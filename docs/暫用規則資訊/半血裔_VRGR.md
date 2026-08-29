@@ -1,7 +1,7 @@
 # 半血裔 (Dhampir) — 規則資料彙整 (VRGR 族系)
 
 - **資料來源網址**：https://5e.dickytwister.org/races.html#%e5%8d%8a%e8%a1%80%e8%a3%94_vrgr
-- **規則出處**：《范·里希騰的鴉閣指南》(Van Richten's Guide to Ravenloft, VRGR)
+- **規則出處**：《範·裏希騰的鴉閣指南》(Van Richten's Guide to Ravenloft, VRGR)
 - **所屬類別**：鴉閣族系 (Lineages)
 - **備註**：本文件為暫用規則參考資料。
 
@@ -72,7 +72,7 @@
 | 6 | **生命能量 (Life energy)** |
 
 ### 半血裔起源 (Dhampir Origins)
-半血裔通常誕生於與吸血鬼的接觸，但也可能源於黑暗契約、通靈術侵蝕或神秘不死存在的轉化。你可以擲 d8 骰或自行選擇你的轉化起源：
+半血裔通常誕生於與吸血鬼的接觸，但也可能源於黑暗契約、通靈術侵蝕或神祕不死存在的轉化。你可以擲 d8 骰或自行選擇你的轉化起源：
 
 | d8 | 起源背景 (Origin) |
 |:---:|:---|
