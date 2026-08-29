@@ -33,8 +33,7 @@ test('P1-B workshop creates and resumes a server-backed character draft', async 
   await page.getByRole('button', { name: 'Save Ability Scores' }).click()
   await expect(page.locator('.summary-abilities')).toContainText('16')
 
-  const humanLanguage = page.locator('.builder-choice').filter({ hasText: 'Human — Languages' })
-  const humanLanguageInput = humanLanguage.getByRole('combobox', { name: 'Add selection' })
+  const humanLanguageInput = page.getByRole('combobox', { name: 'Human — Languages' })
   await humanLanguageInput.fill('Dwarvish')
   await humanLanguageInput.press('ArrowDown')
   await humanLanguageInput.press('Enter')
