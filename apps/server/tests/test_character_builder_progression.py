@@ -98,7 +98,7 @@ def _with_required_choices(payload: BuilderDraftPayload, registry):
     draft = _draft(payload)
     result = compile_builder_draft(draft, registry)
     selections: dict[str, BuilderChoiceSelection] = {}
-    used_option_ids: set[str] = set()
+    used_reference_option_ids: set[str] = set()
     for choice in result.choices:
         if (
             not choice.required
@@ -109,11 +109,23 @@ def _with_required_choices(payload: BuilderDraftPayload, registry):
         available = [
             option
             for option in choice.options
-            if option.option_id not in used_option_ids and option.disabled_reason is None
+            if option.disabled_reason is None
+            and (
+                choice.allow_duplicates
+                or option.reference_id is None
+                or option.option_id not in used_reference_option_ids
+            )
         ]
-        assert len(available) >= choice.choose_count, choice.choice_id
-        selected = tuple(option.option_id for option in available[: choice.choose_count])
-        used_option_ids.update(selected)
+        assert available, choice.choice_id
+        if choice.allow_duplicates:
+            selected = tuple(available[0].option_id for _ in range(choice.choose_count))
+        else:
+            assert len(available) >= choice.choose_count, choice.choice_id
+            selected = tuple(option.option_id for option in available[: choice.choose_count])
+        for option_id in selected:
+            option = next(item for item in choice.options if item.option_id == option_id)
+            if option.reference_id is not None:
+                used_reference_option_ids.add(option_id)
         selections[choice.choice_id] = BuilderChoiceSelection(
             choice_id=choice.choice_id,
             source_ref=choice.source_ref,
