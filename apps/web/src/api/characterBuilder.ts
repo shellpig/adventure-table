@@ -210,27 +210,73 @@ export type BuilderSpellResourcePoolSummary = {
   slots: BuilderSpellSlotCapacity[]
 }
 
+export type BuilderResolvedSummary = {
+  name?: string | null
+  target_level?: number | null
+  race_name?: string | null
+  subrace_name?: string | null
+  background_name?: string | null
+  alignment_name?: string | null
+  starting_class_name?: string | null
+  class_summary?: string | null
+  selected_reference_count: number
+  choice_selection_count: number
+  grants: BuilderGrantSummary[]
+  ability_scores: BuilderAbilityScoreSummary[]
+  progression: BuilderProgressionNodeSummary[]
+  spellcasting_profiles: BuilderSpellcastingProfileSummary[]
+  spell_resource_pools: BuilderSpellResourcePoolSummary[]
+}
+
 export type BuilderView = {
   draft: BuilderDraft
-  resolved_summary: {
-    name?: string | null
-    target_level?: number | null
-    race_name?: string | null
-    subrace_name?: string | null
-    background_name?: string | null
-    alignment_name?: string | null
-    starting_class_name?: string | null
-    class_summary?: string | null
-    selected_reference_count: number
-    choice_selection_count: number
-    grants: BuilderGrantSummary[]
-    ability_scores: BuilderAbilityScoreSummary[]
-    progression: BuilderProgressionNodeSummary[]
-    spellcasting_profiles: BuilderSpellcastingProfileSummary[]
-    spell_resource_pools: BuilderSpellResourcePoolSummary[]
-  }
+  resolved_summary: BuilderResolvedSummary
   choices: BuilderChoice[]
   validation: BuilderValidationResult
+}
+
+export type BuilderEquipmentSummary = {
+  entry_id: string
+  item_ref: string
+  name: string
+  quantity: number
+  source_ref: string
+}
+
+export type BuilderInitialStatePreview = {
+  current_hp: number
+  temporary_hp: number
+  conditions: unknown[]
+  prepared_spell_entry_ids: string[]
+  prepared_spells: unknown[]
+  spell_slots: Record<string, { used: number; remaining: number }>
+  resources: Record<string, { used: number; remaining: number }>
+  hit_dice_state: Record<string, number>
+  inventory_state: {
+    entry_id: string
+    item_ref: string
+    quantity: number
+    equipped: boolean
+    carried: boolean
+  }[]
+}
+
+export type BuilderReviewDTO = {
+  draft_id: string
+  resolved_summary: BuilderResolvedSummary
+  build_candidate?: unknown | null
+  initial_state?: BuilderInitialStatePreview | null
+  starting_equipment: BuilderEquipmentSummary[]
+  issues: BuilderIssue[]
+  can_confirm: boolean
+  non_standard_count: number
+}
+
+export type BuilderConfirmResult = {
+  character_id: string
+  current_version_id: string
+  version_no: number
+  character_path: string
 }
 
 export type CharacterListItem = {
@@ -334,6 +380,22 @@ export function validateBuilderDraft(draftId: string): Promise<BuilderValidation
     `/api/character-builder/drafts/${draftId}/validate`,
     { method: 'POST' },
   )
+}
+
+export function getBuilderReview(draftId: string): Promise<BuilderReviewDTO> {
+  return builderRequest<BuilderReviewDTO>(
+    `/api/character-builder/drafts/${draftId}/review`,
+  )
+}
+
+export function confirmBuilderDraft(draftId: string): Promise<BuilderConfirmResult> {
+  return builderRequest<BuilderConfirmResult>(
+    `/api/character-builder/drafts/${draftId}/confirm`,
+    { method: 'POST' },
+  ).then((result) => {
+    builderPatchQueues.delete(draftId)
+    return result
+  })
 }
 
 export function cancelBuilderDraft(draftId: string): Promise<void> {
