@@ -16,7 +16,7 @@ async function chooseIn(container: ReturnType<Page['locator']>, value: string) {
 }
 
 
-test('P1-C creates and resumes an ordered Fighter 5 / Wizard 5 rail', async ({ page }) => {
+test('P1-D preserves an ordered Fighter 5 / Wizard 5 rail with ASI and feat choices', async ({ page }) => {
   await page.goto('/characters')
   await expect(page.getByRole('heading', { name: 'Character Workshop' })).toBeVisible()
   await expect(page.getByText('Fighter 5 / Wizard 5', { exact: true })).toBeVisible()
@@ -24,11 +24,11 @@ test('P1-C creates and resumes an ordered Fighter 5 / Wizard 5 rail', async ({ p
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
 
-  await page.getByLabel('Character name').fill('P1-C Browser Hero')
+  await page.getByLabel('Character name').fill('P1-D Browser Hero')
   await page.getByLabel('Target character level').fill('10')
   await page.getByLabel('Appearance').fill('A weathered traveler')
   await page.getByRole('button', { name: 'Save Basic Details' }).click()
-  await expect(page.getByText('P1-C Browser Hero').first()).toBeVisible()
+  await expect(page.getByText('P1-D Browser Hero').first()).toBeVisible()
 
   await page.getByRole('button', { name: /Origin/ }).click()
   await chooseSearchable(page, 'Race', 'Human')
@@ -80,6 +80,19 @@ test('P1-C creates and resumes an ordered Fighter 5 / Wizard 5 rail', async ({ p
   await chooseSearchable(page, 'Level 3 class', 'Fighter')
   await chooseSearchable(page, /Fighter subclass/, 'Champion')
   await chooseSearchable(page, 'Level 4 class', 'Fighter')
+
+  // Fighter class level 4 is the first ASI opportunity. The same ability may
+  // legally receive both +1 selections, and the live summary must resolve it once.
+  await chooseSearchable(page, 'Fighter 4 — ASI or Feat', 'Ability Score Improvement')
+  const fighterAsi = page
+    .getByTestId('level-node-4')
+    .locator('.progression-choice')
+    .filter({ hasText: 'Assign 2 ability score points' })
+  await chooseIn(fighterAsi, 'STR +1')
+  await chooseIn(fighterAsi, 'STR +1')
+  await expect(fighterAsi).toContainText('2 / 2')
+  await expect(page.locator('.summary-abilities')).toContainText('18')
+
   await chooseSearchable(page, 'Level 5 class', 'Fighter')
 
   // Wizard is legal here only because the Human +1 resolves INT 12 -> 13.
@@ -88,28 +101,35 @@ test('P1-C creates and resumes an ordered Fighter 5 / Wizard 5 rail', async ({ p
   await chooseSearchable(page, /Wizard subclass/, 'Evocation')
   await chooseSearchable(page, 'Level 8 class', 'Wizard')
   await chooseSearchable(page, 'Level 9 class', 'Wizard')
+
+  // Wizard class level 4 is a second, independent ASI opportunity. Grappler is
+  // legal because the effective STR already satisfies its structural prerequisite.
+  await chooseSearchable(page, 'Wizard 4 — ASI or Feat', 'Grappler')
   await chooseSearchable(page, 'Level 10 class', 'Wizard')
 
   await expect(page.getByText('Fighter 5 / Wizard 5', { exact: true }).last()).toBeVisible()
   await expect(page.getByText('10 / 10', { exact: true })).toBeVisible()
   await expect(page.getByText('0 blocking')).toHaveCount(0)
   await expect(
-    page.getByText(/ASI\/Feat, spellcasting, equipment and final review must be completed/i),
+    page.getByText(/Spellcasting, equipment and final review must be completed/i),
   ).toBeVisible()
 
   const url = page.url()
   await page.reload()
   await expect(page).toHaveURL(url)
-  await expect(page.getByRole('heading', { name: 'P1-C Browser Hero' }).first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'P1-D Browser Hero' }).first()).toBeVisible()
   await page.getByRole('button', { name: /Class/ }).click()
   await expect(page.getByText('Fighter 5 / Wizard 5', { exact: true }).last()).toBeVisible()
   await expect(page.getByTestId('level-node-3').getByRole('combobox', { name: /Fighter subclass/ })).toHaveValue('Champion')
   await expect(page.getByTestId('level-node-7').getByRole('combobox', { name: /Wizard subclass/ })).toHaveValue('Evocation')
+  await expect(page.getByTestId('level-node-4').getByRole('combobox', { name: 'Fighter 4 — ASI or Feat' })).toHaveValue('Ability Score Improvement')
+  await expect(page.getByTestId('level-node-9').getByRole('combobox', { name: 'Wizard 4 — ASI or Feat' })).toHaveValue('Grappler')
   await expect(page.getByTestId('level-node-2').getByLabel('HP method')).toHaveValue('manual_rolled')
   await expect(page.getByTestId('level-node-2').getByLabel('Base HP gain')).toHaveValue('7')
   await expect(page.getByTestId('level-node-6')).toContainText('Multiclass entry')
+  await expect(page.locator('.summary-abilities')).toContainText('18')
 
   await page.goto('/characters')
   await expect(page.getByRole('heading', { name: 'Creation Drafts' })).toBeVisible()
-  await expect(page.getByText('P1-C Browser Hero')).toBeVisible()
+  await expect(page.getByText('P1-D Browser Hero')).toBeVisible()
 })
