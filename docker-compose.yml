@@ -17,7 +17,8 @@ services:
 
   server:
     build:
-      context: ./apps/server
+      context: .
+      dockerfile: apps/server/Dockerfile
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-adventure}:${POSTGRES_PASSWORD:-adventure}@db:5432/${POSTGRES_DB:-adventure_table}
     command: >-

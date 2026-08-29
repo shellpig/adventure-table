@@ -3,14 +3,15 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-WORKDIR /app
+WORKDIR /app/apps/server
 
-COPY pyproject.toml ./
-COPY app ./app
+COPY apps/server/pyproject.toml ./
+COPY apps/server/app ./app
 RUN pip install --no-cache-dir .
 
-COPY alembic.ini ./
-COPY alembic ./alembic
+COPY apps/server/alembic.ini ./
+COPY apps/server/alembic ./alembic
+COPY data/srd5.1 /app/data/srd5.1
 
 EXPOSE 8000
 

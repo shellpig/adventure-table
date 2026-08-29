@@ -1,21 +1,30 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
-from app.config import settings
-from app.db import database_is_ready
+from app.content import load_default_content_registry
+from app.db import engine
 
-app = FastAPI(title=settings.app_name)
+
+content_registry = load_default_content_registry()
+
+app = FastAPI(title="Adventure Table API")
+app.state.content_registry = content_registry
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
+async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
 @app.get("/ready")
-def readiness() -> dict[str, str]:
-    if not database_is_ready():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={"code": "database_unavailable"},
-        )
+def ready() -> dict[str, str]:
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=503, detail="database unavailable")
+
     return {"status": "ready"}
