@@ -21,6 +21,7 @@ Adventure Table 是一個**輕量、桌上跑團優先的 D&D 5e 2014 VTT**。
 - 網站只處理需要共享、同步、計算、保存、權限控制或 AI 接入的資料。
 - 不把產品做成 Foundry 式包山包海平台，也不把 D&D 做成 CRPG。
 - 真人 DM 能靠口頭敘事完成的事情，不強迫建立結構化資料。
+- 網站本身不接 LLM API；AI 能力來自使用者外部 AI Session。
 
 首發規則集：**D&D 5e 2014**  
 Built-in Content：**SRD 5.1**  
@@ -32,7 +33,7 @@ Built-in Content：**SRD 5.1**
 
 ## 當前進度
 
-目前狀態：**產品規格已整理完成，尚未進入正式實作 Phase。**
+目前狀態：**產品規格已整理完成，尚未進入正式實作 Phase。P0 開工前正在收斂技術方案。**
 
 已完成：
 
@@ -45,10 +46,28 @@ Built-in Content：**SRD 5.1**
 - Adventure / Campaign Runtime / AI DM write-back 原則定案。
 - Timeline / Transaction / Snapshot / Export 等產品層行為定案。
 - 第一版明確不做項目已整理。
+- 大 Phase P0～P8 已排定。
+- 已建立 `技術棧討論.md` 並完成第一輪外部 AI review；目前技術方案仍屬討論稿，尚未成為正式 technical SSOT。
 
-**下一步：規劃 P0 `Character Core + SRD / Rules Foundation`。**
+第一輪技術 review 後，目前推薦方向包括：
 
-目前只先維護大 Phase，不預先拆 P0-A / P0-B 等子 Phase。每一個大 Phase 準備開工時，再另外整理該 Phase 的詳細實作規格、開發設計與驗收方式。
+- Frontend：React + TypeScript + Vite。
+- Backend：Python + FastAPI + Pydantic。
+- Database：PostgreSQL。
+- Human UI / MCP 共用同一 Application Use Case。
+- P0 就保留中央 Authorization / Visibility Projection 架構。
+- P0 就保留 revocable scoped AI token / credential boundary。
+- P0 的 GameTransaction / Persistence 不得堵死 P7 Undo / Snapshot / Restore。
+- Reference SRD / custom definitions：Git file 是 truth，DB 是 derived / indexed copy。
+- Runtime / user-created content：DB 是 truth。
+- OpenAPI → TypeScript client/types 採自動 codegen，避免雙語言 schema drift。
+- Tactical Map renderer 延後到 P5 準備時再選。
+
+這些仍以 `技術棧討論.md` 為 review 狀態；**真正拍板後要編入 `開發設計方針.md`，才算正式技術決策。**
+
+**下一步：完成技術方案收斂，接著撰寫 P0 `Character Core + SRD / Rules Foundation` 的 `實作規格書.md`；P0 詳細子 Phase 到那時才拆。**
+
+目前只維護大 Phase，不預先拆 P0-A / P0-B 等子 Phase。每一個大 Phase 準備開工時，再另外整理該 Phase 的詳細實作規格、開發設計與驗收方式。
 
 ---
 
@@ -106,6 +125,16 @@ P0 同時建立：
 - Ability / Skill / Save / AC / Proficiency / Spell DC 等角色計算基礎。
 - Build 與 Current State 的基本分離。
 
+此外，雖然以下功能會在較後 Phase 完整實作，但 P0 地基不得把它們堵死：
+
+- P1 Multiclass / high-level progression。
+- P2 / P3 Role / Seat / scoped credential / AI Join Token。
+- Server-side Permission / Visibility filtering。
+- P7 Revert Transaction / Snapshot / Restore。
+- P5 Tactical geometry 作為可疊加 spatial layer，而不是 Combat Engine 必備前提。
+
+這些是 architecture compatibility requirement，不代表 P0 要把後續功能 UI 提前做完。
+
 ### P1 — Character Builder Complete
 
 P1 要把「角色存在」提升成「網站真正能依 D&D 5e 2014 規則建立與成長角色」。
@@ -147,20 +176,37 @@ Adventure Table 採與 ReturnFare 類似的文件分流方式，但只有真正�
 |---|---|
 | **`PROJECT_BRIEF.md`** | 專案總覽、當前進度、大 Phase Roadmap、下一步、文件索引；隨專案進度持續更新 |
 | **`規格企劃.md`** | 產品定位、跑團方式、Human / AI 行為、角色、戰鬥、Adventure、UI/UX 與明確不做項目的產品單一事實來源 |
+| **`技術棧討論.md`** | **暫時性技術提案／review 文件**；收集候選技術、外部 AI 意見與尚未正式編入方針的架構結論。討論完成後停止維護／刪除 |
 | **`實作規格書.md`** | 某 Phase 準備開工時，定義該 Phase 系統「必須做到什麼」與驗收意圖 |
-| **`開發設計方針.md`** | 具體實作契約：架構、模組、檔案、API、資料流、MCP、接線方式等 |
+| **`開發設計方針.md`** | **正式 technical SSOT**：拍板技術棧與具體實作契約，包括架構、模組、檔案、API、資料流、MCP、接線方式等 |
 | **`測試指南.md`** | 實際操作驗收流程、整合案例與必要人工測試 |
 | **`待決事項.md`** | 只有真正未拍板、無法依既有規格合理推導，而且會影響核心玩法／產品方向的問題 |
 
-目前正式存在的核心文件：
+技術文件生命週期：
+
+```text
+技術棧討論.md
+↓
+外部 AI / 工程 review
+↓
+討論收斂
+↓
+正式內容寫入 開發設計方針.md
+↓
+技術棧討論.md 停止維護／刪除
+```
+
+目前主要專案文件：
 
 ```text
 adventure-table/
+├── AGENTS.md
 ├── PROJECT_BRIEF.md
-└── 規格企劃.md
+├── 規格企劃.md
+└── 技術棧討論.md
 ```
 
-等 P0 準備開工時，再依需要建立：
+P0 準備正式開工時，再依需要建立：
 
 ```text
 實作規格書.md
@@ -183,11 +229,13 @@ adventure-table/
 ↓
 確認產品規格沒有重大缺口
 ↓
+確認晚期功能對本 Phase 是否有反向 architecture requirement
+↓
 拆該 Phase 子階段
 ↓
 撰寫實作規格
 ↓
-撰寫開發設計方針
+將拍板技術決策寫入開發設計方針
 ↓
 定義自動／人工驗收
 ↓
@@ -206,8 +254,9 @@ Phase 收尾後更新 PROJECT_BRIEF
 
 1. 先讀 `PROJECT_BRIEF.md` 取得目前 Phase 與下一步。
 2. 再讀 `規格企劃.md` 理解產品與玩法硬規格。
-3. 若目前 Phase 已有 `實作規格書.md` / `開發設計方針.md` / `測試指南.md`，再依序讀取。
-4. 不重新討論已定案產品規格。
-5. 技術細節在不違反產品規格的前提下自行決定。
-6. 只有會明顯改變實際跑團方式、DM / Player 核心權利、D&D 規則玩法或難以逆轉的產品方向，才回來討論。
-7. 每完成一個 Phase / 子 Phase，更新本檔進度與下一步。
+3. 如果任務是技術選型／架構 review，讀 `技術棧討論.md`；但不得把其中尚未編入 `開發設計方針.md` 的內容誤認為正式定案。
+4. 若目前 Phase 已有 `實作規格書.md` / `開發設計方針.md` / `測試指南.md`，再依序讀取；其中 `開發設計方針.md` 是正式 technical SSOT。
+5. 不重新討論已定案產品規格。
+6. 技術細節在不違反產品規格與正式開發方針的前提下自行決定。
+7. 只有會明顯改變實際跑團方式、DM / Player 核心權利、D&D 規則玩法或難以逆轉的產品方向，才回來討論。
+8. 每完成一個 Phase / 子 Phase，更新本檔進度與下一步。
