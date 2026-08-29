@@ -33,7 +33,7 @@ Built-in Content：**SRD 5.1**
 
 ## 當前進度
 
-目前狀態：**P0-A — Project Foundation 已完成並通過完整 CI 驗證；P0-B 尚未開工。**
+目前狀態：**P0-B — Character-Relevant SRD Foundation 已完成並通過完整 CI 驗證；P0-C 尚未開工。**
 
 已完成：
 
@@ -54,8 +54,12 @@ Built-in Content：**SRD 5.1**
 - P0 的 SRD scope 已縮為 **Character-Relevant SRD**；Monster / Beast stat blocks 明確延後到 P4-A。
 - **P0-A — Project Foundation 已實作完成**：React/TypeScript/Vite app shell、TanStack Query provider、FastAPI、PostgreSQL readiness、SQLAlchemy/Alembic baseline、Docker Compose、pytest/Vitest/Playwright baseline 與 CI 驗證均已建立。
 - P0-A CI 已實際驗證 fresh checkout 的 backend tests、Alembic、frontend install/build、Vitest、Playwright，以及 Docker Compose 全棧啟動與 `/health`、`/ready`、Web 回應。
+- **P0-B — Character-Relevant SRD Foundation 已實作完成**：`data/srd5.1/` 已建立 version-controlled normalized content；目前包含 22 個 character-relevant categories、1,944 筆 entries，並保留 source / ruleset / license / pinned extraction metadata。
+- P0-B 已建立 category-specific Pydantic schemas、stable key（`srd5.1:<kind>:<index>`）、`ContentRegistry`、manifest / count validation、recursive required cross-reference validation、啟動 fail-fast 與 query baseline。
+- P0-B 負向驗證已覆蓋 duplicate key、missing required field、malformed spell value、dangling reference 與 Monster / Beast scope violation；Monster / Beast 仍未進入 P0。
+- P0-B 完整 CI 已實際通過 backend tests、Alembic、frontend build、Vitest、Playwright、Docker Compose config、全棧啟動與 `/health`、`/ready`、Web response，證明 P0-B 未破壞 P0-A baseline。
 
-**下一步：等待使用者明確指示後開始 P0-B — Character-Relevant SRD Foundation；不要自行開始下一個 Subphase。**
+**下一步：等待使用者明確指示後開始 P0-C — Character Core & Persistence；不要自行開始下一個 Subphase。**
 
 本 Brief 不列 P0 的 DB schema / API 細節；那些內容只住在 `docs/P0/開發設計方針.md`。
 
@@ -90,7 +94,7 @@ Built-in Content：**SRD 5.1**
 | Subphase | 狀態 | 重點 |
 |---|---|---|
 | **P0-A — Project Foundation** | ✅ | React/Vite、FastAPI、PostgreSQL、SQLAlchemy/Alembic、Docker Compose、pytest/Vitest/Playwright baseline；專案可啟動、DB 可 migration、health/smoke 可驗 |
-| **P0-B — Character-Relevant SRD Foundation** | 📐 | ContentRegistry、Pydantic schemas、stable keys、cross-reference validation，以及 P0/P1 角色需要的 SRD 5.1 normalized data；**不含 Monster / Beast stat blocks** |
+| **P0-B — Character-Relevant SRD Foundation** | ✅ | ContentRegistry、Pydantic schemas、stable keys、cross-reference validation，以及 P0/P1 角色需要的 SRD 5.1 normalized data；**不含 Monster / Beast stat blocks** |
 | **P0-C — Character Core & Persistence** | 📐 | Character identity、immutable Build Version、mutable Current State、Build/State split、class order、spell access、HP progression、Hit Dice、Starting Equipment / live Inventory、fixture、DB round-trip |
 | **P0-D — Character Rules & Backend API** | 📐 | Ability/PB/Skill/Save/Passive/AC/HP/Spell calculations、Numeric Override、CharacterSheetDTO、Character/State/Reference APIs |
 | **P0-E — Character Sheet & State UI** | 📐 | 三頁 Character Sheet、Header、Attributes/Skills、Spells、Inventory、Hit Dice、Roleplay，以及 P0 需要的 Current State 操作與保存 |
@@ -161,13 +165,17 @@ P1 詳細規格與 Subphase 等 P1 準備開工時再寫，不在 P0 提前完�
 | **`docs/Px/測試指南.md`** | 該 Phase / Subphase 的自動／人工驗收流程 |
 | **`待決事項.md`** | 真正無法從既有規格推導、且會影響核心玩法／方向的未決問題 |
 
-目前主要文件與 P0-A 實作入口：
+目前主要文件與 P0-A / P0-B 實作入口：
 
 ```text
 adventure-table/
 ├── apps/
-│   ├── server/          # FastAPI / SQLAlchemy / Alembic / pytest
+│   ├── server/          # FastAPI / SQLAlchemy / Alembic / Pydantic content registry / pytest
 │   └── web/             # React / TypeScript / Vite / Vitest / Playwright
+├── data/
+│   └── srd5.1/          # P0-B normalized SRD 5.1 content + manifest / attribution
+├── scripts/
+│   └── vendor_srd.py    # maintainer-only pinned SRD vendor tool
 ├── .github/workflows/
 │   └── p0a-foundation.yml
 ├── docker-compose.yml
