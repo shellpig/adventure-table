@@ -128,7 +128,7 @@ class ContentRegistry:
                     raise ContentValidationError(
                         f"{entry.key}: envelope/data index mismatch"
                     )
-                if typed_data.name != entry.name:
+                if typed_data.name is not None and typed_data.name != entry.name:
                     raise ContentValidationError(
                         f"{entry.key}: envelope/data name mismatch"
                     )

@@ -109,6 +109,7 @@ class LanguageData(IndexedNamedData):
 
 
 class LevelData(IndexedNamedData):
+    name: str | None = None
     level: int = Field(ge=1, le=20)
     prof_bonus: int = Field(ge=2, le=6)
     features: list[APIReference]
