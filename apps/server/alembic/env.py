@@ -7,6 +7,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.config import settings
 from app.db import metadata
+from app.persistence import characters as _character_tables  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:
