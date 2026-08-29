@@ -51,6 +51,29 @@ test('opens the three-page P0 character sheet', async ({ page }) => {
   await expect(page.getByRole('combobox', { name: '物品名稱' })).toBeVisible()
 })
 
+test('captures P0-F manual smoke views', async ({ page }, testInfo) => {
+  await page.goto(CHARACTER_URL)
+  await expect(page.getByRole('heading', { name: 'P0 Human Fighter 5 / Wizard 5' })).toBeVisible()
+  await page.screenshot({
+    path: testInfo.outputPath('p0-f-attributes.png'),
+    fullPage: true,
+  })
+
+  await page.getByRole('tab', { name: /法術/ }).click()
+  await expect(page.getByText('Magic Missile', { exact: true })).toBeVisible()
+  await page.screenshot({
+    path: testInfo.outputPath('p0-f-spells.png'),
+    fullPage: true,
+  })
+
+  await page.getByRole('tab', { name: /物品欄/ }).click()
+  await expect(page.getByText('Potion of Healing', { exact: true })).toBeVisible()
+  await page.screenshot({
+    path: testInfo.outputPath('p0-f-inventory.png'),
+    fullPage: true,
+  })
+})
+
 test('persists HP after a browser reload', async ({ page }) => {
   await page.goto(CHARACTER_URL)
   await page.getByTestId('current-hp-input').fill('50')
@@ -86,6 +109,39 @@ test('persists spell-slot resource usage', async ({ page }) => {
   await page.reload()
   await page.getByRole('tab', { name: /法術/ }).click()
   await expect(page.getByTestId('spell-slot-1-counter')).toHaveText('2 / 4')
+})
+
+test('persists prepared spell selection', async ({ page }) => {
+  await page.goto(CHARACTER_URL)
+  await page.getByRole('tab', { name: /法術/ }).click()
+
+  const magicMissileCard = page
+    .getByRole('heading', { name: 'Magic Missile' })
+    .locator('xpath=ancestor::article')
+
+  await expect(magicMissileCard.getByText('Prepared', { exact: true })).toBeVisible()
+  await magicMissileCard.getByRole('button', { name: '取消準備' }).click()
+  await expect(magicMissileCard.getByText('Unprepared', { exact: true })).toBeVisible()
+
+  await page.reload()
+  await page.getByRole('tab', { name: /法術/ }).click()
+  await expect(
+    page
+      .getByRole('heading', { name: 'Magic Missile' })
+      .locator('xpath=ancestor::article')
+      .getByText('Unprepared', { exact: true }),
+  ).toBeVisible()
+})
+
+test('persists available hit dice', async ({ page }) => {
+  await page.goto(CHARACTER_URL)
+  await expect(page.getByTestId('hit-die-d10')).toHaveText('5/5')
+  await page.getByRole('button', { name: 'd10 使用一顆' }).click()
+  await expect(page.getByTestId('hit-die-d10')).toHaveText('4/5')
+
+  await page.reload()
+  await expect(page.getByTestId('hit-die-d10')).toHaveText('4/5')
+  await expect(page.getByTestId('hit-die-d6')).toHaveText('5/5')
 })
 
 test('persists live inventory quantity', async ({ page }) => {
