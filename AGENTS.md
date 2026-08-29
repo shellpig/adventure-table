@@ -127,7 +127,7 @@ grep -n "^## \|^### " 規格企劃.md
 2. **秘密靠 Server 過濾，不靠 UI 隱藏。** Secret DC、DM Notes、Hidden Monster、他人 private knowledge 根本不送給 Player / AI Player。先送再用 CSS 或 prompt 藏起來就是 bug。
 3. **Optional 不得變 Mandatory。** Quest、Scene、NPC、Position Note、Campaign Fact 等都可以完全不建立而繼續跑團。任何「必須先建 X 才能做 Y」的流程都要先確認規格是否真的要求。
 4. **網站不接 LLM API。** 後端沒有模型可呼叫，所有 AI 能力來自使用者的外部 AI Session。看到「這裡叫個 LLM 就好了」的設計，先停下來。
-5. **非 SRD 內容不得打包進 repo。** Built-in 只有 SRD 5.1；其餘由使用者自行提供／匯入。
+5. **內容是逐步擴充的，SRD 5.1 是起點不是上限。** 使用者需要某個 Race / Class / Subclass / Feat / Spell / Item / Monster 時就提供資料，然後補進系統，內容資料一路長進 repo。**不要因為某個東西不在 SRD 就拒絕做**，也不要求第一版把內容做齊；底層資料結構要能容納非 SRD 內容。
 6. **Human UI 與 AI MCP 共用同一份 backend logic**，不做兩套遊戲邏輯。
 
 ## 工程實作守則
