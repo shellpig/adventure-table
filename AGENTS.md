@@ -8,7 +8,7 @@
 - **一句話**：網站只管需要共享、同步、計算、保存、權限與 AI 接入的東西，其餘還給 DM 的嘴巴
 - **首發規則集**：D&D 5e 2014；Built-in Content：SRD 5.1（CC BY 4.0）
 - **專案性質**：朋友間私人使用，非預計商品化平台
-- **目前階段**：產品規格已定案，**尚未進入實作**。下一步是 P0 `Character Core + SRD / Rules Foundation`
+- **目前階段**：已進入 P0 實作；**P0-A — Project Foundation 已完成**，下一步是 P0-B — Character-Relevant SRD Foundation
 - **目前進度**：以 `PROJECT_BRIEF.md` 為單一事實來源
 - **基礎技術棧**：目前方向見 `技術棧討論.md`。該檔只討論語言／Framework／DB 等基礎選型，不承擔各 Phase 的實作設計
 
@@ -47,7 +47,7 @@ Report to user: current progress, and any issues with their scope of impact.
 `規格企劃.md` 的定位鍵是章節中文數字與 `###` 小節：
 
 ```bash
-grep -n "^## \|^### " 規格企劃.md
+grep -n "^## \\|^### " 規格企劃.md
 ```
 
 十四個章節的對照：
@@ -194,7 +194,7 @@ Default mode: read-only reviewer.
 Binary 在 user PATH，但部分 shell 的 PATH 快照可能沒有，直接用完整路徑最穩。
 
 ```powershell
-cmd /c "C:\Users\User\AppData\Local\agy\bin\agy.exe -p `"<任務>`" --model `"<模型>`" --add-dir `"C:\_work\AI_Work\Projects\adventure-table`" --dangerously-skip-permissions --print-timeout 540s < NUL > <輸出檔> 2>&1"
+cmd /c "C:\Users\User\AppData\Local\agy\bin\agy.exe -p `\"<任務>`\" --model `\"<模型>`\" --add-dir `\"C:\_work\AI_Work\Projects\adventure-table`\" --dangerously-skip-permissions --print-timeout 540s < NUL > <輸出檔> 2>&1"
 ```
 
 四個參數都是必要的：
@@ -213,7 +213,7 @@ Default mode: read-only reviewer；跑完必以 `git status` / `git diff` 確認
 使用者說「要 codex 做 XXX」「用 codex 審 / 驗證 XXX」（不帶 `ds4`）時，用預設 `CODEX_HOME` 走 `codex exec`。
 
 ```powershell
-cmd /c "codex exec `"<任務>`" --sandbox read-only -C `"C:\_work\AI_Work\Projects\adventure-table`" --ephemeral -o `"<結果檔>`" < NUL > `"<過程log檔>`" 2>&1"
+cmd /c "codex exec `\"<任務>`\" --sandbox read-only -C `\"C:\_work\AI_Work\Projects\adventure-table`\" --ephemeral -o `\"<結果檔>`\" < NUL > `\"<過程log檔>`\" 2>&1"
 ```
 
 - `< NUL`：避免非 TTY 等待 stdin。

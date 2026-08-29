@@ -33,7 +33,7 @@ Built-in Content：**SRD 5.1**
 
 ## 當前進度
 
-目前狀態：**P0 規劃文件已完成並拆成 P0-A～P0-F，尚未開始任何 P0 coding。**
+目前狀態：**P0-A — Project Foundation 已完成並通過完整 CI 驗證；P0-B 尚未開工。**
 
 已完成：
 
@@ -52,8 +52,10 @@ Built-in Content：**SRD 5.1**
 - `技術棧討論.md` 已瘦身，只保留基礎技術選型，不再提前設計各 Phase。
 - `docs/P0/實作規格.md`、`開發設計方針.md`、`測試指南.md` 已重排為完全對齊的 P0-A～P0-F。
 - P0 的 SRD scope 已縮為 **Character-Relevant SRD**；Monster / Beast stat blocks 明確延後到 P4-A。
+- **P0-A — Project Foundation 已實作完成**：React/TypeScript/Vite app shell、TanStack Query provider、FastAPI、PostgreSQL readiness、SQLAlchemy/Alembic baseline、Docker Compose、pytest/Vitest/Playwright baseline 與 CI 驗證均已建立。
+- P0-A CI 已實際驗證 fresh checkout 的 backend tests、Alembic、frontend install/build、Vitest、Playwright，以及 Docker Compose 全棧啟動與 `/health`、`/ready`、Web 回應。
 
-**下一步：等待使用者明確指示後，依序從 P0-A 開始實作；不要跳階段，也不要自行開始 coding。**
+**下一步：等待使用者明確指示後開始 P0-B — Character-Relevant SRD Foundation；不要自行開始下一個 Subphase。**
 
 本 Brief 不列 P0 的 DB schema / API 細節；那些內容只住在 `docs/P0/開發設計方針.md`。
 
@@ -87,7 +89,7 @@ Built-in Content：**SRD 5.1**
 
 | Subphase | 狀態 | 重點 |
 |---|---|---|
-| **P0-A — Project Foundation** | 📐 | React/Vite、FastAPI、PostgreSQL、SQLAlchemy/Alembic、Docker Compose、pytest/Vitest/Playwright baseline；專案可啟動、DB 可 migration、health/smoke 可驗 |
+| **P0-A — Project Foundation** | ✅ | React/Vite、FastAPI、PostgreSQL、SQLAlchemy/Alembic、Docker Compose、pytest/Vitest/Playwright baseline；專案可啟動、DB 可 migration、health/smoke 可驗 |
 | **P0-B — Character-Relevant SRD Foundation** | 📐 | ContentRegistry、Pydantic schemas、stable keys、cross-reference validation，以及 P0/P1 角色需要的 SRD 5.1 normalized data；**不含 Monster / Beast stat blocks** |
 | **P0-C — Character Core & Persistence** | 📐 | Character identity、immutable Build Version、mutable Current State、Build/State split、class order、spell access、HP progression、Hit Dice、Starting Equipment / live Inventory、fixture、DB round-trip |
 | **P0-D — Character Rules & Backend API** | 📐 | Ability/PB/Skill/Save/Passive/AC/HP/Spell calculations、Numeric Override、CharacterSheetDTO、Character/State/Reference APIs |
@@ -159,10 +161,17 @@ P1 詳細規格與 Subphase 等 P1 準備開工時再寫，不在 P0 提前完�
 | **`docs/Px/測試指南.md`** | 該 Phase / Subphase 的自動／人工驗收流程 |
 | **`待決事項.md`** | 真正無法從既有規格推導、且會影響核心玩法／方向的未決問題 |
 
-目前主要文件：
+目前主要文件與 P0-A 實作入口：
 
 ```text
 adventure-table/
+├── apps/
+│   ├── server/          # FastAPI / SQLAlchemy / Alembic / pytest
+│   └── web/             # React / TypeScript / Vite / Vitest / Playwright
+├── .github/workflows/
+│   └── p0a-foundation.yml
+├── docker-compose.yml
+├── README.md
 ├── AGENTS.md
 ├── PROJECT_BRIEF.md
 ├── 規格企劃.md
