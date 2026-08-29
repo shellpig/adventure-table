@@ -37,9 +37,11 @@ def get_character_repository(request: Request) -> CharacterRepository:
 def get_character_builder_service(request: Request) -> CharacterBuilderService:
     service = getattr(request.app.state, "character_builder_service", None)
     if service is None:
+        engine = get_database_engine(request)
         service = CharacterBuilderService(
-            BuilderDraftRepository(get_database_engine(request)),
+            BuilderDraftRepository(engine),
             get_content_registry(request),
+            get_character_repository(request),
         )
         request.app.state.character_builder_service = service
     return service
