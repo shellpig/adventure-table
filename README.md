@@ -40,7 +40,8 @@ python -m venv .venv
 # Windows: .venv\Scripts\activate
 # macOS/Linux: source .venv/bin/activate
 pip install -e ".[dev]"
-set DATABASE_URL=postgresql+psycopg://adventure:adventure@localhost:5432/adventure_table  # Windows cmd
+# Windows cmd
+set "DATABASE_URL=postgresql+psycopg://adventure:adventure@localhost:5432/adventure_table"
 # PowerShell: $env:DATABASE_URL="postgresql+psycopg://adventure:adventure@localhost:5432/adventure_table"
 alembic upgrade head
 uvicorn app.main:app --reload
@@ -55,8 +56,11 @@ pytest
 
 ## Frontend 本機開發
 
+需求：Node.js 24。先固定 npm 11.6.0，避開 npm 10.9.8 的 dependency resolver bug。
+
 ```bash
 cd apps/web
+npm install --global npm@11.6.0
 npm install
 npm run dev
 ```

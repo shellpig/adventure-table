@@ -1,6 +1,8 @@
-FROM node:22-alpine
+FROM node:24-alpine
 
 WORKDIR /app
+
+RUN npm install --global npm@11.6.0
 
 COPY package.json ./
 RUN npm install
