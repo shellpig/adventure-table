@@ -37,6 +37,14 @@ ABILITY_LABELS = {
 }
 ASI_CAP = 20
 
+# The imported 5e SRD level feed contains one known cumulative-counter anomaly:
+# Rogue 10 is 3, Rogue 11 is shipped as 2, and Rogue 12 continues at 4. P1-D
+# consumes ability_score_bonuses as a cumulative counter, so normalize that
+# upstream row explicitly. Every other decrease still fails fast below.
+KNOWN_ASI_SOURCE_CORRECTIONS: dict[str, tuple[int, int]] = {
+    "srd5.1:level:rogue-11": (2, 3),
+}
+
 
 @dataclass(frozen=True)
 class StructuralCompilation:
@@ -80,7 +88,17 @@ def _cumulative_asi(entry: ContentEntry) -> int:
     value = entry.data.get("ability_score_bonuses")
     if not isinstance(value, int) or value < 0:
         raise ValueError(f"Invalid ability_score_bonuses in {entry.key}")
-    return value
+    correction = KNOWN_ASI_SOURCE_CORRECTIONS.get(entry.key)
+    if correction is None:
+        return value
+    source_value, normalized_value = correction
+    if value == normalized_value:
+        return value
+    if value != source_value:
+        raise ValueError(
+            f"Known ASI source correction no longer matches {entry.key}: {value}"
+        )
+    return normalized_value
 
 
 def _asi_feature_markers(entry: ContentEntry) -> int:
@@ -177,14 +195,16 @@ def feat_failure_reason(
             return "This feat has an unsupported ability prerequisite."
         if effective_abilities.get(ability, 0) < minimum:
             failures.append(f"{ABILITY_LABELS[ability]} {minimum}+")
-    if not failures:
-        return None
-    return "Requires " + " and ".join(failures) + "."
+    return None if not failures else "Requires " + " and ".join(failures) + "."
 
 
 def _selection(draft: BuilderDraft, choice_id: str) -> tuple[str, ...]:
     record = draft.draft_payload.choice_selections.get(choice_id)
     return record.selected_option_ids if record is not None else ()
+
+
+def _asi_option_id(branch_id: str) -> str:
+    return deterministic_choice_id(branch_id, "asi")
 
 
 def _ability_option_id(ability: str) -> str:
@@ -376,7 +396,6 @@ def _feature_specific_choices(
     root = feature.data.get("feature_specific")
     if not isinstance(root, dict):
         return ()
-
     result: list[BuilderChoice] = []
 
     def walk(value: object, path: tuple[str, ...]) -> None:
@@ -446,11 +465,9 @@ def build_structural_choices(
 
         for occurrence in range(occurrences):
             branch_id = deterministic_choice_id(
-                "level",
-                str(character_level),
-                "asi-feat",
-                str(occurrence),
+                "level", str(character_level), "asi-feat", str(occurrence)
             )
+            asi_option_id = _asi_option_id(branch_id)
             effective = _effective_abilities(resolved, overrides)
             feat_options = tuple(
                 BuilderChoiceOption(
@@ -474,7 +491,7 @@ def build_structural_choices(
                     option_source="content:asi-feat",
                     options=(
                         BuilderChoiceOption(
-                            option_id="asi",
+                            option_id=asi_option_id,
                             label="Ability Score Improvement",
                             kind=BuilderOptionKind.BRANCH,
                             branch_key="asi",
@@ -486,10 +503,7 @@ def build_structural_choices(
             )
 
             ability_id = deterministic_choice_id(
-                "level",
-                str(character_level),
-                "asi-abilities",
-                str(occurrence),
+                "level", str(character_level), "asi-abilities", str(occurrence)
             )
             selected_abilities = _selection(draft, ability_id)
             selected_counts = Counter(selected_abilities)
@@ -514,10 +528,9 @@ def build_structural_choices(
                 )
 
             # Keep the dependent choice deterministic even after switching to a
-            # feat so saved ASI selections become harmless stale state instead of
-            # turning into an unknown draft selection. Before the branch is chosen
-            # it stays visible so clients can render the complete opportunity.
-            ability_choice_active = branch_selection in ((), ("asi",))
+            # feat. Saved ASI allocations become harmless stale draft state and
+            # become active again if the branch is switched back to ASI.
+            ability_choice_active = branch_selection in ((), (asi_option_id,))
             choices.append(
                 BuilderChoice(
                     choice_id=ability_id,
@@ -538,7 +551,7 @@ def build_structural_choices(
             )
 
             if (
-                branch_selection == ("asi",)
+                branch_selection == (asi_option_id,)
                 and resolved is not None
                 and len(selected_abilities) == 2
             ):
@@ -627,12 +640,7 @@ def _asi_branch_id_for_ability_choice(choice_id: str) -> str | None:
         or not parts[3].isdigit()
     ):
         return None
-    return deterministic_choice_id(
-        "level",
-        parts[1],
-        "asi-feat",
-        parts[3],
-    )
+    return deterministic_choice_id("level", parts[1], "asi-feat", parts[3])
 
 
 def compile_structural_selections(
@@ -661,8 +669,9 @@ def compile_structural_selections(
                 else None
             )
             if (
-                branch_selection is None
-                or branch_selection.selected_option_ids != ("asi",)
+                branch_id is None
+                or branch_selection is None
+                or branch_selection.selected_option_ids != (_asi_option_id(branch_id),)
                 or len(selection.selected_option_ids) != 2
             ):
                 continue
