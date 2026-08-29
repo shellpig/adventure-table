@@ -276,7 +276,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
         <header className="builder-topbar">
           <div>
             <a href="/characters" className="builder-back">← Character Workshop</a>
-            <p className="eyebrow">P1-C · Create Character</p>
+            <p className="eyebrow">P1-D · Create Character</p>
             <h1>{view.resolved_summary.name?.trim() || 'Unnamed character'}</h1>
           </div>
           <div className="builder-save-state">
@@ -542,7 +542,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   </li>
                 ))}
               </ul>
-              <p className="builder-hint">P1-C validates the full class rail. Confirm remains locked until P1-D through P1-F complete the remaining Build choices.</p>
+              <p className="builder-hint">P1-D validates class progression, ASI/Feat and structural choices. Confirm remains locked until P1-E and P1-F complete spellcasting, equipment and final review.</p>
             </div>
 
             <button
