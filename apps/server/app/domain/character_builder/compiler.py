@@ -69,12 +69,21 @@ def compile_builder_draft(
     draft: BuilderDraft,
     registry: ContentRegistry,
 ) -> BuilderCompileResult:
-    foundation_choices = tuple(
+    raw_foundation_choices = tuple(
         choice
         for choice in build_foundation_choices(draft, registry)
         if choice.option_source != "content:class"
     )
     progression_choices = build_progression_choices(draft, registry)
+    progression_choice_ids = {choice.choice_id for choice in progression_choices}
+    foundation_choices = tuple(
+        choice
+        for choice in raw_foundation_choices
+        if not (
+            choice.option_source == "draft:selection"
+            and choice.choice_id in progression_choice_ids
+        )
+    )
     choices = foundation_choices + progression_choices
 
     # Class/subclass rows are authoritative in level_choices and are validated by
