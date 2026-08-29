@@ -4,6 +4,7 @@ from collections import Counter
 
 from app.content.registry import ContentNotFoundError, ContentRegistry
 from app.domain.character.schemas import CharacterBuild, CharacterState
+from app.domain.rules.hit_points import calculate_max_hp
 
 
 class CharacterValidationError(ValueError):
@@ -15,6 +16,56 @@ def _require_content(registry: ContentRegistry, key: str) -> None:
         registry.get(key)
     except ContentNotFoundError as exc:
         raise CharacterValidationError(f"unknown content reference: {key}") from exc
+
+
+def _validate_numeric_overrides(build: CharacterBuild, registry: ContentRegistry) -> None:
+    abilities = {
+        "strength",
+        "dexterity",
+        "constitution",
+        "intelligence",
+        "wisdom",
+        "charisma",
+    }
+    for override in build.numeric_overrides:
+        key = override.key
+        value = override.value
+        if not float(value).is_integer():
+            raise CharacterValidationError(f"numeric override must be an integer: {key}")
+        if key.startswith("ability:"):
+            ability = key.removeprefix("ability:")
+            if ability not in abilities or value < 1 or value > 30:
+                raise CharacterValidationError(f"invalid ability numeric override: {key}")
+            continue
+        if key == "ac":
+            if value < 1:
+                raise CharacterValidationError("ac override must be positive")
+            continue
+        if key == "max_hp":
+            if value < 1:
+                raise CharacterValidationError("max_hp override must be positive")
+            continue
+        if key.startswith("skill_modifier:"):
+            target = key.removeprefix("skill_modifier:")
+            try:
+                if target.startswith("srd5.1:"):
+                    entry = registry.get(target)
+                else:
+                    entry = registry.resolve("skill", target)
+            except ContentNotFoundError as exc:
+                raise CharacterValidationError(
+                    f"unknown skill override target: {target}"
+                ) from exc
+            if not entry.key.startswith("srd5.1:skill:"):
+                raise CharacterValidationError(f"invalid skill override target: {target}")
+            continue
+        if key.startswith("spell_save_dc:"):
+            target = key.removeprefix("spell_save_dc:")
+            _require_content(registry, target)
+            if value < 1:
+                raise CharacterValidationError("spell save DC override must be positive")
+            continue
+        raise CharacterValidationError(f"unsupported numeric override key: {key}")
 
 
 def validate_build_references(build: CharacterBuild, registry: ContentRegistry) -> None:
@@ -36,6 +87,7 @@ def validate_build_references(build: CharacterBuild, registry: ContentRegistry) 
 
     for key in refs:
         _require_content(registry, key)
+    _validate_numeric_overrides(build, registry)
 
 
 def derive_hit_dice_totals(
@@ -80,3 +132,9 @@ def validate_state_against_build(
             raise CharacterValidationError(
                 f"available hit dice exceed build total for {die}: {available}>{total}"
             )
+
+    max_hp = calculate_max_hp(build)
+    if state.current_hp > max_hp:
+        raise CharacterValidationError(
+            f"current_hp cannot exceed calculated max_hp: {state.current_hp}>{max_hp}"
+        )
