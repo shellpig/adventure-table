@@ -95,43 +95,63 @@ def _payload(levels: tuple[BuilderLevelChoice, ...], *, scores: dict[str, int] |
 
 
 def _with_required_choices(payload: BuilderDraftPayload, registry):
-    draft = _draft(payload)
-    result = compile_builder_draft(draft, registry)
     selections: dict[str, BuilderChoiceSelection] = {}
     used_reference_option_ids: set[str] = set()
-    for choice in result.choices:
-        if (
-            not choice.required
-            or choice.disabled_reason is not None
-            or choice.option_source in DIRECT_SOURCES
-        ):
-            continue
+
+    # Resolve one required choice at a time and recompile after each selection.
+    # P1-D choices can change the legality of later choices (for example, an
+    # earlier ASI can bring an ability to the score cap), so a one-pass fixture
+    # would be able to manufacture a draft that the real builder would reject.
+    for _ in range(128):
+        current = payload.model_copy(update={"choice_selections": selections})
+        result = compile_builder_draft(_draft(current), registry)
+        unresolved = next(
+            (
+                choice
+                for choice in result.choices
+                if choice.required
+                and choice.disabled_reason is None
+                and choice.option_source not in DIRECT_SOURCES
+                and choice.choice_id not in selections
+            ),
+            None,
+        )
+        if unresolved is None:
+            return _draft(current)
+
         available = [
             option
-            for option in choice.options
+            for option in unresolved.options
             if option.disabled_reason is None
             and (
-                choice.allow_duplicates
+                unresolved.allow_duplicates
                 or option.reference_id is None
                 or option.option_id not in used_reference_option_ids
             )
         ]
-        assert available, choice.choice_id
-        if choice.allow_duplicates:
-            selected = tuple(available[0].option_id for _ in range(choice.choose_count))
+        assert available, unresolved.choice_id
+        if unresolved.allow_duplicates:
+            selected = tuple(
+                available[0].option_id for _ in range(unresolved.choose_count)
+            )
         else:
-            assert len(available) >= choice.choose_count, choice.choice_id
-            selected = tuple(option.option_id for option in available[: choice.choose_count])
+            assert len(available) >= unresolved.choose_count, unresolved.choice_id
+            selected = tuple(
+                option.option_id for option in available[: unresolved.choose_count]
+            )
         for option_id in selected:
-            option = next(item for item in choice.options if item.option_id == option_id)
+            option = next(
+                item for item in unresolved.options if item.option_id == option_id
+            )
             if option.reference_id is not None:
                 used_reference_option_ids.add(option_id)
-        selections[choice.choice_id] = BuilderChoiceSelection(
-            choice_id=choice.choice_id,
-            source_ref=choice.source_ref,
+        selections[unresolved.choice_id] = BuilderChoiceSelection(
+            choice_id=unresolved.choice_id,
+            source_ref=unresolved.source_ref,
             selected_option_ids=selected,
         )
-    return _draft(payload.model_copy(update={"choice_selections": selections}))
+
+    raise AssertionError("required choices did not converge")
 
 
 def _codes(result) -> set[str]:
