@@ -8,9 +8,9 @@
 - **一句話**：網站只管需要共享、同步、計算、保存、權限與 AI 接入的東西，其餘還給 DM 的嘴巴
 - **首發規則集**：D&D 5e 2014；Built-in Content：SRD 5.1（CC BY 4.0）
 - **專案性質**：朋友間私人使用，非預計商品化平台
-- **目前階段**：產品規格已定案，**尚未進入實作**。下一步是規劃 P0 `Character Core + SRD / Rules Foundation`
+- **目前階段**：產品規格已定案，**尚未進入實作**。下一步是 P0 `Character Core + SRD / Rules Foundation`
 - **目前進度**：以 `PROJECT_BRIEF.md` 為單一事實來源
-- **技術選型**：**討論中，尚未正式拍板**。目前 review 中的推薦方案見 `技術棧討論.md`；只有整理進 `開發設計方針.md` 後才算正式 technical SSOT
+- **基礎技術棧**：目前方向見 `技術棧討論.md`。該檔只討論語言／Framework／DB 等基礎選型，不承擔各 Phase 的實作設計
 
 ## New Conversation Opening Check
 
@@ -19,17 +19,12 @@
 2. `PROJECT_BRIEF.md`（當前 Phase、Roadmap、文件索引）
 3. `git log --oneline -10`
 
-**Layer 2 — 按任務讀對應文件／段落（見下方查閱規則）：**
+**Layer 2 — 按任務讀對應文件／段落：**
 - `規格企劃.md` — **產品與玩法的單一事實來源**。約 70 KB，一律標題定位、只讀該段
-- `技術棧討論.md` — **暫時性技術 review 文件**；只有做技術選型、架構討論、P0 開發設計前置審查時才讀。它不是正式 technical SSOT
+- `技術棧討論.md` — 只在基礎技術選型／Framework 討論時讀；不要把它當成全專案 architecture spec
+- `docs/Px/` — 某個 Phase 開工後，該 Phase 的正式實作規格、開發設計與測試文件
 
-**Layer 3 — 尚未建立，Phase 開工時才生：**
-- `實作規格書.md` — 該 Phase 必須做到什麼＋驗收意圖
-- `開發設計方針.md` — 正式實作契約與 technical SSOT（架構、模組、API、MCP、資料流；implementer 角色）
-- `測試指南.md` — 操作層驗收（verifier 角色）
-- `待決事項.md` — 只收真正無法從既有規格推導、且會影響核心玩法的問題
-
-> 不要為了湊齊文件而預先建立空檔。目前 repo 的主要專案文件是 `AGENTS.md`、`PROJECT_BRIEF.md`、`規格企劃.md`、`技術棧討論.md`。其中 `技術棧討論.md` 是暫時 review 文件，討論完成後內容應編入 `開發設計方針.md`，再停止維護或刪除。
+> 不要為了「先想完整」而提前設計後續 Phase。資料模型、API、事件、權限實作、Snapshot、Combat、Tactical 等細節，原則上等對應 Phase 再決定。
 
 Report to user: current progress, and any issues with their scope of impact.
 
@@ -46,8 +41,6 @@ Report to user: current progress, and any issues with their scope of impact.
 ## 文件查閱規則
 
 `AGENTS.md` 與 `PROJECT_BRIEF.md` 開場整份讀。**`規格企劃.md` 一律標題 grep 定位、只讀該段**（讀到下一個同級標題為止），整份讀會被工具截斷。
-
-`技術棧討論.md` 只在技術選型／架構 review 任務使用；如果 `開發設計方針.md` 已建立且某決策已正式落入方針，**正式方針優先，討論稿不再覆蓋它**。
 
 **不要依賴行號**——行號隨編輯漂移，一律以標題或關鍵字定位。
 
@@ -70,7 +63,7 @@ grep -n "^## \|^### " 規格企劃.md
 | Combat Engine / Quick / Tactical / Conditions / Death Save | 六 |
 | Adventure / Campaign Runtime / AI DM write-back / Importer | 七 |
 | NPC / Monster / Scene / Knowledge / Roll System | 八 |
-| Timeline / GameTransaction / Undo / Snapshot | 九 |
+| Timeline / GameTransaction / Snapshot | 九 |
 | Inventory / Loot / Shop / Quest / Rest | 十 |
 | 資料生命週期 / Export / Import | 十一 |
 | **第一版明確不做** | 十二 |
@@ -83,35 +76,29 @@ grep -n "^## \|^### " 規格企劃.md
 
 **同一件事只住一個地方。**
 
-| 住哪 | 放什麼 | 例 |
-|---|---|---|
-| **`規格企劃.md`** | 產品行為與**為什麼**：跑團方式、權限、規則選擇、UI 行為、明確不做 | 「Quick Combat 不追移動距離，Dash 只是敘事宣告」 |
-| **`PROJECT_BRIEF.md`** | 當前 Phase、Roadmap、下一步、文件索引 | 「下一步：規劃 P0」 |
-| **`技術棧討論.md`** | **暫時性 review / 提案**；收集技術候選、外部 AI 意見與尚未正式落檔的架構選擇 | 「Vite vs Next.js」「Permission projection 怎麼做」 |
-| **SRD / 規則資料檔**（P0 建立） | **所有規則內容與可調數值** | Spell、Monster stat block、Class progression table |
-| **`實作規格書.md`** | 該 Phase 什麼必須為真（驗收意圖） | 「從空白可建出合法的 Fighter 5 / Wizard 5」 |
-| **`開發設計方針.md`** | **正式 technical SSOT**：技術棧、架構、模組、API、MCP、資料流、接線 | 「Reference file truth → idempotent DB import」 |
-| **`待決事項.md`** | 真正還沒拍板、會影響核心玩法的問題 | — |
+| 住哪 | 放什麼 |
+|---|---|
+| **`規格企劃.md`** | 產品行為與為什麼：跑團方式、權限、規則選擇、UI 行為、明確不做 |
+| **`PROJECT_BRIEF.md`** | 當前 Phase、Roadmap、下一步、文件索引 |
+| **`技術棧討論.md`** | 暫時性的基礎技術選型討論：語言、Framework、DB、基本測試／部署工具 |
+| **`docs/Px/實作規格.md`** | 該 Phase 完成後什麼必須為真、驗收意圖；不寫具體 DB/API |
+| **`docs/Px/開發設計方針.md`** | 該 Phase 的具體實作契約：資料模型、模組、API、資料流、接線、必要技術決策 |
+| **`docs/Px/測試指南.md`** | 該 Phase 的自動／人工驗收流程與測試證據要求 |
+| **SRD / 規則資料檔** | 所有規則內容與可調數值 |
+| **`待決事項.md`** | 真正無法從既有規格推導、且會影響核心玩法／方向的未決問題 |
 
-`技術棧討論.md` 的生命週期：
+**文件裡不重複抄規則數值**，一律指向資料檔。
 
-```text
-技術提案 / 外部 Review
-↓
-討論收斂
-↓
-正式決策編入 開發設計方針.md
-↓
-技術棧討論.md 停止維護／刪除
-```
+判準：**如果一句話不同，DM／Player 的實際跑團方式可能就不同 → `規格企劃.md`；如果是某 Phase 要做到什麼 → 該 Phase `實作規格.md`；如果是怎麼實作 → 該 Phase `開發設計方針.md`。**
 
-**文件裡不寫規則數值**，一律指向資料檔。理由：SRD 內容量大且會逐步擴充，文件抄一份就會過期。
+## Phase 設計原則
 
-判準沿用規格企劃的開頭：**如果一句話不同，DM／Player 的實際跑團方式可能就不同 → 進 `規格企劃.md`；否則就是實作細節，自己決定。**
+1. **只設計正在開工的 Phase。**
+2. 可以記錄已知的跨 Phase 相容要求，但不要因此提前設計後續 Phase 的 schema / API / module。
+3. P0 可以要求「Character 資料模型不得排斥 Multiclass」，但不用現在決定 P2 Token table 或 P5 Tactical renderer。
+4. 後續 Phase 開工時，以當時真正存在的 codebase 為基礎再設計，比現在猜測更可靠。
 
 ## 修改授權與驗證規則
-
-（單一事實來源；其他文件不重複本節內容。）
 
 除非使用者明確要求「修」、「修改」、「實作」、「處理某個 phase」、「commit」或「提交」，否則不得：
 
@@ -128,32 +115,30 @@ grep -n "^## \|^### " 規格企劃.md
 
 **每個問題都要先想好一個解法再拿出來討論。** 不要把開放題原封退回給使用者。
 
-- 有多種讀法時，把選項連同取捨一起端出來，並且**給出推薦**。
-- 發現設計有洞時，講清楚**影響範圍**（哪個系統、哪條規則、哪個既有決策會被打到），不要只說「這裡怪怪的」。
-- **新提議與 `規格企劃.md` 衝突時，先指出衝突，不得默默推翻既有規格。**
+- 有多種讀法時，把選項連同取捨一起端出來，並且給出推薦。
+- 發現設計有洞時，講清楚影響範圍。
+- 新提議與 `規格企劃.md` 衝突時，先指出衝突，不得默默推翻既有規格。
 - 使用者重申某個決定時，那就是拍板；照做，不要重新辯論。
+- **避免為還沒到的 Phase 過度討論實作。** 純技術細節能延後就延後到對應 Phase。
 
 只有符合以下條件才回頭問使用者：A/B 選擇會明顯改變跑團方式、影響 DM / Player 核心權利、改變規則玩法、造成難以逆轉的產品方向，而且從既有規格無法合理推導。純技術或一般 UX 問題自己決定。
 
 ## 產品層實作守則
 
-這幾條是本專案最容易做錯、而且做錯就違反產品定位的地方：
-
-1. **Server 是唯一真實狀態來源。** AI 不直接操作 DB raw fields；Human 點 Attack 與 AI 呼叫 `attack()` 走同一條 GameAction → Validation → GameTransaction → State。**不要為 AI 開後門 API。**
-2. **秘密靠 Server 過濾，不靠 UI 隱藏。** Secret DC、DM Notes、Hidden Monster、他人 private knowledge 根本不送給 Player / AI Player。先送再用 CSS 或 prompt 藏起來就是 bug。
-3. **Optional 不得變 Mandatory。** Quest、Scene、NPC、Position Note、Campaign Fact 等都可以完全不建立而繼續跑團。任何「必須先建 X 才能做 Y」的流程都要先確認規格是否真的要求。
-4. **網站不接 LLM API。** 後端沒有模型可呼叫，所有 AI 能力來自使用者的外部 AI Session。看到「這裡叫個 LLM 就好了」的設計，先停下來。
-5. **內容是逐步擴充的，SRD 5.1 是起點不是上限。** 使用者需要某個 Race / Class / Subclass / Feat / Spell / Item / Monster 時就提供資料，然後補進系統，內容資料一路長進 repo。**不要因為某個東西不在 SRD 就拒絕做**，也不要求第一版把內容做齊；底層資料結構要能容納非 SRD 內容。
+1. **Server 是唯一真實狀態來源。** AI 不直接操作 DB raw fields；Human 與 AI 使用同一套 GameAction / backend logic。
+2. **秘密靠 Server 過濾，不靠 UI 隱藏。** Secret DC、DM Notes、Hidden Monster、他人 private knowledge 不送給 Player / AI Player。
+3. **Optional 不得變 Mandatory。** Quest、Scene、NPC、Position Note、Campaign Fact 等可以完全不建立而繼續跑團。
+4. **網站不接 LLM API。** 後端沒有模型可呼叫，所有 AI 能力來自使用者的外部 AI Session。
+5. **內容逐步擴充，SRD 5.1 是起點不是上限。** 非 SRD 內容依實際需要逐步加入。
 6. **Human UI 與 AI MCP 共用同一份 backend logic**，不做兩套遊戲邏輯。
 
 ## 工程實作守則
 
 1. **API 簽名預先核對**：呼叫任何專案內模組或 API 前，先 grep / 讀檔核對最新定義與參數列，不憑記憶編寫。
 2. **編譯／型別錯誤同 turn 修完**：跑測試或檢查時取同步結果；有錯就在同一個 turn 內修到通過，不讓錯誤流向使用者。
-3. **角色分離**：實作者改程式碼、測試、fixture 與 `開發設計方針.md`（implementer-owned）。`測試指南.md`、`PROJECT_BRIEF.md` 屬 verifier 角色，實作者只列建議、不直接改。實作者跑完只提供證據（exit code、報告路徑、實際數字），打勾與落檔由 verifier 做——**要求實作者自己勾自己的驗收就是分工失效**。
-4. **驗收對應與變異保真**：每條驗收契約都要有可定位的測試證據；完成後暫時反轉目標判斷，確認對應測試確實轉紅，再還原並重跑全綠。不得只憑測試名稱、註解或成功路徑宣稱已覆蓋。
-5. **權限與可見性必測**：涉及 Role / Seat / Controller 的功能，除了 happy path，至少要有一條「不該看到的人收不到」與一條「已撤銷 token 被拒絕」的測試。
-6. **拒絕原子性與 fixture 隔離**：契約要求零副作用的拒絕操作，前後可序列化狀態必須逐字一致；測試注入的 mock／壞資料必須在案例結束後完整還原，不得污染後續測試。
+3. **驗收對應**：每條 Phase 驗收契約都要有可定位的測試證據。
+4. **權限與可見性必測**：當 Phase 涉及 Role / Seat / Controller 時，除了 happy path，必測不該看到／不該操作的 actor。
+5. **拒絕原子性與 fixture 隔離**：契約要求零副作用的拒絕操作，前後狀態不可被污染；測試 fixture 必須完整還原。
 
 ## 文件關門的固定提交流程
 
@@ -169,7 +154,7 @@ verifier 完成已知問題或 Phase 的文件關門後，在同一 turn `commit
 
 ### Python 執行環境規則
 
-⚠️ 本專案目前**沒有 `.venv`**，技術選型仍在 review。若正式方針採 Python backend，先在專案根目錄建立 `.venv`，之後一律使用 `.\.venv\Scripts\python.exe`，讓 agent 與使用者看到一致結果。
+⚠️ 本專案目前**沒有 `.venv`**。若開始 Python 實作，先在專案根目錄建立，之後一律使用 `.\.venv\Scripts\python.exe`，讓 agent 與使用者看到一致結果。
 
 ### 本機工具
 
@@ -203,18 +188,16 @@ Binary 在 user PATH，但部分 shell 的 PATH 快照可能沒有，直接用�
 cmd /c "C:\Users\User\AppData\Local\agy\bin\agy.exe -p `"<任務>`" --model `"<模型>`" --add-dir `"C:\_work\AI_Work\Projects\adventure-table`" --dangerously-skip-permissions --print-timeout 540s < NUL > <輸出檔> 2>&1"
 ```
 
-四個參數都是必要的，各修一個已驗證的失敗模式：
+四個參數都是必要的：
 
-- `< NUL`：非 TTY 下 agy 會癡等 stdin 永久卡死（連自己的 print-timeout 都不會觸發）。主因是 stdin，不是權限確認框。
-- `> 檔案`：非 TTY 下 stdout 不導檔就看不到任何輸出。
-- `--add-dir <專案路徑>`：不加的話 agy 只在自己的 sandbox 暫存區活動，cwd 不算數——它會回報成功但專案裡什麼都沒發生。
+- `< NUL`：非 TTY 下避免等待 stdin。
+- `> 檔案`：保留輸出。
+- `--add-dir <專案路徑>`：讓 reviewer 讀到專案。
 - `--dangerously-skip-permissions`：單次生效，不動持久設定。
 
-Model selection：`--model` 吃 `agy models` 列出的**完整顯示字串**（含括號內專注程度），例如 `"Gemini 3.5 Flash (High)"`。未指定時一律預設 `"Gemini 3.5 Flash (High)"`。
+Model selection：`--model` 使用 `agy models` 列出的完整顯示字串；未指定時預設 `"Gemini 3.5 Flash (High)"`。
 
-Default mode: read-only reviewer.
-- prompt 內明確要求：不建立 / 修改 / 刪除任何檔案、不跑會寫檔的命令、輸出純文字報告。
-- 跑完必以 `git status` / `git diff` 確認實際改動；agy 的口頭回報不可作為改動依據。
+Default mode: read-only reviewer；跑完必以 `git status` / `git diff` 確認實際改動。
 
 ### Codex CLI (OpenAI) Reviewer
 
@@ -224,10 +207,10 @@ Default mode: read-only reviewer.
 cmd /c "codex exec `"<任務>`" --sandbox read-only -C `"C:\_work\AI_Work\Projects\adventure-table`" --ephemeral -o `"<結果檔>`" < NUL > `"<過程log檔>`" 2>&1"
 ```
 
-- `< NUL`：非 TTY 下會停在 `Reading additional input from stdin...` 永久卡死，與 agy 同族病因。
-- `--sandbox read-only`：引擎層強制唯讀（比 prompt 口頭約束可靠）；寫入任務改 `--sandbox workspace-write`。
-- `-o <結果檔>`：只寫最終回覆，與 stdout 的完整過程 log 分離。
+- `< NUL`：避免非 TTY 等待 stdin。
+- `--sandbox read-only`：引擎層強制唯讀；寫入任務改 `--sandbox workspace-write`。
+- `-o <結果檔>`：只寫最終回覆，與 stdout 完整過程 log 分離。
 
-Model selection：預設 `gpt-5.5` + `model_reasoning_effort = "high"`（來自 `~/.codex/config.toml`）。要換模型用 `-m <model>`，專注程度用 `-c model_reasoning_effort="low/medium/high"` 覆蓋。
+Model selection：預設依本機 Codex 設定；要換模型用 `-m <model>`，專注程度用 `-c model_reasoning_effort="low/medium/high"` 覆蓋。
 
 Default mode: read-only reviewer；結果當第二意見。
