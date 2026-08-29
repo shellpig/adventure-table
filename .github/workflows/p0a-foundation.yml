@@ -1,0 +1,75 @@
+name: P0-A Foundation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install backend
+        working-directory: apps/server
+        run: pip install -e ".[dev]"
+
+      - name: Run backend tests
+        working-directory: apps/server
+        run: pytest
+
+      - name: Validate Alembic baseline
+        working-directory: apps/server
+        env:
+          DATABASE_URL: "sqlite+pysqlite:///:memory:"
+        run: alembic upgrade head
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend
+        working-directory: apps/web
+        run: npm install
+
+      - name: Build frontend
+        working-directory: apps/web
+        run: npm run build
+
+      - name: Run Vitest baseline
+        working-directory: apps/web
+        run: npm test -- --run
+
+      - name: Install Playwright Chromium
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright baseline
+        working-directory: apps/web
+        run: npm run test:e2e
+
+      - name: Validate Docker Compose
+        run: docker compose config
+
+      - name: Start full P0-A stack
+        run: docker compose up -d --build
+
+      - name: Verify full stack readiness
+        run: |
+          curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8000/health
+          curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8000/ready
+          curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://localhost:5173
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop stack
+        if: always()
+        run: docker compose down -v

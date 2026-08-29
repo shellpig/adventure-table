@@ -1,1 +1,13 @@
 .claude/
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+apps/web/node_modules/
+apps/web/dist/
+apps/web/playwright-report/
+apps/web/test-results/
+.DS_Store
