@@ -16,10 +16,11 @@ def main() -> None:
     engine = create_engine(settings.database_url, pool_pre_ping=True)
     try:
         repository = CharacterRepository(engine, load_default_content_registry())
+        build = build_p0_fighter_wizard_fixture()
         character = repository.create_character(
             name=P0_FIXTURE_NAME,
-            build=build_p0_fighter_wizard_fixture(),
-            state=build_p0_fighter_wizard_state(),
+            build=build,
+            state=build_p0_fighter_wizard_state(build),
         )
         print(character.id)
     finally:
