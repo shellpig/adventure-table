@@ -55,9 +55,11 @@ Built-in Content：**SRD 5.1**
 - Backend：Python + FastAPI + Pydantic。
 - Database：PostgreSQL。
 - Human UI / MCP 共用同一 Application Use Case。
-- P0 就保留中央 Authorization / Visibility Projection 架構。
-- P0 就保留 revocable scoped AI token / credential boundary。
-- P0 的 GameTransaction / Persistence 不得堵死 P7 Undo / Snapshot / Restore。
+- 送出去的資料在單一 `project_for(actor)` 過濾點依身分過濾（因為 AI Player 直接讀到 server 送的內容）。
+- AI Join Token 可撤銷，每次 formal action 檢查撤銷狀態。
+- **不做 Undo 機制**：還原改用 Human DM Direct Edit，AI DM 主持時不可還原；Snapshot 保留。
+- P0 就把 Character 分成 Character / CharacterVersion / CharacterState 三層。
+- Entity ID 用 UUID，Character 的 campaign 綁定可為空，reference data 帶 ruleset 標記。
 - Reference SRD / custom definitions：Git file 是 truth，DB 是 derived / indexed copy。
 - Runtime / user-created content：DB 是 truth。
 - OpenAPI → TypeScript client/types 採自動 codegen，避免雙語言 schema drift。
@@ -84,7 +86,7 @@ Built-in Content：**SRD 5.1**
 | **P4** | **Quick Combat** | 完成第一個完整可玩的 Combat MVP：Initiative、Action Economy、Attack、Spell、Condition、Reaction、Death Save 等，不依賴精準地圖 |
 | **P5** | **Tactical Combat** | 在同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE、Wall / Door / Terrain、Automatic OA 等空間系統 |
 | **P6** | **Adventure + AI DM Runtime** | Adventure Definition / Importer、Campaign Runtime、World State、NPC / Scene / Fact、AI DM context 與 write-back |
-| **P7** | **Undo / Snapshot / Export** | 長期 Campaign 的安全性與可攜性：Timeline、Undo、Snapshot / Restore、Archive lifecycle、Character / Adventure / Campaign / Room Import / Export |
+| **P7** | **Snapshot / Export** | 長期 Campaign 的安全性與可攜性：Timeline、Snapshot / Restore、Archive lifecycle、Character / Adventure / Campaign / Room Import / Export。**不含 Undo——還原改用 DM Direct Edit** |
 | **P8** | **QA / Polish** | 全流程整合測試、權限與 AI reconnect 測試、錯誤處理、效能、Responsive UI、UX polish 與第一版收尾 |
 
 ---
@@ -129,8 +131,8 @@ P0 同時建立：
 
 - P1 Multiclass / high-level progression。
 - P2 / P3 Role / Seat / scoped credential / AI Join Token。
-- Server-side Permission / Visibility filtering。
-- P7 Revert Transaction / Snapshot / Restore。
+- P2 Character Workshop（角色可在未加入任何 Campaign 前存在）。
+- P7 Snapshot / Restore 與 Import / Export 的 ID remapping。
 - P5 Tactical geometry 作為可疊加 spatial layer，而不是 Combat Engine 必備前提。
 
 這些是 architecture compatibility requirement，不代表 P0 要把後續功能 UI 提前做完。
