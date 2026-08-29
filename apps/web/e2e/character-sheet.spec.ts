@@ -48,7 +48,7 @@ test('opens the three-page P0 character sheet', async ({ page }) => {
 
   await page.getByRole('tab', { name: /物品欄/ }).click()
   await expect(page.getByText('Potion of Healing', { exact: true })).toBeVisible()
-  await expect(page.getByLabel('物品名稱')).toHaveAttribute('role', 'combobox')
+  await expect(page.getByRole('combobox', { name: '物品名稱' })).toBeVisible()
 })
 
 test('persists HP after a browser reload', async ({ page }) => {
@@ -67,7 +67,7 @@ test('persists temporary HP and a searchable condition selection', async ({ page
   await page.getByTestId('temporary-hp-input-save').click()
   await expect(page.getByTestId('header-temp-hp')).toHaveText('8')
 
-  const conditionBox = page.getByLabel('新增狀態')
+  const conditionBox = page.getByRole('combobox', { name: '新增狀態' })
   await conditionBox.fill('Poisoned')
   await page.getByRole('option', { name: 'Poisoned' }).click()
   await page.getByRole('button', { name: '加入 Condition' }).click()
