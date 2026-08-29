@@ -77,9 +77,18 @@ def compile_builder_draft(
     progression_choices = build_progression_choices(draft, registry)
     choices = foundation_choices + progression_choices
 
+    # Class/subclass rows are authoritative in level_choices and are validated by
+    # validate_progression(). Only the nested proficiency choices still use the
+    # generic choice_selections contract.
+    generic_progression_choices = tuple(
+        choice
+        for choice in progression_choices
+        if choice.option_source == "content:class-proficiency"
+    )
+    validation_choices = foundation_choices + generic_progression_choices
     foundation_issues = [
         issue
-        for issue in validate_foundation_draft(draft, registry, choices)
+        for issue in validate_foundation_draft(draft, registry, validation_choices)
         if issue.code != "incomplete_level_progression"
     ]
     resolved_summary = resolve_creation_summary(draft, registry, choices)
