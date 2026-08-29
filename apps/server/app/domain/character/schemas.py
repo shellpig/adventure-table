@@ -101,6 +101,7 @@ class CharacterBuild(FrozenModel):
     ruleset: str = Field(default="dnd5e-2014", min_length=1)
     content_sources: tuple[str, ...] = ("srd5.1",)
     race_ref: StableKey
+    subrace_ref: StableKey | None = None
     background_ref: StableKey | None = None
     alignment_ref: StableKey | None = None
     character_level: int = Field(ge=1, le=20)
@@ -122,6 +123,11 @@ class CharacterBuild(FrozenModel):
     @classmethod
     def race_ref_is_race(cls, value: str) -> str:
         return require_stable_key(value, kinds={"race"})
+
+    @field_validator("subrace_ref")
+    @classmethod
+    def subrace_ref_is_subrace(cls, value: str | None) -> str | None:
+        return None if value is None else require_stable_key(value, kinds={"subrace"})
 
     @field_validator("background_ref")
     @classmethod

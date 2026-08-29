@@ -4,6 +4,8 @@ export type SearchOption = {
   value: string
   label: string
   description?: string
+  disabled?: boolean
+  disabledReason?: string
 }
 
 type SearchableSelectProps = {
@@ -31,27 +33,37 @@ export function SearchableSelect({
   const [activeIndex, setActiveIndex] = useState(0)
 
   useEffect(() => {
-    if (value) {
-      setQuery(options.find((option) => option.value === value)?.label ?? '')
-    } else if (!open) {
-      setQuery('')
-    }
+    if (value) setQuery(options.find((option) => option.value === value)?.label ?? '')
+    else if (!open) setQuery('')
   }, [open, options, value])
 
   const filtered = useMemo(() => {
     const keyword = query.trim().toLocaleLowerCase()
     const source = keyword
       ? options.filter((option) =>
-          `${option.label} ${option.description ?? ''}`.toLocaleLowerCase().includes(keyword),
+          `${option.label} ${option.description ?? ''} ${option.disabledReason ?? ''}`
+            .toLocaleLowerCase()
+            .includes(keyword),
         )
       : options
     return source.slice(0, 80)
   }, [options, query])
 
   const choose = (option: SearchOption) => {
+    if (option.disabled) return
     onChange(option.value)
     setQuery(option.label)
     setOpen(false)
+  }
+
+  const moveActive = (direction: 1 | -1) => {
+    if (!filtered.length) return
+    let next = activeIndex
+    for (let attempts = 0; attempts < filtered.length; attempts += 1) {
+      next = Math.min(Math.max(next + direction, 0), filtered.length - 1)
+      if (!filtered[next]?.disabled || next === 0 || next === filtered.length - 1) break
+    }
+    setActiveIndex(next)
   }
 
   return (
@@ -91,11 +103,16 @@ export function SearchableSelect({
             if (event.key === 'ArrowDown') {
               event.preventDefault()
               setOpen(true)
-              setActiveIndex((index) => Math.min(index + 1, Math.max(filtered.length - 1, 0)))
+              moveActive(1)
             } else if (event.key === 'ArrowUp') {
               event.preventDefault()
-              setActiveIndex((index) => Math.max(index - 1, 0))
-            } else if (event.key === 'Enter' && open && filtered[activeIndex]) {
+              moveActive(-1)
+            } else if (
+              event.key === 'Enter' &&
+              open &&
+              filtered[activeIndex] &&
+              !filtered[activeIndex].disabled
+            ) {
               event.preventDefault()
               choose(filtered[activeIndex])
             } else if (event.key === 'Escape') {
@@ -123,14 +140,17 @@ export function SearchableSelect({
                 role="option"
                 id={`${listboxId}-${index}`}
                 aria-selected={option.value === value}
+                aria-disabled={option.disabled || undefined}
                 className={index === activeIndex ? 'combobox-option is-active' : 'combobox-option'}
                 key={option.value}
+                disabled={option.disabled}
                 onMouseDown={(event) => event.preventDefault()}
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => choose(option)}
               >
                 <span>{option.label}</span>
                 {option.description ? <small>{option.description}</small> : null}
+                {option.disabledReason ? <small>{option.disabledReason}</small> : null}
               </button>
             ))
           ) : (

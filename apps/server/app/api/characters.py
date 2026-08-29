@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -21,6 +22,16 @@ from app.persistence.characters import CharacterRepository
 router = APIRouter(prefix="/api/characters", tags=["characters"])
 
 
+class CharacterListItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID
+    name: str
+    level: int = Field(ge=1, le=20)
+    class_summary: str
+    version_no: int = Field(ge=1)
+
+
 class CharacterStatePatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -32,6 +43,32 @@ class CharacterStatePatch(BaseModel):
     resources: dict[str, ResourceCounter] | None = None
     hit_dice_state: dict[HitDie, int] | None = None
     inventory_state: list[InventoryEntry] | None = None
+
+
+def _class_summary(character: PersistedCharacter, repository: CharacterRepository) -> str:
+    counts = Counter(character.build.class_progression)
+    order = tuple(dict.fromkeys(character.build.class_progression))
+    parts: list[str] = []
+    for class_ref in order:
+        entry = repository.registry.get(class_ref)
+        parts.append(f"{entry.name} {counts[class_ref]}")
+    return " / ".join(parts)
+
+
+@router.get("", response_model=list[CharacterListItem])
+def list_characters(
+    repository: CharacterRepository = Depends(get_character_repository),
+) -> list[CharacterListItem]:
+    return [
+        CharacterListItem(
+            id=character.id,
+            name=character.name,
+            level=character.build.character_level,
+            class_summary=_class_summary(character, repository),
+            version_no=character.version_no,
+        )
+        for character in repository.list_characters()
+    ]
 
 
 @router.get("/{character_id}", response_model=PersistedCharacter)

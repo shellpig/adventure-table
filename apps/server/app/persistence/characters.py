@@ -43,32 +43,17 @@ character_versions = Table(
     "character_versions",
     metadata,
     Column("id", Uuid(as_uuid=True), primary_key=True),
-    Column(
-        "character_id",
-        Uuid(as_uuid=True),
-        ForeignKey("characters.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    ),
+    Column("character_id", Uuid(as_uuid=True), ForeignKey("characters.id", ondelete="CASCADE"), nullable=False, index=True),
     Column("version_no", Integer, nullable=False),
     Column("build_payload", json_payload_type, nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
-    UniqueConstraint(
-        "character_id",
-        "version_no",
-        name="uq_character_versions_character_version",
-    ),
+    UniqueConstraint("character_id", "version_no", name="uq_character_versions_character_version"),
 )
 
 character_states = Table(
     "character_states",
     metadata,
-    Column(
-        "character_id",
-        Uuid(as_uuid=True),
-        ForeignKey("characters.id", ondelete="CASCADE"),
-        primary_key=True,
-    ),
+    Column("character_id", Uuid(as_uuid=True), ForeignKey("characters.id", ondelete="CASCADE"), primary_key=True),
     Column("state_payload", json_payload_type, nullable=False),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
 )
@@ -100,7 +85,6 @@ class CharacterRepository:
 
         character_id = character_id or uuid4()
         version_id = uuid4()
-
         with self.engine.begin() as connection:
             connection.execute(
                 insert(characters).values(
@@ -129,8 +113,12 @@ class CharacterRepository:
                 .where(characters.c.id == character_id)
                 .values(current_version_id=version_id, updated_at=func.now())
             )
-
         return self.load_character(character_id)
+
+    def list_characters(self) -> tuple[PersistedCharacter, ...]:
+        with self.engine.connect() as connection:
+            ids = connection.scalars(select(characters.c.id).order_by(characters.c.name, characters.c.id)).all()
+        return tuple(self.load_character(character_id) for character_id in ids)
 
     def load_character(self, character_id: UUID) -> PersistedCharacter:
         query = (
@@ -143,19 +131,12 @@ class CharacterRepository:
                 character_versions.c.build_payload,
                 character_states.c.state_payload,
             )
-            .join(
-                character_versions,
-                character_versions.c.id == characters.c.current_version_id,
-            )
-            .join(
-                character_states,
-                character_states.c.character_id == characters.c.id,
-            )
+            .join(character_versions, character_versions.c.id == characters.c.current_version_id)
+            .join(character_states, character_states.c.character_id == characters.c.id)
             .where(characters.c.id == character_id)
         )
         with self.engine.connect() as connection:
             row = connection.execute(query).mappings().one_or_none()
-
         if row is None:
             raise CharacterNotFoundError(str(character_id))
 
@@ -163,7 +144,6 @@ class CharacterRepository:
         state = CharacterState.model_validate(row["state_payload"])
         validate_build_references(build, self.registry)
         validate_state_against_build(state, build, self.registry)
-
         return PersistedCharacter(
             id=row["id"],
             name=row["name"],
@@ -177,15 +157,11 @@ class CharacterRepository:
     def save_state(self, character_id: UUID, state: CharacterState) -> PersistedCharacter:
         current = self.load_character(character_id)
         validate_state_against_build(state, current.build, self.registry)
-
         with self.engine.begin() as connection:
             result = connection.execute(
                 update(character_states)
                 .where(character_states.c.character_id == character_id)
-                .values(
-                    state_payload=state.model_dump(mode="json"),
-                    updated_at=func.now(),
-                )
+                .values(state_payload=state.model_dump(mode="json"), updated_at=func.now())
             )
             if result.rowcount != 1:
                 raise CharacterNotFoundError(str(character_id))
@@ -194,5 +170,4 @@ class CharacterRepository:
                 .where(characters.c.id == character_id)
                 .values(updated_at=func.now())
             )
-
         return self.load_character(character_id)

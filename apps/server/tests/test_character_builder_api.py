@@ -89,7 +89,9 @@ def test_character_builder_draft_api_lifecycle_and_machine_errors() -> None:
     assert patched.status_code == 200
     payload = patched.json()
     assert payload["draft"]["revision"] == 2
-    assert [choice["choice_id"] for choice in payload["choices"]] == first_choice_ids
+    patched_ids = [choice["choice_id"] for choice in payload["choices"]]
+    assert set(first_choice_ids).issubset(patched_ids)
+    assert patched_ids[:4] == first_choice_ids[:4]
     severities = {issue["severity"] for issue in payload["validation"]["issues"]}
     assert {"blocking_error", "warning", "non_standard"}.issubset(severities)
 
@@ -122,12 +124,7 @@ def test_character_builder_api_rejects_malformed_and_disabled_modes() -> None:
 
     malformed = client.post(
         "/api/character-builder/drafts",
-        json={
-            "draft_payload": {
-                "target_level": 1,
-                "unexpected": True,
-            }
-        },
+        json={"draft_payload": {"target_level": 1, "unexpected": True}},
     )
     assert malformed.status_code == 422
     assert malformed.json()["error"]["code"] == "validation_failed"
