@@ -8,7 +8,7 @@
 - **一句話**：網站只管需要共享、同步、計算、保存、權限與 AI 接入的東西，其餘還給 DM 的嘴巴
 - **首發規則集**：D&D 5e 2014；Built-in Content：SRD 5.1（CC BY 4.0）
 - **專案性質**：朋友間私人使用，非預計商品化平台
-- **目前階段**：已進入 P0 實作；**P0-A — Project Foundation、P0-B — Character-Relevant SRD Foundation 已完成**，下一步是 P0-C — Character Core & Persistence
+- **目前階段**：已進入 P0 實作；**P0-A — Project Foundation、P0-B — Character-Relevant SRD Foundation、P0-C — Character Core & Persistence 已完成**，下一步是 P0-D — Character Rules & Backend API
 - **目前進度**：以 `PROJECT_BRIEF.md` 為單一事實來源
 - **基礎技術棧**：目前方向見 `技術棧討論.md`。該檔只討論語言／Framework／DB 等基礎選型，不承擔各 Phase 的實作設計
 
