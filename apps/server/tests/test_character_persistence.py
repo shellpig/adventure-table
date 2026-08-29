@@ -28,7 +28,22 @@ def test_p0_fixture_save_reload_and_state_isolation(tmp_path) -> None:
     repository = CharacterRepository(engine, registry)
 
     build = build_p0_fighter_wizard_fixture()
-    state = build_p0_fighter_wizard_state()
+    state = build_p0_fighter_wizard_state(build)
+
+    starting_inventory = {
+        entry.item_ref: entry.quantity for entry in build.starting_equipment
+    }
+    initial_live_inventory = {
+        entry.item_ref: entry.quantity for entry in state.inventory_state
+    }
+    assert initial_live_inventory == starting_inventory
+    assert initial_live_inventory == {
+        "srd5.1:equipment:chain-mail": 1,
+        "srd5.1:equipment:shield": 1,
+        "srd5.1:equipment:longsword": 1,
+        "srd5.1:item:potion-of-healing-common": 2,
+    }
+
     created = repository.create_character(
         name=P0_FIXTURE_NAME,
         build=build,
