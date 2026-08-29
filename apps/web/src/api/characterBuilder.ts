@@ -1,6 +1,7 @@
 export type BuilderMode = 'create' | 'level_up' | 'build_edit' | 'correction'
 export type BuilderIssueSeverity = 'blocking_error' | 'warning' | 'non_standard'
 export type AbilityGenerationMethod = 'standard_array' | 'point_buy' | 'manual'
+export type BuilderHPMethod = 'first_level' | 'fixed_average' | 'manual_rolled'
 export type BuilderOptionKind =
   | 'reference'
   | 'counted_reference'
@@ -33,6 +34,14 @@ export type BuilderAbilityGenerationInput = {
   provenance?: string | null
 }
 
+export type BuilderLevelChoice = {
+  character_level: number
+  class_ref: string
+  hp_method: BuilderHPMethod
+  hp_base_gain: number
+  subclass_ref?: string | null
+}
+
 export type AbilityGenerationRules = {
   standard_array: number[]
   point_buy_budget: number
@@ -58,7 +67,7 @@ export type BuilderDraftPayload = {
   background_selection?: BuilderReferenceSelection | null
   alignment_selection?: BuilderReferenceSelection | null
   ability_generation?: BuilderAbilityGenerationInput | null
-  level_choices?: Record<string, unknown>[]
+  level_choices?: BuilderLevelChoice[]
   choice_selections?: Record<string, BuilderChoiceSelection>
   spell_choices?: Record<string, unknown>
   starting_equipment_choices?: Record<string, unknown>
@@ -102,6 +111,8 @@ export type BuilderChoiceOption = {
   nested_choice_id?: string | null
   branch_key?: string | null
   disabled_reason?: string | null
+  hit_die_size?: number | null
+  fixed_hp_gain?: number | null
 }
 
 export type BuilderChoice = {
@@ -132,6 +143,23 @@ export type BuilderAbilityScoreSummary = {
   overridden: boolean
 }
 
+export type BuilderProgressionNodeSummary = {
+  character_level: number
+  class_ref: string
+  class_name: string
+  class_level: number
+  starting_class: boolean
+  multiclass_entry: boolean
+  hit_die_size: number
+  fixed_hp_gain: number
+  hp_method: BuilderHPMethod
+  hp_base_gain: number
+  subclass_required: boolean
+  subclass_ref?: string | null
+  subclass_name?: string | null
+  automatic_feature_refs: string[]
+}
+
 export type BuilderView = {
   draft: BuilderDraft
   resolved_summary: {
@@ -141,10 +169,13 @@ export type BuilderView = {
     subrace_name?: string | null
     background_name?: string | null
     alignment_name?: string | null
+    starting_class_name?: string | null
+    class_summary?: string | null
     selected_reference_count: number
     choice_selection_count: number
     grants: BuilderGrantSummary[]
     ability_scores: BuilderAbilityScoreSummary[]
+    progression: BuilderProgressionNodeSummary[]
   }
   choices: BuilderChoice[]
   validation: BuilderValidationResult
