@@ -193,6 +193,18 @@ type APIErrorPayload = {
   error?: { code?: string; message?: string }
 }
 
+type BuilderPatchQueue = {
+  tail: Promise<void>
+  latestRevision?: number
+}
+
+// Builder drafts use optimistic revision checks on the server. React can dispatch
+// a second interaction before the first mutation's pending state has rendered,
+// so serialize PATCHes per draft and carry the revision returned by the previous
+// write into the next queued write. This keeps rapid level-rail edits lossless
+// without weakening the server's conflict protection against other clients.
+const builderPatchQueues = new Map<string, BuilderPatchQueue>()
+
 async function builderRequest<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
   const response = await fetch(input, {
     ...init,
@@ -240,10 +252,29 @@ export function patchBuilderDraft(
   expectedRevision: number,
   draftPayload: BuilderDraftPayload,
 ): Promise<BuilderView> {
-  return builderRequest<BuilderView>(`/api/character-builder/drafts/${draftId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ expected_revision: expectedRevision, draft_payload: draftPayload }),
-  })
+  let queue = builderPatchQueues.get(draftId)
+  if (!queue) {
+    queue = { tail: Promise.resolve(), latestRevision: expectedRevision }
+    builderPatchQueues.set(draftId, queue)
+  }
+
+  const run = queue.tail
+    .catch(() => undefined)
+    .then(async () => {
+      const revision = Math.max(expectedRevision, queue?.latestRevision ?? expectedRevision)
+      const view = await builderRequest<BuilderView>(`/api/character-builder/drafts/${draftId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ expected_revision: revision, draft_payload: draftPayload }),
+      })
+      if (queue) queue.latestRevision = view.draft.revision
+      return view
+    })
+
+  queue.tail = run.then(
+    () => undefined,
+    () => undefined,
+  )
+  return run
 }
 
 export function validateBuilderDraft(draftId: string): Promise<BuilderValidationResult> {
@@ -254,5 +285,6 @@ export function validateBuilderDraft(draftId: string): Promise<BuilderValidation
 }
 
 export function cancelBuilderDraft(draftId: string): Promise<void> {
+  builderPatchQueues.delete(draftId)
   return builderRequest<void>(`/api/character-builder/drafts/${draftId}`, { method: 'DELETE' })
 }
