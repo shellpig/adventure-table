@@ -10,25 +10,26 @@
 - **專案性質**：朋友間私人使用，非預計商品化平台
 - **目前階段**：產品規格已定案，**尚未進入實作**。下一步是規劃 P0 `Character Core + SRD / Rules Foundation`
 - **目前進度**：以 `PROJECT_BRIEF.md` 為單一事實來源
-- **技術選型**：尚未決定。規格企劃刻意不綁 DB / API / 框架，開工前由實作者提案
+- **技術選型**：**討論中，尚未正式拍板**。目前 review 中的推薦方案見 `技術棧討論.md`；只有整理進 `開發設計方針.md` 後才算正式 technical SSOT
 
 ## New Conversation Opening Check
 
-**Layer 1 — 必讀（目前兩份都不大，整份讀）：**
+**Layer 1 — 必讀：**
 1. `AGENTS.md`（本檔）
 2. `PROJECT_BRIEF.md`（當前 Phase、Roadmap、文件索引）
 3. `git log --oneline -10`
 
-**Layer 2 — 按任務讀對應段落（見下方查閱規則）：**
+**Layer 2 — 按任務讀對應文件／段落（見下方查閱規則）：**
 - `規格企劃.md` — **產品與玩法的單一事實來源**。約 70 KB，一律標題定位、只讀該段
+- `技術棧討論.md` — **暫時性技術 review 文件**；只有做技術選型、架構討論、P0 開發設計前置審查時才讀。它不是正式 technical SSOT
 
 **Layer 3 — 尚未建立，Phase 開工時才生：**
 - `實作規格書.md` — 該 Phase 必須做到什麼＋驗收意圖
-- `開發設計方針.md` — 實作契約（架構、模組、API、MCP、資料流；implementer 角色）
+- `開發設計方針.md` — 正式實作契約與 technical SSOT（架構、模組、API、MCP、資料流；implementer 角色）
 - `測試指南.md` — 操作層驗收（verifier 角色）
 - `待決事項.md` — 只收真正無法從既有規格推導、且會影響核心玩法的問題
 
-> 不要為了湊齊文件而預先建立空檔。目前 repo 就只有 `PROJECT_BRIEF.md` 與 `規格企劃.md`。
+> 不要為了湊齊文件而預先建立空檔。目前 repo 的主要專案文件是 `AGENTS.md`、`PROJECT_BRIEF.md`、`規格企劃.md`、`技術棧討論.md`。其中 `技術棧討論.md` 是暫時 review 文件，討論完成後內容應編入 `開發設計方針.md`，再停止維護或刪除。
 
 Report to user: current progress, and any issues with their scope of impact.
 
@@ -45,6 +46,8 @@ Report to user: current progress, and any issues with their scope of impact.
 ## 文件查閱規則
 
 `AGENTS.md` 與 `PROJECT_BRIEF.md` 開場整份讀。**`規格企劃.md` 一律標題 grep 定位、只讀該段**（讀到下一個同級標題為止），整份讀會被工具截斷。
+
+`技術棧討論.md` 只在技術選型／架構 review 任務使用；如果 `開發設計方針.md` 已建立且某決策已正式落入方針，**正式方針優先，討論稿不再覆蓋它**。
 
 **不要依賴行號**——行號隨編輯漂移，一律以標題或關鍵字定位。
 
@@ -84,10 +87,23 @@ grep -n "^## \|^### " 規格企劃.md
 |---|---|---|
 | **`規格企劃.md`** | 產品行為與**為什麼**：跑團方式、權限、規則選擇、UI 行為、明確不做 | 「Quick Combat 不追移動距離，Dash 只是敘事宣告」 |
 | **`PROJECT_BRIEF.md`** | 當前 Phase、Roadmap、下一步、文件索引 | 「下一步：規劃 P0」 |
+| **`技術棧討論.md`** | **暫時性 review / 提案**；收集技術候選、外部 AI 意見與尚未正式落檔的架構選擇 | 「Vite vs Next.js」「Permission projection 怎麼做」 |
 | **SRD / 規則資料檔**（P0 建立） | **所有規則內容與可調數值** | Spell、Monster stat block、Class progression table |
 | **`實作規格書.md`** | 該 Phase 什麼必須為真（驗收意圖） | 「從空白可建出合法的 Fighter 5 / Wizard 5」 |
-| **`開發設計方針.md`** | 實作契約（架構、模組、API、MCP、接線） | — |
+| **`開發設計方針.md`** | **正式 technical SSOT**：技術棧、架構、模組、API、MCP、資料流、接線 | 「Reference file truth → idempotent DB import」 |
 | **`待決事項.md`** | 真正還沒拍板、會影響核心玩法的問題 | — |
+
+`技術棧討論.md` 的生命週期：
+
+```text
+技術提案 / 外部 Review
+↓
+討論收斂
+↓
+正式決策編入 開發設計方針.md
+↓
+技術棧討論.md 停止維護／刪除
+```
 
 **文件裡不寫規則數值**，一律指向資料檔。理由：SRD 內容量大且會逐步擴充，文件抄一份就會過期。
 
@@ -153,7 +169,7 @@ verifier 完成已知問題或 Phase 的文件關門後，在同一 turn `commit
 
 ### Python 執行環境規則
 
-⚠️ 本專案目前**沒有 `.venv`**，技術選型也還沒定。若之後需要 Python，先在專案根目錄建立，之後一律使用 `.\.venv\Scripts\python.exe`，讓 agent 與使用者看到一致結果。
+⚠️ 本專案目前**沒有 `.venv`**，技術選型仍在 review。若正式方針採 Python backend，先在專案根目錄建立 `.venv`，之後一律使用 `.\.venv\Scripts\python.exe`，讓 agent 與使用者看到一致結果。
 
 ### 本機工具
 
