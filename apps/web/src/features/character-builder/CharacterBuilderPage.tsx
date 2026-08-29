@@ -14,9 +14,10 @@ import {
 } from '../../api/characterBuilder'
 import { SearchableSelect } from '../../components/SearchableSelect'
 import { ClassProgressionStep } from './ClassProgressionStep'
+import { SpellcastingStep } from './SpellcastingStep'
 import './builder.css'
 
-type BuilderStep = 'basic' | 'origin' | 'abilities' | 'class'
+type BuilderStep = 'basic' | 'origin' | 'abilities' | 'class' | 'spells'
 
 type ChoiceEditorProps = {
   choice: BuilderChoice
@@ -270,13 +271,25 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
       )
     : false
 
+  const saveBasicDetails = () => {
+    const previousTarget = view.draft.draft_payload.target_level ?? 1
+    const payload: BuilderDraftPayload = {
+      basic: { name, ruleset: 'dnd5e-2014' },
+      target_level: targetLevel,
+      level_choices: (view.draft.draft_payload.level_choices ?? []).slice(0, targetLevel),
+      roleplay_profile: { appearance, biography },
+    }
+    if (previousTarget !== targetLevel) payload.spell_choices = {}
+    save.mutate(payload)
+  }
+
   return (
     <main className="builder-page">
       <div className="builder-shell">
         <header className="builder-topbar">
           <div>
             <a href="/characters" className="builder-back">← Character Workshop</a>
-            <p className="eyebrow">P1-D · Create Character</p>
+            <p className="eyebrow">P1-E · Create Character</p>
             <h1>{view.resolved_summary.name?.trim() || 'Unnamed character'}</h1>
           </div>
           <div className="builder-save-state">
@@ -301,7 +314,10 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
             <button className={step === 'class' ? 'is-active' : ''} onClick={() => setStep('class')}>
               <span>04</span><div><strong>Class</strong><small>Level-by-level rail</small></div>
             </button>
-            <button disabled><span>05</span><div><strong>Review</strong><small>P1-F</small></div></button>
+            <button className={step === 'spells' ? 'is-active' : ''} onClick={() => setStep('spells')}>
+              <span>05</span><div><strong>Spellcasting</strong><small>Access & resources</small></div>
+            </button>
+            <button disabled><span>06</span><div><strong>Review</strong><small>P1-F</small></div></button>
           </aside>
 
           <section className="builder-form">
@@ -340,14 +356,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   type="button"
                   className="button primary"
                   disabled={saving || targetLevel < 1 || targetLevel > 20}
-                  onClick={() =>
-                    save.mutate({
-                      basic: { name, ruleset: 'dnd5e-2014' },
-                      target_level: targetLevel,
-                      level_choices: (view.draft.draft_payload.level_choices ?? []).slice(0, targetLevel),
-                      roleplay_profile: { appearance, biography },
-                    })
-                  }
+                  onClick={saveBasicDetails}
                 >
                   Save Basic Details
                 </button>
@@ -494,6 +503,14 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                 onSave={(payload) => save.mutate(payload)}
               />
             ) : null}
+
+            {step === 'spells' ? (
+              <SpellcastingStep
+                view={view}
+                disabled={saving}
+                onSave={(payload) => save.mutate(payload)}
+              />
+            ) : null}
           </section>
 
           <aside className="builder-summary">
@@ -542,7 +559,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   </li>
                 ))}
               </ul>
-              <p className="builder-hint">P1-D validates class progression, ASI/Feat and structural choices. Confirm remains locked until P1-E and P1-F complete spellcasting, equipment and final review.</p>
+              <p className="builder-hint">P1-E validates class progression, structural choices, spell access and spell resource capacity. Confirm remains locked until P1-F completes equipment and final review.</p>
             </div>
 
             <button

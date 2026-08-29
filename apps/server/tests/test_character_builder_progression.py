@@ -15,6 +15,7 @@ from app.domain.character_builder.schemas import (
     BuilderLevelChoice,
     BuilderMode,
     BuilderReferenceSelection,
+    BuilderSpellChoiceInput,
 )
 
 
@@ -94,6 +95,30 @@ def _payload(levels: tuple[BuilderLevelChoice, ...], *, scores: dict[str, int] |
     )
 
 
+def _spell_choices_for_profiles(result) -> dict[str, BuilderSpellChoiceInput]:
+    choices: dict[str, BuilderSpellChoiceInput] = {}
+    for profile in result.resolved_summary.spellcasting_profiles:
+        cantrips = tuple(
+            spell.spell_key
+            for spell in profile.available_spells
+            if spell.level == 0
+        )[: profile.cantrip_count]
+        leveled = tuple(
+            spell.spell_key
+            for spell in profile.available_spells
+            if 1 <= spell.level <= profile.max_spell_level
+        )
+        choices[profile.profile_id] = BuilderSpellChoiceInput(
+            cantrip_keys=cantrips,
+            known_spell_keys=leveled[: profile.known_spell_count],
+            spellbook_spell_keys=leveled[: profile.spellbook_count],
+            # Preparing fewer than the cap is legal; these P1-C regressions do
+            # not exercise daily preparation and intentionally leave it empty.
+            prepared_spell_keys=(),
+        )
+    return choices
+
+
 def _with_required_choices(payload: BuilderDraftPayload, registry):
     selections: dict[str, BuilderChoiceSelection] = {}
     used_reference_option_ids: set[str] = set()
@@ -117,7 +142,13 @@ def _with_required_choices(payload: BuilderDraftPayload, registry):
             None,
         )
         if unresolved is None:
-            return _draft(current)
+            # P1-E makes spellcasting a required part of a complete Build.
+            # Upgrade the older P1-C/P1-D fixture by selecting deterministic,
+            # low-level legal spells from the server-resolved profile options.
+            spell_choices = dict(current.spell_choices)
+            for profile_id, selection in _spell_choices_for_profiles(result).items():
+                spell_choices.setdefault(profile_id, selection)
+            return _draft(current.model_copy(update={"spell_choices": spell_choices}))
 
         available = [
             option

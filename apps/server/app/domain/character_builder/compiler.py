@@ -4,7 +4,14 @@ from dataclasses import dataclass
 
 from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
-from app.domain.character.schemas import AbilityScores, CharacterBuild, RoleplayProfile
+from app.domain.character.schemas import (
+    AbilityScores,
+    CharacterBuild,
+    RoleplayProfile,
+    SpellResourcePool,
+    SpellSlotCapacity,
+    SpellcastingProfile,
+)
 from app.domain.character_builder.basics import resolve_creation_summary
 from app.domain.character_builder.choices import build_foundation_choices
 from app.domain.character_builder.multiclass import multiclass_option_failure_reason
@@ -24,6 +31,7 @@ from app.domain.character_builder.schemas import (
     BuilderResolvedSummary,
     BuilderValidationResult,
 )
+from app.domain.character_builder.spellcasting import compile_spellcasting
 from app.domain.character_builder.structural import (
     StructuralCompilation,
     build_structural_choices,
@@ -237,6 +245,27 @@ def compile_builder_draft(
         }
     )
 
+    automatic_features = tuple(
+        dict.fromkeys(
+            feature_ref
+            for node in nodes
+            for feature_ref in node.automatic_feature_refs
+        )
+    )
+    spellcasting = compile_spellcasting(
+        draft,
+        registry,
+        effective_abilities=_effective_abilities(resolved_summary),
+        feature_refs=tuple(dict.fromkeys((*automatic_features, *structural.feature_refs))),
+    )
+    issues.extend(spellcasting.issues)
+    resolved_summary = resolved_summary.model_copy(
+        update={
+            "spellcasting_profiles": spellcasting.profiles,
+            "spell_resource_pools": spellcasting.resource_pools,
+        }
+    )
+
     build_candidate: CharacterBuild | None = None
     has_blocking = any(issue.severity is BuilderIssueSeverity.BLOCKING_ERROR for issue in issues)
     abilities = _build_ability_scores(resolved_summary)
@@ -254,6 +283,32 @@ def compile_builder_draft(
             registry,
             grants=resolved_summary.grants,
             choices=choices,
+        )
+        build_profiles = tuple(
+            SpellcastingProfile(
+                profile_id=profile.profile_id,
+                source_type=profile.source_type,
+                source_key=profile.source_key,
+                class_ref=profile.class_ref,
+                ability=profile.ability,
+                access_model=profile.access_model,
+                resource_pool_type=profile.resource_pool_type,
+                max_spell_level=profile.max_spell_level,
+                prepared_limit=profile.prepared_limit,
+            )
+            for profile in spellcasting.profiles
+        )
+        build_pools = tuple(
+            SpellResourcePool(
+                pool_id=pool.pool_id,
+                pool_type=pool.pool_type,
+                source_profile_id=pool.source_profile_id,
+                slots=tuple(
+                    SpellSlotCapacity(level=slot.level, capacity=slot.count)
+                    for slot in pool.slots
+                ),
+            )
+            for pool in spellcasting.resource_pools
         )
         build_candidate = CharacterBuild(
             ruleset=payload.basic.ruleset,
@@ -276,13 +331,16 @@ def compile_builder_draft(
             skill_choices=tuple(dict.fromkeys((*compiled.skill_choices, *structural.skill_choices))),
             feature_refs=tuple(dict.fromkeys((*compiled.feature_refs, *structural.feature_refs))),
             feat_refs=structural.feat_refs,
+            spellcasting_profiles=build_profiles,
+            spell_access_entries=spellcasting.spell_access_entries,
+            spell_resource_pools=build_pools,
             hp_progression=compiled.hp_progression,
             roleplay_profile=_roleplay_profile(draft),
             numeric_overrides=payload.numeric_overrides,
         )
 
-    # P1-D now completes structural Build choices, but Confirm stays closed until
-    # P1-E/P1-F finish spellcasting, equipment and the final review workflow.
+    # P1-E completes spell progression, but Confirm stays closed until P1-F
+    # finishes equipment, final review and atomic character creation.
     if not has_blocking:
         issues.append(
             BuilderIssue(
@@ -290,8 +348,8 @@ def compile_builder_draft(
                 severity=BuilderIssueSeverity.BLOCKING_ERROR,
                 path="draft_payload",
                 message=(
-                    "Class progression and structural choices are valid. Spellcasting, equipment and "
-                    "final review must be completed before Confirm is enabled."
+                    "Spellcasting progression is valid. Starting equipment and final review must be "
+                    "completed before Confirm is enabled."
                 ),
             )
         )
