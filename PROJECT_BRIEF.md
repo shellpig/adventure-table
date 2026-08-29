@@ -33,9 +33,9 @@ Built-in Content：**SRD 5.1**
 
 ## 當前進度
 
-目前狀態：**P0 — Character Core + SRD / Rules Foundation 已完成；P0-A～P0-F 全部關門並通過完整 regression。下一步是規劃 P1 — Character Builder Complete 與 P1 Subphases，尚未開始 P1 coding。**
+目前狀態：**P0 — Character Core + SRD / Rules Foundation 已完成；P1 — Character Builder Complete 已完成規劃與 Subphase 拆分，P1-A～P1-H 三份實作文件已對齊。下一步是 P1-A — Builder Domain & Draft Foundation，尚未開始 P1 coding。**
 
-已完成：
+已完成的產品／規劃工作：
 
 - 產品定位與範圍定案。
 - Human / AI 共桌模式定案。
@@ -47,36 +47,35 @@ Built-in Content：**SRD 5.1**
 - Timeline / Snapshot / Export 等產品層行為定案。
 - 第一版明確不做項目已整理。
 - 大 Phase P0～P8 已排定。
-- 全專案規則已補上：**每個 Phase 在 coding 前必須拆成可獨立實作、驗證、commit 的 Subphases；只拆當前 Phase，不提前拆後續 Phase。**
-- 基礎技術棧已初步收斂：React + TypeScript + Vite / Python + FastAPI / PostgreSQL。
-- `技術棧討論.md` 已瘦身，只保留基礎技術選型，不再提前設計各 Phase。
-- `docs/P0/實作規格.md`、`開發設計方針.md`、`測試指南.md` 已重排為完全對齊的 P0-A～P0-F。
-- P0 的 SRD scope 已縮為 **Character-Relevant SRD**；Monster / Beast stat blocks 明確延後到 P4-A。
-- **P0-A — Project Foundation 已實作完成**：React/TypeScript/Vite app shell、TanStack Query provider、FastAPI、PostgreSQL readiness、SQLAlchemy/Alembic baseline、Docker Compose、pytest/Vitest/Playwright baseline 與 CI 驗證均已建立。
-- P0-A CI 已實際驗證 fresh checkout 的 backend tests、Alembic、frontend install/build、Vitest、Playwright，以及 Docker Compose 全棧啟動與 `/health`、`/ready`、Web 回應。
-- **P0-B — Character-Relevant SRD Foundation 已實作完成**：`data/srd5.1/` 已建立 version-controlled normalized content；目前包含 22 個 character-relevant categories、1,944 筆 entries，並保留 source / ruleset / license / pinned extraction metadata。
-- P0-B 已建立 category-specific Pydantic schemas、stable key（`srd5.1:<kind>:<index>`）、`ContentRegistry`、manifest / count validation、recursive required cross-reference validation、啟動 fail-fast 與 query baseline。
-- P0-B 負向驗證已覆蓋 duplicate key、missing required field、malformed spell value、dangling reference 與 Monster / Beast scope violation；Monster / Beast 仍未進入 P0。
-- P0-B 完整 CI 已實際通過 backend tests、Alembic、frontend build、Vitest、Playwright、Docker Compose config、全棧啟動與 `/health`、`/ready`、Web response，證明 P0-B 未破壞 P0-A baseline。
-- **P0-C — Character Core & Persistence 已實作完成**：正式建立 Character identity、immutable Build Version、mutable Current State，以及 Build / State 分離的 Pydantic schema 與 reference validation。
-- P0-C 已建立 `characters`、`character_versions`、`character_states` persistence；Build 以 immutable JSONB snapshot 保存，State 獨立保存，並提供 Alembic migration、repository 與 developer fixture seed command。
-- P0-C 固定 Human Fighter 5 / Wizard 5 fixture 已覆蓋 class acquisition order、resolved Ability Scores、HP progression、Wizard Spellbook vs Prepared State、Spell Slots、5d10 + 5d6 Hit Dice、Starting Equipment 與 live Inventory。
-- P0-C regression 已實際驗證 Save / Reload、fresh application/DB session persistence、Build/State isolation、Prepared access validation、Hit Dice persistence，以及 Starting Equipment 不會在 Reload 時覆寫後續 live Inventory；完整 CI 同時通過既有 backend、Alembic、frontend、Playwright 與 Docker Compose 全棧驗證。
-- **P0-D — Character Rules & Backend API 已實作完成**：建立純 Python server-authoritative rules layer，提供 Ability/PB/Skill/Save/Passive Perception/Initiative/AC/Max HP/Spell Save DC/Spell Attack/Hit Dice 等角色衍生計算，並以 `CharacterSheetDTO` 統一輸出角色卡 read model。
-- P0-D 已正式接上 Reference Content API、Character read、Character Sheet read 與 Current State PATCH；State mutation 可承載 HP、Temp HP、Prepared Spells、Conditions、Spell/Class resources、Available Hit Dice，以及 live Inventory add/remove/quantity/equipped state，且不建立新 Build Version。
-- P0-D Numeric Override 已固定支援 Ability、AC、Max HP、Skill Modifier、Spell Save DC 等允許 key；標準 Human Fighter 5 / Wizard 5 fixture 與 override variant 已驗證 STR/Skill/Save、AC 18→16、Max HP 74→84/override 80、Wizard DC 15 / Attack +7 等 authoritative results。
-- P0-D regression 已覆蓋 machine-readable API errors、prepared/build 分離、live Inventory authoritative AC、Current HP 對 Max HP override 的驗證，以及 malformed ref/type、illegal prepared entry、Hit Dice/HP 上限、negative quantity 等 invalid State request 的原子失敗；完整 CI 通過 backend tests、Alembic、frontend build、Vitest、Playwright、Docker Compose、全棧啟動與 readiness。
-- **P0-E — Character Sheet & State UI 已實作完成**：建立 `/characters/:characterId` 三頁 Character Sheet（Attributes / Skills、Spells、Inventory）、角色摘要 Header、Hit Dice、Roleplay，以及 P0 所需 Current State 操作；桌機與行動版皆有 responsive layout。
-- P0-E Conditions 與 Inventory 加入流程使用可搜尋、可展開且具鍵盤操作與 ARIA combobox semantics 的選單；HP / Temp HP、Conditions、Prepared Spells、Spell Slots / Class Resources、Hit Dice、Inventory quantity / equipped / carried 等操作皆經正式 backend PATCH 保存，UI 不自行持有 authoritative 規則結果。
-- P0-E 將 Human Fighter 5 / Wizard 5 fixture 改為固定 UUID 並讓 seed idempotent，使 `/characters/:id`、人工 smoke 與 E2E 都有穩定入口；Playwright 每個 case 先重設 Current State，避免測試互相污染。
-- P0-E 完整 CI 已實際通過 backend tests、Alembic、frontend TypeScript/Vite build、Vitest、Playwright Chromium、Docker Compose full stack、`/health` / `/ready`、deterministic fixture seed 與真 backend reload persistence；E2E 已覆蓋 HP、Temp HP + searchable Condition、Spell Slot、Inventory quantity、Shield unequip 後 authoritative AC 18→16，以及 optional Roleplay 空白資料不阻塞角色卡。
-- **P0-F — Full P0 Integration & Closeout 已完成**：CI 已升級為 P0 Full Regression，重新跑 backend pytest、Character-Relevant SRD validation、Alembic、frontend build/Vitest、Docker Compose readiness 與真 backend Playwright。
-- P0-F 補齊 Prepared Spells 與 Available Hit Dice 的 browser reload E2E；另以 PostgreSQL full stack 做 deterministic Current State mutation → server restart → reload regression，確認 HP / Temp HP / Condition / Prepared Spells / Spell Slots / Class Resources / Hit Dice / live Inventory 全部保留，Build payload 與 Build Version 不變，Shield unequip 後 authoritative AC 仍為 16。
-- P0-F 三頁 Character Sheet smoke snapshots（Attributes / Skills、Spells、Inventory）已人工檢查；Monster / Beast scope guard 仍由 ContentRegistry regression 保護，P4-A 承接註記維持。
+- 全專案規則：**每個 Phase 在 coding 前必須拆成可獨立實作、驗證、commit 的 Subphases；只拆當前 Phase，不提前拆後續 Phase。**
+- 基礎技術棧：React + TypeScript + Vite / Python + FastAPI / PostgreSQL。
 
-**下一步：等待使用者明確指示後開始 P1 規劃；P1 coding 前先依全專案規則拆出 P1-A～P1-x 並對齊 P1 三份文件。不要自行開始 P1 coding。**
+P0 已完成：
 
-本 Brief 不列 P0 的 DB schema / API 細節；那些內容只住在 `docs/P0/開發設計方針.md`。
+- **P0-A — Project Foundation**：React/TypeScript/Vite、FastAPI、PostgreSQL、SQLAlchemy/Alembic、Docker Compose、pytest/Vitest/Playwright 與 CI baseline。
+- **P0-B — Character-Relevant SRD Foundation**：`data/srd5.1/` normalized content、ContentRegistry、stable keys、schema / cross-reference validation；22 categories、1,944 entries；Monster / Beast 延後 P4-A。
+- **P0-C — Character Core & Persistence**：Character identity、immutable Build Version、mutable Current State、`characters` / `character_versions` / `character_states`、Fighter 5 / Wizard 5 deterministic fixture。
+- **P0-D — Character Rules & Backend API**：Ability/PB/Skill/Save/Passive/AC/HP/Spell calculations、Numeric Override、CharacterSheetDTO、Reference / Character / State APIs。
+- **P0-E — Character Sheet & State UI**：三頁 Character Sheet、responsive UI、searchable accessible selectors、HP / Temp HP / Conditions / Prepared / resources / Hit Dice / Inventory state operations。
+- **P0-F — Full P0 Integration & Closeout**：P0 full regression、real backend Playwright、PostgreSQL restart persistence、Prepared / Hit Dice reload、Starting Equipment / live Inventory isolation、人工 smoke。
+
+P1 規劃已完成：
+
+- `docs/P1/實作規格.md`
+- `docs/P1/開發設計方針.md`
+- `docs/P1/測試指南.md`
+- 三份文件使用完全一致的 P1-A～P1-H 名稱與順序。
+- P1 直接延伸 P0 已存在的 `CharacterBuild` / `CharacterState` / immutable JSONB Build Version / Current State / ContentRegistry / Rules Layer，不重新設計第二套 Character core。
+- Builder Draft 與正式 `CharacterBuild` 明確分離；只有 Confirm 才產生正式 Build candidate / Version。
+- Ability generation：Standard Array / Point Buy / Manual Input；P1 不提前做正式 Roll System。
+- Lv2+ HP：Fixed Average / Manual Rolled Result；P1 不做正式 `Roll HP`。
+- Starting Equipment 做完整 structured choices；P1 不做 Starting Gold shopping workflow。
+- Level Up Current State reconciliation 已定：保留 damage delta、舊資源消耗不回滿、新 Hit Die 可用、Prepared 合法者保留、Inventory / Conditions 等 live state延續。
+- Character JSON Import / Export 留 P7；Builder MCP / AI transport留後續對應 Phase。P1 只建立可被未來 Human UI / AI Tool共用的 backend domain service。
+
+**下一步：只有在使用者明確要求開始 P1 實作後，才進 P1-A。不要自行開始 coding。**
+
+P1 的具體 DB / API / module 契約只住在 `docs/P1/開發設計方針.md`；本 Brief 不重複維護。
 
 ---
 
@@ -90,32 +89,47 @@ Built-in Content：**SRD 5.1**
 | **P1** | **Character Builder Complete** | 完整創角、高等角色建立、Level-by-level progression、Subclass、Multiclass、ASI / Feat、Spell progression、Level Up、Character Version |
 | **P2** | **Room / Campaign / Session / Seat** | 把已建立的角色真正放進桌內；建立 Room、Campaign、Party Roster、Player Seat、Controller 與 Session lifecycle |
 | **P3** | **Exploration + Roll + AI** | 建立 Exploration、Chat / Action / Check、正式骰子與 PendingAction；Human / AI 開始能在同一桌真正跑團 |
-| **P4** | **Quick Combat** | 第一個完整可玩的 Combat MVP：Initiative、Action Economy、Attack、Spell、Condition、Reaction、Death Save 等；**P4-A 必須先承接 P0 延後的 SRD Monster / Beast stat blocks，具體 schema / API 到 P4 規劃時再定。** |
+| **P4** | **Quick Combat** | 第一個完整可玩的 Combat MVP；**P4-A 必須先承接 P0 延後的 SRD Monster / Beast stat blocks。** |
 | **P5** | **Tactical Combat** | 在同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE、Wall / Door / Terrain、Automatic OA 等空間系統 |
 | **P6** | **Adventure + AI DM Runtime** | Adventure Definition / Importer、Campaign Runtime、World State、NPC / Scene / Fact、AI DM context 與 write-back |
-| **P7** | **Snapshot / Export** | 長期 Campaign 安全與可攜性：Timeline、Snapshot / Restore、Archive lifecycle、Character / Adventure / Campaign / Room Import / Export；不做 Undo 機制 |
-| **P8** | **QA / Polish** | 全流程整合測試、權限與 AI reconnect 測試、錯誤處理、效能、Responsive UI、UX polish 與第一版收尾 |
+| **P7** | **Snapshot / Export** | Timeline、Snapshot / Restore、Archive lifecycle、Character / Adventure / Campaign / Room Import / Export；不做 Undo 機制 |
+| **P8** | **QA / Polish** | 全流程整合測試、權限與 AI reconnect、錯誤處理、效能、Responsive UI、UX polish 與第一版收尾 |
 
-尚未輪到的 Phase 維持大 Phase，不提前拆 Subphase。P1～P8 各自準備開工時才依當時 codebase 拆分。
+P1 已拆 Subphase；**P2～P8 仍維持大 Phase，不提前拆。**
 
 ---
 
 ## P0 Subphase 進度
 
-狀態：📐 規格可實作；⬜ 尚未規劃／未開工；✅ 完成。
-
-> **子階段一律一列一個，不得合併。** P0 已拆分後，本表就是 P0 進度的單一事實來源。
+狀態：📐 規格可實作；⬜ 尚未開工；🚧 進行中；✅ 完成。
 
 | Subphase | 狀態 | 重點 |
 |---|---|---|
-| **P0-A — Project Foundation** | ✅ | React/Vite、FastAPI、PostgreSQL、SQLAlchemy/Alembic、Docker Compose、pytest/Vitest/Playwright baseline；專案可啟動、DB 可 migration、health/smoke 可驗 |
-| **P0-B — Character-Relevant SRD Foundation** | ✅ | ContentRegistry、Pydantic schemas、stable keys、cross-reference validation，以及 P0/P1 角色需要的 SRD 5.1 normalized data；**不含 Monster / Beast stat blocks** |
-| **P0-C — Character Core & Persistence** | ✅ | Character identity、immutable Build Version、mutable Current State、Build/State split、class order、spell access、HP progression、Hit Dice、Starting Equipment / live Inventory、fixture、DB round-trip |
-| **P0-D — Character Rules & Backend API** | ✅ | Ability/PB/Skill/Save/Passive/AC/HP/Spell calculations、Numeric Override、CharacterSheetDTO、Character/State/Reference APIs |
-| **P0-E — Character Sheet & State UI** | ✅ | 三頁 Character Sheet、Header、Attributes/Skills、Spells、Inventory、Hit Dice、Roleplay，以及 P0 需要的 Current State 操作與保存 |
-| **P0-F — Full P0 Integration & Closeout** | ✅ | 全套 backend/frontend/E2E regression、Build/State isolation、Starting Equipment reload regression、restart persistence、scope guard、人工 smoke test；P0 正式關門 |
+| **P0-A — Project Foundation** | ✅ | Project / DB / tests / CI baseline |
+| **P0-B — Character-Relevant SRD Foundation** | ✅ | Character-relevant SRD / ContentRegistry / validation |
+| **P0-C — Character Core & Persistence** | ✅ | Build Version / Current State / persistence / fixture |
+| **P0-D — Character Rules & Backend API** | ✅ | Character rules / DTO / APIs / overrides |
+| **P0-E — Character Sheet & State UI** | ✅ | 三頁 Character Sheet / state UI / E2E |
+| **P0-F — Full P0 Integration & Closeout** | ✅ | Full regression / persistence / smoke / closeout |
 
-P0-A → P0-F 已全部完成並驗收；下一個 Phase 開工前先依當時 codebase 規劃 P1 Subphases。
+---
+
+## P1 Subphase 進度
+
+> **子階段一律一列一個，不得合併。** P1 三份文件已拆分後，本表就是 P1 進度的單一事實來源。
+
+| Subphase | 狀態 | 重點 |
+|---|---|---|
+| **P1-A — Builder Domain & Draft Foundation** | 📐 | Builder Draft、choice model、compiler / validation、draft persistence；不完整 Draft 不污染正式 Character |
+| **P1-B — Character Creation Basics** | ⬜ | Character Workshop、Wizard basics、Race/Subrace、Background、Standard Array / Point Buy / Manual、starting skills/proficiencies |
+| **P1-C — Class Progression & Multiclass** | ⬜ | Level-by-level rail、starting class、multiclass prerequisites / grants、Subclass timing、HP progression |
+| **P1-D — ASI, Feat & Structural Choices** | ⬜ | ASI / Feat timing、prerequisites、generic structural choice resolver、Numeric Override boundary |
+| **P1-E — Spellcasting Progression** | ⬜ | Known / Spellbook / Prepared / Always Prepared、multiclass slots、Pact Magic、source profiles |
+| **P1-F — Equipment, Review & Character Creation** | ⬜ | Starting Equipment nested choices、Review、atomic Create Confirm、Version 1 + initial State |
+| **P1-G — Level Up & Character Versions** | ⬜ | Level Up Draft、immutable Version N+1、Version History、stale base guard、State reconciliation、correction/build edit |
+| **P1-H — Full P1 Integration & Closeout** | ⬜ | P1 full regression、Create / high-level / multiclass / caster / Level Up E2E、P0 regression、closeout |
+
+P1-A 是唯一目前可開始實作的 Subphase；未完成 P1-A 驗收前不進 P1-B。
 
 ---
 
@@ -125,18 +139,17 @@ P0-A → P0-F 已全部完成並驗收；下一個 Phase 開工前先依當時 c
 
 P0 建立後續角色系統共用的正式內容與角色地基：
 
-- **Character-Relevant SRD 5.1 reference data**：Race、Class、Subclass、Background、Feature / Trait、Feat、Ability / Skill / Save reference、Equipment、Weapon、Armor、Adventuring Gear / Items、Spells、Conditions、Damage Types、Languages 與角色規則需要的 structured constants。
+- Character-Relevant SRD 5.1 reference data。
 - Character 核心資料與保存／載入能力。
-- Digital Character Sheet。
-- Ability / Skill / Save / AC / Proficiency / Spell DC 等基礎計算。
-- Build 與 Current State 分離。
-- Spell / Item / Feature 等 reference data 能被角色引用。
+- immutable Character Build Version / mutable Current State。
+- Character Sheet authoritative calculations。
+- Current State APIs / UI。
+- Build / State isolation。
+- 可承載 Human Fighter 5 / Wizard 5 Character Level 10。
 
-**P0 明確不導入 Monster / Beast stat blocks、Monster Actions / Traits 等 combat content。** P0～P3 沒有需要完整怪物戰鬥資料的驗收；這一塊延後到 **P4-A — Quick Combat 的第一個 Subphase** 承接。
+P0 不負責從 UI 合法地一級一級建立該角色。
 
-P0 的資料與規則地基必須能**承載**複雜角色，例如 Human Fighter 5 / Wizard 5，但 P0 不要求玩家從 UI 依完整升級流程建立它。
-
-P0 詳細範圍、設計、驗收分別見：
+P0 正式文件：
 
 ```text
 docs/P0/實作規格.md
@@ -146,13 +159,23 @@ docs/P0/測試指南.md
 
 ### P1 — Character Builder Complete
 
-P1 才把「角色資料能存在」提升成「網站能依 D&D 5e 2014 規則建立與成長角色」。
+P1 把「角色資料能存在」提升成「網站能依 D&D 5e 2014 規則建立與成長角色」。
 
-核心驗證案例之一：
+核心驗證案例包括：
 
-> 從空白建立一名 **Human Fighter 5 / Wizard 5（Character Level 10）** 的合法角色，不直接修改底層資料。
+- 從空白建立合法 Lv1 角色。
+- 直接建立高等角色，但保存完整逐級 progression。
+- 建立 Fighter 5 / Wizard 5 等 Multiclass 角色，不直接改底層資料。
+- 正確處理 Subclass、ASI / Feat、Spell progression、Starting Equipment。
+- Existing Character 可 Level Up 並產生新 immutable Build Version，Current State依規則 reconciliation。
 
-P1 詳細規格與 Subphase 等 P1 準備開工時再寫，不在 P0 提前完成。
+P1 正式文件：
+
+```text
+docs/P1/實作規格.md
+docs/P1/開發設計方針.md
+docs/P1/測試指南.md
+```
 
 ---
 
@@ -162,8 +185,8 @@ P1 詳細規格與 Subphase 等 P1 準備開工時再寫，不在 P0 提前完�
 
 - P4 的第一個 Subphase 命名為 **P4-A**。
 - P4-A 必須承接 P0 明確延後的 **SRD 5.1 Monster / Beast stat blocks**。
-- P4-A 開工時再依當時 Combat Engine 需求決定 Monster Template 的 schema、actions / attacks / spellcasting representation、validation 與 API；**現在不預先設計。**
-- P0 不得為了 P4 提前建立 `monsters.json`、Monster-specific Pydantic schema、Monster Action normalization 或 combat-only validation。
+- P4-A 開工時再依當時 Combat Engine 需求決定 Monster Template schema、actions / attacks / spellcasting representation、validation 與 API。
+- P0 / P1 不為此提前建立 Monster-specific schema / validation / combat data。
 
 ---
 
@@ -178,32 +201,19 @@ P1 詳細規格與 Subphase 等 P1 準備開工時再寫，不在 P0 提前完�
 | **`docs/Px/實作規格.md`** | 該 Phase / Subphase 必須做到什麼、驗收意圖 |
 | **`docs/Px/開發設計方針.md`** | 該 Phase / Subphase 實際怎麼做：資料模型、模組、API、資料流與必要技術決策 |
 | **`docs/Px/測試指南.md`** | 該 Phase / Subphase 的自動／人工驗收流程 |
-| **`待決事項.md`** | 真正無法從既有規格推導、且會影響核心玩法／方向的未決問題 |
 
-目前主要文件與 P0-A / P0-B / P0-C / P0-D / P0-E / P0-F 實作入口：
+目前：
 
 ```text
-adventure-table/
-├── apps/
-│   ├── server/          # FastAPI / SQLAlchemy / Alembic / Pydantic content + character domain + rules/API / pytest
-│   └── web/             # React / TypeScript / Vite / Character Sheet UI / Vitest / Playwright
-├── data/
-│   └── srd5.1/          # P0-B normalized SRD 5.1 content + manifest / attribution
-├── scripts/
-│   └── vendor_srd.py    # maintainer-only pinned SRD vendor tool
-├── .github/workflows/
-│   └── p0a-foundation.yml
-├── docker-compose.yml
-├── README.md
-├── AGENTS.md
-├── PROJECT_BRIEF.md
-├── 規格企劃.md
-├── 技術棧討論.md
-└── docs/
-    └── P0/
-        ├── 實作規格.md
-        ├── 開發設計方針.md
-        └── 測試指南.md
+docs/
+├── P0/
+│   ├── 實作規格.md
+│   ├── 開發設計方針.md
+│   └── 測試指南.md
+└── P1/
+    ├── 實作規格.md
+    ├── 開發設計方針.md
+    └── 測試指南.md
 ```
 
 ---
@@ -215,24 +225,16 @@ adventure-table/
 ```text
 確認該 Phase 的產品目標
 ↓
-拆成 P<n>-A、P<n>-B… 可獨立實作／驗證／commit 的 Subphases
+讀當時真正存在的 codebase
 ↓
-三份文件使用完全一致的 Subphase 標題與順序
+拆成可獨立實作 / 驗證 / commit 的 Subphases
 ↓
-實作規格.md：每個 Subphase 完成後什麼必須成立
+同時寫 docs/Px/ 三份對齊文件
 ↓
-開發設計方針.md：每個 Subphase 實際怎麼做
-↓
-測試指南.md：每個 Subphase 如何證明做對
-↓
-等待使用者決定是否開始實作
-↓
-依序逐 Subphase：Implement → Test → Verify → Commit
-↓
-最後一個 Subphase 完成整個 Phase regression / closeout
-↓
-更新 PROJECT_BRIEF
+使用者明確要求後才開始 coding
 ```
+
+Subphase 只拆當前 Phase；例如目前只拆 P1，不拆 P2～P8。
 
 可以保留必要的跨 Phase 相容性／承接要求，但**不要因此提前設計後續 Phase 的 schema / API / module**。
 
@@ -245,8 +247,7 @@ adventure-table/
 1. 先讀 `AGENTS.md`。
 2. 再讀 `PROJECT_BRIEF.md` 取得目前 Phase、Subphase 與下一步。
 3. 按任務讀 `規格企劃.md` 對應章節。
-4. P0 相關任務再依 Subphase id 讀 `docs/P0/` 三份文件的對應段落。
+4. P1 實作／驗收依 Subphase id 讀 `docs/P1/實作規格.md`、`開發設計方針.md`、`測試指南.md` 的同名段落；必要時再回看 P0 相容契約。
 5. 不重新討論已定案產品規格。
 6. 不為還沒開工的 Phase 預先設計具體實作。
 7. **未獲使用者明確要求，不開始 coding。**
-8. 每完成一個 Subphase，先驗證再 commit；每完成一個 Phase，再更新本檔整體進度。
