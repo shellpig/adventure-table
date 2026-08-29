@@ -1,0 +1,77 @@
+import { renderToStaticMarkup } from 'react-dom/server'
+import { describe, expect, it } from 'vitest'
+
+import type { CharacterSheetDTO, ContentEntry } from '../../api/character'
+import { CharacterSheetView } from './CharacterSheetPage'
+
+const sheet: CharacterSheetDTO = {
+  character_id: '00000000-0000-4000-8000-0000000000e0', name: 'P0 Human Fighter 5 / Wizard 5', ruleset: 'dnd5e-2014', version_no: 1, total_level: 10,
+  classes: [
+    { class_ref: 'srd5.1:class:fighter', name: 'Fighter', level: 5 },
+    { class_ref: 'srd5.1:class:wizard', name: 'Wizard', level: 5 },
+  ],
+  proficiency_bonus: 4,
+  abilities: {
+    strength: { score: 16, modifier: 3 }, dexterity: { score: 14, modifier: 2 }, constitution: { score: 14, modifier: 2 }, intelligence: { score: 16, modifier: 3 }, wisdom: { score: 10, modifier: 0 }, charisma: { score: 8, modifier: -1 },
+  },
+  saving_throws: { strength: 7, dexterity: 2, constitution: 6, intelligence: 3, wisdom: 0, charisma: -1 },
+  skills: { athletics: 7, arcana: 7, perception: 4 },
+  passive_perception: 14, initiative_modifier: 2, armor_class: 18, max_hp: 74, current_hp: 74, temporary_hp: 0,
+  hit_dice: [{ die: 'd10', total: 5, available: 5 }, { die: 'd6', total: 5, available: 5 }],
+  features: [{ key: 'srd5.1:feature:second-wind', name: 'Second Wind' }, { key: 'srd5.1:feature:arcane-recovery', name: 'Arcane Recovery' }],
+  conditions: [],
+  spells: [
+    { entry_id: 'wizard:magic-missile', spell_key: 'srd5.1:spell:magic-missile', name: 'Magic Missile', source_type: 'class', source_key: 'srd5.1:class:wizard', access_type: 'spellbook', prepared: true },
+    { entry_id: 'wizard:detect-magic', spell_key: 'srd5.1:spell:detect-magic', name: 'Detect Magic', source_type: 'class', source_key: 'srd5.1:class:wizard', access_type: 'spellbook', prepared: false },
+    { entry_id: 'wizard:always', spell_key: 'srd5.1:spell:shield', name: 'Shield', source_type: 'feature', source_key: 'srd5.1:feature:arcane-recovery', access_type: 'always_prepared', prepared: true },
+  ],
+  spellcasting: [{ source_key: 'srd5.1:class:wizard', source_name: 'Wizard', ability: 'intelligence', save_dc: 15, attack_modifier: 7 }],
+  spell_slots: { '1': { used: 1, remaining: 3 }, '2': { used: 0, remaining: 3 }, '3': { used: 1, remaining: 1 } },
+  resources: { 'wizard:arcane-recovery': { used: 0, remaining: 1 } },
+  inventory: [
+    { entry_id: 'inventory:shield', item_ref: 'srd5.1:equipment:shield', name: 'Shield', quantity: 1, equipped: true, carried: true, rules: { equipment_category: { name: 'Armor' }, armor_class: { base: 2 } } },
+    { entry_id: 'inventory:healing-potion', item_ref: 'srd5.1:item:potion-of-healing-common', name: 'Potion of Healing', quantity: 2, equipped: false, carried: true, rules: {} },
+  ],
+  roleplay_profile: { appearance: null, biography: null, personality_traits: [], ideals: [], bonds: [], flaws: [] },
+}
+
+const conditions: ContentEntry[] = [{ key: 'srd5.1:condition:poisoned', index: 'poisoned', name: 'Poisoned', source: 'srd5.1', ruleset: 'dnd5e-2014', license: 'CC-BY-4.0', data: {} }]
+const inventoryContent: ContentEntry[] = [{ key: 'srd5.1:equipment:shield', index: 'shield', name: 'Shield', source: 'srd5.1', ruleset: 'dnd5e-2014', license: 'CC-BY-4.0', data: { equipment_category: { name: 'Armor' } } }]
+
+describe('P0-E Character Sheet', () => {
+  it('renders the shared header and Page 1 contract without roleplay requirements', () => {
+    const html = renderToStaticMarkup(<CharacterSheetView sheet={sheet} conditionContent={conditions} />)
+    expect(html).toContain('P0 Human Fighter 5 / Wizard 5')
+    expect(html).toContain('Lv. 10')
+    expect(html).toContain('AC')
+    expect(html).toContain('Passive Perception')
+    expect(html).toContain('d10')
+    expect(html).toContain('5/5')
+    expect(html).toContain('d6')
+    expect(html).toContain('Second Wind')
+    expect(html).toContain('Roleplay / Biography')
+    expect(html).toContain('尚未填寫角色扮演資料')
+    expect(html).toContain('role="combobox"')
+  })
+
+  it('keeps spell access and prepared state visibly distinct', () => {
+    const html = renderToStaticMarkup(<CharacterSheetView sheet={sheet} initialTab="spells" />)
+    expect(html).toContain('Spellbook')
+    expect(html).toContain('Prepared')
+    expect(html).toContain('Unprepared')
+    expect(html).toContain('Always Prepared')
+    expect(html).toContain('Save DC')
+    expect(html).toContain('+7')
+    expect(html).toContain('Spell Slots')
+  })
+
+  it('renders live inventory quantity and equipment state with searchable add UI', () => {
+    const html = renderToStaticMarkup(<CharacterSheetView sheet={sheet} inventoryContent={inventoryContent} initialTab="inventory" />)
+    expect(html).toContain('Live Inventory')
+    expect(html).toContain('Potion of Healing')
+    expect(html).toContain('Equipped')
+    expect(html).toContain('Qty')
+    expect(html).toContain('加入物品')
+    expect(html).toContain('role="combobox"')
+  })
+})

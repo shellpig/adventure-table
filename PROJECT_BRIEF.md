@@ -33,7 +33,7 @@ Built-in Content：**SRD 5.1**
 
 ## 當前進度
 
-目前狀態：**P0-D — Character Rules & Backend API 已完成並通過完整 CI 驗證；P0-E 尚未開工。**
+目前狀態：**P0-E — Character Sheet & State UI 已完成並通過完整 CI 驗證；下一步是 P0-F — Full P0 Integration & Closeout。**
 
 已完成：
 
@@ -65,9 +65,13 @@ Built-in Content：**SRD 5.1**
 - **P0-D — Character Rules & Backend API 已實作完成**：建立純 Python server-authoritative rules layer，提供 Ability/PB/Skill/Save/Passive Perception/Initiative/AC/Max HP/Spell Save DC/Spell Attack/Hit Dice 等角色衍生計算，並以 `CharacterSheetDTO` 統一輸出角色卡 read model。
 - P0-D 已正式接上 Reference Content API、Character read、Character Sheet read 與 Current State PATCH；State mutation 可承載 HP、Temp HP、Prepared Spells、Conditions、Spell/Class resources、Available Hit Dice，以及 live Inventory add/remove/quantity/equipped state，且不建立新 Build Version。
 - P0-D Numeric Override 已固定支援 Ability、AC、Max HP、Skill Modifier、Spell Save DC 等允許 key；標準 Human Fighter 5 / Wizard 5 fixture 與 override variant 已驗證 STR/Skill/Save、AC 18→16、Max HP 74→84/override 80、Wizard DC 15 / Attack +7 等 authoritative results。
-- P0-D regression 已覆蓋 machine-readable API errors、prepared/build 分離、live Inventory authoritative AC、Current HP 對 Max HP override 的驗證，以及 malformed ref/type、illegal prepared entry、Hit Dice/HP 上限、negative quantity 等 invalid State request 的原子失敗；最新完整 CI 通過 backend tests、Alembic、frontend build、Vitest、Playwright、Docker Compose、全棧啟動與 readiness。
+- P0-D regression 已覆蓋 machine-readable API errors、prepared/build 分離、live Inventory authoritative AC、Current HP 對 Max HP override 的驗證，以及 malformed ref/type、illegal prepared entry、Hit Dice/HP 上限、negative quantity 等 invalid State request 的原子失敗；完整 CI 通過 backend tests、Alembic、frontend build、Vitest、Playwright、Docker Compose、全棧啟動與 readiness。
+- **P0-E — Character Sheet & State UI 已實作完成**：建立 `/characters/:characterId` 三頁 Character Sheet（Attributes / Skills、Spells、Inventory）、角色摘要 Header、Hit Dice、Roleplay，以及 P0 所需 Current State 操作；桌機與行動版皆有 responsive layout。
+- P0-E Conditions 與 Inventory 加入流程使用可搜尋、可展開且具鍵盤操作與 ARIA combobox semantics 的選單；HP / Temp HP、Conditions、Prepared Spells、Spell Slots / Class Resources、Hit Dice、Inventory quantity / equipped / carried 等操作皆經正式 backend PATCH 保存，UI 不自行持有 authoritative 規則結果。
+- P0-E 將 Human Fighter 5 / Wizard 5 fixture 改為固定 UUID 並讓 seed idempotent，使 `/characters/:id`、人工 smoke 與 E2E 都有穩定入口；Playwright 每個 case 先重設 Current State，避免測試互相污染。
+- P0-E 完整 CI 已實際通過 backend tests、Alembic、frontend TypeScript/Vite build、Vitest、Playwright Chromium、Docker Compose full stack、`/health` / `/ready`、deterministic fixture seed 與真 backend reload persistence；E2E 已覆蓋 HP、Temp HP + searchable Condition、Spell Slot、Inventory quantity、Shield unequip 後 authoritative AC 18→16，以及 optional Roleplay 空白資料不阻塞角色卡。
 
-**下一步：等待使用者明確指示後開始 P0-E — Character Sheet & State UI；不要自行開始下一個 Subphase。**
+**下一步：等待使用者明確指示後開始 P0-F — Full P0 Integration & Closeout；不要自行開始下一個 Subphase。**
 
 本 Brief 不列 P0 的 DB schema / API 細節；那些內容只住在 `docs/P0/開發設計方針.md`。
 
@@ -105,7 +109,7 @@ Built-in Content：**SRD 5.1**
 | **P0-B — Character-Relevant SRD Foundation** | ✅ | ContentRegistry、Pydantic schemas、stable keys、cross-reference validation，以及 P0/P1 角色需要的 SRD 5.1 normalized data；**不含 Monster / Beast stat blocks** |
 | **P0-C — Character Core & Persistence** | ✅ | Character identity、immutable Build Version、mutable Current State、Build/State split、class order、spell access、HP progression、Hit Dice、Starting Equipment / live Inventory、fixture、DB round-trip |
 | **P0-D — Character Rules & Backend API** | ✅ | Ability/PB/Skill/Save/Passive/AC/HP/Spell calculations、Numeric Override、CharacterSheetDTO、Character/State/Reference APIs |
-| **P0-E — Character Sheet & State UI** | 📐 | 三頁 Character Sheet、Header、Attributes/Skills、Spells、Inventory、Hit Dice、Roleplay，以及 P0 需要的 Current State 操作與保存 |
+| **P0-E — Character Sheet & State UI** | ✅ | 三頁 Character Sheet、Header、Attributes/Skills、Spells、Inventory、Hit Dice、Roleplay，以及 P0 需要的 Current State 操作與保存 |
 | **P0-F — Full P0 Integration & Closeout** | 📐 | 全套 backend/frontend/E2E regression、Build/State isolation、Starting Equipment reload regression、restart persistence、scope guard、人工 smoke test；P0 正式關門 |
 
 實作順序固定由 P0-A → P0-F。每個 Subphase 完成時都必須先通過該階段自己的測試／驗證，再 commit，才進下一個。
@@ -173,13 +177,13 @@ P1 詳細規格與 Subphase 等 P1 準備開工時再寫，不在 P0 提前完�
 | **`docs/Px/測試指南.md`** | 該 Phase / Subphase 的自動／人工驗收流程 |
 | **`待決事項.md`** | 真正無法從既有規格推導、且會影響核心玩法／方向的未決問題 |
 
-目前主要文件與 P0-A / P0-B / P0-C / P0-D 實作入口：
+目前主要文件與 P0-A / P0-B / P0-C / P0-D / P0-E 實作入口：
 
 ```text
 adventure-table/
 ├── apps/
 │   ├── server/          # FastAPI / SQLAlchemy / Alembic / Pydantic content + character domain + rules/API / pytest
-│   └── web/             # React / TypeScript / Vite / Vitest / Playwright
+│   └── web/             # React / TypeScript / Vite / Character Sheet UI / Vitest / Playwright
 ├── data/
 │   └── srd5.1/          # P0-B normalized SRD 5.1 content + manifest / attribution
 ├── scripts/
