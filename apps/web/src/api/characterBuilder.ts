@@ -125,6 +125,7 @@ export type BuilderChoice = {
   options: BuilderChoiceOption[]
   selected_option_ids: string[]
   disabled_reason?: string | null
+  allow_duplicates: boolean
 }
 
 export type BuilderGrantSummary = {

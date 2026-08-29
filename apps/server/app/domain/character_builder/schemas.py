@@ -114,9 +114,7 @@ class BuilderChoiceSelection(StrictModel):
 
     @field_validator("selected_option_ids")
     @classmethod
-    def option_ids_are_unique(cls, value: tuple[str, ...]) -> tuple[str, ...]:
-        if len(value) != len(set(value)):
-            raise ValueError("selected_option_ids must be unique")
+    def option_ids_are_non_blank(cls, value: tuple[str, ...]) -> tuple[str, ...]:
         if any(not item.strip() for item in value):
             raise ValueError("selected_option_ids cannot contain blank values")
         return value
@@ -146,6 +144,7 @@ class BuilderChoice(StrictModel):
     options: tuple[BuilderChoiceOption, ...] = ()
     selected_option_ids: tuple[str, ...] = ()
     disabled_reason: str | None = Field(default=None, max_length=500)
+    allow_duplicates: bool = False
 
 
 class BuilderDraftPayload(StrictModel):

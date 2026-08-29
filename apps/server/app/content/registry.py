@@ -38,6 +38,22 @@ URL_ROUTE_TO_KIND = {
     "weapon-properties": "weapon-property",
 }
 
+# The imported 5e SRD Rogue level feed carries several non-ASI rows whose
+# cumulative ability_score_bonuses value is one lower than the immediately
+# preceding ASI milestone. Normalize only these verified upstream anomalies at
+# the content boundary so downstream progression code can keep treating the
+# field as a monotonic cumulative counter and can still fail fast on any other
+# decrease.
+KNOWN_LEVEL_ABILITY_SCORE_BONUS_CORRECTIONS: dict[str, tuple[int, int]] = {
+    "srd5.1:level:rogue-11": (2, 3),
+    "srd5.1:level:rogue-13": (3, 4),
+    "srd5.1:level:rogue-14": (3, 4),
+    "srd5.1:level:rogue-15": (3, 4),
+    "srd5.1:level:rogue-17": (4, 5),
+    "srd5.1:level:rogue-18": (4, 5),
+    "srd5.1:level:rogue-20": (5, 6),
+}
+
 
 class ContentValidationError(RuntimeError):
     pass
@@ -45,6 +61,26 @@ class ContentValidationError(RuntimeError):
 
 class ContentNotFoundError(KeyError):
     pass
+
+
+def _normalize_known_source_anomalies(entry: ContentEntry) -> ContentEntry:
+    correction = KNOWN_LEVEL_ABILITY_SCORE_BONUS_CORRECTIONS.get(entry.key)
+    if correction is None:
+        return entry
+
+    source_value, normalized_value = correction
+    value = entry.data.get("ability_score_bonuses")
+    if value == normalized_value:
+        return entry
+    if value != source_value:
+        raise ContentValidationError(
+            "known SRD ability_score_bonuses correction no longer matches "
+            f"{entry.key}: expected {source_value}, got {value}"
+        )
+
+    data = dict(entry.data)
+    data["ability_score_bonuses"] = normalized_value
+    return entry.model_copy(update={"data": data})
 
 
 class ContentRegistry:
@@ -113,6 +149,7 @@ class ContentRegistry:
             for position, raw_entry in enumerate(payload):
                 try:
                     entry = ContentEntry.model_validate(raw_entry)
+                    entry = _normalize_known_source_anomalies(entry)
                     typed_data = data_model.model_validate(entry.data)
                 except ValidationError as exc:
                     raise ContentValidationError(

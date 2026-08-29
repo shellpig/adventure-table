@@ -49,6 +49,17 @@ function LevelChoiceEditor({
     })
   }
 
+  if (choice.disabled_reason) {
+    return (
+      <div className="builder-choice progression-choice is-disabled">
+        <div>
+          <strong>{choice.label}</strong>
+          <small>{choice.disabled_reason}</small>
+        </div>
+      </div>
+    )
+  }
+
   if (choice.choose_count === 1) {
     return (
       <SearchableSelect
@@ -69,12 +80,14 @@ function LevelChoiceEditor({
         <span>{selected.length} / {choice.choose_count}</span>
       </div>
       <div className="builder-choice__chips">
-        {selected.map((id) => (
+        {selected.map((id, selectedIndex) => (
           <button
             type="button"
-            key={id}
+            key={`${id}:${selectedIndex}`}
             disabled={disabled}
-            onClick={() => saveSelected(selected.filter((item) => item !== id))}
+            onClick={() =>
+              saveSelected(selected.filter((_, index) => index !== selectedIndex))
+            }
           >
             {choice.options.find((option) => option.option_id === id)?.label ?? id} ×
           </button>
@@ -84,13 +97,21 @@ function LevelChoiceEditor({
         label="Add selection"
         value=""
         disabled={disabled || !canAdd}
-        options={optionsFor(choice).map((option) => ({
-          ...option,
-          disabled: option.disabled || selected.includes(option.value),
-          disabledReason: selected.includes(option.value) ? 'Already selected' : option.disabledReason,
-        }))}
+        options={optionsFor(choice).map((option) => {
+          const alreadySelected = selected.includes(option.value)
+          return {
+            ...option,
+            disabled: option.disabled || (!choice.allow_duplicates && alreadySelected),
+            disabledReason:
+              !choice.allow_duplicates && alreadySelected
+                ? 'Already selected'
+                : option.disabledReason,
+          }
+        })}
         onChange={(value) => {
-          if (value && !selected.includes(value)) saveSelected([...selected, value])
+          if (value && (choice.allow_duplicates || !selected.includes(value))) {
+            saveSelected([...selected, value])
+          }
         }}
       />
     </div>
@@ -143,7 +164,10 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
     saveLevel(level, {
       ...current,
       hp_method: method,
-      hp_base_gain: method === 'fixed_average' ? node.fixed_hp_gain : Math.min(current.hp_base_gain, node.hit_die_size),
+      hp_base_gain:
+        method === 'fixed_average'
+          ? node.fixed_hp_gain
+          : Math.min(current.hp_base_gain, node.hit_die_size),
     })
   }
 
@@ -158,7 +182,8 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
         <h2>Build the level rail</h2>
         <p>
           Every row is one real Character Level. Class level, multiclass prerequisites, subclass timing,
-          grants and HP are recalculated by the server from this exact order.
+          ASI / Feat choices, structural feature choices, grants and HP are recalculated by the server
+          from this exact order.
         </p>
       </div>
 
@@ -175,11 +200,16 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
           const node = nodesByLevel.get(level)
           const classChoice = choicesById.get(`level:${level}:class-selection`)
           const subclassChoice = choicesById.get(`level:${level}:subclass-selection`)
-          const levelSpecificChoices = view.choices.filter(
-            (choice) =>
-              choice.choice_id.startsWith(`level:${level}:`) &&
-              choice.option_source === 'content:class-proficiency',
-          )
+          const levelSpecificChoices = view.choices.filter((choice) => {
+            if (!choice.choice_id.startsWith(`level:${level}:`)) return false
+            const source = choice.option_source ?? ''
+            return (
+              source === 'content:class-proficiency' ||
+              source === 'content:asi-feat' ||
+              source === 'content:asi-ability' ||
+              source.startsWith('content:feature:')
+            )
+          })
           const canEdit = level === 1 || savedLevels.length >= level - 1
 
           return (

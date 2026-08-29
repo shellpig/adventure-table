@@ -16,12 +16,19 @@ from app.domain.character_builder.progression import (
     validate_progression,
 )
 from app.domain.character_builder.schemas import (
+    BuilderAbilityScoreSummary,
     BuilderChoice,
     BuilderDraft,
     BuilderIssue,
     BuilderIssueSeverity,
     BuilderResolvedSummary,
     BuilderValidationResult,
+)
+from app.domain.character_builder.structural import (
+    StructuralCompilation,
+    build_structural_choices,
+    compile_structural_selections,
+    validate_structural_choice_integrity,
 )
 from app.domain.character_builder.validation import make_validation_result, validate_foundation_draft
 
@@ -38,6 +45,41 @@ def _effective_abilities(summary: BuilderResolvedSummary) -> dict[str, int] | No
     if not summary.ability_scores:
         return None
     return {entry.ability: entry.effective for entry in summary.ability_scores}
+
+
+def _resolved_abilities(summary: BuilderResolvedSummary) -> dict[str, int] | None:
+    if not summary.ability_scores:
+        return None
+    return {entry.ability: entry.resolved for entry in summary.ability_scores}
+
+
+def _apply_structural_ability_bonuses(
+    summary: BuilderResolvedSummary,
+    structural: StructuralCompilation,
+    draft: BuilderDraft,
+) -> BuilderResolvedSummary:
+    if not summary.ability_scores or not structural.ability_bonuses:
+        return summary
+    override_map = {
+        override.key.removeprefix("ability:"): int(override.value)
+        for override in draft.draft_payload.numeric_overrides
+        if override.key.startswith("ability:") and float(override.value).is_integer()
+    }
+    scores: list[BuilderAbilityScoreSummary] = []
+    for entry in summary.ability_scores:
+        bonus = structural.ability_bonuses.get(entry.ability, 0)
+        resolved = entry.resolved + bonus
+        scores.append(
+            entry.model_copy(
+                update={
+                    "permanent_bonus": entry.permanent_bonus + bonus,
+                    "resolved": resolved,
+                    "effective": override_map.get(entry.ability, resolved),
+                    "overridden": entry.ability in override_map,
+                }
+            )
+        )
+    return summary.model_copy(update={"ability_scores": tuple(scores)})
 
 
 def _build_ability_scores(summary: BuilderResolvedSummary) -> AbilityScores | None:
@@ -118,38 +160,65 @@ def compile_builder_draft(
         if choice.option_source != "content:class"
     )
     foundation_preview = resolve_creation_summary(draft, registry, raw_foundation_choices)
+
+    structural_data_issue: BuilderIssue | None = None
+    try:
+        structural_choices = build_structural_choices(
+            draft,
+            registry,
+            starting_abilities=_resolved_abilities(foundation_preview),
+        )
+    except ValueError as exc:
+        structural_choices = ()
+        structural_data_issue = BuilderIssue(
+            code="structural_rules_data_error",
+            severity=BuilderIssueSeverity.BLOCKING_ERROR,
+            path="draft_payload.level_choices",
+            message=str(exc),
+        )
+
     progression_choices = _effective_progression_choices(
         draft,
         registry,
         build_progression_choices(draft, registry),
         _effective_abilities(foundation_preview),
     )
-    progression_choice_ids = {choice.choice_id for choice in progression_choices}
+    live_choice_ids = {
+        *(choice.choice_id for choice in progression_choices),
+        *(choice.choice_id for choice in structural_choices),
+    }
     foundation_choices = tuple(
         choice
         for choice in raw_foundation_choices
         if not (
             choice.option_source == "draft:selection"
-            and choice.choice_id in progression_choice_ids
+            and choice.choice_id in live_choice_ids
         )
     )
-    choices = foundation_choices + progression_choices
+    choices = foundation_choices + progression_choices + structural_choices
 
     # Class/subclass rows are authoritative in level_choices and are validated by
-    # validate_progression(). Only the nested proficiency choices still use the
-    # generic choice_selections contract.
+    # validate_progression(). Nested class and P1-D structural choices use the
+    # canonical choice_selections contract.
     generic_progression_choices = tuple(
         choice
         for choice in progression_choices
         if choice.option_source == "content:class-proficiency"
     )
-    validation_choices = foundation_choices + generic_progression_choices
+    validation_choices = foundation_choices + generic_progression_choices + structural_choices
     foundation_issues = [
         issue
         for issue in validate_foundation_draft(draft, registry, validation_choices)
         if issue.code != "incomplete_level_progression"
     ]
+    if structural_data_issue is not None:
+        foundation_issues.append(structural_data_issue)
+    foundation_issues.extend(validate_structural_choice_integrity(draft, structural_choices))
+
     resolved_summary = resolve_creation_summary(draft, registry, choices)
+    structural = compile_structural_selections(draft, registry, structural_choices)
+    resolved_summary = _apply_structural_ability_bonuses(resolved_summary, structural, draft)
+
     progression_issues = list(
         validate_progression(
             draft,
@@ -202,18 +271,18 @@ def compile_builder_draft(
             class_progression=compiled.class_progression,
             subclasses=compiled.subclasses,
             ability_scores=abilities,
-            proficiencies=compiled.proficiencies,
+            proficiencies=tuple(dict.fromkeys((*compiled.proficiencies, *structural.proficiencies))),
             saving_throw_proficiencies=compiled.saving_throw_proficiencies,
-            skill_choices=compiled.skill_choices,
-            feature_refs=compiled.feature_refs,
+            skill_choices=tuple(dict.fromkeys((*compiled.skill_choices, *structural.skill_choices))),
+            feature_refs=tuple(dict.fromkeys((*compiled.feature_refs, *structural.feature_refs))),
+            feat_refs=structural.feat_refs,
             hp_progression=compiled.hp_progression,
             roleplay_profile=_roleplay_profile(draft),
             numeric_overrides=payload.numeric_overrides,
         )
 
-    # P1-C intentionally produces a P0-compatible Build candidate for progression
-    # tests, but Confirm stays closed until ASI/feat, spellcasting, equipment and
-    # review are completed by P1-D through P1-F.
+    # P1-D now completes structural Build choices, but Confirm stays closed until
+    # P1-E/P1-F finish spellcasting, equipment and the final review workflow.
     if not has_blocking:
         issues.append(
             BuilderIssue(
@@ -221,8 +290,8 @@ def compile_builder_draft(
                 severity=BuilderIssueSeverity.BLOCKING_ERROR,
                 path="draft_payload",
                 message=(
-                    "Class progression is valid. ASI/Feat, spellcasting, equipment and final review "
-                    "must be completed before Confirm is enabled."
+                    "Class progression and structural choices are valid. Spellcasting, equipment and "
+                    "final review must be completed before Confirm is enabled."
                 ),
             )
         )
