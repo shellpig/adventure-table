@@ -33,7 +33,7 @@ Built-in Content：**SRD 5.1**
 
 ## 當前進度
 
-目前狀態：**產品規格與大 Phase 已整理完成；基礎技術棧已初步討論，下一步正式進入 P0 規劃。**
+目前狀態：**P0 規劃文件已完成，尚未開始任何 P0 coding。**
 
 已完成：
 
@@ -47,11 +47,15 @@ Built-in Content：**SRD 5.1**
 - Timeline / Snapshot / Export 等產品層行為定案。
 - 第一版明確不做項目已整理。
 - 大 Phase P0～P8 已排定。
-- 基礎技術棧方向已初步收斂：React + TypeScript + Vite / Python + FastAPI / PostgreSQL。
+- 基礎技術棧已初步收斂：React + TypeScript + Vite / Python + FastAPI / PostgreSQL。
+- `技術棧討論.md` 已瘦身，只保留基礎技術選型，不再提前設計各 Phase。
+- `docs/P0/實作規格.md` 已建立。
+- `docs/P0/開發設計方針.md` 已建立。
+- `docs/P0/測試指南.md` 已建立。
 
-`技術棧討論.md` 只處理語言、Framework、DB、基本測試與部署工具；**不提前承擔各 Phase 的資料模型、API、權限、事件或其他實作設計。**
+**下一步：先停在 P0 規劃完成狀態，等待使用者 review 或下一步指示；不要自行開始 coding。**
 
-**下一步：建立 `docs/P0/`，完成 P0 的 `實作規格.md`、`開發設計方針.md`、`測試指南.md`，再開始 coding。**
+本 Brief 不列 P0 的 DB schema / API 細節；那些內容只住在 `docs/P0/開發設計方針.md`。
 
 ---
 
@@ -77,16 +81,24 @@ Built-in Content：**SRD 5.1**
 
 ### P0 — Character Core + SRD / Rules Foundation
 
-P0 先建立後續系統共用的正式內容與角色地基：
+P0 建立後續系統共用的正式內容與角色地基：
 
 - 完整可用的 SRD 5.1 reference data。
 - Character 核心資料與保存／載入能力。
 - Digital Character Sheet。
 - Ability / Skill / Save / AC / Proficiency / Spell DC 等基礎計算。
-- Build 與 Current State 的基本分離。
+- Build 與 Current State 分離。
 - Spell / Item / Feature 等 reference data 能被角色引用。
 
-P0 的資料與規則地基必須**能承載**複雜角色，例如 Human Fighter 5 / Wizard 5，但 P0 不要求玩家從 UI 依完整升級流程建立它。
+P0 的資料與規則地基必須能**承載**複雜角色，例如 Human Fighter 5 / Wizard 5，但 P0 不要求玩家從 UI 依完整升級流程建立它。
+
+P0 詳細範圍、設計、驗收分別見：
+
+```text
+docs/P0/實作規格.md
+docs/P0/開發設計方針.md
+docs/P0/測試指南.md
+```
 
 ### P1 — Character Builder Complete
 
@@ -113,24 +125,19 @@ P1 詳細規格等 P1 開工時再寫，不在 P0 提前完成。
 | **`docs/Px/測試指南.md`** | 該 Phase 的自動／人工驗收流程 |
 | **`待決事項.md`** | 真正無法從既有規格推導、且會影響核心玩法／方向的未決問題 |
 
-目前：
+目前主要文件：
 
 ```text
 adventure-table/
 ├── AGENTS.md
 ├── PROJECT_BRIEF.md
 ├── 規格企劃.md
-└── 技術棧討論.md
-```
-
-接下來建立：
-
-```text
-docs/
-└── P0/
-    ├── 實作規格.md
-    ├── 開發設計方針.md
-    └── 測試指南.md
+├── 技術棧討論.md
+└── docs/
+    └── P0/
+        ├── 實作規格.md
+        ├── 開發設計方針.md
+        └── 測試指南.md
 ```
 
 ---
@@ -144,13 +151,13 @@ docs/
 ↓
 寫 實作規格.md：完成後什麼必須成立
 ↓
-寫 開發設計方針.md：這一 Phase 實際怎麼做
+寫 開發設計方針.md：這一 Phase實際怎麼做
 ↓
 寫 測試指南.md：如何證明做對
 ↓
-開始實作
+等待使用者決定是否開始實作
 ↓
-Phase 收尾後更新 PROJECT_BRIEF
+Phase 實作完成後更新 PROJECT_BRIEF
 ```
 
 可以保留必要的跨 Phase 相容性要求，但**不要因此提前設計後續 Phase 的 schema / API / module**。
@@ -164,7 +171,8 @@ Phase 收尾後更新 PROJECT_BRIEF
 1. 先讀 `AGENTS.md`。
 2. 再讀 `PROJECT_BRIEF.md` 取得目前 Phase 與下一步。
 3. 按任務讀 `規格企劃.md` 對應章節。
-4. 若目前 Phase 已有 `docs/Px/` 文件，再讀該 Phase 的實作規格、開發設計與測試指南。
+4. P0 相關任務再讀 `docs/P0/` 三份文件。
 5. 不重新討論已定案產品規格。
 6. 不為還沒開工的 Phase 預先設計具體實作。
-7. 每完成一個 Phase，更新本檔進度與下一步。
+7. **未獲使用者明確要求，不開始 coding。**
+8. 每完成一個 Phase，更新本檔進度與下一步。
