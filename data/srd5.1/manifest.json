@@ -1,0 +1,181 @@
+{
+  "id": "srd5.1",
+  "name": "System Reference Document 5.1",
+  "ruleset": "dnd5e-2014",
+  "license": {
+    "spdx": "CC-BY-4.0",
+    "source": "https://www.dndbeyond.com/srd",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/legalcode",
+    "attribution": "Contains material from the System Reference Document 5.1 (\"SRD 5.1\") by Wizards of the Coast LLC. SRD 5.1 is used under CC BY 4.0."
+  },
+  "extraction": {
+    "repository": "https://github.com/5e-bits/5e-database",
+    "commit": "ce47a18dfeb3e41a1b2a2dfe00a25761c3c3a4f1",
+    "license": "MIT",
+    "license_url": "https://github.com/5e-bits/5e-database/blob/ce47a18dfeb3e41a1b2a2dfe00a25761c3c3a4f1/LICENSE.md"
+  },
+  "categories": [
+    {
+      "name": "abilities",
+      "kind": "ability",
+      "file": "abilities.json",
+      "upstream_file": "5e-SRD-Ability-Scores.json",
+      "count": 6
+    },
+    {
+      "name": "alignments",
+      "kind": "alignment",
+      "file": "alignments.json",
+      "upstream_file": "5e-SRD-Alignments.json",
+      "count": 9
+    },
+    {
+      "name": "backgrounds",
+      "kind": "background",
+      "file": "backgrounds.json",
+      "upstream_file": "5e-SRD-Backgrounds.json",
+      "count": 1
+    },
+    {
+      "name": "classes",
+      "kind": "class",
+      "file": "classes.json",
+      "upstream_file": "5e-SRD-Classes.json",
+      "count": 12
+    },
+    {
+      "name": "conditions",
+      "kind": "condition",
+      "file": "conditions.json",
+      "upstream_file": "5e-SRD-Conditions.json",
+      "count": 15
+    },
+    {
+      "name": "damage-types",
+      "kind": "damage-type",
+      "file": "damage-types.json",
+      "upstream_file": "5e-SRD-Damage-Types.json",
+      "count": 13
+    },
+    {
+      "name": "equipment-categories",
+      "kind": "equipment-category",
+      "file": "equipment-categories.json",
+      "upstream_file": "5e-SRD-Equipment-Categories.json",
+      "count": 39
+    },
+    {
+      "name": "equipment",
+      "kind": "equipment",
+      "file": "equipment.json",
+      "upstream_file": "5e-SRD-Equipment.json",
+      "count": 237
+    },
+    {
+      "name": "feats",
+      "kind": "feat",
+      "file": "feats.json",
+      "upstream_file": "5e-SRD-Feats.json",
+      "count": 1
+    },
+    {
+      "name": "features",
+      "kind": "feature",
+      "file": "features.json",
+      "upstream_file": "5e-SRD-Features.json",
+      "count": 407
+    },
+    {
+      "name": "languages",
+      "kind": "language",
+      "file": "languages.json",
+      "upstream_file": "5e-SRD-Languages.json",
+      "count": 16
+    },
+    {
+      "name": "levels",
+      "kind": "level",
+      "file": "levels.json",
+      "upstream_file": "5e-SRD-Levels.json",
+      "count": 290
+    },
+    {
+      "name": "items",
+      "kind": "item",
+      "file": "items.json",
+      "upstream_file": "5e-SRD-Magic-Items.json",
+      "count": 362
+    },
+    {
+      "name": "magic-schools",
+      "kind": "magic-school",
+      "file": "magic-schools.json",
+      "upstream_file": "5e-SRD-Magic-Schools.json",
+      "count": 8
+    },
+    {
+      "name": "proficiencies",
+      "kind": "proficiency",
+      "file": "proficiencies.json",
+      "upstream_file": "5e-SRD-Proficiencies.json",
+      "count": 117
+    },
+    {
+      "name": "races",
+      "kind": "race",
+      "file": "races.json",
+      "upstream_file": "5e-SRD-Races.json",
+      "count": 9
+    },
+    {
+      "name": "skills",
+      "kind": "skill",
+      "file": "skills.json",
+      "upstream_file": "5e-SRD-Skills.json",
+      "count": 18
+    },
+    {
+      "name": "spells",
+      "kind": "spell",
+      "file": "spells.json",
+      "upstream_file": "5e-SRD-Spells.json",
+      "count": 319
+    },
+    {
+      "name": "subclasses",
+      "kind": "subclass",
+      "file": "subclasses.json",
+      "upstream_file": "5e-SRD-Subclasses.json",
+      "count": 12
+    },
+    {
+      "name": "subraces",
+      "kind": "subrace",
+      "file": "subraces.json",
+      "upstream_file": "5e-SRD-Subraces.json",
+      "count": 4
+    },
+    {
+      "name": "traits",
+      "kind": "trait",
+      "file": "traits.json",
+      "upstream_file": "5e-SRD-Traits.json",
+      "count": 38
+    },
+    {
+      "name": "weapon-properties",
+      "kind": "weapon-property",
+      "file": "weapon-properties.json",
+      "upstream_file": "5e-SRD-Weapon-Properties.json",
+      "count": 11
+    }
+  ],
+  "total_entries": 1944,
+  "scope_guard": {
+    "excluded_categories": [
+      "monsters",
+      "beasts"
+    ],
+    "deferred_to": "P4-A"
+  }
+}
