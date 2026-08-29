@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.api.dependencies import get_character_builder_service
 from app.api.errors import APIError
+from app.domain.character_builder.creation import BuilderConfirmResult, BuilderReviewDTO
 from app.domain.character_builder.rules import load_ability_generation_rules
 from app.domain.character_builder.schemas import (
     BuilderDraftCreateInput,
@@ -14,8 +15,16 @@ from app.domain.character_builder.schemas import (
     BuilderValidationResult,
     BuilderView,
 )
-from app.domain.character_builder.service import BuilderModeNotEnabledError, CharacterBuilderService
-from app.persistence.builder_drafts import BuilderDraftNotFoundError, BuilderDraftRevisionConflictError
+from app.domain.character_builder.service import (
+    BuilderCannotConfirmError,
+    BuilderModeNotEnabledError,
+    CharacterBuilderService,
+)
+from app.persistence.builder_drafts import (
+    BuilderDraftAlreadyConfirmedError,
+    BuilderDraftNotFoundError,
+    BuilderDraftRevisionConflictError,
+)
 
 
 router = APIRouter(prefix="/api/character-builder", tags=["character-builder"])
@@ -35,6 +44,10 @@ class AbilityGenerationRulesDTO(BaseModel):
 
 def _not_found(exc: BuilderDraftNotFoundError) -> APIError:
     return APIError(404, "builder_draft_not_found", f"builder draft not found: {exc}")
+
+
+def _already_confirmed(exc: BuilderDraftAlreadyConfirmedError) -> APIError:
+    return APIError(409, "builder_draft_already_confirmed", str(exc))
 
 
 @router.get("/rules/ability-generation", response_model=AbilityGenerationRulesDTO)
@@ -90,6 +103,8 @@ def patch_builder_draft(
         return service.patch_draft(draft_id, request)
     except BuilderDraftNotFoundError as exc:
         raise _not_found(exc) from exc
+    except BuilderDraftAlreadyConfirmedError as exc:
+        raise _already_confirmed(exc) from exc
     except BuilderDraftRevisionConflictError as exc:
         raise APIError(409, "stale_draft_revision", str(exc)) from exc
 
@@ -105,6 +120,38 @@ def validate_builder_draft(
         raise _not_found(exc) from exc
 
 
+@router.get("/drafts/{draft_id}/review", response_model=BuilderReviewDTO)
+def review_builder_draft(
+    draft_id: UUID,
+    service: CharacterBuilderService = Depends(get_character_builder_service),
+) -> BuilderReviewDTO:
+    try:
+        return service.review_draft(draft_id)
+    except BuilderDraftNotFoundError as exc:
+        raise _not_found(exc) from exc
+
+
+@router.post("/drafts/{draft_id}/confirm", response_model=BuilderConfirmResult)
+def confirm_builder_draft(
+    draft_id: UUID,
+    service: CharacterBuilderService = Depends(get_character_builder_service),
+) -> BuilderConfirmResult:
+    try:
+        return service.confirm_draft(draft_id)
+    except BuilderDraftNotFoundError as exc:
+        raise _not_found(exc) from exc
+    except BuilderDraftRevisionConflictError as exc:
+        raise APIError(409, "stale_draft_revision", str(exc)) from exc
+    except BuilderCannotConfirmError as exc:
+        blocking = [
+            issue.message
+            for issue in exc.validation.issues
+            if issue.severity == "blocking_error"
+        ]
+        message = blocking[0] if blocking else str(exc)
+        raise APIError(422, "builder_confirm_blocked", message) from exc
+
+
 @router.delete("/drafts/{draft_id}", status_code=status.HTTP_204_NO_CONTENT)
 def cancel_builder_draft(
     draft_id: UUID,
@@ -114,4 +161,6 @@ def cancel_builder_draft(
         service.cancel_draft(draft_id)
     except BuilderDraftNotFoundError as exc:
         raise _not_found(exc) from exc
+    except BuilderDraftAlreadyConfirmedError as exc:
+        raise _already_confirmed(exc) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
