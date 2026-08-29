@@ -72,6 +72,25 @@ class SpellAccessEntry(FrozenModel):
         return require_stable_key(value)
 
 
+class PreparedSpellSelection(FrozenModel):
+    """A live prepared spell with source identity independent of Build access rows.
+
+    P0 Wizard state used prepared_spell_entry_ids, which can only point at an
+    explicit spellbook Build entry. Prepared casters such as Cleric and Druid
+    instead prepare from a class-list eligibility profile, so P1-E records the
+    spell and profile directly while keeping the legacy field readable.
+    """
+
+    spell_key: StableKey
+    source_profile_id: str = Field(min_length=1, max_length=240)
+    source_access_entry_id: str | None = Field(default=None, min_length=1, max_length=120)
+
+    @field_validator("spell_key")
+    @classmethod
+    def spell_key_is_spell(cls, value: str) -> str:
+        return require_stable_key(value, kinds={"spell"})
+
+
 class StartingEquipmentEntry(FrozenModel):
     entry_id: str = Field(min_length=1, max_length=120)
     item_ref: StableKey
@@ -235,7 +254,10 @@ class CharacterState(MutableModel):
     current_hp: int = Field(ge=0)
     temporary_hp: int = Field(default=0, ge=0)
     conditions: list[ConditionState] = Field(default_factory=list)
+    # P0 compatibility: persisted Wizard fixtures still use entry ids.
     prepared_spell_entry_ids: list[str] = Field(default_factory=list)
+    # P1-E canonical prepared representation supports full-list prepared casters.
+    prepared_spells: list[PreparedSpellSelection] = Field(default_factory=list)
     spell_slots: dict[int, ResourceCounter] = Field(default_factory=dict)
     resources: dict[str, ResourceCounter] = Field(default_factory=dict)
     hit_dice_state: dict[HitDie, int] = Field(default_factory=dict)
@@ -246,6 +268,16 @@ class CharacterState(MutableModel):
     def prepared_ids_are_unique(cls, value: list[str]) -> list[str]:
         if len(value) != len(set(value)):
             raise ValueError("prepared_spell_entry_ids must be unique")
+        return value
+
+    @field_validator("prepared_spells")
+    @classmethod
+    def prepared_spells_are_unique(
+        cls, value: list[PreparedSpellSelection]
+    ) -> list[PreparedSpellSelection]:
+        identities = [(item.source_profile_id, item.spell_key) for item in value]
+        if len(identities) != len(set(identities)):
+            raise ValueError("prepared spells must be unique per source profile")
         return value
 
     @field_validator("spell_slots")
