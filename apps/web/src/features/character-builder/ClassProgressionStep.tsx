@@ -126,10 +126,16 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
     view.resolved_summary.progression.map((node) => [node.character_level, node]),
   )
 
-  const saveLevel = (level: number, next: BuilderLevelChoice) => {
+  const saveLevel = (
+    level: number,
+    next: BuilderLevelChoice,
+    options: { resetSpellChoices?: boolean } = {},
+  ) => {
     const levels = [...savedLevels]
     levels[level - 1] = next
-    onSave({ level_choices: levels })
+    const payload: BuilderDraftPayload = { level_choices: levels }
+    if (options.resetSpellChoices) payload.spell_choices = {}
+    onSave(payload)
   }
 
   const selectClass = (level: number, classRef: string) => {
@@ -138,23 +144,27 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
     if (!option || option.disabled_reason || !option.hit_die_size || !option.fixed_hp_gain) return
     const current = savedLevels[level - 1]
     const sameClass = current?.class_ref === classRef
-    saveLevel(level, {
-      character_level: level,
-      class_ref: classRef,
-      hp_method:
-        level === 1
-          ? 'first_level'
-          : sameClass
-            ? current.hp_method
-            : 'fixed_average',
-      hp_base_gain:
-        level === 1
-          ? option.hit_die_size
-          : sameClass
-            ? current.hp_base_gain
-            : option.fixed_hp_gain,
-      subclass_ref: sameClass ? current.subclass_ref : null,
-    })
+    saveLevel(
+      level,
+      {
+        character_level: level,
+        class_ref: classRef,
+        hp_method:
+          level === 1
+            ? 'first_level'
+            : sameClass
+              ? current.hp_method
+              : 'fixed_average',
+        hp_base_gain:
+          level === 1
+            ? option.hit_die_size
+            : sameClass
+              ? current.hp_base_gain
+              : option.fixed_hp_gain,
+        subclass_ref: sameClass ? current.subclass_ref : null,
+      },
+      { resetSpellChoices: !sameClass },
+    )
   }
 
   const setHPMethod = (level: number, method: BuilderHPMethod) => {
