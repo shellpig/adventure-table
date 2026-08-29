@@ -40,6 +40,14 @@ character_build_drafts = Table(
     Column("base_version_id", Uuid(as_uuid=True), ForeignKey("character_versions.id", ondelete="CASCADE"), nullable=True, index=True),
     Column("revision", Integer, nullable=False),
     Column("draft_payload", json_payload_type, nullable=False),
+    Column(
+        "confirmed_character_id",
+        Uuid(as_uuid=True),
+        ForeignKey("characters.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    ),
+    Column("confirmed_at", DateTime(timezone=True), nullable=True),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
 )
@@ -47,6 +55,13 @@ character_build_drafts = Table(
 
 class BuilderDraftNotFoundError(LookupError):
     pass
+
+
+class BuilderDraftAlreadyConfirmedError(RuntimeError):
+    def __init__(self, draft_id: UUID, character_id: UUID) -> None:
+        super().__init__(f"draft {draft_id} is already confirmed as character {character_id}")
+        self.draft_id = draft_id
+        self.character_id = character_id
 
 
 class BuilderDraftRevisionConflictError(RuntimeError):
@@ -87,14 +102,23 @@ class BuilderDraftRepository:
                     base_version_id=request.base_version_id,
                     revision=1,
                     draft_payload=request.draft_payload.model_dump(mode="json"),
+                    confirmed_character_id=None,
+                    confirmed_at=None,
                 )
             )
         return self.load_draft(draft_id)
 
-    def list_drafts(self, *, mode: BuilderMode | None = None) -> tuple[BuilderDraft, ...]:
+    def list_drafts(
+        self,
+        *,
+        mode: BuilderMode | None = None,
+        include_confirmed: bool = False,
+    ) -> tuple[BuilderDraft, ...]:
         query = select(character_build_drafts).order_by(character_build_drafts.c.updated_at.desc())
         if mode is not None:
             query = query.where(character_build_drafts.c.mode == mode.value)
+        if not include_confirmed:
+            query = query.where(character_build_drafts.c.confirmed_character_id.is_(None))
         with self.engine.connect() as connection:
             rows = connection.execute(query).mappings().all()
         return tuple(self._from_row(row) for row in rows)
@@ -106,6 +130,18 @@ class BuilderDraftRepository:
         if row is None:
             raise BuilderDraftNotFoundError(str(draft_id))
         return self._from_row(row)
+
+    def confirmed_character_id(self, draft_id: UUID) -> UUID | None:
+        with self.engine.connect() as connection:
+            row = connection.execute(
+                select(
+                    character_build_drafts.c.id,
+                    character_build_drafts.c.confirmed_character_id,
+                ).where(character_build_drafts.c.id == draft_id)
+            ).mappings().one_or_none()
+        if row is None:
+            raise BuilderDraftNotFoundError(str(draft_id))
+        return row["confirmed_character_id"]
 
     def update_draft_payload(
         self,
@@ -120,6 +156,7 @@ class BuilderDraftRepository:
                 .where(
                     character_build_drafts.c.id == draft_id,
                     character_build_drafts.c.revision == expected_revision,
+                    character_build_drafts.c.confirmed_character_id.is_(None),
                 )
                 .values(
                     revision=expected_revision + 1,
@@ -128,18 +165,42 @@ class BuilderDraftRepository:
                 )
             )
             if result.rowcount != 1:
-                actual_revision = connection.scalar(
-                    select(character_build_drafts.c.revision).where(character_build_drafts.c.id == draft_id)
-                )
-                if actual_revision is None:
+                row = connection.execute(
+                    select(
+                        character_build_drafts.c.revision,
+                        character_build_drafts.c.confirmed_character_id,
+                    ).where(character_build_drafts.c.id == draft_id)
+                ).mappings().one_or_none()
+                if row is None:
                     raise BuilderDraftNotFoundError(str(draft_id))
-                raise BuilderDraftRevisionConflictError(draft_id, expected_revision, int(actual_revision))
+                if row["confirmed_character_id"] is not None:
+                    raise BuilderDraftAlreadyConfirmedError(
+                        draft_id, row["confirmed_character_id"]
+                    )
+                raise BuilderDraftRevisionConflictError(
+                    draft_id, expected_revision, int(row["revision"])
+                )
         return self.load_draft(draft_id)
 
     def delete_draft(self, draft_id: UUID) -> None:
         with self.engine.begin() as connection:
             result = connection.execute(
-                delete(character_build_drafts).where(character_build_drafts.c.id == draft_id)
+                delete(character_build_drafts).where(
+                    character_build_drafts.c.id == draft_id,
+                    character_build_drafts.c.confirmed_character_id.is_(None),
+                )
             )
-            if result.rowcount != 1:
+            if result.rowcount == 1:
+                return
+            row = connection.execute(
+                select(character_build_drafts.c.confirmed_character_id).where(
+                    character_build_drafts.c.id == draft_id
+                )
+            ).mappings().one_or_none()
+            if row is None:
                 raise BuilderDraftNotFoundError(str(draft_id))
+            if row["confirmed_character_id"] is not None:
+                raise BuilderDraftAlreadyConfirmedError(
+                    draft_id, row["confirmed_character_id"]
+                )
+            raise BuilderDraftNotFoundError(str(draft_id))
