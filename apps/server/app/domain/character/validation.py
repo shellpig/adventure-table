@@ -5,6 +5,7 @@ from collections import Counter
 from app.content.registry import ContentNotFoundError, ContentRegistry
 from app.domain.character.schemas import CharacterBuild, CharacterState
 from app.domain.rules.hit_points import calculate_max_hp
+from app.domain.rules.spellcasting import max_spell_level_for_class, spell_is_on_class_list
 
 
 class CharacterValidationError(ValueError):
@@ -101,18 +102,72 @@ def derive_hit_dice_totals(build: CharacterBuild, registry: ContentRegistry) -> 
     return dict(totals)
 
 
-def validate_state_against_build(
+def _validate_prepared_spells(
     state: CharacterState,
     build: CharacterBuild,
     registry: ContentRegistry,
 ) -> None:
     access_by_id = {entry.entry_id: entry for entry in build.spell_access_entries}
+
+    # P0 compatibility path: Wizard fixtures persisted explicit spellbook ids.
     for entry_id in state.prepared_spell_entry_ids:
         access = access_by_id.get(entry_id)
         if access is None:
             raise CharacterValidationError(f"prepared spell entry does not exist in build: {entry_id}")
         if access.access_type != "spellbook":
             raise CharacterValidationError(f"prepared spell entry is not prepareable in P0: {entry_id}")
+
+    # P1-E canonical path: a prepared class-list spell need not have a Build
+    # access entry, but its source profile must still be a class the Build owns.
+    progression_classes = set(build.class_progression)
+    for selection in state.prepared_spells:
+        _require_content(registry, selection.spell_key)
+        if not selection.source_profile_id.startswith("class:"):
+            raise CharacterValidationError(
+                f"unsupported prepared spell source profile: {selection.source_profile_id}"
+            )
+        class_index = selection.source_profile_id.removeprefix("class:")
+        class_ref = f"srd5.1:class:{class_index}"
+        if class_ref not in progression_classes:
+            raise CharacterValidationError(
+                f"prepared spell source class does not exist in build: {class_ref}"
+            )
+
+        if selection.source_access_entry_id is not None:
+            access = access_by_id.get(selection.source_access_entry_id)
+            if access is None:
+                raise CharacterValidationError(
+                    f"prepared spell source access entry does not exist: {selection.source_access_entry_id}"
+                )
+            if access.access_type != "spellbook" or access.spell_key != selection.spell_key:
+                raise CharacterValidationError(
+                    f"prepared spell source access entry is not a matching spellbook entry: {selection.source_access_entry_id}"
+                )
+            if access.source_type != "class" or access.source_key != class_ref:
+                raise CharacterValidationError(
+                    f"prepared spell source access entry belongs to a different profile: {selection.source_access_entry_id}"
+                )
+            continue
+
+        if not spell_is_on_class_list(selection.spell_key, class_ref, registry):
+            raise CharacterValidationError(
+                f"prepared spell is not on source class list: {selection.spell_key} / {class_ref}"
+            )
+        spell = registry.get(selection.spell_key)
+        level = spell.data.get("level")
+        max_level = max_spell_level_for_class(build, class_ref, registry)
+        if not isinstance(level, int) or level < 1 or level > max_level:
+            raise CharacterValidationError(
+                f"prepared spell level is not eligible for source class: {selection.spell_key}"
+            )
+
+
+def validate_state_against_build(
+    state: CharacterState,
+    build: CharacterBuild,
+    registry: ContentRegistry,
+) -> None:
+    _validate_prepared_spells(state, build, registry)
 
     for condition in state.conditions:
         _require_content(registry, condition.condition_ref)
