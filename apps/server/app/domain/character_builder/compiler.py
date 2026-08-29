@@ -24,6 +24,7 @@ from app.domain.character_builder.schemas import (
     BuilderResolvedSummary,
     BuilderValidationResult,
 )
+from app.domain.character_builder.spellcasting import compile_spellcasting
 from app.domain.character_builder.structural import (
     StructuralCompilation,
     build_structural_choices,
@@ -237,6 +238,27 @@ def compile_builder_draft(
         }
     )
 
+    automatic_features = tuple(
+        dict.fromkeys(
+            feature_ref
+            for node in nodes
+            for feature_ref in node.automatic_feature_refs
+        )
+    )
+    spellcasting = compile_spellcasting(
+        draft,
+        registry,
+        effective_abilities=_effective_abilities(resolved_summary),
+        feature_refs=tuple(dict.fromkeys((*automatic_features, *structural.feature_refs))),
+    )
+    issues.extend(spellcasting.issues)
+    resolved_summary = resolved_summary.model_copy(
+        update={
+            "spellcasting_profiles": spellcasting.profiles,
+            "spell_resource_pools": spellcasting.resource_pools,
+        }
+    )
+
     build_candidate: CharacterBuild | None = None
     has_blocking = any(issue.severity is BuilderIssueSeverity.BLOCKING_ERROR for issue in issues)
     abilities = _build_ability_scores(resolved_summary)
@@ -276,13 +298,14 @@ def compile_builder_draft(
             skill_choices=tuple(dict.fromkeys((*compiled.skill_choices, *structural.skill_choices))),
             feature_refs=tuple(dict.fromkeys((*compiled.feature_refs, *structural.feature_refs))),
             feat_refs=structural.feat_refs,
+            spell_access_entries=spellcasting.spell_access_entries,
             hp_progression=compiled.hp_progression,
             roleplay_profile=_roleplay_profile(draft),
             numeric_overrides=payload.numeric_overrides,
         )
 
-    # P1-D now completes structural Build choices, but Confirm stays closed until
-    # P1-E/P1-F finish spellcasting, equipment and the final review workflow.
+    # P1-E completes spell progression, but Confirm stays closed until P1-F
+    # finishes equipment, final review and atomic character creation.
     if not has_blocking:
         issues.append(
             BuilderIssue(
@@ -290,8 +313,8 @@ def compile_builder_draft(
                 severity=BuilderIssueSeverity.BLOCKING_ERROR,
                 path="draft_payload",
                 message=(
-                    "Class progression and structural choices are valid. Spellcasting, equipment and "
-                    "final review must be completed before Confirm is enabled."
+                    "Spellcasting progression is valid. Starting equipment and final review must be "
+                    "completed before Confirm is enabled."
                 ),
             )
         )
