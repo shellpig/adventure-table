@@ -45,7 +45,7 @@ jobs:
         working-directory: apps/web
         run: npm run build
 
-      - name: Run Vitest baseline
+      - name: Run Vitest
         working-directory: apps/web
         run: npm test -- --run
 
@@ -53,14 +53,10 @@ jobs:
         working-directory: apps/web
         run: npx playwright install --with-deps chromium
 
-      - name: Run Playwright baseline
-        working-directory: apps/web
-        run: npm run test:e2e
-
       - name: Validate Docker Compose
         run: docker compose config
 
-      - name: Start full P0-A stack
+      - name: Start full stack
         run: docker compose up -d --build
 
       - name: Verify full stack readiness
@@ -68,6 +64,15 @@ jobs:
           curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8000/health
           curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8000/ready
           curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://localhost:5173
+
+      - name: Seed deterministic P0 fixture
+        run: docker compose exec -T server python -m app.scripts.seed_p0_fighter_wizard
+
+      - name: Run Playwright P0-E flow
+        working-directory: apps/web
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:5173
+        run: npm run test:e2e
 
       - name: Show container logs on failure
         if: failure()

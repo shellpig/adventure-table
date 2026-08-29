@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 from app.domain.character.schemas import (
     AbilityScores,
     CharacterBuild,
@@ -12,6 +14,7 @@ from app.domain.character.schemas import (
 )
 
 
+P0_FIXTURE_ID = UUID("00000000-0000-4000-8000-0000000000e0")
 P0_FIXTURE_NAME = "P0 Human Fighter 5 / Wizard 5"
 
 
