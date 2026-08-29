@@ -102,11 +102,43 @@ def build_p0_fighter_wizard_fixture() -> CharacterBuild:
                 item_ref="srd5.1:equipment:longsword",
                 quantity=1,
             ),
+            StartingEquipmentEntry(
+                entry_id="starting:healing-potion",
+                item_ref="srd5.1:item:potion-of-healing-common",
+                quantity=2,
+            ),
         ),
     )
 
 
-def build_p0_fighter_wizard_state() -> CharacterState:
+def initialize_inventory_from_starting_equipment(
+    build: CharacterBuild,
+) -> list[InventoryEntry]:
+    """Create the one-time initial live inventory from the immutable Build choices."""
+    return [
+        InventoryEntry(
+            entry_id=f"inventory:{entry.entry_id.removeprefix('starting:')}",
+            item_ref=entry.item_ref,
+            quantity=entry.quantity,
+        )
+        for entry in build.starting_equipment
+    ]
+
+
+def build_p0_fighter_wizard_state(
+    build: CharacterBuild | None = None,
+) -> CharacterState:
+    build = build or build_p0_fighter_wizard_fixture()
+    equipped_ids = {
+        "inventory:chain-mail",
+        "inventory:shield",
+        "inventory:longsword",
+    }
+    initial_inventory = [
+        entry.model_copy(update={"equipped": entry.entry_id in equipped_ids})
+        for entry in initialize_inventory_from_starting_equipment(build)
+    ]
+
     return CharacterState(
         current_hp=74,
         temporary_hp=0,
@@ -124,30 +156,5 @@ def build_p0_fighter_wizard_state() -> CharacterState:
             "wizard:arcane-recovery": ResourceCounter(used=0, remaining=1),
         },
         hit_dice_state={"d10": 5, "d6": 5},
-        inventory_state=[
-            InventoryEntry(
-                entry_id="inventory:chain-mail",
-                item_ref="srd5.1:equipment:chain-mail",
-                quantity=1,
-                equipped=True,
-            ),
-            InventoryEntry(
-                entry_id="inventory:shield",
-                item_ref="srd5.1:equipment:shield",
-                quantity=1,
-                equipped=True,
-            ),
-            InventoryEntry(
-                entry_id="inventory:longsword",
-                item_ref="srd5.1:equipment:longsword",
-                quantity=1,
-                equipped=True,
-            ),
-            InventoryEntry(
-                entry_id="inventory:healing-potion",
-                item_ref="srd5.1:item:potion-of-healing-common",
-                quantity=2,
-                equipped=False,
-            ),
-        ],
+        inventory_state=initial_inventory,
     )
