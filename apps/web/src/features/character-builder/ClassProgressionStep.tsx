@@ -6,6 +6,7 @@ import {
   type BuilderView,
 } from '../../api/characterBuilder'
 import { SearchableSelect } from '../../components/SearchableSelect'
+import './progression.css'
 
 
 type Props = {
