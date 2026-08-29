@@ -1,20 +1,45 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 
-async function chooseSearchable(page: Page, label: string | RegExp, value: string) {
-  const input = page.getByRole('combobox', { name: label })
-  await expect(input).toBeEnabled()
-  await input.fill(value)
-  await input.press('ArrowDown')
-  await input.press('Enter')
+// Every builder selection starts an async draft save, and the page disables its
+// comboboxes while that save is in flight. Settling on both sides of the
+// interaction keeps a fast sequence from typing into a control that is about to
+// be disabled, and keeps a keystroke from silently landing on an empty option
+// list while the server-generated choices are still being refetched.
+async function expectDraftSaved(page: Page) {
+  await expect(page.getByText('Saved on server')).toBeVisible()
 }
 
-async function chooseIn(container: ReturnType<Page['locator']>, value: string) {
-  const input = container.getByRole('combobox', { name: 'Add selection' })
+// Click the option whose label matches exactly. Typing and pressing ArrowDown
+// moves the active item off the first row, so it only lands on the intended
+// option while the query happens to filter down to a single match.
+async function chooseOption(page: Page, input: Locator, value: string) {
+  await expectDraftSaved(page)
   await expect(input).toBeEnabled()
   await input.fill(value)
-  await input.press('ArrowDown')
-  await input.press('Enter')
+
+  const listboxId = await input.getAttribute('aria-controls')
+  if (!listboxId) throw new Error(`Combobox for "${value}" has no aria-controls listbox`)
+  const listbox = page.locator(`[id="${listboxId}"]`)
+  const option = listbox.getByRole('option').filter({ has: page.getByText(value, { exact: true }) })
+
+  await expect(option).toHaveCount(1)
+  await option.click()
+
+  await expect(listbox).toBeHidden()
+  await expectDraftSaved(page)
+}
+
+async function chooseSearchable(page: Page, label: string | RegExp, value: string) {
+  await chooseOption(page, page.getByRole('combobox', { name: label }), value)
+}
+
+async function chooseIn(container: Locator, value: string) {
+  await chooseOption(
+    container.page(),
+    container.getByRole('combobox', { name: 'Add selection' }),
+    value,
+  )
 }
 
 
@@ -73,9 +98,9 @@ test('P1-D preserves an ordered Fighter 5 / Wizard 5 rail with ASI and feat choi
   const fighterStartingSkills = page
     .getByTestId('level-node-1')
     .locator('.progression-choice')
-  await chooseIn(fighterStartingSkills, 'Acrobatics')
+  await chooseIn(fighterStartingSkills, 'Skill: Acrobatics')
   await expect(fighterStartingSkills).toContainText('1 / 2')
-  await chooseIn(fighterStartingSkills, 'Athletics')
+  await chooseIn(fighterStartingSkills, 'Skill: Athletics')
   await expect(fighterStartingSkills).toContainText('2 / 2')
 
   await chooseSearchable(page, 'Level 2 class', 'Fighter')

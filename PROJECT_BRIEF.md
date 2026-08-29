@@ -4,7 +4,7 @@
 
 **本檔負責：專案概述、當前進度、大 Phase Roadmap、當前 Phase 的 Subphase 進度、下一步與文件索引。**
 
-最後更新：2026-08-29
+最後更新：2026-08-30
 
 ---
 
@@ -33,7 +33,7 @@ Built-in Content：**SRD 5.1**
 
 ## 當前進度
 
-目前狀態：**P0 — Character Core + SRD / Rules Foundation 已完成；P1 — Character Builder Complete 已完成規劃與 Subphase 拆分。P1-A — Builder Domain & Draft Foundation 與 P1-B — Character Creation Basics 已完成實作與驗證；下一步是 P1-C — Class Progression & Multiclass，尚未開始 P1-C coding。**
+目前狀態：**P0 — Character Core + SRD / Rules Foundation 已完成；P1 — Character Builder Complete 已完成規劃與 Subphase 拆分。P1-A — Builder Domain & Draft Foundation、P1-B — Character Creation Basics、P1-C — Class Progression & Multiclass 與 P1-D — ASI, Feat & Structural Choices 已完成實作與驗證；下一步是 P1-E — Spellcasting Progression，尚未開始 P1-E coding。**
 
 已完成的產品／規劃工作：
 
@@ -98,7 +98,28 @@ P1-B 已完成：
 - Docker server image 已包含 `data/rules`，確保 container / CI 環境與本機使用同一份 authoritative Builder rules。
 - P1-B regression 已通過 backend pytest、Alembic、frontend build、Vitest、Docker full stack、real-browser Playwright 與 PostgreSQL restart persistence，並保持 P0 regression。
 
-**下一步：只有在使用者明確要求開始 P1-C 實作後，才進 P1-C — Class Progression & Multiclass。不要自行開始 P1-C coding。**
+P1-C 已完成：
+
+- 新增 ordered progression engine，Builder Draft 以逐級 acquisition event 保存 Character Level，Character Level 與各 Class Level 分離 derive。
+- Starting class grants 與 multiclass grants 明確區分；後續 multiclass 進入同一職業不會重複取得 starting-class-only grants。
+- Multiclass prerequisites 由 data-driven 規則與 server structural validation enforce，支援 alternative prerequisite groups，並以 effective ability scores 判定可用性；UI disabled 之外 backend 仍會拒絕繞過 UI 的非法 Draft。
+- Subclass timing 依各 class 的 class-level timing 驗證；過早選擇或到期未選皆為 structural / blocking error。
+- HP progression 支援 Fixed Average 與 Manual Rolled Result，逐級與 class hit die 1:1 對齊；multiclass 新職業非 Character Lv1 時不取 first-level max。
+- 修改較早 level 的 class 時，dependent 選擇會重新解析，過期 selection 由 live progression choices 取代，不留 hidden stale state。
+- 新增 level-by-level progression rail UI 並啟用 Class Progression 步驟；progression 型別輸出給前端，前端不硬編 eligible class 清單。
+- 新增 `progression` / `multiclass` domain 模組與 P1-C progression 測試，並保持既有 P0 / P1 regression。
+
+P1-D 已完成：
+
+- 新增 generic structural choice resolver，承載 choose-N proficiency、language、tool / weapon / armor、fighting style、nested feature choice 與 ASI-or-Feat branch，不為個別 class hardcode React form。
+- ASI eligibility 依 Class Level progression 判定；`ability_score_bonuses` 以累計值解讀，既有非零 cumulative value 不會讓後續每級重複產生 ASI。
+- 修正並正規化已知的 SRD ASI source 異常（如 Rogue），branch id 以 occurrence 為範圍，重複的合法選擇彼此不互相污染。
+- ASI 永久能力變化只編譯進 Build 一次；Numeric Override 可影響 numeric prerequisite，但不能繞過 subclass timing、ASI occurrence count、selection count 等 structural rule。
+- Feat prerequisite 為 structural validation，不合法時 disabled / blocking 並顯示原因。
+- Level rail 呈現 ASI / Feat 與 structural choices，structural choice metadata 輸出給前端；blocking choice 未完成時不可 Confirm。
+- 新增 `structural` domain 模組與 P1-D structural / progression 測試，並以 real-browser Playwright 覆蓋 ASI 與 feat 在 progression 中的行為。
+
+**下一步：只有在使用者明確要求開始 P1-E 實作後，才進 P1-E — Spellcasting Progression。不要自行開始 P1-E coding。**
 
 P1 的具體 DB / API / module 契約只住在 `docs/P1/開發設計方針.md`；本 Brief 不重複維護。
 
@@ -147,14 +168,14 @@ P1 已拆 Subphase；**P2～P8 仍維持大 Phase，不提前拆。**
 |---|---|---|
 | **P1-A — Builder Domain & Draft Foundation** | ✅ | Builder Draft、choice model、compiler / validation、draft persistence；不完整 Draft 不污染正式 Character |
 | **P1-B — Character Creation Basics** | ✅ | Character Workshop、Wizard basics、Race/Subrace、Background、Standard Array / Point Buy / Manual、starting skills/proficiencies |
-| **P1-C — Class Progression & Multiclass** | ⬜ | Level-by-level rail、starting class、multiclass prerequisites / grants、Subclass timing、HP progression |
-| **P1-D — ASI, Feat & Structural Choices** | ⬜ | ASI / Feat timing、prerequisites、generic structural choice resolver、Numeric Override boundary |
+| **P1-C — Class Progression & Multiclass** | ✅ | Level-by-level rail、starting class、multiclass prerequisites / grants、Subclass timing、HP progression |
+| **P1-D — ASI, Feat & Structural Choices** | ✅ | ASI / Feat timing、prerequisites、generic structural choice resolver、Numeric Override boundary |
 | **P1-E — Spellcasting Progression** | ⬜ | Known / Spellbook / Prepared / Always Prepared、multiclass slots、Pact Magic、source profiles |
 | **P1-F — Equipment, Review & Character Creation** | ⬜ | Starting Equipment nested choices、Review、atomic Create Confirm、Version 1 + initial State |
 | **P1-G — Level Up & Character Versions** | ⬜ | Level Up Draft、immutable Version N+1、Version History、stale base guard、State reconciliation、correction/build edit |
 | **P1-H — Full P1 Integration & Closeout** | ⬜ | P1 full regression、Create / high-level / multiclass / caster / Level Up E2E、P0 regression、closeout |
 
-P1-B 已完成實作與驗收；P1-C 是下一個可實作 Subphase，但未獲使用者明確要求前不開始 P1-C coding。
+P1-D 已完成實作與驗收；P1-E 是下一個可實作 Subphase，但未獲使用者明確要求前不開始 P1-E coding。
 
 ---
 
