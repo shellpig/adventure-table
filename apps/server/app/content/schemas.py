@@ -111,9 +111,16 @@ class LanguageData(IndexedNamedData):
 class LevelData(IndexedNamedData):
     name: str | None = None
     level: int = Field(ge=1, le=20)
-    prof_bonus: int = Field(ge=2, le=6)
+    prof_bonus: int | None = Field(default=None, ge=2, le=6)
     features: list[APIReference]
     class_: APIReference = Field(alias="class")
+    subclass: APIReference | None = None
+
+    @model_validator(mode="after")
+    def validate_level_variant(self) -> "LevelData":
+        if self.subclass is None and self.prof_bonus is None:
+            raise ValueError("class level records must include prof_bonus")
+        return self
 
 
 class ItemData(IndexedNamedData):
