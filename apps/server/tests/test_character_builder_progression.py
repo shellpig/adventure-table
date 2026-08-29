@@ -291,14 +291,31 @@ def test_multiclass_prerequisites_block_target_and_existing_class_failures() -> 
     assert legal_fighter_option.disabled_reason is None
     assert "multiclass_prerequisite_not_met" not in _codes(legal_result)
 
-    low_strength = _payload(
+    human_bonus_boundary = _payload(
         (
             _level(1, "wizard", hp=6),
             _level(2, "fighter", hp=6),
         ),
-        scores=_scores(strength=8, dexterity=13, constitution=12, intelligence=15, wisdom=14, charisma=10),
+        scores=_scores(strength=12, dexterity=8, constitution=10, intelligence=14, wisdom=13, charisma=15),
     )
-    result = compile_builder_draft(_draft(low_strength), registry)
+    boundary_result = compile_builder_draft(_draft(human_bonus_boundary), registry)
+    boundary_class_choice = next(
+        choice for choice in boundary_result.choices if choice.choice_id == "level:2:class-selection"
+    )
+    boundary_fighter_option = next(
+        option for option in boundary_class_choice.options if option.option_id == "srd5.1:class:fighter"
+    )
+    assert boundary_fighter_option.disabled_reason is None
+    assert "multiclass_prerequisite_not_met" not in _codes(boundary_result)
+
+    low_physical = _payload(
+        (
+            _level(1, "wizard", hp=6),
+            _level(2, "fighter", hp=6),
+        ),
+        scores=_scores(strength=8, dexterity=11, constitution=12, intelligence=15, wisdom=14, charisma=10),
+    )
+    result = compile_builder_draft(_draft(low_physical), registry)
     assert "multiclass_prerequisite_not_met" in _codes(result)
 
     class_choice = next(
