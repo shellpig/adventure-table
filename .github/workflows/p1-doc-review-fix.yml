@@ -1,0 +1,37 @@
+name: Apply P1 doc review fixes
+
+on:
+  push:
+    branches:
+      - docs/p1-review-fixes
+    paths:
+      - .github/scripts/p1_doc_review_fix.py
+      - .github/workflows/p1-doc-review-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: docs/p1-review-fixes
+          fetch-depth: 0
+
+      - name: Patch P1 documents
+        run: python3 .github/scripts/p1_doc_review_fix.py
+
+      - name: Validate diff
+        run: |
+          git diff --check
+          git diff -- docs/P1/實作規格.md docs/P1/開發設計方針.md docs/P1/測試指南.md
+
+      - name: Commit document fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/P1/實作規格.md docs/P1/開發設計方針.md docs/P1/測試指南.md
+          git commit -m "docs: close P1 review gaps"
+          git push origin HEAD:docs/p1-review-fixes
