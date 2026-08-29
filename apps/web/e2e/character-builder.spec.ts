@@ -98,9 +98,9 @@ test('P1-D preserves an ordered Fighter 5 / Wizard 5 rail with ASI and feat choi
   const fighterStartingSkills = page
     .getByTestId('level-node-1')
     .locator('.progression-choice')
-  await chooseIn(fighterStartingSkills, 'Acrobatics')
+  await chooseIn(fighterStartingSkills, 'Skill: Acrobatics')
   await expect(fighterStartingSkills).toContainText('1 / 2')
-  await chooseIn(fighterStartingSkills, 'Athletics')
+  await chooseIn(fighterStartingSkills, 'Skill: Athletics')
   await expect(fighterStartingSkills).toContainText('2 / 2')
 
   await chooseSearchable(page, 'Level 2 class', 'Fighter')
