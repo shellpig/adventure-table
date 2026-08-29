@@ -8,6 +8,10 @@ from app.domain.character.fixture import (
     build_p0_fighter_wizard_state,
 )
 from app.domain.character.schemas import NumericOverride, PersistedCharacter
+from app.domain.character.validation import (
+    CharacterValidationError,
+    validate_state_against_build,
+)
 from app.domain.rules.abilities import ability_modifier
 from app.domain.rules.character_sheet import build_character_sheet
 from app.domain.rules.proficiency import class_level, proficiency_bonus
@@ -151,3 +155,19 @@ def test_numeric_override_variant_is_applied_last_without_changing_structure():
     assert build.feature_refs == baseline.feature_refs
     assert build.spell_access_entries == baseline.spell_access_entries
     assert build.starting_equipment == baseline.starting_equipment
+
+
+def test_max_hp_override_is_used_by_current_hp_validation():
+    registry = load_default_content_registry()
+    build = build_p0_fighter_wizard_fixture().model_copy(
+        update={
+            "numeric_overrides": (NumericOverride(key="max_hp", value=80),)
+        }
+    )
+    state = build_p0_fighter_wizard_state(build)
+    state.current_hp = 80
+    validate_state_against_build(state, build, registry)
+
+    state.current_hp = 81
+    with pytest.raises(CharacterValidationError, match="calculated max_hp"):
+        validate_state_against_build(state, build, registry)

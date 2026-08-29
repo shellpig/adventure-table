@@ -88,33 +88,56 @@ def test_character_and_sheet_api_expose_persisted_and_derived_models():
     assert any(item["entry_id"] == "inventory:shield" for item in payload["inventory"])
 
 
-def test_state_patch_is_atomic_and_does_not_change_build_version():
+def test_state_patch_covers_p0_mutations_and_keeps_build_immutable():
     client, repository, character = _seed_api()
     before = repository.load_character(character.id)
     before_build = before.build.model_dump(mode="json")
+
+    inventory = []
+    for item in before.state.inventory_state:
+        if item.entry_id == "inventory:longsword":
+            continue
+        payload = item.model_dump(mode="json")
+        if item.entry_id == "inventory:shield":
+            payload["equipped"] = False
+        if item.entry_id == "inventory:healing-potion":
+            payload["quantity"] = 1
+        inventory.append(payload)
+    inventory.append(
+        {
+            "entry_id": "inventory:dagger",
+            "item_ref": "srd5.1:equipment:dagger",
+            "quantity": 1,
+            "equipped": False,
+            "carried": True,
+        }
+    )
 
     patched = client.patch(
         f"/api/characters/{character.id}/state",
         json={
             "current_hp": 60,
             "temporary_hp": 3,
+            "conditions": [
+                {
+                    "condition_ref": "srd5.1:condition:poisoned",
+                    "note": "P0-D API regression",
+                }
+            ],
             "prepared_spell_entry_ids": [
                 "wizard:magic-missile",
                 "wizard:detect-magic",
             ],
+            "spell_slots": {
+                "1": {"used": 2, "remaining": 2},
+                "2": {"used": 0, "remaining": 3},
+                "3": {"used": 1, "remaining": 1},
+            },
+            "resources": {
+                "wizard:arcane-recovery": {"used": 1, "remaining": 0}
+            },
             "hit_dice_state": {"d10": 4, "d6": 5},
-            "inventory_state": [
-                {
-                    **item.model_dump(mode="json"),
-                    "equipped": False
-                    if item.entry_id == "inventory:shield"
-                    else item.equipped,
-                    "quantity": 1
-                    if item.entry_id == "inventory:healing-potion"
-                    else item.quantity,
-                }
-                for item in before.state.inventory_state
-            ],
+            "inventory_state": inventory,
         },
     )
     assert patched.status_code == 200
@@ -122,23 +145,68 @@ def test_state_patch_is_atomic_and_does_not_change_build_version():
     assert payload["current_hp"] == 60
     assert payload["temporary_hp"] == 3
     assert payload["armor_class"] == 16
+    assert payload["conditions"][0]["condition_ref"] == "srd5.1:condition:poisoned"
+    assert payload["spell_slots"]["1"] == {"used": 2, "remaining": 2}
+    assert payload["resources"]["wizard:arcane-recovery"] == {
+        "used": 1,
+        "remaining": 0,
+    }
     assert next(
         item for item in payload["hit_dice"] if item["die"] == "d10"
     )["available"] == 4
+    inventory_by_id = {item["entry_id"]: item for item in payload["inventory"]}
+    assert "inventory:longsword" not in inventory_by_id
+    assert inventory_by_id["inventory:shield"]["equipped"] is False
+    assert inventory_by_id["inventory:healing-potion"]["quantity"] == 1
+    assert inventory_by_id["inventory:dagger"]["item_ref"] == "srd5.1:equipment:dagger"
 
     after = repository.load_character(character.id)
     assert after.current_version_id == before.current_version_id
     assert after.version_no == before.version_no
     assert after.build.model_dump(mode="json") == before_build
 
-    invalid = client.patch(
-        f"/api/characters/{character.id}/state",
-        json={"hit_dice_state": {"d10": 6, "d6": 5}},
-    )
-    assert invalid.status_code == 422
-    assert invalid.json()["error"]["code"] == "validation_failed"
-    unchanged = repository.load_character(character.id)
-    assert unchanged.state.hit_dice_state == after.state.hit_dice_state
+
+def test_invalid_state_requests_are_atomic_and_machine_readable():
+    client, repository, character = _seed_api()
+    baseline = repository.load_character(character.id)
+    baseline_state = baseline.state.model_dump(mode="json")
+    baseline_version_id = baseline.current_version_id
+    baseline_build = baseline.build.model_dump(mode="json")
+
+    invalid_patches = [
+        {
+            "inventory_state": [
+                {
+                    "entry_id": "inventory:bad-quantity",
+                    "item_ref": "srd5.1:equipment:dagger",
+                    "quantity": -1,
+                }
+            ]
+        },
+        {"conditions": [{"condition_ref": "not-a-stable-key"}]},
+        {"prepared_spell_entry_ids": ["wizard:not-in-build"]},
+        {"hit_dice_state": {"d10": 6, "d6": 5}},
+        {
+            "inventory_state": [
+                {
+                    "entry_id": "inventory:bad-ref",
+                    "item_ref": "not-a-stable-key",
+                    "quantity": 1,
+                }
+            ]
+        },
+        {"current_hp": "many"},
+        {"current_hp": 75},
+    ]
+
+    for patch in invalid_patches:
+        response = client.patch(f"/api/characters/{character.id}/state", json=patch)
+        assert response.status_code == 422
+        assert response.json()["error"]["code"] == "validation_failed"
+        reloaded = repository.load_character(character.id)
+        assert reloaded.state.model_dump(mode="json") == baseline_state
+        assert reloaded.current_version_id == baseline_version_id
+        assert reloaded.build.model_dump(mode="json") == baseline_build
 
 
 def test_invalid_state_types_and_missing_character_use_machine_codes():
