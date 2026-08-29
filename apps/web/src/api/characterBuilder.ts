@@ -2,6 +2,8 @@ export type BuilderMode = 'create' | 'level_up' | 'build_edit' | 'correction'
 export type BuilderIssueSeverity = 'blocking_error' | 'warning' | 'non_standard'
 export type AbilityGenerationMethod = 'standard_array' | 'point_buy' | 'manual'
 export type BuilderHPMethod = 'first_level' | 'fixed_average' | 'manual_rolled'
+export type BuilderSpellAccessModel = 'known' | 'prepared' | 'spellbook'
+export type BuilderSpellResourcePoolType = 'normal_multiclass_slots' | 'pact_magic'
 export type BuilderOptionKind =
   | 'reference'
   | 'counted_reference'
@@ -59,6 +61,13 @@ export type BuilderChoiceSelection = {
   provenance_path?: string | null
 }
 
+export type BuilderSpellChoiceInput = {
+  cantrip_keys?: string[]
+  known_spell_keys?: string[]
+  spellbook_spell_keys?: string[]
+  prepared_spell_keys?: string[]
+}
+
 export type BuilderDraftPayload = {
   basic?: BuilderBasicInput | null
   target_level?: number | null
@@ -69,7 +78,7 @@ export type BuilderDraftPayload = {
   ability_generation?: BuilderAbilityGenerationInput | null
   level_choices?: BuilderLevelChoice[]
   choice_selections?: Record<string, BuilderChoiceSelection>
-  spell_choices?: Record<string, unknown>
+  spell_choices?: Record<string, BuilderSpellChoiceInput>
   starting_equipment_choices?: Record<string, unknown>
   roleplay_profile?: Record<string, unknown>
   numeric_overrides?: { key: string; value: number }[]
@@ -161,6 +170,46 @@ export type BuilderProgressionNodeSummary = {
   automatic_feature_refs: string[]
 }
 
+export type BuilderSpellOptionSummary = {
+  spell_key: string
+  name: string
+  level: number
+}
+
+export type BuilderSpellcastingProfileSummary = {
+  profile_id: string
+  source_type: string
+  source_key: string
+  source_name: string
+  class_ref: string
+  ability: string
+  access_model: BuilderSpellAccessModel
+  class_level: number
+  max_spell_level: number
+  cantrip_count: number
+  known_spell_count: number
+  spellbook_count: number
+  prepared_limit?: number | null
+  resource_pool_type: BuilderSpellResourcePoolType
+  available_spells: BuilderSpellOptionSummary[]
+  selected_cantrip_keys: string[]
+  selected_known_spell_keys: string[]
+  selected_spellbook_spell_keys: string[]
+  selected_prepared_spell_keys: string[]
+}
+
+export type BuilderSpellSlotCapacity = {
+  level: number
+  count: number
+}
+
+export type BuilderSpellResourcePoolSummary = {
+  pool_id: string
+  pool_type: BuilderSpellResourcePoolType
+  source_profile_id?: string | null
+  slots: BuilderSpellSlotCapacity[]
+}
+
 export type BuilderView = {
   draft: BuilderDraft
   resolved_summary: {
@@ -177,6 +226,8 @@ export type BuilderView = {
     grants: BuilderGrantSummary[]
     ability_scores: BuilderAbilityScoreSummary[]
     progression: BuilderProgressionNodeSummary[]
+    spellcasting_profiles: BuilderSpellcastingProfileSummary[]
+    spell_resource_pools: BuilderSpellResourcePoolSummary[]
   }
   choices: BuilderChoice[]
   validation: BuilderValidationResult
