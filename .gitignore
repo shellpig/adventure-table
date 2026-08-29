@@ -11,3 +11,4 @@ apps/web/dist/
 apps/web/playwright-report/
 apps/web/test-results/
 .DS_Store
+apps/server/*.egg-info/
