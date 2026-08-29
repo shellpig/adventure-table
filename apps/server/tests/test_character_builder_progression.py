@@ -98,6 +98,7 @@ def _with_required_choices(payload: BuilderDraftPayload, registry):
     draft = _draft(payload)
     result = compile_builder_draft(draft, registry)
     selections: dict[str, BuilderChoiceSelection] = {}
+    used_option_ids: set[str] = set()
     for choice in result.choices:
         if (
             not choice.required
@@ -105,13 +106,18 @@ def _with_required_choices(payload: BuilderDraftPayload, registry):
             or choice.option_source in DIRECT_SOURCES
         ):
             continue
-        assert len(choice.options) >= choice.choose_count, choice.choice_id
+        available = [
+            option
+            for option in choice.options
+            if option.option_id not in used_option_ids and option.disabled_reason is None
+        ]
+        assert len(available) >= choice.choose_count, choice.choice_id
+        selected = tuple(option.option_id for option in available[: choice.choose_count])
+        used_option_ids.update(selected)
         selections[choice.choice_id] = BuilderChoiceSelection(
             choice_id=choice.choice_id,
             source_ref=choice.source_ref,
-            selected_option_ids=tuple(
-                option.option_id for option in choice.options[: choice.choose_count]
-            ),
+            selected_option_ids=selected,
         )
     return _draft(payload.model_copy(update={"choice_selections": selections}))
 
@@ -262,12 +268,29 @@ def test_starting_class_grants_do_not_reappear_when_multiclassing() -> None:
         "srd5.1:ability:int",
         "srd5.1:ability:wis",
     )
-    assert "srd5.1:proficiency:heavy-armor" in fighter_build.proficiencies
-    assert "srd5.1:proficiency:heavy-armor" not in wizard_build.proficiencies
+    assert "srd5.1:proficiency:all-armor" in fighter_build.proficiencies
+    assert "srd5.1:proficiency:all-armor" not in wizard_build.proficiencies
 
 
 def test_multiclass_prerequisites_block_target_and_existing_class_failures() -> None:
     registry = load_default_content_registry()
+    legal = _payload(
+        (
+            _level(1, "wizard", hp=6),
+            _level(2, "fighter", hp=6),
+        ),
+        scores=_scores(strength=14, intelligence=15),
+    )
+    legal_result = compile_builder_draft(_draft(legal), registry)
+    legal_class_choice = next(
+        choice for choice in legal_result.choices if choice.choice_id == "level:2:class-selection"
+    )
+    legal_fighter_option = next(
+        option for option in legal_class_choice.options if option.option_id == "srd5.1:class:fighter"
+    )
+    assert legal_fighter_option.disabled_reason is None
+    assert "multiclass_prerequisite_not_met" not in _codes(legal_result)
+
     low_strength = _payload(
         (
             _level(1, "wizard", hp=6),
@@ -323,6 +346,20 @@ def test_subclass_timing_rejects_missing_early_and_wrong_class_selections() -> N
         )
     )), registry)
     assert "subclass_class_mismatch" in _codes(wrong)
+
+
+def test_automatic_features_follow_reached_class_levels_only() -> None:
+    registry = load_default_content_registry()
+    first = compile_builder_draft(
+        _with_required_choices(_payload(_fighter_levels(1)), registry), registry
+    )
+    second = compile_builder_draft(
+        _with_required_choices(_payload(_fighter_levels(2)), registry), registry
+    )
+    assert first.build_candidate is not None and second.build_candidate is not None
+    assert "srd5.1:feature:second-wind" in first.build_candidate.feature_refs
+    assert "srd5.1:feature:action-surge-1-use" not in first.build_candidate.feature_refs
+    assert "srd5.1:feature:action-surge-1-use" in second.build_candidate.feature_refs
 
 
 def test_hp_rules_distinguish_first_character_level_fixed_average_and_manual_rolls() -> None:
