@@ -4,7 +4,14 @@ from dataclasses import dataclass
 
 from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
-from app.domain.character.schemas import AbilityScores, CharacterBuild, RoleplayProfile
+from app.domain.character.schemas import (
+    AbilityScores,
+    CharacterBuild,
+    RoleplayProfile,
+    SpellResourcePool,
+    SpellSlotCapacity,
+    SpellcastingProfile,
+)
 from app.domain.character_builder.basics import resolve_creation_summary
 from app.domain.character_builder.choices import build_foundation_choices
 from app.domain.character_builder.multiclass import multiclass_option_failure_reason
@@ -277,6 +284,32 @@ def compile_builder_draft(
             grants=resolved_summary.grants,
             choices=choices,
         )
+        build_profiles = tuple(
+            SpellcastingProfile(
+                profile_id=profile.profile_id,
+                source_type=profile.source_type,
+                source_key=profile.source_key,
+                class_ref=profile.class_ref,
+                ability=profile.ability,
+                access_model=profile.access_model,
+                resource_pool_type=profile.resource_pool_type,
+                max_spell_level=profile.max_spell_level,
+                prepared_limit=profile.prepared_limit,
+            )
+            for profile in spellcasting.profiles
+        )
+        build_pools = tuple(
+            SpellResourcePool(
+                pool_id=pool.pool_id,
+                pool_type=pool.pool_type,
+                source_profile_id=pool.source_profile_id,
+                slots=tuple(
+                    SpellSlotCapacity(level=slot.level, capacity=slot.count)
+                    for slot in pool.slots
+                ),
+            )
+            for pool in spellcasting.resource_pools
+        )
         build_candidate = CharacterBuild(
             ruleset=payload.basic.ruleset,
             race_ref=payload.race_selection.reference_id,
@@ -298,7 +331,9 @@ def compile_builder_draft(
             skill_choices=tuple(dict.fromkeys((*compiled.skill_choices, *structural.skill_choices))),
             feature_refs=tuple(dict.fromkeys((*compiled.feature_refs, *structural.feature_refs))),
             feat_refs=structural.feat_refs,
+            spellcasting_profiles=build_profiles,
             spell_access_entries=spellcasting.spell_access_entries,
+            spell_resource_pools=build_pools,
             hp_progression=compiled.hp_progression,
             roleplay_profile=_roleplay_profile(draft),
             numeric_overrides=payload.numeric_overrides,
