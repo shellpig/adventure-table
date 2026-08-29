@@ -88,6 +88,39 @@ test('persists spell-slot resource usage', async ({ page }) => {
   await expect(page.getByTestId('spell-slot-1-counter')).toHaveText('2 / 4')
 })
 
+test('persists prepared spell selection', async ({ page }) => {
+  await page.goto(CHARACTER_URL)
+  await page.getByRole('tab', { name: /法術/ }).click()
+
+  const magicMissileCard = page
+    .getByRole('heading', { name: 'Magic Missile' })
+    .locator('xpath=ancestor::article')
+
+  await expect(magicMissileCard.getByText('Prepared', { exact: true })).toBeVisible()
+  await magicMissileCard.getByRole('button', { name: '取消準備' }).click()
+  await expect(magicMissileCard.getByText('Unprepared', { exact: true })).toBeVisible()
+
+  await page.reload()
+  await page.getByRole('tab', { name: /法術/ }).click()
+  await expect(
+    page
+      .getByRole('heading', { name: 'Magic Missile' })
+      .locator('xpath=ancestor::article')
+      .getByText('Unprepared', { exact: true }),
+  ).toBeVisible()
+})
+
+test('persists available hit dice', async ({ page }) => {
+  await page.goto(CHARACTER_URL)
+  await expect(page.getByTestId('hit-die-d10')).toHaveText('5/5')
+  await page.getByRole('button', { name: 'd10 使用一顆' }).click()
+  await expect(page.getByTestId('hit-die-d10')).toHaveText('4/5')
+
+  await page.reload()
+  await expect(page.getByTestId('hit-die-d10')).toHaveText('4/5')
+  await expect(page.getByTestId('hit-die-d6')).toHaveText('5/5')
+})
+
 test('persists live inventory quantity', async ({ page }) => {
   await page.goto(CHARACTER_URL)
   await page.getByRole('tab', { name: /物品欄/ }).click()
