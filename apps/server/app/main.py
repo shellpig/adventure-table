@@ -5,7 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-from app.api import characters_router, reference_router
+from app.api import character_builder_router, characters_router, reference_router
 from app.api.errors import APIError
 from app.config import settings
 from app.content import load_default_content_registry
@@ -18,6 +18,7 @@ app = FastAPI(title=settings.app_name)
 app.state.content_registry = content_registry
 app.include_router(reference_router)
 app.include_router(characters_router)
+app.include_router(character_builder_router)
 
 
 def _error_response(status_code: int, code: str, message: str) -> JSONResponse:

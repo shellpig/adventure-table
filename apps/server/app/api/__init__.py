@@ -1,4 +1,5 @@
+from app.api.character_builder import router as character_builder_router
 from app.api.characters import router as characters_router
 from app.api.reference import router as reference_router
 
-__all__ = ["characters_router", "reference_router"]
+__all__ = ["character_builder_router", "characters_router", "reference_router"]
