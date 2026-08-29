@@ -46,6 +46,17 @@ class BuilderHPMethod(StrEnum):
     MANUAL_ROLLED = "manual_rolled"
 
 
+class BuilderSpellAccessModel(StrEnum):
+    KNOWN = "known"
+    PREPARED = "prepared"
+    SPELLBOOK = "spellbook"
+
+
+class BuilderSpellResourcePoolType(StrEnum):
+    NORMAL_MULTICLASS_SLOTS = "normal_multiclass_slots"
+    PACT_MAGIC = "pact_magic"
+
+
 class BuilderBasicInput(StrictModel):
     name: str | None = Field(default=None, max_length=200)
     ruleset: str = Field(default="dnd5e-2014", min_length=1, max_length=80)
@@ -120,6 +131,33 @@ class BuilderChoiceSelection(StrictModel):
         return value
 
 
+class BuilderSpellChoiceInput(StrictModel):
+    """Final spell selections for one deterministic spellcasting profile.
+
+    Build-persistent access and live prepared state stay separate. High-level
+    creation legality is checked by the server against the ordered class
+    progression rather than trusted from these final lists.
+    """
+
+    cantrip_keys: tuple[str, ...] = ()
+    known_spell_keys: tuple[str, ...] = ()
+    spellbook_spell_keys: tuple[str, ...] = ()
+    prepared_spell_keys: tuple[str, ...] = ()
+
+    @field_validator(
+        "cantrip_keys",
+        "known_spell_keys",
+        "spellbook_spell_keys",
+        "prepared_spell_keys",
+    )
+    @classmethod
+    def spell_keys_are_valid_and_unique(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        normalized = tuple(require_stable_key(item, kinds={"spell"}) for item in value)
+        if len(normalized) != len(set(normalized)):
+            raise ValueError("spell selections cannot contain duplicates")
+        return normalized
+
+
 class BuilderChoiceOption(StrictModel):
     option_id: str = Field(min_length=1, max_length=240)
     label: str = Field(min_length=1, max_length=240)
@@ -157,7 +195,7 @@ class BuilderDraftPayload(StrictModel):
     ability_generation: BuilderAbilityGenerationInput | None = None
     level_choices: tuple[BuilderLevelChoice, ...] = ()
     choice_selections: dict[str, BuilderChoiceSelection] = Field(default_factory=dict)
-    spell_choices: dict[str, JsonValue] = Field(default_factory=dict)
+    spell_choices: dict[str, BuilderSpellChoiceInput] = Field(default_factory=dict)
     starting_equipment_choices: dict[str, JsonValue] = Field(default_factory=dict)
     roleplay_profile: dict[str, JsonValue] = Field(default_factory=dict)
     numeric_overrides: tuple[NumericOverride, ...] = ()
@@ -170,6 +208,8 @@ class BuilderDraftPayload(StrictModel):
                 raise ValueError("choice_selections keys cannot be blank")
             if key != selection.choice_id:
                 raise ValueError("choice_selections key must match the nested choice_id")
+        if any(not key.strip() for key in self.spell_choices):
+            raise ValueError("spell_choices profile ids cannot be blank")
         return self
 
 
@@ -183,7 +223,7 @@ class BuilderDraftPayloadPatch(StrictModel):
     ability_generation: BuilderAbilityGenerationInput | None = None
     level_choices: tuple[BuilderLevelChoice, ...] | None = None
     choice_selections: dict[str, BuilderChoiceSelection] | None = None
-    spell_choices: dict[str, JsonValue] | None = None
+    spell_choices: dict[str, BuilderSpellChoiceInput] | None = None
     starting_equipment_choices: dict[str, JsonValue] | None = None
     roleplay_profile: dict[str, JsonValue] | None = None
     numeric_overrides: tuple[NumericOverride, ...] | None = None
@@ -284,6 +324,46 @@ class BuilderProgressionNodeSummary(StrictModel):
     automatic_feature_refs: tuple[str, ...] = ()
 
 
+class BuilderSpellOptionSummary(StrictModel):
+    spell_key: str
+    name: str
+    level: int = Field(ge=0, le=9)
+
+
+class BuilderSpellcastingProfileSummary(StrictModel):
+    profile_id: str = Field(min_length=1, max_length=240)
+    source_type: str
+    source_key: str
+    source_name: str
+    class_ref: str
+    ability: str
+    access_model: BuilderSpellAccessModel
+    class_level: int = Field(ge=1, le=20)
+    max_spell_level: int = Field(ge=0, le=9)
+    cantrip_count: int = Field(ge=0)
+    known_spell_count: int = Field(ge=0)
+    spellbook_count: int = Field(ge=0)
+    prepared_limit: int | None = Field(default=None, ge=0)
+    resource_pool_type: BuilderSpellResourcePoolType
+    available_spells: tuple[BuilderSpellOptionSummary, ...] = ()
+    selected_cantrip_keys: tuple[str, ...] = ()
+    selected_known_spell_keys: tuple[str, ...] = ()
+    selected_spellbook_spell_keys: tuple[str, ...] = ()
+    selected_prepared_spell_keys: tuple[str, ...] = ()
+
+
+class BuilderSpellSlotCapacity(StrictModel):
+    level: int = Field(ge=1, le=9)
+    count: int = Field(ge=0)
+
+
+class BuilderSpellResourcePoolSummary(StrictModel):
+    pool_id: str = Field(min_length=1, max_length=240)
+    pool_type: BuilderSpellResourcePoolType
+    source_profile_id: str | None = Field(default=None, max_length=240)
+    slots: tuple[BuilderSpellSlotCapacity, ...] = ()
+
+
 class BuilderResolvedSummary(StrictModel):
     name: str | None
     target_level: int | None
@@ -298,6 +378,8 @@ class BuilderResolvedSummary(StrictModel):
     grants: tuple[BuilderGrantSummary, ...] = ()
     ability_scores: tuple[BuilderAbilityScoreSummary, ...] = ()
     progression: tuple[BuilderProgressionNodeSummary, ...] = ()
+    spellcasting_profiles: tuple[BuilderSpellcastingProfileSummary, ...] = ()
+    spell_resource_pools: tuple[BuilderSpellResourcePoolSummary, ...] = ()
 
 
 class BuilderView(StrictModel):
