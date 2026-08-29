@@ -109,6 +109,10 @@ def _selection(choice_id: str, *option_ids: str) -> BuilderChoiceSelection:
     )
 
 
+def _asi_option(choice_id: str) -> str:
+    return f"{choice_id}:asi"
+
+
 def _auto_fill_required(payload: BuilderDraftPayload):
     registry = load_default_content_registry()
     selections = dict(payload.choice_selections)
@@ -199,8 +203,9 @@ def test_multiclass_asi_timing_uses_same_class_level_not_total_character_level()
 
 
 def test_asi_can_put_two_points_in_one_ability_and_compiles_once() -> None:
+    branch_id = "level:4:asi-feat:0"
     selections = {
-        "level:4:asi-feat:0": _selection("level:4:asi-feat:0", "asi"),
+        branch_id: _selection(branch_id, _asi_option(branch_id)),
         "level:4:asi-abilities:0": _selection(
             "level:4:asi-abilities:0",
             "ability:strength",
@@ -225,8 +230,9 @@ def test_asi_can_put_two_points_in_one_ability_and_compiles_once() -> None:
 
 
 def test_asi_split_form_compiles_both_permanent_increases() -> None:
+    branch_id = "level:4:asi-feat:0"
     selections = {
-        "level:4:asi-feat:0": _selection("level:4:asi-feat:0", "asi"),
+        branch_id: _selection(branch_id, _asi_option(branch_id)),
         "level:4:asi-abilities:0": _selection(
             "level:4:asi-abilities:0",
             "ability:strength",
@@ -244,8 +250,9 @@ def test_asi_split_form_compiles_both_permanent_increases() -> None:
 
 
 def test_asi_cap_rejects_increase_past_twenty() -> None:
+    branch_id = "level:4:asi-feat:0"
     selections = {
-        "level:4:asi-feat:0": _selection("level:4:asi-feat:0", "asi"),
+        branch_id: _selection(branch_id, _asi_option(branch_id)),
         "level:4:asi-abilities:0": _selection(
             "level:4:asi-abilities:0",
             "ability:strength",
@@ -352,8 +359,9 @@ def test_unknown_feat_and_extra_asi_occurrence_are_rejected() -> None:
     assert "invalid_choice_option" in _codes(result)
     assert result.build_candidate is None
 
+    illegal_branch = "level:1:asi-feat:0"
     illegal_level_one = {
-        "level:1:asi-feat:0": _selection("level:1:asi-feat:0", "asi"),
+        illegal_branch: _selection(illegal_branch, _asi_option(illegal_branch)),
     }
     draft, registry = _auto_fill_required(
         _payload(_fighter_levels(1), selections=illegal_level_one)
