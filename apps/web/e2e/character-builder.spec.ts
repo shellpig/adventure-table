@@ -143,7 +143,7 @@ test('P1-D preserves an ordered Fighter 5 / Wizard 5 rail with ASI and feat choi
   await expect(page.getByText('10 / 10', { exact: true })).toBeVisible()
   await expect(page.getByText('0 blocking')).toHaveCount(0)
   await expect(
-    page.getByText(/Confirm remains locked until P1-E and P1-F/i),
+    page.getByText(/Confirm remains locked until P1-F/i),
   ).toBeVisible()
 
   const url = page.url()
