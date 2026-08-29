@@ -93,7 +93,9 @@ test('P1-C creates and resumes an ordered Fighter 5 / Wizard 5 rail', async ({ p
   await expect(page.getByText('Fighter 5 / Wizard 5', { exact: true }).last()).toBeVisible()
   await expect(page.getByText('10 / 10', { exact: true })).toBeVisible()
   await expect(page.getByText('0 blocking')).toHaveCount(0)
-  await expect(page.getByText(/builder phase not complete/i)).toBeVisible()
+  await expect(
+    page.getByText(/ASI\/Feat, spellcasting, equipment and final review must be completed/i),
+  ).toBeVisible()
 
   const url = page.url()
   await page.reload()
