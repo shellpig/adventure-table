@@ -17,16 +17,12 @@ from app.persistence.builder_drafts import BuilderDraftRepository
 
 class BuilderModeNotEnabledError(ValueError):
     def __init__(self, mode: BuilderMode) -> None:
-        super().__init__(f"builder mode is not enabled in P1-A: {mode.value}")
+        super().__init__(f"builder mode is not enabled yet: {mode.value}")
         self.mode = mode
 
 
 class CharacterBuilderService:
-    def __init__(
-        self,
-        repository: BuilderDraftRepository,
-        registry: ContentRegistry,
-    ) -> None:
+    def __init__(self, repository: BuilderDraftRepository, registry: ContentRegistry) -> None:
         self.repository = repository
         self.registry = registry
 
@@ -36,21 +32,20 @@ class CharacterBuilderService:
         draft = self.repository.create_draft(request)
         return build_builder_view(draft, self.registry)
 
+    def list_create_drafts(self) -> tuple[BuilderView, ...]:
+        return tuple(
+            build_builder_view(draft, self.registry)
+            for draft in self.repository.list_drafts(mode=BuilderMode.CREATE)
+        )
+
     def get_draft(self, draft_id: UUID) -> BuilderView:
         draft = self.repository.load_draft(draft_id)
         return build_builder_view(draft, self.registry)
 
-    def patch_draft(
-        self,
-        draft_id: UUID,
-        request: BuilderDraftPatchInput,
-    ) -> BuilderView:
+    def patch_draft(self, draft_id: UUID, request: BuilderDraftPatchInput) -> BuilderView:
         current = self.repository.load_draft(draft_id)
         payload_data = current.draft_payload.model_dump(mode="python")
-        changes = request.draft_payload.model_dump(
-            mode="python",
-            exclude_unset=True,
-        )
+        changes = request.draft_payload.model_dump(mode="python", exclude_unset=True)
         payload_data.update(changes)
         candidate = BuilderDraftPayload.model_validate(payload_data)
         updated = self.repository.update_draft_payload(

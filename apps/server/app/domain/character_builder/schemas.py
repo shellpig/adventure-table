@@ -34,6 +34,12 @@ class BuilderOptionKind(StrEnum):
     BRANCH = "branch"
 
 
+class AbilityGenerationMethod(StrEnum):
+    STANDARD_ARRAY = "standard_array"
+    POINT_BUY = "point_buy"
+    MANUAL = "manual"
+
+
 class BuilderBasicInput(StrictModel):
     name: str | None = Field(default=None, max_length=200)
     ruleset: str = Field(default="dnd5e-2014", min_length=1, max_length=80)
@@ -49,6 +55,31 @@ class BuilderBasicInput(StrictModel):
 class BuilderReferenceSelection(StrictModel):
     reference_id: str = Field(min_length=1, max_length=240)
     source_ref: str | None = Field(default=None, max_length=240)
+
+
+class BuilderAbilityScores(StrictModel):
+    strength: int = Field(ge=1, le=30)
+    dexterity: int = Field(ge=1, le=30)
+    constitution: int = Field(ge=1, le=30)
+    intelligence: int = Field(ge=1, le=30)
+    wisdom: int = Field(ge=1, le=30)
+    charisma: int = Field(ge=1, le=30)
+
+    def as_dict(self) -> dict[str, int]:
+        return {
+            "strength": self.strength,
+            "dexterity": self.dexterity,
+            "constitution": self.constitution,
+            "intelligence": self.intelligence,
+            "wisdom": self.wisdom,
+            "charisma": self.charisma,
+        }
+
+
+class BuilderAbilityGenerationInput(StrictModel):
+    method: AbilityGenerationMethod
+    scores: BuilderAbilityScores
+    provenance: str | None = Field(default=None, max_length=240)
 
 
 class BuilderChoiceSelection(StrictModel):
@@ -95,8 +126,10 @@ class BuilderDraftPayload(StrictModel):
     basic: BuilderBasicInput | None = None
     target_level: int | None = Field(default=None, ge=1, le=20)
     race_selection: BuilderReferenceSelection | None = None
+    subrace_selection: BuilderReferenceSelection | None = None
     background_selection: BuilderReferenceSelection | None = None
-    ability_generation: dict[str, JsonValue] | None = None
+    alignment_selection: BuilderReferenceSelection | None = None
+    ability_generation: BuilderAbilityGenerationInput | None = None
     level_choices: tuple[dict[str, JsonValue], ...] = ()
     choice_selections: dict[str, BuilderChoiceSelection] = Field(default_factory=dict)
     spell_choices: dict[str, JsonValue] = Field(default_factory=dict)
@@ -111,9 +144,7 @@ class BuilderDraftPayload(StrictModel):
             if not key.strip():
                 raise ValueError("choice_selections keys cannot be blank")
             if key != selection.choice_id:
-                raise ValueError(
-                    "choice_selections key must match the nested choice_id"
-                )
+                raise ValueError("choice_selections key must match the nested choice_id")
         return self
 
 
@@ -121,8 +152,10 @@ class BuilderDraftPayloadPatch(StrictModel):
     basic: BuilderBasicInput | None = None
     target_level: int | None = Field(default=None, ge=1, le=20)
     race_selection: BuilderReferenceSelection | None = None
+    subrace_selection: BuilderReferenceSelection | None = None
     background_selection: BuilderReferenceSelection | None = None
-    ability_generation: dict[str, JsonValue] | None = None
+    alignment_selection: BuilderReferenceSelection | None = None
+    ability_generation: BuilderAbilityGenerationInput | None = None
     level_choices: tuple[dict[str, JsonValue], ...] | None = None
     choice_selections: dict[str, BuilderChoiceSelection] | None = None
     spell_choices: dict[str, JsonValue] | None = None
@@ -139,15 +172,11 @@ def validate_draft_source_combination(
 ) -> None:
     if mode is BuilderMode.CREATE:
         if character_id is not None or base_version_id is not None:
-            raise ValueError(
-                "create drafts cannot reference a character or base version"
-            )
+            raise ValueError("create drafts cannot reference a character or base version")
         return
 
     if character_id is None or base_version_id is None:
-        raise ValueError(
-            f"{mode.value} drafts require character_id and base_version_id"
-        )
+        raise ValueError(f"{mode.value} drafts require character_id and base_version_id")
 
 
 class BuilderDraftCreateInput(StrictModel):
@@ -158,9 +187,7 @@ class BuilderDraftCreateInput(StrictModel):
 
     @model_validator(mode="after")
     def source_combination_is_valid(self) -> "BuilderDraftCreateInput":
-        validate_draft_source_combination(
-            self.mode, self.character_id, self.base_version_id
-        )
+        validate_draft_source_combination(self.mode, self.character_id, self.base_version_id)
         return self
 
 
@@ -181,9 +208,7 @@ class BuilderDraft(StrictModel):
 
     @model_validator(mode="after")
     def source_combination_is_valid(self) -> "BuilderDraft":
-        validate_draft_source_combination(
-            self.mode, self.character_id, self.base_version_id
-        )
+        validate_draft_source_combination(self.mode, self.character_id, self.base_version_id)
         return self
 
 
@@ -201,11 +226,33 @@ class BuilderValidationResult(StrictModel):
     non_standard_count: int = Field(ge=0)
 
 
+class BuilderGrantSummary(StrictModel):
+    label: str
+    kind: str
+    source_ref: str
+    reference_id: str | None = None
+
+
+class BuilderAbilityScoreSummary(StrictModel):
+    ability: str
+    base: int
+    permanent_bonus: int
+    resolved: int
+    effective: int
+    overridden: bool = False
+
+
 class BuilderResolvedSummary(StrictModel):
     name: str | None
     target_level: int | None
+    race_name: str | None = None
+    subrace_name: str | None = None
+    background_name: str | None = None
+    alignment_name: str | None = None
     selected_reference_count: int = Field(ge=0)
     choice_selection_count: int = Field(ge=0)
+    grants: tuple[BuilderGrantSummary, ...] = ()
+    ability_scores: tuple[BuilderAbilityScoreSummary, ...] = ()
 
 
 class BuilderView(StrictModel):

@@ -1,5 +1,12 @@
 export type BuilderMode = 'create' | 'level_up' | 'build_edit' | 'correction'
 export type BuilderIssueSeverity = 'blocking_error' | 'warning' | 'non_standard'
+export type AbilityGenerationMethod = 'standard_array' | 'point_buy' | 'manual'
+export type BuilderOptionKind =
+  | 'reference'
+  | 'counted_reference'
+  | 'nested_choice'
+  | 'category_filter'
+  | 'branch'
 
 export type BuilderBasicInput = {
   name?: string | null
@@ -9,6 +16,31 @@ export type BuilderBasicInput = {
 export type BuilderReferenceSelection = {
   reference_id: string
   source_ref?: string | null
+}
+
+export type BuilderAbilityScores = {
+  strength: number
+  dexterity: number
+  constitution: number
+  intelligence: number
+  wisdom: number
+  charisma: number
+}
+
+export type BuilderAbilityGenerationInput = {
+  method: AbilityGenerationMethod
+  scores: BuilderAbilityScores
+  provenance?: string | null
+}
+
+export type AbilityGenerationRules = {
+  standard_array: number[]
+  point_buy_budget: number
+  point_buy_costs: Record<string, number>
+  manual_standard_min: number
+  manual_standard_max: number
+  hard_min: number
+  hard_max: number
 }
 
 export type BuilderChoiceSelection = {
@@ -22,8 +54,10 @@ export type BuilderDraftPayload = {
   basic?: BuilderBasicInput | null
   target_level?: number | null
   race_selection?: BuilderReferenceSelection | null
+  subrace_selection?: BuilderReferenceSelection | null
   background_selection?: BuilderReferenceSelection | null
-  ability_generation?: Record<string, unknown> | null
+  alignment_selection?: BuilderReferenceSelection | null
+  ability_generation?: BuilderAbilityGenerationInput | null
   level_choices?: Record<string, unknown>[]
   choice_selections?: Record<string, BuilderChoiceSelection>
   spell_choices?: Record<string, unknown>
@@ -58,6 +92,18 @@ export type BuilderValidationResult = {
   non_standard_count: number
 }
 
+export type BuilderChoiceOption = {
+  option_id: string
+  label: string
+  kind: BuilderOptionKind
+  reference_id?: string | null
+  count?: number | null
+  category?: string | null
+  nested_choice_id?: string | null
+  branch_key?: string | null
+  disabled_reason?: string | null
+}
+
 export type BuilderChoice = {
   choice_id: string
   label: string
@@ -65,8 +111,25 @@ export type BuilderChoice = {
   required: boolean
   choose_count: number
   option_source?: string | null
+  options: BuilderChoiceOption[]
   selected_option_ids: string[]
   disabled_reason?: string | null
+}
+
+export type BuilderGrantSummary = {
+  label: string
+  kind: string
+  source_ref: string
+  reference_id?: string | null
+}
+
+export type BuilderAbilityScoreSummary = {
+  ability: string
+  base: number
+  permanent_bonus: number
+  resolved: number
+  effective: number
+  overridden: boolean
 }
 
 export type BuilderView = {
@@ -74,32 +137,36 @@ export type BuilderView = {
   resolved_summary: {
     name?: string | null
     target_level?: number | null
+    race_name?: string | null
+    subrace_name?: string | null
+    background_name?: string | null
+    alignment_name?: string | null
     selected_reference_count: number
     choice_selection_count: number
+    grants: BuilderGrantSummary[]
+    ability_scores: BuilderAbilityScoreSummary[]
   }
   choices: BuilderChoice[]
   validation: BuilderValidationResult
 }
 
-type APIErrorPayload = {
-  error?: {
-    code?: string
-    message?: string
-  }
+export type CharacterListItem = {
+  id: string
+  name: string
+  level: number
+  class_summary: string
+  version_no: number
 }
 
-async function builderRequest<T>(
-  input: RequestInfo | URL,
-  init?: RequestInit,
-): Promise<T> {
+type APIErrorPayload = {
+  error?: { code?: string; message?: string }
+}
+
+async function builderRequest<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
   const response = await fetch(input, {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
+    headers: { 'Content-Type': 'application/json', ...init?.headers },
   })
-
   if (!response.ok) {
     let message = `Request failed (${response.status})`
     try {
@@ -110,23 +177,27 @@ async function builderRequest<T>(
     }
     throw new Error(message)
   }
-
-  if (response.status === 204) {
-    return undefined as T
-  }
+  if (response.status === 204) return undefined as T
   return (await response.json()) as T
 }
 
-export function createBuilderDraft(
-  draftPayload: BuilderDraftPayload = {},
-): Promise<BuilderView> {
+export function listCharacters(): Promise<CharacterListItem[]> {
+  return builderRequest<CharacterListItem[]>('/api/characters')
+}
+
+export function getAbilityGenerationRules(): Promise<AbilityGenerationRules> {
+  return builderRequest<AbilityGenerationRules>('/api/character-builder/rules/ability-generation')
+}
+
+export function createBuilderDraft(draftPayload: BuilderDraftPayload = {}): Promise<BuilderView> {
   return builderRequest<BuilderView>('/api/character-builder/drafts', {
     method: 'POST',
-    body: JSON.stringify({
-      mode: 'create',
-      draft_payload: draftPayload,
-    }),
+    body: JSON.stringify({ mode: 'create', draft_payload: draftPayload }),
   })
+}
+
+export function listCreateBuilderDrafts(): Promise<BuilderView[]> {
+  return builderRequest<BuilderView[]>('/api/character-builder/drafts')
 }
 
 export function getBuilderDraft(draftId: string): Promise<BuilderView> {
@@ -140,16 +211,11 @@ export function patchBuilderDraft(
 ): Promise<BuilderView> {
   return builderRequest<BuilderView>(`/api/character-builder/drafts/${draftId}`, {
     method: 'PATCH',
-    body: JSON.stringify({
-      expected_revision: expectedRevision,
-      draft_payload: draftPayload,
-    }),
+    body: JSON.stringify({ expected_revision: expectedRevision, draft_payload: draftPayload }),
   })
 }
 
-export function validateBuilderDraft(
-  draftId: string,
-): Promise<BuilderValidationResult> {
+export function validateBuilderDraft(draftId: string): Promise<BuilderValidationResult> {
   return builderRequest<BuilderValidationResult>(
     `/api/character-builder/drafts/${draftId}/validate`,
     { method: 'POST' },
@@ -157,7 +223,5 @@ export function validateBuilderDraft(
 }
 
 export function cancelBuilderDraft(draftId: string): Promise<void> {
-  return builderRequest<void>(`/api/character-builder/drafts/${draftId}`, {
-    method: 'DELETE',
-  })
+  return builderRequest<void>(`/api/character-builder/drafts/${draftId}`, { method: 'DELETE' })
 }

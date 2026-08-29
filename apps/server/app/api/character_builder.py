@@ -3,37 +3,55 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Response, status
+from pydantic import BaseModel, ConfigDict
 
-from app.api.errors import APIError
 from app.api.dependencies import get_character_builder_service
+from app.api.errors import APIError
+from app.domain.character_builder.rules import load_ability_generation_rules
 from app.domain.character_builder.schemas import (
     BuilderDraftCreateInput,
     BuilderDraftPatchInput,
     BuilderValidationResult,
     BuilderView,
 )
-from app.domain.character_builder.service import (
-    BuilderModeNotEnabledError,
-    CharacterBuilderService,
-)
-from app.persistence.builder_drafts import (
-    BuilderDraftNotFoundError,
-    BuilderDraftRevisionConflictError,
-)
+from app.domain.character_builder.service import BuilderModeNotEnabledError, CharacterBuilderService
+from app.persistence.builder_drafts import BuilderDraftNotFoundError, BuilderDraftRevisionConflictError
 
 
 router = APIRouter(prefix="/api/character-builder", tags=["character-builder"])
+
+
+class AbilityGenerationRulesDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    standard_array: tuple[int, ...]
+    point_buy_budget: int
+    point_buy_costs: dict[int, int]
+    manual_standard_min: int
+    manual_standard_max: int
+    hard_min: int
+    hard_max: int
 
 
 def _not_found(exc: BuilderDraftNotFoundError) -> APIError:
     return APIError(404, "builder_draft_not_found", f"builder draft not found: {exc}")
 
 
-@router.post(
-    "/drafts",
-    response_model=BuilderView,
-    status_code=status.HTTP_201_CREATED,
-)
+@router.get("/rules/ability-generation", response_model=AbilityGenerationRulesDTO)
+def get_ability_generation_rules() -> AbilityGenerationRulesDTO:
+    rules = load_ability_generation_rules()
+    return AbilityGenerationRulesDTO(
+        standard_array=rules.standard_array,
+        point_buy_budget=rules.point_buy_budget,
+        point_buy_costs=rules.point_buy_costs,
+        manual_standard_min=rules.manual_standard_min,
+        manual_standard_max=rules.manual_standard_max,
+        hard_min=rules.hard_min,
+        hard_max=rules.hard_max,
+    )
+
+
+@router.post("/drafts", response_model=BuilderView, status_code=status.HTTP_201_CREATED)
 def create_builder_draft(
     request: BuilderDraftCreateInput,
     service: CharacterBuilderService = Depends(get_character_builder_service),
@@ -42,6 +60,13 @@ def create_builder_draft(
         return service.create_draft(request)
     except BuilderModeNotEnabledError as exc:
         raise APIError(422, "builder_mode_not_enabled", str(exc)) from exc
+
+
+@router.get("/drafts", response_model=list[BuilderView])
+def list_create_builder_drafts(
+    service: CharacterBuilderService = Depends(get_character_builder_service),
+) -> list[BuilderView]:
+    return list(service.list_create_drafts())
 
 
 @router.get("/drafts/{draft_id}", response_model=BuilderView)
@@ -69,10 +94,7 @@ def patch_builder_draft(
         raise APIError(409, "stale_draft_revision", str(exc)) from exc
 
 
-@router.post(
-    "/drafts/{draft_id}/validate",
-    response_model=BuilderValidationResult,
-)
+@router.post("/drafts/{draft_id}/validate", response_model=BuilderValidationResult)
 def validate_builder_draft(
     draft_id: UUID,
     service: CharacterBuilderService = Depends(get_character_builder_service),
@@ -83,10 +105,7 @@ def validate_builder_draft(
         raise _not_found(exc) from exc
 
 
-@router.delete(
-    "/drafts/{draft_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
+@router.delete("/drafts/{draft_id}", status_code=status.HTTP_204_NO_CONTENT)
 def cancel_builder_draft(
     draft_id: UUID,
     service: CharacterBuilderService = Depends(get_character_builder_service),

@@ -19,14 +19,7 @@ def _require_content(registry: ContentRegistry, key: str) -> None:
 
 
 def _validate_numeric_overrides(build: CharacterBuild, registry: ContentRegistry) -> None:
-    abilities = {
-        "strength",
-        "dexterity",
-        "constitution",
-        "intelligence",
-        "wisdom",
-        "charisma",
-    }
+    abilities = {"strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"}
     for override in build.numeric_overrides:
         key = override.key
         value = override.value
@@ -48,14 +41,9 @@ def _validate_numeric_overrides(build: CharacterBuild, registry: ContentRegistry
         if key.startswith("skill_modifier:"):
             target = key.removeprefix("skill_modifier:")
             try:
-                if target.startswith("srd5.1:"):
-                    entry = registry.get(target)
-                else:
-                    entry = registry.resolve("skill", target)
+                entry = registry.get(target) if target.startswith("srd5.1:") else registry.resolve("skill", target)
             except ContentNotFoundError as exc:
-                raise CharacterValidationError(
-                    f"unknown skill override target: {target}"
-                ) from exc
+                raise CharacterValidationError(f"unknown skill override target: {target}") from exc
             if not entry.key.startswith("srd5.1:skill:"):
                 raise CharacterValidationError(f"invalid skill override target: {target}")
             continue
@@ -70,6 +58,8 @@ def _validate_numeric_overrides(build: CharacterBuild, registry: ContentRegistry
 
 def validate_build_references(build: CharacterBuild, registry: ContentRegistry) -> None:
     refs: list[str] = [build.race_ref, *build.class_progression]
+    if build.subrace_ref:
+        refs.append(build.subrace_ref)
     if build.background_ref:
         refs.append(build.background_ref)
     if build.alignment_ref:
@@ -87,12 +77,20 @@ def validate_build_references(build: CharacterBuild, registry: ContentRegistry) 
 
     for key in refs:
         _require_content(registry, key)
+
+    if build.subrace_ref is not None:
+        subrace = registry.get(build.subrace_ref)
+        parent = subrace.data.get("race")
+        parent_index = parent.get("index") if isinstance(parent, dict) else None
+        if not isinstance(parent_index, str) or build.race_ref != f"srd5.1:race:{parent_index}":
+            raise CharacterValidationError(
+                f"subrace {build.subrace_ref} does not belong to race {build.race_ref}"
+            )
+
     _validate_numeric_overrides(build, registry)
 
 
-def derive_hit_dice_totals(
-    build: CharacterBuild, registry: ContentRegistry
-) -> dict[str, int]:
+def derive_hit_dice_totals(build: CharacterBuild, registry: ContentRegistry) -> dict[str, int]:
     totals: Counter[str] = Counter()
     for class_ref in build.class_progression:
         entry = registry.get(class_ref)
@@ -112,13 +110,9 @@ def validate_state_against_build(
     for entry_id in state.prepared_spell_entry_ids:
         access = access_by_id.get(entry_id)
         if access is None:
-            raise CharacterValidationError(
-                f"prepared spell entry does not exist in build: {entry_id}"
-            )
+            raise CharacterValidationError(f"prepared spell entry does not exist in build: {entry_id}")
         if access.access_type != "spellbook":
-            raise CharacterValidationError(
-                f"prepared spell entry is not prepareable in P0: {entry_id}"
-            )
+            raise CharacterValidationError(f"prepared spell entry is not prepareable in P0: {entry_id}")
 
     for condition in state.conditions:
         _require_content(registry, condition.condition_ref)
@@ -129,9 +123,7 @@ def validate_state_against_build(
     for die, available in state.hit_dice_state.items():
         total = totals.get(die, 0)
         if available > total:
-            raise CharacterValidationError(
-                f"available hit dice exceed build total for {die}: {available}>{total}"
-            )
+            raise CharacterValidationError(f"available hit dice exceed build total for {die}: {available}>{total}")
 
     max_hp = calculate_max_hp(build)
     if state.current_hp > max_hp:

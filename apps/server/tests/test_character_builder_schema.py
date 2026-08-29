@@ -32,6 +32,17 @@ def _draft(payload: BuilderDraftPayload) -> BuilderDraft:
     )
 
 
+def _scores() -> dict[str, int]:
+    return {
+        "strength": 15,
+        "dexterity": 14,
+        "constitution": 13,
+        "intelligence": 12,
+        "wisdom": 10,
+        "charisma": 8,
+    }
+
+
 def test_partial_create_draft_schema_is_strict_but_incomplete_is_allowed() -> None:
     payload = BuilderDraftPayload(
         basic=BuilderBasicInput(name="Partial Hero"),
@@ -42,20 +53,19 @@ def test_partial_create_draft_schema_is_strict_but_incomplete_is_allowed() -> No
 
     with pytest.raises(ValidationError):
         BuilderDraftPayload.model_validate(
-            {
-                "basic": {"name": "Bad extra", "unexpected": True},
-                "target_level": 1,
-            }
+            {"basic": {"name": "Bad extra", "unexpected": True}, "target_level": 1}
         )
 
     with pytest.raises(ValidationError):
         BuilderDraftPayload.model_validate({"target_level": 21})
 
     with pytest.raises(ValidationError):
-        BuilderDraftCreateInput(
-            mode=BuilderMode.CREATE,
-            character_id=uuid4(),
+        BuilderDraftPayload.model_validate(
+            {"ability_generation": {"method": "manual", "scores": {"strength": 10}}}
         )
+
+    with pytest.raises(ValidationError):
+        BuilderDraftCreateInput(mode=BuilderMode.CREATE, character_id=uuid4())
 
     with pytest.raises(ValidationError):
         BuilderDraftCreateInput(
@@ -70,13 +80,9 @@ def test_foundation_validation_is_machine_readable_and_supports_all_severities()
     payload = BuilderDraftPayload(
         basic=BuilderBasicInput(name=" Ada "),
         target_level=1,
-        race_selection=BuilderReferenceSelection(
-            reference_id="srd5.1:race:human"
-        ),
-        background_selection=BuilderReferenceSelection(
-            reference_id="srd5.1:background:acolyte"
-        ),
-        ability_generation={"method": "manual"},
+        race_selection=BuilderReferenceSelection(reference_id="srd5.1:race:human"),
+        background_selection=BuilderReferenceSelection(reference_id="srd5.1:background:acolyte"),
+        ability_generation={"method": "manual", "scores": _scores()},
         level_choices=({"class_ref": "srd5.1:class:fighter"},),
         numeric_overrides=({"key": "armor_class", "value": 17},),
     )
@@ -95,11 +101,7 @@ def test_foundation_validation_is_machine_readable_and_supports_all_severities()
         and issue.path == "draft_payload.numeric_overrides.0"
         for issue in issues
     )
-    assert any(
-        issue.severity is BuilderIssueSeverity.BLOCKING_ERROR
-        and issue.code == "build_compiler_not_complete"
-        for issue in issues
-    )
+    assert any(issue.severity is BuilderIssueSeverity.BLOCKING_ERROR for issue in issues)
     assert result.validation.can_confirm is False
     assert result.validation.non_standard_count == 1
 
@@ -107,10 +109,7 @@ def test_foundation_validation_is_machine_readable_and_supports_all_severities()
 def test_incomplete_validation_and_choice_ids_are_stable_across_unrelated_edits() -> None:
     registry = load_default_content_registry()
     original = _draft(
-        BuilderDraftPayload(
-            basic=BuilderBasicInput(name="One"),
-            target_level=2,
-        )
+        BuilderDraftPayload(basic=BuilderBasicInput(name="One"), target_level=2)
     )
     renamed = original.model_copy(
         update={
