@@ -72,6 +72,12 @@ grep -n "^## \|^### " 規格企劃.md
 
 **提新功能前先看第十二章。** 那份清單是刻意砍掉的東西，不是還沒做的待辦。
 
+同一 Phase 已拆出 Subphase 後，三份 Phase 文件的 Subphase 標題必須一字不差。實作或驗收某個 Subphase 時，只讀該段及必要的共用前言，例如：
+
+```bash
+grep -n "P0-C" docs/P0/實作規格.md docs/P0/開發設計方針.md docs/P0/測試指南.md
+```
+
 ## 文件分工與單一事實來源
 
 **同一件事只住一個地方。**
@@ -79,11 +85,11 @@ grep -n "^## \|^### " 規格企劃.md
 | 住哪 | 放什麼 |
 |---|---|
 | **`規格企劃.md`** | 產品行為與為什麼：跑團方式、權限、規則選擇、UI 行為、明確不做 |
-| **`PROJECT_BRIEF.md`** | 當前 Phase、Roadmap、下一步、文件索引 |
+| **`PROJECT_BRIEF.md`** | 當前 Phase、Roadmap、Subphase 進度、下一步、文件索引 |
 | **`技術棧討論.md`** | 暫時性的基礎技術選型討論：語言、Framework、DB、基本測試／部署工具 |
-| **`docs/Px/實作規格.md`** | 該 Phase 完成後什麼必須為真、驗收意圖；不寫具體 DB/API |
-| **`docs/Px/開發設計方針.md`** | 該 Phase 的具體實作契約：資料模型、模組、API、資料流、接線、必要技術決策 |
-| **`docs/Px/測試指南.md`** | 該 Phase 的自動／人工驗收流程與測試證據要求 |
+| **`docs/Px/實作規格.md`** | 該 Phase / Subphase 完成後什麼必須為真、驗收意圖；不寫具體 DB/API |
+| **`docs/Px/開發設計方針.md`** | 該 Phase / Subphase 的具體實作契約：資料模型、模組、API、資料流、接線、必要技術決策 |
+| **`docs/Px/測試指南.md`** | 該 Phase / Subphase 的自動／人工驗收流程與測試證據要求 |
 | **SRD / 規則資料檔** | 所有規則內容與可調數值 |
 | **`待決事項.md`** | 真正無法從既有規格推導、且會影響核心玩法／方向的未決問題 |
 
@@ -91,12 +97,15 @@ grep -n "^## \|^### " 規格企劃.md
 
 判準：**如果一句話不同，DM／Player 的實際跑團方式可能就不同 → `規格企劃.md`；如果是某 Phase 要做到什麼 → 該 Phase `實作規格.md`；如果是怎麼實作 → 該 Phase `開發設計方針.md`。**
 
-## Phase 設計原則
+## Phase / Subphase 設計原則
 
-1. **只設計正在開工的 Phase。**
-2. 可以記錄已知的跨 Phase 相容要求，但不要因此提前設計後續 Phase 的 schema / API / module。
-3. P0 可以要求「Character 資料模型不得排斥 Multiclass」，但不用現在決定 P2 Token table 或 P5 Tactical renderer。
-4. 後續 Phase 開工時，以當時真正存在的 codebase 為基礎再設計，比現在猜測更可靠。
+1. **只設計正在準備開工的 Phase。**
+2. **所有 Phase 在 coding 開始前，都必須先拆成 `P<n>-A`、`P<n>-B`… 的 Subphases。** 每個 Subphase 必須能獨立實作、驗證並 commit；完成時應處於可執行、可測試、沒有已知編譯／型別／該 Subphase 測試錯誤的狀態。
+3. **Subphase 只拆當前 Phase，不提前拆後續 Phase。** 尚未輪到的 Phase 保持大 Phase Roadmap；可以記錄必要的跨 Phase 承接要求，但不得因此提前設計未來 Phase 的 schema / API / module。
+4. 同一 Phase 的 `實作規格.md`、`開發設計方針.md`、`測試指南.md` 必須使用完全一致的 Subphase 名稱與順序，讓實作者可用 Subphase id 精準取得三份契約。
+5. `PROJECT_BRIEF.md` 在當前 Phase 已拆分後，必須一列一個 Subphase 顯示進度，不可再用「P0（含 A～F）」合併成一列。
+6. 可以記錄已知的跨 Phase 相容要求，例如 P0 可以要求 Character 資料模型不得排斥 Multiclass；但不用現在決定 P2 Token table 或 P5 Tactical renderer。
+7. 後續 Phase 開工時，以當時真正存在的 codebase 為基礎再設計，比現在猜測更可靠。
 
 ## 修改授權與驗證規則
 
@@ -136,7 +145,7 @@ grep -n "^## \|^### " 規格企劃.md
 
 1. **API 簽名預先核對**：呼叫任何專案內模組或 API 前，先 grep / 讀檔核對最新定義與參數列，不憑記憶編寫。
 2. **編譯／型別錯誤同 turn 修完**：跑測試或檢查時取同步結果；有錯就在同一個 turn 內修到通過，不讓錯誤流向使用者。
-3. **驗收對應**：每條 Phase 驗收契約都要有可定位的測試證據。
+3. **驗收對應**：每條 Phase / Subphase 驗收契約都要有可定位的測試證據。
 4. **權限與可見性必測**：當 Phase 涉及 Role / Seat / Controller 時，除了 happy path，必測不該看到／不該操作的 actor。
 5. **拒絕原子性與 fixture 隔離**：契約要求零副作用的拒絕操作，前後狀態不可被污染；測試 fixture 必須完整還原。
 
