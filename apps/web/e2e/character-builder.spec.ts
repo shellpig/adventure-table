@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test'
 test('P1-B workshop creates and resumes a server-backed character draft', async ({ page }) => {
   await page.goto('/characters')
   await expect(page.getByRole('heading', { name: 'Character Workshop' })).toBeVisible()
-  await expect(page.getByText('Fighter 5 / Wizard 5')).toBeVisible()
+  await expect(page.getByText('Fighter 5 / Wizard 5', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
@@ -61,7 +61,7 @@ test('P1-B workshop creates and resumes a server-backed character draft', async 
   const url = page.url()
   await page.reload()
   await expect(page).toHaveURL(url)
-  await expect(page.getByRole('heading', { name: 'P1-B Browser Hero' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'P1-B Browser Hero' }).first()).toBeVisible()
   await expect(page.getByText('Human', { exact: true }).last()).toBeVisible()
   await expect(page.getByText('Acolyte', { exact: true }).last()).toBeVisible()
   await expect(page.getByText('Class progression is intentionally locked until P1-C')).toBeVisible()
