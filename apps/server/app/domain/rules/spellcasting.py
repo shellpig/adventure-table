@@ -107,6 +107,16 @@ def resource_counter_matches_capacity(counter: ResourceCounter, capacity: int) -
     return counter.used + counter.remaining == capacity
 
 
+def reconcile_resource_counter(
+    counter: ResourceCounter | None,
+    capacity: int,
+) -> ResourceCounter:
+    """Preserve legal usage when a Build change modifies capacity."""
+
+    used = min(counter.used if counter is not None else 0, capacity)
+    return ResourceCounter(used=used, remaining=capacity - used)
+
+
 def pact_resource_key(pool_id: str, spell_level: int) -> str:
     """Stable Current State key for one Pact Magic slot tier."""
 
@@ -139,3 +149,40 @@ def initial_spell_resource_state(
                     raise ValueError(f"duplicate Pact Magic resource key: {key}")
                 resources[key] = counter
     return spell_slots, resources
+
+
+def reconcile_spell_resource_state(
+    build: CharacterBuild,
+    current_spell_slots: dict[int, ResourceCounter],
+    current_resources: dict[str, ResourceCounter],
+) -> tuple[dict[int, ResourceCounter], dict[str, ResourceCounter]]:
+    """Reconcile live spell resources after a legal Build capacity change.
+
+    Existing usage is preserved up to the new capacity. Obsolete Pact Magic
+    counters are removed, while unrelated generic resource counters remain
+    untouched. This helper is intended for future level-up/build-edit workflows
+    and keeps `used + remaining == capacity` true after reconciliation.
+    """
+
+    next_slots: dict[int, ResourceCounter] = {}
+    expected_pact_keys: dict[str, int] = {}
+    for pool in build.spell_resource_pools:
+        for slot in pool.slots:
+            if pool.pool_type == "normal_multiclass_slots":
+                next_slots[slot.level] = reconcile_resource_counter(
+                    current_spell_slots.get(slot.level),
+                    slot.capacity,
+                )
+            else:
+                key = pact_resource_key(pool.pool_id, slot.level)
+                expected_pact_keys[key] = slot.capacity
+
+    next_resources = {
+        key: counter
+        for key, counter in current_resources.items()
+        if not (key.startswith("pact_magic:") and ":slot:" in key)
+    }
+    for key, capacity in expected_pact_keys.items():
+        next_resources[key] = reconcile_resource_counter(current_resources.get(key), capacity)
+
+    return next_slots, next_resources
