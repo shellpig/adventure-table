@@ -5,7 +5,11 @@ from collections import Counter
 from app.content.registry import ContentNotFoundError, ContentRegistry
 from app.domain.character.schemas import CharacterBuild, CharacterState
 from app.domain.rules.hit_points import calculate_max_hp
-from app.domain.rules.spellcasting import max_spell_level_for_class, spell_is_on_class_list
+from app.domain.rules.spellcasting import (
+    initial_spell_resource_state,
+    resource_counter_matches_capacity,
+    spell_is_on_class_list,
+)
 
 
 class CharacterValidationError(ValueError):
@@ -72,6 +76,8 @@ def validate_build_references(build: CharacterBuild, registry: ContentRegistry) 
     refs.extend(build.skill_choices)
     refs.extend(build.feature_refs)
     refs.extend(build.feat_refs)
+    refs.extend(profile.source_key for profile in build.spellcasting_profiles)
+    refs.extend(profile.class_ref for profile in build.spellcasting_profiles)
     refs.extend(entry.spell_key for entry in build.spell_access_entries)
     refs.extend(entry.source_key for entry in build.spell_access_entries)
     refs.extend(entry.item_ref for entry in build.starting_equipment)
@@ -117,21 +123,20 @@ def _validate_prepared_spells(
         if access.access_type != "spellbook":
             raise CharacterValidationError(f"prepared spell entry is not prepareable in P0: {entry_id}")
 
-    # P1-E canonical path: a prepared class-list spell need not have a Build
-    # access entry, but its source profile must still be a class the Build owns.
-    progression_classes = set(build.class_progression)
+    profile_by_id = {profile.profile_id: profile for profile in build.spellcasting_profiles}
+    prepared_counts: Counter[str] = Counter()
     for selection in state.prepared_spells:
         _require_content(registry, selection.spell_key)
-        if not selection.source_profile_id.startswith("class:"):
+        profile = profile_by_id.get(selection.source_profile_id)
+        if profile is None:
             raise CharacterValidationError(
-                f"unsupported prepared spell source profile: {selection.source_profile_id}"
+                f"prepared spell source profile does not exist in build: {selection.source_profile_id}"
             )
-        class_index = selection.source_profile_id.removeprefix("class:")
-        class_ref = f"srd5.1:class:{class_index}"
-        if class_ref not in progression_classes:
+        if profile.access_model not in {"prepared", "spellbook"}:
             raise CharacterValidationError(
-                f"prepared spell source class does not exist in build: {class_ref}"
+                f"spellcasting profile does not support a prepared list: {selection.source_profile_id}"
             )
+        prepared_counts[profile.profile_id] += 1
 
         if selection.source_access_entry_id is not None:
             access = access_by_id.get(selection.source_access_entry_id)
@@ -139,26 +144,65 @@ def _validate_prepared_spells(
                 raise CharacterValidationError(
                     f"prepared spell source access entry does not exist: {selection.source_access_entry_id}"
                 )
+            if profile.access_model != "spellbook":
+                raise CharacterValidationError(
+                    f"only spellbook profiles may prepare through a source access entry: {profile.profile_id}"
+                )
             if access.access_type != "spellbook" or access.spell_key != selection.spell_key:
                 raise CharacterValidationError(
                     f"prepared spell source access entry is not a matching spellbook entry: {selection.source_access_entry_id}"
                 )
-            if access.source_type != "class" or access.source_key != class_ref:
+            if access.source_type != profile.source_type or access.source_key != profile.source_key:
                 raise CharacterValidationError(
                     f"prepared spell source access entry belongs to a different profile: {selection.source_access_entry_id}"
                 )
             continue
 
-        if not spell_is_on_class_list(selection.spell_key, class_ref, registry):
+        if profile.access_model == "spellbook":
             raise CharacterValidationError(
-                f"prepared spell is not on source class list: {selection.spell_key} / {class_ref}"
+                f"spellbook prepared spell must reference its Build access entry: {selection.spell_key}"
+            )
+        if not spell_is_on_class_list(selection.spell_key, profile.class_ref, registry):
+            raise CharacterValidationError(
+                f"prepared spell is not on source class list: {selection.spell_key} / {profile.class_ref}"
             )
         spell = registry.get(selection.spell_key)
         level = spell.data.get("level")
-        max_level = max_spell_level_for_class(build, class_ref, registry)
-        if not isinstance(level, int) or level < 1 or level > max_level:
+        if not isinstance(level, int) or level < 1 or level > profile.max_spell_level:
             raise CharacterValidationError(
-                f"prepared spell level is not eligible for source class: {selection.spell_key}"
+                f"prepared spell level is not eligible for source profile: {selection.spell_key}"
+            )
+
+    for profile_id, count in prepared_counts.items():
+        profile = profile_by_id[profile_id]
+        if profile.prepared_limit is not None and count > profile.prepared_limit:
+            raise CharacterValidationError(
+                f"prepared spell count exceeds profile limit: {profile_id} {count}>{profile.prepared_limit}"
+            )
+
+
+def _validate_spell_resources(state: CharacterState, build: CharacterBuild) -> None:
+    if not build.spell_resource_pools:
+        return
+
+    expected_slots, expected_resources = initial_spell_resource_state(build)
+    if set(state.spell_slots) != set(expected_slots):
+        raise CharacterValidationError(
+            "live normal spell-slot levels must match Build spell resource capacity"
+        )
+    for level, expected in expected_slots.items():
+        if not resource_counter_matches_capacity(state.spell_slots[level], expected.remaining):
+            raise CharacterValidationError(
+                f"live spell slot usage does not match Build capacity at level {level}"
+            )
+
+    for key, expected in expected_resources.items():
+        counter = state.resources.get(key)
+        if counter is None:
+            raise CharacterValidationError(f"missing live spell resource counter: {key}")
+        if not resource_counter_matches_capacity(counter, expected.remaining):
+            raise CharacterValidationError(
+                f"live spell resource usage does not match Build capacity: {key}"
             )
 
 
@@ -168,6 +212,7 @@ def validate_state_against_build(
     registry: ContentRegistry,
 ) -> None:
     _validate_prepared_spells(state, build, registry)
+    _validate_spell_resources(state, build)
 
     for condition in state.conditions:
         _require_content(registry, condition.condition_ref)
