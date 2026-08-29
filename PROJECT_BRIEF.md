@@ -33,7 +33,7 @@ Built-in Content：**SRD 5.1**
 
 ## 當前進度
 
-目前狀態：**P0 — Character Core + SRD / Rules Foundation 已完成；P1 — Character Builder Complete 已完成規劃與 Subphase 拆分。P1-A — Builder Domain & Draft Foundation 已完成實作與驗證；下一步是 P1-B — Character Creation Basics，尚未開始 P1-B coding。**
+目前狀態：**P0 — Character Core + SRD / Rules Foundation 已完成；P1 — Character Builder Complete 已完成規劃與 Subphase 拆分。P1-A — Builder Domain & Draft Foundation 與 P1-B — Character Creation Basics 已完成實作與驗證；下一步是 P1-C — Class Progression & Multiclass，尚未開始 P1-C coding。**
 
 已完成的產品／規劃工作：
 
@@ -85,7 +85,20 @@ P1-A 已完成：
 - 新增 typed frontend Builder API 與最小 feature shell；完整 Character Workshop / Wizard 留 P1-B。
 - 新增 P1-A schema / persistence / API / revision / choice-stability 測試，並保持 P0 full regression。
 
-**下一步：只有在使用者明確要求開始 P1-B 實作後，才進 P1-B — Character Creation Basics。不要自行開始 P1-B coding。**
+P1-B 已完成：
+
+- 新增 `/characters` Character Workshop，可查看 Existing Characters、建立新角色 Draft、Resume Draft 與進入既有 Character Sheet。
+- 完成 Create Character Wizard 的 Basic / Origin / Abilities 三個 P1-B 步驟；Class progression 與 Review 依邊界維持 locked。
+- Race / Subrace / Background / Alignment 與 starting choices 由 server-generated choices 驅動；前端以 searchable selectors 操作，不硬編 eligible option 清單。
+- `subrace_ref` 明確保存在 formal `CharacterBuild` schema，並驗證 Subrace 必須屬於所選 Race。
+- Ability generation 支援 Standard Array / Point Buy / Manual Input；規則常數由 versioned server rules data 提供，Point Buy budget / cost 不硬編在 React。
+- Race / Subrace / Background 的 ability bonus、languages、proficiencies、traits / feature 與已選 structured choices 由 server resolver 彙整成 live summary。
+- Manual ability values超出一般 3–18 仍可保存，但會標記 Non-standard；Numeric Override 與 base / resolved / effective ability summary 保持分離。
+- Builder Draft 仍可 Save / Reload / Cancel，但 P1-B 不產生正式 Build candidate，也不開放 Confirm；Class progression 由 P1-C 接手。
+- Docker server image 已包含 `data/rules`，確保 container / CI 環境與本機使用同一份 authoritative Builder rules。
+- P1-B regression 已通過 backend pytest、Alembic、frontend build、Vitest、Docker full stack、real-browser Playwright 與 PostgreSQL restart persistence，並保持 P0 regression。
+
+**下一步：只有在使用者明確要求開始 P1-C 實作後，才進 P1-C — Class Progression & Multiclass。不要自行開始 P1-C coding。**
 
 P1 的具體 DB / API / module 契約只住在 `docs/P1/開發設計方針.md`；本 Brief 不重複維護。
 
@@ -133,7 +146,7 @@ P1 已拆 Subphase；**P2～P8 仍維持大 Phase，不提前拆。**
 | Subphase | 狀態 | 重點 |
 |---|---|---|
 | **P1-A — Builder Domain & Draft Foundation** | ✅ | Builder Draft、choice model、compiler / validation、draft persistence；不完整 Draft 不污染正式 Character |
-| **P1-B — Character Creation Basics** | 📐 | Character Workshop、Wizard basics、Race/Subrace、Background、Standard Array / Point Buy / Manual、starting skills/proficiencies |
+| **P1-B — Character Creation Basics** | ✅ | Character Workshop、Wizard basics、Race/Subrace、Background、Standard Array / Point Buy / Manual、starting skills/proficiencies |
 | **P1-C — Class Progression & Multiclass** | ⬜ | Level-by-level rail、starting class、multiclass prerequisites / grants、Subclass timing、HP progression |
 | **P1-D — ASI, Feat & Structural Choices** | ⬜ | ASI / Feat timing、prerequisites、generic structural choice resolver、Numeric Override boundary |
 | **P1-E — Spellcasting Progression** | ⬜ | Known / Spellbook / Prepared / Always Prepared、multiclass slots、Pact Magic、source profiles |
@@ -141,7 +154,7 @@ P1 已拆 Subphase；**P2～P8 仍維持大 Phase，不提前拆。**
 | **P1-G — Level Up & Character Versions** | ⬜ | Level Up Draft、immutable Version N+1、Version History、stale base guard、State reconciliation、correction/build edit |
 | **P1-H — Full P1 Integration & Closeout** | ⬜ | P1 full regression、Create / high-level / multiclass / caster / Level Up E2E、P0 regression、closeout |
 
-P1-B 是唯一目前可開始實作的 Subphase；未完成 P1-B 驗收前不進 P1-C。
+P1-B 已完成實作與驗收；P1-C 是下一個可實作 Subphase，但未獲使用者明確要求前不開始 P1-C coding。
 
 ---
 
