@@ -3,9 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.content.registry import ContentRegistry
+from app.content.schemas import ContentEntry
 from app.domain.character.schemas import AbilityScores, CharacterBuild, RoleplayProfile
 from app.domain.character_builder.basics import resolve_creation_summary
 from app.domain.character_builder.choices import build_foundation_choices
+from app.domain.character_builder.multiclass import multiclass_option_failure_reason
 from app.domain.character_builder.progression import (
     build_progression_choices,
     class_summary,
@@ -65,6 +67,47 @@ def _roleplay_profile(draft: BuilderDraft) -> RoleplayProfile:
     return RoleplayProfile.model_validate(allowed)
 
 
+def _effective_progression_choices(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+    choices: tuple[BuilderChoice, ...],
+    effective_abilities: dict[str, int] | None,
+) -> tuple[BuilderChoice, ...]:
+    result: list[BuilderChoice] = []
+    levels = draft.draft_payload.level_choices
+    for choice in choices:
+        if choice.option_source != "content:class":
+            result.append(choice)
+            continue
+        parts = choice.choice_id.split(":")
+        if len(parts) < 3 or parts[0] != "level" or not parts[1].isdigit():
+            result.append(choice)
+            continue
+        character_level = int(parts[1])
+        acquired: list[ContentEntry] = []
+        seen: set[str] = set()
+        for level_choice in levels[: max(0, character_level - 1)]:
+            entry = registry.get_optional(level_choice.class_ref)
+            if entry is None or not entry.key.startswith("srd5.1:class:") or entry.key in seen:
+                continue
+            seen.add(entry.key)
+            acquired.append(entry)
+
+        next_options = []
+        for option in choice.options:
+            candidate = registry.get_optional(option.reference_id or "")
+            reason = None
+            if candidate is not None and candidate.key.startswith("srd5.1:class:"):
+                reason = multiclass_option_failure_reason(
+                    candidate,
+                    tuple(acquired),
+                    effective_abilities,
+                )
+            next_options.append(option.model_copy(update={"disabled_reason": reason}))
+        result.append(choice.model_copy(update={"options": tuple(next_options)}))
+    return tuple(result)
+
+
 def compile_builder_draft(
     draft: BuilderDraft,
     registry: ContentRegistry,
@@ -74,7 +117,13 @@ def compile_builder_draft(
         for choice in build_foundation_choices(draft, registry)
         if choice.option_source != "content:class"
     )
-    progression_choices = build_progression_choices(draft, registry)
+    foundation_preview = resolve_creation_summary(draft, registry, raw_foundation_choices)
+    progression_choices = _effective_progression_choices(
+        draft,
+        registry,
+        build_progression_choices(draft, registry),
+        _effective_abilities(foundation_preview),
+    )
     progression_choice_ids = {choice.choice_id for choice in progression_choices}
     foundation_choices = tuple(
         choice
