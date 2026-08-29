@@ -13,9 +13,10 @@ import {
   type BuilderView,
 } from '../../api/characterBuilder'
 import { SearchableSelect } from '../../components/SearchableSelect'
+import { ClassProgressionStep } from './ClassProgressionStep'
 import './builder.css'
 
-type BuilderStep = 'basic' | 'origin' | 'abilities'
+type BuilderStep = 'basic' | 'origin' | 'abilities' | 'class'
 
 type ChoiceEditorProps = {
   choice: BuilderChoice
@@ -29,6 +30,7 @@ const DIRECT_OPTION_SOURCES = new Set([
   'content:background',
   'content:alignment',
   'content:subrace',
+  'content:subclass',
   'builder:ability-generation',
   'content:class',
 ])
@@ -274,7 +276,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
         <header className="builder-topbar">
           <div>
             <a href="/characters" className="builder-back">← Character Workshop</a>
-            <p className="eyebrow">P1-B · Create Character</p>
+            <p className="eyebrow">P1-C · Create Character</p>
             <h1>{view.resolved_summary.name?.trim() || 'Unnamed character'}</h1>
           </div>
           <div className="builder-save-state">
@@ -296,7 +298,9 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
             <button className={step === 'abilities' ? 'is-active' : ''} onClick={() => setStep('abilities')}>
               <span>03</span><div><strong>Abilities</strong><small>Scores & starting choices</small></div>
             </button>
-            <button disabled><span>04</span><div><strong>Class</strong><small>P1-C</small></div></button>
+            <button className={step === 'class' ? 'is-active' : ''} onClick={() => setStep('class')}>
+              <span>04</span><div><strong>Class</strong><small>Level-by-level rail</small></div>
+            </button>
             <button disabled><span>05</span><div><strong>Review</strong><small>P1-F</small></div></button>
           </aside>
 
@@ -340,6 +344,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                     save.mutate({
                       basic: { name, ruleset: 'dnd5e-2014' },
                       target_level: targetLevel,
+                      level_choices: (view.draft.draft_payload.level_choices ?? []).slice(0, targetLevel),
                       roleplay_profile: { appearance, biography },
                     })
                   }
@@ -481,6 +486,14 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                 </div>
               </div>
             ) : null}
+
+            {step === 'class' ? (
+              <ClassProgressionStep
+                view={view}
+                disabled={saving}
+                onSave={(payload) => save.mutate(payload)}
+              />
+            ) : null}
           </section>
 
           <aside className="builder-summary">
@@ -491,6 +504,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
             <dl className="builder-summary__facts">
               <div><dt>Race</dt><dd>{view.resolved_summary.race_name ?? '—'}{view.resolved_summary.subrace_name ? ` · ${view.resolved_summary.subrace_name}` : ''}</dd></div>
               <div><dt>Background</dt><dd>{view.resolved_summary.background_name ?? '—'}</dd></div>
+              <div><dt>Class</dt><dd>{view.resolved_summary.class_summary ?? '—'}</dd></div>
               <div><dt>Alignment</dt><dd>{view.resolved_summary.alignment_name ?? 'Optional'}</dd></div>
             </dl>
 
@@ -528,7 +542,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   </li>
                 ))}
               </ul>
-              <p className="builder-hint">Class progression is intentionally locked until P1-C, so this P1-B draft cannot Confirm yet.</p>
+              <p className="builder-hint">P1-C validates the full class rail. Confirm remains locked until P1-D through P1-F complete the remaining Build choices.</p>
             </div>
 
             <button

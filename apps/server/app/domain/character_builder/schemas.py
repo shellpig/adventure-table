@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
-from app.domain.character.schemas import NumericOverride
+from app.domain.character.schemas import NumericOverride, require_stable_key
 
 
 class StrictModel(BaseModel):
@@ -38,6 +38,12 @@ class AbilityGenerationMethod(StrEnum):
     STANDARD_ARRAY = "standard_array"
     POINT_BUY = "point_buy"
     MANUAL = "manual"
+
+
+class BuilderHPMethod(StrEnum):
+    FIRST_LEVEL = "first_level"
+    FIXED_AVERAGE = "fixed_average"
+    MANUAL_ROLLED = "manual_rolled"
 
 
 class BuilderBasicInput(StrictModel):
@@ -82,6 +88,24 @@ class BuilderAbilityGenerationInput(StrictModel):
     provenance: str | None = Field(default=None, max_length=240)
 
 
+class BuilderLevelChoice(StrictModel):
+    character_level: int = Field(ge=1, le=20)
+    class_ref: str = Field(min_length=1, max_length=240)
+    hp_method: BuilderHPMethod
+    hp_base_gain: int = Field(ge=1, le=12)
+    subclass_ref: str | None = Field(default=None, max_length=240)
+
+    @field_validator("class_ref")
+    @classmethod
+    def class_ref_is_class(cls, value: str) -> str:
+        return require_stable_key(value, kinds={"class"})
+
+    @field_validator("subclass_ref")
+    @classmethod
+    def subclass_ref_is_subclass(cls, value: str | None) -> str | None:
+        return None if value is None else require_stable_key(value, kinds={"subclass"})
+
+
 class BuilderChoiceSelection(StrictModel):
     choice_id: str = Field(min_length=1, max_length=240)
     selected_option_ids: tuple[str, ...] = ()
@@ -108,6 +132,8 @@ class BuilderChoiceOption(StrictModel):
     nested_choice_id: str | None = Field(default=None, max_length=240)
     branch_key: str | None = Field(default=None, max_length=160)
     disabled_reason: str | None = Field(default=None, max_length=500)
+    hit_die_size: int | None = Field(default=None, ge=1, le=12)
+    fixed_hp_gain: int | None = Field(default=None, ge=1, le=12)
 
 
 class BuilderChoice(StrictModel):
@@ -130,7 +156,7 @@ class BuilderDraftPayload(StrictModel):
     background_selection: BuilderReferenceSelection | None = None
     alignment_selection: BuilderReferenceSelection | None = None
     ability_generation: BuilderAbilityGenerationInput | None = None
-    level_choices: tuple[dict[str, JsonValue], ...] = ()
+    level_choices: tuple[BuilderLevelChoice, ...] = ()
     choice_selections: dict[str, BuilderChoiceSelection] = Field(default_factory=dict)
     spell_choices: dict[str, JsonValue] = Field(default_factory=dict)
     starting_equipment_choices: dict[str, JsonValue] = Field(default_factory=dict)
@@ -156,7 +182,7 @@ class BuilderDraftPayloadPatch(StrictModel):
     background_selection: BuilderReferenceSelection | None = None
     alignment_selection: BuilderReferenceSelection | None = None
     ability_generation: BuilderAbilityGenerationInput | None = None
-    level_choices: tuple[dict[str, JsonValue], ...] | None = None
+    level_choices: tuple[BuilderLevelChoice, ...] | None = None
     choice_selections: dict[str, BuilderChoiceSelection] | None = None
     spell_choices: dict[str, JsonValue] | None = None
     starting_equipment_choices: dict[str, JsonValue] | None = None
@@ -242,6 +268,23 @@ class BuilderAbilityScoreSummary(StrictModel):
     overridden: bool = False
 
 
+class BuilderProgressionNodeSummary(StrictModel):
+    character_level: int = Field(ge=1, le=20)
+    class_ref: str
+    class_name: str
+    class_level: int = Field(ge=1, le=20)
+    starting_class: bool = False
+    multiclass_entry: bool = False
+    hit_die_size: int = Field(ge=1, le=12)
+    fixed_hp_gain: int = Field(ge=1, le=12)
+    hp_method: BuilderHPMethod
+    hp_base_gain: int = Field(ge=1, le=12)
+    subclass_required: bool = False
+    subclass_ref: str | None = None
+    subclass_name: str | None = None
+    automatic_feature_refs: tuple[str, ...] = ()
+
+
 class BuilderResolvedSummary(StrictModel):
     name: str | None
     target_level: int | None
@@ -249,10 +292,13 @@ class BuilderResolvedSummary(StrictModel):
     subrace_name: str | None = None
     background_name: str | None = None
     alignment_name: str | None = None
+    starting_class_name: str | None = None
+    class_summary: str | None = None
     selected_reference_count: int = Field(ge=0)
     choice_selection_count: int = Field(ge=0)
     grants: tuple[BuilderGrantSummary, ...] = ()
     ability_scores: tuple[BuilderAbilityScoreSummary, ...] = ()
+    progression: tuple[BuilderProgressionNodeSummary, ...] = ()
 
 
 class BuilderView(StrictModel):

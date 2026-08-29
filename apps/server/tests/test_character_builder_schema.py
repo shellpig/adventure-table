@@ -83,7 +83,14 @@ def test_foundation_validation_is_machine_readable_and_supports_all_severities()
         race_selection=BuilderReferenceSelection(reference_id="srd5.1:race:human"),
         background_selection=BuilderReferenceSelection(reference_id="srd5.1:background:acolyte"),
         ability_generation={"method": "manual", "scores": _scores()},
-        level_choices=({"class_ref": "srd5.1:class:fighter"},),
+        level_choices=(
+            {
+                "character_level": 1,
+                "class_ref": "srd5.1:class:fighter",
+                "hp_method": "first_level",
+                "hp_base_gain": 10,
+            },
+        ),
         numeric_overrides=({"key": "armor_class", "value": 17},),
     )
     result = compile_builder_draft(_draft(payload), registry)
