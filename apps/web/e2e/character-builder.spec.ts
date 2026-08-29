@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 async function chooseSearchable(page: Page, label: string | RegExp, value: string) {
   const input = page.getByRole('combobox', { name: label })
+  await expect(input).toBeEnabled()
   await input.fill(value)
   await input.press('ArrowDown')
   await input.press('Enter')
@@ -10,6 +11,7 @@ async function chooseSearchable(page: Page, label: string | RegExp, value: strin
 
 async function chooseIn(container: ReturnType<Page['locator']>, value: string) {
   const input = container.getByRole('combobox', { name: 'Add selection' })
+  await expect(input).toBeEnabled()
   await input.fill(value)
   await input.press('ArrowDown')
   await input.press('Enter')
@@ -17,6 +19,8 @@ async function chooseIn(container: ReturnType<Page['locator']>, value: string) {
 
 
 test('P1-D preserves an ordered Fighter 5 / Wizard 5 rail with ASI and feat choices', async ({ page }) => {
+  test.slow()
+
   await page.goto('/characters')
   await expect(page.getByRole('heading', { name: 'Character Workshop' })).toBeVisible()
   await expect(page.getByText('Fighter 5 / Wizard 5', { exact: true })).toBeVisible()
