@@ -95,7 +95,10 @@ def _asi_feature_markers(entry: ContentEntry) -> int:
         name = reference.get("name")
         normalized_index = index.lower() if isinstance(index, str) else ""
         normalized_name = name.lower() if isinstance(name, str) else ""
-        if "ability-score-improvement" in normalized_index or normalized_name == "ability score improvement":
+        if (
+            "ability-score-improvement" in normalized_index
+            or normalized_name == "ability score improvement"
+        ):
             count += 1
     return count
 
@@ -112,7 +115,9 @@ def asi_occurrences_at_class_level(
     current = _cumulative_asi(current_entry)
     previous = 0
     if class_level > 1:
-        previous = _cumulative_asi(_class_level_entry(registry, class_entry, class_level - 1))
+        previous = _cumulative_asi(
+            _class_level_entry(registry, class_entry, class_level - 1)
+        )
     delta = current - previous
     if delta < 0:
         raise ValueError(
@@ -122,7 +127,8 @@ def asi_occurrences_at_class_level(
     markers = _asi_feature_markers(current_entry)
     if markers and markers != delta:
         raise ValueError(
-            f"ASI feature markers disagree with cumulative delta for {class_ref} class level {class_level}"
+            "ASI feature markers disagree with cumulative delta for "
+            f"{class_ref} class level {class_level}"
         )
     return delta
 
@@ -286,7 +292,11 @@ def _canonical_rule_choices(
             reference = raw.get("of") if isinstance(raw.get("of"), dict) else raw.get("item")
             count = raw.get("count")
             if isinstance(reference, dict) and isinstance(count, int) and count > 0:
-                option = _reference_option(reference, kind=BuilderOptionKind.COUNTED_REFERENCE, count=count)
+                option = _reference_option(
+                    reference,
+                    kind=BuilderOptionKind.COUNTED_REFERENCE,
+                    count=count,
+                )
                 if option is not None:
                     options.append(option)
         elif option_type == "string" and isinstance(raw.get("string"), str):
@@ -330,7 +340,9 @@ def _canonical_rule_choices(
                 child.model_copy(
                     update={
                         "disabled_reason": (
-                            child.disabled_reason if active else f"Choose {nested_label} first."
+                            child.disabled_reason
+                            if active
+                            else f"Choose {nested_label} first."
                         )
                     }
                 )
@@ -372,7 +384,11 @@ def _feature_specific_choices(
             if isinstance(value.get("choose"), int) and isinstance(value.get("from"), dict):
                 field = "-".join(path) if path else "feature-choice"
                 desc = value.get("desc")
-                label = desc if isinstance(desc, str) and desc.strip() else f"{feature.name} — choice"
+                label = (
+                    desc
+                    if isinstance(desc, str) and desc.strip()
+                    else f"{feature.name} — choice"
+                )
                 choice_id = deterministic_choice_id(
                     "level", str(character_level), feature.key, field
                 )
@@ -409,19 +425,31 @@ def build_structural_choices(
     overrides = _numeric_override_map(draft)
     feats = registry.list_kind("feat")
     choices: list[BuilderChoice] = []
-    nodes = {node.character_level: node for node in progression_summary(draft, registry)}
+    nodes = {
+        node.character_level: node for node in progression_summary(draft, registry)
+    }
 
-    for character_level, level_choice in enumerate(draft.draft_payload.level_choices, start=1):
+    for character_level, level_choice in enumerate(
+        draft.draft_payload.level_choices,
+        start=1,
+    ):
         class_entry = registry.get_optional(level_choice.class_ref)
         if class_entry is None or not class_entry.key.startswith("srd5.1:class:"):
             continue
         class_counts[class_entry.key] += 1
         class_level = class_counts[class_entry.key]
-        occurrences = asi_occurrences_at_class_level(registry, class_entry.key, class_level)
+        occurrences = asi_occurrences_at_class_level(
+            registry,
+            class_entry.key,
+            class_level,
+        )
 
         for occurrence in range(occurrences):
             branch_id = deterministic_choice_id(
-                "level", str(character_level), "asi-feat", str(occurrence)
+                "level",
+                str(character_level),
+                "asi-feat",
+                str(occurrence),
             )
             effective = _effective_abilities(resolved, overrides)
             feat_options = tuple(
@@ -457,54 +485,74 @@ def build_structural_choices(
                 )
             )
 
-            if branch_selection == ("asi",):
-                ability_id = deterministic_choice_id(
-                    "level", str(character_level), "asi-abilities", str(occurrence)
-                )
-                selected_abilities = _selection(draft, ability_id)
-                selected_counts = Counter(selected_abilities)
-                options: list[BuilderChoiceOption] = []
-                for ability in ABILITY_NAME_TO_INDEX:
-                    current = resolved.get(ability, 0) if resolved is not None else 0
-                    already_selected = selected_counts[_ability_option_id(ability)]
-                    disabled_reason = None
-                    if resolved is None:
-                        disabled_reason = "Complete ability scores before assigning an ASI."
-                    elif current + already_selected >= ASI_CAP:
-                        disabled_reason = f"{ABILITY_LABELS[ability]} cannot exceed {ASI_CAP}."
-                    options.append(
-                        BuilderChoiceOption(
-                            option_id=_ability_option_id(ability),
-                            label=f"{ABILITY_LABELS[ability]} +1",
-                            kind=BuilderOptionKind.COUNTED_REFERENCE,
-                            count=1,
-                            category="asi_ability",
-                            disabled_reason=disabled_reason,
-                        )
-                    )
-                choices.append(
-                    BuilderChoice(
-                        choice_id=ability_id,
-                        label="Assign 2 ability score points",
-                        source_ref=class_entry.key,
-                        required=True,
-                        choose_count=2,
-                        option_source="content:asi-ability",
-                        options=tuple(options),
-                        selected_option_ids=selected_abilities,
-                        allow_duplicates=True,
+            ability_id = deterministic_choice_id(
+                "level",
+                str(character_level),
+                "asi-abilities",
+                str(occurrence),
+            )
+            selected_abilities = _selection(draft, ability_id)
+            selected_counts = Counter(selected_abilities)
+            ability_options: list[BuilderChoiceOption] = []
+            for ability in ABILITY_NAME_TO_INDEX:
+                current = resolved.get(ability, 0) if resolved is not None else 0
+                already_selected = selected_counts[_ability_option_id(ability)]
+                disabled_reason = None
+                if resolved is None:
+                    disabled_reason = "Complete ability scores before assigning an ASI."
+                elif current >= ASI_CAP or current + already_selected > ASI_CAP:
+                    disabled_reason = f"{ABILITY_LABELS[ability]} cannot exceed {ASI_CAP}."
+                ability_options.append(
+                    BuilderChoiceOption(
+                        option_id=_ability_option_id(ability),
+                        label=f"{ABILITY_LABELS[ability]} +1",
+                        kind=BuilderOptionKind.COUNTED_REFERENCE,
+                        count=1,
+                        category="asi_ability",
+                        disabled_reason=disabled_reason,
                     )
                 )
 
-                if resolved is not None and len(selected_abilities) == 2:
-                    parsed = [_ability_from_option_id(option_id) for option_id in selected_abilities]
-                    if all(ability is not None for ability in parsed):
-                        candidate = dict(resolved)
-                        for ability in parsed:
-                            assert ability is not None
-                            candidate[ability] += 1
-                        if all(value <= ASI_CAP for value in candidate.values()):
-                            resolved = candidate
+            # Keep the dependent choice deterministic even after switching to a
+            # feat so saved ASI selections become harmless stale state instead of
+            # turning into an unknown draft selection. Before the branch is chosen
+            # it stays visible so clients can render the complete opportunity.
+            ability_choice_active = branch_selection in ((), ("asi",))
+            choices.append(
+                BuilderChoice(
+                    choice_id=ability_id,
+                    label="Assign 2 ability score points",
+                    source_ref=class_entry.key,
+                    required=True,
+                    choose_count=2,
+                    option_source="content:asi-ability",
+                    options=tuple(ability_options),
+                    selected_option_ids=selected_abilities,
+                    disabled_reason=(
+                        None
+                        if ability_choice_active
+                        else "Choose Ability Score Improvement to assign ability points."
+                    ),
+                    allow_duplicates=True,
+                )
+            )
+
+            if (
+                branch_selection == ("asi",)
+                and resolved is not None
+                and len(selected_abilities) == 2
+            ):
+                parsed = [
+                    _ability_from_option_id(option_id)
+                    for option_id in selected_abilities
+                ]
+                if all(ability is not None for ability in parsed):
+                    candidate = dict(resolved)
+                    for ability in parsed:
+                        assert ability is not None
+                        candidate[ability] += 1
+                    if all(value <= ASI_CAP for value in candidate.values()):
+                        resolved = candidate
 
         node = nodes.get(character_level)
         if node is None:
@@ -541,7 +589,9 @@ def validate_structural_choice_integrity(
                     code="duplicate_choice_option",
                     severity=BuilderIssueSeverity.BLOCKING_ERROR,
                     path=path,
-                    message=f"{choice.label} does not allow the same option to be selected twice.",
+                    message=(
+                        f"{choice.label} does not allow the same option to be selected twice."
+                    ),
                     related_refs=tuple(selected),
                 )
             )
@@ -549,7 +599,8 @@ def validate_structural_choice_integrity(
         disabled = [
             option_id
             for option_id in selected
-            if option_id in option_by_id and option_by_id[option_id].disabled_reason is not None
+            if option_id in option_by_id
+            and option_by_id[option_id].disabled_reason is not None
         ]
         if disabled:
             issues.append(
@@ -557,11 +608,31 @@ def validate_structural_choice_integrity(
                     code="disabled_choice_option_selected",
                     severity=BuilderIssueSeverity.BLOCKING_ERROR,
                     path=path,
-                    message=f"{choice.label} contains a selection whose prerequisite is not satisfied.",
+                    message=(
+                        f"{choice.label} contains a selection whose prerequisite is not satisfied."
+                    ),
                     related_refs=tuple(disabled),
                 )
             )
     return tuple(issues)
+
+
+def _asi_branch_id_for_ability_choice(choice_id: str) -> str | None:
+    parts = choice_id.split(":")
+    if (
+        len(parts) != 4
+        or parts[0] != "level"
+        or not parts[1].isdigit()
+        or parts[2] != "asi-abilities"
+        or not parts[3].isdigit()
+    ):
+        return None
+    return deterministic_choice_id(
+        "level",
+        parts[1],
+        "asi-feat",
+        parts[3],
+    )
 
 
 def compile_structural_selections(
@@ -583,12 +654,26 @@ def compile_structural_selections(
         option_by_id = {option.option_id: option for option in choice.options}
 
         if choice.option_source == "content:asi-ability":
-            if len(selection.selected_option_ids) != 2:
+            branch_id = _asi_branch_id_for_ability_choice(choice.choice_id)
+            branch_selection = (
+                draft.draft_payload.choice_selections.get(branch_id)
+                if branch_id is not None
+                else None
+            )
+            if (
+                branch_selection is None
+                or branch_selection.selected_option_ids != ("asi",)
+                or len(selection.selected_option_ids) != 2
+            ):
                 continue
             for option_id in selection.selected_option_ids:
                 ability = _ability_from_option_id(option_id)
                 option = option_by_id.get(option_id)
-                if ability is not None and option is not None and option.disabled_reason is None:
+                if (
+                    ability is not None
+                    and option is not None
+                    and option.disabled_reason is None
+                ):
                     ability_bonuses[ability] += 1
             continue
 
@@ -609,7 +694,11 @@ def compile_structural_selections(
             continue
         for option_id in selection.selected_option_ids:
             option = option_by_id.get(option_id)
-            if option is None or option.disabled_reason is not None or option.reference_id is None:
+            if (
+                option is None
+                or option.disabled_reason is not None
+                or option.reference_id is None
+            ):
                 continue
             reference_id = option.reference_id
             if reference_id.startswith("srd5.1:feature:"):
@@ -617,7 +706,10 @@ def compile_structural_selections(
             elif reference_id.startswith("srd5.1:proficiency:"):
                 proficiency_index = reference_id.rsplit(":", 1)[-1]
                 if proficiency_index.startswith("skill-"):
-                    skill_ref = f"srd5.1:skill:{proficiency_index.removeprefix('skill-')}"
+                    skill_ref = (
+                        "srd5.1:skill:"
+                        f"{proficiency_index.removeprefix('skill-')}"
+                    )
                     if registry.get_optional(skill_ref) is not None:
                         skills.append(skill_ref)
                         continue
