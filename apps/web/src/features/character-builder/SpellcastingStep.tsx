@@ -67,8 +67,12 @@ function SpellBucketEditor({
   const current = profileSelection(view, profile.profile_id)
   const selected = current[bucket]
   const isCantrip = bucket === 'cantrip_keys'
+  const isWizardPrepared = bucket === 'prepared_spell_keys' && profile.access_model === 'spellbook'
   const options = profile.available_spells
     .filter((spell) => (isCantrip ? spell.level === 0 : spell.level > 0))
+    .filter(
+      (spell) => !isWizardPrepared || current.spellbook_spell_keys.includes(spell.spell_key),
+    )
     .map((spell) => ({
       value: spell.spell_key,
       label: spellLabel(spell),
