@@ -51,6 +51,29 @@ test('opens the three-page P0 character sheet', async ({ page }) => {
   await expect(page.getByRole('combobox', { name: '物品名稱' })).toBeVisible()
 })
 
+test('captures P0-F manual smoke views', async ({ page }, testInfo) => {
+  await page.goto(CHARACTER_URL)
+  await expect(page.getByRole('heading', { name: 'P0 Human Fighter 5 / Wizard 5' })).toBeVisible()
+  await page.screenshot({
+    path: testInfo.outputPath('p0-f-attributes.png'),
+    fullPage: true,
+  })
+
+  await page.getByRole('tab', { name: /法術/ }).click()
+  await expect(page.getByText('Magic Missile', { exact: true })).toBeVisible()
+  await page.screenshot({
+    path: testInfo.outputPath('p0-f-spells.png'),
+    fullPage: true,
+  })
+
+  await page.getByRole('tab', { name: /物品欄/ }).click()
+  await expect(page.getByText('Potion of Healing', { exact: true })).toBeVisible()
+  await page.screenshot({
+    path: testInfo.outputPath('p0-f-inventory.png'),
+    fullPage: true,
+  })
+})
+
 test('persists HP after a browser reload', async ({ page }) => {
   await page.goto(CHARACTER_URL)
   await page.getByTestId('current-hp-input').fill('50')
