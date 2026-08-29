@@ -340,7 +340,7 @@ def _acquisition_opportunity_levels(
         max_level = _max_spell_level(row)
         opportunities.extend([max_level] * gained)
         if started and previous_known > 0:
-            opportunities.append(max_level)  # one legal replacement on this class level
+            opportunities.append(max_level)
         started = True
         previous_known = known
     return opportunities
@@ -373,23 +373,50 @@ def _validate_acquisition_feasibility(
     return []
 
 
-def calculate_multiclass_spell_slots(
+def _normal_spellcasting_sources(
     draft: BuilderDraft,
     registry: ContentRegistry,
-) -> dict[int, int]:
-    """Return normal spell-slot capacity; Pact Magic never contributes here."""
-
+) -> list[tuple[str, int, SpellcastingClassRule]]:
     rules = load_spellcasting_rules()
-    class_levels = _class_levels(draft)
-    caster_level = 0
-    for class_ref, class_level in class_levels.items():
+    result: list[tuple[str, int, SpellcastingClassRule]] = []
+    for class_ref, class_level in _class_levels(draft).items():
         rule = rules.classes.get(class_ref)
         class_entry = registry.get_optional(class_ref)
         if rule is None or class_entry is None:
             continue
         start = _spellcasting_start_level(class_entry)
-        if start is None or class_level < start or rule.resource_pool_type != "normal_multiclass_slots":
+        if (
+            start is None
+            or class_level < start
+            or rule.resource_pool_type != "normal_multiclass_slots"
+            or rule.slot_contribution == "none"
+        ):
             continue
+        result.append((class_ref, class_level, rule))
+    return result
+
+
+def calculate_multiclass_spell_slots(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+) -> dict[int, int]:
+    """Return normal spell-slot capacity while keeping Pact Magic separate.
+
+    A character with only one normal Spellcasting class still uses that class's
+    own progression table. The multiclass caster-level table applies only when
+    two or more normal Spellcasting classes contribute; Pact Magic never counts
+    toward that threshold or the combined caster level.
+    """
+
+    sources = _normal_spellcasting_sources(draft, registry)
+    if not sources:
+        return {}
+    if len(sources) == 1:
+        class_ref, class_level, _rule = sources[0]
+        return _slot_counts(_spellcasting_row(registry, class_ref, class_level))
+
+    caster_level = 0
+    for _class_ref, class_level, rule in sources:
         if rule.slot_contribution == "full":
             caster_level += class_level
         elif rule.slot_contribution == "half":
@@ -397,7 +424,7 @@ def calculate_multiclass_spell_slots(
 
     if caster_level <= 0:
         return {}
-    row = rules.combined_spell_slots[min(caster_level, 20)]
+    row = load_spellcasting_rules().combined_spell_slots[min(caster_level, 20)]
     return {level: count for level, count in enumerate(row, start=1) if count > 0}
 
 
@@ -408,10 +435,14 @@ def _resource_pools(
 ) -> tuple[BuilderSpellResourcePoolSummary, ...]:
     pools: list[BuilderSpellResourcePoolSummary] = []
     normal = calculate_multiclass_spell_slots(draft, registry)
+    normal_profile_count = sum(
+        profile.resource_pool_type is BuilderSpellResourcePoolType.NORMAL_MULTICLASS_SLOTS
+        for profile in profiles
+    )
     if normal:
         pools.append(
             BuilderSpellResourcePoolSummary(
-                pool_id="spell_slots:combined",
+                pool_id="spell_slots:combined" if normal_profile_count > 1 else "spell_slots:normal",
                 pool_type=BuilderSpellResourcePoolType.NORMAL_MULTICLASS_SLOTS,
                 slots=tuple(
                     BuilderSpellSlotCapacity(level=level, count=count)
@@ -763,9 +794,6 @@ def compile_spellcasting(
     subclass_entries = _subclass_spell_access(draft, registry, feature_refs)
     access_entries.extend(subclass_entries)
 
-    # Entry ids carry source identity, so the same spell from class and subclass
-    # sources remains two distinct Build access records. Exact duplicate records
-    # are collapsed only when the source and access kind are identical.
     deduped_entries = tuple({entry.entry_id: entry for entry in access_entries}.values())
     profile_tuple = tuple(profiles)
     return SpellcastingCompilation(
