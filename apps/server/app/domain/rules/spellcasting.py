@@ -105,3 +105,37 @@ def resource_counter_matches_capacity(counter: ResourceCounter, capacity: int) -
     """Shared invariant for Build-derived resource capacity versus live usage."""
 
     return counter.used + counter.remaining == capacity
+
+
+def pact_resource_key(pool_id: str, spell_level: int) -> str:
+    """Stable Current State key for one Pact Magic slot tier."""
+
+    return f"{pool_id}:slot:{spell_level}"
+
+
+def initial_spell_resource_state(
+    build: CharacterBuild,
+) -> tuple[dict[int, ResourceCounter], dict[str, ResourceCounter]]:
+    """Create full Current State counters from Build capacities.
+
+    Normal multiclass slots use the dedicated state.spell_slots mapping. Pact
+    Magic stays in state.resources under source-aware keys so the two pools can
+    never be merged accidentally just because their source data uses similar
+    slot-shaped field names.
+    """
+
+    spell_slots: dict[int, ResourceCounter] = {}
+    resources: dict[str, ResourceCounter] = {}
+    for pool in build.spell_resource_pools:
+        for slot in pool.slots:
+            counter = ResourceCounter(used=0, remaining=slot.capacity)
+            if pool.pool_type == "normal_multiclass_slots":
+                if slot.level in spell_slots:
+                    raise ValueError(f"duplicate normal spell slot capacity for level {slot.level}")
+                spell_slots[slot.level] = counter
+            else:
+                key = pact_resource_key(pool.pool_id, slot.level)
+                if key in resources:
+                    raise ValueError(f"duplicate Pact Magic resource key: {key}")
+                resources[key] = counter
+    return spell_slots, resources
