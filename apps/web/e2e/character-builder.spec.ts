@@ -46,6 +46,7 @@ test('P1-D preserves an ordered Fighter 5 / Wizard 5 rail with ASI and feat choi
     .locator('.builder-choice')
     .filter({ hasText: 'Acolyte — Languages' })
   await chooseIn(backgroundLanguages, 'Celestial')
+  await expect(backgroundLanguages).toContainText('1 / 2')
   await chooseIn(backgroundLanguages, 'Draconic')
   await expect(backgroundLanguages).toContainText('2 / 2')
 
@@ -69,6 +70,7 @@ test('P1-D preserves an ordered Fighter 5 / Wizard 5 rail with ASI and feat choi
     .getByTestId('level-node-1')
     .locator('.progression-choice')
   await chooseIn(fighterStartingSkills, 'Acrobatics')
+  await expect(fighterStartingSkills).toContainText('1 / 2')
   await chooseIn(fighterStartingSkills, 'Athletics')
   await expect(fighterStartingSkills).toContainText('2 / 2')
 
@@ -89,6 +91,7 @@ test('P1-D preserves an ordered Fighter 5 / Wizard 5 rail with ASI and feat choi
     .locator('.progression-choice')
     .filter({ hasText: 'Assign 2 ability score points' })
   await chooseIn(fighterAsi, 'STR +1')
+  await expect(fighterAsi).toContainText('1 / 2')
   await chooseIn(fighterAsi, 'STR +1')
   await expect(fighterAsi).toContainText('2 / 2')
   await expect(page.locator('.summary-abilities')).toContainText('18')
