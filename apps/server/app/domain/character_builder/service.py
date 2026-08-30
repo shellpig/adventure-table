@@ -11,6 +11,7 @@ from app.domain.character_builder.creation import (
     build_initial_character_state,
 )
 from app.domain.character_builder.schemas import (
+    BuilderDraft,
     BuilderDraftCreateInput,
     BuilderDraftPatchInput,
     BuilderDraftPayload,
@@ -89,7 +90,7 @@ class CharacterBuilderService:
     def _compile_review(
         self,
         draft_id: UUID,
-    ) -> tuple[BuilderCompileResult, BuilderReviewDTO]:
+    ) -> tuple[BuilderDraft, BuilderCompileResult, BuilderReviewDTO]:
         draft = self.repository.load_draft(draft_id)
         compiled = compile_builder_draft(draft, self.registry)
         issues = list(compiled.validation.issues)
@@ -133,10 +134,10 @@ class CharacterBuilderService:
             can_confirm=validation.can_confirm,
             non_standard_count=validation.non_standard_count,
         )
-        return compiled, review
+        return draft, compiled, review
 
     def review_draft(self, draft_id: UUID) -> BuilderReviewDTO:
-        return self._compile_review(draft_id)[1]
+        return self._compile_review(draft_id)[2]
 
     def confirm_draft(self, draft_id: UUID) -> BuilderConfirmResult:
         if self.character_repository is None:
@@ -152,7 +153,7 @@ class CharacterBuilderService:
                 character_path=f"/characters/{character.id}",
             )
 
-        compiled, review = self._compile_review(draft_id)
+        draft, compiled, review = self._compile_review(draft_id)
         if not review.can_confirm or compiled.build_candidate is None or review.initial_state is None:
             raise BuilderCannotConfirmError(
                 BuilderValidationResult(
@@ -162,7 +163,6 @@ class CharacterBuilderService:
                 )
             )
 
-        draft = self.repository.load_draft(draft_id)
         basic = draft.draft_payload.basic
         if basic is None or basic.name is None:
             raise BuilderCannotConfirmError(
