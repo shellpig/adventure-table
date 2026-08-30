@@ -34,6 +34,11 @@ MYSTIC_ARCANUM_KEY_RE = re.compile(
     r"^srd5\.1:feature:mystic-arcanum-(\d+)(?:st|nd|rd|th)-level$"
 )
 
+# Conservative characters that are Simplified-Chinese-only for the current
+# D&D presentation vocabulary. Do not include ambiguous forms such as 「里」,
+# which is valid Traditional Chinese in names such as 「里拉琴」.
+SIMPLIFIED_ONLY_RE = re.compile(r"[术体龙剑药发门书风灵护战类这为与云气团阴圣师兽见觉听说话语骑标]")
+
 # CR and dice notation are language-neutral rules notation. Imperial distance
 # is user-facing prose and is normalized to Taiwan Traditional Chinese instead.
 PASSTHROUGH_TOKENS = {"CR", "d"}
@@ -91,11 +96,24 @@ def load_reference_names(root: Path) -> dict[str, str]:
 
 
 def _canonical_names() -> dict[str, str]:
-    """Read canonical SRD names for every StableKey covered by M02-D."""
+    """Read canonical SRD names for every StableKey covered by M02-D.
+
+    The committed SRD category files currently use a top-level JSON array. The
+    defensive object form is accepted as well so the authoring tool fails with
+    a useful message rather than an AttributeError if a future import changes
+    the envelope.
+    """
     names: dict[str, str] = {}
     for filename in sorted(set(base.CATEGORY_BY_KIND.values())):
         payload = json.loads((base.SRD_ROOT / filename).read_text(encoding="utf-8"))
-        for raw in payload.get("entries", []):
+        if isinstance(payload, list):
+            rows = payload
+        elif isinstance(payload, dict) and isinstance(payload.get("entries"), list):
+            rows = payload["entries"]
+        else:
+            raise ValueError(f"unexpected SRD category shape: {filename}")
+
+        for raw in rows:
             if not isinstance(raw, dict):
                 continue
             key = raw.get("key")
@@ -171,6 +189,25 @@ def _remaining_markers(overlay: dict[str, Any]) -> list[dict[str, str]]:
     return remaining
 
 
+def _simplified_residues(overlay: dict[str, Any]) -> list[dict[str, str]]:
+    residues: list[dict[str, str]] = []
+    for key, fields in overlay["entries"].items():
+        for field_path, value in fields.items():
+            if not isinstance(value, str):
+                continue
+            found = sorted(set(SIMPLIFIED_ONLY_RE.findall(value)))
+            if found:
+                residues.append(
+                    {
+                        "key": key,
+                        "field_path": field_path,
+                        "characters": "".join(found),
+                        "value": value,
+                    }
+                )
+    return residues
+
+
 def build_reviewed_overlay(
     reference_root: Path | None,
     token_overrides: dict[str, str],
@@ -213,6 +250,7 @@ def build_reviewed_overlay(
 
     overlay = _replace_markers(overlay, token_overrides)
     remaining = _remaining_markers(overlay)
+    simplified = _simplified_residues(overlay)
     report = {
         **report,
         "base_unknown_count": report["unknown_count"],
@@ -223,8 +261,17 @@ def build_reviewed_overlay(
         "reviewed_token_override_count": len(token_overrides),
         "unknown_count": len(remaining),
         "unknowns": remaining,
+        "simplified_residue_count": len(simplified),
+        "simplified_residues": simplified,
     }
     return overlay, report
+
+
+def _load_json_object(path: Path) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"expected JSON object: {path}")
+    return payload
 
 
 def main() -> int:
@@ -233,15 +280,18 @@ def main() -> int:
     parser.add_argument("--report", type=Path)
     parser.add_argument("--reference-root", type=Path)
     parser.add_argument("--token-overrides", type=Path)
+    parser.add_argument(
+        "--check-against",
+        type=Path,
+        help="fail if the generated overlay differs from this committed overlay",
+    )
     parser.add_argument("--strict", action="store_true")
     args = parser.parse_args()
 
     token_overrides: dict[str, str] = {}
     if args.token_overrides:
-        raw = json.loads(args.token_overrides.read_text(encoding="utf-8"))
-        if not isinstance(raw, dict) or not all(
-            isinstance(key, str) and isinstance(value, str) for key, value in raw.items()
-        ):
+        raw = _load_json_object(args.token_overrides)
+        if not all(isinstance(key, str) and isinstance(value, str) for key, value in raw.items()):
             raise ValueError("token overrides must be a JSON string-to-string object")
         token_overrides = raw
 
@@ -259,13 +309,31 @@ def main() -> int:
         f"{report['project_exact_name_hits']} project exact names / "
         f"{report['exact_reference_hits']} exact reference hits / "
         f"{report['structured_name_hits']} structured names / "
-        f"{report['unknown_count']} unknown markers"
+        f"{report['unknown_count']} unknown markers / "
+        f"{report['simplified_residue_count']} simplified residues"
     )
+
+    failed = False
     if report["unknown_count"]:
         for item in report["unknowns"]:
             print(f"UNKNOWN {item['token']!r}: {item['value']} [{item['key']}::{item['field_path']}]")
-        if args.strict:
-            return 2
+        failed = True
+    if report["simplified_residue_count"]:
+        for item in report["simplified_residues"]:
+            print(
+                "SIMPLIFIED "
+                f"{item['characters']!r}: {item['value']} [{item['key']}::{item['field_path']}]"
+            )
+        failed = True
+
+    if args.check_against:
+        committed = _load_json_object(args.check_against)
+        if committed != overlay:
+            print(f"DRIFT generated overlay differs from {args.check_against}")
+            failed = True
+
+    if args.strict and failed:
+        return 2
     return 0
 
 
