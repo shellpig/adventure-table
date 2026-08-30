@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
@@ -16,10 +17,15 @@ function englishStorage(): LocaleStorage {
 function renderSheet(
   props: Omit<Parameters<typeof CharacterSheetView>[0], 'sheet'> = {},
 ) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   return renderToStaticMarkup(
-    <LocaleProvider storage={englishStorage()} documentTarget={null}>
-      <CharacterSheetView sheet={sheet} {...props} />
-    </LocaleProvider>,
+    <QueryClientProvider client={queryClient}>
+      <LocaleProvider storage={englishStorage()} documentTarget={null}>
+        <CharacterSheetView sheet={sheet} {...props} />
+      </LocaleProvider>
+    </QueryClientProvider>,
   )
 }
 
@@ -46,16 +52,17 @@ const sheet: CharacterSheetDTO = {
   ],
   spellcasting: [{ source_key: 'srd5.1:class:wizard', source_name: 'Wizard', ability: 'intelligence', save_dc: 15, attack_modifier: 7 }],
   spell_slots: { '1': { used: 1, remaining: 3 }, '2': { used: 0, remaining: 3 }, '3': { used: 1, remaining: 1 } },
-  resources: { 'wizard:arcane-recovery': { used: 0, remaining: 1 } },
+  resources: { 'pact_magic:srd5.1:class:warlock:slot:2': { used: 0, remaining: 2 } },
   inventory: [
-    { entry_id: 'inventory:shield', item_ref: 'srd5.1:equipment:shield', name: 'Shield', quantity: 1, equipped: true, carried: true, rules: { equipment_category: { name: 'Armor' }, armor_class: { base: 2 } } },
+    { entry_id: 'inventory:shield', item_ref: 'srd5.1:equipment:shield', name: 'Shield', quantity: 1, equipped: true, carried: true, rules: { equipment_category: { index: 'armor', name: 'Armor' }, armor_class: { base: 2 } } },
+    { entry_id: 'inventory:longsword', item_ref: 'srd5.1:equipment:longsword', name: 'Longsword', quantity: 1, equipped: false, carried: true, rules: { equipment_category: { index: 'weapon', name: 'Weapon' }, damage: { damage_dice: '1d8', damage_type: { index: 'slashing', name: 'Slashing' } } } },
     { entry_id: 'inventory:healing-potion', item_ref: 'srd5.1:item:potion-of-healing-common', name: 'Potion of Healing', quantity: 2, equipped: false, carried: true, rules: {} },
   ],
   roleplay_profile: { appearance: null, biography: null, personality_traits: [], ideals: [], bonds: [], flaws: [] },
 }
 
 const conditions: ContentEntry[] = [{ key: 'srd5.1:condition:poisoned', index: 'poisoned', name: 'Poisoned', source: 'srd5.1', ruleset: 'dnd5e-2014', license: 'CC-BY-4.0', data: {} }]
-const inventoryContent: ContentEntry[] = [{ key: 'srd5.1:equipment:shield', index: 'shield', name: 'Shield', source: 'srd5.1', ruleset: 'dnd5e-2014', license: 'CC-BY-4.0', data: { equipment_category: { name: 'Armor' } } }]
+const inventoryContent: ContentEntry[] = [{ key: 'srd5.1:equipment:shield', index: 'shield', name: 'Shield', source: 'srd5.1', ruleset: 'dnd5e-2014', license: 'CC-BY-4.0', data: { equipment_category: { index: 'armor', name: 'Armor' } } }]
 
 describe('P0-E Character Sheet', () => {
   it('renders the shared header and Page 1 contract without roleplay requirements', () => {
@@ -73,7 +80,7 @@ describe('P0-E Character Sheet', () => {
     expect(html).toContain('role="combobox"')
   })
 
-  it('keeps spell access and prepared state visibly distinct', () => {
+  it('keeps spell access and prepared state visibly distinct without leaking raw source types', () => {
     const html = renderSheet({ initialTab: 'spells' })
     expect(html).toContain('Spellbook')
     expect(html).toContain('Prepared')
@@ -82,15 +89,20 @@ describe('P0-E Character Sheet', () => {
     expect(html).toContain('Save DC')
     expect(html).toContain('+7')
     expect(html).toContain('Spell Slots')
+    expect(html).toContain('Intelligence')
+    expect(html).toContain('Level 2')
+    expect(html).not.toContain('Wizard · class')
   })
 
-  it('renders live inventory quantity and equipment state with searchable add UI', () => {
+  it('renders structured equipment category and damage labels with searchable add UI', () => {
     const html = renderSheet({ inventoryContent, initialTab: 'inventory' })
     expect(html).toContain('Live Inventory')
     expect(html).toContain('Potion of Healing')
     expect(html).toContain('Equipped')
     expect(html).toContain('Qty')
     expect(html).toContain('Add item')
+    expect(html).toContain('Armor')
+    expect(html).toContain('1d8 Slashing')
     expect(html).toContain('role="combobox"')
   })
 })
