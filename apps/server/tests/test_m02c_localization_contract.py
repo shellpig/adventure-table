@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from app.content import load_default_content_registry
@@ -13,7 +11,17 @@ from app.content.localization import (
     roleplay_suggestion_id,
 )
 from app.content.registry import CONTENT_PACKS_ROOT, DEFAULT_CONTENT_ROOT, ContentRegistry
-from app.domain.character_builder.schemas import BuilderDraftPayload
+from app.domain.character_builder.schemas import (
+    BuilderDraftPayload,
+    BuilderProgressionNodeSummary,
+    BuilderSpellOptionSummary,
+)
+from app.domain.rules.character_sheet import (
+    ConditionDTO,
+    InventoryDTO,
+    NamedReferenceDTO,
+    SpellAccessDTO,
+)
 
 
 POLICY_PATH = CONTENT_PACKS_ROOT / "localization" / "localizable-fields.json"
@@ -141,6 +149,23 @@ def test_missing_required_translation_is_diagnostic_and_completeness_uses_same_p
     assert all(issue.locale == "zh-TW" for issue in issues)
     assert any(issue.field_path == "name" for issue in issues)
     assert not any(issue.field_path.startswith("data.desc.") for issue in issues)
+
+
+def test_server_rules_dtos_keep_machine_identity_beside_display_names() -> None:
+    """M02-C mode B: rules labels remain traceable without trusting English text."""
+
+    assert {"class_ref", "class_name"}.issubset(
+        BuilderProgressionNodeSummary.model_fields
+    )
+    assert {"subclass_ref", "subclass_name"}.issubset(
+        BuilderProgressionNodeSummary.model_fields
+    )
+    assert {"spell_key", "name"}.issubset(BuilderSpellOptionSummary.model_fields)
+
+    assert {"key", "name"}.issubset(NamedReferenceDTO.model_fields)
+    assert {"condition_ref", "name"}.issubset(ConditionDTO.model_fields)
+    assert {"spell_key", "name"}.issubset(SpellAccessDTO.model_fields)
+    assert {"item_ref", "name"}.issubset(InventoryDTO.model_fields)
 
 
 def test_roleplay_system_suggestion_identity_is_locale_neutral_and_draft_can_persist_it() -> None:
