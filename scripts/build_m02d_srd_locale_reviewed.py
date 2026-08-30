@@ -11,6 +11,10 @@ Translation priority for names is deliberately strict:
 2. structural name rules whose ordinal carries meaning;
 3. unambiguous whole-name matches from the pinned Traditional Chinese reference;
 4. reviewed deterministic token composition as the final fallback.
+
+The reviewed pass also closes policy-visible short-name kinds not covered by the
+older base generator. This keeps completeness driven by localizable-fields.json
+rather than by a hand-maintained UI list.
 """
 
 from __future__ import annotations
@@ -34,14 +38,74 @@ MYSTIC_ARCANUM_KEY_RE = re.compile(
     r"^srd5\.1:feature:mystic-arcanum-(\d+)(?:st|nd|rd|th)-level$"
 )
 
-# Canonical English labels are not globally unique. These StableKey-specific
-# translations prevent same-name concepts from overwriting each other in a
-# plain string dictionary (for example race:halfling vs language:halfling).
+ADDITIONAL_SHORT_NAME_KIND_FILES: dict[str, str] = {
+    "damage-type": "damage-types.json",
+    "equipment-category": "equipment-categories.json",
+}
+ALL_KIND_FILES = {**base.CATEGORY_BY_KIND, **ADDITIONAL_SHORT_NAME_KIND_FILES}
+
+# Canonical English labels are not globally unique, and some short names need a
+# reviewed term rather than word composition. StableKey-specific translations
+# are the authoritative project terminology for those cases.
 PROJECT_EXACT_BY_KEY: dict[str, str] = {
     "srd5.1:race:halfling": "半身人",
     "srd5.1:language:halfling": "半身人語",
     "srd5.1:subclass:draconic": "龍族血脈",
     "srd5.1:language:draconic": "龍語",
+    # Damage types currently visible in Inventory short rule summaries.
+    "srd5.1:damage-type:acid": "強酸",
+    "srd5.1:damage-type:bludgeoning": "鈍擊",
+    "srd5.1:damage-type:cold": "寒冷",
+    "srd5.1:damage-type:fire": "火焰",
+    "srd5.1:damage-type:force": "力場",
+    "srd5.1:damage-type:lightning": "閃電",
+    "srd5.1:damage-type:necrotic": "黯蝕",
+    "srd5.1:damage-type:piercing": "穿刺",
+    "srd5.1:damage-type:poison": "毒素",
+    "srd5.1:damage-type:psychic": "心靈",
+    "srd5.1:damage-type:radiant": "光耀",
+    "srd5.1:damage-type:slashing": "揮砍",
+    "srd5.1:damage-type:thunder": "雷鳴",
+    # Equipment categories currently visible in Inventory selectors/summaries.
+    "srd5.1:equipment-category:weapon": "武器",
+    "srd5.1:equipment-category:armor": "護甲",
+    "srd5.1:equipment-category:adventuring-gear": "冒險裝備",
+    "srd5.1:equipment-category:ammunition": "彈藥",
+    "srd5.1:equipment-category:tools": "工具",
+    "srd5.1:equipment-category:mounts-and-vehicles": "坐騎與載具",
+    "srd5.1:equipment-category:simple-weapons": "簡易武器",
+    "srd5.1:equipment-category:martial-weapons": "軍用武器",
+    "srd5.1:equipment-category:melee-weapons": "近戰武器",
+    "srd5.1:equipment-category:ranged-weapons": "遠程武器",
+    "srd5.1:equipment-category:simple-melee-weapons": "簡易近戰武器",
+    "srd5.1:equipment-category:simple-ranged-weapons": "簡易遠程武器",
+    "srd5.1:equipment-category:martial-melee-weapons": "軍用近戰武器",
+    "srd5.1:equipment-category:martial-ranged-weapons": "軍用遠程武器",
+    "srd5.1:equipment-category:light-armor": "輕甲",
+    "srd5.1:equipment-category:medium-armor": "中甲",
+    "srd5.1:equipment-category:heavy-armor": "重甲",
+    "srd5.1:equipment-category:shields": "盾牌",
+    "srd5.1:equipment-category:standard-gear": "一般裝備",
+    "srd5.1:equipment-category:kits": "工具組",
+    "srd5.1:equipment-category:equipment-packs": "裝備套組",
+    "srd5.1:equipment-category:artisans-tools": "工匠工具",
+    "srd5.1:equipment-category:gaming-sets": "博弈用具",
+    "srd5.1:equipment-category:musical-instruments": "樂器",
+    "srd5.1:equipment-category:other-tools": "其他工具",
+    "srd5.1:equipment-category:mounts-and-other-animals": "坐騎與其他動物",
+    "srd5.1:equipment-category:tack-harness-and-drawn-vehicles": "鞍具、挽具與牽引載具",
+    "srd5.1:equipment-category:land-vehicles": "陸上載具",
+    "srd5.1:equipment-category:waterborne-vehicles": "水上載具",
+    "srd5.1:equipment-category:arcane-foci": "祕法法器",
+    "srd5.1:equipment-category:druidic-foci": "德魯伊法器",
+    "srd5.1:equipment-category:holy-symbols": "聖徽",
+    "srd5.1:equipment-category:wondrous-items": "奇物",
+    "srd5.1:equipment-category:rod": "權杖",
+    "srd5.1:equipment-category:potion": "藥水",
+    "srd5.1:equipment-category:ring": "戒指",
+    "srd5.1:equipment-category:scroll": "卷軸",
+    "srd5.1:equipment-category:staff": "法杖",
+    "srd5.1:equipment-category:wand": "魔杖",
 }
 
 # Conservative characters that are Simplified-Chinese-only for the current
@@ -105,27 +169,71 @@ def load_reference_names(root: Path) -> dict[str, str]:
     return names
 
 
+def _read_rows(filename: str) -> list[dict[str, Any]]:
+    payload = json.loads((base.SRD_ROOT / filename).read_text(encoding="utf-8"))
+    if isinstance(payload, list):
+        rows = payload
+    elif isinstance(payload, dict) and isinstance(payload.get("entries"), list):
+        rows = payload["entries"]
+    else:
+        raise ValueError(f"unexpected SRD category shape: {filename}")
+    return [row for row in rows if isinstance(row, dict)]
+
+
+def _required_policy_name_kinds() -> set[str]:
+    policy = json.loads(base.POLICY_PATH.read_text(encoding="utf-8"))
+    if not isinstance(policy, dict) or not isinstance(policy.get("rules"), list):
+        raise ValueError("invalid localizable-fields policy")
+    return {
+        str(rule["kind"])
+        for rule in policy["rules"]
+        if isinstance(rule, dict)
+        and rule.get("field_path") == "name"
+        and rule.get("localizable")
+        and rule.get("currently_user_visible")
+        and "zh-TW" in rule.get("required_locales", [])
+        and rule.get("pack") in {"*", "srd5.1"}
+    }
+
+
+def _add_policy_required_name_entries(
+    overlay: dict[str, Any],
+    report: dict[str, Any],
+) -> int:
+    """Add policy-required name kinds that the older base generator omits."""
+    required_kinds = _required_policy_name_kinds()
+    unknown_kinds = sorted(required_kinds - set(ALL_KIND_FILES))
+    if unknown_kinds:
+        raise ValueError(f"M02-D has no dataset mapping for required name kinds: {unknown_kinds}")
+
+    added_fields = 0
+    for kind in sorted(required_kinds - set(base.REQUIRED_KINDS)):
+        filename = ALL_KIND_FILES[kind]
+        rows = _read_rows(filename)
+        for row in rows:
+            key = row.get("key")
+            name = row.get("name")
+            if not isinstance(key, str) or not isinstance(name, str):
+                raise ValueError(f"{filename}: required name entry missing key/name")
+            # Seed with the canonical name. The StableKey exact/reference/token
+            # priority below performs the actual zh-TW authoring resolution.
+            overlay["entries"].setdefault(key, {})["name"] = name
+            added_fields += 1
+        report["categories"][kind] = {
+            "entry_count": len(rows),
+            "required_field_count": len(rows),
+        }
+
+    report["localized_entry_count"] = len(overlay["entries"])
+    report["required_field_count"] += added_fields
+    return added_fields
+
+
 def _canonical_names() -> dict[str, str]:
-    """Read canonical SRD names for every StableKey covered by M02-D.
-
-    The committed SRD category files currently use a top-level JSON array. The
-    defensive object form is accepted as well so the authoring tool fails with
-    a useful message rather than an AttributeError if a future import changes
-    the envelope.
-    """
+    """Read canonical SRD names for every StableKey covered by M02-D."""
     names: dict[str, str] = {}
-    for filename in sorted(set(base.CATEGORY_BY_KIND.values())):
-        payload = json.loads((base.SRD_ROOT / filename).read_text(encoding="utf-8"))
-        if isinstance(payload, list):
-            rows = payload
-        elif isinstance(payload, dict) and isinstance(payload.get("entries"), list):
-            rows = payload["entries"]
-        else:
-            raise ValueError(f"unexpected SRD category shape: {filename}")
-
-        for raw in rows:
-            if not isinstance(raw, dict):
-                continue
+    for filename in sorted(set(ALL_KIND_FILES.values())):
+        for raw in _read_rows(filename):
             key = raw.get("key")
             name = raw.get("name")
             if isinstance(key, str) and isinstance(name, str):
@@ -145,13 +253,7 @@ def _structured_name_override(key: str) -> str | None:
 
 
 def _token_candidates(token: str) -> tuple[str, ...]:
-    """Recover possessive spellings lost by the base tokenizer.
-
-    SRD names such as ``Alchemist's Supplies`` and ``Hunter's Prey`` are
-    tokenized as ``Alchemists`` / ``Hunters`` before the unresolved marker is
-    emitted. Keep the reviewed dictionary canonical and try the normalized
-    possessive spellings here instead of duplicating dozens of aliases.
-    """
+    """Recover possessive spellings lost by the base tokenizer."""
     lower = token.lower()
     candidates = [token, lower]
     if lower.endswith("s") and len(lower) > 1:
@@ -223,6 +325,7 @@ def build_reviewed_overlay(
     token_overrides: dict[str, str],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     overlay, report = base.build_overlay()
+    added_policy_name_fields = _add_policy_required_name_entries(overlay, report)
     reference_names = load_reference_names(reference_root) if reference_root else {}
     canonical_names = _canonical_names()
 
@@ -250,6 +353,7 @@ def build_reviewed_overlay(
         # Project-owned exact terminology always wins over external authoring
         # references. StableKey-specific collisions were handled above.
         if canonical in base.EXACT:
+            fields["name"] = base.EXACT[canonical]
             project_exact_name_hits += 1
             continue
 
@@ -270,6 +374,7 @@ def build_reviewed_overlay(
     report = {
         **report,
         "base_unknown_count": report["unknown_count"],
+        "added_policy_name_field_count": added_policy_name_fields,
         "reference_name_count": len(reference_names),
         "project_exact_name_hits": project_exact_name_hits,
         "exact_reference_hits": exact_reference_hits,
