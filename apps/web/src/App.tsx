@@ -26,7 +26,7 @@ export default function App() {
   return (
     <main className="landing-page">
       <section className="landing-card">
-        <p className="eyebrow">P1-B · Character Creation Basics</p>
+        <p className="eyebrow">P1-F · Character Creation</p>
         <div className="landing-mark" aria-hidden="true">AT</div>
         <h1>Adventure Table</h1>
         <p>桌上跑團優先的 D&amp;D 5e 2014 角色工具。</p>
