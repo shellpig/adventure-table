@@ -329,6 +329,19 @@ class CharacterBuilderService:
         payload_data = current.draft_payload.model_dump(mode="python")
         changes = request.draft_payload.model_dump(mode="python", exclude_unset=True)
         self._guard_level_up_patch(current, changes)
+        if "roleplay_profile" in changes:
+            proposed_profile = changes["roleplay_profile"]
+            if proposed_profile is None:
+                changes["roleplay_profile"] = {}
+            elif not isinstance(proposed_profile, dict):
+                raise ValueError("roleplay_profile must be an object")
+            else:
+                existing_profile = payload_data.get("roleplay_profile")
+                merged_profile = (
+                    dict(existing_profile) if isinstance(existing_profile, dict) else {}
+                )
+                merged_profile.update(proposed_profile)
+                changes["roleplay_profile"] = merged_profile
         payload_data.update(changes)
         candidate = BuilderDraftPayload.model_validate(payload_data)
         updated = self.repository.update_draft_payload(
