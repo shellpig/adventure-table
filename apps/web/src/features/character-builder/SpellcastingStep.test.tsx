@@ -52,8 +52,8 @@ function spellView(): BuilderView {
           prepared_limit: 4,
           resource_pool_type: 'normal_multiclass_slots',
           available_spells: [
-            { spell_key: 'srd5.1:spell:fire-bolt', name: 'Fire Bolt', level: 0 },
-            { spell_key: 'srd5.1:spell:magic-missile', name: 'Magic Missile', level: 1 },
+            { spell_key: 'srd5.1:spell:fire-bolt', name: 'Fire Bolt · System Reference Document 5.1', level: 0 },
+            { spell_key: 'srd5.1:spell:magic-missile', name: 'Magic Missile · System Reference Document 5.1', level: 1 },
             { spell_key: 'srd5.1:spell:shield', name: 'Shield', level: 1 },
           ],
           selected_cantrip_keys: ['srd5.1:spell:fire-bolt'],
@@ -122,5 +122,6 @@ describe('P1-E SpellcastingStep', () => {
     expect(html).toContain('Known spells')
     expect(html).toContain('Hex')
     expect(html).toContain('×2')
+    expect(html).not.toContain('System Reference Document 5.1')
   })
 })

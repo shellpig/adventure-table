@@ -5,7 +5,7 @@ import {
   type BuilderSpellOptionSummary,
   type BuilderView,
 } from '../../api/characterBuilder'
-import { SearchableSelect } from '../../components/SearchableSelect'
+import { optionDisplay, SearchableSelect } from '../../components/SearchableSelect'
 import './spellcasting.css'
 
 
@@ -30,7 +30,8 @@ const ABILITY_LABELS: Record<string, string> = {
 }
 
 function spellLabel(spell: BuilderSpellOptionSummary) {
-  return spell.level === 0 ? `${spell.name} · Cantrip` : `${spell.name} · Level ${spell.level}`
+  const name = optionDisplay(spell.name).primary
+  return spell.level === 0 ? `${name} · Cantrip` : `${name} · Level ${spell.level}`
 }
 
 function profileSelection(view: BuilderView, profileId: string): Required<BuilderSpellChoiceInput> {
@@ -116,7 +117,7 @@ function SpellBucketEditor({
                 disabled={disabled}
                 onClick={() => save(selected.filter((item) => item !== spellKey))}
               >
-                <span>{spell?.name ?? 'Unknown spell'}</span>
+                <span>{spell ? optionDisplay(spell.name).primary : 'Unknown spell'}</span>
                 <small>{spell?.level === 0 ? 'Cantrip' : `Lv ${spell?.level ?? '?'}`}</small>
                 <b aria-hidden="true">×</b>
               </button>
