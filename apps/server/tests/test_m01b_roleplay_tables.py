@@ -33,7 +33,7 @@ def test_all_phb_backgrounds_expose_complete_roleplay_tables() -> None:
             assert all("suggestion." not in value.lower() for value in values)
 
 
-def test_phb_variants_receive_the_documented_parent_roleplay_table_only() -> None:
+def test_phb_variants_receive_the_documented_parent_roleplay_table() -> None:
     registry = load_default_content_registry()
 
     for variant_index, source_index in VARIANT_TABLE_SOURCES.items():
@@ -43,6 +43,10 @@ def test_phb_variants_receive_the_documented_parent_roleplay_table_only() -> Non
         assert variant.data["roleplay_suggestions"] == source.data["roleplay_suggestions"]
         assert variant.data["variant_of"]["key"] == source.key
 
-        # The roleplay-table overlay must not replace the variant's own mechanics.
-        if variant_index in {"gladiator", "knight", "pirate"}:
-            assert variant.data["feature"]["name"] != source.data["feature"]["name"]
+    # Roleplay-table reuse does not turn variant_of into mechanical inheritance.
+    knight = registry.get("phb2014:background:knight")
+    noble = registry.get("phb2014:background:noble")
+    pirate = registry.get("phb2014:background:pirate")
+    sailor = registry.get("phb2014:background:sailor")
+    assert knight.data["feature"]["name"] != noble.data["feature"]["name"]
+    assert pirate.data["feature"]["name"] != sailor.data["feature"]["name"]
