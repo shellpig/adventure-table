@@ -302,7 +302,13 @@ def compile_builder_draft(
     # required starting-equipment choices are legal and complete.
     candidate_issues = tuple((*foundation_issues, *progression_issues, *spellcasting.issues))
     equipment = compile_starting_equipment(draft, registry)
-    issues.extend(equipment.issues)
+    equipment_issues = tuple(
+        issue.model_copy(update={"severity": BuilderIssueSeverity.WARNING})
+        if issue.code == "stale_equipment_choice"
+        else issue
+        for issue in equipment.issues
+    )
+    issues.extend(equipment_issues)
     choices = base_choices + equipment.choices
 
     build_candidate: CharacterBuild | None = None
