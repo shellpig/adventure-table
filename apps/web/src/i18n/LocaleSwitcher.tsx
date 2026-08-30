@@ -1,30 +1,23 @@
 import { useLocale } from './LocaleProvider'
-
-const COPY = {
-  'zh-TW': {
-    groupLabel: '語言',
-    zhLabel: '繁體中文',
-    enLabel: 'English',
-  },
-  en: {
-    groupLabel: 'Language',
-    zhLabel: '繁體中文',
-    enLabel: 'English',
-  },
-} as const
+import { useUiCopy } from './useUiCopy'
 
 export function LocaleSwitcher() {
   const { locale, setLocale } = useLocale()
-  const copy = COPY[locale]
+  const { t } = useUiCopy()
 
   return (
-    <div className="locale-switcher" role="group" aria-label={copy.groupLabel} data-testid="locale-switcher">
+    <div
+      className="locale-switcher"
+      role="group"
+      aria-label={t('locale.group')}
+      data-testid="locale-switcher"
+    >
       <button
         type="button"
         className={locale === 'zh-TW' ? 'is-active' : ''}
         aria-pressed={locale === 'zh-TW'}
-        aria-label={copy.zhLabel}
-        title={copy.zhLabel}
+        aria-label={t('locale.zh')}
+        title={t('locale.zh')}
         data-testid="locale-option-zh-TW"
         onClick={() => setLocale('zh-TW')}
       >
@@ -34,8 +27,8 @@ export function LocaleSwitcher() {
         type="button"
         className={locale === 'en' ? 'is-active' : ''}
         aria-pressed={locale === 'en'}
-        aria-label={copy.enLabel}
-        title={copy.enLabel}
+        aria-label={t('locale.en')}
+        title={t('locale.en')}
         data-testid="locale-option-en"
         onClick={() => setLocale('en')}
       >
