@@ -49,12 +49,13 @@ _REFERENCE_KIND_BY_FIELD: dict[str, str] = {
     "equipment": "equipment",
     "equipment_category": "equipment-category",
     "features": "feature",
-    "item": "item",
     "languages": "language",
     "proficiencies": "proficiency",
     "race": "race",
     # Some legacy SRD records use plural `races` for a mixed race/subrace list,
     # so that field is intentionally validated only for existence, not one kind.
+    # Likewise, generic option objects use `item` for many reference kinds
+    # (proficiency, language, equipment, etc.), so `item` cannot imply one kind.
     "saving_throws": "ability",
     "school": "magic-school",
     "subclass": "subclass",
@@ -282,7 +283,7 @@ class ContentRegistry:
                 )
             if len(payload) != category.count:
                 raise ContentValidationError(
-                    f"category {category.name} count mismatch: "
+                    f"{category.name} count mismatch: "
                     f"manifest={category.count}, file={len(payload)}"
                 )
 
