@@ -198,7 +198,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: p1-closeout-smoke-screenshots
-          path: apps/web/test-results/**/p0-f-*.png
+          path: apps/web/test-results/**/*.png
           if-no-files-found: error
 
       - name: Prepare P0 and P1 restart persistence state
