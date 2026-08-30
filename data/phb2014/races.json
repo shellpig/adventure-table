@@ -1,1 +1,96 @@
-[{"key":"phb2014:race:variant-human","index":"variant-human","name":"Variant Human","source":"phb2014","ruleset":"dnd5e-2014","provenance":{"source_document":"docs/暫用規則資訊/種族_PHB_非SRD內容.md","rules_source":"Player's Handbook (2014)"},"data":{"index":"variant-human","name":"Variant Human","speed":30,"ability_bonuses":[],"ability_bonus_options":{"choose":2,"type":"ability_bonuses","from":{"option_set_type":"options_array","options":[{"option_type":"ability_bonus","ability_score":{"key":"srd5.1:ability:str","name":"STR"},"bonus":1},{"option_type":"ability_bonus","ability_score":{"key":"srd5.1:ability:dex","name":"DEX"},"bonus":1},{"option_type":"ability_bonus","ability_score":{"key":"srd5.1:ability:con","name":"CON"},"bonus":1},{"option_type":"ability_bonus","ability_score":{"key":"srd5.1:ability:int","name":"INT"},"bonus":1},{"option_type":"ability_bonus","ability_score":{"key":"srd5.1:ability:wis","name":"WIS"},"bonus":1},{"option_type":"ability_bonus","ability_score":{"key":"srd5.1:ability:cha","name":"CHA"},"bonus":1}]}},"languages":[{"key":"srd5.1:language:common","name":"Common"}],"language_options":{"choose":1,"type":"languages","from":{"option_set_type":"options_array","options":[{"option_type":"reference","item":{"key":"srd5.1:language:dwarvish","name":"Dwarvish"}},{"option_type":"reference","item":{"key":"srd5.1:language:elvish","name":"Elvish"}},{"option_type":"reference","item":{"key":"srd5.1:language:giant","name":"Giant"}},{"option_type":"reference","item":{"key":"srd5.1:language:gnomish","name":"Gnomish"}},{"option_type":"reference","item":{"key":"srd5.1:language:goblin","name":"Goblin"}},{"option_type":"reference","item":{"key":"srd5.1:language:halfling","name":"Halfling"}},{"option_type":"reference","item":{"key":"srd5.1:language:orc","name":"Orc"}},{"option_type":"reference","item":{"key":"srd5.1:language:abyssal","name":"Abyssal"}},{"option_type":"reference","item":{"key":"srd5.1:language:celestial","name":"Celestial"}},{"option_type":"reference","item":{"key":"srd5.1:language:draconic","name":"Draconic"}},{"option_type":"reference","item":{"key":"srd5.1:language:deep-speech","name":"Deep Speech"}},{"option_type":"reference","item":{"key":"srd5.1:language:infernal","name":"Infernal"}},{"option_type":"reference","item":{"key":"srd5.1:language:primordial","name":"Primordial"}},{"option_type":"reference","item":{"key":"srd5.1:language:sylvan","name":"Sylvan"}},{"option_type":"reference","item":{"key":"srd5.1:language:undercommon","name":"Undercommon"}]}},"starting_proficiencies":[],"starting_proficiency_options":{"choose":1,"type":"proficiencies","from":{"option_set_type":"options_array","options":[{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-acrobatics","name":"Skill: Acrobatics"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-animal-handling","name":"Skill: Animal Handling"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-arcana","name":"Skill: Arcana"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-athletics","name":"Skill: Athletics"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-deception","name":"Skill: Deception"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-history","name":"Skill: History"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-insight","name":"Skill: Insight"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-intimidation","name":"Skill: Intimidation"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-investigation","name":"Skill: Investigation"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-medicine","name":"Skill: Medicine"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-nature","name":"Skill: Nature"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-perception","name":"Skill: Perception"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-performance","name":"Skill: Performance"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-persuasion","name":"Skill: Persuasion"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-religion","name":"Skill: Religion"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-sleight-of-hand","name":"Skill: Sleight of Hand"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-stealth","name":"Skill: Stealth"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-survival","name":"Skill: Survival"}}]}},"traits":[],"features":[],"subraces":[],"feat_options":{"choose":1,"type":"feat"},"variant_of":{"key":"srd5.1:race:human","name":"Human"},"size":"Medium","size_description":"Variant Human uses the same physical size category as Human."}}]
+[
+  {
+    "key": "phb2014:race:variant-human",
+    "index": "variant-human",
+    "name": "Variant Human",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "provenance": {
+      "source_document": "docs/暫用規則資訊/種族_PHB_非SRD內容.md",
+      "rules_source": "Player's Handbook (2014)"
+    },
+    "data": {
+      "index": "variant-human",
+      "name": "Variant Human",
+      "speed": 30,
+      "ability_bonuses": [],
+      "ability_bonus_options": {
+        "choose": 2,
+        "type": "ability_bonuses",
+        "from": {
+          "option_set_type": "options_array",
+          "options": [
+            {"option_type": "ability_bonus", "ability_score": {"key": "srd5.1:ability:str", "name": "STR"}, "bonus": 1},
+            {"option_type": "ability_bonus", "ability_score": {"key": "srd5.1:ability:dex", "name": "DEX"}, "bonus": 1},
+            {"option_type": "ability_bonus", "ability_score": {"key": "srd5.1:ability:con", "name": "CON"}, "bonus": 1},
+            {"option_type": "ability_bonus", "ability_score": {"key": "srd5.1:ability:int", "name": "INT"}, "bonus": 1},
+            {"option_type": "ability_bonus", "ability_score": {"key": "srd5.1:ability:wis", "name": "WIS"}, "bonus": 1},
+            {"option_type": "ability_bonus", "ability_score": {"key": "srd5.1:ability:cha", "name": "CHA"}, "bonus": 1}
+          ]
+        }
+      },
+      "languages": [
+        {"key": "srd5.1:language:common", "name": "Common"}
+      ],
+      "language_options": {
+        "choose": 1,
+        "type": "languages",
+        "from": {
+          "option_set_type": "options_array",
+          "options": [
+            {"option_type": "reference", "item": {"key": "srd5.1:language:dwarvish", "name": "Dwarvish"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:language:elvish", "name": "Elvish"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:language:giant", "name": "Giant"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:language:gnomish", "name": "Gnomish"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:language:goblin", "name": "Goblin"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:language:halfling", "name": "Halfling"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:language:orc", "name": "Orc"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:language:abyssal", "name": "Abyssal"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:language:celestial", "name": "Celestial"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:language:draconic", "name": "Draconic"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:language:deep-speech", "name": "Deep Speech"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:language:infernal", "name": "Infernal"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:language:primordial", "name": "Primordial"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:language:sylvan", "name": "Sylvan"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:language:undercommon", "name": "Undercommon"}}
+          ]
+        }
+      },
+      "starting_proficiencies": [],
+      "starting_proficiency_options": {
+        "choose": 1,
+        "type": "proficiencies",
+        "from": {
+          "option_set_type": "options_array",
+          "options": [
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-acrobatics", "name": "Skill: Acrobatics"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-animal-handling", "name": "Skill: Animal Handling"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-arcana", "name": "Skill: Arcana"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-athletics", "name": "Skill: Athletics"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-deception", "name": "Skill: Deception"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-history", "name": "Skill: History"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-insight", "name": "Skill: Insight"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-intimidation", "name": "Skill: Intimidation"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-investigation", "name": "Skill: Investigation"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-medicine", "name": "Skill: Medicine"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-nature", "name": "Skill: Nature"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-perception", "name": "Skill: Perception"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-performance", "name": "Skill: Performance"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-persuasion", "name": "Skill: Persuasion"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-religion", "name": "Skill: Religion"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-sleight-of-hand", "name": "Skill: Sleight of Hand"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-stealth", "name": "Skill: Stealth"}},
+            {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-survival", "name": "Skill: Survival"}}
+          ]
+        }
+      },
+      "traits": [],
+      "features": [],
+      "subraces": [],
+      "feat_options": {"choose": 1, "type": "feat"},
+      "variant_of": {"key": "srd5.1:race:human", "name": "Human"},
+      "size": "Medium",
+      "size_description": "Variant Human uses the same physical size category as Human."
+    }
+  }
+]
