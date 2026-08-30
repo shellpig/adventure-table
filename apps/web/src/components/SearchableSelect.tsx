@@ -17,6 +17,24 @@ type SearchableSelectProps = {
   disabled?: boolean
 }
 
+type OptionDisplay = {
+  primary: string
+  secondary?: string
+}
+
+function optionDisplay(label: string): OptionDisplay {
+  const [primary, ...secondaryParts] = label.split(' · ')
+  const secondary = secondaryParts.join(' · ').trim()
+  return {
+    primary: primary.trim(),
+    secondary: secondary || undefined,
+  }
+}
+
+function optionInputLabel(option: SearchOption | undefined) {
+  return option ? optionDisplay(option.label).primary : ''
+}
+
 export function SearchableSelect({
   label,
   options,
@@ -29,11 +47,11 @@ export function SearchableSelect({
   const listboxId = useId()
   const [open, setOpen] = useState(false)
   const selected = options.find((option) => option.value === value)
-  const [query, setQuery] = useState(selected?.label ?? '')
+  const [query, setQuery] = useState(optionInputLabel(selected))
   const [activeIndex, setActiveIndex] = useState(0)
 
   useEffect(() => {
-    if (value) setQuery(options.find((option) => option.value === value)?.label ?? '')
+    if (value) setQuery(optionInputLabel(options.find((option) => option.value === value)))
     else if (!open) setQuery('')
   }, [open, options, value])
 
@@ -52,7 +70,7 @@ export function SearchableSelect({
   const choose = (option: SearchOption) => {
     if (option.disabled) return
     onChange(option.value)
-    setQuery(option.label)
+    setQuery(optionInputLabel(option))
     setOpen(false)
   }
 
@@ -95,7 +113,7 @@ export function SearchableSelect({
               setOpen(false)
               if (value) {
                 const current = options.find((option) => option.value === value)
-                setQuery(current?.label ?? '')
+                setQuery(optionInputLabel(current))
               }
             }, 120)
           }}
@@ -134,25 +152,29 @@ export function SearchableSelect({
       {open ? (
         <div className="combobox-popover" id={listboxId} role="listbox">
           {filtered.length ? (
-            filtered.map((option, index) => (
-              <button
-                type="button"
-                role="option"
-                id={`${listboxId}-${index}`}
-                aria-selected={option.value === value}
-                aria-disabled={option.disabled || undefined}
-                className={index === activeIndex ? 'combobox-option is-active' : 'combobox-option'}
-                key={option.value}
-                disabled={option.disabled}
-                onMouseDown={(event) => event.preventDefault()}
-                onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => choose(option)}
-              >
-                <span>{option.label}</span>
-                {option.description ? <small>{option.description}</small> : null}
-                {option.disabledReason ? <small>{option.disabledReason}</small> : null}
-              </button>
-            ))
+            filtered.map((option, index) => {
+              const display = optionDisplay(option.label)
+              return (
+                <button
+                  type="button"
+                  role="option"
+                  id={`${listboxId}-${index}`}
+                  aria-selected={option.value === value}
+                  aria-disabled={option.disabled || undefined}
+                  className={index === activeIndex ? 'combobox-option is-active' : 'combobox-option'}
+                  key={option.value}
+                  disabled={option.disabled}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onClick={() => choose(option)}
+                >
+                  <span>{display.primary}</span>
+                  {display.secondary ? <small>{display.secondary}</small> : null}
+                  {option.description ? <small>{option.description}</small> : null}
+                  {option.disabledReason ? <small>{option.disabledReason}</small> : null}
+                </button>
+              )
+            })
           ) : (
             <div className="combobox-empty">找不到符合「{query}」的項目</div>
           )}
