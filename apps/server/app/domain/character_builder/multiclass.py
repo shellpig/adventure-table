@@ -71,7 +71,10 @@ def multiclass_prerequisite_groups(
     class_entry: ContentEntry,
 ) -> tuple[MulticlassPrerequisiteGroup, ...]:
     raw = class_entry.data.get("multi_classing")
-    if not isinstance(raw_group := raw.get("prerequisite_options"), dict):
+    if not isinstance(raw, dict):
+        return ()
+    raw_group = raw.get("prerequisite_options")
+    if not isinstance(raw_group, dict):
         return ()
 
     choose = raw_group.get("choose")
