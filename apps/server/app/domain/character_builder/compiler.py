@@ -127,12 +127,53 @@ def _roleplay_profile(draft: BuilderDraft) -> RoleplayProfile:
 
 
 def _effective_origin_choices(
+    draft: BuilderDraft,
     choices: tuple[BuilderChoice, ...],
     registry: ContentRegistry,
     effective_abilities: dict[str, int] | None,
 ) -> tuple[BuilderChoice, ...]:
+    automatic_payload = draft.draft_payload.model_copy(
+        update={"choice_selections": {}}
+    )
+    automatic_draft = draft.model_copy(
+        update={"draft_payload": automatic_payload}
+    )
+    automatic_summary = resolve_creation_summary(
+        automatic_draft,
+        registry,
+        choices,
+    )
+    acquired_languages = {
+        grant.reference_id
+        for grant in automatic_summary.grants
+        if grant.reference_id is not None
+        and stable_key_is_kind(grant.reference_id, "language")
+    }
+
     result: list[BuilderChoice] = []
     for choice in choices:
+        if choice.option_source == "content:language_options":
+            available_options = tuple(
+                option
+                for option in choice.options
+                if option.reference_id not in acquired_languages
+            )
+            available_by_id = {
+                option.option_id: option for option in available_options
+            }
+            selection = draft.draft_payload.choice_selections.get(choice.choice_id)
+            if selection is not None:
+                for option_id in selection.selected_option_ids:
+                    selected_option = available_by_id.get(option_id)
+                    if (
+                        selected_option is not None
+                        and selected_option.reference_id is not None
+                        and stable_key_is_kind(selected_option.reference_id, "language")
+                    ):
+                        acquired_languages.add(selected_option.reference_id)
+            result.append(choice.model_copy(update={"options": available_options}))
+            continue
+
         if choice.option_source != "content:race-feat":
             result.append(choice)
             continue
@@ -234,6 +275,7 @@ def compile_builder_draft(
         draft, registry, raw_foundation_choices
     )
     raw_foundation_choices = _effective_origin_choices(
+        draft,
         raw_foundation_choices,
         registry,
         _effective_abilities(initial_foundation_preview),

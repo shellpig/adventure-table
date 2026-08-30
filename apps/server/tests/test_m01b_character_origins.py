@@ -258,6 +258,65 @@ def test_variant_human_choices_persist_feat_skill_language_and_distinct_ability_
     validate_build_references(build, registry)
 
 
+def test_later_language_choices_exclude_automatic_and_previously_selected_languages() -> None:
+    registry = load_default_content_registry()
+    payload = _base_payload(
+        race="srd5.1:race:human",
+        background="phb2014:background:noble",
+    )
+    initial = compile_builder_draft(_draft(payload), registry)
+    race_language = next(
+        choice
+        for choice in initial.choices
+        if choice.option_source == "content:language_options"
+        and choice.source_ref == "srd5.1:race:human"
+    )
+    assert "srd5.1:language:common" not in {
+        option.option_id for option in race_language.options
+    }
+
+    with_race_language = payload.model_copy(
+        update={
+            "choice_selections": {
+                race_language.choice_id: BuilderChoiceSelection(
+                    choice_id=race_language.choice_id,
+                    source_ref=race_language.source_ref,
+                    selected_option_ids=("srd5.1:language:elvish",),
+                )
+            }
+        }
+    )
+    compiled = compile_builder_draft(_draft(with_race_language), registry)
+    background_language = next(
+        choice
+        for choice in compiled.choices
+        if choice.option_source == "content:language_options"
+        and choice.source_ref == "phb2014:background:noble"
+    )
+    background_options = {option.option_id for option in background_language.options}
+    assert "srd5.1:language:common" not in background_options
+    assert "srd5.1:language:elvish" not in background_options
+
+    stale = with_race_language.model_copy(
+        update={
+            "choice_selections": {
+                **with_race_language.choice_selections,
+                background_language.choice_id: BuilderChoiceSelection(
+                    choice_id=background_language.choice_id,
+                    source_ref=background_language.source_ref,
+                    selected_option_ids=("srd5.1:language:common",),
+                ),
+            }
+        }
+    )
+    stale_result = compile_builder_draft(_draft(stale), registry)
+    assert any(
+        issue.code == "invalid_choice_option"
+        and "srd5.1:language:common" in issue.related_refs
+        for issue in stale_result.validation.issues
+    )
+
+
 def test_variant_human_duplicate_ability_and_illegal_feat_are_blocking() -> None:
     registry = load_default_content_registry()
     payload = _base_payload(race="phb2014:race:variant-human")
