@@ -10,6 +10,7 @@ from app.domain.character_builder.creation import (
     BuilderConfirmResult,
     BuilderReviewDTO,
     build_initial_character_state,
+    build_review_derived_stats,
 )
 from app.domain.character_builder.reconciliation import reconcile_character_state
 from app.domain.character_builder.schemas import (
@@ -368,6 +369,11 @@ class CharacterBuilderService:
         issues = list(compiled.validation.issues)
         initial_state = None
         reconciliation = None
+        derived_stats = (
+            build_review_derived_stats(compiled.build_candidate, self.registry)
+            if compiled.build_candidate is not None
+            else None
+        )
 
         if compiled.validation.can_confirm and compiled.build_candidate is not None:
             try:
@@ -422,6 +428,7 @@ class CharacterBuilderService:
             build_candidate=compiled.build_candidate,
             initial_state=initial_state,
             reconciliation=reconciliation,
+            derived_stats=derived_stats,
             starting_equipment=compiled.starting_equipment,
             issues=validation.issues,
             can_confirm=validation.can_confirm,

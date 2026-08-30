@@ -258,6 +258,11 @@ def test_p1f_review_confirm_is_idempotent_and_inventory_stays_live_state() -> No
     assert review_payload["initial_state"]["temporary_hp"] == 0
     assert review_payload["initial_state"]["conditions"] == []
     assert review_payload["initial_state"]["inventory_state"]
+    derived = review_payload["derived_stats"]
+    assert derived["proficiency_bonus"] == 2
+    assert len(derived["ability_modifiers"]) == 6
+    assert len(derived["skill_modifiers"]) == 18
+    assert "perception" in derived["skill_modifiers"]
 
     confirmed = client.post(f"/api/character-builder/drafts/{draft_id}/confirm")
     assert confirmed.status_code == 200, confirmed.text

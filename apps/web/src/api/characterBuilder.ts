@@ -266,6 +266,11 @@ export type BuilderReviewDTO = {
   resolved_summary: BuilderResolvedSummary
   build_candidate?: unknown | null
   initial_state?: BuilderInitialStatePreview | null
+  derived_stats?: {
+    ability_modifiers: Record<string, number>
+    proficiency_bonus: number
+    skill_modifiers: Record<string, number>
+  } | null
   starting_equipment: BuilderEquipmentSummary[]
   issues: BuilderIssue[]
   can_confirm: boolean

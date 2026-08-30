@@ -56,6 +56,16 @@ function modeLabel(mode: BuilderView['draft']['mode']) {
   return 'Create'
 }
 
+function signed(value: number) {
+  return value >= 0 ? `+${value}` : String(value)
+}
+
+function titleCase(value: string) {
+  return value
+    .replaceAll('-', ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
 export function EquipmentStep({
   view,
   disabled,
@@ -240,26 +250,43 @@ export function EquipmentReviewStep({
             <h3>
               Build snapshot <span>{versioned ? `New ${modeLabel(view.draft.mode)} Version` : 'Immutable Version 1'}</span>
             </h3>
-            <div className="builder-rule-card">
-              <span>Identity</span>
-              <strong>
-                {review.resolved_summary.name?.trim() || 'Unnamed'} · LV{' '}
-                {review.resolved_summary.target_level ?? '—'}
-              </strong>
-              <small>
-                {review.resolved_summary.race_name ?? '—'} ·{' '}
-                {review.resolved_summary.background_name ?? '—'} ·{' '}
-                {review.resolved_summary.class_summary ?? '—'}
-              </small>
+            <div className="review-identity-grid">
+              <div className="builder-rule-card">
+                <span>Identity</span>
+                <strong>
+                  {review.resolved_summary.name?.trim() || 'Unnamed'} · LV{' '}
+                  {review.resolved_summary.target_level ?? '—'}
+                </strong>
+                <small>
+                  {review.resolved_summary.race_name ?? '—'} ·{' '}
+                  {review.resolved_summary.background_name ?? '—'} ·{' '}
+                  {review.resolved_summary.class_summary ?? '—'}
+                </small>
+              </div>
+              <div className="builder-rule-card proficiency-card">
+                <span>Proficiency Bonus</span>
+                <strong>
+                  {review.derived_stats
+                    ? signed(review.derived_stats.proficiency_bonus)
+                    : '—'}
+                </strong>
+                <small>Current Character Level</small>
+              </div>
             </div>
 
             <div className="summary-abilities">
               {review.resolved_summary.ability_scores.map((score) => (
                 <div key={score.ability}>
                   <span>{score.ability.slice(0, 3).toUpperCase()}</span>
-                  <strong>{score.effective}</strong>
+                  <strong>
+                    {score.effective}{' '}
+                    {review.derived_stats
+                      ? `(${signed(review.derived_stats.ability_modifiers[score.ability] ?? 0)})`
+                      : ''}
+                  </strong>
                   <small>
-                    {score.resolved}
+                    Base {score.base}
+                    {score.permanent_bonus ? ` + ${score.permanent_bonus}` : ''}
                     {score.overridden ? ' · override' : ''}
                   </small>
                 </div>
@@ -381,6 +408,24 @@ export function EquipmentReviewStep({
               )}
             </div>
           )}
+
+          {review.derived_stats ? (
+            <div className="builder-optional review-skills">
+              <h3>
+                Skill Checks <span>Current Build</span>
+              </h3>
+              <div className="skill-modifier-grid">
+                {Object.entries(review.derived_stats.skill_modifiers).map(
+                  ([skill, modifier]) => (
+                    <div key={skill}>
+                      <span>{titleCase(skill)}</span>
+                      <strong>{signed(modifier)}</strong>
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+          ) : null}
 
           <div className="summary-validation">
             <div className="summary-validation__heading">

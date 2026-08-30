@@ -17,7 +17,10 @@ from app.domain.character_builder.schemas import (
     BuilderIssue,
     BuilderResolvedSummary,
 )
+from app.domain.rules.abilities import ABILITY_NAMES, ability_modifier, effective_ability_score
 from app.domain.rules.hit_points import calculate_max_hp
+from app.domain.rules.proficiency import proficiency_bonus, total_character_level
+from app.domain.rules.skills import all_skill_modifiers
 from app.domain.rules.spellcasting import initial_spell_resource_state
 
 
@@ -33,12 +36,19 @@ class BuilderEquipmentSummary(StrictModel):
     source_ref: str = Field(min_length=1, max_length=240)
 
 
+class BuilderReviewDerivedStats(StrictModel):
+    ability_modifiers: dict[str, int]
+    proficiency_bonus: int = Field(ge=2, le=6)
+    skill_modifiers: dict[str, int]
+
+
 class BuilderReviewDTO(StrictModel):
     draft_id: UUID
     resolved_summary: BuilderResolvedSummary
     build_candidate: CharacterBuild | None = None
     initial_state: CharacterState | None = None
     reconciliation: StateReconciliationPreview | None = None
+    derived_stats: BuilderReviewDerivedStats | None = None
     starting_equipment: tuple[BuilderEquipmentSummary, ...] = ()
     issues: tuple[BuilderIssue, ...]
     can_confirm: bool
@@ -50,6 +60,21 @@ class BuilderConfirmResult(StrictModel):
     current_version_id: UUID
     version_no: int = Field(ge=1)
     character_path: str
+
+
+def build_review_derived_stats(
+    build: CharacterBuild,
+    registry: ContentRegistry,
+) -> BuilderReviewDerivedStats:
+    level = total_character_level(build)
+    return BuilderReviewDerivedStats(
+        ability_modifiers={
+            ability: ability_modifier(effective_ability_score(build, ability))
+            for ability in ABILITY_NAMES
+        },
+        proficiency_bonus=proficiency_bonus(level),
+        skill_modifiers=all_skill_modifiers(build, registry),
+    )
 
 
 def build_initial_character_state(
