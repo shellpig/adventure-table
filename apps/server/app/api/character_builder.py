@@ -12,6 +12,7 @@ from app.domain.character_builder.rules import load_ability_generation_rules
 from app.domain.character_builder.schemas import (
     BuilderDraftCreateInput,
     BuilderDraftPatchInput,
+    BuilderMode,
     BuilderValidationResult,
     BuilderView,
 )
@@ -24,6 +25,12 @@ from app.persistence.builder_drafts import (
     BuilderDraftAlreadyConfirmedError,
     BuilderDraftNotFoundError,
     BuilderDraftRevisionConflictError,
+)
+from app.persistence.characters import (
+    CharacterNotFoundError,
+    CharacterVersionNotFoundError,
+    StaleBuildVersionError,
+    StateReconciliationBlockedError,
 )
 
 
@@ -40,6 +47,12 @@ class AbilityGenerationRulesDTO(BaseModel):
     manual_standard_max: int
     hard_min: int
     hard_max: int
+
+
+class VersionDraftCreateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    mode: BuilderMode = BuilderMode.LEVEL_UP
 
 
 def _not_found(exc: BuilderDraftNotFoundError) -> APIError:
@@ -72,7 +85,25 @@ def create_builder_draft(
     try:
         return service.create_draft(request)
     except BuilderModeNotEnabledError as exc:
-        raise APIError(422, "builder_mode_not_enabled", str(exc)) from exc
+        raise APIError(422, "builder_mode_requires_character", str(exc)) from exc
+
+
+@router.post(
+    "/characters/{character_id}/drafts",
+    response_model=BuilderView,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_character_version_draft(
+    character_id: UUID,
+    request: VersionDraftCreateInput,
+    service: CharacterBuilderService = Depends(get_character_builder_service),
+) -> BuilderView:
+    try:
+        return service.create_version_draft(character_id, request.mode)
+    except CharacterNotFoundError as exc:
+        raise APIError(404, "character_not_found", f"character not found: {exc}") from exc
+    except (CharacterVersionNotFoundError, ValueError) as exc:
+        raise APIError(422, "version_draft_invalid", str(exc)) from exc
 
 
 @router.get("/drafts", response_model=list[BuilderView])
@@ -80,6 +111,14 @@ def list_create_builder_drafts(
     service: CharacterBuilderService = Depends(get_character_builder_service),
 ) -> list[BuilderView]:
     return list(service.list_create_drafts())
+
+
+@router.get("/characters/{character_id}/drafts", response_model=list[BuilderView])
+def list_character_builder_drafts(
+    character_id: UUID,
+    service: CharacterBuilderService = Depends(get_character_builder_service),
+) -> list[BuilderView]:
+    return list(service.list_character_drafts(character_id))
 
 
 @router.get("/drafts/{draft_id}", response_model=BuilderView)
@@ -142,6 +181,10 @@ def confirm_builder_draft(
         raise _not_found(exc) from exc
     except BuilderDraftRevisionConflictError as exc:
         raise APIError(409, "stale_draft_revision", str(exc)) from exc
+    except StaleBuildVersionError as exc:
+        raise APIError(409, "stale_build_version", str(exc)) from exc
+    except StateReconciliationBlockedError as exc:
+        raise APIError(422, "state_reconciliation_blocked", str(exc)) from exc
     except BuilderCannotConfirmError as exc:
         blocking = [
             issue.message
