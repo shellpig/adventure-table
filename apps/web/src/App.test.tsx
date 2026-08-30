@@ -7,15 +7,33 @@ import App, {
   characterIdFromPath,
   characterVersionsFromPath,
 } from './App'
+import { LocaleProvider } from './i18n/LocaleProvider'
+import { LOCALE_STORAGE_KEY, type LocaleStorage } from './i18n/locale'
 
 const DRAFT_ID = '11111111-1111-4111-8111-111111111111'
 
+function englishStorage(): LocaleStorage {
+  return {
+    getItem: (key) => (key === LOCALE_STORAGE_KEY ? 'en' : null),
+    setItem: () => undefined,
+  }
+}
+
+function renderApp() {
+  return renderToStaticMarkup(
+    <LocaleProvider storage={englishStorage()} documentTarget={null}>
+      <App />
+    </LocaleProvider>,
+  )
+}
+
 describe('Adventure Table routes', () => {
-  it('renders the P1-G landing page and workshop entry', () => {
-    const html = renderToStaticMarkup(<App />)
+  it('renders the localized landing page and workshop entry', () => {
+    const html = renderApp()
 
     expect(html).toContain('Adventure Table')
-    expect(html).toContain('P1-G')
+    expect(html).toContain('M02-B')
+    expect(html).toContain('Open Character Workshop')
     expect(html).toContain('/characters')
     expect(html).toContain(`/characters/${P0_FIXTURE_ID}`)
   })
