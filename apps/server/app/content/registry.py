@@ -51,7 +51,8 @@ _REFERENCE_KIND_BY_FIELD: dict[str, str] = {
     "languages": "language",
     "proficiencies": "proficiency",
     "race": "race",
-    "races": "race",
+    # Some legacy SRD records use plural `races` for a mixed race/subrace list,
+    # so that field is intentionally validated only for existence, not one kind.
     "saving_throws": "ability",
     "school": "magic-school",
     "subclass": "subclass",
@@ -371,7 +372,15 @@ class ContentRegistry:
     def get_optional(self, key: str) -> ContentEntry | None:
         return self._entries.get(key)
 
-    def resolve(self, source: str, kind: str, index: str) -> ContentEntry:
+    def resolve(self, *parts: str) -> ContentEntry:
+        """Resolve with the old SRD or new source-aware calling convention."""
+        if len(parts) == 2:
+            source = "srd5.1"
+            kind, index = parts
+        elif len(parts) == 3:
+            source, kind, index = parts
+        else:
+            raise TypeError("resolve expects (kind, index) or (source, kind, index)")
         return self.get(stable_key(source, kind, index))
 
     def resolve_reference(
