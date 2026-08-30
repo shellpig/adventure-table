@@ -291,11 +291,18 @@ export type BuilderConfirmResult = {
   character_path: string
 }
 
+export type CharacterListClassItem = {
+  class_ref: string
+  name: string
+  level: number
+}
+
 export type CharacterListItem = {
   id: string
   name: string
   level: number
   class_summary: string
+  classes: CharacterListClassItem[]
   version_no: number
 }
 
