@@ -10,7 +10,7 @@ Automated implementation scope:
 - [x] Racial feature spell access uses race-origin source identity and character-level gates.
 - [x] Background starting equipment stays on the P1 equipment path.
 - [x] Background roleplay editor is optional and preserves manual text.
-- [ ] Full regression CI green.
+- [x] Full regression CI green — `P1 Full Regression` #475 (`33297019620`), 173 backend tests, 12 Vitest tests, 15 Playwright tests, migrations and restart persistence all passed.
 
 ## Mandatory Human Gate
 
