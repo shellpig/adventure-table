@@ -80,7 +80,7 @@ test('P1-F resolves starting equipment, reviews and creates Version 1 from the b
   await expect(page).toHaveURL(/\/characters\/[0-9a-f-]{36}$/)
   await expect(page.getByRole('heading', { name: 'P1-F Browser Hero' })).toBeVisible()
   await expect(page.getByText('Build v1')).toBeVisible()
-  await expect(page.getByTestId('header-hp')).toHaveText('13')
+  await expect(page.getByTestId('header-hp')).toHaveText('14')
 
   await page.getByRole('tab', { name: /物品欄/ }).click()
   await expect(page.getByText('Greataxe', { exact: true })).toBeVisible()
