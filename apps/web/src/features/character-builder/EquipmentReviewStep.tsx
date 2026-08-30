@@ -256,8 +256,10 @@ export function EquipmentReviewStep({
               <div className="builder-rule-card">
                 <span>{t('review.identity')}</span>
                 <strong>
-                  {review.resolved_summary.name?.trim() || t('review.unnamed')} · LV{' '}
-                  {review.resolved_summary.target_level ?? '—'}
+                  {review.resolved_summary.name?.trim() || t('review.unnamed')} ·{' '}
+                  {t('builder.summary.level', {
+                    level: review.resolved_summary.target_level ?? '—',
+                  })}
                 </strong>
                 <small>
                   {review.resolved_summary.race_name ?? '—'} ·{' '}
