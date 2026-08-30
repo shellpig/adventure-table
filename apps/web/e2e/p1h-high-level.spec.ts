@@ -1,13 +1,33 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
 
+async function currentDraftRevision(page: Page) {
+  const text = (await page.locator('.builder-save-state span').innerText()).trim()
+  const match = text.match(/^Draft revision (\d+)$/)
+  if (!match) throw new Error(`Cannot parse draft revision from: ${text}`)
+  return Number(match[1])
+}
+
 async function expectDraftSaved(page: Page) {
   await expect(page.getByText('Saved on server')).toBeVisible()
+}
+
+async function waitForDraftRevision(page: Page, previousRevision: number) {
+  await expect(page.locator('.builder-save-state span')).toHaveText(`Draft revision ${previousRevision + 1}`)
+  await expectDraftSaved(page)
+}
+
+async function clickAndWaitForSave(page: Page, button: Locator) {
+  await expectDraftSaved(page)
+  const revision = await currentDraftRevision(page)
+  await button.click()
+  await waitForDraftRevision(page, revision)
 }
 
 async function chooseOption(page: Page, input: Locator, value: string) {
   await expectDraftSaved(page)
   await expect(input).toBeEnabled()
+  const revision = await currentDraftRevision(page)
   await input.fill(value)
 
   const listboxId = await input.getAttribute('aria-controls')
@@ -18,7 +38,7 @@ async function chooseOption(page: Page, input: Locator, value: string) {
   await expect(option).toHaveCount(1)
   await option.click()
   await expect(listbox).toBeHidden()
-  await expectDraftSaved(page)
+  await waitForDraftRevision(page, revision)
 }
 
 async function chooseSearchable(page: Page, label: string | RegExp, value: string) {
@@ -36,6 +56,7 @@ async function chooseIn(container: Locator, value: string) {
 async function chooseFirstEnabled(page: Page, input: Locator) {
   await expectDraftSaved(page)
   await expect(input).toBeEnabled()
+  const revision = await currentDraftRevision(page)
   await input.focus()
 
   const listboxId = await input.getAttribute('aria-controls')
@@ -46,7 +67,7 @@ async function chooseFirstEnabled(page: Page, input: Locator) {
   const option = listbox.locator('[role="option"]:not([disabled])').first()
   await expect(option).toBeVisible()
   await option.click()
-  await expectDraftSaved(page)
+  await waitForDraftRevision(page, revision)
 }
 
 async function fillEmptyComboboxes(page: Page, container: Locator) {
@@ -89,10 +110,7 @@ async function fillExactSpellBuckets(page: Page) {
       if (selected >= target) continue
 
       const input = bucket.getByRole('combobox')
-      if (!(await input.isEnabled())) {
-        throw new Error(`Spell bucket stopped at ${selected} / ${target}`)
-      }
-
+      await expect(input).toBeEnabled()
       await chooseFirstEnabled(page, input)
       changed = true
       break
@@ -111,17 +129,18 @@ test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to e
   await page.goto('/characters')
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
+  await expectDraftSaved(page)
 
   await page.getByLabel('Character name').fill('P1-H High-Level Hero')
   await page.getByLabel('Target character level').fill('10')
-  await page.getByRole('button', { name: 'Save Basic Details' }).click()
+  await clickAndWaitForSave(page, page.getByRole('button', { name: 'Save Basic Details' }))
 
   await page.getByRole('button', { name: /Origin/ }).click()
   await chooseSearchable(page, 'Race', 'Human')
   await chooseSearchable(page, 'Background', 'Acolyte')
 
   await page.getByRole('button', { name: /Abilities/ }).click()
-  await page.getByRole('button', { name: 'Save Ability Scores' }).click()
+  await clickAndWaitForSave(page, page.getByRole('button', { name: 'Save Ability Scores' }))
   await chooseSearchable(page, 'Human — Languages', 'Dwarvish')
   const backgroundLanguages = page
     .locator('.builder-choice')
@@ -149,6 +168,7 @@ test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to e
 
   await page.reload()
   await expect(page).toHaveURL(draftUrl)
+  await expectDraftSaved(page)
   await page.getByRole('button', { name: /Class/ }).click()
   await expect(page.getByText('Fighter 5 / Wizard 5', { exact: true }).last()).toBeVisible()
 
