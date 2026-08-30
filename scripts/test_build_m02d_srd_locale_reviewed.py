@@ -74,6 +74,44 @@ class M02DReviewedLocaleTests(unittest.TestCase):
         self.assertEqual(report["exact_reference_hits"], 1)
         self.assertEqual(report["project_exact_name_hits"], 1)
 
+    def test_stable_key_exact_names_disambiguate_same_english_label(self) -> None:
+        entries = {
+            "srd5.1:race:halfling": {"name": "半身人語"},
+            "srd5.1:language:halfling": {"name": "半身人語"},
+            "srd5.1:subclass:draconic": {"name": "龍語"},
+            "srd5.1:language:draconic": {"name": "龍語"},
+        }
+        base_overlay = {
+            "schema_version": 1,
+            "locale": "zh-TW",
+            "entries": entries,
+        }
+        base_report = {
+            "localized_entry_count": 4,
+            "required_field_count": 4,
+            "unknown_count": 0,
+            "unknowns": [],
+        }
+        canonical_names = {
+            "srd5.1:race:halfling": "Halfling",
+            "srd5.1:language:halfling": "Halfling",
+            "srd5.1:subclass:draconic": "Draconic",
+            "srd5.1:language:draconic": "Draconic",
+        }
+
+        with patch.object(
+            reviewed.base,
+            "build_overlay",
+            return_value=(deepcopy(base_overlay), deepcopy(base_report)),
+        ), patch.object(reviewed, "_canonical_names", return_value=canonical_names):
+            overlay, report = reviewed.build_reviewed_overlay(None, {})
+
+        self.assertEqual(overlay["entries"]["srd5.1:race:halfling"]["name"], "半身人")
+        self.assertEqual(overlay["entries"]["srd5.1:language:halfling"]["name"], "半身人語")
+        self.assertEqual(overlay["entries"]["srd5.1:subclass:draconic"]["name"], "龍族血脈")
+        self.assertEqual(overlay["entries"]["srd5.1:language:draconic"]["name"], "龍語")
+        self.assertEqual(report["project_exact_name_hits"], 4)
+
     def test_structured_spell_scroll_name_beats_external_reference(self) -> None:
         key = "srd5.1:item:spell-scroll-4th"
         base_overlay = {
