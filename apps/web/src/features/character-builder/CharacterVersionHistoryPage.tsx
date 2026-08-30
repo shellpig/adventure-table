@@ -59,13 +59,13 @@ export function CharacterVersionHistoryPage({
           </div>
           <div className="version-history-list">
             {versions.data?.map((version) => (
-              <article className={`version-history-card ${version.is_current ? 'is-current' : ''}`} key={version.id}>
+              <article className={`workshop-card version-history-card ${version.is_current ? 'is-current' : ''}`} key={version.id}>
                 <div className="version-history-card__top">
                   <div>
                     <span className="workshop-card__mark">{KIND_LABELS[version.version_kind] ?? version.version_kind}</span>
                     <h3>Version {version.version_no}</h3>
                   </div>
-                  {version.is_current ? <strong className="version-current-badge">CURRENT</strong> : null}
+                  {version.is_current ? <strong className="version-current-badge quiet-pill">CURRENT</strong> : null}
                 </div>
                 <p>{version.class_summary} · LV {version.character_level}</p>
                 <div className="workshop-card__meta">
