@@ -113,6 +113,12 @@ async function confirmAndReload(page: Page, name: string) {
   await expect(page.getByText('Build v1')).toBeVisible()
 }
 
+async function expectFisherInventoryOnce(page: Page) {
+  await page.getByRole('tab', { name: /物品欄/ }).click()
+  await expect(page.getByText('Fishing tackle', { exact: true })).toHaveCount(1)
+  await expect(page.getByText('Net', { exact: true })).toHaveCount(1)
+}
+
 
 test('M01-C creates and reloads an SCAG background character through the real browser', async ({ page }) => {
   test.slow()
@@ -136,7 +142,7 @@ test('M01-C creates and reloads an SCAG background character through the real br
 })
 
 
-test('M01-C creates and reloads a GoS background character with a PHB subrace', async ({ page }) => {
+test('M01-C creates, reloads and levels a GoS background character with a PHB subrace', async ({ page }) => {
   test.slow()
   await startLevelOneDraft(page, 'M01-C GoS Hero')
 
@@ -151,8 +157,21 @@ test('M01-C creates and reloads a GoS background character with a PHB subrace', 
   await chooseBarbarian(page, ['Skill: Animal Handling', 'Skill: Athletics'])
   await chooseBarbarianEquipment(page)
   await confirmAndReload(page, 'M01-C GoS Hero')
+  await expectFisherInventoryOnce(page)
 
-  await page.getByRole('tab', { name: /物品欄/ }).click()
-  await expect(page.getByText('Fishing tackle', { exact: true })).toHaveCount(1)
-  await expect(page.getByText('Net', { exact: true })).toHaveCount(1)
+  await page.goto('/characters')
+  const card = page.locator('.workshop-card').filter({ hasText: 'M01-C GoS Hero' })
+  await expect(card).toHaveCount(1)
+  await card.getByRole('button', { name: 'Level Up' }).click()
+  await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
+
+  await page.getByRole('button', { name: /Class/ }).click()
+  await chooseSearchable(page, 'Level 2 class', 'Barbarian')
+  await page.getByRole('button', { name: /Review/ }).click()
+  await expect(page.getByRole('heading', { name: 'Level Up review' })).toBeVisible()
+  const confirmLevelUp = page.getByRole('button', { name: 'Confirm Level Up' })
+  await expect(confirmLevelUp).toBeEnabled()
+  await confirmLevelUp.click()
+  await expect(page.getByText('Build v2')).toBeVisible()
+  await expectFisherInventoryOnce(page)
 })
