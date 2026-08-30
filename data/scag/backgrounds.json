@@ -155,13 +155,9 @@
       "starting_equipment": [{"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}],
       "starting_gold": {"quantity": 15, "unit": "gp"},
       "starting_equipment_notes": ["Faction badge or emblem", "Faction correspondence or code material", "Common clothes"],
-      "feature": {"name": "Safe Haven", "desc": ["Your faction can provide contacts and modest covert support where it maintains a presence; this is narrative access, not a faction subsystem."]},
-      "roleplay_suggestions": {
-        "personality_traits": ["I instinctively look for allies and useful contacts."],
-        "ideals": ["Cause: the faction's mission is larger than any one agent."],
-        "bonds": ["I owe an important debt to another member of my faction."],
-        "flaws": ["I can put faction business ahead of people who deserve my attention."]
-      }
+      "feature": {"name": "Safe Haven", "desc": ["You can contact your faction's secret network for a hidden safe place with free food and lodging, and for help finding information. These contacts will not normally risk their lives or expose their true identities for you."]},
+      "feature_metadata": {"safe_haven": {"hidden_safe_place": true, "food_and_lodging_cost": "free", "information_assistance": true, "contacts_risk_lives_or_identity": false, "automation": "manual"}},
+      "roleplay_suggestions": {"inherits_from": "phb2014:background:acolyte", "guidance": "Use Acolyte suggestions as the base, replacing faith-centered details with your faction, its members, mission, and principles."}
     }
   },
   {
@@ -230,12 +226,7 @@
       "starting_equipment_notes": ["Your inherited object or mark", "Traveler's clothes", "A matching gaming set or instrument"],
       "inheritance": {"selection": "player_and_dm_defined", "automation": "manual"},
       "feature": {"name": "Inheritance", "desc": ["Your inherited object, secret, mark, or claim carries story significance and can attract recognition or complications at the DM's discretion."]},
-      "roleplay_suggestions": {
-        "personality_traits": ["I study every clue about the origin and purpose of my inheritance."],
-        "ideals": ["Destiny: I intend to discover what my inheritance demands of me."],
-        "bonds": ["My inheritance ties me to someone or somewhere I cannot ignore."],
-        "flaws": ["I can become obsessed with signs that seem connected to my inheritance."]
-      }
+      "roleplay_suggestions": {"inherits_from": "phb2014:background:folk-hero", "guidance": "Use Folk Hero suggestions as the base and adapt bonds, ideals, and motivations around the person, family, place, or legacy tied to your inheritance."}
     }
   },
   {
@@ -363,7 +354,8 @@
       "starting_equipment": [{"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}],
       "starting_gold": {"quantity": 10, "unit": "gp"},
       "starting_equipment_notes": ["Hunting trap", "Totemic token or trophy", "Traveler's clothes"],
-      "feature": {"name": "Uthgardt Heritage", "desc": ["Your tribal background provides cultural recognition and practical knowledge of Uthgardt lands, customs, and communities without creating a tribe-management subsystem."]},
+      "feature": {"name": "Uthgardt Heritage", "desc": ["You know the terrain and natural resources of the North exceptionally well. When you forage in wilderness, you find twice as much food and water as you normally would, and your people and their allies generally offer you hospitality."]},
+      "feature_metadata": {"foraging": {"food_and_water_multiplier": 2, "automation": "manual"}, "hospitality": {"from_uthgardt_and_allies": true, "automation": "manual"}},
       "roleplay_suggestions": {"inherits_from": "phb2014:background:outlander", "guidance": "Adapt Outlander suggestions around your tribe, its traditions, and your relationship to settled lands."}
     }
   },
