@@ -102,13 +102,44 @@ def _normalize_known_source_anomalies(entry: ContentEntry) -> ContentEntry:
 class ContentRegistry:
     def __init__(
         self,
+        manifest: ContentManifest | None = None,
+        entries: dict[str, ContentEntry] | None = None,
+        by_kind: dict[str, tuple[ContentEntry, ...]] | None = None,
         *,
-        packs: dict[str, ContentPack],
-        entries: dict[str, ContentEntry],
-        by_kind: dict[str, tuple[ContentEntry, ...]],
-        by_source_kind: dict[tuple[str, str], tuple[ContentEntry, ...]],
-        enabled_pack_ids: tuple[str, ...],
+        packs: dict[str, ContentPack] | None = None,
+        by_source_kind: dict[tuple[str, str], tuple[ContentEntry, ...]] | None = None,
+        enabled_pack_ids: tuple[str, ...] | None = None,
     ) -> None:
+        """Create a registry while preserving the P0/P1 direct constructor.
+
+        New code should use ``from_directory`` or ``from_root``. The positional
+        ``(manifest, entries, by_kind)`` form remains supported because existing
+        tests and small in-memory adapters use it to inject temporary SRD entries.
+        """
+        if manifest is not None:
+            if entries is None or by_kind is None:
+                raise TypeError("legacy ContentRegistry construction requires manifest, entries, and by_kind")
+            if packs is not None or by_source_kind is not None or enabled_pack_ids is not None:
+                raise TypeError("cannot mix legacy and multi-pack ContentRegistry constructor arguments")
+            legacy_pack = ContentPack(
+                manifest=manifest,
+                root=DEFAULT_CONTENT_ROOT if manifest.id == "srd5.1" else Path("."),
+                entries=tuple(entries.values()),
+            )
+            packs = {manifest.id: legacy_pack}
+            by_source_kind_mutable: dict[tuple[str, str], list[ContentEntry]] = defaultdict(list)
+            for entry in entries.values():
+                parsed = parse_stable_key(entry.key)
+                by_source_kind_mutable[(entry.source, parsed.kind)].append(entry)
+            by_source_kind = {
+                key: tuple(kind_entries)
+                for key, kind_entries in by_source_kind_mutable.items()
+            }
+            enabled_pack_ids = (manifest.id,)
+
+        if packs is None or entries is None or by_kind is None or by_source_kind is None or enabled_pack_ids is None:
+            raise TypeError("ContentRegistry requires complete registry indexes")
+
         self._packs = packs
         self._entries = entries
         self._by_kind = by_kind
@@ -267,15 +298,15 @@ class ContentRegistry:
                         f"{category.name}[{position}] identity validation failed: {exc}"
                     ) from exc
 
+                if entry.source != manifest.id:
+                    raise ContentValidationError(
+                        f"{entry.key}: entry source must match manifest id {manifest.id}"
+                    )
                 parsed = parse_stable_key(entry.key)
                 expected_key = stable_key(manifest.id, category.kind, entry.index)
                 if entry.key != expected_key or parsed.kind != category.kind:
                     raise ContentValidationError(
                         f"{entry.key}: expected stable key {expected_key}"
-                    )
-                if entry.source != manifest.id:
-                    raise ContentValidationError(
-                        f"{entry.key}: entry source must match manifest id {manifest.id}"
                     )
                 if entry.ruleset != manifest.ruleset:
                     raise ContentValidationError(
@@ -396,10 +427,10 @@ def _iter_stable_references(
     field_name: str | None = None,
 ) -> Iterable[tuple[str, str | None, str]]:
     if isinstance(value, dict):
-        if _looks_like_reference(value):
+        if field_name is not None and _looks_like_reference(value):
             key = reference_to_stable_key(value)
             if key is not None:
-                expected_kind = _REFERENCE_KIND_BY_FIELD.get(field_name or "")
+                expected_kind = _REFERENCE_KIND_BY_FIELD.get(field_name)
                 yield key, expected_kind, str(value.get("url") or value.get("key"))
                 return
         for child_name, child in value.items():
