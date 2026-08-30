@@ -1,0 +1,266 @@
+{
+  "schema_version": 1,
+  "supported_locales": ["zh-TW", "en"],
+  "rules": [
+    {
+      "pack": "*",
+      "kind": "race",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / Origin", "Review", "Character Sheet"],
+      "reason": "Race names are directly rendered on current character surfaces."
+    },
+    {
+      "pack": "*",
+      "kind": "subrace",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / Origin", "Review", "Character Sheet"],
+      "reason": "Subrace names are directly rendered on current character surfaces."
+    },
+    {
+      "pack": "*",
+      "kind": "background",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / Origin", "Review", "Character Sheet"],
+      "reason": "Background names are current selectable and summary presentation."
+    },
+    {
+      "pack": "*",
+      "kind": "background",
+      "field_path": "data.roleplay_suggestions.personality_traits.*",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / Roleplay Profile"],
+      "reason": "System-authored personality suggestions are shown as selectable text."
+    },
+    {
+      "pack": "*",
+      "kind": "background",
+      "field_path": "data.roleplay_suggestions.ideals.*",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / Roleplay Profile"],
+      "reason": "System-authored ideal suggestions are shown as selectable text."
+    },
+    {
+      "pack": "*",
+      "kind": "background",
+      "field_path": "data.roleplay_suggestions.bonds.*",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / Roleplay Profile"],
+      "reason": "System-authored bond suggestions are shown as selectable text."
+    },
+    {
+      "pack": "*",
+      "kind": "background",
+      "field_path": "data.roleplay_suggestions.flaws.*",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / Roleplay Profile"],
+      "reason": "System-authored flaw suggestions are shown as selectable text."
+    },
+    {
+      "pack": "*",
+      "kind": "background",
+      "field_path": "data.feature.name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / Review grants"],
+      "reason": "Inline background feature names can become user-visible grant labels."
+    },
+    {
+      "pack": "*",
+      "kind": "background",
+      "field_path": "data.feature.desc",
+      "localizable": true,
+      "currently_user_visible": false,
+      "required_locales": [],
+      "surfaces": [],
+      "reason": "Background feature long description is not rendered by the current product surfaces."
+    },
+    {
+      "pack": "*",
+      "kind": "alignment",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / Origin", "Review"],
+      "reason": "Alignment names are selectable and summarized."
+    },
+    {
+      "pack": "*",
+      "kind": "class",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / Class progression", "Review", "Character Sheet", "Character Workshop"],
+      "reason": "Class names are directly rendered across the current character flow."
+    },
+    {
+      "pack": "*",
+      "kind": "subclass",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / Class progression", "Review", "Character Sheet"],
+      "reason": "Subclass names are current rule selections and summaries."
+    },
+    {
+      "pack": "*",
+      "kind": "feature",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / grants", "Review", "Character Sheet"],
+      "reason": "Feature names can be rendered as current character grants."
+    },
+    {
+      "pack": "*",
+      "kind": "feat",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / ASI or Feat", "Review", "Character Sheet"],
+      "reason": "Feat names are selectable rule content."
+    },
+    {
+      "pack": "*",
+      "kind": "trait",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / grants", "Review", "Character Sheet"],
+      "reason": "Trait names can be rendered as current character grants."
+    },
+    {
+      "pack": "*",
+      "kind": "proficiency",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / choices", "Review", "Character Sheet"],
+      "reason": "Proficiency names are current selectable and granted rule labels."
+    },
+    {
+      "pack": "*",
+      "kind": "skill",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / skill choices", "Character Sheet"],
+      "reason": "Skill names are current selectable and sheet labels."
+    },
+    {
+      "pack": "*",
+      "kind": "language",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / language choices", "Review", "Character Sheet"],
+      "reason": "Language names are current selectable and granted rule labels."
+    },
+    {
+      "pack": "*",
+      "kind": "ability",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / choices", "Character Sheet"],
+      "reason": "Ability names can appear inside server-derived choices and rule references."
+    },
+    {
+      "pack": "*",
+      "kind": "equipment",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / Starting Equipment", "Review", "Character Sheet / Inventory"],
+      "reason": "Equipment names are current selectable and inventory presentation."
+    },
+    {
+      "pack": "*",
+      "kind": "item",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Sheet / Inventory selector"],
+      "reason": "Magic-item names are visible in the current inventory selector even before the dedicated magic-item detail UI exists."
+    },
+    {
+      "pack": "*",
+      "kind": "item",
+      "field_path": "data.desc.*",
+      "localizable": true,
+      "currently_user_visible": false,
+      "required_locales": [],
+      "surfaces": [],
+      "reason": "Magic-item long descriptions are not rendered by the current inventory UI and remain deferred until a surface exposes them."
+    },
+    {
+      "pack": "*",
+      "kind": "spell",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Builder / Spellcasting", "Review", "Character Sheet"],
+      "reason": "Spell names are current selectable and prepared-spell presentation."
+    },
+    {
+      "pack": "*",
+      "kind": "spell",
+      "field_path": "data.desc.*",
+      "localizable": true,
+      "currently_user_visible": false,
+      "required_locales": [],
+      "surfaces": [],
+      "reason": "Spell long descriptions are not shown by the current Builder or Character Sheet spell-list surfaces."
+    },
+    {
+      "pack": "*",
+      "kind": "condition",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Sheet / Conditions"],
+      "reason": "Condition names are shown in the live-state condition selector and list."
+    },
+    {
+      "pack": "*",
+      "kind": "condition",
+      "field_path": "data.desc.*",
+      "localizable": true,
+      "currently_user_visible": false,
+      "required_locales": [],
+      "surfaces": [],
+      "reason": "Condition long descriptions are not rendered by the current sheet."
+    }
+  ]
+}
