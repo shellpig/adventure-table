@@ -5,7 +5,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 
 from app.config import settings
-from app.content.registry import ContentRegistry
+from app.content.localization import ContentLocalizationCatalog
+from app.content.registry import CONTENT_PACKS_ROOT, ContentRegistry
 from app.domain.character_builder.service import CharacterBuilderService
 from app.persistence.builder_drafts import BuilderDraftRepository
 from app.persistence.characters import CharacterRepository
@@ -13,6 +14,17 @@ from app.persistence.characters import CharacterRepository
 
 def get_content_registry(request: Request) -> ContentRegistry:
     return request.app.state.content_registry
+
+
+def get_content_localization(request: Request) -> ContentLocalizationCatalog:
+    localization = getattr(request.app.state, "content_localization", None)
+    if localization is None:
+        localization = ContentLocalizationCatalog.from_root(
+            get_content_registry(request),
+            CONTENT_PACKS_ROOT,
+        )
+        request.app.state.content_localization = localization
+    return localization
 
 
 def get_database_engine(request: Request) -> Engine:
