@@ -1,0 +1,25 @@
+name: M02-D Locale Authoring
+
+on:
+  push:
+
+jobs:
+  generate-srd-zh-tw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Generate SRD zh-TW authoring candidate
+        run: |
+          python scripts/build_m02d_srd_locale.py \
+            --output /tmp/m02d-zh-TW.json \
+            --report /tmp/m02d-report.json
+      - name: Upload authoring candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: m02d-srd-zh-tw-authoring
+          path: |
+            /tmp/m02d-zh-TW.json
+            /tmp/m02d-report.json
