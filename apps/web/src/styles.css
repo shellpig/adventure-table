@@ -145,7 +145,8 @@ button { color: inherit; }
 .combobox-option { display: grid; width: 100%; gap: 3px; border: 0; border-radius: 8px; padding: 9px 10px; cursor: pointer; text-align: left; background: transparent; }
 .combobox-option span { font-size: .83rem; font-weight: 700; }
 .combobox-option small { overflow: hidden; color: var(--quiet); font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
-.combobox-option.is-active, .combobox-option[aria-selected="true"] { color: var(--gold-bright); background: rgb(215 181 109 / 9%); }
+.combobox-option.is-active { background: rgb(215 181 109 / 9%); }
+.combobox-option.is-match, .combobox-option[aria-selected="true"] { color: var(--gold-bright); }
 .combobox-empty { padding: 16px 10px; color: var(--quiet); font-size: .78rem; text-align: center; }
 .inline-search { width: min(280px, 100%); }
 .spellcasting-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }

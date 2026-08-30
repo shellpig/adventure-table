@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { duplicateOptionNames, optionDisplay } from './SearchableSelect'
+import { duplicateOptionNames, optionDisplay, rankSearchOptions } from './SearchableSelect'
 
 
 describe('SearchableSelect source-aware labels', () => {
@@ -37,5 +37,21 @@ describe('SearchableSelect source-aware labels', () => {
         { value: 'elf', label: 'Elf · SRD' },
       ]),
     ).toEqual(new Set(['Human']))
+  })
+
+  it('ranks matches first while retaining every unmatched option', () => {
+    const options = [
+      { value: 'elf', label: 'Elf' },
+      { value: 'variant-human', label: 'Variant Human' },
+      { value: 'dwarf', label: 'Dwarf' },
+      { value: 'human', label: 'Human' },
+    ]
+
+    expect(rankSearchOptions(options, 'human')).toEqual([
+      { option: options[1], matches: true },
+      { option: options[3], matches: true },
+      { option: options[0], matches: false },
+      { option: options[2], matches: false },
+    ])
   })
 })

@@ -45,6 +45,22 @@ export function duplicateOptionNames(options: SearchOption[]): Set<string> {
   )
 }
 
+export function rankSearchOptions(options: SearchOption[], query: string) {
+  const keyword = query.trim().toLocaleLowerCase()
+  const ranked = options.map((option) => ({
+    option,
+    matches: Boolean(keyword) &&
+      `${option.label} ${option.description ?? ''} ${option.disabledReason ?? ''}`
+        .toLocaleLowerCase()
+        .includes(keyword),
+  }))
+  if (!keyword) return ranked
+  return [
+    ...ranked.filter((entry) => entry.matches),
+    ...ranked.filter((entry) => !entry.matches),
+  ]
+}
+
 function optionInputLabel(option: SearchOption | undefined) {
   return option ? optionDisplay(option.label).primary : ''
 }
@@ -71,17 +87,7 @@ export function SearchableSelect({
     else if (!open) setQuery('')
   }, [open, options, value])
 
-  const filtered = useMemo(() => {
-    const keyword = query.trim().toLocaleLowerCase()
-    const source = keyword
-      ? options.filter((option) =>
-          `${option.label} ${option.description ?? ''} ${option.disabledReason ?? ''}`
-            .toLocaleLowerCase()
-            .includes(keyword),
-        )
-      : options
-    return source.slice(0, 80)
-  }, [options, query])
+  const rankedOptions = useMemo(() => rankSearchOptions(options, query), [options, query])
 
   const choose = (option: SearchOption) => {
     if (option.disabled) return
@@ -91,11 +97,11 @@ export function SearchableSelect({
   }
 
   const moveActive = (direction: 1 | -1) => {
-    if (!filtered.length) return
+    if (!rankedOptions.length) return
     let next = activeIndex
-    for (let attempts = 0; attempts < filtered.length; attempts += 1) {
-      next = Math.min(Math.max(next + direction, 0), filtered.length - 1)
-      if (!filtered[next]?.disabled || next === 0 || next === filtered.length - 1) break
+    for (let attempts = 0; attempts < rankedOptions.length; attempts += 1) {
+      next = Math.min(Math.max(next + direction, 0), rankedOptions.length - 1)
+      if (!rankedOptions[next]?.option.disabled || next === 0 || next === rankedOptions.length - 1) break
     }
     setActiveIndex(next)
   }
@@ -111,7 +117,7 @@ export function SearchableSelect({
           aria-expanded={open}
           aria-controls={listboxId}
           aria-activedescendant={
-            open && filtered[activeIndex] ? `${listboxId}-${activeIndex}` : undefined
+            open && rankedOptions[activeIndex] ? `${listboxId}-${activeIndex}` : undefined
           }
           value={query}
           placeholder={placeholder}
@@ -144,11 +150,11 @@ export function SearchableSelect({
             } else if (
               event.key === 'Enter' &&
               open &&
-              filtered[activeIndex] &&
-              !filtered[activeIndex].disabled
+              rankedOptions[activeIndex] &&
+              !rankedOptions[activeIndex].option.disabled
             ) {
               event.preventDefault()
-              choose(filtered[activeIndex])
+              choose(rankedOptions[activeIndex].option)
             } else if (event.key === 'Escape') {
               setOpen(false)
             }
@@ -167,8 +173,8 @@ export function SearchableSelect({
       </div>
       {open ? (
         <div className="combobox-popover" id={listboxId} role="listbox">
-          {filtered.length ? (
-            filtered.map((option, index) => {
+          {rankedOptions.length ? (
+            rankedOptions.map(({ option, matches }, index) => {
               const display = optionDisplay(option.label)
               return (
                 <button
@@ -177,7 +183,7 @@ export function SearchableSelect({
                   id={`${listboxId}-${index}`}
                   aria-selected={option.value === value}
                   aria-disabled={option.disabled || undefined}
-                  className={index === activeIndex ? 'combobox-option is-active' : 'combobox-option'}
+                  className={`combobox-option${index === activeIndex ? ' is-active' : ''}${matches ? ' is-match' : ''}`}
                   key={option.value}
                   disabled={option.disabled}
                   onMouseDown={(event) => event.preventDefault()}
