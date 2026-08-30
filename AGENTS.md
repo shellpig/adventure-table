@@ -6,9 +6,9 @@
 
 - **類型**：Web VTT（虛擬桌面），非 CRPG、非 Foundry 式全能平台
 - **一句話**：網站只管需要共享、同步、計算、保存、權限與 AI 接入的東西，其餘還給 DM 的嘴巴
-- **首發規則集**：D&D 5e 2014；Built-in Content：SRD 5.1（CC BY 4.0）
-- **專案性質**：朋友間私人使用，非預計商品化平台
-- **目前階段**：**P0 — Character Core + SRD / Rules Foundation 與 P1 — Character Builder Complete 均已完成並關門**；下一步是 P2 — Room / Campaign / Session / Seat 的規劃與 Subphase 拆分，尚未開始 P2 coding
+- **首發規則集**：D&D 5e 2014；內容 baseline 為 SRD 5.1（CC BY 4.0），私人非 SRD Content Pack 依需求逐步加入
+- **專案性質**：朋友間私人使用，非預計商品化平台；repository 為 private
+- **目前階段**：**P0 與 P1 均已完成並關門；目前準備 M01 — D&D 5e 2014 Private Content Expansion，M01-A～M01-J 規格已完成，尚未開始 M01 coding。下一個可實作 Subphase 是 M01-A；M01 closeout 後回到 P2 — Room / Campaign / Session / Seat。**
 - **目前進度**：以 `PROJECT_BRIEF.md` 為單一事實來源
 - **基礎技術棧**：目前方向見 `技術棧討論.md`。該檔只討論語言／Framework／DB 等基礎選型，不承擔各 Phase 的實作設計
 
@@ -16,13 +16,13 @@
 
 **Layer 1 — 必讀：**
 1. `AGENTS.md`（本檔）
-2. `PROJECT_BRIEF.md`（當前 Phase、Roadmap、文件索引）
+2. `PROJECT_BRIEF.md`（當前 P/M Phase、Roadmap、文件索引）
 3. `git log --oneline -10`
 
 **Layer 2 — 按任務讀對應文件／段落：**
 - `規格企劃.md` — **產品與玩法的單一事實來源**。約 70 KB，一律標題定位、只讀該段
 - `技術棧討論.md` — 只在基礎技術選型／Framework 討論時讀；不要把它當成全專案 architecture spec
-- `docs/Px/` — 某個 Phase 開工後，該 Phase 的正式實作規格、開發設計與測試文件
+- `docs/Px/` 或 `docs/Mxx/` — 某個 P Phase / M Phase 開工後，該 Phase 的正式實作規格、開發設計與測試文件
 
 > 不要為了「先想完整」而提前設計後續 Phase。資料模型、API、事件、權限實作、Snapshot、Combat、Tactical 等細節，原則上等對應 Phase 再決定。
 
@@ -76,6 +76,7 @@ grep -n "^## \\|^### " 規格企劃.md
 
 ```bash
 grep -n "P0-C" docs/P0/實作規格.md docs/P0/開發設計方針.md docs/P0/測試指南.md
+grep -n "M01-F" docs/M01/實作規格.md docs/M01/開發設計方針.md docs/M01/測試指南.md
 ```
 
 ## 文件分工與單一事實來源
@@ -85,27 +86,28 @@ grep -n "P0-C" docs/P0/實作規格.md docs/P0/開發設計方針.md docs/P0/測
 | 住哪 | 放什麼 |
 |---|---|
 | **`規格企劃.md`** | 產品行為與為什麼：跑團方式、權限、規則選擇、UI 行為、明確不做 |
-| **`PROJECT_BRIEF.md`** | 當前 Phase、Roadmap、Subphase 進度、下一步、文件索引 |
+| **`PROJECT_BRIEF.md`** | 當前 P/M Phase、Roadmap、Subphase 進度、下一步、文件索引 |
 | **`技術棧討論.md`** | 暫時性的基礎技術選型討論：語言、Framework、DB、基本測試／部署工具 |
-| **`docs/Px/實作規格.md`** | 該 Phase / Subphase 完成後什麼必須為真、驗收意圖；不寫具體 DB/API |
-| **`docs/Px/開發設計方針.md`** | 該 Phase / Subphase 的具體實作契約：資料模型、模組、API、資料流、接線、必要技術決策 |
-| **`docs/Px/測試指南.md`** | 該 Phase / Subphase 的自動／人工驗收流程與測試證據要求 |
+| **`docs/Px/實作規格.md` / `docs/Mxx/實作規格.md`** | 該 Phase / Subphase 完成後什麼必須為真、驗收意圖；不寫具體 DB/API |
+| **`docs/Px/開發設計方針.md` / `docs/Mxx/開發設計方針.md`** | 該 Phase / Subphase 的具體實作契約：資料模型、模組、API、資料流、接線、必要技術決策 |
+| **`docs/Px/測試指南.md` / `docs/Mxx/測試指南.md`** | 該 Phase / Subphase 的自動／人工驗收流程與測試證據要求 |
 | **SRD / 規則資料檔** | 所有規則內容與可調數值 |
 | **`待決事項.md`** | 真正無法從既有規格推導、且會影響核心玩法／方向的未決問題 |
 
-**文件裡不重複抄規則數值**，一律指向資料檔。
+**文件裡不重複抄規則數值**，一律指向資料檔。Phase 文件可寫「必須驗證哪些 supplied 規則與公式」，但正式 runtime 數值最後仍以 data/rules 檔為 Source of Truth。
 
 判準：**如果一句話不同，DM／Player 的實際跑團方式可能就不同 → `規格企劃.md`；如果是某 Phase 要做到什麼 → 該 Phase `實作規格.md`；如果是怎麼實作 → 該 Phase `開發設計方針.md`。**
 
 ## Phase / Subphase 設計原則
 
 1. **只設計正在準備開工的 Phase。**
-2. **所有 Phase 在 coding 開始前，都必須先拆成 `P<n>-A`、`P<n>-B`… 的 Subphases。** 每個 Subphase 必須能獨立實作、驗證並 commit；完成時應處於可執行、可測試、沒有已知編譯／型別／該 Subphase 測試錯誤的狀態。
-3. **Subphase 只拆當前 Phase，不提前拆後續 Phase。** 尚未輪到的 Phase 保持大 Phase Roadmap；可以記錄必要的跨 Phase 承接要求，但不得因此提前設計未來 Phase 的 schema / API / module。
-4. 同一 Phase 的 `實作規格.md`、`開發設計方針.md`、`測試指南.md` 必須使用完全一致的 Subphase 名稱與順序，讓實作者可用 Subphase id 精準取得三份契約。
-5. `PROJECT_BRIEF.md` 在當前 Phase 已拆分後，必須一列一個 Subphase 顯示進度，不可再用「P0（含 A～F）」合併成一列。
-6. 可以記錄已知的跨 Phase 相容要求，例如 P0 可以要求 Character 資料模型不得排斥 Multiclass；但不用現在決定 P2 Token table 或 P5 Tactical renderer。
-7. 後續 Phase 開工時，以當時真正存在的 codebase 為基礎再設計，比現在猜測更可靠。
+2. **所有 P Phase 與 M Phase 在 coding 開始前，都必須先拆成 Subphases。** 正常產品 Phase 使用 `P<n>-A`、`P<n>-B`…；Modification / Maintenance Phase 使用 `M<nn>-A`、`M<nn>-B`…。每個 Subphase 必須能獨立實作、驗證並 commit；完成時應處於可執行、可測試、沒有已知編譯／型別／該 Subphase 測試錯誤的狀態。
+3. **Subphase 只拆當前 Phase，不提前拆後續 Phase。** 尚未輪到的 P / M Phase 保持大方向即可；可以記錄必要的跨 Phase 承接要求，但不得因此提前設計未來 Phase 的 schema / API / module。
+4. **M Phase 是獨立維護軸，不改寫 P Roadmap。** M01 可以插在 P1 與 P2 之間；M01 closeout 後仍回 P2。M Phase用於補資料、補設定、technical hardening或強化既有系統，不得拿來偷跑未來 Room / Combat / Adventure 等 P Phase。
+5. 同一 Phase 的 `實作規格.md`、`開發設計方針.md`、`測試指南.md` 必須使用完全一致的 Subphase 名稱與順序，讓實作者可用 Subphase id 精準取得三份契約。
+6. `PROJECT_BRIEF.md` 在當前 Phase 已拆分後，必須一列一個 Subphase 顯示進度，不可再用「P0（含 A～F）」或「M01（含 A～J）」合併成一列。
+7. 可以記錄已知的跨 Phase 相容要求，例如 P0 可以要求 Character 資料模型不得排斥 Multiclass；M01 可以保留 Combat/Rest future-runtime metadata；但不用現在決定 P2 Token table 或 P5 Tactical renderer。
+8. 後續 Phase 開工時，以當時真正存在的 codebase 為基礎再設計，比現在猜測更可靠。
 
 ## 修改授權與驗證規則
 
@@ -138,7 +140,7 @@ grep -n "P0-C" docs/P0/實作規格.md docs/P0/開發設計方針.md docs/P0/測
 2. **秘密靠 Server 過濾，不靠 UI 隱藏。** Secret DC、DM Notes、Hidden Monster、他人 private knowledge 不送給 Player / AI Player。
 3. **Optional 不得變 Mandatory。** Quest、Scene、NPC、Position Note、Campaign Fact 等可以完全不建立而繼續跑團。
 4. **網站不接 LLM API。** 後端沒有模型可呼叫，所有 AI 能力來自使用者的外部 AI Session。
-5. **內容逐步擴充，SRD 5.1 是起點不是上限。** 非 SRD 內容依實際需要逐步加入。
+5. **內容逐步擴充，SRD 5.1 是起點不是上限。** 非 SRD 內容依實際需要逐步加入；來源 identity不可偽裝成 SRD。
 6. **Human UI 與 AI MCP 共用同一份 backend logic**，不做兩套遊戲邏輯。
 
 ## 工程實作守則
