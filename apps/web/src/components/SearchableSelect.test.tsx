@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { optionDisplay } from './SearchableSelect'
+import { duplicateOptionNames, optionDisplay } from './SearchableSelect'
 
 
 describe('SearchableSelect source-aware labels', () => {
@@ -27,5 +27,15 @@ describe('SearchableSelect source-aware labels', () => {
       primary: 'Standard Array',
       secondary: undefined,
     })
+  })
+
+  it('identifies only names that need source metadata for disambiguation', () => {
+    expect(
+      duplicateOptionNames([
+        { value: 'srd-human', label: 'Human · SRD' },
+        { value: 'phb-human', label: 'Human · PHB' },
+        { value: 'elf', label: 'Elf · SRD' },
+      ]),
+    ).toEqual(new Set(['Human']))
   })
 })

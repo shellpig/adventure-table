@@ -76,7 +76,6 @@ function SpellBucketEditor({
     .map((spell) => ({
       value: spell.spell_key,
       label: spellLabel(spell),
-      description: spell.spell_key.replace('srd5.1:spell:', ''),
       disabled: selected.includes(spell.spell_key),
       disabledReason: selected.includes(spell.spell_key) ? 'Already selected' : undefined,
     }))
@@ -117,7 +116,7 @@ function SpellBucketEditor({
                 disabled={disabled}
                 onClick={() => save(selected.filter((item) => item !== spellKey))}
               >
-                <span>{spell?.name ?? spellKey}</span>
+                <span>{spell?.name ?? 'Unknown spell'}</span>
                 <small>{spell?.level === 0 ? 'Cantrip' : `Lv ${spell?.level ?? '?'}`}</small>
                 <b aria-hidden="true">×</b>
               </button>
@@ -254,7 +253,10 @@ export function SpellcastingStep({ view, disabled, onSave }: Props) {
             <section key={pool.pool_id} className="spell-pool">
               <div>
                 <span>{pool.pool_type === 'pact_magic' ? 'Pact Magic' : 'Combined spell slots'}</span>
-                <strong>{pool.pool_id.replace('srd5.1:class:', '')}</strong>
+                <strong>
+                  {pool.source_profile_id?.split(':').at(-1)?.replaceAll('-', ' ') ??
+                    (pool.pool_id.endsWith(':combined') ? 'Multiclass' : 'Normal')}
+                </strong>
               </div>
               <div className="spell-pool__slots">
                 {pool.slots.map((slot) => (

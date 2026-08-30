@@ -318,7 +318,7 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
                         <summary>{node.automatic_feature_refs.length} automatic feature(s)</summary>
                         <ul>
                           {node.automatic_feature_refs.map((feature) => (
-                            <li key={feature}>{feature.replace('srd5.1:feature:', '').replaceAll('-', ' ')}</li>
+                            <li key={feature}>{feature.split(':').at(-1)?.replaceAll('-', ' ') ?? 'Unknown feature'}</li>
                           ))}
                         </ul>
                       </details>

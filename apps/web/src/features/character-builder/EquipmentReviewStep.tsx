@@ -9,14 +9,19 @@ import {
   type BuilderView,
 } from '../../api/characterBuilder'
 import type { StateReconciliationPreview } from '../../api/characterVersions'
-import { SearchableSelect } from '../../components/SearchableSelect'
+import { optionDisplay, SearchableSelect } from '../../components/SearchableSelect'
 import { RoleplayProfileEditor } from './RoleplayProfileEditor'
 
+
+type EquipmentStepProps = {
+  view: BuilderView
+  disabled: boolean
+  onSave: (payload: BuilderDraftPayload) => void
+}
 
 type EquipmentReviewStepProps = {
   view: BuilderView
   disabled: boolean
-  onSave: (payload: BuilderDraftPayload) => void
 }
 
 type P1GReview = BuilderReviewDTO & {
@@ -51,26 +56,17 @@ function modeLabel(mode: BuilderView['draft']['mode']) {
   return 'Create'
 }
 
-export function EquipmentReviewStep({
+export function EquipmentStep({
   view,
   disabled,
   onSave,
-}: EquipmentReviewStepProps) {
+}: EquipmentStepProps) {
   const versioned = view.draft.mode !== 'create'
   const equipmentChoices = view.choices.filter(
     (choice) => choice.option_source === 'equipment',
   )
   const equipmentSelections =
     view.draft.draft_payload.starting_equipment_choices ?? {}
-
-  const reviewQuery = useQuery({
-    queryKey: ['builder-review', view.draft.id, view.draft.revision],
-    queryFn: () => getBuilderReview(view.draft.id),
-  })
-  const confirm = useMutation({
-    mutationFn: () => confirmBuilderDraft(view.draft.id),
-    onSuccess: (result) => window.location.assign(result.character_path),
-  })
 
   const saveChoice = (choiceId: string, next: string[]) => {
     onSave({
@@ -81,22 +77,13 @@ export function EquipmentReviewStep({
     })
   }
 
-  const review = reviewQuery.data as P1GReview | undefined
-  const busy = disabled || confirm.isPending
-  const blockingCount =
-    review?.issues.filter((issue) => issue.severity === 'blocking_error').length ??
-    view.validation.issues.filter((issue) => issue.severity === 'blocking_error')
-      .length
-
   return (
     <div className="builder-step">
       <div className="builder-step__heading">
-        <p className="eyebrow">STEP 06 · P1-G</p>
-        <h2>{versioned ? `${modeLabel(view.draft.mode)} review` : 'Equipment & final review'}</h2>
+        <p className="eyebrow">STEP 06 · EQUIPMENT</p>
+        <h2>Equipment & roleplay</h2>
         <p>
-          {versioned
-            ? 'Confirm creates a new immutable Build Version and atomically reconciles the existing live Current State. Level Up is not a rest.'
-            : 'Starting equipment becomes immutable Build provenance. Confirm copies it into live inventory exactly once, then Current State evolves independently.'}
+          Starting equipment becomes immutable Build provenance and initializes live Inventory once. Roleplay Profile remains optional.
         </p>
       </div>
 
@@ -112,8 +99,9 @@ export function EquipmentReviewStep({
                     <SearchableSelect
                       label={choice.label}
                       value={selected[0] ?? ''}
-                      disabled={busy}
+                      disabled={disabled}
                       options={optionsFor(choice)}
+                      secondaryMode="duplicates"
                       onChange={(value) =>
                         saveChoice(choice.choice_id, value ? [value] : [])
                       }
@@ -141,7 +129,7 @@ export function EquipmentReviewStep({
                       <button
                         type="button"
                         key={item.id}
-                        disabled={busy}
+                        disabled={disabled}
                         onClick={() =>
                           saveChoice(
                             choice.choice_id,
@@ -156,7 +144,7 @@ export function EquipmentReviewStep({
                   <SearchableSelect
                     label="Add equipment"
                     value=""
-                    disabled={busy || selected.length >= choice.choose_count}
+                    disabled={disabled || selected.length >= choice.choose_count}
                     options={optionsFor(choice).map((option) => ({
                       ...option,
                       disabled: option.disabled || selected.includes(option.value),
@@ -164,6 +152,7 @@ export function EquipmentReviewStep({
                         ? 'Already selected'
                         : option.disabledReason,
                     }))}
+                    secondaryMode="duplicates"
                     onChange={(value) => {
                       if (value && !selected.includes(value)) {
                         saveChoice(choice.choice_id, [...selected, value])
@@ -190,10 +179,46 @@ export function EquipmentReviewStep({
       {!versioned ? (
         <RoleplayProfileEditor
           view={view}
-          disabled={busy}
+          disabled={disabled}
           onSave={onSave}
         />
       ) : null}
+    </div>
+  )
+}
+
+export function EquipmentReviewStep({
+  view,
+  disabled,
+}: EquipmentReviewStepProps) {
+  const versioned = view.draft.mode !== 'create'
+  const reviewQuery = useQuery({
+    queryKey: ['builder-review', view.draft.id, view.draft.revision],
+    queryFn: () => getBuilderReview(view.draft.id),
+  })
+  const confirm = useMutation({
+    mutationFn: () => confirmBuilderDraft(view.draft.id),
+    onSuccess: (result) => window.location.assign(result.character_path),
+  })
+
+  const review = reviewQuery.data as P1GReview | undefined
+  const busy = disabled || confirm.isPending
+  const blockingCount =
+    review?.issues.filter((issue) => issue.severity === 'blocking_error').length ??
+    view.validation.issues.filter((issue) => issue.severity === 'blocking_error')
+      .length
+
+  return (
+    <div className="builder-step">
+      <div className="builder-step__heading">
+        <p className="eyebrow">STEP 07 · REVIEW</p>
+        <h2>{versioned ? `${modeLabel(view.draft.mode)} review` : 'Build snapshot & final review'}</h2>
+        <p>
+          {versioned
+            ? 'Confirm creates a new immutable Build Version and atomically reconciles the existing live Current State. Level Up is not a rest.'
+            : 'Review the immutable Build snapshot and initial Current State before creating the Character.'}
+        </p>
+      </div>
 
       {reviewQuery.isLoading ? (
         <div className="builder-rule-card">
@@ -242,12 +267,11 @@ export function EquipmentReviewStep({
             </div>
 
             <div className="summary-grants">
-              <h3>Resolved grants & sources</h3>
+              <h3>Resolved grants</h3>
               {review.resolved_summary.grants.map((grant, index) => (
                 <div key={`${grant.source_ref}:${grant.reference_id ?? grant.label}:${index}`}>
-                  <span>{grant.kind}</span>
-                  <strong>{grant.label}</strong>
-                  <small>{grant.source_ref}</small>
+                  <span>{grant.kind.replaceAll('_', ' ')}</span>
+                  <strong>{optionDisplay(grant.label).primary}</strong>
                 </div>
               ))}
               {!review.resolved_summary.grants.length ? (
@@ -261,11 +285,10 @@ export function EquipmentReviewStep({
                 <div key={entry.entry_id}>
                   <span>× {entry.quantity}</span>
                   <strong>{entry.name}</strong>
-                  <small>{entry.source_ref}</small>
                 </div>
               ))}
               {!review.starting_equipment.length ? (
-                <small>No starting-equipment provenance.</small>
+                <small>No starting equipment.</small>
               ) : null}
             </div>
           </div>

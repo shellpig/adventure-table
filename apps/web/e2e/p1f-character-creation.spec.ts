@@ -75,12 +75,15 @@ test('P1-F resolves starting equipment, reviews and creates Version 1 from the b
   await chooseIn(startingSkills, 'Skill: Animal Handling')
   await chooseIn(startingSkills, 'Skill: Athletics')
 
-  await page.getByRole('button', { name: /Review/ }).click()
-  await expect(page.getByRole('heading', { name: 'Equipment & final review' })).toBeVisible()
+  await page.getByRole('button', { name: /Equipment/ }).click()
+  await expect(page.getByRole('heading', { name: 'Equipment & roleplay' })).toBeVisible()
 
   await chooseSearchable(page, /\(a\) a greataxe or \(b\) any martial melee weapon/, 'Greataxe')
   await chooseSearchable(page, /\(a\) two handaxes or \(b\) any simple weapon/, '2 × Handaxe')
   await chooseSearchable(page, 'Acolyte — Starting Equipment', 'Amulet')
+
+  await page.getByRole('button', { name: /Review/ }).click()
+  await expect(page.getByRole('heading', { name: 'Build snapshot & final review' })).toBeVisible()
 
   await expect(page.getByText('No blocking issues. Confirm will create Character, immutable Version 1 and Current State in one transaction.')).toBeVisible()
   const confirm = page.getByRole('button', { name: 'Confirm & Create Character' })

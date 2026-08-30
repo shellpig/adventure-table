@@ -15,6 +15,7 @@ type SearchableSelectProps = {
   onChange: (value: string) => void
   placeholder?: string
   disabled?: boolean
+  secondaryMode?: 'always' | 'duplicates'
 }
 
 type OptionDisplay = {
@@ -31,6 +32,19 @@ export function optionDisplay(label: string): OptionDisplay {
   }
 }
 
+export function duplicateOptionNames(options: SearchOption[]): Set<string> {
+  const counts = new Map<string, number>()
+  for (const option of options) {
+    const primary = optionDisplay(option.label).primary
+    counts.set(primary, (counts.get(primary) ?? 0) + 1)
+  }
+  return new Set(
+    [...counts.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([primary]) => primary),
+  )
+}
+
 function optionInputLabel(option: SearchOption | undefined) {
   return option ? optionDisplay(option.label).primary : ''
 }
@@ -42,6 +56,7 @@ export function SearchableSelect({
   onChange,
   placeholder = '輸入關鍵字或展開選單',
   disabled = false,
+  secondaryMode = 'always',
 }: SearchableSelectProps) {
   const inputId = useId()
   const listboxId = useId()
@@ -49,6 +64,7 @@ export function SearchableSelect({
   const selected = options.find((option) => option.value === value)
   const [query, setQuery] = useState(optionInputLabel(selected))
   const [activeIndex, setActiveIndex] = useState(0)
+  const duplicateNames = useMemo(() => duplicateOptionNames(options), [options])
 
   useEffect(() => {
     if (value) setQuery(optionInputLabel(options.find((option) => option.value === value)))
@@ -169,7 +185,10 @@ export function SearchableSelect({
                   onClick={() => choose(option)}
                 >
                   <span>{display.primary}</span>
-                  {display.secondary ? <small>{display.secondary}</small> : null}
+                  {display.secondary &&
+                  (secondaryMode === 'always' || duplicateNames.has(display.primary)) ? (
+                    <small>{display.secondary}</small>
+                  ) : null}
                   {option.description ? <small>{option.description}</small> : null}
                   {option.disabledReason ? <small>{option.disabledReason}</small> : null}
                 </button>

@@ -12,13 +12,13 @@ import {
   type BuilderDraftPayload,
   type BuilderView,
 } from '../../api/characterBuilder'
-import { SearchableSelect } from '../../components/SearchableSelect'
+import { optionDisplay, SearchableSelect } from '../../components/SearchableSelect'
 import { ClassProgressionStep } from './ClassProgressionStep'
-import { EquipmentReviewStep } from './EquipmentReviewStep'
+import { EquipmentReviewStep, EquipmentStep } from './EquipmentReviewStep'
 import { SpellcastingStep } from './SpellcastingStep'
 import './builder.css'
 
-type BuilderStep = 'basic' | 'origin' | 'abilities' | 'class' | 'spells' | 'review'
+type BuilderStep = 'basic' | 'origin' | 'abilities' | 'class' | 'spells' | 'equipment' | 'review'
 
 type ChoiceEditorProps = {
   choice: BuilderChoice
@@ -101,6 +101,7 @@ function ChoiceEditor({ choice, view, disabled, onSave }: ChoiceEditorProps) {
           value={selected[0] ?? ''}
           disabled={disabled}
           options={selectionOptions(choice)}
+          secondaryMode="duplicates"
           onChange={(value) => saveSelected(value ? [value] : [])}
         />
       </div>
@@ -139,6 +140,7 @@ function ChoiceEditor({ choice, view, disabled, onSave }: ChoiceEditorProps) {
           disabled: option.disabled || selected.includes(option.value),
           disabledReason: selected.includes(option.value) ? 'Already selected' : option.disabledReason,
         }))}
+        secondaryMode="duplicates"
         onChange={(value) => {
           if (value && !selected.includes(value)) saveSelected([...selected, value])
         }}
@@ -325,8 +327,11 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
             <button className={step === 'spells' ? 'is-active' : ''} onClick={() => setStep('spells')}>
               <span>05</span><div><strong>Spellcasting</strong><small>Access & resources</small></div>
             </button>
+            <button className={step === 'equipment' ? 'is-active' : ''} onClick={() => setStep('equipment')}>
+              <span>06</span><div><strong>Equipment</strong><small>Gear & roleplay</small></div>
+            </button>
             <button className={step === 'review' ? 'is-active' : ''} onClick={() => setStep('review')}>
-              <span>06</span><div><strong>Review</strong><small>Equipment & confirm</small></div>
+              <span>07</span><div><strong>Review</strong><small>Build snapshot & confirm</small></div>
             </button>
           </aside>
 
@@ -381,16 +386,16 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   <p>Selectors come from server-generated eligible content. Subrace is preserved as its own choice.</p>
                 </div>
                 {raceChoice ? (
-                  <SearchableSelect label="Race" value={currentRace} disabled={saving} options={selectionOptions(raceChoice)} onChange={(value) => patchReference('race_selection', value, true)} />
+                  <SearchableSelect label="Race" value={currentRace} disabled={saving} options={selectionOptions(raceChoice)} secondaryMode="duplicates" onChange={(value) => patchReference('race_selection', value, true)} />
                 ) : null}
                 {subraceChoice ? (
-                  <SearchableSelect label="Subrace" value={currentSubrace} disabled={saving} options={selectionOptions(subraceChoice)} onChange={(value) => patchReference('subrace_selection', value, true)} />
+                  <SearchableSelect label="Subrace" value={currentSubrace} disabled={saving} options={selectionOptions(subraceChoice)} secondaryMode="duplicates" onChange={(value) => patchReference('subrace_selection', value, true)} />
                 ) : null}
                 {backgroundChoice ? (
-                  <SearchableSelect label="Background" value={currentBackground} disabled={saving} options={selectionOptions(backgroundChoice)} onChange={(value) => patchReference('background_selection', value, true)} />
+                  <SearchableSelect label="Background" value={currentBackground} disabled={saving} options={selectionOptions(backgroundChoice)} secondaryMode="duplicates" onChange={(value) => patchReference('background_selection', value, true)} />
                 ) : null}
                 {alignmentChoice ? (
-                  <SearchableSelect label="Alignment · optional" value={currentAlignment} disabled={saving} options={selectionOptions(alignmentChoice)} onChange={(value) => patchReference('alignment_selection', value)} />
+                  <SearchableSelect label="Alignment · optional" value={currentAlignment} disabled={saving} options={selectionOptions(alignmentChoice)} secondaryMode="duplicates" onChange={(value) => patchReference('alignment_selection', value)} />
                 ) : null}
                 <div className="builder-grant-preview">
                   <span>Resolved grants</span><strong>{view.resolved_summary.grants.length}</strong><small>Traits, languages and proficiencies are resolved by the server.</small>
@@ -522,11 +527,18 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
               />
             ) : null}
 
+            {step === 'equipment' ? (
+              <EquipmentStep
+                view={view}
+                disabled={saving}
+                onSave={(payload) => save.mutate(payload)}
+              />
+            ) : null}
+
             {step === 'review' ? (
               <EquipmentReviewStep
                 view={view}
                 disabled={saving}
-                onSave={(payload) => save.mutate(payload)}
               />
             ) : null}
           </section>
@@ -559,7 +571,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
               <h3>Resolved grants</h3>
               {view.resolved_summary.grants.slice(0, 12).map((grant, index) => (
                 <div key={`${grant.source_ref}:${grant.reference_id ?? grant.label}:${index}`}>
-                  <span>{grant.kind}</span><strong>{grant.label}</strong>
+                  <span>{grant.kind.replaceAll('_', ' ')}</span><strong>{optionDisplay(grant.label).primary}</strong>
                 </div>
               ))}
               {view.resolved_summary.grants.length > 12 ? <small>+ {view.resolved_summary.grants.length - 12} more</small> : null}

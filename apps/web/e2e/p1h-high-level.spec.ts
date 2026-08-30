@@ -202,9 +202,12 @@ test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to e
     }
   }
 
-  await page.getByRole('button', { name: /Review/ }).click()
-  await expect(page.getByRole('heading', { name: 'Equipment & final review' })).toBeVisible()
+  await page.getByRole('button', { name: /Equipment/ }).click()
+  await expect(page.getByRole('heading', { name: 'Equipment & roleplay' })).toBeVisible()
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
+
+  await page.getByRole('button', { name: /Review/ }).click()
+  await expect(page.getByRole('heading', { name: 'Build snapshot & final review' })).toBeVisible()
 
   const reviewResponse = await request.get(`/api/character-builder/drafts/${draftId}/review`)
   expect(reviewResponse.ok()).toBeTruthy()
