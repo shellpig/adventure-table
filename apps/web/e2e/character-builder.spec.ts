@@ -150,7 +150,7 @@ test('P1-D preserves an ordered Fighter 5 / Wizard 5 rail with ASI and feat choi
   await expect(page.getByText('10 / 10', { exact: true })).toBeVisible()
   await expect(page.getByText('0 blocking')).toHaveCount(0)
   await expect(
-    page.getByText(/P1-F adds starting equipment and final server Review/i),
+    page.getByText(/Starting equipment and final server Review are validated before Confirm becomes available/i),
   ).toBeVisible()
 
   const url = page.url()

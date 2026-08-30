@@ -114,7 +114,7 @@ async function confirmAndReload(page: Page, name: string) {
 }
 
 async function expectFisherInventoryOnce(page: Page) {
-  await page.getByRole('tab', { name: /物品欄/ }).click()
+  await page.getByRole('tab', { name: /Inventory/ }).click()
   await expect(page.getByText('Fishing tackle', { exact: true })).toHaveCount(1)
   await expect(page.getByText('Net', { exact: true })).toHaveCount(1)
 }

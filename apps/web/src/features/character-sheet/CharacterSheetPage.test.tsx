@@ -2,7 +2,26 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import type { CharacterSheetDTO, ContentEntry } from '../../api/character'
+import { LocaleProvider } from '../../i18n/LocaleProvider'
+import { LOCALE_STORAGE_KEY, type LocaleStorage } from '../../i18n/locale'
 import { CharacterSheetView } from './CharacterSheetPage'
+
+function englishStorage(): LocaleStorage {
+  return {
+    getItem: (key) => (key === LOCALE_STORAGE_KEY ? 'en' : null),
+    setItem: () => undefined,
+  }
+}
+
+function renderSheet(
+  props: Omit<Parameters<typeof CharacterSheetView>[0], 'sheet'> = {},
+) {
+  return renderToStaticMarkup(
+    <LocaleProvider storage={englishStorage()} documentTarget={null}>
+      <CharacterSheetView sheet={sheet} {...props} />
+    </LocaleProvider>,
+  )
+}
 
 const sheet: CharacterSheetDTO = {
   character_id: '00000000-0000-4000-8000-0000000000e0', current_version_id: '00000000-0000-4000-8000-0000000000e1', name: 'P0 Human Fighter 5 / Wizard 5', ruleset: 'dnd5e-2014', version_no: 1, total_level: 10,
@@ -40,7 +59,7 @@ const inventoryContent: ContentEntry[] = [{ key: 'srd5.1:equipment:shield', inde
 
 describe('P0-E Character Sheet', () => {
   it('renders the shared header and Page 1 contract without roleplay requirements', () => {
-    const html = renderToStaticMarkup(<CharacterSheetView sheet={sheet} conditionContent={conditions} />)
+    const html = renderSheet({ conditionContent: conditions })
     expect(html).toContain('P0 Human Fighter 5 / Wizard 5')
     expect(html).toContain('Lv. 10')
     expect(html).toContain('AC')
@@ -50,12 +69,12 @@ describe('P0-E Character Sheet', () => {
     expect(html).toContain('d6')
     expect(html).toContain('Second Wind')
     expect(html).toContain('Roleplay / Biography')
-    expect(html).toContain('尚未填寫角色扮演資料')
+    expect(html).toContain('No roleplay information has been entered yet')
     expect(html).toContain('role="combobox"')
   })
 
   it('keeps spell access and prepared state visibly distinct', () => {
-    const html = renderToStaticMarkup(<CharacterSheetView sheet={sheet} initialTab="spells" />)
+    const html = renderSheet({ initialTab: 'spells' })
     expect(html).toContain('Spellbook')
     expect(html).toContain('Prepared')
     expect(html).toContain('Unprepared')
@@ -66,12 +85,12 @@ describe('P0-E Character Sheet', () => {
   })
 
   it('renders live inventory quantity and equipment state with searchable add UI', () => {
-    const html = renderToStaticMarkup(<CharacterSheetView sheet={sheet} inventoryContent={inventoryContent} initialTab="inventory" />)
+    const html = renderSheet({ inventoryContent, initialTab: 'inventory' })
     expect(html).toContain('Live Inventory')
     expect(html).toContain('Potion of Healing')
     expect(html).toContain('Equipped')
     expect(html).toContain('Qty')
-    expect(html).toContain('加入物品')
+    expect(html).toContain('Add item')
     expect(html).toContain('role="combobox"')
   })
 })

@@ -9,9 +9,11 @@ import {
   createCharacterVersionDraft,
   type VersionedBuilderMode,
 } from '../../api/characterVersions'
+import { useUiCopy } from '../../i18n/useUiCopy'
 import './builder.css'
 
 export function CharacterWorkshopPage() {
+  const { t } = useUiCopy()
   const characters = useQuery({ queryKey: ['character-list'], queryFn: listCharacters })
   const drafts = useQuery({ queryKey: ['builder-drafts', 'create'], queryFn: listCreateBuilderDrafts })
   const createDraft = useMutation({
@@ -33,9 +35,9 @@ export function CharacterWorkshopPage() {
       <div className="workshop-shell">
         <header className="workshop-hero">
           <div>
-            <p className="eyebrow">P1-G · Character Workshop</p>
-            <h1>Character Workshop</h1>
-            <p>建立角色、升級既有 Build，或查看 immutable Build Version History。</p>
+            <p className="eyebrow">{t('workshop.eyebrow')}</p>
+            <h1>{t('workshop.title')}</h1>
+            <p>{t('workshop.description')}</p>
           </div>
           <button
             type="button"
@@ -43,7 +45,7 @@ export function CharacterWorkshopPage() {
             disabled={createDraft.isPending || versionDraft.isPending}
             onClick={() => createDraft.mutate()}
           >
-            {createDraft.isPending ? '建立中…' : '+ Create Character'}
+            {createDraft.isPending ? t('workshop.creating') : t('workshop.create')}
           </button>
         </header>
 
@@ -53,36 +55,37 @@ export function CharacterWorkshopPage() {
         <section className="workshop-section">
           <div className="workshop-section__heading">
             <div>
-              <span>UNFINISHED</span>
-              <h2>Creation Drafts</h2>
+              <span>{t('workshop.unfinished')}</span>
+              <h2>{t('workshop.creationDrafts')}</h2>
             </div>
-            <small>{drafts.data?.length ?? 0} drafts</small>
+            <small>{t('workshop.draftCount', { count: drafts.data?.length ?? 0 })}</small>
           </div>
-          {drafts.isLoading ? <p className="builder-muted">Loading drafts…</p> : null}
+          {drafts.isLoading ? <p className="builder-muted">{t('workshop.loadingDrafts')}</p> : null}
           {drafts.error ? <div className="error-banner">{drafts.error.message}</div> : null}
           <div className="workshop-grid">
             {drafts.data?.map((view) => (
               <article className="workshop-card draft-card" key={view.draft.id}>
-                <div className="workshop-card__mark">DRAFT</div>
-                <h3>{view.resolved_summary.name?.trim() || 'Unnamed character'}</h3>
+                <div className="workshop-card__mark">{t('workshop.draftBadge')}</div>
+                <h3>{view.resolved_summary.name?.trim() || t('workshop.unnamedCharacter')}</h3>
                 <p>
-                  {view.resolved_summary.race_name ?? 'Race not selected'} ·{' '}
-                  {view.resolved_summary.background_name ?? 'Background not selected'}
+                  {view.resolved_summary.race_name ?? t('workshop.raceNotSelected')} ·{' '}
+                  {view.resolved_summary.background_name ?? t('workshop.backgroundNotSelected')}
                 </p>
                 <div className="workshop-card__meta">
-                  <span>Revision {view.draft.revision}</span>
+                  <span>{t('workshop.revision', { revision: view.draft.revision })}</span>
                   <span>
-                    {view.validation.issues.filter((issue) => issue.severity === 'blocking_error').length}{' '}
-                    blockers
+                    {t('workshop.blockers', {
+                      count: view.validation.issues.filter((issue) => issue.severity === 'blocking_error').length,
+                    })}
                   </span>
                 </div>
                 <a className="button secondary full" href={`/character-builder/${view.draft.id}`}>
-                  Resume Draft →
+                  {t('workshop.resumeDraft')}
                 </a>
               </article>
             ))}
             {!drafts.isLoading && drafts.data?.length === 0 ? (
-              <div className="workshop-empty">沒有未完成的創角草稿。</div>
+              <div className="workshop-empty">{t('workshop.noDrafts')}</div>
             ) : null}
           </div>
         </section>
@@ -90,26 +93,26 @@ export function CharacterWorkshopPage() {
         <section className="workshop-section">
           <div className="workshop-section__heading">
             <div>
-              <span>CHARACTERS</span>
-              <h2>Existing Characters</h2>
+              <span>{t('workshop.charactersBadge')}</span>
+              <h2>{t('workshop.existingCharacters')}</h2>
             </div>
-            <small>{characters.data?.length ?? 0} characters</small>
+            <small>{t('workshop.characterCount', { count: characters.data?.length ?? 0 })}</small>
           </div>
-          {characters.isLoading ? <p className="builder-muted">Loading characters…</p> : null}
+          {characters.isLoading ? <p className="builder-muted">{t('workshop.loadingCharacters')}</p> : null}
           {characters.error ? <div className="error-banner">{characters.error.message}</div> : null}
           <div className="workshop-grid">
             {characters.data?.map((character) => (
               <article className="workshop-card" key={character.id}>
-                <div className="workshop-card__level">LV {character.level}</div>
+                <div className="workshop-card__level">{t('workshop.level', { level: character.level })}</div>
                 <h3>{character.name}</h3>
                 <p>{character.class_summary}</p>
                 <div className="workshop-card__meta">
-                  <span>Build v{character.version_no}</span>
-                  <span>{character.level >= 20 ? 'Max level' : 'Ready'}</span>
+                  <span>{t('workshop.buildVersion', { version: character.version_no })}</span>
+                  <span>{character.level >= 20 ? t('workshop.maxLevel') : t('workshop.ready')}</span>
                 </div>
                 <div className="workshop-card__actions">
                   <a className="button secondary full" href={`/characters/${character.id}`}>
-                    Open Character Sheet →
+                    {t('workshop.openSheet')}
                   </a>
                   <button
                     type="button"
@@ -119,7 +122,7 @@ export function CharacterWorkshopPage() {
                       versionDraft.mutate({ characterId: character.id, mode: 'level_up' })
                     }
                   >
-                    Level Up
+                    {t('workshop.levelUp')}
                   </button>
                   <div className="workshop-card__split-actions">
                     <button
@@ -130,7 +133,7 @@ export function CharacterWorkshopPage() {
                         versionDraft.mutate({ characterId: character.id, mode: 'build_edit' })
                       }
                     >
-                      Edit Build
+                      {t('workshop.editBuild')}
                     </button>
                     <button
                       type="button"
@@ -140,11 +143,11 @@ export function CharacterWorkshopPage() {
                         versionDraft.mutate({ characterId: character.id, mode: 'correction' })
                       }
                     >
-                      Correct Build
+                      {t('workshop.correctBuild')}
                     </button>
                   </div>
                   <a className="button secondary full" href={`/characters/${character.id}/versions`}>
-                    Version History
+                    {t('workshop.versionHistory')}
                   </a>
                 </div>
               </article>

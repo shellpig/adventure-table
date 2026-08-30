@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 import type { BuilderDraftPayload, BuilderView } from '../../api/characterBuilder'
-
+import type { UiCopyKey } from '../../i18n/uiCopy'
+import { useUiCopy } from '../../i18n/useUiCopy'
 
 type RoleplayField = 'personality_traits' | 'ideals' | 'bonds' | 'flaws'
 
@@ -18,11 +19,15 @@ type BackgroundContent = {
   }
 }
 
-const FIELDS: { key: RoleplayField; label: string; hint: string }[] = [
-  { key: 'personality_traits', label: 'Personality Traits', hint: 'Mannerisms, habits, and recognizable personality.' },
-  { key: 'ideals', label: 'Ideals', hint: 'Principles and values that guide the character.' },
-  { key: 'bonds', label: 'Bonds', hint: 'People, places, promises, or causes that matter.' },
-  { key: 'flaws', label: 'Flaws', hint: 'Weaknesses, temptations, blind spots, or bad habits.' },
+const FIELDS: {
+  key: RoleplayField
+  labelKey: UiCopyKey
+  hintKey: UiCopyKey
+}[] = [
+  { key: 'personality_traits', labelKey: 'roleplay.personality', hintKey: 'roleplay.personalityHint' },
+  { key: 'ideals', labelKey: 'roleplay.ideals', hintKey: 'roleplay.idealsHint' },
+  { key: 'bonds', labelKey: 'roleplay.bonds', hintKey: 'roleplay.bondsHint' },
+  { key: 'flaws', labelKey: 'roleplay.flaws', hintKey: 'roleplay.flawsHint' },
 ]
 
 export function roleplayLines(value: unknown): string[] {
@@ -53,7 +58,7 @@ export function appendRoleplaySuggestion(text: string, suggestion: string): stri
 
 async function getBackgroundContent(reference: string): Promise<BackgroundContent> {
   const response = await fetch(`/api/rules/content/backgrounds/${encodeURIComponent(reference)}`)
-  if (!response.ok) throw new Error(`Unable to load background suggestions (${response.status})`)
+  if (!response.ok) throw new Error(String(response.status))
   return (await response.json()) as BackgroundContent
 }
 
@@ -62,6 +67,7 @@ export function RoleplayProfileEditor({
   disabled,
   onSave,
 }: RoleplayProfileEditorProps) {
+  const { t } = useUiCopy()
   const profile = view.draft.draft_payload.roleplay_profile ?? {}
   const backgroundRef = view.draft.draft_payload.background_selection?.reference_id ?? ''
   const [draftText, setDraftText] = useState<Record<RoleplayField, string>>({
@@ -116,29 +122,30 @@ export function RoleplayProfileEditor({
   return (
     <div className="builder-optional roleplay-editor">
       <h3>
-        Roleplay Profile <span>Optional</span>
+        {t('roleplay.title')} <span>{t('shared.optional')}</span>
       </h3>
-      <p className="builder-hint">
-        Type your own notes, leave any field blank, or use a background suggestion. One line becomes one saved entry.
-      </p>
+      <p className="builder-hint">{t('roleplay.description')}</p>
       {!backgroundRef ? (
-        <p className="builder-muted">Choose a background to reveal its suggested characteristics.</p>
+        <p className="builder-muted">{t('roleplay.chooseBackground')}</p>
       ) : null}
       {backgroundQuery.error ? (
-        <div className="error-banner">{backgroundQuery.error.message}</div>
+        <div className="error-banner">
+          {t('sheet.contentError', { message: backgroundQuery.error.message })}
+        </div>
       ) : null}
 
       <div className="roleplay-grid">
         {FIELDS.map((field) => {
           const fieldSuggestions = suggestions[field.key] ?? []
+          const label = t(field.labelKey)
           return (
             <div className="roleplay-field" key={field.key}>
               <label className="builder-field">
-                <span>{field.label}</span>
+                <span>{label}</span>
                 <textarea
                   value={draftText[field.key]}
                   disabled={disabled}
-                  placeholder={field.hint}
+                  placeholder={t(field.hintKey)}
                   onChange={(event) =>
                     setDraftText((current) => ({
                       ...current,
@@ -149,7 +156,7 @@ export function RoleplayProfileEditor({
                 />
               </label>
               {fieldSuggestions.length ? (
-                <div className="roleplay-suggestions" aria-label={`${field.label} suggestions`}>
+                <div className="roleplay-suggestions" aria-label={t('roleplay.suggestionsAria', { label })}>
                   {fieldSuggestions.map((suggestion) => (
                     <button
                       type="button"

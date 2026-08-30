@@ -1,5 +1,7 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 
+import { useUiCopy } from '../i18n/useUiCopy'
+
 export type SearchOption = {
   value: string
   label: string
@@ -70,10 +72,11 @@ export function SearchableSelect({
   options,
   value,
   onChange,
-  placeholder = '輸入關鍵字或展開選單',
+  placeholder,
   disabled = false,
   secondaryMode = 'always',
 }: SearchableSelectProps) {
+  const { t } = useUiCopy()
   const inputId = useId()
   const listboxId = useId()
   const [open, setOpen] = useState(false)
@@ -81,6 +84,7 @@ export function SearchableSelect({
   const [query, setQuery] = useState(optionInputLabel(selected))
   const [activeIndex, setActiveIndex] = useState(0)
   const duplicateNames = useMemo(() => duplicateOptionNames(options), [options])
+  const resolvedPlaceholder = placeholder ?? t('shared.search.placeholder')
 
   useEffect(() => {
     if (value) setQuery(optionInputLabel(options.find((option) => option.value === value)))
@@ -120,7 +124,7 @@ export function SearchableSelect({
             open && rankedOptions[activeIndex] ? `${listboxId}-${activeIndex}` : undefined
           }
           value={query}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           autoComplete="off"
           disabled={disabled}
           onFocus={() => setOpen(true)}
@@ -163,7 +167,7 @@ export function SearchableSelect({
         <button
           type="button"
           className="combobox-toggle"
-          aria-label={`${label}：${open ? '收合' : '展開'}選單`}
+          aria-label={t(open ? 'shared.search.collapse' : 'shared.search.expand', { label })}
           disabled={disabled}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => setOpen((current) => !current)}
@@ -201,7 +205,7 @@ export function SearchableSelect({
               )
             })
           ) : (
-            <div className="combobox-empty">找不到符合「{query}」的項目</div>
+            <div className="combobox-empty">{t('shared.search.empty', { query })}</div>
           )}
         </div>
       ) : null}
