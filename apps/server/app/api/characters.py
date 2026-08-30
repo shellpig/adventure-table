@@ -37,7 +37,6 @@ class CharacterListItem(BaseModel):
     level: int = Field(ge=1, le=20)
     class_summary: str
     version_no: int = Field(ge=1)
-    current_version_id: UUID
 
 
 class CharacterStatePatch(BaseModel):
@@ -75,7 +74,6 @@ def list_characters(
             level=character.build.character_level,
             class_summary=_class_summary(character, repository),
             version_no=character.version_no,
-            current_version_id=character.current_version_id,
         )
         for character in repository.list_characters()
     ]
