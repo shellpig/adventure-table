@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.content.identity import parse_stable_key, require_pack_id
+
 
 StableKey = str
 SpellAccessType = Literal["known", "spellbook", "always_prepared", "granted"]
@@ -15,12 +17,7 @@ HitDie = Literal["d6", "d8", "d10", "d12"]
 
 
 def require_stable_key(value: str, *, kinds: set[str] | None = None) -> str:
-    parts = value.split(":", 2)
-    if len(parts) != 3 or parts[0] != "srd5.1" or not parts[1] or not parts[2]:
-        raise ValueError("reference must use stable key format srd5.1:<kind>:<index>")
-    if kinds is not None and parts[1] not in kinds:
-        expected = ", ".join(sorted(kinds))
-        raise ValueError(f"reference kind must be one of: {expected}")
+    parse_stable_key(value, kinds=kinds)
     return value
 
 
@@ -186,6 +183,15 @@ class CharacterBuild(FrozenModel):
     starting_equipment: tuple[StartingEquipmentEntry, ...] = ()
     roleplay_profile: RoleplayProfile = RoleplayProfile()
     numeric_overrides: tuple[NumericOverride, ...] = ()
+
+    @field_validator("content_sources")
+    @classmethod
+    def content_sources_are_pack_ids(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if len(value) != len(set(value)):
+            raise ValueError("content_sources must be unique")
+        for source in value:
+            require_pack_id(source)
+        return value
 
     @field_validator("race_ref")
     @classmethod
