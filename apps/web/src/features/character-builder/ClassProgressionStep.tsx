@@ -6,8 +6,8 @@ import {
   type BuilderView,
 } from '../../api/characterBuilder'
 import { optionDisplay, SearchableSelect } from '../../components/SearchableSelect'
+import { useUiCopy } from '../../i18n/useUiCopy'
 import './progression.css'
-
 
 type Props = {
   view: BuilderView
@@ -35,6 +35,7 @@ function LevelChoiceEditor({
   disabled: boolean
   onSave: (payload: BuilderDraftPayload) => void
 }) {
+  const { t } = useUiCopy()
   const selected = view.draft.draft_payload.choice_selections?.[choice.choice_id]?.selected_option_ids ?? []
   const saveSelected = (next: string[]) => {
     onSave({
@@ -98,7 +99,7 @@ function LevelChoiceEditor({
         ))}
       </div>
       <SearchableSelect
-        label="Add selection"
+        label={t('shared.addSelection')}
         value=""
         disabled={disabled || !canAdd}
         secondaryMode="duplicates"
@@ -109,7 +110,7 @@ function LevelChoiceEditor({
             disabled: option.disabled || (!choice.allow_duplicates && alreadySelected),
             disabledReason:
               !choice.allow_duplicates && alreadySelected
-                ? 'Already selected'
+                ? t('shared.alreadySelected')
                 : option.disabledReason,
           }
         })}
@@ -124,6 +125,7 @@ function LevelChoiceEditor({
 }
 
 export function ClassProgressionStep({ view, disabled, onSave }: Props) {
+  const { t } = useUiCopy()
   const targetLevel = view.draft.draft_payload.target_level ?? 0
   const savedLevels = view.draft.draft_payload.level_choices ?? []
   const choicesById = new Map(view.choices.map((choice) => [choice.choice_id, choice]))
@@ -187,28 +189,24 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
   }
 
   if (!targetLevel) {
-    return <p className="builder-muted">Set a target level first.</p>
+    return <p className="builder-muted">{t('class.targetFirst')}</p>
   }
 
   return (
     <div className="builder-step class-progression-step">
       <div className="builder-step__heading">
-        <p className="eyebrow">STEP 04</p>
-        <h2>Build the level rail</h2>
-        <p>
-          Every row is one real Character Level. Class level, multiclass prerequisites, subclass timing,
-          ASI / Feat choices, structural feature choices, grants and HP are recalculated by the server
-          from this exact order.
-        </p>
+        <p className="eyebrow">{t('class.step')}</p>
+        <h2>{t('class.title')}</h2>
+        <p>{t('class.description')}</p>
       </div>
 
       <div className="progression-overview">
-        <div><span>Starting class</span><strong>{view.resolved_summary.starting_class_name ?? 'Choose Lv1'}</strong></div>
-        <div><span>Progression</span><strong>{view.resolved_summary.class_summary ?? 'Not started'}</strong></div>
-        <div><span>Filled</span><strong>{savedLevels.length} / {targetLevel}</strong></div>
+        <div><span>{t('class.startingClass')}</span><strong>{view.resolved_summary.starting_class_name ?? t('class.chooseLv1')}</strong></div>
+        <div><span>{t('class.progression')}</span><strong>{view.resolved_summary.class_summary ?? t('class.notStarted')}</strong></div>
+        <div><span>{t('class.filled')}</span><strong>{savedLevels.length} / {targetLevel}</strong></div>
       </div>
 
-      <div className="level-rail" aria-label="Class progression level rail">
+      <div className="level-rail" aria-label={t('class.railAria')}>
         {Array.from({ length: targetLevel }, (_, index) => {
           const level = index + 1
           const current = savedLevels[index]
@@ -240,7 +238,7 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
               <div className="level-node__body">
                 {classChoice ? (
                   <SearchableSelect
-                    label={`Level ${level} class`}
+                    label={t('class.levelClass', { level })}
                     value={current?.class_ref ?? ''}
                     disabled={disabled || !canEdit}
                     options={optionsFor(classChoice)}
@@ -250,7 +248,7 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
                 ) : null}
 
                 {!canEdit ? (
-                  <p className="builder-muted">Complete the previous level first.</p>
+                  <p className="builder-muted">{t('class.previousFirst')}</p>
                 ) : null}
 
                 {node && current ? (
@@ -258,30 +256,30 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
                     <div className="level-node__meta">
                       <span>{node.class_name} {node.class_level}</span>
                       <span>d{node.hit_die_size}</span>
-                      {node.starting_class ? <em>Starting class</em> : null}
-                      {node.multiclass_entry ? <em>Multiclass entry</em> : null}
+                      {node.starting_class ? <em>{t('class.startingClassBadge')}</em> : null}
+                      {node.multiclass_entry ? <em>{t('class.multiclassBadge')}</em> : null}
                     </div>
 
                     {level === 1 ? (
                       <div className="hp-row">
-                        <div><span>HP method</span><strong>First-level maximum</strong></div>
-                        <div><span>Base gain</span><strong>{current.hp_base_gain}</strong></div>
+                        <div><span>{t('class.hpMethod')}</span><strong>{t('class.firstLevelMax')}</strong></div>
+                        <div><span>{t('class.baseGain')}</span><strong>{current.hp_base_gain}</strong></div>
                       </div>
                     ) : (
                       <div className="hp-editor">
                         <label className="builder-field">
-                          <span>HP method</span>
+                          <span>{t('class.hpMethod')}</span>
                           <select
                             value={current.hp_method}
                             disabled={disabled}
                             onChange={(event) => setHPMethod(level, event.target.value as BuilderHPMethod)}
                           >
-                            <option value="fixed_average">Fixed average ({node.fixed_hp_gain})</option>
-                            <option value="manual_rolled">Manual rolled</option>
+                            <option value="fixed_average">{t('class.fixedAverage', { value: node.fixed_hp_gain })}</option>
+                            <option value="manual_rolled">{t('class.manualRolled')}</option>
                           </select>
                         </label>
                         <label className="builder-field">
-                          <span>Base HP gain</span>
+                          <span>{t('class.baseHpGain')}</span>
                           <input
                             type="number"
                             min={1}
@@ -301,7 +299,7 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
 
                     {subclassChoice ? (
                       <SearchableSelect
-                        label={`${node.class_name} subclass · required at class level ${node.class_level}`}
+                        label={t('class.subclass', { className: node.class_name, level: node.class_level })}
                         value={current.subclass_ref ?? ''}
                         disabled={disabled}
                         options={optionsFor(subclassChoice)}
@@ -322,10 +320,10 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
 
                     {node.automatic_feature_refs.length ? (
                       <details className="feature-preview">
-                        <summary>{node.automatic_feature_refs.length} automatic feature(s)</summary>
+                        <summary>{t('class.automaticFeatures', { count: node.automatic_feature_refs.length })}</summary>
                         <ul>
                           {node.automatic_feature_refs.map((feature) => (
-                            <li key={feature}>{feature.split(':').at(-1)?.replaceAll('-', ' ') ?? 'Unknown feature'}</li>
+                            <li key={feature}>{feature.split(':').at(-1)?.replaceAll('-', ' ') ?? t('shared.unknownFeature')}</li>
                           ))}
                         </ul>
                       </details>
