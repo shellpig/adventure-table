@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir .
 COPY apps/server/alembic.ini ./
 COPY apps/server/alembic ./alembic
 COPY data/srd5.1 /app/data/srd5.1
+COPY data/phb2014 /app/data/phb2014
 COPY data/rules /app/data/rules
 
 EXPOSE 8000
