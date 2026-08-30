@@ -33,9 +33,9 @@ Built-in Content：**SRD 5.1**
 
 ## 當前進度
 
-目前狀態：**P0 — Character Core + SRD / Rules Foundation 已完成。P1 — Character Builder Complete 已完成 P1-A～P1-F；網站現在已能從空白 Builder Draft 經 Basic / Origin / Abilities / Class / Spellcasting / Starting Equipment / Review，原子建立正式 Character + immutable Build Version 1 + initial Current State，並直接開啟 Character Sheet。下一個 Subphase 是 P1-G — Level Up & Character Versions，尚未開始。**
+目前狀態：**P0 — Character Core + SRD / Rules Foundation 與 P1 — Character Builder Complete 均已完成並關門。P1-A～P1-H 全部完成；網站現在能從空白 Builder Draft 建立 Lv1 或高等角色，保存完整 level-by-level progression / Multiclass / Subclass / ASI / Feat / Spellcasting / Starting Equipment，原子建立 Character + immutable Build Version 1 + initial Current State；Existing Character 也能進行 Level Up，建立 immutable Version N+1、reconcile live Current State，並查看 Version History。**
 
-> **下一步規則：只有在使用者明確要求開始 P1-G 後，才進 P1-G coding。不得自行提前實作 P1-G / P1-H。**
+> **下一步是 P2 — Room / Campaign / Session / Seat 的規劃與 Subphase 拆分。只有在使用者明確要求開始 P2 後，才讀當時 codebase、拆 P2 Subphases、建立 `docs/P2/` 三份對齊文件；不得直接跳進 P2 coding，也不得提前拆 P3～P8。**
 
 已完成的產品／規劃工作：
 
@@ -83,13 +83,13 @@ P1 共通原則：
 - Lv2+ HP：Fixed Average / Manual Rolled Result；P1 不做正式 `Roll HP`。
 - Starting Equipment 做完整 structured choices；P1 不做 Starting Gold shopping workflow。
 - Spell access identity 與 live prepared state / resource usage 分離。
-- Level Up Current State reconciliation 已定：保留 damage delta、舊資源消耗不回滿、新 Hit Die 可用、Prepared 合法者保留、Inventory / Conditions 等 live state 延續。
+- Level Up Current State reconciliation：保留 damage delta、舊資源消耗不回滿、新 Hit Die 可用、Prepared 合法者保留、Inventory / Conditions 等 live state 延續。
 - Character JSON Import / Export 留 P7；Builder MCP / AI transport 留後續對應 Phase。
 - Human UI 與未來 AI Tool 應共用同一 server-authoritative Builder domain，不在 React 複製規則引擎。
 
 ---
 
-## P1-A～P1-F 已完成內容
+## P1-A～P1-H 已完成內容
 
 ### P1-A — Builder Domain & Draft Foundation
 
@@ -154,6 +154,28 @@ P1 共通原則：
 - P1-F regression 覆蓋 equipment deterministic resolution、nested category、quantities、Starting Gold exclusion、Review、initial State、double-submit、Version 1 metadata、inventory isolation 與 forced transaction rollback。
 - real-browser closeout 覆蓋從 Character Workshop 建立 Lv1 角色、Starting Equipment、Review、Confirm 到 Character Sheet 的完整 Create flow。
 
+### P1-G — Level Up & Character Versions
+
+- Existing Character 可建立 versioned Builder Draft，Draft 明確綁定 `base_version_id`，不直接修改既有 immutable Build。
+- Level Up Confirm append immutable Version N+1，保存 parent / superseded lineage 與 `version_kind`；Version 1 永不覆寫。
+- stale base version 由 server 阻擋，避免兩個舊 Draft 同時覆蓋目前 Build。
+- Level Up Review 同時產生 Build candidate 與 Current State reconciliation preview。
+- reconciliation 保留既有 damage delta、Temporary HP、Conditions、Inventory 與合法 Prepared；既有資源不因升級自動回滿，新取得 Hit Die / capacity 依規則增加。
+- Starting Equipment 只保留 Build provenance；Level Up 不從 starting equipment 重建 live Inventory。
+- Character Workshop 提供 Level Up / Edit Build / Correct Build / Version History 入口；Version History 清楚區分 immutable Build history 與 live Current State。
+- real-backend Playwright 覆蓋 Lv1 Barbarian → Lv2、HP damage-delta reconciliation、Temp HP / Inventory preservation、Hit Die 增加與 Version 1 / 2 history。
+
+### P1-H — Full P1 Integration & Closeout
+
+- CI 升級為 **P1 Full Regression**：backend pytest、fresh Alembic、P0 schema → P1 head migration、frontend build / Vitest、Docker full stack、Playwright、restart persistence 全部納入同一 gate。
+- P0 → P1 migration 會先在真正 P0 schema 寫入 legacy Fighter 5 / Wizard 5 Character，再升到 head，驗證 Build / Current State 不變且 P1 metadata / Draft schema 正確補齊。
+- 新增 direct high-level real-backend E2E：從 UI 建立 **Fighter 5 / Wizard 5 Character Level 10**，完整經過 progression、Subclass、ASI、Spellbook、Starting Equipment、Review、Confirm，並驗證正式 Build v1 / initial Current State。
+- 高等 Create E2E 明確等待 server-persisted Draft revision，並驗證 browser reload 後 progression 不遺失。
+- P1 full flow 保留既有 Lv1 Create、Level Up / Version History 與 P0 Character Sheet regression，共 **15 個 Playwright flows 全綠**。
+- server restart 驗證同時覆蓋 P0 Character Current State、P1 active Builder Draft、P1 Level-Up Character v2、Version History 與 Current State，重啟前後資料一致。
+- closeout smoke artifact 覆蓋 Workshop、Level Rail desktop/mobile、Spellcasting / searchable spell selector、Review、Character Sheet、Level Up reconciliation、Version History；人工檢視並修正 Version History badge positioning 回歸。
+- P1-H 不新增 P2 system；P1 關門後停在 P2 規劃邊界。
+
 ---
 
 ## Phase Roadmap
@@ -172,7 +194,7 @@ P1 共通原則：
 | **P7** | **Snapshot / Export** | Timeline、Snapshot / Restore、Archive lifecycle、Character / Adventure / Campaign / Room Import / Export；不做 Undo 機制 |
 | **P8** | **QA / Polish** | 全流程整合測試、權限與 AI reconnect、錯誤處理、效能、Responsive UI、UX polish 與第一版收尾 |
 
-P1 已拆 Subphase；**P2～P8 仍維持大 Phase，不提前拆。**
+P1 已完成並關門；**P2～P8 仍維持大 Phase，不提前拆。**
 
 ---
 
@@ -203,10 +225,10 @@ P1 已拆 Subphase；**P2～P8 仍維持大 Phase，不提前拆。**
 | **P1-D — ASI, Feat & Structural Choices** | ✅ | ASI / Feat timing、prerequisites、generic structural choice resolver、Numeric Override boundary |
 | **P1-E — Spellcasting Progression** | ✅ | Known / Spellbook / Prepared / Always Prepared、multiclass slots、Pact Magic、source profiles |
 | **P1-F — Equipment, Review & Character Creation** | ✅ | Starting Equipment nested choices、Review、atomic Create Confirm、Version 1 + initial State |
-| **P1-G — Level Up & Character Versions** | ⬜ | Level Up Draft、immutable Version N+1、Version History、stale base guard、State reconciliation、correction/build edit |
-| **P1-H — Full P1 Integration & Closeout** | ⬜ | P1 full regression、Create / high-level / multiclass / caster / Level Up E2E、P0 regression、closeout |
+| **P1-G — Level Up & Character Versions** | ✅ | Level Up Draft、immutable Version N+1、Version History、stale base guard、State reconciliation、correction/build edit |
+| **P1-H — Full P1 Integration & Closeout** | ✅ | P1 full regression、Create / high-level / multiclass / caster / Level Up E2E、P0 regression、migration / restart persistence / smoke closeout |
 
-**P1-G 是下一個可實作 Subphase；未獲使用者明確要求前不得開始 P1-G coding。**
+**P1 已完成並關門。下一步是 P2 規劃與 Subphase 拆分；未獲使用者明確要求前不得開始 P2 coding。**
 
 P1 的具體 DB / API / module 契約只住在 `docs/P1/開發設計方針.md`；本 Brief 不重複維護細節。
 
@@ -238,9 +260,7 @@ docs/P0/測試指南.md
 
 ### P1 — Character Builder Complete
 
-P1 把「角色資料能存在」提升成「網站能依 D&D 5e 2014 規則建立與成長角色」。
-
-目前 P1-A～P1-F 已完成 Create Character 主線；尚待 P1-G / P1-H 補上 Level Up / Version workflow 與整體 P1 closeout。
+P1 把「角色資料能存在」提升成「網站能依 D&D 5e 2014 規則建立與成長角色」，目前 **P1-A～P1-H 已全部完成並 closeout**。
 
 核心驗證案例包括：
 
@@ -248,7 +268,9 @@ P1 把「角色資料能存在」提升成「網站能依 D&D 5e 2014 規則建�
 - 直接建立高等角色，但保存完整逐級 progression。
 - 建立 Fighter 5 / Wizard 5 等 Multiclass 角色，不直接改底層資料。
 - 正確處理 Subclass、ASI / Feat、Spell progression、Starting Equipment。
-- Existing Character 可 Level Up 並產生新 immutable Build Version，Current State 依規則 reconciliation（P1-G）。
+- Existing Character 可 Level Up 並產生新 immutable Build Version，Current State 依規則 reconciliation。
+- P0 legacy Character 可安全 migration 到 P1 schema，P0 Character Sheet 行為維持 regression green。
+- Draft / Character / Version / Current State 在 browser reload 與 server restart 後保持一致。
 
 P1 正式文件：
 
@@ -315,7 +337,7 @@ docs/
 使用者明確要求後才開始 coding
 ```
 
-Subphase 只拆當前 Phase；例如目前只拆 P1，不拆 P2～P8。
+Subphase 只拆當前 Phase；**P1 已關門，下一次獲准規劃時只拆 P2，不拆 P3～P8。**
 
 可以保留必要的跨 Phase 相容性／承接要求，但**不要因此提前設計後續 Phase 的 schema / API / module**。
 
@@ -328,7 +350,7 @@ Subphase 只拆當前 Phase；例如目前只拆 P1，不拆 P2～P8。
 1. 先讀 `AGENTS.md`。
 2. 再讀 `PROJECT_BRIEF.md` 取得目前 Phase、Subphase 與下一步。
 3. 按任務讀 `規格企劃.md` 對應章節。
-4. P1 實作／驗收依 Subphase id 讀 `docs/P1/實作規格.md`、`開發設計方針.md`、`測試指南.md` 的同名段落；必要時再回看 P0 相容契約。
+4. 已完成 Phase 的實作／驗收回查對應 `docs/Px/`；新 Phase 必須先完成 Subphase 拆分與三份正式文件，再依同名 Subphase 開工。
 5. 不重新討論已定案產品規格。
 6. 不為還沒開工的 Phase 預先設計具體實作。
 7. **未獲使用者明確要求，不開始 coding。**

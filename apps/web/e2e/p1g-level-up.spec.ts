@@ -73,7 +73,7 @@ async function createBarbarianOne(page: Page) {
 }
 
 
-test('P1-G levels up through the real backend and preserves live Current State', async ({ page, request }) => {
+test('P1-G levels up through the real backend and preserves live Current State', async ({ page, request }, testInfo) => {
   test.slow()
   await createBarbarianOne(page)
 
@@ -114,6 +114,7 @@ test('P1-G levels up through the real backend and preserves live Current State',
   await expect(page.getByText('Existing damage delta is preserved')).toBeVisible()
   await expect(page.getByText('18', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('No blocking issues. Confirm will append one immutable Build Version and reconcile Current State in one transaction.')).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('p1-h-level-up-reconciliation.png'), fullPage: true })
 
   const confirm = page.getByRole('button', { name: 'Confirm Level Up' })
   await expect(confirm).toBeEnabled()
@@ -137,4 +138,5 @@ test('P1-G levels up through the real backend and preserves live Current State',
   await expect(page.getByRole('heading', { name: 'Version 2' })).toBeVisible()
   await expect(page.getByText('Level Up', { exact: true })).toBeVisible()
   await expect(page.getByText('CURRENT', { exact: true })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('p1-h-version-history.png'), fullPage: true })
 })
