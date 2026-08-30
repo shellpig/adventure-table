@@ -85,7 +85,10 @@ def create_builder_draft(
     try:
         return service.create_draft(request)
     except BuilderModeNotEnabledError as exc:
-        raise APIError(422, "builder_mode_requires_character", str(exc)) from exc
+        # Keep the P1-A public error contract for callers that try to create a
+        # versioned draft through the generic create endpoint. P1-G adds the
+        # character-scoped endpoint below rather than changing this response.
+        raise APIError(422, "builder_mode_not_enabled", str(exc)) from exc
 
 
 @router.post(
@@ -146,6 +149,8 @@ def patch_builder_draft(
         raise _already_confirmed(exc) from exc
     except BuilderDraftRevisionConflictError as exc:
         raise APIError(409, "stale_draft_revision", str(exc)) from exc
+    except ValueError as exc:
+        raise APIError(422, "builder_patch_invalid", str(exc)) from exc
 
 
 @router.post("/drafts/{draft_id}/validate", response_model=BuilderValidationResult)
