@@ -1,13 +1,13 @@
-name: P0 Full Regression
+name: P1 Full Regression
 
 on:
   push:
   pull_request:
 
 jobs:
-  foundation:
+  p1-full-regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v4
@@ -24,11 +24,128 @@ jobs:
         working-directory: apps/server
         run: pytest
 
-      - name: Validate Alembic baseline
+      - name: Validate Alembic fresh database
         working-directory: apps/server
         env:
-          DATABASE_URL: "sqlite+pysqlite:///:memory:"
-        run: alembic upgrade head
+          DATABASE_URL: "sqlite+pysqlite:////tmp/adventure-table-p1-fresh.db"
+        run: |
+          rm -f /tmp/adventure-table-p1-fresh.db
+          alembic upgrade head
+
+      - name: Validate P0 to P1 migration and legacy character compatibility
+        working-directory: apps/server
+        env:
+          DATABASE_URL: "sqlite+pysqlite:////tmp/adventure-table-p0-to-p1.db"
+        run: |
+          rm -f /tmp/adventure-table-p0-to-p1.db /tmp/adventure-table-p0-before-p1.json
+          alembic upgrade 0002_p0c_character_core
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from uuid import uuid4
+
+          from sqlalchemy import MetaData, create_engine
+
+          from app.domain.character.fixture import (
+              P0_FIXTURE_ID,
+              P0_FIXTURE_NAME,
+              build_p0_fighter_wizard_fixture,
+              build_p0_fighter_wizard_state,
+          )
+
+          engine = create_engine(os.environ["DATABASE_URL"])
+          metadata = MetaData()
+          metadata.reflect(
+              engine,
+              only=["characters", "character_versions", "character_states"],
+          )
+          characters = metadata.tables["characters"]
+          versions = metadata.tables["character_versions"]
+          states = metadata.tables["character_states"]
+
+          build = build_p0_fighter_wizard_fixture()
+          state = build_p0_fighter_wizard_state(build)
+          version_id = uuid4()
+          build_payload = build.model_dump(mode="json")
+          state_payload = state.model_dump(mode="json")
+
+          with engine.begin() as connection:
+              connection.execute(
+                  characters.insert().values(
+                      id=P0_FIXTURE_ID,
+                      name=P0_FIXTURE_NAME,
+                      ruleset=build.ruleset,
+                      current_version_id=version_id,
+                  )
+              )
+              connection.execute(
+                  versions.insert().values(
+                      id=version_id,
+                      character_id=P0_FIXTURE_ID,
+                      version_no=1,
+                      build_payload=build_payload,
+                  )
+              )
+              connection.execute(
+                  states.insert().values(
+                      character_id=P0_FIXTURE_ID,
+                      state_payload=state_payload,
+                  )
+              )
+
+          Path("/tmp/adventure-table-p0-before-p1.json").write_text(
+              json.dumps({"build": build_payload, "state": state_payload}),
+              encoding="utf-8",
+          )
+          engine.dispose()
+          PY
+          alembic upgrade head
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          from sqlalchemy import MetaData, create_engine, inspect, select
+
+          from app.content import load_default_content_registry
+          from app.domain.character.fixture import P0_FIXTURE_ID
+          from app.persistence.characters import CharacterRepository
+
+          engine = create_engine(os.environ["DATABASE_URL"])
+          expected = json.loads(
+              Path("/tmp/adventure-table-p0-before-p1.json").read_text(encoding="utf-8")
+          )
+          repository = CharacterRepository(engine, load_default_content_registry())
+          character = repository.load_character(P0_FIXTURE_ID)
+
+          assert character.build.model_dump(mode="json") == expected["build"]
+          assert character.state.model_dump(mode="json") == expected["state"]
+
+          metadata = MetaData()
+          metadata.reflect(engine, only=["character_versions"])
+          versions = metadata.tables["character_versions"]
+          with engine.connect() as connection:
+              row = connection.execute(
+                  select(
+                      versions.c.version_kind,
+                      versions.c.parent_version_id,
+                      versions.c.superseded_by_version_id,
+                  ).where(versions.c.character_id == P0_FIXTURE_ID)
+              ).mappings().one()
+          assert row["version_kind"] == "legacy"
+          assert row["parent_version_id"] is None
+          assert row["superseded_by_version_id"] is None
+
+          inspector = inspect(engine)
+          table_names = set(inspector.get_table_names())
+          assert "character_build_drafts" in table_names
+          draft_columns = {
+              column["name"] for column in inspector.get_columns("character_build_drafts")
+          }
+          assert {"base_version_id", "confirmed_version_id"} <= draft_columns
+          engine.dispose()
+          PY
 
       - uses: actions/setup-node@v4
         with:
@@ -68,20 +185,20 @@ jobs:
       - name: Seed deterministic P0 fixture
         run: docker compose exec -T server python -m app.scripts.seed_p0_fighter_wizard
 
-      - name: Run Playwright P0 flow
+      - name: Run Playwright P0 and P1 flows
         working-directory: apps/web
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:5173
         run: npm run test:e2e
 
-      - name: Upload P0-F smoke screenshots
+      - name: Upload closeout smoke screenshots
         uses: actions/upload-artifact@v4
         with:
-          name: p0-f-smoke-screenshots
+          name: p1-closeout-smoke-screenshots
           path: apps/web/test-results/**/p0-f-*.png
           if-no-files-found: error
 
-      - name: Prepare P0-F restart persistence state
+      - name: Prepare P0 and P1 restart persistence state
         run: |
           python - <<'PY'
           import json
@@ -89,13 +206,13 @@ jobs:
           from urllib.request import Request, urlopen
 
           base = "http://127.0.0.1:8000"
-          character_id = "00000000-0000-4000-8000-0000000000e0"
+          p0_character_id = "00000000-0000-4000-8000-0000000000e0"
 
           def get_json(path: str):
               with urlopen(f"{base}{path}") as response:
                   return json.load(response)
 
-          before = get_json(f"/api/characters/{character_id}")
+          before = get_json(f"/api/characters/{p0_character_id}")
           payload = {
               "current_hp": 63,
               "temporary_hp": 5,
@@ -147,7 +264,7 @@ jobs:
               ],
           }
           request = Request(
-              f"{base}/api/characters/{character_id}/state",
+              f"{base}/api/characters/{p0_character_id}/state",
               data=json.dumps(payload).encode("utf-8"),
               method="PATCH",
               headers={"Content-Type": "application/json"},
@@ -155,7 +272,7 @@ jobs:
           with urlopen(request) as response:
               json.load(response)
 
-          mutated = get_json(f"/api/characters/{character_id}")
+          mutated = get_json(f"/api/characters/{p0_character_id}")
           assert mutated["current_version_id"] == before["current_version_id"]
           assert mutated["version_no"] == before["version_no"] == 1
           assert mutated["build"] == before["build"]
@@ -177,9 +294,38 @@ jobs:
               ),
               encoding="utf-8",
           )
+
+          active_drafts = get_json("/api/character-builder/drafts")
+          p1_draft = next(
+              item
+              for item in active_drafts
+              if item["resolved_summary"].get("name") == "P1-D Browser Hero"
+          )
+          characters = get_json("/api/characters")
+          p1_summary = next(
+              item for item in characters if item["name"] == "P1-G Browser Hero"
+          )
+          p1_character = get_json(f"/api/characters/{p1_summary['id']}")
+          p1_versions = get_json(f"/api/characters/{p1_summary['id']}/versions")
+          assert p1_character["version_no"] == 2
+          assert len(p1_versions) == 2
+
+          Path("/tmp/p1h-before-restart.json").write_text(
+              json.dumps(
+                  {
+                      "draft_id": p1_draft["draft"]["id"],
+                      "draft": p1_draft["draft"],
+                      "resolved_summary": p1_draft["resolved_summary"],
+                      "character_id": p1_summary["id"],
+                      "character": p1_character,
+                      "versions": p1_versions,
+                  }
+              ),
+              encoding="utf-8",
+          )
           PY
 
-      - name: Restart server and verify P0-F persistence
+      - name: Restart server and verify P0 and P1 persistence
         run: |
           docker compose restart server
           curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8000/ready
@@ -189,7 +335,7 @@ jobs:
           from urllib.request import urlopen
 
           base = "http://127.0.0.1:8000"
-          character_id = "00000000-0000-4000-8000-0000000000e0"
+          p0_character_id = "00000000-0000-4000-8000-0000000000e0"
 
           def get_json(path: str):
               with urlopen(f"{base}{path}") as response:
@@ -198,8 +344,8 @@ jobs:
           expected = json.loads(
               Path("/tmp/p0f-before-restart.json").read_text(encoding="utf-8")
           )
-          character = get_json(f"/api/characters/{character_id}")
-          sheet = get_json(f"/api/characters/{character_id}/sheet")
+          character = get_json(f"/api/characters/{p0_character_id}")
+          sheet = get_json(f"/api/characters/{p0_character_id}/sheet")
 
           assert character["current_version_id"] == expected["current_version_id"]
           assert character["version_no"] == expected["version_no"] == 1
@@ -219,6 +365,27 @@ jobs:
           inventory = {entry["entry_id"]: entry for entry in sheet["inventory"]}
           assert inventory["inventory:shield"]["equipped"] is False
           assert inventory["inventory:healing-potion"]["quantity"] == 1
+
+          expected_p1 = json.loads(
+              Path("/tmp/p1h-before-restart.json").read_text(encoding="utf-8")
+          )
+          draft = get_json(
+              f"/api/character-builder/drafts/{expected_p1['draft_id']}"
+          )
+          p1_character = get_json(
+              f"/api/characters/{expected_p1['character_id']}"
+          )
+          p1_versions = get_json(
+              f"/api/characters/{expected_p1['character_id']}/versions"
+          )
+
+          assert draft["draft"] == expected_p1["draft"]
+          assert draft["resolved_summary"] == expected_p1["resolved_summary"]
+          assert p1_character == expected_p1["character"]
+          assert p1_versions == expected_p1["versions"]
+          assert p1_character["version_no"] == 2
+          assert p1_character["state"]["current_hp"] == 18
+          assert p1_character["state"]["temporary_hp"] == 3
           PY
 
       - name: Show container logs on failure
