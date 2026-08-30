@@ -5,8 +5,10 @@ import {
   getBuilderReview,
   type BuilderChoice,
   type BuilderDraftPayload,
+  type BuilderReviewDTO,
   type BuilderView,
 } from '../../api/characterBuilder'
+import type { StateReconciliationPreview } from '../../api/characterVersions'
 import { SearchableSelect } from '../../components/SearchableSelect'
 
 
@@ -14,6 +16,10 @@ type EquipmentReviewStepProps = {
   view: BuilderView
   disabled: boolean
   onSave: (payload: BuilderDraftPayload) => void
+}
+
+type P1GReview = BuilderReviewDTO & {
+  reconciliation?: StateReconciliationPreview | null
 }
 
 function selectedIds(raw: unknown): string[] {
@@ -37,11 +43,19 @@ function optionsFor(choice: BuilderChoice) {
   }))
 }
 
+function modeLabel(mode: BuilderView['draft']['mode']) {
+  if (mode === 'level_up') return 'Level Up'
+  if (mode === 'build_edit') return 'Build Edit'
+  if (mode === 'correction') return 'Correction'
+  return 'Create'
+}
+
 export function EquipmentReviewStep({
   view,
   disabled,
   onSave,
 }: EquipmentReviewStepProps) {
+  const versioned = view.draft.mode !== 'create'
   const equipmentChoices = view.choices.filter(
     (choice) => choice.option_source === 'equipment',
   )
@@ -66,7 +80,7 @@ export function EquipmentReviewStep({
     })
   }
 
-  const review = reviewQuery.data
+  const review = reviewQuery.data as P1GReview | undefined
   const busy = disabled || confirm.isPending
   const blockingCount =
     review?.issues.filter((issue) => issue.severity === 'blocking_error').length ??
@@ -76,98 +90,107 @@ export function EquipmentReviewStep({
   return (
     <div className="builder-step">
       <div className="builder-step__heading">
-        <p className="eyebrow">STEP 06 · P1-F</p>
-        <h2>Equipment & final review</h2>
+        <p className="eyebrow">STEP 06 · P1-G</p>
+        <h2>{versioned ? `${modeLabel(view.draft.mode)} review` : 'Equipment & final review'}</h2>
         <p>
-          Starting equipment becomes immutable Build provenance. Confirm copies it
-          into live inventory exactly once, then Current State evolves independently.
+          {versioned
+            ? 'Confirm creates a new immutable Build Version and atomically reconciles the existing live Current State. Level Up is not a rest.'
+            : 'Starting equipment becomes immutable Build provenance. Confirm copies it into live inventory exactly once, then Current State evolves independently.'}
         </p>
       </div>
 
-      <div className="builder-choice-list">
-        <h3>Starting Equipment</h3>
-        {equipmentChoices.length ? (
-          equipmentChoices.map((choice) => {
-            const selected = selectedIds(equipmentSelections[choice.choice_id])
-            if (choice.choose_count === 1) {
+      {!versioned ? (
+        <div className="builder-choice-list">
+          <h3>Starting Equipment</h3>
+          {equipmentChoices.length ? (
+            equipmentChoices.map((choice) => {
+              const selected = selectedIds(equipmentSelections[choice.choice_id])
+              if (choice.choose_count === 1) {
+                return (
+                  <div className="builder-choice" key={choice.choice_id}>
+                    <SearchableSelect
+                      label={choice.label}
+                      value={selected[0] ?? ''}
+                      disabled={busy}
+                      options={optionsFor(choice)}
+                      onChange={(value) =>
+                        saveChoice(choice.choice_id, value ? [value] : [])
+                      }
+                    />
+                  </div>
+                )
+              }
+
+              const selectedLabels = selected.map((id) => ({
+                id,
+                label:
+                  choice.options.find((option) => option.option_id === id)?.label ??
+                  id,
+              }))
               return (
                 <div className="builder-choice" key={choice.choice_id}>
+                  <div className="builder-choice__heading">
+                    <strong>{choice.label}</strong>
+                    <span>
+                      {selected.length} / {choice.choose_count}
+                    </span>
+                  </div>
+                  <div className="builder-choice__chips">
+                    {selectedLabels.map((item) => (
+                      <button
+                        type="button"
+                        key={item.id}
+                        disabled={busy}
+                        onClick={() =>
+                          saveChoice(
+                            choice.choice_id,
+                            selected.filter((id) => id !== item.id),
+                          )
+                        }
+                      >
+                        {item.label} ×
+                      </button>
+                    ))}
+                  </div>
                   <SearchableSelect
-                    label={choice.label}
-                    value={selected[0] ?? ''}
-                    disabled={busy}
-                    options={optionsFor(choice)}
-                    onChange={(value) =>
-                      saveChoice(choice.choice_id, value ? [value] : [])
-                    }
+                    label="Add equipment"
+                    value=""
+                    disabled={busy || selected.length >= choice.choose_count}
+                    options={optionsFor(choice).map((option) => ({
+                      ...option,
+                      disabled: option.disabled || selected.includes(option.value),
+                      disabledReason: selected.includes(option.value)
+                        ? 'Already selected'
+                        : option.disabledReason,
+                    }))}
+                    onChange={(value) => {
+                      if (value && !selected.includes(value)) {
+                        saveChoice(choice.choice_id, [...selected, value])
+                      }
+                    }}
                   />
                 </div>
               )
-            }
-
-            const selectedLabels = selected.map((id) => ({
-              id,
-              label:
-                choice.options.find((option) => option.option_id === id)?.label ??
-                id,
-            }))
-            return (
-              <div className="builder-choice" key={choice.choice_id}>
-                <div className="builder-choice__heading">
-                  <strong>{choice.label}</strong>
-                  <span>
-                    {selected.length} / {choice.choose_count}
-                  </span>
-                </div>
-                <div className="builder-choice__chips">
-                  {selectedLabels.map((item) => (
-                    <button
-                      type="button"
-                      key={item.id}
-                      disabled={busy}
-                      onClick={() =>
-                        saveChoice(
-                          choice.choice_id,
-                          selected.filter((id) => id !== item.id),
-                        )
-                      }
-                    >
-                      {item.label} ×
-                    </button>
-                  ))}
-                </div>
-                <SearchableSelect
-                  label="Add equipment"
-                  value=""
-                  disabled={busy || selected.length >= choice.choose_count}
-                  options={optionsFor(choice).map((option) => ({
-                    ...option,
-                    disabled: option.disabled || selected.includes(option.value),
-                    disabledReason: selected.includes(option.value)
-                      ? 'Already selected'
-                      : option.disabledReason,
-                  }))}
-                  onChange={(value) => {
-                    if (value && !selected.includes(value)) {
-                      saveChoice(choice.choice_id, [...selected, value])
-                    }
-                  }}
-                />
-              </div>
-            )
-          })
-        ) : (
-          <p className="builder-muted">
-            Choose a starting class and background first to reveal equipment.
-          </p>
-        )}
-      </div>
+            })
+          ) : (
+            <p className="builder-muted">
+              Choose a starting class and background first to reveal equipment.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="builder-rule-card">
+          <span>Starting Equipment</span>
+          <strong>Preserved from base Build</strong>
+          <small>Live Inventory is never rebuilt from starting equipment during a version change.</small>
+        </div>
+      )}
 
       {reviewQuery.isLoading ? (
         <div className="builder-rule-card">
           <span>Server Review</span>
           <strong>Resolving latest rules…</strong>
-          <small>Build and initial Current State are generated on the server.</small>
+          <small>{versioned ? 'Build and reconciliation are generated on the server.' : 'Build and initial Current State are generated on the server.'}</small>
         </div>
       ) : null}
       {reviewQuery.error ? (
@@ -181,7 +204,7 @@ export function EquipmentReviewStep({
         <>
           <div className="builder-optional">
             <h3>
-              Build snapshot <span>Immutable Version 1</span>
+              Build snapshot <span>{versioned ? `New ${modeLabel(view.draft.mode)} Version` : 'Immutable Version 1'}</span>
             </h3>
             <div className="builder-rule-card">
               <span>Identity</span>
@@ -210,7 +233,7 @@ export function EquipmentReviewStep({
             </div>
 
             <div className="summary-grants">
-              <h3>Resolved starting equipment</h3>
+              <h3>{versioned ? 'Starting equipment baseline' : 'Resolved starting equipment'}</h3>
               {review.starting_equipment.map((entry) => (
                 <div key={entry.entry_id}>
                   <span>× {entry.quantity}</span>
@@ -218,49 +241,99 @@ export function EquipmentReviewStep({
                 </div>
               ))}
               {!review.starting_equipment.length ? (
-                <small>No resolved equipment yet.</small>
+                <small>No starting-equipment provenance.</small>
               ) : null}
             </div>
           </div>
 
-          <div className="builder-optional">
-            <h3>
-              Initial Current State <span>Created once</span>
-            </h3>
-            {review.initial_state ? (
-              <div className="builder-field-grid">
-                <div className="builder-rule-card">
-                  <span>Current HP</span>
-                  <strong>{review.initial_state.current_hp}</strong>
-                  <small>Temporary HP {review.initial_state.temporary_hp}</small>
+          {versioned ? (
+            <div className="builder-optional">
+              <h3>
+                Current State Reconciliation <span>Atomic with Version Confirm</span>
+              </h3>
+              {review.reconciliation ? (
+                <>
+                  <div className="builder-field-grid">
+                    <div className="builder-rule-card">
+                      <span>Resulting Current HP</span>
+                      <strong>{review.reconciliation.proposed_state.current_hp}</strong>
+                      <small>Existing damage delta is preserved</small>
+                    </div>
+                    <div className="builder-rule-card">
+                      <span>Live Inventory</span>
+                      <strong>{review.reconciliation.proposed_state.inventory_state.length} entries</strong>
+                      <small>Preserved independently from Build</small>
+                    </div>
+                    <div className="builder-rule-card">
+                      <span>Temporary HP</span>
+                      <strong>{review.reconciliation.proposed_state.temporary_hp}</strong>
+                      <small>Preserved</small>
+                    </div>
+                    <div className="builder-rule-card">
+                      <span>Conditions</span>
+                      <strong>{review.reconciliation.proposed_state.conditions.length}</strong>
+                      <small>Preserved</small>
+                    </div>
+                  </div>
+                  <div className="reconciliation-list">
+                    {review.reconciliation.changes.map((change) => (
+                      <div className="builder-rule-card" key={`${change.path}:${change.kind}`}>
+                        <span>{change.path}</span>
+                        <strong>{change.before} → {change.after}</strong>
+                        <small>{change.message}</small>
+                      </div>
+                    ))}
+                    {!review.reconciliation.changes.length ? (
+                      <p className="builder-muted">No live-state capacity changes are required.</p>
+                    ) : null}
+                  </div>
+                </>
+              ) : (
+                <p className="builder-muted">
+                  Reconciliation preview becomes available after all Build choices are valid and the draft is based on the current version.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="builder-optional">
+              <h3>
+                Initial Current State <span>Created once</span>
+              </h3>
+              {review.initial_state ? (
+                <div className="builder-field-grid">
+                  <div className="builder-rule-card">
+                    <span>Current HP</span>
+                    <strong>{review.initial_state.current_hp}</strong>
+                    <small>Temporary HP {review.initial_state.temporary_hp}</small>
+                  </div>
+                  <div className="builder-rule-card">
+                    <span>Inventory</span>
+                    <strong>{review.initial_state.inventory_state.length} entries</strong>
+                    <small>Independent from Build after Confirm</small>
+                  </div>
+                  <div className="builder-rule-card">
+                    <span>Hit Dice</span>
+                    <strong>
+                      {Object.entries(review.initial_state.hit_dice_state)
+                        .map(([die, count]) => `${die} × ${count}`)
+                        .join(' · ') || '—'}
+                    </strong>
+                    <small>Starts fully available</small>
+                  </div>
+                  <div className="builder-rule-card">
+                    <span>Prepared Spells</span>
+                    <strong>{review.initial_state.prepared_spells.length}</strong>
+                    <small>Initial prepared state only</small>
+                  </div>
                 </div>
-                <div className="builder-rule-card">
-                  <span>Inventory</span>
-                  <strong>{review.initial_state.inventory_state.length} entries</strong>
-                  <small>Independent from Build after Confirm</small>
-                </div>
-                <div className="builder-rule-card">
-                  <span>Hit Dice</span>
-                  <strong>
-                    {Object.entries(review.initial_state.hit_dice_state)
-                      .map(([die, count]) => `${die} × ${count}`)
-                      .join(' · ') || '—'}
-                  </strong>
-                  <small>Starts fully available</small>
-                </div>
-                <div className="builder-rule-card">
-                  <span>Prepared Spells</span>
-                  <strong>{review.initial_state.prepared_spells.length}</strong>
-                  <small>Initial prepared state only</small>
-                </div>
-              </div>
-            ) : (
-              <p className="builder-muted">
-                Initial state preview becomes available after all blocking choices
-                are resolved.
-              </p>
-            )}
-          </div>
+              ) : (
+                <p className="builder-muted">
+                  Initial state preview becomes available after all blocking choices
+                  are resolved.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="summary-validation">
             <div className="summary-validation__heading">
@@ -282,8 +355,9 @@ export function EquipmentReviewStep({
             </ul>
             {!review.issues.length ? (
               <p className="builder-hint">
-                No blocking issues. Confirm will create Character, immutable Version
-                1 and Current State in one transaction.
+                {versioned
+                  ? 'No blocking issues. Confirm will append one immutable Build Version and reconcile Current State in one transaction.'
+                  : 'No blocking issues. Confirm will create Character, immutable Version 1 and Current State in one transaction.'}
               </p>
             ) : null}
           </div>
@@ -295,8 +369,8 @@ export function EquipmentReviewStep({
             onClick={() => confirm.mutate()}
           >
             {confirm.isPending
-              ? 'Creating Character…'
-              : 'Confirm & Create Character'}
+              ? versioned ? 'Creating Version…' : 'Creating Character…'
+              : versioned ? `Confirm ${modeLabel(view.draft.mode)}` : 'Confirm & Create Character'}
           </button>
         </>
       ) : null}
