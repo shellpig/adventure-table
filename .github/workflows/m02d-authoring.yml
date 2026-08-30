@@ -2,6 +2,7 @@ name: M02-D Locale Authoring
 
 on:
   push:
+  pull_request:
 
 jobs:
   generate-srd-zh-tw:
