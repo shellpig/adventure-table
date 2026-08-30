@@ -24,7 +24,7 @@ Adventure Table 是一個**輕量、桌上跑團優先的 D&D 5e 2014 VTT**。
 - 網站本身不接 LLM API；AI 能力來自使用者外部 AI Session。
 
 首發規則集：**D&D 5e 2014**  
-Built-in Content：**SRD 5.1**  
+Built-in Content：**SRD 5.1 為基礎，非 SRD 內容依私人專案需求逐步加入**  
 專案性質：**朋友間私人使用，非預計商品化平台**
 
 完整產品規格見：`規格企劃.md`。
@@ -35,7 +35,17 @@ Built-in Content：**SRD 5.1**
 
 目前狀態：**P0 — Character Core + SRD / Rules Foundation 與 P1 — Character Builder Complete 均已完成並關門。P1-A～P1-H 全部完成；網站現在能從空白 Builder Draft 建立 Lv1 或高等角色，保存完整 level-by-level progression / Multiclass / Subclass / ASI / Feat / Spellcasting / Starting Equipment，原子建立 Character + immutable Build Version 1 + initial Current State；Existing Character 也能進行 Level Up，建立 immutable Version N+1、reconcile live Current State，並查看 Version History。**
 
-> **下一步是 P2 — Room / Campaign / Session / Seat 的規劃與 Subphase 拆分。只有在使用者明確要求開始 P2 後，才讀當時 codebase、拆 P2 Subphases、建立 `docs/P2/` 三份對齊文件；不得直接跳進 P2 coding，也不得提前拆 P3～P8。**
+目前插入 **M01 — Multi-Source Character Content Expansion**。M01 是第一個 Maintenance / Modification Phase，用來補資料、補設定與強化既有 Character Content 能力，不改寫正常 P0 → P1 → P2 Roadmap。M01-A～M01-J 已完成正式規格拆分，**尚未開始 M01 coding**。
+
+M01 的直接目標：
+
+- 將單一 `srd5.1` Content Registry 升級成 Multi-Source Content Pack。
+- 補 PHB 非 SRD Background / race / subrace / Variant Human。
+- M01-B 完成後先進行第一輪真人創角測試。
+- 再補 SCAG / GoS Background、VGM race、SCAG Half-Elf variant、VRGR Dhampir、TCE Artificer、TCE magic items。
+- M01 closeout 後回到 P2 規劃。
+
+> **下一個 coding step 是 M01-A — Multi-Source Content Pack Foundation。只有在使用者明確要求開始 M01-A 實作後才 coding；M01 全部完成後才回到 P2 — Room / Campaign / Session / Seat 的規劃。不得因 M01 提前拆 P2～P8。**
 
 已完成的產品／規劃工作：
 
@@ -50,6 +60,8 @@ Built-in Content：**SRD 5.1**
 - 第一版明確不做項目已整理。
 - 大 Phase P0～P8 已排定。
 - 全專案規則：**每個 Phase 在 coding 前必須拆成可獨立實作、驗證、commit 的 Subphases；只拆當前 Phase，不提前拆後續 Phase。**
+- 新增 M Phase 規則：**M01、M02… 用於補資料／補設定、既有能力加強或 migration；可插在正常 P Phase 之間，但不改寫正常 P Roadmap。**
+- M01-A～M01-J 三份正式文件已完成。
 - 基礎技術棧：React + TypeScript + Vite / Python + FastAPI / PostgreSQL。
 
 ---
@@ -178,6 +190,48 @@ P1 共通原則：
 
 ---
 
+## M01 規劃與共通契約
+
+M01 正式文件：
+
+- `docs/M01/實作規格.md`
+- `docs/M01/開發設計方針.md`
+- `docs/M01/測試指南.md`
+
+M01 共通原則：
+
+- M Phase 專門承接資料補完、既有架構加強與 migration，不改寫正常產品 Phase 編號。
+- `docs/暫用規則資訊/` 是人類參考來源，不是 runtime data source。
+- 正式 runtime 內容進 `data/<pack>/`，由 Content Registry 驗證與載入。
+- StableKey 維持 `<pack_id>:<kind>:<index>`；`srd5.1:*` 舊 key 不改名。
+- `content_sources` 要成為真正可驗證的 Build provenance。
+- 不為 SCAG / Dhampir / Artificer 各做一套 Builder；優先延伸既有 generic choice / progression / rules 模型。
+- 複雜 runtime effect 若需要未來 Combat / Rest context，可以明確標為 manual/deferred，但 structural rule / capacity / identity 必須先正確。
+- M01-B 是第一個真人創角 Gate；Gate blocker 必須在 M01-B closeout前修完並補 regression。
+
+---
+
+## M01 Subphase 進度
+
+狀態：📐 規格可實作；⬜ 尚未開工；🚧 進行中；✅ 完成。
+
+| Subphase | 狀態 | 重點 |
+|---|---|---|
+| **M01-A — Multi-Source Content Pack Foundation** | 📐 | 泛化 Content Pack / StableKey / registry / cross-reference / `content_sources`，維持 SRD compatibility |
+| **M01-B — PHB Character Origins & Background Expansion** | 📐 | PHB Background、PHB 非 SRD subrace、Variant Human；完成後執行真人創角 Gate |
+| **M01-C — SCAG / GoS Background Expansion** | 📐 | SCAG / GoS Background、source collision、background variant / replacement 最小支援 |
+| **M01-D — VGM Race Expansion** | 📐 | Goblin / Hobgoblin / Aasimar、level-gated racial features / resource metadata |
+| **M01-E — SCAG Half-Elf Variant & Grant Replacement** | 📐 | Half-Elf ancestry variants、最小通用 Grant Replacement、stale branch isolation |
+| **M01-F — VRGR Lineage & Dhampir** | 📐 | Lineage、Dhampir、Ancestral Legacy、既有角色 versioned transformation |
+| **M01-G — TCE Artificer Core** | 📐 | Artificer progression / spellcasting / subclass；multiclass half-caster ceil rounding |
+| **M01-H — TCE Artificer Advanced Features & Infusions** | 📐 | Infusion known vs active state、feature resources、attunement capacity、advanced feature boundary |
+| **M01-I — TCE Magic Items** | 📐 | TCE item registry、rarity / attunement / restrictions / charges、manual-effect fallback |
+| **M01-J — Full M01 Integration & Closeout** | 📐 | all-pack validation、P0/P1 regression、full E2E、restart persistence、真人 Gate recheck |
+
+**M01 全部仍未 coding。下一個可開工 Subphase 是 M01-A。**
+
+---
+
 ## Phase Roadmap
 
 > 原則：先把角色與規則資料做完整，再把角色帶進桌內；每個 Phase 準備開工時才設計該 Phase 的細節。
@@ -186,6 +240,7 @@ P1 共通原則：
 |---|---|---|
 | **P0** | **Character Core + SRD / Rules Foundation** | 導入角色真正需要的 SRD 5.1 reference content；建立 Character 核心資料、角色卡與角色相關規則計算基礎。**不導入 Monster / Beast stat blocks。** |
 | **P1** | **Character Builder Complete** | 完整創角、高等角色建立、Level-by-level progression、Subclass、Multiclass、ASI / Feat、Spell progression、Level Up、Character Version |
+| **M01** | **Multi-Source Character Content Expansion** | 插入式 Maintenance Phase：多來源 Content Pack、PHB/SCAG/GoS/VGM/VRGR/TCE 角色內容與既有 Character 系統強化；完成後回到 P2 |
 | **P2** | **Room / Campaign / Session / Seat** | 把已建立的角色真正放進桌內；建立 Room、Campaign、Party Roster、Player Seat、Controller 與 Session lifecycle |
 | **P3** | **Exploration + Roll + AI** | 建立 Exploration、Chat / Action / Check、正式骰子與 PendingAction；Human / AI 開始能在同一桌真正跑團 |
 | **P4** | **Quick Combat** | 第一個完整可玩的 Combat MVP；**P4-A 必須先承接 P0 延後的 SRD Monster / Beast stat blocks。** |
@@ -194,7 +249,7 @@ P1 共通原則：
 | **P7** | **Snapshot / Export** | Timeline、Snapshot / Restore、Archive lifecycle、Character / Adventure / Campaign / Room Import / Export；不做 Undo 機制 |
 | **P8** | **QA / Polish** | 全流程整合測試、權限與 AI reconnect、錯誤處理、效能、Responsive UI、UX polish 與第一版收尾 |
 
-P1 已完成並關門；**P2～P8 仍維持大 Phase，不提前拆。**
+P0/P1 已完成；**目前只拆 M01。P2～P8 仍維持大 Phase，不提前拆。**
 
 ---
 
@@ -215,7 +270,7 @@ P1 已完成並關門；**P2～P8 仍維持大 Phase，不提前拆。**
 
 ## P1 Subphase 進度
 
-> **子階段一律一列一個，不得合併。** 本表是 P1 進度的單一事實來源。
+> **子階段一律一列一個，不得合併。**
 
 | Subphase | 狀態 | 重點 |
 |---|---|---|
@@ -228,56 +283,33 @@ P1 已完成並關門；**P2～P8 仍維持大 Phase，不提前拆。**
 | **P1-G — Level Up & Character Versions** | ✅ | Level Up Draft、immutable Version N+1、Version History、stale base guard、State reconciliation、correction/build edit |
 | **P1-H — Full P1 Integration & Closeout** | ✅ | P1 full regression、Create / high-level / multiclass / caster / Level Up E2E、P0 regression、migration / restart persistence / smoke closeout |
 
-**P1 已完成並關門。下一步是 P2 規劃與 Subphase 拆分；未獲使用者明確要求前不得開始 P2 coding。**
-
-P1 的具體 DB / API / module 契約只住在 `docs/P1/開發設計方針.md`；本 Brief 不重複維護細節。
-
 ---
 
-## P0 / P1 邊界
+## P0 / P1 / M01 邊界
 
 ### P0 — Character Core + SRD / Rules Foundation
 
-P0 建立後續角色系統共用的正式內容與角色地基：
-
-- Character-Relevant SRD 5.1 reference data。
-- Character 核心資料與保存／載入能力。
-- immutable Character Build Version / mutable Current State。
-- Character Sheet authoritative calculations。
-- Current State APIs / UI。
-- Build / State isolation。
-- 可承載 Human Fighter 5 / Wizard 5 Character Level 10。
-
-P0 不負責從 UI 合法地一級一級建立該角色。
-
-P0 正式文件：
-
-```text
-docs/P0/實作規格.md
-docs/P0/開發設計方針.md
-docs/P0/測試指南.md
-```
+P0 建立正式 SRD / Character 地基：Character content、immutable Build、mutable State、rules、Character Sheet、state UI。
 
 ### P1 — Character Builder Complete
 
-P1 把「角色資料能存在」提升成「網站能依 D&D 5e 2014 規則建立與成長角色」，目前 **P1-A～P1-H 已全部完成並 closeout**。
+P1 讓網站可以依 D&D 5e 2014 structural rules 建立／升級角色，並保存 versioned Build。
 
-核心驗證案例包括：
+### M01 — Multi-Source Character Content Expansion
 
-- 從空白建立合法 Lv1 角色。
-- 直接建立高等角色，但保存完整逐級 progression。
-- 建立 Fighter 5 / Wizard 5 等 Multiclass 角色，不直接改底層資料。
-- 正確處理 Subclass、ASI / Feat、Spell progression、Starting Equipment。
-- Existing Character 可 Level Up 並產生新 immutable Build Version，Current State 依規則 reconciliation。
-- P0 legacy Character 可安全 migration 到 P1 schema，P0 Character Sheet 行為維持 regression green。
-- Draft / Character / Version / Current State 在 browser reload 與 server restart 後保持一致。
+M01 不重做 P0/P1；它把「SRD 可創角」提升成「既有 Builder 可以承載逐步加入的多來源內容」。M01 主要增加：
 
-P1 正式文件：
+- Content Pack foundation。
+- PHB / SCAG / GoS / VGM / VRGR / TCE 本次已提供角色資料。
+- replacement / lineage / Artificer 等為這些內容真正需要的最小通用能力。
+- M01-B 真人創角測試 Gate。
+
+M01 正式文件：
 
 ```text
-docs/P1/實作規格.md
-docs/P1/開發設計方針.md
-docs/P1/測試指南.md
+docs/M01/實作規格.md
+docs/M01/開發設計方針.md
+docs/M01/測試指南.md
 ```
 
 ---
@@ -289,7 +321,7 @@ docs/P1/測試指南.md
 - P4 的第一個 Subphase 命名為 **P4-A**。
 - P4-A 必須承接 P0 明確延後的 **SRD 5.1 Monster / Beast stat blocks**。
 - P4-A 開工時再依當時 Combat Engine 需求決定 Monster Template schema、actions / attacks / spellcasting representation、validation 與 API。
-- P0 / P1 不為此提前建立 Monster-specific schema / validation / combat data。
+- P0 / P1 / M01 不為此提前建立 Monster-specific schema / validation / combat data。
 
 ---
 
@@ -297,13 +329,13 @@ docs/P1/測試指南.md
 
 | 文件 | 責任 |
 |---|---|
-| **`AGENTS.md`** | Agent 開工規則、Subphase 規則、文件查閱方式、修改與驗證守則 |
+| **`AGENTS.md`** | Agent 開工規則、P/M Phase / Subphase 規則、文件查閱方式、修改與驗證守則 |
 | **`PROJECT_BRIEF.md`** | 專案總覽、當前 Phase / Subphase、Roadmap、下一步、文件索引 |
 | **`規格企劃.md`** | 產品定位、跑團方式、Human / AI 行為、角色、戰鬥、Adventure、UI/UX 與產品單一事實來源 |
 | **`技術棧討論.md`** | 暫時性的基礎技術選型討論；不負責各 Phase 的實作設計 |
-| **`docs/Px/實作規格.md`** | 該 Phase / Subphase 必須做到什麼、驗收意圖 |
-| **`docs/Px/開發設計方針.md`** | 該 Phase / Subphase 實際怎麼做：資料模型、模組、API、資料流與必要技術決策 |
-| **`docs/Px/測試指南.md`** | 該 Phase / Subphase 的自動／人工驗收流程 |
+| **`docs/Px/實作規格.md` / `docs/Mxx/實作規格.md`** | 該 Phase / Subphase 必須做到什麼、驗收意圖 |
+| **`docs/Px/開發設計方針.md` / `docs/Mxx/開發設計方針.md`** | 該 Phase / Subphase 實際怎麼做：資料模型、模組、API、資料流與必要技術決策 |
+| **`docs/Px/測試指南.md` / `docs/Mxx/測試指南.md`** | 該 Phase / Subphase 的自動／人工驗收流程 |
 
 目前：
 
@@ -313,33 +345,46 @@ docs/
 │   ├── 實作規格.md
 │   ├── 開發設計方針.md
 │   └── 測試指南.md
-└── P1/
-    ├── 實作規格.md
-    ├── 開發設計方針.md
-    └── 測試指南.md
+├── P1/
+│   ├── 實作規格.md
+│   ├── 開發設計方針.md
+│   └── 測試指南.md
+├── M01/
+│   ├── 實作規格.md
+│   ├── 開發設計方針.md
+│   └── 測試指南.md
+└── 暫用規則資訊/
 ```
 
 ---
 
 ## Phase 規劃規則
 
-每個 Phase 準備開工時固定走：
+正常 P Phase 準備開工時：
 
 ```text
-確認該 Phase 的產品目標
+確認產品目標
 ↓
 讀當時真正存在的 codebase
 ↓
-拆成可獨立實作 / 驗證 / commit 的 Subphases
+拆 P<n>-A / B / ...
 ↓
-同時寫 docs/Px/ 三份對齊文件
+同時寫 docs/P<n>/ 三份對齊文件
 ↓
-使用者明確要求後才開始 coding
+使用者明確要求後才 coding
 ```
 
-Subphase 只拆當前 Phase；**P1 已關門，下一次獲准規劃時只拆 P2，不拆 P3～P8。**
+M Phase 使用同樣流程，但命名為：
 
-可以保留必要的跨 Phase 相容性／承接要求，但**不要因此提前設計後續 Phase 的 schema / API / module**。
+```text
+M01 / M02 / ...
+↓
+M01-A / M01-B / ...
+```
+
+M Phase 可以插在 P Phase 之間；**不會把 P2 重新編號，也不代表後續 P Phase 已經設計。**
+
+目前只拆 M01；**P2～P8 不提前拆。**
 
 ---
 
@@ -350,7 +395,7 @@ Subphase 只拆當前 Phase；**P1 已關門，下一次獲准規劃時只拆 P2
 1. 先讀 `AGENTS.md`。
 2. 再讀 `PROJECT_BRIEF.md` 取得目前 Phase、Subphase 與下一步。
 3. 按任務讀 `規格企劃.md` 對應章節。
-4. 已完成 Phase 的實作／驗收回查對應 `docs/Px/`；新 Phase 必須先完成 Subphase 拆分與三份正式文件，再依同名 Subphase 開工。
+4. M01 實作／驗收依 `docs/M01/` 三份文件中的同名 Subphase 取得契約。
 5. 不重新討論已定案產品規格。
-6. 不為還沒開工的 Phase 預先設計具體實作。
+6. 不為 P2～P8 預先設計具體實作。
 7. **未獲使用者明確要求，不開始 coding。**
