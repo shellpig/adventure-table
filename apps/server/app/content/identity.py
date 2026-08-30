@@ -87,6 +87,11 @@ def legacy_srd_key_from_api_url(url: str, index: str) -> str | None:
     parts = [part for part in path.split("/") if part]
     if len(parts) < 2 or parts[0:2] != ["api", "2014"]:
         return None
+    # Only the canonical entity endpoint is a StableKey reference. Deeper SRD
+    # endpoints such as /classes/cleric/levels/1 identify embedded rule data,
+    # not a standalone content entity, and must remain untouched.
+    if len(parts) > 4:
+        return None
     if len(parts) != 4:
         raise ValueError(f"malformed legacy SRD reference URL: {url}")
     kind = URL_ROUTE_TO_KIND.get(parts[2])
