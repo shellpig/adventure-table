@@ -9,6 +9,8 @@ import {
 const nameFor = (reference: string | null | undefined, fallback = '') => {
   if (reference === 'srd5.1:race:human') return '人類'
   if (reference === 'srd5.1:class:fighter') return '戰士'
+  if (reference === 'srd5.1:equipment:javelin') return '標槍'
+  if (reference === 'srd5.1:equipment:shield') return '盾牌'
   return fallback || reference || ''
 }
 
@@ -85,5 +87,31 @@ describe('builderChoicePresentation', () => {
         nameFor,
       ),
     ).toBe('屬性值提升')
+  })
+
+  it('rebuilds equipment bundles from StableKey presentation metadata', () => {
+    const equipment = choice({
+      label: 'Choose a martial weapon or bundle',
+      source_ref: 'srd5.1:class:fighter',
+      option_source: 'equipment',
+    })
+    expect(builderChoiceLabel(equipment, 'zh-TW', nameFor)).toBe('起始裝備選擇')
+    expect(
+      builderChoiceOptionLabel(
+        equipment,
+        {
+          option_id: 'equipment:fighter:bundle:0',
+          label: '2 × Javelin + Shield + choose another item',
+          kind: 'branch',
+          presentation_items: [
+            { reference_id: 'srd5.1:equipment:javelin', count: 2 },
+            { reference_id: 'srd5.1:equipment:shield', count: 1 },
+          ],
+          presentation_has_choice: true,
+        },
+        'zh-TW',
+        nameFor,
+      ),
+    ).toBe('2 × 標槍 + 盾牌 + 裝備選擇')
   })
 })
