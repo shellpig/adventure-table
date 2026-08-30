@@ -26,7 +26,6 @@ from app.persistence.characters import (
     CharacterVersionNotFoundError,
     StaleBuildVersionError,
 )
-from app.persistence.state_mutations import save_state_against_version
 
 router = APIRouter(prefix="/api/characters", tags=["characters"])
 
@@ -218,8 +217,7 @@ def patch_character_state(
         {**character.state.model_dump(mode="python"), **changes}
     )
     try:
-        updated = save_state_against_version(
-            repository,
+        updated = repository.save_state(
             character_id,
             candidate,
             expected_current_version_id=expected_current_version_id,
