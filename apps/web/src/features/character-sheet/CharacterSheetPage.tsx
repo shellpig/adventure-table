@@ -17,6 +17,8 @@ import type {
 } from '../../api/character'
 import { SearchableSelect } from '../../components/SearchableSelect'
 import type { SearchOption } from '../../components/SearchableSelect'
+import type { UiCopyKey } from '../../i18n/uiCopy'
+import { useUiCopy, type UiTranslator } from '../../i18n/useUiCopy'
 
 type CharacterTab = 'attributes' | 'spells' | 'inventory'
 
@@ -30,21 +32,31 @@ type CharacterSheetViewProps = {
   onPatch?: (patch: CharacterStatePatch) => Promise<void> | void
 }
 
-const ABILITY_LABELS: Record<string, string> = {
-  strength: '力量 STR',
-  dexterity: '敏捷 DEX',
-  constitution: '體質 CON',
-  intelligence: '智力 INT',
-  wisdom: '感知 WIS',
-  charisma: '魅力 CHA',
+const ABILITY_KEYS: Record<string, UiCopyKey> = {
+  strength: 'sheet.ability.strength',
+  dexterity: 'sheet.ability.dexterity',
+  constitution: 'sheet.ability.constitution',
+  intelligence: 'sheet.ability.intelligence',
+  wisdom: 'sheet.ability.wisdom',
+  charisma: 'sheet.ability.charisma',
 }
 
-const ACCESS_LABELS: Record<string, string> = {
-  known: 'Known',
-  spellbook: 'Spellbook',
-  prepared: 'Prepared List',
-  always_prepared: 'Always Prepared',
-  granted: 'Granted',
+const ACCESS_KEYS: Record<string, UiCopyKey> = {
+  known: 'sheet.access.known',
+  spellbook: 'sheet.access.spellbook',
+  prepared: 'sheet.access.prepared',
+  always_prepared: 'sheet.access.always_prepared',
+  granted: 'sheet.access.granted',
+}
+
+function abilityLabel(key: string, t: UiTranslator) {
+  const copyKey = ABILITY_KEYS[key]
+  return copyKey ? t(copyKey) : titleCase(key)
+}
+
+function accessLabel(key: string, t: UiTranslator) {
+  const copyKey = ACCESS_KEYS[key]
+  return copyKey ? t(copyKey) : key
 }
 
 function signed(value: number) {
@@ -74,7 +86,7 @@ function countersToPatch(source: Record<string, ResourceCounter>) {
   )
 }
 
-function describeRules(rules: Record<string, unknown>): string[] {
+function describeRules(rules: Record<string, unknown>, t: UiTranslator): string[] {
   const details: string[] = []
   const damage = rules.damage as { damage_dice?: unknown; damage_type?: { name?: unknown } } | undefined
   const armorClass = rules.armor_class as { base?: unknown; dex_bonus?: unknown; max_bonus?: unknown } | undefined
@@ -88,9 +100,9 @@ function describeRules(rules: Record<string, unknown>): string[] {
     )
   }
   if (armorClass?.base) {
-    const dex = armorClass.dex_bonus ? ' + DEX' : ''
-    const cap = armorClass.max_bonus ? ` (max +${String(armorClass.max_bonus)})` : ''
-    details.push(`AC ${String(armorClass.base)}${dex}${cap}`)
+    const dex = armorClass.dex_bonus ? t('sheet.rule.dex') : ''
+    const cap = armorClass.max_bonus ? ` (+${String(armorClass.max_bonus)})` : ''
+    details.push(`${t('sheet.rule.ac', { value: String(armorClass.base) })}${dex}${cap}`)
   }
   if (cost?.quantity !== undefined && cost?.unit) {
     details.push(`${String(cost.quantity)} ${String(cost.unit)}`)
@@ -115,6 +127,7 @@ function NumberSaveField({
   testId?: string
   onSave: (value: number) => Promise<void> | void
 }) {
+  const { t } = useUiCopy()
   const [draft, setDraft] = useState(String(value))
 
   return (
@@ -144,7 +157,7 @@ function NumberSaveField({
         data-testid={testId ? `${testId}-save` : undefined}
         disabled={busy || draft === String(value)}
       >
-        儲存
+        {t('shared.save')}
       </button>
     </form>
   )
@@ -159,6 +172,7 @@ export function CharacterSheetView({
   errorMessage = null,
   onPatch = async () => {},
 }: CharacterSheetViewProps) {
+  const { t } = useUiCopy()
   const [tab, setTab] = useState<CharacterTab>(initialTab)
   const [conditionRef, setConditionRef] = useState('')
   const [conditionNote, setConditionNote] = useState('')
@@ -203,7 +217,7 @@ export function CharacterSheetView({
       source_access_entry_id: spell.source_access_entry_id ?? undefined,
     }))
   const filteredSpells = sheet.spells.filter((spell) =>
-    `${spell.name} ${ACCESS_LABELS[spell.access_type] ?? spell.access_type}`
+    `${spell.name} ${accessLabel(spell.access_type, t)}`
       .toLocaleLowerCase()
       .includes(spellFilter.toLocaleLowerCase()),
   )
@@ -243,27 +257,27 @@ export function CharacterSheetView({
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
 
-      <section className="sheet-shell" aria-label={`${sheet.name} 角色卡`}>
+      <section className="sheet-shell" aria-label={t('sheet.aria', { name: sheet.name })}>
         <header className="character-hero">
           <div className="hero-copy">
-            <p className="eyebrow">Adventure Table · Character Sheet</p>
+            <p className="eyebrow">{t('sheet.eyebrow')}</p>
             <h1>{sheet.name}</h1>
             <p className="character-meta">
-              <strong>Lv. {sheet.total_level}</strong>
+              <strong>{t('sheet.level', { level: sheet.total_level })}</strong>
               <span>{classSummary}</span>
               <span>PB {signed(sheet.proficiency_bonus)}</span>
-              <span>Build v{sheet.version_no}</span>
+              <span>{t('sheet.buildVersion', { version: sheet.version_no })}</span>
             </p>
           </div>
 
-          <div className="hero-stats" aria-label="角色即時狀態">
+          <div className="hero-stats" aria-label={t('sheet.liveState')}>
             <div className="hero-stat hp-stat">
               <span>HP</span>
               <strong data-testid="header-hp">{sheet.current_hp}</strong>
               <small>/ {sheet.max_hp}</small>
             </div>
             <div className="hero-stat">
-              <span>Temp</span>
+              <span>{t('sheet.temp')}</span>
               <strong data-testid="header-temp-hp">{sheet.temporary_hp}</strong>
             </div>
             <div className="hero-stat">
@@ -271,7 +285,7 @@ export function CharacterSheetView({
               <strong data-testid="header-ac">{sheet.armor_class}</strong>
             </div>
             <div className="hero-stat">
-              <span>Init</span>
+              <span>{t('sheet.init')}</span>
               <strong>{signed(sheet.initiative_modifier)}</strong>
             </div>
           </div>
@@ -279,7 +293,7 @@ export function CharacterSheetView({
           <div className="hero-live-row">
             <div className="hero-editors">
               <NumberSaveField
-                label="目前 HP"
+                label={t('sheet.currentHp')}
                 value={sheet.current_hp}
                 min={0}
                 max={sheet.max_hp}
@@ -288,7 +302,7 @@ export function CharacterSheetView({
                 onSave={(value) => onPatch({ current_hp: value })}
               />
               <NumberSaveField
-                label="暫時 HP"
+                label={t('sheet.temporaryHp')}
                 value={sheet.temporary_hp}
                 min={0}
                 busy={busy}
@@ -296,15 +310,15 @@ export function CharacterSheetView({
                 onSave={(value) => onPatch({ temporary_hp: value })}
               />
             </div>
-            <div className="condition-strip" aria-label="Conditions">
-              <span className="condition-label">Conditions</span>
+            <div className="condition-strip" aria-label={t('sheet.conditions')}>
+              <span className="condition-label">{t('sheet.conditions')}</span>
               {sheet.conditions.length ? (
                 sheet.conditions.map((condition) => (
                   <button
                     type="button"
                     className="condition-chip"
                     key={condition.condition_ref}
-                    title={condition.note ? `${condition.note} · 點擊移除` : '點擊移除'}
+                    title={condition.note ? `${condition.note} · ${t('sheet.removeCondition')}` : t('sheet.removeCondition')}
                     disabled={busy}
                     onClick={() =>
                       onPatch({
@@ -318,7 +332,7 @@ export function CharacterSheetView({
                   </button>
                 ))
               ) : (
-                <span className="quiet-pill">無</span>
+                <span className="quiet-pill">{t('sheet.none')}</span>
               )}
             </div>
           </div>
@@ -326,12 +340,12 @@ export function CharacterSheetView({
 
         {errorMessage ? <div className="error-banner" role="alert">{errorMessage}</div> : null}
 
-        <nav className="sheet-tabs" role="tablist" aria-label="角色卡分頁">
+        <nav className="sheet-tabs" role="tablist" aria-label={t('sheet.tabsAria')}>
           {([
-            ['attributes', '屬性與技能', '01'],
-            ['spells', '法術', '02'],
-            ['inventory', '物品欄', '03'],
-          ] as const).map(([value, label, number]) => (
+            ['attributes', 'sheet.tab.attributes', '01'],
+            ['spells', 'sheet.tab.spells', '02'],
+            ['inventory', 'sheet.tab.inventory', '03'],
+          ] as const).map(([value, labelKey, number]) => (
             <button
               key={value}
               role="tab"
@@ -341,20 +355,20 @@ export function CharacterSheetView({
               onClick={() => setTab(value)}
             >
               <span>{number}</span>
-              {label}
+              {t(labelKey)}
             </button>
           ))}
         </nav>
 
         {tab === 'attributes' ? (
-          <section className="sheet-content" role="tabpanel" aria-label="屬性與技能">
+          <section className="sheet-content" role="tabpanel" aria-label={t('sheet.tab.attributes')}>
             <div className="section-heading">
               <div>
-                <p className="eyebrow">Core Profile</p>
-                <h2>屬性與技能</h2>
+                <p className="eyebrow">{t('sheet.coreProfile')}</p>
+                <h2>{t('sheet.tab.attributes')}</h2>
               </div>
               <div className="passive-card">
-                <span>Passive Perception</span>
+                <span>{t('sheet.passivePerception')}</span>
                 <strong>{sheet.passive_perception}</strong>
               </div>
             </div>
@@ -362,24 +376,24 @@ export function CharacterSheetView({
             <div className="ability-grid">
               {Object.entries(sheet.abilities).map(([key, ability]) => (
                 <article className="ability-card" key={key}>
-                  <span>{ABILITY_LABELS[key] ?? titleCase(key)}</span>
+                  <span>{abilityLabel(key, t)}</span>
                   <strong>{signed(ability.modifier)}</strong>
-                  <small>Score {ability.score}</small>
+                  <small>{t('sheet.score', { score: ability.score })}</small>
                 </article>
               ))}
             </div>
 
             <div className="two-column-grid">
               <article className="panel">
-                <div className="panel-title"><h3>Saving Throws</h3><span>豁免</span></div>
+                <div className="panel-title"><h3>{t('sheet.savingThrows')}</h3><span>{t('sheet.saves')}</span></div>
                 <div className="stat-list">
                   {Object.entries(sheet.saving_throws).map(([key, value]) => (
-                    <div key={key}><span>{ABILITY_LABELS[key] ?? titleCase(key)}</span><strong>{signed(value)}</strong></div>
+                    <div key={key}><span>{abilityLabel(key, t)}</span><strong>{signed(value)}</strong></div>
                   ))}
                 </div>
               </article>
               <article className="panel">
-                <div className="panel-title"><h3>Skills</h3><span>技能</span></div>
+                <div className="panel-title"><h3>{t('sheet.skills')}</h3><span>{t('sheet.skills')}</span></div>
                 <div className="stat-list skill-list">
                   {Object.entries(sheet.skills).map(([key, value]) => (
                     <div key={key}><span>{titleCase(key)}</span><strong>{signed(value)}</strong></div>
@@ -390,7 +404,7 @@ export function CharacterSheetView({
 
             <div className="two-column-grid">
               <article className="panel">
-                <div className="panel-title"><h3>Hit Dice</h3><span>Available / Total</span></div>
+                <div className="panel-title"><h3>{t('sheet.hitDice')}</h3><span>{t('sheet.availableTotal')}</span></div>
                 <div className="dice-grid">
                   {sheet.hit_dice.map((hitDie) => (
                     <div className="die-card" key={hitDie.die}>
@@ -399,7 +413,7 @@ export function CharacterSheetView({
                       <div className="stepper">
                         <button
                           type="button"
-                          aria-label={`${hitDie.die} 使用一顆`}
+                          aria-label={t('sheet.useDie', { die: hitDie.die })}
                           disabled={busy || hitDie.available <= 0}
                           onClick={() => {
                             const next = Object.fromEntries(sheet.hit_dice.map((entry) => [entry.die, entry.available]))
@@ -409,7 +423,7 @@ export function CharacterSheetView({
                         >−</button>
                         <button
                           type="button"
-                          aria-label={`${hitDie.die} 恢復一顆`}
+                          aria-label={t('sheet.restoreDie', { die: hitDie.die })}
                           disabled={busy || hitDie.available >= hitDie.total}
                           onClick={() => {
                             const next = Object.fromEntries(sheet.hit_dice.map((entry) => [entry.die, entry.available]))
@@ -424,19 +438,19 @@ export function CharacterSheetView({
               </article>
 
               <article className="panel">
-                <div className="panel-title"><h3>Conditions</h3><span>即時狀態</span></div>
+                <div className="panel-title"><h3>{t('sheet.conditions')}</h3><span>{t('sheet.liveState')}</span></div>
                 <SearchableSelect
-                  label="新增狀態"
+                  label={t('sheet.addCondition')}
                   options={conditionOptions}
                   value={conditionRef}
                   onChange={setConditionRef}
                   disabled={busy}
                 />
                 <label className="text-field">
-                  <span>備註（選填）</span>
+                  <span>{t('sheet.noteOptional')}</span>
                   <input
                     value={conditionNote}
-                    placeholder="來源、持續時間…"
+                    placeholder={t('sheet.notePlaceholder')}
                     disabled={busy}
                     onChange={(event) => setConditionNote(event.target.value)}
                   />
@@ -456,37 +470,37 @@ export function CharacterSheetView({
                     setConditionNote('')
                   }}
                 >
-                  加入 Condition
+                  {t('sheet.addConditionButton')}
                 </button>
               </article>
             </div>
 
             <article className="panel feature-panel">
-              <div className="panel-title"><h3>Features & Traits</h3><span>角色能力</span></div>
+              <div className="panel-title"><h3>{t('sheet.features')}</h3><span>{t('sheet.characterAbilities')}</span></div>
               <div className="feature-chips">
-                {sheet.features.length ? sheet.features.map((feature) => <span key={feature.key}>{feature.name}</span>) : <em>無資料</em>}
+                {sheet.features.length ? sheet.features.map((feature) => <span key={feature.key}>{feature.name}</span>) : <em>{t('sheet.noData')}</em>}
               </div>
             </article>
 
             <details className="roleplay-panel">
               <summary>
-                <span><strong>Roleplay / Biography</strong><small>選填資料，不影響角色可用性</small></span>
-                <span>展開</span>
+                <span><strong>{t('sheet.roleplay')}</strong><small>{t('sheet.roleplayHint')}</small></span>
+                <span>{t('sheet.expand')}</span>
               </summary>
               <div className="roleplay-grid">
-                {sheet.roleplay_profile.appearance ? <div><span>Appearance</span><p>{sheet.roleplay_profile.appearance}</p></div> : null}
-                {sheet.roleplay_profile.biography ? <div><span>Biography</span><p>{sheet.roleplay_profile.biography}</p></div> : null}
-                {sheet.roleplay_profile.personality_traits.length ? <div><span>Personality</span><p>{sheet.roleplay_profile.personality_traits.join(' · ')}</p></div> : null}
-                {sheet.roleplay_profile.ideals.length ? <div><span>Ideals</span><p>{sheet.roleplay_profile.ideals.join(' · ')}</p></div> : null}
-                {sheet.roleplay_profile.bonds.length ? <div><span>Bonds</span><p>{sheet.roleplay_profile.bonds.join(' · ')}</p></div> : null}
-                {sheet.roleplay_profile.flaws.length ? <div><span>Flaws</span><p>{sheet.roleplay_profile.flaws.join(' · ')}</p></div> : null}
+                {sheet.roleplay_profile.appearance ? <div><span>{t('sheet.appearance')}</span><p>{sheet.roleplay_profile.appearance}</p></div> : null}
+                {sheet.roleplay_profile.biography ? <div><span>{t('sheet.biography')}</span><p>{sheet.roleplay_profile.biography}</p></div> : null}
+                {sheet.roleplay_profile.personality_traits.length ? <div><span>{t('sheet.personality')}</span><p>{sheet.roleplay_profile.personality_traits.join(' · ')}</p></div> : null}
+                {sheet.roleplay_profile.ideals.length ? <div><span>{t('sheet.ideals')}</span><p>{sheet.roleplay_profile.ideals.join(' · ')}</p></div> : null}
+                {sheet.roleplay_profile.bonds.length ? <div><span>{t('sheet.bonds')}</span><p>{sheet.roleplay_profile.bonds.join(' · ')}</p></div> : null}
+                {sheet.roleplay_profile.flaws.length ? <div><span>{t('sheet.flaws')}</span><p>{sheet.roleplay_profile.flaws.join(' · ')}</p></div> : null}
                 {!sheet.roleplay_profile.appearance &&
                 !sheet.roleplay_profile.biography &&
                 !sheet.roleplay_profile.personality_traits.length &&
                 !sheet.roleplay_profile.ideals.length &&
                 !sheet.roleplay_profile.bonds.length &&
                 !sheet.roleplay_profile.flaws.length ? (
-                  <p className="empty-copy">尚未填寫角色扮演資料。</p>
+                  <p className="empty-copy">{t('sheet.noRoleplay')}</p>
                 ) : null}
               </div>
             </details>
@@ -494,10 +508,10 @@ export function CharacterSheetView({
         ) : null}
 
         {tab === 'spells' ? (
-          <section className="sheet-content" role="tabpanel" aria-label="法術">
+          <section className="sheet-content" role="tabpanel" aria-label={t('sheet.tab.spells')}>
             <div className="section-heading">
-              <div><p className="eyebrow">Spellbook & Resources</p><h2>法術</h2></div>
-              <label className="inline-search"><span>搜尋法術</span><input value={spellFilter} placeholder="名稱或類型" onChange={(event) => setSpellFilter(event.target.value)} /></label>
+              <div><p className="eyebrow">{t('sheet.spellbookResources')}</p><h2>{t('sheet.tab.spells')}</h2></div>
+              <label className="inline-search"><span>{t('sheet.searchSpells')}</span><input value={spellFilter} placeholder={t('sheet.searchSpellsPlaceholder')} onChange={(event) => setSpellFilter(event.target.value)} /></label>
             </div>
 
             <div className="spellcasting-grid">
@@ -505,22 +519,22 @@ export function CharacterSheetView({
                 <article className="spellcasting-card" key={source.source_key}>
                   <span>{source.source_name}</span>
                   <strong>{titleCase(source.ability)}</strong>
-                  <div><small>Save DC</small><b>{source.save_dc}</b><small>Attack</small><b>{signed(source.attack_modifier)}</b></div>
+                  <div><small>{t('sheet.saveDc')}</small><b>{source.save_dc}</b><small>{t('sheet.attack')}</small><b>{signed(source.attack_modifier)}</b></div>
                 </article>
               ))}
             </div>
 
             <article className="panel">
-              <div className="panel-title"><h3>Spell Slots</h3><span>Server State</span></div>
+              <div className="panel-title"><h3>{t('sheet.spellSlots')}</h3><span>{t('sheet.serverState')}</span></div>
               <div className="slot-grid">
                 {Object.entries(sheet.spell_slots).sort(([a], [b]) => Number(a) - Number(b)).map(([level, counter]) => (
                   <div className="slot-card" key={level}>
-                    <span>Level {level}</span>
+                    <span>{t('sheet.levelLabel', { level })}</span>
                     <strong data-testid={`spell-slot-${level}-counter`}>{counter.remaining} / {counter.used + counter.remaining}</strong>
-                    <small>Remaining / Total</small>
+                    <small>{t('sheet.remainingTotal')}</small>
                     <div className="slot-actions">
-                      <button type="button" data-testid={`spell-slot-${level}-use`} disabled={busy || counter.remaining <= 0} onClick={() => void updateCounter(level, sheet.spell_slots, 'use', 'spell_slots')}>使用 1 格</button>
-                      <button type="button" disabled={busy || counter.used <= 0} onClick={() => void updateCounter(level, sheet.spell_slots, 'restore', 'spell_slots')}>恢復 1 格</button>
+                      <button type="button" data-testid={`spell-slot-${level}-use`} disabled={busy || counter.remaining <= 0} onClick={() => void updateCounter(level, sheet.spell_slots, 'use', 'spell_slots')}>{t('sheet.useOneSlot')}</button>
+                      <button type="button" disabled={busy || counter.used <= 0} onClick={() => void updateCounter(level, sheet.spell_slots, 'restore', 'spell_slots')}>{t('sheet.restoreOneSlot')}</button>
                     </div>
                   </div>
                 ))}
@@ -529,15 +543,15 @@ export function CharacterSheetView({
 
             {Object.keys(sheet.resources).length ? (
               <article className="panel">
-                <div className="panel-title"><h3>Class Resources</h3><span>資源</span></div>
+                <div className="panel-title"><h3>{t('sheet.classResources')}</h3><span>{t('sheet.resources')}</span></div>
                 <div className="resource-list">
                   {Object.entries(sheet.resources).map(([key, counter]) => (
                     <div key={key}>
                       <span>{titleCase(key.split(':').at(-1) ?? key)}</span>
                       <strong>{counter.remaining} / {counter.used + counter.remaining}</strong>
                       <div className="mini-actions">
-                        <button type="button" disabled={busy || counter.remaining <= 0} onClick={() => void updateCounter(key, sheet.resources, 'use', 'resources')}>使用</button>
-                        <button type="button" disabled={busy || counter.used <= 0} onClick={() => void updateCounter(key, sheet.resources, 'restore', 'resources')}>恢復</button>
+                        <button type="button" disabled={busy || counter.remaining <= 0} onClick={() => void updateCounter(key, sheet.resources, 'use', 'resources')}>{t('sheet.use')}</button>
+                        <button type="button" disabled={busy || counter.used <= 0} onClick={() => void updateCounter(key, sheet.resources, 'restore', 'resources')}>{t('sheet.restore')}</button>
                       </div>
                     </div>
                   ))}
@@ -555,12 +569,12 @@ export function CharacterSheetView({
                 return (
                   <article className={spell.prepared ? 'spell-card is-prepared' : 'spell-card'} key={spell.entry_id}>
                     <div>
-                      <span className="access-badge">{ACCESS_LABELS[spell.access_type] ?? spell.access_type}</span>
+                      <span className="access-badge">{accessLabel(spell.access_type, t)}</span>
                       <h3>{spell.name}</h3>
                       <p>{classNameByRef.get(spell.source_key) ?? titleCase(spell.source_type)} · {spell.source_type}</p>
                     </div>
                     <div className="prepared-control">
-                      <span className={spell.prepared ? 'prepared-badge on' : 'prepared-badge'}>{spell.prepared ? 'Prepared' : 'Unprepared'}</span>
+                      <span className={spell.prepared ? 'prepared-badge on' : 'prepared-badge'}>{spell.prepared ? t('sheet.prepared') : t('sheet.unprepared')}</span>
                       {canPrepare ? (
                         <button
                           type="button"
@@ -591,29 +605,29 @@ export function CharacterSheetView({
                             void onPatch({ prepared_spell_entry_ids: next })
                           }}
                         >
-                          {spell.prepared ? '取消準備' : '準備'}
+                          {spell.prepared ? t('sheet.unprepare') : t('sheet.prepare')}
                         </button>
                       ) : null}
                     </div>
                   </article>
                 )
               })}
-              {!filteredSpells.length ? <p className="empty-copy">沒有符合搜尋條件的法術。</p> : null}
+              {!filteredSpells.length ? <p className="empty-copy">{t('sheet.noSpells')}</p> : null}
             </div>
           </section>
         ) : null}
 
         {tab === 'inventory' ? (
-          <section className="sheet-content" role="tabpanel" aria-label="物品欄">
+          <section className="sheet-content" role="tabpanel" aria-label={t('sheet.tab.inventory')}>
             <div className="section-heading">
-              <div><p className="eyebrow">Live Inventory</p><h2>物品欄</h2></div>
-              <label className="inline-search"><span>搜尋持有物</span><input value={inventoryFilter} placeholder="例如 Shield" onChange={(event) => setInventoryFilter(event.target.value)} /></label>
+              <div><p className="eyebrow">{t('sheet.liveInventory')}</p><h2>{t('sheet.tab.inventory')}</h2></div>
+              <label className="inline-search"><span>{t('sheet.searchInventory')}</span><input value={inventoryFilter} placeholder={t('sheet.searchInventoryPlaceholder')} onChange={(event) => setInventoryFilter(event.target.value)} /></label>
             </div>
 
             <article className="panel add-inventory-panel">
-              <div className="panel-title"><h3>加入物品</h3><span>SRD Reference</span></div>
+              <div className="panel-title"><h3>{t('sheet.addItem')}</h3><span>{t('sheet.srdReference')}</span></div>
               <div className="add-inventory-row">
-                <SearchableSelect label="物品名稱" options={inventoryOptions} value={itemRef} onChange={setItemRef} disabled={busy} />
+                <SearchableSelect label={t('sheet.itemName')} options={inventoryOptions} value={itemRef} onChange={setItemRef} disabled={busy} />
                 <button
                   type="button"
                   className="button primary"
@@ -627,50 +641,50 @@ export function CharacterSheetView({
                     setItemRef('')
                   }}
                 >
-                  ＋ 加入 Inventory
+                  {t('sheet.addInventory')}
                 </button>
               </div>
             </article>
 
             <div className="inventory-list">
               {filteredInventory.map((item) => {
-                const ruleDetails = describeRules(item.rules)
+                const ruleDetails = describeRules(item.rules, t)
                 return (
                   <article className="inventory-card" key={item.entry_id} data-testid={`inventory-${item.entry_id}`}>
                     <div className="inventory-main">
                       <div className="item-monogram" aria-hidden="true">{item.name.slice(0, 1)}</div>
                       <div>
                         <h3>{item.name}</h3>
-                        <p>{ruleDetails.length ? ruleDetails.join(' · ') : 'SRD item'}</p>
+                        <p>{ruleDetails.length ? ruleDetails.join(' · ') : t('sheet.srdItem')}</p>
                         <div className="item-badges">
-                          <span className={item.equipped ? 'item-badge active' : 'item-badge'}>{item.equipped ? 'Equipped' : 'Unequipped'}</span>
-                          <span className={item.carried ? 'item-badge active' : 'item-badge'}>{item.carried ? 'Carried' : 'Stored'}</span>
+                          <span className={item.equipped ? 'item-badge active' : 'item-badge'}>{item.equipped ? t('sheet.equipped') : t('sheet.unequipped')}</span>
+                          <span className={item.carried ? 'item-badge active' : 'item-badge'}>{item.carried ? t('sheet.carried') : t('sheet.stored')}</span>
                         </div>
                       </div>
                     </div>
                     <div className="inventory-actions">
                       <div className="quantity-stepper">
-                        <span>Qty</span>
-                        <button type="button" aria-label={`${item.name} 數量減一`} data-testid={`inventory-${item.entry_id}-decrement`} disabled={busy || item.quantity <= 1} onClick={() => void mutateInventoryItem(item.entry_id, { quantity: item.quantity - 1 })}>−</button>
+                        <span>{t('sheet.qty')}</span>
+                        <button type="button" aria-label={t('sheet.decrementQty', { name: item.name })} data-testid={`inventory-${item.entry_id}-decrement`} disabled={busy || item.quantity <= 1} onClick={() => void mutateInventoryItem(item.entry_id, { quantity: item.quantity - 1 })}>−</button>
                         <strong data-testid={`inventory-${item.entry_id}-quantity`}>{item.quantity}</strong>
-                        <button type="button" aria-label={`${item.name} 數量加一`} disabled={busy} onClick={() => void mutateInventoryItem(item.entry_id, { quantity: item.quantity + 1 })}>＋</button>
+                        <button type="button" aria-label={t('sheet.incrementQty', { name: item.name })} disabled={busy} onClick={() => void mutateInventoryItem(item.entry_id, { quantity: item.quantity + 1 })}>＋</button>
                       </div>
-                      <button type="button" className="button secondary compact" data-testid={`inventory-${item.entry_id}-equip`} disabled={busy} onClick={() => void mutateInventoryItem(item.entry_id, { equipped: !item.equipped })}>{item.equipped ? 'Unequip' : 'Equip'}</button>
-                      <button type="button" className="button secondary compact" disabled={busy} onClick={() => void mutateInventoryItem(item.entry_id, { carried: !item.carried })}>{item.carried ? '放下' : '攜帶'}</button>
-                      <button type="button" className="icon-danger" aria-label={`移除 ${item.name}`} disabled={busy} onClick={() => void patchInventory(inventoryState(sheet.inventory).filter((entry) => entry.entry_id !== item.entry_id))}>×</button>
+                      <button type="button" className="button secondary compact" data-testid={`inventory-${item.entry_id}-equip`} disabled={busy} onClick={() => void mutateInventoryItem(item.entry_id, { equipped: !item.equipped })}>{item.equipped ? t('sheet.unequip') : t('sheet.equip')}</button>
+                      <button type="button" className="button secondary compact" disabled={busy} onClick={() => void mutateInventoryItem(item.entry_id, { carried: !item.carried })}>{item.carried ? t('sheet.putDown') : t('sheet.carry')}</button>
+                      <button type="button" className="icon-danger" aria-label={t('sheet.removeItem', { name: item.name })} disabled={busy} onClick={() => void patchInventory(inventoryState(sheet.inventory).filter((entry) => entry.entry_id !== item.entry_id))}>×</button>
                     </div>
                   </article>
                 )
               })}
-              {!filteredInventory.length ? <p className="empty-copy">沒有符合搜尋條件的物品。</p> : null}
+              {!filteredInventory.length ? <p className="empty-copy">{t('sheet.noInventory')}</p> : null}
             </div>
           </section>
         ) : null}
 
         <footer className="sheet-footer">
-          <span>Ruleset: {sheet.ruleset}</span>
-          <span>Server authoritative state</span>
-          {busy ? <strong>Saving…</strong> : <strong>Synced</strong>}
+          <span>{t('sheet.ruleset', { ruleset: sheet.ruleset })}</span>
+          <span>{t('sheet.authoritative')}</span>
+          {busy ? <strong>{t('shared.saving')}</strong> : <strong>{t('shared.synced')}</strong>}
         </footer>
       </section>
     </main>
@@ -678,6 +692,7 @@ export function CharacterSheetView({
 }
 
 export function CharacterSheetPage({ characterId }: { characterId: string }) {
+  const { t } = useUiCopy()
   const queryClient = useQueryClient()
   const sheetQuery = useQuery({
     queryKey: ['character-sheet', characterId],
@@ -706,7 +721,7 @@ export function CharacterSheetPage({ characterId }: { characterId: string }) {
   if (sheetQuery.isPending) {
     return (
       <main className="character-page loading-page">
-        <div className="loading-card"><span className="loading-mark">AT</span><h1>讀取角色卡…</h1><p>正在取得 Server authoritative state</p></div>
+        <div className="loading-card"><span className="loading-mark">AT</span><h1>{t('sheet.loadingTitle')}</h1><p>{t('sheet.loadingHint')}</p></div>
       </main>
     )
   }
@@ -714,7 +729,7 @@ export function CharacterSheetPage({ characterId }: { characterId: string }) {
   if (sheetQuery.isError || !sheetQuery.data) {
     return (
       <main className="character-page loading-page">
-        <div className="loading-card error-state"><span className="loading-mark">!</span><h1>無法開啟角色卡</h1><p>{sheetQuery.error instanceof Error ? sheetQuery.error.message : '未知錯誤'}</p></div>
+        <div className="loading-card error-state"><span className="loading-mark">!</span><h1>{t('sheet.errorTitle')}</h1><p>{sheetQuery.error instanceof Error ? sheetQuery.error.message : t('sheet.unknownError')}</p></div>
       </main>
     )
   }
@@ -724,7 +739,7 @@ export function CharacterSheetPage({ characterId }: { characterId: string }) {
   const errorMessage = mutationError instanceof Error
     ? mutationError.message
     : contentError instanceof Error
-      ? `選單資料載入失敗：${contentError.message}`
+      ? t('sheet.contentError', { message: contentError.message })
       : null
 
   return (
