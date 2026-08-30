@@ -24,6 +24,7 @@ from app.persistence.characters import (
     CharacterNotFoundError,
     CharacterRepository,
     CharacterVersionNotFoundError,
+    StaleBuildVersionError,
 )
 
 router = APIRouter(prefix="/api/characters", tags=["characters"])
@@ -42,6 +43,7 @@ class CharacterListItem(BaseModel):
 class CharacterStatePatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    expected_current_version_id: UUID | None = None
     current_hp: int | None = Field(default=None, ge=0)
     temporary_hp: int | None = Field(default=None, ge=0)
     conditions: list[ConditionState] | None = None
@@ -197,9 +199,29 @@ def patch_character_state(
     changes = patch.model_dump(exclude_unset=True, mode="python")
     if any(value is None for value in changes.values()):
         raise CharacterValidationError("state patch fields cannot be null")
+
+    expected_current_version_id = changes.pop(
+        "expected_current_version_id",
+        character.current_version_id,
+    )
+    if expected_current_version_id != character.current_version_id:
+        stale = StaleBuildVersionError(
+            character_id,
+            expected_current_version_id,
+            character.current_version_id,
+        )
+        raise APIError(409, "stale_build_version", str(stale))
+
     _canonicalize_prepared_patch(character, changes)
     candidate = CharacterState.model_validate(
         {**character.state.model_dump(mode="python"), **changes}
     )
-    updated = repository.save_state(character_id, candidate)
+    try:
+        updated = repository.save_state(
+            character_id,
+            candidate,
+            expected_current_version_id=expected_current_version_id,
+        )
+    except StaleBuildVersionError as exc:
+        raise APIError(409, "stale_build_version", str(exc)) from exc
     return build_character_sheet(updated, repository.registry)

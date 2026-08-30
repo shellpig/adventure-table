@@ -435,14 +435,38 @@ class CharacterBuilderService:
     def confirm_draft(self, draft_id: UUID) -> BuilderConfirmResult:
         character_repository = self._require_character_repository()
 
-        confirmed_character_id, _confirmed_version_id = self.repository.confirmed_result(draft_id)
+        confirmed_character_id, confirmed_version_id = self.repository.confirmed_result(draft_id)
         if confirmed_character_id is not None:
-            character = character_repository.load_character(confirmed_character_id)
+            if confirmed_version_id is None:
+                # Compatibility for any pre-versioning confirmed draft that has
+                # no stored version id. New confirms always persist both ids.
+                character = character_repository.load_character(confirmed_character_id)
+                return BuilderConfirmResult(
+                    character_id=character.id,
+                    current_version_id=character.current_version_id,
+                    version_no=character.version_no,
+                    character_path=f"/characters/{character.id}",
+                )
+            confirmed_version = next(
+                (
+                    version
+                    for version in character_repository.list_versions(confirmed_character_id)
+                    if version.id == confirmed_version_id
+                ),
+                None,
+            )
+            if confirmed_version is None:
+                raise RuntimeError(
+                    f"confirmed builder version is missing: {confirmed_version_id}"
+                )
             return BuilderConfirmResult(
-                character_id=character.id,
-                current_version_id=character.current_version_id,
-                version_no=character.version_no,
-                character_path=f"/characters/{character.id}",
+                character_id=confirmed_character_id,
+                # Keep the historical field name for compatibility: on replay
+                # this is the exact version created by this Confirm, even if a
+                # later version is now current on the character.
+                current_version_id=confirmed_version_id,
+                version_no=confirmed_version.version_no,
+                character_path=f"/characters/{confirmed_character_id}",
             )
 
         draft_snapshot = self.repository.load_draft(draft_id)
