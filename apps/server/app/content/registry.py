@@ -19,9 +19,12 @@ from app.content.schemas import ContentEntry, ContentManifest, DATA_MODELS
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_CONTENT_ROOT = REPOSITORY_ROOT / "data"
+CONTENT_PACKS_ROOT = REPOSITORY_ROOT / "data"
 DEFAULT_CONTENT_PACKS = ("srd5.1",)
-DEFAULT_SRD_CONTENT_ROOT = DEFAULT_CONTENT_ROOT / "srd5.1"
+# P0 compatibility: existing tests/importers use DEFAULT_CONTENT_ROOT as the
+# direct SRD pack directory. Multi-pack loading uses CONTENT_PACKS_ROOT.
+DEFAULT_CONTENT_ROOT = CONTENT_PACKS_ROOT / "srd5.1"
+DEFAULT_SRD_CONTENT_ROOT = DEFAULT_CONTENT_ROOT
 
 # The imported 5e SRD Rogue level feed carries several non-ASI rows whose
 # cumulative ability_score_bonuses value is one lower than the immediately
@@ -407,4 +410,4 @@ def _iter_stable_references(
 
 
 def load_default_content_registry() -> ContentRegistry:
-    return ContentRegistry.from_root(DEFAULT_CONTENT_ROOT, DEFAULT_CONTENT_PACKS)
+    return ContentRegistry.from_root(CONTENT_PACKS_ROOT, DEFAULT_CONTENT_PACKS)
