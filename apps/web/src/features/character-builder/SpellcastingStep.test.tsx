@@ -2,8 +2,16 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import { type BuilderView } from '../../api/characterBuilder'
+import { LocaleProvider } from '../../i18n/LocaleProvider'
+import { LOCALE_STORAGE_KEY, type LocaleStorage } from '../../i18n/locale'
 import { SpellcastingStep } from './SpellcastingStep'
 
+function englishStorage(): LocaleStorage {
+  return {
+    getItem: (key) => (key === LOCALE_STORAGE_KEY ? 'en' : null),
+    setItem: () => undefined,
+  }
+}
 
 function spellView(): BuilderView {
   return {
@@ -108,7 +116,9 @@ function spellView(): BuilderView {
 describe('P1-E SpellcastingStep', () => {
   it('renders source-aware Wizard and Warlock access with separate resource pools', () => {
     const html = renderToStaticMarkup(
-      <SpellcastingStep view={spellView()} disabled={false} onSave={() => undefined} />,
+      <LocaleProvider storage={englishStorage()} documentTarget={null}>
+        <SpellcastingStep view={spellView()} disabled={false} onSave={() => undefined} />
+      </LocaleProvider>,
     )
 
     expect(html).toContain('Spellcasting &amp; resources')
