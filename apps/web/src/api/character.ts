@@ -8,6 +8,12 @@ export type ConditionState = {
   note?: string | null
 }
 
+export type PreparedSpellSelection = {
+  spell_key: string
+  source_profile_id: string
+  source_access_entry_id?: string | null
+}
+
 export type InventoryStateEntry = {
   entry_id: string
   item_ref: string
@@ -21,6 +27,7 @@ export type CharacterStatePatch = {
   temporary_hp?: number
   conditions?: ConditionState[]
   prepared_spell_entry_ids?: string[]
+  prepared_spells?: PreparedSpellSelection[]
   spell_slots?: Record<string, ResourceCounter>
   resources?: Record<string, ResourceCounter>
   hit_dice_state?: Record<string, number>
@@ -61,8 +68,10 @@ export type SpellAccessDTO = {
   name: string
   source_type: string
   source_key: string
-  access_type: 'known' | 'spellbook' | 'always_prepared' | 'granted'
+  access_type: 'known' | 'spellbook' | 'prepared' | 'always_prepared' | 'granted'
   prepared: boolean
+  source_profile_id?: string | null
+  source_access_entry_id?: string | null
 }
 
 export type SpellcastingDTO = {
