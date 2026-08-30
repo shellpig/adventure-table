@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 from typing import Any
 
+from app.content.identity import reference_to_stable_key
 from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
 from app.domain.character.schemas import StartingEquipmentEntry
@@ -60,10 +61,10 @@ def _entry_id(atom: _Atom) -> str:
 def _stable_equipment_ref(raw: Any) -> str | None:
     if not isinstance(raw, dict):
         return None
-    index = raw.get("index")
-    if not isinstance(index, str) or not index:
+    try:
+        return reference_to_stable_key(raw, kinds={"equipment"})
+    except ValueError:
         return None
-    return f"srd5.1:equipment:{index}"
 
 
 def _selection_ids(draft: BuilderDraft, choice_id: str) -> tuple[str, ...]:
@@ -86,13 +87,22 @@ def _category_options(
     registry: ContentRegistry,
 ) -> tuple[list[dict[str, Any]], BuilderIssue | None]:
     category = raw_from.get("equipment_category")
-    if not isinstance(category, dict) or not isinstance(category.get("index"), str):
+    if not isinstance(category, dict):
         return [], _issue(
             "equipment_rules_data_error",
             "starting_equipment",
             "Equipment category choice is missing its category reference.",
         )
-    category_ref = f"srd5.1:equipment-category:{category['index']}"
+    try:
+        category_ref = reference_to_stable_key(category, kinds={"equipment-category"})
+    except ValueError:
+        category_ref = None
+    if category_ref is None:
+        return [], _issue(
+            "equipment_rules_data_error",
+            "starting_equipment",
+            "Equipment category choice has an invalid category reference.",
+        )
     entry = registry.get_optional(category_ref)
     if entry is None:
         return [], _issue(
@@ -155,7 +165,11 @@ def _option_label(raw_option: dict[str, Any], registry: ContentRegistry) -> str:
             return "Unknown equipment"
         item_ref = _stable_equipment_ref(reference)
         item = registry.get_optional(item_ref or "")
-        name = item.name if item is not None else str(reference.get("name") or reference.get("index") or "Equipment")
+        name = (
+            f"{item.name} · {item.source_label or item.source}"
+            if item is not None
+            else str(reference.get("name") or reference.get("index") or "Equipment")
+        )
         count = raw_option.get("count", 1)
         return f"{count} × {name}" if isinstance(count, int) and count > 1 else name
     if kind == "choice":

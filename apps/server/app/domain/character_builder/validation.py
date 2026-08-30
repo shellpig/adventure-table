@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 
+from app.content.identity import parse_stable_key, reference_to_stable_key
 from app.content.registry import ContentRegistry
 from app.domain.character_builder.rules import load_ability_generation_rules
 from app.domain.character_builder.schemas import (
@@ -53,7 +54,10 @@ def _validate_reference(
             message=f"Unknown {expected_kind} reference: {selection.reference_id}",
             related_refs=(selection.reference_id,),
         )
-    kind = entry.key.split(":", 2)[1] if ":" in entry.key else ""
+    try:
+        kind = parse_stable_key(entry.key).kind
+    except ValueError:
+        kind = ""
     if kind != expected_kind:
         return BuilderIssue(
             code="wrong_reference_kind",
@@ -285,8 +289,14 @@ def validate_foundation_draft(
         else:
             subrace = registry.get(payload.subrace_selection.reference_id)
             parent = subrace.data.get("race")
-            parent_index = parent.get("index") if isinstance(parent, dict) else None
-            expected_parent = f"srd5.1:race:{parent_index}" if isinstance(parent_index, str) else None
+            try:
+                expected_parent = (
+                    reference_to_stable_key(parent, kinds={"race"})
+                    if isinstance(parent, dict)
+                    else None
+                )
+            except ValueError:
+                expected_parent = None
             if expected_parent != payload.race_selection.reference_id:
                 issues.append(
                     BuilderIssue(

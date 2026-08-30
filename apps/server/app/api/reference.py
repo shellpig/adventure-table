@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends
 
 from app.api.dependencies import get_content_registry
 from app.api.errors import APIError
-from app.content.registry import ContentNotFoundError, ContentRegistry, URL_ROUTE_TO_KIND
+from app.content.identity import URL_ROUTE_TO_KIND, parse_stable_key
+from app.content.registry import ContentNotFoundError, ContentRegistry
 from app.content.schemas import ContentEntry
 
 router = APIRouter(prefix="/api/rules/content", tags=["rules-content"])
@@ -34,9 +35,9 @@ def get_content(
     kind = _kind_for_category(category)
     try:
         if ":" in key:
-            if not key.startswith(f"srd5.1:{kind}:"):
-                raise ContentNotFoundError(key)
-            return registry.get(key)
-        return registry.resolve(kind, key)
-    except ContentNotFoundError as exc:
+            parsed = parse_stable_key(key, kinds={kind})
+            return registry.get(f"{parsed.source}:{parsed.kind}:{parsed.index}")
+        # Bare index is retained only as a legacy SRD compatibility route.
+        return registry.resolve("srd5.1", kind, key)
+    except (ContentNotFoundError, ValueError) as exc:
         raise APIError(404, "unknown_reference", f"unknown content reference: {key}") from exc

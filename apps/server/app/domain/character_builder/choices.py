@@ -3,7 +3,12 @@ from __future__ import annotations
 import re
 from urllib.parse import urlparse
 
-from app.content.registry import ContentRegistry, URL_ROUTE_TO_KIND
+from app.content.identity import (
+    URL_ROUTE_TO_KIND,
+    reference_to_stable_key,
+    stable_key_is_kind,
+)
+from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
 from app.domain.character_builder.schemas import (
     BuilderChoice,
@@ -27,27 +32,26 @@ def deterministic_choice_id(*parts: str) -> str:
 
 
 def _stable_key(reference: dict[str, object]) -> str | None:
-    index = reference.get("index")
-    url = reference.get("url")
-    if not isinstance(index, str) or not isinstance(url, str):
-        return None
-    parts = [part for part in urlparse(url).path.split("/") if part]
-    if len(parts) != 4 or parts[0:2] != ["api", "2014"]:
-        return None
-    kind = URL_ROUTE_TO_KIND.get(parts[2])
-    if kind is None or parts[3] != index:
-        return None
-    return f"srd5.1:{kind}:{index}"
+    return reference_to_stable_key(reference)
 
 
-def _reference_option(reference: dict[str, object]) -> BuilderChoiceOption | None:
+def _entry_label(entry: ContentEntry) -> str:
+    source_label = entry.source_label or entry.source
+    return f"{entry.name} · {source_label}"
+
+
+def _reference_option(
+    reference: dict[str, object],
+    registry: ContentRegistry,
+) -> BuilderChoiceOption | None:
     key = _stable_key(reference)
     name = reference.get("name")
     if key is None or not isinstance(name, str):
         return None
+    target = registry.get_optional(key)
     return BuilderChoiceOption(
         option_id=key,
-        label=name,
+        label=_entry_label(target) if target is not None else name,
         kind=BuilderOptionKind.REFERENCE,
         reference_id=key,
     )
@@ -70,14 +74,15 @@ def _rule_options(rule: dict[str, object], registry: ContentRegistry) -> tuple[B
         kind = URL_ROUTE_TO_KIND.get(parts[2])
         if kind is None:
             return ()
+        # A legacy /api/2014 resource list explicitly denotes the SRD source.
         return tuple(
             BuilderChoiceOption(
                 option_id=entry.key,
-                label=entry.name,
+                label=_entry_label(entry),
                 kind=BuilderOptionKind.REFERENCE,
                 reference_id=entry.key,
             )
-            for entry in registry.list_kind(kind)
+            for entry in registry.list_kind(kind, source="srd5.1")
         )
 
     options = source.get("options")
@@ -89,7 +94,7 @@ def _rule_options(rule: dict[str, object], registry: ContentRegistry) -> tuple[B
             continue
         option_type = raw.get("option_type")
         if option_type == "reference" and isinstance(raw.get("item"), dict):
-            option = _reference_option(raw["item"])
+            option = _reference_option(raw["item"], registry)
             if option is not None:
                 result.append(option)
         elif option_type in {"ability_bonus", "bonus"} and isinstance(raw.get("ability_score"), dict):
@@ -179,7 +184,7 @@ def _entry_choices(
             option
             for reference in subtraits
             if isinstance(reference, dict)
-            for option in [_reference_option(reference)]
+            for option in [_reference_option(reference, registry)]
             if option is not None
         )
         choice_id = deterministic_choice_id(entry.key, "subtrait", "0")
@@ -222,7 +227,7 @@ def _reference_options(registry: ContentRegistry, kind: str) -> tuple[BuilderCho
     return tuple(
         BuilderChoiceOption(
             option_id=entry.key,
-            label=entry.name,
+            label=_entry_label(entry),
             kind=BuilderOptionKind.REFERENCE,
             reference_id=entry.key,
         )
@@ -291,14 +296,14 @@ def build_foundation_choices(
     race_entry: ContentEntry | None = None
     if payload.race_selection is not None:
         race_entry = registry.get_optional(payload.race_selection.reference_id)
-        if race_entry is not None and race_entry.key.startswith("srd5.1:race:"):
+        if race_entry is not None and stable_key_is_kind(race_entry.key, "race"):
             subraces = race_entry.data.get("subraces")
             if isinstance(subraces, list) and subraces:
                 options = tuple(
                     option
                     for reference in subraces
                     if isinstance(reference, dict)
-                    for option in [_reference_option(reference)]
+                    for option in [_reference_option(reference, registry)]
                     if option is not None
                 )
                 choices.append(
@@ -322,13 +327,13 @@ def build_foundation_choices(
 
     if payload.subrace_selection is not None:
         subrace_entry = registry.get_optional(payload.subrace_selection.reference_id)
-        if subrace_entry is not None and subrace_entry.key.startswith("srd5.1:subrace:"):
+        if subrace_entry is not None and stable_key_is_kind(subrace_entry.key, "subrace"):
             choices.extend(_entry_choices(draft, registry, subrace_entry))
             choices.extend(_trait_choices(draft, registry, subrace_entry.data.get("racial_traits")))
 
     if payload.background_selection is not None:
         background = registry.get_optional(payload.background_selection.reference_id)
-        if background is not None and background.key.startswith("srd5.1:background:"):
+        if background is not None and stable_key_is_kind(background.key, "background"):
             choices.extend(_entry_choices(draft, registry, background))
 
     if payload.target_level is not None:

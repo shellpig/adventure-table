@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from urllib.parse import urlparse
 
-from app.content.registry import ContentRegistry, URL_ROUTE_TO_KIND
+from app.content.identity import parse_stable_key, reference_to_stable_key
+from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
 from app.domain.character_builder.schemas import (
     BuilderAbilityScoreSummary,
@@ -25,17 +25,7 @@ ABILITY_INDEX_TO_NAME = {
 
 
 def _stable_key(reference: dict[str, object]) -> str | None:
-    index = reference.get("index")
-    url = reference.get("url")
-    if not isinstance(index, str) or not isinstance(url, str):
-        return None
-    parts = [part for part in urlparse(url).path.split("/") if part]
-    if len(parts) != 4 or parts[0:2] != ["api", "2014"]:
-        return None
-    kind = URL_ROUTE_TO_KIND.get(parts[2])
-    if kind is None or parts[3] != index:
-        return None
-    return f"srd5.1:{kind}:{index}"
+    return reference_to_stable_key(reference)
 
 
 def _entry_name(registry: ContentRegistry, key: str | None) -> str | None:
@@ -55,7 +45,7 @@ def _grant_from_reference(
     label = reference.get("name")
     if key is None or not isinstance(label, str):
         return None
-    kind = kind_override or key.split(":", 2)[1]
+    kind = kind_override or parse_stable_key(key).kind
     return BuilderGrantSummary(
         label=label,
         kind=kind,
@@ -140,7 +130,10 @@ def _selected_choice_grants(
             option = option_by_id.get(option_id)
             if option is None or option.reference_id is None or option.category == "ability_bonus":
                 continue
-            kind = option.reference_id.split(":", 2)[1] if ":" in option.reference_id else "choice"
+            try:
+                kind = parse_stable_key(option.reference_id).kind
+            except ValueError:
+                kind = "choice"
             grants.append(
                 BuilderGrantSummary(
                     label=option.label,
@@ -221,7 +214,11 @@ def resolve_creation_summary(
     ability_summaries: list[BuilderAbilityScoreSummary] = []
     if payload.ability_generation is not None:
         bonuses: dict[str, int] = defaultdict(int)
-        for source in (_ability_bonuses_from_entry(race), _ability_bonuses_from_entry(subrace), _selected_ability_bonuses(draft, choices)):
+        for source in (
+            _ability_bonuses_from_entry(race),
+            _ability_bonuses_from_entry(subrace),
+            _selected_ability_bonuses(draft, choices),
+        ):
             for ability, bonus in source.items():
                 bonuses[ability] += bonus
         override_map = {

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.content.identity import collect_stable_key_sources, stable_key_is_kind
 from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
 from app.domain.character.schemas import (
@@ -144,7 +145,7 @@ def _effective_progression_choices(
         seen: set[str] = set()
         for level_choice in levels[: max(0, character_level - 1)]:
             entry = registry.get_optional(level_choice.class_ref)
-            if entry is None or not entry.key.startswith("srd5.1:class:") or entry.key in seen:
+            if entry is None or not stable_key_is_kind(entry.key, "class") or entry.key in seen:
                 continue
             seen.add(entry.key)
             acquired.append(entry)
@@ -153,7 +154,7 @@ def _effective_progression_choices(
         for option in choice.options:
             candidate = registry.get_optional(option.reference_id or "")
             reason = None
-            if candidate is not None and candidate.key.startswith("srd5.1:class:"):
+            if candidate is not None and stable_key_is_kind(candidate.key, "class"):
                 reason = multiclass_option_failure_reason(
                     candidate,
                     tuple(acquired),
@@ -186,6 +187,13 @@ def _preserved_starting_equipment(
         summary=tuple(summary),
         issues=(),
     )
+
+
+def _with_derived_content_sources(build: CharacterBuild) -> CharacterBuild:
+    payload = build.model_dump()
+    payload.pop("content_sources", None)
+    payload["content_sources"] = collect_stable_key_sources(payload)
+    return CharacterBuild.model_validate(payload)
 
 
 def compile_builder_draft(
@@ -376,34 +384,45 @@ def compile_builder_draft(
             )
             for pool in spellcasting.resource_pools
         )
-        build_candidate = CharacterBuild(
-            ruleset=payload.basic.ruleset,
-            race_ref=payload.race_selection.reference_id,
-            subrace_ref=(
-                payload.subrace_selection.reference_id if payload.subrace_selection is not None else None
-            ),
-            background_ref=payload.background_selection.reference_id,
-            alignment_ref=(
-                payload.alignment_selection.reference_id
-                if payload.alignment_selection is not None
-                else None
-            ),
-            character_level=payload.target_level,
-            class_progression=compiled.class_progression,
-            subclasses=compiled.subclasses,
-            ability_scores=abilities,
-            proficiencies=tuple(dict.fromkeys((*compiled.proficiencies, *structural.proficiencies))),
-            saving_throw_proficiencies=compiled.saving_throw_proficiencies,
-            skill_choices=tuple(dict.fromkeys((*compiled.skill_choices, *structural.skill_choices))),
-            feature_refs=tuple(dict.fromkeys((*compiled.feature_refs, *structural.feature_refs))),
-            feat_refs=structural.feat_refs,
-            spellcasting_profiles=build_profiles,
-            spell_access_entries=spellcasting.spell_access_entries,
-            spell_resource_pools=build_pools,
-            hp_progression=compiled.hp_progression,
-            starting_equipment=equipment.starting_equipment,
-            roleplay_profile=_roleplay_profile(draft),
-            numeric_overrides=payload.numeric_overrides,
+        build_candidate = _with_derived_content_sources(
+            CharacterBuild(
+                content_sources=(),
+                ruleset=payload.basic.ruleset,
+                race_ref=payload.race_selection.reference_id,
+                subrace_ref=(
+                    payload.subrace_selection.reference_id
+                    if payload.subrace_selection is not None
+                    else None
+                ),
+                background_ref=payload.background_selection.reference_id,
+                alignment_ref=(
+                    payload.alignment_selection.reference_id
+                    if payload.alignment_selection is not None
+                    else None
+                ),
+                character_level=payload.target_level,
+                class_progression=compiled.class_progression,
+                subclasses=compiled.subclasses,
+                ability_scores=abilities,
+                proficiencies=tuple(
+                    dict.fromkeys((*compiled.proficiencies, *structural.proficiencies))
+                ),
+                saving_throw_proficiencies=compiled.saving_throw_proficiencies,
+                skill_choices=tuple(
+                    dict.fromkeys((*compiled.skill_choices, *structural.skill_choices))
+                ),
+                feature_refs=tuple(
+                    dict.fromkeys((*compiled.feature_refs, *structural.feature_refs))
+                ),
+                feat_refs=structural.feat_refs,
+                spellcasting_profiles=build_profiles,
+                spell_access_entries=spellcasting.spell_access_entries,
+                spell_resource_pools=build_pools,
+                hp_progression=compiled.hp_progression,
+                starting_equipment=equipment.starting_equipment,
+                roleplay_profile=_roleplay_profile(draft),
+                numeric_overrides=payload.numeric_overrides,
+            )
         )
 
     return BuilderCompileResult(
