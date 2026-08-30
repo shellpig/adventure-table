@@ -5,12 +5,18 @@ and optional community reference are drafting aids, not an authority on final
 Traditional Chinese D&D terminology. The normal workflow is therefore:
 
 1. generate a readable baseline;
-2. write review diagnostics for uncertain/mixed-language output;
-3. let a human reviewer correct terminology in a follow-up pass.
+2. apply simple StableKey-specific human corrections;
+3. write review diagnostics for uncertain/mixed-language output;
+4. let a human reviewer continue correcting terminology.
 
 Unknown tokens and possible Simplified-Chinese residue are review findings, not
 release blockers by default. Only structural failures (invalid JSON, malformed
 source data, unwritable output, etc.) stop generation.
+
+The preferred human correction surface is
+``data/localization/m02d-srd-zh-tw-stable-overrides.json``. This avoids making
+global translation rules increasingly clever just to fix same-English-name
+collisions such as equipment ``Shield`` versus the spell ``Shield``.
 
 Optional Traditional Chinese reference:
 - repository: hktrpg/fvtt-5e-classpack-zh-tw
@@ -28,6 +34,7 @@ overlay. Runtime code never reads the external reference checkout.
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
 import json
 from pathlib import Path
 import re
@@ -48,6 +55,7 @@ AUTHORING_REFERENCE_SUBDIR = Path("translated-zh-tw/packs")
 DEFAULT_REFERENCE_CHECKOUT = ROOT / "_reference" / "fvtt-5e-classpack-zh-tw"
 DEFAULT_OUTPUT = ROOT / "data" / "srd5.1" / "locales" / "zh-TW.json"
 DEFAULT_REPORT = ROOT / "data" / "localization" / "m02d-srd-zh-tw-report.json"
+STABLE_OVERRIDE_PATH = ROOT / "data" / "localization" / "m02d-srd-zh-tw-stable-overrides.json"
 TOKEN_OVERRIDE_PATHS = (
     ROOT / "data" / "localization" / "m02d-srd-zh-tw-token-overrides.json",
     ROOT / "data" / "localization" / "m02d-srd-zh-tw-token-overrides-singletons.json",
@@ -73,6 +81,46 @@ def load_token_overrides() -> dict[str, str]:
             raise ValueError(f"token override file must contain string pairs: {path}")
         combined.update(raw)
     return combined
+
+
+def load_stable_overrides(path: Path = STABLE_OVERRIDE_PATH) -> dict[str, dict[str, Any]]:
+    """Load the deliberately simple human-review correction layer."""
+
+    raw = _load_json_object(path)
+    normalized: dict[str, dict[str, Any]] = {}
+    for key, fields in raw.items():
+        if not isinstance(key, str) or key.count(":") < 2:
+            raise ValueError(f"invalid StableKey in human override file: {key!r}")
+        if not isinstance(fields, dict) or not fields:
+            raise ValueError(f"human override fields must be a non-empty object: {key}")
+        normalized[key] = dict(fields)
+    return normalized
+
+
+def apply_stable_overrides(
+    overlay: dict[str, Any],
+    stable_overrides: dict[str, dict[str, Any]],
+) -> tuple[dict[str, Any], int]:
+    """Apply human-reviewed fields by StableKey after machine drafting.
+
+    Adding a previously absent entry is allowed. The content catalog still
+    validates every StableKey against the canonical registry at runtime, which
+    is the appropriate structural safety boundary.
+    """
+
+    result = deepcopy(overlay)
+    entries = result.setdefault("entries", {})
+    if not isinstance(entries, dict):
+        raise ValueError("locale overlay entries must be an object")
+    applied = 0
+    for key, fields in stable_overrides.items():
+        entry = entries.setdefault(key, {})
+        if not isinstance(entry, dict):
+            raise ValueError(f"locale overlay entry must be an object: {key}")
+        for field_path, value in fields.items():
+            entry[field_path] = value
+            applied += 1
+    return result, applied
 
 
 def reference_head(checkout: Path) -> str:
@@ -151,11 +199,19 @@ def prepare_human_review_candidate(
     overlay: dict[str, Any],
     report: dict[str, Any],
     *,
+    stable_overrides: dict[str, dict[str, Any]] | None = None,
     notes: list[str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Convert machine diagnostics into a readable baseline plus review queue."""
 
     readable_overlay = _make_readable(overlay)
+    readable_overlay, human_override_field_count = apply_stable_overrides(
+        readable_overlay,
+        stable_overrides or {},
+    )
+    readable_overlay["review_status"] = "draft-human-review-required"
+    readable_overlay["translation_method"] = "machine-assisted-draft-with-stablekey-human-overrides"
+
     unknowns = list(report.get("unknowns", []))
     simplified = list(report.get("simplified_residues", []))
     review_items = [
@@ -178,6 +234,7 @@ def prepare_human_review_candidate(
         **report,
         "review_policy": "human_review_required_non_blocking",
         "authoring_notes": list(notes or []),
+        "human_override_field_count": human_override_field_count,
         "review_item_count": len(review_items),
         "review_items": review_items,
         "runtime_untranslated_marker_count": 0,
@@ -199,8 +256,14 @@ def write_candidate(
         require_reference=require_reference,
     )
     token_overrides = load_token_overrides()
+    stable_overrides = load_stable_overrides()
     raw_overlay, raw_report = reviewed.build_reviewed_overlay(reference_root, token_overrides)
-    overlay, report = prepare_human_review_candidate(raw_overlay, raw_report, notes=notes)
+    overlay, report = prepare_human_review_candidate(
+        raw_overlay,
+        raw_report,
+        stable_overrides=stable_overrides,
+        notes=notes,
+    )
 
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(overlay, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -224,8 +287,9 @@ def write_candidate(
 
     print(
         "M02-D human-review baseline: "
-        f"{report['localized_entry_count']} entries / "
+        f"{report['localized_entry_count']} machine-drafted entries / "
         f"{report['required_field_count']} required fields / "
+        f"{report['human_override_field_count']} human override fields / "
         f"{review_count} review items / "
         "0 runtime unresolved markers"
     )
