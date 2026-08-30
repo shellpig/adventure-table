@@ -12,6 +12,7 @@ from app.domain.character.schemas import (
     PreparedSpellSelection,
 )
 from app.domain.character.validation import derive_hit_dice_totals, validate_state_against_build
+from app.domain.character_builder.reconciliation import StateReconciliationPreview
 from app.domain.character_builder.schemas import (
     BuilderIssue,
     BuilderResolvedSummary,
@@ -37,6 +38,7 @@ class BuilderReviewDTO(StrictModel):
     resolved_summary: BuilderResolvedSummary
     build_candidate: CharacterBuild | None = None
     initial_state: CharacterState | None = None
+    reconciliation: StateReconciliationPreview | None = None
     starting_equipment: tuple[BuilderEquipmentSummary, ...] = ()
     issues: tuple[BuilderIssue, ...]
     can_confirm: bool
