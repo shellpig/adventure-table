@@ -54,6 +54,9 @@ export function builderChoiceLabel(
   if (choice.option_source === 'content:asi-ability') {
     return '分配 2 點屬性值'
   }
+  if (choice.option_source === 'equipment') {
+    return '起始裝備選擇'
+  }
 
   const source = choice.option_source ?? ''
   const suffix = CHOICE_SUFFIX_ZH[source]
@@ -78,14 +81,32 @@ export function builderChoiceLabel(
   return choice.label
 }
 
+function localizedEquipmentOption(
+  option: BuilderChoiceOption,
+  nameFor: ContentNameResolver,
+): string | null {
+  const parts = (option.presentation_items ?? []).map((item) => {
+    const name = nameFor(item.reference_id, '裝備')
+    return item.count > 1 ? `${item.count} × ${name}` : name
+  })
+  if (option.presentation_has_choice) parts.push('裝備選擇')
+  return parts.length ? parts.join(' + ') : null
+}
+
 export function builderChoiceOptionLabel(
   choice: BuilderChoice,
   option: BuilderChoiceOption,
   locale: Locale,
   nameFor: ContentNameResolver,
 ): string {
-  if (option.reference_id) return nameFor(option.reference_id, option.label)
   if (locale === 'en') return option.label
+
+  if (choice.option_source === 'equipment') {
+    const equipmentLabel = localizedEquipmentOption(option, nameFor)
+    if (equipmentLabel) return equipmentLabel
+  }
+
+  if (option.reference_id) return nameFor(option.reference_id, option.label)
 
   if (choice.option_source === 'content:asi-feat' && option.branch_key === 'asi') {
     return '屬性值提升'
