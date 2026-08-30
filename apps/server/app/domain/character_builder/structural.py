@@ -4,7 +4,14 @@ from collections import Counter
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
-from app.content.registry import ContentRegistry, URL_ROUTE_TO_KIND
+from app.content.identity import (
+    URL_ROUTE_TO_KIND,
+    parse_stable_key,
+    reference_to_stable_key,
+    stable_key,
+    stable_key_is_kind,
+)
+from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
 from app.domain.character_builder.choices import deterministic_choice_id
 from app.domain.character_builder.progression import progression_summary
@@ -56,17 +63,11 @@ class StructuralCompilation:
 
 
 def _stable_key(reference: dict[str, object]) -> str | None:
-    index = reference.get("index")
-    url = reference.get("url")
-    if not isinstance(index, str) or not isinstance(url, str):
-        return None
-    parts = [part for part in urlparse(url).path.split("/") if part]
-    if len(parts) != 4 or parts[0:2] != ["api", "2014"]:
-        return None
-    kind = URL_ROUTE_TO_KIND.get(parts[2])
-    if kind is None or parts[3] != index:
-        return None
-    return f"srd5.1:{kind}:{index}"
+    return reference_to_stable_key(reference)
+
+
+def _entry_label(entry: ContentEntry) -> str:
+    return f"{entry.name} · {entry.source_label or entry.source}"
 
 
 def _class_level_entry(
@@ -74,12 +75,13 @@ def _class_level_entry(
     class_entry: ContentEntry,
     class_level: int,
 ) -> ContentEntry:
-    class_index = class_entry.key.rsplit(":", 1)[-1]
-    entry = registry.get_optional(f"srd5.1:level:{class_index}-{class_level}")
+    parsed = parse_stable_key(class_entry.key, kinds={"class"})
+    level_ref = stable_key(parsed.source, "level", f"{parsed.index}-{class_level}")
+    entry = registry.get_optional(level_ref)
     if entry is None:
         raise ValueError(f"Missing level rules for {class_entry.key} class level {class_level}")
     parent = entry.data.get("class")
-    if not isinstance(parent, dict) or parent.get("index") != class_index:
+    if not isinstance(parent, dict) or _stable_key(parent) != class_entry.key:
         raise ValueError(f"Invalid level rules parent for {class_entry.key} class level {class_level}")
     return entry
 
@@ -109,7 +111,8 @@ def _asi_feature_markers(entry: ContentEntry) -> int:
     for reference in raw:
         if not isinstance(reference, dict):
             continue
-        index = reference.get("index")
+        key = _stable_key(reference)
+        index = parse_stable_key(key).index if key is not None else reference.get("index")
         name = reference.get("name")
         normalized_index = index.lower() if isinstance(index, str) else ""
         normalized_name = name.lower() if isinstance(name, str) else ""
@@ -127,7 +130,7 @@ def asi_occurrences_at_class_level(
     class_level: int,
 ) -> int:
     class_entry = registry.get_optional(class_ref)
-    if class_entry is None or not class_entry.key.startswith("srd5.1:class:"):
+    if class_entry is None or not stable_key_is_kind(class_entry.key, "class"):
         raise ValueError(f"Unknown class reference: {class_ref}")
     current_entry = _class_level_entry(registry, class_entry, class_level)
     current = _cumulative_asi(current_entry)
@@ -189,7 +192,11 @@ def feat_failure_reason(
         minimum = prerequisite.get("minimum_score")
         if not isinstance(ability_score, dict) or not isinstance(minimum, int):
             return "This feat has an unsupported prerequisite shape."
-        index = ability_score.get("index")
+        ability_key = _stable_key(ability_score)
+        if ability_key is not None and stable_key_is_kind(ability_key, "ability"):
+            index = parse_stable_key(ability_key).index
+        else:
+            index = ability_score.get("index")
         ability = ABILITY_INDEX_TO_NAME.get(index) if isinstance(index, str) else None
         if ability is None:
             return "This feat has an unsupported ability prerequisite."
@@ -220,6 +227,7 @@ def _ability_from_option_id(option_id: str) -> str | None:
 
 def _reference_option(
     raw: dict[str, object],
+    registry: ContentRegistry,
     *,
     kind: BuilderOptionKind = BuilderOptionKind.REFERENCE,
     count: int | None = None,
@@ -228,9 +236,11 @@ def _reference_option(
     name = raw.get("name")
     if key is None or not isinstance(name, str):
         return None
+    target = registry.get_optional(key)
+    label = _entry_label(target) if target is not None else name
     return BuilderChoiceOption(
         option_id=(f"{key}@{count}" if count is not None else key),
-        label=(f"{count} × {name}" if count is not None else name),
+        label=(f"{count} × {label}" if count is not None else label),
         kind=kind,
         reference_id=key,
         count=count,
@@ -253,12 +263,12 @@ def _resource_list_options(
     return tuple(
         BuilderChoiceOption(
             option_id=entry.key,
-            label=entry.name,
+            label=_entry_label(entry),
             kind=BuilderOptionKind.CATEGORY_FILTER,
             reference_id=entry.key,
             category=kind,
         )
-        for entry in registry.list_kind(kind)
+        for entry in registry.list_kind(kind, source="srd5.1")
     )
 
 
@@ -305,7 +315,7 @@ def _canonical_rule_choices(
             continue
         option_type = raw.get("option_type")
         if option_type == "reference" and isinstance(raw.get("item"), dict):
-            option = _reference_option(raw["item"])
+            option = _reference_option(raw["item"], registry)
             if option is not None:
                 options.append(option)
         elif option_type == "counted_reference":
@@ -314,6 +324,7 @@ def _canonical_rule_choices(
             if isinstance(reference, dict) and isinstance(count, int) and count > 0:
                 option = _reference_option(
                     reference,
+                    registry,
                     kind=BuilderOptionKind.COUNTED_REFERENCE,
                     count=count,
                 )
@@ -453,7 +464,7 @@ def build_structural_choices(
         start=1,
     ):
         class_entry = registry.get_optional(level_choice.class_ref)
-        if class_entry is None or not class_entry.key.startswith("srd5.1:class:"):
+        if class_entry is None or not stable_key_is_kind(class_entry.key, "class"):
             continue
         class_counts[class_entry.key] += 1
         class_level = class_counts[class_entry.key]
@@ -472,7 +483,7 @@ def build_structural_choices(
             feat_options = tuple(
                 BuilderChoiceOption(
                     option_id=feat.key,
-                    label=feat.name,
+                    label=_entry_label(feat),
                     kind=BuilderOptionKind.REFERENCE,
                     reference_id=feat.key,
                     category="feat",
@@ -572,7 +583,7 @@ def build_structural_choices(
             continue
         for feature_ref in node.automatic_feature_refs:
             feature = registry.get_optional(feature_ref)
-            if feature is not None and feature.key.startswith("srd5.1:feature:"):
+            if feature is not None and stable_key_is_kind(feature.key, "feature"):
                 choices.extend(
                     _feature_specific_choices(
                         draft,
@@ -643,6 +654,14 @@ def _asi_branch_id_for_ability_choice(choice_id: str) -> str | None:
     return deterministic_choice_id("level", parts[1], "asi-feat", parts[3])
 
 
+def _skill_from_proficiency(reference_id: str, registry: ContentRegistry) -> str | None:
+    parsed = parse_stable_key(reference_id)
+    if parsed.kind != "proficiency" or not parsed.index.startswith("skill-"):
+        return None
+    skill_ref = stable_key(parsed.source, "skill", parsed.index.removeprefix("skill-"))
+    return skill_ref if registry.get_optional(skill_ref) is not None else None
+
+
 def compile_structural_selections(
     draft: BuilderDraft,
     registry: ContentRegistry,
@@ -694,7 +713,7 @@ def compile_structural_selections(
                 option is not None
                 and option.disabled_reason is None
                 and option.reference_id is not None
-                and option.reference_id.startswith("srd5.1:feat:")
+                and stable_key_is_kind(option.reference_id, "feat")
             ):
                 feats.append(option.reference_id)
             continue
@@ -710,20 +729,15 @@ def compile_structural_selections(
             ):
                 continue
             reference_id = option.reference_id
-            if reference_id.startswith("srd5.1:feature:"):
+            if stable_key_is_kind(reference_id, "feature"):
                 features.append(reference_id)
-            elif reference_id.startswith("srd5.1:proficiency:"):
-                proficiency_index = reference_id.rsplit(":", 1)[-1]
-                if proficiency_index.startswith("skill-"):
-                    skill_ref = (
-                        "srd5.1:skill:"
-                        f"{proficiency_index.removeprefix('skill-')}"
-                    )
-                    if registry.get_optional(skill_ref) is not None:
-                        skills.append(skill_ref)
-                        continue
+            elif stable_key_is_kind(reference_id, "proficiency"):
+                skill_ref = _skill_from_proficiency(reference_id, registry)
+                if skill_ref is not None:
+                    skills.append(skill_ref)
+                    continue
                 proficiencies.append(reference_id)
-            elif reference_id.startswith("srd5.1:skill:"):
+            elif stable_key_is_kind(reference_id, "skill"):
                 skills.append(reference_id)
 
     return StructuralCompilation(
