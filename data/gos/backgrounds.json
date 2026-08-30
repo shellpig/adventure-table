@@ -1,0 +1,175 @@
+[
+  {
+    "key": "gos:background:fisher",
+    "index": "fisher",
+    "name": "Fisher",
+    "source": "gos",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_GoS.md"},
+    "data": {
+      "index": "fisher",
+      "name": "Fisher",
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-history", "name": "Skill: History"},
+        {"key": "srd5.1:proficiency:skill-survival", "name": "Skill: Survival"}
+      ],
+      "language_options": {"choose": 1, "type": "languages", "desc": "Choose one language", "from": {"option_set_type": "resource_list", "resource_list_url": "/api/2014/languages"}},
+      "starting_equipment": [
+        {"equipment": {"key": "srd5.1:equipment:fishing-tackle", "name": "Fishing tackle"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:net", "name": "Net"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:clothes-travelers", "name": "Clothes, traveler's"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}
+      ],
+      "starting_gold": {"quantity": 10, "unit": "gp"},
+      "starting_equipment_notes": ["Favorite fishing lure or oilskin boots"],
+      "feature": {"name": "Harvest the Water", "desc": ["You have advantage on ability checks made using fishing tackle. When suitable water contains edible aquatic life, you can maintain a poor lifestyle while fishing and catch enough food each day for yourself and up to ten other people."]},
+      "feature_metadata": {
+        "fishing": {
+          "ability_check_advantage_with_equipment": "srd5.1:equipment:fishing-tackle",
+          "daily_people_fed_in_suitable_waters": 11,
+          "lifestyle_supported": "poor",
+          "automation": "manual"
+        }
+      },
+      "optional_roleplay_tables": {
+        "fishing_tale": ["Wrestled a giant lobster", "A catch dragged the boat for miles", "A stolen golden-finned catch", "A ghostly fish only you could see", "A giant clam and an enormous pearl", "A fish that blotted out daylight", "An underwater passage to a terrible place", "A doomed romance with an aquatic being"]
+      },
+      "roleplay_suggestions": {
+        "personality_traits": ["I respect people who earn their living through hard work.", "I become calm when I can see open water."],
+        "ideals": ["Work: steady effort carries people through bad weather.", "Balance: take what you need without exhausting the waters that feed you."],
+        "bonds": ["A particular stretch of water and the people who depend on it matter deeply to me."],
+        "flaws": ["I can become fixated on proving one impossible fishing story true."]
+      }
+    }
+  },
+  {
+    "key": "gos:background:marine",
+    "index": "marine",
+    "name": "Marine",
+    "source": "gos",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_GoS.md"},
+    "data": {
+      "index": "marine",
+      "name": "Marine",
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-athletics", "name": "Skill: Athletics"},
+        {"key": "srd5.1:proficiency:skill-survival", "name": "Skill: Survival"},
+        {"key": "srd5.1:proficiency:land-vehicles", "name": "Land Vehicles"},
+        {"key": "srd5.1:proficiency:water-vehicles", "name": "Water Vehicles"}
+      ],
+      "starting_equipment": [
+        {"equipment": {"key": "srd5.1:equipment:dagger", "name": "Dagger"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:clothes-travelers", "name": "Clothes, traveler's"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}
+      ],
+      "starting_gold": {"quantity": 10, "unit": "gp"},
+      "starting_equipment_notes": ["A fallen comrade's dagger provenance", "Folded flag bearing your ship or unit insignia"],
+      "feature": {"name": "Steady", "desc": ["You can travel for twice the normal daily travel time, up to 16 hours, before forced-march effects begin. You are also practiced at finding a safe route for a vessel to come ashore."]},
+      "feature_metadata": {
+        "travel": {
+          "hours_before_forced_march": 16,
+          "normal_travel_time_multiplier": 2,
+          "safe_ship_landing_route": true,
+          "automation": "manual"
+        }
+      },
+      "optional_roleplay_tables": {
+        "hardship_endured": ["Nearly drowned while hiding from enemies", "Survived months of captivity", "Paid dearly so comrades could escape", "Survived an impossible last stand", "Endured a dangerous stowaway seizure of a ship", "Carried a wounded comrade to safety"]
+      },
+      "roleplay_suggestions": {
+        "personality_traits": ["I stay composed when conditions turn miserable.", "I work best as part of a dependable team."],
+        "ideals": ["Teamwork: victory depends on cooperation and communication.", "Endurance: hardship is something to be met rather than feared."],
+        "bonds": ["I will not abandon the people who served beside me."],
+        "flaws": ["I can treat ordinary problems like military emergencies."]
+      }
+    }
+  },
+  {
+    "key": "gos:background:shipwright",
+    "index": "shipwright",
+    "name": "Shipwright",
+    "source": "gos",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_GoS.md"},
+    "data": {
+      "index": "shipwright",
+      "name": "Shipwright",
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-history", "name": "Skill: History"},
+        {"key": "srd5.1:proficiency:skill-perception", "name": "Skill: Perception"},
+        {"key": "srd5.1:proficiency:carpenters-tools", "name": "Carpenter's Tools"},
+        {"key": "srd5.1:proficiency:water-vehicles", "name": "Water Vehicles"}
+      ],
+      "starting_equipment": [
+        {"equipment": {"key": "srd5.1:equipment:carpenters-tools", "name": "Carpenter's Tools"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:book", "name": "Book"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:clothes-travelers", "name": "Clothes, traveler's"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}
+      ],
+      "starting_gold": {"quantity": 10, "unit": "gp"},
+      "starting_equipment_notes": ["Blank book used for ship plans and notes", "One ounce of ink and an ink pen"],
+      "feature": {"name": "I'll Patch It!", "desc": ["With carpenter's tools and wood, you can restore hull hit points to a water vehicle equal to five times your proficiency bonus. You cannot use this feature on that vehicle again until it has been hauled ashore and fully repaired."]},
+      "feature_metadata": {
+        "repair": {
+          "target": "water_vehicle_hull",
+          "requires": ["carpenters_tools", "wood"],
+          "amount": {"type": "proficiency_bonus_multiplier", "multiplier": 5},
+          "reuse_condition": "vehicle_hauled_ashore_and_fully_repaired",
+          "automation": "manual"
+        }
+      },
+      "optional_roleplay_tables": {
+        "life_at_sea": ["Worked toward plans for a grand new vessel", "Saved a warship with timely repairs", "Strengthened a merchant vessel before disaster", "Specialized in naval defensive systems", "Maintained ties to coastal smugglers", "Encountered a mysterious presence in the deep"]
+      },
+      "roleplay_suggestions": {
+        "personality_traits": ["I notice weak joints, warped boards, and bad repairs almost immediately."],
+        "ideals": ["Craft: good work should survive rough water and harder weather."],
+        "bonds": ["A ship or shipyard where I learned my trade still feels like home."],
+        "flaws": ["I have trouble resisting the urge to criticize shoddy workmanship."]
+      }
+    }
+  },
+  {
+    "key": "gos:background:smuggler",
+    "index": "smuggler",
+    "name": "Smuggler",
+    "source": "gos",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_GoS.md"},
+    "data": {
+      "index": "smuggler",
+      "name": "Smuggler",
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-athletics", "name": "Skill: Athletics"},
+        {"key": "srd5.1:proficiency:skill-deception", "name": "Skill: Deception"},
+        {"key": "srd5.1:proficiency:water-vehicles", "name": "Water Vehicles"}
+      ],
+      "starting_equipment": [
+        {"equipment": {"key": "srd5.1:equipment:clothes-common", "name": "Clothes, common"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}
+      ],
+      "starting_gold": {"quantity": 15, "unit": "gp"},
+      "starting_equipment_notes": ["Fancy leather vest or leather boots"],
+      "feature": {"name": "Down Low", "desc": ["You know a smuggler network willing to help you lie low. In a city, town, or similarly sized community chosen by the DM, you and your companions can stay free in a safe house that provides a poor lifestyle, and you can keep your presence there secret."]},
+      "feature_metadata": {
+        "safe_house": {
+          "community_scope": "dm_selected_city_town_or_similar",
+          "cost": "free",
+          "lifestyle": "poor",
+          "may_keep_presence_secret": true,
+          "automation": "manual"
+        }
+      },
+      "optional_roleplay_tables": {
+        "claim_to_fame": ["Hid stolen spirits inside a whale carcass", "Drove stolen goods across a battlefield", "Joined a foreign navy as part of a smuggling job", "Drifted into the Shadowfell while carrying stolen art", "Spent everything to save refugees at a checkpoint", "Sold ammunition to both sides of the same conflict"]
+      },
+      "roleplay_suggestions": {
+        "personality_traits": ["I always notice exits, patrol routes, and places where cargo could disappear."],
+        "ideals": ["Freedom: borders and tariffs should not decide what ordinary people may trade."],
+        "bonds": ["Someone in a port community once hid me when discovery would have ruined me."],
+        "flaws": ["I assume every rule has a price and every official can be worked around."]
+      }
+    }
+  }
+]

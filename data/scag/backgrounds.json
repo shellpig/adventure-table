@@ -1,0 +1,392 @@
+[
+  {
+    "key": "scag:background:city-watch",
+    "index": "city-watch",
+    "name": "City Watch",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_SCAG.md"},
+    "data": {
+      "index": "city-watch",
+      "name": "City Watch",
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-athletics", "name": "Skill: Athletics"},
+        {"key": "srd5.1:proficiency:skill-insight", "name": "Skill: Insight"}
+      ],
+      "language_options": {"choose": 2, "type": "languages", "desc": "Choose two languages", "from": {"option_set_type": "resource_list", "resource_list_url": "/api/2014/languages"}},
+      "starting_equipment": [{"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}],
+      "starting_gold": {"quantity": 10, "unit": "gp"},
+      "starting_equipment_notes": ["Watch uniform or rank insignia", "Signal horn", "Manacles"],
+      "feature": {"name": "Watcher's Eye", "desc": ["Experience enforcing local law helps you locate guard posts, similar authorities, and likely centers of criminal activity."]},
+      "roleplay_suggestions": {"inherits_from": "phb2014:background:soldier", "guidance": "Adapt Soldier suggestions toward public safety, law enforcement, and the community you served."}
+    }
+  },
+  {
+    "key": "scag:background:investigator",
+    "index": "investigator",
+    "name": "Investigator",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_SCAG.md"},
+    "data": {
+      "index": "investigator",
+      "name": "Investigator",
+      "variant_of": {"key": "scag:background:city-watch", "name": "City Watch"},
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-insight", "name": "Skill: Insight"},
+        {"key": "srd5.1:proficiency:skill-investigation", "name": "Skill: Investigation"}
+      ],
+      "language_options": {"choose": 2, "type": "languages", "desc": "Choose two languages", "from": {"option_set_type": "resource_list", "resource_list_url": "/api/2014/languages"}},
+      "starting_equipment": [{"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}],
+      "starting_gold": {"quantity": 10, "unit": "gp"},
+      "starting_equipment_notes": ["Investigator's uniform or identifying clothes", "Signal horn", "Manacles"],
+      "feature": {"name": "Watcher's Eye", "desc": ["Your investigative experience helps you identify local authorities and recognize patterns of criminal activity."]},
+      "roleplay_suggestions": {"inherits_from": "phb2014:background:soldier", "guidance": "Adapt Soldier suggestions toward solving crimes and bringing wrongdoers to justice."}
+    }
+  },
+  {
+    "key": "scag:background:clan-crafter",
+    "index": "clan-crafter",
+    "name": "Clan Crafter",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_SCAG.md"},
+    "data": {
+      "index": "clan-crafter",
+      "name": "Clan Crafter",
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-history", "name": "Skill: History"},
+        {"key": "srd5.1:proficiency:skill-insight", "name": "Skill: Insight"}
+      ],
+      "starting_proficiency_options": {"choose": 1, "type": "proficiencies", "desc": "Choose one artisan's tool proficiency", "from": {"option_set_type": "options_array", "options": [
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:alchemists-supplies", "name": "Alchemist's Supplies"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:brewers-supplies", "name": "Brewer's Supplies"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:carpenters-tools", "name": "Carpenter's Tools"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:smiths-tools", "name": "Smith's Tools"}}
+      ]}},
+      "language_options": {"choose": 1, "type": "languages", "desc": "Choose Dwarvish; if already known, choose another language", "from": {"option_set_type": "resource_list", "resource_list_url": "/api/2014/languages"}},
+      "starting_equipment": [{"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}],
+      "starting_equipment_options": [{"choose": 1, "type": "equipment", "desc": "Choose artisan's tools matching your training", "from": {"option_set_type": "options_array", "options": [
+        {"option_type": "counted_reference", "count": 1, "of": {"key": "srd5.1:equipment:alchemists-supplies", "name": "Alchemist's Supplies"}},
+        {"option_type": "counted_reference", "count": 1, "of": {"key": "srd5.1:equipment:brewers-supplies", "name": "Brewer's Supplies"}},
+        {"option_type": "counted_reference", "count": 1, "of": {"key": "srd5.1:equipment:carpenters-tools", "name": "Carpenter's Tools"}},
+        {"option_type": "counted_reference", "count": 1, "of": {"key": "srd5.1:equipment:smiths-tools", "name": "Smith's Tools"}}
+      ]}}],
+      "starting_gold": {"quantity": 5, "unit": "gp"},
+      "valuables": [{"kind": "gem", "value": 10, "unit": "gp"}],
+      "starting_equipment_notes": ["Crafter's chisel bearing your clan mark", "Traveler's clothes"],
+      "feature": {"name": "Respect of the Stout Folk", "desc": ["Dwarven communities generally recognize your craft training and can offer modest hospitality and professional regard."]},
+      "roleplay_suggestions": {"inherits_from": "phb2014:background:guild-artisan", "guidance": "Replace guild-centered details with the clan, master, and craft tradition that trained you."}
+    }
+  },
+  {
+    "key": "scag:background:cloistered-scholar",
+    "index": "cloistered-scholar",
+    "name": "Cloistered Scholar",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_SCAG.md"},
+    "data": {
+      "index": "cloistered-scholar",
+      "name": "Cloistered Scholar",
+      "starting_proficiencies": [{"key": "srd5.1:proficiency:skill-history", "name": "Skill: History"}],
+      "starting_proficiency_options": {"choose": 1, "type": "proficiencies", "desc": "Choose one scholarly skill", "from": {"option_set_type": "options_array", "options": [
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-arcana", "name": "Skill: Arcana"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-nature", "name": "Skill: Nature"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-religion", "name": "Skill: Religion"}}
+      ]}},
+      "language_options": {"choose": 2, "type": "languages", "desc": "Choose two languages", "from": {"option_set_type": "resource_list", "resource_list_url": "/api/2014/languages"}},
+      "starting_equipment": [{"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}],
+      "starting_gold": {"quantity": 10, "unit": "gp"},
+      "starting_equipment_notes": ["Scholar's robes", "Writing kit", "Borrowed book related to your current research"],
+      "feature": {"name": "Library Access", "desc": ["Your academic affiliation grants easier access to many libraries and lets you navigate their staff and procedures more effectively."]},
+      "roleplay_suggestions": {"inherits_from": "phb2014:background:sage", "guidance": "Adapt Sage suggestions around your institution, research, and pursuit of knowledge."}
+    }
+  },
+  {
+    "key": "scag:background:courtier",
+    "index": "courtier",
+    "name": "Courtier",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_SCAG.md"},
+    "data": {
+      "index": "courtier",
+      "name": "Courtier",
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-insight", "name": "Skill: Insight"},
+        {"key": "srd5.1:proficiency:skill-persuasion", "name": "Skill: Persuasion"}
+      ],
+      "language_options": {"choose": 2, "type": "languages", "desc": "Choose two languages", "from": {"option_set_type": "resource_list", "resource_list_url": "/api/2014/languages"}},
+      "starting_equipment": [{"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}],
+      "starting_gold": {"quantity": 5, "unit": "gp"},
+      "starting_equipment_notes": ["Fine clothes"],
+      "feature": {"name": "Court Functionary", "desc": ["You understand bureaucratic and courtly structures well enough to identify influential people, records, and likely channels for assistance."]},
+      "roleplay_suggestions": {"inherits_from": "phb2014:background:guild-artisan", "guidance": "Adapt Guild Artisan suggestions to the court, bureaucracy, patron, or political institution you once served."}
+    }
+  },
+  {
+    "key": "scag:background:faction-agent",
+    "index": "faction-agent",
+    "name": "Faction Agent",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_SCAG.md"},
+    "data": {
+      "index": "faction-agent",
+      "name": "Faction Agent",
+      "starting_proficiencies": [{"key": "srd5.1:proficiency:skill-insight", "name": "Skill: Insight"}],
+      "starting_proficiency_options": {"choose": 1, "type": "proficiencies", "desc": "Choose one Intelligence, Wisdom, or Charisma skill", "from": {"option_set_type": "options_array", "options": [
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-animal-handling", "name": "Skill: Animal Handling"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-arcana", "name": "Skill: Arcana"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-deception", "name": "Skill: Deception"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-history", "name": "Skill: History"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-intimidation", "name": "Skill: Intimidation"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-investigation", "name": "Skill: Investigation"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-medicine", "name": "Skill: Medicine"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-nature", "name": "Skill: Nature"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-perception", "name": "Skill: Perception"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-performance", "name": "Skill: Performance"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-persuasion", "name": "Skill: Persuasion"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-religion", "name": "Skill: Religion"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-survival", "name": "Skill: Survival"}}
+      ]}},
+      "language_options": {"choose": 2, "type": "languages", "desc": "Choose two languages", "from": {"option_set_type": "resource_list", "resource_list_url": "/api/2014/languages"}},
+      "starting_equipment": [{"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}],
+      "starting_gold": {"quantity": 15, "unit": "gp"},
+      "starting_equipment_notes": ["Faction badge or emblem", "Faction correspondence or code material", "Common clothes"],
+      "feature": {"name": "Safe Haven", "desc": ["You can contact your faction's secret network for a hidden safe place with free food and lodging, and for help finding information. These contacts will not normally risk their lives or expose their true identities for you."]},
+      "feature_metadata": {"safe_haven": {"hidden_safe_place": true, "food_and_lodging_cost": "free", "information_assistance": true, "contacts_risk_lives_or_identity": false, "automation": "manual"}},
+      "roleplay_suggestions": {"inherits_from": "phb2014:background:acolyte", "guidance": "Use Acolyte suggestions as the base, replacing faith-centered details with your faction, its members, mission, and principles."}
+    }
+  },
+  {
+    "key": "scag:background:far-traveler",
+    "index": "far-traveler",
+    "name": "Far Traveler",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_SCAG.md"},
+    "data": {
+      "index": "far-traveler",
+      "name": "Far Traveler",
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-insight", "name": "Skill: Insight"},
+        {"key": "srd5.1:proficiency:skill-perception", "name": "Skill: Perception"}
+      ],
+      "starting_proficiency_options": {"choose": 1, "type": "proficiencies", "desc": "Choose one musical instrument or gaming set", "from": {"option_set_type": "options_array", "options": [
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:dice-set", "name": "Dice Set"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:playing-card-set", "name": "Playing Card Set"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:flute", "name": "Flute"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:lute", "name": "Lute"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:drum", "name": "Drum"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:viol", "name": "Viol"}}
+      ]}},
+      "language_options": {"choose": 1, "type": "languages", "desc": "Choose one language", "from": {"option_set_type": "resource_list", "resource_list_url": "/api/2014/languages"}},
+      "starting_equipment": [{"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}],
+      "starting_gold": {"quantity": 5, "unit": "gp"},
+      "valuables": [{"kind": "jewelry", "value": 10, "unit": "gp"}],
+      "starting_equipment_notes": ["Traveler's clothes", "Small map or keepsake from your homeland", "A matching instrument or gaming set"],
+      "feature": {"name": "All Eyes on You", "desc": ["Your foreign appearance, customs, or manner can attract curiosity and open social opportunities in unfamiliar communities."]},
+      "roleplay_suggestions": {
+        "personality_traits": ["I compare new customs with the traditions of my homeland."],
+        "ideals": ["Open-mindedness: unfamiliar customs are worth understanding before judging."],
+        "bonds": ["I carry a strong connection to the land and people I left behind."],
+        "flaws": ["I sometimes assume my homeland's ways are obviously superior."]
+      }
+    }
+  },
+  {
+    "key": "scag:background:inheritor",
+    "index": "inheritor",
+    "name": "Inheritor",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_SCAG.md"},
+    "data": {
+      "index": "inheritor",
+      "name": "Inheritor",
+      "starting_proficiencies": [{"key": "srd5.1:proficiency:skill-survival", "name": "Skill: Survival"}],
+      "starting_proficiency_options": {"choose": 1, "type": "proficiencies", "desc": "Choose Arcana, History, or Religion", "from": {"option_set_type": "options_array", "options": [
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-arcana", "name": "Skill: Arcana"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-history", "name": "Skill: History"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-religion", "name": "Skill: Religion"}}
+      ]}},
+      "proficiency_choices": {"choose": 1, "type": "proficiencies", "desc": "Choose one gaming set or musical instrument", "from": {"option_set_type": "options_array", "options": [
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:dice-set", "name": "Dice Set"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:playing-card-set", "name": "Playing Card Set"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:flute", "name": "Flute"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:lute", "name": "Lute"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:drum", "name": "Drum"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:viol", "name": "Viol"}}
+      ]}},
+      "language_options": {"choose": 1, "type": "languages", "desc": "Choose one language", "from": {"option_set_type": "resource_list", "resource_list_url": "/api/2014/languages"}},
+      "starting_equipment": [{"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}],
+      "starting_gold": {"quantity": 15, "unit": "gp"},
+      "starting_equipment_notes": ["Your inherited object or mark", "Traveler's clothes", "A matching gaming set or instrument"],
+      "inheritance": {"selection": "player_and_dm_defined", "automation": "manual"},
+      "feature": {"name": "Inheritance", "desc": ["Your inherited object, secret, mark, or claim carries story significance and can attract recognition or complications at the DM's discretion."]},
+      "roleplay_suggestions": {"inherits_from": "phb2014:background:folk-hero", "guidance": "Use Folk Hero suggestions as the base and adapt bonds, ideals, and motivations around the person, family, place, or legacy tied to your inheritance."}
+    }
+  },
+  {
+    "key": "scag:background:knight-of-the-order",
+    "index": "knight-of-the-order",
+    "name": "Knight of the Order",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_SCAG.md"},
+    "data": {
+      "index": "knight-of-the-order",
+      "name": "Knight of the Order",
+      "starting_proficiencies": [{"key": "srd5.1:proficiency:skill-persuasion", "name": "Skill: Persuasion"}],
+      "starting_proficiency_options": {"choose": 1, "type": "proficiencies", "desc": "Choose Arcana, History, Nature, or Religion", "from": {"option_set_type": "options_array", "options": [
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-arcana", "name": "Skill: Arcana"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-history", "name": "Skill: History"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-nature", "name": "Skill: Nature"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-religion", "name": "Skill: Religion"}}
+      ]}},
+      "proficiency_choices": {"choose": 1, "type": "proficiencies", "desc": "Choose one gaming set or musical instrument", "from": {"option_set_type": "options_array", "options": [
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:dice-set", "name": "Dice Set"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:playing-card-set", "name": "Playing Card Set"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:flute", "name": "Flute"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:lute", "name": "Lute"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:drum", "name": "Drum"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:viol", "name": "Viol"}}
+      ]}},
+      "language_options": {"choose": 1, "type": "languages", "desc": "Choose one language", "from": {"option_set_type": "resource_list", "resource_list_url": "/api/2014/languages"}},
+      "starting_equipment": [{"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}],
+      "starting_gold": {"quantity": 10, "unit": "gp"},
+      "starting_equipment_notes": ["Traveler's clothes", "Signet, banner, seal, or other symbol of your order"],
+      "feature": {"name": "Knightly Regard", "desc": ["Members and sympathizers of your order are inclined to recognize your standing and offer appropriate hospitality or assistance."]},
+      "roleplay_suggestions": {"inherits_from": "phb2014:background:soldier", "guidance": "Adapt Soldier suggestions around the vows, hierarchy, and ideals of your knightly order."}
+    }
+  },
+  {
+    "key": "scag:background:mercenary-veteran",
+    "index": "mercenary-veteran",
+    "name": "Mercenary Veteran",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_SCAG.md"},
+    "data": {
+      "index": "mercenary-veteran",
+      "name": "Mercenary Veteran",
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-athletics", "name": "Skill: Athletics"},
+        {"key": "srd5.1:proficiency:skill-persuasion", "name": "Skill: Persuasion"},
+        {"key": "srd5.1:proficiency:land-vehicles", "name": "Land Vehicles"}
+      ],
+      "starting_proficiency_options": {"choose": 1, "type": "proficiencies", "desc": "Choose one gaming set", "from": {"option_set_type": "options_array", "options": [
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:dice-set", "name": "Dice Set"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:playing-card-set", "name": "Playing Card Set"}}
+      ]}},
+      "starting_equipment": [{"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}],
+      "starting_equipment_options": [{"choose": 1, "type": "equipment", "desc": "Choose a gaming set", "from": {"option_set_type": "options_array", "options": [
+        {"option_type": "counted_reference", "count": 1, "of": {"key": "srd5.1:equipment:dice-set", "name": "Dice Set"}},
+        {"option_type": "counted_reference", "count": 1, "of": {"key": "srd5.1:equipment:playing-card-set", "name": "Playing Card Set"}}
+      ]}}],
+      "starting_gold": {"quantity": 10, "unit": "gp"},
+      "starting_equipment_notes": ["Uniform of your former company", "Insignia of rank", "Common clothes"],
+      "feature": {"name": "Mercenary Life", "desc": ["You know the mercenary trade, can identify companies by reputation and insignia, and can more easily seek paid martial work where such forces operate."]},
+      "roleplay_suggestions": {"inherits_from": "phb2014:background:soldier", "guidance": "Adapt Soldier suggestions toward contract work, company loyalty, and the realities of fighting for pay."}
+    }
+  },
+  {
+    "key": "scag:background:urban-bounty-hunter",
+    "index": "urban-bounty-hunter",
+    "name": "Urban Bounty Hunter",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_SCAG.md"},
+    "data": {
+      "index": "urban-bounty-hunter",
+      "name": "Urban Bounty Hunter",
+      "starting_proficiencies": [],
+      "starting_proficiency_options": {"choose": 2, "type": "proficiencies", "desc": "Choose two skills", "from": {"option_set_type": "options_array", "options": [
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-deception", "name": "Skill: Deception"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-insight", "name": "Skill: Insight"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-persuasion", "name": "Skill: Persuasion"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:skill-stealth", "name": "Skill: Stealth"}}
+      ]}},
+      "proficiency_choices": {"choose": 2, "type": "proficiencies", "desc": "Choose two tool proficiencies from gaming sets, musical instruments, or thieves' tools", "from": {"option_set_type": "options_array", "options": [
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:dice-set", "name": "Dice Set"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:playing-card-set", "name": "Playing Card Set"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:flute", "name": "Flute"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:lute", "name": "Lute"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:drum", "name": "Drum"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:viol", "name": "Viol"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:thieves-tools", "name": "Thieves' Tools"}}
+      ]}},
+      "starting_equipment": [{"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}],
+      "starting_gold": {"quantity": 20, "unit": "gp"},
+      "starting_equipment_notes": ["Clothing appropriate to your work"],
+      "tool_choice_policy": {"source_rule": "choose two among a gaming set, a musical instrument, and thieves' tools", "automation": "generic distinct proficiency choice"},
+      "feature": {"name": "Ear to the Ground", "desc": ["You maintain contacts across the social circles where you hunt quarry and can usually learn how to reach local people who trade in useful information."]},
+      "roleplay_suggestions": {"inherits_from": "phb2014:background:criminal", "guidance": "Adapt Criminal suggestions toward tracking people, informants, and paid investigations rather than membership in a criminal gang."}
+    }
+  },
+  {
+    "key": "scag:background:uthgardt-tribe-member",
+    "index": "uthgardt-tribe-member",
+    "name": "Uthgardt Tribe Member",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_SCAG.md"},
+    "data": {
+      "index": "uthgardt-tribe-member",
+      "name": "Uthgardt Tribe Member",
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-athletics", "name": "Skill: Athletics"},
+        {"key": "srd5.1:proficiency:skill-survival", "name": "Skill: Survival"}
+      ],
+      "starting_proficiency_options": {"choose": 1, "type": "proficiencies", "desc": "Choose one artisan's tool or musical instrument", "from": {"option_set_type": "options_array", "options": [
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:alchemists-supplies", "name": "Alchemist's Supplies"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:brewers-supplies", "name": "Brewer's Supplies"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:carpenters-tools", "name": "Carpenter's Tools"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:smiths-tools", "name": "Smith's Tools"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:flute", "name": "Flute"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:lute", "name": "Lute"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:drum", "name": "Drum"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:viol", "name": "Viol"}}
+      ]}},
+      "language_options": {"choose": 1, "type": "languages", "desc": "Choose one language", "from": {"option_set_type": "resource_list", "resource_list_url": "/api/2014/languages"}},
+      "starting_equipment": [{"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}],
+      "starting_gold": {"quantity": 10, "unit": "gp"},
+      "starting_equipment_notes": ["Hunting trap", "Totemic token or trophy", "Traveler's clothes"],
+      "feature": {"name": "Uthgardt Heritage", "desc": ["You know the terrain and natural resources of the North exceptionally well. When you forage in wilderness, you find twice as much food and water as you normally would, and your people and their allies generally offer you hospitality."]},
+      "feature_metadata": {"foraging": {"food_and_water_multiplier": 2, "automation": "manual"}, "hospitality": {"from_uthgardt_and_allies": true, "automation": "manual"}},
+      "roleplay_suggestions": {"inherits_from": "phb2014:background:outlander", "guidance": "Adapt Outlander suggestions around your tribe, its traditions, and your relationship to settled lands."}
+    }
+  },
+  {
+    "key": "scag:background:waterdhavian-noble",
+    "index": "waterdhavian-noble",
+    "name": "Waterdhavian Noble",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_SCAG.md"},
+    "data": {
+      "index": "waterdhavian-noble",
+      "name": "Waterdhavian Noble",
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-history", "name": "Skill: History"},
+        {"key": "srd5.1:proficiency:skill-persuasion", "name": "Skill: Persuasion"}
+      ],
+      "starting_proficiency_options": {"choose": 1, "type": "proficiencies", "desc": "Choose one gaming set or musical instrument", "from": {"option_set_type": "options_array", "options": [
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:dice-set", "name": "Dice Set"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:playing-card-set", "name": "Playing Card Set"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:flute", "name": "Flute"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:lute", "name": "Lute"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:drum", "name": "Drum"}},
+        {"option_type": "reference", "item": {"key": "srd5.1:proficiency:viol", "name": "Viol"}}
+      ]}},
+      "language_options": {"choose": 1, "type": "languages", "desc": "Choose one language", "from": {"option_set_type": "resource_list", "resource_list_url": "/api/2014/languages"}},
+      "starting_equipment": [{"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}],
+      "starting_gold": {"quantity": 20, "unit": "gp"},
+      "starting_equipment_notes": ["Fine clothes", "Family signet or proof of pedigree", "A skin of fine zzar or comparable luxury"],
+      "feature": {"name": "Kept in Style", "desc": ["Your family name and expectations can support a modest noble lifestyle in Waterdeep, subject to the narrative consequences of your behavior and standing."]},
+      "roleplay_suggestions": {"inherits_from": "phb2014:background:noble", "guidance": "Adapt Noble suggestions specifically to Waterdeep's noble houses, family reputation, and civic expectations."}
+    }
+  }
+]

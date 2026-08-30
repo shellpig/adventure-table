@@ -68,11 +68,13 @@ async function createBarbarianOne(page: Page) {
   await chooseIn(startingSkills, 'Skill: Animal Handling')
   await chooseIn(startingSkills, 'Skill: Athletics')
 
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByRole('button', { name: /Equipment/ }).click()
+  await expect(page.getByRole('heading', { name: 'Equipment & roleplay' })).toBeVisible()
   await chooseSearchable(page, /\(a\) a greataxe or \(b\) any martial melee weapon/, 'Greataxe')
   await chooseSearchable(page, /\(a\) two handaxes or \(b\) any simple weapon/, '2 × Handaxe')
   await chooseSearchable(page, 'Acolyte — Starting Equipment', 'Amulet')
 
+  await page.getByRole('button', { name: /Review/ }).click()
   const confirm = page.getByRole('button', { name: 'Confirm & Create Character' })
   await expect(confirm).toBeEnabled()
   await confirm.click()
