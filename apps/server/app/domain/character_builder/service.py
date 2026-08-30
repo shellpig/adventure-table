@@ -29,7 +29,7 @@ from app.domain.character_builder.versions import (
     seed_version_draft_payload,
 )
 from app.persistence.builder_drafts import BuilderDraftRepository
-from app.persistence.characters import CharacterRepository
+from app.persistence.characters import CharacterRepository, StaleBuildVersionError
 
 
 class BuilderModeNotEnabledError(ValueError):
@@ -60,6 +60,91 @@ class CharacterBuilderService:
             raise RuntimeError("character repository is required for this builder workflow")
         return self.character_repository
 
+    @staticmethod
+    def _version_contract_issues(
+        draft: BuilderDraft,
+        base_build,
+        compiled: BuilderCompileResult,
+    ) -> tuple[BuilderIssue, ...]:
+        if draft.mode is BuilderMode.CREATE:
+            return ()
+        expected_level = (
+            base_build.character_level + 1
+            if draft.mode is BuilderMode.LEVEL_UP
+            else base_build.character_level
+        )
+        issues: list[BuilderIssue] = []
+        if draft.draft_payload.target_level != expected_level:
+            issues.append(
+                BuilderIssue(
+                    code="invalid_version_target_level",
+                    severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                    path="draft_payload.target_level",
+                    message=(
+                        f"{draft.mode.value} must target Character Level {expected_level}; "
+                        f"got {draft.draft_payload.target_level}."
+                    ),
+                )
+            )
+
+        if draft.mode is BuilderMode.LEVEL_UP:
+            historical = draft.draft_payload.level_choices[: base_build.character_level]
+            if tuple(level.class_ref for level in historical) != base_build.class_progression:
+                issues.append(
+                    BuilderIssue(
+                        code="level_up_historical_progression_changed",
+                        severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                        path="draft_payload.level_choices",
+                        message="Level Up cannot rewrite class choices from the base Build.",
+                    )
+                )
+            if tuple(level.hp_base_gain for level in historical) != base_build.hp_progression:
+                issues.append(
+                    BuilderIssue(
+                        code="level_up_historical_hp_changed",
+                        severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                        path="draft_payload.level_choices",
+                        message="Level Up cannot rewrite historical HP progression from the base Build.",
+                    )
+                )
+
+            candidate = compiled.build_candidate
+            if candidate is not None:
+                immutable_origin = (
+                    candidate.race_ref == base_build.race_ref
+                    and candidate.subrace_ref == base_build.subrace_ref
+                    and candidate.background_ref == base_build.background_ref
+                    and candidate.alignment_ref == base_build.alignment_ref
+                )
+                if not immutable_origin:
+                    issues.append(
+                        BuilderIssue(
+                            code="level_up_origin_changed",
+                            severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                            path="draft_payload",
+                            message="Level Up cannot rewrite race/background/alignment; use Build Edit or Correction.",
+                        )
+                    )
+                if candidate.starting_equipment != base_build.starting_equipment:
+                    issues.append(
+                        BuilderIssue(
+                            code="level_up_starting_equipment_changed",
+                            severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                            path="build.starting_equipment",
+                            message="Level Up must preserve immutable starting-equipment provenance.",
+                        )
+                    )
+                if candidate.numeric_overrides != base_build.numeric_overrides:
+                    issues.append(
+                        BuilderIssue(
+                            code="level_up_numeric_override_changed",
+                            severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                            path="draft_payload.numeric_overrides",
+                            message="Numeric Overrides are not a Level Up choice; use Build Edit or Correction.",
+                        )
+                    )
+        return tuple(issues)
+
     def _compile(self, draft: BuilderDraft) -> BuilderCompileResult:
         base_build = None
         stale_issue: BuilderIssue | None = None
@@ -89,8 +174,13 @@ class CharacterBuilderService:
             self.registry,
             base_build=base_build,
         )
+        extra_issues: list[BuilderIssue] = []
+        if base_build is not None:
+            extra_issues.extend(self._version_contract_issues(draft, base_build, compiled))
         if stale_issue is not None:
-            validation = make_validation_result((*compiled.validation.issues, stale_issue))
+            extra_issues.append(stale_issue)
+        if extra_issues:
+            validation = make_validation_result((*compiled.validation.issues, *extra_issues))
             compiled = replace(compiled, validation=validation)
         return compiled
 
@@ -157,10 +247,88 @@ class CharacterBuilderService:
         draft = self.repository.load_draft(draft_id)
         return self._view(draft, self._compile(draft))
 
+    def _guard_level_up_patch(
+        self,
+        current: BuilderDraft,
+        changes: dict[str, object],
+    ) -> None:
+        if current.mode is not BuilderMode.LEVEL_UP:
+            return
+        if current.character_id is None or current.base_version_id is None:
+            raise ValueError("level_up draft is missing its base version")
+        base_build = self._require_character_repository().load_build_version(
+            current.character_id,
+            current.base_version_id,
+        )
+        immutable_fields = {
+            "target_level",
+            "race_selection",
+            "subrace_selection",
+            "background_selection",
+            "alignment_selection",
+            "ability_generation",
+            "starting_equipment_choices",
+            "roleplay_profile",
+            "numeric_overrides",
+            "initial_state_seed",
+        }
+        current_payload = current.draft_payload.model_dump(mode="python")
+        for field in immutable_fields.intersection(changes):
+            if changes[field] != current_payload[field]:
+                raise ValueError(
+                    f"level_up cannot modify historical field {field}; use build_edit or correction"
+                )
+
+        if "level_choices" in changes:
+            proposed_levels = changes["level_choices"]
+            if not isinstance(proposed_levels, (list, tuple)):
+                raise ValueError("level_choices must be an ordered list")
+            current_prefix = current.draft_payload.level_choices[: base_build.character_level]
+            proposed_prefix = tuple(proposed_levels[: base_build.character_level])
+            normalized_prefix = tuple(
+                item.model_dump(mode="python") if hasattr(item, "model_dump") else item
+                for item in current_prefix
+            )
+            normalized_proposed = tuple(
+                item.model_dump(mode="python") if hasattr(item, "model_dump") else item
+                for item in proposed_prefix
+            )
+            if normalized_proposed != normalized_prefix:
+                raise ValueError("level_up cannot modify historical level choices")
+
+        if "choice_selections" in changes:
+            proposed = changes["choice_selections"]
+            if not isinstance(proposed, dict):
+                raise ValueError("choice_selections must be an object")
+            current_selections = current.draft_payload.choice_selections
+            target_level = base_build.character_level + 1
+            for choice_id, old_selection in current_selections.items():
+                if choice_id.startswith(f"level:{target_level}:"):
+                    continue
+                proposed_selection = proposed.get(choice_id)
+                old_dump = old_selection.model_dump(mode="python")
+                proposed_dump = (
+                    proposed_selection.model_dump(mode="python")
+                    if hasattr(proposed_selection, "model_dump")
+                    else proposed_selection
+                )
+                if proposed_dump != old_dump:
+                    raise ValueError(
+                        f"level_up cannot modify historical choice {choice_id}"
+                    )
+            for choice_id in proposed:
+                if choice_id not in current_selections and not choice_id.startswith(
+                    f"level:{target_level}:"
+                ):
+                    raise ValueError(
+                        f"level_up cannot add non-level-up choice {choice_id}"
+                    )
+
     def patch_draft(self, draft_id: UUID, request: BuilderDraftPatchInput) -> BuilderView:
         current = self.repository.load_draft(draft_id)
         payload_data = current.draft_payload.model_dump(mode="python")
         changes = request.draft_payload.model_dump(mode="python", exclude_unset=True)
+        self._guard_level_up_patch(current, changes)
         payload_data.update(changes)
         candidate = BuilderDraftPayload.model_validate(payload_data)
         updated = self.repository.update_draft_payload(
@@ -263,6 +431,18 @@ class CharacterBuilderService:
                 version_no=character.version_no,
                 character_path=f"/characters/{character.id}",
             )
+
+        draft_snapshot = self.repository.load_draft(draft_id)
+        if draft_snapshot.mode is not BuilderMode.CREATE:
+            if draft_snapshot.character_id is None or draft_snapshot.base_version_id is None:
+                raise ValueError("versioned draft is missing its base version")
+            current = character_repository.load_character(draft_snapshot.character_id)
+            if current.current_version_id != draft_snapshot.base_version_id:
+                raise StaleBuildVersionError(
+                    current.id,
+                    draft_snapshot.base_version_id,
+                    current.current_version_id,
+                )
 
         draft, compiled, review = self._compile_review(draft_id)
         if not review.can_confirm or compiled.build_candidate is None:
