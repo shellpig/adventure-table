@@ -50,7 +50,9 @@ M01 的直接目標：
 
 **M02-A — Locale Foundation & Runtime Switch 已完成**：建立 typed `zh-TW` / `en` locale runtime、瀏覽器持久化偏好、全站一鍵切換器、`html` language metadata 與 M02-A regression 覆蓋（Vitest + Playwright spec）。locale 仍只是 presentation state，未寫入 Draft / Character domain。
 
-> **下一個 coding step 是 M02-B — Full UI Copy Localization。只有在使用者明確要求後才 coding。M02-B～M02-H 完成並 closeout 後，再回 M01-D～M01-J，最後才回到 P2 — Room / Campaign / Session / Seat 的規劃。M02 未 closeout 前不得開始 M01-D；不得因 M01 / M02 提前拆 P2～P8。**
+**M02-B — Full UI Copy Localization 已完成**：既有 frontend-owned UI copy 已集中到 typed `zh-TW` / `en` localization resources；Landing、Character Workshop、Builder 七個具名 step、Review / Confirm、Character Sheet、Version History、LocaleSwitcher 與 SearchableSelect 均可即時切換，accessibility name / form label / placeholder / helper / loading / empty / confirmation copy 同步 locale；另加入 surface inventory、兩語 key parity、hardcoded presentation copy regression 與 real-browser 雙語 smoke。Rules/content DTO presentation 明確留給 M02-C～M02-F。
+
+> **下一個 coding step 是 M02-C — Localized Content Model & Terminology Contract。只有在使用者明確要求後才 coding。M02-C～M02-H 完成並 closeout 後，再回 M01-D～M01-J，最後才回到 P2 — Room / Campaign / Session / Seat 的規劃。M02 未 closeout 前不得開始 M01-D；不得因 M01 / M02 提前拆 P2～P8。**
 
 已完成的產品／規劃工作：
 
@@ -221,7 +223,7 @@ M01 共通原則：
 | **M01-I — TCE Magic Items** | 📐 | TCE item registry、rarity / attunement / restrictions / charges、manual-effect fallback；首次 expose 欄位同步雙語 |
 | **M01-J — Full M01 Integration & Closeout** | 📐 | all-pack validation、P0/P1 regression、M02 localization regression、full E2E、restart persistence、真人 Gate recheck |
 
-**M01-A、M01-B、M01-C 已完成並關門。M01 現在暫停；目前進行 M02，下一個可開工 Subphase 是 M02-B。M02 closeout 後再回 M01-D。**
+**M01-A、M01-B、M01-C 已完成並關門。M01 現在暫停；目前進行 M02，下一個可開工 Subphase 是 M02-C。M02 closeout 後再回 M01-D。**
 
 ---
 
@@ -261,7 +263,7 @@ M02 共通原則：
 | Subphase | 狀態 | 重點 |
 |---|---|---|
 | **M02-A — Locale Foundation & Runtime Switch** | ✅ | 全站單一 locale state、一鍵切換、browser 記憶、不動 Draft / Character domain state |
-| **M02-B — Full UI Copy Localization** | 📐 | 既有 frontend UI copy 全部進 localization resources，含 accessibility text；Builder 七個具名 step 全覆蓋 |
+| **M02-B — Full UI Copy Localization** | ✅ | 既有 frontend UI copy 全部進 localization resources，含 accessibility text；Builder 七個具名 step 全覆蓋 |
 | **M02-C — Localized Content Model & Terminology Contract** | 📐 | canonical / overlay 邊界、localized resolver、field-level localizable policy、roleplay suggestion identity、glossary 定稿 |
 | **M02-D — SRD 5.1 Names & Structured Text** | 📐 | 依 policy 完成目前 user-visible SRD names / labels / structured text 雙語覆蓋 |
 | **M02-E — SRD 5.1 User-Visible Descriptions** | 📐 | 只翻目前 product surface 已顯示的 SRD 長篇／說明文字；不提前翻未來 surface |
@@ -269,7 +271,7 @@ M02 共通原則：
 | **M02-G — Localized Search, Errors & Completeness Gates** | 📐 | localized search / alias / sort、error code + localized message、policy-driven completeness / orphan guard |
 | **M02-H — Full M02 Integration & Closeout** | 📐 | 全站雙語驗收、Draft-safe switch、batch evidence、doc-sync / CC BY NOTICE、真人 browser gate |
 
-**M02-A 已完成；下一個可開工 Subphase 是 M02-B。M02-B～M02-H 尚未 coding。**
+**M02-A、M02-B 已完成；下一個可開工 Subphase 是 M02-C。M02-C～M02-H 尚未 coding。**
 
 ---
 
@@ -296,7 +298,7 @@ P0/P1 已完成；**目前已拆 M01 與 M02。P2～P8 仍維持大 Phase，不�
 實際執行順序：
 
 ```text
-M01-A ✅ → M01-B ✅ → M01-C ✅ → M02-A ✅ → M02-B～M02-H → M01-D～M01-J → P2
+M01-A ✅ → M01-B ✅ → M01-C ✅ → M02-A ✅ → M02-B ✅ → M02-C～M02-H → M01-D～M01-J → P2
 ```
 
 ---
@@ -480,7 +482,7 @@ M Phase 可以插在 P Phase 之間，**也可以插在另一個 M Phase 的兩�
 2. 再讀 `PROJECT_BRIEF.md` 取得目前 Phase、Subphase 與下一步。
 3. 按任務讀 `規格企劃.md` 對應章節。
 4. M01 實作／驗收依 `docs/M01/`、M02 依 `docs/M02/` 三份文件中的同名 Subphase 取得契約。
-5. M01-C 已 closeout；現在進行 M02（A 已完成，下一步 M02-B），M02 未 closeout 不開始 M01-D。
+5. M01-C 已 closeout；現在進行 M02（A、B 已完成，下一步 M02-C），M02 未 closeout 不開始 M01-D。
 6. M02-D / E / F 的 translation batch 可以分批 commit，但不能分批關閉 Subphase。
 7. M02 closeout 後，M01-D 起新增／修改／首次 expose user-visible content 必須同步維護所有 supported locales。
 8. 不重新討論已定案產品規格。
