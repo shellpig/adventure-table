@@ -46,6 +46,8 @@ const FIELDS: {
   { key: 'flaws', labelKey: 'roleplay.flaws', hintKey: 'roleplay.flawsHint' },
 ]
 
+const EMPTY_SUGGESTIONS: RoleplaySuggestion[] = []
+
 export function roleplayLines(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   return value
@@ -152,7 +154,7 @@ export function RoleplayProfileEditor({
     queryFn: () => getBackgroundPresentation(backgroundRef, locale),
     enabled: Boolean(backgroundRef),
   })
-  const suggestions = backgroundQuery.data?.roleplay_suggestions ?? []
+  const suggestions = backgroundQuery.data?.roleplay_suggestions ?? EMPTY_SUGGESTIONS
   const suggestionTextById = useMemo(
     () => Object.fromEntries(suggestions.map((suggestion) => [suggestion.suggestion_id, suggestion.text])),
     [suggestions],
