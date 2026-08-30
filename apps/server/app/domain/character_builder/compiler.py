@@ -271,21 +271,20 @@ def compile_builder_draft(
         }
     )
 
+    # Equipment is part of final P1-F validation, but it is intentionally not a
+    # prerequisite for compiling the class/feature/spell Build candidate. This
+    # preserves the earlier subphase compiler contract while final Confirm still
+    # uses the complete issue list below and therefore remains blocked until all
+    # required starting-equipment choices are legal and complete.
+    candidate_issues = tuple((*foundation_issues, *progression_issues, *spellcasting.issues))
     equipment = compile_starting_equipment(draft, registry)
     issues.extend(equipment.issues)
     choices = base_choices + equipment.choices
 
     build_candidate: CharacterBuild | None = None
-    # Earlier P1 subphase tests intentionally compile only the choices owned by
-    # that subphase. Missing P1-F equipment choices must block final Confirm,
-    # but they do not make the already-resolved class/feature Build shape
-    # impossible to compile. Keep a partial candidate available for Review and
-    # focused compiler tests while validation.can_confirm remains authoritative.
-    candidate_ignorable_blockers = {"invalid_equipment_choice_count"}
     has_candidate_blocking = any(
         issue.severity is BuilderIssueSeverity.BLOCKING_ERROR
-        and issue.code not in candidate_ignorable_blockers
-        for issue in issues
+        for issue in candidate_issues
     )
     abilities = _build_ability_scores(resolved_summary)
     payload = draft.draft_payload
