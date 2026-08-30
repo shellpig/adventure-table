@@ -114,6 +114,40 @@ def test_scag_roleplay_inheritance_reuses_only_suggestions() -> None:
     assert city_watch.data["starting_gold"]["quantity"] == 10
 
 
+def test_scag_source_audit_reuse_and_numeric_feature_metadata() -> None:
+    registry = load_default_content_registry()
+
+    faction_agent = registry.get("scag:background:faction-agent")
+    acolyte = registry.get("phb2014:background:acolyte")
+    faction_roleplay = faction_agent.data["roleplay_suggestions"]
+    assert faction_roleplay["inherits_from"] == "phb2014:background:acolyte"
+    for field in ROLEPLAY_FIELDS:
+        assert faction_roleplay[field] == acolyte.data["roleplay_suggestions"][field]
+    assert faction_agent.data["feature_metadata"]["safe_haven"] == {
+        "hidden_safe_place": True,
+        "food_and_lodging_cost": "free",
+        "information_assistance": True,
+        "contacts_risk_lives_or_identity": False,
+        "automation": "manual",
+    }
+
+    inheritor = registry.get("scag:background:inheritor")
+    folk_hero = registry.get("phb2014:background:folk-hero")
+    inheritor_roleplay = inheritor.data["roleplay_suggestions"]
+    assert inheritor_roleplay["inherits_from"] == "phb2014:background:folk-hero"
+    for field in ROLEPLAY_FIELDS:
+        assert inheritor_roleplay[field] == folk_hero.data["roleplay_suggestions"][field]
+
+    uthgardt = registry.get("scag:background:uthgardt-tribe-member")
+    assert uthgardt.data["feature_metadata"]["foraging"] == {
+        "food_and_water_multiplier": 2,
+        "automation": "manual",
+    }
+    assert uthgardt.data["feature_metadata"]["hospitality"][
+        "from_uthgardt_and_allies"
+    ] is True
+
+
 def test_scag_variant_identity_and_independent_skill_tool_choices() -> None:
     registry = load_default_content_registry()
     investigator = registry.get("scag:background:investigator")
