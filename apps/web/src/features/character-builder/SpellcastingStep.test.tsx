@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
@@ -115,10 +116,15 @@ function spellView(): BuilderView {
 
 describe('P1-E SpellcastingStep', () => {
   it('renders source-aware Wizard and Warlock access with separate resource pools', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
     const html = renderToStaticMarkup(
-      <LocaleProvider storage={englishStorage()} documentTarget={null}>
-        <SpellcastingStep view={spellView()} disabled={false} onSave={() => undefined} />
-      </LocaleProvider>,
+      <QueryClientProvider client={queryClient}>
+        <LocaleProvider storage={englishStorage()} documentTarget={null}>
+          <SpellcastingStep view={spellView()} disabled={false} onSave={() => undefined} />
+        </LocaleProvider>
+      </QueryClientProvider>,
     )
 
     expect(html).toContain('Spellcasting &amp; resources')
