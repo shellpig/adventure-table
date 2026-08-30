@@ -22,7 +22,7 @@ type OptionDisplay = {
   secondary?: string
 }
 
-function optionDisplay(label: string): OptionDisplay {
+export function optionDisplay(label: string): OptionDisplay {
   const [primary, ...secondaryParts] = label.split(' · ')
   const secondary = secondaryParts.join(' · ').trim()
   return {
