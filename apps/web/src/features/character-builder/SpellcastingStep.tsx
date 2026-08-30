@@ -6,8 +6,9 @@ import {
   type BuilderView,
 } from '../../api/characterBuilder'
 import { optionDisplay, SearchableSelect } from '../../components/SearchableSelect'
+import type { UiCopyKey } from '../../i18n/uiCopy'
+import { useUiCopy, type UiTranslator } from '../../i18n/useUiCopy'
 import './spellcasting.css'
-
 
 type Props = {
   view: BuilderView
@@ -17,11 +18,11 @@ type Props = {
 
 type SpellBucket = keyof Required<BuilderSpellChoiceInput>
 
-const ACCESS_LABELS = {
-  known: 'Known spells',
-  prepared: 'Prepared caster',
-  spellbook: 'Spellbook',
-} as const
+const ACCESS_KEYS: Record<BuilderSpellcastingProfileSummary['access_model'], UiCopyKey> = {
+  known: 'spells.access.known',
+  prepared: 'spells.access.prepared',
+  spellbook: 'spells.access.spellbook',
+}
 
 const ABILITY_LABELS: Record<string, string> = {
   intelligence: 'INT',
@@ -29,9 +30,11 @@ const ABILITY_LABELS: Record<string, string> = {
   charisma: 'CHA',
 }
 
-function spellLabel(spell: BuilderSpellOptionSummary) {
+function spellLabel(spell: BuilderSpellOptionSummary, t: UiTranslator) {
   const name = optionDisplay(spell.name).primary
-  return spell.level === 0 ? `${name} · Cantrip` : `${name} · Level ${spell.level}`
+  return spell.level === 0
+    ? `${name} · ${t('spells.cantrip')}`
+    : `${name} · ${t('spells.level', { level: spell.level })}`
 }
 
 function profileSelection(view: BuilderView, profileId: string): Required<BuilderSpellChoiceInput> {
@@ -65,6 +68,7 @@ function SpellBucketEditor({
   disabled: boolean
   onSave: (payload: BuilderDraftPayload) => void
 }) {
+  const { t } = useUiCopy()
   const current = profileSelection(view, profile.profile_id)
   const selected = current[bucket]
   const isCantrip = bucket === 'cantrip_keys'
@@ -76,9 +80,9 @@ function SpellBucketEditor({
     )
     .map((spell) => ({
       value: spell.spell_key,
-      label: spellLabel(spell),
+      label: spellLabel(spell, t),
       disabled: selected.includes(spell.spell_key),
-      disabledReason: selected.includes(spell.spell_key) ? 'Already selected' : undefined,
+      disabledReason: selected.includes(spell.spell_key) ? t('shared.alreadySelected') : undefined,
     }))
   const canAdd = selected.length < target
 
@@ -102,7 +106,7 @@ function SpellBucketEditor({
           <small>{help}</small>
         </div>
         <span className={exact && selected.length !== target ? 'spell-count is-incomplete' : 'spell-count'}>
-          {selected.length} / {target}{exact ? '' : ' max'}
+          {selected.length} / {target}{exact ? '' : t('spells.max')}
         </span>
       </div>
 
@@ -117,23 +121,23 @@ function SpellBucketEditor({
                 disabled={disabled}
                 onClick={() => save(selected.filter((item) => item !== spellKey))}
               >
-                <span>{spell ? optionDisplay(spell.name).primary : 'Unknown spell'}</span>
-                <small>{spell?.level === 0 ? 'Cantrip' : `Lv ${spell?.level ?? '?'}`}</small>
+                <span>{spell ? optionDisplay(spell.name).primary : t('shared.unknownSpell')}</span>
+                <small>{spell?.level === 0 ? t('spells.cantrip') : t('spells.slotLevel', { level: spell?.level ?? '?' })}</small>
                 <b aria-hidden="true">×</b>
               </button>
             )
           })}
         </div>
       ) : (
-        <p className="spell-empty">No selections yet.</p>
+        <p className="spell-empty">{t('spells.noSelections')}</p>
       )}
 
       <SearchableSelect
-        label={`Add ${label.toLowerCase()}`}
+        label={t('spells.add', { label: label.toLocaleLowerCase() })}
         value=""
         disabled={disabled || !canAdd}
         options={options}
-        placeholder={canAdd ? 'Search spell name or open list' : 'Selection limit reached'}
+        placeholder={canAdd ? t('spells.search') : t('spells.limitReached')}
         onChange={(value) => {
           if (value && !selected.includes(value)) save([...selected, value])
         }}
@@ -153,17 +157,18 @@ function SpellcastingProfile({
   disabled: boolean
   onSave: (payload: BuilderDraftPayload) => void
 }) {
+  const { t } = useUiCopy()
   return (
     <section className="spell-profile" data-testid={`spell-profile-${profile.profile_id}`}>
       <div className="spell-profile__title">
         <div>
-          <p className="eyebrow">{ACCESS_LABELS[profile.access_model]}</p>
+          <p className="eyebrow">{t(ACCESS_KEYS[profile.access_model])}</p>
           <h3>{profile.source_name} {profile.class_level}</h3>
         </div>
         <div className="spell-profile__badges">
           <span>{ABILITY_LABELS[profile.ability] ?? profile.ability.toUpperCase()}</span>
-          <span>Max spell Lv {profile.max_spell_level}</span>
-          <span>{profile.resource_pool_type === 'pact_magic' ? 'Pact Magic' : 'Shared slots'}</span>
+          <span>{t('spells.maxSpellLevel', { level: profile.max_spell_level })}</span>
+          <span>{profile.resource_pool_type === 'pact_magic' ? t('spells.pactMagic') : t('spells.sharedSlots')}</span>
         </div>
       </div>
 
@@ -173,8 +178,8 @@ function SpellcastingProfile({
             view={view}
             profile={profile}
             bucket="cantrip_keys"
-            label="Cantrips"
-            help="Permanent class access. Cantrips do not consume spell slots."
+            label={t('spells.cantrips')}
+            help={t('spells.cantripsHelp')}
             target={profile.cantrip_count}
             exact
             disabled={disabled}
@@ -187,8 +192,8 @@ function SpellcastingProfile({
             view={view}
             profile={profile}
             bucket="known_spell_keys"
-            label="Known spells"
-            help="Stored in Build with this class source; the server validates count and acquisition order."
+            label={t('spells.known')}
+            help={t('spells.knownHelp')}
             target={profile.known_spell_count}
             exact
             disabled={disabled}
@@ -201,8 +206,8 @@ function SpellcastingProfile({
             view={view}
             profile={profile}
             bucket="spellbook_spell_keys"
-            label="Spellbook"
-            help="Long-term Wizard access. This is deliberately separate from the daily prepared list."
+            label={t('spells.spellbook')}
+            help={t('spells.spellbookHelp')}
             target={profile.spellbook_count}
             exact
             disabled={disabled}
@@ -215,11 +220,11 @@ function SpellcastingProfile({
             view={view}
             profile={profile}
             bucket="prepared_spell_keys"
-            label="Initial prepared spells"
+            label={t('spells.prepared')}
             help={
               profile.access_model === 'spellbook'
-                ? 'Live-state seed. Every prepared spell must already exist in this Wizard spellbook.'
-                : 'Live-state seed from the class spell list. You may prepare fewer than the maximum.'
+                ? t('spells.preparedWizardHelp')
+                : t('spells.preparedHelp')
             }
             target={profile.prepared_limit}
             exact={false}
@@ -233,35 +238,32 @@ function SpellcastingProfile({
 }
 
 export function SpellcastingStep({ view, disabled, onSave }: Props) {
+  const { t } = useUiCopy()
   const profiles = view.resolved_summary.spellcasting_profiles ?? []
   const pools = view.resolved_summary.spell_resource_pools ?? []
 
   return (
     <div className="builder-step spellcasting-step">
       <div className="builder-step__heading">
-        <p className="eyebrow">STEP 05</p>
-        <h2>Spellcasting & resources</h2>
-        <p>
-          Spell access stays attached to its source. Known spells and Wizard spellbook entries live in
-          Build; the initial prepared list is live state. Multiclass spell slots are shared only where
-          the 2014 rules say they are, while Warlock Pact Magic stays in its own pool.
-        </p>
+        <p className="eyebrow">{t('spells.step')}</p>
+        <h2>{t('spells.title')}</h2>
+        <p>{t('spells.description')}</p>
       </div>
 
       {pools.length ? (
-        <div className="spell-pools" aria-label="Spell resource capacities">
+        <div className="spell-pools" aria-label={t('spells.resourcesAria')}>
           {pools.map((pool) => (
             <section key={pool.pool_id} className="spell-pool">
               <div>
-                <span>{pool.pool_type === 'pact_magic' ? 'Pact Magic' : 'Combined spell slots'}</span>
+                <span>{pool.pool_type === 'pact_magic' ? t('spells.pactMagic') : t('spells.combinedSlots')}</span>
                 <strong>
                   {pool.source_profile_id?.split(':').at(-1)?.replaceAll('-', ' ') ??
-                    (pool.pool_id.endsWith(':combined') ? 'Multiclass' : 'Normal')}
+                    (pool.pool_id.endsWith(':combined') ? t('spells.multiclass') : t('spells.normal'))}
                 </strong>
               </div>
               <div className="spell-pool__slots">
                 {pool.slots.map((slot) => (
-                  <span key={slot.level}>Lv {slot.level} <b>×{slot.count}</b></span>
+                  <span key={slot.level}>{t('spells.slotLevel', { level: slot.level })} <b>×{slot.count}</b></span>
                 ))}
               </div>
             </section>
@@ -283,18 +285,14 @@ export function SpellcastingStep({ view, disabled, onSave }: Props) {
         </div>
       ) : (
         <div className="spell-no-source">
-          <strong>No spellcasting source in this progression.</strong>
-          <p>This step has nothing to select for the current classes.</p>
+          <strong>{t('spells.noSource')}</strong>
+          <p>{t('spells.noSourceHint')}</p>
         </div>
       )}
 
       <aside className="spellcasting-note">
-        <strong>Source identity is preserved.</strong>
-        <p>
-          If the same spell comes from two classes, subclasses or features, the server keeps separate
-          access entries instead of collapsing them by spell name. Always-prepared / granted spells are
-          likewise Build access and do not consume your daily preparation allowance.
-        </p>
+        <strong>{t('spells.identityTitle')}</strong>
+        <p>{t('spells.identityHint')}</p>
       </aside>
     </div>
   )
