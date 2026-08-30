@@ -35,17 +35,19 @@ Built-in Content：**SRD 5.1 為基礎，非 SRD 內容依私人專案需求逐�
 
 目前狀態：**P0 — Character Core + SRD / Rules Foundation 與 P1 — Character Builder Complete 均已完成並關門。P1-A～P1-H 全部完成；網站現在能從空白 Builder Draft 建立 Lv1 或高等角色，保存完整 level-by-level progression / Multiclass / Subclass / ASI / Feat / Spellcasting / Starting Equipment，原子建立 Character + immutable Build Version 1 + initial Current State；Existing Character 也能進行 Level Up，建立 immutable Version N+1、reconcile live Current State，並查看 Version History。**
 
-目前插入 **M01 — Multi-Source Character Content Expansion**。M01 是第一個 Maintenance / Modification Phase，用來補資料、補設定與強化既有 Character Content 能力，不改寫正常 P0 → P1 → P2 Roadmap。M01-A～M01-J 已完成正式規格拆分，**尚未開始 M01 coding**。
+目前進行 **M01 — Multi-Source Character Content Expansion**。M01 是第一個 Maintenance / Modification Phase，用來補資料、補設定與強化既有 Character Content 能力，不改寫正常 P0 → P1 → P2 Roadmap。**M01-A 與 M01-B 已完成並關門（含 M01-B 真人創角 Gate）；M01-C～M01-J 尚未開工。**
 
 M01 的直接目標：
 
-- 將單一 `srd5.1` Content Registry 升級成 Multi-Source Content Pack。
-- 補 PHB 非 SRD Background / race / subrace / Variant Human。
-- M01-B 完成後先進行第一輪真人創角測試。
+- 將單一 `srd5.1` Content Registry 升級成 Multi-Source Content Pack。（M01-A ✅）
+- 補 PHB 非 SRD Background / race / subrace / Variant Human。（M01-B ✅）
+- M01-B 完成後先進行第一輪真人創角測試。（✅ 已執行）
 - 再補 SCAG / GoS Background、VGM race、SCAG Half-Elf variant、VRGR Dhampir、TCE Artificer、TCE magic items。
 - M01 closeout 後回到 P2 規劃。
 
-> **下一個 coding step 是 M01-A — Multi-Source Content Pack Foundation。只有在使用者明確要求開始 M01-A 實作後才 coding；M01 全部完成後才回到 P2 — Room / Campaign / Session / Seat 的規劃。不得因 M01 提前拆 P2～P8。**
+**M01-C closeout 後，M01 暫停，插入 M02 — Traditional Chinese / English Localization；M02 closeout 後回到 M01-D。**
+
+> **下一個 coding step 是 M01-C — SCAG / GoS Background Expansion。只有在使用者明確要求後才 coding。M01-C 完成後先做 M02-A～M02-H，再回 M01-D～M01-J，最後才回到 P2 — Room / Campaign / Session / Seat 的規劃。不得因 M01 / M02 提前拆 P2～P8。**
 
 已完成的產品／規劃工作：
 
@@ -60,8 +62,9 @@ M01 的直接目標：
 - 第一版明確不做項目已整理。
 - 大 Phase P0～P8 已排定。
 - 全專案規則：**每個 Phase 在 coding 前必須拆成可獨立實作、驗證、commit 的 Subphases；只拆當前 Phase，不提前拆後續 Phase。**
-- 新增 M Phase 規則：**M01、M02… 用於補資料／補設定、既有能力加強或 migration；可插在正常 P Phase 之間，但不改寫正常 P Roadmap。**
+- 新增 M Phase 規則：**M01、M02… 用於補資料／補設定、既有能力加強或 migration；可插在正常 P Phase 之間，也可插在另一個 M Phase 的 Subphase 之間，但不改寫正常 P Roadmap。**
 - M01-A～M01-J 三份正式文件已完成。
+- M02-A～M02-H 三份正式文件已完成。
 - 基礎技術棧：React + TypeScript + Vite / Python + FastAPI / PostgreSQL。
 
 ---
@@ -217,8 +220,8 @@ M01 共通原則：
 
 | Subphase | 狀態 | 重點 |
 |---|---|---|
-| **M01-A — Multi-Source Content Pack Foundation** | 📐 | 泛化 Content Pack / StableKey / registry / cross-reference / `content_sources`，維持 SRD compatibility |
-| **M01-B — PHB Character Origins & Background Expansion** | 📐 | PHB Background、PHB 非 SRD subrace、Variant Human；完成後執行真人創角 Gate |
+| **M01-A — Multi-Source Content Pack Foundation** | ✅ | 泛化 Content Pack / StableKey / registry / cross-reference / `content_sources`，維持 SRD compatibility |
+| **M01-B — PHB Character Origins & Background Expansion** | ✅ | PHB Background、PHB 非 SRD subrace、Variant Human；真人創角 Gate 已執行並關門 |
 | **M01-C — SCAG / GoS Background Expansion** | 📐 | SCAG / GoS Background、source collision、background variant / replacement 最小支援 |
 | **M01-D — VGM Race Expansion** | 📐 | Goblin / Hobgoblin / Aasimar、level-gated racial features / resource metadata |
 | **M01-E — SCAG Half-Elf Variant & Grant Replacement** | 📐 | Half-Elf ancestry variants、最小通用 Grant Replacement、stale branch isolation |
@@ -228,7 +231,51 @@ M01 共通原則：
 | **M01-I — TCE Magic Items** | 📐 | TCE item registry、rarity / attunement / restrictions / charges、manual-effect fallback |
 | **M01-J — Full M01 Integration & Closeout** | 📐 | all-pack validation、P0/P1 regression、full E2E、restart persistence、真人 Gate recheck |
 
-**M01 全部仍未 coding。下一個可開工 Subphase 是 M01-A。**
+**M01-A、M01-B 已完成並關門。下一個可開工 Subphase 是 M01-C；M01-C closeout 後暫停 M01，先做 M02，再回 M01-D。**
+
+---
+
+## M02 規劃與共通契約
+
+M02 正式文件：
+
+- `docs/M02/實作規格.md`
+- `docs/M02/開發設計方針.md`
+- `docs/M02/測試指南.md`
+
+M02 插入時點：**M01-C closeout 後暫停 M01；M02 closeout 後回到 M01-D。**
+
+M02 共通原則：
+
+- 第一版只支援兩個 locale：`zh-TW`、`en`；無既存偏好時預設 `zh-TW`。
+- 兩者都是純語言模式，正常流程不得出現可避免的中英混合 system / rules presentation。
+- locale 是 browser presentation preference，**不得寫入 Draft / CharacterBuild / CharacterState / Version metadata**。
+- 切換語言即時 rerender，不 reload、不 navigation、不觸發任何 Draft / Character mutation。
+- Rules identity（StableKey / refs / choice id / provenance）永遠不因翻譯改變；Display Name 不是 foreign key。
+- Localization 是 presentation overlay，不得複製出第二套會各自演化的 mechanics content。
+- 缺翻譯不得以 silent fallback 當成完成；completeness gate 必須能讓 CI 失敗。
+- 使用者自行輸入的自由文字不翻譯、不因切換語言被改寫。
+- M02 closeout 涵蓋當時 enabled packs：`srd5.1`、`phb2014`、`scag`、`gos`。
+- **M02 closeout 後成為永久規則：任何後續 Subphase 新增或修改 user-visible system / rules content，必須同步提供所有正式 supported locale，缺一語即視為該 Subphase 未完成。**
+
+---
+
+## M02 Subphase 進度
+
+狀態：📐 規格可實作；⬜ 尚未開工；🚧 進行中；✅ 完成。
+
+| Subphase | 狀態 | 重點 |
+|---|---|---|
+| **M02-A — Locale Foundation & Runtime Switch** | 📐 | 全站單一 locale state、一鍵切換、browser 記憶、不動 Draft / Character domain state |
+| **M02-B — Full UI Copy Localization** | 📐 | 既有 frontend UI copy 全部進 localization resources，含 accessibility text |
+| **M02-C — Localized Content Model & Terminology Contract** | 📐 | canonical / overlay 邊界、localized content resolver、roleplay suggestion identity、glossary 定稿 |
+| **M02-D — SRD 5.1 Names & Structured Text** | 📐 | SRD 名稱與短型／結構型 presentation 雙語覆蓋 |
+| **M02-E — SRD 5.1 Full Descriptions** | 📐 | SRD 長篇規則說明雙語覆蓋，不改 mechanics semantics |
+| **M02-F — PHB / SCAG / GoS Localization** | 📐 | M01-B / M01-C 導入的非 SRD content 雙語覆蓋 |
+| **M02-G — Localized Search, Errors & Completeness Gates** | 📐 | localized search / alias / sort、error code + localized message、machine-verifiable completeness gate |
+| **M02-H — Full M02 Integration & Closeout** | 📐 | 全站雙語驗收、Draft-safe switch、completeness final gate、真人 browser gate |
+
+**M02 全部仍未 coding。M02 要在 M01-C closeout 後才開工。**
 
 ---
 
@@ -241,6 +288,7 @@ M01 共通原則：
 | **P0** | **Character Core + SRD / Rules Foundation** | 導入角色真正需要的 SRD 5.1 reference content；建立 Character 核心資料、角色卡與角色相關規則計算基礎。**不導入 Monster / Beast stat blocks。** |
 | **P1** | **Character Builder Complete** | 完整創角、高等角色建立、Level-by-level progression、Subclass、Multiclass、ASI / Feat、Spell progression、Level Up、Character Version |
 | **M01** | **Multi-Source Character Content Expansion** | 插入式 Maintenance Phase：多來源 Content Pack、PHB/SCAG/GoS/VGM/VRGR/TCE 角色內容與既有 Character 系統強化；完成後回到 P2 |
+| **M02** | **Traditional Chinese / English Localization** | 插入於 M01-C 與 M01-D 之間的 Maintenance Phase：`zh-TW` / `en` 雙語 foundation、全站 UI 與 SRD/PHB/SCAG/GoS content 翻譯、completeness gate；完成後回到 M01-D |
 | **P2** | **Room / Campaign / Session / Seat** | 把已建立的角色真正放進桌內；建立 Room、Campaign、Party Roster、Player Seat、Controller 與 Session lifecycle |
 | **P3** | **Exploration + Roll + AI** | 建立 Exploration、Chat / Action / Check、正式骰子與 PendingAction；Human / AI 開始能在同一桌真正跑團 |
 | **P4** | **Quick Combat** | 第一個完整可玩的 Combat MVP；**P4-A 必須先承接 P0 延後的 SRD Monster / Beast stat blocks。** |
@@ -249,7 +297,13 @@ M01 共通原則：
 | **P7** | **Snapshot / Export** | Timeline、Snapshot / Restore、Archive lifecycle、Character / Adventure / Campaign / Room Import / Export；不做 Undo 機制 |
 | **P8** | **QA / Polish** | 全流程整合測試、權限與 AI reconnect、錯誤處理、效能、Responsive UI、UX polish 與第一版收尾 |
 
-P0/P1 已完成；**目前只拆 M01。P2～P8 仍維持大 Phase，不提前拆。**
+P0/P1 已完成；**目前已拆 M01 與 M02。P2～P8 仍維持大 Phase，不提前拆。**
+
+實際執行順序：
+
+```text
+M01-A ✅ → M01-B ✅ → M01-C → M02-A～M02-H → M01-D～M01-J → P2
+```
 
 ---
 
@@ -285,7 +339,7 @@ P0/P1 已完成；**目前只拆 M01。P2～P8 仍維持大 Phase，不提前拆
 
 ---
 
-## P0 / P1 / M01 邊界
+## P0 / P1 / M01 / M02 邊界
 
 ### P0 — Character Core + SRD / Rules Foundation
 
@@ -310,6 +364,25 @@ M01 正式文件：
 docs/M01/實作規格.md
 docs/M01/開發設計方針.md
 docs/M01/測試指南.md
+```
+
+### M02 — Traditional Chinese / English Localization
+
+M02 不加規則內容、不改 mechanics；它把「網站只有單一（且目前中英混用）presentation」提升成「同一份 rules identity 可以用 `zh-TW` / `en` 兩種純語言模式呈現」。M02 主要增加：
+
+- 全站 locale runtime state 與瀏覽器記憶。
+- UI copy 與 rules content 的 localization boundary 與 resolver。
+- roleplay suggestion identity（取代目前只靠英文原句當身份）。
+- D&D 5e 2014 en ↔ zh-TW glossary。
+- localized search / sort / error presentation。
+- machine-verifiable translation completeness gate。
+
+M02 正式文件：
+
+```text
+docs/M02/實作規格.md
+docs/M02/開發設計方針.md
+docs/M02/測試指南.md
 ```
 
 ---
@@ -352,6 +425,12 @@ docs/
 ├── M01/
 │   ├── 實作規格.md
 │   ├── 開發設計方針.md
+│   ├── 測試指南.md
+│   ├── M01-B_CLOSEOUT.md
+│   └── M01-B_HUMAN_GATE.md
+├── M02/
+│   ├── 實作規格.md
+│   ├── 開發設計方針.md
 │   └── 測試指南.md
 └── 暫用規則資訊/
 ```
@@ -382,9 +461,11 @@ M01 / M02 / ...
 M01-A / M01-B / ...
 ```
 
-M Phase 可以插在 P Phase 之間；**不會把 P2 重新編號，也不代表後續 P Phase 已經設計。**
+M Phase 可以插在 P Phase 之間，**也可以插在另一個 M Phase 的兩個 Subphase 之間**（例如 M02 插在 M01-C 與 M01-D 之間）；**不會把 P2 重新編號，也不代表後續 P Phase 已經設計。**
 
-目前只拆 M01；**P2～P8 不提前拆。**
+被插入的 M Phase 保留原本的 Subphase 編號與順序，暫停後照原順序接續，不重新命名。
+
+目前已拆 M01 與 M02；**P2～P8 不提前拆，M03 也不提前拆。**
 
 ---
 
@@ -395,7 +476,7 @@ M Phase 可以插在 P Phase 之間；**不會把 P2 重新編號，也不代表
 1. 先讀 `AGENTS.md`。
 2. 再讀 `PROJECT_BRIEF.md` 取得目前 Phase、Subphase 與下一步。
 3. 按任務讀 `規格企劃.md` 對應章節。
-4. M01 實作／驗收依 `docs/M01/` 三份文件中的同名 Subphase 取得契約。
+4. M01 實作／驗收依 `docs/M01/`、M02 依 `docs/M02/` 三份文件中的同名 Subphase 取得契約。
 5. 不重新討論已定案產品規格。
 6. 不為 P2～P8 預先設計具體實作。
 7. **未獲使用者明確要求，不開始 coding。**
