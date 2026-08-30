@@ -421,6 +421,37 @@
 .summary-validation li.issue-warning { border-color: var(--gold); }
 .summary-validation li.issue-non_standard { border-color: var(--blue); }
 
+.roleplay-editor .roleplay-grid {
+  margin-top: 16px;
+  padding: 0;
+}
+
+.roleplay-field { min-width: 0; }
+.roleplay-suggestions { display: grid; gap: 6px; margin-top: 8px; }
+
+.roleplay-suggestion {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px 11px;
+  color: var(--muted);
+  background: #121720;
+  cursor: pointer;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.roleplay-suggestion:not(:disabled):hover {
+  border-color: var(--gold-dark);
+  color: var(--gold-bright);
+  background: rgb(215 181 109 / 7%);
+}
+
+.roleplay-suggestion:disabled {
+  color: var(--quiet);
+  background: #0e131b;
+}
+
 .builder-loading {
   display: grid;
   place-items: center;
