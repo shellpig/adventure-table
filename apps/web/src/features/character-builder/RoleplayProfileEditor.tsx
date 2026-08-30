@@ -25,7 +25,7 @@ const FIELDS: { key: RoleplayField; label: string; hint: string }[] = [
   { key: 'flaws', label: 'Flaws', hint: 'Weaknesses, temptations, blind spots, or bad habits.' },
 ]
 
-function asLines(value: unknown): string[] {
+export function roleplayLines(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   return value
     .filter((item): item is string => typeof item === 'string')
@@ -34,14 +34,21 @@ function asLines(value: unknown): string[] {
 }
 
 function textFor(value: unknown): string {
-  return asLines(value).join('\n')
+  return roleplayLines(value).join('\n')
 }
 
-function parseText(value: string): string[] {
+export function parseRoleplayText(value: string): string[] {
   return value
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
+}
+
+export function appendRoleplaySuggestion(text: string, suggestion: string): string[] {
+  const current = parseRoleplayText(text)
+  const normalized = suggestion.trim()
+  if (!normalized || current.includes(normalized)) return current
+  return [...current, normalized]
 }
 
 async function getBackgroundContent(reference: string): Promise<BackgroundContent> {
@@ -80,8 +87,8 @@ export function RoleplayProfileEditor({
   })
 
   const saveField = (field: RoleplayField, text: string) => {
-    const next = parseText(text)
-    const current = asLines(profile[field])
+    const next = parseRoleplayText(text)
+    const current = roleplayLines(profile[field])
     if (JSON.stringify(next) === JSON.stringify(current)) return
     onSave({
       roleplay_profile: {
@@ -92,9 +99,9 @@ export function RoleplayProfileEditor({
   }
 
   const addSuggestion = (field: RoleplayField, suggestion: string) => {
-    const current = parseText(draftText[field])
-    if (current.includes(suggestion)) return
-    const next = [...current, suggestion]
+    const next = appendRoleplaySuggestion(draftText[field], suggestion)
+    const current = parseRoleplayText(draftText[field])
+    if (JSON.stringify(next) === JSON.stringify(current)) return
     setDraftText((value) => ({ ...value, [field]: next.join('\n') }))
     onSave({
       roleplay_profile: {
@@ -147,7 +154,7 @@ export function RoleplayProfileEditor({
                     <button
                       type="button"
                       className="roleplay-suggestion"
-                      disabled={disabled || parseText(draftText[field.key]).includes(suggestion)}
+                      disabled={disabled || parseRoleplayText(draftText[field.key]).includes(suggestion)}
                       key={suggestion}
                       onClick={() => addSuggestion(field.key, suggestion)}
                     >
