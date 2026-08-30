@@ -14,10 +14,11 @@ import {
 } from '../../api/characterBuilder'
 import { SearchableSelect } from '../../components/SearchableSelect'
 import { ClassProgressionStep } from './ClassProgressionStep'
+import { EquipmentReviewStep } from './EquipmentReviewStep'
 import { SpellcastingStep } from './SpellcastingStep'
 import './builder.css'
 
-type BuilderStep = 'basic' | 'origin' | 'abilities' | 'class' | 'spells'
+type BuilderStep = 'basic' | 'origin' | 'abilities' | 'class' | 'spells' | 'review'
 
 type ChoiceEditorProps = {
   choice: BuilderChoice
@@ -215,6 +216,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
       view?.choices.filter(
         (choice) =>
           !DIRECT_OPTION_SOURCES.has(choice.option_source ?? '') &&
+          choice.option_source !== 'equipment' &&
           !choice.choice_id.startsWith('level:'),
       ) ?? [],
     [view],
@@ -249,7 +251,10 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
   ) => {
     const payload: BuilderDraftPayload = { [field]: value ? { reference_id: value } : null }
     if (field === 'race_selection') payload.subrace_selection = null
-    if (resetChoices) payload.choice_selections = {}
+    if (resetChoices) {
+      payload.choice_selections = {}
+      payload.starting_equipment_choices = {}
+    }
     save.mutate(payload)
   }
 
@@ -279,7 +284,10 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
       level_choices: (view.draft.draft_payload.level_choices ?? []).slice(0, targetLevel),
       roleplay_profile: { appearance, biography },
     }
-    if (previousTarget !== targetLevel) payload.spell_choices = {}
+    if (previousTarget !== targetLevel) {
+      payload.spell_choices = {}
+      payload.starting_equipment_choices = {}
+    }
     save.mutate(payload)
   }
 
@@ -289,7 +297,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
         <header className="builder-topbar">
           <div>
             <a href="/characters" className="builder-back">← Character Workshop</a>
-            <p className="eyebrow">P1-E · Create Character</p>
+            <p className="eyebrow">P1-F · Create Character</p>
             <h1>{view.resolved_summary.name?.trim() || 'Unnamed character'}</h1>
           </div>
           <div className="builder-save-state">
@@ -317,7 +325,9 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
             <button className={step === 'spells' ? 'is-active' : ''} onClick={() => setStep('spells')}>
               <span>05</span><div><strong>Spellcasting</strong><small>Access & resources</small></div>
             </button>
-            <button disabled><span>06</span><div><strong>Review</strong><small>P1-F</small></div></button>
+            <button className={step === 'review' ? 'is-active' : ''} onClick={() => setStep('review')}>
+              <span>06</span><div><strong>Review</strong><small>Equipment & confirm</small></div>
+            </button>
           </aside>
 
           <section className="builder-form">
@@ -511,6 +521,14 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                 onSave={(payload) => save.mutate(payload)}
               />
             ) : null}
+
+            {step === 'review' ? (
+              <EquipmentReviewStep
+                view={view}
+                disabled={saving}
+                onSave={(payload) => save.mutate(payload)}
+              />
+            ) : null}
           </section>
 
           <aside className="builder-summary">
@@ -559,7 +577,9 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   </li>
                 ))}
               </ul>
-              <p className="builder-hint">P1-E validates class progression, structural choices, spell access and spell resource capacity. Confirm remains locked until P1-F completes equipment and final review.</p>
+              <p className="builder-hint">
+                P1-F adds starting equipment and final server Review. Confirm is enabled only when the complete Build and initial Current State pass validation.
+              </p>
             </div>
 
             <button

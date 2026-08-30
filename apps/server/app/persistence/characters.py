@@ -46,6 +46,20 @@ character_versions = Table(
     Column("character_id", Uuid(as_uuid=True), ForeignKey("characters.id", ondelete="CASCADE"), nullable=False, index=True),
     Column("version_no", Integer, nullable=False),
     Column("build_payload", json_payload_type, nullable=False),
+    Column("version_kind", String(32), nullable=False, server_default="legacy"),
+    Column(
+        "parent_version_id",
+        Uuid(as_uuid=True),
+        ForeignKey("character_versions.id", ondelete="SET NULL"),
+        nullable=True,
+    ),
+    Column(
+        "superseded_by_version_id",
+        Uuid(as_uuid=True),
+        ForeignKey("character_versions.id", ondelete="SET NULL"),
+        nullable=True,
+    ),
+    Column("change_note", String(500), nullable=True),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     UniqueConstraint("character_id", "version_no", name="uq_character_versions_character_version"),
 )
@@ -75,6 +89,7 @@ class CharacterRepository:
         build: CharacterBuild,
         state: CharacterState,
         character_id: UUID | None = None,
+        version_kind: str = "legacy",
     ) -> PersistedCharacter:
         if not name.strip():
             raise ValueError("character name cannot be blank")
@@ -100,6 +115,10 @@ class CharacterRepository:
                     character_id=character_id,
                     version_no=1,
                     build_payload=build.model_dump(mode="json"),
+                    version_kind=version_kind,
+                    parent_version_id=None,
+                    superseded_by_version_id=None,
+                    change_note=None,
                 )
             )
             connection.execute(
@@ -113,6 +132,105 @@ class CharacterRepository:
                 .where(characters.c.id == character_id)
                 .values(current_version_id=version_id, updated_at=func.now())
             )
+        return self.load_character(character_id)
+
+    def create_character_from_builder_draft(
+        self,
+        *,
+        draft_id: UUID,
+        expected_revision: int,
+        name: str,
+        build: CharacterBuild,
+        state: CharacterState,
+    ) -> PersistedCharacter:
+        """Atomically confirm a create draft.
+
+        The draft row is locked in the same transaction that creates Character,
+        immutable Version 1 and Current State. A repeated Confirm returns the
+        already-created character instead of creating a duplicate.
+        """
+
+        from app.persistence.builder_drafts import (
+            BuilderDraftNotFoundError,
+            BuilderDraftRevisionConflictError,
+            character_build_drafts,
+        )
+
+        if not name.strip():
+            raise ValueError("character name cannot be blank")
+        validate_build_references(build, self.registry)
+        validate_state_against_build(state, build, self.registry)
+
+        created_character_id: UUID | None = None
+        existing_character_id: UUID | None = None
+        with self.engine.begin() as connection:
+            row = connection.execute(
+                select(
+                    character_build_drafts.c.id,
+                    character_build_drafts.c.revision,
+                    character_build_drafts.c.confirmed_character_id,
+                )
+                .where(character_build_drafts.c.id == draft_id)
+                .with_for_update()
+            ).mappings().one_or_none()
+            if row is None:
+                raise BuilderDraftNotFoundError(str(draft_id))
+
+            if row["confirmed_character_id"] is not None:
+                existing_character_id = row["confirmed_character_id"]
+            else:
+                actual_revision = int(row["revision"])
+                if actual_revision != expected_revision:
+                    raise BuilderDraftRevisionConflictError(
+                        draft_id, expected_revision, actual_revision
+                    )
+
+                created_character_id = uuid4()
+                version_id = uuid4()
+                connection.execute(
+                    insert(characters).values(
+                        id=created_character_id,
+                        name=name.strip(),
+                        ruleset=build.ruleset,
+                        current_version_id=None,
+                    )
+                )
+                connection.execute(
+                    insert(character_versions).values(
+                        id=version_id,
+                        character_id=created_character_id,
+                        version_no=1,
+                        build_payload=build.model_dump(mode="json"),
+                        version_kind="create",
+                        parent_version_id=None,
+                        superseded_by_version_id=None,
+                        change_note=None,
+                    )
+                )
+                connection.execute(
+                    insert(character_states).values(
+                        character_id=created_character_id,
+                        state_payload=state.model_dump(mode="json"),
+                    )
+                )
+                connection.execute(
+                    update(characters)
+                    .where(characters.c.id == created_character_id)
+                    .values(current_version_id=version_id, updated_at=func.now())
+                )
+                connection.execute(
+                    update(character_build_drafts)
+                    .where(character_build_drafts.c.id == draft_id)
+                    .values(
+                        confirmed_character_id=created_character_id,
+                        confirmed_at=func.now(),
+                        updated_at=func.now(),
+                    )
+                )
+
+        character_id = existing_character_id or created_character_id
+        if character_id is None:
+            raise RuntimeError("builder confirmation completed without a character id")
         return self.load_character(character_id)
 
     def list_characters(self) -> tuple[PersistedCharacter, ...]:

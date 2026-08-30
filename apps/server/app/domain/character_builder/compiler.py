@@ -7,6 +7,7 @@ from app.content.schemas import ContentEntry
 from app.domain.character.schemas import (
     AbilityScores,
     CharacterBuild,
+    PreparedSpellSelection,
     RoleplayProfile,
     SpellResourcePool,
     SpellSlotCapacity,
@@ -14,6 +15,8 @@ from app.domain.character.schemas import (
 )
 from app.domain.character_builder.basics import resolve_creation_summary
 from app.domain.character_builder.choices import build_foundation_choices
+from app.domain.character_builder.creation import BuilderEquipmentSummary
+from app.domain.character_builder.equipment import compile_starting_equipment
 from app.domain.character_builder.multiclass import multiclass_option_failure_reason
 from app.domain.character_builder.progression import (
     build_progression_choices,
@@ -47,6 +50,8 @@ class BuilderCompileResult:
     resolved_summary: BuilderResolvedSummary
     choices: tuple[BuilderChoice, ...]
     validation: BuilderValidationResult
+    starting_equipment: tuple[BuilderEquipmentSummary, ...] = ()
+    initial_prepared_spells: tuple[PreparedSpellSelection, ...] = ()
 
 
 def _effective_abilities(summary: BuilderResolvedSummary) -> dict[str, int] | None:
@@ -195,19 +200,30 @@ def compile_builder_draft(
         *(choice.choice_id for choice in progression_choices),
         *(choice.choice_id for choice in structural_choices),
     }
+    misplaced_equipment_choice_ids = {
+        choice_id
+        for choice_id in draft.draft_payload.choice_selections
+        if choice_id.startswith("equipment:")
+    }
     foundation_choices = tuple(
         choice
         for choice in raw_foundation_choices
         if not (
             choice.option_source == "draft:selection"
-            and choice.choice_id in live_choice_ids
+            and (
+                choice.choice_id in live_choice_ids
+                or choice.choice_id in misplaced_equipment_choice_ids
+            )
         )
     )
-    choices = foundation_choices + progression_choices + structural_choices
 
     # Class/subclass rows are authoritative in level_choices and are validated by
     # validate_progression(). Nested class and P1-D structural choices use the
-    # canonical choice_selections contract.
+    # canonical choice_selections contract. P1-F equipment has its own dedicated
+    # starting_equipment_choices namespace; an equipment-shaped key accidentally
+    # written into generic choice_selections is ignored rather than interpreted as
+    # a Build choice, while final equipment validation still requires the correct
+    # namespace before Confirm.
     generic_progression_choices = tuple(
         choice
         for choice in progression_choices
@@ -219,11 +235,24 @@ def compile_builder_draft(
         for issue in validate_foundation_draft(draft, registry, validation_choices)
         if issue.code != "incomplete_level_progression"
     ]
+    for choice_id in sorted(misplaced_equipment_choice_ids):
+        foundation_issues.append(
+            BuilderIssue(
+                code="misplaced_equipment_choice",
+                severity=BuilderIssueSeverity.WARNING,
+                path=f"draft_payload.choice_selections.{choice_id}",
+                message=(
+                    "Starting equipment selections belong in "
+                    "draft_payload.starting_equipment_choices; this misplaced value is ignored."
+                ),
+            )
+        )
     if structural_data_issue is not None:
         foundation_issues.append(structural_data_issue)
     foundation_issues.extend(validate_structural_choice_integrity(draft, structural_choices))
 
-    resolved_summary = resolve_creation_summary(draft, registry, choices)
+    base_choices = foundation_choices + progression_choices + structural_choices
+    resolved_summary = resolve_creation_summary(draft, registry, base_choices)
     structural = compile_structural_selections(draft, registry, structural_choices)
     resolved_summary = _apply_structural_ability_bonuses(resolved_summary, structural, draft)
 
@@ -266,12 +295,31 @@ def compile_builder_draft(
         }
     )
 
+    # Equipment is part of final P1-F validation, but it is intentionally not a
+    # prerequisite for compiling the class/feature/spell Build candidate. This
+    # preserves the earlier subphase compiler contract while final Confirm still
+    # uses the complete issue list below and therefore remains blocked until all
+    # required starting-equipment choices are legal and complete.
+    candidate_issues = tuple((*foundation_issues, *progression_issues, *spellcasting.issues))
+    equipment = compile_starting_equipment(draft, registry)
+    equipment_issues = tuple(
+        issue.model_copy(update={"severity": BuilderIssueSeverity.WARNING})
+        if issue.code == "stale_equipment_choice"
+        else issue
+        for issue in equipment.issues
+    )
+    issues.extend(equipment_issues)
+    choices = base_choices + equipment.choices
+
     build_candidate: CharacterBuild | None = None
-    has_blocking = any(issue.severity is BuilderIssueSeverity.BLOCKING_ERROR for issue in issues)
+    has_candidate_blocking = any(
+        issue.severity is BuilderIssueSeverity.BLOCKING_ERROR
+        for issue in candidate_issues
+    )
     abilities = _build_ability_scores(resolved_summary)
     payload = draft.draft_payload
     if (
-        not has_blocking
+        not has_candidate_blocking
         and abilities is not None
         and payload.basic is not None
         and payload.race_selection is not None
@@ -335,23 +383,9 @@ def compile_builder_draft(
             spell_access_entries=spellcasting.spell_access_entries,
             spell_resource_pools=build_pools,
             hp_progression=compiled.hp_progression,
+            starting_equipment=equipment.starting_equipment,
             roleplay_profile=_roleplay_profile(draft),
             numeric_overrides=payload.numeric_overrides,
-        )
-
-    # P1-E completes spell progression, but Confirm stays closed until P1-F
-    # finishes equipment, final review and atomic character creation.
-    if not has_blocking:
-        issues.append(
-            BuilderIssue(
-                code="builder_phase_not_complete",
-                severity=BuilderIssueSeverity.BLOCKING_ERROR,
-                path="draft_payload",
-                message=(
-                    "Spellcasting progression is valid. Starting equipment and final review must be "
-                    "completed before Confirm is enabled."
-                ),
-            )
         )
 
     return BuilderCompileResult(
@@ -359,4 +393,6 @@ def compile_builder_draft(
         resolved_summary=resolved_summary,
         choices=choices,
         validation=make_validation_result(issues),
+        starting_equipment=equipment.summary,
+        initial_prepared_spells=spellcasting.initial_prepared_spells,
     )
