@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from app.content.identity import reference_to_stable_key
 from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
 from app.domain.character_builder.multiclass import multiclass_prerequisites
@@ -124,3 +125,16 @@ def test_multiclass_prerequisite_accepts_explicit_non_srd_ability_key() -> None:
     assert len(prerequisites) == 1
     assert prerequisites[0].ability == "intelligence"
     assert prerequisites[0].minimum_score == 13
+
+
+def test_nested_legacy_api_endpoint_is_not_misclassified_as_content_reference() -> None:
+    assert (
+        reference_to_stable_key(
+            {
+                "index": "cleric-1",
+                "name": "Cleric Level 1",
+                "url": "/api/2014/classes/cleric/levels/1",
+            }
+        )
+        is None
+    )
