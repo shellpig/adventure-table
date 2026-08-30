@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import UUID
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event, func, select
@@ -346,7 +347,7 @@ def test_p1f_blocked_confirm_and_database_failure_leave_no_partial_character() -
     with engine.connect() as connection:
         confirmed_character_id = connection.scalar(
             select(character_build_drafts.c.confirmed_character_id).where(
-                character_build_drafts.c.id == draft_id
+                character_build_drafts.c.id == UUID(draft_id)
             )
         )
     assert confirmed_character_id is None
