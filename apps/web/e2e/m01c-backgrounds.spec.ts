@@ -153,4 +153,8 @@ test('M01-C creates and reloads a GoS background character with a PHB subrace', 
   await chooseBarbarian(page, ['Skill: Animal Handling', 'Skill: Athletics'])
   await chooseBarbarianEquipment(page)
   await confirmAndReload(page, 'M01-C GoS Hero')
+
+  await page.getByRole('tab', { name: /物品欄/ }).click()
+  await expect(page.getByText('Fishing tackle', { exact: true })).toHaveCount(1)
+  await expect(page.getByText('Net', { exact: true })).toHaveCount(1)
 })
