@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.content.identity import parse_stable_key, reference_to_stable_key
 from app.content.registry import ContentRegistry
 from app.domain.character.schemas import CharacterBuild, ResourceCounter
 from app.domain.rules.abilities import (
@@ -65,16 +66,27 @@ def class_level(build: CharacterBuild, class_ref: str) -> int:
 
 def spell_is_on_class_list(spell_key: str, class_ref: str, registry: ContentRegistry) -> bool:
     spell = registry.get_optional(spell_key)
-    if spell is None or not spell.key.startswith("srd5.1:spell:"):
+    if spell is None:
         return False
-    class_index = class_ref.split(":", 2)[2]
+    try:
+        parse_stable_key(spell.key, kinds={"spell"})
+        parse_stable_key(class_ref, kinds={"class"})
+    except ValueError:
+        return False
+
     references = spell.data.get("classes")
     if not isinstance(references, list):
         return False
-    return any(
-        isinstance(reference, dict) and reference.get("index") == class_index
-        for reference in references
-    )
+    for reference in references:
+        if not isinstance(reference, dict):
+            continue
+        try:
+            reference_key = reference_to_stable_key(reference, kinds={"class"})
+        except ValueError:
+            continue
+        if reference_key == class_ref:
+            return True
+    return False
 
 
 def max_spell_level_for_class(
@@ -85,8 +97,29 @@ def max_spell_level_for_class(
     level = class_level(build, class_ref)
     if level <= 0:
         return 0
-    class_index = class_ref.split(":", 2)[2]
-    level_entry = registry.get_optional(f"srd5.1:level:{class_index}-{level}")
+    try:
+        class_source = parse_stable_key(class_ref, kinds={"class"}).source
+    except ValueError:
+        return 0
+
+    level_entry = None
+    for candidate in registry.list_kind("level", source=class_source):
+        if candidate.data.get("level") != level or candidate.data.get("subclass") is not None:
+            continue
+        class_reference = candidate.data.get("class")
+        if not isinstance(class_reference, dict):
+            continue
+        try:
+            candidate_class_ref = reference_to_stable_key(
+                class_reference,
+                kinds={"class"},
+            )
+        except ValueError:
+            continue
+        if candidate_class_ref == class_ref:
+            level_entry = candidate
+            break
+
     if level_entry is None:
         return 0
     row = level_entry.data.get("spellcasting")

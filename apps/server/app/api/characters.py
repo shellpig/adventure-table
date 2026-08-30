@@ -63,6 +63,72 @@ def _class_summary(character: PersistedCharacter, repository: CharacterRepositor
     return " / ".join(parts)
 
 
+def _canonicalize_prepared_patch(
+    character: PersistedCharacter,
+    changes: dict[str, object],
+) -> None:
+    """Keep P0 legacy patches readable without letting them bypass P1 limits.
+
+    P1+ Builds own prepared state in ``prepared_spells``. A stale P0 client may
+    still send spellbook entry ids; translate that complete spellbook selection
+    into canonical selections and clear the legacy field before validation.
+    Direct canonical patches also clear any previously persisted legacy ids so
+    two prepared-state representations cannot continue to diverge.
+    """
+
+    if "prepared_spells" in changes:
+        changes["prepared_spell_entry_ids"] = []
+        return
+    if "prepared_spell_entry_ids" not in changes or not character.build.spellcasting_profiles:
+        return
+
+    raw_entry_ids = changes["prepared_spell_entry_ids"]
+    if not isinstance(raw_entry_ids, list):
+        raise CharacterValidationError("prepared_spell_entry_ids patch must be a list")
+
+    access_by_id = {entry.entry_id: entry for entry in character.build.spell_access_entries}
+    spellbook_profiles = {
+        (profile.source_type, profile.source_key): profile
+        for profile in character.build.spellcasting_profiles
+        if profile.access_model == "spellbook"
+    }
+    profile_by_id = {
+        profile.profile_id: profile for profile in character.build.spellcasting_profiles
+    }
+    translated: list[PreparedSpellSelection] = [
+        selection
+        for selection in character.state.prepared_spells
+        if (
+            selection.source_profile_id in profile_by_id
+            and profile_by_id[selection.source_profile_id].access_model != "spellbook"
+        )
+    ]
+
+    for entry_id in raw_entry_ids:
+        if not isinstance(entry_id, str):
+            raise CharacterValidationError("prepared spell entry ids must be strings")
+        access = access_by_id.get(entry_id)
+        if access is None or access.access_type != "spellbook":
+            raise CharacterValidationError(
+                f"prepared spell entry does not exist or is not spellbook access: {entry_id}"
+            )
+        profile = spellbook_profiles.get((access.source_type, access.source_key))
+        if profile is None:
+            raise CharacterValidationError(
+                f"spellbook prepared entry has no canonical source profile: {entry_id}"
+            )
+        translated.append(
+            PreparedSpellSelection(
+                spell_key=access.spell_key,
+                source_profile_id=profile.profile_id,
+                source_access_entry_id=access.entry_id,
+            )
+        )
+
+    changes["prepared_spells"] = translated
+    changes["prepared_spell_entry_ids"] = []
+
+
 @router.get("", response_model=list[CharacterListItem])
 def list_characters(
     repository: CharacterRepository = Depends(get_character_repository),
@@ -131,6 +197,7 @@ def patch_character_state(
     changes = patch.model_dump(exclude_unset=True, mode="python")
     if any(value is None for value in changes.values()):
         raise CharacterValidationError("state patch fields cannot be null")
+    _canonicalize_prepared_patch(character, changes)
     candidate = CharacterState.model_validate(
         {**character.state.model_dump(mode="python"), **changes}
     )

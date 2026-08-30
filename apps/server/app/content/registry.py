@@ -42,27 +42,42 @@ KNOWN_LEVEL_ABILITY_SCORE_BONUS_CORRECTIONS: dict[str, tuple[int, int]] = {
     "srd5.1:level:rogue-20": (5, 6),
 }
 
-_REFERENCE_KIND_BY_FIELD: dict[str, str] = {
-    "ability_score": "ability",
-    "class": "class",
-    "classes": "class",
-    "equipment_category": "equipment-category",
-    "features": "feature",
-    "languages": "language",
-    "proficiencies": "proficiency",
-    "race": "race",
+ReferenceKinds = frozenset[str]
+
+_REFERENCE_KINDS_BY_FIELD: dict[str, ReferenceKinds] = {
+    "ability_score": frozenset({"ability"}),
+    "class": frozenset({"class"}),
+    "classes": frozenset({"class"}),
+    # Starting Equipment and equipment-category membership may legitimately
+    # point at either ordinary equipment or magic items.
+    "equipment": frozenset({"equipment", "item"}),
+    "equipment_category": frozenset({"equipment-category"}),
+    "features": frozenset({"feature"}),
+    "languages": frozenset({"language"}),
+    "proficiencies": frozenset({"proficiency"}),
+    "race": frozenset({"race"}),
     # Some legacy SRD records use plural `races` for a mixed race/subrace list,
     # so that field is intentionally validated only for existence, not one kind.
-    "saving_throws": "ability",
-    "school": "magic-school",
-    "subclass": "subclass",
-    "subclasses": "subclass",
-    "subrace": "subrace",
-    "subraces": "subrace",
-    "traits": "trait",
-    "racial_traits": "trait",
-    "starting_proficiencies": "proficiency",
+    "saving_throws": frozenset({"ability"}),
+    "school": frozenset({"magic-school"}),
+    "subclass": frozenset({"subclass"}),
+    "subclasses": frozenset({"subclass"}),
+    "subrace": frozenset({"subrace"}),
+    "subraces": frozenset({"subrace"}),
+    "traits": frozenset({"trait"}),
+    "racial_traits": frozenset({"trait"}),
+    "starting_proficiencies": frozenset({"proficiency"}),
 }
+
+# `item` and `of` are generic option-wrapper field names in the imported SRD
+# shape. Their target kind comes from the surrounding choice's semantic `type`,
+# so they must never be globally hard-wired to the content kind named `item`.
+_REFERENCE_KINDS_BY_CHOICE_TYPE: dict[str, ReferenceKinds] = {
+    "equipment": frozenset({"equipment", "item"}),
+    "languages": frozenset({"language"}),
+    "proficiencies": frozenset({"proficiency"}),
+}
+_CONTEXTUAL_REFERENCE_FIELDS = {"item", "of"}
 
 
 class ContentValidationError(RuntimeError):
@@ -349,18 +364,19 @@ class ContentRegistry:
                 references = tuple(_iter_stable_references(source_entry.data))
             except ValueError as exc:
                 raise ContentValidationError(f"{source_entry.key}: invalid reference: {exc}") from exc
-            for target_key, expected_kind, display in references:
+            for target_key, expected_kinds, display in references:
                 target = entries.get(target_key)
                 if target is None:
                     raise ContentValidationError(
                         f"{source_entry.key}: dangling reference {display} -> {target_key}"
                     )
-                if expected_kind is not None:
+                if expected_kinds is not None:
                     actual_kind = parse_stable_key(target.key).kind
-                    if actual_kind != expected_kind:
+                    if actual_kind not in expected_kinds:
+                        expected_label = " or ".join(sorted(expected_kinds))
                         raise ContentValidationError(
                             f"{source_entry.key}: wrong-kind reference {target_key}; "
-                            f"expected {expected_kind}, got {actual_kind}"
+                            f"expected {expected_label}, got {actual_kind}"
                         )
 
     def get(self, key: str) -> ContentEntry:
@@ -434,19 +450,34 @@ def _iter_stable_references(
     value: Any,
     *,
     field_name: str | None = None,
-) -> Iterable[tuple[str, str | None, str]]:
+    choice_kinds: ReferenceKinds | None = None,
+) -> Iterable[tuple[str, ReferenceKinds | None, str]]:
     if isinstance(value, dict):
+        declared_type = value.get("type")
+        if isinstance(declared_type, str):
+            choice_kinds = _REFERENCE_KINDS_BY_CHOICE_TYPE.get(declared_type, choice_kinds)
+
         if field_name is not None and _looks_like_reference(value):
             key = reference_to_stable_key(value)
             if key is not None:
-                expected_kind = _REFERENCE_KIND_BY_FIELD.get(field_name)
-                yield key, expected_kind, str(value.get("url") or value.get("key"))
+                expected_kinds = _REFERENCE_KINDS_BY_FIELD.get(field_name)
+                if expected_kinds is None and field_name in _CONTEXTUAL_REFERENCE_FIELDS:
+                    expected_kinds = choice_kinds
+                yield key, expected_kinds, str(value.get("url") or value.get("key"))
                 return
         for child_name, child in value.items():
-            yield from _iter_stable_references(child, field_name=child_name)
+            yield from _iter_stable_references(
+                child,
+                field_name=child_name,
+                choice_kinds=choice_kinds,
+            )
     elif isinstance(value, list):
         for child in value:
-            yield from _iter_stable_references(child, field_name=field_name)
+            yield from _iter_stable_references(
+                child,
+                field_name=field_name,
+                choice_kinds=choice_kinds,
+            )
 
 
 def load_default_content_registry() -> ContentRegistry:

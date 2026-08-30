@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Any
 from uuid import UUID
 
@@ -13,7 +14,12 @@ from app.domain.rules.armor_class import calculate_armor_class
 from app.domain.rules.hit_points import calculate_max_hp
 from app.domain.rules.proficiency import class_level, proficiency_bonus, total_character_level
 from app.domain.rules.skills import all_skill_modifiers, passive_perception, saving_throw_modifiers
-from app.domain.rules.spellcasting import spell_attack_modifier, spell_save_dc, spellcasting_ability
+from app.domain.rules.spellcasting import (
+    spell_attack_modifier,
+    spell_is_on_class_list,
+    spell_save_dc,
+    spellcasting_ability,
+)
 
 
 class SheetModel(BaseModel):
@@ -56,6 +62,8 @@ class SpellAccessDTO(SheetModel):
     source_key: str
     access_type: str
     prepared: bool
+    source_profile_id: str | None = None
+    source_access_entry_id: str | None = None
 
 
 class SpellcastingDTO(SheetModel):
@@ -140,9 +148,30 @@ def build_character_sheet(
         for die, total in totals.items()
     ]
 
-    prepared = set(state.prepared_spell_entry_ids)
-    spells = []
+    legacy_prepared = set(state.prepared_spell_entry_ids)
+    canonical_prepared = {
+        (selection.source_profile_id, selection.spell_key): selection
+        for selection in state.prepared_spells
+    }
+    profiles_by_source: dict[tuple[str, str], list[Any]] = defaultdict(list)
+    for profile in build.spellcasting_profiles:
+        profiles_by_source[(profile.source_type, profile.source_key)].append(profile)
+
+    spells: list[SpellAccessDTO] = []
+    covered_profile_spells: set[tuple[str, str]] = set()
     for access in build.spell_access_entries:
+        matching_profiles = profiles_by_source.get((access.source_type, access.source_key), [])
+        profile = next(
+            (
+                candidate
+                for candidate in matching_profiles
+                if access.access_type != "spellbook" or candidate.access_model == "spellbook"
+            ),
+            None,
+        )
+        pair = (profile.profile_id, access.spell_key) if profile is not None else None
+        if pair is not None:
+            covered_profile_spells.add(pair)
         spell = registry.get(access.spell_key)
         spells.append(
             SpellAccessDTO(
@@ -152,15 +181,58 @@ def build_character_sheet(
                 source_type=access.source_type,
                 source_key=access.source_key,
                 access_type=access.access_type,
-                prepared=access.access_type == "always_prepared" or access.entry_id in prepared,
+                prepared=(
+                    access.access_type == "always_prepared"
+                    or (pair is not None and pair in canonical_prepared)
+                    or access.entry_id in legacy_prepared
+                ),
+                source_profile_id=profile.profile_id if profile is not None else None,
+                source_access_entry_id=(
+                    access.entry_id
+                    if profile is not None and access.access_type == "spellbook"
+                    else None
+                ),
             )
         )
 
+    # Full-list prepared casters (Cleric/Druid-style) do not have one Build
+    # access row per eligible spell. Expose their prepareable list directly from
+    # the source-aware class-list contract so Current State remains canonical.
+    for profile in build.spellcasting_profiles:
+        if profile.access_model != "prepared":
+            continue
+        for spell in registry.list_kind("spell"):
+            level = spell.data.get("level")
+            if not isinstance(level, int) or level < 1 or level > profile.max_spell_level:
+                continue
+            if not spell_is_on_class_list(spell.key, profile.class_ref, registry):
+                continue
+            pair = (profile.profile_id, spell.key)
+            if pair in covered_profile_spells:
+                continue
+            spells.append(
+                SpellAccessDTO(
+                    entry_id=f"prepared:{profile.profile_id}:{spell.key}",
+                    spell_key=spell.key,
+                    name=spell.name,
+                    source_type=profile.source_type,
+                    source_key=profile.source_key,
+                    access_type="prepared",
+                    prepared=pair in canonical_prepared,
+                    source_profile_id=profile.profile_id,
+                    source_access_entry_id=None,
+                )
+            )
+            covered_profile_spells.add(pair)
+
     source_keys = list(
         dict.fromkeys(
-            entry.source_key
-            for entry in build.spell_access_entries
-            if entry.source_type in {"class", "subclass"}
+            [profile.source_key for profile in build.spellcasting_profiles]
+            + [
+                entry.source_key
+                for entry in build.spell_access_entries
+                if entry.source_type in {"class", "subclass"}
+            ]
         )
     )
     spellcasting = []

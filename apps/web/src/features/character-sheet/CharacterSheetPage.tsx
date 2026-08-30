@@ -12,6 +12,7 @@ import type {
   ContentEntry,
   InventoryDTO,
   InventoryStateEntry,
+  PreparedSpellSelection,
   ResourceCounter,
 } from '../../api/character'
 import { SearchableSelect } from '../../components/SearchableSelect'
@@ -41,6 +42,7 @@ const ABILITY_LABELS: Record<string, string> = {
 const ACCESS_LABELS: Record<string, string> = {
   known: 'Known',
   spellbook: 'Spellbook',
+  prepared: 'Prepared List',
   always_prepared: 'Always Prepared',
   granted: 'Granted',
 }
@@ -186,8 +188,20 @@ export function CharacterSheetView({
   const classSummary = sheet.classes.map((entry) => `${entry.name} ${entry.level}`).join(' / ')
   const classNameByRef = new Map(sheet.classes.map((entry) => [entry.class_ref, entry.name]))
   const preparedIds = sheet.spells
-    .filter((spell) => spell.access_type === 'spellbook' && spell.prepared)
+    .filter((spell) => spell.access_type === 'spellbook' && spell.prepared && !spell.source_profile_id)
     .map((spell) => spell.entry_id)
+  const preparedSelections: PreparedSpellSelection[] = sheet.spells
+    .filter(
+      (spell) =>
+        spell.prepared &&
+        Boolean(spell.source_profile_id) &&
+        (spell.access_type === 'spellbook' || spell.access_type === 'prepared'),
+    )
+    .map((spell) => ({
+      spell_key: spell.spell_key,
+      source_profile_id: spell.source_profile_id as string,
+      source_access_entry_id: spell.source_access_entry_id ?? undefined,
+    }))
   const filteredSpells = sheet.spells.filter((spell) =>
     `${spell.name} ${ACCESS_LABELS[spell.access_type] ?? spell.access_type}`
       .toLocaleLowerCase()
@@ -533,7 +547,11 @@ export function CharacterSheetView({
 
             <div className="spell-list">
               {filteredSpells.map((spell) => {
-                const canPrepare = spell.access_type === 'spellbook'
+                const canonicalPrepare =
+                  (spell.access_type === 'spellbook' || spell.access_type === 'prepared') &&
+                  Boolean(spell.source_profile_id)
+                const legacyPrepare = spell.access_type === 'spellbook' && !spell.source_profile_id
+                const canPrepare = canonicalPrepare || legacyPrepare
                 return (
                   <article className={spell.prepared ? 'spell-card is-prepared' : 'spell-card'} key={spell.entry_id}>
                     <div>
@@ -549,6 +567,24 @@ export function CharacterSheetView({
                           className="button secondary compact"
                           disabled={busy}
                           onClick={() => {
+                            if (canonicalPrepare && spell.source_profile_id) {
+                              const next = spell.prepared
+                                ? preparedSelections.filter(
+                                    (selection) =>
+                                      selection.source_profile_id !== spell.source_profile_id ||
+                                      selection.spell_key !== spell.spell_key,
+                                  )
+                                : [
+                                    ...preparedSelections,
+                                    {
+                                      spell_key: spell.spell_key,
+                                      source_profile_id: spell.source_profile_id,
+                                      source_access_entry_id: spell.source_access_entry_id ?? undefined,
+                                    },
+                                  ]
+                              void onPatch({ prepared_spells: next })
+                              return
+                            }
                             const next = spell.prepared
                               ? preparedIds.filter((entryId) => entryId !== spell.entry_id)
                               : [...preparedIds, spell.entry_id]
