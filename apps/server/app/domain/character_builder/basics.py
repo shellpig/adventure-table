@@ -66,7 +66,9 @@ def _append_reference_grants(
         return
     for reference in raw:
         if isinstance(reference, dict):
-            grant = _grant_from_reference(entry.key, reference, kind_override=kind_override)
+            grant = _grant_from_reference(
+                entry.key, reference, kind_override=kind_override
+            )
             if grant is not None:
                 grants.append(grant)
 
@@ -83,12 +85,19 @@ def _append_trait_grants(
     for reference in references:
         if not isinstance(reference, dict):
             continue
-        grant = _grant_from_reference(source_entry.key, reference, kind_override="trait")
+        grant = _grant_from_reference(
+            source_entry.key, reference, kind_override="trait"
+        )
         if grant is not None:
             grants.append(grant)
             trait = registry.get_optional(grant.reference_id or "")
             if trait is not None:
-                _append_reference_grants(grants, trait, "proficiencies", kind_override="proficiency")
+                _append_reference_grants(
+                    grants,
+                    trait,
+                    "proficiencies",
+                    kind_override="proficiency",
+                )
 
 
 def _append_entry_grants(
@@ -97,8 +106,16 @@ def _append_entry_grants(
     entry: ContentEntry,
 ) -> None:
     _append_reference_grants(grants, entry, "languages", kind_override="language")
-    _append_reference_grants(grants, entry, "starting_proficiencies", kind_override="proficiency")
-    _append_reference_grants(grants, entry, "proficiencies", kind_override="proficiency")
+    _append_reference_grants(
+        grants, entry, "starting_proficiencies", kind_override="proficiency"
+    )
+    _append_reference_grants(
+        grants, entry, "proficiencies", kind_override="proficiency"
+    )
+    # M01-B PHB subraces use explicit reusable feature identities. Keep those
+    # separate from legacy SRD traits so their provenance and racial spells
+    # survive Review/Confirm.
+    _append_reference_grants(grants, entry, "features", kind_override="feature")
     _append_trait_grants(grants, registry, entry, "traits")
     _append_trait_grants(grants, registry, entry, "racial_traits")
 
@@ -128,7 +145,11 @@ def _selected_choice_grants(
         option_by_id = {option.option_id: option for option in choice.options}
         for option_id in selection.selected_option_ids:
             option = option_by_id.get(option_id)
-            if option is None or option.reference_id is None or option.category == "ability_bonus":
+            if (
+                option is None
+                or option.reference_id is None
+                or option.category == "ability_bonus"
+            ):
                 continue
             try:
                 kind = parse_stable_key(option.reference_id).kind
@@ -159,7 +180,14 @@ def _ability_bonuses_from_entry(entry: ContentEntry | None) -> dict[str, int]:
         bonus = raw.get("bonus")
         if not isinstance(reference, dict) or not isinstance(bonus, int):
             continue
-        index = reference.get("index")
+        try:
+            key = reference_to_stable_key(reference, kinds={"ability"})
+        except ValueError:
+            key = None
+        if key is not None:
+            index = parse_stable_key(key, kinds={"ability"}).index
+        else:
+            index = reference.get("index")
         if isinstance(index, str) and index in ABILITY_INDEX_TO_NAME:
             result[ABILITY_INDEX_TO_NAME[index]] += bonus
     return result
@@ -177,7 +205,11 @@ def _selected_ability_bonuses(
         option_by_id = {option.option_id: option for option in choice.options}
         for option_id in selection.selected_option_ids:
             option = option_by_id.get(option_id)
-            if option is None or option.category != "ability_bonus" or option.reference_id is None:
+            if (
+                option is None
+                or option.category != "ability_bonus"
+                or option.reference_id is None
+            ):
                 continue
             ability_index = option.reference_id.rsplit(":", 1)[-1]
             ability_name = ABILITY_INDEX_TO_NAME.get(ability_index)
@@ -192,9 +224,21 @@ def resolve_creation_summary(
     choices: tuple[BuilderChoice, ...],
 ) -> BuilderResolvedSummary:
     payload = draft.draft_payload
-    race = registry.get_optional(payload.race_selection.reference_id) if payload.race_selection else None
-    subrace = registry.get_optional(payload.subrace_selection.reference_id) if payload.subrace_selection else None
-    background = registry.get_optional(payload.background_selection.reference_id) if payload.background_selection else None
+    race = (
+        registry.get_optional(payload.race_selection.reference_id)
+        if payload.race_selection
+        else None
+    )
+    subrace = (
+        registry.get_optional(payload.subrace_selection.reference_id)
+        if payload.subrace_selection
+        else None
+    )
+    background = (
+        registry.get_optional(payload.background_selection.reference_id)
+        if payload.background_selection
+        else None
+    )
 
     grants: list[BuilderGrantSummary] = []
     for entry in (race, subrace, background):
@@ -224,7 +268,8 @@ def resolve_creation_summary(
         override_map = {
             override.key.removeprefix("ability:"): int(override.value)
             for override in payload.numeric_overrides
-            if override.key.startswith("ability:") and float(override.value).is_integer()
+            if override.key.startswith("ability:")
+            and float(override.value).is_integer()
         }
         for ability, base in payload.ability_generation.scores.as_dict().items():
             resolved = base + bonuses.get(ability, 0)
@@ -252,10 +297,28 @@ def resolve_creation_summary(
     return BuilderResolvedSummary(
         name=payload.basic.name if payload.basic is not None else None,
         target_level=payload.target_level,
-        race_name=_entry_name(registry, payload.race_selection.reference_id if payload.race_selection else None),
-        subrace_name=_entry_name(registry, payload.subrace_selection.reference_id if payload.subrace_selection else None),
-        background_name=_entry_name(registry, payload.background_selection.reference_id if payload.background_selection else None),
-        alignment_name=_entry_name(registry, payload.alignment_selection.reference_id if payload.alignment_selection else None),
+        race_name=_entry_name(
+            registry,
+            payload.race_selection.reference_id if payload.race_selection else None,
+        ),
+        subrace_name=_entry_name(
+            registry,
+            payload.subrace_selection.reference_id
+            if payload.subrace_selection
+            else None,
+        ),
+        background_name=_entry_name(
+            registry,
+            payload.background_selection.reference_id
+            if payload.background_selection
+            else None,
+        ),
+        alignment_name=_entry_name(
+            registry,
+            payload.alignment_selection.reference_id
+            if payload.alignment_selection
+            else None,
+        ),
         selected_reference_count=selected_reference_count,
         choice_selection_count=len(payload.choice_selections),
         grants=tuple(deduped_grants),
