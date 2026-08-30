@@ -200,18 +200,30 @@ def compile_builder_draft(
         *(choice.choice_id for choice in progression_choices),
         *(choice.choice_id for choice in structural_choices),
     }
+    misplaced_equipment_choice_ids = {
+        choice_id
+        for choice_id in draft.draft_payload.choice_selections
+        if choice_id.startswith("equipment:")
+    }
     foundation_choices = tuple(
         choice
         for choice in raw_foundation_choices
         if not (
             choice.option_source == "draft:selection"
-            and choice.choice_id in live_choice_ids
+            and (
+                choice.choice_id in live_choice_ids
+                or choice.choice_id in misplaced_equipment_choice_ids
+            )
         )
     )
 
     # Class/subclass rows are authoritative in level_choices and are validated by
     # validate_progression(). Nested class and P1-D structural choices use the
-    # canonical choice_selections contract.
+    # canonical choice_selections contract. P1-F equipment has its own dedicated
+    # starting_equipment_choices namespace; an equipment-shaped key accidentally
+    # written into generic choice_selections is ignored rather than interpreted as
+    # a Build choice, while final equipment validation still requires the correct
+    # namespace before Confirm.
     generic_progression_choices = tuple(
         choice
         for choice in progression_choices
@@ -223,6 +235,18 @@ def compile_builder_draft(
         for issue in validate_foundation_draft(draft, registry, validation_choices)
         if issue.code != "incomplete_level_progression"
     ]
+    for choice_id in sorted(misplaced_equipment_choice_ids):
+        foundation_issues.append(
+            BuilderIssue(
+                code="misplaced_equipment_choice",
+                severity=BuilderIssueSeverity.WARNING,
+                path=f"draft_payload.choice_selections.{choice_id}",
+                message=(
+                    "Starting equipment selections belong in "
+                    "draft_payload.starting_equipment_choices; this misplaced value is ignored."
+                ),
+            )
+        )
     if structural_data_issue is not None:
         foundation_issues.append(structural_data_issue)
     foundation_issues.extend(validate_structural_choice_integrity(draft, structural_choices))
