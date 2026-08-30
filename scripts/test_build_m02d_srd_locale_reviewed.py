@@ -15,6 +15,16 @@ if str(SCRIPTS_ROOT) not in sys.path:
 import build_m02d_srd_locale_reviewed as reviewed
 
 
+def _report(entry_count: int, required_count: int, unknown_count: int = 0) -> dict[str, object]:
+    return {
+        "localized_entry_count": entry_count,
+        "required_field_count": required_count,
+        "categories": {},
+        "unknown_count": unknown_count,
+        "unknowns": [],
+    }
+
+
 class M02DReviewedLocaleTests(unittest.TestCase):
     def test_canonical_names_reads_current_top_level_srd_arrays(self) -> None:
         names = reviewed._canonical_names()
@@ -22,6 +32,8 @@ class M02DReviewedLocaleTests(unittest.TestCase):
         self.assertTrue(names)
         self.assertIn("Light Hammer", names.values())
         self.assertIn("Wizard", names.values())
+        self.assertEqual(names["srd5.1:damage-type:fire"], "Fire")
+        self.assertEqual(names["srd5.1:equipment-category:armor"], "Armor")
 
     def test_whole_name_reference_fixes_marker_free_composition(self) -> None:
         base_overlay = {
@@ -32,12 +44,7 @@ class M02DReviewedLocaleTests(unittest.TestCase):
                 "srd5.1:class:wizard": {"name": "法師"},
             },
         }
-        base_report = {
-            "localized_entry_count": 2,
-            "required_field_count": 2,
-            "unknown_count": 0,
-            "unknowns": [],
-        }
+        base_report = _report(2, 2)
         canonical_names = {
             "srd5.1:equipment:light-hammer": "Light Hammer",
             "srd5.1:class:wizard": "Wizard",
@@ -60,6 +67,10 @@ class M02DReviewedLocaleTests(unittest.TestCase):
                 reviewed.base,
                 "build_overlay",
                 return_value=(deepcopy(base_overlay), deepcopy(base_report)),
+            ), patch.object(
+                reviewed,
+                "_required_policy_name_kinds",
+                return_value=set(reviewed.base.REQUIRED_KINDS),
             ), patch.object(reviewed, "_canonical_names", return_value=canonical_names):
                 overlay, report = reviewed.build_reviewed_overlay(root, {})
 
@@ -86,12 +97,7 @@ class M02DReviewedLocaleTests(unittest.TestCase):
             "locale": "zh-TW",
             "entries": entries,
         }
-        base_report = {
-            "localized_entry_count": 4,
-            "required_field_count": 4,
-            "unknown_count": 0,
-            "unknowns": [],
-        }
+        base_report = _report(4, 4)
         canonical_names = {
             "srd5.1:race:halfling": "Halfling",
             "srd5.1:language:halfling": "Halfling",
@@ -103,6 +109,10 @@ class M02DReviewedLocaleTests(unittest.TestCase):
             reviewed.base,
             "build_overlay",
             return_value=(deepcopy(base_overlay), deepcopy(base_report)),
+        ), patch.object(
+            reviewed,
+            "_required_policy_name_kinds",
+            return_value=set(reviewed.base.REQUIRED_KINDS),
         ), patch.object(reviewed, "_canonical_names", return_value=canonical_names):
             overlay, report = reviewed.build_reviewed_overlay(None, {})
 
@@ -112,6 +122,46 @@ class M02DReviewedLocaleTests(unittest.TestCase):
         self.assertEqual(overlay["entries"]["srd5.1:language:draconic"]["name"], "龍語")
         self.assertEqual(report["project_exact_name_hits"], 4)
 
+    def test_policy_required_short_name_kinds_are_added_by_stable_key(self) -> None:
+        fire_key = "srd5.1:damage-type:fire"
+        armor_key = "srd5.1:equipment-category:armor"
+        base_overlay = {
+            "schema_version": 1,
+            "locale": "zh-TW",
+            "entries": {},
+        }
+        base_report = _report(0, 0)
+        rows = {
+            "damage-types.json": [{"key": fire_key, "name": "Fire"}],
+            "equipment-categories.json": [{"key": armor_key, "name": "Armor"}],
+        }
+
+        with patch.object(
+            reviewed.base,
+            "build_overlay",
+            return_value=(deepcopy(base_overlay), deepcopy(base_report)),
+        ), patch.object(
+            reviewed,
+            "_required_policy_name_kinds",
+            return_value={"damage-type", "equipment-category"},
+        ), patch.object(
+            reviewed,
+            "_read_rows",
+            side_effect=lambda filename: deepcopy(rows[filename]),
+        ), patch.object(
+            reviewed,
+            "_canonical_names",
+            return_value={fire_key: "Fire", armor_key: "Armor"},
+        ):
+            overlay, report = reviewed.build_reviewed_overlay(None, {})
+
+        self.assertEqual(overlay["entries"][fire_key]["name"], "火焰")
+        self.assertEqual(overlay["entries"][armor_key]["name"], "護甲")
+        self.assertEqual(report["added_policy_name_field_count"], 2)
+        self.assertEqual(report["required_field_count"], 2)
+        self.assertEqual(report["categories"]["damage-type"]["entry_count"], 1)
+        self.assertEqual(report["categories"]["equipment-category"]["entry_count"], 1)
+
     def test_structured_spell_scroll_name_beats_external_reference(self) -> None:
         key = "srd5.1:item:spell-scroll-4th"
         base_overlay = {
@@ -119,12 +169,7 @@ class M02DReviewedLocaleTests(unittest.TestCase):
             "locale": "zh-TW",
             "entries": {key: {"name": "法術卷軸4〔未譯:th〕等級"}},
         }
-        base_report = {
-            "localized_entry_count": 1,
-            "required_field_count": 1,
-            "unknown_count": 1,
-            "unknowns": [{"key": key, "canonical": "Spell Scroll 4th Level", "token": "th"}],
-        }
+        base_report = _report(1, 1, unknown_count=1)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -139,6 +184,10 @@ class M02DReviewedLocaleTests(unittest.TestCase):
                 reviewed.base,
                 "build_overlay",
                 return_value=(deepcopy(base_overlay), deepcopy(base_report)),
+            ), patch.object(
+                reviewed,
+                "_required_policy_name_kinds",
+                return_value=set(reviewed.base.REQUIRED_KINDS),
             ), patch.object(
                 reviewed,
                 "_canonical_names",
