@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.content.identity import parse_stable_key, reference_to_stable_key
 from app.content.schemas import ContentEntry
 
 
@@ -35,7 +36,14 @@ def _parse_prerequisite(item: object) -> MulticlassPrerequisite | None:
     minimum = item.get("minimum_score")
     if not isinstance(ability_score, dict) or not isinstance(minimum, int):
         return None
-    ability_index = ability_score.get("index")
+    try:
+        ability_key = reference_to_stable_key(ability_score, kinds={"ability"})
+    except ValueError:
+        return None
+    if ability_key is not None:
+        ability_index = parse_stable_key(ability_key).index
+    else:
+        ability_index = ability_score.get("index")
     if not isinstance(ability_index, str):
         return None
     ability = ABILITY_INDEX_TO_NAME.get(ability_index)
@@ -63,10 +71,7 @@ def multiclass_prerequisite_groups(
     class_entry: ContentEntry,
 ) -> tuple[MulticlassPrerequisiteGroup, ...]:
     raw = class_entry.data.get("multi_classing")
-    if not isinstance(raw, dict):
-        return ()
-    raw_group = raw.get("prerequisite_options")
-    if not isinstance(raw_group, dict):
+    if not isinstance(raw_group := raw.get("prerequisite_options"), dict):
         return ()
 
     choose = raw_group.get("choose")
