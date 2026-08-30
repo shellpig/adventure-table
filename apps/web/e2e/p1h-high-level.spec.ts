@@ -25,6 +25,14 @@ async function chooseSearchable(page: Page, label: string | RegExp, value: strin
   await chooseOption(page, page.getByRole('combobox', { name: label }), value)
 }
 
+async function chooseIn(container: Locator, value: string) {
+  await chooseOption(
+    container.page(),
+    container.getByRole('combobox', { name: 'Add selection' }),
+    value,
+  )
+}
+
 async function chooseFirstEnabled(page: Page, input: Locator) {
   await expectDraftSaved(page)
   await expect(input).toBeEnabled()
@@ -106,6 +114,12 @@ test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to e
 
   await page.getByRole('button', { name: /Abilities/ }).click()
   await page.getByRole('button', { name: 'Save Ability Scores' }).click()
+  await chooseSearchable(page, 'Human — Languages', 'Dwarvish')
+  const backgroundLanguages = page
+    .locator('.builder-choice')
+    .filter({ hasText: 'Acolyte — Languages' })
+  await chooseIn(backgroundLanguages, 'Celestial')
+  await chooseIn(backgroundLanguages, 'Draconic')
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
   await page.getByRole('button', { name: /Class/ }).click()
