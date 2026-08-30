@@ -1,42 +1,27 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Iterable
-from urllib.parse import urlparse
 
 from pydantic import ValidationError
 
+from app.content.identity import (
+    URL_ROUTE_TO_KIND,
+    parse_stable_key,
+    reference_to_stable_key,
+    require_pack_id,
+    stable_key,
+)
 from app.content.schemas import ContentEntry, ContentManifest, DATA_MODELS
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_CONTENT_ROOT = REPOSITORY_ROOT / "data" / "srd5.1"
-
-URL_ROUTE_TO_KIND = {
-    "ability-scores": "ability",
-    "alignments": "alignment",
-    "backgrounds": "background",
-    "classes": "class",
-    "conditions": "condition",
-    "damage-types": "damage-type",
-    "equipment-categories": "equipment-category",
-    "equipment": "equipment",
-    "feats": "feat",
-    "features": "feature",
-    "languages": "language",
-    "magic-items": "item",
-    "magic-schools": "magic-school",
-    "proficiencies": "proficiency",
-    "races": "race",
-    "skills": "skill",
-    "spells": "spell",
-    "subclasses": "subclass",
-    "subraces": "subrace",
-    "traits": "trait",
-    "weapon-properties": "weapon-property",
-}
+DEFAULT_CONTENT_ROOT = REPOSITORY_ROOT / "data"
+DEFAULT_CONTENT_PACKS = ("srd5.1",)
+DEFAULT_SRD_CONTENT_ROOT = DEFAULT_CONTENT_ROOT / "srd5.1"
 
 # The imported 5e SRD Rogue level feed carries several non-ASI rows whose
 # cumulative ability_score_bonuses value is one lower than the immediately
@@ -54,6 +39,27 @@ KNOWN_LEVEL_ABILITY_SCORE_BONUS_CORRECTIONS: dict[str, tuple[int, int]] = {
     "srd5.1:level:rogue-20": (5, 6),
 }
 
+_REFERENCE_KIND_BY_FIELD: dict[str, str] = {
+    "ability_score": "ability",
+    "class": "class",
+    "classes": "class",
+    "equipment_category": "equipment-category",
+    "features": "feature",
+    "languages": "language",
+    "proficiencies": "proficiency",
+    "race": "race",
+    "races": "race",
+    "saving_throws": "ability",
+    "school": "magic-school",
+    "subclass": "subclass",
+    "subclasses": "subclass",
+    "subrace": "subrace",
+    "subraces": "subrace",
+    "traits": "trait",
+    "racial_traits": "trait",
+    "starting_proficiencies": "proficiency",
+}
+
 
 class ContentValidationError(RuntimeError):
     pass
@@ -61,6 +67,13 @@ class ContentValidationError(RuntimeError):
 
 class ContentNotFoundError(KeyError):
     pass
+
+
+@dataclass(frozen=True)
+class ContentPack:
+    manifest: ContentManifest
+    root: Path
+    entries: tuple[ContentEntry, ...]
 
 
 def _normalize_known_source_anomalies(entry: ContentEntry) -> ContentEntry:
@@ -86,44 +99,135 @@ def _normalize_known_source_anomalies(entry: ContentEntry) -> ContentEntry:
 class ContentRegistry:
     def __init__(
         self,
-        manifest: ContentManifest,
+        *,
+        packs: dict[str, ContentPack],
         entries: dict[str, ContentEntry],
         by_kind: dict[str, tuple[ContentEntry, ...]],
+        by_source_kind: dict[tuple[str, str], tuple[ContentEntry, ...]],
+        enabled_pack_ids: tuple[str, ...],
     ) -> None:
-        self.manifest = manifest
+        self._packs = packs
         self._entries = entries
         self._by_kind = by_kind
+        self._by_source_kind = by_source_kind
+        self.enabled_pack_ids = enabled_pack_ids
+
+    @property
+    def manifest(self) -> ContentManifest:
+        """P0 compatibility: expose the SRD manifest when it is installed."""
+        if "srd5.1" in self._packs:
+            return self._packs["srd5.1"].manifest
+        if len(self._packs) == 1:
+            return next(iter(self._packs.values())).manifest
+        raise ContentValidationError(
+            "registry contains multiple non-SRD packs; use get_source_manifest(source)"
+        )
+
+    @property
+    def pack_count(self) -> int:
+        return len(self._packs)
 
     @classmethod
     def from_directory(cls, root: Path) -> "ContentRegistry":
-        root = root.resolve()
+        """Compatibility loader for one explicit pack directory."""
+        pack = cls._load_pack(root.resolve())
+        return cls._from_loaded_packs((pack,))
+
+    @classmethod
+    def from_root(
+        cls,
+        content_root: Path,
+        enabled_pack_ids: Iterable[str],
+    ) -> "ContentRegistry":
+        root = content_root.resolve()
+        pack_ids = tuple(enabled_pack_ids)
+        if not pack_ids:
+            raise ContentValidationError("enabled content pack list cannot be empty")
+        if len(pack_ids) != len(set(pack_ids)):
+            raise ContentValidationError("enabled content pack ids must be unique")
+
+        packs: list[ContentPack] = []
+        for pack_id in pack_ids:
+            try:
+                require_pack_id(pack_id)
+            except ValueError as exc:
+                raise ContentValidationError(f"invalid enabled content pack id {pack_id}: {exc}") from exc
+            pack_root = root / pack_id
+            if not pack_root.is_dir():
+                raise ContentValidationError(f"enabled content pack directory is missing: {pack_root}")
+            packs.append(cls._load_pack(pack_root))
+        return cls._from_loaded_packs(tuple(packs))
+
+    @classmethod
+    def _from_loaded_packs(cls, loaded_packs: tuple[ContentPack, ...]) -> "ContentRegistry":
+        packs: dict[str, ContentPack] = {}
+        entries: dict[str, ContentEntry] = {}
+        by_kind_mutable: dict[str, list[ContentEntry]] = defaultdict(list)
+        by_source_kind_mutable: dict[tuple[str, str], list[ContentEntry]] = defaultdict(list)
+
+        for pack in loaded_packs:
+            source = pack.manifest.id
+            if source in packs:
+                raise ContentValidationError(f"duplicate content pack id: {source}")
+            packs[source] = pack
+            for entry in pack.entries:
+                if entry.key in entries:
+                    raise ContentValidationError(f"duplicate content key: {entry.key}")
+                entries[entry.key] = entry
+                kind = parse_stable_key(entry.key).kind
+                by_kind_mutable[kind].append(entry)
+                by_source_kind_mutable[(source, kind)].append(entry)
+
+        cls._validate_cross_references(entries.values(), entries)
+        by_kind = {
+            kind: tuple(sorted(kind_entries, key=lambda entry: entry.key))
+            for kind, kind_entries in by_kind_mutable.items()
+        }
+        by_source_kind = {
+            key: tuple(sorted(kind_entries, key=lambda entry: entry.key))
+            for key, kind_entries in by_source_kind_mutable.items()
+        }
+        return cls(
+            packs=packs,
+            entries=entries,
+            by_kind=by_kind,
+            by_source_kind=by_source_kind,
+            enabled_pack_ids=tuple(pack.manifest.id for pack in loaded_packs),
+        )
+
+    @classmethod
+    def _load_pack(cls, root: Path) -> ContentPack:
         manifest_path = root / "manifest.json"
         if not manifest_path.is_file():
-            raise ContentValidationError(f"missing SRD manifest: {manifest_path}")
+            raise ContentValidationError(f"missing content manifest: {manifest_path}")
 
         try:
             manifest = ContentManifest.model_validate_json(
                 manifest_path.read_text(encoding="utf-8")
             )
         except (OSError, ValidationError, ValueError) as exc:
-            raise ContentValidationError(f"invalid SRD manifest: {exc}") from exc
+            raise ContentValidationError(f"invalid content manifest: {exc}") from exc
 
-        forbidden = [root / "monsters.json", root / "beasts.json"]
-        present_forbidden = [path.name for path in forbidden if path.exists()]
-        if present_forbidden:
+        if root.name != manifest.id:
             raise ContentValidationError(
-                "P0 scope violation: Monster/Beast data must remain deferred to P4-A: "
-                + ", ".join(present_forbidden)
+                f"content pack directory/id mismatch: directory={root.name}, manifest={manifest.id}"
             )
 
-        entries: dict[str, ContentEntry] = {}
-        by_kind_mutable: dict[str, list[ContentEntry]] = defaultdict(list)
+        if manifest.id == "srd5.1":
+            forbidden = [root / "monsters.json", root / "beasts.json"]
+            present_forbidden = [path.name for path in forbidden if path.exists()]
+            if present_forbidden:
+                raise ContentValidationError(
+                    "P0 scope violation: Monster/Beast data must remain deferred to P4-A: "
+                    + ", ".join(present_forbidden)
+                )
 
+        entries: dict[str, ContentEntry] = {}
         for category in manifest.categories:
-            if category.kind in {"monster", "beast"} or category.name in {
-                "monsters",
-                "beasts",
-            }:
+            if manifest.id == "srd5.1" and (
+                category.kind in {"monster", "beast"}
+                or category.name in {"monsters", "beasts"}
+            ):
                 raise ContentValidationError(
                     f"P0 scope violation in manifest category: {category.name}"
                 )
@@ -155,11 +259,24 @@ class ContentRegistry:
                     raise ContentValidationError(
                         f"{category.name}[{position}] schema validation failed: {exc}"
                     ) from exc
+                except ValueError as exc:
+                    raise ContentValidationError(
+                        f"{category.name}[{position}] identity validation failed: {exc}"
+                    ) from exc
 
-                expected_key = f"srd5.1:{category.kind}:{entry.index}"
-                if entry.key != expected_key:
+                parsed = parse_stable_key(entry.key)
+                expected_key = stable_key(manifest.id, category.kind, entry.index)
+                if entry.key != expected_key or parsed.kind != category.kind:
                     raise ContentValidationError(
                         f"{entry.key}: expected stable key {expected_key}"
+                    )
+                if entry.source != manifest.id:
+                    raise ContentValidationError(
+                        f"{entry.key}: entry source must match manifest id {manifest.id}"
+                    )
+                if entry.ruleset != manifest.ruleset:
+                    raise ContentValidationError(
+                        f"{entry.key}: entry ruleset must match manifest ruleset {manifest.ruleset}"
                     )
                 if typed_data.index != entry.index:
                     raise ContentValidationError(
@@ -172,21 +289,20 @@ class ContentRegistry:
                 if entry.key in entries:
                     raise ContentValidationError(f"duplicate content key: {entry.key}")
 
-                entries[entry.key] = entry
-                by_kind_mutable[category.kind].append(entry)
+                entries[entry.key] = entry.model_copy(
+                    update={"source_label": manifest.name}
+                )
 
         if len(entries) != manifest.total_entries:
             raise ContentValidationError(
-                f"registry entry count mismatch: manifest={manifest.total_entries}, "
-                f"loaded={len(entries)}"
+                f"registry entry count mismatch for {manifest.id}: "
+                f"manifest={manifest.total_entries}, loaded={len(entries)}"
             )
-
-        cls._validate_cross_references(entries.values(), entries)
-        by_kind = {
-            kind: tuple(kind_entries)
-            for kind, kind_entries in by_kind_mutable.items()
-        }
-        return cls(manifest=manifest, entries=entries, by_kind=by_kind)
+        return ContentPack(
+            manifest=manifest,
+            root=root,
+            entries=tuple(entries.values()),
+        )
 
     @staticmethod
     def _validate_cross_references(
@@ -194,11 +310,23 @@ class ContentRegistry:
         entries: dict[str, ContentEntry],
     ) -> None:
         for source_entry in source_entries:
-            for target_key, url in _iter_stable_references(source_entry.data):
-                if target_key not in entries:
+            try:
+                references = tuple(_iter_stable_references(source_entry.data))
+            except ValueError as exc:
+                raise ContentValidationError(f"{source_entry.key}: invalid reference: {exc}") from exc
+            for target_key, expected_kind, display in references:
+                target = entries.get(target_key)
+                if target is None:
                     raise ContentValidationError(
-                        f"{source_entry.key}: dangling reference {url} -> {target_key}"
+                        f"{source_entry.key}: dangling reference {display} -> {target_key}"
                     )
+                if expected_kind is not None:
+                    actual_kind = parse_stable_key(target.key).kind
+                    if actual_kind != expected_kind:
+                        raise ContentValidationError(
+                            f"{source_entry.key}: wrong-kind reference {target_key}; "
+                            f"expected {expected_kind}, got {actual_kind}"
+                        )
 
     def get(self, key: str) -> ContentEntry:
         try:
@@ -209,45 +337,74 @@ class ContentRegistry:
     def get_optional(self, key: str) -> ContentEntry | None:
         return self._entries.get(key)
 
-    def resolve(self, kind: str, index: str) -> ContentEntry:
-        return self.get(f"srd5.1:{kind}:{index}")
+    def resolve(self, source: str, kind: str, index: str) -> ContentEntry:
+        return self.get(stable_key(source, kind, index))
 
-    def list_kind(self, kind: str) -> tuple[ContentEntry, ...]:
-        return self._by_kind.get(kind, ())
+    def resolve_reference(
+        self,
+        reference: dict[str, Any],
+        *,
+        kinds: set[str] | None = None,
+    ) -> ContentEntry:
+        try:
+            key = reference_to_stable_key(reference, kinds=kinds)
+        except ValueError as exc:
+            raise ContentValidationError(str(exc)) from exc
+        if key is None:
+            raise ContentValidationError("unsupported content reference shape")
+        return self.get(key)
+
+    def list_kind(
+        self,
+        kind: str,
+        *,
+        source: str | None = None,
+    ) -> tuple[ContentEntry, ...]:
+        if source is None:
+            return self._by_kind.get(kind, ())
+        return self._by_source_kind.get((source, kind), ())
+
+    def get_source_manifest(self, source: str) -> ContentManifest:
+        try:
+            return self._packs[source].manifest
+        except KeyError as exc:
+            raise ContentNotFoundError(source) from exc
+
+    def source_label(self, source: str) -> str:
+        return self.get_source_manifest(source).name
 
     def __len__(self) -> int:
         return len(self._entries)
 
 
-def _iter_stable_references(value: Any) -> Iterable[tuple[str, str]]:
+def _looks_like_reference(value: dict[str, Any]) -> bool:
+    if "key" in value:
+        return isinstance(value.get("key"), str) and isinstance(value.get("name"), str)
+    return (
+        isinstance(value.get("index"), str)
+        and isinstance(value.get("name"), str)
+        and isinstance(value.get("url"), str)
+    )
+
+
+def _iter_stable_references(
+    value: Any,
+    *,
+    field_name: str | None = None,
+) -> Iterable[tuple[str, str | None, str]]:
     if isinstance(value, dict):
-        url = value.get("url")
-        index = value.get("index")
-        if isinstance(url, str) and isinstance(index, str):
-            target = _stable_key_from_api_url(url, index)
-            if target is not None:
-                yield target, url
-        for child in value.values():
-            yield from _iter_stable_references(child)
+        if _looks_like_reference(value):
+            key = reference_to_stable_key(value)
+            if key is not None:
+                expected_kind = _REFERENCE_KIND_BY_FIELD.get(field_name or "")
+                yield key, expected_kind, str(value.get("url") or value.get("key"))
+                return
+        for child_name, child in value.items():
+            yield from _iter_stable_references(child, field_name=child_name)
     elif isinstance(value, list):
         for child in value:
-            yield from _iter_stable_references(child)
-
-
-def _stable_key_from_api_url(url: str, index: str) -> str | None:
-    path = urlparse(url).path
-    parts = [part for part in path.split("/") if part]
-    if len(parts) != 4 or parts[0:2] != ["api", "2014"]:
-        return None
-    kind = URL_ROUTE_TO_KIND.get(parts[2])
-    if kind is None:
-        return None
-    if parts[3] != index:
-        raise ContentValidationError(
-            f"reference URL/index mismatch: url={url}, index={index}"
-        )
-    return f"srd5.1:{kind}:{index}"
+            yield from _iter_stable_references(child, field_name=field_name)
 
 
 def load_default_content_registry() -> ContentRegistry:
-    return ContentRegistry.from_directory(DEFAULT_CONTENT_ROOT)
+    return ContentRegistry.from_root(DEFAULT_CONTENT_ROOT, DEFAULT_CONTENT_PACKS)
