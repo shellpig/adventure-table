@@ -123,10 +123,11 @@ async function fillExactSpellBuckets(page: Page) {
 }
 
 
-test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to end', async ({ page, request }) => {
+test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to end', async ({ page, request }, testInfo) => {
   test.slow()
 
   await page.goto('/characters')
+  await page.screenshot({ path: testInfo.outputPath('p1-h-workshop-desktop.png'), fullPage: true })
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
   await expectDraftSaved(page)
@@ -160,6 +161,11 @@ test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to e
   await fillEmptyComboboxes(page, page.locator('.level-rail'))
   await expect(page.getByText('Fighter 5 / Wizard 5', { exact: true }).last()).toBeVisible()
   await expect(page.getByText('10 / 10', { exact: true })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('p1-h-level-rail-desktop.png'), fullPage: true })
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.screenshot({ path: testInfo.outputPath('p1-h-builder-mobile.png'), fullPage: true })
+  await page.setViewportSize({ width: 1280, height: 720 })
 
   const draftUrl = page.url()
   const draftMatch = draftUrl.match(/\/character-builder\/([0-9a-f-]{36})$/)
@@ -176,6 +182,18 @@ test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to e
   await expect(page.getByRole('heading', { name: 'Spellcasting & resources' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Wizard 5' })).toBeVisible()
   await fillExactSpellBuckets(page)
+  await page.screenshot({ path: testInfo.outputPath('p1-h-spellcasting.png'), fullPage: true })
+
+  const preparedSelector = page.getByRole('combobox', { name: 'Add initial prepared spells' })
+  if (await preparedSelector.isEnabled()) {
+    await preparedSelector.focus()
+    const listboxId = await preparedSelector.getAttribute('aria-controls')
+    if (listboxId) {
+      await expect(page.locator(`[id="${listboxId}"]`)).toBeVisible()
+      await page.screenshot({ path: testInfo.outputPath('p1-h-spell-selector.png'), fullPage: true })
+      await page.keyboard.press('Escape')
+    }
+  }
 
   await page.getByRole('button', { name: /Review/ }).click()
   await expect(page.getByRole('heading', { name: 'Equipment & final review' })).toBeVisible()
@@ -189,7 +207,10 @@ test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to e
   )
   expect(blockingIssues, JSON.stringify(review.issues, null, 2)).toEqual([])
   expect(review.can_confirm, JSON.stringify(review.issues, null, 2)).toBeTruthy()
-  await expect(page.getByText('0 blocking', { exact: true })).toBeVisible()
+  await expect(
+    page.locator('.builder-form .summary-validation').getByText('0 blocking', { exact: true }),
+  ).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('p1-h-review.png'), fullPage: true })
 
   const confirm = page.getByRole('button', { name: 'Confirm & Create Character' })
   await expect(confirm).toBeEnabled()
@@ -197,6 +218,7 @@ test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to e
   await expect(page).toHaveURL(/\/characters\/[0-9a-f-]{36}$/)
   await expect(page.getByRole('heading', { name: 'P1-H High-Level Hero' })).toBeVisible()
   await expect(page.getByText('Build v1')).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('p1-h-character-sheet.png'), fullPage: true })
 
   const match = page.url().match(/\/characters\/([0-9a-f-]{36})$/)
   if (!match) throw new Error(`Cannot parse character id from ${page.url()}`)
