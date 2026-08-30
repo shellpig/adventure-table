@@ -1,9 +1,9 @@
 """Finish the M02-D SRD zh-TW overlay with reviewed external-name references.
 
 The base generator remains the source of terminology and deterministic
-compositional translations.  This authoring-only pass may consume a checkout of
+compositional translations. This authoring-only pass may consume a checkout of
 an explicitly pinned Traditional Chinese community reference to replace mixed
-English marker output by exact English-name matches.  Runtime never reads the
+English marker output by exact English-name matches. Runtime never reads the
 reference checkout; it only reads the committed data/srd5.1/locales/zh-TW.json.
 """
 
@@ -23,14 +23,15 @@ UNTRANSLATED_RE = re.compile(r"〔未譯:([^〕]+)〕")
 ASCII_SUFFIX_RE = re.compile(
     r"([A-Za-z][A-Za-z0-9 A-Za-z'’/().,:+\-×&]*[A-Za-z0-9)])\s*$"
 )
+SPELL_SCROLL_KEY_RE = re.compile(r"^srd5\.1:item:spell-scroll-(\d+)(?:st|nd|rd|th)$")
+MYSTIC_ARCANUM_KEY_RE = re.compile(
+    r"^srd5\.1:feature:mystic-arcanum-(\d+)(?:st|nd|rd|th)-level$"
+)
 
-# Tokens that are valid D&D notation or units and intentionally remain ASCII.
-# Everything else must be translated or resolved by an exact reference name.
-PASSTHROUGH_TOKENS = {
-    "CR",
-    "d",
-    "ft",
-}
+# CR and dice notation are language-neutral rules notation. Imperial distance
+# is user-facing prose and is normalized to Taiwan Traditional Chinese instead.
+PASSTHROUGH_TOKENS = {"CR", "d"}
+BUILTIN_TOKEN_OVERRIDES = {"ft": "呎"}
 
 
 def _normalize_name(value: str) -> str:
@@ -82,6 +83,17 @@ def load_reference_names(root: Path) -> dict[str, str]:
     return names
 
 
+def _structured_name_override(key: str) -> str | None:
+    """Translate name patterns whose ordinal suffix carries structural meaning."""
+    match = SPELL_SCROLL_KEY_RE.match(key)
+    if match:
+        return f"{match.group(1)}環法術卷軸"
+    match = MYSTIC_ARCANUM_KEY_RE.match(key)
+    if match:
+        return f"神祕奧秘：{match.group(1)}級"
+    return None
+
+
 def _replace_markers(value: Any, token_overrides: dict[str, str]) -> Any:
     if isinstance(value, str):
         def replace(match: re.Match[str]) -> str:
@@ -91,6 +103,8 @@ def _replace_markers(value: Any, token_overrides: dict[str, str]) -> Any:
             translated = token_overrides.get(token)
             if translated is None:
                 translated = token_overrides.get(token.lower())
+            if translated is None:
+                translated = BUILTIN_TOKEN_OVERRIDES.get(token.lower())
             return translated if translated is not None else match.group(0)
 
         return UNTRANSLATED_RE.sub(replace, value)
@@ -126,20 +140,25 @@ def build_reviewed_overlay(
     overlay, report = base.build_overlay()
     reference_names = load_reference_names(reference_root) if reference_root else {}
 
-    # A key with a marker in M02-D is currently a user-visible name field.  Use
-    # the base report's canonical source text to resolve an exact reference
-    # translation before falling back to compositional token overrides.
     canonical_by_key: dict[str, set[str]] = {}
     for issue in report["unknowns"]:
         canonical_by_key.setdefault(issue["key"], set()).add(issue["canonical"])
 
     exact_reference_hits = 0
+    structured_name_hits = 0
     for key, canonical_values in canonical_by_key.items():
         fields = overlay["entries"].get(key)
         if not isinstance(fields, dict) or "name" not in fields:
             continue
         if not isinstance(fields["name"], str) or not UNTRANSLATED_RE.search(fields["name"]):
             continue
+
+        structured = _structured_name_override(key)
+        if structured is not None:
+            fields["name"] = structured
+            structured_name_hits += 1
+            continue
+
         candidates = {
             reference_names.get(_normalize_name(canonical))
             for canonical in canonical_values
@@ -156,6 +175,7 @@ def build_reviewed_overlay(
         "base_unknown_count": report["unknown_count"],
         "reference_name_count": len(reference_names),
         "exact_reference_hits": exact_reference_hits,
+        "structured_name_hits": structured_name_hits,
         "reviewed_token_override_count": len(token_overrides),
         "unknown_count": len(remaining),
         "unknowns": remaining,
@@ -193,6 +213,7 @@ def main() -> int:
         f"{report['localized_entry_count']} entries / "
         f"{report['required_field_count']} required fields / "
         f"{report['exact_reference_hits']} exact reference hits / "
+        f"{report['structured_name_hits']} structured names / "
         f"{report['unknown_count']} unknown markers"
     )
     if report["unknown_count"]:
