@@ -146,10 +146,9 @@ test('M01-C creates and reloads a GoS background character with a PHB subrace', 
   await chooseSearchable(page, 'Background', 'Fisher')
 
   await saveDefaultAbilities(page)
-  const backgroundLanguages = page
-    .locator('.builder-choice')
-    .filter({ hasText: 'Fisher — Languages' })
-  await chooseIn(backgroundLanguages, 'Dwarvish')
+  const backgroundLanguages = page.getByRole('combobox', { name: 'Add selection' })
+  await expect(backgroundLanguages).toHaveCount(1)
+  await chooseOption(page, backgroundLanguages, 'Dwarvish')
 
   await chooseBarbarian(page, ['Skill: Animal Handling', 'Skill: Athletics'])
   await chooseBarbarianEquipment(page)
