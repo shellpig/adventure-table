@@ -86,6 +86,7 @@ class InventoryDTO(SheetModel):
 
 class CharacterSheetDTO(SheetModel):
     character_id: UUID
+    current_version_id: UUID
     name: str
     ruleset: str
     version_no: int
@@ -255,6 +256,7 @@ def build_character_sheet(
 
     return CharacterSheetDTO(
         character_id=character.id,
+        current_version_id=character.current_version_id,
         name=character.name,
         ruleset=character.ruleset,
         version_no=character.version_no,
