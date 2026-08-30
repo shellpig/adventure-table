@@ -5,6 +5,10 @@ import {
   listCharacters,
   listCreateBuilderDrafts,
 } from '../../api/characterBuilder'
+import {
+  createCharacterVersionDraft,
+  type VersionedBuilderMode,
+} from '../../api/characterVersions'
 import './builder.css'
 
 export function CharacterWorkshopPage() {
@@ -16,20 +20,27 @@ export function CharacterWorkshopPage() {
       window.location.assign(`/character-builder/${view.draft.id}`)
     },
   })
+  const versionDraft = useMutation({
+    mutationFn: ({ characterId, mode }: { characterId: string; mode: VersionedBuilderMode }) =>
+      createCharacterVersionDraft(characterId, mode),
+    onSuccess: (view) => {
+      window.location.assign(`/character-builder/${view.draft.id}`)
+    },
+  })
 
   return (
     <main className="workshop-page">
       <div className="workshop-shell">
         <header className="workshop-hero">
           <div>
-            <p className="eyebrow">P1-B · Character Workshop</p>
+            <p className="eyebrow">P1-G · Character Workshop</p>
             <h1>Character Workshop</h1>
-            <p>建立、繼續編輯，或打開既有角色卡。草稿與正式角色保持分離。</p>
+            <p>建立角色、升級既有 Build，或查看 immutable Build Version History。</p>
           </div>
           <button
             type="button"
             className="button primary"
-            disabled={createDraft.isPending}
+            disabled={createDraft.isPending || versionDraft.isPending}
             onClick={() => createDraft.mutate()}
           >
             {createDraft.isPending ? '建立中…' : '+ Create Character'}
@@ -37,6 +48,7 @@ export function CharacterWorkshopPage() {
         </header>
 
         {createDraft.error ? <div className="error-banner">{createDraft.error.message}</div> : null}
+        {versionDraft.error ? <div className="error-banner">{versionDraft.error.message}</div> : null}
 
         <section className="workshop-section">
           <div className="workshop-section__heading">
@@ -93,11 +105,48 @@ export function CharacterWorkshopPage() {
                 <p>{character.class_summary}</p>
                 <div className="workshop-card__meta">
                   <span>Build v{character.version_no}</span>
-                  <span>Ready</span>
+                  <span>{character.level >= 20 ? 'Max level' : 'Ready'}</span>
                 </div>
-                <a className="button secondary full" href={`/characters/${character.id}`}>
-                  Open Character Sheet →
-                </a>
+                <div className="workshop-card__actions">
+                  <a className="button secondary full" href={`/characters/${character.id}`}>
+                    Open Character Sheet →
+                  </a>
+                  <button
+                    type="button"
+                    className="button primary full"
+                    disabled={versionDraft.isPending || character.level >= 20}
+                    onClick={() =>
+                      versionDraft.mutate({ characterId: character.id, mode: 'level_up' })
+                    }
+                  >
+                    Level Up
+                  </button>
+                  <div className="workshop-card__split-actions">
+                    <button
+                      type="button"
+                      className="button secondary"
+                      disabled={versionDraft.isPending}
+                      onClick={() =>
+                        versionDraft.mutate({ characterId: character.id, mode: 'build_edit' })
+                      }
+                    >
+                      Edit Build
+                    </button>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      disabled={versionDraft.isPending}
+                      onClick={() =>
+                        versionDraft.mutate({ characterId: character.id, mode: 'correction' })
+                      }
+                    >
+                      Correct Build
+                    </button>
+                  </div>
+                  <a className="button secondary full" href={`/characters/${character.id}/versions`}>
+                    Version History
+                  </a>
+                </div>
               </article>
             ))}
           </div>

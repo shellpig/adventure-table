@@ -16,7 +16,7 @@ from app.domain.character.schemas import (
 from app.domain.character_builder.basics import resolve_creation_summary
 from app.domain.character_builder.choices import build_foundation_choices
 from app.domain.character_builder.creation import BuilderEquipmentSummary
-from app.domain.character_builder.equipment import compile_starting_equipment
+from app.domain.character_builder.equipment import EquipmentCompilation, compile_starting_equipment
 from app.domain.character_builder.multiclass import multiclass_option_failure_reason
 from app.domain.character_builder.progression import (
     build_progression_choices,
@@ -31,6 +31,7 @@ from app.domain.character_builder.schemas import (
     BuilderDraft,
     BuilderIssue,
     BuilderIssueSeverity,
+    BuilderMode,
     BuilderResolvedSummary,
     BuilderValidationResult,
 )
@@ -163,9 +164,35 @@ def _effective_progression_choices(
     return tuple(result)
 
 
+def _preserved_starting_equipment(
+    base_build: CharacterBuild,
+    registry: ContentRegistry,
+) -> EquipmentCompilation:
+    summary: list[BuilderEquipmentSummary] = []
+    for entry in base_build.starting_equipment:
+        content = registry.get_optional(entry.item_ref)
+        summary.append(
+            BuilderEquipmentSummary(
+                entry_id=entry.entry_id,
+                item_ref=entry.item_ref,
+                name=content.name if content is not None else entry.item_ref,
+                quantity=entry.quantity,
+                source_ref="version:base-starting-equipment",
+            )
+        )
+    return EquipmentCompilation(
+        choices=(),
+        starting_equipment=base_build.starting_equipment,
+        summary=tuple(summary),
+        issues=(),
+    )
+
+
 def compile_builder_draft(
     draft: BuilderDraft,
     registry: ContentRegistry,
+    *,
+    base_build: CharacterBuild | None = None,
 ) -> BuilderCompileResult:
     raw_foundation_choices = tuple(
         choice
@@ -217,13 +244,6 @@ def compile_builder_draft(
         )
     )
 
-    # Class/subclass rows are authoritative in level_choices and are validated by
-    # validate_progression(). Nested class and P1-D structural choices use the
-    # canonical choice_selections contract. P1-F equipment has its own dedicated
-    # starting_equipment_choices namespace; an equipment-shaped key accidentally
-    # written into generic choice_selections is ignored rather than interpreted as
-    # a Build choice, while final equipment validation still requires the correct
-    # namespace before Confirm.
     generic_progression_choices = tuple(
         choice
         for choice in progression_choices
@@ -295,13 +315,11 @@ def compile_builder_draft(
         }
     )
 
-    # Equipment is part of final P1-F validation, but it is intentionally not a
-    # prerequisite for compiling the class/feature/spell Build candidate. This
-    # preserves the earlier subphase compiler contract while final Confirm still
-    # uses the complete issue list below and therefore remains blocked until all
-    # required starting-equipment choices are legal and complete.
     candidate_issues = tuple((*foundation_issues, *progression_issues, *spellcasting.issues))
-    equipment = compile_starting_equipment(draft, registry)
+    if draft.mode is not BuilderMode.CREATE and base_build is not None:
+        equipment = _preserved_starting_equipment(base_build, registry)
+    else:
+        equipment = compile_starting_equipment(draft, registry)
     equipment_issues = tuple(
         issue.model_copy(update={"severity": BuilderIssueSeverity.WARNING})
         if issue.code == "stale_equipment_choice"

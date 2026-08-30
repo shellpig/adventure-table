@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 from app.domain.character_builder.schemas import (
     BuilderChoice,
     BuilderDraft,
@@ -9,7 +13,26 @@ from app.domain.character_builder.schemas import (
     BuilderValidationResult,
     BuilderView,
 )
-from app.domain.character_builder.service import CharacterBuilderService
+
+if TYPE_CHECKING:
+    from app.domain.character_builder.service import CharacterBuilderService
+
+
+def __getattr__(name: str) -> Any:
+    """Keep the package-level service export without eager persistence imports.
+
+    Alembic imports persistence table modules while constructing metadata. P1-G
+    reconciliation lives under this package and is imported by the character
+    repository, so eagerly importing the service here would form:
+    persistence.characters -> character_builder -> service -> persistence.characters.
+    """
+
+    if name == "CharacterBuilderService":
+        from app.domain.character_builder.service import CharacterBuilderService
+
+        return CharacterBuilderService
+    raise AttributeError(name)
+
 
 __all__ = [
     "BuilderChoice",

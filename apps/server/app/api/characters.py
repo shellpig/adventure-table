@@ -7,17 +7,24 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.dependencies import get_character_repository
+from app.api.errors import APIError
 from app.domain.character.schemas import (
     CharacterState,
     ConditionState,
     HitDie,
     InventoryEntry,
     PersistedCharacter,
+    PreparedSpellSelection,
     ResourceCounter,
 )
 from app.domain.character.validation import CharacterValidationError
+from app.domain.character_builder.versions import CharacterVersionDetail, CharacterVersionSummary
 from app.domain.rules.character_sheet import CharacterSheetDTO, build_character_sheet
-from app.persistence.characters import CharacterRepository
+from app.persistence.characters import (
+    CharacterNotFoundError,
+    CharacterRepository,
+    CharacterVersionNotFoundError,
+)
 
 router = APIRouter(prefix="/api/characters", tags=["characters"])
 
@@ -39,6 +46,7 @@ class CharacterStatePatch(BaseModel):
     temporary_hp: int | None = Field(default=None, ge=0)
     conditions: list[ConditionState] | None = None
     prepared_spell_entry_ids: list[str] | None = None
+    prepared_spells: list[PreparedSpellSelection] | None = None
     spell_slots: dict[int, ResourceCounter] | None = None
     resources: dict[str, ResourceCounter] | None = None
     hit_dice_state: dict[HitDie, int] | None = None
@@ -86,6 +94,31 @@ def get_character_sheet(
 ) -> CharacterSheetDTO:
     character = repository.load_character(character_id)
     return build_character_sheet(character, repository.registry)
+
+
+@router.get("/{character_id}/versions", response_model=list[CharacterVersionSummary])
+def list_character_versions(
+    character_id: UUID,
+    repository: CharacterRepository = Depends(get_character_repository),
+) -> list[CharacterVersionSummary]:
+    try:
+        return list(repository.list_versions(character_id))
+    except CharacterNotFoundError as exc:
+        raise APIError(404, "character_not_found", f"character not found: {exc}") from exc
+
+
+@router.get("/{character_id}/versions/{version_no}", response_model=CharacterVersionDetail)
+def get_character_version(
+    character_id: UUID,
+    version_no: int,
+    repository: CharacterRepository = Depends(get_character_repository),
+) -> CharacterVersionDetail:
+    try:
+        return repository.load_version(character_id, version_no)
+    except CharacterNotFoundError as exc:
+        raise APIError(404, "character_not_found", f"character not found: {exc}") from exc
+    except CharacterVersionNotFoundError as exc:
+        raise APIError(404, "character_version_not_found", str(exc)) from exc
 
 
 @router.patch("/{character_id}/state", response_model=CharacterSheetDTO)
