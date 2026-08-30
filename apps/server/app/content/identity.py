@@ -34,6 +34,30 @@ URL_ROUTE_TO_KIND = {
     "weapon-properties": "weapon-property",
 }
 
+# Persisted CharacterBuild fields whose values are content references. The
+# provenance collector deliberately uses field semantics instead of scanning
+# arbitrary strings, so free-form roleplay text cannot become content_sources.
+_STABLE_KEY_REFERENCE_FIELDS = frozenset(
+    {
+        "race_ref",
+        "subrace_ref",
+        "background_ref",
+        "alignment_ref",
+        "class_progression",
+        "class_ref",
+        "subclass_ref",
+        "proficiencies",
+        "saving_throw_proficiencies",
+        "skill_choices",
+        "language_refs",
+        "feature_refs",
+        "feat_refs",
+        "source_key",
+        "spell_key",
+        "item_ref",
+    }
+)
+
 
 @dataclass(frozen=True)
 class ParsedStableKey:
@@ -131,9 +155,17 @@ def reference_to_stable_key(
 
 
 def collect_stable_key_sources(value: Any) -> tuple[str, ...]:
+    """Collect sources only from fields that are contractually StableKey refs.
+
+    This helper is used for CharacterBuild provenance. It still traverses model
+    structure to find nested reference fields, but never interprets unrelated
+    strings (Biography, Appearance, profile ids, labels, notes, etc.) as content
+    references merely because they resemble ``<pack>:<kind>:<index>``.
+    """
+
     sources: set[str] = set()
 
-    def visit(item: Any) -> None:
+    def add_reference(item: Any) -> None:
         if isinstance(item, str):
             try:
                 sources.add(parse_stable_key(item).source)
@@ -141,8 +173,27 @@ def collect_stable_key_sources(value: Any) -> tuple[str, ...]:
                 pass
             return
         if isinstance(item, Mapping):
+            # A reference-shaped object can occur when this helper is reused on
+            # serialized structures rather than CharacterBuild model dumps.
+            explicit_key = item.get("key")
+            if isinstance(explicit_key, str):
+                add_reference(explicit_key)
             for child in item.values():
-                visit(child)
+                if isinstance(child, (list, tuple, set)):
+                    for nested in child:
+                        add_reference(nested)
+            return
+        if isinstance(item, (list, tuple, set)):
+            for child in item:
+                add_reference(child)
+
+    def visit(item: Any) -> None:
+        if isinstance(item, Mapping):
+            for field_name, child in item.items():
+                if field_name in _STABLE_KEY_REFERENCE_FIELDS:
+                    add_reference(child)
+                if isinstance(child, (Mapping, list, tuple, set)):
+                    visit(child)
             return
         if isinstance(item, (list, tuple, set)):
             for child in item:
