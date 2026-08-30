@@ -57,6 +57,7 @@ _STABLE_KEY_REFERENCE_FIELDS = frozenset(
         "item_ref",
     }
 )
+_OVERRIDE_REFERENCE_PREFIXES = ("skill_modifier:", "spell_save_dc:")
 
 
 @dataclass(frozen=True)
@@ -189,6 +190,12 @@ def collect_stable_key_sources(value: Any) -> tuple[str, ...]:
 
     def visit(item: Any) -> None:
         if isinstance(item, Mapping):
+            override_key = item.get("key")
+            if isinstance(override_key, str) and "value" in item:
+                for prefix in _OVERRIDE_REFERENCE_PREFIXES:
+                    if override_key.startswith(prefix):
+                        add_reference(override_key.removeprefix(prefix))
+                        break
             for field_name, child in item.items():
                 if field_name in _STABLE_KEY_REFERENCE_FIELDS:
                     add_reference(child)
