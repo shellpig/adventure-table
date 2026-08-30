@@ -10,6 +10,7 @@ import {
 } from '../../api/characterBuilder'
 import type { StateReconciliationPreview } from '../../api/characterVersions'
 import { SearchableSelect } from '../../components/SearchableSelect'
+import { RoleplayProfileEditor } from './RoleplayProfileEditor'
 
 
 type EquipmentReviewStepProps = {
@@ -186,6 +187,14 @@ export function EquipmentReviewStep({
         </div>
       )}
 
+      {!versioned ? (
+        <RoleplayProfileEditor
+          view={view}
+          disabled={busy}
+          onSave={onSave}
+        />
+      ) : null}
+
       {reviewQuery.isLoading ? (
         <div className="builder-rule-card">
           <span>Server Review</span>
@@ -233,11 +242,26 @@ export function EquipmentReviewStep({
             </div>
 
             <div className="summary-grants">
+              <h3>Resolved grants & sources</h3>
+              {review.resolved_summary.grants.map((grant, index) => (
+                <div key={`${grant.source_ref}:${grant.reference_id ?? grant.label}:${index}`}>
+                  <span>{grant.kind}</span>
+                  <strong>{grant.label}</strong>
+                  <small>{grant.source_ref}</small>
+                </div>
+              ))}
+              {!review.resolved_summary.grants.length ? (
+                <small>No resolved origin grants.</small>
+              ) : null}
+            </div>
+
+            <div className="summary-grants">
               <h3>{versioned ? 'Starting equipment baseline' : 'Resolved starting equipment'}</h3>
               {review.starting_equipment.map((entry) => (
                 <div key={entry.entry_id}>
                   <span>× {entry.quantity}</span>
                   <strong>{entry.name}</strong>
+                  <small>{entry.source_ref}</small>
                 </div>
               ))}
               {!review.starting_equipment.length ? (
