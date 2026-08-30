@@ -12,6 +12,7 @@ from app.domain.character_builder.creation import BuilderEquipmentSummary
 from app.domain.character_builder.schemas import (
     BuilderChoice,
     BuilderChoiceOption,
+    BuilderChoicePresentationItem,
     BuilderDraft,
     BuilderIssue,
     BuilderIssueSeverity,
@@ -189,6 +190,40 @@ def _option_label(raw_option: dict[str, Any], registry: ContentRegistry) -> str:
     return str(raw_option.get("string") or "Equipment option")
 
 
+def _presentation_metadata(
+    raw_option: dict[str, Any],
+) -> tuple[tuple[BuilderChoicePresentationItem, ...], bool]:
+    """Extract StableKey-based display metadata without changing option identity."""
+
+    kind = raw_option.get("option_type")
+    if kind in {"counted_reference", "reference"}:
+        reference = raw_option.get("of") if kind == "counted_reference" else raw_option.get("item")
+        item_ref = _stable_equipment_ref(reference)
+        count = raw_option.get("count", 1) if kind == "counted_reference" else 1
+        if item_ref is None or not isinstance(count, int) or count < 1:
+            return (), False
+        return (BuilderChoicePresentationItem(reference_id=item_ref, count=count),), False
+
+    if kind == "choice":
+        return (), True
+
+    if kind == "multiple":
+        items = raw_option.get("items")
+        if not isinstance(items, list):
+            return (), False
+        presentation_items: list[BuilderChoicePresentationItem] = []
+        has_choice = False
+        for child in items:
+            if not isinstance(child, dict):
+                continue
+            child_items, child_has_choice = _presentation_metadata(child)
+            presentation_items.extend(child_items)
+            has_choice = has_choice or child_has_choice
+        return tuple(presentation_items), has_choice
+
+    return (), False
+
+
 def _builder_option(
     choice_id: str,
     raw_option: dict[str, Any],
@@ -197,6 +232,7 @@ def _builder_option(
 ) -> BuilderChoiceOption:
     kind = raw_option.get("option_type")
     option_id = f"{choice_id}:option:{option_index}"
+    presentation_items, presentation_has_choice = _presentation_metadata(raw_option)
     if kind in {"counted_reference", "reference"}:
         reference = raw_option.get("of") if kind == "counted_reference" else raw_option.get("item")
         item_ref = _stable_equipment_ref(reference)
@@ -206,6 +242,8 @@ def _builder_option(
             kind=BuilderOptionKind.COUNTED_REFERENCE,
             reference_id=item_ref,
             count=int(raw_option.get("count", 1)) if kind == "counted_reference" else 1,
+            presentation_items=presentation_items,
+            presentation_has_choice=presentation_has_choice,
         )
     if kind == "choice":
         return BuilderChoiceOption(
@@ -213,6 +251,8 @@ def _builder_option(
             label=_option_label(raw_option, registry),
             kind=BuilderOptionKind.NESTED_CHOICE,
             nested_choice_id=f"{choice_id}:nested:{option_index}",
+            presentation_items=presentation_items,
+            presentation_has_choice=presentation_has_choice,
         )
     if kind == "multiple":
         return BuilderChoiceOption(
@@ -220,12 +260,16 @@ def _builder_option(
             label=_option_label(raw_option, registry),
             kind=BuilderOptionKind.BRANCH,
             branch_key=f"{choice_id}:bundle:{option_index}",
+            presentation_items=presentation_items,
+            presentation_has_choice=presentation_has_choice,
         )
     return BuilderChoiceOption(
         option_id=option_id,
         label=_option_label(raw_option, registry),
         kind=BuilderOptionKind.BRANCH,
         disabled_reason=f"Unsupported equipment option type: {kind!r}",
+        presentation_items=presentation_items,
+        presentation_has_choice=presentation_has_choice,
     )
 
 
