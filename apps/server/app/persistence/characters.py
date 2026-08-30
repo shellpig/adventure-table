@@ -551,20 +551,24 @@ class CharacterRepository:
         )
         return CharacterVersionDetail(**summary.model_dump(mode="python"), build=build)
 
-    def save_state(self, character_id: UUID, state: CharacterState) -> PersistedCharacter:
-        current = self.load_character(character_id)
-        validate_state_against_build(state, current.build, self.registry)
-        with self.engine.begin() as connection:
-            result = connection.execute(
-                update(character_states)
-                .where(character_states.c.character_id == character_id)
-                .values(state_payload=state.model_dump(mode="json"), updated_at=func.now())
-            )
-            if result.rowcount != 1:
-                raise CharacterNotFoundError(str(character_id))
-            connection.execute(
-                update(characters)
-                .where(characters.c.id == character_id)
-                .values(updated_at=func.now())
-            )
-        return self.load_character(character_id)
+    def save_state(
+        self,
+        character_id: UUID,
+        state: CharacterState,
+        *,
+        expected_current_version_id: UUID | None = None,
+    ) -> PersistedCharacter:
+        # Keep the P0 call shape compatible while making every repository state
+        # write pass through the same version-locked transaction used by the API.
+        if expected_current_version_id is None:
+            expected_current_version_id = self.load_character(
+                character_id
+            ).current_version_id
+        from app.persistence.state_mutations import save_state_against_version
+
+        return save_state_against_version(
+            self,
+            character_id,
+            state,
+            expected_current_version_id=expected_current_version_id,
+        )
