@@ -18,10 +18,12 @@ import type {
 import { SearchableSelect } from '../../components/SearchableSelect'
 import type { SearchOption } from '../../components/SearchableSelect'
 import type { UiCopyKey } from '../../i18n/uiCopy'
-import { useContentPresentations } from '../../i18n/useContentPresentations'
+import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy, type UiTranslator } from '../../i18n/useUiCopy'
 
 type CharacterTab = 'attributes' | 'spells' | 'inventory'
+type StructuredRuleKind = 'damage-type' | 'equipment-category'
+type StructuredRuleReference = { index?: unknown; name?: unknown }
 
 type CharacterSheetViewProps = {
   sheet: CharacterSheetDTO
@@ -87,17 +89,62 @@ function countersToPatch(source: Record<string, ResourceCounter>) {
   )
 }
 
-function describeRules(rules: Record<string, unknown>, t: UiTranslator): string[] {
+function structuredRuleReference(
+  rules: Record<string, unknown>,
+  kind: StructuredRuleKind,
+): StructuredRuleReference | undefined {
+  if (kind === 'equipment-category') {
+    const raw = rules.equipment_category
+    return raw && typeof raw === 'object' ? (raw as StructuredRuleReference) : undefined
+  }
+  const damage = rules.damage
+  if (!damage || typeof damage !== 'object') return undefined
+  const raw = (damage as { damage_type?: unknown }).damage_type
+  return raw && typeof raw === 'object' ? (raw as StructuredRuleReference) : undefined
+}
+
+function structuredRuleKey(
+  kind: StructuredRuleKind,
+  reference: StructuredRuleReference | undefined,
+): string | null {
+  const index = reference?.index
+  return typeof index === 'string' && index.trim() ? `srd5.1:${kind}:${index}` : null
+}
+
+function structuredRuleName(
+  rules: Record<string, unknown>,
+  kind: StructuredRuleKind,
+  nameFor: ContentNameResolver,
+): string {
+  const reference = structuredRuleReference(rules, kind)
+  const fallback = typeof reference?.name === 'string' ? reference.name : ''
+  const key = structuredRuleKey(kind, reference)
+  return key ? nameFor(key, fallback) : fallback
+}
+
+function structuredRuleReferences(rules: Record<string, unknown>): string[] {
+  return (['equipment-category', 'damage-type'] as const).flatMap((kind) => {
+    const key = structuredRuleKey(kind, structuredRuleReference(rules, kind))
+    return key ? [key] : []
+  })
+}
+
+function describeRules(
+  rules: Record<string, unknown>,
+  t: UiTranslator,
+  nameFor: ContentNameResolver,
+): string[] {
   const details: string[] = []
-  const damage = rules.damage as { damage_dice?: unknown; damage_type?: { name?: unknown } } | undefined
+  const damage = rules.damage as { damage_dice?: unknown } | undefined
   const armorClass = rules.armor_class as { base?: unknown; dex_bonus?: unknown; max_bonus?: unknown } | undefined
   const cost = rules.cost as { quantity?: unknown; unit?: unknown } | undefined
-  const category = rules.equipment_category as { name?: unknown } | undefined
+  const categoryName = structuredRuleName(rules, 'equipment-category', nameFor)
+  const damageTypeName = structuredRuleName(rules, 'damage-type', nameFor)
 
-  if (category?.name) details.push(String(category.name))
+  if (categoryName) details.push(categoryName)
   if (damage?.damage_dice) {
     details.push(
-      `${String(damage.damage_dice)}${damage.damage_type?.name ? ` ${String(damage.damage_type.name)}` : ''}`,
+      `${String(damage.damage_dice)}${damageTypeName ? ` ${damageTypeName}` : ''}`,
     )
   }
   if (armorClass?.base) {
@@ -109,6 +156,12 @@ function describeRules(rules: Record<string, unknown>, t: UiTranslator): string[
     details.push(`${String(cost.quantity)} ${String(cost.unit)}`)
   }
   return details.slice(0, 3)
+}
+
+function resourceLabel(key: string, t: UiTranslator): string {
+  const pactSlot = key.match(/:slot:(\d+)$/)
+  if (pactSlot) return t('sheet.levelLabel', { level: pactSlot[1] })
+  return titleCase(key.split(':').at(-1) ?? key)
 }
 
 function NumberSaveField({
@@ -183,12 +236,14 @@ export function CharacterSheetView({
   const contentReferences = [
     ...conditionContent.map((entry) => entry.key),
     ...inventoryContent.map((entry) => entry.key),
+    ...inventoryContent.flatMap((entry) => structuredRuleReferences(entry.data)),
     ...sheet.classes.map((entry) => entry.class_ref),
     ...sheet.features.map((feature) => feature.key),
     ...sheet.conditions.map((condition) => condition.condition_ref),
     ...sheet.spells.flatMap((spell) => [spell.spell_key, spell.source_key]),
     ...sheet.spellcasting.map((source) => source.source_key),
     ...sheet.inventory.map((item) => item.item_ref),
+    ...sheet.inventory.flatMap((item) => structuredRuleReferences(item.rules)),
     ...Object.keys(sheet.skills).map((skill) => `srd5.1:skill:${skill}`),
   ]
   const { nameFor } = useContentPresentations(contentReferences)
@@ -207,7 +262,7 @@ export function CharacterSheetView({
       inventoryContent.map((entry) => ({
         value: entry.key,
         label: nameFor(entry.key, entry.name),
-        description: String((entry.data.equipment_category as { name?: unknown } | undefined)?.name ?? ''),
+        description: structuredRuleName(entry.data, 'equipment-category', nameFor),
       })),
     [inventoryContent, nameFor],
   )
@@ -544,7 +599,7 @@ export function CharacterSheetView({
               {sheet.spellcasting.map((source) => (
                 <article className="spellcasting-card" key={source.source_key}>
                   <span>{nameFor(source.source_key, source.source_name)}</span>
-                  <strong>{titleCase(source.ability)}</strong>
+                  <strong>{abilityLabel(source.ability, t)}</strong>
                   <div><small>{t('sheet.saveDc')}</small><b>{source.save_dc}</b><small>{t('sheet.attack')}</small><b>{signed(source.attack_modifier)}</b></div>
                 </article>
               ))}
@@ -573,7 +628,7 @@ export function CharacterSheetView({
                 <div className="resource-list">
                   {Object.entries(sheet.resources).map(([key, counter]) => (
                     <div key={key}>
-                      <span>{titleCase(key.split(':').at(-1) ?? key)}</span>
+                      <span>{resourceLabel(key, t)}</span>
                       <strong>{counter.remaining} / {counter.used + counter.remaining}</strong>
                       <div className="mini-actions">
                         <button type="button" disabled={busy || counter.remaining <= 0} onClick={() => void updateCounter(key, sheet.resources, 'use', 'resources')}>{t('sheet.use')}</button>
@@ -600,7 +655,7 @@ export function CharacterSheetView({
                     <div>
                       <span className="access-badge">{accessLabel(spell.access_type, t)}</span>
                       <h3>{localizedSpellName}</h3>
-                      <p>{localizedSourceName} · {spell.source_type}</p>
+                      <p>{localizedSourceName}</p>
                     </div>
                     <div className="prepared-control">
                       <span className={spell.prepared ? 'prepared-badge on' : 'prepared-badge'}>{spell.prepared ? t('sheet.prepared') : t('sheet.unprepared')}</span>
@@ -677,7 +732,7 @@ export function CharacterSheetView({
 
             <div className="inventory-list">
               {filteredInventory.map((item) => {
-                const ruleDetails = describeRules(item.rules, t)
+                const ruleDetails = describeRules(item.rules, t, nameFor)
                 const localizedItemName = nameFor(item.item_ref, item.name)
                 return (
                   <article className="inventory-card" key={item.entry_id} data-testid={`inventory-${item.entry_id}`}>
