@@ -9,13 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout pinned Traditional Chinese authoring reference
-        uses: actions/checkout@v4
-        with:
-          repository: hktrpg/fvtt-5e-classpack-zh-tw
-          ref: 74276e1c4915d35b4d22539157fd49ef8717e105
-          path: _reference/fvtt-5e-classpack-zh-tw
-          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -28,6 +21,7 @@ jobs:
           paths = [
               Path('data/localization/m02d-srd-zh-tw-token-overrides.json'),
               Path('data/localization/m02d-srd-zh-tw-token-overrides-singletons.json'),
+              Path('data/localization/m02d-srd-zh-tw-token-aliases.json'),
           ]
           combined = {}
           for path in paths:
@@ -42,10 +36,10 @@ jobs:
       - name: Generate reviewed SRD zh-TW authoring candidate
         run: |
           python scripts/build_m02d_srd_locale_reviewed.py \
-            --reference-root _reference/fvtt-5e-classpack-zh-tw/translated-zh-tw/packs \
             --token-overrides /tmp/m02d-token-overrides.json \
             --output /tmp/m02d-zh-TW.json \
-            --report /tmp/m02d-report.json
+            --report /tmp/m02d-report.json \
+            --strict
       - name: Upload authoring candidate
         if: always()
         uses: actions/upload-artifact@v4
