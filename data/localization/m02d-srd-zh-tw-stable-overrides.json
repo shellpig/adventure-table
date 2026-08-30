@@ -1,0 +1,176 @@
+{
+  "srd5.1:equipment:shield": {
+    "name": "盾牌"
+  },
+  "srd5.1:spell:shield": {
+    "name": "護盾術"
+  },
+  "srd5.1:race:halfling": {
+    "name": "半身人"
+  },
+  "srd5.1:language:halfling": {
+    "name": "半身人語"
+  },
+  "srd5.1:subclass:draconic": {
+    "name": "龍族血脈"
+  },
+  "srd5.1:language:draconic": {
+    "name": "龍語"
+  },
+  "srd5.1:damage-type:acid": {
+    "name": "強酸"
+  },
+  "srd5.1:damage-type:bludgeoning": {
+    "name": "鈍擊"
+  },
+  "srd5.1:damage-type:cold": {
+    "name": "寒冷"
+  },
+  "srd5.1:damage-type:fire": {
+    "name": "火焰"
+  },
+  "srd5.1:damage-type:force": {
+    "name": "力場"
+  },
+  "srd5.1:damage-type:lightning": {
+    "name": "閃電"
+  },
+  "srd5.1:damage-type:necrotic": {
+    "name": "黯蝕"
+  },
+  "srd5.1:damage-type:piercing": {
+    "name": "穿刺"
+  },
+  "srd5.1:damage-type:poison": {
+    "name": "毒素"
+  },
+  "srd5.1:damage-type:psychic": {
+    "name": "心靈"
+  },
+  "srd5.1:damage-type:radiant": {
+    "name": "光耀"
+  },
+  "srd5.1:damage-type:slashing": {
+    "name": "揮砍"
+  },
+  "srd5.1:damage-type:thunder": {
+    "name": "雷鳴"
+  },
+  "srd5.1:equipment-category:weapon": {
+    "name": "武器"
+  },
+  "srd5.1:equipment-category:armor": {
+    "name": "護甲"
+  },
+  "srd5.1:equipment-category:adventuring-gear": {
+    "name": "冒險裝備"
+  },
+  "srd5.1:equipment-category:ammunition": {
+    "name": "彈藥"
+  },
+  "srd5.1:equipment-category:tools": {
+    "name": "工具"
+  },
+  "srd5.1:equipment-category:mounts-and-vehicles": {
+    "name": "坐騎與載具"
+  },
+  "srd5.1:equipment-category:simple-weapons": {
+    "name": "簡易武器"
+  },
+  "srd5.1:equipment-category:martial-weapons": {
+    "name": "軍用武器"
+  },
+  "srd5.1:equipment-category:melee-weapons": {
+    "name": "近戰武器"
+  },
+  "srd5.1:equipment-category:ranged-weapons": {
+    "name": "遠程武器"
+  },
+  "srd5.1:equipment-category:simple-melee-weapons": {
+    "name": "簡易近戰武器"
+  },
+  "srd5.1:equipment-category:simple-ranged-weapons": {
+    "name": "簡易遠程武器"
+  },
+  "srd5.1:equipment-category:martial-melee-weapons": {
+    "name": "軍用近戰武器"
+  },
+  "srd5.1:equipment-category:martial-ranged-weapons": {
+    "name": "軍用遠程武器"
+  },
+  "srd5.1:equipment-category:light-armor": {
+    "name": "輕甲"
+  },
+  "srd5.1:equipment-category:medium-armor": {
+    "name": "中甲"
+  },
+  "srd5.1:equipment-category:heavy-armor": {
+    "name": "重甲"
+  },
+  "srd5.1:equipment-category:shields": {
+    "name": "盾牌"
+  },
+  "srd5.1:equipment-category:standard-gear": {
+    "name": "一般裝備"
+  },
+  "srd5.1:equipment-category:kits": {
+    "name": "工具組"
+  },
+  "srd5.1:equipment-category:equipment-packs": {
+    "name": "裝備套組"
+  },
+  "srd5.1:equipment-category:artisans-tools": {
+    "name": "工匠工具"
+  },
+  "srd5.1:equipment-category:gaming-sets": {
+    "name": "博弈用具"
+  },
+  "srd5.1:equipment-category:musical-instruments": {
+    "name": "樂器"
+  },
+  "srd5.1:equipment-category:other-tools": {
+    "name": "其他工具"
+  },
+  "srd5.1:equipment-category:mounts-and-other-animals": {
+    "name": "坐騎與其他動物"
+  },
+  "srd5.1:equipment-category:tack-harness-and-drawn-vehicles": {
+    "name": "鞍具、挽具與牽引載具"
+  },
+  "srd5.1:equipment-category:land-vehicles": {
+    "name": "陸上載具"
+  },
+  "srd5.1:equipment-category:waterborne-vehicles": {
+    "name": "水上載具"
+  },
+  "srd5.1:equipment-category:arcane-foci": {
+    "name": "祕法法器"
+  },
+  "srd5.1:equipment-category:druidic-foci": {
+    "name": "德魯伊法器"
+  },
+  "srd5.1:equipment-category:holy-symbols": {
+    "name": "聖徽"
+  },
+  "srd5.1:equipment-category:wondrous-items": {
+    "name": "奇物"
+  },
+  "srd5.1:equipment-category:rod": {
+    "name": "權杖"
+  },
+  "srd5.1:equipment-category:potion": {
+    "name": "藥水"
+  },
+  "srd5.1:equipment-category:ring": {
+    "name": "戒指"
+  },
+  "srd5.1:equipment-category:scroll": {
+    "name": "卷軸"
+  },
+  "srd5.1:equipment-category:staff": {
+    "name": "法杖"
+  },
+  "srd5.1:equipment-category:wand": {
+    "name": "魔杖"
+  }
+}
