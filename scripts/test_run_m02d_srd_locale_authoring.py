@@ -86,6 +86,7 @@ class M02DLocalAuthoringRunnerTests(unittest.TestCase):
         )
 
         self.assertEqual(candidate["entries"]["srd5.1:feature:test"]["name"], "Eldritch Blast")
+        self.assertEqual(candidate["review_status"], "draft-human-review-required")
         self.assertEqual(human_report["runtime_untranslated_marker_count"], 0)
         self.assertEqual(human_report["review_policy"], "human_review_required_non_blocking")
         self.assertEqual(human_report["review_item_count"], 2)
@@ -94,12 +95,44 @@ class M02DLocalAuthoringRunnerTests(unittest.TestCase):
             {"unresolved_token", "possible_simplified_residue"},
         )
 
-    def test_reviewed_token_sources_are_available_and_string_only(self) -> None:
+    def test_stablekey_human_override_wins_over_machine_same_name_collision(self) -> None:
+        overlay = {
+            "entries": {
+                "srd5.1:equipment:shield": {"name": "護盾術"},
+                "srd5.1:spell:shield": {"name": "護盾術"},
+            }
+        }
+        report = {
+            "localized_entry_count": 2,
+            "required_field_count": 2,
+            "unknown_count": 0,
+            "unknowns": [],
+            "simplified_residue_count": 0,
+            "simplified_residues": [],
+        }
+
+        candidate, human_report = runner.prepare_human_review_candidate(
+            overlay,
+            report,
+            stable_overrides={
+                "srd5.1:equipment:shield": {"name": "盾牌"},
+                "srd5.1:spell:shield": {"name": "護盾術"},
+            },
+        )
+
+        self.assertEqual(candidate["entries"]["srd5.1:equipment:shield"]["name"], "盾牌")
+        self.assertEqual(candidate["entries"]["srd5.1:spell:shield"]["name"], "護盾術")
+        self.assertEqual(human_report["human_override_field_count"], 2)
+
+    def test_reviewed_token_and_stable_override_sources_are_available(self) -> None:
         combined = runner.load_token_overrides()
+        stable = runner.load_stable_overrides()
 
         self.assertTrue(combined)
         self.assertTrue(all(isinstance(key, str) for key in combined))
         self.assertTrue(all(isinstance(value, str) for value in combined.values()))
+        self.assertEqual(stable["srd5.1:equipment:shield"]["name"], "盾牌")
+        self.assertEqual(stable["srd5.1:spell:shield"]["name"], "護盾術")
 
 
 if __name__ == "__main__":
