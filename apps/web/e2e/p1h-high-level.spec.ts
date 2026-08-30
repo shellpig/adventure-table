@@ -82,8 +82,16 @@ async function fillExactSpellBuckets(page: Page) {
       const counter = (await bucket.locator('.spell-count').innerText()).trim()
       if (counter.includes('max')) continue
 
+      const match = counter.match(/^(\d+)\s*\/\s*(\d+)$/)
+      if (!match) throw new Error(`Cannot parse exact spell counter: ${counter}`)
+      const selected = Number(match[1])
+      const target = Number(match[2])
+      if (selected >= target) continue
+
       const input = bucket.getByRole('combobox')
-      if (!(await input.isEnabled())) continue
+      if (!(await input.isEnabled())) {
+        throw new Error(`Spell bucket stopped at ${selected} / ${target}`)
+      }
 
       await chooseFirstEnabled(page, input)
       changed = true
