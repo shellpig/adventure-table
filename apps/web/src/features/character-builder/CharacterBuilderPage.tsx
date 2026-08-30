@@ -13,6 +13,8 @@ import {
   type BuilderView,
 } from '../../api/characterBuilder'
 import { optionDisplay, SearchableSelect } from '../../components/SearchableSelect'
+import type { UiCopyKey } from '../../i18n/uiCopy'
+import { useUiCopy } from '../../i18n/useUiCopy'
 import { ClassProgressionStep } from './ClassProgressionStep'
 import { EquipmentReviewStep, EquipmentStep } from './EquipmentReviewStep'
 import { sortGrantsByKind } from './grants'
@@ -38,16 +40,30 @@ const DIRECT_OPTION_SOURCES = new Set([
   'content:class',
 ])
 
-const ABILITY_LABELS: Record<keyof BuilderAbilityScores, string> = {
-  strength: 'STR · Strength',
-  dexterity: 'DEX · Dexterity',
-  constitution: 'CON · Constitution',
-  intelligence: 'INT · Intelligence',
-  wisdom: 'WIS · Wisdom',
-  charisma: 'CHA · Charisma',
+const ABILITY_COPY_KEYS: Record<keyof BuilderAbilityScores, UiCopyKey> = {
+  strength: 'builder.abilities.strength',
+  dexterity: 'builder.abilities.dexterity',
+  constitution: 'builder.abilities.constitution',
+  intelligence: 'builder.abilities.intelligence',
+  wisdom: 'builder.abilities.wisdom',
+  charisma: 'builder.abilities.charisma',
 }
 
-const ABILITY_KEYS = Object.keys(ABILITY_LABELS) as (keyof BuilderAbilityScores)[]
+const ABILITY_METHOD_KEYS: Record<AbilityGenerationMethod, UiCopyKey> = {
+  standard_array: 'builder.abilities.standardArray',
+  point_buy: 'builder.abilities.pointBuy',
+  manual: 'builder.abilities.manual',
+}
+
+const GRANT_KIND_KEYS: Record<string, UiCopyKey> = {
+  language: 'builder.grant.language',
+  feature: 'builder.grant.feature',
+  background_feature: 'builder.grant.background_feature',
+  trait: 'builder.grant.trait',
+  proficiency: 'builder.grant.proficiency',
+}
+
+const ABILITY_KEYS = Object.keys(ABILITY_COPY_KEYS) as (keyof BuilderAbilityScores)[]
 const EMPTY_SCORES: BuilderAbilityScores = {
   strength: 0,
   dexterity: 0,
@@ -67,6 +83,8 @@ function selectionOptions(choice: BuilderChoice) {
 }
 
 function ChoiceEditor({ choice, view, disabled, onSave }: ChoiceEditorProps) {
+  const { t } = useUiCopy()
+
   if (choice.disabled_reason) {
     return (
       <div className="builder-choice is-disabled">
@@ -74,7 +92,7 @@ function ChoiceEditor({ choice, view, disabled, onSave }: ChoiceEditorProps) {
           <strong>{choice.label}</strong>
           <small>{choice.disabled_reason}</small>
         </div>
-        <span className="builder-lock">LOCKED</span>
+        <span className="builder-lock">{t('shared.locked')}</span>
       </div>
     )
   }
@@ -133,13 +151,13 @@ function ChoiceEditor({ choice, view, disabled, onSave }: ChoiceEditorProps) {
         ))}
       </div>
       <SearchableSelect
-        label="Add selection"
+        label={t('shared.addSelection')}
         value=""
         disabled={disabled || !canAdd}
         options={selectionOptions(choice).map((option) => ({
           ...option,
           disabled: option.disabled || selected.includes(option.value),
-          disabledReason: selected.includes(option.value) ? 'Already selected' : option.disabledReason,
+          disabledReason: selected.includes(option.value) ? t('shared.alreadySelected') : option.disabledReason,
         }))}
         secondaryMode="duplicates"
         onChange={(value) => {
@@ -151,6 +169,7 @@ function ChoiceEditor({ choice, view, disabled, onSave }: ChoiceEditorProps) {
 }
 
 export function CharacterBuilderPage({ draftId }: { draftId: string }) {
+  const { t } = useUiCopy()
   const queryClient = useQueryClient()
   const [step, setStep] = useState<BuilderStep>('basic')
   const draftQuery = useQuery({
@@ -165,7 +184,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
 
   const save = useMutation({
     mutationFn: (payload: BuilderDraftPayload) => {
-      if (!view) throw new Error('Draft is not loaded yet')
+      if (!view) throw new Error(t('builder.notFound'))
       return patchBuilderDraft(draftId, view.draft.revision, payload)
     },
     onSuccess: (next) => {
@@ -226,13 +245,13 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
   )
 
   if (draftQuery.isLoading) {
-    return <main className="builder-loading">Loading Character Builder…</main>
+    return <main className="builder-loading">{t('builder.loading')}</main>
   }
   if (draftQuery.error || !view) {
     return (
       <main className="builder-loading">
-        <div className="error-banner">{draftQuery.error?.message ?? 'Builder draft not found.'}</div>
-        <a className="button secondary" href="/characters">Back to Workshop</a>
+        <div className="error-banner">{draftQuery.error?.message ?? t('builder.notFound')}</div>
+        <a className="button secondary" href="/characters">{t('builder.backWorkshop')}</a>
       </main>
     )
   }
@@ -299,40 +318,40 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
       <div className="builder-shell">
         <header className="builder-topbar">
           <div>
-            <a href="/characters" className="builder-back">← Character Workshop</a>
-            <p className="eyebrow">P1-F · Create Character</p>
-            <h1>{view.resolved_summary.name?.trim() || 'Unnamed character'}</h1>
+            <a href="/characters" className="builder-back">{t('builder.backWorkshopArrow')}</a>
+            <p className="eyebrow">{t('builder.eyebrow')}</p>
+            <h1>{view.resolved_summary.name?.trim() || t('builder.unnamedCharacter')}</h1>
           </div>
           <div className="builder-save-state">
-            <span>Draft revision {view.draft.revision}</span>
-            <strong>{saving ? 'Saving…' : 'Saved on server'}</strong>
+            <span>{t('builder.draftRevision', { revision: view.draft.revision })}</span>
+            <strong>{saving ? t('shared.saving') : t('builder.saved')}</strong>
           </div>
         </header>
 
         {save.error ? <div className="error-banner">{save.error.message}</div> : null}
 
         <div className="builder-layout">
-          <aside className="builder-rail" aria-label="Character creation steps">
+          <aside className="builder-rail" aria-label={t('builder.stepsAria')}>
             <button className={step === 'basic' ? 'is-active' : ''} onClick={() => setStep('basic')}>
-              <span>01</span><div><strong>Basic</strong><small>Name & target</small></div>
+              <span>01</span><div><strong>{t('builder.step.basic')}</strong><small>{t('builder.step.basicHint')}</small></div>
             </button>
             <button className={step === 'origin' ? 'is-active' : ''} onClick={() => setStep('origin')}>
-              <span>02</span><div><strong>Origin</strong><small>Race & background</small></div>
+              <span>02</span><div><strong>{t('builder.step.origin')}</strong><small>{t('builder.step.originHint')}</small></div>
             </button>
             <button className={step === 'abilities' ? 'is-active' : ''} onClick={() => setStep('abilities')}>
-              <span>03</span><div><strong>Abilities</strong><small>Scores & starting choices</small></div>
+              <span>03</span><div><strong>{t('builder.step.abilities')}</strong><small>{t('builder.step.abilitiesHint')}</small></div>
             </button>
             <button className={step === 'class' ? 'is-active' : ''} onClick={() => setStep('class')}>
-              <span>04</span><div><strong>Class</strong><small>Level-by-level rail</small></div>
+              <span>04</span><div><strong>{t('builder.step.class')}</strong><small>{t('builder.step.classHint')}</small></div>
             </button>
             <button className={step === 'spells' ? 'is-active' : ''} onClick={() => setStep('spells')}>
-              <span>05</span><div><strong>Spellcasting</strong><small>Access & resources</small></div>
+              <span>05</span><div><strong>{t('builder.step.spells')}</strong><small>{t('builder.step.spellsHint')}</small></div>
             </button>
             <button className={step === 'equipment' ? 'is-active' : ''} onClick={() => setStep('equipment')}>
-              <span>06</span><div><strong>Equipment</strong><small>Gear & roleplay</small></div>
+              <span>06</span><div><strong>{t('builder.step.equipment')}</strong><small>{t('builder.step.equipmentHint')}</small></div>
             </button>
             <button className={step === 'review' ? 'is-active' : ''} onClick={() => setStep('review')}>
-              <span>07</span><div><strong>Review</strong><small>Build snapshot & confirm</small></div>
+              <span>07</span><div><strong>{t('builder.step.review')}</strong><small>{t('builder.step.reviewHint')}</small></div>
             </button>
           </aside>
 
@@ -340,17 +359,17 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
             {step === 'basic' ? (
               <div className="builder-step">
                 <div className="builder-step__heading">
-                  <p className="eyebrow">STEP 01</p>
-                  <h2>Start with the character</h2>
-                  <p>Name and target level define the draft. Ruleset is fixed to D&amp;D 5e 2014.</p>
+                  <p className="eyebrow">{t('builder.basic.step')}</p>
+                  <h2>{t('builder.basic.title')}</h2>
+                  <p>{t('builder.basic.description')}</p>
                 </div>
                 <div className="builder-field-grid">
                   <label className="builder-field">
-                    <span>Character name</span>
+                    <span>{t('builder.basic.name')}</span>
                     <input value={name} onChange={(event) => setName(event.target.value)} maxLength={200} />
                   </label>
                   <label className="builder-field">
-                    <span>Target character level</span>
+                    <span>{t('builder.basic.targetLevel')}</span>
                     <input
                       type="number"
                       min={1}
@@ -361,12 +380,12 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   </label>
                 </div>
                 <div className="builder-rule-card">
-                  <span>Ruleset</span><strong>D&amp;D 5e · 2014</strong><small>Built-in content: SRD 5.1</small>
+                  <span>{t('builder.basic.ruleset')}</span><strong>D&amp;D 5e · 2014</strong><small>{t('builder.basic.builtIn')}</small>
                 </div>
                 <div className="builder-optional">
-                  <h3>Roleplay notes <span>Optional</span></h3>
-                  <label className="builder-field"><span>Appearance</span><textarea value={appearance} onChange={(event) => setAppearance(event.target.value)} /></label>
-                  <label className="builder-field"><span>Biography</span><textarea value={biography} onChange={(event) => setBiography(event.target.value)} /></label>
+                  <h3>{t('builder.basic.roleplayNotes')} <span>{t('shared.optional')}</span></h3>
+                  <label className="builder-field"><span>{t('builder.basic.appearance')}</span><textarea value={appearance} onChange={(event) => setAppearance(event.target.value)} /></label>
+                  <label className="builder-field"><span>{t('builder.basic.biography')}</span><textarea value={biography} onChange={(event) => setBiography(event.target.value)} /></label>
                 </div>
                 <button
                   type="button"
@@ -374,7 +393,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   disabled={saving || targetLevel < 1 || targetLevel > 20}
                   onClick={saveBasicDetails}
                 >
-                  Save Basic Details
+                  {t('builder.basic.save')}
                 </button>
               </div>
             ) : null}
@@ -382,24 +401,24 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
             {step === 'origin' ? (
               <div className="builder-step">
                 <div className="builder-step__heading">
-                  <p className="eyebrow">STEP 02</p>
-                  <h2>Choose an origin</h2>
-                  <p>Selectors come from server-generated eligible content. Subrace is preserved as its own choice.</p>
+                  <p className="eyebrow">{t('builder.origin.step')}</p>
+                  <h2>{t('builder.origin.title')}</h2>
+                  <p>{t('builder.origin.description')}</p>
                 </div>
                 {raceChoice ? (
-                  <SearchableSelect label="Race" value={currentRace} disabled={saving} options={selectionOptions(raceChoice)} secondaryMode="duplicates" onChange={(value) => patchReference('race_selection', value, true)} />
+                  <SearchableSelect label={t('builder.origin.race')} value={currentRace} disabled={saving} options={selectionOptions(raceChoice)} secondaryMode="duplicates" onChange={(value) => patchReference('race_selection', value, true)} />
                 ) : null}
                 {subraceChoice ? (
-                  <SearchableSelect label="Subrace" value={currentSubrace} disabled={saving} options={selectionOptions(subraceChoice)} secondaryMode="duplicates" onChange={(value) => patchReference('subrace_selection', value, true)} />
+                  <SearchableSelect label={t('builder.origin.subrace')} value={currentSubrace} disabled={saving} options={selectionOptions(subraceChoice)} secondaryMode="duplicates" onChange={(value) => patchReference('subrace_selection', value, true)} />
                 ) : null}
                 {backgroundChoice ? (
-                  <SearchableSelect label="Background" value={currentBackground} disabled={saving} options={selectionOptions(backgroundChoice)} secondaryMode="duplicates" onChange={(value) => patchReference('background_selection', value, true)} />
+                  <SearchableSelect label={t('builder.origin.background')} value={currentBackground} disabled={saving} options={selectionOptions(backgroundChoice)} secondaryMode="duplicates" onChange={(value) => patchReference('background_selection', value, true)} />
                 ) : null}
                 {alignmentChoice ? (
-                  <SearchableSelect label="Alignment · optional" value={currentAlignment} disabled={saving} options={selectionOptions(alignmentChoice)} secondaryMode="duplicates" onChange={(value) => patchReference('alignment_selection', value)} />
+                  <SearchableSelect label={t('builder.origin.alignment')} value={currentAlignment} disabled={saving} options={selectionOptions(alignmentChoice)} secondaryMode="duplicates" onChange={(value) => patchReference('alignment_selection', value)} />
                 ) : null}
                 <div className="builder-grant-preview">
-                  <span>Resolved grants</span><strong>{view.resolved_summary.grants.length}</strong><small>Traits, languages and proficiencies are resolved by the server.</small>
+                  <span>{t('builder.origin.resolvedGrants')}</span><strong>{view.resolved_summary.grants.length}</strong><small>{t('builder.origin.grantsHint')}</small>
                 </div>
               </div>
             ) : null}
@@ -407,11 +426,11 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
             {step === 'abilities' ? (
               <div className="builder-step">
                 <div className="builder-step__heading">
-                  <p className="eyebrow">STEP 03</p>
-                  <h2>Abilities & starting choices</h2>
-                  <p>Base generation stays separate from racial grants and Numeric Overrides.</p>
+                  <p className="eyebrow">{t('builder.abilities.step')}</p>
+                  <h2>{t('builder.abilities.title')}</h2>
+                  <p>{t('builder.abilities.description')}</p>
                 </div>
-                <div className="ability-methods" role="tablist" aria-label="Ability generation method">
+                <div className="ability-methods" role="tablist" aria-label={t('builder.abilities.methodAria')}>
                   {(['standard_array', 'point_buy', 'manual'] as AbilityGenerationMethod[]).map((method) => (
                     <button
                       type="button"
@@ -431,7 +450,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                         }
                       }}
                     >
-                      {method === 'standard_array' ? 'Standard Array' : method === 'point_buy' ? 'Point Buy' : 'Manual Input'}
+                      {t(ABILITY_METHOD_KEYS[method])}
                     </button>
                   ))}
                 </div>
@@ -446,20 +465,20 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                     return abilityMethod === 'standard_array' ? (
                       <SearchableSelect
                         key={ability}
-                        label={ABILITY_LABELS[ability]}
+                        label={t(ABILITY_COPY_KEYS[ability])}
                         value={abilityScores[ability] ? String(abilityScores[ability]) : ''}
                         disabled={saving || !abilityRules}
                         options={standardValues.map((score) => ({
                           value: String(score),
                           label: String(score),
                           disabled: usedElsewhere.has(score),
-                          disabledReason: usedElsewhere.has(score) ? 'Already assigned' : undefined,
+                          disabledReason: usedElsewhere.has(score) ? t('builder.abilities.alreadyAssigned') : undefined,
                         }))}
                         onChange={(value) => setAbilityScores((current) => ({ ...current, [ability]: Number(value) }))}
                       />
                     ) : (
                       <label className="builder-field ability-input" key={ability}>
-                        <span>{ABILITY_LABELS[ability]}</span>
+                        <span>{t(ABILITY_COPY_KEYS[ability])}</span>
                         <input
                           type="number"
                           min={abilityRules?.hard_min}
@@ -476,11 +495,11 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                 <p className="builder-hint">
                   {abilityMethod === 'point_buy' && abilityRules
                     ? Number.isNaN(pointBuySpent)
-                      ? `Point Buy · legal scores only · budget ${abilityRules.point_buy_budget}`
-                      : `Point Buy · ${pointBuySpent} / ${abilityRules.point_buy_budget} points used`
+                      ? t('builder.abilities.pointBuyInvalid', { budget: abilityRules.point_buy_budget })
+                      : t('builder.abilities.pointBuyUsed', { spent: pointBuySpent, budget: abilityRules.point_buy_budget })
                     : abilityMethod === 'manual' && abilityRules
-                      ? `Manual values outside ${abilityRules.manual_standard_min}–${abilityRules.manual_standard_max} are preserved and marked Non-standard.`
-                      : 'Each Standard Array value must be assigned exactly once.'}
+                      ? t('builder.abilities.manualHint', { min: abilityRules.manual_standard_min, max: abilityRules.manual_standard_max })
+                      : t('builder.abilities.standardHint')}
                 </p>
                 <button
                   type="button"
@@ -496,17 +515,17 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                     })
                   }
                 >
-                  Save Ability Scores
+                  {t('builder.abilities.save')}
                 </button>
 
                 <div className="builder-choice-list">
-                  <h3>Starting choices</h3>
+                  <h3>{t('builder.abilities.startingChoices')}</h3>
                   {startingChoices.length ? (
                     startingChoices.map((choice) => (
                       <ChoiceEditor key={choice.choice_id} choice={choice} view={view} disabled={saving} onSave={(payload) => save.mutate(payload)} />
                     ))
                   ) : (
-                    <p className="builder-muted">Choose Race / Background first to reveal starting choices.</p>
+                    <p className="builder-muted">{t('builder.abilities.chooseOriginFirst')}</p>
                   )}
                 </div>
               </div>
@@ -546,14 +565,14 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
 
           <aside className="builder-summary">
             <div className="builder-summary__top">
-              <div><span>LIVE SUMMARY</span><h2>{view.resolved_summary.name?.trim() || 'Unnamed'}</h2></div>
-              <strong>LV {view.resolved_summary.target_level ?? '—'}</strong>
+              <div><span>{t('builder.summary.label')}</span><h2>{view.resolved_summary.name?.trim() || t('review.unnamed')}</h2></div>
+              <strong>{t('builder.summary.level', { level: view.resolved_summary.target_level ?? '—' })}</strong>
             </div>
             <dl className="builder-summary__facts">
-              <div><dt>Race</dt><dd>{view.resolved_summary.race_name ?? '—'}{view.resolved_summary.subrace_name ? ` · ${view.resolved_summary.subrace_name}` : ''}</dd></div>
-              <div><dt>Background</dt><dd>{view.resolved_summary.background_name ?? '—'}</dd></div>
-              <div><dt>Class</dt><dd>{view.resolved_summary.class_summary ?? '—'}</dd></div>
-              <div><dt>Alignment</dt><dd>{view.resolved_summary.alignment_name ?? 'Optional'}</dd></div>
+              <div><dt>{t('builder.summary.race')}</dt><dd>{view.resolved_summary.race_name ?? '—'}{view.resolved_summary.subrace_name ? ` · ${view.resolved_summary.subrace_name}` : ''}</dd></div>
+              <div><dt>{t('builder.summary.background')}</dt><dd>{view.resolved_summary.background_name ?? '—'}</dd></div>
+              <div><dt>{t('builder.summary.class')}</dt><dd>{view.resolved_summary.class_summary ?? '—'}</dd></div>
+              <div><dt>{t('builder.summary.alignment')}</dt><dd>{view.resolved_summary.alignment_name ?? t('builder.summary.optional')}</dd></div>
             </dl>
 
             {view.resolved_summary.ability_scores.length ? (
@@ -562,25 +581,28 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   <div key={score.ability}>
                     <span>{score.ability.slice(0, 3).toUpperCase()}</span>
                     <strong>{score.effective}</strong>
-                    <small>{score.base} {score.permanent_bonus ? `+ ${score.permanent_bonus}` : ''}{score.overridden ? ' · override' : ''}</small>
+                    <small>{score.base} {score.permanent_bonus ? `+ ${score.permanent_bonus}` : ''}{score.overridden ? ` · ${t('builder.summary.override')}` : ''}</small>
                   </div>
                 ))}
               </div>
             ) : null}
 
             <div className="summary-grants">
-              <h3>Resolved grants</h3>
-              {sortGrantsByKind(view.resolved_summary.grants).map((grant, index) => (
-                <div key={`${grant.source_ref}:${grant.reference_id ?? grant.label}:${index}`}>
-                  <span>{grant.kind.replaceAll('_', ' ')}</span><strong>{optionDisplay(grant.label).primary}</strong>
-                </div>
-              ))}
+              <h3>{t('builder.summary.resolvedGrants')}</h3>
+              {sortGrantsByKind(view.resolved_summary.grants).map((grant, index) => {
+                const kindKey = GRANT_KIND_KEYS[grant.kind]
+                return (
+                  <div key={`${grant.source_ref}:${grant.reference_id ?? grant.label}:${index}`}>
+                    <span>{kindKey ? t(kindKey) : grant.kind.replaceAll('_', ' ')}</span><strong>{optionDisplay(grant.label).primary}</strong>
+                  </div>
+                )
+              })}
             </div>
 
             <div className="summary-validation">
               <div className="summary-validation__heading">
-                <h3>Validation</h3>
-                <span className={issueCount ? 'has-errors' : 'is-clear'}>{issueCount} blocking</span>
+                <h3>{t('builder.summary.validation')}</h3>
+                <span className={issueCount ? 'has-errors' : 'is-clear'}>{t('builder.summary.blocking', { count: issueCount })}</span>
               </div>
               <ul>
                 {view.validation.issues.map((issue, index) => (
@@ -589,9 +611,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   </li>
                 ))}
               </ul>
-              <p className="builder-hint">
-                P1-F adds starting equipment and final server Review. Confirm is enabled only when the complete Build and initial Current State pass validation.
-              </p>
+              <p className="builder-hint">{t('builder.summary.reviewHint')}</p>
             </div>
 
             <button
@@ -599,10 +619,10 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
               className="button secondary full"
               disabled={saving}
               onClick={() => {
-                if (window.confirm('Cancel this unfinished draft?')) cancel.mutate()
+                if (window.confirm(t('builder.cancel.confirm'))) cancel.mutate()
               }}
             >
-              Cancel Draft
+              {t('builder.cancel.button')}
             </button>
           </aside>
         </div>
