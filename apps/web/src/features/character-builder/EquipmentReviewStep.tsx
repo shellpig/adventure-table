@@ -10,9 +10,9 @@ import {
 } from '../../api/characterBuilder'
 import type { StateReconciliationPreview } from '../../api/characterVersions'
 import { optionDisplay, SearchableSelect } from '../../components/SearchableSelect'
+import { useUiCopy, type UiTranslator } from '../../i18n/useUiCopy'
 import { sortGrantsByKind } from './grants'
 import { RoleplayProfileEditor } from './RoleplayProfileEditor'
-
 
 type EquipmentStepProps = {
   view: BuilderView
@@ -50,11 +50,8 @@ function optionsFor(choice: BuilderChoice) {
   }))
 }
 
-function modeLabel(mode: BuilderView['draft']['mode']) {
-  if (mode === 'level_up') return 'Level Up'
-  if (mode === 'build_edit') return 'Build Edit'
-  if (mode === 'correction') return 'Correction'
-  return 'Create'
+function modeLabel(mode: BuilderView['draft']['mode'], t: UiTranslator) {
+  return t(`review.mode.${mode}`)
 }
 
 function signed(value: number) {
@@ -72,6 +69,7 @@ export function EquipmentStep({
   disabled,
   onSave,
 }: EquipmentStepProps) {
+  const { t } = useUiCopy()
   const versioned = view.draft.mode !== 'create'
   const equipmentChoices = view.choices.filter(
     (choice) => choice.option_source === 'equipment',
@@ -91,16 +89,14 @@ export function EquipmentStep({
   return (
     <div className="builder-step">
       <div className="builder-step__heading">
-        <p className="eyebrow">STEP 06 · EQUIPMENT</p>
-        <h2>Equipment & roleplay</h2>
-        <p>
-          Starting equipment becomes immutable Build provenance and initializes live Inventory once. Roleplay Profile remains optional.
-        </p>
+        <p className="eyebrow">{t('equipment.step')}</p>
+        <h2>{t('equipment.title')}</h2>
+        <p>{t('equipment.description')}</p>
       </div>
 
       {!versioned ? (
         <div className="builder-choice-list">
-          <h3>Starting Equipment</h3>
+          <h3>{t('equipment.starting')}</h3>
           {equipmentChoices.length ? (
             equipmentChoices.map((choice) => {
               const selected = selectedIds(equipmentSelections[choice.choice_id])
@@ -153,14 +149,14 @@ export function EquipmentStep({
                     ))}
                   </div>
                   <SearchableSelect
-                    label="Add equipment"
+                    label={t('equipment.add')}
                     value=""
                     disabled={disabled || selected.length >= choice.choose_count}
                     options={optionsFor(choice).map((option) => ({
                       ...option,
                       disabled: option.disabled || selected.includes(option.value),
                       disabledReason: selected.includes(option.value)
-                        ? 'Already selected'
+                        ? t('shared.alreadySelected')
                         : option.disabledReason,
                     }))}
                     secondaryMode="duplicates"
@@ -174,16 +170,14 @@ export function EquipmentStep({
               )
             })
           ) : (
-            <p className="builder-muted">
-              Choose a starting class and background first to reveal equipment.
-            </p>
+            <p className="builder-muted">{t('equipment.chooseFirst')}</p>
           )}
         </div>
       ) : (
         <div className="builder-rule-card">
-          <span>Starting Equipment</span>
-          <strong>Preserved from base Build</strong>
-          <small>Live Inventory is never rebuilt from starting equipment during a version change.</small>
+          <span>{t('equipment.starting')}</span>
+          <strong>{t('equipment.preserved')}</strong>
+          <small>{t('equipment.preservedHint')}</small>
         </div>
       )}
 
@@ -202,6 +196,7 @@ export function EquipmentReviewStep({
   view,
   disabled,
 }: EquipmentReviewStepProps) {
+  const { t } = useUiCopy()
   const versioned = view.draft.mode !== 'create'
   const reviewQuery = useQuery({
     queryKey: ['builder-review', view.draft.id, view.draft.revision],
@@ -218,24 +213,25 @@ export function EquipmentReviewStep({
     review?.issues.filter((issue) => issue.severity === 'blocking_error').length ??
     view.validation.issues.filter((issue) => issue.severity === 'blocking_error')
       .length
+  const localizedMode = modeLabel(view.draft.mode, t)
 
   return (
     <div className="builder-step">
       <div className="builder-step__heading">
-        <p className="eyebrow">STEP 07 · REVIEW</p>
-        <h2>{versioned ? `${modeLabel(view.draft.mode)} review` : 'Build snapshot & final review'}</h2>
-        <p>
+        <p className="eyebrow">{t('review.step')}</p>
+        <h2>
           {versioned
-            ? 'Confirm creates a new immutable Build Version and atomically reconciles the existing live Current State. Level Up is not a rest.'
-            : 'Review the immutable Build snapshot and initial Current State before creating the Character.'}
-        </p>
+            ? t('review.versionedTitle', { mode: localizedMode })
+            : t('review.createTitle')}
+        </h2>
+        <p>{versioned ? t('review.versionedDescription') : t('review.createDescription')}</p>
       </div>
 
       {reviewQuery.isLoading ? (
         <div className="builder-rule-card">
-          <span>Server Review</span>
-          <strong>Resolving latest rules…</strong>
-          <small>{versioned ? 'Build and reconciliation are generated on the server.' : 'Build and initial Current State are generated on the server.'}</small>
+          <span>{t('review.serverReview')}</span>
+          <strong>{t('review.resolving')}</strong>
+          <small>{versioned ? t('review.serverVersionedHint') : t('review.serverCreateHint')}</small>
         </div>
       ) : null}
       {reviewQuery.error ? (
@@ -249,13 +245,18 @@ export function EquipmentReviewStep({
         <>
           <div className="builder-optional">
             <h3>
-              Build snapshot <span>{versioned ? `New ${modeLabel(view.draft.mode)} Version` : 'Immutable Version 1'}</span>
+              {t('review.buildSnapshot')}{' '}
+              <span>
+                {versioned
+                  ? t('review.newVersion', { mode: localizedMode })
+                  : t('review.immutableV1')}
+              </span>
             </h3>
             <div className="review-identity-grid">
               <div className="builder-rule-card">
-                <span>Identity</span>
+                <span>{t('review.identity')}</span>
                 <strong>
-                  {review.resolved_summary.name?.trim() || 'Unnamed'} · LV{' '}
+                  {review.resolved_summary.name?.trim() || t('review.unnamed')} · LV{' '}
                   {review.resolved_summary.target_level ?? '—'}
                 </strong>
                 <small>
@@ -265,13 +266,13 @@ export function EquipmentReviewStep({
                 </small>
               </div>
               <div className="builder-rule-card proficiency-card">
-                <span>Proficiency Bonus</span>
+                <span>{t('review.proficiencyBonus')}</span>
                 <strong>
                   {review.derived_stats
                     ? signed(review.derived_stats.proficiency_bonus)
                     : '—'}
                 </strong>
-                <small>Current Character Level</small>
+                <small>{t('review.currentCharacterLevel')}</small>
               </div>
             </div>
 
@@ -286,16 +287,16 @@ export function EquipmentReviewStep({
                       : ''}
                   </strong>
                   <small>
-                    Base {score.base}
+                    {t('review.base', { value: score.base })}
                     {score.permanent_bonus ? ` + ${score.permanent_bonus}` : ''}
-                    {score.overridden ? ' · override' : ''}
+                    {score.overridden ? ` · ${t('review.override')}` : ''}
                   </small>
                 </div>
               ))}
             </div>
 
             <div className="summary-grants">
-              <h3>Resolved grants</h3>
+              <h3>{t('review.resolvedGrants')}</h3>
               {sortGrantsByKind(review.resolved_summary.grants).map((grant, index) => (
                 <div key={`${grant.source_ref}:${grant.reference_id ?? grant.label}:${index}`}>
                   <span>{grant.kind.replaceAll('_', ' ')}</span>
@@ -303,12 +304,12 @@ export function EquipmentReviewStep({
                 </div>
               ))}
               {!review.resolved_summary.grants.length ? (
-                <small>No resolved origin grants.</small>
+                <small>{t('review.noOriginGrants')}</small>
               ) : null}
             </div>
 
             <div className="summary-grants">
-              <h3>{versioned ? 'Starting equipment baseline' : 'Resolved starting equipment'}</h3>
+              <h3>{versioned ? t('review.startingBaseline') : t('review.resolvedStarting')}</h3>
               {review.starting_equipment.map((entry) => (
                 <div key={entry.entry_id}>
                   <span>× {entry.quantity}</span>
@@ -316,7 +317,7 @@ export function EquipmentReviewStep({
                 </div>
               ))}
               {!review.starting_equipment.length ? (
-                <small>No starting equipment.</small>
+                <small>{t('review.noStarting')}</small>
               ) : null}
             </div>
           </div>
@@ -324,30 +325,30 @@ export function EquipmentReviewStep({
           {versioned ? (
             <div className="builder-optional">
               <h3>
-                Current State Reconciliation <span>Atomic with Version Confirm</span>
+                {t('review.reconciliation')} <span>{t('review.atomicConfirm')}</span>
               </h3>
               {review.reconciliation ? (
                 <>
                   <div className="builder-field-grid">
                     <div className="builder-rule-card">
-                      <span>Resulting Current HP</span>
+                      <span>{t('review.resultingHp')}</span>
                       <strong>{review.reconciliation.proposed_state.current_hp}</strong>
-                      <small>Existing damage delta is preserved</small>
+                      <small>{t('review.damagePreserved')}</small>
                     </div>
                     <div className="builder-rule-card">
-                      <span>Live Inventory</span>
-                      <strong>{review.reconciliation.proposed_state.inventory_state.length} entries</strong>
-                      <small>Preserved independently from Build</small>
+                      <span>{t('review.liveInventory')}</span>
+                      <strong>{t('review.entries', { count: review.reconciliation.proposed_state.inventory_state.length })}</strong>
+                      <small>{t('review.independentBuild')}</small>
                     </div>
                     <div className="builder-rule-card">
-                      <span>Temporary HP</span>
+                      <span>{t('review.temporaryHp')}</span>
                       <strong>{review.reconciliation.proposed_state.temporary_hp}</strong>
-                      <small>Preserved</small>
+                      <small>{t('review.preserved')}</small>
                     </div>
                     <div className="builder-rule-card">
-                      <span>Conditions</span>
+                      <span>{t('review.conditions')}</span>
                       <strong>{review.reconciliation.proposed_state.conditions.length}</strong>
-                      <small>Preserved</small>
+                      <small>{t('review.preserved')}</small>
                     </div>
                   </div>
                   <div className="reconciliation-list">
@@ -359,53 +360,48 @@ export function EquipmentReviewStep({
                       </div>
                     ))}
                     {!review.reconciliation.changes.length ? (
-                      <p className="builder-muted">No live-state capacity changes are required.</p>
+                      <p className="builder-muted">{t('review.noCapacityChanges')}</p>
                     ) : null}
                   </div>
                 </>
               ) : (
-                <p className="builder-muted">
-                  Reconciliation preview becomes available after all Build choices are valid and the draft is based on the current version.
-                </p>
+                <p className="builder-muted">{t('review.reconciliationUnavailable')}</p>
               )}
             </div>
           ) : (
             <div className="builder-optional">
               <h3>
-                Initial Current State <span>Created once</span>
+                {t('review.initialState')} <span>{t('review.createdOnce')}</span>
               </h3>
               {review.initial_state ? (
                 <div className="builder-field-grid">
                   <div className="builder-rule-card">
-                    <span>Current HP</span>
+                    <span>{t('review.currentHp')}</span>
                     <strong>{review.initial_state.current_hp}</strong>
-                    <small>Temporary HP {review.initial_state.temporary_hp}</small>
+                    <small>{t('review.tempHpValue', { value: review.initial_state.temporary_hp })}</small>
                   </div>
                   <div className="builder-rule-card">
-                    <span>Inventory</span>
-                    <strong>{review.initial_state.inventory_state.length} entries</strong>
-                    <small>Independent from Build after Confirm</small>
+                    <span>{t('review.inventory')}</span>
+                    <strong>{t('review.entries', { count: review.initial_state.inventory_state.length })}</strong>
+                    <small>{t('review.independentAfterConfirm')}</small>
                   </div>
                   <div className="builder-rule-card">
-                    <span>Hit Dice</span>
+                    <span>{t('review.hitDice')}</span>
                     <strong>
                       {Object.entries(review.initial_state.hit_dice_state)
                         .map(([die, count]) => `${die} × ${count}`)
                         .join(' · ') || '—'}
                     </strong>
-                    <small>Starts fully available</small>
+                    <small>{t('review.startsAvailable')}</small>
                   </div>
                   <div className="builder-rule-card">
-                    <span>Prepared Spells</span>
+                    <span>{t('review.preparedSpells')}</span>
                     <strong>{review.initial_state.prepared_spells.length}</strong>
-                    <small>Initial prepared state only</small>
+                    <small>{t('review.initialPreparedOnly')}</small>
                   </div>
                 </div>
               ) : (
-                <p className="builder-muted">
-                  Initial state preview becomes available after all blocking choices
-                  are resolved.
-                </p>
+                <p className="builder-muted">{t('review.initialUnavailable')}</p>
               )}
             </div>
           )}
@@ -413,7 +409,7 @@ export function EquipmentReviewStep({
           {review.derived_stats ? (
             <div className="builder-optional review-skills">
               <h3>
-                Skill Checks <span>Current Build</span>
+                {t('review.skillChecks')} <span>{t('review.currentBuild')}</span>
               </h3>
               <div className="skill-modifier-grid">
                 {Object.entries(review.derived_stats.skill_modifiers).map(
@@ -430,9 +426,9 @@ export function EquipmentReviewStep({
 
           <div className="summary-validation">
             <div className="summary-validation__heading">
-              <h3>Final server validation</h3>
+              <h3>{t('review.finalValidation')}</h3>
               <span className={blockingCount ? 'has-errors' : 'is-clear'}>
-                {blockingCount} blocking
+                {t('review.blocking', { count: blockingCount })}
               </span>
             </div>
             <ul>
@@ -448,9 +444,7 @@ export function EquipmentReviewStep({
             </ul>
             {!review.issues.length ? (
               <p className="builder-hint">
-                {versioned
-                  ? 'No blocking issues. Confirm will append one immutable Build Version and reconcile Current State in one transaction.'
-                  : 'No blocking issues. Confirm will create Character, immutable Version 1 and Current State in one transaction.'}
+                {versioned ? t('review.clearVersioned') : t('review.clearCreate')}
               </p>
             ) : null}
           </div>
@@ -462,8 +456,8 @@ export function EquipmentReviewStep({
             onClick={() => confirm.mutate()}
           >
             {confirm.isPending
-              ? versioned ? 'Creating Version…' : 'Creating Character…'
-              : versioned ? `Confirm ${modeLabel(view.draft.mode)}` : 'Confirm & Create Character'}
+              ? versioned ? t('review.creatingVersion') : t('review.creatingCharacter')
+              : versioned ? t('review.confirmMode', { mode: localizedMode }) : t('review.confirmCreate')}
           </button>
         </>
       ) : null}
