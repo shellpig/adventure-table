@@ -1,10 +1,16 @@
 """Finish the M02-D SRD zh-TW overlay with reviewed external-name references.
 
-The base generator remains the source of terminology and deterministic
+The base generator remains the source of project terminology and deterministic
 compositional translations. This authoring-only pass may consume a checkout of
-an explicitly pinned Traditional Chinese community reference to replace mixed
-English marker output by exact English-name matches. Runtime never reads the
-reference checkout; it only reads the committed data/srd5.1/locales/zh-TW.json.
+an explicitly pinned Traditional Chinese community reference to improve whole
+visible names by exact English-name matches. Runtime never reads the reference
+checkout; it only reads the committed data/srd5.1/locales/zh-TW.json.
+
+Translation priority for names is deliberately strict:
+1. project-owned exact glossary entries;
+2. structural name rules whose ordinal carries meaning;
+3. unambiguous whole-name matches from the pinned Traditional Chinese reference;
+4. reviewed deterministic token composition as the final fallback.
 """
 
 from __future__ import annotations
@@ -57,6 +63,7 @@ def _reference_pair(display_name: str) -> tuple[str, str] | None:
 
 
 def load_reference_names(root: Path) -> dict[str, str]:
+    """Load only unambiguous English-name -> Traditional-Chinese-name pairs."""
     names: dict[str, str] = {}
     conflicts: set[str] = set()
     for path in sorted(root.rglob("*.json")):
@@ -80,6 +87,21 @@ def load_reference_names(root: Path) -> dict[str, str]:
         names[normalized] = zh
     for normalized in conflicts:
         names.pop(normalized, None)
+    return names
+
+
+def _canonical_names() -> dict[str, str]:
+    """Read canonical SRD names for every StableKey covered by M02-D."""
+    names: dict[str, str] = {}
+    for filename in sorted(set(base.CATEGORY_BY_KIND.values())):
+        payload = json.loads((base.SRD_ROOT / filename).read_text(encoding="utf-8"))
+        for raw in payload.get("entries", []):
+            if not isinstance(raw, dict):
+                continue
+            key = raw.get("key")
+            name = raw.get("name")
+            if isinstance(key, str) and isinstance(name, str):
+                names[key] = name
     return names
 
 
@@ -155,18 +177,27 @@ def build_reviewed_overlay(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     overlay, report = base.build_overlay()
     reference_names = load_reference_names(reference_root) if reference_root else {}
-
-    canonical_by_key: dict[str, set[str]] = {}
-    for issue in report["unknowns"]:
-        canonical_by_key.setdefault(issue["key"], set()).add(issue["canonical"])
+    canonical_names = _canonical_names()
 
     exact_reference_hits = 0
     structured_name_hits = 0
-    for key, canonical_values in canonical_by_key.items():
-        fields = overlay["entries"].get(key)
+    project_exact_name_hits = 0
+
+    # Whole-name quality must be decided before unresolved-token replacement.
+    # Otherwise a mechanically complete token composition such as
+    # "Light Hammer" -> "光明錘" would contain no marker and could never be
+    # corrected by the reviewed whole-name reference.
+    for key, fields in overlay["entries"].items():
         if not isinstance(fields, dict) or "name" not in fields:
             continue
-        if not isinstance(fields["name"], str) or not UNTRANSLATED_RE.search(fields["name"]):
+        canonical = canonical_names.get(key)
+        if canonical is None:
+            continue
+
+        # Project-owned exact terminology always wins over external authoring
+        # references. This keeps the M02 glossary the final terminology SSOT.
+        if canonical in base.EXACT:
+            project_exact_name_hits += 1
             continue
 
         structured = _structured_name_override(key)
@@ -175,13 +206,9 @@ def build_reviewed_overlay(
             structured_name_hits += 1
             continue
 
-        candidates = {
-            reference_names.get(_normalize_name(canonical))
-            for canonical in canonical_values
-        }
-        candidates.discard(None)
-        if len(candidates) == 1:
-            fields["name"] = candidates.pop()
+        referenced = reference_names.get(_normalize_name(canonical))
+        if referenced is not None:
+            fields["name"] = referenced
             exact_reference_hits += 1
 
     overlay = _replace_markers(overlay, token_overrides)
@@ -190,6 +217,7 @@ def build_reviewed_overlay(
         **report,
         "base_unknown_count": report["unknown_count"],
         "reference_name_count": len(reference_names),
+        "project_exact_name_hits": project_exact_name_hits,
         "exact_reference_hits": exact_reference_hits,
         "structured_name_hits": structured_name_hits,
         "reviewed_token_override_count": len(token_overrides),
@@ -228,6 +256,7 @@ def main() -> int:
         "M02-D reviewed SRD zh-TW candidate: "
         f"{report['localized_entry_count']} entries / "
         f"{report['required_field_count']} required fields / "
+        f"{report['project_exact_name_hits']} project exact names / "
         f"{report['exact_reference_hits']} exact reference hits / "
         f"{report['structured_name_hits']} structured names / "
         f"{report['unknown_count']} unknown markers"
