@@ -121,6 +121,10 @@ test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to e
   await expect(page.getByText('10 / 10', { exact: true })).toBeVisible()
 
   const draftUrl = page.url()
+  const draftMatch = draftUrl.match(/\/character-builder\/([0-9a-f-]{36})$/)
+  if (!draftMatch) throw new Error(`Cannot parse draft id from ${draftUrl}`)
+  const draftId = draftMatch[1]
+
   await page.reload()
   await expect(page).toHaveURL(draftUrl)
   await page.getByRole('button', { name: /Class/ }).click()
@@ -135,11 +139,15 @@ test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to e
   await expect(page.getByRole('heading', { name: 'Equipment & final review' })).toBeVisible()
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
-  await expect(
-    page.getByText(
-      'No blocking issues. Confirm will create Character, immutable Version 1 and Current State in one transaction.',
-    ),
-  ).toBeVisible()
+  const reviewResponse = await request.get(`/api/character-builder/drafts/${draftId}/review`)
+  expect(reviewResponse.ok()).toBeTruthy()
+  const review = await reviewResponse.json()
+  const blockingIssues = review.issues.filter(
+    (issue: { severity: string }) => issue.severity === 'blocking_error',
+  )
+  expect(blockingIssues, JSON.stringify(review.issues, null, 2)).toEqual([])
+  expect(review.can_confirm, JSON.stringify(review.issues, null, 2)).toBeTruthy()
+  await expect(page.getByText('0 blocking', { exact: true })).toBeVisible()
 
   const confirm = page.getByRole('button', { name: 'Confirm & Create Character' })
   await expect(confirm).toBeEnabled()
