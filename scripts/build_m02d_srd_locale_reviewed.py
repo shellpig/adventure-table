@@ -94,17 +94,33 @@ def _structured_name_override(key: str) -> str | None:
     return None
 
 
+def _token_candidates(token: str) -> tuple[str, ...]:
+    """Recover possessive spellings lost by the base tokenizer.
+
+    SRD names such as ``Alchemist's Supplies`` and ``Hunter's Prey`` are
+    tokenized as ``Alchemists`` / ``Hunters`` before the unresolved marker is
+    emitted. Keep the reviewed dictionary canonical and try the normalized
+    possessive spellings here instead of duplicating dozens of aliases.
+    """
+    lower = token.lower()
+    candidates = [token, lower]
+    if lower.endswith("s") and len(lower) > 1:
+        candidates.append(f"{lower[:-1]}'s")
+        candidates.append(f"{lower}'")
+    return tuple(dict.fromkeys(candidates))
+
+
 def _replace_markers(value: Any, token_overrides: dict[str, str]) -> Any:
     if isinstance(value, str):
         def replace(match: re.Match[str]) -> str:
             token = match.group(1)
             if token in PASSTHROUGH_TOKENS:
                 return token
-            translated = token_overrides.get(token)
-            if translated is None:
-                translated = token_overrides.get(token.lower())
-            if translated is None:
-                translated = BUILTIN_TOKEN_OVERRIDES.get(token.lower())
+            for candidate in _token_candidates(token):
+                translated = token_overrides.get(candidate)
+                if translated is not None:
+                    return translated
+            translated = BUILTIN_TOKEN_OVERRIDES.get(token.lower())
             return translated if translated is not None else match.group(0)
 
         return UNTRANSLATED_RE.sub(replace, value)
