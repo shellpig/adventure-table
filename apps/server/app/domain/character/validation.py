@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from app.content.identity import reference_to_stable_key
+from app.content.identity import parse_stable_key, reference_to_stable_key
 from app.content.registry import ContentNotFoundError, ContentRegistry
 from app.domain.character.schemas import CharacterBuild, CharacterState
 from app.domain.rules.hit_points import calculate_max_hp
@@ -22,6 +22,67 @@ def _require_content(registry: ContentRegistry, key: str) -> None:
         registry.get(key)
     except ContentNotFoundError as exc:
         raise CharacterValidationError(f"unknown content reference: {key}") from exc
+
+
+def build_content_reference_keys(build: CharacterBuild) -> tuple[str, ...]:
+    """Return only persisted fields whose contract is a content reference.
+
+    This deliberately does not walk arbitrary Build strings. Roleplay prose,
+    labels, ids and other free text may happen to resemble StableKeys, but they
+    are not content provenance. Keeping this list explicit makes
+    ``content_sources`` a projection of the Build reference contract.
+    """
+
+    refs: list[str] = [build.race_ref, *build.class_progression]
+    if build.subrace_ref:
+        refs.append(build.subrace_ref)
+    if build.background_ref:
+        refs.append(build.background_ref)
+    if build.alignment_ref:
+        refs.append(build.alignment_ref)
+
+    for selection in build.subclasses:
+        refs.extend((selection.class_ref, selection.subclass_ref))
+    refs.extend(build.proficiencies)
+    refs.extend(build.saving_throw_proficiencies)
+    refs.extend(build.skill_choices)
+    refs.extend(build.language_refs)
+    refs.extend(build.feature_refs)
+    refs.extend(build.feat_refs)
+    for profile in build.spellcasting_profiles:
+        refs.extend((profile.source_key, profile.class_ref))
+    for entry in build.spell_access_entries:
+        refs.extend((entry.spell_key, entry.source_key))
+    refs.extend(entry.item_ref for entry in build.starting_equipment)
+
+    # Numeric Override keys are mostly symbolic strings. Only the documented
+    # override forms whose suffix is itself a StableKey participate in content
+    # provenance; never scan the whole key as free text.
+    for override in build.numeric_overrides:
+        for prefix in ("skill_modifier:", "spell_save_dc:"):
+            if not override.key.startswith(prefix):
+                continue
+            target = override.key.removeprefix(prefix)
+            try:
+                parse_stable_key(target)
+            except ValueError:
+                pass
+            else:
+                refs.append(target)
+            break
+
+    return tuple(dict.fromkeys(refs))
+
+
+def derive_content_sources(build: CharacterBuild) -> tuple[str, ...]:
+    return tuple(
+        sorted(
+            {
+                parse_stable_key(reference).source
+                for reference in build_content_reference_keys(build)
+            }
+        )
+    )
 
 
 def _validate_numeric_overrides(build: CharacterBuild, registry: ContentRegistry) -> None:
@@ -63,28 +124,7 @@ def _validate_numeric_overrides(build: CharacterBuild, registry: ContentRegistry
 
 
 def validate_build_references(build: CharacterBuild, registry: ContentRegistry) -> None:
-    refs: list[str] = [build.race_ref, *build.class_progression]
-    if build.subrace_ref:
-        refs.append(build.subrace_ref)
-    if build.background_ref:
-        refs.append(build.background_ref)
-    if build.alignment_ref:
-        refs.append(build.alignment_ref)
-
-    refs.extend(selection.subclass_ref for selection in build.subclasses)
-    refs.extend(build.proficiencies)
-    refs.extend(build.saving_throw_proficiencies)
-    refs.extend(build.skill_choices)
-    refs.extend(build.language_refs)
-    refs.extend(build.feature_refs)
-    refs.extend(build.feat_refs)
-    refs.extend(profile.source_key for profile in build.spellcasting_profiles)
-    refs.extend(profile.class_ref for profile in build.spellcasting_profiles)
-    refs.extend(entry.spell_key for entry in build.spell_access_entries)
-    refs.extend(entry.source_key for entry in build.spell_access_entries)
-    refs.extend(entry.item_ref for entry in build.starting_equipment)
-
-    for key in refs:
+    for key in build_content_reference_keys(build):
         _require_content(registry, key)
 
     if build.subrace_ref is not None:
