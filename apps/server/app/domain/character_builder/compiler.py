@@ -276,11 +276,21 @@ def compile_builder_draft(
     choices = base_choices + equipment.choices
 
     build_candidate: CharacterBuild | None = None
-    has_blocking = any(issue.severity is BuilderIssueSeverity.BLOCKING_ERROR for issue in issues)
+    # Earlier P1 subphase tests intentionally compile only the choices owned by
+    # that subphase. Missing P1-F equipment choices must block final Confirm,
+    # but they do not make the already-resolved class/feature Build shape
+    # impossible to compile. Keep a partial candidate available for Review and
+    # focused compiler tests while validation.can_confirm remains authoritative.
+    candidate_ignorable_blockers = {"invalid_equipment_choice_count"}
+    has_candidate_blocking = any(
+        issue.severity is BuilderIssueSeverity.BLOCKING_ERROR
+        and issue.code not in candidate_ignorable_blockers
+        for issue in issues
+    )
     abilities = _build_ability_scores(resolved_summary)
     payload = draft.draft_payload
     if (
-        not has_blocking
+        not has_candidate_blocking
         and abilities is not None
         and payload.basic is not None
         and payload.race_selection is not None
