@@ -287,21 +287,19 @@ def test_variant_human_duplicate_ability_and_illegal_feat_are_blocking() -> None
         for issue in result.validation.issues
     )
 
-    weak = _base_payload(race="phb2014:race:variant-human").model_copy(
-        update={
-            "ability_generation": {
-                "method": "standard_array",
-                "scores": {
-                    "strength": 8,
-                    "dexterity": 15,
-                    "constitution": 14,
-                    "intelligence": 13,
-                    "wisdom": 12,
-                    "charisma": 10,
-                },
-            }
-        }
-    )
+    weak_data = _base_payload(race="phb2014:race:variant-human").model_dump(mode="python")
+    weak_data["ability_generation"] = {
+        "method": "standard_array",
+        "scores": {
+            "strength": 8,
+            "dexterity": 15,
+            "constitution": 14,
+            "intelligence": 13,
+            "wisdom": 12,
+            "charisma": 10,
+        },
+    }
+    weak = BuilderDraftPayload.model_validate(weak_data)
     weak_first = compile_builder_draft(_draft(weak), registry)
     feat_choice = next(
         choice
