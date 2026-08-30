@@ -72,14 +72,14 @@ test('M02-A invalid stored locale safely normalizes to zh-TW', async ({ page }) 
 test('M02-A locale switching preserves Builder step, URL and Draft domain state', async ({ page }) => {
   await resetLocale(page)
   await page.goto('/characters')
-  await expect(page.getByRole('heading', { name: 'Character Workshop' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '角色工作坊' })).toBeVisible()
 
-  await page.getByRole('button', { name: '+ Create Character' }).click()
+  await page.getByRole('button', { name: '＋ 建立角色' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
-  await expect(page.getByText('Saved on server')).toBeVisible()
+  await expect(page.getByText('已儲存至伺服器')).toBeVisible()
 
-  await page.getByRole('button', { name: /Origin/ }).click()
-  await expect(page.getByRole('heading', { name: 'Choose an origin' })).toBeVisible()
+  await page.getByRole('button', { name: /出身/ }).click()
+  await expect(page.getByRole('heading', { name: '選擇出身' })).toBeVisible()
 
   const url = page.url()
   const draftId = url.match(/\/character-builder\/([0-9a-f-]{36})$/)?.[1]
@@ -105,7 +105,7 @@ test('M02-A locale switching preserves Builder step, URL and Draft domain state'
   await page.getByTestId('locale-option-zh-TW').click()
   await expect(page).toHaveURL(url)
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW')
-  await expect(page.getByRole('heading', { name: 'Choose an origin' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '選擇出身' })).toBeVisible()
 
   page.off('request', mutationListener)
   const after = await readDraft(page, draftId)
