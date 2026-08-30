@@ -4,7 +4,14 @@ from collections import Counter
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
-from app.content.registry import ContentRegistry, URL_ROUTE_TO_KIND
+from app.content.identity import (
+    URL_ROUTE_TO_KIND,
+    parse_stable_key,
+    reference_to_stable_key,
+    stable_key,
+    stable_key_is_kind,
+)
+from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
 from app.domain.character.schemas import SubclassSelection
 from app.domain.character_builder.choices import deterministic_choice_id
@@ -39,17 +46,11 @@ class ProgressionCompilation:
 
 
 def _stable_key(reference: dict[str, object]) -> str | None:
-    index = reference.get("index")
-    url = reference.get("url")
-    if not isinstance(index, str) or not isinstance(url, str):
-        return None
-    parts = [part for part in urlparse(url).path.split("/") if part]
-    if len(parts) != 4 or parts[0:2] != ["api", "2014"]:
-        return None
-    kind = URL_ROUTE_TO_KIND.get(parts[2])
-    if kind is None or parts[3] != index:
-        return None
-    return f"srd5.1:{kind}:{index}"
+    return reference_to_stable_key(reference)
+
+
+def _entry_label(entry: ContentEntry) -> str:
+    return f"{entry.name} · {entry.source_label or entry.source}"
 
 
 def _class_hit_die(class_entry: ContentEntry) -> int:
@@ -79,16 +80,20 @@ def _class_subclass_refs(class_entry: ContentEntry) -> tuple[str, ...]:
     return tuple(refs)
 
 
+def _level_ref(source_ref: str, level: int) -> str:
+    parsed = parse_stable_key(source_ref)
+    return stable_key(parsed.source, "level", f"{parsed.index}-{level}")
+
+
 def subclass_selection_level(class_entry: ContentEntry, registry: ContentRegistry) -> int | None:
     timings: list[int] = []
     for subclass_ref in _class_subclass_refs(class_entry):
-        subclass_index = subclass_ref.rsplit(":", 1)[-1]
         for level in range(1, 21):
-            level_entry = registry.get_optional(f"srd5.1:level:{subclass_index}-{level}")
+            level_entry = registry.get_optional(_level_ref(subclass_ref, level))
             if level_entry is None:
                 continue
             parent = level_entry.data.get("subclass")
-            if not isinstance(parent, dict) or parent.get("index") != subclass_index:
+            if not isinstance(parent, dict) or _stable_key(parent) != subclass_ref:
                 continue
             timings.append(level)
             break
@@ -97,22 +102,18 @@ def subclass_selection_level(class_entry: ContentEntry, registry: ContentRegistr
 
 def _level_features(
     registry: ContentRegistry,
-    source_index: str,
+    source_ref: str,
     level: int,
     *,
     subclass: bool = False,
 ) -> tuple[str, ...]:
-    entry = registry.get_optional(f"srd5.1:level:{source_index}-{level}")
+    entry = registry.get_optional(_level_ref(source_ref, level))
     if entry is None:
         return ()
-    if subclass:
-        parent = entry.data.get("subclass")
-        if not isinstance(parent, dict) or parent.get("index") != source_index:
-            return ()
-    else:
-        parent = entry.data.get("class")
-        if not isinstance(parent, dict) or parent.get("index") != source_index:
-            return ()
+    parent_field = "subclass" if subclass else "class"
+    parent = entry.data.get(parent_field)
+    if not isinstance(parent, dict) or _stable_key(parent) != source_ref:
+        return ()
     raw = entry.data.get("features")
     if not isinstance(raw, list):
         return ()
@@ -120,7 +121,7 @@ def _level_features(
     for item in raw:
         if isinstance(item, dict):
             key = _stable_key(item)
-            if key is not None and key.startswith("srd5.1:feature:"):
+            if key is not None and stable_key_is_kind(key, "feature"):
                 result.append(key)
     return tuple(result)
 
@@ -160,11 +161,11 @@ def _reference_options(rule: dict[str, object], registry: ContentRegistry) -> tu
         return tuple(
             BuilderChoiceOption(
                 option_id=entry.key,
-                label=entry.name,
+                label=_entry_label(entry),
                 kind=BuilderOptionKind.REFERENCE,
                 reference_id=entry.key,
             )
-            for entry in registry.list_kind(kind)
+            for entry in registry.list_kind(kind, source="srd5.1")
         )
 
     raw_options = source.get("options")
@@ -180,10 +181,11 @@ def _reference_options(rule: dict[str, object], registry: ContentRegistry) -> tu
         key = _stable_key(item)
         name = item.get("name")
         if key is not None and isinstance(name, str):
+            target = registry.get_optional(key)
             result.append(
                 BuilderChoiceOption(
                     option_id=key,
-                    label=name,
+                    label=_entry_label(target) if target is not None else name,
                     kind=BuilderOptionKind.REFERENCE,
                     reference_id=key,
                 )
@@ -260,7 +262,7 @@ def build_progression_choices(
             options.append(
                 BuilderChoiceOption(
                     option_id=class_entry.key,
-                    label=class_entry.name,
+                    label=_entry_label(class_entry),
                     kind=BuilderOptionKind.REFERENCE,
                     reference_id=class_entry.key,
                     disabled_reason=disabled_reason,
@@ -283,7 +285,7 @@ def build_progression_choices(
         if saved is None:
             continue
         class_entry = registry.get_optional(saved.class_ref)
-        if class_entry is None or not class_entry.key.startswith("srd5.1:class:"):
+        if class_entry is None or not stable_key_is_kind(class_entry.key, "class"):
             continue
         class_counts[class_entry.key] += 1
         class_level = class_counts[class_entry.key]
@@ -296,7 +298,7 @@ def build_progression_choices(
             subclass_options = tuple(
                 BuilderChoiceOption(
                     option_id=key,
-                    label=registry.get(key).name,
+                    label=_entry_label(registry.get(key)),
                     kind=BuilderOptionKind.REFERENCE,
                     reference_id=key,
                 )
@@ -386,7 +388,7 @@ def validate_progression(
                 )
             )
         class_entry = registry.get_optional(level_choice.class_ref)
-        if class_entry is None or not class_entry.key.startswith("srd5.1:class:"):
+        if class_entry is None or not stable_key_is_kind(class_entry.key, "class"):
             issues.append(
                 BuilderIssue(
                     code="invalid_class_reference",
@@ -451,7 +453,7 @@ def validate_progression(
 
         if level_choice.subclass_ref is not None:
             subclass_entry = registry.get_optional(level_choice.subclass_ref)
-            if subclass_entry is None or not subclass_entry.key.startswith("srd5.1:subclass:"):
+            if subclass_entry is None or not stable_key_is_kind(subclass_entry.key, "subclass"):
                 issues.append(
                     BuilderIssue(
                         code="invalid_subclass_reference",
@@ -553,7 +555,7 @@ def progression_summary(
     result: list[BuilderProgressionNodeSummary] = []
     for index, level_choice in enumerate(draft.draft_payload.level_choices):
         class_entry = registry.get_optional(level_choice.class_ref)
-        if class_entry is None or not class_entry.key.startswith("srd5.1:class:"):
+        if class_entry is None or not stable_key_is_kind(class_entry.key, "class"):
             continue
         class_counts[class_entry.key] += 1
         class_level = class_counts[class_entry.key]
@@ -564,11 +566,16 @@ def progression_summary(
         if level_choice.subclass_ref is not None:
             subclass = registry.get_optional(level_choice.subclass_ref)
             subclass_name = subclass.name if subclass is not None else None
-        class_index = class_entry.key.rsplit(":", 1)[-1]
-        features = list(_level_features(registry, class_index, class_level))
+        features = list(_level_features(registry, class_entry.key, class_level))
         if level_choice.subclass_ref is not None:
-            subclass_index = level_choice.subclass_ref.rsplit(":", 1)[-1]
-            features.extend(_level_features(registry, subclass_index, class_level, subclass=True))
+            features.extend(
+                _level_features(
+                    registry,
+                    level_choice.subclass_ref,
+                    class_level,
+                    subclass=True,
+                )
+            )
         result.append(
             BuilderProgressionNodeSummary(
                 character_level=index + 1,
@@ -599,6 +606,14 @@ def class_summary(nodes: tuple[BuilderProgressionNodeSummary, ...]) -> str | Non
     return " / ".join(f"{names[key]} {counts[key]}" for key in order)
 
 
+def _skill_key_from_proficiency(key: str, registry: ContentRegistry) -> str | None:
+    parsed = parse_stable_key(key)
+    if parsed.kind != "proficiency" or not parsed.index.startswith("skill-"):
+        return None
+    skill_key = stable_key(parsed.source, "skill", parsed.index.removeprefix("skill-"))
+    return skill_key if registry.get_optional(skill_key) is not None else None
+
+
 def _append_reference(
     reference: dict[str, object],
     *,
@@ -607,14 +622,12 @@ def _append_reference(
     registry: ContentRegistry,
 ) -> None:
     key = _stable_key(reference)
-    if key is None or not key.startswith("srd5.1:proficiency:"):
+    if key is None or not stable_key_is_kind(key, "proficiency"):
         return
-    index = key.rsplit(":", 1)[-1]
-    if index.startswith("skill-"):
-        skill_key = f"srd5.1:skill:{index.removeprefix('skill-')}"
-        if registry.get_optional(skill_key) is not None:
-            skills.append(skill_key)
-            return
+    skill_key = _skill_key_from_proficiency(key, registry)
+    if skill_key is not None:
+        skills.append(skill_key)
+        return
     proficiencies.append(key)
 
 
@@ -635,14 +648,12 @@ def compile_progression(
     subclasses: list[SubclassSelection] = []
 
     for grant in grants:
-        if grant.reference_id is None or not grant.reference_id.startswith("srd5.1:proficiency:"):
+        if grant.reference_id is None or not stable_key_is_kind(grant.reference_id, "proficiency"):
             continue
-        index = grant.reference_id.rsplit(":", 1)[-1]
-        if index.startswith("skill-"):
-            skill_key = f"srd5.1:skill:{index.removeprefix('skill-')}"
-            if registry.get_optional(skill_key) is not None:
-                skills.append(skill_key)
-                continue
+        skill_key = _skill_key_from_proficiency(grant.reference_id, registry)
+        if skill_key is not None:
+            skills.append(skill_key)
+            continue
         proficiencies.append(grant.reference_id)
 
     class_counts: Counter[str] = Counter()
@@ -661,9 +672,10 @@ def compile_progression(
                     if not isinstance(reference, dict):
                         continue
                     key = _stable_key(reference)
-                    if key is not None and key.startswith("srd5.1:ability:"):
+                    if key is not None and stable_key_is_kind(key, "ability"):
                         saves.append(key)
-                        save_indexes.add(reference.get("index") if isinstance(reference.get("index"), str) else "")
+                        parsed = parse_stable_key(key)
+                        save_indexes.add(parsed.index)
             raw_proficiencies = class_entry.data.get("proficiencies")
             if isinstance(raw_proficiencies, list):
                 for reference in raw_proficiencies:
@@ -689,11 +701,16 @@ def compile_progression(
                     registry=registry,
                 )
 
-        class_index = class_entry.key.rsplit(":", 1)[-1]
-        features.extend(_level_features(registry, class_index, class_level))
+        features.extend(_level_features(registry, class_entry.key, class_level))
         if level_choice.subclass_ref is not None:
-            subclass_index = level_choice.subclass_ref.rsplit(":", 1)[-1]
-            features.extend(_level_features(registry, subclass_index, class_level, subclass=True))
+            features.extend(
+                _level_features(
+                    registry,
+                    level_choice.subclass_ref,
+                    class_level,
+                    subclass=True,
+                )
+            )
             timing = subclass_selection_level(class_entry, registry)
             if timing == class_level:
                 subclasses.append(
@@ -715,14 +732,12 @@ def compile_progression(
             if option is None or option.reference_id is None:
                 continue
             reference_id = option.reference_id
-            if not reference_id.startswith("srd5.1:proficiency:"):
+            if not stable_key_is_kind(reference_id, "proficiency"):
                 continue
-            proficiency_index = reference_id.rsplit(":", 1)[-1]
-            if proficiency_index.startswith("skill-"):
-                skill_key = f"srd5.1:skill:{proficiency_index.removeprefix('skill-')}"
-                if registry.get_optional(skill_key) is not None:
-                    skills.append(skill_key)
-                    continue
+            skill_key = _skill_key_from_proficiency(reference_id, registry)
+            if skill_key is not None:
+                skills.append(skill_key)
+                continue
             proficiencies.append(reference_id)
 
     return ProgressionCompilation(
