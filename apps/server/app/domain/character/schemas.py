@@ -174,6 +174,7 @@ class CharacterBuild(FrozenModel):
     proficiencies: tuple[StableKey, ...] = ()
     saving_throw_proficiencies: tuple[StableKey, ...] = ()
     skill_choices: tuple[StableKey, ...] = ()
+    language_refs: tuple[StableKey, ...] = ()
     feature_refs: tuple[StableKey, ...] = ()
     feat_refs: tuple[StableKey, ...] = ()
     spellcasting_profiles: tuple[SpellcastingProfile, ...] = ()
@@ -234,6 +235,11 @@ class CharacterBuild(FrozenModel):
     @classmethod
     def skill_refs_are_skills(cls, value: tuple[str, ...]) -> tuple[str, ...]:
         return tuple(require_stable_key(item, kinds={"skill"}) for item in value)
+
+    @field_validator("language_refs")
+    @classmethod
+    def language_refs_are_languages(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        return tuple(require_stable_key(item, kinds={"language"}) for item in value)
 
     @field_validator("feature_refs")
     @classmethod
