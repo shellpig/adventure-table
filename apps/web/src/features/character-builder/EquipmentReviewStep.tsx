@@ -10,6 +10,7 @@ import {
 } from '../../api/characterBuilder'
 import type { StateReconciliationPreview } from '../../api/characterVersions'
 import { optionDisplay, SearchableSelect } from '../../components/SearchableSelect'
+import { sortGrantsByKind } from './grants'
 import { RoleplayProfileEditor } from './RoleplayProfileEditor'
 
 
@@ -295,7 +296,7 @@ export function EquipmentReviewStep({
 
             <div className="summary-grants">
               <h3>Resolved grants</h3>
-              {review.resolved_summary.grants.map((grant, index) => (
+              {sortGrantsByKind(review.resolved_summary.grants).map((grant, index) => (
                 <div key={`${grant.source_ref}:${grant.reference_id ?? grant.label}:${index}`}>
                   <span>{grant.kind.replaceAll('_', ' ')}</span>
                   <strong>{optionDisplay(grant.label).primary}</strong>

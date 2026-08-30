@@ -5,7 +5,7 @@ import {
   type BuilderLevelChoice,
   type BuilderView,
 } from '../../api/characterBuilder'
-import { SearchableSelect } from '../../components/SearchableSelect'
+import { optionDisplay, SearchableSelect } from '../../components/SearchableSelect'
 import './progression.css'
 
 
@@ -67,6 +67,7 @@ function LevelChoiceEditor({
         value={selected[0] ?? ''}
         disabled={disabled}
         options={optionsFor(choice)}
+        secondaryMode="duplicates"
         onChange={(value) => saveSelected(value ? [value] : [])}
       />
     )
@@ -89,7 +90,10 @@ function LevelChoiceEditor({
               saveSelected(selected.filter((_, index) => index !== selectedIndex))
             }
           >
-            {choice.options.find((option) => option.option_id === id)?.label ?? id} ×
+            {(() => {
+              const option = choice.options.find((item) => item.option_id === id)
+              return option ? optionDisplay(option.label).primary : id
+            })()} ×
           </button>
         ))}
       </div>
@@ -97,6 +101,7 @@ function LevelChoiceEditor({
         label="Add selection"
         value=""
         disabled={disabled || !canAdd}
+        secondaryMode="duplicates"
         options={optionsFor(choice).map((option) => {
           const alreadySelected = selected.includes(option.value)
           return {
@@ -239,6 +244,7 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
                     value={current?.class_ref ?? ''}
                     disabled={disabled || !canEdit}
                     options={optionsFor(classChoice)}
+                    secondaryMode="duplicates"
                     onChange={(value) => value && selectClass(level, value)}
                   />
                 ) : null}
@@ -299,6 +305,7 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
                         value={current.subclass_ref ?? ''}
                         disabled={disabled}
                         options={optionsFor(subclassChoice)}
+                        secondaryMode="duplicates"
                         onChange={(value) => saveLevel(level, { ...current, subclass_ref: value || null })}
                       />
                     ) : null}

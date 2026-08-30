@@ -15,6 +15,7 @@ import {
 import { optionDisplay, SearchableSelect } from '../../components/SearchableSelect'
 import { ClassProgressionStep } from './ClassProgressionStep'
 import { EquipmentReviewStep, EquipmentStep } from './EquipmentReviewStep'
+import { sortGrantsByKind } from './grants'
 import { SpellcastingStep } from './SpellcastingStep'
 import './builder.css'
 
@@ -569,12 +570,11 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
 
             <div className="summary-grants">
               <h3>Resolved grants</h3>
-              {view.resolved_summary.grants.slice(0, 12).map((grant, index) => (
+              {sortGrantsByKind(view.resolved_summary.grants).map((grant, index) => (
                 <div key={`${grant.source_ref}:${grant.reference_id ?? grant.label}:${index}`}>
                   <span>{grant.kind.replaceAll('_', ' ')}</span><strong>{optionDisplay(grant.label).primary}</strong>
                 </div>
               ))}
-              {view.resolved_summary.grants.length > 12 ? <small>+ {view.resolved_summary.grants.length - 12} more</small> : null}
             </div>
 
             <div className="summary-validation">
