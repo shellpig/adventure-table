@@ -7,7 +7,7 @@ visible names by exact English-name matches. Runtime never reads the reference
 checkout; it only reads the committed data/srd5.1/locales/zh-TW.json.
 
 Translation priority for names is deliberately strict:
-1. project-owned exact glossary entries;
+1. project-owned StableKey/exact glossary entries;
 2. structural name rules whose ordinal carries meaning;
 3. unambiguous whole-name matches from the pinned Traditional Chinese reference;
 4. reviewed deterministic token composition as the final fallback.
@@ -33,6 +33,16 @@ SPELL_SCROLL_KEY_RE = re.compile(r"^srd5\.1:item:spell-scroll-(\d+)(?:st|nd|rd|t
 MYSTIC_ARCANUM_KEY_RE = re.compile(
     r"^srd5\.1:feature:mystic-arcanum-(\d+)(?:st|nd|rd|th)-level$"
 )
+
+# Canonical English labels are not globally unique. These StableKey-specific
+# translations prevent same-name concepts from overwriting each other in a
+# plain string dictionary (for example race:halfling vs language:halfling).
+PROJECT_EXACT_BY_KEY: dict[str, str] = {
+    "srd5.1:race:halfling": "半身人",
+    "srd5.1:language:halfling": "半身人語",
+    "srd5.1:subclass:draconic": "龍族血脈",
+    "srd5.1:language:draconic": "龍語",
+}
 
 # Conservative characters that are Simplified-Chinese-only for the current
 # D&D presentation vocabulary. Do not include ambiguous forms such as 「里」,
@@ -231,8 +241,14 @@ def build_reviewed_overlay(
         if canonical is None:
             continue
 
+        stable_exact = PROJECT_EXACT_BY_KEY.get(key)
+        if stable_exact is not None:
+            fields["name"] = stable_exact
+            project_exact_name_hits += 1
+            continue
+
         # Project-owned exact terminology always wins over external authoring
-        # references. This keeps the M02 glossary the final terminology SSOT.
+        # references. StableKey-specific collisions were handled above.
         if canonical in base.EXACT:
             project_exact_name_hits += 1
             continue
@@ -288,6 +304,9 @@ def main() -> int:
     parser.add_argument("--strict", action="store_true")
     args = parser.parse_args()
 
+    if args.strict and (args.reference_root is None or not args.reference_root.is_dir()):
+        parser.error("--strict requires an existing --reference-root")
+
     token_overrides: dict[str, str] = {}
     if args.token_overrides:
         raw = _load_json_object(args.token_overrides)
@@ -314,6 +333,9 @@ def main() -> int:
     )
 
     failed = False
+    if args.strict and report["reference_name_count"] == 0:
+        print("REFERENCE no unambiguous Traditional Chinese names were loaded")
+        failed = True
     if report["unknown_count"]:
         for item in report["unknowns"]:
             print(f"UNKNOWN {item['token']!r}: {item['value']} [{item['key']}::{item['field_path']}]")
