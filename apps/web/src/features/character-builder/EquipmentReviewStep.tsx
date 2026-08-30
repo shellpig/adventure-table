@@ -10,6 +10,12 @@ import {
 } from '../../api/characterBuilder'
 import type { StateReconciliationPreview } from '../../api/characterVersions'
 import { optionDisplay, SearchableSelect } from '../../components/SearchableSelect'
+import {
+  builderChoiceLabel,
+  builderChoiceOptionLabel,
+} from '../../i18n/builderChoicePresentation'
+import type { Locale } from '../../i18n/locale'
+import type { UiCopyKey } from '../../i18n/uiCopy'
 import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy, type UiTranslator } from '../../i18n/useUiCopy'
 import { sortGrantsByKind } from './grants'
@@ -30,6 +36,14 @@ type P1GReview = BuilderReviewDTO & {
   reconciliation?: StateReconciliationPreview | null
 }
 
+const GRANT_KIND_KEYS: Record<string, UiCopyKey> = {
+  language: 'builder.grant.language',
+  feature: 'builder.grant.feature',
+  background_feature: 'builder.grant.background_feature',
+  trait: 'builder.grant.trait',
+  proficiency: 'builder.grant.proficiency',
+}
+
 function selectedIds(raw: unknown): string[] {
   if (typeof raw === 'string') return raw ? [raw] : []
   if (Array.isArray(raw)) return raw.filter((value): value is string => typeof value === 'string')
@@ -42,10 +56,14 @@ function selectedIds(raw: unknown): string[] {
   return []
 }
 
-function optionsFor(choice: BuilderChoice, nameFor: ContentNameResolver) {
+function optionsFor(
+  choice: BuilderChoice,
+  nameFor: ContentNameResolver,
+  locale: Locale,
+) {
   return choice.options.map((option) => ({
     value: option.option_id,
-    label: nameFor(option.reference_id, option.label),
+    label: builderChoiceOptionLabel(choice, option, locale, nameFor),
     disabled: Boolean(option.disabled_reason),
     disabledReason: option.disabled_reason ?? undefined,
   }))
@@ -95,11 +113,13 @@ export function EquipmentStep({
   )
   const equipmentSelections =
     view.draft.draft_payload.starting_equipment_choices ?? {}
-  const { nameFor } = useContentPresentations(
-    equipmentChoices.flatMap((choice) =>
-      choice.options.flatMap((option) => (option.reference_id ? [option.reference_id] : [])),
-    ),
+  const equipmentReferences = equipmentChoices.flatMap((choice) =>
+    choice.options.flatMap((option) => [
+      ...(option.reference_id ? [option.reference_id] : []),
+      ...(option.presentation_items ?? []).map((item) => item.reference_id),
+    ]),
   )
+  const { nameFor, locale } = useContentPresentations(equipmentReferences)
 
   const saveChoice = (choiceId: string, next: string[]) => {
     onSave({
@@ -124,14 +144,15 @@ export function EquipmentStep({
           {equipmentChoices.length ? (
             equipmentChoices.map((choice) => {
               const selected = selectedIds(equipmentSelections[choice.choice_id])
+              const choiceLabel = builderChoiceLabel(choice, locale, nameFor)
               if (choice.choose_count === 1) {
                 return (
                   <div className="builder-choice" key={choice.choice_id}>
                     <SearchableSelect
-                      label={choice.label}
+                      label={choiceLabel}
                       value={selected[0] ?? ''}
                       disabled={disabled}
-                      options={optionsFor(choice, nameFor)}
+                      options={optionsFor(choice, nameFor, locale)}
                       secondaryMode="duplicates"
                       onChange={(value) =>
                         saveChoice(choice.choice_id, value ? [value] : [])
@@ -146,14 +167,14 @@ export function EquipmentStep({
                 return {
                   id,
                   label: option
-                    ? nameFor(option.reference_id, option.label)
+                    ? builderChoiceOptionLabel(choice, option, locale, nameFor)
                     : nameFor(id, id),
                 }
               })
               return (
                 <div className="builder-choice" key={choice.choice_id}>
                   <div className="builder-choice__heading">
-                    <strong>{choice.label}</strong>
+                    <strong>{choiceLabel}</strong>
                     <span>
                       {selected.length} / {choice.choose_count}
                     </span>
@@ -179,7 +200,7 @@ export function EquipmentStep({
                     label={t('equipment.add')}
                     value=""
                     disabled={disabled || selected.length >= choice.choose_count}
-                    options={optionsFor(choice, nameFor).map((option) => ({
+                    options={optionsFor(choice, nameFor, locale).map((option) => ({
                       ...option,
                       disabled: option.disabled || selected.includes(option.value),
                       disabledReason: selected.includes(option.value)
@@ -363,7 +384,11 @@ export function EquipmentReviewStep({
               <h3>{t('review.resolvedGrants')}</h3>
               {sortGrantsByKind(review.resolved_summary.grants).map((grant, index) => (
                 <div key={`${grant.source_ref}:${grant.reference_id ?? grant.label}:${index}`}>
-                  <span>{grant.kind.replaceAll('_', ' ')}</span>
+                  <span>
+                    {GRANT_KIND_KEYS[grant.kind]
+                      ? t(GRANT_KIND_KEYS[grant.kind])
+                      : grant.kind}
+                  </span>
                   <strong>
                     {nameFor(grant.reference_id, optionDisplay(grant.label).primary)}
                   </strong>
