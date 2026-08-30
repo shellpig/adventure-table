@@ -1,0 +1,139 @@
+[
+  {
+    "key": "gos:background:fisher",
+    "index": "fisher",
+    "name": "Fisher",
+    "source": "gos",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_GoS.md"},
+    "data": {
+      "index": "fisher",
+      "name": "Fisher",
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-history", "name": "Skill: History"},
+        {"key": "srd5.1:proficiency:skill-survival", "name": "Skill: Survival"}
+      ],
+      "language_options": {"choose": 1, "type": "languages", "desc": "Choose one language", "from": {"option_set_type": "resource_list", "resource_list_url": "/api/2014/languages"}},
+      "starting_equipment": [
+        {"equipment": {"key": "srd5.1:equipment:fishing-tackle", "name": "Fishing tackle"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:net", "name": "Net"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:clothes-travelers", "name": "Clothes, traveler's"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}
+      ],
+      "starting_gold": {"quantity": 10, "unit": "gp"},
+      "starting_equipment_notes": ["Favorite fishing lure or oilskin boots"],
+      "feature": {"name": "Harvest the Water", "desc": ["You are practiced at fishing and can support a modest group when suitable waters contain edible aquatic life; exact availability remains a DM call."]},
+      "optional_roleplay_tables": {
+        "fishing_tale": ["Wrestled a giant lobster", "A catch dragged the boat for miles", "A stolen golden-finned catch", "A ghostly fish only you could see", "A giant clam and an enormous pearl", "A fish that blotted out daylight", "An underwater passage to a terrible place", "A doomed romance with an aquatic being"]
+      },
+      "roleplay_suggestions": {
+        "personality_traits": ["I respect people who earn their living through hard work.", "I become calm when I can see open water."],
+        "ideals": ["Work: steady effort carries people through bad weather.", "Balance: take what you need without exhausting the waters that feed you."],
+        "bonds": ["A particular stretch of water and the people who depend on it matter deeply to me."],
+        "flaws": ["I can become fixated on proving one impossible fishing story true."]
+      }
+    }
+  },
+  {
+    "key": "gos:background:marine",
+    "index": "marine",
+    "name": "Marine",
+    "source": "gos",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_GoS.md"},
+    "data": {
+      "index": "marine",
+      "name": "Marine",
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-athletics", "name": "Skill: Athletics"},
+        {"key": "srd5.1:proficiency:skill-survival", "name": "Skill: Survival"},
+        {"key": "srd5.1:proficiency:land-vehicles", "name": "Land Vehicles"},
+        {"key": "srd5.1:proficiency:water-vehicles", "name": "Water Vehicles"}
+      ],
+      "starting_equipment": [
+        {"equipment": {"key": "srd5.1:equipment:dagger", "name": "Dagger"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:clothes-travelers", "name": "Clothes, traveler's"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}
+      ],
+      "starting_gold": {"quantity": 10, "unit": "gp"},
+      "starting_equipment_notes": ["A fallen comrade's dagger provenance", "Folded flag bearing your ship or unit insignia"],
+      "feature": {"name": "Steady", "desc": ["Your training lets you sustain especially long travel days before forced-march consequences apply, and you are practiced at finding safe places for a vessel to come ashore."]},
+      "optional_roleplay_tables": {
+        "hardship_endured": ["Nearly drowned while hiding from enemies", "Survived months of captivity", "Paid dearly so comrades could escape", "Survived an impossible last stand", "Endured a dangerous stowaway seizure of a ship", "Carried a wounded comrade to safety"]
+      },
+      "roleplay_suggestions": {
+        "personality_traits": ["I stay composed when conditions turn miserable.", "I work best as part of a dependable team."],
+        "ideals": ["Teamwork: victory depends on cooperation and communication.", "Endurance: hardship is something to be met rather than feared."],
+        "bonds": ["I will not abandon the people who served beside me."],
+        "flaws": ["I can treat ordinary problems like military emergencies."]
+      }
+    }
+  },
+  {
+    "key": "gos:background:shipwright",
+    "index": "shipwright",
+    "name": "Shipwright",
+    "source": "gos",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_GoS.md"},
+    "data": {
+      "index": "shipwright",
+      "name": "Shipwright",
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-history", "name": "Skill: History"},
+        {"key": "srd5.1:proficiency:skill-perception", "name": "Skill: Perception"},
+        {"key": "srd5.1:proficiency:carpenters-tools", "name": "Carpenter's Tools"},
+        {"key": "srd5.1:proficiency:water-vehicles", "name": "Water Vehicles"}
+      ],
+      "starting_equipment": [
+        {"equipment": {"key": "srd5.1:equipment:carpenters-tools", "name": "Carpenter's Tools"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:book", "name": "Book"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:clothes-travelers", "name": "Clothes, traveler's"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}
+      ],
+      "starting_gold": {"quantity": 10, "unit": "gp"},
+      "starting_equipment_notes": ["Blank book used for ship plans and notes", "Ink and pen"],
+      "feature": {"name": "I'll Patch It!", "desc": ["With carpenter's tools and suitable materials you can make practical repairs to a water vehicle; the repair amount is structured for later runtime use rather than automated here."]},
+      "feature_metadata": {"repair": {"target": "water_vehicle", "amount": {"type": "proficiency_bonus_multiplier", "multiplier": 5}, "automation": "manual"}},
+      "optional_roleplay_tables": {
+        "life_at_sea": ["Worked in a hard-driving shipyard", "Learned from a master craftsperson", "Repaired vessels under dangerous conditions", "Served aboard ships to understand how they fail", "Became known for an unusual specialty", "Left after a memorable shipbuilding dispute"]
+      },
+      "roleplay_suggestions": {
+        "personality_traits": ["I notice weak joints, warped boards, and bad repairs almost immediately."],
+        "ideals": ["Craft: good work should survive rough water and harder weather."],
+        "bonds": ["A ship or shipyard where I learned my trade still feels like home."],
+        "flaws": ["I have trouble resisting the urge to criticize shoddy workmanship."]
+      }
+    }
+  },
+  {
+    "key": "gos:background:smuggler",
+    "index": "smuggler",
+    "name": "Smuggler",
+    "source": "gos",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"source_document": "docs/暫用規則資訊/背景_GoS.md"},
+    "data": {
+      "index": "smuggler",
+      "name": "Smuggler",
+      "starting_proficiencies": [
+        {"key": "srd5.1:proficiency:skill-athletics", "name": "Skill: Athletics"},
+        {"key": "srd5.1:proficiency:skill-deception", "name": "Skill: Deception"},
+        {"key": "srd5.1:proficiency:water-vehicles", "name": "Water Vehicles"}
+      ],
+      "starting_equipment": [
+        {"equipment": {"key": "srd5.1:equipment:clothes-common", "name": "Clothes, common"}, "quantity": 1},
+        {"equipment": {"key": "srd5.1:equipment:pouch", "name": "Pouch"}, "quantity": 1}
+      ],
+      "starting_gold": {"quantity": 15, "unit": "gp"},
+      "starting_equipment_notes": ["Fancy leather vest or leather boots"],
+      "feature": {"name": "Down Low", "desc": ["You understand common smuggling methods and can usually identify people, routes, or practices associated with covert transport without creating a dedicated smuggling subsystem."]},
+      "roleplay_suggestions": {
+        "personality_traits": ["I always notice exits, patrol routes, and places where cargo could disappear."],
+        "ideals": ["Freedom: borders and tariffs should not decide what ordinary people may trade."],
+        "bonds": ["Someone in a port community once hid me when discovery would have ruined me."],
+        "flaws": ["I assume every rule has a price and every official can be worked around."]
+      }
+    }
+  }
+]
