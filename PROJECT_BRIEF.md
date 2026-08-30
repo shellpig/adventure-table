@@ -1,6 +1,6 @@
 # Adventure Table 專案簡報
 
-本文件供新的 ChatGPT / Claude / Codex Session 或實作者快速了解專案全貌；需要產品細節時再深入 `規格企劃.md`。
+本文件供新的 ChatGPT / Claude / Codex Session 或實作者快速了解專案全貌；需要產品細節時再深入 `規格企劃.md` 與對應 Phase 文件。
 
 **本檔負責：專案概述、當前進度、大 Phase Roadmap、當前 Phase 的 Subphase 進度、下一步與文件索引。**
 
@@ -15,7 +15,7 @@ Adventure Table 是一個**輕量、桌上跑團優先的 D&D 5e 2014 VTT**。
 核心方向：
 
 - 真人 DM / Player 可以正常跑團。
-- 外部 AI 可透過 MCP / Site Tools 正式加入桌內擔任 DM 或 Player。
+- 外部 AI 可透過未來 MCP / Site Tools 正式加入桌內擔任 DM 或 Player。
 - Human 與 AI 使用同一套 Game State / Game Actions。
 - Server 是唯一真實狀態來源。
 - 網站只處理需要共享、同步、計算、保存、權限控制或 AI 接入的資料。
@@ -33,7 +33,9 @@ Built-in Content：**SRD 5.1**
 
 ## 當前進度
 
-目前狀態：**P0 — Character Core + SRD / Rules Foundation 已完成；P1 — Character Builder Complete 已完成規劃與 Subphase 拆分。P1-A — Builder Domain & Draft Foundation、P1-B — Character Creation Basics、P1-C — Class Progression & Multiclass 與 P1-D — ASI, Feat & Structural Choices 已完成實作與驗證；下一步是 P1-E — Spellcasting Progression，尚未開始 P1-E coding。**
+目前狀態：**P0 — Character Core + SRD / Rules Foundation 已完成。P1 — Character Builder Complete 已完成 P1-A～P1-F；網站現在已能從空白 Builder Draft 經 Basic / Origin / Abilities / Class / Spellcasting / Starting Equipment / Review，原子建立正式 Character + immutable Build Version 1 + initial Current State，並直接開啟 Character Sheet。下一個 Subphase 是 P1-G — Level Up & Character Versions，尚未開始。**
+
+> **下一步規則：只有在使用者明確要求開始 P1-G 後，才進 P1-G coding。不得自行提前實作 P1-G / P1-H。**
 
 已完成的產品／規劃工作：
 
@@ -50,78 +52,107 @@ Built-in Content：**SRD 5.1**
 - 全專案規則：**每個 Phase 在 coding 前必須拆成可獨立實作、驗證、commit 的 Subphases；只拆當前 Phase，不提前拆後續 Phase。**
 - 基礎技術棧：React + TypeScript + Vite / Python + FastAPI / PostgreSQL。
 
-P0 已完成：
+---
+
+## P0 已完成
 
 - **P0-A — Project Foundation**：React/TypeScript/Vite、FastAPI、PostgreSQL、SQLAlchemy/Alembic、Docker Compose、pytest/Vitest/Playwright 與 CI baseline。
-- **P0-B — Character-Relevant SRD Foundation**：`data/srd5.1/` normalized content、ContentRegistry、stable keys、schema / cross-reference validation；22 categories、1,944 entries；Monster / Beast 延後 P4-A。
+- **P0-B — Character-Relevant SRD Foundation**：`data/srd5.1/` normalized content、ContentRegistry、stable keys、schema / cross-reference validation；Monster / Beast 延後 P4-A。
 - **P0-C — Character Core & Persistence**：Character identity、immutable Build Version、mutable Current State、`characters` / `character_versions` / `character_states`、Fighter 5 / Wizard 5 deterministic fixture。
 - **P0-D — Character Rules & Backend API**：Ability/PB/Skill/Save/Passive/AC/HP/Spell calculations、Numeric Override、CharacterSheetDTO、Reference / Character / State APIs。
 - **P0-E — Character Sheet & State UI**：三頁 Character Sheet、responsive UI、searchable accessible selectors、HP / Temp HP / Conditions / Prepared / resources / Hit Dice / Inventory state operations。
 - **P0-F — Full P0 Integration & Closeout**：P0 full regression、real backend Playwright、PostgreSQL restart persistence、Prepared / Hit Dice reload、Starting Equipment / live Inventory isolation、人工 smoke。
 
-P1 規劃已完成：
+---
+
+## P1 規劃與共通契約
+
+正式文件：
 
 - `docs/P1/實作規格.md`
 - `docs/P1/開發設計方針.md`
 - `docs/P1/測試指南.md`
-- 三份文件使用完全一致的 P1-A～P1-H 名稱與順序。
+
+三份文件使用完全一致的 P1-A～P1-H 名稱與順序。
+
+P1 共通原則：
+
 - P1 直接延伸 P0 已存在的 `CharacterBuild` / `CharacterState` / immutable JSONB Build Version / Current State / ContentRegistry / Rules Layer，不重新設計第二套 Character core。
-- Builder Draft 與正式 `CharacterBuild` 明確分離；只有 Confirm 才產生正式 Build candidate / Version。
+- Builder Draft 與正式 `CharacterBuild` 明確分離；不完整 Draft 可以保存，正式 Build 不可以是假資料。
 - Ability generation：Standard Array / Point Buy / Manual Input；P1 不提前做正式 Roll System。
 - Lv2+ HP：Fixed Average / Manual Rolled Result；P1 不做正式 `Roll HP`。
 - Starting Equipment 做完整 structured choices；P1 不做 Starting Gold shopping workflow。
-- Level Up Current State reconciliation 已定：保留 damage delta、舊資源消耗不回滿、新 Hit Die 可用、Prepared 合法者保留、Inventory / Conditions 等 live state延續。
-- Character JSON Import / Export 留 P7；Builder MCP / AI transport留後續對應 Phase。P1 只建立可被未來 Human UI / AI Tool共用的 backend domain service。
+- Spell access identity 與 live prepared state / resource usage 分離。
+- Level Up Current State reconciliation 已定：保留 damage delta、舊資源消耗不回滿、新 Hit Die 可用、Prepared 合法者保留、Inventory / Conditions 等 live state 延續。
+- Character JSON Import / Export 留 P7；Builder MCP / AI transport 留後續對應 Phase。
+- Human UI 與未來 AI Tool 應共用同一 server-authoritative Builder domain，不在 React 複製規則引擎。
 
-P1-A 已完成：
+---
 
-- 新增獨立 `character_builder` domain，不把不完整資料塞進正式 `CharacterBuild`。
-- 新增 `character_build_drafts` persistence 與 Alembic migration；Create Draft 不會先建立正式 Character。
-- Draft 支援 Save / Reload / Cancel，並以 revision optimistic guard 防止 stale update 靜默覆蓋新資料。
-- 建立 strict Draft / Choice / Validation DTO；validation issue 使用 machine-readable `code` / `severity` / `path` / `message`。
-- Choice ID deterministic，reload 或修改無關欄位不會讓既有 selection 失聯。
-- 建立純 server-side Builder compiler / view extension point；P1-A 不假裝已具備 P1-B 之後的完整 D&D resolver，因此尚未開放 Confirm。
-- 新增 `/api/character-builder/drafts` create / get / patch / validate / delete lifecycle API。
-- 新增 typed frontend Builder API 與最小 feature shell；完整 Character Workshop / Wizard 留 P1-B。
-- 新增 P1-A schema / persistence / API / revision / choice-stability 測試，並保持 P0 full regression。
+## P1-A～P1-F 已完成內容
 
-P1-B 已完成：
+### P1-A — Builder Domain & Draft Foundation
 
-- 新增 `/characters` Character Workshop，可查看 Existing Characters、建立新角色 Draft、Resume Draft 與進入既有 Character Sheet。
-- 完成 Create Character Wizard 的 Basic / Origin / Abilities 三個 P1-B 步驟；Class progression 與 Review 依邊界維持 locked。
-- Race / Subrace / Background / Alignment 與 starting choices 由 server-generated choices 驅動；前端以 searchable selectors 操作，不硬編 eligible option 清單。
-- `subrace_ref` 明確保存在 formal `CharacterBuild` schema，並驗證 Subrace 必須屬於所選 Race。
-- Ability generation 支援 Standard Array / Point Buy / Manual Input；規則常數由 versioned server rules data 提供，Point Buy budget / cost 不硬編在 React。
-- Race / Subrace / Background 的 ability bonus、languages、proficiencies、traits / feature 與已選 structured choices 由 server resolver 彙整成 live summary。
-- Manual ability values超出一般 3–18 仍可保存，但會標記 Non-standard；Numeric Override 與 base / resolved / effective ability summary 保持分離。
-- Builder Draft 仍可 Save / Reload / Cancel，但 P1-B 不產生正式 Build candidate，也不開放 Confirm；Class progression 由 P1-C 接手。
-- Docker server image 已包含 `data/rules`，確保 container / CI 環境與本機使用同一份 authoritative Builder rules。
-- P1-B regression 已通過 backend pytest、Alembic、frontend build、Vitest、Docker full stack、real-browser Playwright 與 PostgreSQL restart persistence，並保持 P0 regression。
+- 建立獨立 `character_builder` domain；不把不完整資料塞進正式 `CharacterBuild`。
+- 新增 `character_build_drafts` persistence / Alembic migration。
+- Draft 支援 Save / Reload / Cancel 與 revision optimistic guard。
+- 建立 strict Draft / Choice / Validation DTO，validation issue 使用 machine-readable `code` / `severity` / `path` / `message`。
+- Choice ID deterministic。
+- 新增 `/api/character-builder/drafts` lifecycle API 與 typed frontend API。
 
-P1-C 已完成：
+### P1-B — Character Creation Basics
 
-- 新增 ordered progression engine，Builder Draft 以逐級 acquisition event 保存 Character Level，Character Level 與各 Class Level 分離 derive。
-- Starting class grants 與 multiclass grants 明確區分；後續 multiclass 進入同一職業不會重複取得 starting-class-only grants。
-- Multiclass prerequisites 由 data-driven 規則與 server structural validation enforce，支援 alternative prerequisite groups，並以 effective ability scores 判定可用性；UI disabled 之外 backend 仍會拒絕繞過 UI 的非法 Draft。
-- Subclass timing 依各 class 的 class-level timing 驗證；過早選擇或到期未選皆為 structural / blocking error。
-- HP progression 支援 Fixed Average 與 Manual Rolled Result，逐級與 class hit die 1:1 對齊；multiclass 新職業非 Character Lv1 時不取 first-level max。
-- 修改較早 level 的 class 時，dependent 選擇會重新解析，過期 selection 由 live progression choices 取代，不留 hidden stale state。
-- 新增 level-by-level progression rail UI 並啟用 Class Progression 步驟；progression 型別輸出給前端，前端不硬編 eligible class 清單。
-- 新增 `progression` / `multiclass` domain 模組與 P1-C progression 測試，並保持既有 P0 / P1 regression。
+- 新增 `/characters` Character Workshop，可查看 Existing Characters、建立新 Draft、Resume Draft 與開啟 Character Sheet。
+- 完成 Basic / Origin / Abilities。
+- Race / Subrace / Background / Alignment 與 starting choices 由 server-generated choices 驅動。
+- Ability generation 支援 Standard Array / Point Buy / Manual Input。
+- Base / permanent grants / resolved / effective ability 與 Numeric Override 保持分離。
+- Searchable accessible selectors 延續 P0 UI pattern。
 
-P1-D 已完成：
+### P1-C — Class Progression & Multiclass
 
-- 新增 generic structural choice resolver，承載 choose-N proficiency、language、tool / weapon / armor、fighting style、nested feature choice 與 ASI-or-Feat branch，不為個別 class hardcode React form。
-- ASI eligibility 依 Class Level progression 判定；`ability_score_bonuses` 以累計值解讀，既有非零 cumulative value 不會讓後續每級重複產生 ASI。
-- 修正並正規化已知的 SRD ASI source 異常（如 Rogue），branch id 以 occurrence 為範圍，重複的合法選擇彼此不互相污染。
-- ASI 永久能力變化只編譯進 Build 一次；Numeric Override 可影響 numeric prerequisite，但不能繞過 subclass timing、ASI occurrence count、selection count 等 structural rule。
-- Feat prerequisite 為 structural validation，不合法時 disabled / blocking 並顯示原因。
-- Level rail 呈現 ASI / Feat 與 structural choices，structural choice metadata 輸出給前端；blocking choice 未完成時不可 Confirm。
-- 新增 `structural` domain 模組與 P1-D structural / progression 測試，並以 real-browser Playwright 覆蓋 ASI 與 feat 在 progression 中的行為。
+- 建立 ordered level-by-level progression engine，Character Level 與 Class Level 分離 derive。
+- Starting class grants 與 multiclass grants 分離。
+- Multiclass prerequisites 由 server structural validation enforce，使用 effective ability scores。
+- Subclass timing 依 Class Level 驗證。
+- HP progression 支援 First Level / Fixed Average / Manual Rolled Result。
+- 新增 level-by-level rail UI。
 
-**下一步：只有在使用者明確要求開始 P1-E 實作後，才進 P1-E — Spellcasting Progression。不要自行開始 P1-E coding。**
+### P1-D — ASI, Feat & Structural Choices
 
-P1 的具體 DB / API / module 契約只住在 `docs/P1/開發設計方針.md`；本 Brief 不重複維護。
+- 新增 generic structural choice resolver，支援 choose-N proficiency、language、tool / weapon / armor、fighting style、nested feature choice 與 ASI-or-Feat branch。
+- ASI eligibility 依 Class Level progression 判定；永久能力變化只編譯進 Build 一次。
+- Feat prerequisite 為 server structural validation。
+- Numeric Override 可影響 numeric prerequisite，但不能繞過 structural rule。
+- Level rail 呈現 ASI / Feat 與 structural choices。
+
+### P1-E — Spellcasting Progression
+
+- 建立 source-aware spellcasting profiles，Build 保存來源身份與 eligibility，不把 daily prepared state 塞回 immutable Build access。
+- 支援 Known、Spellbook、Prepared caster 與 subclass Always Prepared source。
+- Wizard Spellbook 與 Current State prepared list 分離；Prepared caster 不把整張 class spell list materialize 進 Build。
+- 同一 spell 可保留不同 source identity。
+- 支援 normal spell slots、full / half caster multiclass contribution 與 Pact Magic 獨立 resource pool。
+- Build spell resource capacity 與 live `used + remaining == capacity` invariant 分離。
+- Character Builder Step 05 已完成 Spellcasting access / preparation / resource summary UI。
+
+### P1-F — Equipment, Review & Character Creation
+
+- 新增 SRD-driven Starting Equipment resolver：automatic grants、A/B branch、nested choices、equipment category 與 quantity。
+- Starting Equipment 只從 starting class + background 規則取得；**Starting Gold 不建立購物流程。**
+- Starting equipment Build entry ID deterministic；live Inventory 只在 Create Confirm 初始化一次，之後不會從 Build 重建覆蓋玩家修改。
+- `starting_equipment_choices` 與 generic `choice_selections` namespace 分離；跨 namespace 誤值不會被當成有效 Build choice。
+- 過期的 nested equipment branch selection 不參與 Build，只提示 warning；目前有效 branch 的非法／未完成 choice 仍是 blocking。
+- 新增 server-derived Review DTO，Review 同時顯示 immutable Build candidate 與 initial Current State preview。
+- initial Current State 包含：full HP、0 Temp HP、empty Conditions、Hit Dice、Prepared Spells、Spell Resource counters 與 Starting Inventory。
+- 新增 Review / Confirm API；warning / non-standard 可 Confirm，blocking error 不可 Confirm。
+- Confirm 以單一 DB transaction 建立 `Character + immutable Version 1 + Current State + draft confirmation marker`；任一步失敗整筆 rollback。
+- Confirm 使用實際 reviewed Draft revision，避免 concurrent Draft edit 讓舊 Build 配新 revision 落庫。
+- repeated / double-submit Confirm idempotent，回傳同一 Character，不建立第二隻。
+- Character Version metadata baseline 已加入 `version_kind`（`legacy` / `create`）、nullable lineage fields 與 `change_note`，供 P1-G 延伸。
+- Character Builder Step 06 已完成 Equipment / Review / Confirm；成功後直接進既有 Character Sheet。
+- P1-F regression 覆蓋 equipment deterministic resolution、nested category、quantities、Starting Gold exclusion、Review、initial State、double-submit、Version 1 metadata、inventory isolation 與 forced transaction rollback。
+- real-browser closeout 覆蓋從 Character Workshop 建立 Lv1 角色、Starting Equipment、Review、Confirm 到 Character Sheet 的完整 Create flow。
 
 ---
 
@@ -162,7 +193,7 @@ P1 已拆 Subphase；**P2～P8 仍維持大 Phase，不提前拆。**
 
 ## P1 Subphase 進度
 
-> **子階段一律一列一個，不得合併。** P1 三份文件已拆分後，本表就是 P1 進度的單一事實來源。
+> **子階段一律一列一個，不得合併。** 本表是 P1 進度的單一事實來源。
 
 | Subphase | 狀態 | 重點 |
 |---|---|---|
@@ -170,12 +201,14 @@ P1 已拆 Subphase；**P2～P8 仍維持大 Phase，不提前拆。**
 | **P1-B — Character Creation Basics** | ✅ | Character Workshop、Wizard basics、Race/Subrace、Background、Standard Array / Point Buy / Manual、starting skills/proficiencies |
 | **P1-C — Class Progression & Multiclass** | ✅ | Level-by-level rail、starting class、multiclass prerequisites / grants、Subclass timing、HP progression |
 | **P1-D — ASI, Feat & Structural Choices** | ✅ | ASI / Feat timing、prerequisites、generic structural choice resolver、Numeric Override boundary |
-| **P1-E — Spellcasting Progression** | ⬜ | Known / Spellbook / Prepared / Always Prepared、multiclass slots、Pact Magic、source profiles |
-| **P1-F — Equipment, Review & Character Creation** | ⬜ | Starting Equipment nested choices、Review、atomic Create Confirm、Version 1 + initial State |
+| **P1-E — Spellcasting Progression** | ✅ | Known / Spellbook / Prepared / Always Prepared、multiclass slots、Pact Magic、source profiles |
+| **P1-F — Equipment, Review & Character Creation** | ✅ | Starting Equipment nested choices、Review、atomic Create Confirm、Version 1 + initial State |
 | **P1-G — Level Up & Character Versions** | ⬜ | Level Up Draft、immutable Version N+1、Version History、stale base guard、State reconciliation、correction/build edit |
 | **P1-H — Full P1 Integration & Closeout** | ⬜ | P1 full regression、Create / high-level / multiclass / caster / Level Up E2E、P0 regression、closeout |
 
-P1-D 已完成實作與驗收；P1-E 是下一個可實作 Subphase，但未獲使用者明確要求前不開始 P1-E coding。
+**P1-G 是下一個可實作 Subphase；未獲使用者明確要求前不得開始 P1-G coding。**
+
+P1 的具體 DB / API / module 契約只住在 `docs/P1/開發設計方針.md`；本 Brief 不重複維護細節。
 
 ---
 
@@ -207,13 +240,15 @@ docs/P0/測試指南.md
 
 P1 把「角色資料能存在」提升成「網站能依 D&D 5e 2014 規則建立與成長角色」。
 
+目前 P1-A～P1-F 已完成 Create Character 主線；尚待 P1-G / P1-H 補上 Level Up / Version workflow 與整體 P1 closeout。
+
 核心驗證案例包括：
 
 - 從空白建立合法 Lv1 角色。
 - 直接建立高等角色，但保存完整逐級 progression。
 - 建立 Fighter 5 / Wizard 5 等 Multiclass 角色，不直接改底層資料。
 - 正確處理 Subclass、ASI / Feat、Spell progression、Starting Equipment。
-- Existing Character 可 Level Up 並產生新 immutable Build Version，Current State依規則 reconciliation。
+- Existing Character 可 Level Up 並產生新 immutable Build Version，Current State 依規則 reconciliation（P1-G）。
 
 P1 正式文件：
 
