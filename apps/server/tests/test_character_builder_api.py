@@ -153,3 +153,71 @@ def test_character_builder_api_rejects_malformed_and_disabled_modes() -> None:
     assert disabled.json()["error"]["code"] == "builder_mode_not_enabled"
 
     engine.dispose()
+
+
+def test_character_builder_roleplay_profile_partial_patches_merge() -> None:
+    client, engine = _seed_builder_api()
+
+    created = client.post(
+        "/api/character-builder/drafts",
+        json={
+            "draft_payload": {
+                "basic": {"name": "Roleplay Hero"},
+                "target_level": 1,
+                "roleplay_profile": {
+                    "appearance": "Old appearance",
+                    "biography": "Old biography",
+                    "personality_traits": ["Patient"],
+                    "ideals": ["Freedom"],
+                    "bonds": ["My hometown"],
+                    "flaws": ["Too curious"],
+                },
+            }
+        },
+    )
+    assert created.status_code == 201
+    view = created.json()
+    draft_id = view["draft"]["id"]
+
+    basic_patch = client.patch(
+        f"/api/character-builder/drafts/{draft_id}",
+        json={
+            "expected_revision": 1,
+            "draft_payload": {
+                "roleplay_profile": {
+                    "appearance": "New appearance",
+                    "biography": "New biography",
+                }
+            },
+        },
+    )
+    assert basic_patch.status_code == 200
+    profile = basic_patch.json()["draft"]["draft_payload"]["roleplay_profile"]
+    assert profile == {
+        "appearance": "New appearance",
+        "biography": "New biography",
+        "personality_traits": ["Patient"],
+        "ideals": ["Freedom"],
+        "bonds": ["My hometown"],
+        "flaws": ["Too curious"],
+    }
+
+    suggestion_patch = client.patch(
+        f"/api/character-builder/drafts/{draft_id}",
+        json={
+            "expected_revision": 2,
+            "draft_payload": {
+                "roleplay_profile": {"personality_traits": ["Always optimistic"]}
+            },
+        },
+    )
+    assert suggestion_patch.status_code == 200
+    profile = suggestion_patch.json()["draft"]["draft_payload"]["roleplay_profile"]
+    assert profile["appearance"] == "New appearance"
+    assert profile["biography"] == "New biography"
+    assert profile["personality_traits"] == ["Always optimistic"]
+    assert profile["ideals"] == ["Freedom"]
+    assert profile["bonds"] == ["My hometown"]
+    assert profile["flaws"] == ["Too curious"]
+
+    engine.dispose()
