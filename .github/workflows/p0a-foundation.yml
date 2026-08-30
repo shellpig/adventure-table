@@ -70,26 +70,29 @@ jobs:
           build_payload = build.model_dump(mode="json")
           state_payload = state.model_dump(mode="json")
 
+          # SQLite reflects sa.Uuid columns as CHAR(32), so this deliberately
+          # writes the same hex representation SQLAlchemy's Uuid bind processor
+          # would have stored from the original P0 models.
           with engine.begin() as connection:
               connection.execute(
                   characters.insert().values(
-                      id=P0_FIXTURE_ID,
+                      id=P0_FIXTURE_ID.hex,
                       name=P0_FIXTURE_NAME,
                       ruleset=build.ruleset,
-                      current_version_id=version_id,
+                      current_version_id=version_id.hex,
                   )
               )
               connection.execute(
                   versions.insert().values(
-                      id=version_id,
-                      character_id=P0_FIXTURE_ID,
+                      id=version_id.hex,
+                      character_id=P0_FIXTURE_ID.hex,
                       version_no=1,
                       build_payload=build_payload,
                   )
               )
               connection.execute(
                   states.insert().values(
-                      character_id=P0_FIXTURE_ID,
+                      character_id=P0_FIXTURE_ID.hex,
                       state_payload=state_payload,
                   )
               )
@@ -131,7 +134,7 @@ jobs:
                       versions.c.version_kind,
                       versions.c.parent_version_id,
                       versions.c.superseded_by_version_id,
-                  ).where(versions.c.character_id == P0_FIXTURE_ID)
+                  ).where(versions.c.character_id == P0_FIXTURE_ID.hex)
               ).mappings().one()
           assert row["version_kind"] == "legacy"
           assert row["parent_version_id"] is None
