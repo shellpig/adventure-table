@@ -13,6 +13,11 @@ import {
   type BuilderView,
 } from '../../api/characterBuilder'
 import { optionDisplay, SearchableSelect } from '../../components/SearchableSelect'
+import {
+  builderChoiceLabel,
+  builderChoiceOptionLabel,
+} from '../../i18n/builderChoicePresentation'
+import type { Locale } from '../../i18n/locale'
 import type { UiCopyKey } from '../../i18n/uiCopy'
 import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy } from '../../i18n/useUiCopy'
@@ -30,6 +35,7 @@ type ChoiceEditorProps = {
   disabled: boolean
   onSave: (payload: BuilderDraftPayload) => void
   nameFor: ContentNameResolver
+  locale: Locale
 }
 
 const DIRECT_OPTION_SOURCES = new Set([
@@ -75,10 +81,14 @@ const EMPTY_SCORES: BuilderAbilityScores = {
   charisma: 0,
 }
 
-function selectionOptions(choice: BuilderChoice, nameFor: ContentNameResolver) {
+function selectionOptions(
+  choice: BuilderChoice,
+  nameFor: ContentNameResolver,
+  locale: Locale,
+) {
   return choice.options.map((option) => ({
     value: option.option_id,
-    label: nameFor(option.reference_id, option.label),
+    label: builderChoiceOptionLabel(choice, option, locale, nameFor),
     disabled: Boolean(option.disabled_reason),
     disabledReason: option.disabled_reason ?? undefined,
   }))
@@ -99,14 +109,15 @@ function localizedClassSummary(view: BuilderView, nameFor: ContentNameResolver):
     .join(' / ')
 }
 
-function ChoiceEditor({ choice, view, disabled, onSave, nameFor }: ChoiceEditorProps) {
+function ChoiceEditor({ choice, view, disabled, onSave, nameFor, locale }: ChoiceEditorProps) {
   const { t } = useUiCopy()
+  const label = builderChoiceLabel(choice, locale, nameFor)
 
   if (choice.disabled_reason) {
     return (
       <div className="builder-choice is-disabled">
         <div>
-          <strong>{choice.label}</strong>
+          <strong>{label}</strong>
           <small>{choice.disabled_reason}</small>
         </div>
         <span className="builder-lock">{t('shared.locked')}</span>
@@ -133,10 +144,10 @@ function ChoiceEditor({ choice, view, disabled, onSave, nameFor }: ChoiceEditorP
     return (
       <div className="builder-choice">
         <SearchableSelect
-          label={choice.label}
+          label={label}
           value={selected[0] ?? ''}
           disabled={disabled}
-          options={selectionOptions(choice, nameFor)}
+          options={selectionOptions(choice, nameFor, locale)}
           secondaryMode="duplicates"
           onChange={(value) => saveSelected(value ? [value] : [])}
         />
@@ -148,14 +159,16 @@ function ChoiceEditor({ choice, view, disabled, onSave, nameFor }: ChoiceEditorP
     const option = choice.options.find((candidate) => candidate.option_id === id)
     return {
       id,
-      label: option ? nameFor(option.reference_id, option.label) : nameFor(id, id),
+      label: option
+        ? builderChoiceOptionLabel(choice, option, locale, nameFor)
+        : nameFor(id, id),
     }
   })
   const canAdd = selected.length < choice.choose_count
   return (
     <div className="builder-choice">
       <div className="builder-choice__heading">
-        <strong>{choice.label}</strong>
+        <strong>{label}</strong>
         <span>{selected.length} / {choice.choose_count}</span>
       </div>
       <div className="builder-choice__chips">
@@ -174,7 +187,7 @@ function ChoiceEditor({ choice, view, disabled, onSave, nameFor }: ChoiceEditorP
         label={t('shared.addSelection')}
         value=""
         disabled={disabled || !canAdd}
-        options={selectionOptions(choice, nameFor).map((option) => ({
+        options={selectionOptions(choice, nameFor, locale).map((option) => ({
           ...option,
           disabled: option.disabled || selected.includes(option.value),
           disabledReason: selected.includes(option.value) ? t('shared.alreadySelected') : option.disabledReason,
@@ -203,9 +216,13 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
   const view = draftQuery.data
   const contentReferences = useMemo(
     () => [
-      ...(view?.choices.flatMap((choice) =>
-        choice.options.flatMap((option) => (option.reference_id ? [option.reference_id] : [])),
-      ) ?? []),
+      ...(view?.choices.flatMap((choice) => [
+        ...(choice.source_ref ? [choice.source_ref] : []),
+        ...choice.options.flatMap((option) => [
+          ...(option.reference_id ? [option.reference_id] : []),
+          ...(option.presentation_items ?? []).map((item) => item.reference_id),
+        ]),
+      ]) ?? []),
       ...(view?.resolved_summary.progression.flatMap((node) => [
         node.class_ref,
         ...(node.subclass_ref ? [node.subclass_ref] : []),
@@ -229,7 +246,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
     ],
     [view],
   )
-  const { nameFor } = useContentPresentations(contentReferences)
+  const { nameFor, locale } = useContentPresentations(contentReferences)
 
   const save = useMutation({
     mutationFn: (payload: BuilderDraftPayload) => {
@@ -455,16 +472,16 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   <p>{t('builder.origin.description')}</p>
                 </div>
                 {raceChoice ? (
-                  <SearchableSelect label={t('builder.origin.race')} value={currentRace} disabled={saving} options={selectionOptions(raceChoice, nameFor)} secondaryMode="duplicates" onChange={(value) => patchReference('race_selection', value, true)} />
+                  <SearchableSelect label={t('builder.origin.race')} value={currentRace} disabled={saving} options={selectionOptions(raceChoice, nameFor, locale)} secondaryMode="duplicates" onChange={(value) => patchReference('race_selection', value, true)} />
                 ) : null}
                 {subraceChoice ? (
-                  <SearchableSelect label={t('builder.origin.subrace')} value={currentSubrace} disabled={saving} options={selectionOptions(subraceChoice, nameFor)} secondaryMode="duplicates" onChange={(value) => patchReference('subrace_selection', value, true)} />
+                  <SearchableSelect label={t('builder.origin.subrace')} value={currentSubrace} disabled={saving} options={selectionOptions(subraceChoice, nameFor, locale)} secondaryMode="duplicates" onChange={(value) => patchReference('subrace_selection', value, true)} />
                 ) : null}
                 {backgroundChoice ? (
-                  <SearchableSelect label={t('builder.origin.background')} value={currentBackground} disabled={saving} options={selectionOptions(backgroundChoice, nameFor)} secondaryMode="duplicates" onChange={(value) => patchReference('background_selection', value, true)} />
+                  <SearchableSelect label={t('builder.origin.background')} value={currentBackground} disabled={saving} options={selectionOptions(backgroundChoice, nameFor, locale)} secondaryMode="duplicates" onChange={(value) => patchReference('background_selection', value, true)} />
                 ) : null}
                 {alignmentChoice ? (
-                  <SearchableSelect label={t('builder.origin.alignment')} value={currentAlignment} disabled={saving} options={selectionOptions(alignmentChoice, nameFor)} secondaryMode="duplicates" onChange={(value) => patchReference('alignment_selection', value)} />
+                  <SearchableSelect label={t('builder.origin.alignment')} value={currentAlignment} disabled={saving} options={selectionOptions(alignmentChoice, nameFor, locale)} secondaryMode="duplicates" onChange={(value) => patchReference('alignment_selection', value)} />
                 ) : null}
                 <div className="builder-grant-preview">
                   <span>{t('builder.origin.resolvedGrants')}</span><strong>{view.resolved_summary.grants.length}</strong><small>{t('builder.origin.grantsHint')}</small>
@@ -578,6 +595,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                         disabled={saving}
                         onSave={(payload) => save.mutate(payload)}
                         nameFor={nameFor}
+                        locale={locale}
                       />
                     ))
                   ) : (
