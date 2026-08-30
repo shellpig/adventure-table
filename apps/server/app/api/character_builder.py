@@ -63,56 +63,6 @@ def _already_confirmed(exc: BuilderDraftAlreadyConfirmedError) -> APIError:
     return APIError(409, "builder_draft_already_confirmed", str(exc))
 
 
-def _confirmed_replay_result(
-    service: CharacterBuilderService,
-    draft_id: UUID,
-) -> BuilderConfirmResult | None:
-    """Return the original Confirm result, not the character's later head.
-
-    The draft persists both confirmed_character_id and confirmed_version_id.
-    Replaying Confirm must preserve that version identity even if a later Level
-    Up/Edit has advanced the character, otherwise callers are told this old
-    request produced a version that it never created.
-    """
-
-    confirmed_character_id, confirmed_version_id = service.repository.confirmed_result(
-        draft_id
-    )
-    if confirmed_character_id is None:
-        return None
-
-    character_repository = service._require_character_repository()
-    if confirmed_version_id is None:
-        # Compatibility for any pre-versioning confirmed draft that lacks the
-        # later confirmed_version_id column value.
-        character = character_repository.load_character(confirmed_character_id)
-        return BuilderConfirmResult(
-            character_id=character.id,
-            current_version_id=character.current_version_id,
-            version_no=character.version_no,
-            character_path=f"/characters/{character.id}",
-        )
-
-    confirmed_version = next(
-        (
-            version
-            for version in character_repository.list_versions(confirmed_character_id)
-            if version.id == confirmed_version_id
-        ),
-        None,
-    )
-    if confirmed_version is None:
-        raise CharacterVersionNotFoundError(str(confirmed_version_id))
-    return BuilderConfirmResult(
-        character_id=confirmed_character_id,
-        # Historical field name retained for API compatibility. On replay this
-        # is the exact version created by this Confirm, even if no longer live.
-        current_version_id=confirmed_version_id,
-        version_no=confirmed_version.version_no,
-        character_path=f"/characters/{confirmed_character_id}",
-    )
-
-
 @router.get("/rules/ability-generation", response_model=AbilityGenerationRulesDTO)
 def get_ability_generation_rules() -> AbilityGenerationRulesDTO:
     rules = load_ability_generation_rules()
@@ -231,9 +181,6 @@ def confirm_builder_draft(
     service: CharacterBuilderService = Depends(get_character_builder_service),
 ) -> BuilderConfirmResult:
     try:
-        replay = _confirmed_replay_result(service, draft_id)
-        if replay is not None:
-            return replay
         return service.confirm_draft(draft_id)
     except BuilderDraftNotFoundError as exc:
         raise _not_found(exc) from exc
@@ -243,8 +190,6 @@ def confirm_builder_draft(
         raise APIError(409, "stale_build_version", str(exc)) from exc
     except StateReconciliationBlockedError as exc:
         raise APIError(422, "state_reconciliation_blocked", str(exc)) from exc
-    except CharacterVersionNotFoundError as exc:
-        raise APIError(500, "confirmed_version_missing", str(exc)) from exc
     except BuilderCannotConfirmError as exc:
         blocking = [
             issue.message
