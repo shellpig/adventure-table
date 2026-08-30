@@ -41,14 +41,14 @@ test('opens the three-page P0 character sheet', async ({ page }) => {
   await expect(page.getByTestId('hit-die-d10')).toHaveText('5/5')
   await expect(page.getByTestId('hit-die-d6')).toHaveText('5/5')
 
-  await page.getByRole('tab', { name: /法術/ }).click()
+  await page.getByRole('tab', { name: /Spells/ }).click()
   await expect(page.getByText('Magic Missile', { exact: true })).toBeVisible()
   await expect(page.getByText('Spellbook', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Prepared', { exact: true }).first()).toBeVisible()
 
-  await page.getByRole('tab', { name: /物品欄/ }).click()
+  await page.getByRole('tab', { name: /Inventory/ }).click()
   await expect(page.getByText('Potion of Healing', { exact: true })).toBeVisible()
-  await expect(page.getByRole('combobox', { name: '物品名稱' })).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Item name' })).toBeVisible()
 })
 
 test('captures P0-F manual smoke views', async ({ page }, testInfo) => {
@@ -59,14 +59,14 @@ test('captures P0-F manual smoke views', async ({ page }, testInfo) => {
     fullPage: true,
   })
 
-  await page.getByRole('tab', { name: /法術/ }).click()
+  await page.getByRole('tab', { name: /Spells/ }).click()
   await expect(page.getByText('Magic Missile', { exact: true })).toBeVisible()
   await page.screenshot({
     path: testInfo.outputPath('p0-f-spells.png'),
     fullPage: true,
   })
 
-  await page.getByRole('tab', { name: /物品欄/ }).click()
+  await page.getByRole('tab', { name: /Inventory/ }).click()
   await expect(page.getByText('Potion of Healing', { exact: true })).toBeVisible()
   await page.screenshot({
     path: testInfo.outputPath('p0-f-inventory.png'),
@@ -90,10 +90,10 @@ test('persists temporary HP and a searchable condition selection', async ({ page
   await page.getByTestId('temporary-hp-input-save').click()
   await expect(page.getByTestId('header-temp-hp')).toHaveText('8')
 
-  const conditionBox = page.getByRole('combobox', { name: '新增狀態' })
+  const conditionBox = page.getByRole('combobox', { name: 'Add condition' })
   await conditionBox.fill('Poisoned')
   await page.getByRole('option', { name: 'Poisoned' }).click()
-  await page.getByRole('button', { name: '加入 Condition' }).click()
+  await page.getByRole('button', { name: 'Add Condition' }).click()
   await expect(page.getByRole('button', { name: /Poisoned/ })).toBeVisible()
   await page.reload()
   await expect(page.getByTestId('header-temp-hp')).toHaveText('8')
@@ -102,29 +102,29 @@ test('persists temporary HP and a searchable condition selection', async ({ page
 
 test('persists spell-slot resource usage', async ({ page }) => {
   await page.goto(CHARACTER_URL)
-  await page.getByRole('tab', { name: /法術/ }).click()
+  await page.getByRole('tab', { name: /Spells/ }).click()
   await expect(page.getByTestId('spell-slot-1-counter')).toHaveText('3 / 4')
   await page.getByTestId('spell-slot-1-use').click()
   await expect(page.getByTestId('spell-slot-1-counter')).toHaveText('2 / 4')
   await page.reload()
-  await page.getByRole('tab', { name: /法術/ }).click()
+  await page.getByRole('tab', { name: /Spells/ }).click()
   await expect(page.getByTestId('spell-slot-1-counter')).toHaveText('2 / 4')
 })
 
 test('persists prepared spell selection', async ({ page }) => {
   await page.goto(CHARACTER_URL)
-  await page.getByRole('tab', { name: /法術/ }).click()
+  await page.getByRole('tab', { name: /Spells/ }).click()
 
   const magicMissileCard = page
     .getByRole('heading', { name: 'Magic Missile' })
     .locator('xpath=ancestor::article')
 
   await expect(magicMissileCard.getByText('Prepared', { exact: true })).toBeVisible()
-  await magicMissileCard.getByRole('button', { name: '取消準備' }).click()
+  await magicMissileCard.getByRole('button', { name: 'Unprepare' }).click()
   await expect(magicMissileCard.getByText('Unprepared', { exact: true })).toBeVisible()
 
   await page.reload()
-  await page.getByRole('tab', { name: /法術/ }).click()
+  await page.getByRole('tab', { name: /Spells/ }).click()
   await expect(
     page
       .getByRole('heading', { name: 'Magic Missile' })
@@ -136,7 +136,7 @@ test('persists prepared spell selection', async ({ page }) => {
 test('persists available hit dice', async ({ page }) => {
   await page.goto(CHARACTER_URL)
   await expect(page.getByTestId('hit-die-d10')).toHaveText('5/5')
-  await page.getByRole('button', { name: 'd10 使用一顆' }).click()
+  await page.getByRole('button', { name: 'd10: use one' }).click()
   await expect(page.getByTestId('hit-die-d10')).toHaveText('4/5')
 
   await page.reload()
@@ -146,24 +146,24 @@ test('persists available hit dice', async ({ page }) => {
 
 test('persists live inventory quantity', async ({ page }) => {
   await page.goto(CHARACTER_URL)
-  await page.getByRole('tab', { name: /物品欄/ }).click()
+  await page.getByRole('tab', { name: /Inventory/ }).click()
   await expect(page.getByTestId('inventory-inventory:healing-potion-quantity')).toHaveText('2')
   await page.getByTestId('inventory-inventory:healing-potion-decrement').click()
   await expect(page.getByTestId('inventory-inventory:healing-potion-quantity')).toHaveText('1')
   await page.reload()
-  await page.getByRole('tab', { name: /物品欄/ }).click()
+  await page.getByRole('tab', { name: /Inventory/ }).click()
   await expect(page.getByTestId('inventory-inventory:healing-potion-quantity')).toHaveText('1')
 })
 
 test('unequipping Shield persists and uses authoritative AC', async ({ page }) => {
   await page.goto(CHARACTER_URL)
   await expect(page.getByTestId('header-ac')).toHaveText('18')
-  await page.getByRole('tab', { name: /物品欄/ }).click()
+  await page.getByRole('tab', { name: /Inventory/ }).click()
   await page.getByTestId('inventory-inventory:shield-equip').click()
   await expect(page.getByTestId('header-ac')).toHaveText('16')
   await page.reload()
   await expect(page.getByTestId('header-ac')).toHaveText('16')
-  await page.getByRole('tab', { name: /物品欄/ }).click()
+  await page.getByRole('tab', { name: /Inventory/ }).click()
   await expect(page.getByTestId('inventory-inventory:shield-equip')).toHaveText('Equip')
 })
 
@@ -172,5 +172,5 @@ test('empty optional roleplay data does not block the sheet', async ({ page }) =
   const roleplay = page.getByText('Roleplay / Biography', { exact: true })
   await expect(roleplay).toBeVisible()
   await roleplay.click()
-  await expect(page.getByText('尚未填寫角色扮演資料。')).toBeVisible()
+  await expect(page.getByText('No roleplay information has been entered yet.')).toBeVisible()
 })
