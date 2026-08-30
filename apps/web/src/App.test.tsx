@@ -6,11 +6,11 @@ import App, { P0_FIXTURE_ID, builderDraftIdFromPath, characterIdFromPath } from 
 const DRAFT_ID = '11111111-1111-4111-8111-111111111111'
 
 describe('Adventure Table routes', () => {
-  it('renders the P1-B landing page and workshop entry', () => {
+  it('renders the P1-F landing page and workshop entry', () => {
     const html = renderToStaticMarkup(<App />)
 
     expect(html).toContain('Adventure Table')
-    expect(html).toContain('P1-B')
+    expect(html).toContain('P1-F')
     expect(html).toContain('/characters')
     expect(html).toContain(`/characters/${P0_FIXTURE_ID}`)
   })
