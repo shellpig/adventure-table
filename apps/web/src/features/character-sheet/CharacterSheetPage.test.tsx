@@ -5,7 +5,7 @@ import type { CharacterSheetDTO, ContentEntry } from '../../api/character'
 import { CharacterSheetView } from './CharacterSheetPage'
 
 const sheet: CharacterSheetDTO = {
-  character_id: '00000000-0000-4000-8000-0000000000e0', name: 'P0 Human Fighter 5 / Wizard 5', ruleset: 'dnd5e-2014', version_no: 1, total_level: 10,
+  character_id: '00000000-0000-4000-8000-0000000000e0', current_version_id: '00000000-0000-4000-8000-0000000000e1', name: 'P0 Human Fighter 5 / Wizard 5', ruleset: 'dnd5e-2014', version_no: 1, total_level: 10,
   classes: [
     { class_ref: 'srd5.1:class:fighter', name: 'Fighter', level: 5 },
     { class_ref: 'srd5.1:class:wizard', name: 'Wizard', level: 5 },
