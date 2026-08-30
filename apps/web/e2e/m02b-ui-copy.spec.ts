@@ -39,6 +39,9 @@ test('M02-B localizes every Builder step without resetting in-progress UI state'
   await expect(page.getByRole('heading', { name: '先設定角色基本資料' })).toBeVisible()
   await expect(page.getByRole('button', { name: '儲存基本資料' })).toBeVisible()
 
+  await page.getByRole('button', { name: '儲存基本資料' }).click()
+  await expect(page.getByText('已儲存至伺服器')).toBeVisible()
+
   await page.getByRole('button', { name: /出身/ }).click()
   await expect(page.getByRole('heading', { name: '選擇出身' })).toBeVisible()
 
@@ -84,7 +87,7 @@ test('M02-B localizes Character Sheet, shared controls and Version History in pl
   )
 
   await page.getByRole('tab', { name: /法術/ }).click()
-  await expect(page.getByRole('heading', { name: '法術' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '法術', exact: true })).toBeVisible()
   await expect(page.getByText('已準備', { exact: true }).first()).toBeVisible()
 
   await page.getByRole('tab', { name: /物品欄/ }).click()

@@ -95,7 +95,7 @@ test('P1-F resolves starting equipment, reviews and creates Version 1 from the b
   await expect(page.getByText('Build v1')).toBeVisible()
   await expect(page.getByTestId('header-hp')).toHaveText('14')
 
-  await page.getByRole('tab', { name: /物品欄/ }).click()
+  await page.getByRole('tab', { name: /Inventory/ }).click()
   await expect(page.getByText('Greataxe', { exact: true })).toBeVisible()
   await expect(page.getByText('Handaxe', { exact: true })).toBeVisible()
   await expect(page.getByText('Javelin', { exact: true })).toBeVisible()

@@ -93,7 +93,7 @@ test('persists temporary HP and a searchable condition selection', async ({ page
   const conditionBox = page.getByRole('combobox', { name: 'Add condition' })
   await conditionBox.fill('Poisoned')
   await page.getByRole('option', { name: 'Poisoned' }).click()
-  await page.getByRole('button', { name: 'Add Condition' }).click()
+  await page.getByRole('button', { name: 'Add Condition', exact: true }).click()
   await expect(page.getByRole('button', { name: /Poisoned/ })).toBeVisible()
   await page.reload()
   await expect(page.getByTestId('header-temp-hp')).toHaveText('8')
