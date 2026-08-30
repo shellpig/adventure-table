@@ -10,9 +10,9 @@ async function expectDraftSaved(page: Page) {
   await expect(page.getByText('Saved on server')).toBeVisible()
 }
 
-// Click the option whose label matches exactly. Typing and pressing ArrowDown
-// moves the active item off the first row, so it only lands on the intended
-// option while the query happens to filter down to a single match.
+// Click the option whose label matches exactly. When M01-B introduces the same
+// display name from another content pack, preserve this older P1 regression as
+// an SRD baseline by choosing the SRD row explicitly.
 async function chooseOption(page: Page, input: Locator, value: string) {
   await expectDraftSaved(page)
   await expect(input).toBeEnabled()
@@ -21,7 +21,14 @@ async function chooseOption(page: Page, input: Locator, value: string) {
   const listboxId = await input.getAttribute('aria-controls')
   if (!listboxId) throw new Error(`Combobox for "${value}" has no aria-controls listbox`)
   const listbox = page.locator(`[id="${listboxId}"]`)
-  const option = listbox.getByRole('option').filter({ has: page.getByText(value, { exact: true }) })
+  let option = listbox.getByRole('option').filter({ has: page.getByText(value, { exact: true }) })
+
+  if ((await option.count()) > 1) {
+    const srdOption = option.filter({
+      has: page.getByText('System Reference Document 5.1', { exact: true }),
+    })
+    if ((await srdOption.count()) === 1) option = srdOption
+  }
 
   await expect(option).toHaveCount(1)
   await option.click()

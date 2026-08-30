@@ -1,0 +1,91 @@
+{
+  "source_document": "docs/暫用規則資訊/背景_PHB.md",
+  "table_keys": {"p":"personality_traits","i":"ideals","b":"bonds","f":"flaws"},
+  "tables": {
+    "acolyte": {
+      "p": ["Often recalls a revered hero of the faith.","Seeks common ground even between enemies.","Reads signs and omens into everyday events.","Maintains an unusually steady optimism.","Frequently answers with scripture or sacred sayings.","Has strong views about how other faiths should be treated.","Enjoys comfort and refined company more than expected.","Has little practical experience outside religious life."],
+      "i": ["Tradition: preserve old rites and customs.","Charity: help those in need despite the cost.","Change: faith should transform the world.","Power: rise to influence within the religion.","Faith: trust divine guidance and conviction.","Aspiration: prove worth through faithful deeds."],
+      "b": ["Would risk everything to recover a lost sacred relic.","Intends to confront a corrupt religious authority.","Owes a life debt to the mentor who offered shelter.","Ultimately serves ordinary people.","Will go very far to protect the religious institution served.","Guards a sacred teaching that enemies want destroyed."],
+      "f": ["Judges others and self too harshly.","Trusts religious leaders too readily.","Devotion makes false converts easy to believe.","Becomes stubborn when doctrine is involved.","Expects the worst from strangers.","Fixates on chosen goals and neglects everything else."]
+    },
+    "charlatan": {
+      "p": ["Falls in and out of romance quickly.","Jokes even when seriousness is called for.","Uses flattery as a favorite tool.","Loves wagers and risky opportunities.","Lies reflexively even without need.","Prefers sarcasm and cutting remarks.","Adapts symbols and stories to suit the audience.","Immediately notices unattended valuables."],
+      "i": ["Independence: no one defines who I must be.","Fairness: never prey on those who have nothing.","Generosity: share some gains with people in need.","Creativity: never run exactly the same con twice.","Friendship: loyal people matter more than money.","Aspiration: become someone impressive."],
+      "b": ["A dangerous enemy must be kept away from loved ones.","An old mentor shaped everything I know.","Somewhere there is family who barely knows me.","A birthright or inheritance was stolen from me.","Someone powerful destroyed a person I loved.","I ruined someone undeserving and still seek to make amends."],
+      "f": ["Charm and beauty easily distract me.","Lives beyond means and is usually in debt.","Believes no one is clever enough to fool me.","Money tempts me into foolish risks.","Cannot resist deceiving people far more powerful.","When everything collapses, self-preservation comes first."]
+    },
+    "criminal": {
+      "p": ["Always keeps a backup plan.","Stays calm while others lose control.","Quickly notes exits, valuables, and weak points.","Would rather gain a friend than an enemy.","Finds respectable people especially hard to trust.","Ignores the odds when an opportunity appears.","Being told something is impossible makes it irresistible.","Even small insults can provoke anger."],
+      "i": ["Honor: do not betray others who follow the same code.","Freedom: break chains and those who impose them.","Generosity: take from plenty and help those without.","Greed: profit matters more than rules.","Loyalty: friends matter more than abstract principles.","Redemption: people can still choose to become better."],
+      "b": ["Repays a serious debt to an old benefactor.","Illegal earnings support people who depend on me.","Something precious was taken and must be recovered.","Wants to be remembered as the greatest in the trade.","Committed a terrible crime and seeks atonement.","A loved one died because of my choices."],
+      "f": ["Valuable objects immediately trigger thoughts of theft.","Profit often wins when friendship conflicts with it.","Careful plans are easily abandoned in the moment.","Has a noticeable tell when lying.","Runs when a situation becomes bad enough.","Can ignore innocent suffering when confession would be costly."]
+    },
+    "entertainer": {
+      "p": ["Connects almost any situation to a story.","Collects and spreads rumors in every new place.","Is a hopeless romantic.","Tries to defuse tension in any room.","Appreciates an elegant insult even when targeted.","Suffers when not the center of attention.","Pursues perfection in the craft.","Changes moods and opinions as quickly as a performance."],
+      "i": ["Beauty: art can improve the world.","Tradition: old stories preserve who people are.","Creativity: the world needs bold new ideas.","Greed: money and fame are the real rewards.","People: the audience's joy matters most.","Honesty: art should reveal something genuine."],
+      "b": ["A cherished artistic tool recalls someone loved.","Someone stole something central to the craft.","Will pay a high price to become famous.","Models behavior after a legendary hero or performer.","Must prove superiority over a hated rival.","Would do almost anything for the old troupe."],
+      "f": ["Takes reckless chances for fame.","Loses judgment around beautiful or charismatic people.","A scandal prevents returning home.","Insulted someone powerful and may do it again.","Cannot hide true feelings well.","Even friends question reliability."]
+    },
+    "folk-hero": {
+      "p": ["Judges people by deeds rather than promises.","Always tries to help someone in trouble.","Keeps going once a course is chosen.","Cares deeply about fair solutions.","Projects confidence and encourages it in others.","Prefers action to extended debate.","Misuses impressive words to sound educated.","Becomes impatient with long missions."],
+      "i": ["Respect: ordinary people deserve dignity.","Fairness: the same law should bind everyone.","Freedom: tyrants must not crush the people.","Might: strength can justify taking what is deserved.","Sincerity: do not pretend to be someone else.","Destiny: a particular path is meant for me."],
+      "b": ["Was separated from family and hopes to reunite.","Loves and will defend the home land.","Opposes bullies after being humiliated by one.","Old tools are reminders of humble origins.","Protects those unable to protect themselves.","Still misses the person from home who did not come along."],
+      "f": ["A ruler from the past still wants me captured.","Belief in destiny hides personal weaknesses.","Hometown acquaintances know a shameful secret.","City temptations are especially hard to resist.","Sometimes imagines becoming a better ruler than the tyrants opposed.","Has difficulty trusting allies."]
+    },
+    "guild-artisan": {
+      "p": ["Wants worthwhile tasks done exceptionally well.","Is proud of the craft and dismissive of poor taste.","Constantly asks how things are made and work.","Collects useful sayings for every occasion.","Has little patience for lazy or dishonest workers.","Can talk endlessly about the profession.","Bargains hard and hates wasting money.","Is shocked when people do not know the reputation."],
+      "i": ["Community: strengthen and protect shared society.","Generosity: use skill to improve more than one's own life.","Freedom: people should choose their own path.","Greed: wealth is the point of the work.","Loyalty: people I care about outrank abstract causes.","Aspiration: become the best in the trade."],
+      "b": ["The workshop where the craft was learned is precious.","A great work should be taken from an unworthy owner to a worthy one.","The guild created many opportunities and is owed a debt.","Seeks wealth to win someone's affection or respect.","Plans to return and prove mastery to the guild.","Will confront whoever destroyed the workshop or livelihood."],
+      "f": ["Might do almost anything for a rare material or object.","Quickly suspects others of cheating.","Hides a serious wrongdoing involving guild property or money.","Is never satisfied with current possessions.","Would sacrifice too much for title or status.","Is intensely jealous of more skilled artisans."]
+    },
+    "hermit": {
+      "p": ["Uses gestures more comfortably than conversation.","Rarely loses calm even during frightening events.","Quotes the wisdom of an old teacher or order.","Feels deep sympathy for suffering people.","Ignores etiquette and common social expectations.","Sees events as pieces of a larger pattern.","Gets so absorbed in thought that surroundings disappear.","Is building a grand philosophy and loves explaining it."],
+      "i": ["Greater Good: gifts should benefit everyone.","Logic: emotion must not obscure truth.","Free Thought: curiosity drives progress.","Power: solitude can open paths to extraordinary strength.","Live and Let Live: meddling often creates trouble.","Self-Knowledge: understanding oneself leads to wisdom."],
+      "b": ["The retreat, order, or its members matter most.","Withdrew to escape people who may still be searching.","Still seeks the enlightenment that began the seclusion.","Entered isolation because of impossible love.","A discovery could transform the world if revealed.","Solitude exposed a terrible threat that must be stopped."],
+      "f": ["Overindulges in society's pleasures after returning.","Carries a dark violent impulse discipline never erased.","Holds rigid philosophical views.","Values winning arguments over relationships.","Takes reckless risks for lost knowledge.","Keeps too many secrets."]
+    },
+    "noble": {
+      "p": ["Uses gracious praise to make people feel important.","Wants common people to remember generosity.","Carefully displays proper manners and breeding.","Works hard to present well and follow fashion.","Dislikes dirty work and undignified danger.","Does not believe noble blood makes a person better.","Rarely restores favor once it is lost.","Responds to serious insult with overwhelming vindictiveness."],
+      "i": ["Respect: rank differs but dignity should not.","Responsibility: hierarchy creates obligations both ways.","Independence: succeed without family protection.","Power: enough influence means answering to no one.","Family: blood and family duty come first.","Noble Obligation: privilege requires protecting dependents."],
+      "b": ["Will face almost any challenge for family approval.","Will pay dearly to preserve an important family alliance.","No treasure matters more than family members.","Loves someone from a family the house despises.","Loyalty to sovereign or liege is extremely strong.","Wants ordinary people to see a champion."],
+      "f": ["Secretly believes lower-ranked people are inferior.","Hides a disgraceful secret that could ruin the family.","Hears insults and threats in harmless remarks.","Romantic temptation repeatedly defeats judgment.","Acts as though the world naturally revolves around me.","Behavior too often embarrasses the family."]
+    },
+    "outlander": {
+      "p": ["Wanderlust keeps pulling toward the next horizon.","Protects friends with almost parental care.","Takes pride in extreme endurance.","Looks to nature for lessons about ordinary problems.","Has little patience for luxury or elaborate manners.","Absentmindedly picks up and examines unfamiliar objects.","Feels more comfortable around animals than people.","Civilized customs can feel completely foreign."],
+      "i": ["Change: life moves in cycles and people must adapt.","Greater Good: community welfare is everyone's responsibility.","Honor: my conduct reflects on my people.","Might: the strong determine who rules.","Nature: the living world matters more than civilization.","Glory: courageous deeds must earn a lasting name."],
+      "b": ["Family, clan, or tribe remains most important.","Damage to the homeland feels personal.","Will take revenge on those who despoiled home.","Will preserve the name of a vanishing people.","Recurring visions warn of a coming disaster.","Feels responsible for teaching the next generation."],
+      "f": ["Overindulges in drink.","Thinks excessive caution prevents real living.","Remembers every insult and nurses grudges.","Struggles to trust unfamiliar cultures.","Uses violence too readily.","Has little sympathy for those who refuse to help themselves."]
+    },
+    "sage": {
+      "p": ["Uses complicated vocabulary to sound learned.","Boasts about how widely read I am.","Patiently explains things to less knowledgeable people.","A good mystery can distract from almost anything.","Hears every side before forming conclusions.","Can be painfully condescending.","Is awkward in many social situations.","Suspects other scholars of stealing discoveries."],
+      "i": ["Knowledge: understanding brings power and improvement.","Beauty: elegant ideas can lead toward truth.","Logic: emotion should not override reasoning.","No Limits: inquiry should not be bound by convention.","Power: knowledge can be used to dominate.","Self-Improvement: learning should make the learner better."],
+      "b": ["Feels responsible for protecting students.","Guards an old text containing dangerous secrets.","Is devoted to a library, university, archive, or monastery.","Life's work is a major study of one field.","Has spent years pursuing one unresolved answer.","Paid a terrible price for knowledge and wants back what was lost."],
+      "f": ["New information easily distracts me.","Studies dangerous things when wiser people flee.","Can value ancient secrets above whole communities.","Overlooks simple answers in favor of complicated ones.","Speaks without enough tact.","Under pressure, has trouble keeping secrets."]
+    },
+    "sailor": {
+      "p": ["Friends know they can depend on me.","Works hard and celebrates hard afterward.","Loves new ports, strong drink, and new people.","Exaggerates details to improve a story.","Treats a friendly tavern brawl as local culture.","Rarely turns down a harmless wager.","Uses language that shocks polite company.","Likes work done well, especially by someone else."],
+      "i": ["Respect: captain and crew must respect each other.","Fairness: shared work deserves shared reward.","Freedom: the sea means choosing one's own course.","Conquest: other ships are prizes for the strong.","Crew: shipmates matter more than distant causes.","Aspiration: someday command a vessel of my own."],
+      "b": ["Loyalty to a trusted captain comes first.","A beloved ship feels more permanent than any crew.","Will never forget the first vessel served on.","Someone in a port could almost lure me from the sea.","Was cheated out of a rightful share and wants it back.","Raiders destroyed people I cared about and deserve revenge."],
+      "f": ["Obeys orders even when they seem wrong.","Says almost anything to avoid extra work.","Challenges to courage trigger reckless behavior.","Once drinking starts, stopping is difficult.","Pockets unattended coins and trinkets.","Pride can lead to ruinous decisions."]
+    },
+    "soldier": {
+      "p": ["Is consistently polite and respectful.","War memories return vividly and unwanted.","After too many losses, making new friends is hard.","Has a military story for nearly every danger.","Faces frightening enemies without showing much fear.","Enjoys testing strength and breaking things.","Has a coarse sense of humor.","Attacks problems directly and prefers simple plans."],
+      "i": ["Greater Good: accept danger so others do not have to.","Duty: do what must be done and respect legitimate authority.","Independence: blind obedience enables tyranny.","Might: conflict proves strength decides outcomes.","Peace: no ideal justifies endless killing.","Nation: homeland, city, and people matter deeply."],
+      "b": ["Would still risk life for old comrades.","Someone saved my life and I never abandon friends now.","Honor is central to my identity.","Will never forget the defeat or enemy that shattered the unit.","Those who fought beside me deserve lifelong loyalty.","Fights for people who cannot fight for themselves."],
+      "f": ["An enemy from the war still terrifies me.","Looks down on untested or poor fighters.","Hides a disastrous wartime mistake at any cost.","Hatred of an old enemy overwhelms reason.","Obeys rules even when they cause needless suffering.","Finds admitting error nearly impossible."]
+    },
+    "urchin": {
+      "p": ["Hides food scraps and tiny valuables in pockets.","Asks questions constantly.","Likes squeezing into places where others cannot follow.","Sleeps while clutching belongings close.","Has terrible table manners.","Suspects kindness hides another motive.","Avoids bathing whenever possible.","Says plainly what others only imply."],
+      "i": ["Respect: wealth should not determine dignity.","Community: survival depends on sticking together.","Change: those at the bottom can rise.","Retribution: the wealthy should understand desperation.","People: help those who have helped me.","Aspiration: prove I deserve a better life."],
+      "b": ["This city is home and must be defended.","Supports people who protect other children from the same suffering.","Owes survival to a street mentor.","Owes a compassionate benefactor an impossible debt.","Escaped poverty by stealing from someone powerful and remains wanted.","Cannot bear seeing others suffer as I once did."],
+      "f": ["Disappears when badly outnumbered.","Money can tempt me into almost anything.","Never fully trusts anyone else.","Prefers unfair advantage to honorable combat.","Can justify theft when the need feels greater.","Blames careless owners for failing to guard what is stolen."]
+    }
+  },
+  "variant_table_sources": {
+    "spy": "criminal",
+    "gladiator": "entertainer",
+    "guild-merchant": "guild-artisan",
+    "knight": "noble",
+    "pirate": "sailor"
+  }
+}

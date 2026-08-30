@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 
+from app.content.identity import reference_to_stable_key
 from app.content.registry import ContentNotFoundError, ContentRegistry
 from app.domain.character.schemas import CharacterBuild, CharacterState
 from app.domain.rules.hit_points import calculate_max_hp
@@ -46,10 +47,10 @@ def _validate_numeric_overrides(build: CharacterBuild, registry: ContentRegistry
         if key.startswith("skill_modifier:"):
             target = key.removeprefix("skill_modifier:")
             try:
-                entry = registry.get(target) if target.startswith("srd5.1:") else registry.resolve("skill", target)
+                entry = registry.get(target) if ":" in target else registry.resolve("skill", target)
             except ContentNotFoundError as exc:
                 raise CharacterValidationError(f"unknown skill override target: {target}") from exc
-            if not entry.key.startswith("srd5.1:skill:"):
+            if not entry.key.split(":", 2)[1] == "skill":
                 raise CharacterValidationError(f"invalid skill override target: {target}")
             continue
         if key.startswith("spell_save_dc:"):
@@ -74,6 +75,7 @@ def validate_build_references(build: CharacterBuild, registry: ContentRegistry) 
     refs.extend(build.proficiencies)
     refs.extend(build.saving_throw_proficiencies)
     refs.extend(build.skill_choices)
+    refs.extend(build.language_refs)
     refs.extend(build.feature_refs)
     refs.extend(build.feat_refs)
     refs.extend(profile.source_key for profile in build.spellcasting_profiles)
@@ -88,8 +90,15 @@ def validate_build_references(build: CharacterBuild, registry: ContentRegistry) 
     if build.subrace_ref is not None:
         subrace = registry.get(build.subrace_ref)
         parent = subrace.data.get("race")
-        parent_index = parent.get("index") if isinstance(parent, dict) else None
-        if not isinstance(parent_index, str) or build.race_ref != f"srd5.1:race:{parent_index}":
+        try:
+            parent_ref = (
+                reference_to_stable_key(parent, kinds={"race"})
+                if isinstance(parent, dict)
+                else None
+            )
+        except ValueError:
+            parent_ref = None
+        if parent_ref != build.race_ref:
             raise CharacterValidationError(
                 f"subrace {build.subrace_ref} does not belong to race {build.race_ref}"
             )
@@ -115,7 +124,6 @@ def _validate_prepared_spells(
 ) -> None:
     access_by_id = {entry.entry_id: entry for entry in build.spell_access_entries}
 
-    # P0 compatibility path: Wizard fixtures persisted explicit spellbook ids.
     for entry_id in state.prepared_spell_entry_ids:
         access = access_by_id.get(entry_id)
         if access is None:

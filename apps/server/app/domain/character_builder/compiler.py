@@ -19,6 +19,7 @@ from app.domain.character_builder.choices import build_foundation_choices
 from app.domain.character_builder.creation import BuilderEquipmentSummary
 from app.domain.character_builder.equipment import EquipmentCompilation, compile_starting_equipment
 from app.domain.character_builder.multiclass import multiclass_option_failure_reason
+from app.domain.character_builder.origin import compile_origin
 from app.domain.character_builder.progression import (
     build_progression_choices,
     class_summary,
@@ -41,6 +42,7 @@ from app.domain.character_builder.structural import (
     StructuralCompilation,
     build_structural_choices,
     compile_structural_selections,
+    feat_failure_reason,
     validate_structural_choice_integrity,
 )
 from app.domain.character_builder.validation import make_validation_result, validate_foundation_draft
@@ -122,6 +124,27 @@ def _roleplay_profile(draft: BuilderDraft) -> RoleplayProfile:
         if key in raw
     }
     return RoleplayProfile.model_validate(allowed)
+
+
+def _effective_origin_choices(
+    choices: tuple[BuilderChoice, ...],
+    registry: ContentRegistry,
+    effective_abilities: dict[str, int] | None,
+) -> tuple[BuilderChoice, ...]:
+    result: list[BuilderChoice] = []
+    for choice in choices:
+        if choice.option_source != "content:race-feat":
+            result.append(choice)
+            continue
+        options = []
+        for option in choice.options:
+            feat = registry.get_optional(option.reference_id or "")
+            reason = None
+            if feat is not None and stable_key_is_kind(feat.key, "feat"):
+                reason = feat_failure_reason(feat, effective_abilities)
+            options.append(option.model_copy(update={"disabled_reason": reason}))
+        result.append(choice.model_copy(update={"options": tuple(options)}))
+    return tuple(result)
 
 
 def _effective_progression_choices(
@@ -207,7 +230,22 @@ def compile_builder_draft(
         for choice in build_foundation_choices(draft, registry)
         if choice.option_source != "content:class"
     )
-    foundation_preview = resolve_creation_summary(draft, registry, raw_foundation_choices)
+    initial_foundation_preview = resolve_creation_summary(
+        draft, registry, raw_foundation_choices
+    )
+    raw_foundation_choices = _effective_origin_choices(
+        raw_foundation_choices,
+        registry,
+        _effective_abilities(initial_foundation_preview),
+    )
+    foundation_preview = resolve_creation_summary(
+        draft, registry, raw_foundation_choices
+    )
+    origin = compile_origin(
+        grants=foundation_preview.grants,
+        target_level=draft.draft_payload.target_level,
+        registry=registry,
+    )
 
     structural_data_issue: BuilderIssue | None = None
     try:
@@ -257,12 +295,17 @@ def compile_builder_draft(
         for choice in progression_choices
         if choice.option_source == "content:class-proficiency"
     )
-    validation_choices = foundation_choices + generic_progression_choices + structural_choices
+    validation_choices = (
+        foundation_choices + generic_progression_choices + structural_choices
+    )
     foundation_issues = [
         issue
         for issue in validate_foundation_draft(draft, registry, validation_choices)
         if issue.code != "incomplete_level_progression"
     ]
+    foundation_issues.extend(
+        validate_structural_choice_integrity(draft, foundation_choices)
+    )
     for choice_id in sorted(misplaced_equipment_choice_ids):
         foundation_issues.append(
             BuilderIssue(
@@ -277,12 +320,19 @@ def compile_builder_draft(
         )
     if structural_data_issue is not None:
         foundation_issues.append(structural_data_issue)
-    foundation_issues.extend(validate_structural_choice_integrity(draft, structural_choices))
+    foundation_issues.extend(
+        validate_structural_choice_integrity(draft, structural_choices)
+    )
+    foundation_issues.extend(origin.issues)
 
     base_choices = foundation_choices + progression_choices + structural_choices
     resolved_summary = resolve_creation_summary(draft, registry, base_choices)
-    structural = compile_structural_selections(draft, registry, structural_choices)
-    resolved_summary = _apply_structural_ability_bonuses(resolved_summary, structural, draft)
+    structural = compile_structural_selections(
+        draft, registry, structural_choices
+    )
+    resolved_summary = _apply_structural_ability_bonuses(
+        resolved_summary, structural, draft
+    )
 
     progression_issues = list(
         validate_progression(
@@ -313,7 +363,11 @@ def compile_builder_draft(
         draft,
         registry,
         effective_abilities=_effective_abilities(resolved_summary),
-        feature_refs=tuple(dict.fromkeys((*automatic_features, *structural.feature_refs))),
+        feature_refs=tuple(
+            dict.fromkeys(
+                (*automatic_features, *structural.feature_refs, *origin.feature_refs)
+            )
+        ),
     )
     issues.extend(spellcasting.issues)
     resolved_summary = resolved_summary.model_copy(
@@ -323,7 +377,9 @@ def compile_builder_draft(
         }
     )
 
-    candidate_issues = tuple((*foundation_issues, *progression_issues, *spellcasting.issues))
+    candidate_issues = tuple(
+        (*foundation_issues, *progression_issues, *spellcasting.issues)
+    )
     if draft.mode is not BuilderMode.CREATE and base_build is not None:
         equipment = _preserved_starting_equipment(base_build, registry)
     else:
@@ -405,18 +461,39 @@ def compile_builder_draft(
                 subclasses=compiled.subclasses,
                 ability_scores=abilities,
                 proficiencies=tuple(
-                    dict.fromkeys((*compiled.proficiencies, *structural.proficiencies))
+                    dict.fromkeys(
+                        (*compiled.proficiencies, *structural.proficiencies)
+                    )
                 ),
                 saving_throw_proficiencies=compiled.saving_throw_proficiencies,
                 skill_choices=tuple(
-                    dict.fromkeys((*compiled.skill_choices, *structural.skill_choices))
+                    dict.fromkeys(
+                        (*compiled.skill_choices, *structural.skill_choices)
+                    )
                 ),
+                language_refs=origin.language_refs,
                 feature_refs=tuple(
-                    dict.fromkeys((*compiled.feature_refs, *structural.feature_refs))
+                    dict.fromkeys(
+                        (
+                            *compiled.feature_refs,
+                            *structural.feature_refs,
+                            *origin.feature_refs,
+                        )
+                    )
                 ),
-                feat_refs=structural.feat_refs,
+                feat_refs=tuple(
+                    dict.fromkeys((*structural.feat_refs, *origin.feat_refs))
+                ),
                 spellcasting_profiles=build_profiles,
-                spell_access_entries=spellcasting.spell_access_entries,
+                spell_access_entries=tuple(
+                    {
+                        entry.entry_id: entry
+                        for entry in (
+                            *spellcasting.spell_access_entries,
+                            *origin.spell_access_entries,
+                        )
+                    }.values()
+                ),
                 spell_resource_pools=build_pools,
                 hp_progression=compiled.hp_progression,
                 starting_equipment=equipment.starting_equipment,

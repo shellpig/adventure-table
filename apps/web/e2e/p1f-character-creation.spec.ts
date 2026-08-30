@@ -13,7 +13,17 @@ async function chooseOption(page: Page, input: Locator, value: string) {
   const listboxId = await input.getAttribute('aria-controls')
   if (!listboxId) throw new Error(`Combobox for "${value}" has no aria-controls listbox`)
   const listbox = page.locator(`[id="${listboxId}"]`)
-  const option = listbox.getByRole('option').filter({ has: page.getByText(value, { exact: true }) })
+  let option = listbox.getByRole('option').filter({ has: page.getByText(value, { exact: true }) })
+
+  // M01-B intentionally allows same-name entries from multiple content packs.
+  // These older P1 regressions are SRD baselines, so prefer the SRD row when
+  // the primary display name alone is ambiguous.
+  if ((await option.count()) > 1) {
+    const srdOption = option.filter({
+      has: page.getByText('System Reference Document 5.1', { exact: true }),
+    })
+    if ((await srdOption.count()) === 1) option = srdOption
+  }
 
   await expect(option).toHaveCount(1)
   await option.click()
