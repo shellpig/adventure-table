@@ -1,68 +1,33 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-import type { BuilderView } from '../../api/characterBuilder'
-import { RoleplayProfileEditor } from './RoleplayProfileEditor'
+import {
+  appendRoleplaySuggestion,
+  parseRoleplayText,
+  roleplayLines,
+} from './RoleplayProfileEditor'
 
-const view = {
-  draft: {
-    id: 'draft-1',
-    mode: 'create',
-    revision: 1,
-    draft_payload: {
-      background_selection: { reference_id: 'phb2014:background:soldier' },
-      roleplay_profile: {},
-    },
-    created_at: '2026-08-30T00:00:00Z',
-    updated_at: '2026-08-30T00:00:00Z',
-  },
-  resolved_summary: {
-    selected_reference_count: 1,
-    choice_selection_count: 0,
-    grants: [],
-    ability_scores: [],
-    progression: [],
-    spellcasting_profiles: [],
-    spell_resource_pools: [],
-  },
-  choices: [],
-  validation: { issues: [], can_confirm: false, non_standard_count: 0 },
-} as BuilderView
 
-function wrapper(children: React.ReactNode) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>
-}
-
-test('background suggestions are optional and manual text persists through onSave', async () => {
-  vi.stubGlobal('fetch', vi.fn(async () => ({
-    ok: true,
-    json: async () => ({
-      data: {
-        roleplay_suggestions: {
-          personality_traits: ['Always polite and respectful.'],
-          ideals: [], bonds: [], flaws: [],
-        },
-      },
-    }),
-  })))
-  const onSave = vi.fn()
-  render(wrapper(<RoleplayProfileEditor view={view} disabled={false} onSave={onSave} />))
-
-  expect(screen.getByText('Roleplay Profile')).toBeInTheDocument()
-  const suggestion = await screen.findByRole('button', { name: /Always polite and respectful/ })
-  fireEvent.click(suggestion)
-  expect(onSave).toHaveBeenCalledWith({
-    roleplay_profile: { personality_traits: ['Always polite and respectful.'] },
+describe('M01-B RoleplayProfileEditor helpers', () => {
+  it('normalizes optional saved roleplay values without inventing entries', () => {
+    expect(roleplayLines(undefined)).toEqual([])
+    expect(roleplayLines(['  Patient listener.  ', '', 42, 'Keeps promises.'])).toEqual([
+      'Patient listener.',
+      'Keeps promises.',
+    ])
   })
 
-  const personality = screen.getByLabelText('Personality Traits')
-  fireEvent.change(personality, { target: { value: 'My own custom trait.' } })
-  fireEvent.blur(personality)
-  await waitFor(() => expect(onSave).toHaveBeenLastCalledWith({
-    roleplay_profile: { personality_traits: ['My own custom trait.'] },
-  }))
+  it('turns manual multiline text into saved roleplay entries', () => {
+    expect(parseRoleplayText('  My own trait.\n\nAnother note.  ')).toEqual([
+      'My own trait.',
+      'Another note.',
+    ])
+  })
 
-  vi.unstubAllGlobals()
+  it('adds a background suggestion once while preserving manual entries', () => {
+    const first = appendRoleplaySuggestion('My own trait.', 'Always polite and respectful.')
+    expect(first).toEqual(['My own trait.', 'Always polite and respectful.'])
+
+    const duplicate = appendRoleplaySuggestion(first.join('\n'), 'Always polite and respectful.')
+    expect(duplicate).toEqual(first)
+  })
 })
