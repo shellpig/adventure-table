@@ -18,92 +18,74 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "character_versions",
-        sa.Column(
-            "version_kind",
-            sa.String(length=32),
-            server_default=sa.text("'legacy'"),
-            nullable=False,
-        ),
-    )
-    op.add_column(
-        "character_versions",
-        sa.Column("parent_version_id", sa.Uuid(), nullable=True),
-    )
-    op.add_column(
-        "character_versions",
-        sa.Column("superseded_by_version_id", sa.Uuid(), nullable=True),
-    )
-    op.add_column(
-        "character_versions",
-        sa.Column("change_note", sa.String(length=500), nullable=True),
-    )
-    op.create_foreign_key(
-        "fk_character_versions_parent_version_id",
-        "character_versions",
-        "character_versions",
-        ["parent_version_id"],
-        ["id"],
-        ondelete="SET NULL",
-    )
-    op.create_foreign_key(
-        "fk_character_versions_superseded_by_version_id",
-        "character_versions",
-        "character_versions",
-        ["superseded_by_version_id"],
-        ["id"],
-        ondelete="SET NULL",
-    )
+    with op.batch_alter_table("character_versions") as batch_op:
+        batch_op.add_column(
+            sa.Column(
+                "version_kind",
+                sa.String(length=32),
+                server_default=sa.text("'legacy'"),
+                nullable=False,
+            )
+        )
+        batch_op.add_column(sa.Column("parent_version_id", sa.Uuid(), nullable=True))
+        batch_op.add_column(
+            sa.Column("superseded_by_version_id", sa.Uuid(), nullable=True)
+        )
+        batch_op.add_column(sa.Column("change_note", sa.String(length=500), nullable=True))
+        batch_op.create_foreign_key(
+            "fk_character_versions_parent_version_id",
+            "character_versions",
+            ["parent_version_id"],
+            ["id"],
+            ondelete="SET NULL",
+        )
+        batch_op.create_foreign_key(
+            "fk_character_versions_superseded_by_version_id",
+            "character_versions",
+            ["superseded_by_version_id"],
+            ["id"],
+            ondelete="SET NULL",
+        )
 
-    op.add_column(
-        "character_build_drafts",
-        sa.Column("confirmed_character_id", sa.Uuid(), nullable=True),
-    )
-    op.add_column(
-        "character_build_drafts",
-        sa.Column("confirmed_at", sa.DateTime(timezone=True), nullable=True),
-    )
-    op.create_foreign_key(
-        "fk_character_build_drafts_confirmed_character_id",
-        "character_build_drafts",
-        "characters",
-        ["confirmed_character_id"],
-        ["id"],
-        ondelete="SET NULL",
-    )
-    op.create_index(
-        "ix_character_build_drafts_confirmed_character_id",
-        "character_build_drafts",
-        ["confirmed_character_id"],
-        unique=False,
-    )
+    with op.batch_alter_table("character_build_drafts") as batch_op:
+        batch_op.add_column(sa.Column("confirmed_character_id", sa.Uuid(), nullable=True))
+        batch_op.add_column(
+            sa.Column("confirmed_at", sa.DateTime(timezone=True), nullable=True)
+        )
+        batch_op.create_foreign_key(
+            "fk_character_build_drafts_confirmed_character_id",
+            "characters",
+            ["confirmed_character_id"],
+            ["id"],
+            ondelete="SET NULL",
+        )
+        batch_op.create_index(
+            "ix_character_build_drafts_confirmed_character_id",
+            ["confirmed_character_id"],
+            unique=False,
+        )
 
 
 def downgrade() -> None:
-    op.drop_index(
-        "ix_character_build_drafts_confirmed_character_id",
-        table_name="character_build_drafts",
-    )
-    op.drop_constraint(
-        "fk_character_build_drafts_confirmed_character_id",
-        "character_build_drafts",
-        type_="foreignkey",
-    )
-    op.drop_column("character_build_drafts", "confirmed_at")
-    op.drop_column("character_build_drafts", "confirmed_character_id")
+    with op.batch_alter_table("character_build_drafts") as batch_op:
+        batch_op.drop_index("ix_character_build_drafts_confirmed_character_id")
+        batch_op.drop_constraint(
+            "fk_character_build_drafts_confirmed_character_id",
+            type_="foreignkey",
+        )
+        batch_op.drop_column("confirmed_at")
+        batch_op.drop_column("confirmed_character_id")
 
-    op.drop_constraint(
-        "fk_character_versions_superseded_by_version_id",
-        "character_versions",
-        type_="foreignkey",
-    )
-    op.drop_constraint(
-        "fk_character_versions_parent_version_id",
-        "character_versions",
-        type_="foreignkey",
-    )
-    op.drop_column("character_versions", "change_note")
-    op.drop_column("character_versions", "superseded_by_version_id")
-    op.drop_column("character_versions", "parent_version_id")
-    op.drop_column("character_versions", "version_kind")
+    with op.batch_alter_table("character_versions") as batch_op:
+        batch_op.drop_constraint(
+            "fk_character_versions_superseded_by_version_id",
+            type_="foreignkey",
+        )
+        batch_op.drop_constraint(
+            "fk_character_versions_parent_version_id",
+            type_="foreignkey",
+        )
+        batch_op.drop_column("change_note")
+        batch_op.drop_column("superseded_by_version_id")
+        batch_op.drop_column("parent_version_id")
+        batch_op.drop_column("version_kind")
