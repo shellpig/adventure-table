@@ -23,6 +23,7 @@ export type InventoryStateEntry = {
 }
 
 export type CharacterStatePatch = {
+  expected_current_version_id?: string
   current_hp?: number
   temporary_hp?: number
   conditions?: ConditionState[]
@@ -103,6 +104,7 @@ export type RoleplayProfile = {
 
 export type CharacterSheetDTO = {
   character_id: string
+  current_version_id: string
   name: string
   ruleset: string
   version_no: number
@@ -146,6 +148,8 @@ type APIErrorPayload = {
   }
 }
 
+const characterVersionTokens = new Map<string, string>()
+
 async function apiRequest<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
   const response = await fetch(input, {
     ...init,
@@ -169,18 +173,27 @@ async function apiRequest<T>(input: RequestInfo | URL, init?: RequestInit): Prom
   return (await response.json()) as T
 }
 
-export function getCharacterSheet(characterId: string): Promise<CharacterSheetDTO> {
-  return apiRequest<CharacterSheetDTO>(`/api/characters/${characterId}/sheet`)
+export async function getCharacterSheet(characterId: string): Promise<CharacterSheetDTO> {
+  const sheet = await apiRequest<CharacterSheetDTO>(`/api/characters/${characterId}/sheet`)
+  characterVersionTokens.set(characterId, sheet.current_version_id)
+  return sheet
 }
 
-export function patchCharacterState(
+export async function patchCharacterState(
   characterId: string,
   patch: CharacterStatePatch,
 ): Promise<CharacterSheetDTO> {
-  return apiRequest<CharacterSheetDTO>(`/api/characters/${characterId}/state`, {
+  const expectedVersion =
+    patch.expected_current_version_id ?? characterVersionTokens.get(characterId)
+  const body: CharacterStatePatch = expectedVersion
+    ? { ...patch, expected_current_version_id: expectedVersion }
+    : patch
+  const sheet = await apiRequest<CharacterSheetDTO>(`/api/characters/${characterId}/state`, {
     method: 'PATCH',
-    body: JSON.stringify(patch),
+    body: JSON.stringify(body),
   })
+  characterVersionTokens.set(characterId, sheet.current_version_id)
+  return sheet
 }
 
 export function listContent(category: string): Promise<ContentEntry[]> {
