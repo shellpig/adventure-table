@@ -3,6 +3,12 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 
+from app.content.identity import (
+    parse_stable_key,
+    reference_to_stable_key,
+    stable_key,
+    stable_key_is_kind,
+)
 from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
 from app.domain.character.schemas import PreparedSpellSelection, SpellAccessEntry
@@ -32,19 +38,25 @@ class SpellcastingCompilation:
 
 
 def _class_index(class_ref: str) -> str:
-    return class_ref.split(":", 2)[2]
+    return parse_stable_key(class_ref, kinds={"class"}).index
 
 
 def _spell_index(spell_key: str) -> str:
-    return spell_key.split(":", 2)[2]
+    return parse_stable_key(spell_key, kinds={"spell"}).index
+
+
+def _identity_token(key: str) -> str:
+    parsed = parse_stable_key(key)
+    return parsed.index if parsed.source == "srd5.1" else f"{parsed.source}:{parsed.index}"
 
 
 def _profile_id(class_ref: str) -> str:
-    return f"class:{_class_index(class_ref)}"
+    return f"class:{_identity_token(class_ref)}"
 
 
 def _level_entry(registry: ContentRegistry, class_ref: str, class_level: int) -> ContentEntry:
-    return registry.get(f"srd5.1:level:{_class_index(class_ref)}-{class_level}")
+    parsed = parse_stable_key(class_ref, kinds={"class"})
+    return registry.get(stable_key(parsed.source, "level", f"{parsed.index}-{class_level}"))
 
 
 def _spellcasting_row(
@@ -71,7 +83,11 @@ def _spellcasting_ability(class_entry: ContentEntry) -> str | None:
     reference = raw.get("spellcasting_ability")
     if not isinstance(reference, dict):
         return None
-    index = reference.get("index")
+    try:
+        key = reference_to_stable_key(reference, kinds={"ability"})
+    except ValueError:
+        return None
+    index = parse_stable_key(key).index if key is not None else reference.get("index")
     return ABILITY_INDEX_TO_NAME.get(index) if isinstance(index, str) else None
 
 
@@ -94,14 +110,18 @@ def _class_levels(draft: BuilderDraft) -> Counter[str]:
 
 
 def _spell_on_class_list(spell: ContentEntry, class_ref: str) -> bool:
-    class_index = _class_index(class_ref)
     references = spell.data.get("classes")
     if not isinstance(references, list):
         return False
-    return any(
-        isinstance(reference, dict) and reference.get("index") == class_index
-        for reference in references
-    )
+    for reference in references:
+        if not isinstance(reference, dict):
+            continue
+        try:
+            if reference_to_stable_key(reference, kinds={"class"}) == class_ref:
+                return True
+        except ValueError:
+            continue
+    return False
 
 
 def _eligible_spells(
@@ -122,10 +142,10 @@ def _spell_options(entries: tuple[ContentEntry, ...]) -> tuple[BuilderSpellOptio
     return tuple(
         BuilderSpellOptionSummary(
             spell_key=spell.key,
-            name=spell.name,
+            name=f"{spell.name} · {spell.source_label or spell.source}",
             level=int(spell.data["level"]),
         )
-        for spell in sorted(entries, key=lambda item: (int(item.data["level"]), item.name))
+        for spell in sorted(entries, key=lambda item: (int(item.data["level"]), item.name, item.key))
     )
 
 
@@ -145,8 +165,7 @@ def _prepared_limit(
 
 
 def _entry_id(source_type: str, source_key: str, access_type: str, spell_key: str) -> str:
-    source_index = source_key.split(":", 2)[2]
-    return f"{source_type}:{source_index}:{access_type}:{_spell_index(spell_key)}"
+    return f"{source_type}:{_identity_token(source_key)}:{access_type}:{_identity_token(spell_key)}"
 
 
 def _issue(
@@ -166,7 +185,7 @@ def _issue(
 
 def _spell_level(registry: ContentRegistry, spell_key: str) -> int | None:
     entry = registry.get_optional(spell_key)
-    if entry is None or not entry.key.startswith("srd5.1:spell:"):
+    if entry is None or not stable_key_is_kind(entry.key, "spell"):
         return None
     value = entry.data.get("level")
     return value if isinstance(value, int) else None
@@ -195,7 +214,7 @@ def _validate_exact_selection(
         )
     for spell_key in selected:
         spell = registry.get_optional(spell_key)
-        if spell is None or not spell.key.startswith("srd5.1:spell:"):
+        if spell is None or not stable_key_is_kind(spell.key, "spell"):
             issues.append(
                 _issue(
                     "invalid_spell_reference",
@@ -261,7 +280,7 @@ def _validate_prepared_selection(
     spellbook = set(spellbook_keys or ())
     for spell_key in selected:
         spell = registry.get_optional(spell_key)
-        if spell is None or not spell.key.startswith("srd5.1:spell:"):
+        if spell is None or not stable_key_is_kind(spell.key, "spell"):
             issues.append(_issue("invalid_spell_reference", path, f"Unknown prepared spell: {spell_key}.", spell_key))
             continue
         level = spell.data.get("level")
@@ -490,10 +509,14 @@ def _subclass_spell_access(
         if subclass is None:
             continue
         parent = subclass.data.get("class")
-        parent_index = parent.get("index") if isinstance(parent, dict) else None
-        if not isinstance(parent_index, str):
+        if not isinstance(parent, dict):
             continue
-        class_ref = f"srd5.1:class:{parent_index}"
+        try:
+            class_ref = reference_to_stable_key(parent, kinds={"class"})
+        except ValueError:
+            continue
+        if class_ref is None:
+            continue
         class_level = class_levels.get(class_ref, 0)
         raw_spells = subclass.data.get("spells")
         if not isinstance(raw_spells, list):
@@ -518,16 +541,35 @@ def _subclass_spell_access(
                         if class_level < required_level:
                             legal = False
                             break
-                    elif kind == "feature" and isinstance(index, str):
-                        if f"srd5.1:feature:{index}" not in feature_set:
+                    elif kind == "feature":
+                        feature_key = prerequisite.get("key")
+                        if isinstance(feature_key, str):
+                            try:
+                                parsed_feature = parse_stable_key(feature_key, kinds={"feature"})
+                                required_feature = stable_key(
+                                    parsed_feature.source,
+                                    parsed_feature.kind,
+                                    parsed_feature.index,
+                                )
+                            except ValueError:
+                                legal = False
+                                break
+                        elif isinstance(index, str):
+                            required_feature = stable_key("srd5.1", "feature", index)
+                        else:
+                            legal = False
+                            break
+                        if required_feature not in feature_set:
                             legal = False
                             break
             spell = raw.get("spell")
-            spell_index = spell.get("index") if isinstance(spell, dict) else None
-            if not legal or not isinstance(spell_index, str):
+            if not legal or not isinstance(spell, dict):
                 continue
-            spell_key = f"srd5.1:spell:{spell_index}"
-            if registry.get_optional(spell_key) is None:
+            try:
+                spell_key = reference_to_stable_key(spell, kinds={"spell"})
+            except ValueError:
+                continue
+            if spell_key is None or registry.get_optional(spell_key) is None:
                 continue
             entries.append(
                 SpellAccessEntry(
