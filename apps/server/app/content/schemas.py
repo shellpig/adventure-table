@@ -244,6 +244,20 @@ class ContentEntry(StrictModel):
             raise ValueError("content entry key/source mismatch")
         if parsed.index != self.index:
             raise ValueError("content entry key/index mismatch")
+
+        raw_variant = self.data.get("variant_of")
+        if raw_variant is not None:
+            if not isinstance(raw_variant, dict):
+                raise ValueError("variant_of must be a content reference")
+            target_key = reference_to_stable_key(raw_variant)
+            if target_key is None:
+                raise ValueError("variant_of must contain a stable content identity")
+            target_kind = parse_stable_key(target_key).kind
+            if target_kind != parsed.kind:
+                raise ValueError(
+                    f"variant_of must reference the same kind as {self.key}: "
+                    f"expected {parsed.kind}, got {target_kind}"
+                )
         return self
 
 
