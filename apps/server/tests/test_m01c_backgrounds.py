@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import uuid4
 
+import pytest
+
 from app.content import load_default_content_registry
 from app.domain.character_builder.compiler import compile_builder_draft
 from app.domain.character_builder.equipment import compile_starting_equipment
@@ -37,6 +39,26 @@ GOS_KEYS = {
     "gos:background:smuggler",
 }
 ROLEPLAY_FIELDS = ("personality_traits", "ideals", "bonds", "flaws")
+
+BACKGROUND_MECHANICAL_MATRIX = {
+    "scag:background:city-watch": (2, 0, 0, 2, 1, 0, 10, "Watcher's Eye"),
+    "scag:background:investigator": (2, 0, 0, 2, 1, 0, 10, "Watcher's Eye"),
+    "scag:background:clan-crafter": (2, 1, 0, 1, 1, 1, 5, "Respect of the Stout Folk"),
+    "scag:background:cloistered-scholar": (1, 1, 0, 2, 1, 0, 10, "Library Access"),
+    "scag:background:courtier": (2, 0, 0, 2, 1, 0, 5, "Court Functionary"),
+    "scag:background:faction-agent": (1, 1, 0, 2, 1, 0, 15, "Safe Haven"),
+    "scag:background:far-traveler": (2, 1, 0, 1, 1, 0, 5, "All Eyes on You"),
+    "scag:background:inheritor": (1, 1, 1, 1, 1, 0, 15, "Inheritance"),
+    "scag:background:knight-of-the-order": (1, 1, 1, 1, 1, 0, 10, "Knightly Regard"),
+    "scag:background:mercenary-veteran": (3, 1, 0, 0, 1, 1, 10, "Mercenary Life"),
+    "scag:background:urban-bounty-hunter": (0, 2, 2, 0, 1, 0, 20, "Ear to the Ground"),
+    "scag:background:uthgardt-tribe-member": (2, 1, 0, 1, 1, 0, 10, "Uthgardt Heritage"),
+    "scag:background:waterdhavian-noble": (2, 1, 0, 1, 1, 0, 20, "Kept in Style"),
+    "gos:background:fisher": (2, 0, 0, 1, 4, 0, 10, "Harvest the Water"),
+    "gos:background:marine": (4, 0, 0, 0, 3, 0, 10, "Steady"),
+    "gos:background:shipwright": (4, 0, 0, 0, 4, 0, 10, "I'll Patch It!"),
+    "gos:background:smuggler": (3, 0, 0, 0, 2, 0, 15, "Down Low"),
+}
 
 
 def _draft(background_ref: str) -> BuilderDraft:
@@ -86,6 +108,31 @@ def test_default_registry_enables_complete_m01c_background_packs() -> None:
             "Sword Coast Adventurer's Guide",
             "Ghosts of Saltmarsh",
         }
+
+
+@pytest.mark.parametrize("background_key", sorted(BACKGROUND_MECHANICAL_MATRIX))
+def test_each_m01c_background_has_expected_mechanical_shape(background_key: str) -> None:
+    registry = load_default_content_registry()
+    data = registry.get(background_key).data
+    (
+        fixed_proficiencies,
+        primary_proficiency_choose,
+        secondary_proficiency_choose,
+        language_choose,
+        equipment_entries,
+        equipment_choice_groups,
+        starting_gold,
+        feature_name,
+    ) = BACKGROUND_MECHANICAL_MATRIX[background_key]
+
+    assert len(data["starting_proficiencies"]) == fixed_proficiencies
+    assert data.get("starting_proficiency_options", {}).get("choose", 0) == primary_proficiency_choose
+    assert data.get("proficiency_choices", {}).get("choose", 0) == secondary_proficiency_choose
+    assert data.get("language_options", {}).get("choose", 0) == language_choose
+    assert len(data["starting_equipment"]) == equipment_entries
+    assert len(data.get("starting_equipment_options", [])) == equipment_choice_groups
+    assert data["starting_gold"] == {"quantity": starting_gold, "unit": "gp"}
+    assert data["feature"]["name"] == feature_name
 
 
 def test_scag_roleplay_inheritance_reuses_only_suggestions() -> None:
