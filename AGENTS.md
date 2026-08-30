@@ -6,9 +6,9 @@
 
 - **類型**：Web VTT（虛擬桌面），非 CRPG、非 Foundry 式全能平台
 - **一句話**：網站只管需要共享、同步、計算、保存、權限與 AI 接入的東西，其餘還給 DM 的嘴巴
-- **首發規則集**：D&D 5e 2014；Built-in Content：SRD 5.1（CC BY 4.0）
+- **首發規則集**：D&D 5e 2014；Built-in Content：SRD 5.1（CC BY 4.0），非 SRD 內容依私人專案需求逐步加入
 - **專案性質**：朋友間私人使用，非預計商品化平台
-- **目前階段**：**P0 — Character Core + SRD / Rules Foundation 與 P1 — Character Builder Complete 均已完成並關門**；下一步是 P2 — Room / Campaign / Session / Seat 的規劃與 Subphase 拆分，尚未開始 P2 coding
+- **目前階段**：**P0 — Character Core + SRD / Rules Foundation 與 P1 — Character Builder Complete 均已完成並關門；目前插入 M01 — Multi-Source Character Content Expansion，M01-A～M01-J 已完成規格拆分、尚未開始 coding。M01 完成後回到 P2 — Room / Campaign / Session / Seat 的規劃。**
 - **目前進度**：以 `PROJECT_BRIEF.md` 為單一事實來源
 - **基礎技術棧**：目前方向見 `技術棧討論.md`。該檔只討論語言／Framework／DB 等基礎選型，不承擔各 Phase 的實作設計
 
@@ -22,7 +22,7 @@
 **Layer 2 — 按任務讀對應文件／段落：**
 - `規格企劃.md` — **產品與玩法的單一事實來源**。約 70 KB，一律標題定位、只讀該段
 - `技術棧討論.md` — 只在基礎技術選型／Framework 討論時讀；不要把它當成全專案 architecture spec
-- `docs/Px/` — 某個 Phase 開工後，該 Phase 的正式實作規格、開發設計與測試文件
+- `docs/Px/` / `docs/Mxx/` — 某個 Phase 開工後，該 Phase 的正式實作規格、開發設計與測試文件
 
 > 不要為了「先想完整」而提前設計後續 Phase。資料模型、API、事件、權限實作、Snapshot、Combat、Tactical 等細節，原則上等對應 Phase 再決定。
 
@@ -76,6 +76,7 @@ grep -n "^## \\|^### " 規格企劃.md
 
 ```bash
 grep -n "P0-C" docs/P0/實作規格.md docs/P0/開發設計方針.md docs/P0/測試指南.md
+grep -n "M01-B" docs/M01/實作規格.md docs/M01/開發設計方針.md docs/M01/測試指南.md
 ```
 
 ## 文件分工與單一事實來源
@@ -87,9 +88,9 @@ grep -n "P0-C" docs/P0/實作規格.md docs/P0/開發設計方針.md docs/P0/測
 | **`規格企劃.md`** | 產品行為與為什麼：跑團方式、權限、規則選擇、UI 行為、明確不做 |
 | **`PROJECT_BRIEF.md`** | 當前 Phase、Roadmap、Subphase 進度、下一步、文件索引 |
 | **`技術棧討論.md`** | 暫時性的基礎技術選型討論：語言、Framework、DB、基本測試／部署工具 |
-| **`docs/Px/實作規格.md`** | 該 Phase / Subphase 完成後什麼必須為真、驗收意圖；不寫具體 DB/API |
-| **`docs/Px/開發設計方針.md`** | 該 Phase / Subphase 的具體實作契約：資料模型、模組、API、資料流、接線、必要技術決策 |
-| **`docs/Px/測試指南.md`** | 該 Phase / Subphase 的自動／人工驗收流程與測試證據要求 |
+| **`docs/Px/實作規格.md` / `docs/Mxx/實作規格.md`** | 該 Phase / Subphase 完成後什麼必須為真、驗收意圖；不寫具體 DB/API |
+| **`docs/Px/開發設計方針.md` / `docs/Mxx/開發設計方針.md`** | 該 Phase / Subphase 的具體實作契約：資料模型、模組、API、資料流、接線、必要技術決策 |
+| **`docs/Px/測試指南.md` / `docs/Mxx/測試指南.md`** | 該 Phase / Subphase 的自動／人工驗收流程與測試證據要求 |
 | **SRD / 規則資料檔** | 所有規則內容與可調數值 |
 | **`待決事項.md`** | 真正無法從既有規格推導、且會影響核心玩法／方向的未決問題 |
 
@@ -100,12 +101,13 @@ grep -n "P0-C" docs/P0/實作規格.md docs/P0/開發設計方針.md docs/P0/測
 ## Phase / Subphase 設計原則
 
 1. **只設計正在準備開工的 Phase。**
-2. **所有 Phase 在 coding 開始前，都必須先拆成 `P<n>-A`、`P<n>-B`… 的 Subphases。** 每個 Subphase 必須能獨立實作、驗證並 commit；完成時應處於可執行、可測試、沒有已知編譯／型別／該 Subphase 測試錯誤的狀態。
-3. **Subphase 只拆當前 Phase，不提前拆後續 Phase。** 尚未輪到的 Phase 保持大 Phase Roadmap；可以記錄必要的跨 Phase 承接要求，但不得因此提前設計未來 Phase 的 schema / API / module。
-4. 同一 Phase 的 `實作規格.md`、`開發設計方針.md`、`測試指南.md` 必須使用完全一致的 Subphase 名稱與順序，讓實作者可用 Subphase id 精準取得三份契約。
-5. `PROJECT_BRIEF.md` 在當前 Phase 已拆分後，必須一列一個 Subphase 顯示進度，不可再用「P0（含 A～F）」合併成一列。
-6. 可以記錄已知的跨 Phase 相容要求，例如 P0 可以要求 Character 資料模型不得排斥 Multiclass；但不用現在決定 P2 Token table 或 P5 Tactical renderer。
-7. 後續 Phase 開工時，以當時真正存在的 codebase 為基礎再設計，比現在猜測更可靠。
+2. **所有正常產品 Phase 在 coding 開始前，都必須先拆成 `P<n>-A`、`P<n>-B`… 的 Subphases。所有 Maintenance / Modification Phase 在 coding 開始前，都必須先拆成 `M<nn>-A`、`M<nn>-B`… 的 Subphases。** 每個 Subphase 必須能獨立實作、驗證並 commit；完成時應處於可執行、可測試、沒有已知編譯／型別／該 Subphase 測試錯誤的狀態。
+3. **M Phase 定位**：`M01`、`M02`… 用於補資料／補設定、既有能力加強、資料 migration、或不構成下一個正常產品里程碑的維護／修改工作。M Phase 可以插在 P Phase 之間，但不改寫 `P0 → P1 → P2...` 的正常 Roadmap；M Phase 完成後回到原本下一個 P Phase。
+4. **Subphase 只拆當前 Phase，不提前拆後續 Phase。** 尚未輪到的 P Phase 或 M Phase 保持大 Phase / 未建立狀態；可以記錄必要的跨 Phase 承接要求，但不得因此提前設計未來 Phase 的 schema / API / module。
+5. 同一 Phase 的 `實作規格.md`、`開發設計方針.md`、`測試指南.md` 必須使用完全一致的 Subphase 名稱與順序，讓實作者可用 Subphase id 精準取得三份契約。
+6. `PROJECT_BRIEF.md` 在當前 Phase 已拆分後，必須一列一個 Subphase 顯示進度，不可再用「P0（含 A～F）」或「M01（含 A～J）」合併成一列。
+7. 可以記錄已知的跨 Phase 相容要求，例如 P0 可以要求 Character 資料模型不得排斥 Multiclass；但不用現在決定 P2 Token table 或 P5 Tactical renderer。
+8. 後續 Phase 開工時，以當時真正存在的 codebase 為基礎再設計，比現在猜測更可靠。
 
 ## 修改授權與驗證規則
 
