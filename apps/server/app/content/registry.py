@@ -54,8 +54,6 @@ _REFERENCE_KIND_BY_FIELD: dict[str, str] = {
     "race": "race",
     # Some legacy SRD records use plural `races` for a mixed race/subrace list,
     # so that field is intentionally validated only for existence, not one kind.
-    # Likewise, generic option objects use `item` for many reference kinds
-    # (proficiency, language, equipment, etc.), so `item` cannot imply one kind.
     "saving_throws": "ability",
     "school": "magic-school",
     "subclass": "subclass",
@@ -66,6 +64,16 @@ _REFERENCE_KIND_BY_FIELD: dict[str, str] = {
     "racial_traits": "trait",
     "starting_proficiencies": "proficiency",
 }
+
+# `item` and `of` are generic option-wrapper field names in the imported SRD
+# shape. Their target kind comes from the surrounding choice's semantic `type`,
+# so they must never be globally hard-wired to the content kind named `item`.
+_REFERENCE_KIND_BY_CHOICE_TYPE: dict[str, str] = {
+    "equipment": "equipment",
+    "languages": "language",
+    "proficiencies": "proficiency",
+}
+_CONTEXTUAL_REFERENCE_FIELDS = {"item", "of"}
 
 
 class ContentValidationError(RuntimeError):
@@ -283,7 +291,7 @@ class ContentRegistry:
                 )
             if len(payload) != category.count:
                 raise ContentValidationError(
-                    f"{category.name} count mismatch: "
+                    f"category {category.name} count mismatch: "
                     f"manifest={category.count}, file={len(payload)}"
                 )
 
@@ -437,19 +445,34 @@ def _iter_stable_references(
     value: Any,
     *,
     field_name: str | None = None,
+    choice_kind: str | None = None,
 ) -> Iterable[tuple[str, str | None, str]]:
     if isinstance(value, dict):
+        declared_type = value.get("type")
+        if isinstance(declared_type, str):
+            choice_kind = _REFERENCE_KIND_BY_CHOICE_TYPE.get(declared_type, choice_kind)
+
         if field_name is not None and _looks_like_reference(value):
             key = reference_to_stable_key(value)
             if key is not None:
                 expected_kind = _REFERENCE_KIND_BY_FIELD.get(field_name)
+                if expected_kind is None and field_name in _CONTEXTUAL_REFERENCE_FIELDS:
+                    expected_kind = choice_kind
                 yield key, expected_kind, str(value.get("url") or value.get("key"))
                 return
         for child_name, child in value.items():
-            yield from _iter_stable_references(child, field_name=child_name)
+            yield from _iter_stable_references(
+                child,
+                field_name=child_name,
+                choice_kind=choice_kind,
+            )
     elif isinstance(value, list):
         for child in value:
-            yield from _iter_stable_references(child, field_name=field_name)
+            yield from _iter_stable_references(
+                child,
+                field_name=field_name,
+                choice_kind=choice_kind,
+            )
 
 
 def load_default_content_registry() -> ContentRegistry:
