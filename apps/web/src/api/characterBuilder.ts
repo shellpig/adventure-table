@@ -110,6 +110,11 @@ export type BuilderValidationResult = {
   non_standard_count: number
 }
 
+export type BuilderChoicePresentationItem = {
+  reference_id: string
+  count: number
+}
+
 export type BuilderChoiceOption = {
   option_id: string
   label: string
@@ -122,6 +127,8 @@ export type BuilderChoiceOption = {
   disabled_reason?: string | null
   hit_die_size?: number | null
   fixed_hp_gain?: number | null
+  presentation_items?: BuilderChoicePresentationItem[]
+  presentation_has_choice?: boolean
 }
 
 export type BuilderChoice = {
