@@ -10,6 +10,7 @@ import {
 } from '../../api/characterBuilder'
 import type { StateReconciliationPreview } from '../../api/characterVersions'
 import { optionDisplay, SearchableSelect } from '../../components/SearchableSelect'
+import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy, type UiTranslator } from '../../i18n/useUiCopy'
 import { sortGrantsByKind } from './grants'
 import { RoleplayProfileEditor } from './RoleplayProfileEditor'
@@ -41,10 +42,10 @@ function selectedIds(raw: unknown): string[] {
   return []
 }
 
-function optionsFor(choice: BuilderChoice) {
+function optionsFor(choice: BuilderChoice, nameFor: ContentNameResolver) {
   return choice.options.map((option) => ({
     value: option.option_id,
-    label: option.label,
+    label: nameFor(option.reference_id, option.label),
     disabled: Boolean(option.disabled_reason),
     disabledReason: option.disabled_reason ?? undefined,
   }))
@@ -64,6 +65,24 @@ function titleCase(value: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
+function localizedClassSummary(
+  review: P1GReview,
+  nameFor: ContentNameResolver,
+): string {
+  return Array.from(
+    review.resolved_summary.progression.reduce(
+      (classes, node) =>
+        classes.set(node.class_ref, {
+          name: nameFor(node.class_ref, node.class_name),
+          level: node.class_level,
+        }),
+      new Map<string, { name: string; level: number }>(),
+    ).values(),
+  )
+    .map((entry) => `${entry.name} ${entry.level}`)
+    .join(' / ')
+}
+
 export function EquipmentStep({
   view,
   disabled,
@@ -76,6 +95,11 @@ export function EquipmentStep({
   )
   const equipmentSelections =
     view.draft.draft_payload.starting_equipment_choices ?? {}
+  const { nameFor } = useContentPresentations(
+    equipmentChoices.flatMap((choice) =>
+      choice.options.flatMap((option) => (option.reference_id ? [option.reference_id] : [])),
+    ),
+  )
 
   const saveChoice = (choiceId: string, next: string[]) => {
     onSave({
@@ -107,7 +131,7 @@ export function EquipmentStep({
                       label={choice.label}
                       value={selected[0] ?? ''}
                       disabled={disabled}
-                      options={optionsFor(choice)}
+                      options={optionsFor(choice, nameFor)}
                       secondaryMode="duplicates"
                       onChange={(value) =>
                         saveChoice(choice.choice_id, value ? [value] : [])
@@ -117,12 +141,15 @@ export function EquipmentStep({
                 )
               }
 
-              const selectedLabels = selected.map((id) => ({
-                id,
-                label:
-                  choice.options.find((option) => option.option_id === id)?.label ??
+              const selectedLabels = selected.map((id) => {
+                const option = choice.options.find((candidate) => candidate.option_id === id)
+                return {
                   id,
-              }))
+                  label: option
+                    ? nameFor(option.reference_id, option.label)
+                    : nameFor(id, id),
+                }
+              })
               return (
                 <div className="builder-choice" key={choice.choice_id}>
                   <div className="builder-choice__heading">
@@ -152,7 +179,7 @@ export function EquipmentStep({
                     label={t('equipment.add')}
                     value=""
                     disabled={disabled || selected.length >= choice.choose_count}
-                    options={optionsFor(choice).map((option) => ({
+                    options={optionsFor(choice, nameFor).map((option) => ({
                       ...option,
                       disabled: option.disabled || selected.includes(option.value),
                       disabledReason: selected.includes(option.value)
@@ -208,6 +235,35 @@ export function EquipmentReviewStep({
   })
 
   const review = reviewQuery.data as P1GReview | undefined
+  const reviewReferences = review
+    ? [
+        ...(view.draft.draft_payload.race_selection?.reference_id
+          ? [view.draft.draft_payload.race_selection.reference_id]
+          : []),
+        ...(view.draft.draft_payload.subrace_selection?.reference_id
+          ? [view.draft.draft_payload.subrace_selection.reference_id]
+          : []),
+        ...(view.draft.draft_payload.background_selection?.reference_id
+          ? [view.draft.draft_payload.background_selection.reference_id]
+          : []),
+        ...(view.draft.draft_payload.alignment_selection?.reference_id
+          ? [view.draft.draft_payload.alignment_selection.reference_id]
+          : []),
+        ...review.resolved_summary.progression.flatMap((node) => [
+          node.class_ref,
+          ...(node.subclass_ref ? [node.subclass_ref] : []),
+          ...node.automatic_feature_refs,
+        ]),
+        ...review.resolved_summary.grants.flatMap((grant) =>
+          grant.reference_id ? [grant.reference_id] : [],
+        ),
+        ...review.starting_equipment.map((entry) => entry.item_ref),
+        ...Object.keys(review.derived_stats?.skill_modifiers ?? {}).map(
+          (skill) => `srd5.1:skill:${skill}`,
+        ),
+      ]
+    : []
+  const { nameFor } = useContentPresentations(reviewReferences)
   const busy = disabled || confirm.isPending
   const blockingCount =
     review?.issues.filter((issue) => issue.severity === 'blocking_error').length ??
@@ -262,9 +318,15 @@ export function EquipmentReviewStep({
                   })}
                 </strong>
                 <small>
-                  {review.resolved_summary.race_name ?? '—'} ·{' '}
-                  {review.resolved_summary.background_name ?? '—'} ·{' '}
-                  {review.resolved_summary.class_summary ?? '—'}
+                  {nameFor(
+                    view.draft.draft_payload.race_selection?.reference_id,
+                    review.resolved_summary.race_name ?? '—',
+                  )} ·{' '}
+                  {nameFor(
+                    view.draft.draft_payload.background_selection?.reference_id,
+                    review.resolved_summary.background_name ?? '—',
+                  )} ·{' '}
+                  {localizedClassSummary(review, nameFor) || review.resolved_summary.class_summary || '—'}
                 </small>
               </div>
               <div className="builder-rule-card proficiency-card">
@@ -302,7 +364,9 @@ export function EquipmentReviewStep({
               {sortGrantsByKind(review.resolved_summary.grants).map((grant, index) => (
                 <div key={`${grant.source_ref}:${grant.reference_id ?? grant.label}:${index}`}>
                   <span>{grant.kind.replaceAll('_', ' ')}</span>
-                  <strong>{optionDisplay(grant.label).primary}</strong>
+                  <strong>
+                    {nameFor(grant.reference_id, optionDisplay(grant.label).primary)}
+                  </strong>
                 </div>
               ))}
               {!review.resolved_summary.grants.length ? (
@@ -315,7 +379,7 @@ export function EquipmentReviewStep({
               {review.starting_equipment.map((entry) => (
                 <div key={entry.entry_id}>
                   <span>× {entry.quantity}</span>
-                  <strong>{entry.name}</strong>
+                  <strong>{nameFor(entry.item_ref, entry.name)}</strong>
                 </div>
               ))}
               {!review.starting_equipment.length ? (
@@ -417,7 +481,7 @@ export function EquipmentReviewStep({
                 {Object.entries(review.derived_stats.skill_modifiers).map(
                   ([skill, modifier]) => (
                     <div key={skill}>
-                      <span>{titleCase(skill)}</span>
+                      <span>{nameFor(`srd5.1:skill:${skill}`, titleCase(skill))}</span>
                       <strong>{signed(modifier)}</strong>
                     </div>
                   ),
