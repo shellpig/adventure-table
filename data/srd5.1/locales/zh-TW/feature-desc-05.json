@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "review_status": "human-review-ready",
+  "translation_method": "canonical-srd-translation-with-m02c-glossary",
+  "entries": {
+    "srd5.1:feature:fighter-fighting-style": {"data.desc.0":"你採用一種特定的戰鬥風格作為專長。從下列選項中選擇一項。即使之後再次獲得選擇機會，你也不能重複選擇同一個戰鬥風格。"},
+    "srd5.1:feature:fighter-fighting-style-archery": {"data.desc.0":"你使用遠程武器進行的攻擊擲骰獲得 +2 加值。"},
+    "srd5.1:feature:fighter-fighting-style-defense": {"data.desc.0":"當你穿著護甲時，你的 AC 獲得 +1 加值。"},
+    "srd5.1:feature:fighter-fighting-style-dueling": {"data.desc.0":"當你單手持用一把近戰武器，且沒有持用其他武器時，你使用該武器的傷害擲骰獲得 +2 加值。"},
+    "srd5.1:feature:fighter-fighting-style-great-weapon-fighting": {"data.desc.0":"當你以雙手持用的近戰武器進行攻擊，且傷害骰擲出 1 或 2 時，可以重擲該骰，並且必須採用新的結果，即使新結果仍是 1 或 2。該武器必須具有雙手或兩用屬性，你才能獲得此好處。"},
+    "srd5.1:feature:fighter-fighting-style-protection": {"data.desc.0":"當一個你看得見的生物攻擊距離你 5 呎內、且不是你的目標時，你可以用反應使該次攻擊擲骰具有劣勢。你必須正持用盾牌。"},
+    "srd5.1:feature:fighter-fighting-style-two-weapon-fighting": {"data.desc.0":"當你進行雙武器戰鬥時，可以把你的屬性調整值加到第二次攻擊的傷害上。"},
+    "srd5.1:feature:second-wind": {"data.desc.0":"你擁有一股有限的耐力儲備，可以用來保護自己免受傷害。在你的回合，你可以用一個附贈動作恢復等於 1d10 + 你的戰士等級的生命值。使用此特性後，你必須完成一次短休或長休才能再次使用。"},
+    "srd5.1:feature:action-surge-1-use": {
+      "data.desc.0":"從 2 級起，你可以短暫突破自身平常的極限。在你的回合，除了正常的一個動作與可能的一個附贈動作之外，你可以再採取一個額外動作。",
+      "data.desc.1":"使用此特性後，你必須完成一次短休或長休才能再次使用。從 17 級起，每次休息前可以使用兩次，但同一回合只能使用一次。"
+    },
+    "srd5.1:feature:martial-archetype": {"data.desc.0":"到 3 級時，你選擇一個希望在戰鬥風格與技巧上效法的武術典範，例如勇士。你選擇的典範會在 3 級給予你特性，並在 7、10、15、18 級再次給予特性。"},
+    "srd5.1:feature:improved-critical": {"data.desc.0":"從你在 3 級選擇此典範開始，你的武器攻擊在擲出 19 或 20 時造成重擊。"},
+    "srd5.1:feature:fighter-ability-score-improvement-1": {"data.desc.0":"當你達到 4 級，並在 6、8、12、14、16、19 級再次獲得此特性時，你可以將一項自選屬性值提高 2，或將兩項自選屬性值各提高 1。如常，你不能用此特性使任何屬性值提高到 20 以上。"},
+    "srd5.1:feature:extra-attack-1": {"data.desc.0":"從 5 級起，每當你在自己的回合採取攻擊動作時，可以攻擊兩次而不是一次。當你在此職業達到 11 級時，攻擊次數增加為三次；達到 20 級時增加為四次。"},
+    "srd5.1:feature:fighter-ability-score-improvement-2": {"data.desc.0":"當你達到 4 級，並在 6、8、12、14、16、19 級再次獲得此特性時，你可以將一項自選屬性值提高 2，或將兩項自選屬性值各提高 1。如常，你不能用此特性使任何屬性值提高到 20 以上。"},
+    "srd5.1:feature:remarkable-athlete": {"data.desc.0":"從 7 級起，對任何尚未使用你的熟練加值之力量、敏捷或體質檢定，你可以加上熟練加值的一半，向上取整。此外，當你進行助跑跳遠時，可跳躍的距離額外增加等於你的力量調整值之呎數。"},
+    "srd5.1:feature:martial-archetype-improvement-1": {"data.desc.0":"到 3 級時，你選擇一個希望在戰鬥風格與技巧上效法的武術典範，例如勇士。你選擇的典範會在 3 級給予你特性，並在 7、10、15、18 級再次給予特性。"},
+    "srd5.1:feature:fighter-ability-score-improvement-3": {"data.desc.0":"當你達到 4 級，並在 6、8、12、14、16、19 級再次獲得此特性時，你可以將一項自選屬性值提高 2，或將兩項自選屬性值各提高 1。如常，你不能用此特性使任何屬性值提高到 20 以上。"},
+    "srd5.1:feature:indomitable-1-use": {"data.desc.0":"從 9 級起，當你一次豁免檢定失敗時，可以重擲。若這麼做，你必須採用新的擲骰結果，且在完成一次長休前不能再次使用此特性。從 13 級起，每兩次長休之間可以使用兩次；從 17 級起可以使用三次。"},
+    "srd5.1:feature:additional-fighting-style": {"data.desc.0":"到 10 級時，你可以從戰鬥風格職業特性中選擇第二個選項。"},
+    "srd5.1:feature:martial-archetype-improvement-2": {"data.desc.0":"到 3 級時，你選擇一個希望在戰鬥風格與技巧上效法的武術典範，例如勇士。你選擇的典範會在 3 級給予你特性，並在 7、10、15、18 級再次給予特性。"},
+    "srd5.1:feature:extra-attack-2": {"data.desc.0":"從 5 級起，每當你在自己的回合採取攻擊動作時，可以攻擊兩次而不是一次。當你在此職業達到 11 級時，攻擊次數增加為三次；達到 20 級時增加為四次。"},
+    "srd5.1:feature:fighter-ability-score-improvement-4": {"data.desc.0":"當你達到 4 級，並在 6、8、12、14、16、19 級再次獲得此特性時，你可以將一項自選屬性值提高 2，或將兩項自選屬性值各提高 1。如常，你不能用此特性使任何屬性值提高到 20 以上。"},
+    "srd5.1:feature:indomitable-2-uses": {"data.desc.0":"從 9 級起，當你一次豁免檢定失敗時，可以重擲。若這麼做，你必須採用新的擲骰結果，且在完成一次長休前不能再次使用此特性。從 13 級起，每兩次長休之間可以使用兩次；從 17 級起可以使用三次。"},
+    "srd5.1:feature:fighter-ability-score-improvement-5": {"data.desc.0":"當你達到 4 級，並在 6、8、12、14、16、19 級再次獲得此特性時，你可以將一項自選屬性值提高 2，或將兩項自選屬性值各提高 1。如常，你不能用此特性使任何屬性值提高到 20 以上。"},
+    "srd5.1:feature:superior-critical": {"data.desc.0":"從 15 級起，你的武器攻擊在擲出 18–20 時造成重擊。"},
+    "srd5.1:feature:martial-archetype-improvement-3": {"data.desc.0":"到 3 級時，你選擇一個希望在戰鬥風格與技巧上效法的武術典範，例如勇士。你選擇的典範會在 3 級給予你特性，並在 7、10、15、18 級再次給予特性。"},
+    "srd5.1:feature:fighter-ability-score-improvement-6": {"data.desc.0":"當你達到 4 級，並在 6、8、12、14、16、19 級再次獲得此特性時，你可以將一項自選屬性值提高 2，或將兩項自選屬性值各提高 1。如常，你不能用此特性使任何屬性值提高到 20 以上。"},
+    "srd5.1:feature:action-surge-2-uses": {
+      "data.desc.0":"從 2 級起，你可以短暫突破自身平常的極限。在你的回合，除了正常的一個動作與可能的一個附贈動作之外，你可以再採取一個額外動作。",
+      "data.desc.1":"使用此特性後，你必須完成一次短休或長休才能再次使用。從 17 級起，每次休息前可以使用兩次，但同一回合只能使用一次。"
+    },
+    "srd5.1:feature:indomitable-3-uses": {"data.desc.0":"從 9 級起，當你一次豁免檢定失敗時，可以重擲。若這麼做，你必須採用新的擲骰結果，且在完成一次長休前不能再次使用此特性。從 13 級起，每兩次長休之間可以使用兩次；從 17 級起可以使用三次。"},
+    "srd5.1:feature:martial-archetype-improvement-4": {"data.desc.0":"到 3 級時，你選擇一個希望在戰鬥風格與技巧上效法的武術典範，例如勇士。你選擇的典範會在 3 級給予你特性，並在 7、10、15、18 級再次給予特性。"},
+    "srd5.1:feature:survivor": {"data.desc.0":"到 18 級時，你的戰鬥韌性達到巔峰。若你剩餘的生命值不超過生命值上限的一半，則每個自己的回合開始時恢復等於 5 + 你的體質調整值的生命值。若你目前為 0 生命值，則不獲得此好處。"},
+    "srd5.1:feature:fighter-ability-score-improvement-7": {"data.desc.0":"當你達到 4 級，並在 6、8、12、14、16、19 級再次獲得此特性時，你可以將一項自選屬性值提高 2，或將兩項自選屬性值各提高 1。如常，你不能用此特性使任何屬性值提高到 20 以上。"},
+    "srd5.1:feature:extra-attack-3": {"data.desc.0":"從 5 級起，每當你在自己的回合採取攻擊動作時，可以攻擊兩次而不是一次。當你在此職業達到 11 級時，攻擊次數增加為三次；達到 20 級時增加為四次。"}
+  }
+}
