@@ -16,6 +16,11 @@ WOOD = "scag:race-variant:half-elf-wood-descent"
 AQUATIC = "scag:race-variant:half-elf-aquatic-descent"
 
 
+def _assert_reference_selection(selection: dict[str, Any], expected_ref: str) -> None:
+    assert selection["reference_id"] == expected_ref
+    assert selection.get("source_ref") is None
+
+
 def _create_half_elf_draft(client: TestClient, variant: str) -> dict[str, Any]:
     response = client.post(
         "/api/character-builder/drafts",
@@ -100,9 +105,10 @@ def test_m01e_draft_reload_build_edit_and_version_history_persist_ancestry() -> 
         )
         assert reloaded.status_code == 200, reloaded.text
         view = reloaded.json()
-        assert view["draft"]["draft_payload"]["race_variant_selection"] == {
-            "reference_id": WOOD
-        }
+        _assert_reference_selection(
+            view["draft"]["draft_payload"]["race_variant_selection"],
+            WOOD,
+        )
         wood_choice = next(
             choice
             for choice in view["choices"]
@@ -140,9 +146,10 @@ def test_m01e_draft_reload_build_edit_and_version_history_persist_ancestry() -> 
         )
         assert edit.status_code == 201, edit.text
         edit_view = edit.json()
-        assert edit_view["draft"]["draft_payload"]["race_variant_selection"] == {
-            "reference_id": WOOD
-        }
+        _assert_reference_selection(
+            edit_view["draft"]["draft_payload"]["race_variant_selection"],
+            WOOD,
+        )
         assert any(
             selection.get("selected_option_ids") == ["fleet-of-foot"]
             for selection in edit_view["draft"]["draft_payload"][
@@ -173,9 +180,10 @@ def test_m01e_draft_reload_build_edit_and_version_history_persist_ancestry() -> 
         )
         assert reloaded_edit.status_code == 200, reloaded_edit.text
         edit_view = reloaded_edit.json()
-        assert edit_view["draft"]["draft_payload"]["race_variant_selection"] == {
-            "reference_id": AQUATIC
-        }
+        _assert_reference_selection(
+            edit_view["draft"]["draft_payload"]["race_variant_selection"],
+            AQUATIC,
+        )
 
         edit_review = client.get(
             f"/api/character-builder/drafts/{edit_view['draft']['id']}/review"
