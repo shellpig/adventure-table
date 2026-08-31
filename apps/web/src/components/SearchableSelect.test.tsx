@@ -85,4 +85,17 @@ describe('SearchableSelect source-aware labels', () => {
       '乙術',
     ].sort((left, right) => new Intl.Collator('zh-TW', { sensitivity: 'base', numeric: true }).compare(left, right)))
   })
+
+  it('preserves configured order for numeric selectors such as Standard Array', () => {
+    const options = [
+      { value: '15', label: '15' },
+      { value: '14', label: '14' },
+      { value: '13', label: '13' },
+      { value: '12', label: '12' },
+      { value: '10', label: '10' },
+      { value: '8', label: '8' },
+    ]
+
+    expect(sortSearchOptions(options, 'zh-TW')).toEqual(options)
+  })
 })
