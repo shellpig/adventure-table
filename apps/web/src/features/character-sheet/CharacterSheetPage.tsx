@@ -52,6 +52,27 @@ const ACCESS_KEYS: Record<string, UiCopyKey> = {
   granted: 'sheet.access.granted',
 }
 
+const MOVEMENT_COPY = {
+  en: {
+    title: 'Movement',
+    hint: 'Speed',
+    walk: 'Walk',
+    swim: 'Swim',
+    climb: 'Climb',
+    fly: 'Fly',
+    unit: 'ft',
+  },
+  'zh-TW': {
+    title: '移動',
+    hint: '速度',
+    walk: '步行',
+    swim: '游泳',
+    climb: '攀爬',
+    fly: '飛行',
+    unit: '尺',
+  },
+} as const
+
 function abilityLabel(key: string, t: UiTranslator) {
   const copyKey = ABILITY_KEYS[key]
   return copyKey ? t(copyKey) : titleCase(key)
@@ -226,7 +247,8 @@ export function CharacterSheetView({
   errorMessage = null,
   onPatch = async () => {},
 }: CharacterSheetViewProps) {
-  const { t } = useUiCopy()
+  const { locale, t } = useUiCopy()
+  const movementCopy = MOVEMENT_COPY[locale]
   const [tab, setTab] = useState<CharacterTab>(initialTab)
   const [conditionRef, setConditionRef] = useState('')
   const [conditionNote, setConditionNote] = useState('')
@@ -456,6 +478,16 @@ export function CharacterSheetView({
                 </article>
               ))}
             </div>
+
+            <article className="panel" data-testid="movement-panel">
+              <div className="panel-title"><h3>{movementCopy.title}</h3><span>{movementCopy.hint}</span></div>
+              <div className="stat-list">
+                <div><span>{movementCopy.walk}</span><strong data-testid="movement-walk">{sheet.walking_speed} {movementCopy.unit}</strong></div>
+                {sheet.swim_speed != null ? <div><span>{movementCopy.swim}</span><strong data-testid="movement-swim">{sheet.swim_speed} {movementCopy.unit}</strong></div> : null}
+                {sheet.climb_speed != null ? <div><span>{movementCopy.climb}</span><strong data-testid="movement-climb">{sheet.climb_speed} {movementCopy.unit}</strong></div> : null}
+                {sheet.fly_speed != null ? <div><span>{movementCopy.fly}</span><strong data-testid="movement-fly">{sheet.fly_speed} {movementCopy.unit}</strong></div> : null}
+              </div>
+            </article>
 
             <div className="two-column-grid">
               <article className="panel">
