@@ -4,6 +4,69 @@ type MessageParams = Record<string, unknown>
 type MessageFormatter = string | ((params: MessageParams) => string)
 type LocalizedMessage = Record<Locale, MessageFormatter>
 
+type AbilityRequirement = { ability: string; minimum_score: number }
+type AbilityRequirementGroup = { choose: number; options: AbilityRequirement[] }
+
+const ABILITY_LABELS: Record<Locale, Record<string, string>> = {
+  'zh-TW': {
+    strength: '力量',
+    dexterity: '敏捷',
+    constitution: '體質',
+    intelligence: '智力',
+    wisdom: '感知',
+    charisma: '魅力',
+  },
+  en: {
+    strength: 'Strength',
+    dexterity: 'Dexterity',
+    constitution: 'Constitution',
+    intelligence: 'Intelligence',
+    wisdom: 'Wisdom',
+    charisma: 'Charisma',
+  },
+}
+
+function abilityRequirement(value: unknown): AbilityRequirement | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const record = value as Record<string, unknown>
+  if (typeof record.ability !== 'string' || typeof record.minimum_score !== 'number') return undefined
+  return { ability: record.ability, minimum_score: record.minimum_score }
+}
+
+function requirementGroup(value: unknown): AbilityRequirementGroup | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const record = value as Record<string, unknown>
+  if (typeof record.choose !== 'number' || !Array.isArray(record.options)) return undefined
+  const options = record.options.map(abilityRequirement).filter((item): item is AbilityRequirement => Boolean(item))
+  return options.length ? { choose: record.choose, options } : undefined
+}
+
+function formatAbilityRequirement(requirement: AbilityRequirement, locale: Locale): string {
+  const label = ABILITY_LABELS[locale][requirement.ability] ?? requirement.ability
+  return `${label} ${requirement.minimum_score}+`
+}
+
+function structuredRequirements(params: MessageParams, locale: Locale): string | undefined {
+  const requirements = Array.isArray(params.requirements)
+    ? params.requirements.map(abilityRequirement).filter((item): item is AbilityRequirement => Boolean(item))
+    : []
+  const groups = Array.isArray(params.requirement_groups)
+    ? params.requirement_groups.map(requirementGroup).filter((item): item is AbilityRequirementGroup => Boolean(item))
+    : []
+  const parts = requirements.map((item) => formatAbilityRequirement(item, locale))
+  for (const group of groups) {
+    const labels = group.options.map((item) => formatAbilityRequirement(item, locale))
+    if (group.choose === 1) {
+      parts.push(labels.join(locale === 'zh-TW' ? ' 或 ' : ' or '))
+    } else {
+      parts.push(locale === 'zh-TW'
+        ? `任選 ${group.choose} 項：${labels.join('、')}`
+        : `choose ${group.choose}: ${labels.join(', ')}`)
+    }
+  }
+  return parts.length ? parts.join(locale === 'zh-TW' ? '；' : '; ') : undefined
+}
+
 const BUILDER_ISSUE_MESSAGES: Record<string, LocalizedMessage> = {
   unknown_reference: { 'zh-TW': '先前選取的規則項目已不存在，請重新選擇。', en: 'The previously selected rules entry no longer exists. Please choose again.' },
   wrong_reference_kind: { 'zh-TW': '選取的規則項目類型不正確，請重新選擇。', en: 'The selected rules entry has the wrong type. Please choose again.' },
@@ -34,7 +97,10 @@ const BUILDER_ISSUE_MESSAGES: Record<string, LocalizedMessage> = {
   invalid_manual_hp_roll: { 'zh-TW': '手動輸入的生命值擲骰結果超出此職業生命骰允許範圍。', en: 'The manually entered HP roll is outside the class hit-die range.' },
   invalid_subclass_reference: { 'zh-TW': '目前子職業選擇指向不存在或無效的子職業，請重新選擇。', en: 'The selected subclass reference is invalid.' },
   subclass_class_mismatch: { 'zh-TW': '目前選擇的子職業不屬於所選職業。', en: 'The selected subclass does not belong to the selected class.' },
-  multiclass_prerequisite_not_met: { 'zh-TW': '目前能力值不符合兼職所需的先決條件。', en: 'The current ability scores do not meet the multiclass prerequisites.' },
+  multiclass_prerequisite_not_met: {
+    'zh-TW': (params) => structuredRequirements(params, 'zh-TW') ? `兼職需要符合：${structuredRequirements(params, 'zh-TW')}。` : '目前能力值不符合兼職所需的先決條件。',
+    en: (params) => structuredRequirements(params, 'en') ? `Requires ${structuredRequirements(params, 'en')} to multiclass.` : 'The current ability scores do not meet the multiclass prerequisites.',
+  },
   subclass_selected_too_early: { 'zh-TW': '目前等級尚未到達可選擇子職業的時點。', en: 'The subclass was selected before the class reaches its subclass choice level.' },
   missing_subclass_at_timing: { 'zh-TW': '此職業已到達子職業選擇等級，必須選擇子職業。', en: 'This class has reached its subclass choice level and requires a subclass selection.' },
   duplicate_subclass_selection: { 'zh-TW': '同一職業只能保留一個有效的子職業選擇。', en: 'A class must have exactly one subclass selection.' },
@@ -84,20 +150,26 @@ const BUILDER_ISSUE_MESSAGES: Record<string, LocalizedMessage> = {
 const DISABLED_REASON_MESSAGES: Record<string, LocalizedMessage> = {
   multiclass_ability_scores_incomplete: { 'zh-TW': '兼職前請先完成能力值。', en: 'Complete ability scores before multiclassing.' },
   multiclass_prerequisite_not_met: {
-    'zh-TW': ({ requirements }) => requirements ? `兼職需要符合：${String(requirements)}。` : '目前能力值不符合兼職所需的先決條件。',
-    en: ({ requirements }) => requirements ? `Requires ${String(requirements)} to multiclass.` : 'The multiclass prerequisites are not met.',
+    'zh-TW': (params) => structuredRequirements(params, 'zh-TW') ? `兼職需要符合：${structuredRequirements(params, 'zh-TW')}。` : '目前能力值不符合兼職所需的先決條件。',
+    en: (params) => structuredRequirements(params, 'en') ? `Requires ${structuredRequirements(params, 'en')} to multiclass.` : 'The multiclass prerequisites are not met.',
   },
   feat_ability_scores_incomplete: { 'zh-TW': '選擇專長前請先完成能力值。', en: 'Complete ability scores before choosing this feat.' },
   feat_prerequisite_not_met: {
-    'zh-TW': ({ requirements }) => requirements ? `此專長需要符合：${String(requirements)}。` : '目前能力值不符合此專長的先決條件。',
-    en: ({ requirements }) => requirements ? `Requires ${String(requirements)}.` : 'The feat prerequisites are not met.',
+    'zh-TW': (params) => structuredRequirements(params, 'zh-TW') ? `此專長需要符合：${structuredRequirements(params, 'zh-TW')}。` : '目前能力值不符合此專長的先決條件。',
+    en: (params) => structuredRequirements(params, 'en') ? `Requires ${structuredRequirements(params, 'en')}.` : 'The feat prerequisites are not met.',
   },
   unsupported_feat_prerequisite: { 'zh-TW': '此專長使用目前尚未支援的先決條件格式。', en: 'This feat uses a prerequisite shape that is not currently supported.' },
   nested_choice_parent_required: { 'zh-TW': '必須先選擇對應的上層選項，才能使用此子選擇。', en: 'Choose the corresponding parent option first.' },
   unsupported_equipment_option: { 'zh-TW': '此起始裝備選項格式目前尚未支援。', en: 'This starting equipment option shape is not currently supported.' },
   spell_choices_future_step: { 'zh-TW': '法術選擇需在法術步驟中完成。', en: 'Spell choices are completed in the spell step.' },
   starting_equipment_future_step: { 'zh-TW': '起始裝備需在裝備步驟中完成。', en: 'Starting equipment choices are completed in the equipment step.' },
-  ability_score_cap_reached: { 'zh-TW': '此能力值已達一般規則允許的上限。', en: 'This ability score has reached the normal rules cap.' },
+  asi_ability_scores_incomplete: { 'zh-TW': '分配能力值提升前請先完成能力值。', en: 'Complete ability scores before assigning an Ability Score Improvement.' },
+  asi_branch_required: { 'zh-TW': '請先選擇「能力值提升」，再分配能力值點數。', en: 'Choose Ability Score Improvement before assigning ability points.' },
+  ability_score_cap_reached: {
+    'zh-TW': ({ ability, maximum }) => typeof ability === 'string' && typeof maximum === 'number' ? `${ABILITY_LABELS['zh-TW'][ability] ?? ability} 不能超過 ${maximum}。` : '此能力值已達一般規則允許的上限。',
+    en: ({ ability, maximum }) => typeof ability === 'string' && typeof maximum === 'number' ? `${ABILITY_LABELS.en[ability] ?? ability} cannot exceed ${maximum}.` : 'This ability score has reached the normal rules cap.',
+  },
+  class_progression_future_step: { 'zh-TW': '職業進程需在職業步驟中完成。', en: 'Class progression is completed in the class step.' },
 }
 
 const REQUEST_CODE_MESSAGES: Record<string, Record<Locale, string>> = {
