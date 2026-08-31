@@ -2,7 +2,9 @@
 
 ## Structured system-owned localization messages
 
-M02-G guarantees that normal `zh-TW` UI does not fall back to concatenating canonical English server prose. Known builder issue codes use localized copy; unknown issue/disabled-reason paths use a Chinese-only safe fallback.
+M02-G guarantees that normal `zh-TW` UI does not fall back to concatenating canonical English server prose. Every builder issue `code` the server emits (43 of 43) now has localized copy in both supported locales; unknown issue codes and every disabled-reason path use a Chinese-only safe fallback.
+
+Disabled reasons are the remaining gap. The server sends them as free English prose with no machine code, so `DISABLED_REASON_MESSAGES` in `apps/web/src/i18n/systemMessages.ts` — including its `code + params` formatters — is written but unreachable at runtime. Every disabled option therefore reads `此選項目前無法選擇；請先完成相關條件。` in `zh-TW`, while `en` keeps the concrete reason. That asymmetry is accepted for M02-G closeout and must be closed here.
 
 M02-H must finish the structured detail channel for dynamic system-owned messages:
 
