@@ -110,10 +110,37 @@ class FeatData(IndexedNamedData):
     desc: list[str]
 
 
+class FeatureResourceCapacity(StrictModel):
+    type: Literal["fixed", "proficiency_bonus"]
+    value: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def fixed_capacity_requires_value(self) -> "FeatureResourceCapacity":
+        if self.type == "fixed" and self.value is None:
+            raise ValueError("fixed feature resource capacity requires value")
+        if self.type != "fixed" and self.value is not None:
+            raise ValueError("non-fixed feature resource capacity cannot include value")
+        return self
+
+
+class FeatureResourceDescriptor(StrictModel):
+    capacity: FeatureResourceCapacity
+    recharge: list[Literal["short_rest", "long_rest"]] = Field(min_length=1)
+
+    @field_validator("recharge")
+    @classmethod
+    def recharge_values_are_unique(cls, value: list[str]) -> list[str]:
+        if len(value) != len(set(value)):
+            raise ValueError("feature resource recharge values must be unique")
+        return value
+
+
 class FeatureData(IndexedNamedData):
     level: int | None = Field(default=None, ge=1, le=20)
     class_: APIReference | None = Field(default=None, alias="class")
     subclass: APIReference | None = None
+    minimum_character_level: int | None = Field(default=None, ge=1, le=20)
+    resource: FeatureResourceDescriptor | None = None
 
 
 class LanguageData(IndexedNamedData):
