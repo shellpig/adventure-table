@@ -44,10 +44,6 @@ ABILITY_LABELS = {
 }
 ASI_CAP = 20
 
-# The imported 5e SRD level feed contains one known cumulative-counter anomaly:
-# Rogue 10 is 3, Rogue 11 is shipped as 2, and Rogue 12 continues at 4. P1-D
-# consumes ability_score_bonuses as a cumulative counter, so normalize that
-# upstream row explicitly. Every other decrease still fails fast below.
 KNOWN_ASI_SOURCE_CORRECTIONS: dict[str, tuple[int, int]] = {
     "srd5.1:level:rogue-11": (2, 3),
 }
@@ -60,6 +56,12 @@ class StructuralCompilation:
     feature_refs: tuple[str, ...]
     proficiencies: tuple[str, ...]
     skill_choices: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class FeatFailureDetail:
+    code: str
+    params: dict[str, object]
 
 
 def _stable_key(reference: dict[str, object]) -> str | None:
@@ -174,24 +176,33 @@ def _effective_abilities(
     return {ability: overrides.get(ability, score) for ability, score in resolved.items()}
 
 
-def feat_failure_reason(
+def feat_failure_detail(
     feat_entry: ContentEntry,
     effective_abilities: dict[str, int] | None,
-) -> str | None:
+) -> FeatFailureDetail | None:
     prerequisites = feat_entry.data.get("prerequisites")
     if not isinstance(prerequisites, list) or not prerequisites:
         return None
     if effective_abilities is None:
-        return "Complete ability scores before choosing this feat."
+        return FeatFailureDetail(
+            code="feat_ability_scores_incomplete",
+            params={"feat_ref": feat_entry.key},
+        )
 
-    failures: list[str] = []
+    failures: list[dict[str, object]] = []
     for prerequisite in prerequisites:
         if not isinstance(prerequisite, dict):
-            return "This feat has an unsupported prerequisite shape."
+            return FeatFailureDetail(
+                code="unsupported_feat_prerequisite",
+                params={"feat_ref": feat_entry.key},
+            )
         ability_score = prerequisite.get("ability_score")
         minimum = prerequisite.get("minimum_score")
         if not isinstance(ability_score, dict) or not isinstance(minimum, int):
-            return "This feat has an unsupported prerequisite shape."
+            return FeatFailureDetail(
+                code="unsupported_feat_prerequisite",
+                params={"feat_ref": feat_entry.key},
+            )
         ability_key = _stable_key(ability_score)
         if ability_key is not None and stable_key_is_kind(ability_key, "ability"):
             index = parse_stable_key(ability_key).index
@@ -199,10 +210,40 @@ def feat_failure_reason(
             index = ability_score.get("index")
         ability = ABILITY_INDEX_TO_NAME.get(index) if isinstance(index, str) else None
         if ability is None:
-            return "This feat has an unsupported ability prerequisite."
+            return FeatFailureDetail(
+                code="unsupported_feat_prerequisite",
+                params={"feat_ref": feat_entry.key},
+            )
         if effective_abilities.get(ability, 0) < minimum:
-            failures.append(f"{ABILITY_LABELS[ability]} {minimum}+")
-    return None if not failures else "Requires " + " and ".join(failures) + "."
+            failures.append({"ability": ability, "minimum_score": minimum})
+    if not failures:
+        return None
+    return FeatFailureDetail(
+        code="feat_prerequisite_not_met",
+        params={"feat_ref": feat_entry.key, "requirements": failures},
+    )
+
+
+def feat_failure_reason(
+    feat_entry: ContentEntry,
+    effective_abilities: dict[str, int] | None,
+) -> str | None:
+    detail = feat_failure_detail(feat_entry, effective_abilities)
+    if detail is None:
+        return None
+    if detail.code == "feat_ability_scores_incomplete":
+        return "Complete ability scores before choosing this feat."
+    if detail.code == "unsupported_feat_prerequisite":
+        return "This feat has an unsupported prerequisite shape."
+    requirements = detail.params.get("requirements")
+    if not isinstance(requirements, list):
+        return "This feat's prerequisites are not met."
+    labels = [
+        f"{ABILITY_LABELS.get(str(item.get('ability')), str(item.get('ability')).upper())} {item.get('minimum_score')}+"
+        for item in requirements
+        if isinstance(item, dict)
+    ]
+    return "Requires " + " and ".join(labels) + "."
 
 
 def _selection(draft: BuilderDraft, choice_id: str) -> tuple[str, ...]:
@@ -370,11 +411,9 @@ def _canonical_rule_choices(
             nested_choices.extend(
                 child.model_copy(
                     update={
-                        "disabled_reason": (
-                            child.disabled_reason
-                            if active
-                            else f"Choose {nested_label} first."
-                        )
+                        "disabled_reason": child.disabled_reason if active else "Choose the corresponding parent option first.",
+                        "disabled_reason_code": child.disabled_reason_code if active else "nested_choice_parent_required",
+                        "disabled_reason_params": child.disabled_reason_params if active else {},
                     }
                 )
                 for child in children
@@ -480,17 +519,21 @@ def build_structural_choices(
             )
             asi_option_id = _asi_option_id(branch_id)
             effective = _effective_abilities(resolved, overrides)
-            feat_options = tuple(
-                BuilderChoiceOption(
-                    option_id=feat.key,
-                    label=_entry_label(feat),
-                    kind=BuilderOptionKind.REFERENCE,
-                    reference_id=feat.key,
-                    category="feat",
-                    disabled_reason=feat_failure_reason(feat, effective),
+            feat_options: list[BuilderChoiceOption] = []
+            for feat in feats:
+                detail = feat_failure_detail(feat, effective)
+                feat_options.append(
+                    BuilderChoiceOption(
+                        option_id=feat.key,
+                        label=_entry_label(feat),
+                        kind=BuilderOptionKind.REFERENCE,
+                        reference_id=feat.key,
+                        category="feat",
+                        disabled_reason=feat_failure_reason(feat, effective),
+                        disabled_reason_code=detail.code if detail is not None else None,
+                        disabled_reason_params=detail.params if detail is not None else {},
+                    )
                 )
-                for feat in feats
-            )
             branch_selection = _selection(draft, branch_id)
             choices.append(
                 BuilderChoice(
@@ -523,10 +566,15 @@ def build_structural_choices(
                 current = resolved.get(ability, 0) if resolved is not None else 0
                 already_selected = selected_counts[_ability_option_id(ability)]
                 disabled_reason = None
+                disabled_reason_code = None
+                disabled_reason_params: dict[str, object] = {}
                 if resolved is None:
                     disabled_reason = "Complete ability scores before assigning an ASI."
+                    disabled_reason_code = "asi_ability_scores_incomplete"
                 elif current >= ASI_CAP or current + already_selected > ASI_CAP:
                     disabled_reason = f"{ABILITY_LABELS[ability]} cannot exceed {ASI_CAP}."
+                    disabled_reason_code = "ability_score_cap_reached"
+                    disabled_reason_params = {"ability": ability, "maximum": ASI_CAP}
                 ability_options.append(
                     BuilderChoiceOption(
                         option_id=_ability_option_id(ability),
@@ -535,12 +583,11 @@ def build_structural_choices(
                         count=1,
                         category="asi_ability",
                         disabled_reason=disabled_reason,
+                        disabled_reason_code=disabled_reason_code,
+                        disabled_reason_params=disabled_reason_params,
                     )
                 )
 
-            # Keep the dependent choice deterministic even after switching to a
-            # feat. Saved ASI allocations become harmless stale draft state and
-            # become active again if the branch is switched back to ASI.
             ability_choice_active = branch_selection in ((), (asi_option_id,))
             choices.append(
                 BuilderChoice(
@@ -557,6 +604,8 @@ def build_structural_choices(
                         if ability_choice_active
                         else "Choose Ability Score Improvement to assign ability points."
                     ),
+                    disabled_reason_code=(None if ability_choice_active else "asi_branch_required"),
+                    disabled_reason_params={},
                     allow_duplicates=True,
                 )
             )
@@ -616,6 +665,7 @@ def validate_structural_choice_integrity(
                     message=(
                         f"{choice.label} does not allow the same option to be selected twice."
                     ),
+                    message_params={"choice_id": choice.choice_id},
                     related_refs=tuple(selected),
                 )
             )
@@ -635,6 +685,7 @@ def validate_structural_choice_integrity(
                     message=(
                         f"{choice.label} contains a selection whose prerequisite is not satisfied."
                     ),
+                    message_params={"choice_id": choice.choice_id, "option_ids": disabled},
                     related_refs=tuple(disabled),
                 )
             )
