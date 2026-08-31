@@ -99,6 +99,10 @@ class CharacterSheetDTO(SheetModel):
     passive_perception: int
     initiative_modifier: int
     armor_class: int
+    walking_speed: int
+    swim_speed: int | None = None
+    climb_speed: int | None = None
+    fly_speed: int | None = None
     max_hp: int
     current_hp: int
     temporary_hp: int
@@ -138,6 +142,11 @@ def build_character_sheet(
         )
         for name in ABILITY_NAMES
     }
+
+    race_speed = registry.get(build.race_ref).data.get("speed")
+    if not isinstance(race_speed, int) or race_speed <= 0:
+        raise ValueError(f"race {build.race_ref} has invalid walking speed")
+    walking_speed = build.walking_speed if build.walking_speed is not None else race_speed
 
     totals = derive_hit_dice_totals(build, registry)
     hit_dice = [
@@ -269,6 +278,10 @@ def build_character_sheet(
         passive_perception=passive_perception(build, registry),
         initiative_modifier=abilities["dexterity"].modifier,
         armor_class=calculate_armor_class(build, state, registry),
+        walking_speed=walking_speed,
+        swim_speed=build.swim_speed,
+        climb_speed=build.climb_speed,
+        fly_speed=build.fly_speed,
         max_hp=calculate_max_hp(build),
         current_hp=state.current_hp,
         temporary_hp=state.temporary_hp,
