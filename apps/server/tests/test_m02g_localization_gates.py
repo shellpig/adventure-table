@@ -107,13 +107,28 @@ def test_future_visibility_requires_every_supported_locale() -> None:
         sources={"srd5.1"},
         kinds={"item"},
     )
-    assert any(issue.key == item.key and issue.field_path == field_path and issue.locale == "zh-TW" for issue in issues)
+    assert any(
+        issue.key == item.key and issue.field_path == field_path and issue.locale == "zh-TW"
+        for issue in issues
+    )
+
+    zh_entries: dict[str, dict[str, str]] = {}
+    for candidate in registry.list_kind("item", source="srd5.1"):
+        descriptions = candidate.data.get("desc")
+        if not isinstance(descriptions, list):
+            continue
+        zh_entries[candidate.key] = {
+            f"data.desc.{index}": f"測試翻譯 {index + 1}"
+            for index, _description in enumerate(descriptions)
+        }
 
     translated = ContentLocalizationCatalog(
         registry,
         policy,
-        {("srd5.1", "zh-TW"): {item.key: {field_path: "測試翻譯"}}},
+        {("srd5.1", "zh-TW"): zh_entries},
     )
-    resolved = translated.resolve_field(item.key, field_path, "zh-TW")
-    assert resolved.value == "測試翻譯"
-    assert not resolved.missing_required
+    assert not translated.completeness_issues(
+        locales=SUPPORTED_CONTENT_LOCALES,
+        sources={"srd5.1"},
+        kinds={"item"},
+    )
