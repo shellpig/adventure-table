@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import re
 from tempfile import TemporaryDirectory
 
 import pytest
 
 from app.content import load_default_content_registry
-from app.content.localization_files import load_content_localization_catalog
+from app.content.localization_files import (
+    _read_overlay_file,
+    load_content_localization_catalog,
+)
 from app.content.registry import CONTENT_PACKS_ROOT, ContentValidationError
 
 
@@ -139,3 +143,45 @@ def test_locale_shards_allow_mixed_language_human_review_drafts() -> None:
     assert quarterstaff.value == "Quarterstaff"
     assert not quarterstaff.missing_required
     assert shield.value == "盾牌"
+
+
+def test_committed_zh_tw_shard_names_are_not_left_in_source_language() -> None:
+    """Dataset gate: a shipped zh-TW name must read as Traditional Chinese.
+
+    The loader deliberately tolerates mixed-language review drafts, so
+    completeness alone cannot distinguish a translated name from an English
+    string copied into the zh-TW column. This gate is the dataset-level
+    counterpart: every shipped name needs Han characters, and any Latin left
+    inside it must be rules notation rather than an untranslated word.
+    """
+
+    registry = load_default_content_registry()
+    han = re.compile(r"[㐀-鿿]")
+    latin_word = re.compile(r"[A-Za-z][A-Za-z0-9]*")
+    # Latin that is notation, not language: challenge rating, dice, feet, and
+    # the multiplication marker used by carpet-of-flying dimensions.
+    notation = re.compile(r"^(?:CR|d\d+|ft|x|X)$")
+
+    findings: list[str] = []
+    for pack in registry.enabled_pack_ids:
+        shard_root = CONTENT_PACKS_ROOT / pack / "locales" / "zh-TW"
+        for shard in sorted(shard_root.glob("*.json")):
+            entries = _read_overlay_file(shard, "zh-TW")
+            for key, fields in entries.items():
+                name = fields.get("name")
+                if not isinstance(name, str):
+                    continue
+                if not han.search(name):
+                    findings.append(f"untranslated: {key} -> {name}")
+                    continue
+                leftovers = [
+                    token
+                    for token in latin_word.findall(name)
+                    if not notation.match(token)
+                ]
+                if leftovers:
+                    findings.append(f"mixed: {key} -> {name}")
+
+    assert findings == [], "zh-TW shard names still carry source language: " + ", ".join(
+        findings[:20]
+    )
