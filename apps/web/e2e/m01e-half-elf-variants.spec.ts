@@ -307,7 +307,8 @@ test('M01-E Moon/Sun descent selects a runtime Wizard cantrip with racial access
   await completeNonVariantRequirements(page, 1)
   await confirmCreate(page, 'M01-E Moon Hero')
   await expect(page.getByText('Cantrip', { exact: true })).toBeVisible()
-  await expect(page.getByText('Fire Bolt', { exact: true })).toBeVisible()
+  await page.getByRole('tab', { name: 'Spells' }).click()
+  await expect(page.locator('.spell-list').getByText('Fire Bolt', { exact: true })).toBeVisible()
 })
 
 test('M01-E level-5 Drow descent exposes every Drow Magic threshold spell', async ({ page }) => {
@@ -317,7 +318,9 @@ test('M01-E level-5 Drow descent exposes every Drow Magic threshold spell', asyn
   await completeNonVariantRequirements(page, 5)
   await confirmCreate(page, 'M01-E Drow Hero')
   await expect(page.getByText('Drow Magic', { exact: true })).toBeVisible()
-  await expect(page.getByText('Dancing Lights', { exact: true })).toBeVisible()
-  await expect(page.getByText('Faerie Fire', { exact: true })).toBeVisible()
-  await expect(page.getByText('Darkness', { exact: true })).toBeVisible()
+  await page.getByRole('tab', { name: 'Spells' }).click()
+  const spellList = page.locator('.spell-list')
+  await expect(spellList.getByText('Dancing Lights', { exact: true })).toBeVisible()
+  await expect(spellList.getByText('Faerie Fire', { exact: true })).toBeVisible()
+  await expect(spellList.getByText('Darkness', { exact: true })).toBeVisible()
 })
