@@ -111,7 +111,7 @@ async function expectDraftSaved(page: Page) {
 
 async function currentDraftRevision(page: Page) {
   const text = (await page.locator('.builder-save-state span').innerText()).trim()
-  const match = text.match(/(?:Draft revision|草稿版本)\s*(\d+)/)
+  const match = text.match(/(?:Draft revision|草稿修訂版)\s*(\d+)/)
   if (!match) throw new Error(`Cannot parse draft revision from: ${text}`)
   return Number(match[1])
 }
