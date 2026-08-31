@@ -77,6 +77,24 @@ def test_overlay_unknown_field_path_is_rejected(tmp_path: Path) -> None:
         load_content_localization_catalog(registry, tmp_path, policy_path=POLICY_PATH)
 
 
+def test_srd_acolyte_roleplay_orphan_is_not_exempted(tmp_path: Path) -> None:
+    registry = load_default_content_registry()
+    _write_shard(
+        tmp_path,
+        "srd5.1",
+        "zh-TW",
+        "bad-acolyte-roleplay.json",
+        {
+            "srd5.1:background:acolyte": {
+                "data.roleplay_suggestions.personality_traits.0": "不應存在的舊譯文"
+            }
+        },
+    )
+
+    with pytest.raises(ContentValidationError, match="references unknown field"):
+        load_content_localization_catalog(registry, tmp_path, policy_path=POLICY_PATH)
+
+
 def test_duplicate_locale_key_field_definition_is_rejected_even_when_equal(tmp_path: Path) -> None:
     registry = load_default_content_registry()
     entry = registry.list_kind("spell", source="srd5.1")[0]
