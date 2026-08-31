@@ -4,25 +4,25 @@
   "source": "scag",
   "review_status": "human-reviewed",
   "entries": {
-    "scag:background:city-watch": {"name": "城市衛隊", "data.feature.name": "衛隊之眼"},
-    "scag:background:investigator": {"name": "調查員", "data.feature.name": "衛隊之眼"},
-    "scag:background:clan-crafter": {"name": "氏族工匠", "data.feature.name": "矮人敬重"},
-    "scag:background:cloistered-scholar": {"name": "修院學者", "data.feature.name": "圖書館通行"},
-    "scag:background:courtier": {"name": "宮廷侍臣", "data.feature.name": "宮廷職員"},
-    "scag:background:faction-agent": {"name": "派系特工", "data.feature.name": "安全庇護"},
+    "scag:background:city-watch": {"name": "城市守衛", "data.feature.name": "守望者之眼"},
+    "scag:background:investigator": {"name": "調查員", "data.feature.name": "守望者之眼"},
+    "scag:background:clan-crafter": {"name": "氏族工匠", "data.feature.name": "矮人的敬重"},
+    "scag:background:cloistered-scholar": {"name": "修院學士", "data.feature.name": "圖書館使用權"},
+    "scag:background:courtier": {"name": "朝臣", "data.feature.name": "宮廷官員"},
+    "scag:background:faction-agent": {"name": "派系特工", "data.feature.name": "避風港"},
     "scag:background:far-traveler": {
-      "name": "遠方旅人",
-      "data.feature.name": "萬眾矚目",
+      "name": "遠行者",
+      "data.feature.name": "眾目焦點",
       "data.roleplay_suggestions.personality_traits.0": "我會把新見到的習俗與故鄉傳統相比較。",
       "data.roleplay_suggestions.ideals.0": "開放心態：陌生習俗值得先理解，再作判斷。",
       "data.roleplay_suggestions.bonds.0": "我與離開的故土和故人仍有深厚連結。",
       "data.roleplay_suggestions.flaws.0": "我有時會理所當然地認為故鄉的做法更優越。"
     },
-    "scag:background:inheritor": {"name": "繼承人", "data.feature.name": "遺產"},
-    "scag:background:knight-of-the-order": {"name": "騎士團騎士", "data.feature.name": "騎士禮遇"},
-    "scag:background:mercenary-veteran": {"name": "傭兵老兵", "data.feature.name": "傭兵生涯"},
-    "scag:background:urban-bounty-hunter": {"name": "城市賞金獵人", "data.feature.name": "耳聽八方"},
-    "scag:background:uthgardt-tribe-member": {"name": "烏斯伽特部族成員", "data.feature.name": "烏斯伽特傳承"},
-    "scag:background:waterdhavian-noble": {"name": "深水城貴族", "data.feature.name": "維持體面"}
+    "scag:background:inheritor": {"name": "繼承者", "data.feature.name": "繼承權"},
+    "scag:background:knight-of-the-order": {"name": "教團騎士", "data.feature.name": "騎士的敬重"},
+    "scag:background:mercenary-veteran": {"name": "傭兵老將", "data.feature.name": "傭兵生涯"},
+    "scag:background:urban-bounty-hunter": {"name": "城市賞金獵人", "data.feature.name": "在地之耳"},
+    "scag:background:uthgardt-tribe-member": {"name": "烏斯伽部落成員", "data.feature.name": "烏斯伽傳統"},
+    "scag:background:waterdhavian-noble": {"name": "深水城貴族", "data.feature.name": "保持時尚"}
   }
 }
