@@ -1,96 +1,197 @@
-# M02-E Closeout — SRD 5.1 User-Visible Descriptions
+# M02-E Closeout — SRD 5.1 Description Localization
 
 日期：2026-08-31  
 分支：`m02-e-srd-descriptions`
 
 ## 結論
 
-M02-E 已依 M02-C 的 **field-level product visibility policy** 完成 scope audit。
+M02-E 已完成本分支核准的 SRD 5.1 description authoring scope：
 
-本 Subphase 的 required SRD long-form translation count 為：
+- `spell.data.desc.*`
+- `feature.data.desc.*`
+- `condition.data.desc.*`
+
+上述三個 canonical corpus 的繁體中文內容已以 StableKey + field path overlay 寫入 `data/srd5.1/locales/zh-TW/`；不修改 canonical mechanics data，也不建立第二份 mechanics dataset。
+
+這份 closeout **取代本分支早期「required long-form count = 0」的錯誤 closeout 判定**。早期判定只依當時 current-surface required policy 得出零項，但使用者明確要求 M02-E 不要留下大量未翻譯英文，因此本分支將 spell / feature / condition 的 SRD description corpus 提前 author 完成，並新增獨立 gate 保證覆蓋完整。
+
+這項擴充不代表把所有 hidden field 都改成 user-visible，也不修改 `currently_user_visible`；presentation policy 仍如實描述目前 UI surface。
+
+## 已完成資料
+
+### Spells
+
+SRD 5.1 spell canonical `data.desc.*` 已完整翻譯，translation shard：
 
 ```text
-0
+data/srd5.1/locales/zh-TW/spell-desc-01.json
+...
+data/srd5.1/locales/zh-TW/spell-desc-42.json
 ```
 
-這不是把英文長文當成已翻譯，也不是以 fallback 掩蓋缺漏；原因是目前產品畫面沒有 render SRD spell / condition / magic-item / background-feature 的 canonical long description。
+保留：
 
-因此 M02-E 不建立「為未來可能使用」的整份 SRD 長文繁中庫，符合 M02 規格明確要求：只翻 M02 closeout 當下已 user-visible 的 field，未 expose 的 field 延後到首次 expose 它的 Subphase。
+- 原始段落索引 `data.desc.N`
+- 骰式與傷害數值
+- DC / 距離 / 時間 / 百分比 / 次數等 mechanics-sensitive token
+- Markdown table row / column shape
+- StableKey identity
 
-## Surface audit
+包含但不限於 Teleport / Scrying / Reincarnate / Prismatic Spray / Prismatic Wall / True Polymorph / Wish 等具有表格或大量條件的長文。
 
-目前既有產品 surface 的實際接線確認如下：
+### Conditions
 
-- Character Builder / Spellcasting：顯示 spell name、spell level、access model、slot/resource summary 與 frontend-owned helper copy；不 render `spell.data.desc.*`。
-- Character Sheet / Spells：顯示 spell name、access / prepared state、resource state；不 render `spell.data.desc.*`。
-- Character Sheet / Conditions：顯示 condition name 與使用者自行輸入的 note；不 render `condition.data.desc.*`。
-- Character Sheet / Inventory：顯示 item/equipment name 與結構化 mechanics summary（equipment category、damage dice/type、AC、cost）；不 render `item.data.desc.*`。
-- Background feature long description：目前 Review / Sheet 沒有 render `background.data.feature.desc`。
+SRD 5.1 condition canonical `data.desc.*` 已完整翻譯：
 
-目前 policy 對應的 deferred long-form rules：
+```text
+data/srd5.1/locales/zh-TW/condition-desc.json
+```
+
+包含 Blinded / Charmed / Grappled / Paralyzed / Petrified / Restrained / Stunned / Unconscious / Exhaustion 等全部 canonical condition entries。
+
+### Features
+
+SRD 5.1 feature canonical `data.desc.*` 已依職業完整翻譯：
+
+```text
+data/srd5.1/locales/zh-TW/feature-desc-01.json  # Barbarian
+data/srd5.1/locales/zh-TW/feature-desc-02.json  # Bard
+data/srd5.1/locales/zh-TW/feature-desc-03.json  # Cleric
+data/srd5.1/locales/zh-TW/feature-desc-04.json  # Druid
+data/srd5.1/locales/zh-TW/feature-desc-05.json  # Fighter
+data/srd5.1/locales/zh-TW/feature-desc-06.json  # Monk
+data/srd5.1/locales/zh-TW/feature-desc-07.json  # Paladin
+data/srd5.1/locales/zh-TW/feature-desc-08.json  # Ranger
+data/srd5.1/locales/zh-TW/feature-desc-09.json  # Rogue
+data/srd5.1/locales/zh-TW/feature-desc-10.json  # Sorcerer
+data/srd5.1/locales/zh-TW/feature-desc-11.json  # Warlock
+data/srd5.1/locales/zh-TW/feature-desc-12.json  # Wizard
+```
+
+重複 progression StableKey（ASI、Extra Attack、Domain/Origin/Archetype improvement、Mystic Arcanum 等）仍各自有完整 translation field；沒有用 runtime alias 或 summary text 取代 canonical field coverage。
+
+Warlock 的 Eldritch Invocations 亦逐 StableKey author，不只翻 `Eldritch Invocations` 總說明。
+
+## 明確不納入本次 bulk authoring
+
+以下 long-form 仍依 M02-C field policy 延後：
 
 ```text
 background.data.feature.desc
 item.data.desc.*
-spell.data.desc.*
-condition.data.desc.*
 ```
 
-全部維持：
+原因：這些欄位目前仍沒有對應 product surface；尤其 `items.json` 長文體量很大，提前全部翻譯會重建先前已明確排除的 translation / review debt。
+
+因此：
+
+- spell / feature / condition description：M02-E 明確提前 author 完成。
+- item / background hidden description：仍由首次 expose 該欄位的 Subphase 處理。
+- Monster / Beast：仍依既有 roadmap 延後 P4-A，不在 M02 建立 monster-specific translation corpus。
+
+## Automated authoring gates
+
+`apps/server/tests/test_m02e_description_scope.py` 已由早期零 scope regression 改為實際 description corpus gate。
+
+測試會直接讀 canonical：
 
 ```text
-localizable = true
-currently_user_visible = false
-required_locales = []
+data/srd5.1/spells.json
+data/srd5.1/features.json
+data/srd5.1/conditions.json
 ```
 
-## 防止未來留下英文漏翻
+再逐一枚舉每個：
 
-新增 `apps/server/tests/test_m02e_description_scope.py`，鎖定以下行為：
+```text
+<StableKey>::data.desc.N
+```
 
-1. 目前 SRD policy 不得存在未處理的 required long-form field。
-2. 證明 canonical SRD 的 spell / condition / item 確實含大量英文長文；required count = 0 是產品 surface 決策，不是資料不存在。
-3. deferred long-form field 不得被 completeness 誤判成 M02-E 缺翻譯。
-4. 未來任何 Subphase 若把 long-form field 的 policy 改成 `currently_user_visible = true` / required，M02-E scope test 會立即失敗，迫使同一變更同步加入 `zh-TW` / `en` coverage，而不能把英文直接露到正式 UI。
+並要求 zh-TW shards 滿足：
 
-## 為什麼沒有批量翻整份 SRD
+1. **Exact field coverage**
+   - 每個 canonical description path 都必須有 zh-TW field。
+   - canonical 非空字串不得翻成空字串。
 
-M02 規格已明確禁止為尚不存在的 UI surface 提前翻譯完整 SRD 長文庫。
+2. **English leakage gate**
+   - canonical human-language description 不得直接以相同英文原文出貨。
+   - 翻譯內容必須含中文文字。
+   - 純 Markdown separator / 空字串等沒有語言的結構列不誤判。
 
-例如 `items.json`、spells、conditions 中雖有大量 canonical English description，但目前 UI 不顯示它們。現在先翻會造成：
+3. **Mechanics fidelity gate**
+   - dice token，例如 `2d8`、`10d10`
+   - signed modifier，例如 `+2`、`-4`
+   - Arabic numeric token，例如距離、DC、等級、次數、百分比
+   - canonical 中出現的上述 token 必須仍存在於翻譯。
 
-- 大量無產品用途的 translation debt / review debt。
-- 未來真正做 detail UI 時可能因 presentation contract 改變而重做。
-- 違反 M02-C field-level visibility policy 的 SSOT 原則。
+4. **Markdown table shape gate**
+   - canonical table row 必須仍是 table row。
+   - pipe / column 數不得改變。
 
-因此本 closeout 不宣稱「整份 SRD 5.1 已完整繁中化」；只宣稱：
+這些 gate 不 hard-code description 數量；canonical 新增任何 spell / feature / condition `data.desc.*` 後，若沒有同步 zh-TW，測試會自動失敗。
 
-> M02-E 當下 **所有目前 user-visible 的 SRD long-form description fields 已完整處理，而其 required 集合為空**。
+## Runtime / identity 邊界
 
-## English leakage 判定
+M02-E 沒有改變：
 
-使用者要求「不要像未審核機翻一樣留下大量英文」。M02-E 採更嚴格的邊界：
+- StableKey
+- content refs
+- Builder choice IDs
+- CharacterBuild
+- CharacterState
+- Draft revision
+- spell / feature mechanics
 
-- required / user-visible long-form：不得缺繁中；未來一旦出現即由 completeness + scope regression 阻擋。
-- deferred / non-visible canonical long-form：可以維持 SRD 原始英文，因為不會出現在目前產品畫面。
-- 不把 deferred English 誤算成已完成的 zh-TW translation。
+Localization 仍只是 presentation overlay。
+
+英文模式仍讀 canonical English；`zh-TW` 模式由 existing `ContentLocalizationCatalog` / shard loader 套用繁中 overlay。切換 locale 不需要重建角色或改寫任何 character state。
+
+## CI 狀態
+
+PR #29 的 GitHub Actions 目前仍受外部 runner / Actions 執行問題阻塞。
+
+最近一次本分支 workflow：
+
+```text
+run: 33352945719
+workflow: P1 Full Regression
+conclusion: failure
+job: p1-full-regression
+steps: none returned
+```
+
+該 run 在任何 workflow step 執行前即結束，沒有 pytest / frontend / Playwright step result，也沒有可用 test failure log。
+
+因此本文件**不宣稱 CI tests passed**。目前可確認的是：
+
+- translation data、authoring gate 與 closeout 均已寫入 branch；
+- Actions run 沒有執行測試步驟；
+- 這不是已取得 assertion failure 的 M02-E test failure。
+
+待 GitHub Actions 可正常啟動 runner 後，PR #29 必須以現有 branch head 重跑完整 regression；若 M02-E gate 回報漏 field / mechanics token，需在 merge 前修正。
 
 ## M02-E Definition of Done
 
-- [x] 依 M02-C policy 枚舉 SRD long-form scope。
-- [x] Audit 現有 Builder / Character Sheet surface。
-- [x] 確認目前 required long-form field count = 0。
-- [x] 確認 canonical SRD 確實存在 deferred English long text，沒有把「資料不存在」當完成。
-- [x] 新增 regression test 鎖定 policy / completeness boundary。
-- [x] 不提前翻譯沒有 product surface 的 spell / item / condition / background feature 長文。
-- [x] 不修改 StableKey、mechanics、Draft、CharacterBuild 或 CharacterState。
+- [x] SRD spell `data.desc.*` zh-TW authoring 完成。
+- [x] SRD condition `data.desc.*` zh-TW authoring 完成。
+- [x] SRD feature `data.desc.*` zh-TW authoring完成，12 個職業逐 StableKey 覆蓋。
+- [x] 不修改 canonical mechanics / identity。
+- [x] 加入 canonical-driven exact coverage gate。
+- [x] 加入 English leakage gate。
+- [x] 加入 mechanics-sensitive token gate。
+- [x] 加入 Markdown table structure gate。
+- [x] 保持 item / background hidden long-form deferred boundary。
+- [x] 舊的 zero-scope closeout 已淘汰並由本文件取代。
+- [ ] GitHub Actions full regression 實際執行並取得 test-step 結果；目前為外部 runner / Actions blocker，非 branch scope 遺漏。
 
 ## 下一步
 
-M02-E branch scope 完成後，下一個正式 Subphase 為：
+M02-E coding / authoring scope 到此結束。
+
+下一個正式 Subphase：
 
 ```text
 M02-F — PHB / SCAG / GoS Localization
 ```
 
-M02-F 仍必須依同一份 `data/localization/localizable-fields.json` policy 處理 non-SRD current-surface presentation；不得因 E 的零 long-form scope 而放寬 non-SRD 翻譯要求。
+M02-F **尚未開始**。本分支與 PR #29 不應在本任務中 merge 到 `main`。
