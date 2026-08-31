@@ -1,4 +1,8 @@
 import { type BuilderGrantSummary } from '../../api/characterBuilder'
+import type {
+  ContentFieldResolver,
+  ContentNameResolver,
+} from '../../i18n/useContentPresentations'
 
 const KIND_ORDER = ['language', 'feature', 'background_feature', 'trait', 'proficiency']
 
@@ -21,4 +25,42 @@ export function sortGrantsByKind<T extends BuilderGrantSummary>(grants: readonly
       kindRank(a.grant.kind, extraKinds) - kindRank(b.grant.kind, extraKinds) || a.index - b.index,
     )
     .map((entry) => entry.grant)
+}
+
+/**
+ * References and field paths a grant list needs before its names can be shown
+ * in the active locale.
+ *
+ * A grant that points at a standalone content entry resolves through its own
+ * StableKey. A grant that is an inline field of its source entry has no
+ * StableKey, so it resolves through the source entry plus a field path.
+ */
+export function grantPresentationReferences(
+  grants: readonly BuilderGrantSummary[],
+): string[] {
+  return grants.flatMap((grant) =>
+    grant.presentation_field ? [grant.source_ref] : grant.reference_id ? [grant.reference_id] : [],
+  )
+}
+
+export function grantPresentationFields(
+  grants: readonly BuilderGrantSummary[],
+): string[] {
+  return Array.from(
+    new Set(
+      grants.flatMap((grant) => (grant.presentation_field ? [grant.presentation_field] : [])),
+    ),
+  )
+}
+
+export function grantDisplayName(
+  grant: BuilderGrantSummary,
+  fallback: string,
+  nameFor: ContentNameResolver,
+  fieldFor: ContentFieldResolver,
+): string {
+  if (grant.presentation_field) {
+    return fieldFor(grant.source_ref, grant.presentation_field, fallback)
+  }
+  return nameFor(grant.reference_id, fallback)
 }

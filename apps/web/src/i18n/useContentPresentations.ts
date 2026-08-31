@@ -9,6 +9,17 @@ import {
 import { useLocale } from './LocaleProvider'
 
 export type ContentNameResolver = (reference: string | null | undefined, fallback?: string) => string
+/**
+ * Resolve a field other than `name` on a content entry. Grants that live as an
+ * inline field of their source entry - a background's own feature, say - have
+ * no StableKey of their own, so their presentation identity is the source
+ * entry plus the field path holding the name.
+ */
+export type ContentFieldResolver = (
+  reference: string | null | undefined,
+  fieldPath: string | null | undefined,
+  fallback?: string,
+) => string
 
 const SOURCE_SEPARATOR = ' · '
 const LEADING_RULE_PREFIX_RE = /^(\d+\s*×\s*)/
@@ -55,16 +66,18 @@ export function localizedContentLabel(localizedName: string, fallback: string): 
     : primary
 }
 
-export function useContentPresentations(references: string[]) {
+export function useContentPresentations(references: string[], fields: string[] = []) {
   const { locale } = useLocale()
   const referenceKey = references.filter(Boolean).sort().join('\u0000')
   const stableReferences = useMemo(
     () => Array.from(new Set(referenceKey ? referenceKey.split('\u0000') : [])),
     [referenceKey],
   )
+  const fieldKey = Array.from(new Set(['name', ...fields.filter(Boolean)])).sort().join(',')
+  const stableFields = useMemo(() => fieldKey.split(','), [fieldKey])
   const query = useQuery({
-    queryKey: ['content-presentations', locale, stableReferences],
-    queryFn: () => getContentPresentations(stableReferences, locale),
+    queryKey: ['content-presentations', locale, stableReferences, stableFields],
+    queryFn: () => getContentPresentations(stableReferences, locale, stableFields),
     enabled: stableReferences.length > 0,
   })
   const presentations = useMemo(
@@ -74,19 +87,23 @@ export function useContentPresentations(references: string[]) {
       ),
     [query.data],
   )
-  const nameFor: ContentNameResolver = (reference, fallback = '') => {
-    if (!reference) return fallback
-    const field = presentationField(presentations.get(reference), 'name')
+  const fieldFor: ContentFieldResolver = (reference, fieldPath, fallback = '') => {
+    if (!reference || !fieldPath) return fallback
+    const field = presentationField(presentations.get(reference), fieldPath)
     if (typeof field?.value === 'string' && field.value.trim()) {
       return localizedContentLabel(field.value, fallback)
     }
     return fallback || reference
   }
 
+  const nameFor: ContentNameResolver = (reference, fallback = '') =>
+    fieldFor(reference, 'name', fallback)
+
   return {
     locale,
     presentations,
     nameFor,
+    fieldFor,
     isLoading: query.isLoading,
     error: query.error,
   }
