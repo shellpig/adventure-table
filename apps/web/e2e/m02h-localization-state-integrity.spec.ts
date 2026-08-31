@@ -3,6 +3,8 @@ import { expect, test, type APIRequestContext, type Locator, type Page } from '@
 const FIXTURE_ID = '00000000-0000-4000-8000-0000000000e0'
 const LOCALE_STORAGE_KEY = 'adventure-table.locale'
 
+type Locale = 'zh-TW' | 'en'
+
 type DraftSnapshot = {
   draft: {
     revision: number
@@ -10,7 +12,110 @@ type DraftSnapshot = {
   }
 }
 
-async function setLocale(page: Page, locale: 'zh-TW' | 'en') {
+type CreateFlowFixture = {
+  createCharacter: string
+  characterName: string
+  targetLevel: string
+  saveBasic: string
+  originStep: RegExp
+  raceLabel: string
+  raceValue: string
+  backgroundLabel: string
+  backgroundValue: string
+  abilitiesStep: RegExp
+  saveAbilities: string
+  humanLanguagesLabel: string
+  dwarvish: string
+  backgroundLanguagesText: string
+  addSelection: string
+  celestial: string
+  draconic: string
+  classStep: RegExp
+  levelOneClass: string
+  barbarian: string
+  animalHandling: string
+  athletics: string
+  equipmentStep: RegExp
+  greataxeChoice: RegExp
+  greataxe: string
+  handaxeChoice: RegExp
+  handaxes: string
+  acolyteEquipment: string
+  amulet: string
+  reviewStep: RegExp
+  confirm: string
+}
+
+const CREATE_FLOW: Record<Locale, CreateFlowFixture> = {
+  en: {
+    createCharacter: '+ Create Character',
+    characterName: 'Character name',
+    targetLevel: 'Target character level',
+    saveBasic: 'Save Basic Details',
+    originStep: /Origin/,
+    raceLabel: 'Race',
+    raceValue: 'Human',
+    backgroundLabel: 'Background',
+    backgroundValue: 'Acolyte',
+    abilitiesStep: /Abilities/,
+    saveAbilities: 'Save Ability Scores',
+    humanLanguagesLabel: 'Human — Languages',
+    dwarvish: 'Dwarvish',
+    backgroundLanguagesText: 'Acolyte — Languages',
+    addSelection: 'Add selection',
+    celestial: 'Celestial',
+    draconic: 'Draconic',
+    classStep: /Class/,
+    levelOneClass: 'Level 1 class',
+    barbarian: 'Barbarian',
+    animalHandling: 'Skill: Animal Handling',
+    athletics: 'Skill: Athletics',
+    equipmentStep: /Equipment/,
+    greataxeChoice: /\(a\) a greataxe or \(b\) any martial melee weapon/,
+    greataxe: 'Greataxe',
+    handaxeChoice: /\(a\) two handaxes or \(b\) any simple weapon/,
+    handaxes: '2 × Handaxe',
+    acolyteEquipment: 'Acolyte — Starting Equipment',
+    amulet: 'Amulet',
+    reviewStep: /Review/,
+    confirm: 'Confirm & Create Character',
+  },
+  'zh-TW': {
+    createCharacter: '＋ 建立角色',
+    characterName: '角色名稱',
+    targetLevel: '目標角色等級',
+    saveBasic: '儲存基本資料',
+    originStep: /出身/,
+    raceLabel: '種族',
+    raceValue: '人類',
+    backgroundLabel: '背景',
+    backgroundValue: '侍僧',
+    abilitiesStep: /屬性/,
+    saveAbilities: '儲存屬性值',
+    humanLanguagesLabel: '人類 — 語言',
+    dwarvish: '矮人語',
+    backgroundLanguagesText: '侍僧 — 語言',
+    addSelection: '新增選項',
+    celestial: '天界語',
+    draconic: '龍語',
+    classStep: /職業/,
+    levelOneClass: '第 1 級職業',
+    barbarian: '野蠻人',
+    animalHandling: '技能：馴獸',
+    athletics: '技能：運動',
+    equipmentStep: /裝備/,
+    greataxeChoice: /巨斧|軍用近戰武器/,
+    greataxe: '巨斧',
+    handaxeChoice: /兩把手斧|簡易武器/,
+    handaxes: '2 × 手斧',
+    acolyteEquipment: '侍僧 — 起始裝備',
+    amulet: '護符',
+    reviewStep: /檢視/,
+    confirm: '確認並建立角色',
+  },
+}
+
+async function setLocale(page: Page, locale: Locale) {
   await page.getByTestId(`locale-option-${locale}`).click()
   await expect(page.locator('html')).toHaveAttribute('lang', locale)
 }
@@ -48,8 +153,8 @@ async function chooseSearchable(page: Page, label: string | RegExp, value: strin
   await chooseOption(page, page.getByRole('combobox', { name: label }), value)
 }
 
-async function chooseIn(container: Locator, value: string) {
-  await chooseOption(container.page(), container.getByRole('combobox', { name: 'Add selection' }), value)
+async function chooseIn(container: Locator, addSelectionLabel: string, value: string) {
+  await chooseOption(container.page(), container.getByRole('combobox', { name: addSelectionLabel }), value)
 }
 
 async function chooseFirstEnabled(page: Page, input: Locator) {
@@ -85,7 +190,8 @@ async function fillEmptyComboboxes(page: Page, container: Locator) {
 
 async function chooseLowestLevelSpell(page: Page, input: Locator) {
   await expectDraftSaved(page)
-  await input.focus()
+  await input.press('ArrowDown')
+  await expect(input).toHaveAttribute('aria-expanded', 'true')
   const listboxId = await input.getAttribute('aria-controls')
   if (!listboxId) throw new Error('Spell combobox has no aria-controls listbox')
   const listbox = page.locator(`[id="${listboxId}"]`)
@@ -139,41 +245,47 @@ async function readCharacter(request: APIRequestContext, characterId: string) {
   return response.json()
 }
 
-async function createSimpleCharacter(page: Page, name: string) {
+async function createSimpleCharacter(page: Page, name: string, locale: Locale) {
+  const fixture = CREATE_FLOW[locale]
   await page.goto('/characters')
-  if ((await page.locator('html').getAttribute('lang')) !== 'en') await setLocale(page, 'en')
-  await page.getByRole('button', { name: '+ Create Character' }).click()
-  await page.getByLabel('Character name').fill(name)
-  await page.getByLabel('Target character level').fill('1')
-  await page.getByRole('button', { name: 'Save Basic Details' }).click()
+  if ((await page.locator('html').getAttribute('lang')) !== locale) await setLocale(page, locale)
+  await expect(page.locator('html')).toHaveAttribute('lang', locale)
 
-  await page.getByRole('button', { name: /Origin/ }).click()
-  await chooseSearchable(page, 'Race', 'Human')
-  await chooseSearchable(page, 'Background', 'Acolyte')
+  await page.getByRole('button', { name: fixture.createCharacter }).click()
+  await expect(page.locator('html')).toHaveAttribute('lang', locale)
+  await page.getByLabel(fixture.characterName).fill(name)
+  await page.getByLabel(fixture.targetLevel).fill('1')
+  await page.getByRole('button', { name: fixture.saveBasic }).click()
 
-  await page.getByRole('button', { name: /Abilities/ }).click()
-  await page.getByRole('button', { name: 'Save Ability Scores' }).click()
-  await chooseSearchable(page, 'Human — Languages', 'Dwarvish')
-  const languages = page.locator('.builder-choice').filter({ hasText: 'Acolyte — Languages' })
-  await chooseIn(languages, 'Celestial')
-  await chooseIn(languages, 'Draconic')
+  await page.locator('.builder-rail').getByRole('button', { name: fixture.originStep }).click()
+  await chooseSearchable(page, fixture.raceLabel, fixture.raceValue)
+  await chooseSearchable(page, fixture.backgroundLabel, fixture.backgroundValue)
 
-  await page.getByRole('button', { name: /Class/ }).click()
-  await chooseSearchable(page, 'Level 1 class', 'Barbarian')
+  await page.locator('.builder-rail').getByRole('button', { name: fixture.abilitiesStep }).click()
+  await page.getByRole('button', { name: fixture.saveAbilities }).click()
+  await chooseSearchable(page, fixture.humanLanguagesLabel, fixture.dwarvish)
+  const languages = page.locator('.builder-choice').filter({ hasText: fixture.backgroundLanguagesText })
+  await chooseIn(languages, fixture.addSelection, fixture.celestial)
+  await chooseIn(languages, fixture.addSelection, fixture.draconic)
+
+  await page.locator('.builder-rail').getByRole('button', { name: fixture.classStep }).click()
+  await chooseSearchable(page, fixture.levelOneClass, fixture.barbarian)
   const startingSkills = page.getByTestId('level-node-1').locator('.progression-choice')
-  await chooseIn(startingSkills, 'Skill: Animal Handling')
-  await chooseIn(startingSkills, 'Skill: Athletics')
+  await chooseIn(startingSkills, fixture.addSelection, fixture.animalHandling)
+  await chooseIn(startingSkills, fixture.addSelection, fixture.athletics)
 
-  await page.getByRole('button', { name: /Equipment/ }).click()
-  await chooseSearchable(page, /\(a\) a greataxe or \(b\) any martial melee weapon/, 'Greataxe')
-  await chooseSearchable(page, /\(a\) two handaxes or \(b\) any simple weapon/, '2 × Handaxe')
-  await chooseSearchable(page, 'Acolyte — Starting Equipment', 'Amulet')
+  await page.locator('.builder-rail').getByRole('button', { name: fixture.equipmentStep }).click()
+  await chooseSearchable(page, fixture.greataxeChoice, fixture.greataxe)
+  await chooseSearchable(page, fixture.handaxeChoice, fixture.handaxes)
+  await chooseSearchable(page, fixture.acolyteEquipment, fixture.amulet)
 
-  await page.getByRole('button', { name: /Review/ }).click()
-  const confirm = page.getByRole('button', { name: 'Confirm & Create Character' })
+  await page.locator('.builder-rail').getByRole('button', { name: fixture.reviewStep }).click()
+  await expect(page.locator('html')).toHaveAttribute('lang', locale)
+  const confirm = page.getByRole('button', { name: fixture.confirm })
   await expect(confirm).toBeEnabled()
   await confirm.click()
   await expect(page).toHaveURL(/\/characters\/[0-9a-f-]{36}$/)
+  await expect(page.locator('html')).toHaveAttribute('lang', locale)
   const characterId = page.url().match(/\/characters\/([0-9a-f-]{36})$/)?.[1]
   if (!characterId) throw new Error(`Cannot parse character id from ${page.url()}`)
   return characterId
@@ -209,7 +321,7 @@ test('M02-H proves full Create -> Confirm -> Sheet survives en -> zh-TW -> reloa
   await page.evaluate((key) => localStorage.setItem(key, 'en'), LOCALE_STORAGE_KEY)
   await page.reload()
 
-  const characterId = await createSimpleCharacter(page, 'M02-H EN to ZH Hero')
+  const characterId = await createSimpleCharacter(page, 'M02-H EN to ZH Hero', 'en')
   const before = await readCharacter(request, characterId)
   await setLocale(page, 'zh-TW')
   await expect(page.getByRole('tablist', { name: '角色卡分頁' })).toBeVisible()
@@ -222,11 +334,11 @@ test('M02-H proves full Create -> Confirm -> Sheet survives en -> zh-TW -> reloa
 test('M02-H proves full Create -> Confirm -> Sheet survives zh-TW -> en -> reload without domain mutation', async ({ page, request }) => {
   test.slow()
   await page.goto('/')
-  await page.evaluate((key) => localStorage.setItem(key, 'en'), LOCALE_STORAGE_KEY)
+  await page.evaluate((key) => localStorage.setItem(key, 'zh-TW'), LOCALE_STORAGE_KEY)
   await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW')
 
-  const characterId = await createSimpleCharacter(page, 'M02-H ZH to EN Hero')
-  await setLocale(page, 'zh-TW')
+  const characterId = await createSimpleCharacter(page, 'M02-H ZH to EN Hero', 'zh-TW')
   const before = await readCharacter(request, characterId)
   await setLocale(page, 'en')
   await expect(page.getByRole('tablist', { name: 'Character Sheet tabs' })).toBeVisible()
@@ -254,8 +366,8 @@ test('M02-H preserves a populated race/subrace/background/class/spells/equipment
   await page.getByRole('button', { name: /Abilities/ }).click()
   await page.getByRole('button', { name: 'Save Ability Scores' }).click()
   const backgroundLanguages = page.locator('.builder-choice').filter({ hasText: 'Acolyte — Languages' })
-  await chooseIn(backgroundLanguages, 'Celestial')
-  await chooseIn(backgroundLanguages, 'Draconic')
+  await chooseIn(backgroundLanguages, 'Add selection', 'Celestial')
+  await chooseIn(backgroundLanguages, 'Add selection', 'Draconic')
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
   await page.getByRole('button', { name: /Class/ }).click()
