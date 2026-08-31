@@ -1,0 +1,109 @@
+[
+  {
+    "key": "scag:feature:half-elf-moon-sun-cantrip",
+    "index": "half-elf-moon-sun-cantrip",
+    "name": "Cantrip",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "half-elf-moon-sun-cantrip",
+      "name": "Cantrip",
+      "desc": ["You know one cantrip of your choice from the wizard spell list. Intelligence is your spellcasting ability for it."]
+    }
+  },
+  {
+    "key": "scag:feature:half-elf-elf-weapon-training",
+    "index": "half-elf-elf-weapon-training",
+    "name": "Elf Weapon Training",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "half-elf-elf-weapon-training",
+      "name": "Elf Weapon Training",
+      "desc": ["You have proficiency with the longsword, shortsword, shortbow, and longbow."]
+    }
+  },
+  {
+    "key": "scag:feature:half-elf-keen-senses",
+    "index": "half-elf-keen-senses",
+    "name": "Keen Senses",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "half-elf-keen-senses",
+      "name": "Keen Senses",
+      "desc": ["You have proficiency in the Perception skill."]
+    }
+  },
+  {
+    "key": "scag:feature:half-elf-fleet-of-foot",
+    "index": "half-elf-fleet-of-foot",
+    "name": "Fleet of Foot",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "half-elf-fleet-of-foot",
+      "name": "Fleet of Foot",
+      "movement": {"mode": "walk", "speed": 35, "temporary": false}
+    }
+  },
+  {
+    "key": "scag:feature:half-elf-mask-of-the-wild",
+    "index": "half-elf-mask-of-the-wild",
+    "name": "Mask of the Wild",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "half-elf-mask-of-the-wild",
+      "name": "Mask of the Wild",
+      "desc": ["You can attempt to hide even when you are only lightly obscured by natural phenomena."]
+    }
+  },
+  {
+    "key": "scag:feature:half-elf-swimming-speed",
+    "index": "half-elf-swimming-speed",
+    "name": "Swimming Speed",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "half-elf-swimming-speed",
+      "name": "Swimming Speed",
+      "movement": {"mode": "swim", "speed": 30, "temporary": false}
+    }
+  },
+  {
+    "key": "scag:feature:half-elf-drow-magic",
+    "index": "half-elf-drow-magic",
+    "name": "Drow Magic",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "half-elf-drow-magic",
+      "name": "Drow Magic",
+      "racial_spell_access": [
+        {
+          "spell": {"key": "srd5.1:spell:dancing-lights", "name": "Dancing Lights"},
+          "min_character_level": 1,
+          "casting_ability": "charisma",
+          "uses_spell_slot": false
+        },
+        {
+          "spell": {"key": "srd5.1:spell:faerie-fire", "name": "Faerie Fire"},
+          "min_character_level": 3,
+          "casting_ability": "charisma",
+          "uses_spell_slot": false,
+          "uses_per_rest": 1,
+          "rest_type": "long_rest"
+        },
+        {
+          "spell": {"key": "srd5.1:spell:darkness", "name": "Darkness"},
+          "min_character_level": 5,
+          "casting_ability": "charisma",
+          "uses_spell_slot": false,
+          "uses_per_rest": 1,
+          "rest_type": "long_rest"
+        }
+      ]
+    }
+  }
+]
