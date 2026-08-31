@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -10,22 +11,24 @@ from app.domain.character.schemas import (
     AbilityScores,
     CharacterBuild,
     CharacterState,
+    InventoryEntry,
     ResourceCounter,
 )
 from app.domain.character_builder.basics import resolve_creation_summary
 from app.domain.character_builder.choices import build_foundation_choices
 from app.domain.character_builder.compiler import compile_builder_draft
 from app.domain.character_builder.origin import compile_origin
-from app.domain.character_builder.origin_resources import initial_feature_resource_state
 from app.domain.character_builder.reconciliation import reconcile_character_state
 from app.domain.character_builder.schemas import (
     BuilderBasicInput,
     BuilderChoiceSelection,
     BuilderDraft,
     BuilderDraftPayload,
+    BuilderLevelChoice,
     BuilderMode,
     BuilderReferenceSelection,
 )
+from app.domain.rules.feature_resources import initial_feature_resource_state
 
 
 def _draft(payload: BuilderDraftPayload) -> BuilderDraft:
@@ -70,11 +73,12 @@ def _payload(
     )
 
 
-def _origin_for(*, subrace: str, level: int):
+def _origin_for(*, subrace: str, level: int, level_choices=()):
     registry = load_default_content_registry()
-    draft = _draft(
-        _payload(race="vgm:race:aasimar", subrace=subrace, level=level)
-    )
+    payload = _payload(race="vgm:race:aasimar", subrace=subrace, level=level)
+    if level_choices:
+        payload = payload.model_copy(update={"level_choices": tuple(level_choices)})
+    draft = _draft(payload)
     choices = build_foundation_choices(draft, registry)
     summary = resolve_creation_summary(draft, registry, choices)
     origin = compile_origin(
@@ -85,13 +89,20 @@ def _origin_for(*, subrace: str, level: int):
     return registry, summary, origin
 
 
-def _aasimar_build(*, level: int, feature_refs: tuple[str, ...]) -> CharacterBuild:
+def _aasimar_build(
+    *,
+    level: int,
+    subrace_ref: str = "vgm:subrace:protector-aasimar",
+    feature_refs: tuple[str, ...],
+    ability_scores: AbilityScores | None = None,
+) -> CharacterBuild:
     return CharacterBuild(
         race_ref="vgm:race:aasimar",
-        subrace_ref="vgm:subrace:protector-aasimar",
+        subrace_ref=subrace_ref,
         character_level=level,
         class_progression=("srd5.1:class:fighter",) * level,
-        ability_scores=AbilityScores(
+        ability_scores=ability_scores
+        or AbilityScores(
             strength=15,
             dexterity=14,
             constitution=13,
@@ -215,6 +226,25 @@ def test_aasimar_requires_matching_subrace_and_grants_parent_once() -> None:
 
 
 @pytest.mark.parametrize(
+    ("subrace", "ability", "bonus"),
+    [
+        ("vgm:subrace:protector-aasimar", "wisdom", 1),
+        ("vgm:subrace:scourge-aasimar", "constitution", 1),
+        ("vgm:subrace:fallen-aasimar", "strength", 1),
+    ],
+)
+def test_each_aasimar_subrace_applies_its_ability_bonus(
+    subrace: str,
+    ability: str,
+    bonus: int,
+) -> None:
+    _, summary, _origin = _origin_for(subrace=subrace, level=1)
+    abilities = {row.ability: row.permanent_bonus for row in summary.ability_scores}
+    assert abilities["charisma"] == 2
+    assert abilities[ability] == bonus
+
+
+@pytest.mark.parametrize(
     ("subrace", "feature"),
     [
         ("vgm:subrace:protector-aasimar", "vgm:feature:radiant-soul"),
@@ -237,6 +267,35 @@ def test_aasimar_transformation_features_use_character_level_gate(
     assert feature in {
         grant.reference_id for grant in level_three_summary.grants
     }
+
+
+def test_aasimar_gate_uses_total_character_level_for_multiclass_progression() -> None:
+    level_choices = (
+        BuilderLevelChoice(
+            character_level=1,
+            class_ref="srd5.1:class:fighter",
+            hp_method="first_level_max",
+            hp_base_gain=10,
+        ),
+        BuilderLevelChoice(
+            character_level=2,
+            class_ref="srd5.1:class:wizard",
+            hp_method="fixed",
+            hp_base_gain=4,
+        ),
+        BuilderLevelChoice(
+            character_level=3,
+            class_ref="srd5.1:class:fighter",
+            hp_method="fixed",
+            hp_base_gain=6,
+        ),
+    )
+    _, _, origin = _origin_for(
+        subrace="vgm:subrace:protector-aasimar",
+        level=3,
+        level_choices=level_choices,
+    )
+    assert "vgm:feature:radiant-soul" in origin.feature_refs
 
 
 def test_vgm_feature_resources_use_deterministic_keys() -> None:
@@ -268,6 +327,7 @@ def test_level_up_two_to_three_adds_transformation_resource_without_resting() ->
             "vgm:feature:radiant-soul",
         ),
     )
+    old_snapshot = deepcopy(old_build.model_dump(mode="python"))
     old_state = CharacterState(
         current_hp=1,
         resources={
@@ -282,11 +342,96 @@ def test_level_up_two_to_three_adds_transformation_resource_without_resting() ->
     preview = reconcile_character_state(old_build, old_state, new_build, registry)
 
     assert preview.can_apply is True
+    assert old_build.model_dump(mode="python") == old_snapshot
+    assert "vgm:feature:radiant-soul" not in old_build.feature_refs
+    assert "vgm:feature:radiant-soul" in new_build.feature_refs
     assert preview.proposed_state.resources[
         "feature:vgm:feature:healing-hands"
     ] == ResourceCounter(used=1, remaining=0)
     assert preview.proposed_state.resources[
         "feature:vgm:feature:radiant-soul"
+    ] == ResourceCounter(used=0, remaining=1)
+
+
+def test_protector_to_fallen_build_edit_reconciles_without_mutating_old_build() -> None:
+    registry = load_default_content_registry()
+    old_build = _aasimar_build(
+        level=3,
+        subrace_ref="vgm:subrace:protector-aasimar",
+        ability_scores=AbilityScores(
+            strength=15,
+            dexterity=14,
+            constitution=13,
+            intelligence=12,
+            wisdom=11,
+            charisma=10,
+        ),
+        feature_refs=(
+            "vgm:feature:celestial-resistance",
+            "vgm:feature:healing-hands",
+            "vgm:feature:light-bearer",
+            "vgm:feature:radiant-soul",
+        ),
+    )
+    new_build = _aasimar_build(
+        level=3,
+        subrace_ref="vgm:subrace:fallen-aasimar",
+        ability_scores=AbilityScores(
+            strength=16,
+            dexterity=14,
+            constitution=13,
+            intelligence=12,
+            wisdom=10,
+            charisma=10,
+        ),
+        feature_refs=(
+            "vgm:feature:celestial-resistance",
+            "vgm:feature:healing-hands",
+            "vgm:feature:light-bearer",
+            "vgm:feature:necrotic-shroud",
+        ),
+    )
+    old_snapshot = deepcopy(old_build.model_dump(mode="python"))
+    old_state = CharacterState(
+        current_hp=12,
+        temporary_hp=3,
+        resources={
+            "feature:vgm:feature:healing-hands": ResourceCounter(used=1, remaining=0),
+            "feature:vgm:feature:radiant-soul": ResourceCounter(used=0, remaining=1),
+        },
+        hit_dice_state={"d10": 2},
+        inventory_state=[
+            InventoryEntry(
+                entry_id="inventory:keepsake",
+                item_ref="srd5.1:equipment:dagger",
+                quantity=1,
+            )
+        ],
+    )
+
+    preview = reconcile_character_state(old_build, old_state, new_build, registry)
+
+    assert preview.can_apply is True
+    assert old_build.model_dump(mode="python") == old_snapshot
+    assert old_build.subrace_ref == "vgm:subrace:protector-aasimar"
+    assert new_build.subrace_ref == "vgm:subrace:fallen-aasimar"
+    assert old_build.ability_scores.wisdom == 11
+    assert new_build.ability_scores.wisdom == 10
+    assert old_build.ability_scores.strength == 15
+    assert new_build.ability_scores.strength == 16
+    assert "vgm:feature:radiant-soul" in old_build.feature_refs
+    assert "vgm:feature:radiant-soul" not in new_build.feature_refs
+    assert "vgm:feature:necrotic-shroud" in new_build.feature_refs
+    assert new_build.feature_refs.count("vgm:feature:healing-hands") == 1
+    assert preview.proposed_state.current_hp == old_state.current_hp
+    assert preview.proposed_state.temporary_hp == old_state.temporary_hp
+    assert preview.proposed_state.inventory_state == old_state.inventory_state
+    assert preview.proposed_state.resources[
+        "feature:vgm:feature:healing-hands"
+    ] == ResourceCounter(used=1, remaining=0)
+    assert "feature:vgm:feature:radiant-soul" not in preview.proposed_state.resources
+    assert preview.proposed_state.resources[
+        "feature:vgm:feature:necrotic-shroud"
     ] == ResourceCounter(used=0, remaining=1)
 
 
