@@ -2,7 +2,7 @@
   "schema_version": 1,
   "locale": "zh-TW",
   "source": "phb2014",
-  "review_status": "human-reviewed",
+  "review_status": "draft-human-review-required",
   "entries": {
     "phb2014:background:folk-hero": {
       "data.roleplay_suggestions.personality_traits.0": "我以行動而不是承諾來評斷一個人。",
