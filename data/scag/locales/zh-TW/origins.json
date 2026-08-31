@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "scag",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "scag:race-variant:half-elf-moon-sun-descent": {"name": "月精靈或日精靈血統"},
+    "scag:race-variant:half-elf-wood-descent": {"name": "木精靈血統"},
+    "scag:race-variant:half-elf-aquatic-descent": {"name": "水生精靈血統"},
+    "scag:race-variant:half-elf-drow-descent": {"name": "卓爾血統"},
+    "scag:feature:half-elf-moon-sun-cantrip": {"name": "戲法"},
+    "scag:feature:half-elf-elf-weapon-training": {"name": "精靈武器訓練"},
+    "scag:feature:half-elf-keen-senses": {"name": "敏銳感官"},
+    "scag:feature:half-elf-fleet-of-foot": {"name": "輕捷步伐"},
+    "scag:feature:half-elf-mask-of-the-wild": {"name": "荒野隱蔽"},
+    "scag:feature:half-elf-swimming-speed": {"name": "游泳"},
+    "scag:feature:half-elf-drow-magic": {"name": "卓爾魔法"}
+  }
+}
