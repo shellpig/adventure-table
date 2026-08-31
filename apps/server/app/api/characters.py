@@ -157,21 +157,57 @@ def _canonicalize_prepared_patch(
     changes["prepared_spell_entry_ids"] = []
 
 
+def _list_item(
+    character: PersistedCharacter,
+    repository: CharacterRepository,
+) -> CharacterListItem:
+    return CharacterListItem(
+        id=character.id,
+        name=character.name,
+        level=character.build.character_level,
+        class_summary=_class_summary(character, repository),
+        classes=_class_entries(character, repository),
+        version_no=character.version_no,
+    )
+
+
 @router.get("", response_model=list[CharacterListItem])
 def list_characters(
+    archived: bool = False,
     repository: CharacterRepository = Depends(get_character_repository),
 ) -> list[CharacterListItem]:
+    """List active characters, or the archived ones when `archived=true`."""
+
     return [
-        CharacterListItem(
-            id=character.id,
-            name=character.name,
-            level=character.build.character_level,
-            class_summary=_class_summary(character, repository),
-            classes=_class_entries(character, repository),
-            version_no=character.version_no,
-        )
-        for character in repository.list_characters()
+        _list_item(character, repository)
+        for character in repository.list_characters(archived=archived)
     ]
+
+
+@router.post("/{character_id}/archive", response_model=CharacterListItem)
+def archive_character(
+    character_id: UUID,
+    repository: CharacterRepository = Depends(get_character_repository),
+) -> CharacterListItem:
+    return _list_item(repository.set_archived(character_id, True), repository)
+
+
+@router.post("/{character_id}/unarchive", response_model=CharacterListItem)
+def unarchive_character(
+    character_id: UUID,
+    repository: CharacterRepository = Depends(get_character_repository),
+) -> CharacterListItem:
+    return _list_item(repository.set_archived(character_id, False), repository)
+
+
+@router.delete("/{character_id}", status_code=204)
+def delete_character(
+    character_id: UUID,
+    repository: CharacterRepository = Depends(get_character_repository),
+) -> None:
+    """Permanently delete an archived character, versions and state included."""
+
+    repository.delete_character(character_id)
 
 
 @router.get("/{character_id}", response_model=PersistedCharacter)
