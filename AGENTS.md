@@ -8,7 +8,7 @@
 - **一句話**：網站只管需要共享、同步、計算、保存、權限與 AI 接入的東西，其餘還給 DM 的嘴巴
 - **首發規則集**：D&D 5e 2014；Built-in Content：SRD 5.1（CC BY 4.0），非 SRD 內容依私人專案需求逐步加入
 - **專案性質**：朋友間私人使用，非預計商品化平台
-- **目前階段**：**P0 與 P1 已完成並關門。目前進行 M01 — Multi-Source Character Content Expansion：M01-A、M01-B 已完成並關門（含真人創角 Gate），下一個可開工 Subphase 是 M01-C。M01-C closeout 後暫停 M01，插入 M02 — Traditional Chinese / English Localization（M02-A～M02-H 已完成規格拆分、尚未 coding），M02 closeout 後回到 M01-D～M01-J，最後才回到 P2 — Room / Campaign / Session / Seat 的規劃。**
+- **目前階段**：**P0 與 P1 已完成並關門。M01-A～M01-C 已完成，M01 依 Roadmap 暫停；目前進行 M02 — Traditional Chinese / English Localization，M02-A～M02-D 已完成並關門，下一個可開工 Subphase 是 M02-E。M02 closeout 後回到 M01-D～M01-J，最後才回到 P2 — Room / Campaign / Session / Seat 的規劃。**
 - **目前進度**：以 `PROJECT_BRIEF.md` 為單一事實來源
 - **基礎技術棧**：目前方向見 `技術棧討論.md`。該檔只討論語言／Framework／DB 等基礎選型，不承擔各 Phase 的實作設計
 

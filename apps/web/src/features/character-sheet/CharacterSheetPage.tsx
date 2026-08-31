@@ -18,9 +18,12 @@ import type {
 import { SearchableSelect } from '../../components/SearchableSelect'
 import type { SearchOption } from '../../components/SearchableSelect'
 import type { UiCopyKey } from '../../i18n/uiCopy'
+import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy, type UiTranslator } from '../../i18n/useUiCopy'
 
 type CharacterTab = 'attributes' | 'spells' | 'inventory'
+type StructuredRuleKind = 'damage-type' | 'equipment-category'
+type StructuredRuleReference = { index?: unknown; name?: unknown }
 
 type CharacterSheetViewProps = {
   sheet: CharacterSheetDTO
@@ -86,17 +89,62 @@ function countersToPatch(source: Record<string, ResourceCounter>) {
   )
 }
 
-function describeRules(rules: Record<string, unknown>, t: UiTranslator): string[] {
+function structuredRuleReference(
+  rules: Record<string, unknown>,
+  kind: StructuredRuleKind,
+): StructuredRuleReference | undefined {
+  if (kind === 'equipment-category') {
+    const raw = rules.equipment_category
+    return raw && typeof raw === 'object' ? (raw as StructuredRuleReference) : undefined
+  }
+  const damage = rules.damage
+  if (!damage || typeof damage !== 'object') return undefined
+  const raw = (damage as { damage_type?: unknown }).damage_type
+  return raw && typeof raw === 'object' ? (raw as StructuredRuleReference) : undefined
+}
+
+function structuredRuleKey(
+  kind: StructuredRuleKind,
+  reference: StructuredRuleReference | undefined,
+): string | null {
+  const index = reference?.index
+  return typeof index === 'string' && index.trim() ? `srd5.1:${kind}:${index}` : null
+}
+
+function structuredRuleName(
+  rules: Record<string, unknown>,
+  kind: StructuredRuleKind,
+  nameFor: ContentNameResolver,
+): string {
+  const reference = structuredRuleReference(rules, kind)
+  const fallback = typeof reference?.name === 'string' ? reference.name : ''
+  const key = structuredRuleKey(kind, reference)
+  return key ? nameFor(key, fallback) : fallback
+}
+
+function structuredRuleReferences(rules: Record<string, unknown>): string[] {
+  return (['equipment-category', 'damage-type'] as const).flatMap((kind) => {
+    const key = structuredRuleKey(kind, structuredRuleReference(rules, kind))
+    return key ? [key] : []
+  })
+}
+
+function describeRules(
+  rules: Record<string, unknown>,
+  t: UiTranslator,
+  nameFor: ContentNameResolver,
+): string[] {
   const details: string[] = []
-  const damage = rules.damage as { damage_dice?: unknown; damage_type?: { name?: unknown } } | undefined
+  const damage = rules.damage as { damage_dice?: unknown } | undefined
   const armorClass = rules.armor_class as { base?: unknown; dex_bonus?: unknown; max_bonus?: unknown } | undefined
   const cost = rules.cost as { quantity?: unknown; unit?: unknown } | undefined
-  const category = rules.equipment_category as { name?: unknown } | undefined
+  const categoryName = structuredRuleName(rules, 'equipment-category', nameFor)
+  const damageTypeName = structuredRuleName(rules, 'damage-type', nameFor)
 
-  if (category?.name) details.push(String(category.name))
+  if (categoryName) details.push(categoryName)
   if (damage?.damage_dice) {
     details.push(
-      `${String(damage.damage_dice)}${damage.damage_type?.name ? ` ${String(damage.damage_type.name)}` : ''}`,
+      `${String(damage.damage_dice)}${damageTypeName ? ` ${damageTypeName}` : ''}`,
     )
   }
   if (armorClass?.base) {
@@ -108,6 +156,12 @@ function describeRules(rules: Record<string, unknown>, t: UiTranslator): string[
     details.push(`${String(cost.quantity)} ${String(cost.unit)}`)
   }
   return details.slice(0, 3)
+}
+
+function resourceLabel(key: string, t: UiTranslator): string {
+  const pactSlot = key.match(/:slot:(\d+)$/)
+  if (pactSlot) return t('sheet.levelLabel', { level: pactSlot[1] })
+  return titleCase(key.split(':').at(-1) ?? key)
 }
 
 function NumberSaveField({
@@ -179,28 +233,46 @@ export function CharacterSheetView({
   const [itemRef, setItemRef] = useState('')
   const [spellFilter, setSpellFilter] = useState('')
   const [inventoryFilter, setInventoryFilter] = useState('')
+  const contentReferences = [
+    ...conditionContent.map((entry) => entry.key),
+    ...inventoryContent.map((entry) => entry.key),
+    ...inventoryContent.flatMap((entry) => structuredRuleReferences(entry.data)),
+    ...sheet.classes.map((entry) => entry.class_ref),
+    ...sheet.features.map((feature) => feature.key),
+    ...sheet.conditions.map((condition) => condition.condition_ref),
+    ...sheet.spells.flatMap((spell) => [spell.spell_key, spell.source_key]),
+    ...sheet.spellcasting.map((source) => source.source_key),
+    ...sheet.inventory.map((item) => item.item_ref),
+    ...sheet.inventory.flatMap((item) => structuredRuleReferences(item.rules)),
+    ...Object.keys(sheet.skills).map((skill) => `srd5.1:skill:${skill}`),
+  ]
+  const { nameFor } = useContentPresentations(contentReferences)
 
   const conditionOptions = useMemo<SearchOption[]>(
     () =>
       conditionContent.map((entry) => ({
         value: entry.key,
-        label: entry.name,
+        label: nameFor(entry.key, entry.name),
       })),
-    [conditionContent],
+    [conditionContent, nameFor],
   )
 
   const inventoryOptions = useMemo<SearchOption[]>(
     () =>
       inventoryContent.map((entry) => ({
         value: entry.key,
-        label: entry.name,
-        description: String((entry.data.equipment_category as { name?: unknown } | undefined)?.name ?? ''),
+        label: nameFor(entry.key, entry.name),
+        description: structuredRuleName(entry.data, 'equipment-category', nameFor),
       })),
-    [inventoryContent],
+    [inventoryContent, nameFor],
   )
 
-  const classSummary = sheet.classes.map((entry) => `${entry.name} ${entry.level}`).join(' / ')
-  const classNameByRef = new Map(sheet.classes.map((entry) => [entry.class_ref, entry.name]))
+  const classSummary = sheet.classes
+    .map((entry) => `${nameFor(entry.class_ref, entry.name)} ${entry.level}`)
+    .join(' / ')
+  const classNameByRef = new Map(
+    sheet.classes.map((entry) => [entry.class_ref, nameFor(entry.class_ref, entry.name)]),
+  )
   const preparedIds = sheet.spells
     .filter((spell) => spell.access_type === 'spellbook' && spell.prepared && !spell.source_profile_id)
     .map((spell) => spell.entry_id)
@@ -217,12 +289,14 @@ export function CharacterSheetView({
       source_access_entry_id: spell.source_access_entry_id ?? undefined,
     }))
   const filteredSpells = sheet.spells.filter((spell) =>
-    `${spell.name} ${accessLabel(spell.access_type, t)}`
+    `${nameFor(spell.spell_key, spell.name)} ${accessLabel(spell.access_type, t)}`
       .toLocaleLowerCase()
       .includes(spellFilter.toLocaleLowerCase()),
   )
   const filteredInventory = sheet.inventory.filter((item) =>
-    item.name.toLocaleLowerCase().includes(inventoryFilter.toLocaleLowerCase()),
+    nameFor(item.item_ref, item.name)
+      .toLocaleLowerCase()
+      .includes(inventoryFilter.toLocaleLowerCase()),
   )
 
   const patchInventory = (next: InventoryStateEntry[]) => onPatch({ inventory_state: next })
@@ -328,7 +402,7 @@ export function CharacterSheetView({
                       })
                     }
                   >
-                    {condition.name} ×
+                    {nameFor(condition.condition_ref, condition.name)} ×
                   </button>
                 ))
               ) : (
@@ -396,7 +470,10 @@ export function CharacterSheetView({
                 <div className="panel-title"><h3>{t('sheet.skills')}</h3><span>{t('sheet.skills')}</span></div>
                 <div className="stat-list skill-list">
                   {Object.entries(sheet.skills).map(([key, value]) => (
-                    <div key={key}><span>{titleCase(key)}</span><strong>{signed(value)}</strong></div>
+                    <div key={key}>
+                      <span>{nameFor(`srd5.1:skill:${key}`, titleCase(key))}</span>
+                      <strong>{signed(value)}</strong>
+                    </div>
                   ))}
                 </div>
               </article>
@@ -478,7 +555,11 @@ export function CharacterSheetView({
             <article className="panel feature-panel">
               <div className="panel-title"><h3>{t('sheet.features')}</h3><span>{t('sheet.characterAbilities')}</span></div>
               <div className="feature-chips">
-                {sheet.features.length ? sheet.features.map((feature) => <span key={feature.key}>{feature.name}</span>) : <em>{t('sheet.noData')}</em>}
+                {sheet.features.length
+                  ? sheet.features.map((feature) => (
+                      <span key={feature.key}>{nameFor(feature.key, feature.name)}</span>
+                    ))
+                  : <em>{t('sheet.noData')}</em>}
               </div>
             </article>
 
@@ -517,8 +598,8 @@ export function CharacterSheetView({
             <div className="spellcasting-grid">
               {sheet.spellcasting.map((source) => (
                 <article className="spellcasting-card" key={source.source_key}>
-                  <span>{source.source_name}</span>
-                  <strong>{titleCase(source.ability)}</strong>
+                  <span>{nameFor(source.source_key, source.source_name)}</span>
+                  <strong>{abilityLabel(source.ability, t)}</strong>
                   <div><small>{t('sheet.saveDc')}</small><b>{source.save_dc}</b><small>{t('sheet.attack')}</small><b>{signed(source.attack_modifier)}</b></div>
                 </article>
               ))}
@@ -547,7 +628,7 @@ export function CharacterSheetView({
                 <div className="resource-list">
                   {Object.entries(sheet.resources).map(([key, counter]) => (
                     <div key={key}>
-                      <span>{titleCase(key.split(':').at(-1) ?? key)}</span>
+                      <span>{resourceLabel(key, t)}</span>
                       <strong>{counter.remaining} / {counter.used + counter.remaining}</strong>
                       <div className="mini-actions">
                         <button type="button" disabled={busy || counter.remaining <= 0} onClick={() => void updateCounter(key, sheet.resources, 'use', 'resources')}>{t('sheet.use')}</button>
@@ -566,12 +647,15 @@ export function CharacterSheetView({
                   Boolean(spell.source_profile_id)
                 const legacyPrepare = spell.access_type === 'spellbook' && !spell.source_profile_id
                 const canPrepare = canonicalPrepare || legacyPrepare
+                const localizedSpellName = nameFor(spell.spell_key, spell.name)
+                const localizedSourceName =
+                  classNameByRef.get(spell.source_key) ?? nameFor(spell.source_key, titleCase(spell.source_type))
                 return (
                   <article className={spell.prepared ? 'spell-card is-prepared' : 'spell-card'} key={spell.entry_id}>
                     <div>
                       <span className="access-badge">{accessLabel(spell.access_type, t)}</span>
-                      <h3>{spell.name}</h3>
-                      <p>{classNameByRef.get(spell.source_key) ?? titleCase(spell.source_type)} · {spell.source_type}</p>
+                      <h3>{localizedSpellName}</h3>
+                      <p>{localizedSourceName}</p>
                     </div>
                     <div className="prepared-control">
                       <span className={spell.prepared ? 'prepared-badge on' : 'prepared-badge'}>{spell.prepared ? t('sheet.prepared') : t('sheet.unprepared')}</span>
@@ -648,13 +732,14 @@ export function CharacterSheetView({
 
             <div className="inventory-list">
               {filteredInventory.map((item) => {
-                const ruleDetails = describeRules(item.rules, t)
+                const ruleDetails = describeRules(item.rules, t, nameFor)
+                const localizedItemName = nameFor(item.item_ref, item.name)
                 return (
                   <article className="inventory-card" key={item.entry_id} data-testid={`inventory-${item.entry_id}`}>
                     <div className="inventory-main">
-                      <div className="item-monogram" aria-hidden="true">{item.name.slice(0, 1)}</div>
+                      <div className="item-monogram" aria-hidden="true">{localizedItemName.slice(0, 1)}</div>
                       <div>
-                        <h3>{item.name}</h3>
+                        <h3>{localizedItemName}</h3>
                         <p>{ruleDetails.length ? ruleDetails.join(' · ') : t('sheet.srdItem')}</p>
                         <div className="item-badges">
                           <span className={item.equipped ? 'item-badge active' : 'item-badge'}>{item.equipped ? t('sheet.equipped') : t('sheet.unequipped')}</span>
@@ -665,13 +750,13 @@ export function CharacterSheetView({
                     <div className="inventory-actions">
                       <div className="quantity-stepper">
                         <span>{t('sheet.qty')}</span>
-                        <button type="button" aria-label={t('sheet.decrementQty', { name: item.name })} data-testid={`inventory-${item.entry_id}-decrement`} disabled={busy || item.quantity <= 1} onClick={() => void mutateInventoryItem(item.entry_id, { quantity: item.quantity - 1 })}>−</button>
+                        <button type="button" aria-label={t('sheet.decrementQty', { name: localizedItemName })} data-testid={`inventory-${item.entry_id}-decrement`} disabled={busy || item.quantity <= 1} onClick={() => void mutateInventoryItem(item.entry_id, { quantity: item.quantity - 1 })}>−</button>
                         <strong data-testid={`inventory-${item.entry_id}-quantity`}>{item.quantity}</strong>
-                        <button type="button" aria-label={t('sheet.incrementQty', { name: item.name })} disabled={busy} onClick={() => void mutateInventoryItem(item.entry_id, { quantity: item.quantity + 1 })}>＋</button>
+                        <button type="button" aria-label={t('sheet.incrementQty', { name: localizedItemName })} disabled={busy} onClick={() => void mutateInventoryItem(item.entry_id, { quantity: item.quantity + 1 })}>＋</button>
                       </div>
                       <button type="button" className="button secondary compact" data-testid={`inventory-${item.entry_id}-equip`} disabled={busy} onClick={() => void mutateInventoryItem(item.entry_id, { equipped: !item.equipped })}>{item.equipped ? t('sheet.unequip') : t('sheet.equip')}</button>
                       <button type="button" className="button secondary compact" disabled={busy} onClick={() => void mutateInventoryItem(item.entry_id, { carried: !item.carried })}>{item.carried ? t('sheet.putDown') : t('sheet.carry')}</button>
-                      <button type="button" className="icon-danger" aria-label={t('sheet.removeItem', { name: item.name })} disabled={busy} onClick={() => void patchInventory(inventoryState(sheet.inventory).filter((entry) => entry.entry_id !== item.entry_id))}>×</button>
+                      <button type="button" className="icon-danger" aria-label={t('sheet.removeItem', { name: localizedItemName })} disabled={busy} onClick={() => void patchInventory(inventoryState(sheet.inventory).filter((entry) => entry.entry_id !== item.entry_id))}>×</button>
                     </div>
                   </article>
                 )

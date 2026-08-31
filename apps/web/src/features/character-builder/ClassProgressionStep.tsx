@@ -6,6 +6,12 @@ import {
   type BuilderView,
 } from '../../api/characterBuilder'
 import { optionDisplay, SearchableSelect } from '../../components/SearchableSelect'
+import {
+  builderChoiceLabel,
+  builderChoiceOptionLabel,
+} from '../../i18n/builderChoicePresentation'
+import type { Locale } from '../../i18n/locale'
+import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy } from '../../i18n/useUiCopy'
 import './progression.css'
 
@@ -15,10 +21,14 @@ type Props = {
   onSave: (payload: BuilderDraftPayload) => void
 }
 
-function optionsFor(choice: BuilderChoice) {
+function optionsFor(
+  choice: BuilderChoice,
+  nameFor: ContentNameResolver,
+  locale: Locale,
+) {
   return choice.options.map((option) => ({
     value: option.option_id,
-    label: option.label,
+    label: builderChoiceOptionLabel(choice, option, locale, nameFor),
     disabled: Boolean(option.disabled_reason),
     disabledReason: option.disabled_reason ?? undefined,
   }))
@@ -29,13 +39,18 @@ function LevelChoiceEditor({
   view,
   disabled,
   onSave,
+  nameFor,
+  locale,
 }: {
   choice: BuilderChoice
   view: BuilderView
   disabled: boolean
   onSave: (payload: BuilderDraftPayload) => void
+  nameFor: ContentNameResolver
+  locale: Locale
 }) {
   const { t } = useUiCopy()
+  const label = builderChoiceLabel(choice, locale, nameFor)
   const selected = view.draft.draft_payload.choice_selections?.[choice.choice_id]?.selected_option_ids ?? []
   const saveSelected = (next: string[]) => {
     onSave({
@@ -54,7 +69,7 @@ function LevelChoiceEditor({
     return (
       <div className="builder-choice progression-choice is-disabled">
         <div>
-          <strong>{choice.label}</strong>
+          <strong>{label}</strong>
           <small>{choice.disabled_reason}</small>
         </div>
       </div>
@@ -64,10 +79,10 @@ function LevelChoiceEditor({
   if (choice.choose_count === 1) {
     return (
       <SearchableSelect
-        label={choice.label}
+        label={label}
         value={selected[0] ?? ''}
         disabled={disabled}
-        options={optionsFor(choice)}
+        options={optionsFor(choice, nameFor, locale)}
         secondaryMode="duplicates"
         onChange={(value) => saveSelected(value ? [value] : [])}
       />
@@ -78,7 +93,7 @@ function LevelChoiceEditor({
   return (
     <div className="builder-choice progression-choice">
       <div className="builder-choice__heading">
-        <strong>{choice.label}</strong>
+        <strong>{label}</strong>
         <span>{selected.length} / {choice.choose_count}</span>
       </div>
       <div className="builder-choice__chips">
@@ -93,7 +108,9 @@ function LevelChoiceEditor({
           >
             {(() => {
               const option = choice.options.find((item) => item.option_id === id)
-              return option ? optionDisplay(option.label).primary : id
+              return option
+                ? optionDisplay(builderChoiceOptionLabel(choice, option, locale, nameFor)).primary
+                : nameFor(id, id)
             })()} ×
           </button>
         ))}
@@ -103,7 +120,7 @@ function LevelChoiceEditor({
         value=""
         disabled={disabled || !canAdd}
         secondaryMode="duplicates"
-        options={optionsFor(choice).map((option) => {
+        options={optionsFor(choice, nameFor, locale).map((option) => {
           const alreadySelected = selected.includes(option.value)
           return {
             ...option,
@@ -132,6 +149,33 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
   const nodesByLevel = new Map(
     view.resolved_summary.progression.map((node) => [node.character_level, node]),
   )
+  const contentReferences = [
+    ...view.choices.flatMap((choice) =>
+      choice.options.flatMap((option) => (option.reference_id ? [option.reference_id] : [])),
+    ),
+    ...view.resolved_summary.progression.flatMap((node) => [
+      node.class_ref,
+      ...(node.subclass_ref ? [node.subclass_ref] : []),
+      ...node.automatic_feature_refs,
+    ]),
+  ]
+  const { nameFor, locale } = useContentPresentations(contentReferences)
+  const localizedProgression = Array.from(
+    view.resolved_summary.progression.reduce(
+      (classes, node) =>
+        classes.set(node.class_ref, {
+          name: nameFor(node.class_ref, node.class_name),
+          level: node.class_level,
+        }),
+      new Map<string, { name: string; level: number }>(),
+    ).values(),
+  )
+    .map((entry) => `${entry.name} ${entry.level}`)
+    .join(' / ')
+  const startingNode = view.resolved_summary.progression.find((node) => node.starting_class)
+  const localizedStartingClass = startingNode
+    ? nameFor(startingNode.class_ref, startingNode.class_name)
+    : view.resolved_summary.starting_class_name ?? t('class.chooseLv1')
 
   const saveLevel = (
     level: number,
@@ -201,8 +245,8 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
       </div>
 
       <div className="progression-overview">
-        <div><span>{t('class.startingClass')}</span><strong>{view.resolved_summary.starting_class_name ?? t('class.chooseLv1')}</strong></div>
-        <div><span>{t('class.progression')}</span><strong>{view.resolved_summary.class_summary ?? t('class.notStarted')}</strong></div>
+        <div><span>{t('class.startingClass')}</span><strong>{localizedStartingClass}</strong></div>
+        <div><span>{t('class.progression')}</span><strong>{localizedProgression || t('class.notStarted')}</strong></div>
         <div><span>{t('class.filled')}</span><strong>{savedLevels.length} / {targetLevel}</strong></div>
       </div>
 
@@ -224,6 +268,7 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
             )
           })
           const canEdit = level === 1 || savedLevels.length >= level - 1
+          const localizedClassName = node ? nameFor(node.class_ref, node.class_name) : ''
 
           return (
             <section
@@ -241,7 +286,7 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
                     label={t('class.levelClass', { level })}
                     value={current?.class_ref ?? ''}
                     disabled={disabled || !canEdit}
-                    options={optionsFor(classChoice)}
+                    options={optionsFor(classChoice, nameFor, locale)}
                     secondaryMode="duplicates"
                     onChange={(value) => value && selectClass(level, value)}
                   />
@@ -254,7 +299,7 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
                 {node && current ? (
                   <div className="level-node__details">
                     <div className="level-node__meta">
-                      <span>{node.class_name} {node.class_level}</span>
+                      <span>{localizedClassName} {node.class_level}</span>
                       <span>d{node.hit_die_size}</span>
                       {node.starting_class ? <em>{t('class.startingClassBadge')}</em> : null}
                       {node.multiclass_entry ? <em>{t('class.multiclassBadge')}</em> : null}
@@ -299,10 +344,10 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
 
                     {subclassChoice ? (
                       <SearchableSelect
-                        label={t('class.subclass', { className: node.class_name, level: node.class_level })}
+                        label={t('class.subclass', { className: localizedClassName, level: node.class_level })}
                         value={current.subclass_ref ?? ''}
                         disabled={disabled}
-                        options={optionsFor(subclassChoice)}
+                        options={optionsFor(subclassChoice, nameFor, locale)}
                         secondaryMode="duplicates"
                         onChange={(value) => saveLevel(level, { ...current, subclass_ref: value || null })}
                       />
@@ -315,6 +360,8 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
                         view={view}
                         disabled={disabled}
                         onSave={onSave}
+                        nameFor={nameFor}
+                        locale={locale}
                       />
                     ))}
 
@@ -323,7 +370,12 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
                         <summary>{t('class.automaticFeatures', { count: node.automatic_feature_refs.length })}</summary>
                         <ul>
                           {node.automatic_feature_refs.map((feature) => (
-                            <li key={feature}>{feature.split(':').at(-1)?.replaceAll('-', ' ') ?? t('shared.unknownFeature')}</li>
+                            <li key={feature}>
+                              {nameFor(
+                                feature,
+                                feature.split(':').at(-1)?.replaceAll('-', ' ') ?? t('shared.unknownFeature'),
+                              )}
+                            </li>
                           ))}
                         </ul>
                       </details>

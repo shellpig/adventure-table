@@ -30,13 +30,26 @@ from app.persistence.characters import (
 router = APIRouter(prefix="/api/characters", tags=["characters"])
 
 
+class CharacterListClassItem(BaseModel):
+    """Presentation identity for one class in the workshop list."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    class_ref: str = Field(min_length=1, max_length=240)
+    name: str = Field(min_length=1, max_length=240)
+    level: int = Field(ge=1, le=20)
+
+
 class CharacterListItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: UUID
     name: str
     level: int = Field(ge=1, le=20)
+    # Keep the canonical summary for backward compatibility. M02-D clients use
+    # classes[] StableKeys to resolve locale-specific presentation instead.
     class_summary: str
+    classes: tuple[CharacterListClassItem, ...] = ()
     version_no: int = Field(ge=1)
 
 
@@ -55,14 +68,27 @@ class CharacterStatePatch(BaseModel):
     inventory_state: list[InventoryEntry] | None = None
 
 
-def _class_summary(character: PersistedCharacter, repository: CharacterRepository) -> str:
+def _class_entries(
+    character: PersistedCharacter,
+    repository: CharacterRepository,
+) -> tuple[CharacterListClassItem, ...]:
     counts = Counter(character.build.class_progression)
     order = tuple(dict.fromkeys(character.build.class_progression))
-    parts: list[str] = []
-    for class_ref in order:
-        entry = repository.registry.get(class_ref)
-        parts.append(f"{entry.name} {counts[class_ref]}")
-    return " / ".join(parts)
+    return tuple(
+        CharacterListClassItem(
+            class_ref=class_ref,
+            name=repository.registry.get(class_ref).name,
+            level=counts[class_ref],
+        )
+        for class_ref in order
+    )
+
+
+def _class_summary(character: PersistedCharacter, repository: CharacterRepository) -> str:
+    return " / ".join(
+        f"{entry.name} {entry.level}"
+        for entry in _class_entries(character, repository)
+    )
 
 
 def _canonicalize_prepared_patch(
@@ -141,6 +167,7 @@ def list_characters(
             name=character.name,
             level=character.build.character_level,
             class_summary=_class_summary(character, repository),
+            classes=_class_entries(character, repository),
             version_no=character.version_no,
         )
         for character in repository.list_characters()

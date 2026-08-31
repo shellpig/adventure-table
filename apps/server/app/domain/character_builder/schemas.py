@@ -158,6 +158,18 @@ class BuilderSpellChoiceInput(StrictModel):
         return normalized
 
 
+class BuilderChoicePresentationItem(StrictModel):
+    """Mechanics-neutral metadata for rebuilding a localized option label."""
+
+    reference_id: str = Field(min_length=1, max_length=240)
+    count: int = Field(default=1, ge=1)
+
+    @field_validator("reference_id")
+    @classmethod
+    def reference_id_is_stable_key(cls, value: str) -> str:
+        return require_stable_key(value)
+
+
 class BuilderChoiceOption(StrictModel):
     option_id: str = Field(min_length=1, max_length=240)
     label: str = Field(min_length=1, max_length=240)
@@ -170,6 +182,8 @@ class BuilderChoiceOption(StrictModel):
     disabled_reason: str | None = Field(default=None, max_length=500)
     hit_die_size: int | None = Field(default=None, ge=1, le=12)
     fixed_hp_gain: int | None = Field(default=None, ge=1, le=12)
+    presentation_items: tuple[BuilderChoicePresentationItem, ...] = ()
+    presentation_has_choice: bool = False
 
 
 class BuilderChoice(StrictModel):

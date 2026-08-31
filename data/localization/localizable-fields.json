@@ -204,6 +204,26 @@
     },
     {
       "pack": "*",
+      "kind": "equipment-category",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Sheet / Inventory selector", "Character Sheet / Inventory rule summary"],
+      "reason": "Equipment-category names are visible short rule labels in the current inventory UI."
+    },
+    {
+      "pack": "*",
+      "kind": "damage-type",
+      "field_path": "name",
+      "localizable": true,
+      "currently_user_visible": true,
+      "required_locales": ["zh-TW", "en"],
+      "surfaces": ["Character Sheet / Inventory rule summary"],
+      "reason": "Weapon damage-type names are visible short rule labels in the current inventory UI."
+    },
+    {
+      "pack": "*",
       "kind": "item",
       "field_path": "name",
       "localizable": true,

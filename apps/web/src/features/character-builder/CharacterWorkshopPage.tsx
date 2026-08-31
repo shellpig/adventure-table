@@ -9,13 +9,48 @@ import {
   createCharacterVersionDraft,
   type VersionedBuilderMode,
 } from '../../api/characterVersions'
+import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy } from '../../i18n/useUiCopy'
 import './builder.css'
+
+type WorkshopCharacter = Awaited<ReturnType<typeof listCharacters>>[number] & {
+  classes?: {
+    class_ref: string
+    name: string
+    level: number
+  }[]
+}
+
+function localizedClassSummary(
+  character: WorkshopCharacter,
+  nameFor: ContentNameResolver,
+): string {
+  if (!character.classes?.length) return character.class_summary
+  return character.classes
+    .map((entry) => `${nameFor(entry.class_ref, entry.name)} ${entry.level}`)
+    .join(' / ')
+}
 
 export function CharacterWorkshopPage() {
   const { t } = useUiCopy()
   const characters = useQuery({ queryKey: ['character-list'], queryFn: listCharacters })
   const drafts = useQuery({ queryKey: ['builder-drafts', 'create'], queryFn: listCreateBuilderDrafts })
+  const characterRows = (characters.data ?? []) as WorkshopCharacter[]
+  const presentationReferences = [
+    ...(drafts.data ?? []).flatMap((view) => [
+      ...(view.draft.draft_payload.race_selection?.reference_id
+        ? [view.draft.draft_payload.race_selection.reference_id]
+        : []),
+      ...(view.draft.draft_payload.background_selection?.reference_id
+        ? [view.draft.draft_payload.background_selection.reference_id]
+        : []),
+    ]),
+    ...characterRows.flatMap((character) =>
+      (character.classes ?? []).map((entry) => entry.class_ref),
+    ),
+  ]
+  const { nameFor } = useContentPresentations(presentationReferences)
+
   const createDraft = useMutation({
     mutationFn: () => createBuilderDraft(),
     onSuccess: (view) => {
@@ -63,27 +98,37 @@ export function CharacterWorkshopPage() {
           {drafts.isLoading ? <p className="builder-muted">{t('workshop.loadingDrafts')}</p> : null}
           {drafts.error ? <div className="error-banner">{drafts.error.message}</div> : null}
           <div className="workshop-grid">
-            {drafts.data?.map((view) => (
-              <article className="workshop-card draft-card" key={view.draft.id}>
-                <div className="workshop-card__mark">{t('workshop.draftBadge')}</div>
-                <h3>{view.resolved_summary.name?.trim() || t('workshop.unnamedCharacter')}</h3>
-                <p>
-                  {view.resolved_summary.race_name ?? t('workshop.raceNotSelected')} ·{' '}
-                  {view.resolved_summary.background_name ?? t('workshop.backgroundNotSelected')}
-                </p>
-                <div className="workshop-card__meta">
-                  <span>{t('workshop.revision', { revision: view.draft.revision })}</span>
-                  <span>
-                    {t('workshop.blockers', {
-                      count: view.validation.issues.filter((issue) => issue.severity === 'blocking_error').length,
-                    })}
-                  </span>
-                </div>
-                <a className="button secondary full" href={`/character-builder/${view.draft.id}`}>
-                  {t('workshop.resumeDraft')}
-                </a>
-              </article>
-            ))}
+            {drafts.data?.map((view) => {
+              const raceRef = view.draft.draft_payload.race_selection?.reference_id
+              const backgroundRef = view.draft.draft_payload.background_selection?.reference_id
+              return (
+                <article className="workshop-card draft-card" key={view.draft.id}>
+                  <div className="workshop-card__mark">{t('workshop.draftBadge')}</div>
+                  <h3>{view.resolved_summary.name?.trim() || t('workshop.unnamedCharacter')}</h3>
+                  <p>
+                    {nameFor(
+                      raceRef,
+                      view.resolved_summary.race_name ?? t('workshop.raceNotSelected'),
+                    )} ·{' '}
+                    {nameFor(
+                      backgroundRef,
+                      view.resolved_summary.background_name ?? t('workshop.backgroundNotSelected'),
+                    )}
+                  </p>
+                  <div className="workshop-card__meta">
+                    <span>{t('workshop.revision', { revision: view.draft.revision })}</span>
+                    <span>
+                      {t('workshop.blockers', {
+                        count: view.validation.issues.filter((issue) => issue.severity === 'blocking_error').length,
+                      })}
+                    </span>
+                  </div>
+                  <a className="button secondary full" href={`/character-builder/${view.draft.id}`}>
+                    {t('workshop.resumeDraft')}
+                  </a>
+                </article>
+              )
+            })}
             {!drafts.isLoading && drafts.data?.length === 0 ? (
               <div className="workshop-empty">{t('workshop.noDrafts')}</div>
             ) : null}
@@ -101,11 +146,11 @@ export function CharacterWorkshopPage() {
           {characters.isLoading ? <p className="builder-muted">{t('workshop.loadingCharacters')}</p> : null}
           {characters.error ? <div className="error-banner">{characters.error.message}</div> : null}
           <div className="workshop-grid">
-            {characters.data?.map((character) => (
+            {characterRows.map((character) => (
               <article className="workshop-card" key={character.id}>
                 <div className="workshop-card__level">{t('workshop.level', { level: character.level })}</div>
                 <h3>{character.name}</h3>
-                <p>{character.class_summary}</p>
+                <p>{localizedClassSummary(character, nameFor)}</p>
                 <div className="workshop-card__meta">
                   <span>{t('workshop.buildVersion', { version: character.version_no })}</span>
                   <span>{character.level >= 20 ? t('workshop.maxLevel') : t('workshop.ready')}</span>

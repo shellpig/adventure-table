@@ -4,7 +4,7 @@
 
 **本檔負責：專案概述、當前進度、大 Phase Roadmap、當前 Phase 的 Subphase 進度、下一步與文件索引。**
 
-最後更新：2026-08-30
+最後更新：2026-08-31
 
 ---
 
@@ -52,7 +52,11 @@ M01 的直接目標：
 
 **M02-B — Full UI Copy Localization 已完成**：既有 frontend-owned UI copy 已集中到 typed `zh-TW` / `en` localization resources；Landing、Character Workshop、Builder 七個具名 step、Review / Confirm、Character Sheet、Version History、LocaleSwitcher 與 SearchableSelect 均可即時切換，accessibility name / form label / placeholder / helper / loading / empty / confirmation copy 同步 locale；另加入 surface inventory、兩語 key parity、hardcoded presentation copy regression 與 real-browser 雙語 smoke。Rules/content DTO presentation 明確留給 M02-C～M02-F。
 
-> **下一個 coding step 是 M02-C — Localized Content Model & Terminology Contract。只有在使用者明確要求後才 coding。M02-C～M02-H 完成並 closeout 後，再回 M01-D～M01-J，最後才回到 P2 — Room / Campaign / Session / Seat 的規劃。M02 未 closeout 前不得開始 M01-D；不得因 M01 / M02 提前拆 P2～P8。**
+**M02-C — Localized Content Model & Terminology Contract 已完成**：canonical mechanics 與 presentation overlay 邊界確立，StableKey / refs / choice id 維持 locale-neutral；`ContentLocalizationCatalog` 依 StableKey + field path + locale 解析呈現文字；machine-readable field-level policy 落在 `data/localization/localizable-fields.json`，required 與 deferred 覆蓋範圍可枚舉可測；D&D 5e 2014 繁中術語 SSOT 落在 `data/localization/dnd5e-2014-glossary.json`；Background roleplay suggestion 採 deterministic locale-neutral identity，使用者自填文字維持原樣。詳見 `docs/M02/M02-C_CLOSEOUT.md`。
+
+**M02-D — SRD 5.1 Names & Structured Text 已完成**：`srd5.1` policy-required name 欄位的 `zh-TW` overlay 已以 per-kind human-review shard 形式進 `data/srd5.1/locales/zh-TW/`，runtime 優先讀 shard；Builder 進程／裝備／法術／Character Sheet / Character Workshop 均改為以 StableKey 解析 locale presentation。1,635 個 StableKey／1,662 個 presentation field 的 completeness 與 zh-TW 名稱語言 gate 全綠，人工術語 review 已由專案 owner 接受；Docker server image 已正式封裝 localization data，authoring regression tests 也已接入 CI。非 SRD pack 的 zh-TW 覆蓋屬 M02-F scope。詳見 `docs/M02/M02-D_CLOSEOUT.md`。
+
+> **下一個 coding step 是 M02-E — SRD 5.1 User-Visible Descriptions。只有在使用者明確要求後才 coding。M02-E～M02-H 完成並 closeout 後，再回 M01-D～M01-J，最後才回到 P2 — Room / Campaign / Session / Seat 的規劃。M02 未 closeout 前不得開始 M01-D；不得因 M01 / M02 提前拆 P2～P8。**
 
 已完成的產品／規劃工作：
 
@@ -223,7 +227,7 @@ M01 共通原則：
 | **M01-I — TCE Magic Items** | 📐 | TCE item registry、rarity / attunement / restrictions / charges、manual-effect fallback；首次 expose 欄位同步雙語 |
 | **M01-J — Full M01 Integration & Closeout** | 📐 | all-pack validation、P0/P1 regression、M02 localization regression、full E2E、restart persistence、真人 Gate recheck |
 
-**M01-A、M01-B、M01-C 已完成並關門。M01 現在暫停；目前進行 M02，下一個可開工 Subphase 是 M02-C。M02 closeout 後再回 M01-D。**
+**M01-A、M01-B、M01-C 已完成並關門。M01 現在暫停；目前進行 M02，下一個可開工 Subphase 是 M02-E。M02 closeout 後再回 M01-D。**
 
 ---
 
@@ -264,14 +268,14 @@ M02 共通原則：
 |---|---|---|
 | **M02-A — Locale Foundation & Runtime Switch** | ✅ | 全站單一 locale state、一鍵切換、browser 記憶、不動 Draft / Character domain state |
 | **M02-B — Full UI Copy Localization** | ✅ | 既有 frontend UI copy 全部進 localization resources，含 accessibility text；Builder 七個具名 step 全覆蓋 |
-| **M02-C — Localized Content Model & Terminology Contract** | 📐 | canonical / overlay 邊界、localized resolver、field-level localizable policy、roleplay suggestion identity、glossary 定稿 |
-| **M02-D — SRD 5.1 Names & Structured Text** | 📐 | 依 policy 完成目前 user-visible SRD names / labels / structured text 雙語覆蓋 |
+| **M02-C — Localized Content Model & Terminology Contract** | ✅ | canonical / overlay 邊界、localized resolver、field-level localizable policy、roleplay suggestion identity、glossary 定稿 |
+| **M02-D — SRD 5.1 Names & Structured Text** | ✅ | 依 policy 完成目前 user-visible SRD names / labels / structured text 雙語覆蓋 |
 | **M02-E — SRD 5.1 User-Visible Descriptions** | 📐 | 只翻目前 product surface 已顯示的 SRD 長篇／說明文字；不提前翻未來 surface |
 | **M02-F — PHB / SCAG / GoS Localization** | 📐 | 依 policy 完成 M01-B / M01-C current-surface non-SRD content；既有繁中 reference 作 priority input |
 | **M02-G — Localized Search, Errors & Completeness Gates** | 📐 | localized search / alias / sort、error code + localized message、policy-driven completeness / orphan guard |
 | **M02-H — Full M02 Integration & Closeout** | 📐 | 全站雙語驗收、Draft-safe switch、batch evidence、doc-sync / CC BY NOTICE、真人 browser gate |
 
-**M02-A、M02-B 已完成；下一個可開工 Subphase 是 M02-C。M02-C～M02-H 尚未 coding。**
+**M02-A、M02-B、M02-C、M02-D 已完成；下一個可開工 Subphase 是 M02-E。M02-E～M02-H 尚未 coding。**
 
 ---
 
@@ -298,7 +302,7 @@ P0/P1 已完成；**目前已拆 M01 與 M02。P2～P8 仍維持大 Phase，不�
 實際執行順序：
 
 ```text
-M01-A ✅ → M01-B ✅ → M01-C ✅ → M02-A ✅ → M02-B ✅ → M02-C～M02-H → M01-D～M01-J → P2
+M01-A ✅ → M01-B ✅ → M01-C ✅ → M02-A ✅ → M02-B ✅ → M02-C ✅ → M02-D ✅ → M02-E～M02-H → M01-D～M01-J → P2
 ```
 
 ---
@@ -434,7 +438,9 @@ docs/
 ├── M02/
 │   ├── 實作規格.md
 │   ├── 開發設計方針.md
-│   └── 測試指南.md
+│   ├── 測試指南.md
+│   ├── M02-C_CLOSEOUT.md
+│   └── M02-D_CLOSEOUT.md
 └── 暫用規則資訊/
 ```
 
@@ -482,7 +488,7 @@ M Phase 可以插在 P Phase 之間，**也可以插在另一個 M Phase 的兩�
 2. 再讀 `PROJECT_BRIEF.md` 取得目前 Phase、Subphase 與下一步。
 3. 按任務讀 `規格企劃.md` 對應章節。
 4. M01 實作／驗收依 `docs/M01/`、M02 依 `docs/M02/` 三份文件中的同名 Subphase 取得契約。
-5. M01-C 已 closeout；現在進行 M02（A、B 已完成，下一步 M02-C），M02 未 closeout 不開始 M01-D。
+5. M01-C 已 closeout；現在進行 M02（A～D 已完成，下一步 M02-E），M02 未 closeout 不開始 M01-D。
 6. M02-D / E / F 的 translation batch 可以分批 commit，但不能分批關閉 Subphase。
 7. M02 closeout 後，M01-D 起新增／修改／首次 expose user-visible content 必須同步維護所有 supported locales。
 8. 不重新討論已定案產品規格。

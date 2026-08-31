@@ -7,6 +7,7 @@ import {
 } from '../../api/characterBuilder'
 import { optionDisplay, SearchableSelect } from '../../components/SearchableSelect'
 import type { UiCopyKey } from '../../i18n/uiCopy'
+import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy, type UiTranslator } from '../../i18n/useUiCopy'
 import './spellcasting.css'
 
@@ -30,8 +31,12 @@ const ABILITY_LABELS: Record<string, string> = {
   charisma: 'CHA',
 }
 
-function spellLabel(spell: BuilderSpellOptionSummary, t: UiTranslator) {
-  const name = optionDisplay(spell.name).primary
+function spellLabel(
+  spell: BuilderSpellOptionSummary,
+  t: UiTranslator,
+  nameFor: ContentNameResolver,
+) {
+  const name = optionDisplay(nameFor(spell.spell_key, spell.name)).primary
   return spell.level === 0
     ? `${name} · ${t('spells.cantrip')}`
     : `${name} · ${t('spells.level', { level: spell.level })}`
@@ -57,6 +62,7 @@ function SpellBucketEditor({
   exact,
   disabled,
   onSave,
+  nameFor,
 }: {
   view: BuilderView
   profile: BuilderSpellcastingProfileSummary
@@ -67,6 +73,7 @@ function SpellBucketEditor({
   exact: boolean
   disabled: boolean
   onSave: (payload: BuilderDraftPayload) => void
+  nameFor: ContentNameResolver
 }) {
   const { t } = useUiCopy()
   const current = profileSelection(view, profile.profile_id)
@@ -80,7 +87,7 @@ function SpellBucketEditor({
     )
     .map((spell) => ({
       value: spell.spell_key,
-      label: spellLabel(spell, t),
+      label: spellLabel(spell, t, nameFor),
       disabled: selected.includes(spell.spell_key),
       disabledReason: selected.includes(spell.spell_key) ? t('shared.alreadySelected') : undefined,
     }))
@@ -121,7 +128,11 @@ function SpellBucketEditor({
                 disabled={disabled}
                 onClick={() => save(selected.filter((item) => item !== spellKey))}
               >
-                <span>{spell ? optionDisplay(spell.name).primary : t('shared.unknownSpell')}</span>
+                <span>
+                  {spell
+                    ? optionDisplay(nameFor(spell.spell_key, spell.name)).primary
+                    : nameFor(spellKey, t('shared.unknownSpell'))}
+                </span>
                 <small>{spell?.level === 0 ? t('spells.cantrip') : t('spells.slotLevel', { level: spell?.level ?? '?' })}</small>
                 <b aria-hidden="true">×</b>
               </button>
@@ -151,11 +162,13 @@ function SpellcastingProfile({
   profile,
   disabled,
   onSave,
+  nameFor,
 }: {
   view: BuilderView
   profile: BuilderSpellcastingProfileSummary
   disabled: boolean
   onSave: (payload: BuilderDraftPayload) => void
+  nameFor: ContentNameResolver
 }) {
   const { t } = useUiCopy()
   return (
@@ -163,7 +176,7 @@ function SpellcastingProfile({
       <div className="spell-profile__title">
         <div>
           <p className="eyebrow">{t(ACCESS_KEYS[profile.access_model])}</p>
-          <h3>{profile.source_name} {profile.class_level}</h3>
+          <h3>{nameFor(profile.source_key, profile.source_name)} {profile.class_level}</h3>
         </div>
         <div className="spell-profile__badges">
           <span>{ABILITY_LABELS[profile.ability] ?? profile.ability.toUpperCase()}</span>
@@ -184,6 +197,7 @@ function SpellcastingProfile({
             exact
             disabled={disabled}
             onSave={onSave}
+            nameFor={nameFor}
           />
         ) : null}
 
@@ -198,6 +212,7 @@ function SpellcastingProfile({
             exact
             disabled={disabled}
             onSave={onSave}
+            nameFor={nameFor}
           />
         ) : null}
 
@@ -212,6 +227,7 @@ function SpellcastingProfile({
             exact
             disabled={disabled}
             onSave={onSave}
+            nameFor={nameFor}
           />
         ) : null}
 
@@ -230,6 +246,7 @@ function SpellcastingProfile({
             exact={false}
             disabled={disabled}
             onSave={onSave}
+            nameFor={nameFor}
           />
         ) : null}
       </div>
@@ -241,6 +258,12 @@ export function SpellcastingStep({ view, disabled, onSave }: Props) {
   const { t } = useUiCopy()
   const profiles = view.resolved_summary.spellcasting_profiles ?? []
   const pools = view.resolved_summary.spell_resource_pools ?? []
+  const contentReferences = profiles.flatMap((profile) => [
+    profile.source_key,
+    profile.class_ref,
+    ...profile.available_spells.map((spell) => spell.spell_key),
+  ])
+  const { nameFor } = useContentPresentations(contentReferences)
 
   return (
     <div className="builder-step spellcasting-step">
@@ -252,22 +275,28 @@ export function SpellcastingStep({ view, disabled, onSave }: Props) {
 
       {pools.length ? (
         <div className="spell-pools" aria-label={t('spells.resourcesAria')}>
-          {pools.map((pool) => (
-            <section key={pool.pool_id} className="spell-pool">
-              <div>
-                <span>{pool.pool_type === 'pact_magic' ? t('spells.pactMagic') : t('spells.combinedSlots')}</span>
-                <strong>
-                  {pool.source_profile_id?.split(':').at(-1)?.replaceAll('-', ' ') ??
-                    (pool.pool_id.endsWith(':combined') ? t('spells.multiclass') : t('spells.normal'))}
-                </strong>
-              </div>
-              <div className="spell-pool__slots">
-                {pool.slots.map((slot) => (
-                  <span key={slot.level}>{t('spells.slotLevel', { level: slot.level })} <b>×{slot.count}</b></span>
-                ))}
-              </div>
-            </section>
-          ))}
+          {pools.map((pool) => {
+            const sourceProfile = profiles.find((profile) => profile.profile_id === pool.source_profile_id)
+            return (
+              <section key={pool.pool_id} className="spell-pool">
+                <div>
+                  <span>{pool.pool_type === 'pact_magic' ? t('spells.pactMagic') : t('spells.combinedSlots')}</span>
+                  <strong>
+                    {sourceProfile
+                      ? nameFor(sourceProfile.source_key, sourceProfile.source_name)
+                      : pool.pool_id.endsWith(':combined')
+                        ? t('spells.multiclass')
+                        : t('spells.normal')}
+                  </strong>
+                </div>
+                <div className="spell-pool__slots">
+                  {pool.slots.map((slot) => (
+                    <span key={slot.level}>{t('spells.slotLevel', { level: slot.level })} <b>×{slot.count}</b></span>
+                  ))}
+                </div>
+              </section>
+            )
+          })}
         </div>
       ) : null}
 
@@ -280,6 +309,7 @@ export function SpellcastingStep({ view, disabled, onSave }: Props) {
               profile={profile}
               disabled={disabled}
               onSave={onSave}
+              nameFor={nameFor}
             />
           ))}
         </div>
