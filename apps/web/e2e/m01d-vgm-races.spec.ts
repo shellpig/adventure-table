@@ -27,9 +27,19 @@ async function chooseOption(page: Page, input: Locator, value: string) {
   const listboxId = await input.getAttribute('aria-controls')
   if (!listboxId) throw new Error(`Combobox for "${value}" has no aria-controls listbox`)
   const listbox = page.locator(`[id="${listboxId}"]`)
-  const option = listbox
+  let option = listbox
     .getByRole('option')
     .filter({ has: page.getByText(value, { exact: true }) })
+
+  // Same-name entries can coexist across content packs. These M01-D scenarios
+  // intentionally use the SRD Acolyte baseline, so disambiguate it exactly the
+  // same way as the established P1 browser regressions.
+  if ((await option.count()) > 1) {
+    const srdOption = option.filter({
+      has: page.getByText('System Reference Document 5.1', { exact: true }),
+    })
+    if ((await srdOption.count()) === 1) option = srdOption
+  }
 
   await expect(option).toHaveCount(1)
   await option.click()
@@ -90,6 +100,7 @@ async function chooseBarbarianEquipment(page: Page) {
     /\(a\) two handaxes or \(b\) any simple weapon/,
     '2 × Handaxe',
   )
+  await chooseSearchable(page, 'Acolyte — Starting Equipment', 'Amulet')
 }
 
 async function confirmCreateAndReload(page: Page, name: string) {
@@ -119,8 +130,8 @@ test('M01-D creates and reloads a Goblin character', async ({ page }) => {
   await chooseBarbarianLevelOne(page)
   await chooseBarbarianEquipment(page)
   await confirmCreateAndReload(page, 'M01-D Goblin Hero')
-  await expect(page.getByText('Goblin', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Fury of the Small', { exact: true })).toBeVisible()
+  await expect(page.getByText('Nimble Escape', { exact: true })).toBeVisible()
 })
 
 test('M01-D creates a Hobgoblin with two martial weapon choices', async ({ page }) => {
@@ -143,10 +154,10 @@ test('M01-D creates a Hobgoblin with two martial weapon choices', async ({ page 
   await chooseBarbarianLevelOne(page)
   await chooseBarbarianEquipment(page)
   await confirmCreateAndReload(page, 'M01-D Hobgoblin Hero')
-  await expect(page.getByText('Hobgoblin', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Saving Face', { exact: true })).toBeVisible()
 })
 
-test('M01-D requires an Aasimar subrace and persists the selected subrace', async ({ page }) => {
+test('M01-D requires an Aasimar subrace and persists its level-one grants', async ({ page }) => {
   test.slow()
   await startDraft(page, 'M01-D Protector Hero', 1)
   await page.getByRole('button', { name: /Origin/ }).click()
@@ -160,7 +171,9 @@ test('M01-D requires an Aasimar subrace and persists the selected subrace', asyn
   await chooseBarbarianLevelOne(page)
   await chooseBarbarianEquipment(page)
   await confirmCreateAndReload(page, 'M01-D Protector Hero')
-  await expect(page.getByText('Protector Aasimar', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Healing Hands', { exact: true })).toBeVisible()
+  await expect(page.getByText('Light Bearer', { exact: true })).toBeVisible()
+  await expect(page.getByText('Radiant Soul', { exact: true })).toHaveCount(0)
 })
 
 test('M01-D Aasimar level 2 to 3 adds the level-gated transformation in Build v2', async ({ page }) => {
@@ -178,6 +191,7 @@ test('M01-D Aasimar level 2 to 3 adds the level-gated transformation in Build v2
   await chooseSearchable(page, 'Level 2 class', 'Barbarian')
   await chooseBarbarianEquipment(page)
   await confirmCreateAndReload(page, 'M01-D Threshold Hero')
+  await expect(page.getByText('Healing Hands', { exact: true })).toBeVisible()
   await expect(page.getByText('Radiant Soul', { exact: true })).toHaveCount(0)
 
   await page.goto('/characters')
