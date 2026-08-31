@@ -207,6 +207,7 @@ class BuilderDraftPayload(StrictModel):
     basic: BuilderBasicInput | None = None
     target_level: int | None = Field(default=None, ge=1, le=20)
     race_selection: BuilderReferenceSelection | None = None
+    race_variant_selection: BuilderReferenceSelection | None = None
     subrace_selection: BuilderReferenceSelection | None = None
     background_selection: BuilderReferenceSelection | None = None
     alignment_selection: BuilderReferenceSelection | None = None
@@ -235,6 +236,7 @@ class BuilderDraftPayloadPatch(StrictModel):
     basic: BuilderBasicInput | None = None
     target_level: int | None = Field(default=None, ge=1, le=20)
     race_selection: BuilderReferenceSelection | None = None
+    race_variant_selection: BuilderReferenceSelection | None = None
     subrace_selection: BuilderReferenceSelection | None = None
     background_selection: BuilderReferenceSelection | None = None
     alignment_selection: BuilderReferenceSelection | None = None
@@ -391,6 +393,7 @@ class BuilderResolvedSummary(StrictModel):
     name: str | None
     target_level: int | None
     race_name: str | None = None
+    race_variant_name: str | None = None
     subrace_name: str | None = None
     background_name: str | None = None
     alignment_name: str | None = None
