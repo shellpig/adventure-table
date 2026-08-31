@@ -270,7 +270,7 @@ def test_aasimar_transformation_features_use_character_level_gate(
 
 def test_aasimar_gate_uses_total_character_level_for_multiclass_progression() -> None:
     registry = load_default_content_registry()
-    payload = _payload(
+    level_three_payload = _payload(
         race="vgm:race:aasimar",
         subrace="vgm:subrace:protector-aasimar",
         level=3,
@@ -299,44 +299,44 @@ def test_aasimar_gate_uses_total_character_level_for_multiclass_progression() ->
         }
     )
 
-    first_pass = compile_builder_draft(_draft(payload), registry)
-    selections: dict[str, BuilderChoiceSelection] = {}
-    used_references: set[str] = set()
-    for choice in first_pass.choices:
-        if choice.option_source not in {
-            "content:language_options",
-            "content:class-proficiency",
-        }:
-            continue
-        selected: list[str] = []
-        for option in choice.options:
-            if option.disabled_reason is not None:
-                continue
-            if option.reference_id is not None and option.reference_id in used_references:
-                continue
-            selected.append(option.option_id)
-            if option.reference_id is not None:
-                used_references.add(option.reference_id)
-            if len(selected) == choice.choose_count:
-                break
-        assert len(selected) == choice.choose_count, choice.choice_id
-        selections[choice.choice_id] = BuilderChoiceSelection(
-            choice_id=choice.choice_id,
-            source_ref=choice.source_ref,
-            selected_option_ids=tuple(selected),
-        )
+    level_three = compile_builder_draft(_draft(level_three_payload), registry)
 
-    completed_payload = payload.model_copy(update={"choice_selections": selections})
-    result = compile_builder_draft(_draft(completed_payload), registry)
-
-    assert result.build_candidate is not None
-    assert result.build_candidate.character_level == 3
-    assert result.build_candidate.class_progression == (
+    # No single class reaches level 3; only the total character level does.
+    assert [node.class_ref for node in level_three.resolved_summary.progression] == [
         "srd5.1:class:fighter",
         "srd5.1:class:fighter",
         "srd5.1:class:rogue",
+    ]
+    assert "vgm:feature:radiant-soul" in {
+        grant.reference_id for grant in level_three.resolved_summary.grants
+    }
+
+    level_two_payload = _payload(
+        race="vgm:race:aasimar",
+        subrace="vgm:subrace:protector-aasimar",
+        level=2,
+    ).model_copy(
+        update={
+            "level_choices": (
+                BuilderLevelChoice(
+                    character_level=1,
+                    class_ref="srd5.1:class:fighter",
+                    hp_method=BuilderHPMethod.FIRST_LEVEL,
+                    hp_base_gain=10,
+                ),
+                BuilderLevelChoice(
+                    character_level=2,
+                    class_ref="srd5.1:class:rogue",
+                    hp_method=BuilderHPMethod.FIXED_AVERAGE,
+                    hp_base_gain=5,
+                ),
+            )
+        }
     )
-    assert "vgm:feature:radiant-soul" in result.build_candidate.feature_refs
+    level_two = compile_builder_draft(_draft(level_two_payload), registry)
+    assert "vgm:feature:radiant-soul" not in {
+        grant.reference_id for grant in level_two.resolved_summary.grants
+    }
 
 
 def test_vgm_feature_resources_use_deterministic_keys() -> None:
