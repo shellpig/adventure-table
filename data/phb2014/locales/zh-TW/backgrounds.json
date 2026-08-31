@@ -2,7 +2,7 @@
   "schema_version": 1,
   "locale": "zh-TW",
   "source": "phb2014",
-  "review_status": "human-reviewed",
+  "review_status": "draft-human-review-required",
   "entries": {
     "phb2014:background:acolyte": {"name": "侍僧", "data.feature.name": "信徒之家"},
     "phb2014:background:charlatan": {"name": "詐欺師", "data.feature.name": "假身分"},
