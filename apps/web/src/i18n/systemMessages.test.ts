@@ -8,13 +8,14 @@ import {
   localizedRequestErrorMessage,
 } from './systemMessages'
 
-describe('M02-G system-owned messages', () => {
+describe('M02-G/H system-owned messages', () => {
   it('keeps machine validation identity stable while presentation is localized explicitly', () => {
     const issue = installDynamicLocalizedBuilderPayload({
       code: 'missing_race',
       severity: 'blocking_error',
       path: 'draft_payload.race_selection',
       message: 'Race selection is required before Confirm.',
+      message_params: {},
       related_refs: [],
     })
 
@@ -67,23 +68,70 @@ describe('M02-G system-owned messages', () => {
     }
   })
 
-  it('supports code + params for disabled reasons without parsing English prose', () => {
+  it('formats structured multiclass prerequisites without parsing canonical English prose', () => {
+    const params = {
+      class_ref: 'srd5.1:class:wizard',
+      requirements: [{ ability: 'intelligence', minimum_score: 13 }],
+      requirement_groups: [
+        {
+          choose: 1,
+          options: [
+            { ability: 'strength', minimum_score: 13 },
+            { ability: 'dexterity', minimum_score: 13 },
+          ],
+        },
+      ],
+    }
+
     expect(
       localizedDisabledReason(
         'Wizard: Requires INT 13+ to multiclass.',
         'zh-TW',
         'multiclass_prerequisite_not_met',
-        { requirements: 'INT 13+' },
+        params,
       ),
-    ).toBe('兼職需要符合：INT 13+。')
-
+    ).toBe('兼職需要符合：智力 13+；力量 13+ 或 敏捷 13+。')
     expect(
       localizedDisabledReason(
-        'Complete ability scores before multiclassing.',
-        'zh-TW',
-        'multiclass_ability_scores_incomplete',
+        'Wizard: Requires INT 13+ to multiclass.',
+        'en',
+        'multiclass_prerequisite_not_met',
+        params,
       ),
-    ).toBe('兼職前請先完成能力值。')
+    ).toBe('Requires Intelligence 13+; Strength 13+ or Dexterity 13+ to multiclass.')
+  })
+
+  it('formats structured feat and ASI prerequisites in both locales', () => {
+    const featParams = {
+      feat_ref: 'phb2014:feat:example',
+      requirements: [
+        { ability: 'strength', minimum_score: 13 },
+        { ability: 'wisdom', minimum_score: 13 },
+      ],
+    }
+    expect(localizedDisabledReason('canonical', 'zh-TW', 'feat_prerequisite_not_met', featParams)).toBe(
+      '此專長需要符合：力量 13+；感知 13+。',
+    )
+    expect(localizedDisabledReason('canonical', 'en', 'feat_prerequisite_not_met', featParams)).toBe(
+      'Requires Strength 13+; Wisdom 13+.',
+    )
+    expect(localizedDisabledReason('DEX cannot exceed 20.', 'zh-TW', 'ability_score_cap_reached', {
+      ability: 'dexterity', maximum: 20,
+    })).toBe('敏捷 不能超過 20。')
+  })
+
+  it('keeps structured machine fields after installing dynamic getters', () => {
+    const payload = installDynamicLocalizedBuilderPayload({
+      choice_id: 'level:2:class-selection',
+      label: 'Level 2 class',
+      disabled_reason: 'Complete ability scores before multiclassing.',
+      disabled_reason_code: 'multiclass_ability_scores_incomplete',
+      disabled_reason_params: { class_ref: 'srd5.1:class:wizard' },
+    })
+
+    expect(payload.disabled_reason_code).toBe('multiclass_ability_scores_incomplete')
+    expect(payload.disabled_reason_params).toEqual({ class_ref: 'srd5.1:class:wizard' })
+    expect(payload.disabled_reason).toBe('兼職前請先完成能力值。')
   })
 
   it('never leaks untranslated disabled reason prose into zh-TW fallback', () => {
