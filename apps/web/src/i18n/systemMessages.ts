@@ -128,7 +128,7 @@ const BUILDER_ISSUE_MESSAGES: Record<string, LocalizedMessage> = {
   resource_usage_clamped: { 'zh-TW': '既有資源使用量超過新版本容量，系統已將使用量限制在新容量內。', en: 'Existing resource usage exceeded the new capacity and was clamped.' },
   hp_damage_delta_clamped: { 'zh-TW': '保留既有傷害後會低於 0 HP，系統已將目前 HP 限制為 0。', en: 'Preserved damage would reduce current HP below zero, so current HP was clamped to zero.' },
   spell_slot_pool_removed: { 'zh-TW': '新角色版本已不再擁有這個法術位階，因此移除其法術位資源。', en: 'The new build no longer has this spell-slot level, so the resource was removed.' },
-  spell_resource_pool_removed: { 'zh-TW': '新角色版本已不再擁有這個施法資源池，因此已移除。', en: 'The new build no longer has this spell resource pool, so it was removed.' },
+  spell_resource_pool_removed: { 'zh-TW': '新角色版本已不再擁有這個建構來源的資源池，因此已移除。', en: 'The new build no longer has this build-derived resource pool, so it was removed.' },
   hit_dice_usage_clamped: { 'zh-TW': '已消耗生命骰數量超過新版本可用總數，系統已將可用數量限制為 0。', en: 'Spent hit dice exceeded the new total and available hit dice were clamped to zero.' },
   hit_die_type_removed: { 'zh-TW': '新角色版本已不再擁有此種類生命骰，因此移除其即時狀態。', en: 'The new build no longer has this hit-die type, so its live counter was removed.' },
   state_reconciliation_invalid: { 'zh-TW': '目前角色狀態無法安全套用到新的角色版本，請先修正衝突。', en: 'The current character state cannot be safely reconciled to the proposed build.' },
