@@ -1,8 +1,7 @@
 name: P1 Full Regression
 
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   p1-full-regression:
