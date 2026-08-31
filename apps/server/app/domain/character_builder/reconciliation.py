@@ -13,11 +13,11 @@ from app.domain.character.validation import (
     derive_hit_dice_totals,
     validate_state_against_build,
 )
-from app.domain.character_builder.origin_resources import feature_resource_capacities
 from app.domain.character_builder.schemas import (
     BuilderIssue,
     BuilderIssueSeverity,
 )
+from app.domain.rules.feature_resources import feature_resource_capacities
 from app.domain.rules.hit_points import calculate_max_hp
 from app.domain.rules.spellcasting import initial_spell_resource_state
 
@@ -143,7 +143,7 @@ def reconcile_character_state(
         )
 
     new_slot_seed, new_spell_resource_seed = initial_spell_resource_state(new_build)
-    old_slot_seed, old_spell_resource_seed = initial_spell_resource_state(old_build)
+    _old_slot_seed, old_spell_resource_seed = initial_spell_resource_state(old_build)
 
     new_spell_slots: dict[int, ResourceCounter] = {}
     for level, seed in new_slot_seed.items():
@@ -210,7 +210,7 @@ def reconcile_character_state(
             continue
         warnings.append(
             _warning(
-                "build_resource_pool_removed",
+                "spell_resource_pool_removed",
                 f"state.resources.{key}",
                 f"Build-derived resource pool {key} no longer exists and is removed.",
             )
