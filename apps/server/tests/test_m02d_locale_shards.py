@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pytest
 
@@ -35,11 +36,6 @@ def _write_shard(root: Path, name: str, entries: dict[str, dict[str, object]]) -
 def test_runtime_merges_human_review_locale_shards() -> None:
     registry = load_default_content_registry()
 
-    with pytest.MonkeyPatch.context():
-        pass
-
-    from tempfile import TemporaryDirectory
-
     with TemporaryDirectory() as temp_dir:
         root = Path(temp_dir)
         _write_shard(
@@ -66,8 +62,6 @@ def test_runtime_merges_human_review_locale_shards() -> None:
 def test_locale_shards_reject_only_structural_conflicts() -> None:
     registry = load_default_content_registry()
 
-    from tempfile import TemporaryDirectory
-
     with TemporaryDirectory() as temp_dir:
         root = Path(temp_dir)
         _write_shard(
@@ -91,8 +85,6 @@ def test_locale_shards_reject_only_structural_conflicts() -> None:
 
 def test_locale_shards_allow_mixed_language_human_review_drafts() -> None:
     registry = load_default_content_registry()
-
-    from tempfile import TemporaryDirectory
 
     with TemporaryDirectory() as temp_dir:
         root = Path(temp_dir)
