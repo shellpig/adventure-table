@@ -29,6 +29,12 @@ class MulticlassPrerequisiteGroup:
     options: tuple[MulticlassPrerequisite, ...]
 
 
+@dataclass(frozen=True)
+class MulticlassFailureDetail:
+    code: str
+    params: dict[str, object]
+
+
 def _parse_prerequisite(item: object) -> MulticlassPrerequisite | None:
     if not isinstance(item, dict):
         return None
@@ -90,9 +96,6 @@ def multiclass_prerequisite_groups(
     for option in raw_options:
         if not isinstance(option, dict):
             continue
-        # 5e SRD represents Fighter's STR-or-DEX rule as score_prerequisite
-        # options. Accept both the nested option object and a direct prerequisite
-        # shape so imported/custom content can use either without class hardcodes.
         prerequisite = _parse_prerequisite(option)
         if prerequisite is None and option.get("option_type") == "score_prerequisite":
             prerequisite = _parse_prerequisite(option)
@@ -107,16 +110,26 @@ def _label(prerequisite: MulticlassPrerequisite) -> str:
     return f"{ABILITY_NAME_TO_LABEL.get(prerequisite.ability, prerequisite.ability.upper())} {prerequisite.minimum_score}+"
 
 
-def multiclass_failure_reason(
+def _requirement_param(prerequisite: MulticlassPrerequisite) -> dict[str, object]:
+    return {
+        "ability": prerequisite.ability,
+        "minimum_score": prerequisite.minimum_score,
+    }
+
+
+def multiclass_failure_detail(
     class_entry: ContentEntry,
     effective_abilities: dict[str, int] | None,
-) -> str | None:
+) -> MulticlassFailureDetail | None:
     prerequisites = multiclass_prerequisites(class_entry)
     groups = multiclass_prerequisite_groups(class_entry)
     if not prerequisites and not groups:
         return None
     if effective_abilities is None:
-        return "Complete ability scores before multiclassing."
+        return MulticlassFailureDetail(
+            code="multiclass_ability_scores_incomplete",
+            params={"class_ref": class_entry.key},
+        )
 
     failures = [
         prerequisite
@@ -135,6 +148,50 @@ def multiclass_failure_reason(
     if not failures and not failed_groups:
         return None
 
+    return MulticlassFailureDetail(
+        code="multiclass_prerequisite_not_met",
+        params={
+            "class_ref": class_entry.key,
+            "requirements": [_requirement_param(item) for item in failures],
+            "requirement_groups": [
+                {
+                    "choose": group.choose,
+                    "options": [_requirement_param(item) for item in group.options],
+                }
+                for group in failed_groups
+            ],
+        },
+    )
+
+
+def multiclass_failure_reason(
+    class_entry: ContentEntry,
+    effective_abilities: dict[str, int] | None,
+) -> str | None:
+    detail = multiclass_failure_detail(class_entry, effective_abilities)
+    if detail is None:
+        return None
+    if detail.code == "multiclass_ability_scores_incomplete":
+        return "Complete ability scores before multiclassing."
+
+    prerequisites = multiclass_prerequisites(class_entry)
+    groups = multiclass_prerequisite_groups(class_entry)
+    failures = [
+        prerequisite
+        for prerequisite in prerequisites
+        if effective_abilities is None
+        or effective_abilities.get(prerequisite.ability, 0) < prerequisite.minimum_score
+    ]
+    failed_groups: list[MulticlassPrerequisiteGroup] = []
+    if effective_abilities is not None:
+        for group in groups:
+            satisfied = sum(
+                effective_abilities.get(option.ability, 0) >= option.minimum_score
+                for option in group.options
+            )
+            if satisfied < group.choose:
+                failed_groups.append(group)
+
     details = [_label(failure) for failure in failures]
     for group in failed_groups:
         labels = [_label(option) for option in group.options]
@@ -145,26 +202,43 @@ def multiclass_failure_reason(
     return f"Requires {'; '.join(details)} to multiclass."
 
 
-def multiclass_option_failure_reason(
+def multiclass_option_failure_detail(
     candidate: ContentEntry,
     acquired_classes: tuple[ContentEntry, ...],
     effective_abilities: dict[str, int] | None,
-) -> str | None:
+) -> MulticlassFailureDetail | None:
     if not acquired_classes or any(entry.key == candidate.key for entry in acquired_classes):
         return None
 
-    # 2014 rules require meeting the prerequisites for both the class being left
-    # and the class being entered. Validate every class already represented in the
-    # ordered progression so a stale/edited rail cannot bypass that requirement.
     seen: set[str] = set()
     for entry in (*acquired_classes, candidate):
         if entry.key in seen:
             continue
         seen.add(entry.key)
-        reason = multiclass_failure_reason(entry, effective_abilities)
-        if reason is not None:
-            return f"{entry.name}: {reason}"
+        detail = multiclass_failure_detail(entry, effective_abilities)
+        if detail is not None:
+            return MulticlassFailureDetail(
+                code=detail.code,
+                params={**detail.params, "blocking_class_ref": entry.key},
+            )
     return None
+
+
+def multiclass_option_failure_reason(
+    candidate: ContentEntry,
+    acquired_classes: tuple[ContentEntry, ...],
+    effective_abilities: dict[str, int] | None,
+) -> str | None:
+    detail = multiclass_option_failure_detail(candidate, acquired_classes, effective_abilities)
+    if detail is None:
+        return None
+    blocking_ref = detail.params.get("blocking_class_ref")
+    entry = next(
+        (item for item in (*acquired_classes, candidate) if item.key == blocking_ref),
+        candidate,
+    )
+    reason = multiclass_failure_reason(entry, effective_abilities)
+    return f"{entry.name}: {reason}" if reason is not None else None
 
 
 def multiclass_proficiencies(class_entry: ContentEntry) -> tuple[dict[str, object], ...]:
