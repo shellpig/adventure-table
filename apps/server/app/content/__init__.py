@@ -8,9 +8,10 @@ from app.content.registry import (
 )
 
 
-# Production/dev packs are explicit. M01-C enables SCAG / GoS only after their
-# normalized manifests and data exist; fixture directories remain opt-in in tests.
-_registry.DEFAULT_CONTENT_PACKS = ("srd5.1", "phb2014", "scag", "gos")
+# Production/dev packs are explicit. M01-D enables VGM only after its normalized
+# manifest, bilingual presentation overlay, and race rules exist; fixture
+# directories remain opt-in in tests.
+_registry.DEFAULT_CONTENT_PACKS = ("srd5.1", "phb2014", "scag", "gos", "vgm")
 
 
 def load_default_content_registry() -> ContentRegistry:
