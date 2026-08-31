@@ -1,9 +1,14 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  archiveCharacter,
   createBuilderDraft,
+  deleteCharacter,
+  listArchivedCharacters,
   listCharacters,
   listCreateBuilderDrafts,
+  unarchiveCharacter,
 } from '../../api/characterBuilder'
 import {
   createCharacterVersionDraft,
@@ -33,9 +38,17 @@ function localizedClassSummary(
 
 export function CharacterWorkshopPage() {
   const { t } = useUiCopy()
+  const queryClient = useQueryClient()
   const characters = useQuery({ queryKey: ['character-list'], queryFn: listCharacters })
+  const archivedCharacters = useQuery({
+    queryKey: ['character-list', 'archived'],
+    queryFn: listArchivedCharacters,
+  })
   const drafts = useQuery({ queryKey: ['builder-drafts', 'create'], queryFn: listCreateBuilderDrafts })
   const characterRows = (characters.data ?? []) as WorkshopCharacter[]
+  const archivedRows = (archivedCharacters.data ?? []) as WorkshopCharacter[]
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [deleteConfirmation, setDeleteConfirmation] = useState('')
   const presentationReferences = [
     ...(drafts.data ?? []).flatMap((view) => [
       ...(view.draft.draft_payload.race_selection?.reference_id
@@ -62,6 +75,25 @@ export function CharacterWorkshopPage() {
       createCharacterVersionDraft(characterId, mode),
     onSuccess: (view) => {
       window.location.assign(`/character-builder/${view.draft.id}`)
+    },
+  })
+  const refreshLists = () => {
+    void queryClient.invalidateQueries({ queryKey: ['character-list'] })
+  }
+  const archive = useMutation({
+    mutationFn: archiveCharacter,
+    onSuccess: refreshLists,
+  })
+  const unarchive = useMutation({
+    mutationFn: unarchiveCharacter,
+    onSuccess: refreshLists,
+  })
+  const remove = useMutation({
+    mutationFn: deleteCharacter,
+    onSuccess: () => {
+      setDeleteTarget(null)
+      setDeleteConfirmation('')
+      refreshLists()
     },
   })
 
@@ -169,36 +201,113 @@ export function CharacterWorkshopPage() {
                   >
                     {t('workshop.levelUp')}
                   </button>
-                  <div className="workshop-card__split-actions">
-                    <button
-                      type="button"
-                      className="button secondary"
-                      disabled={versionDraft.isPending}
-                      onClick={() =>
-                        versionDraft.mutate({ characterId: character.id, mode: 'build_edit' })
-                      }
-                    >
-                      {t('workshop.editBuild')}
-                    </button>
-                    <button
-                      type="button"
-                      className="button secondary"
-                      disabled={versionDraft.isPending}
-                      onClick={() =>
-                        versionDraft.mutate({ characterId: character.id, mode: 'correction' })
-                      }
-                    >
-                      {t('workshop.correctBuild')}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    className="button secondary full"
+                    disabled={versionDraft.isPending}
+                    onClick={() =>
+                      versionDraft.mutate({ characterId: character.id, mode: 'build_edit' })
+                    }
+                  >
+                    {t('workshop.editBuild')}
+                  </button>
                   <a className="button secondary full" href={`/characters/${character.id}/versions`}>
                     {t('workshop.versionHistory')}
                   </a>
+                  <button
+                    type="button"
+                    className="workshop-card__quiet-action"
+                    disabled={archive.isPending}
+                    onClick={() => archive.mutate(character.id)}
+                  >
+                    {t('workshop.archive')}
+                  </button>
                 </div>
               </article>
             ))}
           </div>
         </section>
+
+        {archivedRows.length ? (
+          <section className="workshop-section workshop-section--archived">
+            <div className="workshop-section__heading">
+              <div>
+                <span>{t('workshop.charactersBadge')}</span>
+                <h2>{t('workshop.archivedCharacters')}</h2>
+              </div>
+              <small>{t('workshop.characterCount', { count: archivedRows.length })}</small>
+            </div>
+            {archivedCharacters.error ? (
+              <div className="error-banner">{archivedCharacters.error.message}</div>
+            ) : null}
+            {remove.error ? <div className="error-banner">{remove.error.message}</div> : null}
+            <div className="workshop-grid">
+              {archivedRows.map((character) => (
+                <article className="workshop-card workshop-card--archived" key={character.id}>
+                  <h3>{character.name}</h3>
+                  <p>{localizedClassSummary(character, nameFor)}</p>
+                  <div className="workshop-card__actions">
+                    <button
+                      type="button"
+                      className="button primary full"
+                      disabled={unarchive.isPending}
+                      onClick={() => unarchive.mutate(character.id)}
+                    >
+                      {t('workshop.unarchive')}
+                    </button>
+                  </div>
+                  {deleteTarget === character.id ? (
+                    <div className="workshop-card__danger">
+                      <label htmlFor={`delete-${character.id}`}>
+                        {t('workshop.deleteConfirmPrompt', { name: character.name })}
+                      </label>
+                      <input
+                        id={`delete-${character.id}`}
+                        type="text"
+                        value={deleteConfirmation}
+                        autoComplete="off"
+                        onChange={(event) => setDeleteConfirmation(event.target.value)}
+                      />
+                      <div className="workshop-card__split-actions">
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={() => {
+                            setDeleteTarget(null)
+                            setDeleteConfirmation('')
+                          }}
+                        >
+                          {t('workshop.deleteCancel')}
+                        </button>
+                        <button
+                          type="button"
+                          className="button danger"
+                          disabled={
+                            remove.isPending || deleteConfirmation.trim() !== character.name
+                          }
+                          onClick={() => remove.mutate(character.id)}
+                        >
+                          {t('workshop.deleteConfirm')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="workshop-card__quiet-action workshop-card__quiet-action--danger"
+                      onClick={() => {
+                        setDeleteTarget(character.id)
+                        setDeleteConfirmation('')
+                      }}
+                    >
+                      {t('workshop.deleteForever')}
+                    </button>
+                  )}
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
     </main>
   )

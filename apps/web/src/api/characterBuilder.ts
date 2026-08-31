@@ -346,6 +346,26 @@ export function listCharacters(): Promise<CharacterListItem[]> {
   return builderRequest<CharacterListItem[]>('/api/characters')
 }
 
+export function listArchivedCharacters(): Promise<CharacterListItem[]> {
+  return builderRequest<CharacterListItem[]>('/api/characters?archived=true')
+}
+
+export function archiveCharacter(characterId: string): Promise<CharacterListItem> {
+  return builderRequest<CharacterListItem>(`/api/characters/${characterId}/archive`, {
+    method: 'POST',
+  })
+}
+
+export function unarchiveCharacter(characterId: string): Promise<CharacterListItem> {
+  return builderRequest<CharacterListItem>(`/api/characters/${characterId}/unarchive`, {
+    method: 'POST',
+  })
+}
+
+export function deleteCharacter(characterId: string): Promise<void> {
+  return builderRequest<void>(`/api/characters/${characterId}`, { method: 'DELETE' })
+}
+
 export function getAbilityGenerationRules(): Promise<AbilityGenerationRules> {
   return builderRequest<AbilityGenerationRules>('/api/character-builder/rules/ability-generation')
 }

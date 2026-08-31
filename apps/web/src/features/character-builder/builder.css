@@ -514,3 +514,59 @@
 @media (max-width: 480px) {
   .skill-modifier-grid { grid-template-columns: 1fr; }
 }
+
+.workshop-section--archived .workshop-card {
+  opacity: .82;
+}
+
+.workshop-card--archived h3 {
+  margin-top: 0;
+}
+
+.workshop-card__quiet-action {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  border: 0;
+  padding: 4px 0 0;
+  background: none;
+  color: var(--quiet);
+  cursor: pointer;
+  font-size: .72rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.workshop-card__quiet-action:not(:disabled):hover { color: var(--text); }
+
+.workshop-card__quiet-action--danger:not(:disabled):hover { color: var(--red); }
+
+.workshop-card__danger {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.workshop-card__danger label {
+  color: var(--quiet);
+  font-size: .72rem;
+  line-height: 1.5;
+}
+
+.workshop-card__danger input {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--text);
+  background: #12171f;
+  font-size: .8rem;
+}
+
+.workshop-card__split-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
