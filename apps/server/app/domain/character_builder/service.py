@@ -113,6 +113,7 @@ class CharacterBuilderService:
             if candidate is not None:
                 immutable_origin = (
                     candidate.race_ref == base_build.race_ref
+                    and candidate.race_variant_ref == base_build.race_variant_ref
                     and candidate.subrace_ref == base_build.subrace_ref
                     and candidate.background_ref == base_build.background_ref
                     and candidate.alignment_ref == base_build.alignment_ref
@@ -123,7 +124,7 @@ class CharacterBuilderService:
                             code="level_up_origin_changed",
                             severity=BuilderIssueSeverity.BLOCKING_ERROR,
                             path="draft_payload",
-                            message="Level Up cannot rewrite race/background/alignment; use Build Edit or Correction.",
+                            message="Level Up cannot rewrite race/ancestry/background/alignment; use Build Edit or Correction.",
                         )
                     )
                 if candidate.starting_equipment != base_build.starting_equipment:
@@ -264,6 +265,7 @@ class CharacterBuilderService:
         immutable_fields = {
             "target_level",
             "race_selection",
+            "race_variant_selection",
             "subrace_selection",
             "background_selection",
             "alignment_selection",
