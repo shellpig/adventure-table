@@ -10,9 +10,13 @@ from app.content.localization import (
     SUPPORTED_CONTENT_LOCALES,
     ContentLocalizationCatalog,
     LocalizableFieldPolicy,
-    _read_path,
 )
+from app.content.localization_paths import read_localization_path
 from app.content.registry import ContentRegistry, ContentValidationError
+
+
+_LEGACY_SRD_ACOLYTE_KEY = "srd5.1:background:acolyte"
+_LEGACY_SRD_ROLEPLAY_PREFIX = "data.roleplay_suggestions."
 
 
 def _read_overlay_file(path: Path, locale: str) -> dict[str, dict[str, Any]]:
@@ -64,6 +68,20 @@ def _reject_unsupported_locale_artifacts(content_root: Path, source: str) -> Non
             )
 
 
+def _is_redundant_legacy_srd_acolyte_roleplay(key: str, field_path: str) -> bool:
+    """Ignore the pre-M02-F SRD copy of roleplay text now owned by PHB.
+
+    The normalized SRD Acolyte intentionally has no ``roleplay_suggestions``;
+    PHB 2014 owns those presentation rows. Older SRD zh-TW authoring left an
+    identical copy in ``core.json``. Treat only those known redundant rows as a
+    migration artifact so the general orphan-field gate remains strict.
+    """
+
+    return key == _LEGACY_SRD_ACOLYTE_KEY and field_path.startswith(
+        _LEGACY_SRD_ROLEPLAY_PREFIX
+    )
+
+
 def _validate_overlay_field_path(
     registry: ContentRegistry,
     *,
@@ -75,7 +93,7 @@ def _validate_overlay_field_path(
         raise ContentValidationError(f"locale overlay {path} contains a blank field path for {key}")
     payload = registry.get(key).model_dump(mode="python")
     try:
-        _read_path(payload, field_path)
+        read_localization_path(payload, field_path)
     except (KeyError, ValueError) as exc:
         raise ContentValidationError(
             f"locale overlay {path} references unknown field {key}::{field_path}"
@@ -204,6 +222,8 @@ def load_content_localization_catalog(
 
                     target = merged.setdefault(key, {})
                     for field_path, value in fields.items():
+                        if _is_redundant_legacy_srd_acolyte_roleplay(key, field_path):
+                            continue
                         _validate_overlay_field_path(
                             registry,
                             key=key,
