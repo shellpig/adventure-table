@@ -22,12 +22,12 @@ def test_m02f_non_srd_required_translation_scope_is_complete() -> None:
     _registry, catalog = _catalog()
 
     issues = catalog.completeness_issues(
-        locales=("zh-TW",),
+        locales=("zh-TW", "en"),
         sources=NON_SRD_SOURCES,
     )
 
-    assert issues == (), "missing M02-F zh-TW fields: " + ", ".join(
-        f"{issue.key}::{issue.field_path}" for issue in issues[:20]
+    assert issues == (), "missing M02-F localized fields: " + ", ".join(
+        f"{issue.key}::{issue.field_path}::{issue.locale}" for issue in issues[:20]
     )
 
 
@@ -134,6 +134,22 @@ def test_m02f_localization_does_not_mutate_canonical_content_or_english() -> Non
 
     for key, before in watched.items():
         assert registry.get(key).model_dump(mode="python") == before
+
+
+def test_same_display_name_across_sources_keeps_distinct_stable_identity() -> None:
+    _registry, catalog = _catalog()
+
+    srd_name = catalog.resolve_name("srd5.1:background:acolyte", "zh-TW")
+    phb_name = catalog.resolve_name("phb2014:background:acolyte", "zh-TW")
+    srd_suggestions = catalog.roleplay_suggestions("srd5.1:background:acolyte", "zh-TW")
+    phb_suggestions = catalog.roleplay_suggestions("phb2014:background:acolyte", "zh-TW")
+
+    assert srd_name.value == "侍僧"
+    assert phb_name.value == "侍僧"
+    assert srd_name.key != phb_name.key
+    assert srd_suggestions[0].suggestion_id.startswith("srd5.1:background:acolyte:")
+    assert phb_suggestions[0].suggestion_id.startswith("phb2014:background:acolyte:")
+    assert srd_suggestions[0].suggestion_id != phb_suggestions[0].suggestion_id
 
 
 def test_cross_pack_srd_reference_presentation_remains_owned_by_srd_overlay() -> None:
