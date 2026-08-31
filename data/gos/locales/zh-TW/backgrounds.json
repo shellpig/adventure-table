@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "gos",
+  "review_status": "human-reviewed",
+  "entries": {
+    "gos:background:fisher": {
+      "name": "漁夫",
+      "data.feature.name": "水中收穫",
+      "data.roleplay_suggestions.personality_traits.0": "我尊敬那些靠辛勤工作維生的人。",
+      "data.roleplay_suggestions.personality_traits.1": "只要看見開闊水面，我就會平靜下來。",
+      "data.roleplay_suggestions.ideals.0": "勤奮：穩定的努力能帶人撐過惡劣天候。",
+      "data.roleplay_suggestions.ideals.1": "平衡：只取所需，不耗盡養活我們的水域。",
+      "data.roleplay_suggestions.bonds.0": "有一片特別的水域，以及依賴它生活的人，對我意義重大。",
+      "data.roleplay_suggestions.flaws.0": "我可能會執著於證明某個荒誕的捕魚故事其實是真的。"
+    },
+    "gos:background:marine": {
+      "name": "海軍陸戰隊員",
+      "data.feature.name": "穩健",
+      "data.roleplay_suggestions.personality_traits.0": "情況再惡劣，我也會努力保持鎮定。",
+      "data.roleplay_suggestions.personality_traits.1": "和可靠的團隊一起行動時，我能發揮得最好。",
+      "data.roleplay_suggestions.ideals.0": "團隊合作：勝利依靠合作與溝通。",
+      "data.roleplay_suggestions.ideals.1": "堅忍：艱苦是應該面對的事，而不是畏懼的事。",
+      "data.roleplay_suggestions.bonds.0": "我絕不拋下曾與我並肩服役的人。",
+      "data.roleplay_suggestions.flaws.0": "我有時會把普通問題當成軍事緊急狀況處理。"
+    },
+    "gos:background:shipwright": {
+      "name": "造船匠",
+      "data.feature.name": "我來修！",
+      "data.roleplay_suggestions.personality_traits.0": "鬆脫的接合、變形的木板和糟糕的修補，我幾乎一眼就能看出來。",
+      "data.roleplay_suggestions.ideals.0": "工藝：真正好的作品應能撐過惡浪與更嚴酷的天候。",
+      "data.roleplay_suggestions.bonds.0": "教會我手藝的那艘船或那座船塢，至今仍像我的家。",
+      "data.roleplay_suggestions.flaws.0": "看到粗劣做工時，我總很難忍住不批評。"
+    },
+    "gos:background:smuggler": {
+      "name": "走私者",
+      "data.feature.name": "低調藏身",
+      "data.roleplay_suggestions.personality_traits.0": "我總會注意出口、巡邏路線，以及貨物可以消失的地方。",
+      "data.roleplay_suggestions.ideals.0": "自由：邊界與關稅不該決定普通人可以交易什麼。",
+      "data.roleplay_suggestions.bonds.0": "某個港口社群曾有人在我一旦被發現就會身敗名裂時藏匿我。",
+      "data.roleplay_suggestions.flaws.0": "我認為每條規則都有價碼，每個官員都有辦法繞過。"
+    }
+  }
+}
