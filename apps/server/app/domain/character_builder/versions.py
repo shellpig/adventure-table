@@ -178,6 +178,11 @@ def legacy_payload_from_build(
         basic=BuilderBasicInput(name=character.name, ruleset=build.ruleset),
         target_level=build.character_level,
         race_selection=BuilderReferenceSelection(reference_id=build.race_ref),
+        race_variant_selection=(
+            BuilderReferenceSelection(reference_id=build.race_variant_ref)
+            if build.race_variant_ref is not None
+            else None
+        ),
         subrace_selection=(
             BuilderReferenceSelection(reference_id=build.subrace_ref)
             if build.subrace_ref is not None
