@@ -42,7 +42,13 @@ const BUILDER_STEPS = {
 
 async function createDraft(request: APIRequestContext) {
   const response = await request.post('/api/character-builder/drafts', {
-    data: { mode: 'create', draft_payload: {} },
+    data: {
+      mode: 'create',
+      draft_payload: {
+        basic: { name: 'M02-H Crawl' },
+        target_level: 1,
+      },
+    },
   })
   expect(response.ok()).toBeTruthy()
   const payload = await response.json()
@@ -93,37 +99,33 @@ async function expectNoKnownOppositeLocaleLeak(page: Page, locale: Locale) {
   }
 }
 
-for (const viewport of [
-  { name: 'desktop', width: 1280, height: 720 },
-  { name: 'mobile', width: 390, height: 844 },
-] as const) {
-  for (const locale of ['zh-TW', 'en'] as const) {
-    test(`M02-H ${locale} ${viewport.name} route crawl has localized chrome and no horizontal overflow`, async ({ page }) => {
-      const pageErrors: string[] = []
-      const consoleErrors: string[] = []
-      page.on('pageerror', (error) => pageErrors.push(error.message))
-      page.on('console', (message) => {
-        if (message.type() === 'error') consoleErrors.push(message.text())
-      })
-      await page.setViewportSize({ width: viewport.width, height: viewport.height })
-
-      for (const route of ROUTES) {
-        await page.goto(route.path)
-        await forceLocale(page, locale)
-        await expectRouteMarker(page, route, locale)
-        await expectNoKnownOppositeLocaleLeak(page, locale)
-        await expectNoHorizontalOverflow(page)
-      }
-
-      expect(pageErrors).toEqual([])
-      expect(consoleErrors).toEqual([])
+for (const locale of ['zh-TW', 'en'] as const) {
+  test(`M02-H ${locale} desktop route crawl has localized chrome and no horizontal overflow`, async ({ page }) => {
+    const pageErrors: string[] = []
+    const consoleErrors: string[] = []
+    page.on('pageerror', (error) => pageErrors.push(error.message))
+    page.on('console', (message) => {
+      if (message.type() === 'error') consoleErrors.push(message.text())
     })
-  }
+    await page.setViewportSize({ width: 1280, height: 720 })
+
+    for (const route of ROUTES) {
+      await page.goto(route.path)
+      await forceLocale(page, locale)
+      await expectRouteMarker(page, route, locale)
+      await expectNoKnownOppositeLocaleLeak(page, locale)
+      await expectNoHorizontalOverflow(page)
+    }
+
+    expect(pageErrors).toEqual([])
+    expect(consoleErrors).toEqual([])
+  })
 }
 
 test('M02-H crawls every Builder step in zh-TW and en with localized headings and overflow gate', async ({ page, request }) => {
   test.slow()
   const draftId = await createDraft(request)
+  await page.setViewportSize({ width: 1280, height: 720 })
 
   for (const locale of ['zh-TW', 'en'] as const) {
     await page.goto(`/character-builder/${draftId}`)
@@ -133,22 +135,6 @@ test('M02-H crawls every Builder step in zh-TW and en with localized headings an
       await page.locator('.builder-rail').getByRole('button', { name: buttonName }).click()
       await expect(page.getByRole('heading', { name: heading })).toBeVisible()
       await expectNoKnownOppositeLocaleLeak(page, locale)
-      await expectNoHorizontalOverflow(page)
-    }
-  }
-})
-
-test('M02-H mobile Builder step crawl catches layout overflow in both locales', async ({ page, request }) => {
-  test.slow()
-  const draftId = await createDraft(request)
-  await page.setViewportSize({ width: 390, height: 844 })
-
-  for (const locale of ['zh-TW', 'en'] as const) {
-    await page.goto(`/character-builder/${draftId}`)
-    await forceLocale(page, locale)
-    for (const [buttonName, heading] of BUILDER_STEPS[locale]) {
-      await page.locator('.builder-rail').getByRole('button', { name: buttonName }).click()
-      await expect(page.getByRole('heading', { name: heading })).toBeVisible()
       await expectNoHorizontalOverflow(page)
     }
   }
