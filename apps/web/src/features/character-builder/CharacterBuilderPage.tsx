@@ -45,12 +45,18 @@ type ChoiceEditorProps = {
 
 const DIRECT_OPTION_SOURCES = new Set([
   'content:race',
+  'content:race-variant',
   'content:background',
   'content:alignment',
   'content:subrace',
   'content:subclass',
   'builder:ability-generation',
   'content:class',
+])
+
+const VARIANT_BRANCH_OPTION_SOURCES = new Set([
+  'content:race-variant-replacement',
+  'content:race-variant-spell',
 ])
 
 const ABILITY_COPY_KEYS: Record<keyof BuilderAbilityScores, UiCopyKey> = {
@@ -237,6 +243,9 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
       ...(view?.draft.draft_payload.race_selection?.reference_id
         ? [view.draft.draft_payload.race_selection.reference_id]
         : []),
+      ...(view?.draft.draft_payload.race_variant_selection?.reference_id
+        ? [view.draft.draft_payload.race_variant_selection.reference_id]
+        : []),
       ...(view?.draft.draft_payload.subrace_selection?.reference_id
         ? [view.draft.draft_payload.subrace_selection.reference_id]
         : []),
@@ -305,11 +314,19 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
     () => new Map(view?.choices.map((choice) => [choice.option_source, choice]) ?? []),
     [view],
   )
+  const variantBranchChoices = useMemo(
+    () =>
+      view?.choices.filter((choice) =>
+        VARIANT_BRANCH_OPTION_SOURCES.has(choice.option_source ?? ''),
+      ) ?? [],
+    [view],
+  )
   const startingChoices = useMemo(
     () =>
       view?.choices.filter(
         (choice) =>
           !DIRECT_OPTION_SOURCES.has(choice.option_source ?? '') &&
+          !VARIANT_BRANCH_OPTION_SOURCES.has(choice.option_source ?? '') &&
           choice.option_source !== 'equipment' &&
           !choice.choice_id.startsWith('level:'),
       ) ?? [],
@@ -330,21 +347,31 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
 
   const saving = save.isPending || cancel.isPending
   const raceChoice = choicesBySource.get('content:race')
+  const raceVariantChoice = choicesBySource.get('content:race-variant')
   const subraceChoice = choicesBySource.get('content:subrace')
   const backgroundChoice = choicesBySource.get('content:background')
   const alignmentChoice = choicesBySource.get('content:alignment')
   const currentRace = view.draft.draft_payload.race_selection?.reference_id ?? ''
+  const currentRaceVariant = view.draft.draft_payload.race_variant_selection?.reference_id ?? ''
   const currentSubrace = view.draft.draft_payload.subrace_selection?.reference_id ?? ''
   const currentBackground = view.draft.draft_payload.background_selection?.reference_id ?? ''
   const currentAlignment = view.draft.draft_payload.alignment_selection?.reference_id ?? ''
 
   const patchReference = (
-    field: 'race_selection' | 'subrace_selection' | 'background_selection' | 'alignment_selection',
+    field:
+      | 'race_selection'
+      | 'race_variant_selection'
+      | 'subrace_selection'
+      | 'background_selection'
+      | 'alignment_selection',
     value: string,
     resetChoices = false,
   ) => {
     const payload: BuilderDraftPayload = { [field]: value ? { reference_id: value } : null }
-    if (field === 'race_selection') payload.subrace_selection = null
+    if (field === 'race_selection') {
+      payload.race_variant_selection = null
+      payload.subrace_selection = null
+    }
     if (resetChoices) {
       payload.choice_selections = {}
       payload.starting_equipment_choices = {}
@@ -479,6 +506,31 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                 </div>
                 {raceChoice ? (
                   <SearchableSelect label={t('builder.origin.race')} value={currentRace} disabled={saving} options={selectionOptions(raceChoice, nameFor, locale)} secondaryMode="duplicates" onChange={(value) => patchReference('race_selection', value, true)} />
+                ) : null}
+                {raceVariantChoice ? (
+                  <SearchableSelect
+                    label={builderChoiceLabel(raceVariantChoice, locale, nameFor)}
+                    value={currentRaceVariant}
+                    disabled={saving}
+                    options={selectionOptions(raceVariantChoice, nameFor, locale)}
+                    secondaryMode="duplicates"
+                    onChange={(value) => patchReference('race_variant_selection', value)}
+                  />
+                ) : null}
+                {variantBranchChoices.length ? (
+                  <div className="builder-choice-list">
+                    {variantBranchChoices.map((choice) => (
+                      <ChoiceEditor
+                        key={choice.choice_id}
+                        choice={choice}
+                        view={view}
+                        disabled={saving}
+                        onSave={(payload) => save.mutate(payload)}
+                        nameFor={nameFor}
+                        locale={locale}
+                      />
+                    ))}
+                  </div>
                 ) : null}
                 {subraceChoice ? (
                   <SearchableSelect label={t('builder.origin.subrace')} value={currentSubrace} disabled={saving} options={selectionOptions(subraceChoice, nameFor, locale)} secondaryMode="duplicates" onChange={(value) => patchReference('subrace_selection', value, true)} />
@@ -653,6 +705,9 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                 <dt>{t('builder.summary.race')}</dt>
                 <dd>
                   {nameFor(currentRace, view.resolved_summary.race_name ?? '—')}
+                  {currentRaceVariant
+                    ? ` · ${nameFor(currentRaceVariant, view.resolved_summary.race_variant_name ?? currentRaceVariant)}`
+                    : ''}
                   {currentSubrace
                     ? ` · ${nameFor(currentSubrace, view.resolved_summary.subrace_name ?? currentSubrace)}`
                     : ''}
