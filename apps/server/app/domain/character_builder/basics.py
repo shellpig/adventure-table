@@ -73,6 +73,36 @@ def _append_reference_grants(
                 grants.append(grant)
 
 
+def _append_feature_grants(
+    grants: list[BuilderGrantSummary],
+    registry: ContentRegistry,
+    entry: ContentEntry,
+    character_level: int | None,
+) -> None:
+    raw = entry.data.get("features")
+    if not isinstance(raw, list):
+        return
+    resolved_level = character_level or 0
+    for reference in raw:
+        if not isinstance(reference, dict):
+            continue
+        grant = _grant_from_reference(entry.key, reference, kind_override="feature")
+        if grant is None:
+            continue
+        feature = registry.get_optional(grant.reference_id or "")
+        if feature is None:
+            grants.append(grant)
+            continue
+        minimum_level = feature.data.get("minimum_character_level", 1)
+        # Keep malformed rows visible to compile_origin, which owns the blocking
+        # content-data error. Valid rows are hidden from Review until eligible.
+        if not isinstance(minimum_level, int) or minimum_level < 1 or minimum_level > 20:
+            grants.append(grant)
+            continue
+        if resolved_level >= minimum_level:
+            grants.append(grant)
+
+
 def _append_trait_grants(
     grants: list[BuilderGrantSummary],
     registry: ContentRegistry,
@@ -104,6 +134,8 @@ def _append_entry_grants(
     grants: list[BuilderGrantSummary],
     registry: ContentRegistry,
     entry: ContentEntry,
+    *,
+    character_level: int | None,
 ) -> None:
     _append_reference_grants(grants, entry, "languages", kind_override="language")
     _append_reference_grants(
@@ -112,10 +144,7 @@ def _append_entry_grants(
     _append_reference_grants(
         grants, entry, "proficiencies", kind_override="proficiency"
     )
-    # M01-B PHB subraces use explicit reusable feature identities. Keep those
-    # separate from legacy SRD traits so their provenance and racial spells
-    # survive Review/Confirm.
-    _append_reference_grants(grants, entry, "features", kind_override="feature")
+    _append_feature_grants(grants, registry, entry, character_level)
     _append_trait_grants(grants, registry, entry, "traits")
     _append_trait_grants(grants, registry, entry, "racial_traits")
 
@@ -244,7 +273,12 @@ def resolve_creation_summary(
     grants: list[BuilderGrantSummary] = []
     for entry in (race, subrace, background):
         if entry is not None:
-            _append_entry_grants(grants, registry, entry)
+            _append_entry_grants(
+                grants,
+                registry,
+                entry,
+                character_level=payload.target_level,
+            )
     grants.extend(_selected_choice_grants(draft, choices))
 
     deduped_grants: list[BuilderGrantSummary] = []
