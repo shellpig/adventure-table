@@ -101,11 +101,14 @@ export type BuilderDraft = {
   updated_at: string
 }
 
+export type BuilderMessageParams = Record<string, unknown>
+
 export type BuilderIssue = {
   code: string
   severity: BuilderIssueSeverity
   path: string
   message: string
+  message_params?: BuilderMessageParams
   related_refs: string[]
 }
 
@@ -130,6 +133,8 @@ export type BuilderChoiceOption = {
   nested_choice_id?: string | null
   branch_key?: string | null
   disabled_reason?: string | null
+  disabled_reason_code?: string | null
+  disabled_reason_params?: BuilderMessageParams
   hit_die_size?: number | null
   fixed_hp_gain?: number | null
   presentation_items?: BuilderChoicePresentationItem[]
@@ -146,6 +151,8 @@ export type BuilderChoice = {
   options: BuilderChoiceOption[]
   selected_option_ids: string[]
   disabled_reason?: string | null
+  disabled_reason_code?: string | null
+  disabled_reason_params?: BuilderMessageParams
   allow_duplicates: boolean
 }
 
