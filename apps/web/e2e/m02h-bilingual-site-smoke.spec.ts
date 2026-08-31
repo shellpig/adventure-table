@@ -30,10 +30,10 @@ const BUILDER_STEPS = {
     [/檢視/, '角色配置快照與最終檢視'],
   ],
   en: [
-    [/Basic/, 'Set the basics first'],
+    [/Basic/, 'Start with the character'],
     [/Origin/, 'Choose an origin'],
     [/Abilities/, 'Abilities & starting choices'],
-    [/Class/, 'Build the level-by-level class progression'],
+    [/Class/, 'Build the level rail'],
     [/Spellcasting/, 'Spellcasting & resources'],
     [/Equipment/, 'Equipment & roleplay'],
     [/Review/, 'Build snapshot & final review'],
