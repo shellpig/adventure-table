@@ -26,6 +26,7 @@ URL_ROUTE_TO_KIND = {
     "magic-schools": "magic-school",
     "proficiencies": "proficiency",
     "races": "race",
+    "race-variants": "race-variant",
     "skills": "skill",
     "spells": "spell",
     "subclasses": "subclass",
@@ -40,6 +41,7 @@ URL_ROUTE_TO_KIND = {
 _STABLE_KEY_REFERENCE_FIELDS = frozenset(
     {
         "race_ref",
+        "race_variant_ref",
         "subrace_ref",
         "background_ref",
         "alignment_ref",
