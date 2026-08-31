@@ -14,17 +14,15 @@ export type ContentSearchAliasResolver = (
   reference: string | null | undefined,
   fallback?: string,
 ) => string[]
-/**
- * Resolve a field other than `name` on a content entry. Grants that live as an
- * inline field of their source entry - a background's own feature, say - have
- * no StableKey of their own, so their presentation identity is the source
- * entry plus the field path holding the name.
- */
 export type ContentFieldResolver = (
   reference: string | null | undefined,
   fieldPath: string | null | undefined,
   fallback?: string,
 ) => string
+
+type ContentPresentationOptions = {
+  includeSearchAliases?: boolean
+}
 
 const SOURCE_SEPARATOR = ' · '
 const LEADING_RULE_PREFIX_RE = /^(\d+\s*×\s*)/
@@ -77,6 +75,7 @@ export function groupPresentationRequests(
 export function useContentPresentations(
   references: string[],
   extraFields: Record<string, string[]> = {},
+  options: ContentPresentationOptions = {},
 ) {
   const { locale } = useLocale()
   const requestKey = JSON.stringify(groupPresentationRequests(references, extraFields))
@@ -84,23 +83,23 @@ export function useContentPresentations(
     () => JSON.parse(requestKey) as { fields: string[]; references: string[] }[],
     [requestKey],
   )
+  const requestedLocales = options.includeSearchAliases ? SUPPORTED_LOCALES : [locale]
   const results = useQueries({
-    queries: SUPPORTED_LOCALES.flatMap((requestLocale) =>
+    queries: requestedLocales.flatMap((requestLocale) =>
       requests.map((request) => ({
         queryKey: ['content-presentations', requestLocale, request.references, request.fields],
         queryFn: () => getContentPresentations(request.references, requestLocale, request.fields),
         enabled: request.references.length > 0,
-        meta: { locale: requestLocale },
       })),
     ),
   })
 
   const presentationsByLocale = new Map<Locale, Map<string, ContentPresentation>>()
-  for (const requestLocale of SUPPORTED_LOCALES) {
+  for (const requestLocale of requestedLocales) {
     presentationsByLocale.set(requestLocale, new Map())
   }
   results.forEach((result, index) => {
-    const requestLocale = SUPPORTED_LOCALES[Math.floor(index / Math.max(requests.length, 1))]
+    const requestLocale = requestedLocales[Math.floor(index / Math.max(requests.length, 1))]
     if (!requestLocale) return
     const target = presentationsByLocale.get(requestLocale)
     for (const presentation of result.data?.presentations ?? []) {
@@ -125,7 +124,7 @@ export function useContentPresentations(
     if (!reference) return fallback ? [fallback] : []
     const aliases = new Set<string>()
     if (fallback.trim()) aliases.add(fallback.trim())
-    for (const requestLocale of SUPPORTED_LOCALES) {
+    for (const requestLocale of requestedLocales) {
       const field = presentationField(
         presentationsByLocale.get(requestLocale)?.get(reference),
         'name',
