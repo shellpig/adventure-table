@@ -1,3 +1,5 @@
+import { createLocalizedRequestError } from '../i18n/systemMessages'
+
 export type ResourceCounter = {
   used: number
   remaining: number
@@ -160,14 +162,16 @@ async function apiRequest<T>(input: RequestInfo | URL, init?: RequestInit): Prom
   })
 
   if (!response.ok) {
+    let code: string | undefined
     let message = `Request failed (${response.status})`
     try {
       const payload = (await response.json()) as APIErrorPayload
+      code = payload.error?.code
       message = payload.error?.message ?? message
     } catch {
       // Keep the HTTP fallback when the body is not JSON.
     }
-    throw new Error(message)
+    throw createLocalizedRequestError(code, response.status, message)
   }
 
   return (await response.json()) as T
