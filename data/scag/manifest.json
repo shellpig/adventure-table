@@ -2,15 +2,19 @@
   "id": "scag",
   "name": "Sword Coast Adventurer's Guide",
   "ruleset": "dnd5e-2014",
-  "version": "m01-c",
+  "version": "m01-e",
   "provenance": {
-    "source_documents": ["docs/暫用規則資訊/背景_SCAG.md"],
+    "source_documents": [
+      "docs/暫用規則資訊/背景_SCAG.md",
+      "docs/暫用規則資訊/半精靈變體_SCAG.md"
+    ],
     "rules_source": "Sword Coast Adventurer's Guide (2015)",
     "note": "Private-project content pack assembled from rule references supplied in this repository."
   },
   "usage": {
-    "scope": "M01-C background expansion",
-    "roleplay_inheritance_policy": "inherits_from reuses only personality/ideal/bond/flaw suggestions and never mechanics"
+    "scope": "M01-C background expansion plus M01-E Half-Elf ancestry variants",
+    "roleplay_inheritance_policy": "inherits_from reuses only personality/ideal/bond/flaw suggestions and never mechanics",
+    "race_variant_policy": "race-variant entries keep srd5.1:race:half-elf as the base race and replace grants only through declared stable grant identities"
   },
   "categories": [
     {
@@ -18,7 +22,19 @@
       "kind": "background",
       "file": "backgrounds.json",
       "count": 13
+    },
+    {
+      "name": "features",
+      "kind": "feature",
+      "file": "features.json",
+      "count": 7
+    },
+    {
+      "name": "race-variants",
+      "kind": "race-variant",
+      "file": "race-variants.json",
+      "count": 4
     }
   ],
-  "total_entries": 13
+  "total_entries": 24
 }
