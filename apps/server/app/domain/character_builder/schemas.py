@@ -180,6 +180,8 @@ class BuilderChoiceOption(StrictModel):
     nested_choice_id: str | None = Field(default=None, max_length=240)
     branch_key: str | None = Field(default=None, max_length=160)
     disabled_reason: str | None = Field(default=None, max_length=500)
+    disabled_reason_code: str | None = Field(default=None, max_length=160)
+    disabled_reason_params: dict[str, JsonValue] = Field(default_factory=dict)
     hit_die_size: int | None = Field(default=None, ge=1, le=12)
     fixed_hp_gain: int | None = Field(default=None, ge=1, le=12)
     presentation_items: tuple[BuilderChoicePresentationItem, ...] = ()
@@ -196,6 +198,8 @@ class BuilderChoice(StrictModel):
     options: tuple[BuilderChoiceOption, ...] = ()
     selected_option_ids: tuple[str, ...] = ()
     disabled_reason: str | None = Field(default=None, max_length=500)
+    disabled_reason_code: str | None = Field(default=None, max_length=160)
+    disabled_reason_params: dict[str, JsonValue] = Field(default_factory=dict)
     allow_duplicates: bool = False
 
 
@@ -296,6 +300,7 @@ class BuilderIssue(StrictModel):
     severity: BuilderIssueSeverity
     path: str = Field(min_length=1, max_length=320)
     message: str = Field(min_length=1, max_length=1000)
+    message_params: dict[str, JsonValue] = Field(default_factory=dict)
     related_refs: tuple[str, ...] = ()
 
 
