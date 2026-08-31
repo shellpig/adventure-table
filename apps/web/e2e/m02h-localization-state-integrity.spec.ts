@@ -58,7 +58,7 @@ const CREATE_FLOW: Record<Locale, CreateFlowFixture> = {
     raceValue: 'Human',
     backgroundLabel: 'Background',
     backgroundValue: 'Acolyte',
-    backgroundSource: 'SRD 5.1',
+    backgroundSource: 'System Reference Document 5.1',
     abilitiesStep: /Abilities/,
     saveAbilities: 'Save Ability Scores',
     humanLanguagesLabel: 'Human — Languages',
@@ -278,9 +278,7 @@ async function createSimpleCharacter(page: Page, name: string, locale: Locale) {
   await chooseIn(startingSkills, fixture.addSelection, fixture.athletics)
 
   await page.locator('.builder-rail').getByRole('button', { name: fixture.equipmentStep }).click()
-  await chooseSearchable(page, fixture.greataxeChoice, fixture.greataxe)
-  await chooseSearchable(page, fixture.handaxeChoice, fixture.handaxes)
-  await chooseSearchable(page, fixture.acolyteEquipment, fixture.amulet)
+  await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
   await page.locator('.builder-rail').getByRole('button', { name: fixture.reviewStep }).click()
   await expect(page.locator('html')).toHaveAttribute('lang', locale)
