@@ -2,7 +2,7 @@
   "schema_version": 1,
   "locale": "zh-TW",
   "source": "phb2014",
-  "review_status": "human-reviewed",
+  "review_status": "draft-human-review-required",
   "entries": {
     "phb2014:background:acolyte": {
       "data.roleplay_suggestions.personality_traits.0": "我經常回憶並談起信仰中受人敬仰的英雄。",
