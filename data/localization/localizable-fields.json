@@ -3,6 +3,7 @@
   "supported_locales": ["zh-TW", "en"],
   "rules": [
     {"pack":"*","kind":"race","field_path":"name","localizable":true,"currently_user_visible":true,"required_locales":["zh-TW","en"],"surfaces":["Character Builder / Origin","Review","Character Sheet"],"reason":"Race names are directly rendered on current character surfaces."},
+    {"pack":"*","kind":"race-variant","field_path":"name","localizable":true,"currently_user_visible":true,"required_locales":["zh-TW","en"],"surfaces":["Character Builder / Origin","Review","Character Sheet"],"reason":"Race ancestry variant names are selectable and persisted current-character presentation."},
     {"pack":"*","kind":"subrace","field_path":"name","localizable":true,"currently_user_visible":true,"required_locales":["zh-TW","en"],"surfaces":["Character Builder / Origin","Review","Character Sheet"],"reason":"Subrace names are directly rendered on current character surfaces."},
     {"pack":"*","kind":"background","field_path":"name","localizable":true,"currently_user_visible":true,"required_locales":["zh-TW","en"],"surfaces":["Character Builder / Origin","Review","Character Sheet"],"reason":"Background names are current selectable and summary presentation."},
     {"pack":"*","kind":"background","field_path":"data.roleplay_suggestions.personality_traits.*","localizable":true,"currently_user_visible":true,"required_locales":["zh-TW","en"],"surfaces":["Character Builder / Roleplay Profile"],"reason":"System-authored personality suggestions are shown as selectable text."},
