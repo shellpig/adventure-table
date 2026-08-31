@@ -18,7 +18,10 @@ from app.domain.character_builder.basics import resolve_creation_summary
 from app.domain.character_builder.choices import build_foundation_choices
 from app.domain.character_builder.creation import BuilderEquipmentSummary
 from app.domain.character_builder.equipment import EquipmentCompilation, compile_starting_equipment
-from app.domain.character_builder.multiclass import multiclass_option_failure_reason
+from app.domain.character_builder.multiclass import (
+    multiclass_option_failure_detail,
+    multiclass_option_failure_reason,
+)
 from app.domain.character_builder.origin import compile_origin
 from app.domain.character_builder.progression import (
     build_progression_choices,
@@ -42,6 +45,7 @@ from app.domain.character_builder.structural import (
     StructuralCompilation,
     build_structural_choices,
     compile_structural_selections,
+    feat_failure_detail,
     feat_failure_reason,
     validate_structural_choice_integrity,
 )
@@ -182,9 +186,19 @@ def _effective_origin_choices(
         for option in choice.options:
             feat = registry.get_optional(option.reference_id or "")
             reason = None
+            detail = None
             if feat is not None and stable_key_is_kind(feat.key, "feat"):
                 reason = feat_failure_reason(feat, effective_abilities)
-            options.append(option.model_copy(update={"disabled_reason": reason}))
+                detail = feat_failure_detail(feat, effective_abilities)
+            options.append(
+                option.model_copy(
+                    update={
+                        "disabled_reason": reason,
+                        "disabled_reason_code": detail.code if detail is not None else None,
+                        "disabled_reason_params": detail.params if detail is not None else {},
+                    }
+                )
+            )
         result.append(choice.model_copy(update={"options": tuple(options)}))
     return tuple(result)
 
@@ -219,13 +233,27 @@ def _effective_progression_choices(
         for option in choice.options:
             candidate = registry.get_optional(option.reference_id or "")
             reason = None
+            detail = None
             if candidate is not None and stable_key_is_kind(candidate.key, "class"):
                 reason = multiclass_option_failure_reason(
                     candidate,
                     tuple(acquired),
                     effective_abilities,
                 )
-            next_options.append(option.model_copy(update={"disabled_reason": reason}))
+                detail = multiclass_option_failure_detail(
+                    candidate,
+                    tuple(acquired),
+                    effective_abilities,
+                )
+            next_options.append(
+                option.model_copy(
+                    update={
+                        "disabled_reason": reason,
+                        "disabled_reason_code": detail.code if detail is not None else None,
+                        "disabled_reason_params": detail.params if detail is not None else {},
+                    }
+                )
+            )
         result.append(choice.model_copy(update={"options": tuple(next_options)}))
     return tuple(result)
 
@@ -359,6 +387,7 @@ def compile_builder_draft(
                     "Starting equipment selections belong in "
                     "draft_payload.starting_equipment_choices; this misplaced value is ignored."
                 ),
+                message_params={"choice_id": choice_id},
             )
         )
     if structural_data_issue is not None:
