@@ -13,6 +13,7 @@ from app.domain.character.validation import (
     derive_hit_dice_totals,
     validate_state_against_build,
 )
+from app.domain.character_builder.origin_resources import feature_resource_capacities
 from app.domain.character_builder.schemas import (
     BuilderIssue,
     BuilderIssueSeverity,
@@ -141,7 +142,7 @@ def reconcile_character_state(
             )
         )
 
-    new_slot_seed, new_resource_seed = initial_spell_resource_state(new_build)
+    new_slot_seed, new_spell_resource_seed = initial_spell_resource_state(new_build)
     old_slot_seed, old_spell_resource_seed = initial_spell_resource_state(old_build)
 
     new_spell_slots: dict[int, ResourceCounter] = {}
@@ -175,15 +176,15 @@ def reconcile_character_state(
                 )
             )
 
-    # Spell/Pact resource keys are Build-derived. Other live counters are preserved
-    # because P1 does not yet model every class/feature resource as Build capacity.
-    old_spell_resource_keys = set(old_spell_resource_seed)
+    old_feature_capacities = feature_resource_capacities(old_build, registry)
+    new_feature_capacities = feature_resource_capacities(new_build, registry)
+    managed_resource_keys = set(old_spell_resource_seed) | set(old_feature_capacities)
     new_resources = {
         key: counter
         for key, counter in old_state.resources.items()
-        if key not in old_spell_resource_keys
+        if key not in managed_resource_keys
     }
-    for key, seed in new_resource_seed.items():
+    for key, seed in new_spell_resource_seed.items():
         new_resources[key] = _reconcile_counter(
             path=f"state.resources.{key}",
             old=old_state.resources.get(key),
@@ -191,25 +192,38 @@ def reconcile_character_state(
             warnings=warnings,
             changes=changes,
         )
-    for key in sorted(old_spell_resource_keys - set(new_resource_seed)):
+    for key, capacity in new_feature_capacities.items():
+        new_resources[key] = _reconcile_counter(
+            path=f"state.resources.{key}",
+            old=old_state.resources.get(key),
+            new_capacity=capacity,
+            warnings=warnings,
+            changes=changes,
+        )
+
+    removed_managed_keys = managed_resource_keys - (
+        set(new_spell_resource_seed) | set(new_feature_capacities)
+    )
+    for key in sorted(removed_managed_keys):
         old_counter = old_state.resources.get(key)
-        if old_counter is not None:
-            warnings.append(
-                _warning(
-                    "spell_resource_pool_removed",
-                    f"state.resources.{key}",
-                    f"Spell resource pool {key} no longer exists in the new Build and is removed.",
-                )
+        if old_counter is None:
+            continue
+        warnings.append(
+            _warning(
+                "build_resource_pool_removed",
+                f"state.resources.{key}",
+                f"Build-derived resource pool {key} no longer exists and is removed.",
             )
-            changes.append(
-                StateReconciliationChange(
-                    path=f"state.resources.{key}",
-                    kind="resource_removed",
-                    before=f"used={old_counter.used}, remaining={old_counter.remaining}",
-                    after="removed",
-                    message="The new Build no longer has this resource pool.",
-                )
+        )
+        changes.append(
+            StateReconciliationChange(
+                path=f"state.resources.{key}",
+                kind="resource_removed",
+                before=f"used={old_counter.used}, remaining={old_counter.remaining}",
+                after="removed",
+                message="The new Build no longer grants this resource pool.",
             )
+        )
 
     old_hit_dice_totals = derive_hit_dice_totals(old_build, registry)
     new_hit_dice_totals = derive_hit_dice_totals(new_build, registry)
@@ -262,9 +276,6 @@ def reconcile_character_state(
     try:
         validate_state_against_build(proposed, new_build, registry)
     except CharacterValidationError as exc:
-        # Determine whether keeping the prepared list is the only blocker. This
-        # lets the UI give the explicit P1 contract rather than silently dropping
-        # selections that became illegal after a correction/build edit.
         without_prepared = proposed.model_copy(
             update={"prepared_spell_entry_ids": [], "prepared_spells": []}
         )
