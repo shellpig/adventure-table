@@ -28,6 +28,7 @@ type OptionDisplay = {
 }
 
 const STABLE_KEY_RE = /^(?:srd5\.1|phb2014|scag|gos):[^:]+:[^:]+$/
+const NUMERIC_LABEL_RE = /^[-+]?\d+(?:\.\d+)?$/
 
 export function optionDisplay(label: string): OptionDisplay {
   const [primary, ...secondaryParts] = label.split(' · ')
@@ -52,6 +53,10 @@ export function duplicateOptionNames(options: SearchOption[]): Set<string> {
 }
 
 export function sortSearchOptions(options: SearchOption[], locale: string): SearchOption[] {
+  const primaries = options.map((option) => optionDisplay(option.label).primary)
+  if (primaries.length > 0 && primaries.every((label) => NUMERIC_LABEL_RE.test(label))) {
+    return [...options]
+  }
   const collator = new Intl.Collator(locale, { sensitivity: 'base', numeric: true })
   return [...options].sort((left, right) => {
     const byName = collator.compare(optionDisplay(left.label).primary, optionDisplay(right.label).primary)
