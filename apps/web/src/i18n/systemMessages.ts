@@ -118,9 +118,12 @@ export function localizedBuilderIssueMessage(
   originalMessage: string,
   locale: Locale = currentSystemLocale(),
 ): string {
-  return BUILDER_ISSUE_MESSAGES[code]?.[locale] ?? (
-    locale === 'en' ? originalMessage : '目前的角色資料有一項需要修正的規則問題。'
-  )
+  const translated = BUILDER_ISSUE_MESSAGES[code]?.[locale]
+  if (translated) return translated
+  if (locale === 'en') return originalMessage
+  return originalMessage.trim()
+    ? `規則問題：${originalMessage}`
+    : '目前的角色資料有一項需要修正的規則問題。'
 }
 
 export function localizedDisabledReason(
@@ -128,7 +131,26 @@ export function localizedDisabledReason(
   locale: Locale = currentSystemLocale(),
 ): string {
   if (locale === 'en') return originalMessage
-  return '此選項目前無法選擇。'
+
+  const message = originalMessage.trim()
+  if (message === 'Complete ability scores before multiclassing.') {
+    return '兼職前請先完成能力值。'
+  }
+  const scopedMulticlass = message.match(/^(.+): Requires (.+) to multiclass\.$/)
+  if (scopedMulticlass) {
+    return `${scopedMulticlass[1]}：兼職需要 ${scopedMulticlass[2]}。`
+  }
+  const multiclass = message.match(/^Requires (.+) to multiclass\.$/)
+  if (multiclass) {
+    return `兼職需要 ${multiclass[1]}。`
+  }
+  if (message === 'Spell choices are completed in P1-E.') {
+    return '法術選擇需在法術步驟中完成。'
+  }
+  if (message === 'Starting equipment choices are completed in P1-F.') {
+    return '起始裝備需在裝備步驟中完成。'
+  }
+  return message ? `目前無法選擇：${message}` : '此選項目前無法選擇。'
 }
 
 export function localizedRequestErrorMessage(
@@ -141,19 +163,22 @@ export function localizedRequestErrorMessage(
   if (status === 404) return REQUEST_CODE_MESSAGES.not_found[locale]
   if (status === 409) return REQUEST_CODE_MESSAGES.revision_conflict[locale]
   if (locale === 'en') return originalMessage || `Request failed (${status})`
-  return `要求失敗（HTTP ${status}），請稍後再試。`
+  return originalMessage.trim()
+    ? `要求失敗（HTTP ${status}）：${originalMessage}`
+    : `要求失敗（HTTP ${status}），請稍後再試。`
 }
 
 export function createLocalizedRequestError(
   code: string | undefined,
   status: number,
   originalMessage: string,
+  locale?: Locale,
 ): Error {
   const error = new Error()
   Object.defineProperty(error, 'message', {
     configurable: true,
     enumerable: false,
-    get: () => localizedRequestErrorMessage(code, status, originalMessage),
+    get: () => localizedRequestErrorMessage(code, status, originalMessage, locale ?? currentSystemLocale()),
   })
   return error
 }
