@@ -130,7 +130,7 @@ test('M02-H crawls every Builder step in zh-TW and en with localized headings an
     await forceLocale(page, locale)
 
     for (const [buttonName, heading] of BUILDER_STEPS[locale]) {
-      await page.getByRole('button', { name: buttonName }).click()
+      await page.locator('.builder-rail').getByRole('button', { name: buttonName }).click()
       await expect(page.getByRole('heading', { name: heading })).toBeVisible()
       await expectNoKnownOppositeLocaleLeak(page, locale)
       await expectNoHorizontalOverflow(page)
@@ -147,7 +147,7 @@ test('M02-H mobile Builder step crawl catches layout overflow in both locales', 
     await page.goto(`/character-builder/${draftId}`)
     await forceLocale(page, locale)
     for (const [buttonName, heading] of BUILDER_STEPS[locale]) {
-      await page.getByRole('button', { name: buttonName }).click()
+      await page.locator('.builder-rail').getByRole('button', { name: buttonName }).click()
       await expect(page.getByRole('heading', { name: heading })).toBeVisible()
       await expectNoHorizontalOverflow(page)
     }
