@@ -12,6 +12,7 @@ from app.domain.character.schemas import (
     PreparedSpellSelection,
 )
 from app.domain.character.validation import derive_hit_dice_totals, validate_state_against_build
+from app.domain.character_builder.origin_resources import initial_feature_resource_state
 from app.domain.character_builder.reconciliation import StateReconciliationPreview
 from app.domain.character_builder.schemas import (
     BuilderIssue,
@@ -83,7 +84,9 @@ def build_initial_character_state(
     *,
     prepared_spells: tuple[PreparedSpellSelection, ...] = (),
 ) -> CharacterState:
-    spell_slots, resources = initial_spell_resource_state(build)
+    spell_slots, spell_resources = initial_spell_resource_state(build)
+    resources = dict(spell_resources)
+    resources.update(initial_feature_resource_state(build, registry))
     state = CharacterState(
         current_hp=calculate_max_hp(build),
         temporary_hp=0,
