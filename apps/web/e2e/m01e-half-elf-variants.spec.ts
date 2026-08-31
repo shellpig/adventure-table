@@ -277,7 +277,12 @@ test('M01-E keeps Skill Versatility when the ancestry branch explicitly keeps it
 
   await completeNonVariantRequirements(page, 1)
   await confirmCreate(page, 'M01-E Keep Hero')
-  await expect(page.getByText('Skill Versatility', { exact: true })).toBeVisible()
+  await expect(
+    page.locator('.skill-list > div').filter({ hasText: 'Acrobatics' }),
+  ).toContainText('+4')
+  await expect(
+    page.locator('.skill-list > div').filter({ hasText: 'Animal Handling' }),
+  ).toContainText('+2')
 })
 
 test('M01-E Wood Elf descent Fleet of Foot persists 35 ft walking speed', async ({ page }) => {
