@@ -42,11 +42,11 @@ describe('grant presentation identity', () => {
     ])
   })
 
-  it('collects the field paths those grants need', () => {
-    expect(grantPresentationFields([referenceGrant, inlineGrant])).toEqual([
-      'data.feature.name',
-    ])
-    expect(grantPresentationFields([referenceGrant])).toEqual([])
+  it('maps each source entry to the extra field paths it needs', () => {
+    expect(grantPresentationFields([referenceGrant, inlineGrant])).toEqual({
+      'phb2014:background:noble': ['data.feature.name'],
+    })
+    expect(grantPresentationFields([referenceGrant])).toEqual({})
   })
 
   it('localizes an inline background feature instead of falling back to English', () => {
