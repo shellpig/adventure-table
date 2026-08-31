@@ -1,5 +1,7 @@
 # M02-H TODO
 
+> **狀態：已完成（2026-08-31）。** 本檔記錄的 structured system-owned message 契約已在 M02-H 實作完畢：server 送出 `disabled_reason_code` + `disabled_reason_params` 與 issue `message_params`，前端以 `code + params` 格式化，繁中 disabled 選項顯示具體原因。驗收證據見 `docs/M02/M02-H_CLOSEOUT.md`。以下為當時的原始待辦內容，保留作為契約說明。
+
 ## Structured system-owned localization messages
 
 M02-G guarantees that normal `zh-TW` UI does not fall back to concatenating canonical English server prose. Every builder issue `code` the server emits (43 of 43) now has localized copy in both supported locales; unknown issue codes and every disabled-reason path use a Chinese-only safe fallback.

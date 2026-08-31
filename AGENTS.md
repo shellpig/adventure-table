@@ -8,7 +8,7 @@
 - **一句話**：網站只管需要共享、同步、計算、保存、權限與 AI 接入的東西，其餘還給 DM 的嘴巴
 - **首發規則集**：D&D 5e 2014；Built-in Content：SRD 5.1（CC BY 4.0），非 SRD 內容依私人專案需求逐步加入
 - **專案性質**：朋友間私人使用，非預計商品化平台
-- **目前階段**：**P0 與 P1 已完成並關門。M01-A～M01-C 已完成，M01 依 Roadmap 暫停；目前進行 M02 — Traditional Chinese / English Localization，M02-A～M02-E 已完成並關門，下一個可開工 Subphase 是 M02-F。M02 closeout 後回到 M01-D～M01-J，最後才回到 P2 — Room / Campaign / Session / Seat 的規劃。**
+- **目前階段**：**P0 與 P1 已完成並關門。M02 — Traditional Chinese / English Localization 已完成 M02-A～M02-H 並關門；網站現在是 `zh-TW` / `en` 兩個純語言模式。M01 恢復，下一個可開工 Subphase 是 M01-D — VGM Race Expansion。M01-D～M01-J 完成後才回到 P2 — Room / Campaign / Session / Seat 的規劃。**
 - **目前進度**：以 `PROJECT_BRIEF.md` 為單一事實來源
 - **基礎技術棧**：目前方向見 `技術棧討論.md`。該檔只討論語言／Framework／DB 等基礎選型，不承擔各 Phase 的實作設計
 
@@ -77,7 +77,7 @@ grep -n "^## \\|^### " 規格企劃.md
 ```bash
 grep -n "P0-C" docs/P0/實作規格.md docs/P0/開發設計方針.md docs/P0/測試指南.md
 grep -n "M01-B" docs/M01/實作規格.md docs/M01/開發設計方針.md docs/M01/測試指南.md
-grep -n "M02-C" docs/M02/實作規格.md docs/M02/開發設計方針.md docs/M02/測試指南.md
+grep -n "M01-D" docs/M01/實作規格.md docs/M01/開發設計方針.md docs/M01/測試指南.md
 ```
 
 ## 文件分工與單一事實來源
@@ -152,6 +152,7 @@ grep -n "M02-C" docs/M02/實作規格.md docs/M02/開發設計方針.md docs/M02
 3. **驗收對應**：每條 Phase / Subphase 驗收契約都要有可定位的測試證據。
 4. **權限與可見性必測**：當 Phase 涉及 Role / Seat / Controller 時，除了 happy path，必測不該看到／不該操作的 actor。
 5. **拒絕原子性與 fixture 隔離**：契約要求零副作用的拒絕操作，前後狀態不可被污染；測試 fixture 必須完整還原。
+6. **Supported locale 同步交付**：新增、修改，或因新畫面而首次 expose user-visible system / rules content 時，必須在同一個 Subphase 同步補齊所有正式 supported locale（目前為 `zh-TW` / `en`），包含 UI copy、rules presentation field、validation / error 訊息與 searchable 欄位。缺任一語言視同該 Subphase regression，不得以「先做英文、之後再補 M Phase」結案。
 
 ## 文件關門的固定提交流程
 
