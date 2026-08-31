@@ -2,7 +2,7 @@
   "schema_version": 1,
   "locale": "zh-TW",
   "source": "gos",
-  "review_status": "human-reviewed",
+  "review_status": "draft-human-review-required",
   "entries": {
     "gos:background:fisher": {
       "name": "漁民",
