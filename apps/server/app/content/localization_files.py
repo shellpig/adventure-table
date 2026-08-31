@@ -10,6 +10,7 @@ from app.content.localization import (
     SUPPORTED_CONTENT_LOCALES,
     ContentLocalizationCatalog,
     LocalizableFieldPolicy,
+    _read_path,
 )
 from app.content.registry import ContentRegistry, ContentValidationError
 
@@ -37,12 +38,7 @@ def _read_overlay_file(path: Path, locale: str) -> dict[str, dict[str, Any]]:
 
 
 def _locale_paths(content_root: Path, source: str, locale: str) -> tuple[Path, ...]:
-    """Prefer human-review shards; fall back to the legacy monolithic overlay.
-
-    Once a locale has reviewer-owned shards, those files are the runtime source
-    of truth. A machine-authored monolithic candidate may still exist beside
-    them for comparison without overriding or conflicting with human edits.
-    """
+    """Prefer human-review shards; fall back to the legacy monolithic overlay."""
 
     locale_root = content_root / source / "locales"
     shard_root = locale_root / locale
@@ -55,15 +51,39 @@ def _locale_paths(content_root: Path, source: str, locale: str) -> tuple[Path, .
     return (monolith,) if monolith.is_file() else ()
 
 
-def _roleplay_parent_key(entry: Any) -> str | None:
-    """Return the explicit presentation-reuse parent for a background.
+def _reject_unsupported_locale_artifacts(content_root: Path, source: str) -> None:
+    locale_root = content_root / source / "locales"
+    if not locale_root.is_dir():
+        return
+    supported = set(SUPPORTED_CONTENT_LOCALES)
+    for path in locale_root.iterdir():
+        locale_name = path.stem if path.is_file() and path.suffix == ".json" else path.name
+        if (path.is_dir() or path.suffix == ".json") and locale_name not in supported:
+            raise ContentValidationError(
+                f"unsupported locale artifact for {source}: {path}; expected one of {SUPPORTED_CONTENT_LOCALES}"
+            )
 
-    SCAG backgrounds model roleplay-only inheritance with ``inherits_from``.
-    PHB variants reuse their parent background's suggested characteristics; the
-    runtime PHB sidecar materializes identical arrays on the variant, while the
-    canonical ``variant_of`` relation remains the stable declaration of reuse.
-    Neither relation implies mechanics inheritance here.
-    """
+
+def _validate_overlay_field_path(
+    registry: ContentRegistry,
+    *,
+    key: str,
+    field_path: str,
+    path: Path,
+) -> None:
+    if not isinstance(field_path, str) or not field_path:
+        raise ContentValidationError(f"locale overlay {path} contains a blank field path for {key}")
+    payload = registry.get(key).model_dump(mode="python")
+    try:
+        _read_path(payload, field_path)
+    except (KeyError, ValueError) as exc:
+        raise ContentValidationError(
+            f"locale overlay {path} references unknown field {key}::{field_path}"
+        ) from exc
+
+
+def _roleplay_parent_key(entry: Any) -> str | None:
+    """Return the explicit presentation-reuse parent for a background."""
 
     raw = entry.data.get("roleplay_suggestions")
     if isinstance(raw, dict):
@@ -83,14 +103,7 @@ def _materialize_roleplay_presentation_inheritance(
     registry: ContentRegistry,
     overlays: dict[tuple[str, str], dict[str, dict[str, Any]]],
 ) -> None:
-    """Reuse translated suggested-characteristic text without copying mechanics.
-
-    A child keeps its own background StableKey and deterministic suggestion IDs.
-    We only copy a parent's localized roleplay field when the child's canonical
-    runtime text at that exact field is identical to the parent's. This prevents
-    a variant/inheritance relation from accidentally becoming broad content or
-    mechanics inheritance, while avoiding duplicate translation maintenance.
-    """
+    """Reuse translated suggested-characteristic text without copying mechanics."""
 
     backgrounds = {entry.key: entry for entry in registry.list_kind("background")}
 
@@ -137,9 +150,9 @@ def _materialize_roleplay_presentation_inheritance(
                     for index, child_value in enumerate(child_values):
                         if index >= len(parent_values) or child_value != parent_values[index]:
                             continue
-                        path = f"data.roleplay_suggestions.{field}.{index}"
-                        if path not in child_fields and path in parent_fields:
-                            child_fields[path] = parent_fields[path]
+                        field_path = f"data.roleplay_suggestions.{field}.{index}"
+                        if field_path not in child_fields and field_path in parent_fields:
+                            child_fields[field_path] = parent_fields[field_path]
 
             resolving.remove(key)
             resolved.add(key)
@@ -154,12 +167,12 @@ def load_content_localization_catalog(
     *,
     policy_path: Path | None = None,
 ) -> ContentLocalizationCatalog:
-    """Load static locale overlays, including optional per-kind human-review shards.
+    """Load locale overlays and enforce M02-G structural integrity gates.
 
-    Translation wording is deliberately not validated here. The loader only
-    protects structural identity: locale, StableKey source, canonical key
-    existence, and conflicting duplicate fields. A reviewer may therefore leave
-    mixed-language draft text in a shard without making runtime unusable.
+    Runtime localization files may only use supported locales, existing StableKeys
+    and existing canonical field paths. A locale/StableKey/field identity may be
+    authored exactly once; duplicate definitions fail even when their values are
+    textually identical so shard ownership stays unambiguous.
     """
 
     policy = LocalizableFieldPolicy.from_path(
@@ -168,6 +181,7 @@ def load_content_localization_catalog(
     overlays: dict[tuple[str, str], dict[str, dict[str, Any]]] = {}
 
     for source in registry.enabled_pack_ids:
+        _reject_unsupported_locale_artifacts(content_root, source)
         for locale in SUPPORTED_CONTENT_LOCALES:
             paths = _locale_paths(content_root, source, locale)
             if not paths:
@@ -190,12 +204,19 @@ def load_content_localization_catalog(
 
                     target = merged.setdefault(key, {})
                     for field_path, value in fields.items():
+                        _validate_overlay_field_path(
+                            registry,
+                            key=key,
+                            field_path=field_path,
+                            path=path,
+                        )
                         identity = (key, field_path)
-                        if field_path in target and target[field_path] != value:
+                        if field_path in target:
                             previous = field_sources[identity]
+                            qualifier = "conflicting" if target[field_path] != value else "duplicate"
                             raise ContentValidationError(
-                                "conflicting locale overlay field "
-                                f"{key}::{field_path} in {previous} and {path}"
+                                f"{qualifier} locale overlay field {key}::{field_path} "
+                                f"in {previous} and {path}"
                             )
                         target[field_path] = value
                         field_sources[identity] = path
