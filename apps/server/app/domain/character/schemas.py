@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -384,3 +385,5 @@ class PersistedCharacter(FrozenModel):
     version_no: int
     build: CharacterBuild
     state: CharacterState
+    # Archived characters stay fully readable; every write path refuses them.
+    archived_at: datetime | None = None

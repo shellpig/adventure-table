@@ -45,6 +45,7 @@ characters = Table(
     Column("name", String(200), nullable=False),
     Column("ruleset", String(80), nullable=False),
     Column("current_version_id", Uuid(as_uuid=True), nullable=True),
+    Column("archived_at", DateTime(timezone=True), nullable=True),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
 )
@@ -85,6 +86,14 @@ character_states = Table(
 
 class CharacterNotFoundError(LookupError):
     pass
+
+
+class CharacterNotArchivedError(RuntimeError):
+    """Raised when a permanent delete is attempted on a character still in use."""
+
+
+class CharacterArchivedError(RuntimeError):
+    """Raised when a write is attempted against an archived character."""
 
 
 class CharacterVersionNotFoundError(LookupError):
@@ -349,6 +358,7 @@ class CharacterRepository:
             current_row = connection.execute(
                 select(
                     characters.c.current_version_id,
+                    characters.c.archived_at,
                     character_states.c.state_payload,
                 )
                 .join(character_states, character_states.c.character_id == characters.c.id)
@@ -357,6 +367,11 @@ class CharacterRepository:
             ).mappings().one_or_none()
             if current_row is None or current_row["current_version_id"] is None:
                 raise CharacterNotFoundError(str(character_id))
+            # Archiving does not cancel an open draft, so the draft survives and
+            # this is where it is stopped: the character is out of play, and
+            # confirming would append a version and reconcile live state.
+            if current_row["archived_at"] is not None:
+                raise CharacterArchivedError(str(character_id))
             actual_version_id = current_row["current_version_id"]
             if actual_version_id != base_version_id:
                 raise StaleBuildVersionError(
@@ -440,10 +455,77 @@ class CharacterRepository:
             raise RuntimeError("version confirmation completed without a result")
         return self.load_character(created_character_id), preview
 
-    def list_characters(self) -> tuple[PersistedCharacter, ...]:
+    def list_characters(self, *, archived: bool = False) -> tuple[PersistedCharacter, ...]:
+        """List active characters, or archived ones when asked.
+
+        The two sets are disjoint so the workshop never shows a character twice.
+        """
+
+        condition = (
+            characters.c.archived_at.is_not(None)
+            if archived
+            else characters.c.archived_at.is_(None)
+        )
         with self.engine.connect() as connection:
-            ids = connection.scalars(select(characters.c.id).order_by(characters.c.name, characters.c.id)).all()
+            ids = connection.scalars(
+                select(characters.c.id)
+                .where(condition)
+                .order_by(characters.c.name, characters.c.id)
+            ).all()
         return tuple(self.load_character(character_id) for character_id in ids)
+
+    def set_archived(self, character_id: UUID, archived: bool) -> PersistedCharacter:
+        """Archive or restore a character. Idempotent in both directions."""
+
+        with self.engine.begin() as connection:
+            existing = connection.execute(
+                select(characters.c.id).where(characters.c.id == character_id)
+            ).one_or_none()
+            if existing is None:
+                raise CharacterNotFoundError(str(character_id))
+            connection.execute(
+                characters.update()
+                .where(characters.c.id == character_id)
+                .values(archived_at=func.now() if archived else None)
+            )
+        return self.load_character(character_id)
+
+    def delete_character(self, character_id: UUID) -> None:
+        """Permanently remove an archived character and everything it owns.
+
+        Archiving first is required rather than merely conventional: it is the
+        only irreversible action here, so it must not be reachable from the
+        active list where the safe actions live.
+        """
+
+        with self.engine.begin() as connection:
+            row = connection.execute(
+                select(characters.c.archived_at).where(characters.c.id == character_id)
+            ).mappings().one_or_none()
+            if row is None:
+                raise CharacterNotFoundError(str(character_id))
+            if row["archived_at"] is None:
+                raise CharacterNotArchivedError(str(character_id))
+            # Deleted explicitly rather than left to ON DELETE CASCADE: SQLite
+            # does not enforce foreign keys unless the pragma is on, so relying
+            # on the cascade would leave orphan rows in tests while looking
+            # correct against PostgreSQL.
+            connection.execute(
+                character_states.delete().where(
+                    character_states.c.character_id == character_id
+                )
+            )
+            connection.execute(
+                characters.update()
+                .where(characters.c.id == character_id)
+                .values(current_version_id=None)
+            )
+            connection.execute(
+                character_versions.delete().where(
+                    character_versions.c.character_id == character_id
+                )
+            )
+            connection.execute(characters.delete().where(characters.c.id == character_id))
 
     def load_character(self, character_id: UUID) -> PersistedCharacter:
         query = (
@@ -452,6 +534,7 @@ class CharacterRepository:
                 characters.c.name,
                 characters.c.ruleset,
                 characters.c.current_version_id,
+                characters.c.archived_at,
                 character_versions.c.version_no,
                 character_versions.c.build_payload,
                 character_states.c.state_payload,
@@ -477,6 +560,7 @@ class CharacterRepository:
             version_no=row["version_no"],
             build=build,
             state=state,
+            archived_at=row["archived_at"],
         )
 
     def load_build_version(self, character_id: UUID, version_id: UUID) -> CharacterBuild:
