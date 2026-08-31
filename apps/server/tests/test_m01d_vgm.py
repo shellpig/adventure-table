@@ -6,12 +6,18 @@ from uuid import uuid4
 import pytest
 
 from app.content import load_default_content_registry
-from app.domain.character.schemas import AbilityScores, CharacterBuild
+from app.domain.character.schemas import (
+    AbilityScores,
+    CharacterBuild,
+    CharacterState,
+    ResourceCounter,
+)
 from app.domain.character_builder.basics import resolve_creation_summary
 from app.domain.character_builder.choices import build_foundation_choices
 from app.domain.character_builder.compiler import compile_builder_draft
 from app.domain.character_builder.origin import compile_origin
 from app.domain.character_builder.origin_resources import initial_feature_resource_state
+from app.domain.character_builder.reconciliation import reconcile_character_state
 from app.domain.character_builder.schemas import (
     BuilderBasicInput,
     BuilderChoiceSelection,
@@ -77,6 +83,25 @@ def _origin_for(*, subrace: str, level: int):
         registry=registry,
     )
     return registry, summary, origin
+
+
+def _aasimar_build(*, level: int, feature_refs: tuple[str, ...]) -> CharacterBuild:
+    return CharacterBuild(
+        race_ref="vgm:race:aasimar",
+        subrace_ref="vgm:subrace:protector-aasimar",
+        character_level=level,
+        class_progression=("srd5.1:class:fighter",) * level,
+        ability_scores=AbilityScores(
+            strength=15,
+            dexterity=14,
+            constitution=13,
+            intelligence=12,
+            wisdom=11,
+            charisma=10,
+        ),
+        feature_refs=feature_refs,
+        hp_progression=(10,) + (6,) * (level - 1),
+    )
 
 
 def test_vgm_pack_exposes_goblin_and_hobgoblin_rules() -> None:
@@ -216,30 +241,53 @@ def test_aasimar_transformation_features_use_character_level_gate(
 
 def test_vgm_feature_resources_use_deterministic_keys() -> None:
     registry = load_default_content_registry()
-    build = CharacterBuild(
-        race_ref="vgm:race:aasimar",
-        subrace_ref="vgm:subrace:protector-aasimar",
-        character_level=3,
-        class_progression=("srd5.1:class:fighter",) * 3,
-        ability_scores=AbilityScores(
-            strength=15,
-            dexterity=14,
-            constitution=13,
-            intelligence=12,
-            wisdom=11,
-            charisma=10,
-        ),
+    build = _aasimar_build(
+        level=3,
         feature_refs=(
             "vgm:feature:healing-hands",
             "vgm:feature:radiant-soul",
         ),
-        hp_progression=(10, 6, 6),
     )
 
     resources = initial_feature_resource_state(build, registry)
     assert resources["feature:vgm:feature:healing-hands"].remaining == 1
     assert resources["feature:vgm:feature:radiant-soul"].remaining == 1
     assert all(counter.used == 0 for counter in resources.values())
+
+
+def test_level_up_two_to_three_adds_transformation_resource_without_resting() -> None:
+    registry = load_default_content_registry()
+    old_build = _aasimar_build(
+        level=2,
+        feature_refs=("vgm:feature:healing-hands",),
+    )
+    new_build = _aasimar_build(
+        level=3,
+        feature_refs=(
+            "vgm:feature:healing-hands",
+            "vgm:feature:radiant-soul",
+        ),
+    )
+    old_state = CharacterState(
+        current_hp=1,
+        resources={
+            "feature:vgm:feature:healing-hands": ResourceCounter(
+                used=1,
+                remaining=0,
+            )
+        },
+        hit_dice_state={"d10": 2},
+    )
+
+    preview = reconcile_character_state(old_build, old_state, new_build, registry)
+
+    assert preview.can_apply is True
+    assert preview.proposed_state.resources[
+        "feature:vgm:feature:healing-hands"
+    ] == ResourceCounter(used=1, remaining=0)
+    assert preview.proposed_state.resources[
+        "feature:vgm:feature:radiant-soul"
+    ] == ResourceCounter(used=0, remaining=1)
 
 
 def test_scourge_and_fallen_formula_metadata_is_preserved() -> None:
