@@ -37,12 +37,6 @@ type CreateFlowFixture = {
   animalHandling: string
   athletics: string
   equipmentStep: RegExp
-  greataxeChoice: RegExp
-  greataxe: string
-  handaxeChoice: RegExp
-  handaxes: string
-  acolyteEquipment: string
-  amulet: string
   reviewStep: RegExp
   confirm: string
 }
@@ -73,12 +67,6 @@ const CREATE_FLOW: Record<Locale, CreateFlowFixture> = {
     animalHandling: 'Skill: Animal Handling',
     athletics: 'Skill: Athletics',
     equipmentStep: /Equipment/,
-    greataxeChoice: /\(a\) a greataxe or \(b\) any martial melee weapon/,
-    greataxe: 'Greataxe',
-    handaxeChoice: /\(a\) two handaxes or \(b\) any simple weapon/,
-    handaxes: '2 × Handaxe',
-    acolyteEquipment: 'Acolyte — Starting Equipment',
-    amulet: 'Amulet',
     reviewStep: /Review/,
     confirm: 'Confirm & Create Character',
   },
@@ -107,12 +95,6 @@ const CREATE_FLOW: Record<Locale, CreateFlowFixture> = {
     animalHandling: '技能：馴獸',
     athletics: '技能：運動',
     equipmentStep: /裝備/,
-    greataxeChoice: /巨斧|軍用近戰武器/,
-    greataxe: '巨斧',
-    handaxeChoice: /兩把手斧|簡易武器/,
-    handaxes: '2 × 手斧',
-    acolyteEquipment: '侍僧 — 起始裝備',
-    amulet: '護符',
     reviewStep: /檢視/,
     confirm: '確認並建立角色',
   },
@@ -125,6 +107,18 @@ async function setLocale(page: Page, locale: Locale) {
 
 async function expectDraftSaved(page: Page) {
   await expect(page.getByText(/Saved on server|已儲存至伺服器/)).toBeVisible()
+}
+
+async function currentDraftRevision(page: Page) {
+  const text = (await page.locator('.builder-save-state span').innerText()).trim()
+  const match = text.match(/(?:Draft revision|草稿版本)\s*(\d+)/)
+  if (!match) throw new Error(`Cannot parse draft revision from: ${text}`)
+  return Number(match[1])
+}
+
+async function waitForDraftRevision(page: Page, before: number) {
+  await expect.poll(() => currentDraftRevision(page)).toBeGreaterThan(before)
+  await expectDraftSaved(page)
 }
 
 async function chooseOption(page: Page, input: Locator, value: string, source?: string) {
@@ -143,9 +137,10 @@ async function chooseOption(page: Page, input: Locator, value: string, source?: 
     })
   }
   await expect(option).toHaveCount(1)
+  const beforeRevision = await currentDraftRevision(page)
   await option.click()
   await expect(listbox).toBeHidden()
-  await expectDraftSaved(page)
+  await waitForDraftRevision(page, beforeRevision)
 }
 
 async function chooseSearchable(
@@ -175,8 +170,9 @@ async function chooseFirstEnabled(page: Page, input: Locator) {
   await expect(listbox).toBeVisible()
   const option = listbox.locator('[role="option"]:not([disabled])').first()
   await expect(option).toBeVisible()
+  const beforeRevision = await currentDraftRevision(page)
   await option.click()
-  await expectDraftSaved(page)
+  await waitForDraftRevision(page, beforeRevision)
 }
 
 async function fillEmptyComboboxes(page: Page, container: Locator) {
@@ -206,8 +202,9 @@ async function chooseLowestLevelSpell(page: Page, input: Locator) {
   await expect(listbox).toBeVisible()
   const option = listbox.locator('[role="option"]:not([disabled])').first()
   await expect(option).toBeVisible()
+  const beforeRevision = await currentDraftRevision(page)
   await option.click()
-  await expectDraftSaved(page)
+  await waitForDraftRevision(page, beforeRevision)
 }
 
 async function fillExactSpellBuckets(page: Page) {
@@ -241,6 +238,12 @@ async function readCharacter(request: APIRequestContext, characterId: string) {
   return response.json()
 }
 
+async function clickDraftSave(page: Page, buttonName: string) {
+  const beforeRevision = await currentDraftRevision(page)
+  await page.getByRole('button', { name: buttonName }).click()
+  await waitForDraftRevision(page, beforeRevision)
+}
+
 async function createSimpleCharacter(page: Page, name: string, locale: Locale) {
   const fixture = CREATE_FLOW[locale]
   await page.goto('/characters')
@@ -251,7 +254,7 @@ async function createSimpleCharacter(page: Page, name: string, locale: Locale) {
   await expect(page.locator('html')).toHaveAttribute('lang', locale)
   await page.getByLabel(fixture.characterName).fill(name)
   await page.getByLabel(fixture.targetLevel).fill('1')
-  await page.getByRole('button', { name: fixture.saveBasic }).click()
+  await clickDraftSave(page, fixture.saveBasic)
 
   await page.locator('.builder-rail').getByRole('button', { name: fixture.originStep }).click()
   await chooseSearchable(page, fixture.raceLabel, fixture.raceValue)
@@ -263,7 +266,7 @@ async function createSimpleCharacter(page: Page, name: string, locale: Locale) {
   )
 
   await page.locator('.builder-rail').getByRole('button', { name: fixture.abilitiesStep }).click()
-  await page.getByRole('button', { name: fixture.saveAbilities }).click()
+  await clickDraftSave(page, fixture.saveAbilities)
   await chooseSearchable(page, fixture.humanLanguagesLabel, fixture.dwarvish)
   const languages = page
     .locator('.builder-choice')
@@ -377,15 +380,15 @@ test('M02-H preserves a populated race/subrace/background/class/spells/equipment
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await page.getByLabel('Character name').fill('M02-H Complex Draft')
   await page.getByLabel('Target character level').fill('1')
-  await page.getByRole('button', { name: 'Save Basic Details' }).click()
+  await clickDraftSave(page, 'Save Basic Details')
 
   await page.getByRole('button', { name: /Origin/ }).click()
   await chooseSearchable(page, 'Race', 'Elf')
   await chooseSearchable(page, 'Subrace', 'Wood Elf')
-  await chooseSearchable(page, 'Background', 'Acolyte', 'SRD 5.1')
+  await chooseSearchable(page, 'Background', 'Acolyte', CREATE_FLOW.en.backgroundSource)
 
   await page.getByRole('button', { name: /Abilities/ }).click()
-  await page.getByRole('button', { name: 'Save Ability Scores' }).click()
+  await clickDraftSave(page, 'Save Ability Scores')
   const backgroundLanguages = page
     .locator('.builder-choice')
     .filter({ hasText: 'Acolyte — Languages' })
