@@ -1,0 +1,211 @@
+[
+  {
+    "key": "scag:race-variant:half-elf-moon-sun-descent",
+    "index": "half-elf-moon-sun-descent",
+    "name": "Moon Elf or Sun Elf Descent",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "half-elf-moon-sun-descent",
+      "name": "Moon Elf or Sun Elf Descent",
+      "base_race_ref": {"key": "srd5.1:race:half-elf", "name": "Half-Elf"},
+      "replacement_rules": [
+        {
+          "target_grant_id": "grant:srd5.1:race:half-elf:skill-versatility",
+          "target_reference": {"key": "srd5.1:trait:skill-versatility", "name": "Skill Versatility"},
+          "action": "remove",
+          "replacement_group_id": "half-elf-ancestry"
+        }
+      ],
+      "replacement_groups": [
+        {
+          "id": "half-elf-ancestry",
+          "label": "Half-Elf ancestry feature",
+          "choose": 1,
+          "options": [
+            {"id": "keep-skill-versatility", "label": "Keep Skill Versatility", "keep_target": true},
+            {
+              "id": "wizard-cantrip",
+              "label": "Wizard Cantrip",
+              "grants": [{"key": "scag:feature:half-elf-moon-sun-cantrip", "name": "Cantrip"}],
+              "spell_choice": {
+                "label": "Wizard cantrip",
+                "class": {"key": "srd5.1:class:wizard", "name": "Wizard"},
+                "level": 0,
+                "choose": 1,
+                "casting_ability": "intelligence",
+                "feature": {"key": "scag:feature:half-elf-moon-sun-cantrip", "name": "Cantrip"}
+              }
+            },
+            {
+              "id": "elf-weapon-training",
+              "label": "Elf Weapon Training",
+              "grants": [
+                {"key": "scag:feature:half-elf-elf-weapon-training", "name": "Elf Weapon Training"},
+                {"key": "srd5.1:proficiency:longswords", "name": "Longswords"},
+                {"key": "srd5.1:proficiency:shortswords", "name": "Shortswords"},
+                {"key": "srd5.1:proficiency:shortbows", "name": "Shortbows"},
+                {"key": "srd5.1:proficiency:longbows", "name": "Longbows"}
+              ]
+            },
+            {
+              "id": "keen-senses",
+              "label": "Keen Senses",
+              "grants": [
+                {"key": "scag:feature:half-elf-keen-senses", "name": "Keen Senses"},
+                {"key": "srd5.1:proficiency:skill-perception", "name": "Skill: Perception"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "key": "scag:race-variant:half-elf-wood-descent",
+    "index": "half-elf-wood-descent",
+    "name": "Wood Elf Descent",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "half-elf-wood-descent",
+      "name": "Wood Elf Descent",
+      "base_race_ref": {"key": "srd5.1:race:half-elf", "name": "Half-Elf"},
+      "replacement_rules": [
+        {
+          "target_grant_id": "grant:srd5.1:race:half-elf:skill-versatility",
+          "target_reference": {"key": "srd5.1:trait:skill-versatility", "name": "Skill Versatility"},
+          "action": "remove",
+          "replacement_group_id": "half-elf-ancestry"
+        }
+      ],
+      "replacement_groups": [
+        {
+          "id": "half-elf-ancestry",
+          "label": "Half-Elf ancestry feature",
+          "choose": 1,
+          "options": [
+            {"id": "keep-skill-versatility", "label": "Keep Skill Versatility", "keep_target": true},
+            {
+              "id": "fleet-of-foot",
+              "label": "Fleet of Foot",
+              "grants": [{"key": "scag:feature:half-elf-fleet-of-foot", "name": "Fleet of Foot"}],
+              "movement": [{"mode": "walk", "speed": 35}]
+            },
+            {
+              "id": "mask-of-the-wild",
+              "label": "Mask of the Wild",
+              "grants": [{"key": "scag:feature:half-elf-mask-of-the-wild", "name": "Mask of the Wild"}]
+            },
+            {
+              "id": "elf-weapon-training",
+              "label": "Elf Weapon Training",
+              "grants": [
+                {"key": "scag:feature:half-elf-elf-weapon-training", "name": "Elf Weapon Training"},
+                {"key": "srd5.1:proficiency:longswords", "name": "Longswords"},
+                {"key": "srd5.1:proficiency:shortswords", "name": "Shortswords"},
+                {"key": "srd5.1:proficiency:shortbows", "name": "Shortbows"},
+                {"key": "srd5.1:proficiency:longbows", "name": "Longbows"}
+              ]
+            },
+            {
+              "id": "keen-senses",
+              "label": "Keen Senses",
+              "grants": [
+                {"key": "scag:feature:half-elf-keen-senses", "name": "Keen Senses"},
+                {"key": "srd5.1:proficiency:skill-perception", "name": "Skill: Perception"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "key": "scag:race-variant:half-elf-aquatic-descent",
+    "index": "half-elf-aquatic-descent",
+    "name": "Aquatic Elf Descent",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "half-elf-aquatic-descent",
+      "name": "Aquatic Elf Descent",
+      "base_race_ref": {"key": "srd5.1:race:half-elf", "name": "Half-Elf"},
+      "replacement_rules": [
+        {
+          "target_grant_id": "grant:srd5.1:race:half-elf:skill-versatility",
+          "target_reference": {"key": "srd5.1:trait:skill-versatility", "name": "Skill Versatility"},
+          "action": "remove",
+          "replacement_group_id": "half-elf-ancestry"
+        }
+      ],
+      "replacement_groups": [
+        {
+          "id": "half-elf-ancestry",
+          "label": "Half-Elf ancestry feature",
+          "choose": 1,
+          "options": [
+            {"id": "keep-skill-versatility", "label": "Keep Skill Versatility", "keep_target": true},
+            {
+              "id": "swimming-speed",
+              "label": "Swimming Speed",
+              "grants": [{"key": "scag:feature:half-elf-swimming-speed", "name": "Swimming Speed"}],
+              "movement": [{"mode": "swim", "speed": 30}]
+            },
+            {
+              "id": "keen-senses",
+              "label": "Keen Senses",
+              "grants": [
+                {"key": "scag:feature:half-elf-keen-senses", "name": "Keen Senses"},
+                {"key": "srd5.1:proficiency:skill-perception", "name": "Skill: Perception"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "key": "scag:race-variant:half-elf-drow-descent",
+    "index": "half-elf-drow-descent",
+    "name": "Drow Descent",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "half-elf-drow-descent",
+      "name": "Drow Descent",
+      "base_race_ref": {"key": "srd5.1:race:half-elf", "name": "Half-Elf"},
+      "replacement_rules": [
+        {
+          "target_grant_id": "grant:srd5.1:race:half-elf:skill-versatility",
+          "target_reference": {"key": "srd5.1:trait:skill-versatility", "name": "Skill Versatility"},
+          "action": "remove",
+          "replacement_group_id": "half-elf-ancestry"
+        }
+      ],
+      "replacement_groups": [
+        {
+          "id": "half-elf-ancestry",
+          "label": "Half-Elf ancestry feature",
+          "choose": 1,
+          "options": [
+            {"id": "keep-skill-versatility", "label": "Keep Skill Versatility", "keep_target": true},
+            {
+              "id": "drow-magic",
+              "label": "Drow Magic",
+              "grants": [{"key": "scag:feature:half-elf-drow-magic", "name": "Drow Magic"}]
+            },
+            {
+              "id": "keen-senses",
+              "label": "Keen Senses",
+              "grants": [
+                {"key": "scag:feature:half-elf-keen-senses", "name": "Keen Senses"},
+                {"key": "srd5.1:proficiency:skill-perception", "name": "Skill: Perception"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+]
