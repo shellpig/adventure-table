@@ -22,6 +22,7 @@ type CreateFlowFixture = {
   raceValue: string
   backgroundLabel: string
   backgroundValue: string
+  backgroundSource: string
   abilitiesStep: RegExp
   saveAbilities: string
   humanLanguagesLabel: string
@@ -57,6 +58,7 @@ const CREATE_FLOW: Record<Locale, CreateFlowFixture> = {
     raceValue: 'Human',
     backgroundLabel: 'Background',
     backgroundValue: 'Acolyte',
+    backgroundSource: 'SRD 5.1',
     abilitiesStep: /Abilities/,
     saveAbilities: 'Save Ability Scores',
     humanLanguagesLabel: 'Human — Languages',
@@ -90,6 +92,7 @@ const CREATE_FLOW: Record<Locale, CreateFlowFixture> = {
     raceValue: '人類',
     backgroundLabel: '背景',
     backgroundValue: '侍僧',
+    backgroundSource: 'SRD 5.1',
     abilitiesStep: /屬性/,
     saveAbilities: '儲存屬性值',
     humanLanguagesLabel: '人類 — 語言',
@@ -124,24 +127,18 @@ async function expectDraftSaved(page: Page) {
   await expect(page.getByText(/Saved on server|已儲存至伺服器/)).toBeVisible()
 }
 
-async function currentDraftRevision(page: Page) {
-  const text = (await page.locator('.builder-save-state span').innerText()).trim()
-  const match = text.match(/(?:Draft revision|草稿版本)\s*(\d+)/)
-  if (!match) throw new Error(`Cannot parse draft revision from: ${text}`)
-  return Number(match[1])
-}
-
-async function chooseOption(page: Page, input: Locator, value: string) {
+async function chooseOption(page: Page, input: Locator, value: string, source?: string) {
   await expectDraftSaved(page)
   await expect(input).toBeEnabled()
   await input.fill(value)
   const listboxId = await input.getAttribute('aria-controls')
   if (!listboxId) throw new Error(`Combobox for "${value}" has no aria-controls listbox`)
   const listbox = page.locator(`[id="${listboxId}"]`)
-  let option = listbox.getByRole('option').filter({ has: page.getByText(value, { exact: true }) })
-  if ((await option.count()) > 1) {
-    const srd = option.filter({ has: page.getByText('System Reference Document 5.1', { exact: true }) })
-    if ((await srd.count()) === 1) option = srd
+  let option = listbox.getByRole('option').filter({ has: listbox.getByText(value, { exact: true }) })
+  if (source) {
+    option = option.filter({
+      has: listbox.getByText(source, { exact: true }),
+    })
   }
   await expect(option).toHaveCount(1)
   await option.click()
@@ -149,12 +146,21 @@ async function chooseOption(page: Page, input: Locator, value: string) {
   await expectDraftSaved(page)
 }
 
-async function chooseSearchable(page: Page, label: string | RegExp, value: string) {
-  await chooseOption(page, page.getByRole('combobox', { name: label }), value)
+async function chooseSearchable(
+  page: Page,
+  label: string | RegExp,
+  value: string,
+  source?: string,
+) {
+  await chooseOption(page, page.getByRole('combobox', { name: label }), value, source)
 }
 
 async function chooseIn(container: Locator, addSelectionLabel: string, value: string) {
-  await chooseOption(container.page(), container.getByRole('combobox', { name: addSelectionLabel }), value)
+  await chooseOption(
+    container.page(),
+    container.getByRole('combobox', { name: addSelectionLabel }),
+    value,
+  )
 }
 
 async function chooseFirstEnabled(page: Page, input: Locator) {
@@ -196,21 +202,9 @@ async function chooseLowestLevelSpell(page: Page, input: Locator) {
   if (!listboxId) throw new Error('Spell combobox has no aria-controls listbox')
   const listbox = page.locator(`[id="${listboxId}"]`)
   await expect(listbox).toBeVisible()
-  const options = listbox.locator('[role="option"]:not([disabled])')
-  const count = await options.count()
-  if (count === 0) throw new Error('Spell combobox has no selectable option')
-
-  let bestIndex = 0
-  let bestLevel = Number.POSITIVE_INFINITY
-  for (let index = 0; index < count; index += 1) {
-    const text = (await options.nth(index).innerText()).trim()
-    const level = /Cantrip/.test(text) ? 0 : Number(text.match(/Level (\d+)/)?.[1] ?? Number.NaN)
-    if (!Number.isNaN(level) && level < bestLevel) {
-      bestLevel = level
-      bestIndex = index
-    }
-  }
-  await options.nth(bestIndex).click()
+  const option = listbox.locator('[role="option"]:not([disabled])').first()
+  await expect(option).toBeVisible()
+  await option.click()
   await expectDraftSaved(page)
 }
 
@@ -259,12 +253,19 @@ async function createSimpleCharacter(page: Page, name: string, locale: Locale) {
 
   await page.locator('.builder-rail').getByRole('button', { name: fixture.originStep }).click()
   await chooseSearchable(page, fixture.raceLabel, fixture.raceValue)
-  await chooseSearchable(page, fixture.backgroundLabel, fixture.backgroundValue)
+  await chooseSearchable(
+    page,
+    fixture.backgroundLabel,
+    fixture.backgroundValue,
+    fixture.backgroundSource,
+  )
 
   await page.locator('.builder-rail').getByRole('button', { name: fixture.abilitiesStep }).click()
   await page.getByRole('button', { name: fixture.saveAbilities }).click()
   await chooseSearchable(page, fixture.humanLanguagesLabel, fixture.dwarvish)
-  const languages = page.locator('.builder-choice').filter({ hasText: fixture.backgroundLanguagesText })
+  const languages = page
+    .locator('.builder-choice')
+    .filter({ hasText: fixture.backgroundLanguagesText })
   await chooseIn(languages, fixture.addSelection, fixture.celestial)
   await chooseIn(languages, fixture.addSelection, fixture.draconic)
 
@@ -296,7 +297,9 @@ async function resetStateFixture(request: APIRequestContext) {
     data: {
       current_hp: 51,
       temporary_hp: 7,
-      conditions: [{ condition_ref: 'srd5.1:condition:poisoned', note: 'M02-H integrity' }],
+      conditions: [
+        { condition_ref: 'srd5.1:condition:poisoned', note: 'M02-H integrity' },
+      ],
       prepared_spell_entry_ids: ['wizard:magic-missile', 'wizard:shield', 'wizard:fireball'],
       spell_slots: {
         '1': { used: 2, remaining: 2 },
@@ -306,9 +309,27 @@ async function resetStateFixture(request: APIRequestContext) {
       resources: { 'wizard:arcane-recovery': { used: 1, remaining: 0 } },
       hit_dice_state: { d10: 4, d6: 3 },
       inventory_state: [
-        { entry_id: 'inventory:chain-mail', item_ref: 'srd5.1:equipment:chain-mail', quantity: 1, equipped: true, carried: true },
-        { entry_id: 'inventory:shield', item_ref: 'srd5.1:equipment:shield', quantity: 1, equipped: true, carried: true },
-        { entry_id: 'inventory:healing-potion', item_ref: 'srd5.1:item:potion-of-healing-common', quantity: 2, equipped: false, carried: true },
+        {
+          entry_id: 'inventory:chain-mail',
+          item_ref: 'srd5.1:equipment:chain-mail',
+          quantity: 1,
+          equipped: true,
+          carried: true,
+        },
+        {
+          entry_id: 'inventory:shield',
+          item_ref: 'srd5.1:equipment:shield',
+          quantity: 1,
+          equipped: true,
+          carried: true,
+        },
+        {
+          entry_id: 'inventory:healing-potion',
+          item_ref: 'srd5.1:item:potion-of-healing-common',
+          quantity: 2,
+          equipped: false,
+          carried: true,
+        },
       ],
     },
   })
@@ -361,11 +382,13 @@ test('M02-H preserves a populated race/subrace/background/class/spells/equipment
   await page.getByRole('button', { name: /Origin/ }).click()
   await chooseSearchable(page, 'Race', 'Elf')
   await chooseSearchable(page, 'Subrace', 'Wood Elf')
-  await chooseSearchable(page, 'Background', 'Acolyte')
+  await chooseSearchable(page, 'Background', 'Acolyte', 'SRD 5.1')
 
   await page.getByRole('button', { name: /Abilities/ }).click()
   await page.getByRole('button', { name: 'Save Ability Scores' }).click()
-  const backgroundLanguages = page.locator('.builder-choice').filter({ hasText: 'Acolyte — Languages' })
+  const backgroundLanguages = page
+    .locator('.builder-choice')
+    .filter({ hasText: 'Acolyte — Languages' })
   await chooseIn(backgroundLanguages, 'Add selection', 'Celestial')
   await chooseIn(backgroundLanguages, 'Add selection', 'Draconic')
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
@@ -395,7 +418,10 @@ test('M02-H preserves a populated race/subrace/background/class/spells/equipment
     },
   }
   const patch = await request.patch(`/api/character-builder/drafts/${draftId}`, {
-    data: { expected_revision: beforeRoleplay.draft.revision, draft_payload: roleplayPayload },
+    data: {
+      expected_revision: beforeRoleplay.draft.revision,
+      draft_payload: roleplayPayload,
+    },
   })
   expect(patch.ok()).toBeTruthy()
   await page.reload()
@@ -406,7 +432,10 @@ test('M02-H preserves a populated race/subrace/background/class/spells/equipment
   const baselineRevision = baseline.draft.revision
   const mutationRequests: string[] = []
   page.on('request', (request) => {
-    if (request.url().includes(`/api/character-builder/drafts/${draftId}`) && ['PATCH', 'POST', 'DELETE'].includes(request.method())) {
+    if (
+      request.url().includes(`/api/character-builder/drafts/${draftId}`) &&
+      ['PATCH', 'POST', 'DELETE'].includes(request.method())
+    ) {
       mutationRequests.push(`${request.method()} ${request.url()}`)
     }
   })
