@@ -2,7 +2,7 @@
   "schema_version": 1,
   "locale": "zh-TW",
   "source": "phb2014",
-  "review_status": "human-reviewed",
+  "review_status": "draft-human-review-required",
   "entries": {
     "phb2014:background:outlander": {
       "data.roleplay_suggestions.personality_traits.0": "對下一片地平線的渴望總在催促我繼續前進。",
