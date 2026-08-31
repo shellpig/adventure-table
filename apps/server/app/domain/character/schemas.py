@@ -14,6 +14,7 @@ SpellAccessType = Literal["known", "spellbook", "always_prepared", "granted"]
 SpellcastingAccessModel = Literal["known", "prepared", "spellbook"]
 SpellResourcePoolType = Literal["normal_multiclass_slots", "pact_magic"]
 SourceType = Literal["class", "subclass", "feature", "feat", "race", "background", "other"]
+RestType = Literal["short_rest", "long_rest"]
 HitDie = Literal["d6", "d8", "d10", "d12"]
 
 
@@ -60,6 +61,9 @@ class SpellAccessEntry(FrozenModel):
     source_type: SourceType
     source_key: StableKey
     access_type: SpellAccessType
+    casting_ability: str | None = Field(default=None, max_length=40)
+    uses_per_rest: int | None = Field(default=None, ge=1)
+    rest_type: RestType | None = None
 
     @field_validator("spell_key")
     @classmethod
@@ -70,6 +74,12 @@ class SpellAccessEntry(FrozenModel):
     @classmethod
     def source_key_is_stable(cls, value: str) -> str:
         return require_stable_key(value)
+
+    @model_validator(mode="after")
+    def usage_metadata_is_consistent(self) -> "SpellAccessEntry":
+        if (self.uses_per_rest is None) != (self.rest_type is None):
+            raise ValueError("spell access uses_per_rest and rest_type must be declared together")
+        return self
 
 
 class SpellcastingProfile(FrozenModel):
@@ -166,6 +176,7 @@ class CharacterBuild(FrozenModel):
     ruleset: str = Field(default="dnd5e-2014", min_length=1)
     content_sources: tuple[str, ...] = ("srd5.1",)
     race_ref: StableKey
+    race_variant_ref: StableKey | None = None
     subrace_ref: StableKey | None = None
     background_ref: StableKey | None = None
     alignment_ref: StableKey | None = None
@@ -179,6 +190,10 @@ class CharacterBuild(FrozenModel):
     language_refs: tuple[StableKey, ...] = ()
     feature_refs: tuple[StableKey, ...] = ()
     feat_refs: tuple[StableKey, ...] = ()
+    walking_speed: int | None = Field(default=None, ge=0)
+    swim_speed: int | None = Field(default=None, ge=0)
+    climb_speed: int | None = Field(default=None, ge=0)
+    fly_speed: int | None = Field(default=None, ge=0)
     spellcasting_profiles: tuple[SpellcastingProfile, ...] = ()
     spell_access_entries: tuple[SpellAccessEntry, ...] = ()
     spell_resource_pools: tuple[SpellResourcePool, ...] = ()
@@ -200,6 +215,11 @@ class CharacterBuild(FrozenModel):
     @classmethod
     def race_ref_is_race(cls, value: str) -> str:
         return require_stable_key(value, kinds={"race"})
+
+    @field_validator("race_variant_ref")
+    @classmethod
+    def race_variant_ref_is_variant(cls, value: str | None) -> str | None:
+        return None if value is None else require_stable_key(value, kinds={"race-variant"})
 
     @field_validator("subrace_ref")
     @classmethod
