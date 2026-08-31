@@ -149,6 +149,7 @@ export type BuilderGrantSummary = {
   kind: string
   source_ref: string
   reference_id?: string | null
+  presentation_field?: string | null
 }
 
 export type BuilderAbilityScoreSummary = {
@@ -343,6 +344,26 @@ async function builderRequest<T>(input: RequestInfo | URL, init?: RequestInit): 
 
 export function listCharacters(): Promise<CharacterListItem[]> {
   return builderRequest<CharacterListItem[]>('/api/characters')
+}
+
+export function listArchivedCharacters(): Promise<CharacterListItem[]> {
+  return builderRequest<CharacterListItem[]>('/api/characters?archived=true')
+}
+
+export function archiveCharacter(characterId: string): Promise<CharacterListItem> {
+  return builderRequest<CharacterListItem>(`/api/characters/${characterId}/archive`, {
+    method: 'POST',
+  })
+}
+
+export function unarchiveCharacter(characterId: string): Promise<CharacterListItem> {
+  return builderRequest<CharacterListItem>(`/api/characters/${characterId}/unarchive`, {
+    method: 'POST',
+  })
+}
+
+export function deleteCharacter(characterId: string): Promise<void> {
+  return builderRequest<void>(`/api/characters/${characterId}`, { method: 'DELETE' })
 }
 
 export function getAbilityGenerationRules(): Promise<AbilityGenerationRules> {

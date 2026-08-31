@@ -16,7 +16,11 @@ from app.config import settings
 from app.content import load_default_content_registry
 from app.db import database_is_ready
 from app.domain.character.validation import CharacterValidationError
-from app.persistence.characters import CharacterNotFoundError
+from app.persistence.characters import (
+    CharacterArchivedError,
+    CharacterNotArchivedError,
+    CharacterNotFoundError,
+)
 
 content_registry = load_default_content_registry()
 app = FastAPI(title=settings.app_name)
@@ -44,6 +48,28 @@ def handle_character_not_found(
     _request: Request, exc: CharacterNotFoundError
 ) -> JSONResponse:
     return _error_response(404, "character_not_found", f"character not found: {exc}")
+
+
+@app.exception_handler(CharacterArchivedError)
+def handle_character_archived(
+    _request: Request, exc: CharacterArchivedError
+) -> JSONResponse:
+    return _error_response(
+        409,
+        "character_archived",
+        f"archived characters are read-only: {exc}",
+    )
+
+
+@app.exception_handler(CharacterNotArchivedError)
+def handle_character_not_archived(
+    _request: Request, exc: CharacterNotArchivedError
+) -> JSONResponse:
+    return _error_response(
+        409,
+        "character_not_archived",
+        f"archive the character before deleting it: {exc}",
+    )
 
 
 @app.exception_handler(CharacterValidationError)

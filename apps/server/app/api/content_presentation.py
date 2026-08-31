@@ -39,6 +39,14 @@ class RoleplaySuggestionDTO(BaseModel):
     missing_required: bool
 
 
+class OptionalRoleplayTableDTO(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    table_id: str
+    label: str
+    suggestions: tuple[RoleplaySuggestionDTO, ...]
+
+
 class ContentPresentationDTO(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -46,6 +54,7 @@ class ContentPresentationDTO(BaseModel):
     locale: str
     fields: tuple[LocalizedFieldDTO, ...]
     roleplay_suggestions: tuple[RoleplaySuggestionDTO, ...] = ()
+    optional_roleplay_tables: tuple[OptionalRoleplayTableDTO, ...] = ()
 
 
 class ContentPresentationBatchRequest(BaseModel):
@@ -89,6 +98,11 @@ def _presentation_dto(
         if key.split(":", 2)[1:2] == ["background"]
         else ()
     )
+    optional_roleplay = (
+        localization.optional_roleplay_tables(key, locale)
+        if key.split(":", 2)[1:2] == ["background"]
+        else ()
+    )
     return ContentPresentationDTO(
         key=key,
         locale=locale,
@@ -103,6 +117,14 @@ def _presentation_dto(
             for value in localized_fields
         ),
         roleplay_suggestions=tuple(_suggestion_dto(value) for value in roleplay),
+        optional_roleplay_tables=tuple(
+            OptionalRoleplayTableDTO(
+                table_id=table.table_id,
+                label=table.label,
+                suggestions=tuple(_suggestion_dto(value) for value in table.suggestions),
+            )
+            for table in optional_roleplay
+        ),
     )
 
 

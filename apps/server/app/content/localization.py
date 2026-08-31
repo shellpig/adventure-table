@@ -158,6 +158,13 @@ class LocalizedRoleplaySuggestion:
     missing_required: bool
 
 
+@dataclass(frozen=True)
+class LocalizedOptionalRoleplayTable:
+    table_id: str
+    label: str
+    suggestions: tuple[LocalizedRoleplaySuggestion, ...]
+
+
 def _tokens(path: str) -> tuple[str, ...]:
     if not path or path.startswith(".") or path.endswith("."):
         raise ValueError(f"invalid localization field path: {path!r}")
@@ -367,6 +374,71 @@ class ContentLocalizationCatalog:
                     )
                 )
         return tuple(suggestions)
+
+    def optional_roleplay_tables(
+        self,
+        background_key: str,
+        locale: str,
+    ) -> tuple[LocalizedOptionalRoleplayTable, ...]:
+        locale = require_content_locale(locale)
+        parse_stable_key(background_key, kinds={"background"})
+        entry = self.registry.get(background_key)
+        raw_tables = entry.data.get("optional_roleplay_tables")
+        raw_labels = entry.data.get("optional_roleplay_table_labels")
+        if not isinstance(raw_tables, dict):
+            return ()
+        if not isinstance(raw_labels, dict):
+            raise ContentValidationError(
+                f"{background_key}: optional roleplay tables require labels"
+            )
+
+        tables: list[LocalizedOptionalRoleplayTable] = []
+        for table_id, values in raw_tables.items():
+            if not isinstance(table_id, str) or not isinstance(values, list):
+                raise ContentValidationError(
+                    f"{background_key}: invalid optional roleplay table"
+                )
+            label = self.resolve_field(
+                background_key,
+                f"data.optional_roleplay_table_labels.{table_id}",
+                locale,
+            )
+            if not isinstance(label.value, str):
+                raise ContentValidationError(
+                    f"{background_key}: optional roleplay table label must be text"
+                )
+            suggestions: list[LocalizedRoleplaySuggestion] = []
+            for position, _value in enumerate(values):
+                localized = self.resolve_field(
+                    background_key,
+                    f"data.optional_roleplay_tables.{table_id}.{position}",
+                    locale,
+                )
+                if not isinstance(localized.value, str):
+                    raise ContentValidationError(
+                        f"{background_key}: optional roleplay suggestion must be text"
+                    )
+                suggestions.append(
+                    LocalizedRoleplaySuggestion(
+                        suggestion_id=(
+                            f"{background_key}:optional-roleplay:{table_id}:{position + 1:02d}"
+                        ),
+                        background_key=background_key,
+                        field=table_id,
+                        position=position,
+                        text=localized.value,
+                        locale=locale,
+                        missing_required=localized.missing_required,
+                    )
+                )
+            tables.append(
+                LocalizedOptionalRoleplayTable(
+                    table_id=table_id,
+                    label=label.value,
+                    suggestions=tuple(suggestions),
+                )
+            )
+        return tuple(tables)
 
     def completeness_issues(
         self,

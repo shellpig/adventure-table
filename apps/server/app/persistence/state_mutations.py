@@ -7,6 +7,7 @@ from sqlalchemy import func, select, update
 from app.domain.character.schemas import CharacterBuild, CharacterState, PersistedCharacter
 from app.domain.character.validation import validate_state_against_build
 from app.persistence.characters import (
+    CharacterArchivedError,
     CharacterNotFoundError,
     CharacterRepository,
     StaleBuildVersionError,
@@ -36,6 +37,7 @@ def save_state_against_version(
         row = connection.execute(
             select(
                 characters.c.current_version_id,
+                characters.c.archived_at,
                 character_versions.c.build_payload,
             )
             .join(
@@ -51,6 +53,12 @@ def save_state_against_version(
         ).mappings().one_or_none()
         if row is None or row["current_version_id"] is None:
             raise CharacterNotFoundError(str(character_id))
+
+        # Checked inside the same lock as the version comparison: an archive
+        # landing between check and write would otherwise let a state patch
+        # through against a character that is no longer in play.
+        if row["archived_at"] is not None:
+            raise CharacterArchivedError(str(character_id))
 
         actual_version_id = row["current_version_id"]
         if actual_version_id != expected_current_version_id:

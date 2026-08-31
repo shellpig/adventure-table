@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -158,6 +159,7 @@ class RoleplayProfile(FrozenModel):
     ideals: tuple[str, ...] = ()
     bonds: tuple[str, ...] = ()
     flaws: tuple[str, ...] = ()
+    custom_fields: dict[str, tuple[str, ...]] = Field(default_factory=dict)
 
 
 class CharacterBuild(FrozenModel):
@@ -383,3 +385,5 @@ class PersistedCharacter(FrozenModel):
     version_no: int
     build: CharacterBuild
     state: CharacterState
+    # Archived characters stay fully readable; every write path refuses them.
+    archived_at: datetime | None = None

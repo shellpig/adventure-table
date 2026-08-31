@@ -19,6 +19,17 @@ export type ContentPresentation = {
     text: string
     missing_required: boolean
   }[]
+  optional_roleplay_tables: {
+    table_id: string
+    label: string
+    suggestions: {
+      suggestion_id: string
+      field: string
+      position: number
+      text: string
+      missing_required: boolean
+    }[]
+  }[]
 }
 
 type ContentPresentationBatch = {

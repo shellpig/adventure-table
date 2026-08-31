@@ -310,6 +310,10 @@ class BuilderGrantSummary(StrictModel):
     kind: str
     source_ref: str
     reference_id: str | None = None
+    # Some grants are inline fields of their source entry rather than standalone
+    # content entries, so they have no StableKey of their own. For those, the
+    # presentation identity is source_ref plus the field path holding the name.
+    presentation_field: str | None = None
 
 
 class BuilderAbilityScoreSummary(StrictModel):

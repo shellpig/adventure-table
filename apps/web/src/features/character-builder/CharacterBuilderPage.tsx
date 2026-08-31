@@ -23,7 +23,12 @@ import { type ContentNameResolver, useContentPresentations } from '../../i18n/us
 import { useUiCopy } from '../../i18n/useUiCopy'
 import { ClassProgressionStep } from './ClassProgressionStep'
 import { EquipmentReviewStep, EquipmentStep } from './EquipmentReviewStep'
-import { sortGrantsByKind } from './grants'
+import {
+  grantDisplayName,
+  grantPresentationFields,
+  grantPresentationReferences,
+  sortGrantsByKind,
+} from './grants'
 import { SpellcastingStep } from './SpellcastingStep'
 import './builder.css'
 
@@ -228,9 +233,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
         ...(node.subclass_ref ? [node.subclass_ref] : []),
         ...node.automatic_feature_refs,
       ]) ?? []),
-      ...(view?.resolved_summary.grants.flatMap((grant) =>
-        grant.reference_id ? [grant.reference_id] : [],
-      ) ?? []),
+      ...grantPresentationReferences(view?.resolved_summary.grants ?? []),
       ...(view?.draft.draft_payload.race_selection?.reference_id
         ? [view.draft.draft_payload.race_selection.reference_id]
         : []),
@@ -246,7 +249,10 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
     ],
     [view],
   )
-  const { nameFor, locale } = useContentPresentations(contentReferences)
+  const { nameFor, fieldFor, locale } = useContentPresentations(
+    contentReferences,
+    grantPresentationFields(view?.resolved_summary.grants ?? []),
+  )
 
   const save = useMutation({
     mutationFn: (payload: BuilderDraftPayload) => {
@@ -685,7 +691,14 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                 return (
                   <div key={`${grant.source_ref}:${grant.reference_id ?? grant.label}:${index}`}>
                     <span>{kindKey ? t(kindKey) : grant.kind.replaceAll('_', ' ')}</span>
-                    <strong>{nameFor(grant.reference_id, optionDisplay(grant.label).primary)}</strong>
+                    <strong>
+                      {grantDisplayName(
+                        grant,
+                        optionDisplay(grant.label).primary,
+                        nameFor,
+                        fieldFor,
+                      )}
+                    </strong>
                   </div>
                 )
               })}

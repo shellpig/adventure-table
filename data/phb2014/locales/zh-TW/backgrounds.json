@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "phb2014",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "phb2014:background:acolyte": {"name": "侍僧", "data.feature.name": "信徒之家"},
+    "phb2014:background:charlatan": {"name": "詐欺師", "data.feature.name": "假身分"},
+    "phb2014:background:criminal": {"name": "罪犯", "data.feature.name": "罪犯人脈"},
+    "phb2014:background:spy": {"name": "間諜", "data.feature.name": "間諜人脈"},
+    "phb2014:background:entertainer": {"name": "藝人", "data.feature.name": "人見人愛"},
+    "phb2014:background:gladiator": {"name": "角鬥士", "data.feature.name": "人見人愛"},
+    "phb2014:background:folk-hero": {"name": "平民英雄", "data.feature.name": "鄉民款待"},
+    "phb2014:background:guild-artisan": {"name": "公會工匠", "data.feature.name": "公會成員"},
+    "phb2014:background:guild-merchant": {"name": "公會商人", "data.feature.name": "公會成員"},
+    "phb2014:background:hermit": {"name": "隱士", "data.feature.name": "發現"},
+    "phb2014:background:noble": {"name": "貴族", "data.feature.name": "特權階級"},
+    "phb2014:background:knight": {"name": "騎士", "data.feature.name": "家臣"},
+    "phb2014:background:outlander": {"name": "化外之民", "data.feature.name": "漂泊者"},
+    "phb2014:background:sage": {"name": "學者", "data.feature.name": "研究者"},
+    "phb2014:background:sailor": {"name": "水手", "data.feature.name": "船行水路"},
+    "phb2014:background:pirate": {"name": "海盜", "data.feature.name": "惡名昭彰"},
+    "phb2014:background:soldier": {"name": "士兵", "data.feature.name": "軍事階級"},
+    "phb2014:background:urchin": {"name": "孤兒", "data.feature.name": "城市密徑"}
+  }
+}

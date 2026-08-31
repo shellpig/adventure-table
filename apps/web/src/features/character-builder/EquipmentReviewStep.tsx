@@ -18,7 +18,12 @@ import type { Locale } from '../../i18n/locale'
 import type { UiCopyKey } from '../../i18n/uiCopy'
 import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy, type UiTranslator } from '../../i18n/useUiCopy'
-import { sortGrantsByKind } from './grants'
+import {
+  grantDisplayName,
+  grantPresentationFields,
+  grantPresentationReferences,
+  sortGrantsByKind,
+} from './grants'
 import { RoleplayProfileEditor } from './RoleplayProfileEditor'
 
 type EquipmentStepProps = {
@@ -275,16 +280,17 @@ export function EquipmentReviewStep({
           ...(node.subclass_ref ? [node.subclass_ref] : []),
           ...node.automatic_feature_refs,
         ]),
-        ...review.resolved_summary.grants.flatMap((grant) =>
-          grant.reference_id ? [grant.reference_id] : [],
-        ),
+        ...grantPresentationReferences(review.resolved_summary.grants),
         ...review.starting_equipment.map((entry) => entry.item_ref),
         ...Object.keys(review.derived_stats?.skill_modifiers ?? {}).map(
           (skill) => `srd5.1:skill:${skill}`,
         ),
       ]
     : []
-  const { nameFor } = useContentPresentations(reviewReferences)
+  const { nameFor, fieldFor } = useContentPresentations(
+    reviewReferences,
+    review ? grantPresentationFields(review.resolved_summary.grants) : {},
+  )
   const busy = disabled || confirm.isPending
   const blockingCount =
     review?.issues.filter((issue) => issue.severity === 'blocking_error').length ??
@@ -390,7 +396,12 @@ export function EquipmentReviewStep({
                       : grant.kind}
                   </span>
                   <strong>
-                    {nameFor(grant.reference_id, optionDisplay(grant.label).primary)}
+                    {grantDisplayName(
+                      grant,
+                      optionDisplay(grant.label).primary,
+                      nameFor,
+                      fieldFor,
+                    )}
                   </strong>
                 </div>
               ))}

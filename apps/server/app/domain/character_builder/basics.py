@@ -128,6 +128,7 @@ def _append_entry_grants(
                     label=name,
                     kind="background_feature",
                     source_ref=entry.key,
+                    presentation_field="data.feature.name",
                 )
             )
 

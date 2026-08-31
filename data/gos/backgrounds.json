@@ -34,6 +34,7 @@
       "optional_roleplay_tables": {
         "fishing_tale": ["Wrestled a giant lobster", "A catch dragged the boat for miles", "A stolen golden-finned catch", "A ghostly fish only you could see", "A giant clam and an enormous pearl", "A fish that blotted out daylight", "An underwater passage to a terrible place", "A doomed romance with an aquatic being"]
       },
+      "optional_roleplay_table_labels": {"fishing_tale": "Fishing Tale"},
       "roleplay_suggestions": {
         "personality_traits": ["I respect people who earn their living through hard work.", "I become calm when I can see open water."],
         "ideals": ["Work: steady effort carries people through bad weather.", "Balance: take what you need without exhausting the waters that feed you."],
@@ -77,6 +78,7 @@
       "optional_roleplay_tables": {
         "hardship_endured": ["Nearly drowned while hiding from enemies", "Survived months of captivity", "Paid dearly so comrades could escape", "Survived an impossible last stand", "Endured a dangerous stowaway seizure of a ship", "Carried a wounded comrade to safety"]
       },
+      "optional_roleplay_table_labels": {"hardship_endured": "Hardship Endured"},
       "roleplay_suggestions": {
         "personality_traits": ["I stay composed when conditions turn miserable.", "I work best as part of a dependable team."],
         "ideals": ["Teamwork: victory depends on cooperation and communication.", "Endurance: hardship is something to be met rather than feared."],
@@ -122,6 +124,7 @@
       "optional_roleplay_tables": {
         "life_at_sea": ["Worked toward plans for a grand new vessel", "Saved a warship with timely repairs", "Strengthened a merchant vessel before disaster", "Specialized in naval defensive systems", "Maintained ties to coastal smugglers", "Encountered a mysterious presence in the deep"]
       },
+      "optional_roleplay_table_labels": {"life_at_sea": "Life at Sea"},
       "roleplay_suggestions": {
         "personality_traits": ["I notice weak joints, warped boards, and bad repairs almost immediately."],
         "ideals": ["Craft: good work should survive rough water and harder weather."],
@@ -164,6 +167,7 @@
       "optional_roleplay_tables": {
         "claim_to_fame": ["Hid stolen spirits inside a whale carcass", "Drove stolen goods across a battlefield", "Joined a foreign navy as part of a smuggling job", "Drifted into the Shadowfell while carrying stolen art", "Spent everything to save refugees at a checkpoint", "Sold ammunition to both sides of the same conflict"]
       },
+      "optional_roleplay_table_labels": {"claim_to_fame": "Claim to Fame"},
       "roleplay_suggestions": {
         "personality_traits": ["I always notice exits, patrol routes, and places where cargo could disappear."],
         "ideals": ["Freedom: borders and tariffs should not decide what ordinary people may trade."],

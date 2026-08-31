@@ -26,6 +26,13 @@ type BackgroundPresentation = {
   key: string
   locale: string
   roleplay_suggestions: RoleplaySuggestion[]
+  optional_roleplay_tables: OptionalRoleplayTable[]
+}
+
+type OptionalRoleplayTable = {
+  table_id: string
+  label: string
+  suggestions: RoleplaySuggestion[]
 }
 
 export type SystemSuggestionRef = {
@@ -47,6 +54,39 @@ const FIELDS: {
 ]
 
 const EMPTY_SUGGESTIONS: RoleplaySuggestion[] = []
+const EMPTY_OPTIONAL_TABLES: OptionalRoleplayTable[] = []
+
+function recordValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
+}
+
+export function optionalRoleplayFields(value: unknown): Record<string, string[]> {
+  return Object.fromEntries(
+    Object.entries(recordValue(value)).map(([key, entries]) => [key, roleplayLines(entries)]),
+  )
+}
+
+export function optionalRoleplaySuggestionRefs(
+  value: unknown,
+): Record<string, SystemSuggestionRef[]> {
+  const result: Record<string, SystemSuggestionRef[]> = {}
+  for (const [key, entries] of Object.entries(recordValue(value))) {
+    if (!Array.isArray(entries)) continue
+    const refs = entries.flatMap((entry) => {
+      const raw = recordValue(entry)
+      return typeof raw.suggestion_id === 'string' &&
+        typeof raw.position === 'number' &&
+        Number.isInteger(raw.position) &&
+        raw.position >= 0
+        ? [{ suggestion_id: raw.suggestion_id, position: raw.position }]
+        : []
+    })
+    if (refs.length) result[key] = refs
+  }
+  return result
+}
 
 export function roleplayLines(value: unknown): string[] {
   if (!Array.isArray(value)) return []
@@ -142,6 +182,9 @@ export function RoleplayProfileEditor({
   const profile = view.draft.draft_payload.roleplay_profile ?? {}
   const backgroundRef = view.draft.draft_payload.background_selection?.reference_id ?? ''
   const systemRefs = roleplaySuggestionRefs(profile.system_suggestion_refs)
+  const rawSystemRefs = recordValue(profile.system_suggestion_refs)
+  const optionalFields = optionalRoleplayFields(profile.custom_fields)
+  const optionalRefs = optionalRoleplaySuggestionRefs(rawSystemRefs.custom_fields)
   const [draftText, setDraftText] = useState<Record<RoleplayField, string>>({
     personality_traits: '',
     ideals: '',
@@ -155,9 +198,15 @@ export function RoleplayProfileEditor({
     enabled: Boolean(backgroundRef),
   })
   const suggestions = backgroundQuery.data?.roleplay_suggestions ?? EMPTY_SUGGESTIONS
+  const optionalTables = backgroundQuery.data?.optional_roleplay_tables ?? EMPTY_OPTIONAL_TABLES
   const suggestionTextById = useMemo(
-    () => Object.fromEntries(suggestions.map((suggestion) => [suggestion.suggestion_id, suggestion.text])),
-    [suggestions],
+    () =>
+      Object.fromEntries(
+        [...suggestions, ...optionalTables.flatMap((table) => table.suggestions)].map(
+          (suggestion) => [suggestion.suggestion_id, suggestion.text],
+        ),
+      ),
+    [optionalTables, suggestions],
   )
 
   useEffect(() => {
@@ -192,13 +241,40 @@ export function RoleplayProfileEditor({
     // Once the player manually changes a field, those lines become verbatim
     // player-authored text. Do not guess which edited line still corresponds to
     // a system suggestion.
-    const nextRefs = { ...systemRefs }
+    const nextRefs = { ...rawSystemRefs, ...systemRefs }
     delete nextRefs[field]
     onSave({
       roleplay_profile: {
         ...profile,
         [field]: next,
         system_suggestion_refs: nextRefs,
+      },
+    })
+  }
+
+  const selectOptionalSuggestion = (
+    table: OptionalRoleplayTable,
+    suggestion: RoleplaySuggestion | null,
+  ) => {
+    const nextFields = { ...optionalFields }
+    const nextRefs = { ...optionalRefs }
+    if (suggestion) {
+      nextFields[table.table_id] = [suggestion.text]
+      nextRefs[table.table_id] = [
+        { suggestion_id: suggestion.suggestion_id, position: 0 },
+      ]
+    } else {
+      delete nextFields[table.table_id]
+      delete nextRefs[table.table_id]
+    }
+    onSave({
+      roleplay_profile: {
+        ...profile,
+        custom_fields: nextFields,
+        system_suggestion_refs: {
+          ...rawSystemRefs,
+          custom_fields: nextRefs,
+        },
       },
     })
   }
@@ -219,6 +295,7 @@ export function RoleplayProfileEditor({
         ...profile,
         [field]: next,
         system_suggestion_refs: {
+          ...rawSystemRefs,
           ...systemRefs,
           [field]: [...currentRefs, ref],
         },
@@ -286,6 +363,47 @@ export function RoleplayProfileEditor({
           )
         })}
       </div>
+      {optionalTables.length ? (
+        <div className="roleplay-optional-tables">
+          <h4>{t('roleplay.optionalTables')}</h4>
+          <p className="builder-hint">{t('roleplay.optionalTablesHint')}</p>
+          {optionalTables.map((table) => {
+            const selectedRef = optionalRefs[table.table_id]?.[0]
+            const selectedText = localizedRoleplayLines(
+              optionalFields[table.table_id],
+              optionalRefs[table.table_id],
+              suggestionTextById,
+            )[0]
+            return (
+              <div className="roleplay-field" key={table.table_id}>
+                <h5>{table.label}</h5>
+                {selectedText ? <p data-testid={`optional-roleplay-${table.table_id}`}>{selectedText}</p> : null}
+                <div className="roleplay-suggestions" aria-label={table.label}>
+                  {table.suggestions.map((suggestion) => (
+                    <button
+                      type="button"
+                      className="roleplay-suggestion"
+                      disabled={disabled || selectedRef?.suggestion_id === suggestion.suggestion_id}
+                      key={suggestion.suggestion_id}
+                      onClick={() => selectOptionalSuggestion(table, suggestion)}
+                    >
+                      + {suggestion.text}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="roleplay-suggestion"
+                    disabled={disabled || !selectedRef}
+                    onClick={() => selectOptionalSuggestion(table, null)}
+                  >
+                    {t('roleplay.clearOptional')}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : null}
     </div>
   )
 }

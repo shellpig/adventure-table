@@ -81,6 +81,8 @@ button { color: inherit; }
 .button.secondary { border-color: var(--line); color: var(--text); background: #171d27; }
 .button.secondary:not(:disabled):hover { border-color: #4a5668; background: #1c2430; }
 .button.compact { min-height: 36px; padding: 0 11px; font-size: .76rem; }
+.button.danger { border-color: rgb(225 128 128 / 45%); color: var(--red); background: #241a1c; }
+.button.danger:not(:disabled):hover { border-color: var(--red); background: #2c1e21; }
 .button.full { width: 100%; margin-top: 10px; }
 .error-banner { margin: 16px 30px 0; border: 1px solid rgb(225 128 128 / 38%); border-radius: 12px; padding: 12px 14px; color: #f0b2b2; background: rgb(225 128 128 / 8%); font-size: .84rem; }
 .sheet-tabs { position: sticky; z-index: 10; top: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 10px; border-bottom: 1px solid var(--line); background: rgb(14 18 25 / 94%); backdrop-filter: blur(16px); }
