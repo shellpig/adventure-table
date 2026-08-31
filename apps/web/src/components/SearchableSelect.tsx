@@ -27,7 +27,7 @@ type OptionDisplay = {
   secondary?: string
 }
 
-const STABLE_KEY_RE = /^[^:]+:[^:]+:[^:]+$/
+const STABLE_KEY_RE = /^(?:srd5\.1|phb2014|scag|gos):[^:]+:[^:]+$/
 
 export function optionDisplay(label: string): OptionDisplay {
   const [primary, ...secondaryParts] = label.split(' · ')
