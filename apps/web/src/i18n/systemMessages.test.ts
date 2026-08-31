@@ -5,10 +5,11 @@ import {
   installDynamicLocalizedBuilderPayload,
   localizedBuilderIssueMessage,
   localizedDisabledReason,
+  localizedRequestErrorMessage,
 } from './systemMessages'
 
 describe('M02-G system-owned messages', () => {
-  it('keeps the machine validation code stable while the visible message changes locale', () => {
+  it('keeps machine validation identity stable while presentation is localized explicitly', () => {
     const issue = installDynamicLocalizedBuilderPayload({
       code: 'missing_race',
       severity: 'blocking_error',
@@ -17,44 +18,42 @@ describe('M02-G system-owned messages', () => {
       related_refs: [],
     })
 
-    document.documentElement.lang = 'zh-TW'
     expect(issue.code).toBe('missing_race')
     expect(issue.path).toBe('draft_payload.race_selection')
-    expect(issue.message).toBe('確認角色前必須選擇種族。')
-
-    document.documentElement.lang = 'en'
-    expect(issue.code).toBe('missing_race')
-    expect(issue.path).toBe('draft_payload.race_selection')
-    expect(issue.message).toBe('Race selection is required before Confirm.')
+    expect(
+      localizedBuilderIssueMessage(issue.code, 'Race selection is required before Confirm.', 'zh-TW'),
+    ).toBe('確認角色前必須選擇種族。')
+    expect(
+      localizedBuilderIssueMessage(issue.code, 'Race selection is required before Confirm.', 'en'),
+    ).toBe('Race selection is required before Confirm.')
   })
 
-  it('localizes server-owned disabled reasons without changing option identity', () => {
-    const option = installDynamicLocalizedBuilderPayload({
-      option_id: 'srd5.1:class:wizard',
-      disabled_reason: 'Prerequisite not met.',
-    })
-
-    document.documentElement.lang = 'zh-TW'
-    expect(option.option_id).toBe('srd5.1:class:wizard')
-    expect(option.disabled_reason).toBe('此選項目前無法選擇。')
-
-    document.documentElement.lang = 'en'
-    expect(option.disabled_reason).toBe('Prerequisite not met.')
+  it('localizes disabled reasons without discarding the concrete reason', () => {
+    expect(localizedDisabledReason('Complete ability scores before multiclassing.', 'zh-TW')).toBe(
+      '兼職前請先完成能力值。',
+    )
+    expect(localizedDisabledReason('Wizard: Requires INT 13+ to multiclass.', 'zh-TW')).toBe(
+      'Wizard：兼職需要 INT 13+。',
+    )
+    expect(localizedDisabledReason('Prerequisite not met.', 'zh-TW')).toContain('Prerequisite not met.')
+    expect(localizedDisabledReason('Prerequisite not met.', 'en')).toBe('Prerequisite not met.')
   })
 
-  it('localizes request failures at read time so cached errors follow locale switches', () => {
-    const error = createLocalizedRequestError('not_found', 404, 'Draft not found')
+  it('localizes request failures without requiring a browser document', () => {
+    const zhError = createLocalizedRequestError('not_found', 404, 'Draft not found', 'zh-TW')
+    const enError = createLocalizedRequestError('not_found', 404, 'Draft not found', 'en')
 
-    document.documentElement.lang = 'zh-TW'
-    expect(error.message).toContain('找不到')
-
-    document.documentElement.lang = 'en'
-    expect(error.message).toContain('could not be found')
+    expect(zhError.message).toContain('找不到')
+    expect(enError.message).toContain('could not be found')
+    expect(localizedRequestErrorMessage(undefined, 500, 'Database unavailable', 'zh-TW')).toContain(
+      'Database unavailable',
+    )
   })
 
-  it('has a safe localized fallback for unknown validation codes', () => {
-    expect(localizedBuilderIssueMessage('future_code', 'Future warning', 'zh-TW')).not.toBe('Future warning')
+  it('preserves details for unknown validation codes instead of collapsing to a generic sentence', () => {
+    expect(localizedBuilderIssueMessage('future_code', 'Future warning', 'zh-TW')).toContain(
+      'Future warning',
+    )
     expect(localizedBuilderIssueMessage('future_code', 'Future warning', 'en')).toBe('Future warning')
-    expect(localizedDisabledReason('Unavailable', 'zh-TW')).toBe('此選項目前無法選擇。')
   })
 })
