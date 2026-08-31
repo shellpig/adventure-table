@@ -1,0 +1,20 @@
+{
+  "id": "vgm",
+  "name": "Volo's Guide to Monsters",
+  "ruleset": "dnd5e-2014",
+  "version": "M01-D",
+  "provenance": {
+    "type": "private-maintainer-normalization",
+    "reference": "docs/暫用規則資訊"
+  },
+  "usage": {
+    "scope": "private-friends-project"
+  },
+  "categories": [
+    {"name": "races", "kind": "race", "file": "races.json", "count": 3},
+    {"name": "subraces", "kind": "subrace", "file": "subraces.json", "count": 3},
+    {"name": "traits", "kind": "trait", "file": "traits.json", "count": 0},
+    {"name": "features", "kind": "feature", "file": "features.json", "count": 9}
+  ],
+  "total_entries": 15
+}
