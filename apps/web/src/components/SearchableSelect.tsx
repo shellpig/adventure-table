@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 
+import { useContentPresentations } from '../i18n/useContentPresentations'
 import { useUiCopy } from '../i18n/useUiCopy'
 
 export type SearchOption = {
@@ -8,6 +9,7 @@ export type SearchOption = {
   description?: string
   disabled?: boolean
   disabledReason?: string
+  searchAliases?: string[]
 }
 
 type SearchableSelectProps = {
@@ -24,6 +26,8 @@ type OptionDisplay = {
   primary: string
   secondary?: string
 }
+
+const STABLE_KEY_RE = /^[^:]+:[^:]+:[^:]+$/
 
 export function optionDisplay(label: string): OptionDisplay {
   const [primary, ...secondaryParts] = label.split(' · ')
@@ -47,13 +51,23 @@ export function duplicateOptionNames(options: SearchOption[]): Set<string> {
   )
 }
 
-export function rankSearchOptions(options: SearchOption[], query: string) {
-  const keyword = query.trim().toLocaleLowerCase()
-  const ranked = options.map((option) => ({
+export function sortSearchOptions(options: SearchOption[], locale: string): SearchOption[] {
+  const collator = new Intl.Collator(locale, { sensitivity: 'base', numeric: true })
+  return [...options].sort((left, right) => {
+    const byName = collator.compare(optionDisplay(left.label).primary, optionDisplay(right.label).primary)
+    return byName || left.value.localeCompare(right.value)
+  })
+}
+
+export function rankSearchOptions(options: SearchOption[], query: string, locale = 'en') {
+  const keyword = query.trim().toLocaleLowerCase(locale)
+  const ranked = sortSearchOptions(options, locale).map((option) => ({
     option,
     matches: Boolean(keyword) &&
-      `${option.label} ${option.description ?? ''} ${option.disabledReason ?? ''}`
-        .toLocaleLowerCase()
+      [option.label, option.description, option.disabledReason, ...(option.searchAliases ?? [])]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase(locale)
         .includes(keyword),
   }))
   if (!keyword) return ranked
@@ -77,21 +91,39 @@ export function SearchableSelect({
   secondaryMode = 'always',
 }: SearchableSelectProps) {
   const { t } = useUiCopy()
+  const contentReferences = useMemo(
+    () => options.map((option) => option.value).filter((candidate) => STABLE_KEY_RE.test(candidate)),
+    [options],
+  )
+  const { locale, searchAliasesFor } = useContentPresentations(contentReferences)
+  const searchableOptions = useMemo(
+    () => options.map((option) => ({
+      ...option,
+      searchAliases: Array.from(new Set([
+        ...(option.searchAliases ?? []),
+        ...(STABLE_KEY_RE.test(option.value) ? searchAliasesFor(option.value, option.label) : []),
+      ])),
+    })),
+    [options, searchAliasesFor],
+  )
   const inputId = useId()
   const listboxId = useId()
   const [open, setOpen] = useState(false)
-  const selected = options.find((option) => option.value === value)
+  const selected = searchableOptions.find((option) => option.value === value)
   const [query, setQuery] = useState(optionInputLabel(selected))
   const [activeIndex, setActiveIndex] = useState(0)
-  const duplicateNames = useMemo(() => duplicateOptionNames(options), [options])
+  const duplicateNames = useMemo(() => duplicateOptionNames(searchableOptions), [searchableOptions])
   const resolvedPlaceholder = placeholder ?? t('shared.search.placeholder')
 
   useEffect(() => {
-    if (value) setQuery(optionInputLabel(options.find((option) => option.value === value)))
+    if (value) setQuery(optionInputLabel(searchableOptions.find((option) => option.value === value)))
     else if (!open) setQuery('')
-  }, [open, options, value])
+  }, [open, searchableOptions, value])
 
-  const rankedOptions = useMemo(() => rankSearchOptions(options, query), [options, query])
+  const rankedOptions = useMemo(
+    () => rankSearchOptions(searchableOptions, query, locale),
+    [locale, query, searchableOptions],
+  )
 
   const choose = (option: SearchOption) => {
     if (option.disabled) return
@@ -138,7 +170,7 @@ export function SearchableSelect({
             window.setTimeout(() => {
               setOpen(false)
               if (value) {
-                const current = options.find((option) => option.value === value)
+                const current = searchableOptions.find((option) => option.value === value)
                 setQuery(optionInputLabel(current))
               }
             }, 120)
