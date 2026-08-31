@@ -18,11 +18,17 @@ async function startDraft(page: Page, name: string) {
 
 async function openListbox(page: Page, input: Locator, query = '') {
   await expect(input).toBeEnabled()
-  await input.focus()
-  await input.fill(query)
   const listboxId = await input.getAttribute('aria-controls')
   if (!listboxId) throw new Error('Combobox has no aria-controls listbox')
   const listbox = page.locator(`[id="${listboxId}"]`)
+
+  // The popover closes on blur behind a 120ms timer. Settle any pending close
+  // before focusing again, or that timer closes the popover we just reopened.
+  await input.evaluate((element: HTMLElement) => element.blur())
+  await expect(listbox).toBeHidden()
+
+  await input.focus()
+  await input.fill(query)
   await expect(listbox).toBeVisible()
   return listbox
 }
@@ -37,6 +43,20 @@ async function expectAliasMatch(listbox: Locator, expected: string) {
 async function optionOrder(listbox: Locator) {
   const texts = await listbox.locator('.combobox-option > span').allInnerTexts()
   return texts.map((text) => text.trim())
+}
+
+/**
+ * Localized names arrive from a presentation request, so a listbox opened right
+ * after a locale switch can still be rendering canonical English fallbacks.
+ * Snapshot the order only once every option carries the expected script.
+ */
+async function optionOrderOnceLocalized(listbox: Locator, script: RegExp) {
+  await expect(async () => {
+    const names = await optionOrder(listbox)
+    expect(names.length).toBeGreaterThan(1)
+    expect(names.filter((name) => !script.test(name))).toEqual([])
+  }).toPass()
+  return optionOrder(listbox)
 }
 
 async function sortedInBrowser(page: Page, locale: string, values: string[]) {
@@ -77,15 +97,19 @@ test('M02-G orders rules-content options by the active locale display name', asy
   await startDraft(page, `M02-G sort ${Date.now()}`)
   await page.getByRole('button', { name: /Origin/ }).click()
 
-  const englishOrder = await optionOrder(await openListbox(page, page.getByRole('combobox', { name: 'Race' })))
-  expect(englishOrder.length).toBeGreaterThan(1)
+  const englishOrder = await optionOrderOnceLocalized(
+    await openListbox(page, page.getByRole('combobox', { name: 'Race' })),
+    /^[\x20-\x7e]+$/,
+  )
   expect(englishOrder).toEqual(await sortedInBrowser(page, 'en', englishOrder))
 
-  await page.keyboard.press('Escape')
   await page.getByTestId('locale-option-zh-TW').click()
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW')
 
-  const chineseOrder = await optionOrder(await openListbox(page, page.getByRole('combobox', { name: '種族' })))
+  const chineseOrder = await optionOrderOnceLocalized(
+    await openListbox(page, page.getByRole('combobox', { name: '種族' })),
+    /[一-鿿]/,
+  )
   expect(chineseOrder).toHaveLength(englishOrder.length)
   expect(chineseOrder).toEqual(await sortedInBrowser(page, 'zh-TW', chineseOrder))
   expect(chineseOrder).not.toEqual(englishOrder)
@@ -101,7 +125,6 @@ test('M02-G keeps numeric Standard Array options in configured order in both loc
   )
   expect(englishValues).toEqual(['15', '14', '13', '12', '10', '8'])
 
-  await page.keyboard.press('Escape')
   await page.getByTestId('locale-option-zh-TW').click()
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW')
 
