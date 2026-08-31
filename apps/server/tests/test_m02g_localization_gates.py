@@ -48,6 +48,20 @@ def test_enabled_pack_required_localization_is_complete() -> None:
     )
 
 
+def test_overlay_unknown_stable_key_is_rejected(tmp_path: Path) -> None:
+    registry = load_default_content_registry()
+    _write_shard(
+        tmp_path,
+        "srd5.1",
+        "zh-TW",
+        "orphan-key.json",
+        {"srd5.1:spell:not-a-real-spell": {"name": "不存在的法術"}},
+    )
+
+    with pytest.raises(ContentValidationError, match="references unknown content key"):
+        load_content_localization_catalog(registry, tmp_path, policy_path=POLICY_PATH)
+
+
 def test_overlay_unknown_field_path_is_rejected(tmp_path: Path) -> None:
     registry = load_default_content_registry()
     entry = registry.list_kind("spell", source="srd5.1")[0]
