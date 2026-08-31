@@ -1,0 +1,56 @@
+[
+  {
+    "key": "vgm:subrace:protector-aasimar",
+    "index": "protector-aasimar",
+    "name": "Protector Aasimar",
+    "source": "vgm",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "protector-aasimar",
+      "name": "Protector Aasimar",
+      "race": {"key": "vgm:race:aasimar", "name": "Aasimar"},
+      "ability_bonuses": [
+        {"ability_score": {"key": "srd5.1:ability:wis", "name": "WIS"}, "bonus": 1}
+      ],
+      "features": [
+        {"key": "vgm:feature:radiant-soul", "name": "Radiant Soul"}
+      ]
+    }
+  },
+  {
+    "key": "vgm:subrace:scourge-aasimar",
+    "index": "scourge-aasimar",
+    "name": "Scourge Aasimar",
+    "source": "vgm",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "scourge-aasimar",
+      "name": "Scourge Aasimar",
+      "race": {"key": "vgm:race:aasimar", "name": "Aasimar"},
+      "ability_bonuses": [
+        {"ability_score": {"key": "srd5.1:ability:con", "name": "CON"}, "bonus": 1}
+      ],
+      "features": [
+        {"key": "vgm:feature:radiant-consumption", "name": "Radiant Consumption"}
+      ]
+    }
+  },
+  {
+    "key": "vgm:subrace:fallen-aasimar",
+    "index": "fallen-aasimar",
+    "name": "Fallen Aasimar",
+    "source": "vgm",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "fallen-aasimar",
+      "name": "Fallen Aasimar",
+      "race": {"key": "vgm:race:aasimar", "name": "Aasimar"},
+      "ability_bonuses": [
+        {"ability_score": {"key": "srd5.1:ability:str", "name": "STR"}, "bonus": 1}
+      ],
+      "features": [
+        {"key": "vgm:feature:necrotic-shroud", "name": "Necrotic Shroud"}
+      ]
+    }
+  }
+]

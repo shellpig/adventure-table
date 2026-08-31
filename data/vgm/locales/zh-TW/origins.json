@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "vgm",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "vgm:race:goblin": {"name": "哥布林"},
+    "vgm:race:hobgoblin": {"name": "大地精"},
+    "vgm:race:aasimar": {"name": "阿斯莫"},
+    "vgm:subrace:protector-aasimar": {"name": "守護者阿斯莫"},
+    "vgm:subrace:scourge-aasimar": {"name": "天譴阿斯莫"},
+    "vgm:subrace:fallen-aasimar": {"name": "墮落阿斯莫"},
+    "vgm:feature:fury-of-the-small": {"name": "弱小之怒"},
+    "vgm:feature:nimble-escape": {"name": "靈巧逃脫"},
+    "vgm:feature:saving-face": {"name": "挽回顏面"},
+    "vgm:feature:celestial-resistance": {"name": "天界抗性"},
+    "vgm:feature:healing-hands": {"name": "治癒之手"},
+    "vgm:feature:light-bearer": {"name": "光明使者"},
+    "vgm:feature:radiant-soul": {"name": "光耀之魂"},
+    "vgm:feature:radiant-consumption": {"name": "光耀吞噬"},
+    "vgm:feature:necrotic-shroud": {"name": "死靈帷幕"}
+  }
+}

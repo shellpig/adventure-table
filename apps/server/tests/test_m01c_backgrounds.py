@@ -93,7 +93,7 @@ def _draft(background_ref: str) -> BuilderDraft:
 def test_default_registry_enables_complete_m01c_background_packs() -> None:
     registry = load_default_content_registry()
 
-    assert registry.enabled_pack_ids == ("srd5.1", "phb2014", "scag", "gos")
+    assert registry.enabled_pack_ids == ("srd5.1", "phb2014", "scag", "gos", "vgm")
     assert {entry.key for entry in registry.list_kind("background", source="scag")} == SCAG_KEYS
     assert {entry.key for entry in registry.list_kind("background", source="gos")} == GOS_KEYS
 

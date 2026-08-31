@@ -10,7 +10,7 @@ from app.domain.character_builder.basics import _append_entry_grants
 from app.domain.character_builder.schemas import BuilderGrantSummary
 
 
-NON_SRD_SOURCES = {"phb2014", "scag", "gos"}
+NON_SRD_SOURCES = {"phb2014", "scag", "gos", "vgm"}
 HAN = re.compile(r"[㐀-鿿]")
 
 
@@ -122,6 +122,7 @@ def test_m02f_localization_does_not_mutate_canonical_content_or_english() -> Non
             "phb2014:background:spy",
             "scag:background:city-watch",
             "gos:background:shipwright",
+            "vgm:race:goblin",
         )
     }
 
@@ -130,9 +131,11 @@ def test_m02f_localization_does_not_mutate_canonical_content_or_english() -> Non
     assert catalog.resolve_name("phb2014:race:variant-human", "en").value == "Variant Human"
     assert catalog.resolve_name("scag:background:city-watch", "en").value == "City Watch"
     assert catalog.resolve_name("gos:background:shipwright", "en").value == "Shipwright"
+    assert catalog.resolve_name("vgm:race:goblin", "en").value == "Goblin"
     assert catalog.resolve_name("phb2014:race:variant-human", "zh-TW").value == "變體人類"
     assert catalog.resolve_name("scag:background:city-watch", "zh-TW").value == "城市守衛"
     assert catalog.resolve_name("gos:background:shipwright", "zh-TW").value == "船工"
+    assert catalog.resolve_name("vgm:race:goblin", "zh-TW").value != "Goblin"
 
     for key, before in watched.items():
         assert registry.get(key).model_dump(mode="python") == before
@@ -195,7 +198,12 @@ def test_background_feature_grants_carry_a_localizable_presentation_identity() -
             continue
 
         grants: list[BuilderGrantSummary] = []
-        _append_entry_grants(grants, registry, background)
+        _append_entry_grants(
+            grants,
+            registry,
+            background,
+            character_level=None,
+        )
         feature_grants = [
             grant for grant in grants if grant.kind == "background_feature"
         ]

@@ -18,6 +18,7 @@ from app.domain.character_builder.schemas import (
     BuilderResolvedSummary,
 )
 from app.domain.rules.abilities import ABILITY_NAMES, ability_modifier, effective_ability_score
+from app.domain.rules.feature_resources import initial_feature_resource_state
 from app.domain.rules.hit_points import calculate_max_hp
 from app.domain.rules.proficiency import proficiency_bonus, total_character_level
 from app.domain.rules.skills import all_skill_modifiers
@@ -83,7 +84,9 @@ def build_initial_character_state(
     *,
     prepared_spells: tuple[PreparedSpellSelection, ...] = (),
 ) -> CharacterState:
-    spell_slots, resources = initial_spell_resource_state(build)
+    spell_slots, spell_resources = initial_spell_resource_state(build)
+    resources = dict(spell_resources)
+    resources.update(initial_feature_resource_state(build, registry))
     state = CharacterState(
         current_hp=calculate_max_hp(build),
         temporary_hp=0,

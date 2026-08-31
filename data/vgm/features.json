@@ -1,0 +1,132 @@
+[
+  {
+    "key": "vgm:feature:fury-of-the-small",
+    "index": "fury-of-the-small",
+    "name": "Fury of the Small",
+    "source": "vgm",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "fury-of-the-small",
+      "name": "Fury of the Small",
+      "trigger": {"category": "damage", "target_size": "larger_than_self"},
+      "bonus": {"type": "character_level"},
+      "resource": {"capacity": {"type": "fixed", "value": 1}, "recharge": ["short_rest", "long_rest"]}
+    }
+  },
+  {
+    "key": "vgm:feature:nimble-escape",
+    "index": "nimble-escape",
+    "name": "Nimble Escape",
+    "source": "vgm",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "nimble-escape",
+      "name": "Nimble Escape",
+      "action": {"type": "bonus_action", "options": ["disengage", "hide"]}
+    }
+  },
+  {
+    "key": "vgm:feature:saving-face",
+    "index": "saving-face",
+    "name": "Saving Face",
+    "source": "vgm",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "saving-face",
+      "name": "Saving Face",
+      "trigger": {"category": "failed_attack_check_or_save", "ally_count_radius_ft": 30},
+      "bonus": {"type": "ally_count", "maximum": 5},
+      "resource": {"capacity": {"type": "fixed", "value": 1}, "recharge": ["short_rest", "long_rest"]}
+    }
+  },
+  {
+    "key": "vgm:feature:celestial-resistance",
+    "index": "celestial-resistance",
+    "name": "Celestial Resistance",
+    "source": "vgm",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "celestial-resistance",
+      "name": "Celestial Resistance",
+      "damage_resistances": ["radiant", "necrotic"]
+    }
+  },
+  {
+    "key": "vgm:feature:healing-hands",
+    "index": "healing-hands",
+    "name": "Healing Hands",
+    "source": "vgm",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "healing-hands",
+      "name": "Healing Hands",
+      "healing": {"type": "character_level"},
+      "resource": {"capacity": {"type": "fixed", "value": 1}, "recharge": ["long_rest"]}
+    }
+  },
+  {
+    "key": "vgm:feature:light-bearer",
+    "index": "light-bearer",
+    "name": "Light Bearer",
+    "source": "vgm",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "light-bearer",
+      "name": "Light Bearer",
+      "racial_spell_access": [
+        {
+          "spell": {"key": "srd5.1:spell:light", "name": "Light"},
+          "min_character_level": 1,
+          "casting_ability": "charisma",
+          "uses_spell_slot": false
+        }
+      ]
+    }
+  },
+  {
+    "key": "vgm:feature:radiant-soul",
+    "index": "radiant-soul",
+    "name": "Radiant Soul",
+    "source": "vgm",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "radiant-soul",
+      "name": "Radiant Soul",
+      "minimum_character_level": 3,
+      "movement": {"mode": "fly", "speed": 30, "temporary": true},
+      "bonus_damage": {"damage_type": "radiant", "type": "character_level", "once_per_turn": true},
+      "resource": {"capacity": {"type": "fixed", "value": 1}, "recharge": ["long_rest"]}
+    }
+  },
+  {
+    "key": "vgm:feature:radiant-consumption",
+    "index": "radiant-consumption",
+    "name": "Radiant Consumption",
+    "source": "vgm",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "radiant-consumption",
+      "name": "Radiant Consumption",
+      "minimum_character_level": 3,
+      "self_damage": {"type": "half_character_level_ceil", "damage_type": "radiant"},
+      "nearby_damage": {"type": "half_character_level_ceil", "damage_type": "radiant", "radius_ft": 10},
+      "bonus_damage": {"damage_type": "radiant", "type": "character_level", "once_per_turn": true},
+      "resource": {"capacity": {"type": "fixed", "value": 1}, "recharge": ["long_rest"]}
+    }
+  },
+  {
+    "key": "vgm:feature:necrotic-shroud",
+    "index": "necrotic-shroud",
+    "name": "Necrotic Shroud",
+    "source": "vgm",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "necrotic-shroud",
+      "name": "Necrotic Shroud",
+      "minimum_character_level": 3,
+      "fear_save_dc": {"base": 8, "add": ["proficiency_bonus", "charisma_modifier"]},
+      "bonus_damage": {"damage_type": "necrotic", "type": "character_level", "once_per_turn": true},
+      "resource": {"capacity": {"type": "fixed", "value": 1}, "recharge": ["long_rest"]}
+    }
+  }
+]

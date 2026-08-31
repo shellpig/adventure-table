@@ -1,0 +1,101 @@
+[
+  {
+    "key": "vgm:race:goblin",
+    "index": "goblin",
+    "name": "Goblin",
+    "source": "vgm",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "goblin",
+      "name": "Goblin",
+      "speed": 30,
+      "size": "Small",
+      "darkvision": 60,
+      "ability_bonuses": [
+        {"ability_score": {"key": "srd5.1:ability:dex", "name": "DEX"}, "bonus": 2},
+        {"ability_score": {"key": "srd5.1:ability:con", "name": "CON"}, "bonus": 1}
+      ],
+      "languages": [
+        {"key": "srd5.1:language:common", "name": "Common"},
+        {"key": "srd5.1:language:goblin", "name": "Goblin"}
+      ],
+      "traits": [],
+      "features": [
+        {"key": "vgm:feature:fury-of-the-small", "name": "Fury of the Small"},
+        {"key": "vgm:feature:nimble-escape", "name": "Nimble Escape"}
+      ],
+      "subraces": []
+    }
+  },
+  {
+    "key": "vgm:race:hobgoblin",
+    "index": "hobgoblin",
+    "name": "Hobgoblin",
+    "source": "vgm",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "hobgoblin",
+      "name": "Hobgoblin",
+      "speed": 30,
+      "size": "Medium",
+      "darkvision": 60,
+      "ability_bonuses": [
+        {"ability_score": {"key": "srd5.1:ability:con", "name": "CON"}, "bonus": 2},
+        {"ability_score": {"key": "srd5.1:ability:int", "name": "INT"}, "bonus": 1}
+      ],
+      "languages": [
+        {"key": "srd5.1:language:common", "name": "Common"},
+        {"key": "srd5.1:language:goblin", "name": "Goblin"}
+      ],
+      "proficiencies": [
+        {"key": "srd5.1:proficiency:light-armor", "name": "Light Armor"}
+      ],
+      "proficiency_choices": {
+        "choose": 2,
+        "type": "proficiencies",
+        "from": {
+          "option_set_type": "resource_list",
+          "resource_list_url": "/api/2014/proficiencies",
+          "filter": "martial_weapon"
+        }
+      },
+      "traits": [],
+      "features": [
+        {"key": "vgm:feature:saving-face", "name": "Saving Face"}
+      ],
+      "subraces": []
+    }
+  },
+  {
+    "key": "vgm:race:aasimar",
+    "index": "aasimar",
+    "name": "Aasimar",
+    "source": "vgm",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "aasimar",
+      "name": "Aasimar",
+      "speed": 30,
+      "size": "Medium",
+      "darkvision": 60,
+      "ability_bonuses": [
+        {"ability_score": {"key": "srd5.1:ability:cha", "name": "CHA"}, "bonus": 2}
+      ],
+      "languages": [
+        {"key": "srd5.1:language:common", "name": "Common"},
+        {"key": "srd5.1:language:celestial", "name": "Celestial"}
+      ],
+      "traits": [],
+      "features": [
+        {"key": "vgm:feature:celestial-resistance", "name": "Celestial Resistance"},
+        {"key": "vgm:feature:healing-hands", "name": "Healing Hands"},
+        {"key": "vgm:feature:light-bearer", "name": "Light Bearer"}
+      ],
+      "subraces": [
+        {"key": "vgm:subrace:protector-aasimar", "name": "Protector Aasimar"},
+        {"key": "vgm:subrace:scourge-aasimar", "name": "Scourge Aasimar"},
+        {"key": "vgm:subrace:fallen-aasimar", "name": "Fallen Aasimar"}
+      ]
+    }
+  }
+]

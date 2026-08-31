@@ -41,14 +41,13 @@ def compile_origin(
 ) -> OriginCompilation:
     """Compile permanent origin selections that P1 did not previously persist.
 
-    P1 already compiles selected proficiencies through the progression path and
-    ability bonuses through the foundation summary. M01-B keeps those paths and
-    adds the remaining origin identities here: languages, explicit racial
-    features, Variant Human feats, and feature-owned racial spell access.
+    M01-D extends the existing origin compiler with character-level racial feature
+    gates. Content can declare ``minimum_character_level`` on a feature; direct
+    high-level Create and Level Up therefore share one eligibility rule.
     """
 
     languages: list[str] = []
-    features: list[str] = []
+    candidate_features: list[str] = []
     feats: list[str] = []
     issues: list[BuilderIssue] = []
 
@@ -59,13 +58,13 @@ def compile_origin(
         if stable_key_is_kind(reference_id, "language"):
             languages.append(reference_id)
         elif stable_key_is_kind(reference_id, "feature"):
-            features.append(reference_id)
+            candidate_features.append(reference_id)
         elif stable_key_is_kind(reference_id, "feat"):
             feats.append(reference_id)
 
-    access_entries: list[SpellAccessEntry] = []
     character_level = target_level or 0
-    for feature_ref in dict.fromkeys(features):
+    features: list[str] = []
+    for feature_ref in dict.fromkeys(candidate_features):
         feature = registry.get_optional(feature_ref)
         if feature is None:
             issues.append(
@@ -76,6 +75,26 @@ def compile_origin(
                     feature_ref,
                 )
             )
+            continue
+        minimum_level = feature.data.get("minimum_character_level", 1)
+        if not isinstance(minimum_level, int) or minimum_level < 1 or minimum_level > 20:
+            issues.append(
+                _issue(
+                    "origin_rules_data_error",
+                    f"content.{feature_ref}.minimum_character_level",
+                    f"{feature.name} has an invalid character-level gate.",
+                    feature_ref,
+                )
+            )
+            continue
+        if character_level < minimum_level:
+            continue
+        features.append(feature_ref)
+
+    access_entries: list[SpellAccessEntry] = []
+    for feature_ref in features:
+        feature = registry.get_optional(feature_ref)
+        if feature is None:
             continue
         raw_access = feature.data.get("racial_spell_access")
         if raw_access is None:
