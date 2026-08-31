@@ -34,6 +34,8 @@ def build_content_reference_keys(build: CharacterBuild) -> tuple[str, ...]:
     """
 
     refs: list[str] = [build.race_ref, *build.class_progression]
+    if build.race_variant_ref:
+        refs.append(build.race_variant_ref)
     if build.subrace_ref:
         refs.append(build.subrace_ref)
     if build.background_ref:
@@ -126,6 +128,22 @@ def _validate_numeric_overrides(build: CharacterBuild, registry: ContentRegistry
 def validate_build_references(build: CharacterBuild, registry: ContentRegistry) -> None:
     for key in build_content_reference_keys(build):
         _require_content(registry, key)
+
+    if build.race_variant_ref is not None:
+        variant = registry.get(build.race_variant_ref)
+        base_race = variant.data.get("base_race_ref")
+        try:
+            expected_base = (
+                reference_to_stable_key(base_race, kinds={"race"})
+                if isinstance(base_race, dict)
+                else None
+            )
+        except ValueError:
+            expected_base = None
+        if expected_base != build.race_ref:
+            raise CharacterValidationError(
+                f"race variant {build.race_variant_ref} does not belong to race {build.race_ref}"
+            )
 
     if build.subrace_ref is not None:
         subrace = registry.get(build.subrace_ref)
