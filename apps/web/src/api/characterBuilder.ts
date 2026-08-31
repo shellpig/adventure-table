@@ -149,6 +149,7 @@ export type BuilderGrantSummary = {
   kind: string
   source_ref: string
   reference_id?: string | null
+  presentation_field?: string | null
 }
 
 export type BuilderAbilityScoreSummary = {
