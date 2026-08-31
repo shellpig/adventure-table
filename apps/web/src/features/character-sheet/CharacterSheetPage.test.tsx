@@ -41,7 +41,7 @@ const sheet: CharacterSheetDTO = {
   },
   saving_throws: { strength: 7, dexterity: 2, constitution: 6, intelligence: 3, wisdom: 0, charisma: -1 },
   skills: { athletics: 7, arcana: 7, perception: 4 },
-  passive_perception: 14, initiative_modifier: 2, armor_class: 18, max_hp: 74, current_hp: 74, temporary_hp: 0,
+  passive_perception: 14, initiative_modifier: 2, armor_class: 18, walking_speed: 30, swim_speed: 30, max_hp: 74, current_hp: 74, temporary_hp: 0,
   hit_dice: [{ die: 'd10', total: 5, available: 5 }, { die: 'd6', total: 5, available: 5 }],
   features: [{ key: 'srd5.1:feature:second-wind', name: 'Second Wind' }, { key: 'srd5.1:feature:arcane-recovery', name: 'Arcane Recovery' }],
   conditions: [],
@@ -71,6 +71,10 @@ describe('P0-E Character Sheet', () => {
     expect(html).toContain('Lv. 10')
     expect(html).toContain('AC')
     expect(html).toContain('Passive Perception')
+    expect(html).toContain('Movement')
+    expect(html).toContain('Walk')
+    expect(html).toContain('Swim')
+    expect(html).toContain('30 ft')
     expect(html).toContain('d10')
     expect(html).toContain('5/5')
     expect(html).toContain('d6')
