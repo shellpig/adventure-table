@@ -134,10 +134,12 @@ async function chooseOption(page: Page, input: Locator, value: string, source?: 
   const listboxId = await input.getAttribute('aria-controls')
   if (!listboxId) throw new Error(`Combobox for "${value}" has no aria-controls listbox`)
   const listbox = page.locator(`[id="${listboxId}"]`)
-  let option = listbox.getByRole('option').filter({ has: listbox.getByText(value, { exact: true }) })
+  let option = listbox.getByRole('option').filter({
+    has: page.getByText(value, { exact: true }),
+  })
   if (source) {
     option = option.filter({
-      has: listbox.getByText(source, { exact: true }),
+      has: page.getByText(source, { exact: true }),
     })
   }
   await expect(option).toHaveCount(1)
