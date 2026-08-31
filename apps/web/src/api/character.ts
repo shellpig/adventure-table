@@ -119,6 +119,10 @@ export type CharacterSheetDTO = {
   passive_perception: number
   initiative_modifier: number
   armor_class: number
+  walking_speed: number
+  swim_speed?: number | null
+  climb_speed?: number | null
+  fly_speed?: number | null
   max_hp: number
   current_hp: number
   temporary_hp: number
