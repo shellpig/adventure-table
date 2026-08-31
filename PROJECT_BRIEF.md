@@ -43,7 +43,7 @@ M01 的直接目標：
 - 補 PHB 非 SRD Background / race / subrace / Variant Human。（M01-B ✅）
 - M01-B 完成後先進行第一輪真人創角測試。（✅ 已執行）
 - 補 SCAG / GoS Background。（M01-C ✅）
-- 補 VGM race（M01-D ✅）、SCAG Half-Elf variant、VRGR Dhampir、TCE Artificer、TCE magic items。
+- 補 VGM race（M01-D ✅）、SCAG Half-Elf variant、VRGR Dhampir、TCE Artificer、TCE Optional Class Features / Fighting Styles，以及 PHB / SCAG / XGE / TCE 2014 Subclass。
 - M01 closeout 後回到 P2 規劃。
 
 **M02 — Traditional Chinese / English Localization 已於 2026-08-31 closeout（M02-A～M02-H 全部完成）；M01-D 亦已完成並關門，下一步是 M01-E。**
@@ -66,7 +66,7 @@ M01 的直接目標：
 
 **M02-H — Full M02 Integration & Closeout 已完成**：補完 M02-G 遺留的 structured system-message 契約——server 改送語言中立的 `disabled_reason_code` + `disabled_reason_params` 與 issue `message_params`，multiclass / feat prerequisite 以 ability + minimum score 結構表示、content identity 用 StableKey，前端直接格式化 `code + params`，不再 regex-match server 英文句子；繁中 disabled 選項因此顯示具體原因。新增雙語全站 crawl + overflow gate 與 localization state integrity E2E（Draft 四次切換不增 revision、Character live state 跨切換與 reload 不變）。同步關閉專案 SSOT：`AGENTS.md` / `PROJECT_BRIEF.md` 切回 M01-D 並加入永久 supported-locale 交付守則、`規格企劃.md` 產品基線改為兩種語言、`data/srd5.1/NOTICE.md` 補 CC BY 4.0 繁中 translation/adaptation 聲明。詳見 `docs/M02/M02-H_CLOSEOUT.md`。
 
-> **下一個 coding step 是 M01-E — SCAG Half-Elf Variant & Grant Replacement。只有在使用者明確要求後才 coding。M01-E～M01-J 完成後，才回到 P2 — Room / Campaign / Session / Seat 的規劃；不得因 M01 / M02 提前拆 P2～P8。**
+> **下一個 coding step 是 M01-E — SCAG Half-Elf Variant & Grant Replacement。只有在使用者明確要求後才 coding。M01-E～M01-K 完成後，才回到 P2 — Room / Campaign / Session / Seat 的規劃；不得因 M01 / M02 提前拆 P2～P8。**
 
 已完成的產品／規劃工作：
 
@@ -82,7 +82,7 @@ M01 的直接目標：
 - 大 Phase P0～P8 已排定。
 - 全專案規則：**每個 Phase 在 coding 前必須拆成可獨立實作、驗證、commit 的 Subphases；只拆當前 Phase，不提前拆後續 Phase。已明確拍板且插入點確定的 M Phase 是唯一可提前完成三份文件的例外。**
 - M Phase 可插在正常 P Phase 之間，也可插在另一個 M Phase 的兩個 Subphase 之間；不改寫正常 P Roadmap。
-- M01-A～M01-J 三份正式文件已完成。
+- M01-A～M01-K 三份正式文件已完成。
 - M02-A～M02-H 三份正式文件已完成。
 - 基礎技術棧：React + TypeScript + Vite / Python + FastAPI / PostgreSQL。
 
@@ -216,7 +216,7 @@ M01 共通原則：
 - 複雜 runtime effect 若需要未來 Combat / Rest context，可以明確標為 manual/deferred，但 structural rule / capacity / identity 必須先正確。
 - M01-B 是第一個真人創角 Gate；Gate blocker 已完成修正並關門。
 - **M01-C 後插入的 M02 已 closeout；M01-D 亦已完成並關門，M01 自 M01-E 依原編號接續。**
-- **M01-D～J 恢復後遵守 M02 localization 永久規則：新增／修改／首次 expose user-visible system / rules content 必須同一 Subphase 同步 `zh-TW` / `en`。**
+- **M01-D～K 遵守 M02 localization 永久規則：新增／修改／首次 expose user-visible system / rules content 必須同一 Subphase 同步 `zh-TW` / `en`。**
 
 ---
 
@@ -234,8 +234,9 @@ M01 共通原則：
 | **M01-F — VRGR Lineage & Dhampir** | 📐 | Lineage、Dhampir、Ancestral Legacy、既有角色 versioned transformation；同步雙語 |
 | **M01-G — TCE Artificer Core** | 📐 | Artificer progression / spellcasting / subclass；multiclass half-caster ceil rounding；同步雙語 |
 | **M01-H — TCE Artificer Advanced Features & Infusions** | 📐 | Infusion known vs active state、feature resources、attunement capacity、advanced feature boundary；同步雙語 |
-| **M01-I — TCE Magic Items** | 📐 | TCE item registry、rarity / attunement / restrictions / charges、manual-effect fallback；首次 expose 欄位同步雙語 |
-| **M01-J — Full M01 Integration & Closeout** | 📐 | all-pack validation、P0/P1 regression、M02 localization regression、full E2E、restart persistence、真人 Gate recheck |
+| **M01-I — TCE Optional Class Features & Fighting Styles** | 📐 | addition / expanded option pool / replacement / retraining，並補 TCE Fighting Styles；同步雙語 |
+| **M01-J — 2014 Class Subclass Expansion** | 📐 | PHB / SCAG / XGE / TCE 主要官方 Subclass inventory、generic feature shapes 與 Builder integration；同步雙語 |
+| **M01-K — Full M01 Integration & Closeout** | 📐 | all-pack validation、P0/P1 regression、M02 localization regression、full E2E、restart persistence、真人 Gate recheck |
 
 **M01-A～M01-D 已完成並關門。下一個可開工 Subphase 是 M01-E。**
 
@@ -313,7 +314,7 @@ P0/P1 已完成；**目前已拆 M01 與 M02。P2～P8 仍維持大 Phase，不�
 實際執行順序：
 
 ```text
-M01-A ✅ → M01-B ✅ → M01-C ✅ → M02-A ✅ → M02-B ✅ → M02-C ✅ → M02-D ✅ → M02-E ✅ → M02-F ✅ → M02-G ✅ → M02-H ✅ → M01-D ✅ → M01-E～M01-J → P2
+M01-A ✅ → M01-B ✅ → M01-C ✅ → M02-A ✅ → M02-B ✅ → M02-C ✅ → M02-D ✅ → M02-E ✅ → M02-F ✅ → M02-G ✅ → M02-H ✅ → M01-D ✅ → M01-E～M01-K → P2
 ```
 
 ---

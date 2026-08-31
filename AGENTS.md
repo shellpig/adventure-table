@@ -8,7 +8,7 @@
 - **一句話**：網站只管需要共享、同步、計算、保存、權限與 AI 接入的東西，其餘還給 DM 的嘴巴
 - **首發規則集**：D&D 5e 2014；Built-in Content：SRD 5.1（CC BY 4.0），非 SRD 內容依私人專案需求逐步加入
 - **專案性質**：朋友間私人使用，非預計商品化平台
-- **目前階段**：**P0 與 P1 已完成並關門。M02 — Traditional Chinese / English Localization 已完成 M02-A～M02-H 並關門；網站現在是 `zh-TW` / `en` 兩個純語言模式。M01 已完成 M01-A～M01-D，下一個可開工 Subphase 是 M01-E — SCAG Half-Elf Variant & Grant Replacement。M01-E～M01-J 完成後才回到 P2 — Room / Campaign / Session / Seat 的規劃。**
+- **目前階段**：**P0 與 P1 已完成並關門。M02 — Traditional Chinese / English Localization 已完成 M02-A～M02-H 並關門；網站現在是 `zh-TW` / `en` 兩個純語言模式。M01 已完成 M01-A～M01-D，下一個可開工 Subphase 是 M01-E — SCAG Half-Elf Variant & Grant Replacement。M01-E～M01-K 完成後才回到 P2 — Room / Campaign / Session / Seat 的規劃。**
 - **目前進度**：以 `PROJECT_BRIEF.md` 為單一事實來源
 - **基礎技術棧**：目前方向見 `技術棧討論.md`。該檔只討論語言／Framework／DB 等基礎選型，不承擔各 Phase 的實作設計
 
@@ -107,7 +107,7 @@ grep -n "M01-D" docs/M01/實作規格.md docs/M01/開發設計方針.md docs/M01
 4. **Subphase 只拆當前 Phase，不提前拆後續 Phase。** 尚未輪到的 P Phase 或 M Phase 保持大 Phase / 未建立狀態；可以記錄必要的跨 Phase 承接要求，但不得因此提前設計未來 Phase 的 schema / API / module。
    **唯一例外：使用者已明確決定要插入、且插入點已確定的 M Phase，可以在插入點到達前先完成拆分與三份文件**（M02 即為此例，插入點固定在 M01-C closeout 後）。此例外只適用已拍板的插入，不適用「將來可能會做」的 Phase。
 5. 同一 Phase 的 `實作規格.md`、`開發設計方針.md`、`測試指南.md` 必須使用完全一致的 Subphase 名稱與順序，讓實作者可用 Subphase id 精準取得三份契約。
-6. `PROJECT_BRIEF.md` 在當前 Phase 已拆分後，必須一列一個 Subphase 顯示進度，不可再用「P0（含 A～F）」或「M01（含 A～J）」合併成一列。
+6. `PROJECT_BRIEF.md` 在當前 Phase 已拆分後，必須一列一個 Subphase 顯示進度，不可再用「P0（含 A～F）」或「M01（含 A～K）」合併成一列。
 7. 可以記錄已知的跨 Phase 相容要求，例如 P0 可以要求 Character 資料模型不得排斥 Multiclass；但不用現在決定 P2 Token table 或 P5 Tactical renderer。
 8. 後續 Phase 開工時，以當時真正存在的 codebase 為基礎再設計，比現在猜測更可靠。
 
