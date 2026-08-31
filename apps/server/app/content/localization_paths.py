@@ -1,15 +1,38 @@
 from __future__ import annotations
 
-"""Public localization path API shared by runtime and structural gates.
+from typing import Any, Mapping
 
-The canonical traversal implementation currently lives in ``localization`` because
-``ContentLocalizationCatalog`` predates this facade. Re-exporting the exact same
-functions here avoids a second implementation (and therefore semantic drift) while
-callers outside that module depend only on a public helper name. A later module
-split can move the implementation here without changing those callers.
-"""
 
-from app.content.localization import _read_path as read_localization_path
-from app.content.localization import _tokens as localization_path_tokens
+def localization_path_tokens(path: str) -> tuple[str, ...]:
+    """Parse a concrete localization field path into traversal tokens."""
+
+    if not path or path.startswith(".") or path.endswith("."):
+        raise ValueError(f"invalid localization field path: {path!r}")
+    return tuple(path.split("."))
+
+
+def read_localization_path(root: Any, path: str) -> Any:
+    """Read a concrete field path from a canonical content payload.
+
+    Runtime localization resolution and structural overlay validation both use
+    this public helper so field-path semantics have one implementation.
+    """
+
+    current = root
+    for token in localization_path_tokens(path):
+        if isinstance(current, Mapping):
+            if token not in current:
+                raise KeyError(path)
+            current = current[token]
+            continue
+        if isinstance(current, (list, tuple)) and token.isdigit():
+            position = int(token)
+            if position >= len(current):
+                raise KeyError(path)
+            current = current[position]
+            continue
+        raise KeyError(path)
+    return current
+
 
 __all__ = ["localization_path_tokens", "read_localization_path"]
