@@ -24,6 +24,7 @@ from app.domain.character_builder.schemas import (
     BuilderChoiceSelection,
     BuilderDraft,
     BuilderDraftPayload,
+    BuilderHPMethod,
     BuilderLevelChoice,
     BuilderMode,
     BuilderReferenceSelection,
@@ -73,11 +74,9 @@ def _payload(
     )
 
 
-def _origin_for(*, subrace: str, level: int, level_choices=()):
+def _origin_for(*, subrace: str, level: int):
     registry = load_default_content_registry()
     payload = _payload(race="vgm:race:aasimar", subrace=subrace, level=level)
-    if level_choices:
-        payload = payload.model_copy(update={"level_choices": tuple(level_choices)})
     draft = _draft(payload)
     choices = build_foundation_choices(draft, registry)
     summary = resolve_creation_summary(draft, registry, choices)
@@ -270,32 +269,74 @@ def test_aasimar_transformation_features_use_character_level_gate(
 
 
 def test_aasimar_gate_uses_total_character_level_for_multiclass_progression() -> None:
-    level_choices = (
-        BuilderLevelChoice(
-            character_level=1,
-            class_ref="srd5.1:class:fighter",
-            hp_method="first_level_max",
-            hp_base_gain=10,
-        ),
-        BuilderLevelChoice(
-            character_level=2,
-            class_ref="srd5.1:class:wizard",
-            hp_method="fixed",
-            hp_base_gain=4,
-        ),
-        BuilderLevelChoice(
-            character_level=3,
-            class_ref="srd5.1:class:fighter",
-            hp_method="fixed",
-            hp_base_gain=6,
-        ),
-    )
-    _, _, origin = _origin_for(
+    registry = load_default_content_registry()
+    payload = _payload(
+        race="vgm:race:aasimar",
         subrace="vgm:subrace:protector-aasimar",
         level=3,
-        level_choices=level_choices,
+    ).model_copy(
+        update={
+            "level_choices": (
+                BuilderLevelChoice(
+                    character_level=1,
+                    class_ref="srd5.1:class:fighter",
+                    hp_method=BuilderHPMethod.FIRST_LEVEL,
+                    hp_base_gain=10,
+                ),
+                BuilderLevelChoice(
+                    character_level=2,
+                    class_ref="srd5.1:class:fighter",
+                    hp_method=BuilderHPMethod.FIXED_AVERAGE,
+                    hp_base_gain=6,
+                ),
+                BuilderLevelChoice(
+                    character_level=3,
+                    class_ref="srd5.1:class:rogue",
+                    hp_method=BuilderHPMethod.FIXED_AVERAGE,
+                    hp_base_gain=5,
+                ),
+            )
+        }
     )
-    assert "vgm:feature:radiant-soul" in origin.feature_refs
+
+    first_pass = compile_builder_draft(_draft(payload), registry)
+    selections: dict[str, BuilderChoiceSelection] = {}
+    used_references: set[str] = set()
+    for choice in first_pass.choices:
+        if choice.option_source not in {
+            "content:language_options",
+            "content:class-proficiency",
+        }:
+            continue
+        selected: list[str] = []
+        for option in choice.options:
+            if option.disabled_reason is not None:
+                continue
+            if option.reference_id is not None and option.reference_id in used_references:
+                continue
+            selected.append(option.option_id)
+            if option.reference_id is not None:
+                used_references.add(option.reference_id)
+            if len(selected) == choice.choose_count:
+                break
+        assert len(selected) == choice.choose_count, choice.choice_id
+        selections[choice.choice_id] = BuilderChoiceSelection(
+            choice_id=choice.choice_id,
+            source_ref=choice.source_ref,
+            selected_option_ids=tuple(selected),
+        )
+
+    completed_payload = payload.model_copy(update={"choice_selections": selections})
+    result = compile_builder_draft(_draft(completed_payload), registry)
+
+    assert result.build_candidate is not None
+    assert result.build_candidate.character_level == 3
+    assert result.build_candidate.class_progression == (
+        "srd5.1:class:fighter",
+        "srd5.1:class:fighter",
+        "srd5.1:class:rogue",
+    )
+    assert "vgm:feature:radiant-soul" in result.build_candidate.feature_refs
 
 
 def test_vgm_feature_resources_use_deterministic_keys() -> None:
