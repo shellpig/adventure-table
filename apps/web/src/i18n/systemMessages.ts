@@ -70,6 +70,15 @@ const BUILDER_ISSUE_MESSAGES: Record<string, LocalizedMessage> = {
   stale_build_version: { 'zh-TW': '此角色建構版本已不是最新版本，請重新載入後再操作。', en: 'This character build version is stale. Reload before continuing.' },
   duplicate_numeric_override: { 'zh-TW': '同一個數值覆寫項目只能設定一次。', en: 'Each numeric override key may only be configured once.' },
   numeric_override: { 'zh-TW': '此數值已使用手動覆寫，並取代系統計算結果。', en: 'This value uses a manual override instead of the calculated result.' },
+  invalid_version_target_level: { 'zh-TW': '此次操作的目標角色等級不正確，請重新載入後再試一次。', en: 'This draft does not target the expected character level.' },
+  level_up_origin_changed: { 'zh-TW': '升級不能修改種族、背景或陣營；請改用重建或修正流程。', en: 'Level Up cannot rewrite race, background or alignment. Use Build Edit or Correction.' },
+  level_up_historical_progression_changed: { 'zh-TW': '升級不能修改既有等級的職業選擇；請改用重建或修正流程。', en: 'Level Up cannot rewrite class choices from the base build. Use Build Edit or Correction.' },
+  level_up_historical_hp_changed: { 'zh-TW': '升級不能修改既有等級的生命值歷程；請改用重建或修正流程。', en: 'Level Up cannot rewrite historical HP progression from the base build. Use Build Edit or Correction.' },
+  level_up_starting_equipment_changed: { 'zh-TW': '升級必須保留原本的起始裝備，不能在此變更。', en: 'Level Up must preserve the original starting equipment.' },
+  level_up_numeric_override_changed: { 'zh-TW': '數值覆寫不是升級可以調整的項目；請改用重建或修正流程。', en: 'Numeric overrides are not a Level Up choice. Use Build Edit or Correction.' },
+  build_candidate_missing: { 'zh-TW': '伺服器無法從目前的草稿產生完整的角色建構，請檢查前面步驟是否還有未完成的選擇。', en: 'The server could not compile a final character build from this draft.' },
+  initial_state_missing: { 'zh-TW': '伺服器無法建立這個角色的初始狀態，請檢查前面步驟是否還有未完成的選擇。', en: 'The server could not build the initial current state.' },
+  final_character_validation_failed: { 'zh-TW': '最終角色驗證未通過，請檢查前面步驟的選擇是否互相衝突。', en: 'Final character validation failed.' },
 }
 
 const DISABLED_REASON_MESSAGES: Record<string, LocalizedMessage> = {

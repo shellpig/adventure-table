@@ -45,6 +45,28 @@ describe('M02-G system-owned messages', () => {
     }
   })
 
+  it('covers the remaining Level Up guard and build-failure codes in both locales', () => {
+    const cases = [
+      ['invalid_version_target_level', 'level_up must target Character Level 6; got 7.'],
+      ['level_up_origin_changed', 'Level Up cannot rewrite race/background/alignment; use Build Edit or Correction.'],
+      ['level_up_historical_progression_changed', 'Level Up cannot rewrite class choices from the base Build.'],
+      ['level_up_historical_hp_changed', 'Level Up cannot rewrite historical HP progression from the base Build.'],
+      ['level_up_starting_equipment_changed', 'Level Up must preserve immutable starting-equipment provenance.'],
+      ['level_up_numeric_override_changed', 'Numeric Overrides are not a Level Up choice; use Build Edit or Correction.'],
+      ['build_candidate_missing', 'The server could not compile a final CharacterBuild from this draft.'],
+      ['initial_state_missing', 'The server could not build initial Current State.'],
+      ['final_character_validation_failed', 'Character level 1 must use the starting class maximum hit die.'],
+    ] as const
+
+    for (const [code, original] of cases) {
+      const localized = localizedBuilderIssueMessage(code, original, 'zh-TW')
+      expect(localized).not.toContain(original)
+      expect(localized).not.toMatch(/[A-Za-z]/)
+      expect(localized).not.toBe('目前的角色資料有一項需要修正的規則問題。')
+      expect(localizedBuilderIssueMessage(code, original, 'en')).toMatch(/[A-Za-z]/)
+    }
+  })
+
   it('supports code + params for disabled reasons without parsing English prose', () => {
     expect(
       localizedDisabledReason(
