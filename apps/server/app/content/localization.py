@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from app.content.identity import parse_stable_key
+from app.content.localization_paths import localization_path_tokens, read_localization_path
 from app.content.registry import ContentRegistry, ContentValidationError
 
 
@@ -165,32 +166,8 @@ class LocalizedOptionalRoleplayTable:
     suggestions: tuple[LocalizedRoleplaySuggestion, ...]
 
 
-def _tokens(path: str) -> tuple[str, ...]:
-    if not path or path.startswith(".") or path.endswith("."):
-        raise ValueError(f"invalid localization field path: {path!r}")
-    return tuple(path.split("."))
-
-
-def _read_path(root: Any, path: str) -> Any:
-    current = root
-    for token in _tokens(path):
-        if isinstance(current, Mapping):
-            if token not in current:
-                raise KeyError(path)
-            current = current[token]
-            continue
-        if isinstance(current, (list, tuple)) and token.isdigit():
-            position = int(token)
-            if position >= len(current):
-                raise KeyError(path)
-            current = current[position]
-            continue
-        raise KeyError(path)
-    return current
-
-
 def _iter_matching_paths(root: Any, pattern: str) -> Iterable[str]:
-    tokens = _tokens(pattern)
+    tokens = localization_path_tokens(pattern)
 
     def walk(current: Any, offset: int, concrete: list[str]) -> Iterable[str]:
         if offset == len(tokens):
@@ -293,7 +270,7 @@ class ContentLocalizationCatalog:
         parsed = parse_stable_key(key)
         payload = self._canonical_payload(key)
         try:
-            canonical = _read_path(payload, field_path)
+            canonical = read_localization_path(payload, field_path)
         except KeyError as exc:
             raise ContentValidationError(f"{key}: unknown localization field {field_path}") from exc
 

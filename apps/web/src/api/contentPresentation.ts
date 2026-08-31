@@ -1,4 +1,5 @@
 import type { Locale } from '../i18n/locale'
+import { createLocalizedRequestError } from '../i18n/systemMessages'
 
 export type LocalizedPresentationField = {
   field_path: string
@@ -51,14 +52,16 @@ export async function getContentPresentations(
     },
   )
   if (!response.ok) {
+    let code: string | undefined
     let message = `Presentation request failed (${response.status})`
     try {
-      const payload = (await response.json()) as { error?: { message?: string } }
+      const payload = (await response.json()) as { error?: { code?: string; message?: string } }
+      code = payload.error?.code
       message = payload.error?.message ?? message
     } catch {
       // Keep the HTTP fallback when the response is not JSON.
     }
-    throw new Error(message)
+    throw createLocalizedRequestError(code, response.status, message)
   }
   return (await response.json()) as ContentPresentationBatch
 }

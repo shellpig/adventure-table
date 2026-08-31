@@ -1,3 +1,7 @@
+import {
+  createLocalizedRequestError,
+  installDynamicLocalizedBuilderPayload,
+} from '../i18n/systemMessages'
 import type { BuilderMode, BuilderView } from './characterBuilder'
 
 export type VersionedBuilderMode = Exclude<BuilderMode, 'create'>
@@ -64,16 +68,18 @@ async function request<T>(input: RequestInfo | URL, init?: RequestInit): Promise
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   })
   if (!response.ok) {
+    let code: string | undefined
     let message = `Request failed (${response.status})`
     try {
       const payload = (await response.json()) as APIErrorPayload
+      code = payload.error?.code
       message = payload.error?.message ?? message
     } catch {
       // Keep the HTTP fallback when the response is not JSON.
     }
-    throw new Error(message)
+    throw createLocalizedRequestError(code, response.status, message)
   }
-  return (await response.json()) as T
+  return installDynamicLocalizedBuilderPayload((await response.json()) as T)
 }
 
 export function createCharacterVersionDraft(

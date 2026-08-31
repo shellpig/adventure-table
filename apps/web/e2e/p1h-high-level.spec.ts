@@ -77,6 +77,37 @@ async function chooseFirstEnabled(page: Page, input: Locator) {
   await waitForDraftRevision(page, revision)
 }
 
+async function chooseLowestLevelSpell(page: Page, input: Locator) {
+  await expectDraftSaved(page)
+  await expect(input).toBeEnabled()
+  const revision = await currentDraftRevision(page)
+  await input.focus()
+
+  const listboxId = await input.getAttribute('aria-controls')
+  if (!listboxId) throw new Error('Spell combobox has no aria-controls listbox')
+  const listbox = page.locator(`[id="${listboxId}"]`)
+  await expect(listbox).toBeVisible()
+
+  const options = listbox.locator('[role="option"]:not([disabled])')
+  const count = await options.count()
+  if (count === 0) throw new Error('Spell combobox has no selectable option')
+
+  let bestIndex = -1
+  let bestLevel = Number.POSITIVE_INFINITY
+  for (let index = 0; index < count; index += 1) {
+    const text = (await options.nth(index).innerText()).trim()
+    const level = /Cantrip/.test(text) ? 0 : Number(text.match(/Level (\d+)/)?.[1] ?? Number.NaN)
+    if (Number.isNaN(level)) throw new Error(`Cannot parse spell level from option: ${text}`)
+    if (level < bestLevel) {
+      bestLevel = level
+      bestIndex = index
+    }
+  }
+
+  await options.nth(bestIndex).click()
+  await waitForDraftRevision(page, revision)
+}
+
 async function fillEmptyComboboxes(page: Page, container: Locator) {
   for (let pass = 0; pass < 96; pass += 1) {
     const inputs = container.getByRole('combobox')
@@ -118,7 +149,7 @@ async function fillExactSpellBuckets(page: Page) {
 
       const input = bucket.getByRole('combobox')
       await expect(input).toBeEnabled()
-      await chooseFirstEnabled(page, input)
+      await chooseLowestLevelSpell(page, input)
       changed = true
       break
     }

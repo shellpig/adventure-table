@@ -62,7 +62,9 @@ M01 的直接目標：
 
 **同批合併的非 localization 工作**：依使用者明確決定，`m02-f-non-srd-localization` 一併完成「Build Edit / Correction 按鈕合併」與「角色 Archive / 永久刪除」，未另開 M Phase。前者收斂為單一「編輯角色配置」，新版本一律記 `build_edit`；後者新增 `characters.archived_at`（migration `0006_character_archive`）、archive / unarchive / delete 端點、封存後可讀不可寫的守衛，以及 Workshop「封存角色」區塊與打字確認的永久刪除。
 
-> **下一個 coding step 是 M02-G — Localized Search, Errors & Completeness Gates。只有在使用者明確要求後才 coding。M02-G～M02-H 完成並 closeout 後，再回 M01-D～M01-J，最後才回到 P2 — Room / Campaign / Session / Seat 的規劃。M02 未 closeout 前不得開始 M01-D；不得因 M01 / M02 提前拆 P2～P8。**
+**M02-G — Localized Search, Errors & Completeness Gates 已完成**：rules-content selector 以目前 locale 顯示與搜尋，另一 supported locale 的名稱作為隱藏 search alias（繁中搜 `fireball` 命中「火球術」且清單仍只有繁中）；名稱排序改依目前 locale 的 `Intl.Collator`，純數值選單維持設定順序。system-owned 錯誤訊息改以語言中立 machine code 對應在地化字串，server 送出的 43 個 builder issue code 已全數具備 `zh-TW` / `en` 對應，`zh-TW` fallback 一律純中文、不串接英文原文；訊息於 render 時解析 locale，切換語言即時更新且不觸發 Draft mutation。新增 policy × enabled packs × locales 的 completeness gate 與 orphan StableKey / orphan field path / duplicate definition / unsupported locale 四道結構 gate，並藉此刪除 `srd5.1` zh-TW overlay 中 26 筆 Acolyte roleplay orphan 譯文（`phb2014` 已擁有同樣內容，無譯文遺失）。**已知未竟**：server 尚未為 disabled reason 送出 machine code，因此繁中每個 disabled 選項只顯示通用句，依使用者決定延至 M02-H；詳見 `docs/M02/M02-G_CLOSEOUT.md` 與 `docs/M02/M02-H_TODO.md`。
+
+> **下一個 coding step 是 M02-H — Full M02 Integration & Closeout。只有在使用者明確要求後才 coding。M02-H 完成並 closeout 後，再回 M01-D～M01-J，最後才回到 P2 — Room / Campaign / Session / Seat 的規劃。M02 未 closeout 前不得開始 M01-D；不得因 M01 / M02 提前拆 P2～P8。**
 
 已完成的產品／規劃工作：
 
@@ -233,7 +235,7 @@ M01 共通原則：
 | **M01-I — TCE Magic Items** | 📐 | TCE item registry、rarity / attunement / restrictions / charges、manual-effect fallback；首次 expose 欄位同步雙語 |
 | **M01-J — Full M01 Integration & Closeout** | 📐 | all-pack validation、P0/P1 regression、M02 localization regression、full E2E、restart persistence、真人 Gate recheck |
 
-**M01-A、M01-B、M01-C 已完成並關門。M01 現在暫停；目前進行 M02，下一個可開工 Subphase 是 M02-G。M02 closeout 後再回 M01-D。**
+**M01-A、M01-B、M01-C 已完成並關門。M01 現在暫停；目前進行 M02，下一個可開工 Subphase 是 M02-H。M02 closeout 後再回 M01-D。**
 
 ---
 
@@ -279,10 +281,10 @@ M02 共通原則：
 | **M02-D — SRD 5.1 Names & Structured Text** | ✅ | 依 policy 完成目前 user-visible SRD names / labels / structured text 雙語覆蓋 |
 | **M02-E — SRD 5.1 User-Visible Descriptions** | ✅ | SRD spell / feature / condition `data.desc.*` zh-TW authoring；canonical-driven coverage / leakage / mechanics / Markdown gates；item / background hidden long-form 延後 |
 | **M02-F — PHB / SCAG / GoS Localization** | ✅ | 依 policy 完成 M01-B / M01-C current-surface non-SRD content；既有繁中 reference 作 priority input |
-| **M02-G — Localized Search, Errors & Completeness Gates** | 📐 | localized search / alias / sort、error code + localized message、policy-driven completeness / orphan guard |
+| **M02-G — Localized Search, Errors & Completeness Gates** | ✅ | localized search / alias / sort、error code + localized message、policy-driven completeness / orphan guard |
 | **M02-H — Full M02 Integration & Closeout** | 📐 | 全站雙語驗收、Draft-safe switch、batch evidence、doc-sync / CC BY NOTICE、真人 browser gate |
 
-**M02-A～M02-F 已完成；下一個可開工 Subphase 是 M02-G。M02-G～M02-H 尚未 coding。**
+**M02-A～M02-G 已完成；下一個可開工 Subphase 是 M02-H。M02-H 尚未 coding。**
 
 ---
 
