@@ -6,16 +6,16 @@
   "entries": {
     "phb2014:race:human-variant": {"name": "變體人類"},
     "phb2014:subrace:wood-elf": {"name": "木精靈"},
-    "phb2014:subrace:drow": {"name": "卓爾"},
+    "phb2014:subrace:drow": {"name": "卓爾精靈"},
     "phb2014:subrace:mountain-dwarf": {"name": "山地矮人"},
-    "phb2014:subrace:stout-halfling": {"name": "健壯半身人"},
+    "phb2014:subrace:stout-halfling": {"name": "強魄半身人"},
     "phb2014:subrace:forest-gnome": {"name": "森林侏儒"},
-    "phb2014:feature:mask-of-the-wild": {"name": "野性面具"},
-    "phb2014:feature:superior-darkvision": {"name": "強效黑暗視覺"},
-    "phb2014:feature:sunlight-sensitivity": {"name": "陽光敏感"},
+    "phb2014:feature:mask-of-the-wild": {"name": "荒野隱蔽"},
+    "phb2014:feature:superior-darkvision": {"name": "高級黑暗視覺"},
+    "phb2014:feature:sunlight-sensitivity": {"name": "日光敏感"},
     "phb2014:feature:drow-magic": {"name": "卓爾魔法"},
-    "phb2014:feature:stout-resilience": {"name": "健壯韌性"},
-    "phb2014:feature:natural-illusionist": {"name": "天生幻術師"},
-    "phb2014:feature:speak-with-small-beasts": {"name": "與小型野獸交談"}
+    "phb2014:feature:stout-resilience": {"name": "強魄韌性"},
+    "phb2014:feature:natural-illusionist": {"name": "天生幻術"},
+    "phb2014:feature:speak-with-small-beasts": {"name": "小型野獸溝通"}
   }
 }
