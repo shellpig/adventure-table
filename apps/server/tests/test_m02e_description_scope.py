@@ -31,7 +31,10 @@ M02E_DEFERRED_LONG_FORM_RULES = {
 
 _CJK_RE = re.compile(r"[\u3400-\u9fff]")
 _WORD_RE = re.compile(r"[A-Za-z]{3,}")
-_DICE_RE = re.compile(r"(?<![A-Za-z0-9])\d+d\d+(?![A-Za-z0-9])", re.IGNORECASE)
+_DICE_RE = re.compile(
+    r"(?<![A-Za-z0-9])(?:\d+\s*)?d\s*\d+(?![A-Za-z0-9])",
+    re.IGNORECASE,
+)
 _SIGNED_RE = re.compile(r"(?<![\w.])[+-]\d+(?!\w)")
 _NUMBER_RE = re.compile(r"(?<![\w])\d[\d,]*(?:\.\d+)?(?!\w)")
 
@@ -99,12 +102,18 @@ def _canonical_description_fields(kind: str, filename: str) -> dict[tuple[str, s
 def _mechanics_tokens(text: str) -> Counter[str]:
     # Dice and signed modifiers are removed from the generic-number pass so
     # tokens such as 2d8 are not accidentally treated as unrelated 2 / 8.
-    dice = [token.lower() for token in _DICE_RE.findall(text)]
+    dice = [re.sub(r"\s+", "", token.lower()) for token in _DICE_RE.findall(text)]
     without_dice = _DICE_RE.sub(" ", text)
     signed = _SIGNED_RE.findall(without_dice)
     without_signed = _SIGNED_RE.sub(" ", without_dice)
     numbers = [token.replace(",", "") for token in _NUMBER_RE.findall(without_signed)]
     return Counter([*(f"dice:{token}" for token in dice), *(f"signed:{token}" for token in signed), *(f"num:{token}" for token in numbers)])
+
+
+def test_m02e_mechanics_tokens_normalize_spaced_dice_notation() -> None:
+    assert _mechanics_tokens("roll a d 100 and deal 10d 10 damage") == _mechanics_tokens(
+        "擲一顆 d100 並造成 10d10 傷害"
+    )
 
 
 def _is_markdown_table_row(text: str) -> bool:
