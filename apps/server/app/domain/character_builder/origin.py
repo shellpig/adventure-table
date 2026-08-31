@@ -166,6 +166,38 @@ def compile_origin(
                     )
                 )
                 continue
+
+            casting_ability = raw.get("casting_ability")
+            if casting_ability is not None and not isinstance(casting_ability, str):
+                issues.append(
+                    _issue(
+                        "origin_rules_data_error",
+                        path,
+                        f"{feature.name} has an invalid racial spell casting ability.",
+                        feature_ref,
+                        spell_ref,
+                    )
+                )
+                continue
+            uses_per_rest = raw.get("uses_per_rest")
+            rest_type = raw.get("rest_type")
+            if uses_per_rest is not None or rest_type is not None:
+                if (
+                    not isinstance(uses_per_rest, int)
+                    or uses_per_rest < 1
+                    or rest_type not in {"short_rest", "long_rest"}
+                ):
+                    issues.append(
+                        _issue(
+                            "origin_rules_data_error",
+                            path,
+                            f"{feature.name} has invalid racial spell rest-use metadata.",
+                            feature_ref,
+                            spell_ref,
+                        )
+                    )
+                    continue
+
             access_entries.append(
                 SpellAccessEntry(
                     entry_id=_entry_id(feature_ref, spell_ref),
@@ -173,6 +205,9 @@ def compile_origin(
                     source_type="race",
                     source_key=feature_ref,
                     access_type="granted",
+                    casting_ability=casting_ability,
+                    uses_per_rest=uses_per_rest,
+                    rest_type=rest_type,
                 )
             )
 
