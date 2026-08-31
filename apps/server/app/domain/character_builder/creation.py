@@ -12,13 +12,13 @@ from app.domain.character.schemas import (
     PreparedSpellSelection,
 )
 from app.domain.character.validation import derive_hit_dice_totals, validate_state_against_build
-from app.domain.character_builder.origin_resources import initial_feature_resource_state
 from app.domain.character_builder.reconciliation import StateReconciliationPreview
 from app.domain.character_builder.schemas import (
     BuilderIssue,
     BuilderResolvedSummary,
 )
 from app.domain.rules.abilities import ABILITY_NAMES, ability_modifier, effective_ability_score
+from app.domain.rules.feature_resources import initial_feature_resource_state
 from app.domain.rules.hit_points import calculate_max_hp
 from app.domain.rules.proficiency import proficiency_bonus, total_character_level
 from app.domain.rules.skills import all_skill_modifiers
