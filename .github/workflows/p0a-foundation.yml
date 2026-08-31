@@ -24,6 +24,12 @@ jobs:
         working-directory: apps/server
         run: pytest
 
+      - name: Run M02-D authoring tests
+        run: >-
+          python -m unittest
+          scripts.test_build_m02d_srd_locale_reviewed
+          scripts.test_run_m02d_srd_locale_authoring
+
       - name: Validate Alembic fresh database
         working-directory: apps/server
         env:

@@ -30,7 +30,7 @@ class M02DReviewedLocaleTests(unittest.TestCase):
         names = reviewed._canonical_names()
 
         self.assertTrue(names)
-        self.assertIn("Light Hammer", names.values())
+        self.assertIn("Light hammer", names.values())
         self.assertIn("Wizard", names.values())
         self.assertEqual(names["srd5.1:damage-type:fire"], "Fire")
         self.assertEqual(names["srd5.1:equipment-category:armor"], "Armor")
