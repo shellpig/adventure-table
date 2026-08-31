@@ -27,7 +27,7 @@ type OptionDisplay = {
   secondary?: string
 }
 
-const STABLE_KEY_RE = /^(?:srd5\.1|phb2014|scag|gos):[^:]+:[^:]+$/
+const STABLE_KEY_RE = /^[^:\s]+:[^:\s]+:[^:\s]+$/
 const NUMERIC_LABEL_RE = /^[-+]?\d+(?:\.\d+)?$/
 
 export function optionDisplay(label: string): OptionDisplay {
@@ -100,7 +100,11 @@ export function SearchableSelect({
     () => options.map((option) => option.value).filter((candidate) => STABLE_KEY_RE.test(candidate)),
     [options],
   )
-  const { locale, searchAliasesFor } = useContentPresentations(contentReferences)
+  const { locale, searchAliasesFor } = useContentPresentations(
+    contentReferences,
+    {},
+    { includeSearchAliases: true },
+  )
   const searchableOptions = useMemo(
     () => options.map((option) => ({
       ...option,
