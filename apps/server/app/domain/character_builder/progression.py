@@ -16,7 +16,9 @@ from app.content.schemas import ContentEntry
 from app.domain.character.schemas import SubclassSelection
 from app.domain.character_builder.choices import deterministic_choice_id
 from app.domain.character_builder.multiclass import (
+    multiclass_failure_detail,
     multiclass_failure_reason,
+    multiclass_option_failure_detail,
     multiclass_option_failure_reason,
     multiclass_proficiencies,
     multiclass_proficiency_choices,
@@ -130,10 +132,6 @@ def _effective_abilities(draft: BuilderDraft, grants: tuple[BuilderGrantSummary,
     generation = draft.draft_payload.ability_generation
     if generation is None:
         return None
-    # Race/subrace bonuses are exposed by the creation summary, but progression
-    # choices are built before that summary is passed in. The class picker should
-    # therefore use raw scores only as a conservative eligibility preview; the
-    # authoritative validator receives the resolved effective scores.
     values = generation.scores.as_dict()
     override_map = {
         override.key.removeprefix("ability:"): int(override.value)
@@ -253,12 +251,22 @@ def build_progression_choices(
         acquired_entries = tuple(registry.get(key) for key in acquired_unique)
         for class_entry in class_entries:
             disabled_reason = None
+            disabled_reason_code = None
+            disabled_reason_params: dict[str, object] = {}
             if character_level > 1:
-                disabled_reason = multiclass_option_failure_reason(
+                detail = multiclass_option_failure_detail(
                     class_entry,
                     acquired_entries,
                     effective,
                 )
+                if detail is not None:
+                    disabled_reason_code = detail.code
+                    disabled_reason_params = detail.params
+                    disabled_reason = multiclass_option_failure_reason(
+                        class_entry,
+                        acquired_entries,
+                        effective,
+                    )
             options.append(
                 BuilderChoiceOption(
                     option_id=class_entry.key,
@@ -266,6 +274,8 @@ def build_progression_choices(
                     kind=BuilderOptionKind.REFERENCE,
                     reference_id=class_entry.key,
                     disabled_reason=disabled_reason,
+                    disabled_reason_code=disabled_reason_code,
+                    disabled_reason_params=disabled_reason_params,
                     hit_die_size=_class_hit_die(class_entry),
                     fixed_hp_gain=fixed_hp_gain(class_entry),
                 )
@@ -367,6 +377,10 @@ def validate_progression(
                     "Level choices must contain one ordered entry per target level "
                     f"(expected {payload.target_level}, got {len(payload.level_choices)})."
                 ),
+                message_params={
+                    "expected_level_count": payload.target_level,
+                    "actual_level_count": len(payload.level_choices),
+                },
             ),
         )
 
@@ -385,6 +399,11 @@ def validate_progression(
                     severity=BuilderIssueSeverity.BLOCKING_ERROR,
                     path=f"{path}.character_level",
                     message=f"Progression node {index + 1} must represent Character Level {expected_character_level}.",
+                    message_params={
+                        "progression_index": index + 1,
+                        "expected_character_level": expected_character_level,
+                        "actual_character_level": level_choice.character_level,
+                    },
                 )
             )
         class_entry = registry.get_optional(level_choice.class_ref)
@@ -395,6 +414,7 @@ def validate_progression(
                     severity=BuilderIssueSeverity.BLOCKING_ERROR,
                     path=f"{path}.class_ref",
                     message=f"Unknown class reference: {level_choice.class_ref}",
+                    message_params={"class_ref": level_choice.class_ref},
                     related_refs=(level_choice.class_ref,),
                 )
             )
@@ -414,6 +434,7 @@ def validate_progression(
                         severity=BuilderIssueSeverity.BLOCKING_ERROR,
                         path=f"{path}.hp_method",
                         message=f"Character Level 1 must use the starting class maximum hit die ({hit_die}).",
+                        message_params={"class_ref": class_entry.key, "hit_die_size": hit_die},
                         related_refs=(class_entry.key,),
                     )
                 )
@@ -424,6 +445,7 @@ def validate_progression(
                     severity=BuilderIssueSeverity.BLOCKING_ERROR,
                     path=f"{path}.hp_method",
                     message="The first-level maximum HP rule only applies at Character Level 1.",
+                    message_params={"class_ref": class_entry.key, "character_level": expected_character_level},
                     related_refs=(class_entry.key,),
                 )
             )
@@ -436,6 +458,7 @@ def validate_progression(
                         severity=BuilderIssueSeverity.BLOCKING_ERROR,
                         path=f"{path}.hp_base_gain",
                         message=f"{class_entry.name} fixed HP gain must be {expected}.",
+                        message_params={"class_ref": class_entry.key, "expected_hp_gain": expected},
                         related_refs=(class_entry.key,),
                     )
                 )
@@ -447,6 +470,7 @@ def validate_progression(
                         severity=BuilderIssueSeverity.BLOCKING_ERROR,
                         path=f"{path}.hp_base_gain",
                         message=f"Manual HP for {class_entry.name} must be between 1 and {hit_die}.",
+                        message_params={"class_ref": class_entry.key, "minimum": 1, "maximum": hit_die},
                         related_refs=(class_entry.key,),
                     )
                 )
@@ -460,6 +484,7 @@ def validate_progression(
                         severity=BuilderIssueSeverity.BLOCKING_ERROR,
                         path=f"{path}.subclass_ref",
                         message=f"Unknown subclass reference: {level_choice.subclass_ref}",
+                        message_params={"subclass_ref": level_choice.subclass_ref},
                         related_refs=(level_choice.subclass_ref,),
                     )
                 )
@@ -470,6 +495,10 @@ def validate_progression(
                         severity=BuilderIssueSeverity.BLOCKING_ERROR,
                         path=f"{path}.subclass_ref",
                         message=f"{subclass_entry.name} does not belong to {class_entry.name}.",
+                        message_params={
+                            "class_ref": class_entry.key,
+                            "subclass_ref": subclass_entry.key,
+                        },
                         related_refs=(class_entry.key, subclass_entry.key),
                     )
                 )
@@ -480,14 +509,16 @@ def validate_progression(
 
     if len(distinct_class_entries) > 1:
         for class_entry in distinct_class_entries:
-            reason = multiclass_failure_reason(class_entry, effective_abilities)
-            if reason is not None:
+            detail = multiclass_failure_detail(class_entry, effective_abilities)
+            if detail is not None:
+                reason = multiclass_failure_reason(class_entry, effective_abilities)
                 issues.append(
                     BuilderIssue(
                         code="multiclass_prerequisite_not_met",
                         severity=BuilderIssueSeverity.BLOCKING_ERROR,
                         path="draft_payload.level_choices",
                         message=f"{class_entry.name}: {reason}",
+                        message_params=detail.params,
                         related_refs=(class_entry.key,),
                     )
                 )
@@ -506,6 +537,7 @@ def validate_progression(
                         severity=BuilderIssueSeverity.BLOCKING_ERROR,
                         path="draft_payload.level_choices",
                         message=f"{class_entry.name} subclass cannot be selected before class level {timing}.",
+                        message_params={"class_ref": class_entry.key, "required_class_level": timing},
                         related_refs=(class_entry.key,),
                     )
                 )
@@ -517,6 +549,7 @@ def validate_progression(
                     severity=BuilderIssueSeverity.BLOCKING_ERROR,
                     path="draft_payload.level_choices",
                     message=f"{class_entry.name} requires a subclass selection at class level {timing}.",
+                    message_params={"class_ref": class_entry.key, "required_class_level": timing},
                     related_refs=(class_entry.key,),
                 )
             )
@@ -529,6 +562,7 @@ def validate_progression(
                     severity=BuilderIssueSeverity.BLOCKING_ERROR,
                     path="draft_payload.level_choices",
                     message=f"{class_entry.name} must have exactly one subclass selection.",
+                    message_params={"class_ref": class_entry.key, "subclass_refs": sorted(selected_refs)},
                     related_refs=tuple(sorted(selected_refs)),
                 )
             )
@@ -539,6 +573,12 @@ def validate_progression(
                     severity=BuilderIssueSeverity.BLOCKING_ERROR,
                     path="draft_payload.level_choices",
                     message=f"{class_entry.name} subclass must be selected at class level {timing}.",
+                    message_params={
+                        "class_ref": class_entry.key,
+                        "subclass_ref": records[0][2],
+                        "required_class_level": timing,
+                        "actual_class_level": records[0][1],
+                    },
                     related_refs=(records[0][2],),
                 )
             )
