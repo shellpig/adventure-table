@@ -6,6 +6,8 @@ import re
 from app.content import load_default_content_registry
 from app.content.localization_files import load_content_localization_catalog
 from app.content.registry import CONTENT_PACKS_ROOT
+from app.domain.character_builder.basics import _append_entry_grants
+from app.domain.character_builder.schemas import BuilderGrantSummary
 
 
 NON_SRD_SOURCES = {"phb2014", "scag", "gos"}
@@ -174,3 +176,40 @@ def test_gos_optional_flavor_tables_are_localized_and_keep_stable_identity() -> 
     assert len(zh[0].suggestions) == len(en[0].suggestions) == 8
     assert zh[0].suggestions[0].suggestion_id == en[0].suggestions[0].suggestion_id
     assert zh[0].suggestions[0].text != en[0].suggestions[0].text
+
+
+def test_background_feature_grants_carry_a_localizable_presentation_identity() -> None:
+    """Background features live inline in their background entry.
+
+    They have no StableKey of their own, so a grant that only carried
+    `reference_id` left the Review list with nothing to resolve and rendered the
+    canonical English name in every locale.
+    """
+
+    registry, catalog = _catalog()
+
+    checked = 0
+    for background in registry.list_kind("background"):
+        feature = background.data.get("feature")
+        if not isinstance(feature, dict) or not isinstance(feature.get("name"), str):
+            continue
+
+        grants: list[BuilderGrantSummary] = []
+        _append_entry_grants(grants, registry, background)
+        feature_grants = [
+            grant for grant in grants if grant.kind == "background_feature"
+        ]
+
+        assert len(feature_grants) == 1, background.key
+        grant = feature_grants[0]
+        assert grant.source_ref == background.key
+        assert grant.presentation_field == "data.feature.name"
+
+        localized = catalog.resolve_field(
+            grant.source_ref, grant.presentation_field, "zh-TW"
+        )
+        assert not localized.fallback_used, background.key
+        assert localized.value != grant.label, background.key
+        checked += 1
+
+    assert checked == 36
