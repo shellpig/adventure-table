@@ -112,7 +112,7 @@ def _skill_versatility_choice():
         choice
         for choice in build_foundation_choices(baseline, registry)
         if choice.source_ref == SKILL_VERSATILITY
-        and choice.option_source == "content:starting_proficiency_options"
+        and choice.option_source == "content:proficiency_choices"
     )
 
 
@@ -125,7 +125,7 @@ def test_baseline_half_elf_keeps_skill_versatility_without_scag_variant() -> Non
         choice
         for choice in choices
         if choice.source_ref == SKILL_VERSATILITY
-        and choice.option_source == "content:starting_proficiency_options"
+        and choice.option_source == "content:proficiency_choices"
     )
 
     assert skill_choice.choose_count == 2
