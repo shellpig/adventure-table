@@ -129,8 +129,8 @@ def test_m02f_localization_does_not_mutate_canonical_content_or_english() -> Non
     assert catalog.resolve_name("scag:background:city-watch", "en").value == "City Watch"
     assert catalog.resolve_name("gos:background:shipwright", "en").value == "Shipwright"
     assert catalog.resolve_name("phb2014:race:human-variant", "zh-TW").value == "變體人類"
-    assert catalog.resolve_name("scag:background:city-watch", "zh-TW").value == "城市衛隊"
-    assert catalog.resolve_name("gos:background:shipwright", "zh-TW").value == "造船匠"
+    assert catalog.resolve_name("scag:background:city-watch", "zh-TW").value == "城市守衛"
+    assert catalog.resolve_name("gos:background:shipwright", "zh-TW").value == "船工"
 
     for key, before in watched.items():
         assert registry.get(key).model_dump(mode="python") == before
