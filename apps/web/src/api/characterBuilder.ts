@@ -1,3 +1,8 @@
+import {
+  createLocalizedRequestError,
+  installDynamicLocalizedBuilderPayload,
+} from '../i18n/systemMessages'
+
 export type BuilderMode = 'create' | 'level_up' | 'build_edit' | 'correction'
 export type BuilderIssueSeverity = 'blocking_error' | 'warning' | 'non_standard'
 export type AbilityGenerationMethod = 'standard_array' | 'point_buy' | 'manual'
@@ -316,11 +321,6 @@ type BuilderPatchQueue = {
   latestRevision?: number
 }
 
-// Builder drafts use optimistic revision checks on the server. React can dispatch
-// a second interaction before the first mutation's pending state has rendered,
-// so serialize PATCHes per draft and carry the revision returned by the previous
-// write into the next queued write. This keeps rapid level-rail edits lossless
-// without weakening the server's conflict protection against other clients.
 const builderPatchQueues = new Map<string, BuilderPatchQueue>()
 
 async function builderRequest<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
@@ -329,17 +329,19 @@ async function builderRequest<T>(input: RequestInfo | URL, init?: RequestInit): 
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   })
   if (!response.ok) {
+    let code: string | undefined
     let message = `Request failed (${response.status})`
     try {
       const payload = (await response.json()) as APIErrorPayload
+      code = payload.error?.code
       message = payload.error?.message ?? message
     } catch {
       // Keep the HTTP fallback when the body is not JSON.
     }
-    throw new Error(message)
+    throw createLocalizedRequestError(code, response.status, message)
   }
   if (response.status === 204) return undefined as T
-  return (await response.json()) as T
+  return installDynamicLocalizedBuilderPayload((await response.json()) as T)
 }
 
 export function listCharacters(): Promise<CharacterListItem[]> {
