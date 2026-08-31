@@ -57,6 +57,27 @@ def _reference_option(
     )
 
 
+def _is_martial_weapon_proficiency(
+    entry: ContentEntry,
+    registry: ContentRegistry,
+) -> bool:
+    if not stable_key_is_kind(entry.key, "proficiency"):
+        return False
+    if entry.data.get("type") != "Weapons":
+        return False
+    reference = entry.data.get("reference")
+    if not isinstance(reference, dict):
+        return False
+    try:
+        target_key = reference_to_stable_key(reference, kinds={"equipment"})
+    except ValueError:
+        return False
+    if target_key is None:
+        return False
+    equipment = registry.get_optional(target_key)
+    return equipment is not None and equipment.data.get("weapon_category") == "Martial"
+
+
 def _rule_options(
     rule: dict[str, object],
     registry: ContentRegistry,
@@ -77,6 +98,18 @@ def _rule_options(
         kind = URL_ROUTE_TO_KIND.get(parts[2])
         if kind is None:
             return ()
+        entries = registry.list_kind(kind, source="srd5.1")
+        filter_name = source.get("filter")
+        if filter_name == "martial_weapon":
+            if kind != "proficiency":
+                return ()
+            entries = tuple(
+                entry
+                for entry in entries
+                if _is_martial_weapon_proficiency(entry, registry)
+            )
+        elif filter_name is not None:
+            return ()
         return tuple(
             BuilderChoiceOption(
                 option_id=entry.key,
@@ -84,7 +117,7 @@ def _rule_options(
                 kind=BuilderOptionKind.REFERENCE,
                 reference_id=entry.key,
             )
-            for entry in registry.list_kind(kind, source="srd5.1")
+            for entry in entries
         )
 
     options = source.get("options")
