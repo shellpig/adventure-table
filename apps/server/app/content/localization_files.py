@@ -36,17 +36,22 @@ def _read_overlay_file(path: Path, locale: str) -> dict[str, dict[str, Any]]:
 
 
 def _locale_paths(content_root: Path, source: str, locale: str) -> tuple[Path, ...]:
-    """Return monolith first, then review-friendly shards in deterministic order."""
+    """Prefer human-review shards; fall back to the legacy monolithic overlay.
+
+    Once a locale has reviewer-owned shards, those files are the runtime source
+    of truth. A machine-authored monolithic candidate may still exist beside
+    them for comparison without overriding or conflicting with human edits.
+    """
 
     locale_root = content_root / source / "locales"
-    paths: list[Path] = []
-    monolith = locale_root / f"{locale}.json"
-    if monolith.is_file():
-        paths.append(monolith)
     shard_root = locale_root / locale
     if shard_root.is_dir():
-        paths.extend(sorted(path for path in shard_root.glob("*.json") if path.is_file()))
-    return tuple(paths)
+        shards = tuple(sorted(path for path in shard_root.glob("*.json") if path.is_file()))
+        if shards:
+            return shards
+
+    monolith = locale_root / f"{locale}.json"
+    return (monolith,) if monolith.is_file() else ()
 
 
 def load_content_localization_catalog(
