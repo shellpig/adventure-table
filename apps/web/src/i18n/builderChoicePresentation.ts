@@ -15,6 +15,20 @@ const CHOICE_SUFFIX_ZH: Record<string, string> = {
   'content:subtraits': '選擇',
   'content:class-proficiency': '熟練項選擇',
   'content:asi-feat': '屬性值提升或專長',
+  'content:race-variant': '血統變體',
+  'content:race-variant-replacement': '血統特徵',
+  'content:race-variant-spell': '法術選擇',
+}
+
+const RACE_VARIANT_OPTION_ZH: Record<string, string> = {
+  'keep-skill-versatility': '保留多才多藝',
+  'wizard-cantrip': '戲法',
+  'elf-weapon-training': '精靈武器訓練',
+  'keen-senses': '敏銳感官',
+  'fleet-of-foot': '輕捷步伐',
+  'mask-of-the-wild': '荒野隱蔽',
+  'swimming-speed': '游泳',
+  'drow-magic': '卓爾魔法',
 }
 
 const ABILITY_NAMES_ZH: Record<string, string> = {
@@ -107,6 +121,11 @@ export function builderChoiceOptionLabel(
   }
 
   if (option.reference_id) return nameFor(option.reference_id, option.label)
+
+  if (choice.option_source === 'content:race-variant-replacement') {
+    const label = RACE_VARIANT_OPTION_ZH[option.option_id]
+    if (label) return label
+  }
 
   if (choice.option_source === 'content:asi-feat' && option.branch_key === 'asi') {
     return '屬性值提升'
