@@ -12,9 +12,7 @@ async function expectDraftSaved(page: Page) {
 }
 
 async function waitForDraftRevision(page: Page, previousRevision: number) {
-  await expect(page.locator('.builder-save-state span')).toHaveText(
-    `Draft revision ${previousRevision + 1}`,
-  )
+  await expect.poll(() => currentDraftRevision(page)).toBeGreaterThan(previousRevision)
   await expectDraftSaved(page)
 }
 

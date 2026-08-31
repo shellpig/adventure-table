@@ -24,15 +24,17 @@ cd apps/web
 npm run test:e2e -- e2e/m01d-vgm-races.spec.ts
 ```
 
-結果：`4 passed (11.6s)`。
+最終結果：`4 passed (14.4s)`。
 
 首次執行因資料庫殘留兩張同名 `M01-D Threshold Hero`，Playwright strict locator 命中兩個按鈕而停止；透過正式 archive / delete API 只清除 8 筆名稱以 `M01-D ` 開頭的既有 E2E 測試角色後，同一 commit、同一 spec 無程式修改即全綠。此失敗歸類為測試資料隔離，不是產品功能 failure。
+
+同步遠端最新 M01-D commits 後重驗時，舊 helper 曾要求畫面必須恰好停在 `previous revision + 1`，遇到 autosave 已前進兩版時產生假陰性。M01-D helper 已對齊既有 M02-H canonical 判準，等待 revision 大於動作前值；清除本 spec 建立的測試角色後，最終四條情境全部通過。
 
 ## Boundary
 
 - M01-D 不執行 Bonus Action / Reaction timing、spatial ally count、fear target resolution 或 Rest auto-recovery。
 - Aasimar subrace change 繼續使用既有 Build Edit / Correction 與 immutable Version，不新增 transformation subsystem。
-- 本次關門只補 M01-D E2E 驗證與文件同步；沒有重跑其他測試，也沒有修改產品碼或測試碼。
+- 本次關門只補 M01-D E2E 驗證、M01-D autosave revision wait helper 與文件同步；沒有重跑其他測試，也沒有修改產品碼。
 
 ## Handoff
 
