@@ -62,6 +62,12 @@ def test_optional_roleplay_can_be_completely_empty() -> None:
     assert rebuilt.roleplay_profile == RoleplayProfile()
 
 
+def test_optional_roleplay_custom_fields_round_trip() -> None:
+    profile = RoleplayProfile(custom_fields={"fishing_tale": ("A giant lobster",)})
+
+    assert RoleplayProfile.model_validate(profile.model_dump(mode="json")) == profile
+
+
 def test_character_state_round_trips_json_payload() -> None:
     state = build_p0_fighter_wizard_state()
 

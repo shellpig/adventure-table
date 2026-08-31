@@ -4,6 +4,8 @@ import {
   appendRoleplaySuggestion,
   localizedRoleplayLines,
   parseRoleplayText,
+  optionalRoleplayFields,
+  optionalRoleplaySuggestionRefs,
   roleplayLines,
   roleplaySuggestionRefs,
 } from './RoleplayProfileEditor'
@@ -61,5 +63,18 @@ describe('M01-B / M02-C RoleplayProfileEditor helpers', () => {
         ],
       }).ideals,
     ).toEqual([{ suggestion_id: 'valid-id', position: 2 }])
+  })
+
+  it('keeps optional background detail text and suggestion identity separate', () => {
+    expect(optionalRoleplayFields({ fishing_tale: ['  Giant lobster  '] })).toEqual({
+      fishing_tale: ['Giant lobster'],
+    })
+    expect(
+      optionalRoleplaySuggestionRefs({
+        fishing_tale: [{ suggestion_id: 'gos:fisher:tale:01', position: 0 }],
+      }),
+    ).toEqual({
+      fishing_tale: [{ suggestion_id: 'gos:fisher:tale:01', position: 0 }],
+    })
   })
 })

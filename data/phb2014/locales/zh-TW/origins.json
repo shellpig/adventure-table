@@ -4,7 +4,7 @@
   "source": "phb2014",
   "review_status": "draft-human-review-required",
   "entries": {
-    "phb2014:race:human-variant": {"name": "變體人類"},
+    "phb2014:race:variant-human": {"name": "變體人類"},
     "phb2014:subrace:wood-elf": {"name": "木精靈"},
     "phb2014:subrace:drow": {"name": "卓爾精靈"},
     "phb2014:subrace:mountain-dwarf": {"name": "山地矮人"},

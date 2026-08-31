@@ -236,6 +236,9 @@ const en = {
   'roleplay.flaws': 'Flaws',
   'roleplay.flawsHint': 'Weaknesses, temptations, blind spots, or bad habits.',
   'roleplay.suggestionsAria': '{label} suggestions',
+  'roleplay.optionalTables': 'Optional background details',
+  'roleplay.optionalTablesHint': 'Choose one suggestion per table or leave every table blank.',
+  'roleplay.clearOptional': 'Clear selection',
 
   'review.step': 'STEP 07 · REVIEW',
   'review.mode.create': 'Create',
@@ -665,6 +668,9 @@ const zhTW: Record<UiCopyKey, string> = {
   'roleplay.flaws': '缺點',
   'roleplay.flawsHint': '弱點、誘惑、盲點或壞習慣。',
   'roleplay.suggestionsAria': '{label}建議',
+  'roleplay.optionalTables': '選填背景細節',
+  'roleplay.optionalTablesHint': '每張表可選一項，也可以全部留白。',
+  'roleplay.clearOptional': '清除選擇',
 
   'review.step': '步驟 07 · 檢視',
   'review.mode.create': '建立角色',

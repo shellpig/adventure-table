@@ -120,6 +120,7 @@ def _roleplay_profile(draft: BuilderDraft) -> RoleplayProfile:
             "ideals",
             "bonds",
             "flaws",
+            "custom_fields",
         )
         if key in raw
     }

@@ -13,6 +13,15 @@
       "data.roleplay_suggestions.ideals.1": "平衡：只取所需，不耗盡養活我們的水域。",
       "data.roleplay_suggestions.bonds.0": "有一片特別的水域，以及依賴它生活的人，對我意義重大。",
       "data.roleplay_suggestions.flaws.0": "我可能會執著於證明某個荒誕的捕魚故事其實是真的。"
+      ,"data.optional_roleplay_table_labels.fishing_tale": "捕魚奇談"
+      ,"data.optional_roleplay_tables.fishing_tale.0": "曾與一隻巨型龍蝦搏鬥"
+      ,"data.optional_roleplay_tables.fishing_tale.1": "漁獲拖著船航行了數英里"
+      ,"data.optional_roleplay_tables.fishing_tale.2": "釣到的金鰭魚被人偷走"
+      ,"data.optional_roleplay_tables.fishing_tale.3": "看見一條只有自己能看見的幽靈魚"
+      ,"data.optional_roleplay_tables.fishing_tale.4": "發現巨蛤與一顆碩大珍珠"
+      ,"data.optional_roleplay_tables.fishing_tale.5": "遇見一條遮蔽日光的巨魚"
+      ,"data.optional_roleplay_tables.fishing_tale.6": "發現通往可怕地點的水下通道"
+      ,"data.optional_roleplay_tables.fishing_tale.7": "與一名水棲生物展開注定無果的戀情"
     },
     "gos:background:marine": {
       "name": "海軍",
@@ -23,6 +32,13 @@
       "data.roleplay_suggestions.ideals.1": "堅忍：艱苦是應該面對的事，而不是畏懼的事。",
       "data.roleplay_suggestions.bonds.0": "我絕不拋下曾與我並肩服役的人。",
       "data.roleplay_suggestions.flaws.0": "我有時會把普通問題當成軍事緊急狀況處理。"
+      ,"data.optional_roleplay_table_labels.hardship_endured": "曾受磨難"
+      ,"data.optional_roleplay_tables.hardship_endured.0": "躲避敵人時差點溺水"
+      ,"data.optional_roleplay_tables.hardship_endured.1": "熬過數月囚禁"
+      ,"data.optional_roleplay_tables.hardship_endured.2": "付出慘痛代價讓戰友逃脫"
+      ,"data.optional_roleplay_tables.hardship_endured.3": "在不可能獲勝的背水一戰中存活"
+      ,"data.optional_roleplay_tables.hardship_endured.4": "熬過危險偷渡客奪船事件"
+      ,"data.optional_roleplay_tables.hardship_endured.5": "把受傷的戰友帶到安全處"
     },
     "gos:background:shipwright": {
       "name": "船工",
@@ -31,6 +47,13 @@
       "data.roleplay_suggestions.ideals.0": "工藝：真正好的作品應能撐過惡浪與更嚴酷的天候。",
       "data.roleplay_suggestions.bonds.0": "教會我手藝的那艘船或那座船塢，至今仍像我的家。",
       "data.roleplay_suggestions.flaws.0": "看到粗劣做工時，我總很難忍住不批評。"
+      ,"data.optional_roleplay_table_labels.life_at_sea": "海上生涯"
+      ,"data.optional_roleplay_tables.life_at_sea.0": "參與宏偉新船的設計計畫"
+      ,"data.optional_roleplay_tables.life_at_sea.1": "及時修繕而挽救一艘戰艦"
+      ,"data.optional_roleplay_tables.life_at_sea.2": "在災難前強化一艘商船"
+      ,"data.optional_roleplay_tables.life_at_sea.3": "專精於海軍防禦系統"
+      ,"data.optional_roleplay_tables.life_at_sea.4": "與沿海走私者保持聯繫"
+      ,"data.optional_roleplay_tables.life_at_sea.5": "在深海遇見神祕存在"
     },
     "gos:background:smuggler": {
       "name": "走私者",
@@ -39,6 +62,13 @@
       "data.roleplay_suggestions.ideals.0": "自由：邊界與關稅不該決定普通人可以交易什麼。",
       "data.roleplay_suggestions.bonds.0": "某個港口社群曾有人在我一旦被發現就會身敗名裂時藏匿我。",
       "data.roleplay_suggestions.flaws.0": "我認為每條規則都有價碼，每個官員都有辦法繞過。"
+      ,"data.optional_roleplay_table_labels.claim_to_fame": "成名事蹟"
+      ,"data.optional_roleplay_tables.claim_to_fame.0": "把偷來的烈酒藏在鯨魚屍體裡"
+      ,"data.optional_roleplay_tables.claim_to_fame.1": "駕車穿越戰場運送贓物"
+      ,"data.optional_roleplay_tables.claim_to_fame.2": "為了走私工作加入外國海軍"
+      ,"data.optional_roleplay_tables.claim_to_fame.3": "攜帶贓畫時漂流進幽影界"
+      ,"data.optional_roleplay_tables.claim_to_fame.4": "散盡財物讓難民通過檢查站"
+      ,"data.optional_roleplay_tables.claim_to_fame.5": "同時向衝突雙方出售彈藥"
     }
   }
 }

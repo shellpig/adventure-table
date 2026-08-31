@@ -158,6 +158,7 @@ class RoleplayProfile(FrozenModel):
     ideals: tuple[str, ...] = ()
     bonds: tuple[str, ...] = ()
     flaws: tuple[str, ...] = ()
+    custom_fields: dict[str, tuple[str, ...]] = Field(default_factory=dict)
 
 
 class CharacterBuild(FrozenModel):

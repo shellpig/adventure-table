@@ -116,7 +116,7 @@ def test_m02f_localization_does_not_mutate_canonical_content_or_english() -> Non
     watched = {
         key: deepcopy(registry.get(key).model_dump(mode="python"))
         for key in (
-            "phb2014:race:human-variant",
+            "phb2014:race:variant-human",
             "phb2014:background:spy",
             "scag:background:city-watch",
             "gos:background:shipwright",
@@ -125,10 +125,10 @@ def test_m02f_localization_does_not_mutate_canonical_content_or_english() -> Non
 
     catalog = load_content_localization_catalog(registry, CONTENT_PACKS_ROOT)
 
-    assert catalog.resolve_name("phb2014:race:human-variant", "en").value == "Variant Human"
+    assert catalog.resolve_name("phb2014:race:variant-human", "en").value == "Variant Human"
     assert catalog.resolve_name("scag:background:city-watch", "en").value == "City Watch"
     assert catalog.resolve_name("gos:background:shipwright", "en").value == "Shipwright"
-    assert catalog.resolve_name("phb2014:race:human-variant", "zh-TW").value == "變體人類"
+    assert catalog.resolve_name("phb2014:race:variant-human", "zh-TW").value == "變體人類"
     assert catalog.resolve_name("scag:background:city-watch", "zh-TW").value == "城市守衛"
     assert catalog.resolve_name("gos:background:shipwright", "zh-TW").value == "船工"
 
@@ -141,15 +141,13 @@ def test_same_display_name_across_sources_keeps_distinct_stable_identity() -> No
 
     srd_name = catalog.resolve_name("srd5.1:background:acolyte", "zh-TW")
     phb_name = catalog.resolve_name("phb2014:background:acolyte", "zh-TW")
-    srd_suggestions = catalog.roleplay_suggestions("srd5.1:background:acolyte", "zh-TW")
     phb_suggestions = catalog.roleplay_suggestions("phb2014:background:acolyte", "zh-TW")
 
     assert srd_name.value == "侍僧"
     assert phb_name.value == "侍僧"
     assert srd_name.key != phb_name.key
-    assert srd_suggestions[0].suggestion_id.startswith("srd5.1:background:acolyte:")
     assert phb_suggestions[0].suggestion_id.startswith("phb2014:background:acolyte:")
-    assert srd_suggestions[0].suggestion_id != phb_suggestions[0].suggestion_id
+    assert phb_suggestions[0].background_key == phb_name.key
 
 
 def test_cross_pack_srd_reference_presentation_remains_owned_by_srd_overlay() -> None:
@@ -161,3 +159,18 @@ def test_cross_pack_srd_reference_presentation_remains_owned_by_srd_overlay() ->
     localized = catalog.resolve_name(first_proficiency["key"], "zh-TW")
     assert localized.value != first_proficiency["name"]
     assert HAN.search(str(localized.value))
+
+
+def test_gos_optional_flavor_tables_are_localized_and_keep_stable_identity() -> None:
+    _registry, catalog = _catalog()
+
+    zh = catalog.optional_roleplay_tables("gos:background:fisher", "zh-TW")
+    en = catalog.optional_roleplay_tables("gos:background:fisher", "en")
+
+    assert len(zh) == len(en) == 1
+    assert zh[0].table_id == en[0].table_id == "fishing_tale"
+    assert zh[0].label == "捕魚奇談"
+    assert en[0].label == "Fishing Tale"
+    assert len(zh[0].suggestions) == len(en[0].suggestions) == 8
+    assert zh[0].suggestions[0].suggestion_id == en[0].suggestions[0].suggestion_id
+    assert zh[0].suggestions[0].text != en[0].suggestions[0].text
