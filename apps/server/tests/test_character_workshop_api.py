@@ -57,6 +57,10 @@ def test_character_workshop_summary_and_create_draft_listing() -> None:
             "name": P0_FIXTURE_NAME,
             "level": 10,
             "class_summary": "Fighter 5 / Wizard 5",
+            "classes": [
+                {"class_ref": "srd5.1:class:fighter", "name": "Fighter", "level": 5},
+                {"class_ref": "srd5.1:class:wizard", "name": "Wizard", "level": 5},
+            ],
             "version_no": 1,
         }
     ]
