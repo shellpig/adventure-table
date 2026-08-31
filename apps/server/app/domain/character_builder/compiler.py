@@ -30,6 +30,14 @@ from app.domain.character_builder.progression import (
     progression_summary,
     validate_progression,
 )
+from app.domain.character_builder.race_variants import (
+    apply_race_variant_summary,
+    build_race_variant_choices,
+    compile_race_variant,
+    is_race_variant_choice_id,
+    suppress_replaced_foundation_choices,
+    validate_race_variant,
+)
 from app.domain.character_builder.schemas import (
     BuilderAbilityScoreSummary,
     BuilderChoice,
@@ -289,6 +297,15 @@ def _with_derived_content_sources(build: CharacterBuild) -> CharacterBuild:
     return CharacterBuild.model_validate(payload)
 
 
+def _variant_summary(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+    choices: tuple[BuilderChoice, ...],
+    summary: BuilderResolvedSummary,
+) -> BuilderResolvedSummary:
+    return apply_race_variant_summary(draft, registry, choices, summary)
+
+
 def compile_builder_draft(
     draft: BuilderDraft,
     registry: ContentRegistry,
@@ -300,8 +317,17 @@ def compile_builder_draft(
         for choice in build_foundation_choices(draft, registry)
         if choice.option_source != "content:class"
     )
-    initial_foundation_preview = resolve_creation_summary(
-        draft, registry, raw_foundation_choices
+    variant_choices = build_race_variant_choices(draft, registry)
+    raw_foundation_choices = suppress_replaced_foundation_choices(
+        draft,
+        registry,
+        raw_foundation_choices + variant_choices,
+    )
+    initial_foundation_preview = _variant_summary(
+        draft,
+        registry,
+        raw_foundation_choices,
+        resolve_creation_summary(draft, registry, raw_foundation_choices),
     )
     raw_foundation_choices = _effective_origin_choices(
         draft,
@@ -309,8 +335,11 @@ def compile_builder_draft(
         registry,
         _effective_abilities(initial_foundation_preview),
     )
-    foundation_preview = resolve_creation_summary(
-        draft, registry, raw_foundation_choices
+    foundation_preview = _variant_summary(
+        draft,
+        registry,
+        raw_foundation_choices,
+        resolve_creation_summary(draft, registry, raw_foundation_choices),
     )
     origin = compile_origin(
         grants=foundation_preview.grants,
@@ -343,6 +372,7 @@ def compile_builder_draft(
     live_choice_ids = {
         *(choice.choice_id for choice in progression_choices),
         *(choice.choice_id for choice in structural_choices),
+        *(choice.choice_id for choice in variant_choices),
     }
     misplaced_equipment_choice_ids = {
         choice_id
@@ -357,6 +387,7 @@ def compile_builder_draft(
             and (
                 choice.choice_id in live_choice_ids
                 or choice.choice_id in misplaced_equipment_choice_ids
+                or is_race_variant_choice_id(choice.choice_id)
             )
         )
     )
@@ -374,6 +405,7 @@ def compile_builder_draft(
         for issue in validate_foundation_draft(draft, registry, validation_choices)
         if issue.code != "incomplete_level_progression"
     ]
+    foundation_issues.extend(validate_race_variant(draft, registry))
     foundation_issues.extend(
         validate_structural_choice_integrity(draft, foundation_choices)
     )
@@ -398,7 +430,12 @@ def compile_builder_draft(
     foundation_issues.extend(origin.issues)
 
     base_choices = foundation_choices + progression_choices + structural_choices
-    resolved_summary = resolve_creation_summary(draft, registry, base_choices)
+    resolved_summary = _variant_summary(
+        draft,
+        registry,
+        base_choices,
+        resolve_creation_summary(draft, registry, base_choices),
+    )
     structural = compile_structural_selections(
         draft, registry, structural_choices
     )
@@ -464,6 +501,7 @@ def compile_builder_draft(
     )
     issues.extend(equipment_issues)
     choices = base_choices + equipment.choices
+    race_variant = compile_race_variant(draft, registry, base_choices)
 
     build_candidate: CharacterBuild | None = None
     has_candidate_blocking = any(
@@ -517,6 +555,7 @@ def compile_builder_draft(
                 content_sources=(),
                 ruleset=payload.basic.ruleset,
                 race_ref=payload.race_selection.reference_id,
+                race_variant_ref=race_variant.race_variant_ref,
                 subrace_ref=(
                     payload.subrace_selection.reference_id
                     if payload.subrace_selection is not None
@@ -556,6 +595,10 @@ def compile_builder_draft(
                 feat_refs=tuple(
                     dict.fromkeys((*structural.feat_refs, *origin.feat_refs))
                 ),
+                walking_speed=race_variant.walking_speed,
+                swim_speed=race_variant.swim_speed,
+                climb_speed=race_variant.climb_speed,
+                fly_speed=race_variant.fly_speed,
                 spellcasting_profiles=build_profiles,
                 spell_access_entries=tuple(
                     {
@@ -563,6 +606,7 @@ def compile_builder_draft(
                         for entry in (
                             *spellcasting.spell_access_entries,
                             *origin.spell_access_entries,
+                            *race_variant.spell_access_entries,
                         )
                     }.values()
                 ),
