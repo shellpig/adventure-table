@@ -2,7 +2,7 @@
   "schema_version": 1,
   "locale": "zh-TW",
   "source": "scag",
-  "review_status": "human-reviewed",
+  "review_status": "draft-human-review-required",
   "entries": {
     "scag:background:city-watch": {"name": "城市守衛", "data.feature.name": "守望者之眼"},
     "scag:background:investigator": {"name": "調查員", "data.feature.name": "守望者之眼"},
