@@ -45,12 +45,16 @@ export function grantPresentationReferences(
 
 export function grantPresentationFields(
   grants: readonly BuilderGrantSummary[],
-): string[] {
-  return Array.from(
-    new Set(
-      grants.flatMap((grant) => (grant.presentation_field ? [grant.presentation_field] : [])),
-    ),
-  )
+): Record<string, string[]> {
+  const fields: Record<string, string[]> = {}
+  for (const grant of grants) {
+    if (!grant.presentation_field) continue
+    const existing = fields[grant.source_ref] ?? []
+    if (!existing.includes(grant.presentation_field)) {
+      fields[grant.source_ref] = [...existing, grant.presentation_field]
+    }
+  }
+  return fields
 }
 
 export function grantDisplayName(

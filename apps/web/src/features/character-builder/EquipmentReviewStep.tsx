@@ -289,7 +289,7 @@ export function EquipmentReviewStep({
     : []
   const { nameFor, fieldFor } = useContentPresentations(
     reviewReferences,
-    review ? grantPresentationFields(review.resolved_summary.grants) : [],
+    review ? grantPresentationFields(review.resolved_summary.grants) : {},
   )
   const busy = disabled || confirm.isPending
   const blockingCount =

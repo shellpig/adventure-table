@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQueries } from '@tanstack/react-query'
 
 import {
   getContentPresentations,
@@ -66,26 +66,58 @@ export function localizedContentLabel(localizedName: string, fallback: string): 
     : primary
 }
 
-export function useContentPresentations(references: string[], fields: string[] = []) {
+/**
+ * Split references into one request per distinct field set.
+ *
+ * A field path only exists on the kinds that declare it, and the batch
+ * endpoint rejects the whole request when any reference lacks a requested
+ * field. Asking every reference for `data.feature.name` would therefore lose
+ * the names of every grant, not just the one that needed the extra field.
+ */
+export function groupPresentationRequests(
+  references: readonly string[],
+  extraFields: Readonly<Record<string, string[]>>,
+): { fields: string[]; references: string[] }[] {
+  const bySignature = new Map<string, { fields: string[]; references: string[] }>()
+  for (const reference of Array.from(new Set(references.filter(Boolean))).sort()) {
+    const fields = Array.from(new Set(['name', ...(extraFields[reference] ?? [])])).sort()
+    const signature = fields.join(' ')
+    const group = bySignature.get(signature)
+    if (group) {
+      group.references.push(reference)
+    } else {
+      bySignature.set(signature, { fields, references: [reference] })
+    }
+  }
+  return Array.from(bySignature.values())
+}
+
+export function useContentPresentations(
+  references: string[],
+  extraFields: Record<string, string[]> = {},
+) {
   const { locale } = useLocale()
-  const referenceKey = references.filter(Boolean).sort().join('\u0000')
-  const stableReferences = useMemo(
-    () => Array.from(new Set(referenceKey ? referenceKey.split('\u0000') : [])),
-    [referenceKey],
+  const requestKey = JSON.stringify(groupPresentationRequests(references, extraFields))
+  const requests = useMemo(
+    () => JSON.parse(requestKey) as { fields: string[]; references: string[] }[],
+    [requestKey],
   )
-  const fieldKey = Array.from(new Set(['name', ...fields.filter(Boolean)])).sort().join(',')
-  const stableFields = useMemo(() => fieldKey.split(','), [fieldKey])
-  const query = useQuery({
-    queryKey: ['content-presentations', locale, stableReferences, stableFields],
-    queryFn: () => getContentPresentations(stableReferences, locale, stableFields),
-    enabled: stableReferences.length > 0,
+  const results = useQueries({
+    queries: requests.map((request) => ({
+      queryKey: ['content-presentations', locale, request.references, request.fields],
+      queryFn: () => getContentPresentations(request.references, locale, request.fields),
+      enabled: request.references.length > 0,
+    })),
   })
-  const presentations = useMemo(
-    () =>
-      new Map<string, ContentPresentation>(
-        (query.data?.presentations ?? []).map((presentation) => [presentation.key, presentation]),
+  // Built per render rather than memoised: the number of groups varies with the
+  // reference set, so there is no dependency array of stable length to key on,
+  // and a wrong key here would serve stale names after a locale switch.
+  const presentations = new Map<string, ContentPresentation>(
+    results.flatMap((result) =>
+      (result.data?.presentations ?? []).map(
+        (presentation) => [presentation.key, presentation] as const,
       ),
-    [query.data],
+    ),
   )
   const fieldFor: ContentFieldResolver = (reference, fieldPath, fallback = '') => {
     if (!reference || !fieldPath) return fallback
@@ -104,7 +136,7 @@ export function useContentPresentations(references: string[], fields: string[] =
     presentations,
     nameFor,
     fieldFor,
-    isLoading: query.isLoading,
-    error: query.error,
+    isLoading: results.some((result) => result.isLoading),
+    error: results.find((result) => result.error)?.error ?? null,
   }
 }
