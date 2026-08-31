@@ -77,6 +77,7 @@ export type BuilderDraftPayload = {
   basic?: BuilderBasicInput | null
   target_level?: number | null
   race_selection?: BuilderReferenceSelection | null
+  race_variant_selection?: BuilderReferenceSelection | null
   subrace_selection?: BuilderReferenceSelection | null
   background_selection?: BuilderReferenceSelection | null
   alignment_selection?: BuilderReferenceSelection | null
@@ -234,6 +235,7 @@ export type BuilderResolvedSummary = {
   name?: string | null
   target_level?: number | null
   race_name?: string | null
+  race_variant_name?: string | null
   subrace_name?: string | null
   background_name?: string | null
   alignment_name?: string | null
