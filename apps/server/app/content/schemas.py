@@ -24,6 +24,7 @@ StableKind = Literal[
     "magic-school",
     "proficiency",
     "race",
+    "race-variant",
     "skill",
     "spell",
     "subclass",
@@ -185,6 +186,85 @@ class RaceData(IndexedNamedData):
     subraces: list[APIReference]
 
 
+class RaceVariantReplacementRule(StrictModel):
+    target_grant_id: str = Field(min_length=1, max_length=320)
+    target_reference: APIReference
+    action: Literal["remove"]
+    replacement_group_id: str = Field(min_length=1, max_length=160)
+
+
+class RaceVariantMovementGrant(StrictModel):
+    mode: Literal["walk", "swim", "climb", "fly"]
+    speed: int = Field(gt=0)
+
+
+class RaceVariantSpellChoice(StrictModel):
+    label: str = Field(min_length=1, max_length=240)
+    class_: APIReference = Field(alias="class")
+    level: int = Field(default=0, ge=0, le=9)
+    choose: int = Field(default=1, ge=1)
+    casting_ability: Literal[
+        "strength",
+        "dexterity",
+        "constitution",
+        "intelligence",
+        "wisdom",
+        "charisma",
+    ]
+    feature: APIReference
+
+
+class RaceVariantReplacementOption(StrictModel):
+    id: str = Field(min_length=1, pattern=r"^[a-z0-9][a-z0-9-]*$")
+    label: str = Field(min_length=1, max_length=240)
+    keep_target: bool = False
+    grants: list[APIReference] = Field(default_factory=list)
+    movement: list[RaceVariantMovementGrant] = Field(default_factory=list)
+    spell_choice: RaceVariantSpellChoice | None = None
+
+    @model_validator(mode="after")
+    def validate_option_shape(self) -> "RaceVariantReplacementOption":
+        has_replacement = bool(self.grants or self.movement or self.spell_choice)
+        if self.keep_target and has_replacement:
+            raise ValueError("keep-target race variant option cannot add replacement mechanics")
+        if not self.keep_target and not has_replacement:
+            raise ValueError("replacement race variant option must add at least one mechanic")
+        return self
+
+
+class RaceVariantReplacementGroup(StrictModel):
+    id: str = Field(min_length=1, pattern=r"^[a-z0-9][a-z0-9-]*$")
+    label: str = Field(min_length=1, max_length=240)
+    choose: Literal[1] = 1
+    options: list[RaceVariantReplacementOption] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def option_ids_are_unique(self) -> "RaceVariantReplacementGroup":
+        ids = [option.id for option in self.options]
+        if len(ids) != len(set(ids)):
+            raise ValueError("race variant replacement option ids must be unique")
+        return self
+
+
+class RaceVariantData(IndexedNamedData):
+    base_race_ref: APIReference
+    replacement_rules: list[RaceVariantReplacementRule] = Field(min_length=1)
+    replacement_groups: list[RaceVariantReplacementGroup] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def replacement_groups_cover_rules(self) -> "RaceVariantData":
+        group_ids = [group.id for group in self.replacement_groups]
+        if len(group_ids) != len(set(group_ids)):
+            raise ValueError("race variant replacement group ids must be unique")
+        known = set(group_ids)
+        for rule in self.replacement_rules:
+            if rule.replacement_group_id not in known:
+                raise ValueError(
+                    "race variant replacement rule references an unknown replacement group"
+                )
+        return self
+
+
 class SkillData(IndexedNamedData):
     desc: list[str]
     ability_score: APIReference
@@ -243,6 +323,7 @@ DATA_MODELS: dict[str, type[IndexedNamedData]] = {
     "magic-school": MagicSchoolData,
     "proficiency": ProficiencyData,
     "race": RaceData,
+    "race-variant": RaceVariantData,
     "skill": SkillData,
     "spell": SpellData,
     "subclass": SubclassData,
