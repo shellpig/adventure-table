@@ -118,6 +118,85 @@ EXPECTED_FIGHTING_STYLE_RELATIONS: dict[str, frozenset[str]] = {
     ),
 }
 
+EXPECTED_TCE_MANEUVERS = frozenset(
+    {
+        "tce:feature:maneuver-ambush",
+        "tce:feature:maneuver-bait-and-switch",
+        "tce:feature:maneuver-brace",
+        "tce:feature:maneuver-commanding-presence",
+        "tce:feature:maneuver-grappling-strike",
+        "tce:feature:maneuver-quick-toss",
+        "tce:feature:maneuver-tactical-assessment",
+    }
+)
+
+EXPECTED_PHB_MANEUVERS = frozenset(
+    {
+        "phb2014:feature:maneuver-commanders-strike",
+        "phb2014:feature:maneuver-disarming-attack",
+        "phb2014:feature:maneuver-distracting-strike",
+        "phb2014:feature:maneuver-evasive-footwork",
+        "phb2014:feature:maneuver-feinting-attack",
+        "phb2014:feature:maneuver-goading-attack",
+        "phb2014:feature:maneuver-lunging-attack",
+        "phb2014:feature:maneuver-maneuvering-attack",
+        "phb2014:feature:maneuver-menacing-attack",
+        "phb2014:feature:maneuver-parry",
+        "phb2014:feature:maneuver-precision-attack",
+        "phb2014:feature:maneuver-pushing-attack",
+        "phb2014:feature:maneuver-rally",
+        "phb2014:feature:maneuver-riposte",
+        "phb2014:feature:maneuver-sweeping-attack",
+        "phb2014:feature:maneuver-trip-attack",
+    }
+)
+
+EXPECTED_TCE_METAMAGIC = frozenset(
+    {
+        "tce:feature:metamagic-seeking-spell",
+        "tce:feature:metamagic-transmuted-spell",
+    }
+)
+
+EXPECTED_TCE_PACT_BOONS = frozenset({"tce:feature:pact-of-the-talisman"})
+
+EXPECTED_TCE_INVOCATIONS = frozenset(
+    {
+        "tce:feature:bond-of-the-talisman",
+        "tce:feature:eldritch-mind",
+        "tce:feature:far-scribe",
+        "tce:feature:gift-of-the-protectors",
+        "tce:feature:investment-of-the-chain-master",
+        "tce:feature:protection-of-the-talisman",
+        "tce:feature:rebuke-of-the-talisman",
+        "tce:feature:undying-servitude",
+    }
+)
+
+
+def _pool_members(registry: ContentRegistry, pool: str, *, source: str) -> frozenset[str]:
+    return frozenset(
+        entry.key
+        for entry in registry.list_kind("feature", source=source)
+        if isinstance((raw := entry.data.get("choice_pool_option")), dict)
+        and raw.get("pool") == pool
+    )
+
+
+def _require_exact_pool(
+    registry: ContentRegistry,
+    *,
+    pool: str,
+    source: str,
+    expected: frozenset[str],
+) -> None:
+    actual = _pool_members(registry, pool, source=source)
+    if actual != expected:
+        raise ContentValidationError(
+            f"M01-I {source} {pool} inventory mismatch: "
+            f"missing={sorted(expected - actual)}, extra={sorted(actual - expected)}"
+        )
+
 
 def validate_m01i_inventory(registry: ContentRegistry) -> ContentRegistry:
     """Fail startup if the documented M01-I inventory silently drifts.
@@ -178,6 +257,38 @@ def validate_m01i_inventory(registry: ContentRegistry) -> ContentRegistry:
                 f"M01-I fighting style relation mismatch for {class_ref}: "
                 f"missing={missing}, extra={extra}"
             )
+
+    _require_exact_pool(
+        registry,
+        pool="battle-master-maneuver",
+        source="tce",
+        expected=EXPECTED_TCE_MANEUVERS,
+    )
+    if "phb2014" in registry.enabled_pack_ids:
+        _require_exact_pool(
+            registry,
+            pool="battle-master-maneuver",
+            source="phb2014",
+            expected=EXPECTED_PHB_MANEUVERS,
+        )
+    _require_exact_pool(
+        registry,
+        pool="metamagic",
+        source="tce",
+        expected=EXPECTED_TCE_METAMAGIC,
+    )
+    _require_exact_pool(
+        registry,
+        pool="warlock-pact-boon",
+        source="tce",
+        expected=EXPECTED_TCE_PACT_BOONS,
+    )
+    _require_exact_pool(
+        registry,
+        pool="eldritch-invocation",
+        source="tce",
+        expected=EXPECTED_TCE_INVOCATIONS,
+    )
 
     if sum(len(items) for items in EXPECTED_OPTIONAL_FEATURES_BY_CLASS.values()) != 42:
         raise ContentValidationError("M01-I maintained optional feature inventory must contain 42 entries")
