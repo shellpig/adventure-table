@@ -36,13 +36,23 @@ async function chooseOption(page: Page, input: Locator, value: string, source?: 
   if (!listboxId) throw new Error(`Combobox for "${value}" has no aria-controls listbox`)
   const listbox = page.locator(`[id="${listboxId}"]`)
   let option = listbox.getByRole('option').filter({ has: page.getByText(value, { exact: true }) })
-  if (source) option = option.filter({ has: page.getByText(source, { exact: true }) })
+
+  // Some selectors only show source provenance when the visible label collides.
+  // Keep unique options selectable by label, and disambiguate only when needed.
+  if (source && (await option.count()) > 1) {
+    const sourced = option.filter({ has: page.getByText(source, { exact: true }) })
+    if ((await sourced.count()) === 1) option = sourced
+  }
   if ((await option.count()) > 1) {
-    const tceOption = option.filter({ has: page.getByText("Tasha's Cauldron of Everything", { exact: true }) })
+    const tceOption = option.filter({
+      has: page.getByText("Tasha's Cauldron of Everything", { exact: true }),
+    })
     if ((await tceOption.count()) === 1) option = tceOption
   }
   if ((await option.count()) > 1) {
-    const srdOption = option.filter({ has: page.getByText('System Reference Document 5.1', { exact: true }) })
+    const srdOption = option.filter({
+      has: page.getByText('System Reference Document 5.1', { exact: true }),
+    })
     if ((await srdOption.count()) === 1) option = srdOption
   }
 
@@ -53,12 +63,7 @@ async function chooseOption(page: Page, input: Locator, value: string, source?: 
   await waitForDraftRevision(page, before)
 }
 
-async function chooseSearchable(
-  page: Page,
-  label: string | RegExp,
-  value: string,
-  source?: string,
-) {
+async function chooseSearchable(page: Page, label: string | RegExp, value: string, source?: string) {
   await chooseOption(page, page.getByRole('combobox', { name: label }), value, source)
 }
 
@@ -247,10 +252,7 @@ async function confirmCreate(page: Page, expectedName: string) {
 test('M01-G real backend creates an Artificer level 1', async ({ page, request }) => {
   test.slow()
   const name = `M01-G Artificer 1 ${Date.now()}`
-  const { review } = await prepareCreateReview(page, request, {
-    name,
-    classes: ['Artificer'],
-  })
+  const { review } = await prepareCreateReview(page, request, { name, classes: ['Artificer'] })
 
   expect(review.resolved_summary.class_summary).toBe('Artificer 1')
   const profile = review.resolved_summary.spellcasting_profiles.find(
@@ -263,8 +265,7 @@ test('M01-G real backend creates an Artificer level 1', async ({ page, request }
   const characterId = await confirmCreate(page, name)
   const response = await request.get(`/api/characters/${characterId}`)
   expect(response.ok()).toBeTruthy()
-  const character = await response.json()
-  expect(character.version_no).toBe(1)
+  expect((await response.json()).version_no).toBe(1)
 })
 
 test('M01-G real backend creates Artificer 3 with an Alchemist Specialist', async ({ page, request }) => {
@@ -286,7 +287,6 @@ test('M01-G real backend creates Artificer 3 with an Alchemist Specialist', asyn
       'tce:feature:experimental-elixir',
     ]),
   )
-
   await confirmCreate(page, name)
 })
 
@@ -309,7 +309,6 @@ test('M01-G real backend reviews and creates high-level Artificer 15 progression
   )
   expect(profile?.class_level).toBe(15)
   expect(profile?.max_spell_level).toBe(4)
-
   await confirmCreate(page, name)
 })
 
@@ -335,17 +334,13 @@ test('M01-G real backend reviews Artificer 1 / Wizard 1 shared multiclass slots'
   )
   expect(artificerProfile?.class_level).toBe(1)
   expect(wizardProfile?.class_level).toBe(1)
-
   await confirmCreate(page, name)
 })
 
 test('M01-G real backend levels an existing Artificer 2 to 3 and adds Specialist without resetting live state', async ({ page, request }) => {
   test.slow()
   const name = `M01-G Level Up ${Date.now()}`
-  await prepareCreateReview(page, request, {
-    name,
-    classes: ['Artificer', 'Artificer'],
-  })
+  await prepareCreateReview(page, request, { name, classes: ['Artificer', 'Artificer'] })
   const characterId = await confirmCreate(page, name)
 
   const beforeResponse = await request.get(`/api/characters/${characterId}`)
