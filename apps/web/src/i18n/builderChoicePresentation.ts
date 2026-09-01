@@ -25,6 +25,7 @@ const CHOICE_SUFFIX_ZH: Record<string, string> = {
   'content:lineage-language': '語言',
   'content:lineage-legacy-skill': '祖源傳承技能',
   'content:lineage-legacy-movement': '祖源傳承移動方式',
+  'content:infusion': '已知注法',
 }
 
 const RACE_VARIANT_OPTION_ZH: Record<string, string> = {
