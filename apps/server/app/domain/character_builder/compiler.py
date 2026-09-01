@@ -14,6 +14,10 @@ from app.domain.character.schemas import (
     SpellSlotCapacity,
     SpellcastingProfile,
 )
+from app.domain.character_builder.artificer import (
+    build_artificer_infusion_choices,
+    compile_artificer_infusion_refs,
+)
 from app.domain.character_builder.basics import resolve_creation_summary
 from app.domain.character_builder.choices import build_foundation_choices
 from app.domain.character_builder.creation import BuilderEquipmentSummary
@@ -358,9 +362,15 @@ def compile_builder_draft(
         build_progression_choices(draft, registry),
         _effective_abilities(foundation_preview),
     )
+    artificer_choices = build_artificer_infusion_choices(
+        draft,
+        registry,
+        base_build=base_build,
+    )
     live_choice_ids = {
         *(choice.choice_id for choice in progression_choices),
         *(choice.choice_id for choice in structural_choices),
+        *(choice.choice_id for choice in artificer_choices),
         *(choice.choice_id for choice in variant_choices),
         *(choice.choice_id for choice in lineage_choices),
     }
@@ -387,7 +397,12 @@ def compile_builder_draft(
         for choice in progression_choices
         if choice.option_source == "content:class-proficiency"
     )
-    validation_choices = foundation_choices + generic_progression_choices + structural_choices
+    validation_choices = (
+        foundation_choices
+        + generic_progression_choices
+        + structural_choices
+        + artificer_choices
+    )
     foundation_issues = [
         issue
         for issue in validate_foundation_draft(draft, registry, validation_choices)
@@ -414,7 +429,7 @@ def compile_builder_draft(
     foundation_issues.extend(validate_structural_choice_integrity(draft, structural_choices))
     foundation_issues.extend(origin.issues)
 
-    base_choices = foundation_choices + progression_choices + structural_choices
+    base_choices = foundation_choices + progression_choices + structural_choices + artificer_choices
     resolved_summary = _variant_summary(
         draft,
         registry,
@@ -579,6 +594,11 @@ def compile_builder_draft(
                     )
                 ),
                 feat_refs=tuple(dict.fromkeys((*structural.feat_refs, *origin.feat_refs))),
+                infusion_refs=compile_artificer_infusion_refs(
+                    draft,
+                    choices,
+                    base_build=base_build,
+                ),
                 walking_speed=(lineage.walking_speed if active_lineage else race_variant.walking_speed),
                 swim_speed=(lineage.swim_speed if active_lineage else race_variant.swim_speed),
                 climb_speed=(lineage.climb_speed if active_lineage else race_variant.climb_speed),
