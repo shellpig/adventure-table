@@ -18,6 +18,7 @@ from app.domain.character_builder.m01i_runtime import prepare_optional_class_fea
 from app.domain.character_builder.m01i_validation import (
     active_retraining_choices,
     apply_cantrip_retraining_for_m01i,
+    validate_feature_grant_source_references,
     validate_final_feature_pool_dependencies,
 )
 from app.domain.character_builder.optional_class_features import (
@@ -238,6 +239,7 @@ def compile_builder_draft(
                 }
             )
         )
+        issues.extend(validate_feature_grant_source_references(build, runtime.registry))
         issues.extend(validate_final_feature_pool_dependencies(build, runtime.registry))
 
     validation = make_validation_result(tuple(issues))
