@@ -7,6 +7,7 @@ from typing import Any
 from app.content.identity import parse_stable_key, reference_to_stable_key
 from app.content.registry import ContentRegistry
 from app.domain.character.schemas import CharacterBuild, CharacterState, ResourceCounter
+from app.domain.rules.spellcasting import spell_is_on_class_list
 
 
 ARTIFICER_REF = "tce:class:artificer"
@@ -24,6 +25,27 @@ SPELL_STORING_ITEM_FEATURE_REF = "tce:feature:spell-storing-item"
 ARMOR_MODELS = ("guardian", "infiltrator")
 ELDRITCH_CANNON_TYPES = ("flamethrower", "force-ballista", "protector")
 ARCANE_ARMOR_PARTS = ("armor", "boots", "helmet", "special_weapon")
+ARTISAN_TOOL_INDEXES = frozenset(
+    {
+        "alchemists-supplies",
+        "brewers-supplies",
+        "calligraphers-supplies",
+        "carpenters-tools",
+        "cartographers-tools",
+        "cobblers-tools",
+        "cooks-utensils",
+        "glassblowers-tools",
+        "jewelers-tools",
+        "leatherworkers-tools",
+        "masons-tools",
+        "painters-supplies",
+        "potters-tools",
+        "smiths-tools",
+        "tinkers-tools",
+        "weavers-tools",
+        "woodcarvers-tools",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -234,7 +256,7 @@ def spell_storing_item_metadata(build: CharacterBuild) -> dict[str, Any] | None:
         "recharge": ["long_rest"],
         "eligible_spell_levels": [1, 2],
         "eligible_casting_time": "1 action",
-        "eligible_item_types": ["simple_or_martial_weapon", "spellcasting_focus"],
+        "eligible_item_types": ["simple_or_martial_weapon", "artificer_spellcasting_focus"],
     }
 
 
@@ -336,6 +358,19 @@ def _entry_tokens(entry) -> set[str]:
     return tokens
 
 
+def _equipment_value_gp(entry) -> float | None:
+    cost = entry.data.get("cost")
+    if not isinstance(cost, dict):
+        return None
+    quantity = cost.get("quantity")
+    unit = cost.get("unit")
+    if not isinstance(quantity, (int, float)) or not isinstance(unit, str):
+        return None
+    multipliers = {"cp": 0.01, "sp": 0.1, "ep": 0.5, "gp": 1.0, "pp": 10.0}
+    multiplier = multipliers.get(unit.lower())
+    return float(quantity) * multiplier if multiplier is not None else None
+
+
 def _weapon_property_indexes(entry) -> set[str]:
     properties = entry.data.get("properties")
     if not isinstance(properties, list):
@@ -390,6 +425,13 @@ def infusion_matches_inventory_item(
     entry = registry.get_optional(item_ref)
     if entry is None:
         return False
+
+    # Mind Sharpener explicitly accepts a suit of armor or robes. Robes are
+    # adventuring gear in the canonical SRD dataset, so this exception belongs
+    # to the infusion rule rather than globally redefining robes as armor.
+    if infusion_data.get("index") == "mind-sharpener" and entry.index == "robes":
+        return True
+
     item_filter = infusion_data.get("item_filter")
     if not isinstance(item_filter, dict):
         return False
@@ -402,11 +444,21 @@ def infusion_matches_inventory_item(
         if isinstance(raw_replicated, dict)
         else None
     )
-    return any(
+    matches_kind = any(
         isinstance(filter_kind, str)
         and _matches_filter_kind(entry, filter_kind, replicated_item_ref)
         for filter_kind in filters
     )
+    if not matches_kind:
+        return False
+
+    # Homunculus Servant requires the gem/crystal heart to be worth at least
+    # 100 gp. Missing or non-monetary value data fails closed rather than
+    # allowing a cheap arcane-focus crystal to satisfy the rule.
+    if infusion_data.get("index") == "homunculus-servant":
+        value_gp = _equipment_value_gp(entry)
+        return value_gp is not None and value_gp >= 100
+    return True
 
 
 def validate_known_infusions(build: CharacterBuild, registry: ContentRegistry) -> None:
@@ -510,14 +562,26 @@ def _validate_active_infusions(
         raise ValueError("each arcane armor part can host at most one active infusion")
 
 
-def _spell_storing_target_is_eligible(item_ref: str, registry: ContentRegistry) -> bool:
+def _spell_storing_target_is_eligible(
+    state: CharacterState,
+    inventory_entry_id: str,
+    item_ref: str,
+    registry: ContentRegistry,
+) -> bool:
     entry = registry.get_optional(item_ref)
     if entry is None or parse_stable_key(entry.key).kind != "equipment":
         return False
     if _matches_filter_kind(entry, "simple_or_martial_weapon", None):
         return True
-    tokens = _entry_tokens(entry)
-    return bool(tokens.intersection({"focus", "arcane-focus", "druidic-focus", "holy-symbol"}))
+    if entry.index == "thieves-tools" or entry.index in ARTISAN_TOOL_INDEXES:
+        return True
+    # From Artificer level 2 onward an infused item can serve as that Artificer's
+    # spellcasting focus. Spell-Storing Item is level 11, so an active infusion
+    # on this exact inventory entry makes it a legal focus target.
+    return any(
+        active.inventory_entry_id == inventory_entry_id
+        for active in state.active_infusions
+    )
 
 
 def _validate_spell_storing_item(
@@ -537,8 +601,15 @@ def _validate_spell_storing_item(
         raise ValueError(
             f"Spell-Storing Item target inventory entry does not exist: {stored.inventory_entry_id}"
         )
-    if not _spell_storing_target_is_eligible(target.item_ref, registry):
-        raise ValueError("Spell-Storing Item target must be a simple/martial weapon or spellcasting focus")
+    if not _spell_storing_target_is_eligible(
+        state,
+        stored.inventory_entry_id,
+        target.item_ref,
+        registry,
+    ):
+        raise ValueError(
+            "Spell-Storing Item target must be a simple/martial weapon or an item usable as this Artificer's spellcasting focus"
+        )
     spell = registry.get_optional(stored.spell_ref)
     if spell is None or parse_stable_key(spell.key).kind != "spell":
         raise ValueError(f"Spell-Storing Item references an unknown spell: {stored.spell_ref}")
@@ -546,17 +617,10 @@ def _validate_spell_storing_item(
     if spell_level not in {1, 2}:
         raise ValueError("Spell-Storing Item spell must be level 1 or 2")
     casting_time = spell.data.get("casting_time")
-    if isinstance(casting_time, str) and casting_time.strip().lower() not in {"1 action", "action"}:
+    if not isinstance(casting_time, str) or casting_time.strip().lower() not in {"1 action", "action"}:
         raise ValueError("Spell-Storing Item spell must have a casting time of 1 action")
-    classes = spell.data.get("classes")
-    if isinstance(classes, list):
-        class_refs = {
-            reference_to_stable_key(value, kinds={"class"})
-            for value in classes
-            if isinstance(value, dict)
-        }
-        if ARTIFICER_REF not in class_refs:
-            raise ValueError("Spell-Storing Item spell must be on the Artificer spell list")
+    if not spell_is_on_class_list(spell.key, ARTIFICER_REF, registry):
+        raise ValueError("Spell-Storing Item spell must be on the Artificer spell list")
     if stored.remaining_uses > capacity:
         raise ValueError(
             f"Spell-Storing Item remaining uses exceed capacity: {stored.remaining_uses}>{capacity}"
