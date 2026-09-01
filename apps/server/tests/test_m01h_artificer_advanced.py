@@ -215,13 +215,13 @@ def test_spell_storing_item_accepts_artificer_action_spell_and_weapon_target() -
 
 
 @pytest.mark.parametrize(
-    ("spell_ref", "message"),
+    "spell_ref",
     [
-        ("srd5.1:spell:magic-missile", "Artificer spell list"),
-        ("srd5.1:spell:spiritual-weapon", "Artificer spell list"),
+        "srd5.1:spell:magic-missile",
+        "srd5.1:spell:animal-friendship",
     ],
 )
-def test_spell_storing_item_rejects_non_artificer_spells(spell_ref: str, message: str) -> None:
+def test_spell_storing_item_rejects_non_artificer_action_spells(spell_ref: str) -> None:
     registry = load_default_content_registry()
     build = _build(11, intelligence=16)
     state = _state(
@@ -240,7 +240,7 @@ def test_spell_storing_item_rejects_non_artificer_spells(spell_ref: str, message
         ),
     )
 
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(ValueError, match="Artificer spell list"):
         validate_artificer_state(state, build, registry)
 
 
