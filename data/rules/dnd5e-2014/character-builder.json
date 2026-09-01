@@ -68,6 +68,16 @@
         "prepared_formula": "class_level_plus_ability",
         "spellbook_initial": 6,
         "spellbook_per_level": 2
+      },
+      "tce:class:artificer": {
+        "access_model": "prepared",
+        "slot_contribution": {
+          "formula": "half",
+          "rounding": "ceil"
+        },
+        "resource_pool_type": "normal_multiclass_slots",
+        "prepared_formula": "half_class_level_floor_plus_ability",
+        "prepared_minimum": 1
       }
     },
     "combined_spell_slots": {
