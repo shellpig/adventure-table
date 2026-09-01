@@ -46,6 +46,7 @@ type ChoiceEditorProps = {
 const DIRECT_OPTION_SOURCES = new Set([
   'content:race',
   'content:race-variant',
+  'content:lineage',
   'content:background',
   'content:alignment',
   'content:subrace',
@@ -249,6 +250,9 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
       ...(view?.draft.draft_payload.subrace_selection?.reference_id
         ? [view.draft.draft_payload.subrace_selection.reference_id]
         : []),
+      ...(view?.draft.draft_payload.lineage_selection?.reference_id
+        ? [view.draft.draft_payload.lineage_selection.reference_id]
+        : []),
       ...(view?.draft.draft_payload.background_selection?.reference_id
         ? [view.draft.draft_payload.background_selection.reference_id]
         : []),
@@ -348,11 +352,16 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
   const saving = save.isPending || cancel.isPending
   const raceChoice = choicesBySource.get('content:race')
   const raceVariantChoice = choicesBySource.get('content:race-variant')
+  const lineageChoice = choicesBySource.get('content:lineage')
   const subraceChoice = choicesBySource.get('content:subrace')
   const backgroundChoice = choicesBySource.get('content:background')
   const alignmentChoice = choicesBySource.get('content:alignment')
   const currentRace = view.draft.draft_payload.race_selection?.reference_id ?? ''
   const currentRaceVariant = view.draft.draft_payload.race_variant_selection?.reference_id ?? ''
+  const currentLineage =
+    view.draft.draft_payload.lineage_selection?.reference_id ??
+    lineageChoice?.selected_option_ids[0] ??
+    ''
   const currentSubrace = view.draft.draft_payload.subrace_selection?.reference_id ?? ''
   const currentBackground = view.draft.draft_payload.background_selection?.reference_id ?? ''
   const currentAlignment = view.draft.draft_payload.alignment_selection?.reference_id ?? ''
@@ -362,6 +371,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
       | 'race_selection'
       | 'race_variant_selection'
       | 'subrace_selection'
+      | 'lineage_selection'
       | 'background_selection'
       | 'alignment_selection',
     value: string,
@@ -371,6 +381,16 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
     if (field === 'race_selection') {
       payload.race_variant_selection = null
       payload.subrace_selection = null
+    }
+    if (field === 'lineage_selection' && lineageChoice) {
+      payload.choice_selections = {
+        ...(view.draft.draft_payload.choice_selections ?? {}),
+        [lineageChoice.choice_id]: {
+          choice_id: lineageChoice.choice_id,
+          source_ref: lineageChoice.source_ref,
+          selected_option_ids: value ? [value] : [],
+        },
+      }
     }
     if (resetChoices) {
       payload.choice_selections = {}
@@ -506,6 +526,16 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                 </div>
                 {raceChoice ? (
                   <SearchableSelect label={t('builder.origin.race')} value={currentRace} disabled={saving} options={selectionOptions(raceChoice, nameFor, locale)} secondaryMode="duplicates" onChange={(value) => patchReference('race_selection', value, true)} />
+                ) : null}
+                {lineageChoice ? (
+                  <SearchableSelect
+                    label={builderChoiceLabel(lineageChoice, locale, nameFor)}
+                    value={currentLineage}
+                    disabled={saving}
+                    options={selectionOptions(lineageChoice, nameFor, locale)}
+                    secondaryMode="duplicates"
+                    onChange={(value) => patchReference('lineage_selection', value)}
+                  />
                 ) : null}
                 {raceVariantChoice ? (
                   <SearchableSelect
@@ -701,18 +731,25 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
               <strong>{t('builder.summary.level', { level: view.resolved_summary.target_level ?? '—' })}</strong>
             </div>
             <dl className="builder-summary__facts">
-              <div>
-                <dt>{t('builder.summary.race')}</dt>
-                <dd>
-                  {nameFor(currentRace, view.resolved_summary.race_name ?? '—')}
-                  {currentRaceVariant
-                    ? ` · ${nameFor(currentRaceVariant, view.resolved_summary.race_variant_name ?? currentRaceVariant)}`
-                    : ''}
-                  {currentSubrace
-                    ? ` · ${nameFor(currentSubrace, view.resolved_summary.subrace_name ?? currentSubrace)}`
-                    : ''}
-                </dd>
-              </div>
+              {currentLineage && lineageChoice ? (
+                <div>
+                  <dt>{builderChoiceLabel(lineageChoice, locale, nameFor)}</dt>
+                  <dd>{nameFor(currentLineage, view.resolved_summary.lineage_name ?? currentLineage)}</dd>
+                </div>
+              ) : (
+                <div>
+                  <dt>{t('builder.summary.race')}</dt>
+                  <dd>
+                    {nameFor(currentRace, view.resolved_summary.race_name ?? '—')}
+                    {currentRaceVariant
+                      ? ` · ${nameFor(currentRaceVariant, view.resolved_summary.race_variant_name ?? currentRaceVariant)}`
+                      : ''}
+                    {currentSubrace
+                      ? ` · ${nameFor(currentSubrace, view.resolved_summary.subrace_name ?? currentSubrace)}`
+                      : ''}
+                  </dd>
+                </div>
+              )}
               <div>
                 <dt>{t('builder.summary.background')}</dt>
                 <dd>{nameFor(currentBackground, view.resolved_summary.background_name ?? '—')}</dd>
