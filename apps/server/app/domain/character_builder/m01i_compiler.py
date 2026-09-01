@@ -15,8 +15,12 @@ from app.domain.character_builder.m01i_provenance import (
     reconcile_feature_pool_retraining,
 )
 from app.domain.character_builder.m01i_runtime import prepare_optional_class_features_for_m01i
+from app.domain.character_builder.m01i_validation import (
+    active_retraining_choices,
+    apply_cantrip_retraining_for_m01i,
+    validate_final_feature_pool_dependencies,
+)
 from app.domain.character_builder.optional_class_features import (
-    apply_cantrip_retraining,
     apply_feature_pool_retraining,
     apply_optional_feature_replacements,
     apply_optional_pool_eligibility,
@@ -140,6 +144,7 @@ def compile_builder_draft(
         runtime,
         base_build=base_build,
     )
+    retraining_choices = active_retraining_choices(retraining_choices, runtime)
     retraining_choices = prevent_duplicate_retraining_targets(draft, retraining_choices)
     retraining_nested_choices = build_retraining_nested_choices(
         draft,
@@ -191,12 +196,12 @@ def compile_builder_draft(
                 for entry in (*build.spell_access_entries, *nested_spell_entries)
             }.values()
         )
-        spell_entries = apply_cantrip_retraining(
+        spell_entries, cantrip_retraining_issues = apply_cantrip_retraining_for_m01i(
             spell_entries,
             draft,
-            retraining_choices,
-            runtime.registry,
+            runtime,
         )
+        issues.extend(cantrip_retraining_issues)
 
         base_sources = base_build.feature_grant_sources if base_build is not None else ()
         feature_refs, spell_entries, reconciled_base_sources, provenance_issues = (
@@ -233,6 +238,7 @@ def compile_builder_draft(
                 }
             )
         )
+        issues.extend(validate_final_feature_pool_dependencies(build, runtime.registry))
 
     validation = make_validation_result(tuple(issues))
     return BuilderCompileResult(
