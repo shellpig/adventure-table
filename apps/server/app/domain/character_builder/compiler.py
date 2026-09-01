@@ -18,6 +18,12 @@ from app.domain.character_builder.basics import resolve_creation_summary
 from app.domain.character_builder.choices import build_foundation_choices
 from app.domain.character_builder.creation import BuilderEquipmentSummary
 from app.domain.character_builder.equipment import EquipmentCompilation, compile_starting_equipment
+from app.domain.character_builder.lineages import (
+    build_lineage_choices,
+    compile_lineage,
+    selected_lineage_ref,
+    suppress_replaced_origin_choices,
+)
 from app.domain.character_builder.multiclass import (
     multiclass_option_failure_detail,
     multiclass_option_failure_reason,
@@ -145,17 +151,9 @@ def _effective_origin_choices(
     registry: ContentRegistry,
     effective_abilities: dict[str, int] | None,
 ) -> tuple[BuilderChoice, ...]:
-    automatic_payload = draft.draft_payload.model_copy(
-        update={"choice_selections": {}}
-    )
-    automatic_draft = draft.model_copy(
-        update={"draft_payload": automatic_payload}
-    )
-    automatic_summary = resolve_creation_summary(
-        automatic_draft,
-        registry,
-        choices,
-    )
+    automatic_payload = draft.draft_payload.model_copy(update={"choice_selections": {}})
+    automatic_draft = draft.model_copy(update={"draft_payload": automatic_payload})
+    automatic_summary = resolve_creation_summary(automatic_draft, registry, choices)
     acquired_languages = {
         grant.reference_id
         for grant in automatic_summary.grants
@@ -165,15 +163,11 @@ def _effective_origin_choices(
 
     result: list[BuilderChoice] = []
     for choice in choices:
-        if choice.option_source == "content:language_options":
+        if choice.option_source in {"content:language_options", "content:lineage-language"}:
             available_options = tuple(
-                option
-                for option in choice.options
-                if option.reference_id not in acquired_languages
+                option for option in choice.options if option.reference_id not in acquired_languages
             )
-            available_by_id = {
-                option.option_id: option for option in available_options
-            }
+            available_by_id = {option.option_id: option for option in available_options}
             selection = draft.draft_payload.choice_selections.get(choice.choice_id)
             if selection is not None:
                 for option_id in selection.selected_option_ids:
@@ -243,16 +237,8 @@ def _effective_progression_choices(
             reason = None
             detail = None
             if candidate is not None and stable_key_is_kind(candidate.key, "class"):
-                reason = multiclass_option_failure_reason(
-                    candidate,
-                    tuple(acquired),
-                    effective_abilities,
-                )
-                detail = multiclass_option_failure_detail(
-                    candidate,
-                    tuple(acquired),
-                    effective_abilities,
-                )
+                reason = multiclass_option_failure_reason(candidate, tuple(acquired), effective_abilities)
+                detail = multiclass_option_failure_detail(candidate, tuple(acquired), effective_abilities)
             next_options.append(
                 option.model_copy(
                     update={
@@ -266,10 +252,7 @@ def _effective_progression_choices(
     return tuple(result)
 
 
-def _preserved_starting_equipment(
-    base_build: CharacterBuild,
-    registry: ContentRegistry,
-) -> EquipmentCompilation:
+def _preserved_starting_equipment(base_build: CharacterBuild, registry: ContentRegistry) -> EquipmentCompilation:
     summary: list[BuilderEquipmentSummary] = []
     for entry in base_build.starting_equipment:
         content = registry.get_optional(entry.item_ref)
@@ -303,6 +286,8 @@ def _variant_summary(
     choices: tuple[BuilderChoice, ...],
     summary: BuilderResolvedSummary,
 ) -> BuilderResolvedSummary:
+    if selected_lineage_ref(draft) is not None:
+        return summary
     return apply_race_variant_summary(draft, registry, choices, summary)
 
 
@@ -323,6 +308,10 @@ def compile_builder_draft(
         registry,
         raw_foundation_choices + variant_choices,
     )
+    raw_foundation_choices = suppress_replaced_origin_choices(draft, raw_foundation_choices)
+    lineage_choices = build_lineage_choices(draft, registry, base_build=base_build)
+    raw_foundation_choices = raw_foundation_choices + lineage_choices
+
     initial_foundation_preview = _variant_summary(
         draft,
         registry,
@@ -373,6 +362,7 @@ def compile_builder_draft(
         *(choice.choice_id for choice in progression_choices),
         *(choice.choice_id for choice in structural_choices),
         *(choice.choice_id for choice in variant_choices),
+        *(choice.choice_id for choice in lineage_choices),
     }
     misplaced_equipment_choice_ids = {
         choice_id
@@ -397,18 +387,15 @@ def compile_builder_draft(
         for choice in progression_choices
         if choice.option_source == "content:class-proficiency"
     )
-    validation_choices = (
-        foundation_choices + generic_progression_choices + structural_choices
-    )
+    validation_choices = foundation_choices + generic_progression_choices + structural_choices
     foundation_issues = [
         issue
         for issue in validate_foundation_draft(draft, registry, validation_choices)
         if issue.code != "incomplete_level_progression"
     ]
-    foundation_issues.extend(validate_race_variant(draft, registry))
-    foundation_issues.extend(
-        validate_structural_choice_integrity(draft, foundation_choices)
-    )
+    if selected_lineage_ref(draft) is None:
+        foundation_issues.extend(validate_race_variant(draft, registry))
+    foundation_issues.extend(validate_structural_choice_integrity(draft, foundation_choices))
     for choice_id in sorted(misplaced_equipment_choice_ids):
         foundation_issues.append(
             BuilderIssue(
@@ -424,9 +411,7 @@ def compile_builder_draft(
         )
     if structural_data_issue is not None:
         foundation_issues.append(structural_data_issue)
-    foundation_issues.extend(
-        validate_structural_choice_integrity(draft, structural_choices)
-    )
+    foundation_issues.extend(validate_structural_choice_integrity(draft, structural_choices))
     foundation_issues.extend(origin.issues)
 
     base_choices = foundation_choices + progression_choices + structural_choices
@@ -436,12 +421,8 @@ def compile_builder_draft(
         base_choices,
         resolve_creation_summary(draft, registry, base_choices),
     )
-    structural = compile_structural_selections(
-        draft, registry, structural_choices
-    )
-    resolved_summary = _apply_structural_ability_bonuses(
-        resolved_summary, structural, draft
-    )
+    structural = compile_structural_selections(draft, registry, structural_choices)
+    resolved_summary = _apply_structural_ability_bonuses(resolved_summary, structural, draft)
 
     progression_issues = list(
         validate_progression(
@@ -462,20 +443,14 @@ def compile_builder_draft(
     )
 
     automatic_features = tuple(
-        dict.fromkeys(
-            feature_ref
-            for node in nodes
-            for feature_ref in node.automatic_feature_refs
-        )
+        dict.fromkeys(feature_ref for node in nodes for feature_ref in node.automatic_feature_refs)
     )
     spellcasting = compile_spellcasting(
         draft,
         registry,
         effective_abilities=_effective_abilities(resolved_summary),
         feature_refs=tuple(
-            dict.fromkeys(
-                (*automatic_features, *structural.feature_refs, *origin.feature_refs)
-            )
+            dict.fromkeys((*automatic_features, *structural.feature_refs, *origin.feature_refs))
         ),
     )
     issues.extend(spellcasting.issues)
@@ -486,8 +461,16 @@ def compile_builder_draft(
         }
     )
 
+    lineage = compile_lineage(draft, registry, base_build=base_build)
+    issues.extend(lineage.issues)
+    if lineage.ancestral_origin_ref is not None:
+        ancestor = registry.get_optional(lineage.ancestral_origin_ref)
+        resolved_summary = resolved_summary.model_copy(
+            update={"ancestral_origin_name": ancestor.name if ancestor is not None else lineage.ancestral_origin_ref}
+        )
+
     candidate_issues = tuple(
-        (*foundation_issues, *progression_issues, *spellcasting.issues)
+        (*foundation_issues, *progression_issues, *spellcasting.issues, *lineage.issues)
     )
     if draft.mode is not BuilderMode.CREATE and base_build is not None:
         equipment = _preserved_starting_equipment(base_build, registry)
@@ -502,11 +485,11 @@ def compile_builder_draft(
     issues.extend(equipment_issues)
     choices = base_choices + equipment.choices
     race_variant = compile_race_variant(draft, registry, base_choices)
+    active_lineage = lineage.lineage_ref is not None
 
     build_candidate: CharacterBuild | None = None
     has_candidate_blocking = any(
-        issue.severity is BuilderIssueSeverity.BLOCKING_ERROR
-        for issue in candidate_issues
+        issue.severity is BuilderIssueSeverity.BLOCKING_ERROR for issue in candidate_issues
     )
     abilities = _build_ability_scores(resolved_summary)
     payload = draft.draft_payload
@@ -550,17 +533,22 @@ def compile_builder_draft(
             )
             for pool in spellcasting.resource_pools
         )
+        variant_spell_entries = () if active_lineage else race_variant.spell_access_entries
         build_candidate = _with_derived_content_sources(
             CharacterBuild(
                 content_sources=(),
                 ruleset=payload.basic.ruleset,
                 race_ref=payload.race_selection.reference_id,
-                race_variant_ref=race_variant.race_variant_ref,
+                race_variant_ref=(None if active_lineage else race_variant.race_variant_ref),
                 subrace_ref=(
                     payload.subrace_selection.reference_id
                     if payload.subrace_selection is not None
                     else None
                 ),
+                lineage_ref=lineage.lineage_ref,
+                ancestral_origin_ref=lineage.ancestral_origin_ref,
+                ancestral_legacy=lineage.ancestral_legacy,
+                size=lineage.size,
                 background_ref=payload.background_selection.reference_id,
                 alignment_ref=(
                     payload.alignment_selection.reference_id
@@ -572,33 +560,29 @@ def compile_builder_draft(
                 subclasses=compiled.subclasses,
                 ability_scores=abilities,
                 proficiencies=tuple(
-                    dict.fromkeys(
-                        (*compiled.proficiencies, *structural.proficiencies)
-                    )
+                    dict.fromkeys((*compiled.proficiencies, *structural.proficiencies))
                 ),
                 saving_throw_proficiencies=compiled.saving_throw_proficiencies,
                 skill_choices=tuple(
                     dict.fromkeys(
-                        (*compiled.skill_choices, *structural.skill_choices)
+                        (*compiled.skill_choices, *structural.skill_choices, *lineage.skill_refs)
                     )
                 ),
-                language_refs=origin.language_refs,
+                language_refs=(
+                    lineage.language_refs
+                    if active_lineage and draft.mode is not BuilderMode.CREATE
+                    else origin.language_refs
+                ),
                 feature_refs=tuple(
                     dict.fromkeys(
-                        (
-                            *compiled.feature_refs,
-                            *structural.feature_refs,
-                            *origin.feature_refs,
-                        )
+                        (*compiled.feature_refs, *structural.feature_refs, *origin.feature_refs, *lineage.feature_refs)
                     )
                 ),
-                feat_refs=tuple(
-                    dict.fromkeys((*structural.feat_refs, *origin.feat_refs))
-                ),
-                walking_speed=race_variant.walking_speed,
-                swim_speed=race_variant.swim_speed,
-                climb_speed=race_variant.climb_speed,
-                fly_speed=race_variant.fly_speed,
+                feat_refs=tuple(dict.fromkeys((*structural.feat_refs, *origin.feat_refs))),
+                walking_speed=(lineage.walking_speed if active_lineage else race_variant.walking_speed),
+                swim_speed=(lineage.swim_speed if active_lineage else race_variant.swim_speed),
+                climb_speed=(lineage.climb_speed if active_lineage else race_variant.climb_speed),
+                fly_speed=(lineage.fly_speed if active_lineage else race_variant.fly_speed),
                 spellcasting_profiles=build_profiles,
                 spell_access_entries=tuple(
                     {
@@ -606,7 +590,7 @@ def compile_builder_draft(
                         for entry in (
                             *spellcasting.spell_access_entries,
                             *origin.spell_access_entries,
-                            *race_variant.spell_access_entries,
+                            *variant_spell_entries,
                         )
                     }.values()
                 ),
