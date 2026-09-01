@@ -327,13 +327,14 @@ test('M01-G real backend reviews Artificer 1 / Wizard 1 shared multiclass slots'
   )
   expect(pool).toBeTruthy()
   expect(pool.slots.find((slot: { level: number }) => slot.level === 1)?.count).toBe(3)
-  const profiles = new Map(
-    review.resolved_summary.spellcasting_profiles.map(
-      (item: { class_ref: string; class_level: number }) => [item.class_ref, item],
-    ),
+  const artificerProfile = review.resolved_summary.spellcasting_profiles.find(
+    (item: { class_ref: string }) => item.class_ref === ARTIFICER,
   )
-  expect(profiles.get(ARTIFICER)?.class_level).toBe(1)
-  expect(profiles.get(WIZARD)?.class_level).toBe(1)
+  const wizardProfile = review.resolved_summary.spellcasting_profiles.find(
+    (item: { class_ref: string }) => item.class_ref === WIZARD,
+  )
+  expect(artificerProfile?.class_level).toBe(1)
+  expect(wizardProfile?.class_level).toBe(1)
 
   await confirmCreate(page, name)
 })
