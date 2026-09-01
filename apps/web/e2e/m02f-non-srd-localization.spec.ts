@@ -4,8 +4,21 @@ async function expectDraftSaved(page: Page) {
   await expect(page.getByText(/Saved on server|已儲存至伺服器/)).toBeVisible()
 }
 
+async function currentDraftRevision(page: Page) {
+  const text = (await page.locator('.builder-save-state span').innerText()).trim()
+  const match = text.match(/(?:Draft revision|草稿修訂版)\s*(\d+)/)
+  if (!match) throw new Error(`Cannot parse draft revision from: ${text}`)
+  return Number(match[1])
+}
+
+async function waitForDraftRevision(page: Page, before: number) {
+  await expect.poll(() => currentDraftRevision(page)).toBeGreaterThan(before)
+  await expectDraftSaved(page)
+}
+
 async function chooseOption(page: Page, input: Locator, value: string, source?: string) {
   await expectDraftSaved(page)
+  await expect(input).toBeEnabled()
   await input.fill(value)
   const listboxId = await input.getAttribute('aria-controls')
   if (!listboxId) throw new Error(`Combobox for ${value} has no listbox`)
@@ -14,12 +27,45 @@ async function chooseOption(page: Page, input: Locator, value: string, source?: 
   })
   if (source) option = option.filter({ has: page.getByText(source, { exact: true }) })
   await expect(option).toHaveCount(1)
+  const before = await currentDraftRevision(page)
   await option.click()
-  await expectDraftSaved(page)
+  await waitForDraftRevision(page, before)
 }
 
 async function chooseSearchable(page: Page, label: string | RegExp, value: string, source?: string) {
   await chooseOption(page, page.getByRole('combobox', { name: label }), value, source)
+}
+
+async function chooseFirstEnabled(page: Page, input: Locator) {
+  await expectDraftSaved(page)
+  await expect(input).toBeEnabled()
+  await input.focus()
+  const listboxId = await input.getAttribute('aria-controls')
+  if (!listboxId) throw new Error('Combobox has no aria-controls listbox')
+  const listbox = page.locator(`[id="${listboxId}"]`)
+  await expect(listbox).toBeVisible()
+  const option = listbox.locator('[role="option"]:not([disabled])').first()
+  await expect(option).toBeVisible()
+  const before = await currentDraftRevision(page)
+  await option.click()
+  await waitForDraftRevision(page, before)
+}
+
+async function fillEmptyComboboxes(page: Page, container: Locator) {
+  for (let pass = 0; pass < 96; pass += 1) {
+    const inputs = container.getByRole('combobox')
+    let changed = false
+    for (let index = 0; index < (await inputs.count()); index += 1) {
+      const input = inputs.nth(index)
+      if (!(await input.isVisible()) || !(await input.isEnabled())) continue
+      if ((await input.inputValue()).trim()) continue
+      await chooseFirstEnabled(page, input)
+      changed = true
+      break
+    }
+    if (!changed) return
+  }
+  throw new Error('Required combobox selections did not converge')
 }
 
 async function startDraft(page: Page, name: string) {
@@ -27,8 +73,9 @@ async function startDraft(page: Page, name: string) {
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await page.getByLabel('Character name').fill(name)
   await page.getByLabel('Target character level').fill('1')
+  const before = await currentDraftRevision(page)
   await page.getByRole('button', { name: 'Save Basic Details' }).click()
-  await expectDraftSaved(page)
+  await waitForDraftRevision(page, before)
 }
 
 test('M02-F presents PHB, SCAG inheritance, GoS flavor and source collisions by stable identity', async ({ request }) => {
@@ -65,7 +112,7 @@ test('M02-F presents PHB, SCAG inheritance, GoS flavor and source collisions by 
   expect(srdAcolyte.key).not.toBe(phbAcolyte.key)
 })
 
-test('M02-F completes a bilingual PHB origin flow without changing selections', async ({ page }) => {
+test('M02-F completes a bilingual PHB origin flow without changing selections', async ({ page, request }) => {
   test.slow()
   const name = `M02-F PHB ${Date.now()}`
   await startDraft(page, name)
@@ -83,23 +130,42 @@ test('M02-F completes a bilingual PHB origin flow without changing selections', 
   await expect(page.getByRole('combobox', { name: 'Background' })).toHaveValue('Acolyte')
 
   await page.getByRole('button', { name: /Abilities/ }).click()
+  const beforeAbilities = await currentDraftRevision(page)
   await page.getByRole('button', { name: 'Save Ability Scores' }).click()
+  await waitForDraftRevision(page, beforeAbilities)
   const languageChoice = page.locator('.builder-choice').filter({ hasText: 'Acolyte — Languages' })
   await chooseOption(page, languageChoice.getByRole('combobox', { name: 'Add selection' }), 'Celestial')
   await chooseOption(page, languageChoice.getByRole('combobox', { name: 'Add selection' }), 'Draconic')
+  // Keep this flow future-proof as origin packs grow: any additional required
+  // starting choice must be completed before Review, while optional roleplay stays untouched.
+  await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
   await page.getByRole('button', { name: /Class/ }).click()
   await chooseSearchable(page, 'Level 1 class', 'Barbarian')
   const skills = page.getByTestId('level-node-1').locator('.progression-choice')
   await chooseOption(page, skills.getByRole('combobox', { name: 'Add selection' }), 'Skill: Animal Handling')
   await chooseOption(page, skills.getByRole('combobox', { name: 'Add selection' }), 'Skill: Athletics')
+  await fillEmptyComboboxes(page, page.locator('.level-rail'))
 
   await page.getByRole('button', { name: /Equipment/ }).click()
   await chooseSearchable(page, /greataxe or/, 'Greataxe')
   await chooseSearchable(page, /two handaxes or/, '2 × Handaxe')
   await chooseSearchable(page, 'Choose a holy symbol', 'Amulet')
+  await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
+
+  const draftId = page.url().match(/\/character-builder\/([0-9a-f-]{36})$/)?.[1]
+  if (!draftId) throw new Error(`Cannot parse draft id from ${page.url()}`)
 
   await page.getByRole('button', { name: /Review/ }).click()
+  const reviewResponse = await request.get(`/api/character-builder/drafts/${draftId}/review`)
+  expect(reviewResponse.ok()).toBeTruthy()
+  const review = await reviewResponse.json()
+  const blockingIssues = review.issues.filter(
+    (issue: { severity: string }) => issue.severity === 'blocking_error',
+  )
+  expect(blockingIssues, JSON.stringify(review.issues, null, 2)).toEqual([])
+  expect(review.can_confirm, JSON.stringify(review.issues, null, 2)).toBeTruthy()
+
   const confirm = page.getByRole('button', { name: 'Confirm & Create Character' })
   await expect(confirm).toBeEnabled()
   await confirm.click()
