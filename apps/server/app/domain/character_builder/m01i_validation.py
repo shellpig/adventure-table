@@ -39,6 +39,56 @@ def active_retraining_choices(
     return tuple(choice for choice in choices if choice.source_ref in active)
 
 
+def validate_unique_feature_pool_selections(
+    draft: BuilderDraft,
+    choices: tuple[BuilderChoice, ...],
+    registry: ContentRegistry,
+) -> tuple[BuilderIssue, ...]:
+    """Reject the same mechanical pool option being acquired from two slots.
+
+    D&D choice pools such as Fighting Style, Battle Master Maneuver,
+    Metamagic, and Eldritch Invocation do not become legal duplicates merely
+    because the character has more than one choice slot. Retraining `from`
+    controls describe an existing grant and are not themselves acquisitions.
+    """
+
+    owners: dict[str, list[str]] = {}
+    for choice in choices:
+        if choice.disabled_reason is not None:
+            continue
+        source = choice.option_source or ""
+        if source.startswith("content:optional-feature:retraining-from:"):
+            continue
+        options = {option.option_id: option for option in choice.options}
+        for option_id in _selection(draft, choice.choice_id):
+            option = options.get(option_id)
+            if option is None or option.reference_id is None or option.disabled_reason is not None:
+                continue
+            entry = registry.get_optional(option.reference_id)
+            if entry is None or _pool_option_spec(entry) is None:
+                continue
+            owners.setdefault(option.reference_id, []).append(choice.choice_id)
+
+    issues: list[BuilderIssue] = []
+    for feature_ref, choice_ids in sorted(owners.items()):
+        if len(choice_ids) < 2:
+            continue
+        issues.append(
+            BuilderIssue(
+                code="duplicate_optional_pool_selection",
+                severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                path="draft_payload.choice_selections",
+                message="The same feature-pool option cannot be selected in more than one choice slot.",
+                message_params={
+                    "option_ref": feature_ref,
+                    "choice_ids": choice_ids,
+                },
+                related_refs=(feature_ref,),
+            )
+        )
+    return tuple(issues)
+
+
 def _cantrip_replacements(
     draft: BuilderDraft,
     runtime: OptionalFeatureRuntime,
