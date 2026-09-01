@@ -28,6 +28,7 @@ from app.domain.character_builder.lineages import (
 from app.domain.character_builder.reconciliation import reconcile_character_state
 from app.domain.character_builder.schemas import BuilderChoiceSelection, BuilderMode
 from app.domain.character_builder.structural import validate_structural_choice_integrity
+from app.domain.character_builder.validation import validate_foundation_draft
 from app.domain.rules.hit_points import calculate_max_hp
 from test_m01f_dhampir_lineage import (
     ARCANA,
@@ -61,14 +62,24 @@ def _branch_b_selections(*abilities: str) -> dict[str, BuilderChoiceSelection]:
     return selections
 
 
+def _server_choice_issues(draft, registry):
+    choices = build_lineage_choices(draft, registry)
+    return (
+        *validate_foundation_draft(draft, registry, choices),
+        *validate_structural_choice_integrity(draft, choices),
+    )
+
+
 def test_f2_branch_b_requires_exactly_three_distinct_abilities() -> None:
     registry = load_default_content_registry()
 
     valid = _draft(selections=_branch_b_selections("str", "dex", "con"))
-    assert validate_structural_choice_integrity(
-        valid,
-        build_lineage_choices(valid, registry),
-    ) == ()
+    valid_issues = [
+        issue
+        for issue in _server_choice_issues(valid, registry)
+        if issue.path.endswith(LINEAGE_ASI_TRIPLE_CHOICE_ID)
+    ]
+    assert valid_issues == []
 
     for abilities in (
         ("str", "str", "con"),
@@ -76,10 +87,11 @@ def test_f2_branch_b_requires_exactly_three_distinct_abilities() -> None:
         ("str", "dex", "con", "wis"),
     ):
         draft = _draft(selections=_branch_b_selections(*abilities))
-        issues = validate_structural_choice_integrity(
-            draft,
-            build_lineage_choices(draft, registry),
-        )
+        issues = [
+            issue
+            for issue in _server_choice_issues(draft, registry)
+            if issue.path.endswith(LINEAGE_ASI_TRIPLE_CHOICE_ID)
+        ]
         assert issues, abilities
         assert any(issue.severity.value == "blocking_error" for issue in issues)
 
@@ -92,10 +104,12 @@ def test_f3_small_is_valid_and_invalid_size_is_server_blocked() -> None:
         "lineage-size:small",
     )
     small = _draft(selections=selections)
-    assert not validate_structural_choice_integrity(
-        small,
-        build_lineage_choices(small, registry),
-    )
+    small_issues = [
+        issue
+        for issue in _server_choice_issues(small, registry)
+        if issue.path.endswith(LINEAGE_SIZE_CHOICE_ID)
+    ]
+    assert small_issues == []
     assert compile_lineage(small, registry).size == "small"
 
     invalid_selections = dict(selections)
@@ -104,11 +118,12 @@ def test_f3_small_is_valid_and_invalid_size_is_server_blocked() -> None:
         "lineage-size:large",
     )
     invalid = _draft(selections=invalid_selections)
-    issues = validate_structural_choice_integrity(
-        invalid,
-        build_lineage_choices(invalid, registry),
-    )
-    assert issues
+    issues = [
+        issue
+        for issue in _server_choice_issues(invalid, registry)
+        if issue.path.endswith(LINEAGE_SIZE_CHOICE_ID)
+    ]
+    assert any(issue.code == "invalid_choice_option" for issue in issues)
     assert compile_lineage(invalid, registry).size is None
 
 
@@ -121,12 +136,12 @@ def test_f4_direct_ancestral_legacy_rejects_duplicate_skill() -> None:
         PERCEPTION,
     )
     draft = _draft(selections=selections)
-    issues = validate_structural_choice_integrity(
-        draft,
-        build_lineage_choices(draft, registry),
-    )
-    assert issues
-    assert any(issue.severity.value == "blocking_error" for issue in issues)
+    issues = [
+        issue
+        for issue in _server_choice_issues(draft, registry)
+        if issue.path.endswith(LINEAGE_SKILL_CHOICE_ID)
+    ]
+    assert any(issue.code == "duplicate_choice_option" for issue in issues)
 
 
 def test_f5_origin_fixture_matrix_covers_skill_swim_fly_and_forbidden_only_origins() -> None:
