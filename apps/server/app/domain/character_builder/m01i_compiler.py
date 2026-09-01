@@ -13,6 +13,7 @@ from app.domain.character_builder.m01i_provenance import (
     finalize_feature_grant_sources,
     reconcile_feature_pool_retraining,
 )
+from app.domain.character_builder.m01i_runtime import prepare_optional_class_features_for_m01i
 from app.domain.character_builder.optional_class_features import (
     apply_cantrip_retraining,
     apply_feature_pool_retraining,
@@ -22,7 +23,6 @@ from app.domain.character_builder.optional_class_features import (
     build_optional_retraining_choices,
     compile_nested_feature_selections,
     compile_nested_spell_access,
-    prepare_optional_class_features,
     suppress_replaced_choices,
     validate_optional_choices,
 )
@@ -104,7 +104,7 @@ def compile_builder_draft(
     monkey-patching or import-order dependency.
     """
 
-    runtime = prepare_optional_class_features(
+    runtime = prepare_optional_class_features_for_m01i(
         draft,
         registry,
         base_build=base_build,
