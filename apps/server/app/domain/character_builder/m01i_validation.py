@@ -232,3 +232,34 @@ def validate_final_feature_pool_dependencies(
             )
 
     return tuple(issues)
+
+
+def validate_feature_grant_source_references(
+    build: CharacterBuild,
+    registry: ContentRegistry,
+) -> tuple[BuilderIssue, ...]:
+    """Ensure Build-persistent feature provenance never points at missing content."""
+
+    issues: list[BuilderIssue] = []
+    for row in build.feature_grant_sources:
+        missing = tuple(
+            ref
+            for ref in (row.feature_ref, row.source_ref)
+            if registry.get_optional(ref) is None
+        )
+        if not missing:
+            continue
+        issues.append(
+            BuilderIssue(
+                code="feature_grant_provenance_reference_missing",
+                severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                path="build.feature_grant_sources",
+                message="Feature grant provenance references content that is not installed.",
+                message_params={
+                    "feature_ref": row.feature_ref,
+                    "source_ref": row.source_ref,
+                },
+                related_refs=missing,
+            )
+        )
+    return tuple(issues)
