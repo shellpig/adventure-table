@@ -26,9 +26,32 @@ def _anchor_character_level(draft: BuilderDraft) -> int | None:
     return max(levels) if levels else None
 
 
+def _base_anchor_character_level(build: CharacterBuild | None) -> int | None:
+    if build is None:
+        return None
+    levels = [
+        character_level
+        for character_level, class_ref in enumerate(build.class_progression, start=1)
+        if class_ref == ARTIFICER_REF
+    ]
+    return max(levels) if levels else None
+
+
 def infusion_choice_id(draft: BuilderDraft) -> str | None:
     anchor = _anchor_character_level(draft)
     if anchor is None or _draft_artificer_level(draft) < 2:
+        return None
+    return deterministic_choice_id("level", str(anchor), "artificer", "infusions-known")
+
+
+def _base_infusion_choice_id(build: CharacterBuild | None) -> str | None:
+    anchor = _base_anchor_character_level(build)
+    if anchor is None:
+        return None
+    artificer_level = sum(
+        1 for class_ref in build.class_progression if class_ref == ARTIFICER_REF
+    ) if build is not None else 0
+    if artificer_level < 2:
         return None
     return deterministic_choice_id("level", str(anchor), "artificer", "infusions-known")
 
@@ -115,7 +138,27 @@ def build_artificer_infusion_choices(
     if draft.mode is BuilderMode.LEVEL_UP:
         choose_count = max(0, target_count - len(base_refs))
         if choose_count == 0:
-            return ()
+            # The canonical Known list already lives on the immutable base Build.
+            # Keep its historical choice id "live" only inside the compiler so
+            # the generic stale-selection fallback does not reinterpret that
+            # provenance as an option-less draft choice and reject Level Up.
+            # This internal source is intentionally not rendered by the Class UI.
+            preserved_choice_id = _base_infusion_choice_id(base_build)
+            if preserved_choice_id is None:
+                return ()
+            return (
+                BuilderChoice(
+                    choice_id=preserved_choice_id,
+                    label="Artificer Infusions Known — preserved from base Build",
+                    source_ref="tce:feature:infuse-item",
+                    required=False,
+                    choose_count=0,
+                    option_source="internal:preserved-artificer-infusions",
+                    options=(),
+                    selected_option_ids=(),
+                    disabled_reason="Preserved from the authoritative base Build.",
+                ),
+            )
         # Level Up may only add choices in the target-level namespace. This is
         # also the safe migration path for pre-H Artificers whose base Build has
         # no canonical infusion_refs yet, including multiclass Level Ups where
