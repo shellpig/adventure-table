@@ -1,1 +1,46 @@
-{"phase":"M01-J","ruleset":"dnd5e-2014","expected_counts":{"phb2014":40,"scag":11,"xge":31,"tce":30},"data_blocker":"Verified non-SRD subclass mechanics/reference data is not present in the repository; M01-J forbids synthesizing rules from model memory.","sources":{"phb2014":{"barbarian":{"level":3,"entries":[["berserker","Berserker","canonical_duplicate","srd5.1:subclass:berserker"],["totem-warrior","Totem Warrior","data_blocker"]]},"bard":{"level":3,"entries":[["lore","Lore","canonical_duplicate","srd5.1:subclass:lore"],["valor","Valor","data_blocker"]]},"cleric":{"level":1,"entries":[["knowledge","Knowledge","data_blocker"],["life","Life","canonical_duplicate","srd5.1:subclass:life"],["light","Light","data_blocker"],["nature","Nature","data_blocker"],["tempest","Tempest","data_blocker"],["trickery","Trickery","data_blocker"],["war","War","data_blocker"]]},"druid":{"level":2,"entries":[["land","Land","canonical_duplicate","srd5.1:subclass:land"],["moon","Moon","data_blocker"]]},"fighter":{"level":3,"entries":[["battle-master","Battle Master","data_blocker"],["champion","Champion","canonical_duplicate","srd5.1:subclass:champion"],["eldritch-knight","Eldritch Knight","data_blocker"]]},"monk":{"level":3,"entries":[["four-elements","Four Elements","data_blocker"],["open-hand","Open Hand","canonical_duplicate","srd5.1:subclass:open-hand"],["shadow","Shadow","data_blocker"]]},"paladin":{"level":3,"entries":[["ancients","Ancients","data_blocker"],["devotion","Devotion","canonical_duplicate","srd5.1:subclass:devotion"],["vengeance","Vengeance","data_blocker"]]},"ranger":{"level":3,"entries":[["beast-master","Beast Master","data_blocker"],["hunter","Hunter","canonical_duplicate","srd5.1:subclass:hunter"]]},"rogue":{"level":3,"entries":[["arcane-trickster","Arcane Trickster","data_blocker"],["assassin","Assassin","data_blocker"],["thief","Thief","canonical_duplicate","srd5.1:subclass:thief"]]},"sorcerer":{"level":1,"entries":[["draconic","Draconic Bloodline","canonical_duplicate","srd5.1:subclass:draconic"],["wild-magic","Wild Magic","data_blocker"]]},"warlock":{"level":1,"entries":[["archfey","Archfey","data_blocker"],["fiend","Fiend","canonical_duplicate","srd5.1:subclass:fiend"],["great-old-one","Great Old One","data_blocker"]]},"wizard":{"level":2,"entries":[["abjuration","Abjuration","data_blocker"],["conjuration","Conjuration","data_blocker"],["divination","Divination","data_blocker"],["enchantment","Enchantment","data_blocker"],["evocation","Evocation","canonical_duplicate","srd5.1:subclass:evocation"],["illusion","Illusion","data_blocker"],["necromancy","Necromancy","data_blocker"],["transmutation","Transmutation","data_blocker"]]}},"scag":{"barbarian":{"level":3,"entries":[["battlerager","Battlerager","data_blocker"]]},"cleric":{"level":1,"entries":[["arcana","Arcana Domain","data_blocker"]]},"fighter":{"level":3,"entries":[["purple-dragon-knight","Purple Dragon Knight","data_blocker"]]},"monk":{"level":3,"entries":[["long-death","Way of the Long Death","data_blocker"],["sun-soul","Way of the Sun Soul","data_blocker"]]},"paladin":{"level":3,"entries":[["crown","Oath of the Crown","data_blocker"]]},"rogue":{"level":3,"entries":[["mastermind","Mastermind","data_blocker"],["swashbuckler","Swashbuckler","data_blocker"]]},"sorcerer":{"level":1,"entries":[["storm-sorcery","Storm Sorcery","data_blocker"]]},"warlock":{"level":1,"entries":[["undying","The Undying","data_blocker"]]},"wizard":{"level":2,"entries":[["bladesinging","Bladesinging","data_blocker"]]}},"xge":{"barbarian":{"level":3,"entries":[["ancestral-guardian","Path of the Ancestral Guardian","data_blocker"],["storm-herald","Path of the Storm Herald","data_blocker"],["zealot","Path of the Zealot","data_blocker"]]},"bard":{"level":3,"entries":[["glamour","College of Glamour","data_blocker"],["swords","College of Swords","data_blocker"],["whispers","College of Whispers","data_blocker"]]},"cleric":{"level":1,"entries":[["forge","Forge Domain","data_blocker"],["grave","Grave Domain","data_blocker"]]},"druid":{"level":2,"entries":[["dreams","Circle of Dreams","data_blocker"],["shepherd","Circle of the Shepherd","data_blocker"]]},"fighter":{"level":3,"entries":[["arcane-archer","Arcane Archer","data_blocker"],["cavalier","Cavalier","data_blocker"],["samurai","Samurai","data_blocker"]]},"monk":{"level":3,"entries":[["drunken-master","Way of the Drunken Master","data_blocker"],["kensei","Way of the Kensei","data_blocker"],["sun-soul","Way of the Sun Soul","data_blocker"]]},"paladin":{"level":3,"entries":[["conquest","Oath of Conquest","data_blocker"],["redemption","Oath of Redemption","data_blocker"]]},"ranger":{"level":3,"entries":[["gloom-stalker","Gloom Stalker","data_blocker"],["horizon-walker","Horizon Walker","data_blocker"],["monster-slayer","Monster Slayer","data_blocker"]]},"rogue":{"level":3,"entries":[["inquisitive","Inquisitive","data_blocker"],["mastermind","Mastermind","data_blocker"],["scout","Scout","data_blocker"],["swashbuckler","Swashbuckler","data_blocker"]]},"sorcerer":{"level":1,"entries":[["divine-soul","Divine Soul","data_blocker"],["shadow-magic","Shadow Magic","data_blocker"],["storm-sorcery","Storm Sorcery","data_blocker"]]},"warlock":{"level":1,"entries":[["celestial","The Celestial","data_blocker"],["hexblade","The Hexblade","data_blocker"]]},"wizard":{"level":2,"entries":[["war-magic","War Magic","data_blocker"]]}},"tce":{"artificer":{"level":3,"parent_source":"tce","entries":[["alchemist","Alchemist","implemented"],["armorer","Armorer","implemented"],["artillerist","Artillerist","implemented"],["battle-smith","Battle Smith","implemented"]]},"barbarian":{"level":3,"entries":[["beast","Path of the Beast","data_blocker"],["wild-magic","Path of Wild Magic","data_blocker"]]},"bard":{"level":3,"entries":[["creation","College of Creation","data_blocker"],["eloquence","College of Eloquence","data_blocker"]]},"cleric":{"level":1,"entries":[["order","Order Domain","data_blocker"],["peace","Peace Domain","data_blocker"],["twilight","Twilight Domain","data_blocker"]]},"druid":{"level":2,"entries":[["spores","Circle of Spores","data_blocker"],["stars","Circle of Stars","data_blocker"],["wildfire","Circle of Wildfire","data_blocker"]]},"fighter":{"level":3,"entries":[["psi-warrior","Psi Warrior","data_blocker"],["rune-knight","Rune Knight","data_blocker"]]},"monk":{"level":3,"entries":[["mercy","Way of Mercy","data_blocker"],["astral-self","Way of the Astral Self","data_blocker"]]},"paladin":{"level":3,"entries":[["glory","Oath of Glory","data_blocker"],["watchers","Oath of the Watchers","data_blocker"]]},"ranger":{"level":3,"entries":[["fey-wanderer","Fey Wanderer","data_blocker"],["swarmkeeper","Swarmkeeper","data_blocker"]]},"rogue":{"level":3,"entries":[["phantom","Phantom","data_blocker"],["soulknife","Soulknife","data_blocker"]]},"sorcerer":{"level":1,"entries":[["aberrant-mind","Aberrant Mind","data_blocker"],["clockwork-soul","Clockwork Soul","data_blocker"]]},"warlock":{"level":1,"entries":[["fathomless","The Fathomless","data_blocker"],["genie","The Genie","data_blocker"]]},"wizard":{"level":2,"entries":[["bladesinging","Bladesinging","data_blocker"],["scribes","Order of Scribes","data_blocker"]]}}}}
+{
+  "phase": "M01-J",
+  "ruleset": "dnd5e-2014",
+  "expected_counts": {
+    "phb2014": 40,
+    "scag": 11,
+    "xge": 31,
+    "tce": 30
+  },
+  "reference_docs": {
+    "artificer": "docs/暫用規則資訊/子職業_奇械師.md",
+    "barbarian": "docs/暫用規則資訊/子職業_野蠻人.md",
+    "bard": "docs/暫用規則資訊/子職業_吟遊詩人.md",
+    "cleric": "docs/暫用規則資訊/子職業_牧師.md",
+    "druid": "docs/暫用規則資訊/子職業_德魯伊.md",
+    "fighter": "docs/暫用規則資訊/子職業_戰士.md",
+    "monk": "docs/暫用規則資訊/子職業_武僧.md",
+    "paladin": "docs/暫用規則資訊/子職業_聖武士.md",
+    "ranger": "docs/暫用規則資訊/子職業_遊俠.md",
+    "rogue": "docs/暫用規則資訊/子職業_遊蕩者.md",
+    "sorcerer": "docs/暫用規則資訊/子職業_術士.md",
+    "warlock": "docs/暫用規則資訊/子職業_邪術師.md",
+    "wizard": "docs/暫用規則資訊/子職業_法師.md"
+  },
+  "canonical_duplicates": {
+    "phb2014:subclass:berserker": "srd5.1:subclass:berserker",
+    "phb2014:subclass:lore": "srd5.1:subclass:lore",
+    "phb2014:subclass:life": "srd5.1:subclass:life",
+    "phb2014:subclass:land": "srd5.1:subclass:land",
+    "phb2014:subclass:champion": "srd5.1:subclass:champion",
+    "phb2014:subclass:open-hand": "srd5.1:subclass:open-hand",
+    "phb2014:subclass:devotion": "srd5.1:subclass:devotion",
+    "phb2014:subclass:hunter": "srd5.1:subclass:hunter",
+    "phb2014:subclass:thief": "srd5.1:subclass:thief",
+    "phb2014:subclass:draconic": "srd5.1:subclass:draconic",
+    "phb2014:subclass:fiend": "srd5.1:subclass:fiend",
+    "phb2014:subclass:evocation": "srd5.1:subclass:evocation"
+  },
+  "reprints": {
+    "scag:subclass:sun-soul": "xge:subclass:sun-soul",
+    "scag:subclass:mastermind": "xge:subclass:mastermind",
+    "scag:subclass:swashbuckler": "xge:subclass:swashbuckler",
+    "scag:subclass:storm-sorcery": "xge:subclass:storm-sorcery",
+    "scag:subclass:bladesinging": "tce:subclass:bladesinging"
+  }
+}
