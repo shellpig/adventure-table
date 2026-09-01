@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "phb2014",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "phb2014:feature:maneuver-commanders-strike": {
+      "name": "指揮官打擊",
+      "data.desc.0": "消耗一顆優勢骰與自己的一次攻擊，指揮一名盟友使用反應進行一次武器攻擊。"
+    },
+    "phb2014:feature:maneuver-disarming-attack": {
+      "name": "繳械攻擊",
+      "data.desc.0": "將優勢骰加入武器攻擊的傷害，並迫使目標通過豁免，否則掉落手持物品。"
+    },
+    "phb2014:feature:maneuver-distracting-strike": {
+      "name": "擾亂打擊",
+      "data.desc.0": "將優勢骰加入傷害；在你下回合開始前，下一名攻擊該目標的盟友獲得優勢。"
+    },
+    "phb2014:feature:maneuver-evasive-footwork": {
+      "name": "閃避步法",
+      "data.desc.0": "移動時消耗一顆優勢骰，並在停止移動前將骰值加到護甲等級。"
+    },
+    "phb2014:feature:maneuver-feinting-attack": {
+      "name": "佯攻",
+      "data.desc.0": "以附贈動作消耗一顆優勢骰，讓你對附近生物的下一次攻擊獲得優勢，命中時再將骰值加入傷害。"
+    },
+    "phb2014:feature:maneuver-goading-attack": {
+      "name": "挑釁攻擊",
+      "data.desc.0": "將優勢骰加入傷害，並迫使目標進行感知豁免；失敗時，它攻擊你以外的生物會受到妨礙。"
+    },
+    "phb2014:feature:maneuver-lunging-attack": {
+      "name": "突刺攻擊",
+      "data.desc.0": "消耗一顆優勢骰延伸一次近戰武器攻擊的觸及距離；命中時將骰值加入傷害。"
+    },
+    "phb2014:feature:maneuver-maneuvering-attack": {
+      "name": "調位攻擊",
+      "data.desc.0": "將優勢骰加入傷害，並讓一名盟友使用反應移動，且不會因離開該目標的觸及範圍而引發藉機攻擊。"
+    },
+    "phb2014:feature:maneuver-menacing-attack": {
+      "name": "威嚇攻擊",
+      "data.desc.0": "將優勢骰加入傷害，並迫使目標進行感知豁免；失敗時直到你下回合結束前陷入恐懼。"
+    },
+    "phb2014:feature:maneuver-parry": {
+      "name": "招架",
+      "data.desc.0": "受到近戰攻擊傷害時，使用反應並消耗一顆優勢骰來降低傷害。"
+    },
+    "phb2014:feature:maneuver-precision-attack": {
+      "name": "精準攻擊",
+      "data.desc.0": "在一次武器攻擊的效果套用前，可於擲骰前或擲骰後將一顆優勢骰加入攻擊檢定。"
+    },
+    "phb2014:feature:maneuver-pushing-attack": {
+      "name": "推擊",
+      "data.desc.0": "將優勢骰加入傷害，並迫使目標進行力量豁免；失敗時將其推離。"
+    },
+    "phb2014:feature:maneuver-rally": {
+      "name": "激勵",
+      "data.desc.0": "以附贈動作消耗一顆優勢骰，使一名盟友獲得臨時生命值。"
+    },
+    "phb2014:feature:maneuver-riposte": {
+      "name": "還擊",
+      "data.desc.0": "當生物的近戰攻擊未命中你時，使用反應並消耗一顆優勢骰進行一次近戰武器攻擊。"
+    },
+    "phb2014:feature:maneuver-sweeping-attack": {
+      "name": "橫掃攻擊",
+      "data.desc.0": "近戰武器攻擊命中時，消耗一顆優勢骰；若原攻擊骰也足以命中附近另一名生物，便對其造成額外傷害。"
+    },
+    "phb2014:feature:maneuver-trip-attack": {
+      "name": "絆摔攻擊",
+      "data.desc.0": "將優勢骰加入傷害，並迫使目標進行力量豁免；失敗時倒地。"
+    }
+  }
+}
