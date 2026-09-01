@@ -22,6 +22,7 @@ type BuilderView = {
     source_ref?: string | null
     disabled_reason?: string | null
     allow_duplicates?: boolean
+    selected_option_ids?: string[]
     options: Array<{
       option_id: string
       reference_id?: string | null
@@ -39,6 +40,10 @@ type ConfirmResult = {
 
 const DHAMPIR = 'vrgr:lineage:dhampir'
 const HALF_ELF = 'srd5.1:race:half-elf'
+const LINEAGE_ASI_PATTERN = 'lineage:asi-pattern'
+const LINEAGE_ASI_PLUS_TWO = 'lineage:asi-plus-two'
+const LINEAGE_ASI_PLUS_ONE = 'lineage:asi-plus-one'
+const ASI_PATTERN_2_1 = 'lineage-asi:2-1'
 
 const DIRECT_SOURCES = new Set([
   'content:race',
@@ -88,6 +93,44 @@ async function patchView(
       },
     }),
   )
+}
+
+async function setChoice(
+  page: Page,
+  view: BuilderView,
+  choiceId: string,
+  selectedOptionIds: string[],
+): Promise<BuilderView> {
+  const choice = view.choices.find((item) => item.choice_id === choiceId)
+  expect(choice, choiceId).toBeTruthy()
+  const selections = { ...(view.draft.draft_payload.choice_selections ?? {}) }
+  selections[choiceId] = {
+    choice_id: choiceId,
+    source_ref: choice?.source_ref,
+    selected_option_ids: selectedOptionIds,
+  }
+  return patchView(page, view, { choice_selections: selections })
+}
+
+async function fillDhampirAsi(page: Page, initial: BuilderView): Promise<BuilderView> {
+  let view = initial
+  const pattern = view.choices.find((choice) => choice.choice_id === LINEAGE_ASI_PATTERN)
+  expect(pattern).toBeTruthy()
+  if (pattern?.selected_option_ids?.[0] !== ASI_PATTERN_2_1) {
+    view = await setChoice(page, view, LINEAGE_ASI_PATTERN, [ASI_PATTERN_2_1])
+  }
+
+  const plusTwo = view.choices.find((choice) => choice.choice_id === LINEAGE_ASI_PLUS_TWO)
+  expect(plusTwo).toBeTruthy()
+  const plusTwoOption = plusTwo?.options.find((option) => !option.disabled_reason)
+  expect(plusTwoOption).toBeTruthy()
+  view = await setChoice(page, view, LINEAGE_ASI_PLUS_TWO, [plusTwoOption!.option_id])
+
+  const plusOne = view.choices.find((choice) => choice.choice_id === LINEAGE_ASI_PLUS_ONE)
+  expect(plusOne).toBeTruthy()
+  const plusOneOption = plusOne?.options.find((option) => !option.disabled_reason)
+  expect(plusOneOption).toBeTruthy()
+  return setChoice(page, view, LINEAGE_ASI_PLUS_ONE, [plusOneOption!.option_id])
 }
 
 async function fillGenericChoices(page: Page, initial: BuilderView): Promise<BuilderView> {
@@ -203,6 +246,7 @@ async function createDraft(page: Page, name: string, lineage: boolean): Promise<
       data: { draft_payload: payload },
     }),
   )
+  if (lineage) view = await fillDhampirAsi(page, view)
   view = await fillGenericChoices(page, view)
   return fillEquipment(page, view)
 }
@@ -226,6 +270,7 @@ async function transformToDhampir(page: Page, characterId: string): Promise<Conf
   view = await patchView(page, view, {
     lineage_selection: { reference_id: DHAMPIR },
   })
+  view = await fillDhampirAsi(page, view)
   view = await fillGenericChoices(page, view)
   return confirm(page, view)
 }
