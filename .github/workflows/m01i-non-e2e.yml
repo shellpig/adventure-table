@@ -44,6 +44,9 @@ jobs:
           if missing:
               raise SystemExit("M01-I content shard is not wired into its manifest")
           PY
+      - name: Audit expanded spell inventory
+        working-directory: .
+        run: python scripts/audit_m01i_spell_gaps.py
       - name: Install backend
         run: pip install -e ".[dev]"
       - name: Backend pytest
