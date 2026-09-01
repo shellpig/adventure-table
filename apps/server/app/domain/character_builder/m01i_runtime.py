@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from copy import deepcopy
+
+from app.content.identity import reference_to_stable_key, stable_key_is_kind
 from app.content.registry import ContentRegistry
+from app.content.schemas import ContentEntry
 from app.domain.character.schemas import CharacterBuild
 from app.domain.character_builder.optional_class_features import (
     OptionalClassFeatureSpec,
@@ -22,6 +26,74 @@ from app.domain.character_builder.schemas import (
     BuilderMode,
     BuilderOptionKind,
 )
+
+
+class M01IReferenceNormalizedRegistry:
+    """Expose legacy embedded content references with canonical StableKeys.
+
+    Imported SRD feature-specific choices predate the multi-pack StableKey
+    contract and commonly contain only ``index/name/url``. M01-I retraining
+    needs to compare those options with persisted ``feature_refs``. Normalizing
+    the embedded reference at this read-only overlay boundary lets the generic
+    pool machinery use one identity model without mutating source data.
+    """
+
+    def __init__(self, base: ContentRegistry) -> None:
+        self.base = base
+
+    @staticmethod
+    def _normalize_entry(entry: ContentEntry) -> ContentEntry:
+        if not stable_key_is_kind(entry.key, "feature"):
+            return entry
+        root = entry.data.get("feature_specific")
+        if not isinstance(root, dict):
+            return entry
+
+        normalized = deepcopy(root)
+        changed = False
+
+        def walk(value: object) -> None:
+            nonlocal changed
+            if isinstance(value, dict):
+                if "key" not in value:
+                    try:
+                        key = reference_to_stable_key(value)
+                    except ValueError:
+                        key = None
+                    if key is not None:
+                        value["key"] = key
+                        changed = True
+                for child in value.values():
+                    walk(child)
+            elif isinstance(value, list):
+                for child in value:
+                    walk(child)
+
+        walk(normalized)
+        if not changed:
+            return entry
+        data = dict(entry.data)
+        data["feature_specific"] = normalized
+        return entry.model_copy(update={"data": data})
+
+    def get(self, key: str) -> ContentEntry:
+        return self._normalize_entry(self.base.get(key))
+
+    def get_optional(self, key: str) -> ContentEntry | None:
+        entry = self.base.get_optional(key)
+        return None if entry is None else self._normalize_entry(entry)
+
+    def list_kind(self, kind: str, *, source: str | None = None) -> tuple[ContentEntry, ...]:
+        return tuple(
+            self._normalize_entry(entry)
+            for entry in self.base.list_kind(kind, source=source)
+        )
+
+    def resolve(self, kind: str, index: str, *, source: str | None = None) -> ContentEntry:
+        return self._normalize_entry(self.base.resolve(kind, index, source=source))
+
+    def __getattr__(self, name: str):
+        return getattr(self.base, name)
 
 
 def prepare_optional_class_features_for_m01i(
@@ -92,9 +164,11 @@ def prepare_optional_class_features_for_m01i(
             active.append((feature_ref, spec))
 
     active_tuple = tuple(active)
-    issues = _validate_active_extensions(registry, active_tuple)
+    optional_registry = OptionalFeatureRegistry(registry, active_tuple)
+    normalized_registry = M01IReferenceNormalizedRegistry(optional_registry)
+    issues = _validate_active_extensions(normalized_registry, active_tuple)
     return OptionalFeatureRuntime(
-        registry=OptionalFeatureRegistry(registry, active_tuple),
+        registry=normalized_registry,
         choices=tuple(choices),
         active_feature_refs=tuple(feature_ref for feature_ref, _spec in active_tuple),
         specs=specs,
