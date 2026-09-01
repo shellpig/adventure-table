@@ -4,27 +4,13 @@ from app.content.registry import ContentRegistry
 from app.domain.character.schemas import CharacterBuild
 from app.domain.character_builder.choices import deterministic_choice_id
 from app.domain.character_builder.schemas import (
-    BuilderArtificerResourceSummary,
-    BuilderArtificerSummary,
     BuilderChoice,
     BuilderChoiceOption,
     BuilderDraft,
     BuilderMode,
     BuilderOptionKind,
 )
-from app.domain.rules.artificer import (
-    ARMOR_MODELS,
-    ARTIFICER_REF,
-    advanced_feature_resource_rules,
-    artificer_level,
-    attunement_capacity,
-    attunement_requirement_exceptions,
-    infused_item_capacity,
-    known_infusion_count,
-    selected_artificer_subclass,
-    spell_storing_item_capacity,
-    subclass_runtime_metadata,
-)
+from app.domain.rules.artificer import ARTIFICER_REF, known_infusion_count
 
 
 def _draft_artificer_level(draft: BuilderDraft) -> int:
@@ -128,44 +114,3 @@ def compile_artificer_infusion_refs(
     if base_build is not None and draft.mode in {BuilderMode.BUILD_EDIT, BuilderMode.CORRECTION}:
         return base_build.infusion_refs
     return ()
-
-
-def build_artificer_summary(build: CharacterBuild | None) -> BuilderArtificerSummary | None:
-    if build is None:
-        return None
-    level = artificer_level(build)
-    if level <= 0:
-        return None
-    exceptions = attunement_requirement_exceptions(build)
-    bypasses = tuple(
-        name.removeprefix("ignore_").removesuffix("_requirement")
-        for name, enabled in exceptions.items()
-        if enabled
-    )
-    runtime = subclass_runtime_metadata(build)
-    resources = tuple(
-        BuilderArtificerResourceSummary(
-            resource_id=rule.resource_id,
-            feature_ref=rule.feature_ref,
-            capacity=rule.capacity,
-            recharge=rule.recharge,
-        )
-        for rule in advanced_feature_resource_rules(build)
-    )
-    return BuilderArtificerSummary(
-        artificer_level=level,
-        known_infusion_refs=build.infusion_refs,
-        known_infusion_limit=known_infusion_count(level),
-        infused_item_capacity=infused_item_capacity(level),
-        attunement_capacity=attunement_capacity(build),
-        attunement_requirement_bypasses=bypasses,
-        resources=resources,
-        spell_storing_item_capacity=spell_storing_item_capacity(build),
-        armor_model_options=ARMOR_MODELS if selected_artificer_subclass(build) == "tce:subclass:armorer" else (),
-        subclass_runtime_feature_ref=(
-            runtime.get("feature_ref") if isinstance(runtime.get("feature_ref"), str) else None
-        ),
-        subclass_runtime_kind=(
-            runtime.get("runtime_kind") if isinstance(runtime.get("runtime_kind"), str) else None
-        ),
-    )
