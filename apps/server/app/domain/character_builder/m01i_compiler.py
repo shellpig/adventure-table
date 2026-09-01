@@ -7,6 +7,12 @@ from app.domain.character_builder.compiler import (
     BuilderCompileResult,
     compile_builder_draft as compile_core_builder_draft,
 )
+from app.domain.character_builder.m01i_provenance import (
+    build_retraining_nested_choices,
+    current_feature_grant_sources,
+    finalize_feature_grant_sources,
+    reconcile_feature_pool_retraining,
+)
 from app.domain.character_builder.optional_class_features import (
     apply_cantrip_retraining,
     apply_feature_pool_retraining,
@@ -133,8 +139,15 @@ def compile_builder_draft(
         runtime,
         base_build=base_build,
     )
+    retraining_nested_choices = build_retraining_nested_choices(
+        draft,
+        runtime,
+        retraining_choices,
+        base_build=base_build,
+    )
+    all_nested_choices = nested_choices + retraining_nested_choices
 
-    optional_choices = runtime.choices + nested_choices + retraining_choices
+    optional_choices = runtime.choices + all_nested_choices + retraining_choices
     choices = core_choices + optional_choices
 
     issues = [
@@ -154,7 +167,7 @@ def compile_builder_draft(
         nested_structural = compile_nested_feature_selections(
             draft,
             runtime.registry,
-            nested_choices,
+            all_nested_choices,
         )
         feature_refs = tuple(
             dict.fromkeys((*feature_refs, *nested_structural.feature_refs))
@@ -168,7 +181,7 @@ def compile_builder_draft(
         nested_spell_entries = compile_nested_spell_access(
             draft,
             runtime.registry,
-            nested_choices,
+            all_nested_choices,
         )
         spell_entries = tuple(
             {
@@ -183,10 +196,38 @@ def compile_builder_draft(
             runtime.registry,
         )
 
+        base_sources = base_build.feature_grant_sources if base_build is not None else ()
+        feature_refs, spell_entries, reconciled_base_sources, provenance_issues = (
+            reconcile_feature_pool_retraining(
+                feature_refs,
+                spell_entries,
+                base_sources,
+                draft,
+                retraining_choices,
+                runtime.registry,
+            )
+        )
+        issues.extend(provenance_issues)
+
+        current_sources = current_feature_grant_sources(
+            draft,
+            runtime,
+            core_choices=core_choices,
+            nested_choices=all_nested_choices,
+            retraining_choices=retraining_choices,
+        )
+        feature_grant_sources = finalize_feature_grant_sources(
+            feature_refs,
+            base_build=base_build,
+            current_sources=current_sources,
+            reconciled_base_sources=reconciled_base_sources,
+        )
+
         build = _derive_sources(
             build.model_copy(
                 update={
                     "feature_refs": feature_refs,
+                    "feature_grant_sources": feature_grant_sources,
                     "spell_access_entries": spell_entries,
                 }
             )
