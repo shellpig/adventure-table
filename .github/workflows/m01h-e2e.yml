@@ -102,6 +102,7 @@ jobs:
                           wisdom=10,
                           charisma=10,
                       ),
+                      feature_refs=(ARMOR_MODEL_FEATURE_REF,),
                       infusion_refs=(
                           'tce:infusion:enhanced-defense',
                           'tce:infusion:enhanced-weapon',
