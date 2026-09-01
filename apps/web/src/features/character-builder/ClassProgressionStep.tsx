@@ -214,7 +214,7 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
               : option.fixed_hp_gain,
         subclass_ref: sameClass ? current.subclass_ref : null,
       },
-      { resetSpellChoices: !sameClass },
+      { resetSpellChoices: Boolean(current) && !sameClass },
     )
   }
 
