@@ -7,13 +7,14 @@ import {
   builderChoiceLabel,
   builderChoiceOptionLabel,
 } from './builderChoicePresentation'
+import type { ContentNameResolver } from './useContentPresentations'
 
-const nameFor = (referenceId: string, fallback: string) => {
+const nameFor: ContentNameResolver = (referenceId, fallback = '') => {
   const names: Record<string, string> = {
     'vrgr:lineage:dhampir': '達姆匹爾',
     'srd5.1:skill:perception': '察覺',
   }
-  return names[referenceId] ?? fallback
+  return referenceId ? (names[referenceId] ?? fallback) : fallback
 }
 
 function choice(
