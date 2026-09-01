@@ -32,6 +32,7 @@ jobs:
               "data/tce/maneuvers-m01i.json",
               "data/tce/options-m01i.json",
               "data/phb2014/maneuvers-m01i.json",
+              "data/phb2014/spells-m01i.json",
           }
           manifested = set()
           for pack in ("tce", "phb2014"):
