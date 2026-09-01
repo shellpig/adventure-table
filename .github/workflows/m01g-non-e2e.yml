@@ -17,39 +17,68 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Audit installed TCE spell references
+      - name: Audit installed TCE references
         working-directory: .
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
 
+          route_to_kind = {
+              "ability-scores": "ability",
+              "alignments": "alignment",
+              "backgrounds": "background",
+              "classes": "class",
+              "equipment": "equipment",
+              "equipment-categories": "equipment-category",
+              "features": "feature",
+              "proficiencies": "proficiency",
+              "skills": "skill",
+              "spells": "spell",
+              "subclasses": "subclass",
+          }
+
           installed = set()
-          for path in Path("data").glob("*/spells.json"):
-              for entry in json.loads(path.read_text(encoding="utf-8")):
-                  key = entry.get("key")
-                  if isinstance(key, str):
-                      installed.add(key)
+          for path in Path("data").glob("*/*.json"):
+              if path.name == "manifest.json":
+                  continue
+              try:
+                  payload = json.loads(path.read_text(encoding="utf-8"))
+              except json.JSONDecodeError:
+                  continue
+              if not isinstance(payload, list):
+                  continue
+              for entry in payload:
+                  if isinstance(entry, dict):
+                      key = entry.get("key")
+                      if isinstance(key, str):
+                          installed.add(key)
 
           refs = set()
-          for filename in ("classes.json", "subclasses.json"):
-              payload = json.loads((Path("data/tce") / filename).read_text(encoding="utf-8"))
-              stack = list(payload)
+          for path in Path("data/tce").glob("*.json"):
+              if path.name == "manifest.json":
+                  continue
+              payload = json.loads(path.read_text(encoding="utf-8"))
+              stack = list(payload) if isinstance(payload, list) else [payload]
               while stack:
                   value = stack.pop()
                   if isinstance(value, dict):
                       url = value.get("url")
-                      if isinstance(url, str) and url.startswith("/api/2014/spells/"):
-                          refs.add("srd5.1:spell:" + url.rsplit("/", 1)[-1])
+                      if isinstance(url, str) and url.startswith("/api/2014/"):
+                          parts = url.strip("/").split("/")
+                          if len(parts) == 4 and parts[:2] == ["api", "2014"]:
+                              kind = route_to_kind.get(parts[2])
+                              if kind is not None:
+                                  refs.add(f"srd5.1:{kind}:{parts[3]}")
                       key = value.get("key")
-                      if isinstance(key, str) and ":spell:" in key:
+                      if isinstance(key, str) and key.count(":") == 2:
                           refs.add(key)
                       stack.extend(value.values())
                   elif isinstance(value, list):
                       stack.extend(value)
 
           missing = sorted(refs - installed)
-          print("MISSING_TCE_SPELL_REFS", missing)
+          print("MISSING_TCE_REFS", missing)
           PY
       - name: Install backend
         run: pip install -e ".[dev]"
