@@ -36,9 +36,14 @@ def infusion_choice_id(draft: BuilderDraft) -> str | None:
 def _eligible_options(
     registry: ContentRegistry,
     level: int,
+    *,
+    excluded_refs: set[str] | None = None,
 ) -> tuple[BuilderChoiceOption, ...]:
+    excluded = excluded_refs or set()
     options: list[BuilderChoiceOption] = []
     for entry in registry.list_kind("infusion", source="tce"):
+        if entry.key in excluded:
+            continue
         minimum = entry.data.get("minimum_artificer_level")
         if not isinstance(minimum, int) or minimum > level:
             continue
@@ -66,18 +71,23 @@ def build_artificer_infusion_choices(
         return ()
 
     target_count = known_infusion_count(level)
-    base_count = len(base_build.infusion_refs) if base_build is not None else 0
+    base_refs = base_build.infusion_refs if base_build is not None else ()
     choose_count = target_count
+    excluded_refs: set[str] = set()
     if draft.mode is BuilderMode.LEVEL_UP:
-        choose_count = max(0, target_count - base_count)
+        choose_count = max(0, target_count - len(base_refs))
         if choose_count == 0:
             return ()
+        # This choice is only the newly gained Known Infusions. If an existing
+        # infusion remained selectable, the user could consume the delta with a
+        # duplicate and leave the final immutable Build underfilled.
+        excluded_refs = set(base_refs)
 
     selection = draft.draft_payload.choice_selections.get(choice_id)
     if selection is not None:
         selected = selection.selected_option_ids
     elif draft.mode in {BuilderMode.BUILD_EDIT, BuilderMode.CORRECTION} and base_build is not None:
-        selected = base_build.infusion_refs
+        selected = base_refs
     else:
         selected = ()
 
@@ -89,7 +99,7 @@ def build_artificer_infusion_choices(
             required=True,
             choose_count=choose_count,
             option_source="content:infusion",
-            options=_eligible_options(registry, level),
+            options=_eligible_options(registry, level, excluded_refs=excluded_refs),
             selected_option_ids=tuple(selected),
         ),
     )
