@@ -18,6 +18,7 @@ from app.domain.character_builder.schemas import (
     BuilderResolvedSummary,
 )
 from app.domain.rules.abilities import ABILITY_NAMES, ability_modifier, effective_ability_score
+from app.domain.rules.artificer_dto import ArtificerSummaryDTO, build_artificer_summary
 from app.domain.rules.feature_resources import initial_feature_resource_state
 from app.domain.rules.hit_points import calculate_max_hp
 from app.domain.rules.proficiency import proficiency_bonus, total_character_level
@@ -41,6 +42,7 @@ class BuilderReviewDerivedStats(StrictModel):
     ability_modifiers: dict[str, int]
     proficiency_bonus: int = Field(ge=2, le=6)
     skill_modifiers: dict[str, int]
+    artificer: ArtificerSummaryDTO | None = None
 
 
 class BuilderReviewDTO(StrictModel):
@@ -66,6 +68,8 @@ class BuilderConfirmResult(StrictModel):
 def build_review_derived_stats(
     build: CharacterBuild,
     registry: ContentRegistry,
+    *,
+    state: CharacterState | None = None,
 ) -> BuilderReviewDerivedStats:
     level = total_character_level(build)
     return BuilderReviewDerivedStats(
@@ -75,6 +79,7 @@ def build_review_derived_stats(
         },
         proficiency_bonus=proficiency_bonus(level),
         skill_modifiers=all_skill_modifiers(build, registry),
+        artificer=build_artificer_summary(build, state, registry),
     )
 
 
