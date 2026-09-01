@@ -9,7 +9,11 @@ from app.domain.character.fixture import (
     build_p0_fighter_wizard_fixture,
     build_p0_fighter_wizard_state,
 )
-from app.domain.character.schemas import AncestralLegacySelection, ConditionState
+from app.domain.character.schemas import (
+    AncestralLegacySelection,
+    ConditionState,
+    SpellAccessEntry,
+)
 from app.domain.character_builder.lineages import (
     ASI_PATTERN_1_1_1,
     ASI_PATTERN_2_1,
@@ -182,7 +186,10 @@ def test_f5_origin_fixture_matrix_covers_skill_swim_fly_and_forbidden_only_origi
         update={
             "race_ref": "vgm:race:hobgoblin",
             "climb_speed": None,
-            "proficiencies": ("srd5.1:proficiency:light-armor",),
+            "proficiencies": (
+                "srd5.1:proficiency:light-armor",
+                "srd5.1:proficiency:martial-weapons",
+            ),
             "feature_refs": ("vgm:feature:saving-face",),
         }
     )
@@ -203,14 +210,25 @@ def test_f5_origin_fixture_matrix_covers_skill_swim_fly_and_forbidden_only_origi
 
 def test_f7_forbidden_legacy_categories_are_not_exposed_as_retention_options() -> None:
     registry = load_default_content_registry()
+    racial_spell = SpellAccessEntry(
+        entry_id="old-racial-light",
+        spell_key="srd5.1:spell:light",
+        source_type="race",
+        source_key="vgm:race:hobgoblin",
+        access_type="granted",
+        casting_ability="intelligence",
+    )
     base = _base_build(skill_choices=(), fly_speed=None).model_copy(
         update={
             "race_ref": "vgm:race:hobgoblin",
             "walking_speed": 30,
             "climb_speed": None,
-            "proficiencies": ("srd5.1:proficiency:light-armor",),
+            "proficiencies": (
+                "srd5.1:proficiency:light-armor",
+                "srd5.1:proficiency:martial-weapons",
+            ),
             "feature_refs": ("vgm:feature:saving-face",),
-            "spell_access_entries": (),
+            "spell_access_entries": (racial_spell,),
         }
     )
     draft = _draft(mode=BuilderMode.BUILD_EDIT, selections={})
@@ -227,11 +245,15 @@ def test_f7_forbidden_legacy_categories_are_not_exposed_as_retention_options() -
         for option in choice.options
     }
 
-    # Old racial ASI, weapon/armor proficiencies, racial spells, and unrelated
-    # traits/features never become Ancestral Legacy choices. Walking speed is
-    # also explicitly absent; only climb/fly/swim may be retained.
+    # Establish that this ancestry actually carries every forbidden category
+    # being audited, then prove none is offered as Ancestral Legacy.
+    hobgoblin = registry.get("vgm:race:hobgoblin")
+    assert hobgoblin.data["ability_bonuses"]
+    assert hobgoblin.data["proficiency_choices"]
     assert "content:ability_bonus_options" not in retention_sources
     assert "srd5.1:proficiency:light-armor" not in option_ids
+    assert "srd5.1:proficiency:martial-weapons" not in option_ids
+    assert "srd5.1:spell:light" not in option_ids
     assert "vgm:feature:saving-face" not in option_ids
     assert not any("spell" in source for source in retention_sources)
     assert "lineage-movement:walk" not in option_ids
