@@ -1,0 +1,217 @@
+name: M01-H Full-Stack E2E
+
+on:
+  push:
+    branches:
+      - m01-h-artificer-advanced-features
+    paths:
+      - 'apps/server/**'
+      - 'apps/web/**'
+      - 'data/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/m01h-e2e.yml'
+  workflow_dispatch:
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@11.6.0
+
+      - name: Install frontend dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: TypeScript and Vite build
+        working-directory: apps/web
+        run: npm run build
+
+      - name: Install Playwright Chromium
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate Docker Compose
+        run: docker compose config
+
+      - name: Start clean full stack
+        run: |
+          docker compose down -v --remove-orphans || true
+          docker compose up -d --build
+
+      - name: Verify full stack readiness
+        run: |
+          curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:8000/health
+          curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:8000/ready
+          curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:5173
+
+      - name: Seed deterministic fixtures
+        run: |
+          docker compose exec -T server python -m app.scripts.seed_p0_fighter_wizard
+          docker compose exec -T server python - <<'PY'
+          from uuid import UUID
+          from sqlalchemy import create_engine
+
+          from app.config import settings
+          from app.content.registry import load_default_content_registry
+          from app.domain.character.schemas import (
+              AbilityScores,
+              ActiveInfusion,
+              CharacterBuild,
+              CharacterState,
+              InventoryEntry,
+              SubclassSelection,
+          )
+          from app.domain.rules.artificer import (
+              ARMORER_REF,
+              ARMOR_MODEL_FEATURE_REF,
+              ARTIFICER_REF,
+          )
+          from app.persistence.characters import CharacterNotFoundError, CharacterRepository
+
+          fixture_id = UUID('00000000-0000-4000-8000-0000000000e1')
+          engine = create_engine(settings.database_url, pool_pre_ping=True)
+          try:
+              repository = CharacterRepository(engine, load_default_content_registry())
+              try:
+                  repository.load_character(fixture_id)
+              except CharacterNotFoundError:
+                  build = CharacterBuild(
+                      content_sources=('srd5.1', 'tce'),
+                      race_ref='srd5.1:race:human',
+                      character_level=3,
+                      class_progression=(ARTIFICER_REF, ARTIFICER_REF, ARTIFICER_REF),
+                      subclasses=(
+                          SubclassSelection(class_ref=ARTIFICER_REF, subclass_ref=ARMORER_REF),
+                      ),
+                      ability_scores=AbilityScores(
+                          strength=10,
+                          dexterity=14,
+                          constitution=10,
+                          intelligence=16,
+                          wisdom=10,
+                          charisma=10,
+                      ),
+                      infusion_refs=(
+                          'tce:infusion:enhanced-defense',
+                          'tce:infusion:enhanced-weapon',
+                          'tce:infusion:enhanced-arcane-focus',
+                          'tce:infusion:returning-weapon',
+                      ),
+                      hp_progression=(8, 5, 5),
+                  )
+                  state = CharacterState(
+                      current_hp=18,
+                      hit_dice_state={'d8': 3},
+                      inventory_state=[
+                          InventoryEntry(
+                              entry_id='inventory:armor',
+                              item_ref='srd5.1:equipment:leather-armor',
+                              quantity=1,
+                              equipped=True,
+                              carried=True,
+                          ),
+                      ],
+                      active_infusions=[
+                          ActiveInfusion(
+                              inventory_entry_id='inventory:armor',
+                              infusion_ref='tce:infusion:enhanced-defense',
+                          ),
+                      ],
+                      feature_modes={ARMOR_MODEL_FEATURE_REF: 'guardian'},
+                  )
+                  repository.create_character(
+                      name='M01-H Armorer Fixture',
+                      build=build,
+                      state=state,
+                      character_id=fixture_id,
+                      version_kind='test_fixture',
+                  )
+              print(fixture_id)
+          finally:
+              engine.dispose()
+          PY
+          curl --fail http://127.0.0.1:8000/api/characters/00000000-0000-4000-8000-0000000000e1/sheet >/dev/null
+
+      - name: Add M01-H focused browser smoke
+        working-directory: apps/web
+        run: |
+          cat > e2e/m01h-artificer-state.spec.ts <<'TS'
+          import { expect, test } from '@playwright/test'
+
+          const CHARACTER_ID = '00000000-0000-4000-8000-0000000000e1'
+
+          test('M01-H Artificer workbench persists infusion and Armor Model state', async ({ page, request }) => {
+            await page.goto(`/characters/${CHARACTER_ID}`)
+
+            const panel = page.getByRole('region', { name: 'Artificer Workbench' })
+            await expect(panel).toBeVisible()
+
+            const knownCard = panel.locator('.artificer-card').filter({ hasText: 'Known Infusions' })
+            await expect(knownCard.locator('strong')).toHaveText('4 / 4')
+
+            const activeCard = panel.locator('.artificer-card').filter({ hasText: 'Active capacity' })
+            await expect(activeCard.locator('strong')).toHaveText('1 / 2')
+            await expect(panel.getByText('Enhanced Defense', { exact: true })).toBeVisible()
+
+            await panel.getByRole('button', { name: 'Deactivate' }).click()
+            await expect(activeCard.locator('strong')).toHaveText('0 / 2')
+
+            let sheetResponse = await request.get(`/api/characters/${CHARACTER_ID}/sheet`)
+            expect(sheetResponse.ok()).toBeTruthy()
+            let sheet = await sheetResponse.json()
+            expect(sheet.artificer.active_infusion_count).toBe(0)
+
+            const modelSelect = panel.locator('select').last()
+            await modelSelect.selectOption('infiltrator')
+            await panel.getByRole('button', { name: 'Switch model' }).click()
+
+            const armorCard = panel.locator('.artificer-card').filter({ hasText: 'Armor Model' })
+            await expect(armorCard.locator('strong')).toHaveText('infiltrator')
+
+            sheetResponse = await request.get(`/api/characters/${CHARACTER_ID}/sheet`)
+            expect(sheetResponse.ok()).toBeTruthy()
+            sheet = await sheetResponse.json()
+            expect(sheet.artificer.armor_model).toBe('infiltrator')
+
+            await page.reload()
+            const reloaded = page.getByRole('region', { name: 'Artificer Workbench' })
+            await expect(reloaded.locator('.artificer-card').filter({ hasText: 'Active capacity' }).locator('strong')).toHaveText('0 / 2')
+            await expect(reloaded.locator('.artificer-card').filter({ hasText: 'Armor Model' }).locator('strong')).toHaveText('infiltrator')
+          })
+          TS
+
+      - name: Run complete Playwright suite
+        working-directory: apps/web
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:5173
+        run: npm run test:e2e
+
+      - name: Print full-stack logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Upload Playwright results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m01h-playwright-results
+          path: |
+            apps/web/test-results
+            apps/web/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Stop full stack
+        if: always()
+        run: docker compose down -v --remove-orphans
