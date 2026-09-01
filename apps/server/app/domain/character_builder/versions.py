@@ -61,6 +61,35 @@ def _class_summary(build: CharacterBuild, registry: ContentRegistry) -> str:
     )
 
 
+def build_version_summary(
+    *,
+    version_id: UUID,
+    character_id: UUID,
+    version_no: int,
+    version_kind: str,
+    parent_version_id: UUID | None,
+    superseded_by_version_id: UUID | None,
+    change_note: str | None,
+    created_at: datetime,
+    current_version_id: UUID,
+    build: CharacterBuild,
+    registry: ContentRegistry,
+) -> CharacterVersionSummary:
+    return CharacterVersionSummary(
+        id=version_id,
+        character_id=character_id,
+        version_no=version_no,
+        version_kind=CharacterVersionKind(version_kind),
+        parent_version_id=parent_version_id,
+        superseded_by_version_id=superseded_by_version_id,
+        change_note=change_note,
+        created_at=created_at,
+        is_current=version_id == current_version_id,
+        character_level=build.character_level,
+        class_summary=_class_summary(build, registry),
+    )
+
+
 def _legacy_level_choices(
     build: CharacterBuild,
     registry: ContentRegistry,
@@ -77,7 +106,6 @@ def _legacy_level_choices(
         class_counts[class_ref] += 1
         class_level = class_counts[class_ref]
         class_entry = registry.get(class_ref)
-        hit_die = class_entry.data.get("hit_die")
         if index == 1:
             method = BuilderHPMethod.FIRST_LEVEL
         elif hp_gain == fixed_hp_gain(class_entry):
@@ -218,21 +246,10 @@ def seed_version_draft_payload(
             ruleset=character.build.ruleset,
         )
         payload.target_level = character.build.character_level
-        # Lineage is Build identity, not merely historical UI provenance. Always
-        # seed the typed selector from the authoritative current Build so a
-        # later Level Up / Build Edit cannot silently lose it if an older source
-        # payload did not yet carry M01-F fields.
         payload.lineage_selection = _lineage_selection(character.build)
-        # Starting equipment is creation provenance and live inventory has long
-        # since diverged. P1-G preserves the immutable baseline instead of asking
-        # the user to choose starting equipment again.
         payload.starting_equipment_choices = {}
         payload.initial_state_seed = {}
 
-    # Prepared lists are Current State, not Build provenance. Keeping the create
-    # draft's initial prepared choice here would incorrectly make a later live
-    # preparation change look like a Build edit. Reconciliation validates the
-    # actual Current State against the proposed new Build.
     payload.spell_choices = {
         profile_id: choice.model_copy(update={"prepared_spell_keys": ()})
         for profile_id, choice in payload.spell_choices.items()
