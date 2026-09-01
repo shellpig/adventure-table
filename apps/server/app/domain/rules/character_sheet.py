@@ -11,6 +11,7 @@ from app.domain.character.schemas import PersistedCharacter, ResourceCounter, Ro
 from app.domain.character.validation import derive_hit_dice_totals
 from app.domain.rules.abilities import ABILITY_NAMES, ability_modifier, effective_ability_score
 from app.domain.rules.armor_class import calculate_armor_class
+from app.domain.rules.artificer_dto import ArtificerSummaryDTO, build_artificer_summary
 from app.domain.rules.hit_points import calculate_max_hp
 from app.domain.rules.proficiency import class_level, proficiency_bonus, total_character_level
 from app.domain.rules.skills import all_skill_modifiers, passive_perception, saving_throw_modifiers
@@ -114,6 +115,7 @@ class CharacterSheetDTO(SheetModel):
     spell_slots: dict[int, ResourceCounter]
     resources: dict[str, ResourceCounter]
     inventory: list[InventoryDTO]
+    artificer: ArtificerSummaryDTO | None = None
     roleplay_profile: RoleplayProfile
 
 
@@ -314,5 +316,6 @@ def build_character_sheet(
             )
             for entry in state.inventory_state
         ],
+        artificer=build_artificer_summary(build, state, registry),
         roleplay_profile=build.roleplay_profile,
     )
