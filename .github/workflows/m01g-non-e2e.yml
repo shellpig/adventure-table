@@ -17,6 +17,40 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - name: Audit installed TCE spell references
+        working-directory: .
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          installed = set()
+          for path in Path("data").glob("*/spells.json"):
+              for entry in json.loads(path.read_text(encoding="utf-8")):
+                  key = entry.get("key")
+                  if isinstance(key, str):
+                      installed.add(key)
+
+          refs = set()
+          for filename in ("classes.json", "subclasses.json"):
+              payload = json.loads((Path("data/tce") / filename).read_text(encoding="utf-8"))
+              stack = list(payload)
+              while stack:
+                  value = stack.pop()
+                  if isinstance(value, dict):
+                      url = value.get("url")
+                      if isinstance(url, str) and url.startswith("/api/2014/spells/"):
+                          refs.add("srd5.1:spell:" + url.rsplit("/", 1)[-1])
+                      key = value.get("key")
+                      if isinstance(key, str) and ":spell:" in key:
+                          refs.add(key)
+                      stack.extend(value.values())
+                  elif isinstance(value, list):
+                      stack.extend(value)
+
+          missing = sorted(refs - installed)
+          print("MISSING_TCE_SPELL_REFS", missing)
+          PY
       - name: Install backend
         run: pip install -e ".[dev]"
       - name: Backend pytest
