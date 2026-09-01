@@ -180,6 +180,24 @@ def _validate_builder_choices(
                 )
             )
             continue
+
+        disabled = tuple(
+            option_id
+            for option_id in selected
+            if option_by_id[option_id].disabled_reason is not None
+        )
+        if disabled:
+            issues.append(
+                BuilderIssue(
+                    code="disabled_choice_option",
+                    severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                    path=path,
+                    message=f"{choice.label} contains an option whose requirements are not met.",
+                    related_refs=disabled,
+                )
+            )
+            continue
+
         for option_id in selected:
             option = option_by_id[option_id]
             if option.reference_id is not None and option.category != "ability_bonus":
