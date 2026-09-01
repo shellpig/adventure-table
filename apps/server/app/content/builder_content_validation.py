@@ -125,6 +125,20 @@ def _require_feature_refs(
     )
 
 
+def _require_installed_pool(
+    pools: dict[str, list[str]],
+    *,
+    owner: str,
+    field: str,
+    value: object,
+) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ContentValidationError(f"{owner}.{field} must be a non-empty pool id")
+    if not pools.get(value):
+        raise ContentValidationError(f"{owner}.{field} references an empty or unknown pool: {value}")
+    return value
+
+
 def _validate_m01i_feature_relations(registry: ContentRegistry) -> None:
     """Fail fast on the string-key relations introduced by M01-I.
 
@@ -134,10 +148,16 @@ def _validate_m01i_feature_relations(registry: ContentRegistry) -> None:
     cross-reference walker cannot validate them; M01-I owns that boundary here.
     """
 
-    feature_indices = defaultdict(list)
+    feature_indices: dict[str, list[str]] = defaultdict(list)
+    spell_indices: dict[str, list[str]] = defaultdict(list)
+    pools: dict[str, list[str]] = defaultdict(list)
     for entry in registry.list_kind("feature"):
         feature_indices[entry.index].append(entry.key)
-    spell_indices = defaultdict(list)
+        option = entry.data.get("choice_pool_option")
+        if isinstance(option, dict):
+            pool = option.get("pool")
+            if isinstance(pool, str) and pool:
+                pools[pool].append(entry.key)
     for entry in registry.list_kind("spell"):
         spell_indices[entry.index].append(entry.key)
 
@@ -212,6 +232,14 @@ def _validate_m01i_feature_relations(registry: ContentRegistry) -> None:
                     field=f"optional_class_feature.pool_extensions[{ext_index}].option_refs",
                     values=extension.get("option_refs", []),
                 )
+                option_pool = extension.get("option_pool")
+                if option_pool is not None:
+                    _require_installed_pool(
+                        pools,
+                        owner=entry.key,
+                        field=f"optional_class_feature.pool_extensions[{ext_index}].option_pool",
+                        value=option_pool,
+                    )
                 targets = extension.get("target_feature_indices", [])
                 if not isinstance(targets, list):
                     raise ContentValidationError(
@@ -251,6 +279,28 @@ def _validate_m01i_feature_relations(registry: ContentRegistry) -> None:
                             value=class_ref,
                             kind="class",
                         )
+                    pool = strategy.get("pool")
+                    if pool is not None:
+                        _require_installed_pool(
+                            pools,
+                            owner=entry.key,
+                            field=(
+                                "optional_class_feature.retraining.strategies"
+                                f"[{strategy_index}].pool"
+                            ),
+                            value=pool,
+                        )
+                    targets = strategy.get("target_feature_indices", [])
+                    if not isinstance(targets, list):
+                        raise ContentValidationError(
+                            f"{entry.key}: retraining target_feature_indices must be a list"
+                        )
+                    if targets and not any(
+                        feature_indices.get(index) for index in targets if isinstance(index, str)
+                    ):
+                        raise ContentValidationError(
+                            f"{entry.key}: retraining target feature is not installed"
+                        )
 
         option = entry.data.get("choice_pool_option")
         if not isinstance(option, dict):
@@ -279,14 +329,34 @@ def _validate_m01i_feature_relations(registry: ContentRegistry) -> None:
             values=option.get("any_required_feature_refs", []),
         )
         nested = option.get("nested")
-        if isinstance(nested, dict) and nested.get("class_ref") is not None:
-            _require_key(
-                registry,
-                owner=entry.key,
-                field="choice_pool_option.nested.class_ref",
-                value=nested.get("class_ref"),
-                kind="class",
-            )
+        if isinstance(nested, dict):
+            if nested.get("class_ref") is not None:
+                _require_key(
+                    registry,
+                    owner=entry.key,
+                    field="choice_pool_option.nested.class_ref",
+                    value=nested.get("class_ref"),
+                    kind="class",
+                )
+            pool = nested.get("pool")
+            if pool is not None:
+                _require_installed_pool(
+                    pools,
+                    owner=entry.key,
+                    field="choice_pool_option.nested.pool",
+                    value=pool,
+                )
+            targets = nested.get("target_feature_indices", [])
+            if not isinstance(targets, list):
+                raise ContentValidationError(
+                    f"{entry.key}.choice_pool_option.nested.target_feature_indices must be a list"
+                )
+            if targets and not any(
+                feature_indices.get(index) for index in targets if isinstance(index, str)
+            ):
+                raise ContentValidationError(
+                    f"{entry.key}: nested target feature is not installed"
+                )
 
 
 def validate_builder_content(registry: ContentRegistry) -> ContentRegistry:
