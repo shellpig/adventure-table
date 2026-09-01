@@ -3,8 +3,10 @@ from __future__ import annotations
 from app.content.identity import collect_stable_key_sources
 from app.content.registry import ContentRegistry
 from app.domain.character.schemas import CharacterBuild
-from app.domain.character_builder import compiler as core_compiler
-from app.domain.character_builder.compiler import BuilderCompileResult
+from app.domain.character_builder.compiler import (
+    BuilderCompileResult,
+    compile_builder_draft as compile_core_builder_draft,
+)
 from app.domain.character_builder.optional_class_features import (
     apply_cantrip_retraining,
     apply_feature_pool_retraining,
@@ -22,13 +24,6 @@ from app.domain.character_builder.schemas import BuilderDraft
 from app.domain.character_builder.validation import make_validation_result
 
 
-_CORE_COMPILE = getattr(
-    core_compiler,
-    "_m01_i_core_compile_builder_draft",
-    core_compiler.compile_builder_draft,
-)
-
-
 def _derive_sources(build: CharacterBuild) -> CharacterBuild:
     payload = build.model_dump()
     payload.pop("content_sources", None)
@@ -42,14 +37,19 @@ def compile_builder_draft(
     *,
     base_build: CharacterBuild | None = None,
 ) -> BuilderCompileResult:
-    """Extend the established compiler with the data-driven M01-I rules."""
+    """Extend the established compiler with the data-driven M01-I rules.
+
+    The P0/P1/M01-G/H compiler remains the core pipeline. M01-I wraps it
+    explicitly from the service layer so importing this package has no hidden
+    monkey-patching or import-order dependency.
+    """
 
     runtime = prepare_optional_class_features(
         draft,
         registry,
         base_build=base_build,
     )
-    compiled = _CORE_COMPILE(
+    compiled = compile_core_builder_draft(
         draft,
         runtime.registry,
         base_build=base_build,
@@ -160,13 +160,3 @@ def compile_builder_draft(
         starting_equipment=compiled.starting_equipment,
         initial_prepared_spells=compiled.initial_prepared_spells,
     )
-
-
-def install_m01_i_compiler_extension() -> None:
-    """Install once so direct compiler imports and service imports agree."""
-
-    if getattr(core_compiler, "_m01_i_extension_installed", False):
-        return
-    core_compiler._m01_i_core_compile_builder_draft = _CORE_COMPILE
-    core_compiler.compile_builder_draft = compile_builder_draft
-    core_compiler._m01_i_extension_installed = True
