@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from app.content.identity import reference_to_stable_key
+from app.content.identity import reference_to_stable_key, stable_key_is_kind
 from app.content.registry import ContentRegistry, ContentValidationError
 from app.content.schemas import APIReference, ContentEntry
 
@@ -81,13 +82,215 @@ def _validate_spell_relation(
             raise ContentValidationError(f"{owner.key}.{field} has dangling spell reference: {key}")
 
 
-def validate_builder_content(registry: ContentRegistry) -> ContentRegistry:
-    """Validate TCE Builder fields and cross-pack spell relations.
+def _require_key(
+    registry: ContentRegistry,
+    *,
+    owner: str,
+    field: str,
+    value: object,
+    kind: str,
+) -> str:
+    if not isinstance(value, str):
+        raise ContentValidationError(f"{owner}.{field} must be a {kind} StableKey")
+    try:
+        valid_kind = stable_key_is_kind(value, kind)
+    except ValueError as exc:
+        raise ContentValidationError(f"{owner}.{field} has invalid StableKey: {value}") from exc
+    target = registry.get_optional(value)
+    if not valid_kind or target is None:
+        raise ContentValidationError(f"{owner}.{field} has dangling {kind} reference: {value}")
+    return value
 
-    Core imported schemas intentionally remain permissive. M01-G adds a typed
-    boundary for the new TCE class data without forcing legacy SRD packs through
-    a migration unrelated to Artificer.
+
+def _require_feature_refs(
+    registry: ContentRegistry,
+    *,
+    owner: str,
+    field: str,
+    values: object,
+) -> tuple[str, ...]:
+    if values is None:
+        return ()
+    if not isinstance(values, list):
+        raise ContentValidationError(f"{owner}.{field} must be a list")
+    return tuple(
+        _require_key(
+            registry,
+            owner=owner,
+            field=f"{field}[{index}]",
+            value=value,
+            kind="feature",
+        )
+        for index, value in enumerate(values)
+    )
+
+
+def _validate_m01i_feature_relations(registry: ContentRegistry) -> None:
+    """Fail fast on the string-key relations introduced by M01-I.
+
+    These relations intentionally live in permissive ContentEntry.data so the
+    generic content schema is not turned into a D&D rules DSL. Because they are
+    StableKey strings rather than APIReference objects, the generic registry
+    cross-reference walker cannot validate them; M01-I owns that boundary here.
     """
+
+    feature_indices = defaultdict(list)
+    for entry in registry.list_kind("feature"):
+        feature_indices[entry.index].append(entry.key)
+    spell_indices = defaultdict(list)
+    for entry in registry.list_kind("spell"):
+        spell_indices[entry.index].append(entry.key)
+
+    for entry in registry.list_kind("feature", source="tce"):
+        root = entry.data.get("optional_class_feature")
+        if isinstance(root, dict):
+            parent = _require_key(
+                registry,
+                owner=entry.key,
+                field="optional_class_feature.parent_class_ref",
+                value=root.get("parent_class_ref"),
+                kind="class",
+            )
+            spell_access = root.get("spell_access")
+            if spell_access is not None:
+                if not isinstance(spell_access, dict):
+                    raise ContentValidationError(
+                        f"{entry.key}.optional_class_feature.spell_access must be an object"
+                    )
+                spell_class = _require_key(
+                    registry,
+                    owner=entry.key,
+                    field="optional_class_feature.spell_access.class_ref",
+                    value=spell_access.get("class_ref"),
+                    kind="class",
+                )
+                if spell_class != parent:
+                    raise ContentValidationError(
+                        f"{entry.key}: expanded spell access class must match parent class"
+                    )
+                for index, spell_ref in enumerate(spell_access.get("spell_refs", [])):
+                    _require_key(
+                        registry,
+                        owner=entry.key,
+                        field=f"optional_class_feature.spell_access.spell_refs[{index}]",
+                        value=spell_ref,
+                        kind="spell",
+                    )
+                raw_indices = spell_access.get("spell_indices", [])
+                if not isinstance(raw_indices, list):
+                    raise ContentValidationError(
+                        f"{entry.key}.optional_class_feature.spell_access.spell_indices must be a list"
+                    )
+                for spell_index in raw_indices:
+                    if not isinstance(spell_index, str) or not spell_index:
+                        raise ContentValidationError(
+                            f"{entry.key}: expanded spell index must be non-empty text"
+                        )
+                    matches = spell_indices.get(spell_index, [])
+                    if not matches:
+                        raise ContentValidationError(
+                            f"{entry.key}: expanded spell index is not installed: {spell_index}"
+                        )
+                    if len(matches) > 1:
+                        raise ContentValidationError(
+                            f"{entry.key}: expanded spell index is ambiguous: {spell_index} -> {matches}"
+                        )
+
+            extensions = root.get("pool_extensions", [])
+            if not isinstance(extensions, list):
+                raise ContentValidationError(
+                    f"{entry.key}.optional_class_feature.pool_extensions must be a list"
+                )
+            for ext_index, extension in enumerate(extensions):
+                if not isinstance(extension, dict):
+                    raise ContentValidationError(
+                        f"{entry.key}.optional_class_feature.pool_extensions[{ext_index}] must be an object"
+                    )
+                _require_feature_refs(
+                    registry,
+                    owner=entry.key,
+                    field=f"optional_class_feature.pool_extensions[{ext_index}].option_refs",
+                    values=extension.get("option_refs", []),
+                )
+                targets = extension.get("target_feature_indices", [])
+                if not isinstance(targets, list):
+                    raise ContentValidationError(
+                        f"{entry.key}: target_feature_indices must be a list"
+                    )
+                if extension.get("target_required") is True and targets:
+                    if not any(feature_indices.get(index) for index in targets if isinstance(index, str)):
+                        raise ContentValidationError(
+                            f"{entry.key}: required expanded-choice target is not installed"
+                        )
+
+            retraining = root.get("retraining")
+            if retraining is not None:
+                if not isinstance(retraining, dict):
+                    raise ContentValidationError(
+                        f"{entry.key}.optional_class_feature.retraining must be an object"
+                    )
+                strategies = retraining.get("strategies", [])
+                if not isinstance(strategies, list):
+                    raise ContentValidationError(
+                        f"{entry.key}.optional_class_feature.retraining.strategies must be a list"
+                    )
+                for strategy_index, strategy in enumerate(strategies):
+                    if not isinstance(strategy, dict):
+                        raise ContentValidationError(
+                            f"{entry.key}: retraining strategy must be an object"
+                        )
+                    class_ref = strategy.get("class_ref")
+                    if class_ref is not None:
+                        _require_key(
+                            registry,
+                            owner=entry.key,
+                            field=(
+                                "optional_class_feature.retraining.strategies"
+                                f"[{strategy_index}].class_ref"
+                            ),
+                            value=class_ref,
+                            kind="class",
+                        )
+
+        option = entry.data.get("choice_pool_option")
+        if not isinstance(option, dict):
+            continue
+        eligible = option.get("eligible_class_refs", [])
+        if not isinstance(eligible, list):
+            raise ContentValidationError(f"{entry.key}.choice_pool_option.eligible_class_refs must be a list")
+        for class_index, class_ref in enumerate(eligible):
+            _require_key(
+                registry,
+                owner=entry.key,
+                field=f"choice_pool_option.eligible_class_refs[{class_index}]",
+                value=class_ref,
+                kind="class",
+            )
+        _require_feature_refs(
+            registry,
+            owner=entry.key,
+            field="choice_pool_option.required_feature_refs",
+            values=option.get("required_feature_refs", []),
+        )
+        _require_feature_refs(
+            registry,
+            owner=entry.key,
+            field="choice_pool_option.any_required_feature_refs",
+            values=option.get("any_required_feature_refs", []),
+        )
+        nested = option.get("nested")
+        if isinstance(nested, dict) and nested.get("class_ref") is not None:
+            _require_key(
+                registry,
+                owner=entry.key,
+                field="choice_pool_option.nested.class_ref",
+                value=nested.get("class_ref"),
+                kind="class",
+            )
+
+
+def validate_builder_content(registry: ContentRegistry) -> ContentRegistry:
+    """Validate Builder-only fields and cross-pack relations."""
 
     for class_entry in registry.list_kind("class", source="tce"):
         try:
@@ -118,4 +321,5 @@ def validate_builder_content(registry: ContentRegistry) -> ContentRegistry:
                 ) from exc
         _validate_spell_relation(registry, subclass_entry, references, "spells")
 
+    _validate_m01i_feature_relations(registry)
     return registry
