@@ -33,6 +33,30 @@ def infusion_choice_id(draft: BuilderDraft) -> str | None:
     return deterministic_choice_id("level", str(anchor), "artificer", "infusions-known")
 
 
+def _level_up_infusion_choice_id(draft: BuilderDraft) -> str | None:
+    """Anchor Level Up-only infusion work to the new character level.
+
+    Normally this is the level where the character actually advances Artificer
+    and gains a Known Infusion. It also covers pre-M01-H characters whose
+    authoritative Build has no infusion_refs yet: even when another class is
+    being advanced, the migration choice must use the target-level namespace so
+    the Level Up patch guard permits the newly required choice without opening
+    historical Build choices for editing.
+    """
+
+    if draft.mode is not BuilderMode.LEVEL_UP or _draft_artificer_level(draft) < 2:
+        return None
+    target_level = draft.draft_payload.target_level
+    if target_level is None:
+        return None
+    return deterministic_choice_id(
+        "level",
+        str(target_level),
+        "artificer",
+        "infusions-known",
+    )
+
+
 def _infusion_options(
     registry: ContentRegistry,
     level: int,
@@ -92,9 +116,17 @@ def build_artificer_infusion_choices(
         choose_count = max(0, target_count - len(base_refs))
         if choose_count == 0:
             return ()
-        # This choice is only the newly gained Known Infusions. If an existing
-        # infusion remained selectable, the user could consume the delta with a
-        # duplicate and leave the final immutable Build underfilled.
+        # Level Up may only add choices in the target-level namespace. This is
+        # also the safe migration path for pre-H Artificers whose base Build has
+        # no canonical infusion_refs yet, including multiclass Level Ups where
+        # Artificer itself is not the class being advanced.
+        level_up_choice_id = _level_up_infusion_choice_id(draft)
+        if level_up_choice_id is None:
+            return ()
+        choice_id = level_up_choice_id
+        # This choice is only the newly gained/migrated Known Infusions. If an
+        # existing infusion remained selectable, the user could consume the
+        # delta with a duplicate and leave the final immutable Build underfilled.
         excluded_refs = set(base_refs)
 
     selection = draft.draft_payload.choice_selections.get(choice_id)
