@@ -82,6 +82,45 @@ def _class_subclass_refs(class_entry: ContentEntry) -> tuple[str, ...]:
     return tuple(refs)
 
 
+def _selected_subclass_refs(draft: BuilderDraft) -> dict[str, str]:
+    """Resolve each class's sparse subclass selection for later class levels.
+
+    Builder level rows intentionally store ``subclass_ref`` only on the class
+    level where the subclass is selected. Later class levels must still inherit
+    that identity so their subclass progression rows can grant features and
+    presentation metadata. Validation separately rejects duplicate, early, or
+    wrong-parent selections; this helper only provides deterministic carry-forward.
+    """
+
+    selected: dict[str, str] = {}
+    for level_choice in draft.draft_payload.level_choices:
+        if level_choice.subclass_ref is not None:
+            selected.setdefault(level_choice.class_ref, level_choice.subclass_ref)
+    return selected
+
+
+def _active_subclass_ref(
+    class_entry: ContentEntry,
+    class_level: int,
+    selected_subclasses: dict[str, str],
+    registry: ContentRegistry,
+) -> str | None:
+    subclass_ref = selected_subclasses.get(class_entry.key)
+    if subclass_ref is None:
+        return None
+    timing = subclass_selection_level(class_entry, registry)
+    if timing is None or class_level < timing:
+        return None
+    subclass_entry = registry.get_optional(subclass_ref)
+    if (
+        subclass_entry is None
+        or not stable_key_is_kind(subclass_entry.key, "subclass")
+        or _subclass_parent_ref(subclass_entry) != class_entry.key
+    ):
+        return None
+    return subclass_ref
+
+
 def _level_ref(source_ref: str, level: int) -> str:
     parsed = parse_stable_key(source_ref)
     return stable_key(parsed.source, "level", f"{parsed.index}-{level}")
@@ -592,6 +631,7 @@ def progression_summary(
 ) -> tuple[BuilderProgressionNodeSummary, ...]:
     class_counts: Counter[str] = Counter()
     first_acquired: set[str] = set()
+    selected_subclasses = _selected_subclass_refs(draft)
     result: list[BuilderProgressionNodeSummary] = []
     for index, level_choice in enumerate(draft.draft_payload.level_choices):
         class_entry = registry.get_optional(level_choice.class_ref)
@@ -602,16 +642,22 @@ def progression_summary(
         first_for_class = class_entry.key not in first_acquired
         first_acquired.add(class_entry.key)
         timing = subclass_selection_level(class_entry, registry)
+        active_subclass_ref = _active_subclass_ref(
+            class_entry,
+            class_level,
+            selected_subclasses,
+            registry,
+        )
         subclass_name = None
-        if level_choice.subclass_ref is not None:
-            subclass = registry.get_optional(level_choice.subclass_ref)
+        if active_subclass_ref is not None:
+            subclass = registry.get_optional(active_subclass_ref)
             subclass_name = subclass.name if subclass is not None else None
         features = list(_level_features(registry, class_entry.key, class_level))
-        if level_choice.subclass_ref is not None:
+        if active_subclass_ref is not None:
             features.extend(
                 _level_features(
                     registry,
-                    level_choice.subclass_ref,
+                    active_subclass_ref,
                     class_level,
                     subclass=True,
                 )
@@ -629,7 +675,7 @@ def progression_summary(
                 hp_method=level_choice.hp_method,
                 hp_base_gain=level_choice.hp_base_gain,
                 subclass_required=timing is not None and class_level == timing,
-                subclass_ref=level_choice.subclass_ref,
+                subclass_ref=active_subclass_ref,
                 subclass_name=subclass_name,
                 automatic_feature_refs=tuple(dict.fromkeys(features)),
             )
@@ -698,6 +744,7 @@ def compile_progression(
 
     class_counts: Counter[str] = Counter()
     acquired_classes: set[str] = set()
+    selected_subclasses = _selected_subclass_refs(draft)
     for index, level_choice in enumerate(payload.level_choices):
         class_entry = registry.get(level_choice.class_ref)
         class_counts[class_entry.key] += 1
@@ -742,11 +789,17 @@ def compile_progression(
                 )
 
         features.extend(_level_features(registry, class_entry.key, class_level))
-        if level_choice.subclass_ref is not None:
+        active_subclass_ref = _active_subclass_ref(
+            class_entry,
+            class_level,
+            selected_subclasses,
+            registry,
+        )
+        if active_subclass_ref is not None:
             features.extend(
                 _level_features(
                     registry,
-                    level_choice.subclass_ref,
+                    active_subclass_ref,
                     class_level,
                     subclass=True,
                 )
@@ -756,7 +809,7 @@ def compile_progression(
                 subclasses.append(
                     SubclassSelection(
                         class_ref=class_entry.key,
-                        subclass_ref=level_choice.subclass_ref,
+                        subclass_ref=active_subclass_ref,
                     )
                 )
         acquired_classes.add(class_entry.key)
