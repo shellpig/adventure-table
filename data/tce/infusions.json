@@ -1,0 +1,283 @@
+[
+  {
+    "key": "tce:infusion:enhanced-defense",
+    "index": "enhanced-defense",
+    "name": "Enhanced Defense",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "enhanced-defense",
+      "name": "Enhanced Defense",
+      "minimum_artificer_level": 2,
+      "requires_attunement": false,
+      "item_filter": {"any_of": ["armor", "shield"]},
+      "modifiers": [{"kind": "ac", "value": 1, "scales_at_artificer_level": 10, "scaled_value": 2}],
+      "description": "Infuses armor or a shield with a defensive bonus; the bonus improves at higher Artificer level.",
+      "manual_effects": ["Apply the AC modifier while the infused item is in use."]
+    }
+  },
+  {
+    "key": "tce:infusion:enhanced-weapon",
+    "index": "enhanced-weapon",
+    "name": "Enhanced Weapon",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "enhanced-weapon",
+      "name": "Enhanced Weapon",
+      "minimum_artificer_level": 2,
+      "requires_attunement": false,
+      "item_filter": {"any_of": ["simple_or_martial_weapon"]},
+      "modifiers": [
+        {"kind": "attack", "value": 1, "scales_at_artificer_level": 10, "scaled_value": 2},
+        {"kind": "damage", "value": 1, "scales_at_artificer_level": 10, "scaled_value": 2}
+      ],
+      "description": "Improves a simple or martial weapon's attack and damage bonus, scaling at higher Artificer level.",
+      "manual_effects": ["Apply the attack and damage modifiers when using the infused weapon."]
+    }
+  },
+  {
+    "key": "tce:infusion:enhanced-arcane-focus",
+    "index": "enhanced-arcane-focus",
+    "name": "Enhanced Arcane Focus",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "enhanced-arcane-focus",
+      "name": "Enhanced Arcane Focus",
+      "minimum_artificer_level": 2,
+      "requires_attunement": true,
+      "item_filter": {"any_of": ["rod_staff_wand"]},
+      "modifiers": [{"kind": "spell_attack", "value": 1, "scales_at_artificer_level": 10, "scaled_value": 2}],
+      "description": "Improves spell attacks made through an arcane focus and supports its cover-ignoring rider manually.",
+      "manual_effects": ["Resolve cover interaction manually; M01-H does not automate spell attack targeting."]
+    }
+  },
+  {
+    "key": "tce:infusion:returning-weapon",
+    "index": "returning-weapon",
+    "name": "Returning Weapon",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "returning-weapon",
+      "name": "Returning Weapon",
+      "minimum_artificer_level": 2,
+      "requires_attunement": false,
+      "item_filter": {"any_of": ["thrown_weapon"]},
+      "modifiers": [{"kind": "attack", "value": 1}, {"kind": "damage", "value": 1}],
+      "description": "Improves a thrown weapon and causes it to return after a ranged attack.",
+      "manual_effects": ["Return-to-hand behavior is descriptive in M01-H."]
+    }
+  },
+  {
+    "key": "tce:infusion:repeating-shot",
+    "index": "repeating-shot",
+    "name": "Repeating Shot",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "repeating-shot",
+      "name": "Repeating Shot",
+      "minimum_artificer_level": 2,
+      "requires_attunement": true,
+      "item_filter": {"any_of": ["ammunition_weapon"]},
+      "modifiers": [{"kind": "attack", "value": 1}, {"kind": "damage", "value": 1}],
+      "description": "Improves an ammunition weapon and supplies its ammunition while the infusion is active.",
+      "manual_effects": ["Ammunition generation and loading-property interaction are manual in M01-H."]
+    }
+  },
+  {
+    "key": "tce:infusion:mind-sharpener",
+    "index": "mind-sharpener",
+    "name": "Mind Sharpener",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "mind-sharpener",
+      "name": "Mind Sharpener",
+      "minimum_artificer_level": 2,
+      "requires_attunement": false,
+      "item_filter": {"any_of": ["armor"]},
+      "modifiers": [],
+      "charges": {"capacity": {"type": "fixed", "value": 4}, "recharge": ["long_rest"]},
+      "description": "Stores charges that can be spent to support concentration after a failed concentration check.",
+      "manual_effects": ["Robes are also eligible by the source rule; equipment lacking an armor classification requires manual eligibility confirmation.", "Concentration reaction resolution is manual."]
+    }
+  },
+  {
+    "key": "tce:infusion:homunculus-servant",
+    "index": "homunculus-servant",
+    "name": "Homunculus Servant",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "homunculus-servant",
+      "name": "Homunculus Servant",
+      "minimum_artificer_level": 2,
+      "requires_attunement": false,
+      "item_filter": {"any_of": ["crystal_or_gem"]},
+      "modifiers": [],
+      "description": "Uses an eligible gem or crystal as the heart of a homunculus servant.",
+      "manual_effects": ["The homunculus is not created as a combat entity in M01-H; its stat block remains metadata/manual play."]
+    }
+  },
+  {
+    "key": "tce:infusion:armor-of-magical-strength",
+    "index": "armor-of-magical-strength",
+    "name": "Armor of Magical Strength",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "armor-of-magical-strength",
+      "name": "Armor of Magical Strength",
+      "minimum_artificer_level": 2,
+      "requires_attunement": true,
+      "item_filter": {"any_of": ["armor"]},
+      "modifiers": [],
+      "charges": {"capacity": {"type": "fixed", "value": 6}, "recharge": ["long_rest"]},
+      "description": "Stores charges for Strength-related benefits and resisting being knocked prone.",
+      "manual_effects": ["Charge spending and roll modification are manual in M01-H."]
+    }
+  },
+  {
+    "key": "tce:infusion:replicate-magic-item-bag-of-holding",
+    "index": "replicate-magic-item-bag-of-holding",
+    "name": "Replicate Magic Item: Bag of Holding",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "replicate-magic-item-bag-of-holding",
+      "name": "Replicate Magic Item: Bag of Holding",
+      "minimum_artificer_level": 2,
+      "requires_attunement": false,
+      "item_filter": {"any_of": ["replicated_item"]},
+      "modifiers": [],
+      "replicates_item": {"key": "srd5.1:item:bag-of-holding", "name": "Bag of Holding"},
+      "description": "A concrete Replicate Magic Item recipe. The known recipe remains an infusion identity while the active target is an inventory item instance.",
+      "manual_effects": ["Full magic-item behavior remains deferred; M01-H tracks verified identity and active state only."]
+    }
+  },
+  {
+    "key": "tce:infusion:boots-of-the-winding-path",
+    "index": "boots-of-the-winding-path",
+    "name": "Boots of the Winding Path",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "boots-of-the-winding-path",
+      "name": "Boots of the Winding Path",
+      "minimum_artificer_level": 6,
+      "requires_attunement": true,
+      "item_filter": {"any_of": ["boots"]},
+      "modifiers": [],
+      "description": "Infuses boots with a short-range return-to-a-recent-space movement option.",
+      "manual_effects": ["Movement history and teleport resolution are manual in M01-H."]
+    }
+  },
+  {
+    "key": "tce:infusion:radiant-weapon",
+    "index": "radiant-weapon",
+    "name": "Radiant Weapon",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "radiant-weapon",
+      "name": "Radiant Weapon",
+      "minimum_artificer_level": 6,
+      "requires_attunement": true,
+      "item_filter": {"any_of": ["simple_or_martial_weapon"]},
+      "modifiers": [{"kind": "attack", "value": 1}, {"kind": "damage", "value": 1}],
+      "charges": {"capacity": {"type": "fixed", "value": 4}, "recharge": ["long_rest"]},
+      "description": "Improves a weapon, can shed light, and stores charges for a reactive blinding effect.",
+      "manual_effects": ["Light toggling and reaction/save resolution are manual in M01-H."]
+    }
+  },
+  {
+    "key": "tce:infusion:repulsion-shield",
+    "index": "repulsion-shield",
+    "name": "Repulsion Shield",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "repulsion-shield",
+      "name": "Repulsion Shield",
+      "minimum_artificer_level": 6,
+      "requires_attunement": true,
+      "item_filter": {"any_of": ["shield"]},
+      "modifiers": [{"kind": "ac", "value": 1}],
+      "charges": {"capacity": {"type": "fixed", "value": 4}, "recharge": ["long_rest"]},
+      "description": "Improves a shield and stores charges for a reactive push effect.",
+      "manual_effects": ["Reaction and forced-movement resolution are manual in M01-H."]
+    }
+  },
+  {
+    "key": "tce:infusion:resistant-armor",
+    "index": "resistant-armor",
+    "name": "Resistant Armor",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "resistant-armor",
+      "name": "Resistant Armor",
+      "minimum_artificer_level": 6,
+      "requires_attunement": true,
+      "item_filter": {"any_of": ["armor"]},
+      "modifiers": [],
+      "description": "Grants a selected damage resistance while the infused armor is worn.",
+      "manual_effects": ["The resistance type is chosen and applied manually in M01-H."]
+    }
+  },
+  {
+    "key": "tce:infusion:spell-refueling-ring",
+    "index": "spell-refueling-ring",
+    "name": "Spell-Refueling Ring",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "spell-refueling-ring",
+      "name": "Spell-Refueling Ring",
+      "minimum_artificer_level": 6,
+      "requires_attunement": true,
+      "item_filter": {"any_of": ["ring"]},
+      "modifiers": [],
+      "charges": {"capacity": {"type": "fixed", "value": 1}, "recharge": ["long_rest"]},
+      "description": "Allows the wearer to recover a spent spell slot within the feature's supported range.",
+      "manual_effects": ["Choosing and restoring the spell slot is manual in M01-H."]
+    }
+  },
+  {
+    "key": "tce:infusion:helm-of-awareness",
+    "index": "helm-of-awareness",
+    "name": "Helm of Awareness",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "helm-of-awareness",
+      "name": "Helm of Awareness",
+      "minimum_artificer_level": 10,
+      "requires_attunement": true,
+      "item_filter": {"any_of": ["helmet"]},
+      "modifiers": [],
+      "description": "Provides awareness benefits while worn and attuned.",
+      "manual_effects": ["Initiative advantage and surprise handling are manual until combat automation exists."]
+    }
+  },
+  {
+    "key": "tce:infusion:arcane-propulsion-armor",
+    "index": "arcane-propulsion-armor",
+    "name": "Arcane Propulsion Armor",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "arcane-propulsion-armor",
+      "name": "Arcane Propulsion Armor",
+      "minimum_artificer_level": 14,
+      "requires_attunement": true,
+      "item_filter": {"any_of": ["armor"]},
+      "modifiers": [],
+      "description": "Enhances a suit of armor with mobility and gauntlet weapon benefits.",
+      "manual_effects": ["Movement and gauntlet attack effects remain manual in M01-H."]
+    }
+  }
+]
