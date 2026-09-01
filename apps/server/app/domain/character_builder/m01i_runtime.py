@@ -89,8 +89,8 @@ class M01IReferenceNormalizedRegistry:
             for entry in self.base.list_kind(kind, source=source)
         )
 
-    def resolve(self, kind: str, index: str, *, source: str | None = None) -> ContentEntry:
-        return self._normalize_entry(self.base.resolve(kind, index, source=source))
+    def resolve(self, *parts: str) -> ContentEntry:
+        return self._normalize_entry(self.base.resolve(*parts))
 
     def __getattr__(self, name: str):
         return getattr(self.base, name)
