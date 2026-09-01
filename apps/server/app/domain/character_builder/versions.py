@@ -9,11 +9,13 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.content.registry import ContentRegistry
 from app.domain.character.schemas import CharacterBuild, CharacterState, PersistedCharacter
+from app.domain.character_builder.choices import deterministic_choice_id
 from app.domain.character_builder.progression import fixed_hp_gain, subclass_selection_level
 from app.domain.character_builder.schemas import (
     BuilderAbilityGenerationInput,
     BuilderAbilityScores,
     BuilderBasicInput,
+    BuilderChoiceSelection,
     BuilderDraftPayload,
     BuilderHPMethod,
     BuilderLevelChoice,
@@ -21,6 +23,7 @@ from app.domain.character_builder.schemas import (
     BuilderReferenceSelection,
     BuilderSpellChoiceInput,
 )
+from app.domain.rules.artificer import ARTIFICER_REF, known_infusion_count
 
 
 class StrictModel(BaseModel):
@@ -170,6 +173,57 @@ def _lineage_selection(build: CharacterBuild) -> BuilderReferenceSelection | Non
     )
 
 
+def _seed_authoritative_artificer_infusions(
+    payload: BuilderDraftPayload,
+    build: CharacterBuild,
+) -> None:
+    """Seed H Build choices from Build identity, never stale UI provenance.
+
+    Characters created before M01-H legitimately have an empty infusion_refs
+    tuple. Those drafts remain blocking until the user supplies the newly
+    required Known Infusions. H-era Builds, however, must reopen with their
+    exact immutable Known list instead of forcing a redundant reselection.
+    """
+
+    artificer_character_levels = tuple(
+        index
+        for index, class_ref in enumerate(build.class_progression, start=1)
+        if class_ref == ARTIFICER_REF
+    )
+    selections = dict(payload.choice_selections)
+    for choice_id in tuple(selections):
+        if choice_id.endswith(":artificer:infusions-known"):
+            selections.pop(choice_id, None)
+
+    artificer_level = len(artificer_character_levels)
+    if artificer_level < 2:
+        payload.choice_selections = selections
+        return
+
+    anchor = artificer_character_levels[-1]
+    choice_id = deterministic_choice_id(
+        "level",
+        str(anchor),
+        "artificer",
+        "infusions-known",
+    )
+    # A pre-H Build has no canonical Known list to invent. Seed an explicit
+    # empty choice so Review clearly requires the H migration choice instead of
+    # pretending those Infusions were historically known.
+    selected = (
+        build.infusion_refs
+        if len(build.infusion_refs) == known_infusion_count(artificer_level)
+        else ()
+    )
+    selections[choice_id] = BuilderChoiceSelection(
+        choice_id=choice_id,
+        source_ref="tce:feature:infuse-item",
+        selected_option_ids=selected,
+        provenance_path="build.infusion_refs",
+    )
+    payload.choice_selections = selections
+
+
 def legacy_payload_from_build(
     character: PersistedCharacter,
     registry: ContentRegistry,
@@ -183,7 +237,7 @@ def legacy_payload_from_build(
     """
 
     build = character.build
-    return BuilderDraftPayload(
+    payload = BuilderDraftPayload(
         basic=BuilderBasicInput(name=character.name, ruleset=build.ruleset),
         target_level=build.character_level,
         race_selection=BuilderReferenceSelection(reference_id=build.race_ref),
@@ -224,6 +278,8 @@ def legacy_payload_from_build(
             "base_character_level": build.character_level,
         },
     )
+    _seed_authoritative_artificer_infusions(payload, build)
+    return payload
 
 
 def seed_version_draft_payload(
@@ -256,6 +312,7 @@ def seed_version_draft_payload(
         # the user to choose starting equipment again.
         payload.starting_equipment_choices = {}
         payload.initial_state_seed = {}
+        _seed_authoritative_artificer_infusions(payload, character.build)
 
     # Prepared lists are Current State, not Build provenance. Keeping the create
     # draft's initial prepared choice here would incorrectly make a later live
