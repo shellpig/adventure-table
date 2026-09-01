@@ -18,6 +18,7 @@ RestType = Literal["short_rest", "long_rest"]
 HitDie = Literal["d6", "d8", "d10", "d12"]
 LegacyMovementMode = Literal["climb", "fly", "swim"]
 LineageSize = Literal["small", "medium"]
+ArcaneArmorPart = Literal["armor", "boots", "helmet", "special_weapon"]
 
 
 def require_stable_key(value: str, *, kinds: set[str] | None = None) -> str:
@@ -396,6 +397,7 @@ class ActiveInfusion(FrozenModel):
     inventory_entry_id: str = Field(min_length=1, max_length=120)
     infusion_ref: StableKey
     resource: ResourceCounter | None = None
+    arcane_armor_part: ArcaneArmorPart | None = None
 
     @field_validator("infusion_ref")
     @classmethod
@@ -460,6 +462,13 @@ class CharacterState(MutableModel):
         infusion_targets = [entry.inventory_entry_id for entry in self.active_infusions]
         if len(infusion_targets) != len(set(infusion_targets)):
             raise ValueError("an inventory item can have at most one active infusion")
+        armor_parts = [
+            entry.arcane_armor_part
+            for entry in self.active_infusions
+            if entry.arcane_armor_part is not None
+        ]
+        if len(armor_parts) != len(set(armor_parts)):
+            raise ValueError("each arcane armor part can host at most one active infusion")
         if any(not key.strip() or not value.strip() for key, value in self.feature_modes.items()):
             raise ValueError("feature mode keys and values cannot be blank")
         return self
