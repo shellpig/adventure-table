@@ -1,10 +1,10 @@
-# M01-I Closeout Checkpoint
+# M01-I Closeout
 
-M01-I — TCE Optional Class Features & Fighting Styles 目前已完成 **code / static review / non-E2E gate**。
+M01-I — TCE Optional Class Features & Fighting Styles 已完成並關門。
 
-> **狀態：Non-E2E Complete / E2E Pending**
+> **狀態：Full Closeout Complete**
 >
-> 本文件不是完整 Subphase closeout 宣告。依 `docs/M01/測試指南.md` 的 M01-I E2E 要求，browser/full-stack E2E 尚未執行；在該 gate 通過前，M01-I 不標記為 fully closed，也不以本 checkpoint 取代 E2E evidence。
+> 2026-09-02 已補齊 `docs/M01/測試指南.md` 的 M01-I browser/full-stack E2E gate。M01-I 可作為 M01-J 開工前的完整關門證據。
 
 ## Implemented Scope
 
@@ -73,7 +73,7 @@ Ranger
 
 The maintained inventory is keyed by StableKey / relation data, never translated display name.
 
-## Verification Evidence — Non-E2E
+## Verification Evidence
 
 2026-09-01 GitHub Actions，branch `m01-i-tce-optional-class-features`，受測 code HEAD：
 
@@ -121,6 +121,81 @@ passed
 
 Backend唯一 warning為 FastAPI / Starlette TestClient 的 `httpx` deprecation warning；GitHub hosted Actions另有 action runtime Node 20 deprecation提示。兩者均未影響 M01-I correctness。
 
+2026-09-02 local closeout verification，branch `m01-i-tce-optional-class-features`，受測 base HEAD：
+
+```text
+f08964f fix(m01-i): resolve overlay entries by stable key
+```
+
+本 closeout commit 另修正 M01-I E2E spec 的兩個 selector / fixture label 問題：
+
+1. `getByRole('button', { name: /Class/ })` 會同時匹配 Class step 與 Optional Class Feature combobox toggle；改為明確點擊 `Class Level-by-level rail`。
+2. Superior Technique nested maneuver 的 UI label 為 `Maneuver: Ambush`；測試不再用裸 `Ambush`。
+
+Local closeout commands：
+
+```text
+M01-I manifest shard audit
+M01_I_UNMANIFESTED_SHARDS []
+
+Expanded spell inventory audit
+M01_I_EXPANDED_SPELL_MISSING_COUNT 0
+M01_I_EXPANDED_SPELL_MISSING []
+M01_I_EXPANDED_SPELL_MISSING_BY_FEATURE {}
+M01_I_EXPANDED_SPELL_AMBIGUOUS {}
+
+M01-I backend pytest
+14 passed
+
+Backend pytest
+399 passed, 1 warning in 108.04s
+
+M01-I localization Vitest
+1 test file passed
+4 tests passed
+
+Frontend Vitest
+16 test files passed
+80 tests passed
+
+TypeScript / Vite
+npm run build
+passed
+
+Localization authoring unit tests
+Ran 13 tests
+OK
+
+Docker Compose
+docker compose config
+passed
+
+Clean full-stack readiness
+/ready passed
+web root passed
+seed_p0_fighter_wizard passed
+```
+
+M01-I mandatory browser/full-stack E2E gate：
+
+```text
+npm run test:e2e -- m01i-optional-features.spec.ts
+5 passed in 39.1s
+
+1. Fighter + TCE Fighting Style + Superior Technique nested maneuver
+2. Paladin + Blessed Warrior + two Cleric cantrips with Charisma
+3. Ranger + Druidic Warrior + two Druid cantrips with Wisdom
+4. Ranger replacement flow removing represented base grants from final Build
+5. Existing Fighter Level Up + Martial Versatility + Version History
+```
+
+Full browser regression on clean Docker full stack：
+
+```text
+npm run test:e2e
+58 passed in 3.3m
+```
+
 ## Regression Findings Fixed During Gate
 
 Non-E2E closeout過程實際抓到並修正下列問題，而不是只新增 happy-path tests：
@@ -147,7 +222,7 @@ Closeout checkpoint前重新檢查 `main...m01-i-tce-optional-class-features`：
 - 新增 PHB spell gaps保留 PHB source identity；TCE只透過 optional-feature overlay增加 class eligibility。
 - M01-I沒有提前建立 Combat trigger、Reaction、Bonus Action、Rest或 Magic Item runtime。
 
-目前未發現剩餘 **non-E2E blocking static-review issue**。
+目前未發現剩餘 blocking static-review issue。
 
 ## Explicit Boundary
 
@@ -159,20 +234,10 @@ M01-I本階段仍明確不做：
 - TCE Magic Items。
 - M01-J subclass expansion內容。
 
-另外，目前尚未執行 M01-I測試指南要求的 browser/full-stack E2E，因此以下項目仍為 **pending gate**：
-
-```text
-1. Fighter + TCE Fighting Style browser flow
-2. Paladin + Blessed Warrior browser flow
-3. Ranger + Druidic Warrior browser flow
-4. Ranger replacement browser flow
-5. Existing Character Level Up + versatility/retraining + Version History browser flow
-```
-
 ## Current Handoff
 
 **Code / static review / non-E2E gate：完成。**
 
-**M01-I full closeout：尚未完成，等待 E2E gate。**
+**M01-I browser/full-stack E2E gate：完成。**
 
-在 E2E通過以前，不建議把 M01-I標記為 fully closed，也不應直接把本 checkpoint當成 M01-J開工的完整關門證據。
+**M01-I full closeout：完成。下一個可開工 Subphase 是 M01-J — 2014 Class Subclass Expansion。**

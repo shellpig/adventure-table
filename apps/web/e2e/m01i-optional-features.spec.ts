@@ -77,6 +77,10 @@ async function chooseSearchable(
   await chooseOption(page, page.getByRole('combobox', { name: label }), value, source)
 }
 
+async function goToClassStep(page: Page) {
+  await page.getByRole('button', { name: 'Class Level-by-level rail' }).click()
+}
+
 async function chooseIn(container: Locator, value: string) {
   await chooseOption(
     container.page(),
@@ -213,7 +217,7 @@ async function startCreate(
   await clickAndWaitForSave(page, page.getByRole('button', { name: 'Save Ability Scores' }))
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await goToClassStep(page)
   for (let level = 1; level <= targetLevel; level += 1) {
     await chooseSearchable(page, `Level ${level} class`, className)
   }
@@ -274,13 +278,14 @@ test('M01-I Fighter selects a TCE Fighting Style with its nested maneuver', asyn
   await startCreate(page, name, 'Fighter', 1)
   await activateOptionalFeature(page, 'Fighting Style Options')
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await goToClassStep(page)
   const level1 = page.getByTestId('level-node-1')
   await chooseOption(page, level1.getByRole('combobox', { name: /Fighting Style/i }), 'Superior Technique')
-  const maneuverChoice = level1.locator('.builder-choice.progression-choice').filter({
-    hasText: 'Superior Technique — Choice',
-  })
-  await chooseIn(maneuverChoice, 'Ambush')
+  await chooseOption(
+    page,
+    level1.getByRole('combobox', { name: 'Superior Technique — Choice' }),
+    'Maneuver: Ambush',
+  )
   await fillEmptyComboboxes(page, page.locator('.level-rail'))
 
   const { review } = await finishCreateReview(page, request)
@@ -298,7 +303,7 @@ test('M01-I Paladin Blessed Warrior persists two Cleric cantrips with Charisma',
   await startCreate(page, name, 'Paladin', 2)
   await activateOptionalFeature(page, 'Fighting Style Options')
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await goToClassStep(page)
   const level2 = page.getByTestId('level-node-2')
   await chooseOption(page, level2.getByRole('combobox', { name: /Fighting Style/i }), 'Blessed Warrior')
   const cantripChoice = level2.locator('.builder-choice.progression-choice').filter({
@@ -331,7 +336,7 @@ test('M01-I Ranger Druidic Warrior persists two Druid cantrips with Wisdom', asy
   await startCreate(page, name, 'Ranger', 2)
   await activateOptionalFeature(page, 'Fighting Style Options')
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await goToClassStep(page)
   const level2 = page.getByTestId('level-node-2')
   await chooseOption(page, level2.getByRole('combobox', { name: /Fighting Style/i }), 'Druidic Warrior')
   const cantripChoice = level2.locator('.builder-choice.progression-choice').filter({
@@ -368,7 +373,7 @@ test('M01-I Ranger replacement flow removes all represented base grants from the
   await activateOptionalFeature(page, 'Primal Awareness')
   await activateOptionalFeature(page, "Nature's Veil")
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await goToClassStep(page)
   await chooseSearchable(page, /Ranger subclass/, 'Hunter')
   await fillEmptyComboboxes(page, page.locator('.level-rail'))
 
@@ -416,7 +421,7 @@ test('M01-I existing Fighter levels up with Martial Versatility and preserves Ve
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
   await expectDraftSaved(page)
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await goToClassStep(page)
   await chooseSearchable(page, 'Level 4 class', 'Fighter')
   await chooseSearchable(page, 'Fighter 4 — ASI or Feat', 'Grappler')
 
