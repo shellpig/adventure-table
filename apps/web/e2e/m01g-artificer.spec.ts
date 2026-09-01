@@ -149,7 +149,7 @@ async function fillExactSpellBuckets(page: Page) {
 }
 
 async function saveManualArtificerAbilities(page: Page) {
-  await page.getByRole('button', { name: 'Manual Input' }).click()
+  await page.getByRole('tab', { name: 'Manual Input' }).click()
   const scores: Record<string, string> = {
     'STR · Strength': '10',
     'DEX · Dexterity': '14',
