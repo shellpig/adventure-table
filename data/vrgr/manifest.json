@@ -1,0 +1,18 @@
+{
+  "id": "vrgr",
+  "name": "Van Richten's Guide to Ravenloft",
+  "ruleset": "dnd5e-2014",
+  "version": "M01-F",
+  "provenance": {
+    "type": "private-maintainer-normalization",
+    "reference": "docs/暫用規則資訊/半血裔_VRGR.md"
+  },
+  "usage": {
+    "scope": "private-friends-project"
+  },
+  "categories": [
+    {"name": "lineages", "kind": "lineage", "file": "lineages.json", "count": 1},
+    {"name": "features", "kind": "feature", "file": "features.json", "count": 4}
+  ],
+  "total_entries": 5
+}
