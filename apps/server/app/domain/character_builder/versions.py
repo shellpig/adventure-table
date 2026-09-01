@@ -61,6 +61,35 @@ def _class_summary(build: CharacterBuild, registry: ContentRegistry) -> str:
     )
 
 
+def build_version_summary(
+    *,
+    version_id: UUID,
+    character_id: UUID,
+    version_no: int,
+    version_kind: str,
+    parent_version_id: UUID | None,
+    superseded_by_version_id: UUID | None,
+    change_note: str | None,
+    created_at: datetime,
+    current_version_id: UUID,
+    build: CharacterBuild,
+    registry: ContentRegistry,
+) -> CharacterVersionSummary:
+    return CharacterVersionSummary(
+        id=version_id,
+        character_id=character_id,
+        version_no=version_no,
+        version_kind=CharacterVersionKind(version_kind),
+        parent_version_id=parent_version_id,
+        superseded_by_version_id=superseded_by_version_id,
+        change_note=change_note,
+        created_at=created_at,
+        is_current=version_id == current_version_id,
+        character_level=build.character_level,
+        class_summary=_class_summary(build, registry),
+    )
+
+
 def _legacy_level_choices(
     build: CharacterBuild,
     registry: ContentRegistry,
@@ -77,7 +106,6 @@ def _legacy_level_choices(
         class_counts[class_ref] += 1
         class_level = class_counts[class_ref]
         class_entry = registry.get(class_ref)
-        hit_die = class_entry.data.get("hit_die")
         if index == 1:
             method = BuilderHPMethod.FIRST_LEVEL
         elif hp_gain == fixed_hp_gain(class_entry):
