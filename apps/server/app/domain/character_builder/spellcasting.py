@@ -12,7 +12,12 @@ from app.content.identity import (
 from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
 from app.domain.character.schemas import PreparedSpellSelection, SpellAccessEntry
-from app.domain.character_builder.rules import SpellcastingClassRule, load_spellcasting_rules
+from app.domain.character_builder.rules import (
+    SpellcastingClassRule,
+    caster_level_contribution,
+    load_spellcasting_rules,
+    prepared_limit as calculate_prepared_limit,
+)
 from app.domain.character_builder.schemas import (
     BuilderDraft,
     BuilderIssue,
@@ -109,15 +114,33 @@ def _class_levels(draft: BuilderDraft) -> Counter[str]:
     return Counter(level.class_ref for level in draft.draft_payload.level_choices)
 
 
-def _spell_on_class_list(spell: ContentEntry, class_ref: str) -> bool:
+def _spell_on_class_list(
+    registry: ContentRegistry,
+    spell: ContentEntry,
+    class_ref: str,
+) -> bool:
     references = spell.data.get("classes")
-    if not isinstance(references, list):
+    if isinstance(references, list):
+        for reference in references:
+            if not isinstance(reference, dict):
+                continue
+            try:
+                if reference_to_stable_key(reference, kinds={"class"}) == class_ref:
+                    return True
+            except ValueError:
+                continue
+
+    class_entry = registry.get_optional(class_ref)
+    if class_entry is None:
         return False
-    for reference in references:
+    dedicated = class_entry.data.get("spell_list")
+    if not isinstance(dedicated, list):
+        return False
+    for reference in dedicated:
         if not isinstance(reference, dict):
             continue
         try:
-            if reference_to_stable_key(reference, kinds={"class"}) == class_ref:
+            if reference_to_stable_key(reference, kinds={"spell"}) == spell.key:
                 return True
         except ValueError:
             continue
@@ -132,7 +155,7 @@ def _eligible_spells(
     return tuple(
         spell
         for spell in registry.list_kind("spell")
-        if _spell_on_class_list(spell, class_ref)
+        if _spell_on_class_list(registry, spell, class_ref)
         and isinstance(spell.data.get("level"), int)
         and int(spell.data["level"]) <= max_spell_level
     )
@@ -156,12 +179,7 @@ def _prepared_limit(
 ) -> int | None:
     if rule.prepared_formula is None or ability_score is None:
         return None
-    modifier = ability_modifier(ability_score)
-    if rule.prepared_formula == "class_level_plus_ability":
-        return max(1, class_level + modifier)
-    if rule.prepared_formula == "half_class_level_plus_ability":
-        return max(1, class_level // 2 + modifier)
-    raise ValueError(f"unsupported prepared formula: {rule.prepared_formula}")
+    return calculate_prepared_limit(rule, class_level, ability_modifier(ability_score))
 
 
 def _entry_id(source_type: str, source_key: str, access_type: str, spell_key: str) -> str:
@@ -225,7 +243,7 @@ def _validate_exact_selection(
             )
             continue
         level = spell.data.get("level")
-        if not isinstance(level, int) or not _spell_on_class_list(spell, class_ref):
+        if not isinstance(level, int) or not _spell_on_class_list(registry, spell, class_ref):
             issues.append(
                 _issue(
                     "spell_not_on_source_list",
@@ -304,7 +322,7 @@ def _validate_prepared_selection(
                         spell_key,
                     )
                 )
-        elif not _spell_on_class_list(spell, class_ref):
+        elif not _spell_on_class_list(registry, spell, class_ref):
             issues.append(
                 _issue(
                     "spell_not_on_source_list",
@@ -408,7 +426,7 @@ def _normal_spellcasting_sources(
             start is None
             or class_level < start
             or rule.resource_pool_type != "normal_multiclass_slots"
-            or rule.slot_contribution == "none"
+            or rule.slot_contribution.formula == "none"
         ):
             continue
         result.append((class_ref, class_level, rule))
@@ -434,13 +452,10 @@ def calculate_multiclass_spell_slots(
         class_ref, class_level, _rule = sources[0]
         return _slot_counts(_spellcasting_row(registry, class_ref, class_level))
 
-    caster_level = 0
-    for _class_ref, class_level, rule in sources:
-        if rule.slot_contribution == "full":
-            caster_level += class_level
-        elif rule.slot_contribution == "half":
-            caster_level += class_level // 2
-
+    caster_level = sum(
+        caster_level_contribution(class_ref, class_level, rule)
+        for class_ref, class_level, rule in sources
+    )
     if caster_level <= 0:
         return {}
     row = load_spellcasting_rules().combined_spell_slots[min(caster_level, 20)]
