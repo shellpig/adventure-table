@@ -19,8 +19,9 @@
     {"name": "backgrounds", "kind": "background", "file": "backgrounds-m01b.json", "count": 18},
     {"name": "features", "kind": "feature", "file": "features.json", "count": 7},
     {"name": "maneuvers-m01i", "kind": "feature", "file": "maneuvers-m01i.json", "count": 16},
+    {"name": "spells-m01i", "kind": "spell", "file": "spells-m01i.json", "count": 6},
     {"name": "races", "kind": "race", "file": "races.json", "count": 1},
     {"name": "subraces", "kind": "subrace", "file": "subraces.json", "count": 5}
   ],
-  "total_entries": 47
+  "total_entries": 53
 }
