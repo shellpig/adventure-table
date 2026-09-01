@@ -132,12 +132,7 @@ class BuilderChoiceSelection(StrictModel):
 
 
 class BuilderSpellChoiceInput(StrictModel):
-    """Final spell selections for one deterministic spellcasting profile.
-
-    Build-persistent access and live prepared state stay separate. High-level
-    creation legality is checked by the server against the ordered class
-    progression rather than trusted from these final lists.
-    """
+    """Final spell selections for one deterministic spellcasting profile."""
 
     cantrip_keys: tuple[str, ...] = ()
     known_spell_keys: tuple[str, ...] = ()
@@ -159,8 +154,6 @@ class BuilderSpellChoiceInput(StrictModel):
 
 
 class BuilderChoicePresentationItem(StrictModel):
-    """Mechanics-neutral metadata for rebuilding a localized option label."""
-
     reference_id: str = Field(min_length=1, max_length=240)
     count: int = Field(default=1, ge=1)
 
@@ -209,6 +202,7 @@ class BuilderDraftPayload(StrictModel):
     race_selection: BuilderReferenceSelection | None = None
     race_variant_selection: BuilderReferenceSelection | None = None
     subrace_selection: BuilderReferenceSelection | None = None
+    lineage_selection: BuilderReferenceSelection | None = None
     background_selection: BuilderReferenceSelection | None = None
     alignment_selection: BuilderReferenceSelection | None = None
     ability_generation: BuilderAbilityGenerationInput | None = None
@@ -238,6 +232,7 @@ class BuilderDraftPayloadPatch(StrictModel):
     race_selection: BuilderReferenceSelection | None = None
     race_variant_selection: BuilderReferenceSelection | None = None
     subrace_selection: BuilderReferenceSelection | None = None
+    lineage_selection: BuilderReferenceSelection | None = None
     background_selection: BuilderReferenceSelection | None = None
     alignment_selection: BuilderReferenceSelection | None = None
     ability_generation: BuilderAbilityGenerationInput | None = None
@@ -250,16 +245,11 @@ class BuilderDraftPayloadPatch(StrictModel):
     initial_state_seed: dict[str, JsonValue] | None = None
 
 
-def validate_draft_source_combination(
-    mode: BuilderMode,
-    character_id: UUID | None,
-    base_version_id: UUID | None,
-) -> None:
+def validate_draft_source_combination(mode: BuilderMode, character_id: UUID | None, base_version_id: UUID | None) -> None:
     if mode is BuilderMode.CREATE:
         if character_id is not None or base_version_id is not None:
             raise ValueError("create drafts cannot reference a character or base version")
         return
-
     if character_id is None or base_version_id is None:
         raise ValueError(f"{mode.value} drafts require character_id and base_version_id")
 
@@ -317,9 +307,6 @@ class BuilderGrantSummary(StrictModel):
     kind: str
     source_ref: str
     reference_id: str | None = None
-    # Some grants are inline fields of their source entry rather than standalone
-    # content entries, so they have no StableKey of their own. For those, the
-    # presentation identity is source_ref plus the field path holding the name.
     presentation_field: str | None = None
 
 
@@ -395,6 +382,8 @@ class BuilderResolvedSummary(StrictModel):
     race_name: str | None = None
     race_variant_name: str | None = None
     subrace_name: str | None = None
+    lineage_name: str | None = None
+    ancestral_origin_name: str | None = None
     background_name: str | None = None
     alignment_name: str | None = None
     starting_class_name: str | None = None
