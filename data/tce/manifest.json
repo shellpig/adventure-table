@@ -1,1 +1,29 @@
-{"id":"tce","name":"Tasha's Cauldron of Everything","ruleset":"dnd5e-2014","version":"M01-H","provenance":{"type":"private-maintainer-normalization","reference":"docs/暫用規則資訊/奇械師_TCE.md","supplemental_reference":"AuroraLegacy/elements TCE transcription"},"usage":{"scope":"private-friends-project"},"categories":[{"name":"classes","kind":"class","file":"classes.json","count":1},{"name":"levels","kind":"level","file":"levels.json","count":36},{"name":"subclasses","kind":"subclass","file":"subclasses.json","count":4},{"name":"features","kind":"feature","file":"features.json","count":39},{"name":"infusions","kind":"infusion","file":"infusions.json","count":16},{"name":"spells","kind":"spell","file":"spells.json","count":0}],"total_entries":96}
+{
+  "id": "tce",
+  "name": "Tasha's Cauldron of Everything",
+  "ruleset": "dnd5e-2014",
+  "version": "M01-I",
+  "provenance": {
+    "type": "private-maintainer-normalization",
+    "reference": "docs/暫用規則資訊/奇械師_TCE.md",
+    "supplemental_reference": "AuroraLegacy/elements TCE transcription"
+  },
+  "usage": {
+    "scope": "private-friends-project"
+  },
+  "categories": [
+    {"name": "classes", "kind": "class", "file": "classes.json", "count": 1},
+    {"name": "levels", "kind": "level", "file": "levels.json", "count": 36},
+    {"name": "subclasses", "kind": "subclass", "file": "subclasses.json", "count": 4},
+    {"name": "features", "kind": "feature", "file": "features.json", "count": 39},
+    {"name": "optional-class-features-a", "kind": "feature", "file": "optional-class-features-a.json", "count": 12},
+    {"name": "optional-class-features-b", "kind": "feature", "file": "optional-class-features-b.json", "count": 19},
+    {"name": "optional-class-features-c", "kind": "feature", "file": "optional-class-features-c.json", "count": 11},
+    {"name": "fighting-styles-m01i", "kind": "feature", "file": "fighting-styles-m01i.json", "count": 7},
+    {"name": "maneuvers-m01i", "kind": "feature", "file": "maneuvers-m01i.json", "count": 7},
+    {"name": "options-m01i", "kind": "feature", "file": "options-m01i.json", "count": 11},
+    {"name": "infusions", "kind": "infusion", "file": "infusions.json", "count": 16},
+    {"name": "spells", "kind": "spell", "file": "spells.json", "count": 21}
+  ],
+  "total_entries": 184
+}
