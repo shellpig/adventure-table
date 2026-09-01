@@ -17,6 +17,7 @@ from app.domain.character_builder.schemas import (
     BuilderIssue,
     BuilderIssueSeverity,
 )
+from app.domain.rules.artificer import spell_storing_item_capacity
 from app.domain.rules.feature_resources import feature_resource_capacities
 from app.domain.rules.hit_points import calculate_max_hp
 from app.domain.rules.spellcasting import initial_spell_resource_state
@@ -107,8 +108,8 @@ def reconcile_character_state(
 
     Level Up is deliberately not a rest. Damage, spent resources, spent hit dice,
     inventory, conditions and temporary HP survive unless a Build invariant forces
-    a bounded adjustment. Prepared spells are never silently removed: an invalid
-    prepared selection blocks the version change instead.
+    a bounded adjustment. Prepared spells and Artificer live bindings are never
+    silently removed: invalid live selections block the version change instead.
     """
 
     warnings: list[BuilderIssue] = []
@@ -273,33 +274,69 @@ def reconcile_character_state(
         }
     )
 
-    try:
-        validate_state_against_build(proposed, new_build, registry)
-    except CharacterValidationError as exc:
-        without_prepared = proposed.model_copy(
-            update={"prepared_spell_entry_ids": [], "prepared_spells": []}
+    removed_known = sorted(
+        {
+            active.infusion_ref
+            for active in old_state.active_infusions
+            if active.infusion_ref not in set(new_build.infusion_refs)
+        }
+    )
+    if removed_known:
+        blocking.append(
+            _blocking(
+                "active_infusion_reconciliation_required",
+                "state.active_infusions",
+                (
+                    "The proposed Build removes Known Infusions that are still active: "
+                    + ", ".join(removed_known)
+                    + ". Deactivate or replace those live Infusions before confirming the Build change."
+                ),
+            )
         )
+
+    if old_state.spell_storing_item is not None and spell_storing_item_capacity(new_build) <= 0:
+        blocking.append(
+            _blocking(
+                "spell_storing_item_reconciliation_required",
+                "state.spell_storing_item",
+                (
+                    "The proposed Build no longer grants Spell-Storing Item while a stored item is active. "
+                    "Clear that live state before confirming the Build change."
+                ),
+            )
+        )
+
+    # If an Artificer-specific conflict is already known, preserve the live state
+    # exactly and surface the targeted action instead of adding a generic
+    # state_reconciliation_invalid duplicate for the same condition.
+    if not blocking:
         try:
-            validate_state_against_build(without_prepared, new_build, registry)
-        except CharacterValidationError:
-            blocking.append(
-                _blocking(
-                    "state_reconciliation_invalid",
-                    "state",
-                    f"Current State cannot be reconciled to the proposed Build: {exc}",
-                )
+            validate_state_against_build(proposed, new_build, registry)
+        except CharacterValidationError as exc:
+            without_prepared = proposed.model_copy(
+                update={"prepared_spell_entry_ids": [], "prepared_spells": []}
             )
-        else:
-            blocking.append(
-                _blocking(
-                    "prepared_spell_reconciliation_required",
-                    "state.prepared_spells",
-                    (
-                        "At least one currently prepared spell is no longer legal "
-                        f"under the proposed Build: {exc}"
-                    ),
+            try:
+                validate_state_against_build(without_prepared, new_build, registry)
+            except CharacterValidationError:
+                blocking.append(
+                    _blocking(
+                        "state_reconciliation_invalid",
+                        "state",
+                        f"Current State cannot be reconciled to the proposed Build: {exc}",
+                    )
                 )
-            )
+            else:
+                blocking.append(
+                    _blocking(
+                        "prepared_spell_reconciliation_required",
+                        "state.prepared_spells",
+                        (
+                            "At least one currently prepared spell is no longer legal "
+                            f"under the proposed Build: {exc}"
+                        ),
+                    )
+                )
 
     return StateReconciliationPreview(
         proposed_state=proposed,
