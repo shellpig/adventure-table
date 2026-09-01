@@ -18,6 +18,7 @@ StableKind = Literal[
     "equipment",
     "feat",
     "feature",
+    "infusion",
     "language",
     "level",
     "lineage",
@@ -32,6 +33,15 @@ StableKind = Literal[
     "subrace",
     "trait",
     "weapon-property",
+]
+
+AbilityName = Literal[
+    "strength",
+    "dexterity",
+    "constitution",
+    "intelligence",
+    "wisdom",
+    "charisma",
 ]
 
 
@@ -113,15 +123,42 @@ class FeatData(IndexedNamedData):
 
 
 class FeatureResourceCapacity(StrictModel):
-    type: Literal["fixed", "proficiency_bonus"]
+    type: Literal[
+        "fixed",
+        "proficiency_bonus",
+        "ability_modifier",
+        "ability_modifier_x2",
+        "class_level",
+    ]
     value: int | None = Field(default=None, ge=0)
+    ability: AbilityName | None = None
+    minimum: int | None = Field(default=None, ge=0)
+    class_ref: APIReference | None = None
 
     @model_validator(mode="after")
-    def fixed_capacity_requires_value(self) -> "FeatureResourceCapacity":
-        if self.type == "fixed" and self.value is None:
-            raise ValueError("fixed feature resource capacity requires value")
-        if self.type != "fixed" and self.value is not None:
+    def capacity_expression_is_well_formed(self) -> "FeatureResourceCapacity":
+        if self.type == "fixed":
+            if self.value is None:
+                raise ValueError("fixed feature resource capacity requires value")
+            if self.ability is not None or self.class_ref is not None:
+                raise ValueError("fixed feature resource capacity cannot include ability/class_ref")
+            return self
+        if self.value is not None:
             raise ValueError("non-fixed feature resource capacity cannot include value")
+        if self.type in {"ability_modifier", "ability_modifier_x2"}:
+            if self.ability is None:
+                raise ValueError("ability-based feature resource capacity requires ability")
+            if self.class_ref is not None:
+                raise ValueError("ability-based feature resource capacity cannot include class_ref")
+            return self
+        if self.type == "class_level":
+            if self.class_ref is None:
+                raise ValueError("class_level feature resource capacity requires class_ref")
+            if self.ability is not None:
+                raise ValueError("class_level feature resource capacity cannot include ability")
+            return self
+        if self.ability is not None or self.class_ref is not None or self.minimum is not None:
+            raise ValueError("proficiency_bonus capacity cannot include ability/class_ref/minimum")
         return self
 
 
@@ -143,6 +180,61 @@ class FeatureData(IndexedNamedData):
     subclass: APIReference | None = None
     minimum_character_level: int | None = Field(default=None, ge=1, le=20)
     resource: FeatureResourceDescriptor | None = None
+
+
+InfusionItemFilterKind = Literal[
+    "armor",
+    "shield",
+    "simple_or_martial_weapon",
+    "thrown_weapon",
+    "ammunition_weapon",
+    "rod_staff_wand",
+    "boots",
+    "ring",
+    "helmet",
+    "crystal_or_gem",
+    "replicated_item",
+]
+
+
+class InfusionItemFilterData(StrictModel):
+    any_of: list[InfusionItemFilterKind] = Field(min_length=1)
+
+    @field_validator("any_of")
+    @classmethod
+    def filter_values_are_unique(cls, value: list[str]) -> list[str]:
+        if len(value) != len(set(value)):
+            raise ValueError("infusion item filters must be unique")
+        return value
+
+
+class InfusionModifierData(StrictModel):
+    kind: Literal["ac", "attack", "damage", "spell_attack", "save", "other"]
+    value: int | None = None
+    scales_at_artificer_level: int | None = Field(default=None, ge=1, le=20)
+    scaled_value: int | None = None
+    note: str | None = Field(default=None, max_length=500)
+
+
+class InfusionData(IndexedNamedData):
+    minimum_artificer_level: int = Field(default=2, ge=2, le=20)
+    requires_attunement: bool
+    item_filter: InfusionItemFilterData
+    modifiers: list[InfusionModifierData] = Field(default_factory=list)
+    charges: FeatureResourceDescriptor | None = None
+    replicates_item: APIReference | None = None
+    active_copy_limit: int = Field(default=1, ge=1)
+    description: str = Field(min_length=1)
+    manual_effects: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def replicated_item_filter_matches_reference(self) -> "InfusionData":
+        has_replicated_filter = "replicated_item" in self.item_filter.any_of
+        if has_replicated_filter != (self.replicates_item is not None):
+            raise ValueError(
+                "replicated_item infusion filter and replicates_item reference must be declared together"
+            )
+        return self
 
 
 class LanguageData(IndexedNamedData):
@@ -234,14 +326,7 @@ class RaceVariantSpellChoice(StrictModel):
     class_: APIReference = Field(alias="class")
     level: int = Field(default=0, ge=0, le=9)
     choose: int = Field(default=1, ge=1)
-    casting_ability: Literal[
-        "strength",
-        "dexterity",
-        "constitution",
-        "intelligence",
-        "wisdom",
-        "charisma",
-    ]
+    casting_ability: AbilityName
     feature: APIReference
 
 
@@ -348,6 +433,7 @@ DATA_MODELS: dict[str, type[IndexedNamedData]] = {
     "equipment": EquipmentData,
     "feat": FeatData,
     "feature": FeatureData,
+    "infusion": InfusionData,
     "language": LanguageData,
     "level": LevelData,
     "lineage": LineageData,
