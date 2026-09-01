@@ -79,6 +79,8 @@ jobs:
 
           missing = sorted(refs - installed)
           print("MISSING_TCE_REFS", missing)
+          if missing:
+              raise SystemExit("TCE contains dangling installed-content references")
           PY
       - name: Install backend
         run: pip install -e ".[dev]"
