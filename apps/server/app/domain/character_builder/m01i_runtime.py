@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from app.content.identity import reference_to_stable_key, stable_key_is_kind
+from app.content.identity import reference_to_stable_key, stable_key, stable_key_is_kind
 from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
 from app.domain.character.schemas import CharacterBuild
@@ -90,7 +90,14 @@ class M01IReferenceNormalizedRegistry:
         )
 
     def resolve(self, *parts: str) -> ContentEntry:
-        return self._normalize_entry(self.base.resolve(*parts))
+        if len(parts) == 2:
+            source = "srd5.1"
+            kind, index = parts
+        elif len(parts) == 3:
+            source, kind, index = parts
+        else:
+            raise TypeError("resolve expects (kind, index) or (source, kind, index)")
+        return self.get(stable_key(source, kind, index))
 
     def __getattr__(self, name: str):
         return getattr(self.base, name)
