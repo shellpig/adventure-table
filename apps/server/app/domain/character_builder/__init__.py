@@ -46,11 +46,3 @@ __all__ = [
     "BuilderView",
     "CharacterBuilderService",
 ]
-
-
-# M01-I extends the established compiler without replacing its core pipeline.
-# Installing here makes both direct compiler imports and service imports use the
-# same extension while preserving the package's lazy persistence boundary.
-from app.domain.character_builder.m01i_compiler import install_m01_i_compiler_extension
-
-install_m01_i_compiler_extension()
