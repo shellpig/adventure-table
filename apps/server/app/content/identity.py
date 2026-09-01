@@ -21,6 +21,7 @@ URL_ROUTE_TO_KIND = {
     "equipment": "equipment",
     "feats": "feat",
     "features": "feature",
+    "infusions": "infusion",
     "languages": "language",
     "lineages": "lineage",
     "magic-items": "item",
