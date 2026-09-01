@@ -31,6 +31,60 @@ def _derive_sources(build: CharacterBuild) -> CharacterBuild:
     return CharacterBuild.model_validate(payload)
 
 
+def _is_extension_selection(
+    choice_id: str,
+    source_ref: str | None,
+    registry: ContentRegistry,
+) -> bool:
+    parts = choice_id.split(":")
+    if choice_id.startswith("m01-i:"):
+        return True
+    if len(parts) >= 3 and parts[0] == "level" and parts[1].isdigit() and parts[2] == "m01-i":
+        return True
+    if source_ref is None:
+        return False
+    source = registry.get_optional(source_ref)
+    if source is None:
+        return False
+    return isinstance(source.data.get("optional_class_feature"), dict) or isinstance(
+        source.data.get("choice_pool_option"),
+        dict,
+    )
+
+
+def _core_draft(draft: BuilderDraft, registry: ContentRegistry) -> BuilderDraft:
+    """Hide M01-I-owned selections from the pre-M01-I compiler.
+
+    The core compiler must still see parent choices such as the SRD Fighter
+    Fighting Style selection; it must not see optional-feature toggles, nested
+    children or retraining controls that only this extension understands.
+    Otherwise the legacy draft-selection fallback correctly—but undesirably for
+    an extension-owned choice—flags them as unknown/illegal.
+    """
+
+    selections = {
+        choice_id: selection
+        for choice_id, selection in draft.draft_payload.choice_selections.items()
+        if not _is_extension_selection(
+            choice_id,
+            selection.source_ref,
+            registry,
+        )
+    }
+    if len(selections) == len(draft.draft_payload.choice_selections):
+        return draft
+    payload = draft.draft_payload.model_copy(update={"choice_selections": selections})
+    return draft.model_copy(update={"draft_payload": payload})
+
+
+def _is_extension_draft_fallback(choice, registry: ContentRegistry) -> bool:
+    return choice.option_source == "draft:selection" and _is_extension_selection(
+        choice.choice_id,
+        choice.source_ref,
+        registry,
+    )
+
+
 def compile_builder_draft(
     draft: BuilderDraft,
     registry: ContentRegistry,
@@ -50,19 +104,15 @@ def compile_builder_draft(
         base_build=base_build,
     )
     compiled = compile_core_builder_draft(
-        draft,
+        _core_draft(draft, runtime.registry),
         runtime.registry,
         base_build=base_build,
     )
 
-    runtime_ids = {choice.choice_id for choice in runtime.choices}
     core_choices = tuple(
         choice
         for choice in compiled.choices
-        if not (
-            choice.option_source == "draft:selection"
-            and choice.choice_id in runtime_ids
-        )
+        if not _is_extension_draft_fallback(choice, runtime.registry)
     )
     core_choices = apply_optional_pool_eligibility(
         draft,
@@ -85,15 +135,6 @@ def compile_builder_draft(
     )
 
     optional_choices = runtime.choices + nested_choices + retraining_choices
-    live_optional_ids = {choice.choice_id for choice in optional_choices}
-    core_choices = tuple(
-        choice
-        for choice in core_choices
-        if not (
-            choice.option_source == "draft:selection"
-            and choice.choice_id in live_optional_ids
-        )
-    )
     choices = core_choices + optional_choices
 
     issues = [
