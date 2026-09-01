@@ -5,6 +5,8 @@ from collections import Counter
 from app.content.identity import parse_stable_key, reference_to_stable_key
 from app.content.registry import ContentNotFoundError, ContentRegistry
 from app.domain.character.schemas import CharacterBuild, CharacterState
+from app.domain.rules.artificer import validate_artificer_state, validate_known_infusions
+from app.domain.rules.feature_resources import feature_resource_capacities
 from app.domain.rules.hit_points import calculate_max_hp
 from app.domain.rules.spellcasting import (
     initial_spell_resource_state,
@@ -51,6 +53,7 @@ def build_content_reference_keys(build: CharacterBuild) -> tuple[str, ...]:
     refs.extend(build.language_refs)
     refs.extend(build.feature_refs)
     refs.extend(build.feat_refs)
+    refs.extend(build.infusion_refs)
     for profile in build.spellcasting_profiles:
         refs.extend((profile.source_key, profile.class_ref))
     for entry in build.spell_access_entries:
@@ -162,6 +165,10 @@ def validate_build_references(build: CharacterBuild, registry: ContentRegistry) 
             )
 
     _validate_numeric_overrides(build, registry)
+    try:
+        validate_known_infusions(build, registry)
+    except ValueError as exc:
+        raise CharacterValidationError(str(exc)) from exc
 
 
 def derive_hit_dice_totals(build: CharacterBuild, registry: ContentRegistry) -> dict[str, int]:
@@ -272,6 +279,25 @@ def _validate_spell_resources(state: CharacterState, build: CharacterBuild) -> N
             )
 
 
+def _validate_feature_resources(
+    state: CharacterState,
+    build: CharacterBuild,
+    registry: ContentRegistry,
+) -> None:
+    expected = feature_resource_capacities(build, registry)
+    for key, capacity in expected.items():
+        counter = state.resources.get(key)
+        # Compatibility: characters confirmed before a newly introduced resource
+        # rule may not have the counter until their next Build-version
+        # reconciliation. If present, however, the live counter must be exact.
+        if counter is None:
+            continue
+        if not resource_counter_matches_capacity(counter, capacity):
+            raise CharacterValidationError(
+                f"live feature resource usage does not match Build capacity: {key}"
+            )
+
+
 def validate_state_against_build(
     state: CharacterState,
     build: CharacterBuild,
@@ -279,6 +305,7 @@ def validate_state_against_build(
 ) -> None:
     _validate_prepared_spells(state, build, registry)
     _validate_spell_resources(state, build)
+    _validate_feature_resources(state, build, registry)
 
     for condition in state.conditions:
         _require_content(registry, condition.condition_ref)
@@ -296,3 +323,8 @@ def validate_state_against_build(
         raise CharacterValidationError(
             f"current_hp cannot exceed calculated max_hp: {state.current_hp}>{max_hp}"
         )
+
+    try:
+        validate_artificer_state(state, build, registry)
+    except ValueError as exc:
+        raise CharacterValidationError(str(exc)) from exc
