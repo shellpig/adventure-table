@@ -420,21 +420,19 @@ class CharacterBuilderService:
                     code="build_candidate_missing",
                     severity=BuilderIssueSeverity.BLOCKING_ERROR,
                     path="draft_payload",
-                    message="Builder validation passed but no Build candidate was produced.",
+                    message="The server could not compile a final CharacterBuild from this draft.",
                 )
             )
 
         validation = make_validation_result(issues)
         review = BuilderReviewDTO(
             draft_id=draft.id,
-            revision=draft.revision,
-            mode=draft.mode,
             resolved_summary=compiled.resolved_summary,
             build_candidate=compiled.build_candidate,
-            starting_equipment=compiled.starting_equipment,
             initial_state=initial_state,
             reconciliation=reconciliation,
             derived_stats=derived_stats,
+            starting_equipment=compiled.starting_equipment,
             issues=validation.issues,
             can_confirm=validation.can_confirm,
             non_standard_count=validation.non_standard_count,
@@ -442,15 +440,58 @@ class CharacterBuilderService:
         return draft, compiled, review
 
     def review_draft(self, draft_id: UUID) -> BuilderReviewDTO:
-        _draft, _compiled, review = self._compile_review(draft_id)
-        return review
+        return self._compile_review(draft_id)[2]
 
-    def confirm_draft(self, draft_id: UUID, expected_revision: int) -> BuilderConfirmResult:
-        draft, compiled, review = self._compile_review(draft_id)
-        if draft.revision != expected_revision:
-            raise ValueError(
-                f"builder revision mismatch: expected {expected_revision}, current {draft.revision}"
+    def confirm_draft(self, draft_id: UUID) -> BuilderConfirmResult:
+        character_repository = self._require_character_repository()
+
+        confirmed_character_id, confirmed_version_id = self.repository.confirmed_result(draft_id)
+        if confirmed_character_id is not None:
+            if confirmed_version_id is None:
+                # Compatibility for any pre-versioning confirmed draft that has
+                # no stored version id. New confirms always persist both ids.
+                character = character_repository.load_character(confirmed_character_id)
+                return BuilderConfirmResult(
+                    character_id=character.id,
+                    current_version_id=character.current_version_id,
+                    version_no=character.version_no,
+                    character_path=f"/characters/{character.id}",
+                )
+            confirmed_version = next(
+                (
+                    version
+                    for version in character_repository.list_versions(confirmed_character_id)
+                    if version.id == confirmed_version_id
+                ),
+                None,
             )
+            if confirmed_version is None:
+                raise RuntimeError(
+                    f"confirmed builder version is missing: {confirmed_version_id}"
+                )
+            return BuilderConfirmResult(
+                character_id=confirmed_character_id,
+                # Keep the historical field name for compatibility: on replay
+                # this is the exact version created by this Confirm, even if a
+                # later version is now current on the character.
+                current_version_id=confirmed_version_id,
+                version_no=confirmed_version.version_no,
+                character_path=f"/characters/{confirmed_character_id}",
+            )
+
+        draft_snapshot = self.repository.load_draft(draft_id)
+        if draft_snapshot.mode is not BuilderMode.CREATE:
+            if draft_snapshot.character_id is None or draft_snapshot.base_version_id is None:
+                raise ValueError("versioned draft is missing its base version")
+            current = character_repository.load_character(draft_snapshot.character_id)
+            if current.current_version_id != draft_snapshot.base_version_id:
+                raise StaleBuildVersionError(
+                    current.id,
+                    draft_snapshot.base_version_id,
+                    current.current_version_id,
+                )
+
+        draft, compiled, review = self._compile_review(draft_id)
         if not review.can_confirm or compiled.build_candidate is None:
             raise BuilderCannotConfirmError(
                 BuilderValidationResult(
@@ -460,59 +501,61 @@ class CharacterBuilderService:
                 )
             )
 
-        character_repository = self._require_character_repository()
-        try:
-            if draft.mode is BuilderMode.CREATE:
-                if review.initial_state is None:
-                    raise ValueError("create review is missing initial character state")
-                confirmed = character_repository.create_character_from_builder(
-                    draft,
-                    compiled.build_candidate,
-                    review.initial_state,
-                )
-                version_kind = CharacterVersionKind.CREATE
-            else:
-                if draft.character_id is None or draft.base_version_id is None:
-                    raise ValueError("versioned draft is missing character/base version")
-                current = character_repository.load_character(draft.character_id)
-                if current.current_version_id != draft.base_version_id:
-                    stale = BuilderIssue(
-                        code="stale_build_version",
-                        severity=BuilderIssueSeverity.BLOCKING_ERROR,
-                        path="draft.base_version_id",
-                        message="Character changed after this draft was opened. Start from the current version.",
-                        related_refs=(str(draft.base_version_id), str(current.current_version_id)),
+        if draft.mode is BuilderMode.CREATE:
+            if review.initial_state is None:
+                raise BuilderCannotConfirmError(
+                    make_validation_result(
+                        [
+                            BuilderIssue(
+                                code="initial_state_missing",
+                                severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                                path="draft_payload",
+                                message="The server could not build initial Current State.",
+                            )
+                        ]
                     )
-                    raise BuilderCannotConfirmError(
-                        make_validation_result((*review.issues, stale))
-                    )
-                if review.reconciliation is None:
-                    raise ValueError("versioned review is missing reconciliation result")
-                confirmed = character_repository.create_character_version_from_builder(
-                    draft,
-                    compiled.build_candidate,
-                    review.reconciliation.next_state,
-                    base_version_id=draft.base_version_id,
                 )
-                version_kind = CharacterVersionKind(draft.mode.value)
-        except StaleBuildVersionError as exc:
-            stale = BuilderIssue(
-                code="stale_build_version",
-                severity=BuilderIssueSeverity.BLOCKING_ERROR,
-                path="draft.base_version_id",
-                message="Character changed after this draft was opened. Start from the current version.",
-                related_refs=(str(exc.expected_version_id), str(exc.current_version_id)),
+            basic = draft.draft_payload.basic
+            if basic is None or basic.name is None:
+                raise BuilderCannotConfirmError(
+                    make_validation_result(
+                        [
+                            BuilderIssue(
+                                code="missing_character_name",
+                                severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                                path="draft_payload.basic.name",
+                                message="Character name is required before Confirm.",
+                            )
+                        ]
+                    )
+                )
+            character = character_repository.create_character_from_builder_draft(
+                draft_id=draft.id,
+                expected_revision=draft.revision,
+                name=basic.name,
+                build=compiled.build_candidate,
+                state=review.initial_state,
             )
-            raise BuilderCannotConfirmError(
-                make_validation_result((*review.issues, stale))
-            ) from exc
+        else:
+            kind_by_mode = {
+                BuilderMode.LEVEL_UP: CharacterVersionKind.LEVEL_UP,
+                BuilderMode.BUILD_EDIT: CharacterVersionKind.BUILD_EDIT,
+                BuilderMode.CORRECTION: CharacterVersionKind.CORRECTION,
+            }
+            version_kind = kind_by_mode[draft.mode]
+            character, _ = character_repository.create_build_version_from_builder_draft(
+                draft_id=draft.id,
+                expected_revision=draft.revision,
+                new_build=compiled.build_candidate,
+                version_kind=version_kind,
+            )
 
-        self.repository.confirm_draft(draft.id)
         return BuilderConfirmResult(
-            character=confirmed,
-            version_kind=version_kind,
-            previous_version_id=draft.base_version_id,
+            character_id=character.id,
+            current_version_id=character.current_version_id,
+            version_no=character.version_no,
+            character_path=f"/characters/{character.id}",
         )
 
-    def cancel_draft(self, draft_id: UUID) -> BuilderDraft:
-        return self.repository.cancel_draft(draft_id)
+    def cancel_draft(self, draft_id: UUID) -> None:
+        self.repository.delete_draft(draft_id)
