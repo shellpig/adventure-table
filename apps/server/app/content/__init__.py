@@ -1,5 +1,6 @@
 from app.content import registry as _registry
 from app.content.background_roleplay import apply_background_roleplay_inheritance
+from app.content.builder_content_validation import validate_builder_content
 from app.content.phb_roleplay import apply_phb_background_roleplay
 from app.content.registry import (
     ContentNotFoundError,
@@ -8,14 +9,23 @@ from app.content.registry import (
 )
 
 
-# Production/dev packs are explicit. M01-F enables VRGR only after its normalized
-# manifest, bilingual presentation overlay, lineage schema, and Dhampir rules
+# Production/dev packs are explicit. M01-G enables TCE after the Artificer
+# class/subclass progression, spell relations, and Builder validation boundary
 # exist; fixture directories remain opt-in in tests.
-_registry.DEFAULT_CONTENT_PACKS = ("srd5.1", "phb2014", "scag", "gos", "vgm", "vrgr")
+_registry.DEFAULT_CONTENT_PACKS = (
+    "srd5.1",
+    "phb2014",
+    "scag",
+    "gos",
+    "vgm",
+    "vrgr",
+    "tce",
+)
 
 
 def load_default_content_registry() -> ContentRegistry:
     registry = _registry.load_default_content_registry()
+    registry = validate_builder_content(registry)
     registry = apply_phb_background_roleplay(
         registry,
         content_root=_registry.CONTENT_PACKS_ROOT,
