@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -209,6 +209,110 @@ def validate_m01j_inventory(registry: ContentRegistry) -> ContentRegistry:
             f"missing={sorted(inventory_runtime_keys - actual_runtime_keys)}, "
             f"extra={sorted(actual_runtime_keys - inventory_runtime_keys)}"
         )
+
+    return registry
+
+
+def _canonical_runtime_subclass_ref(entry: object) -> str:
+    data = getattr(entry, "data", None)
+    key = getattr(entry, "key", None)
+    if not isinstance(data, dict) or not isinstance(key, str):
+        raise ContentValidationError("invalid runtime subclass entry")
+    raw = data.get("canonical_ref")
+    if raw is None:
+        return key
+    if isinstance(raw, str):
+        try:
+            parsed = parse_stable_key(raw, kinds={"subclass"})
+        except ValueError as exc:
+            raise ContentValidationError(f"{key}: invalid canonical_ref {raw}") from exc
+        return stable_key(parsed.source, parsed.kind, parsed.index)
+    if isinstance(raw, dict):
+        try:
+            resolved = reference_to_stable_key(raw, kinds={"subclass"})
+        except ValueError as exc:
+            raise ContentValidationError(f"{key}: invalid canonical_ref") from exc
+        if resolved is not None:
+            return resolved
+    raise ContentValidationError(f"{key}: canonical_ref must be a subclass StableKey/reference")
+
+
+def apply_m01j_subclass_relations(registry: ContentRegistry) -> ContentRegistry:
+    """Expose canonical multi-pack subclasses through the existing class relation.
+
+    P1 progression already gates subclass selection by per-class level, compiles
+    subclass level feature rows, feeds subclass spell access into the canonical
+    spell-source model, and lets feature resources flow into generic Current
+    State counters. M01-J therefore only needs to make cross-pack subclasses
+    discoverable without editing canonical SRD class files or duplicating the
+    progression/compiler path.
+
+    Runtime reprints may declare ``canonical_ref``. Only the canonical entry is
+    injected into the parent class selector, so pack load order and localized
+    display names cannot create duplicate Builder options.
+    """
+
+    supported_sources = frozenset((*EXPECTED_SOURCES, "srd5.1"))
+    canonical_by_parent: dict[str, list[object]] = defaultdict(list)
+
+    for entry in registry.list_kind("subclass"):
+        if entry.source not in supported_sources:
+            continue
+        parent_ref = _parent_ref(entry)
+        if parent_ref is None:
+            raise ContentValidationError(f"{entry.key}: subclass parent class is invalid")
+        canonical_key = _canonical_runtime_subclass_ref(entry)
+        canonical = registry.get_optional(canonical_key)
+        if canonical is None or parse_stable_key(canonical.key).kind != "subclass":
+            raise ContentValidationError(
+                f"{entry.key}: canonical subclass target is missing: {canonical_key}"
+            )
+        if _parent_ref(canonical) != parent_ref:
+            raise ContentValidationError(
+                f"{entry.key}: canonical subclass target belongs to a different parent class"
+            )
+        if canonical.key == entry.key:
+            canonical_by_parent[parent_ref].append(canonical)
+
+    for class_entry in registry.list_kind("class"):
+        discovered = canonical_by_parent.get(class_entry.key)
+        if not discovered:
+            continue
+
+        existing_by_key: dict[str, dict[str, object]] = {}
+        raw_existing = class_entry.data.get("subclasses")
+        if isinstance(raw_existing, list):
+            for raw_ref in raw_existing:
+                if not isinstance(raw_ref, dict):
+                    continue
+                try:
+                    existing_key = reference_to_stable_key(raw_ref, kinds={"subclass"})
+                except ValueError:
+                    continue
+                if existing_key is not None:
+                    existing_by_key[existing_key] = raw_ref
+
+        ordered_keys = list(existing_by_key)
+        for subclass in sorted(
+            discovered,
+            key=lambda item: (str(getattr(item, "source", "")), str(getattr(item, "key", ""))),
+        ):
+            subclass_key = str(getattr(subclass, "key"))
+            if subclass_key not in ordered_keys:
+                ordered_keys.append(subclass_key)
+
+        normalized_refs: list[dict[str, object]] = []
+        for subclass_key in ordered_keys:
+            target = registry.get_optional(subclass_key)
+            if target is None or _parent_ref(target) != class_entry.key:
+                continue
+            normalized_refs.append(
+                existing_by_key.get(
+                    subclass_key,
+                    {"key": target.key, "name": target.name},
+                )
+            )
+        class_entry.data["subclasses"] = normalized_refs
 
     return registry
 
