@@ -6,6 +6,7 @@ from app.content.m01j_inventory import (
     apply_m01j_subclass_relations,
     validate_m01j_inventory,
 )
+from app.content.m01j_reference_content import apply_m01j_reference_content
 from app.content.phb_roleplay import apply_phb_background_roleplay
 from app.content.registry import (
     ContentNotFoundError,
@@ -14,9 +15,6 @@ from app.content.registry import (
 )
 
 
-# Production/dev packs are explicit. M01-J introduces the XGE pack boundary
-# before source-backed subclass runtime data is available; the M01-J inventory
-# validator keeps those explicit data blockers separate from implemented content.
 _registry.DEFAULT_CONTENT_PACKS = (
     "srd5.1",
     "phb2014",
@@ -33,6 +31,10 @@ def load_default_content_registry() -> ContentRegistry:
     registry = _registry.load_default_content_registry()
     registry = validate_builder_content(registry)
     registry = validate_m01i_inventory(registry)
+    # M01-J's verified non-SRD mechanics are repository reference documents.
+    # Materialize their temporary runtime overlay before closeout validation so
+    # the inventory proves real selectable content rather than placeholder rows.
+    registry = apply_m01j_reference_content(registry)
     registry = validate_m01j_inventory(registry)
     registry = apply_m01j_subclass_relations(registry)
     registry = apply_phb_background_roleplay(
