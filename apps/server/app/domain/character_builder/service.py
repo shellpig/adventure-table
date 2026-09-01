@@ -5,7 +5,8 @@ from uuid import UUID
 
 from app.content.registry import ContentRegistry
 from app.domain.character.validation import CharacterValidationError, validate_build_references
-from app.domain.character_builder.compiler import BuilderCompileResult, compile_builder_draft
+from app.domain.character_builder.compiler import BuilderCompileResult
+from app.domain.character_builder.m01i_compiler import compile_builder_draft
 from app.domain.character_builder.creation import (
     BuilderConfirmResult,
     BuilderReviewDTO,

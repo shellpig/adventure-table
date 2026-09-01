@@ -1,0 +1,145 @@
+[
+  {
+    "key": "tce:feature:metamagic-seeking-spell",
+    "index": "metamagic-seeking-spell",
+    "name": "Seeking Spell",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "metamagic-seeking-spell",
+      "name": "Seeking Spell",
+      "desc": ["Spend sorcery points to reroll a missed spell attack; this can be combined with another Metamagic option."],
+      "choice_pool_option": {"pool": "metamagic", "eligible_class_refs": ["srd5.1:class:sorcerer"], "minimum_class_level": 3}
+    }
+  },
+  {
+    "key": "tce:feature:metamagic-transmuted-spell",
+    "index": "metamagic-transmuted-spell",
+    "name": "Transmuted Spell",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "metamagic-transmuted-spell",
+      "name": "Transmuted Spell",
+      "desc": ["Spend a sorcery point to change a spell's acid, cold, fire, lightning, poison, or thunder damage to another type in that list."],
+      "choice_pool_option": {"pool": "metamagic", "eligible_class_refs": ["srd5.1:class:sorcerer"], "minimum_class_level": 3}
+    }
+  },
+  {
+    "key": "tce:feature:pact-of-the-talisman",
+    "index": "pact-of-the-talisman",
+    "name": "Pact of the Talisman",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "pact-of-the-talisman",
+      "name": "Pact of the Talisman",
+      "desc": ["Your patron grants a talisman that can add a d4 to a failed ability check a limited number of times."],
+      "choice_pool_option": {"pool": "warlock-pact-boon", "eligible_class_refs": ["srd5.1:class:warlock"], "minimum_class_level": 3}
+    }
+  },
+  {
+    "key": "tce:feature:bond-of-the-talisman",
+    "index": "bond-of-the-talisman",
+    "name": "Bond of the Talisman",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "bond-of-the-talisman",
+      "name": "Bond of the Talisman",
+      "desc": ["While another creature wears your talisman, you and the wearer can teleport to one another a limited number of times."],
+      "choice_pool_option": {"pool": "eldritch-invocation", "eligible_class_refs": ["srd5.1:class:warlock"], "minimum_class_level": 12, "required_feature_refs": ["tce:feature:pact-of-the-talisman"]}
+    }
+  },
+  {
+    "key": "tce:feature:eldritch-mind",
+    "index": "eldritch-mind",
+    "name": "Eldritch Mind",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "eldritch-mind",
+      "name": "Eldritch Mind",
+      "desc": ["You have advantage on Constitution saving throws made to maintain concentration on a spell."],
+      "choice_pool_option": {"pool": "eldritch-invocation", "eligible_class_refs": ["srd5.1:class:warlock"], "minimum_class_level": 2}
+    }
+  },
+  {
+    "key": "tce:feature:far-scribe",
+    "index": "far-scribe",
+    "name": "Far Scribe",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "far-scribe",
+      "name": "Far Scribe",
+      "desc": ["Your Book of Shadows can hold names that let you send written messages with sending."],
+      "choice_pool_option": {"pool": "eldritch-invocation", "eligible_class_refs": ["srd5.1:class:warlock"], "minimum_class_level": 5, "required_feature_refs": ["srd5.1:feature:pact-of-the-tome"]}
+    }
+  },
+  {
+    "key": "tce:feature:gift-of-the-protectors",
+    "index": "gift-of-the-protectors",
+    "name": "Gift of the Protectors",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "gift-of-the-protectors",
+      "name": "Gift of the Protectors",
+      "desc": ["Names written in your Book of Shadows can protect a creature from dropping to 0 hit points, subject to the feature's recharge."],
+      "choice_pool_option": {"pool": "eldritch-invocation", "eligible_class_refs": ["srd5.1:class:warlock"], "minimum_class_level": 9, "required_feature_refs": ["srd5.1:feature:pact-of-the-tome"]}
+    }
+  },
+  {
+    "key": "tce:feature:investment-of-the-chain-master",
+    "index": "investment-of-the-chain-master",
+    "name": "Investment of the Chain Master",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "investment-of-the-chain-master",
+      "name": "Investment of the Chain Master",
+      "desc": ["Your Pact of the Chain familiar gains additional movement, attack, magical-damage, save-DC, and resistance benefits."],
+      "choice_pool_option": {"pool": "eldritch-invocation", "eligible_class_refs": ["srd5.1:class:warlock"], "minimum_class_level": 2, "required_feature_refs": ["srd5.1:feature:pact-of-the-chain"]}
+    }
+  },
+  {
+    "key": "tce:feature:protection-of-the-talisman",
+    "index": "protection-of-the-talisman",
+    "name": "Protection of the Talisman",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "protection-of-the-talisman",
+      "name": "Protection of the Talisman",
+      "desc": ["The wearer of your talisman can add a d4 to a failed saving throw a limited number of times."],
+      "choice_pool_option": {"pool": "eldritch-invocation", "eligible_class_refs": ["srd5.1:class:warlock"], "minimum_class_level": 7, "required_feature_refs": ["tce:feature:pact-of-the-talisman"]}
+    }
+  },
+  {
+    "key": "tce:feature:rebuke-of-the-talisman",
+    "index": "rebuke-of-the-talisman",
+    "name": "Rebuke of the Talisman",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "rebuke-of-the-talisman",
+      "name": "Rebuke of the Talisman",
+      "desc": ["When the talisman wearer is hit, you can react to deal psychic damage and push the attacker."],
+      "choice_pool_option": {"pool": "eldritch-invocation", "eligible_class_refs": ["srd5.1:class:warlock"], "minimum_class_level": 2, "required_feature_refs": ["tce:feature:pact-of-the-talisman"]}
+    }
+  },
+  {
+    "key": "tce:feature:undying-servitude",
+    "index": "undying-servitude",
+    "name": "Undying Servitude",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "undying-servitude",
+      "name": "Undying Servitude",
+      "desc": ["You can cast animate dead once without using a spell slot, regaining the use after a long rest."],
+      "choice_pool_option": {"pool": "eldritch-invocation", "eligible_class_refs": ["srd5.1:class:warlock"], "minimum_class_level": 5}
+    }
+  }
+]

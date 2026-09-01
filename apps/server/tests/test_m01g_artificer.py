@@ -375,8 +375,12 @@ def test_artificer_spell_list_uses_installed_cross_pack_spell_entries_only() -> 
 
     assert "srd5.1:spell:cure-wounds" in spell_refs
     assert "srd5.1:spell:magic-missile" not in spell_refs
-    assert all(spell_ref is not None and registry.get_optional(spell_ref) is not None for spell_ref in spell_refs)
-    assert registry.list_kind("spell", source="tce") == ()
+    assert all(
+        spell_ref is not None and registry.get_optional(spell_ref) is not None
+        for spell_ref in spell_refs
+    )
+    assert registry.get_optional("tce:spell:booming-blade") is not None
+    assert registry.get_optional("tce:spell:blade-of-disaster") is not None
 
     draft = _draft(_artificer_levels(5, subclass_ref="tce:subclass:armorer"))
     compilation = compile_spellcasting(
@@ -388,6 +392,8 @@ def test_artificer_spell_list_uses_installed_cross_pack_spell_entries_only() -> 
     available = {spell.spell_key for spell in profile.available_spells}
     assert "srd5.1:spell:cure-wounds" in available
     assert "srd5.1:spell:magic-missile" not in available
+    assert "tce:spell:booming-blade" in available
+    assert "tce:spell:blade-of-disaster" not in available
 
     armorer_spells = {
         entry.spell_key

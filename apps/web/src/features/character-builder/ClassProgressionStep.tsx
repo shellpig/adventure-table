@@ -265,6 +265,8 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
               source === 'content:asi-feat' ||
               source === 'content:asi-ability' ||
               source === 'content:infusion' ||
+              source === 'content:optional-class-feature' ||
+              source.startsWith('content:optional-feature:') ||
               source.startsWith('content:feature:')
             )
           })

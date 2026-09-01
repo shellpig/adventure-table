@@ -1,0 +1,122 @@
+[
+  {
+    "key": "phb2014:spell:aura-of-life",
+    "index": "aura-of-life",
+    "name": "Aura of Life",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"rules_source": "Player's Handbook (2014)"},
+    "data": {
+      "index": "aura-of-life",
+      "name": "Aura of Life",
+      "desc": ["Project a protective aura that helps nearby allies resist necrotic harm and remain in the fight."],
+      "components": ["V"],
+      "ritual": false,
+      "concentration": true,
+      "level": 4,
+      "school": {"key": "srd5.1:magic-school:abjuration", "name": "Abjuration"},
+      "classes": [{"key": "srd5.1:class:paladin", "name": "Paladin"}],
+      "subclasses": []
+    }
+  },
+  {
+    "key": "phb2014:spell:aura-of-purity",
+    "index": "aura-of-purity",
+    "name": "Aura of Purity",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"rules_source": "Player's Handbook (2014)"},
+    "data": {
+      "index": "aura-of-purity",
+      "name": "Aura of Purity",
+      "desc": ["Surround nearby allies with an aura that wards against poison, disease, and several disabling conditions."],
+      "components": ["V"],
+      "ritual": false,
+      "concentration": true,
+      "level": 4,
+      "school": {"key": "srd5.1:magic-school:abjuration", "name": "Abjuration"},
+      "classes": [{"key": "srd5.1:class:paladin", "name": "Paladin"}],
+      "subclasses": []
+    }
+  },
+  {
+    "key": "phb2014:spell:aura-of-vitality",
+    "index": "aura-of-vitality",
+    "name": "Aura of Vitality",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"rules_source": "Player's Handbook (2014)"},
+    "data": {
+      "index": "aura-of-vitality",
+      "name": "Aura of Vitality",
+      "desc": ["Create a mobile healing aura that lets you repeatedly restore hit points to creatures within it."],
+      "components": ["V"],
+      "ritual": false,
+      "concentration": true,
+      "level": 3,
+      "school": {"key": "srd5.1:magic-school:evocation", "name": "Evocation"},
+      "classes": [{"key": "srd5.1:class:paladin", "name": "Paladin"}],
+      "subclasses": []
+    }
+  },
+  {
+    "key": "phb2014:spell:elemental-weapon",
+    "index": "elemental-weapon",
+    "name": "Elemental Weapon",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"rules_source": "Player's Handbook (2014)"},
+    "data": {
+      "index": "elemental-weapon",
+      "name": "Elemental Weapon",
+      "desc": ["Temporarily make a nonmagical weapon magical, improving its attacks and adding chosen elemental damage."],
+      "components": ["V", "S"],
+      "ritual": false,
+      "concentration": true,
+      "level": 3,
+      "school": {"key": "srd5.1:magic-school:transmutation", "name": "Transmutation"},
+      "classes": [{"key": "srd5.1:class:paladin", "name": "Paladin"}],
+      "subclasses": []
+    }
+  },
+  {
+    "key": "phb2014:spell:power-word-heal",
+    "index": "power-word-heal",
+    "name": "Power Word Heal",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"rules_source": "Player's Handbook (2014)"},
+    "data": {
+      "index": "power-word-heal",
+      "name": "Power Word Heal",
+      "desc": ["Fully restore a touched creature's hit points and end several severe disabling conditions."],
+      "components": ["V", "S"],
+      "ritual": false,
+      "concentration": false,
+      "level": 9,
+      "school": {"key": "srd5.1:magic-school:evocation", "name": "Evocation"},
+      "classes": [{"key": "srd5.1:class:bard", "name": "Bard"}],
+      "subclasses": []
+    }
+  },
+  {
+    "key": "phb2014:spell:searing-smite",
+    "index": "searing-smite",
+    "name": "Searing Smite",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"rules_source": "Player's Handbook (2014)"},
+    "data": {
+      "index": "searing-smite",
+      "name": "Searing Smite",
+      "desc": ["Empower your next melee weapon hit with fire that can continue burning the target."],
+      "components": ["V"],
+      "ritual": false,
+      "concentration": true,
+      "level": 1,
+      "school": {"key": "srd5.1:magic-school:evocation", "name": "Evocation"},
+      "classes": [{"key": "srd5.1:class:paladin", "name": "Paladin"}],
+      "subclasses": []
+    }
+  }
+]

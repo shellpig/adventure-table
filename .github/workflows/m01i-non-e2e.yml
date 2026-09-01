@@ -1,0 +1,89 @@
+name: M01-I Non-E2E Regression
+
+on:
+  push:
+    branches:
+      - m01-i-tce-optional-class-features
+  workflow_dispatch:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Audit M01-I manifest shards
+        working-directory: .
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          expected = {
+              "data/tce/optional-class-features-a.json",
+              "data/tce/optional-class-features-b.json",
+              "data/tce/optional-class-features-c.json",
+              "data/tce/fighting-styles-m01i.json",
+              "data/tce/maneuvers-m01i.json",
+              "data/tce/options-m01i.json",
+              "data/phb2014/maneuvers-m01i.json",
+              "data/phb2014/spells-m01i.json",
+          }
+          manifested = set()
+          for pack in ("tce", "phb2014"):
+              root = Path("data") / pack
+              manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+              for category in manifest["categories"]:
+                  manifested.add(str(root / category["file"]).replace("\\", "/"))
+          missing = sorted(expected - manifested)
+          print("M01_I_UNMANIFESTED_SHARDS", missing)
+          if missing:
+              raise SystemExit("M01-I content shard is not wired into its manifest")
+          PY
+      - name: Audit expanded spell inventory
+        working-directory: .
+        run: python scripts/audit_m01i_spell_gaps.py
+      - name: Install backend
+        run: pip install -e ".[dev]"
+      - name: Backend pytest
+        run: pytest
+      - name: Localization authoring unit tests
+        working-directory: .
+        run: python -m unittest scripts.test_build_m02d_srd_locale_reviewed scripts.test_run_m02d_srd_locale_authoring
+      - name: Fresh SQLite migration
+        env:
+          DATABASE_URL: sqlite+pysqlite:////tmp/adventure-table-m01i-fresh.db
+        run: alembic upgrade head
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Pin npm
+        run: npm install --global npm@11.6.0
+      - name: Install frontend
+        run: npm ci
+      - name: Frontend unit tests
+        run: npm test -- --run
+      - name: TypeScript and Vite build
+        run: npm run build
+
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose config
+        run: docker compose config

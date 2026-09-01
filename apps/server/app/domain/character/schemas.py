@@ -19,6 +19,7 @@ HitDie = Literal["d6", "d8", "d10", "d12"]
 LegacyMovementMode = Literal["climb", "fly", "swim"]
 LineageSize = Literal["small", "medium"]
 ArcaneArmorPart = Literal["armor", "boots", "helmet", "special_weapon"]
+FeatureGrantKind = Literal["choice", "optional_feature", "nested_choice", "retraining"]
 
 
 def require_stable_key(value: str, *, kinds: set[str] | None = None) -> str:
@@ -189,6 +190,24 @@ class AncestralLegacySelection(FrozenModel):
         return value
 
 
+class FeatureGrantSource(FrozenModel):
+    """Build-persistent provenance for one selected/granted feature."""
+
+    feature_ref: StableKey
+    source_ref: StableKey
+    grant_kind: FeatureGrantKind
+
+    @field_validator("feature_ref")
+    @classmethod
+    def feature_ref_is_feature(cls, value: str) -> str:
+        return require_stable_key(value, kinds={"feature"})
+
+    @field_validator("source_ref")
+    @classmethod
+    def source_ref_is_stable(cls, value: str) -> str:
+        return require_stable_key(value)
+
+
 class CharacterBuild(FrozenModel):
     ruleset: str = Field(default="dnd5e-2014", min_length=1)
     content_sources: tuple[str, ...] = ("srd5.1",)
@@ -210,6 +229,7 @@ class CharacterBuild(FrozenModel):
     skill_choices: tuple[StableKey, ...] = ()
     language_refs: tuple[StableKey, ...] = ()
     feature_refs: tuple[StableKey, ...] = ()
+    feature_grant_sources: tuple[FeatureGrantSource, ...] = ()
     feat_refs: tuple[StableKey, ...] = ()
     infusion_refs: tuple[StableKey, ...] = ()
     walking_speed: int | None = Field(default=None, ge=0)
@@ -335,6 +355,13 @@ class CharacterBuild(FrozenModel):
             if selection.class_ref in subclass_classes:
                 raise ValueError("only one subclass selection per class is allowed")
             subclass_classes.add(selection.class_ref)
+
+        feature_ref_set = set(self.feature_refs)
+        feature_source_refs = [entry.feature_ref for entry in self.feature_grant_sources]
+        if len(feature_source_refs) != len(set(feature_source_refs)):
+            raise ValueError("feature grant provenance must be unique per feature_ref")
+        if any(feature_ref not in feature_ref_set for feature_ref in feature_source_refs):
+            raise ValueError("feature grant provenance must reference a feature in feature_refs")
 
         profile_ids = [profile.profile_id for profile in self.spellcasting_profiles]
         if len(profile_ids) != len(set(profile_ids)):

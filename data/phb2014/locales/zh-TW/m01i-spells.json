@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "phb2014",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "phb2014:spell:aura-of-life": {
+      "name": "生命靈光",
+      "data.desc.0": "放出保護性靈光，幫助附近盟友抵禦死靈傷害並維持戰鬥能力。"
+    },
+    "phb2014:spell:aura-of-purity": {
+      "name": "純淨靈光",
+      "data.desc.0": "以靈光保護附近盟友，使其更能抵抗毒素、疾病與多種妨礙狀態。"
+    },
+    "phb2014:spell:aura-of-vitality": {
+      "name": "活力靈光",
+      "data.desc.0": "創造隨施法者移動的治療靈光，可持續為範圍內的生物恢復生命值。"
+    },
+    "phb2014:spell:elemental-weapon": {
+      "name": "元素武器",
+      "data.desc.0": "暫時使一把非魔法武器成為魔法武器，提升攻擊並附加所選元素傷害。"
+    },
+    "phb2014:spell:power-word-heal": {
+      "name": "律令治療",
+      "data.desc.0": "完全恢復接觸目標的生命值，並解除數種嚴重的妨礙狀態。"
+    },
+    "phb2014:spell:searing-smite": {
+      "name": "灼熱斬",
+      "data.desc.0": "強化下一次近戰武器命中，使其附帶火焰並可能持續灼燒目標。"
+    }
+  }
+}
