@@ -530,7 +530,9 @@ class ContentManifest(StrictModel):
     @model_validator(mode="after")
     def validate_manifest(self) -> "ContentManifest":
         require_pack_id(self.id)
-        for attribute in ("name", "kind", "file"):
+        # A pack may shard one StableKind across multiple files. Category name
+        # and file remain unique identities; kind is intentionally repeatable.
+        for attribute in ("name", "file"):
             values = [getattr(category, attribute) for category in self.categories]
             if len(values) != len(set(values)):
                 raise ValueError(f"manifest category {attribute} values must be unique")
