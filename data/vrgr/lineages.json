@@ -1,0 +1,30 @@
+[
+  {
+    "key": "vrgr:lineage:dhampir",
+    "index": "dhampir",
+    "name": "Dhampir",
+    "source": "vrgr",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "dhampir",
+      "name": "Dhampir",
+      "creature_type": "humanoid",
+      "sizes": ["medium", "small"],
+      "walking_speed": 35,
+      "climb_speed": 35,
+      "ability_score_patterns": [[2, 1], [1, 1, 1]],
+      "direct_create_languages": [
+        {"key": "srd5.1:language:common", "name": "Common"}
+      ],
+      "direct_create_additional_language_count": 1,
+      "direct_legacy_skill_count": 2,
+      "ancestral_legacy_movement_whitelist": ["climb", "fly", "swim"],
+      "features": [
+        {"key": "vrgr:feature:dhampir-darkvision", "name": "Darkvision"},
+        {"key": "vrgr:feature:deathless-nature", "name": "Deathless Nature"},
+        {"key": "vrgr:feature:spider-climb", "name": "Spider Climb"},
+        {"key": "vrgr:feature:vampiric-bite", "name": "Vampiric Bite"}
+      ]
+    }
+  }
+]
