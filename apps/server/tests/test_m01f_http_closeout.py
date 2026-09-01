@@ -5,6 +5,12 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
+from app.domain.character_builder.lineages import (
+    ASI_PATTERN_2_1,
+    LINEAGE_ASI_PATTERN_CHOICE_ID,
+    LINEAGE_ASI_PLUS_ONE_CHOICE_ID,
+    LINEAGE_ASI_PLUS_TWO_CHOICE_ID,
+)
 from test_m01f_dhampir_lineage import DHAMPIR
 from test_p1f_character_creation import (
     _fill_equipment_choices,
@@ -56,34 +62,6 @@ def _base_create_payload(name: str, *, lineage: bool) -> dict[str, Any]:
     return payload
 
 
-def _create_complete_draft(
-    client: TestClient,
-    name: str,
-    *,
-    lineage: bool,
-) -> dict[str, Any]:
-    response = client.post(
-        "/api/character-builder/drafts",
-        json={"draft_payload": _base_create_payload(name, lineage=lineage)},
-    )
-    assert response.status_code == 201, response.text
-    view = _fill_generic_choices(client, response.json())
-    return _fill_equipment_choices(client, view)
-
-
-def _confirm(client: TestClient, view: dict[str, Any]) -> dict[str, Any]:
-    review = client.get(
-        f"/api/character-builder/drafts/{view['draft']['id']}/review"
-    )
-    assert review.status_code == 200, review.text
-    assert review.json()["can_confirm"] is True, review.json()["issues"]
-    response = client.post(
-        f"/api/character-builder/drafts/{view['draft']['id']}/confirm"
-    )
-    assert response.status_code == 200, response.text
-    return response.json()
-
-
 def _patch_payload(
     client: TestClient,
     view: dict[str, Any],
@@ -95,6 +73,99 @@ def _patch_payload(
             "expected_revision": view["draft"]["revision"],
             "draft_payload": payload,
         },
+    )
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def _set_choice(
+    client: TestClient,
+    view: dict[str, Any],
+    choice_id: str,
+    option_ids: list[str],
+) -> dict[str, Any]:
+    choice = next(item for item in view["choices"] if item["choice_id"] == choice_id)
+    selections = dict(view["draft"]["draft_payload"].get("choice_selections") or {})
+    selections[choice_id] = {
+        "choice_id": choice_id,
+        "source_ref": choice.get("source_ref"),
+        "selected_option_ids": option_ids,
+    }
+    return _patch_payload(client, view, {"choice_selections": selections})
+
+
+def _fill_dhampir_asi(client: TestClient, view: dict[str, Any]) -> dict[str, Any]:
+    """Fill dependent +2/+1 choices across revisions so disabled options refresh."""
+    pattern = next(
+        choice
+        for choice in view["choices"]
+        if choice["choice_id"] == LINEAGE_ASI_PATTERN_CHOICE_ID
+    )
+    if pattern.get("selected_option_ids") != [ASI_PATTERN_2_1]:
+        view = _set_choice(
+            client,
+            view,
+            LINEAGE_ASI_PATTERN_CHOICE_ID,
+            [ASI_PATTERN_2_1],
+        )
+
+    plus_two = next(
+        choice
+        for choice in view["choices"]
+        if choice["choice_id"] == LINEAGE_ASI_PLUS_TWO_CHOICE_ID
+    )
+    plus_two_option = next(
+        option for option in plus_two["options"] if not option.get("disabled_reason")
+    )
+    view = _set_choice(
+        client,
+        view,
+        LINEAGE_ASI_PLUS_TWO_CHOICE_ID,
+        [plus_two_option["option_id"]],
+    )
+
+    plus_one = next(
+        choice
+        for choice in view["choices"]
+        if choice["choice_id"] == LINEAGE_ASI_PLUS_ONE_CHOICE_ID
+    )
+    plus_one_option = next(
+        option for option in plus_one["options"] if not option.get("disabled_reason")
+    )
+    return _set_choice(
+        client,
+        view,
+        LINEAGE_ASI_PLUS_ONE_CHOICE_ID,
+        [plus_one_option["option_id"]],
+    )
+
+
+def _create_complete_draft(
+    client: TestClient,
+    name: str,
+    *,
+    lineage: bool,
+) -> dict[str, Any]:
+    response = client.post(
+        "/api/character-builder/drafts",
+        json={"draft_payload": _base_create_payload(name, lineage=lineage)},
+    )
+    assert response.status_code == 201, response.text
+    view = response.json()
+    if lineage:
+        view = _fill_dhampir_asi(client, view)
+    view = _fill_generic_choices(client, view)
+    return _fill_equipment_choices(client, view)
+
+
+def _confirm(client: TestClient, view: dict[str, Any]) -> dict[str, Any]:
+    review = client.get(
+        f"/api/character-builder/drafts/{view['draft']['id']}/review"
+    )
+    assert review.status_code == 200, review.text
+    assert review.json()["can_confirm"] is True, review.json()["issues"]
+    response = client.post(
+        f"/api/character-builder/drafts/{view['draft']['id']}/confirm"
     )
     assert response.status_code == 200, response.text
     return response.json()
@@ -185,6 +256,7 @@ def test_m01f_http_existing_character_transforms_to_version_n_plus_one_with_reco
             edit.json(),
             {"lineage_selection": {"reference_id": DHAMPIR}},
         )
+        view = _fill_dhampir_asi(client, view)
         view = _fill_generic_choices(client, view)
 
         legacy = next(
