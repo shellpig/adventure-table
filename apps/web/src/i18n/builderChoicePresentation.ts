@@ -18,6 +18,13 @@ const CHOICE_SUFFIX_ZH: Record<string, string> = {
   'content:race-variant': '血統變體',
   'content:race-variant-replacement': '血統特徵',
   'content:race-variant-spell': '法術選擇',
+  'content:lineage': '血裔',
+  'content:lineage-asi-pattern': '屬性值加值方式',
+  'content:lineage-asi-ability': '屬性值加值',
+  'content:lineage-size': '體型',
+  'content:lineage-language': '語言',
+  'content:lineage-legacy-skill': '祖源傳承技能',
+  'content:lineage-legacy-movement': '祖源傳承移動方式',
 }
 
 const RACE_VARIANT_OPTION_ZH: Record<string, string> = {
@@ -38,6 +45,23 @@ const ABILITY_NAMES_ZH: Record<string, string> = {
   intelligence: '智力',
   wisdom: '睿知',
   charisma: '魅力',
+  str: '力量',
+  dex: '敏捷',
+  con: '體質',
+  int: '智力',
+  wis: '睿知',
+  cha: '魅力',
+}
+
+const LINEAGE_SIZE_ZH: Record<string, string> = {
+  'lineage-size:medium': '中型',
+  'lineage-size:small': '小型',
+}
+
+const LINEAGE_MOVEMENT_ZH: Record<string, string> = {
+  'lineage-movement:climb': '攀爬',
+  'lineage-movement:fly': '飛行',
+  'lineage-movement:swim': '游泳',
 }
 
 function sourceFallback(choice: BuilderChoice): { name: string; suffix: string } {
@@ -84,9 +108,6 @@ export function builderChoiceLabel(
     return sourceName ? `${sourceName}${CHOICE_SEPARATOR}選擇` : '特性選擇'
   }
 
-  // Unknown content-derived choice labels should not silently leak an English
-  // heading into zh-TW. Preserve the source identity and use a neutral choice
-  // label; non-content/system choices retain their existing presentation.
   if (source.startsWith('content:') && choice.source_ref) {
     const sourceName = localizedSourceName(choice, nameFor)
     return sourceName ? `${sourceName}${CHOICE_SEPARATOR}選擇` : '選擇'
@@ -137,6 +158,21 @@ export function builderChoiceOptionLabel(
       : ''
     const name = ABILITY_NAMES_ZH[ability]
     if (name) return `${name} +1`
+  }
+
+  if (choice.option_source === 'content:lineage-asi-ability') {
+    const parts = option.option_id.split(':')
+    const name = ABILITY_NAMES_ZH[parts[1] ?? '']
+    const bonus = parts[2]
+    if (name && bonus) return `${name} +${bonus}`
+  }
+
+  if (choice.option_source === 'content:lineage-size') {
+    return LINEAGE_SIZE_ZH[option.option_id] ?? option.label
+  }
+
+  if (choice.option_source === 'content:lineage-legacy-movement') {
+    return LINEAGE_MOVEMENT_ZH[option.option_id] ?? option.label
   }
 
   return option.label
