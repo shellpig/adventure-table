@@ -1,0 +1,22 @@
+name: M01-F Pytest Check
+
+on:
+  push:
+    branches:
+      - ci/m01-f-pytest
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install backend
+        working-directory: apps/server
+        run: pip install -e ".[dev]"
+      - name: Run backend pytest
+        working-directory: apps/server
+        run: pytest
