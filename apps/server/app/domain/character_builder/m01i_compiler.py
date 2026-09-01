@@ -22,6 +22,10 @@ from app.domain.character_builder.m01i_validation import (
     validate_final_feature_pool_dependencies,
     validate_unique_feature_pool_selections,
 )
+from app.domain.character_builder.m01j_subclasses import (
+    apply_m01j_subclass_runtime,
+    prepare_m01j_subclasses,
+)
 from app.domain.character_builder.optional_class_features import (
     apply_feature_pool_retraining,
     apply_optional_feature_replacements,
@@ -49,6 +53,8 @@ def _is_extension_selection(
     source_ref: str | None,
     registry: ContentRegistry,
 ) -> bool:
+    if choice_id.startswith("m01-j:"):
+        return True
     parts = choice_id.split(":")
     if choice_id.startswith("m01-i:"):
         return True
@@ -66,13 +72,14 @@ def _is_extension_selection(
 
 
 def _core_draft(draft: BuilderDraft, registry: ContentRegistry) -> BuilderDraft:
-    """Hide M01-I-owned selections from the pre-M01-I compiler.
+    """Hide extension-owned selections from the pre-M01-I/J compiler.
 
     The core compiler must still see parent choices such as the SRD Fighter
     Fighting Style selection; it must not see optional-feature toggles, nested
-    children or retraining controls that only this extension understands.
-    Otherwise the legacy draft-selection fallback correctly—but undesirably for
-    an extension-owned choice—flags them as unknown/illegal.
+    children, retraining controls, or M01-J subclass child choices that only the
+    extension compilers understand. Otherwise the legacy draft-selection
+    fallback correctly—but undesirably for an extension-owned choice—flags them
+    as unknown/illegal.
     """
 
     selections = {
@@ -104,16 +111,18 @@ def compile_builder_draft(
     *,
     base_build: CharacterBuild | None = None,
 ) -> BuilderCompileResult:
-    """Extend the established compiler with the data-driven M01-I rules.
+    """Extend the established compiler with M01-I and M01-J data-driven rules.
 
-    The P0/P1/M01-G/H compiler remains the core pipeline. M01-I wraps it
-    explicitly from the service layer so importing this package has no hidden
-    monkey-patching or import-order dependency.
+    P0/P1 remains the core compiler. M01-J contributes an active-subclass spell
+    overlay and persistent subclass choices; M01-I then composes its optional
+    class-feature overlay on top. This keeps Direct Create, Level Up and
+    Multiclass on the same progression/compiler path.
     """
 
+    m01j = prepare_m01j_subclasses(draft, registry)
     runtime = prepare_optional_class_features_for_m01i(
         draft,
-        registry,
+        m01j.registry,
         base_build=base_build,
     )
     compiled = compile_core_builder_draft(
@@ -157,11 +166,12 @@ def compile_builder_draft(
     all_nested_choices = nested_choices + retraining_nested_choices
 
     optional_choices = runtime.choices + all_nested_choices + retraining_choices
-    choices = core_choices + optional_choices
+    choices = core_choices + optional_choices + m01j.choices
 
     issues = [
         *compiled.validation.issues,
         *runtime.issues,
+        *m01j.issues,
         *validate_optional_choices(draft, optional_choices),
         *validate_unique_feature_pool_selections(draft, choices, runtime.registry),
     ]
@@ -232,15 +242,16 @@ def compile_builder_draft(
             reconciled_base_sources=reconciled_base_sources,
         )
 
-        build = _derive_sources(
-            build.model_copy(
-                update={
-                    "feature_refs": feature_refs,
-                    "feature_grant_sources": feature_grant_sources,
-                    "spell_access_entries": spell_entries,
-                }
-            )
+        build = build.model_copy(
+            update={
+                "feature_refs": feature_refs,
+                "feature_grant_sources": feature_grant_sources,
+                "spell_access_entries": spell_entries,
+            }
         )
+        build = apply_m01j_subclass_runtime(build, m01j)
+        build = _derive_sources(build)
+        # Validate again after J has appended its selected option provenance.
         issues.extend(validate_feature_grant_source_references(build, runtime.registry))
         issues.extend(validate_final_feature_pool_dependencies(build, runtime.registry))
 
