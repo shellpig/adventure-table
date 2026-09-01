@@ -21,6 +21,7 @@ from app.domain.character_builder.service import (
     BuilderModeNotEnabledError,
     CharacterBuilderService,
 )
+from app.domain.rules.artificer_dto import build_artificer_summary
 from app.persistence.builder_drafts import (
     BuilderDraftAlreadyConfirmedError,
     BuilderDraftNotFoundError,
@@ -61,6 +62,40 @@ def _not_found(exc: BuilderDraftNotFoundError) -> APIError:
 
 def _already_confirmed(exc: BuilderDraftAlreadyConfirmedError) -> APIError:
     return APIError(409, "builder_draft_already_confirmed", str(exc))
+
+
+def _with_live_artificer_review(
+    review: BuilderReviewDTO,
+    service: CharacterBuilderService,
+) -> BuilderReviewDTO:
+    """Project the state that Review is actually about into the Artificer DTO.
+
+    The compiler can derive Build-only Artificer metadata before Current State is
+    available. Create Review has an initial state; versioned Review has the
+    reconciliation proposal. Rebuild only the presentation projection here so
+    resource usage, active infusions, Armor Model and Spell-Storing Item match
+    the same state the user is reviewing. Confirm semantics remain unchanged.
+    """
+
+    if review.build_candidate is None or review.derived_stats is None:
+        return review
+    state = review.initial_state
+    if review.reconciliation is not None:
+        state = review.reconciliation.proposed_state
+    if state is None:
+        return review
+    artificer = build_artificer_summary(
+        review.build_candidate,
+        state,
+        service.registry,
+    )
+    return review.model_copy(
+        update={
+            "derived_stats": review.derived_stats.model_copy(
+                update={"artificer": artificer}
+            )
+        }
+    )
 
 
 @router.get("/rules/ability-generation", response_model=AbilityGenerationRulesDTO)
@@ -170,7 +205,7 @@ def review_builder_draft(
     service: CharacterBuilderService = Depends(get_character_builder_service),
 ) -> BuilderReviewDTO:
     try:
-        return service.review_draft(draft_id)
+        return _with_live_artificer_review(service.review_draft(draft_id), service)
     except BuilderDraftNotFoundError as exc:
         raise _not_found(exc) from exc
 
