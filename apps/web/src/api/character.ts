@@ -24,6 +24,19 @@ export type InventoryStateEntry = {
   carried: boolean
 }
 
+export type ActiveInfusionState = {
+  inventory_entry_id: string
+  infusion_ref: string
+  resource?: ResourceCounter | null
+  arcane_armor_part?: 'armor' | 'boots' | 'helmet' | 'special_weapon' | null
+}
+
+export type SpellStoringItemState = {
+  inventory_entry_id: string
+  spell_ref: string
+  remaining_uses: number
+}
+
 export type CharacterStatePatch = {
   expected_current_version_id?: string
   current_hp?: number
@@ -35,6 +48,9 @@ export type CharacterStatePatch = {
   resources?: Record<string, ResourceCounter>
   hit_dice_state?: Record<string, number>
   inventory_state?: InventoryStateEntry[]
+  active_infusions?: ActiveInfusionState[]
+  feature_modes?: Record<string, string>
+  spell_storing_item?: SpellStoringItemState | null
 }
 
 export type AbilityDTO = {
@@ -95,6 +111,80 @@ export type InventoryDTO = {
   rules: Record<string, unknown>
 }
 
+export type ArtificerKnownInfusionDTO = {
+  infusion_ref: string
+  name: string
+  minimum_artificer_level: number
+  requires_attunement: boolean
+  item_filters: string[]
+  modifiers: Record<string, unknown>[]
+  charge_capacity?: number | null
+  replicates_item_ref?: string | null
+  description: string
+  manual_effects: string[]
+}
+
+export type ArtificerActiveInfusionDTO = {
+  inventory_entry_id: string
+  inventory_item_ref: string
+  inventory_item_name: string
+  infusion_ref: string
+  infusion_name: string
+  resource?: ResourceCounter | null
+  arcane_armor_part?: string | null
+  manual_effects: string[]
+}
+
+export type ArtificerTrackedResourceDTO = {
+  resource_id: string
+  feature_ref: string
+  feature_name: string
+  capacity: number
+  used: number
+  remaining: number
+  recharge: string[]
+  resolution: 'manual'
+}
+
+export type ArtificerSpellStoringItemDTO = {
+  inventory_entry_id: string
+  inventory_item_ref: string
+  inventory_item_name: string
+  spell_ref: string
+  spell_name: string
+  remaining_uses: number
+  capacity: number
+  cast_resolution: 'manual'
+}
+
+export type ArtificerManualFeatureDTO = {
+  feature_ref: string
+  feature_name: string
+  runtime_kind: string
+  resolution: 'manual' | 'state_tracked_effect_manual'
+  metadata: Record<string, unknown>
+}
+
+export type ArtificerSummaryDTO = {
+  artificer_level: number
+  known_infusions: ArtificerKnownInfusionDTO[]
+  known_infusion_limit: number
+  active_infusions: ArtificerActiveInfusionDTO[]
+  active_infusion_count: number
+  active_infusion_base_capacity: number
+  active_infusion_capacity_bonus: number
+  active_infusion_capacity: number
+  armor_modification_parts: string[]
+  attunement_capacity: number
+  attunement_requirement_bypasses: string[]
+  tracked_resources: ArtificerTrackedResourceDTO[]
+  armor_model?: string | null
+  armor_model_options: string[]
+  spell_storing_item_capacity: number
+  spell_storing_item?: ArtificerSpellStoringItemDTO | null
+  manual_features: ArtificerManualFeatureDTO[]
+}
+
 export type RoleplayProfile = {
   appearance?: string | null
   biography?: string | null
@@ -134,6 +224,7 @@ export type CharacterSheetDTO = {
   spell_slots: Record<string, ResourceCounter>
   resources: Record<string, ResourceCounter>
   inventory: InventoryDTO[]
+  artificer?: ArtificerSummaryDTO | null
   roleplay_profile: RoleplayProfile
 }
 
@@ -143,7 +234,7 @@ export type ContentEntry = {
   name: string
   source: string
   ruleset: string
-  license: string
+  license?: string | null
   data: Record<string, unknown>
 }
 
