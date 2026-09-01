@@ -1,0 +1,18 @@
+{
+  "id": "xge",
+  "name": "Xanathar's Guide to Everything",
+  "ruleset": "dnd5e-2014",
+  "version": "M01-J",
+  "provenance": {
+    "type": "inventory-placeholder",
+    "reference": "docs/M01/實作規格.md",
+    "status": "runtime subclass mechanics blocked pending verified repository reference data"
+  },
+  "usage": {
+    "scope": "private-friends-project"
+  },
+  "categories": [
+    {"name": "subclasses", "kind": "subclass", "file": "subclasses.json", "count": 0}
+  ],
+  "total_entries": 0
+}
