@@ -33,7 +33,7 @@ def infusion_choice_id(draft: BuilderDraft) -> str | None:
     return deterministic_choice_id("level", str(anchor), "artificer", "infusions-known")
 
 
-def _eligible_options(
+def _infusion_options(
     registry: ContentRegistry,
     level: int,
     *,
@@ -45,15 +45,29 @@ def _eligible_options(
         if entry.key in excluded:
             continue
         minimum = entry.data.get("minimum_artificer_level")
-        if not isinstance(minimum, int) or minimum > level:
-            continue
+        if not isinstance(minimum, int):
+            # Content schema guarantees this; fail closed if an in-memory test
+            # registry bypasses the normal pack loader.
+            minimum = 20
         source_label = entry.source_label or entry.source
+        disabled = minimum > level
         options.append(
             BuilderChoiceOption(
                 option_id=entry.key,
                 label=f"{entry.name} · {source_label}",
                 kind=BuilderOptionKind.REFERENCE,
                 reference_id=entry.key,
+                disabled_reason=(
+                    f"Requires Artificer level {minimum}." if disabled else None
+                ),
+                disabled_reason_code=(
+                    "artificer_infusion_level_requirement" if disabled else None
+                ),
+                disabled_reason_params=(
+                    {"minimum_artificer_level": minimum, "artificer_level": level}
+                    if disabled
+                    else {}
+                ),
             )
         )
     return tuple(options)
@@ -99,7 +113,7 @@ def build_artificer_infusion_choices(
             required=True,
             choose_count=choose_count,
             option_source="content:infusion",
-            options=_eligible_options(registry, level, excluded_refs=excluded_refs),
+            options=_infusion_options(registry, level, excluded_refs=excluded_refs),
             selected_option_ids=tuple(selected),
         ),
     )
