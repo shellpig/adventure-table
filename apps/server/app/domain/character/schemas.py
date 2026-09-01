@@ -210,6 +210,7 @@ class CharacterBuild(FrozenModel):
     language_refs: tuple[StableKey, ...] = ()
     feature_refs: tuple[StableKey, ...] = ()
     feat_refs: tuple[StableKey, ...] = ()
+    infusion_refs: tuple[StableKey, ...] = ()
     walking_speed: int | None = Field(default=None, ge=0)
     swim_speed: int | None = Field(default=None, ge=0)
     climb_speed: int | None = Field(default=None, ge=0)
@@ -303,6 +304,14 @@ class CharacterBuild(FrozenModel):
     def feat_refs_are_feats(cls, value: tuple[str, ...]) -> tuple[str, ...]:
         return tuple(require_stable_key(item, kinds={"feat"}) for item in value)
 
+    @field_validator("infusion_refs")
+    @classmethod
+    def infusion_refs_are_infusions(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        normalized = tuple(require_stable_key(item, kinds={"infusion"}) for item in value)
+        if len(normalized) != len(set(normalized)):
+            raise ValueError("infusion_refs must be unique")
+        return normalized
+
     @model_validator(mode="after")
     def validate_build_shape(self) -> "CharacterBuild":
         if self.character_level != len(self.class_progression):
@@ -383,6 +392,28 @@ class InventoryEntry(FrozenModel):
         return require_stable_key(value, kinds={"equipment", "item"})
 
 
+class ActiveInfusion(FrozenModel):
+    inventory_entry_id: str = Field(min_length=1, max_length=120)
+    infusion_ref: StableKey
+    resource: ResourceCounter | None = None
+
+    @field_validator("infusion_ref")
+    @classmethod
+    def infusion_ref_is_infusion(cls, value: str) -> str:
+        return require_stable_key(value, kinds={"infusion"})
+
+
+class SpellStoringItemState(FrozenModel):
+    inventory_entry_id: str = Field(min_length=1, max_length=120)
+    spell_ref: StableKey
+    remaining_uses: int = Field(ge=0)
+
+    @field_validator("spell_ref")
+    @classmethod
+    def spell_ref_is_spell(cls, value: str) -> str:
+        return require_stable_key(value, kinds={"spell"})
+
+
 class CharacterState(MutableModel):
     current_hp: int = Field(ge=0)
     temporary_hp: int = Field(default=0, ge=0)
@@ -393,6 +424,9 @@ class CharacterState(MutableModel):
     resources: dict[str, ResourceCounter] = Field(default_factory=dict)
     hit_dice_state: dict[HitDie, int] = Field(default_factory=dict)
     inventory_state: list[InventoryEntry] = Field(default_factory=list)
+    active_infusions: list[ActiveInfusion] = Field(default_factory=list)
+    feature_modes: dict[str, str] = Field(default_factory=dict)
+    spell_storing_item: SpellStoringItemState | None = None
 
     @field_validator("prepared_spell_entry_ids")
     @classmethod
@@ -423,6 +457,11 @@ class CharacterState(MutableModel):
             raise ValueError("inventory entry_id values must be unique")
         if any(not key.strip() for key in self.resources):
             raise ValueError("resource keys cannot be blank")
+        infusion_targets = [entry.inventory_entry_id for entry in self.active_infusions]
+        if len(infusion_targets) != len(set(infusion_targets)):
+            raise ValueError("an inventory item can have at most one active infusion")
+        if any(not key.strip() or not value.strip() for key, value in self.feature_modes.items()):
+            raise ValueError("feature mode keys and values cannot be blank")
         return self
 
 
