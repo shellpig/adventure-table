@@ -13,9 +13,11 @@ StableKey = str
 SpellAccessType = Literal["known", "spellbook", "always_prepared", "granted"]
 SpellcastingAccessModel = Literal["known", "prepared", "spellbook"]
 SpellResourcePoolType = Literal["normal_multiclass_slots", "pact_magic"]
-SourceType = Literal["class", "subclass", "feature", "feat", "race", "background", "other"]
+SourceType = Literal["class", "subclass", "feature", "feat", "race", "lineage", "background", "other"]
 RestType = Literal["short_rest", "long_rest"]
 HitDie = Literal["d6", "d8", "d10", "d12"]
+LegacyMovementMode = Literal["climb", "fly", "swim"]
+LineageSize = Literal["small", "medium"]
 
 
 def require_stable_key(value: str, *, kinds: set[str] | None = None) -> str:
@@ -128,13 +130,7 @@ class SpellResourcePool(FrozenModel):
 
 
 class PreparedSpellSelection(FrozenModel):
-    """A live prepared spell with source identity independent of Build access rows.
-
-    P0 Wizard state used prepared_spell_entry_ids, which can only point at an
-    explicit spellbook Build entry. Prepared casters such as Cleric and Druid
-    instead prepare from a class-list eligibility profile, so P1-E records the
-    spell and profile directly while keeping the legacy field readable.
-    """
+    """A live prepared spell with source identity independent of Build access rows."""
 
     spell_key: StableKey
     source_profile_id: str = Field(min_length=1, max_length=240)
@@ -172,12 +168,36 @@ class RoleplayProfile(FrozenModel):
     custom_fields: dict[str, tuple[str, ...]] = Field(default_factory=dict)
 
 
+class AncestralLegacySelection(FrozenModel):
+    retained_skill_refs: tuple[StableKey, ...] = ()
+    retained_movement_modes: tuple[LegacyMovementMode, ...] = ()
+
+    @field_validator("retained_skill_refs")
+    @classmethod
+    def retained_skills_are_valid_unique(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        normalized = tuple(require_stable_key(item, kinds={"skill"}) for item in value)
+        if len(normalized) != len(set(normalized)):
+            raise ValueError("ancestral legacy skill refs must be unique")
+        return normalized
+
+    @field_validator("retained_movement_modes")
+    @classmethod
+    def movement_modes_are_unique(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if len(value) != len(set(value)):
+            raise ValueError("ancestral legacy movement modes must be unique")
+        return value
+
+
 class CharacterBuild(FrozenModel):
     ruleset: str = Field(default="dnd5e-2014", min_length=1)
     content_sources: tuple[str, ...] = ("srd5.1",)
     race_ref: StableKey
     race_variant_ref: StableKey | None = None
     subrace_ref: StableKey | None = None
+    lineage_ref: StableKey | None = None
+    ancestral_origin_ref: StableKey | None = None
+    ancestral_legacy: AncestralLegacySelection | None = None
+    size: LineageSize | None = None
     background_ref: StableKey | None = None
     alignment_ref: StableKey | None = None
     character_level: int = Field(ge=1, le=20)
@@ -225,6 +245,16 @@ class CharacterBuild(FrozenModel):
     @classmethod
     def subrace_ref_is_subrace(cls, value: str | None) -> str | None:
         return None if value is None else require_stable_key(value, kinds={"subrace"})
+
+    @field_validator("lineage_ref")
+    @classmethod
+    def lineage_ref_is_lineage(cls, value: str | None) -> str | None:
+        return None if value is None else require_stable_key(value, kinds={"lineage"})
+
+    @field_validator("ancestral_origin_ref")
+    @classmethod
+    def ancestral_origin_ref_is_race(cls, value: str | None) -> str | None:
+        return None if value is None else require_stable_key(value, kinds={"race"})
 
     @field_validator("background_ref")
     @classmethod
@@ -281,6 +311,11 @@ class CharacterBuild(FrozenModel):
             raise ValueError("hp_progression must align 1:1 with class_progression")
         if any(value <= 0 for value in self.hp_progression):
             raise ValueError("hp_progression entries must be positive")
+        if self.lineage_ref is None:
+            if self.ancestral_origin_ref is not None or self.ancestral_legacy is not None or self.size is not None:
+                raise ValueError("lineage-only fields require lineage_ref")
+        elif self.ancestral_legacy is None or self.size is None:
+            raise ValueError("lineage_ref requires ancestral_legacy and size")
 
         progression_classes = set(self.class_progression)
         subclass_classes: set[str] = set()
@@ -352,9 +387,7 @@ class CharacterState(MutableModel):
     current_hp: int = Field(ge=0)
     temporary_hp: int = Field(default=0, ge=0)
     conditions: list[ConditionState] = Field(default_factory=list)
-    # P0 compatibility: persisted Wizard fixtures still use entry ids.
     prepared_spell_entry_ids: list[str] = Field(default_factory=list)
-    # P1-E canonical prepared representation supports full-list prepared casters.
     prepared_spells: list[PreparedSpellSelection] = Field(default_factory=list)
     spell_slots: dict[int, ResourceCounter] = Field(default_factory=dict)
     resources: dict[str, ResourceCounter] = Field(default_factory=dict)
@@ -370,9 +403,7 @@ class CharacterState(MutableModel):
 
     @field_validator("prepared_spells")
     @classmethod
-    def prepared_spells_are_unique(
-        cls, value: list[PreparedSpellSelection]
-    ) -> list[PreparedSpellSelection]:
+    def prepared_spells_are_unique(cls, value: list[PreparedSpellSelection]) -> list[PreparedSpellSelection]:
         identities = [(item.source_profile_id, item.spell_key) for item in value]
         if len(identities) != len(set(identities)):
             raise ValueError("prepared spells must be unique per source profile")
@@ -380,9 +411,7 @@ class CharacterState(MutableModel):
 
     @field_validator("spell_slots")
     @classmethod
-    def spell_slot_levels_are_valid(
-        cls, value: dict[int, ResourceCounter]
-    ) -> dict[int, ResourceCounter]:
+    def spell_slot_levels_are_valid(cls, value: dict[int, ResourceCounter]) -> dict[int, ResourceCounter]:
         if any(level < 1 or level > 9 for level in value):
             raise ValueError("spell slot level must be between 1 and 9")
         return value
@@ -405,5 +434,4 @@ class PersistedCharacter(FrozenModel):
     version_no: int
     build: CharacterBuild
     state: CharacterState
-    # Archived characters stay fully readable; every write path refuses them.
     archived_at: datetime | None = None
