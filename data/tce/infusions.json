@@ -101,8 +101,8 @@
       "item_filter": {"any_of": ["armor"]},
       "modifiers": [],
       "charges": {"capacity": {"type": "fixed", "value": 4}, "recharge": ["long_rest"]},
-      "description": "Stores charges that can be spent to support concentration after a failed concentration check.",
-      "manual_effects": ["Robes are also eligible by the source rule; equipment lacking an armor classification requires manual eligibility confirmation.", "Concentration reaction resolution is manual."]
+      "description": "Stores charges that can be spent to support concentration after a failed concentration check; robes are also a legal target under the source rule.",
+      "manual_effects": ["Concentration reaction resolution is manual in M01-H."]
     }
   },
   {
@@ -118,7 +118,7 @@
       "requires_attunement": false,
       "item_filter": {"any_of": ["crystal_or_gem"]},
       "modifiers": [],
-      "description": "Uses an eligible gem or crystal as the heart of a homunculus servant.",
+      "description": "Uses a gem or crystal worth at least 100 gp as the heart of a homunculus servant.",
       "manual_effects": ["The homunculus is not created as a combat entity in M01-H; its stat block remains metadata/manual play."]
     }
   },
