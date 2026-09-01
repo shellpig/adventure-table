@@ -5,11 +5,13 @@ from collections import defaultdict
 from app.content.identity import parse_stable_key, reference_to_stable_key
 from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
+from app.domain.character_builder.lineages import selected_lineage_ref
 from app.domain.character_builder.schemas import (
     BuilderAbilityScoreSummary,
     BuilderChoice,
     BuilderDraft,
     BuilderGrantSummary,
+    BuilderMode,
     BuilderResolvedSummary,
 )
 
@@ -94,8 +96,6 @@ def _append_feature_grants(
             grants.append(grant)
             continue
         minimum_level = feature.data.get("minimum_character_level", 1)
-        # Keep malformed rows visible to compile_origin, which owns the blocking
-        # content-data error. Valid rows are hidden from Review until eligible.
         if not isinstance(minimum_level, int) or minimum_level < 1 or minimum_level > 20:
             grants.append(grant)
             continue
@@ -264,6 +264,8 @@ def resolve_creation_summary(
         if payload.subrace_selection
         else None
     )
+    lineage_key = selected_lineage_ref(draft)
+    lineage = registry.get_optional(lineage_key) if lineage_key is not None else None
     background = (
         registry.get_optional(payload.background_selection.reference_id)
         if payload.background_selection
@@ -271,7 +273,8 @@ def resolve_creation_summary(
     )
 
     grants: list[BuilderGrantSummary] = []
-    for entry in (race, subrace, background):
+    origin_entries = (lineage, background) if lineage is not None else (race, subrace, background)
+    for entry in origin_entries:
         if entry is not None:
             _append_entry_grants(
                 grants,
@@ -279,6 +282,13 @@ def resolve_creation_summary(
                 entry,
                 character_level=payload.target_level,
             )
+    if lineage is not None and draft.mode is BuilderMode.CREATE:
+        _append_reference_grants(
+            grants,
+            lineage,
+            "direct_create_languages",
+            kind_override="language",
+        )
     grants.extend(_selected_choice_grants(draft, choices))
 
     deduped_grants: list[BuilderGrantSummary] = []
@@ -293,11 +303,11 @@ def resolve_creation_summary(
     ability_summaries: list[BuilderAbilityScoreSummary] = []
     if payload.ability_generation is not None:
         bonuses: dict[str, int] = defaultdict(int)
-        for source in (
+        entry_bonus_sources = () if lineage is not None else (
             _ability_bonuses_from_entry(race),
             _ability_bonuses_from_entry(subrace),
-            _selected_ability_bonuses(draft, choices),
-        ):
+        )
+        for source in (*entry_bonus_sources, _selected_ability_bonuses(draft, choices)):
             for ability, bonus in source.items():
                 bonuses[ability] += bonus
         override_map = {
@@ -325,10 +335,13 @@ def resolve_creation_summary(
         for selection in (
             payload.race_selection,
             payload.subrace_selection,
+            payload.lineage_selection,
             payload.background_selection,
             payload.alignment_selection,
         )
     )
+    if payload.lineage_selection is None and lineage_key is not None:
+        selected_reference_count += 1
     return BuilderResolvedSummary(
         name=payload.basic.name if payload.basic is not None else None,
         target_level=payload.target_level,
@@ -342,6 +355,7 @@ def resolve_creation_summary(
             if payload.subrace_selection
             else None,
         ),
+        lineage_name=_entry_name(registry, lineage_key),
         background_name=_entry_name(
             registry,
             payload.background_selection.reference_id

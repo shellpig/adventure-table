@@ -106,7 +106,6 @@ def _legacy_level_choices(
         class_counts[class_ref] += 1
         class_level = class_counts[class_ref]
         class_entry = registry.get(class_ref)
-        hit_die = class_entry.data.get("hit_die")
         if index == 1:
             method = BuilderHPMethod.FIRST_LEVEL
         elif hp_gain == fixed_hp_gain(class_entry):
@@ -135,7 +134,9 @@ def _legacy_spell_choices(
 ) -> dict[str, BuilderSpellChoiceInput]:
     grouped: dict[str, dict[str, list[str]]] = {}
     for entry in build.spell_access_entries:
-        if entry.source_type != "class" or not entry.source_key.startswith("srd5.1:class:"):
+        if entry.source_type != "class" or not entry.source_key.startswith(
+            "srd5.1:class:"
+        ):
             continue
         profile_id = f"class:{entry.source_key.rsplit(':', 1)[-1]}"
         bucket = grouped.setdefault(
@@ -159,6 +160,14 @@ def _legacy_spell_choices(
         )
         for profile_id, values in grouped.items()
     }
+
+
+def _lineage_selection(build: CharacterBuild) -> BuilderReferenceSelection | None:
+    return (
+        BuilderReferenceSelection(reference_id=build.lineage_ref)
+        if build.lineage_ref is not None
+        else None
+    )
 
 
 def legacy_payload_from_build(
@@ -188,6 +197,7 @@ def legacy_payload_from_build(
             if build.subrace_ref is not None
             else None
         ),
+        lineage_selection=_lineage_selection(build),
         background_selection=(
             BuilderReferenceSelection(reference_id=build.background_ref)
             if build.background_ref is not None
@@ -236,6 +246,11 @@ def seed_version_draft_payload(
             ruleset=character.build.ruleset,
         )
         payload.target_level = character.build.character_level
+        # Lineage is Build identity, not merely historical UI provenance. Always
+        # seed the typed selector from the authoritative current Build so a
+        # later Level Up / Build Edit cannot silently lose it if an older source
+        # payload did not yet carry M01-F fields.
+        payload.lineage_selection = _lineage_selection(character.build)
         # Starting equipment is creation provenance and live inventory has long
         # since diverged. P1-G preserves the immutable baseline instead of asking
         # the user to choose starting equipment again.

@@ -1,0 +1,72 @@
+[
+  {
+    "key": "vrgr:feature:dhampir-darkvision",
+    "index": "dhampir-darkvision",
+    "name": "Darkvision",
+    "source": "vrgr",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "dhampir-darkvision",
+      "name": "Darkvision",
+      "darkvision_range_ft": 60
+    }
+  },
+  {
+    "key": "vrgr:feature:deathless-nature",
+    "index": "deathless-nature",
+    "name": "Deathless Nature",
+    "source": "vrgr",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "deathless-nature",
+      "name": "Deathless Nature",
+      "requires_breathing": false
+    }
+  },
+  {
+    "key": "vrgr:feature:spider-climb",
+    "index": "spider-climb",
+    "name": "Spider Climb",
+    "source": "vrgr",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "spider-climb",
+      "name": "Spider Climb",
+      "minimum_character_level": 3,
+      "movement": {
+        "mode": "climb",
+        "surface_types": ["vertical", "ceiling"],
+        "hands_free": true
+      }
+    }
+  },
+  {
+    "key": "vrgr:feature:vampiric-bite",
+    "index": "vampiric-bite",
+    "name": "Vampiric Bite",
+    "source": "vrgr",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "vampiric-bite",
+      "name": "Vampiric Bite",
+      "natural_weapon": {
+        "weapon_type": "simple_melee",
+        "attack_ability": "constitution",
+        "damage_ability": "constitution",
+        "damage_dice": "1d4",
+        "damage_type": "piercing",
+        "advantage_condition": {"self_hp_at_or_below_half_max": true}
+      },
+      "empowerment": {
+        "trigger": "bite_hits_non_construct_non_undead",
+        "modes": ["heal", "next_check_or_attack_bonus"],
+        "value": "piercing_damage_dealt"
+      },
+      "invalid_target_creature_types": ["construct", "undead"],
+      "resource": {
+        "capacity": {"type": "proficiency_bonus"},
+        "recharge": ["long_rest"]
+      }
+    }
+  }
+]

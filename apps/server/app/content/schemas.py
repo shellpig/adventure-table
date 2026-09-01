@@ -20,6 +20,7 @@ StableKind = Literal[
     "feature",
     "language",
     "level",
+    "lineage",
     "item",
     "magic-school",
     "proficiency",
@@ -161,6 +162,36 @@ class LevelData(IndexedNamedData):
         if self.subclass is None and self.prof_bonus is None:
             raise ValueError("class level records must include prof_bonus")
         return self
+
+
+class LineageData(IndexedNamedData):
+    creature_type: str = Field(min_length=1)
+    sizes: list[Literal["small", "medium"]] = Field(min_length=1)
+    walking_speed: int = Field(gt=0)
+    climb_speed: int | None = Field(default=None, gt=0)
+    ability_score_patterns: list[list[int]] = Field(min_length=1)
+    direct_create_languages: list[APIReference] = Field(default_factory=list)
+    direct_create_additional_language_count: int = Field(default=0, ge=0)
+    direct_legacy_skill_count: int = Field(default=0, ge=0)
+    ancestral_legacy_movement_whitelist: list[Literal["climb", "fly", "swim"]] = Field(default_factory=list)
+    features: list[APIReference] = Field(default_factory=list)
+
+    @field_validator("sizes", "ancestral_legacy_movement_whitelist")
+    @classmethod
+    def lineage_values_are_unique(cls, value: list[str]) -> list[str]:
+        if len(value) != len(set(value)):
+            raise ValueError("lineage list values must be unique")
+        return value
+
+    @field_validator("ability_score_patterns")
+    @classmethod
+    def ability_patterns_are_supported(cls, value: list[list[int]]) -> list[list[int]]:
+        for pattern in value:
+            if pattern not in ([2, 1], [1, 1, 1]):
+                raise ValueError("unsupported lineage ability score pattern")
+        if len({tuple(pattern) for pattern in value}) != len(value):
+            raise ValueError("lineage ability score patterns must be unique")
+        return value
 
 
 class ItemData(IndexedNamedData):
@@ -319,6 +350,7 @@ DATA_MODELS: dict[str, type[IndexedNamedData]] = {
     "feature": FeatureData,
     "language": LanguageData,
     "level": LevelData,
+    "lineage": LineageData,
     "item": ItemData,
     "magic-school": MagicSchoolData,
     "proficiency": ProficiencyData,

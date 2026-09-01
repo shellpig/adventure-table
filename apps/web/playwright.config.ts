@@ -7,6 +7,7 @@ const localeOrigin = new URL(baseURL).origin
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
+  workers: 1,
   use: {
     baseURL,
     browserName: 'chromium',

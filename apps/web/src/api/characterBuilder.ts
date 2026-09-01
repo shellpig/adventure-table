@@ -79,6 +79,7 @@ export type BuilderDraftPayload = {
   race_selection?: BuilderReferenceSelection | null
   race_variant_selection?: BuilderReferenceSelection | null
   subrace_selection?: BuilderReferenceSelection | null
+  lineage_selection?: BuilderReferenceSelection | null
   background_selection?: BuilderReferenceSelection | null
   alignment_selection?: BuilderReferenceSelection | null
   ability_generation?: BuilderAbilityGenerationInput | null
@@ -237,6 +238,8 @@ export type BuilderResolvedSummary = {
   race_name?: string | null
   race_variant_name?: string | null
   subrace_name?: string | null
+  lineage_name?: string | null
+  ancestral_origin_name?: string | null
   background_name?: string | null
   alignment_name?: string | null
   starting_class_name?: string | null

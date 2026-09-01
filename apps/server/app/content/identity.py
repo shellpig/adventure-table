@@ -22,6 +22,7 @@ URL_ROUTE_TO_KIND = {
     "feats": "feat",
     "features": "feature",
     "languages": "language",
+    "lineages": "lineage",
     "magic-items": "item",
     "magic-schools": "magic-school",
     "proficiencies": "proficiency",
@@ -42,6 +43,9 @@ _STABLE_KEY_REFERENCE_FIELDS = frozenset(
     {
         "race_ref",
         "race_variant_ref",
+        "lineage_ref",
+        "ancestral_origin_ref",
+        "retained_skill_refs",
         "subrace_ref",
         "background_ref",
         "alignment_ref",
