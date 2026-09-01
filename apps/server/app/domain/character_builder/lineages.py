@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.content.identity import parse_stable_key, reference_to_stable_key, stable_key, stable_key_is_kind
+from app.content.identity import (
+    parse_stable_key,
+    reference_to_stable_key,
+    stable_key,
+    stable_key_is_kind,
+)
 from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
 from app.domain.character.schemas import AncestralLegacySelection, CharacterBuild
@@ -93,15 +98,25 @@ def _skill_from_reference(reference_id: str, registry: ContentRegistry) -> str |
     return skill_ref if registry.get_optional(skill_ref) is not None else None
 
 
-def _ancestry_source_refs(draft: BuilderDraft, registry: ContentRegistry, base_build: CharacterBuild | None) -> set[str]:
+def _ancestry_source_refs(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+    base_build: CharacterBuild | None,
+) -> set[str]:
     refs: set[str] = set()
     for value in (
         base_build.race_ref if base_build is not None else None,
         base_build.subrace_ref if base_build is not None else None,
         base_build.race_variant_ref if base_build is not None else None,
-        draft.draft_payload.race_selection.reference_id if draft.draft_payload.race_selection else None,
-        draft.draft_payload.subrace_selection.reference_id if draft.draft_payload.subrace_selection else None,
-        draft.draft_payload.race_variant_selection.reference_id if draft.draft_payload.race_variant_selection else None,
+        draft.draft_payload.race_selection.reference_id
+        if draft.draft_payload.race_selection
+        else None,
+        draft.draft_payload.subrace_selection.reference_id
+        if draft.draft_payload.subrace_selection
+        else None,
+        draft.draft_payload.race_variant_selection.reference_id
+        if draft.draft_payload.race_variant_selection
+        else None,
     ):
         if value:
             refs.add(value)
@@ -124,7 +139,11 @@ def _ancestry_source_refs(draft: BuilderDraft, registry: ContentRegistry, base_b
     return refs
 
 
-def eligible_ancestral_skills(draft: BuilderDraft, registry: ContentRegistry, base_build: CharacterBuild | None) -> tuple[str, ...]:
+def eligible_ancestral_skills(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+    base_build: CharacterBuild | None,
+) -> tuple[str, ...]:
     if base_build is None or draft.mode is BuilderMode.CREATE:
         return ()
     ancestry_refs = _ancestry_source_refs(draft, registry, base_build)
@@ -143,8 +162,15 @@ def eligible_ancestral_skills(draft: BuilderDraft, registry: ContentRegistry, ba
                 candidates.append(skill_ref)
 
     # Fixed racial/trait skill proficiencies have no choice record; derive only
-    # from ancestry content and intersect with the persisted Build.
+    # from ancestry content and intersect with the persisted Build. Older Build
+    # rows may persist a skill either as skill_choices or as a skill-* proficiency,
+    # so normalize both representations before the intersection.
     build_skills = set(base_build.skill_choices)
+    for proficiency_ref in base_build.proficiencies:
+        skill_ref = _skill_from_reference(proficiency_ref, registry)
+        if skill_ref is not None:
+            build_skills.add(skill_ref)
+
     for source_ref in ancestry_refs:
         entry = registry.get_optional(source_ref)
         if entry is None:
@@ -163,7 +189,9 @@ def eligible_ancestral_skills(draft: BuilderDraft, registry: ContentRegistry, ba
     return tuple(dict.fromkeys(candidates))
 
 
-def eligible_ancestral_movements(base_build: CharacterBuild | None) -> tuple[str, ...]:
+def eligible_ancestral_movements(
+    base_build: CharacterBuild | None,
+) -> tuple[str, ...]:
     if base_build is None:
         return ()
     result = []
@@ -176,7 +204,11 @@ def eligible_ancestral_movements(base_build: CharacterBuild | None) -> tuple[str
     return tuple(result)
 
 
-def _ability_options(*, bonus: int, disabled: set[str] | None = None) -> tuple[BuilderChoiceOption, ...]:
+def _ability_options(
+    *,
+    bonus: int,
+    disabled: set[str] | None = None,
+) -> tuple[BuilderChoiceOption, ...]:
     disabled = disabled or set()
     return tuple(
         BuilderChoiceOption(
@@ -186,14 +218,25 @@ def _ability_options(*, bonus: int, disabled: set[str] | None = None) -> tuple[B
             reference_id=f"srd5.1:ability:{index}",
             count=bonus,
             category="ability_bonus",
-            disabled_reason=("Choose a different ability." if index in disabled else None),
-            disabled_reason_code=("lineage_asi_ability_must_be_distinct" if index in disabled else None),
+            disabled_reason=(
+                "Choose a different ability." if index in disabled else None
+            ),
+            disabled_reason_code=(
+                "lineage_asi_ability_must_be_distinct"
+                if index in disabled
+                else None
+            ),
         )
         for index in ABILITY_INDEXES
     )
 
 
-def build_lineage_choices(draft: BuilderDraft, registry: ContentRegistry, *, base_build: CharacterBuild | None = None) -> tuple[BuilderChoice, ...]:
+def build_lineage_choices(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+    *,
+    base_build: CharacterBuild | None = None,
+) -> tuple[BuilderChoice, ...]:
     lineage_ref = selected_lineage_ref(draft)
     lineages = registry.list_kind("lineage")
     selector = BuilderChoice(
@@ -232,8 +275,18 @@ def build_lineage_choices(draft: BuilderDraft, registry: ContentRegistry, *, bas
             choose_count=1,
             option_source="content:lineage-asi-pattern",
             options=(
-                BuilderChoiceOption(option_id=ASI_PATTERN_2_1, label="+2 / +1", kind=BuilderOptionKind.BRANCH, branch_key="2-1"),
-                BuilderChoiceOption(option_id=ASI_PATTERN_1_1_1, label="+1 / +1 / +1", kind=BuilderOptionKind.BRANCH, branch_key="1-1-1"),
+                BuilderChoiceOption(
+                    option_id=ASI_PATTERN_2_1,
+                    label="+2 / +1",
+                    kind=BuilderOptionKind.BRANCH,
+                    branch_key="2-1",
+                ),
+                BuilderChoiceOption(
+                    option_id=ASI_PATTERN_1_1_1,
+                    label="+1 / +1 / +1",
+                    kind=BuilderOptionKind.BRANCH,
+                    branch_key="1-1-1",
+                ),
             ),
             selected_option_ids=pattern_selection,
         )
@@ -243,7 +296,8 @@ def build_lineage_choices(draft: BuilderDraft, registry: ContentRegistry, *, bas
         selected_indexes = {
             option_id.split(":")[1]
             for option_id in plus_two_selected
-            if option_id.startswith("lineage-ability:") and len(option_id.split(":")) == 3
+            if option_id.startswith("lineage-ability:")
+            and len(option_id.split(":")) == 3
         }
         result.extend(
             (
@@ -264,8 +318,14 @@ def build_lineage_choices(draft: BuilderDraft, registry: ContentRegistry, *, bas
                     required=True,
                     choose_count=1,
                     option_source="content:lineage-asi-ability",
-                    options=_ability_options(bonus=1, disabled=selected_indexes),
-                    selected_option_ids=_selected(draft, LINEAGE_ASI_PLUS_ONE_CHOICE_ID),
+                    options=_ability_options(
+                        bonus=1,
+                        disabled=selected_indexes,
+                    ),
+                    selected_option_ids=_selected(
+                        draft,
+                        LINEAGE_ASI_PLUS_ONE_CHOICE_ID,
+                    ),
                 ),
             )
         )
@@ -310,7 +370,8 @@ def build_lineage_choices(draft: BuilderDraft, registry: ContentRegistry, *, bas
         count = lineage.data.get("direct_create_additional_language_count", 0)
         if isinstance(count, int) and count > 0:
             fixed_languages = {
-                key for raw in lineage.data.get("direct_create_languages", [])
+                key
+                for raw in lineage.data.get("direct_create_languages", [])
                 if (key := _reference_key(raw)) is not None
             }
             result.append(
@@ -332,7 +393,10 @@ def build_lineage_choices(draft: BuilderDraft, registry: ContentRegistry, *, bas
                         for entry in registry.list_kind("language")
                         if entry.key not in fixed_languages
                     ),
-                    selected_option_ids=_selected(draft, LINEAGE_LANGUAGE_CHOICE_ID),
+                    selected_option_ids=_selected(
+                        draft,
+                        LINEAGE_LANGUAGE_CHOICE_ID,
+                    ),
                 )
             )
         skill_count = lineage.data.get("direct_legacy_skill_count", 0)
@@ -372,7 +436,11 @@ def build_lineage_choices(draft: BuilderDraft, registry: ContentRegistry, *, bas
                     options=tuple(
                         BuilderChoiceOption(
                             option_id=skill_ref,
-                            label=(registry.get_optional(skill_ref).name if registry.get_optional(skill_ref) is not None else skill_ref),
+                            label=(
+                                registry.get_optional(skill_ref).name
+                                if registry.get_optional(skill_ref) is not None
+                                else skill_ref
+                            ),
                             kind=BuilderOptionKind.REFERENCE,
                             reference_id=skill_ref,
                             category="skill",
@@ -401,16 +469,26 @@ def build_lineage_choices(draft: BuilderDraft, registry: ContentRegistry, *, bas
                         )
                         for mode in eligible_movement
                     ),
-                    selected_option_ids=_selected(draft, LINEAGE_MOVEMENT_CHOICE_ID),
+                    selected_option_ids=_selected(
+                        draft,
+                        LINEAGE_MOVEMENT_CHOICE_ID,
+                    ),
                 )
             )
     return tuple(result)
 
 
-def suppress_replaced_origin_choices(draft: BuilderDraft, choices: tuple[BuilderChoice, ...]) -> tuple[BuilderChoice, ...]:
+def suppress_replaced_origin_choices(
+    draft: BuilderDraft,
+    choices: tuple[BuilderChoice, ...],
+) -> tuple[BuilderChoice, ...]:
     if selected_lineage_ref(draft) is None:
         return choices
-    background_ref = draft.draft_payload.background_selection.reference_id if draft.draft_payload.background_selection else None
+    background_ref = (
+        draft.draft_payload.background_selection.reference_id
+        if draft.draft_payload.background_selection
+        else None
+    )
     keep_sources = {background_ref} if background_ref else set()
     keep_option_sources = {
         "content:race",
@@ -425,7 +503,11 @@ def suppress_replaced_origin_choices(draft: BuilderDraft, choices: tuple[Builder
     )
 
 
-def _feature_refs(lineage: ContentEntry, registry: ContentRegistry, target_level: int) -> tuple[str, ...]:
+def _feature_refs(
+    lineage: ContentEntry,
+    registry: ContentRegistry,
+    target_level: int,
+) -> tuple[str, ...]:
     result: list[str] = []
     raw = lineage.data.get("features")
     if not isinstance(raw, list):
@@ -443,50 +525,101 @@ def _feature_refs(lineage: ContentEntry, registry: ContentRegistry, target_level
     return tuple(dict.fromkeys(result))
 
 
-def compile_lineage(draft: BuilderDraft, registry: ContentRegistry, *, base_build: CharacterBuild | None = None) -> LineageCompilation:
+def _level_up_lineage_issue(
+    lineage_ref: str | None,
+    base_build: CharacterBuild | None,
+) -> BuilderIssue | None:
+    if base_build is None or lineage_ref == base_build.lineage_ref:
+        return None
+    return BuilderIssue(
+        code="level_up_lineage_changed",
+        severity=BuilderIssueSeverity.BLOCKING_ERROR,
+        path="draft_payload.lineage_selection",
+        message="Level Up cannot add, remove, or replace a Lineage; use Build Edit or Correction.",
+        related_refs=tuple(
+            ref for ref in (base_build.lineage_ref, lineage_ref) if ref is not None
+        ),
+    )
+
+
+def compile_lineage(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+    *,
+    base_build: CharacterBuild | None = None,
+) -> LineageCompilation:
     lineage_ref = selected_lineage_ref(draft)
     if lineage_ref is None:
+        if draft.mode is BuilderMode.LEVEL_UP:
+            issue = _level_up_lineage_issue(lineage_ref, base_build)
+            if issue is not None:
+                return LineageCompilation(issues=(issue,))
         return LineageCompilation()
+
     lineage = registry.get_optional(lineage_ref)
     if lineage is None or not stable_key_is_kind(lineage.key, "lineage"):
         return LineageCompilation(
             lineage_ref=lineage_ref,
-            issues=(BuilderIssue(
-                code="unknown_lineage",
-                severity=BuilderIssueSeverity.BLOCKING_ERROR,
-                path="draft_payload.lineage_selection",
-                message="Selected lineage is not available.",
-                related_refs=(lineage_ref,),
-            ),),
+            issues=(
+                BuilderIssue(
+                    code="unknown_lineage",
+                    severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                    path="draft_payload.lineage_selection",
+                    message="Selected lineage is not available.",
+                    related_refs=(lineage_ref,),
+                ),
+            ),
         )
 
     issues: list[BuilderIssue] = []
+    if draft.mode is BuilderMode.LEVEL_UP:
+        issue = _level_up_lineage_issue(lineage_ref, base_build)
+        if issue is not None:
+            issues.append(issue)
+
     size_selection = _selected(draft, LINEAGE_SIZE_CHOICE_ID)
-    size = size_selection[0].removeprefix("lineage-size:") if len(size_selection) == 1 else None
+    size = (
+        size_selection[0].removeprefix("lineage-size:")
+        if len(size_selection) == 1
+        else None
+    )
     if size not in set(lineage.data.get("sizes", [])):
         size = None
 
     selected_skills = tuple(
-        option_id for option_id in _selected(draft, LINEAGE_SKILL_CHOICE_ID)
+        option_id
+        for option_id in _selected(draft, LINEAGE_SKILL_CHOICE_ID)
         if stable_key_is_kind(option_id, "skill")
     )
     if draft.mode is BuilderMode.CREATE or base_build is None:
         eligible_skills = {entry.key for entry in registry.list_kind("skill")}
         expected_skill_count = lineage.data.get("direct_legacy_skill_count", 0)
-        if len(selected_skills) != expected_skill_count or not set(selected_skills).issubset(eligible_skills):
-            issues.append(BuilderIssue(
-                code="invalid_lineage_legacy_skills",
-                severity=BuilderIssueSeverity.BLOCKING_ERROR,
-                path=f"draft_payload.choice_selections.{LINEAGE_SKILL_CHOICE_ID}",
-                message="Direct-create Ancestral Legacy skill selection is incomplete or invalid.",
-                related_refs=selected_skills,
-            ))
+        if len(selected_skills) != expected_skill_count or not set(
+            selected_skills
+        ).issubset(eligible_skills):
+            issues.append(
+                BuilderIssue(
+                    code="invalid_lineage_legacy_skills",
+                    severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                    path=(
+                        "draft_payload.choice_selections."
+                        f"{LINEAGE_SKILL_CHOICE_ID}"
+                    ),
+                    message=(
+                        "Direct-create Ancestral Legacy skill selection is "
+                        "incomplete or invalid."
+                    ),
+                    related_refs=selected_skills,
+                )
+            )
         fixed_languages = tuple(
-            key for raw in lineage.data.get("direct_create_languages", [])
+            key
+            for raw in lineage.data.get("direct_create_languages", [])
             if (key := _reference_key(raw)) is not None
         )
         extra_languages = tuple(
-            option_id for option_id in _selected(draft, LINEAGE_LANGUAGE_CHOICE_ID)
+            option_id
+            for option_id in _selected(draft, LINEAGE_LANGUAGE_CHOICE_ID)
             if stable_key_is_kind(option_id, "language")
         )
         language_refs = tuple(dict.fromkeys((*fixed_languages, *extra_languages)))
@@ -495,13 +628,21 @@ def compile_lineage(draft: BuilderDraft, registry: ContentRegistry, *, base_buil
         allowed = set(eligible_ancestral_skills(draft, registry, base_build))
         illegal = tuple(skill for skill in selected_skills if skill not in allowed)
         if illegal:
-            issues.append(BuilderIssue(
-                code="illegal_ancestral_legacy_skill",
-                severity=BuilderIssueSeverity.BLOCKING_ERROR,
-                path=f"draft_payload.choice_selections.{LINEAGE_SKILL_CHOICE_ID}",
-                message="Ancestral Legacy can retain only race-origin skill proficiencies.",
-                related_refs=illegal,
-            ))
+            issues.append(
+                BuilderIssue(
+                    code="illegal_ancestral_legacy_skill",
+                    severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                    path=(
+                        "draft_payload.choice_selections."
+                        f"{LINEAGE_SKILL_CHOICE_ID}"
+                    ),
+                    message=(
+                        "Ancestral Legacy can retain only race-origin skill "
+                        "proficiencies."
+                    ),
+                    related_refs=illegal,
+                )
+            )
         language_refs = base_build.language_refs
         ancestral_origin_ref = base_build.race_ref
 
@@ -510,17 +651,35 @@ def compile_lineage(draft: BuilderDraft, registry: ContentRegistry, *, base_buil
         for option_id in _selected(draft, LINEAGE_MOVEMENT_CHOICE_ID)
         if option_id.startswith("lineage-movement:")
     )
-    allowed_movements = set(eligible_ancestral_movements(base_build)) if base_build is not None else set()
-    illegal_movements = tuple(mode for mode in selected_movements if mode not in allowed_movements)
+    allowed_movements = (
+        set(eligible_ancestral_movements(base_build))
+        if base_build is not None
+        else set()
+    )
+    illegal_movements = tuple(
+        mode for mode in selected_movements if mode not in allowed_movements
+    )
     if illegal_movements:
-        issues.append(BuilderIssue(
-            code="illegal_ancestral_legacy_movement",
-            severity=BuilderIssueSeverity.BLOCKING_ERROR,
-            path=f"draft_payload.choice_selections.{LINEAGE_MOVEMENT_CHOICE_ID}",
-            message="Ancestral Legacy can retain only an existing climb, fly, or swim speed.",
-        ))
+        issues.append(
+            BuilderIssue(
+                code="illegal_ancestral_legacy_movement",
+                severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                path=(
+                    "draft_payload.choice_selections."
+                    f"{LINEAGE_MOVEMENT_CHOICE_ID}"
+                ),
+                message=(
+                    "Ancestral Legacy can retain only an existing climb, fly, "
+                    "or swim speed."
+                ),
+            )
+        )
 
-    climb_speed = lineage.data.get("climb_speed") if isinstance(lineage.data.get("climb_speed"), int) else None
+    climb_speed = (
+        lineage.data.get("climb_speed")
+        if isinstance(lineage.data.get("climb_speed"), int)
+        else None
+    )
     fly_speed = None
     swim_speed = None
     if base_build is not None:
@@ -537,13 +696,21 @@ def compile_lineage(draft: BuilderDraft, registry: ContentRegistry, *, base_buil
         ancestral_origin_ref=ancestral_origin_ref,
         ancestral_legacy=AncestralLegacySelection(
             retained_skill_refs=selected_skills,
-            retained_movement_modes=tuple(mode for mode in selected_movements if mode in {"climb", "fly", "swim"}),
+            retained_movement_modes=tuple(
+                mode
+                for mode in selected_movements
+                if mode in {"climb", "fly", "swim"}
+            ),
         ),
         size=size,
         language_refs=language_refs,
         skill_refs=selected_skills,
-        feature_refs=_feature_refs(lineage, registry, draft.draft_payload.target_level or 0),
-        walking_speed=walking_speed if isinstance(walking_speed, int) else None,
+        feature_refs=_feature_refs(
+            lineage,
+            registry,
+            draft.draft_payload.target_level or 0,
+        ),
+        walking_speed=(walking_speed if isinstance(walking_speed, int) else None),
         climb_speed=climb_speed,
         fly_speed=fly_speed,
         swim_speed=swim_speed,
