@@ -265,12 +265,47 @@ def reconcile_character_state(
             )
         )
 
+    new_spell_storing_item = old_state.spell_storing_item
+    if old_state.spell_storing_item is not None:
+        old_capacity = spell_storing_item_capacity(old_build)
+        new_capacity = spell_storing_item_capacity(new_build)
+        if new_capacity > 0:
+            old_remaining = min(old_state.spell_storing_item.remaining_uses, old_capacity)
+            old_used = max(0, old_capacity - old_remaining)
+            new_used = min(old_used, new_capacity)
+            new_remaining = new_capacity - new_used
+            if old_used > new_capacity:
+                warnings.append(
+                    _warning(
+                        "spell_storing_item_usage_clamped",
+                        "state.spell_storing_item.remaining_uses",
+                        (
+                            f"Spell-Storing Item usage ({old_used}) exceeds the new capacity "
+                            f"({new_capacity}); used is clamped to the new capacity."
+                        ),
+                    )
+                )
+            if old_capacity != new_capacity or old_remaining != new_remaining:
+                changes.append(
+                    StateReconciliationChange(
+                        path="state.spell_storing_item.remaining_uses",
+                        kind="resource_capacity",
+                        before=f"used={old_used}, remaining={old_remaining}, capacity={old_capacity}",
+                        after=f"used={new_used}, remaining={new_remaining}, capacity={new_capacity}",
+                        message="Preserve prior Spell-Storing Item usage while reconciling to the new Build capacity.",
+                    )
+                )
+            new_spell_storing_item = old_state.spell_storing_item.model_copy(
+                update={"remaining_uses": new_remaining}
+            )
+
     proposed = old_state.model_copy(
         update={
             "current_hp": new_current_hp,
             "spell_slots": new_spell_slots,
             "resources": new_resources,
             "hit_dice_state": new_hit_dice_state,
+            "spell_storing_item": new_spell_storing_item,
         }
     )
 
