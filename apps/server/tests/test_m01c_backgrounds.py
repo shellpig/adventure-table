@@ -100,6 +100,7 @@ def test_default_registry_enables_complete_m01c_background_packs() -> None:
         "gos",
         "vgm",
         "vrgr",
+        "tce",
     )
     assert {entry.key for entry in registry.list_kind("background", source="scag")} == SCAG_KEYS
     assert {entry.key for entry in registry.list_kind("background", source="gos")} == GOS_KEYS
