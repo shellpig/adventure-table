@@ -10,6 +10,12 @@ def spell_access_resource_key(source_key: str, spell_key: str) -> str:
     return f"spell-access:{source_key}:{spell_key}"
 
 
+def _proficiency_bonus(character_level: int) -> int:
+    """D&D 5e 2014 proficiency bonus by total character level."""
+
+    return 2 + (character_level - 1) // 4
+
+
 def feature_resource_capacities(
     build: CharacterBuild,
     registry: ContentRegistry,
@@ -23,10 +29,16 @@ def feature_resource_capacities(
         if not isinstance(resource, dict):
             continue
         capacity = resource.get("capacity")
-        if not isinstance(capacity, dict) or capacity.get("type") != "fixed":
+        if not isinstance(capacity, dict):
             continue
-        value = capacity.get("value")
-        if not isinstance(value, int) or value < 0:
+        capacity_type = capacity.get("type")
+        if capacity_type == "fixed":
+            value = capacity.get("value")
+            if not isinstance(value, int) or value < 0:
+                continue
+        elif capacity_type == "proficiency_bonus":
+            value = _proficiency_bonus(build.character_level)
+        else:
             continue
         capacities[f"feature:{feature_ref}"] = value
 
