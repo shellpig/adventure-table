@@ -8,10 +8,10 @@ from app.content.registry import (
 )
 
 
-# Production/dev packs are explicit. M01-D enables VGM only after its normalized
-# manifest, bilingual presentation overlay, and race rules exist; fixture
-# directories remain opt-in in tests.
-_registry.DEFAULT_CONTENT_PACKS = ("srd5.1", "phb2014", "scag", "gos", "vgm")
+# Production/dev packs are explicit. M01-F enables VRGR only after its normalized
+# manifest, bilingual presentation overlay, lineage schema, and Dhampir rules
+# exist; fixture directories remain opt-in in tests.
+_registry.DEFAULT_CONTENT_PACKS = ("srd5.1", "phb2014", "scag", "gos", "vgm", "vrgr")
 
 
 def load_default_content_registry() -> ContentRegistry:
