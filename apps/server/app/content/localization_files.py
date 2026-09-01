@@ -69,7 +69,7 @@ def _validate_overlay_field_path(
     *,
     key: str,
     field_path: str,
-    path: Path,
+    path: Path | str,
 ) -> None:
     if not isinstance(field_path, str) or not field_path:
         raise ContentValidationError(f"locale overlay {path} contains a blank field path for {key}")
@@ -161,6 +161,57 @@ def _materialize_roleplay_presentation_inheritance(
             resolve(key)
 
 
+def _merge_m01j_reference_localization(
+    registry: ContentRegistry,
+    overlays: dict[tuple[str, str], dict[str, dict[str, Any]]],
+) -> None:
+    """Expose Chinese names authored in M01-J's verified reference documents.
+
+    M01-J supplemental entries are generated after physical pack loading, so
+    their locale overlay is generated from the same repository documents rather
+    than duplicated into hundreds of hand-maintained JSON rows. A physical
+    overlay may never silently shadow the generated identity.
+    """
+
+    raw = getattr(registry, "m01j_localization_overlays", None)
+    if not isinstance(raw, dict):
+        return
+    for identity, entries in raw.items():
+        if (
+            not isinstance(identity, tuple)
+            or len(identity) != 2
+            or not all(isinstance(value, str) for value in identity)
+            or not isinstance(entries, dict)
+        ):
+            raise ContentValidationError("invalid M01-J generated localization overlay")
+        source, locale = identity
+        if source not in registry.enabled_pack_ids or locale not in SUPPORTED_CONTENT_LOCALES:
+            raise ContentValidationError(
+                f"invalid M01-J generated localization target: {source}/{locale}"
+            )
+        target_entries = overlays.setdefault((source, locale), {})
+        for key, fields in entries.items():
+            if not isinstance(key, str) or not isinstance(fields, dict):
+                raise ContentValidationError("invalid M01-J generated localization entry")
+            if registry.get_optional(key) is None or parse_stable_key(key).source != source:
+                raise ContentValidationError(
+                    f"M01-J generated localization references unknown/cross-pack key {key}"
+                )
+            target = target_entries.setdefault(key, {})
+            for field_path, value in fields.items():
+                _validate_overlay_field_path(
+                    registry,
+                    key=key,
+                    field_path=field_path,
+                    path="M01-J repository reference",
+                )
+                if field_path in target:
+                    raise ContentValidationError(
+                        f"duplicate locale overlay field {key}::{field_path} in physical locale data and M01-J reference"
+                    )
+                target[field_path] = value
+
+
 def load_content_localization_catalog(
     registry: ContentRegistry,
     content_root: Path,
@@ -223,5 +274,6 @@ def load_content_localization_catalog(
 
             overlays[(source, locale)] = merged
 
+    _merge_m01j_reference_localization(registry, overlays)
     _materialize_roleplay_presentation_inheritance(registry, overlays)
     return ContentLocalizationCatalog(registry, policy, overlays)
