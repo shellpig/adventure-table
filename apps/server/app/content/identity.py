@@ -58,6 +58,8 @@ _STABLE_KEY_REFERENCE_FIELDS = frozenset(
         "language_refs",
         "feature_refs",
         "feat_refs",
+        "infusion_refs",
+        "infusion_ref",
         "source_key",
         "spell_key",
         "item_ref",
