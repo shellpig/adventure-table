@@ -22,6 +22,56 @@ def _selection(draft: BuilderDraft, choice_id: str) -> tuple[str, ...]:
     return record.selected_option_ids if record is not None else ()
 
 
+def prevent_duplicate_retraining_targets(
+    draft: BuilderDraft,
+    choices: tuple[BuilderChoice, ...],
+) -> tuple[BuilderChoice, ...]:
+    """Do not let a replacement choose another option the Build already has."""
+
+    by_id = {choice.choice_id: choice for choice in choices}
+    result: list[BuilderChoice] = []
+    for choice in choices:
+        if not choice.option_source.startswith("content:optional-feature:retraining-to:"):
+            result.append(choice)
+            continue
+        if not choice.choice_id.endswith(":to"):
+            result.append(choice)
+            continue
+
+        parent_id = choice.choice_id.removesuffix(":to")
+        old_id = f"{parent_id}:from"
+        old_choice = by_id.get(old_id)
+        if old_choice is None:
+            result.append(choice)
+            continue
+
+        selected_old = set(_selection(draft, old_id))
+        already_owned = {
+            option.reference_id
+            for option in old_choice.options
+            if option.reference_id is not None
+        } - selected_old
+        if not already_owned:
+            result.append(choice)
+            continue
+
+        options = []
+        for option in choice.options:
+            if option.reference_id not in already_owned or option.disabled_reason is not None:
+                options.append(option)
+                continue
+            options.append(
+                option.model_copy(
+                    update={
+                        "disabled_reason": "This option is already known or selected.",
+                        "disabled_reason_code": "retraining_duplicate_target",
+                    }
+                )
+            )
+        result.append(choice.model_copy(update={"options": tuple(options)}))
+    return tuple(result)
+
+
 def build_retraining_nested_choices(
     draft: BuilderDraft,
     runtime: OptionalFeatureRuntime,
@@ -202,7 +252,6 @@ def reconcile_feature_pool_retraining(
 def finalize_feature_grant_sources(
     feature_refs: tuple[str, ...],
     *,
-    base_build: CharacterBuild | None,
     current_sources: tuple[FeatureGrantSource, ...],
     reconciled_base_sources: tuple[FeatureGrantSource, ...],
 ) -> tuple[FeatureGrantSource, ...]:
