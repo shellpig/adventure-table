@@ -75,16 +75,35 @@ def spell_is_on_class_list(spell_key: str, class_ref: str, registry: ContentRegi
         return False
 
     references = spell.data.get("classes")
-    if not isinstance(references, list):
+    if isinstance(references, list):
+        for reference in references:
+            if not isinstance(reference, dict):
+                continue
+            try:
+                reference_key = reference_to_stable_key(reference, kinds={"class"})
+            except ValueError:
+                continue
+            if reference_key == class_ref:
+                return True
+
+    # Non-SRD class packs can define their class list authoritatively on the
+    # class entry because canonical SRD spell records cannot be mutated to add
+    # cross-pack class references. This mirrors the Builder spell-list contract
+    # and keeps Character Sheet / runtime validation source-aware.
+    class_entry = registry.get_optional(class_ref)
+    if class_entry is None:
         return False
-    for reference in references:
+    dedicated = class_entry.data.get("spell_list")
+    if not isinstance(dedicated, list):
+        return False
+    for reference in dedicated:
         if not isinstance(reference, dict):
             continue
         try:
-            reference_key = reference_to_stable_key(reference, kinds={"class"})
+            reference_key = reference_to_stable_key(reference, kinds={"spell"})
         except ValueError:
             continue
-        if reference_key == class_ref:
+        if reference_key == spell.key:
             return True
     return False
 
