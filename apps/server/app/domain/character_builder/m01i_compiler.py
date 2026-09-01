@@ -11,6 +11,7 @@ from app.domain.character_builder.m01i_provenance import (
     build_retraining_nested_choices,
     current_feature_grant_sources,
     finalize_feature_grant_sources,
+    prevent_duplicate_retraining_targets,
     reconcile_feature_pool_retraining,
 )
 from app.domain.character_builder.m01i_runtime import prepare_optional_class_features_for_m01i
@@ -139,6 +140,7 @@ def compile_builder_draft(
         runtime,
         base_build=base_build,
     )
+    retraining_choices = prevent_duplicate_retraining_targets(draft, retraining_choices)
     retraining_nested_choices = build_retraining_nested_choices(
         draft,
         runtime,
@@ -218,7 +220,6 @@ def compile_builder_draft(
         )
         feature_grant_sources = finalize_feature_grant_sources(
             feature_refs,
-            base_build=base_build,
             current_sources=current_sources,
             reconciled_base_sources=reconciled_base_sources,
         )
