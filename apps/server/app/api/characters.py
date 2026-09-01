@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.api.dependencies import get_character_repository
 from app.api.errors import APIError
 from app.domain.character.schemas import (
+    ActiveInfusion,
     CharacterState,
     ConditionState,
     HitDie,
@@ -16,6 +17,7 @@ from app.domain.character.schemas import (
     PersistedCharacter,
     PreparedSpellSelection,
     ResourceCounter,
+    SpellStoringItemState,
 )
 from app.domain.character.validation import CharacterValidationError
 from app.domain.character_builder.versions import CharacterVersionDetail, CharacterVersionSummary
@@ -66,6 +68,9 @@ class CharacterStatePatch(BaseModel):
     resources: dict[str, ResourceCounter] | None = None
     hit_dice_state: dict[HitDie, int] | None = None
     inventory_state: list[InventoryEntry] | None = None
+    active_infusions: list[ActiveInfusion] | None = None
+    feature_modes: dict[str, str] | None = None
+    spell_storing_item: SpellStoringItemState | None = None
 
 
 def _class_entries(
@@ -260,7 +265,12 @@ def patch_character_state(
 ) -> CharacterSheetDTO:
     character = repository.load_character(character_id)
     changes = patch.model_dump(exclude_unset=True, mode="python")
-    if any(value is None for value in changes.values()):
+    nullable_state_fields = {"spell_storing_item"}
+    if any(
+        value is None
+        for key, value in changes.items()
+        if key not in nullable_state_fields
+    ):
         raise CharacterValidationError("state patch fields cannot be null")
 
     expected_current_version_id = changes.pop(
