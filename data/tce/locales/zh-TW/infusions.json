@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "tce",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "tce:infusion:enhanced-defense": {"name": "增強防禦"},
+    "tce:infusion:enhanced-weapon": {"name": "增強武器"},
+    "tce:infusion:enhanced-arcane-focus": {"name": "增強奧術法器"},
+    "tce:infusion:returning-weapon": {"name": "回力武器"},
+    "tce:infusion:repeating-shot": {"name": "連射武器"},
+    "tce:infusion:mind-sharpener": {"name": "思維砥石"},
+    "tce:infusion:homunculus-servant": {"name": "人工生命僕從"},
+    "tce:infusion:armor-of-magical-strength": {"name": "魔法力量盔甲"},
+    "tce:infusion:replicate-magic-item-bag-of-holding": {"name": "複製魔法物品：次元袋"},
+    "tce:infusion:boots-of-the-winding-path": {"name": "折返之靴"},
+    "tce:infusion:radiant-weapon": {"name": "光耀武器"},
+    "tce:infusion:repulsion-shield": {"name": "斥力之盾"},
+    "tce:infusion:resistant-armor": {"name": "抗力盔甲"},
+    "tce:infusion:spell-refueling-ring": {"name": "法力恢復戒指"},
+    "tce:infusion:helm-of-awareness": {"name": "警覺之盔"},
+    "tce:infusion:arcane-propulsion-armor": {"name": "奧能動力甲"}
+  }
+}
