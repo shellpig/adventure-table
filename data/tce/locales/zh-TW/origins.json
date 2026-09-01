@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "tce",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "tce:class:artificer": {"name": "奇械師"},
+    "tce:subclass:alchemist": {"name": "鍊金術師"},
+    "tce:subclass:armorer": {"name": "裝甲師"},
+    "tce:subclass:artillerist": {"name": "砲術師"},
+    "tce:subclass:battle-smith": {"name": "戰鬥鐵匠"},
+    "tce:feature:magical-tinkering": {"name": "魔法修補"},
+    "tce:feature:spellcasting": {"name": "施法"},
+    "tce:feature:infuse-item": {"name": "注法物品"},
+    "tce:feature:artificer-specialist": {"name": "奇械專精"},
+    "tce:feature:the-right-tool-for-the-job": {"name": "適才適用"},
+    "tce:feature:ability-score-improvement": {"name": "屬性值提升"},
+    "tce:feature:tool-expertise": {"name": "工具專精"},
+    "tce:feature:flash-of-genius": {"name": "靈光乍現"},
+    "tce:feature:magic-item-adept": {"name": "魔法物品巧匠"},
+    "tce:feature:spell-storing-item": {"name": "儲法物品"},
+    "tce:feature:magic-item-savant": {"name": "魔法物品專家"},
+    "tce:feature:magic-item-master": {"name": "魔法物品大師"},
+    "tce:feature:soul-of-artifice": {"name": "奇械之魂"}
+  }
+}
