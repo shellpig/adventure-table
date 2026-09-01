@@ -1,7 +1,9 @@
-import { CharacterBuilderPage } from './features/character-builder/CharacterBuilderPage'
 import { CharacterVersionHistoryPage } from './features/character-builder/CharacterVersionHistoryPage'
 import { CharacterWorkshopPage } from './features/character-builder/CharacterWorkshopPage'
-import { CharacterSheetPage } from './features/character-sheet/CharacterSheetPage'
+import {
+  CharacterBuilderRoutePage,
+  CharacterSheetRoutePage,
+} from './features/artificer/ArtificerRoutePanels'
 import { useUiCopy } from './i18n/useUiCopy'
 
 export const P0_FIXTURE_ID = '00000000-0000-4000-8000-0000000000e0'
@@ -44,8 +46,8 @@ export default function App() {
       />
     )
   }
-  if (characterId) return <CharacterSheetPage characterId={characterId} />
-  if (draftId) return <CharacterBuilderPage draftId={draftId} />
+  if (characterId) return <CharacterSheetRoutePage characterId={characterId} />
+  if (draftId) return <CharacterBuilderRoutePage draftId={draftId} />
   if (pathname === '/characters' || pathname === '/characters/') return <CharacterWorkshopPage />
 
   return (
