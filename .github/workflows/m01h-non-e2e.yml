@@ -1,0 +1,135 @@
+name: M01-H Non-E2E Regression
+
+on:
+  push:
+    branches:
+      - m01-h-artificer-advanced-features
+  workflow_dispatch:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Audit installed TCE references
+        working-directory: .
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          route_to_kind = {
+              "ability-scores": "ability",
+              "alignments": "alignment",
+              "backgrounds": "background",
+              "classes": "class",
+              "conditions": "condition",
+              "damage-types": "damage-type",
+              "equipment": "equipment",
+              "equipment-categories": "equipment-category",
+              "feats": "feat",
+              "features": "feature",
+              "languages": "language",
+              "lineages": "lineage",
+              "magic-items": "item",
+              "magic-schools": "magic-school",
+              "proficiencies": "proficiency",
+              "races": "race",
+              "race-variants": "race-variant",
+              "skills": "skill",
+              "spells": "spell",
+              "subclasses": "subclass",
+              "subraces": "subrace",
+              "traits": "trait",
+              "weapon-properties": "weapon-property",
+          }
+
+          installed = set()
+          for path in Path("data").glob("*/*.json"):
+              if path.name == "manifest.json":
+                  continue
+              try:
+                  payload = json.loads(path.read_text(encoding="utf-8"))
+              except json.JSONDecodeError:
+                  continue
+              if not isinstance(payload, list):
+                  continue
+              for entry in payload:
+                  if isinstance(entry, dict):
+                      key = entry.get("key")
+                      if isinstance(key, str):
+                          installed.add(key)
+
+          refs = set()
+          for path in Path("data/tce").glob("*.json"):
+              if path.name == "manifest.json":
+                  continue
+              payload = json.loads(path.read_text(encoding="utf-8"))
+              stack = list(payload) if isinstance(payload, list) else [payload]
+              while stack:
+                  value = stack.pop()
+                  if isinstance(value, dict):
+                      url = value.get("url")
+                      if isinstance(url, str) and url.startswith("/api/2014/"):
+                          parts = url.strip("/").split("/")
+                          if len(parts) == 4 and parts[:2] == ["api", "2014"]:
+                              kind = route_to_kind.get(parts[2])
+                              if kind is not None:
+                                  refs.add(f"srd5.1:{kind}:{parts[3]}")
+                      key = value.get("key")
+                      if isinstance(key, str) and key.count(":") == 2:
+                          refs.add(key)
+                      stack.extend(value.values())
+                  elif isinstance(value, list):
+                      stack.extend(value)
+
+          missing = sorted(refs - installed)
+          print("MISSING_TCE_REFS", missing)
+          if missing:
+              raise SystemExit("TCE contains dangling installed-content references")
+          PY
+      - name: Install backend
+        run: pip install -e ".[dev]"
+      - name: Backend pytest
+        run: pytest
+      - name: Localization authoring unit tests
+        working-directory: .
+        run: python -m unittest scripts.test_build_m02d_srd_locale_reviewed scripts.test_run_m02d_srd_locale_authoring
+      - name: Fresh SQLite migration
+        env:
+          DATABASE_URL: sqlite+pysqlite:////tmp/adventure-table-m01h-fresh.db
+        run: alembic upgrade head
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Pin npm
+        run: npm install --global npm@11.6.0
+      - name: Install frontend
+        run: npm ci
+      - name: Frontend unit tests
+        run: npm test -- --run
+      - name: TypeScript and Vite build
+        run: npm run build
+
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose config
+        run: docker compose config
