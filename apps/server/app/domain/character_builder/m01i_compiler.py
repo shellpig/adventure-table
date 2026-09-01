@@ -20,6 +20,7 @@ from app.domain.character_builder.m01i_validation import (
     apply_cantrip_retraining_for_m01i,
     validate_feature_grant_source_references,
     validate_final_feature_pool_dependencies,
+    validate_unique_feature_pool_selections,
 )
 from app.domain.character_builder.optional_class_features import (
     apply_feature_pool_retraining,
@@ -162,6 +163,7 @@ def compile_builder_draft(
         *compiled.validation.issues,
         *runtime.issues,
         *validate_optional_choices(draft, optional_choices),
+        *validate_unique_feature_pool_selections(draft, choices, runtime.registry),
     ]
 
     build = compiled.build_candidate
