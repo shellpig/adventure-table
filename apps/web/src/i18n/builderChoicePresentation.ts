@@ -26,6 +26,14 @@ const CHOICE_SUFFIX_ZH: Record<string, string> = {
   'content:lineage-legacy-skill': '祖源傳承技能',
   'content:lineage-legacy-movement': '祖源傳承移動方式',
   'content:infusion': '已知注法',
+  'content:optional-class-feature': '選用職業特性',
+  'content:optional-feature:cantrip': '戲法選擇',
+  'content:feature:optional-nested': '附帶特性選擇',
+  'content:optional-feature:retraining-action': '重訓',
+  'content:optional-feature:retraining-from:feature_pool': '要替換的選項',
+  'content:optional-feature:retraining-to:feature_pool': '新的選項',
+  'content:optional-feature:retraining-from:cantrip': '要替換的戲法',
+  'content:optional-feature:retraining-to:cantrip': '新的戲法',
 }
 
 const RACE_VARIANT_OPTION_ZH: Record<string, string> = {
@@ -143,6 +151,13 @@ export function builderChoiceOptionLabel(
   }
 
   if (option.reference_id) return nameFor(option.reference_id, option.label)
+
+  if (
+    choice.option_source === 'content:optional-feature:retraining-action' &&
+    option.branch_key === 'replace'
+  ) {
+    return '替換一個選項'
+  }
 
   if (choice.option_source === 'content:race-variant-replacement') {
     const label = RACE_VARIANT_OPTION_ZH[option.option_id]
