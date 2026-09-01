@@ -58,7 +58,6 @@ const COPY = {
     spellStoring: 'Spell-Storing Item',
     manual: 'Manual-resolution features',
     none: 'None',
-    addInfusion: 'Activate infusion',
     infusion: 'Infusion',
     targetItem: 'Target inventory item',
     armorPart: 'Arcane Armor part (only for Armor Modifications bonus slots)',
@@ -77,11 +76,12 @@ const COPY = {
     reviewHint: 'Review reflects the proposed immutable Build plus preserved Current State. Conflicts remain blocking and are never silently deleted.',
     charges: 'charges',
     remaining: 'remaining',
+    level: 'Lv',
   },
   'zh-TW': {
     eyebrow: 'M01-H · 奇械師進階狀態',
     title: '奇械師工作台',
-    reviewTitle: '奇械師 Review',
+    reviewTitle: '奇械師檢視',
     known: '已知注法',
     active: '啟用中的注法',
     activeCapacity: '啟用注法容量',
@@ -91,7 +91,6 @@ const COPY = {
     spellStoring: '儲法物品',
     manual: '需手動判定的能力',
     none: '無',
-    addInfusion: '啟用注法',
     infusion: '注法',
     targetItem: '目標物品欄項目',
     armorPart: '奧能裝甲部位（僅裝甲改造的額外注法槽需要）',
@@ -107,11 +106,45 @@ const COPY = {
     manualHint: '這裡追蹤狀態與規則資料；戰鬥、反應、隨機表與其他延後效果仍由玩家手動處理。',
     attunementBypass: '魔法物品專家的限制無視',
     noBypass: '目前等級沒有額外無視條件',
-    reviewHint: 'Review 同時反映預定的新角色配置與保留的即時狀態；衝突會阻擋確認，不會偷偷刪除狀態。',
+    reviewHint: '檢視內容同時反映預定的新角色配置與保留的即時狀態；衝突會阻擋確認，不會偷偷刪除狀態。',
     charges: '充能',
     remaining: '剩餘',
+    level: '等級',
   },
 } as const
+
+type PanelLocale = keyof typeof COPY
+
+const MODE_ZH: Record<string, string> = {
+  guardian: '守護者',
+  infiltrator: '滲透者',
+}
+
+const PART_ZH: Record<string, string> = {
+  armor: '胸甲',
+  boots: '靴子',
+  helmet: '頭盔',
+  special_weapon: '特殊武器',
+}
+
+const BYPASS_ZH: Record<string, string> = {
+  class: '職業需求',
+  race: '種族需求',
+  spell: '施法需求',
+  level: '等級需求',
+}
+
+function modeLabel(locale: PanelLocale, value: string): string {
+  return locale === 'zh-TW' ? MODE_ZH[value] ?? value : value.replaceAll('-', ' ')
+}
+
+function armorPartLabel(locale: PanelLocale, value: string): string {
+  return locale === 'zh-TW' ? PART_ZH[value] ?? value : value.replaceAll('_', ' ')
+}
+
+function bypassLabel(locale: PanelLocale, value: string): string {
+  return locale === 'zh-TW' ? BYPASS_ZH[value] ?? value : value.replaceAll('_', ' ')
+}
 
 function toActiveState(summary: ArtificerSummaryDTO): ActiveInfusionState[] {
   return summary.active_infusions.map((active) => ({
@@ -156,6 +189,7 @@ function ArtificerSummaryCards({
   ]
   const { nameFor, locale } = useContentPresentations(references)
   const copy = COPY[locale]
+  const effectiveArmorModel = armorModel || summary.armor_model
 
   return (
     <>
@@ -173,13 +207,17 @@ function ArtificerSummaryCards({
         <article className="artificer-card">
           <span>{copy.attunement}</span>
           <strong>{summary.attunement_capacity}</strong>
-          <p>{summary.attunement_requirement_bypasses.length ? `${copy.attunementBypass}: ${summary.attunement_requirement_bypasses.join(', ')}` : copy.noBypass}</p>
+          <p>
+            {summary.attunement_requirement_bypasses.length
+              ? `${copy.attunementBypass}: ${summary.attunement_requirement_bypasses.map((value) => bypassLabel(locale, value)).join('、')}`
+              : copy.noBypass}
+          </p>
         </article>
         {summary.armor_model_options.length ? (
           <article className="artificer-card">
             <span>{copy.armorModel}</span>
-            <strong>{armorModel || summary.armor_model || copy.none}</strong>
-            <p>{summary.armor_model_options.join(' / ')}</p>
+            <strong>{effectiveArmorModel ? modeLabel(locale, effectiveArmorModel) : copy.none}</strong>
+            <p>{summary.armor_model_options.map((value) => modeLabel(locale, value)).join(' / ')}</p>
           </article>
         ) : null}
       </div>
@@ -328,7 +366,7 @@ function ArtificerSheetPanel({
           <p className="eyebrow">{copy.eyebrow}</p>
           <h2>{nameFor(ARTIFICER_REF, copy.title)}</h2>
         </div>
-        <strong>Lv {summary.artificer_level}</strong>
+        <strong>{copy.level} {summary.artificer_level}</strong>
       </div>
 
       {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
@@ -342,7 +380,7 @@ function ArtificerSheetPanel({
               <div>
                 <strong>{nameFor(active.infusion_ref, active.infusion_name)}</strong>
                 <span>{nameFor(active.inventory_item_ref, active.inventory_item_name)}</span>
-                {active.arcane_armor_part ? <small>{active.arcane_armor_part}</small> : null}
+                {active.arcane_armor_part ? <small>{armorPartLabel(locale, active.arcane_armor_part)}</small> : null}
               </div>
               {active.resource ? (
                 <div className="artificer-inline-actions">
@@ -365,7 +403,7 @@ function ArtificerSheetPanel({
               <span>{copy.armorPart}</span>
               <select value={armorPart} disabled={busy} onChange={(event) => setArmorPart(event.target.value)}>
                 <option value="">—</option>
-                {summary.armor_modification_parts.map((part) => <option key={part} value={part}>{part}</option>)}
+                {summary.armor_modification_parts.map((part) => <option key={part} value={part}>{armorPartLabel(locale, part)}</option>)}
               </select>
             </label>
           ) : null}
@@ -402,7 +440,7 @@ function ArtificerSheetPanel({
           <h3>{copy.armorModel}</h3>
           <div className="artificer-inline-form">
             <select value={armorModel} disabled={busy} onChange={(event) => setArmorModel(event.target.value)}>
-              {summary.armor_model_options.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
+              {summary.armor_model_options.map((mode) => <option key={mode} value={mode}>{modeLabel(locale, mode)}</option>)}
             </select>
             <button type="button" className="button secondary compact" disabled={busy || !armorModel || armorModel === summary.armor_model} onClick={() => void onPatch({ feature_modes: { [ARMOR_MODEL_FEATURE_REF]: armorModel } })}>{copy.saveMode}</button>
           </div>
@@ -450,9 +488,13 @@ function ArtificerSheetPanel({
   )
 }
 
-function ArtificerReviewPanel({ review }: { review: ReviewWithArtificer }) {
-  const summary = review.derived_stats?.artificer
-  if (!summary) return null
+function ArtificerReviewPanel({
+  review,
+  summary,
+}: {
+  review: ReviewWithArtificer
+  summary: ArtificerSummaryDTO
+}) {
   const proposed = review.reconciliation?.proposed_state
   const active = activeStateFromReview(review)
   const armorModel = proposed?.feature_modes?.[ARMOR_MODEL_FEATURE_REF] ?? summary.armor_model
@@ -471,7 +513,7 @@ function ArtificerReviewPanel({ review }: { review: ReviewWithArtificer }) {
           <p className="eyebrow">{copy.eyebrow}</p>
           <h2>{copy.reviewTitle} · {nameFor(ARTIFICER_REF, 'Artificer')}</h2>
         </div>
-        <strong>Lv {summary.artificer_level}</strong>
+        <strong>{copy.level} {summary.artificer_level}</strong>
       </div>
       <ArtificerSummaryCards summary={summary} activeCount={active.length} armorModel={armorModel} />
       <section className="artificer-subsection">
@@ -528,11 +570,12 @@ export function CharacterBuilderRoutePage({ draftId }: { draftId: string }) {
     enabled: revision != null,
   })
   const review = reviewQuery.data as ReviewWithArtificer | undefined
+  const summary = review?.derived_stats?.artificer
 
   return (
     <>
       <CharacterBuilderPage draftId={draftId} />
-      {review?.derived_stats?.artificer ? <ArtificerReviewPanel review={review} /> : null}
+      {review && summary ? <ArtificerReviewPanel review={review} summary={summary} /> : null}
     </>
   )
 }
