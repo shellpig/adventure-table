@@ -82,14 +82,14 @@ def _validate_spell_relation(
 
 
 def validate_builder_content(registry: ContentRegistry) -> ContentRegistry:
-    """Validate Builder-dependent class fields and cross-pack spell relations.
+    """Validate TCE Builder fields and cross-pack spell relations.
 
-    Core content schemas intentionally remain permissive for imported source
-    payloads. This boundary model types the fields the Character Builder relies
-    on without forcing an all-at-once rewrite of every content schema.
+    Core imported schemas intentionally remain permissive. M01-G adds a typed
+    boundary for the new TCE class data without forcing legacy SRD packs through
+    a migration unrelated to Artificer.
     """
 
-    for class_entry in registry.list_kind("class"):
+    for class_entry in registry.list_kind("class", source="tce"):
         try:
             parsed = BuilderClassData.model_validate(class_entry.data)
         except ValidationError as exc:
@@ -98,7 +98,7 @@ def validate_builder_content(registry: ContentRegistry) -> ContentRegistry:
             ) from exc
         _validate_spell_relation(registry, class_entry, parsed.spell_list, "spell_list")
 
-    for subclass_entry in registry.list_kind("subclass"):
+    for subclass_entry in registry.list_kind("subclass", source="tce"):
         raw_spells = subclass_entry.data.get("spells")
         if raw_spells is None:
             continue
