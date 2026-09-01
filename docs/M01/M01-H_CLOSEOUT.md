@@ -21,7 +21,7 @@ M01-H — TCE Artificer Advanced Features & Infusions closeout scope：
 
 ## Verification Evidence
 
-2026-09-01 最終 code驗證，分支 `m01-h-artificer-advanced-features`，受測 HEAD `4225fb02b49a9b8f00fe68352d45b5b3274ea7b0`。
+2026-09-01 GitHub Actions code驗證，分支 `m01-h-artificer-advanced-features`，受測 HEAD `4225fb02b49a9b8f00fe68352d45b5b3274ea7b0`。
 
 ```text
 GitHub Actions — M01-H Non-E2E Regression #5
@@ -74,6 +74,45 @@ Playwright artifact
 m01h-playwright-results
 Artifact ID: 9794913218
 ```
+
+2026-09-01 本機關門複驗，分支 `m01-h-artificer-advanced-features`，受測 HEAD `fdfa58d2f3c517a0c17ab9e2e755213d20b059e0`：
+
+```text
+TCE installed reference audit
+MISSING_TCE_REFS []
+
+Backend pytest
+385 passed, 1 warning in 99.10s
+
+Localization authoring unit tests
+Ran 13 tests
+OK
+
+Fresh SQLite migration
+alembic upgrade head
+passed through 0006_character_archive
+
+Docker Compose
+docker compose config
+passed
+
+Frontend Vitest
+15 test files passed
+76 tests passed
+
+TypeScript / Vite
+npm run build
+passed
+
+Clean Docker full stack
+PostgreSQL + server migration/startup + Vite web + readiness
+passed
+
+Complete Playwright suite
+53 passed (2.5m)
+```
+
+本機第一次以既有預設 DB volume 跑 full E2E 時，4 個失敗均為同名測試角色／Draft 殘留導致的 Playwright strict locator 或 count failure。改用獨立 clean compose project / fresh volume 後，單一 P1-D spec 與完整 Playwright suite 均通過；判定為測試資料污染，不是 M01-H regression。
 
 Full-Stack E2E的H-specific browser smoke實際驗證：
 
