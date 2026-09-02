@@ -5,11 +5,18 @@
     "name": "Aura of Life",
     "source": "phb2014",
     "ruleset": "dnd5e-2014",
-    "provenance": {"rules_source": "Player's Handbook (2014)"},
+    "provenance": {
+      "rules_source": "Player's Handbook (2014)",
+      "reference_doc": "docs/暫用規則資訊/法術_PHB_非SRD內容.md",
+      "scope": "M01-K reuses M01-I identity and completes PHB spell presentation"
+    },
     "data": {
       "index": "aura-of-life",
       "name": "Aura of Life",
       "desc": ["Project a protective aura that helps nearby allies resist necrotic harm and remain in the fight."],
+      "casting_time": "1 action",
+      "range": "Self (30-foot radius)",
+      "duration": "Concentration, up to 10 minutes",
       "components": ["V"],
       "ritual": false,
       "concentration": true,
@@ -25,11 +32,18 @@
     "name": "Aura of Purity",
     "source": "phb2014",
     "ruleset": "dnd5e-2014",
-    "provenance": {"rules_source": "Player's Handbook (2014)"},
+    "provenance": {
+      "rules_source": "Player's Handbook (2014)",
+      "reference_doc": "docs/暫用規則資訊/法術_PHB_非SRD內容.md",
+      "scope": "M01-K reuses M01-I identity and completes PHB spell presentation"
+    },
     "data": {
       "index": "aura-of-purity",
       "name": "Aura of Purity",
       "desc": ["Surround nearby allies with an aura that wards against poison, disease, and several disabling conditions."],
+      "casting_time": "1 action",
+      "range": "Self (30-foot radius)",
+      "duration": "Concentration, up to 10 minutes",
       "components": ["V"],
       "ritual": false,
       "concentration": true,
@@ -45,11 +59,18 @@
     "name": "Aura of Vitality",
     "source": "phb2014",
     "ruleset": "dnd5e-2014",
-    "provenance": {"rules_source": "Player's Handbook (2014)"},
+    "provenance": {
+      "rules_source": "Player's Handbook (2014)",
+      "reference_doc": "docs/暫用規則資訊/法術_PHB_非SRD內容.md",
+      "scope": "M01-K reuses M01-I identity and completes PHB spell presentation"
+    },
     "data": {
       "index": "aura-of-vitality",
       "name": "Aura of Vitality",
       "desc": ["Create a mobile healing aura that lets you repeatedly restore hit points to creatures within it."],
+      "casting_time": "1 action",
+      "range": "Self (30-foot radius)",
+      "duration": "Concentration, up to 1 minute",
       "components": ["V"],
       "ritual": false,
       "concentration": true,
@@ -65,11 +86,18 @@
     "name": "Elemental Weapon",
     "source": "phb2014",
     "ruleset": "dnd5e-2014",
-    "provenance": {"rules_source": "Player's Handbook (2014)"},
+    "provenance": {
+      "rules_source": "Player's Handbook (2014)",
+      "reference_doc": "docs/暫用規則資訊/法術_PHB_非SRD內容.md",
+      "scope": "M01-K reuses M01-I identity; PHB class access excludes later Artificer overlay"
+    },
     "data": {
       "index": "elemental-weapon",
       "name": "Elemental Weapon",
       "desc": ["Temporarily make a nonmagical weapon magical, improving its attacks and adding chosen elemental damage."],
+      "casting_time": "1 action",
+      "range": "Touch",
+      "duration": "Concentration, up to 1 hour",
       "components": ["V", "S"],
       "ritual": false,
       "concentration": true,
@@ -85,11 +113,18 @@
     "name": "Power Word Heal",
     "source": "phb2014",
     "ruleset": "dnd5e-2014",
-    "provenance": {"rules_source": "Player's Handbook (2014)"},
+    "provenance": {
+      "rules_source": "Player's Handbook (2014)",
+      "reference_doc": "docs/暫用規則資訊/法術_PHB_非SRD內容.md",
+      "scope": "M01-K reuses M01-I identity and completes PHB spell presentation"
+    },
     "data": {
       "index": "power-word-heal",
       "name": "Power Word Heal",
       "desc": ["Fully restore a touched creature's hit points and end several severe disabling conditions."],
+      "casting_time": "1 action",
+      "range": "Touch",
+      "duration": "Instantaneous",
       "components": ["V", "S"],
       "ritual": false,
       "concentration": false,
@@ -105,11 +140,18 @@
     "name": "Searing Smite",
     "source": "phb2014",
     "ruleset": "dnd5e-2014",
-    "provenance": {"rules_source": "Player's Handbook (2014)"},
+    "provenance": {
+      "rules_source": "Player's Handbook (2014)",
+      "reference_doc": "docs/暫用規則資訊/法術_PHB_非SRD內容.md",
+      "scope": "M01-K reuses M01-I identity and completes PHB spell presentation"
+    },
     "data": {
       "index": "searing-smite",
       "name": "Searing Smite",
       "desc": ["Empower your next melee weapon hit with fire that can continue burning the target."],
+      "casting_time": "1 bonus action",
+      "range": "Self",
+      "duration": "Concentration, up to 1 minute",
       "components": ["V"],
       "ritual": false,
       "concentration": true,
