@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from app.content import load_default_content_registry
 from app.domain.character.schemas import AbilityScores, CharacterBuild, SubclassSelection
+from app.domain.character.validation import CharacterValidationError, validate_build_references
 from app.domain.character_builder.m01j_expertise import apply_m01j_skill_expertise
 from app.domain.character_builder.m01j_subclasses import m01j_choice_id
 from app.domain.character_builder.schemas import (
@@ -141,3 +142,16 @@ def test_character_build_rejects_expertise_without_proficiency() -> None:
             skill_expertise_refs=(ARCANA_REF,),
             hp_progression=(8,),
         )
+
+
+def test_build_reference_validation_rejects_unknown_expertise_skill() -> None:
+    registry = load_default_content_registry()
+    unknown = "srd5.1:skill:not-a-real-skill"
+    build = _build(
+        CLERIC_REF,
+        KNOWLEDGE_REF,
+        level=1,
+        skills=(unknown,),
+    ).model_copy(update={"skill_expertise_refs": (unknown,)})
+    with pytest.raises(CharacterValidationError, match="unknown content reference"):
+        validate_build_references(build, registry)
