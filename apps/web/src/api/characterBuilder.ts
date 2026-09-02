@@ -1,3 +1,4 @@
+import { installM01KLocalizedBuilderPayload } from '../i18n/m01kBuilderMessages'
 import {
   createLocalizedRequestError,
   installDynamicLocalizedBuilderPayload,
@@ -353,7 +354,9 @@ async function builderRequest<T>(input: RequestInfo | URL, init?: RequestInit): 
     throw createLocalizedRequestError(code, response.status, message)
   }
   if (response.status === 204) return undefined as T
-  return installDynamicLocalizedBuilderPayload((await response.json()) as T)
+  return installM01KLocalizedBuilderPayload(
+    installDynamicLocalizedBuilderPayload((await response.json()) as T),
+  )
 }
 
 export function listCharacters(): Promise<CharacterListItem[]> {
