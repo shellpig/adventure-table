@@ -22,7 +22,9 @@ from app.domain.character_builder.m01i_validation import (
     validate_final_feature_pool_dependencies,
     validate_unique_feature_pool_selections,
 )
-from app.domain.character_builder.m01j_subclasses import (
+from app.domain.character_builder.m01j_extension import (
+    apply_m01j_spellcasting_build,
+    apply_m01j_spellcasting_summary,
     apply_m01j_subclass_runtime,
     prepare_m01j_subclasses,
 )
@@ -113,10 +115,10 @@ def compile_builder_draft(
 ) -> BuilderCompileResult:
     """Extend the established compiler with M01-I and M01-J data-driven rules.
 
-    P0/P1 remains the core compiler. M01-J contributes an active-subclass spell
-    overlay and persistent subclass choices; M01-I then composes its optional
-    class-feature overlay on top. This keeps Direct Create, Level Up and
-    Multiclass on the same progression/compiler path.
+    P0/P1 remains the core compiler. M01-J contributes active-subclass spell
+    overlays, permanent subclass grants/choices and PHB third-caster profiles;
+    M01-I then composes its optional class-feature overlay on top. Direct Create,
+    Level Up and Multiclass therefore remain on one progression/compiler path.
     """
 
     m01j = prepare_m01j_subclasses(draft, registry)
@@ -250,15 +252,21 @@ def compile_builder_draft(
             }
         )
         build = apply_m01j_subclass_runtime(build, m01j)
+        build = apply_m01j_spellcasting_build(build, m01j)
         build = _derive_sources(build)
-        # Validate again after J has appended its selected option provenance.
+        # Validate again after J has appended selected option provenance/grants.
         issues.extend(validate_feature_grant_source_references(build, runtime.registry))
         issues.extend(validate_final_feature_pool_dependencies(build, runtime.registry))
 
+    resolved_summary = apply_m01j_spellcasting_summary(
+        compiled.resolved_summary,
+        m01j,
+        build,
+    )
     validation = make_validation_result(tuple(issues))
     return BuilderCompileResult(
         build_candidate=build,
-        resolved_summary=compiled.resolved_summary,
+        resolved_summary=resolved_summary,
         choices=choices,
         validation=validation,
         starting_equipment=compiled.starting_equipment,
