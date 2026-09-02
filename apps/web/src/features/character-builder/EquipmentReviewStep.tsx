@@ -328,7 +328,7 @@ export function EquipmentReviewStep({
         ),
       ]
     : []
-  const { nameFor, fieldFor } = useContentPresentations(
+  const { nameFor, fieldFor, locale } = useContentPresentations(
     reviewReferences,
     review ? grantPresentationFields(review.resolved_summary.grants) : {},
   )
@@ -435,9 +435,11 @@ export function EquipmentReviewStep({
                     {row.map((grant, index) => (
                       <div key={`${grant.source_ref}:${grant.reference_id ?? grant.label}:${index}`}>
                         <span>
-                          {GRANT_KIND_KEYS[grant.kind]
-                            ? t(GRANT_KIND_KEYS[grant.kind])
-                            : grant.kind}
+                          {grant.kind === 'feat'
+                            ? locale === 'zh-TW' ? '專長' : 'feat'
+                            : GRANT_KIND_KEYS[grant.kind]
+                              ? t(GRANT_KIND_KEYS[grant.kind])
+                              : grant.kind}
                         </span>
                         <strong>
                           {grantDisplayName(
