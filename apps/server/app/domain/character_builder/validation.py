@@ -198,9 +198,16 @@ def _validate_builder_choices(
             )
             continue
 
+        tracks_starting_duplicates = not (choice.option_source or "").startswith(
+            "content:feature:"
+        )
         for option_id in selected:
             option = option_by_id[option_id]
-            if option.reference_id is not None and option.category != "ability_bonus":
+            if (
+                tracks_starting_duplicates
+                and option.reference_id is not None
+                and option.category != "ability_bonus"
+            ):
                 selected_reference_ids.append((option.reference_id, path))
 
     duplicate_refs = {
