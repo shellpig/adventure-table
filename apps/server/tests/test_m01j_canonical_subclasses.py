@@ -12,6 +12,10 @@ from app.domain.character_builder.schemas import (
     BuilderLevelChoice,
     BuilderMode,
 )
+from app.domain.character_builder.structural import (
+    build_structural_choices,
+    compile_structural_selections,
+)
 
 
 def _draft(payload: BuilderDraftPayload) -> BuilderDraft:
@@ -57,8 +61,19 @@ def _payload(
     )
 
 
-def _choice(runtime, suffix: str):
+def _m01j_choice(runtime, suffix: str):
     return next(choice for choice in runtime.choices if choice.choice_id.endswith(suffix))
+
+
+def _structural_choice(choices, source_ref: str):
+    matches = [
+        choice
+        for choice in choices
+        if choice.source_ref == source_ref
+        and (choice.option_source or "").startswith("content:feature:")
+    ]
+    assert len(matches) == 1
+    return matches[0]
 
 
 def test_lore_canonical_identity_has_bonus_skills_and_magical_secrets() -> None:
@@ -74,8 +89,8 @@ def test_lore_canonical_identity_has_bonus_skills_and_magical_secrets() -> None:
         ),
         registry,
     )
-    skills = _choice(runtime, "lore-bonus-proficiencies")
-    secrets = _choice(runtime, "additional-magical-secrets")
+    skills = _m01j_choice(runtime, "lore-bonus-proficiencies")
+    secrets = _m01j_choice(runtime, "additional-magical-secrets")
     assert skills.choose_count == 3
     assert secrets.choose_count == 2
     assert all(
@@ -84,86 +99,72 @@ def test_lore_canonical_identity_has_bonus_skills_and_magical_secrets() -> None:
     )
 
 
-def test_land_choice_uses_existing_srd_feature_prerequisite_identity() -> None:
+def test_land_choice_reuses_structural_feature_and_compiles_feature_ref() -> None:
     registry = load_default_content_registry()
-    runtime = prepare_m01j_subclasses(
-        _draft(
-            _payload(
-                "druid",
-                "srd5.1:subclass:land",
-                target_level=3,
-                acquisition_level=2,
-            )
-        ),
-        registry,
+    payload = _payload(
+        "druid",
+        "srd5.1:subclass:land",
+        target_level=3,
+        acquisition_level=2,
     )
-    choice = _choice(runtime, "circle-of-the-land-terrain")
+    choices = build_structural_choices(_draft(payload), registry, starting_abilities=None)
+    choice = _structural_choice(choices, "srd5.1:feature:circle-of-the-land")
     arctic = next(
-        option for option in choice.options if option.option_id == "srd5.1:feature:circle-of-the-land-arctic"
+        option
+        for option in choice.options
+        if option.option_id == "srd5.1:feature:circle-of-the-land-arctic"
     )
-    selected = {
-        choice.choice_id: BuilderChoiceSelection(
-            choice_id=choice.choice_id,
-            source_ref=choice.source_ref,
-            selected_option_ids=(arctic.option_id,),
-        )
-    }
-    selected_runtime = prepare_m01j_subclasses(
-        _draft(
-            _payload(
-                "druid",
-                "srd5.1:subclass:land",
-                target_level=3,
-                acquisition_level=2,
-                selections=selected,
-            )
-        ),
+    selection = BuilderChoiceSelection(
+        choice_id=choice.choice_id,
+        source_ref=choice.source_ref,
+        selected_option_ids=(arctic.option_id,),
+    )
+    selected_payload = payload.model_copy(
+        update={"choice_selections": {choice.choice_id: selection}}
+    )
+    selected_draft = _draft(selected_payload)
+    selected_choices = build_structural_choices(
+        selected_draft,
         registry,
+        starting_abilities=None,
     )
-    assert arctic.option_id in selected_runtime.base.base.selected_option_feature_refs
+    compiled = compile_structural_selections(selected_draft, registry, selected_choices)
+    assert arctic.option_id in compiled.feature_refs
 
 
-def test_hunter_has_four_server_authoritative_persistent_choices() -> None:
+def test_hunter_reuses_four_structural_persistent_choices() -> None:
     registry = load_default_content_registry()
-    runtime = prepare_m01j_subclasses(
-        _draft(
-            _payload(
-                "ranger",
-                "srd5.1:subclass:hunter",
-                target_level=15,
-                acquisition_level=3,
-            )
-        ),
-        registry,
+    payload = _payload(
+        "ranger",
+        "srd5.1:subclass:hunter",
+        target_level=15,
+        acquisition_level=3,
     )
+    choices = build_structural_choices(_draft(payload), registry, starting_abilities=None)
     expected = {
-        "hunters-prey": 3,
-        "defensive-tactics": 3,
-        "multiattack": 2,
-        "superior-hunters-defense": 3,
+        "srd5.1:feature:hunters-prey": 3,
+        "srd5.1:feature:defensive-tactics": 3,
+        "srd5.1:feature:multiattack": 2,
+        "srd5.1:feature:superior-hunters-defense": 3,
     }
-    for suffix, option_count in expected.items():
-        choice = _choice(runtime, suffix)
+    for source_ref, option_count in expected.items():
+        choice = _structural_choice(choices, source_ref)
         assert choice.choose_count == 1
         assert len(choice.options) == option_count
 
 
-def test_draconic_has_one_of_ten_ancestors_and_fixed_draconic_language() -> None:
+def test_draconic_reuses_structural_ancestor_and_adds_fixed_language() -> None:
     registry = load_default_content_registry()
     subclass = registry.get("srd5.1:subclass:draconic")
     assert "srd5.1:language:draconic" in subclass.data["fixed_grants"]["languages"]
-    runtime = prepare_m01j_subclasses(
-        _draft(
-            _payload(
-                "sorcerer",
-                "srd5.1:subclass:draconic",
-                target_level=1,
-                acquisition_level=1,
-            )
-        ),
-        registry,
+    payload = _payload(
+        "sorcerer",
+        "srd5.1:subclass:draconic",
+        target_level=1,
+        acquisition_level=1,
     )
-    ancestor = _choice(runtime, "dragon-ancestor")
+    choices = build_structural_choices(_draft(payload), registry, starting_abilities=None)
+    ancestor = _structural_choice(choices, "srd5.1:feature:dragon-ancestor")
     assert ancestor.choose_count == 1
     assert len(ancestor.options) == 10
 
@@ -181,7 +182,7 @@ def test_champion_second_style_shares_fighting_style_uniqueness_pool() -> None:
         ),
         registry,
     )
-    choice = _choice(runtime, "champion-additional-fighting-style")
+    choice = _m01j_choice(runtime, "champion-additional-fighting-style")
     assert choice.choose_count == 1
     assert len(choice.options) >= 6
     for option in choice.options:
