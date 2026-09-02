@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
+from hashlib import sha1
 from typing import Any
 
 from app.content.identity import parse_stable_key, reference_to_stable_key, stable_key_is_kind
 from app.content.registry import ContentRegistry
-from app.domain.character.schemas import CharacterBuild
+from app.domain.character.schemas import CharacterBuild, SpellAccessEntry
 from app.domain.character_builder import m01j_extension as _extension
 from app.domain.character_builder.m01j_subclasses import m01j_choice_id
 from app.domain.character_builder.schemas import (
@@ -24,6 +25,17 @@ from app.domain.character_builder.schemas import (
 class ConditionalGrant:
     target: str
     refs: tuple[str, ...]
+    source_ref: str | None = None
+    access_type: str | None = None
+
+
+@dataclass(frozen=True)
+class SpellReplacement:
+    subclass_ref: str
+    original_spell_ref: str
+    replacement_spell_ref: str
+    access_type: str
+    minimum_class_level: int
 
 
 @dataclass(frozen=True)
@@ -33,6 +45,7 @@ class M01JSubclassRuntime:
     choices: tuple[BuilderChoice, ...]
     issues: tuple[BuilderIssue, ...]
     conditional_grants: tuple[ConditionalGrant, ...]
+    spell_replacements: tuple[SpellReplacement, ...]
 
 
 def _issue(code: str, path: str, message: str, *refs: str) -> BuilderIssue:
@@ -92,6 +105,24 @@ def _draft_skill_refs(draft: BuilderDraft, registry: ContentRegistry) -> set[str
     return refs
 
 
+def _draft_spell_refs(draft: BuilderDraft, registry: ContentRegistry) -> set[str]:
+    refs: set[str] = set()
+    for selection in draft.draft_payload.spell_choices.values():
+        for ref in (
+            *selection.cantrip_keys,
+            *selection.known_spell_keys,
+            *selection.spellbook_spell_keys,
+            *selection.prepared_spell_keys,
+        ):
+            if registry.get_optional(ref) is not None and stable_key_is_kind(ref, "spell"):
+                refs.add(ref)
+    for selection in draft.draft_payload.choice_selections.values():
+        for ref in selection.selected_option_ids:
+            if registry.get_optional(ref) is not None and stable_key_is_kind(ref, "spell"):
+                refs.add(ref)
+    return refs
+
+
 def _starting_save_refs(draft: BuilderDraft, registry: ContentRegistry) -> set[str]:
     if not draft.draft_payload.level_choices:
         return set()
@@ -117,7 +148,11 @@ def _selection(draft: BuilderDraft, choice_id: str) -> tuple[str, ...]:
     return value.selected_option_ids if value is not None else ()
 
 
-def _choice_options(registry: ContentRegistry, refs: tuple[str, ...], category: str) -> tuple[BuilderChoiceOption, ...]:
+def _choice_options(
+    registry: ContentRegistry,
+    refs: tuple[str, ...],
+    category: str,
+) -> tuple[BuilderChoiceOption, ...]:
     return tuple(
         BuilderChoiceOption(
             option_id=ref,
@@ -131,16 +166,293 @@ def _choice_options(registry: ContentRegistry, refs: tuple[str, ...], category: 
     )
 
 
+def _record_minimum_level(record: dict[str, Any]) -> int:
+    prerequisites = record.get("prerequisites")
+    if not isinstance(prerequisites, list):
+        return 1
+    minimum = 1
+    for prerequisite in prerequisites:
+        if not isinstance(prerequisite, dict) or prerequisite.get("type") != "level":
+            continue
+        index = prerequisite.get("index")
+        if not isinstance(index, str):
+            continue
+        parts = index.rsplit("-", 1)
+        if len(parts) != 2:
+            continue
+        try:
+            minimum = max(minimum, int(parts[1]))
+        except ValueError:
+            continue
+    return minimum
+
+
+def _spell_on_class_list(registry: ContentRegistry, spell: Any, class_ref: str) -> bool:
+    raw_classes = spell.data.get("classes")
+    if isinstance(raw_classes, list):
+        for reference in raw_classes:
+            if not isinstance(reference, dict):
+                continue
+            try:
+                if reference_to_stable_key(reference, kinds={"class"}) == class_ref:
+                    return True
+            except ValueError:
+                continue
+    class_entry = registry.get_optional(class_ref)
+    dedicated = class_entry.data.get("spell_list") if class_entry is not None else None
+    if isinstance(dedicated, list):
+        for reference in dedicated:
+            if not isinstance(reference, dict):
+                continue
+            try:
+                if reference_to_stable_key(reference, kinds={"spell"}) == spell.key:
+                    return True
+            except ValueError:
+                continue
+    return False
+
+
+def _spell_school_index(spell: Any) -> str | None:
+    raw = spell.data.get("school")
+    if not isinstance(raw, dict):
+        return None
+    try:
+        key = reference_to_stable_key(raw, kinds={"magic-school"})
+    except ValueError:
+        key = None
+    if key is not None:
+        return parse_stable_key(key).index
+    index = raw.get("index")
+    return index if isinstance(index, str) else None
+
+
+def _replacement_choice_key(original_spell_ref: str, minimum_level: int) -> str:
+    parsed = parse_stable_key(original_spell_ref, kinds={"spell"})
+    return f"subclass-spell-replacement-{minimum_level}-{parsed.source}-{parsed.index}"
+
+
+def _active_spell_replacement_rows(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+) -> tuple[tuple[str, str, int, dict[str, Any], dict[str, Any], str, int], ...]:
+    class_levels, selected_subclasses = _class_state(draft)
+    result: list[tuple[str, str, int, dict[str, Any], dict[str, Any], str, int]] = []
+    for class_ref, subclass_ref in selected_subclasses.items():
+        subclass = registry.get_optional(subclass_ref)
+        if subclass is None:
+            continue
+        spec = subclass.data.get("subclass_spell_replacement")
+        rows = subclass.data.get("spells")
+        if not isinstance(spec, dict) or not isinstance(rows, list):
+            continue
+        class_level = class_levels[class_ref]
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            minimum = _record_minimum_level(row)
+            if minimum > class_level:
+                continue
+            raw_spell = row.get("spell")
+            if not isinstance(raw_spell, dict):
+                continue
+            try:
+                spell_ref = reference_to_stable_key(raw_spell, kinds={"spell"})
+            except ValueError:
+                spell_ref = None
+            if spell_ref is None or registry.get_optional(spell_ref) is None:
+                continue
+            result.append(
+                (
+                    class_ref,
+                    subclass_ref,
+                    class_level,
+                    spec,
+                    row,
+                    spell_ref,
+                    minimum,
+                )
+            )
+    return tuple(result)
+
+
+def _active_spell_replacement_choice_ids(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+) -> set[str]:
+    return {
+        m01j_choice_id(
+            subclass_ref,
+            _replacement_choice_key(original_spell_ref, minimum),
+        )
+        for _class_ref, subclass_ref, _class_level, _spec, _row, original_spell_ref, minimum
+        in _active_spell_replacement_rows(draft, registry)
+    }
+
+
+def _replacement_spell_options(
+    registry: ContentRegistry,
+    original_spell_ref: str,
+    spec: dict[str, Any],
+) -> tuple[str, ...]:
+    original = registry.get(original_spell_ref)
+    spell_level = original.data.get("level")
+    eligible_classes = tuple(
+        ref for ref in spec.get("eligible_class_refs", ()) if isinstance(ref, str)
+    )
+    allowed_schools = {
+        value for value in spec.get("school_indices", ()) if isinstance(value, str)
+    }
+    if not isinstance(spell_level, int) or not eligible_classes or not allowed_schools:
+        return (original_spell_ref,)
+    refs = [original_spell_ref]
+    for spell in registry.list_kind("spell"):
+        if spell.key == original_spell_ref or spell.data.get("level") != spell_level:
+            continue
+        if _spell_school_index(spell) not in allowed_schools:
+            continue
+        if not any(_spell_on_class_list(registry, spell, class_ref) for class_ref in eligible_classes):
+            continue
+        refs.append(spell.key)
+    return tuple(dict.fromkeys(refs))
+
+
+def _compile_spell_replacement_choices(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+) -> tuple[
+    tuple[BuilderChoice, ...],
+    tuple[BuilderIssue, ...],
+    tuple[SpellReplacement, ...],
+    set[str],
+]:
+    choices: list[BuilderChoice] = []
+    issues: list[BuilderIssue] = []
+    replacements: list[SpellReplacement] = []
+    active_ids: set[str] = set()
+    final_by_subclass: dict[str, list[tuple[str, int, str]]] = defaultdict(list)
+    class_level_by_subclass: dict[str, int] = {}
+
+    for (
+        _class_ref,
+        subclass_ref,
+        class_level,
+        spec,
+        row,
+        original_spell_ref,
+        minimum,
+    ) in _active_spell_replacement_rows(draft, registry):
+        class_level_by_subclass[subclass_ref] = class_level
+        choice_key = _replacement_choice_key(original_spell_ref, minimum)
+        choice_id = m01j_choice_id(subclass_ref, choice_key)
+        active_ids.add(choice_id)
+        refs = _replacement_spell_options(registry, original_spell_ref, spec)
+        selection = draft.draft_payload.choice_selections.get(choice_id)
+        selected = selection.selected_option_ids if selection is not None else ()
+        choices.append(
+            BuilderChoice(
+                choice_id=choice_id,
+                label=f"{registry.get(subclass_ref).name} — replace {registry.get(original_spell_ref).name}",
+                source_ref=subclass_ref,
+                required=False,
+                choose_count=1,
+                option_source="content:m01-j-subclass-spell-replacement",
+                options=_choice_options(registry, refs, "spell"),
+                selected_option_ids=selected,
+            )
+        )
+
+        final_ref = original_spell_ref
+        if selection is not None:
+            if len(selected) != 1:
+                issues.append(
+                    _issue(
+                        "invalid_subclass_spell_replacement_count",
+                        f"draft_payload.choice_selections.{choice_id}",
+                        "A subclass spell replacement must select exactly one final spell.",
+                        subclass_ref,
+                    )
+                )
+            elif selected[0] not in refs:
+                issues.append(
+                    _issue(
+                        "illegal_subclass_spell_replacement",
+                        f"draft_payload.choice_selections.{choice_id}",
+                        "The replacement spell must have the same spell level and match the feature's class/school restrictions.",
+                        subclass_ref,
+                        selected[0],
+                    )
+                )
+            else:
+                final_ref = selected[0]
+
+        final_by_subclass[subclass_ref].append((final_ref, minimum, original_spell_ref))
+        if final_ref != original_spell_ref:
+            replacements.append(
+                SpellReplacement(
+                    subclass_ref=subclass_ref,
+                    original_spell_ref=original_spell_ref,
+                    replacement_spell_ref=final_ref,
+                    access_type=str(row.get("access_type") or "granted"),
+                    minimum_class_level=minimum,
+                )
+            )
+
+    for subclass_ref, final_rows in final_by_subclass.items():
+        final_refs = [ref for ref, _minimum, _original in final_rows]
+        duplicates = sorted(ref for ref, count in Counter(final_refs).items() if count > 1)
+        if duplicates:
+            issues.append(
+                _issue(
+                    "duplicate_subclass_replacement_spell",
+                    "draft_payload.choice_selections",
+                    "A replaceable subclass spell list cannot contain the same final spell more than once.",
+                    subclass_ref,
+                    *duplicates,
+                )
+            )
+
+        class_level = class_level_by_subclass[subclass_ref]
+        changed = [
+            replacement
+            for replacement in replacements
+            if replacement.subclass_ref == subclass_ref
+        ]
+        for threshold in sorted(
+            {replacement.minimum_class_level for replacement in changed},
+            reverse=True,
+        ):
+            needed = sum(
+                1 for replacement in changed if replacement.minimum_class_level >= threshold
+            )
+            available_level_ups = class_level - threshold + 1
+            if needed > available_level_ups:
+                issues.append(
+                    _issue(
+                        "subclass_spell_replacement_timing_exceeded",
+                        "draft_payload.choice_selections",
+                        "The final subclass spell list requires more replacements than the level-by-level feature permits.",
+                        subclass_ref,
+                    )
+                )
+                break
+
+    return tuple(choices), tuple(issues), tuple(replacements), active_ids
+
+
 def _known_final_choice_ids() -> set[str]:
     return {
         m01j_choice_id("phb2014:subclass:totem-warrior", "tiger-aspect-skills"),
         m01j_choice_id("scag:subclass:purple-dragon-knight", "royal-envoy-fallback-skill"),
         m01j_choice_id("xge:subclass:samurai", "elegant-courtier-fallback-save"),
+        m01j_choice_id("phb2014:subclass:illusion", "improved-minor-illusion-fallback-cantrip"),
     }
 
 
-def _draft_without_final_choices(draft: BuilderDraft) -> BuilderDraft:
-    final_ids = _known_final_choice_ids()
+def _draft_without_final_choices(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+) -> BuilderDraft:
+    final_ids = _known_final_choice_ids() | _active_spell_replacement_choice_ids(draft, registry)
     selections = {
         choice_id: value
         for choice_id, value in draft.draft_payload.choice_selections.items()
@@ -165,7 +477,11 @@ def _active_totem_tiger(
         return False
     choice_id = m01j_choice_id("phb2014:subclass:totem-warrior", "aspect-of-the-beast")
     selected = _selection(draft, choice_id)
-    return len(selected) == 1 and registry.get_optional(selected[0]) is not None and registry.get(selected[0]).name == "Tiger"
+    return (
+        len(selected) == 1
+        and registry.get_optional(selected[0]) is not None
+        and registry.get(selected[0]).name == "Tiger"
+    )
 
 
 def _compile_conditional_choices(
@@ -174,6 +490,7 @@ def _compile_conditional_choices(
 ) -> tuple[tuple[BuilderChoice, ...], tuple[BuilderIssue, ...], tuple[ConditionalGrant, ...], set[str]]:
     class_levels, selected_subclasses = _class_state(draft)
     known_skills = _draft_skill_refs(draft, registry)
+    known_spells = _draft_spell_refs(draft, registry)
     known_saves = _starting_save_refs(draft, registry)
     choices: list[BuilderChoice] = []
     issues: list[BuilderIssue] = []
@@ -300,18 +617,88 @@ def _compile_conditional_choices(
             else:
                 grants.append(ConditionalGrant("saving_throw", selected))
 
+    illusion_class_ref = "srd5.1:class:wizard"
+    illusion_ref = "phb2014:subclass:illusion"
+    if (
+        selected_subclasses.get(illusion_class_ref) == illusion_ref
+        and class_levels[illusion_class_ref] >= 2
+    ):
+        minor_illusion = "srd5.1:spell:minor-illusion"
+        if minor_illusion not in known_spells:
+            grants.append(
+                ConditionalGrant(
+                    "spell",
+                    (minor_illusion,),
+                    source_ref=illusion_ref,
+                    access_type="granted",
+                )
+            )
+        else:
+            choice_id = m01j_choice_id(
+                illusion_ref,
+                "improved-minor-illusion-fallback-cantrip",
+            )
+            active_ids.add(choice_id)
+            refs = tuple(
+                spell.key
+                for spell in registry.list_kind("spell")
+                if spell.data.get("level") == 0
+                and spell.key not in known_spells
+                and _spell_on_class_list(registry, spell, illusion_class_ref)
+            )
+            refs = tuple(sorted(dict.fromkeys(refs)))
+            selected = _selection(draft, choice_id)
+            choices.append(
+                BuilderChoice(
+                    choice_id=choice_id,
+                    label="Improved Minor Illusion — bonus Wizard cantrip",
+                    source_ref=illusion_ref,
+                    required=True,
+                    choose_count=1,
+                    option_source="content:m01-j-conditional-grant",
+                    options=_choice_options(registry, refs, "spell"),
+                    selected_option_ids=selected,
+                )
+            )
+            if len(selected) != 1 or selected[0] not in refs:
+                issues.append(
+                    _issue(
+                        "invalid_improved_minor_illusion_cantrip",
+                        f"draft_payload.choice_selections.{choice_id}",
+                        "Improved Minor Illusion requires one different Wizard cantrip when Minor Illusion is already known.",
+                        *selected,
+                    )
+                )
+            else:
+                grants.append(
+                    ConditionalGrant(
+                        "spell",
+                        selected,
+                        source_ref=illusion_ref,
+                        access_type="granted",
+                    )
+                )
+
     return tuple(choices), tuple(issues), tuple(grants), active_ids
 
 
 def prepare_m01j_subclasses(draft: BuilderDraft, registry: ContentRegistry) -> M01JSubclassRuntime:
-    base = _extension.prepare_m01j_subclasses(_draft_without_final_choices(draft), registry)
+    base = _extension.prepare_m01j_subclasses(
+        _draft_without_final_choices(draft, registry),
+        registry,
+    )
     conditional_choices, conditional_issues, grants, active_final_ids = _compile_conditional_choices(
         draft,
         registry,
     )
+    replacement_choices, replacement_issues, replacements, active_replacement_ids = (
+        _compile_spell_replacement_choices(draft, registry)
+    )
     issues = list(base.issues)
     # The extension saw final-runtime selections removed, so it cannot identify
-    # stale conditional selections. Own that validation here.
+    # stale static conditional selections. Dynamic replacement selections that
+    # are inactive are intentionally left visible to the extension so its
+    # generic stale-M01-J validation catches them.
     for choice_id, selection in draft.draft_payload.choice_selections.items():
         if choice_id in _known_final_choice_ids() and choice_id not in active_final_ids:
             issues.append(
@@ -323,12 +710,14 @@ def prepare_m01j_subclasses(draft: BuilderDraft, registry: ContentRegistry) -> M
                 )
             )
     issues.extend(conditional_issues)
+    issues.extend(replacement_issues)
     return M01JSubclassRuntime(
         base=base,
         registry=base.registry,
-        choices=tuple((*base.choices, *conditional_choices)),
+        choices=tuple((*base.choices, *conditional_choices, *replacement_choices)),
         issues=tuple(issues),
         conditional_grants=grants,
+        spell_replacements=replacements,
     )
 
 
@@ -362,6 +751,36 @@ def _apply_branch_progression(build: CharacterBuild, registry: ContentRegistry) 
     return tuple(dict.fromkeys(refs))
 
 
+def _conditional_spell_entry_id(
+    subclass_ref: str,
+    spell_ref: str,
+    access_type: str,
+) -> str:
+    subclass = parse_stable_key(subclass_ref, kinds={"subclass"})
+    spell = parse_stable_key(spell_ref, kinds={"spell"})
+    digest = sha1(
+        f"conditional|{subclass_ref}|{spell_ref}|{access_type}".encode("utf-8")
+    ).hexdigest()[:10]
+    return f"m01j:{subclass.source}:{subclass.index}:{access_type}:{spell.index}:{digest}"[:120]
+
+
+def _append_conditional_spell(
+    spell_entries: dict[str, SpellAccessEntry],
+    *,
+    subclass_ref: str,
+    spell_ref: str,
+    access_type: str,
+) -> None:
+    entry = SpellAccessEntry(
+        entry_id=_conditional_spell_entry_id(subclass_ref, spell_ref, access_type),
+        spell_key=spell_ref,
+        source_type="subclass",
+        source_key=subclass_ref,
+        access_type=access_type,
+    )
+    spell_entries[entry.entry_id] = entry
+
+
 def apply_m01j_subclass_runtime(
     build: CharacterBuild,
     runtime: M01JSubclassRuntime,
@@ -369,16 +788,45 @@ def apply_m01j_subclass_runtime(
     build = _extension.apply_m01j_subclass_runtime(build, runtime.base)
     skills = list(build.skill_choices)
     saves = list(build.saving_throw_proficiencies)
+    spell_entries = {entry.entry_id: entry for entry in build.spell_access_entries}
     for grant in runtime.conditional_grants:
         if grant.target == "skill":
             skills.extend(grant.refs)
         elif grant.target == "saving_throw":
             saves.extend(grant.refs)
+        elif grant.target == "spell" and grant.source_ref is not None:
+            for spell_ref in grant.refs:
+                _append_conditional_spell(
+                    spell_entries,
+                    subclass_ref=grant.source_ref,
+                    spell_ref=spell_ref,
+                    access_type=grant.access_type or "granted",
+                )
+
+    for replacement in runtime.spell_replacements:
+        remove_ids = [
+            entry_id
+            for entry_id, entry in spell_entries.items()
+            if entry.source_type == "subclass"
+            and entry.source_key == replacement.subclass_ref
+            and entry.spell_key == replacement.original_spell_ref
+            and entry.access_type == replacement.access_type
+        ]
+        for entry_id in remove_ids:
+            spell_entries.pop(entry_id, None)
+        _append_conditional_spell(
+            spell_entries,
+            subclass_ref=replacement.subclass_ref,
+            spell_ref=replacement.replacement_spell_ref,
+            access_type=replacement.access_type,
+        )
+
     return build.model_copy(
         update={
             "feature_refs": _apply_branch_progression(build, runtime.registry),
             "skill_choices": tuple(dict.fromkeys(skills)),
             "saving_throw_proficiencies": tuple(dict.fromkeys(saves)),
+            "spell_access_entries": tuple(spell_entries.values()),
         }
     )
 
