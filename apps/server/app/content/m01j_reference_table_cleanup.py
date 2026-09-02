@@ -38,6 +38,18 @@ def _validate_resolved_spell_reference_kinds(registry: M01JReferenceRegistry) ->
                     )
 
 
+def _replace_overlay_entry(registry: M01JReferenceRegistry, entry: object) -> None:
+    """Replace an overlay entry without changing supplemental/override precedence."""
+
+    key = getattr(entry, "key", None)
+    if not isinstance(key, str):
+        raise ContentValidationError("M01-J table cleanup received an invalid overlay entry")
+    if key in registry.supplemental:
+        registry.supplemental[key] = entry
+    else:
+        registry.overrides[key] = entry
+
+
 def apply_m01j_reference_table_cleanup(registry: ContentRegistry) -> ContentRegistry:
     """Clean parser-only table artifacts and validate generated spell identity kinds.
 
@@ -83,7 +95,10 @@ def apply_m01j_reference_table_cleanup(registry: ContentRegistry) -> ContentRegi
     if removed:
         data = dict(subclass.data)
         data["spells"] = cleaned
-        registry.overrides[subclass.key] = subclass.model_copy(update={"data": data})
+        _replace_overlay_entry(
+            registry,
+            subclass.model_copy(update={"data": data}),
+        )
 
     _validate_resolved_spell_reference_kinds(registry)
     return registry
