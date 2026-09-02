@@ -73,15 +73,17 @@ def _is_extension_selection(
     )
 
 
+def _is_extension_spell_profile(profile_id: str) -> bool:
+    return profile_id.startswith("subclass:phb2014:")
+
+
 def _core_draft(draft: BuilderDraft, registry: ContentRegistry) -> BuilderDraft:
     """Hide extension-owned selections from the pre-M01-I/J compiler.
 
     The core compiler must still see parent choices such as the SRD Fighter
     Fighting Style selection; it must not see optional-feature toggles, nested
-    children, retraining controls, or M01-J subclass child choices that only the
-    extension compilers understand. Otherwise the legacy draft-selection
-    fallback correctly—but undesirably for an extension-owned choice—flags them
-    as unknown/illegal.
+    children, retraining controls, M01-J subclass child choices, or M01-J
+    subclass spell profiles that only the extension compilers understand.
     """
 
     selections = {
@@ -93,9 +95,22 @@ def _core_draft(draft: BuilderDraft, registry: ContentRegistry) -> BuilderDraft:
             registry,
         )
     }
-    if len(selections) == len(draft.draft_payload.choice_selections):
+    spell_choices = {
+        profile_id: selection
+        for profile_id, selection in draft.draft_payload.spell_choices.items()
+        if not _is_extension_spell_profile(profile_id)
+    }
+    if (
+        len(selections) == len(draft.draft_payload.choice_selections)
+        and len(spell_choices) == len(draft.draft_payload.spell_choices)
+    ):
         return draft
-    payload = draft.draft_payload.model_copy(update={"choice_selections": selections})
+    payload = draft.draft_payload.model_copy(
+        update={
+            "choice_selections": selections,
+            "spell_choices": spell_choices,
+        }
+    )
     return draft.model_copy(update={"draft_payload": payload})
 
 
