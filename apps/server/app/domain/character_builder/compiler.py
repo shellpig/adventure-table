@@ -28,6 +28,11 @@ from app.domain.character_builder.lineages import (
     selected_lineage_ref,
     suppress_replaced_origin_choices,
 )
+from app.domain.character_builder.m01k_feats import (
+    build_evaluation_context,
+    compile_feat_acquisitions,
+    enrich_feat_choices,
+)
 from app.domain.character_builder.multiclass import (
     multiclass_option_failure_detail,
     multiclass_option_failure_reason,
@@ -92,12 +97,12 @@ def _resolved_abilities(summary: BuilderResolvedSummary) -> dict[str, int] | Non
     return {entry.ability: entry.resolved for entry in summary.ability_scores}
 
 
-def _apply_structural_ability_bonuses(
+def _apply_ability_bonuses(
     summary: BuilderResolvedSummary,
-    structural: StructuralCompilation,
+    bonuses: dict[str, int],
     draft: BuilderDraft,
 ) -> BuilderResolvedSummary:
-    if not summary.ability_scores or not structural.ability_bonuses:
+    if not summary.ability_scores or not bonuses:
         return summary
     override_map = {
         override.key.removeprefix("ability:"): int(override.value)
@@ -106,7 +111,7 @@ def _apply_structural_ability_bonuses(
     }
     scores: list[BuilderAbilityScoreSummary] = []
     for entry in summary.ability_scores:
-        bonus = structural.ability_bonuses.get(entry.ability, 0)
+        bonus = bonuses.get(entry.ability, 0)
         resolved = entry.resolved + bonus
         scores.append(
             entry.model_copy(
@@ -119,6 +124,14 @@ def _apply_structural_ability_bonuses(
             )
         )
     return summary.model_copy(update={"ability_scores": tuple(scores)})
+
+
+def _apply_structural_ability_bonuses(
+    summary: BuilderResolvedSummary,
+    structural: StructuralCompilation,
+    draft: BuilderDraft,
+) -> BuilderResolvedSummary:
+    return _apply_ability_bonuses(summary, structural.ability_bonuses, draft)
 
 
 def _build_ability_scores(summary: BuilderResolvedSummary) -> AbilityScores | None:
@@ -185,6 +198,8 @@ def _effective_origin_choices(
             result.append(choice.model_copy(update={"options": available_options}))
             continue
 
+        # M01-K PHB feats use the unified resolver after structural choices exist.
+        # Keep the legacy SRD feat resolver here only for pre-K content shapes.
         if choice.option_source != "content:race-feat":
             result.append(choice)
             continue
@@ -193,7 +208,11 @@ def _effective_origin_choices(
             feat = registry.get_optional(option.reference_id or "")
             reason = None
             detail = None
-            if feat is not None and stable_key_is_kind(feat.key, "feat"):
+            if (
+                feat is not None
+                and stable_key_is_kind(feat.key, "feat")
+                and feat.source != "phb2014"
+            ):
                 reason = feat_failure_reason(feat, effective_abilities)
                 detail = feat_failure_detail(feat, effective_abilities)
             options.append(
@@ -356,6 +375,29 @@ def compile_builder_draft(
             message=str(exc),
         )
 
+    # M01-K makes Variant Human and every ASI feat opportunity share one
+    # prerequisite/repeatability engine. Nested feat choice identity derives from
+    # the opportunity, so repeated Elemental Adept acquisitions cannot overwrite
+    # one another.
+    foundation_ids = {choice.choice_id for choice in raw_foundation_choices}
+    feat_context = build_evaluation_context(
+        draft,
+        registry,
+        _effective_abilities(foundation_preview),
+    )
+    enriched = enrich_feat_choices(
+        draft,
+        registry,
+        raw_foundation_choices + structural_choices,
+        feat_context,
+    )
+    raw_foundation_choices = tuple(
+        choice for choice in enriched if choice.choice_id in foundation_ids
+    )
+    structural_choices = tuple(
+        choice for choice in enriched if choice.choice_id not in foundation_ids
+    )
+
     progression_choices = _effective_progression_choices(
         draft,
         registry,
@@ -430,6 +472,9 @@ def compile_builder_draft(
     foundation_issues.extend(origin.issues)
 
     base_choices = foundation_choices + progression_choices + structural_choices + artificer_choices
+    feat_compilation = compile_feat_acquisitions(draft, registry, base_choices)
+    foundation_issues.extend(feat_compilation.issues)
+
     resolved_summary = _variant_summary(
         draft,
         registry,
@@ -438,6 +483,11 @@ def compile_builder_draft(
     )
     structural = compile_structural_selections(draft, registry, structural_choices)
     resolved_summary = _apply_structural_ability_bonuses(resolved_summary, structural, draft)
+    resolved_summary = _apply_ability_bonuses(
+        resolved_summary,
+        feat_compilation.ability_bonuses,
+        draft,
+    )
 
     progression_issues = list(
         validate_progression(
@@ -465,7 +515,9 @@ def compile_builder_draft(
         registry,
         effective_abilities=_effective_abilities(resolved_summary),
         feature_refs=tuple(
-            dict.fromkeys((*automatic_features, *structural.feature_refs, *origin.feature_refs))
+            dict.fromkeys(
+                (*automatic_features, *structural.feature_refs, *origin.feature_refs, *feat_compilation.feature_refs)
+            )
         ),
     )
     issues.extend(spellcasting.issues)
@@ -549,6 +601,20 @@ def compile_builder_draft(
             for pool in spellcasting.resource_pools
         )
         variant_spell_entries = () if active_lineage else race_variant.spell_access_entries
+        feat_refs = tuple(
+            dict.fromkeys(
+                (
+                    *structural.feat_refs,
+                    *origin.feat_refs,
+                    *(entry.feat_ref for entry in feat_compilation.acquisitions),
+                )
+            )
+        )
+        base_languages = (
+            lineage.language_refs
+            if active_lineage and draft.mode is not BuilderMode.CREATE
+            else origin.language_refs
+        )
         build_candidate = _with_derived_content_sources(
             CharacterBuild(
                 content_sources=(),
@@ -575,25 +641,41 @@ def compile_builder_draft(
                 subclasses=compiled.subclasses,
                 ability_scores=abilities,
                 proficiencies=tuple(
-                    dict.fromkeys((*compiled.proficiencies, *structural.proficiencies))
+                    dict.fromkeys(
+                        (*compiled.proficiencies, *structural.proficiencies, *feat_compilation.proficiencies)
+                    )
                 ),
-                saving_throw_proficiencies=compiled.saving_throw_proficiencies,
+                saving_throw_proficiencies=tuple(
+                    dict.fromkeys(
+                        (*compiled.saving_throw_proficiencies, *feat_compilation.saving_throw_proficiencies)
+                    )
+                ),
                 skill_choices=tuple(
                     dict.fromkeys(
-                        (*compiled.skill_choices, *structural.skill_choices, *lineage.skill_refs)
+                        (
+                            *compiled.skill_choices,
+                            *structural.skill_choices,
+                            *lineage.skill_refs,
+                            *feat_compilation.skill_refs,
+                        )
                     )
                 ),
-                language_refs=(
-                    lineage.language_refs
-                    if active_lineage and draft.mode is not BuilderMode.CREATE
-                    else origin.language_refs
-                ),
+                language_refs=tuple(dict.fromkeys((*base_languages, *feat_compilation.language_refs))),
                 feature_refs=tuple(
                     dict.fromkeys(
-                        (*compiled.feature_refs, *structural.feature_refs, *origin.feature_refs, *lineage.feature_refs)
+                        (
+                            *compiled.feature_refs,
+                            *structural.feature_refs,
+                            *origin.feature_refs,
+                            *lineage.feature_refs,
+                            *feat_compilation.feature_refs,
+                        )
                     )
                 ),
-                feat_refs=tuple(dict.fromkeys((*structural.feat_refs, *origin.feat_refs))),
+                feat_refs=feat_refs,
+                feat_acquisitions=feat_compilation.acquisitions,
+                static_derived_modifiers=feat_compilation.static_modifiers,
+                feat_resource_grants=feat_compilation.resource_grants,
                 infusion_refs=compile_artificer_infusion_refs(
                     draft,
                     choices,
@@ -611,6 +693,7 @@ def compile_builder_draft(
                             *spellcasting.spell_access_entries,
                             *origin.spell_access_entries,
                             *variant_spell_entries,
+                            *feat_compilation.spell_access_entries,
                         )
                     }.values()
                 ),
