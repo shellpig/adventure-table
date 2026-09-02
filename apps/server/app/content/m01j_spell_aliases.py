@@ -42,6 +42,8 @@ REFERENCE_SPELL_INDEX_ALIASES: dict[str, str] = {
     "激憤斬": "wrathful-smite",
     "驚震斬": "staggering-smite",
     "防護法陣": "magic-circle",
+    # Oath of the Ancients uses a title that otherwise fuzzy-matches Nature.
+    "問道自然": "commune-with-nature",
     # Genie common expanded spells.
     "偵測善惡": "detect-evil-and-good",
     "魅影之力": "phantasmal-force",
