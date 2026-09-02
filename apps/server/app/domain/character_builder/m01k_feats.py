@@ -281,6 +281,17 @@ def _reference_options(entries: tuple[ContentEntry, ...]) -> tuple[BuilderChoice
     )
 
 
+def _proficiency_reference_is_kind(entry: ContentEntry, kind: str) -> bool:
+    reference = entry.data.get("reference")
+    if not isinstance(reference, dict):
+        return False
+    try:
+        key = reference_to_stable_key(reference)
+    except ValueError:
+        return False
+    return key is not None and stable_key_is_kind(key, kind)
+
+
 def _ability_choice(
     draft: BuilderDraft,
     opportunity_id: str,
@@ -426,14 +437,21 @@ def _feat_nested_choices(
             ) if disabled_reason is None else ()
         elif kind == "skill_or_tool_proficiency":
             entries = tuple(
-                entry for entry in registry.list_kind("proficiency")
-                if entry.data.get("type") in {"Skills", "Tools"}
+                entry
+                for entry in registry.list_kind("proficiency")
+                if entry.data.get("type") == "Skills"
+                or (
+                    entry.data.get("type") not in {"Armor", "Weapons"}
+                    and _proficiency_reference_is_kind(entry, "equipment")
+                )
             )
             options = _reference_options(entries)
         elif kind == "weapon_proficiency":
             entries = tuple(
-                entry for entry in registry.list_kind("proficiency")
+                entry
+                for entry in registry.list_kind("proficiency")
                 if entry.data.get("type") == "Weapons"
+                and _proficiency_reference_is_kind(entry, "equipment")
             )
             options = _reference_options(entries)
 
