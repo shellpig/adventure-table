@@ -28,6 +28,7 @@ type OptionDisplay = {
 }
 
 const STABLE_KEY_RE = /^[^:\s]+:[^:\s]+:[^:\s]+$/
+const M01K_DETAIL_RE = /^phb2014:(?:feat|spell):/
 const NUMERIC_LABEL_RE = /^[-+]?\d+(?:\.\d+)?$/
 
 export function optionDisplay(label: string): OptionDisplay {
@@ -100,20 +101,33 @@ export function SearchableSelect({
     () => options.map((option) => option.value).filter((candidate) => STABLE_KEY_RE.test(candidate)),
     [options],
   )
-  const { locale, searchAliasesFor } = useContentPresentations(
+  const extraFields = useMemo(
+    () => Object.fromEntries(
+      contentReferences
+        .filter((reference) => M01K_DETAIL_RE.test(reference))
+        .map((reference) => [reference, ['data.desc.0']]),
+    ),
+    [contentReferences],
+  )
+  const { locale, fieldFor, searchAliasesFor } = useContentPresentations(
     contentReferences,
-    {},
+    extraFields,
     { includeSearchAliases: true },
   )
   const searchableOptions = useMemo(
     () => options.map((option) => ({
       ...option,
+      description:
+        option.description ??
+        (M01K_DETAIL_RE.test(option.value)
+          ? fieldFor(option.value, 'data.desc.0', '')
+          : undefined),
       searchAliases: Array.from(new Set([
         ...(option.searchAliases ?? []),
         ...(STABLE_KEY_RE.test(option.value) ? searchAliasesFor(option.value, option.label) : []),
       ])),
     })),
-    [options, searchAliasesFor],
+    [fieldFor, options, searchAliasesFor],
   )
   const inputId = useId()
   const listboxId = useId()
