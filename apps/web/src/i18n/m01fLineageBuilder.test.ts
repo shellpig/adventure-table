@@ -11,7 +11,7 @@ import type { ContentNameResolver } from './useContentPresentations'
 
 const nameFor: ContentNameResolver = (referenceId, fallback = '') => {
   const names: Record<string, string> = {
-    'vrgr:lineage:dhampir': '達姆匹爾',
+    'vrgr:lineage:dhampir': '半血裔',
     'srd5.1:skill:perception': '察覺',
   }
   return referenceId ? (names[referenceId] ?? fallback) : fallback
@@ -63,7 +63,7 @@ describe('M01-F lineage Builder presentation', () => {
     )
 
     expect(builderChoiceLabel(lineage, 'zh-TW', nameFor)).toBe('血裔')
-    expect(builderChoiceLabel(size, 'zh-TW', nameFor)).toBe('達姆匹爾 — 體型')
+    expect(builderChoiceLabel(size, 'zh-TW', nameFor)).toBe('半血裔 — 體型')
     expect(builderChoiceOptionLabel(size, option('lineage-size:small', 'Small'), 'zh-TW', nameFor)).toBe('小型')
     expect(
       builderChoiceOptionLabel(

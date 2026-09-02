@@ -347,4 +347,4 @@ def test_m01f_lineage_name_is_required_bilingual_presentation() -> None:
     localized = catalog.resolve_name(DHAMPIR, "zh-TW")
     assert localized.missing_required is False
     assert localized.fallback_used is False
-    assert localized.value == "達姆匹爾"
+    assert localized.value == "半血裔"
