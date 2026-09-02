@@ -12,6 +12,7 @@ from app.domain.character.schemas import (
     SpellAccessEntry,
     StaticDerivedModifier,
 )
+from app.domain.character_builder.basics import resolve_creation_summary
 from app.domain.character_builder.schemas import (
     BuilderChoice,
     BuilderChoiceOption,
@@ -20,6 +21,7 @@ from app.domain.character_builder.schemas import (
     BuilderIssueSeverity,
     BuilderOptionKind,
 )
+from app.domain.character_builder.structural import compile_structural_selections
 
 
 ABILITY_TO_INDEX = {
@@ -32,6 +34,16 @@ ABILITY_TO_INDEX = {
 }
 ABILITY_LABELS = {key: value.upper() for key, value in ABILITY_TO_INDEX.items()}
 FEAT_CHOICE_SOURCES = {"content:race-feat", "content:asi-feat"}
+FEAT_ABILITY_CAP = 20
+ARMOR_PROFICIENCY_IMPLICATIONS = {
+    "srd5.1:proficiency:all-armor": frozenset(
+        {
+            "srd5.1:proficiency:light-armor",
+            "srd5.1:proficiency:medium-armor",
+            "srd5.1:proficiency:heavy-armor",
+        }
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -96,6 +108,15 @@ def _legacy_ability_prerequisite(raw: dict[str, object]) -> dict[str, object] | 
     return None
 
 
+def _has_proficiency(context: FeatEvaluationContext, required: str) -> bool:
+    if required in context.proficiencies:
+        return True
+    return any(
+        required in ARMOR_PROFICIENCY_IMPLICATIONS.get(held, ())
+        for held in context.proficiencies
+    )
+
+
 def _requirement_failure(
     requirement: dict[str, object],
     context: FeatEvaluationContext,
@@ -127,7 +148,7 @@ def _requirement_failure(
         proficiency_ref = requirement.get("proficiency_ref")
         if not isinstance(proficiency_ref, str) or not stable_key_is_kind(proficiency_ref, "proficiency"):
             return {"type": "unsupported"}
-        return None if proficiency_ref in context.proficiencies else {
+        return None if _has_proficiency(context, proficiency_ref) else {
             "type": "armor_proficiency",
             "proficiency_ref": proficiency_ref,
         }
@@ -529,6 +550,29 @@ def _selected_child_values(draft: BuilderDraft, opportunity_id: str, field: str)
     return _selection(draft, _child_choice_id(opportunity_id, field))
 
 
+def _capped_feat_ability_bonuses(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+    choices: tuple[BuilderChoice, ...],
+    raw_bonuses: dict[str, int],
+) -> dict[str, int]:
+    if not raw_bonuses:
+        return {}
+    foundation = resolve_creation_summary(draft, registry, choices)
+    baseline = {entry.ability: entry.resolved for entry in foundation.ability_scores}
+    if not baseline:
+        return raw_bonuses
+    structural = compile_structural_selections(draft, registry, choices)
+    result: dict[str, int] = {}
+    for ability, bonus in raw_bonuses.items():
+        before_feat = baseline.get(ability, 0) + structural.ability_bonuses.get(ability, 0)
+        if before_feat >= FEAT_ABILITY_CAP:
+            result[ability] = 0
+        else:
+            result[ability] = min(bonus, FEAT_ABILITY_CAP - before_feat)
+    return result
+
+
 def compile_feat_acquisitions(
     draft: BuilderDraft,
     registry: ContentRegistry,
@@ -687,9 +731,15 @@ def compile_feat_acquisitions(
         acquisitions.append(acquisition)
         acquired_refs.append(feat.key)
 
+    capped_ability_bonuses = _capped_feat_ability_bonuses(
+        draft,
+        registry,
+        choices,
+        ability_bonuses,
+    )
     return FeatCompilation(
         acquisitions=tuple(acquisitions),
-        ability_bonuses=ability_bonuses,
+        ability_bonuses=capped_ability_bonuses,
         proficiencies=tuple(dict.fromkeys(proficiencies)),
         saving_throw_proficiencies=tuple(dict.fromkeys(saves)),
         skill_refs=tuple(dict.fromkeys(skills)),
