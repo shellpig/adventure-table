@@ -29,5 +29,38 @@
       ],
       "subclasses": []
     }
+  },
+  {
+    "key": "phb2014:spell:beast-sense",
+    "index": "beast-sense",
+    "name": "Beast Sense",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "provenance": {
+      "rules_source": "Player's Handbook (2014)",
+      "reference_doc": "docs/暫用規則資訊/子職業_野蠻人.md",
+      "scope": "M01-J subclass spell identity; descriptive spell text intentionally omitted"
+    },
+    "data": {
+      "index": "beast-sense",
+      "name": "Beast Sense",
+      "desc": [],
+      "range": "Touch",
+      "components": ["S"],
+      "ritual": true,
+      "duration": "Concentration, up to 1 hour",
+      "concentration": true,
+      "casting_time": "1 action",
+      "level": 2,
+      "school": {
+        "key": "srd5.1:magic-school:divination",
+        "name": "Divination"
+      },
+      "classes": [
+        {"key": "srd5.1:class:druid", "name": "Druid"},
+        {"key": "srd5.1:class:ranger", "name": "Ranger"}
+      ],
+      "subclasses": []
+    }
   }
 ]
