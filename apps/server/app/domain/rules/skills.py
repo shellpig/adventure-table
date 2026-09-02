@@ -38,7 +38,10 @@ def skill_modifier(
     ability_name = ABILITY_INDEX_TO_NAME[ability_index]
     result = ability_modifier(effective_ability_score(build, ability_name))
     if skill_ref in build.skill_choices:
-        result += proficiency_bonus(total_character_level(build))
+        bonus = proficiency_bonus(total_character_level(build))
+        result += bonus
+        if skill_ref in build.skill_expertise_refs:
+            result += bonus
 
     for override_key in (
         f"skill_modifier:{skill_ref}",
@@ -50,10 +53,7 @@ def skill_modifier(
     return result
 
 
-def all_skill_modifiers(
-    build: CharacterBuild,
-    registry: ContentRegistry,
-) -> dict[str, int]:
+def all_skill_modifiers(build: CharacterBuild, registry: ContentRegistry) -> dict[str, int]:
     return {
         entry.index: skill_modifier(build, entry.key, registry)
         for entry in registry.list_kind("skill")
