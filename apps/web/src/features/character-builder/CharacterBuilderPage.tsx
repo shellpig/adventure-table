@@ -173,7 +173,7 @@ function ChoiceEditor({ choice, view, disabled, onSave, nameFor, locale }: Choic
     return {
       id,
       label: option
-        ? builderChoiceOptionLabel(choice, option, locale, nameFor)
+        ? optionDisplay(builderChoiceOptionLabel(choice, option, locale, nameFor)).primary
         : nameFor(id, id),
     }
   })
@@ -668,7 +668,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   {t('builder.abilities.save')}
                 </button>
 
-                <div className="builder-choice-list">
+                <div className="builder-choice-list builder-choice-list--columns">
                   <h3>{t('builder.abilities.startingChoices')}</h3>
                   {startingChoices.length ? (
                     startingChoices.map((choice) => (

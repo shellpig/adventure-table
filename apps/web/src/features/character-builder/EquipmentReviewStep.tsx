@@ -206,7 +206,7 @@ export function EquipmentStep({
                 return {
                   id,
                   label: option
-                    ? builderChoiceOptionLabel(choice, option, locale, nameFor)
+                    ? optionDisplay(builderChoiceOptionLabel(choice, option, locale, nameFor)).primary
                     : nameFor(id, id),
                 }
               })

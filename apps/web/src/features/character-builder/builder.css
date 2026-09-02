@@ -344,6 +344,9 @@
   padding-top: 24px;
 }
 
+.builder-choice-list--columns { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+.builder-choice-list--columns > h3, .builder-choice-list--columns > p { grid-column: 1 / -1; }
+
 .builder-choice {
   border: 1px solid var(--line);
   border-radius: 13px;
@@ -518,6 +521,7 @@
   .builder-field-grid, .builder-abilities, .review-identity-grid { grid-template-columns: 1fr; }
   .summary-grants--paired > .grant-row { grid-template-columns: 1fr; }
   .summary-grants > .equipment-grid { grid-template-columns: 1fr; }
+  .builder-choice-list--columns { grid-template-columns: 1fr; }
   .skill-modifier-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ability-methods { grid-template-columns: 1fr; }
   .builder-summary { grid-column: auto; }
