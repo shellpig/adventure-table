@@ -2,9 +2,6 @@ name: M01-J Non-E2E Regression
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - m01-j-subclass-expansion
 
 jobs:
   backend:
