@@ -15,6 +15,31 @@ from app.content.registry import ContentRegistry, ContentValidationError
 # explicit and machine-verifiable.
 
 
+_REFERENCE_FEATURE_NAME_ALIASES = {
+    "擴充套件法術列表": "Expanded Spell List",
+}
+
+
+def _normalize_generated_feature_names(registry: M01JReferenceRegistry) -> None:
+    """Give Chinese-only reference headings their canonical runtime names.
+
+    StableKeys stay untouched and the docs-derived zh-TW localization overlay
+    keeps the original heading, so this only reconciles runtime lookup names.
+    """
+
+    for feature in registry.list_kind("feature"):
+        reference_heading = feature.data.get("reference_heading_zh")
+        if not isinstance(reference_heading, str):
+            continue
+        canonical_name = _REFERENCE_FEATURE_NAME_ALIASES.get(reference_heading)
+        if canonical_name is None or feature.name == canonical_name:
+            continue
+        _fixes._replace_entry(
+            registry,
+            feature.model_copy(update={"name": canonical_name}),
+        )
+
+
 def _merge_fixed_grant(subclass_ref: str, field: str, *refs: str) -> None:
     current = deepcopy(_fixes.FIXED_GRANTS.get(subclass_ref, {}))
     values = list(current.get(field, ()))
@@ -294,6 +319,9 @@ def _normalize_post_generation(registry: ContentRegistry) -> ContentRegistry:
 
 
 def apply_m01j_reference_completion(registry: ContentRegistry) -> ContentRegistry:
+    if not isinstance(registry, M01JReferenceRegistry):
+        raise ContentValidationError("M01-J completion requires M01JReferenceRegistry")
     _prepare_completion_constants()
+    _normalize_generated_feature_names(registry)
     registry = _fixes.apply_m01j_reference_fixes(registry)
     return _normalize_post_generation(registry)
