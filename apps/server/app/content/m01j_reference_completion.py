@@ -95,6 +95,16 @@ def _prepare_completion_constants() -> None:
         current.extend(stale_spores)
         _fixes.FIXED_SPELLS["tce:subclass:spores"] = tuple(current)
 
+    # Assassin is a PHB subclass. A static-grant row was accidentally keyed as
+    # XGE; move that metadata onto the canonical M01-J source identity before
+    # the attachment pass validates every target subclass.
+    stale_assassin = _fixes.FIXED_GRANTS.pop("xge:subclass:assassin", None)
+    if stale_assassin is not None:
+        existing = _fixes.FIXED_GRANTS.get("phb2014:subclass:assassin")
+        if existing is not None and existing != stale_assassin:
+            raise ContentValidationError("M01-J Assassin fixed-grant source correction conflicts")
+        _fixes.FIXED_GRANTS["phb2014:subclass:assassin"] = stale_assassin
+
     _merge_fixed_grant("scag:subclass:arcana", "skills", "srd5.1:skill:arcana")
 
     _append_grant_choice(
