@@ -239,7 +239,10 @@ def _reference_options(rule: dict[str, object], registry: ContentRegistry) -> tu
                     reference_id=key,
                 )
             )
-    return tuple(dict.fromkeys((option.option_id, option) for option in result).values())
+    deduped: dict[str, BuilderChoiceOption] = {}
+    for option in result:
+        deduped.setdefault(option.option_id, option)
+    return tuple(deduped.values())
 
 
 def _proficiency_choices(
