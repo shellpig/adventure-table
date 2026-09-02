@@ -94,6 +94,7 @@ J.13 四來源矩陣：PHB ×4、SCAG ×2、XGE ×3、TCE ×3，另有一條測�
 5. **duplicate 偵測被全域關閉**：豁免範圍是「所有 `content:feature:` 開頭的 choice」，連戰鬥風格也一併豁免。收斂成只豁免專精（Expertise 依規則本就選已熟練的技能）。
 6. **Level Up 無法儲存任何 M01-J 子職業選項**，回 HTTP 422 且 UI 無錯誤提示，計數停在 `0 / 2`。子職業選項是累積型（同一 id、`choose_total` 隨等級成長），守衛規則從「完全不可變」改為「可以加、不可以抽掉」。
 7. **`p1h-high-level.spec.ts` 在本分支上本來就是壞的**：它以「選第一個可選項」挑子職業並斷言 Champion / Evocation，而 M01-J 新增的 XGE / TCE 選項排序在前。改為指名選取，恢復原意圖。
+8. **初版誤把規則文件當成 runtime data source**：Registry 啟動時直接解析 `docs/暫用規則資訊/子職業_*.md`。已改成開發階段產生正式 `data/<pack>/`，runtime 不再依賴 `docs/`；此原則已補進 M01 共通開發與測試規則。
 
 ## Explicit Boundary
 
