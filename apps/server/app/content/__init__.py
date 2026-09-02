@@ -7,6 +7,7 @@ from app.content.m01j_inventory import (
     apply_m01j_subclass_relations,
     validate_m01j_inventory,
 )
+from app.content.m01j_reference_closeout import apply_m01j_reference_closeout
 from app.content.m01j_reference_completion import apply_m01j_reference_completion
 from app.content.m01j_reference_content import apply_m01j_reference_content
 from app.content.phb_roleplay import apply_phb_background_roleplay
@@ -34,10 +35,12 @@ def load_default_content_registry() -> ContentRegistry:
     registry = validate_builder_content(registry)
     registry = validate_m01i_inventory(registry)
     # M01-J's verified non-SRD mechanics are repository reference documents.
-    # Materialize their temporary runtime overlay, then normalize the handful of
-    # rules whose permanent semantics span multiple Markdown sections/tables.
+    # Materialize their temporary runtime overlay, normalize the handful of
+    # rules whose permanent semantics span multiple Markdown sections/tables,
+    # then finish spell-choice semantics that require cross-feature context.
     registry = apply_m01j_reference_content(registry)
     registry = apply_m01j_reference_completion(registry)
+    registry = apply_m01j_reference_closeout(registry)
     registry = validate_m01j_inventory(registry)
     registry = validate_m01j_closeout_metadata(registry)
     registry = apply_m01j_subclass_relations(registry)
