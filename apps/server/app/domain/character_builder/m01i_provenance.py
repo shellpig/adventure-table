@@ -153,6 +153,8 @@ def current_feature_grant_sources(
     )
     for feature_ref in runtime.active_feature_refs:
         spec = runtime.specs[feature_ref]
+        if spec.mode == "expanded_choice":
+            continue
         result.append(
             FeatureGrantSource(
                 feature_ref=feature_ref,

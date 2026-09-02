@@ -439,6 +439,10 @@ def prepare_optional_class_features(
         if feature is None:
             continue
 
+        if spec.mode == "expanded_choice":
+            active.append((feature_ref, spec))
+            continue
+
         base_active = base_build is not None and feature_ref in base_build.feature_refs
         new_level = _level_up_new_class_level(draft, spec.parent_class_ref)
         if draft.mode is BuilderMode.LEVEL_UP and base_active:
@@ -1046,7 +1050,11 @@ def apply_optional_feature_replacements(
         target_set = set(targets)
         refs = [ref for ref in refs if ref not in target_set]
 
-    refs.extend(runtime.active_feature_refs)
+    refs.extend(
+        feature_ref
+        for feature_ref in runtime.active_feature_refs
+        if runtime.specs[feature_ref].mode != "expanded_choice"
+    )
     return tuple(dict.fromkeys(refs)), tuple(issues)
 
 

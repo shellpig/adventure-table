@@ -12,7 +12,7 @@ from __future__ import annotations
 import pytest
 
 from app.content import load_default_content_registry
-from app.domain.character_builder.compiler import compile_builder_draft
+from app.domain.character_builder.m01i_compiler import compile_builder_draft
 from app.domain.character_builder.schemas import BuilderChoiceSelection
 from app.domain.character_builder.validation import EXPERTISE_OPTION_SOURCE
 

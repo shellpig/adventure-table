@@ -1,8 +1,5 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
 
-const FIGHTER_STYLE_OPTIONS = 'tce:feature:fighter-fighting-style-options'
-const PALADIN_STYLE_OPTIONS = 'tce:feature:paladin-fighting-style-options'
-const RANGER_STYLE_OPTIONS = 'tce:feature:ranger-fighting-style-options'
 const SUPERIOR_TECHNIQUE = 'tce:feature:superior-technique'
 const BLESSED_WARRIOR = 'tce:feature:blessed-warrior'
 const DRUIDIC_WARRIOR = 'tce:feature:druidic-warrior'
@@ -276,8 +273,6 @@ test('M01-I Fighter selects a TCE Fighting Style with its nested maneuver', asyn
   test.slow()
   const name = `M01-I Fighter Style ${Date.now()}`
   await startCreate(page, name, 'Fighter', 1)
-  await activateOptionalFeature(page, 'Fighting Style Options')
-
   await goToClassStep(page)
   const level1 = page.getByTestId('level-node-1')
   await chooseOption(page, level1.getByRole('combobox', { name: /Fighting Style/i }), 'Superior Technique')
@@ -291,7 +286,7 @@ test('M01-I Fighter selects a TCE Fighting Style with its nested maneuver', asyn
   const { review } = await finishCreateReview(page, request)
   const build = buildFrom(review)
   expect(build.feature_refs).toEqual(
-    expect.arrayContaining([FIGHTER_STYLE_OPTIONS, SUPERIOR_TECHNIQUE, MANEUVER_AMBUSH]),
+    expect.arrayContaining([SUPERIOR_TECHNIQUE, MANEUVER_AMBUSH]),
   )
 
   await confirmCreate(page, name)
@@ -301,8 +296,6 @@ test('M01-I Paladin Blessed Warrior persists two Cleric cantrips with Charisma',
   test.slow()
   const name = `M01-I Blessed Warrior ${Date.now()}`
   await startCreate(page, name, 'Paladin', 2)
-  await activateOptionalFeature(page, 'Fighting Style Options')
-
   await goToClassStep(page)
   const level2 = page.getByTestId('level-node-2')
   await chooseOption(page, level2.getByRole('combobox', { name: /Fighting Style/i }), 'Blessed Warrior')
@@ -316,7 +309,7 @@ test('M01-I Paladin Blessed Warrior persists two Cleric cantrips with Charisma',
 
   const { review } = await finishCreateReview(page, request)
   const build = buildFrom(review)
-  expect(build.feature_refs).toEqual(expect.arrayContaining([PALADIN_STYLE_OPTIONS, BLESSED_WARRIOR]))
+  expect(build.feature_refs).toEqual(expect.arrayContaining([BLESSED_WARRIOR]))
   const styleSpells = build.spell_access_entries.filter((entry) => entry.source_key === BLESSED_WARRIOR)
   expect(styleSpells).toHaveLength(2)
   expect(styleSpells.map((entry) => entry.spell_key)).toEqual(
@@ -334,8 +327,6 @@ test('M01-I Ranger Druidic Warrior persists two Druid cantrips with Wisdom', asy
   test.slow()
   const name = `M01-I Druidic Warrior ${Date.now()}`
   await startCreate(page, name, 'Ranger', 2)
-  await activateOptionalFeature(page, 'Fighting Style Options')
-
   await goToClassStep(page)
   const level2 = page.getByTestId('level-node-2')
   await chooseOption(page, level2.getByRole('combobox', { name: /Fighting Style/i }), 'Druidic Warrior')
@@ -349,7 +340,7 @@ test('M01-I Ranger Druidic Warrior persists two Druid cantrips with Wisdom', asy
 
   const { review } = await finishCreateReview(page, request)
   const build = buildFrom(review)
-  expect(build.feature_refs).toEqual(expect.arrayContaining([RANGER_STYLE_OPTIONS, DRUIDIC_WARRIOR]))
+  expect(build.feature_refs).toEqual(expect.arrayContaining([DRUIDIC_WARRIOR]))
   const styleSpells = build.spell_access_entries.filter((entry) => entry.source_key === DRUIDIC_WARRIOR)
   expect(styleSpells).toHaveLength(2)
   expect(styleSpells.map((entry) => entry.spell_key)).toEqual(

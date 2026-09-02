@@ -114,6 +114,10 @@ def prepare_optional_class_features_for_m01i(
     A skipped optional feature remains adoptable on later level-ups once the
     character meets its minimum class level. Existing active features carry
     forward without asking the user to re-select them.
+
+    ``expanded_choice`` features only widen an existing option pool, so they are
+    always active once the class level allows them and never ask the user to
+    adopt them first.
     """
 
     specs = _optional_specs(registry)
@@ -128,6 +132,10 @@ def prepare_optional_class_features_for_m01i(
             continue
         feature = registry.get_optional(feature_ref)
         if feature is None:
+            continue
+
+        if spec.mode == "expanded_choice":
+            active.append((feature_ref, spec))
             continue
 
         base_active = base_build is not None and feature_ref in base_build.feature_refs
