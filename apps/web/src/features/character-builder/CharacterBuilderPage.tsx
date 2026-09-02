@@ -21,6 +21,7 @@ import type { Locale } from '../../i18n/locale'
 import type { UiCopyKey } from '../../i18n/uiCopy'
 import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy } from '../../i18n/useUiCopy'
+import { assignStandardArrayScore } from './abilityAssignment'
 import { ClassProgressionStep } from './ClassProgressionStep'
 import { EquipmentReviewStep, EquipmentStep } from './EquipmentReviewStep'
 import {
@@ -611,11 +612,6 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                 {rulesQuery.error ? <div className="error-banner">{rulesQuery.error.message}</div> : null}
                 <div className="builder-abilities">
                   {ABILITY_KEYS.map((ability) => {
-                    const usedElsewhere = new Set(
-                      Object.entries(abilityScores)
-                        .filter(([key]) => key !== ability)
-                        .map(([, score]) => score),
-                    )
                     return abilityMethod === 'standard_array' ? (
                       <SearchableSelect
                         key={ability}
@@ -625,10 +621,10 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                         options={standardValues.map((score) => ({
                           value: String(score),
                           label: String(score),
-                          disabled: usedElsewhere.has(score),
-                          disabledReason: usedElsewhere.has(score) ? t('builder.abilities.alreadyAssigned') : undefined,
                         }))}
-                        onChange={(value) => setAbilityScores((current) => ({ ...current, [ability]: Number(value) }))}
+                        onChange={(value) =>
+                          setAbilityScores((current) => assignStandardArrayScore(current, ability, Number(value)))
+                        }
                       />
                     ) : (
                       <label className="builder-field ability-input" key={ability}>
