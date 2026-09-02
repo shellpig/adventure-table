@@ -10,6 +10,7 @@ from app.content.m01j_inventory import (
 from app.content.m01j_reference_closeout import apply_m01j_reference_closeout
 from app.content.m01j_reference_completion import apply_m01j_reference_completion
 from app.content.m01j_reference_content import apply_m01j_reference_content
+from app.content.m01j_spell_closeout_validation import validate_m01j_spell_closeout
 from app.content.phb_roleplay import apply_phb_background_roleplay
 from app.content.registry import (
     ContentNotFoundError,
@@ -43,6 +44,7 @@ def load_default_content_registry() -> ContentRegistry:
     registry = apply_m01j_reference_closeout(registry)
     registry = validate_m01j_inventory(registry)
     registry = validate_m01j_closeout_metadata(registry)
+    registry = validate_m01j_spell_closeout(registry)
     registry = apply_m01j_subclass_relations(registry)
     registry = apply_phb_background_roleplay(
         registry,
