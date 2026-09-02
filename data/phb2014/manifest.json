@@ -7,7 +7,8 @@
     "source_documents": [
       "docs/暫用規則資訊/背景_PHB.md",
       "docs/暫用規則資訊/種族_PHB_非SRD內容.md",
-      "docs/暫用規則資訊/子職業_邪術師.md"
+      "docs/暫用規則資訊/子職業_邪術師.md",
+      "docs/暫用規則資訊/子職業_野蠻人.md"
     ],
     "rules_source": "Player's Handbook (2014)",
     "note": "Private-project content pack assembled from rule references supplied in this repository."
@@ -21,9 +22,9 @@
     {"name": "features", "kind": "feature", "file": "features.json", "count": 7},
     {"name": "maneuvers-m01i", "kind": "feature", "file": "maneuvers-m01i.json", "count": 16},
     {"name": "spells-m01i", "kind": "spell", "file": "spells-m01i.json", "count": 6},
-    {"name": "spells-m01j", "kind": "spell", "file": "spells-m01j.json", "count": 1},
+    {"name": "spells-m01j", "kind": "spell", "file": "spells-m01j.json", "count": 2},
     {"name": "races", "kind": "race", "file": "races.json", "count": 1},
     {"name": "subraces", "kind": "subrace", "file": "subraces.json", "count": 5}
   ],
-  "total_entries": 54
+  "total_entries": 55
 }
