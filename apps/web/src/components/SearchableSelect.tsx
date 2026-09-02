@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 
+import { presentationField } from '../api/contentPresentation'
 import { useContentPresentations } from '../i18n/useContentPresentations'
 import { useUiCopy } from '../i18n/useUiCopy'
 
@@ -109,25 +110,30 @@ export function SearchableSelect({
     ),
     [contentReferences],
   )
-  const { locale, fieldFor, searchAliasesFor } = useContentPresentations(
+  const { locale, presentations, searchAliasesFor } = useContentPresentations(
     contentReferences,
     extraFields,
     { includeSearchAliases: true },
   )
   const searchableOptions = useMemo(
-    () => options.map((option) => ({
-      ...option,
-      description:
-        option.description ??
-        (M01K_DETAIL_RE.test(option.value)
-          ? fieldFor(option.value, 'data.desc.0', '')
-          : undefined),
-      searchAliases: Array.from(new Set([
-        ...(option.searchAliases ?? []),
-        ...(STABLE_KEY_RE.test(option.value) ? searchAliasesFor(option.value, option.label) : []),
-      ])),
-    })),
-    [fieldFor, options, searchAliasesFor],
+    () => options.map((option) => {
+      const localizedDescription = M01K_DETAIL_RE.test(option.value)
+        ? presentationField(presentations.get(option.value), 'data.desc.0')?.value
+        : undefined
+      return {
+        ...option,
+        description:
+          option.description ??
+          (typeof localizedDescription === 'string' && localizedDescription.trim()
+            ? localizedDescription
+            : undefined),
+        searchAliases: Array.from(new Set([
+          ...(option.searchAliases ?? []),
+          ...(STABLE_KEY_RE.test(option.value) ? searchAliasesFor(option.value, option.label) : []),
+        ])),
+      }
+    }),
+    [options, presentations, searchAliasesFor],
   )
   const inputId = useId()
   const listboxId = useId()
