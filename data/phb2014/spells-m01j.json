@@ -1,66 +1,14 @@
 [
-  {
-    "key": "phb2014:spell:phantasmal-force",
-    "index": "phantasmal-force",
-    "name": "Phantasmal Force",
-    "source": "phb2014",
-    "ruleset": "dnd5e-2014",
-    "provenance": {
-      "rules_source": "Player's Handbook (2014)",
-      "reference_doc": "docs/暫用規則資訊/子職業_邪術師.md",
-      "scope": "M01-J subclass spell identity; descriptive spell text intentionally omitted"
-    },
-    "data": {
-      "index": "phantasmal-force",
-      "name": "Phantasmal Force",
-      "desc": [],
-      "components": ["V", "S", "M"],
-      "ritual": false,
-      "concentration": true,
-      "level": 2,
-      "school": {
-        "key": "srd5.1:magic-school:illusion",
-        "name": "Illusion"
-      },
-      "classes": [
-        {"key": "srd5.1:class:bard", "name": "Bard"},
-        {"key": "srd5.1:class:sorcerer", "name": "Sorcerer"},
-        {"key": "srd5.1:class:wizard", "name": "Wizard"}
-      ],
-      "subclasses": []
-    }
-  },
-  {
-    "key": "phb2014:spell:beast-sense",
-    "index": "beast-sense",
-    "name": "Beast Sense",
-    "source": "phb2014",
-    "ruleset": "dnd5e-2014",
-    "provenance": {
-      "rules_source": "Player's Handbook (2014)",
-      "reference_doc": "docs/暫用規則資訊/子職業_野蠻人.md",
-      "scope": "M01-J subclass spell identity; descriptive spell text intentionally omitted"
-    },
-    "data": {
-      "index": "beast-sense",
-      "name": "Beast Sense",
-      "desc": [],
-      "range": "Touch",
-      "components": ["S"],
-      "ritual": true,
-      "duration": "Concentration, up to 1 hour",
-      "concentration": true,
-      "casting_time": "1 action",
-      "level": 2,
-      "school": {
-        "key": "srd5.1:magic-school:divination",
-        "name": "Divination"
-      },
-      "classes": [
-        {"key": "srd5.1:class:druid", "name": "Druid"},
-        {"key": "srd5.1:class:ranger", "name": "Ranger"}
-      ],
-      "subclasses": []
-    }
-  }
+  {"key":"phb2014:spell:phantasmal-force","index":"phantasmal-force","name":"Phantasmal Force","source":"phb2014","ruleset":"dnd5e-2014","provenance":{"rules_source":"Player's Handbook (2014)","reference_doc":"docs/暫用規則資訊/子職業_邪術師.md","scope":"M01-J subclass spell identity; descriptive spell text intentionally omitted"},"data":{"index":"phantasmal-force","name":"Phantasmal Force","desc":[],"components":["V","S","M"],"ritual":false,"concentration":true,"level":2,"school":{"key":"srd5.1:magic-school:illusion","name":"Illusion"},"classes":[{"key":"srd5.1:class:bard","name":"Bard"},{"key":"srd5.1:class:sorcerer","name":"Sorcerer"},{"key":"srd5.1:class:wizard","name":"Wizard"}],"subclasses":[]}},
+  {"key":"phb2014:spell:beast-sense","index":"beast-sense","name":"Beast Sense","source":"phb2014","ruleset":"dnd5e-2014","provenance":{"rules_source":"Player's Handbook (2014)","reference_doc":"docs/暫用規則資訊/子職業_野蠻人.md","scope":"M01-J subclass spell identity; descriptive spell text intentionally omitted"},"data":{"index":"beast-sense","name":"Beast Sense","desc":[],"range":"Touch","components":["S"],"ritual":true,"duration":"Concentration, up to 1 hour","concentration":true,"casting_time":"1 action","level":2,"school":{"key":"srd5.1:magic-school:divination","name":"Divination"},"classes":[{"key":"srd5.1:class:druid","name":"Druid"},{"key":"srd5.1:class:ranger","name":"Ranger"}],"subclasses":[]}},
+  {"key":"phb2014:spell:ensnaring-strike","index":"ensnaring-strike","name":"Ensnaring Strike","source":"phb2014","ruleset":"dnd5e-2014","provenance":{"rules_source":"Player's Handbook (2014)","scope":"M01-J subclass spell identity; descriptive spell text intentionally omitted"},"data":{"index":"ensnaring-strike","name":"Ensnaring Strike","desc":[],"components":["V"],"ritual":false,"concentration":true,"level":1,"school":{"key":"srd5.1:magic-school:conjuration","name":"Conjuration"},"classes":[],"subclasses":[]}},
+  {"key":"phb2014:spell:dissonant-whispers","index":"dissonant-whispers","name":"Dissonant Whispers","source":"phb2014","ruleset":"dnd5e-2014","provenance":{"rules_source":"Player's Handbook (2014)","scope":"M01-J subclass spell identity; descriptive spell text intentionally omitted"},"data":{"index":"dissonant-whispers","name":"Dissonant Whispers","desc":[],"components":["V"],"ritual":false,"concentration":false,"level":1,"school":{"key":"srd5.1:magic-school:enchantment","name":"Enchantment"},"classes":[],"subclasses":[]}},
+  {"key":"phb2014:spell:circle-of-power","index":"circle-of-power","name":"Circle of Power","source":"phb2014","ruleset":"dnd5e-2014","provenance":{"rules_source":"Player's Handbook (2014)","scope":"M01-J subclass spell identity; descriptive spell text intentionally omitted"},"data":{"index":"circle-of-power","name":"Circle of Power","desc":[],"components":["V"],"ritual":false,"concentration":true,"level":5,"school":{"key":"srd5.1:magic-school:abjuration","name":"Abjuration"},"classes":[],"subclasses":[]}},
+  {"key":"phb2014:spell:ray-of-sickness","index":"ray-of-sickness","name":"Ray of Sickness","source":"phb2014","ruleset":"dnd5e-2014","provenance":{"rules_source":"Player's Handbook (2014)","scope":"M01-J subclass spell identity; descriptive spell text intentionally omitted"},"data":{"index":"ray-of-sickness","name":"Ray of Sickness","desc":[],"components":["V","S"],"ritual":false,"concentration":false,"level":1,"school":{"key":"srd5.1:magic-school:necromancy","name":"Necromancy"},"classes":[],"subclasses":[]}},
+  {"key":"phb2014:spell:feign-death","index":"feign-death","name":"Feign Death","source":"phb2014","ruleset":"dnd5e-2014","provenance":{"rules_source":"Player's Handbook (2014)","scope":"M01-J subclass spell identity; descriptive spell text intentionally omitted"},"data":{"index":"feign-death","name":"Feign Death","desc":[],"components":["V","S","M"],"ritual":true,"concentration":false,"level":3,"school":{"key":"srd5.1:magic-school:necromancy","name":"Necromancy"},"classes":[],"subclasses":[]}},
+  {"key":"phb2014:spell:arms-of-hadar","index":"arms-of-hadar","name":"Arms of Hadar","source":"phb2014","ruleset":"dnd5e-2014","provenance":{"rules_source":"Player's Handbook (2014)","scope":"M01-J subclass spell identity; descriptive spell text intentionally omitted"},"data":{"index":"arms-of-hadar","name":"Arms of Hadar","desc":[],"components":["V","S"],"ritual":false,"concentration":false,"level":1,"school":{"key":"srd5.1:magic-school:conjuration","name":"Conjuration"},"classes":[],"subclasses":[]}},
+  {"key":"phb2014:spell:hunger-of-hadar","index":"hunger-of-hadar","name":"Hunger of Hadar","source":"phb2014","ruleset":"dnd5e-2014","provenance":{"rules_source":"Player's Handbook (2014)","scope":"M01-J subclass spell identity; descriptive spell text intentionally omitted"},"data":{"index":"hunger-of-hadar","name":"Hunger of Hadar","desc":[],"components":["V","S","M"],"ritual":false,"concentration":true,"level":3,"school":{"key":"srd5.1:magic-school:conjuration","name":"Conjuration"},"classes":[],"subclasses":[]}},
+  {"key":"phb2014:spell:armor-of-agathys","index":"armor-of-agathys","name":"Armor of Agathys","source":"phb2014","ruleset":"dnd5e-2014","provenance":{"rules_source":"Player's Handbook (2014)","scope":"M01-J subclass spell identity; descriptive spell text intentionally omitted"},"data":{"index":"armor-of-agathys","name":"Armor of Agathys","desc":[],"components":["V","S","M"],"ritual":false,"concentration":false,"level":1,"school":{"key":"srd5.1:magic-school:abjuration","name":"Abjuration"},"classes":[],"subclasses":[]}},
+  {"key":"phb2014:spell:wrathful-smite","index":"wrathful-smite","name":"Wrathful Smite","source":"phb2014","ruleset":"dnd5e-2014","provenance":{"rules_source":"Player's Handbook (2014)","scope":"M01-J subclass spell identity; descriptive spell text intentionally omitted"},"data":{"index":"wrathful-smite","name":"Wrathful Smite","desc":[],"components":["V"],"ritual":false,"concentration":true,"level":1,"school":{"key":"srd5.1:magic-school:evocation","name":"Evocation"},"classes":[],"subclasses":[]}},
+  {"key":"phb2014:spell:staggering-smite","index":"staggering-smite","name":"Staggering Smite","source":"phb2014","ruleset":"dnd5e-2014","provenance":{"rules_source":"Player's Handbook (2014)","scope":"M01-J subclass spell identity; descriptive spell text intentionally omitted"},"data":{"index":"staggering-smite","name":"Staggering Smite","desc":[],"components":["V"],"ritual":false,"concentration":true,"level":4,"school":{"key":"srd5.1:magic-school:evocation","name":"Evocation"},"classes":[],"subclasses":[]}}
 ]
