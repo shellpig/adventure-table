@@ -26,6 +26,7 @@ REFERENCE_SPELL_INDEX_ALIASES: dict[str, str] = {
     "防死護咒": "death-ward",
     "哈達之臂": "arms-of-hadar",
     "哈達之慾": "hunger-of-hadar",
+    "心靈之楔": "mind-sliver",
     "異怪召喚術": "summon-aberration",
     "次級復原術": "lesser-restoration",
     "構裝體召喚術": "summon-construct",
