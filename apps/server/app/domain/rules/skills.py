@@ -63,5 +63,42 @@ def all_skill_modifiers(
     }
 
 
+def _static_passive_bonus(build: CharacterBuild, target: str) -> int:
+    level = total_character_level(build)
+    return sum(
+        modifier.value * (level if modifier.per_level else 1)
+        for modifier in build.static_derived_modifiers
+        if modifier.target == target
+    )
+
+
+def _passive_score(
+    build: CharacterBuild,
+    registry: ContentRegistry,
+    *,
+    skill_ref: str,
+    target: str,
+) -> int:
+    result = 10 + skill_modifier(build, skill_ref, registry) + _static_passive_bonus(build, target)
+    override = numeric_override(build, target)
+    if override is not None:
+        return int(override)
+    return result
+
+
 def passive_perception(build: CharacterBuild, registry: ContentRegistry) -> int:
-    return 10 + skill_modifier(build, "srd5.1:skill:perception", registry)
+    return _passive_score(
+        build,
+        registry,
+        skill_ref="srd5.1:skill:perception",
+        target="passive_perception",
+    )
+
+
+def passive_investigation(build: CharacterBuild, registry: ContentRegistry) -> int:
+    return _passive_score(
+        build,
+        registry,
+        skill_ref="srd5.1:skill:investigation",
+        target="passive_investigation",
+    )
