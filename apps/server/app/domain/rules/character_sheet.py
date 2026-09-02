@@ -14,7 +14,12 @@ from app.domain.rules.armor_class import calculate_armor_class
 from app.domain.rules.artificer_dto import ArtificerSummaryDTO, build_artificer_summary
 from app.domain.rules.hit_points import calculate_max_hp
 from app.domain.rules.proficiency import class_level, proficiency_bonus, total_character_level
-from app.domain.rules.skills import all_skill_modifiers, passive_perception, saving_throw_modifiers
+from app.domain.rules.skills import (
+    all_skill_modifiers,
+    passive_investigation,
+    passive_perception,
+    saving_throw_modifiers,
+)
 from app.domain.rules.spellcasting import (
     spell_attack_modifier,
     spell_is_on_class_list,
@@ -98,6 +103,7 @@ class CharacterSheetDTO(SheetModel):
     saving_throws: dict[str, int]
     skills: dict[str, int]
     passive_perception: int
+    passive_investigation: int
     initiative_modifier: int
     armor_class: int
     walking_speed: int
@@ -278,6 +284,7 @@ def build_character_sheet(
         saving_throws=saving_throw_modifiers(build),
         skills=all_skill_modifiers(build, registry),
         passive_perception=passive_perception(build, registry),
+        passive_investigation=passive_investigation(build, registry),
         initiative_modifier=abilities["dexterity"].modifier,
         armor_class=calculate_armor_class(build, state, registry),
         walking_speed=walking_speed,
