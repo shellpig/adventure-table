@@ -22,6 +22,7 @@ from app.domain.character_builder.m01i_validation import (
     validate_final_feature_pool_dependencies,
     validate_unique_feature_pool_selections,
 )
+from app.domain.character_builder.m01j_expertise import apply_m01j_skill_expertise
 from app.domain.character_builder.m01j_runtime import (
     apply_m01j_spellcasting_build,
     apply_m01j_spellcasting_summary,
@@ -267,6 +268,7 @@ def compile_builder_draft(
             }
         )
         build = apply_m01j_subclass_runtime(build, m01j)
+        build = apply_m01j_skill_expertise(build, draft)
         build = apply_m01j_spellcasting_build(build, m01j)
         build = _derive_sources(build)
         # Validate again after J has appended selected option provenance/grants.
