@@ -53,7 +53,10 @@ def skill_modifier(
     return result
 
 
-def all_skill_modifiers(build: CharacterBuild, registry: ContentRegistry) -> dict[str, int]:
+def all_skill_modifiers(
+    build: CharacterBuild,
+    registry: ContentRegistry,
+) -> dict[str, int]:
     return {
         entry.index: skill_modifier(build, entry.key, registry)
         for entry in registry.list_kind("skill")
