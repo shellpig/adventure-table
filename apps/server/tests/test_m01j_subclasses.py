@@ -10,6 +10,7 @@ from app.content.localization import SUPPORTED_CONTENT_LOCALES
 from app.content.localization_files import load_content_localization_catalog
 from app.content.m01j_inventory import m01j_inventory_summary
 from app.content.registry import CONTENT_PACKS_ROOT
+from app.domain.character_builder.equipment import compile_starting_equipment
 from app.domain.character_builder.m01i_compiler import compile_builder_draft
 from app.domain.character_builder.m01j_subclasses import prepare_m01j_subclasses
 from app.domain.character_builder.progression import progression_summary
@@ -33,6 +34,7 @@ DIRECT_SOURCES = {
     "content:class",
     "content:subclass",
     "builder:ability-generation",
+    "equipment",
 }
 
 
@@ -126,9 +128,43 @@ def _spell_choices(result) -> dict[str, BuilderSpellChoiceInput]:
     return choices
 
 
+def _complete_starting_equipment(payload: BuilderDraftPayload, registry) -> BuilderDraftPayload:
+    """Resolve the real starting-equipment channel before generic builder choices."""
+
+    selections = dict(payload.starting_equipment_choices)
+    for _ in range(80):
+        current = payload.model_copy(update={"starting_equipment_choices": selections})
+        result = compile_starting_equipment(_draft(current), registry)
+        unresolved = next(
+            (
+                choice
+                for choice in result.choices
+                if choice.required
+                and choice.disabled_reason is None
+                and choice.choice_id not in selections
+            ),
+            None,
+        )
+        if unresolved is None:
+            return current
+
+        available = [
+            option for option in unresolved.options if option.disabled_reason is None
+        ]
+        assert len(available) >= unresolved.choose_count, unresolved.choice_id
+        if unresolved.allow_duplicates:
+            selected = [available[0].option_id for _ in range(unresolved.choose_count)]
+        else:
+            selected = [
+                option.option_id for option in available[: unresolved.choose_count]
+            ]
+        selections[unresolved.choice_id] = selected
+    raise AssertionError("M01-J starting equipment choices did not converge")
+
+
 def _complete_required_choices(payload: BuilderDraftPayload, registry) -> BuilderDraft:
-    selections: dict[str, BuilderChoiceSelection] = {}
-    used_reference_ids: set[str] = set()
+    payload = _complete_starting_equipment(payload, registry)
+    selections = dict(payload.choice_selections)
     for _ in range(160):
         current = payload.model_copy(update={"choice_selections": selections})
         result = compile_builder_draft(_draft(current), registry)
@@ -150,24 +186,15 @@ def _complete_required_choices(payload: BuilderDraftPayload, registry) -> Builde
             return _draft(current.model_copy(update={"spell_choices": spell_choices}))
 
         available = [
-            option
-            for option in unresolved.options
-            if option.disabled_reason is None
-            and (
-                unresolved.allow_duplicates
-                or option.reference_id is None
-                or option.option_id not in used_reference_ids
-            )
+            option for option in unresolved.options if option.disabled_reason is None
         ]
         assert len(available) >= unresolved.choose_count, unresolved.choice_id
         if unresolved.allow_duplicates:
             selected = tuple(available[0].option_id for _ in range(unresolved.choose_count))
         else:
-            selected = tuple(option.option_id for option in available[: unresolved.choose_count])
-        for option_id in selected:
-            option = next(item for item in unresolved.options if item.option_id == option_id)
-            if option.reference_id is not None:
-                used_reference_ids.add(option_id)
+            selected = tuple(
+                option.option_id for option in available[: unresolved.choose_count]
+            )
         selections[unresolved.choice_id] = BuilderChoiceSelection(
             choice_id=unresolved.choice_id,
             source_ref=unresolved.source_ref,
