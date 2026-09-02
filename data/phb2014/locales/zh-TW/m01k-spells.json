@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "phb2014",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "phb2014:spell:blade-ward":{"name":"劍刃防護","data.desc.0":"畫出防護手勢，短暫獲得對武器鈍擊、穿刺與揮砍傷害的抗性。"},
+    "phb2014:spell:friends":{"name":"交友術","data.desc.0":"短時間強化你對一名非敵對生物進行的魅力檢定，但效果結束後可能帶來社交後果。"},
+    "phb2014:spell:thorn-whip":{"name":"荊棘之鞭","data.desc.0":"召出帶刺藤蔓進行近戰法術攻擊，並可將大型或更小的目標拉近。"},
+    "phb2014:spell:chromatic-orb":{"name":"繁彩球","data.desc.0":"投出自選元素能量球進行遠程法術攻擊，使用更高環法術位時傷害提高。"},
+    "phb2014:spell:compelled-duel":{"name":"強迫決鬥","data.desc.0":"向一名生物發出挑戰，以魔法迫使其在法術持續期間更專注於你。"},
+    "phb2014:spell:hail-of-thorns":{"name":"荊棘箭雨","data.desc.0":"強化下一次遠程武器命中，使荊棘爆散並傷害附近生物。"},
+    "phb2014:spell:hex":{"name":"妖火詛咒","data.desc.0":"詛咒一名生物，使你的攻擊造成額外死靈傷害，並妨礙其使用所選屬性的檢定。"},
+    "phb2014:spell:thunderous-smite":{"name":"雷鳴斬","data.desc.0":"強化下一次近戰武器命中，造成雷鳴傷害並可能推開、擊倒目標。"},
+    "phb2014:spell:witch-bolt":{"name":"巫術箭","data.desc.0":"以遠程法術攻擊建立持續電弧，在連結維持期間可持續傷害目標。"},
+    "phb2014:spell:cloud-of-daggers":{"name":"匕首之雲","data.desc.0":"在小範圍內充滿旋轉魔法刀刃，傷害進入或在其中開始回合的生物。"},
+    "phb2014:spell:cordon-of-arrows":{"name":"箭矢警戒","data.desc.0":"將彈藥設為魔法警戒，當生物接近保護區域時自動發動攻擊。"},
+    "phb2014:spell:crown-of-madness":{"name":"狂亂之冠","data.desc.0":"魅惑一名類人生物，並在你維持控制時迫使它近戰攻擊你指定的生物。"},
+    "phb2014:spell:blinding-smite":{"name":"致盲斬","data.desc.0":"強化下一次近戰武器命中，造成光耀傷害並可能使目標目盲直到成功豁免。"},
+    "phb2014:spell:conjure-barrage":{"name":"召喚箭幕","data.desc.0":"擲出武器或彈藥並創造大量相同投射物，形成錐形範圍攻擊。"},
+    "phb2014:spell:crusaders-mantle":{"name":"十字軍披風","data.desc.0":"散發神聖力量，使靈光內友軍的武器攻擊附加光耀傷害。"},
+    "phb2014:spell:lightning-arrow":{"name":"閃電箭","data.desc.0":"使下一發遠程武器投射物化為閃電，傷害目標與其附近生物。"},
+    "phb2014:spell:grasping-vine":{"name":"抓握藤蔓","data.desc.0":"創造魔法藤蔓，可在你的附贈動作中抽擊並將附近生物拉向它。"},
+    "phb2014:spell:banishing-smite":{"name":"放逐斬","data.desc.0":"強化下一次武器命中造成力場傷害，並可能放逐生命值已很低的目標。"},
+    "phb2014:spell:conjure-volley":{"name":"召喚箭雨","data.desc.0":"將一枚投射物射向空中，在大範圍內降下大量相同彈藥。"},
+    "phb2014:spell:destructive-wave":{"name":"毀滅波","data.desc.0":"釋放神聖衝擊波，傷害你選定的附近生物並可能將其擊倒。"},
+    "phb2014:spell:swift-quiver":{"name":"迅捷箭袋","data.desc.0":"附魔箭袋，使彈藥自動備妥，並可用附贈動作進行額外遠程攻擊。"},
+    "phb2014:spell:arcane-gate":{"name":"秘法之門","data.desc.0":"在可見位置創造兩個相連傳送門，使生物與物件能瞬間在兩端之間通過。"},
+    "phb2014:spell:telepathy":{"name":"心靈感應","data.desc.0":"與同位面一名自願生物建立長時間心靈連結，可跨越任意距離溝通。"},
+    "phb2014:spell:tsunami":{"name":"海嘯術","data.desc.0":"創造巨大的水牆向前推進，傷害並捲帶被它捕捉的生物。"}
+  }
+}
