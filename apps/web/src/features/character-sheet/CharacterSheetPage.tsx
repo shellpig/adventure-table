@@ -18,6 +18,7 @@ import type {
 import { SearchableSelect } from '../../components/SearchableSelect'
 import type { SearchOption } from '../../components/SearchableSelect'
 import type { UiCopyKey } from '../../i18n/uiCopy'
+import { passiveInvestigationLabel } from '../../i18n/m01kCharacterSheetCopy'
 import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy, type UiTranslator } from '../../i18n/useUiCopy'
 
@@ -226,7 +227,7 @@ export function CharacterSheetView({
   errorMessage = null,
   onPatch = async () => {},
 }: CharacterSheetViewProps) {
-  const { t } = useUiCopy()
+  const { locale, t } = useUiCopy()
   const [tab, setTab] = useState<CharacterTab>(initialTab)
   const [conditionRef, setConditionRef] = useState('')
   const [conditionNote, setConditionNote] = useState('')
@@ -441,9 +442,15 @@ export function CharacterSheetView({
                 <p className="eyebrow">{t('sheet.coreProfile')}</p>
                 <h2>{t('sheet.tab.attributes')}</h2>
               </div>
-              <div className="passive-card">
-                <span>{t('sheet.passivePerception')}</span>
-                <strong>{sheet.passive_perception}</strong>
+              <div className="hero-editors">
+                <div className="passive-card">
+                  <span>{t('sheet.passivePerception')}</span>
+                  <strong>{sheet.passive_perception}</strong>
+                </div>
+                <div className="passive-card">
+                  <span>{passiveInvestigationLabel(locale)}</span>
+                  <strong>{sheet.passive_investigation}</strong>
+                </div>
               </div>
             </div>
 
