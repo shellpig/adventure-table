@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "phase": "M01-J",
+  "note": "Canonical English names for M01-J entries whose reference-document heading carried no English title. Every row must cite a supplied source; NEEDS_SOURCE rows fail the build. zh_reference is documentation only - the zh-TW presentation always comes from the reference documents.",
+  "sources": {
+    "srd": "data/srd5.1 (already-installed canonical naming)",
+    "mirror-optionalfeature": "5e.dickytwister.org /data/optionalfeatures.json ENG_name",
+    "mirror-subclassfeature": "5e.dickytwister.org /data/class/class-*.json subclassFeature[].ENG_name (incl. nested entries)",
+    "NEEDS_SOURCE": "no supplied English name located; must be provided before this build can run",
+    "user-confirmed": "no published English name located on any supplied source; name confirmed by the project owner"
+  },
+  "overrides": {
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-1-17": {
+      "name": "Breath of Winter",
+      "min_level": 17,
+      "source": "mirror-optionalfeature",
+      "zh_reference": "寒冬之息"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-2-6": {
+      "name": "Clench of the North Wind",
+      "min_level": 6,
+      "source": "mirror-optionalfeature",
+      "zh_reference": "北風之握"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-4-17": {
+      "name": "Eternal Mountain Defense",
+      "min_level": 17,
+      "source": "mirror-optionalfeature",
+      "zh_reference": "蒼山庇佑"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-8-11": {
+      "name": "Flames of the Phoenix",
+      "min_level": 11,
+      "source": "mirror-optionalfeature",
+      "zh_reference": "鳳凰火"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-9-6": {
+      "name": "Gong of the Summit",
+      "min_level": 6,
+      "source": "mirror-optionalfeature",
+      "zh_reference": "獅吼功"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-10-11": {
+      "name": "Mist Stance",
+      "min_level": 11,
+      "source": "mirror-optionalfeature",
+      "zh_reference": "雲霧式"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-11-11": {
+      "name": "Ride the Wind",
+      "min_level": 11,
+      "source": "mirror-optionalfeature",
+      "zh_reference": "攀雲步"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-12-17": {
+      "name": "River of Hungry Flame",
+      "min_level": 17,
+      "source": "mirror-optionalfeature",
+      "zh_reference": "噬焰流"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-17-17": {
+      "name": "Wave of Rolling Earth",
+      "min_level": 17,
+      "source": "mirror-optionalfeature",
+      "zh_reference": "滾石浪"
+    },
+    "xge:feature:shepherd-2-spirit-totem-option-1-u718a-u4e4b-u7cbe-u9b42": {
+      "name": "Bear Spirit",
+      "source": "mirror-subclassfeature",
+      "zh_reference": "熊之精魂"
+    },
+    "xge:feature:shepherd-2-spirit-totem-option-2-u9df9-u4e4b-u7cbe-u9b42": {
+      "name": "Hawk Spirit",
+      "source": "mirror-subclassfeature",
+      "zh_reference": "鷹之精魂"
+    },
+    "xge:feature:shepherd-2-spirit-totem-option-3-u7368-u89d2-u7378-u7cbe-u9b42": {
+      "name": "Unicorn Spirit",
+      "source": "mirror-subclassfeature",
+      "zh_reference": "獨角獸精魂"
+    },
+    "xge:feature:kensei-3-path-of-the-kensei-option-1-u528d-u8056-u6b66-u5668": {
+      "name": "Kensei Weapons",
+      "source": "mirror-subclassfeature",
+      "zh_reference": "劍聖武器"
+    },
+    "tce:feature:peace-1-u9818-u57df-u6cd5-u8853": {
+      "name": "Domain Spells",
+      "source": "srd",
+      "zh_reference": "領域法術"
+    },
+    "tce:feature:twilight-1-u9818-u57df-u6cd5-u8853": {
+      "name": "Domain Spells",
+      "source": "srd",
+      "zh_reference": "領域法術"
+    },
+    "tce:feature:bladesinging-2-training-in-war-and-song-bladesinging": {
+      "name": "Training in War and Song (Bladesinging)",
+      "source": "mirror-subclassfeature",
+      "zh_reference": "戰歌訓練（劍詠）"
+    },
+    "tce:feature:stars-2-starry-form-option-1-u5c04-u624b-u5ea7": {
+      "name": "Archer",
+      "source": "user-confirmed",
+      "zh_reference": "射手座"
+    },
+    "tce:feature:stars-2-starry-form-option-2-u8056-u76c3-u5ea7": {
+      "name": "Chalice",
+      "source": "user-confirmed",
+      "zh_reference": "聖盃座"
+    },
+    "tce:feature:stars-2-starry-form-option-3-u5de8-u9f8d-u5ea7": {
+      "name": "Dragon",
+      "source": "user-confirmed",
+      "zh_reference": "巨龍座"
+    },
+    "xge:feature:kensei-3-path-of-the-kensei-option-4-u66f8-u756b-u4e4b-u9053": {
+      "name": "Way of the Brush",
+      "source": "user-confirmed",
+      "zh_reference": "書畫之道"
+    },
+    "tce:feature:watchers-3-channel-divinity-option-1-u5b88-u671b-u610f-u5fd7": {
+      "name": "Watcher's Will",
+      "source": "mirror-subclassfeature",
+      "zh_reference": "守望意志"
+    },
+    "tce:feature:watchers-3-channel-divinity-option-2-u9a45-u6563-u7570-u57df": {
+      "name": "Abjure the Extraplanar",
+      "source": "mirror-subclassfeature",
+      "zh_reference": "驅散異域"
+    }
+  }
+}

@@ -1,0 +1,338 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "tce",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "tce:feature:aberrant-mind-1-psionic-spells": {
+      "name": "靈能法術"
+    },
+    "tce:feature:aberrant-mind-1-telepathic-speech": {
+      "name": "傳心談話"
+    },
+    "tce:feature:astral-self-3-arms-of-the-astral-self": {
+      "name": "星我之臂"
+    },
+    "tce:feature:astral-self-3-forms-of-your-astral-self": {
+      "name": "你的星我形態"
+    },
+    "tce:feature:beast-3-form-of-the-beast": {
+      "name": "野獸之形"
+    },
+    "tce:feature:bladesinging-2-bladesinger-styles": {
+      "name": "劍詠者風格"
+    },
+    "tce:feature:bladesinging-2-bladesong": {
+      "name": "劍歌"
+    },
+    "tce:feature:bladesinging-2-training-in-war-and-song-bladesinging": {
+      "name": "戰歌訓練"
+    },
+    "tce:feature:clockwork-soul-1-clockwork-magic": {
+      "name": "時械法術"
+    },
+    "tce:feature:clockwork-soul-1-restore-balance": {
+      "name": "歸復平衡"
+    },
+    "tce:feature:creation-3-mote-of-potential": {
+      "name": "潛能微塵"
+    },
+    "tce:feature:creation-3-performance-of-creation": {
+      "name": "造物表演"
+    },
+    "tce:feature:eloquence-3-silver-tongue": {
+      "name": "巧舌如簧"
+    },
+    "tce:feature:eloquence-3-unsettling-words": {
+      "name": "擾神之詞"
+    },
+    "tce:feature:fathomless-1-expanded-spell-list": {
+      "name": "擴充套件法術列表"
+    },
+    "tce:feature:fathomless-1-gift-of-the-sea": {
+      "name": "海洋饋贈"
+    },
+    "tce:feature:fathomless-1-tentacle-of-the-deeps": {
+      "name": "深海觸手"
+    },
+    "tce:feature:fey-wanderer-3-dreadful-strikes": {
+      "name": "哀懼靈襲"
+    },
+    "tce:feature:fey-wanderer-3-fey-wanderer-magic": {
+      "name": "妖精漫遊者法術"
+    },
+    "tce:feature:fey-wanderer-3-otherworldly-glamour": {
+      "name": "妖冶嫻都"
+    },
+    "tce:feature:genie-1-expanded-spell-list": {
+      "name": "擴充套件法術列表"
+    },
+    "tce:feature:genie-1-genie-s-vessel": {
+      "name": "巨靈器皿"
+    },
+    "tce:feature:genie-m01j-choice-genie-dao": {
+      "name": "土巨靈"
+    },
+    "tce:feature:genie-m01j-choice-genie-djinni": {
+      "name": "氣巨靈"
+    },
+    "tce:feature:genie-m01j-choice-genie-efreeti": {
+      "name": "火巨靈"
+    },
+    "tce:feature:genie-m01j-choice-genie-marid": {
+      "name": "水巨靈"
+    },
+    "tce:feature:glory-3-channel-divinity": {
+      "name": "引導神力"
+    },
+    "tce:feature:glory-3-channel-divinity-option-1-peerless-athlete": {
+      "name": "絕倫健將"
+    },
+    "tce:feature:glory-3-channel-divinity-option-2-inspiring-smite": {
+      "name": "鼓舞一擊"
+    },
+    "tce:feature:glory-3-oath-spells": {
+      "name": "聖誓法術"
+    },
+    "tce:feature:glory-3-tenets-of-glory": {
+      "name": "榮耀之信條"
+    },
+    "tce:feature:mercy-3-hand-of-harm": {
+      "name": "奪命之手"
+    },
+    "tce:feature:mercy-3-hand-of-healing": {
+      "name": "予命之手"
+    },
+    "tce:feature:mercy-3-implements-of-mercy": {
+      "name": "命流之器"
+    },
+    "tce:feature:order-1-bonus-proficiencies": {
+      "name": "額外熟練"
+    },
+    "tce:feature:order-1-voice-of-authority": {
+      "name": "權威之音"
+    },
+    "tce:feature:peace-1-domain-spells": {
+      "name": "領域法術"
+    },
+    "tce:feature:peace-1-emboldening-bond": {
+      "name": "勇氣聯結"
+    },
+    "tce:feature:peace-1-implement-of-peace": {
+      "name": "和平執行"
+    },
+    "tce:feature:phantom-3-wails-from-the-grave": {
+      "name": "墓穴驚嚎"
+    },
+    "tce:feature:phantom-3-whispers-of-the-dead": {
+      "name": "亡者餘聲"
+    },
+    "tce:feature:psi-warrior-3-psionic-power": {
+      "name": "靈能力量"
+    },
+    "tce:feature:psi-warrior-7-psi-powered-leap": {
+      "name": "靈力躍動"
+    },
+    "tce:feature:psi-warrior-7-telekinetic-thrust": {
+      "name": "念力突刺"
+    },
+    "tce:feature:rune-knight-3-bonus-proficiencies": {
+      "name": "額外熟練項"
+    },
+    "tce:feature:rune-knight-3-giant-s-might": {
+      "name": "巨人之力"
+    },
+    "tce:feature:rune-knight-3-rune-carver": {
+      "name": "符文雕刻者"
+    },
+    "tce:feature:rune-knight-3-rune-carver-option-1-cloud-rune": {
+      "name": "雲之符文"
+    },
+    "tce:feature:rune-knight-3-rune-carver-option-2-fire-rune": {
+      "name": "火之符文"
+    },
+    "tce:feature:rune-knight-3-rune-carver-option-3-frost-rune": {
+      "name": "霜之符文"
+    },
+    "tce:feature:rune-knight-3-rune-carver-option-4-stone-rune": {
+      "name": "石之符文"
+    },
+    "tce:feature:rune-knight-3-rune-carver-option-hill-rune": {
+      "name": "山丘符文（7級或更高）"
+    },
+    "tce:feature:rune-knight-3-rune-carver-option-storm-rune": {
+      "name": "風暴符文（7級或更高）"
+    },
+    "tce:feature:scribes-2-awakened-spellbook": {
+      "name": "覺醒魔典"
+    },
+    "tce:feature:scribes-2-wizardly-quill": {
+      "name": "法師之筆"
+    },
+    "tce:feature:soulknife-3-psionic-power": {
+      "name": "靈能天賦"
+    },
+    "tce:feature:soulknife-3-psionic-power-option-1-psi-bolstered-knack": {
+      "name": "靈能訣竅"
+    },
+    "tce:feature:soulknife-3-psionic-power-option-2-psychic-whispers": {
+      "name": "心靈低語"
+    },
+    "tce:feature:soulknife-3-psychic-blades": {
+      "name": "念刃"
+    },
+    "tce:feature:soulknife-9-homing-strikes": {
+      "name": "尋的攻擊"
+    },
+    "tce:feature:soulknife-9-psychic-teleportation": {
+      "name": "心靈傳送"
+    },
+    "tce:feature:spores-2-circle-spells": {
+      "name": "結社法術"
+    },
+    "tce:feature:spores-2-halo-of-spores": {
+      "name": "孢子光環"
+    },
+    "tce:feature:spores-2-symbiotic-entity": {
+      "name": "共生實體"
+    },
+    "tce:feature:stars-2-star-map": {
+      "name": "星圖"
+    },
+    "tce:feature:stars-2-starry-form": {
+      "name": "星耀形態"
+    },
+    "tce:feature:stars-2-starry-form-option-1-archer": {
+      "name": "射手座"
+    },
+    "tce:feature:stars-2-starry-form-option-2-chalice": {
+      "name": "聖盃座"
+    },
+    "tce:feature:stars-2-starry-form-option-3-dragon": {
+      "name": "巨龍座"
+    },
+    "tce:feature:swarmkeeper-3-gathered-swarm": {
+      "name": "蜂聚叢集"
+    },
+    "tce:feature:swarmkeeper-3-swarmkeeper-magic": {
+      "name": "叢集守衛魔法"
+    },
+    "tce:feature:twilight-1-bonus-proficiencies": {
+      "name": "額外熟練"
+    },
+    "tce:feature:twilight-1-domain-spells": {
+      "name": "領域法術"
+    },
+    "tce:feature:twilight-1-eyes-of-night": {
+      "name": "黑夜明目"
+    },
+    "tce:feature:twilight-1-vigilant-blessing": {
+      "name": "警覺賜福"
+    },
+    "tce:feature:watchers-3-channel-divinity": {
+      "name": "引導神力"
+    },
+    "tce:feature:watchers-3-channel-divinity-option-1-watcher-s-will": {
+      "name": "守望意志"
+    },
+    "tce:feature:watchers-3-channel-divinity-option-2-abjure-the-extraplanar": {
+      "name": "驅散異域"
+    },
+    "tce:feature:watchers-3-oath-spells": {
+      "name": "聖誓法術"
+    },
+    "tce:feature:watchers-3-tenets-of-the-watchers": {
+      "name": "守望之信條"
+    },
+    "tce:feature:wild-magic-3-magic-awareness": {
+      "name": "察覺魔法"
+    },
+    "tce:feature:wild-magic-3-wild-surge": {
+      "name": "狂野浪潮"
+    },
+    "tce:feature:wildfire-2-circle-spells": {
+      "name": "結社法術"
+    },
+    "tce:feature:wildfire-2-summon-wildfire-spirit": {
+      "name": "召喚野火精魄"
+    },
+    "tce:subclass:aberrant-mind": {
+      "name": "畸變心智"
+    },
+    "tce:subclass:astral-self": {
+      "name": "星體自性宗"
+    },
+    "tce:subclass:beast": {
+      "name": "野獸道途"
+    },
+    "tce:subclass:bladesinging": {
+      "name": "劍詠傳承"
+    },
+    "tce:subclass:clockwork-soul": {
+      "name": "時械之魂"
+    },
+    "tce:subclass:creation": {
+      "name": "創造學院"
+    },
+    "tce:subclass:eloquence": {
+      "name": "雄辯學院"
+    },
+    "tce:subclass:fathomless": {
+      "name": "深海意志"
+    },
+    "tce:subclass:fey-wanderer": {
+      "name": "妖精漫遊者"
+    },
+    "tce:subclass:genie": {
+      "name": "巨靈宗主"
+    },
+    "tce:subclass:glory": {
+      "name": "榮耀之誓"
+    },
+    "tce:subclass:mercy": {
+      "name": "慈悲宗"
+    },
+    "tce:subclass:order": {
+      "name": "秩序領域"
+    },
+    "tce:subclass:peace": {
+      "name": "和平領域"
+    },
+    "tce:subclass:phantom": {
+      "name": "鬼魅"
+    },
+    "tce:subclass:psi-warrior": {
+      "name": "靈能武士"
+    },
+    "tce:subclass:rune-knight": {
+      "name": "符文騎士"
+    },
+    "tce:subclass:scribes": {
+      "name": "銘文書士會"
+    },
+    "tce:subclass:soulknife": {
+      "name": "心刃"
+    },
+    "tce:subclass:spores": {
+      "name": "孢子結社"
+    },
+    "tce:subclass:stars": {
+      "name": "星辰結社"
+    },
+    "tce:subclass:swarmkeeper": {
+      "name": "蜂聚守衛"
+    },
+    "tce:subclass:twilight": {
+      "name": "暮光領域"
+    },
+    "tce:subclass:watchers": {
+      "name": "守望之誓"
+    },
+    "tce:subclass:wild-magic": {
+      "name": "狂野魔法道途"
+    },
+    "tce:subclass:wildfire": {
+      "name": "野火結社"
+    }
+  }
+}

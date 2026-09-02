@@ -1,0 +1,1814 @@
+{
+  "schema_version": 1,
+  "phase": "M01-J",
+  "ruleset": "dnd5e-2014",
+  "rows": [
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:wizard",
+      "subclass_key": "phb2014:subclass:abjuration",
+      "name": "School of Abjuration",
+      "zh_name": "防護學派",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:paladin",
+      "subclass_key": "phb2014:subclass:ancients",
+      "name": "Oath of Ancients",
+      "zh_name": "古賢之誓",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        15,
+        20
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:rogue",
+      "subclass_key": "phb2014:subclass:arcane-trickster",
+      "name": "Arcane Trickster",
+      "zh_name": "奧法詭術師",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        9,
+        13,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:warlock",
+      "subclass_key": "phb2014:subclass:archfey",
+      "name": "The Archfey",
+      "zh_name": "妖精君王",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:rogue",
+      "subclass_key": "phb2014:subclass:assassin",
+      "name": "Assassin",
+      "zh_name": "刺客",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        9,
+        13,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:fighter",
+      "subclass_key": "phb2014:subclass:battle-master",
+      "name": "Battle Master",
+      "zh_name": "戰鬥大師",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        10,
+        15,
+        18
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:ranger",
+      "subclass_key": "phb2014:subclass:beast-master",
+      "name": "Beast Master",
+      "zh_name": "獸王",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        11,
+        15
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:barbarian",
+      "subclass_key": "phb2014:subclass:berserker",
+      "name": "Path of the Berserker",
+      "zh_name": "狂戰士道途",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        10,
+        14
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "srd5.1:subclass:berserker"
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:fighter",
+      "subclass_key": "phb2014:subclass:champion",
+      "name": "Champion",
+      "zh_name": "勇士",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        10,
+        15,
+        18
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "srd5.1:subclass:champion"
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:wizard",
+      "subclass_key": "phb2014:subclass:conjuration",
+      "name": "School of Conjuration",
+      "zh_name": "咒法學派",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:paladin",
+      "subclass_key": "phb2014:subclass:devotion",
+      "name": "Oath of Devotion",
+      "zh_name": "奉獻之誓",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        15,
+        20
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "srd5.1:subclass:devotion"
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:wizard",
+      "subclass_key": "phb2014:subclass:divination",
+      "name": "School of Divination",
+      "zh_name": "預言學派",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:sorcerer",
+      "subclass_key": "phb2014:subclass:draconic",
+      "name": "Draconic Bloodline",
+      "zh_name": "龍族血脈",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        14,
+        18
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "srd5.1:subclass:draconic"
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:fighter",
+      "subclass_key": "phb2014:subclass:eldritch-knight",
+      "name": "Eldritch Knight",
+      "zh_name": "奧法騎士",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        10,
+        15,
+        18
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:wizard",
+      "subclass_key": "phb2014:subclass:enchantment",
+      "name": "School of Enchantment",
+      "zh_name": "惑控學派",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:wizard",
+      "subclass_key": "phb2014:subclass:evocation",
+      "name": "School of Evocation",
+      "zh_name": "塑能學派",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "srd5.1:subclass:evocation"
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:warlock",
+      "subclass_key": "phb2014:subclass:fiend",
+      "name": "The Fiend",
+      "zh_name": "邪魔",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        10,
+        14
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "srd5.1:subclass:fiend"
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:monk",
+      "subclass_key": "phb2014:subclass:four-elements",
+      "name": "Way of the Four Elements",
+      "zh_name": "四象宗",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        11,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:warlock",
+      "subclass_key": "phb2014:subclass:great-old-one",
+      "name": "The Great Old One",
+      "zh_name": "舊日支配者",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:ranger",
+      "subclass_key": "phb2014:subclass:hunter",
+      "name": "Hunter",
+      "zh_name": "獵人",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        11,
+        15
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "srd5.1:subclass:hunter"
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:wizard",
+      "subclass_key": "phb2014:subclass:illusion",
+      "name": "School of Illusion",
+      "zh_name": "幻術學派",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:cleric",
+      "subclass_key": "phb2014:subclass:knowledge",
+      "name": "Knowledge Domain",
+      "zh_name": "知識領域",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:druid",
+      "subclass_key": "phb2014:subclass:land",
+      "name": "Circle of the Land",
+      "zh_name": "大地結社",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "srd5.1:subclass:land"
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:cleric",
+      "subclass_key": "phb2014:subclass:life",
+      "name": "Life Domain",
+      "zh_name": "生命領域",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "srd5.1:subclass:life"
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:cleric",
+      "subclass_key": "phb2014:subclass:light",
+      "name": "Light Domain",
+      "zh_name": "光明領域",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:bard",
+      "subclass_key": "phb2014:subclass:lore",
+      "name": "College of Lore",
+      "zh_name": "逸聞學院",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        14
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "srd5.1:subclass:lore"
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:druid",
+      "subclass_key": "phb2014:subclass:moon",
+      "name": "Circle of the Moon",
+      "zh_name": "月亮結社",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:cleric",
+      "subclass_key": "phb2014:subclass:nature",
+      "name": "Nature Domain",
+      "zh_name": "自然領域",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:wizard",
+      "subclass_key": "phb2014:subclass:necromancy",
+      "name": "School of Necromancy",
+      "zh_name": "死靈學派",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:monk",
+      "subclass_key": "phb2014:subclass:open-hand",
+      "name": "Way of the Open Hand",
+      "zh_name": "散打宗",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        11,
+        17
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "srd5.1:subclass:open-hand"
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:monk",
+      "subclass_key": "phb2014:subclass:shadow",
+      "name": "Way of Shadow",
+      "zh_name": "暗影宗",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        11,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:cleric",
+      "subclass_key": "phb2014:subclass:tempest",
+      "name": "Tempest Domain",
+      "zh_name": "風暴領域",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:rogue",
+      "subclass_key": "phb2014:subclass:thief",
+      "name": "Thief",
+      "zh_name": "竊賊",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        9,
+        13,
+        17
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "srd5.1:subclass:thief"
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:barbarian",
+      "subclass_key": "phb2014:subclass:totem-warrior",
+      "name": "Path of the Totem Warrior",
+      "zh_name": "圖騰勇士道途",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:wizard",
+      "subclass_key": "phb2014:subclass:transmutation",
+      "name": "School of Transmutation",
+      "zh_name": "變化學派",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:cleric",
+      "subclass_key": "phb2014:subclass:trickery",
+      "name": "Trickery Domain",
+      "zh_name": "詭術領域",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:bard",
+      "subclass_key": "phb2014:subclass:valor",
+      "name": "College of Valor",
+      "zh_name": "勇氣學院",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:paladin",
+      "subclass_key": "phb2014:subclass:vengeance",
+      "name": "Oath of Vengeance",
+      "zh_name": "復仇之誓",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        15,
+        20
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:cleric",
+      "subclass_key": "phb2014:subclass:war",
+      "name": "War Domain",
+      "zh_name": "戰爭領域",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "phb2014",
+      "parent_class_ref": "srd5.1:class:sorcerer",
+      "subclass_key": "phb2014:subclass:wild-magic",
+      "name": "Wild Magic",
+      "zh_name": "狂野魔法",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        14,
+        18
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "scag",
+      "parent_class_ref": "srd5.1:class:cleric",
+      "subclass_key": "scag:subclass:arcana",
+      "name": "Arcana Domain",
+      "zh_name": "奧祕領域",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "scag",
+      "parent_class_ref": "srd5.1:class:barbarian",
+      "subclass_key": "scag:subclass:battlerager",
+      "name": "Path of the Battlerager",
+      "zh_name": "戰狂道途",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "scag",
+      "parent_class_ref": "srd5.1:class:wizard",
+      "subclass_key": "scag:subclass:bladesinging",
+      "name": "Bladesinging",
+      "zh_name": "劍詠傳承",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "tce:subclass:bladesinging"
+    },
+    {
+      "source": "scag",
+      "parent_class_ref": "srd5.1:class:paladin",
+      "subclass_key": "scag:subclass:crown",
+      "name": "Oath of the Crown",
+      "zh_name": "王冠之誓",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        15,
+        20
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "scag",
+      "parent_class_ref": "srd5.1:class:monk",
+      "subclass_key": "scag:subclass:long-death",
+      "name": "Way of the Long Death",
+      "zh_name": "永亡宗",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        11,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "scag",
+      "parent_class_ref": "srd5.1:class:rogue",
+      "subclass_key": "scag:subclass:mastermind",
+      "name": "Mastermind",
+      "zh_name": "策士",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        9,
+        13,
+        17
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "xge:subclass:mastermind"
+    },
+    {
+      "source": "scag",
+      "parent_class_ref": "srd5.1:class:fighter",
+      "subclass_key": "scag:subclass:purple-dragon-knight",
+      "name": "Purple Dragon Knight (Banneret)",
+      "zh_name": "紫龍騎士（旗將）",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        10,
+        15,
+        18
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "scag",
+      "parent_class_ref": "srd5.1:class:sorcerer",
+      "subclass_key": "scag:subclass:storm-sorcery",
+      "name": "Storm Sorcery",
+      "zh_name": "暴風術法",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        14,
+        18
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "xge:subclass:storm-sorcery"
+    },
+    {
+      "source": "scag",
+      "parent_class_ref": "srd5.1:class:monk",
+      "subclass_key": "scag:subclass:sun-soul",
+      "name": "Way of the Sun Soul",
+      "zh_name": "日魂宗",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        11,
+        17
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "xge:subclass:sun-soul"
+    },
+    {
+      "source": "scag",
+      "parent_class_ref": "srd5.1:class:rogue",
+      "subclass_key": "scag:subclass:swashbuckler",
+      "name": "Swashbuckler",
+      "zh_name": "風流劍客",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        9,
+        13,
+        17
+      ],
+      "disposition": "canonical_duplicate",
+      "canonical_key": "xge:subclass:swashbuckler"
+    },
+    {
+      "source": "scag",
+      "parent_class_ref": "srd5.1:class:warlock",
+      "subclass_key": "scag:subclass:undying",
+      "name": "The Undying",
+      "zh_name": "不朽者",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:sorcerer",
+      "subclass_key": "tce:subclass:aberrant-mind",
+      "name": "Aberrant Mind",
+      "zh_name": "畸變心智",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        14,
+        18
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "tce:class:artificer",
+      "subclass_key": "tce:subclass:alchemist",
+      "name": "Alchemist",
+      "zh_name": "鍊金師",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        5,
+        9,
+        15
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "tce:class:artificer",
+      "subclass_key": "tce:subclass:armorer",
+      "name": "Armorer",
+      "zh_name": "裝甲師",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        5,
+        9,
+        15
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "tce:class:artificer",
+      "subclass_key": "tce:subclass:artillerist",
+      "name": "Artillerist",
+      "zh_name": "魔炮師",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        5,
+        9,
+        15
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:monk",
+      "subclass_key": "tce:subclass:astral-self",
+      "name": "Way of the Astral Self",
+      "zh_name": "星體自性宗",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        11,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "tce:class:artificer",
+      "subclass_key": "tce:subclass:battle-smith",
+      "name": "Battle Smith",
+      "zh_name": "戰地匠師",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        5,
+        9,
+        15
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:barbarian",
+      "subclass_key": "tce:subclass:beast",
+      "name": "Path of the Beast",
+      "zh_name": "野獸道途",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:wizard",
+      "subclass_key": "tce:subclass:bladesinging",
+      "name": "Bladesinging",
+      "zh_name": "劍詠傳承",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:sorcerer",
+      "subclass_key": "tce:subclass:clockwork-soul",
+      "name": "Clockwork Soul",
+      "zh_name": "時械之魂",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        14,
+        18
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:bard",
+      "subclass_key": "tce:subclass:creation",
+      "name": "College of Creation",
+      "zh_name": "創造學院",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:bard",
+      "subclass_key": "tce:subclass:eloquence",
+      "name": "College of Eloquence",
+      "zh_name": "雄辯學院",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:warlock",
+      "subclass_key": "tce:subclass:fathomless",
+      "name": "The Fathomless",
+      "zh_name": "深海意志",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:ranger",
+      "subclass_key": "tce:subclass:fey-wanderer",
+      "name": "Fey Wanderer",
+      "zh_name": "妖精漫遊者",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        11,
+        15
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:warlock",
+      "subclass_key": "tce:subclass:genie",
+      "name": "The Genie",
+      "zh_name": "巨靈宗主",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:paladin",
+      "subclass_key": "tce:subclass:glory",
+      "name": "Oath of Glory",
+      "zh_name": "榮耀之誓",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        15,
+        20
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:monk",
+      "subclass_key": "tce:subclass:mercy",
+      "name": "Way of Mercy",
+      "zh_name": "慈悲宗",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        11,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:cleric",
+      "subclass_key": "tce:subclass:order",
+      "name": "Order Domain",
+      "zh_name": "秩序領域",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:cleric",
+      "subclass_key": "tce:subclass:peace",
+      "name": "Peace Domain",
+      "zh_name": "和平領域",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:rogue",
+      "subclass_key": "tce:subclass:phantom",
+      "name": "Phantom",
+      "zh_name": "鬼魅",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        9,
+        13,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:fighter",
+      "subclass_key": "tce:subclass:psi-warrior",
+      "name": "Psi Warrior",
+      "zh_name": "靈能武士",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        10,
+        15,
+        18
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:fighter",
+      "subclass_key": "tce:subclass:rune-knight",
+      "name": "Rune Knight",
+      "zh_name": "符文騎士",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        10,
+        15,
+        18
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:wizard",
+      "subclass_key": "tce:subclass:scribes",
+      "name": "Order of Scribes",
+      "zh_name": "銘文書士會",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:rogue",
+      "subclass_key": "tce:subclass:soulknife",
+      "name": "Soulknife",
+      "zh_name": "心刃",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        9,
+        13,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:druid",
+      "subclass_key": "tce:subclass:spores",
+      "name": "Circle of Spores",
+      "zh_name": "孢子結社",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:druid",
+      "subclass_key": "tce:subclass:stars",
+      "name": "Circle of Stars",
+      "zh_name": "星辰結社",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:ranger",
+      "subclass_key": "tce:subclass:swarmkeeper",
+      "name": "Swarmkeeper",
+      "zh_name": "蜂聚守衛",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        11,
+        15
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:cleric",
+      "subclass_key": "tce:subclass:twilight",
+      "name": "Twilight Domain",
+      "zh_name": "暮光領域",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:paladin",
+      "subclass_key": "tce:subclass:watchers",
+      "name": "Oath of the Watchers",
+      "zh_name": "守望之誓",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        15,
+        20
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:barbarian",
+      "subclass_key": "tce:subclass:wild-magic",
+      "name": "Path of Wild Magic",
+      "zh_name": "狂野魔法道途",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "tce",
+      "parent_class_ref": "srd5.1:class:druid",
+      "subclass_key": "tce:subclass:wildfire",
+      "name": "Circle of Wildfire",
+      "zh_name": "野火結社",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:barbarian",
+      "subclass_key": "xge:subclass:ancestral-guardian",
+      "name": "Path of the Ancestral Guardian",
+      "zh_name": "先祖守衛道途",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:fighter",
+      "subclass_key": "xge:subclass:arcane-archer",
+      "name": "Arcane Archer",
+      "zh_name": "奧法弓手",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        10,
+        15,
+        18
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:fighter",
+      "subclass_key": "xge:subclass:cavalier",
+      "name": "Cavalier",
+      "zh_name": "騎兵",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        10,
+        15,
+        18
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:warlock",
+      "subclass_key": "xge:subclass:celestial",
+      "name": "The Celestial",
+      "zh_name": "天界宗主",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:paladin",
+      "subclass_key": "xge:subclass:conquest",
+      "name": "Oath of the Conquest",
+      "zh_name": "征服之誓",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        15,
+        20
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:sorcerer",
+      "subclass_key": "xge:subclass:divine-soul",
+      "name": "Divine Soul",
+      "zh_name": "神聖之魂",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        14,
+        18
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:druid",
+      "subclass_key": "xge:subclass:dreams",
+      "name": "Circle of the Dreams",
+      "zh_name": "夢境結社",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:monk",
+      "subclass_key": "xge:subclass:drunken-master",
+      "name": "Way of the Drunken Master",
+      "zh_name": "醉拳宗",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        11,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:cleric",
+      "subclass_key": "xge:subclass:forge",
+      "name": "Forge Domain",
+      "zh_name": "鍛造領域",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:bard",
+      "subclass_key": "xge:subclass:glamour",
+      "name": "College of Glamour",
+      "zh_name": "魅惑學院",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:ranger",
+      "subclass_key": "xge:subclass:gloom-stalker",
+      "name": "Gloom Stalker",
+      "zh_name": "幽域追蹤者",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        11,
+        15
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:cleric",
+      "subclass_key": "xge:subclass:grave",
+      "name": "Grave Domain",
+      "zh_name": "墳墓領域",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:warlock",
+      "subclass_key": "xge:subclass:hexblade",
+      "name": "The Hexblade",
+      "zh_name": "咒劍士",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:ranger",
+      "subclass_key": "xge:subclass:horizon-walker",
+      "name": "Horizon Walker",
+      "zh_name": "遠界行者",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        11,
+        15
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:rogue",
+      "subclass_key": "xge:subclass:inquisitive",
+      "name": "Inquisitive",
+      "zh_name": "審問者",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        9,
+        13,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:monk",
+      "subclass_key": "xge:subclass:kensei",
+      "name": "Way of the Kensei",
+      "zh_name": "劍聖宗",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        11,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:rogue",
+      "subclass_key": "xge:subclass:mastermind",
+      "name": "Mastermind",
+      "zh_name": "策士",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        9,
+        13,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:ranger",
+      "subclass_key": "xge:subclass:monster-slayer",
+      "name": "Monster Slayer",
+      "zh_name": "怪物殺手",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        11,
+        15
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:paladin",
+      "subclass_key": "xge:subclass:redemption",
+      "name": "Oath of the Redemption",
+      "zh_name": "救贖之誓",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        15,
+        20
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:fighter",
+      "subclass_key": "xge:subclass:samurai",
+      "name": "Samurai",
+      "zh_name": "武士",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        10,
+        15,
+        18
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:rogue",
+      "subclass_key": "xge:subclass:scout",
+      "name": "Scout",
+      "zh_name": "斥侯",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        9,
+        13,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:sorcerer",
+      "subclass_key": "xge:subclass:shadow-magic",
+      "name": "Shadow Magic",
+      "zh_name": "幽影魔法",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        14,
+        18
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:druid",
+      "subclass_key": "xge:subclass:shepherd",
+      "name": "Circle of the Shepherd",
+      "zh_name": "牧人結社",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:barbarian",
+      "subclass_key": "xge:subclass:storm-herald",
+      "name": "Path of the Storm Herald",
+      "zh_name": "風暴先驅道途",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:sorcerer",
+      "subclass_key": "xge:subclass:storm-sorcery",
+      "name": "Storm Sorcery",
+      "zh_name": "暴風術法",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        14,
+        18
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:monk",
+      "subclass_key": "xge:subclass:sun-soul",
+      "name": "Way of the Sun Soul",
+      "zh_name": "日魂宗",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        11,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:rogue",
+      "subclass_key": "xge:subclass:swashbuckler",
+      "name": "Swashbuckler",
+      "zh_name": "風流劍客",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        9,
+        13,
+        17
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:bard",
+      "subclass_key": "xge:subclass:swords",
+      "name": "College of Swords",
+      "zh_name": "劍舞學院",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:wizard",
+      "subclass_key": "xge:subclass:war-magic",
+      "name": "War Magic",
+      "zh_name": "戰爭魔法",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:bard",
+      "subclass_key": "xge:subclass:whispers",
+      "name": "College of Whispers",
+      "zh_name": "低語學院",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    },
+    {
+      "source": "xge",
+      "parent_class_ref": "srd5.1:class:barbarian",
+      "subclass_key": "xge:subclass:zealot",
+      "name": "Path of the Zealot",
+      "zh_name": "狂熱者道途",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        10,
+        14
+      ],
+      "disposition": "implemented",
+      "canonical_key": null
+    }
+  ]
+}

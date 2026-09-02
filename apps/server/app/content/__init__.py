@@ -2,20 +2,13 @@ from app.content import registry as _registry
 from app.content.background_roleplay import apply_background_roleplay_inheritance
 from app.content.builder_content_validation import validate_builder_content
 from app.content.m01i_inventory import validate_m01i_inventory
-from app.content.m01j_canonical_integration import apply_m01j_canonical_integration
 from app.content.m01j_closeout_validation import validate_m01j_closeout_metadata
+from app.content.m01j_overrides import apply_m01j_entry_overrides
 from app.content.m01j_inventory import (
     apply_m01j_subclass_relations,
     validate_m01j_inventory,
 )
-from app.content.m01j_option_identity import apply_m01j_option_identity_normalization
-from app.content.m01j_reference_closeout import apply_m01j_reference_closeout
-from app.content.m01j_reference_completion import apply_m01j_reference_completion
-from app.content.m01j_reference_content import apply_m01j_reference_content
-from app.content.m01j_reference_table_cleanup import apply_m01j_reference_table_cleanup
-from app.content.m01j_spell_aliases import install_m01j_spell_aliases
 from app.content.m01j_spell_closeout_validation import validate_m01j_spell_closeout
-from app.content.m01j_static_sweep import apply_m01j_static_sweep
 from app.content.phb_roleplay import apply_phb_background_roleplay
 from app.content.registry import (
     ContentNotFoundError,
@@ -40,20 +33,10 @@ def load_default_content_registry() -> ContentRegistry:
     registry = _registry.load_default_content_registry()
     registry = validate_builder_content(registry)
     registry = validate_m01i_inventory(registry)
-    # M01-J's verified non-SRD mechanics are repository reference documents.
-    # Materialize their runtime overlay, normalize the rules whose permanent
-    # semantics span Markdown sections/tables, close the final static grants,
-    # attach PHB mechanics whose source identities dedupe onto canonical SRD
-    # subclasses, then validate the remaining spell-choice contracts before
-    # exposing parent relations.
-    install_m01j_spell_aliases()
-    registry = apply_m01j_reference_content(registry)
-    registry = apply_m01j_reference_table_cleanup(registry)
-    registry = apply_m01j_reference_completion(registry)
-    registry = apply_m01j_static_sweep(registry)
-    registry = apply_m01j_reference_closeout(registry)
-    registry = apply_m01j_option_identity_normalization(registry)
-    registry = apply_m01j_canonical_integration(registry)
+    # M01-J subclass content is ordinary pack data. Only the additive patches
+    # onto vendored SRD entries are applied here; the gates below then check the
+    # installed rows against the checked-in inventory.
+    registry = apply_m01j_entry_overrides(registry)
     registry = validate_m01j_inventory(registry)
     registry = validate_m01j_closeout_metadata(registry)
     registry = validate_m01j_spell_closeout(registry)

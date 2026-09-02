@@ -1,0 +1,348 @@
+{
+  "schema_version": 1,
+  "phase": "M01-J",
+  "ruleset": "dnd5e-2014",
+  "note": "Additive field patches M01-J applies to already-installed srd5.1 entries. The vendored SRD corpus is never edited in place.",
+  "patches": {
+    "srd5.1:feature:fighter-fighting-style-archery": {
+      "choice_pool_option": {
+        "pool": "fighting-style",
+        "eligible_class_refs": [
+          "srd5.1:class:fighter"
+        ],
+        "minimum_class_level": 1
+      }
+    },
+    "srd5.1:feature:fighter-fighting-style-defense": {
+      "choice_pool_option": {
+        "pool": "fighting-style",
+        "eligible_class_refs": [
+          "srd5.1:class:fighter"
+        ],
+        "minimum_class_level": 1
+      }
+    },
+    "srd5.1:feature:fighter-fighting-style-dueling": {
+      "choice_pool_option": {
+        "pool": "fighting-style",
+        "eligible_class_refs": [
+          "srd5.1:class:fighter"
+        ],
+        "minimum_class_level": 1
+      }
+    },
+    "srd5.1:feature:fighter-fighting-style-great-weapon-fighting": {
+      "choice_pool_option": {
+        "pool": "fighting-style",
+        "eligible_class_refs": [
+          "srd5.1:class:fighter"
+        ],
+        "minimum_class_level": 1
+      }
+    },
+    "srd5.1:feature:fighter-fighting-style-protection": {
+      "choice_pool_option": {
+        "pool": "fighting-style",
+        "eligible_class_refs": [
+          "srd5.1:class:fighter"
+        ],
+        "minimum_class_level": 1
+      }
+    },
+    "srd5.1:feature:fighter-fighting-style-two-weapon-fighting": {
+      "choice_pool_option": {
+        "pool": "fighting-style",
+        "eligible_class_refs": [
+          "srd5.1:class:fighter"
+        ],
+        "minimum_class_level": 1
+      }
+    },
+    "srd5.1:level:land-2": {
+      "features": [
+        {
+          "index": "bonus-cantrip",
+          "name": "Bonus Cantrip",
+          "url": "/api/2014/features/bonus-cantrip"
+        },
+        {
+          "index": "natural-recovery",
+          "name": "Natural Recovery",
+          "url": "/api/2014/features/natural-recovery"
+        },
+        {
+          "key": "srd5.1:feature:circle-of-the-land",
+          "index": "circle-of-the-land",
+          "name": "Circle of the Land"
+        }
+      ]
+    },
+    "srd5.1:subclass:champion": {
+      "persistent_choices": [
+        {
+          "choice_key": "champion-additional-fighting-style",
+          "feature_ref": "srd5.1:feature:additional-fighting-style",
+          "minimum_class_level": 10,
+          "choose_total": 1,
+          "progression": [],
+          "option_refs": [
+            "srd5.1:feature:fighter-fighting-style-archery",
+            "srd5.1:feature:fighter-fighting-style-defense",
+            "srd5.1:feature:fighter-fighting-style-dueling",
+            "srd5.1:feature:fighter-fighting-style-great-weapon-fighting",
+            "srd5.1:feature:fighter-fighting-style-protection",
+            "srd5.1:feature:fighter-fighting-style-two-weapon-fighting",
+            "tce:feature:blind-fighting",
+            "tce:feature:interception",
+            "tce:feature:superior-technique",
+            "tce:feature:thrown-weapon-fighting",
+            "tce:feature:unarmed-fighting"
+          ],
+          "option_minimum_levels": {},
+          "label": "Champion — Additional Fighting Style"
+        }
+      ]
+    },
+    "srd5.1:subclass:draconic": {
+      "fixed_grants": {
+        "languages": [
+          "srd5.1:language:draconic"
+        ]
+      }
+    },
+    "srd5.1:subclass:land": {
+      "grant_choices": [
+        {
+          "choice_key": "land-bonus-cantrip",
+          "label": "Circle of the Land — Bonus Cantrip",
+          "minimum_class_level": 2,
+          "choose_total": 1,
+          "grant_target": "spell",
+          "option_pool": "druid_cantrips",
+          "access_type": "granted"
+        }
+      ]
+    },
+    "srd5.1:subclass:lore": {
+      "grant_choices": [
+        {
+          "choice_key": "lore-bonus-proficiencies",
+          "label": "College of Lore — Bonus Proficiencies",
+          "minimum_class_level": 3,
+          "choose_total": 3,
+          "grant_target": "skill",
+          "option_refs": [
+            "srd5.1:skill:acrobatics",
+            "srd5.1:skill:animal-handling",
+            "srd5.1:skill:arcana",
+            "srd5.1:skill:athletics",
+            "srd5.1:skill:deception",
+            "srd5.1:skill:history",
+            "srd5.1:skill:insight",
+            "srd5.1:skill:intimidation",
+            "srd5.1:skill:investigation",
+            "srd5.1:skill:medicine",
+            "srd5.1:skill:nature",
+            "srd5.1:skill:perception",
+            "srd5.1:skill:performance",
+            "srd5.1:skill:persuasion",
+            "srd5.1:skill:religion",
+            "srd5.1:skill:sleight-of-hand",
+            "srd5.1:skill:stealth",
+            "srd5.1:skill:survival"
+          ]
+        },
+        {
+          "choice_key": "additional-magical-secrets",
+          "label": "College of Lore — Additional Magical Secrets",
+          "minimum_class_level": 6,
+          "choose_total": 2,
+          "grant_target": "spell",
+          "option_refs": [
+            "phb2014:spell:aura-of-vitality",
+            "phb2014:spell:beast-sense",
+            "phb2014:spell:elemental-weapon",
+            "phb2014:spell:phantasmal-force",
+            "phb2014:spell:searing-smite",
+            "srd5.1:spell:acid-arrow",
+            "srd5.1:spell:acid-splash",
+            "srd5.1:spell:aid",
+            "srd5.1:spell:alarm",
+            "srd5.1:spell:alter-self",
+            "srd5.1:spell:animal-friendship",
+            "srd5.1:spell:animal-messenger",
+            "srd5.1:spell:animate-dead",
+            "srd5.1:spell:arcane-lock",
+            "srd5.1:spell:arcanists-magic-aura",
+            "srd5.1:spell:augury",
+            "srd5.1:spell:bane",
+            "srd5.1:spell:barkskin",
+            "srd5.1:spell:beacon-of-hope",
+            "srd5.1:spell:bestow-curse",
+            "srd5.1:spell:bless",
+            "srd5.1:spell:blindness-deafness",
+            "srd5.1:spell:blink",
+            "srd5.1:spell:blur",
+            "srd5.1:spell:branding-smite",
+            "srd5.1:spell:burning-hands",
+            "srd5.1:spell:call-lightning",
+            "srd5.1:spell:calm-emotions",
+            "srd5.1:spell:charm-person",
+            "srd5.1:spell:chill-touch",
+            "srd5.1:spell:clairvoyance",
+            "srd5.1:spell:color-spray",
+            "srd5.1:spell:command",
+            "srd5.1:spell:comprehend-languages",
+            "srd5.1:spell:conjure-animals",
+            "srd5.1:spell:continual-flame",
+            "srd5.1:spell:counterspell",
+            "srd5.1:spell:create-food-and-water",
+            "srd5.1:spell:create-or-destroy-water",
+            "srd5.1:spell:cure-wounds",
+            "srd5.1:spell:dancing-lights",
+            "srd5.1:spell:darkness",
+            "srd5.1:spell:darkvision",
+            "srd5.1:spell:daylight",
+            "srd5.1:spell:detect-evil-and-good",
+            "srd5.1:spell:detect-magic",
+            "srd5.1:spell:detect-poison-and-disease",
+            "srd5.1:spell:detect-thoughts",
+            "srd5.1:spell:disguise-self",
+            "srd5.1:spell:dispel-magic",
+            "srd5.1:spell:divine-favor",
+            "srd5.1:spell:druidcraft",
+            "srd5.1:spell:eldritch-blast",
+            "srd5.1:spell:enhance-ability",
+            "srd5.1:spell:enlarge-reduce",
+            "srd5.1:spell:entangle",
+            "srd5.1:spell:enthrall",
+            "srd5.1:spell:expeditious-retreat",
+            "srd5.1:spell:faerie-fire",
+            "srd5.1:spell:false-life",
+            "srd5.1:spell:fear",
+            "srd5.1:spell:feather-fall",
+            "srd5.1:spell:find-familiar",
+            "srd5.1:spell:find-steed",
+            "srd5.1:spell:find-traps",
+            "srd5.1:spell:fire-bolt",
+            "srd5.1:spell:fireball",
+            "srd5.1:spell:flame-blade",
+            "srd5.1:spell:flaming-sphere",
+            "srd5.1:spell:floating-disk",
+            "srd5.1:spell:fly",
+            "srd5.1:spell:fog-cloud",
+            "srd5.1:spell:gaseous-form",
+            "srd5.1:spell:gentle-repose",
+            "srd5.1:spell:glyph-of-warding",
+            "srd5.1:spell:goodberry",
+            "srd5.1:spell:grease",
+            "srd5.1:spell:guidance",
+            "srd5.1:spell:guiding-bolt",
+            "srd5.1:spell:gust-of-wind",
+            "srd5.1:spell:haste",
+            "srd5.1:spell:healing-word",
+            "srd5.1:spell:heat-metal",
+            "srd5.1:spell:hellish-rebuke",
+            "srd5.1:spell:heroism",
+            "srd5.1:spell:hideous-laughter",
+            "srd5.1:spell:hold-person",
+            "srd5.1:spell:hunters-mark",
+            "srd5.1:spell:hypnotic-pattern",
+            "srd5.1:spell:identify",
+            "srd5.1:spell:illusory-script",
+            "srd5.1:spell:inflict-wounds",
+            "srd5.1:spell:invisibility",
+            "srd5.1:spell:jump",
+            "srd5.1:spell:knock",
+            "srd5.1:spell:lesser-restoration",
+            "srd5.1:spell:levitate",
+            "srd5.1:spell:light",
+            "srd5.1:spell:lightning-bolt",
+            "srd5.1:spell:locate-animals-or-plants",
+            "srd5.1:spell:locate-object",
+            "srd5.1:spell:longstrider",
+            "srd5.1:spell:mage-armor",
+            "srd5.1:spell:mage-hand",
+            "srd5.1:spell:magic-circle",
+            "srd5.1:spell:magic-missile",
+            "srd5.1:spell:magic-mouth",
+            "srd5.1:spell:magic-weapon",
+            "srd5.1:spell:major-image",
+            "srd5.1:spell:mass-healing-word",
+            "srd5.1:spell:meld-into-stone",
+            "srd5.1:spell:mending",
+            "srd5.1:spell:message",
+            "srd5.1:spell:minor-illusion",
+            "srd5.1:spell:mirror-image",
+            "srd5.1:spell:misty-step",
+            "srd5.1:spell:moonbeam",
+            "srd5.1:spell:nondetection",
+            "srd5.1:spell:pass-without-trace",
+            "srd5.1:spell:phantom-steed",
+            "srd5.1:spell:plant-growth",
+            "srd5.1:spell:poison-spray",
+            "srd5.1:spell:prayer-of-healing",
+            "srd5.1:spell:prestidigitation",
+            "srd5.1:spell:produce-flame",
+            "srd5.1:spell:protection-from-energy",
+            "srd5.1:spell:protection-from-evil-and-good",
+            "srd5.1:spell:protection-from-poison",
+            "srd5.1:spell:purify-food-and-drink",
+            "srd5.1:spell:ray-of-enfeeblement",
+            "srd5.1:spell:ray-of-frost",
+            "srd5.1:spell:remove-curse",
+            "srd5.1:spell:resistance",
+            "srd5.1:spell:revivify",
+            "srd5.1:spell:rope-trick",
+            "srd5.1:spell:sacred-flame",
+            "srd5.1:spell:sanctuary",
+            "srd5.1:spell:scorching-ray",
+            "srd5.1:spell:see-invisibility",
+            "srd5.1:spell:sending",
+            "srd5.1:spell:shatter",
+            "srd5.1:spell:shield",
+            "srd5.1:spell:shield-of-faith",
+            "srd5.1:spell:shillelagh",
+            "srd5.1:spell:shocking-grasp",
+            "srd5.1:spell:silence",
+            "srd5.1:spell:silent-image",
+            "srd5.1:spell:sleep",
+            "srd5.1:spell:sleet-storm",
+            "srd5.1:spell:slow",
+            "srd5.1:spell:spare-the-dying",
+            "srd5.1:spell:speak-with-animals",
+            "srd5.1:spell:speak-with-dead",
+            "srd5.1:spell:speak-with-plants",
+            "srd5.1:spell:spider-climb",
+            "srd5.1:spell:spike-growth",
+            "srd5.1:spell:spirit-guardians",
+            "srd5.1:spell:spiritual-weapon",
+            "srd5.1:spell:stinking-cloud",
+            "srd5.1:spell:suggestion",
+            "srd5.1:spell:thaumaturgy",
+            "srd5.1:spell:thunderwave",
+            "srd5.1:spell:tiny-hut",
+            "srd5.1:spell:tongues",
+            "srd5.1:spell:true-strike",
+            "srd5.1:spell:unseen-servant",
+            "srd5.1:spell:vampiric-touch",
+            "srd5.1:spell:vicious-mockery",
+            "srd5.1:spell:warding-bond",
+            "srd5.1:spell:water-breathing",
+            "srd5.1:spell:water-walk",
+            "srd5.1:spell:web",
+            "srd5.1:spell:wind-wall",
+            "srd5.1:spell:zone-of-truth",
+            "tce:spell:booming-blade",
+            "tce:spell:green-flame-blade",
+            "tce:spell:intellect-fortress",
+            "tce:spell:lightning-lure",
+            "tce:spell:sword-burst",
+            "tce:spell:tashas-caustic-brew"
+          ],
+          "access_type": "granted"
+        }
+      ]
+    }
+  }
+}

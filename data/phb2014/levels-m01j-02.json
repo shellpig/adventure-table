@@ -1,0 +1,1136 @@
+[
+  {
+    "key": "phb2014:level:necromancy-6",
+    "index": "necromancy-6",
+    "name": "School of Necromancy 6",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "necromancy-6",
+      "name": "School of Necromancy 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:necromancy",
+        "name": "School of Necromancy"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:shadow-11",
+    "index": "shadow-11",
+    "name": "Way of Shadow 11",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "shadow-11",
+      "name": "Way of Shadow 11",
+      "level": 11,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:shadow",
+        "name": "Way of Shadow"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:shadow-17",
+    "index": "shadow-17",
+    "name": "Way of Shadow 17",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "shadow-17",
+      "name": "Way of Shadow 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:shadow",
+        "name": "Way of Shadow"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:shadow-3",
+    "index": "shadow-3",
+    "name": "Way of Shadow 3",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "shadow-3",
+      "name": "Way of Shadow 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "phb2014:feature:shadow-3-shadow-arts",
+          "name": "Shadow Arts"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:shadow",
+        "name": "Way of Shadow"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:shadow-6",
+    "index": "shadow-6",
+    "name": "Way of Shadow 6",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "shadow-6",
+      "name": "Way of Shadow 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:shadow",
+        "name": "Way of Shadow"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:tempest-1",
+    "index": "tempest-1",
+    "name": "Tempest Domain 1",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "tempest-1",
+      "name": "Tempest Domain 1",
+      "level": 1,
+      "features": [
+        {
+          "key": "phb2014:feature:tempest-1-bonus-proficiency",
+          "name": "Bonus Proficiency"
+        },
+        {
+          "key": "phb2014:feature:tempest-1-wrath-of-the-storm",
+          "name": "Wrath of the Storm"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:tempest",
+        "name": "Tempest Domain"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:tempest-17",
+    "index": "tempest-17",
+    "name": "Tempest Domain 17",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "tempest-17",
+      "name": "Tempest Domain 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:tempest",
+        "name": "Tempest Domain"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:tempest-2",
+    "index": "tempest-2",
+    "name": "Tempest Domain 2",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "tempest-2",
+      "name": "Tempest Domain 2",
+      "level": 2,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:tempest",
+        "name": "Tempest Domain"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:tempest-6",
+    "index": "tempest-6",
+    "name": "Tempest Domain 6",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "tempest-6",
+      "name": "Tempest Domain 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:tempest",
+        "name": "Tempest Domain"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:tempest-8",
+    "index": "tempest-8",
+    "name": "Tempest Domain 8",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "tempest-8",
+      "name": "Tempest Domain 8",
+      "level": 8,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:tempest",
+        "name": "Tempest Domain"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:totem-warrior-10",
+    "index": "totem-warrior-10",
+    "name": "Path of the Totem Warrior 10",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-10",
+      "name": "Path of the Totem Warrior 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:totem-warrior-14",
+    "index": "totem-warrior-14",
+    "name": "Path of the Totem Warrior 14",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-14",
+      "name": "Path of the Totem Warrior 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:totem-warrior-3",
+    "index": "totem-warrior-3",
+    "name": "Path of the Totem Warrior 3",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-3",
+      "name": "Path of the Totem Warrior 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "phb2014:feature:totem-warrior-3-spirit-seeker",
+          "name": "Spirit Seeker"
+        },
+        {
+          "key": "phb2014:feature:totem-warrior-3-totem-spirit",
+          "name": "Totem Spirit"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:totem-warrior-6",
+    "index": "totem-warrior-6",
+    "name": "Path of the Totem Warrior 6",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-6",
+      "name": "Path of the Totem Warrior 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:transmutation-10",
+    "index": "transmutation-10",
+    "name": "School of Transmutation 10",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "transmutation-10",
+      "name": "School of Transmutation 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:transmutation",
+        "name": "School of Transmutation"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:transmutation-14",
+    "index": "transmutation-14",
+    "name": "School of Transmutation 14",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "transmutation-14",
+      "name": "School of Transmutation 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:transmutation",
+        "name": "School of Transmutation"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:transmutation-2",
+    "index": "transmutation-2",
+    "name": "School of Transmutation 2",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "transmutation-2",
+      "name": "School of Transmutation 2",
+      "level": 2,
+      "features": [
+        {
+          "key": "phb2014:feature:transmutation-2-transmutation-savant",
+          "name": "Transmutation Savant"
+        },
+        {
+          "key": "phb2014:feature:transmutation-2-minor-alchemy",
+          "name": "Minor Alchemy"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:transmutation",
+        "name": "School of Transmutation"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:transmutation-6",
+    "index": "transmutation-6",
+    "name": "School of Transmutation 6",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "transmutation-6",
+      "name": "School of Transmutation 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:transmutation",
+        "name": "School of Transmutation"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:trickery-1",
+    "index": "trickery-1",
+    "name": "Trickery Domain 1",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "trickery-1",
+      "name": "Trickery Domain 1",
+      "level": 1,
+      "features": [
+        {
+          "key": "phb2014:feature:trickery-1-blessing-of-the-trickster",
+          "name": "Blessing of the Trickster"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:trickery",
+        "name": "Trickery Domain"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:trickery-17",
+    "index": "trickery-17",
+    "name": "Trickery Domain 17",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "trickery-17",
+      "name": "Trickery Domain 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:trickery",
+        "name": "Trickery Domain"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:trickery-2",
+    "index": "trickery-2",
+    "name": "Trickery Domain 2",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "trickery-2",
+      "name": "Trickery Domain 2",
+      "level": 2,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:trickery",
+        "name": "Trickery Domain"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:trickery-6",
+    "index": "trickery-6",
+    "name": "Trickery Domain 6",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "trickery-6",
+      "name": "Trickery Domain 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:trickery",
+        "name": "Trickery Domain"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:trickery-8",
+    "index": "trickery-8",
+    "name": "Trickery Domain 8",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "trickery-8",
+      "name": "Trickery Domain 8",
+      "level": 8,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:trickery",
+        "name": "Trickery Domain"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:valor-14",
+    "index": "valor-14",
+    "name": "College of Valor 14",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "valor-14",
+      "name": "College of Valor 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:valor",
+        "name": "College of Valor"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:valor-3",
+    "index": "valor-3",
+    "name": "College of Valor 3",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "valor-3",
+      "name": "College of Valor 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "phb2014:feature:valor-3-bonus-proficiencies",
+          "name": "Bonus Proficiencies"
+        },
+        {
+          "key": "phb2014:feature:valor-3-combat-inspiration",
+          "name": "Combat Inspiration"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:valor",
+        "name": "College of Valor"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:valor-6",
+    "index": "valor-6",
+    "name": "College of Valor 6",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "valor-6",
+      "name": "College of Valor 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:valor",
+        "name": "College of Valor"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:vengeance-15",
+    "index": "vengeance-15",
+    "name": "Oath of Vengeance 15",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "vengeance-15",
+      "name": "Oath of Vengeance 15",
+      "level": 15,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:vengeance",
+        "name": "Oath of Vengeance"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:vengeance-20",
+    "index": "vengeance-20",
+    "name": "Oath of Vengeance 20",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "vengeance-20",
+      "name": "Oath of Vengeance 20",
+      "level": 20,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:vengeance",
+        "name": "Oath of Vengeance"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:vengeance-3",
+    "index": "vengeance-3",
+    "name": "Oath of Vengeance 3",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "vengeance-3",
+      "name": "Oath of Vengeance 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "phb2014:feature:vengeance-3-tenets-of-vengeance",
+          "name": "Tenets of Vengeance"
+        },
+        {
+          "key": "phb2014:feature:vengeance-3-oath-spells",
+          "name": "Oath Spells"
+        },
+        {
+          "key": "phb2014:feature:vengeance-3-channel-divinity-abjure-enemy",
+          "name": "Channel Divinity: Abjure Enemy"
+        },
+        {
+          "key": "phb2014:feature:vengeance-3-channel-divinity-vow-of-enmity",
+          "name": "Channel Divinity: Vow of Enmity"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:vengeance",
+        "name": "Oath of Vengeance"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:vengeance-7",
+    "index": "vengeance-7",
+    "name": "Oath of Vengeance 7",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "vengeance-7",
+      "name": "Oath of Vengeance 7",
+      "level": 7,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:vengeance",
+        "name": "Oath of Vengeance"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:war-1",
+    "index": "war-1",
+    "name": "War Domain 1",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "war-1",
+      "name": "War Domain 1",
+      "level": 1,
+      "features": [
+        {
+          "key": "phb2014:feature:war-1-bonus-proficiencies",
+          "name": "Bonus Proficiencies"
+        },
+        {
+          "key": "phb2014:feature:war-1-war-priest",
+          "name": "War Priest"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:war",
+        "name": "War Domain"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:war-17",
+    "index": "war-17",
+    "name": "War Domain 17",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "war-17",
+      "name": "War Domain 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:war",
+        "name": "War Domain"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:war-2",
+    "index": "war-2",
+    "name": "War Domain 2",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "war-2",
+      "name": "War Domain 2",
+      "level": 2,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:war",
+        "name": "War Domain"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:war-6",
+    "index": "war-6",
+    "name": "War Domain 6",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "war-6",
+      "name": "War Domain 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:war",
+        "name": "War Domain"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:war-8",
+    "index": "war-8",
+    "name": "War Domain 8",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "war-8",
+      "name": "War Domain 8",
+      "level": 8,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:war",
+        "name": "War Domain"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:wild-magic-1",
+    "index": "wild-magic-1",
+    "name": "Wild Magic 1",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "wild-magic-1",
+      "name": "Wild Magic 1",
+      "level": 1,
+      "features": [
+        {
+          "key": "phb2014:feature:wild-magic-1-wild-magic-surge",
+          "name": "Wild Magic Surge"
+        },
+        {
+          "key": "phb2014:feature:wild-magic-1-tides-of-chaos",
+          "name": "Tides of Chaos"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:wild-magic",
+        "name": "Wild Magic"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:wild-magic-14",
+    "index": "wild-magic-14",
+    "name": "Wild Magic 14",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "wild-magic-14",
+      "name": "Wild Magic 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:wild-magic",
+        "name": "Wild Magic"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:wild-magic-18",
+    "index": "wild-magic-18",
+    "name": "Wild Magic 18",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "wild-magic-18",
+      "name": "Wild Magic 18",
+      "level": 18,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:wild-magic",
+        "name": "Wild Magic"
+      }
+    }
+  },
+  {
+    "key": "phb2014:level:wild-magic-6",
+    "index": "wild-magic-6",
+    "name": "Wild Magic 6",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "wild-magic-6",
+      "name": "Wild Magic 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:wild-magic",
+        "name": "Wild Magic"
+      }
+    }
+  }
+]

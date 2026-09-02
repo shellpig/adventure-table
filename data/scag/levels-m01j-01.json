@@ -1,0 +1,758 @@
+[
+  {
+    "key": "scag:level:arcana-1",
+    "index": "arcana-1",
+    "name": "Arcana Domain 1",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "arcana-1",
+      "name": "Arcana Domain 1",
+      "level": 1,
+      "features": [
+        {
+          "key": "scag:feature:arcana-1-arcane-initiate",
+          "name": "Arcane Initiate"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "scag:subclass:arcana",
+        "name": "Arcana Domain"
+      }
+    }
+  },
+  {
+    "key": "scag:level:arcana-17",
+    "index": "arcana-17",
+    "name": "Arcana Domain 17",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "arcana-17",
+      "name": "Arcana Domain 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "scag:subclass:arcana",
+        "name": "Arcana Domain"
+      }
+    }
+  },
+  {
+    "key": "scag:level:arcana-2",
+    "index": "arcana-2",
+    "name": "Arcana Domain 2",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "arcana-2",
+      "name": "Arcana Domain 2",
+      "level": 2,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "scag:subclass:arcana",
+        "name": "Arcana Domain"
+      }
+    }
+  },
+  {
+    "key": "scag:level:arcana-6",
+    "index": "arcana-6",
+    "name": "Arcana Domain 6",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "arcana-6",
+      "name": "Arcana Domain 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "scag:subclass:arcana",
+        "name": "Arcana Domain"
+      }
+    }
+  },
+  {
+    "key": "scag:level:arcana-8",
+    "index": "arcana-8",
+    "name": "Arcana Domain 8",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "arcana-8",
+      "name": "Arcana Domain 8",
+      "level": 8,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "scag:subclass:arcana",
+        "name": "Arcana Domain"
+      }
+    }
+  },
+  {
+    "key": "scag:level:battlerager-10",
+    "index": "battlerager-10",
+    "name": "Path of the Battlerager 10",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "battlerager-10",
+      "name": "Path of the Battlerager 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "scag:subclass:battlerager",
+        "name": "Path of the Battlerager"
+      }
+    }
+  },
+  {
+    "key": "scag:level:battlerager-14",
+    "index": "battlerager-14",
+    "name": "Path of the Battlerager 14",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "battlerager-14",
+      "name": "Path of the Battlerager 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "scag:subclass:battlerager",
+        "name": "Path of the Battlerager"
+      }
+    }
+  },
+  {
+    "key": "scag:level:battlerager-3",
+    "index": "battlerager-3",
+    "name": "Path of the Battlerager 3",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "battlerager-3",
+      "name": "Path of the Battlerager 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "scag:feature:battlerager-3-restriction-dwarves-only",
+          "name": "Restriction - Dwarves Only"
+        },
+        {
+          "key": "scag:feature:battlerager-3-battlerager-armor",
+          "name": "Battlerager Armor"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "scag:subclass:battlerager",
+        "name": "Path of the Battlerager"
+      }
+    }
+  },
+  {
+    "key": "scag:level:battlerager-6",
+    "index": "battlerager-6",
+    "name": "Path of the Battlerager 6",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "battlerager-6",
+      "name": "Path of the Battlerager 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "scag:subclass:battlerager",
+        "name": "Path of the Battlerager"
+      }
+    }
+  },
+  {
+    "key": "scag:level:crown-15",
+    "index": "crown-15",
+    "name": "Oath of the Crown 15",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "crown-15",
+      "name": "Oath of the Crown 15",
+      "level": 15,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "scag:subclass:crown",
+        "name": "Oath of the Crown"
+      }
+    }
+  },
+  {
+    "key": "scag:level:crown-20",
+    "index": "crown-20",
+    "name": "Oath of the Crown 20",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "crown-20",
+      "name": "Oath of the Crown 20",
+      "level": 20,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "scag:subclass:crown",
+        "name": "Oath of the Crown"
+      }
+    }
+  },
+  {
+    "key": "scag:level:crown-3",
+    "index": "crown-3",
+    "name": "Oath of the Crown 3",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "crown-3",
+      "name": "Oath of the Crown 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "scag:feature:crown-3-tenets-of-the-crown",
+          "name": "Tenets of the Crown"
+        },
+        {
+          "key": "scag:feature:crown-3-oath-spells",
+          "name": "Oath Spells"
+        },
+        {
+          "key": "scag:feature:crown-3-channel-divinity-champion-challenge",
+          "name": "Channel Divinity: Champion Challenge"
+        },
+        {
+          "key": "scag:feature:crown-3-channel-divinity-turn-the-tide",
+          "name": "Channel Divinity: Turn the Tide"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "scag:subclass:crown",
+        "name": "Oath of the Crown"
+      }
+    }
+  },
+  {
+    "key": "scag:level:crown-7",
+    "index": "crown-7",
+    "name": "Oath of the Crown 7",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "crown-7",
+      "name": "Oath of the Crown 7",
+      "level": 7,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "scag:subclass:crown",
+        "name": "Oath of the Crown"
+      }
+    }
+  },
+  {
+    "key": "scag:level:long-death-11",
+    "index": "long-death-11",
+    "name": "Way of the Long Death 11",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "long-death-11",
+      "name": "Way of the Long Death 11",
+      "level": 11,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "scag:subclass:long-death",
+        "name": "Way of the Long Death"
+      }
+    }
+  },
+  {
+    "key": "scag:level:long-death-17",
+    "index": "long-death-17",
+    "name": "Way of the Long Death 17",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "long-death-17",
+      "name": "Way of the Long Death 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "scag:subclass:long-death",
+        "name": "Way of the Long Death"
+      }
+    }
+  },
+  {
+    "key": "scag:level:long-death-3",
+    "index": "long-death-3",
+    "name": "Way of the Long Death 3",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "long-death-3",
+      "name": "Way of the Long Death 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "scag:feature:long-death-3-touch-of-death",
+          "name": "Touch of Death"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "scag:subclass:long-death",
+        "name": "Way of the Long Death"
+      }
+    }
+  },
+  {
+    "key": "scag:level:long-death-6",
+    "index": "long-death-6",
+    "name": "Way of the Long Death 6",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "long-death-6",
+      "name": "Way of the Long Death 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "scag:subclass:long-death",
+        "name": "Way of the Long Death"
+      }
+    }
+  },
+  {
+    "key": "scag:level:purple-dragon-knight-10",
+    "index": "purple-dragon-knight-10",
+    "name": "Purple Dragon Knight (Banneret) 10",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "purple-dragon-knight-10",
+      "name": "Purple Dragon Knight (Banneret) 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "scag:subclass:purple-dragon-knight",
+        "name": "Purple Dragon Knight (Banneret)"
+      }
+    }
+  },
+  {
+    "key": "scag:level:purple-dragon-knight-15",
+    "index": "purple-dragon-knight-15",
+    "name": "Purple Dragon Knight (Banneret) 15",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "purple-dragon-knight-15",
+      "name": "Purple Dragon Knight (Banneret) 15",
+      "level": 15,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "scag:subclass:purple-dragon-knight",
+        "name": "Purple Dragon Knight (Banneret)"
+      }
+    }
+  },
+  {
+    "key": "scag:level:purple-dragon-knight-18",
+    "index": "purple-dragon-knight-18",
+    "name": "Purple Dragon Knight (Banneret) 18",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "purple-dragon-knight-18",
+      "name": "Purple Dragon Knight (Banneret) 18",
+      "level": 18,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "scag:subclass:purple-dragon-knight",
+        "name": "Purple Dragon Knight (Banneret)"
+      }
+    }
+  },
+  {
+    "key": "scag:level:purple-dragon-knight-3",
+    "index": "purple-dragon-knight-3",
+    "name": "Purple Dragon Knight (Banneret) 3",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "purple-dragon-knight-3",
+      "name": "Purple Dragon Knight (Banneret) 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "scag:feature:purple-dragon-knight-3-restriction-knighthood",
+          "name": "Restriction: Knighthood"
+        },
+        {
+          "key": "scag:feature:purple-dragon-knight-3-rallying-cry",
+          "name": "Rallying Cry"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "scag:subclass:purple-dragon-knight",
+        "name": "Purple Dragon Knight (Banneret)"
+      }
+    }
+  },
+  {
+    "key": "scag:level:purple-dragon-knight-7",
+    "index": "purple-dragon-knight-7",
+    "name": "Purple Dragon Knight (Banneret) 7",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "purple-dragon-knight-7",
+      "name": "Purple Dragon Knight (Banneret) 7",
+      "level": 7,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "scag:subclass:purple-dragon-knight",
+        "name": "Purple Dragon Knight (Banneret)"
+      }
+    }
+  },
+  {
+    "key": "scag:level:undying-1",
+    "index": "undying-1",
+    "name": "The Undying 1",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "undying-1",
+      "name": "The Undying 1",
+      "level": 1,
+      "features": [
+        {
+          "key": "scag:feature:undying-1-expanded-spell-list",
+          "name": "擴充套件法術列表"
+        },
+        {
+          "key": "scag:feature:undying-1-among-the-dead",
+          "name": "Among the Dead"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "scag:subclass:undying",
+        "name": "The Undying"
+      }
+    }
+  },
+  {
+    "key": "scag:level:undying-10",
+    "index": "undying-10",
+    "name": "The Undying 10",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "undying-10",
+      "name": "The Undying 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "scag:subclass:undying",
+        "name": "The Undying"
+      }
+    }
+  },
+  {
+    "key": "scag:level:undying-14",
+    "index": "undying-14",
+    "name": "The Undying 14",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "undying-14",
+      "name": "The Undying 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "scag:subclass:undying",
+        "name": "The Undying"
+      }
+    }
+  },
+  {
+    "key": "scag:level:undying-6",
+    "index": "undying-6",
+    "name": "The Undying 6",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "undying-6",
+      "name": "The Undying 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "scag:subclass:undying",
+        "name": "The Undying"
+      }
+    }
+  }
+]

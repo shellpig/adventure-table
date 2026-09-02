@@ -2,7 +2,7 @@
   "id": "scag",
   "name": "Sword Coast Adventurer's Guide",
   "ruleset": "dnd5e-2014",
-  "version": "m01-e",
+  "version": "M01-J",
   "provenance": {
     "source_documents": [
       "docs/暫用規則資訊/背景_SCAG.md",
@@ -34,7 +34,10 @@
       "kind": "race-variant",
       "file": "race-variants.json",
       "count": 4
-    }
+    },
+    {"name": "features-m01j-01", "kind": "feature", "file": "features-m01j-01.json", "count": 12},
+    {"name": "levels-m01j-01", "kind": "level", "file": "levels-m01j-01.json", "count": 26},
+    {"name": "subclasses-m01j-01", "kind": "subclass", "file": "subclasses-m01j-01.json", "count": 6}
   ],
-  "total_entries": 24
+  "total_entries": 68
 }

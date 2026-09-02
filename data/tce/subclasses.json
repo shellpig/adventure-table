@@ -8,20 +8,170 @@
     "data": {
       "index": "alchemist",
       "name": "Alchemist",
-      "class": {"key": "tce:class:artificer", "name": "Artificer"},
+      "class": {
+        "key": "tce:class:artificer",
+        "name": "Artificer"
+      },
       "subclass_flavor": "Artificer Specialist",
       "spells": [
-        {"prerequisites": [{"index": "artificer-3", "type": "level", "name": "Artificer 3"}], "spell": {"index": "healing-word", "name": "Healing Word", "url": "/api/2014/spells/healing-word"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-5", "type": "level", "name": "Artificer 5"}], "spell": {"index": "flaming-sphere", "name": "Flaming Sphere", "url": "/api/2014/spells/flaming-sphere"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-5", "type": "level", "name": "Artificer 5"}], "spell": {"index": "acid-arrow", "name": "Acid Arrow", "url": "/api/2014/spells/acid-arrow"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-9", "type": "level", "name": "Artificer 9"}], "spell": {"index": "gaseous-form", "name": "Gaseous Form", "url": "/api/2014/spells/gaseous-form"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-9", "type": "level", "name": "Artificer 9"}], "spell": {"index": "mass-healing-word", "name": "Mass Healing Word", "url": "/api/2014/spells/mass-healing-word"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-13", "type": "level", "name": "Artificer 13"}], "spell": {"index": "blight", "name": "Blight", "url": "/api/2014/spells/blight"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-13", "type": "level", "name": "Artificer 13"}], "spell": {"index": "death-ward", "name": "Death Ward", "url": "/api/2014/spells/death-ward"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-17", "type": "level", "name": "Artificer 17"}], "spell": {"index": "cloudkill", "name": "Cloudkill", "url": "/api/2014/spells/cloudkill"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-17", "type": "level", "name": "Artificer 17"}], "spell": {"index": "raise-dead", "name": "Raise Dead", "url": "/api/2014/spells/raise-dead"}, "access_type": "always_prepared"}
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-3",
+              "type": "level",
+              "name": "Artificer 3"
+            }
+          ],
+          "spell": {
+            "index": "healing-word",
+            "name": "Healing Word",
+            "url": "/api/2014/spells/healing-word"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-5",
+              "type": "level",
+              "name": "Artificer 5"
+            }
+          ],
+          "spell": {
+            "index": "flaming-sphere",
+            "name": "Flaming Sphere",
+            "url": "/api/2014/spells/flaming-sphere"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-5",
+              "type": "level",
+              "name": "Artificer 5"
+            }
+          ],
+          "spell": {
+            "index": "acid-arrow",
+            "name": "Acid Arrow",
+            "url": "/api/2014/spells/acid-arrow"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-9",
+              "type": "level",
+              "name": "Artificer 9"
+            }
+          ],
+          "spell": {
+            "index": "gaseous-form",
+            "name": "Gaseous Form",
+            "url": "/api/2014/spells/gaseous-form"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-9",
+              "type": "level",
+              "name": "Artificer 9"
+            }
+          ],
+          "spell": {
+            "index": "mass-healing-word",
+            "name": "Mass Healing Word",
+            "url": "/api/2014/spells/mass-healing-word"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-13",
+              "type": "level",
+              "name": "Artificer 13"
+            }
+          ],
+          "spell": {
+            "index": "blight",
+            "name": "Blight",
+            "url": "/api/2014/spells/blight"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-13",
+              "type": "level",
+              "name": "Artificer 13"
+            }
+          ],
+          "spell": {
+            "index": "death-ward",
+            "name": "Death Ward",
+            "url": "/api/2014/spells/death-ward"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-17",
+              "type": "level",
+              "name": "Artificer 17"
+            }
+          ],
+          "spell": {
+            "index": "cloudkill",
+            "name": "Cloudkill",
+            "url": "/api/2014/spells/cloudkill"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-17",
+              "type": "level",
+              "name": "Artificer 17"
+            }
+          ],
+          "spell": {
+            "index": "raise-dead",
+            "name": "Raise Dead",
+            "url": "/api/2014/spells/raise-dead"
+          },
+          "access_type": "always_prepared"
+        }
       ],
-      "spell_content_gaps": {"3": ["Ray of Sickness"]}
+      "spell_content_gaps": {
+        "3": [
+          "Ray of Sickness"
+        ]
+      },
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        5,
+        9,
+        15
+      ],
+      "progression_feature_refs": [
+        "tce:feature:alchemist-tool-proficiency",
+        "tce:feature:alchemist-spells",
+        "tce:feature:experimental-elixir",
+        "tce:feature:alchemical-savant",
+        "tce:feature:restorative-reagents",
+        "tce:feature:chemical-mastery"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_奇械師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%a5%87%e6%a2%b0%e5%b8%88_tce"
     }
   },
   {
@@ -33,20 +183,181 @@
     "data": {
       "index": "armorer",
       "name": "Armorer",
-      "class": {"key": "tce:class:artificer", "name": "Artificer"},
+      "class": {
+        "key": "tce:class:artificer",
+        "name": "Artificer"
+      },
       "subclass_flavor": "Artificer Specialist",
       "spells": [
-        {"prerequisites": [{"index": "artificer-3", "type": "level", "name": "Artificer 3"}], "spell": {"index": "magic-missile", "name": "Magic Missile", "url": "/api/2014/spells/magic-missile"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-3", "type": "level", "name": "Artificer 3"}], "spell": {"index": "thunderwave", "name": "Thunderwave", "url": "/api/2014/spells/thunderwave"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-5", "type": "level", "name": "Artificer 5"}], "spell": {"index": "mirror-image", "name": "Mirror Image", "url": "/api/2014/spells/mirror-image"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-5", "type": "level", "name": "Artificer 5"}], "spell": {"index": "shatter", "name": "Shatter", "url": "/api/2014/spells/shatter"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-9", "type": "level", "name": "Artificer 9"}], "spell": {"index": "hypnotic-pattern", "name": "Hypnotic Pattern", "url": "/api/2014/spells/hypnotic-pattern"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-9", "type": "level", "name": "Artificer 9"}], "spell": {"index": "lightning-bolt", "name": "Lightning Bolt", "url": "/api/2014/spells/lightning-bolt"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-13", "type": "level", "name": "Artificer 13"}], "spell": {"index": "fire-shield", "name": "Fire Shield", "url": "/api/2014/spells/fire-shield"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-13", "type": "level", "name": "Artificer 13"}], "spell": {"index": "greater-invisibility", "name": "Greater Invisibility", "url": "/api/2014/spells/greater-invisibility"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-17", "type": "level", "name": "Artificer 17"}], "spell": {"index": "passwall", "name": "Passwall", "url": "/api/2014/spells/passwall"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-17", "type": "level", "name": "Artificer 17"}], "spell": {"index": "wall-of-force", "name": "Wall of Force", "url": "/api/2014/spells/wall-of-force"}, "access_type": "always_prepared"}
-      ]
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-3",
+              "type": "level",
+              "name": "Artificer 3"
+            }
+          ],
+          "spell": {
+            "index": "magic-missile",
+            "name": "Magic Missile",
+            "url": "/api/2014/spells/magic-missile"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-3",
+              "type": "level",
+              "name": "Artificer 3"
+            }
+          ],
+          "spell": {
+            "index": "thunderwave",
+            "name": "Thunderwave",
+            "url": "/api/2014/spells/thunderwave"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-5",
+              "type": "level",
+              "name": "Artificer 5"
+            }
+          ],
+          "spell": {
+            "index": "mirror-image",
+            "name": "Mirror Image",
+            "url": "/api/2014/spells/mirror-image"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-5",
+              "type": "level",
+              "name": "Artificer 5"
+            }
+          ],
+          "spell": {
+            "index": "shatter",
+            "name": "Shatter",
+            "url": "/api/2014/spells/shatter"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-9",
+              "type": "level",
+              "name": "Artificer 9"
+            }
+          ],
+          "spell": {
+            "index": "hypnotic-pattern",
+            "name": "Hypnotic Pattern",
+            "url": "/api/2014/spells/hypnotic-pattern"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-9",
+              "type": "level",
+              "name": "Artificer 9"
+            }
+          ],
+          "spell": {
+            "index": "lightning-bolt",
+            "name": "Lightning Bolt",
+            "url": "/api/2014/spells/lightning-bolt"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-13",
+              "type": "level",
+              "name": "Artificer 13"
+            }
+          ],
+          "spell": {
+            "index": "fire-shield",
+            "name": "Fire Shield",
+            "url": "/api/2014/spells/fire-shield"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-13",
+              "type": "level",
+              "name": "Artificer 13"
+            }
+          ],
+          "spell": {
+            "index": "greater-invisibility",
+            "name": "Greater Invisibility",
+            "url": "/api/2014/spells/greater-invisibility"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-17",
+              "type": "level",
+              "name": "Artificer 17"
+            }
+          ],
+          "spell": {
+            "index": "passwall",
+            "name": "Passwall",
+            "url": "/api/2014/spells/passwall"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-17",
+              "type": "level",
+              "name": "Artificer 17"
+            }
+          ],
+          "spell": {
+            "index": "wall-of-force",
+            "name": "Wall of Force",
+            "url": "/api/2014/spells/wall-of-force"
+          },
+          "access_type": "always_prepared"
+        }
+      ],
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        5,
+        9,
+        15
+      ],
+      "progression_feature_refs": [
+        "tce:feature:tools-of-the-trade",
+        "tce:feature:armorer-spells",
+        "tce:feature:arcane-armor",
+        "tce:feature:armor-model",
+        "tce:feature:armorer-extra-attack",
+        "tce:feature:armor-modifications",
+        "tce:feature:perfected-armor"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_奇械師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%a5%87%e6%a2%b0%e5%b8%88_tce"
     }
   },
   {
@@ -58,20 +369,180 @@
     "data": {
       "index": "artillerist",
       "name": "Artillerist",
-      "class": {"key": "tce:class:artificer", "name": "Artificer"},
+      "class": {
+        "key": "tce:class:artificer",
+        "name": "Artificer"
+      },
       "subclass_flavor": "Artificer Specialist",
       "spells": [
-        {"prerequisites": [{"index": "artificer-3", "type": "level", "name": "Artificer 3"}], "spell": {"index": "shield", "name": "Shield", "url": "/api/2014/spells/shield"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-3", "type": "level", "name": "Artificer 3"}], "spell": {"index": "thunderwave", "name": "Thunderwave", "url": "/api/2014/spells/thunderwave"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-5", "type": "level", "name": "Artificer 5"}], "spell": {"index": "scorching-ray", "name": "Scorching Ray", "url": "/api/2014/spells/scorching-ray"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-5", "type": "level", "name": "Artificer 5"}], "spell": {"index": "shatter", "name": "Shatter", "url": "/api/2014/spells/shatter"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-9", "type": "level", "name": "Artificer 9"}], "spell": {"index": "fireball", "name": "Fireball", "url": "/api/2014/spells/fireball"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-9", "type": "level", "name": "Artificer 9"}], "spell": {"index": "wind-wall", "name": "Wind Wall", "url": "/api/2014/spells/wind-wall"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-13", "type": "level", "name": "Artificer 13"}], "spell": {"index": "ice-storm", "name": "Ice Storm", "url": "/api/2014/spells/ice-storm"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-13", "type": "level", "name": "Artificer 13"}], "spell": {"index": "wall-of-fire", "name": "Wall of Fire", "url": "/api/2014/spells/wall-of-fire"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-17", "type": "level", "name": "Artificer 17"}], "spell": {"index": "cone-of-cold", "name": "Cone of Cold", "url": "/api/2014/spells/cone-of-cold"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-17", "type": "level", "name": "Artificer 17"}], "spell": {"index": "wall-of-force", "name": "Wall of Force", "url": "/api/2014/spells/wall-of-force"}, "access_type": "always_prepared"}
-      ]
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-3",
+              "type": "level",
+              "name": "Artificer 3"
+            }
+          ],
+          "spell": {
+            "index": "shield",
+            "name": "Shield",
+            "url": "/api/2014/spells/shield"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-3",
+              "type": "level",
+              "name": "Artificer 3"
+            }
+          ],
+          "spell": {
+            "index": "thunderwave",
+            "name": "Thunderwave",
+            "url": "/api/2014/spells/thunderwave"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-5",
+              "type": "level",
+              "name": "Artificer 5"
+            }
+          ],
+          "spell": {
+            "index": "scorching-ray",
+            "name": "Scorching Ray",
+            "url": "/api/2014/spells/scorching-ray"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-5",
+              "type": "level",
+              "name": "Artificer 5"
+            }
+          ],
+          "spell": {
+            "index": "shatter",
+            "name": "Shatter",
+            "url": "/api/2014/spells/shatter"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-9",
+              "type": "level",
+              "name": "Artificer 9"
+            }
+          ],
+          "spell": {
+            "index": "fireball",
+            "name": "Fireball",
+            "url": "/api/2014/spells/fireball"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-9",
+              "type": "level",
+              "name": "Artificer 9"
+            }
+          ],
+          "spell": {
+            "index": "wind-wall",
+            "name": "Wind Wall",
+            "url": "/api/2014/spells/wind-wall"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-13",
+              "type": "level",
+              "name": "Artificer 13"
+            }
+          ],
+          "spell": {
+            "index": "ice-storm",
+            "name": "Ice Storm",
+            "url": "/api/2014/spells/ice-storm"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-13",
+              "type": "level",
+              "name": "Artificer 13"
+            }
+          ],
+          "spell": {
+            "index": "wall-of-fire",
+            "name": "Wall of Fire",
+            "url": "/api/2014/spells/wall-of-fire"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-17",
+              "type": "level",
+              "name": "Artificer 17"
+            }
+          ],
+          "spell": {
+            "index": "cone-of-cold",
+            "name": "Cone of Cold",
+            "url": "/api/2014/spells/cone-of-cold"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-17",
+              "type": "level",
+              "name": "Artificer 17"
+            }
+          ],
+          "spell": {
+            "index": "wall-of-force",
+            "name": "Wall of Force",
+            "url": "/api/2014/spells/wall-of-force"
+          },
+          "access_type": "always_prepared"
+        }
+      ],
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        5,
+        9,
+        15
+      ],
+      "progression_feature_refs": [
+        "tce:feature:artillerist-tool-proficiency",
+        "tce:feature:artillerist-spells",
+        "tce:feature:eldritch-cannon",
+        "tce:feature:arcane-firearm",
+        "tce:feature:explosive-cannon",
+        "tce:feature:fortified-position"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_奇械師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%a5%87%e6%a2%b0%e5%b8%88_tce"
     }
   },
   {
@@ -83,17 +554,133 @@
     "data": {
       "index": "battle-smith",
       "name": "Battle Smith",
-      "class": {"key": "tce:class:artificer", "name": "Artificer"},
+      "class": {
+        "key": "tce:class:artificer",
+        "name": "Artificer"
+      },
       "subclass_flavor": "Artificer Specialist",
       "spells": [
-        {"prerequisites": [{"index": "artificer-3", "type": "level", "name": "Artificer 3"}], "spell": {"index": "heroism", "name": "Heroism", "url": "/api/2014/spells/heroism"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-3", "type": "level", "name": "Artificer 3"}], "spell": {"index": "shield", "name": "Shield", "url": "/api/2014/spells/shield"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-5", "type": "level", "name": "Artificer 5"}], "spell": {"index": "branding-smite", "name": "Branding Smite", "url": "/api/2014/spells/branding-smite"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-5", "type": "level", "name": "Artificer 5"}], "spell": {"index": "warding-bond", "name": "Warding Bond", "url": "/api/2014/spells/warding-bond"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-13", "type": "level", "name": "Artificer 13"}], "spell": {"index": "fire-shield", "name": "Fire Shield", "url": "/api/2014/spells/fire-shield"}, "access_type": "always_prepared"},
-        {"prerequisites": [{"index": "artificer-17", "type": "level", "name": "Artificer 17"}], "spell": {"index": "mass-cure-wounds", "name": "Mass Cure Wounds", "url": "/api/2014/spells/mass-cure-wounds"}, "access_type": "always_prepared"}
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-3",
+              "type": "level",
+              "name": "Artificer 3"
+            }
+          ],
+          "spell": {
+            "index": "heroism",
+            "name": "Heroism",
+            "url": "/api/2014/spells/heroism"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-3",
+              "type": "level",
+              "name": "Artificer 3"
+            }
+          ],
+          "spell": {
+            "index": "shield",
+            "name": "Shield",
+            "url": "/api/2014/spells/shield"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-5",
+              "type": "level",
+              "name": "Artificer 5"
+            }
+          ],
+          "spell": {
+            "index": "branding-smite",
+            "name": "Branding Smite",
+            "url": "/api/2014/spells/branding-smite"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-5",
+              "type": "level",
+              "name": "Artificer 5"
+            }
+          ],
+          "spell": {
+            "index": "warding-bond",
+            "name": "Warding Bond",
+            "url": "/api/2014/spells/warding-bond"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-13",
+              "type": "level",
+              "name": "Artificer 13"
+            }
+          ],
+          "spell": {
+            "index": "fire-shield",
+            "name": "Fire Shield",
+            "url": "/api/2014/spells/fire-shield"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "artificer-17",
+              "type": "level",
+              "name": "Artificer 17"
+            }
+          ],
+          "spell": {
+            "index": "mass-cure-wounds",
+            "name": "Mass Cure Wounds",
+            "url": "/api/2014/spells/mass-cure-wounds"
+          },
+          "access_type": "always_prepared"
+        }
       ],
-      "spell_content_gaps": {"9": ["Aura of Vitality", "Conjure Barrage"], "13": ["Aura of Purity"], "17": ["Banishing Smite"]}
+      "spell_content_gaps": {
+        "9": [
+          "Aura of Vitality",
+          "Conjure Barrage"
+        ],
+        "13": [
+          "Aura of Purity"
+        ],
+        "17": [
+          "Banishing Smite"
+        ]
+      },
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        5,
+        9,
+        15
+      ],
+      "progression_feature_refs": [
+        "tce:feature:battle-smith-tool-proficiency",
+        "tce:feature:battle-smith-spells",
+        "tce:feature:battle-ready",
+        "tce:feature:steel-defender",
+        "tce:feature:battle-smith-extra-attack",
+        "tce:feature:arcane-jolt",
+        "tce:feature:improved-defender"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_奇械師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%a5%87%e6%a2%b0%e5%b8%88_tce"
     }
   }
 ]

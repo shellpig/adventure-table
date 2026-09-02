@@ -1,0 +1,1348 @@
+[
+  {
+    "key": "xge:level:samurai-15",
+    "index": "samurai-15",
+    "name": "Samurai 15",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "samurai-15",
+      "name": "Samurai 15",
+      "level": 15,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "xge:subclass:samurai",
+        "name": "Samurai"
+      }
+    }
+  },
+  {
+    "key": "xge:level:samurai-18",
+    "index": "samurai-18",
+    "name": "Samurai 18",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "samurai-18",
+      "name": "Samurai 18",
+      "level": 18,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "xge:subclass:samurai",
+        "name": "Samurai"
+      }
+    }
+  },
+  {
+    "key": "xge:level:samurai-3",
+    "index": "samurai-3",
+    "name": "Samurai 3",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "samurai-3",
+      "name": "Samurai 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "xge:feature:samurai-3-bonus-proficiency",
+          "name": "Bonus Proficiency"
+        },
+        {
+          "key": "xge:feature:samurai-3-fighting-spirit",
+          "name": "Fighting Spirit"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "xge:subclass:samurai",
+        "name": "Samurai"
+      }
+    }
+  },
+  {
+    "key": "xge:level:samurai-7",
+    "index": "samurai-7",
+    "name": "Samurai 7",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "samurai-7",
+      "name": "Samurai 7",
+      "level": 7,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "xge:subclass:samurai",
+        "name": "Samurai"
+      }
+    }
+  },
+  {
+    "key": "xge:level:scout-13",
+    "index": "scout-13",
+    "name": "Scout 13",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "scout-13",
+      "name": "Scout 13",
+      "level": 13,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "xge:subclass:scout",
+        "name": "Scout"
+      }
+    }
+  },
+  {
+    "key": "xge:level:scout-17",
+    "index": "scout-17",
+    "name": "Scout 17",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "scout-17",
+      "name": "Scout 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "xge:subclass:scout",
+        "name": "Scout"
+      }
+    }
+  },
+  {
+    "key": "xge:level:scout-3",
+    "index": "scout-3",
+    "name": "Scout 3",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "scout-3",
+      "name": "Scout 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "xge:feature:scout-3-skirmisher",
+          "name": "Skirmisher"
+        },
+        {
+          "key": "xge:feature:scout-3-survivalist",
+          "name": "Survivalist"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "xge:subclass:scout",
+        "name": "Scout"
+      }
+    }
+  },
+  {
+    "key": "xge:level:scout-9",
+    "index": "scout-9",
+    "name": "Scout 9",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "scout-9",
+      "name": "Scout 9",
+      "level": 9,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "xge:subclass:scout",
+        "name": "Scout"
+      }
+    }
+  },
+  {
+    "key": "xge:level:shadow-magic-1",
+    "index": "shadow-magic-1",
+    "name": "Shadow Magic 1",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "shadow-magic-1",
+      "name": "Shadow Magic 1",
+      "level": 1,
+      "features": [
+        {
+          "key": "xge:feature:shadow-magic-1-eyes-of-the-dark",
+          "name": "Eyes of the Dark"
+        },
+        {
+          "key": "xge:feature:shadow-magic-1-strength-of-the-grave",
+          "name": "Strength of the Grave"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "xge:subclass:shadow-magic",
+        "name": "Shadow Magic"
+      }
+    }
+  },
+  {
+    "key": "xge:level:shadow-magic-14",
+    "index": "shadow-magic-14",
+    "name": "Shadow Magic 14",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "shadow-magic-14",
+      "name": "Shadow Magic 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "xge:subclass:shadow-magic",
+        "name": "Shadow Magic"
+      }
+    }
+  },
+  {
+    "key": "xge:level:shadow-magic-18",
+    "index": "shadow-magic-18",
+    "name": "Shadow Magic 18",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "shadow-magic-18",
+      "name": "Shadow Magic 18",
+      "level": 18,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "xge:subclass:shadow-magic",
+        "name": "Shadow Magic"
+      }
+    }
+  },
+  {
+    "key": "xge:level:shadow-magic-6",
+    "index": "shadow-magic-6",
+    "name": "Shadow Magic 6",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "shadow-magic-6",
+      "name": "Shadow Magic 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "xge:subclass:shadow-magic",
+        "name": "Shadow Magic"
+      }
+    }
+  },
+  {
+    "key": "xge:level:shepherd-10",
+    "index": "shepherd-10",
+    "name": "Circle of the Shepherd 10",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "shepherd-10",
+      "name": "Circle of the Shepherd 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "xge:subclass:shepherd",
+        "name": "Circle of the Shepherd"
+      }
+    }
+  },
+  {
+    "key": "xge:level:shepherd-14",
+    "index": "shepherd-14",
+    "name": "Circle of the Shepherd 14",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "shepherd-14",
+      "name": "Circle of the Shepherd 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "xge:subclass:shepherd",
+        "name": "Circle of the Shepherd"
+      }
+    }
+  },
+  {
+    "key": "xge:level:shepherd-2",
+    "index": "shepherd-2",
+    "name": "Circle of the Shepherd 2",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "shepherd-2",
+      "name": "Circle of the Shepherd 2",
+      "level": 2,
+      "features": [
+        {
+          "key": "xge:feature:shepherd-2-speech-of-the-woods",
+          "name": "Speech of the Woods"
+        },
+        {
+          "key": "xge:feature:shepherd-2-spirit-totem",
+          "name": "Spirit Totem"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "xge:subclass:shepherd",
+        "name": "Circle of the Shepherd"
+      }
+    }
+  },
+  {
+    "key": "xge:level:shepherd-6",
+    "index": "shepherd-6",
+    "name": "Circle of the Shepherd 6",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "shepherd-6",
+      "name": "Circle of the Shepherd 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "xge:subclass:shepherd",
+        "name": "Circle of the Shepherd"
+      }
+    }
+  },
+  {
+    "key": "xge:level:storm-herald-10",
+    "index": "storm-herald-10",
+    "name": "Path of the Storm Herald 10",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "storm-herald-10",
+      "name": "Path of the Storm Herald 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-herald",
+        "name": "Path of the Storm Herald"
+      }
+    }
+  },
+  {
+    "key": "xge:level:storm-herald-14",
+    "index": "storm-herald-14",
+    "name": "Path of the Storm Herald 14",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "storm-herald-14",
+      "name": "Path of the Storm Herald 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-herald",
+        "name": "Path of the Storm Herald"
+      }
+    }
+  },
+  {
+    "key": "xge:level:storm-herald-3",
+    "index": "storm-herald-3",
+    "name": "Path of the Storm Herald 3",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "storm-herald-3",
+      "name": "Path of the Storm Herald 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "xge:feature:storm-herald-3-storm-aura",
+          "name": "Storm Aura"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-herald",
+        "name": "Path of the Storm Herald"
+      }
+    }
+  },
+  {
+    "key": "xge:level:storm-herald-6",
+    "index": "storm-herald-6",
+    "name": "Path of the Storm Herald 6",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "storm-herald-6",
+      "name": "Path of the Storm Herald 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-herald",
+        "name": "Path of the Storm Herald"
+      }
+    }
+  },
+  {
+    "key": "xge:level:storm-sorcery-1",
+    "index": "storm-sorcery-1",
+    "name": "Storm Sorcery 1",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "storm-sorcery-1",
+      "name": "Storm Sorcery 1",
+      "level": 1,
+      "features": [
+        {
+          "key": "xge:feature:storm-sorcery-1-wind-speaker",
+          "name": "Wind Speaker"
+        },
+        {
+          "key": "xge:feature:storm-sorcery-1-tempestuous-magic",
+          "name": "Tempestuous Magic"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-sorcery",
+        "name": "Storm Sorcery"
+      }
+    }
+  },
+  {
+    "key": "xge:level:storm-sorcery-14",
+    "index": "storm-sorcery-14",
+    "name": "Storm Sorcery 14",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "storm-sorcery-14",
+      "name": "Storm Sorcery 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-sorcery",
+        "name": "Storm Sorcery"
+      }
+    }
+  },
+  {
+    "key": "xge:level:storm-sorcery-18",
+    "index": "storm-sorcery-18",
+    "name": "Storm Sorcery 18",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "storm-sorcery-18",
+      "name": "Storm Sorcery 18",
+      "level": 18,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-sorcery",
+        "name": "Storm Sorcery"
+      }
+    }
+  },
+  {
+    "key": "xge:level:storm-sorcery-6",
+    "index": "storm-sorcery-6",
+    "name": "Storm Sorcery 6",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "storm-sorcery-6",
+      "name": "Storm Sorcery 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-sorcery",
+        "name": "Storm Sorcery"
+      }
+    }
+  },
+  {
+    "key": "xge:level:sun-soul-11",
+    "index": "sun-soul-11",
+    "name": "Way of the Sun Soul 11",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "sun-soul-11",
+      "name": "Way of the Sun Soul 11",
+      "level": 11,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "xge:subclass:sun-soul",
+        "name": "Way of the Sun Soul"
+      }
+    }
+  },
+  {
+    "key": "xge:level:sun-soul-17",
+    "index": "sun-soul-17",
+    "name": "Way of the Sun Soul 17",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "sun-soul-17",
+      "name": "Way of the Sun Soul 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "xge:subclass:sun-soul",
+        "name": "Way of the Sun Soul"
+      }
+    }
+  },
+  {
+    "key": "xge:level:sun-soul-3",
+    "index": "sun-soul-3",
+    "name": "Way of the Sun Soul 3",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "sun-soul-3",
+      "name": "Way of the Sun Soul 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "xge:feature:sun-soul-3-radiant-sun-bolt",
+          "name": "Radiant Sun Bolt"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "xge:subclass:sun-soul",
+        "name": "Way of the Sun Soul"
+      }
+    }
+  },
+  {
+    "key": "xge:level:sun-soul-6",
+    "index": "sun-soul-6",
+    "name": "Way of the Sun Soul 6",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "sun-soul-6",
+      "name": "Way of the Sun Soul 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "xge:subclass:sun-soul",
+        "name": "Way of the Sun Soul"
+      }
+    }
+  },
+  {
+    "key": "xge:level:swashbuckler-13",
+    "index": "swashbuckler-13",
+    "name": "Swashbuckler 13",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "swashbuckler-13",
+      "name": "Swashbuckler 13",
+      "level": 13,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "xge:subclass:swashbuckler",
+        "name": "Swashbuckler"
+      }
+    }
+  },
+  {
+    "key": "xge:level:swashbuckler-17",
+    "index": "swashbuckler-17",
+    "name": "Swashbuckler 17",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "swashbuckler-17",
+      "name": "Swashbuckler 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "xge:subclass:swashbuckler",
+        "name": "Swashbuckler"
+      }
+    }
+  },
+  {
+    "key": "xge:level:swashbuckler-3",
+    "index": "swashbuckler-3",
+    "name": "Swashbuckler 3",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "swashbuckler-3",
+      "name": "Swashbuckler 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "xge:feature:swashbuckler-3-fancy-footwork",
+          "name": "Fancy Footwork"
+        },
+        {
+          "key": "xge:feature:swashbuckler-3-rakish-audacity",
+          "name": "Rakish Audacity"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "xge:subclass:swashbuckler",
+        "name": "Swashbuckler"
+      }
+    }
+  },
+  {
+    "key": "xge:level:swashbuckler-9",
+    "index": "swashbuckler-9",
+    "name": "Swashbuckler 9",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "swashbuckler-9",
+      "name": "Swashbuckler 9",
+      "level": 9,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "xge:subclass:swashbuckler",
+        "name": "Swashbuckler"
+      }
+    }
+  },
+  {
+    "key": "xge:level:swords-14",
+    "index": "swords-14",
+    "name": "College of Swords 14",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "swords-14",
+      "name": "College of Swords 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:swords",
+        "name": "College of Swords"
+      }
+    }
+  },
+  {
+    "key": "xge:level:swords-3",
+    "index": "swords-3",
+    "name": "College of Swords 3",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "swords-3",
+      "name": "College of Swords 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "xge:feature:swords-3-bonus-proficiencies",
+          "name": "Bonus Proficiencies"
+        },
+        {
+          "key": "xge:feature:swords-3-fighting-style",
+          "name": "Fighting Style"
+        },
+        {
+          "key": "xge:feature:swords-3-blade-flourish",
+          "name": "Blade Flourish"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:swords",
+        "name": "College of Swords"
+      }
+    }
+  },
+  {
+    "key": "xge:level:swords-6",
+    "index": "swords-6",
+    "name": "College of Swords 6",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "swords-6",
+      "name": "College of Swords 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:swords",
+        "name": "College of Swords"
+      }
+    }
+  },
+  {
+    "key": "xge:level:war-magic-10",
+    "index": "war-magic-10",
+    "name": "War Magic 10",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "war-magic-10",
+      "name": "War Magic 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "xge:subclass:war-magic",
+        "name": "War Magic"
+      }
+    }
+  },
+  {
+    "key": "xge:level:war-magic-14",
+    "index": "war-magic-14",
+    "name": "War Magic 14",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "war-magic-14",
+      "name": "War Magic 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "xge:subclass:war-magic",
+        "name": "War Magic"
+      }
+    }
+  },
+  {
+    "key": "xge:level:war-magic-2",
+    "index": "war-magic-2",
+    "name": "War Magic 2",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "war-magic-2",
+      "name": "War Magic 2",
+      "level": 2,
+      "features": [
+        {
+          "key": "xge:feature:war-magic-2-arcane-deflection",
+          "name": "Arcane Deflection"
+        },
+        {
+          "key": "xge:feature:war-magic-2-tactical-wit",
+          "name": "Tactical Wit"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "xge:subclass:war-magic",
+        "name": "War Magic"
+      }
+    }
+  },
+  {
+    "key": "xge:level:war-magic-6",
+    "index": "war-magic-6",
+    "name": "War Magic 6",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "war-magic-6",
+      "name": "War Magic 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "xge:subclass:war-magic",
+        "name": "War Magic"
+      }
+    }
+  },
+  {
+    "key": "xge:level:whispers-14",
+    "index": "whispers-14",
+    "name": "College of Whispers 14",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "whispers-14",
+      "name": "College of Whispers 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:whispers",
+        "name": "College of Whispers"
+      }
+    }
+  },
+  {
+    "key": "xge:level:whispers-3",
+    "index": "whispers-3",
+    "name": "College of Whispers 3",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "whispers-3",
+      "name": "College of Whispers 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "xge:feature:whispers-3-psychic-blades",
+          "name": "Psychic Blades"
+        },
+        {
+          "key": "xge:feature:whispers-3-words-of-terror",
+          "name": "Words of Terror"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:whispers",
+        "name": "College of Whispers"
+      }
+    }
+  },
+  {
+    "key": "xge:level:whispers-6",
+    "index": "whispers-6",
+    "name": "College of Whispers 6",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "whispers-6",
+      "name": "College of Whispers 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:whispers",
+        "name": "College of Whispers"
+      }
+    }
+  },
+  {
+    "key": "xge:level:zealot-10",
+    "index": "zealot-10",
+    "name": "Path of the Zealot 10",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "zealot-10",
+      "name": "Path of the Zealot 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:zealot",
+        "name": "Path of the Zealot"
+      }
+    }
+  },
+  {
+    "key": "xge:level:zealot-14",
+    "index": "zealot-14",
+    "name": "Path of the Zealot 14",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "zealot-14",
+      "name": "Path of the Zealot 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:zealot",
+        "name": "Path of the Zealot"
+      }
+    }
+  },
+  {
+    "key": "xge:level:zealot-3",
+    "index": "zealot-3",
+    "name": "Path of the Zealot 3",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "zealot-3",
+      "name": "Path of the Zealot 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "xge:feature:zealot-3-divine-fury",
+          "name": "Divine Fury"
+        },
+        {
+          "key": "xge:feature:zealot-3-warrior-of-the-gods",
+          "name": "Warrior of the Gods"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:zealot",
+        "name": "Path of the Zealot"
+      }
+    }
+  },
+  {
+    "key": "xge:level:zealot-6",
+    "index": "zealot-6",
+    "name": "Path of the Zealot 6",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "zealot-6",
+      "name": "Path of the Zealot 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:zealot",
+        "name": "Path of the Zealot"
+      }
+    }
+  }
+]

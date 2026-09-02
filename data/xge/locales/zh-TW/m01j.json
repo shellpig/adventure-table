@@ -1,0 +1,425 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "xge",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "xge:feature:ancestral-guardian-3-ancestral-protectors": {
+      "name": "先祖守護"
+    },
+    "xge:feature:arcane-archer-3-arcane-archer-lore": {
+      "name": "魔射手學識"
+    },
+    "xge:feature:arcane-archer-3-arcane-shot": {
+      "name": "秘法射擊"
+    },
+    "xge:feature:arcane-archer-3-arcane-shot-options": {
+      "name": "秘法射擊選項"
+    },
+    "xge:feature:arcane-archer-3-arcane-shot-options-option-1-banishing-arrow": {
+      "name": "放逐箭"
+    },
+    "xge:feature:arcane-archer-3-arcane-shot-options-option-2-beguiling-arrow": {
+      "name": "迷惑箭"
+    },
+    "xge:feature:arcane-archer-3-arcane-shot-options-option-3-bursting-arrow": {
+      "name": "爆裂箭"
+    },
+    "xge:feature:arcane-archer-3-arcane-shot-options-option-4-enfeebling-arrow": {
+      "name": "衰弱箭"
+    },
+    "xge:feature:arcane-archer-3-arcane-shot-options-option-5-grasping-arrow": {
+      "name": "糾纏箭"
+    },
+    "xge:feature:arcane-archer-3-arcane-shot-options-option-6-piercing-arrow": {
+      "name": "穿透箭"
+    },
+    "xge:feature:arcane-archer-3-arcane-shot-options-option-7-seeking-arrow": {
+      "name": "追蹤箭"
+    },
+    "xge:feature:arcane-archer-3-arcane-shot-options-option-8-shadow-arrow": {
+      "name": "暗影箭"
+    },
+    "xge:feature:cavalier-3-bonus-proficiency": {
+      "name": "額外熟練"
+    },
+    "xge:feature:cavalier-3-born-to-the-saddle": {
+      "name": "生而為騎"
+    },
+    "xge:feature:cavalier-3-unwavering-mark": {
+      "name": "堅定印記"
+    },
+    "xge:feature:celestial-1-bonus-cantrips": {
+      "name": "額外戲法"
+    },
+    "xge:feature:celestial-1-expanded-spell-list": {
+      "name": "擴充套件法術列表"
+    },
+    "xge:feature:celestial-1-healing-light": {
+      "name": "治癒之光"
+    },
+    "xge:feature:conquest-3-channel-divinity-conquering-presence": {
+      "name": "引導神力：征服威儀"
+    },
+    "xge:feature:conquest-3-channel-divinity-guided-strike": {
+      "name": "引導神力：神導打擊"
+    },
+    "xge:feature:conquest-3-oath-spells": {
+      "name": "聖誓法術"
+    },
+    "xge:feature:conquest-3-tenets-of-conquest": {
+      "name": "征服之信條"
+    },
+    "xge:feature:divine-soul-1-divine-magic": {
+      "name": "神聖魔法"
+    },
+    "xge:feature:divine-soul-1-favored-by-the-gods": {
+      "name": "諸神眷顧"
+    },
+    "xge:feature:divine-soul-m01j-choice-affinity-chaos": {
+      "name": "混亂"
+    },
+    "xge:feature:divine-soul-m01j-choice-affinity-evil": {
+      "name": "邪惡"
+    },
+    "xge:feature:divine-soul-m01j-choice-affinity-good": {
+      "name": "善良"
+    },
+    "xge:feature:divine-soul-m01j-choice-affinity-law": {
+      "name": "守序"
+    },
+    "xge:feature:divine-soul-m01j-choice-affinity-neutrality": {
+      "name": "中立"
+    },
+    "xge:feature:dreams-2-balm-of-the-summer-court": {
+      "name": "仲夏庭院的芬馥"
+    },
+    "xge:feature:drunken-master-3-bonus-proficiencies": {
+      "name": "額外熟練"
+    },
+    "xge:feature:drunken-master-3-drunken-technique": {
+      "name": "醉拳技巧"
+    },
+    "xge:feature:drunken-master-6-leap-to-your-feet": {
+      "name": "鯉魚打挺"
+    },
+    "xge:feature:drunken-master-6-redirect-attack": {
+      "name": "借力打力"
+    },
+    "xge:feature:forge-1-blessing-of-the-forge": {
+      "name": "鍛造祝福"
+    },
+    "xge:feature:forge-1-bonus-proficiency": {
+      "name": "額外熟練"
+    },
+    "xge:feature:glamour-3-enthralling-performance": {
+      "name": "醉人表演"
+    },
+    "xge:feature:glamour-3-mantle-of-inspiration": {
+      "name": "激勵光環"
+    },
+    "xge:feature:gloom-stalker-3-dread-ambusher": {
+      "name": "懼怖伏兵"
+    },
+    "xge:feature:gloom-stalker-3-gloom-stalker-magic": {
+      "name": "幽域追蹤者魔法"
+    },
+    "xge:feature:gloom-stalker-3-umbral-sight": {
+      "name": "幽影視覺"
+    },
+    "xge:feature:grave-1-circle-of-mortality": {
+      "name": "凡命迴圈"
+    },
+    "xge:feature:grave-1-eyes-of-the-grave": {
+      "name": "墳墓之眼"
+    },
+    "xge:feature:hexblade-1-expanded-spell-list": {
+      "name": "擴充套件法術列表"
+    },
+    "xge:feature:hexblade-1-hex-warrior": {
+      "name": "巫咒戰士"
+    },
+    "xge:feature:hexblade-1-hexblade-s-curse": {
+      "name": "咒劍詛咒"
+    },
+    "xge:feature:horizon-walker-3-detect-portal": {
+      "name": "偵測傳送門"
+    },
+    "xge:feature:horizon-walker-3-horizon-walker-magic": {
+      "name": "境界行者魔法"
+    },
+    "xge:feature:horizon-walker-3-planar-warrior": {
+      "name": "位面戰士"
+    },
+    "xge:feature:inquisitive-3-ear-for-deceit": {
+      "name": "辨謊之耳"
+    },
+    "xge:feature:inquisitive-3-eye-for-detail": {
+      "name": "明察之眼"
+    },
+    "xge:feature:inquisitive-3-insightful-fighting": {
+      "name": "戰鬥洞察"
+    },
+    "xge:feature:kensei-3-path-of-the-kensei": {
+      "name": "劍聖之途"
+    },
+    "xge:feature:kensei-3-path-of-the-kensei-option-1-kensei-weapons": {
+      "name": "劍聖武器"
+    },
+    "xge:feature:kensei-3-path-of-the-kensei-option-2-agile-parry": {
+      "name": "靈巧格檔"
+    },
+    "xge:feature:kensei-3-path-of-the-kensei-option-3-kensei-s-shot": {
+      "name": "劍聖神射"
+    },
+    "xge:feature:kensei-3-path-of-the-kensei-option-4-way-of-the-brush": {
+      "name": "書畫之道"
+    },
+    "xge:feature:mastermind-3-master-of-intrigue": {
+      "name": "陰謀大師"
+    },
+    "xge:feature:mastermind-3-master-of-tactics": {
+      "name": "戰術大師"
+    },
+    "xge:feature:monster-slayer-3-hunter-s-sense": {
+      "name": "獵人感知"
+    },
+    "xge:feature:monster-slayer-3-monster-slayer-magic": {
+      "name": "怪物殺手魔法"
+    },
+    "xge:feature:monster-slayer-3-slayer-s-prey": {
+      "name": "殺手獵物"
+    },
+    "xge:feature:redemption-3-channel-divinity-emissary-of-peace": {
+      "name": "引導神力：和平使者"
+    },
+    "xge:feature:redemption-3-channel-divinity-rebuke-the-violent": {
+      "name": "引導神力：斥喝暴力"
+    },
+    "xge:feature:redemption-3-oath-spells": {
+      "name": "聖誓法術"
+    },
+    "xge:feature:redemption-3-tenets-of-redemption": {
+      "name": "救贖之信條"
+    },
+    "xge:feature:samurai-3-bonus-proficiency": {
+      "name": "額外熟練"
+    },
+    "xge:feature:samurai-3-fighting-spirit": {
+      "name": "戰鬥之魂"
+    },
+    "xge:feature:scout-3-skirmisher": {
+      "name": "散兵戰術"
+    },
+    "xge:feature:scout-3-survivalist": {
+      "name": "求生專家"
+    },
+    "xge:feature:shadow-magic-1-eyes-of-the-dark": {
+      "name": "幽暗之瞳"
+    },
+    "xge:feature:shadow-magic-1-strength-of-the-grave": {
+      "name": "終焉之力"
+    },
+    "xge:feature:shepherd-2-speech-of-the-woods": {
+      "name": "林地之語"
+    },
+    "xge:feature:shepherd-2-spirit-totem": {
+      "name": "精魂圖騰"
+    },
+    "xge:feature:shepherd-2-spirit-totem-option-1-bear-spirit": {
+      "name": "熊之精魂"
+    },
+    "xge:feature:shepherd-2-spirit-totem-option-2-hawk-spirit": {
+      "name": "鷹之精魂"
+    },
+    "xge:feature:shepherd-2-spirit-totem-option-3-unicorn-spirit": {
+      "name": "獨角獸精魂"
+    },
+    "xge:feature:storm-herald-14-desert": {
+      "name": "沙漠"
+    },
+    "xge:feature:storm-herald-14-sea": {
+      "name": "海洋"
+    },
+    "xge:feature:storm-herald-14-tundra": {
+      "name": "凍原"
+    },
+    "xge:feature:storm-herald-3-storm-aura": {
+      "name": "風暴靈光"
+    },
+    "xge:feature:storm-herald-3-storm-aura-option-1-desert": {
+      "name": "沙漠"
+    },
+    "xge:feature:storm-herald-3-storm-aura-option-2-sea": {
+      "name": "海洋"
+    },
+    "xge:feature:storm-herald-3-storm-aura-option-3-tundra": {
+      "name": "凍原"
+    },
+    "xge:feature:storm-herald-6-desert": {
+      "name": "沙漠"
+    },
+    "xge:feature:storm-herald-6-sea": {
+      "name": "海洋"
+    },
+    "xge:feature:storm-herald-6-tundra": {
+      "name": "凍原"
+    },
+    "xge:feature:storm-sorcery-1-tempestuous-magic": {
+      "name": "風暴魔法"
+    },
+    "xge:feature:storm-sorcery-1-wind-speaker": {
+      "name": "風語者"
+    },
+    "xge:feature:sun-soul-3-radiant-sun-bolt": {
+      "name": "日光箭"
+    },
+    "xge:feature:swashbuckler-3-fancy-footwork": {
+      "name": "華麗步法"
+    },
+    "xge:feature:swashbuckler-3-rakish-audacity": {
+      "name": "放蕩無畏"
+    },
+    "xge:feature:swords-3-blade-flourish": {
+      "name": "鋒刃劍舞"
+    },
+    "xge:feature:swords-3-blade-flourish-option-1-defensive-flourish": {
+      "name": "防禦劍舞"
+    },
+    "xge:feature:swords-3-blade-flourish-option-2-slashing-flourish": {
+      "name": "順劈劍舞"
+    },
+    "xge:feature:swords-3-blade-flourish-option-3-mobile-flourish": {
+      "name": "靈活劍舞"
+    },
+    "xge:feature:swords-3-bonus-proficiencies": {
+      "name": "額外熟練"
+    },
+    "xge:feature:swords-3-fighting-style": {
+      "name": "戰鬥風格"
+    },
+    "xge:feature:swords-3-fighting-style-option-1-dueling": {
+      "name": "決鬥"
+    },
+    "xge:feature:swords-3-fighting-style-option-2-two-weapon-fighting": {
+      "name": "雙武器戰鬥"
+    },
+    "xge:feature:war-magic-2-arcane-deflection": {
+      "name": "秘法偏斜"
+    },
+    "xge:feature:war-magic-2-tactical-wit": {
+      "name": "戰術思維"
+    },
+    "xge:feature:whispers-3-psychic-blades": {
+      "name": "精神之刃"
+    },
+    "xge:feature:whispers-3-words-of-terror": {
+      "name": "駭人言詞"
+    },
+    "xge:feature:zealot-3-divine-fury": {
+      "name": "神性狂怒"
+    },
+    "xge:feature:zealot-3-warrior-of-the-gods": {
+      "name": "諸神勇士"
+    },
+    "xge:feature:zealot-m01j-choice-divine-fury-necrotic": {
+      "name": "黯蝕神性狂怒"
+    },
+    "xge:feature:zealot-m01j-choice-divine-fury-radiant": {
+      "name": "光耀神性狂怒"
+    },
+    "xge:subclass:ancestral-guardian": {
+      "name": "先祖守衛道途"
+    },
+    "xge:subclass:arcane-archer": {
+      "name": "奧法弓手"
+    },
+    "xge:subclass:cavalier": {
+      "name": "騎兵"
+    },
+    "xge:subclass:celestial": {
+      "name": "天界宗主"
+    },
+    "xge:subclass:conquest": {
+      "name": "征服之誓"
+    },
+    "xge:subclass:divine-soul": {
+      "name": "神聖之魂"
+    },
+    "xge:subclass:dreams": {
+      "name": "夢境結社"
+    },
+    "xge:subclass:drunken-master": {
+      "name": "醉拳宗"
+    },
+    "xge:subclass:forge": {
+      "name": "鍛造領域"
+    },
+    "xge:subclass:glamour": {
+      "name": "魅惑學院"
+    },
+    "xge:subclass:gloom-stalker": {
+      "name": "幽域追蹤者"
+    },
+    "xge:subclass:grave": {
+      "name": "墳墓領域"
+    },
+    "xge:subclass:hexblade": {
+      "name": "咒劍士"
+    },
+    "xge:subclass:horizon-walker": {
+      "name": "遠界行者"
+    },
+    "xge:subclass:inquisitive": {
+      "name": "審問者"
+    },
+    "xge:subclass:kensei": {
+      "name": "劍聖宗"
+    },
+    "xge:subclass:mastermind": {
+      "name": "策士"
+    },
+    "xge:subclass:monster-slayer": {
+      "name": "怪物殺手"
+    },
+    "xge:subclass:redemption": {
+      "name": "救贖之誓"
+    },
+    "xge:subclass:samurai": {
+      "name": "武士"
+    },
+    "xge:subclass:scout": {
+      "name": "斥侯"
+    },
+    "xge:subclass:shadow-magic": {
+      "name": "幽影魔法"
+    },
+    "xge:subclass:shepherd": {
+      "name": "牧人結社"
+    },
+    "xge:subclass:storm-herald": {
+      "name": "風暴先驅道途"
+    },
+    "xge:subclass:storm-sorcery": {
+      "name": "暴風術法"
+    },
+    "xge:subclass:sun-soul": {
+      "name": "日魂宗"
+    },
+    "xge:subclass:swashbuckler": {
+      "name": "風流劍客"
+    },
+    "xge:subclass:swords": {
+      "name": "劍舞學院"
+    },
+    "xge:subclass:war-magic": {
+      "name": "戰爭魔法"
+    },
+    "xge:subclass:whispers": {
+      "name": "低語學院"
+    },
+    "xge:subclass:zealot": {
+      "name": "狂熱者道途"
+    }
+  }
+}

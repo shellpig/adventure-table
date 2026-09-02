@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "scag",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "scag:feature:arcana-1-arcane-initiate": {
+      "name": "奧法學徒"
+    },
+    "scag:feature:battlerager-3-battlerager-armor": {
+      "name": "戰狂護甲"
+    },
+    "scag:feature:battlerager-3-restriction-dwarves-only": {
+      "name": "限制 - 僅限矮人"
+    },
+    "scag:feature:crown-3-channel-divinity-champion-challenge": {
+      "name": "引導神力：捍衛挑戰"
+    },
+    "scag:feature:crown-3-channel-divinity-turn-the-tide": {
+      "name": "引導神力：扭轉局勢"
+    },
+    "scag:feature:crown-3-oath-spells": {
+      "name": "聖誓法術"
+    },
+    "scag:feature:crown-3-tenets-of-the-crown": {
+      "name": "王冠之信條"
+    },
+    "scag:feature:long-death-3-touch-of-death": {
+      "name": "死之觸"
+    },
+    "scag:feature:purple-dragon-knight-3-rallying-cry": {
+      "name": "鼓舞戰吼"
+    },
+    "scag:feature:purple-dragon-knight-3-restriction-knighthood": {
+      "name": "限制：騎士爵位"
+    },
+    "scag:feature:undying-1-among-the-dead": {
+      "name": "常伴死亡"
+    },
+    "scag:feature:undying-1-expanded-spell-list": {
+      "name": "擴充套件法術列表"
+    },
+    "scag:subclass:arcana": {
+      "name": "奧祕領域"
+    },
+    "scag:subclass:battlerager": {
+      "name": "戰狂道途"
+    },
+    "scag:subclass:crown": {
+      "name": "王冠之誓"
+    },
+    "scag:subclass:long-death": {
+      "name": "永亡宗"
+    },
+    "scag:subclass:purple-dragon-knight": {
+      "name": "紫龍騎士（旗將）"
+    },
+    "scag:subclass:undying": {
+      "name": "不朽者"
+    }
+  }
+}

@@ -2,7 +2,7 @@
   "id": "tce",
   "name": "Tasha's Cauldron of Everything",
   "ruleset": "dnd5e-2014",
-  "version": "M01-I",
+  "version": "M01-J",
   "provenance": {
     "type": "private-maintainer-normalization",
     "reference": "docs/暫用規則資訊/奇械師_TCE.md",
@@ -23,7 +23,12 @@
     {"name": "maneuvers-m01i", "kind": "feature", "file": "maneuvers-m01i.json", "count": 7},
     {"name": "options-m01i", "kind": "feature", "file": "options-m01i.json", "count": 11},
     {"name": "infusions", "kind": "infusion", "file": "infusions.json", "count": 16},
-    {"name": "spells", "kind": "spell", "file": "spells.json", "count": 21}
+    {"name": "spells", "kind": "spell", "file": "spells.json", "count": 21},
+    {"name": "features-m01j-01", "kind": "feature", "file": "features-m01j-01.json", "count": 80},
+    {"name": "features-m01j-02", "kind": "feature", "file": "features-m01j-02.json", "count": 4},
+    {"name": "levels-m01j-01", "kind": "level", "file": "levels-m01j-01.json", "count": 80},
+    {"name": "levels-m01j-02", "kind": "level", "file": "levels-m01j-02.json", "count": 27},
+    {"name": "subclasses-m01j-01", "kind": "subclass", "file": "subclasses-m01j-01.json", "count": 26}
   ],
-  "total_entries": 184
+  "total_entries": 401
 }

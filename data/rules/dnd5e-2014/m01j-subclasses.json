@@ -7,21 +7,6 @@
     "xge": 31,
     "tce": 30
   },
-  "reference_docs": {
-    "artificer": "docs/暫用規則資訊/子職業_奇械師.md",
-    "barbarian": "docs/暫用規則資訊/子職業_野蠻人.md",
-    "bard": "docs/暫用規則資訊/子職業_吟遊詩人.md",
-    "cleric": "docs/暫用規則資訊/子職業_牧師.md",
-    "druid": "docs/暫用規則資訊/子職業_德魯伊.md",
-    "fighter": "docs/暫用規則資訊/子職業_戰士.md",
-    "monk": "docs/暫用規則資訊/子職業_武僧.md",
-    "paladin": "docs/暫用規則資訊/子職業_聖武士.md",
-    "ranger": "docs/暫用規則資訊/子職業_遊俠.md",
-    "rogue": "docs/暫用規則資訊/子職業_遊蕩者.md",
-    "sorcerer": "docs/暫用規則資訊/子職業_術士.md",
-    "warlock": "docs/暫用規則資訊/子職業_邪術師.md",
-    "wizard": "docs/暫用規則資訊/子職業_法師.md"
-  },
   "canonical_duplicates": {
     "phb2014:subclass:berserker": "srd5.1:subclass:berserker",
     "phb2014:subclass:lore": "srd5.1:subclass:lore",
@@ -42,5 +27,6 @@
     "scag:subclass:swashbuckler": "xge:subclass:swashbuckler",
     "scag:subclass:storm-sorcery": "xge:subclass:storm-sorcery",
     "scag:subclass:bladesinging": "tce:subclass:bladesinging"
-  }
+  },
+  "note": "Expected M01-J source accounting. The per-subclass expected inventory lives in m01j-inventory.json; this file holds the totals and the canonical/reprint maps."
 }

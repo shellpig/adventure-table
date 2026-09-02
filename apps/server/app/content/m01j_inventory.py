@@ -1,14 +1,65 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+from dataclasses import dataclass
+from functools import lru_cache
+import json
 
 from app.content.identity import parse_stable_key, reference_to_stable_key
-from app.content.m01j_reference_content import (
-    EXPECTED_SOURCES,
-    InventoryRow,
-    m01j_reference_inventory,
+from app.content.registry import (
+    CONTENT_PACKS_ROOT,
+    ContentRegistry,
+    ContentValidationError,
 )
-from app.content.registry import ContentRegistry, ContentValidationError
+
+
+EXPECTED_SOURCES = ("phb2014", "scag", "xge", "tce")
+INVENTORY_PATH = CONTENT_PACKS_ROOT / "rules" / "dnd5e-2014" / "m01j-inventory.json"
+
+
+@dataclass(frozen=True)
+class InventoryRow:
+    """One expected M01-J subclass identity, as published by the source book."""
+
+    source: str
+    parent_class_ref: str
+    subclass_key: str
+    name: str
+    zh_name: str
+    acquisition_class_level: int
+    progression_levels: tuple[int, ...]
+    disposition: str
+    canonical_key: str | None
+
+
+@lru_cache(maxsize=1)
+def m01j_reference_inventory() -> tuple[InventoryRow, ...]:
+    """Load the checked-in expected inventory that M01-J closeout validates against."""
+
+    try:
+        payload = json.loads(INVENTORY_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ContentValidationError(f"cannot read M01-J inventory: {exc}") from exc
+    rows = payload.get("rows")
+    if not isinstance(rows, list) or not rows:
+        raise ContentValidationError("M01-J inventory must contain rows")
+    try:
+        return tuple(
+            InventoryRow(
+                source=row["source"],
+                parent_class_ref=row["parent_class_ref"],
+                subclass_key=row["subclass_key"],
+                name=row["name"],
+                zh_name=row["zh_name"],
+                acquisition_class_level=int(row["acquisition_class_level"]),
+                progression_levels=tuple(int(level) for level in row["progression_levels"]),
+                disposition=row["disposition"],
+                canonical_key=row["canonical_key"],
+            )
+            for row in rows
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ContentValidationError(f"invalid M01-J inventory row: {exc}") from exc
 
 
 ALLOWED_DISPOSITIONS = frozenset({"implemented", "canonical_duplicate"})
@@ -196,7 +247,7 @@ def _validate_resource_metadata(
 def validate_m01j_inventory(registry: ContentRegistry) -> ContentRegistry:
     """Close M01-J only when the verified subclass inventory is fully runnable."""
 
-    rows = m01j_reference_inventory(registry)
+    rows = m01j_reference_inventory()
     by_key = {row.subclass_key: row for row in rows}
     if len(by_key) != len(rows):
         raise ContentValidationError("M01-J subclass inventory contains duplicate source identities")
@@ -372,7 +423,7 @@ def apply_m01j_subclass_relations(registry: ContentRegistry) -> ContentRegistry:
 
 
 def m01j_inventory_summary(registry: ContentRegistry | None = None) -> dict[str, object]:
-    rows = m01j_reference_inventory(registry) if registry is not None else m01j_reference_inventory(object())
+    rows = m01j_reference_inventory()
     dispositions = Counter(row.disposition for row in rows)
     return {
         "expected": len(rows),

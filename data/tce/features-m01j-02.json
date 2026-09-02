@@ -1,0 +1,126 @@
+[
+  {
+    "key": "tce:feature:wild-magic-3-magic-awareness",
+    "index": "wild-magic-3-magic-awareness",
+    "name": "Magic Awareness",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "wild-magic-3-magic-awareness",
+      "name": "Magic Awareness",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "tce:subclass:wild-magic",
+        "name": "Path of Wild Magic"
+      },
+      "reference_heading_zh": "察覺魔法",
+      "reference_text_zh": "*3級狂野魔法道途特性*\n\n以一個動作，你讓你的感官對聚集的魔力的存在保持警覺。知道你的下一個回合結束前，你可以知曉你60尺內任何法術或者魔法物品的位置，除非它們對你有全掩蔽。當你察覺到一個法術的存在時，你還能判斷這個法術屬於哪一個學派。\n\n你可以使用該能力的次數等於你的熟練加值。每完成一次長休之後你恢復所有已消耗的使用次數。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "proficiency_bonus"
+        },
+        "recharge": [
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "tce:feature:wild-magic-3-wild-surge",
+    "index": "wild-magic-3-wild-surge",
+    "name": "Wild Surge",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "wild-magic-3-wild-surge",
+      "name": "Wild Surge",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "tce:subclass:wild-magic",
+        "name": "Path of Wild Magic"
+      },
+      "reference_heading_zh": "狂野浪潮",
+      "reference_text_zh": "*3級狂野魔法道途特性*\n\n你體內那翻滾不息的魔法能量又是會從你身上爆發出來。當你進入狂暴狀態時，擲骰子並根據以下\"狂野魔法表\"中決定所產生的狂野魔法。\n\n如果這個狂野魔法需要進行豁免檢定，則其DC等於8 + 你的熟練加值 + 你的體質調整值。\n\n**狂野魔法**\n\n| d8 | 魔法效應 |\n| :--- | :--- |\n| 1 | 陰暗的卷鬚在你身邊瘋狂揮舞。在你能看到的30尺內，你選擇若干生物，這些生物必須進行一次體質豁免，如果失敗，則將受到1d12的黯蝕傷害。你獲得1d12的臨時生命值。 |\n| 2 | 你可以傳送到30尺內的一個未被佔據的，你可以看到的地方。直到你的狂暴終止，你的每一個回合都可以消耗一個附贈動作再次發動這個效果。 |\n| 3 | 一個無形的靈體，看起來像一個《呋嚕》或者《皮克精》（由你決定），出現在一個你30尺內可以看到的生物的5尺以內。並且在當前回合結束時，這個靈體會爆炸，所有5尺以內的生物必須進行一次敏捷豁免，如果失敗，將承受1d6的力場傷害。直到你的狂暴結束前，你每個回合都可以消耗一次附贈動作來再次發動這個效果。 |\n| 4 | 魔力與你所選擇的一把你正持握著的武器相融在一起。直到你的狂暴結束前，這把武器的傷害型別轉變為力場傷害，並且獲得輕型和投擲（20尺/60尺）的屬性。如果你手中不在持握有這把武器，它會在當前回合結束的時候重新出現在你的手中。 |\n| 5 | 在你的狂暴結束前，每當一個生物以攻擊檢定的方式對你進行攻擊並命中，你身上的魔力抽打反擊對其造成1d6的力場傷害。 |\n| 6 | 在你的狂暴結束前，你周身圍繞著彩色的防護光芒。你的AC獲得+1加值，並且在你10尺內的夥伴也可以享受到這一加成。 |\n| 7 | 你身邊暫時生長出花朵與藤蔓。在你的狂暴結束前，你周圍15尺的地面對你的敵人視作困難地形。 |\n| 8 | 一束光從你胸膛射出。你所選擇的30尺內的你可以看到的一個其他生物必須進行一次體質豁免檢定，如果失敗，將會受到1d6的光耀傷害，並且直到你的下一個回合開始前，其將一直目盲。直到你的狂暴結束前，你每個回合都可以消耗一次附贈動作來再次發動這個效果。 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:wildfire-2-circle-spells",
+    "index": "wildfire-2-circle-spells",
+    "name": "Circle Spells",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "wildfire-2-circle-spells",
+      "name": "Circle Spells",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:wildfire",
+        "name": "Circle of Wildfire"
+      },
+      "reference_heading_zh": "結社法術",
+      "reference_text_zh": "*2級野火結社特性*\n\n你與野火精魄——一位兼具創生和毀滅的原初存在——之間的神秘連線業已形成。當你在此職業到達特定等級時，你與精魄的連線使你獲取了一些特定法術的使用權，就如野火結社法術列表所示。\n\n　一旦你獲得了其中某個法術的使用權，你就會一直準備著它，且不計入你的每日準備法術上限。如果你學會一個不在德魯伊法術列表中的法術，該法術對你來說視作德魯伊法術。\n\n**野火結社法術**\n\n| 等級 | 擴充套件法術 |\n| :--- | :--- |\n| 2nd | 《燃燒之手》, 《治療傷勢》 |\n| 3rd | 《熾焰法球》, 《灼熱射線》 |\n| 5th | 《植物滋長》, 《回生術》 |\n| 7th | 《生命靈光》, 《火焰護盾》 |\n| 9th | 《焰擊術》, 《群體治療傷勢》 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:wildfire-2-summon-wildfire-spirit",
+    "index": "wildfire-2-summon-wildfire-spirit",
+    "name": "Summon Wildfire Spirit",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "wildfire-2-summon-wildfire-spirit",
+      "name": "Summon Wildfire Spirit",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:wildfire",
+        "name": "Circle of Wildfire"
+      },
+      "reference_heading_zh": "召喚野火精魄",
+      "reference_text_zh": "*2級野火結社特性*\n\n你能召喚出與你靈魂連線的原初精魄。以一個動作，你可以消耗一次荒野形態使用次數召喚你的野火精魄，而不是變化為野獸形態。\n\n精魄出現在你所選擇的距離你30尺內未被佔據的可見空間內。每個精魄10尺內的生物（除你之外）在它出現時都必須成功一次對抗你法術豁免DC的敏捷豁免否則受到2d6火焰傷害。\n\n野火精魄對你與你的同伴保持友善並遵從你的命令。在《野火精魄》資料表中可以看到這隻生物的遊戲資料，其中幾處採用了你的熟練加值（PB）。由你來決定精魄的外形。一些精魄是熊熊燃燒的枝條虯結而成的人形，而另一些則像是被火焰包裹的野獸。\n\n在戰鬥中，野火精魄與你使用同一先攻，但在你的回合之後緊接著行動。它僅能使用閃避，除非你使用一個附贈動作命令它採取其他動作。那個動作可以是其資料表上的一個，也可以是其他動作。如果你陷入無力，精魄可以採取任何它選擇的動作，不只是閃避。\n\n野火精魄持續存在1小時，直到其生命值降低至0，或直到你再次使用此特性召喚此精魄，或直到你死亡。",
+      "automation_boundary": "structured_manual"
+    }
+  }
+]

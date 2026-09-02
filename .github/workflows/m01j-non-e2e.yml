@@ -14,25 +14,29 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Audit M01-J reference inventory
+      - name: Audit M01-J inventory accounting
         working-directory: .
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
 
-          config = json.loads(
-              Path("data/rules/dnd5e-2014/m01j-subclasses.json").read_text(encoding="utf-8")
-          )
-          docs = config["reference_docs"]
-          missing = sorted(path for path in docs.values() if not Path(path).is_file())
+          root = Path("data/rules/dnd5e-2014")
+          config = json.loads((root / "m01j-subclasses.json").read_text(encoding="utf-8"))
+          inventory = json.loads((root / "m01j-inventory.json").read_text(encoding="utf-8"))
+          rows = inventory["rows"]
           expected = config["expected_counts"]
-          print("M01_J_REFERENCE_DOCS", len(docs))
+          print("M01_J_INVENTORY_ROWS", len(rows))
           print("M01_J_EXPECTED_COUNTS", expected)
-          if len(docs) != 13 or missing:
-              raise SystemExit(f"M01-J reference inventory is incomplete: missing={missing}")
           if sum(expected.values()) != 112:
               raise SystemExit("M01-J expected source identity total must remain 112")
+          if len(rows) != sum(expected.values()):
+              raise SystemExit(f"M01-J inventory row drift: {len(rows)} != {sum(expected.values())}")
+          actual = {}
+          for row in rows:
+              actual[row["source"]] = actual.get(row["source"], 0) + 1
+          if actual != expected:
+              raise SystemExit(f"M01-J inventory per-source drift: {actual} != {expected}")
           if len(config["canonical_duplicates"]) != 12 or len(config["reprints"]) != 5:
               raise SystemExit("M01-J canonical/reprint accounting drift")
           PY

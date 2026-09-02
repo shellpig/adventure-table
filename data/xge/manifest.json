@@ -13,7 +13,11 @@
     "physical_file_policy": "The installed pack boundary is explicit; M01-J subclass rows are generated in the validated reference overlay rather than duplicated into vendored JSON."
   },
   "categories": [
-    {"name": "subclasses", "kind": "subclass", "file": "subclasses.json", "count": 0}
+    {"name": "features-m01j-01", "kind": "feature", "file": "features-m01j-01.json", "count": 80},
+    {"name": "features-m01j-02", "kind": "feature", "file": "features-m01j-02.json", "count": 28},
+    {"name": "levels-m01j-01", "kind": "level", "file": "levels-m01j-01.json", "count": 80},
+    {"name": "levels-m01j-02", "kind": "level", "file": "levels-m01j-02.json", "count": 46},
+    {"name": "subclasses-m01j-01", "kind": "subclass", "file": "subclasses-m01j-01.json", "count": 31}
   ],
-  "total_entries": 0
+  "total_entries": 265
 }

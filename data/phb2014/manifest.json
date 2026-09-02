@@ -25,7 +25,12 @@
     {"name": "spells-m01i", "kind": "spell", "file": "spells-m01i.json", "count": 6},
     {"name": "spells-m01j", "kind": "spell", "file": "spells-m01j.json", "count": 12},
     {"name": "races", "kind": "race", "file": "races.json", "count": 1},
-    {"name": "subraces", "kind": "subrace", "file": "subraces.json", "count": 5}
+    {"name": "subraces", "kind": "subrace", "file": "subraces.json", "count": 5},
+    {"name": "features-m01j-01", "kind": "feature", "file": "features-m01j-01.json", "count": 80},
+    {"name": "features-m01j-02", "kind": "feature", "file": "features-m01j-02.json", "count": 27},
+    {"name": "levels-m01j-01", "kind": "level", "file": "levels-m01j-01.json", "count": 80},
+    {"name": "levels-m01j-02", "kind": "level", "file": "levels-m01j-02.json", "count": 39},
+    {"name": "subclasses-m01j-01", "kind": "subclass", "file": "subclasses-m01j-01.json", "count": 28}
   ],
-  "total_entries": 65
+  "total_entries": 319
 }

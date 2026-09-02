@@ -18,6 +18,7 @@ COPY data/gos /app/data/gos
 COPY data/vgm /app/data/vgm
 COPY data/vrgr /app/data/vrgr
 COPY data/tce /app/data/tce
+COPY data/xge /app/data/xge
 COPY data/rules /app/data/rules
 COPY data/localization /app/data/localization
 
