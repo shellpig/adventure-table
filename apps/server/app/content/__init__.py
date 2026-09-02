@@ -12,6 +12,7 @@ from app.content.m01j_reference_closeout import apply_m01j_reference_closeout
 from app.content.m01j_reference_completion import apply_m01j_reference_completion
 from app.content.m01j_reference_content import apply_m01j_reference_content
 from app.content.m01j_spell_closeout_validation import validate_m01j_spell_closeout
+from app.content.m01j_static_sweep import apply_m01j_static_sweep
 from app.content.phb_roleplay import apply_phb_background_roleplay
 from app.content.registry import (
     ContentNotFoundError,
@@ -38,11 +39,13 @@ def load_default_content_registry() -> ContentRegistry:
     registry = validate_m01i_inventory(registry)
     # M01-J's verified non-SRD mechanics are repository reference documents.
     # Materialize their runtime overlay, normalize the rules whose permanent
-    # semantics span Markdown sections/tables, attach PHB mechanics whose source
-    # identities dedupe onto canonical SRD subclasses, then close and validate
-    # the remaining spell-choice contracts before exposing parent relations.
+    # semantics span Markdown sections/tables, close the final static grants,
+    # attach PHB mechanics whose source identities dedupe onto canonical SRD
+    # subclasses, then validate the remaining spell-choice contracts before
+    # exposing parent relations.
     registry = apply_m01j_reference_content(registry)
     registry = apply_m01j_reference_completion(registry)
+    registry = apply_m01j_static_sweep(registry)
     registry = apply_m01j_reference_closeout(registry)
     registry = apply_m01j_canonical_integration(registry)
     registry = validate_m01j_inventory(registry)
