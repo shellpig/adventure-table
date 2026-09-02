@@ -1,0 +1,83 @@
+name: M01-J Non-E2E Regression
+
+on:
+  workflow_dispatch:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Audit M01-J inventory accounting
+        working-directory: .
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("data/rules/dnd5e-2014")
+          config = json.loads((root / "m01j-subclasses.json").read_text(encoding="utf-8"))
+          inventory = json.loads((root / "m01j-inventory.json").read_text(encoding="utf-8"))
+          rows = inventory["rows"]
+          expected = config["expected_counts"]
+          print("M01_J_INVENTORY_ROWS", len(rows))
+          print("M01_J_EXPECTED_COUNTS", expected)
+          if sum(expected.values()) != 112:
+              raise SystemExit("M01-J expected source identity total must remain 112")
+          if len(rows) != sum(expected.values()):
+              raise SystemExit(f"M01-J inventory row drift: {len(rows)} != {sum(expected.values())}")
+          actual = {}
+          for row in rows:
+              actual[row["source"]] = actual.get(row["source"], 0) + 1
+          if actual != expected:
+              raise SystemExit(f"M01-J inventory per-source drift: {actual} != {expected}")
+          if len(config["canonical_duplicates"]) != 12 or len(config["reprints"]) != 5:
+              raise SystemExit("M01-J canonical/reprint accounting drift")
+          PY
+      - name: Install backend
+        run: pip install -e ".[dev]"
+      - name: M01-J focused pytest
+        run: pytest tests/test_m01j_subclasses.py -q
+      - name: Backend pytest
+        run: pytest
+      - name: Localization authoring unit tests
+        working-directory: .
+        run: python -m unittest scripts.test_build_m02d_srd_locale_reviewed scripts.test_run_m02d_srd_locale_authoring
+      - name: Fresh SQLite migration
+        env:
+          DATABASE_URL: sqlite+pysqlite:////tmp/adventure-table-m01j-fresh.db
+        run: alembic upgrade head
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Pin npm
+        run: npm install --global npm@11.6.0
+      - name: Install frontend
+        run: npm ci
+      - name: Frontend unit tests
+        run: npm test -- --run
+      - name: TypeScript and Vite build
+        run: npm run build
+
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose config
+        run: docker compose config

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "phb2014",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "phb2014:spell:armor-of-agathys": {"name": "艾嘉西斯之鎧"},
+    "phb2014:spell:arms-of-hadar": {"name": "哈達之臂"},
+    "phb2014:spell:beast-sense": {"name": "野獸知覺"},
+    "phb2014:spell:circle-of-power": {"name": "威能法環"},
+    "phb2014:spell:dissonant-whispers": {"name": "噪音暗語"},
+    "phb2014:spell:ensnaring-strike": {"name": "誘捕打擊"},
+    "phb2014:spell:feign-death": {"name": "假死術"},
+    "phb2014:spell:hunger-of-hadar": {"name": "哈達之慾"},
+    "phb2014:spell:phantasmal-force": {"name": "魅影之力"},
+    "phb2014:spell:ray-of-sickness": {"name": "致病射線"},
+    "phb2014:spell:staggering-smite": {"name": "驚震斬"},
+    "phb2014:spell:wrathful-smite": {"name": "激憤斬"}
+  }
+}

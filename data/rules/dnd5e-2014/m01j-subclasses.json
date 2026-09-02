@@ -1,0 +1,32 @@
+{
+  "phase": "M01-J",
+  "ruleset": "dnd5e-2014",
+  "expected_counts": {
+    "phb2014": 40,
+    "scag": 11,
+    "xge": 31,
+    "tce": 30
+  },
+  "canonical_duplicates": {
+    "phb2014:subclass:berserker": "srd5.1:subclass:berserker",
+    "phb2014:subclass:lore": "srd5.1:subclass:lore",
+    "phb2014:subclass:life": "srd5.1:subclass:life",
+    "phb2014:subclass:land": "srd5.1:subclass:land",
+    "phb2014:subclass:champion": "srd5.1:subclass:champion",
+    "phb2014:subclass:open-hand": "srd5.1:subclass:open-hand",
+    "phb2014:subclass:devotion": "srd5.1:subclass:devotion",
+    "phb2014:subclass:hunter": "srd5.1:subclass:hunter",
+    "phb2014:subclass:thief": "srd5.1:subclass:thief",
+    "phb2014:subclass:draconic": "srd5.1:subclass:draconic",
+    "phb2014:subclass:fiend": "srd5.1:subclass:fiend",
+    "phb2014:subclass:evocation": "srd5.1:subclass:evocation"
+  },
+  "reprints": {
+    "scag:subclass:sun-soul": "xge:subclass:sun-soul",
+    "scag:subclass:mastermind": "xge:subclass:mastermind",
+    "scag:subclass:swashbuckler": "xge:subclass:swashbuckler",
+    "scag:subclass:storm-sorcery": "xge:subclass:storm-sorcery",
+    "scag:subclass:bladesinging": "tce:subclass:bladesinging"
+  },
+  "note": "Expected M01-J source accounting. The per-subclass expected inventory lives in m01j-inventory.json; this file holds the totals and the canonical/reprint maps."
+}

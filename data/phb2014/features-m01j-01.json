@@ -1,0 +1,2352 @@
+[
+  {
+    "key": "phb2014:feature:abjuration-2-abjuration-savant",
+    "index": "abjuration-2-abjuration-savant",
+    "name": "Abjuration Savant",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "abjuration-2-abjuration-savant",
+      "name": "Abjuration Savant",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:abjuration",
+        "name": "School of Abjuration"
+      },
+      "reference_heading_zh": "防護學者",
+      "reference_text_zh": "*2級​防護學派特性*\n\n你在將防護系法術抄寫進你的法術書時所必須花費的金錢和時間減半。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:abjuration-2-arcane-ward",
+    "index": "abjuration-2-arcane-ward",
+    "name": "Arcane Ward",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "abjuration-2-arcane-ward",
+      "name": "Arcane Ward",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:abjuration",
+        "name": "School of Abjuration"
+      },
+      "reference_heading_zh": "奧法防護",
+      "reference_text_zh": "*2級​防護學派特性*\n\n你可以在你周遭編織魔法以守護自己。當你施放一個1環或更高環的防護系法術時，你可以同時利用該法術的一縷魔法在你身上創造出一道魔法防護結界，持續直到你完成一次長休。這道防護結界具有等同於你法師等級二倍 + 你的智力調整值的生命值。每當你受到傷害時，這道防護結界將代替你承受傷害。若該傷害將這道防護結界的生命值歸零，則你將受到任何剩餘的傷害。\n\n當這道防護結界的生命值為0，它將不能再吸收傷害，但它的魔法仍然保留。每當你再施放一個1環或更高環的防護系法術，防護結界將會回覆等同於該法術環階二倍的生命值。\n\n一旦你創造出防護結界，直到你完成一次長休之前你都不能再創造它。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:ancients-3-channel-divinity-nature-s-wrath",
+    "index": "ancients-3-channel-divinity-nature-s-wrath",
+    "name": "Channel Divinity: Nature's Wrath",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "ancients-3-channel-divinity-nature-s-wrath",
+      "name": "Channel Divinity: Nature's Wrath",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:ancients",
+        "name": "Oath of Ancients"
+      },
+      "reference_heading_zh": "引導神力：自然之怒",
+      "reference_text_zh": "*3級遠古之誓特性*\n\n你可以使用你的引導神力並喚起原初之力以捕縛一個敵人。以一個動作，你可以讓靈體藤蔓生長而出並纏向一個距離你10尺內，且你所能看見的生物。該生物必須成功透過一次力量或敏捷豁免（由它選擇），否則陷入束縛狀態。當被這些藤蔓束縛時，該生物將在每個它的回合結束時重複此豁免檢定。若豁免成功，則它將掙脫束縛，且這些藤蔓也將消失。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:ancients-3-channel-divinity-turn-the-faithless",
+    "index": "ancients-3-channel-divinity-turn-the-faithless",
+    "name": "Channel Divinity: Turn the Faithless",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "ancients-3-channel-divinity-turn-the-faithless",
+      "name": "Channel Divinity: Turn the Faithless",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:ancients",
+        "name": "Oath of Ancients"
+      },
+      "reference_heading_zh": "引導神力：驅散無信者",
+      "reference_text_zh": "*3級遠古之誓特性*\n\n你可以使用你的引導神力以喊出一句將讓聽到的精類和邪魔都感到痛苦的禱言。以一個動作，你展現你的聖徽，且每個距離你30尺內且能聽見你的精類或邪魔都必須進行一次感知豁免。若豁免失敗，該生物將被驅散長達1分鐘或直到它受到傷害。\n\n一個被驅散的精類和邪魔必須用它的回合嘗試儘可能的遠離你，且它無法自願的移動到距離你30尺內的空間。它無法採取反應。它的動作只能使用疾走動作或嘗試掙脫阻止它移動的效果。若它無法移動，則該生物將使用閃避動作。\n\n若該生物的真實型態因為幻象、變形、或其他效果而被遮蔽，則它的真實型態將在它被驅散時被揭露。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:ancients-3-oath-spells",
+    "index": "ancients-3-oath-spells",
+    "name": "Oath Spells",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "ancients-3-oath-spells",
+      "name": "Oath Spells",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:ancients",
+        "name": "Oath of Ancients"
+      },
+      "reference_heading_zh": "聖誓法術",
+      "reference_text_zh": "*3級遠古之誓特性*\n\n你在下列聖武士等級時獲得相應的聖誓法術。\n\n**遠古之誓法術**\n\n| 聖武士等級 | 法術 |\n| :--- | :--- |\n| 3級 | 《誘捕打擊》, 《動物交談術》 |\n| 5級 | 《月華之光》, 《迷蹤步》 |\n| 9級 | 《植物滋長》, 《防護能量》 |\n| 13級 | 《冰風暴》, 《石膚術》 |\n| 17級 | 《問道自然》, 《樹躍術》 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:ancients-3-tenets-of-the-ancients",
+    "index": "ancients-3-tenets-of-the-ancients",
+    "name": "Tenets of the Ancients",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "ancients-3-tenets-of-the-ancients",
+      "name": "Tenets of the Ancients",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:ancients",
+        "name": "Oath of Ancients"
+      },
+      "reference_heading_zh": "遠古之信條",
+      "reference_text_zh": "遠古之誓的信條已經被傳承了無數個世紀。這個誓言強調善良的準則高於一切秩序和混亂。它的四個核心準則相當單純。\n\n###### 點燃光明\n\n透過你慈憫、和善、和寬恕的行動，在世界中點燃希望之光，讓絕望在你面前退散。\n\n###### 守護明光\n\n世界上何處有善、美、愛、和歡笑，你就起身對抗那將吞噬它們的邪惡。何處有繁盛興旺的生命，你就起身對抗那將使之歸於貧瘠的力量。\n\n###### 維持己身光輝\n\n欣喜於歌聲和歡笑，悅樂於美和藝術。若你讓自己心中的光明殞落，你就無法保護世上的光明。\n\n###### 成為真光\n\n成為絕望者眼中的輝煌明燈。在你的所有行為中都閃耀出樂觀和勇氣的光輝。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:arcane-trickster-3-mage-hand-legerdemain",
+    "index": "arcane-trickster-3-mage-hand-legerdemain",
+    "name": "Mage Hand Legerdemain",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "arcane-trickster-3-mage-hand-legerdemain",
+      "name": "Mage Hand Legerdemain",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:arcane-trickster",
+        "name": "Arcane Trickster"
+      },
+      "reference_heading_zh": "法師之手詐術",
+      "reference_text_zh": "*3級詭術師特性*\n\n當你施放《法師之手》時，你可以讓這隻幽靈般的手掌隱形，且你可以用它來進行下列的額外行動：\n\n- 你可以將一個這隻手所持握的物體放入一個被其他生物所穿戴或攜帶的容器內。\n- 你可以取走一個被裝在其他生物所穿戴或攜帶的容器內的物體。\n- 你可以使用《盜賊工具》以在射程內開鎖或解除陷阱。\n\n若你成功透過一次對抗某個生物感知（察覺）檢定的敏捷（巧手）檢定，則你可以進行上述其中一個行動而不會被該生物察覺。\n\n此外，你可以使用你靈巧動作能力所賦予的附贈動作以控制這隻手。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:arcane-trickster-3-spellcasting",
+    "index": "arcane-trickster-3-spellcasting",
+    "name": "Spellcasting",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "arcane-trickster-3-spellcasting",
+      "name": "Spellcasting",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:arcane-trickster",
+        "name": "Arcane Trickster"
+      },
+      "reference_heading_zh": "施法",
+      "reference_text_zh": "*3級詭術師特性*\n\n當你升至3級時，你獲得了施放法術的能力。請參閱第十章以瞭解關於施法的規則，以及第十一章以查閱法師法術列表。\n\n###### 戲法\n\n你學會三個戲法：《法師之手》、和另外二個你從法師法術列表中自選的戲法。你將在10級時學會另一個自選的法師戲法。\n\n###### 法術位\n\n詭術師施法表中顯示了你有多少個法術位可以用來施放你一環或更高環的法師法術。要施放其中一個法術，你必須消耗一個與該法術環階相同或更高的法術位。你在完成一次長休後恢復所有你花費掉的法術位。\n\n舉例來說，如果你知曉一個1環法術《魅惑人類》，且你擁有一個1環和一個2環的法術位，則你可以使用其中任意一個法術位來施放《魅惑人類》。\n\n###### 一環或更高環的已知法術\n\n你知曉三個從法師法術列表中自選的1環法術，其中二個必須從法師法術列表中的惑控系和幻術系法術中選擇。\n\n詭術師施法表中的已知法術欄位顯示了你會在何時學習到新的1環或更高環的法師法術。每個這些法術都必須是一個惑控系和幻術系法術，且環階也必須符合你所擁有法術位的環階。舉例來說，當你在此職業升至7級時，你可以學習一個新的1環或2環法術。\n\n你在8級、14級、和20級時所學會的法術可以來自任何魔法學派。\n\n每當你提升這個職業的等級時，你可以從法師法術列表中挑選一個法術來取代一個你目前已知的法師法術。新法術的環階必須符合你所擁有法術位的環階，且它必須是一個惑控系和幻術系法術，除非你取代的法術是你在3級、8級、14級、或20級時所獲得的來自任意魔法學派的法術。\n\n###### 施法屬性\n\n因為你是透過致力研讀與記憶習得你的法師法術，智力是你施展法師法術的施法屬性。每當法術提及你的施法屬性時，你將使用你的智力。此外，當決定你法師法術的豁免DC、以及使用法師法術進行攻擊檢定時，你使用你的智力調整值。\n\n* **法術豁免 DC** = 8 + 熟練加值 + INT調整值\n\n* **法術攻擊加值** = 熟練加值 + INT調整值",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:archfey-1-expanded-spell-list",
+    "index": "archfey-1-expanded-spell-list",
+    "name": "Expanded Spell List",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "archfey-1-expanded-spell-list",
+      "name": "Expanded Spell List",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:archfey",
+        "name": "The Archfey"
+      },
+      "reference_heading_zh": "擴充套件法術列表",
+      "reference_text_zh": "當你要學習契術師法術時，至高妖精宗主讓你可以從擴充套件法術列表中選擇法術。對你而言下列法術將被加入契術師法術列表。\n\n**至高妖精擴充套件法術**\n\n| 法術環階 | 法術 |\n| :--- | :--- |\n| 1環 | 《妖火術》, 《睡眠術》 |\n| 2環 | 《安定心神》, 《魅影之力》 |\n| 3環 | 《閃現術》, 《植物滋長》 |\n| 4環 | 《支配野獸》, 《高等隱形術》 |\n| 5環 | 《支配人類》, 《偽裝術》 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:archfey-1-fey-presence",
+    "index": "archfey-1-fey-presence",
+    "name": "Fey Presence",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "archfey-1-fey-presence",
+      "name": "Fey Presence",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:archfey",
+        "name": "The Archfey"
+      },
+      "reference_heading_zh": "妖精威儀",
+      "reference_text_zh": "*1級至高妖精特性*\n\n你的宗主賜予你散發出令人著迷和恐懼的精族威儀。以一個動作，你可以使每個在以你為中心的10尺邊長立方體範圍內的生物進行一次對抗你契術師法術豁免DC的感知豁免。豁免失敗的生物將被你魅惑或恐懼（由你決定）直到你的下個回合結束。\n\n一旦你使用此能力，直到你完成一次短休或長休之前你都不能再使用它。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "fixed",
+          "value": 1
+        },
+        "recharge": [
+          "short_rest",
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "phb2014:feature:assassin-3-assassinate",
+    "index": "assassin-3-assassinate",
+    "name": "Assassinate",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "assassin-3-assassinate",
+      "name": "Assassinate",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:assassin",
+        "name": "Assassin"
+      },
+      "reference_heading_zh": "刺殺",
+      "reference_text_zh": "*3級刺客特性*\n\n你在先發制人的時刻是最致命的。你對任何在戰鬥中尚未行動過的生物所進行的攻擊檢定具有優勢。此外，任何你命中被突襲生物的攻擊都是重擊。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:assassin-3-bonus-proficiencies",
+    "index": "assassin-3-bonus-proficiencies",
+    "name": "Bonus Proficiencies",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "assassin-3-bonus-proficiencies",
+      "name": "Bonus Proficiencies",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:assassin",
+        "name": "Assassin"
+      },
+      "reference_heading_zh": "額外熟練",
+      "reference_text_zh": "*3級刺客特性*\n\n你獲得《易容工具》和《製毒工具》的熟練。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-combat-superiority",
+    "index": "battle-master-3-combat-superiority",
+    "name": "Combat Superiority",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-combat-superiority",
+      "name": "Combat Superiority",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "reference_heading_zh": "戰鬥卓越",
+      "reference_text_zh": "*3級戰鬥大師特性*\n\n你學會各種戰技，並藉由被稱作卓越骰的特殊骰子驅動它們。\n\n###### 戰技\n\n你學會三個自選戰技，參見下列「戰技」條目。許多戰技將以某些方式強化一次攻擊。你只能為每次攻擊使用一種戰技。\n\n你將在7級、10級、和15級時學會二個額外的戰技。每次你學會新的戰技時，你也可以將一個你已知的戰技取代成另一個不同的戰技。\n\n###### 卓越骰\n\n你擁有四顆卓越骰，這四顆卓越骰為d8。卓越骰將在你使用戰技時被花費。你在完成一次短休或長休後恢復你花費掉的卓越骰。\n\n你將在7級、和15級時再獲得一顆卓越骰。\n\n###### 豁免檢定\n\n你的部分戰技會要求你的目標進行一次豁免檢定以對抗戰技的效果。這個豁免檢定DC的計算方式如下：\n\n* **戰技豁免 DC** = 8 + 熟練加值 + STR / DEX調整值",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuver-options",
+    "index": "battle-master-3-maneuver-options",
+    "name": "Maneuver Options",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuver-options",
+      "name": "Maneuver Options",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "reference_heading_zh": "戰技選項",
+      "reference_text_zh": "*3級戰士 可選職業特性*\n\n如果你能夠使用戰技，以下戰技將加入可選列表。使用戰技的能力可以透過戰鬥大師武術範型、卓越技巧戰鬥風格或戰技專家專長來獲得。\n\n###### 突襲 (Ambush)\n\n當你進行一次敏捷（隱匿）檢定或先攻檢定時，如果你並非無力，你能夠消耗一枚卓越骰，並將消耗的卓越骰加入檢定中。\n\n###### 誘餌戰術 (Bait and Switch)\n\n當你距離一個生物5尺以內時，你能夠消耗一枚卓越骰，如果你同時消耗至少5尺的移動速度，該生物自願且並不無力，你能與該生物互換位置。這一移動不會引發藉機攻擊。\n\n擲消耗的卓越骰。直到你的下個回合開始，你或另一個生物（由你選擇）的AC獲得等於擲骰結果的加值。\n\n###### 警戒 (Brace)\n\n當一個生物移動進你的觸及範圍而你手握武器時，你能以一個反應消耗一枚卓越骰對該生物進行一次武器攻擊。如果攻擊命中，將消耗的卓越骰加入此次攻擊的傷害骰中。\n\n###### 領導風範 (Commanding Presence)\n\n當你進行一次魅力（威嚇）、魅力（表演）或魅力（說服）檢定時，你能夠消耗一枚卓越骰，將消耗的卓越骰加入此次能力檢定中。\n\n###### 擒拿擊 (Grappling Strike)\n\n當你在一次近戰武器攻擊命中一個生物後，你能夠立即消耗一枚卓越骰，以一個附贈動作對目標進行一次擒抱（見《玩家手冊》的\"擒抱\"規則）。將消耗的卓越骰加入你的力量（運動）檢定中。\n\n###### 快手投擲 (Quick Toss)\n\n以一個附贈動作，你能消耗一枚卓越骰一一件具有投擲屬性的武器進行一次遠端攻擊。在進行此攻擊時，你能拔出一把投擲武器作為攻擊的一部分。如果此次攻擊命中，你能將消耗的卓越骰加入此次攻擊的傷害骰中。\n\n###### 戰術預估 (Tactical Assessment)\n\n當你進行一次智力（調查）、智力（歷史）或感知（洞悉）檢定時，你能夠消耗一枚卓越骰，將消耗的卓越骰加入此次能力檢定中。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers",
+    "index": "battle-master-3-maneuvers",
+    "name": "Maneuvers",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers",
+      "name": "Maneuvers",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "reference_heading_zh": "戰技",
+      "reference_text_zh": "*3級戰鬥大師特性*\n\n以下戰技按英文字母順序排列。\n\n##### 指揮官奇襲 (Commander's Strike)\n\n當你在你的回合採取攻擊動作時，你可以放棄你的其中一次攻擊，並使用一個附贈動作以指揮你的其中一個同伴進行奇襲。當你這麼做時，選擇一個能夠看見或聽見你的友善生物，並消耗一顆卓越骰。該生物可以立刻使用它的反應以進行一次武器攻擊，並將卓越骰加入該攻擊的傷害骰中。\n\n##### 繳械擊 (Disarming Attack)\n\n當你以一次武器攻擊命中一個生物時，你可以消耗一顆卓越骰並嘗試使目標繳械，強迫它掉落一個它正持握且你所選擇的物品。你將卓越骰加入該攻擊的傷害骰中，且目標必須進行一次力量豁免。若豁免失敗，它將掉落你所選擇的該物體。該物體將落在它的腳邊。\n\n##### 擾亂擊 (Distracting Strike)\n\n當你以一次武器攻擊命中一個生物時，你可以消耗一顆卓越骰以干擾該生物，為你的盟友製造良機。你將卓越骰加入該攻擊的傷害骰中。在你的下個回合開始前，下一次你以外的攻擊者對目標所進行的攻擊檢定將具有優勢。\n\n##### 躲閃步伐 (Evasive Footwork)\n\n當你移動時，你可以消耗一顆卓越骰，擲該卓越骰並將骰出的數字加入你的AC中直到你停止移動。\n\n##### 詭詐擊 (Feinting Attack)\n\n你可以消耗一顆卓越骰並在你的回合使用一個附贈動作以進行佯攻，選擇一個距離你5尺內的生物作為你的目標。你在該回合對該生物的下一次攻擊檢定中具有優勢。若該攻擊命中，則將卓越骰加入該攻擊的傷害骰中。\n\n若你在獲得這個優勢的回合中沒有使用它，則你將會失去這個優勢。\n\n##### 挑釁擊 (Goading Attack)\n\n當你以一次武器攻擊命中一個生物時，你可以消耗一顆卓越骰以嘗試挑釁目標攻擊你。你將卓越骰加入該攻擊的傷害骰中，且目標必須進行一次感知豁免。若豁免失敗，則直到你的下個回合結束前，目標對你以外的物件所進行的所有攻擊檢定都將承受劣勢。\n\n##### 突刺擊 (Lunging Attack)\n\n當你在你的回合進行一次近戰武器攻擊時，你可以消耗一顆卓越骰以使你該攻擊的觸及範圍增加5尺。若你命中，則你將卓越骰加入該攻擊的傷害骰中。\n\n##### 靈動擊 (Maneuvering Attack)\n\n當你以一次武器攻擊命中一個生物時，你可以消耗一顆卓越骰以調動你其中一個夥伴到一處更有利的位置。你將卓越骰加入該攻擊的傷害骰中，且你選擇一個能夠看見或聽見你的友善生物。該生物可以使用它的反應以移動最多等同於它移動速度一半的距離，且不會觸發來自你攻擊目標的藉機攻擊。\n\n##### 恐嚇擊 (Menacing Attack)\n\n當你以一次武器攻擊命中一個生物時，你可以消耗一顆卓越骰以嘗試嚇唬目標。你將卓越骰加入該攻擊的傷害骰中，且目標必須進行一次感知豁免。若豁免失敗，它將因你陷入恐懼直到你的下個回合結束。\n\n##### 格擋 (Parry)\n\n當另一個生物以一次近戰攻擊傷害你時，你可以使用你的反應並消耗一顆卓越骰以減少傷害。該傷害將減少等同於你卓越骰所骰出的數字 + 你的敏捷調整值。\n\n##### 精準擊 (Precision Attack)\n\n當你對一個生物進行一次武器攻擊檢定，你可以消耗一顆卓越骰以將它加入該檢定中。你可以在進行攻擊檢定之前或之後使用此戰技，但必須在任何攻擊的效果適用前使用。\n\n##### 推撞擊 (Pushing Attack)\n\n當你以一次武器攻擊命中一個生物時，你可以消耗一顆卓越骰以嘗試驅使目標後退。你將卓越骰加入該攻擊的傷害骰中，且若目標的體型為大型或更小，則它必須進行一次力量豁免。若豁免失敗，你將目標推離你最多15尺距離。\n\n##### 鼓舞 (Rally)\n\n在你的回合，你可以使用一個附贈動作並消耗一顆卓越骰以鼓舞你其中一個同伴計程車氣。當你這麼做時，選擇一個能夠看見或聽見你的友善生物。該生物將獲得等同於你卓越骰所骰出的數字 + 你的魅力調整值的臨時生命值。\n\n##### 反擊 (Riposte)\n\n當一個生物在一次對你進行的近戰攻擊中失手，你可以使用你的反應並消耗一顆卓越骰以對該生物進行一次近戰武器攻擊。若你命中，則你將卓越骰加入該攻擊的傷害骰中。\n\n##### 橫掃擊 (Sweeping Attack)\n\n當你以一次近戰武器攻擊命中一個生物時，你可以消耗一顆卓越骰以嘗試以相同的攻擊傷害另一個生物。選擇另一個距離原本目標5尺內，且處於你觸及範圍的生物。若原本的攻擊檢定能夠命中第二個生物，則它將受到等同於你卓越骰所骰出的數字的傷害。這個傷害的傷害型別與原本攻擊所造成的傷害型別相同。\n\n##### 絆摔擊 (Trip Attack)\n\n當你以一次武器攻擊命中一個生物時，你可以消耗一顆卓越骰以嘗試將目標擊倒。你將卓越骰加入該攻擊的傷害骰中，且若目標的體型為大型或更小，則它必須進行一次力量豁免。若豁免失敗，則你將目標擊倒伏地。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-1-commander-s-strike",
+    "index": "battle-master-3-maneuvers-option-1-commander-s-strike",
+    "name": "Commander's Strike",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-1-commander-s-strike",
+      "name": "Commander's Strike",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "指揮官奇襲",
+      "reference_text_zh": "當你在你的回合採取攻擊動作時，你可以放棄你的其中一次攻擊，並使用一個附贈動作以指揮你的其中一個同伴進行奇襲。當你這麼做時，選擇一個能夠看見或聽見你的友善生物，並消耗一顆卓越骰。該生物可以立刻使用它的反應以進行一次武器攻擊，並將卓越骰加入該攻擊的傷害骰中。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-10-parry",
+    "index": "battle-master-3-maneuvers-option-10-parry",
+    "name": "Parry",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-10-parry",
+      "name": "Parry",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "格擋",
+      "reference_text_zh": "當另一個生物以一次近戰攻擊傷害你時，你可以使用你的反應並消耗一顆卓越骰以減少傷害。該傷害將減少等同於你卓越骰所骰出的數字 + 你的敏捷調整值。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-11-precision-attack",
+    "index": "battle-master-3-maneuvers-option-11-precision-attack",
+    "name": "Precision Attack",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-11-precision-attack",
+      "name": "Precision Attack",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "精準擊",
+      "reference_text_zh": "當你對一個生物進行一次武器攻擊檢定，你可以消耗一顆卓越骰以將它加入該檢定中。你可以在進行攻擊檢定之前或之後使用此戰技，但必須在任何攻擊的效果適用前使用。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-12-pushing-attack",
+    "index": "battle-master-3-maneuvers-option-12-pushing-attack",
+    "name": "Pushing Attack",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-12-pushing-attack",
+      "name": "Pushing Attack",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "推撞擊",
+      "reference_text_zh": "當你以一次武器攻擊命中一個生物時，你可以消耗一顆卓越骰以嘗試驅使目標後退。你將卓越骰加入該攻擊的傷害骰中，且若目標的體型為大型或更小，則它必須進行一次力量豁免。若豁免失敗，你將目標推離你最多15尺距離。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-13-rally",
+    "index": "battle-master-3-maneuvers-option-13-rally",
+    "name": "Rally",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-13-rally",
+      "name": "Rally",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "鼓舞",
+      "reference_text_zh": "在你的回合，你可以使用一個附贈動作並消耗一顆卓越骰以鼓舞你其中一個同伴計程車氣。當你這麼做時，選擇一個能夠看見或聽見你的友善生物。該生物將獲得等同於你卓越骰所骰出的數字 + 你的魅力調整值的臨時生命值。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-14-riposte",
+    "index": "battle-master-3-maneuvers-option-14-riposte",
+    "name": "Riposte",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-14-riposte",
+      "name": "Riposte",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "反擊",
+      "reference_text_zh": "當一個生物在一次對你進行的近戰攻擊中失手，你可以使用你的反應並消耗一顆卓越骰以對該生物進行一次近戰武器攻擊。若你命中，則你將卓越骰加入該攻擊的傷害骰中。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-15-sweeping-attack",
+    "index": "battle-master-3-maneuvers-option-15-sweeping-attack",
+    "name": "Sweeping Attack",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-15-sweeping-attack",
+      "name": "Sweeping Attack",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "橫掃擊",
+      "reference_text_zh": "當你以一次近戰武器攻擊命中一個生物時，你可以消耗一顆卓越骰以嘗試以相同的攻擊傷害另一個生物。選擇另一個距離原本目標5尺內，且處於你觸及範圍的生物。若原本的攻擊檢定能夠命中第二個生物，則它將受到等同於你卓越骰所骰出的數字的傷害。這個傷害的傷害型別與原本攻擊所造成的傷害型別相同。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-16-trip-attack",
+    "index": "battle-master-3-maneuvers-option-16-trip-attack",
+    "name": "Trip Attack",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-16-trip-attack",
+      "name": "Trip Attack",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "絆摔擊",
+      "reference_text_zh": "當你以一次武器攻擊命中一個生物時，你可以消耗一顆卓越骰以嘗試將目標擊倒。你將卓越骰加入該攻擊的傷害骰中，且若目標的體型為大型或更小，則它必須進行一次力量豁免。若豁免失敗，則你將目標擊倒伏地。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-2-disarming-attack",
+    "index": "battle-master-3-maneuvers-option-2-disarming-attack",
+    "name": "Disarming Attack",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-2-disarming-attack",
+      "name": "Disarming Attack",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "繳械擊",
+      "reference_text_zh": "當你以一次武器攻擊命中一個生物時，你可以消耗一顆卓越骰並嘗試使目標繳械，強迫它掉落一個它正持握且你所選擇的物品。你將卓越骰加入該攻擊的傷害骰中，且目標必須進行一次力量豁免。若豁免失敗，它將掉落你所選擇的該物體。該物體將落在它的腳邊。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-3-distracting-strike",
+    "index": "battle-master-3-maneuvers-option-3-distracting-strike",
+    "name": "Distracting Strike",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-3-distracting-strike",
+      "name": "Distracting Strike",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "擾亂擊",
+      "reference_text_zh": "當你以一次武器攻擊命中一個生物時，你可以消耗一顆卓越骰以干擾該生物，為你的盟友製造良機。你將卓越骰加入該攻擊的傷害骰中。在你的下個回合開始前，下一次你以外的攻擊者對目標所進行的攻擊檢定將具有優勢。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-4-evasive-footwork",
+    "index": "battle-master-3-maneuvers-option-4-evasive-footwork",
+    "name": "Evasive Footwork",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-4-evasive-footwork",
+      "name": "Evasive Footwork",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "躲閃步伐",
+      "reference_text_zh": "當你移動時，你可以消耗一顆卓越骰，擲該卓越骰並將骰出的數字加入你的AC中直到你停止移動。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-5-feinting-attack",
+    "index": "battle-master-3-maneuvers-option-5-feinting-attack",
+    "name": "Feinting Attack",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-5-feinting-attack",
+      "name": "Feinting Attack",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "詭詐擊",
+      "reference_text_zh": "你可以消耗一顆卓越骰並在你的回合使用一個附贈動作以進行佯攻，選擇一個距離你5尺內的生物作為你的目標。你在該回合對該生物的下一次攻擊檢定中具有優勢。若該攻擊命中，則將卓越骰加入該攻擊的傷害骰中。\n\n若你在獲得這個優勢的回合中沒有使用它，則你將會失去這個優勢。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-6-goading-attack",
+    "index": "battle-master-3-maneuvers-option-6-goading-attack",
+    "name": "Goading Attack",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-6-goading-attack",
+      "name": "Goading Attack",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "挑釁擊",
+      "reference_text_zh": "當你以一次武器攻擊命中一個生物時，你可以消耗一顆卓越骰以嘗試挑釁目標攻擊你。你將卓越骰加入該攻擊的傷害骰中，且目標必須進行一次感知豁免。若豁免失敗，則直到你的下個回合結束前，目標對你以外的物件所進行的所有攻擊檢定都將承受劣勢。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-7-lunging-attack",
+    "index": "battle-master-3-maneuvers-option-7-lunging-attack",
+    "name": "Lunging Attack",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-7-lunging-attack",
+      "name": "Lunging Attack",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "突刺擊",
+      "reference_text_zh": "當你在你的回合進行一次近戰武器攻擊時，你可以消耗一顆卓越骰以使你該攻擊的觸及範圍增加5尺。若你命中，則你將卓越骰加入該攻擊的傷害骰中。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-8-maneuvering-attack",
+    "index": "battle-master-3-maneuvers-option-8-maneuvering-attack",
+    "name": "Maneuvering Attack",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-8-maneuvering-attack",
+      "name": "Maneuvering Attack",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "靈動擊",
+      "reference_text_zh": "當你以一次武器攻擊命中一個生物時，你可以消耗一顆卓越骰以調動你其中一個夥伴到一處更有利的位置。你將卓越骰加入該攻擊的傷害骰中，且你選擇一個能夠看見或聽見你的友善生物。該生物可以使用它的反應以移動最多等同於它移動速度一半的距離，且不會觸發來自你攻擊目標的藉機攻擊。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-maneuvers-option-9-menacing-attack",
+    "index": "battle-master-3-maneuvers-option-9-menacing-attack",
+    "name": "Menacing Attack",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-maneuvers-option-9-menacing-attack",
+      "name": "Menacing Attack",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "choice_option_for": "phb2014:feature:battle-master-3-maneuvers",
+      "reference_heading_zh": "恐嚇擊",
+      "reference_text_zh": "當你以一次武器攻擊命中一個生物時，你可以消耗一顆卓越骰以嘗試嚇唬目標。你將卓越骰加入該攻擊的傷害骰中，且目標必須進行一次感知豁免。若豁免失敗，它將因你陷入恐懼直到你的下個回合結束。"
+    }
+  },
+  {
+    "key": "phb2014:feature:battle-master-3-student-of-war",
+    "index": "battle-master-3-student-of-war",
+    "name": "Student of War",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master-3-student-of-war",
+      "name": "Student of War",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:battle-master",
+        "name": "Battle Master"
+      },
+      "reference_heading_zh": "戰爭學徒",
+      "reference_text_zh": "*3級戰鬥大師特性*\n\n你獲得一種你所選的工匠工具的熟練。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:beast-master-3-primal-companion",
+    "index": "beast-master-3-primal-companion",
+    "name": "Primal Companion",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "beast-master-3-primal-companion",
+      "name": "Primal Companion",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:beast-master",
+        "name": "Beast Master"
+      },
+      "reference_heading_zh": "原初動物夥伴",
+      "reference_text_zh": "*3級獸王 可選職業特性*，替代遊俠動物夥伴\n\n你召喚出一隻原初的野獸，其力量來自於與你與自然的聯絡。這隻野獸對你和你的夥伴態度友善，並會聽從你的命令。從—《大地野獸》、《海洋野獸》或《天空野獸》—的資料中選擇其一，它資料表中許多地方將會用到你的熟練加值（PB）。你決定原初野獸是何種動物，並選擇適合其資料的種類。無論你選擇什麼樣的動物，這隻野獸都帶有原始的印記，暗示著其神秘的起源。\n\n在戰鬥中，原初野獸在你的回合中行動。它能自行移動和使用反應動作，但除非你在你的回合中以一個附贈動作命令它執行其他動作，它只會執行閃避動作。該動作可以是其資料中列出的動作或是之外的其他動作。你也能在使用自己的攻擊動作時，犧牲一次自己的攻擊命令野獸執行攻擊動作。如果你陷入無力，野獸將會自主行動，而非僅使用閃避動作。\n\n如果野獸在存在時間內死亡，你能使用你的動作觸碰它並消耗一個一環或更高的法術位。原初野獸會在一分鐘後死而復生並獲得所有生命值。\n\n當你結束一次長休後，你能夠召喚一隻不同的原初野獸。這隻新的野獸出現在你5尺內未被佔據的空間內，並由你選擇其資料和外表。如果你已經透過此特性獲得了一隻原初野獸，它會在新的原初野獸出現時消失。原初野獸也會在你死亡時消失。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:beast-master-3-ranger-s-companion",
+    "index": "beast-master-3-ranger-s-companion",
+    "name": "Ranger's Companion",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "beast-master-3-ranger-s-companion",
+      "name": "Ranger's Companion",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:beast-master",
+        "name": "Beast Master"
+      },
+      "reference_heading_zh": "遊俠動物夥伴",
+      "reference_text_zh": "*3級獸王特性*\n\n你獲得一個動物夥伴，牠將陪伴你一起冒險，並受過訓練以與你一起戰鬥。選擇一個體型不超過中型，且挑戰等級為1/4或更低的野獸。將你的熟練加值加入該野獸的AC、攻擊檢定、傷害骰，以及任何牠所熟練的豁免檢定和技能中。牠的生命值最大值等同於牠正常的生命值最大值或你遊俠等級的四倍，兩者取高。\n\n該野獸將盡其所能的服從你的命令。牠會在你的先攻順序採取牠的行動。在你的回合，你可以口頭命令該野獸移動到某處（你不需要花費動作）。你也可以使用你的動作以口頭命令牠採取攻擊、疾走、撤離、閃避或協助動作。如果你沒有命令，牠將採取閃避動作。一旦你獲得額外攻擊能力，則當你命令該野獸採取攻擊動作時，你可以自己進行一次武器攻擊。\n\n若你處於無力狀態或不在現場，你的動物夥伴將會自主行動，專注於保護你或牠自己。牠使用牠的反應時不需要你的命令，例如進行一次藉機攻擊。\n\n跟其他生物一樣，野獸可以在短休期間消耗生命骰。\n\n當你只和該野獸一起在你的偏好環境中旅行時，你們能夠以正常步調隱匿移動。\n\n若該野獸死亡，你可以藉由花費8小時的時間以用魔法與另一個對你不具有敵意的野獸建立連結以再次獲得動物夥伴。該野獸可以是與之前那隻相同或不同型別的野獸。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:conjuration-2-conjuration-savant",
+    "index": "conjuration-2-conjuration-savant",
+    "name": "Conjuration Savant",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "conjuration-2-conjuration-savant",
+      "name": "Conjuration Savant",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:conjuration",
+        "name": "School of Conjuration"
+      },
+      "reference_heading_zh": "咒法學者",
+      "reference_text_zh": "*2級​咒法學派特性*\n\n你在將咒法系法術抄寫進你的法術書時所必須花費的金錢和時間減半。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:conjuration-2-minor-conjuration",
+    "index": "conjuration-2-minor-conjuration",
+    "name": "Minor Conjuration",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "conjuration-2-minor-conjuration",
+      "name": "Minor Conjuration",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:conjuration",
+        "name": "School of Conjuration"
+      },
+      "reference_heading_zh": "次級咒喚",
+      "reference_text_zh": "*2級​咒法學派特性*\n\n你可以使用你的動作以喚出一個無生命物體，讓其出現在你手上、或出現在距離你10尺內你所能看見的一處未被佔據空間的地面上。這個物體的大小在各邊不能超過3尺，重量不能超過10磅，且它的外形必須是一個你曾經見過的非魔法物體。這個物體可以明顯被看出是帶有魔法的，且它將散發出5尺的微光光照。\n\n這個物體將在1小時之後，或當你再此使用此能力、它受到任何傷害、或它造成任何傷害時消失。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:divination-2-divination-savant",
+    "index": "divination-2-divination-savant",
+    "name": "Divination Savant",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "divination-2-divination-savant",
+      "name": "Divination Savant",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:divination",
+        "name": "School of Divination"
+      },
+      "reference_heading_zh": "預言學者",
+      "reference_text_zh": "*2級​預言學派特性*\n\n你在將預言系法術抄寫進你的法術書時所必須花費的金錢和時間減半。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:divination-2-portent",
+    "index": "divination-2-portent",
+    "name": "Portent",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "divination-2-portent",
+      "name": "Portent",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:divination",
+        "name": "School of Divination"
+      },
+      "reference_heading_zh": "預兆",
+      "reference_text_zh": "*2級​預言學派特性*\n\n未來一瞬的景象開始出現在你的意識中。當你完成一次長休時，骰二顆d20，並將它們骰出來的數字記錄下來。你可以將你或一個你所能看見的生物所進行的任意攻擊檢定、豁免檢定、或能力檢定的結果替換成其中一顆這些預言骰的結果。你必須在擲骰前選擇是否這麼做，且你每回合只能用這個方式替換擲骰結果一次。\n\n每個預言骰只能被使用一次。當你完成一次長休時，你失去所有尚未被使用的預言骰。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:eldritch-knight-3-spellcasting",
+    "index": "eldritch-knight-3-spellcasting",
+    "name": "Spellcasting",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "eldritch-knight-3-spellcasting",
+      "name": "Spellcasting",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:eldritch-knight",
+        "name": "Eldritch Knight"
+      },
+      "reference_heading_zh": "施法",
+      "reference_text_zh": "*3級魔能騎士特性*\n\n你以施放法術的能力增進了你的戰鬥實力。請參閱第十章以瞭解關於施法的規則，以及第十一章以查閱法師法術列表。\n\n##### 戲法\n\n你學會二個從法師法術列表自選的戲法。你將在10級時學會一個額外的法師戲法。\n\n###### 法術位\n\n魔能騎士施法表中顯示了你有多少個法術位可以用來施放你一環或更高環的法師法術。要施放其中一個法術，你必須消耗一個與該法術環階相同或更高的法術位。你在完成一次長休後恢復所有你花費掉的法術位。\n\n舉例來說，如果你知曉一個1環法術《護盾術》，且你擁有一個1環和一個2環的法術位，則你可以使用其中任意一個法術位來施放《護盾術》。\n\n###### 一環或更高環的已知法術\n\n你知曉三個從法師法術列表中自選的1環法術，其中二個必須從法師法術列表中的防護系和塑能系法術中選擇。\n\n魔能騎士施法表中的已知法術欄位顯示了你會在何時學習到新的1環或更高環的法師法術。每個這些法術都必須是一個防護系或塑能系法術，且環階也必須符合你所擁有法術位的環階。舉例來說，當你在此職業升至7級時，你可以學習一個新的1環或2環法術。\n\n你在8級、14級、和20級時所學會的法術可以來自任何魔法學派。\n\n每當你提升這個職業的等級時，你可以從法師法術列表中挑選一個法術來取代一個你目前已知的法師法術。新法術的環階必須符合你所擁有法術位的環階，且它必須是一個防護系或塑能系法術，除非你取代的法術是你在3級、8級、14級、或20級時所獲得的來自任意魔法學派的法術。\n\n###### 施法屬性\n\nIntelligence is your spellcasting ability for your wizard spells, since you learn your spells through study and memorization. You use your Intelligence whenever a spell refers to your spellcasting ability. In addition, you use your Intelligence modifier when setting the saving throw DC for a wizard spell you cast and when making an attack roll with one.\n\n* **法術豁免 DC** = 8 + 熟練加值 + INT調整值\n\n* **法術攻擊加值** = 熟練加值 + INT調整值",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:eldritch-knight-3-weapon-bond",
+    "index": "eldritch-knight-3-weapon-bond",
+    "name": "Weapon Bond",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "eldritch-knight-3-weapon-bond",
+      "name": "Weapon Bond",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:eldritch-knight",
+        "name": "Eldritch Knight"
+      },
+      "reference_heading_zh": "武器聯結",
+      "reference_text_zh": "*3級魔能騎士特性*\n\n你學會一個用以在你和一把武器間創造出魔法聯結的儀式。施展這個儀式的過程需要1小時，且可以在短休期間被施展。這把武器必須在整個儀式的過程中處於你的觸及範圍內，且在儀式結束時，你觸碰該武器並創造出聯結。\n\n一旦你與一把武器建立聯結，則除非你處於無力狀態，否則你的聯結武器不會被繳械。若該武器與你處於相同的存在位面，你可以在你的回合以一個附贈動作召喚該武器，使它瞬間被傳送到你手中。\n\n你可以有最多二把聯結武器，但在只能以附贈動作一次召喚一把。若你嘗試與第三把武器建立聯結，則你必須打破與另外兩把其中之一的聯結。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:enchantment-2-enchantment-savant",
+    "index": "enchantment-2-enchantment-savant",
+    "name": "Enchantment Savant",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "enchantment-2-enchantment-savant",
+      "name": "Enchantment Savant",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:enchantment",
+        "name": "School of Enchantment"
+      },
+      "reference_heading_zh": "惑控學者",
+      "reference_text_zh": "*2級​惑控學派特性*\n\n你在將惑控系法術抄寫進你的法術書時所必須花費的金錢和時間減半。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:enchantment-2-hypnotic-gaze",
+    "index": "enchantment-2-hypnotic-gaze",
+    "name": "Hypnotic Gaze",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "enchantment-2-hypnotic-gaze",
+      "name": "Hypnotic Gaze",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:enchantment",
+        "name": "School of Enchantment"
+      },
+      "reference_heading_zh": "催眠凝視",
+      "reference_text_zh": "*2級​惑控學派特性*\n\n你的柔和言語和魅惑凝視可以用魔法迷住另一個生物。以一個動作，選擇一個距離你5尺內且你能看見的生物。若目標可以看見或聽見你，則它必須成功透過一次對抗你法師法術豁免DC的感知豁免，否則被你魅惑直到你的下個回合結束。被魅惑生物的移動速度歸零，該生物陷入無力狀態，且明顯茫然的樣子。\n\n在接下來的回合，你可以使用你的動作以維持這個效果，將它的持續時間延到你的下個回合結束。然而，若你移離該生物超過5尺距離、該生物無法看見或聽見你、或該生物受到傷害時，則這個效果將會結束。\n\n一旦這個效果結束，或若該生物成功透過它最初對抗這個效果的豁免檢定，則直到你完成一次長休之前，你都無法再對該生物使用此能力。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-disciple-of-the-elements",
+    "index": "four-elements-3-disciple-of-the-elements",
+    "name": "Disciple of the Elements",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-disciple-of-the-elements",
+      "name": "Disciple of the Elements",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "reference_heading_zh": "元素門徒",
+      "reference_text_zh": "*3級四象宗特性*\n\n你學會駕馭四元素力量的魔法法門。每種法門都會要求你在每次使用它的時候消耗氣。\n\n你知曉元素調律法門、以及另外一個你所選擇的四象法門。你將在6級、11級、和17級時各學會一個你所選擇的額外四象法門。\n\n每當你學會一個新的四象法門，你也可以將其中一個你已知的四象法門替換成另一個不同的法門。\n\n##### 施放元素法術\n\n有些四象法門會允許你施放法術。請參閱第十章以瞭解關於施法的通用規則。要施放其中一個這些法術，你使用該法術的施法時間和其他規則，但你不需要為其提供材料構材。\n\n一旦你在本職業升至5級時，你可以消耗額外的氣以提升你透過四象法門所施放的法術的環階，只要該法術在以更高法術位施放時具有升階效果，例如《燃燒之手》。你每額外消耗1點氣，就可以使該法術的環階提升1環。舉例來說，若你是一個5級武僧並使用飛焰擊以施放《燃燒之手》，你可以消耗3點氣以將此法術作為2環法術施放（該法門的基本消耗為2點氣，加上額外的1點）。\n\n你透過這個方式施放法術時所能消耗的氣的最大值（包括它的基本消耗以及任何你用以提升其環階所消耗的氣）由你的武僧等級決定，如下列的法術與氣表格所示。在5級時，你可以消耗最多3點氣；這個數值會在9級時增加到4點氣；13級時5點；和17級時6點。\n\n**法術與氣**\n\n| 武僧等級 | 單一法術消耗氣的最大值 |\n| :--- | :--- |\n| 5級-8級 | 3 |\n| 9級-12級 | 4 |\n| 13級-16級 | 5 |\n| 17級-20級 | 6 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines",
+    "index": "four-elements-3-elemental-disciplines",
+    "name": "Elemental Disciplines",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines",
+      "name": "Elemental Disciplines",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "reference_heading_zh": "四象法門",
+      "reference_text_zh": "*3級四象宗特性*\n\n這些四象法門將在以下按照等級需求（然後按照字母順序）排列呈現。若某個法門要求特定等級，則你必須在此職業中達到該等級才能夠學習這個法門。\n\n##### 寒冬之息（需要 17 級）\n\n你可以消耗6點氣以施放《寒冰錐》。\n\n##### 北風之握（需要 6 級）\n\n你可以消耗3點氣以施放《人類定身術》。\n\n##### 元素調律 (Elemental Attunement)\n\n你可以使用你的動作以簡單地控制距離你30尺內的元素之力，造成下列其中一個你所選擇的效果：\n\n- 創造出一個與氣、土、火、或水有關，即效而無害的感官效果，像是火花飛濺、清風吹拂、輕煙飄散、或岩石輕微地隆隆作響。\n- 立刻點亮或熄滅一根蠟燭、火炬、或一處小型篝火。\n- 冷卻或溫熱最多1磅的非活物物質長達最多1小時。\n- 使一片可容納於1尺邊長立方體內的土、火、水、或霧以自我形塑成你指定的粗糙形狀，長達1分鐘。\n\n##### 蒼山庇佑（需要 17 級）\n\n你可以消耗5點氣以施放《石膚術》，以你自己為目標。\n\n##### 火蛇利牙 (Fangs of the Fire Snake)\n\n當你在你的回合使用攻擊動作時，你可以消耗1點氣以讓烈焰觸手從你的拳腳延伸而出。你徒手打擊的觸及範圍在該動作以及該回合結束前視為增加10尺。這類攻擊在命中時將造成火焰傷害，而非鈍擊傷害。且若你在攻擊命中時消耗1點氣，它將造成額外的1d10火焰傷害。\n\n##### 四雷拳 (Fist of Four Thunders)\n\n你可以消耗2點氣以施放《雷鳴波》。\n\n##### 凝氣剛拳 (Unbroken Air)\n\n你可以將大氣凝聚成拳進行打擊。作為一個動作，你可以消耗2點氣並指定一個在你身邊30尺內的生物。該生物必須進行一次力量豁免，豁免失敗將受到3d10鈍擊傷害，此外你每額外消耗1點氣則再增加1d10鈍擊傷害，並且可以將目標從遠離你的方向推開至多20尺再使其伏地。豁免成功則傷害減半，且不會被推離和伏地。\n\n##### 鳳凰火（需要 11 級）\n\n你可以消耗4點氣以施放《火球術》。\n\n##### 獅吼功（需要 6 級）\n\n你可以消耗3點氣以施放《粉碎音波》。\n\n##### 雲霧式（需要 11 級）\n\n你可以消耗4點氣以施放《氣化形體》，以你自己為目標。\n\n##### 攀雲步（需要 11 級）\n\n你可以消耗4點氣以施放《飛行術》，以你自己為目標。\n\n##### 噬焰流（需要 17 級）\n\n你可以消耗5點氣以施放《火牆術》。\n\n##### 風靈突進 (Rush of the Gale Spirits)\n\n你可以消耗2點氣以施放《造風術》。\n\n##### 形塑流川 (Shape the Flowing River)\n\n以一個動作，你可以消耗1點氣以選擇一片距離你120尺內，各邊不超過30尺的冰或水的區域。你可以將該區域內的水變成冰，反之亦可，且你可以將區域內的冰重塑成任何你想要的樣子。你可以升高或降低冰的海拔高度、創造或填滿一道溝壑，升起或移平一道牆、或形成一根立柱。任何這類變化的程度都不能超過這片區域最大邊長的一半。舉例來說，若你影響了一片30尺平方的方形區域，你可以創造出一個最多15尺高的立柱、將這片方形區域的高度提升或降低最多15尺、或挖掘一道最多15尺深的溝壑，諸如此類。你無法透過形塑冰以困住或傷害位於區域內的生物。\n\n##### 飛炎擊 (Sweeping Cinder Strike)\n\n你可以消耗2點氣以施放《燃燒之手》。\n\n##### 清流鞭 (Water Whip)\n\n你可以消耗2點氣，並以一個動作創造出一條流水長鞭推拉目標使其失衡。一個距離你30尺內且你所能看見的生物必須進行一次敏捷豁免。若豁免失敗，該生物將受到3d10鈍擊傷害，加上你每額外消耗一點氣的額外1d10鈍擊傷害，且你可以將它擊倒伏地或將它向你拉近最多25尺距離。若豁免成功，該生物只受到一半的傷害，且你無法拉動它或將它擊倒伏地。\n\n##### 滾石浪（需要 17 級）\n\n你可以消耗6點氣以施放《石牆術》。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-13-rush-of-the-gale-spirits",
+    "index": "four-elements-3-elemental-disciplines-option-13-rush-of-the-gale-spirits",
+    "name": "Rush of the Gale Spirits",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-13-rush-of-the-gale-spirits",
+      "name": "Rush of the Gale Spirits",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "風靈突進",
+      "reference_text_zh": "你可以消耗2點氣以施放《造風術》。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-14-shape-the-flowing-river",
+    "index": "four-elements-3-elemental-disciplines-option-14-shape-the-flowing-river",
+    "name": "Shape the Flowing River",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-14-shape-the-flowing-river",
+      "name": "Shape the Flowing River",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "形塑流川",
+      "reference_text_zh": "以一個動作，你可以消耗1點氣以選擇一片距離你120尺內，各邊不超過30尺的冰或水的區域。你可以將該區域內的水變成冰，反之亦可，且你可以將區域內的冰重塑成任何你想要的樣子。你可以升高或降低冰的海拔高度、創造或填滿一道溝壑，升起或移平一道牆、或形成一根立柱。任何這類變化的程度都不能超過這片區域最大邊長的一半。舉例來說，若你影響了一片30尺平方的方形區域，你可以創造出一個最多15尺高的立柱、將這片方形區域的高度提升或降低最多15尺、或挖掘一道最多15尺深的溝壑，諸如此類。你無法透過形塑冰以困住或傷害位於區域內的生物。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-15-sweeping-cinder-strike",
+    "index": "four-elements-3-elemental-disciplines-option-15-sweeping-cinder-strike",
+    "name": "Sweeping Cinder Strike",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-15-sweeping-cinder-strike",
+      "name": "Sweeping Cinder Strike",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "飛炎擊",
+      "reference_text_zh": "你可以消耗2點氣以施放《燃燒之手》。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-16-water-whip",
+    "index": "four-elements-3-elemental-disciplines-option-16-water-whip",
+    "name": "Water Whip",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-16-water-whip",
+      "name": "Water Whip",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "清流鞭",
+      "reference_text_zh": "你可以消耗2點氣，並以一個動作創造出一條流水長鞭推拉目標使其失衡。一個距離你30尺內且你所能看見的生物必須進行一次敏捷豁免。若豁免失敗，該生物將受到3d10鈍擊傷害，加上你每額外消耗一點氣的額外1d10鈍擊傷害，且你可以將它擊倒伏地或將它向你拉近最多25尺距離。若豁免成功，該生物只受到一半的傷害，且你無法拉動它或將它擊倒伏地。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-3-elemental-attunement",
+    "index": "four-elements-3-elemental-disciplines-option-3-elemental-attunement",
+    "name": "Elemental Attunement",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-3-elemental-attunement",
+      "name": "Elemental Attunement",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "元素調律",
+      "reference_text_zh": "你可以使用你的動作以簡單地控制距離你30尺內的元素之力，造成下列其中一個你所選擇的效果：\n\n- 創造出一個與氣、土、火、或水有關，即效而無害的感官效果，像是火花飛濺、清風吹拂、輕煙飄散、或岩石輕微地隆隆作響。\n- 立刻點亮或熄滅一根蠟燭、火炬、或一處小型篝火。\n- 冷卻或溫熱最多1磅的非活物物質長達最多1小時。\n- 使一片可容納於1尺邊長立方體內的土、火、水、或霧以自我形塑成你指定的粗糙形狀，長達1分鐘。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-5-fangs-of-the-fire-snake",
+    "index": "four-elements-3-elemental-disciplines-option-5-fangs-of-the-fire-snake",
+    "name": "Fangs of the Fire Snake",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-5-fangs-of-the-fire-snake",
+      "name": "Fangs of the Fire Snake",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "火蛇利牙",
+      "reference_text_zh": "當你在你的回合使用攻擊動作時，你可以消耗1點氣以讓烈焰觸手從你的拳腳延伸而出。你徒手打擊的觸及範圍在該動作以及該回合結束前視為增加10尺。這類攻擊在命中時將造成火焰傷害，而非鈍擊傷害。且若你在攻擊命中時消耗1點氣，它將造成額外的1d10火焰傷害。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-6-fist-of-four-thunders",
+    "index": "four-elements-3-elemental-disciplines-option-6-fist-of-four-thunders",
+    "name": "Fist of Four Thunders",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-6-fist-of-four-thunders",
+      "name": "Fist of Four Thunders",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "四雷拳",
+      "reference_text_zh": "你可以消耗2點氣以施放《雷鳴波》。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-7-unbroken-air",
+    "index": "four-elements-3-elemental-disciplines-option-7-unbroken-air",
+    "name": "Unbroken Air",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-7-unbroken-air",
+      "name": "Unbroken Air",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "凝氣剛拳",
+      "reference_text_zh": "你可以將大氣凝聚成拳進行打擊。作為一個動作，你可以消耗2點氣並指定一個在你身邊30尺內的生物。該生物必須進行一次力量豁免，豁免失敗將受到3d10鈍擊傷害，此外你每額外消耗1點氣則再增加1d10鈍擊傷害，並且可以將目標從遠離你的方向推開至多20尺再使其伏地。豁免成功則傷害減半，且不會被推離和伏地。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-breath-of-winter",
+    "index": "four-elements-3-elemental-disciplines-option-breath-of-winter",
+    "name": "Breath of Winter",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-breath-of-winter",
+      "name": "Breath of Winter",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "寒冬之息（需要 17 級）",
+      "reference_text_zh": "你可以消耗6點氣以施放《寒冰錐》。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-clench-of-the-north-wind",
+    "index": "four-elements-3-elemental-disciplines-option-clench-of-the-north-wind",
+    "name": "Clench of the North Wind",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-clench-of-the-north-wind",
+      "name": "Clench of the North Wind",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "北風之握（需要 6 級）",
+      "reference_text_zh": "你可以消耗3點氣以施放《人類定身術》。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-eternal-mountain-defense",
+    "index": "four-elements-3-elemental-disciplines-option-eternal-mountain-defense",
+    "name": "Eternal Mountain Defense",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-eternal-mountain-defense",
+      "name": "Eternal Mountain Defense",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "蒼山庇佑（需要 17 級）",
+      "reference_text_zh": "你可以消耗5點氣以施放《石膚術》，以你自己為目標。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-flames-of-the-phoenix",
+    "index": "four-elements-3-elemental-disciplines-option-flames-of-the-phoenix",
+    "name": "Flames of the Phoenix",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-flames-of-the-phoenix",
+      "name": "Flames of the Phoenix",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "鳳凰火（需要 11 級）",
+      "reference_text_zh": "你可以消耗4點氣以施放《火球術》。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-gong-of-the-summit",
+    "index": "four-elements-3-elemental-disciplines-option-gong-of-the-summit",
+    "name": "Gong of the Summit",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-gong-of-the-summit",
+      "name": "Gong of the Summit",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "獅吼功（需要 6 級）",
+      "reference_text_zh": "你可以消耗3點氣以施放《粉碎音波》。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-mist-stance",
+    "index": "four-elements-3-elemental-disciplines-option-mist-stance",
+    "name": "Mist Stance",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-mist-stance",
+      "name": "Mist Stance",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "雲霧式（需要 11 級）",
+      "reference_text_zh": "你可以消耗4點氣以施放《氣化形體》，以你自己為目標。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-ride-the-wind",
+    "index": "four-elements-3-elemental-disciplines-option-ride-the-wind",
+    "name": "Ride the Wind",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-ride-the-wind",
+      "name": "Ride the Wind",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "攀雲步（需要 11 級）",
+      "reference_text_zh": "你可以消耗4點氣以施放《飛行術》，以你自己為目標。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-river-of-hungry-flame",
+    "index": "four-elements-3-elemental-disciplines-option-river-of-hungry-flame",
+    "name": "River of Hungry Flame",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-river-of-hungry-flame",
+      "name": "River of Hungry Flame",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "噬焰流（需要 17 級）",
+      "reference_text_zh": "你可以消耗5點氣以施放《火牆術》。"
+    }
+  },
+  {
+    "key": "phb2014:feature:four-elements-3-elemental-disciplines-option-wave-of-rolling-earth",
+    "index": "four-elements-3-elemental-disciplines-option-wave-of-rolling-earth",
+    "name": "Wave of Rolling Earth",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements-3-elemental-disciplines-option-wave-of-rolling-earth",
+      "name": "Wave of Rolling Earth",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:four-elements",
+        "name": "Way of the Four Elements"
+      },
+      "choice_option_for": "phb2014:feature:four-elements-3-elemental-disciplines",
+      "reference_heading_zh": "滾石浪（需要 17 級）",
+      "reference_text_zh": "你可以消耗6點氣以施放《石牆術》。"
+    }
+  },
+  {
+    "key": "phb2014:feature:great-old-one-1-awakened-mind",
+    "index": "great-old-one-1-awakened-mind",
+    "name": "Awakened Mind",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "great-old-one-1-awakened-mind",
+      "name": "Awakened Mind",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:great-old-one",
+        "name": "The Great Old One"
+      },
+      "reference_heading_zh": "喚醒心靈",
+      "reference_text_zh": "*1級舊日支配者特性*\n\n你的異界知識賦予了你接觸其他生物心靈的能力。你可以對距離你30尺內且你所能看見的一個生物透過心靈感應交談。你不需要與該生物有共通的語言，就能使它理解你透過心靈感應所傳達的話語，但該生物必須至少理解一種語言。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:great-old-one-1-expanded-spell-list",
+    "index": "great-old-one-1-expanded-spell-list",
+    "name": "Expanded Spell List",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "great-old-one-1-expanded-spell-list",
+      "name": "Expanded Spell List",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:great-old-one",
+        "name": "The Great Old One"
+      },
+      "reference_heading_zh": "擴充套件法術列表",
+      "reference_text_zh": "當你要學習契術師法術時，舊日支配者宗主讓你可以從擴充套件法術列表中選擇法術。對你而言下列法術將被加入契術師法術列表。\n\n**舊日支配者擴充套件法術**\n\n| 法術環階 | 法術 |\n| :--- | :--- |\n| 1環 | 《噪音暗語》, 《塔莎狂笑術》 |\n| 2環 | 《偵測思想》, 《魅影之力》 |\n| 3環 | 《銳眼術》, 《短訊術》 |\n| 4環 | 《支配野獸》, 《艾伐黑觸手》 |\n| 5環 | 《支配人類》, 《心靈遙控》 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:illusion-2-illusion-savant",
+    "index": "illusion-2-illusion-savant",
+    "name": "Illusion Savant",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "illusion-2-illusion-savant",
+      "name": "Illusion Savant",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:illusion",
+        "name": "School of Illusion"
+      },
+      "reference_heading_zh": "幻術學者",
+      "reference_text_zh": "*2級幻術學派特性*\n\n你在將幻術系法術抄寫進你的法術書時所必須花費的金錢和時間減半。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:illusion-2-improved-minor-illusion",
+    "index": "illusion-2-improved-minor-illusion",
+    "name": "Improved Minor Illusion",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "illusion-2-improved-minor-illusion",
+      "name": "Improved Minor Illusion",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:illusion",
+        "name": "School of Illusion"
+      },
+      "reference_heading_zh": "精通次級幻象",
+      "reference_text_zh": "*2級幻術學派特性*\n\n你習得《次級幻象》戲法。若你已經知曉此戲法，則你習得另一個自選的法師戲法。這個戲法並不會計入你的已知戲法數量。\n\n當你施放《次級幻象》，你可以在一次施法中同時創造出聲音和影像。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:knowledge-1-blessings-of-knowledge",
+    "index": "knowledge-1-blessings-of-knowledge",
+    "name": "Blessings of Knowledge",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "knowledge-1-blessings-of-knowledge",
+      "name": "Blessings of Knowledge",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:knowledge",
+        "name": "Knowledge Domain"
+      },
+      "reference_heading_zh": "知識祝福",
+      "reference_text_zh": "*1級知識領域特性*\n\n你學會二種自選的語言。你也變得熟練於二個從下列選項中自選的技能：奧秘、歷史、自然或宗教。\n\n你的熟練加值在使用這些技能所進行的任何能力檢定中變為兩倍。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:light-1-bonus-cantrip",
+    "index": "light-1-bonus-cantrip",
+    "name": "Bonus Cantrip",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "light-1-bonus-cantrip",
+      "name": "Bonus Cantrip",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:light",
+        "name": "Light Domain"
+      },
+      "reference_heading_zh": "額外戲法",
+      "reference_text_zh": "*1級光明領域特性*\n\n若你尚未習得《光亮術》戲法，則你習得之。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:light-1-warding-flare",
+    "index": "light-1-warding-flare",
+    "name": "Warding Flare",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "light-1-warding-flare",
+      "name": "Warding Flare",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:light",
+        "name": "Light Domain"
+      },
+      "reference_heading_zh": "閃耀防護",
+      "reference_text_zh": "*1級光明領域特性*\n\n你可以使神聖光芒介入你與進行攻擊的敵人之間。當你被一個距離你30尺內且你能看見的生物攻擊時，你可以在它命中或失手之前使用你的反應讓強光在攻擊者面前閃耀，以使該次攻擊檢定承受劣勢。一個不會陷入目盲狀態的攻擊者將免疫於此能力。\n\n你可以使用這個能力的次數等同於你的感知調整值（最少一次）。你在完成一次長休後恢復所有你花費掉的次數。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "ability_modifier",
+          "ability": "wisdom",
+          "minimum": 1
+        },
+        "recharge": [
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "phb2014:feature:moon-2-circle-forms",
+    "index": "moon-2-circle-forms",
+    "name": "Circle Forms",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "moon-2-circle-forms",
+      "name": "Circle Forms",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:moon",
+        "name": "Circle of the Moon"
+      },
+      "reference_heading_zh": "結社型態",
+      "reference_text_zh": "*2級月亮結社特性*\n\n你結社的儀式賦予你轉變成更加危險動物型態的能力。你可以使用你的荒野形態以轉變成一個挑戰等級最高為1的野獸（你忽視原本野獸型態表中的最高挑戰等級欄位，但仍受限於該表中的其它限制）。\n\n從6級開始，你可以轉變成一個挑戰等級最高等同於你德魯伊等級除以3（向下取整）的野獸。\n\n**月亮結社野獸型態**\n\n| 等級 | 最高挑戰等級 | 限制 |\n| :--- | :--- | :--- |\n| 2級 | 1 | 沒有飛行或游泳速度 |\n| 4級 | 1 | 沒有飛行速度 |\n| 6級 | 2 | 沒有飛行速度 |\n| 8級 | 2 | — |\n| 9級 | 3 | — |\n| 12級 | 4 | — |\n| 15級 | 5 | — |\n| 18級 | 6 | — |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:moon-2-combat-wild-shape",
+    "index": "moon-2-combat-wild-shape",
+    "name": "Combat Wild Shape",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "moon-2-combat-wild-shape",
+      "name": "Combat Wild Shape",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:moon",
+        "name": "Circle of the Moon"
+      },
+      "reference_heading_zh": "戰鬥荒野形態",
+      "reference_text_zh": "*2級月亮結社特性*\n\n你獲得在你的回合以一個附贈動作，而非一個動作來使用荒野形態型態的能力。\n\n此外，當你透過荒野型態而處於變形狀態時，你可以使用一個附贈動作以消耗一個法術位，回覆等同於被消耗法術位的每環階1d8點的生命值。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:nature-1-acolyte-of-nature",
+    "index": "nature-1-acolyte-of-nature",
+    "name": "Acolyte of Nature",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "nature-1-acolyte-of-nature",
+      "name": "Acolyte of Nature",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:nature",
+        "name": "Nature Domain"
+      },
+      "reference_heading_zh": "自然侍祭",
+      "reference_text_zh": "*1級自然領域特性*\n\n你學會一個自選的德魯伊戲法。你同時選擇並獲得下列其中一個技能的熟練：馴獸、自然或生存。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:nature-1-bonus-proficiency",
+    "index": "nature-1-bonus-proficiency",
+    "name": "Bonus Proficiency",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "nature-1-bonus-proficiency",
+      "name": "Bonus Proficiency",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:nature",
+        "name": "Nature Domain"
+      },
+      "reference_heading_zh": "額外熟練",
+      "reference_text_zh": "*1級自然領域特性*\n\n你獲得重甲的熟練。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:necromancy-2-grim-harvest",
+    "index": "necromancy-2-grim-harvest",
+    "name": "Grim Harvest",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "necromancy-2-grim-harvest",
+      "name": "Grim Harvest",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:necromancy",
+        "name": "School of Necromancy"
+      },
+      "reference_heading_zh": "殘怖收割",
+      "reference_text_zh": "*2級死靈學派特性*\n\n你獲得從你以法術殺死的生物那裡收割生命能量的能力。每回合一次，當你以1環或更高環的法術殺死一個或更多的生物時，你將獲得等同於該法術環階二倍的生命值，或若該法術屬於死靈學派，則改為回覆該法術環階三倍的生命值。你不會因為殺死構裝體或不死生物而獲得這個好處。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:necromancy-2-necromancy-savant",
+    "index": "necromancy-2-necromancy-savant",
+    "name": "Necromancy Savant",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "necromancy-2-necromancy-savant",
+      "name": "Necromancy Savant",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:necromancy",
+        "name": "School of Necromancy"
+      },
+      "reference_heading_zh": "死靈學者",
+      "reference_text_zh": "*2級死靈學派特性*\n\n你在將死靈系法術抄寫進你的法術書時所必須花費的金錢和時間減半。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:shadow-3-shadow-arts",
+    "index": "shadow-3-shadow-arts",
+    "name": "Shadow Arts",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "shadow-3-shadow-arts",
+      "name": "Shadow Arts",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:shadow",
+        "name": "Way of Shadow"
+      },
+      "reference_heading_zh": "影之技藝",
+      "reference_text_zh": "*3級暗影宗特性*\n\n你可以使用你的氣以複製特定法術的效果。以一個動作，你可以消耗2點氣以施放《黑暗術》、《黑暗視覺》、《行蹤無跡》或《沉默術》，且無須提供材料構材。此外，若你尚未知曉《次級幻象》戲法，則你將習得它。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:tempest-1-bonus-proficiency",
+    "index": "tempest-1-bonus-proficiency",
+    "name": "Bonus Proficiency",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "tempest-1-bonus-proficiency",
+      "name": "Bonus Proficiency",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:tempest",
+        "name": "Tempest Domain"
+      },
+      "reference_heading_zh": "額外熟練",
+      "reference_text_zh": "*1級暴風領域特性*\n\n你獲得軍用武器和重甲的熟練。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:tempest-1-wrath-of-the-storm",
+    "index": "tempest-1-wrath-of-the-storm",
+    "name": "Wrath of the Storm",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "tempest-1-wrath-of-the-storm",
+      "name": "Wrath of the Storm",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:tempest",
+        "name": "Tempest Domain"
+      },
+      "reference_heading_zh": "風暴狂怒",
+      "reference_text_zh": "*1級暴風領域特性*\n\n你可以如雷鳴般斥退攻擊者。當一個距離你5尺內且你能看見的生物以一次攻擊命中你，你可以使用你的反應使該生物進行一次敏捷豁免。該生物若豁免失敗將受到2d8閃電或雷鳴傷害（由你選擇），豁免成功則只受到一半的傷害。\n\n你可以使用這個能力的次數等同於你的感知調整值（最少一次）。你在完成一次長休後恢復所有你花費掉的次數。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "ability_modifier",
+          "ability": "wisdom",
+          "minimum": 1
+        },
+        "recharge": [
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-14-bear",
+    "index": "totem-warrior-14-bear",
+    "name": "Bear",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-14-bear",
+      "name": "Bear",
+      "level": 14,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "reference_heading_zh": "熊",
+      "reference_text_zh": "當你狂暴時，任何距離你5尺內且對你有敵意的生物，將在對你或其他擁有此能力生物以外的目標所進行的攻擊檢定中具有劣勢。若一個敵人無法看見或聽見你、或它不會被恐懼，則它將免疫於這個效果。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-14-eagle",
+    "index": "totem-warrior-14-eagle",
+    "name": "Eagle",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-14-eagle",
+      "name": "Eagle",
+      "level": 14,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "reference_heading_zh": "鷹",
+      "reference_text_zh": "當狂暴時，你將具有等同於你步行速度的飛行速度。這個好處只會在短時間作用；若你在空中結束你的回合且沒有其他東西讓你維持浮空，則你將墜落。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-14-elk",
+    "index": "totem-warrior-14-elk",
+    "name": "Elk",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-14-elk",
+      "name": "Elk",
+      "level": 14,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "reference_heading_zh": "鹿",
+      "reference_text_zh": "當狂暴時，你可以在你的移動期間使用一個附贈動作，以穿過一個體型為大型或更小的生物所佔據的空間。該生物必須成功透過一次力量豁免（DC為8 + 你的力量調整值 + 你的熟練加值），否則被擊倒伏地，並受到等同於1d12 + 你的力量調整值的鈍擊傷害。",
+      "automation_boundary": "structured_manual"
+    }
+  }
+]

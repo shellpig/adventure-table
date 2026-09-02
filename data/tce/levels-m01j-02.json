@@ -1,0 +1,810 @@
+[
+  {
+    "key": "tce:level:spores-2",
+    "index": "spores-2",
+    "name": "Circle of Spores 2",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "spores-2",
+      "name": "Circle of Spores 2",
+      "level": 2,
+      "features": [
+        {
+          "key": "tce:feature:spores-2-circle-spells",
+          "name": "Circle Spells"
+        },
+        {
+          "key": "tce:feature:spores-2-halo-of-spores",
+          "name": "Halo of Spores"
+        },
+        {
+          "key": "tce:feature:spores-2-symbiotic-entity",
+          "name": "Symbiotic Entity"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:spores",
+        "name": "Circle of Spores"
+      }
+    }
+  },
+  {
+    "key": "tce:level:spores-6",
+    "index": "spores-6",
+    "name": "Circle of Spores 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "spores-6",
+      "name": "Circle of Spores 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:spores",
+        "name": "Circle of Spores"
+      }
+    }
+  },
+  {
+    "key": "tce:level:stars-10",
+    "index": "stars-10",
+    "name": "Circle of Stars 10",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "stars-10",
+      "name": "Circle of Stars 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:stars",
+        "name": "Circle of Stars"
+      }
+    }
+  },
+  {
+    "key": "tce:level:stars-14",
+    "index": "stars-14",
+    "name": "Circle of Stars 14",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "stars-14",
+      "name": "Circle of Stars 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:stars",
+        "name": "Circle of Stars"
+      }
+    }
+  },
+  {
+    "key": "tce:level:stars-2",
+    "index": "stars-2",
+    "name": "Circle of Stars 2",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "stars-2",
+      "name": "Circle of Stars 2",
+      "level": 2,
+      "features": [
+        {
+          "key": "tce:feature:stars-2-star-map",
+          "name": "Star Map"
+        },
+        {
+          "key": "tce:feature:stars-2-starry-form",
+          "name": "Starry Form"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:stars",
+        "name": "Circle of Stars"
+      }
+    }
+  },
+  {
+    "key": "tce:level:stars-6",
+    "index": "stars-6",
+    "name": "Circle of Stars 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "stars-6",
+      "name": "Circle of Stars 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:stars",
+        "name": "Circle of Stars"
+      }
+    }
+  },
+  {
+    "key": "tce:level:swarmkeeper-11",
+    "index": "swarmkeeper-11",
+    "name": "Swarmkeeper 11",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "swarmkeeper-11",
+      "name": "Swarmkeeper 11",
+      "level": 11,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass": {
+        "key": "tce:subclass:swarmkeeper",
+        "name": "Swarmkeeper"
+      }
+    }
+  },
+  {
+    "key": "tce:level:swarmkeeper-15",
+    "index": "swarmkeeper-15",
+    "name": "Swarmkeeper 15",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "swarmkeeper-15",
+      "name": "Swarmkeeper 15",
+      "level": 15,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass": {
+        "key": "tce:subclass:swarmkeeper",
+        "name": "Swarmkeeper"
+      }
+    }
+  },
+  {
+    "key": "tce:level:swarmkeeper-3",
+    "index": "swarmkeeper-3",
+    "name": "Swarmkeeper 3",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "swarmkeeper-3",
+      "name": "Swarmkeeper 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "tce:feature:swarmkeeper-3-gathered-swarm",
+          "name": "Gathered Swarm"
+        },
+        {
+          "key": "tce:feature:swarmkeeper-3-swarmkeeper-magic",
+          "name": "Swarmkeeper Magic"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass": {
+        "key": "tce:subclass:swarmkeeper",
+        "name": "Swarmkeeper"
+      }
+    }
+  },
+  {
+    "key": "tce:level:swarmkeeper-7",
+    "index": "swarmkeeper-7",
+    "name": "Swarmkeeper 7",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "swarmkeeper-7",
+      "name": "Swarmkeeper 7",
+      "level": 7,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass": {
+        "key": "tce:subclass:swarmkeeper",
+        "name": "Swarmkeeper"
+      }
+    }
+  },
+  {
+    "key": "tce:level:twilight-1",
+    "index": "twilight-1",
+    "name": "Twilight Domain 1",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "twilight-1",
+      "name": "Twilight Domain 1",
+      "level": 1,
+      "features": [
+        {
+          "key": "tce:feature:twilight-1-domain-spells",
+          "name": "領域法術"
+        },
+        {
+          "key": "tce:feature:twilight-1-bonus-proficiencies",
+          "name": "Bonus Proficiencies"
+        },
+        {
+          "key": "tce:feature:twilight-1-eyes-of-night",
+          "name": "Eyes of Night"
+        },
+        {
+          "key": "tce:feature:twilight-1-vigilant-blessing",
+          "name": "Vigilant Blessing"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:twilight",
+        "name": "Twilight Domain"
+      }
+    }
+  },
+  {
+    "key": "tce:level:twilight-17",
+    "index": "twilight-17",
+    "name": "Twilight Domain 17",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "twilight-17",
+      "name": "Twilight Domain 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:twilight",
+        "name": "Twilight Domain"
+      }
+    }
+  },
+  {
+    "key": "tce:level:twilight-2",
+    "index": "twilight-2",
+    "name": "Twilight Domain 2",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "twilight-2",
+      "name": "Twilight Domain 2",
+      "level": 2,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:twilight",
+        "name": "Twilight Domain"
+      }
+    }
+  },
+  {
+    "key": "tce:level:twilight-6",
+    "index": "twilight-6",
+    "name": "Twilight Domain 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "twilight-6",
+      "name": "Twilight Domain 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:twilight",
+        "name": "Twilight Domain"
+      }
+    }
+  },
+  {
+    "key": "tce:level:twilight-8",
+    "index": "twilight-8",
+    "name": "Twilight Domain 8",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "twilight-8",
+      "name": "Twilight Domain 8",
+      "level": 8,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:twilight",
+        "name": "Twilight Domain"
+      }
+    }
+  },
+  {
+    "key": "tce:level:watchers-15",
+    "index": "watchers-15",
+    "name": "Oath of the Watchers 15",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "watchers-15",
+      "name": "Oath of the Watchers 15",
+      "level": 15,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:watchers",
+        "name": "Oath of the Watchers"
+      }
+    }
+  },
+  {
+    "key": "tce:level:watchers-20",
+    "index": "watchers-20",
+    "name": "Oath of the Watchers 20",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "watchers-20",
+      "name": "Oath of the Watchers 20",
+      "level": 20,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:watchers",
+        "name": "Oath of the Watchers"
+      }
+    }
+  },
+  {
+    "key": "tce:level:watchers-3",
+    "index": "watchers-3",
+    "name": "Oath of the Watchers 3",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "watchers-3",
+      "name": "Oath of the Watchers 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "tce:feature:watchers-3-tenets-of-the-watchers",
+          "name": "Tenets of the Watchers"
+        },
+        {
+          "key": "tce:feature:watchers-3-oath-spells",
+          "name": "Oath Spells"
+        },
+        {
+          "key": "tce:feature:watchers-3-channel-divinity",
+          "name": "Channel Divinity"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:watchers",
+        "name": "Oath of the Watchers"
+      }
+    }
+  },
+  {
+    "key": "tce:level:watchers-7",
+    "index": "watchers-7",
+    "name": "Oath of the Watchers 7",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "watchers-7",
+      "name": "Oath of the Watchers 7",
+      "level": 7,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:watchers",
+        "name": "Oath of the Watchers"
+      }
+    }
+  },
+  {
+    "key": "tce:level:wild-magic-10",
+    "index": "wild-magic-10",
+    "name": "Path of Wild Magic 10",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "wild-magic-10",
+      "name": "Path of Wild Magic 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "tce:subclass:wild-magic",
+        "name": "Path of Wild Magic"
+      }
+    }
+  },
+  {
+    "key": "tce:level:wild-magic-14",
+    "index": "wild-magic-14",
+    "name": "Path of Wild Magic 14",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "wild-magic-14",
+      "name": "Path of Wild Magic 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "tce:subclass:wild-magic",
+        "name": "Path of Wild Magic"
+      }
+    }
+  },
+  {
+    "key": "tce:level:wild-magic-3",
+    "index": "wild-magic-3",
+    "name": "Path of Wild Magic 3",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "wild-magic-3",
+      "name": "Path of Wild Magic 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "tce:feature:wild-magic-3-magic-awareness",
+          "name": "Magic Awareness"
+        },
+        {
+          "key": "tce:feature:wild-magic-3-wild-surge",
+          "name": "Wild Surge"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "tce:subclass:wild-magic",
+        "name": "Path of Wild Magic"
+      }
+    }
+  },
+  {
+    "key": "tce:level:wild-magic-6",
+    "index": "wild-magic-6",
+    "name": "Path of Wild Magic 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "wild-magic-6",
+      "name": "Path of Wild Magic 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "tce:subclass:wild-magic",
+        "name": "Path of Wild Magic"
+      }
+    }
+  },
+  {
+    "key": "tce:level:wildfire-10",
+    "index": "wildfire-10",
+    "name": "Circle of Wildfire 10",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "wildfire-10",
+      "name": "Circle of Wildfire 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:wildfire",
+        "name": "Circle of Wildfire"
+      }
+    }
+  },
+  {
+    "key": "tce:level:wildfire-14",
+    "index": "wildfire-14",
+    "name": "Circle of Wildfire 14",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "wildfire-14",
+      "name": "Circle of Wildfire 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:wildfire",
+        "name": "Circle of Wildfire"
+      }
+    }
+  },
+  {
+    "key": "tce:level:wildfire-2",
+    "index": "wildfire-2",
+    "name": "Circle of Wildfire 2",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "wildfire-2",
+      "name": "Circle of Wildfire 2",
+      "level": 2,
+      "features": [
+        {
+          "key": "tce:feature:wildfire-2-circle-spells",
+          "name": "Circle Spells"
+        },
+        {
+          "key": "tce:feature:wildfire-2-summon-wildfire-spirit",
+          "name": "Summon Wildfire Spirit"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:wildfire",
+        "name": "Circle of Wildfire"
+      }
+    }
+  },
+  {
+    "key": "tce:level:wildfire-6",
+    "index": "wildfire-6",
+    "name": "Circle of Wildfire 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "wildfire-6",
+      "name": "Circle of Wildfire 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:wildfire",
+        "name": "Circle of Wildfire"
+      }
+    }
+  }
+]

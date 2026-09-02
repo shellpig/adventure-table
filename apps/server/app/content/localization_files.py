@@ -69,7 +69,7 @@ def _validate_overlay_field_path(
     *,
     key: str,
     field_path: str,
-    path: Path,
+    path: Path | str,
 ) -> None:
     if not isinstance(field_path, str) or not field_path:
         raise ContentValidationError(f"locale overlay {path} contains a blank field path for {key}")

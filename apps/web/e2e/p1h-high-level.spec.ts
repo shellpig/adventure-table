@@ -196,6 +196,12 @@ test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to e
     await chooseSearchable(page, `Level ${level} class`, 'Wizard')
   }
 
+  // Pick the asserted subclasses by name. M01-J added XGE and TCE options that
+  // sort ahead of the SRD ones, so leaving these to the first-enabled sweep no
+  // longer lands on Champion and School of Evocation.
+  await chooseSearchable(page, 'Fighter subclass · required at class level 3', 'Champion')
+  await chooseSearchable(page, 'Wizard subclass · required at class level 2', 'Evocation')
+
   await fillEmptyComboboxes(page, page.locator('.level-rail'))
   await expect(page.getByText('Fighter 5 / Wizard 5', { exact: true }).last()).toBeVisible()
   await expect(page.getByText('10 / 10', { exact: true })).toBeVisible()

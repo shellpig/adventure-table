@@ -1,0 +1,2401 @@
+[
+  {
+    "key": "tce:feature:aberrant-mind-1-psionic-spells",
+    "index": "aberrant-mind-1-psionic-spells",
+    "name": "Psionic Spells",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "aberrant-mind-1-psionic-spells",
+      "name": "Psionic Spells",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "tce:subclass:aberrant-mind",
+        "name": "Aberrant Mind"
+      },
+      "reference_heading_zh": "靈能法術",
+      "reference_text_zh": "*1級畸變心智特性*\n\n當你達到相應的術士等級時，你習得下表中的額外法術。這些法術對你而言視為術士法術，且不受術士表上已知法術一欄的數量限制。\n\n每當你提升術士等級時，你可以選擇一個環數相同的新法術來替換你因此特性習得的一個法術。該法術必須為術士、契術師或法師法術列表中的一個預言系或惑控系法術。\n\n**靈能法術**\n\n| 術士等級 | 法術 |\n| :--- | :--- |\n| 1st | 《哈達之臂》, 《噪音暗語》, 《心靈之楔》 |\n| 3rd | 《安定心神》, 《偵測思想》 |\n| 5th | 《哈達之慾》, 《短訊術》 |\n| 7th | 《艾伐黑觸手》, 《異怪召喚術》 |\n| 9th | 《拉瑞心靈聯結》, 《心靈遙控》 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:aberrant-mind-1-telepathic-speech",
+    "index": "aberrant-mind-1-telepathic-speech",
+    "name": "Telepathic Speech",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "aberrant-mind-1-telepathic-speech",
+      "name": "Telepathic Speech",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "tce:subclass:aberrant-mind",
+        "name": "Aberrant Mind"
+      },
+      "reference_heading_zh": "傳心談話",
+      "reference_text_zh": "*1級畸變心智特性*\n\n1級起，你能夠在自己與他人的意識中構建一道心靈感應的連結。以一個附贈動作，你可以選擇30尺內一個你可見的生物，只要你與其距離的裡數不超過你的魅力調整值（至少1裡），你與其能夠透過心靈感應方式進行交流。你們必須使用對方知曉的語言進行心靈交流才能使其理解你透過心靈感應傳達的話語。\n\n心靈感應的連結持續等同於你術士等級的分鐘數。當你無力或死亡，或你使用此能力與其他生物構建連結時，其提前結束。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:astral-self-3-arms-of-the-astral-self",
+    "index": "astral-self-3-arms-of-the-astral-self",
+    "name": "Arms of the Astral Self",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "astral-self-3-arms-of-the-astral-self",
+      "name": "Arms of the Astral Self",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "tce:subclass:astral-self",
+        "name": "Way of the Astral Self"
+      },
+      "reference_heading_zh": "星我之臂",
+      "reference_text_zh": "*3級星我宗特性*\n\n你對氣的掌握允許你召喚出星我的一部分。以一個附贈動作，你可以花費1點氣來召喚你的星我之臂，當你這麼做時，你選擇的每一個你所見的10尺範圍內的生物必須進行一次敏捷豁免檢定，如果失敗則受到相當於你兩倍武藝骰的力場傷害。\n\n在10分鐘內，這些幽光般的手臂會盤旋在你的肩膀附近或環繞著你的手臂（由你選擇），你來決定手臂們的外觀，如果你無力或死亡，它們就會立即消失。\n\n當星我之臂出現時，你將獲得如下增益：\n\n- 你進行力量檢定和力量豁免檢定時，可以用你的感知調整值來代替力量力量調整值。\n- 你可以用星我之臂進行徒手攻擊。\n- 當你在自己回合用星我之臂進行徒手攻擊時，你的觸及範圍增加5尺。\n- 當你用星我之臂進行徒手攻擊時，可以用感知調整值代替力量或敏捷調整值來進行攻擊檢定和傷害檢定，它們的傷害型別是力場。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:astral-self-3-forms-of-your-astral-self",
+    "index": "astral-self-3-forms-of-your-astral-self",
+    "name": "Forms of Your Astral Self",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "astral-self-3-forms-of-your-astral-self",
+      "name": "Forms of Your Astral Self",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "tce:subclass:astral-self",
+        "name": "Way of the Astral Self"
+      },
+      "reference_heading_zh": "你的星我形態",
+      "reference_text_zh": "星我是武僧精神與靈魂的半透明化身。因此，星我的形態會展現出武僧的背景、理想、牽絆和缺點，而且星我並不一定看起來像武僧一樣。例如，一個瘦長的人的星我可能會讓人聯想到牛頭人——這代表著武僧內心所感受到的力量；同樣，一個獸人武僧可能會表現出絲般嫩滑的手臂和精緻的面容——這代表著獸人內心深處的溫柔。每一個星我都是獨一無二的，而這一宗派的武僧們更為人所知的是他們的星我外表，而非他們自己的外表。\n\n當你選擇這一宗派時，仔細考慮一下能定義你武僧特質的怪癖。他們是否對某種東西充滿迷戀？驅使你的動力是正義還是私慾？所有這些特質都可以在你的星我形態上有所體現。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:beast-3-form-of-the-beast",
+    "index": "beast-3-form-of-the-beast",
+    "name": "Form of the Beast",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "beast-3-form-of-the-beast",
+      "name": "Form of the Beast",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "tce:subclass:beast",
+        "name": "Path of the Beast"
+      },
+      "reference_heading_zh": "野獸之形",
+      "reference_text_zh": "*3級野獸道途特性*\n\n當你進入狂暴時，你可以變形，顯現出你體內的野獸之力。直到你的狂暴結束，你獲得一件天生武器。它對你視作簡易近戰武器。和普通的簡易近戰武器一樣，你在你的攻擊骰和傷害骰上加上你的力量調整值。\n\n在你進入狂暴時，你可以在以下幾種天生武器中選擇一種：\n\n- **噬咬。**：你的嘴變形成一個野獸的血盆大口或者巨大的昆蟲大顎（由你選擇）。它的一次攻擊能造成1d8穿刺傷害。每回合一次，當你用它命中一個生物並造成傷害時，你回覆等同於你的熟練等級的生命值。你只能在生命值低於一半的時候使用此方式回覆生命值。\n- **利爪。**：你的雙手變成了一對利爪，當他沒有持握東西時，可以把它當作作武器使用。利爪命中後能夠造成1d6揮砍傷害。每回合一次，當你用利爪以攻擊動作進行攻擊時，你可以額外攻擊一次，作為同一個攻擊動作的一部分。\n- **尾擊。**：你長出一條繩索一般的，多刺的長尾巴。它攻擊命中能造成1d8的穿刺傷害，並且擁有觸及屬性。如果一個10尺以內的，你能看見的生物透過攻擊檢定的方式攻擊並擊中你，你可以消耗你的反應動作來揮舞你的尾巴進行擋避，你投一個d8的骰子，並將它加入到你的AC中。這個反應可能可以讓這次攻擊轉而無法命中你。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:bladesinging-2-bladesinger-styles",
+    "index": "bladesinging-2-bladesinger-styles",
+    "name": "Bladesinger Styles",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "bladesinging-2-bladesinger-styles",
+      "name": "Bladesinger Styles",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "tce:subclass:bladesinging",
+        "name": "Bladesinging"
+      },
+      "reference_heading_zh": "劍詠者風格",
+      "reference_text_zh": "從最初作為武術和魔法結合的技藝以來，劍詠與劍，或更準確來說是長劍，之間的關聯便密不可分。然而數個世代的研究也因此發展出了多種以近戰武器作為基礎的不同劍詠風格。這些風格的技術在各個小學派中透過導師代代傳承給學徒，其中一些甚至有著專門用於教學的建築。即使是最新式的風格也有著數百年的歷史，但因為精靈漫長的壽命，其創始者仍可以親自傳承他們所創造的風格。大部分的劍詠學派坐落於永聚島 (Evermeet)或者埃弗拉斯卡 (Evereska)。曾經有一個學派發跡於迷斯卓諾 (Myth Drannor)，但城市的毀滅也讓那些倖存下來的學徒們分散在世界各地。\n\n基於所使用武器種類的不同，劍詠風格被大致區別成數個類別，且每一個類別都有著一個對應的動物型別。在這些類別之中，特定的風格又會基於使用的法術型別、導師的技術、以及特定武器的使用而被以特定的動物型別命名。從師於一名導師的劍詠者學徒通常會得到一個象徵他們所選風格的動物紋身。有些劍詠者會學習多種風格並帶有多種紋身，透過他們肌膚上那致命技藝的象徵警告那些不懷好意的人們。\n\n##### 貓型\n\n應用了刀劍的風格屬於這個類別。最古老的獅子學派，訓練修行者使用長劍且不偏好任何特定型別的法術。豹學派專注於短劍以及幻象和隱匿的法術。赤虎學派，一個僅三個世紀曆史的風格，則讓他們的劍詠者使用彎刀，從旋轉著的防禦性劍舞中突然跳起並發動攻擊。\n\n##### 鳥型\n\n儘管種類繁多，那些專注於使用長柄武器的風格，例如斧頭或槌子，都會被歸類為鳥型風格。它們全都是相對新式的風格，且使用通常不為精靈所好的武器。山鷹學派的劍詠者使用小型手斧，這個風格中的許多武技都專注於流暢地丟出武器並抽出一把新的。渡鴉學派則使用戰鎬，且它們所使用的法術讓劍詠者在戰鬥中的動作能夠更加靈巧。\n\n##### 蛇型\n\n這些風格的修行者使用連枷、鎖鏈、或是鞭子。蝮蛇學派所用的武器是長鞭，儘管其作為武器而言有些粗俗，但它卻有著與獅子學派同樣悠久的歷史。這個學派的宗師會在他們的劍歌中以一連串絕妙而迅速的鞭擊伴奏，在牽制住眾多敵人的同時，讓劍詠者得以施放這個風格所偏好，能夠造成中毒和疾病的殘忍法術。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:bladesinging-2-bladesong",
+    "index": "bladesinging-2-bladesong",
+    "name": "Bladesong",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "bladesinging-2-bladesong",
+      "name": "Bladesong",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "tce:subclass:bladesinging",
+        "name": "Bladesinging"
+      },
+      "reference_heading_zh": "劍歌",
+      "reference_text_zh": "*2級劍詠傳承特性*\n\n你可咒喚一種名喚\"劍歌\"的精靈魔法，前提是你必須未著裝中甲、重甲，也未使用盾牌。這一魔法將使你獲得超乎尋常的速度、敏捷與專注。\n\n你可以用一個附贈動作啟動劍歌，並使之維持1分鐘。當你陷入無力或完成中甲、重甲、盾牌的著裝，又或者用雙手發動一次攻擊時，你的劍歌將提前終止。你也可以隨時隨意的解除劍歌（不需要動作）。\n\n在劍歌啟用期間，你獲得下列好處：\n\n- 你的AC獲得等同於你智力調整值的加值（最少+1）。\n- 你的步行速度增加10尺。\n- 你在敏捷（體操）檢定上具有優勢。\n- 你在用以維持法術專注時所進行的任何體質豁免中獲得加值。這個加值等同於你的智力調整值（最少+1）。\n\n你能使用本特性的次數等於你的熟練加值。你在完成一次長休後恢復所有消耗掉的使用次數。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "proficiency_bonus"
+        },
+        "recharge": [
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "tce:feature:bladesinging-2-training-in-war-and-song-bladesinging",
+    "index": "bladesinging-2-training-in-war-and-song-bladesinging",
+    "name": "Training in War and Song (Bladesinging)",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "bladesinging-2-training-in-war-and-song-bladesinging",
+      "name": "Training in War and Song (Bladesinging)",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "tce:subclass:bladesinging",
+        "name": "Bladesinging"
+      },
+      "reference_heading_zh": "戰歌訓練",
+      "reference_text_zh": "*2級劍詠傳承特性*\n\n你獲得輕甲的熟練項，並獲得一種自選的單手近戰武器熟練項。\n\n如果你尚未熟練 表演 技能，則還可以獲得表演技能的熟練項。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:clockwork-soul-1-clockwork-magic",
+    "index": "clockwork-soul-1-clockwork-magic",
+    "name": "Clockwork Magic",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "clockwork-soul-1-clockwork-magic",
+      "name": "Clockwork Magic",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "tce:subclass:clockwork-soul",
+        "name": "Clockwork Soul"
+      },
+      "reference_heading_zh": "時械法術",
+      "reference_text_zh": "*1級時械之魂特性*\n\n當你達到相應的術士等級時，你習得下表中的額外法術。這些法術對你而言視為術士法術，且不受術士表上已知法術一欄的數量限制。\n\n每當你提升術士等級時，你可以選擇一個環數相同的新法術來替換你因此特性習得的一個法術。該法術必須為術士、契術師或法師法術列表中的一個防護系或變化系法術。\n\n**時械法術**\n\n| 術士等級 | 法術 |\n| :--- | :--- |\n| 1st | 《警報術》, 《防護善惡》 |\n| 3rd | 《援助術》, 《次級復原術》 |\n| 5th | 《解除魔法》, 《防護能量》 |\n| 7th | 《行動自如術》, 《構裝體召喚術》 |\n| 9th | 《高等復原術》, 《力牆術》 |\n\n此外，你可以從秩序顯跡表格中選擇或擲骰決定一種你在施法時顯現出與秩序之聯絡的方式。\n\n**秩序顯跡**\n\n| d6 | 顯跡 |\n| :--- | :--- |\n| 1 | 幽靈般的虛幻齒輪在你身後旋轉。 |\n| 2 | 時鐘的指標出現在你的眼中。 |\n| 3 | 你的皮膚髮出如黃銅般的金屬光澤。 |\n| 4 | 你的體表浮動著方程式和幾何圖形。 |\n| 5 | 你的法器短暫地變化成小巧的機械裝置。 |\n| 6 | 你和那些受到你法術影響的生物都會聽到齒輪的滴答聲或是鐘錶的響鈴。 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:clockwork-soul-1-restore-balance",
+    "index": "clockwork-soul-1-restore-balance",
+    "name": "Restore Balance",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "clockwork-soul-1-restore-balance",
+      "name": "Restore Balance",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "tce:subclass:clockwork-soul",
+        "name": "Clockwork Soul"
+      },
+      "reference_heading_zh": "歸復平衡",
+      "reference_text_zh": "*1級時械之魂特性*\n\n1級起，你與絕對秩序之位面的聯絡使你能重整混沌的時刻。當你60尺內一個你可見的生物即將進行一次具有優勢或劣勢的d20檢定時，你可以用反應使其免受優勢或劣勢的影響。\n\n你可以使用此能力的次數等同於你的熟練加值。每當你完成一次長休息，你重新獲得已消耗的使用次數。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "proficiency_bonus"
+        },
+        "recharge": [
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "tce:feature:creation-3-mote-of-potential",
+    "index": "creation-3-mote-of-potential",
+    "name": "Mote of Potential",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "creation-3-mote-of-potential",
+      "name": "Mote of Potential",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "tce:subclass:creation",
+        "name": "College of Creation"
+      },
+      "reference_heading_zh": "潛能微塵",
+      "reference_text_zh": "*3級創造學院特性*\n\n每當你給予一個生物以吟遊激勵骰時，你可以唱出造物之歌的一個音符，創造一團微小的潛能微塵，在那個生物五尺以內的軌道上環繞。這個微塵是無形且不可被摧毀的，它將一直持續存在直到這個吟遊激勵骰被消耗掉。這團微塵看起來像一個音符，或是一顆星星，一朵花，抑或其他任何一種藝術或者生命的符號，這將由你來決定。\n\n當這個生物使用那個吟遊激勵骰時，這團微塵將會根據這個吟遊激勵骰被使用的方式-能力檢定，攻擊檢定或者豁免檢定，會產生不同的額外效果。具體細節如下所示：\n\n- **能力檢定。**：當該生物將吟遊激勵骰用於增益能力檢定時，他可以重新擲一次吟遊激勵骰並且選擇使用其中一個擲骰結果。這團微塵會炸開，發射出多彩而無害的閃光。\n- **攻擊檢定。**：當該生物將吟遊激勵骰用於增益攻擊檢定時，擲出吟遊激勵骰後，這團微塵會立刻如雷霆般破碎。該生物這次攻擊的目標以及其5尺距離內你能看到的由你決定的所有生物必須進行一次體質豁免，其DC為你的施法DC，如果豁免失敗，將會承受等同於該吟遊激勵骰子所擲結果的雷鳴傷害。\n- **豁免檢定。**：當該生物將吟遊激勵骰用於增益豁免檢定時，擲出吟遊激勵骰後，這團微塵會立刻伴隨著一段舒緩的音樂消失不見，給予這個生物等同於該吟遊激勵骰子所擲結果加上你的魅力調整值的臨時生命值（最低為1）。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:creation-3-performance-of-creation",
+    "index": "creation-3-performance-of-creation",
+    "name": "Performance of Creation",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "creation-3-performance-of-creation",
+      "name": "Performance of Creation",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "tce:subclass:creation",
+        "name": "College of Creation"
+      },
+      "reference_heading_zh": "造物表演",
+      "reference_text_zh": "*3級創造學院特性*\n\n以一個動作，你可以引導造物之歌的魔力來創造一個由你選擇的非魔法物品，它會在你選擇的距離你10尺內的一處未被佔據的空間裡生成。它必須要生成在一個可以支撐它的地方——這可以是在也體內或者一個表面上。這件物品的價值不能超過你吟遊詩人等級*20gp，它必須是中型或者更小的物品。這件物品會閃爍著柔和的微光。當一個生物觸碰它的時候，會聽到輕微的音樂。在被創造出等同於你的熟練加值數的小時之後，這件物品會消失。例如，《玩家手冊》中的\"裝備\"章節裡的物品大多數都是可以透過此方法創造的。\n\n每當你用這一特性創造出一件物品後，直到下一次長休結束前你都不能再次使用這個能力。你可以消耗一個2環或者更高階的法術位去重製這個能力的使用次數。你同時只能保持一件以此法被創造出的物品。如果在你使用這個能力創造物品時已經有一件被創造出來的物品了，那麼那個舊的物品會立刻消失不見。\n\n你創造的物品都大小限制會隨著你的吟遊詩人等級提高而增長。6級時你可以創造大型物品，14級時你可以創造巨型物品。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "proficiency_bonus"
+        },
+        "recharge": [
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "tce:feature:eloquence-3-silver-tongue",
+    "index": "eloquence-3-silver-tongue",
+    "name": "Silver Tongue",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "eloquence-3-silver-tongue",
+      "name": "Silver Tongue",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "tce:subclass:eloquence",
+        "name": "College of Eloquence"
+      },
+      "reference_heading_zh": "巧舌如簧",
+      "reference_text_zh": "*3級雄辯學院特性*\n\n你是語言的大師，懂得在合適的時刻說出正確的話語。當你在進行一次魅力(說服)檢定或魅力(欺瞞)檢定時，如果你擲出9或者更低的d20，都會被視作10。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:eloquence-3-unsettling-words",
+    "index": "eloquence-3-unsettling-words",
+    "name": "Unsettling Words",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "eloquence-3-unsettling-words",
+      "name": "Unsettling Words",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "tce:subclass:eloquence",
+        "name": "College of Eloquence"
+      },
+      "reference_heading_zh": "擾神之詞",
+      "reference_text_zh": "*3級雄辯學院特性*\n\n你可以編造一些帶有魔力的話語，擾亂一個生物的心神，使其自我懷疑。消耗一個附贈動作，你可以消耗一個吟遊激勵骰，選擇一個你視野中的距你60尺以內的生物。擲出詩人激勵，在你的下一個回合開始前，該生物的下一次豁免檢定將會減去這個激勵骰所投出的值。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:fathomless-1-expanded-spell-list",
+    "index": "fathomless-1-expanded-spell-list",
+    "name": "Expanded Spell List",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "fathomless-1-expanded-spell-list",
+      "name": "Expanded Spell List",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:fathomless",
+        "name": "The Fathomless"
+      },
+      "reference_heading_zh": "擴充套件法術列表",
+      "reference_text_zh": "*1級深海意志特性*\n\n當你學習一個契術師法術時，你的深海宗主賜予你將以下法術加入契術師法術列表進行選擇的權力。\n\n**深海意志擴充套件法術**\n\n| 法術環位 | 法術 |\n| :--- | :--- |\n| 1環 | 《造水/枯水術》, 《雷鳴波》 |\n| 2環 | 《造風術》, 《沉默術》 |\n| 3環 | 《閃電束》, 《雪雨暴》 |\n| 4環 | 《操控水體》, 《元素召喚術》 （僅限水元素） |\n| 5環 | 《畢格比之掌》 （以觸手形式顯現）, 《寒冰錐》 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:fathomless-1-gift-of-the-sea",
+    "index": "fathomless-1-gift-of-the-sea",
+    "name": "Gift of the Sea",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "fathomless-1-gift-of-the-sea",
+      "name": "Gift of the Sea",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:fathomless",
+        "name": "The Fathomless"
+      },
+      "reference_heading_zh": "海洋饋贈",
+      "reference_text_zh": "*1級深海意志特性*\n\n你游泳速度為40尺，且可以在水下呼吸。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:fathomless-1-tentacle-of-the-deeps",
+    "index": "fathomless-1-tentacle-of-the-deeps",
+    "name": "Tentacle of the Deeps",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "fathomless-1-tentacle-of-the-deeps",
+      "name": "Tentacle of the Deeps",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:fathomless",
+        "name": "The Fathomless"
+      },
+      "reference_heading_zh": "深海觸手",
+      "reference_text_zh": "*1級深海意志特性*\n\n你可以以魔法的形式召喚一根幽靈觸手攻擊你的敵人。在你60尺的可視範圍內，你可以以一個附贈動作創造一根10尺長的觸手。這根觸手可以持續一分鐘，或於你使用該能力創造另一根觸手時終止。\n\n當你創造觸手後，你可以對其10尺內的目標進行一次近戰法術攻擊。目標受到1d8冷凍傷害，且直到你的下一回合，目標速度降低10尺。當你達到契術師10級時，造成的傷害提高至2d8。\n\n在你的回合中，你可以使用一個附贈動作將觸手移動至多30尺並重復以上攻擊。\n\n你可召喚的觸手的次數等於你的熟練加值，且可以在結束長休之後恢復所有使用次數。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "proficiency_bonus"
+        },
+        "recharge": [
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "tce:feature:fey-wanderer-3-dreadful-strikes",
+    "index": "fey-wanderer-3-dreadful-strikes",
+    "name": "Dreadful Strikes",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "fey-wanderer-3-dreadful-strikes",
+      "name": "Dreadful Strikes",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass": {
+        "key": "tce:subclass:fey-wanderer",
+        "name": "Fey Wanderer"
+      },
+      "reference_heading_zh": "哀懼靈襲",
+      "reference_text_zh": "*3級妖精漫遊者特性*\n\n你能夠使用來自妖精荒原中黑暗空洞的攝心魔法以強化你的武器攻擊。當你使用武器命中一個生物時，你可以對目標造成額外的1d4心靈傷害，一個目標一回合只能夠受到一次這個傷害。\n\n該額外傷害在你於此職業的等級升至11級時變成1d6。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:fey-wanderer-3-fey-wanderer-magic",
+    "index": "fey-wanderer-3-fey-wanderer-magic",
+    "name": "Fey Wanderer Magic",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "fey-wanderer-3-fey-wanderer-magic",
+      "name": "Fey Wanderer Magic",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass": {
+        "key": "tce:subclass:fey-wanderer",
+        "name": "Fey Wanderer"
+      },
+      "reference_heading_zh": "妖精漫遊者法術",
+      "reference_text_zh": "*3級妖精漫遊者特性*\n\n你在達到特定等級時學會一個下方妖精漫遊者法術列表中列出的魔法。這些法術對你而言視作遊俠法術，且不佔用你的遊俠已知法術數量。\n\n**妖精漫遊者法術**\n\n| 遊俠等級 | 法術 |\n| :--- | :--- |\n| 3rd | 《魅惑人類》 |\n| 5th | 《迷蹤步》 |\n| 9th | 《解除魔法》 |\n| 13th | 《次元門》 |\n| 17th | 《假象術》 |\n\n你還獲得了來自一位妖精盟友或一處妖精神力的神奇祝福。你可以在下方妖精荒原之賜表格中選擇你的祝福或者隨機決定。\n\n**精野之賜**\n\n| d6 | 賜福 |\n| :--- | :--- |\n| 1 | 在你進行長休或短休時，縹緲的蝴蝶在你周身振翅。 |\n| 2 | 每天黎明，新鮮的、當季的花朵將在你的頭髮中生長。 |\n| 3 | 你身上有淡淡的肉桂、薰衣草或肉豆蔻，或另一種令人舒適的藥草或香料的香味。 |\n| 4 | 你的影子會在沒人直視它時起舞。 |\n| 5 | 你的頭髮中長出纖細的觸角或鹿角。 |\n| 6 | 每天黎明，你的膚色與髮色都會變成適合當下季節的顏色。 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:fey-wanderer-3-otherworldly-glamour",
+    "index": "fey-wanderer-3-otherworldly-glamour",
+    "name": "Otherworldly Glamour",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "fey-wanderer-3-otherworldly-glamour",
+      "name": "Otherworldly Glamour",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass": {
+        "key": "tce:subclass:fey-wanderer",
+        "name": "Fey Wanderer"
+      },
+      "reference_heading_zh": "妖冶嫻都",
+      "reference_text_zh": "*3級妖精漫遊者特性*\n\n你的妖精本質給予了你超脫凡俗的魅力。因此，每當你進行一次魅力檢定時，你可以在結果中加入等於你的感知調整值的加值(最低為1)。\n\n另外，你得到下列技能中你選擇的一項的熟練：欺瞞、表演或說服.",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:genie-1-expanded-spell-list",
+    "index": "genie-1-expanded-spell-list",
+    "name": "Expanded Spell List",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "genie-1-expanded-spell-list",
+      "name": "Expanded Spell List",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:genie",
+        "name": "The Genie"
+      },
+      "reference_heading_zh": "擴充套件法術列表",
+      "reference_text_zh": "*1級巨靈宗主特性*\n\n當你學習一個契術師法術時，你的巨靈宗主擴寬了你的可學習法術範圍。巨靈擴充套件法術表包含加入到了契術師法術列表中的巨靈法術和與你的巨靈宗主型別相關的法術。\n\n**巨靈宗主擴充套件法術**\n\n| 法術環位 | 全巨靈 | 土巨靈 | 氣巨靈 | 火巨靈 | 水巨靈 |\n| :--- | :--- | :--- | :--- | :--- | :--- |\n| 1環 | 《偵測善惡》 | 《聖域術》 | 《雷鳴波》 | 《燃燒之手》 | 《雲霧術》 |\n| 2環 | 《魅影之力》 | 《荊棘叢生》 | 《造風術》 | 《灼熱射線》 | 《朦朧術》 |\n| 3環 | 《創造飲食》 | 《融身入石》 | 《風牆術》 | 《火球術》 | 《雪雨暴》 |\n| 4環 | 《魅影殺手》 | 《塑石術》 | 《高等隱形術》 | 《火焰護盾》 | 《操控水體》 |\n| 5環 | 《造物術》 | 《石牆術》 | 《偽裝術》 | 《焰擊術》 | 《寒冰錐》 |\n| 9環 | 《祈願術》 | — | — | — | — |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:genie-1-genie-s-vessel",
+    "index": "genie-1-genie-s-vessel",
+    "name": "Genie's Vessel",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "genie-1-genie-s-vessel",
+      "name": "Genie's Vessel",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:genie",
+        "name": "The Genie"
+      },
+      "reference_heading_zh": "巨靈器皿",
+      "reference_text_zh": "*1級巨靈宗主特性*\n\n你的宗主賜予你一個包含巨靈之力的魔法器皿。該器皿是一個微型物件，你可以將其作為施展你契術師法術的法器。你決定物件的類別，或者你可以透過巨靈器皿表來決定。\n\n**巨靈器皿**\n\n| d6 | 器皿種類 |\n| :--- | :--- |\n| 1 | 油燈 |\n| 2 | 甕 |\n| 3 | 可裝東西的戒指 |\n| 4 | 被塞住的瓶子 |\n| 5 | 空心小雕像 |\n| 6 | 華麗提燈 |\n\n當你觸碰器皿時，你可以用以下方式使用它：\n\n##### 瓶中小憩 (Bottled Respite)\n\n以一個動作，你可以用魔法消失並進到你的器皿內，器皿將留在你所在的原地。器皿內是與其本身相似的20尺半徑，20尺高的圓柱形超維度空間。器皿內部溫度適宜，並安放有舒適的墊子和茶几。在器皿之中時，你可以如同身在器皿所在之處一般聽到外界的聲音。你在器皿內可停留的時間等同於你熟練加值雙倍數目的小時。如果你死亡，或是器皿被摧毀，抑或是使用一個附贈動作離開，你將提前從器皿中出來。當你離開器皿時，你出現在距離它最近的不被佔據的空間中。在器皿內的一切物件將被留在其中直到被取出，而倘若器皿被摧毀，其中的物品則會完好無損地出現在距離它最近的不被佔據的空間中。一旦你進入器皿，直到你完成一次長休後你不能再度進入。\n\n##### 巨靈之怒 (Genie's Wrath)\n\n在你的每個回合僅限一次，你可以在你攻擊骰命中時對目標造成等同於你熟練加值的額外傷害。傷害型別取決於你的宗主型別：鈍擊（土巨靈），雷鳴（氣巨靈），火焰（火巨靈），冷凍（水巨靈）。\n\n器皿的AC等同於你的法術豁免DC。它的生命值等於你的契術師等級加熟練加值，並免疫於毒素和心靈傷害。\n\n倘若器皿被摧毀或是丟失，你可以進行一場持續1小時的儀式來從你的宗主處獲得一個替代品。這一儀式可於短休或長休時進行，並會摧毀之前仍存在的器皿。當你死亡時，器皿在一陣元素能量的閃耀中消失。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:genie-m01j-choice-genie-dao",
+    "index": "genie-m01j-choice-genie-dao",
+    "name": "Dao",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": null
+    },
+    "data": {
+      "index": "genie-m01j-choice-genie-dao",
+      "name": "Dao",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:genie",
+        "name": "The Genie"
+      },
+      "choice_option_for": "tce:feature:genie-1-expanded-spell-list",
+      "reference_heading_zh": "土巨靈"
+    }
+  },
+  {
+    "key": "tce:feature:genie-m01j-choice-genie-djinni",
+    "index": "genie-m01j-choice-genie-djinni",
+    "name": "Djinni",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": null
+    },
+    "data": {
+      "index": "genie-m01j-choice-genie-djinni",
+      "name": "Djinni",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:genie",
+        "name": "The Genie"
+      },
+      "choice_option_for": "tce:feature:genie-1-expanded-spell-list",
+      "reference_heading_zh": "氣巨靈"
+    }
+  },
+  {
+    "key": "tce:feature:genie-m01j-choice-genie-efreeti",
+    "index": "genie-m01j-choice-genie-efreeti",
+    "name": "Efreeti",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": null
+    },
+    "data": {
+      "index": "genie-m01j-choice-genie-efreeti",
+      "name": "Efreeti",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:genie",
+        "name": "The Genie"
+      },
+      "choice_option_for": "tce:feature:genie-1-expanded-spell-list",
+      "reference_heading_zh": "火巨靈"
+    }
+  },
+  {
+    "key": "tce:feature:genie-m01j-choice-genie-marid",
+    "index": "genie-m01j-choice-genie-marid",
+    "name": "Marid",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": null
+    },
+    "data": {
+      "index": "genie-m01j-choice-genie-marid",
+      "name": "Marid",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:genie",
+        "name": "The Genie"
+      },
+      "choice_option_for": "tce:feature:genie-1-expanded-spell-list",
+      "reference_heading_zh": "水巨靈"
+    }
+  },
+  {
+    "key": "tce:feature:glory-3-channel-divinity",
+    "index": "glory-3-channel-divinity",
+    "name": "Channel Divinity",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "glory-3-channel-divinity",
+      "name": "Channel Divinity",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:glory",
+        "name": "Oath of Glory"
+      },
+      "reference_heading_zh": "引導神力",
+      "reference_text_zh": "*3級榮耀之誓特性*\n\n你獲得以下引導神力選項。參考神聖誓言職業能力來了解如何使用引導神力。\n\n##### 絕倫健將 (Peerless Athlete)\n\n*3級榮耀之誓特性*\n\n以一個附贈動作，你可以使用你的引導神力以增強運動能力。10分鐘內，你在力量（運動）和敏捷（體操）檢定上獲得優勢，你的負重及能夠拖、拉、拽的重量翻倍，且你跳遠和跳高的距離增加10尺（你依然為此正常消耗移動速度）。\n\n##### 鼓舞一擊 (Inspiring Smite)\n\n*3級榮耀之誓特性*\n\n當你以至聖斬特性造成一次傷害時，你可以立即用附贈動作使用你的引導神力，使30尺內由你選擇的生物或你自身獲得臨時生命值。這些生物共獲得的臨時生命值等同於你的聖武士等級加上2d8，你可以為其隨意分配這些臨時生命值。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:glory-3-channel-divinity-option-1-peerless-athlete",
+    "index": "glory-3-channel-divinity-option-1-peerless-athlete",
+    "name": "Peerless Athlete",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "glory-3-channel-divinity-option-1-peerless-athlete",
+      "name": "Peerless Athlete",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:glory",
+        "name": "Oath of Glory"
+      },
+      "choice_option_for": "tce:feature:glory-3-channel-divinity",
+      "reference_heading_zh": "絕倫健將",
+      "reference_text_zh": "*3級榮耀之誓特性*\n\n以一個附贈動作，你可以使用你的引導神力以增強運動能力。10分鐘內，你在力量（運動）和敏捷（體操）檢定上獲得優勢，你的負重及能夠拖、拉、拽的重量翻倍，且你跳遠和跳高的距離增加10尺（你依然為此正常消耗移動速度）。"
+    }
+  },
+  {
+    "key": "tce:feature:glory-3-channel-divinity-option-2-inspiring-smite",
+    "index": "glory-3-channel-divinity-option-2-inspiring-smite",
+    "name": "Inspiring Smite",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "glory-3-channel-divinity-option-2-inspiring-smite",
+      "name": "Inspiring Smite",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:glory",
+        "name": "Oath of Glory"
+      },
+      "choice_option_for": "tce:feature:glory-3-channel-divinity",
+      "reference_heading_zh": "鼓舞一擊",
+      "reference_text_zh": "*3級榮耀之誓特性*\n\n當你以至聖斬特性造成一次傷害時，你可以立即用附贈動作使用你的引導神力，使30尺內由你選擇的生物或你自身獲得臨時生命值。這些生物共獲得的臨時生命值等同於你的聖武士等級加上2d8，你可以為其隨意分配這些臨時生命值。"
+    }
+  },
+  {
+    "key": "tce:feature:glory-3-oath-spells",
+    "index": "glory-3-oath-spells",
+    "name": "Oath Spells",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "glory-3-oath-spells",
+      "name": "Oath Spells",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:glory",
+        "name": "Oath of Glory"
+      },
+      "reference_heading_zh": "聖誓法術",
+      "reference_text_zh": "*3級榮耀之誓特性*\n\n你在下列聖武士等級時獲得相應的聖誓法術。\n\n**榮耀之誓法術**\n\n| 聖武士等級 | 法術 |\n| :--- | :--- |\n| 3rd | 《光導箭》, 《英雄氣概》 |\n| 5th | 《強化屬性》, 《魔化武器》 |\n| 9th | 《加速術》, 《防護能量》 |\n| 13th | 《強迫術》, 《行動自如術》 |\n| 17th | 《通神術》, 《焰擊術》 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:glory-3-tenets-of-glory",
+    "index": "glory-3-tenets-of-glory",
+    "name": "Tenets of Glory",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "glory-3-tenets-of-glory",
+      "name": "Tenets of Glory",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:glory",
+        "name": "Oath of Glory"
+      },
+      "reference_heading_zh": "榮耀之信條",
+      "reference_text_zh": "榮耀之誓的信條驅使著聖武士英勇地追求終將閃耀的傳奇之道。\n\n##### 行勝於言\n\n力爭以輝煌的功績成名，而非只憑空談。\n\n##### 無懼挑戰\n\n面對困難的鞭撻，也鼓勵你的夥伴和你共同面對。\n\n##### 磨練其身\n\n猶如原石荒料，潛能只在你的身體得到磨鍊時展現。\n\n##### 堅毅其魂\n\n整頓紀律，克服弱點，若非如此，有損榮耀。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:mercy-3-hand-of-harm",
+    "index": "mercy-3-hand-of-harm",
+    "name": "Hand of Harm",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "mercy-3-hand-of-harm",
+      "name": "Hand of Harm",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "tce:subclass:mercy",
+        "name": "Way of Mercy"
+      },
+      "reference_heading_zh": "奪命之手",
+      "reference_text_zh": "*3級命流宗特性*\n\n你能用氣來造成傷害。當你用徒手攻擊命中一個生物時，可以花費1點氣來額外造成等於1個你的武藝骰 + 你的感知調整值的黯蝕傷害。每回合你能使用該特性一次。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:mercy-3-hand-of-healing",
+    "index": "mercy-3-hand-of-healing",
+    "name": "Hand of Healing",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "mercy-3-hand-of-healing",
+      "name": "Hand of Healing",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "tce:subclass:mercy",
+        "name": "Way of Mercy"
+      },
+      "reference_heading_zh": "予命之手",
+      "reference_text_zh": "*3級命流宗特性*\n\n你的玄秘之觸能夠癒合傷口。以一個動作，你能花費1點氣來接觸一個生物，恢復目標1個你的武藝骰 + 你的感知調整值數量的生命值。\n\n當你使用疾風連擊時，你能在不消耗氣的情況下用此特性替換一次徒手攻擊。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:mercy-3-implements-of-mercy",
+    "index": "mercy-3-implements-of-mercy",
+    "name": "Implements of Mercy",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "mercy-3-implements-of-mercy",
+      "name": "Implements of Mercy",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "tce:subclass:mercy",
+        "name": "Way of Mercy"
+      },
+      "reference_heading_zh": "命流之器",
+      "reference_text_zh": "*3級命流宗特性*\n\n你獲得洞悉和醫藥技能熟練項，以及你獲得《草藥工具》的熟練項。\n\n你還可以獲得一個特殊的面具，當你使用這個子職的特性時，你通常會戴著它。你可以自由決定它的外觀，或者透過命流面具表來投骰隨機決定。\n\n**命流面具**\n\n| d6 | 面具外形 |\n| :--- | :--- |\n| 1 | 渡鴉 |\n| 2 | 黑白 |\n| 3 | 哭臉 |\n| 4 | 笑臉 |\n| 5 | 骷髏 |\n| 6 | 蝴蝶 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:order-1-bonus-proficiencies",
+    "index": "order-1-bonus-proficiencies",
+    "name": "Bonus Proficiencies",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "order-1-bonus-proficiencies",
+      "name": "Bonus Proficiencies",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:order",
+        "name": "Order Domain"
+      },
+      "reference_heading_zh": "額外熟練",
+      "reference_text_zh": "*1級秩序領域特性*\n\n你獲得重甲的熟練。你也獲得威嚇或說服技能的熟練（由你選擇）。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:order-1-voice-of-authority",
+    "index": "order-1-voice-of-authority",
+    "name": "Voice of Authority",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "order-1-voice-of-authority",
+      "name": "Voice of Authority",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:order",
+        "name": "Order Domain"
+      },
+      "reference_heading_zh": "權威之音",
+      "reference_text_zh": "*1級秩序領域特性*\n\n你可以呼喚律法的力量以驅使一個盟友進行攻擊。若你以一個1環或更高環的法術位施放一個法術，並指定一個盟友作為該法術的目標，則該盟友可以在法術後立即使用它的反應，對一個你所選且你能看見的生物進行一次武器攻擊。\n\n若該法術指定了多於一個盟友作為目標，則你選擇一個可以進行攻擊的盟友。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:peace-1-domain-spells",
+    "index": "peace-1-domain-spells",
+    "name": "Domain Spells",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "peace-1-domain-spells",
+      "name": "Domain Spells",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:peace",
+        "name": "Peace Domain"
+      },
+      "reference_heading_zh": "領域法術",
+      "reference_text_zh": "*1級和平領域特性*\n\n當你獲得和平領域法術表中所對應的牧師等級時，你將同時習得這些法術。檢視玩家手冊中的神聖領域職業特性來了解什麼是領域法術。\n\n**和平領域法術**\n\n| 牧師等級 | 法術 |\n| :--- | :--- |\n| 1st | 《英雄氣概》, 《聖域術》 |\n| 3rd | 《援助術》, 《守護聯結》 |\n| 5th | 《希望信標》, 《短訊術》 |\n| 7th | 《淨化靈光》, 《歐提路克魔封法球》 |\n| 9th | 《高等復原術》, 《拉瑞心靈聯結》 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:peace-1-emboldening-bond",
+    "index": "peace-1-emboldening-bond",
+    "name": "Emboldening Bond",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "peace-1-emboldening-bond",
+      "name": "Emboldening Bond",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:peace",
+        "name": "Peace Domain"
+      },
+      "reference_heading_zh": "勇氣聯結",
+      "reference_text_zh": "*1級和平領域特性*\n\n你創造出一條聯結，賦予彼此之間和平相處的人以力量。以一個動作，你可以選擇30尺內等同於你熟練加值數量的自願生物（可以包括你自己）。你在他們之間創造出一條持續10分鐘或直到你再次使用該特性的魔法聯結。當任意兩個聯結生物在彼此30尺內，其進行攻擊檢定，能力檢定或豁免檢定時，可以額外擲一次d4並加在其結果上。每個生物每回合只能加一次d4。\n\n你可以使用此特性的次數等同於你的熟練加值，當你完成一次長休時恢復所有使用次數。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "proficiency_bonus"
+        },
+        "recharge": [
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "tce:feature:peace-1-implement-of-peace",
+    "index": "peace-1-implement-of-peace",
+    "name": "Implement of Peace",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "peace-1-implement-of-peace",
+      "name": "Implement of Peace",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:peace",
+        "name": "Peace Domain"
+      },
+      "reference_heading_zh": "和平執行",
+      "reference_text_zh": "*1級和平領域特性*\n\n你獲得洞悉、表演或說服的熟練項（由你選擇）。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:phantom-3-wails-from-the-grave",
+    "index": "phantom-3-wails-from-the-grave",
+    "name": "Wails from the Grave",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "phantom-3-wails-from-the-grave",
+      "name": "Wails from the Grave",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:phantom",
+        "name": "Phantom"
+      },
+      "reference_heading_zh": "墓穴驚嚎",
+      "reference_text_zh": "*3級鬼魅特性*\n\n當你將某人推向墓穴時，你也可以溝通死亡之力，使得亡者的嚎哭短暫環繞著新的目標。當你在你的回合對於一個生物造成了偷襲傷害之後，你可以立即選擇該生物30尺內第二個可見生物，擲你一半的偷襲骰（向上取整），對其造成等同於結果的黯蝕傷害。\n\n你可以使用此特性的次數等同於你的熟練加值，當你完成一次長休時恢復所有使用次數。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "proficiency_bonus"
+        },
+        "recharge": [
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "tce:feature:phantom-3-whispers-of-the-dead",
+    "index": "phantom-3-whispers-of-the-dead",
+    "name": "Whispers of the Dead",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "phantom-3-whispers-of-the-dead",
+      "name": "Whispers of the Dead",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:phantom",
+        "name": "Phantom"
+      },
+      "reference_heading_zh": "亡者餘聲",
+      "reference_text_zh": "*3級鬼魅特性*\n\n死者的迴響依附著你，一個幽靈般的存在會向你分享它的知識。每當你完成一次短休或長休時，你可以選擇一項你沒有熟練的工具或者技能並且獲得該熟練，當你用這個能力來選擇一項不同的熟練時，你會失去原來的熟練項。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:psi-warrior-3-psionic-power",
+    "index": "psi-warrior-3-psionic-power",
+    "name": "Psionic Power",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "psi-warrior-3-psionic-power",
+      "name": "Psionic Power",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:psi-warrior",
+        "name": "Psi Warrior"
+      },
+      "reference_heading_zh": "靈能力量",
+      "reference_text_zh": "*3級靈能武士特性*\n\n你內心擁有一個靈能力量的源泉。這股能量表現為每個d6的靈能骰。你擁有兩倍熟練加值的靈能骰數量，且它們為你所擁有的各種心靈異能提供能量，詳情如下。\n\n你在使用一些能力時需要消耗靈能骰，如異能描述中所述，如果一些異能在你的靈能骰全部擲完後還需要你使用一個靈能骰，你就不能使用該異能。你可以在完成一次長休後恢復所有已使用的靈能骰。此外，你可以使用一個附贈動作重新獲得一個已使用的靈能骰，但你在完成一次短休或長休之前不能再次獲得。\n\n當你在此職業升級到特定等級時，你的靈能骰大小有所增長：5級（d8），11級（d10），17級（d12）。\n\n可以在以下異能使用你的靈能骰。\n\n##### 庇護力場 (Protective Field)\n\n當你或者另一個對你30尺內可見的生物受到傷害，你可以使用一個反應動作消耗一枚靈能骰，對其降低等同於靈能骰骰出的數值加你的智力調整值的傷害（最小為1），如同你創造了一面瞬間的念力盾牌。\n\n##### 靈能擊打 (Psionic Strike)\n\n你可以用靈能驅動你的武器。你的每回合一次，當你擊中並對30尺以內的目標造成武器傷害，你可以立即消耗一個靈能骰，對目標造成等同於靈能骰骰出的數值加你的智力調整值的力場傷害。\n\n##### 念力控物 (Telekinetic Movement)\n\n你可以用意念移動一個物體或生物。你可以使用一個動作選中一個最多大型的物體或一個除你以外的自願生物。如果目標在對你30尺內且可視，你可以將其移動至多30尺至一個對你可見的空地。另外，如果目標是一個小物件，你可以從你的手中給出或收回。無論採取哪種方式，你都可以或水平、或垂直、或兩者都使用地移動它。當你使用該異能時，你無法再使用該能力直到你完成一次短休或長休，除非你消耗一個靈能骰來再次使用該異能。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:psi-warrior-7-psi-powered-leap",
+    "index": "psi-warrior-7-psi-powered-leap",
+    "name": "Psi-Powered Leap.",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "psi-warrior-7-psi-powered-leap",
+      "name": "Psi-Powered Leap.",
+      "level": 7,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:psi-warrior",
+        "name": "Psi Warrior"
+      },
+      "reference_heading_zh": "靈力躍動",
+      "reference_text_zh": "你可以使用一個附贈動作用你的意志來驅使你的身體。你獲得等同於兩倍步行速度的飛行速度直到該回合結束。每當你使用這個附贈動作，你無法再次使用該異能直到你完成一次短休或長休，除非你消耗一個靈能骰來再次使用該異能。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "fixed",
+          "value": 1
+        },
+        "recharge": [
+          "short_rest",
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "tce:feature:psi-warrior-7-telekinetic-thrust",
+    "index": "psi-warrior-7-telekinetic-thrust",
+    "name": "Telekinetic Thrust.",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "psi-warrior-7-telekinetic-thrust",
+      "name": "Telekinetic Thrust.",
+      "level": 7,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:psi-warrior",
+        "name": "Psi Warrior"
+      },
+      "reference_heading_zh": "念力突刺",
+      "reference_text_zh": "當你使用靈能擊打對一個目標造成傷害時，你可以使目標進行一次力量豁免來對抗DC等於8 + 你的熟練加值 + 你的智力調整值。如果豁免失敗，你可以將目標擊倒伏地或者將其在任意方向水平移動至多10尺。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:rune-knight-3-bonus-proficiencies",
+    "index": "rune-knight-3-bonus-proficiencies",
+    "name": "Bonus Proficiencies",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "rune-knight-3-bonus-proficiencies",
+      "name": "Bonus Proficiencies",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:rune-knight",
+        "name": "Rune Knight"
+      },
+      "reference_heading_zh": "額外熟練項",
+      "reference_text_zh": "*3級符文騎士特性*\n\n你獲得對於《鐵匠工具》的熟練項，並且你學會了說、讀和寫Giant。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:rune-knight-3-giant-s-might",
+    "index": "rune-knight-3-giant-s-might",
+    "name": "Giant's Might",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "rune-knight-3-giant-s-might",
+      "name": "Giant's Might",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:rune-knight",
+        "name": "Rune Knight"
+      },
+      "reference_heading_zh": "巨人之力",
+      "reference_text_zh": "*3級符文騎士特性*\n\n你已經學會了如何使用巨人之力灌注自身。你可以使用一個附贈動作，魔法性地獲得以下能力，持續一分鐘：\n\n- 如果你的體型小於大型，你和你所穿戴的所有物品一起變為大型。如果你缺少變為大型的空間，則你的體型無法發生變化。\n- 你在力量檢定和力量豁免檢定上獲得優勢。\n- 你的每回合內一次，你的武器攻擊或徒手打擊可以在擊中後對目標造成額外1d6的傷害。\n\n該特性的可使用次數等於你的熟練加值，且你可以在完成一次長休之後恢復所有已使用的次數。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "proficiency_bonus"
+        },
+        "recharge": [
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "tce:feature:rune-knight-3-rune-carver",
+    "index": "rune-knight-3-rune-carver",
+    "name": "Rune Carver",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "rune-knight-3-rune-carver",
+      "name": "Rune Carver",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:rune-knight",
+        "name": "Rune Knight"
+      },
+      "reference_heading_zh": "符文雕刻者",
+      "reference_text_zh": "*3級符文騎士特性*\n\n你可以使用魔法符文來增強你的裝備。你可以從下列的被描述的符文當中，選擇並學會兩個符文，且每當你在此職業中升一級，你可以從此特性中選擇一個不同的符文來替換一個你已知的符文。當你達到特定的職業等級，你可以學會更多的符文，具體數量如\"符文已知表\"所示。\n\n每當你完成了一次長休，你可以接觸數量等於你已知符文數物品，並在每個物品上銘刻不同的符文。符合條件的物品必須為一把武器、一套盔甲、一面盾牌、一件首飾或者任何其他你可以穿著或手持的物品。你的符文會保留在物品上直到你完成一次長休，且一件物品同時只能承載你的一個符文。\n\n**符文已知**\n\n| 戰士等級 | 符文數量 |\n| :--- | :--- |\n| 3rd | 2 |\n| 7th | 3 |\n| 10th | 4 |\n| 15th | 5 |\n\n當你研習符文時，下列的符文成為了你的可選項。如果一個符文具有等級需求，你的戰士等級必須達到相應等級才能研習該符文。如果一個符文需要透過豁免檢定，你的符文魔法的豁免DC等於8 + 你的熟練加值 + 你的體質調整值。\n\n##### 雲之符文 (Cloud Rune)\n\n該符文模擬了一些雲巨人使用的魔法詐術。當你穿著或持有一個銘刻此符文的物品時，你在敏捷（巧手）和魅力（欺瞞）檢定上具有優勢。\n\n此外，當你或一個你30尺內可視生物被一次攻擊檢定擊中，你可以用你的反應啟用此符文並選擇30尺內除攻擊者外另一生物。此攻擊檢定的目標改為該生物，且使用同一骰值。此魔法帶來的攻擊效果無視其距離。一旦你啟用此符文，你無法再如此直到你完成一次短休或長休。\n\n##### 火之符文 (Fire Rune)\n\n該符文中的魔力引導了偉大鐵匠的高超技藝。當你穿著或持有一個銘刻此符文的物品，你在使用具有熟練項的工具進行能力檢定時，你的熟練加值翻倍。\n\n此外，當你使用武器攻擊並命中一個生物，你可以啟用此符文來召喚熾熱鐐銬：目標受到額外2d6火焰傷害，且其必須透過一次力量豁免檢定，如果失敗則被束縛1分鐘。當目標被熾熱鐐銬束縛時，目標在它每回合開始時受到2d6火焰傷害。目標可以在每個自己回合結束時重複此豁免檢定，成功則放逐鐐銬。每當你啟用該符文，你無法再如此直到你完成一次短休或長休。\n\n##### 霜之符文 (Frost Rune)\n\n該符文的魔力喚起了諸如霜巨人般在冬日荒野中生存下來的力量。當你穿著或持有一個銘刻此符文的物品，你在感知（馴獸）檢定和魅力（威嚇）檢定上獲得優勢。\n\n此外，你可以用一個附贈動作啟用該符文來提高你的體能。十分鐘內，你所有與力量或體質有關的屬性和豁免檢定獲得+2的加值。每當你啟用該符文，你無法再如此直到你完成一次短休或長休。\n\n##### 石之符文 (Stone Rune)\n\n該符文的魔力可以引導和石巨人相關的智慧。當你穿著或持有一個銘刻此符文的物品，你在感知（洞悉）的檢定上獲得優勢，且你獲得120尺的黑暗視覺 。\n\n此外，當一個你30尺內可見生物結束它的回合時，你可以使用一個反應動作來啟用該符文，並強迫該生物進行一次感知豁免。若失敗，則該生物被你魅惑1分鐘。如果以該形式被魅惑，該生物移動速度降為0且無力，陷入夢幻般的麻木狀態。目標可以在每個自己回合結束時重複此豁免，成功則解除該狀態。每當你啟用該符文，你無法再如此直到你完成一次短休或長休。\n\n##### 山丘符文（7級或更高）\n\n該符文的魔力賦予如山丘巨人一般的堅韌。當你穿著或持有一個銘刻此符文的物品，你在對抗中毒狀態的豁免檢定上具有優勢，且你對於毒素傷害具有抗性。\n\n此外，你可以用一個附贈動作啟用該符文，並獲得1分鐘的鈍擊、揮砍和穿刺傷害抗性。每當你啟用該符文，你無法再如此直到你完成一次短休或長休。\n\n##### 風暴符文（7級或更高）\n\n透過使用該符文，你可以像一位風暴巨人預言者一樣瞥見未來。當你穿著或持有一個銘刻此符文的物品，你在智力（奧秘）檢定上獲得優勢，且只要你未無力，你不會被突襲。\n\n此外，你可以用一個附贈動作啟用該符文來進入先知形態，持續1分鐘或直到你無力。在該形態結束之前，當你或另一個你60尺內可見的生物進行一次攻擊檢定、一次豁免檢定或一次能力檢定時，你可以用反應使這次檢定獲得優勢或劣勢。每當你啟用該符文，你無法再如此直到你完成一次短休或長休。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:rune-knight-3-rune-carver-option-1-cloud-rune",
+    "index": "rune-knight-3-rune-carver-option-1-cloud-rune",
+    "name": "Cloud Rune",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "rune-knight-3-rune-carver-option-1-cloud-rune",
+      "name": "Cloud Rune",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:rune-knight",
+        "name": "Rune Knight"
+      },
+      "choice_option_for": "tce:feature:rune-knight-3-rune-carver",
+      "reference_heading_zh": "雲之符文",
+      "reference_text_zh": "該符文模擬了一些雲巨人使用的魔法詐術。當你穿著或持有一個銘刻此符文的物品時，你在敏捷（巧手）和魅力（欺瞞）檢定上具有優勢。\n\n此外，當你或一個你30尺內可視生物被一次攻擊檢定擊中，你可以用你的反應啟用此符文並選擇30尺內除攻擊者外另一生物。此攻擊檢定的目標改為該生物，且使用同一骰值。此魔法帶來的攻擊效果無視其距離。一旦你啟用此符文，你無法再如此直到你完成一次短休或長休。"
+    }
+  },
+  {
+    "key": "tce:feature:rune-knight-3-rune-carver-option-2-fire-rune",
+    "index": "rune-knight-3-rune-carver-option-2-fire-rune",
+    "name": "Fire Rune",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "rune-knight-3-rune-carver-option-2-fire-rune",
+      "name": "Fire Rune",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:rune-knight",
+        "name": "Rune Knight"
+      },
+      "choice_option_for": "tce:feature:rune-knight-3-rune-carver",
+      "reference_heading_zh": "火之符文",
+      "reference_text_zh": "該符文中的魔力引導了偉大鐵匠的高超技藝。當你穿著或持有一個銘刻此符文的物品，你在使用具有熟練項的工具進行能力檢定時，你的熟練加值翻倍。\n\n此外，當你使用武器攻擊並命中一個生物，你可以啟用此符文來召喚熾熱鐐銬：目標受到額外2d6火焰傷害，且其必須透過一次力量豁免檢定，如果失敗則被束縛1分鐘。當目標被熾熱鐐銬束縛時，目標在它每回合開始時受到2d6火焰傷害。目標可以在每個自己回合結束時重複此豁免檢定，成功則放逐鐐銬。每當你啟用該符文，你無法再如此直到你完成一次短休或長休。"
+    }
+  },
+  {
+    "key": "tce:feature:rune-knight-3-rune-carver-option-3-frost-rune",
+    "index": "rune-knight-3-rune-carver-option-3-frost-rune",
+    "name": "Frost Rune",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "rune-knight-3-rune-carver-option-3-frost-rune",
+      "name": "Frost Rune",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:rune-knight",
+        "name": "Rune Knight"
+      },
+      "choice_option_for": "tce:feature:rune-knight-3-rune-carver",
+      "reference_heading_zh": "霜之符文",
+      "reference_text_zh": "該符文的魔力喚起了諸如霜巨人般在冬日荒野中生存下來的力量。當你穿著或持有一個銘刻此符文的物品，你在感知（馴獸）檢定和魅力（威嚇）檢定上獲得優勢。\n\n此外，你可以用一個附贈動作啟用該符文來提高你的體能。十分鐘內，你所有與力量或體質有關的屬性和豁免檢定獲得+2的加值。每當你啟用該符文，你無法再如此直到你完成一次短休或長休。"
+    }
+  },
+  {
+    "key": "tce:feature:rune-knight-3-rune-carver-option-4-stone-rune",
+    "index": "rune-knight-3-rune-carver-option-4-stone-rune",
+    "name": "Stone Rune",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "rune-knight-3-rune-carver-option-4-stone-rune",
+      "name": "Stone Rune",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:rune-knight",
+        "name": "Rune Knight"
+      },
+      "choice_option_for": "tce:feature:rune-knight-3-rune-carver",
+      "reference_heading_zh": "石之符文",
+      "reference_text_zh": "該符文的魔力可以引導和石巨人相關的智慧。當你穿著或持有一個銘刻此符文的物品，你在感知（洞悉）的檢定上獲得優勢，且你獲得120尺的黑暗視覺 。\n\n此外，當一個你30尺內可見生物結束它的回合時，你可以使用一個反應動作來啟用該符文，並強迫該生物進行一次感知豁免。若失敗，則該生物被你魅惑1分鐘。如果以該形式被魅惑，該生物移動速度降為0且無力，陷入夢幻般的麻木狀態。目標可以在每個自己回合結束時重複此豁免，成功則解除該狀態。每當你啟用該符文，你無法再如此直到你完成一次短休或長休。"
+    }
+  },
+  {
+    "key": "tce:feature:rune-knight-3-rune-carver-option-hill-rune",
+    "index": "rune-knight-3-rune-carver-option-hill-rune",
+    "name": "Hill Rune",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "rune-knight-3-rune-carver-option-hill-rune",
+      "name": "Hill Rune",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:rune-knight",
+        "name": "Rune Knight"
+      },
+      "choice_option_for": "tce:feature:rune-knight-3-rune-carver",
+      "reference_heading_zh": "山丘符文（7級或更高）",
+      "reference_text_zh": "該符文的魔力賦予如山丘巨人一般的堅韌。當你穿著或持有一個銘刻此符文的物品，你在對抗中毒狀態的豁免檢定上具有優勢，且你對於毒素傷害具有抗性。\n\n此外，你可以用一個附贈動作啟用該符文，並獲得1分鐘的鈍擊、揮砍和穿刺傷害抗性。每當你啟用該符文，你無法再如此直到你完成一次短休或長休。"
+    }
+  },
+  {
+    "key": "tce:feature:rune-knight-3-rune-carver-option-storm-rune",
+    "index": "rune-knight-3-rune-carver-option-storm-rune",
+    "name": "Storm Rune",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "rune-knight-3-rune-carver-option-storm-rune",
+      "name": "Storm Rune",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:rune-knight",
+        "name": "Rune Knight"
+      },
+      "choice_option_for": "tce:feature:rune-knight-3-rune-carver",
+      "reference_heading_zh": "風暴符文（7級或更高）",
+      "reference_text_zh": "透過使用該符文，你可以像一位風暴巨人預言者一樣瞥見未來。當你穿著或持有一個銘刻此符文的物品，你在智力（奧秘）檢定上獲得優勢，且只要你未無力，你不會被突襲。\n\n此外，你可以用一個附贈動作啟用該符文來進入先知形態，持續1分鐘或直到你無力。在該形態結束之前，當你或另一個你60尺內可見的生物進行一次攻擊檢定、一次豁免檢定或一次能力檢定時，你可以用反應使這次檢定獲得優勢或劣勢。每當你啟用該符文，你無法再如此直到你完成一次短休或長休。"
+    }
+  },
+  {
+    "key": "tce:feature:scribes-2-awakened-spellbook",
+    "index": "scribes-2-awakened-spellbook",
+    "name": "Awakened Spellbook",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "scribes-2-awakened-spellbook",
+      "name": "Awakened Spellbook",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "tce:subclass:scribes",
+        "name": "Order of Scribes"
+      },
+      "reference_heading_zh": "覺醒魔典",
+      "reference_text_zh": "*2級書士會特性*\n\n透過特別準備的墨水和書士會所傳承的咒語，你喚醒了法術書中具有智慧的奧法存在。\n\n當你持握法術時，它將為你提供以下增益：\n\n- 你可以將本書用作施展法師法術的法器。\n- 當你消耗法術位施展一個法師法術時，你可以將它的傷害型別替換為你法術書內另一個法術的傷害型別：你的法術書用魔法改變了此次施法所用的奧法公式。後一個法術的等級必須與你花費的法術位等級相同。\n- 當你用儀式施法施展一個法術時，你可以使用法術的正常施法時間，而不用額外增加10分鐘。你必須完成一次長休才能再次使用此增益。\n\n如有必要，你可以在一次短休時用你的法師之筆，在空白書本或是你與之同調的魔法法術書上畫下奧術魔印。短休結束時，你原本法術書內的意識將會帶著舊書它所記載的所有法術轉移到新書之中、將其變為你的法術書。如果舊書依舊在某處存在，它上面所記載的所有法術將消失。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "fixed",
+          "value": 1
+        },
+        "recharge": [
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "tce:feature:scribes-2-wizardly-quill",
+    "index": "scribes-2-wizardly-quill",
+    "name": "Wizardly Quill",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "scribes-2-wizardly-quill",
+      "name": "Wizardly Quill",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "tce:subclass:scribes",
+        "name": "Order of Scribes"
+      },
+      "reference_heading_zh": "法師之筆",
+      "reference_text_zh": "*2級書士會特性*\n\n以一個附贈動作，你能用魔法創造一支微型羽毛筆。這支魔法羽毛筆具有以下特性：\n\n- 這支毛筆不需要墨水。當你用它書寫時，它會在用於書寫的表面上自行生成墨水，顏色由你選擇。\n- 若你使用這根羽毛筆來將法術抄入法術書，你只需花費每個法術等級2分鐘的時間。\n- 若你用羽毛筆書寫的文字在你身邊5尺範圍之內，你可以用一個附贈動作在文字上方晃動羽毛將其消除。\n\n這根羽毛筆將在你創造另一支筆或是死亡時消失。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:soulknife-3-psionic-power",
+    "index": "soulknife-3-psionic-power",
+    "name": "Psionic Power",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "soulknife-3-psionic-power",
+      "name": "Psionic Power",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:soulknife",
+        "name": "Soulknife"
+      },
+      "reference_heading_zh": "靈能天賦",
+      "reference_text_zh": "*3級魂刃特性*\n\n你的內在潛藏著一個心靈異能的源泉，當你以各種形式引導它時，其能量會上下起伏。這一力量被表現為你的靈能骰，它的起始大小是d6. 你擁有等同於你熟練加值兩倍數量的靈能骰，並且他們供你發揮出你擁有的多種靈能力量，這些選項在後面列出。\n\n一些你的能力會消耗它們使用的靈能骰，如能力中確切描述的一樣，而且你不能在你靈能骰全部用完的時候使用要求你使用靈能骰的能力。你在完成一次長休之後恢復所有的靈能骰。此外，作為一個附贈動作，你可以恢復一個你消耗的靈能骰，但是直到你完成一次短休或者長休之前，你都無法再次這樣做。\n\n每當你在這個職業中達到特定等級，你的靈能骰會增大，5級達到(d8),11級(d10),17級(d12).\n\n下面的能力會用到你的靈能骰：\n\n##### 靈能訣竅 (Psi-Bolstered Knack)\n\n當你接受的常規訓練沒法讓你搞定時，你的心靈異能會幫助你：如果你使用具有熟練項的技能或工具進行一次能力檢定，但失敗時，你可以擲靈能天賦骰，將擲骰結果加到檢定結果中，這可能會讓失敗的檢定變為成功。你只在靈能讓檢定成功時消耗靈能骰。\n\n##### 心靈低語 (Psychic Whispers)\n\n你能夠利用靈能力在自己和他人之間建立起基於心靈感應的交流——在需要無聲滲透時這堪稱完美。以一個動作，擲一個靈能骰，從可見的生物中選擇一到至多等同於你熟練加值數量的生物，你和選擇的生物獲得透過心靈感應進行交流的能力。在等同於靈能骰結果個小時內，你可以和選擇生物進行雙向的心靈感應交流，但在傳送或接收資訊時（無需動作），你和選擇生物之間的距離不可超過一里。不會說任何語言的生物無法透過此方法進行交流，而且生物可以隨時終止心靈感應的連結（無需動作）。你和連結的生物不需要能說同一種語言也能互相理解話語。\n\n你每次長休後的第一次使用這個能力不會消耗你的靈能骰，在其它情況下使用這個能力的話，你會消耗靈能骰。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:soulknife-3-psionic-power-option-1-psi-bolstered-knack",
+    "index": "soulknife-3-psionic-power-option-1-psi-bolstered-knack",
+    "name": "Psi-Bolstered Knack",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "soulknife-3-psionic-power-option-1-psi-bolstered-knack",
+      "name": "Psi-Bolstered Knack",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:soulknife",
+        "name": "Soulknife"
+      },
+      "choice_option_for": "tce:feature:soulknife-3-psionic-power",
+      "reference_heading_zh": "靈能訣竅",
+      "reference_text_zh": "當你接受的常規訓練沒法讓你搞定時，你的心靈異能會幫助你：如果你使用具有熟練項的技能或工具進行一次能力檢定，但失敗時，你可以擲靈能天賦骰，將擲骰結果加到檢定結果中，這可能會讓失敗的檢定變為成功。你只在靈能讓檢定成功時消耗靈能骰。"
+    }
+  },
+  {
+    "key": "tce:feature:soulknife-3-psionic-power-option-2-psychic-whispers",
+    "index": "soulknife-3-psionic-power-option-2-psychic-whispers",
+    "name": "Psychic Whispers",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "soulknife-3-psionic-power-option-2-psychic-whispers",
+      "name": "Psychic Whispers",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:soulknife",
+        "name": "Soulknife"
+      },
+      "choice_option_for": "tce:feature:soulknife-3-psionic-power",
+      "reference_heading_zh": "心靈低語",
+      "reference_text_zh": "你能夠利用靈能力在自己和他人之間建立起基於心靈感應的交流——在需要無聲滲透時這堪稱完美。以一個動作，擲一個靈能骰，從可見的生物中選擇一到至多等同於你熟練加值數量的生物，你和選擇的生物獲得透過心靈感應進行交流的能力。在等同於靈能骰結果個小時內，你可以和選擇生物進行雙向的心靈感應交流，但在傳送或接收資訊時（無需動作），你和選擇生物之間的距離不可超過一里。不會說任何語言的生物無法透過此方法進行交流，而且生物可以隨時終止心靈感應的連結（無需動作）。你和連結的生物不需要能說同一種語言也能互相理解話語。\n\n你每次長休後的第一次使用這個能力不會消耗你的靈能骰，在其它情況下使用這個能力的話，你會消耗靈能骰。"
+    }
+  },
+  {
+    "key": "tce:feature:soulknife-3-psychic-blades",
+    "index": "soulknife-3-psychic-blades",
+    "name": "Psychic Blades",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "soulknife-3-psychic-blades",
+      "name": "Psychic Blades",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:soulknife",
+        "name": "Soulknife"
+      },
+      "reference_heading_zh": "念刃",
+      "reference_text_zh": "*3級魂刃特性*\n\n你能將自己的心靈異能塑造為由靈能構成的閃亮刀刃。當使用攻擊動作時，你能以空閒的手中塑造靈能之刃，並使用它來進行攻擊。念刃是一種魔法的簡易近戰武器，具有靈巧和投擲特性。它的常規射程為60尺，沒有最大射程，在命中後造成1d6 + 你用於攻擊的屬性調整值的心靈傷害。念刃會在擊中或未擊中目標後立即消失，如果它造成傷害，其傷害不會在目標上留下痕跡。\n\n當你使用念刃攻擊後，只要你的另一隻手空閒，就能以一個附贈動作塑造第二把念刃再進行一次近戰或遠端武器攻擊。此附贈攻擊的傷害骰是1d4，而不是1d6。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:soulknife-9-homing-strikes",
+    "index": "soulknife-9-homing-strikes",
+    "name": "Homing Strikes",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "soulknife-9-homing-strikes",
+      "name": "Homing Strikes",
+      "level": 9,
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:soulknife",
+        "name": "Soulknife"
+      },
+      "reference_heading_zh": "尋的攻擊",
+      "reference_text_zh": "如果在使用念刃進行的攻擊中失手，你能擲靈能骰，將擲骰結果加到這次攻擊檢定中。如果這會使攻擊變為命中，你將消耗一個靈能骰。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:soulknife-9-psychic-teleportation",
+    "index": "soulknife-9-psychic-teleportation",
+    "name": "Psychic Teleportation",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "soulknife-9-psychic-teleportation",
+      "name": "Psychic Teleportation",
+      "level": 9,
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:soulknife",
+        "name": "Soulknife"
+      },
+      "reference_heading_zh": "心靈傳送",
+      "reference_text_zh": "如果你的靈能天賦骰可用，你能透過投擲念刃來將自己傳送到其他地方。以一個附贈動作，你塑造一把念刃，消耗並擲一個靈能骰，將念刃投擲到至多距離靈能骰結果數字10倍尺數的可見空閒區域。你傳送到目標位置，同時念刃消失。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:spores-2-circle-spells",
+    "index": "spores-2-circle-spells",
+    "name": "Circle Spells",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "spores-2-circle-spells",
+      "name": "Circle Spells",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:spores",
+        "name": "Circle of Spores"
+      },
+      "reference_heading_zh": "結社法術",
+      "reference_text_zh": "*2級孢子結社特性*\n\n你與真菌之間形成了共生連結，且你踏入生死迴圈的能力使你獲得特定的法術。你學會《寒顫之觸》戲法。在3級、5級、7級、和9級時，你將獲得孢子結社法術表中在該等級所對應的法術。\n\n一旦你獲得其中一個這些法術，你將永遠視作已經準備了它，且它不會計入你每日可準備的法術數量中。若你獲得一個不在德魯伊法術列表上的法術，則該法術對你而言仍然視作德魯伊法術。\n\n**孢子結社法術**\n\n| 德魯伊等級 | 結社法術 |\n| :--- | :--- |\n| 3級 | 《目盲/耳聾術》, 《遺體防腐》 |\n| 5級 | 《活化死屍》, 《氣化形體》 |\n| 7級 | 《枯萎術》, 《困惑術》 |\n| 9級 | 《死雲術》, 《疫病術》 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:spores-2-halo-of-spores",
+    "index": "spores-2-halo-of-spores",
+    "name": "Halo of Spores",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "spores-2-halo-of-spores",
+      "name": "Halo of Spores",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:spores",
+        "name": "Circle of Spores"
+      },
+      "reference_heading_zh": "孢子光環",
+      "reference_text_zh": "*2級孢子結社特性*\n\n你被不可見的壞死孢子給環繞，它們是無害的，直到你將它們釋放到附近的一個生物上。當一個你所能看見的生物移動到距離你10尺內的空間，或在該處開始它的回合，你可以使用你的反應，除非該生物成功透過一次對抗你法術豁免DC的體質豁免，否則該生物將受到1d4黯蝕傷害。這個黯蝕傷害將在6級時增加至1d6，10級時1d8，14級時1d10。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:spores-2-symbiotic-entity",
+    "index": "spores-2-symbiotic-entity",
+    "name": "Symbiotic Entity",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "spores-2-symbiotic-entity",
+      "name": "Symbiotic Entity",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:spores",
+        "name": "Circle of Spores"
+      },
+      "reference_heading_zh": "共生實體",
+      "reference_text_zh": "*2級孢子結社特性*\n\n你獲得了將魔法能量引導到你孢子的能力。以一個動作，你可以消耗一次你荒野形態能力的使用次數以喚醒這些孢子，而非轉變成野獸型態。當你這麼做時，你獲得每個此職業等級4點的臨時生命值。當這個能力被啟動時，你獲得下列好處：\n\n- 當你的孢子光環能力造成傷害時，骰第二次傷害骰，並將之加入傷害總和。\n- 你的近戰武器攻擊將對任何它命中的目標造成額外的1d6黯蝕傷害。\n\n這些好處將會持續10分鐘，或直到你失去所有這些臨時生命值、或直到你再次使用你的荒野形態。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:stars-2-star-map",
+    "index": "stars-2-star-map",
+    "name": "Star Map",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "stars-2-star-map",
+      "name": "Star Map",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:stars",
+        "name": "Circle of Stars"
+      },
+      "reference_heading_zh": "星圖",
+      "reference_text_zh": "*2級星辰結社特性*\n\n作為你天文學研究的一部分，你創造了一個星圖。它是一個微型物體，可以作為你德魯伊法術的法器。你透過在星圖列表上擲骰或選擇一個來確定它的形態。\n\n**星圖形態**\n\n| d6 | 星圖樣式 |\n| :--- | :--- |\n| 1 | 一幅佈滿星座圖列的卷軸 |\n| 2 | 一塊鑽有細孔的石板 |\n| 3 | 一張斑點梟熊皮，標有凸痕記號 |\n| 4 | 一套黑檀木封皮地圖集 |\n| 5 | 一塊遇光會投射出星辰軌跡的水晶 |\n| 6 | 描繪星座排列的玻璃圓盤 |\n\n當你持握這件星圖時，你獲得這些好處：\n\n- 你已知《神導術》戲法。\n- 你獲得準備《光導箭》。它對你來說視作德魯伊法術，且不計入你的每日準備法術上限。\n- 你可以施放《光導箭》而無需消耗法術位。你可以這樣做的次數等同於你的熟練加值，且在你完成一次長休後會恢復所有已消耗使用次數。\n\n如果你丟失了星圖，你可以舉行一場為時一小時的儀式來使用魔法創造一個替代品。這一儀式可以在一場短休或長休時舉行，並會摧毀先前的星圖。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "proficiency_bonus"
+        },
+        "recharge": [
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "tce:feature:stars-2-starry-form",
+    "index": "stars-2-starry-form",
+    "name": "Starry Form",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "stars-2-starry-form",
+      "name": "Starry Form",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:stars",
+        "name": "Circle of Stars"
+      },
+      "reference_heading_zh": "星耀形態",
+      "reference_text_zh": "*2級星辰結社特性*\n\n作為一個附贈動作，你可以消耗一次荒野形態使用次數以呈現一個星耀形態，而不是變化為野獸形態。\n\n當處於星耀形態時，你保留你的遊戲資料，但你的身體變得明亮；你的關節星光熠熠並有如星圖一般由亮線連線。這一形態散發出10尺範圍明亮光照以及其外10尺範圍昏暗光照。這一形態持續10分鐘。如果你解除它（無需動作）、無力、死亡或再次使用此特性，它就會提前結束。\n\n每當你化身星耀形態，選擇以下哪個星座在你身上閃耀；你的選擇為你在形態中獲得特定好處：\n\n##### 射手座\n\n一個弓箭手星座於你身上浮現。當你啟用這個形態時，你可以在它持續的後續回合使用一個附贈動作進行一次遠端法術攻擊，對你60尺內的一個生物射出一發光箭。命中時，此次攻擊造成的光耀傷害等同於1d8 + 你的感知調整值。\n\n##### 聖盃座\n\n一個予命聖盃星座於你身上浮現。每當你使用法術位施展生物生命值的法術，你或你30尺內的另一生物可以回覆等同於1d8 + 你的感知調整值的生命值。\n\n##### 巨龍座\n\n一個智龍星座於你身上浮現。當你進行一次智力或感知檢定或是進行一次體質豁免來維持法術專注時，你可以將d20中9或以下的骰值視為10。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:stars-2-starry-form-option-1-archer",
+    "index": "stars-2-starry-form-option-1-archer",
+    "name": "Archer",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "stars-2-starry-form-option-1-archer",
+      "name": "Archer",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:stars",
+        "name": "Circle of Stars"
+      },
+      "choice_option_for": "tce:feature:stars-2-starry-form",
+      "reference_heading_zh": "射手座",
+      "reference_text_zh": "一個弓箭手星座於你身上浮現。當你啟用這個形態時，你可以在它持續的後續回合使用一個附贈動作進行一次遠端法術攻擊，對你60尺內的一個生物射出一發光箭。命中時，此次攻擊造成的光耀傷害等同於1d8 + 你的感知調整值。"
+    }
+  },
+  {
+    "key": "tce:feature:stars-2-starry-form-option-2-chalice",
+    "index": "stars-2-starry-form-option-2-chalice",
+    "name": "Chalice",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "stars-2-starry-form-option-2-chalice",
+      "name": "Chalice",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:stars",
+        "name": "Circle of Stars"
+      },
+      "choice_option_for": "tce:feature:stars-2-starry-form",
+      "reference_heading_zh": "聖盃座",
+      "reference_text_zh": "一個予命聖盃星座於你身上浮現。每當你使用法術位施展生物生命值的法術，你或你30尺內的另一生物可以回覆等同於1d8 + 你的感知調整值的生命值。"
+    }
+  },
+  {
+    "key": "tce:feature:stars-2-starry-form-option-3-dragon",
+    "index": "stars-2-starry-form-option-3-dragon",
+    "name": "Dragon",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "stars-2-starry-form-option-3-dragon",
+      "name": "Dragon",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:stars",
+        "name": "Circle of Stars"
+      },
+      "choice_option_for": "tce:feature:stars-2-starry-form",
+      "reference_heading_zh": "巨龍座",
+      "reference_text_zh": "一個智龍星座於你身上浮現。當你進行一次智力或感知檢定或是進行一次體質豁免來維持法術專注時，你可以將d20中9或以下的骰值視為10。"
+    }
+  },
+  {
+    "key": "tce:feature:swarmkeeper-3-gathered-swarm",
+    "index": "swarmkeeper-3-gathered-swarm",
+    "name": "Gathered Swarm",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "swarmkeeper-3-gathered-swarm",
+      "name": "Gathered Swarm",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass": {
+        "key": "tce:subclass:swarmkeeper",
+        "name": "Swarmkeeper"
+      },
+      "reference_heading_zh": "蜂聚叢集",
+      "reference_text_zh": "*3級叢集守衛特性*\n\n無形自然精魂形成的叢集與你形影不離並會在戰鬥中對你施以援手。直到你死亡，叢集會存在於你的空間中，在你身上爬行或在你周身的空間裡飛舞或竄動。你決定叢集的外觀，或者你透過按照叢集外觀表格擲骰生成其外表。\n\n**叢集外觀**\n\n| d4 | 外觀 |\n| :--- | :--- |\n| 1 | 群聚的昆蟲 |\n| 2 | 微小的枯枝怪 |\n| 3 | 飛舞的群鳥 |\n| 4 | 好動的皮克精 |\n\n在你的回合中每回合一次，當你以一次攻擊命中一個生物之後，你能讓叢集以以下一種方式助你一臂之力：\n\n- 這次攻擊的目標因叢集受到1d6穿刺傷害。\n- 這次攻擊的目標必須成功透過對抗你法術DC的力量豁免檢定否則被叢集朝你選擇的方向水平移動最多15尺。\n- 你被叢集朝著你所選擇的方向水平移動5尺。\n\n> ### 【邊欄】這是你的叢集\n>\n> 一位叢集守衛的叢集和法術反應了角色與自然精魂的聯絡。在遊戲中抓住機會描述你自己的叢集和遊俠法術。比方說，當你的遊俠施展《氣化形體》時，施法物件可能會消失在他自己的叢集中，而非變為一團霧氣，而《秘法眼》則可以創造出一部分分離的叢集為你進行偵查。這樣的描述不會改變法術的效應，但它們能讓透過特性描述自己的角色更加引人入勝。需要更多個性化法術的指導，請見第一章中的\"定製法術\"一節。\n>\n> 同樣，記住你得叢集外表能由你自己定製，別侷限於單一的造型。也許精魂的外表會隨著遊俠的情緒而千變萬化，或者隨著季節而呈現出不同的形象。這一切都由你自己選擇！\n>",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:swarmkeeper-3-swarmkeeper-magic",
+    "index": "swarmkeeper-3-swarmkeeper-magic",
+    "name": "Swarmkeeper Magic",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "swarmkeeper-3-swarmkeeper-magic",
+      "name": "Swarmkeeper Magic",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass": {
+        "key": "tce:subclass:swarmkeeper",
+        "name": "Swarmkeeper"
+      },
+      "reference_heading_zh": "叢集守衛魔法",
+      "reference_text_zh": "*3級叢集守衛特性*\n\n如果你之前並未掌握，你學會《法師之手》戲法，當你施展它的時候，其形式是聚集在一起的自然精魂。\n\n同樣，你會在升至指定遊俠等級時，學會一個額外的1環或更高環階的法術，如叢集守衛法術列表所示。這些法術對你視為遊俠法術，但它不計入你的已知法術總數中。\n\n**叢集守衛魔法**\n\n| 遊俠等級 | 法術 |\n| :--- | :--- |\n| 3rd | 《妖火術》 |\n| 5th | 《蛛網術》 |\n| 9th | 《氣化形體》 |\n| 13th | 《秘法眼》 |\n| 17th | 《疫病蟲群》 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:twilight-1-bonus-proficiencies",
+    "index": "twilight-1-bonus-proficiencies",
+    "name": "Bonus Proficiencies",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "twilight-1-bonus-proficiencies",
+      "name": "Bonus Proficiencies",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:twilight",
+        "name": "Twilight Domain"
+      },
+      "reference_heading_zh": "額外熟練",
+      "reference_text_zh": "*1級暮光領域特性*\n\n你獲得軍用武器和重甲的熟練項。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:twilight-1-domain-spells",
+    "index": "twilight-1-domain-spells",
+    "name": "Domain Spells",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "twilight-1-domain-spells",
+      "name": "Domain Spells",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:twilight",
+        "name": "Twilight Domain"
+      },
+      "reference_heading_zh": "領域法術",
+      "reference_text_zh": "*1級暮光領域特性*\n\n當你獲得暮光領域法術表中所對應的牧師等級時，你將同時習得這些法術。檢視玩家手冊中的神聖領域職業特性來了解什麼是領域法術。\n\n**暮光領域法術**\n\n| 牧師等級 | 法術 |\n| :--- | :--- |\n| 1st | 《妖火術》, 《睡眠術》 |\n| 3rd | 《月華之光》, 《識破隱形》 |\n| 5th | 《活力靈光》, 《李歐蒙小屋》 |\n| 7th | 《生命靈光》, 《高等隱形術》 |\n| 9th | 《威能法環》, 《假象術》 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:twilight-1-eyes-of-night",
+    "index": "twilight-1-eyes-of-night",
+    "name": "Eyes of Night",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "twilight-1-eyes-of-night",
+      "name": "Eyes of Night",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:twilight",
+        "name": "Twilight Domain"
+      },
+      "reference_heading_zh": "黑夜明目",
+      "reference_text_zh": "*1級暮光領域特性*\n\n你的雙眼可以洞穿最深沉的黑暗。你獲得300尺的黑暗視覺，而你的視力在微光光照下視為等同於明亮光照，而在黑暗中則視為等同於微光光照。\n\n以一個動作，你可以用魔法將黑暗視覺分享給你10尺內最多等同於你感知調整值數量（最少1名生物）的可見自願生物。共享的黑暗視覺持續1小時。一旦如此做，直到你完成一次長休或消耗一個任意環階的法術位，你無法再次分享此特性。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:twilight-1-vigilant-blessing",
+    "index": "twilight-1-vigilant-blessing",
+    "name": "Vigilant Blessing",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "twilight-1-vigilant-blessing",
+      "name": "Vigilant Blessing",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:twilight",
+        "name": "Twilight Domain"
+      },
+      "reference_heading_zh": "警覺賜福",
+      "reference_text_zh": "*1級暮光領域特性*\n\n夜晚教會了你時刻保持警惕。你能用一個動作觸碰一個生物（包括你自己），並賦予該生物下次先攻檢定優勢。此增益在該生物骰先攻檢定或你再次使用此特性後立刻結束。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:watchers-3-channel-divinity",
+    "index": "watchers-3-channel-divinity",
+    "name": "Channel Divinity",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "watchers-3-channel-divinity",
+      "name": "Channel Divinity",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:watchers",
+        "name": "Oath of the Watchers"
+      },
+      "reference_heading_zh": "引導神力",
+      "reference_text_zh": "*3級守望之誓特性*\n\n你獲得以下引導神力選項。參考神聖誓言職業能力來了解如何使用引導神力。\n\n##### 守望意志\n\n你可以使用你的引導神力，將信仰的守護力量融入你的存在之中。以一個動作，你可以選擇30尺內你可見的生物，數量至多等同於你的魅力調整值（至少為1）。在1分鐘內，你和所有被選擇的生物在智力、感知和魅力豁免上都獲得優勢。\n\n##### 驅散異域\n\n你可以使用你的引導神力懲罰來自異界的存在。以一個動作，你展示你的聖徽，你30尺範圍內能夠聽到你禱言的異怪、天界生物、元素、精類或邪魔都必須進行一次感知豁免，豁免失敗者將受到驅散，其效應持續1分鐘或直至其受到任何傷害。\n\n以此方式被驅散的生物必須花費其回合內的所有移動速度儘量遠離你，且無法主動靠近你30尺內。被驅散的生物無法執行反應，只能使用既有的疾走動作或從任何妨礙其移動的效應中掙脫。該生物無路可走時將執行閃避動作。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:watchers-3-channel-divinity-option-1-watcher-s-will",
+    "index": "watchers-3-channel-divinity-option-1-watcher-s-will",
+    "name": "Watcher's Will",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "watchers-3-channel-divinity-option-1-watcher-s-will",
+      "name": "Watcher's Will",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:watchers",
+        "name": "Oath of the Watchers"
+      },
+      "choice_option_for": "tce:feature:watchers-3-channel-divinity",
+      "reference_heading_zh": "守望意志",
+      "reference_text_zh": "你可以使用你的引導神力，將信仰的守護力量融入你的存在之中。以一個動作，你可以選擇30尺內你可見的生物，數量至多等同於你的魅力調整值（至少為1）。在1分鐘內，你和所有被選擇的生物在智力、感知和魅力豁免上都獲得優勢。"
+    }
+  },
+  {
+    "key": "tce:feature:watchers-3-channel-divinity-option-2-abjure-the-extraplanar",
+    "index": "watchers-3-channel-divinity-option-2-abjure-the-extraplanar",
+    "name": "Abjure the Extraplanar",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "watchers-3-channel-divinity-option-2-abjure-the-extraplanar",
+      "name": "Abjure the Extraplanar",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:watchers",
+        "name": "Oath of the Watchers"
+      },
+      "choice_option_for": "tce:feature:watchers-3-channel-divinity",
+      "reference_heading_zh": "驅散異域",
+      "reference_text_zh": "你可以使用你的引導神力懲罰來自異界的存在。以一個動作，你展示你的聖徽，你30尺範圍內能夠聽到你禱言的異怪、天界生物、元素、精類或邪魔都必須進行一次感知豁免，豁免失敗者將受到驅散，其效應持續1分鐘或直至其受到任何傷害。\n\n以此方式被驅散的生物必須花費其回合內的所有移動速度儘量遠離你，且無法主動靠近你30尺內。被驅散的生物無法執行反應，只能使用既有的疾走動作或從任何妨礙其移動的效應中掙脫。該生物無路可走時將執行閃避動作。"
+    }
+  },
+  {
+    "key": "tce:feature:watchers-3-oath-spells",
+    "index": "watchers-3-oath-spells",
+    "name": "Oath Spells",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "watchers-3-oath-spells",
+      "name": "Oath Spells",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:watchers",
+        "name": "Oath of the Watchers"
+      },
+      "reference_heading_zh": "聖誓法術",
+      "reference_text_zh": "*3級守望之誓特性*\n\n你獲得以下聖誓法術，如表。\n\n**守望之誓法術列表**\n\n| 聖武士等級 | 法術 |\n| :--- | :--- |\n| 3rd | 《警報術》, 《偵測魔法》 |\n| 5th | 《月華之光》, 《識破隱形》 |\n| 9th | 《反制法術》, 《迴避偵測》 |\n| 13th | 《淨化靈光》, 《放逐術》 |\n| 17th | 《怪物定身術》, 《探知》 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "tce:feature:watchers-3-tenets-of-the-watchers",
+    "index": "watchers-3-tenets-of-the-watchers",
+    "name": "Tenets of the Watchers",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "watchers-3-tenets-of-the-watchers",
+      "name": "Tenets of the Watchers",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:watchers",
+        "name": "Oath of the Watchers"
+      },
+      "reference_heading_zh": "守望之信條",
+      "reference_text_zh": "接受守望之誓的聖武士發誓要保護凡人國度不受來自其他位面的威脅。\n\n> ### 【邊欄】Vigilance\n>\n> 你所面臨的威脅狡猾、強大而又超乎常理。時刻警惕他們的腐化。\n>\n\n##### 忠誠\n\n永遠不要接受來自邪魔或其同夥的禮物或恩惠。忠於你的使命，忠於你的同志，忠於你的職責。\n\n##### 紀律\n\n你是抵禦星辰之外無盡恐怖的盾牌。你的劍刃必須永遠鋒利，你的頭腦必須永遠清晰。",
+      "automation_boundary": "structured_manual"
+    }
+  }
+]

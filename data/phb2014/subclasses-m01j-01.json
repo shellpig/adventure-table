@@ -1,0 +1,2334 @@
+[
+  {
+    "key": "phb2014:subclass:abjuration",
+    "index": "abjuration",
+    "name": "School of Abjuration",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "abjuration",
+      "name": "School of Abjuration",
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass_flavor": "Arcane Tradition",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:abjuration-2-abjuration-savant",
+        "phb2014:feature:abjuration-2-arcane-ward"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_法師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b3%95%e5%b8%88_phb"
+    }
+  },
+  {
+    "key": "phb2014:subclass:ancients",
+    "index": "ancients",
+    "name": "Oath of Ancients",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "ancients",
+      "name": "Oath of Ancients",
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass_flavor": "Sacred Oath",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        15,
+        20
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:ancients-3-tenets-of-the-ancients",
+        "phb2014:feature:ancients-3-oath-spells",
+        "phb2014:feature:ancients-3-channel-divinity-nature-s-wrath",
+        "phb2014:feature:ancients-3-channel-divinity-turn-the-faithless"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_聖武士.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%9c%a3%e6%ad%a6%e5%a3%ab_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-3",
+              "type": "level",
+              "name": "Paladin 3"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:ensnaring-strike",
+            "name": "Ensnaring Strike"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-3",
+              "type": "level",
+              "name": "Paladin 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:speak-with-animals",
+            "name": "Speak with Animals"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-5",
+              "type": "level",
+              "name": "Paladin 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:moonbeam",
+            "name": "Moonbeam"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-5",
+              "type": "level",
+              "name": "Paladin 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:misty-step",
+            "name": "Misty Step"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-9",
+              "type": "level",
+              "name": "Paladin 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:plant-growth",
+            "name": "Plant Growth"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-9",
+              "type": "level",
+              "name": "Paladin 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:protection-from-energy",
+            "name": "Protection From Energy"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-13",
+              "type": "level",
+              "name": "Paladin 13"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:ice-storm",
+            "name": "Ice Storm"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-13",
+              "type": "level",
+              "name": "Paladin 13"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:stoneskin",
+            "name": "Stoneskin"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-17",
+              "type": "level",
+              "name": "Paladin 17"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:commune-with-nature",
+            "name": "Commune With Nature"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-17",
+              "type": "level",
+              "name": "Paladin 17"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:tree-stride",
+            "name": "Tree Stride"
+          },
+          "access_type": "always_prepared"
+        }
+      ]
+    }
+  },
+  {
+    "key": "phb2014:subclass:arcane-trickster",
+    "index": "arcane-trickster",
+    "name": "Arcane Trickster",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "arcane-trickster",
+      "name": "Arcane Trickster",
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass_flavor": "Roguish Archetype",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        9,
+        13,
+        17
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:arcane-trickster-3-spellcasting",
+        "phb2014:feature:arcane-trickster-3-mage-hand-legerdemain"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_遊蕩者.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b8%b8%e8%8d%a1%e8%80%85_phb",
+      "subclass_spellcasting": {
+        "ability": "intelligence",
+        "spell_class_ref": "srd5.1:class:wizard",
+        "school_indices": [
+          "enchantment",
+          "illusion"
+        ],
+        "fixed_cantrip_refs": [
+          "srd5.1:spell:mage-hand"
+        ],
+        "rows": {
+          "3": {
+            "cantrips_known": 3,
+            "spells_known": 3,
+            "slots": [
+              2,
+              0,
+              0,
+              0
+            ]
+          },
+          "4": {
+            "cantrips_known": 3,
+            "spells_known": 4,
+            "slots": [
+              3,
+              0,
+              0,
+              0
+            ]
+          },
+          "5": {
+            "cantrips_known": 3,
+            "spells_known": 4,
+            "slots": [
+              3,
+              0,
+              0,
+              0
+            ]
+          },
+          "6": {
+            "cantrips_known": 3,
+            "spells_known": 4,
+            "slots": [
+              3,
+              0,
+              0,
+              0
+            ]
+          },
+          "7": {
+            "cantrips_known": 3,
+            "spells_known": 5,
+            "slots": [
+              4,
+              2,
+              0,
+              0
+            ]
+          },
+          "8": {
+            "cantrips_known": 3,
+            "spells_known": 6,
+            "slots": [
+              4,
+              2,
+              0,
+              0
+            ]
+          },
+          "9": {
+            "cantrips_known": 3,
+            "spells_known": 6,
+            "slots": [
+              4,
+              2,
+              0,
+              0
+            ]
+          },
+          "10": {
+            "cantrips_known": 4,
+            "spells_known": 7,
+            "slots": [
+              4,
+              3,
+              0,
+              0
+            ]
+          },
+          "11": {
+            "cantrips_known": 4,
+            "spells_known": 8,
+            "slots": [
+              4,
+              3,
+              0,
+              0
+            ]
+          },
+          "12": {
+            "cantrips_known": 4,
+            "spells_known": 8,
+            "slots": [
+              4,
+              3,
+              0,
+              0
+            ]
+          },
+          "13": {
+            "cantrips_known": 4,
+            "spells_known": 9,
+            "slots": [
+              4,
+              3,
+              2,
+              0
+            ]
+          },
+          "14": {
+            "cantrips_known": 4,
+            "spells_known": 10,
+            "slots": [
+              4,
+              3,
+              2,
+              0
+            ]
+          },
+          "15": {
+            "cantrips_known": 4,
+            "spells_known": 10,
+            "slots": [
+              4,
+              3,
+              2,
+              0
+            ]
+          },
+          "16": {
+            "cantrips_known": 4,
+            "spells_known": 11,
+            "slots": [
+              4,
+              3,
+              3,
+              0
+            ]
+          },
+          "17": {
+            "cantrips_known": 4,
+            "spells_known": 11,
+            "slots": [
+              4,
+              3,
+              3,
+              0
+            ]
+          },
+          "18": {
+            "cantrips_known": 4,
+            "spells_known": 11,
+            "slots": [
+              4,
+              3,
+              3,
+              0
+            ]
+          },
+          "19": {
+            "cantrips_known": 4,
+            "spells_known": 12,
+            "slots": [
+              4,
+              3,
+              3,
+              1
+            ]
+          },
+          "20": {
+            "cantrips_known": 4,
+            "spells_known": 13,
+            "slots": [
+              4,
+              3,
+              3,
+              1
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    "key": "phb2014:subclass:archfey",
+    "index": "archfey",
+    "name": "The Archfey",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "archfey",
+      "name": "The Archfey",
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass_flavor": "Otherworldly Patron",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:archfey-1-expanded-spell-list",
+        "phb2014:feature:archfey-1-fey-presence"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [
+        "phb2014:feature:archfey-1-fey-presence"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_邪術師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e9%82%aa%e6%9c%af%e5%b8%88_phb",
+      "expanded_spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:faerie-fire",
+            "name": "Faerie Fire"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:sleep",
+            "name": "Sleep"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:calm-emotions",
+            "name": "Calm Emotions"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:phantasmal-force",
+            "name": "Phantasmal Force"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:blink",
+            "name": "Blink"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:plant-growth",
+            "name": "Plant Growth"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:dominate-beast",
+            "name": "Dominate Beast"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:greater-invisibility",
+            "name": "Greater Invisibility"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:dominate-person",
+            "name": "Dominate Person"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:seeming",
+            "name": "Seeming"
+          },
+          "access_type": "expanded"
+        }
+      ]
+    }
+  },
+  {
+    "key": "phb2014:subclass:assassin",
+    "index": "assassin",
+    "name": "Assassin",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "assassin",
+      "name": "Assassin",
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass_flavor": "Roguish Archetype",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        9,
+        13,
+        17
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:assassin-3-assassinate",
+        "phb2014:feature:assassin-3-bonus-proficiencies"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_遊蕩者.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b8%b8%e8%8d%a1%e8%80%85_phb",
+      "fixed_grants": {
+        "proficiencies": [
+          "srd5.1:proficiency:disguise-kit",
+          "srd5.1:proficiency:poisoners-kit"
+        ]
+      }
+    }
+  },
+  {
+    "key": "phb2014:subclass:battle-master",
+    "index": "battle-master",
+    "name": "Battle Master",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "battle-master",
+      "name": "Battle Master",
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass_flavor": "Martial Archetype",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        10,
+        15,
+        18
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:battle-master-3-student-of-war",
+        "phb2014:feature:battle-master-3-combat-superiority",
+        "phb2014:feature:battle-master-3-maneuvers",
+        "phb2014:feature:battle-master-3-maneuver-options"
+      ],
+      "persistent_choices": [
+        {
+          "choice_key": "battle-master-maneuvers",
+          "feature_ref": "phb2014:feature:battle-master-3-combat-superiority",
+          "minimum_class_level": 3,
+          "choose_total": 3,
+          "progression": [
+            {
+              "class_level": 3,
+              "choose_total": 3
+            },
+            {
+              "class_level": 7,
+              "choose_total": 5
+            },
+            {
+              "class_level": 10,
+              "choose_total": 7
+            },
+            {
+              "class_level": 15,
+              "choose_total": 9
+            }
+          ],
+          "option_refs": [
+            "phb2014:feature:maneuver-commanders-strike",
+            "phb2014:feature:maneuver-disarming-attack",
+            "phb2014:feature:maneuver-distracting-strike",
+            "phb2014:feature:maneuver-evasive-footwork",
+            "phb2014:feature:maneuver-feinting-attack",
+            "phb2014:feature:maneuver-goading-attack",
+            "phb2014:feature:maneuver-lunging-attack",
+            "phb2014:feature:maneuver-maneuvering-attack",
+            "phb2014:feature:maneuver-menacing-attack",
+            "phb2014:feature:maneuver-parry",
+            "phb2014:feature:maneuver-precision-attack",
+            "phb2014:feature:maneuver-pushing-attack",
+            "phb2014:feature:maneuver-rally",
+            "phb2014:feature:maneuver-riposte",
+            "phb2014:feature:maneuver-sweeping-attack",
+            "phb2014:feature:maneuver-trip-attack",
+            "tce:feature:maneuver-ambush",
+            "tce:feature:maneuver-bait-and-switch",
+            "tce:feature:maneuver-brace",
+            "tce:feature:maneuver-commanding-presence",
+            "tce:feature:maneuver-grappling-strike",
+            "tce:feature:maneuver-quick-toss",
+            "tce:feature:maneuver-tactical-assessment"
+          ],
+          "option_minimum_levels": {},
+          "label": "Battle Master Maneuvers"
+        }
+      ],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_戰士.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%88%98%e5%a3%ab_phb",
+      "grant_choices": [
+        {
+          "choice_key": "battle-master-student-of-war",
+          "label": "Student of War — artisan tool",
+          "minimum_class_level": 3,
+          "choose_total": 1,
+          "grant_target": "proficiency",
+          "option_pool": "artisans_tools"
+        }
+      ]
+    }
+  },
+  {
+    "key": "phb2014:subclass:beast-master",
+    "index": "beast-master",
+    "name": "Beast Master",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "beast-master",
+      "name": "Beast Master",
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass_flavor": "Ranger Archetype",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        11,
+        15
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:beast-master-3-ranger-s-companion",
+        "phb2014:feature:beast-master-3-primal-companion"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_遊俠.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b8%b8%e4%be%a0_phb"
+    }
+  },
+  {
+    "key": "phb2014:subclass:conjuration",
+    "index": "conjuration",
+    "name": "School of Conjuration",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "conjuration",
+      "name": "School of Conjuration",
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass_flavor": "Arcane Tradition",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:conjuration-2-conjuration-savant",
+        "phb2014:feature:conjuration-2-minor-conjuration"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_法師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b3%95%e5%b8%88_phb"
+    }
+  },
+  {
+    "key": "phb2014:subclass:divination",
+    "index": "divination",
+    "name": "School of Divination",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "divination",
+      "name": "School of Divination",
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass_flavor": "Arcane Tradition",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:divination-2-divination-savant",
+        "phb2014:feature:divination-2-portent"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_法師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b3%95%e5%b8%88_phb"
+    }
+  },
+  {
+    "key": "phb2014:subclass:eldritch-knight",
+    "index": "eldritch-knight",
+    "name": "Eldritch Knight",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "eldritch-knight",
+      "name": "Eldritch Knight",
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass_flavor": "Martial Archetype",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        10,
+        15,
+        18
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:eldritch-knight-3-spellcasting",
+        "phb2014:feature:eldritch-knight-3-weapon-bond"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_戰士.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%88%98%e5%a3%ab_phb",
+      "subclass_spellcasting": {
+        "ability": "intelligence",
+        "spell_class_ref": "srd5.1:class:wizard",
+        "school_indices": [
+          "abjuration",
+          "evocation"
+        ],
+        "fixed_cantrip_refs": [],
+        "rows": {
+          "3": {
+            "cantrips_known": 2,
+            "spells_known": 3,
+            "slots": [
+              2,
+              0,
+              0,
+              0
+            ]
+          },
+          "4": {
+            "cantrips_known": 2,
+            "spells_known": 4,
+            "slots": [
+              3,
+              0,
+              0,
+              0
+            ]
+          },
+          "5": {
+            "cantrips_known": 2,
+            "spells_known": 4,
+            "slots": [
+              3,
+              0,
+              0,
+              0
+            ]
+          },
+          "6": {
+            "cantrips_known": 2,
+            "spells_known": 4,
+            "slots": [
+              3,
+              0,
+              0,
+              0
+            ]
+          },
+          "7": {
+            "cantrips_known": 2,
+            "spells_known": 5,
+            "slots": [
+              4,
+              2,
+              0,
+              0
+            ]
+          },
+          "8": {
+            "cantrips_known": 2,
+            "spells_known": 6,
+            "slots": [
+              4,
+              2,
+              0,
+              0
+            ]
+          },
+          "9": {
+            "cantrips_known": 2,
+            "spells_known": 6,
+            "slots": [
+              4,
+              2,
+              0,
+              0
+            ]
+          },
+          "10": {
+            "cantrips_known": 3,
+            "spells_known": 7,
+            "slots": [
+              4,
+              3,
+              0,
+              0
+            ]
+          },
+          "11": {
+            "cantrips_known": 3,
+            "spells_known": 8,
+            "slots": [
+              4,
+              3,
+              0,
+              0
+            ]
+          },
+          "12": {
+            "cantrips_known": 3,
+            "spells_known": 8,
+            "slots": [
+              4,
+              3,
+              0,
+              0
+            ]
+          },
+          "13": {
+            "cantrips_known": 3,
+            "spells_known": 9,
+            "slots": [
+              4,
+              3,
+              2,
+              0
+            ]
+          },
+          "14": {
+            "cantrips_known": 3,
+            "spells_known": 10,
+            "slots": [
+              4,
+              3,
+              2,
+              0
+            ]
+          },
+          "15": {
+            "cantrips_known": 3,
+            "spells_known": 10,
+            "slots": [
+              4,
+              3,
+              2,
+              0
+            ]
+          },
+          "16": {
+            "cantrips_known": 3,
+            "spells_known": 11,
+            "slots": [
+              4,
+              3,
+              3,
+              0
+            ]
+          },
+          "17": {
+            "cantrips_known": 3,
+            "spells_known": 11,
+            "slots": [
+              4,
+              3,
+              3,
+              0
+            ]
+          },
+          "18": {
+            "cantrips_known": 3,
+            "spells_known": 11,
+            "slots": [
+              4,
+              3,
+              3,
+              0
+            ]
+          },
+          "19": {
+            "cantrips_known": 3,
+            "spells_known": 12,
+            "slots": [
+              4,
+              3,
+              3,
+              1
+            ]
+          },
+          "20": {
+            "cantrips_known": 3,
+            "spells_known": 13,
+            "slots": [
+              4,
+              3,
+              3,
+              1
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    "key": "phb2014:subclass:enchantment",
+    "index": "enchantment",
+    "name": "School of Enchantment",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "enchantment",
+      "name": "School of Enchantment",
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass_flavor": "Arcane Tradition",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:enchantment-2-enchantment-savant",
+        "phb2014:feature:enchantment-2-hypnotic-gaze"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_法師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b3%95%e5%b8%88_phb"
+    }
+  },
+  {
+    "key": "phb2014:subclass:four-elements",
+    "index": "four-elements",
+    "name": "Way of the Four Elements",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "four-elements",
+      "name": "Way of the Four Elements",
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass_flavor": "Monastic Tradition",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        11,
+        17
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:four-elements-3-disciple-of-the-elements",
+        "phb2014:feature:four-elements-3-elemental-disciplines"
+      ],
+      "persistent_choices": [
+        {
+          "choice_key": "elemental-disciplines",
+          "feature_ref": "phb2014:feature:four-elements-3-elemental-disciplines",
+          "minimum_class_level": 3,
+          "choose_total": 1,
+          "progression": [
+            {
+              "class_level": 3,
+              "choose_total": 1
+            },
+            {
+              "class_level": 6,
+              "choose_total": 2
+            },
+            {
+              "class_level": 11,
+              "choose_total": 3
+            },
+            {
+              "class_level": 17,
+              "choose_total": 4
+            }
+          ],
+          "option_refs": [
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-breath-of-winter",
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-mist-stance",
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-ride-the-wind",
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-river-of-hungry-flame",
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-13-rush-of-the-gale-spirits",
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-14-shape-the-flowing-river",
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-15-sweeping-cinder-strike",
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-16-water-whip",
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-wave-of-rolling-earth",
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-clench-of-the-north-wind",
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-eternal-mountain-defense",
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-5-fangs-of-the-fire-snake",
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-6-fist-of-four-thunders",
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-7-unbroken-air",
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-flames-of-the-phoenix",
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-gong-of-the-summit"
+          ],
+          "option_minimum_levels": {
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-breath-of-winter": 17,
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-mist-stance": 11,
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-ride-the-wind": 11,
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-river-of-hungry-flame": 17,
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-wave-of-rolling-earth": 17,
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-clench-of-the-north-wind": 6,
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-eternal-mountain-defense": 17,
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-flames-of-the-phoenix": 11,
+            "phb2014:feature:four-elements-3-elemental-disciplines-option-gong-of-the-summit": 6
+          },
+          "label": "Elemental Disciplines"
+        }
+      ],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_武僧.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%ad%a6%e5%83%a7_phb",
+      "spells": [],
+      "fixed_feature_refs": [
+        "phb2014:feature:four-elements-3-elemental-disciplines-option-3-elemental-attunement"
+      ]
+    }
+  },
+  {
+    "key": "phb2014:subclass:great-old-one",
+    "index": "great-old-one",
+    "name": "The Great Old One",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "great-old-one",
+      "name": "The Great Old One",
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass_flavor": "Otherworldly Patron",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:great-old-one-1-expanded-spell-list",
+        "phb2014:feature:great-old-one-1-awakened-mind"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_邪術師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e9%82%aa%e6%9c%af%e5%b8%88_phb",
+      "expanded_spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:dissonant-whispers",
+            "name": "Dissonant Whispers"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:hideous-laughter",
+            "name": "Hideous Laughter"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:detect-thoughts",
+            "name": "Detect Thoughts"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:phantasmal-force",
+            "name": "Phantasmal Force"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:clairvoyance",
+            "name": "Clairvoyance"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:sending",
+            "name": "Sending"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:dominate-beast",
+            "name": "Dominate Beast"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:black-tentacles",
+            "name": "Black Tentacles"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:dominate-person",
+            "name": "Dominate Person"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:telekinesis",
+            "name": "Telekinesis"
+          },
+          "access_type": "expanded"
+        }
+      ]
+    }
+  },
+  {
+    "key": "phb2014:subclass:illusion",
+    "index": "illusion",
+    "name": "School of Illusion",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "illusion",
+      "name": "School of Illusion",
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass_flavor": "Arcane Tradition",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:illusion-2-illusion-savant",
+        "phb2014:feature:illusion-2-improved-minor-illusion"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_法師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b3%95%e5%b8%88_phb",
+      "spells": []
+    }
+  },
+  {
+    "key": "phb2014:subclass:knowledge",
+    "index": "knowledge",
+    "name": "Knowledge Domain",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "knowledge",
+      "name": "Knowledge Domain",
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass_flavor": "Divine Domain",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:knowledge-1-blessings-of-knowledge"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_牧師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e7%89%a7%e5%b8%88_phb",
+      "grant_choices": [
+        {
+          "choice_key": "knowledge-domain-skills",
+          "label": "Blessings of Knowledge — skills",
+          "minimum_class_level": 1,
+          "choose_total": 2,
+          "grant_target": "skill",
+          "option_refs": [
+            "srd5.1:skill:arcana",
+            "srd5.1:skill:history",
+            "srd5.1:skill:nature",
+            "srd5.1:skill:religion"
+          ]
+        },
+        {
+          "choice_key": "knowledge-domain-languages",
+          "label": "Blessings of Knowledge — languages",
+          "minimum_class_level": 1,
+          "choose_total": 2,
+          "grant_target": "language",
+          "option_pool": "all_languages"
+        }
+      ]
+    }
+  },
+  {
+    "key": "phb2014:subclass:light",
+    "index": "light",
+    "name": "Light Domain",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "light",
+      "name": "Light Domain",
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass_flavor": "Divine Domain",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:light-1-bonus-cantrip",
+        "phb2014:feature:light-1-warding-flare"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [
+        "phb2014:feature:light-1-warding-flare"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_牧師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e7%89%a7%e5%b8%88_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-1",
+              "type": "level",
+              "name": "Class Level 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:light",
+            "name": "Light"
+          },
+          "access_type": "granted"
+        }
+      ]
+    }
+  },
+  {
+    "key": "phb2014:subclass:moon",
+    "index": "moon",
+    "name": "Circle of the Moon",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "moon",
+      "name": "Circle of the Moon",
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass_flavor": "Druid Circle",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:moon-2-combat-wild-shape",
+        "phb2014:feature:moon-2-circle-forms"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_德魯伊.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%be%b7%e9%b2%81%e4%bc%8a_phb"
+    }
+  },
+  {
+    "key": "phb2014:subclass:nature",
+    "index": "nature",
+    "name": "Nature Domain",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "nature",
+      "name": "Nature Domain",
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass_flavor": "Divine Domain",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:nature-1-acolyte-of-nature",
+        "phb2014:feature:nature-1-bonus-proficiency"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_牧師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e7%89%a7%e5%b8%88_phb",
+      "fixed_grants": {
+        "proficiencies": [
+          "srd5.1:proficiency:heavy-armor"
+        ]
+      },
+      "grant_choices": [
+        {
+          "choice_key": "nature-domain-cantrip",
+          "label": "Acolyte of Nature — Druid cantrip",
+          "minimum_class_level": 1,
+          "choose_total": 1,
+          "grant_target": "spell",
+          "option_pool": "druid_cantrips",
+          "access_type": "granted"
+        },
+        {
+          "choice_key": "nature-domain-skill",
+          "label": "Acolyte of Nature — skill",
+          "minimum_class_level": 1,
+          "choose_total": 1,
+          "grant_target": "skill",
+          "option_refs": [
+            "srd5.1:skill:animal-handling",
+            "srd5.1:skill:nature",
+            "srd5.1:skill:survival"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "key": "phb2014:subclass:necromancy",
+    "index": "necromancy",
+    "name": "School of Necromancy",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "necromancy",
+      "name": "School of Necromancy",
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass_flavor": "Arcane Tradition",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:necromancy-2-necromancy-savant",
+        "phb2014:feature:necromancy-2-grim-harvest"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_法師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b3%95%e5%b8%88_phb"
+    }
+  },
+  {
+    "key": "phb2014:subclass:shadow",
+    "index": "shadow",
+    "name": "Way of Shadow",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "shadow",
+      "name": "Way of Shadow",
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass_flavor": "Monastic Tradition",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        11,
+        17
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:shadow-3-shadow-arts"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_武僧.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%ad%a6%e5%83%a7_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-3",
+              "type": "level",
+              "name": "Class Level 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:minor-illusion",
+            "name": "Minor Illusion"
+          },
+          "access_type": "granted"
+        }
+      ]
+    }
+  },
+  {
+    "key": "phb2014:subclass:tempest",
+    "index": "tempest",
+    "name": "Tempest Domain",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "tempest",
+      "name": "Tempest Domain",
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass_flavor": "Divine Domain",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:tempest-1-bonus-proficiency",
+        "phb2014:feature:tempest-1-wrath-of-the-storm"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [
+        "phb2014:feature:tempest-1-wrath-of-the-storm"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_牧師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e7%89%a7%e5%b8%88_phb",
+      "fixed_grants": {
+        "proficiencies": [
+          "srd5.1:proficiency:martial-weapons",
+          "srd5.1:proficiency:heavy-armor"
+        ]
+      }
+    }
+  },
+  {
+    "key": "phb2014:subclass:totem-warrior",
+    "index": "totem-warrior",
+    "name": "Path of the Totem Warrior",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior",
+      "name": "Path of the Totem Warrior",
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass_flavor": "Primal Path",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:totem-warrior-3-spirit-seeker",
+        "phb2014:feature:totem-warrior-3-totem-spirit"
+      ],
+      "persistent_choices": [
+        {
+          "choice_key": "totem-warrior-3-totem-spirit:0",
+          "feature_ref": "phb2014:feature:totem-warrior-3-totem-spirit",
+          "minimum_class_level": 3,
+          "choose_total": 1,
+          "progression": [
+            {
+              "class_level": 3,
+              "choose_total": 1
+            }
+          ],
+          "option_refs": [
+            "phb2014:feature:totem-warrior-3-totem-spirit-option-1-bear",
+            "phb2014:feature:totem-warrior-3-totem-spirit-option-2-eagle",
+            "phb2014:feature:totem-warrior-3-totem-spirit-option-3-elk",
+            "phb2014:feature:totem-warrior-3-totem-spirit-option-4-tiger",
+            "phb2014:feature:totem-warrior-3-totem-spirit-option-5-wolf"
+          ],
+          "label": "Totem Spirit",
+          "label_zh": "圖騰精魂"
+        },
+        {
+          "choice_key": "aspect-of-the-beast",
+          "minimum_class_level": 6,
+          "choose_total": 1,
+          "progression": [],
+          "option_refs": [
+            "phb2014:feature:totem-warrior-6-bear",
+            "phb2014:feature:totem-warrior-6-eagle",
+            "phb2014:feature:totem-warrior-6-elk",
+            "phb2014:feature:totem-warrior-6-tiger",
+            "phb2014:feature:totem-warrior-6-wolf"
+          ],
+          "option_minimum_levels": {},
+          "label": "Aspect of the Beast"
+        },
+        {
+          "choice_key": "totemic-attunement",
+          "minimum_class_level": 14,
+          "choose_total": 1,
+          "progression": [],
+          "option_refs": [
+            "phb2014:feature:totem-warrior-14-bear",
+            "phb2014:feature:totem-warrior-14-eagle",
+            "phb2014:feature:totem-warrior-14-elk",
+            "phb2014:feature:totem-warrior-14-tiger",
+            "phb2014:feature:totem-warrior-14-wolf"
+          ],
+          "option_minimum_levels": {},
+          "label": "Totemic Attunement"
+        }
+      ],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_野蠻人.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e9%87%8e%e8%9b%ae%e4%ba%ba_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-3",
+              "type": "level",
+              "name": "Class Level 3"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:beast-sense",
+            "name": "Beast Sense"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-3",
+              "type": "level",
+              "name": "Class Level 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:speak-with-animals",
+            "name": "Speak with Animals"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-10",
+              "type": "level",
+              "name": "Class Level 10"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:commune-with-nature",
+            "name": "Commune With Nature"
+          },
+          "access_type": "granted"
+        }
+      ]
+    }
+  },
+  {
+    "key": "phb2014:subclass:transmutation",
+    "index": "transmutation",
+    "name": "School of Transmutation",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "transmutation",
+      "name": "School of Transmutation",
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass_flavor": "Arcane Tradition",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:transmutation-2-transmutation-savant",
+        "phb2014:feature:transmutation-2-minor-alchemy"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_法師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b3%95%e5%b8%88_phb"
+    }
+  },
+  {
+    "key": "phb2014:subclass:trickery",
+    "index": "trickery",
+    "name": "Trickery Domain",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "trickery",
+      "name": "Trickery Domain",
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass_flavor": "Divine Domain",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:trickery-1-blessing-of-the-trickster"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_牧師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e7%89%a7%e5%b8%88_phb"
+    }
+  },
+  {
+    "key": "phb2014:subclass:valor",
+    "index": "valor",
+    "name": "College of Valor",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "valor",
+      "name": "College of Valor",
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass_flavor": "Bard College",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        14
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:valor-3-bonus-proficiencies",
+        "phb2014:feature:valor-3-combat-inspiration"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_吟遊詩人.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%90%9f%e6%b8%b8%e8%af%97%e4%ba%ba_phb",
+      "fixed_grants": {
+        "proficiencies": [
+          "srd5.1:proficiency:medium-armor",
+          "srd5.1:proficiency:shields",
+          "srd5.1:proficiency:martial-weapons"
+        ]
+      }
+    }
+  },
+  {
+    "key": "phb2014:subclass:vengeance",
+    "index": "vengeance",
+    "name": "Oath of Vengeance",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "vengeance",
+      "name": "Oath of Vengeance",
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass_flavor": "Sacred Oath",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        15,
+        20
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:vengeance-3-tenets-of-vengeance",
+        "phb2014:feature:vengeance-3-oath-spells",
+        "phb2014:feature:vengeance-3-channel-divinity-abjure-enemy",
+        "phb2014:feature:vengeance-3-channel-divinity-vow-of-enmity"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_聖武士.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%9c%a3%e6%ad%a6%e5%a3%ab_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-3",
+              "type": "level",
+              "name": "Paladin 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:bane",
+            "name": "Bane"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-3",
+              "type": "level",
+              "name": "Paladin 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:hunters-mark",
+            "name": "Hunter's Mark"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-5",
+              "type": "level",
+              "name": "Paladin 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:hold-person",
+            "name": "Hold Person"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-5",
+              "type": "level",
+              "name": "Paladin 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:misty-step",
+            "name": "Misty Step"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-9",
+              "type": "level",
+              "name": "Paladin 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:haste",
+            "name": "Haste"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-9",
+              "type": "level",
+              "name": "Paladin 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:protection-from-energy",
+            "name": "Protection From Energy"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-13",
+              "type": "level",
+              "name": "Paladin 13"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:banishment",
+            "name": "Banishment"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-13",
+              "type": "level",
+              "name": "Paladin 13"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:dimension-door",
+            "name": "Dimension Door"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-17",
+              "type": "level",
+              "name": "Paladin 17"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:hold-monster",
+            "name": "Hold Monster"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-17",
+              "type": "level",
+              "name": "Paladin 17"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:scrying",
+            "name": "Scrying"
+          },
+          "access_type": "always_prepared"
+        }
+      ]
+    }
+  },
+  {
+    "key": "phb2014:subclass:war",
+    "index": "war",
+    "name": "War Domain",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "war",
+      "name": "War Domain",
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass_flavor": "Divine Domain",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:war-1-bonus-proficiencies",
+        "phb2014:feature:war-1-war-priest"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [
+        "phb2014:feature:war-1-war-priest"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_牧師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e7%89%a7%e5%b8%88_phb",
+      "fixed_grants": {
+        "proficiencies": [
+          "srd5.1:proficiency:martial-weapons",
+          "srd5.1:proficiency:heavy-armor"
+        ]
+      }
+    }
+  },
+  {
+    "key": "phb2014:subclass:wild-magic",
+    "index": "wild-magic",
+    "name": "Wild Magic",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "wild-magic",
+      "name": "Wild Magic",
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass_flavor": "Sorcerous Origin",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        14,
+        18
+      ],
+      "progression_feature_refs": [
+        "phb2014:feature:wild-magic-1-wild-magic-surge",
+        "phb2014:feature:wild-magic-1-tides-of-chaos"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_術士.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%9c%af%e5%a3%ab_phb"
+    }
+  }
+]

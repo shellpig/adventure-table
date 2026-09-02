@@ -227,6 +227,7 @@ class CharacterBuild(FrozenModel):
     proficiencies: tuple[StableKey, ...] = ()
     saving_throw_proficiencies: tuple[StableKey, ...] = ()
     skill_choices: tuple[StableKey, ...] = ()
+    skill_expertise_refs: tuple[StableKey, ...] = ()
     language_refs: tuple[StableKey, ...] = ()
     feature_refs: tuple[StableKey, ...] = ()
     feature_grant_sources: tuple[FeatureGrantSource, ...] = ()
@@ -310,6 +311,14 @@ class CharacterBuild(FrozenModel):
     def skill_refs_are_skills(cls, value: tuple[str, ...]) -> tuple[str, ...]:
         return tuple(require_stable_key(item, kinds={"skill"}) for item in value)
 
+    @field_validator("skill_expertise_refs")
+    @classmethod
+    def expertise_refs_are_unique_skills(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        normalized = tuple(require_stable_key(item, kinds={"skill"}) for item in value)
+        if len(normalized) != len(set(normalized)):
+            raise ValueError("skill expertise refs must be unique")
+        return normalized
+
     @field_validator("language_refs")
     @classmethod
     def language_refs_are_languages(cls, value: tuple[str, ...]) -> tuple[str, ...]:
@@ -341,6 +350,8 @@ class CharacterBuild(FrozenModel):
             raise ValueError("hp_progression must align 1:1 with class_progression")
         if any(value <= 0 for value in self.hp_progression):
             raise ValueError("hp_progression entries must be positive")
+        if any(skill_ref not in self.skill_choices for skill_ref in self.skill_expertise_refs):
+            raise ValueError("skill expertise requires the corresponding skill proficiency")
         if self.lineage_ref is None:
             if self.ancestral_origin_ref is not None or self.ancestral_legacy is not None or self.size is not None:
                 raise ValueError("lineage-only fields require lineage_ref")

@@ -1,0 +1,640 @@
+[
+  {
+    "key": "scag:subclass:arcana",
+    "index": "arcana",
+    "name": "Arcana Domain",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "arcana",
+      "name": "Arcana Domain",
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass_flavor": "Divine Domain",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "progression_feature_refs": [
+        "scag:feature:arcana-1-arcane-initiate"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_牧師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e7%89%a7%e5%b8%88_phb",
+      "fixed_grants": {
+        "skills": [
+          "srd5.1:skill:arcana"
+        ]
+      },
+      "grant_choices": [
+        {
+          "choice_key": "arcana-domain-cantrips",
+          "label": "Arcane Initiate — Wizard cantrips",
+          "minimum_class_level": 1,
+          "choose_total": 2,
+          "grant_target": "spell",
+          "option_pool": "wizard_cantrips",
+          "access_type": "granted"
+        },
+        {
+          "choice_key": "arcane-mastery-6",
+          "label": "Arcane Mastery — level 6 spell",
+          "minimum_class_level": 17,
+          "choose_total": 1,
+          "grant_target": "spell",
+          "option_refs": [
+            "srd5.1:spell:chain-lightning",
+            "srd5.1:spell:circle-of-death",
+            "srd5.1:spell:contingency",
+            "srd5.1:spell:create-undead",
+            "srd5.1:spell:disintegrate",
+            "srd5.1:spell:eyebite",
+            "srd5.1:spell:flesh-to-stone",
+            "srd5.1:spell:freezing-sphere",
+            "srd5.1:spell:globe-of-invulnerability",
+            "srd5.1:spell:guards-and-wards",
+            "srd5.1:spell:instant-summons",
+            "srd5.1:spell:irresistible-dance",
+            "srd5.1:spell:magic-jar",
+            "srd5.1:spell:mass-suggestion",
+            "srd5.1:spell:move-earth",
+            "srd5.1:spell:programmed-illusion",
+            "srd5.1:spell:sunbeam",
+            "srd5.1:spell:true-seeing",
+            "srd5.1:spell:wall-of-ice"
+          ],
+          "access_type": "always_prepared"
+        },
+        {
+          "choice_key": "arcane-mastery-7",
+          "label": "Arcane Mastery — level 7 spell",
+          "minimum_class_level": 17,
+          "choose_total": 1,
+          "grant_target": "spell",
+          "option_refs": [
+            "srd5.1:spell:arcane-sword",
+            "srd5.1:spell:delayed-blast-fireball",
+            "srd5.1:spell:etherealness",
+            "srd5.1:spell:finger-of-death",
+            "srd5.1:spell:forcecage",
+            "srd5.1:spell:magnificent-mansion",
+            "srd5.1:spell:mirage-arcane",
+            "srd5.1:spell:plane-shift",
+            "srd5.1:spell:prismatic-spray",
+            "srd5.1:spell:project-image",
+            "srd5.1:spell:reverse-gravity",
+            "srd5.1:spell:sequester",
+            "srd5.1:spell:simulacrum",
+            "srd5.1:spell:symbol",
+            "srd5.1:spell:teleport"
+          ],
+          "access_type": "always_prepared"
+        },
+        {
+          "choice_key": "arcane-mastery-8",
+          "label": "Arcane Mastery — level 8 spell",
+          "minimum_class_level": 17,
+          "choose_total": 1,
+          "grant_target": "spell",
+          "option_refs": [
+            "srd5.1:spell:antimagic-field",
+            "srd5.1:spell:antipathy-sympathy",
+            "srd5.1:spell:clone",
+            "srd5.1:spell:control-weather",
+            "srd5.1:spell:demiplane",
+            "srd5.1:spell:dominate-monster",
+            "srd5.1:spell:feeblemind",
+            "srd5.1:spell:incendiary-cloud",
+            "srd5.1:spell:maze",
+            "srd5.1:spell:mind-blank",
+            "srd5.1:spell:power-word-stun",
+            "srd5.1:spell:sunburst"
+          ],
+          "access_type": "always_prepared"
+        },
+        {
+          "choice_key": "arcane-mastery-9",
+          "label": "Arcane Mastery — level 9 spell",
+          "minimum_class_level": 17,
+          "choose_total": 1,
+          "grant_target": "spell",
+          "option_refs": [
+            "srd5.1:spell:astral-projection",
+            "srd5.1:spell:foresight",
+            "srd5.1:spell:gate",
+            "srd5.1:spell:imprisonment",
+            "srd5.1:spell:meteor-swarm",
+            "srd5.1:spell:power-word-kill",
+            "srd5.1:spell:prismatic-wall",
+            "srd5.1:spell:shapechange",
+            "srd5.1:spell:time-stop",
+            "srd5.1:spell:true-polymorph",
+            "srd5.1:spell:weird",
+            "srd5.1:spell:wish"
+          ],
+          "access_type": "always_prepared"
+        }
+      ]
+    }
+  },
+  {
+    "key": "scag:subclass:battlerager",
+    "index": "battlerager",
+    "name": "Path of the Battlerager",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "battlerager",
+      "name": "Path of the Battlerager",
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass_flavor": "Primal Path",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "scag:feature:battlerager-3-restriction-dwarves-only",
+        "scag:feature:battlerager-3-battlerager-armor"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_野蠻人.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e9%87%8e%e8%9b%ae%e4%ba%ba_phb"
+    }
+  },
+  {
+    "key": "scag:subclass:crown",
+    "index": "crown",
+    "name": "Oath of the Crown",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "crown",
+      "name": "Oath of the Crown",
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass_flavor": "Sacred Oath",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        15,
+        20
+      ],
+      "progression_feature_refs": [
+        "scag:feature:crown-3-tenets-of-the-crown",
+        "scag:feature:crown-3-oath-spells",
+        "scag:feature:crown-3-channel-divinity-champion-challenge",
+        "scag:feature:crown-3-channel-divinity-turn-the-tide"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_聖武士.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%9c%a3%e6%ad%a6%e5%a3%ab_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-3",
+              "type": "level",
+              "name": "Paladin 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:command",
+            "name": "Command"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-3",
+              "type": "level",
+              "name": "Paladin 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:compulsion",
+            "name": "Compulsion"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-5",
+              "type": "level",
+              "name": "Paladin 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:warding-bond",
+            "name": "Warding Bond"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-5",
+              "type": "level",
+              "name": "Paladin 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:zone-of-truth",
+            "name": "Zone of Truth"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-9",
+              "type": "level",
+              "name": "Paladin 9"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:aura-of-vitality",
+            "name": "Aura of Vitality"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-9",
+              "type": "level",
+              "name": "Paladin 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:spirit-guardians",
+            "name": "Spirit Guardians"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-13",
+              "type": "level",
+              "name": "Paladin 13"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:banishment",
+            "name": "Banishment"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-13",
+              "type": "level",
+              "name": "Paladin 13"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:guardian-of-faith",
+            "name": "Guardian of Faith"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-17",
+              "type": "level",
+              "name": "Paladin 17"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:circle-of-power",
+            "name": "Circle of Power"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-17",
+              "type": "level",
+              "name": "Paladin 17"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:geas",
+            "name": "Geas"
+          },
+          "access_type": "always_prepared"
+        }
+      ]
+    }
+  },
+  {
+    "key": "scag:subclass:long-death",
+    "index": "long-death",
+    "name": "Way of the Long Death",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "long-death",
+      "name": "Way of the Long Death",
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass_flavor": "Monastic Tradition",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        11,
+        17
+      ],
+      "progression_feature_refs": [
+        "scag:feature:long-death-3-touch-of-death"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_武僧.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%ad%a6%e5%83%a7_phb"
+    }
+  },
+  {
+    "key": "scag:subclass:purple-dragon-knight",
+    "index": "purple-dragon-knight",
+    "name": "Purple Dragon Knight (Banneret)",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "purple-dragon-knight",
+      "name": "Purple Dragon Knight (Banneret)",
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass_flavor": "Martial Archetype",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        10,
+        15,
+        18
+      ],
+      "progression_feature_refs": [
+        "scag:feature:purple-dragon-knight-3-restriction-knighthood",
+        "scag:feature:purple-dragon-knight-3-rallying-cry"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_戰士.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%88%98%e5%a3%ab_phb"
+    }
+  },
+  {
+    "key": "scag:subclass:undying",
+    "index": "undying",
+    "name": "The Undying",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "undying",
+      "name": "The Undying",
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass_flavor": "Otherworldly Patron",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "scag:feature:undying-1-expanded-spell-list",
+        "scag:feature:undying-1-among-the-dead"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_邪術師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e9%82%aa%e6%9c%af%e5%b8%88_phb",
+      "expanded_spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:false-life",
+            "name": "False Life"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:ray-of-sickness",
+            "name": "Ray of Sickness"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:blindness-deafness",
+            "name": "Blindness/Deafness"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:silence",
+            "name": "Silence"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:feign-death",
+            "name": "Feign Death"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:speak-with-dead",
+            "name": "Speak with Dead"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:aura-of-life",
+            "name": "Aura of Life"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:death-ward",
+            "name": "Death Ward"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:contagion",
+            "name": "Contagion"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:thaumaturgy",
+            "name": "Thaumaturgy"
+          },
+          "access_type": "expanded"
+        }
+      ],
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-1",
+              "type": "level",
+              "name": "Class Level 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:spare-the-dying",
+            "name": "Spare the Dying"
+          },
+          "access_type": "granted"
+        }
+      ]
+    }
+  }
+]

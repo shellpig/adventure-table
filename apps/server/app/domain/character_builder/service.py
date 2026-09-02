@@ -46,6 +46,22 @@ class BuilderCannotConfirmError(ValueError):
         self.validation = validation
 
 
+M01J_CHOICE_PREFIX = "m01-j:"
+
+
+def _is_cumulative_subclass_choice(choice_id: str) -> bool:
+    """Is this an M01-J subclass choice that keeps growing as the class levels?
+
+    Unlike a per-level choice, these keep one stable id whose ``choose_total``
+    rises with class level - a Rune Knight picks two runes at 3rd level and a
+    third at 7th through the same choice. Level Up therefore has to extend them
+    rather than treat them as frozen history, so they are guarded by "earlier
+    picks may not be dropped" instead of "may not change at all".
+    """
+
+    return choice_id.startswith(M01J_CHOICE_PREFIX)
+
+
 class CharacterBuilderService:
     def __init__(
         self,
@@ -316,13 +332,25 @@ class CharacterBuilderService:
                     if hasattr(proposed_selection, "model_dump")
                     else proposed_selection
                 )
+                if _is_cumulative_subclass_choice(choice_id):
+                    old_options = set(old_dump.get("selected_option_ids") or ())
+                    proposed_options = set(
+                        (proposed_dump or {}).get("selected_option_ids") or ()
+                    )
+                    if not old_options <= proposed_options:
+                        raise ValueError(
+                            f"level_up cannot drop earlier selections from {choice_id}"
+                        )
+                    continue
                 if proposed_dump != old_dump:
                     raise ValueError(
                         f"level_up cannot modify historical choice {choice_id}"
                     )
             for choice_id in proposed:
-                if choice_id not in current_selections and not choice_id.startswith(
-                    f"level:{target_level}:"
+                if (
+                    choice_id not in current_selections
+                    and not choice_id.startswith(f"level:{target_level}:")
+                    and not _is_cumulative_subclass_choice(choice_id)
                 ):
                     raise ValueError(
                         f"level_up cannot add non-level-up choice {choice_id}"

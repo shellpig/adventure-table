@@ -1,0 +1,834 @@
+[
+  {
+    "key": "xge:feature:storm-herald-3-storm-aura",
+    "index": "storm-herald-3-storm-aura",
+    "name": "Storm Aura",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "storm-herald-3-storm-aura",
+      "name": "Storm Aura",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-herald",
+        "name": "Path of the Storm Herald"
+      },
+      "reference_heading_zh": "風暴靈光",
+      "reference_text_zh": "*3級風暴先驅道途特性*\n\n你將在處於狂暴時散發出一道風暴般的魔法靈光。這道靈光將從你身上向全方位延伸10尺，但並無法穿透全掩護。\n\n你的靈光具有一個會在你進入狂暴時被激發的效果，且你可以在你的每個回合以一個附贈動作再次激發這個效果。從沙漠、海洋、和凍原中選擇一種環境。你的靈光效果將根據你所選的環境而有所不同，詳述如下。每當你提升此職業的等級，你都可以變更你所選擇的環境。\n\n若你的靈光效果要求一次豁免檢定，則DC等同於8 + 你的熟練加值 + 你的體質調整值。\n\n##### 沙漠 (Desert)\n\n當這個效果被激發時，所有其他處於你靈光中的生物都將各自受到2點火焰傷害。這個傷害將在你本職業升至特定等級時增加，5級時增加至3點，10級時4點，15級時5點，和20級時6點。\n\n##### 海洋 (Sea)\n\n當這個效果被激發時，你可以選擇處於你靈光中一個你所能看見的其他生物。目標必須進行一次敏捷豁免。豁免失敗的目標將受到1d6閃電傷害，豁免成功則只受到一半的傷害。這個傷害將在你本職業升至特定等級時增加，10級時增加至2d6，15級時3d6，和20級時4d6。\n\n##### 凍原 (Tundra)\n\n當這個效果被激發時，由於冷凍驚魂將使人適應於苦難，每個處於你靈光中你所選擇的生物將獲得2點臨時生命值。這個臨時生命值將在你本職業升至特定等級時增加，5級時增加至3點，10級時4點，15級時5點，和20級時6點。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:storm-herald-3-storm-aura-option-1-desert",
+    "index": "storm-herald-3-storm-aura-option-1-desert",
+    "name": "Desert",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "storm-herald-3-storm-aura-option-1-desert",
+      "name": "Desert",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-herald",
+        "name": "Path of the Storm Herald"
+      },
+      "choice_option_for": "xge:feature:storm-herald-3-storm-aura",
+      "reference_heading_zh": "沙漠",
+      "reference_text_zh": "當這個效果被激發時，所有其他處於你靈光中的生物都將各自受到2點火焰傷害。這個傷害將在你本職業升至特定等級時增加，5級時增加至3點，10級時4點，15級時5點，和20級時6點。",
+      "branch_progression_refs": {
+        "6": "xge:feature:storm-herald-6-desert",
+        "14": "xge:feature:storm-herald-14-desert"
+      }
+    }
+  },
+  {
+    "key": "xge:feature:storm-herald-3-storm-aura-option-2-sea",
+    "index": "storm-herald-3-storm-aura-option-2-sea",
+    "name": "Sea",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "storm-herald-3-storm-aura-option-2-sea",
+      "name": "Sea",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-herald",
+        "name": "Path of the Storm Herald"
+      },
+      "choice_option_for": "xge:feature:storm-herald-3-storm-aura",
+      "reference_heading_zh": "海洋",
+      "reference_text_zh": "當這個效果被激發時，你可以選擇處於你靈光中一個你所能看見的其他生物。目標必須進行一次敏捷豁免。豁免失敗的目標將受到1d6閃電傷害，豁免成功則只受到一半的傷害。這個傷害將在你本職業升至特定等級時增加，10級時增加至2d6，15級時3d6，和20級時4d6。",
+      "branch_progression_refs": {
+        "6": "xge:feature:storm-herald-6-sea",
+        "14": "xge:feature:storm-herald-14-sea"
+      }
+    }
+  },
+  {
+    "key": "xge:feature:storm-herald-3-storm-aura-option-3-tundra",
+    "index": "storm-herald-3-storm-aura-option-3-tundra",
+    "name": "Tundra",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "storm-herald-3-storm-aura-option-3-tundra",
+      "name": "Tundra",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-herald",
+        "name": "Path of the Storm Herald"
+      },
+      "choice_option_for": "xge:feature:storm-herald-3-storm-aura",
+      "reference_heading_zh": "凍原",
+      "reference_text_zh": "當這個效果被激發時，由於冷凍驚魂將使人適應於苦難，每個處於你靈光中你所選擇的生物將獲得2點臨時生命值。這個臨時生命值將在你本職業升至特定等級時增加，5級時增加至3點，10級時4點，15級時5點，和20級時6點。",
+      "branch_progression_refs": {
+        "6": "xge:feature:storm-herald-6-tundra",
+        "14": "xge:feature:storm-herald-14-tundra"
+      }
+    }
+  },
+  {
+    "key": "xge:feature:storm-herald-6-desert",
+    "index": "storm-herald-6-desert",
+    "name": "Desert",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "storm-herald-6-desert",
+      "name": "Desert",
+      "level": 6,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-herald",
+        "name": "Path of the Storm Herald"
+      },
+      "reference_heading_zh": "沙漠",
+      "reference_text_zh": "你獲得對火焰傷害的抗性，且你不會受到極端高溫環境的影響（參見地下城主指南的描述）。此外，以一個動作，你可以觸碰一個未被其他人穿戴或攜帶的可燃物體，並使之起火燃燒。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:storm-herald-6-sea",
+    "index": "storm-herald-6-sea",
+    "name": "Sea",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "storm-herald-6-sea",
+      "name": "Sea",
+      "level": 6,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-herald",
+        "name": "Path of the Storm Herald"
+      },
+      "reference_heading_zh": "海洋",
+      "reference_text_zh": "你獲得對閃電傷害的抗性，且你可以在水下呼吸。你也獲得30尺的游泳速度。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:storm-herald-6-tundra",
+    "index": "storm-herald-6-tundra",
+    "name": "Tundra",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "storm-herald-6-tundra",
+      "name": "Tundra",
+      "level": 6,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-herald",
+        "name": "Path of the Storm Herald"
+      },
+      "reference_heading_zh": "凍原",
+      "reference_text_zh": "你獲得對冷凍傷害的抗性，且你不會受到極端寒冷環境的影響（參見地下城主指南的描述）。此外，以一個動作，你可以觸碰水並將其中5尺邊長立方體的區域轉變成冰，這塊冰將在1分鐘之後融化。若有生物在這個立方體區域內，則這個動作將失敗。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:storm-sorcery-1-tempestuous-magic",
+    "index": "storm-sorcery-1-tempestuous-magic",
+    "name": "Tempestuous Magic",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "storm-sorcery-1-tempestuous-magic",
+      "name": "Tempestuous Magic",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-sorcery",
+        "name": "Storm Sorcery"
+      },
+      "reference_heading_zh": "風暴魔法",
+      "reference_text_zh": "*1級暴風術法特性*\n\n緊接在你施放一個1環或更高環的法術之前或之後，你可以在你的回合使用一個附贈動作以使元素之氣形成的旋轉陣風短暫地環繞著你。這麼做讓你得以飛行最多10尺距離，而不會引發藉機攻擊。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:storm-sorcery-1-wind-speaker",
+    "index": "storm-sorcery-1-wind-speaker",
+    "name": "Wind Speaker",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "storm-sorcery-1-wind-speaker",
+      "name": "Wind Speaker",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "xge:subclass:storm-sorcery",
+        "name": "Storm Sorcery"
+      },
+      "reference_heading_zh": "風語者",
+      "reference_text_zh": "*1級暴風術法特性*\n\n你所支配的奧法魔力充盈著氣之元素。你可以說、讀、寫Primordial。知曉這個語言讓你得以理解使用其同源語系的生物，並讓它們理解你所說的話。其同源語系為：Aquan, Auran, Ignan 和 Terran。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:sun-soul-3-radiant-sun-bolt",
+    "index": "sun-soul-3-radiant-sun-bolt",
+    "name": "Radiant Sun Bolt",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "sun-soul-3-radiant-sun-bolt",
+      "name": "Radiant Sun Bolt",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "xge:subclass:sun-soul",
+        "name": "Way of the Sun Soul"
+      },
+      "reference_heading_zh": "日光箭",
+      "reference_text_zh": "*3級日魂宗特性*\n\n你可以投擲出灼熱的魔法光輝箭矢。\n\n你獲得可以在採取攻擊動作時使用的新的攻擊選項。這種特殊攻擊是一個射程為30尺的遠端法術攻擊。你熟練於此攻擊，且你將你的敏捷調整值加入它的攻擊檢定和傷害骰。它的傷害型別為光耀傷害，且它的傷害骰為一顆d4。這顆骰子會隨著你提升武僧等級時變化，參見武僧表中的武藝欄位。\n\n當你在你的回合採取攻擊動作並使用此特殊攻擊作為攻擊動作的一部份，你可以消耗1點氣以使用一個附贈動作進行二次此特殊攻擊。\n\n當你獲得額外攻擊能力，此特殊攻擊可以被用於任何你作為攻擊動作一部份所進行的攻擊中。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:swashbuckler-3-fancy-footwork",
+    "index": "swashbuckler-3-fancy-footwork",
+    "name": "Fancy Footwork",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "swashbuckler-3-fancy-footwork",
+      "name": "Fancy Footwork",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "xge:subclass:swashbuckler",
+        "name": "Swashbuckler"
+      },
+      "reference_heading_zh": "華麗步法",
+      "reference_text_zh": "*3級風流劍客特性*\n\n你學會如何降下打擊並接著迅速溜走而不至遭受反擊。在你的回合期間，若你對一個生物進行了一次近戰攻擊，該生物在該回合間將無法對你進行藉機攻擊。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:swashbuckler-3-rakish-audacity",
+    "index": "swashbuckler-3-rakish-audacity",
+    "name": "Rakish Audacity",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "swashbuckler-3-rakish-audacity",
+      "name": "Rakish Audacity",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "xge:subclass:swashbuckler",
+        "name": "Swashbuckler"
+      },
+      "reference_heading_zh": "放蕩無畏",
+      "reference_text_zh": "*3級風流劍客特性*\n\n你的自信驅使著你加入戰鬥。你可以讓你先攻檢定獲得等同於你魅力調整值的加值。\n\n你也獲得一種使用你偷襲能力的額外手段；若你對一個距離你5尺內的生物進行攻擊，沒有其他生物距離你5尺內，且你在該攻擊檢定中不具有劣勢，則你不需要在該攻擊檢定中具有優勢而仍能對該生物使用你的偷襲能力。所有其他偷襲的規則仍舊適用於你。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:swords-3-blade-flourish",
+    "index": "swords-3-blade-flourish",
+    "name": "Blade Flourish",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "swords-3-blade-flourish",
+      "name": "Blade Flourish",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:swords",
+        "name": "College of Swords"
+      },
+      "reference_heading_zh": "鋒刃劍舞",
+      "reference_text_zh": "*3級劍舞學院特性*\n\n你學會展示出戰鬥技藝和速度而令人印象深刻的表演。\n\n每當你在你的回合採取攻擊動作，你的步行速度增加10尺直到這個回合結束，且若此攻擊動作的其中一次你所進行的武器攻擊命中一個生物，則你可以選擇使用下列其中一個鋒刃劍舞選項。你每回合只能使用一個鋒刃劍舞選項。\n\n##### 防禦劍舞 (Defensive Flourish)\n\n你可以消耗一次你吟遊激勵的使用次數，以讓武器對你命中的目標造成額外傷害。這個額外傷害等同於你吟遊激勵骰的擲骰結果。直到你的下個回合開始，你也將其擲骰結果加到你的AC中。\n\n##### 順劈劍舞 (Slashing Flourish)\n\n你可以消耗一次你吟遊激勵的使用次數，以讓武器對你命中的目標和任何距離你5尺內，你所選且你所能看見的其他生物造成額外傷害。這個額外傷害等同於你吟遊激勵骰的擲骰結果。\n\n##### 靈活劍舞 (Mobile Flourish)\n\n你可以消耗一次你吟遊激勵的使用次數，以讓武器對你命中的目標造成額外傷害。這個額外傷害等同於你吟遊激勵骰的擲骰結果。你也可以將目標推離你5尺加上等同於其擲骰結果的尺數的距離。你可以接著立刻使用你的反應以移動最多你步行速度的距離到一處距離目標5尺內的未被佔據空間。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:swords-3-blade-flourish-option-1-defensive-flourish",
+    "index": "swords-3-blade-flourish-option-1-defensive-flourish",
+    "name": "Defensive Flourish",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "swords-3-blade-flourish-option-1-defensive-flourish",
+      "name": "Defensive Flourish",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:swords",
+        "name": "College of Swords"
+      },
+      "choice_option_for": "xge:feature:swords-3-blade-flourish",
+      "reference_heading_zh": "防禦劍舞",
+      "reference_text_zh": "你可以消耗一次你吟遊激勵的使用次數，以讓武器對你命中的目標造成額外傷害。這個額外傷害等同於你吟遊激勵骰的擲骰結果。直到你的下個回合開始，你也將其擲骰結果加到你的AC中。"
+    }
+  },
+  {
+    "key": "xge:feature:swords-3-blade-flourish-option-2-slashing-flourish",
+    "index": "swords-3-blade-flourish-option-2-slashing-flourish",
+    "name": "Slashing Flourish",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "swords-3-blade-flourish-option-2-slashing-flourish",
+      "name": "Slashing Flourish",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:swords",
+        "name": "College of Swords"
+      },
+      "choice_option_for": "xge:feature:swords-3-blade-flourish",
+      "reference_heading_zh": "順劈劍舞",
+      "reference_text_zh": "你可以消耗一次你吟遊激勵的使用次數，以讓武器對你命中的目標和任何距離你5尺內，你所選且你所能看見的其他生物造成額外傷害。這個額外傷害等同於你吟遊激勵骰的擲骰結果。"
+    }
+  },
+  {
+    "key": "xge:feature:swords-3-blade-flourish-option-3-mobile-flourish",
+    "index": "swords-3-blade-flourish-option-3-mobile-flourish",
+    "name": "Mobile Flourish",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "swords-3-blade-flourish-option-3-mobile-flourish",
+      "name": "Mobile Flourish",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:swords",
+        "name": "College of Swords"
+      },
+      "choice_option_for": "xge:feature:swords-3-blade-flourish",
+      "reference_heading_zh": "靈活劍舞",
+      "reference_text_zh": "你可以消耗一次你吟遊激勵的使用次數，以讓武器對你命中的目標造成額外傷害。這個額外傷害等同於你吟遊激勵骰的擲骰結果。你也可以將目標推離你5尺加上等同於其擲骰結果的尺數的距離。你可以接著立刻使用你的反應以移動最多你步行速度的距離到一處距離目標5尺內的未被佔據空間。"
+    }
+  },
+  {
+    "key": "xge:feature:swords-3-bonus-proficiencies",
+    "index": "swords-3-bonus-proficiencies",
+    "name": "Bonus Proficiencies",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "swords-3-bonus-proficiencies",
+      "name": "Bonus Proficiencies",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:swords",
+        "name": "College of Swords"
+      },
+      "reference_heading_zh": "額外熟練",
+      "reference_text_zh": "*3級劍舞學院特性*\n\n你將獲得中甲和《彎刀》的熟練。\n\n若你熟練於一把簡易或軍用近戰武器，則你可以用它來你施放吟遊詩人法術的法器。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:swords-3-fighting-style",
+    "index": "swords-3-fighting-style",
+    "name": "Fighting Style",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "swords-3-fighting-style",
+      "name": "Fighting Style",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:swords",
+        "name": "College of Swords"
+      },
+      "reference_heading_zh": "戰鬥風格",
+      "reference_text_zh": "*3級劍舞學院特性*\n\n你採用一種特殊的戰鬥風格以作為你的專業。從下列選項中選擇一種。你不能獲得相同的戰鬥風格選項超過一次，即使遊戲中的某個專案讓你有機會再選擇它也一樣。\n\n##### 決鬥 (Dueling)\n\n當你單手持用一把近戰武器，且沒有持用其他武器時，你在使用該武器所進行的傷害骰中獲得+2加值。\n\n##### 雙武器戰鬥 (Two-Weapon Fighting)\n\n當你進行雙武器戰鬥時，你可以將你的屬性調整值加入第二次攻擊的傷害中。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:swords-3-fighting-style-option-1-dueling",
+    "index": "swords-3-fighting-style-option-1-dueling",
+    "name": "Dueling",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "swords-3-fighting-style-option-1-dueling",
+      "name": "Dueling",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:swords",
+        "name": "College of Swords"
+      },
+      "choice_option_for": "xge:feature:swords-3-fighting-style",
+      "reference_heading_zh": "決鬥",
+      "reference_text_zh": "當你單手持用一把近戰武器，且沒有持用其他武器時，你在使用該武器所進行的傷害骰中獲得+2加值。"
+    }
+  },
+  {
+    "key": "xge:feature:swords-3-fighting-style-option-2-two-weapon-fighting",
+    "index": "swords-3-fighting-style-option-2-two-weapon-fighting",
+    "name": "Two-Weapon Fighting",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "swords-3-fighting-style-option-2-two-weapon-fighting",
+      "name": "Two-Weapon Fighting",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:swords",
+        "name": "College of Swords"
+      },
+      "choice_option_for": "xge:feature:swords-3-fighting-style",
+      "reference_heading_zh": "雙武器戰鬥",
+      "reference_text_zh": "當你進行雙武器戰鬥時，你可以將你的屬性調整值加入第二次攻擊的傷害中。"
+    }
+  },
+  {
+    "key": "xge:feature:war-magic-2-arcane-deflection",
+    "index": "war-magic-2-arcane-deflection",
+    "name": "Arcane Deflection",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "war-magic-2-arcane-deflection",
+      "name": "Arcane Deflection",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "xge:subclass:war-magic",
+        "name": "War Magic"
+      },
+      "reference_heading_zh": "秘法偏斜",
+      "reference_text_zh": "*2級戰爭魔法特性*\n\n你學會編制你的魔法以讓你自己在對抗傷害時更加堅韌。當你被一次攻擊命中、或在一次豁免檢定中失敗時，你可以使用你的反應以使你的AC對該次攻擊獲得+2加值，或在該豁免檢定中獲得+4加值。\n\n當你使用此能力，則直到你的下個回合結束前，你都無法施放戲法以外的法術。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:war-magic-2-tactical-wit",
+    "index": "war-magic-2-tactical-wit",
+    "name": "Tactical Wit",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "war-magic-2-tactical-wit",
+      "name": "Tactical Wit",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "xge:subclass:war-magic",
+        "name": "War Magic"
+      },
+      "reference_heading_zh": "戰術思維",
+      "reference_text_zh": "*2級戰爭魔法特性*\n\n你對於戰局的敏銳掌控讓你得以在戰鬥中迅速行動。你可以讓你自己在先攻檢定中獲得等同於你智力調整值的加值。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:whispers-3-psychic-blades",
+    "index": "whispers-3-psychic-blades",
+    "name": "Psychic Blades",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "whispers-3-psychic-blades",
+      "name": "Psychic Blades",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:whispers",
+        "name": "College of Whispers"
+      },
+      "reference_heading_zh": "精神之刃",
+      "reference_text_zh": "*3級低語學院特性*\n\n你獲得了使你的武器攻擊得以魔法性毒害其他生物精神的能力。\n\n當你以一次武器攻擊命中一個生物時，你可以消耗一次你吟遊激勵的使用次數，以對該目標造成額外的2d6心靈傷害。你每輪在你的回合只能使用此能力一次。\n\n這個心靈傷害會在你本職業升至特定等級時增加，在5級時增加至3d6、10級時5d6、15級時8d6。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:whispers-3-words-of-terror",
+    "index": "whispers-3-words-of-terror",
+    "name": "Words of Terror",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "whispers-3-words-of-terror",
+      "name": "Words of Terror",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "xge:subclass:whispers",
+        "name": "College of Whispers"
+      },
+      "reference_heading_zh": "駭人言詞",
+      "reference_text_zh": "*3級低語學院特性*\n\n你學會將能夠引發恐慌的陰險魔法注入看似無害的言詞中。\n\n若你和一個類人生物單獨談話至少1分鐘，你可以嘗試在它心中埋下偏執和妄想。在對話結束時，目標必須成功透過一次對抗你法術豁免DC的感知豁免，否則因你或你所選擇的另一個生物陷入恐懼。目標將因為這個方式而陷入恐懼長達1小時，或直到它被攻擊或傷害、或直到它目擊它的盟友被攻擊或傷害。\n\n若目標成功透過豁免檢定，目標並不會察覺到你曾嘗試恐懼它。\n\n一旦你使用此能力，直到你完成一次短休或長休之前你都不能再使用它。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "fixed",
+          "value": 1
+        },
+        "recharge": [
+          "short_rest",
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "xge:feature:zealot-3-divine-fury",
+    "index": "zealot-3-divine-fury",
+    "name": "Divine Fury",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "zealot-3-divine-fury",
+      "name": "Divine Fury",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:zealot",
+        "name": "Path of the Zealot"
+      },
+      "reference_heading_zh": "神性狂怒",
+      "reference_text_zh": "*3級狂熱者道途特性*\n\n你可以引導神性狂怒注入你的武器打擊中。當你處於狂暴時，你在你的每個回合以武器攻擊命中的第一個生物將受到等同於1d6 + 你野蠻人等級的一半的額外傷害。這個額外傷害的傷害型別為黯蝕或光耀；你在獲得此能力時選擇其中一個傷害型別。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:zealot-3-warrior-of-the-gods",
+    "index": "zealot-3-warrior-of-the-gods",
+    "name": "Warrior of the Gods",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "zealot-3-warrior-of-the-gods",
+      "name": "Warrior of the Gods",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:zealot",
+        "name": "Path of the Zealot"
+      },
+      "reference_heading_zh": "諸神勇士",
+      "reference_text_zh": "*3級狂熱者道途特性*\n\n你的靈魂被印記於加入無盡的戰鬥。若一個法術，像是《喚醒死者》，只具有能將你從死裡復活的效果（但不能是作為不死生物復活），則施法者在對你施放該法術時並不需要材料構材。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "xge:feature:zealot-m01j-choice-divine-fury-necrotic",
+    "index": "zealot-m01j-choice-divine-fury-necrotic",
+    "name": "Necrotic Divine Fury",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": null
+    },
+    "data": {
+      "index": "zealot-m01j-choice-divine-fury-necrotic",
+      "name": "Necrotic Divine Fury",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:zealot",
+        "name": "Path of the Zealot"
+      },
+      "choice_option_for": "xge:feature:zealot-3-divine-fury",
+      "reference_heading_zh": "黯蝕神性狂怒"
+    }
+  },
+  {
+    "key": "xge:feature:zealot-m01j-choice-divine-fury-radiant",
+    "index": "zealot-m01j-choice-divine-fury-radiant",
+    "name": "Radiant Divine Fury",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": null
+    },
+    "data": {
+      "index": "zealot-m01j-choice-divine-fury-radiant",
+      "name": "Radiant Divine Fury",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "xge:subclass:zealot",
+        "name": "Path of the Zealot"
+      },
+      "choice_option_for": "xge:feature:zealot-3-divine-fury",
+      "reference_heading_zh": "光耀神性狂怒"
+    }
+  }
+]

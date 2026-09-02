@@ -16,6 +16,11 @@ from app.domain.character_builder.schemas import (
 )
 
 
+# Bard/Rogue Expertise and the subclass features that reuse its shape select a
+# proficiency the character already holds rather than granting a new one.
+EXPERTISE_OPTION_SOURCE = "content:feature:feature-specific-expertise_options"
+
+
 def make_validation_result(
     issues: tuple[BuilderIssue, ...] | list[BuilderIssue],
 ) -> BuilderValidationResult:
@@ -198,9 +203,19 @@ def _validate_builder_choices(
             )
             continue
 
+        # Expertise does not grant a proficiency, it doubles one the character
+        # already has, so its selections intentionally repeat an earlier choice.
+        # Every other choice that hands out a reference must still be unique.
+        grants_reference = not (choice.option_source or "").startswith(
+            EXPERTISE_OPTION_SOURCE
+        )
         for option_id in selected:
             option = option_by_id[option_id]
-            if option.reference_id is not None and option.category != "ability_bonus":
+            if (
+                grants_reference
+                and option.reference_id is not None
+                and option.category != "ability_bonus"
+            ):
                 selected_reference_ids.append((option.reference_id, path))
 
     duplicate_refs = {

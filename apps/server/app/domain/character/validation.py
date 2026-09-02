@@ -50,6 +50,7 @@ def build_content_reference_keys(build: CharacterBuild) -> tuple[str, ...]:
     refs.extend(build.proficiencies)
     refs.extend(build.saving_throw_proficiencies)
     refs.extend(build.skill_choices)
+    refs.extend(build.skill_expertise_refs)
     refs.extend(build.language_refs)
     refs.extend(build.feature_refs)
     refs.extend(build.feat_refs)

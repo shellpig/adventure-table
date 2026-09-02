@@ -1,0 +1,413 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "phb2014",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "phb2014:feature:abjuration-2-abjuration-savant": {
+      "name": "防護學者"
+    },
+    "phb2014:feature:abjuration-2-arcane-ward": {
+      "name": "奧法防護"
+    },
+    "phb2014:feature:ancients-3-channel-divinity-nature-s-wrath": {
+      "name": "引導神力：自然之怒"
+    },
+    "phb2014:feature:ancients-3-channel-divinity-turn-the-faithless": {
+      "name": "引導神力：驅散無信者"
+    },
+    "phb2014:feature:ancients-3-oath-spells": {
+      "name": "聖誓法術"
+    },
+    "phb2014:feature:ancients-3-tenets-of-the-ancients": {
+      "name": "遠古之信條"
+    },
+    "phb2014:feature:arcane-trickster-3-mage-hand-legerdemain": {
+      "name": "法師之手詐術"
+    },
+    "phb2014:feature:arcane-trickster-3-spellcasting": {
+      "name": "施法"
+    },
+    "phb2014:feature:archfey-1-expanded-spell-list": {
+      "name": "擴充套件法術列表"
+    },
+    "phb2014:feature:archfey-1-fey-presence": {
+      "name": "妖精威儀"
+    },
+    "phb2014:feature:assassin-3-assassinate": {
+      "name": "刺殺"
+    },
+    "phb2014:feature:assassin-3-bonus-proficiencies": {
+      "name": "額外熟練"
+    },
+    "phb2014:feature:battle-master-3-combat-superiority": {
+      "name": "戰鬥卓越"
+    },
+    "phb2014:feature:battle-master-3-maneuver-options": {
+      "name": "戰技選項"
+    },
+    "phb2014:feature:battle-master-3-maneuvers": {
+      "name": "戰技"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-1-commander-s-strike": {
+      "name": "指揮官奇襲"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-10-parry": {
+      "name": "格擋"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-11-precision-attack": {
+      "name": "精準擊"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-12-pushing-attack": {
+      "name": "推撞擊"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-13-rally": {
+      "name": "鼓舞"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-14-riposte": {
+      "name": "反擊"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-15-sweeping-attack": {
+      "name": "橫掃擊"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-16-trip-attack": {
+      "name": "絆摔擊"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-2-disarming-attack": {
+      "name": "繳械擊"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-3-distracting-strike": {
+      "name": "擾亂擊"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-4-evasive-footwork": {
+      "name": "躲閃步伐"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-5-feinting-attack": {
+      "name": "詭詐擊"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-6-goading-attack": {
+      "name": "挑釁擊"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-7-lunging-attack": {
+      "name": "突刺擊"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-8-maneuvering-attack": {
+      "name": "靈動擊"
+    },
+    "phb2014:feature:battle-master-3-maneuvers-option-9-menacing-attack": {
+      "name": "恐嚇擊"
+    },
+    "phb2014:feature:battle-master-3-student-of-war": {
+      "name": "戰爭學徒"
+    },
+    "phb2014:feature:beast-master-3-primal-companion": {
+      "name": "原初動物夥伴"
+    },
+    "phb2014:feature:beast-master-3-ranger-s-companion": {
+      "name": "遊俠動物夥伴"
+    },
+    "phb2014:feature:conjuration-2-conjuration-savant": {
+      "name": "咒法學者"
+    },
+    "phb2014:feature:conjuration-2-minor-conjuration": {
+      "name": "次級咒喚"
+    },
+    "phb2014:feature:divination-2-divination-savant": {
+      "name": "預言學者"
+    },
+    "phb2014:feature:divination-2-portent": {
+      "name": "預兆"
+    },
+    "phb2014:feature:eldritch-knight-3-spellcasting": {
+      "name": "施法"
+    },
+    "phb2014:feature:eldritch-knight-3-weapon-bond": {
+      "name": "武器聯結"
+    },
+    "phb2014:feature:enchantment-2-enchantment-savant": {
+      "name": "惑控學者"
+    },
+    "phb2014:feature:enchantment-2-hypnotic-gaze": {
+      "name": "催眠凝視"
+    },
+    "phb2014:feature:four-elements-3-disciple-of-the-elements": {
+      "name": "元素門徒"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines": {
+      "name": "四象法門"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-13-rush-of-the-gale-spirits": {
+      "name": "風靈突進"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-14-shape-the-flowing-river": {
+      "name": "形塑流川"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-15-sweeping-cinder-strike": {
+      "name": "飛炎擊"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-16-water-whip": {
+      "name": "清流鞭"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-3-elemental-attunement": {
+      "name": "元素調律"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-5-fangs-of-the-fire-snake": {
+      "name": "火蛇利牙"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-6-fist-of-four-thunders": {
+      "name": "四雷拳"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-7-unbroken-air": {
+      "name": "凝氣剛拳"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-breath-of-winter": {
+      "name": "寒冬之息"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-clench-of-the-north-wind": {
+      "name": "北風之握"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-eternal-mountain-defense": {
+      "name": "蒼山庇佑"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-flames-of-the-phoenix": {
+      "name": "鳳凰火"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-gong-of-the-summit": {
+      "name": "獅吼功"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-mist-stance": {
+      "name": "雲霧式"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-ride-the-wind": {
+      "name": "攀雲步"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-river-of-hungry-flame": {
+      "name": "噬焰流"
+    },
+    "phb2014:feature:four-elements-3-elemental-disciplines-option-wave-of-rolling-earth": {
+      "name": "滾石浪"
+    },
+    "phb2014:feature:great-old-one-1-awakened-mind": {
+      "name": "喚醒心靈"
+    },
+    "phb2014:feature:great-old-one-1-expanded-spell-list": {
+      "name": "擴充套件法術列表"
+    },
+    "phb2014:feature:illusion-2-illusion-savant": {
+      "name": "幻術學者"
+    },
+    "phb2014:feature:illusion-2-improved-minor-illusion": {
+      "name": "精通次級幻象"
+    },
+    "phb2014:feature:knowledge-1-blessings-of-knowledge": {
+      "name": "知識祝福"
+    },
+    "phb2014:feature:light-1-bonus-cantrip": {
+      "name": "額外戲法"
+    },
+    "phb2014:feature:light-1-warding-flare": {
+      "name": "閃耀防護"
+    },
+    "phb2014:feature:moon-2-circle-forms": {
+      "name": "結社型態"
+    },
+    "phb2014:feature:moon-2-combat-wild-shape": {
+      "name": "戰鬥荒野形態"
+    },
+    "phb2014:feature:nature-1-acolyte-of-nature": {
+      "name": "自然侍祭"
+    },
+    "phb2014:feature:nature-1-bonus-proficiency": {
+      "name": "額外熟練"
+    },
+    "phb2014:feature:necromancy-2-grim-harvest": {
+      "name": "殘怖收割"
+    },
+    "phb2014:feature:necromancy-2-necromancy-savant": {
+      "name": "死靈學者"
+    },
+    "phb2014:feature:shadow-3-shadow-arts": {
+      "name": "影之技藝"
+    },
+    "phb2014:feature:tempest-1-bonus-proficiency": {
+      "name": "額外熟練"
+    },
+    "phb2014:feature:tempest-1-wrath-of-the-storm": {
+      "name": "風暴狂怒"
+    },
+    "phb2014:feature:totem-warrior-14-bear": {
+      "name": "熊"
+    },
+    "phb2014:feature:totem-warrior-14-eagle": {
+      "name": "鷹"
+    },
+    "phb2014:feature:totem-warrior-14-elk": {
+      "name": "鹿"
+    },
+    "phb2014:feature:totem-warrior-14-tiger": {
+      "name": "虎"
+    },
+    "phb2014:feature:totem-warrior-14-wolf": {
+      "name": "狼"
+    },
+    "phb2014:feature:totem-warrior-3-spirit-seeker": {
+      "name": "精魂尋訪者"
+    },
+    "phb2014:feature:totem-warrior-3-totem-spirit": {
+      "name": "圖騰精魂"
+    },
+    "phb2014:feature:totem-warrior-3-totem-spirit-option-1-bear": {
+      "name": "熊"
+    },
+    "phb2014:feature:totem-warrior-3-totem-spirit-option-2-eagle": {
+      "name": "鷹"
+    },
+    "phb2014:feature:totem-warrior-3-totem-spirit-option-3-elk": {
+      "name": "鹿"
+    },
+    "phb2014:feature:totem-warrior-3-totem-spirit-option-4-tiger": {
+      "name": "虎"
+    },
+    "phb2014:feature:totem-warrior-3-totem-spirit-option-5-wolf": {
+      "name": "狼"
+    },
+    "phb2014:feature:totem-warrior-6-bear": {
+      "name": "熊"
+    },
+    "phb2014:feature:totem-warrior-6-eagle": {
+      "name": "鷹"
+    },
+    "phb2014:feature:totem-warrior-6-elk": {
+      "name": "鹿"
+    },
+    "phb2014:feature:totem-warrior-6-tiger": {
+      "name": "虎"
+    },
+    "phb2014:feature:totem-warrior-6-wolf": {
+      "name": "狼"
+    },
+    "phb2014:feature:transmutation-2-minor-alchemy": {
+      "name": "次級鍊金"
+    },
+    "phb2014:feature:transmutation-2-transmutation-savant": {
+      "name": "變化學者"
+    },
+    "phb2014:feature:trickery-1-blessing-of-the-trickster": {
+      "name": "詭術祝福"
+    },
+    "phb2014:feature:valor-3-bonus-proficiencies": {
+      "name": "額外熟練"
+    },
+    "phb2014:feature:valor-3-combat-inspiration": {
+      "name": "戰鬥激勵"
+    },
+    "phb2014:feature:vengeance-3-channel-divinity-abjure-enemy": {
+      "name": "引導神力：誓絕仇敵"
+    },
+    "phb2014:feature:vengeance-3-channel-divinity-vow-of-enmity": {
+      "name": "引導神力：憎恨誓言"
+    },
+    "phb2014:feature:vengeance-3-oath-spells": {
+      "name": "聖誓法術"
+    },
+    "phb2014:feature:vengeance-3-tenets-of-vengeance": {
+      "name": "復仇之信條"
+    },
+    "phb2014:feature:war-1-bonus-proficiencies": {
+      "name": "額外熟練"
+    },
+    "phb2014:feature:war-1-war-priest": {
+      "name": "戰爭祭司"
+    },
+    "phb2014:feature:wild-magic-1-tides-of-chaos": {
+      "name": "混亂之潮"
+    },
+    "phb2014:feature:wild-magic-1-wild-magic-surge": {
+      "name": "狂野魔法浪湧"
+    },
+    "phb2014:subclass:abjuration": {
+      "name": "防護學派"
+    },
+    "phb2014:subclass:ancients": {
+      "name": "古賢之誓"
+    },
+    "phb2014:subclass:arcane-trickster": {
+      "name": "奧法詭術師"
+    },
+    "phb2014:subclass:archfey": {
+      "name": "妖精君王"
+    },
+    "phb2014:subclass:assassin": {
+      "name": "刺客"
+    },
+    "phb2014:subclass:battle-master": {
+      "name": "戰鬥大師"
+    },
+    "phb2014:subclass:beast-master": {
+      "name": "獸王"
+    },
+    "phb2014:subclass:conjuration": {
+      "name": "咒法學派"
+    },
+    "phb2014:subclass:divination": {
+      "name": "預言學派"
+    },
+    "phb2014:subclass:eldritch-knight": {
+      "name": "奧法騎士"
+    },
+    "phb2014:subclass:enchantment": {
+      "name": "惑控學派"
+    },
+    "phb2014:subclass:four-elements": {
+      "name": "四象宗"
+    },
+    "phb2014:subclass:great-old-one": {
+      "name": "舊日支配者"
+    },
+    "phb2014:subclass:illusion": {
+      "name": "幻術學派"
+    },
+    "phb2014:subclass:knowledge": {
+      "name": "知識領域"
+    },
+    "phb2014:subclass:light": {
+      "name": "光明領域"
+    },
+    "phb2014:subclass:moon": {
+      "name": "月亮結社"
+    },
+    "phb2014:subclass:nature": {
+      "name": "自然領域"
+    },
+    "phb2014:subclass:necromancy": {
+      "name": "死靈學派"
+    },
+    "phb2014:subclass:shadow": {
+      "name": "暗影宗"
+    },
+    "phb2014:subclass:tempest": {
+      "name": "風暴領域"
+    },
+    "phb2014:subclass:totem-warrior": {
+      "name": "圖騰勇士道途"
+    },
+    "phb2014:subclass:transmutation": {
+      "name": "變化學派"
+    },
+    "phb2014:subclass:trickery": {
+      "name": "詭術領域"
+    },
+    "phb2014:subclass:valor": {
+      "name": "勇氣學院"
+    },
+    "phb2014:subclass:vengeance": {
+      "name": "復仇之誓"
+    },
+    "phb2014:subclass:war": {
+      "name": "戰爭領域"
+    },
+    "phb2014:subclass:wild-magic": {
+      "name": "狂野魔法"
+    }
+  }
+}

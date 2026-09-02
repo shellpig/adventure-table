@@ -1,0 +1,795 @@
+[
+  {
+    "key": "phb2014:feature:totem-warrior-14-tiger",
+    "index": "totem-warrior-14-tiger",
+    "name": "Tiger",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-14-tiger",
+      "name": "Tiger",
+      "level": 14,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "reference_heading_zh": "虎",
+      "reference_text_zh": "當你狂暴時，若你向一個體型為大型或更小的生物直線移動至少20尺並接著立即對它進行一次近戰武器攻擊，則你可以使用一個附贈動作以對它進行一次額外的近戰武器攻擊。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-14-wolf",
+    "index": "totem-warrior-14-wolf",
+    "name": "Wolf",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-14-wolf",
+      "name": "Wolf",
+      "level": 14,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "reference_heading_zh": "狼",
+      "reference_text_zh": "當你狂暴時，當你在你的回合以一次近戰武器攻擊命中一個體型為大型或更小的生物時，你可以使用一個附贈動作以將它擊倒伏地。\n\n\n---",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-3-spirit-seeker",
+    "index": "totem-warrior-3-spirit-seeker",
+    "name": "Spirit Seeker",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-3-spirit-seeker",
+      "name": "Spirit Seeker",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "reference_heading_zh": "精魂尋訪者",
+      "reference_text_zh": "*3級圖騰勇士道途特性*\n\n你追求於與大自然調和知道，使你與動物建立了親密的關係。你獲得施放《野獸知覺》和《動物交談術》法術的能力，但只能透過儀式施展，參見第十章的描述。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-3-totem-spirit",
+    "index": "totem-warrior-3-totem-spirit",
+    "name": "Totem Spirit",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-3-totem-spirit",
+      "name": "Totem Spirit",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "reference_heading_zh": "圖騰精魂",
+      "reference_text_zh": "*3級圖騰勇士道途特性*\n\n當你選擇此道途時，你選擇一種圖騰精魂並獲得它的能力。你必須製造或獲得一個象徵圖騰野獸的獸毛、翼羽、利爪、牙齒、或骨頭的圖騰物體—例如護身符或其他類似的飾品。根據你的選擇，你也可以獲得一些讓人聯想到你圖騰精魂的細微身體特徵。舉例而言，若你擁有熊的圖騰精魂，你可能會有著特別茂盛的毛髮和厚實的肌膚。若你的圖騰為鷹，則你的瞳孔可能變成明亮的黃色。\n\n你的圖騰動物可能會是一個與下列這些有關，但更適合你家鄉的動物。舉例來說，你可以選擇隼鳥或鷲來代替鷹。\n\n##### 熊 (Bear)\n\n當狂暴時，你對除了心靈傷害以外的所有傷害具有抗性。熊之精魂將使你堅韌無匹，無懼於任何打擊。\n\n##### 鷹 (Eagle)\n\n當你狂暴且未穿著重甲時，其他生物對你所進行的藉機攻擊將具有劣勢，且你可以在你的回合以一個附贈動作使用疾走動作。鷹之精魂將使你成為能在戰場中自由穿梭的獵殺者。\n\n##### 鹿 (Elk)\n\n當你狂暴且未穿著重甲時，你的步行速度增加15尺。鹿之精魂將使你格外迅捷。\n\n##### 虎 (Tiger)\n\n當狂暴時，你可以使你的跳遠距離增加10尺，並使你的跳高距離增加3尺。虎之精魂將強化你的跳躍能力。\n\n##### 狼 (Wolf)\n\n當你狂暴時，你的盟友在對任何距離你5尺內且對你有敵意的生物所進行的近戰攻擊檢定具有優勢。狼之精魂將使你成為獵手中的領袖。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-3-totem-spirit-option-1-bear",
+    "index": "totem-warrior-3-totem-spirit-option-1-bear",
+    "name": "Bear",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-3-totem-spirit-option-1-bear",
+      "name": "Bear",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "choice_option_for": "phb2014:feature:totem-warrior-3-totem-spirit",
+      "reference_heading_zh": "熊",
+      "reference_text_zh": "當狂暴時，你對除了心靈傷害以外的所有傷害具有抗性。熊之精魂將使你堅韌無匹，無懼於任何打擊。"
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-3-totem-spirit-option-2-eagle",
+    "index": "totem-warrior-3-totem-spirit-option-2-eagle",
+    "name": "Eagle",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-3-totem-spirit-option-2-eagle",
+      "name": "Eagle",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "choice_option_for": "phb2014:feature:totem-warrior-3-totem-spirit",
+      "reference_heading_zh": "鷹",
+      "reference_text_zh": "當你狂暴且未穿著重甲時，其他生物對你所進行的藉機攻擊將具有劣勢，且你可以在你的回合以一個附贈動作使用疾走動作。鷹之精魂將使你成為能在戰場中自由穿梭的獵殺者。"
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-3-totem-spirit-option-3-elk",
+    "index": "totem-warrior-3-totem-spirit-option-3-elk",
+    "name": "Elk",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-3-totem-spirit-option-3-elk",
+      "name": "Elk",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "choice_option_for": "phb2014:feature:totem-warrior-3-totem-spirit",
+      "reference_heading_zh": "鹿",
+      "reference_text_zh": "當你狂暴且未穿著重甲時，你的步行速度增加15尺。鹿之精魂將使你格外迅捷。"
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-3-totem-spirit-option-4-tiger",
+    "index": "totem-warrior-3-totem-spirit-option-4-tiger",
+    "name": "Tiger",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-3-totem-spirit-option-4-tiger",
+      "name": "Tiger",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "choice_option_for": "phb2014:feature:totem-warrior-3-totem-spirit",
+      "reference_heading_zh": "虎",
+      "reference_text_zh": "當狂暴時，你可以使你的跳遠距離增加10尺，並使你的跳高距離增加3尺。虎之精魂將強化你的跳躍能力。"
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-3-totem-spirit-option-5-wolf",
+    "index": "totem-warrior-3-totem-spirit-option-5-wolf",
+    "name": "Wolf",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-3-totem-spirit-option-5-wolf",
+      "name": "Wolf",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "choice_option_for": "phb2014:feature:totem-warrior-3-totem-spirit",
+      "reference_heading_zh": "狼",
+      "reference_text_zh": "當你狂暴時，你的盟友在對任何距離你5尺內且對你有敵意的生物所進行的近戰攻擊檢定具有優勢。狼之精魂將使你成為獵手中的領袖。"
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-6-bear",
+    "index": "totem-warrior-6-bear",
+    "name": "Bear",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-6-bear",
+      "name": "Bear",
+      "level": 6,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "reference_heading_zh": "熊",
+      "reference_text_zh": "你獲得熊之力量。你的負載能力（包括最大負重和最大舉重）變為兩倍，且你在拖曳、推動、提舉、或破壞物體時所進行的力量檢定將具有優勢。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-6-eagle",
+    "index": "totem-warrior-6-eagle",
+    "name": "Eagle",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-6-eagle",
+      "name": "Eagle",
+      "level": 6,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "reference_heading_zh": "鷹",
+      "reference_text_zh": "你獲得鷹之銳目。你可以毫無困難地看見最遠1裡的距離，甚至能辨別出最細微的細節，就如同在檢視距離你不超過100尺的事物一樣。此外，微光光照並不會使你的感知（察覺）檢定承受劣勢。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-6-elk",
+    "index": "totem-warrior-6-elk",
+    "name": "Elk",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-6-elk",
+      "name": "Elk",
+      "level": 6,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "reference_heading_zh": "鹿",
+      "reference_text_zh": "無論是騎乘或徒步，你的旅行步調將變為二倍。只要你未處於無力狀態，則最多十個距離你60尺內的同伴的旅行步調也將變為二倍。鹿之精魂將幫助你行得更快更遠。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-6-tiger",
+    "index": "totem-warrior-6-tiger",
+    "name": "Tiger",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-6-tiger",
+      "name": "Tiger",
+      "level": 6,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "reference_heading_zh": "虎",
+      "reference_text_zh": "你獲得下列其中二個技能的熟練：運動、體操、隱匿、和生存。貓科精魂將磨練你的生存本能。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:totem-warrior-6-wolf",
+    "index": "totem-warrior-6-wolf",
+    "name": "Wolf",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "totem-warrior-6-wolf",
+      "name": "Wolf",
+      "level": 6,
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:totem-warrior",
+        "name": "Path of the Totem Warrior"
+      },
+      "reference_heading_zh": "狼",
+      "reference_text_zh": "你獲得狼的狩獵敏銳。你能夠以快速步速追蹤其他生物，且你能夠以正常步速隱匿移動。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:transmutation-2-minor-alchemy",
+    "index": "transmutation-2-minor-alchemy",
+    "name": "Minor Alchemy",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "transmutation-2-minor-alchemy",
+      "name": "Minor Alchemy",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:transmutation",
+        "name": "School of Transmutation"
+      },
+      "reference_heading_zh": "次級鍊金",
+      "reference_text_zh": "*2級變化學派特性*\n\n你可以暫時地改變一個非魔法物體的物理性質，將它變成另一種物質。你可以對一個完全由木、石（但非寶石）、鐵、銅、或銀所構成的物體施展一項特殊的鍊金程序，將它轉變成上述的另一種材質。你每花費10分鐘施展這個鍊金程序，你就可以轉變最多1立方尺的材質。在1小時之後，或直到你失去你的專注（如同你專注於一個法術），該材質將會變回它原本的物質。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:transmutation-2-transmutation-savant",
+    "index": "transmutation-2-transmutation-savant",
+    "name": "Transmutation Savant",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "transmutation-2-transmutation-savant",
+      "name": "Transmutation Savant",
+      "level": 2,
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:transmutation",
+        "name": "School of Transmutation"
+      },
+      "reference_heading_zh": "變化學者",
+      "reference_text_zh": "*2級變化學派特性*\n\n你在將變化系法術抄寫進你的法術書時所必須花費的金錢和時間減半。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:trickery-1-blessing-of-the-trickster",
+    "index": "trickery-1-blessing-of-the-trickster",
+    "name": "Blessing of the Trickster",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "trickery-1-blessing-of-the-trickster",
+      "name": "Blessing of the Trickster",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:trickery",
+        "name": "Trickery Domain"
+      },
+      "reference_heading_zh": "詭術祝福",
+      "reference_text_zh": "*1級詭術領域特性*\n\n你可以使用你的動作觸碰一個除了你以外的自願生物，讓它在敏捷（隱匿）檢定中獲得優勢。這個祝福會持續1小時或直到你再次使用此能力。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:valor-3-bonus-proficiencies",
+    "index": "valor-3-bonus-proficiencies",
+    "name": "Bonus Proficiencies",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "valor-3-bonus-proficiencies",
+      "name": "Bonus Proficiencies",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:valor",
+        "name": "College of Valor"
+      },
+      "reference_heading_zh": "額外熟練",
+      "reference_text_zh": "*3級勇氣學院特性*\n\n你獲得中甲、盾牌、和軍用武器的熟練。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:valor-3-combat-inspiration",
+    "index": "valor-3-combat-inspiration",
+    "name": "Combat Inspiration",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "valor-3-combat-inspiration",
+      "name": "Combat Inspiration",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:valor",
+        "name": "College of Valor"
+      },
+      "reference_heading_zh": "戰鬥激勵",
+      "reference_text_zh": "*3級勇氣學院特性*\n\n你學會在戰鬥中激勵他人。一個擁有你所給予的吟遊激勵骰的生物，可以骰該吟遊激勵骰以將骰出來的數字加入它剛進行的武器傷害骰中。或者，當一個以該生物為目標的攻擊檢定被進行時，它可以在看見該次攻擊檢定的結果後，但DM宣佈該次攻擊命中與否之前，使用它的反應以骰該吟遊激勵骰，並將骰出來的數字加入它對該次攻擊的AC中。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:vengeance-3-channel-divinity-abjure-enemy",
+    "index": "vengeance-3-channel-divinity-abjure-enemy",
+    "name": "Channel Divinity: Abjure Enemy",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "vengeance-3-channel-divinity-abjure-enemy",
+      "name": "Channel Divinity: Abjure Enemy",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:vengeance",
+        "name": "Oath of Vengeance"
+      },
+      "reference_heading_zh": "引導神力：誓絕仇敵",
+      "reference_text_zh": "*3級復仇之誓特性*\n\n以一個動作，你展現你的聖徽並說出斥責的禱詞，使用你的引導神力。選擇一個距離你60尺內且你所能看見的生物。該生物必須進行一次感知豁免，除非它免疫於恐懼。邪魔和不死生物將在此豁免檢定中具有劣勢。\n\n若豁免失敗，該生物將陷入恐懼長達1分鐘，或直到它受到任何傷害。當處於恐懼時，該生物的移動速度歸零，且無法得益於任何對它移動速度的加值。\n\n若豁免成功，該生物的移動速度被減半長達1分鐘，或直到該生物受到任何傷害。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:vengeance-3-channel-divinity-vow-of-enmity",
+    "index": "vengeance-3-channel-divinity-vow-of-enmity",
+    "name": "Channel Divinity: Vow of Enmity",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "vengeance-3-channel-divinity-vow-of-enmity",
+      "name": "Channel Divinity: Vow of Enmity",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:vengeance",
+        "name": "Oath of Vengeance"
+      },
+      "reference_heading_zh": "引導神力：憎恨誓言",
+      "reference_text_zh": "*3級復仇之誓特性*\n\n以一個附贈動作，你可以使用你的引導神力，對一個距離你10尺內且你所能看見的生物立下憎恨誓言。你對該生物所進行的攻擊檢定將具有優勢，持續1分鐘，或直到它的生命值歸零或陷入昏迷狀態。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:vengeance-3-oath-spells",
+    "index": "vengeance-3-oath-spells",
+    "name": "Oath Spells",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "vengeance-3-oath-spells",
+      "name": "Oath Spells",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:vengeance",
+        "name": "Oath of Vengeance"
+      },
+      "reference_heading_zh": "聖誓法術",
+      "reference_text_zh": "*3級復仇之誓特性*\n\n你在下列聖武士等級時獲得相應的聖誓法術。\n\n**奉獻之誓法術**\n\n| 聖武士等級 | 法術 |\n| :--- | :--- |\n| 3級 | 《災禍術》, 《獵人印記》 |\n| 5級 | 《人類定身術》, 《迷蹤步》 |\n| 9級 | 《加速術》, 《防護能量》 |\n| 13級 | 《放逐術》, 《次元門》 |\n| 17級 | 《怪物定身術》, 《探知》 |",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:vengeance-3-tenets-of-vengeance",
+    "index": "vengeance-3-tenets-of-vengeance",
+    "name": "Tenets of Vengeance",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "vengeance-3-tenets-of-vengeance",
+      "name": "Tenets of Vengeance",
+      "level": 3,
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:vengeance",
+        "name": "Oath of Vengeance"
+      },
+      "reference_heading_zh": "復仇之信條",
+      "reference_text_zh": "復仇之誓的信條對每個聖武士而言都各有不同，但這些信條全都圍繞著以任何必要手段懲罰有過者。高舉這些信條的聖武士甚至願意犧牲他們的正直以讓正義降臨在惡者身上，也因此，這些聖武士的陣營通常會是絕對中立或守序中立。這些信條的核心原則極其簡單。\n\n###### 追尋以迎戰大惡\n\n是要追獵誓敵？抑或驅逐小惡？我選擇迎戰那更大的邪惡。\n\n###### 對惡徒不留慈悲\n\n尋常敵人可能贏得我的慈悲，但我的誓敵無可憐憫。\n\n###### 為目的不擇手段\n\n我的擔憂疑慮永不會阻止我殲滅敵人。\n\n###### 為惡行盡力補償\n\n若我的敵人在這世界上造成了破壞，那必是因我沒能成功阻止它。我必須幫助那些因其惡行而被傷害的人們。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:war-1-bonus-proficiencies",
+    "index": "war-1-bonus-proficiencies",
+    "name": "Bonus Proficiencies",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "war-1-bonus-proficiencies",
+      "name": "Bonus Proficiencies",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:war",
+        "name": "War Domain"
+      },
+      "reference_heading_zh": "額外熟練",
+      "reference_text_zh": "*1級戰爭領域特性*\n\n你獲得軍用武器和重甲的熟練。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:war-1-war-priest",
+    "index": "war-1-war-priest",
+    "name": "War Priest",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "war-1-war-priest",
+      "name": "War Priest",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:war",
+        "name": "War Domain"
+      },
+      "reference_heading_zh": "戰爭祭司",
+      "reference_text_zh": "*1級戰爭領域特性*\n\n你的神在你投身於戰鬥時賦予你激勵。當你執行攻擊動作時，你能夠以一個附贈動作進行一次武器攻擊。你可以使用此能力等同於你感知調整值的次數（最少一次）。你在完成一次長休後恢復所有你花費掉的次數。",
+      "automation_boundary": "structured_manual",
+      "resource": {
+        "capacity": {
+          "type": "ability_modifier",
+          "ability": "wisdom",
+          "minimum": 1
+        },
+        "recharge": [
+          "long_rest"
+        ]
+      }
+    }
+  },
+  {
+    "key": "phb2014:feature:wild-magic-1-tides-of-chaos",
+    "index": "wild-magic-1-tides-of-chaos",
+    "name": "Tides of Chaos",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "wild-magic-1-tides-of-chaos",
+      "name": "Tides of Chaos",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:wild-magic",
+        "name": "Wild Magic"
+      },
+      "reference_heading_zh": "混亂之潮",
+      "reference_text_zh": "*1級狂野魔法特性*\n\n你可以操作機率和混亂之力以在一次攻擊檢定、能力檢定、或豁免檢定中獲得優勢。一旦你這麼做，你必須在完成一次長休後才能再使用此能力。\n\n在你重新獲得使用混亂之潮的能力之前，DM可以緊接你施放一個1環或更高環的術士法術後要求你擲骰使用狂野魔法浪湧表。接著你恢復使用混亂之潮的能力。",
+      "automation_boundary": "structured_manual"
+    }
+  },
+  {
+    "key": "phb2014:feature:wild-magic-1-wild-magic-surge",
+    "index": "wild-magic-1-wild-magic-surge",
+    "name": "Wild Magic Surge",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "wild-magic-1-wild-magic-surge",
+      "name": "Wild Magic Surge",
+      "level": 1,
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "phb2014:subclass:wild-magic",
+        "name": "Wild Magic"
+      },
+      "reference_heading_zh": "狂野魔法浪湧",
+      "reference_text_zh": "*1級狂野魔法特性*\n\n你的施法可以釋放出未經馴服的魔法浪湧。緊接在你施放一個1環或更高環的術士法術，DM可以要求你骰一顆d20。若你骰出了1，則擲骰使用狂野魔法浪湧表以創造出一個隨機的魔法效果。一道狂野魔法浪湧在每回合可以發生一次。\n\n若狂野魔法效果為一個法術，則它太過狂野以至於它無法被超魔法影響。若它原本需要專注，則它在這個情況下也不需要專注；該法術將持續到它的完整持續時間。\n\n**狂野魔法浪湧**\n\n| d100 | 效果 |\n| :--- | :--- |\n| 01-02 | 在接下來一分鐘內，你在你的每個回合開始時骰這張表，並在後續的擲骰中無視骰到這個專案的擲骰結果。 |\n| 03-04 | 在接下來一分鐘內，若任何隱形生物處於你的視線範圍內，則你可以看見它。 |\n| 05-06 | 一個DM所選擇並控制的魔冢出現在距離你5尺內的一處未被佔據空間，並在1分鐘後消失。 |\n| 07-08 | 你以3環法術，以你自己為中心施放《火球術》。 |\n| 09-10 | 你以5環法術施放《魔法飛彈》。 |\n| 11-12 | 骰一顆d10。你的身高改變等同於擲骰結果的寸數。若擲骰結果為奇數，你的身高變矮。若擲骰結果為偶數，你的身高變高。 |\n| 13-14 | 你以自己為中心施放《困惑術》。 |\n| 15-16 | 在接下來一分鐘內，你在你的每個回合開始時回覆5點生命值。 |\n| 17-18 | 你的臉上長出大把羽毛組成的長鬚。一旦你打了噴嚏，這些羽毛將從你臉上被炸飛出去。 |\n| 19-20 | 你以自己為中心施放《油膩術》。 |\n| 21-22 | 所有生物在對抗你在接下來一分鐘內所施放的下一個涉及豁免檢定的法術時，所進行的豁免檢定具有劣勢。 |\n| 23-24 | 你的肌膚變成有著鮮豔漸層的藍色。一個《移除詛咒》法術可以終止此效果。 |\n| 25-26 | 一顆眼睛將在接下來一分鐘內出現在你的額頭上。 |\n| 27-28 | 在接下來一分鐘內，你所有施法時間為1個動作的法術，其施法時間變成1個附贈動作。 |\n| 29-30 | 你傳送最遠60尺距離到一處你所選且你能看見的一處未被佔據空間。 |\n| 31-32 | 你被傳送到星界直到你的下個回合結束，在那之後你將回到你先前所佔據的空間，或若該空間被佔據，則回到離該處最近的一處未被佔據空間。 |\n| 33-34 | 在接下來一分鐘內你所施放的下一個傷害法術的傷害取最大值。 |\n| 35-36 | 骰一顆d10。你的年齡改變等同於擲骰結果的年數。若擲骰結果為奇數，你變年輕（最小一歲）。若擲骰結果為偶數，你變得更老。 |\n| 37-38 | 1d6個由DM控制的《呋嚕》出現在距離你60尺內的未被佔據空間，且對你感到恐懼。它們將在1分鐘後消失。 |\n| 39-40 | 你回覆2d10點生命值。 |\n| 41-42 | 你變成一個盆栽植物直到你的下個回合開始。當變成盆栽植物時，你處於無力狀態且對所有傷害易傷。若你的生命值歸零，你的盆栽將被破壞，且你恢復原本的型態。 |\n| 43-44 | 在接下來一分鐘內，你可以在你的每個回合以一個附贈動作傳送最遠20尺距離。 |\n| 45-46 | 你對你自己施放《浮空術》。 |\n| 47-48 | 一個由DM控制的《獨角獸》出現在距離你5尺內的一個空間，並在1分鐘後消失。 |\n| 49-50 | 你在接下來一分鐘內無法說話。每當你嘗試說話時，粉紅色的泡泡將從你口中飄出。 |\n| 51-52 | 一道靈體似的護盾在接下來一分鐘內漂浮於你附近，使你的AC獲得+2加值，並讓你免疫於《魔法飛彈》。 |\n| 53-54 | 你在接下來的5d6天內免疫於酒精導致的酒醉狀態。 |\n| 55-56 | 你的頭髮掉光，但在24小時內重新長回來。 |\n| 57-58 | 在接下來一分鐘內，任何你所碰觸，且未被其他生物穿戴或攜帶的可燃物體都將熊熊燃燒。 |\n| 59-60 | 你恢復你花費掉最低環階的法術位。 |\n| 61-62 | 在接下來一分鐘內，你在說話時必須用吼的。 |\n| 63-64 | 你以你自己為中心施放《雲霧術》。 |\n| 65-66 | 最多三個你所選擇距離你30尺內的生物受到4d10閃電傷害。 |\n| 67-68 | 你因離你最近的生物而陷入恐懼狀態，持續直到你的下個回合結束。 |\n| 69-70 | 每個距離你30尺內的生物在接下來一分鐘內變得隱形。作用於一個生物的隱形狀態會在它攻擊或施放法術時結束。 |\n| 71-72 | 你在接下來一分鐘內獲得對所有傷害的抗性。 |\n| 73-74 | 一個距離你60尺內的隨機生物將陷入中毒狀態長達1d4小時。 |\n| 75-76 | 你在接下來一分鐘內發出30尺半徑的明亮光照。任何在距離你5尺內結束它回合的生物將陷入目盲狀態直到它的下個回合結束。 |\n| 77-78 | 你對你自己施放《變形術》。若你在該豁免檢定中失敗，你將在法術的持續時間內被變成一隻綿羊。 |\n| 79-80 | 幻影蝴蝶和花瓣在接下來一分鐘內於你10尺內翩翩飛舞於空中。 |\n| 81-82 | 你可以立刻採取一個額外的動作。 |\n| 83-84 | 每個距離你30尺內的生物受到1d10黯蝕傷害。你回覆等同於所造成黯蝕傷害總和的生命值。 |\n| 85-86 | 你施放《鏡影術》。 |\n| 87-88 | 你對一個距離你60尺內的隨機生物施放《飛行術》。 |\n| 89-90 | 你在接下來一分鐘內變得隱形。在這段時間內，其他生物無法聽見你。這個隱形狀態會在你攻擊或施放法術時結束。 |\n| 91-92 | 若你在接下來一分鐘內死亡，你將立刻復活，如同被施放了《轉生術》法術。 |\n| 93-94 | 你的體型在接下來一分鐘內增加一級。 |\n| 95-96 | 你和所有距離你30尺內的生物在接下來一分鐘內獲得對穿刺傷害的易傷。 |\n| 97-98 | 你在接下來一分鐘內被模糊縹緲的音樂環繞。 |\n| 99-00 | 你恢復所有你花費掉的術法點。 |",
+      "automation_boundary": "structured_manual"
+    }
+  }
+]

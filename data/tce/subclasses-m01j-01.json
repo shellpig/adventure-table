@@ -1,0 +1,3112 @@
+[
+  {
+    "key": "tce:subclass:aberrant-mind",
+    "index": "aberrant-mind",
+    "name": "Aberrant Mind",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "aberrant-mind",
+      "name": "Aberrant Mind",
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass_flavor": "Sorcerous Origin",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        14,
+        18
+      ],
+      "progression_feature_refs": [
+        "tce:feature:aberrant-mind-1-psionic-spells",
+        "tce:feature:aberrant-mind-1-telepathic-speech"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_術士.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%9c%af%e5%a3%ab_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-1",
+              "type": "level",
+              "name": "Sorcerer 1"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:arms-of-hadar",
+            "name": "Arms of Hadar"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-1",
+              "type": "level",
+              "name": "Sorcerer 1"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:dissonant-whispers",
+            "name": "Dissonant Whispers"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-1",
+              "type": "level",
+              "name": "Sorcerer 1"
+            }
+          ],
+          "spell": {
+            "key": "tce:spell:mind-sliver",
+            "name": "Mind Sliver"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-3",
+              "type": "level",
+              "name": "Sorcerer 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:calm-emotions",
+            "name": "Calm Emotions"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-3",
+              "type": "level",
+              "name": "Sorcerer 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:detect-thoughts",
+            "name": "Detect Thoughts"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-5",
+              "type": "level",
+              "name": "Sorcerer 5"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:hunger-of-hadar",
+            "name": "Hunger of Hadar"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-5",
+              "type": "level",
+              "name": "Sorcerer 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:sending",
+            "name": "Sending"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-7",
+              "type": "level",
+              "name": "Sorcerer 7"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:black-tentacles",
+            "name": "Black Tentacles"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-7",
+              "type": "level",
+              "name": "Sorcerer 7"
+            }
+          ],
+          "spell": {
+            "key": "tce:spell:summon-aberration",
+            "name": "Summon Aberration"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-9",
+              "type": "level",
+              "name": "Sorcerer 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:telepathic-bond",
+            "name": "Telepathic Bond"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-9",
+              "type": "level",
+              "name": "Sorcerer 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:telekinesis",
+            "name": "Telekinesis"
+          },
+          "access_type": "granted"
+        }
+      ],
+      "subclass_spell_replacement": {
+        "eligible_class_refs": [
+          "srd5.1:class:sorcerer",
+          "srd5.1:class:warlock",
+          "srd5.1:class:wizard"
+        ],
+        "school_indices": [
+          "divination",
+          "enchantment"
+        ],
+        "one_replacement_per_class_level": true
+      }
+    }
+  },
+  {
+    "key": "tce:subclass:astral-self",
+    "index": "astral-self",
+    "name": "Way of the Astral Self",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "astral-self",
+      "name": "Way of the Astral Self",
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass_flavor": "Monastic Tradition",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        11,
+        17
+      ],
+      "progression_feature_refs": [
+        "tce:feature:astral-self-3-forms-of-your-astral-self",
+        "tce:feature:astral-self-3-arms-of-the-astral-self"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_武僧.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%ad%a6%e5%83%a7_phb"
+    }
+  },
+  {
+    "key": "tce:subclass:beast",
+    "index": "beast",
+    "name": "Path of the Beast",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "beast",
+      "name": "Path of the Beast",
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass_flavor": "Primal Path",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "tce:feature:beast-3-form-of-the-beast"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_野蠻人.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e9%87%8e%e8%9b%ae%e4%ba%ba_phb"
+    }
+  },
+  {
+    "key": "tce:subclass:bladesinging",
+    "index": "bladesinging",
+    "name": "Bladesinging",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "bladesinging",
+      "name": "Bladesinging",
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass_flavor": "Arcane Tradition",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "tce:feature:bladesinging-2-training-in-war-and-song-bladesinging",
+        "tce:feature:bladesinging-2-bladesong",
+        "tce:feature:bladesinging-2-bladesinger-styles"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [
+        "tce:feature:bladesinging-2-bladesong"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_法師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b3%95%e5%b8%88_phb",
+      "fixed_grants": {
+        "proficiencies": [
+          "srd5.1:proficiency:light-armor"
+        ],
+        "skills": [
+          "srd5.1:skill:performance"
+        ]
+      },
+      "grant_choices": [
+        {
+          "choice_key": "bladesinger-weapon",
+          "label": "Training in War and Song — weapon",
+          "minimum_class_level": 2,
+          "choose_total": 1,
+          "grant_target": "proficiency",
+          "option_pool": "one_handed_melee_weapons"
+        }
+      ]
+    }
+  },
+  {
+    "key": "tce:subclass:clockwork-soul",
+    "index": "clockwork-soul",
+    "name": "Clockwork Soul",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "clockwork-soul",
+      "name": "Clockwork Soul",
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass_flavor": "Sorcerous Origin",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        14,
+        18
+      ],
+      "progression_feature_refs": [
+        "tce:feature:clockwork-soul-1-clockwork-magic",
+        "tce:feature:clockwork-soul-1-restore-balance"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [
+        "tce:feature:clockwork-soul-1-restore-balance"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_術士.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%9c%af%e5%a3%ab_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-1",
+              "type": "level",
+              "name": "Sorcerer 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:alarm",
+            "name": "Alarm"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-1",
+              "type": "level",
+              "name": "Sorcerer 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:protection-from-evil-and-good",
+            "name": "Protection from Evil and Good"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-3",
+              "type": "level",
+              "name": "Sorcerer 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:aid",
+            "name": "Aid"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-3",
+              "type": "level",
+              "name": "Sorcerer 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:lesser-restoration",
+            "name": "Lesser Restoration"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-5",
+              "type": "level",
+              "name": "Sorcerer 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:dispel-magic",
+            "name": "Dispel Magic"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-5",
+              "type": "level",
+              "name": "Sorcerer 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:protection-from-energy",
+            "name": "Protection From Energy"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-7",
+              "type": "level",
+              "name": "Sorcerer 7"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:freedom-of-movement",
+            "name": "Freedom of Movement"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-7",
+              "type": "level",
+              "name": "Sorcerer 7"
+            }
+          ],
+          "spell": {
+            "key": "tce:spell:summon-construct",
+            "name": "Summon Construct"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-9",
+              "type": "level",
+              "name": "Sorcerer 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:greater-restoration",
+            "name": "Greater Restoration"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "sorcerer-9",
+              "type": "level",
+              "name": "Sorcerer 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:wall-of-force",
+            "name": "Wall of Force"
+          },
+          "access_type": "granted"
+        }
+      ],
+      "subclass_spell_replacement": {
+        "eligible_class_refs": [
+          "srd5.1:class:sorcerer",
+          "srd5.1:class:warlock",
+          "srd5.1:class:wizard"
+        ],
+        "school_indices": [
+          "abjuration",
+          "transmutation"
+        ],
+        "one_replacement_per_class_level": true
+      }
+    }
+  },
+  {
+    "key": "tce:subclass:creation",
+    "index": "creation",
+    "name": "College of Creation",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "creation",
+      "name": "College of Creation",
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass_flavor": "Bard College",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        14
+      ],
+      "progression_feature_refs": [
+        "tce:feature:creation-3-mote-of-potential",
+        "tce:feature:creation-3-performance-of-creation"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [
+        "tce:feature:creation-3-performance-of-creation"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_吟遊詩人.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%90%9f%e6%b8%b8%e8%af%97%e4%ba%ba_phb"
+    }
+  },
+  {
+    "key": "tce:subclass:eloquence",
+    "index": "eloquence",
+    "name": "College of Eloquence",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "eloquence",
+      "name": "College of Eloquence",
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass_flavor": "Bard College",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        14
+      ],
+      "progression_feature_refs": [
+        "tce:feature:eloquence-3-silver-tongue",
+        "tce:feature:eloquence-3-unsettling-words"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_吟遊詩人.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%90%9f%e6%b8%b8%e8%af%97%e4%ba%ba_phb"
+    }
+  },
+  {
+    "key": "tce:subclass:fathomless",
+    "index": "fathomless",
+    "name": "The Fathomless",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "fathomless",
+      "name": "The Fathomless",
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass_flavor": "Otherworldly Patron",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "tce:feature:fathomless-1-expanded-spell-list",
+        "tce:feature:fathomless-1-tentacle-of-the-deeps",
+        "tce:feature:fathomless-1-gift-of-the-sea"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [
+        "tce:feature:fathomless-1-tentacle-of-the-deeps"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_邪術師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e9%82%aa%e6%9c%af%e5%b8%88_phb",
+      "expanded_spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:create-or-destroy-water",
+            "name": "Create or Destroy Water"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-1",
+              "type": "level",
+              "name": "Warlock 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:thunderwave",
+            "name": "Thunderwave"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-2",
+              "type": "level",
+              "name": "Warlock 2"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:gust-of-wind",
+            "name": "Gust of Wind"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-2",
+              "type": "level",
+              "name": "Warlock 2"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:silence",
+            "name": "Silence"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-3",
+              "type": "level",
+              "name": "Warlock 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:lightning-bolt",
+            "name": "Lightning Bolt"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-3",
+              "type": "level",
+              "name": "Warlock 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:sleet-storm",
+            "name": "Sleet Storm"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-4",
+              "type": "level",
+              "name": "Warlock 4"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:control-water",
+            "name": "Control Water"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-4",
+              "type": "level",
+              "name": "Warlock 4"
+            }
+          ],
+          "spell": {
+            "key": "tce:spell:summon-elemental",
+            "name": "Summon Elemental"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-5",
+              "type": "level",
+              "name": "Warlock 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:cone-of-cold",
+            "name": "Cone of Cold"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "warlock-5",
+              "type": "level",
+              "name": "Warlock 5"
+            }
+          ],
+          "access_type": "expanded",
+          "spell": {
+            "key": "srd5.1:spell:arcane-hand",
+            "name": "Arcane Hand"
+          }
+        }
+      ],
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-10",
+              "type": "level",
+              "name": "Class Level 10"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:black-tentacles",
+            "name": "Black Tentacles"
+          },
+          "access_type": "granted"
+        }
+      ]
+    }
+  },
+  {
+    "key": "tce:subclass:fey-wanderer",
+    "index": "fey-wanderer",
+    "name": "Fey Wanderer",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "fey-wanderer",
+      "name": "Fey Wanderer",
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass_flavor": "Ranger Archetype",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        11,
+        15
+      ],
+      "progression_feature_refs": [
+        "tce:feature:fey-wanderer-3-dreadful-strikes",
+        "tce:feature:fey-wanderer-3-fey-wanderer-magic",
+        "tce:feature:fey-wanderer-3-otherworldly-glamour"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_遊俠.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b8%b8%e4%be%a0_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "ranger-3",
+              "type": "level",
+              "name": "Ranger 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:charm-person",
+            "name": "Charm Person"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "ranger-5",
+              "type": "level",
+              "name": "Ranger 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:misty-step",
+            "name": "Misty Step"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "ranger-9",
+              "type": "level",
+              "name": "Ranger 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:dispel-magic",
+            "name": "Dispel Magic"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "ranger-13",
+              "type": "level",
+              "name": "Ranger 13"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:dimension-door",
+            "name": "Dimension Door"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "ranger-17",
+              "type": "level",
+              "name": "Ranger 17"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:mislead",
+            "name": "Mislead"
+          },
+          "access_type": "granted"
+        }
+      ],
+      "grant_choices": [
+        {
+          "choice_key": "fey-wanderer-skill",
+          "label": "Otherworldly Glamour — skill",
+          "minimum_class_level": 3,
+          "choose_total": 1,
+          "grant_target": "skill",
+          "option_refs": [
+            "srd5.1:skill:deception",
+            "srd5.1:skill:performance",
+            "srd5.1:skill:persuasion"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "key": "tce:subclass:genie",
+    "index": "genie",
+    "name": "The Genie",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "genie",
+      "name": "The Genie",
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass_flavor": "Otherworldly Patron",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "tce:feature:genie-1-expanded-spell-list",
+        "tce:feature:genie-1-genie-s-vessel"
+      ],
+      "persistent_choices": [
+        {
+          "choice_key": "genie-kind",
+          "feature_ref": "tce:feature:genie-1-expanded-spell-list",
+          "minimum_class_level": 1,
+          "choose_total": 1,
+          "progression": [],
+          "option_refs": [
+            "tce:feature:genie-m01j-choice-genie-dao",
+            "tce:feature:genie-m01j-choice-genie-djinni",
+            "tce:feature:genie-m01j-choice-genie-efreeti",
+            "tce:feature:genie-m01j-choice-genie-marid"
+          ],
+          "option_minimum_levels": {},
+          "label": "Genie Kind"
+        }
+      ],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_邪術師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e9%82%aa%e6%9c%af%e5%b8%88_phb",
+      "expanded_spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-1",
+              "type": "level",
+              "name": "Class Level 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:detect-evil-and-good",
+            "name": "Detect Evil and Good"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-2",
+              "type": "level",
+              "name": "Class Level 2"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:phantasmal-force",
+            "name": "Phantasmal Force"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-3",
+              "type": "level",
+              "name": "Class Level 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:create-food-and-water",
+            "name": "Create Food and Water"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-4",
+              "type": "level",
+              "name": "Class Level 4"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:phantasmal-killer",
+            "name": "Phantasmal Killer"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-5",
+              "type": "level",
+              "name": "Class Level 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:creation",
+            "name": "Creation"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-9",
+              "type": "level",
+              "name": "Class Level 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:wish",
+            "name": "Wish"
+          },
+          "access_type": "expanded"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-1",
+              "type": "level",
+              "name": "Class Level 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:sanctuary",
+            "name": "Sanctuary"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-dao"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-2",
+              "type": "level",
+              "name": "Class Level 2"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:spike-growth",
+            "name": "Spike Growth"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-dao"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-3",
+              "type": "level",
+              "name": "Class Level 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:meld-into-stone",
+            "name": "Meld Into Stone"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-dao"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-4",
+              "type": "level",
+              "name": "Class Level 4"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:stone-shape",
+            "name": "Stone Shape"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-dao"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-5",
+              "type": "level",
+              "name": "Class Level 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:wall-of-stone",
+            "name": "Wall of Stone"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-dao"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-1",
+              "type": "level",
+              "name": "Class Level 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:thunderwave",
+            "name": "Thunderwave"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-djinni"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-2",
+              "type": "level",
+              "name": "Class Level 2"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:gust-of-wind",
+            "name": "Gust of Wind"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-djinni"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-3",
+              "type": "level",
+              "name": "Class Level 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:wind-wall",
+            "name": "Wind Wall"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-djinni"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-4",
+              "type": "level",
+              "name": "Class Level 4"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:greater-invisibility",
+            "name": "Greater Invisibility"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-djinni"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-5",
+              "type": "level",
+              "name": "Class Level 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:seeming",
+            "name": "Seeming"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-djinni"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-1",
+              "type": "level",
+              "name": "Class Level 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:burning-hands",
+            "name": "Burning Hands"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-efreeti"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-2",
+              "type": "level",
+              "name": "Class Level 2"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:scorching-ray",
+            "name": "Scorching Ray"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-efreeti"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-3",
+              "type": "level",
+              "name": "Class Level 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:fireball",
+            "name": "Fireball"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-efreeti"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-4",
+              "type": "level",
+              "name": "Class Level 4"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:fire-shield",
+            "name": "Fire Shield"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-efreeti"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-5",
+              "type": "level",
+              "name": "Class Level 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:flame-strike",
+            "name": "Flame Strike"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-efreeti"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-1",
+              "type": "level",
+              "name": "Class Level 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:fog-cloud",
+            "name": "Fog Cloud"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-marid"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-2",
+              "type": "level",
+              "name": "Class Level 2"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:blur",
+            "name": "Blur"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-marid"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-3",
+              "type": "level",
+              "name": "Class Level 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:sleet-storm",
+            "name": "Sleet Storm"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-marid"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-4",
+              "type": "level",
+              "name": "Class Level 4"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:control-water",
+            "name": "Control Water"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-marid"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-5",
+              "type": "level",
+              "name": "Class Level 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:cone-of-cold",
+            "name": "Cone of Cold"
+          },
+          "access_type": "expanded",
+          "choice_key": "genie-kind",
+          "option_ref": "tce:feature:genie-m01j-choice-genie-marid"
+        }
+      ]
+    }
+  },
+  {
+    "key": "tce:subclass:glory",
+    "index": "glory",
+    "name": "Oath of Glory",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "glory",
+      "name": "Oath of Glory",
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass_flavor": "Sacred Oath",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        15,
+        20
+      ],
+      "progression_feature_refs": [
+        "tce:feature:glory-3-tenets-of-glory",
+        "tce:feature:glory-3-oath-spells",
+        "tce:feature:glory-3-channel-divinity"
+      ],
+      "persistent_choices": [
+        {
+          "choice_key": "glory-3-channel-divinity:0",
+          "feature_ref": "tce:feature:glory-3-channel-divinity",
+          "minimum_class_level": 3,
+          "choose_total": 1,
+          "progression": [
+            {
+              "class_level": 3,
+              "choose_total": 1
+            }
+          ],
+          "option_refs": [
+            "tce:feature:glory-3-channel-divinity-option-1-peerless-athlete",
+            "tce:feature:glory-3-channel-divinity-option-2-inspiring-smite"
+          ],
+          "label": "Channel Divinity",
+          "label_zh": "引導神力"
+        }
+      ],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_聖武士.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%9c%a3%e6%ad%a6%e5%a3%ab_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-3",
+              "type": "level",
+              "name": "Paladin 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:guiding-bolt",
+            "name": "Guiding Bolt"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-3",
+              "type": "level",
+              "name": "Paladin 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:heroism",
+            "name": "Heroism"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-5",
+              "type": "level",
+              "name": "Paladin 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:enhance-ability",
+            "name": "Enhance Ability"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-5",
+              "type": "level",
+              "name": "Paladin 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:magic-weapon",
+            "name": "Magic Weapon"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-9",
+              "type": "level",
+              "name": "Paladin 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:haste",
+            "name": "Haste"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-9",
+              "type": "level",
+              "name": "Paladin 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:protection-from-energy",
+            "name": "Protection From Energy"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-13",
+              "type": "level",
+              "name": "Paladin 13"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:compulsion",
+            "name": "Compulsion"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-13",
+              "type": "level",
+              "name": "Paladin 13"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:freedom-of-movement",
+            "name": "Freedom of Movement"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-17",
+              "type": "level",
+              "name": "Paladin 17"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:commune",
+            "name": "Commune"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-17",
+              "type": "level",
+              "name": "Paladin 17"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:flame-strike",
+            "name": "Flame Strike"
+          },
+          "access_type": "always_prepared"
+        }
+      ]
+    }
+  },
+  {
+    "key": "tce:subclass:mercy",
+    "index": "mercy",
+    "name": "Way of Mercy",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "mercy",
+      "name": "Way of Mercy",
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass_flavor": "Monastic Tradition",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        11,
+        17
+      ],
+      "progression_feature_refs": [
+        "tce:feature:mercy-3-implements-of-mercy",
+        "tce:feature:mercy-3-hand-of-healing",
+        "tce:feature:mercy-3-hand-of-harm"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_武僧.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%ad%a6%e5%83%a7_phb",
+      "fixed_grants": {
+        "proficiencies": [
+          "srd5.1:proficiency:herbalism-kit"
+        ],
+        "skills": [
+          "srd5.1:skill:insight",
+          "srd5.1:skill:medicine"
+        ]
+      }
+    }
+  },
+  {
+    "key": "tce:subclass:order",
+    "index": "order",
+    "name": "Order Domain",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "order",
+      "name": "Order Domain",
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass_flavor": "Divine Domain",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "progression_feature_refs": [
+        "tce:feature:order-1-bonus-proficiencies",
+        "tce:feature:order-1-voice-of-authority"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_牧師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e7%89%a7%e5%b8%88_phb",
+      "fixed_grants": {
+        "proficiencies": [
+          "srd5.1:proficiency:heavy-armor"
+        ]
+      },
+      "grant_choices": [
+        {
+          "choice_key": "order-domain-skill",
+          "label": "Bonus Proficiency",
+          "minimum_class_level": 1,
+          "choose_total": 1,
+          "grant_target": "skill",
+          "option_refs": [
+            "srd5.1:skill:intimidation",
+            "srd5.1:skill:persuasion"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "key": "tce:subclass:peace",
+    "index": "peace",
+    "name": "Peace Domain",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "peace",
+      "name": "Peace Domain",
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass_flavor": "Divine Domain",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "progression_feature_refs": [
+        "tce:feature:peace-1-domain-spells",
+        "tce:feature:peace-1-implement-of-peace",
+        "tce:feature:peace-1-emboldening-bond"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [
+        "tce:feature:peace-1-emboldening-bond"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_牧師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e7%89%a7%e5%b8%88_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-1",
+              "type": "level",
+              "name": "Cleric 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:heroism",
+            "name": "Heroism"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-1",
+              "type": "level",
+              "name": "Cleric 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:sanctuary",
+            "name": "Sanctuary"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-3",
+              "type": "level",
+              "name": "Cleric 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:aid",
+            "name": "Aid"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-3",
+              "type": "level",
+              "name": "Cleric 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:warding-bond",
+            "name": "Warding Bond"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-5",
+              "type": "level",
+              "name": "Cleric 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:beacon-of-hope",
+            "name": "Beacon of Hope"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-5",
+              "type": "level",
+              "name": "Cleric 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:sending",
+            "name": "Sending"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-7",
+              "type": "level",
+              "name": "Cleric 7"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:aura-of-purity",
+            "name": "Aura of Purity"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-7",
+              "type": "level",
+              "name": "Cleric 7"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:resilient-sphere",
+            "name": "Resilient Sphere"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-9",
+              "type": "level",
+              "name": "Cleric 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:greater-restoration",
+            "name": "Greater Restoration"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-9",
+              "type": "level",
+              "name": "Cleric 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:telepathic-bond",
+            "name": "Telepathic Bond"
+          },
+          "access_type": "always_prepared"
+        }
+      ],
+      "grant_choices": [
+        {
+          "choice_key": "peace-domain-skill",
+          "label": "Implement of Peace",
+          "minimum_class_level": 1,
+          "choose_total": 1,
+          "grant_target": "skill",
+          "option_refs": [
+            "srd5.1:skill:insight",
+            "srd5.1:skill:performance",
+            "srd5.1:skill:persuasion"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "key": "tce:subclass:phantom",
+    "index": "phantom",
+    "name": "Phantom",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "phantom",
+      "name": "Phantom",
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass_flavor": "Roguish Archetype",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        9,
+        13,
+        17
+      ],
+      "progression_feature_refs": [
+        "tce:feature:phantom-3-whispers-of-the-dead",
+        "tce:feature:phantom-3-wails-from-the-grave"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [
+        "tce:feature:phantom-3-wails-from-the-grave"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_遊蕩者.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b8%b8%e8%8d%a1%e8%80%85_phb"
+    }
+  },
+  {
+    "key": "tce:subclass:psi-warrior",
+    "index": "psi-warrior",
+    "name": "Psi Warrior",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "psi-warrior",
+      "name": "Psi Warrior",
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass_flavor": "Martial Archetype",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        10,
+        15,
+        18
+      ],
+      "progression_feature_refs": [
+        "tce:feature:psi-warrior-3-psionic-power",
+        "tce:feature:psi-warrior-7-psi-powered-leap",
+        "tce:feature:psi-warrior-7-telekinetic-thrust"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [
+        "tce:feature:psi-warrior-7-psi-powered-leap"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_戰士.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%88%98%e5%a3%ab_phb"
+    }
+  },
+  {
+    "key": "tce:subclass:rune-knight",
+    "index": "rune-knight",
+    "name": "Rune Knight",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "rune-knight",
+      "name": "Rune Knight",
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass_flavor": "Martial Archetype",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        10,
+        15,
+        18
+      ],
+      "progression_feature_refs": [
+        "tce:feature:rune-knight-3-bonus-proficiencies",
+        "tce:feature:rune-knight-3-rune-carver",
+        "tce:feature:rune-knight-3-giant-s-might"
+      ],
+      "persistent_choices": [
+        {
+          "choice_key": "rune-carver",
+          "feature_ref": "tce:feature:rune-knight-3-rune-carver",
+          "minimum_class_level": 3,
+          "choose_total": 2,
+          "progression": [
+            {
+              "class_level": 3,
+              "choose_total": 2
+            },
+            {
+              "class_level": 7,
+              "choose_total": 3
+            },
+            {
+              "class_level": 10,
+              "choose_total": 4
+            },
+            {
+              "class_level": 15,
+              "choose_total": 5
+            }
+          ],
+          "option_refs": [
+            "tce:feature:rune-knight-3-rune-carver-option-1-cloud-rune",
+            "tce:feature:rune-knight-3-rune-carver-option-2-fire-rune",
+            "tce:feature:rune-knight-3-rune-carver-option-3-frost-rune",
+            "tce:feature:rune-knight-3-rune-carver-option-4-stone-rune",
+            "tce:feature:rune-knight-3-rune-carver-option-hill-rune",
+            "tce:feature:rune-knight-3-rune-carver-option-storm-rune"
+          ],
+          "option_minimum_levels": {
+            "tce:feature:rune-knight-3-rune-carver-option-hill-rune": 7,
+            "tce:feature:rune-knight-3-rune-carver-option-storm-rune": 7
+          },
+          "label": "Rune Carver"
+        }
+      ],
+      "resource_feature_refs": [
+        "tce:feature:rune-knight-3-giant-s-might"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_戰士.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%88%98%e5%a3%ab_phb",
+      "fixed_grants": {
+        "proficiencies": [
+          "srd5.1:proficiency:smiths-tools"
+        ],
+        "languages": [
+          "srd5.1:language:giant"
+        ]
+      }
+    }
+  },
+  {
+    "key": "tce:subclass:scribes",
+    "index": "scribes",
+    "name": "Order of Scribes",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "scribes",
+      "name": "Order of Scribes",
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass_flavor": "Arcane Tradition",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "tce:feature:scribes-2-wizardly-quill",
+        "tce:feature:scribes-2-awakened-spellbook"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [
+        "tce:feature:scribes-2-awakened-spellbook"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_法師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b3%95%e5%b8%88_phb"
+    }
+  },
+  {
+    "key": "tce:subclass:soulknife",
+    "index": "soulknife",
+    "name": "Soulknife",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "soulknife",
+      "name": "Soulknife",
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass_flavor": "Roguish Archetype",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        9,
+        13,
+        17
+      ],
+      "progression_feature_refs": [
+        "tce:feature:soulknife-3-psionic-power",
+        "tce:feature:soulknife-3-psychic-blades",
+        "tce:feature:soulknife-9-homing-strikes",
+        "tce:feature:soulknife-9-psychic-teleportation"
+      ],
+      "persistent_choices": [
+        {
+          "choice_key": "soulknife-3-psionic-power:0",
+          "feature_ref": "tce:feature:soulknife-3-psionic-power",
+          "minimum_class_level": 3,
+          "choose_total": 1,
+          "progression": [
+            {
+              "class_level": 3,
+              "choose_total": 1
+            }
+          ],
+          "option_refs": [
+            "tce:feature:soulknife-3-psionic-power-option-1-psi-bolstered-knack",
+            "tce:feature:soulknife-3-psionic-power-option-2-psychic-whispers"
+          ],
+          "label": "Psionic Power",
+          "label_zh": "靈能天賦"
+        }
+      ],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_遊蕩者.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b8%b8%e8%8d%a1%e8%80%85_phb"
+    }
+  },
+  {
+    "key": "tce:subclass:spores",
+    "index": "spores",
+    "name": "Circle of Spores",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "spores",
+      "name": "Circle of Spores",
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass_flavor": "Druid Circle",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "tce:feature:spores-2-circle-spells",
+        "tce:feature:spores-2-halo-of-spores",
+        "tce:feature:spores-2-symbiotic-entity"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_德魯伊.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%be%b7%e9%b2%81%e4%bc%8a_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "druid-3",
+              "type": "level",
+              "name": "Druid 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:blindness-deafness",
+            "name": "Blindness/Deafness"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-3",
+              "type": "level",
+              "name": "Druid 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:gentle-repose",
+            "name": "Gentle Repose"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-5",
+              "type": "level",
+              "name": "Druid 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:animate-dead",
+            "name": "Animate Dead"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-5",
+              "type": "level",
+              "name": "Druid 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:gaseous-form",
+            "name": "Gaseous Form"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-7",
+              "type": "level",
+              "name": "Druid 7"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:blight",
+            "name": "Blight"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-7",
+              "type": "level",
+              "name": "Druid 7"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:confusion",
+            "name": "Confusion"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-9",
+              "type": "level",
+              "name": "Druid 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:cloudkill",
+            "name": "Cloudkill"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-9",
+              "type": "level",
+              "name": "Druid 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:contagion",
+            "name": "Contagion"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-2",
+              "type": "level",
+              "name": "Class Level 2"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:chill-touch",
+            "name": "Chill Touch"
+          },
+          "access_type": "granted"
+        }
+      ]
+    }
+  },
+  {
+    "key": "tce:subclass:stars",
+    "index": "stars",
+    "name": "Circle of Stars",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "stars",
+      "name": "Circle of Stars",
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass_flavor": "Druid Circle",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "tce:feature:stars-2-star-map",
+        "tce:feature:stars-2-starry-form"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [
+        "tce:feature:stars-2-star-map"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_德魯伊.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%be%b7%e9%b2%81%e4%bc%8a_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-2",
+              "type": "level",
+              "name": "Class Level 2"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:guidance",
+            "name": "Guidance"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-2",
+              "type": "level",
+              "name": "Class Level 2"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:guiding-bolt",
+            "name": "Guiding Bolt"
+          },
+          "access_type": "always_prepared"
+        }
+      ]
+    }
+  },
+  {
+    "key": "tce:subclass:swarmkeeper",
+    "index": "swarmkeeper",
+    "name": "Swarmkeeper",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "swarmkeeper",
+      "name": "Swarmkeeper",
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass_flavor": "Ranger Archetype",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        11,
+        15
+      ],
+      "progression_feature_refs": [
+        "tce:feature:swarmkeeper-3-gathered-swarm",
+        "tce:feature:swarmkeeper-3-swarmkeeper-magic"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_遊俠.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e6%b8%b8%e4%be%a0_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "ranger-3",
+              "type": "level",
+              "name": "Ranger 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:faerie-fire",
+            "name": "Faerie Fire"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "ranger-5",
+              "type": "level",
+              "name": "Ranger 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:web",
+            "name": "Web"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "ranger-9",
+              "type": "level",
+              "name": "Ranger 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:gaseous-form",
+            "name": "Gaseous Form"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "ranger-13",
+              "type": "level",
+              "name": "Ranger 13"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:arcane-eye",
+            "name": "Arcane Eye"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "ranger-17",
+              "type": "level",
+              "name": "Ranger 17"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:contagion",
+            "name": "Contagion"
+          },
+          "access_type": "granted"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "m01j-3",
+              "type": "level",
+              "name": "Class Level 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:mage-hand",
+            "name": "Mage Hand"
+          },
+          "access_type": "granted"
+        }
+      ]
+    }
+  },
+  {
+    "key": "tce:subclass:twilight",
+    "index": "twilight",
+    "name": "Twilight Domain",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "twilight",
+      "name": "Twilight Domain",
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass_flavor": "Divine Domain",
+      "acquisition_class_level": 1,
+      "progression_levels": [
+        1,
+        2,
+        6,
+        8,
+        17
+      ],
+      "progression_feature_refs": [
+        "tce:feature:twilight-1-domain-spells",
+        "tce:feature:twilight-1-bonus-proficiencies",
+        "tce:feature:twilight-1-eyes-of-night",
+        "tce:feature:twilight-1-vigilant-blessing"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_牧師.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e7%89%a7%e5%b8%88_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-1",
+              "type": "level",
+              "name": "Cleric 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:faerie-fire",
+            "name": "Faerie Fire"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-1",
+              "type": "level",
+              "name": "Cleric 1"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:sleep",
+            "name": "Sleep"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-3",
+              "type": "level",
+              "name": "Cleric 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:moonbeam",
+            "name": "Moonbeam"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-3",
+              "type": "level",
+              "name": "Cleric 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:see-invisibility",
+            "name": "See Invisibility"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-5",
+              "type": "level",
+              "name": "Cleric 5"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:aura-of-vitality",
+            "name": "Aura of Vitality"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-5",
+              "type": "level",
+              "name": "Cleric 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:tiny-hut",
+            "name": "Tiny Hut"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-7",
+              "type": "level",
+              "name": "Cleric 7"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:aura-of-life",
+            "name": "Aura of Life"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-7",
+              "type": "level",
+              "name": "Cleric 7"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:greater-invisibility",
+            "name": "Greater Invisibility"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-9",
+              "type": "level",
+              "name": "Cleric 9"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:circle-of-power",
+            "name": "Circle of Power"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "cleric-9",
+              "type": "level",
+              "name": "Cleric 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:mislead",
+            "name": "Mislead"
+          },
+          "access_type": "always_prepared"
+        }
+      ],
+      "fixed_grants": {
+        "proficiencies": [
+          "srd5.1:proficiency:martial-weapons",
+          "srd5.1:proficiency:heavy-armor"
+        ]
+      }
+    }
+  },
+  {
+    "key": "tce:subclass:watchers",
+    "index": "watchers",
+    "name": "Oath of the Watchers",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "watchers",
+      "name": "Oath of the Watchers",
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass_flavor": "Sacred Oath",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        7,
+        15,
+        20
+      ],
+      "progression_feature_refs": [
+        "tce:feature:watchers-3-tenets-of-the-watchers",
+        "tce:feature:watchers-3-oath-spells",
+        "tce:feature:watchers-3-channel-divinity"
+      ],
+      "persistent_choices": [
+        {
+          "choice_key": "watchers-3-channel-divinity:0",
+          "feature_ref": "tce:feature:watchers-3-channel-divinity",
+          "minimum_class_level": 3,
+          "choose_total": 1,
+          "progression": [
+            {
+              "class_level": 3,
+              "choose_total": 1
+            }
+          ],
+          "option_refs": [
+            "tce:feature:watchers-3-channel-divinity-option-1-watcher-s-will",
+            "tce:feature:watchers-3-channel-divinity-option-2-abjure-the-extraplanar"
+          ],
+          "label": "Channel Divinity",
+          "label_zh": "引導神力"
+        }
+      ],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_聖武士.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%9c%a3%e6%ad%a6%e5%a3%ab_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-3",
+              "type": "level",
+              "name": "Paladin 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:alarm",
+            "name": "Alarm"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-3",
+              "type": "level",
+              "name": "Paladin 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:detect-magic",
+            "name": "Detect Magic"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-5",
+              "type": "level",
+              "name": "Paladin 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:moonbeam",
+            "name": "Moonbeam"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-5",
+              "type": "level",
+              "name": "Paladin 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:see-invisibility",
+            "name": "See Invisibility"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-9",
+              "type": "level",
+              "name": "Paladin 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:counterspell",
+            "name": "Counterspell"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-9",
+              "type": "level",
+              "name": "Paladin 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:nondetection",
+            "name": "Nondetection"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-13",
+              "type": "level",
+              "name": "Paladin 13"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:aura-of-purity",
+            "name": "Aura of Purity"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-13",
+              "type": "level",
+              "name": "Paladin 13"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:banishment",
+            "name": "Banishment"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-17",
+              "type": "level",
+              "name": "Paladin 17"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:hold-monster",
+            "name": "Hold Monster"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "paladin-17",
+              "type": "level",
+              "name": "Paladin 17"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:scrying",
+            "name": "Scrying"
+          },
+          "access_type": "always_prepared"
+        }
+      ]
+    }
+  },
+  {
+    "key": "tce:subclass:wild-magic",
+    "index": "wild-magic",
+    "name": "Path of Wild Magic",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "wild-magic",
+      "name": "Path of Wild Magic",
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass_flavor": "Primal Path",
+      "acquisition_class_level": 3,
+      "progression_levels": [
+        3,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "tce:feature:wild-magic-3-magic-awareness",
+        "tce:feature:wild-magic-3-wild-surge"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [
+        "tce:feature:wild-magic-3-magic-awareness"
+      ],
+      "reference_doc": "docs/暫用規則資訊/子職業_野蠻人.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e9%87%8e%e8%9b%ae%e4%ba%ba_phb"
+    }
+  },
+  {
+    "key": "tce:subclass:wildfire",
+    "index": "wildfire",
+    "name": "Circle of Wildfire",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "wildfire",
+      "name": "Circle of Wildfire",
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass_flavor": "Druid Circle",
+      "acquisition_class_level": 2,
+      "progression_levels": [
+        2,
+        6,
+        10,
+        14
+      ],
+      "progression_feature_refs": [
+        "tce:feature:wildfire-2-circle-spells",
+        "tce:feature:wildfire-2-summon-wildfire-spirit"
+      ],
+      "persistent_choices": [],
+      "resource_feature_refs": [],
+      "reference_doc": "docs/暫用規則資訊/子職業_德魯伊.md",
+      "reference_url": "https://5e.dickytwister.org/classes.html#%e5%be%b7%e9%b2%81%e4%bc%8a_phb",
+      "spells": [
+        {
+          "prerequisites": [
+            {
+              "index": "druid-2",
+              "type": "level",
+              "name": "Druid 2"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:burning-hands",
+            "name": "Burning Hands"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-2",
+              "type": "level",
+              "name": "Druid 2"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:cure-wounds",
+            "name": "Cure Wounds"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-3",
+              "type": "level",
+              "name": "Druid 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:flaming-sphere",
+            "name": "Flaming Sphere"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-3",
+              "type": "level",
+              "name": "Druid 3"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:scorching-ray",
+            "name": "Scorching Ray"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-5",
+              "type": "level",
+              "name": "Druid 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:plant-growth",
+            "name": "Plant Growth"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-5",
+              "type": "level",
+              "name": "Druid 5"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:revivify",
+            "name": "Revivify"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-7",
+              "type": "level",
+              "name": "Druid 7"
+            }
+          ],
+          "spell": {
+            "key": "phb2014:spell:aura-of-life",
+            "name": "Aura of Life"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-7",
+              "type": "level",
+              "name": "Druid 7"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:fire-shield",
+            "name": "Fire Shield"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-9",
+              "type": "level",
+              "name": "Druid 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:flame-strike",
+            "name": "Flame Strike"
+          },
+          "access_type": "always_prepared"
+        },
+        {
+          "prerequisites": [
+            {
+              "index": "druid-9",
+              "type": "level",
+              "name": "Druid 9"
+            }
+          ],
+          "spell": {
+            "key": "srd5.1:spell:mass-cure-wounds",
+            "name": "Mass Cure Wounds"
+          },
+          "access_type": "always_prepared"
+        }
+      ]
+    }
+  }
+]

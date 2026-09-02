@@ -1,0 +1,2371 @@
+[
+  {
+    "key": "tce:level:aberrant-mind-1",
+    "index": "aberrant-mind-1",
+    "name": "Aberrant Mind 1",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "aberrant-mind-1",
+      "name": "Aberrant Mind 1",
+      "level": 1,
+      "features": [
+        {
+          "key": "tce:feature:aberrant-mind-1-psionic-spells",
+          "name": "Psionic Spells"
+        },
+        {
+          "key": "tce:feature:aberrant-mind-1-telepathic-speech",
+          "name": "Telepathic Speech"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "tce:subclass:aberrant-mind",
+        "name": "Aberrant Mind"
+      }
+    }
+  },
+  {
+    "key": "tce:level:aberrant-mind-14",
+    "index": "aberrant-mind-14",
+    "name": "Aberrant Mind 14",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "aberrant-mind-14",
+      "name": "Aberrant Mind 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "tce:subclass:aberrant-mind",
+        "name": "Aberrant Mind"
+      }
+    }
+  },
+  {
+    "key": "tce:level:aberrant-mind-18",
+    "index": "aberrant-mind-18",
+    "name": "Aberrant Mind 18",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "aberrant-mind-18",
+      "name": "Aberrant Mind 18",
+      "level": 18,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "tce:subclass:aberrant-mind",
+        "name": "Aberrant Mind"
+      }
+    }
+  },
+  {
+    "key": "tce:level:aberrant-mind-6",
+    "index": "aberrant-mind-6",
+    "name": "Aberrant Mind 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "aberrant-mind-6",
+      "name": "Aberrant Mind 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "tce:subclass:aberrant-mind",
+        "name": "Aberrant Mind"
+      }
+    }
+  },
+  {
+    "key": "tce:level:astral-self-11",
+    "index": "astral-self-11",
+    "name": "Way of the Astral Self 11",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "astral-self-11",
+      "name": "Way of the Astral Self 11",
+      "level": 11,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "tce:subclass:astral-self",
+        "name": "Way of the Astral Self"
+      }
+    }
+  },
+  {
+    "key": "tce:level:astral-self-17",
+    "index": "astral-self-17",
+    "name": "Way of the Astral Self 17",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "astral-self-17",
+      "name": "Way of the Astral Self 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "tce:subclass:astral-self",
+        "name": "Way of the Astral Self"
+      }
+    }
+  },
+  {
+    "key": "tce:level:astral-self-3",
+    "index": "astral-self-3",
+    "name": "Way of the Astral Self 3",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "astral-self-3",
+      "name": "Way of the Astral Self 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "tce:feature:astral-self-3-forms-of-your-astral-self",
+          "name": "Forms of Your Astral Self"
+        },
+        {
+          "key": "tce:feature:astral-self-3-arms-of-the-astral-self",
+          "name": "Arms of the Astral Self"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "tce:subclass:astral-self",
+        "name": "Way of the Astral Self"
+      }
+    }
+  },
+  {
+    "key": "tce:level:astral-self-6",
+    "index": "astral-self-6",
+    "name": "Way of the Astral Self 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "astral-self-6",
+      "name": "Way of the Astral Self 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "tce:subclass:astral-self",
+        "name": "Way of the Astral Self"
+      }
+    }
+  },
+  {
+    "key": "tce:level:beast-10",
+    "index": "beast-10",
+    "name": "Path of the Beast 10",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "beast-10",
+      "name": "Path of the Beast 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "tce:subclass:beast",
+        "name": "Path of the Beast"
+      }
+    }
+  },
+  {
+    "key": "tce:level:beast-14",
+    "index": "beast-14",
+    "name": "Path of the Beast 14",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "beast-14",
+      "name": "Path of the Beast 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "tce:subclass:beast",
+        "name": "Path of the Beast"
+      }
+    }
+  },
+  {
+    "key": "tce:level:beast-3",
+    "index": "beast-3",
+    "name": "Path of the Beast 3",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "beast-3",
+      "name": "Path of the Beast 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "tce:feature:beast-3-form-of-the-beast",
+          "name": "Form of the Beast"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "tce:subclass:beast",
+        "name": "Path of the Beast"
+      }
+    }
+  },
+  {
+    "key": "tce:level:beast-6",
+    "index": "beast-6",
+    "name": "Path of the Beast 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_野蠻人.md"
+    },
+    "data": {
+      "index": "beast-6",
+      "name": "Path of the Beast 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:barbarian",
+        "name": "Barbarian"
+      },
+      "subclass": {
+        "key": "tce:subclass:beast",
+        "name": "Path of the Beast"
+      }
+    }
+  },
+  {
+    "key": "tce:level:bladesinging-10",
+    "index": "bladesinging-10",
+    "name": "Bladesinging 10",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "bladesinging-10",
+      "name": "Bladesinging 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "tce:subclass:bladesinging",
+        "name": "Bladesinging"
+      }
+    }
+  },
+  {
+    "key": "tce:level:bladesinging-14",
+    "index": "bladesinging-14",
+    "name": "Bladesinging 14",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "bladesinging-14",
+      "name": "Bladesinging 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "tce:subclass:bladesinging",
+        "name": "Bladesinging"
+      }
+    }
+  },
+  {
+    "key": "tce:level:bladesinging-2",
+    "index": "bladesinging-2",
+    "name": "Bladesinging 2",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "bladesinging-2",
+      "name": "Bladesinging 2",
+      "level": 2,
+      "features": [
+        {
+          "key": "tce:feature:bladesinging-2-training-in-war-and-song-bladesinging",
+          "name": "劍詠) (Training in War and Song (Bladesinging)"
+        },
+        {
+          "key": "tce:feature:bladesinging-2-bladesong",
+          "name": "Bladesong"
+        },
+        {
+          "key": "tce:feature:bladesinging-2-bladesinger-styles",
+          "name": "Bladesinger Styles"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "tce:subclass:bladesinging",
+        "name": "Bladesinging"
+      }
+    }
+  },
+  {
+    "key": "tce:level:bladesinging-6",
+    "index": "bladesinging-6",
+    "name": "Bladesinging 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "bladesinging-6",
+      "name": "Bladesinging 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "tce:subclass:bladesinging",
+        "name": "Bladesinging"
+      }
+    }
+  },
+  {
+    "key": "tce:level:clockwork-soul-1",
+    "index": "clockwork-soul-1",
+    "name": "Clockwork Soul 1",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "clockwork-soul-1",
+      "name": "Clockwork Soul 1",
+      "level": 1,
+      "features": [
+        {
+          "key": "tce:feature:clockwork-soul-1-clockwork-magic",
+          "name": "Clockwork Magic"
+        },
+        {
+          "key": "tce:feature:clockwork-soul-1-restore-balance",
+          "name": "Restore Balance"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "tce:subclass:clockwork-soul",
+        "name": "Clockwork Soul"
+      }
+    }
+  },
+  {
+    "key": "tce:level:clockwork-soul-14",
+    "index": "clockwork-soul-14",
+    "name": "Clockwork Soul 14",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "clockwork-soul-14",
+      "name": "Clockwork Soul 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "tce:subclass:clockwork-soul",
+        "name": "Clockwork Soul"
+      }
+    }
+  },
+  {
+    "key": "tce:level:clockwork-soul-18",
+    "index": "clockwork-soul-18",
+    "name": "Clockwork Soul 18",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "clockwork-soul-18",
+      "name": "Clockwork Soul 18",
+      "level": 18,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "tce:subclass:clockwork-soul",
+        "name": "Clockwork Soul"
+      }
+    }
+  },
+  {
+    "key": "tce:level:clockwork-soul-6",
+    "index": "clockwork-soul-6",
+    "name": "Clockwork Soul 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_術士.md"
+    },
+    "data": {
+      "index": "clockwork-soul-6",
+      "name": "Clockwork Soul 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:sorcerer",
+        "name": "Sorcerer"
+      },
+      "subclass": {
+        "key": "tce:subclass:clockwork-soul",
+        "name": "Clockwork Soul"
+      }
+    }
+  },
+  {
+    "key": "tce:level:creation-14",
+    "index": "creation-14",
+    "name": "College of Creation 14",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "creation-14",
+      "name": "College of Creation 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "tce:subclass:creation",
+        "name": "College of Creation"
+      }
+    }
+  },
+  {
+    "key": "tce:level:creation-3",
+    "index": "creation-3",
+    "name": "College of Creation 3",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "creation-3",
+      "name": "College of Creation 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "tce:feature:creation-3-mote-of-potential",
+          "name": "Mote of Potential"
+        },
+        {
+          "key": "tce:feature:creation-3-performance-of-creation",
+          "name": "Performance of Creation"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "tce:subclass:creation",
+        "name": "College of Creation"
+      }
+    }
+  },
+  {
+    "key": "tce:level:creation-6",
+    "index": "creation-6",
+    "name": "College of Creation 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "creation-6",
+      "name": "College of Creation 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "tce:subclass:creation",
+        "name": "College of Creation"
+      }
+    }
+  },
+  {
+    "key": "tce:level:eloquence-14",
+    "index": "eloquence-14",
+    "name": "College of Eloquence 14",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "eloquence-14",
+      "name": "College of Eloquence 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "tce:subclass:eloquence",
+        "name": "College of Eloquence"
+      }
+    }
+  },
+  {
+    "key": "tce:level:eloquence-3",
+    "index": "eloquence-3",
+    "name": "College of Eloquence 3",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "eloquence-3",
+      "name": "College of Eloquence 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "tce:feature:eloquence-3-silver-tongue",
+          "name": "Silver Tongue"
+        },
+        {
+          "key": "tce:feature:eloquence-3-unsettling-words",
+          "name": "Unsettling Words"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "tce:subclass:eloquence",
+        "name": "College of Eloquence"
+      }
+    }
+  },
+  {
+    "key": "tce:level:eloquence-6",
+    "index": "eloquence-6",
+    "name": "College of Eloquence 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_吟遊詩人.md"
+    },
+    "data": {
+      "index": "eloquence-6",
+      "name": "College of Eloquence 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:bard",
+        "name": "Bard"
+      },
+      "subclass": {
+        "key": "tce:subclass:eloquence",
+        "name": "College of Eloquence"
+      }
+    }
+  },
+  {
+    "key": "tce:level:fathomless-1",
+    "index": "fathomless-1",
+    "name": "The Fathomless 1",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "fathomless-1",
+      "name": "The Fathomless 1",
+      "level": 1,
+      "features": [
+        {
+          "key": "tce:feature:fathomless-1-expanded-spell-list",
+          "name": "擴充套件法術列表"
+        },
+        {
+          "key": "tce:feature:fathomless-1-tentacle-of-the-deeps",
+          "name": "Tentacle of the Deeps"
+        },
+        {
+          "key": "tce:feature:fathomless-1-gift-of-the-sea",
+          "name": "Gift of the Sea"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:fathomless",
+        "name": "The Fathomless"
+      }
+    }
+  },
+  {
+    "key": "tce:level:fathomless-10",
+    "index": "fathomless-10",
+    "name": "The Fathomless 10",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "fathomless-10",
+      "name": "The Fathomless 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:fathomless",
+        "name": "The Fathomless"
+      }
+    }
+  },
+  {
+    "key": "tce:level:fathomless-14",
+    "index": "fathomless-14",
+    "name": "The Fathomless 14",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "fathomless-14",
+      "name": "The Fathomless 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:fathomless",
+        "name": "The Fathomless"
+      }
+    }
+  },
+  {
+    "key": "tce:level:fathomless-6",
+    "index": "fathomless-6",
+    "name": "The Fathomless 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "fathomless-6",
+      "name": "The Fathomless 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:fathomless",
+        "name": "The Fathomless"
+      }
+    }
+  },
+  {
+    "key": "tce:level:fey-wanderer-11",
+    "index": "fey-wanderer-11",
+    "name": "Fey Wanderer 11",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "fey-wanderer-11",
+      "name": "Fey Wanderer 11",
+      "level": 11,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass": {
+        "key": "tce:subclass:fey-wanderer",
+        "name": "Fey Wanderer"
+      }
+    }
+  },
+  {
+    "key": "tce:level:fey-wanderer-15",
+    "index": "fey-wanderer-15",
+    "name": "Fey Wanderer 15",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "fey-wanderer-15",
+      "name": "Fey Wanderer 15",
+      "level": 15,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass": {
+        "key": "tce:subclass:fey-wanderer",
+        "name": "Fey Wanderer"
+      }
+    }
+  },
+  {
+    "key": "tce:level:fey-wanderer-3",
+    "index": "fey-wanderer-3",
+    "name": "Fey Wanderer 3",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "fey-wanderer-3",
+      "name": "Fey Wanderer 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "tce:feature:fey-wanderer-3-dreadful-strikes",
+          "name": "Dreadful Strikes"
+        },
+        {
+          "key": "tce:feature:fey-wanderer-3-fey-wanderer-magic",
+          "name": "Fey Wanderer Magic"
+        },
+        {
+          "key": "tce:feature:fey-wanderer-3-otherworldly-glamour",
+          "name": "Otherworldly Glamour"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass": {
+        "key": "tce:subclass:fey-wanderer",
+        "name": "Fey Wanderer"
+      }
+    }
+  },
+  {
+    "key": "tce:level:fey-wanderer-7",
+    "index": "fey-wanderer-7",
+    "name": "Fey Wanderer 7",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊俠.md"
+    },
+    "data": {
+      "index": "fey-wanderer-7",
+      "name": "Fey Wanderer 7",
+      "level": 7,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:ranger",
+        "name": "Ranger"
+      },
+      "subclass": {
+        "key": "tce:subclass:fey-wanderer",
+        "name": "Fey Wanderer"
+      }
+    }
+  },
+  {
+    "key": "tce:level:genie-1",
+    "index": "genie-1",
+    "name": "The Genie 1",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "genie-1",
+      "name": "The Genie 1",
+      "level": 1,
+      "features": [
+        {
+          "key": "tce:feature:genie-1-expanded-spell-list",
+          "name": "擴充套件法術列表"
+        },
+        {
+          "key": "tce:feature:genie-1-genie-s-vessel",
+          "name": "Genie's Vessel"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:genie",
+        "name": "The Genie"
+      }
+    }
+  },
+  {
+    "key": "tce:level:genie-10",
+    "index": "genie-10",
+    "name": "The Genie 10",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "genie-10",
+      "name": "The Genie 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:genie",
+        "name": "The Genie"
+      }
+    }
+  },
+  {
+    "key": "tce:level:genie-14",
+    "index": "genie-14",
+    "name": "The Genie 14",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "genie-14",
+      "name": "The Genie 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:genie",
+        "name": "The Genie"
+      }
+    }
+  },
+  {
+    "key": "tce:level:genie-6",
+    "index": "genie-6",
+    "name": "The Genie 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_邪術師.md"
+    },
+    "data": {
+      "index": "genie-6",
+      "name": "The Genie 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:warlock",
+        "name": "Warlock"
+      },
+      "subclass": {
+        "key": "tce:subclass:genie",
+        "name": "The Genie"
+      }
+    }
+  },
+  {
+    "key": "tce:level:glory-15",
+    "index": "glory-15",
+    "name": "Oath of Glory 15",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "glory-15",
+      "name": "Oath of Glory 15",
+      "level": 15,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:glory",
+        "name": "Oath of Glory"
+      }
+    }
+  },
+  {
+    "key": "tce:level:glory-20",
+    "index": "glory-20",
+    "name": "Oath of Glory 20",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "glory-20",
+      "name": "Oath of Glory 20",
+      "level": 20,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:glory",
+        "name": "Oath of Glory"
+      }
+    }
+  },
+  {
+    "key": "tce:level:glory-3",
+    "index": "glory-3",
+    "name": "Oath of Glory 3",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "glory-3",
+      "name": "Oath of Glory 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "tce:feature:glory-3-tenets-of-glory",
+          "name": "Tenets of Glory"
+        },
+        {
+          "key": "tce:feature:glory-3-oath-spells",
+          "name": "Oath Spells"
+        },
+        {
+          "key": "tce:feature:glory-3-channel-divinity",
+          "name": "Channel Divinity"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:glory",
+        "name": "Oath of Glory"
+      }
+    }
+  },
+  {
+    "key": "tce:level:glory-7",
+    "index": "glory-7",
+    "name": "Oath of Glory 7",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_聖武士.md"
+    },
+    "data": {
+      "index": "glory-7",
+      "name": "Oath of Glory 7",
+      "level": 7,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:paladin",
+        "name": "Paladin"
+      },
+      "subclass": {
+        "key": "tce:subclass:glory",
+        "name": "Oath of Glory"
+      }
+    }
+  },
+  {
+    "key": "tce:level:mercy-11",
+    "index": "mercy-11",
+    "name": "Way of Mercy 11",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "mercy-11",
+      "name": "Way of Mercy 11",
+      "level": 11,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "tce:subclass:mercy",
+        "name": "Way of Mercy"
+      }
+    }
+  },
+  {
+    "key": "tce:level:mercy-17",
+    "index": "mercy-17",
+    "name": "Way of Mercy 17",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "mercy-17",
+      "name": "Way of Mercy 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "tce:subclass:mercy",
+        "name": "Way of Mercy"
+      }
+    }
+  },
+  {
+    "key": "tce:level:mercy-3",
+    "index": "mercy-3",
+    "name": "Way of Mercy 3",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "mercy-3",
+      "name": "Way of Mercy 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "tce:feature:mercy-3-implements-of-mercy",
+          "name": "Implements of Mercy"
+        },
+        {
+          "key": "tce:feature:mercy-3-hand-of-healing",
+          "name": "Hand of Healing"
+        },
+        {
+          "key": "tce:feature:mercy-3-hand-of-harm",
+          "name": "Hand of Harm"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "tce:subclass:mercy",
+        "name": "Way of Mercy"
+      }
+    }
+  },
+  {
+    "key": "tce:level:mercy-6",
+    "index": "mercy-6",
+    "name": "Way of Mercy 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_武僧.md"
+    },
+    "data": {
+      "index": "mercy-6",
+      "name": "Way of Mercy 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:monk",
+        "name": "Monk"
+      },
+      "subclass": {
+        "key": "tce:subclass:mercy",
+        "name": "Way of Mercy"
+      }
+    }
+  },
+  {
+    "key": "tce:level:order-1",
+    "index": "order-1",
+    "name": "Order Domain 1",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "order-1",
+      "name": "Order Domain 1",
+      "level": 1,
+      "features": [
+        {
+          "key": "tce:feature:order-1-bonus-proficiencies",
+          "name": "Bonus Proficiencies"
+        },
+        {
+          "key": "tce:feature:order-1-voice-of-authority",
+          "name": "Voice of Authority"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:order",
+        "name": "Order Domain"
+      }
+    }
+  },
+  {
+    "key": "tce:level:order-17",
+    "index": "order-17",
+    "name": "Order Domain 17",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "order-17",
+      "name": "Order Domain 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:order",
+        "name": "Order Domain"
+      }
+    }
+  },
+  {
+    "key": "tce:level:order-2",
+    "index": "order-2",
+    "name": "Order Domain 2",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "order-2",
+      "name": "Order Domain 2",
+      "level": 2,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:order",
+        "name": "Order Domain"
+      }
+    }
+  },
+  {
+    "key": "tce:level:order-6",
+    "index": "order-6",
+    "name": "Order Domain 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "order-6",
+      "name": "Order Domain 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:order",
+        "name": "Order Domain"
+      }
+    }
+  },
+  {
+    "key": "tce:level:order-8",
+    "index": "order-8",
+    "name": "Order Domain 8",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "order-8",
+      "name": "Order Domain 8",
+      "level": 8,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:order",
+        "name": "Order Domain"
+      }
+    }
+  },
+  {
+    "key": "tce:level:peace-1",
+    "index": "peace-1",
+    "name": "Peace Domain 1",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "peace-1",
+      "name": "Peace Domain 1",
+      "level": 1,
+      "features": [
+        {
+          "key": "tce:feature:peace-1-domain-spells",
+          "name": "領域法術"
+        },
+        {
+          "key": "tce:feature:peace-1-implement-of-peace",
+          "name": "Implement of Peace"
+        },
+        {
+          "key": "tce:feature:peace-1-emboldening-bond",
+          "name": "Emboldening Bond"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:peace",
+        "name": "Peace Domain"
+      }
+    }
+  },
+  {
+    "key": "tce:level:peace-17",
+    "index": "peace-17",
+    "name": "Peace Domain 17",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "peace-17",
+      "name": "Peace Domain 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:peace",
+        "name": "Peace Domain"
+      }
+    }
+  },
+  {
+    "key": "tce:level:peace-2",
+    "index": "peace-2",
+    "name": "Peace Domain 2",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "peace-2",
+      "name": "Peace Domain 2",
+      "level": 2,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:peace",
+        "name": "Peace Domain"
+      }
+    }
+  },
+  {
+    "key": "tce:level:peace-6",
+    "index": "peace-6",
+    "name": "Peace Domain 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "peace-6",
+      "name": "Peace Domain 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:peace",
+        "name": "Peace Domain"
+      }
+    }
+  },
+  {
+    "key": "tce:level:peace-8",
+    "index": "peace-8",
+    "name": "Peace Domain 8",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_牧師.md"
+    },
+    "data": {
+      "index": "peace-8",
+      "name": "Peace Domain 8",
+      "level": 8,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:cleric",
+        "name": "Cleric"
+      },
+      "subclass": {
+        "key": "tce:subclass:peace",
+        "name": "Peace Domain"
+      }
+    }
+  },
+  {
+    "key": "tce:level:phantom-13",
+    "index": "phantom-13",
+    "name": "Phantom 13",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "phantom-13",
+      "name": "Phantom 13",
+      "level": 13,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:phantom",
+        "name": "Phantom"
+      }
+    }
+  },
+  {
+    "key": "tce:level:phantom-17",
+    "index": "phantom-17",
+    "name": "Phantom 17",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "phantom-17",
+      "name": "Phantom 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:phantom",
+        "name": "Phantom"
+      }
+    }
+  },
+  {
+    "key": "tce:level:phantom-3",
+    "index": "phantom-3",
+    "name": "Phantom 3",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "phantom-3",
+      "name": "Phantom 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "tce:feature:phantom-3-whispers-of-the-dead",
+          "name": "Whispers of the Dead"
+        },
+        {
+          "key": "tce:feature:phantom-3-wails-from-the-grave",
+          "name": "Wails from the Grave"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:phantom",
+        "name": "Phantom"
+      }
+    }
+  },
+  {
+    "key": "tce:level:phantom-9",
+    "index": "phantom-9",
+    "name": "Phantom 9",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "phantom-9",
+      "name": "Phantom 9",
+      "level": 9,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:phantom",
+        "name": "Phantom"
+      }
+    }
+  },
+  {
+    "key": "tce:level:psi-warrior-10",
+    "index": "psi-warrior-10",
+    "name": "Psi Warrior 10",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "psi-warrior-10",
+      "name": "Psi Warrior 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:psi-warrior",
+        "name": "Psi Warrior"
+      }
+    }
+  },
+  {
+    "key": "tce:level:psi-warrior-15",
+    "index": "psi-warrior-15",
+    "name": "Psi Warrior 15",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "psi-warrior-15",
+      "name": "Psi Warrior 15",
+      "level": 15,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:psi-warrior",
+        "name": "Psi Warrior"
+      }
+    }
+  },
+  {
+    "key": "tce:level:psi-warrior-18",
+    "index": "psi-warrior-18",
+    "name": "Psi Warrior 18",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "psi-warrior-18",
+      "name": "Psi Warrior 18",
+      "level": 18,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:psi-warrior",
+        "name": "Psi Warrior"
+      }
+    }
+  },
+  {
+    "key": "tce:level:psi-warrior-3",
+    "index": "psi-warrior-3",
+    "name": "Psi Warrior 3",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "psi-warrior-3",
+      "name": "Psi Warrior 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "tce:feature:psi-warrior-3-psionic-power",
+          "name": "Psionic Power"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:psi-warrior",
+        "name": "Psi Warrior"
+      }
+    }
+  },
+  {
+    "key": "tce:level:psi-warrior-7",
+    "index": "psi-warrior-7",
+    "name": "Psi Warrior 7",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "psi-warrior-7",
+      "name": "Psi Warrior 7",
+      "level": 7,
+      "features": [
+        {
+          "key": "tce:feature:psi-warrior-7-psi-powered-leap",
+          "name": "Psi-Powered Leap."
+        },
+        {
+          "key": "tce:feature:psi-warrior-7-telekinetic-thrust",
+          "name": "Telekinetic Thrust."
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:psi-warrior",
+        "name": "Psi Warrior"
+      }
+    }
+  },
+  {
+    "key": "tce:level:rune-knight-10",
+    "index": "rune-knight-10",
+    "name": "Rune Knight 10",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "rune-knight-10",
+      "name": "Rune Knight 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:rune-knight",
+        "name": "Rune Knight"
+      }
+    }
+  },
+  {
+    "key": "tce:level:rune-knight-15",
+    "index": "rune-knight-15",
+    "name": "Rune Knight 15",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "rune-knight-15",
+      "name": "Rune Knight 15",
+      "level": 15,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:rune-knight",
+        "name": "Rune Knight"
+      }
+    }
+  },
+  {
+    "key": "tce:level:rune-knight-18",
+    "index": "rune-knight-18",
+    "name": "Rune Knight 18",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "rune-knight-18",
+      "name": "Rune Knight 18",
+      "level": 18,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:rune-knight",
+        "name": "Rune Knight"
+      }
+    }
+  },
+  {
+    "key": "tce:level:rune-knight-3",
+    "index": "rune-knight-3",
+    "name": "Rune Knight 3",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "rune-knight-3",
+      "name": "Rune Knight 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "tce:feature:rune-knight-3-bonus-proficiencies",
+          "name": "Bonus Proficiencies"
+        },
+        {
+          "key": "tce:feature:rune-knight-3-rune-carver",
+          "name": "Rune Carver"
+        },
+        {
+          "key": "tce:feature:rune-knight-3-giant-s-might",
+          "name": "Giant's Might"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:rune-knight",
+        "name": "Rune Knight"
+      }
+    }
+  },
+  {
+    "key": "tce:level:rune-knight-7",
+    "index": "rune-knight-7",
+    "name": "Rune Knight 7",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_戰士.md"
+    },
+    "data": {
+      "index": "rune-knight-7",
+      "name": "Rune Knight 7",
+      "level": 7,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:fighter",
+        "name": "Fighter"
+      },
+      "subclass": {
+        "key": "tce:subclass:rune-knight",
+        "name": "Rune Knight"
+      }
+    }
+  },
+  {
+    "key": "tce:level:scribes-10",
+    "index": "scribes-10",
+    "name": "Order of Scribes 10",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "scribes-10",
+      "name": "Order of Scribes 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "tce:subclass:scribes",
+        "name": "Order of Scribes"
+      }
+    }
+  },
+  {
+    "key": "tce:level:scribes-14",
+    "index": "scribes-14",
+    "name": "Order of Scribes 14",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "scribes-14",
+      "name": "Order of Scribes 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "tce:subclass:scribes",
+        "name": "Order of Scribes"
+      }
+    }
+  },
+  {
+    "key": "tce:level:scribes-2",
+    "index": "scribes-2",
+    "name": "Order of Scribes 2",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "scribes-2",
+      "name": "Order of Scribes 2",
+      "level": 2,
+      "features": [
+        {
+          "key": "tce:feature:scribes-2-wizardly-quill",
+          "name": "Wizardly Quill"
+        },
+        {
+          "key": "tce:feature:scribes-2-awakened-spellbook",
+          "name": "Awakened Spellbook"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "tce:subclass:scribes",
+        "name": "Order of Scribes"
+      }
+    }
+  },
+  {
+    "key": "tce:level:scribes-6",
+    "index": "scribes-6",
+    "name": "Order of Scribes 6",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_法師.md"
+    },
+    "data": {
+      "index": "scribes-6",
+      "name": "Order of Scribes 6",
+      "level": 6,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:wizard",
+        "name": "Wizard"
+      },
+      "subclass": {
+        "key": "tce:subclass:scribes",
+        "name": "Order of Scribes"
+      }
+    }
+  },
+  {
+    "key": "tce:level:soulknife-13",
+    "index": "soulknife-13",
+    "name": "Soulknife 13",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "soulknife-13",
+      "name": "Soulknife 13",
+      "level": 13,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:soulknife",
+        "name": "Soulknife"
+      }
+    }
+  },
+  {
+    "key": "tce:level:soulknife-17",
+    "index": "soulknife-17",
+    "name": "Soulknife 17",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "soulknife-17",
+      "name": "Soulknife 17",
+      "level": 17,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:soulknife",
+        "name": "Soulknife"
+      }
+    }
+  },
+  {
+    "key": "tce:level:soulknife-3",
+    "index": "soulknife-3",
+    "name": "Soulknife 3",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "soulknife-3",
+      "name": "Soulknife 3",
+      "level": 3,
+      "features": [
+        {
+          "key": "tce:feature:soulknife-3-psionic-power",
+          "name": "Psionic Power"
+        },
+        {
+          "key": "tce:feature:soulknife-3-psychic-blades",
+          "name": "Psychic Blades"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:soulknife",
+        "name": "Soulknife"
+      }
+    }
+  },
+  {
+    "key": "tce:level:soulknife-9",
+    "index": "soulknife-9",
+    "name": "Soulknife 9",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_遊蕩者.md"
+    },
+    "data": {
+      "index": "soulknife-9",
+      "name": "Soulknife 9",
+      "level": 9,
+      "features": [
+        {
+          "key": "tce:feature:soulknife-9-homing-strikes",
+          "name": "Homing Strikes"
+        },
+        {
+          "key": "tce:feature:soulknife-9-psychic-teleportation",
+          "name": "Psychic Teleportation"
+        }
+      ],
+      "class": {
+        "key": "srd5.1:class:rogue",
+        "name": "Rogue"
+      },
+      "subclass": {
+        "key": "tce:subclass:soulknife",
+        "name": "Soulknife"
+      }
+    }
+  },
+  {
+    "key": "tce:level:spores-10",
+    "index": "spores-10",
+    "name": "Circle of Spores 10",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "spores-10",
+      "name": "Circle of Spores 10",
+      "level": 10,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:spores",
+        "name": "Circle of Spores"
+      }
+    }
+  },
+  {
+    "key": "tce:level:spores-14",
+    "index": "spores-14",
+    "name": "Circle of Spores 14",
+    "source": "tce",
+    "ruleset": "dnd5e-2014",
+    "license": null,
+    "provenance": {
+      "type": "private-maintainer-normalization",
+      "phase": "M01-J",
+      "reference": "docs/暫用規則資訊/子職業_德魯伊.md"
+    },
+    "data": {
+      "index": "spores-14",
+      "name": "Circle of Spores 14",
+      "level": 14,
+      "features": [],
+      "class": {
+        "key": "srd5.1:class:druid",
+        "name": "Druid"
+      },
+      "subclass": {
+        "key": "tce:subclass:spores",
+        "name": "Circle of Spores"
+      }
+    }
+  }
+]
