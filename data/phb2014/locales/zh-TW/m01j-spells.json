@@ -4,17 +4,17 @@
   "source": "phb2014",
   "review_status": "draft-human-review-required",
   "entries": {
-    "phb2014:spell:armor-of-agathys": {"name": "艾嘉西斯之鎧"},
-    "phb2014:spell:arms-of-hadar": {"name": "哈達之臂"},
-    "phb2014:spell:beast-sense": {"name": "野獸知覺"},
-    "phb2014:spell:circle-of-power": {"name": "威能法環"},
-    "phb2014:spell:dissonant-whispers": {"name": "噪音暗語"},
-    "phb2014:spell:ensnaring-strike": {"name": "誘捕打擊"},
-    "phb2014:spell:feign-death": {"name": "假死術"},
-    "phb2014:spell:hunger-of-hadar": {"name": "哈達之慾"},
-    "phb2014:spell:phantasmal-force": {"name": "魅影之力"},
-    "phb2014:spell:ray-of-sickness": {"name": "致病射線"},
-    "phb2014:spell:staggering-smite": {"name": "驚震斬"},
-    "phb2014:spell:wrathful-smite": {"name": "激憤斬"}
+    "phb2014:spell:armor-of-agathys": {"name":"艾嘉西斯之鎧","data.desc.0":"以幽靈般的寒霜包覆自身，獲得臨時生命值，並在效果持續時傷害近戰攻擊者。"},
+    "phb2014:spell:arms-of-hadar": {"name":"哈達之臂","data.desc.0":"召喚黑暗觸鬚襲擊周圍生物，造成傷害並妨礙其反應動作。"},
+    "phb2014:spell:beast-sense": {"name":"野獸知覺","data.desc.0":"接觸一隻自願的野獸，在法術持續期間透過牠的感官感知世界。"},
+    "phb2014:spell:circle-of-power": {"name":"威能法環","data.desc.0":"散發神聖防護能量，幫助附近友軍抵抗法術與魔法效果。"},
+    "phb2014:spell:dissonant-whispers": {"name":"噪音暗語","data.desc.0":"低語不協和旋律造成心靈傷害，並可能迫使目標逃離。"},
+    "phb2014:spell:ensnaring-strike": {"name":"誘捕打擊","data.desc.0":"強化下一次武器命中，使藤蔓纏住目標並限制其行動。"},
+    "phb2014:spell:feign-death": {"name":"假死術","data.desc.0":"使自願生物進入近似死亡的狀態，保護其免受毒素並抵抗多數傷害。"},
+    "phb2014:spell:hunger-of-hadar": {"name":"哈達之慾","data.desc.0":"開啟充滿異界黑暗與寒冷的球形空間，使其中生物失去視覺並受到傷害。"},
+    "phb2014:spell:phantasmal-force": {"name":"魅影之力","data.desc.0":"在一名生物心中植入可信幻象，甚至能讓它因相信幻象為真而受到心靈傷害。"},
+    "phb2014:spell:ray-of-sickness": {"name":"致病射線","data.desc.0":"射出病態綠色射線進行遠程法術攻擊，造成毒素傷害並可能使目標中毒。"},
+    "phb2014:spell:staggering-smite": {"name":"驚震斬","data.desc.0":"強化下一次近戰武器命中，以心靈衝擊重創並削弱目標。"},
+    "phb2014:spell:wrathful-smite": {"name":"激憤斬","data.desc.0":"強化下一次近戰武器命中，造成心靈傷害並可能使目標陷入恐慌。"}
   }
 }
