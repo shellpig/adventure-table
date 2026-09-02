@@ -11,6 +11,7 @@ from app.content.m01j_inventory import (
 from app.content.m01j_reference_closeout import apply_m01j_reference_closeout
 from app.content.m01j_reference_completion import apply_m01j_reference_completion
 from app.content.m01j_reference_content import apply_m01j_reference_content
+from app.content.m01j_spell_aliases import install_m01j_spell_aliases
 from app.content.m01j_spell_closeout_validation import validate_m01j_spell_closeout
 from app.content.m01j_static_sweep import apply_m01j_static_sweep
 from app.content.phb_roleplay import apply_phb_background_roleplay
@@ -43,6 +44,7 @@ def load_default_content_registry() -> ContentRegistry:
     # attach PHB mechanics whose source identities dedupe onto canonical SRD
     # subclasses, then validate the remaining spell-choice contracts before
     # exposing parent relations.
+    install_m01j_spell_aliases()
     registry = apply_m01j_reference_content(registry)
     registry = apply_m01j_reference_completion(registry)
     registry = apply_m01j_static_sweep(registry)
