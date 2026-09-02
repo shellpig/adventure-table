@@ -182,8 +182,15 @@ def _verify_spell(entry: dict[str, Any]) -> None:
     _require_nonblank(data.get("range"), "range", key)
     _require_nonblank(data.get("duration"), "duration", key)
     components = data.get("components")
-    if not isinstance(components, list) or not all(component in {"V", "S", "M"} for component in components):
+    if (
+        not isinstance(components, list)
+        or not components
+        or len(components) != len(set(components))
+        or not all(component in {"V", "S", "M"} for component in components)
+    ):
         raise AssertionError(f"{key}: invalid components")
+    if "M" in components:
+        _require_nonblank(data.get("material"), "material component metadata", key)
     if not isinstance(data.get("ritual"), bool):
         raise AssertionError(f"{key}: ritual must be explicit")
     if not isinstance(data.get("concentration"), bool):
