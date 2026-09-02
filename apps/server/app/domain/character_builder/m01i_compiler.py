@@ -29,6 +29,7 @@ from app.domain.character_builder.m01j_runtime import (
     apply_m01j_subclass_runtime,
     prepare_m01j_subclasses,
 )
+from app.domain.character_builder.m01k_integration import apply_m01k_post_compile
 from app.domain.character_builder.optional_class_features import (
     apply_feature_pool_retraining,
     apply_optional_feature_replacements,
@@ -129,12 +130,13 @@ def compile_builder_draft(
     *,
     base_build: CharacterBuild | None = None,
 ) -> BuilderCompileResult:
-    """Extend the established compiler with M01-I and M01-J data-driven rules.
+    """Extend the established compiler with M01-I, M01-J and M01-K rules.
 
-    P0/P1 remains the core compiler. M01-J contributes active-subclass spell
-    overlays, permanent subclass grants/choices, conditional grants and PHB
-    third-caster profiles; M01-I then composes its optional class-feature overlay
-    on top. Direct Create, Level Up and Multiclass remain on one compiler path.
+    P0/P1 remains the core compiler. M01-K hardens PHB feat acquisition/spell
+    semantics on that same path; M01-J contributes active-subclass spell overlays,
+    permanent subclass grants/choices, conditional grants and PHB third-caster
+    profiles; M01-I composes its optional class-feature overlay on top. Direct
+    Create, Level Up and Multiclass therefore remain on one compiler path.
     """
 
     m01j = prepare_m01j_subclasses(draft, registry)
@@ -148,6 +150,7 @@ def compile_builder_draft(
         runtime.registry,
         base_build=base_build,
     )
+    compiled = apply_m01k_post_compile(draft, runtime.registry, compiled)
 
     core_choices = tuple(
         choice
