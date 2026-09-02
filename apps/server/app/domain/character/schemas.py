@@ -20,6 +20,7 @@ LegacyMovementMode = Literal["climb", "fly", "swim"]
 LineageSize = Literal["small", "medium"]
 ArcaneArmorPart = Literal["armor", "boots", "helmet", "special_weapon"]
 FeatureGrantKind = Literal["choice", "optional_feature", "nested_choice", "retraining"]
+DerivedModifierTarget = Literal["max_hp", "passive_perception", "passive_investigation"]
 
 
 def require_stable_key(value: str, *, kinds: set[str] | None = None) -> str:
@@ -208,6 +209,59 @@ class FeatureGrantSource(FrozenModel):
         return require_stable_key(value)
 
 
+class FeatAcquisition(FrozenModel):
+    """One persisted feat acquisition; identity is the opportunity, not the feat key."""
+
+    acquisition_id: str = Field(min_length=1, max_length=320)
+    feat_ref: StableKey
+    source_opportunity: str = Field(min_length=1, max_length=320)
+    selections: dict[str, tuple[str, ...]] = Field(default_factory=dict)
+
+    @field_validator("feat_ref")
+    @classmethod
+    def feat_ref_is_feat(cls, value: str) -> str:
+        return require_stable_key(value, kinds={"feat"})
+
+    @model_validator(mode="after")
+    def selections_are_well_formed(self) -> "FeatAcquisition":
+        if any(not key.strip() for key in self.selections):
+            raise ValueError("feat acquisition selection keys cannot be blank")
+        return self
+
+
+class StaticDerivedModifier(FrozenModel):
+    target: DerivedModifierTarget
+    value: int
+    per_level: bool = False
+    source_ref: StableKey
+
+    @field_validator("source_ref")
+    @classmethod
+    def source_ref_is_stable(cls, value: str) -> str:
+        return require_stable_key(value)
+
+
+class FeatResourceGrant(FrozenModel):
+    resource_id: str = Field(min_length=1, max_length=160)
+    capacity: int = Field(ge=1)
+    die_size: int | None = Field(default=None, ge=2, le=20)
+    recharge: tuple[RestType, ...] = ()
+    stacking: Literal["separate", "aggregate-superiority-dice"] = "separate"
+    source_ref: StableKey
+
+    @field_validator("source_ref")
+    @classmethod
+    def source_ref_is_stable(cls, value: str) -> str:
+        return require_stable_key(value)
+
+    @field_validator("recharge")
+    @classmethod
+    def recharge_values_are_unique(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if len(value) != len(set(value)):
+            raise ValueError("feat resource recharge values must be unique")
+        return value
+
+
 class CharacterBuild(FrozenModel):
     ruleset: str = Field(default="dnd5e-2014", min_length=1)
     content_sources: tuple[str, ...] = ("srd5.1",)
@@ -232,6 +286,9 @@ class CharacterBuild(FrozenModel):
     feature_refs: tuple[StableKey, ...] = ()
     feature_grant_sources: tuple[FeatureGrantSource, ...] = ()
     feat_refs: tuple[StableKey, ...] = ()
+    feat_acquisitions: tuple[FeatAcquisition, ...] = ()
+    static_derived_modifiers: tuple[StaticDerivedModifier, ...] = ()
+    feat_resource_grants: tuple[FeatResourceGrant, ...] = ()
     infusion_refs: tuple[StableKey, ...] = ()
     walking_speed: int | None = Field(default=None, ge=0)
     swim_speed: int | None = Field(default=None, ge=0)
@@ -373,6 +430,13 @@ class CharacterBuild(FrozenModel):
             raise ValueError("feature grant provenance must be unique per feature_ref")
         if any(feature_ref not in feature_ref_set for feature_ref in feature_source_refs):
             raise ValueError("feature grant provenance must reference a feature in feature_refs")
+
+        acquisition_ids = [entry.acquisition_id for entry in self.feat_acquisitions]
+        if len(acquisition_ids) != len(set(acquisition_ids)):
+            raise ValueError("feat acquisition_id values must be unique")
+        acquired_feat_refs = {entry.feat_ref for entry in self.feat_acquisitions}
+        if any(feat_ref not in set(self.feat_refs) for feat_ref in acquired_feat_refs):
+            raise ValueError("feat acquisitions must be represented in feat_refs summary")
 
         profile_ids = [profile.profile_id for profile in self.spellcasting_profiles]
         if len(profile_ids) != len(set(profile_ids)):
