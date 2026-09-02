@@ -118,12 +118,21 @@ export function EquipmentStep({
   )
   const equipmentSelections =
     view.draft.draft_payload.starting_equipment_choices ?? {}
-  const equipmentReferences = equipmentChoices.flatMap((choice) =>
-    choice.options.flatMap((option) => [
-      ...(option.reference_id ? [option.reference_id] : []),
-      ...(option.presentation_items ?? []).map((item) => item.reference_id),
-    ]),
-  )
+  const resolvedQuery = useQuery({
+    queryKey: ['builder-review', view.draft.id, view.draft.revision],
+    queryFn: () => getBuilderReview(view.draft.id),
+    enabled: !versioned,
+  })
+  const resolvedEquipment = resolvedQuery.data?.starting_equipment ?? []
+  const equipmentReferences = [
+    ...equipmentChoices.flatMap((choice) =>
+      choice.options.flatMap((option) => [
+        ...(option.reference_id ? [option.reference_id] : []),
+        ...(option.presentation_items ?? []).map((item) => item.reference_id),
+      ]),
+    ),
+    ...resolvedEquipment.map((entry) => entry.item_ref),
+  ]
   const { nameFor, locale } = useContentPresentations(equipmentReferences)
 
   const saveChoice = (choiceId: string, next: string[]) => {
@@ -225,6 +234,18 @@ export function EquipmentStep({
           ) : (
             <p className="builder-muted">{t('equipment.chooseFirst')}</p>
           )}
+          <div className="summary-grants">
+            <h3>{t('review.resolvedStarting')}</h3>
+            {resolvedEquipment.map((entry) => (
+              <div key={entry.entry_id}>
+                <span>× {entry.quantity}</span>
+                <strong>{nameFor(entry.item_ref, entry.name)}</strong>
+              </div>
+            ))}
+            {!resolvedEquipment.length ? (
+              <small>{t('review.noStarting')}</small>
+            ) : null}
+          </div>
         </div>
       ) : (
         <div className="builder-rule-card">
