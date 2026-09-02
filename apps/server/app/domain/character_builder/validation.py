@@ -19,6 +19,13 @@ from app.domain.character_builder.schemas import (
 # Bard/Rogue Expertise and the subclass features that reuse its shape select a
 # proficiency the character already holds rather than granting a new one.
 EXPERTISE_OPTION_SOURCE = "content:feature:feature-specific-expertise_options"
+# Feat spell/source selections are source-aware access identities. Selecting the
+# same spell or casting class in two different feats is legal; uniqueness is
+# enforced inside each individual feat choice instead of globally by reference.
+SOURCE_AWARE_FEAT_REFERENCE_SOURCES = {
+    "content:feat:spell",
+    "content:feat:spellcasting_source",
+}
 
 
 def make_validation_result(
@@ -172,6 +179,28 @@ def _validate_builder_choices(
                 )
             )
             continue
+        if (
+            (choice.option_source or "").startswith("content:feat:")
+            and not choice.allow_duplicates
+            and len(selected) != len(set(selected))
+        ):
+            duplicate_options = tuple(
+                sorted(
+                    option_id
+                    for option_id, count in Counter(selected).items()
+                    if count > 1
+                )
+            )
+            issues.append(
+                BuilderIssue(
+                    code="duplicate_starting_choice",
+                    severity=BuilderIssueSeverity.BLOCKING_ERROR,
+                    path=path,
+                    message=f"{choice.label} cannot select the same option more than once.",
+                    related_refs=duplicate_options,
+                )
+            )
+            continue
         option_by_id = {option.option_id: option for option in choice.options}
         illegal = tuple(option_id for option_id in selected if option_id not in option_by_id)
         if illegal:
@@ -205,9 +234,12 @@ def _validate_builder_choices(
 
         # Expertise does not grant a proficiency, it doubles one the character
         # already has, so its selections intentionally repeat an earlier choice.
+        # Feat spell/source choices also preserve source identity, so the same
+        # spell or casting class may legally appear in separate feat acquisitions.
         # Every other choice that hands out a reference must still be unique.
-        grants_reference = not (choice.option_source or "").startswith(
-            EXPERTISE_OPTION_SOURCE
+        grants_reference = (
+            not (choice.option_source or "").startswith(EXPERTISE_OPTION_SOURCE)
+            and choice.option_source not in SOURCE_AWARE_FEAT_REFERENCE_SOURCES
         )
         for option_id in selected:
             option = option_by_id[option_id]
