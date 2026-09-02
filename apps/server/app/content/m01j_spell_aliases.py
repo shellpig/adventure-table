@@ -42,6 +42,14 @@ REFERENCE_SPELL_INDEX_ALIASES: dict[str, str] = {
     "激憤斬": "wrathful-smite",
     "驚震斬": "staggering-smite",
     "防護法陣": "magic-circle",
+    # Aberrant Mind Psionic Spells. Keep the whole table deterministic instead
+    # of allowing localized fuzzy matching to collide with non-spell entities.
+    "安定心神": "calm-emotions",
+    "偵測思想": "detect-thoughts",
+    "短訊術": "sending",
+    "艾伐黑觸手": "black-tentacles",
+    "拉瑞心靈聯結": "telepathic-bond",
+    "心靈遙控": "telekinesis",
     # Oath of the Ancients uses a title that otherwise fuzzy-matches Nature.
     "問道自然": "commune-with-nature",
     # Genie common expanded spells.
