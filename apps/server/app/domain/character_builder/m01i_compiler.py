@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from app.content.identity import collect_stable_key_sources
 from app.content.registry import ContentRegistry
 from app.domain.character.schemas import CharacterBuild
@@ -158,6 +160,21 @@ def compile_builder_draft(
         core_registry,
         base_build=base_build,
     )
+
+    # M01-J third-caster profiles must exist before K evaluates "can cast at
+    # least one spell" prerequisites. Materialize those profiles exactly once
+    # here, before K's ordered prerequisite pass; the later J runtime steps add
+    # subclass grants/conditional spell rows but do not need to append these
+    # profiles a second time.
+    if compiled.build_candidate is not None:
+        compiled = replace(
+            compiled,
+            build_candidate=apply_m01j_spellcasting_build(
+                compiled.build_candidate,
+                m01j,
+            ),
+        )
+
     compiled = apply_m01k_post_compile(
         draft,
         runtime.registry,
@@ -285,7 +302,6 @@ def compile_builder_draft(
         )
         build = apply_m01j_subclass_runtime(build, m01j)
         build = apply_m01j_skill_expertise(build, draft)
-        build = apply_m01j_spellcasting_build(build, m01j)
         build = _derive_sources(build)
         # Validate again after J has appended selected option provenance/grants.
         issues.extend(validate_feature_grant_source_references(build, runtime.registry))
