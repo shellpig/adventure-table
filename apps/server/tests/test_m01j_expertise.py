@@ -23,6 +23,7 @@ from app.domain.rules.skills import skill_modifier
 CLERIC_REF = "srd5.1:class:cleric"
 FIGHTER_REF = "srd5.1:class:fighter"
 ROGUE_REF = "srd5.1:class:rogue"
+WIZARD_REF = "srd5.1:class:wizard"
 KNOWLEDGE_REF = "phb2014:subclass:knowledge"
 SCOUT_REF = "xge:subclass:scout"
 PURPLE_DRAGON_KNIGHT_REF = "scag:subclass:purple-dragon-knight"
@@ -57,6 +58,34 @@ def _build(
         character_level=level,
         class_progression=(class_ref,) * level,
         subclasses=(SubclassSelection(class_ref=class_ref, subclass_ref=subclass_ref),),
+        ability_scores=AbilityScores(
+            strength=10,
+            dexterity=10,
+            constitution=10,
+            intelligence=14,
+            wisdom=14,
+            charisma=14,
+        ),
+        skill_choices=skills,
+        hp_progression=(8,) + (5,) * (level - 1),
+    )
+
+
+def _multiclass_build(
+    progression: tuple[str, ...],
+    subclasses: tuple[tuple[str, str], ...],
+    *,
+    skills: tuple[str, ...],
+) -> CharacterBuild:
+    level = len(progression)
+    return CharacterBuild(
+        race_ref="srd5.1:race:human",
+        character_level=level,
+        class_progression=progression,
+        subclasses=tuple(
+            SubclassSelection(class_ref=class_ref, subclass_ref=subclass_ref)
+            for class_ref, subclass_ref in subclasses
+        ),
         ability_scores=AbilityScores(
             strength=10,
             dexterity=10,
@@ -111,6 +140,50 @@ def test_royal_envoy_expertise_stays_on_persuasion() -> None:
     )
     result = apply_m01j_skill_expertise(build, _draft())
     assert result.skill_expertise_refs == (PERSUASION_REF,)
+
+
+@pytest.mark.parametrize("fighter_level", [3, 4, 5, 6])
+def test_royal_envoy_expertise_waits_for_fighter_7(fighter_level: int) -> None:
+    """Royal Envoy is a 7th-level feature; choosing the oath at 3 grants nothing."""
+
+    build = _build(
+        FIGHTER_REF,
+        PURPLE_DRAGON_KNIGHT_REF,
+        level=fighter_level,
+        skills=(PERSUASION_REF,),
+    )
+    result = apply_m01j_skill_expertise(build, _draft())
+    assert result.skill_expertise_refs == ()
+
+
+def test_royal_envoy_expertise_uses_class_level_not_character_level() -> None:
+    """Fighter 3 / Wizard 9 is character level 12 but only Fighter 3."""
+
+    build = _multiclass_build(
+        (FIGHTER_REF,) * 3 + (WIZARD_REF,) * 9,
+        ((FIGHTER_REF, PURPLE_DRAGON_KNIGHT_REF),),
+        skills=(PERSUASION_REF,),
+    )
+    assert build.character_level == 12
+    assert apply_m01j_skill_expertise(build, _draft()).skill_expertise_refs == ()
+
+    build = _multiclass_build(
+        (FIGHTER_REF,) * 7 + (WIZARD_REF,) * 5,
+        ((FIGHTER_REF, PURPLE_DRAGON_KNIGHT_REF),),
+        skills=(PERSUASION_REF,),
+    )
+    assert apply_m01j_skill_expertise(build, _draft()).skill_expertise_refs == (PERSUASION_REF,)
+
+
+def test_scout_expertise_uses_rogue_level_not_character_level() -> None:
+    """Survivalist is a 3rd-level Scout feature and must track the rogue level."""
+
+    build = _multiclass_build(
+        (ROGUE_REF,) * 2 + (FIGHTER_REF,) * 8,
+        ((ROGUE_REF, SCOUT_REF),),
+        skills=(NATURE_REF, SURVIVAL_REF),
+    )
+    assert apply_m01j_skill_expertise(build, _draft()).skill_expertise_refs == ()
 
 
 def test_expertise_skill_modifier_adds_proficiency_bonus_twice() -> None:
