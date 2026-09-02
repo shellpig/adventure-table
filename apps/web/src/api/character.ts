@@ -207,6 +207,7 @@ export type CharacterSheetDTO = {
   saving_throws: Record<string, number>
   skills: Record<string, number>
   passive_perception: number
+  passive_investigation: number
   initiative_modifier: number
   armor_class: number
   walking_speed: number
