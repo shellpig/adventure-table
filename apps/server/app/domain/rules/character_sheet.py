@@ -271,6 +271,7 @@ def build_character_sheet(
             )
         )
 
+    sheet_feature_refs = tuple(dict.fromkeys((*build.feature_refs, *build.feat_refs)))
     return CharacterSheetDTO(
         character_id=character.id,
         current_version_id=character.current_version_id,
@@ -297,7 +298,7 @@ def build_character_sheet(
         hit_dice=hit_dice,
         features=[
             NamedReferenceDTO(key=key, name=registry.get(key).name)
-            for key in build.feature_refs
+            for key in sheet_feature_refs
         ],
         conditions=[
             ConditionDTO(
