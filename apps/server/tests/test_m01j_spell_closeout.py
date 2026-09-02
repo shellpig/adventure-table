@@ -40,15 +40,14 @@ def _single_class_payload(
         "sorcerer": 6,
         "wizard": 6,
     }[class_index]
+    acquisition_level = 1 if class_index in {"cleric", "sorcerer"} else 2
     levels = tuple(
         BuilderLevelChoice(
             character_level=level,
             class_ref=f"srd5.1:class:{class_index}",
             hp_method="first_level" if level == 1 else "fixed_average",
             hp_base_gain=hit_die if level == 1 else hit_die // 2 + 1,
-            subclass_ref=subclass_ref if level == (
-                1 if class_index == "sorcerer" else 2 if class_index == "wizard" else 1
-            ) else None,
+            subclass_ref=subclass_ref if level == acquisition_level else None,
         )
         for level in range(1, class_level + 1)
     )
@@ -107,15 +106,10 @@ def test_clockwork_cannot_replace_two_new_feature_spells_at_level_one() -> None:
         if choice.option_source == "content:m01-j-subclass-spell-replacement"
     ]
     assert len(choices) == 2
-    selected_refs: set[str] = set()
     selections: dict[str, BuilderChoiceSelection] = {}
     for choice in choices:
-        alternative = next(
-            option.option_id
-            for option in choice.options[1:]
-            if option.option_id not in selected_refs
-        )
-        selected_refs.add(alternative)
+        assert len(choice.options) > 1
+        alternative = choice.options[1].option_id
         selections[choice.choice_id] = BuilderChoiceSelection(
             choice_id=choice.choice_id,
             source_ref=choice.source_ref,
