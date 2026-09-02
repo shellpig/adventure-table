@@ -1,0 +1,33 @@
+[
+  {
+    "key": "phb2014:spell:phantasmal-force",
+    "index": "phantasmal-force",
+    "name": "Phantasmal Force",
+    "source": "phb2014",
+    "ruleset": "dnd5e-2014",
+    "provenance": {
+      "rules_source": "Player's Handbook (2014)",
+      "reference_doc": "docs/暫用規則資訊/子職業_邪術師.md",
+      "scope": "M01-J subclass spell identity; descriptive spell text intentionally omitted"
+    },
+    "data": {
+      "index": "phantasmal-force",
+      "name": "Phantasmal Force",
+      "desc": [],
+      "components": ["V", "S", "M"],
+      "ritual": false,
+      "concentration": true,
+      "level": 2,
+      "school": {
+        "key": "srd5.1:magic-school:illusion",
+        "name": "Illusion"
+      },
+      "classes": [
+        {"key": "srd5.1:class:bard", "name": "Bard"},
+        {"key": "srd5.1:class:sorcerer", "name": "Sorcerer"},
+        {"key": "srd5.1:class:wizard", "name": "Wizard"}
+      ],
+      "subclasses": []
+    }
+  }
+]
