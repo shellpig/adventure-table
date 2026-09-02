@@ -7,8 +7,8 @@ from app.content.m01j_inventory import (
     apply_m01j_subclass_relations,
     validate_m01j_inventory,
 )
+from app.content.m01j_reference_completion import apply_m01j_reference_completion
 from app.content.m01j_reference_content import apply_m01j_reference_content
-from app.content.m01j_reference_fixes import apply_m01j_reference_fixes
 from app.content.phb_roleplay import apply_phb_background_roleplay
 from app.content.registry import (
     ContentNotFoundError,
@@ -37,7 +37,7 @@ def load_default_content_registry() -> ContentRegistry:
     # Materialize their temporary runtime overlay, then normalize the handful of
     # rules whose permanent semantics span multiple Markdown sections/tables.
     registry = apply_m01j_reference_content(registry)
-    registry = apply_m01j_reference_fixes(registry)
+    registry = apply_m01j_reference_completion(registry)
     registry = validate_m01j_inventory(registry)
     registry = validate_m01j_closeout_metadata(registry)
     registry = apply_m01j_subclass_relations(registry)
