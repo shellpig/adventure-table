@@ -4,12 +4,13 @@
   "ruleset": "dnd5e-2014",
   "version": "M01-J",
   "provenance": {
-    "type": "inventory-placeholder",
-    "reference": "docs/M01/實作規格.md",
-    "status": "runtime subclass mechanics blocked pending verified repository reference data"
+    "type": "repository-reference-runtime",
+    "reference": "docs/暫用規則資訊/子職業_*.md",
+    "status": "M01-J subclasses are materialized deterministically from verified repository reference documents at registry load"
   },
   "usage": {
-    "scope": "private-friends-project"
+    "scope": "private-friends-project",
+    "physical_file_policy": "The installed pack boundary is explicit; M01-J subclass rows are generated in the validated reference overlay rather than duplicated into vendored JSON."
   },
   "categories": [
     {"name": "subclasses", "kind": "subclass", "file": "subclasses.json", "count": 0}
