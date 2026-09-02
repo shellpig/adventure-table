@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from app.content import load_default_content_registry
+from app.domain.character_builder.m01i_validation import validate_unique_feature_pool_selections
 from app.domain.character_builder.m01j_runtime import prepare_m01j_subclasses
 from app.domain.character_builder.schemas import (
     BuilderChoiceSelection,
@@ -171,17 +172,14 @@ def test_draconic_reuses_structural_ancestor_and_adds_fixed_language() -> None:
 
 def test_champion_second_style_shares_fighting_style_uniqueness_pool() -> None:
     registry = load_default_content_registry()
-    runtime = prepare_m01j_subclasses(
-        _draft(
-            _payload(
-                "fighter",
-                "srd5.1:subclass:champion",
-                target_level=10,
-                acquisition_level=3,
-            )
-        ),
-        registry,
+    payload = _payload(
+        "fighter",
+        "srd5.1:subclass:champion",
+        target_level=10,
+        acquisition_level=3,
     )
+    draft = _draft(payload)
+    runtime = prepare_m01j_subclasses(draft, registry)
     choice = _m01j_choice(runtime, "champion-additional-fighting-style")
     assert choice.choose_count == 1
     assert len(choice.options) >= 6
@@ -190,3 +188,32 @@ def test_champion_second_style_shares_fighting_style_uniqueness_pool() -> None:
         assert isinstance(spec, dict)
         assert spec.get("pool") == "fighting-style"
         assert "srd5.1:class:fighter" in spec.get("eligible_class_refs", ())
+
+    structural = build_structural_choices(draft, registry, starting_abilities=None)
+    first_style = _structural_choice(structural, "srd5.1:feature:fighter-fighting-style")
+    duplicate_ref = "srd5.1:feature:fighter-fighting-style-defense"
+    selections = {
+        first_style.choice_id: BuilderChoiceSelection(
+            choice_id=first_style.choice_id,
+            source_ref=first_style.source_ref,
+            selected_option_ids=(duplicate_ref,),
+        ),
+        choice.choice_id: BuilderChoiceSelection(
+            choice_id=choice.choice_id,
+            source_ref=choice.source_ref,
+            selected_option_ids=(duplicate_ref,),
+        ),
+    }
+    selected_draft = _draft(payload.model_copy(update={"choice_selections": selections}))
+    selected_structural = build_structural_choices(
+        selected_draft,
+        registry,
+        starting_abilities=None,
+    )
+    selected_runtime = prepare_m01j_subclasses(selected_draft, registry)
+    issues = validate_unique_feature_pool_selections(
+        selected_draft,
+        tuple((*selected_structural, *selected_runtime.choices)),
+        registry,
+    )
+    assert any(issue.code == "duplicate_optional_pool_selection" for issue in issues)
