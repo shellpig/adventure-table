@@ -8,6 +8,7 @@ from app.content.m01j_inventory import (
     apply_m01j_subclass_relations,
     validate_m01j_inventory,
 )
+from app.content.m01j_option_identity import apply_m01j_option_identity_normalization
 from app.content.m01j_reference_closeout import apply_m01j_reference_closeout
 from app.content.m01j_reference_completion import apply_m01j_reference_completion
 from app.content.m01j_reference_content import apply_m01j_reference_content
@@ -51,6 +52,7 @@ def load_default_content_registry() -> ContentRegistry:
     registry = apply_m01j_reference_completion(registry)
     registry = apply_m01j_static_sweep(registry)
     registry = apply_m01j_reference_closeout(registry)
+    registry = apply_m01j_option_identity_normalization(registry)
     registry = apply_m01j_canonical_integration(registry)
     registry = validate_m01j_inventory(registry)
     registry = validate_m01j_closeout_metadata(registry)
