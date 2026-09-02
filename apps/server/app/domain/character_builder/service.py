@@ -322,6 +322,17 @@ class CharacterBuilderService:
                 raise ValueError("choice_selections must be an object")
             current_selections = current.draft_payload.choice_selections
             target_level = base_build.character_level + 1
+            # M01-K feat child choices use deterministic ``feat:<digest>:...``
+            # ids rather than a level prefix. Only allow a new non-level id when
+            # the authoritative compile for the current draft actually exposes it
+            # as a feat child choice. Historical selections remain protected by
+            # the loop below, so this does not make old feat choices editable.
+            current_compiled = self._compile(current)
+            allowed_new_feat_choice_ids = {
+                choice.choice_id
+                for choice in current_compiled.choices
+                if (choice.option_source or "").startswith("content:feat:")
+            }
             for choice_id, old_selection in current_selections.items():
                 if choice_id.startswith(f"level:{target_level}:"):
                     continue
@@ -351,6 +362,7 @@ class CharacterBuilderService:
                     choice_id not in current_selections
                     and not choice_id.startswith(f"level:{target_level}:")
                     and not _is_cumulative_subclass_choice(choice_id)
+                    and choice_id not in allowed_new_feat_choice_ids
                 ):
                     raise ValueError(
                         f"level_up cannot add non-level-up choice {choice_id}"
