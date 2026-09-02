@@ -210,7 +210,19 @@ def _reference_options(rule: dict[str, object], registry: ContentRegistry) -> tu
         return ()
     result: list[BuilderChoiceOption] = []
     for raw in raw_options:
-        if not isinstance(raw, dict) or raw.get("option_type") != "reference":
+        if not isinstance(raw, dict):
+            continue
+        option_type = raw.get("option_type")
+        if option_type == "choice":
+            nested = raw.get("choice")
+            if not isinstance(nested, dict):
+                continue
+            nested_choose = nested.get("choose", 1)
+            if nested_choose != 1:
+                continue
+            result.extend(_reference_options(nested, registry))
+            continue
+        if option_type != "reference":
             continue
         item = raw.get("item")
         if not isinstance(item, dict):
@@ -227,7 +239,7 @@ def _reference_options(rule: dict[str, object], registry: ContentRegistry) -> tu
                     reference_id=key,
                 )
             )
-    return tuple(result)
+    return tuple(dict.fromkeys((option.option_id, option) for option in result).values())
 
 
 def _proficiency_choices(
