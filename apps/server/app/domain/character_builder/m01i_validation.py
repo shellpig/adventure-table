@@ -206,6 +206,40 @@ def apply_cantrip_retraining_for_m01i(
     )
 
 
+def _has_source_granted_pool_entitlement(
+    feature_ref: str,
+    source_ref: str | None,
+    registry: ContentRegistry,
+) -> bool:
+    """Allow a pool option when its persisted granting source explicitly says so.
+
+    Native ``eligible_class_refs`` remain authoritative by default. M01-K adds a
+    second, narrow entitlement path for sources such as Martial Adept: the source
+    content must opt in, the granted target must be a feature-pool option, and
+    the opt-in kind must match that pool. This prevents the feat from globally
+    weakening Fighter-native maneuver legality.
+    """
+
+    if source_ref is None:
+        return False
+    source = registry.get_optional(source_ref)
+    target = registry.get_optional(feature_ref)
+    target_spec = _pool_option_spec(target) if target is not None else None
+    if source is None or target_spec is None:
+        return False
+
+    choices = source.data.get("choices")
+    if not isinstance(choices, list):
+        return False
+    for choice in choices:
+        if not isinstance(choice, dict) or choice.get("source_granted_entitlement") is not True:
+            continue
+        kind = choice.get("kind")
+        if kind == "maneuver" and target_spec.pool == "battle-master-maneuver":
+            return True
+    return False
+
+
 def validate_final_feature_pool_dependencies(
     build: CharacterBuild,
     registry: ContentRegistry,
@@ -215,10 +249,18 @@ def validate_final_feature_pool_dependencies(
     This is intentionally post-retraining. In particular, changing Pact Boon
     must not leave a Talisman-only Invocation in the new immutable Build merely
     because the old Pact existed in the base version while choices were built.
+
+    M01-K also permits an explicitly source-granted pool entitlement (for
+    example Martial Adept -> Battle Master maneuver) without weakening the
+    option's class-native eligibility for every other source.
     """
 
     known = set(build.feature_refs)
     class_levels = Counter(build.class_progression)
+    source_by_feature = {
+        row.feature_ref: row.source_ref
+        for row in build.feature_grant_sources
+    }
     issues: list[BuilderIssue] = []
 
     for feature_ref in build.feature_refs:
@@ -234,7 +276,11 @@ def validate_final_feature_pool_dependencies(
                 (class_levels.get(class_ref, 0) for class_ref in spec.eligible_class_refs),
                 default=0,
             )
-            if highest < spec.minimum_class_level:
+            if highest < spec.minimum_class_level and not _has_source_granted_pool_entitlement(
+                feature_ref,
+                source_by_feature.get(feature_ref),
+                registry,
+            ):
                 issues.append(
                     BuilderIssue(
                         code="optional_pool_final_class_prerequisite_not_met",
