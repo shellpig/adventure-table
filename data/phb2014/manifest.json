@@ -2,14 +2,16 @@
   "id": "phb2014",
   "name": "Player's Handbook 2014 Additions",
   "ruleset": "dnd5e-2014",
-  "version": "M01-J",
+  "version": "M01-K",
   "provenance": {
     "source_documents": [
       "docs/暫用規則資訊/背景_PHB.md",
       "docs/暫用規則資訊/種族_PHB_非SRD內容.md",
       "docs/暫用規則資訊/子職業_邪術師.md",
       "docs/暫用規則資訊/子職業_野蠻人.md",
-      "docs/暫用規則資訊/子職業_聖武士.md"
+      "docs/暫用規則資訊/子職業_聖武士.md",
+      "docs/暫用規則資訊/專長_PHB_非SRD內容.md",
+      "docs/暫用規則資訊/法術_PHB_非SRD內容.md"
     ],
     "rules_source": "Player's Handbook (2014)",
     "note": "Private-project content pack assembled from rule references supplied in this repository."
@@ -24,6 +26,13 @@
     {"name": "maneuvers-m01i", "kind": "feature", "file": "maneuvers-m01i.json", "count": 16},
     {"name": "spells-m01i", "kind": "spell", "file": "spells-m01i.json", "count": 6},
     {"name": "spells-m01j", "kind": "spell", "file": "spells-m01j.json", "count": 12},
+    {"name": "spells-m01k-01", "kind": "spell", "file": "spells-m01k-01.json", "count": 12},
+    {"name": "spells-m01k-02", "kind": "spell", "file": "spells-m01k-02.json", "count": 12},
+    {"name": "feats-m01k-01", "kind": "feat", "file": "feats-m01k-01.json", "count": 9},
+    {"name": "feats-m01k-02", "kind": "feat", "file": "feats-m01k-02.json", "count": 9},
+    {"name": "feats-m01k-03", "kind": "feat", "file": "feats-m01k-03.json", "count": 9},
+    {"name": "feats-m01k-04", "kind": "feat", "file": "feats-m01k-04.json", "count": 9},
+    {"name": "feats-m01k-05", "kind": "feat", "file": "feats-m01k-05.json", "count": 5},
     {"name": "races", "kind": "race", "file": "races.json", "count": 1},
     {"name": "subraces", "kind": "subrace", "file": "subraces.json", "count": 5},
     {"name": "features-m01j-01", "kind": "feature", "file": "features-m01j-01.json", "count": 80},
@@ -32,5 +41,5 @@
     {"name": "levels-m01j-02", "kind": "level", "file": "levels-m01j-02.json", "count": 39},
     {"name": "subclasses-m01j-01", "kind": "subclass", "file": "subclasses-m01j-01.json", "count": 28}
   ],
-  "total_entries": 319
+  "total_entries": 384
 }
