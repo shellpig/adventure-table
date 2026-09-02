@@ -105,6 +105,19 @@ def _prepare_completion_constants() -> None:
             raise ContentValidationError("M01-J Assassin fixed-grant source correction conflicts")
         _fixes.FIXED_GRANTS["phb2014:subclass:assassin"] = stale_assassin
 
+    # Beast Sense is PHB-only in the vendored content boundary, not an SRD
+    # identity. Preserve the Totem Warrior grant while pointing at the real
+    # supplemental PHB spell record registered by M01-J.
+    totem_ref = "phb2014:subclass:totem-warrior"
+    totem_spells = []
+    for item in _fixes.FIXED_SPELLS.get(totem_ref, ()):
+        next_item = deepcopy(item)
+        if next_item.get("spell_ref") == "srd5.1:spell:beast-sense":
+            next_item["spell_ref"] = "phb2014:spell:beast-sense"
+        totem_spells.append(next_item)
+    if totem_spells:
+        _fixes.FIXED_SPELLS[totem_ref] = tuple(totem_spells)
+
     _merge_fixed_grant("scag:subclass:arcana", "skills", "srd5.1:skill:arcana")
 
     _append_grant_choice(
