@@ -165,25 +165,26 @@ def _validate_spell_replacement(
             raise ContentValidationError(f"{subclass_ref}: duplicate replaceable spell {ref}")
         seen.add(ref)
 
-    # The replacement universe must have at least one legal option at every
-    # spell level represented by the feature. The original spell is always a
-    # legal keep-current option; this gate protects the actual replacement path.
     spell_levels = {
         int(registry.get(ref).data["level"])
         for ref in seen
         if isinstance(registry.get(ref).data.get("level"), int)
     }
     for spell_level in spell_levels:
-        candidates = [
+        alternatives = [
             spell
             for spell in registry.list_kind("spell")
-            if spell.data.get("level") == spell_level
+            if spell.key not in seen
+            and spell.data.get("level") == spell_level
             and _spell_school_index(spell) in expected_schools
-            and any(_spell_on_class_list(registry, spell, class_ref) for class_ref in expected_classes)
+            and any(
+                _spell_on_class_list(registry, spell, class_ref)
+                for class_ref in expected_classes
+            )
         ]
-        if not candidates:
+        if not alternatives:
             raise ContentValidationError(
-                f"{subclass_ref}: no legal replacement candidates at spell level {spell_level}"
+                f"{subclass_ref}: no distinct legal replacement candidates at spell level {spell_level}"
             )
 
 
