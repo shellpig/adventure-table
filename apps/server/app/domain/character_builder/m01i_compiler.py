@@ -29,7 +29,10 @@ from app.domain.character_builder.m01j_runtime import (
     apply_m01j_subclass_runtime,
     prepare_m01j_subclasses,
 )
-from app.domain.character_builder.m01k_integration import apply_m01k_post_compile
+from app.domain.character_builder.m01k_integration import (
+    apply_m01k_post_compile,
+    prepare_m01k_core_registry,
+)
 from app.domain.character_builder.optional_class_features import (
     apply_feature_pool_retraining,
     apply_optional_feature_replacements,
@@ -145,12 +148,22 @@ def compile_builder_draft(
         m01j.registry,
         base_build=base_build,
     )
+    # The old core structural gate only understands SRD's ability-only feat
+    # prerequisites. K defers PHB feat gating to its level-ordered resolver so
+    # armor proficiency, spellcasting and compound prerequisites are evaluated
+    # against the exact point in the level rail rather than rejected early.
+    core_registry = prepare_m01k_core_registry(runtime.registry)
     compiled = compile_core_builder_draft(
         _core_draft(draft, runtime.registry),
-        runtime.registry,
+        core_registry,
         base_build=base_build,
     )
-    compiled = apply_m01k_post_compile(draft, runtime.registry, compiled)
+    compiled = apply_m01k_post_compile(
+        draft,
+        runtime.registry,
+        compiled,
+        base_build=base_build,
+    )
 
     core_choices = tuple(
         choice
