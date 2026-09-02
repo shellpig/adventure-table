@@ -253,6 +253,89 @@ def _class_proficiencies_through_level(
     return result
 
 
+def _subclass_spell_minimum_class_level(
+    subclass: ContentEntry,
+    spell_key: str,
+) -> int:
+    minimum = subclass.data.get("acquisition_class_level")
+    result = minimum if isinstance(minimum, int) and minimum > 0 else 1
+    rows = subclass.data.get("spells")
+    if not isinstance(rows, list):
+        return result
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        spell = row.get("spell")
+        if not isinstance(spell, dict):
+            continue
+        try:
+            row_spell_key = reference_to_stable_key(spell, kinds={"spell"})
+        except ValueError:
+            row_spell_key = None
+        if row_spell_key != spell_key:
+            continue
+        prerequisites = row.get("prerequisites")
+        if not isinstance(prerequisites, list):
+            return result
+        thresholds: list[int] = []
+        for prerequisite in prerequisites:
+            if not isinstance(prerequisite, dict) or prerequisite.get("type") != "level":
+                continue
+            index = prerequisite.get("index")
+            if not isinstance(index, str):
+                continue
+            raw_level = index.rsplit("-", 1)[-1]
+            if raw_level.isdigit():
+                thresholds.append(int(raw_level))
+        return max((result, *thresholds)) if thresholds else result
+    return result
+
+
+def _nonclass_spell_access_available(
+    entry: SpellAccessEntry,
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+    class_levels: Counter[str],
+    character_level: int,
+) -> bool:
+    if entry.source_type in {"class", "feat"}:
+        return False
+    source = registry.get_optional(entry.source_key)
+    if source is None:
+        return False
+
+    if entry.source_type == "subclass":
+        parent = source.data.get("class")
+        if not isinstance(parent, dict):
+            return False
+        try:
+            class_ref = reference_to_stable_key(parent, kinds={"class"})
+        except ValueError:
+            class_ref = None
+        if class_ref is None:
+            return False
+        minimum = _subclass_spell_minimum_class_level(source, entry.spell_key)
+        return class_levels.get(class_ref, 0) >= minimum
+
+    minimum_character_level = source.data.get("minimum_character_level")
+    if isinstance(minimum_character_level, int) and minimum_character_level > 0:
+        return character_level >= minimum_character_level
+
+    parent = source.data.get("class")
+    source_level = source.data.get("level")
+    if isinstance(parent, dict) and isinstance(source_level, int) and source_level > 0:
+        try:
+            class_ref = reference_to_stable_key(parent, kinds={"class"})
+        except ValueError:
+            class_ref = None
+        if class_ref is not None:
+            return class_levels.get(class_ref, 0) >= source_level
+
+    # Race, lineage and background spell grants without a later level gate are
+    # available from the origin once their SpellAccessEntry exists in the Build.
+    return entry.source_type in {"race", "lineage", "background", "feature", "other"}
+
+
 def _class_spellcasting_through_level(
     draft: BuilderDraft,
     registry: ContentRegistry,
@@ -275,22 +358,34 @@ def _class_spellcasting_through_level(
         if minimum is not None and class_level >= minimum:
             return True
 
-    # M01-J third-caster subclass profiles are present on the candidate Build.
-    # Their acquisition-level content gate prevents a future subclass from
-    # satisfying Variant Human at level 1, while Fighter/Rogue ASIs begin after
-    # their level-3 subclass choice.
-    if build is not None:
-        for profile in build.spellcasting_profiles:
-            if profile.source_type != "subclass":
-                continue
-            class_level = counts.get(profile.class_ref, 0)
-            source = registry.get_optional(profile.source_key)
-            minimum = source.data.get("acquisition_class_level") if source is not None else None
-            if not isinstance(minimum, int):
-                minimum = 3
-            if class_level >= minimum:
-                return True
-    return False
+    if build is None:
+        return False
+
+    # M01-J third-caster profiles and any source-specific grant must count when
+    # it is genuinely active at this point in the level rail. Reading the final
+    # high-level Build without these gates would allow a future spell grant to
+    # satisfy an earlier ASI feat prerequisite.
+    for profile in build.spellcasting_profiles:
+        if profile.source_type != "subclass":
+            continue
+        class_level = counts.get(profile.class_ref, 0)
+        source = registry.get_optional(profile.source_key)
+        minimum = source.data.get("acquisition_class_level") if source is not None else None
+        if not isinstance(minimum, int):
+            minimum = 3
+        if class_level >= minimum:
+            return True
+
+    return any(
+        _nonclass_spell_access_available(
+            entry,
+            draft,
+            registry,
+            counts,
+            character_level,
+        )
+        for entry in build.spell_access_entries
+    )
 
 
 def _starting_ability_context(
