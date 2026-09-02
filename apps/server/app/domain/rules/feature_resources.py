@@ -11,6 +11,12 @@ from app.domain.rules.artificer import (
 )
 
 
+SUPERIORITY_DICE_RESOURCE_KEY = "feature:superiority-dice"
+BATTLE_MASTER_COMBAT_SUPERIORITY = "phb2014:feature:battle-master-3-combat-superiority"
+SUPERIOR_TECHNIQUE = "tce:feature:superior-technique"
+FIGHTER_REF = "srd5.1:class:fighter"
+
+
 def spell_access_resource_key(source_key: str, spell_key: str) -> str:
     """Stable live-state identity for Build-granted limited-use spell access."""
 
@@ -46,6 +52,45 @@ def _capacity_from_content_expression(
             return None
         return max(minimum_value, class_level(build, class_ref))
     return None
+
+
+def _battle_master_superiority_dice(build: CharacterBuild) -> int:
+    """Return the canonical Battle Master pool contribution already granted by Build.
+
+    M01-J materialized Combat Superiority before generic resource metadata existed,
+    so K bridges that historical content identity here rather than duplicating the
+    feature or rewriting immutable old Builds. New contributors aggregate into the
+    same Current State resource key below.
+    """
+
+    if BATTLE_MASTER_COMBAT_SUPERIORITY not in build.feature_refs:
+        return 0
+    fighter_level = class_level(build, FIGHTER_REF)
+    if fighter_level >= 15:
+        return 6
+    if fighter_level >= 7:
+        return 5
+    if fighter_level >= 3:
+        return 4
+    return 0
+
+
+def _superiority_dice_capacity(build: CharacterBuild) -> int:
+    capacity = _battle_master_superiority_dice(build)
+
+    # TCE Superior Technique predates the K feat-resource contract but is another
+    # canonical source of one superiority die. Keep its existing StableKey and
+    # aggregate it without widening native maneuver eligibility.
+    if SUPERIOR_TECHNIQUE in build.feature_refs:
+        capacity += 1
+
+    for grant in build.feat_resource_grants:
+        if (
+            grant.resource_id == "superiority-dice"
+            and grant.stacking == "aggregate-superiority-dice"
+        ):
+            capacity += grant.capacity
+    return capacity
 
 
 def feature_resource_capacities(
@@ -85,6 +130,21 @@ def feature_resource_capacities(
         capacities[
             spell_access_resource_key(access.source_key, access.spell_key)
         ] = access.uses_per_rest
+
+    # M01-K Martial Adept contributes one superiority die. The pool is shared
+    # with canonical Battle Master / Superior Technique contributors while the
+    # feat's die-size and recharge provenance remain on CharacterBuild.
+    superiority_capacity = _superiority_dice_capacity(build)
+    if superiority_capacity > 0:
+        capacities[SUPERIORITY_DICE_RESOURCE_KEY] = superiority_capacity
+
+    # Future feat resources that explicitly request a separate pool can reuse the
+    # same Build-derived State substrate without inventing feat-specific state.
+    for grant in build.feat_resource_grants:
+        if grant.stacking != "separate":
+            continue
+        key = f"feat:{grant.source_ref}:{grant.resource_id}"
+        capacities[key] = capacities.get(key, 0) + grant.capacity
 
     return capacities
 
