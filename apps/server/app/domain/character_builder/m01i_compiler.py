@@ -22,7 +22,7 @@ from app.domain.character_builder.m01i_validation import (
     validate_final_feature_pool_dependencies,
     validate_unique_feature_pool_selections,
 )
-from app.domain.character_builder.m01j_extension import (
+from app.domain.character_builder.m01j_runtime import (
     apply_m01j_spellcasting_build,
     apply_m01j_spellcasting_summary,
     apply_m01j_subclass_runtime,
@@ -131,9 +131,9 @@ def compile_builder_draft(
     """Extend the established compiler with M01-I and M01-J data-driven rules.
 
     P0/P1 remains the core compiler. M01-J contributes active-subclass spell
-    overlays, permanent subclass grants/choices and PHB third-caster profiles;
-    M01-I then composes its optional class-feature overlay on top. Direct Create,
-    Level Up and Multiclass therefore remain on one progression/compiler path.
+    overlays, permanent subclass grants/choices, conditional grants and PHB
+    third-caster profiles; M01-I then composes its optional class-feature overlay
+    on top. Direct Create, Level Up and Multiclass remain on one compiler path.
     """
 
     m01j = prepare_m01j_subclasses(draft, registry)
