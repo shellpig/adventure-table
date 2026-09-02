@@ -5,6 +5,7 @@ import {
   getBuilderReview,
   type BuilderChoice,
   type BuilderDraftPayload,
+  type BuilderEquipmentSummary,
   type BuilderReviewDTO,
   type BuilderView,
 } from '../../api/characterBuilder'
@@ -22,6 +23,7 @@ import {
   grantDisplayName,
   grantPresentationFields,
   grantPresentationReferences,
+  pairGrantsByKind,
   sortGrantsByKind,
 } from './grants'
 import { RoleplayProfileEditor } from './RoleplayProfileEditor'
@@ -47,6 +49,9 @@ const GRANT_KIND_KEYS: Record<string, UiCopyKey> = {
   background_feature: 'builder.grant.background_feature',
   trait: 'builder.grant.trait',
   proficiency: 'builder.grant.proficiency',
+  skill: 'builder.grant.skill',
+  spell: 'builder.grant.spell',
+  infusion: 'builder.grant.infusion',
 }
 
 function selectedIds(raw: unknown): string[] {
@@ -59,6 +64,26 @@ function selectedIds(raw: unknown): string[] {
     }
   }
   return []
+}
+
+function EquipmentGrid({
+  entries,
+  nameFor,
+}: {
+  entries: readonly BuilderEquipmentSummary[]
+  nameFor: ContentNameResolver
+}) {
+  if (!entries.length) return null
+  return (
+    <div className="equipment-grid">
+      {entries.map((entry) => (
+        <div key={entry.entry_id}>
+          <strong>{nameFor(entry.item_ref, entry.name)}</strong>
+          <span>× {entry.quantity}</span>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function optionsFor(
@@ -236,12 +261,7 @@ export function EquipmentStep({
           )}
           <div className="summary-grants">
             <h3>{t('review.resolvedStarting')}</h3>
-            {resolvedEquipment.map((entry) => (
-              <div key={entry.entry_id}>
-                <span>× {entry.quantity}</span>
-                <strong>{nameFor(entry.item_ref, entry.name)}</strong>
-              </div>
-            ))}
+            <EquipmentGrid entries={resolvedEquipment} nameFor={nameFor} />
             {!resolvedEquipment.length ? (
               <small>{t('review.noStarting')}</small>
             ) : null}
@@ -407,25 +427,31 @@ export function EquipmentReviewStep({
               ))}
             </div>
 
-            <div className="summary-grants">
+            <div className="summary-grants summary-grants--paired">
               <h3>{t('review.resolvedGrants')}</h3>
-              {sortGrantsByKind(review.resolved_summary.grants).map((grant, index) => (
-                <div key={`${grant.source_ref}:${grant.reference_id ?? grant.label}:${index}`}>
-                  <span>
-                    {GRANT_KIND_KEYS[grant.kind]
-                      ? t(GRANT_KIND_KEYS[grant.kind])
-                      : grant.kind}
-                  </span>
-                  <strong>
-                    {grantDisplayName(
-                      grant,
-                      optionDisplay(grant.label).primary,
-                      nameFor,
-                      fieldFor,
-                    )}
-                  </strong>
-                </div>
-              ))}
+              {pairGrantsByKind(sortGrantsByKind(review.resolved_summary.grants)).map(
+                (row, rowIndex) => (
+                  <div className="grant-row" key={`${row[0].kind}:${rowIndex}`}>
+                    {row.map((grant, index) => (
+                      <div key={`${grant.source_ref}:${grant.reference_id ?? grant.label}:${index}`}>
+                        <span>
+                          {GRANT_KIND_KEYS[grant.kind]
+                            ? t(GRANT_KIND_KEYS[grant.kind])
+                            : grant.kind}
+                        </span>
+                        <strong>
+                          {grantDisplayName(
+                            grant,
+                            optionDisplay(grant.label).primary,
+                            nameFor,
+                            fieldFor,
+                          )}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                ),
+              )}
               {!review.resolved_summary.grants.length ? (
                 <small>{t('review.noOriginGrants')}</small>
               ) : null}
@@ -433,12 +459,7 @@ export function EquipmentReviewStep({
 
             <div className="summary-grants">
               <h3>{versioned ? t('review.startingBaseline') : t('review.resolvedStarting')}</h3>
-              {review.starting_equipment.map((entry) => (
-                <div key={entry.entry_id}>
-                  <span>× {entry.quantity}</span>
-                  <strong>{nameFor(entry.item_ref, entry.name)}</strong>
-                </div>
-              ))}
+              <EquipmentGrid entries={review.starting_equipment} nameFor={nameFor} />
               {!review.starting_equipment.length ? (
                 <small>{t('review.noStarting')}</small>
               ) : null}

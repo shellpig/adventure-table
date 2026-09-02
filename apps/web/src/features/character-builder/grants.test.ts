@@ -5,6 +5,7 @@ import {
   grantDisplayName,
   grantPresentationFields,
   grantPresentationReferences,
+  pairGrantsByKind,
 } from './grants'
 
 const referenceGrant: BuilderGrantSummary = {
@@ -71,5 +72,37 @@ describe('grant presentation identity', () => {
     expect(grantDisplayName(unknown, unknown.label, nameFor, fieldFor)).toBe(
       'Unlocalized',
     )
+  })
+})
+
+describe('pairGrantsByKind', () => {
+  const grant = (kind: string, label: string): BuilderGrantSummary => ({
+    label,
+    kind,
+    source_ref: `srd5.1:race:${label}`,
+  })
+
+  it('puts two grants of the same kind on one row', () => {
+    const rows = pairGrantsByKind([grant('language', 'a'), grant('language', 'b')])
+    expect(rows).toEqual([[grant('language', 'a'), grant('language', 'b')]])
+  })
+
+  it('starts a new row when the kind changes', () => {
+    const rows = pairGrantsByKind([grant('language', 'a'), grant('trait', 'b')])
+    expect(rows.map((row) => row.length)).toEqual([1, 1])
+  })
+
+  it('leaves an odd kind alone on its row', () => {
+    const rows = pairGrantsByKind([
+      grant('language', 'a'),
+      grant('language', 'b'),
+      grant('language', 'c'),
+      grant('trait', 'd'),
+    ])
+    expect(rows.map((row) => row.map((item) => item.label))).toEqual([
+      ['a', 'b'],
+      ['c'],
+      ['d'],
+    ])
   })
 })

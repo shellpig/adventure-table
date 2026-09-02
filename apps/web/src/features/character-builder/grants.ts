@@ -68,3 +68,23 @@ export function grantDisplayName(
   }
   return nameFor(grant.reference_id, fallback)
 }
+
+/**
+ * Lay the grant list out two per row, never pairing across kinds: a kind that
+ * ends on an odd count leaves the right cell empty so the next kind starts on
+ * its own row.
+ */
+export function pairGrantsByKind<T extends BuilderGrantSummary>(
+  grants: readonly T[],
+): T[][] {
+  const rows: T[][] = []
+  for (const grant of grants) {
+    const last = rows[rows.length - 1]
+    if (last && last.length === 1 && last[0].kind === grant.kind) {
+      last.push(grant)
+    } else {
+      rows.push([grant])
+    }
+  }
+  return rows
+}
