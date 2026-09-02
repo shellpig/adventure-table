@@ -269,12 +269,14 @@ def test_every_phb_class_has_a_non_srd_subclass_compile_path(
         registry,
     )
     result = compile_builder_draft(draft, registry)
-    assert result.build_candidate is not None
+    blocking = [issue for issue in result.validation.issues if issue.severity == "blocking_error"]
+    assert result.build_candidate is not None, "\n".join(
+        f"{issue.code}: {issue.message}" for issue in blocking
+    )
     assert any(
         selection.subclass_ref == subclass_ref
         for selection in result.build_candidate.subclasses
     )
-    blocking = [issue for issue in result.validation.issues if issue.severity == "blocking_error"]
     assert not blocking, "\n".join(f"{issue.code}: {issue.message}" for issue in blocking)
 
 
