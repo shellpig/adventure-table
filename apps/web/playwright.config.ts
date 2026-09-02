@@ -6,6 +6,7 @@ const localeOrigin = new URL(baseURL).origin
 
 export default defineConfig({
   testDir: './e2e',
+  globalSetup: './scripts/e2e-global-setup.mjs',
   fullyParallel: false,
   workers: 1,
   use: {
