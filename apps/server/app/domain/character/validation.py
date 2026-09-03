@@ -8,6 +8,7 @@ from app.domain.character.schemas import CharacterBuild, CharacterState
 from app.domain.rules.artificer import validate_artificer_state, validate_known_infusions
 from app.domain.rules.feature_resources import feature_resource_capacities
 from app.domain.rules.hit_points import calculate_max_hp
+from app.domain.rules.m01m_ancestry import validate_feature_modes
 from app.domain.rules.spellcasting import (
     initial_spell_resource_state,
     resource_counter_matches_capacity,
@@ -129,6 +130,47 @@ def _validate_numeric_overrides(build: CharacterBuild, registry: ContentRegistry
         raise CharacterValidationError(f"unsupported numeric override key: {key}")
 
 
+def _validate_race_variant_groups(build: CharacterBuild, registry: ContentRegistry) -> None:
+    if build.race_variant_ref is None or not build.race_variant_group_selections:
+        # Backward compatibility: M01-E Builds predate persisted group provenance.
+        return
+    variant = registry.get(build.race_variant_ref)
+    raw_groups = variant.data.get("replacement_groups")
+    if not isinstance(raw_groups, list):
+        raise CharacterValidationError(
+            f"race variant {build.race_variant_ref} has malformed replacement groups"
+        )
+    groups: dict[str, set[str]] = {}
+    for raw_group in raw_groups:
+        if not isinstance(raw_group, dict):
+            continue
+        group_id = raw_group.get("id")
+        raw_options = raw_group.get("options")
+        if not isinstance(group_id, str) or not isinstance(raw_options, list):
+            continue
+        groups[group_id] = {
+            option_id
+            for option in raw_options
+            if isinstance(option, dict)
+            and isinstance((option_id := option.get("id")), str)
+        }
+    selected_group_ids = {
+        selection.replacement_group_id
+        for selection in build.race_variant_group_selections
+    }
+    if selected_group_ids != set(groups):
+        raise CharacterValidationError(
+            f"race variant group provenance is incomplete for {build.race_variant_ref}"
+        )
+    for selection in build.race_variant_group_selections:
+        options = groups.get(selection.replacement_group_id, set())
+        if selection.selected_option_id not in options:
+            raise CharacterValidationError(
+                "unknown race variant replacement option: "
+                f"{selection.replacement_group_id}/{selection.selected_option_id}"
+            )
+
+
 def validate_build_references(build: CharacterBuild, registry: ContentRegistry) -> None:
     for key in build_content_reference_keys(build):
         _require_content(registry, key)
@@ -148,6 +190,7 @@ def validate_build_references(build: CharacterBuild, registry: ContentRegistry) 
             raise CharacterValidationError(
                 f"race variant {build.race_variant_ref} does not belong to race {build.race_ref}"
             )
+        _validate_race_variant_groups(build, registry)
 
     if build.subrace_ref is not None:
         subrace = registry.get(build.subrace_ref)
@@ -307,6 +350,10 @@ def validate_state_against_build(
     _validate_prepared_spells(state, build, registry)
     _validate_spell_resources(state, build)
     _validate_feature_resources(state, build, registry)
+    try:
+        validate_feature_modes(build, state, registry)
+    except ValueError as exc:
+        raise CharacterValidationError(str(exc)) from exc
 
     for condition in state.conditions:
         _require_content(registry, condition.condition_ref)
