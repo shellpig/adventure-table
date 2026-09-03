@@ -220,6 +220,19 @@ class AncestralLegacySelection(FrozenModel):
         return value
 
 
+class RaceVariantGroupSelection(FrozenModel):
+    """Build-persistent selection for one generic race-variant replacement group."""
+
+    race_variant_ref: StableKey
+    replacement_group_id: str = Field(min_length=1, max_length=160)
+    selected_option_id: str = Field(min_length=1, max_length=160)
+
+    @field_validator("race_variant_ref")
+    @classmethod
+    def race_variant_ref_is_variant(cls, value: str) -> str:
+        return require_stable_key(value, kinds={"race-variant"})
+
+
 class FeatureGrantSource(FrozenModel):
     """Build-persistent provenance for one selected/granted feature."""
 
@@ -296,6 +309,7 @@ class CharacterBuild(FrozenModel):
     content_sources: tuple[str, ...] = ("srd5.1",)
     race_ref: StableKey
     race_variant_ref: StableKey | None = None
+    race_variant_group_selections: tuple[RaceVariantGroupSelection, ...] = ()
     subrace_ref: StableKey | None = None
     lineage_ref: StableKey | None = None
     ancestral_origin_ref: StableKey | None = None
@@ -443,6 +457,20 @@ class CharacterBuild(FrozenModel):
                 raise ValueError("lineage-only fields require lineage_ref")
         elif self.ancestral_legacy is None or self.size is None:
             raise ValueError("lineage_ref requires ancestral_legacy and size")
+
+        variant_group_ids = [
+            (selection.race_variant_ref, selection.replacement_group_id)
+            for selection in self.race_variant_group_selections
+        ]
+        if len(variant_group_ids) != len(set(variant_group_ids)):
+            raise ValueError("race variant replacement groups must be unique")
+        if self.race_variant_ref is None and self.race_variant_group_selections:
+            raise ValueError("race variant group selections require race_variant_ref")
+        if any(
+            selection.race_variant_ref != self.race_variant_ref
+            for selection in self.race_variant_group_selections
+        ):
+            raise ValueError("race variant group selections must match race_variant_ref")
 
         progression_classes = set(self.class_progression)
         subclass_classes: set[str] = set()
