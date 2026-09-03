@@ -1018,6 +1018,46 @@
       "reference_source": "5etools",
       "decision_note": "Grave Cleric level 1 feature.",
       "reviewed": true
+    },
+    {
+      "en": "Timeless Body",
+      "zh-TW": "不老身軀",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Druid level 18 / Monk level 15 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Beast Spells",
+      "zh-TW": "野獸施法",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Druid level 18 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Natural Recovery",
+      "zh-TW": "自然恢復",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Circle of the Land level 2 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Nature's Ward",
+      "zh-TW": "自然之護",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Circle of the Land level 10 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Nature's Sanctuary",
+      "zh-TW": "自然庇護",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Circle of the Land level 14 feature.",
+      "reviewed": true
     }
   ]
 }

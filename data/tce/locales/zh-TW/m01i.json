@@ -49,7 +49,7 @@
       "data.desc.0": "消耗荒野形態的使用次數，暫時召來一個魔寵靈體。"
     },
     "tce:feature:druid-cantrip-versatility": {
-      "name": "戲法多樣性",
+      "name": "替換戲法",
       "data.desc.0": "在德魯伊取得屬性值提升的等級，可替換一個德魯伊戲法。"
     },
     "tce:feature:fighter-fighting-style-options": {
