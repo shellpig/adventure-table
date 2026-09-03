@@ -9,6 +9,7 @@ import { useContentPresentations } from '../../i18n/useContentPresentations'
 import { CharacterSheetRoutePage as BaseCharacterSheetRoutePage } from '../artificer/ArtificerRoutePanels'
 
 const M01M_SOURCES = ['mtf:', 'scag:'] as const
+const ASMODEUS_BASELINE_SOURCE = 'srd5.1:trait:infernal-legacy'
 
 const COPY = {
   en: {
@@ -21,6 +22,8 @@ const COPY = {
     castAt: 'Cast at level {level}',
     noSlot: 'Does not use a spell slot',
     waived: 'Components waived: {components}',
+    enlargeOnly: 'Enlarge effect only',
+    invisibleMageHand: 'Mage Hand is invisible',
   },
   'zh-TW': {
     eyebrow: 'M01-M · 祖源即時狀態',
@@ -32,6 +35,8 @@ const COPY = {
     castAt: '以 {level} 環施展',
     noSlot: '不消耗法術位',
     waived: '免除成分：{components}',
+    enlargeOnly: '只能使用變大效果',
+    invisibleMageHand: '法師之手呈隱形',
   },
 } as const
 
@@ -49,7 +54,10 @@ const OPTION_LABELS_ZH: Record<string, string> = {
 }
 
 function isM01MSource(reference: string): boolean {
-  return M01M_SOURCES.some((prefix) => reference.startsWith(prefix))
+  return (
+    reference === ASMODEUS_BASELINE_SOURCE ||
+    M01M_SOURCES.some((prefix) => reference.startsWith(prefix))
+  )
 }
 
 function modeLabel(locale: PanelLocale, key: string): string {
@@ -60,6 +68,13 @@ function modeLabel(locale: PanelLocale, key: string): string {
 function optionLabel(locale: PanelLocale, value: string): string {
   if (locale === 'zh-TW') return OPTION_LABELS_ZH[value] ?? value
   return value.replaceAll('-', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function castingModifierLabel(locale: PanelLocale, value: string): string {
+  const copy = COPY[locale]
+  if (value === 'enlarge_effect_only') return copy.enlargeOnly
+  if (value === 'mage_hand_invisible') return copy.invisibleMageHand
+  return value.replaceAll('_', ' ')
 }
 
 function interpolate(template: string, params: Record<string, string | number>): string {
@@ -86,7 +101,12 @@ function M01MAncestryPanel({
   const ancestrySpells = sheet.spells.filter(
     (spell) =>
       isM01MSource(spell.source_key) &&
-      (spell.cast_at_level != null || spell.waive_components?.length || spell.uses_spell_slot === false),
+      (
+        spell.cast_at_level != null ||
+        spell.waive_components?.length ||
+        spell.casting_modifiers?.length ||
+        spell.uses_spell_slot === false
+      ),
   )
   const references = [
     ...definitions.map((definition) => definition.source_feature_ref),
@@ -161,6 +181,9 @@ function M01MAncestryPanel({
                     components: spell.waive_components.join(', '),
                   }),
                 )
+              }
+              for (const modifier of spell.casting_modifiers ?? []) {
+                facts.push(castingModifierLabel(locale, modifier))
               }
               return (
                 <div key={spell.entry_id}>
