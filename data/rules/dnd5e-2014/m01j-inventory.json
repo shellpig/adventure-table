@@ -24,7 +24,7 @@
       "parent_class_ref": "srd5.1:class:paladin",
       "subclass_key": "phb2014:subclass:ancients",
       "name": "Oath of Ancients",
-      "zh_name": "古賢之誓",
+      "zh_name": "遠古之誓",
       "acquisition_class_level": 3,
       "progression_levels": [
         3,

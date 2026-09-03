@@ -1242,6 +1242,86 @@
       "reference_source": "5etools",
       "decision_note": "Way of the Open Hand level 11 feature.",
       "reviewed": true
+    },
+    {
+      "en": "Divine Health",
+      "zh-TW": "神性體魄",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Paladin level 3 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Sacred Weapon",
+      "zh-TW": "引導神力：至聖武器",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Oath of Devotion Channel Divinity.",
+      "reviewed": true
+    },
+    {
+      "en": "Turn the Unholy",
+      "zh-TW": "引導神力：驅散不潔者",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Oath of Devotion Channel Divinity.",
+      "reviewed": true
+    },
+    {
+      "en": "Martial Versatility",
+      "zh-TW": "替換武術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighter / Paladin / Ranger level 4 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Aura of Protection",
+      "zh-TW": "守護靈光",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Paladin level 6 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Aura of Devotion",
+      "zh-TW": "奉獻靈光",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Oath of Devotion level 7 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Improved Divine Smite",
+      "zh-TW": "強化至聖斬",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Paladin level 11 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Purity of Spirit",
+      "zh-TW": "純淨之魂",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Oath of Devotion level 15 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Aura Improvements",
+      "zh-TW": "靈光強化",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Paladin level 18 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Oath of the Ancients",
+      "zh-TW": "遠古之誓",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Paladin subclass.",
+      "reviewed": true
     }
   ]
 }

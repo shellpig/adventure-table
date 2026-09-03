@@ -89,11 +89,11 @@
       "data.desc.0": "將《塔莎的萬事坩堝》中聖武士可選的戰鬥風格加入既有選項池。"
     },
     "tce:feature:paladin-harness-divine-power": {
-      "name": "駕馭神聖力量",
+      "name": "引導神力：神力掌控",
       "data.desc.0": "可將引導神力轉化為恢復施法資源的力量。"
     },
     "tce:feature:paladin-martial-versatility": {
-      "name": "武技多樣性",
+      "name": "替換武術",
       "data.desc.0": "在聖武士取得屬性值提升的等級，可重新選擇一個戰鬥風格。"
     },
     "tce:feature:deft-explorer": {
