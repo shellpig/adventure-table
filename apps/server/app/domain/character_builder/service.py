@@ -50,14 +50,7 @@ M01J_CHOICE_PREFIX = "m01-j:"
 
 
 def _is_cumulative_subclass_choice(choice_id: str) -> bool:
-    """Is this an M01-J subclass choice that keeps growing as the class levels?
-
-    Unlike a per-level choice, these keep one stable id whose ``choose_total``
-    rises with class level - a Rune Knight picks two runes at 3rd level and a
-    third at 7th through the same choice. Level Up therefore has to extend them
-    rather than treat them as frozen history, so they are guarded by "earlier
-    picks may not be dropped" instead of "may not change at all".
-    """
+    """Is this an M01-J subclass choice that keeps growing as the class levels?"""
 
     return choice_id.startswith(M01J_CHOICE_PREFIX)
 
@@ -128,9 +121,15 @@ class CharacterBuilderService:
 
             candidate = compiled.build_candidate
             if candidate is not None:
+                group_provenance_unchanged = (
+                    not base_build.race_variant_group_selections
+                    or candidate.race_variant_group_selections
+                    == base_build.race_variant_group_selections
+                )
                 immutable_origin = (
                     candidate.race_ref == base_build.race_ref
                     and candidate.race_variant_ref == base_build.race_variant_ref
+                    and group_provenance_unchanged
                     and candidate.subrace_ref == base_build.subrace_ref
                     and candidate.background_ref == base_build.background_ref
                     and candidate.alignment_ref == base_build.alignment_ref
@@ -213,9 +212,6 @@ class CharacterBuilderService:
         )
 
     def create_draft(self, request: BuilderDraftCreateInput) -> BuilderView:
-        # Non-create drafts must be initialized from the authoritative current
-        # character so callers cannot choose an arbitrary base_version_id or fake
-        # historical provenance. Use create_version_draft() for those modes.
         if request.mode is not BuilderMode.CREATE:
             raise BuilderModeNotEnabledError(request.mode)
         draft = self.repository.create_draft(request)
@@ -322,11 +318,6 @@ class CharacterBuilderService:
                 raise ValueError("choice_selections must be an object")
             current_selections = current.draft_payload.choice_selections
             target_level = base_build.character_level + 1
-            # M01-K feat child choices use deterministic ``feat:<digest>:...``
-            # ids rather than a level prefix. Only allow a new non-level id when
-            # the authoritative compile for the current draft actually exposes it
-            # as a feat child choice. Historical selections remain protected by
-            # the loop below, so this does not make old feat choices editable.
             current_compiled = self._compile(current)
             allowed_new_feat_choice_ids = {
                 choice.choice_id
@@ -426,6 +417,7 @@ class CharacterBuilderService:
                         compiled.build_candidate,
                         self.registry,
                         prepared_spells=compiled.initial_prepared_spells,
+                        initial_state_seed=draft.draft_payload.initial_state_seed,
                     )
                 else:
                     character_repository = self._require_character_repository()
@@ -488,8 +480,6 @@ class CharacterBuilderService:
         confirmed_character_id, confirmed_version_id = self.repository.confirmed_result(draft_id)
         if confirmed_character_id is not None:
             if confirmed_version_id is None:
-                # Compatibility for any pre-versioning confirmed draft that has
-                # no stored version id. New confirms always persist both ids.
                 character = character_repository.load_character(confirmed_character_id)
                 return BuilderConfirmResult(
                     character_id=character.id,
@@ -511,9 +501,6 @@ class CharacterBuilderService:
                 )
             return BuilderConfirmResult(
                 character_id=confirmed_character_id,
-                # Keep the historical field name for compatibility: on replay
-                # this is the exact version created by this Confirm, even if a
-                # later version is now current on the character.
                 current_version_id=confirmed_version_id,
                 version_no=confirmed_version.version_no,
                 character_path=f"/characters/{confirmed_character_id}",
