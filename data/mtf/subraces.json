@@ -1,0 +1,155 @@
+[
+  {
+    "key": "mtf:subrace:duergar",
+    "index": "duergar",
+    "name": "Duergar (Gray Dwarf)",
+    "source": "mtf",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "duergar",
+      "name": "Duergar (Gray Dwarf)",
+      "race": {"key": "srd5.1:race:dwarf", "name": "Dwarf"},
+      "ability_bonuses": [
+        {"ability_score": {"key": "srd5.1:ability:str", "name": "STR"}, "bonus": 1}
+      ],
+      "languages": [
+        {"key": "srd5.1:language:undercommon", "name": "Undercommon"}
+      ],
+      "features": [
+        {"key": "mtf:feature:superior-darkvision", "name": "Superior Darkvision"},
+        {"key": "mtf:feature:duergar-resilience", "name": "Duergar Resilience"},
+        {"key": "mtf:feature:duergar-magic", "name": "Duergar Magic"},
+        {"key": "mtf:feature:duergar-sunlight-sensitivity", "name": "Sunlight Sensitivity"}
+      ]
+    }
+  },
+  {
+    "key": "mtf:subrace:eladrin",
+    "index": "eladrin",
+    "name": "Eladrin",
+    "source": "mtf",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "eladrin",
+      "name": "Eladrin",
+      "race": {"key": "srd5.1:race:elf", "name": "Elf"},
+      "ability_bonuses": [
+        {"ability_score": {"key": "srd5.1:ability:cha", "name": "CHA"}, "bonus": 1}
+      ],
+      "features": [
+        {"key": "mtf:feature:fey-step", "name": "Fey Step"},
+        {"key": "mtf:feature:eladrin-seasonal-aspect", "name": "Seasonal Aspect"}
+      ]
+    }
+  },
+  {
+    "key": "mtf:subrace:sea-elf",
+    "index": "sea-elf",
+    "name": "Sea Elf",
+    "source": "mtf",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "sea-elf",
+      "name": "Sea Elf",
+      "race": {"key": "srd5.1:race:elf", "name": "Elf"},
+      "ability_bonuses": [
+        {"ability_score": {"key": "srd5.1:ability:con", "name": "CON"}, "bonus": 1}
+      ],
+      "movement_grants": [{"mode": "swim", "speed": 30}],
+      "languages": [{"key": "vgm:language:aquan", "name": "Aquan"}],
+      "proficiencies": [
+        {"key": "srd5.1:proficiency:spears", "name": "Spears"},
+        {"key": "srd5.1:proficiency:tridents", "name": "Tridents"},
+        {"key": "srd5.1:proficiency:light-crossbows", "name": "Crossbows, light"},
+        {"key": "srd5.1:proficiency:nets", "name": "Nets"}
+      ],
+      "features": [
+        {"key": "mtf:feature:sea-elf-training", "name": "Sea Elf Training"},
+        {"key": "mtf:feature:child-of-the-sea", "name": "Child of the Sea"},
+        {"key": "mtf:feature:friend-of-the-sea", "name": "Friend of the Sea"}
+      ]
+    }
+  },
+  {
+    "key": "mtf:subrace:shadar-kai",
+    "index": "shadar-kai",
+    "name": "Shadar-kai",
+    "source": "mtf",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "shadar-kai",
+      "name": "Shadar-kai",
+      "race": {"key": "srd5.1:race:elf", "name": "Elf"},
+      "ability_bonuses": [
+        {"ability_score": {"key": "srd5.1:ability:con", "name": "CON"}, "bonus": 1}
+      ],
+      "features": [
+        {"key": "mtf:feature:shadar-kai-necrotic-resistance", "name": "Necrotic Resistance"},
+        {"key": "mtf:feature:blessing-of-the-raven-queen", "name": "Blessing of the Raven Queen"}
+      ]
+    }
+  },
+  {
+    "key": "mtf:subrace:githyanki",
+    "index": "githyanki",
+    "name": "Githyanki",
+    "source": "mtf",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "githyanki",
+      "name": "Githyanki",
+      "race": {"key": "mtf:race:gith", "name": "Gith"},
+      "ability_bonuses": [
+        {"ability_score": {"key": "srd5.1:ability:str", "name": "STR"}, "bonus": 2}
+      ],
+      "proficiencies": [
+        {"key": "srd5.1:proficiency:light-armor", "name": "Light Armor"},
+        {"key": "srd5.1:proficiency:medium-armor", "name": "Medium Armor"},
+        {"key": "srd5.1:proficiency:shortswords", "name": "Shortswords"},
+        {"key": "srd5.1:proficiency:longswords", "name": "Longswords"},
+        {"key": "srd5.1:proficiency:greatswords", "name": "Greatswords"}
+      ],
+      "proficiency_choices": {
+        "choose": 1,
+        "type": "proficiencies",
+        "from": {
+          "option_set_type": "resource_list",
+          "resource_list_url": "/api/2014/proficiencies",
+          "filter": "skill_or_tool"
+        }
+      },
+      "language_options": {
+        "choose": 1,
+        "type": "languages",
+        "from": {
+          "option_set_type": "resource_list",
+          "resource_list_url": "/api/2014/languages"
+        }
+      },
+      "features": [
+        {"key": "mtf:feature:decadent-mastery", "name": "Decadent Mastery"},
+        {"key": "mtf:feature:martial-prodigy", "name": "Martial Prodigy"},
+        {"key": "mtf:feature:githyanki-psionics", "name": "Githyanki Psionics"}
+      ]
+    }
+  },
+  {
+    "key": "mtf:subrace:githzerai",
+    "index": "githzerai",
+    "name": "Githzerai",
+    "source": "mtf",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "githzerai",
+      "name": "Githzerai",
+      "race": {"key": "mtf:race:gith", "name": "Gith"},
+      "ability_bonuses": [
+        {"ability_score": {"key": "srd5.1:ability:wis", "name": "WIS"}, "bonus": 2}
+      ],
+      "features": [
+        {"key": "mtf:feature:mental-discipline", "name": "Mental Discipline"},
+        {"key": "mtf:feature:githzerai-psionics", "name": "Githzerai Psionics"}
+      ]
+    }
+  }
+]
