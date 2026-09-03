@@ -13,7 +13,7 @@
     {"source":"vgm","kind":"race","key":"vgm:race:triton","name":"Triton","parent_race_ref":null,"disposition":"implemented"},
     {"source":"vgm","kind":"race","key":"vgm:race:yuan-ti-pureblood","name":"Yuan-ti Pureblood","parent_race_ref":null,"disposition":"implemented"},
     {"source":"scag","kind":"subrace","key":"scag:subrace:ghostwise-halfling","name":"Ghostwise Halfling","parent_race_ref":"srd5.1:race:halfling","disposition":"implemented"},
-    {"source":"scag","kind":"subrace","key":"scag:subrace:deep-gnome","name":"Deep Gnome","parent_race_ref":"srd5.1:race:gnome","disposition":"implemented"}
+    {"source":"scag","kind":"subrace","key":"scag:subrace:deep-gnome","name":"Deep Gnome (Svirfneblin)","parent_race_ref":"srd5.1:race:gnome","disposition":"implemented"}
   ],
   "legacy_vgm_race_keys": [
     "vgm:race:goblin",
