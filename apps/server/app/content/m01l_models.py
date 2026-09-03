@@ -18,6 +18,18 @@ from app.content.schemas import (
 
 MovementGrantData = RaceVariantMovementGrant
 RestType = Literal["short_rest", "long_rest"]
+# L8 automation boundary. Every M01-L race feature declares how much of it the
+# current substrate really executes, so a deferred effect can never be presented
+# as if the server already applied it.
+RuntimeExecution = Literal[
+    "automatic_static",
+    "manual",
+    "deferred_roll",
+    "deferred_combat",
+    "deferred_reaction",
+    "deferred_rest",
+    "deferred_spatial",
+]
 
 
 class NaturalArmorData(StrictModel):
@@ -108,6 +120,7 @@ class M01LSubraceData(SubraceData):
 class M01LFeatureData(FeatureData):
     natural_armor: NaturalArmorData | None = None
     racial_spell_access: list[RacialSpellAccessData] = Field(default_factory=list)
+    runtime_execution: RuntimeExecution | None = None
 
 
 def install_m01l_content_models() -> None:
