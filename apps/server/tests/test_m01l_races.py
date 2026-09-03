@@ -335,17 +335,15 @@ def test_legacy_single_rest_spell_access_shapes_remain_readable() -> None:
     scag = compile_origin(
         grants=(_feature_grant("scag:feature:half-elf-drow-magic"),), target_level=5, registry=registry
     )
-    assert all(
-        entry.recharge_types == ("long_rest",)
+    limited = [
+        entry
         for result in (phb, scag)
         for entry in result.spell_access_entries
         if entry.uses_per_rest
-    )
-    assert all(
-        entry.rest_type == "long_rest"
-        for entry in scag.spell_access_entries
-        if entry.uses_per_rest
-    )
+    ]
+    assert limited
+    assert all(entry.recharge_types == ("long_rest",) for entry in limited)
+    assert all(entry.rest_type is None for entry in limited)
 
 
 def test_m01l_localization_scope_is_complete_and_mechanics_are_locale_neutral() -> None:
