@@ -1,9 +1,7 @@
 import { CharacterVersionHistoryPage } from './features/character-builder/CharacterVersionHistoryPage'
 import { CharacterWorkshopPage } from './features/character-builder/CharacterWorkshopPage'
-import {
-  CharacterBuilderRoutePage,
-  CharacterSheetRoutePage,
-} from './features/artificer/ArtificerRoutePanels'
+import { CharacterBuilderRoutePage } from './features/artificer/ArtificerRoutePanels'
+import { CharacterSheetRoutePage } from './features/m01m/M01MAncestryRoutePanel'
 import { useUiCopy } from './i18n/useUiCopy'
 
 export const P0_FIXTURE_ID = '00000000-0000-4000-8000-0000000000e0'
