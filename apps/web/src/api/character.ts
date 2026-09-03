@@ -93,6 +93,7 @@ export type SpellAccessDTO = {
   source_access_entry_id?: string | null
   cast_at_level?: number | null
   waive_components?: string[]
+  casting_modifiers?: string[]
   uses_spell_slot?: boolean | null
 }
 
