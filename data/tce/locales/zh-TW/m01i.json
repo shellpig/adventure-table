@@ -65,19 +65,19 @@
       "data.desc.0": "若已安裝戰鬥大師的戰技選項池，加入《塔莎的萬事坩堝》的額外戰技。"
     },
     "tce:feature:dedicated-weapon": {
-      "name": "專注武器",
+      "name": "專用武器",
       "data.desc.0": "經過訓練後，可將一把符合資格的武器指定為武僧武器。"
     },
     "tce:feature:ki-fueled-attack": {
-      "name": "氣力驅動攻擊",
+      "name": "馭氣以擊",
       "data.desc.0": "若你的動作中消耗了氣，可再以附贈動作進行符合條件的武器或徒手攻擊。"
     },
     "tce:feature:quickened-healing": {
-      "name": "迅捷療癒",
+      "name": "加速癒合",
       "data.desc.0": "消耗氣來恢復自身部分生命值。"
     },
     "tce:feature:focused-aim": {
-      "name": "專注瞄準",
+      "name": "凝神聚氣",
       "data.desc.0": "攻擊未命中後可消耗氣，提高該次攻擊檢定。"
     },
     "tce:feature:additional-paladin-spells": {

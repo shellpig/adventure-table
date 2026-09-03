@@ -898,7 +898,7 @@
       "parent_class_ref": "srd5.1:class:monk",
       "subclass_key": "tce:subclass:astral-self",
       "name": "Way of the Astral Self",
-      "zh_name": "星體自性宗",
+      "zh_name": "星我宗",
       "acquisition_class_level": 3,
       "progression_levels": [
         3,
@@ -1072,7 +1072,7 @@
       "parent_class_ref": "srd5.1:class:monk",
       "subclass_key": "tce:subclass:mercy",
       "name": "Way of Mercy",
-      "zh_name": "慈悲宗",
+      "zh_name": "命流宗",
       "acquisition_class_level": 3,
       "progression_levels": [
         3,

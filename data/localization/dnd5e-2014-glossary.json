@@ -1058,6 +1058,190 @@
       "reference_source": "5etools",
       "decision_note": "Circle of the Land level 14 feature.",
       "reviewed": true
+    },
+    {
+      "en": "Ki",
+      "zh-TW": "氣",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk class resource.",
+      "reviewed": true
+    },
+    {
+      "en": "Flurry of Blows",
+      "zh-TW": "疾風連擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 2 Ki feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Patient Defense",
+      "zh-TW": "堅強防禦",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 2 Ki feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Step of the Wind",
+      "zh-TW": "飛簷走壁",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 2 Ki feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Dedicated Weapon",
+      "zh-TW": "專用武器",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 2 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Deflect Missiles",
+      "zh-TW": "撥擋飛彈",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 3 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Monastic Tradition",
+      "zh-TW": "宗派傳承",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 3 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Ki-Fueled Attack",
+      "zh-TW": "馭氣以擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 3 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Slow Fall",
+      "zh-TW": "輕身墜",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 4 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Quickened Healing",
+      "zh-TW": "加速癒合",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 4 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Stunning Strike",
+      "zh-TW": "震懾拳",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 5 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Focused Aim",
+      "zh-TW": "凝神聚氣",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 5 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Ki-Empowered Strikes",
+      "zh-TW": "真氣駐拳",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 6 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Stillness of Mind",
+      "zh-TW": "心頭滅卻",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 7 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Purity of Body",
+      "zh-TW": "百病不侵",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 10 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Tongue of the Sun and Moon",
+      "zh-TW": "天語通",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 13 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Empty Body",
+      "zh-TW": "空靈體",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 18 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Perfect Self",
+      "zh-TW": "超凡魂",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk level 20 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Way of Mercy",
+      "zh-TW": "命流宗",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Way of the Astral Self",
+      "zh-TW": "星我宗",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Monk subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Open Hand Technique",
+      "zh-TW": "散打技巧",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Way of the Open Hand level 3 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Wholeness of Body",
+      "zh-TW": "混元體",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Way of the Open Hand level 6 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Tranquility",
+      "zh-TW": "凝神境",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Way of the Open Hand level 11 feature.",
+      "reviewed": true
     }
   ]
 }
