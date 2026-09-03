@@ -2114,6 +2114,62 @@
       "reference_source": "5etools",
       "decision_note": "Eldritch invocation.",
       "reviewed": true
+    },
+    {
+      "en": "Arcane Recovery",
+      "zh-TW": "奧術恢復",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Wizard level 1 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Arcane Tradition",
+      "zh-TW": "奧法學派",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Wizard subclass archetype.",
+      "reviewed": true
+    },
+    {
+      "en": "Signature Spells",
+      "zh-TW": "招牌法術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Wizard level 20 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Sculpt Spells",
+      "zh-TW": "形塑法術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "School of Evocation level 2 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Potent Cantrip",
+      "zh-TW": "強力戲法",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "School of Evocation level 6 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Empowered Evocation",
+      "zh-TW": "強效塑能",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "School of Evocation level 10 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Overchannel",
+      "zh-TW": "重載導魔",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "School of Evocation level 14 feature.",
+      "reviewed": true
     }
   ]
 }
