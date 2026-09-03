@@ -101,18 +101,28 @@ def _reconcile_counter(
 
 def _reconcile_feature_modes(
     *,
+    old_build: CharacterBuild,
     old_state: CharacterState,
     new_build: CharacterBuild,
     registry: ContentRegistry,
     warnings: list[BuilderIssue],
     changes: list[StateReconciliationChange],
 ) -> dict[str, str]:
-    definitions = {
+    """Reconcile only M01-M-owned data-defined modes in the shared state map."""
+
+    old_definitions = {
+        definition.key: definition
+        for definition in feature_mode_definitions(old_build, registry)
+    }
+    new_definitions = {
         definition.key: definition
         for definition in feature_mode_definitions(new_build, registry)
     }
-    result: dict[str, str] = {}
-    for key, definition in definitions.items():
+    # M01-H Artificer and future independent subsystems share this dictionary.
+    # Preserve their keys exactly; this helper owns only data-defined M01-M keys.
+    result = dict(old_state.feature_modes)
+
+    for key, definition in new_definitions.items():
         previous = old_state.feature_modes.get(key)
         if previous in definition.options:
             result[key] = previous
@@ -145,8 +155,10 @@ def _reconcile_feature_modes(
                     message="Preserve the live mode when legal; otherwise use the new Build default.",
                 )
             )
-    for key, previous in old_state.feature_modes.items():
-        if key in definitions:
+
+    for key in sorted(set(old_definitions) - set(new_definitions)):
+        previous = result.pop(key, None)
+        if previous is None:
             continue
         changes.append(
             StateReconciliationChange(
@@ -154,7 +166,7 @@ def _reconcile_feature_modes(
                 kind="feature_mode_removed",
                 before=previous,
                 after="removed",
-                message="The new Build no longer grants this live feature mode.",
+                message="The new Build no longer grants this ancestry feature mode.",
             )
         )
     return result
@@ -328,6 +340,7 @@ def reconcile_character_state(
         )
 
     new_feature_modes = _reconcile_feature_modes(
+        old_build=old_build,
         old_state=old_state,
         new_build=new_build,
         registry=registry,
