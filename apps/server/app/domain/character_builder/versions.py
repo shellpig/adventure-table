@@ -148,11 +148,16 @@ def _seed_authoritative_race_variant_groups(
     payload: BuilderDraftPayload,
     build: CharacterBuild,
 ) -> None:
-    """Restore M01-M group choices from immutable Build provenance when available.
+    """Restore race-variant provenance from the authoritative immutable Build.
 
-    Older M01-E Builds have the new field's default empty tuple. In that case we
-    deliberately retain any historical source-payload choices instead of trying
-    to reverse engineer a branch from resolved grants or ability scores.
+    Older M01-E confirmed payloads may retain stale child selections even after
+    their top-level variant was cleared or changed. Those stale ids were safe in
+    the old compiler because inactive branches were ignored, but M01-M now has a
+    server-authoritative cross-variant ownership gate. Prune only provenance that
+    has no owner in the current Build (or belongs to a different top-level
+    variant). If an older M01-E Build still owns a variant but has no typed group
+    provenance, preserve that variant's historical child selections rather than
+    reverse engineering its branch from resolved mechanics.
     """
 
     payload.race_variant_selection = (
@@ -160,9 +165,23 @@ def _seed_authoritative_race_variant_groups(
         if build.race_variant_ref is not None
         else None
     )
+
+    active_prefix = (
+        f"{deterministic_choice_id('race-variant', build.race_variant_ref)}:"
+        if build.race_variant_ref is not None
+        else None
+    )
+    selections = {
+        choice_id: selection
+        for choice_id, selection in payload.choice_selections.items()
+        if not choice_id.startswith("race-variant:")
+        or (active_prefix is not None and choice_id.startswith(active_prefix))
+    }
+
     if not build.race_variant_group_selections:
+        payload.choice_selections = selections
         return
-    selections = dict(payload.choice_selections)
+
     for group in build.race_variant_group_selections:
         choice_id = deterministic_choice_id(
             "race-variant",
