@@ -35,6 +35,7 @@ class FeatureModeDefinition:
 class RacialSpellRuntimeMetadata:
     cast_at_level: int | None
     waive_components: tuple[str, ...]
+    casting_modifiers: tuple[str, ...]
     uses_spell_slot: bool
 
 
@@ -259,10 +260,10 @@ def racial_spell_runtime_metadata(
 ) -> RacialSpellRuntimeMetadata | None:
     if access_entry.source_type != "race":
         return None
-    feature = registry.get_optional(access_entry.source_key)
-    if feature is None:
+    source = registry.get_optional(access_entry.source_key)
+    if source is None:
         return None
-    raw_access = feature.data.get("racial_spell_access")
+    raw_access = source.data.get("racial_spell_access")
     if not isinstance(raw_access, list):
         return None
     for raw in raw_access:
@@ -279,6 +280,7 @@ def racial_spell_runtime_metadata(
         return RacialSpellRuntimeMetadata(
             cast_at_level=access.cast_at_level,
             waive_components=tuple(access.waive_components),
+            casting_modifiers=tuple(access.casting_modifiers),
             uses_spell_slot=bool(access.uses_spell_slot),
         )
     return None
