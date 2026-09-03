@@ -179,3 +179,22 @@ def test_m01m_runtime_never_depends_on_authoring_markdown() -> None:
     copied = [line for line in dockerfile.splitlines() if line.startswith("COPY ")]
     assert copied
     assert not [line for line in copied if "docs" in line]
+
+
+def test_the_server_image_ships_every_enabled_content_pack() -> None:
+    """A pack enabled in code but absent from the image kills startup.
+
+    ``docs/`` is deliberately excluded from the image, so the packs are copied
+    one directory at a time and a newly enabled pack is easy to forget.
+    """
+
+    registry = load_default_content_registry()
+    dockerfile = (REPO_ROOT / "apps" / "server" / "Dockerfile").read_text(encoding="utf-8")
+    copied = {
+        line.split()[1]
+        for line in dockerfile.splitlines()
+        if line.startswith("COPY data/")
+    }
+
+    missing = [pack for pack in registry.enabled_pack_ids if f"data/{pack}" not in copied]
+    assert missing == [], f"enabled packs missing from the server image: {missing}"
