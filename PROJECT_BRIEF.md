@@ -35,7 +35,7 @@ Built-in Content：**SRD 5.1 為基礎，非 SRD 內容依私人專案需求逐�
 
 目前狀態：**P0 — Character Core + SRD / Rules Foundation、P1 — Character Builder Complete 與 M02 — Traditional Chinese / English Localization 均已完成並關門。P1-A～P1-H 全部完成；網站現在能從空白 Builder Draft 建立 Lv1 或高等角色，保存完整 level-by-level progression / Multiclass / Subclass / ASI / Feat / Spellcasting / Starting Equipment，原子建立 Character + immutable Build Version 1 + initial Current State；Existing Character 也能進行 Level Up，建立 immutable Version N+1、reconcile live Current State，並查看 Version History。**
 
-**M01 — Multi-Source Character Content Expansion 已完成 M01-A～M01-K 並關門；M01 尚未 full closeout。** M01-A 建立 Multi-Source Content Pack；M01-B 補 PHB Character Origins / Background 並完成真人創角 Gate；M01-C 已補完 13 個 SCAG + 4 個 GoS Background；M01-D 已導入 Goblin / Hobgoblin / Aasimar；M01-E 已導入四種 SCAG Half-Elf ancestry variant、最小通用 Grant Replacement、movement modes、Drow Magic thresholds / resources 與 versioned Build Edit round-trip；M01-F 已導入 `lineage` StableKind 與 VRGR Dhampir、Ancestral Legacy whitelist 與既有角色的 versioned transformation；M01-G 已導入 TCE Artificer core、Lv1～20 progression、Specialists、prepared spellcasting 與 multiclass half-caster ceil rounding；M01-H 已導入 TCE Artificer Infusions / advanced feature state、Known vs Active Infusion boundary、feature resources、attunement capacity metadata、Armor Model live state、Spell-Storing Item state 與 manual combat-effect boundary；M01-I 已導入 TCE Optional Class Features / Fighting Styles、addition / expanded option pool / replacement / retraining semantics，以及 5 條 mandatory browser/full-stack E2E；M01-J 已導入 PHB / SCAG / XGE / TCE 四來源共 112 個 subclass identity（95 implemented + 17 canonical duplicate / reprint），並把 subclass 內容 materialize 成一般 pack data、移除 registry load 時的 Markdown 解析；M01-K 已導入 PHB 相對 SRD 缺少的 41 個 Feats 與 42 個 Spells，並接上 Feat structural mechanics、repeatable acquisition、prerequisite resolver、static derived values、Spell catalog / Builder integration 與 description localization。現行 enabled content packs 為 `srd5.1`、`phb2014`、`scag`、`gos`、`vgm`、`vrgr`、`tce`、`xge`。
+**M01 — Multi-Source Character Content Expansion 已完成 M01-A～M01-K 並關門；M01-L 與 M01-M 已正式拍板並完成三份文件，尚未開工；M01 尚未 full closeout。** M01-A 建立 Multi-Source Content Pack；M01-B 補 PHB Character Origins / Background 並完成真人創角 Gate；M01-C 已補完 13 個 SCAG + 4 個 GoS Background；M01-D 已導入 Goblin / Hobgoblin / Aasimar；M01-E 已導入四種 SCAG Half-Elf ancestry variant、最小通用 Grant Replacement、movement modes、Drow Magic thresholds / resources 與 versioned Build Edit round-trip；M01-F 已導入 `lineage` StableKind 與 VRGR Dhampir、Ancestral Legacy whitelist 與既有角色的 versioned transformation；M01-G 已導入 TCE Artificer core、Lv1～20 progression、Specialists、prepared spellcasting 與 multiclass half-caster ceil rounding；M01-H 已導入 TCE Artificer Infusions / advanced feature state、Known vs Active Infusion boundary、feature resources、attunement capacity metadata、Armor Model live state、Spell-Storing Item state 與 manual combat-effect boundary；M01-I 已導入 TCE Optional Class Features / Fighting Styles、addition / expanded option pool / replacement / retraining semantics，以及 5 條 mandatory browser/full-stack E2E；M01-J 已導入 PHB / SCAG / XGE / TCE 四來源共 112 個 subclass identity（95 implemented + 17 canonical duplicate / reprint），並把 subclass 內容 materialize 成一般 pack data、移除 registry load 時的 Markdown 解析；M01-K 已導入 PHB 相對 SRD 缺少的 41 個 Feats 與 42 個 Spells，並接上 Feat structural mechanics、repeatable acquisition、prerequisite resolver、static derived values、Spell catalog / Builder integration 與 description localization。現行 enabled content packs 為 `srd5.1`、`phb2014`、`scag`、`gos`、`vgm`、`vrgr`、`tce`、`xge`。
 
 M01 的直接目標：
 
@@ -45,10 +45,11 @@ M01 的直接目標：
 - 補 SCAG / GoS Background。（M01-C ✅）
 - 補 VGM race（M01-D ✅）、SCAG Half-Elf variant（M01-E ✅）、VRGR Dhampir（M01-F ✅）、TCE Artificer core（M01-G ✅）、TCE Artificer advanced features / Infusions（M01-H ✅）、TCE Optional Class Features / Fighting Styles（M01-I ✅）、PHB / SCAG / XGE / TCE 2014 Subclass（M01-J ✅）、PHB Feat / Spell Catalog（M01-K ✅）。
 - **M01-K 已補 PHB 相對 SRD 缺少的 41 個 Feats 與 42 個 Spells，並把能由現有 substrate 表達的 Feat structural mechanics正式接進 Builder；Spell scope只做到 catalog / access / Builder integration，不提前建立完整 Spell Engine。**
-- M01-K 之後仍可能新增其他規則 Subphase；**Full M01 Integration & Closeout 暫不固定編號**，只有最終 M01 scope確定後才編號。
+- **M01-L — VGM & SCAG Remaining Race Expansion / Generic Race Mechanics 與 M01-M — MTF Planar Race Expansion & Tiefling Bloodline / Variant System 已正式拍板**，三份 M01 文件已同步；兩者尚未開工。
+- M01-M 之後仍可能新增其他規則 Subphase；**Full M01 Integration & Closeout 暫不固定編號**，只有最終 M01 scope確定後才編號。
 - Full M01 closeout 後才回到 P2 規劃。
 
-**M02 — Traditional Chinese / English Localization 已於 2026-08-31 closeout（M02-A～M02-H 全部完成）；M01-D～M01-K 亦已完成並關門。M01 尚未 full closeout；K 後是否還有新 M01 規則 Subphase與 Full M01 Integration & Closeout 的 Subphase ID 仍由使用者後續拍板。**
+**M02 — Traditional Chinese / English Localization 已於 2026-08-31 closeout（M02-A～M02-H 全部完成）；M01-D～M01-K 亦已完成並關門。M01-L / M01-M 已拍板且文件就緒，等待開工。M01 尚未 full closeout；M 之後是否還有新 M01 規則 Subphase與 Full M01 Integration & Closeout 的 Subphase ID 仍由使用者後續拍板。**
 
 **M02-A — Locale Foundation & Runtime Switch 已完成**：建立 typed `zh-TW` / `en` locale runtime、瀏覽器持久化偏好、全站一鍵切換器、`html` language metadata 與 M02-A regression 覆蓋（Vitest + Playwright spec）。locale 仍只是 presentation state，未寫入 Draft / Character domain。
 
@@ -80,7 +81,11 @@ M01 的直接目標：
 
 **M01-K — PHB Feat & Spell Catalog Expansion 已完成**：PHB 2014 相對 SRD Grappler 以外的 41 個 Feats 與 PHB relative-to-SRD missing 42 個 Spells 已全部進入 `phb2014` runtime catalog。Feat acquisition 取得 acquisition-level persistence，Variant Human / ASI 共用同一 Feat pool 與 prerequisite / repeatability resolver；Elemental Adept repeatable acquisition、Martial Adept maneuver entitlement / superiority-die resource、Tough / Observant static derived modifiers、Magic Initiate / Ritual Caster / Spell Sniper spell choices與 four-shape prerequisite matrix均已驗收。Spell metadata / class access / cross-source provenance / Known-Spellbook-Prepared integration 已補齊，M01-I/J provisional spell identities 被 reuse / enrich。`phb2014` Feat / Spell `data.desc.*` 已納入 M02 localization policy並完成 `zh-TW` / `en` required coverage。詳見 `docs/M01/M01-K_CLOSEOUT.md`。
 
-> **M01-K 已 closeout，但 M01 不是 full closeout。K 後是否還有新 M01 規則 Subphase、以及 Full M01 Integration & Closeout 的 Subphase ID 目前 TBD。只有 final M01 closeout 完成後才回到 P2 — Room / Campaign / Session / Seat；不得因 M01 / M02 提前拆 P2～P8。**
+**M01-L — VGM & SCAG Remaining Race Expansion / Generic Race Mechanics（📐 規格可實作）**：把 supplied `種族_VGM.md` remaining 10 個 full race 與 `種族_SCAG.md` remaining 2 個 subrace materialize 成正式 pack data，並補上這批內容真正需要的通用能力——generic Race/Subrace movement grant、signed racial ability modifier compatibility、Natural Armor Rules Layer primitive、racial spell multi-rest recharge。Tiefling 與 MTF 全部留給 M01-M。
+
+**M01-M — MTF Planar Race Expansion & Tiefling Bloodline / Variant System（📐 規格可實作）**：新增 `mtf` pack，導入 7 個 MTF planar race identity 與 9 個九獄大魔血脈（Asmodeus canonical map 既有 `srd5.1:race:tiefling` + 8 個新 bloodline variant），一次定案 Tiefling baseline / bloodline / SCAG variant 的 replacement contract、group selection persistence、Winged conditional movement 與 Eladrin Seasonal Aspect 的 Build / State ownership。
+
+> **M01-K 已 closeout，但 M01 不是 full closeout。M01-L / M01-M 已拍板並完成文件，尚未開工；M 之後是否還有新 M01 規則 Subphase、以及 Full M01 Integration & Closeout 的 Subphase ID 目前 TBD。只有 final M01 closeout 完成後才回到 P2 — Room / Campaign / Session / Seat；不得因 M01 / M02 提前拆 P2～P8。**
 
 已完成的產品／規劃工作：
 
@@ -96,7 +101,7 @@ M01 的直接目標：
 - 大 Phase P0～P8 已排定。
 - 全專案規則：**每個 Phase 在 coding 前必須拆成可獨立實作、驗證、commit 的 Subphases；只拆當前 Phase，不提前拆後續 Phase。已明確拍板且插入點確定的 M Phase 是唯一可提前完成三份文件的例外。**
 - M Phase 可插在正常 P Phase 之間，也可插在另一個 M Phase 的兩個 Subphase 之間；不改寫正常 P Roadmap。
-- 目前已拍板 M01-A～M01-K 三份正式文件已完成，且 M01-A～M01-K 均已關門；K後內容 Subphase與 final closeout字母待後續需求確定。
+- 目前已拍板 M01-A～M01-M 三份正式文件已完成；M01-A～M01-K 均已關門，M01-L / M01-M 尚未開工；M後內容 Subphase與 final closeout字母待後續需求確定。
 - M02-A～M02-H 三份正式文件已完成。
 - 基礎技術棧：React + TypeScript + Vite / Python + FastAPI / PostgreSQL。
 
@@ -232,7 +237,7 @@ M01 共通原則：
 - M01-B 是第一個真人創角 Gate；Gate blocker 已完成修正並關門。
 - **M01-C 後插入的 M02 已 closeout；M01-D～M01-K 亦已完成並關門，M01 尚未 full closeout。**
 - **M01-D 起所有後續 M01 Subphase 遵守 M02 localization 永久規則：新增／修改／首次 expose user-visible system / rules content 必須同一 Subphase 同步 `zh-TW` / `en`。**
-- **M01-K 已 closeout，但不是 M01 full closeout。** K後可能再新增規則 Subphase；原 Full M01 Integration & Closeout scope保留，但 Subphase ID TBD，不先假設為 L。
+- **M01-K 已 closeout，但不是 M01 full closeout。** K 後已正式追加 M01-L / M01-M 兩個內容 Subphase；M 後仍可能再新增規則 Subphase。原 Full M01 Integration & Closeout scope保留，但 Subphase ID TBD，不先假設為 N。
 
 ---
 
@@ -253,8 +258,10 @@ M01 共通原則：
 | **M01-I — TCE Optional Class Features & Fighting Styles** | ✅ | addition / expanded option pool / replacement / retraining，並補 TCE Fighting Styles；同步雙語與 E2E 已驗收 |
 | **M01-J — 2014 Class Subclass Expansion** | ✅ | PHB / SCAG / XGE / TCE 112 個 subclass identity、`xge` pack、內容 materialize 進 `data/`、class-level gate、reprint canonicalization；雙語與 12 職業 E2E 已驗收 |
 | **M01-K — PHB Feat & Spell Catalog Expansion** | ✅ | PHB non-SRD Feats 41/41、Spells 42/42；Feat structural mechanics / prerequisite / nested choices、Spell catalog/access、既有 M01-I/J spell reconcile、跨來源 provenance、雙語與 focused E2E 已驗收 |
+| **M01-L — VGM & SCAG Remaining Race Expansion / Generic Race Mechanics** | 📐 | VGM remaining 10 races + SCAG remaining 2 subraces；generic Race/Subrace movement grant、signed racial modifier compatibility、Natural Armor Rules Layer primitive、racial spell multi-rest recharge；不碰 Tiefling / MTF |
+| **M01-M — MTF Planar Race Expansion & Tiefling Bloodline / Variant System** | 📐 | `mtf` pack、7 個 MTF planar race、Tiefling 9/9 血脈（Asmodeus canonical map + 8 new variants）、SCAG 保守相容、replacement group persistence、Winged conditional movement、Eladrin season State ownership |
 
-**M01-A～M01-K 已完成並關門。M01 尚未 full closeout；K後 Subphase 尚未拍板，Full M01 Integration & Closeout 的 Subphase ID 目前 TBD。**
+**M01-A～M01-K 已完成並關門；M01-L / M01-M 已拍板、三份文件就緒，尚未開工。M01 尚未 full closeout；M 後 Subphase 尚未拍板，Full M01 Integration & Closeout 的 Subphase ID 目前 TBD。**
 
 ---
 
@@ -303,7 +310,7 @@ M02 共通原則：
 | **M02-G — Localized Search, Errors & Completeness Gates** | ✅ | localized search / alias / sort、error code + localized message、policy-driven completeness / orphan guard |
 | **M02-H — Full M02 Integration & Closeout** | ✅ | structured disabled-reason / issue params、全站雙語 crawl + overflow gate、Draft / Character state integrity、translation evidence 彙整、doc-sync / CC BY NOTICE |
 
-**M02-A～M02-H 全部完成，M02 已關門；M01-D～M01-K 亦已完成並關門。M01 尚未 full closeout；K 後是否新增 M01 Subphase 與 Full M01 Integration & Closeout 的 Subphase ID 仍待後續拍板。**
+**M02-A～M02-H 全部完成，M02 已關門；M01-D～M01-K 亦已完成並關門。M01-L / M01-M 已拍板且文件就緒，尚未開工。M01 尚未 full closeout；M 後是否新增 M01 Subphase 與 Full M01 Integration & Closeout 的 Subphase ID 仍待後續拍板。**
 
 ---
 
@@ -315,7 +322,7 @@ M02 共通原則：
 |---|---|---|
 | **P0** | **Character Core + SRD / Rules Foundation** | 導入角色真正需要的 SRD 5.1 reference content；建立 Character 核心資料、角色卡與角色相關規則計算基礎。**不導入 Monster / Beast stat blocks。** |
 | **P1** | **Character Builder Complete** | 完整創角、高等角色建立、Level-by-level progression、Subclass、Multiclass、ASI / Feat、Spell progression、Level Up、Character Version |
-| **M01** | **Multi-Source Character Content Expansion** | 插入式 Maintenance Phase：多來源 Content Pack、PHB/SCAG/GoS/VGM/VRGR/XGE/TCE 角色內容與既有 Character 系統強化；C 後插 M02，再由 D 接續；K補 PHB Feats/Spells，後續內容可再拆 Subphase，final closeout後才回 P2 |
+| **M01** | **Multi-Source Character Content Expansion** | 插入式 Maintenance Phase：多來源 Content Pack、PHB/SCAG/GoS/VGM/VRGR/XGE/TCE 角色內容與既有 Character 系統強化；C 後插 M02，再由 D 接續；K補 PHB Feats/Spells，L 補 VGM/SCAG remaining race 與通用 race mechanics，M 補 MTF planar race 與 Tiefling bloodline system，後續內容可再拆 Subphase，final closeout後才回 P2 |
 | **M02** | **Traditional Chinese / English Localization** | 插入於 M01-C 與 M01-D 之間：`zh-TW` / `en` 雙語 foundation、field-level current-surface localization、translation workflow、completeness gate；完成後回 M01-D |
 | **P2** | **Room / Campaign / Session / Seat** | 把已建立的角色真正放進桌內；建立 Room、Campaign、Party Roster、Player Seat、Controller 與 Session lifecycle |
 | **P3** | **Exploration + Roll + AI** | 建立 Exploration、Chat / Action / Check、正式骰子與 PendingAction；Human / AI 開始能在同一桌真正跑團 |
@@ -330,7 +337,7 @@ P0/P1 已完成；**目前已拆 M01 與 M02。P2～P8 仍維持大 Phase，不�
 實際執行順序：
 
 ```text
-M01-A ✅ → M01-B ✅ → M01-C ✅ → M02-A ✅ → M02-B ✅ → M02-C ✅ → M02-D ✅ → M02-E ✅ → M02-F ✅ → M02-G ✅ → M02-H ✅ → M01-D ✅ → M01-E ✅ → M01-F ✅ → M01-G ✅ → M01-H ✅ → M01-I ✅ → M01-J ✅ → M01-K ✅ → Future M01 Subphase(s) TBD → Full M01 Integration & Closeout (Subphase ID TBD) → P2
+M01-A ✅ → M01-B ✅ → M01-C ✅ → M02-A ✅ → M02-B ✅ → M02-C ✅ → M02-D ✅ → M02-E ✅ → M02-F ✅ → M02-G ✅ → M02-H ✅ → M01-D ✅ → M01-E ✅ → M01-F ✅ → M01-G ✅ → M01-H ✅ → M01-I ✅ → M01-J ✅ → M01-K ✅ → M01-L 📐 → M01-M 📐 → Future M01 Subphase(s) TBD → Full M01 Integration & Closeout (Subphase ID TBD) → P2
 ```
 
 ---
@@ -390,7 +397,8 @@ M01 不重做 P0/P1；它把「SRD 可創角」提升成「既有 Builder 可以
 - M01-C SCAG / GoS Background expansion 已 closeout。
 - M01-D～M01-K 已 closeout。
 - M01-D 起承接 M02 已建立的 localization Definition of Done。
-- M01-K closeout 後仍可依實際規則需求拆新的 M01 Subphase；Full M01 Integration & Closeout 的字母目前不預先決定。
+- VGM / SCAG remaining race 與 generic race mechanics（M01-L）、MTF planar race 與 Tiefling bloodline / variant system（M01-M）已拍板，尚未開工。
+- M01-M 之後仍可依實際規則需求拆新的 M01 Subphase；Full M01 Integration & Closeout 的字母目前不預先決定。
 
 M01 正式文件：
 
@@ -497,6 +505,16 @@ docs/
 法術_PHB_非SRD內容.md
 ```
 
+M01-L / M01-M 的 supplied authoring reference：
+
+```text
+種族_VGM.md     # M01-L remaining 10 full races
+種族_SCAG.md    # M01-L remaining 2 subraces；M01-M Tiefling variants
+種族_MTF.md     # M01-M planar races 與九獄大魔血脈
+```
+
+這三份只作 authoring / review input；runtime 不得解析或依路徑讀取。
+
 ---
 
 ## Phase 規劃規則
@@ -541,8 +559,8 @@ M Phase 可以插在 P Phase 之間，**也可以插在另一個 M Phase 的兩�
 2. 再讀 `PROJECT_BRIEF.md` 取得目前 Phase、Subphase 與下一步。
 3. 按任務讀 `規格企劃.md` 對應章節。
 4. M01 實作／驗收依 `docs/M01/`、M02 依 `docs/M02/` 三份文件中的同名 Subphase 取得契約。
-5. M02 已 closeout（A～H 全部完成）；M01-D～M01-K 亦已完成並關門。M01 尚未 full closeout；K 後是否新增 M01 規則 Subphase 由使用者後續決定。
-6. 不要因 M01-K 已完成而自動宣布 M01 full closeout 或切到 P2；Full M01 Integration & Closeout 的 Subphase ID 目前 TBD。
+5. M02 已 closeout（A～H 全部完成）；M01-D～M01-K 亦已完成並關門。M01-L / M01-M 已拍板、三份文件就緒但尚未開工。M01 尚未 full closeout；M 後是否新增 M01 規則 Subphase 由使用者後續決定。
+6. 不要因 M01-K 已完成而自動宣布 M01 full closeout 或切到 P2；下一個 M01 內容 Subphase 是 M01-L，Full M01 Integration & Closeout 的 Subphase ID 目前 TBD。
 7. M02-D / E / F 的 translation batch 可以分批 commit，但不能分批關閉 Subphase。
 8. M01-D 起，新增／修改／首次 expose user-visible content 必須同步維護所有 supported locales（`zh-TW` / `en`）；缺任一語言視同該 Subphase regression。
 9. 不重新討論已定案產品規格。
