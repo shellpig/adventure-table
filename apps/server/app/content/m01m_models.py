@@ -21,6 +21,7 @@ from app.content.schemas import (
 
 
 SpellComponent = Literal["V", "S", "M"]
+CastingModifier = Literal["enlarge_effect_only", "mage_hand_invisible"]
 
 
 class RaceVariantAbilityBonus(StrictModel):
@@ -45,6 +46,9 @@ class M01MRacialSpellAccessData(RacialSpellAccessData):
     # no spell/combat engine is introduced here.
     cast_at_level: int | None = Field(default=None, ge=1, le=9)
     waive_components: tuple[SpellComponent, ...] = ()
+    # Closed, locale-neutral modifiers that change how the referenced spell is
+    # used without requiring a general spell-effect language.
+    casting_modifiers: tuple[CastingModifier, ...] = ()
 
     @model_validator(mode="before")
     @classmethod
@@ -84,13 +88,11 @@ class M01MRacialSpellAccessData(RacialSpellAccessData):
         payload["runtime_restrictions"] = normalized
         return payload
 
-    @field_validator("waive_components")
+    @field_validator("waive_components", "casting_modifiers")
     @classmethod
-    def waived_components_are_unique(
-        cls, value: tuple[SpellComponent, ...]
-    ) -> tuple[SpellComponent, ...]:
+    def closed_casting_lists_are_unique(cls, value: tuple[str, ...]) -> tuple[str, ...]:
         if len(value) != len(set(value)):
-            raise ValueError("waive_components must be unique")
+            raise ValueError("racial casting modifier/component lists must be unique")
         return value
 
 
