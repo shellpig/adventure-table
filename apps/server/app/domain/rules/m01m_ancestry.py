@@ -158,6 +158,22 @@ def feature_mode_definitions(
     return tuple(definitions)
 
 
+def _known_ancestry_feature_mode_keys(registry: ContentRegistry) -> set[str]:
+    """Return mode keys claimed by installed typed ancestry content."""
+
+    result: set[str] = set()
+    for feature in registry.list_kind("feature"):
+        raw = feature.data.get("feature_mode")
+        if not isinstance(raw, dict):
+            continue
+        try:
+            mode = FeatureModeData.model_validate(raw)
+        except (ValidationError, ValueError):
+            continue
+        result.add(mode.mode_key)
+    return result
+
+
 def initial_feature_modes(
     build: CharacterBuild,
     registry: ContentRegistry,
@@ -218,15 +234,20 @@ def validate_feature_modes(
     state: CharacterState,
     registry: ContentRegistry,
 ) -> None:
-    """Validate only M01-M-owned mode keys; preserve shared-map compatibility."""
+    """Validate M01-M-owned keys without claiming other shared-map subsystems."""
 
     definitions = {
         definition.key: definition
         for definition in feature_mode_definitions(build, registry)
     }
+    known_ancestry_keys = _known_ancestry_feature_mode_keys(registry)
     for key, selected in state.feature_modes.items():
         definition = definitions.get(key)
         if definition is None:
+            if key in known_ancestry_keys:
+                raise ValueError(
+                    f"feature mode {key!r} is not granted by the current Build"
+                )
             continue
         if selected not in definition.options:
             raise ValueError(f"invalid feature mode {selected!r} for {key}")
