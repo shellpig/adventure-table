@@ -321,7 +321,10 @@ def build_character_sheet(
             NamedReferenceDTO(key=key, name=registry.get(key).name)
             for key in sheet_feature_refs
         ],
-        feature_modes=effective_feature_modes(build, state, registry),
+        feature_modes={
+            **state.feature_modes,
+            **effective_feature_modes(build, state, registry),
+        },
         feature_mode_definitions=[
             FeatureModeDTO(
                 key=definition.key,
