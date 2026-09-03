@@ -1,11 +1,21 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
+from typing import get_args
 from uuid import uuid4
+
+import pytest
+from pydantic import ValidationError
 
 from app.content import load_default_content_registry
 from app.content.localization_files import load_content_localization_catalog
 from app.content.m01l_inventory import m01l_reference_inventory
+from app.content.m01l_models import (
+    NaturalArmorData,
+    RacialSpellAccessData,
+    RuntimeExecution,
+)
 from app.content.registry import CONTENT_PACKS_ROOT
 from app.domain.character.schemas import (
     AbilityScores,
@@ -22,14 +32,24 @@ from app.domain.character_builder.origin import compile_origin
 from app.domain.character_builder.race_variants import compile_race_variant
 from app.domain.character_builder.schemas import (
     BuilderBasicInput,
+    BuilderChoiceSelection,
     BuilderDraft,
     BuilderDraftPayload,
     BuilderGrantSummary,
+    BuilderLevelChoice,
     BuilderMode,
     BuilderReferenceSelection,
 )
+from app.domain.character_builder.m01i_compiler import (
+    compile_builder_draft as composed_compile,
+)
 from app.domain.rules.armor_class import calculate_armor_class
 from app.domain.rules.feature_resources import initial_feature_resource_state, spell_access_resource_key
+
+import m01k_support as S
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def _draft(payload: BuilderDraftPayload) -> BuilderDraft:
@@ -152,6 +172,10 @@ def test_negative_racial_ability_modifiers_apply_after_point_buy_base_scores() -
 
 
 def test_race_and_subrace_movement_compile_through_one_substrate() -> None:
+    # The M01-E / M01-F movement controls (Aquatic and Wood Half-Elf, Dhampir)
+    # stay in their own suites so this matrix keeps one harness:
+    # test_m01e_half_elf_variants.py::test_variant_movement_compiles_to_explicit_modes
+    # and test_m01f_closeout.py cover them against the same resolver.
     registry = load_default_content_registry()
     cases = (
         ("vgm:race:lizardfolk", None, (30, 30, None, None)),
@@ -363,3 +387,242 @@ def test_m01l_localization_scope_is_complete_and_mechanics_are_locale_neutral() 
     assert not catalog.policy.is_required("vgm", "feature", "data.natural_armor.base", "zh-TW")
     assert catalog.policy.is_required("vgm", "feature", "data.desc.0", "zh-TW")
     assert catalog.policy.is_required("xge", "spell", "data.desc.0", "zh-TW")
+
+
+def test_m01l_runtime_never_depends_on_authoring_markdown() -> None:
+    authoring_markers = (
+        "暫用規則資訊",
+        "種族_VGM",
+        "種族_SCAG",
+    )
+    roots = (
+        REPO_ROOT / "apps" / "server" / "app",
+        REPO_ROOT / "apps" / "web" / "src",
+    )
+    offenders: list[str] = []
+    for root in roots:
+        for path in (*root.rglob("*.py"), *root.rglob("*.ts"), *root.rglob("*.tsx")):
+            text = path.read_text(encoding="utf-8")
+            if any(marker in text for marker in authoring_markers):
+                offenders.append(str(path.relative_to(REPO_ROOT)))
+
+    assert offenders == [], f"runtime code references authoring markdown: {offenders}"
+
+    # The shipped server image copies data packs explicitly and never docs/, so
+    # the runtime the E2E suite exercises already has no authoring reference.
+    dockerfile = (REPO_ROOT / "apps" / "server" / "Dockerfile").read_text(encoding="utf-8")
+    copied = [line for line in dockerfile.splitlines() if line.startswith("COPY ")]
+    assert copied
+    assert not [line for line in copied if "docs" in line]
+
+    registry = load_default_content_registry()
+    for row in m01l_reference_inventory().rows:
+        assert registry.get_optional(row.key) is not None
+
+
+def test_natural_armor_descriptor_rejects_unsupported_shapes() -> None:
+    valid = NaturalArmorData.model_validate(
+        {"base": 13, "ability": "dexterity", "requires_unarmored": True}
+    )
+    assert (valid.base, valid.ability, valid.requires_unarmored) == (13, "dexterity", True)
+
+    for malformed in (
+        {"base": 0, "ability": "dexterity"},
+        {"base": 13, "ability": "strength"},
+        {"ability": "dexterity"},
+        {"base": 13, "ability": "dexterity", "bonus_when_shielded": 2},
+    ):
+        with pytest.raises(ValidationError):
+            NaturalArmorData.model_validate(malformed)
+
+
+def test_racial_spell_recharge_invariants_are_enforced() -> None:
+    at_will = RacialSpellAccessData.model_validate(
+        {"spell": {"key": "srd5.1:spell:poison-spray", "name": "Poison Spray"}}
+    )
+    assert (at_will.uses_per_rest, at_will.recharge_types) == (None, [])
+
+    multi_rest = RacialSpellAccessData.model_validate(
+        {
+            "spell": {"key": "srd5.1:spell:detect-magic", "name": "Detect Magic"},
+            "uses_per_rest": 1,
+            "recharge_types": ["short_rest", "long_rest"],
+        }
+    )
+    assert multi_rest.recharge_types == ["short_rest", "long_rest"]
+
+    legacy = RacialSpellAccessData.model_validate(
+        {
+            "spell": {"key": "srd5.1:spell:darkness", "name": "Darkness"},
+            "uses_per_rest": 1,
+            "rest_type": "long_rest",
+        }
+    )
+    assert legacy.recharge_types == ["long_rest"]
+
+    spell = {"key": "srd5.1:spell:darkness", "name": "Darkness"}
+    for malformed in (
+        {"spell": spell, "recharge_types": ["long_rest"]},
+        {"spell": spell, "uses_per_rest": 1},
+        {"spell": spell, "uses_per_rest": 1, "recharge_types": ["long_rest", "long_rest"]},
+        {"spell": spell, "uses_per_rest": 1, "recharge_types": ["short_rest"], "rest_type": "long_rest"},
+        {"spell": spell, "uses_per_rest": 1, "recharge_types": ["daily"]},
+        {"spell": spell, "min_character_level": 0},
+        {"spell": spell, "uses_spell_slot": True},
+    ):
+        with pytest.raises(ValidationError):
+            RacialSpellAccessData.model_validate(malformed)
+
+
+def test_m01l_race_features_declare_a_runtime_execution_classification() -> None:
+    registry = load_default_content_registry()
+    feature_refs: set[str] = set()
+    for row in m01l_reference_inventory().rows:
+        entry = registry.get(row.key)
+        for feature in entry.data.get("features", ()):
+            feature_refs.add(feature["key"])
+    assert feature_refs
+
+    automatic_payload_keys = ("natural_armor", "racial_spell_access")
+    for feature_ref in sorted(feature_refs):
+        data = registry.get(feature_ref).data
+        classification = data.get("runtime_execution")
+        assert classification in get_args(RuntimeExecution), (
+            f"{feature_ref} has no M01-L runtime execution classification: {classification!r}"
+        )
+        if any(data.get(key) for key in automatic_payload_keys):
+            assert classification == "automatic_static", (
+                f"{feature_ref} is applied by the server but classified {classification!r}"
+            )
+
+
+def test_m01l_race_skill_choices_reject_wrong_count_and_forged_options() -> None:
+    registry = load_default_content_registry()
+    payload = _payload("vgm:race:kenku")
+    baseline = compile_builder_draft(_draft(payload), registry)
+    choice = next(
+        item
+        for item in baseline.choices
+        if item.source_ref == "vgm:race:kenku"
+        and item.option_source == "content:proficiency_choices"
+    )
+
+    def _codes(selected: tuple[str, ...]) -> set[str]:
+        mutated = payload.model_copy(
+            update={
+                "choice_selections": {
+                    choice.choice_id: BuilderChoiceSelection(
+                        choice_id=choice.choice_id,
+                        source_ref=choice.source_ref,
+                        selected_option_ids=selected,
+                    )
+                }
+            }
+        )
+        result = compile_builder_draft(_draft(mutated), registry)
+        return {
+            issue.code
+            for issue in result.validation.issues
+            if choice.choice_id in (issue.path or "") or choice.choice_id in issue.related_refs
+        }
+
+    assert "invalid_choice_count" in _codes(("srd5.1:proficiency:skill-stealth",))
+    assert "invalid_choice_option" in _codes(
+        ("srd5.1:proficiency:skill-stealth", "srd5.1:proficiency:skill-arcana")
+    )
+    assert "invalid_choice_count" in _codes(
+        (
+            "srd5.1:proficiency:skill-stealth",
+            "srd5.1:proficiency:skill-deception",
+            "srd5.1:proficiency:skill-acrobatics",
+        )
+    )
+
+    accepted = _codes(
+        ("srd5.1:proficiency:skill-stealth", "srd5.1:proficiency:skill-deception")
+    )
+    assert "invalid_choice_count" not in accepted
+    assert "invalid_choice_option" not in accepted
+
+
+def _triton_payload(level: int) -> BuilderDraftPayload:
+    payload = _payload("vgm:race:triton", level=level)
+    return payload.model_copy(
+        update={
+            "level_choices": tuple(
+                BuilderLevelChoice(
+                    character_level=index + 1,
+                    class_ref="srd5.1:class:fighter",
+                    hp_method="first_level" if index == 0 else "fixed_average",
+                    hp_base_gain=10 if index == 0 else 6,
+                    subclass_ref="srd5.1:subclass:champion" if index == 2 else None,
+                )
+                for index in range(level)
+            )
+        }
+    )
+
+
+def _racial_spell_view(build: CharacterBuild) -> set[tuple[str, int | None, tuple[str, ...]]]:
+    return {
+        (entry.spell_key, entry.uses_per_rest, entry.recharge_types)
+        for entry in build.spell_access_entries
+        if entry.source_type == "race"
+    }
+
+
+def _versioned_draft(payload: BuilderDraftPayload, mode: BuilderMode) -> BuilderDraft:
+    now = datetime.now(UTC)
+    return BuilderDraft(
+        id=uuid4(),
+        mode=mode,
+        character_id=uuid4(),
+        base_version_id=uuid4(),
+        revision=1,
+        draft_payload=payload,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+def test_triton_direct_create_matches_sequential_level_up_and_build_edit() -> None:
+    # Compiles through the composed service entry point, so the M01-L origin
+    # resolver is exercised the same way Create, Level Up and Build Edit reach it.
+    registry = S.registry()
+    level_five = S.auto_fill(_triton_payload(5), registry, skip_sources=set())
+    level_three = S.auto_fill(_triton_payload(3), registry, skip_sources=set())
+
+    direct = composed_compile(S.draft(level_five), registry)
+    assert direct.build_candidate is not None
+    assert _racial_spell_view(direct.build_candidate) == {
+        ("srd5.1:spell:fog-cloud", 1, ("long_rest",)),
+        ("srd5.1:spell:gust-of-wind", 1, ("long_rest",)),
+        ("xge:spell:wall-of-water", 1, ("long_rest",)),
+    }
+
+    base = composed_compile(S.draft(level_three), registry)
+    assert base.build_candidate is not None
+    assert _racial_spell_view(base.build_candidate) == {
+        ("srd5.1:spell:fog-cloud", 1, ("long_rest",)),
+        ("srd5.1:spell:gust-of-wind", 1, ("long_rest",)),
+    }
+
+    stepped = composed_compile(
+        _versioned_draft(level_five, BuilderMode.LEVEL_UP),
+        registry,
+        base_build=base.build_candidate,
+    )
+    assert stepped.build_candidate is not None
+    assert _racial_spell_view(stepped.build_candidate) == _racial_spell_view(direct.build_candidate)
+
+    edited = composed_compile(
+        _versioned_draft(level_five, BuilderMode.BUILD_EDIT),
+        registry,
+        base_build=direct.build_candidate,
+    )
+    assert edited.build_candidate is not None
+    assert _racial_spell_view(edited.build_candidate) == _racial_spell_view(direct.build_candidate)
+    assert (
+        edited.build_candidate.swim_speed,
+        edited.build_candidate.walking_speed,
+    ) == (30, 30)
