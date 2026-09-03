@@ -6,7 +6,7 @@ from hashlib import sha256
 from pydantic import ValidationError
 
 from app.content.identity import reference_to_stable_key, stable_key_is_kind
-from app.content.m01l_models import RacialSpellAccessData
+from app.content.m01m_models import M01MRacialSpellAccessData
 from app.content.registry import ContentRegistry
 from app.domain.character.schemas import SpellAccessEntry
 from app.domain.character_builder.schemas import BuilderGrantSummary, BuilderIssue, BuilderIssueSeverity
@@ -44,10 +44,10 @@ def compile_origin(
 ) -> OriginCompilation:
     """Compile permanent origin grants and ancestry spell access.
 
-    M01-L keeps character-level gating from M01-D while normalizing ancestry
-    spell recharge metadata to the canonical multi-rest tuple. Legacy singleton
-    ``rest_type`` content is accepted by ``RacialSpellAccessData`` at read time,
-    but compiler output writes only ``recharge_types``.
+    M01-M keeps M01-L recharge semantics and additionally validates static
+    racial/psionic casting metadata such as cast_at_level and waived components.
+    Those static facts remain canonical content owned by the source feature and
+    are losslessly re-resolvable through each SpellAccessEntry.source_key.
     """
 
     languages: list[str] = []
@@ -117,7 +117,7 @@ def compile_origin(
         for index, raw in enumerate(raw_access):
             path = f"content.{feature_ref}.racial_spell_access.{index}"
             try:
-                access = RacialSpellAccessData.model_validate(raw)
+                access = M01MRacialSpellAccessData.model_validate(raw)
             except (ValidationError, ValueError):
                 issues.append(
                     _issue(
