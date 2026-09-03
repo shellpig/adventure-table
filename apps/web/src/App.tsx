@@ -1,6 +1,6 @@
 import { CharacterVersionHistoryPage } from './features/character-builder/CharacterVersionHistoryPage'
 import { CharacterWorkshopPage } from './features/character-builder/CharacterWorkshopPage'
-import { CharacterBuilderRoutePage } from './features/artificer/ArtificerRoutePanels'
+import { CharacterBuilderRoutePage } from './features/m01m/M01MBuilderRoutePanel'
 import { CharacterSheetRoutePage } from './features/m01m/M01MAncestryRoutePanel'
 import { useUiCopy } from './i18n/useUiCopy'
 
