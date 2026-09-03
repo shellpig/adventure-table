@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from pydantic import ValidationError
 
+from app.content.identity import reference_to_stable_key
 from app.content.m01m_models import (
     ConditionalMovementGrantData,
     FeatureModeData,
@@ -75,12 +76,7 @@ def effective_movement(
     state: CharacterState,
     registry: ContentRegistry,
 ) -> EffectiveMovement:
-    """Resolve live equipment-dependent movement without mutating the Build.
-
-    The immutable Build stores ancestry capability. M01-M conditions are then
-    evaluated against Current State so equipping or unequipping heavy armor can
-    change Winged Tiefling flight immediately without a new Build version.
-    """
+    """Resolve live equipment-dependent movement without mutating the Build."""
 
     race = registry.get(build.race_ref)
     race_speed = race.data.get("speed")
@@ -155,6 +151,38 @@ def feature_mode_definitions(
     return tuple(definitions)
 
 
+def initial_feature_modes(
+    build: CharacterBuild,
+    registry: ContentRegistry,
+    initial_state_seed: dict[str, object] | None = None,
+) -> dict[str, str]:
+    """Resolve initial Current-State modes from content defaults plus Draft seed."""
+
+    definitions = {
+        definition.key: definition
+        for definition in feature_mode_definitions(build, registry)
+    }
+    seed = initial_state_seed or {}
+    raw_modes = seed.get("feature_modes", {})
+    if raw_modes is None:
+        raw_modes = {}
+    if not isinstance(raw_modes, dict):
+        raise ValueError("initial_state_seed.feature_modes must be an object")
+    unknown = set(raw_modes) - set(definitions)
+    if unknown:
+        raise ValueError(
+            "initial feature mode is not granted by Build: " + ", ".join(sorted(unknown))
+        )
+
+    result: dict[str, str] = {}
+    for key, definition in definitions.items():
+        selected = raw_modes.get(key, definition.default)
+        if not isinstance(selected, str) or selected not in definition.options:
+            raise ValueError(f"invalid initial feature mode {selected!r} for {key}")
+        result[key] = selected
+    return result
+
+
 def effective_feature_modes(
     build: CharacterBuild,
     state: CharacterState,
@@ -204,12 +232,12 @@ def racial_spell_runtime_metadata(
     for raw in raw_access:
         try:
             access = M01MRacialSpellAccessData.model_validate(raw)
+            reference = reference_to_stable_key(
+                access.spell.model_dump(exclude_none=True),
+                kinds={"spell"},
+            )
         except (ValidationError, ValueError):
             continue
-        spell = access.spell
-        reference = spell.key or (
-            f"srd5.1:spell:{spell.index}" if spell.index is not None else None
-        )
         if reference != access_entry.spell_key:
             continue
         return RacialSpellRuntimeMetadata(
