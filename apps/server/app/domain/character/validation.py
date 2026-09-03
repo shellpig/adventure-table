@@ -131,9 +131,16 @@ def _validate_numeric_overrides(build: CharacterBuild, registry: ContentRegistry
 
 
 def _validate_race_variant_groups(build: CharacterBuild, registry: ContentRegistry) -> None:
-    if build.race_variant_ref is None or not build.race_variant_group_selections:
+    if build.race_variant_ref is None:
+        if build.race_variant_group_selections:
+            raise CharacterValidationError(
+                "race variant group provenance cannot exist without race_variant_ref"
+            )
+        return
+    if not build.race_variant_group_selections:
         # Backward compatibility: M01-E Builds predate persisted group provenance.
         return
+
     variant = registry.get(build.race_variant_ref)
     raw_groups = variant.data.get("replacement_groups")
     if not isinstance(raw_groups, list):
@@ -154,11 +161,23 @@ def _validate_race_variant_groups(build: CharacterBuild, registry: ContentRegist
             if isinstance(option, dict)
             and isinstance((option_id := option.get("id")), str)
         }
-    selected_group_ids = {
+
+    for selection in build.race_variant_group_selections:
+        if selection.race_variant_ref != build.race_variant_ref:
+            raise CharacterValidationError(
+                "race variant group provenance belongs to a different variant: "
+                f"{selection.race_variant_ref} != {build.race_variant_ref}"
+            )
+
+    selected_group_ids = [
         selection.replacement_group_id
         for selection in build.race_variant_group_selections
-    }
-    if selected_group_ids != set(groups):
+    ]
+    if len(selected_group_ids) != len(set(selected_group_ids)):
+        raise CharacterValidationError(
+            f"race variant group provenance contains duplicate groups for {build.race_variant_ref}"
+        )
+    if set(selected_group_ids) != set(groups):
         raise CharacterValidationError(
             f"race variant group provenance is incomplete for {build.race_variant_ref}"
         )
@@ -190,7 +209,7 @@ def validate_build_references(build: CharacterBuild, registry: ContentRegistry) 
             raise CharacterValidationError(
                 f"race variant {build.race_variant_ref} does not belong to race {build.race_ref}"
             )
-        _validate_race_variant_groups(build, registry)
+    _validate_race_variant_groups(build, registry)
 
     if build.subrace_ref is not None:
         subrace = registry.get(build.subrace_ref)
