@@ -46,6 +46,44 @@ class M01MRacialSpellAccessData(RacialSpellAccessData):
     cast_at_level: int | None = Field(default=None, ge=1, le=9)
     waive_components: tuple[SpellComponent, ...] = ()
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_closed_restriction_tokens(cls, value: object) -> object:
+        """Accept M01-M closed authoring tokens through the existing M01-L shape.
+
+        M01-L already owns the generic runtime-restriction transport as typed
+        objects. MTF needs two non-executable restrictions (self-only and direct
+        sunlight), so normalize their compact checked-in tokens into the existing
+        manual restriction form instead of creating a second runtime-state model.
+        """
+
+        if not isinstance(value, dict):
+            return value
+        payload = dict(value)
+        raw = payload.get("runtime_restrictions")
+        if not isinstance(raw, list):
+            return payload
+        normalized: list[object] = []
+        for restriction in raw:
+            if restriction == "self_only":
+                normalized.append(
+                    {
+                        "kind": "manual",
+                        "note": "This racial casting can target only the caster.",
+                    }
+                )
+            elif restriction == "cannot_cast_in_direct_sunlight":
+                normalized.append(
+                    {
+                        "kind": "manual",
+                        "note": "This racial casting cannot be used while the caster is in direct sunlight.",
+                    }
+                )
+            else:
+                normalized.append(restriction)
+        payload["runtime_restrictions"] = normalized
+        return payload
+
     @field_validator("waive_components")
     @classmethod
     def waived_components_are_unique(
