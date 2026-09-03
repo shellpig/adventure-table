@@ -13,6 +13,12 @@ from app.domain.rules.abilities import ABILITY_NAMES, ability_modifier, effectiv
 from app.domain.rules.armor_class import calculate_armor_class
 from app.domain.rules.artificer_dto import ArtificerSummaryDTO, build_artificer_summary
 from app.domain.rules.hit_points import calculate_max_hp
+from app.domain.rules.m01m_ancestry import (
+    effective_feature_modes,
+    effective_movement,
+    feature_mode_definitions,
+    racial_spell_runtime_metadata,
+)
 from app.domain.rules.proficiency import class_level, proficiency_bonus, total_character_level
 from app.domain.rules.skills import (
     all_skill_modifiers,
@@ -70,6 +76,9 @@ class SpellAccessDTO(SheetModel):
     prepared: bool
     source_profile_id: str | None = None
     source_access_entry_id: str | None = None
+    cast_at_level: int | None = None
+    waive_components: tuple[str, ...] = ()
+    uses_spell_slot: bool | None = None
 
 
 class SpellcastingDTO(SheetModel):
@@ -88,6 +97,14 @@ class InventoryDTO(SheetModel):
     equipped: bool
     carried: bool
     rules: dict[str, Any]
+
+
+class FeatureModeDTO(SheetModel):
+    key: str
+    source_feature_ref: str
+    options: tuple[str, ...]
+    default: str
+    change_timing: str
 
 
 class CharacterSheetDTO(SheetModel):
@@ -115,6 +132,8 @@ class CharacterSheetDTO(SheetModel):
     temporary_hp: int
     hit_dice: list[HitDieDTO]
     features: list[NamedReferenceDTO]
+    feature_modes: dict[str, str]
+    feature_mode_definitions: list[FeatureModeDTO]
     conditions: list[ConditionDTO]
     spells: list[SpellAccessDTO]
     spellcasting: list[SpellcastingDTO]
@@ -151,10 +170,7 @@ def build_character_sheet(
         for name in ABILITY_NAMES
     }
 
-    race_speed = registry.get(build.race_ref).data.get("speed")
-    if not isinstance(race_speed, int) or race_speed <= 0:
-        raise ValueError(f"race {build.race_ref} has invalid walking speed")
-    walking_speed = build.walking_speed if build.walking_speed is not None else race_speed
+    movement = effective_movement(build, state, registry)
 
     totals = derive_hit_dice_totals(build, registry)
     hit_dice = [
@@ -191,6 +207,7 @@ def build_character_sheet(
         if pair is not None:
             covered_profile_spells.add(pair)
         spell = registry.get(access.spell_key)
+        runtime = racial_spell_runtime_metadata(access, registry)
         spells.append(
             SpellAccessDTO(
                 entry_id=access.entry_id,
@@ -210,6 +227,9 @@ def build_character_sheet(
                     if profile is not None and access.access_type == "spellbook"
                     else None
                 ),
+                cast_at_level=runtime.cast_at_level if runtime is not None else None,
+                waive_components=runtime.waive_components if runtime is not None else (),
+                uses_spell_slot=runtime.uses_spell_slot if runtime is not None else None,
             )
         )
 
@@ -272,6 +292,7 @@ def build_character_sheet(
         )
 
     sheet_feature_refs = tuple(dict.fromkeys((*build.feature_refs, *build.feat_refs)))
+    mode_definitions = feature_mode_definitions(build, registry)
     return CharacterSheetDTO(
         character_id=character.id,
         current_version_id=character.current_version_id,
@@ -288,10 +309,10 @@ def build_character_sheet(
         passive_investigation=passive_investigation(build, registry),
         initiative_modifier=abilities["dexterity"].modifier,
         armor_class=calculate_armor_class(build, state, registry),
-        walking_speed=walking_speed,
-        swim_speed=build.swim_speed,
-        climb_speed=build.climb_speed,
-        fly_speed=build.fly_speed,
+        walking_speed=movement.walk,
+        swim_speed=movement.swim,
+        climb_speed=movement.climb,
+        fly_speed=movement.fly,
         max_hp=calculate_max_hp(build),
         current_hp=state.current_hp,
         temporary_hp=state.temporary_hp,
@@ -299,6 +320,17 @@ def build_character_sheet(
         features=[
             NamedReferenceDTO(key=key, name=registry.get(key).name)
             for key in sheet_feature_refs
+        ],
+        feature_modes=effective_feature_modes(build, state, registry),
+        feature_mode_definitions=[
+            FeatureModeDTO(
+                key=definition.key,
+                source_feature_ref=definition.source_feature_ref,
+                options=definition.options,
+                default=definition.default,
+                change_timing=definition.change_timing,
+            )
+            for definition in mode_definitions
         ],
         conditions=[
             ConditionDTO(
