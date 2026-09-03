@@ -1,0 +1,38 @@
+[
+  {
+    "key": "scag:subrace:ghostwise-halfling",
+    "index": "ghostwise-halfling",
+    "name": "Ghostwise Halfling",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"rules_source": "Sword Coast Adventurer's Guide (2015)", "scope": "M01-L"},
+    "data": {
+      "index": "ghostwise-halfling",
+      "name": "Ghostwise Halfling",
+      "race": {"key": "srd5.1:race:halfling", "name": "Halfling"},
+      "ability_bonuses": [{"ability_score": {"key": "srd5.1:ability:wis", "name": "WIS"}, "bonus": 1}],
+      "starting_proficiencies": [],
+      "features": [{"key": "scag:feature:silent-speech", "name": "Silent Speech"}]
+    }
+  },
+  {
+    "key": "scag:subrace:deep-gnome",
+    "index": "deep-gnome",
+    "name": "Deep Gnome (Svirfneblin)",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "provenance": {"rules_source": "Sword Coast Adventurer's Guide (2015)", "scope": "M01-L"},
+    "data": {
+      "index": "deep-gnome",
+      "name": "Deep Gnome (Svirfneblin)",
+      "race": {"key": "srd5.1:race:gnome", "name": "Gnome"},
+      "ability_bonuses": [{"ability_score": {"key": "srd5.1:ability:dex", "name": "DEX"}, "bonus": 1}],
+      "languages": [{"key": "srd5.1:language:undercommon", "name": "Undercommon"}],
+      "starting_proficiencies": [],
+      "features": [
+        {"key": "scag:feature:deep-gnome-superior-darkvision", "name": "Superior Darkvision"},
+        {"key": "scag:feature:stone-camouflage", "name": "Stone Camouflage"}
+      ]
+    }
+  }
+]
