@@ -521,8 +521,13 @@ def _apply_movement_grants(
 ) -> None:
     if not isinstance(raw_grants, list):
         return
+    # Only unconditional speeds belong in the immutable Build. A conditional
+    # grant is not true for every Current State, so it stays typed content
+    # metadata and is resolved by effective_movement() at read time.
     for raw in raw_grants:
         movement = ConditionalMovementGrantData.model_validate(raw)
+        if movement.condition is not None:
+            continue
         speeds[movement.mode] = movement.speed
 
 
@@ -604,6 +609,8 @@ def compile_race_variant(
         if option.keep_target:
             continue
         for movement in option.movement:
+            if movement.condition is not None:
+                continue
             speeds[movement.mode] = movement.speed
         if option.spell_choice is None:
             continue

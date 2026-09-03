@@ -76,17 +76,7 @@
             {
               "id": "winged",
               "label": "Winged",
-              "grants": [{"key": "scag:feature:winged-tiefling", "name": "Winged"}],
-              "movement": [
-                {
-                  "mode": "fly",
-                  "speed": 30,
-                  "condition": {
-                    "kind": "not_wearing_armor_category",
-                    "armor_category": "heavy"
-                  }
-                }
-              ]
+              "grants": [{"key": "scag:feature:winged-tiefling", "name": "Winged"}]
             }
           ]
         }
