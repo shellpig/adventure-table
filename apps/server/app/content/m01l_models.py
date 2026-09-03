@@ -47,24 +47,35 @@ class RacialSpellAccessData(StrictModel):
     uses_spell_slot: Literal[False] = False
     uses_per_rest: int | None = Field(default=None, ge=1)
     recharge_types: list[RestType] = Field(default_factory=list)
-    # Backward-compatible authoring input used by M01-D/E data. New M01-L data
-    # writes recharge_types instead; runtime compilation consumes only that view.
+    # M01-D/E persisted singleton rest_type in a few rows. Keep accepting that
+    # field for compatibility, while new authoring uses recharge_types only.
     rest_type: RestType | None = None
     runtime_restrictions: list[RacialSpellRuntimeRestrictionData] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
-    def normalize_legacy_rest_type(cls, value: object) -> object:
+    def normalize_legacy_recharge_shapes(cls, value: object) -> object:
         if not isinstance(value, dict):
             return value
         payload = dict(value)
-        legacy = payload.get("rest_type")
+
+        legacy_uses = payload.pop("uses", None)
+        if payload.get("uses_per_rest") is None and legacy_uses is not None:
+            payload["uses_per_rest"] = legacy_uses
+
+        legacy_recharge = payload.pop("recharge", None)
+        singleton_rest_type = payload.get("rest_type")
         recharge = payload.get("recharge_types")
-        if legacy is not None:
-            if recharge in (None, []):
-                payload["recharge_types"] = [legacy]
-            elif isinstance(recharge, list) and legacy not in recharge:
+        if recharge in (None, []):
+            if singleton_rest_type is not None:
+                payload["recharge_types"] = [singleton_rest_type]
+            elif legacy_recharge is not None:
+                payload["recharge_types"] = [legacy_recharge]
+        elif isinstance(recharge, list):
+            if singleton_rest_type is not None and singleton_rest_type not in recharge:
                 raise ValueError("legacy rest_type conflicts with recharge_types")
+            if legacy_recharge is not None and legacy_recharge not in recharge:
+                raise ValueError("legacy recharge conflicts with recharge_types")
         return payload
 
     @field_validator("recharge_types")
