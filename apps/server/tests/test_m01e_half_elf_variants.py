@@ -341,10 +341,12 @@ def test_drow_magic_uses_character_level_thresholds_and_separate_rest_metadata(
 
     for spell_key in {"srd5.1:spell:faerie-fire", "srd5.1:spell:darkness"}.intersection(expected):
         assert by_spell[spell_key].uses_per_rest == 1
-        assert by_spell[spell_key].rest_type == "long_rest"
+        assert by_spell[spell_key].recharge_types == ("long_rest",)
+        assert by_spell[spell_key].rest_type is None
 
     dancing_lights = by_spell["srd5.1:spell:dancing-lights"]
     assert dancing_lights.uses_per_rest is None
+    assert dancing_lights.recharge_types == ()
     assert dancing_lights.rest_type is None
 
 
