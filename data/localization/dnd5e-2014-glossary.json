@@ -1602,6 +1602,150 @@
       "reference_source": "5etools",
       "decision_note": "Thief level 17 feature.",
       "reviewed": true
+    },
+    {
+      "en": "Sorcerous Origin",
+      "zh-TW": "術法起源",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Sorcerer subclass archetype.",
+      "reviewed": true
+    },
+    {
+      "en": "Font of Magic",
+      "zh-TW": "魔力泉湧",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Sorcerer level 2 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Flexible Casting",
+      "zh-TW": "易變施法",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Sorcerer level 2 feature option.",
+      "reviewed": true
+    },
+    {
+      "en": "Sorcerous Restoration",
+      "zh-TW": "術法復原",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Sorcerer level 20 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Sorcerous Versatility",
+      "zh-TW": "術法變換",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Sorcerer level 4 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Careful Spell",
+      "zh-TW": "謹慎法術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Metamagic option.",
+      "reviewed": true
+    },
+    {
+      "en": "Distant Spell",
+      "zh-TW": "遠程法術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Metamagic option.",
+      "reviewed": true
+    },
+    {
+      "en": "Empowered Spell",
+      "zh-TW": "強效法術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Metamagic option.",
+      "reviewed": true
+    },
+    {
+      "en": "Extended Spell",
+      "zh-TW": "延時法術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Metamagic option.",
+      "reviewed": true
+    },
+    {
+      "en": "Heightened Spell",
+      "zh-TW": "升階法術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Metamagic option.",
+      "reviewed": true
+    },
+    {
+      "en": "Quickened Spell",
+      "zh-TW": "瞬發法術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Metamagic option.",
+      "reviewed": true
+    },
+    {
+      "en": "Subtle Spell",
+      "zh-TW": "精妙法術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Metamagic option.",
+      "reviewed": true
+    },
+    {
+      "en": "Twinned Spell",
+      "zh-TW": "孿生法術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Metamagic option.",
+      "reviewed": true
+    },
+    {
+      "en": "Seeking Spell",
+      "zh-TW": "追蹤法術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "TCE Metamagic option.",
+      "reviewed": true
+    },
+    {
+      "en": "Dragon Ancestor",
+      "zh-TW": "龍族血統",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Draconic Bloodline level 1 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Draconic Resilience",
+      "zh-TW": "龍族韌性",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Draconic Bloodline level 1 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Dragon Wings",
+      "zh-TW": "龍之翼",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Draconic Bloodline level 14 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Draconic Presence",
+      "zh-TW": "真龍威儀",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Draconic Bloodline level 18 feature.",
+      "reviewed": true
     }
   ]
 }

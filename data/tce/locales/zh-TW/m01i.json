@@ -137,7 +137,7 @@
       "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充術士的職業法術列表。"
     },
     "tce:feature:sorcerous-versatility": {
-      "name": "術士多樣性",
+      "name": "術法變換",
       "data.desc.0": "在術士取得屬性值提升的等級，可重新選擇一個戲法或超魔法選項。"
     },
     "tce:feature:sorcerer-metamagic-options": {
@@ -229,7 +229,7 @@
       "data.desc.0": "《塔莎的萬事坩堝》新增的戰鬥大師戰技選項。"
     },
     "tce:feature:metamagic-seeking-spell": {
-      "name": "追尋法術",
+      "name": "追蹤法術",
       "data.desc.0": "消耗術法點重擲一次未命中的法術攻擊；此選項可與另一個超魔法選項併用。"
     },
     "tce:feature:metamagic-transmuted-spell": {
