@@ -123,6 +123,13 @@ def feature_mode_definitions(
     build: CharacterBuild,
     registry: ContentRegistry,
 ) -> tuple[FeatureModeDefinition, ...]:
+    """Return only feature modes owned by the M01-M data-defined contract.
+
+    ``CharacterState.feature_modes`` predates M01-M and is also used by the
+    Artificer subsystem. Modes without a typed ``feature_mode`` descriptor are
+    intentionally left to their owning subsystem instead of being claimed here.
+    """
+
     definitions: list[FeatureModeDefinition] = []
     seen_keys: set[str] = set()
     for feature_ref in build.feature_refs:
@@ -156,7 +163,13 @@ def initial_feature_modes(
     registry: ContentRegistry,
     initial_state_seed: dict[str, object] | None = None,
 ) -> dict[str, str]:
-    """Resolve initial Current-State modes from content defaults plus Draft seed."""
+    """Merge M01-M defaults into the shared Current-State feature-mode map.
+
+    Existing subsystems such as M01-H Artificer already own keys in the same map.
+    Preserve those seed values verbatim and validate only keys whose definition is
+    owned by this data-driven ancestry contract. Final state validation delegates
+    the preserved external keys back to their existing subsystem validators.
+    """
 
     definitions = {
         definition.key: definition
@@ -168,16 +181,16 @@ def initial_feature_modes(
         raw_modes = {}
     if not isinstance(raw_modes, dict):
         raise ValueError("initial_state_seed.feature_modes must be an object")
-    unknown = set(raw_modes) - set(definitions)
-    if unknown:
-        raise ValueError(
-            "initial feature mode is not granted by Build: " + ", ".join(sorted(unknown))
-        )
 
     result: dict[str, str] = {}
+    for key, selected in raw_modes.items():
+        if not isinstance(key, str) or not isinstance(selected, str):
+            raise ValueError("initial_state_seed.feature_modes must map strings to strings")
+        result[key] = selected
+
     for key, definition in definitions.items():
-        selected = raw_modes.get(key, definition.default)
-        if not isinstance(selected, str) or selected not in definition.options:
+        selected = result.get(key, definition.default)
+        if selected not in definition.options:
             raise ValueError(f"invalid initial feature mode {selected!r} for {key}")
         result[key] = selected
     return result
@@ -205,6 +218,8 @@ def validate_feature_modes(
     state: CharacterState,
     registry: ContentRegistry,
 ) -> None:
+    """Validate only M01-M-owned mode keys; preserve shared-map compatibility."""
+
     definitions = {
         definition.key: definition
         for definition in feature_mode_definitions(build, registry)
@@ -212,7 +227,7 @@ def validate_feature_modes(
     for key, selected in state.feature_modes.items():
         definition = definitions.get(key)
         if definition is None:
-            raise ValueError(f"feature mode is not granted by Build: {key}")
+            continue
         if selected not in definition.options:
             raise ValueError(f"invalid feature mode {selected!r} for {key}")
 
