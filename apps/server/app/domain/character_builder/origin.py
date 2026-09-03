@@ -44,9 +44,10 @@ def compile_origin(
 ) -> OriginCompilation:
     """Compile permanent origin grants and ancestry spell access.
 
-    M01-L keeps character-level gating from M01-D but normalizes all ancestry
-    spell recharge metadata to a multi-rest tuple. Legacy singleton rest_type
-    content remains readable through RacialSpellAccessData normalization.
+    M01-L keeps character-level gating from M01-D but normalizes ancestry spell
+    recharge metadata to a multi-rest tuple. Legacy singleton ``rest_type`` is
+    preserved only when the checked-in source row actually used that legacy
+    field, so new M01-L content persists only canonical ``recharge_types``.
     """
 
     languages: list[str] = []
@@ -157,6 +158,7 @@ def compile_origin(
                     casting_ability=access.casting_ability,
                     uses_per_rest=access.uses_per_rest,
                     recharge_types=tuple(access.recharge_types),
+                    rest_type=access.rest_type,
                 )
             )
 
