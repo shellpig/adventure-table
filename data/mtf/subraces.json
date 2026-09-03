@@ -60,7 +60,7 @@
       "proficiencies": [
         {"key": "srd5.1:proficiency:spears", "name": "Spears"},
         {"key": "srd5.1:proficiency:tridents", "name": "Tridents"},
-        {"key": "srd5.1:proficiency:light-crossbows", "name": "Crossbows, light"},
+        {"key": "srd5.1:proficiency:crossbows-light", "name": "Crossbows, light"},
         {"key": "srd5.1:proficiency:nets", "name": "Nets"}
       ],
       "features": [
