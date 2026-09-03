@@ -5,11 +5,11 @@
   "review_status": "draft-human-review-required",
   "entries": {
     "tce:feature:primal-knowledge": {
-      "name": "原始知識",
+      "name": "原初見聞",
       "data.desc.0": "獲得額外的實用知識，以更多職業技能訓練呈現。"
     },
     "tce:feature:instinctive-pounce": {
-      "name": "本能撲擊",
+      "name": "直覺猛撲",
       "data.desc.0": "進入狂暴時，你也能迅速移動到更有利的位置。"
     },
     "tce:feature:additional-bard-spells": {

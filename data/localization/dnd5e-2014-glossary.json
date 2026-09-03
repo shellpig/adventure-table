@@ -714,6 +714,78 @@
       "reference_source": "5etools",
       "decision_note": "Battle Master maneuver.",
       "reviewed": true
+    },
+    {
+      "en": "Danger Sense",
+      "zh-TW": "險境感知",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Barbarian level 2 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Primal Knowledge",
+      "zh-TW": "原初見聞",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Barbarian level 3 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Instinctive Pounce",
+      "zh-TW": "直覺猛撲",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Barbarian level 7 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Relentless Rage",
+      "zh-TW": "頑強狂暴",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Barbarian level 11 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Indomitable Might",
+      "zh-TW": "不屈勇武",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Barbarian level 18 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Frenzy",
+      "zh-TW": "狂怒",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Berserker level 3 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Mindless Rage",
+      "zh-TW": "無我狂暴",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Berserker level 6 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Intimidating Presence",
+      "zh-TW": "威懾之姿",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Berserker level 10 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Retaliation",
+      "zh-TW": "復仇",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Berserker level 14 feature.",
+      "reviewed": true
     }
   ]
 }
