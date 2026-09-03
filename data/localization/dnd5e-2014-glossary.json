@@ -906,6 +906,118 @@
       "reference_source": "5etools",
       "decision_note": "Lore Bard level 14 feature.",
       "reviewed": true
+    },
+    {
+      "en": "Channel Divinity",
+      "zh-TW": "引導神力",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Cleric / Paladin class feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Turn Undead",
+      "zh-TW": "驅散不死",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Cleric level 2 Channel Divinity.",
+      "reviewed": true
+    },
+    {
+      "en": "Harness Divine Power",
+      "zh-TW": "引導神力：神力掌控",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Cleric / Paladin optional Channel Divinity.",
+      "reviewed": true
+    },
+    {
+      "en": "Cantrip Versatility",
+      "zh-TW": "替換戲法",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Cleric / Druid optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Destroy Undead",
+      "zh-TW": "摧毀不死",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Cleric level 5 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Blessed Strikes",
+      "zh-TW": "受祝擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Cleric level 8 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Divine Intervention",
+      "zh-TW": "神力干預",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Cleric level 10 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Tempest Domain",
+      "zh-TW": "暴風領域",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Cleric subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Arcana Domain",
+      "zh-TW": "奧秘領域",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Cleric subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Disciple of Life",
+      "zh-TW": "生命門徒",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Life Cleric level 1 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Preserve Life",
+      "zh-TW": "引導神力：維繫生命",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Life Cleric level 2 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Blessed Healer",
+      "zh-TW": "祝聖醫者",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Life Cleric level 6 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Supreme Healing",
+      "zh-TW": "極效治療",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Life Cleric level 17 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Circle of Mortality",
+      "zh-TW": "凡命循環",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Grave Cleric level 1 feature.",
+      "reviewed": true
     }
   ]
 }

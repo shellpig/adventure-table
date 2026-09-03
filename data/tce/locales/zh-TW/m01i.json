@@ -29,15 +29,15 @@
       "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充牧師的職業法術列表。"
     },
     "tce:feature:cleric-harness-divine-power": {
-      "name": "駕馭神聖力量",
+      "name": "引導神力：神力掌控",
       "data.desc.0": "可將引導神力轉化為恢復施法資源的力量。"
     },
     "tce:feature:cleric-cantrip-versatility": {
-      "name": "戲法多樣性",
+      "name": "替換戲法",
       "data.desc.0": "在牧師取得屬性值提升的等級，可替換一個牧師戲法。"
     },
     "tce:feature:blessed-strikes": {
-      "name": "祝福打擊",
+      "name": "受祝擊",
       "data.desc.0": "以統一的神聖傷害選項，取代符合條件領域的神聖打擊或強效施法。"
     },
     "tce:feature:additional-druid-spells": {

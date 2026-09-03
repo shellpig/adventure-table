@@ -510,7 +510,7 @@
       "parent_class_ref": "srd5.1:class:cleric",
       "subclass_key": "phb2014:subclass:tempest",
       "name": "Tempest Domain",
-      "zh_name": "風暴領域",
+      "zh_name": "暴風領域",
       "acquisition_class_level": 1,
       "progression_levels": [
         1,
@@ -656,7 +656,7 @@
       "parent_class_ref": "srd5.1:class:cleric",
       "subclass_key": "scag:subclass:arcana",
       "name": "Arcana Domain",
-      "zh_name": "奧祕領域",
+      "zh_name": "奧秘領域",
       "acquisition_class_level": 1,
       "progression_levels": [
         1,
