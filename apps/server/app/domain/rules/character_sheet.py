@@ -78,6 +78,7 @@ class SpellAccessDTO(SheetModel):
     source_access_entry_id: str | None = None
     cast_at_level: int | None = None
     waive_components: tuple[str, ...] = ()
+    casting_modifiers: tuple[str, ...] = ()
     uses_spell_slot: bool | None = None
 
 
@@ -229,6 +230,7 @@ def build_character_sheet(
                 ),
                 cast_at_level=runtime.cast_at_level if runtime is not None else None,
                 waive_components=runtime.waive_components if runtime is not None else (),
+                casting_modifiers=runtime.casting_modifiers if runtime is not None else (),
                 uses_spell_slot=runtime.uses_spell_slot if runtime is not None else None,
             )
         )
