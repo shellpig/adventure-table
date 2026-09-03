@@ -17,6 +17,7 @@
         {"key": "srd5.1:language:common", "name": "Common"},
         {"key": "mtf:language:gith", "name": "Gith"}
       ],
+      "traits": [],
       "subraces": [
         {"key": "mtf:subrace:githyanki", "name": "Githyanki"},
         {"key": "mtf:subrace:githzerai", "name": "Githzerai"}
