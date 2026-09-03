@@ -375,6 +375,25 @@ def _spell_options(
     return tuple(result)
 
 
+def _class_has_attack_roll_cantrip(registry: ContentRegistry, class_ref: str) -> bool:
+    for spell in registry.list_kind("spell"):
+        if spell.data.get("level") != 0:
+            continue
+        if spell.data.get("attack_type") not in {"melee", "ranged"}:
+            continue
+        raw_classes = spell.data.get("classes")
+        if not isinstance(raw_classes, list):
+            continue
+        class_refs = {
+            reference_to_stable_key(item)
+            for item in raw_classes
+            if isinstance(item, dict)
+        }
+        if class_ref in class_refs:
+            return True
+    return False
+
+
 def _feat_nested_choices(
     draft: BuilderDraft,
     registry: ContentRegistry,
@@ -440,7 +459,33 @@ def _feat_nested_choices(
                 for ref in refs if isinstance(ref, str)
                 if (entry := registry.get_optional(ref)) is not None
             ) if isinstance(refs, list) else ()
-            options = _reference_options(entries)
+            if feat.key == "phb2014:feat:spell-sniper":
+                options = tuple(
+                    BuilderChoiceOption(
+                        option_id=entry.key,
+                        label=_entry_label(entry),
+                        kind=BuilderOptionKind.REFERENCE,
+                        reference_id=entry.key,
+                        disabled_reason=(
+                            "This class has no cantrips that require an attack roll in 5e 2014 rules."
+                            if not _class_has_attack_roll_cantrip(registry, entry.key)
+                            else None
+                        ),
+                        disabled_reason_code=(
+                            "feat_spell_source_no_attack_cantrip"
+                            if not _class_has_attack_roll_cantrip(registry, entry.key)
+                            else None
+                        ),
+                        disabled_reason_params=(
+                            {"class_ref": entry.key}
+                            if not _class_has_attack_roll_cantrip(registry, entry.key)
+                            else {}
+                        ),
+                    )
+                    for entry in entries
+                )
+            else:
+                options = _reference_options(entries)
         elif kind == "spell":
             source_choice = raw.get("from_source_choice")
             source_ref = None

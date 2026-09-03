@@ -142,6 +142,24 @@ describe('M02-G/H system-owned messages', () => {
     expect(localizedDisabledReason(original, 'en')).toBe(original)
   })
 
+  it('localizes spell sniper no attack cantrip disabled reason in both locales', () => {
+    const payload = installDynamicLocalizedBuilderPayload({
+      choice_id: 'asi:wizard:4:feat:phb2014:feat:spell-sniper:spell-source',
+      option_id: 'srd5.1:class:bard',
+      disabled_reason: 'This class has no cantrips that require an attack roll in 5e 2014 rules.',
+      disabled_reason_code: 'feat_spell_source_no_attack_cantrip',
+      disabled_reason_params: { class_ref: 'srd5.1:class:bard' },
+    })
+
+    expect(payload.disabled_reason_code).toBe('feat_spell_source_no_attack_cantrip')
+    expect(localizedDisabledReason(payload.disabled_reason, 'zh-TW', payload.disabled_reason_code)).toBe(
+      '此職業在 5e 2014 規則中沒有需要攻擊擲骰的戲法。',
+    )
+    expect(localizedDisabledReason(payload.disabled_reason, 'en', payload.disabled_reason_code)).toBe(
+      'This class has no cantrips that require an attack roll in 5e 2014 rules.',
+    )
+  })
+
   it('localizes request failures without requiring a browser document', () => {
     const zhError = createLocalizedRequestError('not_found', 404, 'Draft not found', 'zh-TW')
     const enError = createLocalizedRequestError('not_found', 404, 'Draft not found', 'en')

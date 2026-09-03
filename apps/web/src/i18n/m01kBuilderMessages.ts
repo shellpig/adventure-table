@@ -116,6 +116,11 @@ function disabledReason(code: string, params: MessageParams, locale: Locale): st
       ? '請先選擇此專長的施法來源職業。'
       : "Choose the feat's spellcasting source first."
   }
+  if (code === 'feat_spell_source_no_attack_cantrip') {
+    return locale === 'zh-TW'
+      ? '此職業在 5e 2014 規則中沒有需要攻擊擲骰的戲法。'
+      : 'This class has no cantrips that require an attack roll in 5e 2014 rules.'
+  }
   return undefined
 }
 

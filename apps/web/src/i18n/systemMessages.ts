@@ -160,6 +160,10 @@ const DISABLED_REASON_MESSAGES: Record<string, LocalizedMessage> = {
     en: (params) => structuredRequirements(params, 'en') ? `Requires ${structuredRequirements(params, 'en')}.` : 'The feat prerequisites are not met.',
   },
   unsupported_feat_prerequisite: { 'zh-TW': '此專長使用目前尚未支援的先決條件格式。', en: 'This feat uses a prerequisite shape that is not currently supported.' },
+  feat_spell_source_no_attack_cantrip: {
+    'zh-TW': '此職業在 5e 2014 規則中沒有需要攻擊擲骰的戲法。',
+    en: 'This class has no cantrips that require an attack roll in 5e 2014 rules.',
+  },
   nested_choice_parent_required: { 'zh-TW': '必須先選擇對應的上層選項，才能使用此子選擇。', en: 'Choose the corresponding parent option first.' },
   unsupported_equipment_option: { 'zh-TW': '此起始裝備選項格式目前尚未支援。', en: 'This starting equipment option shape is not currently supported.' },
   spell_choices_future_step: { 'zh-TW': '法術選擇需在法術步驟中完成。', en: 'Spell choices are completed in the spell step.' },

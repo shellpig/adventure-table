@@ -18,6 +18,7 @@ RESILIENT = "phb2014:feat:resilient"
 SKILLED = "phb2014:feat:skilled"
 TOUGH = "phb2014:feat:tough"
 WEAPON_MASTER = "phb2014:feat:weapon-master"
+SPELL_SNIPER = "phb2014:feat:spell-sniper"
 
 BATTLE_MASTER_POOL = "feature:superiority-dice"
 
@@ -545,3 +546,65 @@ def test_observant_stacks_on_top_of_proficiency_and_expertise_order() -> None:
     assert passive_investigation(build, content) == (
         passive_investigation(plain, content) + 5 + intelligence_delta
     )
+
+
+def test_spell_sniper_disables_bard_and_cleric_spell_sources() -> None:
+    content = S.registry()
+    # Draft with Spell Sniper, without picking nested choices yet
+    result, _, opportunity = S.feat_draft(
+        SPELL_SNIPER,
+        spec=S.WIZARD_L8,
+        content=content,
+        fill_rest=False,
+    )
+    source_choice = _child(result, opportunity, "spell-source")
+    options_by_ref = {opt.reference_id: opt for opt in source_choice.options}
+
+    # All 6 classes from the PHB text are present
+    assert set(options_by_ref.keys()) == {
+        "srd5.1:class:bard",
+        "srd5.1:class:cleric",
+        "srd5.1:class:druid",
+        "srd5.1:class:sorcerer",
+        "srd5.1:class:warlock",
+        "srd5.1:class:wizard",
+    }
+
+    # Bard and Cleric are disabled because they have no attack-roll cantrips in 5e 2014
+    assert options_by_ref["srd5.1:class:bard"].disabled_reason_code == "feat_spell_source_no_attack_cantrip"
+    assert options_by_ref["srd5.1:class:bard"].disabled_reason is not None
+    assert options_by_ref["srd5.1:class:cleric"].disabled_reason_code == "feat_spell_source_no_attack_cantrip"
+    assert options_by_ref["srd5.1:class:cleric"].disabled_reason is not None
+
+    # Druid, Sorcerer, Warlock, Wizard are enabled
+    for class_ref in ("srd5.1:class:druid", "srd5.1:class:sorcerer", "srd5.1:class:warlock", "srd5.1:class:wizard"):
+        assert options_by_ref[class_ref].disabled_reason is None
+        assert options_by_ref[class_ref].disabled_reason_code is None
+
+    # Selecting a disabled source (Bard) produces illegal_feat_nested_choice
+    illegal_result, _, _ = S.feat_draft(
+        SPELL_SNIPER,
+        spec=S.WIZARD_L8,
+        content=content,
+        nested={"spell-source": ("srd5.1:class:bard",)},
+        fill_rest=False,
+    )
+    assert "illegal_feat_nested_choice" in S.issue_codes(illegal_result)
+    cantrip_choice = _child(illegal_result, opportunity, "cantrip")
+    assert cantrip_choice.disabled_reason_code == "feat_spell_source_no_attack_cantrip"
+
+    # Selecting a legal source (Druid) and an attack-roll cantrip (Thorn Whip) succeeds
+    legal_result, _, _ = S.feat_draft(
+        SPELL_SNIPER,
+        spec=S.WIZARD_L8,
+        content=content,
+        nested={
+            "spell-source": ("srd5.1:class:druid",),
+            "cantrip": ("phb2014:spell:thorn-whip",),
+        },
+    )
+    assert S.issue_codes(legal_result) == set()
+    build = legal_result.build_candidate
+    assert build is not None
+    assert any(spell.spell_key == "phb2014:spell:thorn-whip" for spell in build.spell_access_entries)
+

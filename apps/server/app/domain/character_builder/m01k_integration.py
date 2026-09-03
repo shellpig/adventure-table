@@ -12,6 +12,7 @@ from app.domain.character_builder.basics import resolve_creation_summary
 from app.domain.character_builder.compiler import BuilderCompileResult
 from app.domain.character_builder.m01k_feats import (
     FeatEvaluationContext,
+    _class_has_attack_roll_cantrip,
     feat_failure_detail,
     feat_failure_reason,
 )
@@ -622,7 +623,30 @@ def _spell_sniper_choices(
     result: list[BuilderChoice] = []
     issues: list[BuilderIssue] = []
     for choice in choices:
-        if choice.source_ref != SPELL_SNIPER or choice.option_source != "content:feat:spell":
+        if choice.source_ref != SPELL_SNIPER:
+            result.append(choice)
+            continue
+
+        if choice.option_source == "content:feat:spellcasting_source":
+            options = tuple(
+                option.model_copy(
+                    update={
+                        "disabled_reason": (
+                            "This class has no cantrips that require an attack roll in 5e 2014 rules."
+                        ),
+                        "disabled_reason_code": "feat_spell_source_no_attack_cantrip",
+                        "disabled_reason_params": {"class_ref": option.reference_id or ""},
+                    }
+                )
+                if option.reference_id is not None
+                and not _class_has_attack_roll_cantrip(registry, option.reference_id)
+                else option
+                for option in choice.options
+            )
+            result.append(choice.model_copy(update={"options": options}))
+            continue
+
+        if choice.option_source != "content:feat:spell":
             result.append(choice)
             continue
 
@@ -652,7 +676,11 @@ def _spell_sniper_choices(
                         *illegal,
                     )
                 )
-        result.append(choice.model_copy(update={"options": legal_options}))
+        choice_update: dict[str, Any] = {"options": legal_options}
+        if not legal_options and choice.disabled_reason is None:
+            choice_update["disabled_reason"] = "This class has no cantrips that require an attack roll in 5e 2014 rules."
+            choice_update["disabled_reason_code"] = "feat_spell_source_no_attack_cantrip"
+        result.append(choice.model_copy(update=choice_update))
     return tuple(result), tuple(issues)
 
 
