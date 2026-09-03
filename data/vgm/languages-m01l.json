@@ -1,0 +1,4 @@
+[
+  {"key":"vgm:language:auran","index":"auran","name":"Auran","source":"vgm","ruleset":"dnd5e-2014","data":{"index":"auran","name":"Auran","type":"Exotic","typical_speakers":["Air elementals"],"script":"Dwarvish"}},
+  {"key":"vgm:language:aquan","index":"aquan","name":"Aquan","source":"vgm","ruleset":"dnd5e-2014","data":{"index":"aquan","name":"Aquan","type":"Exotic","typical_speakers":["Water elementals"],"script":"Dwarvish"}}
+]

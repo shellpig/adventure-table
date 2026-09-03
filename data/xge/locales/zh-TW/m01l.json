@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "xge",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "xge:spell:wall-of-water": {
+      "name": "水牆術",
+      "data.desc.0": "你在射程內的地面上創造一道水牆。你可以使牆體筆直延伸，或形成環形；牆內空間視為困難地形，穿過水牆的遠程武器攻擊具有劣勢，火焰傷害穿牆時減半，造成寒冷傷害的法術可以凍結牆體的一部分。"
+    }
+  }
+}

@@ -44,6 +44,7 @@
     "data": {
       "index": "half-elf-fleet-of-foot",
       "name": "Fleet of Foot",
+      "desc": ["Your base walking speed increases to 35 feet."],
       "movement": {"mode": "walk", "speed": 35, "temporary": false}
     }
   },
@@ -68,6 +69,7 @@
     "data": {
       "index": "half-elf-swimming-speed",
       "name": "Swimming Speed",
+      "desc": ["You have a swimming speed of 30 feet."],
       "movement": {"mode": "swim", "speed": 30, "temporary": false}
     }
   },
@@ -80,6 +82,7 @@
     "data": {
       "index": "half-elf-drow-magic",
       "name": "Drow Magic",
+      "desc": ["You know the dancing lights cantrip. At 3rd level you can cast faerie fire once per long rest, and at 5th level darkness once per long rest. Charisma is your spellcasting ability for these spells."],
       "racial_spell_access": [
         {
           "spell": {"key": "srd5.1:spell:dancing-lights", "name": "Dancing Lights"},

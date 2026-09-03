@@ -68,7 +68,25 @@ class SpellAccessEntry(FrozenModel):
     access_type: SpellAccessType
     casting_ability: str | None = Field(default=None, max_length=40)
     uses_per_rest: int | None = Field(default=None, ge=1)
+    recharge_types: tuple[RestType, ...] = ()
+    # Compatibility field for pre-M01-L persisted Builds. New writers use only
+    # recharge_types; legacy singleton rest_type is normalized on read.
     rest_type: RestType | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_legacy_rest_type(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        payload = dict(value)
+        legacy = payload.get("rest_type")
+        recharge = payload.get("recharge_types")
+        if legacy is not None:
+            if recharge in (None, (), []):
+                payload["recharge_types"] = (legacy,)
+            elif isinstance(recharge, (list, tuple)) and legacy not in recharge:
+                raise ValueError("legacy spell access rest_type conflicts with recharge_types")
+        return payload
 
     @field_validator("spell_key")
     @classmethod
@@ -80,10 +98,21 @@ class SpellAccessEntry(FrozenModel):
     def source_key_is_stable(cls, value: str) -> str:
         return require_stable_key(value)
 
+    @field_validator("recharge_types")
+    @classmethod
+    def recharge_types_are_unique(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if len(value) != len(set(value)):
+            raise ValueError("spell access recharge_types must be unique")
+        return value
+
     @model_validator(mode="after")
     def usage_metadata_is_consistent(self) -> "SpellAccessEntry":
-        if (self.uses_per_rest is None) != (self.rest_type is None):
-            raise ValueError("spell access uses_per_rest and rest_type must be declared together")
+        if (self.uses_per_rest is None) != (len(self.recharge_types) == 0):
+            raise ValueError(
+                "spell access uses_per_rest and recharge_types must be declared together"
+            )
+        if self.rest_type is not None and self.rest_type not in self.recharge_types:
+            raise ValueError("legacy spell access rest_type must be included in recharge_types")
         return self
 
 

@@ -22,6 +22,7 @@ import type { UiCopyKey } from '../../i18n/uiCopy'
 import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy } from '../../i18n/useUiCopy'
 import { assignStandardArrayScore } from './abilityAssignment'
+import { formatSignedBonus } from './abilityPresentation'
 import { ClassProgressionStep } from './ClassProgressionStep'
 import { EquipmentReviewStep, EquipmentStep } from './EquipmentReviewStep'
 import {
@@ -766,7 +767,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   <div key={score.ability}>
                     <span>{score.ability.slice(0, 3).toUpperCase()}</span>
                     <strong>{score.effective}</strong>
-                    <small>{score.base} {score.permanent_bonus ? `+ ${score.permanent_bonus}` : ''}{score.overridden ? ` · ${t('builder.summary.override')}` : ''}</small>
+                    <small>{score.base} {formatSignedBonus(score.permanent_bonus)}{score.overridden ? ` · ${t('builder.summary.override')}` : ''}</small>
                   </div>
                 ))}
               </div>

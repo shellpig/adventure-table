@@ -1,0 +1,29 @@
+{
+  "phase": "M01-L",
+  "ruleset": "dnd5e-2014",
+  "rows": [
+    {"source":"vgm","kind":"race","key":"vgm:race:bugbear","name":"Bugbear","parent_race_ref":null,"disposition":"implemented"},
+    {"source":"vgm","kind":"race","key":"vgm:race:firbolg","name":"Firbolg","parent_race_ref":null,"disposition":"implemented"},
+    {"source":"vgm","kind":"race","key":"vgm:race:goliath","name":"Goliath","parent_race_ref":null,"disposition":"implemented"},
+    {"source":"vgm","kind":"race","key":"vgm:race:kenku","name":"Kenku","parent_race_ref":null,"disposition":"implemented"},
+    {"source":"vgm","kind":"race","key":"vgm:race:kobold","name":"Kobold","parent_race_ref":null,"disposition":"implemented"},
+    {"source":"vgm","kind":"race","key":"vgm:race:lizardfolk","name":"Lizardfolk","parent_race_ref":null,"disposition":"implemented"},
+    {"source":"vgm","kind":"race","key":"vgm:race:orc","name":"Orc","parent_race_ref":null,"disposition":"implemented"},
+    {"source":"vgm","kind":"race","key":"vgm:race:tabaxi","name":"Tabaxi","parent_race_ref":null,"disposition":"implemented"},
+    {"source":"vgm","kind":"race","key":"vgm:race:triton","name":"Triton","parent_race_ref":null,"disposition":"implemented"},
+    {"source":"vgm","kind":"race","key":"vgm:race:yuan-ti-pureblood","name":"Yuan-ti Pureblood","parent_race_ref":null,"disposition":"implemented"},
+    {"source":"scag","kind":"subrace","key":"scag:subrace:ghostwise-halfling","name":"Ghostwise Halfling","parent_race_ref":"srd5.1:race:halfling","disposition":"implemented"},
+    {"source":"scag","kind":"subrace","key":"scag:subrace:deep-gnome","name":"Deep Gnome (Svirfneblin)","parent_race_ref":"srd5.1:race:gnome","disposition":"implemented"}
+  ],
+  "legacy_vgm_race_keys": [
+    "vgm:race:goblin",
+    "vgm:race:hobgoblin",
+    "vgm:race:aasimar"
+  ],
+  "required_dependencies": [
+    "vgm:language:auran",
+    "vgm:language:aquan",
+    "xge:spell:wall-of-water"
+  ],
+  "note": "Exact M01-L runtime identity accounting. Counts alone are not a closeout gate."
+}

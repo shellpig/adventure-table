@@ -1,0 +1,33 @@
+[
+  {
+    "key": "xge:spell:wall-of-water",
+    "index": "wall-of-water",
+    "name": "Wall of Water",
+    "source": "xge",
+    "ruleset": "dnd5e-2014",
+    "provenance": {
+      "rules_source": "Xanathar's Guide to Everything (2017)",
+      "scope": "M01-L Triton racial spell dependency"
+    },
+    "data": {
+      "index": "wall-of-water",
+      "name": "Wall of Water",
+      "desc": ["Create a shaped wall of water that obscures and impedes attacks and interacts with cold damage while you maintain concentration."],
+      "casting_time": "1 action",
+      "range": "60 feet",
+      "duration": "Concentration, up to 10 minutes",
+      "components": ["V", "S", "M"],
+      "material": "a drop of water",
+      "ritual": false,
+      "concentration": true,
+      "level": 3,
+      "school": {"key": "srd5.1:magic-school:evocation", "name": "Evocation"},
+      "classes": [
+        {"key": "srd5.1:class:druid", "name": "Druid"},
+        {"key": "srd5.1:class:sorcerer", "name": "Sorcerer"},
+        {"key": "srd5.1:class:wizard", "name": "Wizard"}
+      ],
+      "subclasses": []
+    }
+  }
+]

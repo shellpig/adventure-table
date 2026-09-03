@@ -1,0 +1,5 @@
+[
+  {"key":"scag:feature:silent-speech","index":"silent-speech","name":"Silent Speech","source":"scag","ruleset":"dnd5e-2014","data":{"index":"silent-speech","name":"Silent Speech","desc":["You can speak telepathically to one creature you can see within 30 feet. The creature understands you if it can understand at least one language."],"runtime_execution":"manual","telepathy_range_ft":30}},
+  {"key":"scag:feature:deep-gnome-superior-darkvision","index":"deep-gnome-superior-darkvision","name":"Superior Darkvision","source":"scag","ruleset":"dnd5e-2014","data":{"index":"deep-gnome-superior-darkvision","name":"Superior Darkvision","desc":["Your darkvision has a radius of 120 feet."],"runtime_execution":"manual","darkvision_ft":120}},
+  {"key":"scag:feature:stone-camouflage","index":"stone-camouflage","name":"Stone Camouflage","source":"scag","ruleset":"dnd5e-2014","data":{"index":"stone-camouflage","name":"Stone Camouflage","desc":["You have advantage on Dexterity (Stealth) checks made to hide in rocky terrain."],"runtime_execution":"deferred_roll"}}
+]

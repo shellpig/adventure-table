@@ -2,22 +2,23 @@
   "id": "xge",
   "name": "Xanathar's Guide to Everything",
   "ruleset": "dnd5e-2014",
-  "version": "M01-J",
+  "version": "M01-L",
   "provenance": {
     "type": "repository-reference-runtime",
     "reference": "docs/暫用規則資訊/子職業_*.md",
-    "status": "M01-J subclasses are materialized deterministically from verified repository reference documents at registry load"
+    "status": "M01-J subclasses are ordinary checked-in pack data; M01-L adds the Wall of Water spell required by Triton racial spell access."
   },
   "usage": {
     "scope": "private-friends-project",
-    "physical_file_policy": "The installed pack boundary is explicit; M01-J subclass rows are generated in the validated reference overlay rather than duplicated into vendored JSON."
+    "physical_file_policy": "Enabled pack content is explicit and checked in; runtime never parses reference Markdown."
   },
   "categories": [
     {"name": "features-m01j-01", "kind": "feature", "file": "features-m01j-01.json", "count": 80},
     {"name": "features-m01j-02", "kind": "feature", "file": "features-m01j-02.json", "count": 28},
     {"name": "levels-m01j-01", "kind": "level", "file": "levels-m01j-01.json", "count": 80},
     {"name": "levels-m01j-02", "kind": "level", "file": "levels-m01j-02.json", "count": 46},
-    {"name": "subclasses-m01j-01", "kind": "subclass", "file": "subclasses-m01j-01.json", "count": 31}
+    {"name": "subclasses-m01j-01", "kind": "subclass", "file": "subclasses-m01j-01.json", "count": 31},
+    {"name": "spells-m01l", "kind": "spell", "file": "spells-m01l.json", "count": 1}
   ],
-  "total_entries": 265
+  "total_entries": 266
 }

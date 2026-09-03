@@ -3,7 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 
+from pydantic import ValidationError
+
 from app.content.identity import reference_to_stable_key, stable_key_is_kind
+from app.content.m01l_models import RacialSpellAccessData
 from app.content.registry import ContentRegistry
 from app.domain.character.schemas import SpellAccessEntry
 from app.domain.character_builder.schemas import BuilderGrantSummary, BuilderIssue, BuilderIssueSeverity
@@ -39,11 +42,12 @@ def compile_origin(
     target_level: int | None,
     registry: ContentRegistry,
 ) -> OriginCompilation:
-    """Compile permanent origin selections that P1 did not previously persist.
+    """Compile permanent origin grants and ancestry spell access.
 
-    M01-D extends the existing origin compiler with character-level racial feature
-    gates. Content can declare ``minimum_character_level`` on a feature; direct
-    high-level Create and Level Up therefore share one eligibility rule.
+    M01-L keeps character-level gating from M01-D while normalizing ancestry
+    spell recharge metadata to the canonical multi-rest tuple. Legacy singleton
+    ``rest_type`` content is accepted by ``RacialSpellAccessData`` at read time,
+    but compiler output writes only ``recharge_types``.
     """
 
     languages: list[str] = []
@@ -112,7 +116,9 @@ def compile_origin(
 
         for index, raw in enumerate(raw_access):
             path = f"content.{feature_ref}.racial_spell_access.{index}"
-            if not isinstance(raw, dict):
+            try:
+                access = RacialSpellAccessData.model_validate(raw)
+            except (ValidationError, ValueError):
                 issues.append(
                     _issue(
                         "origin_rules_data_error",
@@ -122,25 +128,11 @@ def compile_origin(
                     )
                 )
                 continue
-            min_level = raw.get("min_character_level", 1)
-            if not isinstance(min_level, int) or min_level < 1:
-                issues.append(
-                    _issue(
-                        "origin_rules_data_error",
-                        path,
-                        f"{feature.name} has an invalid racial spell level gate.",
-                        feature_ref,
-                    )
-                )
+            if character_level < access.min_character_level:
                 continue
-            if character_level < min_level:
-                continue
-            spell = raw.get("spell")
             try:
-                spell_ref = (
-                    reference_to_stable_key(spell, kinds={"spell"})
-                    if isinstance(spell, dict)
-                    else None
+                spell_ref = reference_to_stable_key(
+                    access.spell.model_dump(exclude_none=True), kinds={"spell"}
                 )
             except ValueError:
                 spell_ref = None
@@ -155,48 +147,6 @@ def compile_origin(
                     )
                 )
                 continue
-            if raw.get("uses_spell_slot") is not False:
-                issues.append(
-                    _issue(
-                        "origin_rules_data_error",
-                        path,
-                        f"{feature.name} racial spell access must explicitly opt out of normal spell slots.",
-                        feature_ref,
-                        spell_ref,
-                    )
-                )
-                continue
-
-            casting_ability = raw.get("casting_ability")
-            if casting_ability is not None and not isinstance(casting_ability, str):
-                issues.append(
-                    _issue(
-                        "origin_rules_data_error",
-                        path,
-                        f"{feature.name} has an invalid racial spell casting ability.",
-                        feature_ref,
-                        spell_ref,
-                    )
-                )
-                continue
-            uses_per_rest = raw.get("uses_per_rest")
-            rest_type = raw.get("rest_type")
-            if uses_per_rest is not None or rest_type is not None:
-                if (
-                    not isinstance(uses_per_rest, int)
-                    or uses_per_rest < 1
-                    or rest_type not in {"short_rest", "long_rest"}
-                ):
-                    issues.append(
-                        _issue(
-                            "origin_rules_data_error",
-                            path,
-                            f"{feature.name} has invalid racial spell rest-use metadata.",
-                            feature_ref,
-                            spell_ref,
-                        )
-                    )
-                    continue
 
             access_entries.append(
                 SpellAccessEntry(
@@ -205,9 +155,9 @@ def compile_origin(
                     source_type="race",
                     source_key=feature_ref,
                     access_type="granted",
-                    casting_ability=casting_ability,
-                    uses_per_rest=uses_per_rest,
-                    rest_type=rest_type,
+                    casting_ability=access.casting_ability,
+                    uses_per_rest=access.uses_per_rest,
+                    recharge_types=tuple(access.recharge_types),
                 )
             )
 

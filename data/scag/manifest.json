@@ -2,42 +2,31 @@
   "id": "scag",
   "name": "Sword Coast Adventurer's Guide",
   "ruleset": "dnd5e-2014",
-  "version": "M01-J",
+  "version": "M01-L",
   "provenance": {
     "source_documents": [
       "docs/暫用規則資訊/背景_SCAG.md",
-      "docs/暫用規則資訊/半精靈變體_SCAG.md"
+      "docs/暫用規則資訊/半精靈變體_SCAG.md",
+      "docs/暫用規則資訊/種族_SCAG.md"
     ],
     "rules_source": "Sword Coast Adventurer's Guide (2015)",
     "note": "Private-project content pack assembled from rule references supplied in this repository."
   },
   "usage": {
-    "scope": "M01-C background expansion plus M01-E Half-Elf ancestry variants",
+    "scope": "M01-C backgrounds, M01-E Half-Elf ancestry variants, M01-J subclasses, and M01-L Ghostwise Halfling / Deep Gnome",
     "roleplay_inheritance_policy": "inherits_from reuses only personality/ideal/bond/flaw suggestions and never mechanics",
-    "race_variant_policy": "race-variant entries keep srd5.1:race:half-elf as the base race and replace grants only through declared stable grant identities"
+    "race_variant_policy": "race-variant entries keep srd5.1:race:half-elf as the base race and replace grants only through declared stable grant identities",
+    "runtime_policy": "Reference Markdown is authoring input only; runtime loads checked-in pack data."
   },
   "categories": [
-    {
-      "name": "backgrounds",
-      "kind": "background",
-      "file": "backgrounds.json",
-      "count": 13
-    },
-    {
-      "name": "features",
-      "kind": "feature",
-      "file": "features.json",
-      "count": 7
-    },
-    {
-      "name": "race-variants",
-      "kind": "race-variant",
-      "file": "race-variants.json",
-      "count": 4
-    },
+    {"name": "backgrounds", "kind": "background", "file": "backgrounds.json", "count": 13},
+    {"name": "features", "kind": "feature", "file": "features.json", "count": 7},
+    {"name": "race-variants", "kind": "race-variant", "file": "race-variants.json", "count": 4},
     {"name": "features-m01j-01", "kind": "feature", "file": "features-m01j-01.json", "count": 12},
     {"name": "levels-m01j-01", "kind": "level", "file": "levels-m01j-01.json", "count": 26},
-    {"name": "subclasses-m01j-01", "kind": "subclass", "file": "subclasses-m01j-01.json", "count": 6}
+    {"name": "subclasses-m01j-01", "kind": "subclass", "file": "subclasses-m01j-01.json", "count": 6},
+    {"name": "features-m01l", "kind": "feature", "file": "features-m01l.json", "count": 3},
+    {"name": "subraces-m01l", "kind": "subrace", "file": "subraces-m01l.json", "count": 2}
   ],
-  "total_entries": 68
+  "total_entries": 73
 }
