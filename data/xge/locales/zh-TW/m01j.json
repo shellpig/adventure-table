@@ -299,7 +299,7 @@
       "name": "戰鬥風格"
     },
     "xge:feature:swords-3-fighting-style-option-1-dueling": {
-      "name": "決鬥"
+      "name": "對決"
     },
     "xge:feature:swords-3-fighting-style-option-2-two-weapon-fighting": {
       "name": "雙武器戰鬥"
@@ -356,7 +356,7 @@
       "name": "鍛造領域"
     },
     "xge:subclass:glamour": {
-      "name": "魅惑學院"
+      "name": "迷惑學院"
     },
     "xge:subclass:gloom-stalker": {
       "name": "幽域追蹤者"

@@ -786,6 +786,126 @@
       "reference_source": "5etools",
       "decision_note": "Berserker level 14 feature.",
       "reviewed": true
+    },
+    {
+      "en": "Bardic Inspiration",
+      "zh-TW": "吟遊激勵",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bard level 1 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Jack of All Trades",
+      "zh-TW": "全能高手",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bard level 2 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Song of Rest",
+      "zh-TW": "紓壓曲",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bard level 2 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Bard College",
+      "zh-TW": "吟遊學院",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bard level 3 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Expertise",
+      "zh-TW": "專精",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bard level 3 and Rogue level 1 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Bardic Versatility",
+      "zh-TW": "多才詩人",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bard level 4 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Font of Inspiration",
+      "zh-TW": "激勵湧泉",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bard level 5 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Countercharm",
+      "zh-TW": "反制迷惑",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bard level 6 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Magical Secrets",
+      "zh-TW": "魔法秘密",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bard level 10 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "College of Lore",
+      "zh-TW": "軼聞學院",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bard subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "College of Glamour",
+      "zh-TW": "迷惑學院",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bard subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Bonus Proficiencies",
+      "zh-TW": "額外熟練",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bard / Rogue subclass feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Cutting Words",
+      "zh-TW": "語出驚人",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Lore Bard level 3 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Additional Magical Secrets",
+      "zh-TW": "額外魔法秘密",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Lore Bard level 6 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Peerless Skill",
+      "zh-TW": "絕代技能",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Lore Bard level 14 feature.",
+      "reviewed": true
     }
   ]
 }
