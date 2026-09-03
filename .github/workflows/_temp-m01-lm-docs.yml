@@ -1,0 +1,2156 @@
+name: Apply M01-L-M docs
+
+on:
+  push:
+    branches:
+      - docs/m01-l-m-spec
+    paths:
+      - .github/workflows/_temp-m01-lm-docs.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: docs/m01-l-m-spec
+          fetch-depth: 0
+
+      - name: Apply specification updates
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly one match, got {count}")
+              return text.replace(old, new, 1)
+
+          # -----------------------------------------------------------------
+          # 實作規格.md
+          # -----------------------------------------------------------------
+          path = Path("docs/M01/實作規格.md")
+          text = path.read_text(encoding="utf-8")
+
+          text = replace_once(
+              text,
+              "本文件定義 **目前已拍板的 M01-A～M01-K 每個 Subphase 完成後什麼必須為真**。",
+              "本文件定義 **目前已拍板的 M01-A～M01-M 每個 Subphase 完成後什麼必須為真**。",
+              "spec header scope",
+          )
+          text = replace_once(text, "最後更新：2026-09-02", "最後更新：2026-09-03", "spec date")
+          text = replace_once(
+              text,
+              """1. **SRD 5.1 角色內容量不足。**
+2. **Content Registry / StableKey / Builder 仍有 `srd5.1` 單一來源假設。**
+3. 使用者已提供一批 PHB / SCAG / GoS / VGM / VRGR / TCE 私人規則資料，需要正式轉成 runtime content。
+4. Variant / Lineage / Artificer / Optional Class Features / Fighting Styles / Subclasses / PHB Feats 會帶來幾種現有 P1 尚未正式表示的規則形狀，需要補最小通用能力。
+5. PHB 相對 SRD 缺少的 Feats / Spells 必須在 M01-K 補成正式 runtime catalog，而不是只停留在 reference Markdown。
+6. **Magic Items 延後。** `魔法物品_TCE.md` 保留為 reference，但完整 Magic Item / Attunement / item live-state 擴充不再是 M01 closeout blocker。""",
+              """1. **SRD 5.1 角色內容量不足。**
+2. **Content Registry / StableKey / Builder 仍有 `srd5.1` 單一來源假設。**
+3. 使用者已提供一批 PHB / SCAG / GoS / VGM / VRGR / XGE / TCE / MTF 私人規則資料，需要正式轉成 runtime content。
+4. Variant / Lineage / Artificer / Optional Class Features / Fighting Styles / Subclasses / PHB Feats / expanded races 會帶來幾種現有 P1 尚未正式表示的規則形狀，需要補最小通用能力。
+5. PHB 相對 SRD 缺少的 Feats / Spells 已在 M01-K 補成正式 runtime catalog，而不是只停留在 reference Markdown。
+6. M01-L / M01-M 進一步補齊目前已拍板的 VGM / SCAG / MTF 種族範圍，並補上 Race/Subrace movement、negative racial modifier compatibility、Natural Armor、Tiefling replacement composition、conditional movement 與 live ancestry mode 等最小通用能力。
+7. **Magic Items 延後。** `魔法物品_TCE.md` 保留為 reference，但完整 Magic Item / Attunement / item live-state 擴充不再是 M01 closeout blocker。""",
+              "spec positioning bullets",
+          )
+          text = replace_once(
+              text,
+              """→ 回到 M01-D → ... → M01-K
+→ 未來 M01 Subphase(s) — TBD
+→ Full M01 Integration & Closeout — Subphase ID TBD""",
+              """→ 回到 M01-D → ... → M01-K → M01-L → M01-M
+→ Full M01 Integration & Closeout — Subphase ID TBD""",
+              "spec schedule",
+          )
+          text = replace_once(
+              text,
+              "**原 `M01-K — Full M01 Integration & Closeout` 已取消固定編號。** 因 M01-K 之後仍可能新增規則內容，Full M01 Integration & Closeout 的實際 Subphase ID 暫不決定；只有在後續 M01 scope 確定後才編號。",
+              "**原 `M01-K — Full M01 Integration & Closeout` 已取消固定編號。** M01-L / M01-M 現已正式拍板並固定接在 K 後；Full M01 Integration & Closeout 的實際 Subphase ID 仍暫不決定，避免未來又有已拍板內容插入時重複改號。",
+              "spec closeout numbering note",
+          )
+          text = replace_once(
+              text,
+              """├── 半精靈變體_SCAG.md
+├── 地精_VGM.md
+├── 大地精_VGM.md
+├── 阿斯莫_VGM.md
+├── 半血裔_VRGR.md""",
+              """├── 半精靈變體_SCAG.md
+├── 種族_SCAG.md
+├── 種族_VGM.md
+├── 種族_MTF.md
+├── 地精_VGM.md
+├── 大地精_VGM.md
+├── 阿斯莫_VGM.md
+├── 半血裔_VRGR.md""",
+              "spec reference list",
+          )
+          text = replace_once(
+              text,
+              """禁止 runtime：
+
+- parse Markdown。
+- 依 Markdown 標題判規則。
+- 從 Markdown 即時生成 Builder choices。
+
+Markdown 可以保留 provenance / reference，也可以作為 authoring-time 規則文字來源，但不與正式 JSON 形成雙主來源。正式 runtime data 與 reference 若日後出現差異，runtime 一律以 `data/<pack>/...` 為準。""",
+              """禁止 runtime：
+
+- parse Markdown。
+- 依 Markdown 標題判規則。
+- 從 Markdown 即時生成 Builder choices。
+- 透過檔案路徑、URL、import、startup hook 或 lazy loader 回頭讀取 `docs/暫用規則資訊/`。
+- 因 reference Markdown 缺失而無法啟動 server、載入 Registry、產生 Builder choices 或開 Character Sheet。
+
+Markdown 可以保留 provenance / reference，也可以作為 authoring-time 規則文字來源，但不與正式 JSON 形成雙主來源。正式 runtime data 與 reference 若日後出現差異，runtime 一律以 `data/<pack>/...` 與既有 localization SSOT 為準。**正式 runtime image / package 即使完全不包含 `docs/`，M01-L / M01-M 功能也必須完整成立。**""",
+              "spec runtime boundary",
+          )
+          text = replace_once(
+              text,
+              """vrgr
+xge
+tce
+```""",
+              """vrgr
+xge
+tce
+mtf
+```""",
+              "spec pack identities",
+          )
+          text = replace_once(
+              text,
+              """M01-J — 2014 Class Subclass Expansion
+M01-K — PHB Feat & Spell Catalog Expansion
+```""",
+              """M01-J — 2014 Class Subclass Expansion
+M01-K — PHB Feat & Spell Catalog Expansion
+M01-L — VGM & SCAG Remaining Race Expansion / Generic Race Mechanics
+M01-M — MTF Planar Race Expansion & Tiefling Bloodline / Variant System
+```""",
+              "spec subphase list",
+          )
+          text = replace_once(
+              text,
+              "**M01-K 不是 M01 closeout。** K 後仍可能新增其他 M01 Subphase；Full M01 Integration & Closeout 保留既有 scope，但實際 Subphase ID 暫時 TBD，不預先叫 M01-L。",
+              "**M01-K 不是 M01 closeout。** K 後目前已正式追加 M01-L / M01-M；Full M01 Integration & Closeout 保留既有 scope，但實際 Subphase ID 仍暫時 TBD。",
+              "spec post-k note",
+          )
+
+          spec_sections = r'''# M01-L — VGM & SCAG Remaining Race Expansion / Generic Race Mechanics
+
+## 目標
+
+在不重做 M01-D / E / F 的前提下，把目前 supplied `種族_VGM.md` / `種族_SCAG.md` 中尚未進 runtime 的已拍板種族內容正式 materialize，並把這批內容真正需要的通用 Race/Subrace mechanics 補進既有 Builder / Rules / Character Sheet。
+
+L 的核心不是「再做一批 JSON」，而是讓後續種族不再依靠 race-specific hardcode。
+
+## L1. Scope / expected inventory
+
+M01-L 正式範圍：
+
+### VGM remaining 10 full races
+
+```text
+Bugbear
+Firbolg
+Goliath
+Kenku
+Kobold
+Lizardfolk
+Orc
+Tabaxi
+Triton
+Yuan-ti Pureblood
+```
+
+M01-D 已完成的：
+
+```text
+Goblin
+Hobgoblin
+Aasimar + 3 subraces
+```
+
+不在 L 重做、改 key 或複製第二份。
+
+### SCAG remaining 2 subraces
+
+```text
+Ghostwise Halfling
+Deep Gnome / Svirfneblin
+```
+
+M01-E 已完成的 Half-Elf variants 不在 L 重做。
+
+### 明確不在 L
+
+```text
+SCAG Tiefling variants
+MTF races / Tiefling bloodlines
+```
+
+兩者全部留 M01-M，避免 Tiefling architecture 被拆成兩半。
+
+L closeout 必須有 machine-verifiable expected inventory；不能只驗「10 + 2 筆數量看起來對」。
+
+## L2. Reference / runtime boundary
+
+Authoring reference：
+
+```text
+docs/暫用規則資訊/種族_VGM.md
+docs/暫用規則資訊/種族_SCAG.md
+```
+
+兩份檔案只允許：
+
+```text
+human / maintainer read
+→ authoring / normalization
+→ checked-in data/<pack>/ + localization
+```
+
+**禁止任何 runtime link。** Server / Registry / Builder / Character Sheet 不得 parse、import、fetch 或依路徑讀取這兩份 Markdown。正式 runtime package 不含 `docs/` 時仍必須完整工作。
+
+## L3. Generic Race / Subrace movement grants
+
+M01-E / F 後，`CharacterBuild` / Character Sheet 已經有：
+
+```text
+walking_speed
+swim_speed
+climb_speed
+fly_speed
+```
+
+因此 L **不是重新建立 movement system**。
+
+L 要做的是把既有 movement-grant 能力泛化給普通 Race / Subrace content，讓下列規則不需要 hardcode race name：
+
+```text
+Lizardfolk → swim 30
+Tabaxi     → climb 20
+Triton     → swim 30
+```
+
+要求：
+
+- normal Race / Subrace 可以宣告 typed movement grant。
+- compile order延續既有 origin composition；同一 mode 的結果 deterministic。
+- walking / swim / climb / fly 語意不可互相混用。
+- M01-E Aquatic Half-Elf、Wood Half-Elf與 M01-F Dhampir movement regression必須保持正確。
+- 不建立第二套 `race_speed_*` persistence。
+
+## L4. Negative racial ability modifiers
+
+Kobold / Orc supplied data需要：
+
+```text
+Kobold → STR -2
+Orc    → INT -2
+```
+
+現有 ability bonus arithmetic 已能接受 signed integer；L 不建立新的「negative modifier engine」。
+
+L 必須保證：
+
+- normalized racial ability bonus允許負值。
+- Standard Array / Point Buy 的 base-score legality先於 racial modifier判定。
+- Point Buy 的 minimum 8 **不能錯套到套完種族修正後的 effective score**；合法 base 8 + racial -2 可以得到 6。
+- final ability仍遵守既有 Character schema合法範圍。
+- Review / Character Sheet / localization presentation顯示 `-2`，不得出現 `+ -2` 等錯誤格式。
+- Numeric Override semantics不因 signed racial bonus改變。
+
+## L5. Natural Armor — generic Rules Layer candidate
+
+Lizardfolk supplied rule需要：
+
+```text
+未穿護甲時 AC = 13 + DEX modifier
+```
+
+目前 Armor Class Rules Layer只有：
+
+```text
+10 + DEX
+worn armor
+shield
+numeric override
+```
+
+因此 Natural Armor 是 L 真正需要新增的 Rules Layer primitive。
+
+要求：
+
+- Natural Armor 以 typed rule / feature metadata表示，不 hardcode `if lizardfolk`。
+- 只有規則條件成立時才成為 AC candidate；Lizardfolk 的 candidate要求未穿 body armor。
+- 未穿 body armor：在普通 unarmored 與可用 Natural Armor candidates 中依規則選正確結果。
+- 穿 body armor：不能把 Natural Armor 與 worn armor疊加。
+- Shield 延續既有 shield semantics；不能因 Natural Armor 路徑漏掉或 double apply。
+- Numeric Override仍是最終絕對值覆寫。
+- 既有 SRD armor / shield / unarmored角色結果不變。
+
+L 不因此建立完整 armor-effect DSL。
+
+## L6. Racial spell access / multi-rest recharge
+
+Firbolg / Triton / Yuan-ti 必須重用 M01-D 已存在的 racial spell substrate：
+
+```text
+source_type=race
+source_key=<racial feature>
+character-level gate
+casting ability
+uses_spell_slot=false
+```
+
+L 不建立第二套 innate-spell system。
+
+但 supplied content帶來一個既有 contract必須正確保存的形狀：
+
+```text
+1 / short rest OR long rest
+```
+
+例如 Firbolg Magic。L 必須讓 racial spell usage metadata可以無損表示一個以上合法 recharge rest type；不得為了遷就既有單一 `rest_type` 欄位而把「short or long rest」錯寫成只有其中一種。
+
+要求：
+
+- singleton long-rest既有資料 backward compatible。
+- multi-rest recharge有 canonical typed representation。
+- level gate Direct High-Level Create / sequential Level Up共用同一 resolver。
+- at-will racial spell可以明確與 limited-use spell區分。
+- Yuan-ti `Animal Friendship` 的 snake-only限制等 runtime target condition至少保留 structured/manual metadata；在沒有 Spell/Target Engine前不假裝已自動 enforce。
+- Triton Lv1 / Lv3 / Lv5 spell access依 Character Level正確出現。
+
+Rest auto-recovery仍不在 L；L 只要求規則資料與目前 State/presentation不失真。
+
+## L7. Other structural race mechanics
+
+現有 generic choice / proficiency / feature / resource substrate能表達者，L 必須真正接上，例如：
+
+- Kenku Training choose 2 skills from supplied pool。
+- Lizardfolk Hunter's Lore choose 2 skills from supplied pool。
+- fixed skill / language / armor / weapon proficiencies。
+- natural weapon identity / damage metadata。
+- damage resistance / immunity / condition immunity metadata。
+- Powerful Build / amphibious / hold-breath等 static feature identity。
+- limited-use racial features的 capacity / recharge metadata。
+
+不因某個 feature 同時含有 deferred Combat效果，就把其中已能表示的永久 choice / proficiency / resource identity一起退成 description-only。
+
+## L8. Runtime automation boundary
+
+下列效果可 structured + manual / deferred，直到對應 substrate存在：
+
+```text
+Bugbear Surprise Attack / Long-Limbed combat execution
+Firbolg Hidden Step timing / invisibility lifecycle
+Goliath Stone's Endurance reaction + damage reduction roll
+Kobold Pack Tactics / Grovel, Cower, and Beg / Sunlight Sensitivity
+Lizardfolk Bite / Hungry Jaws attack execution / corpse crafting
+Orc Aggressive spatial movement
+Tabaxi Feline Agility turn-reset condition
+Triton / Yuan-ti target-conditional spell effects
+save advantage / damage resistance execution where no damage/save transaction exists
+```
+
+L 可以保存 trigger、formula、resource、range、target restriction、manual/deferred classification；**不得為這批 Race 偷跑 P3 Roll / P4 Combat / Rest Engine。**
+
+## L9. Localization
+
+L 遵守 M02 永久規則：
+
+- 10 VGM races + 2 SCAG subraces的 user-visible names / descriptions / choices / manual labels同步 `zh-TW` / `en`。
+- 新增或首次 expose 的 Natural Armor、movement、negative ability presentation納入既有 localization field policy SSOT。
+- 缺 required locale即 L 未完成。
+- StableKey / mechanics保持 locale-neutral。
+
+## L10. Persistence / compatibility
+
+- 舊 M01-D Goblin / Hobgoblin / Aasimar key不改。
+- 舊 M01-E movement / variant Build可讀。
+- 舊 M01-F Dhampir movement Build可讀。
+- 新 Race / Subrace Build在 reload / restart後 StableKey、movement、ability results、feature/resource refs一致。
+- Signed racial modifier / Natural Armor不需要 bulk rewrite舊 Build。
+- Build Edit / Correction仍產生 Version N+1，不 in-place rewrite舊版本。
+
+## L11. 不做
+
+- 不做 Tiefling。
+- 不做 MTF pack。
+- 不做 generic Combat trigger engine。
+- 不做 Rest transaction / auto-recovery。
+- 不做完整 natural-weapon attack engine。
+- 不把 supplied Markdown放進 runtime dependency graph。
+
+## M01-L Closeout
+
+至少必須成立：
+
+1. VGM remaining 10 races 10 / 10 accounted for，且 M01-D identities不重複。
+2. Ghostwise Halfling / Deep Gnome 2 / 2 accounted for，parent refs正確。
+3. Race / Subrace generic movement grant可驅動 Lizardfolk / Tabaxi / Triton，且 M01-E / F movement regression green。
+4. Kobold STR -2 / Orc INT -2 正確套用，Point Buy minimum不誤套到 post-racial effective score。
+5. Lizardfolk Natural Armor真正進 Rules Layer，與 worn armor / shield / Numeric Override關係正確。
+6. Firbolg / Triton / Yuan-ti重用同一 racial spell resolver；short-or-long recharge metadata可無損保存。
+7. 代表 skill/proficiency/language/natural weapon/resource mechanics真正進既有 Build / State substrate。
+8. 需要 Combat / Roll / Rest的效果有明確 deferred classification，UI不宣稱已自動執行。
+9. `zh-TW` / `en` localization completeness green。
+10. runtime在完全沒有 `docs/暫用規則資訊/` 的環境仍可載入全部 L content並完成 Builder flow。
+11. Direct High-Level Create / Level Up / Build Edit representative cases一致。
+12. P0/P1/M01-A～K regression保持 green。
+
+---
+
+# M01-M — MTF Planar Race Expansion & Tiefling Bloodline / Variant System
+
+## 目標
+
+新增 `mtf` Content Pack，完成目前 supplied MTF planar-race scope，並一次解決 Tiefling baseline / bloodline / SCAG variant 的 identity、replacement、backward compatibility與 live-state邊界。
+
+M 的重點是**一個清楚的 Tiefling contract**，不是把每本書各做一套 Tiefling hardcode。
+
+## M1. Scope / expected inventory
+
+### MTF non-Tiefling scope
+
+```text
+Duergar / Gray Dwarf
+Eladrin
+Sea Elf
+Shadar-kai
+Gith parent race
+Githyanki
+Githzerai
+```
+
+parent / subrace relation依 supplied MTF reference materialize：
+
+- Duergar → Dwarf parent。
+- Eladrin / Sea Elf / Shadar-kai → Elf parent。
+- Githyanki / Githzerai → `mtf:race:gith` parent。
+
+### Tiefling scope
+
+MTF 九獄大魔血脈 **9 / 9 必須 accounted for**：
+
+```text
+Asmodeus
+Baalzebul
+Dispater
+Fierna
+Glasya
+Levistus
+Mammon
+Mephistopheles
+Zariel
+```
+
+另加 SCAG：
+
+```text
+Feral ability package
+Devil's Tongue
+Hellfire
+Winged
+Appearance table / optional appearance helper
+```
+
+## M2. New `mtf` Content Pack
+
+正式新增：
+
+```text
+data/mtf/
+```
+
+使用 M01-A generic manifest / StableKey / explicit enabled-pack contract。
+
+要求：
+
+- pack完整 materialize並通過 validation後才加入 default enabled list。
+- source=`mtf`，不得偽裝成 `scag` / `phb2014` / `srd5.1`。
+- cross-pack refs用 full StableKey。
+- `mtf` 的 user-visible content同一 Subphase完成 `zh-TW` / `en`。
+
+## M3. Asmodeus canonical mapping — 正式定案
+
+**標準 SRD/PHB Tiefling = MTF Asmodeus baseline。**
+
+因此：
+
+```text
+Asmodeus accounted identity
+→ existing srd5.1:race:tiefling
+```
+
+M **不建立**第二個 mechanical duplicate：
+
+```text
+mtf:subrace:asmodeus-tiefling   # 不建立
+mtf:race-variant:asmodeus-*     # 不建立
+```
+
+要求：
+
+- machine-verifiable MTF bloodline inventory仍回報 9 / 9 accounted：1 canonical mapping + 8 new bloodline identities。
+- existing Tiefling Build完全不 migration、不換 key、不補 fake subrace_ref。
+- Builder不顯示兩個 mechanics完全相同的「Standard Tiefling」與「Asmodeus Tiefling」。
+- UI若需要說明，可把 existing standard baseline標示為 Standard / Asmodeus provenance；identity仍是原 key。
+
+## M4. MTF non-Asmodeus bloodline representation
+
+其他 8 個 MTF bloodline以 generic Tiefling replacement identity表示，優先重用 M01-E `race-variant` substrate，而不是把 base Tiefling grants複製八次。
+
+每個 bloodline 必須替換 standard Tiefling中實際被來源改掉的 package：
+
+```text
+Ability Score Increase package
+Infernal Legacy package
+```
+
+共同 base traits仍由 `srd5.1:race:tiefling`提供，例如 size / walk / darkvision / fire resistance / languages。
+
+要求：
+
+- replacement target使用 stable grant identity，不用 display text比對。
+- bloodline ability package是 replacement，不與 standard INT+1/CHA+2疊加。
+- bloodline Legacy Spells是 replacement，不與 standard Infernal Legacy一起存在。
+- `race_ref`保持 standard Tiefling parent identity；`race_variant_ref`保存 selected MTF bloodline identity。
+- 8 個 bloodline各自有 deterministic StableKey與 source=`mtf`。
+
+## M5. SCAG Tiefling compatibility — 正式採保守版
+
+SCAG mechanical variants **只作用於 standard / Asmodeus baseline Tiefling**。
+
+禁止：
+
+```text
+Baalzebul + Feral
+Dispater + Winged
+Zariel + Devil's Tongue
+任何其他 MTF non-Asmodeus bloodline + SCAG mechanical variant
+```
+
+Server option generation不提供非法組合；繞過 UI硬送時 final validation仍必須 blocking且 zero side effect。
+
+對 standard / Asmodeus baseline，SCAG本身有兩個正交 replacement dimension：
+
+### Ability package
+
+```text
+standard INT +1 / CHA +2
+OR
+Feral DEX +2 / INT +1
+```
+
+### Legacy package
+
+```text
+standard Infernal Legacy
+OR Devil's Tongue
+OR Hellfire
+OR Winged
+```
+
+因此合法 standard combinations包括：
+
+```text
+Feral only
+one Legacy replacement only
+Feral + exactly one Legacy replacement
+```
+
+不能把 Feral 與 Winged誤做成互斥，也不能同時選兩個 Legacy replacement。
+
+## M6. Tiefling race-variant selection persistence
+
+目前 `CharacterBuild.race_variant_ref`只有一個 top-level variant identity；這足以讓「SCAG composite variant」與「MTF bloodline variant」互斥，但不足以單獨保存 SCAG composite內兩個 replacement group的選擇。
+
+M 必須增加 backward-safe 的 group-selection persistence，概念上保存：
+
+```text
+race_variant_ref
+replacement_group_id
+selected_option_id
+```
+
+要求：
+
+- Build Version能重建 Feral / Legacy branch，而不是只看最後 ability數值猜。
+- Build Edit seed可以 deterministic還原 active branch。
+- old M01-E Build沒有新欄位仍可讀；不 bulk rewrite immutable history。
+- M01-E Half-Elf variant既有 semantics不被破壞。
+- SCAG composite choice切換時 stale branch grants不進 final Build。
+
+不得把整份 choice JSON藏進 Tiefling-specific欄位。
+
+## M7. Winged Tiefling conditional movement
+
+Winged supplied rule是：
+
+```text
+未穿 heavy armor → fly 30
+穿 heavy armor   → 無此 fly speed
+```
+
+因此 Winged **不能**只在 Build永久寫死：
+
+```text
+fly_speed = 30
+```
+
+M 要把 L 的 movement substrate延伸成最小 closed conditional movement rule，至少支援：
+
+```text
+not_wearing_heavy_armor
+```
+
+Character Sheet顯示 **current effective movement**：
+
+```text
+Build / selected feature grants
++ Current State equipped armor
+→ effective movement
+```
+
+要求：
+
+- equip heavy armor → current fly unavailable。
+- unequip heavy armor → current fly 30恢復。
+- equip/unequip不建立 Build Version。
+- reload / restart後由同一 Build + State重新 derive。
+- M01-E / F / L 的 unconditional movement結果不變。
+- 不為 Winged建立 generic arbitrary predicate DSL。
+
+## M8. Eladrin Seasonal Aspect = Current State
+
+Eladrin的 Spring / Summer / Autumn / Winter 可以在 long rest後改變，因此不是 immutable Build choice。
+
+正式 ownership：
+
+```text
+Build  → Eladrin identity / Seasonal Aspect feature availability
+State  → current season
+```
+
+重用既有：
+
+```text
+CharacterState.feature_modes
+BuilderDraft.initial_state_seed
+```
+
+例如概念上：
+
+```text
+feature_modes["mtf:feature:seasonal-aspect"] = "spring|summer|autumn|winter"
+```
+
+要求：
+
+- Create時可透過 `initial_state_seed`建立 initial current season；該值不進 CharacterBuild。
+- change season只改 State，不產生 Build Version。
+- allowed mode由 content / server validation決定，不信任 arbitrary client string。
+- reload / restart保留 current season。
+- 正式 Rest transaction尚未存在時，server不假裝能自動知道「剛完成 long rest」；手動切換可存在，但 UI需清楚表達規則時機。
+- Lv3 Seasonal Aspect附加 Charm/Frighten/teleport-other/fire-damage execution仍依 Combat/Target/Save substrate deferred。
+
+不得新增 `eladrin_season`專用 persistence欄位。
+
+## M9. Racial psionics / legacy spell metadata
+
+Duergar、Githyanki、Githzerai與 Tiefling bloodlines重用 L 已泛化的 racial spell access contract。
+
+M 需要額外正確保存 supplied spell semantics，例如：
+
+- character-level gates。
+- casting ability。
+- 1/rest recharge。
+- short-or-long recharge where supplied。
+- fixed higher-level cast（例如某些 legacy spell以指定環位施放）。
+- no-component racial/psionic casting where supplied。
+- uses normal spell slot = false。
+
+如果既有 `SpellAccessEntry`不足以無損承載這些 static casting facts，M 只加 backward-safe optional typed fields；不建立完整 Spell Engine。
+
+## M10. Other MTF mechanics / automation boundary
+
+能沿用既有 substrate者真正接上：
+
+- Duergar / Elf / Gith parent + subrace inheritance。
+- Sea Elf swim 30重用 L movement。
+- Githyanki skill/tool/language choice。
+- armor / weapon proficiency grants。
+- racial resource capacity / recharge metadata。
+- resistance feature identity。
+
+需要未來 runtime者保留 structured/manual/deferred metadata，例如：
+
+```text
+Duergar sunlight / save-condition execution
+Eladrin Fey Step target/save/effect
+Shadar-kai teleport後 all-damage resistance duration
+Gith psychic/save effect execution
+Tiefling spell effect execution
+```
+
+## M11. SCAG Appearance table
+
+Tiefling appearance table是 optional roleplay helper，不是 structural Build choice。
+
+可：
+
+- 顯示 supplied options。
+- 允許使用者挑選或擲出建議。
+- 把結果寫入 existing `roleplay_profile.appearance` /適合的 optional roleplay field。
+- 完全不填仍可 Confirm。
+
+不得因 appearance table建立新的 ancestry legality或 mandatory workflow。
+
+## M12. Localization / runtime boundary
+
+- `mtf` pack names / descriptions / choices / mode labels / manual-deferred labels全部同步 `zh-TW` / `en`。
+- SCAG新增 Tiefling user-visible fields同樣兩語完成。
+- Asmodeus canonical mapping的 UI label兩語一致，但 StableKey不變。
+- reference Markdown只作 authoring input；正式 runtime package無 `docs/`仍必須完整可用。
+- localization仍用 M02 SSOT，不建立 `mtf`專用翻譯 engine。
+
+## M13. Persistence / compatibility
+
+- Existing `srd5.1:race:tiefling` Build原樣可讀。
+- Existing Tiefling不自動補 Asmodeus subrace / variant key。
+- Existing M01-E Half-Elf variant可讀、可 Build Edit。
+- New MTF bloodline / SCAG composite variant的 replacement selection在 restart後語意一致。
+- Eladrin current season / Winged current effective flight依 State正確恢復。
+- 不 bulk rewrite舊 Build / State JSON。
+
+## M14. 不做
+
+- 不允許 MTF non-Asmodeus bloodline與 SCAG mechanical variants交叉混搭。
+- 不建立 duplicate Asmodeus identity。
+- 不做 generic arbitrary condition/effect DSL。
+- 不做完整 Spell / Combat / Rest Engine。
+- 不做 2024 Tiefling / species rules。
+- 不把 supplied Markdown變成 runtime source。
+
+## M01-M Closeout
+
+至少必須成立：
+
+1. `mtf` pack合法、deterministic、加入 default enabled list，runtime無 `docs/`仍能啟動。
+2. Duergar / Eladrin / Sea Elf / Shadar-kai / Gith / Githyanki / Githzerai scope全部 accounted for，parent inheritance正確。
+3. MTF Tiefling bloodlines 9 / 9 accounted：Asmodeus canonical-map existing Tiefling + 8 new bloodline variants。
+4. Existing SRD/PHB Tiefling沒有 duplicate option、沒有 migration、沒有 key rewrite。
+5. MTF 8 bloodline正確 replacement standard ability package + Infernal Legacy，不 double apply base grants。
+6. SCAG Feral與 Legacy replacement groups可正確獨立／組合；同 group互斥。
+7. MTF non-Asmodeus bloodline + SCAG mechanical variant所有交叉組合都被 server阻擋。
+8. race-variant group selection可以進 Build Version並 deterministic Build Edit seed；old M01-E builds backward compatible。
+9. Winged Tiefling fly 30依 current heavy-armor equip state生效／失效，不建立 Build Version。
+10. Eladrin current season使用 `feature_modes` + `initial_state_seed`，切換只改 State，restart後保留。
+11. Duergar / Gith / Tiefling racial spell/psionic metadata正確保留 level gate / casting ability / recharge / cast-level / component semantics where supplied。
+12. Sea Elf等 movement重用 L generic substrate，沒有 source-specific movement engine。
+13. Tiefling Appearance保持 optional roleplay helper。
+14. `zh-TW` / `en` localization completeness green。
+15. P0/P1/M01-A～L regression保持 green。
+'''
+
+          text = replace_once(
+              text,
+              "---\n\n# Full M01 Integration & Closeout — Subphase ID TBD",
+              "---\n\n" + spec_sections + "\n---\n\n# Full M01 Integration & Closeout — Subphase ID TBD",
+              "spec insert L/M",
+          )
+          text = replace_once(
+              text,
+              """vrgr
+xge
+tce
+```
+
+以及屆時已拍板的其他 M01 pack""",
+              """vrgr
+xge
+tce
+mtf
+```
+
+以及屆時已拍板的其他 M01 pack""",
+              "spec closeout pack list",
+          )
+          text = replace_once(
+              text,
+              """- PHB non-SRD Feat / Spell catalog representative characters。
+- 屆時新增的其他 M01 rules。""",
+              """- PHB non-SRD Feat / Spell catalog representative characters。
+- M01-L VGM / SCAG remaining race representatives，含 negative modifier / Natural Armor / secondary movement。
+- M01-M MTF parent/subrace、Tiefling bloodline/SCAG variant、Winged conditional movement與 Eladrin Seasonal Aspect representatives。
+- 屆時新增的其他 M01 rules。""",
+              "spec representative creations",
+          )
+          text = replace_once(
+              text,
+              """- feat / spell-related Level Up choices。
+- 所有永久內容 provenance在 Version History可見。""",
+              """- feat / spell-related Level Up choices。
+- Tiefling bloodline / SCAG variant Build Edit與 replacement-group reconstruction。
+- Eladrin season只改 Current State、不產生 Build Version。
+- 所有永久內容 provenance在 Version History可見。""",
+              "spec versioned changes",
+          )
+          text = replace_once(
+              text,
+              """15. M01-D起所有新增／首次 expose 的 user-visible system / rules presentation符合 M02 supported-locale completeness rule。
+16. 所有在 M01-K 後正式拍板的新 M01 Subphase均已完成並納入整合驗證。
+17. P0/P1 regression green。
+18. migration / restart persistence / E2E / human smoke都有證據。
+19. 未納入 M01 的 Magic Items等 scope已明確 deferred，不是假裝完成。
+20. Full M01 Integration & Closeout 的實際 Subphase完成後，下一步回到 P2。""",
+              """15. M01-D起所有新增／首次 expose 的 user-visible system / rules presentation符合 M02 supported-locale completeness rule。
+16. M01-L 的 VGM remaining 10 + SCAG remaining 2完整 accounted，generic Race/Subrace movement、negative racial modifier compatibility與 Natural Armor contract完成。
+17. M01-M 的 `mtf` planar race scope與 Tiefling system完成；Asmodeus canonical mapping、SCAG保守 compatibility、Winged conditional movement、Eladrin live season contract都有整合證據。
+18. 所有在 M01-M 後若再正式拍板的新 M01 Subphase均已完成並納入整合驗證。
+19. P0/P1 regression green。
+20. migration / restart persistence / E2E / human smoke都有證據。
+21. 未納入 M01 的 Magic Items等 scope已明確 deferred，不是假裝完成。
+22. Full M01 Integration & Closeout 的實際 Subphase完成後，下一步回到 P2。""",
+              "spec final closeout list",
+          )
+          path.write_text(text, encoding="utf-8")
+
+          # -----------------------------------------------------------------
+          # 測試指南.md
+          # -----------------------------------------------------------------
+          path = Path("docs/M01/測試指南.md")
+          text = path.read_text(encoding="utf-8")
+          text = replace_once(
+              text,
+              "本文件定義目前已拍板 M01-A～M01-K 的自動與人工驗收流程。",
+              "本文件定義目前已拍板 M01-A～M01-M 的自動與人工驗收流程。",
+              "test header scope",
+          )
+          text = replace_once(text, "最後更新：2026-09-02", "最後更新：2026-09-03", "test date")
+          text = replace_once(
+              text,
+              """- subclass progression。
+""",
+              """- subclass progression。
+- Race / Subrace movement grants與 effective movement。
+- signed racial ability modifiers。
+- Natural Armor AC candidate。
+- Tiefling replacement-group legality / persistence。
+- live feature modes / conditional movement。
+""",
+              "test layer B additions",
+          )
+          text = replace_once(
+              text,
+              """- **M01-K：mandatory PHB Feat / Spell focused human smoke。**
+- **Full M01 Integration & Closeout（ID TBD）：mandatory Full M01 Human Closeout Smoke。**""",
+              """- **M01-K：mandatory PHB Feat / Spell focused human smoke。**
+- **M01-L：mandatory remaining-race focused human smoke。**
+- **M01-M：mandatory MTF / Tiefling focused human smoke。**
+- **Full M01 Integration & Closeout（ID TBD）：mandatory Full M01 Human Closeout Smoke。**""",
+              "test human smoke list",
+          )
+
+          test_sections = r'''# M01-L — VGM & SCAG Remaining Race Expansion / Generic Race Mechanics
+
+## L.1 Expected inventory / duplicate guard
+
+Machine-verifiable expected identities：
+
+```text
+VGM remaining full races = 10
+SCAG remaining subraces  = 2
+```
+
+逐 key驗，不只驗 count。
+
+必須同時證明：
+
+- Goblin / Hobgoblin / Aasimar仍只有 M01-D identities。
+- Half-Elf variants仍只有 M01-E identities。
+- L沒有 Tiefling / MTF entry。
+- manifest counts與實際 entry一致。
+
+## L.2 Runtime-without-docs gate
+
+建立 runtime-only package / fixture：
+
+```text
+include data/ + app + localization runtime files
+exclude docs/
+```
+
+在完全沒有：
+
+```text
+docs/暫用規則資訊/種族_VGM.md
+docs/暫用規則資訊/種族_SCAG.md
+```
+
+的情況下，必須：
+
+- Registry load成功。
+- server startup成功。
+- 12-scope content query成功。
+- representative Builder Create / Review / Confirm成功。
+
+另做 static grep / dependency check，禁止 app runtime code出現對上述 Markdown path的讀取／import。
+
+## L.3 Generic movement matrix
+
+至少驗：
+
+```text
+Lizardfolk → walk 30 + swim 30
+Tabaxi     → walk 30 + climb 20
+Triton     → walk 30 + swim 30
+```
+
+並做 regression controls：
+
+```text
+Aquatic Half-Elf → swim 30
+Wood Half-Elf    → walk 35
+Dhampir          → walk 35 + climb 35 (+ retained movement where legal)
+```
+
+要求：
+
+- Race/Subrace grants由 server compile，不靠 frontend hardcode。
+- reload / restart保持。
+- 同 mode merge deterministic。
+- swim/climb不誤寫 walking。
+
+## L.4 Negative racial modifier matrix
+
+### Kobold
+
+```text
+base STR 8
++ racial STR -2
+→ resolved/effective STR 6
+```
+
+### Orc
+
+```text
+base INT 8
++ racial INT -2
+→ resolved/effective INT 6
+```
+
+必測：
+
+- Standard Array / Point Buy base legality仍照原規則。
+- post-racial 6不被 Point Buy minimum 8錯誤拒絕。
+- invalid base score仍拒絕，不能因負 racial modifier放寬 base generator。
+- Review / Sheet顯示 signed modifier正確。
+- Numeric Override仍依既有順序運作。
+- existing positive-only races regression不變。
+
+## L.5 Natural Armor AC matrix
+
+Lizardfolk至少測：
+
+1. no armor, DEX modifier 0 → AC 13。
+2. no armor, positive/negative DEX modifier → 13 + DEX。
+3. equipped body armor低/高於 Natural Armor → 只走合法 worn-armor route，不把兩者疊加。
+4. no body armor + shield → Natural Armor + existing shield semantics。
+5. body armor + shield → existing armor + shield semantics。
+6. Numeric Override → override為最終結果。
+7. non-Lizardfolk / no Natural Armor feature → existing result不變。
+
+另做 negative data：malformed Natural Armor descriptor fail-fast；Rules Layer不得靠 race StableKey hardcode。
+
+## L.6 Racial spell / recharge matrix
+
+### Firbolg
+
+- Detect Magic / Disguise Self正確存在。
+- WIS casting ability。
+- 每個 spell的 supplied short-or-long recharge語意可完整保存。
+- 不能被 normal spell slot consumption誤認。
+
+### Triton
+
+- Lv1 Fog Cloud。
+- Lv3 Gust of Wind。
+- Lv5 Wall of Water。
+- CHA casting ability。
+- Direct Create Lv5與 sequential Level Up到5語意一致。
+
+### Yuan-ti
+
+- Poison Spray / Animal Friendship / Suggestion access正確。
+- at-will與limited-use區分。
+- snake-only target restriction保留 structured/manual metadata。
+
+Negative：invalid spell ref / invalid level gate / invalid recharge list fail-fast。
+
+## L.7 Structural choice / feature matrix
+
+至少：
+
+- Kenku Training choose exactly 2 from supplied pool。
+- Lizardfolk Hunter's Lore choose exactly 2 from supplied pool。
+- fixed skill / language / armor / weapon proficiency representative。
+- natural weapon metadata representative。
+- limited-use resource metadata representative。
+
+wrong-kind / wrong-count / duplicate / forged option都由 server拒絕且 zero side effect。
+
+## L.8 Deferred automation classification
+
+Machine-check 12-scope features：
+
+- 已有 substrate能完成的 permanent/structural部分不得被整條 deferred。
+- 需要 Combat / Roll / Reaction / spatial / Rest的部分有明確 classification。
+- UI不顯示「自動套用」給 deferred effect。
+- L沒有新增 generic Combat trigger / Rest engine。
+
+## L.9 API / real-backend E2E
+
+至少四條 representative flow：
+
+### L-E2E-01 — Lizardfolk
+
+Create → choices → Review → Confirm → Sheet，驗 swim + Natural Armor。
+
+### L-E2E-02 — Kobold or Orc
+
+Create with legal low base score → negative racial modifier → Review / Confirm / Sheet。
+
+### L-E2E-03 — Firbolg or Triton
+
+Racial spell access + level gate + reload。
+
+### L-E2E-04 — Ghostwise / Deep Gnome
+
+cross-pack parent subrace selection → inherited base grants exactly once → Confirm / reload。
+
+## L.10 Localization / restart / human smoke
+
+Localization：
+
+- 12-scope names/descriptions/choices兩語完整。
+- movement / Natural Armor / negative-modifier presentation兩語完整。
+- missing required field使 completeness fail。
+
+Restart dataset至少：
+
+- Lizardfolk with shield / armor state representative。
+- Kobold或Orc。
+- Firbolg/Triton racial spell representative。
+- SCAG subrace representative。
+
+Human smoke至少實際建立：
+
+- 一個有 secondary movement + Natural Armor的角色。
+- 一個有 negative racial modifier的角色。
+- 一個有 racial spell的角色。
+- 一個 SCAG subrace。
+
+## M01-L Closeout Evidence
+
+回報：
+
+```text
+VGM remaining inventory: 10 / 10
+SCAG remaining subraces: 2 / 2
+Duplicate prior identities: 0
+Generic movement matrix: <result>
+Negative racial modifier matrix: <result>
+Natural Armor matrix: <result>
+Racial spell / multi-rest recharge: <result>
+Structural choice matrix: <result>
+Deferred classification: <result>
+Localization completeness: <result>
+Runtime without docs: <result>
+Focused E2E: <result/count>
+Restart persistence: <result>
+Human smoke: <result>
+P0/P1/M01-A～K regression: <result>
+```
+
+---
+
+# M01-M — MTF Planar Race Expansion & Tiefling Bloodline / Variant System
+
+## M.1 `mtf` pack / non-Tiefling inventory
+
+必測：
+
+```text
+Duergar
+Eladrin
+Sea Elf
+Shadar-kai
+Gith
+Githyanki
+Githzerai
+```
+
+逐 key驗 source=`mtf`、parent refs、manifest count、cross-pack refs與 localization。
+
+`mtf` 未完整時不得提前加入 default enabled list；完成後 startup必須 deterministic。
+
+## M.2 Parent / inheritance matrix
+
+至少：
+
+- Duergar + Dwarf base grants exactly once。
+- Eladrin / Sea Elf / Shadar-kai + Elf base grants exactly once。
+- Githyanki / Githzerai + Gith parent grants exactly once。
+- wrong parent / wrong-kind parent fail-fast。
+- subrace切換不殘留上一 branch grants。
+
+Sea Elf swim 30必須走 L generic movement resolver。
+
+## M.3 Tiefling 9 / 9 canonical inventory
+
+Machine-verifiable expected table必須明確區分：
+
+```text
+Asmodeus       → canonical mapping to srd5.1:race:tiefling
+other 8        → new mtf race-variant identities
+```
+
+驗：
+
+- 9 / 9 accounted。
+- new MTF mechanical identities = 8。
+- duplicate Asmodeus content entry = 0。
+- old `srd5.1:race:tiefling`仍 resolve。
+- Builder不出現 duplicate standard/Asmodeus option。
+
+## M.4 MTF bloodline replacement matrix
+
+對 8 個 new bloodline table-driven驗：
+
+```text
+base Tiefling common grants
++ selected bloodline replacement
+```
+
+必須：
+
+- standard ability package被移除後才加入 bloodline ability package。
+- standard Infernal Legacy被移除後才加入 bloodline Legacy Spells。
+- common darkvision / fire resistance / languages / walk只保留一次。
+- no double ability bonuses。
+- no standard + bloodline spell stacking。
+- Direct Create / reload / Build Edit deterministic。
+
+至少抽不同 ability package與不同 spell list的多個代表，不只測一個血脈。
+
+## M.5 SCAG Tiefling compatibility matrix
+
+### Standard / Asmodeus baseline — legal
+
+測：
+
+```text
+baseline only
+Feral only
+Devil's Tongue only
+Hellfire only
+Winged only
+Feral + Devil's Tongue
+Feral + Hellfire
+Feral + Winged
+```
+
+同 Legacy group同時選兩個 → blocking。
+
+### MTF non-Asmodeus + SCAG mechanical variant — illegal
+
+至少各類型一個：
+
+```text
+Baalzebul + Feral
+Dispater + Winged
+Zariel + Devil's Tongue
+```
+
+要求 option generation不提供，forged payload final validation仍拒絕且 zero side effect。
+
+## M.6 Race-variant group persistence / legacy compatibility
+
+對 SCAG composite variant：
+
+- group IDs / selected option IDs進 immutable Build Version。
+- Draft reload / Review / Confirm / Character reload一致。
+- Build Edit seed能還原 Feral + selected Legacy branch。
+- 切 branch後 stale ability/spell/feature grants不殘留。
+
+Regression：
+
+- existing M01-E Half-Elf variant old Build沒有新 selection field仍可讀。
+- 新 Build Edit不改寫歷史 Version。
+
+## M.7 Winged effective movement
+
+建立 Standard Tiefling + Winged：
+
+1. no heavy armor equipped → fly 30。
+2. equip heavy armor → current effective fly unavailable。
+3. unequip → fly 30恢復。
+4. equipment state reload → derived result一致。
+5. equip/unequip前後 `current_version_id` / `version_no`不變。
+6. body armor分類不是 heavy時仍可 fly。
+7. M01-E/F/L unconditional movement regression。
+
+若實作只把 `build.fly_speed=30`後永遠顯示可飛，M gate直接 fail。
+
+## M.8 Eladrin Seasonal Aspect state
+
+Create：
+
+```text
+Eladrin selected
+→ initial_state_seed selects one legal season
+→ Confirm
+→ CharacterState.feature_modes stores current season
+```
+
+驗四個 allowed modes：
+
+```text
+spring
+summer
+autumn
+winter
+```
+
+必測：
+
+- arbitrary mode拒絕。
+- switch season只改 State，不產生 Build Version。
+- reload / restart保留。
+- Build Edit仍保留 current mode，除非 Eladrin feature被移除並按 reconciliation處理。
+- Lv3前後 feature availability / presentation正確。
+- 沒有 Rest transaction時，不測 fake auto long-rest timing；manual switch UI要清楚標示規則時機。
+
+## M.9 Racial psionics / legacy spell matrix
+
+至少：
+
+### Duergar
+
+- Lv3 / Lv5 gates。
+- component-free metadata。
+- long-rest use semantics。
+
+### Githyanki / Githzerai
+
+- Mage Hand + Lv3 + Lv5 spell gates。
+- INT / WIS casting ability分開。
+- component-free metadata。
+
+### Tiefling
+
+抽至少四個不同 bloodline / SCAG Legacy package，驗：
+
+- spell identities resolve。
+- cast-at-level metadata where supplied。
+- short-or-long recharge where supplied（例如 supplied Mammon entry）。
+- uses_spell_slot=false。
+- replacement後 standard Infernal Legacy不殘留。
+
+不要求 spell effect execution。
+
+## M.10 Other MTF structural / deferred matrix
+
+至少驗：
+
+- Githyanki skill/tool/language choices count / distinctness。
+- weapon / armor proficiency grants。
+- Sea Elf swim grant。
+- Shadar-kai / Eladrin teleport resource metadata。
+- resistance identities。
+
+Combat/Target/Save效果只驗 structured/deferred metadata與 UI presentation，不建立 runtime engine。
+
+## M.11 Appearance helper
+
+Tiefling appearance：
+
+- completely optional。
+- supplied option可挑選／建議。
+- 可寫 existing roleplay appearance。
+- 不填仍可 Confirm。
+- 不影響 bloodline / variant legality。
+- locale switch保持已輸入 roleplay text。
+
+## M.12 Localization / runtime-without-docs
+
+先驗 policy coverage，再 completeness。
+
+- `mtf`新增 user-visible required fields都有 `zh-TW` / `en`。
+- SCAG Tiefling新增 presentation同樣兩語。
+- season labels / conditional-flight status / replacement labels兩語。
+- 缺 required translation → fail。
+
+Runtime-only package完全排除：
+
+```text
+docs/暫用規則資訊/種族_MTF.md
+docs/暫用規則資訊/種族_SCAG.md
+```
+
+仍要通過 Registry / server / representative Builder flows。
+
+## M.13 Real-backend E2E
+
+至少：
+
+### M-E2E-01 — Eladrin
+
+Create → initial season → Confirm → Sheet → switch season → reload，version不增加。
+
+### M-E2E-02 — Gith
+
+parent + subrace + psionic access → Confirm / reload。
+
+### M-E2E-03 — MTF Tiefling bloodline
+
+選一個 non-Asmodeus bloodline → replacement correct → Confirm / reload。
+
+### M-E2E-04 — Standard Tiefling + Feral + Winged
+
+兩 replacement groups → Confirm → equip heavy armor → flight disabled → unequip → restored。
+
+### M-E2E-05 — Illegal cross-book Tiefling combo
+
+MTF bloodline + SCAG variant forged payload → server reject / zero side effect。
+
+## M.14 Restart / human smoke
+
+Restart dataset至少：
+
+1. old pre-M standard Tiefling。
+2. non-Asmodeus MTF bloodline。
+3. Standard Tiefling + Feral + Legacy replacement。
+4. Winged with heavy armor equipped state。
+5. Eladrin with non-default current season。
+6. Gith / Duergar racial spell representative。
+
+Restart後比對 Build / State ownership與effective movement。
+
+Human smoke至少：
+
+- 看不到 duplicate Asmodeus option。
+- 建一個 MTF non-Asmodeus Tiefling。
+- 建一個 Feral + Winged standard Tiefling並實際切換 heavy armor確認飛行顯示。
+- 建一個 Eladrin並切換 season。
+- 切兩語確認 MTF / SCAG presentation。
+
+## M01-M Closeout Evidence
+
+回報：
+
+```text
+MTF non-Tiefling inventory: 7 / 7
+Tiefling bloodlines accounted: 9 / 9
+Asmodeus duplicate identities: 0
+New MTF bloodline variants: 8 / 8
+Parent/inheritance matrix: <result>
+MTF bloodline replacement matrix: <result>
+SCAG standard-baseline compatibility matrix: <result>
+Illegal MTF+SCAG combination rejection: <result>
+Race-variant group persistence: <result>
+Winged conditional movement: <result>
+Eladrin feature_modes state: <result>
+Racial spell/psionic metadata: <result>
+Appearance optionality: <result>
+Localization completeness: <result>
+Runtime without docs: <result>
+Focused E2E: <result/count>
+Restart persistence: <result>
+Human smoke: <result>
+P0/P1/M01-A～L regression: <result>
+```
+'''
+
+          text = replace_once(
+              text,
+              "---\n\n# Full M01 Integration & Closeout — Subphase ID TBD",
+              "---\n\n" + test_sections + "\n---\n\n# Full M01 Integration & Closeout — Subphase ID TBD",
+              "test insert L/M",
+          )
+          text = replace_once(
+              text,
+              """- PHB non-SRD Feats / Spells，包含 repeatable acquisition、feat-granted option entitlement/resource 與 description localization policy coverage。
+- K後正式新增的其他 M01內容。""",
+              """- PHB non-SRD Feats / Spells，包含 repeatable acquisition、feat-granted option entitlement/resource 與 description localization policy coverage。
+- M01-L remaining VGM / SCAG races，含 generic movement / negative modifier / Natural Armor。
+- M01-M MTF races / Tiefling replacement system / Winged effective movement / Eladrin feature modes。
+- M後正式新增的其他 M01內容。""",
+              "test full backend list",
+          )
+          text = replace_once(
+              text,
+              """### FC-E2E-20 — PHB Feat / Spell Catalog
+
+至少一條 structural Feat + repeatable Feat acquisition + Martial Adept entitlement/resource + 一條 PHB-only spell完整流程；可以拆成多個 spec，但 coverage不得缺。
+
+K後若再新增 M01 rule shape，必須補入本 matrix；不要求剛好 20 個 spec files，可以合併 flow，但 coverage不得缺。""",
+              """### FC-E2E-20 — PHB Feat / Spell Catalog
+
+至少一條 structural Feat + repeatable Feat acquisition + Martial Adept entitlement/resource + 一條 PHB-only spell完整流程；可以拆成多個 spec，但 coverage不得缺。
+
+### FC-E2E-21 — M01-L Race Mechanics
+
+至少一條 Natural Armor + secondary movement、一條 negative racial modifier，以及一條 racial spell representative。
+
+### FC-E2E-22 — M01-M Tiefling / MTF State
+
+至少一條 MTF bloodline、一條 SCAG Feral + Winged conditional movement，以及一條 Eladrin current-season State flow。
+
+M後若再新增 M01 rule shape，必須補入本 matrix；不要求剛好 22 個 spec files，可以合併 flow，但 coverage不得缺。""",
+              "test full e2e matrix",
+          )
+          text = replace_once(
+              text,
+              """11. caster with PHB non-SRD spell selection / spellbook / prepared state as applicable。
+12. K後新增規則的 representative character(s)。""",
+              """11. caster with PHB non-SRD spell selection / spellbook / prepared state as applicable。
+12. Lizardfolk / negative-modifier / SCAG subrace representative(s)。
+13. old standard Tiefling + MTF bloodline + SCAG variant representative(s)。
+14. Winged equipped-state + Eladrin feature_modes State representative(s)。
+15. M後新增規則的 representative character(s)。""",
+              "test restart dataset",
+          )
+          path.write_text(text, encoding="utf-8")
+
+          # -----------------------------------------------------------------
+          # 開發設計方針.md
+          # -----------------------------------------------------------------
+          path = Path("docs/M01/開發設計方針.md")
+          text = path.read_text(encoding="utf-8")
+          text = replace_once(
+              text,
+              "本文件是目前已拍板的 M01-A～M01-K 具體實作契約。",
+              "本文件是目前已拍板的 M01-A～M01-M 具體實作契約。",
+              "design header scope",
+          )
+          text = replace_once(text, "最後更新：2026-09-02", "最後更新：2026-09-03", "design date")
+          text = replace_once(
+              text,
+              """M01-J — 2014 Class Subclass Expansion
+M01-K — PHB Feat & Spell Catalog Expansion
+```""",
+              """M01-J — 2014 Class Subclass Expansion
+M01-K — PHB Feat & Spell Catalog Expansion
+M01-L — VGM & SCAG Remaining Race Expansion / Generic Race Mechanics
+M01-M — MTF Planar Race Expansion & Tiefling Bloodline / Variant System
+```""",
+              "design subphase list",
+          )
+          text = replace_once(
+              text,
+              """M01-B 完成後先做第一次真人創角 Gate。M01-K **不是** closeout；K 後仍可能新增規則 Subphase。
+
+原 `M01-K — Full M01 Integration & Closeout` 的 scope保留，但 **Subphase ID TBD**。只有後續 M01 規則 scope 確定後才重新編號，不先假定為 M01-L。""",
+              """M01-B 完成後先做第一次真人創角 Gate。M01-K **不是** closeout；目前已正式接續 M01-L / M01-M。
+
+原 `M01-K — Full M01 Integration & Closeout` 的 scope保留，但 **Subphase ID TBD**。L / M 已固定；Full closeout不占用 L / M 編號。""",
+              "design post-k note",
+          )
+          text = replace_once(
+              text,
+              """├── xge/
+├── tce/
+└── rules/""",
+              """├── xge/
+├── tce/
+├── mtf/
+└── rules/""",
+              "design directory layout",
+          )
+          text = replace_once(
+              text,
+              """vrgr
+xge
+tce
+```""",
+              """vrgr
+xge
+tce
+mtf
+```""",
+              "design pack ids",
+          )
+
+          design_sections = r'''# M01-L — VGM & SCAG Remaining Race Expansion / Generic Race Mechanics
+
+## L.1 Scope / authoring inputs
+
+Authoring references：
+
+```text
+docs/暫用規則資訊/種族_VGM.md
+docs/暫用規則資訊/種族_SCAG.md
+```
+
+Expected runtime inventory：
+
+```text
+vgm full races: Bugbear, Firbolg, Goliath, Kenku, Kobold,
+                Lizardfolk, Orc, Tabaxi, Triton, Yuan-ti Pureblood
+scag subraces: Ghostwise Halfling, Deep Gnome
+```
+
+這兩份 Markdown只用來 authoring / review。**任何 `apps/server` / `apps/web` runtime path不得讀它們。** Docker/runtime image可以不帶 `docs/`。
+
+## L.2 Existing substrate — 不重做 movement
+
+L 開工時 current code已有：
+
+```text
+CharacterBuild.walking_speed
+CharacterBuild.swim_speed
+CharacterBuild.climb_speed
+CharacterBuild.fly_speed
+CharacterSheetDTO 同四種速度
+RaceVariantMovementGrant(mode=walk|swim|climb|fly)
+LineageData climb / ancestral movement retention
+```
+
+所以 L只把 movement grant 泛化到 `RaceData` / `SubraceData`。
+
+推薦抽共用 typed shape（實際 class名可依 code style調整）：
+
+```python
+class MovementGrantData(StrictModel):
+    mode: Literal["walk", "swim", "climb", "fly"]
+    speed: int = Field(gt=0)
+```
+
+然後：
+
+```text
+RaceData.movement_grants: []
+SubraceData.movement_grants: []
+RaceVariantData沿用同一 shape
+```
+
+不要同時維護 `RaceVariantMovementGrant`與另一個 mechanics不同的 `RaceMovementGrant`。
+
+Backward compatibility：
+
+- `RaceData.speed`繼續是 legacy/default walking speed SSOT；不要求重寫 SRD races。
+- `movement_grants`先承載 secondary / explicit override movement。
+- compile origin時統一轉成既有 Build四個 speed fields。
+
+Compile語意沿既有 origin層次：
+
+```text
+base race
+→ subrace
+→ race variant
+→ lineage active mechanics（若有）
+```
+
+同一 mode 後層 explicit grant取代前層；不是加法。
+
+## L.3 Signed racial ability bonus compatibility
+
+現有 `_ability_bonuses_from_entry()` arithmetic本身接受 `int`，L不要再做一套負值 engine。
+
+需要做的是把 contract固定：
+
+```text
+base generated score legality
+→ racial signed bonuses
+→ final CharacterBuild ability_scores
+→ Numeric Override effective view
+```
+
+若要把 `ability_bonuses`從 `dict[str, Any]`補 typed model，`bonus`必須是 signed integer；不能寫 `ge=0`。
+
+Point Buy validator只驗 Builder base generation，不得拿 final/post-racial score再套 8～15 constraint。
+
+Presentation helper統一 signed formatting：
+
+```text
++2
++1
+-2
+```
+
+不要 `+-2` / `+ -2`。
+
+## L.4 Natural Armor typed feature
+
+不要在 RaceData加 `lizardfolk_ac`。
+
+建議把可重用 Natural Armor formula放在 feature typed metadata，例如：
+
+```python
+class NaturalArmorData(StrictModel):
+    base: int = Field(ge=1)
+    ability: AbilityName
+    requires_unarmored: bool = True
+```
+
+`FeatureData`新增 backward-safe：
+
+```text
+natural_armor: NaturalArmorData | None = None
+```
+
+Lizardfolk race grant一個正式 Natural Armor feature；Rules Layer從 `build.feature_refs`解析所有 active Natural Armor candidates。
+
+`calculate_armor_class()`重構概念：
+
+```text
+dex modifier
+body armor candidates
+shield candidates
+natural armor candidates from active features
+
+if body armor equipped:
+    base_ac = best legal worn armor
+else:
+    base_ac = max(10 + dex, legal natural armor candidates)
+
+base_ac + best shield
+→ numeric_override("ac") final
+```
+
+若日後有 Natural Armor不允許 shield，再由 descriptor加**已被 supplied content證明需要的 closed field**；L不先做 arbitrary predicate DSL。
+
+## L.5 Racial spell access typed normalization
+
+`compile_origin()`目前直接讀 raw `feature.data["racial_spell_access"]`。L應把 code真正依賴的欄位收斂成 typed descriptor，避免 L/M繼續加 dict magic string。
+
+推薦概念：
+
+```text
+spell
+min_character_level
+casting_ability
+uses_spell_slot = false
+uses_per_rest optional
+recharge = [short_rest|long_rest, ...]
+cast_at_level optional
+waive_components optional
+runtime_restrictions optional structured/manual metadata
+```
+
+L至少需要 `recharge`支援多值，因 Firbolg supplied rule是 short OR long rest。
+
+### `SpellAccessEntry` compatibility
+
+現有 Build model只有：
+
+```text
+uses_per_rest
+rest_type: one value
+```
+
+不得把 multi-rest資料硬壓成錯誤 singleton。
+
+正式方向：新增 backward-safe canonical multi-rest欄位（名稱依現有 style，例如 `recharge_types`），legacy `rest_type`仍可讀並 normalize成 singleton。新 code只consume canonical view；不要長期維護兩套互相矛盾的使用次數真相。
+
+M01-D舊 Build不用 bulk rewrite。
+
+## L.6 Origin compiler movement / spell / resources
+
+`compile_origin()`與 origin grants pipeline泛化時：
+
+- Race / Subrace movement grant在同一 resolver產生 final speeds。
+- character-level feature gates保持共用。
+- racial spell access仍使用 `source_type="race"`與 feature `source_key`。
+- limited-use feature / spell resource IDs deterministic，不用 display name。
+- at-will spell不偽造 `uses_per_rest=999`。
+
+Direct High-Level Create與 Level Up一定走同一 character-level gate。
+
+## L.7 Natural weapon / resistance / manual metadata
+
+L可為 feature資料補 supplied content需要的有限 typed metadata，例如：
+
+```text
+natural_weapon: ability / damage die / damage type
+resistance / immunity identities
+runtime trigger/category/manual classification
+```
+
+只有目前資料真正需要 query / validate的欄位才 typed；其餘純敘述仍可留 description。
+
+不要建立 AttackAction / Damage Engine。
+
+## L.8 UI / Review / Character Sheet
+
+Builder不新增 VGM-only頁面。
+
+沿用 generic Origin step：
+
+- Race/Subrace searchable selector。
+- source label。
+- server-generated skill/language/proficiency choices。
+- Review顯示 resolved ability含負值。
+- Sheet顯示 secondary movement。
+- Natural Armor由 server AC DTO結果呈現。
+- deferred feature可以顯示說明，但不能標「自動執行」。
+
+## L.9 Localization / no-docs packaging
+
+沿用 M02：
+
+- `vgm` / `scag` 新增的 required fields進既有 field-policy SSOT。
+- `zh-TW` / `en` required。
+- no-docs runtime packaging必須成為 focused gate。
+
+Static check至少禁止 production app code引用：
+
+```text
+docs/暫用規則資訊/種族_VGM.md
+docs/暫用規則資訊/種族_SCAG.md
+```
+
+文件/provenance文字可以提到 reference filename；**程式 dependency不可以。**
+
+---
+
+# M01-M — MTF Planar Race Expansion & Tiefling Bloodline / Variant System
+
+## M.1 `mtf` pack layout
+
+正式新增：
+
+```text
+data/mtf/
+├── manifest.json
+├── races.json          # Gith parent等真正 full race identity
+├── subraces.json       # Duergar / Eladrin / Sea Elf / Shadar-kai / Gith children
+├── race-variants.json  # 8 non-Asmodeus Tiefling bloodlines（可 deterministic shard）
+├── features.json
+└── ... only categories actually needed
+```
+
+不要建立空 category file。
+
+`DEFAULT_CONTENT_PACKS` / equivalent只在資料、localization、cross refs全部 ready後加入 `mtf`。
+
+## M.2 MTF parent / subrace composition
+
+沿用 M01-B / D 的 cross-pack parent contract：
+
+```text
+mtf:subrace:duergar        → srd5.1:race:dwarf
+mtf:subrace:eladrin        → srd5.1:race:elf
+mtf:subrace:sea-elf        → srd5.1:race:elf
+mtf:subrace:shadar-kai     → srd5.1:race:elf
+mtf:race:gith              → full parent race
+mtf:subrace:githyanki      → mtf:race:gith
+mtf:subrace:githzerai      → mtf:race:gith
+```
+
+實際 index命名可依 repository convention，但 parent relation必須是 full StableKey。
+
+Base grants只套一次；subrace只提供增量 grants。
+
+## M.3 Tiefling canonical identity table
+
+M維護 machine-verifiable bloodline inventory：
+
+```text
+Asmodeus       canonical → srd5.1:race:tiefling
+Baalzebul      → mtf:race-variant:tiefling-baalzebul
+Dispater       → mtf:race-variant:tiefling-dispater
+Fierna         → mtf:race-variant:tiefling-fierna
+Glasya         → mtf:race-variant:tiefling-glasya
+Levistus       → mtf:race-variant:tiefling-levistus
+Mammon         → mtf:race-variant:tiefling-mammon
+Mephistopheles → mtf:race-variant:tiefling-mephistopheles
+Zariel         → mtf:race-variant:tiefling-zariel
+```
+
+**Asmodeus不建立 content alias entry。** Inventory verifier本身知道它是 canonical mapping；不要靠 duplicate JSON湊到九筆。
+
+## M.4 Stable Tiefling replacement targets
+
+Standard Tiefling至少需要兩個 deterministic compiler grant identities：
+
+```text
+grant:srd5.1:race:tiefling:ability-score-increase
+grant:srd5.1:race:tiefling:infernal-legacy
+```
+
+具體字串可按既有 grant-id convention，但必須 stable、可測、不可用 display label。
+
+所有 MTF bloodline與 SCAG variant都只針對這兩個 target做 replacement。
+
+## M.5 `RaceVariantReplacementOption` extension
+
+現有 option已支援：
+
+```text
+grants
+movement
+spell_choice
+keep_target
+```
+
+Tiefling ability replacement需要最小 typed extension，例如：
+
+```text
+ability_bonuses: list[AbilityBonusData] = []
+```
+
+其中 bonus允許 signed integer，沿 L contract。
+
+MTF bloodline的 Legacy Spells優先透過 feature grants + typed `racial_spell_access`重用，不把 spell names hardcode進 compiler。
+
+### One-option bloodline groups
+
+每個 non-Asmodeus MTF bloodline可使用一個 required replacement group，只有一個合法 option；server自動選定，不要求 UI顯示沒有選擇意義的單選框。這樣仍重用同一 replacement engine，不另開 `TieflingBloodlineCompiler`。
+
+## M.6 SCAG composite Tiefling variant
+
+使用一個 top-level identity，例如：
+
+```text
+scag:race-variant:tiefling-variants
+```
+
+內含兩個 replacement groups：
+
+```text
+ability-package:
+  standard (keep)
+  feral
+
+legacy-package:
+  infernal-legacy (keep)
+  devils-tongue
+  hellfire
+  winged
+```
+
+這讓 `Feral + Winged`合法，同時保證 `Winged + Hellfire`不合法。
+
+`RaceVariantData.base_race_ref`固定 `srd5.1:race:tiefling`。
+
+### Conservative cross-book guard
+
+如果 active `race_variant_ref`是任何 `mtf:race-variant:tiefling-*`，Builder不得再掛 SCAG composite variant。現有 `CharacterBuild.race_variant_ref`單一 top-level identity正好形成此互斥；final validator仍要檢查 base race / source compatibility，不能只靠 UI。
+
+## M.7 Persist replacement-group selections
+
+新增 backward-safe Build shape，名稱可依 code style，例如：
+
+```python
+class RaceVariantOptionSelection(FrozenModel):
+    group_id: str
+    option_id: str
+
+class CharacterBuild:
+    race_variant_option_selections: tuple[RaceVariantOptionSelection, ...] = ()
+```
+
+Validator：
+
+- `race_variant_ref is None`時 selection tuple必須空。
+- 每個 group最多一筆。
+- group / option必須存在於 selected `RaceVariantData`。
+- required groups都有 active option。
+
+M01-E legacy Build沒有此欄位視為 empty；**不 bulk rewrite**。
+
+### Legacy M01-E seed
+
+Build Edit對 old Half-Elf variant：
+
+- 可從既有 `race_variant_ref` + compiled feature/movement grants deterministic推回 selection時就推回。
+- 若某 legacy payload真的無法唯一推回，不 silent猜；Review顯示需要重新確認該 branch，但舊 immutable Version本身仍可讀。
+
+新 Confirm一律持久化 canonical group selections。
+
+## M.8 Conditional movement descriptor / resolver
+
+L 的 unconditional `MovementGrantData`在 M擴成 closed optional condition：
+
+```python
+class MovementConditionData(StrictModel):
+    type: Literal["not_wearing_heavy_armor"]
+
+class MovementGrantData(StrictModel):
+    mode: Literal["walk", "swim", "climb", "fly"]
+    speed: int
+    condition: MovementConditionData | None = None
+```
+
+目前只開一個 condition。需要新 condition時必須改 enum + tests；**不是資料任意 predicate**。
+
+Winged feature grant：
+
+```text
+mode=fly
+speed=30
+condition=not_wearing_heavy_armor
+```
+
+新增 pure-ish resolver（名稱可調）：
+
+```text
+effective_movement(build, state, registry)
+```
+
+輸入：
+
+- Build unconditional speeds / active feature refs。
+- Current State equipped inventory。
+- Registry armor category。
+
+輸出四種 current effective speed。
+
+Character Sheet改用 resolver，不再直接把 `build.fly_speed`原樣送出。
+
+Heavy armor equip/unequip只改 State，因此不建立 Build Version。
+
+## M.9 Eladrin feature mode
+
+現有：
+
+```text
+CharacterState.feature_modes: dict[str, str]
+BuilderDraft.initial_state_seed
+```
+
+直接重用。
+
+Feature content補最小 typed mode descriptor，例如：
+
+```text
+mode_options = [spring, summer, autumn, winter]
+mode_change_timing = long_rest_manual_until_rest_substrate
+```
+
+或等價 closed fields。
+
+Create flow：
+
+```text
+Builder initial_state_seed
+→ validate selected mode against active feature
+→ Confirm Build
+→ initialize CharacterState.feature_modes
+```
+
+Mode不進 Build。
+
+State mutation service使用 generic feature-mode validation；不要 `if eladrin`。
+
+Armorer Guardian/Infiltrator既有 `feature_modes` regression必須一起 green；不能為 Eladrin做第二個 mode store。
+
+## M.10 Eladrin runtime boundary
+
+`Fey Step` / Seasonal Aspect可保存：
+
+- resource / recharge。
+- teleport range。
+- minimum_character_level=3 for seasonal added effect。
+- current mode identity。
+- save DC formula metadata。
+- target/effect description。
+
+但不在 M實作：
+
+```text
+teleport target transaction
+Charm/Frighten save transaction
+AoE fire damage resolution
+turn duration lifecycle
+```
+
+沒有 Rest transaction時 mode change timing由 UI提示 + tabletop manual discipline；server只驗 mode合法，不偽造 rest event。
+
+## M.11 Racial spell / psionic access extension
+
+重用 L typed descriptor與 `compile_origin()`。
+
+M需要的 optional fields至少能無損表達 supplied MTF/SCAG內容：
+
+```text
+cast_at_level
+waive_components
+multi-rest recharge
+character-level gate
+casting ability
+uses_spell_slot=false
+```
+
+`SpellAccessEntry`若增加欄位，一律 backward-safe defaults；legacy JSON缺欄位可讀。
+
+不要因 Gith / Duergar component-free casting建立另一套 Psionics spell engine；它們仍是 racial spell access + source feature metadata。
+
+## M.12 Tiefling Legacy feature materialization
+
+每個 Legacy package用正式 feature identity承載 spell access：
+
+```text
+standard Infernal Legacy       # existing target
+SCAG Devil's Tongue
+SCAG Hellfire
+SCAG Winged                    # conditional movement feature，不是 spell access
+MTF bloodline legacy feature(s)
+```
+
+Replacement compiler順序：
+
+```text
+compile base Tiefling grants
+→ validate variant belongs to Tiefling
+→ resolve active replacement groups
+→ remove targeted base grants
+→ add replacement ability / feature grants
+→ character-level racial spell gates
+→ structural validation
+→ final Build
+```
+
+被 remove的 Infernal Legacy不得只在 UI hide後仍留下 spell access entries。
+
+## M.13 Appearance table
+
+SCAG appearance只走 `RoleplayProfile`：
+
+- options可 localization。
+- roll/pick只是 UI helper。
+- final value是普通 appearance text / optional roleplay field。
+- 不新增 Build legality field。
+
+## M.14 Localization / source labels
+
+`mtf`加入 existing source-label localization。
+
+M要擴充既有 field policy涵蓋：
+
+- MTF race/subrace/variant feature descriptions。
+- Tiefling replacement group / option labels。
+- Eladrin season labels。
+- conditional movement status/requirement presentation（若 user-visible）。
+- SCAG Tiefling variant descriptions。
+
+仍以 M02 policy SSOT為唯一 completeness contract。
+
+## M.15 No-docs static/runtime gate
+
+Production code grep不得出現 runtime讀取：
+
+```text
+種族_MTF.md
+種族_SCAG.md
+```
+
+允許文件與 provenance metadata提到 reference名稱，但 code不能 open/read/import/fetch它們。
+
+Server container若不 COPY `docs/`，全部 MTF / Tiefling functionality仍必須通過。
+'''
+
+          text = replace_once(
+              text,
+              "---\n\n# Full M01 Integration & Closeout — Subphase ID TBD",
+              "---\n\n" + design_sections + "\n---\n\n# Full M01 Integration & Closeout — Subphase ID TBD",
+              "design insert L/M",
+          )
+          text = replace_once(
+              text,
+              """vrgr
+xge
+tce
+```
+
+加上屆時正式新增的其他 M01 packs。""",
+              """vrgr
+xge
+tce
+mtf
+```
+
+加上屆時正式新增的其他 M01 packs。""",
+              "design closeout pack list",
+          )
+          text = replace_once(
+              text,
+              """feat prerequisite / grant helper
+spell access overlay helper
+attunement capacity metadata helper""",
+              """feat prerequisite / grant helper
+spell access overlay helper
+race/subrace movement resolver
+Natural Armor candidate helper
+race-variant replacement/group-selection resolver
+feature-mode validation / effective movement helper
+attunement capacity metadata helper""",
+              "design consolidation",
+          )
+          text = replace_once(
+              text,
+              """source-aware Spell access / catalog metadata
+```""",
+              """source-aware Spell access / catalog metadata
+generic Race/Subrace movement grants / Natural Armor metadata
+race variant group selections / conditional movement
+live ancestry feature modes
+```""",
+              "design api fields",
+          )
+          text = replace_once(
+              text,
+              """- automation/deferred boundary（如有）。
+- localization policy coverage for newly user-visible fields。""",
+              """- automation/deferred boundary（如有）。
+- signed racial ability modifier（如有）。
+- Natural Armor / movement grants / conditional movement（如有）。
+- race-variant compatibility / replacement-group selection（如有）。
+- Build vs Current State mode ownership（如有）。
+- localization policy coverage for newly user-visible fields。""",
+              "design conversion checklist",
+          )
+          text = replace_once(
+              text,
+              """35. Martial Adept只存 maneuver refs，卻遺失其 feat-granted resource / stacking / recharge semantics。
+36. `phb2014` Feat / Spell descriptions沒有進 localization policy required coverage，卻因 name-only completeness gate green 就宣告 K localization完成。""",
+              """35. Martial Adept只存 maneuver refs，卻遺失其 feat-granted resource / stacking / recharge semantics。
+36. `phb2014` Feat / Spell descriptions沒有進 localization policy required coverage，卻因 name-only completeness gate green 就宣告 K localization完成。
+37. `apps/server` / `apps/web` runtime透過路徑、URL或 loader直接讀 `docs/暫用規則資訊/種族_*.md`。
+38. 為 MTF Asmodeus建立第二個與 `srd5.1:race:tiefling` mechanics相同的 content identity。
+39. 允許 MTF non-Asmodeus Tiefling bloodline與 SCAG Feral / Devil's Tongue / Hellfire / Winged交叉混搭。
+40. Winged Tiefling只永久寫 `build.fly_speed=30`，完全不看 Current State heavy armor。
+41. 把 Eladrin current season存成 immutable Build choice或新增 `eladrin_season`專用 persistence。
+42. 對 Kobold / Orc套完 racial penalty後再拿 Point Buy minimum 8拒絕合法角色。
+43. `calculate_armor_class()` hardcode Lizardfolk StableKey，而不是 generic Natural Armor candidate。
+44. 為 L/M另建第二套 Race movement / racial spell / feature-mode engine，破壞 M01-D/E/F/H既有 substrate。""",
+              "design anti-patterns",
+          )
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Commit specification docs
+        shell: bash
+        run: |
+          git config user.name "openai-docs-bot"
+          git config user.email "noreply@openai.com"
+          git rm .github/workflows/_temp-m01-lm-docs.yml
+          git add docs/M01/實作規格.md docs/M01/測試指南.md docs/M01/開發設計方針.md
+          git diff --cached --check
+          git commit -m "docs(m01): define M01-L and M01-M"
+          git push origin HEAD:docs/m01-l-m-spec
