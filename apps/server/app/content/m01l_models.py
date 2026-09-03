@@ -22,7 +22,10 @@ RestType = Literal["short_rest", "long_rest"]
 
 class NaturalArmorData(StrictModel):
     base: int = Field(ge=1)
-    ability: AbilityName
+    # M01-L needs only the 2014 Lizardfolk formula. Reject unsupported formulas
+    # at the content boundary instead of silently accepting a broader DSL that
+    # the Rules Layer does not implement yet.
+    ability: Literal["dexterity"]
     requires_unarmored: bool = True
 
 
