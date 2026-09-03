@@ -1,1 +1,719 @@
-{"schema_version":1,"locale":"zh-TW","review_status":"draft-human-review-required","translation_method":"machine-assisted-draft-readable-fallback","entries":{"srd5.1:equipment:club":{"name":"棍棒"},"srd5.1:equipment:dagger":{"name":"匕首"},"srd5.1:equipment:greatclub":{"name":"巨棍"},"srd5.1:equipment:handaxe":{"name":"手斧"},"srd5.1:equipment:javelin":{"name":"標槍"},"srd5.1:equipment:light-hammer":{"name":"輕錘"},"srd5.1:equipment:mace":{"name":"釘頭錘"},"srd5.1:equipment:quarterstaff":{"name":"長棍"},"srd5.1:equipment:sickle":{"name":"鐮刀"},"srd5.1:equipment:spear":{"name":"長矛"},"srd5.1:equipment:crossbow-light":{"name":"輕弩"},"srd5.1:equipment:dart":{"name":"飛鏢"},"srd5.1:equipment:shortbow":{"name":"短弓"},"srd5.1:equipment:sling":{"name":"投石索"},"srd5.1:equipment:battleaxe":{"name":"戰斧"},"srd5.1:equipment:flail":{"name":"連枷"},"srd5.1:equipment:glaive":{"name":"長柄刀"},"srd5.1:equipment:greataxe":{"name":"巨斧"},"srd5.1:equipment:greatsword":{"name":"巨劍"},"srd5.1:equipment:halberd":{"name":"戟"},"srd5.1:equipment:lance":{"name":"騎槍"},"srd5.1:equipment:longsword":{"name":"長劍"},"srd5.1:equipment:maul":{"name":"大鎚"},"srd5.1:equipment:morningstar":{"name":"晨星錘"},"srd5.1:equipment:pike":{"name":"長槍"},"srd5.1:equipment:rapier":{"name":"細劍"},"srd5.1:equipment:scimitar":{"name":"彎刀"},"srd5.1:equipment:shortsword":{"name":"短劍"},"srd5.1:equipment:trident":{"name":"三叉戟"},"srd5.1:equipment:war-pick":{"name":"戰鎬"},"srd5.1:equipment:warhammer":{"name":"戰錘"},"srd5.1:equipment:whip":{"name":"鞭"},"srd5.1:equipment:blowgun":{"name":"吹箭筒"},"srd5.1:equipment:crossbow-hand":{"name":"手弩"},"srd5.1:equipment:crossbow-heavy":{"name":"重弩"},"srd5.1:equipment:longbow":{"name":"長弓"},"srd5.1:equipment:net":{"name":"網"},"srd5.1:equipment:padded-armor":{"name":"軟甲"},"srd5.1:equipment:leather-armor":{"name":"皮甲"},"srd5.1:equipment:studded-leather-armor":{"name":"鉚釘皮甲"},"srd5.1:equipment:hide-armor":{"name":"生皮甲"},"srd5.1:equipment:chain-shirt":{"name":"鎖子衫"},"srd5.1:equipment:scale-mail":{"name":"鱗甲"},"srd5.1:equipment:breastplate":{"name":"胸甲"},"srd5.1:equipment:half-plate-armor":{"name":"半身板甲"},"srd5.1:equipment:ring-mail":{"name":"環甲"},"srd5.1:equipment:chain-mail":{"name":"鎖子甲"},"srd5.1:equipment:splint-armor":{"name":"板條甲"},"srd5.1:equipment:plate-armor":{"name":"板甲"},"srd5.1:equipment:shield":{"name":"盾牌"},"srd5.1:equipment:abacus":{"name":"算盤"},"srd5.1:equipment:acid-vial":{"name":"強酸瓶"},"srd5.1:equipment:alchemists-fire-flask":{"name":"煉金師之火瓶"},"srd5.1:equipment:alms-box":{"name":"施捨箱"},"srd5.1:equipment:arrow":{"name":"箭矢"},"srd5.1:equipment:block-of-incense":{"name":"薰香塊"},"srd5.1:equipment:blowgun-needle":{"name":"吹箭針"},"srd5.1:equipment:censer":{"name":"香爐"},"srd5.1:equipment:crossbow-bolt":{"name":"弩矢"},"srd5.1:equipment:sling-bullet":{"name":"投石索彈丸"},"srd5.1:equipment:amulet":{"name":"護符"},"srd5.1:equipment:antitoxin-vial":{"name":"解毒劑瓶"},"srd5.1:equipment:crystal":{"name":"水晶"},"srd5.1:equipment:orb":{"name":"寶珠"},"srd5.1:equipment:rod":{"name":"權杖"},"srd5.1:equipment:staff":{"name":"法杖"},"srd5.1:equipment:wand":{"name":"魔杖"},"srd5.1:equipment:backpack":{"name":"背包"},"srd5.1:equipment:ball-bearings-bag-of-1000":{"name":"滾珠（一袋1000顆）"},"srd5.1:equipment:barrel":{"name":"木桶"},"srd5.1:equipment:basket":{"name":"籃子"},"srd5.1:equipment:bedroll":{"name":"鋪蓋卷"},"srd5.1:equipment:bell":{"name":"鈴鐺"},"srd5.1:equipment:blanket":{"name":"毛毯"},"srd5.1:equipment:block-and-tackle":{"name":"滑輪組"},"srd5.1:equipment:book":{"name":"書籍"},"srd5.1:equipment:bottle-glass":{"name":"玻璃瓶"},"srd5.1:equipment:bucket":{"name":"水桶"},"srd5.1:equipment:caltrops":{"name":"鐵蒺藜"},"srd5.1:equipment:candle":{"name":"蠟燭"},"srd5.1:equipment:case-crossbow-bolt":{"name":"弩矢筒"},"srd5.1:equipment:case-map-or-scroll":{"name":"地圖或卷軸盒"},"srd5.1:equipment:chain-10-feet":{"name":"鎖鏈（10呎）"},"srd5.1:equipment:chalk-1-piece":{"name":"粉筆（1支）"},"srd5.1:equipment:chest":{"name":"箱子"},"srd5.1:equipment:clothes-common":{"name":"衣服， 普通"},"srd5.1:equipment:clothes-costume":{"name":"戲服"},"srd5.1:equipment:clothes-fine":{"name":"精緻服裝"},"srd5.1:equipment:clothes-travelers":{"name":"旅行者服裝"},"srd5.1:equipment:component-pouch":{"name":"材料包"},"srd5.1:equipment:crowbar":{"name":"撬棍"},"srd5.1:equipment:sprig-of-mistletoe":{"name":"槲寄生枝"},"srd5.1:equipment:totem":{"name":"圖騰"},"srd5.1:equipment:wooden-staff":{"name":"木杖"},"srd5.1:equipment:yew-wand":{"name":"紫杉魔杖"},"srd5.1:equipment:emblem":{"name":"徽記"},"srd5.1:equipment:fishing-tackle":{"name":"釣具"},"srd5.1:equipment:flask-or-tankard":{"name":"燒瓶或大酒杯"},"srd5.1:equipment:grappling-hook":{"name":"抓鉤"},"srd5.1:equipment:hammer":{"name":"錘"},"srd5.1:equipment:hammer-sledge":{"name":"大錘"},"srd5.1:equipment:holy-water-flask":{"name":"聖水瓶"},"srd5.1:equipment:hourglass":{"name":"沙漏"},"srd5.1:equipment:hunting-trap":{"name":"獵捕陷阱"},"srd5.1:equipment:ink-1-ounce-bottle":{"name":"墨水（1盎司瓶）"},"srd5.1:equipment:ink-pen":{"name":"墨水筆"},"srd5.1:equipment:jug-or-pitcher":{"name":"水壺或水罐"},"srd5.1:equipment:climbers-kit":{"name":"攀爬工具組"},"srd5.1:equipment:disguise-kit":{"name":"偽裝工具組"},"srd5.1:equipment:forgery-kit":{"name":"偽造工具組"},"srd5.1:equipment:herbalism-kit":{"name":"草藥工具組"},"srd5.1:equipment:healers-kit":{"name":"治療工具組"},"srd5.1:equipment:mess-kit":{"name":"餐具組"},"srd5.1:equipment:poisoners-kit":{"name":"製毒工具組"},"srd5.1:equipment:ladder-10-foot":{"name":"梯子（10呎）"},"srd5.1:equipment:lamp":{"name":"油燈"},"srd5.1:equipment:lantern-bullseye":{"name":"聚光提燈"},"srd5.1:equipment:lantern-hooded":{"name":"遮罩提燈"},"srd5.1:equipment:little-bag-of-sand":{"name":"小袋沙"},"srd5.1:equipment:lock":{"name":"鎖"},"srd5.1:equipment:magnifying-glass":{"name":"放大鏡"},"srd5.1:equipment:manacles":{"name":"手銬"},"srd5.1:equipment:mirror-steel":{"name":"鋼鏡"},"srd5.1:equipment:oil-flask":{"name":"燈油瓶"},"srd5.1:equipment:paper-one-sheet":{"name":"紙（一張）"},"srd5.1:equipment:parchment-one-sheet":{"name":"羊皮紙（一張）"},"srd5.1:equipment:perfume-vial":{"name":"香水瓶"},"srd5.1:equipment:pick-miners":{"name":"礦工鎬"},"srd5.1:equipment:piton":{"name":"岩釘"},"srd5.1:equipment:poison-basic-vial":{"name":"基本毒藥瓶"},"srd5.1:equipment:pole-10-foot":{"name":"長桿（10呎）"},"srd5.1:equipment:pot-iron":{"name":"鐵鍋"},"srd5.1:equipment:pouch":{"name":"小袋"},"srd5.1:equipment:quiver":{"name":"箭袋"},"srd5.1:equipment:ram-portable":{"name":"攜行式破城槌"},"srd5.1:equipment:rations-1-day":{"name":"口糧（1日份）"},"srd5.1:equipment:reliquary":{"name":"聖髑盒"},"srd5.1:equipment:robes":{"name":"長袍"},"srd5.1:equipment:rope-hempen-50-feet":{"name":"麻繩（50呎）"},"srd5.1:equipment:rope-silk-50-feet":{"name":"絲繩（50呎）"},"srd5.1:equipment:sack":{"name":"麻袋"},"srd5.1:equipment:scale-merchants":{"name":"商人天秤"},"srd5.1:equipment:sealing-wax":{"name":"封蠟"},"srd5.1:equipment:shovel":{"name":"鏟子"},"srd5.1:equipment:signal-whistle":{"name":"信號哨"},"srd5.1:equipment:signet-ring":{"name":"印章戒指"},"srd5.1:equipment:small-knife":{"name":"小刀"},"srd5.1:equipment:soap":{"name":"肥皂"},"srd5.1:equipment:spellbook":{"name":"法術書"},"srd5.1:equipment:spike-iron":{"name":"鐵釘"},"srd5.1:equipment:spyglass":{"name":"望遠鏡"},"srd5.1:equipment:string-10-feet":{"name":"細繩（10呎）"},"srd5.1:equipment:tent-two-person":{"name":"帳篷（雙人）"},"srd5.1:equipment:tinderbox":{"name":"火絨盒"},"srd5.1:equipment:torch":{"name":"火把"},"srd5.1:equipment:vestments":{"name":"法衣"},"srd5.1:equipment:vial":{"name":"小瓶"},"srd5.1:equipment:waterskin":{"name":"水袋"},"srd5.1:equipment:whetstone":{"name":"磨刀石"},"srd5.1:equipment:burglars-pack":{"name":"竊賊套組"},"srd5.1:equipment:diplomats-pack":{"name":"外交官套組"},"srd5.1:equipment:dungeoneers-pack":{"name":"地城探索者套組"},"srd5.1:equipment:entertainers-pack":{"name":"藝人套組"},"srd5.1:equipment:explorers-pack":{"name":"探索者套組"},"srd5.1:equipment:priests-pack":{"name":"祭司套組"},"srd5.1:equipment:scholars-pack":{"name":"學者套組"},"srd5.1:equipment:alchemists-supplies":{"name":"煉金術士工具"},"srd5.1:equipment:brewers-supplies":{"name":"釀酒師工具"},"srd5.1:equipment:calligraphers-supplies":{"name":"書法家工具"},"srd5.1:equipment:carpenters-tools":{"name":"木匠工具"},"srd5.1:equipment:cartographers-tools":{"name":"製圖師工具"},"srd5.1:equipment:cobblers-tools":{"name":"製鞋匠工具"},"srd5.1:equipment:cooks-utensils":{"name":"廚師用具"},"srd5.1:equipment:glassblowers-tools":{"name":"玻璃匠工具"},"srd5.1:equipment:jewelers-tools":{"name":"珠寶匠工具"},"srd5.1:equipment:leatherworkers-tools":{"name":"皮匠工具"},"srd5.1:equipment:masons-tools":{"name":"石匠工具"},"srd5.1:equipment:painters-supplies":{"name":"畫家工具"},"srd5.1:equipment:potters-tools":{"name":"陶匠工具"},"srd5.1:equipment:smiths-tools":{"name":"鐵匠工具"},"srd5.1:equipment:tinkers-tools":{"name":"修補匠工具"},"srd5.1:equipment:weavers-tools":{"name":"織匠工具"},"srd5.1:equipment:woodcarvers-tools":{"name":"木雕匠工具"},"srd5.1:equipment:dice-set":{"name":"骰子組"},"srd5.1:equipment:playing-card-set":{"name":"紙牌組"},"srd5.1:equipment:bagpipes":{"name":"風笛"},"srd5.1:equipment:drum":{"name":"鼓"},"srd5.1:equipment:dulcimer":{"name":"揚琴"},"srd5.1:equipment:flute":{"name":"長笛"},"srd5.1:equipment:lute":{"name":"魯特琴"},"srd5.1:equipment:lyre":{"name":"里拉琴"},"srd5.1:equipment:horn":{"name":"號角"},"srd5.1:equipment:pan-flute":{"name":"排笛"},"srd5.1:equipment:shawm":{"name":"蕭姆管"},"srd5.1:equipment:viol":{"name":"古提琴"},"srd5.1:equipment:navigators-tools":{"name":"領航員工具"},"srd5.1:equipment:thieves-tools":{"name":"盜賊工具"},"srd5.1:equipment:camel":{"name":"駱駝"},"srd5.1:equipment:donkey":{"name":"驢"},"srd5.1:equipment:mule":{"name":"騾"},"srd5.1:equipment:elephant":{"name":"象"},"srd5.1:equipment:horse-draft":{"name":"馱馬"},"srd5.1:equipment:horse-riding":{"name":"乘用馬"},"srd5.1:equipment:mastiff":{"name":"獒犬"},"srd5.1:equipment:pony":{"name":"小馬"},"srd5.1:equipment:warhorse":{"name":"戰馬"},"srd5.1:equipment:barding-padded":{"name":"馬鎧（軟甲）"},"srd5.1:equipment:barding-leather":{"name":"馬鎧（皮甲）"},"srd5.1:equipment:barding-studded-leather":{"name":"馬鎧（釘皮甲）"},"srd5.1:equipment:barding-hide":{"name":"馬鎧（生皮甲）"},"srd5.1:equipment:barding-chain-shirt":{"name":"馬鎧（鎖子衫）"},"srd5.1:equipment:barding-scale-mail":{"name":"馬鎧（鱗甲）"},"srd5.1:equipment:barding-breastplate":{"name":"馬鎧（胸甲）"},"srd5.1:equipment:barding-half-plate":{"name":"馬鎧（半身板甲）"},"srd5.1:equipment:barding-ring-mail":{"name":"馬鎧（環甲）"},"srd5.1:equipment:barding-chain-mail":{"name":"馬鎧（鎖子甲）"},"srd5.1:equipment:barding-splint":{"name":"馬鎧（板條甲）"},"srd5.1:equipment:barding-plate":{"name":"馬鎧（全身板甲）"},"srd5.1:equipment:bit-and-bridle":{"name":"馬銜與韁繩"},"srd5.1:equipment:carriage":{"name":"四輪馬車"},"srd5.1:equipment:cart":{"name":"手推車"},"srd5.1:equipment:chariot":{"name":"戰車"},"srd5.1:equipment:animal-feed-1-day":{"name":"動物飼料（1日份）"},"srd5.1:equipment:saddle-exotic":{"name":"異獸鞍具"},"srd5.1:equipment:saddle-military":{"name":"軍用鞍具"},"srd5.1:equipment:saddle-pack":{"name":"馱運鞍具"},"srd5.1:equipment:saddle-riding":{"name":"騎乘鞍具"},"srd5.1:equipment:saddlebags":{"name":"鞍袋"},"srd5.1:equipment:sled":{"name":"雪橇"},"srd5.1:equipment:stabling-1-day":{"name":"馬廄寄養（1日）"},"srd5.1:equipment:wagon":{"name":"貨運馬車"},"srd5.1:equipment:galley":{"name":"槳帆船"},"srd5.1:equipment:keelboat":{"name":"龍骨船"},"srd5.1:equipment:longship":{"name":"長船"},"srd5.1:equipment:rowboat":{"name":"划艇"},"srd5.1:equipment:sailing-ship":{"name":"帆船"},"srd5.1:equipment:warship":{"name":"戰船"}}}
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "review_status": "draft-human-review-required",
+  "translation_method": "machine-assisted-draft-readable-fallback",
+  "entries": {
+    "srd5.1:equipment:club": {
+      "name": "棍棒"
+    },
+    "srd5.1:equipment:dagger": {
+      "name": "匕首"
+    },
+    "srd5.1:equipment:greatclub": {
+      "name": "巨棍"
+    },
+    "srd5.1:equipment:handaxe": {
+      "name": "手斧"
+    },
+    "srd5.1:equipment:javelin": {
+      "name": "標槍"
+    },
+    "srd5.1:equipment:light-hammer": {
+      "name": "輕錘"
+    },
+    "srd5.1:equipment:mace": {
+      "name": "釘頭錘"
+    },
+    "srd5.1:equipment:quarterstaff": {
+      "name": "長棍"
+    },
+    "srd5.1:equipment:sickle": {
+      "name": "鐮刀"
+    },
+    "srd5.1:equipment:spear": {
+      "name": "長矛"
+    },
+    "srd5.1:equipment:crossbow-light": {
+      "name": "輕弩"
+    },
+    "srd5.1:equipment:dart": {
+      "name": "飛鏢"
+    },
+    "srd5.1:equipment:shortbow": {
+      "name": "短弓"
+    },
+    "srd5.1:equipment:sling": {
+      "name": "投石索"
+    },
+    "srd5.1:equipment:battleaxe": {
+      "name": "戰斧"
+    },
+    "srd5.1:equipment:flail": {
+      "name": "連枷"
+    },
+    "srd5.1:equipment:glaive": {
+      "name": "長柄刀"
+    },
+    "srd5.1:equipment:greataxe": {
+      "name": "巨斧"
+    },
+    "srd5.1:equipment:greatsword": {
+      "name": "巨劍"
+    },
+    "srd5.1:equipment:halberd": {
+      "name": "戟"
+    },
+    "srd5.1:equipment:lance": {
+      "name": "騎槍"
+    },
+    "srd5.1:equipment:longsword": {
+      "name": "長劍"
+    },
+    "srd5.1:equipment:maul": {
+      "name": "大鎚"
+    },
+    "srd5.1:equipment:morningstar": {
+      "name": "晨星錘"
+    },
+    "srd5.1:equipment:pike": {
+      "name": "長槍"
+    },
+    "srd5.1:equipment:rapier": {
+      "name": "細劍"
+    },
+    "srd5.1:equipment:scimitar": {
+      "name": "彎刀"
+    },
+    "srd5.1:equipment:shortsword": {
+      "name": "短劍"
+    },
+    "srd5.1:equipment:trident": {
+      "name": "三叉戟"
+    },
+    "srd5.1:equipment:war-pick": {
+      "name": "戰鎬"
+    },
+    "srd5.1:equipment:warhammer": {
+      "name": "戰錘"
+    },
+    "srd5.1:equipment:whip": {
+      "name": "鞭"
+    },
+    "srd5.1:equipment:blowgun": {
+      "name": "吹箭筒"
+    },
+    "srd5.1:equipment:crossbow-hand": {
+      "name": "手弩"
+    },
+    "srd5.1:equipment:crossbow-heavy": {
+      "name": "重弩"
+    },
+    "srd5.1:equipment:longbow": {
+      "name": "長弓"
+    },
+    "srd5.1:equipment:net": {
+      "name": "網"
+    },
+    "srd5.1:equipment:padded-armor": {
+      "name": "軟甲"
+    },
+    "srd5.1:equipment:leather-armor": {
+      "name": "皮甲"
+    },
+    "srd5.1:equipment:studded-leather-armor": {
+      "name": "鉚釘皮甲"
+    },
+    "srd5.1:equipment:hide-armor": {
+      "name": "生皮甲"
+    },
+    "srd5.1:equipment:chain-shirt": {
+      "name": "鎖子衫"
+    },
+    "srd5.1:equipment:scale-mail": {
+      "name": "鱗甲"
+    },
+    "srd5.1:equipment:breastplate": {
+      "name": "胸甲"
+    },
+    "srd5.1:equipment:half-plate-armor": {
+      "name": "半身板甲"
+    },
+    "srd5.1:equipment:ring-mail": {
+      "name": "環甲"
+    },
+    "srd5.1:equipment:chain-mail": {
+      "name": "鎖子甲"
+    },
+    "srd5.1:equipment:splint-armor": {
+      "name": "板條甲"
+    },
+    "srd5.1:equipment:plate-armor": {
+      "name": "板甲"
+    },
+    "srd5.1:equipment:shield": {
+      "name": "盾牌"
+    },
+    "srd5.1:equipment:abacus": {
+      "name": "算盤"
+    },
+    "srd5.1:equipment:acid-vial": {
+      "name": "強酸瓶"
+    },
+    "srd5.1:equipment:alchemists-fire-flask": {
+      "name": "煉金師之火瓶"
+    },
+    "srd5.1:equipment:alms-box": {
+      "name": "施捨箱"
+    },
+    "srd5.1:equipment:arrow": {
+      "name": "箭矢"
+    },
+    "srd5.1:equipment:block-of-incense": {
+      "name": "薰香塊"
+    },
+    "srd5.1:equipment:blowgun-needle": {
+      "name": "吹箭針"
+    },
+    "srd5.1:equipment:censer": {
+      "name": "香爐"
+    },
+    "srd5.1:equipment:crossbow-bolt": {
+      "name": "弩矢"
+    },
+    "srd5.1:equipment:sling-bullet": {
+      "name": "投石索彈丸"
+    },
+    "srd5.1:equipment:amulet": {
+      "name": "護符"
+    },
+    "srd5.1:equipment:antitoxin-vial": {
+      "name": "解毒劑瓶"
+    },
+    "srd5.1:equipment:crystal": {
+      "name": "水晶"
+    },
+    "srd5.1:equipment:orb": {
+      "name": "寶珠"
+    },
+    "srd5.1:equipment:rod": {
+      "name": "權杖"
+    },
+    "srd5.1:equipment:staff": {
+      "name": "法杖"
+    },
+    "srd5.1:equipment:wand": {
+      "name": "魔杖"
+    },
+    "srd5.1:equipment:backpack": {
+      "name": "背包"
+    },
+    "srd5.1:equipment:ball-bearings-bag-of-1000": {
+      "name": "滾珠（一袋1000顆）"
+    },
+    "srd5.1:equipment:barrel": {
+      "name": "木桶"
+    },
+    "srd5.1:equipment:basket": {
+      "name": "籃子"
+    },
+    "srd5.1:equipment:bedroll": {
+      "name": "鋪蓋卷"
+    },
+    "srd5.1:equipment:bell": {
+      "name": "鈴鐺"
+    },
+    "srd5.1:equipment:blanket": {
+      "name": "毛毯"
+    },
+    "srd5.1:equipment:block-and-tackle": {
+      "name": "滑輪組"
+    },
+    "srd5.1:equipment:book": {
+      "name": "書籍"
+    },
+    "srd5.1:equipment:bottle-glass": {
+      "name": "玻璃瓶"
+    },
+    "srd5.1:equipment:bucket": {
+      "name": "水桶"
+    },
+    "srd5.1:equipment:caltrops": {
+      "name": "鐵蒺藜"
+    },
+    "srd5.1:equipment:candle": {
+      "name": "蠟燭"
+    },
+    "srd5.1:equipment:case-crossbow-bolt": {
+      "name": "弩矢筒"
+    },
+    "srd5.1:equipment:case-map-or-scroll": {
+      "name": "地圖或卷軸盒"
+    },
+    "srd5.1:equipment:chain-10-feet": {
+      "name": "鎖鏈（10呎）"
+    },
+    "srd5.1:equipment:chalk-1-piece": {
+      "name": "粉筆（1支）"
+    },
+    "srd5.1:equipment:chest": {
+      "name": "箱子"
+    },
+    "srd5.1:equipment:clothes-common": {
+      "name": "衣服， 普通"
+    },
+    "srd5.1:equipment:clothes-costume": {
+      "name": "戲服"
+    },
+    "srd5.1:equipment:clothes-fine": {
+      "name": "精緻服裝"
+    },
+    "srd5.1:equipment:clothes-travelers": {
+      "name": "旅行者服裝"
+    },
+    "srd5.1:equipment:component-pouch": {
+      "name": "材料包"
+    },
+    "srd5.1:equipment:crowbar": {
+      "name": "撬棍"
+    },
+    "srd5.1:equipment:sprig-of-mistletoe": {
+      "name": "槲寄生枝"
+    },
+    "srd5.1:equipment:totem": {
+      "name": "圖騰"
+    },
+    "srd5.1:equipment:wooden-staff": {
+      "name": "木杖"
+    },
+    "srd5.1:equipment:yew-wand": {
+      "name": "紫杉魔杖"
+    },
+    "srd5.1:equipment:emblem": {
+      "name": "徽記"
+    },
+    "srd5.1:equipment:fishing-tackle": {
+      "name": "釣具"
+    },
+    "srd5.1:equipment:flask-or-tankard": {
+      "name": "燒瓶或大酒杯"
+    },
+    "srd5.1:equipment:grappling-hook": {
+      "name": "抓鉤"
+    },
+    "srd5.1:equipment:hammer": {
+      "name": "錘"
+    },
+    "srd5.1:equipment:hammer-sledge": {
+      "name": "大錘"
+    },
+    "srd5.1:equipment:holy-water-flask": {
+      "name": "聖水瓶"
+    },
+    "srd5.1:equipment:hourglass": {
+      "name": "沙漏"
+    },
+    "srd5.1:equipment:hunting-trap": {
+      "name": "獵捕陷阱"
+    },
+    "srd5.1:equipment:ink-1-ounce-bottle": {
+      "name": "墨水（1盎司瓶）"
+    },
+    "srd5.1:equipment:ink-pen": {
+      "name": "墨水筆"
+    },
+    "srd5.1:equipment:jug-or-pitcher": {
+      "name": "水壺或水罐"
+    },
+    "srd5.1:equipment:climbers-kit": {
+      "name": "攀爬工具組"
+    },
+    "srd5.1:equipment:disguise-kit": {
+      "name": "偽裝工具組"
+    },
+    "srd5.1:equipment:forgery-kit": {
+      "name": "偽造工具組"
+    },
+    "srd5.1:equipment:herbalism-kit": {
+      "name": "草藥工具組"
+    },
+    "srd5.1:equipment:healers-kit": {
+      "name": "治療工具組"
+    },
+    "srd5.1:equipment:mess-kit": {
+      "name": "餐具組"
+    },
+    "srd5.1:equipment:poisoners-kit": {
+      "name": "製毒工具組"
+    },
+    "srd5.1:equipment:ladder-10-foot": {
+      "name": "梯子（10呎）"
+    },
+    "srd5.1:equipment:lamp": {
+      "name": "油燈"
+    },
+    "srd5.1:equipment:lantern-bullseye": {
+      "name": "聚光提燈"
+    },
+    "srd5.1:equipment:lantern-hooded": {
+      "name": "遮罩提燈"
+    },
+    "srd5.1:equipment:little-bag-of-sand": {
+      "name": "小袋沙"
+    },
+    "srd5.1:equipment:lock": {
+      "name": "鎖"
+    },
+    "srd5.1:equipment:magnifying-glass": {
+      "name": "放大鏡"
+    },
+    "srd5.1:equipment:manacles": {
+      "name": "手銬"
+    },
+    "srd5.1:equipment:mirror-steel": {
+      "name": "鋼鏡"
+    },
+    "srd5.1:equipment:oil-flask": {
+      "name": "燈油瓶"
+    },
+    "srd5.1:equipment:paper-one-sheet": {
+      "name": "紙（一張）"
+    },
+    "srd5.1:equipment:parchment-one-sheet": {
+      "name": "羊皮紙（一張）"
+    },
+    "srd5.1:equipment:perfume-vial": {
+      "name": "香水瓶"
+    },
+    "srd5.1:equipment:pick-miners": {
+      "name": "礦工鎬"
+    },
+    "srd5.1:equipment:piton": {
+      "name": "岩釘"
+    },
+    "srd5.1:equipment:poison-basic-vial": {
+      "name": "基本毒藥瓶"
+    },
+    "srd5.1:equipment:pole-10-foot": {
+      "name": "長桿（10呎）"
+    },
+    "srd5.1:equipment:pot-iron": {
+      "name": "鐵鍋"
+    },
+    "srd5.1:equipment:pouch": {
+      "name": "小袋"
+    },
+    "srd5.1:equipment:quiver": {
+      "name": "箭袋"
+    },
+    "srd5.1:equipment:ram-portable": {
+      "name": "攜行式破城槌"
+    },
+    "srd5.1:equipment:rations-1-day": {
+      "name": "口糧（1日份）"
+    },
+    "srd5.1:equipment:reliquary": {
+      "name": "聖髑盒"
+    },
+    "srd5.1:equipment:robes": {
+      "name": "長袍"
+    },
+    "srd5.1:equipment:rope-hempen-50-feet": {
+      "name": "麻繩（50呎）"
+    },
+    "srd5.1:equipment:rope-silk-50-feet": {
+      "name": "絲繩（50呎）"
+    },
+    "srd5.1:equipment:sack": {
+      "name": "麻袋"
+    },
+    "srd5.1:equipment:scale-merchants": {
+      "name": "商人天秤"
+    },
+    "srd5.1:equipment:sealing-wax": {
+      "name": "封蠟"
+    },
+    "srd5.1:equipment:shovel": {
+      "name": "鏟子"
+    },
+    "srd5.1:equipment:signal-whistle": {
+      "name": "信號哨"
+    },
+    "srd5.1:equipment:signet-ring": {
+      "name": "印章戒指"
+    },
+    "srd5.1:equipment:small-knife": {
+      "name": "小刀"
+    },
+    "srd5.1:equipment:soap": {
+      "name": "肥皂"
+    },
+    "srd5.1:equipment:spellbook": {
+      "name": "法術書"
+    },
+    "srd5.1:equipment:spike-iron": {
+      "name": "鐵釘"
+    },
+    "srd5.1:equipment:spyglass": {
+      "name": "望遠鏡"
+    },
+    "srd5.1:equipment:string-10-feet": {
+      "name": "細繩（10呎）"
+    },
+    "srd5.1:equipment:tent-two-person": {
+      "name": "帳篷（雙人）"
+    },
+    "srd5.1:equipment:tinderbox": {
+      "name": "火絨盒"
+    },
+    "srd5.1:equipment:torch": {
+      "name": "火把"
+    },
+    "srd5.1:equipment:vestments": {
+      "name": "法衣"
+    },
+    "srd5.1:equipment:vial": {
+      "name": "小瓶"
+    },
+    "srd5.1:equipment:waterskin": {
+      "name": "水袋"
+    },
+    "srd5.1:equipment:whetstone": {
+      "name": "磨刀石"
+    },
+    "srd5.1:equipment:burglars-pack": {
+      "name": "竊賊套組"
+    },
+    "srd5.1:equipment:diplomats-pack": {
+      "name": "外交官套組"
+    },
+    "srd5.1:equipment:dungeoneers-pack": {
+      "name": "地城探險家套裝"
+    },
+    "srd5.1:equipment:entertainers-pack": {
+      "name": "藝人套組"
+    },
+    "srd5.1:equipment:explorers-pack": {
+      "name": "探索者套組"
+    },
+    "srd5.1:equipment:priests-pack": {
+      "name": "祭司套組"
+    },
+    "srd5.1:equipment:scholars-pack": {
+      "name": "學者套組"
+    },
+    "srd5.1:equipment:alchemists-supplies": {
+      "name": "煉金術士工具"
+    },
+    "srd5.1:equipment:brewers-supplies": {
+      "name": "釀酒師工具"
+    },
+    "srd5.1:equipment:calligraphers-supplies": {
+      "name": "書法家工具"
+    },
+    "srd5.1:equipment:carpenters-tools": {
+      "name": "木匠工具"
+    },
+    "srd5.1:equipment:cartographers-tools": {
+      "name": "製圖師工具"
+    },
+    "srd5.1:equipment:cobblers-tools": {
+      "name": "製鞋匠工具"
+    },
+    "srd5.1:equipment:cooks-utensils": {
+      "name": "廚師用具"
+    },
+    "srd5.1:equipment:glassblowers-tools": {
+      "name": "玻璃匠工具"
+    },
+    "srd5.1:equipment:jewelers-tools": {
+      "name": "珠寶匠工具"
+    },
+    "srd5.1:equipment:leatherworkers-tools": {
+      "name": "皮匠工具"
+    },
+    "srd5.1:equipment:masons-tools": {
+      "name": "石匠工具"
+    },
+    "srd5.1:equipment:painters-supplies": {
+      "name": "畫家工具"
+    },
+    "srd5.1:equipment:potters-tools": {
+      "name": "陶匠工具"
+    },
+    "srd5.1:equipment:smiths-tools": {
+      "name": "鐵匠工具"
+    },
+    "srd5.1:equipment:tinkers-tools": {
+      "name": "修理工具"
+    },
+    "srd5.1:equipment:weavers-tools": {
+      "name": "織匠工具"
+    },
+    "srd5.1:equipment:woodcarvers-tools": {
+      "name": "木雕匠工具"
+    },
+    "srd5.1:equipment:dice-set": {
+      "name": "骰子組"
+    },
+    "srd5.1:equipment:playing-card-set": {
+      "name": "紙牌組"
+    },
+    "srd5.1:equipment:bagpipes": {
+      "name": "風笛"
+    },
+    "srd5.1:equipment:drum": {
+      "name": "鼓"
+    },
+    "srd5.1:equipment:dulcimer": {
+      "name": "揚琴"
+    },
+    "srd5.1:equipment:flute": {
+      "name": "長笛"
+    },
+    "srd5.1:equipment:lute": {
+      "name": "魯特琴"
+    },
+    "srd5.1:equipment:lyre": {
+      "name": "里拉琴"
+    },
+    "srd5.1:equipment:horn": {
+      "name": "號角"
+    },
+    "srd5.1:equipment:pan-flute": {
+      "name": "排笛"
+    },
+    "srd5.1:equipment:shawm": {
+      "name": "蕭姆管"
+    },
+    "srd5.1:equipment:viol": {
+      "name": "古提琴"
+    },
+    "srd5.1:equipment:navigators-tools": {
+      "name": "領航員工具"
+    },
+    "srd5.1:equipment:thieves-tools": {
+      "name": "盜賊工具"
+    },
+    "srd5.1:equipment:camel": {
+      "name": "駱駝"
+    },
+    "srd5.1:equipment:donkey": {
+      "name": "驢"
+    },
+    "srd5.1:equipment:mule": {
+      "name": "騾"
+    },
+    "srd5.1:equipment:elephant": {
+      "name": "象"
+    },
+    "srd5.1:equipment:horse-draft": {
+      "name": "馱馬"
+    },
+    "srd5.1:equipment:horse-riding": {
+      "name": "乘用馬"
+    },
+    "srd5.1:equipment:mastiff": {
+      "name": "獒犬"
+    },
+    "srd5.1:equipment:pony": {
+      "name": "小馬"
+    },
+    "srd5.1:equipment:warhorse": {
+      "name": "戰馬"
+    },
+    "srd5.1:equipment:barding-padded": {
+      "name": "馬鎧（軟甲）"
+    },
+    "srd5.1:equipment:barding-leather": {
+      "name": "馬鎧（皮甲）"
+    },
+    "srd5.1:equipment:barding-studded-leather": {
+      "name": "馬鎧（釘皮甲）"
+    },
+    "srd5.1:equipment:barding-hide": {
+      "name": "馬鎧（生皮甲）"
+    },
+    "srd5.1:equipment:barding-chain-shirt": {
+      "name": "馬鎧（鎖子衫）"
+    },
+    "srd5.1:equipment:barding-scale-mail": {
+      "name": "馬鎧（鱗甲）"
+    },
+    "srd5.1:equipment:barding-breastplate": {
+      "name": "馬鎧（胸甲）"
+    },
+    "srd5.1:equipment:barding-half-plate": {
+      "name": "馬鎧（半身板甲）"
+    },
+    "srd5.1:equipment:barding-ring-mail": {
+      "name": "馬鎧（環甲）"
+    },
+    "srd5.1:equipment:barding-chain-mail": {
+      "name": "馬鎧（鎖子甲）"
+    },
+    "srd5.1:equipment:barding-splint": {
+      "name": "馬鎧（板條甲）"
+    },
+    "srd5.1:equipment:barding-plate": {
+      "name": "馬鎧（全身板甲）"
+    },
+    "srd5.1:equipment:bit-and-bridle": {
+      "name": "馬銜與韁繩"
+    },
+    "srd5.1:equipment:carriage": {
+      "name": "四輪馬車"
+    },
+    "srd5.1:equipment:cart": {
+      "name": "手推車"
+    },
+    "srd5.1:equipment:chariot": {
+      "name": "戰車"
+    },
+    "srd5.1:equipment:animal-feed-1-day": {
+      "name": "動物飼料（1日份）"
+    },
+    "srd5.1:equipment:saddle-exotic": {
+      "name": "異獸鞍具"
+    },
+    "srd5.1:equipment:saddle-military": {
+      "name": "軍用鞍具"
+    },
+    "srd5.1:equipment:saddle-pack": {
+      "name": "馱運鞍具"
+    },
+    "srd5.1:equipment:saddle-riding": {
+      "name": "騎乘鞍具"
+    },
+    "srd5.1:equipment:saddlebags": {
+      "name": "鞍袋"
+    },
+    "srd5.1:equipment:sled": {
+      "name": "雪橇"
+    },
+    "srd5.1:equipment:stabling-1-day": {
+      "name": "馬廄寄養（1日）"
+    },
+    "srd5.1:equipment:wagon": {
+      "name": "貨運馬車"
+    },
+    "srd5.1:equipment:galley": {
+      "name": "槳帆船"
+    },
+    "srd5.1:equipment:keelboat": {
+      "name": "龍骨船"
+    },
+    "srd5.1:equipment:longship": {
+      "name": "長船"
+    },
+    "srd5.1:equipment:rowboat": {
+      "name": "划艇"
+    },
+    "srd5.1:equipment:sailing-ship": {
+      "name": "帆船"
+    },
+    "srd5.1:equipment:warship": {
+      "name": "戰船"
+    }
+  }
+}

@@ -3,32 +3,349 @@
   "ruleset": "dnd5e-2014",
   "reference_policy": "docs/暫用規則資訊 is comparison input only; runtime never parses those Markdown files",
   "terms": [
-    {"en":"Ability Score","zh-TW":"能力值","reference_zh-TW":null,"reference_source":null,"decision_note":"Use the established Traditional Chinese tabletop term.","reviewed":true},
-    {"en":"Saving Throw","zh-TW":"豁免檢定","reference_zh-TW":null,"reference_source":null,"decision_note":"Keep 檢定 explicit to distinguish the roll from proficiency.","reviewed":true},
-    {"en":"Armor Class","zh-TW":"護甲等級","reference_zh-TW":null,"reference_source":null,"decision_note":"Canonical UI term; AC remains the machine/abbreviation form where appropriate.","reviewed":true},
-    {"en":"Difficulty Class","zh-TW":"難度等級","reference_zh-TW":null,"reference_source":null,"decision_note":"Canonical UI term; DC remains the machine/abbreviation form where appropriate.","reviewed":true},
-    {"en":"Proficiency Bonus","zh-TW":"熟練加值","reference_zh-TW":null,"reference_source":null,"decision_note":"Use 加值 consistently for the numeric bonus.","reviewed":true},
-    {"en":"Proficiency","zh-TW":"熟練","reference_zh-TW":"技能熟練","reference_source":"docs/暫用規則資訊/背景_PHB.md","decision_note":"The reference document uses contextual compounds such as 技能熟練/工具熟練. The glossary keeps the reusable base term 熟練 so the object type can be composed by context.","reviewed":true},
-    {"en":"Advantage","zh-TW":"優勢","reference_zh-TW":null,"reference_source":null,"decision_note":"Use the standard opposed pair 優勢/劣勢.","reviewed":true},
-    {"en":"Disadvantage","zh-TW":"劣勢","reference_zh-TW":null,"reference_source":null,"decision_note":"Use the standard opposed pair 優勢/劣勢.","reviewed":true},
-    {"en":"Short Rest","zh-TW":"短休","reference_zh-TW":null,"reference_source":null,"decision_note":"Concise product term.","reviewed":true},
-    {"en":"Long Rest","zh-TW":"長休","reference_zh-TW":null,"reference_source":null,"decision_note":"Concise product term.","reviewed":true},
-    {"en":"Spell Slot","zh-TW":"法術位","reference_zh-TW":null,"reference_source":null,"decision_note":"Use 法術位 consistently for slot capacity and expenditure.","reviewed":true},
-    {"en":"Cantrip","zh-TW":"戲法","reference_zh-TW":null,"reference_source":null,"decision_note":"Canonical 5e term for level-0 spells.","reviewed":true},
-    {"en":"Concentration","zh-TW":"專注","reference_zh-TW":null,"reference_source":null,"decision_note":"Use 專注 for the spell mechanic rather than a prose synonym.","reviewed":true},
-    {"en":"Attunement","zh-TW":"同調","reference_zh-TW":null,"reference_source":null,"decision_note":"Canonical magic-item mechanic term.","reviewed":true},
-    {"en":"Race","zh-TW":"種族","reference_zh-TW":null,"reference_source":"docs/暫用規則資訊/種族_PHB_非SRD內容.md","decision_note":"Retain 2014 rules terminology because the product ruleset is explicitly D&D 5e 2014.","reviewed":true},
-    {"en":"Subrace","zh-TW":"亞種","reference_zh-TW":null,"reference_source":"docs/暫用規則資訊/種族_PHB_非SRD內容.md","decision_note":"Use 亞種 for the 2014 subrace rules concept.","reviewed":true},
-    {"en":"Background","zh-TW":"背景","reference_zh-TW":"背景","reference_source":"docs/暫用規則資訊/背景_PHB.md","decision_note":"Matches the existing reference documents.","reviewed":true},
-    {"en":"Class","zh-TW":"職業","reference_zh-TW":null,"reference_source":null,"decision_note":"Canonical character-build term.","reviewed":true},
-    {"en":"Subclass","zh-TW":"子職業","reference_zh-TW":null,"reference_source":null,"decision_note":"Keep a direct compositional relationship with 職業.","reviewed":true},
-    {"en":"Feat","zh-TW":"專長","reference_zh-TW":null,"reference_source":null,"decision_note":"Canonical character option term.","reviewed":true},
-    {"en":"Feature","zh-TW":"特性","reference_zh-TW":"特性","reference_source":"docs/暫用規則資訊/背景_PHB.md","decision_note":"Matches headings such as 特性：信徒之家 in the current reference material.","reviewed":true},
-    {"en":"Trait","zh-TW":"特質","reference_zh-TW":"特質","reference_source":"docs/暫用規則資訊/背景_PHB.md","decision_note":"Matches the existing 建議特質 wording while remaining usable for rules traits.","reviewed":true},
-    {"en":"Lineage","zh-TW":"血統","reference_zh-TW":null,"reference_source":null,"decision_note":"Reserved terminology for lineage-style player options; no runtime semantics are added in M02-C.","reviewed":true},
-    {"en":"Infusion","zh-TW":"灌注","reference_zh-TW":null,"reference_source":null,"decision_note":"Reserved terminology for the later Artificer content phase; no Artificer mechanics are added in M02-C.","reviewed":true},
-    {"en":"Spell","zh-TW":"法術","reference_zh-TW":null,"reference_source":null,"decision_note":"Base rules-content term.","reviewed":true},
-    {"en":"Skill","zh-TW":"技能","reference_zh-TW":"技能熟練","reference_source":"docs/暫用規則資訊/背景_PHB.md","decision_note":"The reference phrase is a compound; the glossary keeps 技能 as the entity term and 熟練 as a separate mechanics term.","reviewed":true},
-    {"en":"Hit Points","zh-TW":"生命值","reference_zh-TW":null,"reference_source":null,"decision_note":"Use 生命值 for HP in user-facing rules prose.","reviewed":true}
+    {
+      "en": "Ability Score",
+      "zh-TW": "能力值",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Use the established Traditional Chinese tabletop term.",
+      "reviewed": true
+    },
+    {
+      "en": "Saving Throw",
+      "zh-TW": "豁免檢定",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Keep 檢定 explicit to distinguish the roll from proficiency.",
+      "reviewed": true
+    },
+    {
+      "en": "Armor Class",
+      "zh-TW": "護甲等級",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Canonical UI term; AC remains the machine/abbreviation form where appropriate.",
+      "reviewed": true
+    },
+    {
+      "en": "Difficulty Class",
+      "zh-TW": "難度等級",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Canonical UI term; DC remains the machine/abbreviation form where appropriate.",
+      "reviewed": true
+    },
+    {
+      "en": "Proficiency Bonus",
+      "zh-TW": "熟練加值",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Use 加值 consistently for the numeric bonus.",
+      "reviewed": true
+    },
+    {
+      "en": "Proficiency",
+      "zh-TW": "熟練",
+      "reference_zh-TW": "技能熟練",
+      "reference_source": "docs/暫用規則資訊/背景_PHB.md",
+      "decision_note": "The reference document uses contextual compounds such as 技能熟練/工具熟練. The glossary keeps the reusable base term 熟練 so the object type can be composed by context.",
+      "reviewed": true
+    },
+    {
+      "en": "Advantage",
+      "zh-TW": "優勢",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Use the standard opposed pair 優勢/劣勢.",
+      "reviewed": true
+    },
+    {
+      "en": "Disadvantage",
+      "zh-TW": "劣勢",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Use the standard opposed pair 優勢/劣勢.",
+      "reviewed": true
+    },
+    {
+      "en": "Short Rest",
+      "zh-TW": "短休",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Concise product term.",
+      "reviewed": true
+    },
+    {
+      "en": "Long Rest",
+      "zh-TW": "長休",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Concise product term.",
+      "reviewed": true
+    },
+    {
+      "en": "Spell Slot",
+      "zh-TW": "法術位",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Use 法術位 consistently for slot capacity and expenditure.",
+      "reviewed": true
+    },
+    {
+      "en": "Cantrip",
+      "zh-TW": "戲法",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Canonical 5e term for level-0 spells.",
+      "reviewed": true
+    },
+    {
+      "en": "Concentration",
+      "zh-TW": "專注",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Use 專注 for the spell mechanic rather than a prose synonym.",
+      "reviewed": true
+    },
+    {
+      "en": "Attunement",
+      "zh-TW": "調諧",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Aligned with 5etools canonical Traditional Chinese translation.",
+      "reviewed": true
+    },
+    {
+      "en": "Race",
+      "zh-TW": "種族",
+      "reference_zh-TW": null,
+      "reference_source": "docs/暫用規則資訊/種族_PHB_非SRD內容.md",
+      "decision_note": "Retain 2014 rules terminology because the product ruleset is explicitly D&D 5e 2014.",
+      "reviewed": true
+    },
+    {
+      "en": "Subrace",
+      "zh-TW": "亞種",
+      "reference_zh-TW": null,
+      "reference_source": "docs/暫用規則資訊/種族_PHB_非SRD內容.md",
+      "decision_note": "Use 亞種 for the 2014 subrace rules concept.",
+      "reviewed": true
+    },
+    {
+      "en": "Background",
+      "zh-TW": "背景",
+      "reference_zh-TW": "背景",
+      "reference_source": "docs/暫用規則資訊/背景_PHB.md",
+      "decision_note": "Matches the existing reference documents.",
+      "reviewed": true
+    },
+    {
+      "en": "Class",
+      "zh-TW": "職業",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Canonical character-build term.",
+      "reviewed": true
+    },
+    {
+      "en": "Subclass",
+      "zh-TW": "子職業",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Keep a direct compositional relationship with 職業.",
+      "reviewed": true
+    },
+    {
+      "en": "Feat",
+      "zh-TW": "專長",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Canonical character option term.",
+      "reviewed": true
+    },
+    {
+      "en": "Feature",
+      "zh-TW": "特性",
+      "reference_zh-TW": "特性",
+      "reference_source": "docs/暫用規則資訊/背景_PHB.md",
+      "decision_note": "Matches headings such as 特性：信徒之家 in the current reference material.",
+      "reviewed": true
+    },
+    {
+      "en": "Trait",
+      "zh-TW": "特質",
+      "reference_zh-TW": "特質",
+      "reference_source": "docs/暫用規則資訊/背景_PHB.md",
+      "decision_note": "Matches the existing 建議特質 wording while remaining usable for rules traits.",
+      "reviewed": true
+    },
+    {
+      "en": "Lineage",
+      "zh-TW": "血統",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Reserved terminology for lineage-style player options; no runtime semantics are added in M02-C.",
+      "reviewed": true
+    },
+    {
+      "en": "Infusion",
+      "zh-TW": "灌注",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Reserved terminology for the later Artificer content phase; no Artificer mechanics are added in M02-C.",
+      "reviewed": true
+    },
+    {
+      "en": "Spell",
+      "zh-TW": "法術",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Base rules-content term.",
+      "reviewed": true
+    },
+    {
+      "en": "Skill",
+      "zh-TW": "技能",
+      "reference_zh-TW": "技能熟練",
+      "reference_source": "docs/暫用規則資訊/背景_PHB.md",
+      "decision_note": "The reference phrase is a compound; the glossary keeps 技能 as the entity term and 熟練 as a separate mechanics term.",
+      "reviewed": true
+    },
+    {
+      "en": "Hit Points",
+      "zh-TW": "生命值",
+      "reference_zh-TW": null,
+      "reference_source": null,
+      "decision_note": "Use 生命值 for HP in user-facing rules prose.",
+      "reviewed": true
+    },
+    {
+      "en": "Attuned Magic Items",
+      "zh-TW": "調諧魔法物品",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Canonical magic item mechanic.",
+      "reviewed": true
+    },
+    {
+      "en": "Tinker's tools",
+      "zh-TW": "修理工具",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Aligned with 5etools translation.",
+      "reviewed": true
+    },
+    {
+      "en": "Investigation",
+      "zh-TW": "調查",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Canonical 5e skill name.",
+      "reviewed": true
+    },
+    {
+      "en": "Dungeoneer's Pack",
+      "zh-TW": "地城探險家套裝",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Aligned with 5etools equipment pack translation.",
+      "reviewed": true
+    },
+    {
+      "en": "Spell Attack Modifier",
+      "zh-TW": "法術攻擊檢定",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Aligned with 5etools spell attack roll modifier term.",
+      "reviewed": true
+    },
+    {
+      "en": "Artillerist",
+      "zh-TW": "魔砲師",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Artificer specialist subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Battle Smith",
+      "zh-TW": "戰地匠師",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Artificer specialist subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Magical Tinkering",
+      "zh-TW": "魔法工藝",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Artificer level 1 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Artificer Specialist",
+      "zh-TW": "奇械師專業",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Artificer level 3 subclass choice feature.",
+      "reviewed": true
+    },
+    {
+      "en": "The Right Tool for the Job",
+      "zh-TW": "稱手工具",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Artificer level 3 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Flash of Genius",
+      "zh-TW": "靈光一閃",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Artificer level 7 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Magic Item Adept",
+      "zh-TW": "魔法物品熟稔",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Artificer level 10 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Artillerist Spells",
+      "zh-TW": "魔砲師法術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Artillerist subclass spells feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Eldritch Cannon",
+      "zh-TW": "魔能砲台",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Artillerist subclass cannon feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Battle Smith Spells",
+      "zh-TW": "戰地匠師法術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Smith subclass spells feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Replicate Magic Item",
+      "zh-TW": "複製魔法物品",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Artificer infusion name.",
+      "reviewed": true
+    }
   ]
 }

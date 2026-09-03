@@ -85,7 +85,7 @@ const COPY = {
     known: '已知注法',
     active: '啟用中的注法',
     activeCapacity: '啟用注法容量',
-    attunement: '同調上限',
+    attunement: '調諧上限',
     resources: '追蹤中的資源',
     armorModel: '裝甲型號',
     spellStoring: '儲法物品',
