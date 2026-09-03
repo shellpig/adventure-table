@@ -551,6 +551,39 @@ def _option_failure(
     return None
 
 
+# M01-K sources such as Martial Adept grant access to an existing feature pool
+# without the class levels the pool natively requires. The opt-in lives on the
+# source content, and the same narrow rule is enforced again on the final Build
+# by ``validate_final_feature_pool_dependencies``.
+SOURCE_GRANTED_POOL_BY_CHOICE_KIND = {"maneuver": "battle-master-maneuver"}
+
+
+def _source_granted_pool(
+    registry: ContentRegistry,
+    choice: BuilderChoice,
+) -> str | None:
+    option_source = choice.option_source or ""
+    if not option_source.startswith("content:feat:"):
+        return None
+    pool = SOURCE_GRANTED_POOL_BY_CHOICE_KIND.get(option_source.removeprefix("content:feat:"))
+    if pool is None:
+        return None
+    source = registry.get_optional(choice.source_ref or "")
+    if source is None:
+        return None
+    raw_choices = source.data.get("choices")
+    if not isinstance(raw_choices, list):
+        return None
+    for raw in raw_choices:
+        if (
+            isinstance(raw, dict)
+            and raw.get("source_granted_entitlement") is True
+            and SOURCE_GRANTED_POOL_BY_CHOICE_KIND.get(str(raw.get("kind"))) == pool
+        ):
+            return pool
+    return None
+
+
 def apply_optional_pool_eligibility(
     draft: BuilderDraft,
     registry: ContentRegistry,
@@ -565,6 +598,7 @@ def apply_optional_pool_eligibility(
     }
     result: list[BuilderChoice] = []
     for choice in choices:
+        entitled_pool = _source_granted_pool(registry, choice)
         options: list[BuilderChoiceOption] = []
         for option in choice.options:
             if option.reference_id is None:
@@ -589,6 +623,15 @@ def apply_optional_pool_eligibility(
                 options.append(option)
                 continue
             reason, code, params = failure
+            if (
+                code == "optional_pool_class_prerequisite_not_met"
+                and entitled_pool is not None
+                and spec.pool == entitled_pool
+            ):
+                # The class gate is exactly what the source entitlement replaces;
+                # every other prerequisite on the option still applies.
+                options.append(option)
+                continue
             options.append(
                 option.model_copy(
                     update={

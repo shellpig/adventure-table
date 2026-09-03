@@ -26,6 +26,15 @@ SOURCE_AWARE_FEAT_REFERENCE_SOURCES = {
     "content:feat:spell",
     "content:feat:spellcasting_source",
 }
+# A repeatable feat is a legal second acquisition, not a duplicated reference.
+# Non-repeatable duplicates keep their own dedicated rejection, so the global
+# reference-uniqueness sweep must not also claim them.
+FEAT_OPPORTUNITY_SOURCES = {"content:race-feat", "content:asi-feat"}
+
+
+def _is_repeatable_feat(registry: ContentRegistry, reference_id: str) -> bool:
+    entry = registry.get_optional(reference_id)
+    return entry is not None and entry.data.get("repeatable") is True
 
 
 def make_validation_result(
@@ -151,6 +160,7 @@ def _validate_ability_generation(draft: BuilderDraft) -> list[BuilderIssue]:
 def _validate_builder_choices(
     draft: BuilderDraft,
     choices: tuple[BuilderChoice, ...],
+    registry: ContentRegistry,
 ) -> list[BuilderIssue]:
     issues: list[BuilderIssue] = []
     direct_sources = {
@@ -247,6 +257,10 @@ def _validate_builder_choices(
                 grants_reference
                 and option.reference_id is not None
                 and option.category != "ability_bonus"
+                and not (
+                    choice.option_source in FEAT_OPPORTUNITY_SOURCES
+                    and _is_repeatable_feat(registry, option.reference_id)
+                )
             ):
                 selected_reference_ids.append((option.reference_id, path))
 
@@ -405,7 +419,7 @@ def validate_foundation_draft(
             issues.append(issue)
 
     issues.extend(_validate_ability_generation(draft))
-    issues.extend(_validate_builder_choices(draft, choices))
+    issues.extend(_validate_builder_choices(draft, choices, registry))
 
     if payload.target_level is not None and len(payload.level_choices) != payload.target_level:
         issues.append(
