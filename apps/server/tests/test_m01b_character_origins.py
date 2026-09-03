@@ -235,7 +235,13 @@ def test_variant_human_choices_persist_feat_skill_language_and_distinct_ability_
     build = result.build_candidate
     assert build.race_ref == "phb2014:race:variant-human"
     assert build.subrace_ref is None
-    assert build.feat_refs == ("srd5.1:feat:grappler",)
+    # The auto-filler takes the first eligible option, and the Variant Human feat
+    # pool grows as PHB content lands, so assert the selection round-trips rather
+    # than pinning one feat key.
+    feat_choice = next(
+        choice for choice in result.choices if choice.option_source == "content:race-feat"
+    )
+    assert build.feat_refs == completed.choice_selections[feat_choice.choice_id].selected_option_ids
     assert "srd5.1:language:common" in build.language_refs
     assert len(build.language_refs) == 2
     assert len(build.skill_choices) >= 1

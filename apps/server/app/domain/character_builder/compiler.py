@@ -379,24 +379,42 @@ def compile_builder_draft(
     # prerequisite/repeatability engine. Nested feat choice identity derives from
     # the opportunity, so repeated Elemental Adept acquisitions cannot overwrite
     # one another.
-    foundation_ids = {choice.choice_id for choice in raw_foundation_choices}
     feat_context = build_evaluation_context(
         draft,
         registry,
         _effective_abilities(foundation_preview),
     )
+    submitted_choices = raw_foundation_choices + structural_choices
     enriched = enrich_feat_choices(
         draft,
         registry,
-        raw_foundation_choices + structural_choices,
+        submitted_choices,
         feat_context,
     )
-    raw_foundation_choices = tuple(
-        choice for choice in enriched if choice.choice_id in foundation_ids
-    )
-    structural_choices = tuple(
-        choice for choice in enriched if choice.choice_id not in foundation_ids
-    )
+    # Split the enrichment result by walking the submitted choices in order.
+    # A `draft:selection` placeholder can carry the same choice_id as the live
+    # structural choice it stands in for, so splitting by choice_id would file
+    # that structural choice back into the foundation bucket and defeat the
+    # placeholder de-duplication below.
+    enriched_foundation: list[BuilderChoice] = []
+    enriched_structural: list[BuilderChoice] = []
+    foundation_count = len(raw_foundation_choices)
+    consumed = 0
+    for choice in enriched:
+        if (
+            consumed < len(submitted_choices)
+            and choice.choice_id == submitted_choices[consumed].choice_id
+        ):
+            if consumed < foundation_count:
+                enriched_foundation.append(choice)
+            else:
+                enriched_structural.append(choice)
+            consumed += 1
+            continue
+        # Nested feat choices the enrichment pass inserted after their opportunity.
+        enriched_structural.append(choice)
+    raw_foundation_choices = tuple(enriched_foundation)
+    structural_choices = tuple(enriched_structural)
 
     progression_choices = _effective_progression_choices(
         draft,
