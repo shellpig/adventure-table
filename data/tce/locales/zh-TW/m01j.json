@@ -212,10 +212,10 @@
       "name": "巨龍座"
     },
     "tce:feature:swarmkeeper-3-gathered-swarm": {
-      "name": "蜂聚叢集"
+      "name": "蜂聚集群"
     },
     "tce:feature:swarmkeeper-3-swarmkeeper-magic": {
-      "name": "叢集守衛魔法"
+      "name": "集群守衛魔法"
     },
     "tce:feature:twilight-1-bonus-proficiencies": {
       "name": "額外熟練"
@@ -320,7 +320,7 @@
       "name": "星辰結社"
     },
     "tce:subclass:swarmkeeper": {
-      "name": "蜂聚守衛"
+      "name": "集群守衛"
     },
     "tce:subclass:twilight": {
       "name": "暮光領域"

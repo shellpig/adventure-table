@@ -1322,6 +1322,174 @@
       "reference_source": "5etools",
       "decision_note": "Paladin subclass.",
       "reviewed": true
+    },
+    {
+      "en": "Ranger Archetype",
+      "zh-TW": "遊俠範型",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Ranger subclass archetype.",
+      "reviewed": true
+    },
+    {
+      "en": "Primeval Awareness",
+      "zh-TW": "原初意識",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Ranger level 3 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Hide in Plain Sight",
+      "zh-TW": "避人耳目",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Ranger level 10 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Vanish",
+      "zh-TW": "無蹤步",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Ranger level 14 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Foe Slayer",
+      "zh-TW": "眾敵屠戮",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Ranger level 20 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Deft Explorer",
+      "zh-TW": "熟練探險家",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Ranger level 1 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Favored Foe",
+      "zh-TW": "夙敵",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Ranger level 1 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Primal Awareness",
+      "zh-TW": "原始意識",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Ranger level 3 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Nature's Veil",
+      "zh-TW": "自然面紗",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Ranger level 10 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Horizon Walker",
+      "zh-TW": "境界行者",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Ranger subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Swarmkeeper",
+      "zh-TW": "集群守衛",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Ranger subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Hunter's Prey",
+      "zh-TW": "狩者獵物",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Hunter level 3 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Colossus Slayer",
+      "zh-TW": "巨怪獵者",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Hunter level 3 option.",
+      "reviewed": true
+    },
+    {
+      "en": "Horde Breaker",
+      "zh-TW": "滅族者",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Hunter level 3 option.",
+      "reviewed": true
+    },
+    {
+      "en": "Defensive Tactics",
+      "zh-TW": "防禦性戰術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Hunter level 7 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Escape the Horde",
+      "zh-TW": "逃離眾敵",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Hunter level 7 option.",
+      "reviewed": true
+    },
+    {
+      "en": "Multiattack Defense",
+      "zh-TW": "防禦多重攻擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Hunter level 7 option.",
+      "reviewed": true
+    },
+    {
+      "en": "Volley",
+      "zh-TW": "箭雨",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Hunter level 11 option.",
+      "reviewed": true
+    },
+    {
+      "en": "Whirlwind Attack",
+      "zh-TW": "劍刃風暴",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Hunter level 11 option.",
+      "reviewed": true
+    },
+    {
+      "en": "Stand Against the Tide",
+      "zh-TW": "逆潮而立",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Hunter level 15 option.",
+      "reviewed": true
+    },
+    {
+      "en": "Gathered Swarm",
+      "zh-TW": "蜂聚集群",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Swarmkeeper level 3 feature.",
+      "reviewed": true
     }
   ]
 }

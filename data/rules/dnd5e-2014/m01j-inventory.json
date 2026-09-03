@@ -1236,7 +1236,7 @@
       "parent_class_ref": "srd5.1:class:ranger",
       "subclass_key": "tce:subclass:swarmkeeper",
       "name": "Swarmkeeper",
-      "zh_name": "蜂聚守衛",
+      "zh_name": "集群守衛",
       "acquisition_class_level": 3,
       "progression_levels": [
         3,
@@ -1528,7 +1528,7 @@
       "parent_class_ref": "srd5.1:class:ranger",
       "subclass_key": "xge:subclass:horizon-walker",
       "name": "Horizon Walker",
-      "zh_name": "遠界行者",
+      "zh_name": "境界行者",
       "acquisition_class_level": 3,
       "progression_levels": [
         3,

@@ -97,11 +97,11 @@
       "data.desc.0": "在聖武士取得屬性值提升的等級，可重新選擇一個戰鬥風格。"
     },
     "tce:feature:deft-explorer": {
-      "name": "靈巧探索者",
+      "name": "熟練探險家",
       "data.desc.0": "使用《塔莎的萬事坩堝》的靈巧探索者進程，取代自然探索者。"
     },
     "tce:feature:favored-foe": {
-      "name": "宿敵",
+      "name": "夙敵",
       "data.desc.0": "使用宿敵選用能力，取代宿敵敵人進程。"
     },
     "tce:feature:additional-ranger-spells": {
@@ -117,15 +117,15 @@
       "data.desc.0": "允許使用德魯伊法器作為遊俠法術的施法法器。"
     },
     "tce:feature:primal-awareness": {
-      "name": "原始感知",
+      "name": "原始意識",
       "data.desc.0": "以一系列自然主題法術取代原始感知能力。"
     },
     "tce:feature:ranger-martial-versatility": {
-      "name": "武技多樣性",
+      "name": "替換武術",
       "data.desc.0": "在遊俠取得屬性值提升的等級，可重新選擇一個戰鬥風格。"
     },
     "tce:feature:natures-veil": {
-      "name": "自然帷幕",
+      "name": "自然面紗",
       "data.desc.0": "以短暫隱形的能力取代匿蹤於野。"
     },
     "tce:feature:steady-aim": {
