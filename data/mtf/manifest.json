@@ -15,8 +15,8 @@
     {"name": "races", "kind": "race", "file": "races.json", "count": 1},
     {"name": "subraces", "kind": "subrace", "file": "subraces.json", "count": 6},
     {"name": "race-variants", "kind": "race-variant", "file": "race-variants.json", "count": 8},
-    {"name": "features", "kind": "feature", "file": "features.json", "count": 23},
+    {"name": "features", "kind": "feature", "file": "features.json", "count": 24},
     {"name": "languages", "kind": "language", "file": "languages.json", "count": 1}
   ],
-  "total_entries": 39
+  "total_entries": 40
 }
