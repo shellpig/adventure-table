@@ -8,12 +8,12 @@
     "scag:race-variant:half-elf-wood-descent": {"name": "木精靈血統"},
     "scag:race-variant:half-elf-aquatic-descent": {"name": "水生精靈血統"},
     "scag:race-variant:half-elf-drow-descent": {"name": "卓爾血統"},
-    "scag:feature:half-elf-moon-sun-cantrip": {"name": "戲法"},
-    "scag:feature:half-elf-elf-weapon-training": {"name": "精靈武器訓練"},
-    "scag:feature:half-elf-keen-senses": {"name": "敏銳感官"},
-    "scag:feature:half-elf-fleet-of-foot": {"name": "輕捷步伐"},
-    "scag:feature:half-elf-mask-of-the-wild": {"name": "荒野隱蔽"},
-    "scag:feature:half-elf-swimming-speed": {"name": "游泳"},
-    "scag:feature:half-elf-drow-magic": {"name": "卓爾魔法"}
+    "scag:feature:half-elf-moon-sun-cantrip": {"name": "戲法", "data.desc.0": "你學會一個自選的法師戲法；智力是你施展該戲法的施法屬性。"},
+    "scag:feature:half-elf-elf-weapon-training": {"name": "精靈武器訓練", "data.desc.0": "你熟練長劍、短劍、短弓與長弓。"},
+    "scag:feature:half-elf-keen-senses": {"name": "敏銳感官", "data.desc.0": "你獲得察覺技能熟練。"},
+    "scag:feature:half-elf-fleet-of-foot": {"name": "輕捷步伐", "data.desc.0": "你的基礎步行速度提升為 35 尺。"},
+    "scag:feature:half-elf-mask-of-the-wild": {"name": "荒野隱蔽", "data.desc.0": "即使只受到樹葉、大雨、降雪、薄霧或其他自然現象造成的輕度遮蔽，你也可以嘗試躲藏。"},
+    "scag:feature:half-elf-swimming-speed": {"name": "游泳", "data.desc.0": "你獲得 30 尺游泳速度。"},
+    "scag:feature:half-elf-drow-magic": {"name": "卓爾魔法", "data.desc.0": "你學會舞光術；角色 3 級時可每次長休施展一次妖火術，5 級時可每次長休施展一次黑暗術；魅力是你的施法屬性。"}
   }
 }
