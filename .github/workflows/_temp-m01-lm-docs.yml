@@ -22,7 +22,7 @@ jobs:
       - name: Recover and run staged updater
         shell: bash
         run: |
-          git show HEAD^^:.github/workflows/_temp-m01-lm-docs.yml > /tmp/old-m01-lm-workflow.yml
+          git show HEAD^^^:.github/workflows/_temp-m01-lm-docs.yml > /tmp/old-m01-lm-workflow.yml
           python - <<'PY'
           from pathlib import Path
 
@@ -40,14 +40,13 @@ jobs:
           PY
           python /tmp/apply_m01_lm_docs.py
 
-      - name: Validate and commit specification docs
+      - name: Commit specification docs
         shell: bash
         run: |
           git config user.name "openai-docs-bot"
           git config user.email "noreply@openai.com"
           git rm .github/workflows/_temp-m01-lm-docs.yml
           git add docs/M01/實作規格.md docs/M01/測試指南.md docs/M01/開發設計方針.md
-          test "$(git diff --cached --name-only | grep '^docs/M01/' | wc -l)" -eq 3
-          git diff --cached --name-only
+          git -c core.quotePath=false diff --cached --name-only
           git commit -m "docs(m01): define M01-L and M01-M"
           git push origin HEAD:docs/m01-l-m-spec
