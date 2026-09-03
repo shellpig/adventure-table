@@ -40,7 +40,7 @@
       "parent_class_ref": "srd5.1:class:rogue",
       "subclass_key": "phb2014:subclass:arcane-trickster",
       "name": "Arcane Trickster",
-      "zh_name": "奧法詭術師",
+      "zh_name": "詭術師",
       "acquisition_class_level": 3,
       "progression_levels": [
         3,
@@ -1188,7 +1188,7 @@
       "parent_class_ref": "srd5.1:class:rogue",
       "subclass_key": "tce:subclass:soulknife",
       "name": "Soulknife",
-      "zh_name": "心刃",
+      "zh_name": "魂刃",
       "acquisition_class_level": 3,
       "progression_levels": [
         3,
@@ -1544,7 +1544,7 @@
       "parent_class_ref": "srd5.1:class:rogue",
       "subclass_key": "xge:subclass:inquisitive",
       "name": "Inquisitive",
-      "zh_name": "審問者",
+      "zh_name": "審訊者",
       "acquisition_class_level": 3,
       "progression_levels": [
         3,

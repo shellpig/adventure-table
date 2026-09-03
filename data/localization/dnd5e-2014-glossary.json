@@ -1490,6 +1490,118 @@
       "reference_source": "5etools",
       "decision_note": "Swarmkeeper level 3 feature.",
       "reviewed": true
+    },
+    {
+      "en": "Roguish Archetype",
+      "zh-TW": "遊蕩者範型",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Rogue subclass archetype.",
+      "reviewed": true
+    },
+    {
+      "en": "Uncanny Dodge",
+      "zh-TW": "直覺閃避",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Rogue level 5 / Hunter Ranger level 15 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Reliable Talent",
+      "zh-TW": "可靠才能",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Rogue level 11 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Slippery Mind",
+      "zh-TW": "靈活心智",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Rogue level 15 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Elusive",
+      "zh-TW": "捉摸不定",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Rogue level 18 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Steady Aim",
+      "zh-TW": "手穩就準",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Rogue level 3 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Thief",
+      "zh-TW": "竊賊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Rogue subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Arcane Trickster",
+      "zh-TW": "詭術師",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Rogue subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Inquisitive",
+      "zh-TW": "審訊者",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Rogue subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Soulknife",
+      "zh-TW": "魂刃",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Rogue subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Second-Story Work",
+      "zh-TW": "樑上君子",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Thief level 3 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Supreme Sneak",
+      "zh-TW": "卓越潛行",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Thief level 9 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Use Magic Device",
+      "zh-TW": "使用魔法設備",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Thief level 13 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Thief's Reflexes",
+      "zh-TW": "竊賊反射",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Thief level 17 feature.",
+      "reviewed": true
     }
   ]
 }
