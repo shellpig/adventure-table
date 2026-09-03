@@ -9,6 +9,7 @@ from app.content.m01j_inventory import (
     validate_m01j_inventory,
 )
 from app.content.m01j_spell_closeout_validation import validate_m01j_spell_closeout
+from app.content.m01l_models import install_m01l_content_models
 from app.content.phb_roleplay import apply_phb_background_roleplay
 from app.content.registry import (
     ContentNotFoundError,
@@ -16,6 +17,8 @@ from app.content.registry import (
     ContentValidationError,
 )
 
+
+install_m01l_content_models()
 
 _registry.DEFAULT_CONTENT_PACKS = (
     "srd5.1",
