@@ -5,7 +5,7 @@
   "review_status": "draft-human-review-required",
   "entries": {
     "scag:race-variant:tiefling-variants": {
-      "name": "SCAG 提夫林變體",
+      "name": "提夫林變體",
       "data.appearance_suggestions.0": "小型犄角",
       "data.appearance_suggestions.1": "獠牙或尖銳牙齒",
       "data.appearance_suggestions.2": "分叉的舌頭",
