@@ -1,8 +1,31 @@
 from __future__ import annotations
 
+from app.content.m01l_models import NaturalArmorData
 from app.content.registry import ContentRegistry
 from app.domain.character.schemas import CharacterBuild, CharacterState
 from app.domain.rules.abilities import ability_modifier, effective_ability_score, numeric_override
+
+
+def _natural_armor_candidates(
+    build: CharacterBuild,
+    registry: ContentRegistry,
+    *,
+    body_armor_equipped: bool,
+) -> tuple[int, ...]:
+    candidates: list[int] = []
+    for feature_ref in build.feature_refs:
+        feature = registry.get_optional(feature_ref)
+        if feature is None:
+            continue
+        raw = feature.data.get("natural_armor")
+        if not isinstance(raw, dict):
+            continue
+        natural = NaturalArmorData.model_validate(raw)
+        if natural.requires_unarmored and body_armor_equipped:
+            continue
+        modifier = ability_modifier(effective_ability_score(build, natural.ability))
+        candidates.append(natural.base + modifier)
+    return tuple(candidates)
 
 
 def calculate_armor_class(
@@ -11,7 +34,7 @@ def calculate_armor_class(
     registry: ContentRegistry,
 ) -> int:
     dex_modifier = ability_modifier(effective_ability_score(build, "dexterity"))
-    unarmored_ac = 10 + dex_modifier
+    ordinary_unarmored_ac = 10 + dex_modifier
     armor_values: list[int] = []
     shield_values: list[int] = []
 
@@ -45,7 +68,17 @@ def calculate_armor_class(
             value += dex_contribution
         armor_values.append(value)
 
-    result = max(armor_values, default=unarmored_ac)
+    body_armor_equipped = bool(armor_values)
+    if body_armor_equipped:
+        result = max(armor_values)
+    else:
+        natural_values = _natural_armor_candidates(
+            build,
+            registry,
+            body_armor_equipped=False,
+        )
+        result = max((ordinary_unarmored_ac, *natural_values))
+
     if shield_values:
         result += max(shield_values)
 
