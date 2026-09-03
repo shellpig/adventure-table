@@ -161,7 +161,7 @@
       "data.desc.0": "將《塔莎的萬事坩堝》新增的祈喚加入魔能祈喚選項池。"
     },
     "tce:feature:eldritch-versatility": {
-      "name": "邪術多樣性",
+      "name": "魔能選項",
       "data.desc.0": "在邪術師取得屬性值提升的等級，可重新選擇一個戲法或契約恩賜。"
     },
     "tce:feature:additional-wizard-spells": {
@@ -237,7 +237,7 @@
       "data.desc.0": "消耗一點術法點，將法術造成的強酸、寒冷、火焰、閃電、毒素或雷鳴傷害改為清單中的另一種傷害類型。"
     },
     "tce:feature:pact-of-the-talisman": {
-      "name": "護符魔契",
+      "name": "符之魔契",
       "data.desc.0": "你的宗主賜予一枚護符；在有限次數內，佩戴者可為失敗的屬性檢定加上一顆 d4。"
     },
     "tce:feature:bond-of-the-talisman": {

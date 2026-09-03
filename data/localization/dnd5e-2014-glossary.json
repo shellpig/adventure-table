@@ -1746,6 +1746,374 @@
       "reference_source": "5etools",
       "decision_note": "Draconic Bloodline level 18 feature.",
       "reviewed": true
+    },
+    {
+      "en": "Warlock",
+      "zh-TW": "契術師",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Character class.",
+      "reviewed": true
+    },
+    {
+      "en": "The Archfey",
+      "zh-TW": "至高妖精",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Warlock otherworldly patron subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Eldritch Invocations",
+      "zh-TW": "魔能祈喚",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Warlock level 2 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Pact Boon",
+      "zh-TW": "契約恩賜",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Warlock level 3 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Pact of the Chain",
+      "zh-TW": "鎖鏈魔契",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Warlock level 3 pact boon option.",
+      "reviewed": true
+    },
+    {
+      "en": "Pact of the Blade",
+      "zh-TW": "鋒刃魔契",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Warlock level 3 pact boon option.",
+      "reviewed": true
+    },
+    {
+      "en": "Pact of the Tome",
+      "zh-TW": "書卷魔契",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Warlock level 3 pact boon option.",
+      "reviewed": true
+    },
+    {
+      "en": "Pact of the Talisman",
+      "zh-TW": "符之魔契",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Warlock level 3 pact boon option (TCE).",
+      "reviewed": true
+    },
+    {
+      "en": "Eldritch Versatility",
+      "zh-TW": "魔能選項",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Warlock level 4 optional feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Eldritch Master",
+      "zh-TW": "魔能大師",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Warlock level 20 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Dark One's Blessing",
+      "zh-TW": "黑暗者賜福",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "The Fiend level 1 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Dark One's Own Luck",
+      "zh-TW": "黑暗者強運",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "The Fiend level 6 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Fiendish Resilience",
+      "zh-TW": "邪魔韌性",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "The Fiend level 10 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Hurl Through Hell",
+      "zh-TW": "直墮地獄",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "The Fiend level 14 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Agonizing Blast",
+      "zh-TW": "痛苦衝擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Armor of Shadows",
+      "zh-TW": "暗影護甲",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Ascendant Step",
+      "zh-TW": "躍升步伐",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Beast Speech",
+      "zh-TW": "野獸之語",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Beguiling Influence",
+      "zh-TW": "迷人影響力",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Bewitching Whispers",
+      "zh-TW": "惑人低語",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Book of Ancient Secrets",
+      "zh-TW": "遠古奧秘卷冊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Chains of Carceri",
+      "zh-TW": "卡瑟利之縛",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Devil's Sight",
+      "zh-TW": "魔鬼視覺",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Dreadful Word",
+      "zh-TW": "恐懼之語",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Eldritch Sight",
+      "zh-TW": "魔能視界",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Eldritch Spear",
+      "zh-TW": "魔能之矛",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Eyes of the Rune Keeper",
+      "zh-TW": "符文師之眼",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Fiendish Vigor",
+      "zh-TW": "邪魔精力",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Gaze of Two Minds",
+      "zh-TW": "聯心之視",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Lifedrinker",
+      "zh-TW": "飲命者",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Mask of Many Faces",
+      "zh-TW": "千面之臉",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Master of Myriad Forms",
+      "zh-TW": "萬形之主",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Minions of Chaos",
+      "zh-TW": "渾沌僕役",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Mire the Mind",
+      "zh-TW": "陷困心靈",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Misty Visions",
+      "zh-TW": "迷霧幻影",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "One with Shadows",
+      "zh-TW": "融身入影",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Otherworldly Leap",
+      "zh-TW": "超凡跳躍",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Repelling Blast",
+      "zh-TW": "斥力衝擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Sculptor of Flesh",
+      "zh-TW": "重塑血肉",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Sign of Ill Omen",
+      "zh-TW": "凶兆符記",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Thief of Five Fates",
+      "zh-TW": "五運竊賊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Thirsting Blade",
+      "zh-TW": "飢渴鋒刃",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Visions of Distant Realms",
+      "zh-TW": "穹宇盡視",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Voice of the Chain Master",
+      "zh-TW": "縛主之音",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Whispers of the Grave",
+      "zh-TW": "墳墓低語",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
+    },
+    {
+      "en": "Witch Sight",
+      "zh-TW": "巫者視界",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eldritch invocation.",
+      "reviewed": true
     }
   ]
 }
