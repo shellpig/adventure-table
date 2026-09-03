@@ -92,7 +92,7 @@ export type SpellAccessDTO = {
   source_profile_id?: string | null
   source_access_entry_id?: string | null
   cast_at_level?: number | null
-  waive_components: string[]
+  waive_components?: string[]
   uses_spell_slot?: boolean | null
 }
 
@@ -230,8 +230,8 @@ export type CharacterSheetDTO = {
   temporary_hp: number
   hit_dice: HitDieDTO[]
   features: NamedReferenceDTO[]
-  feature_modes: Record<string, string>
-  feature_mode_definitions: FeatureModeDTO[]
+  feature_modes?: Record<string, string>
+  feature_mode_definitions?: FeatureModeDTO[]
   conditions: ConditionDTO[]
   spells: SpellAccessDTO[]
   spellcasting: SpellcastingDTO[]
