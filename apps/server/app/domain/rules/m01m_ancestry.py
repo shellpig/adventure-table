@@ -124,11 +124,12 @@ def feature_mode_definitions(
     build: CharacterBuild,
     registry: ContentRegistry,
 ) -> tuple[FeatureModeDefinition, ...]:
-    """Return only feature modes owned by the M01-M data-defined contract.
+    """Return every feature mode the current Build declares.
 
-    ``CharacterState.feature_modes`` predates M01-M and is also used by the
-    Artificer subsystem. Modes without a typed ``feature_mode`` descriptor are
-    intentionally left to their owning subsystem instead of being claimed here.
+    A mode exists only when a feature the Build grants carries a typed
+    ``feature_mode`` descriptor, so content decides which modes are legal and
+    the Build decides which of them this character has. Subsystems that own
+    modes — M01-M ancestries, M01-H Artificer — all declare them this way.
     """
 
     definitions: list[FeatureModeDefinition] = []
@@ -159,33 +160,16 @@ def feature_mode_definitions(
     return tuple(definitions)
 
 
-def _known_ancestry_feature_mode_keys(registry: ContentRegistry) -> set[str]:
-    """Return mode keys claimed by installed typed ancestry content."""
-
-    result: set[str] = set()
-    for feature in registry.list_kind("feature"):
-        raw = feature.data.get("feature_mode")
-        if not isinstance(raw, dict):
-            continue
-        try:
-            mode = FeatureModeData.model_validate(raw)
-        except (ValidationError, ValueError):
-            continue
-        result.add(mode.mode_key)
-    return result
-
 
 def initial_feature_modes(
     build: CharacterBuild,
     registry: ContentRegistry,
     initial_state_seed: dict[str, object] | None = None,
 ) -> dict[str, str]:
-    """Merge M01-M defaults into the shared Current-State feature-mode map.
+    """Seed the Current-State feature-mode map from the Build's declared modes.
 
-    Existing subsystems such as M01-H Artificer already own keys in the same map.
-    Preserve those seed values verbatim and validate only keys whose definition is
-    owned by this data-driven ancestry contract. Final state validation delegates
-    the preserved external keys back to their existing subsystem validators.
+    A seed may pick a legal starting mode; every mode the Build declares and the
+    seed does not name falls back to its content-defined default.
     """
 
     definitions = {
@@ -235,21 +219,24 @@ def validate_feature_modes(
     state: CharacterState,
     registry: ContentRegistry,
 ) -> None:
-    """Validate M01-M-owned keys without claiming other shared-map subsystems."""
+    """Validate every persisted mode against the Build that must own it.
+
+    This is default-deny: a key with no mode descriptor in the current Build
+    is rejected rather than passed through. Letting unknown keys survive would
+    make the map a place to smuggle arbitrary client state, and would silently
+    keep a mode whose granting feature the Build no longer has.
+    """
 
     definitions = {
         definition.key: definition
         for definition in feature_mode_definitions(build, registry)
     }
-    known_ancestry_keys = _known_ancestry_feature_mode_keys(registry)
     for key, selected in state.feature_modes.items():
         definition = definitions.get(key)
         if definition is None:
-            if key in known_ancestry_keys:
-                raise ValueError(
-                    f"feature mode {key!r} is not granted by the current Build"
-                )
-            continue
+            raise ValueError(
+                f"feature mode {key!r} is not granted by the current Build"
+            )
         if selected not in definition.options:
             raise ValueError(f"invalid feature mode {selected!r} for {key}")
 

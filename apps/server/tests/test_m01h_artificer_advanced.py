@@ -24,6 +24,7 @@ from app.domain.rules.artificer import (
     spell_storing_item_capacity,
     validate_artificer_state,
 )
+from app.domain.rules.m01m_ancestry import validate_feature_modes
 from app.domain.rules.spellcasting import spell_is_on_class_list
 
 
@@ -41,6 +42,7 @@ def _build(
     intelligence: int = 14,
     infusion_refs: tuple[str, ...] = (),
     subclass_ref: str | None = None,
+    feature_refs: tuple[str, ...] = (),
 ) -> CharacterBuild:
     return CharacterBuild(
         content_sources=("srd5.1", "tce"),
@@ -61,6 +63,7 @@ def _build(
             charisma=10,
         ),
         infusion_refs=infusion_refs,
+        feature_refs=feature_refs,
         hp_progression=(8,) + (5,) * (level - 1),
     )
 
@@ -172,18 +175,22 @@ def test_homunculus_servant_rejects_cheap_focus_crystal_below_100_gp() -> None:
 
 def test_armor_model_is_live_state_and_rejects_unknown_modes() -> None:
     registry = load_default_content_registry()
-    build = _build(3, subclass_ref=ARMORER_REF)
+    build = _build(
+        3,
+        subclass_ref=ARMORER_REF,
+        feature_refs=(ARMOR_MODEL_FEATURE_REF,),
+    )
 
-    validate_artificer_state(
-        _state(build, feature_modes={ARMOR_MODEL_FEATURE_REF: "guardian"}),
+    validate_feature_modes(
         build,
+        _state(build, feature_modes={ARMOR_MODEL_FEATURE_REF: "guardian"}),
         registry,
     )
 
-    with pytest.raises(ValueError, match="unsupported Armor Model mode"):
-        validate_artificer_state(
-            _state(build, feature_modes={ARMOR_MODEL_FEATURE_REF: "invalid"}),
+    with pytest.raises(ValueError, match="invalid feature mode"):
+        validate_feature_modes(
             build,
+            _state(build, feature_modes={ARMOR_MODEL_FEATURE_REF: "invalid"}),
             registry,
         )
 
