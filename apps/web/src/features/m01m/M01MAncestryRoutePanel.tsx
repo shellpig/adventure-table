@@ -8,14 +8,13 @@ import {
 import { useContentPresentations } from '../../i18n/useContentPresentations'
 import { CharacterSheetRoutePage as BaseCharacterSheetRoutePage } from '../artificer/ArtificerRoutePanels'
 
-const M01M_SOURCES = ('mtf:', 'scag:') as const
+const M01M_SOURCES = ['mtf:', 'scag:'] as const
 
 const COPY = {
   en: {
     eyebrow: 'M01-M · Ancestry Current State',
     title: 'Ancestry State',
     mode: 'Current ancestry mode',
-    saveMode: 'Save mode',
     longRestTiming: 'This mode may be changed after a long rest. Rest automation is not implemented yet, so the timing remains player/DM enforced.',
     manualTiming: 'This is live Current State and does not create a new Build Version.',
     casting: 'Ancestry casting facts',
@@ -27,7 +26,6 @@ const COPY = {
     eyebrow: 'M01-M · 祖源即時狀態',
     title: '祖源狀態',
     mode: '目前祖源模式',
-    saveMode: '儲存模式',
     longRestTiming: '此模式可在長休後變更。目前尚未實作正式休息交易，因此變更時點仍由玩家／DM自行確認。',
     manualTiming: '這是即時狀態，不會因此建立新的角色配置版本。',
     casting: '祖源施法資訊',
