@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "scag",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "scag:subrace:ghostwise-halfling": {"name": "鬼智半身人"},
+    "scag:subrace:deep-gnome": {"name": "地底侏儒 / 斯奈布力"},
+    "scag:feature:silent-speech": {"name": "無聲傳話", "data.desc.0": "你可以透過心靈感應向 30 尺內的一個生物說話；對方必須至少理解一種語言。"},
+    "scag:feature:deep-gnome-superior-darkvision": {"name": "高級黑暗視覺", "data.desc.0": "你的黑暗視覺範圍延伸至 120 尺。"},
+    "scag:feature:stone-camouflage": {"name": "石之偽裝", "data.desc.0": "在岩石地形中嘗試躲藏時，你的敏捷（隱匿）檢定具有優勢。"}
+  }
+}
