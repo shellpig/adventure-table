@@ -35,6 +35,9 @@ from app.domain.character_builder.m01k_integration import (
     apply_m01k_post_compile,
     prepare_m01k_core_registry,
 )
+from app.domain.character_builder.m01m_variant_validation import (
+    validate_race_variant_selection_ownership,
+)
 from app.domain.character_builder.optional_class_features import (
     apply_feature_pool_retraining,
     apply_optional_feature_replacements,
@@ -223,6 +226,7 @@ def compile_builder_draft(
         *compiled.validation.issues,
         *runtime.issues,
         *m01j.issues,
+        *validate_race_variant_selection_ownership(draft, runtime.registry),
         *validate_optional_choices(draft, optional_choices),
         *validate_unique_feature_pool_selections(draft, choices, runtime.registry),
     ]
