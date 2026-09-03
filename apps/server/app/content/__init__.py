@@ -11,6 +11,7 @@ from app.content.m01j_inventory import (
 from app.content.m01j_spell_closeout_validation import validate_m01j_spell_closeout
 from app.content.m01l_inventory import validate_m01l_inventory
 from app.content.m01l_models import install_m01l_content_models
+from app.content.m01m_models import install_m01m_content_models
 from app.content.phb_roleplay import apply_phb_background_roleplay
 from app.content.registry import (
     ContentNotFoundError,
@@ -20,6 +21,7 @@ from app.content.registry import (
 
 
 install_m01l_content_models()
+install_m01m_content_models()
 
 _registry.DEFAULT_CONTENT_PACKS = (
     "srd5.1",
@@ -30,6 +32,7 @@ _registry.DEFAULT_CONTENT_PACKS = (
     "vrgr",
     "tce",
     "xge",
+    "mtf",
 )
 
 
