@@ -5,12 +5,20 @@ const SCAG = "Sword Coast Adventurer's Guide"
 const XGE = "Xanathar's Guide to Everything"
 const TCE = "Tasha's Cauldron of Everything"
 
+type NamedChoice = {
+  label: RegExp
+  value: string
+}
+
 type MatrixRow = {
   className: string
   subclass: string
   source: string
   acquisition: number
   subclassRef: string
+  /** Choices this spec picks by name instead of leaving to the generic sweep,
+   * because the sweep's "first enabled option" is not a legal answer here. */
+  namedChoices?: NamedChoice[]
 }
 
 // One non-SRD subclass per PHB class, chosen so all four M01-J sources appear
@@ -88,6 +96,16 @@ const SUBCLASS_MATRIX: MatrixRow[] = [
     source: TCE,
     acquisition: 1,
     subclassRef: 'tce:subclass:aberrant-mind',
+    // Aberrant Mind grants three replaceable Psionic Spells at sorcerer level 1,
+    // but the feature only allows one replacement per sorcerer level. The server
+    // lists each spell's own entry first; the selector re-sorts by name, so the
+    // sweep's first-option pick silently replaces every row and blows the level-1
+    // budget. Name all three: two keep the granted spell, one replacement is real.
+    namedChoices: [
+      { label: /Aberrant Mind.*replace Mind Sliver/, value: 'Mind Sliver' },
+      { label: /Aberrant Mind.*replace Arms of Hadar/, value: 'Arms of Hadar' },
+      { label: /Aberrant Mind.*replace Dissonant Whispers/, value: 'Charm Person' },
+    ],
   },
   {
     className: 'Warlock',
@@ -331,17 +349,26 @@ async function fillClassLevels(page: Page, className: string, from: number, to: 
 // Subclass grants that are not tied to a single level row (Arcana Domain's
 // cantrips, Gloom Stalker's language) render on the Abilities step, so every
 // step that can hold a required choice gets swept before Review.
-async function fillPendingChoices(page: Page) {
+async function fillPendingChoices(page: Page, namedChoices: NamedChoice[] = []) {
   // The level rail owns the per-level subclass choices; the Abilities step
   // owns grants that are not tied to one level row (Arcana Domain's cantrips).
   await page.getByRole('button', { name: 'Class Level-by-level rail' }).click()
   await fillEmptyComboboxes(page, page.locator('.level-rail'))
   await page.getByRole('button', { name: /Abilities/ }).click()
+  // Named choices go first so the sweep below sees them already filled.
+  for (const named of namedChoices) {
+    await chooseSearchable(page, named.label, named.value)
+  }
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 }
 
-async function finishAndConfirm(page: Page, request: APIRequestContext, name: string) {
-  await fillPendingChoices(page)
+async function finishAndConfirm(
+  page: Page,
+  request: APIRequestContext,
+  name: string,
+  namedChoices: NamedChoice[] = [],
+) {
+  await fillPendingChoices(page, namedChoices)
   await page.getByRole('button', { name: 'Spellcasting Access & resources' }).click()
   await fillExactSpellBuckets(page)
 
@@ -381,7 +408,7 @@ test.describe('M01-J every PHB class reaches a non-SRD subclass in the browser',
 
       await fillEmptyComboboxes(page, page.locator('.level-rail'))
 
-      const characterId = await finishAndConfirm(page, request, name)
+      const characterId = await finishAndConfirm(page, request, name, row.namedChoices)
 
       const response = await request.get(`/api/characters/${characterId}`)
       expect(response.ok()).toBeTruthy()
