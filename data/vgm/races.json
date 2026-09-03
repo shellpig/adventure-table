@@ -1,101 +1,15 @@
 [
-  {
-    "key": "vgm:race:goblin",
-    "index": "goblin",
-    "name": "Goblin",
-    "source": "vgm",
-    "ruleset": "dnd5e-2014",
-    "data": {
-      "index": "goblin",
-      "name": "Goblin",
-      "speed": 30,
-      "size": "Small",
-      "darkvision": 60,
-      "ability_bonuses": [
-        {"ability_score": {"key": "srd5.1:ability:dex", "name": "DEX"}, "bonus": 2},
-        {"ability_score": {"key": "srd5.1:ability:con", "name": "CON"}, "bonus": 1}
-      ],
-      "languages": [
-        {"key": "srd5.1:language:common", "name": "Common"},
-        {"key": "srd5.1:language:goblin", "name": "Goblin"}
-      ],
-      "traits": [],
-      "features": [
-        {"key": "vgm:feature:fury-of-the-small", "name": "Fury of the Small"},
-        {"key": "vgm:feature:nimble-escape", "name": "Nimble Escape"}
-      ],
-      "subraces": []
-    }
-  },
-  {
-    "key": "vgm:race:hobgoblin",
-    "index": "hobgoblin",
-    "name": "Hobgoblin",
-    "source": "vgm",
-    "ruleset": "dnd5e-2014",
-    "data": {
-      "index": "hobgoblin",
-      "name": "Hobgoblin",
-      "speed": 30,
-      "size": "Medium",
-      "darkvision": 60,
-      "ability_bonuses": [
-        {"ability_score": {"key": "srd5.1:ability:con", "name": "CON"}, "bonus": 2},
-        {"ability_score": {"key": "srd5.1:ability:int", "name": "INT"}, "bonus": 1}
-      ],
-      "languages": [
-        {"key": "srd5.1:language:common", "name": "Common"},
-        {"key": "srd5.1:language:goblin", "name": "Goblin"}
-      ],
-      "proficiencies": [
-        {"key": "srd5.1:proficiency:light-armor", "name": "Light Armor"}
-      ],
-      "proficiency_choices": {
-        "choose": 2,
-        "type": "proficiencies",
-        "from": {
-          "option_set_type": "resource_list",
-          "resource_list_url": "/api/2014/proficiencies",
-          "filter": "martial_weapon"
-        }
-      },
-      "traits": [],
-      "features": [
-        {"key": "vgm:feature:saving-face", "name": "Saving Face"}
-      ],
-      "subraces": []
-    }
-  },
-  {
-    "key": "vgm:race:aasimar",
-    "index": "aasimar",
-    "name": "Aasimar",
-    "source": "vgm",
-    "ruleset": "dnd5e-2014",
-    "data": {
-      "index": "aasimar",
-      "name": "Aasimar",
-      "speed": 30,
-      "size": "Medium",
-      "darkvision": 60,
-      "ability_bonuses": [
-        {"ability_score": {"key": "srd5.1:ability:cha", "name": "CHA"}, "bonus": 2}
-      ],
-      "languages": [
-        {"key": "srd5.1:language:common", "name": "Common"},
-        {"key": "srd5.1:language:celestial", "name": "Celestial"}
-      ],
-      "traits": [],
-      "features": [
-        {"key": "vgm:feature:celestial-resistance", "name": "Celestial Resistance"},
-        {"key": "vgm:feature:healing-hands", "name": "Healing Hands"},
-        {"key": "vgm:feature:light-bearer", "name": "Light Bearer"}
-      ],
-      "subraces": [
-        {"key": "vgm:subrace:protector-aasimar", "name": "Protector Aasimar"},
-        {"key": "vgm:subrace:scourge-aasimar", "name": "Scourge Aasimar"},
-        {"key": "vgm:subrace:fallen-aasimar", "name": "Fallen Aasimar"}
-      ]
-    }
-  }
+  {"key":"vgm:race:goblin","index":"goblin","name":"Goblin","source":"vgm","ruleset":"dnd5e-2014","data":{"index":"goblin","name":"Goblin","speed":30,"size":"Small","darkvision":60,"ability_bonuses":[{"ability_score":{"key":"srd5.1:ability:dex","name":"DEX"},"bonus":2},{"ability_score":{"key":"srd5.1:ability:con","name":"CON"},"bonus":1}],"languages":[{"key":"srd5.1:language:common","name":"Common"},{"key":"srd5.1:language:goblin","name":"Goblin"}],"traits":[],"features":[{"key":"vgm:feature:fury-of-the-small","name":"Fury of the Small"},{"key":"vgm:feature:nimble-escape","name":"Nimble Escape"}],"subraces":[]}},
+  {"key":"vgm:race:hobgoblin","index":"hobgoblin","name":"Hobgoblin","source":"vgm","ruleset":"dnd5e-2014","data":{"index":"hobgoblin","name":"Hobgoblin","speed":30,"size":"Medium","darkvision":60,"ability_bonuses":[{"ability_score":{"key":"srd5.1:ability:con","name":"CON"},"bonus":2},{"ability_score":{"key":"srd5.1:ability:int","name":"INT"},"bonus":1}],"languages":[{"key":"srd5.1:language:common","name":"Common"},{"key":"srd5.1:language:goblin","name":"Goblin"}],"proficiencies":[{"key":"srd5.1:proficiency:light-armor","name":"Light Armor"}],"proficiency_choices":{"choose":2,"type":"proficiencies","from":{"option_set_type":"resource_list","resource_list_url":"/api/2014/proficiencies","filter":"martial_weapon"}},"traits":[],"features":[{"key":"vgm:feature:saving-face","name":"Saving Face"}],"subraces":[]}},
+  {"key":"vgm:race:aasimar","index":"aasimar","name":"Aasimar","source":"vgm","ruleset":"dnd5e-2014","data":{"index":"aasimar","name":"Aasimar","speed":30,"size":"Medium","darkvision":60,"ability_bonuses":[{"ability_score":{"key":"srd5.1:ability:cha","name":"CHA"},"bonus":2}],"languages":[{"key":"srd5.1:language:common","name":"Common"},{"key":"srd5.1:language:celestial","name":"Celestial"}],"traits":[],"features":[{"key":"vgm:feature:celestial-resistance","name":"Celestial Resistance"},{"key":"vgm:feature:healing-hands","name":"Healing Hands"},{"key":"vgm:feature:light-bearer","name":"Light Bearer"}],"subraces":[{"key":"vgm:subrace:protector-aasimar","name":"Protector Aasimar"},{"key":"vgm:subrace:scourge-aasimar","name":"Scourge Aasimar"},{"key":"vgm:subrace:fallen-aasimar","name":"Fallen Aasimar"}]}},
+  {"key":"vgm:race:bugbear","index":"bugbear","name":"Bugbear","source":"vgm","ruleset":"dnd5e-2014","data":{"index":"bugbear","name":"Bugbear","speed":30,"size":"Medium","darkvision":60,"ability_bonuses":[{"ability_score":{"key":"srd5.1:ability:str","name":"STR"},"bonus":2},{"ability_score":{"key":"srd5.1:ability:dex","name":"DEX"},"bonus":1}],"languages":[{"key":"srd5.1:language:common","name":"Common"},{"key":"srd5.1:language:goblin","name":"Goblin"}],"proficiencies":[{"key":"srd5.1:proficiency:skill-stealth","name":"Skill: Stealth"}],"traits":[],"features":[{"key":"vgm:feature:bugbear-long-limbed","name":"Long-Limbed"},{"key":"vgm:feature:bugbear-powerful-build","name":"Powerful Build"},{"key":"vgm:feature:bugbear-sneaky","name":"Sneaky"},{"key":"vgm:feature:surprise-attack","name":"Surprise Attack"}],"subraces":[]}},
+  {"key":"vgm:race:firbolg","index":"firbolg","name":"Firbolg","source":"vgm","ruleset":"dnd5e-2014","data":{"index":"firbolg","name":"Firbolg","speed":30,"size":"Medium","ability_bonuses":[{"ability_score":{"key":"srd5.1:ability:wis","name":"WIS"},"bonus":2},{"ability_score":{"key":"srd5.1:ability:str","name":"STR"},"bonus":1}],"languages":[{"key":"srd5.1:language:common","name":"Common"},{"key":"srd5.1:language:elvish","name":"Elvish"},{"key":"srd5.1:language:giant","name":"Giant"}],"traits":[],"features":[{"key":"vgm:feature:firbolg-magic","name":"Firbolg Magic"},{"key":"vgm:feature:hidden-step","name":"Hidden Step"},{"key":"vgm:feature:firbolg-powerful-build","name":"Powerful Build"},{"key":"vgm:feature:speech-of-beast-and-leaf","name":"Speech of Beast and Leaf"}],"subraces":[]}},
+  {"key":"vgm:race:goliath","index":"goliath","name":"Goliath","source":"vgm","ruleset":"dnd5e-2014","data":{"index":"goliath","name":"Goliath","speed":30,"size":"Medium","ability_bonuses":[{"ability_score":{"key":"srd5.1:ability:str","name":"STR"},"bonus":2},{"ability_score":{"key":"srd5.1:ability:con","name":"CON"},"bonus":1}],"languages":[{"key":"srd5.1:language:common","name":"Common"},{"key":"srd5.1:language:giant","name":"Giant"}],"proficiencies":[{"key":"srd5.1:proficiency:skill-athletics","name":"Skill: Athletics"}],"traits":[],"features":[{"key":"vgm:feature:natural-athlete","name":"Natural Athlete"},{"key":"vgm:feature:stones-endurance","name":"Stone's Endurance"},{"key":"vgm:feature:goliath-powerful-build","name":"Powerful Build"},{"key":"vgm:feature:mountain-born","name":"Mountain Born"}],"subraces":[]}},
+  {"key":"vgm:race:kenku","index":"kenku","name":"Kenku","source":"vgm","ruleset":"dnd5e-2014","data":{"index":"kenku","name":"Kenku","speed":30,"size":"Medium","ability_bonuses":[{"ability_score":{"key":"srd5.1:ability:dex","name":"DEX"},"bonus":2},{"ability_score":{"key":"srd5.1:ability:wis","name":"WIS"},"bonus":1}],"languages":[{"key":"srd5.1:language:common","name":"Common"},{"key":"vgm:language:auran","name":"Auran"}],"proficiency_choices":{"choose":2,"type":"proficiencies","from":{"option_set_type":"options_array","options":[{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-acrobatics","name":"Skill: Acrobatics"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-deception","name":"Skill: Deception"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-stealth","name":"Skill: Stealth"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-sleight-of-hand","name":"Skill: Sleight of Hand"}}]}},"traits":[],"features":[{"key":"vgm:feature:expert-forgery","name":"Expert Forgery"},{"key":"vgm:feature:kenku-training","name":"Kenku Training"},{"key":"vgm:feature:mimicry","name":"Mimicry"}],"subraces":[]}},
+  {"key":"vgm:race:kobold","index":"kobold","name":"Kobold","source":"vgm","ruleset":"dnd5e-2014","data":{"index":"kobold","name":"Kobold","speed":30,"size":"Small","darkvision":60,"ability_bonuses":[{"ability_score":{"key":"srd5.1:ability:dex","name":"DEX"},"bonus":2},{"ability_score":{"key":"srd5.1:ability:str","name":"STR"},"bonus":-2}],"languages":[{"key":"srd5.1:language:common","name":"Common"},{"key":"srd5.1:language:draconic","name":"Draconic"}],"traits":[],"features":[{"key":"vgm:feature:grovel-cower-and-beg","name":"Grovel, Cower, and Beg"},{"key":"vgm:feature:pack-tactics","name":"Pack Tactics"},{"key":"vgm:feature:sunlight-sensitivity","name":"Sunlight Sensitivity"}],"subraces":[]}},
+  {"key":"vgm:race:lizardfolk","index":"lizardfolk","name":"Lizardfolk","source":"vgm","ruleset":"dnd5e-2014","data":{"index":"lizardfolk","name":"Lizardfolk","speed":30,"size":"Medium","ability_bonuses":[{"ability_score":{"key":"srd5.1:ability:con","name":"CON"},"bonus":2},{"ability_score":{"key":"srd5.1:ability:wis","name":"WIS"},"bonus":1}],"languages":[{"key":"srd5.1:language:common","name":"Common"},{"key":"srd5.1:language:draconic","name":"Draconic"}],"proficiency_choices":{"choose":2,"type":"proficiencies","from":{"option_set_type":"options_array","options":[{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-animal-handling","name":"Skill: Animal Handling"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-nature","name":"Skill: Nature"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-perception","name":"Skill: Perception"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-stealth","name":"Skill: Stealth"}},{"option_type":"reference","item":{"key":"srd5.1:proficiency:skill-survival","name":"Skill: Survival"}}]}},"movement_grants":[{"mode":"swim","speed":30}],"traits":[],"features":[{"key":"vgm:feature:lizardfolk-bite","name":"Bite"},{"key":"vgm:feature:cunning-artisan","name":"Cunning Artisan"},{"key":"vgm:feature:hold-breath","name":"Hold Breath"},{"key":"vgm:feature:hunters-lore","name":"Hunter's Lore"},{"key":"vgm:feature:lizardfolk-natural-armor","name":"Natural Armor"},{"key":"vgm:feature:hungry-jaws","name":"Hungry Jaws"}],"subraces":[]}},
+  {"key":"vgm:race:orc","index":"orc","name":"Orc","source":"vgm","ruleset":"dnd5e-2014","data":{"index":"orc","name":"Orc","speed":30,"size":"Medium","darkvision":60,"ability_bonuses":[{"ability_score":{"key":"srd5.1:ability:str","name":"STR"},"bonus":2},{"ability_score":{"key":"srd5.1:ability:con","name":"CON"},"bonus":1},{"ability_score":{"key":"srd5.1:ability:int","name":"INT"},"bonus":-2}],"languages":[{"key":"srd5.1:language:common","name":"Common"},{"key":"srd5.1:language:orc","name":"Orc"}],"proficiencies":[{"key":"srd5.1:proficiency:skill-intimidation","name":"Skill: Intimidation"}],"traits":[],"features":[{"key":"vgm:feature:aggressive","name":"Aggressive"},{"key":"vgm:feature:menacing","name":"Menacing"},{"key":"vgm:feature:orc-powerful-build","name":"Powerful Build"}],"subraces":[]}},
+  {"key":"vgm:race:tabaxi","index":"tabaxi","name":"Tabaxi","source":"vgm","ruleset":"dnd5e-2014","data":{"index":"tabaxi","name":"Tabaxi","speed":30,"size":"Medium","darkvision":60,"ability_bonuses":[{"ability_score":{"key":"srd5.1:ability:dex","name":"DEX"},"bonus":2},{"ability_score":{"key":"srd5.1:ability:cha","name":"CHA"},"bonus":1}],"languages":[{"key":"srd5.1:language:common","name":"Common"}],"language_options":{"choose":1,"type":"languages","from":{"option_set_type":"options_array","options":[{"option_type":"reference","item":{"key":"srd5.1:language:dwarvish","name":"Dwarvish"}},{"option_type":"reference","item":{"key":"srd5.1:language:elvish","name":"Elvish"}},{"option_type":"reference","item":{"key":"srd5.1:language:giant","name":"Giant"}},{"option_type":"reference","item":{"key":"srd5.1:language:gnomish","name":"Gnomish"}},{"option_type":"reference","item":{"key":"srd5.1:language:goblin","name":"Goblin"}},{"option_type":"reference","item":{"key":"srd5.1:language:halfling","name":"Halfling"}},{"option_type":"reference","item":{"key":"srd5.1:language:orc","name":"Orc"}},{"option_type":"reference","item":{"key":"srd5.1:language:abyssal","name":"Abyssal"}},{"option_type":"reference","item":{"key":"srd5.1:language:celestial","name":"Celestial"}},{"option_type":"reference","item":{"key":"srd5.1:language:draconic","name":"Draconic"}},{"option_type":"reference","item":{"key":"srd5.1:language:deep-speech","name":"Deep Speech"}},{"option_type":"reference","item":{"key":"srd5.1:language:infernal","name":"Infernal"}},{"option_type":"reference","item":{"key":"srd5.1:language:primordial","name":"Primordial"}},{"option_type":"reference","item":{"key":"srd5.1:language:sylvan","name":"Sylvan"}},{"option_type":"reference","item":{"key":"srd5.1:language:undercommon","name":"Undercommon"}},{"option_type":"reference","item":{"key":"vgm:language:auran","name":"Auran"}},{"option_type":"reference","item":{"key":"vgm:language:aquan","name":"Aquan"}}]}},"proficiencies":[{"key":"srd5.1:proficiency:skill-perception","name":"Skill: Perception"},{"key":"srd5.1:proficiency:skill-stealth","name":"Skill: Stealth"}],"movement_grants":[{"mode":"climb","speed":20}],"traits":[],"features":[{"key":"vgm:feature:feline-agility","name":"Feline Agility"},{"key":"vgm:feature:cats-claws","name":"Cat's Claws"},{"key":"vgm:feature:cats-talent","name":"Cat's Talent"}],"subraces":[]}},
+  {"key":"vgm:race:triton","index":"triton","name":"Triton","source":"vgm","ruleset":"dnd5e-2014","data":{"index":"triton","name":"Triton","speed":30,"size":"Medium","ability_bonuses":[{"ability_score":{"key":"srd5.1:ability:str","name":"STR"},"bonus":1},{"ability_score":{"key":"srd5.1:ability:con","name":"CON"},"bonus":1},{"ability_score":{"key":"srd5.1:ability:cha","name":"CHA"},"bonus":1}],"languages":[{"key":"srd5.1:language:common","name":"Common"},{"key":"vgm:language:aquan","name":"Aquan"}],"movement_grants":[{"mode":"swim","speed":30}],"traits":[],"features":[{"key":"vgm:feature:amphibious","name":"Amphibious"},{"key":"vgm:feature:control-air-and-water","name":"Control Air and Water"},{"key":"vgm:feature:emissary-of-the-sea","name":"Emissary of the Sea"},{"key":"vgm:feature:guardians-of-the-depths","name":"Guardians of the Depths"}],"subraces":[]}},
+  {"key":"vgm:race:yuan-ti-pureblood","index":"yuan-ti-pureblood","name":"Yuan-ti Pureblood","source":"vgm","ruleset":"dnd5e-2014","data":{"index":"yuan-ti-pureblood","name":"Yuan-ti Pureblood","speed":30,"size":"Medium","darkvision":60,"ability_bonuses":[{"ability_score":{"key":"srd5.1:ability:cha","name":"CHA"},"bonus":2},{"ability_score":{"key":"srd5.1:ability:int","name":"INT"},"bonus":1}],"languages":[{"key":"srd5.1:language:common","name":"Common"},{"key":"srd5.1:language:abyssal","name":"Abyssal"},{"key":"srd5.1:language:draconic","name":"Draconic"}],"traits":[],"features":[{"key":"vgm:feature:yuan-ti-innate-spellcasting","name":"Innate Spellcasting"},{"key":"vgm:feature:magic-resistance","name":"Magic Resistance"},{"key":"vgm:feature:poison-immunity","name":"Poison Immunity"}],"subraces":[]}}
 ]
