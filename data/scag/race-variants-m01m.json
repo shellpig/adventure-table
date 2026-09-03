@@ -9,6 +9,20 @@
       "index": "tiefling-variants",
       "name": "SCAG Tiefling Variants",
       "base_race_ref": {"key": "srd5.1:race:tiefling", "name": "Tiefling"},
+      "appearance_suggestions": [
+        "Small horns",
+        "Fangs or sharp teeth",
+        "A forked tongue",
+        "Catlike eyes",
+        "Six fingers on each hand",
+        "Goat-like legs",
+        "Cloven hooves",
+        "A forked tail",
+        "Leathery or scaly skin",
+        "Red or dark blue skin",
+        "No shadow or reflection",
+        "A faint smell of brimstone"
+      ],
       "replacement_rules": [
         {
           "target_grant_id": "grant:srd5.1:race:tiefling:infernal-legacy",
