@@ -1,0 +1,14 @@
+[
+  {
+    "key": "mtf:language:gith",
+    "index": "gith",
+    "name": "Gith",
+    "source": "mtf",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "gith",
+      "name": "Gith",
+      "type": "Exotic"
+    }
+  }
+]
