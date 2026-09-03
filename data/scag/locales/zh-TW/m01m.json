@@ -4,7 +4,21 @@
   "source": "scag",
   "review_status": "draft-human-review-required",
   "entries": {
-    "scag:race-variant:tiefling-variants": {"name": "SCAG 提夫林變體"},
+    "scag:race-variant:tiefling-variants": {
+      "name": "SCAG 提夫林變體",
+      "data.appearance_suggestions.0": "小型犄角",
+      "data.appearance_suggestions.1": "獠牙或尖銳牙齒",
+      "data.appearance_suggestions.2": "分叉的舌頭",
+      "data.appearance_suggestions.3": "貓樣豎瞳",
+      "data.appearance_suggestions.4": "每隻手有六根手指",
+      "data.appearance_suggestions.5": "山羊般的腿",
+      "data.appearance_suggestions.6": "偶蹄",
+      "data.appearance_suggestions.7": "分叉的尾巴",
+      "data.appearance_suggestions.8": "革質或帶鱗片的皮膚",
+      "data.appearance_suggestions.9": "紅色或深藍色皮膚",
+      "data.appearance_suggestions.10": "沒有影子或鏡像",
+      "data.appearance_suggestions.11": "帶有淡淡的硫磺氣味"
+    },
     "scag:feature:feral-tiefling": {"name": "野性提夫林", "data.desc.0": "以敏捷 +2、智力 +1 取代標準提夫林的屬性值提升。"},
     "scag:feature:devils-tongue": {"name": "魔鬼之舌", "data.desc.0": "取代煉獄傳承：你學會惡毒嘲笑；3 級起每次長休可將魅惑人類以 2 環施展一次；5 級起每次長休可施展一次迷魂術。魅力是你的施法屬性。"},
     "scag:feature:hellfire-tiefling": {"name": "煉獄火", "data.desc.0": "以燃燒之手取代煉獄傳承中的煉獄叱喝，保留相同的等級門檻與魅力施法屬性。"},
