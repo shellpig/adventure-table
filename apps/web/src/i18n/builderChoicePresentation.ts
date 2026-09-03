@@ -51,6 +51,14 @@ const RACE_VARIANT_OPTION_ZH: Record<string, string> = {
   'devils-tongue': '魔鬼之舌',
   hellfire: '煉獄火',
   winged: '翼生',
+  baalzebul: '巴爾澤布爾傳承',
+  dispater: '狄斯帕特傳承',
+  fierna: '菲爾娜傳承',
+  glasya: '格萊西雅傳承',
+  levistus: '萊維思圖斯傳承',
+  mammon: '瑪門傳承',
+  mephistopheles: '梅菲斯特費利斯傳承',
+  zariel: '扎瑞爾傳承',
 }
 
 const ABILITY_NAMES_ZH: Record<string, string> = {
