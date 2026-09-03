@@ -2,7 +2,7 @@
   "id": "scag",
   "name": "Sword Coast Adventurer's Guide",
   "ruleset": "dnd5e-2014",
-  "version": "M01-L",
+  "version": "M01-M",
   "provenance": {
     "source_documents": [
       "docs/暫用規則資訊/背景_SCAG.md",
@@ -13,9 +13,9 @@
     "note": "Private-project content pack assembled from rule references supplied in this repository."
   },
   "usage": {
-    "scope": "M01-C backgrounds, M01-E Half-Elf ancestry variants, M01-J subclasses, and M01-L Ghostwise Halfling / Deep Gnome",
+    "scope": "M01-C backgrounds, M01-E Half-Elf ancestry variants, M01-J subclasses, M01-L Ghostwise Halfling / Deep Gnome, and M01-M Tiefling variants",
     "roleplay_inheritance_policy": "inherits_from reuses only personality/ideal/bond/flaw suggestions and never mechanics",
-    "race_variant_policy": "race-variant entries keep srd5.1:race:half-elf as the base race and replace grants only through declared stable grant identities",
+    "race_variant_policy": "race-variant entries keep their canonical base race and replace grants only through declared stable grant identities and generic replacement groups",
     "runtime_policy": "Reference Markdown is authoring input only; runtime loads checked-in pack data."
   },
   "categories": [
@@ -26,7 +26,9 @@
     {"name": "levels-m01j-01", "kind": "level", "file": "levels-m01j-01.json", "count": 26},
     {"name": "subclasses-m01j-01", "kind": "subclass", "file": "subclasses-m01j-01.json", "count": 6},
     {"name": "features-m01l", "kind": "feature", "file": "features-m01l.json", "count": 3},
-    {"name": "subraces-m01l", "kind": "subrace", "file": "subraces-m01l.json", "count": 2}
+    {"name": "subraces-m01l", "kind": "subrace", "file": "subraces-m01l.json", "count": 2},
+    {"name": "features-m01m", "kind": "feature", "file": "features-m01m.json", "count": 4},
+    {"name": "race-variants-m01m", "kind": "race-variant", "file": "race-variants-m01m.json", "count": 1}
   ],
-  "total_entries": 73
+  "total_entries": 78
 }

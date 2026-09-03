@@ -11,6 +11,9 @@ from app.content.m01j_inventory import (
 from app.content.m01j_spell_closeout_validation import validate_m01j_spell_closeout
 from app.content.m01l_inventory import validate_m01l_inventory
 from app.content.m01l_models import install_m01l_content_models
+from app.content.m01m_inventory import validate_m01m_inventory
+from app.content.m01m_models import install_m01m_content_models
+from app.content.m01m_overrides import apply_m01m_entry_overrides
 from app.content.phb_roleplay import apply_phb_background_roleplay
 from app.content.registry import (
     ContentNotFoundError,
@@ -20,6 +23,7 @@ from app.content.registry import (
 
 
 install_m01l_content_models()
+install_m01m_content_models()
 
 _registry.DEFAULT_CONTENT_PACKS = (
     "srd5.1",
@@ -30,6 +34,7 @@ _registry.DEFAULT_CONTENT_PACKS = (
     "vrgr",
     "tce",
     "xge",
+    "mtf",
 )
 
 
@@ -46,6 +51,11 @@ def load_default_content_registry() -> ContentRegistry:
     registry = validate_m01j_spell_closeout(registry)
     registry = apply_m01j_subclass_relations(registry)
     registry = validate_m01l_inventory(registry)
+    # Standard SRD/PHB Tiefling remains the canonical MTF Asmodeus identity.
+    # Add only typed casting metadata to its existing Infernal Legacy trait;
+    # identity and the vendored SRD corpus remain unchanged.
+    registry = apply_m01m_entry_overrides(registry)
+    registry = validate_m01m_inventory(registry)
     registry = apply_phb_background_roleplay(
         registry,
         content_root=_registry.CONTENT_PACKS_ROOT,

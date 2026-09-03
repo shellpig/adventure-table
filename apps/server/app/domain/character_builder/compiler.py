@@ -639,6 +639,9 @@ def compile_builder_draft(
                 ruleset=payload.basic.ruleset,
                 race_ref=payload.race_selection.reference_id,
                 race_variant_ref=(None if active_lineage else race_variant.race_variant_ref),
+                race_variant_group_selections=(
+                    () if active_lineage else race_variant.group_selections
+                ),
                 subrace_ref=(
                     payload.subrace_selection.reference_id
                     if payload.subrace_selection is not None

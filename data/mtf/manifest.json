@@ -1,0 +1,22 @@
+{
+  "id": "mtf",
+  "name": "Mordenkainen's Tome of Foes",
+  "ruleset": "dnd5e-2014",
+  "version": "M01-M",
+  "provenance": {
+    "type": "private-maintainer-normalization",
+    "reference": "docs/暫用規則資訊/種族_MTF.md"
+  },
+  "usage": {
+    "scope": "M01-M planar ancestries and non-Asmodeus Tiefling bloodlines",
+    "runtime_policy": "Reference Markdown is authoring input only; runtime loads only checked-in pack data."
+  },
+  "categories": [
+    {"name": "races", "kind": "race", "file": "races.json", "count": 1},
+    {"name": "subraces", "kind": "subrace", "file": "subraces.json", "count": 6},
+    {"name": "race-variants", "kind": "race-variant", "file": "race-variants.json", "count": 8},
+    {"name": "features", "kind": "feature", "file": "features.json", "count": 24},
+    {"name": "languages", "kind": "language", "file": "languages.json", "count": 1}
+  ],
+  "total_entries": 40
+}

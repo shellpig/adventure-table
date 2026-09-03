@@ -91,6 +91,10 @@ export type SpellAccessDTO = {
   prepared: boolean
   source_profile_id?: string | null
   source_access_entry_id?: string | null
+  cast_at_level?: number | null
+  waive_components?: string[]
+  casting_modifiers?: string[]
+  uses_spell_slot?: boolean | null
 }
 
 export type SpellcastingDTO = {
@@ -109,6 +113,14 @@ export type InventoryDTO = {
   equipped: boolean
   carried: boolean
   rules: Record<string, unknown>
+}
+
+export type FeatureModeDTO = {
+  key: string
+  source_feature_ref: string
+  options: string[]
+  default: string
+  change_timing: string
 }
 
 export type ArtificerKnownInfusionDTO = {
@@ -219,6 +231,8 @@ export type CharacterSheetDTO = {
   temporary_hp: number
   hit_dice: HitDieDTO[]
   features: NamedReferenceDTO[]
+  feature_modes?: Record<string, string>
+  feature_mode_definitions?: FeatureModeDTO[]
   conditions: ConditionDTO[]
   spells: SpellAccessDTO[]
   spellcasting: SpellcastingDTO[]

@@ -45,6 +45,20 @@ const RACE_VARIANT_OPTION_ZH: Record<string, string> = {
   'mask-of-the-wild': '荒野隱蔽',
   'swimming-speed': '游泳',
   'drow-magic': '卓爾魔法',
+  'standard-ability-package': '標準屬性組合（智力 +1、魅力 +2）',
+  feral: '野性（敏捷 +2、智力 +1）',
+  'infernal-legacy': '保留煉獄傳承',
+  'devils-tongue': '魔鬼之舌',
+  hellfire: '煉獄火',
+  winged: '翼生',
+  baalzebul: '巴爾澤布爾傳承',
+  dispater: '狄斯帕特傳承',
+  fierna: '菲爾娜傳承',
+  glasya: '格萊西雅傳承',
+  levistus: '萊維思圖斯傳承',
+  mammon: '瑪門傳承',
+  mephistopheles: '梅菲斯特費利斯傳承',
+  zariel: '扎瑞爾傳承',
 }
 
 const ABILITY_NAMES_ZH: Record<string, string> = {
@@ -103,6 +117,10 @@ export function builderChoiceLabel(
   }
   if (choice.option_source === 'equipment') {
     return '起始裝備選擇'
+  }
+  if (choice.option_source === 'content:race-variant-replacement') {
+    if (choice.choice_id.endsWith(':ability-package')) return '提夫林屬性組合'
+    if (choice.choice_id.endsWith(':legacy')) return '提夫林傳承'
   }
 
   const source = choice.option_source ?? ''

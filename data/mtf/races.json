@@ -1,0 +1,27 @@
+[
+  {
+    "key": "mtf:race:gith",
+    "index": "gith",
+    "name": "Gith",
+    "source": "mtf",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "gith",
+      "name": "Gith",
+      "speed": 30,
+      "size": "Medium",
+      "ability_bonuses": [
+        {"ability_score": {"key": "srd5.1:ability:int", "name": "INT"}, "bonus": 1}
+      ],
+      "languages": [
+        {"key": "srd5.1:language:common", "name": "Common"},
+        {"key": "mtf:language:gith", "name": "Gith"}
+      ],
+      "traits": [],
+      "subraces": [
+        {"key": "mtf:subrace:githyanki", "name": "Githyanki"},
+        {"key": "mtf:subrace:githzerai", "name": "Githzerai"}
+      ]
+    }
+  }
+]

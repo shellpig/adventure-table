@@ -21,6 +21,7 @@ from app.domain.rules.abilities import ABILITY_NAMES, ability_modifier, effectiv
 from app.domain.rules.artificer_dto import ArtificerSummaryDTO, build_artificer_summary
 from app.domain.rules.feature_resources import initial_feature_resource_state
 from app.domain.rules.hit_points import calculate_max_hp
+from app.domain.rules.m01m_ancestry import initial_feature_modes
 from app.domain.rules.proficiency import proficiency_bonus, total_character_level
 from app.domain.rules.skills import all_skill_modifiers
 from app.domain.rules.spellcasting import initial_spell_resource_state
@@ -88,6 +89,7 @@ def build_initial_character_state(
     registry: ContentRegistry,
     *,
     prepared_spells: tuple[PreparedSpellSelection, ...] = (),
+    initial_state_seed: dict[str, object] | None = None,
 ) -> CharacterState:
     spell_slots, spell_resources = initial_spell_resource_state(build)
     resources = dict(spell_resources)
@@ -111,6 +113,11 @@ def build_initial_character_state(
             )
             for entry in build.starting_equipment
         ],
+        feature_modes=initial_feature_modes(
+            build,
+            registry,
+            initial_state_seed,
+        ),
     )
     validate_state_against_build(state, build, registry)
     return state

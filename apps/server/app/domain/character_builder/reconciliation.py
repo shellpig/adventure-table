@@ -20,6 +20,7 @@ from app.domain.character_builder.schemas import (
 from app.domain.rules.artificer import spell_storing_item_capacity
 from app.domain.rules.feature_resources import feature_resource_capacities
 from app.domain.rules.hit_points import calculate_max_hp
+from app.domain.rules.m01m_ancestry import feature_mode_definitions
 from app.domain.rules.spellcasting import initial_spell_resource_state
 
 
@@ -96,6 +97,79 @@ def _reconcile_counter(
             )
         )
     return ResourceCounter(used=new_used, remaining=new_remaining)
+
+
+def _reconcile_feature_modes(
+    *,
+    old_build: CharacterBuild,
+    old_state: CharacterState,
+    new_build: CharacterBuild,
+    registry: ContentRegistry,
+    warnings: list[BuilderIssue],
+    changes: list[StateReconciliationChange],
+) -> dict[str, str]:
+    """Reconcile only M01-M-owned data-defined modes in the shared state map."""
+
+    old_definitions = {
+        definition.key: definition
+        for definition in feature_mode_definitions(old_build, registry)
+    }
+    new_definitions = {
+        definition.key: definition
+        for definition in feature_mode_definitions(new_build, registry)
+    }
+    # M01-H Artificer and future independent subsystems share this dictionary.
+    # Preserve their keys exactly; this helper owns only data-defined M01-M keys.
+    result = dict(old_state.feature_modes)
+
+    for key, definition in new_definitions.items():
+        previous = old_state.feature_modes.get(key)
+        if previous in definition.options:
+            result[key] = previous
+            continue
+        result[key] = definition.default
+        if previous is None:
+            changes.append(
+                StateReconciliationChange(
+                    path=f"state.feature_modes.{key}",
+                    kind="feature_mode_added",
+                    before="missing",
+                    after=definition.default,
+                    message="The new Build grants this mode; seed its content-defined default.",
+                )
+            )
+        else:
+            warnings.append(
+                _warning(
+                    "feature_mode_reset",
+                    f"state.feature_modes.{key}",
+                    f"Mode {previous!r} is not valid for the new Build and resets to {definition.default!r}.",
+                )
+            )
+            changes.append(
+                StateReconciliationChange(
+                    path=f"state.feature_modes.{key}",
+                    kind="feature_mode_reset",
+                    before=previous,
+                    after=definition.default,
+                    message="Preserve the live mode when legal; otherwise use the new Build default.",
+                )
+            )
+
+    for key in sorted(set(old_definitions) - set(new_definitions)):
+        previous = result.pop(key, None)
+        if previous is None:
+            continue
+        changes.append(
+            StateReconciliationChange(
+                path=f"state.feature_modes.{key}",
+                kind="feature_mode_removed",
+                before=previous,
+                after="removed",
+                message="The new Build no longer grants this ancestry feature mode.",
+            )
+        )
+    return result
 
 
 def reconcile_character_state(
@@ -265,6 +339,15 @@ def reconcile_character_state(
             )
         )
 
+    new_feature_modes = _reconcile_feature_modes(
+        old_build=old_build,
+        old_state=old_state,
+        new_build=new_build,
+        registry=registry,
+        warnings=warnings,
+        changes=changes,
+    )
+
     new_spell_storing_item = old_state.spell_storing_item
     if old_state.spell_storing_item is not None:
         old_capacity = spell_storing_item_capacity(old_build)
@@ -305,6 +388,7 @@ def reconcile_character_state(
             "spell_slots": new_spell_slots,
             "resources": new_resources,
             "hit_dice_state": new_hit_dice_state,
+            "feature_modes": new_feature_modes,
             "spell_storing_item": new_spell_storing_item,
         }
     )
@@ -341,9 +425,6 @@ def reconcile_character_state(
             )
         )
 
-    # If an Artificer-specific conflict is already known, preserve the live state
-    # exactly and surface the targeted action instead of adding a generic
-    # state_reconciliation_invalid duplicate for the same condition.
     if not blocking:
         try:
             validate_state_against_build(proposed, new_build, registry)

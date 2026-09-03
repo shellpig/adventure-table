@@ -78,6 +78,19 @@ def _is_martial_weapon_proficiency(
     return equipment is not None and equipment.data.get("weapon_category") == "Martial"
 
 
+def _is_skill_or_tool_proficiency(entry: ContentEntry) -> bool:
+    if not stable_key_is_kind(entry.key, "proficiency"):
+        return False
+    proficiency_type = entry.data.get("type")
+    return proficiency_type in {
+        "Skills",
+        "Artisan's Tools",
+        "Gaming Sets",
+        "Musical Instruments",
+        "Other",
+    }
+
+
 def _rule_options(
     rule: dict[str, object],
     registry: ContentRegistry,
@@ -107,6 +120,12 @@ def _rule_options(
                 entry
                 for entry in entries
                 if _is_martial_weapon_proficiency(entry, registry)
+            )
+        elif filter_name == "skill_or_tool":
+            if kind != "proficiency":
+                return ()
+            entries = tuple(
+                entry for entry in entries if _is_skill_or_tool_proficiency(entry)
             )
         elif filter_name is not None:
             return ()

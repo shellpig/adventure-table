@@ -1,0 +1,86 @@
+[
+  {
+    "key": "scag:race-variant:tiefling-variants",
+    "index": "tiefling-variants",
+    "name": "SCAG Tiefling Variants",
+    "source": "scag",
+    "ruleset": "dnd5e-2014",
+    "data": {
+      "index": "tiefling-variants",
+      "name": "SCAG Tiefling Variants",
+      "base_race_ref": {"key": "srd5.1:race:tiefling", "name": "Tiefling"},
+      "appearance_suggestions": [
+        "Small horns",
+        "Fangs or sharp teeth",
+        "A forked tongue",
+        "Catlike eyes",
+        "Six fingers on each hand",
+        "Goat-like legs",
+        "Cloven hooves",
+        "A forked tail",
+        "Leathery or scaly skin",
+        "Red or dark blue skin",
+        "No shadow or reflection",
+        "A faint smell of brimstone"
+      ],
+      "replacement_rules": [
+        {
+          "target_grant_id": "grant:srd5.1:race:tiefling:infernal-legacy",
+          "target_reference": {"key": "srd5.1:trait:infernal-legacy", "name": "Infernal Legacy"},
+          "action": "remove",
+          "replacement_group_id": "legacy"
+        }
+      ],
+      "replacement_groups": [
+        {
+          "id": "ability-package",
+          "label": "Tiefling ability package",
+          "choose": 1,
+          "options": [
+            {
+              "id": "standard-ability-package",
+              "label": "Standard ability package (INT +1, CHA +2)",
+              "keep_target": true
+            },
+            {
+              "id": "feral",
+              "label": "Feral (DEX +2, INT +1)",
+              "grants": [{"key": "scag:feature:feral-tiefling", "name": "Feral Tiefling"}],
+              "replacement_ability_bonuses": [
+                {"ability": "dexterity", "bonus": 2},
+                {"ability": "intelligence", "bonus": 1}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "legacy",
+          "label": "Tiefling legacy",
+          "choose": 1,
+          "options": [
+            {
+              "id": "infernal-legacy",
+              "label": "Keep Infernal Legacy",
+              "keep_target": true
+            },
+            {
+              "id": "devils-tongue",
+              "label": "Devil's Tongue",
+              "grants": [{"key": "scag:feature:devils-tongue", "name": "Devil's Tongue"}]
+            },
+            {
+              "id": "hellfire",
+              "label": "Hellfire",
+              "grants": [{"key": "scag:feature:hellfire-tiefling", "name": "Hellfire"}]
+            },
+            {
+              "id": "winged",
+              "label": "Winged",
+              "grants": [{"key": "scag:feature:winged-tiefling", "name": "Winged"}]
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

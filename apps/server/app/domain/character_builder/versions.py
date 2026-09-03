@@ -173,6 +173,59 @@ def _lineage_selection(build: CharacterBuild) -> BuilderReferenceSelection | Non
     )
 
 
+def _seed_authoritative_race_variant_groups(
+    payload: BuilderDraftPayload,
+    build: CharacterBuild,
+) -> None:
+    """Restore race-variant provenance from the authoritative immutable Build.
+
+    Older M01-E confirmed payloads may retain stale child selections even after
+    their top-level variant was cleared or changed. Those stale ids were safe in
+    the old compiler because inactive branches were ignored, but M01-M now has a
+    server-authoritative cross-variant ownership gate. Prune only provenance that
+    has no owner in the current Build (or belongs to a different top-level
+    variant). If an older M01-E Build still owns a variant but has no typed group
+    provenance, preserve that variant's historical child selections rather than
+    reverse engineering its branch from resolved mechanics.
+    """
+
+    payload.race_variant_selection = (
+        BuilderReferenceSelection(reference_id=build.race_variant_ref)
+        if build.race_variant_ref is not None
+        else None
+    )
+
+    active_prefix = (
+        f"{deterministic_choice_id('race-variant', build.race_variant_ref)}:"
+        if build.race_variant_ref is not None
+        else None
+    )
+    selections = {
+        choice_id: selection
+        for choice_id, selection in payload.choice_selections.items()
+        if not choice_id.startswith("race-variant:")
+        or (active_prefix is not None and choice_id.startswith(active_prefix))
+    }
+
+    if not build.race_variant_group_selections:
+        payload.choice_selections = selections
+        return
+
+    for group in build.race_variant_group_selections:
+        choice_id = deterministic_choice_id(
+            "race-variant",
+            group.race_variant_ref,
+            group.replacement_group_id,
+        )
+        selections[choice_id] = BuilderChoiceSelection(
+            choice_id=choice_id,
+            source_ref=group.race_variant_ref,
+            selected_option_ids=(group.selected_option_id,),
+            provenance_path="build.race_variant_group_selections",
+        )
+    payload.choice_selections = selections
+
+
 def _seed_authoritative_artificer_infusions(
     payload: BuilderDraftPayload,
     build: CharacterBuild,
@@ -278,6 +331,7 @@ def legacy_payload_from_build(
             "base_character_level": build.character_level,
         },
     )
+    _seed_authoritative_race_variant_groups(payload, build)
     _seed_authoritative_artificer_infusions(payload, build)
     return payload
 
@@ -302,6 +356,10 @@ def seed_version_draft_payload(
             ruleset=character.build.ruleset,
         )
         payload.target_level = character.build.character_level
+        # Origin identity is authoritative Build data. New M01-M Builds also
+        # carry group selections so a Build Edit can reconstruct Feral/Legacy
+        # branches without reverse engineering resolved values.
+        _seed_authoritative_race_variant_groups(payload, character.build)
         # Lineage is Build identity, not merely historical UI provenance. Always
         # seed the typed selector from the authoritative current Build so a
         # later Level Up / Build Edit cannot silently lose it if an older source

@@ -5,6 +5,7 @@ from uuid import UUID
 
 from app.content.registry import ContentRegistry
 from app.domain.character.validation import CharacterValidationError, validate_build_references
+from app.domain.character_builder.choices import deterministic_choice_id
 from app.domain.character_builder.compiler import BuilderCompileResult
 from app.domain.character_builder.m01i_compiler import compile_builder_draft
 from app.domain.character_builder.creation import (
@@ -50,14 +51,7 @@ M01J_CHOICE_PREFIX = "m01-j:"
 
 
 def _is_cumulative_subclass_choice(choice_id: str) -> bool:
-    """Is this an M01-J subclass choice that keeps growing as the class levels?
-
-    Unlike a per-level choice, these keep one stable id whose ``choose_total``
-    rises with class level - a Rune Knight picks two runes at 3rd level and a
-    third at 7th through the same choice. Level Up therefore has to extend them
-    rather than treat them as frozen history, so they are guarded by "earlier
-    picks may not be dropped" instead of "may not change at all".
-    """
+    """Is this an M01-J subclass choice that keeps growing as the class levels?"""
 
     return choice_id.startswith(M01J_CHOICE_PREFIX)
 
@@ -128,9 +122,15 @@ class CharacterBuilderService:
 
             candidate = compiled.build_candidate
             if candidate is not None:
+                group_provenance_unchanged = (
+                    not base_build.race_variant_group_selections
+                    or candidate.race_variant_group_selections
+                    == base_build.race_variant_group_selections
+                )
                 immutable_origin = (
                     candidate.race_ref == base_build.race_ref
                     and candidate.race_variant_ref == base_build.race_variant_ref
+                    and group_provenance_unchanged
                     and candidate.subrace_ref == base_build.subrace_ref
                     and candidate.background_ref == base_build.background_ref
                     and candidate.alignment_ref == base_build.alignment_ref
@@ -213,9 +213,6 @@ class CharacterBuilderService:
         )
 
     def create_draft(self, request: BuilderDraftCreateInput) -> BuilderView:
-        # Non-create drafts must be initialized from the authoritative current
-        # character so callers cannot choose an arbitrary base_version_id or fake
-        # historical provenance. Use create_version_draft() for those modes.
         if request.mode is not BuilderMode.CREATE:
             raise BuilderModeNotEnabledError(request.mode)
         draft = self.repository.create_draft(request)
@@ -322,11 +319,6 @@ class CharacterBuilderService:
                 raise ValueError("choice_selections must be an object")
             current_selections = current.draft_payload.choice_selections
             target_level = base_build.character_level + 1
-            # M01-K feat child choices use deterministic ``feat:<digest>:...``
-            # ids rather than a level prefix. Only allow a new non-level id when
-            # the authoritative compile for the current draft actually exposes it
-            # as a feat child choice. Historical selections remain protected by
-            # the loop below, so this does not make old feat choices editable.
             current_compiled = self._compile(current)
             allowed_new_feat_choice_ids = {
                 choice.choice_id
@@ -368,11 +360,44 @@ class CharacterBuilderService:
                         f"level_up cannot add non-level-up choice {choice_id}"
                     )
 
+    @staticmethod
+    def _prune_previous_race_variant_branch(
+        current: BuilderDraft,
+        changes: dict[str, object],
+    ) -> None:
+        """Drop only the previous top-level variant branch on an ordinary switch.
+
+        If the caller explicitly submits ``choice_selections`` together with the
+        new top-level variant, preserve that payload. Final variant validation can
+        then reject forged cross-variant combinations instead of silently fixing
+        an untrusted request.
+        """
+
+        if "race_variant_selection" not in changes or "choice_selections" in changes:
+            return
+        previous = current.draft_payload.race_variant_selection
+        raw_next = changes.get("race_variant_selection")
+        next_ref = (
+            raw_next.get("reference_id")
+            if isinstance(raw_next, dict) and isinstance(raw_next.get("reference_id"), str)
+            else None
+        )
+        previous_ref = previous.reference_id if previous is not None else None
+        if previous_ref is None or previous_ref == next_ref:
+            return
+        previous_prefix = f"{deterministic_choice_id('race-variant', previous_ref)}:"
+        changes["choice_selections"] = {
+            choice_id: selection.model_dump(mode="python")
+            for choice_id, selection in current.draft_payload.choice_selections.items()
+            if not choice_id.startswith(previous_prefix)
+        }
+
     def patch_draft(self, draft_id: UUID, request: BuilderDraftPatchInput) -> BuilderView:
         current = self.repository.load_draft(draft_id)
         payload_data = current.draft_payload.model_dump(mode="python")
         changes = request.draft_payload.model_dump(mode="python", exclude_unset=True)
         self._guard_level_up_patch(current, changes)
+        self._prune_previous_race_variant_branch(current, changes)
         if "roleplay_profile" in changes:
             proposed_profile = changes["roleplay_profile"]
             if proposed_profile is None:
@@ -426,6 +451,7 @@ class CharacterBuilderService:
                         compiled.build_candidate,
                         self.registry,
                         prepared_spells=compiled.initial_prepared_spells,
+                        initial_state_seed=draft.draft_payload.initial_state_seed,
                     )
                 else:
                     character_repository = self._require_character_repository()
@@ -488,8 +514,6 @@ class CharacterBuilderService:
         confirmed_character_id, confirmed_version_id = self.repository.confirmed_result(draft_id)
         if confirmed_character_id is not None:
             if confirmed_version_id is None:
-                # Compatibility for any pre-versioning confirmed draft that has
-                # no stored version id. New confirms always persist both ids.
                 character = character_repository.load_character(confirmed_character_id)
                 return BuilderConfirmResult(
                     character_id=character.id,
@@ -511,9 +535,6 @@ class CharacterBuilderService:
                 )
             return BuilderConfirmResult(
                 character_id=confirmed_character_id,
-                # Keep the historical field name for compatibility: on replay
-                # this is the exact version created by this Confirm, even if a
-                # later version is now current on the character.
                 current_version_id=confirmed_version_id,
                 version_no=confirmed_version.version_no,
                 character_path=f"/characters/{confirmed_character_id}",

@@ -1,0 +1,32 @@
+{
+  "phase": "M01-M",
+  "ruleset": "dnd5e-2014",
+  "planar_rows": [
+    {"source":"mtf","kind":"subrace","key":"mtf:subrace:duergar","name":"Duergar (Gray Dwarf)","parent_race_ref":"srd5.1:race:dwarf"},
+    {"source":"mtf","kind":"subrace","key":"mtf:subrace:eladrin","name":"Eladrin","parent_race_ref":"srd5.1:race:elf"},
+    {"source":"mtf","kind":"subrace","key":"mtf:subrace:sea-elf","name":"Sea Elf","parent_race_ref":"srd5.1:race:elf"},
+    {"source":"mtf","kind":"subrace","key":"mtf:subrace:shadar-kai","name":"Shadar-kai","parent_race_ref":"srd5.1:race:elf"},
+    {"source":"mtf","kind":"race","key":"mtf:race:gith","name":"Gith","parent_race_ref":null},
+    {"source":"mtf","kind":"subrace","key":"mtf:subrace:githyanki","name":"Githyanki","parent_race_ref":"mtf:race:gith"},
+    {"source":"mtf","kind":"subrace","key":"mtf:subrace:githzerai","name":"Githzerai","parent_race_ref":"mtf:race:gith"}
+  ],
+  "tiefling_bloodlines": [
+    {"name":"Asmodeus","disposition":"canonical_mapping","key":"srd5.1:race:tiefling"},
+    {"name":"Baalzebul","disposition":"implemented_variant","key":"mtf:race-variant:baalzebul-tiefling"},
+    {"name":"Dispater","disposition":"implemented_variant","key":"mtf:race-variant:dispater-tiefling"},
+    {"name":"Fierna","disposition":"implemented_variant","key":"mtf:race-variant:fierna-tiefling"},
+    {"name":"Glasya","disposition":"implemented_variant","key":"mtf:race-variant:glasya-tiefling"},
+    {"name":"Levistus","disposition":"implemented_variant","key":"mtf:race-variant:levistus-tiefling"},
+    {"name":"Mammon","disposition":"implemented_variant","key":"mtf:race-variant:mammon-tiefling"},
+    {"name":"Mephistopheles","disposition":"implemented_variant","key":"mtf:race-variant:mephistopheles-tiefling"},
+    {"name":"Zariel","disposition":"implemented_variant","key":"mtf:race-variant:zariel-tiefling"}
+  ],
+  "scag_tiefling_variant_key": "scag:race-variant:tiefling-variants",
+  "required_dependencies": [
+    "srd5.1:race:dwarf",
+    "srd5.1:race:elf",
+    "srd5.1:race:tiefling",
+    "vgm:language:aquan"
+  ],
+  "note": "Exact M01-M runtime identity accounting. Asmodeus intentionally maps to the existing SRD Tiefling identity."
+}

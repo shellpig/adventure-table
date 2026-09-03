@@ -627,28 +627,17 @@ def _validate_spell_storing_item(
         )
 
 
-def _validate_feature_modes(state: CharacterState, build: CharacterBuild) -> None:
-    for feature_ref, mode in state.feature_modes.items():
-        if feature_ref == ARMOR_MODEL_FEATURE_REF:
-            if selected_artificer_subclass(build) != ARMORER_REF or artificer_level(build) < 3:
-                raise ValueError("Armor Model state requires Armorer level 3")
-            if mode not in ARMOR_MODELS:
-                raise ValueError(f"unsupported Armor Model mode: {mode}")
-        elif feature_ref == ELDRITCH_CANNON_FEATURE_REF:
-            if selected_artificer_subclass(build) != ARTILLERIST_REF or artificer_level(build) < 3:
-                raise ValueError("Eldritch Cannon state requires Artillerist level 3")
-            if mode not in ELDRITCH_CANNON_TYPES:
-                raise ValueError(f"unsupported Eldritch Cannon type: {mode}")
-
 
 def validate_artificer_state(
     state: CharacterState,
     build: CharacterBuild,
     registry: ContentRegistry,
 ) -> None:
+    # Armor Model and Eldritch Cannon modes are declared as typed content
+    # ``feature_mode`` descriptors and validated by the shared feature-mode
+    # validator, which is default-deny about who owns a key.
     _validate_active_infusions(state, build, registry)
     _validate_spell_storing_item(state, build, registry)
-    _validate_feature_modes(state, build)
 
 
 def initial_artificer_feature_resources(
