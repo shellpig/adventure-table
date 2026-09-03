@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 
 from app.content.identity import parse_stable_key, reference_to_stable_key, stable_key_is_kind
+from app.content.m01l_models import MovementGrantData
 from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry, RaceVariantData, RaceVariantReplacementOption
 from app.domain.character.schemas import SpellAccessEntry
@@ -425,43 +426,92 @@ def _spell_entry_id(feature_ref: str, spell_ref: str) -> str:
     return f"race-variant:{digest}:granted"
 
 
+def _apply_movement_grants(
+    speeds: dict[str, int | None], raw_grants: object
+) -> None:
+    if not isinstance(raw_grants, list):
+        return
+    for raw in raw_grants:
+        movement = MovementGrantData.model_validate(raw)
+        speeds[movement.mode] = movement.speed
+
+
+def _base_origin_speeds(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+) -> dict[str, int | None]:
+    speeds: dict[str, int | None] = {
+        "walk": None,
+        "swim": None,
+        "climb": None,
+        "fly": None,
+    }
+    race_selection = draft.draft_payload.race_selection
+    race = (
+        registry.get_optional(race_selection.reference_id)
+        if race_selection is not None
+        else None
+    )
+    if race is None or not stable_key_is_kind(race.key, "race"):
+        return speeds
+
+    base_speed = race.data.get("speed")
+    if isinstance(base_speed, int) and base_speed > 0:
+        speeds["walk"] = base_speed
+    _apply_movement_grants(speeds, race.data.get("movement_grants"))
+
+    subrace_selection = draft.draft_payload.subrace_selection
+    subrace = (
+        registry.get_optional(subrace_selection.reference_id)
+        if subrace_selection is not None
+        else None
+    )
+    if subrace is None or not stable_key_is_kind(subrace.key, "subrace"):
+        return speeds
+    parent = subrace.data.get("race")
+    try:
+        parent_ref = (
+            reference_to_stable_key(parent, kinds={"race"})
+            if isinstance(parent, dict)
+            else None
+        )
+    except ValueError:
+        parent_ref = None
+    if parent_ref == race.key:
+        _apply_movement_grants(speeds, subrace.data.get("movement_grants"))
+    return speeds
+
+
 def compile_race_variant(
     draft: BuilderDraft,
     registry: ContentRegistry,
     choices: tuple[BuilderChoice, ...],
 ) -> RaceVariantCompilation:
+    # Despite the historical function name, M01-L makes this the generic origin
+    # movement compiler: base race -> subrace -> race variant. The caller already
+    # applies lineage last, preserving the documented precedence order.
+    speeds = _base_origin_speeds(draft, registry)
     variant = _variant_entry(draft, registry)
     if variant is None:
-        return RaceVariantCompilation()
+        return RaceVariantCompilation(
+            walking_speed=speeds["walk"],
+            swim_speed=speeds["swim"],
+            climb_speed=speeds["climb"],
+            fly_speed=speeds["fly"],
+        )
     selected = _selected_option(draft, variant)
     if selected is None or selected[1].keep_target:
-        return RaceVariantCompilation(race_variant_ref=variant.key)
+        return RaceVariantCompilation(
+            race_variant_ref=variant.key,
+            walking_speed=speeds["walk"],
+            swim_speed=speeds["swim"],
+            climb_speed=speeds["climb"],
+            fly_speed=speeds["fly"],
+        )
 
     group_id, option = selected
-    walking_speed: int | None = None
-    swim_speed: int | None = None
-    climb_speed: int | None = None
-    fly_speed: int | None = None
     for movement in option.movement:
-        if movement.mode == "walk":
-            walking_speed = movement.speed
-        elif movement.mode == "swim":
-            swim_speed = movement.speed
-        elif movement.mode == "climb":
-            climb_speed = movement.speed
-        elif movement.mode == "fly":
-            fly_speed = movement.speed
-
-    if swim_speed is not None and walking_speed is None:
-        race_selection = draft.draft_payload.race_selection
-        race = (
-            registry.get_optional(race_selection.reference_id)
-            if race_selection is not None
-            else None
-        )
-        base_speed = race.data.get("speed") if race is not None else None
-        if isinstance(base_speed, int) and base_speed > 0:
-            walking_speed = base_speed
+        speeds[movement.mode] = movement.speed
 
     spell_entries: list[SpellAccessEntry] = []
     if option.spell_choice is not None:
@@ -495,9 +545,9 @@ def compile_race_variant(
 
     return RaceVariantCompilation(
         race_variant_ref=variant.key,
-        walking_speed=walking_speed,
-        swim_speed=swim_speed,
-        climb_speed=climb_speed,
-        fly_speed=fly_speed,
+        walking_speed=speeds["walk"],
+        swim_speed=speeds["swim"],
+        climb_speed=speeds["climb"],
+        fly_speed=speeds["fly"],
         spell_access_entries=tuple(spell_entries),
     )
