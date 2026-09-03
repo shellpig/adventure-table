@@ -14,6 +14,7 @@ from app.domain.character.schemas import CharacterBuild, PersistedCharacter
 from app.domain.character_builder.creation import build_initial_character_state
 from app.domain.character_builder.schemas import BuilderChoiceSelection, BuilderMode
 from app.domain.character_builder.versions import seed_version_draft_payload
+from app.domain.rules.m01m_ancestry import racial_spell_runtime_metadata
 
 
 ASMODEUS_BASELINE = "srd5.1:race:tiefling"
@@ -399,3 +400,83 @@ def test_an_m01e_build_predating_group_provenance_still_reads_and_seeds() -> Non
         selection.selected_option_ids == ("fleet-of-foot",)
         for selection in seeded.choice_selections.values()
     )
+
+
+# (variant, group id, option id, spell, expected cast level, expected recharge)
+LEGACY_CASTING = [
+    ("mtf:race-variant:zariel-tiefling", "bloodline", "zariel",
+     "phb2014:spell:searing-smite", 2, ("long_rest",)),
+    ("mtf:race-variant:levistus-tiefling", "bloodline", "levistus",
+     "phb2014:spell:armor-of-agathys", 2, ("long_rest",)),
+    ("mtf:race-variant:baalzebul-tiefling", "bloodline", "baalzebul",
+     "phb2014:spell:ray-of-sickness", 2, ("long_rest",)),
+    ("mtf:race-variant:mammon-tiefling", "bloodline", "mammon",
+     "srd5.1:spell:floating-disk", None, ("short_rest", "long_rest")),
+    (M.SCAG_TIEFLING_VARIANT, "legacy", "devils-tongue",
+     "srd5.1:spell:charm-person", 2, ("long_rest",)),
+    (M.SCAG_TIEFLING_VARIANT, "legacy", "hellfire",
+     "srd5.1:spell:burning-hands", 2, ("long_rest",)),
+]
+
+
+@pytest.mark.parametrize(
+    ("variant", "group", "option", "spell", "cast_at_level", "recharge"),
+    LEGACY_CASTING,
+)
+def test_legacy_casting_keeps_its_supplied_static_facts(
+    variant: str,
+    group: str,
+    option: str,
+    spell: str,
+    cast_at_level: int | None,
+    recharge: tuple[str, ...],
+) -> None:
+    """M.9: the source's static casting facts survive the replacement path.
+
+    A fixed cast level and a short-or-long recharge are the two facts a single
+    ``rest_type`` field could not carry, so they are asserted per representative
+    rather than in bulk.
+    """
+
+    registry = load_default_content_registry()
+    result, _ = M.ancestry(
+        race=M.TIEFLING, variant=variant, options={group: option}, level=5
+    )
+    assert result.validation.issues == ()
+
+    entry = M.spell_access(result)[spell]
+    assert entry.source_type == "race"
+    assert entry.casting_ability == "charisma"
+    assert entry.recharge_types == recharge
+    assert entry.uses_per_rest == 1
+    # The legacy single-value shape is only a load-time normalize input.
+    assert entry.rest_type is None
+
+    metadata = racial_spell_runtime_metadata(entry, registry)
+    assert metadata is not None
+    assert metadata.cast_at_level == cast_at_level
+    assert metadata.uses_spell_slot is False
+
+
+@pytest.mark.parametrize(("variant", "option", "legacy", "raised"), BLOODLINES)
+def test_no_bloodline_legacy_spell_ever_spends_a_normal_spell_slot(
+    variant: str,
+    option: str,
+    legacy: str,
+    raised: str,
+) -> None:
+    registry = load_default_content_registry()
+    result, _ = M.ancestry(
+        race=M.TIEFLING, variant=variant, options={"bloodline": option}, level=5
+    )
+
+    entries = [
+        entry
+        for entry in result.build_candidate.spell_access_entries
+        if entry.source_key == legacy
+    ]
+    assert len(entries) == 3, [entry.spell_key for entry in entries]
+    for entry in entries:
+        metadata = racial_spell_runtime_metadata(entry, registry)
+        assert metadata is not None, entry.spell_key
+        assert metadata.uses_spell_slot is False, entry.spell_key
