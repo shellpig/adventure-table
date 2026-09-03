@@ -140,3 +140,18 @@ def spell_access(result) -> dict[str, Any]:
     build = result.build_candidate
     assert build is not None
     return {entry.spell_key: entry for entry in build.spell_access_entries}
+
+
+def http_ready_payload(payload: BuilderDraftPayload, content=None) -> dict[str, Any]:
+    """Fill a payload remaining required choices and render it for the API."""
+
+    content = content or S.registry()
+    filled = S.auto_fill(payload, content, skip_sources=set())
+    filled = S.fill_spell_choices(filled, content)
+    return filled.model_dump(mode="json")
+
+
+def http_create_character(client, payload: BuilderDraftPayload, content=None) -> dict[str, Any]:
+    view = S.http_create_draft(client, http_ready_payload(payload, content))
+    assert [issue["code"] for issue in view["validation"]["issues"]] == []
+    return S.http_confirm(client, view)
