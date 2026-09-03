@@ -4,99 +4,336 @@
   "source": "tce",
   "review_status": "draft-human-review-required",
   "entries": {
-    "tce:feature:primal-knowledge": {"name": "原始知識", "data.desc.0": "獲得額外的實用知識，以更多職業技能訓練呈現。"},
-    "tce:feature:instinctive-pounce": {"name": "本能撲擊", "data.desc.0": "進入狂暴時，你也能迅速移動到更有利的位置。"},
-    "tce:feature:additional-bard-spells": {"name": "額外吟遊詩人法術", "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充吟遊詩人的職業法術列表。"},
-    "tce:feature:magical-inspiration": {"name": "魔法激勵", "data.desc.0": "吟遊激勵也能強化生物由法術造成的治療或傷害。"},
-    "tce:feature:bardic-versatility": {"name": "吟遊多樣性", "data.desc.0": "在吟遊詩人取得屬性值提升的等級，可重新選擇一個符合資格的吟遊詩人戲法。"},
-    "tce:feature:additional-cleric-spells": {"name": "額外牧師法術", "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充牧師的職業法術列表。"},
-    "tce:feature:cleric-harness-divine-power": {"name": "駕馭神聖力量", "data.desc.0": "可將引導神力轉化為恢復施法資源的力量。"},
-    "tce:feature:cleric-cantrip-versatility": {"name": "戲法多樣性", "data.desc.0": "在牧師取得屬性值提升的等級，可替換一個牧師戲法。"},
-    "tce:feature:blessed-strikes": {"name": "祝福打擊", "data.desc.0": "以統一的神聖傷害選項，取代符合條件領域的神聖打擊或強效施法。"},
-    "tce:feature:additional-druid-spells": {"name": "額外德魯伊法術", "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充德魯伊的職業法術列表。"},
-    "tce:feature:wild-companion": {"name": "荒野夥伴", "data.desc.0": "消耗荒野形態的使用次數，暫時召來一個魔寵靈體。"},
-    "tce:feature:druid-cantrip-versatility": {"name": "戲法多樣性", "data.desc.0": "在德魯伊取得屬性值提升的等級，可替換一個德魯伊戲法。"},
-
-    "tce:feature:fighter-fighting-style-options": {"name": "戰鬥風格選項", "data.desc.0": "將《塔莎的萬事坩堝》中戰士可選的戰鬥風格加入既有選項池。"},
-    "tce:feature:fighter-martial-versatility": {"name": "武技多樣性", "data.desc.0": "在戰士取得屬性值提升的等級，可重新選擇戰鬥風格或戰技。"},
-    "tce:feature:fighter-maneuver-options": {"name": "戰技選項", "data.desc.0": "若已安裝戰鬥大師的戰技選項池，加入《塔莎的萬事坩堝》的額外戰技。"},
-    "tce:feature:dedicated-weapon": {"name": "專注武器", "data.desc.0": "經過訓練後，可將一把符合資格的武器指定為武僧武器。"},
-    "tce:feature:ki-fueled-attack": {"name": "氣力驅動攻擊", "data.desc.0": "若你的動作中消耗了氣，可再以附贈動作進行符合條件的武器或徒手攻擊。"},
-    "tce:feature:quickened-healing": {"name": "迅捷療癒", "data.desc.0": "消耗氣來恢復自身部分生命值。"},
-    "tce:feature:focused-aim": {"name": "專注瞄準", "data.desc.0": "攻擊未命中後可消耗氣，提高該次攻擊檢定。"},
-    "tce:feature:additional-paladin-spells": {"name": "額外聖武士法術", "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充聖武士的職業法術列表。"},
-    "tce:feature:paladin-fighting-style-options": {"name": "戰鬥風格選項", "data.desc.0": "將《塔莎的萬事坩堝》中聖武士可選的戰鬥風格加入既有選項池。"},
-    "tce:feature:paladin-harness-divine-power": {"name": "駕馭神聖力量", "data.desc.0": "可將引導神力轉化為恢復施法資源的力量。"},
-    "tce:feature:paladin-martial-versatility": {"name": "武技多樣性", "data.desc.0": "在聖武士取得屬性值提升的等級，可重新選擇一個戰鬥風格。"},
-    "tce:feature:deft-explorer": {"name": "靈巧探索者", "data.desc.0": "使用《塔莎的萬事坩堝》的靈巧探索者進程，取代自然探索者。"},
-    "tce:feature:favored-foe": {"name": "宿敵", "data.desc.0": "使用宿敵選用能力，取代宿敵敵人進程。"},
-    "tce:feature:additional-ranger-spells": {"name": "額外遊俠法術", "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充遊俠的職業法術列表。"},
-    "tce:feature:ranger-fighting-style-options": {"name": "戰鬥風格選項", "data.desc.0": "將《塔莎的萬事坩堝》中遊俠可選的戰鬥風格加入既有選項池。"},
-    "tce:feature:ranger-spellcasting-focus": {"name": "施法法器", "data.desc.0": "允許使用德魯伊法器作為遊俠法術的施法法器。"},
-    "tce:feature:primal-awareness": {"name": "原始感知", "data.desc.0": "以一系列自然主題法術取代原始感知能力。"},
-    "tce:feature:ranger-martial-versatility": {"name": "武技多樣性", "data.desc.0": "在遊俠取得屬性值提升的等級，可重新選擇一個戰鬥風格。"},
-    "tce:feature:natures-veil": {"name": "自然帷幕", "data.desc.0": "以短暫隱形的能力取代匿蹤於野。"},
-
-    "tce:feature:steady-aim": {"name": "穩定瞄準", "data.desc.0": "犧牲本回合的移動能力，換取一次攻擊的優勢。"},
-    "tce:feature:additional-sorcerer-spells": {"name": "額外術士法術", "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充術士的職業法術列表。"},
-    "tce:feature:sorcerous-versatility": {"name": "術士多樣性", "data.desc.0": "在術士取得屬性值提升的等級，可重新選擇一個戲法或超魔法選項。"},
-    "tce:feature:sorcerer-metamagic-options": {"name": "超魔法選項", "data.desc.0": "將追尋法術與轉化法術加入術士的超魔法選項池。"},
-    "tce:feature:magical-guidance": {"name": "魔法指引", "data.desc.0": "消耗術法點，在一次失敗的屬性檢定後重新擲骰。"},
-    "tce:feature:additional-warlock-spells": {"name": "額外邪術師法術", "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充邪術師的職業法術列表。"},
-    "tce:feature:warlock-pact-boon-options": {"name": "契約恩賜選項", "data.desc.0": "將護符魔契加入契約恩賜選項池。"},
-    "tce:feature:warlock-eldritch-invocation-options": {"name": "魔能祈喚選項", "data.desc.0": "將《塔莎的萬事坩堝》新增的祈喚加入魔能祈喚選項池。"},
-    "tce:feature:eldritch-versatility": {"name": "邪術多樣性", "data.desc.0": "在邪術師取得屬性值提升的等級，可重新選擇一個戲法或契約恩賜。"},
-    "tce:feature:additional-wizard-spells": {"name": "額外法師法術", "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充法師的職業法術列表。"},
-    "tce:feature:cantrip-formulas": {"name": "戲法公式", "data.desc.0": "完成足夠的法師訓練後，可在角色 Build 管理中重新整理一個戲法公式。"},
-
-    "tce:feature:blind-fighting": {"name": "盲鬥", "data.desc.0": "即使無法以一般方式看見附近敵人，也能有效與其戰鬥。"},
-    "tce:feature:interception": {"name": "攔截", "data.desc.0": "以反應配合手持武器或盾牌，降低附近盟友受到的傷害。"},
-    "tce:feature:superior-technique": {"name": "卓越技法", "data.desc.0": "學會一個戰鬥大師戰技，並獲得一顆可供該戰技使用的優勢骰。"},
-    "tce:feature:thrown-weapon-fighting": {"name": "投擲武器戰鬥", "data.desc.0": "可在攻擊時順勢拔出投擲武器，並提高其傷害。"},
-    "tce:feature:unarmed-fighting": {"name": "徒手戰鬥", "data.desc.0": "強化徒手打擊，並能持續壓制被你擒抱的生物。"},
-    "tce:feature:blessed-warrior": {"name": "受祝戰士", "data.desc.0": "學會兩個牧師戲法，視為使用魅力施法的聖武士法術。"},
-    "tce:feature:druidic-warrior": {"name": "德魯伊戰士", "data.desc.0": "學會兩個德魯伊戲法，視為使用感知施法的遊俠法術。"},
-
-    "tce:feature:maneuver-ambush": {"name": "戰技：伏擊", "data.desc.0": "《塔莎的萬事坩堝》新增的戰鬥大師戰技選項。"},
-    "tce:feature:maneuver-bait-and-switch": {"name": "戰技：誘敵換位", "data.desc.0": "《塔莎的萬事坩堝》新增的戰鬥大師戰技選項。"},
-    "tce:feature:maneuver-brace": {"name": "戰技：備戰", "data.desc.0": "《塔莎的萬事坩堝》新增的戰鬥大師戰技選項。"},
-    "tce:feature:maneuver-commanding-presence": {"name": "戰技：威儀", "data.desc.0": "《塔莎的萬事坩堝》新增的戰鬥大師戰技選項。"},
-    "tce:feature:maneuver-grappling-strike": {"name": "戰技：擒抱打擊", "data.desc.0": "《塔莎的萬事坩堝》新增的戰鬥大師戰技選項。"},
-    "tce:feature:maneuver-quick-toss": {"name": "戰技：快速投擲", "data.desc.0": "《塔莎的萬事坩堝》新增的戰鬥大師戰技選項。"},
-    "tce:feature:maneuver-tactical-assessment": {"name": "戰技：戰術評估", "data.desc.0": "《塔莎的萬事坩堝》新增的戰鬥大師戰技選項。"},
-
-    "tce:feature:metamagic-seeking-spell": {"name": "追尋法術", "data.desc.0": "消耗術法點重擲一次未命中的法術攻擊；此選項可與另一個超魔法選項併用。"},
-    "tce:feature:metamagic-transmuted-spell": {"name": "轉化法術", "data.desc.0": "消耗一點術法點，將法術造成的強酸、寒冷、火焰、閃電、毒素或雷鳴傷害改為清單中的另一種傷害類型。"},
-    "tce:feature:pact-of-the-talisman": {"name": "護符魔契", "data.desc.0": "你的宗主賜予一枚護符；在有限次數內，佩戴者可為失敗的屬性檢定加上一顆 d4。"},
-    "tce:feature:bond-of-the-talisman": {"name": "護符之繫", "data.desc.0": "當另一名生物佩戴你的護符時，你與佩戴者可在有限次數內傳送到彼此身旁。"},
-    "tce:feature:eldritch-mind": {"name": "魔能心智", "data.desc.0": "為維持法術專注而進行的體質豁免具有優勢。"},
-    "tce:feature:far-scribe": {"name": "遠方書記", "data.desc.0": "你的影之書可記錄名字，使你能透過傳訊術傳遞書面訊息。"},
-    "tce:feature:gift-of-the-protectors": {"name": "守護者恩賜", "data.desc.0": "影之書中記錄的名字可在能力的恢復限制內，保護生物免於降至 0 生命值。"},
-    "tce:feature:investment-of-the-chain-master": {"name": "鎖鏈主宰賦能", "data.desc.0": "你的鎖鏈魔契魔寵獲得額外移動、攻擊、魔法傷害、豁免 DC 與抗性相關增益。"},
-    "tce:feature:protection-of-the-talisman": {"name": "護符之佑", "data.desc.0": "護符佩戴者可在有限次數內，為一次失敗的豁免加上一顆 d4。"},
-    "tce:feature:rebuke-of-the-talisman": {"name": "護符斥責", "data.desc.0": "護符佩戴者被命中時，你可使用反應造成心靈傷害並將攻擊者推開。"},
-    "tce:feature:undying-servitude": {"name": "不死侍從", "data.desc.0": "可不消耗法術位施展一次操縱死屍，完成長休後恢復此使用次數。"},
-
-    "tce:spell:blade-of-disaster": {"name": "災厄之刃"},
-    "tce:spell:booming-blade": {"name": "轟鳴之刃"},
-    "tce:spell:dream-of-the-blue-veil": {"name": "藍幕之夢"},
-    "tce:spell:green-flame-blade": {"name": "綠焰之刃"},
-    "tce:spell:intellect-fortress": {"name": "心智堡壘"},
-    "tce:spell:lightning-lure": {"name": "閃電誘餌"},
-    "tce:spell:mind-sliver": {"name": "心靈裂片"},
-    "tce:spell:spirit-shroud": {"name": "靈魂覆體"},
-    "tce:spell:summon-aberration": {"name": "召喚異怪"},
-    "tce:spell:summon-beast": {"name": "召喚野獸"},
-    "tce:spell:summon-celestial": {"name": "召喚天界生物"},
-    "tce:spell:summon-construct": {"name": "召喚構裝體"},
-    "tce:spell:summon-elemental": {"name": "召喚元素"},
-    "tce:spell:summon-fey": {"name": "召喚妖精"},
-    "tce:spell:summon-fiend": {"name": "召喚邪魔"},
-    "tce:spell:summon-shadowspawn": {"name": "召喚陰影孽生物"},
-    "tce:spell:summon-undead": {"name": "召喚不死生物"},
-    "tce:spell:sword-burst": {"name": "劍刃爆發"},
-    "tce:spell:tashas-caustic-brew": {"name": "塔莎酸蝕釀"},
-    "tce:spell:tashas-mind-whip": {"name": "塔莎心靈鞭"},
-    "tce:spell:tashas-otherworldly-guise": {"name": "塔莎異界形貌"}
+    "tce:feature:primal-knowledge": {
+      "name": "原始知識",
+      "data.desc.0": "獲得額外的實用知識，以更多職業技能訓練呈現。"
+    },
+    "tce:feature:instinctive-pounce": {
+      "name": "本能撲擊",
+      "data.desc.0": "進入狂暴時，你也能迅速移動到更有利的位置。"
+    },
+    "tce:feature:additional-bard-spells": {
+      "name": "額外吟遊詩人法術",
+      "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充吟遊詩人的職業法術列表。"
+    },
+    "tce:feature:magical-inspiration": {
+      "name": "魔法激勵",
+      "data.desc.0": "吟遊激勵也能強化生物由法術造成的治療或傷害。"
+    },
+    "tce:feature:bardic-versatility": {
+      "name": "吟遊多樣性",
+      "data.desc.0": "在吟遊詩人取得屬性值提升的等級，可重新選擇一個符合資格的吟遊詩人戲法。"
+    },
+    "tce:feature:additional-cleric-spells": {
+      "name": "額外牧師法術",
+      "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充牧師的職業法術列表。"
+    },
+    "tce:feature:cleric-harness-divine-power": {
+      "name": "駕馭神聖力量",
+      "data.desc.0": "可將引導神力轉化為恢復施法資源的力量。"
+    },
+    "tce:feature:cleric-cantrip-versatility": {
+      "name": "戲法多樣性",
+      "data.desc.0": "在牧師取得屬性值提升的等級，可替換一個牧師戲法。"
+    },
+    "tce:feature:blessed-strikes": {
+      "name": "祝福打擊",
+      "data.desc.0": "以統一的神聖傷害選項，取代符合條件領域的神聖打擊或強效施法。"
+    },
+    "tce:feature:additional-druid-spells": {
+      "name": "額外德魯伊法術",
+      "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充德魯伊的職業法術列表。"
+    },
+    "tce:feature:wild-companion": {
+      "name": "荒野夥伴",
+      "data.desc.0": "消耗荒野形態的使用次數，暫時召來一個魔寵靈體。"
+    },
+    "tce:feature:druid-cantrip-versatility": {
+      "name": "戲法多樣性",
+      "data.desc.0": "在德魯伊取得屬性值提升的等級，可替換一個德魯伊戲法。"
+    },
+    "tce:feature:fighter-fighting-style-options": {
+      "name": "戰鬥風格選項",
+      "data.desc.0": "將《塔莎的萬事坩堝》中戰士可選的戰鬥風格加入既有選項池。"
+    },
+    "tce:feature:fighter-martial-versatility": {
+      "name": "武技多樣性",
+      "data.desc.0": "在戰士取得屬性值提升的等級，可重新選擇戰鬥風格或戰技。"
+    },
+    "tce:feature:fighter-maneuver-options": {
+      "name": "戰技選項",
+      "data.desc.0": "若已安裝戰鬥大師的戰技選項池，加入《塔莎的萬事坩堝》的額外戰技。"
+    },
+    "tce:feature:dedicated-weapon": {
+      "name": "專注武器",
+      "data.desc.0": "經過訓練後，可將一把符合資格的武器指定為武僧武器。"
+    },
+    "tce:feature:ki-fueled-attack": {
+      "name": "氣力驅動攻擊",
+      "data.desc.0": "若你的動作中消耗了氣，可再以附贈動作進行符合條件的武器或徒手攻擊。"
+    },
+    "tce:feature:quickened-healing": {
+      "name": "迅捷療癒",
+      "data.desc.0": "消耗氣來恢復自身部分生命值。"
+    },
+    "tce:feature:focused-aim": {
+      "name": "專注瞄準",
+      "data.desc.0": "攻擊未命中後可消耗氣，提高該次攻擊檢定。"
+    },
+    "tce:feature:additional-paladin-spells": {
+      "name": "額外聖武士法術",
+      "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充聖武士的職業法術列表。"
+    },
+    "tce:feature:paladin-fighting-style-options": {
+      "name": "戰鬥風格選項",
+      "data.desc.0": "將《塔莎的萬事坩堝》中聖武士可選的戰鬥風格加入既有選項池。"
+    },
+    "tce:feature:paladin-harness-divine-power": {
+      "name": "駕馭神聖力量",
+      "data.desc.0": "可將引導神力轉化為恢復施法資源的力量。"
+    },
+    "tce:feature:paladin-martial-versatility": {
+      "name": "武技多樣性",
+      "data.desc.0": "在聖武士取得屬性值提升的等級，可重新選擇一個戰鬥風格。"
+    },
+    "tce:feature:deft-explorer": {
+      "name": "靈巧探索者",
+      "data.desc.0": "使用《塔莎的萬事坩堝》的靈巧探索者進程，取代自然探索者。"
+    },
+    "tce:feature:favored-foe": {
+      "name": "宿敵",
+      "data.desc.0": "使用宿敵選用能力，取代宿敵敵人進程。"
+    },
+    "tce:feature:additional-ranger-spells": {
+      "name": "額外遊俠法術",
+      "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充遊俠的職業法術列表。"
+    },
+    "tce:feature:ranger-fighting-style-options": {
+      "name": "戰鬥風格選項",
+      "data.desc.0": "將《塔莎的萬事坩堝》中遊俠可選的戰鬥風格加入既有選項池。"
+    },
+    "tce:feature:ranger-spellcasting-focus": {
+      "name": "施法法器",
+      "data.desc.0": "允許使用德魯伊法器作為遊俠法術的施法法器。"
+    },
+    "tce:feature:primal-awareness": {
+      "name": "原始感知",
+      "data.desc.0": "以一系列自然主題法術取代原始感知能力。"
+    },
+    "tce:feature:ranger-martial-versatility": {
+      "name": "武技多樣性",
+      "data.desc.0": "在遊俠取得屬性值提升的等級，可重新選擇一個戰鬥風格。"
+    },
+    "tce:feature:natures-veil": {
+      "name": "自然帷幕",
+      "data.desc.0": "以短暫隱形的能力取代匿蹤於野。"
+    },
+    "tce:feature:steady-aim": {
+      "name": "穩定瞄準",
+      "data.desc.0": "犧牲本回合的移動能力，換取一次攻擊的優勢。"
+    },
+    "tce:feature:additional-sorcerer-spells": {
+      "name": "額外術士法術",
+      "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充術士的職業法術列表。"
+    },
+    "tce:feature:sorcerous-versatility": {
+      "name": "術士多樣性",
+      "data.desc.0": "在術士取得屬性值提升的等級，可重新選擇一個戲法或超魔法選項。"
+    },
+    "tce:feature:sorcerer-metamagic-options": {
+      "name": "超魔法選項",
+      "data.desc.0": "將追尋法術與轉化法術加入術士的超魔法選項池。"
+    },
+    "tce:feature:magical-guidance": {
+      "name": "魔法指引",
+      "data.desc.0": "消耗術法點，在一次失敗的屬性檢定後重新擲骰。"
+    },
+    "tce:feature:additional-warlock-spells": {
+      "name": "額外邪術師法術",
+      "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充邪術師的職業法術列表。"
+    },
+    "tce:feature:warlock-pact-boon-options": {
+      "name": "契約恩賜選項",
+      "data.desc.0": "將護符魔契加入契約恩賜選項池。"
+    },
+    "tce:feature:warlock-eldritch-invocation-options": {
+      "name": "魔能祈喚選項",
+      "data.desc.0": "將《塔莎的萬事坩堝》新增的祈喚加入魔能祈喚選項池。"
+    },
+    "tce:feature:eldritch-versatility": {
+      "name": "邪術多樣性",
+      "data.desc.0": "在邪術師取得屬性值提升的等級，可重新選擇一個戲法或契約恩賜。"
+    },
+    "tce:feature:additional-wizard-spells": {
+      "name": "額外法師法術",
+      "data.desc.0": "以《塔莎的萬事坩堝》選用內容擴充法師的職業法術列表。"
+    },
+    "tce:feature:cantrip-formulas": {
+      "name": "戲法公式",
+      "data.desc.0": "完成足夠的法師訓練後，可在角色 Build 管理中重新整理一個戲法公式。"
+    },
+    "tce:feature:blind-fighting": {
+      "name": "盲鬥",
+      "data.desc.0": "即使無法以一般方式看見附近敵人，也能有效與其戰鬥。"
+    },
+    "tce:feature:interception": {
+      "name": "攔截",
+      "data.desc.0": "以反應配合手持武器或盾牌，降低附近盟友受到的傷害。"
+    },
+    "tce:feature:superior-technique": {
+      "name": "卓越技巧",
+      "data.desc.0": "學會一個戰鬥大師戰技，並獲得一顆可供該戰技使用的優勢骰。"
+    },
+    "tce:feature:thrown-weapon-fighting": {
+      "name": "投擲武器戰鬥",
+      "data.desc.0": "可在攻擊時順勢拔出投擲武器，並提高其傷害。"
+    },
+    "tce:feature:unarmed-fighting": {
+      "name": "徒手格鬥",
+      "data.desc.0": "強化徒手打擊，並能持續壓制被你擒抱的生物。"
+    },
+    "tce:feature:blessed-warrior": {
+      "name": "受祝戰士",
+      "data.desc.0": "學會兩個牧師戲法，視為使用魅力施法的聖武士法術。"
+    },
+    "tce:feature:druidic-warrior": {
+      "name": "德魯伊戰士",
+      "data.desc.0": "學會兩個德魯伊戲法，視為使用感知施法的遊俠法術。"
+    },
+    "tce:feature:maneuver-ambush": {
+      "name": "突襲",
+      "data.desc.0": "《塔莎的萬事坩堝》新增的戰鬥大師戰技選項。"
+    },
+    "tce:feature:maneuver-bait-and-switch": {
+      "name": "誘餌戰術",
+      "data.desc.0": "《塔莎的萬事坩堝》新增的戰鬥大師戰技選項。"
+    },
+    "tce:feature:maneuver-brace": {
+      "name": "警戒",
+      "data.desc.0": "《塔莎的萬事坩堝》新增的戰鬥大師戰技選項。"
+    },
+    "tce:feature:maneuver-commanding-presence": {
+      "name": "領導風範",
+      "data.desc.0": "《塔莎的萬事坩堝》新增的戰鬥大師戰技選項。"
+    },
+    "tce:feature:maneuver-grappling-strike": {
+      "name": "擒拿擊",
+      "data.desc.0": "《塔莎的萬事坩堝》新增的戰鬥大師戰技選項。"
+    },
+    "tce:feature:maneuver-quick-toss": {
+      "name": "快手投擲",
+      "data.desc.0": "《塔莎的萬事坩堝》新增的戰鬥大師戰技選項。"
+    },
+    "tce:feature:maneuver-tactical-assessment": {
+      "name": "戰術預估",
+      "data.desc.0": "《塔莎的萬事坩堝》新增的戰鬥大師戰技選項。"
+    },
+    "tce:feature:metamagic-seeking-spell": {
+      "name": "追尋法術",
+      "data.desc.0": "消耗術法點重擲一次未命中的法術攻擊；此選項可與另一個超魔法選項併用。"
+    },
+    "tce:feature:metamagic-transmuted-spell": {
+      "name": "轉化法術",
+      "data.desc.0": "消耗一點術法點，將法術造成的強酸、寒冷、火焰、閃電、毒素或雷鳴傷害改為清單中的另一種傷害類型。"
+    },
+    "tce:feature:pact-of-the-talisman": {
+      "name": "護符魔契",
+      "data.desc.0": "你的宗主賜予一枚護符；在有限次數內，佩戴者可為失敗的屬性檢定加上一顆 d4。"
+    },
+    "tce:feature:bond-of-the-talisman": {
+      "name": "護符之繫",
+      "data.desc.0": "當另一名生物佩戴你的護符時，你與佩戴者可在有限次數內傳送到彼此身旁。"
+    },
+    "tce:feature:eldritch-mind": {
+      "name": "魔能心智",
+      "data.desc.0": "為維持法術專注而進行的體質豁免具有優勢。"
+    },
+    "tce:feature:far-scribe": {
+      "name": "遠方書記",
+      "data.desc.0": "你的影之書可記錄名字，使你能透過傳訊術傳遞書面訊息。"
+    },
+    "tce:feature:gift-of-the-protectors": {
+      "name": "守護者恩賜",
+      "data.desc.0": "影之書中記錄的名字可在能力的恢復限制內，保護生物免於降至 0 生命值。"
+    },
+    "tce:feature:investment-of-the-chain-master": {
+      "name": "鎖鏈主宰賦能",
+      "data.desc.0": "你的鎖鏈魔契魔寵獲得額外移動、攻擊、魔法傷害、豁免 DC 與抗性相關增益。"
+    },
+    "tce:feature:protection-of-the-talisman": {
+      "name": "護符之佑",
+      "data.desc.0": "護符佩戴者可在有限次數內，為一次失敗的豁免加上一顆 d4。"
+    },
+    "tce:feature:rebuke-of-the-talisman": {
+      "name": "護符斥責",
+      "data.desc.0": "護符佩戴者被命中時，你可使用反應造成心靈傷害並將攻擊者推開。"
+    },
+    "tce:feature:undying-servitude": {
+      "name": "不死侍從",
+      "data.desc.0": "可不消耗法術位施展一次操縱死屍，完成長休後恢復此使用次數。"
+    },
+    "tce:spell:blade-of-disaster": {
+      "name": "災厄之刃"
+    },
+    "tce:spell:booming-blade": {
+      "name": "轟鳴之刃"
+    },
+    "tce:spell:dream-of-the-blue-veil": {
+      "name": "藍幕之夢"
+    },
+    "tce:spell:green-flame-blade": {
+      "name": "綠焰之刃"
+    },
+    "tce:spell:intellect-fortress": {
+      "name": "心智堡壘"
+    },
+    "tce:spell:lightning-lure": {
+      "name": "閃電誘餌"
+    },
+    "tce:spell:mind-sliver": {
+      "name": "心靈裂片"
+    },
+    "tce:spell:spirit-shroud": {
+      "name": "靈魂覆體"
+    },
+    "tce:spell:summon-aberration": {
+      "name": "召喚異怪"
+    },
+    "tce:spell:summon-beast": {
+      "name": "召喚野獸"
+    },
+    "tce:spell:summon-celestial": {
+      "name": "召喚天界生物"
+    },
+    "tce:spell:summon-construct": {
+      "name": "召喚構裝體"
+    },
+    "tce:spell:summon-elemental": {
+      "name": "召喚元素"
+    },
+    "tce:spell:summon-fey": {
+      "name": "召喚妖精"
+    },
+    "tce:spell:summon-fiend": {
+      "name": "召喚邪魔"
+    },
+    "tce:spell:summon-shadowspawn": {
+      "name": "召喚陰影孽生物"
+    },
+    "tce:spell:summon-undead": {
+      "name": "召喚不死生物"
+    },
+    "tce:spell:sword-burst": {
+      "name": "劍刃爆發"
+    },
+    "tce:spell:tashas-caustic-brew": {
+      "name": "塔莎酸蝕釀"
+    },
+    "tce:spell:tashas-mind-whip": {
+      "name": "塔莎心靈鞭"
+    },
+    "tce:spell:tashas-otherworldly-guise": {
+      "name": "塔莎異界形貌"
+    }
   }
 }

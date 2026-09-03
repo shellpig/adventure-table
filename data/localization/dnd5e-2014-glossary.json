@@ -346,6 +346,374 @@
       "reference_source": "5etools",
       "decision_note": "Artificer infusion name.",
       "reviewed": true
+    },
+    {
+      "en": "Second Wind",
+      "zh-TW": "回氣",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighter base class level 1 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Action Surge",
+      "zh-TW": "動作如潮",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighter base class level 2 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Martial Archetype",
+      "zh-TW": "武術範型",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighter subclass archetype selection.",
+      "reviewed": true
+    },
+    {
+      "en": "Indomitable",
+      "zh-TW": "不屈",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighter base class level 9 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Combat Superiority",
+      "zh-TW": "戰鬥卓越",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master level 3 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Superiority Die",
+      "zh-TW": "卓越骰",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master resource die.",
+      "reviewed": true
+    },
+    {
+      "en": "Student of War",
+      "zh-TW": "戰爭學徒",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master level 3 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Know Your Enemy",
+      "zh-TW": "知己知彼",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master level 7 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Maneuver",
+      "zh-TW": "戰技",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver mechanic.",
+      "reviewed": true
+    },
+    {
+      "en": "Remarkable Athlete",
+      "zh-TW": "運動健將",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Champion level 7 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Survivor",
+      "zh-TW": "生還者",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Champion level 18 feature.",
+      "reviewed": true
+    },
+    {
+      "en": "Eldritch Knight",
+      "zh-TW": "魔能騎士",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighter subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Arcane Archer",
+      "zh-TW": "魔射手",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighter subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Cavalier",
+      "zh-TW": "騎兵",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighter subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Samurai",
+      "zh-TW": "武士",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighter subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Psi Warrior",
+      "zh-TW": "靈能武士",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighter subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Rune Knight",
+      "zh-TW": "符文騎士",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighter subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Purple Dragon Knight",
+      "zh-TW": "紫龍騎士（旗將）",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighter subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Echo Knight",
+      "zh-TW": "回音騎士",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighter subclass.",
+      "reviewed": true
+    },
+    {
+      "en": "Dueling",
+      "zh-TW": "對決",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighting Style.",
+      "reviewed": true
+    },
+    {
+      "en": "Protection",
+      "zh-TW": "護衛",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighting Style.",
+      "reviewed": true
+    },
+    {
+      "en": "Superior Technique",
+      "zh-TW": "卓越技巧",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighting Style.",
+      "reviewed": true
+    },
+    {
+      "en": "Unarmed Fighting",
+      "zh-TW": "徒手格鬥",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fighting Style.",
+      "reviewed": true
+    },
+    {
+      "en": "Commander's Strike",
+      "zh-TW": "指揮官奇襲",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Disarming Attack",
+      "zh-TW": "繳械擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Distracting Strike",
+      "zh-TW": "擾亂擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Evasive Footwork",
+      "zh-TW": "躲閃步伐",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Feinting Attack",
+      "zh-TW": "詭詐擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Goading Attack",
+      "zh-TW": "挑釁擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Lunging Attack",
+      "zh-TW": "突刺擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Maneuvering Attack",
+      "zh-TW": "靈動擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Menacing Attack",
+      "zh-TW": "恐嚇擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Parry",
+      "zh-TW": "格擋",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Precision Attack",
+      "zh-TW": "精準擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Pushing Attack",
+      "zh-TW": "推撞擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Rally",
+      "zh-TW": "鼓舞",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Riposte",
+      "zh-TW": "反擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Sweeping Attack",
+      "zh-TW": "橫掃擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Trip Attack",
+      "zh-TW": "絆摔擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Ambush",
+      "zh-TW": "突襲",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Bait and Switch",
+      "zh-TW": "誘餌戰術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Brace",
+      "zh-TW": "警戒",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Commanding Presence",
+      "zh-TW": "領導風範",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Grappling Strike",
+      "zh-TW": "擒拿擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Quick Toss",
+      "zh-TW": "快手投擲",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
+    },
+    {
+      "en": "Tactical Assessment",
+      "zh-TW": "戰術預估",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Battle Master maneuver.",
+      "reviewed": true
     }
   ]
 }
