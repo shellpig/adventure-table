@@ -11,7 +11,7 @@ from app.content.m01m_models import (
 )
 from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
-from app.domain.character.schemas import SpellAccessEntry
+from app.domain.character.schemas import RaceVariantGroupSelection, SpellAccessEntry
 from app.domain.character_builder.choices import deterministic_choice_id
 from app.domain.character_builder.schemas import (
     BuilderChoice,
@@ -43,6 +43,7 @@ _ABILITY_INDEX_TO_NAME = {
 @dataclass(frozen=True)
 class RaceVariantCompilation:
     race_variant_ref: str | None = None
+    group_selections: tuple[RaceVariantGroupSelection, ...] = ()
     walking_speed: int | None = None
     swim_speed: int | None = None
     climb_speed: int | None = None
@@ -590,6 +591,14 @@ def compile_race_variant(
         )
 
     selected = _selected_options(draft, variant)
+    group_selections = tuple(
+        RaceVariantGroupSelection(
+            race_variant_ref=variant.key,
+            replacement_group_id=group_id,
+            selected_option_id=option.id,
+        )
+        for group_id, option in selected
+    )
     spell_entries: list[SpellAccessEntry] = []
     for group_id, option in selected:
         if option.keep_target:
@@ -627,6 +636,7 @@ def compile_race_variant(
 
     return RaceVariantCompilation(
         race_variant_ref=variant.key,
+        group_selections=group_selections,
         walking_speed=speeds["walk"],
         swim_speed=speeds["swim"],
         climb_speed=speeds["climb"],
