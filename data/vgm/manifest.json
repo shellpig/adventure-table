@@ -2,19 +2,26 @@
   "id": "vgm",
   "name": "Volo's Guide to Monsters",
   "ruleset": "dnd5e-2014",
-  "version": "M01-D",
+  "version": "M01-L",
   "provenance": {
     "type": "private-maintainer-normalization",
-    "reference": "docs/暫用規則資訊"
+    "reference": "docs/暫用規則資訊/種族_VGM.md"
   },
   "usage": {
-    "scope": "private-friends-project"
+    "scope": "M01-D Aasimar/Goblinoid content plus M01-L remaining VGM player races and generic race mechanics",
+    "runtime_policy": "Reference Markdown is authoring input only; runtime loads only checked-in pack data."
   },
   "categories": [
-    {"name": "races", "kind": "race", "file": "races.json", "count": 3},
+    {"name": "races", "kind": "race", "file": "races.json", "count": 13},
     {"name": "subraces", "kind": "subrace", "file": "subraces.json", "count": 3},
     {"name": "traits", "kind": "trait", "file": "traits.json", "count": 0},
-    {"name": "features", "kind": "feature", "file": "features.json", "count": 9}
+    {"name": "features", "kind": "feature", "file": "features.json", "count": 9},
+    {"name": "features-m01l-01", "kind": "feature", "file": "features-m01l-01.json", "count": 8},
+    {"name": "features-m01l-02", "kind": "feature", "file": "features-m01l-02.json", "count": 7},
+    {"name": "features-m01l-03", "kind": "feature", "file": "features-m01l-03.json", "count": 9},
+    {"name": "features-m01l-04", "kind": "feature", "file": "features-m01l-04.json", "count": 6},
+    {"name": "features-m01l-05", "kind": "feature", "file": "features-m01l-05.json", "count": 7},
+    {"name": "languages-m01l", "kind": "language", "file": "languages-m01l.json", "count": 2}
   ],
-  "total_entries": 15
+  "total_entries": 64
 }
