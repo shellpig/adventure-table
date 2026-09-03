@@ -31,8 +31,8 @@ def _issue(code: str, path: str, message: str, *refs: str) -> BuilderIssue:
     )
 
 
-def _entry_id(feature_ref: str, spell_ref: str) -> str:
-    digest = sha256(f"{feature_ref}|{spell_ref}".encode("utf-8")).hexdigest()[:20]
+def _entry_id(source_ref: str, spell_ref: str) -> str:
+    digest = sha256(f"{source_ref}|{spell_ref}".encode("utf-8")).hexdigest()[:20]
     return f"race:{digest}:granted"
 
 
@@ -46,12 +46,18 @@ def compile_origin(
 
     M01-M keeps M01-L recharge semantics and additionally validates static
     racial/psionic casting metadata such as cast_at_level and waived components.
-    Those static facts remain canonical content owned by the source feature and
-    are losslessly re-resolvable through each SpellAccessEntry.source_key.
+    Those static facts remain canonical content owned by the source entry and are
+    losslessly re-resolvable through each SpellAccessEntry.source_key.
+
+    Racial spell metadata may live on a feature (new M01-D+ content) or on an
+    existing racial trait whose StableKey must remain canonical (the SRD/PHB
+    Tiefling Infernal Legacy / MTF Asmodeus baseline). Both use one resolver;
+    traits are never reclassified as CharacterBuild.feature_refs.
     """
 
     languages: list[str] = []
     candidate_features: list[str] = []
+    candidate_traits: list[str] = []
     feats: list[str] = []
     issues: list[BuilderIssue] = []
 
@@ -63,6 +69,8 @@ def compile_origin(
             languages.append(reference_id)
         elif stable_key_is_kind(reference_id, "feature"):
             candidate_features.append(reference_id)
+        elif stable_key_is_kind(reference_id, "trait"):
+            candidate_traits.append(reference_id)
         elif stable_key_is_kind(reference_id, "feat"):
             feats.append(reference_id)
 
@@ -95,12 +103,22 @@ def compile_origin(
             continue
         features.append(feature_ref)
 
-    access_entries: list[SpellAccessEntry] = []
-    for feature_ref in features:
-        feature = registry.get_optional(feature_ref)
-        if feature is None:
+    spell_sources: list[str] = list(features)
+    for trait_ref in dict.fromkeys(candidate_traits):
+        trait = registry.get_optional(trait_ref)
+        if trait is None:
             continue
-        raw_access = feature.data.get("racial_spell_access")
+        # Most legacy SRD traits remain presentation-only. Only traits that have
+        # explicit typed ancestry casting metadata participate in this compiler.
+        if isinstance(trait.data.get("racial_spell_access"), list):
+            spell_sources.append(trait_ref)
+
+    access_entries: list[SpellAccessEntry] = []
+    for source_ref in dict.fromkeys(spell_sources):
+        source = registry.get_optional(source_ref)
+        if source is None:
+            continue
+        raw_access = source.data.get("racial_spell_access")
         if raw_access is None:
             continue
         if not isinstance(raw_access, list):
@@ -108,14 +126,14 @@ def compile_origin(
                 _issue(
                     "origin_rules_data_error",
                     "draft_payload.race_selection",
-                    f"{feature.name} has malformed racial_spell_access data.",
-                    feature_ref,
+                    f"{source.name} has malformed racial_spell_access data.",
+                    source_ref,
                 )
             )
             continue
 
         for index, raw in enumerate(raw_access):
-            path = f"content.{feature_ref}.racial_spell_access.{index}"
+            path = f"content.{source_ref}.racial_spell_access.{index}"
             try:
                 access = M01MRacialSpellAccessData.model_validate(raw)
             except (ValidationError, ValueError):
@@ -123,8 +141,8 @@ def compile_origin(
                     _issue(
                         "origin_rules_data_error",
                         path,
-                        f"{feature.name} has a malformed racial spell row.",
-                        feature_ref,
+                        f"{source.name} has a malformed racial spell row.",
+                        source_ref,
                     )
                 )
                 continue
@@ -141,8 +159,8 @@ def compile_origin(
                     _issue(
                         "origin_rules_data_error",
                         path,
-                        f"{feature.name} references an unknown racial spell.",
-                        feature_ref,
+                        f"{source.name} references an unknown racial spell.",
+                        source_ref,
                         *(tuple([spell_ref]) if spell_ref else ()),
                     )
                 )
@@ -150,10 +168,10 @@ def compile_origin(
 
             access_entries.append(
                 SpellAccessEntry(
-                    entry_id=_entry_id(feature_ref, spell_ref),
+                    entry_id=_entry_id(source_ref, spell_ref),
                     spell_key=spell_ref,
                     source_type="race",
-                    source_key=feature_ref,
+                    source_key=source_ref,
                     access_type="granted",
                     casting_ability=access.casting_ability,
                     uses_per_rest=access.uses_per_rest,
