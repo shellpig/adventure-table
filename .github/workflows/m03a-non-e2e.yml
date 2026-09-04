@@ -6,6 +6,7 @@ on:
       - m03-a-paths-enabled-pack-ssot
   workflow_dispatch:
 
+# M03-A closeout intentionally excludes Playwright/E2E; those remain separate.
 permissions:
   contents: read
 
