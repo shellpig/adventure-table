@@ -39,7 +39,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install backend
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[web,dev]"
       - name: M03-C PostgreSQL migration round trip
         env:
           DATABASE_URL: postgresql+psycopg://adventure:adventure@localhost:5432/adventure_table_m03c

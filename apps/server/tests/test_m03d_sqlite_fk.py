@@ -3,9 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import uuid4
 
-from sqlalchemy import create_engine, delete, insert, select, text
+from sqlalchemy import delete, insert, select, text
 
-from app.db import metadata
+from app.db import create_database_engine, metadata
 from app.persistence.builder_drafts import character_build_drafts
 from app.persistence.character_imports import character_import_records
 from app.persistence.characters import characters
@@ -18,7 +18,7 @@ def _sqlite_url(path: Path) -> str:
 def test_sqlite_connections_enable_foreign_keys_and_set_null_import_targets(
     tmp_path: Path,
 ) -> None:
-    engine = create_engine(_sqlite_url(tmp_path / "fk.sqlite3"))
+    engine = create_database_engine(_sqlite_url(tmp_path / "fk.sqlite3"))
     metadata.create_all(engine)
 
     character_id = uuid4()

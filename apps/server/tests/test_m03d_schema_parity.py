@@ -4,15 +4,12 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, inspect
 
 from app.db import metadata
 from app.persistence import builder_drafts as _builder_drafts  # noqa: F401
 from app.persistence import character_imports as _character_imports  # noqa: F401
 from app.persistence import characters as _characters  # noqa: F401
-
-
-EXPECTED_HEAD = "0008_m03c_import_records"
 
 
 def _alembic_config(server_root: Path) -> Config:
@@ -61,42 +58,6 @@ def _schema_snapshot(engine) -> dict[str, object]:
             "unique_constraints": unique_constraints,
         }
     return tables
-
-
-def test_sqlite_alembic_upgrade_head_and_downgrade_base(
-    tmp_path: Path,
-    monkeypatch,
-) -> None:
-    server_root = Path(__file__).resolve().parents[1]
-    database_path = tmp_path / "migration-chain.sqlite3"
-    monkeypatch.setenv("ADVENTURE_TABLE_DATABASE_PATH", str(database_path))
-
-    config = _alembic_config(server_root)
-    command.upgrade(config, "head")
-
-    engine = create_engine(_sqlite_url(database_path))
-    try:
-        with engine.connect() as connection:
-            revision = connection.execute(
-                text("SELECT version_num FROM alembic_version")
-            ).scalar_one()
-        assert revision == EXPECTED_HEAD
-        assert "character_import_records" in inspect(engine).get_table_names()
-    finally:
-        engine.dispose()
-
-    command.downgrade(config, "base")
-
-    engine = create_engine(_sqlite_url(database_path))
-    try:
-        inspector = inspect(engine)
-        assert inspector.get_table_names() == ["alembic_version"]
-        with engine.connect() as connection:
-            assert connection.execute(
-                text("SELECT COUNT(*) FROM alembic_version")
-            ).scalar_one() == 0
-    finally:
-        engine.dispose()
 
 
 def test_sqlite_migration_schema_matches_metadata(

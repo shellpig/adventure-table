@@ -1,6 +1,11 @@
 name: M03-D Non-E2E Regression
 
 on:
+  push:
+    branches:
+      - m03-d-sqlite-migration-gate
+    paths:
+      - '.github/m03d-non-e2e.trigger'
   workflow_dispatch:
 
 permissions:
@@ -32,7 +37,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install backend with web and dev extras
-        run: pip install -e ".[dev,web]"
+        run: pip install -e ".[web,dev]"
       - name: M03-D focused pytest
         run: pytest tests/test_m03d_*.py -q
       - name: PostgreSQL migration round trip regression
