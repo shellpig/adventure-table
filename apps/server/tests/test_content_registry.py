@@ -7,11 +7,11 @@ from pathlib import Path
 import pytest
 
 from app.content.registry import (
-    DEFAULT_CONTENT_ROOT,
     ContentNotFoundError,
     ContentRegistry,
     ContentValidationError,
 )
+from app.paths import resolve_srd_content_root
 
 
 EXPECTED_KINDS = {
@@ -53,12 +53,13 @@ def write_json(path: Path, payload) -> None:
 
 def copy_content(tmp_path: Path) -> Path:
     target = tmp_path / "srd5.1"
-    shutil.copytree(DEFAULT_CONTENT_ROOT, target)
+    shutil.copytree(resolve_srd_content_root(), target)
     return target
 
 
 def test_full_character_relevant_srd_loads() -> None:
-    registry = ContentRegistry.from_directory(DEFAULT_CONTENT_ROOT)
+    root = resolve_srd_content_root()
+    registry = ContentRegistry.from_directory(root)
 
     assert len(registry) == registry.manifest.total_entries
     assert set(category.kind for category in registry.manifest.categories) == EXPECTED_KINDS
@@ -66,8 +67,8 @@ def test_full_character_relevant_srd_loads() -> None:
     assert {"monsters", "beasts"}.issubset(
         set(registry.manifest.scope_guard.excluded_categories)
     )
-    assert not (DEFAULT_CONTENT_ROOT / "monsters.json").exists()
-    assert not (DEFAULT_CONTENT_ROOT / "beasts.json").exists()
+    assert not (root / "monsters.json").exists()
+    assert not (root / "beasts.json").exists()
 
 
 @pytest.mark.parametrize(
@@ -82,13 +83,13 @@ def test_full_character_relevant_srd_loads() -> None:
     ],
 )
 def test_registry_resolves_baseline_entries(key: str, expected_name: str) -> None:
-    registry = ContentRegistry.from_directory(DEFAULT_CONTENT_ROOT)
+    registry = ContentRegistry.from_directory(resolve_srd_content_root())
 
     assert registry.get(key).name == expected_name
 
 
 def test_missing_key_is_explicit() -> None:
-    registry = ContentRegistry.from_directory(DEFAULT_CONTENT_ROOT)
+    registry = ContentRegistry.from_directory(resolve_srd_content_root())
 
     with pytest.raises(ContentNotFoundError):
         registry.get("srd5.1:spell:not-a-real-spell")
