@@ -14,6 +14,7 @@ export const characterIoEn = {
   importPreview: 'Preview import',
   importPreviewing: 'Checking…',
   importCancel: 'Cancel',
+  importClose: 'Close import dialog',
   importContinue: 'Continue import',
   importCommitting: 'Importing…',
   importResolved: '{count} resolved',

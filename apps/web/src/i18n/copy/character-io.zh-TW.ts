@@ -14,6 +14,7 @@ export const characterIoZhTw = {
   importPreview: '預覽匯入',
   importPreviewing: '檢查中…',
   importCancel: '取消',
+  importClose: '關閉匯入對話框',
   importContinue: '繼續匯入',
   importCommitting: '匯入中…',
   importResolved: '已解析 {count} 個',

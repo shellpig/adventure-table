@@ -90,7 +90,7 @@ export function ImportCharacterDialog({
               <button
                 type="button"
                 className="character-import-dialog__close"
-                aria-label={copy.importCancel}
+                aria-label={copy.importClose}
                 disabled={Boolean(pending)}
                 onClick={close}
               >
