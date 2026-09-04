@@ -47,6 +47,7 @@ from app.domain.character_builder.progression import (
 )
 from app.domain.character_builder.race_variants import (
     apply_race_variant_summary,
+    autofill_singleton_replacement_groups,
     build_race_variant_choices,
     compile_race_variant,
     is_race_variant_choice_id,
@@ -320,6 +321,10 @@ def compile_builder_draft(
     *,
     base_build: CharacterBuild | None = None,
 ) -> BuilderCompileResult:
+    # Runs before anything reads draft_payload so replacement groups with a
+    # single legal answer are already recorded for choices, validation and the
+    # compiled Build alike. Drafts saved before this existed heal on next read.
+    draft = autofill_singleton_replacement_groups(draft, registry)
     raw_foundation_choices = tuple(
         choice
         for choice in build_foundation_choices(draft, registry)

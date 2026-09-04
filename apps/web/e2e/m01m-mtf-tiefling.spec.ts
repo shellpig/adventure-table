@@ -329,7 +329,9 @@ test('M01-M Zariel bloodline replaces the standard Tiefling packages', async ({ 
   await chooseSearchable(page, 'Race', 'Tiefling')
   await chooseSearchable(page, 'Background', 'Acolyte')
   await chooseSearchable(page, 'Ancestry variant (optional)', 'Zariel Tiefling')
-  await chooseSearchable(page, 'Zariel bloodline', 'Legacy of Zariel')
+  // The bloodline binds exactly one Legacy, so the server fills that group and
+  // the builder never asks: picking Zariel is already the whole decision.
+  await expect(page.getByRole('combobox', { name: 'Zariel bloodline' })).toHaveCount(0)
   await completeRequirements(page, 3)
   await confirmCreate(page, 'M01-M Zariel Hero')
 
@@ -387,7 +389,6 @@ test('M01-M rejects a forged MTF bloodline plus SCAG variant payload', async ({ 
   await chooseSearchable(page, 'Race', 'Tiefling')
   await chooseSearchable(page, 'Background', 'Acolyte')
   await chooseSearchable(page, 'Ancestry variant (optional)', 'Zariel Tiefling')
-  await chooseSearchable(page, 'Zariel bloodline', 'Legacy of Zariel')
   await completeRequirements(page, 1)
 
   // The UI never offers the SCAG groups while an MTF bloodline is selected.

@@ -225,13 +225,16 @@ def test_cross_book_tiefling_combinations_are_rejected(
     issues = {issue.code for issue in result.validation.issues}
     assert "cross_variant_choice_selection" in issues
 
-    # Option generation never offered the combination in the first place.
+    # Option generation never offered the combination in the first place. The
+    # bloodline's own group is absent too, because a group with one legal answer
+    # is filled by the server rather than asked.
     offered = {
         choice.source_ref
         for choice in result.choices
         if choice.option_source == "content:race-variant-replacement"
     }
-    assert offered == {variant}
+    assert M.SCAG_TIEFLING_VARIANT not in offered
+    assert offered == set()
 
 
 def test_forged_cross_book_payload_cannot_confirm_and_creates_nothing() -> None:

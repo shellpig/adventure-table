@@ -16,6 +16,7 @@ from app.domain.character_builder.choices import deterministic_choice_id
 from app.domain.character_builder.schemas import (
     BuilderChoice,
     BuilderChoiceOption,
+    BuilderChoiceSelection,
     BuilderDraft,
     BuilderGrantSummary,
     BuilderIssue,
@@ -162,6 +163,59 @@ def _spell_choice_options(
     return tuple(result)
 
 
+def _group_has_single_legal_answer(group: object) -> bool:
+    """True when the group offers no real branch.
+
+    MTF Tiefling bloodlines reuse the M01-E replacement-group skeleton even
+    though each bloodline binds exactly one Legacy, so every such group has
+    choose=1 over a single option. SCAG keeps genuine branches and is
+    unaffected. Decided per group, never per race or pack.
+    """
+
+    return getattr(group, "choose", None) == 1 and len(getattr(group, "options", ())) == 1
+
+
+def autofill_singleton_replacement_groups(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+) -> BuilderDraft:
+    """Record the only legal answer for single-option replacement groups.
+
+    The selection still lands in choice_selections, so the compiled Build keeps
+    the same race_variant_group_selections it had before. Server-side filling
+    keeps the rule with the backend: a draft reaching this code without the
+    selection, whether from an older saved draft or from a non-browser client,
+    is completed the same way instead of failing validation on a question with
+    one possible answer.
+    """
+
+    variant = _variant_entry(draft, registry)
+    if variant is None:
+        return draft
+
+    selections = dict(draft.draft_payload.choice_selections)
+    added = False
+    for group in _variant_data(variant).replacement_groups:
+        if not _group_has_single_legal_answer(group):
+            continue
+        choice_id = _replacement_choice_id(variant.key, group.id)
+        existing = selections.get(choice_id)
+        if existing is not None and len(existing.selected_option_ids) == 1:
+            continue
+        selections[choice_id] = BuilderChoiceSelection(
+            choice_id=choice_id,
+            source_ref=variant.key,
+            selected_option_ids=(group.options[0].id,),
+            provenance_path="content.race_variant_replacement_groups",
+        )
+        added = True
+
+    if not added:
+        return draft
+    payload = draft.draft_payload.model_copy(update={"choice_selections": selections})
+    return draft.model_copy(update={"draft_payload": payload})
+
+
 def build_race_variant_choices(
     draft: BuilderDraft,
     registry: ContentRegistry,
@@ -203,26 +257,30 @@ def build_race_variant_choices(
         choice_id = _replacement_choice_id(variant.key, group.id)
         selection = draft.draft_payload.choice_selections.get(choice_id)
         selected_ids = selection.selected_option_ids if selection is not None else ()
-        choices.append(
-            BuilderChoice(
-                choice_id=choice_id,
-                label=group.label,
-                source_ref=variant.key,
-                required=True,
-                choose_count=group.choose,
-                option_source=RACE_VARIANT_REPLACEMENT_OPTION_SOURCE,
-                options=tuple(
-                    BuilderChoiceOption(
-                        option_id=option.id,
-                        label=option.label,
-                        kind=BuilderOptionKind.BRANCH,
-                        branch_key=option.id,
-                    )
-                    for option in group.options
-                ),
-                selected_option_ids=selected_ids,
+        # A group with one option carries no decision: autofill has already
+        # recorded it, so asking again is pure friction. Nested spell choices
+        # below still run, because a future single-option group may carry one.
+        if not _group_has_single_legal_answer(group):
+            choices.append(
+                BuilderChoice(
+                    choice_id=choice_id,
+                    label=group.label,
+                    source_ref=variant.key,
+                    required=True,
+                    choose_count=group.choose,
+                    option_source=RACE_VARIANT_REPLACEMENT_OPTION_SOURCE,
+                    options=tuple(
+                        BuilderChoiceOption(
+                            option_id=option.id,
+                            label=option.label,
+                            kind=BuilderOptionKind.BRANCH,
+                            branch_key=option.id,
+                        )
+                        for option in group.options
+                    ),
+                    selected_option_ids=selected_ids,
+                )
             )
-        )
 
         if len(selected_ids) != 1:
             continue
