@@ -11,10 +11,10 @@
   line-height: 1.35;
 }
 
+/* Sheet placement lives inside the sheet header, so it only needs to size
+   itself; the header owns the layout. */
 .character-export-sheet-action {
   flex: 0 0 auto;
-  align-self: flex-start;
-  margin-left: auto;
   width: min(180px, 100%);
 }
 
@@ -29,6 +29,5 @@
 @media (max-width: 640px) {
   .character-export-sheet-action {
     width: 100%;
-    margin-left: 0;
   }
 }

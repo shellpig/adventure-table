@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
@@ -15,6 +16,7 @@ import type {
   PreparedSpellSelection,
   ResourceCounter,
 } from '../../api/character'
+import { ExportCharacterButton } from '../character-io/ExportCharacterButton'
 import { SearchableSelect } from '../../components/SearchableSelect'
 import type { SearchOption } from '../../components/SearchableSelect'
 import type { UiCopyKey } from '../../i18n/uiCopy'
@@ -34,6 +36,8 @@ type CharacterSheetViewProps = {
   busy?: boolean
   errorMessage?: string | null
   onPatch?: (patch: CharacterStatePatch) => Promise<void> | void
+  /** Sheet-owned header actions (M03-B export, later M03-C import). */
+  headerActions?: ReactNode
 }
 
 const ABILITY_KEYS: Record<string, UiCopyKey> = {
@@ -226,6 +230,7 @@ export function CharacterSheetView({
   busy = false,
   errorMessage = null,
   onPatch = async () => {},
+  headerActions = null,
 }: CharacterSheetViewProps) {
   const { locale, t } = useUiCopy()
   const [tab, setTab] = useState<CharacterTab>(initialTab)
@@ -343,6 +348,9 @@ export function CharacterSheetView({
               <span>PB {signed(sheet.proficiency_bonus)}</span>
               <span>{t('sheet.buildVersion', { version: sheet.version_no })}</span>
             </p>
+            {headerActions ? (
+              <div className="character-hero__actions">{headerActions}</div>
+            ) : null}
           </div>
 
           <div className="hero-stats" aria-label={t('sheet.liveState')}>
@@ -851,6 +859,7 @@ export function CharacterSheetPage({ characterId }: { characterId: string }) {
       inventoryContent={[...(equipmentQuery.data ?? []), ...(itemQuery.data ?? [])]}
       busy={mutation.isPending}
       errorMessage={errorMessage}
+      headerActions={<ExportCharacterButton characterId={characterId} placement="sheet" />}
       onPatch={async (patch) => {
         await mutation.mutateAsync(patch)
       }}

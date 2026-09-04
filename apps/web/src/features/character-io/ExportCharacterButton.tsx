@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useState } from 'react'
 
 import { useCharacterIoCopy } from '../../i18n/useCharacterIoCopy'
 import { downloadCharacterExport } from './api'
@@ -19,15 +18,6 @@ export function ExportCharacterButton({
   const copy = useCharacterIoCopy()
   const [pending, setPending] = useState(false)
   const [failed, setFailed] = useState(false)
-  const [sheetHeader, setSheetHeader] = useState<HTMLElement | null>(null)
-
-  useEffect(() => {
-    if (placement !== 'sheet' || typeof document === 'undefined') {
-      setSheetHeader(null)
-      return
-    }
-    setSheetHeader(document.querySelector<HTMLElement>('.character-hero'))
-  }, [placement])
 
   const body = (
     <div className="character-export-action">
@@ -59,10 +49,9 @@ export function ExportCharacterButton({
     </div>
   )
 
-  if (placement !== 'sheet') return body
-  if (sheetHeader === null) return null
-  return createPortal(
-    <div className="character-export-sheet-action">{body}</div>,
-    sheetHeader,
-  )
+  // The sheet owns its own header; this component never reaches outside its
+  // own tree to find a mount point.
+  return placement === 'sheet' ? (
+    <div className="character-export-sheet-action">{body}</div>
+  ) : body
 }
