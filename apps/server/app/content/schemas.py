@@ -518,7 +518,7 @@ class ContentManifest(StrictModel):
     id: str = Field(min_length=1, max_length=120)
     name: str = Field(min_length=1)
     ruleset: Literal["dnd5e-2014"]
-    version: str | None = Field(default=None, min_length=1)
+    version: str = Field(default="1.0.0", min_length=1)
     license: ManifestLicense | None = None
     extraction: ExtractionSource | None = None
     provenance: dict[str, Any] | None = None
