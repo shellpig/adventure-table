@@ -13,7 +13,6 @@ from alembic.config import Config
 import uvicorn
 
 from app.paths import (
-    STANDALONE_DB_FILENAME,
     mark_launcher_mode,
     resolve_content_root,
     resolve_database_path,
@@ -27,26 +26,22 @@ SERVER_START_TIMEOUT_SECONDS = 10.0
 BUILD_ID_FILENAME = "build-id.txt"
 
 
-def _resolve_default_database_path() -> Path:
-    if getattr(sys, "frozen", False):
-        return (Path(sys.executable).resolve().parent / STANDALONE_DB_FILENAME).resolve()
-    return (Path.cwd() / STANDALONE_DB_FILENAME).resolve()
-
-
 def _prepare_database_path() -> Path:
     """Pin the standalone SQLite path before migrations or app import."""
 
     mark_launcher_mode()
-    os.environ.setdefault(
-        "ADVENTURE_TABLE_DATABASE_PATH",
-        str(_resolve_default_database_path()),
-    )
+    # Resolve first: the shared resolver already implements the E.5 order
+    # (env -> settings.database_path -> frozen exe dir -> launcher cwd), so
+    # pinning a default into the environment beforehand would shadow a path
+    # configured through settings rather than through the environment.
     database_path = resolve_database_path()
     if database_path is None:
         raise RuntimeError(
             "Unable to resolve standalone SQLite path; check "
             "ADVENTURE_TABLE_DATABASE_PATH."
         )
+    database_path = database_path.resolve()
+    os.environ["ADVENTURE_TABLE_DATABASE_PATH"] = str(database_path)
     try:
         database_path.parent.mkdir(parents=True, exist_ok=True)
         database_path.touch(exist_ok=True)

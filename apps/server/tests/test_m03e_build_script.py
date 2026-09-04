@@ -32,6 +32,16 @@ def test_build_script_contract_keeps_web_extra_out_and_copies_external_roots() -
 
 @pytest.mark.skipif(os.name != "nt", reason="Windows cmd dry-run contract")
 def test_build_script_dry_run_is_side_effect_free_on_windows() -> None:
+    # A developer machine may already hold a real build.  The contract is that
+    # --dry-run neither creates nor deletes these paths, so compare snapshots
+    # instead of requiring them to be absent.
+    side_effect_paths = (
+        REPO_ROOT / ".standalone-venv",
+        REPO_ROOT / "build" / "standalone",
+        REPO_ROOT / "dist" / "adventure-table-standalone",
+    )
+    before = [path.exists() for path in side_effect_paths]
+
     result = subprocess.run(
         ["cmd.exe", "/d", "/c", str(SCRIPT), "--dry-run", "--version", "v-test"],
         cwd=REPO_ROOT,
@@ -42,4 +52,4 @@ def test_build_script_dry_run_is_side_effect_free_on_windows() -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "[dry-run]" in result.stdout
-    assert not (REPO_ROOT / ".standalone-venv").exists()
+    assert [path.exists() for path in side_effect_paths] == before

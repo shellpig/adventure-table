@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import os
 from pathlib import Path
 import sqlite3
 import sys
@@ -90,6 +91,28 @@ def test_launcher_sets_default_database_path_before_migration_and_opens_browser(
     assert observed["database_url"] == f"sqlite+pysqlite:///{expected.as_posix()}"
     assert observed["database_url"].startswith("sqlite+pysqlite://")
     assert observed["browser_url"].startswith("http://127.0.0.1:")
+
+
+def test_launcher_keeps_settings_database_path_when_env_var_is_absent(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A path configured through settings (for example a .env file) must win
+    over the launcher's own exe-dir/cwd default, which is last in the E.5 order.
+    """
+
+    _clear_launcher_env(monkeypatch)
+    monkeypatch.chdir(tmp_path)
+    configured = tmp_path / "configured" / "adventure-table.sqlite3"
+    monkeypatch.setattr(paths.settings, "database_path", str(configured))
+
+    resolved = launcher._prepare_database_path()
+
+    assert resolved == configured.resolve()
+    assert resolved.is_file()
+    assert not (tmp_path / paths.STANDALONE_DB_FILENAME).exists()
+    assert os.environ["ADVENTURE_TABLE_DATABASE_PATH"] == str(configured.resolve())
+    assert paths.resolve_database_url() == f"sqlite+pysqlite:///{configured.resolve().as_posix()}"
 
 
 def test_standalone_http_smoke_after_launcher_migration(
