@@ -8,6 +8,7 @@ from app.content.localization import ContentLocalizationCatalog
 from app.content.localization_files import load_content_localization_catalog
 from app.content.registry import ContentRegistry
 from app.domain.character_builder.service import CharacterBuilderService
+from app.interop.character_import import CharacterImportService
 from app.paths import resolve_content_root, resolve_database_url
 from app.persistence.builder_drafts import BuilderDraftRepository
 from app.persistence.characters import CharacterRepository
@@ -57,4 +58,15 @@ def get_character_builder_service(request: Request) -> CharacterBuilderService:
             get_character_repository(request),
         )
         request.app.state.character_builder_service = service
+    return service
+
+
+def get_character_import_service(request: Request) -> CharacterImportService:
+    service = getattr(request.app.state, "character_import_service", None)
+    if service is None:
+        service = CharacterImportService(
+            get_database_engine(request),
+            get_content_registry(request),
+        )
+        request.app.state.character_import_service = service
     return service

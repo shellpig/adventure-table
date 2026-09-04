@@ -8,6 +8,8 @@ from sqlalchemy import engine_from_config, pool
 from app.db import metadata
 from app.paths import resolve_database_url
 from app.persistence import characters as _character_tables  # noqa: F401
+from app.persistence import builder_drafts as _builder_draft_tables  # noqa: F401
+from app.persistence import character_imports as _character_import_tables  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:

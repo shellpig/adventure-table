@@ -66,9 +66,6 @@ test('archived character remains exportable from Workshop', async ({ page, reque
 })
 
 test('the export endpoint offers both an ASCII and an RFC 5987 filename', async ({ request }) => {
-  // Chromium reports a generic name for an intercepted blob download, so the
-  // header contract is asserted against the real endpoint here and the client's
-  // parsing of it is covered by src/features/character-io/api.test.ts.
   const response = await request.get(`/api/characters/${FIXTURE_ID}/export`)
   expect(response.ok()).toBeTruthy()
   const disposition = response.headers()['content-disposition']
@@ -83,10 +80,4 @@ test('a real download keeps the name the endpoint offered', async ({ page }) => 
   await page.getByRole('button', { name: 'Export character JSON' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toMatch(/-v\d+-\d{8}T\d{6}Z\.json$/)
-})
-
-test('M03-B UI exposes no import action before M03-C', async ({ page }) => {
-  await page.goto('/characters')
-  await expect(page.getByRole('button', { name: /import/i })).toHaveCount(0)
-  await expect(page.getByRole('link', { name: /import/i })).toHaveCount(0)
 })

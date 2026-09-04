@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -8,6 +10,7 @@ from pydantic import ValidationError
 from app.api import (
     character_builder_router,
     character_export_router,
+    character_import_router,
     characters_router,
     content_presentation_router,
     reference_router,
@@ -31,19 +34,31 @@ app.include_router(reference_router)
 app.include_router(content_presentation_router)
 app.include_router(characters_router)
 app.include_router(character_export_router)
+app.include_router(character_import_router)
 app.include_router(character_builder_router)
 
 
-def _error_response(status_code: int, code: str, message: str) -> JSONResponse:
-    return JSONResponse(
-        status_code=status_code,
-        content={"error": {"code": code, "message": message}},
-    )
+def _error_response(
+    status_code: int,
+    code: str,
+    message: str,
+    *,
+    params: dict[str, Any] | None = None,
+) -> JSONResponse:
+    error: dict[str, Any] = {"code": code, "message": message}
+    if params is not None:
+        error["params"] = params
+    return JSONResponse(status_code=status_code, content={"error": error})
 
 
 @app.exception_handler(APIError)
 def handle_api_error(_request: Request, exc: APIError) -> JSONResponse:
-    return _error_response(exc.status_code, exc.code, exc.message)
+    return _error_response(
+        exc.status_code,
+        exc.code,
+        exc.message,
+        params=exc.params,
+    )
 
 
 @app.exception_handler(CharacterNotFoundError)

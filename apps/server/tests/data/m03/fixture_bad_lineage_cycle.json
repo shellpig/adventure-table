@@ -1,0 +1,18 @@
+{
+  "envelope": {
+    "schema_version": "unstable", "schema_status": "unstable", "ruleset": "dnd5e-2014",
+    "content_requirements": [{"pack": "srd5.1", "version": "1.0.0"}], "stable_key_refs_summary": 2,
+    "source_character_id": "11111111-1111-4111-8111-111111111111", "source_export_id": "22222222-2222-4222-8222-222222222222",
+    "source_app": {"name": "adventure-table", "channel": "web", "commit": null, "build": null}, "exported_at": "2026-09-04T00:00:00Z"
+  },
+  "payload": {
+    "character": {"name": "M03-C Lineage Cycle", "ruleset": "dnd5e-2014"}, "current_version_no": 2,
+    "versions": [
+      {"version_no": 1, "version_kind": "create", "parent_version_no": 2, "superseded_by_version_no": null, "change_note": null,
+       "build_payload": {"ruleset": "dnd5e-2014", "content_sources": ["srd5.1"], "race_ref": "srd5.1:race:human", "character_level": 1, "class_progression": ["srd5.1:class:fighter"], "ability_scores": {"strength": 10, "dexterity": 10, "constitution": 10, "intelligence": 10, "wisdom": 10, "charisma": 10}, "hp_progression": [10]}, "builder_provenance": {}, "created_at": "2026-09-04T00:00:00Z"},
+      {"version_no": 2, "version_kind": "build_edit", "parent_version_no": 1, "superseded_by_version_no": null, "change_note": null,
+       "build_payload": {"ruleset": "dnd5e-2014", "content_sources": ["srd5.1"], "race_ref": "srd5.1:race:human", "character_level": 1, "class_progression": ["srd5.1:class:fighter"], "ability_scores": {"strength": 10, "dexterity": 10, "constitution": 10, "intelligence": 10, "wisdom": 10, "charisma": 10}, "hp_progression": [10]}, "builder_provenance": {}, "created_at": "2026-09-04T00:00:00Z"}
+    ],
+    "current_state": {"state_payload": {"current_hp": 10}}
+  }
+}

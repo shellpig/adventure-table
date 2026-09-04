@@ -17,6 +17,7 @@ import {
 import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy } from '../../i18n/useUiCopy'
 import { ExportCharacterButton } from '../character-io/ExportCharacterButton'
+import { ImportCharacterDialog } from '../character-io/ImportCharacterDialog'
 import './builder.css'
 
 type WorkshopCharacter = Awaited<ReturnType<typeof listCharacters>>[number] & {
@@ -107,14 +108,17 @@ export function CharacterWorkshopPage() {
             <h1>{t('workshop.title')}</h1>
             <p>{t('workshop.description')}</p>
           </div>
-          <button
-            type="button"
-            className="button primary"
-            disabled={createDraft.isPending || versionDraft.isPending}
-            onClick={() => createDraft.mutate()}
-          >
-            {createDraft.isPending ? t('workshop.creating') : t('workshop.create')}
-          </button>
+          <div className="workshop-hero__actions">
+            <ImportCharacterDialog className="button secondary" />
+            <button
+              type="button"
+              className="button primary"
+              disabled={createDraft.isPending || versionDraft.isPending}
+              onClick={() => createDraft.mutate()}
+            >
+              {createDraft.isPending ? t('workshop.creating') : t('workshop.create')}
+            </button>
+          </div>
         </header>
 
         {createDraft.error ? <div className="error-banner">{createDraft.error.message}</div> : null}
@@ -174,7 +178,10 @@ export function CharacterWorkshopPage() {
               <span>{t('workshop.charactersBadge')}</span>
               <h2>{t('workshop.existingCharacters')}</h2>
             </div>
-            <small>{t('workshop.characterCount', { count: characters.data?.length ?? 0 })}</small>
+            <div className="workshop-section__tools">
+              <small>{t('workshop.characterCount', { count: characters.data?.length ?? 0 })}</small>
+              <ImportCharacterDialog className="button secondary" />
+            </div>
           </div>
           {characters.isLoading ? <p className="builder-muted">{t('workshop.loadingCharacters')}</p> : null}
           {characters.error ? <div className="error-banner">{characters.error.message}</div> : null}
@@ -227,6 +234,11 @@ export function CharacterWorkshopPage() {
                 </div>
               </article>
             ))}
+            {!characters.isLoading && characterRows.length === 0 ? (
+              <div className="workshop-empty">
+                <ImportCharacterDialog className="button secondary" />
+              </div>
+            ) : null}
           </div>
         </section>
 

@@ -1,6 +1,32 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { filenameFromDisposition } from './api'
+import {
+  commitCharacterImport,
+  filenameFromDisposition,
+  previewCharacterImport,
+} from './api'
+
+const importResult = {
+  dry_run: true,
+  landing_mode: 'character' as const,
+  resolved_ref_count: 3,
+  unresolved_ref_count: 0,
+  unresolved_refs: [],
+  duplicate_hint: null,
+  character_preview: {
+    name: 'Portable Hero',
+    level: 1,
+    class_summary: 'Fighter 1',
+  },
+  character_id: null,
+  draft_id: null,
+  character_path: null,
+  draft_path: null,
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('M03-B export filename parsing', () => {
   it('prefers the RFC 5987 UTF-8 form over the ASCII fallback', () => {
@@ -24,5 +50,45 @@ describe('M03-B export filename parsing', () => {
   it('uses a safe default when the header is absent or unparseable', () => {
     expect(filenameFromDisposition(null)).toBe('character.json')
     expect(filenameFromDisposition('attachment')).toBe('character.json')
+  })
+})
+
+describe('M03-C character import API', () => {
+  it('sends the original JSON body to dry-run without rebuilding it in the client', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(importResult), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const documentText = '{"envelope":{"opaque":"spacing preserved"},"payload":{}}'
+
+    await previewCharacterImport(documentText)
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/characters/import?dry_run=true', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: documentText,
+    })
+  })
+
+  it('uses the same raw JSON body for commit', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ...importResult, dry_run: false }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const documentText = '{"envelope":{},"payload":{}}'
+
+    await commitCharacterImport(documentText)
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/characters/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: documentText,
+    })
   })
 })

@@ -33,6 +33,7 @@ def test_m03b_fixture_corpus_is_present() -> None:
         "fixture_multiclass_mixed.json",
         "fixture_xge_dependent.json",
         "fixture_legacy_no_provenance.json",
+        "fixture_state_only_missing_inventory.json",
     }
     assert BAD_VERSION_KIND.exists()
 

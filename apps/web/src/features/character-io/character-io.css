@@ -26,8 +26,217 @@
   max-width: 220px;
 }
 
+.character-import-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.character-import-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(4 6 10 / 76%);
+  backdrop-filter: blur(8px);
+}
+
+.character-import-dialog {
+  display: grid;
+  width: min(760px, 100%);
+  max-height: min(860px, calc(100vh - 48px));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.character-import-dialog__header,
+.character-import-dialog__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px 22px;
+}
+
+.character-import-dialog__header {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--line);
+}
+
+.character-import-dialog__header h2 {
+  margin: 0 0 7px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.65rem;
+}
+
+.character-import-dialog__header p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.55;
+}
+
+.character-import-dialog__close {
+  border: 0;
+  padding: 2px 7px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 1.45rem;
+  cursor: pointer;
+}
+
+.character-import-dialog__body {
+  display: grid;
+  gap: 16px;
+  overflow: auto;
+  padding: 22px;
+}
+
+.character-import-editor {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.character-import-editor textarea {
+  min-height: 230px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  color: inherit;
+  background: var(--surface-2);
+  font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.character-import-preview {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 15px;
+  background: var(--surface-2);
+}
+
+.character-import-preview__character,
+.character-import-preview__stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.character-import-preview__character > div {
+  display: grid;
+  gap: 3px;
+}
+
+.character-import-preview__character span,
+.character-import-preview__stats,
+.character-import-unresolved li span {
+  color: var(--muted);
+  font-size: .76rem;
+}
+
+.character-import-preview__character b {
+  color: var(--gold-bright);
+  font-size: .78rem;
+}
+
+.character-import-preview__stats {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.character-import-preview__stats span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 9px;
+}
+
+.character-import-warning,
+.character-import-loss {
+  border: 1px solid rgb(215 181 109 / 38%);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgb(215 181 109 / 8%);
+  font-size: .8rem;
+  line-height: 1.5;
+}
+
+.character-import-loss {
+  display: grid;
+  gap: 10px;
+}
+
+.character-import-loss label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--muted);
+  font-size: .78rem;
+}
+
+.character-import-unresolved summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.character-import-unresolved ul {
+  display: grid;
+  gap: 8px;
+  max-height: 180px;
+  overflow: auto;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.character-import-unresolved li {
+  display: grid;
+  gap: 3px;
+  border-left: 2px solid var(--line);
+  padding-left: 9px;
+}
+
+.character-import-unresolved code {
+  overflow-wrap: anywhere;
+  font-size: .73rem;
+}
+
+.character-import-dialog__footer {
+  justify-content: flex-end;
+  border-top: 1px solid var(--line);
+}
+
 @media (max-width: 640px) {
   .character-export-sheet-action {
     width: 100%;
+  }
+
+  .character-import-backdrop {
+    padding: 10px;
+  }
+
+  .character-import-dialog {
+    max-height: calc(100vh - 20px);
+  }
+
+  .character-import-preview__character {
+    align-items: flex-start;
   }
 }
