@@ -55,7 +55,9 @@ M01 的直接目標：
 
 **M03-C — Character JSON Import via Builder Draft 已完成並關門（2026-09-04）。** `POST /api/characters/import` 只收 JSON、手動讀 raw body，因此 pydantic 失敗不會被全域 422 蓋掉，一律回 400 加 20 個 machine code 之一（`dry_run=true` 回 200、commit 回 201）。Pipeline 依序做 ruleset 支援檢查、version chain 連續性、lineage 完整性（cycle 偵測刻意排在 direction 檢查之前，否則 `version_lineage_cycle` 永遠到不了）、逐 version `CharacterBuild` / `builder_provenance` / `CharacterState` 驗證、ruleset 三重 cross-check，再收集 build / state refs 並依解析結果判定 landing mode：全解且通過 domain validation → `character`；build ref 有缺 → `draft`；只有 state ref 有缺 → `draft_with_history_loss`；缺 ref 又沒有 provenance → `draft_reconstruction_unavailable` 拒絕。落地一律新 UUID，version chain 走兩階段 insert（先全 NULL lineage、再依 `version_no → 新 UUID` UPDATE 補上），Draft 落地會清空未解析 choice 與 `initial_state_seed`。`0008_m03c_import_records` 建 `character_import_records`，CheckConstraint 刻意是 `OR` 而非 XOR——兩個 FK 都是 `ON DELETE SET NULL`，目標被永久刪除後兩欄皆 NULL 是合法終態，「建立當下恰好一欄非 NULL」由 service 層保證。Revision id 必須 ≤ 32 字元，否則 Postgres 的 `alembic_version.version_num` 會截斷、server 直接起不來，已由真 Postgres 的 round-trip 測試鎖住。前端 Workshop 三處匯入入口、dialog 支援選檔與貼上、preview 顯示可解析／未解析數與 landing mode、`draft_with_history_loss` 需二次確認；20 個 rejection code 各有 `zh-TW` / `en` 文案。詳見 `docs/M03/M03-C_CLOSEOUT.md`。
 
-下一步為 M03-D — SQLite Migration Chain Gate & FK PRAGMA。M03 是 P2 前的插入式 Maintenance Phase，目標是把現有 Character Workshop / Builder / Sheet / Level Up / Version History 打包成可離線執行的 standalone 版本，並加入 Character JSON Import / Export。M01 後續內容補充或 UI 調整不需要先 full closeout；只要不破壞 Character Build / State / Version / StableKey / Builder provenance 等 M03 核心契約，即可在 M03 後續繼續追加。
+**M03-D — SQLite Migration Chain Gate & FK PRAGMA 已完成並關門（2026-09-04）。** 整條 Alembic 鏈（`0001` ～ `0008_m03c_import_records`）在乾淨 SQLite 檔上的 `upgrade head` → `downgrade base` → 再 `upgrade head` 已是 CI-enforced 事實；downgrade 後只剩 `alembic_version` 且 row 數為 0（該表由 Alembic 自身管理，契約寫的是「除它以外無殘留」）。`alembic upgrade head` 與 `metadata.create_all()` 兩條路徑的 SQLite schema 在表列／型別／nullable／索引／unique 約束上完全相等，**沒有任何白名單讓步**。SQLite FK 語意改由 `app/db.py` 的 `@event.listens_for(Engine, "connect")` 對每條新連線下 `PRAGMA foreign_keys=ON`：掛在 `Engine` 類別而非單一實例，因此 runtime engine、測試 engine 與 M03-E launcher 之後的 migration engine 一體適用，`character_import_records` 兩個 `ON DELETE SET NULL` 於 SQLite 上實測生效。Engine 建立收斂為 `app.db.create_database_engine()` 單一入口，`api/dependencies.py` 與 `database_is_ready()` 都改走它。`psycopg[binary]` 移出無條件相依改列 `web` extra，Dockerfile 改裝 `.[web]`、三個 M03 workflow 改裝 `.[web,dev]`，並由測試掃過所有帶 `postgres:` service 的 workflow 強制此事，standalone 打包因此不會拖進 psycopg。Postgres 無回歸。詳見 `docs/M03/M03-D_CLOSEOUT.md`。
+
+下一步為 M03-E — Standalone Packaging & Launcher。M03 是 P2 前的插入式 Maintenance Phase，目標是把現有 Character Workshop / Builder / Sheet / Level Up / Version History 打包成可離線執行的 standalone 版本，並加入 Character JSON Import / Export。M01 後續內容補充或 UI 調整不需要先 full closeout；只要不破壞 Character Build / State / Version / StableKey / Builder provenance 等 M03 核心契約，即可在 M03 後續繼續追加。
 
 **M02 — Traditional Chinese / English Localization 已於 2026-08-31 closeout（M02-A～M02-H 全部完成）；M01-D～M01-M 亦已完成並關門。M01 尚未 full closeout；M 之後是否還有新 M01 規則 Subphase與 Full M01 Integration & Closeout 的 Subphase ID 仍由使用者後續拍板。**
 
@@ -113,7 +115,7 @@ M01 的直接目標：
 - M Phase 可插在正常 P Phase 之間，也可插在另一個 M Phase 的兩個 Subphase 之間；不改寫正常 P Roadmap。
 - 目前已拍板 M01-A～M01-M 三份正式文件已完成，且 M01-A～M01-M 均已關門；M 後內容 Subphase與 final closeout字母待後續需求確定。
 - M02-A～M02-H 三份正式文件已完成。
-- **M03-A～M03-G 三份正式文件已完成拆分；M03-A、M03-B、M03-C 已完成並關門。**
+- **M03-A～M03-G 三份正式文件已完成拆分；M03-A～M03-D 已完成並關門。**
 - 基礎技術棧：React + TypeScript + Vite / Python + FastAPI / PostgreSQL。
 
 ---
@@ -356,12 +358,12 @@ M03 共通原則：
 | **M03-A — Content Root Path Abstraction & Enabled-Pack SSOT** | ✅ | Content / Rules / Localization / DB path resolver、frozen/repo fallback、`Settings.enabled_content_packs` SSOT、consumer 接線、legacy path static guard、subset unresolved 語意收窄 |
 | **M03-B — Character JSON Schema, Export & Builder Provenance** | ✅ | Character export envelope、完整 version chain / current state、`builder_provenance` migration 與 versioned draft seed SSOT |
 | **M03-C — Character JSON Import via Builder Draft** | ✅ | JSON preview / validation、StableKey unresolved 分析、new identity import、`draft` / `draft_with_history_loss` landing mode |
-| **M03-D — SQLite Migration Chain Gate & FK PRAGMA** | ⬜ | SQLite migration chain、foreign key enforcement、standalone DB lifecycle 與 migration compatibility gate |
+| **M03-D — SQLite Migration Chain Gate & FK PRAGMA** | ✅ | SQLite migration chain、foreign key enforcement、standalone DB lifecycle 與 migration compatibility gate |
 | **M03-E — Standalone Packaging & Launcher** | ⬜ | `app.standalone` entry、capability endpoint、SPA fallback、PyInstaller、browser launcher、SQLite beside executable |
 | **M03-F — Windows CI Build, Release & Import Boundary Test** | ⬜ | Windows frozen build、artifact/release flow、standalone import boundary 與未來 P2 dependency leakage gate |
 | **M03-G — Full M03 Integration & Closeout** | ⬜ | web ↔ standalone ↔ standalone JSON round-trip、frozen runtime smoke、雙語 / persistence / migration / capability 全整合 closeout |
 
-**M03 已完成 A～G 正式拆分；M03-A、M03-B、M03-C 已完成並關門，下一步為 M03-D。M01 同時保持 open，不因 M03 開工而宣告 full closeout。**
+**M03 已完成 A～G 正式拆分；M03-A～M03-D 已完成並關門，下一步為 M03-E。M01 同時保持 open，不因 M03 開工而宣告 full closeout。**
 
 ---
 
@@ -375,7 +377,7 @@ M03 共通原則：
 | **P1** | **Character Builder Complete** | 完整創角、高等角色建立、Level-by-level progression、Subclass、Multiclass、ASI / Feat、Spell progression、Level Up、Character Version |
 | **M01** | **Multi-Source Character Content Expansion** | 插入式 Maintenance Phase：多來源 Content Pack、PHB/SCAG/GoS/VGM/VRGR/XGE/TCE/MTF 角色內容與既有 Character 系統強化；C 後插 M02，再由 D 接續；K 補 PHB Feats/Spells，L 補 VGM/SCAG remaining race 與通用 race mechanics，M 補 MTF planar race 與 Tiefling bloodline system。M01 目前保持 open，後續仍可補資料/UI，final closeout 於 P2 前完成 |
 | **M02** | **Traditional Chinese / English Localization** | 插入於 M01-C 與 M01-D 之間：`zh-TW` / `en` 雙語 foundation、field-level current-surface localization、translation workflow、completeness gate；完成後回 M01-D |
-| **M03** | **Standalone Character Builder Distribution** | P2 前的插入式 Maintenance Phase：同 codebase 單機創角、SQLite、Character JSON Import / Export、capability contract、PyInstaller / Windows release 與 standalone import boundary；A / B / C 已關門，D 為下一步 |
+| **M03** | **Standalone Character Builder Distribution** | P2 前的插入式 Maintenance Phase：同 codebase 單機創角、SQLite、Character JSON Import / Export、capability contract、PyInstaller / Windows release 與 standalone import boundary；A～D 已關門，E 為下一步 |
 | **P2** | **Room / Campaign / Session / Seat** | 把已建立的角色真正放進桌內；建立 Room、Campaign、Party Roster、Player Seat、Controller 與 Session lifecycle |
 | **P3** | **Exploration + Roll + AI** | 建立 Exploration、Chat / Action / Check、正式骰子與 PendingAction；Human / AI 開始能在同一桌真正跑團 |
 | **P4** | **Quick Combat** | 第一個完整可玩的 Combat MVP；**P4-A 必須先承接 P0 延後的 SRD Monster / Beast stat blocks。** |
@@ -384,12 +386,12 @@ M03 共通原則：
 | **P7** | **Snapshot / Export** | Timeline、Snapshot / Restore、broader Archive / Import / Export lifecycle；Character 基礎 JSON exchange 已由 M03 先行，不做 Undo 機制 |
 | **P8** | **QA / Polish** | 全流程整合測試、權限與 AI reconnect、錯誤處理、效能、Responsive UI、UX polish 與第一版收尾 |
 
-P0/P1 已完成；**目前已拆 M01、M02 與 M03；M03-A、M03-B、M03-C 已關門。P2～P8 仍維持大 Phase，不提前拆。**
+P0/P1 已完成；**目前已拆 M01、M02 與 M03；M03-A～M03-D 已關門。P2～P8 仍維持大 Phase，不提前拆。**
 
 實際執行順序：
 
 ```text
-M01-A ✅ → M01-B ✅ → M01-C ✅ → M02-A ✅ → M02-B ✅ → M02-C ✅ → M02-D ✅ → M02-E ✅ → M02-F ✅ → M02-G ✅ → M02-H ✅ → M01-D ✅ → M01-E ✅ → M01-F ✅ → M01-G ✅ → M01-H ✅ → M01-I ✅ → M01-J ✅ → M01-K ✅ → M01-L ✅ → M01-M ✅ → M03-A ✅ → M03-B ✅ → M03-C ✅ → M03-D → M03-E → M03-F → M03-G → M03 closeout → Future M01 Subphase(s) TBD → Full M01 Integration & Closeout (Subphase ID TBD) → P2
+M01-A ✅ → M01-B ✅ → M01-C ✅ → M02-A ✅ → M02-B ✅ → M02-C ✅ → M02-D ✅ → M02-E ✅ → M02-F ✅ → M02-G ✅ → M02-H ✅ → M01-D ✅ → M01-E ✅ → M01-F ✅ → M01-G ✅ → M01-H ✅ → M01-I ✅ → M01-J ✅ → M01-K ✅ → M01-L ✅ → M01-M ✅ → M03-A ✅ → M03-B ✅ → M03-C ✅ → M03-D ✅ → M03-E → M03-F → M03-G → M03 closeout → Future M01 Subphase(s) TBD → Full M01 Integration & Closeout (Subphase ID TBD) → P2
 ```
 
 ---
@@ -634,7 +636,7 @@ M Phase 可以插在 P Phase 之間，**也可以插在另一個 M Phase 的兩�
 2. 再讀 `PROJECT_BRIEF.md` 取得目前 Phase、Subphase 與下一步。
 3. 按任務讀 `規格企劃.md` 對應章節。
 4. M01 實作／驗收依 `docs/M01/`、M02 依 `docs/M02/`、M03 依 `docs/M03/` 三份文件中的同名 Subphase 取得契約。
-5. M02 已 closeout（A～H 全部完成）；M01-D～M01-M 亦已完成並關門，但 M01 尚未 full closeout。M03 已拆成 A～G，**M03-A、M03-B、M03-C 已完成並關門，下一步為 M03-D**。
+5. M02 已 closeout（A～H 全部完成）；M01-D～M01-M 亦已完成並關門，但 M01 尚未 full closeout。M03 已拆成 A～G，**M03-A～M03-D 已完成並關門，下一步為 M03-E**。
 6. M01 可以保持 open 並在後續補資料/UI；不要因 M03 開工而自動宣布 M01 full closeout。也不要提前切到 P2：P2 須等 M03 closeout 與 M01 final closeout，Full M01 Integration & Closeout 的 Subphase ID 目前仍 TBD。
 7. M02-D / E / F 的 translation batch 可以分批 commit，但不能分批關閉 Subphase。
 8. M01-D 起，新增／修改／首次 expose user-visible content 必須同步維護所有 supported locales（`zh-TW` / `en`）；缺任一語言視同該 Subphase regression。
