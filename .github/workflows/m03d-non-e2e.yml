@@ -1,0 +1,75 @@
+name: M03-D Non-E2E Regression
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: adventure_table_m03d
+          POSTGRES_USER: adventure
+          POSTGRES_PASSWORD: adventure
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U adventure -d adventure_table_m03d"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install backend with web and dev extras
+        run: pip install -e ".[dev,web]"
+      - name: M03-D focused pytest
+        run: pytest tests/test_m03d_*.py -q
+      - name: PostgreSQL migration round trip regression
+        env:
+          DATABASE_URL: postgresql+psycopg://adventure:adventure@localhost:5432/adventure_table_m03d
+          M03C_POSTGRES_URL: postgresql+psycopg://adventure:adventure@localhost:5432/adventure_table_m03d
+        run: pytest tests/test_m03c_migration.py -q
+      - name: Backend pytest
+        run: pytest
+      - name: Localization authoring unit tests
+        working-directory: .
+        run: python -m unittest scripts.test_build_m02d_srd_locale_reviewed scripts.test_run_m02d_srd_locale_authoring
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Pin npm
+        run: npm install --global npm@11.6.0
+      - name: Install frontend
+        run: npm ci
+      - name: Frontend unit tests
+        run: npm test -- --run
+      - name: TypeScript and Vite build
+        run: npm run build
+
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose config
+        run: docker compose config
