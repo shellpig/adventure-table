@@ -16,10 +16,11 @@ function parseFlags(value: unknown): CapabilityFlags {
   const record = value as Record<string, unknown>
   const flags = {} as CapabilityFlags
   for (const key of CAPABILITY_KEYS) {
-    if (typeof record[key] !== 'boolean') {
+    const flag = record[key]
+    if (typeof flag !== 'boolean') {
       throw new Error(`capabilities payload has invalid ${key}`)
     }
-    flags[key] = record[key]
+    flags[key] = flag
   }
   return flags
 }

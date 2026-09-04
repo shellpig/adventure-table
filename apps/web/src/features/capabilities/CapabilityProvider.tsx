@@ -28,7 +28,7 @@ type CapabilityProviderProps = PropsWithChildren<{
 
 const CapabilityContext = createContext<CapabilityContextValue>({
   snapshot: DEFAULT_WEB_CAPABILITIES,
-  status: 'fallback',
+  status: 'ready',
   isEnabled: (capability) => DEFAULT_WEB_CAPABILITIES.capabilities[capability],
 })
 

@@ -1,0 +1,28 @@
+.landing-data-path {
+  display: grid;
+  gap: 6px;
+  margin: 20px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  text-align: left;
+}
+
+.landing-data-path strong {
+  color: var(--gold-bright);
+  font-size: .78rem;
+}
+
+.landing-data-path code {
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: .78rem;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.landing-data-path small {
+  color: var(--muted);
+  line-height: 1.45;
+}

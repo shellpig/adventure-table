@@ -33,10 +33,14 @@ def test_m03e_non_e2e_workflow_covers_changed_sides_without_browser_e2e() -> Non
     assert "test:e2e" not in text.lower()
 
 
-def test_workflow_does_not_run_the_frozen_release_build_reserved_for_m03f() -> None:
+def test_e0_frozen_smoke_is_real_freeze_but_not_m03f_release_build() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
 
-    assert "--dry-run" in text
-    assert "smoke_standalone.py" not in text
+    assert "pyinstaller.exe" in text
+    assert "standalone.spec" in text
+    assert "smoke_standalone.py" in text
+    assert "dist\\adventure-table-standalone\\data" in text
+    assert "apps\\web\\dist" not in text
+    assert "Compress-Archive" not in text
     assert "upload-artifact" not in text
-    assert "release" not in text.lower()
+    assert "gh release" not in text.lower()

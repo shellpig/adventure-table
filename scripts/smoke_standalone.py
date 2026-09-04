@@ -8,7 +8,6 @@ from pathlib import Path
 import re
 import sqlite3
 import subprocess
-import sys
 import threading
 import time
 from urllib.error import URLError
@@ -18,25 +17,32 @@ LISTEN_RE = re.compile(r"Listening on:\s+(http://127\.0\.0\.1:\d+/)")
 FORBIDDEN_OUTPUT = ("postgresql", "psycopg")
 
 
+def _assigned_string(node: ast.stmt, name: str) -> str | None:
+    value: ast.expr | None = None
+    if isinstance(node, ast.Assign) and len(node.targets) == 1:
+        target = node.targets[0]
+        if isinstance(target, ast.Name) and target.id == name:
+            value = node.value
+    elif isinstance(node, ast.AnnAssign):
+        target = node.target
+        if isinstance(target, ast.Name) and target.id == name:
+            value = node.value
+    if isinstance(value, ast.Constant) and isinstance(value.value, str):
+        return value.value
+    return None
+
+
 def _migration_head(repo_root: Path) -> str:
     revisions: dict[str, str | None] = {}
     for path in sorted((repo_root / "apps/server/alembic/versions").glob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        values: dict[str, str | None] = {}
+        revision: str | None = None
+        down_revision: str | None = None
         for node in tree.body:
-            if not isinstance(node, ast.Assign) or len(node.targets) != 1:
-                continue
-            target = node.targets[0]
-            if not isinstance(target, ast.Name) or target.id not in {"revision", "down_revision"}:
-                continue
-            if isinstance(node.value, ast.Constant) and (
-                isinstance(node.value.value, str) or node.value.value is None
-            ):
-                values[target.id] = node.value.value
-        revision = values.get("revision")
-        if isinstance(revision, str):
-            down_revision = values.get("down_revision")
-            revisions[revision] = down_revision if isinstance(down_revision, str) else None
+            revision = _assigned_string(node, "revision") or revision
+            down_revision = _assigned_string(node, "down_revision") or down_revision
+        if revision is not None:
+            revisions[revision] = down_revision
     referenced = {down for down in revisions.values() if down is not None}
     heads = sorted(set(revisions) - referenced)
     if len(heads) != 1:
@@ -69,6 +75,7 @@ def run_smoke(artifact_dir: Path, repo_root: Path, timeout: float = 20.0) -> Non
 
     env = os.environ.copy()
     env.pop("ADVENTURE_TABLE_DATABASE_PATH", None)
+    env["ADVENTURE_TABLE_NO_BROWSER"] = "1"
     process = subprocess.Popen(
         [str(executable)],
         cwd=artifact_dir,

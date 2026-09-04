@@ -21,6 +21,7 @@ def _clear_launcher_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "ADVENTURE_TABLE_DATABASE_PATH",
         "ADVENTURE_TABLE_CONTENT_ROOT",
         "ADVENTURE_TABLE_SPA_ROOT",
+        "ADVENTURE_TABLE_NO_BROWSER",
     ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(paths.settings, "database_path", None)
@@ -52,7 +53,7 @@ def test_run_migrations_upgrades_tmp_sqlite_to_head(
     assert actual_head == expected_head
 
 
-def test_launcher_sets_default_database_path_before_migration(
+def test_launcher_sets_default_database_path_before_migration_and_opens_browser(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -61,7 +62,7 @@ def test_launcher_sets_default_database_path_before_migration(
     observed: dict[str, str] = {}
 
     def fake_migrations() -> None:
-        observed["url"] = paths.resolve_database_url()
+        observed["database_url"] = paths.resolve_database_url()
 
     class FakeServer:
         def __init__(self, _config: uvicorn.Config) -> None:
@@ -71,17 +72,21 @@ def test_launcher_sets_default_database_path_before_migration(
         def run(self) -> None:
             self.started = True
 
+    def fake_browser(url: str) -> bool:
+        observed["browser_url"] = url
+        return True
+
     monkeypatch.setattr(launcher, "run_migrations", fake_migrations)
     monkeypatch.setattr(launcher.uvicorn, "Server", FakeServer)
-    monkeypatch.setattr(launcher, "open_browser", lambda url: observed.setdefault("url", url) is not None)
+    monkeypatch.setattr(launcher, "open_browser", fake_browser)
 
     assert launcher.main() == 0
 
     expected = (tmp_path / paths.STANDALONE_DB_FILENAME).resolve()
     assert expected.is_file()
-    assert observed["url"] == f"sqlite+pysqlite:///{expected.as_posix()}"
-    assert observed["url"].startswith("sqlite+pysqlite://")
-    assert observed["url"].endswith("adventure-table.sqlite3")
+    assert observed["database_url"] == f"sqlite+pysqlite:///{expected.as_posix()}"
+    assert observed["database_url"].startswith("sqlite+pysqlite://")
+    assert observed["browser_url"].startswith("http://127.0.0.1:")
 
 
 def test_standalone_http_smoke_after_launcher_migration(

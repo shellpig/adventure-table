@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import App, {
   P0_FIXTURE_ID,
@@ -13,6 +13,21 @@ import { LocaleProvider } from './i18n/LocaleProvider'
 import { LOCALE_STORAGE_KEY, type LocaleStorage } from './i18n/locale'
 
 const DRAFT_ID = '11111111-1111-4111-8111-111111111111'
+const STANDALONE: CapabilitySnapshot = {
+  channel: 'standalone',
+  capabilities: {
+    character_builder: true,
+    character_import_export: true,
+    room: false,
+    campaign: false,
+    session: false,
+    seat: false,
+    combat: false,
+    timeline: false,
+    ai_actor: false,
+  },
+  database_path: 'C:/Adventure Table/adventure-table.sqlite3',
+}
 
 function englishStorage(): LocaleStorage {
   return {
@@ -33,7 +48,7 @@ function renderApp(snapshot?: CapabilitySnapshot) {
 }
 
 describe('Adventure Table routes', () => {
-  it('renders the localized landing page and workshop entry', () => {
+  it('renders the localized web landing page and workshop entry', () => {
     const html = renderApp()
 
     expect(html).toContain('Adventure Table')
@@ -43,25 +58,24 @@ describe('Adventure Table routes', () => {
     expect(html).toContain(`/characters/${P0_FIXTURE_ID}`)
   })
 
-  it('shows the concrete SQLite path on standalone Landing', () => {
-    const html = renderApp({
-      channel: 'standalone',
-      capabilities: {
-        character_builder: true,
-        character_import_export: true,
-        room: false,
-        campaign: false,
-        session: false,
-        seat: false,
-        combat: false,
-        timeline: false,
-        ai_actor: false,
-      },
-      database_path: 'C:/Adventure Table/adventure-table.sqlite3',
-    })
+  it('shows the concrete SQLite path without exposing the web-only P0 fixture on standalone', () => {
+    const html = renderApp(STANDALONE)
 
     expect(html).toContain('Local character database')
     expect(html).toContain('C:/Adventure Table/adventure-table.sqlite3')
+    expect(html).not.toContain(`/characters/${P0_FIXTURE_ID}`)
+  })
+
+  it('renders capability_disabled presentation for a manually entered disabled route', () => {
+    vi.stubGlobal('window', { location: { pathname: '/rooms/demo' } })
+    try {
+      const html = renderApp(STANDALONE)
+      expect(html).toContain('This feature is not available here')
+      expect(html).toContain('Open Character Workshop')
+      expect(html).not.toContain('href="/rooms')
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it('parses character sheet, version history and builder draft routes independently', () => {

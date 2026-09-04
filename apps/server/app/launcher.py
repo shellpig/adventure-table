@@ -166,6 +166,14 @@ def open_browser(url: str) -> bool:
     return webbrowser.open(url)
 
 
+def _should_open_browser() -> bool:
+    return os.environ.get("ADVENTURE_TABLE_NO_BROWSER", "").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+    }
+
+
 def main() -> int:
     # The database path is deliberately the first runtime decision. It must be
     # pinned before Alembic and before uvicorn imports app.standalone.
@@ -188,7 +196,8 @@ def main() -> int:
     thread.start()
     try:
         _wait_for_server(server, thread)
-        open_browser(url)
+        if _should_open_browser():
+            open_browser(url)
         while thread.is_alive():
             thread.join(timeout=0.5)
     except KeyboardInterrupt:

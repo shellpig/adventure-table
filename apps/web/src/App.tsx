@@ -38,7 +38,7 @@ export default function App() {
   const { t } = useUiCopy()
   const { locale } = useLocale()
   const capabilityPresentation = capabilityCopy(locale)
-  const { snapshot, isEnabled } = useCapabilities()
+  const { snapshot, status, isEnabled } = useCapabilities()
   const pathname = typeof window === 'undefined' ? '/' : window.location.pathname
   const protectedCapability = protectedCapabilityForPath(pathname)
   const versions = characterVersionsFromPath(pathname)
@@ -77,9 +77,11 @@ export default function App() {
         <a className="button primary landing-action" href="/characters">
           {t('landing.workshop')}
         </a>
-        <a className="button secondary landing-action" href={`/characters/${P0_FIXTURE_ID}`}>
-          {t('landing.fixture')}
-        </a>
+        {status === 'ready' && snapshot.channel === 'web' ? (
+          <a className="button secondary landing-action" href={`/characters/${P0_FIXTURE_ID}`}>
+            {t('landing.fixture')}
+          </a>
+        ) : null}
       </section>
     </main>
   )

@@ -72,6 +72,29 @@ jobs:
       - name: TypeScript and Vite build
         run: npm run build
 
+  frozen-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Create minimal frozen environment
+        shell: cmd
+        run: |
+          python -m venv .m03e-frozen
+          .m03e-frozen\Scripts\python.exe -m pip install --upgrade pip
+          .m03e-frozen\Scripts\python.exe -m pip install -e "apps\server[standalone]"
+      - name: Freeze launcher without web assets or release zip
+        shell: cmd
+        run: .m03e-frozen\Scripts\pyinstaller.exe --noconfirm --clean --workpath build\m03e-frozen --distpath dist apps\server\pyinstaller\standalone.spec
+      - name: Provide external content root beside executable
+        shell: powershell
+        run: Copy-Item -Path 'data' -Destination 'dist\adventure-table-standalone\data' -Recurse -Force
+      - name: Frozen E.0 smoke
+        shell: cmd
+        run: .m03e-frozen\Scripts\python.exe scripts\smoke_standalone.py dist\adventure-table-standalone --timeout 30
+
   windows-build-contract:
     runs-on: windows-latest
     steps:
