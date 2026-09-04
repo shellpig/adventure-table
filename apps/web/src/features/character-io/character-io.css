@@ -1,0 +1,33 @@
+.character-export-action {
+  position: relative;
+  width: 100%;
+}
+
+.character-export-toast {
+  display: block;
+  margin-top: 6px;
+  color: var(--danger, #efb0b0);
+  font-size: .78rem;
+  line-height: 1.35;
+}
+
+/* Sheet placement lives inside the sheet header, so it only needs to size
+   itself; the header owns the layout. */
+.character-export-sheet-action {
+  flex: 0 0 auto;
+  width: min(180px, 100%);
+}
+
+.character-export-sheet-action .character-export-action {
+  width: auto;
+}
+
+.character-export-sheet-action .character-export-toast {
+  max-width: 220px;
+}
+
+@media (max-width: 640px) {
+  .character-export-sheet-action {
+    width: 100%;
+  }
+}

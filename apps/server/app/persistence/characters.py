@@ -28,6 +28,7 @@ from app.domain.character_builder.reconciliation import (
     StateReconciliationPreview,
     reconcile_character_state,
 )
+from app.domain.character_builder.schemas import BuilderDraftPayload
 from app.domain.character_builder.versions import (
     CharacterVersionDetail,
     CharacterVersionKind,
@@ -57,6 +58,7 @@ character_versions = Table(
     Column("character_id", Uuid(as_uuid=True), ForeignKey("characters.id", ondelete="CASCADE"), nullable=False, index=True),
     Column("version_no", Integer, nullable=False),
     Column("build_payload", json_payload_type, nullable=False),
+    Column("builder_provenance", json_payload_type, nullable=True),
     Column("version_kind", String(32), nullable=False, server_default="legacy"),
     Column(
         "parent_version_id",
@@ -165,6 +167,7 @@ class CharacterRepository:
                     character_id=character_id,
                     version_no=1,
                     build_payload=build.model_dump(mode="json"),
+                    builder_provenance=None,
                     version_kind=version_kind,
                     parent_version_id=None,
                     superseded_by_version_id=None,
@@ -218,6 +221,7 @@ class CharacterRepository:
                 select(
                     character_build_drafts.c.id,
                     character_build_drafts.c.revision,
+                    character_build_drafts.c.draft_payload,
                     character_build_drafts.c.confirmed_character_id,
                 )
                 .where(character_build_drafts.c.id == draft_id)
@@ -234,6 +238,9 @@ class CharacterRepository:
                     raise BuilderDraftRevisionConflictError(
                         draft_id, expected_revision, actual_revision
                     )
+                builder_provenance = BuilderDraftPayload.model_validate(
+                    row["draft_payload"]
+                ).model_dump(mode="json")
 
                 created_character_id = uuid4()
                 version_id = uuid4()
@@ -251,6 +258,7 @@ class CharacterRepository:
                         character_id=created_character_id,
                         version_no=1,
                         build_payload=build.model_dump(mode="json"),
+                        builder_provenance=builder_provenance,
                         version_kind=CharacterVersionKind.CREATE.value,
                         parent_version_id=None,
                         superseded_by_version_id=None,
@@ -325,6 +333,7 @@ class CharacterRepository:
                     character_build_drafts.c.character_id,
                     character_build_drafts.c.base_version_id,
                     character_build_drafts.c.revision,
+                    character_build_drafts.c.draft_payload,
                     character_build_drafts.c.confirmed_character_id,
                     character_build_drafts.c.confirmed_version_id,
                 )
@@ -350,6 +359,9 @@ class CharacterRepository:
                 raise BuilderDraftRevisionConflictError(
                     draft_id, expected_revision, actual_revision
                 )
+            builder_provenance = BuilderDraftPayload.model_validate(
+                draft_row["draft_payload"]
+            ).model_dump(mode="json")
             character_id = draft_row["character_id"]
             base_version_id = draft_row["base_version_id"]
             if character_id is None or base_version_id is None:
@@ -414,6 +426,7 @@ class CharacterRepository:
                     character_id=character_id,
                     version_no=new_version_no,
                     build_payload=new_build.model_dump(mode="json"),
+                    builder_provenance=builder_provenance,
                     version_kind=version_kind.value,
                     parent_version_id=base_version_id,
                     superseded_by_version_id=None,
@@ -574,6 +587,20 @@ class CharacterRepository:
         if row is None:
             raise CharacterVersionNotFoundError(str(version_id))
         return CharacterBuild.model_validate(row["build_payload"])
+
+    def load_builder_provenance(self, character_id: UUID, version_id: UUID) -> object | None:
+        """Return the immutable Builder snapshot for one Character Version."""
+
+        with self.engine.connect() as connection:
+            row = connection.execute(
+                select(character_versions.c.builder_provenance).where(
+                    character_versions.c.id == version_id,
+                    character_versions.c.character_id == character_id,
+                )
+            ).mappings().one_or_none()
+        if row is None:
+            raise CharacterVersionNotFoundError(str(version_id))
+        return row["builder_provenance"]
 
     def list_versions(self, character_id: UUID) -> tuple[CharacterVersionSummary, ...]:
         with self.engine.connect() as connection:

@@ -16,6 +16,7 @@ import {
 } from '../../api/characterVersions'
 import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy } from '../../i18n/useUiCopy'
+import { ExportCharacterButton } from '../character-io/ExportCharacterButton'
 import './builder.css'
 
 type WorkshopCharacter = Awaited<ReturnType<typeof listCharacters>>[number] & {
@@ -191,6 +192,7 @@ export function CharacterWorkshopPage() {
                   <a className="button secondary full" href={`/characters/${character.id}`}>
                     {t('workshop.openSheet')}
                   </a>
+                  <ExportCharacterButton characterId={character.id} />
                   <button
                     type="button"
                     className="button primary full"
@@ -247,6 +249,7 @@ export function CharacterWorkshopPage() {
                   <h3>{character.name}</h3>
                   <p>{localizedClassSummary(character, nameFor)}</p>
                   <div className="workshop-card__actions">
+                    <ExportCharacterButton characterId={character.id} />
                     <button
                       type="button"
                       className="button primary full"

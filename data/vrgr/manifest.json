@@ -2,7 +2,7 @@
   "id": "vrgr",
   "name": "Van Richten's Guide to Ravenloft",
   "ruleset": "dnd5e-2014",
-  "version": "M01-F",
+  "version": "1.0.0",
   "provenance": {
     "type": "private-maintainer-normalization",
     "reference": "docs/暫用規則資訊/半血裔_VRGR.md"

@@ -2,7 +2,7 @@
   "id": "scag",
   "name": "Sword Coast Adventurer's Guide",
   "ruleset": "dnd5e-2014",
-  "version": "M01-M",
+  "version": "1.0.0",
   "provenance": {
     "source_documents": [
       "docs/暫用規則資訊/背景_SCAG.md",

@@ -2,7 +2,7 @@
   "id": "gos",
   "name": "Ghosts of Saltmarsh",
   "ruleset": "dnd5e-2014",
-  "version": "m01-c",
+  "version": "1.0.0",
   "provenance": {
     "source_documents": ["docs/暫用規則資訊/背景_GoS.md"],
     "rules_source": "Ghosts of Saltmarsh (2019)",

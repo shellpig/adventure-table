@@ -110,3 +110,21 @@ describe('P0-E Character Sheet', () => {
     expect(html).toContain('role="combobox"')
   })
 })
+
+describe('M03-B sheet header actions', () => {
+  it('renders header actions inside the sheet hero, not as a floating overlay', () => {
+    const markup = renderSheet({
+      headerActions: <button type="button" aria-label="Export character JSON">Export JSON</button>,
+    })
+    const hero = markup.slice(
+      markup.indexOf('class="character-hero"'),
+      markup.indexOf('class="sheet-tabs"'),
+    )
+    expect(hero).toContain('character-hero__actions')
+    expect(hero).toContain('aria-label="Export character JSON"')
+  })
+
+  it('omits the actions container when the page supplies none', () => {
+    expect(renderSheet()).not.toContain('character-hero__actions')
+  })
+})

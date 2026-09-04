@@ -1,0 +1,482 @@
+{
+  "envelope": {
+    "content_requirements": [
+      {
+        "pack": "srd5.1",
+        "version": "1.0.0"
+      },
+      {
+        "pack": "xge",
+        "version": "1.0.0"
+      }
+    ],
+    "exported_at": "2026-09-04T00:00:00Z",
+    "ruleset": "dnd5e-2014",
+    "schema_status": "unstable",
+    "schema_version": "unstable",
+    "source_app": {
+      "build": null,
+      "channel": "web",
+      "commit": null,
+      "name": "adventure-table"
+    },
+    "source_character_id": "00000000-0000-4000-8000-00000000c0de",
+    "source_export_id": "00000000-0000-4000-8000-0000000e6b07",
+    "stable_key_refs_summary": 56
+  },
+  "payload": {
+    "character": {
+      "name": "M03-B XGE Dependent",
+      "ruleset": "dnd5e-2014"
+    },
+    "current_state": {
+      "state_payload": {
+        "active_infusions": [],
+        "conditions": [],
+        "current_hp": 25,
+        "feature_modes": {},
+        "hit_dice_state": {
+          "d10": 3
+        },
+        "inventory_state": [
+          {
+            "carried": true,
+            "entry_id": "inventory:start:ca26045b077f2a0f0fb2",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:longbow",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:03e3ceeaf74de6d22776",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:arrow",
+            "quantity": 20
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:bf08a0f716fd3486ce89",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:scale-mail",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:4b7be7f5fd22729d38c0",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:shortsword",
+            "quantity": 2
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:fb009db225d2d6ffea6e",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:dungeoneers-pack",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:e68506b01a3bba8bf3e3",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:clothes-common",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:f9e2bbe2e512de2cf63f",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:pouch",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:42f883b474fc241b0032",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:amulet",
+            "quantity": 1
+          }
+        ],
+        "prepared_spell_entry_ids": [],
+        "prepared_spells": [],
+        "resources": {},
+        "spell_slots": {
+          "1": {
+            "remaining": 3,
+            "used": 0
+          }
+        },
+        "spell_storing_item": null,
+        "temporary_hp": 0
+      }
+    },
+    "current_version_no": 1,
+    "versions": [
+      {
+        "build_payload": {
+          "ability_scores": {
+            "charisma": 8,
+            "constitution": 13,
+            "dexterity": 16,
+            "intelligence": 13,
+            "strength": 15,
+            "wisdom": 10
+          },
+          "alignment_ref": null,
+          "ancestral_legacy": null,
+          "ancestral_origin_ref": null,
+          "background_ref": "srd5.1:background:acolyte",
+          "character_level": 3,
+          "class_progression": [
+            "srd5.1:class:ranger",
+            "srd5.1:class:ranger",
+            "srd5.1:class:ranger"
+          ],
+          "climb_speed": null,
+          "content_sources": [
+            "srd5.1",
+            "xge"
+          ],
+          "feat_acquisitions": [],
+          "feat_refs": [],
+          "feat_resource_grants": [],
+          "feature_grant_sources": [
+            {
+              "feature_ref": "srd5.1:feature:ranger-fighting-style-archery",
+              "grant_kind": "choice",
+              "source_ref": "srd5.1:feature:ranger-fighting-style"
+            }
+          ],
+          "feature_refs": [
+            "srd5.1:feature:favored-enemy-1-type",
+            "srd5.1:feature:natural-explorer-1-terrain-type",
+            "srd5.1:feature:ranger-fighting-style",
+            "srd5.1:feature:spellcasting-ranger",
+            "srd5.1:feature:ranger-archetype",
+            "srd5.1:feature:primeval-awareness",
+            "xge:feature:gloom-stalker-3-gloom-stalker-magic",
+            "xge:feature:gloom-stalker-3-dread-ambusher",
+            "xge:feature:gloom-stalker-3-umbral-sight",
+            "srd5.1:feature:ranger-fighting-style-archery"
+          ],
+          "fly_speed": null,
+          "hp_progression": [
+            10,
+            6,
+            6
+          ],
+          "infusion_refs": [],
+          "language_refs": [
+            "srd5.1:language:common",
+            "srd5.1:language:elvish",
+            "srd5.1:language:dwarvish",
+            "srd5.1:language:abyssal",
+            "srd5.1:language:celestial"
+          ],
+          "lineage_ref": null,
+          "numeric_overrides": [],
+          "proficiencies": [
+            "srd5.1:proficiency:longswords",
+            "srd5.1:proficiency:shortswords",
+            "srd5.1:proficiency:shortbows",
+            "srd5.1:proficiency:longbows",
+            "srd5.1:proficiency:light-armor",
+            "srd5.1:proficiency:medium-armor",
+            "srd5.1:proficiency:shields",
+            "srd5.1:proficiency:simple-weapons",
+            "srd5.1:proficiency:martial-weapons"
+          ],
+          "race_ref": "srd5.1:race:elf",
+          "race_variant_group_selections": [],
+          "race_variant_ref": null,
+          "roleplay_profile": {
+            "appearance": null,
+            "biography": null,
+            "bonds": [],
+            "custom_fields": {},
+            "flaws": [],
+            "ideals": [],
+            "personality_traits": []
+          },
+          "ruleset": "dnd5e-2014",
+          "saving_throw_proficiencies": [
+            "srd5.1:ability:str",
+            "srd5.1:ability:dex"
+          ],
+          "size": null,
+          "skill_choices": [
+            "srd5.1:skill:perception",
+            "srd5.1:skill:insight",
+            "srd5.1:skill:religion",
+            "srd5.1:skill:animal-handling",
+            "srd5.1:skill:athletics"
+          ],
+          "skill_expertise_refs": [],
+          "spell_access_entries": [
+            {
+              "access_type": "known",
+              "casting_ability": null,
+              "entry_id": "class:ranger:known:alarm",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:ranger",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:alarm",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "known",
+              "casting_ability": null,
+              "entry_id": "class:ranger:known:animal-friendship",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:ranger",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:animal-friendship",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "known",
+              "casting_ability": null,
+              "entry_id": "class:ranger:known:cure-wounds",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:ranger",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:cure-wounds",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "always_prepared",
+              "casting_ability": null,
+              "entry_id": "subclass:xge:gloom-stalker:always_prepared:disguise-self",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "xge:subclass:gloom-stalker",
+              "source_type": "subclass",
+              "spell_key": "srd5.1:spell:disguise-self",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "granted",
+              "casting_ability": null,
+              "entry_id": "m01j:xge:gloom-stalker:granted:disguise-self:dcc1d5224f",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "xge:subclass:gloom-stalker",
+              "source_type": "subclass",
+              "spell_key": "srd5.1:spell:disguise-self",
+              "uses_per_rest": null
+            }
+          ],
+          "spell_resource_pools": [
+            {
+              "pool_id": "spell_slots:normal",
+              "pool_type": "normal_multiclass_slots",
+              "slots": [
+                {
+                  "capacity": 3,
+                  "level": 1
+                }
+              ],
+              "source_profile_id": null
+            }
+          ],
+          "spellcasting_profiles": [
+            {
+              "ability": "wisdom",
+              "access_model": "known",
+              "class_ref": "srd5.1:class:ranger",
+              "max_spell_level": 1,
+              "prepared_limit": null,
+              "profile_id": "class:ranger",
+              "resource_pool_type": "normal_multiclass_slots",
+              "source_key": "srd5.1:class:ranger",
+              "source_type": "class"
+            }
+          ],
+          "starting_equipment": [
+            {
+              "entry_id": "start:ca26045b077f2a0f0fb2",
+              "item_ref": "srd5.1:equipment:longbow",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:03e3ceeaf74de6d22776",
+              "item_ref": "srd5.1:equipment:arrow",
+              "quantity": 20
+            },
+            {
+              "entry_id": "start:bf08a0f716fd3486ce89",
+              "item_ref": "srd5.1:equipment:scale-mail",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:4b7be7f5fd22729d38c0",
+              "item_ref": "srd5.1:equipment:shortsword",
+              "quantity": 2
+            },
+            {
+              "entry_id": "start:fb009db225d2d6ffea6e",
+              "item_ref": "srd5.1:equipment:dungeoneers-pack",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:e68506b01a3bba8bf3e3",
+              "item_ref": "srd5.1:equipment:clothes-common",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:f9e2bbe2e512de2cf63f",
+              "item_ref": "srd5.1:equipment:pouch",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:42f883b474fc241b0032",
+              "item_ref": "srd5.1:equipment:amulet",
+              "quantity": 1
+            }
+          ],
+          "static_derived_modifiers": [],
+          "subclasses": [
+            {
+              "class_ref": "srd5.1:class:ranger",
+              "subclass_ref": "xge:subclass:gloom-stalker"
+            }
+          ],
+          "subrace_ref": "srd5.1:subrace:high-elf",
+          "swim_speed": null,
+          "walking_speed": 30
+        },
+        "builder_provenance": {
+          "ability_generation": {
+            "method": "standard_array",
+            "provenance": "m03b-fixture",
+            "scores": {
+              "charisma": 8,
+              "constitution": 13,
+              "dexterity": 14,
+              "intelligence": 12,
+              "strength": 15,
+              "wisdom": 10
+            }
+          },
+          "alignment_selection": null,
+          "background_selection": {
+            "reference_id": "srd5.1:background:acolyte",
+            "source_ref": null
+          },
+          "basic": {
+            "name": "M03-B XGE Dependent",
+            "ruleset": "dnd5e-2014"
+          },
+          "choice_selections": {
+            "level:1:srd5.1:class:ranger:starting-proficiency:0": {
+              "choice_id": "level:1:srd5.1:class:ranger:starting-proficiency:0",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "srd5.1:proficiency:skill-animal-handling",
+                "srd5.1:proficiency:skill-athletics",
+                "srd5.1:proficiency:skill-insight"
+              ],
+              "source_ref": "srd5.1:class:ranger"
+            },
+            "level:2:srd5.1:feature:ranger-fighting-style:feature-specific-subfeature_options": {
+              "choice_id": "level:2:srd5.1:feature:ranger-fighting-style:feature-specific-subfeature_options",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "srd5.1:feature:ranger-fighting-style-archery"
+              ],
+              "source_ref": "srd5.1:feature:ranger-fighting-style"
+            },
+            "srd5.1:background:acolyte:language_options:0": {
+              "choice_id": "srd5.1:background:acolyte:language_options:0",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "srd5.1:language:abyssal",
+                "srd5.1:language:celestial"
+              ],
+              "source_ref": "srd5.1:background:acolyte"
+            },
+            "srd5.1:trait:extra-language:language_options:0": {
+              "choice_id": "srd5.1:trait:extra-language:language_options:0",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "srd5.1:language:dwarvish"
+              ],
+              "source_ref": "srd5.1:trait:extra-language"
+            }
+          },
+          "initial_state_seed": {},
+          "level_choices": [
+            {
+              "character_level": 1,
+              "class_ref": "srd5.1:class:ranger",
+              "hp_base_gain": 10,
+              "hp_method": "first_level",
+              "subclass_ref": null
+            },
+            {
+              "character_level": 2,
+              "class_ref": "srd5.1:class:ranger",
+              "hp_base_gain": 6,
+              "hp_method": "fixed_average",
+              "subclass_ref": null
+            },
+            {
+              "character_level": 3,
+              "class_ref": "srd5.1:class:ranger",
+              "hp_base_gain": 6,
+              "hp_method": "fixed_average",
+              "subclass_ref": "xge:subclass:gloom-stalker"
+            }
+          ],
+          "lineage_selection": null,
+          "numeric_overrides": [],
+          "race_selection": {
+            "reference_id": "srd5.1:race:elf",
+            "source_ref": null
+          },
+          "race_variant_selection": null,
+          "roleplay_profile": {},
+          "spell_choices": {
+            "class:ranger": {
+              "cantrip_keys": [],
+              "known_spell_keys": [
+                "srd5.1:spell:alarm",
+                "srd5.1:spell:animal-friendship",
+                "srd5.1:spell:cure-wounds"
+              ],
+              "prepared_spell_keys": [],
+              "spellbook_spell_keys": []
+            }
+          },
+          "starting_equipment_choices": {
+            "equipment:acolyte:4e27ce81740b": [
+              "equipment:acolyte:4e27ce81740b:option:0"
+            ],
+            "equipment:ranger:8f83274336c2": [
+              "equipment:ranger:8f83274336c2:option:0"
+            ],
+            "equipment:ranger:9ef7b036fe0d": [
+              "equipment:ranger:9ef7b036fe0d:option:0"
+            ],
+            "equipment:ranger:9f82122ba063": [
+              "equipment:ranger:9f82122ba063:option:0"
+            ]
+          },
+          "subrace_selection": {
+            "reference_id": "srd5.1:subrace:high-elf",
+            "source_ref": null
+          },
+          "target_level": 3
+        },
+        "change_note": null,
+        "created_at": "2026-09-04T00:00:00Z",
+        "parent_version_no": null,
+        "superseded_by_version_no": null,
+        "version_kind": "create",
+        "version_no": 1
+      }
+    ]
+  }
+}

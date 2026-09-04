@@ -518,6 +518,8 @@ class ContentManifest(StrictModel):
     id: str = Field(min_length=1, max_length=120)
     name: str = Field(min_length=1)
     ruleset: Literal["dnd5e-2014"]
+    # No default: a portability version must be authored in the manifest file.
+    # A schema default would let an unversioned pack silently claim one.
     version: str | None = Field(default=None, min_length=1)
     license: ManifestLicense | None = None
     extraction: ExtractionSource | None = None
