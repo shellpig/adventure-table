@@ -4,17 +4,14 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
 import json
+from pathlib import Path
 
 from app.content.identity import parse_stable_key, reference_to_stable_key
-from app.content.registry import (
-    CONTENT_PACKS_ROOT,
-    ContentRegistry,
-    ContentValidationError,
-)
+from app.content.registry import ContentRegistry, ContentValidationError
+from app.paths import resolve_rules_root
 
 
 EXPECTED_SOURCES = ("phb2014", "scag", "xge", "tce")
-INVENTORY_PATH = CONTENT_PACKS_ROOT / "rules" / "dnd5e-2014" / "m01j-inventory.json"
 
 
 @dataclass(frozen=True)
@@ -32,12 +29,10 @@ class InventoryRow:
     canonical_key: str | None
 
 
-@lru_cache(maxsize=1)
-def m01j_reference_inventory() -> tuple[InventoryRow, ...]:
-    """Load the checked-in expected inventory that M01-J closeout validates against."""
-
+@lru_cache(maxsize=8)
+def _load_m01j_reference_inventory(path: Path) -> tuple[InventoryRow, ...]:
     try:
-        payload = json.loads(INVENTORY_PATH.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ContentValidationError(f"cannot read M01-J inventory: {exc}") from exc
     rows = payload.get("rows")
@@ -60,6 +55,16 @@ def m01j_reference_inventory() -> tuple[InventoryRow, ...]:
         )
     except (KeyError, TypeError, ValueError) as exc:
         raise ContentValidationError(f"invalid M01-J inventory row: {exc}") from exc
+
+
+def m01j_reference_inventory() -> tuple[InventoryRow, ...]:
+    """Load the checked-in expected inventory from the active content root."""
+
+    path = (resolve_rules_root() / "m01j-inventory.json").resolve()
+    return _load_m01j_reference_inventory(path)
+
+
+m01j_reference_inventory.cache_clear = _load_m01j_reference_inventory.cache_clear  # type: ignore[attr-defined]
 
 
 ALLOWED_DISPOSITIONS = frozenset({"implemented", "canonical_duplicate"})
