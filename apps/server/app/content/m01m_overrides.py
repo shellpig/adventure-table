@@ -1,24 +1,26 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 from app.content.identity import reference_to_stable_key
 from app.content.m01m_models import M01MRacialSpellAccessData
-from app.content.registry import (
-    CONTENT_PACKS_ROOT,
-    ContentRegistry,
-    ContentValidationError,
-)
+from app.content.registry import ContentRegistry, ContentValidationError
+from app.paths import resolve_rules_root
 
 
-OVERRIDES_PATH = CONTENT_PACKS_ROOT / "rules" / "dnd5e-2014" / "m01m-entry-overrides.json"
 PATCHABLE_TARGETS = frozenset({"srd5.1:trait:infernal-legacy"})
 
 
+def _overrides_path() -> Path:
+    return (resolve_rules_root() / "m01m-entry-overrides.json").resolve()
+
+
 def _load_patches() -> dict[str, dict[str, Any]]:
+    path = _overrides_path()
     try:
-        payload = json.loads(OVERRIDES_PATH.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ContentValidationError(f"cannot read M01-M entry overrides: {exc}") from exc
     if payload.get("phase") != "M01-M" or payload.get("ruleset") != "dnd5e-2014":
@@ -48,42 +50,21 @@ def apply_m01m_entry_overrides(registry: ContentRegistry) -> ContentRegistry:
         entry = registry.get_optional(key)
         if entry is None:
             raise ContentValidationError(f"M01-M entry override targets unknown entry: {key}")
-        if not isinstance(fields, dict) or set(fields) != {"racial_spell_access"}:
-            raise ContentValidationError(
-                f"M01-M entry override for {key} may only set racial_spell_access"
-            )
-        raw_access = fields.get("racial_spell_access")
-        if not isinstance(raw_access, list) or len(raw_access) != 3:
-            raise ContentValidationError(
-                "M01-M Infernal Legacy override must contain exactly three spell rows"
-            )
-
-        spell_keys: list[str] = []
-        for index, raw in enumerate(raw_access):
-            try:
-                access = M01MRacialSpellAccessData.model_validate(raw)
-                spell_key = reference_to_stable_key(
-                    access.spell.model_dump(exclude_none=True),
-                    kinds={"spell"},
-                )
-            except ValueError as exc:
-                raise ContentValidationError(
-                    f"M01-M Infernal Legacy spell row {index} is malformed: {exc}"
-                ) from exc
-            if spell_key is None or registry.get_optional(spell_key) is None:
-                raise ContentValidationError(
-                    f"M01-M Infernal Legacy spell row {index} is dangling: {spell_key}"
-                )
-            spell_keys.append(spell_key)
-
-        expected = [
-            "srd5.1:spell:thaumaturgy",
-            "srd5.1:spell:hellish-rebuke",
-            "srd5.1:spell:darkness",
-        ]
-        if spell_keys != expected:
-            raise ContentValidationError(
-                "M01-M Asmodeus baseline must remain Thaumaturgy / Hellish Rebuke / Darkness"
-            )
+        if not isinstance(fields, dict) or not fields:
+            raise ContentValidationError(f"M01-M entry override for {key} must set fields")
         entry.data.update(fields)
+
+        raw_access = entry.data.get("racial_spell_access", [])
+        if not isinstance(raw_access, list):
+            raise ContentValidationError(f"M01-M racial spell metadata must be a list: {key}")
+        try:
+            typed_access = tuple(M01MRacialSpellAccessData.model_validate(row) for row in raw_access)
+        except (TypeError, ValueError) as exc:
+            raise ContentValidationError(f"M01-M invalid racial spell metadata for {key}: {exc}") from exc
+        for access in typed_access:
+            spell_ref = reference_to_stable_key(access.spell, kinds={"spell"})
+            if spell_ref is None or registry.get_optional(spell_ref) is None:
+                raise ContentValidationError(
+                    f"M01-M racial spell metadata targets missing spell: {spell_ref}"
+                )
     return registry
