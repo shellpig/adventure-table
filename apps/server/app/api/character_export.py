@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -28,11 +29,15 @@ def export_character(
         character_id,
         channel=_distribution_channel(request),
     )
+    content_disposition = (
+        f'attachment; filename="{artifact.filename}"; '
+        f"filename*=UTF-8''{quote(artifact.utf8_filename, safe='')}"
+    )
     return Response(
         content=artifact.document.model_dump_json(indent=2),
         media_type="application/json",
         headers={
-            "Content-Disposition": f'attachment; filename="{artifact.filename}"',
+            "Content-Disposition": content_disposition,
             "X-Adventure-Table-Character-Archived": str(artifact.archived).lower(),
         },
     )
