@@ -20,22 +20,11 @@ from app.content.registry import (
     ContentRegistry,
     ContentValidationError,
 )
+from app.paths import resolve_content_root
 
 
 install_m01l_content_models()
 install_m01m_content_models()
-
-_registry.DEFAULT_CONTENT_PACKS = (
-    "srd5.1",
-    "phb2014",
-    "scag",
-    "gos",
-    "vgm",
-    "vrgr",
-    "tce",
-    "xge",
-    "mtf",
-)
 
 
 def load_default_content_registry() -> ContentRegistry:
@@ -58,7 +47,7 @@ def load_default_content_registry() -> ContentRegistry:
     registry = validate_m01m_inventory(registry)
     registry = apply_phb_background_roleplay(
         registry,
-        content_root=_registry.CONTENT_PACKS_ROOT,
+        content_root=resolve_content_root(),
     )
     return apply_background_roleplay_inheritance(registry)
 
