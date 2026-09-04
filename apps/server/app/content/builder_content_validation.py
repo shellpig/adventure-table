@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from app.content.identity import reference_to_stable_key, stable_key_is_kind
+from app.content.identity import parse_stable_key, reference_to_stable_key, stable_key_is_kind
 from app.content.registry import ContentRegistry, ContentValidationError
 from app.content.schemas import APIReference, ContentEntry
 
@@ -65,6 +65,10 @@ def _reference_payload(reference: APIReference) -> dict[str, Any]:
     return reference.model_dump(exclude_none=True, by_alias=True)
 
 
+def _target_pack_is_disabled(registry: ContentRegistry, key: str) -> bool:
+    return parse_stable_key(key).source not in registry.enabled_pack_ids
+
+
 def _validate_spell_relation(
     registry: ContentRegistry,
     owner: ContentEntry,
@@ -78,8 +82,16 @@ def _validate_spell_relation(
             raise ContentValidationError(
                 f"{owner.key}.{field} contains an invalid spell reference"
             ) from exc
-        if key is None or registry.get_optional(key) is None:
-            raise ContentValidationError(f"{owner.key}.{field} has dangling spell reference: {key}")
+        if key is None:
+            raise ContentValidationError(
+                f"{owner.key}.{field} has dangling spell reference: {key}"
+            )
+        if registry.get_optional(key) is None:
+            if _target_pack_is_disabled(registry, key):
+                continue
+            raise ContentValidationError(
+                f"{owner.key}.{field} has dangling spell reference: {key}"
+            )
 
 
 def _require_key(
@@ -96,8 +108,12 @@ def _require_key(
         valid_kind = stable_key_is_kind(value, kind)
     except ValueError as exc:
         raise ContentValidationError(f"{owner}.{field} has invalid StableKey: {value}") from exc
+    if not valid_kind:
+        raise ContentValidationError(f"{owner}.{field} has dangling {kind} reference: {value}")
     target = registry.get_optional(value)
-    if not valid_kind or target is None:
+    if target is None:
+        if _target_pack_is_disabled(registry, value):
+            return value
         raise ContentValidationError(f"{owner}.{field} has dangling {kind} reference: {value}")
     return value
 
@@ -286,7 +302,7 @@ def _validate_m01i_feature_relations(registry: ContentRegistry) -> None:
                             owner=entry.key,
                             field=(
                                 "optional_class_feature.retraining.strategies"
-                                f"[{strategy_index}].pool"
+                                f"[{strategy_index}].pool",
                             ),
                             value=pool,
                         )
