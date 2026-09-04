@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 from app.paths import resolve_content_root, resolve_rules_root
 
@@ -6,7 +7,6 @@ INVENTORY_PATH = resolve_rules_root() / "m01m-race-inventory.json"
 
 """M01-M M.1 / M.3 / M.12 — pack identity, Tiefling accounting, localization scope."""
 
-from __future__ import annotations
 
 import json
 from pathlib import Path

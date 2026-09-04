@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 from app.paths import resolve_content_root
 
@@ -12,7 +13,6 @@ presentation. The M02 completeness gate did not catch it: that gate only checks
 whether a value is present, not which language it is in.
 """
 
-from __future__ import annotations
 
 import re
 

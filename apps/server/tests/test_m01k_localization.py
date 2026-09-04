@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 from app.paths import resolve_content_root
 
@@ -5,7 +6,6 @@ CONTENT_PACKS_ROOT = resolve_content_root()
 
 """M01-K K.11 — localization policy coverage, then completeness (in that order)."""
 
-from __future__ import annotations
 
 import json
 import shutil
