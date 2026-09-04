@@ -20,6 +20,7 @@ FULL_PACKS = (
     "xge",
     "mtf",
 )
+PACKS_WITHOUT_XGE = tuple(pack for pack in FULL_PACKS if pack != "xge")
 M03A_START_ENTRY_COUNT = 3186
 
 
@@ -103,6 +104,7 @@ def test_reference_into_disabled_pack_is_unresolved_not_corruption() -> None:
     [
         ("srd5.1",),
         ("srd5.1", "scag"),
+        PACKS_WITHOUT_XGE,
     ],
 )
 def test_application_registry_can_start_with_intentional_pack_subset(
@@ -118,6 +120,7 @@ def test_application_registry_can_start_with_intentional_pack_subset(
     assert registry.enabled_pack_ids == packs
     assert registry.get("srd5.1:race:human").name == "Human"
     assert registry.get_optional("xge:spell:wall-of-water") is None
+    assert (root / "xge").is_dir()
 
 
 def test_default_full_registry_matches_m03a_start_baseline(
