@@ -1,9 +1,6 @@
 name: M03-B Non-E2E Regression
 
 on:
-  push:
-    branches:
-      - m03-b-character-export-provenance
   workflow_dispatch:
 
 # M03-B validation intentionally excludes Playwright/E2E.
