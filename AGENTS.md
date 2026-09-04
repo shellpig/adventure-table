@@ -171,6 +171,18 @@ verifier 完成已知問題或 Phase 的文件關門後，在同一 turn `commit
 
 ⚠️ 本專案目前**沒有 `.venv`**。若開始 Python 實作，先在專案根目錄建立，之後一律使用 `.\.venv\Scripts\python.exe`，讓 agent 與使用者看到一致結果。
 
+### E2E 測試執行規則
+
+**Windows 上不得讓 Playwright 託管 vite。** dev server 會在跑測試途中停止接受連線，造成數十個 `net::ERR_CONNECTION_REFUSED`（KI-ENV-001，上游 vite 未修）。整套 E2E 一律走容器裡的 Linux dev server：
+
+```
+cd apps/web && npm run test:e2e:docker
+```
+
+該 script 內的 `--build` 不可省——`web` service 沒有掛 bind mount，略過重建會靜默測到上一版 frontend。
+
+`playwright.config.ts` 會直接擋下 Windows 託管路徑；要重現該 dev server 問題才設 `ALLOW_WINDOWS_VITE_E2E=1`。細節見 `已知問題.md` 的 KI-ENV-001。
+
 ### 本機工具
 
 外部工具不放進本專案 repo。
