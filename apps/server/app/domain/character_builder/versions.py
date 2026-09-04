@@ -3,9 +3,10 @@ from __future__ import annotations
 from collections import Counter
 from datetime import datetime
 from enum import StrEnum
+import logging
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.content.registry import ContentRegistry
 from app.domain.character.schemas import CharacterBuild, CharacterState, PersistedCharacter
@@ -24,6 +25,9 @@ from app.domain.character_builder.schemas import (
     BuilderSpellChoiceInput,
 )
 from app.domain.rules.artificer import ARTIFICER_REF, known_infusion_count
+
+
+logger = logging.getLogger(__name__)
 
 
 class StrictModel(BaseModel):
@@ -341,11 +345,26 @@ def seed_version_draft_payload(
     registry: ContentRegistry,
     *,
     mode: BuilderMode,
-    source_payload: BuilderDraftPayload | None,
+    builder_provenance: object | None,
+    stored_draft_payload: BuilderDraftPayload | None,
     state: CharacterState | None = None,
 ) -> BuilderDraftPayload:
     if mode is BuilderMode.CREATE:
         raise ValueError("version draft seeding does not apply to create mode")
+
+    source_payload: BuilderDraftPayload | None = None
+    if builder_provenance is not None:
+        try:
+            source_payload = BuilderDraftPayload.model_validate(builder_provenance)
+        except ValidationError:
+            logger.warning(
+                "invalid builder_provenance for character %s version %s; falling back",
+                character.id,
+                character.current_version_id,
+                exc_info=True,
+            )
+    if source_payload is None:
+        source_payload = stored_draft_payload
 
     if source_payload is None:
         payload = legacy_payload_from_build(character, registry)
