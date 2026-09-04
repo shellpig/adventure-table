@@ -2,7 +2,8 @@ import { characterIoEn } from './copy/character-io.en'
 import { characterIoZhTw } from './copy/character-io.zh-TW'
 import { useLocale } from './LocaleProvider'
 
-export type CharacterIoCopy = typeof characterIoEn
+/** Structural, not literal: both locales share the key set, never the strings. */
+export type CharacterIoCopy = Record<keyof typeof characterIoEn, string>
 
 export const CHARACTER_IO_COPY: Record<'en' | 'zh-TW', CharacterIoCopy> = {
   en: characterIoEn,
