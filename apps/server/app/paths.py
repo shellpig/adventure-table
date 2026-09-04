@@ -59,15 +59,18 @@ def resolve_content_root() -> Path:
             fallback = meipass / "data"
             if fallback.is_dir():
                 return fallback
+            meipass_detail = str(fallback)
+        else:
+            meipass_detail = "<unset>"
         raise RuntimeError(
-            f"[frozen] content data directory not found: {candidate}; "
-            "no usable _MEIPASS/data fallback"
+            f"[frozen-exe-dir] content data directory not found: {candidate}; "
+            f"[frozen-meipass] content data directory not found: {meipass_detail}"
         )
 
     candidate = Path(__file__).resolve().parents[3] / "data"
     if candidate.is_dir():
         return candidate
-    raise RuntimeError(f"[repository] content data directory not found: {candidate}")
+    raise RuntimeError(f"[repo-relative] content data directory not found: {candidate}")
 
 
 def resolve_srd_content_root() -> Path:
