@@ -227,7 +227,11 @@ class CharacterBuilderService:
             raise ValueError("create_version_draft requires a versioned builder mode")
         character_repository = self._require_character_repository()
         character = character_repository.load_character(character_id)
-        source_payload = self.repository.load_payload_for_confirmed_version(
+        builder_provenance = character_repository.load_builder_provenance(
+            character.id,
+            character.current_version_id,
+        )
+        stored_draft_payload = self.repository.load_payload_for_confirmed_version(
             character.id,
             character.current_version_id,
         )
@@ -235,7 +239,8 @@ class CharacterBuilderService:
             character,
             self.registry,
             mode=mode,
-            source_payload=source_payload,
+            builder_provenance=builder_provenance,
+            stored_draft_payload=stored_draft_payload,
             state=character.state,
         )
         request = BuilderDraftCreateInput(
