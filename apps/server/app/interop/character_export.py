@@ -32,7 +32,6 @@ from app.persistence.characters import (
 
 ExportChannel = Literal["web", "standalone"]
 _FILENAME_SAFE = re.compile(r"[^A-Za-z0-9_.-]+")
-_LEGACY_MANIFEST_VERSION = "1.0.0"
 
 
 @dataclass(frozen=True)
@@ -141,18 +140,13 @@ def build_character_export(
     build_keys: set[str] = set().union(*build_key_sets) if build_key_sets else set()
     all_keys = build_keys | state_keys
     packs = sorted({key.split(":", 1)[0] for key in all_keys})
-    requirements: list[PackRequirement] = []
-    for pack in packs:
-        manifest = repository.registry.get_source_manifest(pack)
-        requirements.append(
-            PackRequirement(
-                pack=pack,
-                # Pre-M03 manifests did not require an explicit version. Treat
-                # that frozen baseline as 1.0.0 while honoring explicit manifest
-                # versions as soon as packs begin declaring them.
-                version=manifest.version or _LEGACY_MANIFEST_VERSION,
-            )
+    requirements = [
+        PackRequirement(
+            pack=pack,
+            version=repository.registry.get_source_manifest(pack).version,
         )
+        for pack in packs
+    ]
 
     exported_at = datetime.now(timezone.utc)
     document = CharacterExport(
