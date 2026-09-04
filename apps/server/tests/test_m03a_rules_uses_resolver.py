@@ -16,6 +16,10 @@ def _write_rules_variant(source: Path, target: Path, first_standard_score: int) 
     return target
 
 
+def test_rules_module_no_longer_owns_rules_path_constant() -> None:
+    assert not hasattr(rules_module, "RULES_PATH")
+
+
 def test_default_rules_path_is_resolved_at_call_time_and_cache_is_path_keyed(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -40,12 +44,11 @@ def test_explicit_rules_path_still_overrides_default_resolver(
     source = resolve_rules_path()
     explicit = _write_rules_variant(source, tmp_path / "explicit.json", 18)
     rules_module.load_ability_generation_rules.cache_clear()
-    monkeypatch.setattr(
-        rules_module,
-        "resolve_rules_path",
-        lambda: (_ for _ in ()).throw(AssertionError("default resolver should not run")),
-    )
 
+    def fail_default_resolution() -> Path:
+        raise AssertionError("default resolver should not run")
+
+    monkeypatch.setattr(rules_module, "resolve_rules_path", fail_default_resolution)
     assert rules_module.load_ability_generation_rules(explicit).standard_array[0] == 18
 
 
