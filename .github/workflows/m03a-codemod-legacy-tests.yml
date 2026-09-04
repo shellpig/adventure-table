@@ -1,0 +1,143 @@
+name: M03-A One-Time Test Path Migration
+
+on:
+  push:
+    branches:
+      - m03-a-paths-enabled-pack-ssot
+    paths:
+      - .github/workflows/m03a-codemod-legacy-tests.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: m03-a-paths-enabled-pack-ssot
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Replace legacy production-path imports in tests
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import ast
+          from pathlib import Path
+
+          tests_root = Path("apps/server/tests")
+          registry_names = {
+              "CONTENT_PACKS_ROOT": ("resolve_content_root", "resolve_content_root()"),
+              "DEFAULT_CONTENT_ROOT": ("resolve_srd_content_root", "resolve_srd_content_root()"),
+              "DEFAULT_SRD_CONTENT_ROOT": ("resolve_srd_content_root", "resolve_srd_content_root()"),
+              "REPOSITORY_ROOT": ("resolve_content_root", "resolve_content_root().parent"),
+          }
+
+          changed = []
+          for path in sorted(tests_root.glob("*.py")):
+              source = path.read_text(encoding="utf-8")
+              tree = ast.parse(source, filename=str(path))
+              lines = source.splitlines(keepends=True)
+              edits: list[tuple[int, int, str]] = []
+              aliases: dict[str, tuple[str, str]] = {}
+              inventory_path = False
+
+              for node in ast.walk(tree):
+                  if not isinstance(node, ast.ImportFrom):
+                      continue
+                  if node.module == "app.content.registry":
+                      removed = [a for a in node.names if a.name in registry_names]
+                      if not removed:
+                          continue
+                      for alias in removed:
+                          aliases[alias.asname or alias.name] = registry_names[alias.name]
+                      kept = [a for a in node.names if a.name not in registry_names]
+                      replacement = ""
+                      if kept:
+                          rendered = ", ".join(
+                              f"{a.name} as {a.asname}" if a.asname else a.name
+                              for a in kept
+                          )
+                          replacement = f"from app.content.registry import {rendered}\n"
+                      edits.append((node.lineno - 1, node.end_lineno, replacement))
+                  elif node.module == "app.content.m01m_inventory":
+                      removed = [a for a in node.names if a.name == "INVENTORY_PATH"]
+                      if not removed:
+                          continue
+                      inventory_path = True
+                      kept = [a for a in node.names if a.name != "INVENTORY_PATH"]
+                      replacement = ""
+                      if kept:
+                          rendered = ", ".join(
+                              f"{a.name} as {a.asname}" if a.asname else a.name
+                              for a in kept
+                          )
+                          replacement = f"from app.content.m01m_inventory import {rendered}\n"
+                      edits.append((node.lineno - 1, node.end_lineno, replacement))
+
+              if not aliases and not inventory_path:
+                  continue
+
+              for start, end, replacement in sorted(edits, reverse=True):
+                  lines[start:end] = [replacement] if replacement else []
+
+              helper_names = {helper for helper, _expr in aliases.values()}
+              if inventory_path:
+                  helper_names.add("resolve_rules_root")
+              helper_import = (
+                  "from app.paths import " + ", ".join(sorted(helper_names)) + "\n"
+              )
+              definitions = []
+              for local_name, (_helper, expression) in aliases.items():
+                  definitions.append(f"{local_name} = {expression}\n")
+              if inventory_path:
+                  definitions.append(
+                      'INVENTORY_PATH = resolve_rules_root() / "m01m-race-inventory.json"\n'
+                  )
+
+              insertion = helper_import + "\n" + "".join(definitions) + "\n"
+              insert_at = 0
+              if lines and lines[0].startswith("from __future__ import"):
+                  insert_at = 1
+              lines[insert_at:insert_at] = ["\n", insertion]
+              path.write_text("".join(lines), encoding="utf-8")
+              changed.append(str(path))
+
+          print("MIGRATED_TEST_FILES", len(changed))
+          for path in changed:
+              print(path)
+          if not changed:
+              raise SystemExit("no legacy test imports found")
+          PY
+      - name: Verify legacy imports are gone
+        run: |
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+
+          failures = []
+          banned = {"CONTENT_PACKS_ROOT", "DEFAULT_CONTENT_ROOT", "DEFAULT_SRD_CONTENT_ROOT", "REPOSITORY_ROOT"}
+          for path in Path("apps/server/tests").glob("*.py"):
+              tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+              for node in ast.walk(tree):
+                  if isinstance(node, ast.ImportFrom) and node.module == "app.content.registry":
+                      bad = banned & {alias.name for alias in node.names}
+                      if bad:
+                          failures.append(f"{path}: {sorted(bad)}")
+                  if isinstance(node, ast.ImportFrom) and node.module == "app.content.m01m_inventory":
+                      if any(alias.name == "INVENTORY_PATH" for alias in node.names):
+                          failures.append(f"{path}: INVENTORY_PATH")
+          if failures:
+              raise SystemExit("\n".join(failures))
+          PY
+      - name: Commit migrated tests and remove one-time workflow
+        run: |
+          git rm .github/workflows/m03a-codemod-legacy-tests.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/server/tests
+          git commit -m "M03-A: migrate legacy test path imports"
+          git push origin HEAD:m03-a-paths-enabled-pack-ssot
