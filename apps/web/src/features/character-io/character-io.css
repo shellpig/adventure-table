@@ -1,0 +1,40 @@
+.character-export-action {
+  position: relative;
+  width: 100%;
+}
+
+.character-export-toast {
+  display: block;
+  margin-top: 6px;
+  color: var(--danger, #efb0b0);
+  font-size: .78rem;
+  line-height: 1.35;
+}
+
+.character-export-sheet-action {
+  position: fixed;
+  z-index: 900;
+  top: 64px;
+  right: 14px;
+  width: min(180px, calc(100vw - 28px));
+}
+
+.character-export-sheet-action .character-export-action {
+  width: auto;
+}
+
+.character-export-sheet-action .character-export-toast {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgb(11 13 18 / 94%);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 24%);
+}
+
+@media (max-width: 640px) {
+  .character-export-sheet-action {
+    top: 52px;
+    right: 8px;
+    width: min(160px, calc(100vw - 16px));
+  }
+}
