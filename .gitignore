@@ -1,6 +1,7 @@
 .claude/
 .env
 .venv/
+.standalone-venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -10,5 +11,7 @@ apps/web/node_modules/
 apps/web/dist/
 apps/web/playwright-report/
 apps/web/test-results/
-.DS_Store
 apps/server/*.egg-info/
+build/
+dist/
+.DS_Store

@@ -1,0 +1,22 @@
+Adventure Table distribution notice
+===================================
+
+Adventure Table project code and project-authored content
+---------------------------------------------------------
+This repository does not currently declare a project-wide open-source license.
+Unless a file states otherwise, project-authored material remains under the
+rights of its respective copyright holder(s).
+
+Dungeons & Dragons Systems Reference Document 5.1
+--------------------------------------------------
+Portions derived from the Dungeons & Dragons Systems Reference Document 5.1
+are provided under the Creative Commons Attribution 4.0 International License
+(CC BY 4.0).
+
+Dungeons & Dragons Systems Reference Document 5.1 © Wizards of the Coast LLC.
+Licensed under CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+
+Other sourcebook-derived private-project data may be present in this build.
+This standalone package is intended for the same private, friends-only use as
+the Adventure Table project and does not grant redistribution rights to
+third-party copyrighted material.
