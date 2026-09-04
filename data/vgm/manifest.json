@@ -2,7 +2,7 @@
   "id": "vgm",
   "name": "Volo's Guide to Monsters",
   "ruleset": "dnd5e-2014",
-  "version": "M01-L",
+  "version": "1.0.0",
   "provenance": {
     "type": "private-maintainer-normalization",
     "reference": "docs/暫用規則資訊/種族_VGM.md"
