@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from app.api import (
     character_builder_router,
     character_export_router,
+    character_import_router,
     characters_router,
     content_presentation_router,
     reference_router,
@@ -31,6 +32,7 @@ app.include_router(reference_router)
 app.include_router(content_presentation_router)
 app.include_router(characters_router)
 app.include_router(character_export_router)
+app.include_router(character_import_router)
 app.include_router(character_builder_router)
 
 
