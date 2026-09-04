@@ -2,7 +2,7 @@
   "id": "phb2014",
   "name": "Player's Handbook 2014 Additions",
   "ruleset": "dnd5e-2014",
-  "version": "M01-K",
+  "version": "1.0.0",
   "provenance": {
     "source_documents": [
       "docs/暫用規則資訊/背景_PHB.md",
