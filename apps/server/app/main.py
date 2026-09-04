@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from app.api import (
     character_builder_router,
+    character_export_router,
     characters_router,
     content_presentation_router,
     reference_router,
@@ -25,9 +26,11 @@ from app.persistence.characters import (
 content_registry = load_default_content_registry()
 app = FastAPI(title=settings.app_name)
 app.state.content_registry = content_registry
+app.state.distribution_channel = "web"
 app.include_router(reference_router)
 app.include_router(content_presentation_router)
 app.include_router(characters_router)
+app.include_router(character_export_router)
 app.include_router(character_builder_router)
 
 
