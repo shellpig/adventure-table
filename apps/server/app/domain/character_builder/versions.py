@@ -345,17 +345,29 @@ def seed_version_draft_payload(
     registry: ContentRegistry,
     *,
     mode: BuilderMode,
-    builder_provenance: object | None,
-    stored_draft_payload: BuilderDraftPayload | None,
+    builder_provenance: object | None = None,
+    stored_draft_payload: BuilderDraftPayload | None = None,
+    source_payload: BuilderDraftPayload | None = None,
     state: CharacterState | None = None,
 ) -> BuilderDraftPayload:
     if mode is BuilderMode.CREATE:
         raise ValueError("version draft seeding does not apply to create mode")
+    if stored_draft_payload is not None and source_payload is not None:
+        raise ValueError(
+            "pass only one of stored_draft_payload or legacy source_payload"
+        )
 
-    source_payload: BuilderDraftPayload | None = None
+    # ``source_payload`` was the pre-M03-B keyword. Keep it as a compatibility
+    # alias for the historical confirmed draft while the new provenance snapshot
+    # remains authoritative when present.
+    fallback_draft_payload = (
+        stored_draft_payload if stored_draft_payload is not None else source_payload
+    )
+
+    selected_payload: BuilderDraftPayload | None = None
     if builder_provenance is not None:
         try:
-            source_payload = BuilderDraftPayload.model_validate(builder_provenance)
+            selected_payload = BuilderDraftPayload.model_validate(builder_provenance)
         except ValidationError:
             logger.warning(
                 "invalid builder_provenance for character %s version %s; falling back",
@@ -363,13 +375,13 @@ def seed_version_draft_payload(
                 character.current_version_id,
                 exc_info=True,
             )
-    if source_payload is None:
-        source_payload = stored_draft_payload
+    if selected_payload is None:
+        selected_payload = fallback_draft_payload
 
-    if source_payload is None:
+    if selected_payload is None:
         payload = legacy_payload_from_build(character, registry)
     else:
-        payload = source_payload.model_copy(deep=True)
+        payload = selected_payload.model_copy(deep=True)
         payload.basic = BuilderBasicInput(
             name=character.name,
             ruleset=character.build.ruleset,
