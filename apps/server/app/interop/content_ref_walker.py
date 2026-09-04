@@ -54,7 +54,35 @@ STATE_STABLE_KEY_PATHS = frozenset(
     }
 )
 
-_IDENTITY_FIELD_SUFFIXES = ("_ref", "_refs", "_key", "_keys")
+# Numeric override keys carry a StableKey after one of these semantic prefixes.
+# The stored value itself stays an ordinary number.
+_OVERRIDE_REFERENCE_PREFIXES = ("skill_modifier:", "spell_save_dc:")
+_OVERRIDE_PATH_PREFIX = "numeric_overrides["
+
+# Persisted payload subtrees that hold free-form text authored by the player.
+# They are deliberately never interpreted as content references, matching the
+# contract already stated in ``app.content.identity``.
+_FREE_FORM_SUBTREES = frozenset({"roleplay_profile"})
+
+
+def _leaf_field_names(paths: frozenset[str]) -> frozenset[str]:
+    """Reduce the declared path inventory to the field names the audit checks.
+
+    Deriving this from the inventory keeps one source of truth: a path removed
+    from the inventory stops being audited, and a path added starts being
+    audited, without a second list to maintain.
+    """
+
+    names: set[str] = set()
+    for path in paths:
+        if path.startswith(_OVERRIDE_PATH_PREFIX):
+            continue
+        names.add(path.rsplit(".", 1)[-1].removesuffix("[]"))
+    return frozenset(names)
+
+
+BUILD_REF_FIELD_NAMES = _leaf_field_names(BUILD_STABLE_KEY_PATHS)
+STATE_REF_FIELD_NAMES = _leaf_field_names(STATE_STABLE_KEY_PATHS)
 
 
 @dataclass(frozen=True, order=True)
@@ -74,45 +102,58 @@ def _collect(keys: Iterable[str | None]) -> tuple[ContentRef, ...]:
     return tuple(sorted(refs.values()))
 
 
-def _stable_key_if_valid(value: object) -> str | None:
-    if not isinstance(value, str):
-        return None
-    try:
-        parse_stable_key(value)
-    except ValueError:
-        return None
-    return value
-
-
 def assert_no_unwalked_stable_keys(
     payload: object,
     walked_keys: set[str],
     *,
     root: str,
+    field_names: frozenset[str],
 ) -> None:
-    """Fail if a ref-like field contains a StableKey the explicit walker missed.
+    """Fail if a contractual reference field holds a StableKey the walk missed.
 
-    The explicit walker remains the portability contract. This recursive audit is
-    deliberately only a guard: adding a future ``*_ref``/``*_key`` model field
-    cannot silently disappear from ``content_requirements`` once populated.
+    The audit only inspects the field names the path inventory declares, so
+    free-form player text (a roleplay custom field that happens to be named
+    ``patron_ref``) can never be mistaken for a portability requirement. Its job
+    is to catch the opposite mistake: an inventory path that the explicit walk
+    stopped collecting. A brand-new model field is caught by the schema
+    inventory test instead, where the developer can classify it deliberately.
     """
 
     missing: list[str] = []
 
-    def visit(value: object, path: str, field_name: str | None = None) -> None:
+    def check(value: object, path: str) -> None:
+        if isinstance(value, (list, tuple)):
+            for index, child in enumerate(value):
+                check(child, f"{path}[{index}]")
+            return
+        if not isinstance(value, str):
+            return
+        try:
+            parse_stable_key(value)
+        except ValueError:
+            return
+        if value not in walked_keys:
+            missing.append(f"{path}={value}")
+
+    def visit(value: object, path: str) -> None:
         if isinstance(value, dict):
-            for key, child in value.items():
-                visit(child, f"{path}.{key}", key)
+            override_key = value.get("key")
+            if isinstance(override_key, str) and "value" in value:
+                for prefix in _OVERRIDE_REFERENCE_PREFIXES:
+                    if override_key.startswith(prefix):
+                        check(override_key.removeprefix(prefix), f"{path}.key")
+                        break
+            for name, child in value.items():
+                if name in _FREE_FORM_SUBTREES:
+                    continue
+                child_path = f"{path}.{name}"
+                if name in field_names:
+                    check(child, child_path)
+                visit(child, child_path)
             return
         if isinstance(value, (list, tuple)):
             for index, child in enumerate(value):
-                visit(child, f"{path}[{index}]", field_name)
-            return
-        if field_name is None or not field_name.endswith(_IDENTITY_FIELD_SUFFIXES):
-            return
-        stable_key = _stable_key_if_valid(value)
-        if stable_key is not None and stable_key not in walked_keys:
-            missing.append(f"{path}={stable_key}")
+                visit(child, f"{path}[{index}]")
 
     visit(payload, root)
     if missing:
@@ -177,6 +218,7 @@ def collect_build_refs(
         build.model_dump(mode="python"),
         {ref.stable_key for ref in refs},
         root="build",
+        field_names=BUILD_REF_FIELD_NAMES,
     )
     return refs
 
@@ -203,5 +245,6 @@ def collect_state_refs(
         state.model_dump(mode="python"),
         {ref.stable_key for ref in refs},
         root="state",
+        field_names=STATE_REF_FIELD_NAMES,
     )
     return refs
