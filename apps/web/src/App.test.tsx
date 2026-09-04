@@ -7,6 +7,8 @@ import App, {
   characterIdFromPath,
   characterVersionsFromPath,
 } from './App'
+import { CapabilityProvider } from './features/capabilities/CapabilityProvider'
+import type { CapabilitySnapshot } from './features/capabilities/types'
 import { LocaleProvider } from './i18n/LocaleProvider'
 import { LOCALE_STORAGE_KEY, type LocaleStorage } from './i18n/locale'
 
@@ -19,10 +21,13 @@ function englishStorage(): LocaleStorage {
   }
 }
 
-function renderApp() {
+function renderApp(snapshot?: CapabilitySnapshot) {
+  const app = snapshot ? (
+    <CapabilityProvider initialSnapshot={snapshot}><App /></CapabilityProvider>
+  ) : <App />
   return renderToStaticMarkup(
     <LocaleProvider storage={englishStorage()} documentTarget={null}>
-      <App />
+      {app}
     </LocaleProvider>,
   )
 }
@@ -36,6 +41,27 @@ describe('Adventure Table routes', () => {
     expect(html).toContain('Open Character Workshop')
     expect(html).toContain('/characters')
     expect(html).toContain(`/characters/${P0_FIXTURE_ID}`)
+  })
+
+  it('shows the concrete SQLite path on standalone Landing', () => {
+    const html = renderApp({
+      channel: 'standalone',
+      capabilities: {
+        character_builder: true,
+        character_import_export: true,
+        room: false,
+        campaign: false,
+        session: false,
+        seat: false,
+        combat: false,
+        timeline: false,
+        ai_actor: false,
+      },
+      database_path: 'C:/Adventure Table/adventure-table.sqlite3',
+    })
+
+    expect(html).toContain('Local character database')
+    expect(html).toContain('C:/Adventure Table/adventure-table.sqlite3')
   })
 
   it('parses character sheet, version history and builder draft routes independently', () => {

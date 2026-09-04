@@ -6,6 +6,8 @@ const SOURCE_FILES = [
   '../App.tsx',
   '../i18n/LocaleSwitcher.tsx',
   '../components/SearchableSelect.tsx',
+  '../features/capabilities/CapabilityDisabledPage.tsx',
+  '../features/capabilities/CapabilityLink.tsx',
   '../features/character-builder/BuilderDraftShell.tsx',
   '../features/character-builder/CharacterBuilderPage.tsx',
   '../features/character-builder/CharacterWorkshopPage.tsx',
