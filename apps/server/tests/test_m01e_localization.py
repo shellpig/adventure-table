@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from app.paths import resolve_content_root
+
+CONTENT_PACKS_ROOT = resolve_content_root()
+
+
 from app.content import load_default_content_registry
 from app.content.localization_files import load_content_localization_catalog
-from app.content.registry import CONTENT_PACKS_ROOT
 
 
 VARIANTS = (

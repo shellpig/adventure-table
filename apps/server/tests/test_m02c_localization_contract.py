@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+from app.paths import resolve_content_root, resolve_srd_content_root
+
+CONTENT_PACKS_ROOT = resolve_content_root()
+DEFAULT_CONTENT_ROOT = resolve_srd_content_root()
+
+
 from pathlib import Path
 
 import pytest
@@ -12,7 +18,7 @@ from app.content.localization import (
     TerminologyGlossary,
     roleplay_suggestion_id,
 )
-from app.content.registry import CONTENT_PACKS_ROOT, DEFAULT_CONTENT_ROOT, ContentRegistry
+from app.content.registry import ContentRegistry
 from app.domain.character_builder.schemas import BuilderDraftPayload
 
 

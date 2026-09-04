@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from app.paths import resolve_content_root
+
+CONTENT_PACKS_ROOT = resolve_content_root()
+
+
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -9,7 +14,6 @@ from app.content import load_default_content_registry
 from app.content.localization import SUPPORTED_CONTENT_LOCALES
 from app.content.localization_files import load_content_localization_catalog
 from app.content.m01j_inventory import m01j_inventory_summary
-from app.content.registry import CONTENT_PACKS_ROOT
 from app.domain.character_builder.equipment import compile_starting_equipment
 from app.domain.character_builder.m01i_compiler import compile_builder_draft
 from app.domain.character_builder.m01j_subclasses import prepare_m01j_subclasses

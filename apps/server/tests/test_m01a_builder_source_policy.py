@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from app.paths import resolve_srd_content_root
+
+DEFAULT_CONTENT_ROOT = resolve_srd_content_root()
+
+
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from app.content.registry import DEFAULT_CONTENT_ROOT, ContentRegistry
+from app.content.registry import ContentRegistry
 from app.domain.character.schemas import AbilityScores, CharacterBuild
 from app.domain.character_builder.choices import build_foundation_choices
 from app.domain.character_builder.compiler import _with_derived_content_sources

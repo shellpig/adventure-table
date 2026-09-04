@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from app.paths import resolve_content_root
+
+CONTENT_PACKS_ROOT = resolve_content_root()
+
+
 import json
 from pathlib import Path
 
@@ -13,7 +18,7 @@ from app.content.localization import (
     LocalizableFieldRule,
 )
 from app.content.localization_files import load_content_localization_catalog
-from app.content.registry import CONTENT_PACKS_ROOT, ContentValidationError
+from app.content.registry import ContentValidationError
 
 
 POLICY_PATH = CONTENT_PACKS_ROOT / "localization" / "localizable-fields.json"

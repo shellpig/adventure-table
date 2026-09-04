@@ -1,3 +1,8 @@
+
+from app.paths import resolve_content_root
+
+CONTENT_PACKS_ROOT = resolve_content_root()
+
 """M01-K K.7 / K.8 / K.9 — spell reconciliation, canonical metadata, provenance."""
 
 from __future__ import annotations
@@ -5,7 +10,6 @@ from __future__ import annotations
 import json
 
 import m01k_support as S
-from app.content.registry import CONTENT_PACKS_ROOT
 
 
 PHB_ROOT = CONTENT_PACKS_ROOT / "phb2014"

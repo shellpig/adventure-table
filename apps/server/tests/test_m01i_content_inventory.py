@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from app.paths import resolve_content_root
+
+CONTENT_PACKS_ROOT = resolve_content_root()
+
+
 from app.content import load_default_content_registry
 from app.content.localization_files import load_content_localization_catalog
 from app.content.m01i_inventory import (
@@ -11,7 +16,6 @@ from app.content.m01i_inventory import (
     EXPECTED_TCE_METAMAGIC,
     EXPECTED_TCE_PACT_BOONS,
 )
-from app.content.registry import CONTENT_PACKS_ROOT
 
 
 def test_m01i_machine_inventory_is_complete_and_stable() -> None:

@@ -1,3 +1,8 @@
+
+from app.paths import resolve_content_root
+
+CONTENT_PACKS_ROOT = resolve_content_root()
+
 """M01-K K.11 — localization policy coverage, then completeness (in that order)."""
 
 from __future__ import annotations
@@ -9,7 +14,6 @@ from pathlib import Path
 import m01k_support as S
 from app.content.localization import SUPPORTED_CONTENT_LOCALES, LocalizableFieldPolicy
 from app.content.localization_files import load_content_localization_catalog
-from app.content.registry import CONTENT_PACKS_ROOT
 
 
 POLICY_PATH = CONTENT_PACKS_ROOT / "localization" / "localizable-fields.json"

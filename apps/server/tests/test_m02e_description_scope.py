@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+from app.paths import resolve_content_root, resolve_srd_content_root
+
+CONTENT_PACKS_ROOT = resolve_content_root()
+DEFAULT_CONTENT_ROOT = resolve_srd_content_root()
+
+
 from collections import Counter
 import json
 import re
 from pathlib import Path
 
 from app.content.localization import LocalizableFieldPolicy
-from app.content.registry import CONTENT_PACKS_ROOT, DEFAULT_CONTENT_ROOT
 
 
 POLICY_PATH = CONTENT_PACKS_ROOT / "localization" / "localizable-fields.json"

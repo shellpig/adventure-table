@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from app.paths import resolve_content_root
+
+CONTENT_PACKS_ROOT = resolve_content_root()
+
+
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import get_args
@@ -16,7 +21,6 @@ from app.content.m01l_models import (
     RacialSpellAccessData,
     RuntimeExecution,
 )
-from app.content.registry import CONTENT_PACKS_ROOT
 from app.domain.character.schemas import (
     AbilityScores,
     CharacterBuild,

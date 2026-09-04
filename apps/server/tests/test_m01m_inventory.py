@@ -1,3 +1,9 @@
+
+from app.paths import resolve_content_root, resolve_rules_root
+
+CONTENT_PACKS_ROOT = resolve_content_root()
+INVENTORY_PATH = resolve_rules_root() / "m01m-race-inventory.json"
+
 """M01-M M.1 / M.3 / M.12 — pack identity, Tiefling accounting, localization scope."""
 
 from __future__ import annotations
@@ -9,8 +15,8 @@ import pytest
 
 from app.content import load_default_content_registry
 from app.content.localization_files import load_content_localization_catalog
-from app.content.m01m_inventory import INVENTORY_PATH, validate_m01m_inventory
-from app.content.registry import CONTENT_PACKS_ROOT, ContentValidationError
+from app.content.m01m_inventory import validate_m01m_inventory
+from app.content.registry import ContentValidationError
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
