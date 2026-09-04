@@ -74,13 +74,32 @@ def _alembic_config_path() -> Path:
         if not meipass:
             raise RuntimeError("Frozen launcher is missing sys._MEIPASS for Alembic resources")
         return Path(meipass).resolve() / "alembic" / "alembic.ini"
-    return Path(__file__).resolve().parents[1] / "alembic" / "alembic.ini"
+    return Path(__file__).resolve().parents[1] / "alembic.ini"
+
+
+def _alembic_script_location(config_path: Path) -> Path:
+    """Resolve migration scripts independently from the Alembic config file.
+
+    The source tree keeps ``alembic.ini`` at ``apps/server/`` and migration
+    scripts under ``apps/server/alembic/``.  The frozen bundle deliberately
+    co-locates the copied config with ``env.py`` and ``versions/`` under
+    ``_MEIPASS/alembic/``.  Keeping these two layouts explicit prevents the
+    launcher from depending on CWD or Alembic's relative-path semantics.
+    """
+
+    if getattr(sys, "frozen", False):
+        return config_path.parent
+    return config_path.parent / "alembic"
 
 
 def run_migrations() -> None:
     config_path = _alembic_config_path()
     if not config_path.is_file():
         raise RuntimeError(f"Alembic config not found: {config_path}")
+
+    script_location = _alembic_script_location(config_path)
+    if not script_location.is_dir():
+        raise RuntimeError(f"Alembic script directory not found: {script_location}")
 
     database_url = resolve_database_url()
     if not database_url.startswith("sqlite+pysqlite://"):
@@ -92,7 +111,7 @@ def run_migrations() -> None:
 
     config = Config(str(config_path))
     config.set_main_option("sqlalchemy.url", database_url)
-    config.set_main_option("script_location", str(config_path.parent))
+    config.set_main_option("script_location", str(script_location))
     try:
         command.upgrade(config, "head")
     except Exception as exc:
