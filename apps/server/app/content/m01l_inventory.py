@@ -3,14 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import lru_cache
 import json
+from pathlib import Path
 
 from app.content.identity import parse_stable_key, reference_to_stable_key
-from app.content.registry import CONTENT_PACKS_ROOT, ContentRegistry, ContentValidationError
-
-
-INVENTORY_PATH = (
-    CONTENT_PACKS_ROOT / "rules" / "dnd5e-2014" / "m01l-race-inventory.json"
-)
+from app.content.registry import ContentRegistry, ContentValidationError
+from app.paths import resolve_rules_root
 
 
 @dataclass(frozen=True)
@@ -30,10 +27,10 @@ class M01LInventory:
     required_dependencies: tuple[str, ...]
 
 
-@lru_cache(maxsize=1)
-def m01l_reference_inventory() -> M01LInventory:
+@lru_cache(maxsize=8)
+def _load_m01l_reference_inventory(path: Path) -> M01LInventory:
     try:
-        payload = json.loads(INVENTORY_PATH.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ContentValidationError(f"cannot read M01-L race inventory: {exc}") from exc
 
@@ -70,6 +67,14 @@ def m01l_reference_inventory() -> M01LInventory:
         legacy_vgm_race_keys=tuple(str(value) for value in legacy),
         required_dependencies=tuple(str(value) for value in dependencies),
     )
+
+
+def m01l_reference_inventory() -> M01LInventory:
+    path = (resolve_rules_root() / "m01l-race-inventory.json").resolve()
+    return _load_m01l_reference_inventory(path)
+
+
+m01l_reference_inventory.cache_clear = _load_m01l_reference_inventory.cache_clear  # type: ignore[attr-defined]
 
 
 def _subrace_parent_ref(entry: object) -> str | None:
