@@ -1,6 +1,4 @@
-# Agent Instructions
-
-# Adventure Table
+# Agent Instructions — Adventure Table
 
 一個**輕量、桌上跑團優先的 D&D 5e 2014 VTT**。真人 DM 像實體跑團一樣主要靠口頭敘事，只在需要時使用網站工具；外部 AI 透過 MCP / Site Tools 正式進桌當 DM 或 Player，與真人共用同一套 Game State、規則與權限。
 
@@ -8,8 +6,7 @@
 - **一句話**：網站只管需要共享、同步、計算、保存、權限與 AI 接入的東西，其餘還給 DM 的嘴巴
 - **首發規則集**：D&D 5e 2014；Built-in Content：SRD 5.1（CC BY 4.0），非 SRD 內容依私人專案需求逐步加入
 - **專案性質**：朋友間私人使用，非預計商品化平台
-- **目前階段**：**P0 與 P1 已完成並關門。M02 — Traditional Chinese / English Localization 已完成 M02-A～M02-H 並關門；網站現在是 `zh-TW` / `en` 兩個純語言模式。M01 已完成 M01-A～M01-M 並關門，但 M01 尚未 full closeout；依使用者決定，M01 保持 open 並不再是後續 Phase 的開工前置條件。M03 — Standalone Character Builder Distribution 已拆成 M03-A～M03-G 並正式開工，M03-A 已完成並關門，下一步為 M03-B。M 後是否新增其他 M01 規則 Subphase、以及 Full M01 Integration & Closeout 的 Subphase ID 仍由使用者後續拍板。P2 — Room / Campaign / Session / Seat 須等 M03 closeout 與 M01 final closeout 後才開工。**
-- **目前進度**：以 `PROJECT_BRIEF.md` 為單一事實來源
+- **目前階段與進度**：**一律以 `PROJECT_BRIEF.md` 為單一事實來源。** 本檔不複述 Phase / Subphase 狀態
 - **基礎技術棧**：目前方向見 `技術棧討論.md`。該檔只討論語言／Framework／DB 等基礎選型，不承擔各 Phase 的實作設計
 
 ## New Conversation Opening Check
@@ -75,9 +72,6 @@ grep -n "^## \\|^### " 規格企劃.md
 同一 Phase 已拆出 Subphase 後，三份 Phase 文件的 Subphase 標題必須一字不差。實作或驗收某個 Subphase 時，只讀該段及必要的共用前言，例如：
 
 ```bash
-grep -n "P0-C" docs/P0/實作規格.md docs/P0/開發設計方針.md docs/P0/測試指南.md
-grep -n "M01-B" docs/M01/實作規格.md docs/M01/開發設計方針.md docs/M01/測試指南.md
-grep -n "M01-D" docs/M01/實作規格.md docs/M01/開發設計方針.md docs/M01/測試指南.md
 grep -n "M03-B" docs/M03/實作規格.md docs/M03/開發設計方針.md docs/M03/測試指南.md
 ```
 
@@ -102,15 +96,12 @@ grep -n "M03-B" docs/M03/實作規格.md docs/M03/開發設計方針.md docs/M03
 
 ## Phase / Subphase 設計原則
 
-1. **只設計正在準備開工的 Phase。**
+1. **只設計正在準備開工的 Phase。** 尚未輪到的 P / M Phase 保持大 Phase 狀態，不提前設計其 schema / API / module；可以記錄已知的跨 Phase 相容要求（例如 P0 要求 Character 資料模型不得排斥 Multiclass），但不用現在決定 P2 Token table 或 P5 Tactical renderer。後續 Phase 開工時以當時真正存在的 codebase 為基礎再設計，比現在猜測可靠。
 2. **所有正常產品 Phase 在 coding 開始前，都必須先拆成 `P<n>-A`、`P<n>-B`… 的 Subphases。所有 Maintenance / Modification Phase 在 coding 開始前，都必須先拆成 `M<nn>-A`、`M<nn>-B`… 的 Subphases。** 每個 Subphase 必須能獨立實作、驗證並 commit；完成時應處於可執行、可測試、沒有已知編譯／型別／該 Subphase 測試錯誤的狀態。
 3. **M Phase 定位**：`M01`、`M02`… 用於補資料／補設定、既有能力加強、資料 migration、或不構成下一個正常產品里程碑的維護／修改工作。M Phase 可以插在 P Phase 之間，**也可以插在另一個 M Phase 的兩個 Subphase 之間**（目前 M02 就插在 M01-C 與 M01-D 之間）；但不改寫 `P0 → P1 → P2...` 的正常 Roadmap。被暫停的 M Phase 保留原本的 Subphase 編號與順序，恢復後照原順序接續。
-4. **Subphase 只拆當前 Phase，不提前拆後續 Phase。** 尚未輪到的 P Phase 或 M Phase 保持大 Phase / 未建立狀態；可以記錄必要的跨 Phase 承接要求，但不得因此提前設計未來 Phase 的 schema / API / module。
-   **唯一例外：使用者已明確決定要插入、且插入點已確定的 M Phase，可以在插入點到達前先完成拆分與三份文件**（M02 即為此例，插入點固定在 M01-C closeout 後）。此例外只適用已拍板的插入，不適用「將來可能會做」的 Phase。
+4. **Subphase 只拆當前 Phase。唯一例外：使用者已明確決定要插入、且插入點已確定的 M Phase，可以在插入點到達前先完成拆分與三份文件**（M02 即為此例，插入點固定在 M01-C closeout 後）。此例外只適用已拍板的插入，不適用「將來可能會做」的 Phase。
 5. 同一 Phase 的 `實作規格.md`、`開發設計方針.md`、`測試指南.md` 必須使用完全一致的 Subphase 名稱與順序，讓實作者可用 Subphase id 精準取得三份契約。
 6. `PROJECT_BRIEF.md` 在當前 Phase 已拆分後，必須一列一個 Subphase 顯示進度，不可再用「P0（含 A～F）」或「M01（含 A～K）」合併成一列。
-7. 可以記錄已知的跨 Phase 相容要求，例如 P0 可以要求 Character 資料模型不得排斥 Multiclass；但不用現在決定 P2 Token table 或 P5 Tactical renderer。
-8. 後續 Phase 開工時，以當時真正存在的 codebase 為基礎再設計，比現在猜測更可靠。
 
 ## 修改授權與驗證規則
 
@@ -122,8 +113,6 @@ grep -n "M03-B" docs/M03/實作規格.md docs/M03/開發設計方針.md docs/M03
 - 建立 commit
 
 當使用者要求「驗證」，或只是描述錯誤、貼截圖、詢問原因、要求解釋、要求列出問題、詢問某功能怎麼使用時：只能進行檢查、讀檔、執行測試、code review、啟動本機服務與回報結果。若發現問題，只列出問題、影響範圍與建議修法，等待使用者下一步指示。
-
-(English mirror: only modify files when the user explicitly requests fix / implement / commit. Verify / diagnose = report only.)
 
 ## 設計討論的方式
 
@@ -169,7 +158,7 @@ verifier 完成已知問題或 Phase 的文件關門後，在同一 turn `commit
 
 ### Python 執行環境規則
 
-⚠️ 本專案目前**沒有 `.venv`**。若開始 Python 實作，先在專案根目錄建立，之後一律使用 `.\.venv\Scripts\python.exe`，讓 agent 與使用者看到一致結果。
+一律使用專案根目錄的 `.\.venv\Scripts\python.exe`，讓 agent 與使用者看到一致結果。
 
 ### E2E 測試執行規則
 
@@ -192,52 +181,30 @@ cd apps/web && npm run test:e2e:docker
 | Codex DeepSeek home | `C:\_work\AI_Work\Tools\codex-deepseek-home` | DS reviewer 環境 |
 | Antigravity CLI | `C:\Users\User\AppData\Local\agy\bin\agy.exe` | agy reviewer |
 
-### DeepSeek Codex CLI Reviewer
+### 外部 Reviewer CLI
 
-使用者說「要 ds4 pro 做 XXX」「要 ds4 flash 做 XXX」時，透過本機 Moon Bridge DeepSeek 設定走 Codex CLI。
+三個 reviewer 共通：**預設 read-only**——不寫檔、不刪檔、不 stage、不 commit、不 push，不讀 `.env` 與 `C:\_work\AI_Work\Tools\`；非互動呼叫必須 `< NUL` 關閉 stdin，否則會停在等待輸入永久卡死；輸出重導到檔案保留；結果只當第二意見，回報前先自己審一遍，並以 `git status` / `git diff` 確認實際改動。
 
-Model mapping：`ds4 pro` → `deepseek-v4-pro`；`ds4 flash` → `deepseek-v4-flash`；只說 `ds4` 用 `deepseek-v4-pro`。
+| 觸發語 | 走哪個 |
+|---|---|
+| 「要 ds4 / ds4 pro / ds4 flash 做 XXX」 | DeepSeek via Codex CLI |
+| 「要 agy 做 XXX」「用 agy 審 / 驗證 XXX」 | Antigravity CLI |
+| 「要 codex 做 XXX」（不帶 `ds4`） | Codex CLI (OpenAI) |
 
-Default mode: read-only reviewer.
-- 用 `CODEX_HOME=C:\_work\AI_Work\Tools\codex-deepseek-home`。
-- 不寫檔、不刪檔、不 stage、不 commit、不 push。
-- 不讀 `.env`、`C:\_work\AI_Work\Tools\`。
-- 結果當第二意見，回報前先自己審一遍。
-- 非互動呼叫（`codex exec`）必須 `< NUL` 關閉 stdin，否則會停在 `Reading additional input from stdin...` 永久卡死。
+**DeepSeek via Codex CLI**：透過本機 Moon Bridge DeepSeek 設定，用 `CODEX_HOME=C:\_work\AI_Work\Tools\codex-deepseek-home`。Model：`ds4 pro` → `deepseek-v4-pro`；`ds4 flash` → `deepseek-v4-flash`；只說 `ds4` 用 `deepseek-v4-pro`。
 
-### Antigravity CLI (agy) Reviewer
-
-使用者說「要 agy 做 XXX」「用 agy 審 / 驗證 XXX」時走 `agy`。
-
-Binary 在 user PATH，但部分 shell 的 PATH 快照可能沒有，直接用完整路徑最穩。
+**Antigravity CLI**：binary 在 user PATH，但部分 shell 的 PATH 快照可能沒有，直接用完整路徑最穩。
 
 ```powershell
 cmd /c "C:\Users\User\AppData\Local\agy\bin\agy.exe -p `\"<任務>`\" --model `\"<模型>`\" --add-dir `\"C:\_work\AI_Work\Projects\adventure-table`\" --dangerously-skip-permissions --print-timeout 540s < NUL > <輸出檔> 2>&1"
 ```
 
-四個參數都是必要的：
+`--add-dir` 讓 reviewer 讀到專案，`--dangerously-skip-permissions` 單次生效不動持久設定，兩者都不可省。Model：`--model` 用 `agy models` 列出的完整顯示字串，未指定時預設 `"Gemini 3.5 Flash (High)"`。
 
-- `< NUL`：非 TTY 下避免等待 stdin。
-- `> 檔案`：保留輸出。
-- `--add-dir <專案路徑>`：讓 reviewer 讀到專案。
-- `--dangerously-skip-permissions`：單次生效，不動持久設定。
-
-Model selection：`--model` 使用 `agy models` 列出的完整顯示字串；未指定時預設 `"Gemini 3.5 Flash (High)"`。
-
-Default mode: read-only reviewer；跑完必以 `git status` / `git diff` 確認實際改動。
-
-### Codex CLI (OpenAI) Reviewer
-
-使用者說「要 codex 做 XXX」「用 codex 審 / 驗證 XXX」（不帶 `ds4`）時，用預設 `CODEX_HOME` 走 `codex exec`。
+**Codex CLI (OpenAI)**：用預設 `CODEX_HOME`。
 
 ```powershell
 cmd /c "codex exec `\"<任務>`\" --sandbox read-only -C `\"C:\_work\AI_Work\Projects\adventure-table`\" --ephemeral -o `\"<結果檔>`\" < NUL > `\"<過程log檔>`\" 2>&1"
 ```
 
-- `< NUL`：避免非 TTY 等待 stdin。
-- `--sandbox read-only`：引擎層強制唯讀；寫入任務改 `--sandbox workspace-write`。
-- `-o <結果檔>`：只寫最終回覆，與 stdout 完整過程 log 分離。
-
-Model selection：預設依本機 Codex 設定；要換模型用 `-m <model>`，專注程度用 `-c model_reasoning_effort="low/medium/high"` 覆蓋。
-
-Default mode: read-only reviewer；結果當第二意見。
+`--sandbox read-only` 是引擎層強制唯讀，寫入任務才改 `--sandbox workspace-write`；`-o <結果檔>` 只寫最終回覆，與 stdout 的完整過程 log 分離。Model：預設依本機 Codex 設定，要換用 `-m <model>`，專注程度用 `-c model_reasoning_effort="low/medium/high"` 覆蓋。
