@@ -32,6 +32,11 @@ def _validation_error_code(exc: ValidationError) -> str:
     if special:
         return sorted(special, key=lambda item: item[0])[0][1]
 
+    # A valid JSON scalar/list is not an export envelope at all. Pydantic uses
+    # an empty root location for that case, so keep it in the envelope bucket
+    # rather than misreporting it as a payload-field failure.
+    if any(not tuple(error.get("loc", ())) for error in errors):
+        return "invalid_envelope_shape"
     for error in errors:
         loc = tuple(str(part) for part in error.get("loc", ()))
         if loc and loc[0] == "envelope":
@@ -47,9 +52,12 @@ def _parse_document(raw_body: bytes) -> CharacterExport:
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise APIError(400, "invalid_envelope_shape", "request body is not valid JSON") from exc
     try:
-        return CharacterExport.model_validate(payload)
+        document = CharacterExport.model_validate(payload)
     except ValidationError as exc:
         raise APIError(400, _validation_error_code(exc), str(exc)) from exc
+    if not document.payload.character.name.strip():
+        raise APIError(400, "invalid_payload_shape", "payload.character.name cannot be blank")
+    return document
 
 
 @router.post("/import", response_model=CharacterImportResult)

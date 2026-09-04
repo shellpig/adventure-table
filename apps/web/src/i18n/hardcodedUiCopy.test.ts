@@ -15,6 +15,7 @@ const SOURCE_FILES = [
   '../features/character-builder/RoleplayProfileEditor.tsx',
   '../features/character-builder/SpellcastingStep.tsx',
   '../features/character-io/ExportCharacterButton.tsx',
+  '../features/character-io/ImportCharacterDialog.tsx',
   '../features/character-sheet/CharacterSheetPage.tsx',
 ] as const
 
