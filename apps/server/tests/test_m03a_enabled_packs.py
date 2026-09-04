@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import pytest
 
+import app.content as content_module
 import app.content.registry as registry_module
 from app.config import Settings
+from app.content.registry import ContentRegistry, ContentValidationError
 from app.paths import resolve_content_root
 
 
@@ -18,6 +20,7 @@ FULL_PACKS = (
     "xge",
     "mtf",
 )
+M03A_START_ENTRY_COUNT = 3186
 
 
 def _settings_with_pack_env(
@@ -65,6 +68,60 @@ def test_default_registry_respects_subset_without_removing_pack_directories(
     assert registry.pack_count == 2
     assert (root / "mtf").is_dir()
     assert registry.get_optional("mtf:race-variant:baalzebul-tiefling") is None
+
+
+def test_reference_into_disabled_pack_is_unresolved_not_corruption() -> None:
+    registry = ContentRegistry.from_root(resolve_content_root(), ("srd5.1",))
+    source = registry.get("srd5.1:class:fighter")
+    probe = source.model_copy(
+        update={
+            "data": {
+                "features": [
+                    {"key": "xge:feature:m03-a-disabled-probe", "name": "Disabled Probe"}
+                ]
+            }
+        }
+    )
+    entries = {probe.key: probe}
+
+    ContentRegistry._validate_cross_references(
+        (probe,),
+        entries,
+        enabled_pack_ids=frozenset({"srd5.1"}),
+    )
+
+    with pytest.raises(ContentValidationError, match="dangling reference"):
+        ContentRegistry._validate_cross_references(
+            (probe,),
+            entries,
+            enabled_pack_ids=frozenset({"srd5.1", "xge"}),
+        )
+
+
+def test_application_registry_can_start_with_srd_only_subset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = resolve_content_root()
+    monkeypatch.setattr(registry_module.settings, "enabled_content_packs", ("srd5.1",))
+    monkeypatch.setattr(registry_module, "resolve_content_root", lambda: root)
+    monkeypatch.setattr(content_module, "resolve_content_root", lambda: root)
+
+    registry = content_module.load_default_content_registry()
+    assert registry.enabled_pack_ids == ("srd5.1",)
+    assert registry.get("srd5.1:race:human").name == "Human"
+    assert registry.get_optional("xge:spell:wall-of-water") is None
+
+
+def test_default_full_registry_matches_m03a_start_baseline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = resolve_content_root()
+    monkeypatch.setattr(registry_module.settings, "enabled_content_packs", FULL_PACKS)
+    monkeypatch.setattr(registry_module, "resolve_content_root", lambda: root)
+
+    registry = registry_module.load_default_content_registry()
+    assert registry.enabled_pack_ids == FULL_PACKS
+    assert len(registry) == M03A_START_ENTRY_COUNT
 
 
 def test_registry_module_no_longer_owns_enabled_pack_constant() -> None:
