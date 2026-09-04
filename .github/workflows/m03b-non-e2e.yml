@@ -1,6 +1,9 @@
 name: M03-B Non-E2E Regression
 
 on:
+  push:
+    branches:
+      - m03-b-character-export-provenance
   workflow_dispatch:
 
 # M03-B validation intentionally excludes Playwright/E2E.
@@ -20,6 +23,8 @@ jobs:
           python-version: "3.13"
       - name: Install backend
         run: pip install -e ".[dev]"
+      - name: M03-B focused pytest
+        run: pytest tests/test_m03b_*.py -q
       - name: Backend pytest
         run: pytest
       - name: Localization authoring unit tests
@@ -29,6 +34,13 @@ jobs:
         env:
           ADVENTURE_TABLE_DATABASE_PATH: /tmp/adventure-table-m03b-fresh.db
         run: alembic upgrade head
+      - name: Generate endpoint export fixtures
+        run: python tests/generate_m03b_fixtures.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: m03b-export-fixtures
+          path: apps/server/tests/data/m03/*.json
+          if-no-files-found: error
 
   frontend:
     runs-on: ubuntu-latest
