@@ -32,12 +32,14 @@ from app.persistence.characters import (
 
 ExportChannel = Literal["web", "standalone"]
 _FILENAME_SAFE = re.compile(r"[^A-Za-z0-9_.-]+")
+_FILENAME_UNSAFE_UNICODE = re.compile(r"[\\/\x00-\x1f\x7f]+")
 
 
 @dataclass(frozen=True)
 class CharacterExportArtifact:
     document: CharacterExport
     filename: str
+    utf8_filename: str
     archived: bool
 
 
@@ -47,10 +49,20 @@ def _source_app(channel: ExportChannel) -> SourceApp:
     return SourceApp(channel=channel, commit=commit, build=build)
 
 
-def _safe_filename(name: str, version_no: int, exported_at: datetime) -> str:
-    stem = _FILENAME_SAFE.sub("_", name.strip()).strip("._-")[:60] or "character"
+def _export_filenames(
+    name: str,
+    version_no: int,
+    exported_at: datetime,
+) -> tuple[str, str]:
     timestamp = exported_at.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    return f"{stem}-v{version_no}-{timestamp}.json"
+
+    ascii_stem = _FILENAME_SAFE.sub("_", name.strip()).strip("._-")[:60] or "character"
+    ascii_filename = f"{ascii_stem}-v{version_no}-{timestamp}.json"
+
+    unicode_stem = _FILENAME_UNSAFE_UNICODE.sub("_", name.strip()).strip(". ")[:120]
+    unicode_stem = unicode_stem or "character"
+    utf8_filename = f"{unicode_stem}-v{version_no}-{timestamp}.json"
+    return ascii_filename, utf8_filename
 
 
 def _mapped_version_no(
@@ -65,6 +77,27 @@ def _mapped_version_no(
         return id_to_no[version_id]
     except KeyError as exc:
         raise RuntimeError(f"character version {relation} points outside the exported chain") from exc
+
+
+def _pack_requirement(repository: CharacterRepository, pack: str) -> PackRequirement:
+    manifest = repository.registry.get_source_manifest(pack)
+    # M03 portability versions must be authored in the physical manifest. Never
+    # let a Pydantic default silently manufacture a compatibility contract.
+    if "version" not in manifest.model_fields_set or not manifest.version:
+        raise RuntimeError(
+            f"content pack {pack!r} has no explicit portability version in manifest.json"
+        )
+    return PackRequirement(pack=pack, version=manifest.version)
+
+
+def stable_key_refs_summary(build_keys: set[str], state_keys: set[str]) -> int:
+    """Count unique refs per ownership domain.
+
+    A StableKey present in immutable Build history and live Current State counts
+    once in each domain. M03-C diagnostics rely on this exact contract.
+    """
+
+    return len(build_keys) + len(state_keys)
 
 
 def build_character_export(
@@ -140,23 +173,14 @@ def build_character_export(
     build_keys: set[str] = set().union(*build_key_sets) if build_key_sets else set()
     all_keys = build_keys | state_keys
     packs = sorted({key.split(":", 1)[0] for key in all_keys})
-    requirements = [
-        PackRequirement(
-            pack=pack,
-            version=repository.registry.get_source_manifest(pack).version,
-        )
-        for pack in packs
-    ]
+    requirements = [_pack_requirement(repository, pack) for pack in packs]
 
     exported_at = datetime.now(timezone.utc)
     document = CharacterExport(
         envelope=Envelope(
             ruleset=character_row["ruleset"],
             content_requirements=requirements,
-            # Keep build/state origins separate in the summary contract. A key
-            # present in both counts once for immutable Build and once for live
-            # State, matching the M03 interchange definition.
-            stable_key_refs_summary=len(build_keys) + len(state_keys),
+            stable_key_refs_summary=stable_key_refs_summary(build_keys, state_keys),
             source_character_id=character_row["id"],
             source_export_id=uuid4(),
             source_app=_source_app(channel),
@@ -174,8 +198,12 @@ def build_character_export(
             ),
         ),
     )
+    filename, utf8_filename = _export_filenames(
+        character_row["name"], current_version_no, exported_at
+    )
     return CharacterExportArtifact(
         document=document,
-        filename=_safe_filename(character_row["name"], current_version_no, exported_at),
+        filename=filename,
+        utf8_filename=utf8_filename,
         archived=character_row["archived_at"] is not None,
     )
