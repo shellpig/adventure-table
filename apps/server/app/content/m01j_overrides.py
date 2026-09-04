@@ -1,22 +1,25 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
-from app.content.registry import (
-    CONTENT_PACKS_ROOT,
-    ContentRegistry,
-    ContentValidationError,
-)
+from app.content.registry import ContentRegistry, ContentValidationError
+from app.paths import resolve_rules_root
 
 
-OVERRIDES_PATH = CONTENT_PACKS_ROOT / "rules" / "dnd5e-2014" / "m01j-entry-overrides.json"
 PATCHABLE_SOURCES = frozenset({"srd5.1"})
 
 
+
+def _overrides_path() -> Path:
+    return (resolve_rules_root() / "m01j-entry-overrides.json").resolve()
+
+
 def _load_patches() -> dict[str, dict[str, Any]]:
+    path = _overrides_path()
     try:
-        payload = json.loads(OVERRIDES_PATH.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ContentValidationError(f"cannot read M01-J entry overrides: {exc}") from exc
     patches = payload.get("patches")
