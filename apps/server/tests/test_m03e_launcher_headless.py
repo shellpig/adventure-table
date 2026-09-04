@@ -44,7 +44,10 @@ def test_run_migrations_upgrades_tmp_sqlite_to_head(
 
     config_path = launcher._alembic_config_path()
     config = Config(str(config_path))
-    config.set_main_option("script_location", str(config_path.parent))
+    config.set_main_option(
+        "script_location",
+        str(launcher._alembic_script_location(config_path)),
+    )
     expected_head = ScriptDirectory.from_config(config).get_current_head()
     with sqlite3.connect(database_path) as connection:
         actual_head = connection.execute(
