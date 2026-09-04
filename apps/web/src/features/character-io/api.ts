@@ -7,7 +7,8 @@ type APIErrorPayload = {
   }
 }
 
-function filenameFromDisposition(value: string | null): string {
+/** Parse RFC 6266 / RFC 5987 `Content-Disposition`, preferring the UTF-8 form. */
+export function filenameFromDisposition(value: string | null): string {
   if (!value) return 'character.json'
   const encoded = value.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
   if (encoded) {

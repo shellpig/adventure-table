@@ -16,6 +16,24 @@ jobs:
     defaults:
       run:
         working-directory: apps/server
+    # B.1 requires Postgres up/down to be green during M03-B; SQLite parity is
+    # only guaranteed from M03-D.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: adventure
+          POSTGRES_PASSWORD: adventure
+          POSTGRES_DB: adventure_m03b
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U adventure"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      M03B_POSTGRES_URL: postgresql+psycopg://adventure:adventure@127.0.0.1:5432/adventure_m03b
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -34,13 +52,8 @@ jobs:
         env:
           ADVENTURE_TABLE_DATABASE_PATH: /tmp/adventure-table-m03b-fresh.db
         run: alembic upgrade head
-      - name: Generate endpoint export fixtures
-        run: python tests/generate_m03b_fixtures.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: m03b-export-fixtures
-          path: apps/server/tests/data/m03/*.json
-          if-no-files-found: error
+      - name: Committed export fixtures still match the endpoint
+        run: python tests/generate_m03b_fixtures.py --check
 
   frontend:
     runs-on: ubuntu-latest
