@@ -1,16 +1,9 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-import { useLocale } from '../../i18n/LocaleProvider'
-import { characterIoEn } from '../../i18n/copy/character-io.en'
-import { characterIoZhTw } from '../../i18n/copy/character-io.zh-TW'
+import { useCharacterIoCopy } from '../../i18n/useCharacterIoCopy'
 import { downloadCharacterExport } from './api'
 import './character-io.css'
-
-const COPY = {
-  en: characterIoEn,
-  'zh-TW': characterIoZhTw,
-} as const
 
 type ExportCharacterButtonProps = {
   characterId: string
@@ -23,8 +16,7 @@ export function ExportCharacterButton({
   className = 'button secondary full',
   placement = 'inline',
 }: ExportCharacterButtonProps) {
-  const { locale } = useLocale()
-  const copy = COPY[locale]
+  const copy = useCharacterIoCopy()
   const [pending, setPending] = useState(false)
   const [failed, setFailed] = useState(false)
   const [sheetHeader, setSheetHeader] = useState<HTMLElement | null>(null)
