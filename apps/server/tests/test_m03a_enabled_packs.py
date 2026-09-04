@@ -98,16 +98,24 @@ def test_reference_into_disabled_pack_is_unresolved_not_corruption() -> None:
         )
 
 
-def test_application_registry_can_start_with_srd_only_subset(
+@pytest.mark.parametrize(
+    "packs",
+    [
+        ("srd5.1",),
+        ("srd5.1", "scag"),
+    ],
+)
+def test_application_registry_can_start_with_intentional_pack_subset(
     monkeypatch: pytest.MonkeyPatch,
+    packs: tuple[str, ...],
 ) -> None:
     root = resolve_content_root()
-    monkeypatch.setattr(registry_module.settings, "enabled_content_packs", ("srd5.1",))
+    monkeypatch.setattr(registry_module.settings, "enabled_content_packs", packs)
     monkeypatch.setattr(registry_module, "resolve_content_root", lambda: root)
     monkeypatch.setattr(content_module, "resolve_content_root", lambda: root)
 
     registry = content_module.load_default_content_registry()
-    assert registry.enabled_pack_ids == ("srd5.1",)
+    assert registry.enabled_pack_ids == packs
     assert registry.get("srd5.1:race:human").name == "Human"
     assert registry.get_optional("xge:spell:wall-of-water") is None
 
