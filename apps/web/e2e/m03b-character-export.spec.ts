@@ -1,10 +1,11 @@
 import { readFile } from 'node:fs/promises'
 
 import { expect, test } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
 const FIXTURE_ID = '00000000-0000-4000-8000-0000000000e0'
 
-async function downloadedJson(page: Parameters<typeof test>[0]['page'], buttonName: string | RegExp) {
+async function downloadedJson(page: Page, buttonName: string | RegExp) {
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: buttonName }).click()
   const download = await downloadPromise
