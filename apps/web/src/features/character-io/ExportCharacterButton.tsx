@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import { useLocale } from '../../i18n/LocaleProvider'
 import { characterIoEn } from '../../i18n/copy/character-io.en'
@@ -26,6 +27,15 @@ export function ExportCharacterButton({
   const copy = COPY[locale]
   const [pending, setPending] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [sheetHeader, setSheetHeader] = useState<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (placement !== 'sheet' || typeof document === 'undefined') {
+      setSheetHeader(null)
+      return
+    }
+    setSheetHeader(document.querySelector<HTMLElement>('.character-hero'))
+  }, [placement])
 
   const body = (
     <div className="character-export-action">
@@ -57,7 +67,10 @@ export function ExportCharacterButton({
     </div>
   )
 
-  return placement === 'sheet' ? (
-    <div className="character-export-sheet-action">{body}</div>
-  ) : body
+  if (placement !== 'sheet') return body
+  if (sheetHeader === null) return null
+  return createPortal(
+    <div className="character-export-sheet-action">{body}</div>,
+    sheetHeader,
+  )
 }
