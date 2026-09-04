@@ -10,15 +10,18 @@ requires-python = ">=3.12"
 dependencies = [
   "alembic>=1.18,<2",
   "fastapi>=0.128,<1",
-  "psycopg[binary]>=3.2,<4",
   "pydantic-settings>=2.14,<3",
   "sqlalchemy>=2.0,<3",
   "uvicorn[standard]>=0.35,<1",
 ]
 
 [project.optional-dependencies]
+web = [
+  "psycopg[binary]>=3.2,<4",
+]
 dev = [
   "httpx>=0.28,<1",
+  "psycopg[binary]>=3.2,<4",
   "pytest>=9,<10",
 ]
 

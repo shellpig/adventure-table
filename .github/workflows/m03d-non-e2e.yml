@@ -1,13 +1,11 @@
-name: M03-C Non-E2E Regression
+name: M03-D Non-E2E Regression
 
 on:
   push:
     branches:
-      - m03-c-character-import
-    # Ordinary development commits do not run this workflow. A reviewed
-    # checkpoint intentionally touches this file once to run the non-E2E gate.
+      - m03-d-sqlite-migration-gate
     paths:
-      - '.github/workflows/m03c-non-e2e.yml'
+      - '.github/m03d-non-e2e.trigger'
   workflow_dispatch:
 
 permissions:
@@ -20,13 +18,13 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_DB: adventure_table_m03c
+          POSTGRES_DB: adventure_table_m03d
           POSTGRES_USER: adventure
           POSTGRES_PASSWORD: adventure
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U adventure -d adventure_table_m03c"
+          --health-cmd "pg_isready -U adventure -d adventure_table_m03d"
           --health-interval 3s
           --health-timeout 3s
           --health-retries 20
@@ -38,15 +36,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Install backend
+      - name: Install backend with web and dev extras
         run: pip install -e ".[web,dev]"
-      - name: M03-C PostgreSQL migration round trip
+      - name: M03-D focused pytest
+        run: pytest tests/test_m03d_*.py -q
+      - name: PostgreSQL migration round trip regression
         env:
-          DATABASE_URL: postgresql+psycopg://adventure:adventure@localhost:5432/adventure_table_m03c
-          M03C_POSTGRES_URL: postgresql+psycopg://adventure:adventure@localhost:5432/adventure_table_m03c
+          DATABASE_URL: postgresql+psycopg://adventure:adventure@localhost:5432/adventure_table_m03d
+          M03C_POSTGRES_URL: postgresql+psycopg://adventure:adventure@localhost:5432/adventure_table_m03d
         run: pytest tests/test_m03c_migration.py -q
-      - name: M03-C focused pytest
-        run: pytest tests/test_m03c_*.py --ignore=tests/test_m03c_migration.py -q
       - name: Backend pytest
         run: pytest
       - name: Localization authoring unit tests

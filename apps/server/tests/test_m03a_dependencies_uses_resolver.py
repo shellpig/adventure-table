@@ -12,27 +12,26 @@ def _request() -> SimpleNamespace:
     return SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace()))
 
 
-def test_database_dependency_uses_central_url_resolver(
+def test_database_dependency_uses_shared_engine_factory(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     request = _request()
-    calls: list[tuple[str, bool]] = []
+    calls: list[None] = []
     engine = object()
-    monkeypatch.setattr(
-        dependencies,
-        "resolve_database_url",
-        lambda: "sqlite+pysqlite:////tmp/m03-a.sqlite3",
-    )
 
-    def fake_create_engine(url: str, *, pool_pre_ping: bool) -> object:
-        calls.append((url, pool_pre_ping))
+    def fake_create_database_engine() -> object:
+        calls.append(None)
         return engine
 
-    monkeypatch.setattr(dependencies, "create_engine", fake_create_engine)
+    monkeypatch.setattr(
+        dependencies,
+        "create_database_engine",
+        fake_create_database_engine,
+    )
 
     assert dependencies.get_database_engine(request) is engine
     assert dependencies.get_database_engine(request) is engine
-    assert calls == [("sqlite+pysqlite:////tmp/m03-a.sqlite3", True)]
+    assert calls == [None]
 
 
 def test_localization_dependency_uses_resolved_content_root(

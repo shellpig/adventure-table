@@ -140,9 +140,15 @@ grep -n "M03-B" docs/M03/實作規格.md docs/M03/開發設計方針.md docs/M03
 1. **API 簽名預先核對**：呼叫任何專案內模組或 API 前，先 grep / 讀檔核對最新定義與參數列，不憑記憶編寫。
 2. **編譯／型別錯誤同 turn 修完**：跑測試或檢查時取同步結果；有錯就在同一個 turn 內修到通過，不讓錯誤流向使用者。
 3. **驗收對應**：每條 Phase / Subphase 驗收契約都要有可定位的測試證據。
-4. **權限與可見性必測**：當 Phase 涉及 Role / Seat / Controller 時，除了 happy path，必測不該看到／不該操作的 actor。
-5. **拒絕原子性與 fixture 隔離**：契約要求零副作用的拒絕操作，前後狀態不可被污染；測試 fixture 必須完整還原。
-6. **Supported locale 同步交付**：新增、修改，或因新畫面而首次 expose user-visible system / rules content 時，必須在同一個 Subphase 同步補齊所有正式 supported locale（目前為 `zh-TW` / `en`），包含 UI copy、rules presentation field、validation / error 訊息與 searchable 欄位。缺任一語言視同該 Subphase regression，不得以「先做英文、之後再補 M Phase」結案。
+4. **測試分層 gate**：測試範圍依改動範圍決定，不是每次都跑全部。
+   - **每次改動**：該 Subphase 的 focused test，加上被改到那一側的單元測試（backend `pytest tests/test_<subphase>_*.py`；frontend `npm test -- --run` 與 `npm run build`）。
+   - **Subphase 關門**：全套 backend pytest、全套前端單元測試與 build、`docker compose config`，以及**該 Subphase diff 觸及的畫面／流程對應的 E2E spec**。
+   - **Phase 關門與合併回 `main`**：全套 E2E。
+   - 判準：diff 只動 backend / DB / 打包相依而不碰 `apps/web` 者為 backend-only，Subphase 關門不需要跑 E2E；一旦動到 `apps/web`，或動到 server 送給前端的 DTO、machine code、locale 字串，就要跑對應的 E2E spec。
+   - 各 Phase 若有專屬對照（哪個 Subphase 配哪組 E2E spec），寫在該 Phase 的 `測試指南.md`；沒有特殊情況者直接沿用本條，不需重述。
+5. **權限與可見性必測**：當 Phase 涉及 Role / Seat / Controller 時，除了 happy path，必測不該看到／不該操作的 actor。
+6. **拒絕原子性與 fixture 隔離**：契約要求零副作用的拒絕操作，前後狀態不可被污染；測試 fixture 必須完整還原。
+7. **Supported locale 同步交付**：新增、修改，或因新畫面而首次 expose user-visible system / rules content 時，必須在同一個 Subphase 同步補齊所有正式 supported locale（目前為 `zh-TW` / `en`），包含 UI copy、rules presentation field、validation / error 訊息與 searchable 欄位。缺任一語言視同該 Subphase regression，不得以「先做英文、之後再補 M Phase」結案。
 
 ## 文件關門的固定提交流程
 

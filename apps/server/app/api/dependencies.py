@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from fastapi import Request
-from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 
 from app.content.localization import ContentLocalizationCatalog
 from app.content.localization_files import load_content_localization_catalog
 from app.content.registry import ContentRegistry
+from app.db import create_database_engine
 from app.domain.character_builder.service import CharacterBuilderService
 from app.interop.character_import import CharacterImportService
-from app.paths import resolve_content_root, resolve_database_url
+from app.paths import resolve_content_root
 from app.persistence.builder_drafts import BuilderDraftRepository
 from app.persistence.characters import CharacterRepository
 
@@ -32,7 +32,7 @@ def get_content_localization(request: Request) -> ContentLocalizationCatalog:
 def get_database_engine(request: Request) -> Engine:
     engine = getattr(request.app.state, "character_engine", None)
     if engine is None:
-        engine = create_engine(resolve_database_url(), pool_pre_ping=True)
+        engine = create_database_engine()
         request.app.state.character_engine = engine
     return engine
 
