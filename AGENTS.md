@@ -8,7 +8,7 @@
 - **一句話**：網站只管需要共享、同步、計算、保存、權限與 AI 接入的東西，其餘還給 DM 的嘴巴
 - **首發規則集**：D&D 5e 2014；Built-in Content：SRD 5.1（CC BY 4.0），非 SRD 內容依私人專案需求逐步加入
 - **專案性質**：朋友間私人使用，非預計商品化平台
-- **目前階段**：**P0 與 P1 已完成並關門。M02 — Traditional Chinese / English Localization 已完成 M02-A～M02-H 並關門；網站現在是 `zh-TW` / `en` 兩個純語言模式。M01 已完成 M01-A～M01-M 並關門；M01 尚未 full closeout。M 後是否新增其他 M01 規則 Subphase、以及 Full M01 Integration & Closeout 的 Subphase ID 仍由使用者後續拍板。只有 final M01 closeout 完成後才回到 P2 — Room / Campaign / Session / Seat 的規劃。**
+- **目前階段**：**P0 與 P1 已完成並關門。M02 — Traditional Chinese / English Localization 已完成 M02-A～M02-H 並關門；網站現在是 `zh-TW` / `en` 兩個純語言模式。M01 已完成 M01-A～M01-M 並關門，但 M01 尚未 full closeout；依使用者決定，M01 保持 open 並不再是後續 Phase 的開工前置條件。M03 — Standalone Character Builder Distribution 已拆成 M03-A～M03-G 並正式開工，M03-A 已完成並關門，下一步為 M03-B。M 後是否新增其他 M01 規則 Subphase、以及 Full M01 Integration & Closeout 的 Subphase ID 仍由使用者後續拍板。P2 — Room / Campaign / Session / Seat 須等 M03 closeout 與 M01 final closeout 後才開工。**
 - **目前進度**：以 `PROJECT_BRIEF.md` 為單一事實來源
 - **基礎技術棧**：目前方向見 `技術棧討論.md`。該檔只討論語言／Framework／DB 等基礎選型，不承擔各 Phase 的實作設計
 
@@ -78,6 +78,7 @@ grep -n "^## \\|^### " 規格企劃.md
 grep -n "P0-C" docs/P0/實作規格.md docs/P0/開發設計方針.md docs/P0/測試指南.md
 grep -n "M01-B" docs/M01/實作規格.md docs/M01/開發設計方針.md docs/M01/測試指南.md
 grep -n "M01-D" docs/M01/實作規格.md docs/M01/開發設計方針.md docs/M01/測試指南.md
+grep -n "M03-B" docs/M03/實作規格.md docs/M03/開發設計方針.md docs/M03/測試指南.md
 ```
 
 ## 文件分工與單一事實來源
