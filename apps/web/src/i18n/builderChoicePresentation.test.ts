@@ -11,6 +11,7 @@ const nameFor = (reference: string | null | undefined, fallback = '') => {
   if (reference === 'srd5.1:class:fighter') return '戰士'
   if (reference === 'srd5.1:equipment:javelin') return '標槍'
   if (reference === 'srd5.1:equipment:shield') return '盾牌'
+  if (reference === 'srd5.1:proficiency:thieves-tools') return '盜賊工具'
   return fallback || reference || ''
 }
 
@@ -113,5 +114,46 @@ describe('builderChoicePresentation', () => {
         nameFor,
       ),
     ).toBe('2 × 標槍 + 盾牌 + 裝備選擇')
+  })
+})
+
+describe('feature branch options the SRD left undescribed', () => {
+  const expertise = choice({
+    choice_id: 'level:1:srd5.1:feature:rogue-expertise-1:feature-specific-expertise_options',
+    label: 'Expertise — choice',
+    source_ref: 'srd5.1:feature:rogue-expertise-1',
+    option_source: 'content:feature:feature-specific-expertise_options',
+  })
+
+  const twoSkills = {
+    option_id: 'branch:0',
+    label: 'Choose 2',
+    kind: 'nested_choice' as const,
+    count: 2,
+    presentation_has_choice: true,
+  }
+
+  const bundle = {
+    option_id: 'bundle:1',
+    label: "Choose 1 + Thieves' Tools",
+    kind: 'branch' as const,
+    count: 1,
+    presentation_has_choice: true,
+    presentation_items: [{ reference_id: 'srd5.1:proficiency:thieves-tools', count: 1 }],
+    granted_reference_ids: ['srd5.1:proficiency:thieves-tools'],
+  }
+
+  it('builds the zh-TW branch labels from structure, not from the English sentence', () => {
+    expect(builderChoiceOptionLabel(expertise, twoSkills, 'zh-TW', nameFor)).toBe('選 2 項')
+    expect(builderChoiceOptionLabel(expertise, bundle, 'zh-TW', nameFor)).toBe(
+      '選 1 項 + 盜賊工具',
+    )
+  })
+
+  it('keeps the server labels in English mode', () => {
+    expect(builderChoiceOptionLabel(expertise, twoSkills, 'en', nameFor)).toBe('Choose 2')
+    expect(builderChoiceOptionLabel(expertise, bundle, 'en', nameFor)).toBe(
+      "Choose 1 + Thieves' Tools",
+    )
   })
 })

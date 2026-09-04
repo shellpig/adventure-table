@@ -45,10 +45,14 @@ def test_expertise_may_reselect_an_existing_proficiency(
     )
     result = compile_builder_draft(draft, registry)
 
+    # Rogue Expertise branches, so the branch not taken contributes a child
+    # choice that is deliberately unanswerable. Only live choices carry a
+    # selection to compare against the starting proficiencies.
     expertise = [
         choice
         for choice in result.choices
         if (choice.option_source or "").startswith(EXPERTISE_OPTION_SOURCE)
+        and choice.disabled_reason_code is None
     ]
     assert expertise, f"{class_index} should offer an Expertise choice"
 

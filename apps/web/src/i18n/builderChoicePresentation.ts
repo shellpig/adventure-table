@@ -201,6 +201,24 @@ export function builderChoiceOptionLabel(
     if (name && bonus) return `${name} +${bonus}`
   }
 
+  // A feature branch the SRD left undescribed: the server sends how many the
+  // branch lets you pick plus the references it bundles in, so zh-TW is built
+  // from that structure rather than from the English sentence.
+  if (
+    (choice.option_source ?? '').startsWith('content:feature:') &&
+    (option.presentation_has_choice || (option.presentation_items ?? []).length > 0)
+  ) {
+    const parts: string[] = []
+    if (option.presentation_has_choice) {
+      parts.push(option.count ? `選 ${option.count} 項` : '選擇')
+    }
+    for (const item of option.presentation_items ?? []) {
+      const name = nameFor(item.reference_id, option.label)
+      parts.push(item.count > 1 ? `${item.count} × ${name}` : name)
+    }
+    if (parts.length) return parts.join(' + ')
+  }
+
   if (choice.option_source === 'content:lineage-size') {
     return LINEAGE_SIZE_ZH[option.option_id] ?? option.label
   }

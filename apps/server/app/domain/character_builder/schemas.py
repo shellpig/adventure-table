@@ -179,6 +179,11 @@ class BuilderChoiceOption(StrictModel):
     fixed_hp_gain: int | None = Field(default=None, ge=1, le=12)
     presentation_items: tuple[BuilderChoicePresentationItem, ...] = ()
     presentation_has_choice: bool = False
+    # References this option grants outright when picked, on top of anything its
+    # nested choices resolve to. A bundled option such as the Rogue's "one skill
+    # and thieves' tools" carries the tools here: they are part of the branch,
+    # not a second question.
+    granted_reference_ids: tuple[str, ...] = ()
 
 
 class BuilderChoice(StrictModel):

@@ -18,6 +18,7 @@ from app.domain.character_builder.progression import progression_summary
 from app.domain.character_builder.schemas import (
     BuilderChoice,
     BuilderChoiceOption,
+    BuilderChoicePresentationItem,
     BuilderDraft,
     BuilderIssue,
     BuilderIssueSeverity,
@@ -313,6 +314,23 @@ def _resource_list_options(
     )
 
 
+def _choose_label(count: int | None) -> str:
+    """Fallback for a nested rule the SRD left without a desc.
+
+    The wording the book uses lives in the parent feature's description, so the
+    only honest thing left to say here is how many the branch lets you pick.
+    """
+
+    return f"Choose {count}" if count is not None else "Choose"
+
+
+def _rule_choose_count(rule: object) -> int | None:
+    if not isinstance(rule, dict):
+        return None
+    choose = rule.get("choose")
+    return choose if isinstance(choose, int) and choose >= 1 else None
+
+
 def _canonical_rule_choices(
     draft: BuilderDraft,
     registry: ContentRegistry,
@@ -382,13 +400,98 @@ def _canonical_rule_choices(
                     branch_key=option_id,
                 )
             )
+        elif option_type == "multiple" and isinstance(raw.get("items"), list):
+            # A bundle: everything in it comes together. Its fixed references
+            # ride on the option, its nested rules become child choices gated on
+            # the bundle being picked, exactly like a plain nested choice.
+            option_id = deterministic_choice_id(choice_id, "bundle", str(index))
+            labels: list[str] = []
+            granted: list[str] = []
+            bundle_items: list[BuilderChoicePresentationItem] = []
+            bundle_children: list[BuilderChoice] = []
+            bundle_choose: int | None = None
+            bundle_has_choice = False
+            for item_index, item in enumerate(raw["items"]):
+                if not isinstance(item, dict):
+                    continue
+                item_type = item.get("option_type")
+                if item_type in {"reference", "counted_reference"}:
+                    reference = (
+                        item.get("of") if item_type == "counted_reference" else item.get("item")
+                    )
+                    if not isinstance(reference, dict):
+                        continue
+                    bundled = _reference_option(reference, registry)
+                    if bundled is None:
+                        continue
+                    labels.append(bundled.label)
+                    granted.append(bundled.reference_id)
+                    bundle_items.append(
+                        BuilderChoicePresentationItem(
+                            reference_id=bundled.reference_id,
+                            count=bundled.count or 1,
+                        )
+                    )
+                elif item_type == "choice" and isinstance(item.get("choice"), dict):
+                    item_rule = item["choice"]
+                    item_id = deterministic_choice_id(
+                        choice_id, "bundle", str(index), "nested", str(item_index)
+                    )
+                    item_desc = item_rule.get("desc")
+                    item_count = _rule_choose_count(item_rule)
+                    item_label = (
+                        item_desc
+                        if isinstance(item_desc, str) and item_desc.strip()
+                        else _choose_label(item_count)
+                    )
+                    labels.append(item_label)
+                    nested_count = _rule_choose_count(item_rule)
+                    bundle_choose = nested_count if nested_count is not None else bundle_choose
+                    bundle_has_choice = True
+                    bundle_children.extend(
+                        _canonical_rule_choices(
+                            draft,
+                            registry,
+                            source_ref=source_ref,
+                            choice_id=item_id,
+                            label=item_label,
+                            rule=item_rule,
+                            option_source=f"{option_source}:nested",
+                        )
+                    )
+            if not labels:
+                continue
+            options.append(
+                BuilderChoiceOption(
+                    option_id=option_id,
+                    label=" + ".join(labels),
+                    kind=BuilderOptionKind.BRANCH,
+                    branch_key=option_id,
+                    count=bundle_choose,
+                    presentation_items=tuple(bundle_items),
+                    presentation_has_choice=bundle_has_choice,
+                    granted_reference_ids=tuple(dict.fromkeys(granted)),
+                )
+            )
+            active = option_id in selected_parent
+            nested_choices.extend(
+                child.model_copy(
+                    update={
+                        "disabled_reason": child.disabled_reason if active else "Choose the corresponding parent option first.",
+                        "disabled_reason_code": child.disabled_reason_code if active else "nested_choice_parent_required",
+                        "disabled_reason_params": child.disabled_reason_params if active else {},
+                    }
+                )
+                for child in bundle_children
+            )
         elif option_type == "choice" and isinstance(raw.get("choice"), dict):
             nested_id = deterministic_choice_id(choice_id, "nested", str(index))
             option_id = deterministic_choice_id(choice_id, "branch", str(index))
             nested_rule = raw["choice"]
+            nested_count = _rule_choose_count(nested_rule)
             nested_label = nested_rule.get("desc")
             if not isinstance(nested_label, str) or not nested_label.strip():
-                nested_label = f"{label} — nested choice"
+                nested_label = _choose_label(nested_count)
             options.append(
                 BuilderChoiceOption(
                     option_id=option_id,
@@ -396,6 +499,8 @@ def _canonical_rule_choices(
                     kind=BuilderOptionKind.NESTED_CHOICE,
                     nested_choice_id=nested_id,
                     branch_key=option_id,
+                    count=nested_count,
+                    presentation_has_choice=True,
                 )
             )
             children = _canonical_rule_choices(
@@ -773,23 +878,24 @@ def compile_structural_selections(
             continue
         for option_id in selection.selected_option_ids:
             option = option_by_id.get(option_id)
-            if (
-                option is None
-                or option.disabled_reason is not None
-                or option.reference_id is None
-            ):
+            if option is None or option.disabled_reason is not None:
                 continue
-            reference_id = option.reference_id
-            if stable_key_is_kind(reference_id, "feature"):
-                features.append(reference_id)
-            elif stable_key_is_kind(reference_id, "proficiency"):
-                skill_ref = _skill_from_proficiency(reference_id, registry)
-                if skill_ref is not None:
-                    skills.append(skill_ref)
+            # A bundled option grants its fixed references as well as whatever
+            # its own reference_id points at, so both go through the same
+            # feature / proficiency / skill routing.
+            for reference_id in (option.reference_id, *option.granted_reference_ids):
+                if reference_id is None:
                     continue
-                proficiencies.append(reference_id)
-            elif stable_key_is_kind(reference_id, "skill"):
-                skills.append(reference_id)
+                if stable_key_is_kind(reference_id, "feature"):
+                    features.append(reference_id)
+                elif stable_key_is_kind(reference_id, "proficiency"):
+                    skill_ref = _skill_from_proficiency(reference_id, registry)
+                    if skill_ref is not None:
+                        skills.append(skill_ref)
+                        continue
+                    proficiencies.append(reference_id)
+                elif stable_key_is_kind(reference_id, "skill"):
+                    skills.append(reference_id)
 
     return StructuralCompilation(
         ability_bonuses=dict(ability_bonuses),

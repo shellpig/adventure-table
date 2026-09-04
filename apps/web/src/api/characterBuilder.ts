@@ -142,6 +142,7 @@ export type BuilderChoiceOption = {
   fixed_hp_gain?: number | null
   presentation_items?: BuilderChoicePresentationItem[]
   presentation_has_choice?: boolean
+  granted_reference_ids?: string[]
 }
 
 export type BuilderChoice = {
