@@ -2,25 +2,30 @@ from __future__ import annotations
 
 from functools import lru_cache
 import json
+from pathlib import Path
 
 from app.content.identity import parse_stable_key, reference_to_stable_key
-from app.content.registry import CONTENT_PACKS_ROOT, ContentRegistry, ContentValidationError
+from app.content.registry import ContentRegistry, ContentValidationError
+from app.paths import resolve_rules_root
 
 
-INVENTORY_PATH = (
-    CONTENT_PACKS_ROOT / "rules" / "dnd5e-2014" / "m01m-race-inventory.json"
-)
-
-
-@lru_cache(maxsize=1)
-def _inventory() -> dict[str, object]:
+@lru_cache(maxsize=8)
+def _load_inventory(path: Path) -> dict[str, object]:
     try:
-        payload = json.loads(INVENTORY_PATH.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ContentValidationError(f"cannot read M01-M race inventory: {exc}") from exc
     if payload.get("phase") != "M01-M" or payload.get("ruleset") != "dnd5e-2014":
         raise ContentValidationError("M01-M race inventory has wrong phase/ruleset")
     return payload
+
+
+def _inventory() -> dict[str, object]:
+    path = (resolve_rules_root() / "m01m-race-inventory.json").resolve()
+    return _load_inventory(path)
+
+
+_inventory.cache_clear = _load_inventory.cache_clear  # type: ignore[attr-defined]
 
 
 def _parent_race_ref(entry: object) -> str | None:
