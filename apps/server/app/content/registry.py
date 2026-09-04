@@ -119,6 +119,7 @@ class ContentRegistry:
         packs: dict[str, ContentPack] | None = None,
         by_source_kind: dict[tuple[str, str], tuple[ContentEntry, ...]] | None = None,
         enabled_pack_ids: tuple[str, ...] | None = None,
+        installed_pack_ids: tuple[str, ...] | None = None,
     ) -> None:
         """Create a registry while preserving the P0/P1 direct constructor.
 
@@ -129,7 +130,12 @@ class ContentRegistry:
         if manifest is not None:
             if entries is None or by_kind is None:
                 raise TypeError("legacy ContentRegistry construction requires manifest, entries, and by_kind")
-            if packs is not None or by_source_kind is not None or enabled_pack_ids is not None:
+            if (
+                packs is not None
+                or by_source_kind is not None
+                or enabled_pack_ids is not None
+                or installed_pack_ids is not None
+            ):
                 raise TypeError("cannot mix legacy and multi-pack ContentRegistry constructor arguments")
             legacy_pack = ContentPack(
                 manifest=manifest,
@@ -146,6 +152,7 @@ class ContentRegistry:
                 for key, kind_entries in by_source_kind_mutable.items()
             }
             enabled_pack_ids = (manifest.id,)
+            installed_pack_ids = (manifest.id,)
 
         if packs is None or entries is None or by_kind is None or by_source_kind is None or enabled_pack_ids is None:
             raise TypeError("ContentRegistry requires complete registry indexes")
@@ -155,6 +162,10 @@ class ContentRegistry:
         self._by_kind = by_kind
         self._by_source_kind = by_source_kind
         self.enabled_pack_ids = enabled_pack_ids
+        # Packs present in the content root. Everything installed but not
+        # enabled is a deliberate subset choice; anything not installed at all
+        # is a bad StableKey source and still fails validation.
+        self.installed_pack_ids = installed_pack_ids or enabled_pack_ids
 
     @property
     def manifest(self) -> ContentManifest:
@@ -175,7 +186,10 @@ class ContentRegistry:
     def from_directory(cls, root: Path) -> "ContentRegistry":
         """Compatibility loader for one explicit pack directory."""
         pack = cls._load_pack(root.resolve())
-        return cls._from_loaded_packs((pack,))
+        return cls._from_loaded_packs(
+            (pack,),
+            installed_pack_ids=frozenset({pack.manifest.id}),
+        )
 
     @classmethod
     def from_root(
@@ -200,10 +214,30 @@ class ContentRegistry:
             if not pack_root.is_dir():
                 raise ContentValidationError(f"enabled content pack directory is missing: {pack_root}")
             packs.append(cls._load_pack(pack_root))
-        return cls._from_loaded_packs(tuple(packs))
+        return cls._from_loaded_packs(
+            tuple(packs),
+            installed_pack_ids=cls._installed_pack_ids(root),
+        )
+
+    @staticmethod
+    def _installed_pack_ids(content_root: Path) -> frozenset[str]:
+        """Pack ids physically present in the content root, enabled or not."""
+
+        if not content_root.is_dir():
+            return frozenset()
+        return frozenset(
+            child.name
+            for child in content_root.iterdir()
+            if child.is_dir() and (child / "manifest.json").is_file()
+        )
 
     @classmethod
-    def _from_loaded_packs(cls, loaded_packs: tuple[ContentPack, ...]) -> "ContentRegistry":
+    def _from_loaded_packs(
+        cls,
+        loaded_packs: tuple[ContentPack, ...],
+        *,
+        installed_pack_ids: frozenset[str],
+    ) -> "ContentRegistry":
         packs: dict[str, ContentPack] = {}
         entries: dict[str, ContentEntry] = {}
         by_kind_mutable: dict[str, list[ContentEntry]] = defaultdict(list)
@@ -227,6 +261,7 @@ class ContentRegistry:
             entries.values(),
             entries,
             enabled_pack_ids=enabled_pack_ids,
+            installed_pack_ids=installed_pack_ids | enabled_pack_ids,
         )
         by_kind = {
             kind: tuple(sorted(kind_entries, key=lambda entry: entry.key))
@@ -242,6 +277,7 @@ class ContentRegistry:
             by_kind=by_kind,
             by_source_kind=by_source_kind,
             enabled_pack_ids=tuple(pack.manifest.id for pack in loaded_packs),
+            installed_pack_ids=tuple(sorted(installed_pack_ids | set(packs))),
         )
 
     @classmethod
@@ -359,6 +395,7 @@ class ContentRegistry:
         entries: dict[str, ContentEntry],
         *,
         enabled_pack_ids: frozenset[str],
+        installed_pack_ids: frozenset[str],
     ) -> None:
         for source_entry in source_entries:
             try:
@@ -369,11 +406,15 @@ class ContentRegistry:
                 target = entries.get(target_key)
                 if target is None:
                     target_source = parse_stable_key(target_key).source
-                    if target_source not in enabled_pack_ids:
-                        # Disabled packs are intentionally unavailable in M03 subset
-                        # registries. Their refs must remain unresolved so import
-                        # preview can classify them later; they are not content
-                        # corruption inside the active registry.
+                    if (
+                        target_source in installed_pack_ids
+                        and target_source not in enabled_pack_ids
+                    ):
+                        # An installed pack that this registry deliberately left
+                        # disabled is an unavailable dependency, not corruption:
+                        # the ref stays unresolved so M03-C import preview can
+                        # classify it. A source that is not installed at all is
+                        # still a bad StableKey and keeps failing here.
                         continue
                     raise ContentValidationError(
                         f"{source_entry.key}: dangling reference {display} -> {target_key}"

@@ -9,19 +9,10 @@ import pytest
 import app.content.registry as registry_module
 from app.content.registry import ContentRegistry, ContentValidationError
 from app.paths import resolve_content_root, resolve_srd_content_root
+from tests.m03_baseline import M03A_START_PACK_ENTRY_COUNTS
 
 
-FULL_PACK_ENTRY_COUNTS = {
-    "srd5.1": 1944,
-    "phb2014": 384,
-    "scag": 78,
-    "gos": 4,
-    "vgm": 64,
-    "vrgr": 5,
-    "tce": 401,
-    "xge": 266,
-    "mtf": 40,
-}
+FULL_PACK_ENTRY_COUNTS = M03A_START_PACK_ENTRY_COUNTS
 
 
 def test_registry_module_no_longer_owns_legacy_root_constants() -> None:

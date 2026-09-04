@@ -4,23 +4,19 @@ from collections.abc import Callable
 
 import pytest
 
+from tests.m03_baseline import M03A_START_PACKS
 
-M03_FULL_CONTENT_PACKS = (
-    "srd5.1",
-    "phb2014",
-    "scag",
-    "gos",
-    "vgm",
-    "vrgr",
-    "tce",
-    "xge",
-    "mtf",
-)
+
+M03_FULL_CONTENT_PACKS = M03A_START_PACKS
 
 
 @pytest.fixture
 def enabled_content_packs_full() -> tuple[str, ...]:
-    """M03-A start baseline pack set shared by later M03 subphases."""
+    """M03-A start baseline pack set shared by later M03 subphases.
+
+    Sourced from ``docs/M03/baseline/m03a-start.json`` so the pack list is not
+    restated in test code.
+    """
 
     return M03_FULL_CONTENT_PACKS
 

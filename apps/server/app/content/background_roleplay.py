@@ -38,13 +38,15 @@ def apply_background_roleplay_inheritance(
     presentation fields. Skills, tools, languages, equipment, features, variants,
     and every other mechanical field remain owned by the selected background.
 
-    In an M03 subset registry, an inheritance source from a disabled pack stays
-    unresolved rather than making startup fail. A missing source from an enabled
-    pack is still content corruption and remains an error.
+    In an M03 subset registry, an inheritance source from an installed but
+    disabled pack stays unresolved rather than making startup fail. A missing
+    source from an enabled pack, or one naming a pack that is not installed at
+    all, is still content corruption and remains an error.
     """
 
     backgrounds = {entry.key: entry for entry in registry.list_kind("background")}
     enabled_pack_ids = frozenset(registry.enabled_pack_ids)
+    installed_pack_ids = frozenset(registry.installed_pack_ids)
     resolved: set[str] = set()
     resolving: set[str] = set()
 
@@ -86,7 +88,11 @@ def apply_background_roleplay_inheritance(
                 f"{background_key}: invalid roleplay inheritance source {inherited_ref}: {exc}"
             ) from exc
         if inherited_ref not in backgrounds:
-            if parsed.source not in enabled_pack_ids:
+            if (
+                parsed.kind == "background"
+                and parsed.source in installed_pack_ids
+                and parsed.source not in enabled_pack_ids
+            ):
                 resolved.add(background_key)
                 return
             raise ContentValidationError(

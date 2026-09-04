@@ -189,9 +189,53 @@ def test_enabled_pack_list_is_explicit_and_does_not_scan_root(fixture_root: Path
     assert registry.get_optional("pack-b:feature:test-b") is None
 
 
-def test_cross_pack_dependency_must_be_enabled(fixture_root: Path) -> None:
+def test_installed_but_disabled_cross_pack_dependency_stays_unresolved(
+    fixture_root: Path,
+) -> None:
+    """M03-A narrowed M01-A's original "cross-pack dependency must be enabled".
+
+    M03-A requires subset registries (`Settings.enabled_content_packs`) to load
+    without deleting pack directories, so a reference into a pack that ships but
+    is deliberately disabled can no longer fail the load. It stays unresolved
+    instead, which is what M03-C import preview classifies. The corruption half
+    of the original contract is kept by the next test.
+    """
+
+    registry = ContentRegistry.from_root(fixture_root, ("srd5.1", "pack-b"))
+
+    assert registry.enabled_pack_ids == ("srd5.1", "pack-b")
+    assert "pack-a" in registry.installed_pack_ids
+    assert registry.get_optional("pack-a:feature:test-a") is None
+    assert registry.get("pack-b:background:test-background").name == "Test Background B"
+
+
+def test_reference_to_uninstalled_pack_is_still_dangling(fixture_root: Path) -> None:
+    """A source that ships nowhere is a bad StableKey, not a disabled dependency."""
+
+    write_pack(
+        fixture_root,
+        "pack-c",
+        "Fixture Pack C",
+        {
+            "backgrounds": (
+                "background",
+                [
+                    background(
+                        "pack-c",
+                        "typo-background",
+                        "Typo Background C",
+                        feature_ref={
+                            "key": "pack-typo:feature:test-a",
+                            "name": "Feature A",
+                        },
+                    )
+                ],
+            )
+        },
+    )
+
     with pytest.raises(ContentValidationError, match="dangling reference"):
-        ContentRegistry.from_root(fixture_root, ("srd5.1", "pack-b"))
+        ContentRegistry.from_root(fixture_root, ("srd5.1", "pack-c"))
 
 
 def test_same_kind_and_index_can_coexist_across_sources(fixture_root: Path) -> None:

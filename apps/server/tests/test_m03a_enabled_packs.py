@@ -7,21 +7,11 @@ import app.content.registry as registry_module
 from app.config import Settings
 from app.content.registry import ContentRegistry, ContentValidationError
 from app.paths import resolve_content_root
+from tests.m03_baseline import M03A_START_ENTRY_COUNT, M03A_START_PACKS
 
 
-FULL_PACKS = (
-    "srd5.1",
-    "phb2014",
-    "scag",
-    "gos",
-    "vgm",
-    "vrgr",
-    "tce",
-    "xge",
-    "mtf",
-)
+FULL_PACKS = M03A_START_PACKS
 PACKS_WITHOUT_XGE = tuple(pack for pack in FULL_PACKS if pack != "xge")
-M03A_START_ENTRY_COUNT = 3186
 
 
 def _settings_with_pack_env(
@@ -71,31 +61,63 @@ def test_default_registry_respects_subset_without_removing_pack_directories(
     assert registry.get_optional("mtf:race-variant:baalzebul-tiefling") is None
 
 
-def test_reference_into_disabled_pack_is_unresolved_not_corruption() -> None:
+def _probe_entry_referencing(key: str):
     registry = ContentRegistry.from_root(resolve_content_root(), ("srd5.1",))
     source = registry.get("srd5.1:class:fighter")
-    probe = source.model_copy(
-        update={
-            "data": {
-                "features": [
-                    {"key": "xge:feature:m03-a-disabled-probe", "name": "Disabled Probe"}
-                ]
-            }
-        }
+    return source.model_copy(
+        update={"data": {"features": [{"key": key, "name": "Disabled Probe"}]}}
     )
+
+
+def test_reference_into_disabled_pack_is_unresolved_not_corruption() -> None:
+    probe = _probe_entry_referencing("xge:feature:m03-a-disabled-probe")
     entries = {probe.key: probe}
 
+    # xge ships but is disabled here: an unavailable dependency, not corruption.
     ContentRegistry._validate_cross_references(
         (probe,),
         entries,
         enabled_pack_ids=frozenset({"srd5.1"}),
+        installed_pack_ids=frozenset({"srd5.1", "xge"}),
     )
 
+    # xge enabled and the entry still missing: genuine dangling content.
     with pytest.raises(ContentValidationError, match="dangling reference"):
         ContentRegistry._validate_cross_references(
             (probe,),
             entries,
             enabled_pack_ids=frozenset({"srd5.1", "xge"}),
+            installed_pack_ids=frozenset({"srd5.1", "xge"}),
+        )
+
+
+def test_reference_into_uninstalled_pack_is_still_corruption() -> None:
+    """The disabled-pack allowance must not swallow a mistyped StableKey source."""
+
+    probe = _probe_entry_referencing("xgee:feature:m03-a-typo-probe")
+    entries = {probe.key: probe}
+
+    with pytest.raises(ContentValidationError, match="dangling reference"):
+        ContentRegistry._validate_cross_references(
+            (probe,),
+            entries,
+            enabled_pack_ids=frozenset({"srd5.1"}),
+            installed_pack_ids=frozenset({"srd5.1", "xge"}),
+        )
+
+
+def test_full_runtime_registry_still_rejects_unknown_pack_sources() -> None:
+    """The default nine-pack web configuration keeps the typo gate."""
+
+    registry = ContentRegistry.from_root(resolve_content_root(), ("srd5.1",))
+    probe = _probe_entry_referencing("not-a-pack:feature:m03-a-typo-probe")
+
+    with pytest.raises(ContentValidationError, match="dangling reference"):
+        ContentRegistry._validate_cross_references(
+            (probe,),
+            {probe.key: probe},
+            enabled_pack_ids=frozenset(M03A_START_PACKS),
+            installed_pack_ids=frozenset(registry.installed_pack_ids),
         )
 
 

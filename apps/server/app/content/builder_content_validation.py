@@ -65,8 +65,15 @@ def _reference_payload(reference: APIReference) -> dict[str, Any]:
     return reference.model_dump(exclude_none=True, by_alias=True)
 
 
-def _target_pack_is_disabled(registry: ContentRegistry, key: str) -> bool:
-    return parse_stable_key(key).source not in registry.enabled_pack_ids
+def _target_pack_is_installed_but_disabled(registry: ContentRegistry, key: str) -> bool:
+    """True only for refs into a pack that ships but is deliberately disabled.
+
+    A source that is not installed at all stays a hard validation failure: that
+    is a bad StableKey, not an M03 subset choice.
+    """
+
+    source = parse_stable_key(key).source
+    return source in registry.installed_pack_ids and source not in registry.enabled_pack_ids
 
 
 def _validate_spell_relation(
@@ -87,7 +94,7 @@ def _validate_spell_relation(
                 f"{owner.key}.{field} has dangling spell reference: {key}"
             )
         if registry.get_optional(key) is None:
-            if _target_pack_is_disabled(registry, key):
+            if _target_pack_is_installed_but_disabled(registry, key):
                 continue
             raise ContentValidationError(
                 f"{owner.key}.{field} has dangling spell reference: {key}"
@@ -112,7 +119,7 @@ def _require_key(
         raise ContentValidationError(f"{owner}.{field} has dangling {kind} reference: {value}")
     target = registry.get_optional(value)
     if target is None:
-        if _target_pack_is_disabled(registry, value):
+        if _target_pack_is_installed_but_disabled(registry, value):
             return value
         raise ContentValidationError(f"{owner}.{field} has dangling {kind} reference: {value}")
     return value
@@ -302,7 +309,7 @@ def _validate_m01i_feature_relations(registry: ContentRegistry) -> None:
                             owner=entry.key,
                             field=(
                                 "optional_class_feature.retraining.strategies"
-                                f"[{strategy_index}].pool",
+                                f"[{strategy_index}].pool"
                             ),
                             value=pool,
                         )

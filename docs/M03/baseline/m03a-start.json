@@ -1,0 +1,27 @@
+{
+  "baseline_id": "m03a-start",
+  "description": "Frozen content baseline captured when M03-A opened. M01 stays open by explicit project decision, so this is the M03-A start snapshot rather than an M01 full-closeout snapshot. Later M03 subphases compare against these numbers.",
+  "enabled_content_packs": [
+    "srd5.1",
+    "phb2014",
+    "scag",
+    "gos",
+    "vgm",
+    "vrgr",
+    "tce",
+    "xge",
+    "mtf"
+  ],
+  "pack_entry_counts": {
+    "srd5.1": 1944,
+    "phb2014": 384,
+    "scag": 78,
+    "gos": 4,
+    "vgm": 64,
+    "vrgr": 5,
+    "tce": 401,
+    "xge": 266,
+    "mtf": 40
+  },
+  "total_entries": 3186
+}
