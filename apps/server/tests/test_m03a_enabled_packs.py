@@ -64,7 +64,7 @@ def test_default_registry_respects_subset_without_removing_pack_directories(
     assert registry.enabled_pack_ids == ("srd5.1", "phb2014")
     assert registry.pack_count == 2
     assert (root / "mtf").is_dir()
-    assert registry.get_optional("mtf:race_variant:baalzebul-tiefling") is None
+    assert registry.get_optional("mtf:race-variant:baalzebul-tiefling") is None
 
 
 def test_registry_module_no_longer_owns_enabled_pack_constant() -> None:
