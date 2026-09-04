@@ -24,6 +24,7 @@ from app.paths import (
 PORT_RANGE_START = 8000
 PORT_RANGE_END = 8100
 SERVER_START_TIMEOUT_SECONDS = 10.0
+BUILD_ID_FILENAME = "build-id.txt"
 
 
 def _resolve_default_database_path() -> Path:
@@ -114,13 +115,27 @@ def _find_free_port(
     raise RuntimeError(f"No free localhost port in range {start}-{end}")
 
 
+def _build_id() -> str:
+    configured = os.environ.get("ADVENTURE_TABLE_BUILD_ID")
+    if configured:
+        return configured.strip() or "dev"
+    if getattr(sys, "frozen", False):
+        build_id_path = Path(sys.executable).resolve().parent / BUILD_ID_FILENAME
+        try:
+            value = build_id_path.read_text(encoding="utf-8").strip()
+        except OSError:
+            return "dev"
+        return value or "dev"
+    return "dev"
+
+
 def _print_banner(
     port: int,
     database_path: Path,
     content_root: Path,
     spa_root: Path | None,
 ) -> None:
-    print("Adventure Table Standalone", flush=True)
+    print(f"Adventure Table Standalone ({_build_id()})", flush=True)
     print(f"  Database: {database_path.resolve()}", flush=True)
     print(f"  Content root: {content_root.resolve()}", flush=True)
     print(
