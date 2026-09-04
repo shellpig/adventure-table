@@ -49,7 +49,11 @@ M01 的直接目標：
 - M01-M 之後仍可能新增其他規則 Subphase；**Full M01 Integration & Closeout 暫不固定編號**，只有最終 M01 scope確定後才編號。
 - **M01 不必先 full closeout 才能開始 M03。** 目前 M01 保持 open，後續仍可補資料或調整 UI；M03 先行實作。P2 仍須等 M03 closeout 與 M01 final closeout 後才正式開工。
 
-**M03 — Standalone Character Builder Distribution 已正式開工，M03-A 已完成並關門（2026-09-04）。** M03-A 把 content / rules / localization / SPA / database path 全部收斂到 `app/paths.py` 的一組 resolver（解析順序 `env` → `frozen-exe-dir` → `frozen-meipass` → `repo-relative`，失敗訊息帶出實際路徑與解析階段），把 enabled pack 清單收斂到 `Settings.enabled_content_packs`（`NoDecode` + `field_validator`，移除 `content/__init__.py` 的 monkey-patch），並以靜態 sweep test 擋住舊路徑常數回流。Subset registry 的 unresolved 語意同時收窄為「已安裝但未啟用」才放行——source 未安裝、目標 pack 已啟用卻缺 entry、kind 不符一律仍然 fail-fast，因此正式 9 pack 設定下 M01-J / L / M 的 registry load 身分守門完全不受影響；這條收窄了 M01-A 原本的「跨 pack 依賴必須被 enable」契約，理由記於 `docs/M03/實作規格.md` A.5.1。M03-A start baseline 凍結於 `docs/M03/baseline/m03a-start.json`（9 pack / 3,186 entry）。詳見 `docs/M03/M03-A_CLOSEOUT.md`。下一步為 M03-B — Character JSON Schema, Export & Builder Provenance。M03 是 P2 前的插入式 Maintenance Phase，目標是把現有 Character Workshop / Builder / Sheet / Level Up / Version History 打包成可離線執行的 standalone 版本，並加入 Character JSON Import / Export。M01 後續內容補充或 UI 調整不需要先 full closeout；只要不破壞 Character Build / State / Version / StableKey / Builder provenance 等 M03 核心契約，即可在 M03 後續繼續追加。
+**M03 — Standalone Character Builder Distribution 進行中；M03-A、M03-B 已完成並關門（2026-09-04）。** M03-A 把 content / rules / localization / SPA / database path 全部收斂到 `app/paths.py` 的一組 resolver（解析順序 `env` → `frozen-exe-dir` → `frozen-meipass` → `repo-relative`，失敗訊息帶出實際路徑與解析階段），把 enabled pack 清單收斂到 `Settings.enabled_content_packs`（`NoDecode` + `field_validator`，移除 `content/__init__.py` 的 monkey-patch），並以靜態 sweep test 擋住舊路徑常數回流。Subset registry 的 unresolved 語意同時收窄為「已安裝但未啟用」才放行——source 未安裝、目標 pack 已啟用卻缺 entry、kind 不符一律仍然 fail-fast，因此正式 9 pack 設定下 M01-J / L / M 的 registry load 身分守門完全不受影響；這條收窄了 M01-A 原本的「跨 pack 依賴必須被 enable」契約，理由記於 `docs/M03/實作規格.md` A.5.1。M03-A start baseline 凍結於 `docs/M03/baseline/m03a-start.json`（9 pack / 3,186 entry）。詳見 `docs/M03/M03-A_CLOSEOUT.md`。
+
+**M03-B — Character JSON Schema, Export & Builder Provenance 已完成並關門（2026-09-04）。** `GET /api/characters/{id}/export` 送出 server-authoritative 的角色 JSON：envelope 帶 `schema_version` / `schema_status`（M03 期間鎖為 `"unstable"`）、`ruleset`、由實際 refs 走訪得出的 `content_requirements`、`stable_key_refs_summary`、`source_character_id` / `source_export_id` / `source_app` / `exported_at`；payload 帶完整 version chain（`parent_version_id` / `superseded_by_version_id` 已映射為 chain 內 `version_no`）、明寫的 `current_version_no`（不假定等於 max）與 `current_state`，且不含 `id` / `current_version_id` / `archived_at` / Builder Draft。Migration `0007_m03b_builder_provenance` 在 `character_versions` 加 `builder_provenance`，Create / Level Up / Build Edit / Correction 四條 Confirm 路徑都寫入當時的 Draft payload snapshot，legacy version 維持 `NULL` 不 backfill。Versioned draft seeding 收斂為單一 SSOT：`builder_provenance` → `character_build_drafts` → `legacy_payload_from_build`，`legacy_payload_from_build` 降級為最後手段——這是 M03-C 匯入落地的角色能安全走 Level Up 的前提。`ContentManifest.version` 刻意不給 schema default（給了等於讓未標版本的 pack 靜默宣稱版本），9 個 enabled pack 的 manifest 均已補上。`test_m03b_schema_inventory.py` 要求 `CharacterBuild` / `CharacterState` 可達的每個欄位都被歸類為 StableKey portability path 或「不帶 content reference」，新增欄位即紅燈。前端 Workshop 卡片與 Sheet header 各有雙語匯出按鈕，4 份匯出 fixture 由端點產生並提交、CI 以 `--check` 擋漂移。本 Subphase 不做匯入、不 lock schema、不加 `/api/meta/capabilities`；SQLite 上的 migration 綠燈統一由 M03-D 保證。詳見 `docs/M03/M03-B_CLOSEOUT.md`。
+
+下一步為 M03-C — Character JSON Import via Builder Draft。M03 是 P2 前的插入式 Maintenance Phase，目標是把現有 Character Workshop / Builder / Sheet / Level Up / Version History 打包成可離線執行的 standalone 版本，並加入 Character JSON Import / Export。M01 後續內容補充或 UI 調整不需要先 full closeout；只要不破壞 Character Build / State / Version / StableKey / Builder provenance 等 M03 核心契約，即可在 M03 後續繼續追加。
 
 **M02 — Traditional Chinese / English Localization 已於 2026-08-31 closeout（M02-A～M02-H 全部完成）；M01-D～M01-M 亦已完成並關門。M01 尚未 full closeout；M 之後是否還有新 M01 規則 Subphase與 Full M01 Integration & Closeout 的 Subphase ID 仍由使用者後續拍板。**
 
@@ -348,14 +352,14 @@ M03 共通原則：
 | Subphase | 狀態 | 重點 |
 |---|---|---|
 | **M03-A — Content Root Path Abstraction & Enabled-Pack SSOT** | ✅ | Content / Rules / Localization / DB path resolver、frozen/repo fallback、`Settings.enabled_content_packs` SSOT、consumer 接線、legacy path static guard、subset unresolved 語意收窄 |
-| **M03-B — Character JSON Schema, Export & Builder Provenance** | ⬜ | Character export envelope、完整 version chain / current state、`builder_provenance` migration 與 versioned draft seed SSOT |
+| **M03-B — Character JSON Schema, Export & Builder Provenance** | ✅ | Character export envelope、完整 version chain / current state、`builder_provenance` migration 與 versioned draft seed SSOT |
 | **M03-C — Character JSON Import via Builder Draft** | ⬜ | JSON preview / validation、StableKey unresolved 分析、new identity import、`draft` / `draft_with_history_loss` landing mode |
 | **M03-D — SQLite Migration Chain Gate & FK PRAGMA** | ⬜ | SQLite migration chain、foreign key enforcement、standalone DB lifecycle 與 migration compatibility gate |
 | **M03-E — Standalone Packaging & Launcher** | ⬜ | `app.standalone` entry、capability endpoint、SPA fallback、PyInstaller、browser launcher、SQLite beside executable |
 | **M03-F — Windows CI Build, Release & Import Boundary Test** | ⬜ | Windows frozen build、artifact/release flow、standalone import boundary 與未來 P2 dependency leakage gate |
 | **M03-G — Full M03 Integration & Closeout** | ⬜ | web ↔ standalone ↔ standalone JSON round-trip、frozen runtime smoke、雙語 / persistence / migration / capability 全整合 closeout |
 
-**M03 已完成 A～G 正式拆分；M03-A 已完成並關門，下一步為 M03-B。M01 同時保持 open，不因 M03 開工而宣告 full closeout。**
+**M03 已完成 A～G 正式拆分；M03-A、M03-B 已完成並關門，下一步為 M03-C。M01 同時保持 open，不因 M03 開工而宣告 full closeout。**
 
 ---
 
@@ -369,7 +373,7 @@ M03 共通原則：
 | **P1** | **Character Builder Complete** | 完整創角、高等角色建立、Level-by-level progression、Subclass、Multiclass、ASI / Feat、Spell progression、Level Up、Character Version |
 | **M01** | **Multi-Source Character Content Expansion** | 插入式 Maintenance Phase：多來源 Content Pack、PHB/SCAG/GoS/VGM/VRGR/XGE/TCE/MTF 角色內容與既有 Character 系統強化；C 後插 M02，再由 D 接續；K 補 PHB Feats/Spells，L 補 VGM/SCAG remaining race 與通用 race mechanics，M 補 MTF planar race 與 Tiefling bloodline system。M01 目前保持 open，後續仍可補資料/UI，final closeout 於 P2 前完成 |
 | **M02** | **Traditional Chinese / English Localization** | 插入於 M01-C 與 M01-D 之間：`zh-TW` / `en` 雙語 foundation、field-level current-surface localization、translation workflow、completeness gate；完成後回 M01-D |
-| **M03** | **Standalone Character Builder Distribution** | P2 前的插入式 Maintenance Phase：同 codebase 單機創角、SQLite、Character JSON Import / Export、capability contract、PyInstaller / Windows release 與 standalone import boundary；A 已關門，B 為下一步 |
+| **M03** | **Standalone Character Builder Distribution** | P2 前的插入式 Maintenance Phase：同 codebase 單機創角、SQLite、Character JSON Import / Export、capability contract、PyInstaller / Windows release 與 standalone import boundary；A / B 已關門，C 為下一步 |
 | **P2** | **Room / Campaign / Session / Seat** | 把已建立的角色真正放進桌內；建立 Room、Campaign、Party Roster、Player Seat、Controller 與 Session lifecycle |
 | **P3** | **Exploration + Roll + AI** | 建立 Exploration、Chat / Action / Check、正式骰子與 PendingAction；Human / AI 開始能在同一桌真正跑團 |
 | **P4** | **Quick Combat** | 第一個完整可玩的 Combat MVP；**P4-A 必須先承接 P0 延後的 SRD Monster / Beast stat blocks。** |
@@ -383,7 +387,7 @@ P0/P1 已完成；**目前已拆 M01、M02 與 M03；M03-A 已關門。P2～P8 �
 實際執行順序：
 
 ```text
-M01-A ✅ → M01-B ✅ → M01-C ✅ → M02-A ✅ → M02-B ✅ → M02-C ✅ → M02-D ✅ → M02-E ✅ → M02-F ✅ → M02-G ✅ → M02-H ✅ → M01-D ✅ → M01-E ✅ → M01-F ✅ → M01-G ✅ → M01-H ✅ → M01-I ✅ → M01-J ✅ → M01-K ✅ → M01-L ✅ → M01-M ✅ → M03-A ✅ → M03-B → M03-C → M03-D → M03-E → M03-F → M03-G → M03 closeout → Future M01 Subphase(s) TBD → Full M01 Integration & Closeout (Subphase ID TBD) → P2
+M01-A ✅ → M01-B ✅ → M01-C ✅ → M02-A ✅ → M02-B ✅ → M02-C ✅ → M02-D ✅ → M02-E ✅ → M02-F ✅ → M02-G ✅ → M02-H ✅ → M01-D ✅ → M01-E ✅ → M01-F ✅ → M01-G ✅ → M01-H ✅ → M01-I ✅ → M01-J ✅ → M01-K ✅ → M01-L ✅ → M01-M ✅ → M03-A ✅ → M03-B ✅ → M03-C → M03-D → M03-E → M03-F → M03-G → M03 closeout → Future M01 Subphase(s) TBD → Full M01 Integration & Closeout (Subphase ID TBD) → P2
 ```
 
 ---
@@ -560,6 +564,7 @@ docs/
 │   ├── 開發設計方針.md
 │   ├── 測試指南.md
 │   ├── M03-A_CLOSEOUT.md
+│   ├── M03-B_CLOSEOUT.md
 │   └── baseline/
 │       └── m03a-start.json
 └── 暫用規則資訊/
@@ -614,7 +619,7 @@ M Phase 可以插在 P Phase 之間，**也可以插在另一個 M Phase 的兩�
 
 原則上只拆正在準備開工的 Phase；**唯一例外是使用者已明確拍板且插入點已確定的 M Phase，可在插入點到達前先完成三份文件。** M02 就是此例。
 
-目前已拆 M01、M02 與 M03；**M03-A～M03-G 已拍板，M03-A 已完成並關門。P2～P8 不提前拆。**
+目前已拆 M01、M02 與 M03；**M03-A～M03-G 已拍板，M03-A、M03-B 已完成並關門。P2～P8 不提前拆。**
 
 ---
 
@@ -626,7 +631,7 @@ M Phase 可以插在 P Phase 之間，**也可以插在另一個 M Phase 的兩�
 2. 再讀 `PROJECT_BRIEF.md` 取得目前 Phase、Subphase 與下一步。
 3. 按任務讀 `規格企劃.md` 對應章節。
 4. M01 實作／驗收依 `docs/M01/`、M02 依 `docs/M02/`、M03 依 `docs/M03/` 三份文件中的同名 Subphase 取得契約。
-5. M02 已 closeout（A～H 全部完成）；M01-D～M01-M 亦已完成並關門，但 M01 尚未 full closeout。M03 已拆成 A～G，**M03-A 已完成並關門，下一步為 M03-B**。
+5. M02 已 closeout（A～H 全部完成）；M01-D～M01-M 亦已完成並關門，但 M01 尚未 full closeout。M03 已拆成 A～G，**M03-A、M03-B 已完成並關門，下一步為 M03-C**。
 6. M01 可以保持 open 並在後續補資料/UI；不要因 M03 開工而自動宣布 M01 full closeout。也不要提前切到 P2：P2 須等 M03 closeout 與 M01 final closeout，Full M01 Integration & Closeout 的 Subphase ID 目前仍 TBD。
 7. M02-D / E / F 的 translation batch 可以分批 commit，但不能分批關閉 Subphase。
 8. M01-D 起，新增／修改／首次 expose user-visible content 必須同步維護所有 supported locales（`zh-TW` / `en`）；缺任一語言視同該 Subphase regression。
