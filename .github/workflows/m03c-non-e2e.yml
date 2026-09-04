@@ -1,10 +1,16 @@
 name: M03-C Non-E2E Regression
 
 on:
+  push:
+    branches:
+      - m03-c-character-import
+    # Deliberately do not run on ordinary code pushes. Development commits use
+    # [skip ci]; when a reviewed checkpoint needs CI, touch this workflow file
+    # in one explicit trigger commit.
+    paths:
+      - '.github/workflows/m03c-non-e2e.yml'
   workflow_dispatch:
 
-# Manual-only by design: M03-C development pushes use [skip ci], and the user
-# requested one non-E2E regression run only after static review is complete.
 permissions:
   contents: read
 
