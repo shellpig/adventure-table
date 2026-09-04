@@ -7,7 +7,7 @@ WORKDIR /app/apps/server
 
 COPY apps/server/pyproject.toml ./
 COPY apps/server/app ./app
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir ".[web]"
 
 COPY apps/server/alembic.ini ./
 COPY apps/server/alembic ./alembic
