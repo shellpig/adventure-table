@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 
+import { useLocale } from '../../i18n/LocaleProvider'
 import { useCharacterIoCopy } from '../../i18n/useCharacterIoCopy'
 import {
   commitCharacterImport,
@@ -25,6 +26,7 @@ export function ImportCharacterDialog({
   className = 'button secondary',
 }: ImportCharacterDialogProps) {
   const copy = useCharacterIoCopy()
+  const { locale } = useLocale()
   const fileInput = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
   const [documentText, setDocumentText] = useState('')
@@ -44,6 +46,16 @@ export function ImportCharacterDialog({
     if (mode === 'character') return copy.importModeCharacter
     if (mode === 'draft_with_history_loss') return copy.importModeDraftHistoryLoss
     return copy.importModeDraft
+  }
+
+  const latestImportLabel = (value: string | null | undefined): string => {
+    if (!value) return copy.importDuplicateUnknownDate
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return copy.importDuplicateUnknownDate
+    return new Intl.DateTimeFormat(locale, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(parsed)
   }
 
   const close = () => {
@@ -155,7 +167,10 @@ export function ImportCharacterDialog({
 
                   {preview.duplicate_hint ? (
                     <div className="character-import-warning">
-                      {format(copy.importDuplicate, { count: preview.duplicate_hint.count })}
+                      {format(copy.importDuplicate, {
+                        count: preview.duplicate_hint.count,
+                        latest: latestImportLabel(preview.duplicate_hint.latest_imported_at),
+                      })}
                     </div>
                   ) : null}
 

@@ -1,9 +1,10 @@
-import { createLocalizedRequestError } from '../../i18n/systemMessages'
+import { createLocalizedCharacterImportRequestError } from '../../i18n/characterImportMessages'
 
 type APIErrorPayload = {
   error?: {
     code?: string
     message?: string
+    params?: Record<string, unknown>
   }
 }
 
@@ -19,6 +20,7 @@ export type CharacterImportUnresolvedRef = {
 
 export type CharacterImportResult = {
   dry_run: boolean
+  committed: boolean
   landing_mode: CharacterImportLandingMode
   resolved_ref_count: number
   unresolved_ref_count: number
@@ -62,7 +64,7 @@ async function parseRequestError(response: Response): Promise<Error> {
   } catch {
     // Keep the HTTP fallback when the body is not JSON.
   }
-  return createLocalizedRequestError(code, response.status, message)
+  return createLocalizedCharacterImportRequestError(code, response.status, message)
 }
 
 export async function downloadCharacterExport(characterId: string): Promise<void> {

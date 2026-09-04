@@ -29,11 +29,19 @@ class StrictModel(BaseModel):
 
 
 class CharacterImportError(ValueError):
-    def __init__(self, code: str, message: str, *, status_code: int = 400) -> None:
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        *,
+        status_code: int = 400,
+        params: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
         self.status_code = status_code
+        self.params = params
 
 
 class ImportUnresolvedRef(StrictModel):
@@ -57,6 +65,7 @@ class ImportCharacterPreview(StrictModel):
 
 class CharacterImportResult(StrictModel):
     dry_run: bool
+    committed: bool
     landing_mode: ImportLandingMode
     resolved_ref_count: int
     unresolved_ref_count: int
@@ -83,8 +92,13 @@ class _PreparedImport:
     character_preview: ImportCharacterPreview
 
 
-def _fail(code: str, message: str) -> None:
-    raise CharacterImportError(code, message)
+def _fail(
+    code: str,
+    message: str,
+    *,
+    params: dict[str, Any] | None = None,
+) -> None:
+    raise CharacterImportError(code, message, params=params)
 
 
 def _check_cycle(versions: tuple[ExportedVersion, ...], field: str) -> None:
@@ -98,7 +112,11 @@ def _check_cycle(versions: tuple[ExportedVersion, ...], field: str) -> None:
         cursor: int | None = start
         while cursor is not None and cursor in edges:
             if cursor in seen:
-                _fail("version_lineage_cycle", f"{field} contains a cycle at version {cursor}")
+                _fail(
+                    "version_lineage_cycle",
+                    f"{field} contains a cycle at version {cursor}",
+                    params={"field": field, "version_no": cursor},
+                )
             seen.add(cursor)
             cursor = edges.get(cursor)
 
@@ -119,6 +137,7 @@ def _validate_version_chain(document: CharacterExport) -> tuple[ExportedVersion,
         _fail(
             "current_state_version_missing",
             "current_version_no does not identify a version in the imported chain",
+            params={"current_version_no": document.payload.current_version_no},
         )
 
     for version in versions:
@@ -128,12 +147,23 @@ def _validate_version_chain(document: CharacterExport) -> tuple[ExportedVersion,
                 _fail(
                     "version_lineage_invalid",
                     f"version {version.version_no} {field} points outside the imported chain",
+                    params={
+                        "field": field,
+                        "version_no": version.version_no,
+                        "target_version_no": target,
+                    },
                 )
             if target == version.version_no:
                 _fail(
                     "version_lineage_self_reference",
                     f"version {version.version_no} {field} points to itself",
+                    params={"field": field, "version_no": version.version_no},
                 )
+
+    _check_cycle(versions, "parent_version_no")
+    _check_cycle(versions, "superseded_by_version_no")
+
+    for version in versions:
         if (
             version.parent_version_no is not None
             and version.parent_version_no >= version.version_no
@@ -141,6 +171,11 @@ def _validate_version_chain(document: CharacterExport) -> tuple[ExportedVersion,
             _fail(
                 "version_lineage_direction_invalid",
                 f"version {version.version_no} parent must be an earlier version",
+                params={
+                    "field": "parent_version_no",
+                    "version_no": version.version_no,
+                    "target_version_no": version.parent_version_no,
+                },
             )
         if (
             version.superseded_by_version_no is not None
@@ -149,10 +184,12 @@ def _validate_version_chain(document: CharacterExport) -> tuple[ExportedVersion,
             _fail(
                 "version_lineage_direction_invalid",
                 f"version {version.version_no} superseded target must be a later version",
+                params={
+                    "field": "superseded_by_version_no",
+                    "version_no": version.version_no,
+                    "target_version_no": version.superseded_by_version_no,
+                },
             )
-
-    _check_cycle(versions, "parent_version_no")
-    _check_cycle(versions, "superseded_by_version_no")
     return versions
 
 
@@ -198,9 +235,6 @@ def _sanitize_draft_payload(
             continue
         level = dict(raw_level)
         if level.get("class_ref") in unresolved_current_build_refs:
-            # A level row cannot exist without a class ref. Truncate here so the
-            # normal Builder progression rail asks the user to refill this level
-            # and everything after it rather than persisting an invalid sentinel.
             break
         if level.get("subclass_ref") in unresolved_current_build_refs:
             level["subclass_ref"] = None
@@ -252,9 +286,6 @@ def _sanitize_draft_payload(
         for ref in unresolved_current_build_refs
         if ref.count(":") >= 2
     ):
-        # Equipment choice ids are deterministic builder ids rather than StableKeys,
-        # so there is no safe per-option reverse map here. Re-open the equipment
-        # questions instead of guessing which stored option produced the missing ref.
         data["starting_equipment_choices"] = {}
 
     numeric_overrides = data.get("numeric_overrides") or []
@@ -272,9 +303,6 @@ def _sanitize_draft_payload(
             )
         ]
 
-    # Imported Drafts never receive live state. Even provenance captured from a
-    # historical create/version draft must not smuggle a stale state seed into
-    # the new Version 1.
     data["initial_state_seed"] = {}
     return BuilderDraftPayload.model_validate(data)
 
@@ -307,11 +335,22 @@ class CharacterImportService:
             labels.append(f"{entry.name if entry is not None else fallback} {level}")
         return " / ".join(labels)
 
+    def _supported_rulesets(self) -> set[str]:
+        return {
+            self.registry.get_source_manifest(pack_id).ruleset
+            for pack_id in self.registry.enabled_pack_ids
+        }
+
     def _prepare(self, document: CharacterExport) -> _PreparedImport:
-        if document.envelope.ruleset != "dnd5e-2014":
+        supported_rulesets = self._supported_rulesets()
+        if document.envelope.ruleset not in supported_rulesets:
             _fail(
                 "unsupported_ruleset",
                 f"unsupported ruleset: {document.envelope.ruleset}",
+                params={
+                    "ruleset": document.envelope.ruleset,
+                    "supported_rulesets": sorted(supported_rulesets),
+                },
             )
 
         versions = _validate_version_chain(document)
@@ -324,6 +363,7 @@ class CharacterImportService:
                 raise CharacterImportError(
                     "invalid_build_shape",
                     f"version {version.version_no} build_payload is invalid: {exc}",
+                    params={"version_no": version.version_no},
                 ) from exc
             if version.builder_provenance is None:
                 provenances[version.version_no] = None
@@ -336,6 +376,7 @@ class CharacterImportService:
                     raise CharacterImportError(
                         "invalid_builder_provenance",
                         f"version {version.version_no} builder_provenance is invalid: {exc}",
+                        params={"version_no": version.version_no},
                     ) from exc
 
         try:
@@ -355,6 +396,7 @@ class CharacterImportService:
             _fail(
                 "ruleset_mismatch",
                 "envelope, character, and every Build must use the same ruleset",
+                params={"rulesets": sorted(rulesets)},
             )
 
         unresolved: list[ImportUnresolvedRef] = []
@@ -419,6 +461,7 @@ class CharacterImportService:
                     raise CharacterImportError(
                         "build_references_invalid",
                         f"version {version.version_no} Build references are invalid: {exc}",
+                        params={"version_no": version.version_no},
                     ) from exc
             try:
                 validate_state_against_build(state, current_build, self.registry)
@@ -466,6 +509,7 @@ class CharacterImportService:
     ) -> CharacterImportResult:
         return CharacterImportResult(
             dry_run=dry_run,
+            committed=not dry_run,
             landing_mode=prepared.landing_mode,
             resolved_ref_count=prepared.resolved_ref_count,
             unresolved_ref_count=len(prepared.unresolved_refs),

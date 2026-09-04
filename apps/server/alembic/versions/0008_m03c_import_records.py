@@ -1,6 +1,6 @@
 """Add Character import provenance records.
 
-Revision ID: 0008_m03c_character_import_records
+Revision ID: 0008_m03c_import_records
 Revises: 0007_m03b_builder_provenance
 Create Date: 2026-09-04
 """
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = "0008_m03c_character_import_records"
+revision: str = "0008_m03c_import_records"
 down_revision: Union[str, Sequence[str], None] = "0007_m03b_builder_provenance"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
