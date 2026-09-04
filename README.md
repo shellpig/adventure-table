@@ -1,5 +1,14 @@
 # Adventure Table
 
+![Python](https://img.shields.io/badge/PYTHON-3.13-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FASTAPI-0.128-009688?logo=fastapi&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/POSTGRESQL-17-4169E1?logo=postgresql&logoColor=white)
+![React](https://img.shields.io/badge/REACT-19.2-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TYPESCRIPT-5.9-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/VITE-8.2-646CFF?logo=vite&logoColor=white)
+![Ruleset](https://img.shields.io/badge/RULESET-D%26D%205E%202014-purple)
+![Status](https://img.shields.io/badge/STATUS-CHARACTER%20LAYER%20USABLE-orange)
+
 Adventure Table 是一個**輕量、桌上跑團優先的 D&D 5e 2014 Web VTT**。真人 DM 像實體跑團一樣主要靠口頭敘事，網站只管需要共享、同步、計算、保存、權限與 AI 接入的東西。外部 AI 未來可透過 MCP / Site Tools 正式進桌擔任 DM 或 Player，與真人共用同一套 Game State、規則與權限。
 
 朋友間私人使用，非商品化平台。介面為 `zh-TW` / `en` 雙語。
