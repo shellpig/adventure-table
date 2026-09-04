@@ -2,7 +2,7 @@
   "id": "xge",
   "name": "Xanathar's Guide to Everything",
   "ruleset": "dnd5e-2014",
-  "version": "M01-L",
+  "version": "1.0.0",
   "provenance": {
     "type": "repository-reference-runtime",
     "reference": "docs/暫用規則資訊/子職業_*.md",
