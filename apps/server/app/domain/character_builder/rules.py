@@ -6,10 +6,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from app.content.registry import REPOSITORY_ROOT
+from app.paths import resolve_rules_path
 
-
-RULES_PATH = REPOSITORY_ROOT / "data" / "rules" / "dnd5e-2014" / "character-builder.json"
 
 SpellAccessModel = Literal["known", "prepared", "spellbook"]
 SlotContributionFormula = Literal["full", "half", "none"]
@@ -144,8 +142,8 @@ def prepared_limit(
     return max(config.prepared_minimum, value)
 
 
-@lru_cache(maxsize=1)
-def load_ability_generation_rules(path: Path = RULES_PATH) -> AbilityGenerationRules:
+@lru_cache(maxsize=8)
+def _load_ability_generation_rules(path: Path) -> AbilityGenerationRules:
     payload = json.loads(path.read_text(encoding="utf-8"))
     source = payload["ability_generation"]
     point_buy = source["point_buy"]
@@ -161,8 +159,15 @@ def load_ability_generation_rules(path: Path = RULES_PATH) -> AbilityGenerationR
     )
 
 
-@lru_cache(maxsize=1)
-def load_spellcasting_rules(path: Path = RULES_PATH) -> SpellcastingRules:
+def load_ability_generation_rules(path: Path | None = None) -> AbilityGenerationRules:
+    """Resolve the default rules file at call time, then cache by resolved path."""
+
+    resolved = (path or resolve_rules_path()).resolve()
+    return _load_ability_generation_rules(resolved)
+
+
+@lru_cache(maxsize=8)
+def _load_spellcasting_rules(path: Path) -> SpellcastingRules:
     payload = json.loads(path.read_text(encoding="utf-8"))
     source = payload["spellcasting"]
     classes: dict[str, SpellcastingClassRule] = {}
@@ -193,3 +198,17 @@ def load_spellcasting_rules(path: Path = RULES_PATH) -> SpellcastingRules:
         raise ValueError("combined_spell_slots must define caster levels 1 through 20")
 
     return SpellcastingRules(classes=classes, combined_spell_slots=combined)
+
+
+def load_spellcasting_rules(path: Path | None = None) -> SpellcastingRules:
+    """Resolve the default rules file at call time, then cache by resolved path."""
+
+    resolved = (path or resolve_rules_path()).resolve()
+    return _load_spellcasting_rules(resolved)
+
+
+# Preserve the lru-cache testing/debug surface that earlier callers used.
+load_ability_generation_rules.cache_clear = _load_ability_generation_rules.cache_clear  # type: ignore[attr-defined]
+load_ability_generation_rules.cache_info = _load_ability_generation_rules.cache_info  # type: ignore[attr-defined]
+load_spellcasting_rules.cache_clear = _load_spellcasting_rules.cache_clear  # type: ignore[attr-defined]
+load_spellcasting_rules.cache_info = _load_spellcasting_rules.cache_info  # type: ignore[attr-defined]
