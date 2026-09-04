@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 import json
-from collections import defaultdict
 from pathlib import Path
 from typing import Any, Iterable
 
 from pydantic import ValidationError
 
+from app.config import settings
 from app.content.identity import (
     URL_ROUTE_TO_KIND,
     parse_stable_key,
@@ -16,15 +17,8 @@ from app.content.identity import (
     stable_key,
 )
 from app.content.schemas import ContentEntry, ContentManifest, DATA_MODELS
+from app.paths import resolve_content_root, resolve_srd_content_root
 
-
-REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
-CONTENT_PACKS_ROOT = REPOSITORY_ROOT / "data"
-DEFAULT_CONTENT_PACKS = ("srd5.1",)
-# P0 compatibility: existing tests/importers use DEFAULT_CONTENT_ROOT as the
-# direct SRD pack directory. Multi-pack loading uses CONTENT_PACKS_ROOT.
-DEFAULT_CONTENT_ROOT = CONTENT_PACKS_ROOT / "srd5.1"
-DEFAULT_SRD_CONTENT_ROOT = DEFAULT_CONTENT_ROOT
 
 # The imported 5e SRD Rogue level feed carries several non-ASI rows whose
 # cumulative ability_score_bonuses value is one lower than the immediately
@@ -139,7 +133,7 @@ class ContentRegistry:
                 raise TypeError("cannot mix legacy and multi-pack ContentRegistry constructor arguments")
             legacy_pack = ContentPack(
                 manifest=manifest,
-                root=DEFAULT_CONTENT_ROOT if manifest.id == "srd5.1" else Path("."),
+                root=resolve_srd_content_root() if manifest.id == "srd5.1" else Path("."),
                 entries=tuple(entries.values()),
             )
             packs = {manifest.id: legacy_pack}
@@ -481,4 +475,4 @@ def _iter_stable_references(
 
 
 def load_default_content_registry() -> ContentRegistry:
-    return ContentRegistry.from_root(CONTENT_PACKS_ROOT, DEFAULT_CONTENT_PACKS)
+    return ContentRegistry.from_root(resolve_content_root(), settings.enabled_content_packs)
