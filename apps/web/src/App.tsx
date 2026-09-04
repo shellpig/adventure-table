@@ -1,5 +1,6 @@
 import { CharacterVersionHistoryPage } from './features/character-builder/CharacterVersionHistoryPage'
 import { CharacterWorkshopPage } from './features/character-builder/CharacterWorkshopPage'
+import { ExportCharacterButton } from './features/character-io/ExportCharacterButton'
 import { CharacterBuilderRoutePage } from './features/m01m/M01MBuilderRoutePanel'
 import { CharacterSheetRoutePage } from './features/m01m/M01MAncestryRoutePanel'
 import { useUiCopy } from './i18n/useUiCopy'
@@ -44,7 +45,14 @@ export default function App() {
       />
     )
   }
-  if (characterId) return <CharacterSheetRoutePage characterId={characterId} />
+  if (characterId) {
+    return (
+      <>
+        <ExportCharacterButton characterId={characterId} placement="sheet" />
+        <CharacterSheetRoutePage characterId={characterId} />
+      </>
+    )
+  }
   if (draftId) return <CharacterBuilderRoutePage draftId={draftId} />
   if (pathname === '/characters' || pathname === '/characters/') return <CharacterWorkshopPage />
 
