@@ -222,7 +222,12 @@ class ContentRegistry:
                 by_kind_mutable[kind].append(entry)
                 by_source_kind_mutable[(source, kind)].append(entry)
 
-        cls._validate_cross_references(entries.values(), entries)
+        enabled_pack_ids = frozenset(packs)
+        cls._validate_cross_references(
+            entries.values(),
+            entries,
+            enabled_pack_ids=enabled_pack_ids,
+        )
         by_kind = {
             kind: tuple(sorted(kind_entries, key=lambda entry: entry.key))
             for kind, kind_entries in by_kind_mutable.items()
@@ -352,6 +357,8 @@ class ContentRegistry:
     def _validate_cross_references(
         source_entries: Iterable[ContentEntry],
         entries: dict[str, ContentEntry],
+        *,
+        enabled_pack_ids: frozenset[str],
     ) -> None:
         for source_entry in source_entries:
             try:
@@ -361,6 +368,13 @@ class ContentRegistry:
             for target_key, expected_kinds, display in references:
                 target = entries.get(target_key)
                 if target is None:
+                    target_source = parse_stable_key(target_key).source
+                    if target_source not in enabled_pack_ids:
+                        # Disabled packs are intentionally unavailable in M03 subset
+                        # registries. Their refs must remain unresolved so import
+                        # preview can classify them later; they are not content
+                        # corruption inside the active registry.
+                        continue
                     raise ContentValidationError(
                         f"{source_entry.key}: dangling reference {display} -> {target_key}"
                     )
