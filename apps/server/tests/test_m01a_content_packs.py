@@ -8,7 +8,6 @@ import pytest
 
 from app.content.identity import parse_stable_key, reference_to_stable_key
 from app.content.registry import (
-    DEFAULT_CONTENT_ROOT,
     ContentNotFoundError,
     ContentRegistry,
     ContentValidationError,
@@ -16,6 +15,7 @@ from app.content.registry import (
 from app.content.schemas import ContentManifest
 from app.domain.character.schemas import AbilityScores, CharacterBuild, require_stable_key
 from app.domain.character_builder.compiler import _with_derived_content_sources
+from app.paths import resolve_srd_content_root
 
 
 def write_json(path: Path, payload: object) -> None:
@@ -110,7 +110,7 @@ def write_pack(
 def fixture_root(tmp_path: Path) -> Path:
     root = tmp_path / "content"
     root.mkdir()
-    shutil.copytree(DEFAULT_CONTENT_ROOT, root / "srd5.1")
+    shutil.copytree(resolve_srd_content_root(), root / "srd5.1")
 
     write_pack(
         root,
@@ -154,7 +154,7 @@ def fixture_root(tmp_path: Path) -> Path:
 
 
 def test_legacy_srd_manifest_loads_unchanged() -> None:
-    registry = ContentRegistry.from_directory(DEFAULT_CONTENT_ROOT)
+    registry = ContentRegistry.from_directory(resolve_srd_content_root())
 
     assert registry.enabled_pack_ids == ("srd5.1",)
     assert registry.manifest.id == "srd5.1"
