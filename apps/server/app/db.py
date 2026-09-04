@@ -1,11 +1,26 @@
 from __future__ import annotations
 
-from sqlalchemy import MetaData, create_engine, text
+import sqlite3
+
+from sqlalchemy import Engine, MetaData, create_engine, event, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import settings
 
 metadata = MetaData()
+
+
+@event.listens_for(Engine, "connect")
+def _enable_sqlite_foreign_keys(dbapi_connection, _connection_record) -> None:
+    """Enforce SQLite foreign-key semantics on every SQLAlchemy Engine connection."""
+
+    if not isinstance(dbapi_connection, sqlite3.Connection):
+        return
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA foreign_keys=ON")
+    finally:
+        cursor.close()
 
 
 def database_is_ready(database_url: str | None = None) -> bool:
