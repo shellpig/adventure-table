@@ -651,6 +651,12 @@ export function CharacterSheetView({
                   <span>{nameFor(source.source_key, source.source_name)}</span>
                   <strong>{abilityLabel(source.ability, t)}</strong>
                   <div><small>{t('sheet.saveDc')}</small><b>{source.save_dc}</b><small>{t('sheet.attack')}</small><b>{signed(source.attack_modifier)}</b></div>
+                  {source.prepared_limit != null ? (
+                    <div className="prepared-limit" data-testid={`prepared-limit-${source.source_key}`}>
+                      <small>{t('sheet.prepared')}</small>
+                      <b>{source.prepared_count} / {source.prepared_limit}</b>
+                    </div>
+                  ) : null}
                 </article>
               ))}
             </div>
@@ -712,42 +718,44 @@ export function CharacterSheetView({
                           <h3>{localizedSpellName}</h3>
                           <p>{localizedSourceName}</p>
                         </div>
-                        <div className="prepared-control">
-                          <span className={spell.prepared ? 'prepared-badge on' : 'prepared-badge'}>{spell.prepared ? t('sheet.prepared') : t('sheet.unprepared')}</span>
-                          {canPrepare ? (
-                            <button
-                              type="button"
-                              className="button secondary compact"
-                              disabled={busy}
-                              onClick={() => {
-                                if (canonicalPrepare && spell.source_profile_id) {
+                        {spell.level > 0 ? (
+                          <div className="prepared-control">
+                            <span className={spell.prepared ? 'prepared-badge on' : 'prepared-badge'}>{spell.prepared ? t('sheet.prepared') : t('sheet.unprepared')}</span>
+                            {canPrepare ? (
+                              <button
+                                type="button"
+                                className="button secondary compact"
+                                disabled={busy}
+                                onClick={() => {
+                                  if (canonicalPrepare && spell.source_profile_id) {
+                                    const next = spell.prepared
+                                      ? preparedSelections.filter(
+                                          (selection) =>
+                                            selection.source_profile_id !== spell.source_profile_id ||
+                                            selection.spell_key !== spell.spell_key,
+                                        )
+                                      : [
+                                          ...preparedSelections,
+                                          {
+                                            spell_key: spell.spell_key,
+                                            source_profile_id: spell.source_profile_id,
+                                            source_access_entry_id: spell.source_access_entry_id ?? undefined,
+                                          },
+                                        ]
+                                    void onPatch({ prepared_spells: next })
+                                    return
+                                  }
                                   const next = spell.prepared
-                                    ? preparedSelections.filter(
-                                        (selection) =>
-                                          selection.source_profile_id !== spell.source_profile_id ||
-                                          selection.spell_key !== spell.spell_key,
-                                      )
-                                    : [
-                                        ...preparedSelections,
-                                        {
-                                          spell_key: spell.spell_key,
-                                          source_profile_id: spell.source_profile_id,
-                                          source_access_entry_id: spell.source_access_entry_id ?? undefined,
-                                        },
-                                      ]
-                                  void onPatch({ prepared_spells: next })
-                                  return
-                                }
-                                const next = spell.prepared
-                                  ? preparedIds.filter((entryId) => entryId !== spell.entry_id)
-                                  : [...preparedIds, spell.entry_id]
-                                void onPatch({ prepared_spell_entry_ids: next })
-                              }}
-                            >
-                              {spell.prepared ? t('sheet.unprepare') : t('sheet.prepare')}
-                            </button>
-                          ) : null}
-                        </div>
+                                    ? preparedIds.filter((entryId) => entryId !== spell.entry_id)
+                                    : [...preparedIds, spell.entry_id]
+                                  void onPatch({ prepared_spell_entry_ids: next })
+                                }}
+                              >
+                                {spell.prepared ? t('sheet.unprepare') : t('sheet.prepare')}
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </article>
                     )
                   })}

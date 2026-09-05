@@ -90,6 +90,8 @@ class SpellcastingDTO(SheetModel):
     ability: str
     save_dc: int
     attack_modifier: int
+    prepared_limit: int | None = None
+    prepared_count: int = 0
 
 
 class InventoryDTO(SheetModel):
@@ -289,6 +291,14 @@ def build_character_sheet(
         if ability is None or save_dc is None or attack is None:
             continue
         source = registry.get(source_key)
+        limited_profile = next(
+            (
+                profile
+                for profile in build.spellcasting_profiles
+                if profile.source_key == source_key and profile.prepared_limit is not None
+            ),
+            None,
+        )
         spellcasting.append(
             SpellcastingDTO(
                 source_key=source_key,
@@ -296,6 +306,18 @@ def build_character_sheet(
                 ability=ability,
                 save_dc=save_dc,
                 attack_modifier=attack,
+                prepared_limit=(
+                    limited_profile.prepared_limit if limited_profile is not None else None
+                ),
+                prepared_count=(
+                    sum(
+                        1
+                        for selection in state.prepared_spells
+                        if selection.source_profile_id == limited_profile.profile_id
+                    )
+                    if limited_profile is not None
+                    else 0
+                ),
             )
         )
 

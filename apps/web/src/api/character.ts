@@ -104,6 +104,8 @@ export type SpellcastingDTO = {
   ability: string
   save_dc: number
   attack_modifier: number
+  prepared_limit: number | null
+  prepared_count: number
 }
 
 export type InventoryDTO = {

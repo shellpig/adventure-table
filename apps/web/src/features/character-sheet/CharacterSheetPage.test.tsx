@@ -51,7 +51,7 @@ const sheet: CharacterSheetDTO = {
     { entry_id: 'wizard:detect-magic', spell_key: 'srd5.1:spell:detect-magic', name: 'Detect Magic', level: 1, source_type: 'class', source_key: 'srd5.1:class:wizard', access_type: 'spellbook', prepared: false },
     { entry_id: 'wizard:always', spell_key: 'srd5.1:spell:shield', name: 'Shield', level: 1, source_type: 'feature', source_key: 'srd5.1:feature:arcane-recovery', access_type: 'always_prepared', prepared: true },
   ],
-  spellcasting: [{ source_key: 'srd5.1:class:wizard', source_name: 'Wizard', ability: 'intelligence', save_dc: 15, attack_modifier: 7 }],
+  spellcasting: [{ source_key: 'srd5.1:class:wizard', source_name: 'Wizard', ability: 'intelligence', save_dc: 15, attack_modifier: 7, prepared_limit: 4, prepared_count: 1 }],
   spell_slots: { '1': { used: 1, remaining: 3 }, '2': { used: 0, remaining: 3 }, '3': { used: 1, remaining: 1 } },
   resources: { 'pact_magic:srd5.1:class:warlock:slot:2': { used: 0, remaining: 2 } },
   inventory: [
