@@ -19,19 +19,12 @@ def _non_e2e_text() -> str:
     return NON_E2E_WORKFLOW.read_text(encoding="utf-8")
 
 
-def _release_job_text() -> str:
-    text = _workflow_text()
-    marker = "\n  release:\n"
-    assert marker in text, "M03-F release job is missing"
-    return text.split(marker, 1)[1]
-
-
 def test_m03f_workflow_has_required_triggers_and_windows_toolchain() -> None:
     text = _workflow_text()
 
     assert "branches:\n      - main" in text
-    assert "tags:\n      - 'v*'" in text
     assert "pull_request:\n    types:\n      - labeled" in text
+    assert "workflow_dispatch:" in text
     assert "github.event.label.name == 'standalone-build'" in text
     assert "runs-on: windows-latest" in text
     assert 'python-version: "3.13"' in text
@@ -51,37 +44,31 @@ def test_m03f_windows_job_builds_smokes_and_uploads_the_zip() -> None:
     assert "ADVENTURE_TABLE_DATABASE_PATH" not in text
 
 
-def test_m03f_release_job_has_explicit_repository_context_and_checked_out_notes() -> None:
-    release = _release_job_text()
+def test_m03f_workflow_never_publishes_a_github_release() -> None:
+    text = _workflow_text()
 
-    # gh CLI commands are not allowed to depend on cwd inference alone.  Keep
-    # both an explicit GH_REPO and checkout because the release notes template
-    # is a repository file consumed by the job.
-    assert "GH_REPO: ${{ github.repository }}" in release
-    assert release.index("actions/checkout@v4") < release.index("gh release view")
-    assert RELEASE_NOTES.is_file(), "M03-F release notes template is missing"
-    assert "--notes-file docs/M03/release-notes-template.md" in release
+    # F.2: releases are produced locally with build-standalone.cmd.  A private
+    # repo's Release assets are not anonymously downloadable, so the GitHub
+    # Release path buys nothing and must not creep back in.
+    assert "gh release" not in text
+    assert "refs/tags/v" not in text
+    assert "tags:" not in text
+    assert "contents: write" not in text
 
 
-def test_m03f_release_job_is_tag_only_writable_and_marks_schema_unstable() -> None:
-    release = _release_job_text()
+def test_m03f_local_release_notes_template_marks_schema_unstable() -> None:
+    assert RELEASE_NOTES.is_file(), "M03-F local release notes template is missing"
     notes = RELEASE_NOTES.read_text(encoding="utf-8")
 
-    assert "if: startsWith(github.ref, 'refs/tags/v')" in release
-    assert "permissions:\n      contents: write" in release
-    assert "gh release create" in release
-    assert "gh release upload" in release
-    assert "--clobber" in release
     assert "schema is **unstable** during M03" in notes
 
 
-def test_m03f_release_asset_name_matches_build_script_contract() -> None:
+def test_m03f_artifact_name_matches_build_script_contract() -> None:
     workflow = _workflow_text()
     build_script = (REPO_ROOT / "scripts" / "build-standalone.cmd").read_text(encoding="utf-8")
 
     assert "adventure-table-standalone-%VERSION%.zip" in build_script
-    assert "adventure-table-standalone-$VERSION.zip" in workflow
-    assert "needs.standalone-build.outputs.version" in workflow
+    assert "scripts\\build-standalone.cmd --version ${{ steps.version.outputs.value }}" in workflow
 
 
 def test_m03f_non_e2e_gate_is_manual_by_trigger_commit_and_contains_no_e2e() -> None:

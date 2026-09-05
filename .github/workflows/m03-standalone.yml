@@ -1,11 +1,13 @@
-name: M03 Standalone Windows Build and Release
+name: M03 Standalone Windows Build
+
+# Build evidence only. Releases are produced locally with
+# scripts\build-standalone.cmd; this workflow must never create a GitHub
+# Release. See docs/M03/實作規格.md F.2.
 
 on:
   push:
     branches:
       - main
-    tags:
-      - 'v*'
   pull_request:
     types:
       - labeled
@@ -18,8 +20,6 @@ jobs:
   standalone-build:
     if: github.event_name != 'pull_request' || github.event.label.name == 'standalone-build'
     runs-on: windows-latest
-    outputs:
-      version: ${{ steps.version.outputs.value }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -36,13 +36,8 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          if ("${{ github.ref_type }}" -eq "tag") {
-            $version = "${{ github.ref_name }}"
-          } else {
-            $sha = "${{ github.sha }}"
-            $version = "m03f-$($sha.Substring(0, 12))"
-          }
-          "value=$version" >> $env:GITHUB_OUTPUT
+          $sha = "${{ github.sha }}"
+          "value=m03f-$($sha.Substring(0, 12))" >> $env:GITHUB_OUTPUT
       - name: Build standalone distribution
         shell: cmd
         run: scripts\build-standalone.cmd --version ${{ steps.version.outputs.value }}
@@ -55,27 +50,3 @@ jobs:
           name: adventure-table-standalone-${{ steps.version.outputs.value }}
           path: dist/adventure-table-standalone-${{ steps.version.outputs.value }}.zip
           if-no-files-found: error
-
-  release:
-    needs: standalone-build
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
-      TAG: ${{ github.ref_name }}
-      VERSION: ${{ needs.standalone-build.outputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: adventure-table-standalone-${{ needs.standalone-build.outputs.version }}
-          path: release-artifact
-      - name: Create release when missing
-        shell: bash
-        run: gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Adventure Table Standalone $TAG" --notes-file docs/M03/release-notes-template.md
-      - name: Upload standalone release asset
-        shell: bash
-        run: gh release upload "$TAG" "release-artifact/adventure-table-standalone-$VERSION.zip" --clobber
