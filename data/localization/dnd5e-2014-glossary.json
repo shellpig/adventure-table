@@ -2514,6 +2514,102 @@
       "reference_source": "5etools",
       "decision_note": "Halfling subrace (SCAG).",
       "reviewed": true
+    },
+    {
+      "en": "Breath Weapon",
+      "zh-TW": "噴吐武器",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dragonborn racial trait (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Draconic Ancestry",
+      "zh-TW": "龍族血統",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dragonborn racial trait (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Draconic Ancestry (Black)",
+      "zh-TW": "龍族血統（黑龍）",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dragonborn draconic ancestry variant (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Draconic Ancestry (Blue)",
+      "zh-TW": "龍族血統（藍龍）",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dragonborn draconic ancestry variant (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Draconic Ancestry (Brass)",
+      "zh-TW": "龍族血統（黃銅龍）",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dragonborn draconic ancestry variant (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Draconic Ancestry (Bronze)",
+      "zh-TW": "龍族血統（青銅龍）",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dragonborn draconic ancestry variant (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Draconic Ancestry (Copper)",
+      "zh-TW": "龍族血統（赤銅龍）",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dragonborn draconic ancestry variant (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Draconic Ancestry (Gold)",
+      "zh-TW": "龍族血統（金龍）",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dragonborn draconic ancestry variant (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Draconic Ancestry (Green)",
+      "zh-TW": "龍族血統（綠龍）",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dragonborn draconic ancestry variant (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Draconic Ancestry (Red)",
+      "zh-TW": "龍族血統（紅龍）",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dragonborn draconic ancestry variant (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Draconic Ancestry (Silver)",
+      "zh-TW": "龍族血統（銀龍）",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dragonborn draconic ancestry variant (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Draconic Ancestry (White)",
+      "zh-TW": "龍族血統（白龍）",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dragonborn draconic ancestry variant (SRD / PHB).",
+      "reviewed": true
     }
   ]
 }
