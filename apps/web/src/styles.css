@@ -178,7 +178,7 @@ button { color: inherit; }
 .resource-list > div { min-height: 52px; }
 .resource-list > div > span { flex: 1; }
 .spell-levels { display: grid; gap: 18px; margin-top: 14px; }
-.spell-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.spell-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .spell-card { display: flex; flex-direction: column; align-items: stretch; justify-content: space-between; gap: 12px; min-height: 104px; border: 1px solid var(--line); border-radius: 16px; padding: 17px 18px; background: var(--surface-2); }
 .spell-card.is-prepared { border: 2px solid rgb(125 201 166 / 62%); padding: 16px 17px; background: linear-gradient(150deg, rgb(125 201 166 / 15%), var(--surface-2) 62%); box-shadow: 0 0 16px rgb(125 201 166 / 12%); }
 .spell-card h3 { margin: 6px 0 4px; font-family: Georgia, "Times New Roman", serif; font-size: 1.1rem; font-weight: 600; }
@@ -218,6 +218,7 @@ button { color: inherit; }
 
 @media (max-width: 900px) {
   .ability-grid { grid-template-columns: repeat(3, 1fr); }
+  .spell-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .spellcasting-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hero-live-row, .inventory-card { align-items: stretch; flex-direction: column; }
   .condition-strip, .inventory-actions { justify-content: flex-start; }
