@@ -17,7 +17,7 @@ EXPECTED_ROUTER_CALLS = {
     "content_presentation_router",
     "characters_router",
     "character_builder_router",
-    'create_meta_router("standalone")',
+    "create_meta_router('standalone')",
 }
 
 
