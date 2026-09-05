@@ -2642,6 +2642,102 @@
       "reference_source": "5etools",
       "decision_note": "Deep Gnome subrace feature (SCAG / MTF).",
       "reviewed": true
+    },
+    {
+      "en": "Half-Elf",
+      "zh-TW": "半精靈",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Half-Elf race (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Half-Elf (Variant)",
+      "zh-TW": "半精靈 (變體)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Half-Elf race variant (PHB / SCAG).",
+      "reviewed": true
+    },
+    {
+      "en": "Skill Versatility",
+      "zh-TW": "多才多藝",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Half-Elf racial trait (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Darkvision",
+      "zh-TW": "黑暗視覺",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Racial trait (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Moon Elf or Sun Elf Descent",
+      "zh-TW": "月精靈或日精靈血統",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Half-Elf ancestry variant (SCAG).",
+      "reviewed": true
+    },
+    {
+      "en": "Wood Elf Descent",
+      "zh-TW": "木精靈血統",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Half-Elf ancestry variant (SCAG).",
+      "reviewed": true
+    },
+    {
+      "en": "Aquatic Elf Descent",
+      "zh-TW": "水生精靈血統",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Half-Elf ancestry variant (SCAG).",
+      "reviewed": true
+    },
+    {
+      "en": "Drow Descent",
+      "zh-TW": "卓爾血統",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Half-Elf ancestry variant (SCAG).",
+      "reviewed": true
+    },
+    {
+      "en": "Elf Weapon Training",
+      "zh-TW": "精靈武器訓練",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Elf / Half-Elf racial feature (PHB / SCAG).",
+      "reviewed": true
+    },
+    {
+      "en": "Fleet of Foot",
+      "zh-TW": "輕捷步伐",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Wood Elf / Half-Elf racial feature (PHB / SCAG).",
+      "reviewed": true
+    },
+    {
+      "en": "Mask of the Wild",
+      "zh-TW": "荒野隱蔽",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Wood Elf / Half-Elf racial feature (PHB / SCAG).",
+      "reviewed": true
+    },
+    {
+      "en": "Drow Magic",
+      "zh-TW": "卓爾魔法",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Drow / Half-Elf racial feature (PHB / SCAG).",
+      "reviewed": true
     }
   ]
 }

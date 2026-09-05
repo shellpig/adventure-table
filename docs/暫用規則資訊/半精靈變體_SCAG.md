@@ -1,4 +1,4 @@
-# 半精靈變體 (Half-Elf Variants) — 規則資料彙整 (SCAG 版)
+# 半精靈 (變體) (Half-Elf Variants) — 規則資料彙整 (SCAG 版)
 
 - **資料來源網址**：
   - **月精靈/日精靈血統 (Moon Elf or Sun Elf Descent)**：https://5e.dickytwister.org/races.html#%e5%8d%8a%e7%b2%be%e7%81%b5%20(%e5%8f%98%e4%bd%93%3b%20%e6%9c%88%e7%b2%be%e7%81%b5%e6%88%96%e6%97%a5%e7%b2%be%e7%81%b5%e8%a1%80%e7%bb%9f)_scag
@@ -25,7 +25,7 @@
 - **體型 (Size)**：中型 (Medium)，身高與體重範圍與人類相同。
 - **基礎速度 (Speed)**：30 尺。
 - **黑暗視覺 (Darkvision)**：60 尺微光視為明亮，黑暗視為微光（灰階視覺）。
-- **妖精血統 (Fey Ancestry)**：你在對抗魅惑的豁免檢定中**具有優勢**，且魔法無法使你陷入睡眠。
+- **精類血統 (Fey Ancestry)**：你在對抗魅惑的豁免檢定中**具有優勢**，且魔法無法使你陷入睡眠。
 - **語言 (Languages)**：你能夠說、讀、寫通用語 (Common)、精靈語 (Elvish) 以及一門自選語言。
 
 ---
