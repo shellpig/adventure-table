@@ -2882,6 +2882,294 @@
       "reference_source": "5etools",
       "decision_note": "Githzerai racial trait (MTF).",
       "reviewed": true
+    },
+    {
+      "en": "Aasimar",
+      "zh-TW": "阿斯莫",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Aasimar race (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Protector Aasimar",
+      "zh-TW": "阿斯莫 (守護者)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Aasimar subrace (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Scourge Aasimar",
+      "zh-TW": "阿斯莫 (天譴)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Aasimar subrace (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Fallen Aasimar",
+      "zh-TW": "阿斯莫 (墮落)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Aasimar subrace (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Celestial Resistance",
+      "zh-TW": "天界抗性",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Aasimar racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Healing Hands",
+      "zh-TW": "治癒之手",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Aasimar racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Light-Bearer",
+      "zh-TW": "光輝掌者",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Aasimar racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Radiant Soul",
+      "zh-TW": "光輝靈魂",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Protector Aasimar trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Radiant Consumption",
+      "zh-TW": "光輝焚化",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Scourge Aasimar trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Necrotic Shroud",
+      "zh-TW": "死靈障幕",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Fallen Aasimar trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Firbolg",
+      "zh-TW": "費爾伯格",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Firbolg race (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Firbolg Magic",
+      "zh-TW": "費爾伯格魔法",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Firbolg racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Hidden Step",
+      "zh-TW": "神隱步",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Firbolg racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Powerful Build",
+      "zh-TW": "強健體格",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Speech of Beast and Leaf",
+      "zh-TW": "獸與葉之語",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Firbolg racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Goliath",
+      "zh-TW": "歌利亞",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Goliath race (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Stone's Endurance",
+      "zh-TW": "石之耐性",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Goliath racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Mountain Born",
+      "zh-TW": "高山之子",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Goliath racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Kenku",
+      "zh-TW": "天狗",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Kenku race (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Expert Forgery",
+      "zh-TW": "專業偽造",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Kenku racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Kenku Training",
+      "zh-TW": "天狗訓練",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Kenku racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Mimicry",
+      "zh-TW": "擬聲",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Kenku racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Lizardfolk",
+      "zh-TW": "蜥蜴人",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Lizardfolk race (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Bite (Lizardfolk)",
+      "zh-TW": "啃咬",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Lizardfolk racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Cunning Artisan",
+      "zh-TW": "能巧工匠",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Lizardfolk racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Hold Breath",
+      "zh-TW": "屏息",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Lizardfolk racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Hunter's Lore",
+      "zh-TW": "獵人學識",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Lizardfolk racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Hungry Jaws",
+      "zh-TW": "飢渴之顎",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Lizardfolk racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Tabaxi",
+      "zh-TW": "斑貓人",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tabaxi race (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Feline Agility",
+      "zh-TW": "貓科迅捷",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tabaxi racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Cat's Claws",
+      "zh-TW": "貓之利爪",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tabaxi racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Cat's Talent",
+      "zh-TW": "貓之天賦",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tabaxi racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Triton",
+      "zh-TW": "梭螺魚人",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Triton race (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Control Air and Water",
+      "zh-TW": "控風操水",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Triton racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Emissary of the Sea",
+      "zh-TW": "海之使者",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Triton racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Guardians of the Depths",
+      "zh-TW": "深海守護者",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Triton racial trait (VGM).",
+      "reviewed": true
     }
   ]
 }
