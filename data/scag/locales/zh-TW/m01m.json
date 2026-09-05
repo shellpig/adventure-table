@@ -19,9 +19,21 @@
       "data.appearance_suggestions.10": "沒有影子或鏡像",
       "data.appearance_suggestions.11": "帶有淡淡的硫磺氣味"
     },
-    "scag:feature:feral-tiefling": {"name": "野性提夫林", "data.desc.0": "以敏捷 +2、智力 +1 取代標準提夫林的屬性值提升。"},
-    "scag:feature:devils-tongue": {"name": "魔鬼之舌", "data.desc.0": "取代煉獄傳承：你學會惡毒嘲笑；3 級起每次長休可將魅惑人類以 2 環施展一次；5 級起每次長休可施展一次迷魂術。魅力是你的施法屬性。"},
-    "scag:feature:hellfire-tiefling": {"name": "煉獄火", "data.desc.0": "以燃燒之手取代煉獄傳承中的煉獄叱喝，保留相同的等級門檻與魅力施法屬性。"},
-    "scag:feature:winged-tiefling": {"name": "翼生", "data.desc.0": "以蝙蝠般的雙翼取代煉獄傳承。當你未穿著重甲時，具有 30 尺飛行速度。"}
+    "scag:feature:feral-tiefling": {
+      "name": "野性提夫林",
+      "data.desc.0": "以敏捷 +2、智力 +1 取代標準提夫林的屬性值提升。"
+    },
+    "scag:feature:devils-tongue": {
+      "name": "魔鬼之舌",
+      "data.desc.0": "取代煉獄傳承：你學會惡毒嘲笑；3 級起每次長休可將魅惑人類以 2 環施展一次；5 級起每次長休可施展一次迷魂術。魅力是你的施法屬性。"
+    },
+    "scag:feature:hellfire-tiefling": {
+      "name": "地獄之火",
+      "data.desc.0": "以燃燒之手取代煉獄傳承中的煉獄叱喝，保留相同的等級門檻與魅力施法屬性。"
+    },
+    "scag:feature:winged-tiefling": {
+      "name": "飛翔之翼",
+      "data.desc.0": "以蝙蝠般的雙翼取代煉獄傳承。當你未穿著重甲時，具有 30 尺飛行速度。"
+    }
   }
 }

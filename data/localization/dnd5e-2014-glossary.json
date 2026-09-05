@@ -2170,6 +2170,158 @@
       "reference_source": "5etools",
       "decision_note": "School of Evocation level 14 feature.",
       "reviewed": true
+    },
+    {
+      "en": "Hellish Resistance",
+      "zh-TW": "煉獄抗性",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling racial trait.",
+      "reviewed": true
+    },
+    {
+      "en": "Variant: Hellfire",
+      "zh-TW": "地獄之火",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling SCAG variant.",
+      "reviewed": true
+    },
+    {
+      "en": "Variant: Winged",
+      "zh-TW": "飛翔之翼",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling SCAG variant.",
+      "reviewed": true
+    },
+    {
+      "en": "Legacy of Maladomini",
+      "zh-TW": "馬拉多米尼之遺贈",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling Baalzebul bloodline trait.",
+      "reviewed": true
+    },
+    {
+      "en": "Legacy of Dis",
+      "zh-TW": "迪斯之遺贈",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling Dispater bloodline trait.",
+      "reviewed": true
+    },
+    {
+      "en": "Legacy of Phlegethos",
+      "zh-TW": "福萊格索斯之遺贈",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling Fierna bloodline trait.",
+      "reviewed": true
+    },
+    {
+      "en": "Legacy of Malbolge",
+      "zh-TW": "馬爾伯吉之遺贈",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling Glasya bloodline trait.",
+      "reviewed": true
+    },
+    {
+      "en": "Legacy of Stygia",
+      "zh-TW": "斯泰吉亞之遺贈",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling Levistus bloodline trait.",
+      "reviewed": true
+    },
+    {
+      "en": "Legacy of Minauros",
+      "zh-TW": "彌瑙洛斯之遺贈",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling Mammon bloodline trait.",
+      "reviewed": true
+    },
+    {
+      "en": "Legacy of Cania",
+      "zh-TW": "卡尼亞之遺贈",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling Mephistopheles bloodline trait.",
+      "reviewed": true
+    },
+    {
+      "en": "Legacy of Avernus",
+      "zh-TW": "阿弗納斯之遺贈",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling Zariel bloodline trait.",
+      "reviewed": true
+    },
+    {
+      "en": "Baalzebul Tiefling",
+      "zh-TW": "提夫林 (巴力西卜)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling subrace (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Dispater Tiefling",
+      "zh-TW": "提夫林 (狄斯帕特)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling subrace (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Fierna Tiefling",
+      "zh-TW": "提夫林 (菲爾娜)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling subrace (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Glasya Tiefling",
+      "zh-TW": "提夫林 (格萊希亞)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling subrace (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Levistus Tiefling",
+      "zh-TW": "提夫林 (萊維斯圖斯)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling subrace (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Mammon Tiefling",
+      "zh-TW": "提夫林 (瑪門)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling subrace (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Mephistopheles Tiefling",
+      "zh-TW": "提夫林 (梅菲斯托費勒斯)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling subrace (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Zariel Tiefling",
+      "zh-TW": "提夫林 (扎瑞爾)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Tiefling subrace (MTF).",
+      "reviewed": true
     }
   ]
 }
