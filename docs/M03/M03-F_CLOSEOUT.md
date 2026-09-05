@@ -42,6 +42,7 @@ M03-F 的 diff 只動 `.github/`、`apps/server/tests/` 與 `docs/M03/`，未觸
 - `docker compose config`：通過（同上 run 的 `compose-config` job）。
 - `windows-latest` frozen build + smoke：綠（run `33933833357` 與 `33931831167` 的 `windows-standalone` job）。
 - PostgreSQL migration round trip：綠（同上 run 的 backend job）。
+- 全套 E2E（`npm run test:e2e:docker`）：綠。Subphase 關門本身不需要，但測試指南 1.1 要求「合併回 `main` 前一律比照 M03-G 跑全套」，故於合併前執行。證據：script exit code 0、`apps/web/test-results/.last-run.json` 為 `{"status": "passed", "failedTests": []}`；`e2e-docker.mjs` 拿掉 `xge` 的第二輪另 **7 passed (5.7s)**。第一輪的逐項計數未保留（主控台輸出被截斷），日後若需精確筆數請重跑。
 
 ## M03-F 未涵蓋（依實作規格「本 Subphase 不要求」）
 
