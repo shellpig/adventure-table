@@ -63,6 +63,17 @@ def all_skill_modifiers(
     }
 
 
+def all_skill_proficiencies(
+    build: CharacterBuild,
+    registry: ContentRegistry,
+) -> tuple[str, ...]:
+    return tuple(
+        entry.index
+        for entry in registry.list_kind("skill")
+        if entry.key in build.skill_choices
+    )
+
+
 def _static_passive_bonus(build: CharacterBuild, target: str) -> int:
     level = total_character_level(build)
     return sum(

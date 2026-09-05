@@ -512,6 +512,14 @@
 .skill-modifier-grid span { overflow: hidden; color: var(--muted); font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
 .skill-modifier-grid strong { color: var(--gold-bright); font-size: .85rem; }
 
+.skill-modifier-grid div.is-proficient {
+  border: 2px solid var(--gold);
+  padding: 8px 9px;
+  background: #171308;
+}
+
+.skill-modifier-grid div.is-proficient span { color: var(--gold-bright); }
+
 .summary-grants,
 .summary-validation { margin-top: 20px; }
 .summary-grants > div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 14px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); }

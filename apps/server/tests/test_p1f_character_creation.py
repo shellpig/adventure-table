@@ -263,6 +263,11 @@ def test_p1f_review_confirm_is_idempotent_and_inventory_stays_live_state() -> No
     assert len(derived["ability_modifiers"]) == 6
     assert len(derived["skill_modifiers"]) == 18
     assert "perception" in derived["skill_modifiers"]
+    proficiencies = derived["skill_proficiencies"]
+    assert proficiencies, "the review must report which skills are proficient"
+    assert set(proficiencies) <= set(derived["skill_modifiers"])
+    for skill in proficiencies:
+        assert derived["skill_modifiers"][skill] >= derived["proficiency_bonus"] - 5
 
     confirmed = client.post(f"/api/character-builder/drafts/{draft_id}/confirm")
     assert confirmed.status_code == 200, confirmed.text

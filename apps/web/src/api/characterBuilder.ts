@@ -297,6 +297,7 @@ export type BuilderReviewDTO = {
     ability_modifiers: Record<string, number>
     proficiency_bonus: number
     skill_modifiers: Record<string, number>
+    skill_proficiencies?: string[]
   } | null
   starting_equipment: BuilderEquipmentSummary[]
   issues: BuilderIssue[]

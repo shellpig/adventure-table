@@ -331,6 +331,7 @@ export function EquipmentReviewStep({
   })
 
   const review = reviewQuery.data as P1GReview | undefined
+  const proficientSkills = new Set(review?.derived_stats?.skill_proficiencies ?? [])
   const reviewReferences = review
     ? [
         ...(view.draft.draft_payload.race_selection?.reference_id
@@ -591,7 +592,12 @@ export function EquipmentReviewStep({
               <div className="skill-modifier-grid">
                 {Object.entries(review.derived_stats.skill_modifiers).map(
                   ([skill, modifier]) => (
-                    <div key={skill}>
+                    <div
+                      key={skill}
+                      className={
+                        proficientSkills.has(skill) ? 'is-proficient' : undefined
+                      }
+                    >
                       <span>{nameFor(`srd5.1:skill:${skill}`, titleCase(skill))}</span>
                       <strong>{signed(modifier)}</strong>
                     </div>

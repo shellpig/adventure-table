@@ -23,7 +23,7 @@ from app.domain.rules.feature_resources import initial_feature_resource_state
 from app.domain.rules.hit_points import calculate_max_hp
 from app.domain.rules.m01m_ancestry import initial_feature_modes
 from app.domain.rules.proficiency import proficiency_bonus, total_character_level
-from app.domain.rules.skills import all_skill_modifiers
+from app.domain.rules.skills import all_skill_modifiers, all_skill_proficiencies
 from app.domain.rules.spellcasting import initial_spell_resource_state
 
 
@@ -43,6 +43,7 @@ class BuilderReviewDerivedStats(StrictModel):
     ability_modifiers: dict[str, int]
     proficiency_bonus: int = Field(ge=2, le=6)
     skill_modifiers: dict[str, int]
+    skill_proficiencies: tuple[str, ...] = ()
     artificer: ArtificerSummaryDTO | None = None
 
 
@@ -80,6 +81,7 @@ def build_review_derived_stats(
         },
         proficiency_bonus=proficiency_bonus(level),
         skill_modifiers=all_skill_modifiers(build, registry),
+        skill_proficiencies=all_skill_proficiencies(build, registry),
         artificer=build_artificer_summary(build, state, registry),
     )
 
