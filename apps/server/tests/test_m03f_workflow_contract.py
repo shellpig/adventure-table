@@ -1,0 +1,85 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+WORKFLOW = REPO_ROOT / ".github" / "workflows" / "m03-standalone.yml"
+NON_E2E_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "m03f-non-e2e.yml"
+RELEASE_NOTES = REPO_ROOT / "docs" / "M03" / "release-notes-template.md"
+
+
+def _workflow_text() -> str:
+    assert WORKFLOW.is_file(), "M03-F standalone workflow is missing"
+    return WORKFLOW.read_text(encoding="utf-8")
+
+
+def _non_e2e_text() -> str:
+    assert NON_E2E_WORKFLOW.is_file(), "M03-F non-E2E workflow is missing"
+    return NON_E2E_WORKFLOW.read_text(encoding="utf-8")
+
+
+def test_m03f_workflow_has_required_triggers_and_windows_toolchain() -> None:
+    text = _workflow_text()
+
+    assert "branches:\n      - main" in text
+    assert "pull_request:\n    types:\n      - labeled" in text
+    assert "workflow_dispatch:" in text
+    assert "github.event.label.name == 'standalone-build'" in text
+    assert "runs-on: windows-latest" in text
+    assert 'python-version: "3.13"' in text
+    assert 'node-version: "24"' in text
+
+
+def test_m03f_windows_job_builds_smokes_and_uploads_the_zip() -> None:
+    text = _workflow_text()
+
+    assert "scripts\\build-standalone.cmd --version" in text
+    assert "scripts\\smoke_standalone.py dist\\adventure-table-standalone --timeout 30" in text
+    assert "actions/upload-artifact@v4" in text
+    assert "dist/adventure-table-standalone-${{ steps.version.outputs.value }}.zip" in text
+    assert "if-no-files-found: error" in text
+    # F.1 explicitly requires the default exe-adjacent SQLite path to be the
+    # subject under test, not something supplied by the runner environment.
+    assert "ADVENTURE_TABLE_DATABASE_PATH" not in text
+
+
+def test_m03f_workflow_never_publishes_a_github_release() -> None:
+    text = _workflow_text()
+
+    # F.2: releases are produced locally with build-standalone.cmd.  A private
+    # repo's Release assets are not anonymously downloadable, so the GitHub
+    # Release path buys nothing and must not creep back in.
+    assert "gh release" not in text
+    assert "refs/tags/v" not in text
+    assert "tags:" not in text
+    assert "contents: write" not in text
+
+
+def test_m03f_local_release_notes_template_marks_schema_unstable() -> None:
+    assert RELEASE_NOTES.is_file(), "M03-F local release notes template is missing"
+    notes = RELEASE_NOTES.read_text(encoding="utf-8")
+
+    assert "schema is **unstable** during M03" in notes
+
+
+def test_m03f_artifact_name_matches_build_script_contract() -> None:
+    workflow = _workflow_text()
+    build_script = (REPO_ROOT / "scripts" / "build-standalone.cmd").read_text(encoding="utf-8")
+
+    assert "adventure-table-standalone-%VERSION%.zip" in build_script
+    assert "scripts\\build-standalone.cmd --version ${{ steps.version.outputs.value }}" in workflow
+
+
+def test_m03f_non_e2e_gate_is_manual_by_trigger_commit_and_contains_no_e2e() -> None:
+    text = _non_e2e_text()
+
+    assert "m03-f-windows-ci-release-boundary" in text
+    assert ".github/m03f-non-e2e.trigger" in text
+    assert "test_m03_import_boundary.py" in text
+    assert "test_m03_standalone_composition.py" in text
+    assert "test_m03f_workflow_contract.py" in text
+    assert "scripts\\build-standalone.cmd --version m03f-non-e2e" in text
+    assert "scripts\\smoke_standalone.py dist\\adventure-table-standalone --timeout 30" in text
+    assert "test:e2e" not in text.lower()
+    assert "playwright" not in text.lower()

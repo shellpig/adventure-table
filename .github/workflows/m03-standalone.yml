@@ -1,0 +1,52 @@
+name: M03 Standalone Windows Build
+
+# Build evidence only. Releases are produced locally with
+# scripts\build-standalone.cmd; this workflow must never create a GitHub
+# Release. See docs/M03/實作規格.md F.2.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - labeled
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  standalone-build:
+    if: github.event_name != 'pull_request' || github.event.label.name == 'standalone-build'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Pin npm
+        run: npm install --global npm@11.6.0
+      - name: Resolve standalone artifact version
+        id: version
+        shell: pwsh
+        run: |
+          $sha = "${{ github.sha }}"
+          "value=m03f-$($sha.Substring(0, 12))" >> $env:GITHUB_OUTPUT
+      - name: Build standalone distribution
+        shell: cmd
+        run: scripts\build-standalone.cmd --version ${{ steps.version.outputs.value }}
+      - name: Smoke standalone from clean artifact directory
+        shell: cmd
+        run: .standalone-venv\Scripts\python.exe scripts\smoke_standalone.py dist\adventure-table-standalone --timeout 30
+      - name: Upload standalone zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: adventure-table-standalone-${{ steps.version.outputs.value }}
+          path: dist/adventure-table-standalone-${{ steps.version.outputs.value }}.zip
+          if-no-files-found: error
