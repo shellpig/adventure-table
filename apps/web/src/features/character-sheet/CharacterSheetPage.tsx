@@ -253,6 +253,7 @@ export function CharacterSheetView({
     ...Object.keys(sheet.skills).map((skill) => `srd5.1:skill:${skill}`),
   ]
   const { nameFor } = useContentPresentations(contentReferences)
+  const proficientSkills = new Set(sheet.skill_proficiencies ?? [])
 
   const conditionOptions = useMemo<SearchOption[]>(
     () =>
@@ -475,7 +476,7 @@ export function CharacterSheetView({
 
             <article className="panel" data-testid="movement-panel">
               <div className="panel-title"><h3>{t('sheet.movement')}</h3><span>{t('sheet.movementHint')}</span></div>
-              <div className="stat-list">
+              <div className="stat-list movement-list">
                 <div><span>{t('sheet.movement.walk')}</span><strong data-testid="movement-walk">{t('sheet.distanceFeet', { value: sheet.walking_speed })}</strong></div>
                 {sheet.swim_speed != null ? <div><span>{t('sheet.movement.swim')}</span><strong data-testid="movement-swim">{t('sheet.distanceFeet', { value: sheet.swim_speed })}</strong></div> : null}
                 {sheet.climb_speed != null ? <div><span>{t('sheet.movement.climb')}</span><strong data-testid="movement-climb">{t('sheet.distanceFeet', { value: sheet.climb_speed })}</strong></div> : null}
@@ -486,7 +487,7 @@ export function CharacterSheetView({
             <div className="two-column-grid">
               <article className="panel">
                 <div className="panel-title"><h3>{t('sheet.savingThrows')}</h3><span>{t('sheet.saves')}</span></div>
-                <div className="stat-list">
+                <div className="stat-list save-list">
                   {Object.entries(sheet.saving_throws).map(([key, value]) => (
                     <div key={key}><span>{abilityLabel(key, t)}</span><strong>{signed(value)}</strong></div>
                   ))}
@@ -496,7 +497,10 @@ export function CharacterSheetView({
                 <div className="panel-title"><h3>{t('sheet.skills')}</h3><span>{t('sheet.skills')}</span></div>
                 <div className="stat-list skill-list">
                   {Object.entries(sheet.skills).map(([key, value]) => (
-                    <div key={key}>
+                    <div
+                      key={key}
+                      className={proficientSkills.has(key) ? 'is-proficient' : undefined}
+                    >
                       <span>{nameFor(`srd5.1:skill:${key}`, titleCase(key))}</span>
                       <strong>{signed(value)}</strong>
                     </div>

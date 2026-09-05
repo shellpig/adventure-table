@@ -22,6 +22,7 @@ from app.domain.rules.m01m_ancestry import (
 from app.domain.rules.proficiency import class_level, proficiency_bonus, total_character_level
 from app.domain.rules.skills import (
     all_skill_modifiers,
+    all_skill_proficiencies,
     passive_investigation,
     passive_perception,
     saving_throw_modifiers,
@@ -120,6 +121,7 @@ class CharacterSheetDTO(SheetModel):
     abilities: dict[str, AbilityDTO]
     saving_throws: dict[str, int]
     skills: dict[str, int]
+    skill_proficiencies: tuple[str, ...] = ()
     passive_perception: int
     passive_investigation: int
     initiative_modifier: int
@@ -307,6 +309,7 @@ def build_character_sheet(
         abilities=abilities,
         saving_throws=saving_throw_modifiers(build),
         skills=all_skill_modifiers(build, registry),
+        skill_proficiencies=all_skill_proficiencies(build, registry),
         passive_perception=passive_perception(build, registry),
         passive_investigation=passive_investigation(build, registry),
         initiative_modifier=abilities["dexterity"].modifier,

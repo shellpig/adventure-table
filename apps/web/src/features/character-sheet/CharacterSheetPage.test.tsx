@@ -41,6 +41,7 @@ const sheet: CharacterSheetDTO = {
   },
   saving_throws: { strength: 7, dexterity: 2, constitution: 6, intelligence: 3, wisdom: 0, charisma: -1 },
   skills: { athletics: 7, arcana: 7, perception: 4 },
+  skill_proficiencies: ['athletics', 'arcana'],
   passive_perception: 14, passive_investigation: 13, initiative_modifier: 2, armor_class: 18, walking_speed: 30, swim_speed: 30, max_hp: 74, current_hp: 74, temporary_hp: 0,
   hit_dice: [{ die: 'd10', total: 5, available: 5 }, { die: 'd6', total: 5, available: 5 }],
   features: [{ key: 'srd5.1:feature:second-wind', name: 'Second Wind' }, { key: 'srd5.1:feature:arcane-recovery', name: 'Arcane Recovery' }],

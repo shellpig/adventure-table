@@ -114,7 +114,16 @@ button { color: inherit; }
 .stat-list > div:last-child, .resource-list > div:last-child { border-bottom: 0; }
 .stat-list span, .resource-list span { color: var(--muted); font-size: .8rem; }
 .stat-list strong, .resource-list strong { color: var(--gold-bright); font-variant-numeric: tabular-nums; }
-.skill-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; }
+.movement-list { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 18px; }
+.movement-list > div:last-child { border-bottom: 1px solid var(--line-soft); }
+.save-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; }
+.save-list > div:last-child { border-bottom: 1px solid var(--line-soft); }
+.skill-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.skill-list > div, .skill-list > div:last-child { min-height: 0; border: 1px solid var(--line-soft); border-radius: 9px; padding: 9px 10px; background: #0e131b; }
+.skill-list > div.is-proficient { border: 2px solid var(--gold); padding: 8px 9px; background: #171308; }
+.skill-list > div.is-proficient span { color: var(--gold-bright); }
+.skill-list span { overflow: hidden; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+.skill-list strong { font-size: .85rem; }
 .dice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .die-card { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; min-height: 68px; border: 1px solid var(--line-soft); border-radius: 12px; padding: 10px 12px; background: #121720; }
 .die-card > strong { color: var(--gold-bright); font-family: Georgia, "Times New Roman", serif; font-size: 1.45rem; }
@@ -220,7 +229,7 @@ button { color: inherit; }
   .number-save label { flex: 1; }
   .number-save input { width: 100%; }
   .two-column-grid, .roleplay-grid, .spellcasting-grid { grid-template-columns: 1fr; }
-  .skill-list { grid-template-columns: 1fr; }
+  .movement-list, .skill-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .section-heading { align-items: stretch; flex-direction: column; }
   .passive-card, .inline-search { width: 100%; }
   .passive-card { justify-content: space-between; }
@@ -231,6 +240,7 @@ button { color: inherit; }
   .character-hero { padding-top: 24px; }
   .hero-stats { gap: 7px; }
   .hero-stat { min-height: 82px; padding: 13px 14px; }
+  .movement-list, .save-list, .skill-list { grid-template-columns: 1fr; }
   .ability-grid { grid-template-columns: repeat(2, 1fr); }
   .ability-card { min-height: 126px; }
   .sheet-tabs { gap: 2px; padding: 7px; }
