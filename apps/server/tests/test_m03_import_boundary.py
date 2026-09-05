@@ -7,7 +7,10 @@ import re
 
 
 APP_ROOT = Path(__file__).resolve().parents[1] / "app"
-FORBIDDEN_MODULE_RE = re.compile(r"(room|session|seat|campaign|party_roster)", re.IGNORECASE)
+FORBIDDEN_MODULE_RE = re.compile(
+    r"(?:^|\.)(?:room|session|seat|campaign|party_roster)(?:\.|$)",
+    re.IGNORECASE,
+)
 
 EXACT_PROTECTED_MODULES = {
     "app.persistence.characters",
@@ -23,16 +26,16 @@ EXACT_PROTECTED_MODULES = {
 }
 
 
-def _module_name(path: Path) -> str:
-    relative = path.relative_to(APP_ROOT)
+def _module_name(path: Path, app_root: Path = APP_ROOT) -> str:
+    relative = path.relative_to(app_root)
     parts = list(relative.with_suffix("").parts)
     if parts[-1] == "__init__":
         parts.pop()
     return ".".join(("app", *parts))
 
 
-def _module_index() -> dict[str, Path]:
-    return {_module_name(path): path for path in APP_ROOT.rglob("*.py")}
+def _module_index(app_root: Path = APP_ROOT) -> dict[str, Path]:
+    return {_module_name(path, app_root): path for path in app_root.rglob("*.py")}
 
 
 def _protected_seeds(index: dict[str, Path]) -> set[str]:
@@ -112,17 +115,20 @@ def _reachable_import_graph(index: dict[str, Path], seeds: set[str]) -> dict[str
     return graph
 
 
-def test_character_distribution_import_graph_has_no_multiplayer_dependencies() -> None:
-    index = _module_index()
-    seeds = _protected_seeds(index)
-    graph = _reachable_import_graph(index, seeds)
-
-    violations = sorted(
+def _forbidden_violations(graph: dict[str, set[str]]) -> list[tuple[str, str]]:
+    return sorted(
         (source, imported)
         for source, imported_modules in graph.items()
         for imported in imported_modules
         if imported.startswith("app.") and FORBIDDEN_MODULE_RE.search(imported)
     )
+
+
+def test_character_distribution_import_graph_has_no_multiplayer_dependencies() -> None:
+    index = _module_index()
+    seeds = _protected_seeds(index)
+    graph = _reachable_import_graph(index, seeds)
+    violations = _forbidden_violations(graph)
 
     assert not violations, (
         "M03-F import boundary violation: standalone character/content code must remain "
@@ -142,3 +148,32 @@ def test_standalone_import_graph_never_reaches_web_entrypoint() -> None:
     )
 
     assert not offenders, f"app.standalone must not import or reach app.main: {offenders}"
+
+
+def test_import_boundary_fixture_detects_multiplayer_module(tmp_path: Path) -> None:
+    app_root = tmp_path / "app"
+    (app_root / "domain").mkdir(parents=True)
+    (app_root / "room").mkdir(parents=True)
+    (app_root / "__init__.py").write_text("", encoding="utf-8")
+    (app_root / "domain" / "__init__.py").write_text("", encoding="utf-8")
+    (app_root / "room" / "__init__.py").write_text("", encoding="utf-8")
+    (app_root / "room" / "fake.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (app_root / "domain" / "character_fixture.py").write_text(
+        "from app.room import fake\n\nVALUE = fake.VALUE\n",
+        encoding="utf-8",
+    )
+
+    index = _module_index(app_root)
+    graph = _reachable_import_graph(index, {"app.domain.character_fixture"})
+    violations = _forbidden_violations(graph)
+
+    assert violations, "negative fixture must prove the M03-F boundary gate can fail"
+    assert any(imported in {"app.room", "app.room.fake"} for _, imported in violations)
+
+
+def test_forbidden_regex_matches_module_segments_not_substrings() -> None:
+    assert FORBIDDEN_MODULE_RE.search("app.room.api")
+    assert FORBIDDEN_MODULE_RE.search("app.feature.session")
+    assert FORBIDDEN_MODULE_RE.search("app.party_roster")
+    assert FORBIDDEN_MODULE_RE.search("app.domain.session_scope") is None
+    assert FORBIDDEN_MODULE_RE.search("app.content.roommate") is None
