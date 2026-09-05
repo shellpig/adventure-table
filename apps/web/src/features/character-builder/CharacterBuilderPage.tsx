@@ -438,10 +438,11 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
     <main className="builder-page">
       <div className="builder-shell">
         <header className="builder-topbar">
-          <div>
+          <div className="builder-topbar__main">
             <a href="/characters" className="builder-back">{t('builder.backWorkshopArrow')}</a>
-            <p className="eyebrow">{t('builder.eyebrow')}</p>
-            <h1>{view.resolved_summary.name?.trim() || t('builder.unnamedCharacter')}</h1>
+            <span className="builder-topbar__divider" aria-hidden="true" />
+            <h1 className="builder-topbar__title">{view.resolved_summary.name?.trim() || t('builder.unnamedCharacter')}</h1>
+            <span className="builder-topbar__badge">{t('builder.eyebrow')}</span>
           </div>
           <div className="builder-save-state">
             <span>{t('builder.draftRevision', { revision: view.draft.revision })}</span>

@@ -11,8 +11,7 @@
   margin: 0 auto;
 }
 
-.workshop-hero,
-.builder-topbar {
+.workshop-hero {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -26,8 +25,21 @@
   box-shadow: var(--shadow);
 }
 
+.builder-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 24px;
+  background:
+    linear-gradient(120deg, rgb(215 181 109 / 8%), transparent 46%),
+    var(--surface);
+  box-shadow: var(--shadow);
+}
+
 .workshop-hero h1,
-.builder-topbar h1,
 .builder-step__heading h2,
 .workshop-section__heading h2,
 .builder-summary h2 {
@@ -36,11 +48,74 @@
   letter-spacing: -.025em;
 }
 
-.workshop-hero h1,
-.builder-topbar h1 {
+.workshop-hero h1 {
   margin: 7px 0 8px;
   font-size: clamp(2rem, 5vw, 3.8rem);
   line-height: 1;
+}
+
+.builder-topbar__main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.builder-topbar .builder-back {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: .82rem;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 4%);
+  border: 1px solid var(--line-soft);
+  transition: all .2s;
+  white-space: nowrap;
+}
+
+.builder-topbar .builder-back:hover {
+  color: var(--gold-bright);
+  border-color: var(--line);
+}
+
+.builder-topbar__divider {
+  width: 1px;
+  height: 18px;
+  background: var(--line);
+  flex-shrink: 0;
+}
+
+.builder-topbar__title {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 600;
+  font-size: clamp(1.2rem, 2.2vw, 1.45rem);
+  line-height: 1.2;
+  color: var(--text);
+  letter-spacing: -.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.builder-topbar__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: rgb(215 181 109 / 12%);
+  border: 1px solid rgb(215 181 109 / 30%);
+  border-radius: 6px;
+  color: var(--gold);
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .workshop-hero p:last-child,
@@ -510,7 +585,9 @@
 
 @media (max-width: 720px) {
   .workshop-page, .builder-page { padding: 16px 12px 40px; }
-  .workshop-hero, .builder-topbar { align-items: stretch; flex-direction: column; padding: 22px; }
+  .workshop-hero { align-items: stretch; flex-direction: column; padding: 22px; }
+  .builder-topbar { align-items: stretch; flex-direction: column; padding: 14px 16px; gap: 12px; }
+  .builder-topbar__divider { display: none; }
   .builder-save-state { text-align: left; }
   .workshop-grid { grid-template-columns: 1fr; }
   .builder-layout { grid-template-columns: 1fr; }
