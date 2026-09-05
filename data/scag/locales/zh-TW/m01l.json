@@ -8,7 +8,7 @@
       "name": "半身人 (鬼智)"
     },
     "scag:subrace:deep-gnome": {
-      "name": "地底侏儒 / 斯奈布力"
+      "name": "侏儒 (地底/斯奈布力)"
     },
     "scag:feature:silent-speech": {
       "name": "無聲傳話",
@@ -19,7 +19,7 @@
       "data.desc.0": "你的黑暗視覺範圍延伸至 120 尺。"
     },
     "scag:feature:stone-camouflage": {
-      "name": "石之偽裝",
+      "name": "岩地偽裝",
       "data.desc.0": "在岩石地形中嘗試躲藏時，你的敏捷（隱匿）檢定具有優勢。"
     }
   }

@@ -2610,6 +2610,38 @@
       "reference_source": "5etools",
       "decision_note": "Dragonborn draconic ancestry variant (SRD / PHB).",
       "reviewed": true
+    },
+    {
+      "en": "Rock Gnome",
+      "zh-TW": "侏儒 (岩)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Gnome subrace (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Forest Gnome",
+      "zh-TW": "侏儒 (林)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Gnome subrace (PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Deep Gnome (Svirfneblin)",
+      "zh-TW": "侏儒 (地底/斯奈布力)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Gnome subrace (SCAG / MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Stone Camouflage",
+      "zh-TW": "岩地偽裝",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Deep Gnome subrace feature (SCAG / MTF).",
+      "reviewed": true
     }
   ]
 }
