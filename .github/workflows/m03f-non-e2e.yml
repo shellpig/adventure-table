@@ -1,0 +1,101 @@
+name: M03-F Non-E2E Regression
+
+on:
+  push:
+    branches:
+      - m03-f-windows-ci-release-boundary
+    paths:
+      - '.github/m03f-non-e2e.trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: adventure_table_m03f
+          POSTGRES_USER: adventure
+          POSTGRES_PASSWORD: adventure
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U adventure -d adventure_table_m03f"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install backend with web, dev, and standalone extras
+        run: pip install -e ".[web,dev,standalone]"
+      - name: M03-F focused static-contract tests
+        run: pytest tests/test_m03_import_boundary.py tests/test_m03_standalone_composition.py tests/test_m03f_workflow_contract.py -q
+      - name: PostgreSQL migration round trip regression
+        env:
+          DATABASE_URL: postgresql+psycopg://adventure:adventure@localhost:5432/adventure_table_m03f
+          M03C_POSTGRES_URL: postgresql+psycopg://adventure:adventure@localhost:5432/adventure_table_m03f
+        run: pytest tests/test_m03c_migration.py -q
+      - name: Backend pytest
+        run: pytest
+      - name: Localization authoring unit tests
+        working-directory: .
+        run: python -m unittest scripts.test_build_m02d_srd_locale_reviewed scripts.test_run_m02d_srd_locale_authoring
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Pin npm
+        run: npm install --global npm@11.6.0
+      - name: Install frontend
+        run: npm ci
+      - name: Frontend unit tests
+        run: npm test -- --run
+      - name: TypeScript and Vite build
+        run: npm run build
+
+  windows-standalone:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Pin npm
+        run: npm install --global npm@11.6.0
+      - name: Build standalone distribution
+        shell: cmd
+        run: scripts\build-standalone.cmd --version m03f-non-e2e
+      - name: Smoke frozen standalone
+        shell: cmd
+        run: .standalone-venv\Scripts\python.exe scripts\smoke_standalone.py dist\adventure-table-standalone --timeout 30
+
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose config
+        run: docker compose config

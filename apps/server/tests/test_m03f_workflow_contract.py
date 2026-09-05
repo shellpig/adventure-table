@@ -5,11 +5,17 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "m03-standalone.yml"
+NON_E2E_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "m03f-non-e2e.yml"
 
 
 def _workflow_text() -> str:
     assert WORKFLOW.is_file(), "M03-F standalone workflow is missing"
     return WORKFLOW.read_text(encoding="utf-8")
+
+
+def _non_e2e_text() -> str:
+    assert NON_E2E_WORKFLOW.is_file(), "M03-F non-E2E workflow is missing"
+    return NON_E2E_WORKFLOW.read_text(encoding="utf-8")
 
 
 def test_m03f_workflow_has_required_triggers_and_windows_toolchain() -> None:
@@ -56,3 +62,17 @@ def test_m03f_release_asset_name_matches_build_script_contract() -> None:
     assert "adventure-table-standalone-%VERSION%.zip" in build_script
     assert "adventure-table-standalone-$VERSION.zip" in workflow
     assert "needs.standalone-build.outputs.version" in workflow
+
+
+def test_m03f_non_e2e_gate_is_manual_by_trigger_commit_and_contains_no_e2e() -> None:
+    text = _non_e2e_text()
+
+    assert "m03-f-windows-ci-release-boundary" in text
+    assert ".github/m03f-non-e2e.trigger" in text
+    assert "test_m03_import_boundary.py" in text
+    assert "test_m03_standalone_composition.py" in text
+    assert "test_m03f_workflow_contract.py" in text
+    assert "scripts\\build-standalone.cmd --version m03f-non-e2e" in text
+    assert "scripts\\smoke_standalone.py dist\\adventure-table-standalone --timeout 30" in text
+    assert "test:e2e" not in text.lower()
+    assert "playwright" not in text.lower()
