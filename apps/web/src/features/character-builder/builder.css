@@ -535,7 +535,8 @@
 .summary-validation__heading .is-clear { color: var(--green); background: rgb(125 201 166 / 10%); }
 .summary-validation ul { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
 .summary-validation li { display: grid; gap: 3px; border-left: 2px solid var(--line); padding: 7px 0 7px 9px; }
-.summary-validation li strong { font-size: .63rem; text-transform: capitalize; }
+.summary-validation li strong { font-size: .63rem; }
+.summary-validation__code { text-transform: capitalize; }
 .summary-validation li span { color: var(--muted); font-size: .67rem; line-height: 1.45; }
 .summary-validation li.issue-blocking_error { border-color: var(--red); }
 .summary-validation li.issue-warning { border-color: var(--gold); }

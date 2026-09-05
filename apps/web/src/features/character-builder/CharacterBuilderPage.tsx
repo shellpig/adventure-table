@@ -866,7 +866,14 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   const targetChoiceId = issueChoiceId(issue.path)
                   const target = targetChoiceId ? choicesById.get(targetChoiceId) : undefined
                   const body = (
-                    <><strong>{issue.code.replaceAll('_', ' ')}</strong><span>{issue.message}</span></>
+                    <>
+                      <strong className={target ? undefined : 'summary-validation__code'}>
+                        {target
+                          ? builderChoiceLabel(target, locale, nameFor)
+                          : issue.code.replaceAll('_', ' ')}
+                      </strong>
+                      <span>{issue.message}</span>
+                    </>
                   )
                   return (
                     <li className={`issue-${issue.severity}`} key={`${issue.code}:${issue.path}:${index}`}>
