@@ -246,6 +246,7 @@ async function startCreate(
   await page.getByRole('button', { name: 'Origin Race & background' }).click()
   await chooseSearchable(page, 'Race', race)
   await chooseSearchable(page, 'Background', 'Acolyte', 'System Reference Document 5.1')
+  await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
   await page.getByRole('button', { name: 'Abilities Scores & starting choices' }).click()
   await clickAndWaitForSave(page, page.getByRole('button', { name: 'Save Ability Scores' }))
@@ -257,6 +258,9 @@ async function startCreate(
 }
 
 async function finishAndReview(page: Page, request: APIRequestContext) {
+  await page.getByRole('button', { name: 'Origin Race & background' }).click()
+  await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
+
   await page.getByRole('button', { name: 'Abilities Scores & starting choices' }).click()
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 

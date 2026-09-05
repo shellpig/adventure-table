@@ -62,6 +62,13 @@ const VARIANT_BRANCH_OPTION_SOURCES = new Set([
   'content:race-variant-spell',
 ])
 
+const ORIGIN_ABILITY_OPTION_SOURCES = new Set([
+  'content:ability_bonus_options',
+  'content:lineage-asi-pattern',
+  'content:lineage-asi-ability',
+  'content:lineage-size',
+])
+
 const ABILITY_COPY_KEYS: Record<keyof BuilderAbilityScores, UiCopyKey> = {
   strength: 'builder.abilities.strength',
   dexterity: 'builder.abilities.dexterity',
@@ -327,12 +334,20 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
       ) ?? [],
     [view],
   )
+  const originAbilityChoices = useMemo(
+    () =>
+      view?.choices.filter((choice) =>
+        ORIGIN_ABILITY_OPTION_SOURCES.has(choice.option_source ?? ''),
+      ) ?? [],
+    [view],
+  )
   const startingChoices = useMemo(
     () =>
       view?.choices.filter(
         (choice) =>
           !DIRECT_OPTION_SOURCES.has(choice.option_source ?? '') &&
           !VARIANT_BRANCH_OPTION_SOURCES.has(choice.option_source ?? '') &&
+          !ORIGIN_ABILITY_OPTION_SOURCES.has(choice.option_source ?? '') &&
           choice.option_source !== 'equipment' &&
           !choice.choice_id.startsWith('level:'),
       ) ?? [],
@@ -567,6 +582,21 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                 ) : null}
                 {subraceChoice ? (
                   <SearchableSelect label={t('builder.origin.subrace')} value={currentSubrace} disabled={saving} options={selectionOptions(subraceChoice, nameFor, locale)} secondaryMode="duplicates" onChange={(value) => patchReference('subrace_selection', value, true)} />
+                ) : null}
+                {originAbilityChoices.length ? (
+                  <div className="builder-choice-list">
+                    {originAbilityChoices.map((choice) => (
+                      <ChoiceEditor
+                        key={choice.choice_id}
+                        choice={choice}
+                        view={view}
+                        disabled={saving}
+                        onSave={(payload) => save.mutate(payload)}
+                        nameFor={nameFor}
+                        locale={locale}
+                      />
+                    ))}
+                  </div>
                 ) : null}
                 {backgroundChoice ? (
                   <SearchableSelect label={t('builder.origin.background')} value={currentBackground} disabled={saving} options={selectionOptions(backgroundChoice, nameFor, locale)} secondaryMode="duplicates" onChange={(value) => patchReference('background_selection', value, true)} />
