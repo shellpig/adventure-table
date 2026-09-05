@@ -145,7 +145,7 @@ grep -n "M03-B" docs/M03/實作規格.md docs/M03/開發設計方針.md docs/M03
 3. **驗收對應**：每條 Phase / Subphase 驗收契約都要有可定位的測試證據。
 4. **測試分層 gate**：測試範圍依改動範圍決定，不是每次都跑全部。
    - **純文件修改**：未改變產品／實作／驗收契約時，只核對內容一致性、連結與 diff，不適用下列程式改動 gate，也不因合併回 `main` 而重跑全套 E2E。若文件修改涉及上述契約，須核對對應實作與證據，必要時執行受影響的驗證；若是在辦理 Subphase／Phase 關門，仍須確認該階段 gate 的證據完整，不能以純文件提交豁免，也不因整理既有有效證據而重跑測試。
-   - **每次改動**：該 Subphase 的 focused test，加上被改到那一側的單元測試（backend `pytest tests/test_<subphase>_*.py`；frontend `npm test -- --run` 與 `npm run build`）。
+   - **每次改動**：該 Subphase 的 focused test，加上被改到那一側的單元測試（backend `pytest tests/test_<subphase>_*.py`，cwd 為 `apps/server`；frontend `npm test -- --run` 與 `npm run build`）。
    - **Subphase 關門**：全套 backend pytest、全套前端單元測試與 build、`docker compose config`，以及**該 Subphase diff 觸及的畫面／流程對應的 E2E spec**。
    - **Phase 關門與合併回 `main`**：全套 E2E。
    - 判準：diff 只動 backend / DB / 打包相依而不碰 `apps/web` 者為 backend-only，Subphase 關門不需要跑 E2E；一旦動到 `apps/web`，或動到 server 送給前端的 DTO、machine code、locale 字串，就要跑對應的 E2E spec。
@@ -177,6 +177,17 @@ grep -n "M03-B" docs/M03/實作規格.md docs/M03/開發設計方針.md docs/M03
 ### Python 執行環境規則
 
 一律使用專案根目錄的 `.\.venv\Scripts\python.exe`，讓 agent 與使用者看到一致結果。
+
+Backend server app 的指令（`pytest`、`alembic`、`uvicorn`）cwd 一律為 `apps/server`，直譯器一律 `..\..\.venv\Scripts\python.exe`。兩行分開下，**不要用 `cd ... && ...` 串成單行**——本機是 Windows PowerShell 5.1，沒有 `&&`：
+
+```
+cd apps/server
+..\..\.venv\Scripts\python.exe -m pytest tests/test_<subphase>_*.py
+```
+
+`tests/test_m03b_migration.py` 等測試用裸相對路徑讀 `alembic.ini` 與 `alembic/versions/`，cwd 不在 `apps/server` 會失敗；pytest 的 rootdir 解析到 `apps/server/pyproject.toml` 不代表 cwd 也跟著換。
+
+例外：`scripts\` 底下的發版與 smoke 工具從 repo root 執行，並使用工程實作守則第 8 條指定的 `.standalone-venv` / `STANDALONE_PYTHON`，不是這裡的 `.venv`。
 
 ### E2E 測試執行規則
 
