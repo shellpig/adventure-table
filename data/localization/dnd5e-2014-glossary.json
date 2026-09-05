@@ -2482,6 +2482,38 @@
       "reference_source": "5etools",
       "decision_note": "Shadar-kai subrace feature (MTF).",
       "reviewed": true
+    },
+    {
+      "en": "Naturally Stealthy",
+      "zh-TW": "天生善匿",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Lightfoot Halfling racial trait (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Lightfoot Halfling",
+      "zh-TW": "半身人 (輕足)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Halfling subrace (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Stout Halfling",
+      "zh-TW": "半身人 (強魄)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Halfling subrace (PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Ghostwise Halfling",
+      "zh-TW": "半身人 (鬼智)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Halfling subrace (SCAG).",
+      "reviewed": true
     }
   ]
 }
