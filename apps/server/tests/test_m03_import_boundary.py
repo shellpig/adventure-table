@@ -8,7 +8,7 @@ import re
 
 APP_ROOT = Path(__file__).resolve().parents[1] / "app"
 FORBIDDEN_MODULE_RE = re.compile(
-    r"(?:^|\.)(?:room|session|seat|campaign|party_roster)(?:\.|$)",
+    r"(?:^|\.)(?:rooms?|sessions?|seats?|campaigns?|party_rosters?)(?:\.|$)",
     re.IGNORECASE,
 )
 
@@ -154,21 +154,28 @@ def test_import_boundary_fixture_detects_multiplayer_module(tmp_path: Path) -> N
     app_root = tmp_path / "app"
     (app_root / "domain").mkdir(parents=True)
     (app_root / "room").mkdir(parents=True)
+    (app_root / "api").mkdir(parents=True)
     (app_root / "__init__.py").write_text("", encoding="utf-8")
     (app_root / "domain" / "__init__.py").write_text("", encoding="utf-8")
     (app_root / "room" / "__init__.py").write_text("", encoding="utf-8")
     (app_root / "room" / "fake.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (app_root / "api" / "__init__.py").write_text("", encoding="utf-8")
+    # Plural resource module names are the likelier P2 spelling, so the gate has
+    # to catch ``rooms`` as well as ``room``.
+    (app_root / "api" / "rooms.py").write_text("VALUE = 2\n", encoding="utf-8")
     (app_root / "domain" / "character_fixture.py").write_text(
-        "from app.room import fake\n\nVALUE = fake.VALUE\n",
+        "from app.room import fake\nimport app.api.rooms\n\nVALUE = fake.VALUE\n",
         encoding="utf-8",
     )
 
     index = _module_index(app_root)
     graph = _reachable_import_graph(index, {"app.domain.character_fixture"})
     violations = _forbidden_violations(graph)
+    flagged = {imported for _, imported in violations}
 
     assert violations, "negative fixture must prove the M03-F boundary gate can fail"
-    assert any(imported in {"app.room", "app.room.fake"} for _, imported in violations)
+    assert flagged & {"app.room", "app.room.fake"}
+    assert "app.api.rooms" in flagged
 
 
 def test_forbidden_regex_matches_module_segments_not_substrings() -> None:
@@ -177,3 +184,12 @@ def test_forbidden_regex_matches_module_segments_not_substrings() -> None:
     assert FORBIDDEN_MODULE_RE.search("app.party_roster")
     assert FORBIDDEN_MODULE_RE.search("app.domain.session_scope") is None
     assert FORBIDDEN_MODULE_RE.search("app.content.roommate") is None
+
+
+def test_forbidden_regex_matches_plural_resource_module_names() -> None:
+    assert FORBIDDEN_MODULE_RE.search("app.api.rooms")
+    assert FORBIDDEN_MODULE_RE.search("app.persistence.sessions")
+    assert FORBIDDEN_MODULE_RE.search("app.api.seats")
+    assert FORBIDDEN_MODULE_RE.search("app.domain.campaigns")
+    assert FORBIDDEN_MODULE_RE.search("app.domain.party_rosters")
+    assert FORBIDDEN_MODULE_RE.search("app.content.roomservice") is None
