@@ -108,6 +108,10 @@ function signed(value: number) {
   return value >= 0 ? `+${value}` : String(value)
 }
 
+function abilityModifier(score: number): number {
+  return Math.floor((score - 10) / 2)
+}
+
 function titleCase(value: string) {
   return value
     .replaceAll('-', ' ')
@@ -410,22 +414,24 @@ export function EquipmentReviewStep({
             </div>
 
             <div className="summary-abilities">
-              {review.resolved_summary.ability_scores.map((score) => (
-                <div key={score.ability}>
-                  <span>{score.ability.slice(0, 3).toUpperCase()}</span>
-                  <strong>
-                    {score.effective}{' '}
-                    {review.derived_stats
-                      ? `(${signed(review.derived_stats.ability_modifiers[score.ability] ?? 0)})`
-                      : ''}
-                  </strong>
-                  <small>
-                    {t('review.base', { value: score.base })}
-                    {score.permanent_bonus ? ` + ${score.permanent_bonus}` : ''}
-                    {score.overridden ? ` · ${t('review.override')}` : ''}
-                  </small>
-                </div>
-              ))}
+              {review.resolved_summary.ability_scores.map((score) => {
+                const modifier =
+                  review.derived_stats?.ability_modifiers[score.ability] ??
+                  abilityModifier(score.effective)
+                return (
+                  <div key={score.ability}>
+                    <span>{score.ability.slice(0, 3).toUpperCase()}</span>
+                    <strong>
+                      {score.effective}({signed(modifier)})
+                    </strong>
+                    <small>
+                      {t('review.base', { value: score.base })}
+                      {score.permanent_bonus ? ` + ${score.permanent_bonus}` : ''}
+                      {score.overridden ? ` · ${t('review.override')}` : ''}
+                    </small>
+                  </div>
+                )
+              })}
             </div>
 
             <div className="summary-grants summary-grants--paired">
