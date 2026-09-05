@@ -53,7 +53,7 @@
       "name": "吉斯語"
     },
     "mtf:feature:superior-darkvision": {
-      "name": "高等黑暗視覺",
+      "name": "高級黑暗視覺",
       "data.desc.0": "你的黑暗視覺範圍為 120 尺。"
     },
     "mtf:feature:duergar-resilience": {
@@ -97,11 +97,11 @@
       "data.desc.0": "每次長休可用附贈動作一次，魔法傳送至多 30 尺到一個你看得見的未占據空間。3 級起，傳送後直到你的下回合開始前，你對所有傷害具有抗性。"
     },
     "mtf:feature:decadent-mastery": {
-      "name": "奢華精通",
+      "name": "業餘愛好",
       "data.desc.0": "你學會一種自選語言，並從一項自選技能或工具中獲得熟練。"
     },
     "mtf:feature:martial-prodigy": {
-      "name": "武藝奇才",
+      "name": "軍事人才",
       "data.desc.0": "你熟練輕甲、中甲、短劍、長劍與巨劍。"
     },
     "mtf:feature:githyanki-psionics": {

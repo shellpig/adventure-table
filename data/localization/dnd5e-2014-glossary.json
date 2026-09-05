@@ -2770,6 +2770,118 @@
       "reference_source": "5etools",
       "decision_note": "Half-Orc racial trait (SRD / PHB).",
       "reviewed": true
+    },
+    {
+      "en": "Gith",
+      "zh-TW": "吉斯人",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Gith race (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Githyanki",
+      "zh-TW": "吉斯洋基",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Gith subrace (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Githzerai",
+      "zh-TW": "吉斯澤萊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Gith subrace (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Superior Darkvision",
+      "zh-TW": "高級黑暗視覺",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Drow / Duergar racial trait (PHB / MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Duergar Resilience",
+      "zh-TW": "灰矮人韌性",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Duergar racial trait (MTF / SCAG).",
+      "reviewed": true
+    },
+    {
+      "en": "Duergar Magic",
+      "zh-TW": "灰矮人魔法",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Duergar racial trait (MTF / SCAG).",
+      "reviewed": true
+    },
+    {
+      "en": "Sunlight Sensitivity",
+      "zh-TW": "日光敏感",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Drow / Duergar racial trait (PHB / MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Fey Step",
+      "zh-TW": "妖精步",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Eladrin racial trait (MTF / DMG).",
+      "reviewed": true
+    },
+    {
+      "en": "Necrotic Resistance",
+      "zh-TW": "黯蝕抗性",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Shadar-kai racial trait (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Decadent Mastery",
+      "zh-TW": "業餘愛好",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Githyanki racial trait (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Martial Prodigy",
+      "zh-TW": "軍事人才",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Githyanki racial trait (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Githyanki Psionics",
+      "zh-TW": "吉斯洋基靈能",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Githyanki racial trait (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Mental Discipline",
+      "zh-TW": "心靈紀律",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Githzerai racial trait (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Githzerai Psionics",
+      "zh-TW": "吉斯澤萊靈能",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Githzerai racial trait (MTF).",
+      "reviewed": true
     }
   ]
 }
