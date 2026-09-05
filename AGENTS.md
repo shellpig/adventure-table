@@ -134,6 +134,7 @@ grep -n "M03-B" docs/M03/實作規格.md docs/M03/開發設計方針.md docs/M03
 4. **網站不接 LLM API。** 後端沒有模型可呼叫，所有 AI 能力來自使用者的外部 AI Session。
 5. **內容逐步擴充，SRD 5.1 是起點不是上限。** 非 SRD 內容依實際需要逐步加入。
 6. **Human UI 與 AI MCP 共用同一份 backend logic**，不做兩套遊戲邏輯。
+7. **M03 已交付單機版，standalone boundary 從此是常駐約束。** 新增任何 P Phase / M Phase 都不得違反 `docs/M03/實作規格.md` 3.2 的界線：`app.standalone` 不得 import `app.main`；`app.content.*`、`app.domain.character*` 與 protected module 不得觸及 Room / Campaign / Session / Seat / Party Roster 等多人層。P2 引入多人模組時，必須同步擴充 `tests/test_m03_import_boundary.py` 的 forbidden regex 與 `EXACT_PROTECTED_MODULES`，否則新命名會讓 gate 靜默放行。
 
 ## 工程實作守則
 
