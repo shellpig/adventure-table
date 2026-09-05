@@ -174,11 +174,11 @@ test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to e
   await page.getByLabel('Target character level').fill('10')
   await clickAndWaitForSave(page, page.getByRole('button', { name: 'Save Basic Details' }))
 
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Human')
   await chooseSearchable(page, 'Background', 'Acolyte')
 
-  await page.getByRole('button', { name: /Abilities/ }).click()
+  await page.getByTestId('builder-step-abilities').click()
   await clickAndWaitForSave(page, page.getByRole('button', { name: 'Save Ability Scores' }))
   await chooseSearchable(page, 'Human — Languages', 'Dwarvish')
   const backgroundLanguages = page
@@ -188,7 +188,7 @@ test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to e
   await chooseIn(backgroundLanguages, 'Draconic')
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   for (let level = 1; level <= 5; level += 1) {
     await chooseSearchable(page, `Level ${level} class`, 'Fighter')
   }
@@ -219,10 +219,10 @@ test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to e
   await page.reload()
   await expect(page).toHaveURL(draftUrl)
   await expectDraftSaved(page)
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await expect(page.getByText('Fighter 5 / Wizard 5', { exact: true }).last()).toBeVisible()
 
-  await page.getByRole('button', { name: /Spellcasting/ }).click()
+  await page.getByTestId('builder-step-spells').click()
   await expect(page.getByRole('heading', { name: 'Spellcasting & resources' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Wizard 5' })).toBeVisible()
   await fillExactSpellBuckets(page)
@@ -239,11 +239,11 @@ test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to e
     }
   }
 
-  await page.getByRole('button', { name: /Equipment/ }).click()
+  await page.getByTestId('builder-step-equipment').click()
   await expect(page.getByRole('heading', { name: 'Equipment & roleplay' })).toBeVisible()
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByTestId('builder-step-review').click()
   await expect(page.getByRole('heading', { name: 'Build snapshot & final review' })).toBeVisible()
 
   const reviewResponse = await request.get(`/api/character-builder/drafts/${draftId}/review`)

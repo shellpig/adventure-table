@@ -501,25 +501,25 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
 
         <div className="builder-layout">
           <aside className="builder-rail" aria-label={t('builder.stepsAria')}>
-            <button className={step === 'basic' ? 'is-active' : ''} onClick={() => setStep('basic')}>
+            <button data-testid="builder-step-basic" className={step === 'basic' ? 'is-active' : ''} onClick={() => setStep('basic')}>
               <span>01</span><div><strong>{t('builder.step.basic')}</strong><small>{t('builder.step.basicHint')}</small></div>
             </button>
-            <button className={step === 'origin' ? 'is-active' : ''} onClick={() => setStep('origin')}>
+            <button data-testid="builder-step-origin" className={step === 'origin' ? 'is-active' : ''} onClick={() => setStep('origin')}>
               <span>02</span><div><strong>{t('builder.step.origin')}</strong><small>{t('builder.step.originHint')}</small></div>
             </button>
-            <button className={step === 'abilities' ? 'is-active' : ''} onClick={() => setStep('abilities')}>
+            <button data-testid="builder-step-abilities" className={step === 'abilities' ? 'is-active' : ''} onClick={() => setStep('abilities')}>
               <span>03</span><div><strong>{t('builder.step.abilities')}</strong><small>{t('builder.step.abilitiesHint')}</small></div>
             </button>
-            <button className={step === 'class' ? 'is-active' : ''} onClick={() => setStep('class')}>
+            <button data-testid="builder-step-class" className={step === 'class' ? 'is-active' : ''} onClick={() => setStep('class')}>
               <span>04</span><div><strong>{t('builder.step.class')}</strong><small>{t('builder.step.classHint')}</small></div>
             </button>
-            <button className={step === 'spells' ? 'is-active' : ''} onClick={() => setStep('spells')}>
+            <button data-testid="builder-step-spells" className={step === 'spells' ? 'is-active' : ''} onClick={() => setStep('spells')}>
               <span>05</span><div><strong>{t('builder.step.spells')}</strong><small>{t('builder.step.spellsHint')}</small></div>
             </button>
-            <button className={step === 'equipment' ? 'is-active' : ''} onClick={() => setStep('equipment')}>
+            <button data-testid="builder-step-equipment" className={step === 'equipment' ? 'is-active' : ''} onClick={() => setStep('equipment')}>
               <span>06</span><div><strong>{t('builder.step.equipment')}</strong><small>{t('builder.step.equipmentHint')}</small></div>
             </button>
-            <button className={step === 'review' ? 'is-active' : ''} onClick={() => setStep('review')}>
+            <button data-testid="builder-step-review" className={step === 'review' ? 'is-active' : ''} onClick={() => setStep('review')}>
               <span>07</span><div><strong>{t('builder.step.review')}</strong><small>{t('builder.step.reviewHint')}</small></div>
             </button>
           </aside>

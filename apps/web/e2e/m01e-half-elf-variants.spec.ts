@@ -247,7 +247,7 @@ async function chooseOrigin(
   ancestry: string,
   replacement: string,
 ) {
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Half-Elf')
   await chooseSearchable(page, 'Background', 'Acolyte')
   await chooseSearchable(page, 'Ancestry variant (optional)', ancestry)
@@ -255,7 +255,7 @@ async function chooseOrigin(
 }
 
 async function confirmCreate(page: Page, name: string) {
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByTestId('builder-step-review').click()
   const confirm = page.getByRole('button', { name: 'Confirm & Create Character' })
   await expect(confirm).toBeEnabled()
   await confirm.click()
@@ -269,7 +269,7 @@ test('M01-E keeps Skill Versatility when the ancestry branch explicitly keeps it
   await startDraft(page, 'M01-E Keep Hero', 1)
   await chooseOrigin(page, 'Wood Elf Descent', 'Keep Skill Versatility')
 
-  await page.getByRole('button', { name: /Abilities/ }).click()
+  await page.getByTestId('builder-step-abilities').click()
   const skillVersatility = page.locator('.builder-choice').filter({ hasText: 'Skill Versatility' })
   await chooseIn(skillVersatility, 'Skill: Acrobatics')
   await chooseIn(skillVersatility, 'Skill: Animal Handling')

@@ -117,7 +117,7 @@ test('M02-F completes a bilingual PHB origin flow without changing selections', 
   const name = `M02-F PHB ${Date.now()}`
   await startDraft(page, name)
 
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Elf')
   await chooseSearchable(page, 'Subrace', 'Wood Elf')
   await chooseSearchable(page, 'Background', 'Acolyte', "Player's Handbook 2014 Additions")
@@ -129,7 +129,7 @@ test('M02-F completes a bilingual PHB origin flow without changing selections', 
   await page.getByTestId('locale-option-en').click()
   await expect(page.getByRole('combobox', { name: 'Background' })).toHaveValue('Acolyte')
 
-  await page.getByRole('button', { name: /Abilities/ }).click()
+  await page.getByTestId('builder-step-abilities').click()
   const beforeAbilities = await currentDraftRevision(page)
   await page.getByRole('button', { name: 'Save Ability Scores' }).click()
   await waitForDraftRevision(page, beforeAbilities)
@@ -140,14 +140,14 @@ test('M02-F completes a bilingual PHB origin flow without changing selections', 
   // starting choice must be completed before Review, while optional roleplay stays untouched.
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await chooseSearchable(page, 'Level 1 class', 'Barbarian')
   const skills = page.getByTestId('level-node-1').locator('.progression-choice')
   await chooseOption(page, skills.getByRole('combobox', { name: 'Add selection' }), 'Skill: Animal Handling')
   await chooseOption(page, skills.getByRole('combobox', { name: 'Add selection' }), 'Skill: Athletics')
   await fillEmptyComboboxes(page, page.locator('.level-rail'))
 
-  await page.getByRole('button', { name: /Equipment/ }).click()
+  await page.getByTestId('builder-step-equipment').click()
   await chooseSearchable(page, /greataxe or/, 'Greataxe')
   await chooseSearchable(page, /two handaxes or/, '2 × Handaxe')
   await chooseSearchable(page, 'Choose a holy symbol', 'Amulet')
@@ -156,7 +156,7 @@ test('M02-F completes a bilingual PHB origin flow without changing selections', 
   const draftId = page.url().match(/\/character-builder\/([0-9a-f-]{36})$/)?.[1]
   if (!draftId) throw new Error(`Cannot parse draft id from ${page.url()}`)
 
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByTestId('builder-step-review').click()
   const reviewResponse = await request.get(`/api/character-builder/drafts/${draftId}/review`)
   expect(reviewResponse.ok()).toBeTruthy()
   const review = await reviewResponse.json()
@@ -174,9 +174,9 @@ test('M02-F completes a bilingual PHB origin flow without changing selections', 
 
 test('M02-F keeps a GoS optional flavor selection localized and non-mandatory', async ({ page }) => {
   await startDraft(page, `M02-F GoS ${Date.now()}`)
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Background', 'Fisher')
-  await page.getByRole('button', { name: /Equipment/ }).click()
+  await page.getByTestId('builder-step-equipment').click()
 
   await page.getByTestId('locale-option-zh-TW').click()
   await expect(page.getByRole('heading', { name: '選填背景細節' })).toBeVisible()

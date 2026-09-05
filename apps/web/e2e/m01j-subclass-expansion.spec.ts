@@ -322,11 +322,11 @@ async function startDraft(page: Page, name: string, targetLevel: number) {
   await page.getByLabel('Target character level').fill(String(targetLevel))
   await clickAndWaitForSave(page, page.getByRole('button', { name: 'Save Basic Details' }))
 
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Human', 'System Reference Document 5.1')
   await chooseSearchable(page, 'Background', 'Acolyte', 'System Reference Document 5.1')
 
-  await page.getByRole('button', { name: /Abilities/ }).click()
+  await page.getByTestId('builder-step-abilities').click()
   await clickAndWaitForSave(page, page.getByRole('button', { name: 'Save Ability Scores' }))
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 }
@@ -354,7 +354,7 @@ async function fillPendingChoices(page: Page, namedChoices: NamedChoice[] = []) 
   // owns grants that are not tied to one level row (Arcana Domain's cantrips).
   await page.getByRole('button', { name: 'Class Level-by-level rail' }).click()
   await fillEmptyComboboxes(page, page.locator('.level-rail'))
-  await page.getByRole('button', { name: /Abilities/ }).click()
+  await page.getByTestId('builder-step-abilities').click()
   // Named choices go first so the sweep below sees them already filled.
   for (const named of namedChoices) {
     await chooseSearchable(page, named.label, named.value)
@@ -372,11 +372,11 @@ async function finishAndConfirm(
   await page.getByRole('button', { name: 'Spellcasting Access & resources' }).click()
   await fillExactSpellBuckets(page)
 
-  await page.getByRole('button', { name: /Equipment/ }).click()
+  await page.getByTestId('builder-step-equipment').click()
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
   const draftId = draftIdFrom(page)
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByTestId('builder-step-review').click()
   await expect(page.getByRole('heading', { name: 'Build snapshot & final review' })).toBeVisible()
   await readReview(request, draftId)
 
@@ -565,11 +565,11 @@ test('M01-J direct high-level create matches sequential level up', async ({ page
 
     await page.getByRole('button', { name: 'Spellcasting Access & resources' }).click()
     await fillExactSpellBuckets(page)
-    await page.getByRole('button', { name: /Equipment/ }).click()
+    await page.getByTestId('builder-step-equipment').click()
     await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
     const levelUpDraftId = draftIdFrom(page)
-    await page.getByRole('button', { name: /Review/ }).click()
+    await page.getByTestId('builder-step-review').click()
     await expect(page.getByRole('heading', { name: 'Level Up review' })).toBeVisible()
     await readReview(request, levelUpDraftId)
     const confirm = page.getByRole('button', { name: 'Confirm Level Up' })

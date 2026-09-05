@@ -68,7 +68,7 @@ async function startDraft(page: Page, name: string, level: number) {
 }
 
 async function saveDefaultAbilities(page: Page) {
-  await page.getByRole('button', { name: /Abilities/ }).click()
+  await page.getByTestId('builder-step-abilities').click()
   await page.getByRole('button', { name: 'Save Ability Scores' }).click()
   await expectDraftSaved(page)
 }
@@ -87,7 +87,7 @@ async function chooseBarbarianLevelOne(page: Page) {
 }
 
 async function chooseBarbarianEquipment(page: Page) {
-  await page.getByRole('button', { name: /Equipment/ }).click()
+  await page.getByTestId('builder-step-equipment').click()
   await chooseSearchable(
     page,
     /\(a\) a greataxe or \(b\) any martial melee weapon/,
@@ -102,7 +102,7 @@ async function chooseBarbarianEquipment(page: Page) {
 }
 
 async function confirmCreateAndReload(page: Page, name: string) {
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByTestId('builder-step-review').click()
   const confirm = page.getByRole('button', { name: 'Confirm & Create Character' })
   await expect(confirm).toBeEnabled()
   await confirm.click()
@@ -119,12 +119,12 @@ async function confirmCreateAndReload(page: Page, name: string) {
 test('M01-D creates and reloads a Goblin character', async ({ page }) => {
   test.slow()
   await startDraft(page, 'M01-D Goblin Hero', 1)
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Goblin')
   await chooseSearchable(page, 'Background', 'Acolyte')
   await saveDefaultAbilities(page)
   await chooseAcolyteLanguages(page)
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await chooseBarbarianLevelOne(page)
   await chooseBarbarianEquipment(page)
   await confirmCreateAndReload(page, 'M01-D Goblin Hero')
@@ -135,7 +135,7 @@ test('M01-D creates and reloads a Goblin character', async ({ page }) => {
 test('M01-D creates a Hobgoblin with two martial weapon choices', async ({ page }) => {
   test.slow()
   await startDraft(page, 'M01-D Hobgoblin Hero', 1)
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Hobgoblin')
   await chooseSearchable(page, 'Background', 'Acolyte')
   await saveDefaultAbilities(page)
@@ -148,7 +148,7 @@ test('M01-D creates a Hobgoblin with two martial weapon choices', async ({ page 
   await chooseIn(martialTraining, 'Longbows')
   await expect(martialTraining).toContainText('2 / 2')
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await chooseBarbarianLevelOne(page)
   await chooseBarbarianEquipment(page)
   await confirmCreateAndReload(page, 'M01-D Hobgoblin Hero')
@@ -158,14 +158,14 @@ test('M01-D creates a Hobgoblin with two martial weapon choices', async ({ page 
 test('M01-D requires an Aasimar subrace and persists its level-one grants', async ({ page }) => {
   test.slow()
   await startDraft(page, 'M01-D Protector Hero', 1)
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Aasimar')
   await expect(page.getByText(/requires a subrace selection/i)).toBeVisible()
   await chooseSearchable(page, 'Subrace', 'Protector Aasimar')
   await chooseSearchable(page, 'Background', 'Acolyte')
   await saveDefaultAbilities(page)
   await chooseAcolyteLanguages(page)
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await chooseBarbarianLevelOne(page)
   await chooseBarbarianEquipment(page)
   await confirmCreateAndReload(page, 'M01-D Protector Hero')
@@ -177,14 +177,14 @@ test('M01-D requires an Aasimar subrace and persists its level-one grants', asyn
 test('M01-D Aasimar level 2 to 3 adds the level-gated transformation in Build v2', async ({ page }) => {
   test.slow()
   await startDraft(page, 'M01-D Threshold Hero', 2)
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Aasimar')
   await chooseSearchable(page, 'Subrace', 'Protector Aasimar')
   await chooseSearchable(page, 'Background', 'Acolyte')
   await saveDefaultAbilities(page)
   await chooseAcolyteLanguages(page)
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await chooseBarbarianLevelOne(page)
   await chooseSearchable(page, 'Level 2 class', 'Barbarian')
   await chooseBarbarianEquipment(page)
@@ -196,10 +196,10 @@ test('M01-D Aasimar level 2 to 3 adds the level-gated transformation in Build v2
   const card = page.locator('.workshop-card').filter({ hasText: 'M01-D Threshold Hero' })
   await card.getByRole('button', { name: 'Level Up' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await chooseSearchable(page, 'Level 3 class', 'Barbarian')
   await chooseSearchable(page, /Barbarian subclass/, 'Berserker')
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByTestId('builder-step-review').click()
   const confirm = page.getByRole('button', { name: 'Confirm Level Up' })
   await expect(confirm).toBeEnabled()
   await confirm.click()

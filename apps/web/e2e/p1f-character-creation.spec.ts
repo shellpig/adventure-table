@@ -56,11 +56,11 @@ test('P1-F resolves starting equipment, reviews and creates Version 1 from the b
   await page.getByRole('button', { name: 'Save Basic Details' }).click()
   await expect(page.getByRole('heading', { name: 'P1-F Browser Hero' }).first()).toBeVisible()
 
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Human')
   await chooseSearchable(page, 'Background', 'Acolyte')
 
-  await page.getByRole('button', { name: /Abilities/ }).click()
+  await page.getByTestId('builder-step-abilities').click()
   await page.getByRole('button', { name: 'Save Ability Scores' }).click()
   await chooseSearchable(page, 'Human — Languages', 'Dwarvish')
   const backgroundLanguages = page
@@ -69,20 +69,20 @@ test('P1-F resolves starting equipment, reviews and creates Version 1 from the b
   await chooseIn(backgroundLanguages, 'Celestial')
   await chooseIn(backgroundLanguages, 'Draconic')
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await chooseSearchable(page, 'Level 1 class', 'Barbarian')
   const startingSkills = page.getByTestId('level-node-1').locator('.progression-choice')
   await chooseIn(startingSkills, 'Skill: Animal Handling')
   await chooseIn(startingSkills, 'Skill: Athletics')
 
-  await page.getByRole('button', { name: /Equipment/ }).click()
+  await page.getByTestId('builder-step-equipment').click()
   await expect(page.getByRole('heading', { name: 'Equipment & roleplay' })).toBeVisible()
 
   await chooseSearchable(page, /\(a\) a greataxe or \(b\) any martial melee weapon/, 'Greataxe')
   await chooseSearchable(page, /\(a\) two handaxes or \(b\) any simple weapon/, '2 × Handaxe')
   await chooseSearchable(page, 'Acolyte — Starting Equipment', 'Amulet')
 
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByTestId('builder-step-review').click()
   await expect(page.getByRole('heading', { name: 'Build snapshot & final review' })).toBeVisible()
 
   await expect(page.getByText('No blocking issues. Confirm will create Character, immutable Version 1 and Current State in one transaction.')).toBeVisible()

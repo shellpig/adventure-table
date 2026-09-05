@@ -66,13 +66,13 @@ test('P1-D preserves an ordered Fighter 5 / Wizard 5 rail with ASI and feat choi
   await page.getByRole('button', { name: 'Save Basic Details' }).click()
   await expect(page.getByText('P1-D Browser Hero').first()).toBeVisible()
 
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Human')
   await expect(page.getByText('Human', { exact: true }).last()).toBeVisible()
   await chooseSearchable(page, 'Background', 'Acolyte')
   await expect(page.getByText('Acolyte', { exact: true }).last()).toBeVisible()
 
-  await page.getByRole('button', { name: /Abilities/ }).click()
+  await page.getByTestId('builder-step-abilities').click()
   await expect(page.getByRole('tab', { name: 'Standard Array' })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('button', { name: 'Save Ability Scores' }).click()
   await expect(page.locator('.summary-abilities')).toContainText('16')
@@ -97,7 +97,7 @@ test('P1-D preserves an ordered Fighter 5 / Wizard 5 rail with ASI and feat choi
   await expect(page.locator('.builder-abilities input')).toHaveCount(6)
   await page.getByRole('button', { name: 'Save Ability Scores' }).click()
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await expect(page.getByRole('heading', { name: 'Build the level rail' })).toBeVisible()
   await expect(page.locator('[data-testid^="level-node-"]')).toHaveCount(10)
 
@@ -157,7 +157,7 @@ test('P1-D preserves an ordered Fighter 5 / Wizard 5 rail with ASI and feat choi
   await page.reload()
   await expect(page).toHaveURL(url)
   await expect(page.getByRole('heading', { name: 'P1-D Browser Hero' }).first()).toBeVisible()
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await expect(page.getByText('Fighter 5 / Wizard 5', { exact: true }).last()).toBeVisible()
   await expect(page.getByTestId('level-node-3').getByRole('combobox', { name: /Fighter subclass/ })).toHaveValue('Champion')
   await expect(page.getByTestId('level-node-7').getByRole('combobox', { name: /Wizard subclass/ })).toHaveValue('Evocation')

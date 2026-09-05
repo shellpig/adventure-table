@@ -382,12 +382,12 @@ test('M02-H preserves a populated race/subrace/background/class/spells/equipment
   await page.getByLabel('Target character level').fill('1')
   await clickDraftSave(page, 'Save Basic Details')
 
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Elf')
   await chooseSearchable(page, 'Subrace', 'Wood Elf')
   await chooseSearchable(page, 'Background', 'Acolyte', CREATE_FLOW.en.backgroundSource)
 
-  await page.getByRole('button', { name: /Abilities/ }).click()
+  await page.getByTestId('builder-step-abilities').click()
   await clickDraftSave(page, 'Save Ability Scores')
   const backgroundLanguages = page
     .locator('.builder-choice')
@@ -396,14 +396,14 @@ test('M02-H preserves a populated race/subrace/background/class/spells/equipment
   await chooseIn(backgroundLanguages, 'Add selection', 'Draconic')
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await chooseSearchable(page, 'Level 1 class', 'Wizard')
   await fillEmptyComboboxes(page, page.locator('.level-rail'))
 
-  await page.getByRole('button', { name: /Spellcasting/ }).click()
+  await page.getByTestId('builder-step-spells').click()
   await fillExactSpellBuckets(page)
 
-  await page.getByRole('button', { name: /Equipment/ }).click()
+  await page.getByTestId('builder-step-equipment').click()
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
   const draftId = page.url().match(/\/character-builder\/([0-9a-f-]{36})$/)?.[1]

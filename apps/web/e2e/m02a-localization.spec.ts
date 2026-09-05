@@ -78,7 +78,7 @@ test('M02-A locale switching preserves Builder step, URL and Draft domain state'
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
   await expect(page.getByText('已儲存至伺服器')).toBeVisible()
 
-  await page.getByRole('button', { name: /出身/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await expect(page.getByRole('heading', { name: '選擇出身' })).toBeVisible()
 
   const url = page.url()

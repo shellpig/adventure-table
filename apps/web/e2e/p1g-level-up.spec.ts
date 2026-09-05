@@ -49,11 +49,11 @@ async function createBarbarianOne(page: Page) {
   await page.getByLabel('Target character level').fill('1')
   await page.getByRole('button', { name: 'Save Basic Details' }).click()
 
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Human')
   await chooseSearchable(page, 'Background', 'Acolyte')
 
-  await page.getByRole('button', { name: /Abilities/ }).click()
+  await page.getByTestId('builder-step-abilities').click()
   await page.getByRole('button', { name: 'Save Ability Scores' }).click()
   await chooseSearchable(page, 'Human — Languages', 'Dwarvish')
   const backgroundLanguages = page
@@ -62,19 +62,19 @@ async function createBarbarianOne(page: Page) {
   await chooseIn(backgroundLanguages, 'Celestial')
   await chooseIn(backgroundLanguages, 'Draconic')
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await chooseSearchable(page, 'Level 1 class', 'Barbarian')
   const startingSkills = page.getByTestId('level-node-1').locator('.progression-choice')
   await chooseIn(startingSkills, 'Skill: Animal Handling')
   await chooseIn(startingSkills, 'Skill: Athletics')
 
-  await page.getByRole('button', { name: /Equipment/ }).click()
+  await page.getByTestId('builder-step-equipment').click()
   await expect(page.getByRole('heading', { name: 'Equipment & roleplay' })).toBeVisible()
   await chooseSearchable(page, /\(a\) a greataxe or \(b\) any martial melee weapon/, 'Greataxe')
   await chooseSearchable(page, /\(a\) two handaxes or \(b\) any simple weapon/, '2 × Handaxe')
   await chooseSearchable(page, 'Acolyte — Starting Equipment', 'Amulet')
 
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByTestId('builder-step-review').click()
   const confirm = page.getByRole('button', { name: 'Confirm & Create Character' })
   await expect(confirm).toBeEnabled()
   await confirm.click()
@@ -113,11 +113,11 @@ test('P1-G levels up through the real backend and preserves live Current State',
   await card.getByRole('button', { name: 'Level Up' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await expect(page.getByTestId('level-node-1')).toContainText('Barbarian 1')
   await chooseSearchable(page, 'Level 2 class', 'Barbarian')
 
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByTestId('builder-step-review').click()
   await expect(page.getByRole('heading', { name: 'Level Up review' })).toBeVisible()
   await expect(page.getByText('Current State Reconciliation')).toBeVisible()
   await expect(page.getByText('Existing damage delta is preserved')).toBeVisible()

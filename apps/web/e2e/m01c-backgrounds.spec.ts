@@ -62,13 +62,13 @@ async function startLevelOneDraft(page: Page, name: string) {
 }
 
 async function saveDefaultAbilities(page: Page) {
-  await page.getByRole('button', { name: /Abilities/ }).click()
+  await page.getByTestId('builder-step-abilities').click()
   await page.getByRole('button', { name: 'Save Ability Scores' }).click()
   await expectDraftSaved(page)
 }
 
 async function chooseBarbarian(page: Page, skills: [string, string]) {
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await chooseSearchable(page, 'Level 1 class', 'Barbarian')
   const startingSkills = page.getByTestId('level-node-1').locator('.progression-choice')
   await chooseIn(startingSkills, skills[0])
@@ -76,7 +76,7 @@ async function chooseBarbarian(page: Page, skills: [string, string]) {
 }
 
 async function chooseBarbarianEquipment(page: Page) {
-  await page.getByRole('button', { name: /Equipment/ }).click()
+  await page.getByTestId('builder-step-equipment').click()
   await expect(page.getByRole('heading', { name: 'Equipment & roleplay' })).toBeVisible()
   await chooseSearchable(
     page,
@@ -91,7 +91,7 @@ async function chooseBarbarianEquipment(page: Page) {
 }
 
 async function confirmAndReload(page: Page, name: string) {
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByTestId('builder-step-review').click()
   await expect(page.getByRole('heading', { name: 'Build snapshot & final review' })).toBeVisible()
   await expect(
     page.getByText(
@@ -124,7 +124,7 @@ test('M01-C creates and reloads an SCAG background character through the real br
   test.slow()
   await startLevelOneDraft(page, 'M01-C SCAG Hero')
 
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Human')
   await chooseSearchable(page, 'Background', 'City Watch')
 
@@ -146,7 +146,7 @@ test('M01-C creates, reloads and levels a GoS background character with a PHB su
   test.slow()
   await startLevelOneDraft(page, 'M01-C GoS Hero')
 
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Elf')
   await chooseSearchable(page, 'Subrace', 'Wood Elf')
   await chooseSearchable(page, 'Background', 'Fisher')
@@ -165,9 +165,9 @@ test('M01-C creates, reloads and levels a GoS background character with a PHB su
   await card.getByRole('button', { name: 'Level Up' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
 
-  await page.getByRole('button', { name: /Class/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await chooseSearchable(page, 'Level 2 class', 'Barbarian')
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByTestId('builder-step-review').click()
   await expect(page.getByRole('heading', { name: 'Level Up review' })).toBeVisible()
   const confirmLevelUp = page.getByRole('button', { name: 'Confirm Level Up' })
   await expect(confirmLevelUp).toBeEnabled()

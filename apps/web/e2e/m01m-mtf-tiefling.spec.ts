@@ -247,7 +247,7 @@ async function completeRequirements(page: Page, level: number) {
 }
 
 async function confirmCreate(page: Page, name: string) {
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByTestId('builder-step-review').click()
   const confirm = page.getByRole('button', { name: 'Confirm & Create Character' })
   await expect(confirm).toBeEnabled()
   await confirm.click()
@@ -272,7 +272,7 @@ async function toggleEquipped(page: Page, itemName: string) {
 test('M01-M Eladrin keeps its current season in state across a reload', async ({ page }) => {
   test.slow()
   await startDraft(page, 'M01-M Eladrin Hero', 1)
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Elf')
   await chooseSearchable(page, 'Subrace', 'Eladrin')
   await chooseSearchable(page, 'Background', 'Acolyte')
@@ -298,7 +298,7 @@ test('M01-M Eladrin keeps its current season in state across a reload', async ({
 test('M01-M Githyanki inherits its Gith parent and level-gated psionics', async ({ page }) => {
   test.slow()
   await startDraft(page, 'M01-M Githyanki Hero', 3)
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Gith')
   await chooseSearchable(page, 'Subrace', 'Githyanki')
   await chooseSearchable(page, 'Background', 'Acolyte')
@@ -325,7 +325,7 @@ test('M01-M Githyanki inherits its Gith parent and level-gated psionics', async 
 test('M01-M Zariel bloodline replaces the standard Tiefling packages', async ({ page }) => {
   test.slow()
   await startDraft(page, 'M01-M Zariel Hero', 3)
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Tiefling')
   await chooseSearchable(page, 'Background', 'Acolyte')
   await chooseSearchable(page, 'Ancestry variant (optional)', 'Zariel Tiefling')
@@ -353,7 +353,7 @@ test('M01-M Zariel bloodline replaces the standard Tiefling packages', async ({ 
 test('M01-M Winged Tiefling loses its flight only while heavy armor is worn', async ({ page }) => {
   test.slow()
   await startDraft(page, 'M01-M Winged Hero', 1)
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Tiefling')
   await chooseSearchable(page, 'Background', 'Acolyte')
   await chooseSearchable(page, 'Ancestry variant (optional)', 'SCAG Tiefling Variants')
@@ -385,7 +385,7 @@ test('M01-M Winged Tiefling loses its flight only while heavy armor is worn', as
 test('M01-M rejects a forged MTF bloodline plus SCAG variant payload', async ({ page }) => {
   test.slow()
   await startDraft(page, 'M01-M Forged Hero', 1)
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Tiefling')
   await chooseSearchable(page, 'Background', 'Acolyte')
   await chooseSearchable(page, 'Ancestry variant (optional)', 'Zariel Tiefling')

@@ -42,23 +42,23 @@ test('M02-B localizes every Builder step without resetting in-progress UI state'
   await page.getByRole('button', { name: '儲存基本資料' }).click()
   await expect(page.getByText('已儲存至伺服器')).toBeVisible()
 
-  await page.getByRole('button', { name: /出身/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await expect(page.getByRole('heading', { name: '選擇出身' })).toBeVisible()
 
-  await page.getByRole('button', { name: /屬性/ }).click()
+  await page.getByTestId('builder-step-abilities').click()
   await expect(page.getByRole('heading', { name: '屬性與起始選擇' })).toBeVisible()
   await expect(page.getByRole('tab', { name: '標準陣列' })).toBeVisible()
 
-  await page.getByRole('button', { name: /職業/ }).click()
+  await page.getByTestId('builder-step-class').click()
   await expect(page.getByRole('heading', { name: '建立逐等級職業配置' })).toBeVisible()
 
-  await page.getByRole('button', { name: /施法/ }).click()
+  await page.getByTestId('builder-step-spells').click()
   await expect(page.getByRole('heading', { name: '施法與資源' })).toBeVisible()
 
-  await page.getByRole('button', { name: /裝備/ }).click()
+  await page.getByTestId('builder-step-equipment').click()
   await expect(page.getByRole('heading', { name: '裝備與角色扮演' })).toBeVisible()
 
-  await page.getByRole('button', { name: /檢視/ }).click()
+  await page.getByTestId('builder-step-review').click()
   await expect(page.getByRole('heading', { name: '角色配置快照與最終檢視' })).toBeVisible()
 
   await page.getByTestId('locale-option-en').click()

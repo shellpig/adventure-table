@@ -69,7 +69,7 @@ async function sortedInBrowser(page: Page, locale: string, values: string[]) {
 
 test('M02-G finds a zh-TW entry through its English alias without showing English', async ({ page }) => {
   await startDraft(page, `M02-G alias zh ${Date.now()}`)
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await page.getByTestId('locale-option-zh-TW').click()
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW')
 
@@ -84,7 +84,7 @@ test('M02-G finds a zh-TW entry through its English alias without showing Englis
 
 test('M02-G finds an English entry through its zh-TW alias without showing zh-TW', async ({ page }) => {
   await startDraft(page, `M02-G alias en ${Date.now()}`)
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
 
   const race = page.getByRole('combobox', { name: 'Race' })
@@ -95,7 +95,7 @@ test('M02-G finds an English entry through its zh-TW alias without showing zh-TW
 
 test('M02-G orders rules-content options by the active locale display name', async ({ page }) => {
   await startDraft(page, `M02-G sort ${Date.now()}`)
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
 
   const englishOrder = await optionOrderOnceLocalized(
     await openListbox(page, page.getByRole('combobox', { name: 'Race' })),
@@ -117,7 +117,7 @@ test('M02-G orders rules-content options by the active locale display name', asy
 
 test('M02-G keeps numeric Standard Array options in configured order in both locales', async ({ page }) => {
   await startDraft(page, `M02-G numeric ${Date.now()}`)
-  await page.getByRole('button', { name: /Abilities/ }).click()
+  await page.getByTestId('builder-step-abilities').click()
   await page.getByRole('tab', { name: 'Standard Array' }).click()
 
   const englishValues = await optionOrder(

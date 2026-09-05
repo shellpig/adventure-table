@@ -206,11 +206,11 @@ async function startCreate(
   await page.getByLabel('Target character level').fill(String(targetLevel))
   await clickAndWaitForSave(page, page.getByRole('button', { name: 'Save Basic Details' }))
 
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', 'Human', 'System Reference Document 5.1')
   await chooseSearchable(page, 'Background', 'Acolyte', 'System Reference Document 5.1')
 
-  await page.getByRole('button', { name: /Abilities/ }).click()
+  await page.getByTestId('builder-step-abilities').click()
   await clickAndWaitForSave(page, page.getByRole('button', { name: 'Save Ability Scores' }))
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
@@ -221,7 +221,7 @@ async function startCreate(
 }
 
 async function activateOptionalFeature(page: Page, featureName: string) {
-  await page.getByRole('button', { name: /Abilities/ }).click()
+  await page.getByTestId('builder-step-abilities').click()
   await chooseSearchable(
     page,
     new RegExp(`${featureName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*Optional Class Feature`, 'i'),
@@ -231,14 +231,14 @@ async function activateOptionalFeature(page: Page, featureName: string) {
 }
 
 async function finishCreateReview(page: Page, request: APIRequestContext) {
-  await page.getByRole('button', { name: /Spellcasting/ }).click()
+  await page.getByTestId('builder-step-spells').click()
   await fillExactSpellBuckets(page)
 
-  await page.getByRole('button', { name: /Equipment/ }).click()
+  await page.getByTestId('builder-step-equipment').click()
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
   const draftId = draftIdFrom(page)
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByTestId('builder-step-review').click()
   await expect(page.getByRole('heading', { name: 'Build snapshot & final review' })).toBeVisible()
   const review = await readReview(request, draftId)
   await expect(page.getByRole('button', { name: 'Confirm & Create Character' })).toBeEnabled()
@@ -440,7 +440,7 @@ test('M01-I existing Fighter levels up with Martial Versatility and preserves Ve
   )
 
   const draftId = draftIdFrom(page)
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByTestId('builder-step-review').click()
   await expect(page.getByRole('heading', { name: 'Level Up review' })).toBeVisible()
   const review = await readReview(request, draftId)
   const build = buildFrom(review)

@@ -253,14 +253,14 @@ async function completeRequirements(
 }
 
 async function chooseOrigin(page: Page, race: string, subrace?: string) {
-  await page.getByRole('button', { name: /Origin/ }).click()
+  await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Race', race)
   if (subrace) await chooseSearchable(page, 'Subrace', subrace)
   await chooseSearchable(page, 'Background', 'Acolyte')
 }
 
 async function confirmCreate(page: Page, name: string) {
-  await page.getByRole('button', { name: /Review/ }).click()
+  await page.getByTestId('builder-step-review').click()
   const confirm = page.getByRole('button', { name: 'Confirm & Create Character' })
   await expect(confirm).toBeEnabled()
   await confirm.click()
