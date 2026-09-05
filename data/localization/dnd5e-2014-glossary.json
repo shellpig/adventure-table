@@ -2738,6 +2738,38 @@
       "reference_source": "5etools",
       "decision_note": "Drow / Half-Elf racial feature (PHB / SCAG).",
       "reviewed": true
+    },
+    {
+      "en": "Half-Orc",
+      "zh-TW": "半獸人",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Half-Orc race (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Menacing",
+      "zh-TW": "兇惡",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Half-Orc racial trait (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Relentless Endurance",
+      "zh-TW": "頑強耐性",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Half-Orc racial trait (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Savage Attacks",
+      "zh-TW": "野蠻攻擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Half-Orc racial trait (SRD / PHB).",
+      "reviewed": true
     }
   ]
 }
