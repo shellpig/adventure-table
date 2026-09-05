@@ -2322,6 +2322,14 @@
       "reference_source": "5etools",
       "decision_note": "Tiefling subrace (MTF).",
       "reviewed": true
+    },
+    {
+      "en": "Variant Human",
+      "zh-TW": "人類 (變體)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Human racial variant (PHB).",
+      "reviewed": true
     }
   ]
 }

@@ -89,7 +89,7 @@ test('M02-F presents PHB, SCAG inheritance, GoS flavor and source collisions by 
 
   const variant = await get('phb2014:race:variant-human', 'zh-TW')
   expect(variant.key).toBe('phb2014:race:variant-human')
-  expect(variant.fields[0].value).toBe('變體人類')
+  expect(variant.fields[0].value).toBe('人類 (變體)')
 
   const soldier = await get('phb2014:background:soldier', 'zh-TW')
   const cityWatch = await get('scag:background:city-watch', 'zh-TW')

@@ -136,7 +136,7 @@ def test_m02f_localization_does_not_mutate_canonical_content_or_english() -> Non
     assert catalog.resolve_name("scag:background:city-watch", "en").value == "City Watch"
     assert catalog.resolve_name("gos:background:shipwright", "en").value == "Shipwright"
     assert catalog.resolve_name("vgm:race:goblin", "en").value == "Goblin"
-    assert catalog.resolve_name("phb2014:race:variant-human", "zh-TW").value == "變體人類"
+    assert catalog.resolve_name("phb2014:race:variant-human", "zh-TW").value == "人類 (變體)"
     assert catalog.resolve_name("scag:background:city-watch", "zh-TW").value == "城市守衛"
     assert catalog.resolve_name("gos:background:shipwright", "zh-TW").value == "船工"
     assert catalog.resolve_name("vgm:race:goblin", "zh-TW").value != "Goblin"
