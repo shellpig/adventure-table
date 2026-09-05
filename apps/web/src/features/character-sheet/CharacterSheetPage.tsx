@@ -340,6 +340,7 @@ export function CharacterSheetView({
       <section className="sheet-shell" aria-label={t('sheet.aria', { name: sheet.name })}>
         <header className="character-hero">
           <div className="hero-copy">
+            <a href="/characters" className="builder-back">{t('sheet.backWorkshop')}</a>
             <p className="eyebrow">{t('sheet.eyebrow')}</p>
             <h1>{sheet.name}</h1>
             <p className="character-meta">

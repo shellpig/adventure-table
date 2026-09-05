@@ -340,6 +340,7 @@ const en = {
   'versions.characterLevel': 'Character Level',
 
   'sheet.aria': '{name} Character Sheet',
+  'sheet.backWorkshop': '← Character Workshop',
   'sheet.eyebrow': 'Adventure Table · Character Sheet',
   'sheet.level': 'Lv. {level}',
   'sheet.buildVersion': 'Build v{version}',
@@ -789,6 +790,7 @@ const zhTW: Record<UiCopyKey, string> = {
   'versions.characterLevel': '角色等級',
 
   'sheet.aria': '{name} 角色卡',
+  'sheet.backWorkshop': '← 角色工作坊',
   'sheet.eyebrow': 'Adventure Table · 角色卡',
   'sheet.level': '等級 {level}',
   'sheet.buildVersion': '角色配置 v{version}',
