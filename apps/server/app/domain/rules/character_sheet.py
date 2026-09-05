@@ -71,6 +71,7 @@ class SpellAccessDTO(SheetModel):
     entry_id: str
     spell_key: str
     name: str
+    level: int = 0
     source_type: str
     source_key: str
     access_type: str
@@ -210,12 +211,14 @@ def build_character_sheet(
         if pair is not None:
             covered_profile_spells.add(pair)
         spell = registry.get(access.spell_key)
+        spell_level = spell.data.get("level")
         runtime = racial_spell_runtime_metadata(access, registry)
         spells.append(
             SpellAccessDTO(
                 entry_id=access.entry_id,
                 spell_key=access.spell_key,
                 name=spell.name,
+                level=spell_level if isinstance(spell_level, int) else 0,
                 source_type=access.source_type,
                 source_key=access.source_key,
                 access_type=access.access_type,
@@ -257,6 +260,7 @@ def build_character_sheet(
                     entry_id=f"prepared:{profile.profile_id}:{spell.key}",
                     spell_key=spell.key,
                     name=spell.name,
+                    level=level,
                     source_type=profile.source_type,
                     source_key=profile.source_key,
                     access_type="prepared",

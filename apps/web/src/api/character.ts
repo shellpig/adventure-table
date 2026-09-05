@@ -85,6 +85,7 @@ export type SpellAccessDTO = {
   entry_id: string
   spell_key: string
   name: string
+  level: number
   source_type: string
   source_key: string
   access_type: 'known' | 'spellbook' | 'prepared' | 'always_prepared' | 'granted'

@@ -176,13 +176,16 @@ button { color: inherit; }
 .slot-actions button, .mini-actions button { min-height: 30px; padding: 0 9px; font-size: .68rem; }
 .resource-list > div { min-height: 52px; }
 .resource-list > div > span { flex: 1; }
-.spell-list { display: grid; gap: 10px; margin-top: 14px; }
-.spell-card { display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 104px; border: 1px solid var(--line); border-radius: 16px; padding: 17px 18px; background: var(--surface-2); }
+.spell-levels { display: grid; gap: 18px; margin-top: 14px; }
+.spell-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.spell-card { display: flex; flex-direction: column; align-items: stretch; justify-content: space-between; gap: 12px; min-height: 104px; border: 1px solid var(--line); border-radius: 16px; padding: 17px 18px; background: var(--surface-2); }
 .spell-card.is-prepared { border-color: rgb(125 201 166 / 30%); background: linear-gradient(100deg, rgb(125 201 166 / 7%), var(--surface-2) 42%); }
-.spell-card h3 { margin: 6px 0 4px; font-family: Georgia, "Times New Roman", serif; font-size: 1.25rem; font-weight: 600; }
+.spell-card h3 { margin: 6px 0 4px; font-family: Georgia, "Times New Roman", serif; font-size: 1.1rem; font-weight: 600; }
 .spell-card p { margin: 0; color: var(--quiet); font-size: .74rem; }
-.access-badge, .prepared-badge, .item-badge { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 4px 8px; color: var(--muted); background: #121720; font-size: .65rem; font-weight: 800; }
+.spell-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.access-badge, .prepared-badge, .item-badge, .level-badge { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 4px 8px; color: var(--muted); background: #121720; font-size: .65rem; font-weight: 800; }
 .access-badge { color: #b9cbed; border-color: rgb(134 169 220 / 28%); background: rgb(134 169 220 / 6%); }
+.level-badge { color: var(--gold-bright); border-color: rgb(215 181 109 / 32%); background: rgb(215 181 109 / 7%); }
 .prepared-control { display: grid; justify-items: end; gap: 8px; }
 .prepared-badge.on, .item-badge.active { border-color: rgb(125 201 166 / 28%); color: #a9dec6; background: rgb(125 201 166 / 7%); }
 .add-inventory-panel { margin-bottom: 14px; }
@@ -229,6 +232,7 @@ button { color: inherit; }
   .number-save label { flex: 1; }
   .number-save input { width: 100%; }
   .two-column-grid, .roleplay-grid, .spellcasting-grid { grid-template-columns: 1fr; }
+  .spell-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .movement-list, .skill-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .section-heading { align-items: stretch; flex-direction: column; }
   .passive-card, .inline-search { width: 100%; }
@@ -247,7 +251,7 @@ button { color: inherit; }
   .sheet-tab { min-height: 47px; font-size: .78rem; }
   .sheet-tab span { display: none; }
   .dice-grid { grid-template-columns: 1fr; }
-  .spell-card { align-items: flex-start; flex-direction: column; }
+  .spell-list { grid-template-columns: 1fr; }
   .prepared-control { width: 100%; align-items: center; grid-template-columns: 1fr auto; }
   .inventory-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .quantity-stepper { grid-column: 1 / -1; }

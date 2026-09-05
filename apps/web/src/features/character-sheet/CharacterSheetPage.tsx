@@ -163,10 +163,24 @@ function describeRules(
   return details.slice(0, 3)
 }
 
-function resourceLabel(key: string, t: UiTranslator): string {
+function resourceContentKey(key: string): string | null {
+  return key.startsWith('feature:') ? key.slice('feature:'.length) : null
+}
+
+function resourceLabel(
+  key: string,
+  t: UiTranslator,
+  nameFor: (reference: string, fallback: string) => string,
+): string {
   const pactSlot = key.match(/:slot:(\d+)$/)
   if (pactSlot) return t('sheet.levelLabel', { level: pactSlot[1] })
-  return titleCase(key.split(':').at(-1) ?? key)
+  const fallback = titleCase(key.split(':').at(-1) ?? key)
+  const contentKey = resourceContentKey(key)
+  return contentKey ? nameFor(contentKey, fallback) : fallback
+}
+
+function spellLevelLabel(level: number, t: UiTranslator): string {
+  return level <= 0 ? t('spells.cantrip') : t('sheet.levelLabel', { level: String(level) })
 }
 
 function NumberSaveField({
@@ -251,6 +265,9 @@ export function CharacterSheetView({
     ...sheet.inventory.map((item) => item.item_ref),
     ...sheet.inventory.flatMap((item) => structuredRuleReferences(item.rules)),
     ...Object.keys(sheet.skills).map((skill) => `srd5.1:skill:${skill}`),
+    ...Object.keys(sheet.resources)
+      .map(resourceContentKey)
+      .filter((key): key is string => key !== null),
   ]
   const { nameFor } = useContentPresentations(contentReferences)
   const proficientSkills = new Set(sheet.skill_proficiencies ?? [])
@@ -300,6 +317,9 @@ export function CharacterSheetView({
       .toLocaleLowerCase()
       .includes(spellFilter.toLocaleLowerCase()),
   )
+  const spellsByLevel = [...new Set(filteredSpells.map((spell) => spell.level))]
+    .sort((a, b) => a - b)
+    .map((level) => [level, filteredSpells.filter((spell) => spell.level === level)] as const)
   const filteredInventory = sheet.inventory.filter((item) =>
     nameFor(item.item_ref, item.name)
       .toLocaleLowerCase()
@@ -658,7 +678,7 @@ export function CharacterSheetView({
                 <div className="resource-list">
                   {Object.entries(sheet.resources).map(([key, counter]) => (
                     <div key={key}>
-                      <span>{resourceLabel(key, t)}</span>
+                      <span>{resourceLabel(key, t, nameFor)}</span>
                       <strong>{counter.remaining} / {counter.used + counter.remaining}</strong>
                       <div className="mini-actions">
                         <button type="button" disabled={busy || counter.remaining <= 0} onClick={() => void updateCounter(key, sheet.resources, 'use', 'resources')}>{t('sheet.use')}</button>
@@ -670,62 +690,69 @@ export function CharacterSheetView({
               </article>
             ) : null}
 
-            <div className="spell-list">
-              {filteredSpells.map((spell) => {
-                const canonicalPrepare =
-                  (spell.access_type === 'spellbook' || spell.access_type === 'prepared') &&
-                  Boolean(spell.source_profile_id)
-                const legacyPrepare = spell.access_type === 'spellbook' && !spell.source_profile_id
-                const canPrepare = canonicalPrepare || legacyPrepare
-                const localizedSpellName = nameFor(spell.spell_key, spell.name)
-                const localizedSourceName =
-                  classNameByRef.get(spell.source_key) ?? nameFor(spell.source_key, titleCase(spell.source_type))
-                return (
-                  <article className={spell.prepared ? 'spell-card is-prepared' : 'spell-card'} key={spell.entry_id}>
-                    <div>
-                      <span className="access-badge">{accessLabel(spell.access_type, t)}</span>
-                      <h3>{localizedSpellName}</h3>
-                      <p>{localizedSourceName}</p>
-                    </div>
-                    <div className="prepared-control">
-                      <span className={spell.prepared ? 'prepared-badge on' : 'prepared-badge'}>{spell.prepared ? t('sheet.prepared') : t('sheet.unprepared')}</span>
-                      {canPrepare ? (
-                        <button
-                          type="button"
-                          className="button secondary compact"
-                          disabled={busy}
-                          onClick={() => {
-                            if (canonicalPrepare && spell.source_profile_id) {
-                              const next = spell.prepared
-                                ? preparedSelections.filter(
-                                    (selection) =>
-                                      selection.source_profile_id !== spell.source_profile_id ||
-                                      selection.spell_key !== spell.spell_key,
-                                  )
-                                : [
-                                    ...preparedSelections,
-                                    {
-                                      spell_key: spell.spell_key,
-                                      source_profile_id: spell.source_profile_id,
-                                      source_access_entry_id: spell.source_access_entry_id ?? undefined,
-                                    },
-                                  ]
-                              void onPatch({ prepared_spells: next })
-                              return
-                            }
-                            const next = spell.prepared
-                              ? preparedIds.filter((entryId) => entryId !== spell.entry_id)
-                              : [...preparedIds, spell.entry_id]
-                            void onPatch({ prepared_spell_entry_ids: next })
-                          }}
-                        >
-                          {spell.prepared ? t('sheet.unprepare') : t('sheet.prepare')}
-                        </button>
-                      ) : null}
-                    </div>
-                  </article>
-                )
-              })}
+            <div className="spell-levels">
+              {spellsByLevel.map(([level, entries]) => (
+                <div className="spell-list" key={level}>
+                  {entries.map((spell) => {
+                    const canonicalPrepare =
+                      (spell.access_type === 'spellbook' || spell.access_type === 'prepared') &&
+                      Boolean(spell.source_profile_id)
+                    const legacyPrepare = spell.access_type === 'spellbook' && !spell.source_profile_id
+                    const canPrepare = canonicalPrepare || legacyPrepare
+                    const localizedSpellName = nameFor(spell.spell_key, spell.name)
+                    const localizedSourceName =
+                      classNameByRef.get(spell.source_key) ?? nameFor(spell.source_key, titleCase(spell.source_type))
+                    return (
+                      <article className={spell.prepared ? 'spell-card is-prepared' : 'spell-card'} key={spell.entry_id}>
+                        <div>
+                          <div className="spell-badges">
+                            <span className="level-badge">{spellLevelLabel(spell.level, t)}</span>
+                            <span className="access-badge">{accessLabel(spell.access_type, t)}</span>
+                          </div>
+                          <h3>{localizedSpellName}</h3>
+                          <p>{localizedSourceName}</p>
+                        </div>
+                        <div className="prepared-control">
+                          <span className={spell.prepared ? 'prepared-badge on' : 'prepared-badge'}>{spell.prepared ? t('sheet.prepared') : t('sheet.unprepared')}</span>
+                          {canPrepare ? (
+                            <button
+                              type="button"
+                              className="button secondary compact"
+                              disabled={busy}
+                              onClick={() => {
+                                if (canonicalPrepare && spell.source_profile_id) {
+                                  const next = spell.prepared
+                                    ? preparedSelections.filter(
+                                        (selection) =>
+                                          selection.source_profile_id !== spell.source_profile_id ||
+                                          selection.spell_key !== spell.spell_key,
+                                      )
+                                    : [
+                                        ...preparedSelections,
+                                        {
+                                          spell_key: spell.spell_key,
+                                          source_profile_id: spell.source_profile_id,
+                                          source_access_entry_id: spell.source_access_entry_id ?? undefined,
+                                        },
+                                      ]
+                                  void onPatch({ prepared_spells: next })
+                                  return
+                                }
+                                const next = spell.prepared
+                                  ? preparedIds.filter((entryId) => entryId !== spell.entry_id)
+                                  : [...preparedIds, spell.entry_id]
+                                void onPatch({ prepared_spell_entry_ids: next })
+                              }}
+                            >
+                              {spell.prepared ? t('sheet.unprepare') : t('sheet.prepare')}
+                            </button>
+                          ) : null}
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              ))}
               {!filteredSpells.length ? <p className="empty-copy">{t('sheet.noSpells')}</p> : null}
             </div>
           </section>
