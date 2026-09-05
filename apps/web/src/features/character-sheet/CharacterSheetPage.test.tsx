@@ -15,7 +15,7 @@ function englishStorage(): LocaleStorage {
 }
 
 function renderSheet(
-  props: Omit<Parameters<typeof CharacterSheetView>[0], 'sheet'> = {},
+  props: Partial<Parameters<typeof CharacterSheetView>[0]> = {},
 ) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -127,5 +127,56 @@ describe('M03-B sheet header actions', () => {
 
   it('omits the actions container when the page supplies none', () => {
     expect(renderSheet()).not.toContain('character-hero__actions')
+  })
+})
+
+function spellCard(markup: string, spellName: string): string {
+  const heading = markup.indexOf(`<h3>${spellName}</h3>`)
+  const start = markup.lastIndexOf('<article class="spell-card', heading)
+  return markup.slice(start, markup.indexOf('</article>', heading))
+}
+
+describe('spell preparation budget', () => {
+  it('offers preparation while the source has room left', () => {
+    const markup = renderSheet({ initialTab: 'spells' })
+    expect(markup).toContain('1 / 4')
+    expect(markup).not.toContain('Prepared limit of')
+    expect(spellCard(markup, 'Detect Magic')).not.toContain('disabled=""')
+  })
+
+  it('stops offering preparation once the source is at its prepared limit', () => {
+    const full: CharacterSheetDTO = {
+      ...sheet,
+      spellcasting: [{ ...sheet.spellcasting[0], prepared_count: 4 }],
+    }
+    const markup = renderSheet({ sheet: full, initialTab: 'spells' })
+
+    expect(markup).toContain('4 / 4')
+    expect(markup).toContain('Prepared limit of 4 reached')
+    // An unprepared spell can no longer be prepared, but freeing a slot must stay possible.
+    expect(spellCard(markup, 'Detect Magic')).toContain('disabled=""')
+    expect(spellCard(markup, 'Magic Missile')).not.toContain('disabled=""')
+  })
+
+  it('never asks the reader to prepare a cantrip', () => {
+    const withCantrip: CharacterSheetDTO = {
+      ...sheet,
+      spells: [
+        ...sheet.spells,
+        {
+          entry_id: 'wizard:fire-bolt',
+          spell_key: 'srd5.1:spell:fire-bolt',
+          name: 'Fire Bolt',
+          level: 0,
+          source_type: 'class',
+          source_key: 'srd5.1:class:wizard',
+          access_type: 'known',
+          prepared: false,
+        },
+      ],
+    }
+    const card = spellCard(renderSheet({ sheet: withCantrip, initialTab: 'spells' }), 'Fire Bolt')
+    expect(card).toContain('Cantrip')
+    expect(card).not.toContain('prepared-control')
   })
 })

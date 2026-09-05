@@ -317,6 +317,14 @@ export function CharacterSheetView({
       .toLocaleLowerCase()
       .includes(spellFilter.toLocaleLowerCase()),
   )
+  const preparedBudgetBySource = new Map(
+    sheet.spellcasting
+      .filter((source) => source.prepared_limit != null)
+      .map((source) => [
+        source.source_key,
+        { count: source.prepared_count, limit: source.prepared_limit as number },
+      ]),
+  )
   const spellsByLevel = [...new Set(filteredSpells.map((spell) => spell.level))]
     .sort((a, b) => a - b)
     .map((level) => [level, filteredSpells.filter((spell) => spell.level === level)] as const)
@@ -657,6 +665,11 @@ export function CharacterSheetView({
                       <b>{source.prepared_count} / {source.prepared_limit}</b>
                     </div>
                   ) : null}
+                  {source.prepared_limit != null && source.prepared_count >= source.prepared_limit ? (
+                    <p className="prepared-limit-hint">
+                      {t('sheet.preparedLimitReached', { limit: source.prepared_limit })}
+                    </p>
+                  ) : null}
                 </article>
               ))}
             </div>
@@ -705,6 +718,9 @@ export function CharacterSheetView({
                       Boolean(spell.source_profile_id)
                     const legacyPrepare = spell.access_type === 'spellbook' && !spell.source_profile_id
                     const canPrepare = canonicalPrepare || legacyPrepare
+                    const budget = preparedBudgetBySource.get(spell.source_key)
+                    const atPreparedLimit =
+                      !spell.prepared && budget != null && budget.count >= budget.limit
                     const localizedSpellName = nameFor(spell.spell_key, spell.name)
                     const localizedSourceName =
                       classNameByRef.get(spell.source_key) ?? nameFor(spell.source_key, titleCase(spell.source_type))
@@ -725,7 +741,12 @@ export function CharacterSheetView({
                               <button
                                 type="button"
                                 className="button secondary compact"
-                                disabled={busy}
+                                disabled={busy || atPreparedLimit}
+                                title={
+                                  atPreparedLimit && budget
+                                    ? t('sheet.preparedLimitReached', { limit: budget.limit })
+                                    : undefined
+                                }
                                 onClick={() => {
                                   if (canonicalPrepare && spell.source_profile_id) {
                                     const next = spell.prepared

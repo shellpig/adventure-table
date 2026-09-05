@@ -180,7 +180,7 @@ const DISABLED_REASON_MESSAGES: Record<string, LocalizedMessage> = {
 const REQUEST_CODE_MESSAGES: Record<string, Record<Locale, string>> = {
   not_found: { 'zh-TW': '找不到要求的資料，可能已被刪除或變更。', en: 'The requested data could not be found. It may have been removed or changed.' },
   revision_conflict: { 'zh-TW': '資料已在其他操作中更新，請重新載入後再試一次。', en: 'The data changed in another operation. Reload and try again.' },
-  validation_error: { 'zh-TW': '送出的資料未通過驗證，請檢查目前選擇。', en: 'The submitted data did not pass validation. Check the current selections.' },
+  validation_failed: { 'zh-TW': '送出的資料未通過驗證，請檢查目前選擇。', en: 'The submitted data did not pass validation. Check the current selections.' },
   invalid_request: { 'zh-TW': '這次要求無法處理，請檢查目前資料後再試一次。', en: 'This request could not be processed. Check the current data and try again.' },
 }
 

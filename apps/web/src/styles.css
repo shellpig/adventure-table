@@ -169,6 +169,7 @@ button { color: inherit; }
 .spellcasting-card small { color: var(--quiet); font-size: .67rem; }
 .spellcasting-card b { color: #bfd2ef; font-size: 1.05rem; }
 .prepared-limit { grid-template-columns: auto 1fr; margin-top: 0; }
+.prepared-limit-hint { margin: 4px 0 0; color: var(--gold-bright); font-size: .68rem; line-height: 1.5; }
 .slot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
 .slot-card { display: grid; gap: 4px; border: 1px solid var(--line-soft); border-radius: 13px; padding: 14px; background: #121720; }
 .slot-card > span, .slot-card > small { color: var(--quiet); font-size: .7rem; }

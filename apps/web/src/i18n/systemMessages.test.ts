@@ -171,6 +171,17 @@ describe('M02-G/H system-owned messages', () => {
     )
   })
 
+  it('explains a rejected write instead of telling the reader to retry', () => {
+    // The server sends "validation_failed"; a rejected write never succeeds on
+    // a retry, so it must not fall through to the generic retry copy.
+    expect(localizedRequestErrorMessage('validation_failed', 422, 'raw server detail', 'zh-TW')).toBe(
+      '送出的資料未通過驗證，請檢查目前選擇。',
+    )
+    expect(localizedRequestErrorMessage('validation_failed', 422, 'raw server detail', 'en')).toBe(
+      'The submitted data did not pass validation. Check the current selections.',
+    )
+  })
+
   it('uses a Chinese-only safe fallback for unknown validation codes', () => {
     expect(localizedBuilderIssueMessage('future_code', 'Future warning', 'zh-TW')).toBe(
       '目前的角色資料有一項需要修正的規則問題。',
