@@ -4,10 +4,20 @@
   "source": "vrgr",
   "review_status": "draft-human-review-required",
   "entries": {
-    "vrgr:lineage:dhampir": {"name": "半血裔"},
-    "vrgr:feature:dhampir-darkvision": {"name": "黑暗視覺"},
-    "vrgr:feature:deathless-nature": {"name": "不死本質"},
-    "vrgr:feature:spider-climb": {"name": "蛛行術"},
-    "vrgr:feature:vampiric-bite": {"name": "吸血啃咬"}
+    "vrgr:lineage:dhampir": {
+      "name": "半血裔"
+    },
+    "vrgr:feature:dhampir-darkvision": {
+      "name": "黑暗視覺"
+    },
+    "vrgr:feature:deathless-nature": {
+      "name": "不死本質"
+    },
+    "vrgr:feature:spider-climb": {
+      "name": "蛛行"
+    },
+    "vrgr:feature:vampiric-bite": {
+      "name": "吸血啃咬"
+    }
   }
 }

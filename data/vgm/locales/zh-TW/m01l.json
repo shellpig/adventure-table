@@ -41,7 +41,7 @@
       "name": "水族語"
     },
     "vgm:feature:bugbear-long-limbed": {
-      "name": "長臂",
+      "name": "長肢",
       "data.desc.0": "在你自己的回合進行近戰攻擊時，攻擊距離增加 5 尺。"
     },
     "vgm:feature:bugbear-powerful-build": {
@@ -53,7 +53,7 @@
       "data.desc.0": "你熟練隱匿技能。"
     },
     "vgm:feature:surprise-attack": {
-      "name": "突襲",
+      "name": "突襲攻擊",
       "data.desc.0": "戰鬥第一回合突襲並命中生物時，該次攻擊額外造成 2d6 傷害，每場戰鬥限一次。"
     },
     "vgm:feature:firbolg-magic": {
@@ -101,11 +101,11 @@
       "data.desc.0": "你能模仿曾聽過的聲音；聽者可用洞悉檢定識破模仿。"
     },
     "vgm:feature:grovel-cower-and-beg": {
-      "name": "恐縮諂媚",
+      "name": "搖尾乞憐",
       "data.desc.0": "以動作干擾附近敵人，使盟友暫時更容易攻擊它們；短休或長休後恢復。"
     },
     "vgm:feature:pack-tactics": {
-      "name": "群毆戰術",
+      "name": "群體戰術",
       "data.desc.0": "若目標 5 尺內有未失能的盟友，你對該目標的攻擊檢定具有優勢。"
     },
     "vgm:feature:sunlight-sensitivity": {
@@ -137,11 +137,11 @@
       "data.desc.0": "以附贈動作進行特殊咬擊；命中時獲得至少 1 點、等同體質調整值的臨時生命值。"
     },
     "vgm:feature:aggressive": {
-      "name": "好鬥",
+      "name": "侵略性",
       "data.desc.0": "以附贈動作朝你能看見的敵對生物移動最多等同自身速度的距離。"
     },
     "vgm:feature:menacing": {
-      "name": "威嚇直覺",
+      "name": "兇惡",
       "data.desc.0": "你熟練威嚇技能。"
     },
     "vgm:feature:orc-powerful-build": {

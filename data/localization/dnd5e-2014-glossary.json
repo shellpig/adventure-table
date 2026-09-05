@@ -3170,6 +3170,190 @@
       "reference_source": "5etools",
       "decision_note": "Triton racial trait (VGM).",
       "reviewed": true
+    },
+    {
+      "en": "Bugbear",
+      "zh-TW": "熊地精",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bugbear race (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Long-Limbed",
+      "zh-TW": "長肢",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bugbear racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Sneaky",
+      "zh-TW": "鬼祟",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bugbear racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Surprise Attack",
+      "zh-TW": "突襲攻擊",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Bugbear racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Goblin",
+      "zh-TW": "地精",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Goblin race (VGM / 5etools).",
+      "reviewed": true
+    },
+    {
+      "en": "Fury of the Small",
+      "zh-TW": "小個子怒火",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Goblin racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Nimble Escape",
+      "zh-TW": "靈敏脫逃",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Goblin racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Hobgoblin",
+      "zh-TW": "大地精",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Hobgoblin race (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Saving Face",
+      "zh-TW": "挽回顏面",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Hobgoblin racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Kobold",
+      "zh-TW": "狗頭人",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Kobold race (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Grovel, Cower, and Beg",
+      "zh-TW": "搖尾乞憐",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Kobold racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Pack Tactics",
+      "zh-TW": "群體戰術",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Kobold racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Orc",
+      "zh-TW": "獸人",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Orc race (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Aggressive",
+      "zh-TW": "侵略性",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Orc racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Yuan-ti Pureblood",
+      "zh-TW": "純血蛇人",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Yuan-ti Pureblood race (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Innate Spellcasting",
+      "zh-TW": "天生施法",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Yuan-ti Pureblood racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Magic Resistance",
+      "zh-TW": "魔法抗性",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Yuan-ti Pureblood racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Poison Immunity",
+      "zh-TW": "毒素免疫",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Yuan-ti Pureblood racial trait (VGM).",
+      "reviewed": true
+    },
+    {
+      "en": "Dhampir",
+      "zh-TW": "半血裔",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dhampir lineage (VRGR).",
+      "reviewed": true
+    },
+    {
+      "en": "Ancestral Legacy",
+      "zh-TW": "先祖遺贈",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dhampir lineage trait (VRGR).",
+      "reviewed": true
+    },
+    {
+      "en": "Deathless Nature",
+      "zh-TW": "不死本質",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dhampir lineage trait (VRGR).",
+      "reviewed": true
+    },
+    {
+      "en": "Spider Climb",
+      "zh-TW": "蛛行",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dhampir lineage trait (VRGR).",
+      "reviewed": true
+    },
+    {
+      "en": "Vampiric Bite",
+      "zh-TW": "吸血啃咬",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dhampir lineage trait (VRGR).",
+      "reviewed": true
     }
   ]
 }

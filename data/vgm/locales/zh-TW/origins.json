@@ -5,7 +5,7 @@
   "review_status": "draft-human-review-required",
   "entries": {
     "vgm:race:goblin": {
-      "name": "哥布林"
+      "name": "地精"
     },
     "vgm:race:hobgoblin": {
       "name": "大地精"
@@ -23,10 +23,10 @@
       "name": "阿斯莫 (墮落)"
     },
     "vgm:feature:fury-of-the-small": {
-      "name": "弱小之怒"
+      "name": "小個子怒火"
     },
     "vgm:feature:nimble-escape": {
-      "name": "靈巧逃脫"
+      "name": "靈敏脫逃"
     },
     "vgm:feature:saving-face": {
       "name": "挽回顏面"
