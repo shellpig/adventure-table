@@ -8,14 +8,22 @@ from app import launcher
 from m03g_support import standalone_client
 
 
-def test_standalone_disables_api_documentation_routes(
+def test_standalone_api_documentation_is_disabled_behind_spa_fallback(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    with standalone_client(monkeypatch, tmp_path) as (standalone, _):
+    with standalone_client(monkeypatch, tmp_path) as (standalone, module):
+        assert module.app.docs_url is None
+        assert module.app.redoc_url is None
+        assert module.app.openapi_url is None
+
         for path in ("/docs", "/redoc", "/openapi.json"):
             response = standalone.get(path)
-            assert response.status_code == 404, (path, response.text)
+            assert response.status_code == 200, (path, response.text)
+            assert response.headers["content-type"].startswith("text/html")
+            assert "M03-G integration SPA" in response.text
+            assert "Swagger UI" not in response.text
+            assert "ReDoc" not in response.text
 
 
 def test_launcher_keyboard_interrupt_requests_shutdown_and_joins_server(
@@ -24,7 +32,7 @@ def test_launcher_keyboard_interrupt_requests_shutdown_and_joins_server(
 ) -> None:
     database_path = tmp_path / "interrupt.sqlite3"
     monkeypatch.setattr(launcher, "_prepare_database_path", lambda: database_path)
-    monkeypatch.setattr(launcher, "_prepare_resource_roots", lambda: None)
+    monkeypatch.setattr(launcher, "_prepare_resource_roots", lambda: (tmp_path, None))
     monkeypatch.setattr(launcher, "run_migrations", lambda: None)
     monkeypatch.setattr(launcher, "_find_free_port", lambda: 8123)
     monkeypatch.setattr(launcher, "_wait_for_server", lambda *_args, **_kwargs: None)
@@ -47,8 +55,9 @@ def test_launcher_keyboard_interrupt_requests_shutdown_and_joins_server(
             pass
 
     class InterruptingThread:
-        def __init__(self, *, target, daemon: bool) -> None:
+        def __init__(self, *, target, name: str, daemon: bool) -> None:
             self.target = target
+            self.name = name
             self.daemon = daemon
             self._alive = True
             self._interrupted = False
@@ -76,5 +85,6 @@ def test_launcher_keyboard_interrupt_requests_shutdown_and_joins_server(
     assert len(servers) == 1
     assert len(threads) == 1
     assert servers[0].should_exit is True
+    assert threads[0].name == "adventure-table-server"
     assert threads[0].join_timeouts == [0.5, 10.0]
     assert threads[0].is_alive() is False
