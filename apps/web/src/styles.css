@@ -101,8 +101,8 @@ button { color: inherit; }
 .ability-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
 .ability-card { display: grid; place-items: center; min-height: 142px; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(180deg, rgb(255 255 255 / 2%), transparent), var(--surface-2); }
 .ability-card span { color: var(--muted); font-size: .72rem; font-weight: 700; }
-.ability-card strong { color: var(--text); font-family: Georgia, "Times New Roman", serif; font-size: 2.35rem; line-height: 1; }
-.ability-card small { color: var(--gold); font-size: .72rem; }
+.ability-card strong { color: var(--gold-bright); font-family: Georgia, "Times New Roman", serif; font-size: 2.35rem; line-height: 1; }
+.ability-card small { color: var(--text); font-size: .72rem; }
 .two-column-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
 .panel, .roleplay-panel { border: 1px solid var(--line); border-radius: 17px; background: var(--surface-2); }
 .panel { padding: 20px; }
