@@ -30,6 +30,7 @@ import {
   grantDisplayName,
   grantPresentationFields,
   grantPresentationReferences,
+  isVisibleGrant,
   sortGrantsByKind,
 } from './grants'
 import { SpellcastingStep } from './SpellcastingStep'
@@ -636,7 +637,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   <SearchableSelect label={t('builder.origin.alignment')} value={currentAlignment} disabled={saving} options={selectionOptions(alignmentChoice, nameFor, locale)} secondaryMode="duplicates" onChange={(value) => patchReference('alignment_selection', value)} />
                 ) : null}
                 <div className="builder-grant-preview">
-                  <span>{t('builder.origin.resolvedGrants')}</span><strong>{view.resolved_summary.grants.length}</strong><small>{t('builder.origin.grantsHint')}</small>
+                  <span>{t('builder.origin.resolvedGrants')}</span><strong>{view.resolved_summary.grants.filter(isVisibleGrant).length}</strong><small>{t('builder.origin.grantsHint')}</small>
                 </div>
               </div>
             ) : null}

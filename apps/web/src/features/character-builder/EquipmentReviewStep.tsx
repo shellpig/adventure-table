@@ -24,6 +24,7 @@ import {
   grantDisplayName,
   grantPresentationFields,
   grantPresentationReferences,
+  isVisibleGrant,
   pairGrantsByKind,
   sortGrantsByKind,
 } from './grants'
@@ -461,7 +462,7 @@ export function EquipmentReviewStep({
                   </div>
                 ),
               )}
-              {!review.resolved_summary.grants.length ? (
+              {!review.resolved_summary.grants.filter(isVisibleGrant).length ? (
                 <small>{t('review.noOriginGrants')}</small>
               ) : null}
             </div>

@@ -178,13 +178,15 @@ def _selected_choice_grants(
             if (
                 option is None
                 or option.reference_id is None
-                or option.category == "ability_bonus"
+                or option.category in {"ability_bonus", "lineage"}
             ):
                 continue
             try:
                 kind = parse_stable_key(option.reference_id).kind
             except ValueError:
                 kind = "choice"
+            if kind == "lineage":
+                continue
             grants.append(
                 BuilderGrantSummary(
                     label=option.label,

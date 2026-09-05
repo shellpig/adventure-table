@@ -5,7 +5,9 @@ import {
   grantDisplayName,
   grantPresentationFields,
   grantPresentationReferences,
+  isVisibleGrant,
   pairGrantsByKind,
+  sortGrantsByKind,
 } from './grants'
 
 const referenceGrant: BuilderGrantSummary = {
@@ -104,5 +106,26 @@ describe('pairGrantsByKind', () => {
       ['c'],
       ['d'],
     ])
+  })
+})
+
+describe('isVisibleGrant and sortGrantsByKind filtering', () => {
+  it('filters out lineage kind from resolved grants', () => {
+    const lineageGrant: BuilderGrantSummary = {
+      label: 'Dhampir',
+      kind: 'lineage',
+      source_ref: 'vrgr:lineage:dhampir',
+      reference_id: 'vrgr:lineage:dhampir',
+    }
+    const featureGrant: BuilderGrantSummary = {
+      label: 'Spider Climb',
+      kind: 'feature',
+      source_ref: 'vrgr:lineage:dhampir',
+      reference_id: 'vrgr:feature:spider-climb',
+    }
+    expect(isVisibleGrant(lineageGrant)).toBe(false)
+    expect(isVisibleGrant(featureGrant)).toBe(true)
+    const sorted = sortGrantsByKind([lineageGrant, featureGrant])
+    expect(sorted).toEqual([featureGrant])
   })
 })

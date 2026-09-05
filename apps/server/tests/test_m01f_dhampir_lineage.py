@@ -17,11 +17,13 @@ from app.domain.character.schemas import (
     CharacterState,
     PersistedCharacter,
 )
+from app.domain.character_builder.basics import resolve_creation_summary
 from app.domain.character_builder.lineages import (
     ASI_PATTERN_2_1,
     LINEAGE_ASI_PATTERN_CHOICE_ID,
     LINEAGE_ASI_PLUS_ONE_CHOICE_ID,
     LINEAGE_ASI_PLUS_TWO_CHOICE_ID,
+    LINEAGE_SELECTION_CHOICE_ID,
     LINEAGE_LANGUAGE_CHOICE_ID,
     LINEAGE_MOVEMENT_CHOICE_ID,
     LINEAGE_SIZE_CHOICE_ID,
@@ -352,3 +354,23 @@ def test_m01f_lineage_name_is_required_bilingual_presentation() -> None:
     assert localized.missing_required is False
     assert localized.fallback_used is False
     assert localized.value == "半血裔"
+
+
+def test_m01f_resolved_grants_do_not_include_lineage_itself() -> None:
+    registry = load_default_content_registry()
+    draft = _draft(
+        lineage_ref=DHAMPIR,
+        selections={
+            LINEAGE_SELECTION_CHOICE_ID: _selection(
+                LINEAGE_SELECTION_CHOICE_ID,
+                DHAMPIR,
+            ),
+        },
+    )
+    choices = build_lineage_choices(draft, registry)
+    summary = resolve_creation_summary(draft, registry, choices=choices)
+    assert not any(grant.kind == "lineage" for grant in summary.grants)
+    assert not any(grant.reference_id == DHAMPIR for grant in summary.grants)
+    # Features granted by the lineage should still be included
+    assert any(grant.reference_id == DEATHLESS_NATURE for grant in summary.grants)
+

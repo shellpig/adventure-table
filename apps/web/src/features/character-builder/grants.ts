@@ -12,14 +12,19 @@ function kindRank(kind: string, extraKinds: string[]) {
   return KIND_ORDER.length + extraKinds.indexOf(kind)
 }
 
+export function isVisibleGrant(grant: BuilderGrantSummary): boolean {
+  return grant.kind !== 'lineage'
+}
+
 export function sortGrantsByKind<T extends BuilderGrantSummary>(grants: readonly T[]): T[] {
+  const visible = grants.filter(isVisibleGrant) as T[]
   const extraKinds: string[] = []
-  for (const grant of grants) {
+  for (const grant of visible) {
     if (!KIND_ORDER.includes(grant.kind) && !extraKinds.includes(grant.kind)) {
       extraKinds.push(grant.kind)
     }
   }
-  return grants
+  return visible
     .map((grant, index) => ({ grant, index }))
     .sort((a, b) =>
       kindRank(a.grant.kind, extraKinds) - kindRank(b.grant.kind, extraKinds) || a.index - b.index,
