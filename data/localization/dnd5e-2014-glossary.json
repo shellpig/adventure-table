@@ -2330,6 +2330,54 @@
       "reference_source": "5etools",
       "decision_note": "Human racial variant (PHB).",
       "reviewed": true
+    },
+    {
+      "en": "Dwarven Resilience",
+      "zh-TW": "矮人韌性",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dwarf racial trait (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Stonecunning",
+      "zh-TW": "岩石熟悉",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dwarf racial trait (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Dwarven Toughness",
+      "zh-TW": "矮人耐性",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Hill Dwarf subrace trait (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Hill Dwarf",
+      "zh-TW": "矮人 (丘陵)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dwarf subrace (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Mountain Dwarf",
+      "zh-TW": "矮人 (山地)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dwarf subrace (PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Duergar",
+      "zh-TW": "矮人 (灰)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Dwarf subrace (MTF).",
+      "reviewed": true
     }
   ]
 }
