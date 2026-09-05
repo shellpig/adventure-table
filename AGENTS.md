@@ -154,9 +154,16 @@ grep -n "M03-B" docs/M03/實作規格.md docs/M03/開發設計方針.md docs/M03
 6. **拒絕原子性與 fixture 隔離**：契約要求零副作用的拒絕操作，前後狀態不可被污染；測試 fixture 必須完整還原。
 7. **Supported locale 同步交付**：新增、修改，或因新畫面而首次 expose user-visible system / rules content 時，必須在同一個 Subphase 同步補齊所有正式 supported locale（目前為 `zh-TW` / `en`），包含 UI copy、rules presentation field、validation / error 訊息與 searchable 欄位。缺任一語言視同該 Subphase regression，不得以「先做英文、之後再補 M Phase」結案。
 
-## 文件關門的固定提交流程
+## 修改任務的完成條件
 
-verifier 完成已知問題或 Phase 的文件關門後，在同一 turn `commit` 並 `push`，不必等待再次提醒。這只適用已獲授權的文件關門；其他程式、資料或設定修改仍依「修改授權與驗證規則」。
+使用者明確要求修改文件、程式、資料、設定或實作功能時，授權包含完成必要驗證後的 **commit 與 push**。除非使用者明確要求暫不提交、暫不推送或先看 diff，否則必須在同一任務內完成，不需再次詢問。本條適用所有修改任務，包含已獲授權的文件關門，不限 implementer 或 verifier。
+
+- 只提交本次任務的改動，不夾帶其他工作。
+- 完成必要驗證後提交，不為 commit／push 重複執行已通過且仍有效的檢查。
+- 修改任務必須完成「修改 → 驗證 → commit → push → 回報 commit hash」才算完成；使用者明確要求暫停於某一步時，依其要求處理。
+- 若驗證或推送受阻，明確回報原因與未完成步驟，不宣稱任務完成。
+- 純詢問、分析與驗證仍不構成修改授權，依「修改授權與驗證規則」處理。
+- 此授權不包含合併分支、強制推送或部署。
 
 ---
 
