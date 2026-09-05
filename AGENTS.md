@@ -153,6 +153,7 @@ grep -n "M03-B" docs/M03/實作規格.md docs/M03/開發設計方針.md docs/M03
 5. **權限與可見性必測**：當 Phase 涉及 Role / Seat / Controller 時，除了 happy path，必測不該看到／不該操作的 actor。
 6. **拒絕原子性與 fixture 隔離**：契約要求零副作用的拒絕操作，前後狀態不可被污染；測試 fixture 必須完整還原。
 7. **Supported locale 同步交付**：新增、修改，或因新畫面而首次 expose user-visible system / rules content 時，必須在同一個 Subphase 同步補齊所有正式 supported locale（目前為 `zh-TW` / `en`），包含 UI copy、rules presentation field、validation / error 訊息與 searchable 欄位。缺任一語言視同該 Subphase regression，不得以「先做英文、之後再補 M Phase」結案。
+8. **發版相依不得漂移**：Windows standalone 發版一律依 `apps/server/constraints-standalone-win.txt` 安裝，本機與 CI 共用同一份清單。`pyproject.toml` 只宣告需要哪些套件與相容範圍，實際版本號只住清單，不抄進其他文件。新增 Python 套件、升級既有套件或更換發版 Python 版本時，必須在同一個改動內重新產生清單、跑過 standalone build 與 frozen smoke 再提交。`scripts/check_standalone_env.py` 會在 build 期擋下與清單不符的環境；不得為了讓 build 通過而繞過、放寬或跳過它。操作步驟見 `README.md`。
 
 ## 修改任務的完成條件
 

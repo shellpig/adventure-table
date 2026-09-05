@@ -137,6 +137,40 @@ Windows 上不要讓 Playwright 自己託管 vite：dev server 會在跑測試�
 npx playwright install chromium
 ```
 
+## Standalone 發版相依版本
+
+Windows standalone 發版的套件版本固定在 [`apps/server/constraints-standalone-win.txt`](apps/server/constraints-standalone-win.txt)，本機與 CI 共用同一份。`pyproject.toml` 只宣告需要哪些套件與相容範圍；實際版本號只住這份清單。
+
+`scripts/build-standalone.cmd` 會在建立 venv 後檢查直譯器版本，安裝時帶 `-c` 套用清單，裝完再比對一次實際安裝結果。環境與清單不符時 build 直接失敗，錯誤訊息會列出差在哪個套件。
+
+發版用的 Python 固定為 3.13（與 M03 CI 契約一致）。若本機預設 `python` 不是 3.13，用 `STANDALONE_PYTHON` 指向 3.13 直譯器：
+
+```bat
+set "STANDALONE_PYTHON=C:\path\to\python3.13\python.exe"
+scripts\build-standalone.cmd --version v0.1.0
+```
+
+平常改遊戲邏輯、UI 或翻譯都不必動這份清單。新增 Python 套件、升級既有套件，或更換發版 Python 版本時才更新：
+
+```bat
+rmdir /s /q .pin-venv
+"%STANDALONE_PYTHON%" -m venv .pin-venv
+.pin-venv\Scripts\python.exe -m pip install --upgrade pip
+.pin-venv\Scripts\python.exe -m pip install -e "apps\server[standalone]"
+.pin-venv\Scripts\python.exe -m pip freeze --exclude-editable --all
+```
+
+把輸出接在清單既有的註解標頭後面覆蓋原本的版本列表——標頭裡的 `# python-version:` 與說明要保留。**一定要帶 `--exclude-editable`**，否則 `adventure-table-server` 自己會被寫進清單，下次安裝就會壞。
+
+更新後必須跑過完整 standalone build 與 frozen smoke 才提交：
+
+```bat
+scripts\build-standalone.cmd --version pin-check
+.standalone-venv\Scripts\python.exe scripts\smoke_standalone.py dist\adventure-table-standalone --timeout 30
+```
+
+這份清單只適用 Windows，內含 win32 專用 wheel，不要拿去餵 Linux 或 Docker。重建某個舊版發行時，用當時 commit 的清單。
+
 ## 授權
 
 本 repo 的規則內容取自 System Reference Document 5.1，依 CC BY 4.0 使用；attribution 見 `data/srd5.1/NOTICE.md`。非 SRD 內容依私人專案需求逐步加入，不對外散布。

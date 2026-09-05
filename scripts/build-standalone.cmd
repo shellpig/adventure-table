@@ -6,6 +6,9 @@ for %%I in ("%ROOT%") do set "ROOT=%%~fI"
 set "SERVER_DIR=%ROOT%\apps\server"
 set "WEB_DIR=%ROOT%\apps\web"
 set "VENV_DIR=%ROOT%\.standalone-venv"
+set "CONSTRAINTS=%SERVER_DIR%\constraints-standalone-win.txt"
+set "ENV_CHECK=%ROOT%\scripts\check_standalone_env.py"
+if not defined STANDALONE_PYTHON set "STANDALONE_PYTHON=python"
 set "BUILD_DIR=%ROOT%\build\standalone"
 set "DIST_DIR=%ROOT%\dist"
 set "ARTIFACT_DIR=%DIST_DIR%\adventure-table-standalone"
@@ -49,8 +52,11 @@ echo [M03-E] Adventure Table standalone build
 
 if "%DRY_RUN%"=="1" (
   echo [dry-run] remove previous venv/build/dist output
-  echo [dry-run] python -m venv "%VENV_DIR%"
-  echo [dry-run] pip install -e "%SERVER_DIR%[standalone]" ^(no web extra^)
+  echo [dry-run] "%STANDALONE_PYTHON%" -m venv "%VENV_DIR%"
+  echo [dry-run] verify interpreter against "%CONSTRAINTS%"
+  echo [dry-run] pip install -c "%CONSTRAINTS%" --upgrade pip
+  echo [dry-run] pip install -e "%SERVER_DIR%[standalone]" -c "%CONSTRAINTS%" ^(no web extra^)
+  echo [dry-run] verify installed versions against "%CONSTRAINTS%"
   if "%SKIP_FRONTEND%"=="0" echo [dry-run] npm ci ^&^& npm run build in "%WEB_DIR%"
   echo [dry-run] pyinstaller "%SERVER_DIR%\pyinstaller\standalone.spec"
   echo [dry-run] copy data/ and apps/web/dist/ beside adventure-table.exe
@@ -65,12 +71,16 @@ if exist "%BUILD_DIR%" rmdir /s /q "%BUILD_DIR%"
 if exist "%ARTIFACT_DIR%" rmdir /s /q "%ARTIFACT_DIR%"
 if exist "%ZIP_PATH%" del /q "%ZIP_PATH%"
 
-python -m venv "%VENV_DIR%"
+"%STANDALONE_PYTHON%" -m venv "%VENV_DIR%"
 if errorlevel 1 goto fail
 set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
-"%VENV_PY%" -m pip install --upgrade pip
+"%VENV_PY%" "%ENV_CHECK%" --constraints "%CONSTRAINTS%" --mode python
 if errorlevel 1 goto fail
-"%VENV_PY%" -m pip install -e "%SERVER_DIR%[standalone]"
+"%VENV_PY%" -m pip install -c "%CONSTRAINTS%" --upgrade pip
+if errorlevel 1 goto fail
+"%VENV_PY%" -m pip install -e "%SERVER_DIR%[standalone]" -c "%CONSTRAINTS%"
+if errorlevel 1 goto fail
+"%VENV_PY%" "%ENV_CHECK%" --constraints "%CONSTRAINTS%" --mode packages
 if errorlevel 1 goto fail
 
 if "%SKIP_FRONTEND%"=="0" (

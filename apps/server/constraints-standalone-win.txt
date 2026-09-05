@@ -1,0 +1,55 @@
+# Adventure Table - Windows standalone release constraints.
+#
+# Exact package versions validated for the shipped Windows standalone build.
+# scripts\build-standalone.cmd installs against this file, and
+# scripts\check_standalone_env.py fails the build when the resolved
+# environment does not match it.
+#
+# python-version: 3.13
+# python-version-built-with: 3.13.13
+#
+# The enforced interpreter pin is major.minor, matching the Python version the
+# M03 CI contract fixes for the Windows build job; the exact patch used to
+# generate this file is recorded above for forensics only.  Rebuilding on a
+# different 3.13 patch is allowed and produces a different frozen binary.
+#
+# Windows-only: contains win32-specific wheels. Do not reuse for Linux or
+# Docker images.
+#
+# The PEP 517 build backend (setuptools, fetched by pip into an isolated build
+# environment) is not pinned here; it produces the editable install shim and
+# contributes no code to the frozen artifact.
+#
+# To regenerate, see README.md, section "Standalone 發版相依版本".
+alembic==1.19.2
+altgraph==0.17.5
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.1
+click==8.5.0
+fastapi==0.141.1
+greenlet==3.5.5
+h11==0.16.0
+httptools==0.8.0
+idna==3.19
+Mako==1.4.1
+MarkupSafe==3.0.3
+packaging==26.3
+pefile==2024.8.26
+pip==26.2.1
+pydantic==2.13.5
+pydantic-settings==2.15.0
+pydantic_core==2.46.5
+pyinstaller==6.22.2
+pyinstaller-hooks-contrib==2026.7
+python-dotenv==1.2.3
+pywin32-ctypes==0.2.3
+PyYAML==6.0.3
+setuptools==84.0.0
+SQLAlchemy==2.0.52
+starlette==1.6.0
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+uvicorn==0.52.4
+watchfiles==1.2.0
+websockets==17.1
