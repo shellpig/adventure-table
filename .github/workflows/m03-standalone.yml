@@ -64,26 +64,18 @@ jobs:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
       TAG: ${{ github.ref_name }}
       VERSION: ${{ needs.standalone-build.outputs.version }}
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: adventure-table-standalone-${{ needs.standalone-build.outputs.version }}
           path: release-artifact
-      - name: Write M03 release notes
-        shell: bash
-        run: |
-          cat > release-notes.txt <<'EOF'
-          Adventure Table standalone Character Builder for Windows x64.
-
-          IMPORTANT: Character JSON schema is unstable during M03. Exported JSON from this release is not guaranteed to import into a future release until the schema is locked at P2.
-
-          Extract the ZIP before launching adventure-table.exe. See the bundled zh-TW / en standalone README files for database location, import/export, and shutdown behavior.
-          EOF
       - name: Create release when missing
         shell: bash
-        run: gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Adventure Table Standalone $TAG" --notes-file release-notes.txt
+        run: gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Adventure Table Standalone $TAG" --notes-file docs/M03/release-notes-template.md
       - name: Upload standalone release asset
         shell: bash
         run: gh release upload "$TAG" "release-artifact/adventure-table-standalone-$VERSION.zip" --clobber

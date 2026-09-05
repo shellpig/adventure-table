@@ -6,6 +6,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "m03-standalone.yml"
 NON_E2E_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "m03f-non-e2e.yml"
+RELEASE_NOTES = REPO_ROOT / "docs" / "M03" / "release-notes-template.md"
 
 
 def _workflow_text() -> str:
@@ -16,6 +17,13 @@ def _workflow_text() -> str:
 def _non_e2e_text() -> str:
     assert NON_E2E_WORKFLOW.is_file(), "M03-F non-E2E workflow is missing"
     return NON_E2E_WORKFLOW.read_text(encoding="utf-8")
+
+
+def _release_job_text() -> str:
+    text = _workflow_text()
+    marker = "\n  release:\n"
+    assert marker in text, "M03-F release job is missing"
+    return text.split(marker, 1)[1]
 
 
 def test_m03f_workflow_has_required_triggers_and_windows_toolchain() -> None:
@@ -43,16 +51,28 @@ def test_m03f_windows_job_builds_smokes_and_uploads_the_zip() -> None:
     assert "ADVENTURE_TABLE_DATABASE_PATH" not in text
 
 
-def test_m03f_release_job_is_tag_only_writable_and_marks_schema_unstable() -> None:
-    text = _workflow_text()
+def test_m03f_release_job_has_explicit_repository_context_and_checked_out_notes() -> None:
+    release = _release_job_text()
 
-    assert "if: startsWith(github.ref, 'refs/tags/v')" in text
-    assert "permissions:\n      contents: write" in text
-    assert "gh release create" in text
-    assert "--notes-file release-notes.txt" in text
-    assert "gh release upload" in text
-    assert "--clobber" in text
-    assert "Character JSON schema is unstable during M03" in text
+    # gh CLI commands are not allowed to depend on cwd inference alone.  Keep
+    # both an explicit GH_REPO and checkout because the release notes template
+    # is a repository file consumed by the job.
+    assert "GH_REPO: ${{ github.repository }}" in release
+    assert release.index("actions/checkout@v4") < release.index("gh release view")
+    assert RELEASE_NOTES.is_file(), "M03-F release notes template is missing"
+    assert "--notes-file docs/M03/release-notes-template.md" in release
+
+
+def test_m03f_release_job_is_tag_only_writable_and_marks_schema_unstable() -> None:
+    release = _release_job_text()
+    notes = RELEASE_NOTES.read_text(encoding="utf-8")
+
+    assert "if: startsWith(github.ref, 'refs/tags/v')" in release
+    assert "permissions:\n      contents: write" in release
+    assert "gh release create" in release
+    assert "gh release upload" in release
+    assert "--clobber" in release
+    assert "schema is **unstable** during M03" in notes
 
 
 def test_m03f_release_asset_name_matches_build_script_contract() -> None:
