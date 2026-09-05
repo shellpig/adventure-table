@@ -1,0 +1,89 @@
+name: M03 Standalone Windows Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    types:
+      - labeled
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  standalone-build:
+    if: github.event_name != 'pull_request' || github.event.label.name == 'standalone-build'
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Pin npm
+        run: npm install --global npm@11.6.0
+      - name: Resolve standalone artifact version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $version = "${{ github.ref_name }}"
+          } else {
+            $sha = "${{ github.sha }}"
+            $version = "m03f-$($sha.Substring(0, 12))"
+          }
+          "value=$version" >> $env:GITHUB_OUTPUT
+      - name: Build standalone distribution
+        shell: cmd
+        run: scripts\build-standalone.cmd --version ${{ steps.version.outputs.value }}
+      - name: Smoke standalone from clean artifact directory
+        shell: cmd
+        run: .standalone-venv\Scripts\python.exe scripts\smoke_standalone.py dist\adventure-table-standalone --timeout 30
+      - name: Upload standalone zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: adventure-table-standalone-${{ steps.version.outputs.value }}
+          path: dist/adventure-table-standalone-${{ steps.version.outputs.value }}.zip
+          if-no-files-found: error
+
+  release:
+    needs: standalone-build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.ref_name }}
+      VERSION: ${{ needs.standalone-build.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: adventure-table-standalone-${{ needs.standalone-build.outputs.version }}
+          path: release-artifact
+      - name: Write M03 release notes
+        shell: bash
+        run: |
+          cat > release-notes.txt <<'EOF'
+          Adventure Table standalone Character Builder for Windows x64.
+
+          IMPORTANT: Character JSON schema is unstable during M03. Exported JSON from this release is not guaranteed to import into a future release until the schema is locked at P2.
+
+          Extract the ZIP before launching adventure-table.exe. See the bundled zh-TW / en standalone README files for database location, import/export, and shutdown behavior.
+          EOF
+      - name: Create release when missing
+        shell: bash
+        run: gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Adventure Table Standalone $TAG" --notes-file release-notes.txt
+      - name: Upload standalone release asset
+        shell: bash
+        run: gh release upload "$TAG" "release-artifact/adventure-table-standalone-$VERSION.zip" --clobber
