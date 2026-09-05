@@ -53,7 +53,7 @@ M03-F 的 diff 只動 `.github/`、`apps/server/tests/` 與 `docs/M03/`，未觸
 ## 已知的覆蓋缺口與待決建議（留給 M03-G）
 
 1. **測試指南 E.9 乾淨 Windows 11 冷啟動未執行**（見上方未打勾項）。需要一台未裝 Python / Node / Docker 的機器或 VM；artifact 已備妥。
-2. **`m03-standalone.yml` 尚未由 `main` push 路徑實跑過**。目前綠燈來自 PR label 觸發；三種觸發走同一個 job，差異只在 `if` 條件，風險低，但 M03-F 合併進 `main` 後會自然跑到一次，屆時確認即可。
+2. ~~`m03-standalone.yml` 尚未由 `main` push 路徑實跑過~~ **已結清**：M03-F 合併進 `main`（`9519e76`）觸發的 push run 為 success，三種觸發路徑皆已實跑過。
 3. **M03-E 遺留第 2 點仍未處理**：`/docs` / `/redoc` / `/openapi.json` 只由 `*_url is None` 間接保證，沒有實際發 request 驗 404。M03-E closeout 建議由 M03-F 補，本 Subphase 未做。
 4. **M03-E 遺留第 3、4 點仍未處理**：launcher 的 `KeyboardInterrupt` 回收路徑無測試；`Settings()` import-time 快照跨測試污染。
 5. **forbidden regex 的維護責任**：P2 開工引入多人模組時，若命名不落在 `room` / `session` / `seat` / `campaign` / `party_roster`（含複數）這組字根內，boundary gate 會失效。P2 的第一個 Subphase 應同步擴充該 regex 與 `EXACT_PROTECTED_MODULES`。
