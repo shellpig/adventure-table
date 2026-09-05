@@ -11,13 +11,13 @@
       "name": "矮人 (灰)"
     },
     "mtf:subrace:eladrin": {
-      "name": "艾拉德林"
+      "name": "精靈 (雅靈)"
     },
     "mtf:subrace:sea-elf": {
-      "name": "海精靈"
+      "name": "精靈 (海)"
     },
     "mtf:subrace:shadar-kai": {
-      "name": "夏達凱"
+      "name": "精靈 (影靈)"
     },
     "mtf:subrace:githyanki": {
       "name": "吉斯洋基"
@@ -77,15 +77,15 @@
       "data.desc.0": "選擇秋、冬、春或夏，並可在完成長休後改變季節。3 級起妖精步會依目前季節獲得額外效果；相關目標、豁免與戰鬥效果目前以手動處理。"
     },
     "mtf:feature:sea-elf-training": {
-      "name": "海精靈訓練",
+      "name": "海精靈武器訓練",
       "data.desc.0": "你熟練長矛、三叉戟、輕弩與網。"
     },
     "mtf:feature:child-of-the-sea": {
-      "name": "海之子",
+      "name": "海洋之子",
       "data.desc.0": "你可以在空氣與水中呼吸，並具有 30 尺游泳速度。"
     },
     "mtf:feature:friend-of-the-sea": {
-      "name": "海之友",
+      "name": "海洋之友",
       "data.desc.0": "你能以手勢與聲音，向天生具有游泳速度的野獸傳達簡單想法。"
     },
     "mtf:feature:shadar-kai-necrotic-resistance": {
@@ -93,7 +93,7 @@
       "data.desc.0": "你具有黯蝕傷害抗性。"
     },
     "mtf:feature:blessing-of-the-raven-queen": {
-      "name": "鴉后祝福",
+      "name": "鴉後的祝福",
       "data.desc.0": "每次長休可用附贈動作一次，魔法傳送至多 30 尺到一個你看得見的未占據空間。3 級起，傳送後直到你的下回合開始前，你對所有傷害具有抗性。"
     },
     "mtf:feature:decadent-mastery": {

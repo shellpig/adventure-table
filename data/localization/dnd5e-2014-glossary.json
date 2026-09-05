@@ -2378,6 +2378,110 @@
       "reference_source": "5etools",
       "decision_note": "Dwarf subrace (MTF).",
       "reviewed": true
+    },
+    {
+      "en": "Keen Senses",
+      "zh-TW": "敏銳感官",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Elf racial trait (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Fey Ancestry",
+      "zh-TW": "精類血統",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Elf / Half-Elf racial trait (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Trance",
+      "zh-TW": "傳思",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Elf racial trait (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "High Elf",
+      "zh-TW": "精靈 (高等)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Elf subrace (SRD / PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Wood Elf",
+      "zh-TW": "精靈 (木)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Elf subrace (PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Drow",
+      "zh-TW": "精靈 (卓爾)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Elf subrace (PHB).",
+      "reviewed": true
+    },
+    {
+      "en": "Eladrin",
+      "zh-TW": "精靈 (雅靈)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Elf subrace (MTF / DMG).",
+      "reviewed": true
+    },
+    {
+      "en": "Sea Elf",
+      "zh-TW": "精靈 (海)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Elf subrace (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Shadar-kai",
+      "zh-TW": "精靈 (影靈)",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Elf subrace (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Sea Elf Training",
+      "zh-TW": "海精靈武器訓練",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Sea Elf subrace feature (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Child of the Sea",
+      "zh-TW": "海洋之子",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Sea Elf subrace feature (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Friend of the Sea",
+      "zh-TW": "海洋之友",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Sea Elf subrace feature (MTF).",
+      "reviewed": true
+    },
+    {
+      "en": "Blessing of the Raven Queen",
+      "zh-TW": "鴉後的祝福",
+      "reference_zh-TW": null,
+      "reference_source": "5etools",
+      "decision_note": "Shadar-kai subrace feature (MTF).",
+      "reviewed": true
     }
   ]
 }

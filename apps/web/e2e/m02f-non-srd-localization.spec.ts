@@ -124,7 +124,7 @@ test('M02-F completes a bilingual PHB origin flow without changing selections', 
 
   await page.getByTestId('locale-option-zh-TW').click()
   await expect(page.getByRole('combobox', { name: '種族' })).toHaveValue('精靈')
-  await expect(page.getByRole('combobox', { name: '亞種' })).toHaveValue('木精靈')
+  await expect(page.getByRole('combobox', { name: '亞種' })).toHaveValue('精靈 (木)')
   await expect(page.getByRole('combobox', { name: '背景' })).toHaveValue('侍僧')
   await page.getByTestId('locale-option-en').click()
   await expect(page.getByRole('combobox', { name: 'Background' })).toHaveValue('Acolyte')
