@@ -68,6 +68,25 @@ function selectedIds(raw: unknown): string[] {
   return []
 }
 
+export function mergeEquipmentByItem(
+  entries: readonly BuilderEquipmentSummary[],
+): { item_ref: string; name: string; quantity: number }[] {
+  const merged = new Map<string, { item_ref: string; name: string; quantity: number }>()
+  for (const entry of entries) {
+    const existing = merged.get(entry.item_ref)
+    if (existing) {
+      existing.quantity += entry.quantity
+      continue
+    }
+    merged.set(entry.item_ref, {
+      item_ref: entry.item_ref,
+      name: entry.name,
+      quantity: entry.quantity,
+    })
+  }
+  return [...merged.values()]
+}
+
 function EquipmentGrid({
   entries,
   nameFor,
@@ -78,8 +97,8 @@ function EquipmentGrid({
   if (!entries.length) return null
   return (
     <div className="equipment-grid">
-      {entries.map((entry) => (
-        <div key={entry.entry_id}>
+      {mergeEquipmentByItem(entries).map((entry) => (
+        <div key={entry.item_ref}>
           <strong>{nameFor(entry.item_ref, entry.name)}</strong>
           <span>× {entry.quantity}</span>
         </div>
@@ -225,15 +244,15 @@ export function EquipmentStep({
                     </span>
                   </div>
                   <div className="builder-choice__chips">
-                    {selectedLabels.map((item) => (
+                    {selectedLabels.map((item, selectedIndex) => (
                       <button
                         type="button"
-                        key={item.id}
+                        key={`${item.id}:${selectedIndex}`}
                         disabled={disabled}
                         onClick={() =>
                           saveChoice(
                             choice.choice_id,
-                            selected.filter((id) => id !== item.id),
+                            selected.filter((_, index) => index !== selectedIndex),
                           )
                         }
                       >
@@ -245,16 +264,20 @@ export function EquipmentStep({
                     label={t('equipment.add')}
                     value=""
                     disabled={disabled || selected.length >= choice.choose_count}
-                    options={optionsFor(choice, nameFor, locale).map((option) => ({
-                      ...option,
-                      disabled: option.disabled || selected.includes(option.value),
-                      disabledReason: selected.includes(option.value)
-                        ? t('shared.alreadySelected')
-                        : option.disabledReason,
-                    }))}
+                    options={optionsFor(choice, nameFor, locale).map((option) => {
+                      const alreadySelected =
+                        !choice.allow_duplicates && selected.includes(option.value)
+                      return {
+                        ...option,
+                        disabled: option.disabled || alreadySelected,
+                        disabledReason: alreadySelected
+                          ? t('shared.alreadySelected')
+                          : option.disabledReason,
+                      }
+                    })}
                     secondaryMode="duplicates"
                     onChange={(value) => {
-                      if (value && !selected.includes(value)) {
+                      if (value && (choice.allow_duplicates || !selected.includes(value))) {
                         saveChoice(choice.choice_id, [...selected, value])
                       }
                     }}

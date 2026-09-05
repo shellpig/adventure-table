@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 from hashlib import sha256
 from typing import Any
@@ -330,6 +331,10 @@ def _resolve_choice(
     if not isinstance(label, str) or not label.strip():
         label = f"{registry.get(source_ref).name} — Starting Equipment"
 
+    allow_duplicates = (raw_choice.get("from") or {}).get(
+        "option_set_type"
+    ) == "equipment_category"
+
     builder_choice = BuilderChoice(
         choice_id=choice_id,
         label=label,
@@ -339,6 +344,7 @@ def _resolve_choice(
         option_source="equipment",
         options=options,
         selected_option_ids=selected,
+        allow_duplicates=allow_duplicates,
     )
     choices = [builder_choice]
     atoms: list[_Atom] = []
@@ -375,7 +381,7 @@ def _resolve_choice(
         )
         return choices, atoms, issues
 
-    if len(selected) != len(set(selected)):
+    if not allow_duplicates and len(selected) != len(set(selected)):
         issues.append(
             _issue(
                 "duplicate_equipment_option",
@@ -385,10 +391,15 @@ def _resolve_choice(
         )
         return choices, atoms, issues
 
+    seen_option_ids: Counter[str] = Counter()
     for option_id in selected:
         option_index, raw_option = option_by_id[option_id]
         kind = raw_option.get("option_type")
+        repeat = seen_option_ids[option_id]
+        seen_option_ids[option_id] += 1
         option_path = f"{path}.option.{option_index}"
+        if repeat:
+            option_path = f"{option_path}.repeat.{repeat}"
         if kind in {"counted_reference", "reference"}:
             atom, issue = _resolve_fixed_item(source_ref, option_path, raw_option, registry)
             if atom is not None:
