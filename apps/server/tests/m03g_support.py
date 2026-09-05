@@ -12,6 +12,7 @@ import pytest
 
 from app import launcher
 from app.config import settings
+from m03_baseline import M03A_START_PACKS
 from m03c_support import document, post_document
 
 
@@ -37,9 +38,7 @@ def standalone_client(
     monkeypatch.setenv("ADVENTURE_TABLE_DATABASE_PATH", str(database_path))
     monkeypatch.setenv("ADVENTURE_TABLE_SPA_ROOT", str(spa_root))
     if disabled_pack is not None:
-        enabled = tuple(
-            pack for pack in settings.enabled_content_packs if pack != disabled_pack
-        )
+        enabled = tuple(pack for pack in M03A_START_PACKS if pack != disabled_pack)
         monkeypatch.setattr(settings, "enabled_content_packs", enabled)
 
     launcher.run_migrations()

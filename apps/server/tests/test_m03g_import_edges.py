@@ -27,6 +27,9 @@ def test_missing_xge_lands_as_persisted_builder_draft(
             (entry["pack"], entry["origin"])
             for entry in preview_body["unresolved_refs"]
         } == {("xge", "build")}
+        assert "xge:subclass:gloom-stalker" in {
+            entry["stable_key"] for entry in preview_body["unresolved_refs"]
+        }
 
         committed = post_document(standalone, payload)
         assert committed.status_code == 201, committed.text
@@ -53,6 +56,9 @@ def test_state_only_missing_ref_lands_as_history_loss_draft(
         assert body["landing_mode"] == "draft_with_history_loss"
         assert body["unresolved_ref_count"] > 0
         assert {entry["origin"] for entry in body["unresolved_refs"]} == {"state"}
+        assert "xge:equipment:missing-import-item" in {
+            entry["stable_key"] for entry in body["unresolved_refs"]
+        }
 
         committed = post_document(standalone, payload)
         assert committed.status_code == 201, committed.text
@@ -75,6 +81,7 @@ def test_duplicate_hint_does_not_block_second_character(
         duplicate_hint = preview.json()["duplicate_hint"]
         assert duplicate_hint is not None
         assert duplicate_hint["count"] == 1
+        assert duplicate_hint["latest_imported_at"] is not None
 
         second = post_document(standalone, payload)
         assert second.status_code == 201, second.text
