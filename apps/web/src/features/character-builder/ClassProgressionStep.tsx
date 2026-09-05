@@ -13,6 +13,7 @@ import {
 import type { Locale } from '../../i18n/locale'
 import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy } from '../../i18n/useUiCopy'
+import { choiceAnchorId } from './choiceAnchor'
 import './progression.css'
 
 type Props = {
@@ -67,7 +68,7 @@ function LevelChoiceEditor({
 
   if (choice.disabled_reason) {
     return (
-      <div className="builder-choice progression-choice is-disabled">
+      <div className="builder-choice progression-choice is-disabled" id={choiceAnchorId(choice.choice_id)}>
         <div>
           <strong>{label}</strong>
           <small>{choice.disabled_reason}</small>
@@ -78,20 +79,22 @@ function LevelChoiceEditor({
 
   if (choice.choose_count === 1) {
     return (
-      <SearchableSelect
-        label={label}
-        value={selected[0] ?? ''}
-        disabled={disabled}
-        options={optionsFor(choice, nameFor, locale)}
-        secondaryMode="duplicates"
-        onChange={(value) => saveSelected(value ? [value] : [])}
-      />
+      <div id={choiceAnchorId(choice.choice_id)}>
+        <SearchableSelect
+          label={label}
+          value={selected[0] ?? ''}
+          disabled={disabled}
+          options={optionsFor(choice, nameFor, locale)}
+          secondaryMode="duplicates"
+          onChange={(value) => saveSelected(value ? [value] : [])}
+        />
+      </div>
     )
   }
 
   const canAdd = selected.length < choice.choose_count
   return (
-    <div className="builder-choice progression-choice">
+    <div className="builder-choice progression-choice" id={choiceAnchorId(choice.choice_id)}>
       <div className="builder-choice__heading">
         <strong>{label}</strong>
         <span>{selected.length} / {choice.choose_count}</span>

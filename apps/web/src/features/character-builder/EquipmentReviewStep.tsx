@@ -19,6 +19,7 @@ import type { Locale } from '../../i18n/locale'
 import type { UiCopyKey } from '../../i18n/uiCopy'
 import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy, type UiTranslator } from '../../i18n/useUiCopy'
+import { choiceAnchorId } from './choiceAnchor'
 import {
   grantDisplayName,
   grantPresentationFields,
@@ -186,7 +187,7 @@ export function EquipmentStep({
               const choiceLabel = builderChoiceLabel(choice, locale, nameFor)
               if (choice.choose_count === 1) {
                 return (
-                  <div className="builder-choice" key={choice.choice_id}>
+                  <div className="builder-choice" key={choice.choice_id} id={choiceAnchorId(choice.choice_id)}>
                     <SearchableSelect
                       label={choiceLabel}
                       value={selected[0] ?? ''}
@@ -211,7 +212,7 @@ export function EquipmentStep({
                 }
               })
               return (
-                <div className="builder-choice" key={choice.choice_id}>
+                <div className="builder-choice" key={choice.choice_id} id={choiceAnchorId(choice.choice_id)}>
                   <div className="builder-choice__heading">
                     <strong>{choiceLabel}</strong>
                     <span>

@@ -539,6 +539,21 @@
 .summary-validation li.issue-warning { border-color: var(--gold); }
 .summary-validation li.issue-non_standard { border-color: var(--blue); }
 
+.summary-validation__jump {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.summary-validation__jump:hover strong,
+.summary-validation__jump:focus-visible strong { color: var(--gold); }
+
 .roleplay-editor .roleplay-grid {
   margin-top: 16px;
   padding: 0;

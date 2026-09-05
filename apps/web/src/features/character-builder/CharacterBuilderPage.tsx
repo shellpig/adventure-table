@@ -23,6 +23,7 @@ import { type ContentNameResolver, useContentPresentations } from '../../i18n/us
 import { useUiCopy } from '../../i18n/useUiCopy'
 import { assignStandardArrayScore } from './abilityAssignment'
 import { formatSignedBonus } from './abilityPresentation'
+import { choiceAnchorId, issueChoiceId } from './choiceAnchor'
 import { ClassProgressionStep } from './ClassProgressionStep'
 import { EquipmentReviewStep, EquipmentStep } from './EquipmentReviewStep'
 import {
@@ -68,6 +69,20 @@ const ORIGIN_ABILITY_OPTION_SOURCES = new Set([
   'content:lineage-asi-ability',
   'content:lineage-size',
 ])
+
+function stepForChoice(choice: BuilderChoice): BuilderStep {
+  if (choice.choice_id.startsWith('level:')) return 'class'
+  const source = choice.option_source ?? ''
+  if (source === 'equipment') return 'equipment'
+  if (
+    DIRECT_OPTION_SOURCES.has(source) ||
+    VARIANT_BRANCH_OPTION_SOURCES.has(source) ||
+    ORIGIN_ABILITY_OPTION_SOURCES.has(source)
+  ) {
+    return 'origin'
+  }
+  return 'abilities'
+}
 
 const ABILITY_COPY_KEYS: Record<keyof BuilderAbilityScores, UiCopyKey> = {
   strength: 'builder.abilities.strength',
@@ -136,7 +151,7 @@ function ChoiceEditor({ choice, view, disabled, onSave, nameFor, locale }: Choic
 
   if (choice.disabled_reason) {
     return (
-      <div className="builder-choice is-disabled">
+      <div className="builder-choice is-disabled" id={choiceAnchorId(choice.choice_id)}>
         <div>
           <strong>{label}</strong>
           <small>{choice.disabled_reason}</small>
@@ -163,7 +178,7 @@ function ChoiceEditor({ choice, view, disabled, onSave, nameFor, locale }: Choic
 
   if (choice.choose_count === 1) {
     return (
-      <div className="builder-choice">
+      <div className="builder-choice" id={choiceAnchorId(choice.choice_id)}>
         <SearchableSelect
           label={label}
           value={selected[0] ?? ''}
@@ -187,7 +202,7 @@ function ChoiceEditor({ choice, view, disabled, onSave, nameFor, locale }: Choic
   })
   const canAdd = selected.length < choice.choose_count
   return (
-    <div className="builder-choice">
+    <div className="builder-choice" id={choiceAnchorId(choice.choice_id)}>
       <div className="builder-choice__heading">
         <strong>{label}</strong>
         <span>{selected.length} / {choice.choose_count}</span>
@@ -226,6 +241,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
   const { t } = useUiCopy()
   const queryClient = useQueryClient()
   const [step, setStep] = useState<BuilderStep>('basic')
+  const [pendingChoiceId, setPendingChoiceId] = useState<string | null>(null)
   const draftQuery = useQuery({
     queryKey: ['builder-draft', draftId],
     queryFn: () => getBuilderDraft(draftId),
@@ -327,6 +343,21 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
     () => new Map(view?.choices.map((choice) => [choice.option_source, choice]) ?? []),
     [view],
   )
+  const choicesById = useMemo(
+    () => new Map(view?.choices.map((choice) => [choice.choice_id, choice]) ?? []),
+    [view],
+  )
+
+  useEffect(() => {
+    if (!pendingChoiceId) return
+    setPendingChoiceId(null)
+    const anchor = document.getElementById(choiceAnchorId(pendingChoiceId))
+    if (!anchor) return
+    anchor.scrollIntoView({ block: 'center' })
+    anchor
+      .querySelector<HTMLElement>('input:not([disabled]), select:not([disabled]), button:not([disabled])')
+      ?.focus({ preventScroll: true })
+  }, [pendingChoiceId, step])
   const variantBranchChoices = useMemo(
     () =>
       view?.choices.filter((choice) =>
@@ -830,11 +861,30 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                 <span className={issueCount ? 'has-errors' : 'is-clear'}>{t('builder.summary.blocking', { count: issueCount })}</span>
               </div>
               <ul>
-                {view.validation.issues.map((issue, index) => (
-                  <li className={`issue-${issue.severity}`} key={`${issue.code}:${issue.path}:${index}`}>
-                    <strong>{issue.code.replaceAll('_', ' ')}</strong><span>{issue.message}</span>
-                  </li>
-                ))}
+                {view.validation.issues.map((issue, index) => {
+                  const targetChoiceId = issueChoiceId(issue.path)
+                  const target = targetChoiceId ? choicesById.get(targetChoiceId) : undefined
+                  const body = (
+                    <><strong>{issue.code.replaceAll('_', ' ')}</strong><span>{issue.message}</span></>
+                  )
+                  return (
+                    <li className={`issue-${issue.severity}`} key={`${issue.code}:${issue.path}:${index}`}>
+                      {target ? (
+                        <button
+                          type="button"
+                          className="summary-validation__jump"
+                          title={t('builder.summary.jumpToChoice')}
+                          onClick={() => {
+                            setStep(stepForChoice(target))
+                            setPendingChoiceId(target.choice_id)
+                          }}
+                        >
+                          {body}
+                        </button>
+                      ) : body}
+                    </li>
+                  )
+                })}
               </ul>
               <p className="builder-hint">{t('builder.summary.reviewHint')}</p>
             </div>
