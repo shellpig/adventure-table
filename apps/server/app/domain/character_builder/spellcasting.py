@@ -539,6 +539,12 @@ def _subclass_spell_access(
         for raw in raw_spells:
             if not isinstance(raw, dict):
                 continue
+            # A record that names its own access_type belongs to the M01-J
+            # expansion shape, which also reads option refs and choice gating.
+            # Granting it here too would mint a second entry_id for one record,
+            # and every dedup downstream keys on entry_id.
+            if raw.get("access_type") is not None:
+                continue
             prerequisites = raw.get("prerequisites")
             legal = True
             if isinstance(prerequisites, list):

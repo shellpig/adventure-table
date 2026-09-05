@@ -25,6 +25,7 @@ from app.domain.character_builder.schemas import (
     BuilderLevelChoice,
     BuilderMode,
 )
+from app.domain.character_builder.m01j_extension import prepare_m01j_subclasses
 from app.domain.character_builder.spellcasting import (
     calculate_multiclass_spell_slots,
     compile_spellcasting,
@@ -395,13 +396,20 @@ def test_artificer_spell_list_uses_installed_cross_pack_spell_entries_only() -> 
     assert "tce:spell:booming-blade" in available
     assert "tce:spell:blade-of-disaster" not in available
 
+    # Armorer's spell records declare an access_type, so the M01-J producer owns
+    # them; compile_spellcasting only grants the SRD record shape.
+    runtime = prepare_m01j_subclasses(draft, registry)
     armorer_spells = {
         entry.spell_key
-        for entry in compilation.spell_access_entries
+        for entry in runtime.base.spell_access_entries
         if entry.source_type == "subclass" and entry.source_key == "tce:subclass:armorer"
     }
     assert "srd5.1:spell:magic-missile" in armorer_spells
     assert "srd5.1:spell:mirror-image" in armorer_spells
+    assert not any(
+        entry.source_key == "tce:subclass:armorer"
+        for entry in compilation.spell_access_entries
+    )
 
 
 def test_specialist_choice_is_data_driven_at_artificer_level_three() -> None:
