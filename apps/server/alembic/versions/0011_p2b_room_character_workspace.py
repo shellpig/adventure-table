@@ -1,6 +1,6 @@
 """Add P2-B Room-to-Character workspace associations on the Web track.
 
-Revision ID: 0011_p2b_room_character_workspace
+Revision ID: 0011_p2b_room_workspace
 Revises: 0010_p2a_web_rooms
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 
 
-revision = "0011_p2b_room_character_workspace"
+revision = "0011_p2b_room_workspace"
 down_revision = "0010_p2a_web_rooms"
 branch_labels = None
 depends_on = None
