@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, openCharacterWorkshop, test, type Locator, type Page } from './support/roomTest'
 
 
 // Every builder selection starts an async draft save, and the page disables its
@@ -53,7 +53,7 @@ async function chooseIn(container: Locator, value: string) {
 test('P1-D preserves an ordered Fighter 5 / Wizard 5 rail with ASI and feat choices', async ({ page }) => {
   test.slow()
 
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   await expect(page.getByRole('heading', { name: 'Character Workshop' })).toBeVisible()
   await expect(page.getByText('Fighter 5 / Wizard 5', { exact: true })).toBeVisible()
 
@@ -168,7 +168,7 @@ test('P1-D preserves an ordered Fighter 5 / Wizard 5 rail with ASI and feat choi
   await expect(page.getByTestId('level-node-6')).toContainText('Multiclass entry')
   await expect(page.locator('.summary-abilities')).toContainText('18')
 
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   await expect(page.getByRole('heading', { name: 'Creation Drafts' })).toBeVisible()
   await expect(page.getByText('P1-D Browser Hero')).toBeVisible()
 })

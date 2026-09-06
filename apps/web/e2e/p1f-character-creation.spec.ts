@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, openCharacterWorkshop, test, type Locator, type Page } from './support/roomTest'
 
 
 async function expectDraftSaved(page: Page) {
@@ -47,7 +47,7 @@ async function chooseIn(container: Locator, value: string) {
 test('P1-F resolves starting equipment, reviews and creates Version 1 from the browser', async ({ page }) => {
   test.slow()
 
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
 
