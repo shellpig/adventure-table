@@ -37,6 +37,18 @@ class WebRoomTestClient(TestClient):
         self.character_api = f"/api/rooms/{room_id}/characters"
         self.builder_api = f"/api/rooms/{room_id}/character-builder"
 
+    def scope_character(self, character_id: UUID) -> None:
+        app.state.room_workspace_service.workspace_repository.attach_character(
+            room_id=self.room_id,
+            character_id=character_id,
+        )
+
+    def scope_draft(self, draft_id: UUID) -> None:
+        app.state.room_workspace_service.workspace_repository.attach_draft(
+            room_id=self.room_id,
+            draft_id=draft_id,
+        )
+
 
 def _bind_services(
     engine: Engine,

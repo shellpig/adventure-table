@@ -18,10 +18,11 @@ def test_p1g_p0_legacy_character_can_open_level_up_draft_without_mutation() -> N
         state=state,
         version_kind="legacy",
     )
-    before = client.get(f"/api/characters/{character.id}").json()
+    client.scope_character(character.id)
+    before = client.get(f"{client.character_api}/{character.id}").json()
 
     response = client.post(
-        f"/api/character-builder/characters/{character.id}/drafts",
+        f"{client.builder_api}/characters/{character.id}/drafts",
         json={"mode": "level_up"},
     )
     assert response.status_code == 201, response.text
@@ -35,15 +36,14 @@ def test_p1g_p0_legacy_character_can_open_level_up_draft_without_mutation() -> N
     assert len(draft["draft_payload"]["level_choices"]) == build.character_level
     assert draft["draft_payload"]["initial_state_seed"]["p1g_legacy_import"] is True
 
-    # Opening/cancelling an imported Draft is never an official Build or State change.
-    after_open = client.get(f"/api/characters/{character.id}").json()
+    after_open = client.get(f"{client.character_api}/{character.id}").json()
     assert after_open == before
-    cancelled = client.delete(f"/api/character-builder/drafts/{draft['id']}")
+    cancelled = client.delete(f"{client.builder_api}/drafts/{draft['id']}")
     assert cancelled.status_code == 204, cancelled.text
-    after_cancel = client.get(f"/api/characters/{character.id}").json()
+    after_cancel = client.get(f"{client.character_api}/{character.id}").json()
     assert after_cancel == before
 
-    history = client.get(f"/api/characters/{character.id}/versions").json()
+    history = client.get(f"{client.character_api}/{character.id}/versions").json()
     assert len(history) == 1
     assert history[0]["version_kind"] == "legacy"
     assert history[0]["is_current"] is True
