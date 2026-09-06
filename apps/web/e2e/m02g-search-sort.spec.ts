@@ -1,4 +1,6 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
+
+import { openCharacterWorkshop, test } from './support/roomTest'
 
 const COLLATOR_OPTIONS = { sensitivity: 'base', numeric: true } as const
 
@@ -7,7 +9,7 @@ async function expectDraftSaved(page: Page) {
 }
 
 async function startDraft(page: Page, name: string) {
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
   await page.getByLabel('Character name').fill(name)
