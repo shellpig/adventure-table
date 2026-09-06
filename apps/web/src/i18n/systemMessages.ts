@@ -146,6 +146,18 @@ const BUILDER_ISSUE_MESSAGES: Record<string, LocalizedMessage> = {
   build_candidate_missing: { 'zh-TW': '伺服器無法從目前的草稿產生完整的角色建構，請檢查前面步驟是否還有未完成的選擇。', en: 'The server could not compile a final character build from this draft.' },
   initial_state_missing: { 'zh-TW': '伺服器無法建立這個角色的初始狀態，請檢查前面步驟是否還有未完成的選擇。', en: 'The server could not build the initial current state.' },
   final_character_validation_failed: { 'zh-TW': '最終角色驗證未通過，請檢查前面步驟的選擇是否互相衝突。', en: 'Final character validation failed.' },
+  illegal_ancestral_legacy_skill: {
+    'zh-TW': '祖源傳承只能保留來自原種族的技能熟練，請取消不符合的選項。',
+    en: 'Ancestral Legacy can retain only skill proficiencies that came from the original race. Clear the options that do not qualify.',
+  },
+  invalid_lineage_legacy_skills: {
+    'zh-TW': '祖源傳承技能的選擇數量不正確或含有無效選項。',
+    en: 'The Ancestral Legacy skill selection has the wrong number of picks or an invalid option.',
+  },
+  illegal_ancestral_legacy_movement: {
+    'zh-TW': '祖源傳承只能保留角色已有的攀爬、飛行或游泳速度。',
+    en: 'Ancestral Legacy can retain only a climb, fly, or swim speed the character already has.',
+  },
 }
 
 const DISABLED_REASON_MESSAGES: Record<string, LocalizedMessage> = {

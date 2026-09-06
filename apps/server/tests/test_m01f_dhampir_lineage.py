@@ -374,3 +374,103 @@ def test_m01f_resolved_grants_do_not_include_lineage_itself() -> None:
     # Features granted by the lineage should still be included
     assert any(grant.reference_id == DEATHLESS_NATURE for grant in summary.grants)
 
+
+
+def _direct_created_base(*, retained: tuple[str, ...] = (PERCEPTION, STEALTH)) -> CharacterBuild:
+    """A Dhampir taken at direct creation: a lineage with no ancestral origin."""
+
+    base = _base_build(lineage=True)
+    return base.model_copy(
+        update={
+            "ancestral_origin_ref": None,
+            "ancestral_legacy": AncestralLegacySelection(retained_skill_refs=retained),
+            "skill_choices": retained,
+        }
+    )
+
+
+def test_direct_created_legacy_skills_survive_build_edit_and_level_up() -> None:
+    # A direct-created Dhampir picks two skills freely. Re-opening the character
+    # must judge that pick by the rule that produced it; the retention whitelist
+    # would reject skills the original race never granted and leave the
+    # character permanently unconfirmable.
+    registry = load_default_content_registry()
+    base = _direct_created_base()
+    selections = {
+        LINEAGE_SIZE_CHOICE_ID: _selection(LINEAGE_SIZE_CHOICE_ID, "lineage-size:medium"),
+        LINEAGE_SKILL_CHOICE_ID: _selection(LINEAGE_SKILL_CHOICE_ID, PERCEPTION, STEALTH),
+    }
+
+    for mode in (BuilderMode.BUILD_EDIT, BuilderMode.LEVEL_UP):
+        compiled = compile_lineage(
+            _draft(mode=mode, selections=selections),
+            registry,
+            base_build=base,
+        )
+        assert not compiled.issues, (mode, compiled.issues)
+        assert compiled.skill_refs == (PERCEPTION, STEALTH)
+        # Recording the current race as an origin would make the next version a
+        # transformed character and re-expose the same rejection.
+        assert compiled.ancestral_origin_ref is None
+
+    choices = build_lineage_choices(
+        _draft(mode=BuilderMode.BUILD_EDIT, selections=selections),
+        registry,
+        base_build=base,
+    )
+    skill_choice = next(
+        choice for choice in choices if choice.choice_id == LINEAGE_SKILL_CHOICE_ID
+    )
+    assert len(skill_choice.options) > 2, "the free pick must still offer every skill"
+    assert skill_choice.selected_option_ids == (PERCEPTION, STEALTH)
+    assert any(
+        choice.choice_id == LINEAGE_MOVEMENT_CHOICE_ID for choice in choices
+    ), "Build Edit must still offer ancestral movement retention"
+
+
+def test_transformed_lineage_still_only_retains_race_origin_skills() -> None:
+    registry = load_default_content_registry()
+    base = _base_build(lineage=True)
+    assert base.ancestral_origin_ref == HALF_ELF
+
+    rejected = compile_lineage(
+        _draft(
+            mode=BuilderMode.BUILD_EDIT,
+            selections={
+                LINEAGE_SIZE_CHOICE_ID: _selection(
+                    LINEAGE_SIZE_CHOICE_ID, "lineage-size:medium"
+                ),
+                LINEAGE_SKILL_CHOICE_ID: _selection(LINEAGE_SKILL_CHOICE_ID, STEALTH),
+            },
+        ),
+        registry,
+        base_build=base,
+    )
+    assert any(issue.code == "illegal_ancestral_legacy_skill" for issue in rejected.issues)
+
+
+def test_a_rejected_legacy_skill_selection_is_always_reachable_as_a_choice() -> None:
+    # A blocking issue the reader cannot open is a dead end: the builder jumps
+    # from the validation row to the choice by id, so the choice has to exist
+    # even when nothing is eligible any more.
+    registry = load_default_content_registry()
+    base = _base_build(lineage=True, skill_choices=())
+    draft = _draft(
+        mode=BuilderMode.BUILD_EDIT,
+        selections={
+            LINEAGE_SIZE_CHOICE_ID: _selection(LINEAGE_SIZE_CHOICE_ID, "lineage-size:medium"),
+            LINEAGE_SKILL_CHOICE_ID: _selection(LINEAGE_SKILL_CHOICE_ID, STEALTH),
+        },
+    )
+
+    assert eligible_ancestral_skills(draft, registry, base) == ()
+    compiled = compile_lineage(draft, registry, base_build=base)
+    issue = next(
+        issue for issue in compiled.issues if issue.code == "illegal_ancestral_legacy_skill"
+    )
+    choice_id = issue.path.rsplit(".", 1)[-1]
+
+    choices = build_lineage_choices(draft, registry, base_build=base)
+    assert any(choice.choice_id == choice_id for choice in choices), (
+        "the rejected selection must have a rendered choice to clear it in"
+    )

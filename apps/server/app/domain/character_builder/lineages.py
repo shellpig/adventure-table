@@ -139,6 +139,24 @@ def _ancestry_source_refs(
     return refs
 
 
+def uses_direct_legacy_rules(
+    draft: BuilderDraft,
+    base_build: CharacterBuild | None,
+) -> bool:
+    """Whether the legacy skill pick follows the direct-create rule.
+
+    A lineage taken at direct creation has no ancestral origin, so its legacy
+    skills were a free pick rather than skills retained from a former race.
+    Build Edit and Level Up seed that stored pick back into the draft, so they
+    have to judge it by the rule that produced it; judging it by the retention
+    whitelist instead leaves the character permanently unconfirmable.
+    """
+
+    if draft.mode is BuilderMode.CREATE or base_build is None:
+        return True
+    return base_build.lineage_ref is not None and base_build.ancestral_origin_ref is None
+
+
 def eligible_ancestral_skills(
     draft: BuilderDraft,
     registry: ContentRegistry,
@@ -399,6 +417,7 @@ def build_lineage_choices(
                     ),
                 )
             )
+    if uses_direct_legacy_rules(draft, base_build):
         skill_count = lineage.data.get("direct_legacy_skill_count", 0)
         if isinstance(skill_count, int) and skill_count > 0:
             result.append(
@@ -424,7 +443,10 @@ def build_lineage_choices(
             )
     else:
         eligible_skills = eligible_ancestral_skills(draft, registry, base_build)
-        if eligible_skills:
+        # Offer the choice whenever the draft still carries a selection, even
+        # with nothing eligible left: without a rendered choice the reader has
+        # no way to clear a selection the validator rejects.
+        if eligible_skills or _selected(draft, LINEAGE_SKILL_CHOICE_ID):
             result.append(
                 BuilderChoice(
                     choice_id=LINEAGE_SKILL_CHOICE_ID,
@@ -450,6 +472,7 @@ def build_lineage_choices(
                     selected_option_ids=_selected(draft, LINEAGE_SKILL_CHOICE_ID),
                 )
             )
+    if draft.mode is not BuilderMode.CREATE and base_build is not None:
         eligible_movement = eligible_ancestral_movements(base_build)
         if eligible_movement:
             result.append(
@@ -591,7 +614,8 @@ def compile_lineage(
         for option_id in _selected(draft, LINEAGE_SKILL_CHOICE_ID)
         if stable_key_is_kind(option_id, "skill")
     )
-    if draft.mode is BuilderMode.CREATE or base_build is None:
+    direct_legacy = uses_direct_legacy_rules(draft, base_build)
+    if direct_legacy:
         eligible_skills = {entry.key for entry in registry.list_kind("skill")}
         expected_skill_count = lineage.data.get("direct_legacy_skill_count", 0)
         if len(selected_skills) != expected_skill_count or not set(
@@ -612,18 +636,6 @@ def compile_lineage(
                     related_refs=selected_skills,
                 )
             )
-        fixed_languages = tuple(
-            key
-            for raw in lineage.data.get("direct_create_languages", [])
-            if (key := _reference_key(raw)) is not None
-        )
-        extra_languages = tuple(
-            option_id
-            for option_id in _selected(draft, LINEAGE_LANGUAGE_CHOICE_ID)
-            if stable_key_is_kind(option_id, "language")
-        )
-        language_refs = tuple(dict.fromkeys((*fixed_languages, *extra_languages)))
-        ancestral_origin_ref = None
     else:
         allowed = set(eligible_ancestral_skills(draft, registry, base_build))
         illegal = tuple(skill for skill in selected_skills if skill not in allowed)
@@ -643,8 +655,27 @@ def compile_lineage(
                     related_refs=illegal,
                 )
             )
+
+    if draft.mode is BuilderMode.CREATE or base_build is None:
+        fixed_languages = tuple(
+            key
+            for raw in lineage.data.get("direct_create_languages", [])
+            if (key := _reference_key(raw)) is not None
+        )
+        extra_languages = tuple(
+            option_id
+            for option_id in _selected(draft, LINEAGE_LANGUAGE_CHOICE_ID)
+            if stable_key_is_kind(option_id, "language")
+        )
+        language_refs = tuple(dict.fromkeys((*fixed_languages, *extra_languages)))
+    else:
         language_refs = base_build.language_refs
-        ancestral_origin_ref = base_build.race_ref
+    # A direct-created lineage never had an ancestral origin. Recording the
+    # current race as one would turn it into a transformed character on the
+    # next version and hand its legacy skills to the retention whitelist.
+    ancestral_origin_ref = (
+        None if direct_legacy or base_build is None else base_build.race_ref
+    )
 
     selected_movements = tuple(
         option_id.removeprefix("lineage-movement:")

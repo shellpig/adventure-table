@@ -182,6 +182,21 @@ describe('M02-G/H system-owned messages', () => {
     )
   })
 
+  it('names the lineage rule instead of printing a raw issue code', () => {
+    for (const code of [
+      'illegal_ancestral_legacy_skill',
+      'invalid_lineage_legacy_skills',
+      'illegal_ancestral_legacy_movement',
+    ]) {
+      expect(localizedBuilderIssueMessage(code, 'raw server message', 'zh-TW')).toContain(
+        '祖源傳承',
+      )
+      expect(localizedBuilderIssueMessage(code, 'raw server message', 'en')).toContain(
+        'Ancestral Legacy',
+      )
+    }
+  })
+
   it('uses a Chinese-only safe fallback for unknown validation codes', () => {
     expect(localizedBuilderIssueMessage('future_code', 'Future warning', 'zh-TW')).toBe(
       '目前的角色資料有一項需要修正的規則問題。',
