@@ -1,0 +1,130 @@
+.export-character-page {
+  min-height: 0;
+  padding: 28px;
+}
+
+.export-character-page .sheet-shell {
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.export-document-meta {
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.export-document-meta h2 {
+  margin: 4px 0 8px;
+}
+
+.export-document-meta__details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  font-size: 0.9rem;
+  opacity: 0.78;
+}
+
+.export-ac-note {
+  width: 100%;
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  opacity: 0.78;
+}
+
+.export-quantity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.export-capacity-label {
+  margin-left: 8px;
+  opacity: 0.72;
+}
+
+.export-character-page .sheet-content {
+  display: block;
+}
+
+.export-character-page details[open] > .roleplay-grid {
+  display: grid;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  html,
+  body,
+  .export-character-page,
+  .export-character-page .sheet-shell {
+    background: #fff !important;
+    color: #111 !important;
+    box-shadow: none !important;
+  }
+
+  body,
+  .export-character-page {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .export-character-page * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .export-character-page .character-hero,
+  .export-character-page .panel,
+  .export-character-page .ability-card,
+  .export-character-page .passive-card,
+  .export-character-page .die-card,
+  .export-character-page .spellcasting-card,
+  .export-character-page .slot-card,
+  .export-character-page .spell-card,
+  .export-character-page .inventory-card,
+  .export-character-page .roleplay-panel {
+    background: #fff !important;
+    color: #111 !important;
+    border-color: #bbb !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .export-character-page .eyebrow,
+  .export-character-page small,
+  .export-character-page .panel-title span,
+  .export-character-page .character-meta,
+  .export-character-page .inventory-card p,
+  .export-character-page .spell-card p,
+  .export-character-page .sheet-footer,
+  .export-document-meta__details,
+  .export-ac-note {
+    color: #444 !important;
+  }
+
+  .export-character-page .spell-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .export-character-page .ability-grid,
+  .export-character-page .spellcasting-grid,
+  .export-character-page .slot-grid,
+  .export-character-page .inventory-list,
+  .export-character-page .two-column-grid {
+    gap: 8px !important;
+  }
+
+  .export-character-page .sheet-content,
+  .export-document-meta,
+  .export-character-page .character-hero {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+}
