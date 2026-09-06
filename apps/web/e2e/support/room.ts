@@ -22,6 +22,21 @@ type RoomGrant = {
   access_token: string
 }
 
+type StoredRoomContext = {
+  roomId: string
+  code: string
+  name: string
+  accessToken: string
+  authority: E2ERoomContext['authority']
+}
+
+async function readStoredRoomContext(page: Page): Promise<E2ERoomContext | null> {
+  return page.evaluate((storageKey) => {
+    const parsed = JSON.parse(window.localStorage.getItem(storageKey) ?? '[]') as StoredRoomContext[]
+    return parsed[0] ?? null
+  }, RECENT_ROOMS_STORAGE_KEY)
+}
+
 export async function enterRoom(
   page: Page,
   options: { name?: string; displayName?: string } = {},
@@ -53,16 +68,8 @@ export async function enterRoom(
   const grant = (await response.json()) as RoomGrant
 
   await expect(page.getByRole('heading', { name: 'Room created' })).toBeVisible()
-  const stored = await page.evaluate(
-    ({ storageKey, roomId }) => {
-      const parsed = JSON.parse(window.localStorage.getItem(storageKey) ?? '[]') as Array<{
-        roomId?: string
-        accessToken?: string
-      }>
-      return parsed.find((room) => room.roomId === roomId) ?? null
-    },
-    { storageKey: RECENT_ROOMS_STORAGE_KEY, roomId: grant.room.id },
-  )
+  const stored = await readStoredRoomContext(page)
+  expect(stored?.roomId).toBe(grant.room.id)
   expect(stored?.accessToken).toBe(grant.access_token)
 
   return {
@@ -76,22 +83,22 @@ export async function enterRoom(
 
 export async function openCharacterWorkshop(
   page: Page,
-  roomContext: E2ERoomContext,
+  roomContext?: E2ERoomContext,
 ): Promise<void> {
+  const context = roomContext ?? await readStoredRoomContext(page)
+  expect(context).not.toBeNull()
+
   const hasRoomContext = await page.evaluate(
     ({ storageKey, roomId, accessToken }) => {
-      const parsed = JSON.parse(window.localStorage.getItem(storageKey) ?? '[]') as Array<{
-        roomId?: string
-        accessToken?: string
-      }>
+      const parsed = JSON.parse(window.localStorage.getItem(storageKey) ?? '[]') as StoredRoomContext[]
       return parsed.some(
         (room) => room.roomId === roomId && room.accessToken === accessToken,
       )
     },
     {
       storageKey: RECENT_ROOMS_STORAGE_KEY,
-      roomId: roomContext.roomId,
-      accessToken: roomContext.accessToken,
+      roomId: context!.roomId,
+      accessToken: context!.accessToken,
     },
   )
   expect(hasRoomContext).toBe(true)
