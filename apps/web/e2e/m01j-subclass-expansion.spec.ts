@@ -1,4 +1,5 @@
-import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { openCharacterWorkshop, test } from './support/roomTest'
 
 const PHB = "Player's Handbook 2014 Additions"
 const SCAG = "Sword Coast Adventurer's Guide"
@@ -313,7 +314,7 @@ async function readReview(request: APIRequestContext, draftId: string) {
 }
 
 async function startDraft(page: Page, name: string, targetLevel: number) {
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
   await expectDraftSaved(page)
@@ -551,7 +552,7 @@ test('M01-J direct high-level create matches sequential level up', async ({ page
   const steppedId = await finishAndConfirm(page, request, steppedName)
 
   for (let level = 2; level <= target; level += 1) {
-    await page.goto('/characters')
+    await openCharacterWorkshop(page)
     const card = page.locator('.workshop-card').filter({ hasText: steppedName })
     await expect(card).toHaveCount(1)
     await card.getByRole('button', { name: 'Level Up' }).click()
