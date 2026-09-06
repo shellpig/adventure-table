@@ -32,9 +32,7 @@ class SourceApp(StrictModel):
     build: str | None = None
 
 
-class Envelope(StrictModel):
-    schema_version: Literal["unstable"] = "unstable"
-    schema_status: Literal["unstable", "locked"] = "unstable"
+class _EnvelopeFields(StrictModel):
     ruleset: str = Field(min_length=1)
     content_requirements: list[PackRequirement]
     stable_key_refs_summary: int = Field(ge=0)
@@ -42,6 +40,19 @@ class Envelope(StrictModel):
     source_export_id: UUID
     source_app: SourceApp
     exported_at: datetime
+
+
+class LegacyM03Envelope(_EnvelopeFields):
+    schema_version: Literal["unstable"] = "unstable"
+    # M03 reserved `locked` before a locked version existed. Keep accepting it
+    # only on the legacy parser so previously produced files remain readable.
+    schema_status: Literal["unstable", "locked"] = "unstable"
+
+
+class CharacterExportV1Envelope(_EnvelopeFields):
+    schema_version: Literal["1"] = "1"
+    schema_status: Literal["locked"] = "locked"
+    export_type: Literal["character"] = "character"
 
 
 class ExportedVersion(StrictModel):
@@ -71,6 +82,47 @@ class ExportPayload(StrictModel):
     current_state: ExportedState
 
 
-class CharacterExport(StrictModel):
-    envelope: Envelope
+class LegacyM03CharacterExport(StrictModel):
+    envelope: LegacyM03Envelope
     payload: ExportPayload
+
+
+class CharacterExportV1(StrictModel):
+    envelope: CharacterExportV1Envelope
+    payload: ExportPayload
+
+
+ParsedCharacterExport = LegacyM03CharacterExport | CharacterExportV1
+
+
+def parse_character_export(payload: Any) -> ParsedCharacterExport:
+    """Parse either the frozen M03 unstable envelope or locked v1."""
+
+    schema_version = None
+    if isinstance(payload, dict):
+        envelope = payload.get("envelope")
+        if isinstance(envelope, dict):
+            schema_version = envelope.get("schema_version")
+    if schema_version == "unstable":
+        return LegacyM03CharacterExport.model_validate(payload)
+    return CharacterExportV1.model_validate(payload)
+
+
+def normalize_character_export(document: ParsedCharacterExport) -> CharacterExportV1:
+    """Normalize every accepted Character JSON document to the locked v1 DTO."""
+
+    if isinstance(document, CharacterExportV1):
+        return document
+    envelope = document.envelope.model_dump(
+        exclude={"schema_version", "schema_status"}
+    )
+    return CharacterExportV1(
+        envelope=CharacterExportV1Envelope(**envelope),
+        payload=document.payload,
+    )
+
+
+# Compatibility names used by the M03 fixture-corpus tests and old direct
+# service tests. New production export code must use CharacterExportV1.
+CharacterExport = LegacyM03CharacterExport
+Envelope = CharacterExportV1Envelope

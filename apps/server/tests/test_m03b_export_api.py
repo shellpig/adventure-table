@@ -32,8 +32,9 @@ def test_m03b_export_api_is_json_read_only_and_uses_manifest_versions() -> None:
     assert "attachment;" in response.headers["content-disposition"]
 
     document = response.json()
-    assert document["envelope"]["schema_version"] == "unstable"
-    assert document["envelope"]["schema_status"] == "unstable"
+    assert document["envelope"]["schema_version"] == "1"
+    assert document["envelope"]["schema_status"] == "locked"
+    assert document["envelope"]["export_type"] == "character"
     assert document["envelope"]["content_requirements"]
     assert all(
         item["version"] == "1.0.0"
