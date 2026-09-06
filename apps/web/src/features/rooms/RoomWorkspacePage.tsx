@@ -106,7 +106,12 @@ export function RoomWorkspacePage({ roomId }: { roomId: string }) {
           <span>{copy.authority}: {recent.authority}</span>
         </div>
         <p>{copy.workspacePlaceholder}</p>
-        <a className="button secondary" href="/">{copy.backHome}</a>
+        <div className="workshop-card__split-actions">
+          <a className="button primary" href={`/rooms/${roomId}/characters`}>
+            {copy.charactersAction}
+          </a>
+          <a className="button secondary" href="/">{copy.backHome}</a>
+        </div>
       </section>
     </main>
   )
