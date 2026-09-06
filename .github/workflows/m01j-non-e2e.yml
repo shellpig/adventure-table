@@ -52,7 +52,7 @@ jobs:
       - name: Fresh SQLite migration
         env:
           DATABASE_URL: sqlite+pysqlite:////tmp/adventure-table-m01j-fresh.db
-        run: alembic upgrade head
+        run: alembic upgrade heads
 
   frontend:
     runs-on: ubuntu-latest
