@@ -6,6 +6,7 @@ import {
   assertSafeCharacterSheetHtml,
   buildCharacterSheetExportFilename,
   buildCharacterSheetHtmlDocument,
+  formatConditionForExport,
   projectCharacterSheetForExport,
   sanitizeFilenameSegment,
 } from './CharacterSheetHtmlExport'
@@ -17,7 +18,7 @@ const sheet = {
   max_hp: 38,
   temporary_hp: 6,
   conditions: [
-    { condition_ref: 'srd5.1:condition:poisoned', name: 'Poisoned' },
+    { condition_ref: 'srd5.1:condition:poisoned', name: 'Poisoned', note: 'From spider venom' },
     { condition_ref: 'srd5.1:condition:prone', name: 'Prone' },
   ],
   hit_dice: [
@@ -99,6 +100,13 @@ describe('M01-N Character Sheet export projection', () => {
       preparedCount: null,
     })
   })
+
+  it('preserves visible condition notes as static text instead of hover-only state', () => {
+    expect(formatConditionForExport('Poisoned ×', '  From spider venom  ')).toBe(
+      'Poisoned — From spider venom',
+    )
+    expect(formatConditionForExport('Prone ×')).toBe('Prone')
+  })
 })
 
 describe('M01-N Character Sheet export identity', () => {
@@ -157,6 +165,7 @@ describe('M01-N self-contained HTML document', () => {
     ['href attribute', '<a href="/x">x</a>'],
     ['button control', '<button>Save</button>'],
     ['input control', '<input value="x">'],
+    ['collapsible details', '<details open><summary>Roleplay</summary></details>'],
     ['tab navigation', '<div role="tablist">tabs</div>'],
   ])('rejects %s from the final export', (_label, unsafe) => {
     expect(() => assertSafeCharacterSheetHtml(unsafe)).toThrow()

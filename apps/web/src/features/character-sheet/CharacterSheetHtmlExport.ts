@@ -82,6 +82,12 @@ export function buildCharacterSheetExportFilename(
   return `${sanitizeFilenameSegment(sheet.name)}-v${sheet.version_no}-${scope}.html`
 }
 
+export function formatConditionForExport(label: string, note?: string | null): string {
+  const trimmedLabel = label.replace(/\s*×\s*$/, '').trim()
+  const trimmedNote = note?.trim()
+  return trimmedNote ? `${trimmedLabel} — ${trimmedNote}` : trimmedLabel
+}
+
 export function buildCharacterSheetHtmlDocument({
   bodyMarkup,
   locale,
@@ -108,6 +114,7 @@ export function assertSafeCharacterSheetHtml(html: string): void {
     [/<select\b/i, 'select control'],
     [/<textarea\b/i, 'textarea control'],
     [/<form\b/i, 'form control'],
+    [/<details\b/i, 'collapsible details'],
     [/role="tablist"/i, 'tab navigation'],
   ]
   const violation = forbidden.find(([pattern]) => pattern.test(html))
@@ -153,15 +160,15 @@ export function createCharacterSheetHtmlExport({
   shell.querySelector('.error-banner')?.remove()
 
   insertExportDocumentMeta(shell, sheet, scope, locale, now)
-  preserveConditionLabels(shell)
+  preserveConditionLabels(shell, sheet)
   preserveInventoryQuantities(shell, copy.quantity)
   removeInteractiveChrome(shell)
+  flattenRoleplayDetails(shell)
 
   if (scope === 'build') {
     applyBuildOnlyProjection(shell, sheet, projection, locale)
   }
 
-  shell.querySelectorAll('details').forEach((details) => details.setAttribute('open', ''))
   shell.querySelector('.sheet-footer strong')?.remove()
 
   // Final defense: an export should never ship a live control even if a future
@@ -242,11 +249,14 @@ function insertExportDocumentMeta(
   shell.prepend(meta)
 }
 
-function preserveConditionLabels(root: HTMLElement): void {
-  root.querySelectorAll('button.condition-chip').forEach((button) => {
+function preserveConditionLabels(root: HTMLElement, sheet: CharacterSheetDTO): void {
+  root.querySelectorAll('button.condition-chip').forEach((button, index) => {
     const span = document.createElement('span')
     span.className = button.className
-    span.textContent = (button.textContent ?? '').replace(/\s*×\s*$/, '').trim()
+    span.textContent = formatConditionForExport(
+      button.textContent ?? '',
+      sheet.conditions[index]?.note,
+    )
     button.replaceWith(span)
   })
 }
@@ -275,6 +285,26 @@ function removeInteractiveChrome(root: HTMLElement): void {
   // remain visible in the hero strip after condition buttons are converted to spans.
   root.querySelectorAll('[role="combobox"]').forEach((combobox) => {
     combobox.closest('article.panel')?.remove()
+  })
+}
+
+function flattenRoleplayDetails(root: HTMLElement): void {
+  root.querySelectorAll<HTMLDetailsElement>('details').forEach((details) => {
+    const section = document.createElement('section')
+    section.className = details.className
+
+    const summary = details.querySelector('summary')
+    const primarySummary = summary?.firstElementChild
+    if (primarySummary) {
+      const heading = document.createElement('div')
+      heading.className = 'export-roleplay-heading'
+      heading.append(primarySummary.cloneNode(true))
+      section.append(heading)
+    }
+
+    const grid = details.querySelector('.roleplay-grid')
+    if (grid) section.append(grid.cloneNode(true))
+    details.replaceWith(section)
   })
 }
 

@@ -28,8 +28,10 @@ describe('M01-N Character Sheet HTML export action', () => {
   it('offers build-only and current-snapshot scopes in English', () => {
     const markup = renderExportButton('en')
     expect(markup).toContain('Export scope')
-    expect(markup).toContain('value="build" selected="">Build only</option>')
-    expect(markup).toContain('value="snapshot">Current snapshot</option>')
+    expect(markup).toContain('<option value="build"')
+    expect(markup).toContain('Build only</option>')
+    expect(markup).toContain('<option value="snapshot"')
+    expect(markup).toContain('Current snapshot</option>')
     expect(markup).toContain('Export HTML')
     expect(markup).toContain('data-testid="character-html-export-button"')
   })

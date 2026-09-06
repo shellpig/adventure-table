@@ -46,12 +46,25 @@
   opacity: 0.72;
 }
 
-.export-character-page .sheet-content {
-  display: block;
+.export-roleplay-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 0;
 }
 
-.export-character-page details[open] > .roleplay-grid {
+.export-roleplay-heading > span {
   display: grid;
+  gap: 3px;
+}
+
+.export-roleplay-heading small {
+  color: var(--muted);
+}
+
+.export-character-page .sheet-content {
+  display: block;
 }
 
 @media print {
