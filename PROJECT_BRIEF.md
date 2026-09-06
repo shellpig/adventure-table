@@ -8,9 +8,9 @@
 
 Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 2014 Web VTT**。真人 DM 主要靠口頭敘事，網站負責共享、同步、計算、保存、權限與外部 AI 接入；不做 CRPG 或包山包海的平台。
 
-- **現在可用**：Character Workshop、Lv1／高等創角、Multiclass／Subclass／ASI／Feat／Spellcasting／Starting Equipment、Character Sheet、Current State 編輯、Level Up、Build Edit、Version History、Archive／永久刪除。
+- **目前 code 可用**：Character Workshop、Lv1／高等創角、Multiclass／Subclass／ASI／Feat／Spellcasting／Starting Equipment、Character Sheet、Current State 編輯、Level Up、Build Edit、Version History、Archive／永久刪除。P2 尚未開始 coding，因此 Web 現行 code仍是 P2 前的 global Character 入口；Room-first 是已定案、待 P2-A/B 實作的產品契約。
 - **內容與語言**：以 SRD 5.1 為基礎，已擴充多來源角色內容；介面與目前正式呈現的規則內容支援 `zh-TW`／`en`。Enabled pack 清單以程式中的 `Settings.enabled_content_packs` 為準。
-- **已交付單機版**：同一份角色核心與前端可打包成 Windows 離線 portable zip，使用 SQLite 保存；提供 Character JSON 匯入／匯出。完整乾淨機驗收仍有缺口，見「未結清事項」。
+- **已交付單機版**：同一份角色核心與前端可打包成 Windows 離線 portable zip，使用 SQLite 保存；提供 Character JSON 匯入／匯出。完整乾淨機驗收仍有缺口，見「未結清事項」。Standalone 永久保持 Character-first，不導入 Room／Campaign／Session／Seat。
 - **尚未實作**：Room／Campaign／Session／Seat、正式 AI 桌內接入、Exploration／Roll／Combat／Adventure Runtime。角色層可用不代表多人 VTT 已可跑團。
 - **技術基礎**：React + TypeScript + Vite；Python + FastAPI + Pydantic；SQLAlchemy + Alembic；網頁版 PostgreSQL、單機版 SQLite。啟動與開發指令見 [README.md](README.md)。
 
@@ -18,24 +18,40 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## 當前狀態與下一步
 
-**P0、P1、M02、M03 已完成並關門；M01-A～M01-M 已逐項關門，M01 改為長期保持 open 的 Character Content Expansion / Maintenance track；P2 現在正式進入 planning / specification。**
+**P0、P1、M02、M03 已完成並關門；M01-A～M01-M 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track；P2 三份正式規格與 Subphase A～F 已完成設計，P2 code 尚未開始，下一步是 P2-A。**
+
+P2 已拍板的核心方向：
+
+- **Web Room-first**：首頁先 Create / Enter Room；Character / Builder Draft 在 P2-B 後全部由 Room workspace 管理，不再有跨 Room global Character Workshop。
+- **Standalone Character-first**：Character Core / Builder / JSON exchange 不依賴多人 domain，單機版不建立假 Room。
+- **同一 Character 不跨 Room共享 identity**；跨 Room用 Export / Import / Copy-as-new。
+- **同 Room多 Campaign可 reference同一 Character，Current State共用同一份。**
+- **同一 Character不可同時成為兩個 active Session 的 Active Character。**
+- **Character JSON 在 P2-A 鎖定 v1**，但仍接受 M03 最後 `unstable`格式並 normalize。
+- **P2-A 先拆 Alembic shared-character / web-multiplayer migration tracks**，避免 standalone SQLite長出 Room / Campaign / Session schema。
 
 下一步依序為：
 
-1. 依目前真正存在的 codebase 與 `規格企劃.md`，完成 **P2 — Room / Campaign / Session / Seat** 的前置設計討論。
-2. P2 coding 前拆成可獨立實作、驗證與 commit 的 `P2-A`、`P2-B`…，並建立對齊的三份正式 Phase 文件。
-3. P2 文件拍板後才開始 P2 coding；P3～P8 仍維持大 Phase，不提前設計 schema、API 或模組。
+1. **實作 P2-A — Room Foundation & Web Entry**；只做該 Subphase 的 code + tests + static review，不提前做 P2-B～F。
+2. P2-A closeout後依序 P2-B → P2-C → P2-D → P2-E；每個 Subphase都獨立實作、驗證、commit。
+3. P2-F 做 Full P2 Integration & Closeout；P3～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
+
+P2 的正式契約：
+
+- [P2 實作規格](docs/P2/實作規格.md)
+- [P2 開發設計方針](docs/P2/開發設計方針.md)
+- [P2 測試指南](docs/P2/測試指南.md)
 
 **M01 不再有「必須 final closeout 後才能開始 P2」的 gate。** A～M 是目前已完成的角色內容 baseline；之後若再拍板新的角色內容或既有角色系統強化，從 **M01-N** 起繼續新增 Subphase。M01 可以在 P2／P3 等正常產品 Roadmap 繼續前進時保持 open，不要求先建立一個假的「全部 D&D 內容已完成」里程碑。
 
-新的 M01 Subphase若只補 content / presentation，依當時既有 regression contract驗證；若碰到 Character Build／State／Version／StableKey／Builder provenance／Character JSON schema 或其他共享角色核心，除了 M01 自身驗證外，還必須同步做**當時已存在的後續 P Phase compatibility review**與 **M03 standalone compatibility review**。不得因 M01 是 maintenance track 就破壞多人層或 standalone boundary。
+新的 M01 Subphase若只補 content / presentation，依當時既有 regression contract驗證；若碰到 Character Build／State／Version／StableKey／Builder provenance／Character JSON schema 或其他共享角色核心，除了 M01 自身驗證外，還必須同步做**當時已存在的後續 P Phase compatibility review**與 **M03 standalone compatibility review**。P2-A 起 shared Character migration 必須落在 `character` Alembic track，不得讓 maintenance 工作反向依賴多人層。
 
 ## 未結清事項與驗收限制
 
 | 項目 | 當前狀態與影響 | 證據／後續入口 |
 |---|---|---|
 | 乾淨 Windows 11 冷啟動 | M03 已有 frozen build 與 smoke 證據，但尚未在未裝 Python／Node／Docker 的 Windows 11 完成 E.9 驗收；M03 關門不視同此項通過。需用交付 zip 補驗 | [M03-G closeout：未結清的驗收項](docs/M03/M03-G_CLOSEOUT.md)；[M03 測試指南](docs/M03/測試指南.md) E.9 |
-| Character JSON 版本相容 | M03 schema 仍為 `unstable`，不保證未來版本可讀；P2 lock schema 時須決定既有匯出檔處置。SQLite 是單機版保存庫 | [M03 實作規格](docs/M03/實作規格.md) 2.6／2.7；[M03-G closeout](docs/M03/M03-G_CLOSEOUT.md) |
+| Character JSON 版本相容 | **產品／設計已拍板**：P2-A 把新 export 鎖成 v1，保留 M03 `unstable` legacy parser / normalizer；目前 code仍是 `unstable`，要到 P2-A implementation 才算交付 | [P2 實作規格](docs/P2/實作規格.md) §6／P2-A；[P2 開發設計方針](docs/P2/開發設計方針.md) §6 |
 | P1-D ASI 摘要 E2E 不穩定 | 根因未確認；會干擾整套 E2E 與後續 xge-less 測試執行。不得以重跑通過推論根因已修復 | [已知問題.md](已知問題.md) KI-P1D-001 |
 | M01-J 直創／逐級升等等價 E2E | 測試目前 `fixme`，瀏覽器層證據仍有缺口；後端已有相關整合覆蓋 | [已知問題.md](已知問題.md) KI-M01J-001 |
 | Windows Vite E2E 環境 | 使用既有 Docker Linux dev server 路徑驗證；不要走 Windows Playwright 託管 Vite 的整套路徑 | [已知問題.md](已知問題.md) KI-ENV-001；[README.md](README.md) |
@@ -54,7 +70,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 | M01 | Multi-Source Character Content Expansion | 長期角色內容／角色系統維護 track；A～M 已關門，整體保持 open，未來從 N 繼續，不阻塞 P2+ |
 | M02 | Traditional Chinese / English Localization | 插於 M01-C 與 M01-D 間；雙語呈現、翻譯流程與完整性 gate；已關門 |
 | M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，保留上列驗收缺口 |
-| P2 | Room / Campaign / Session / Seat | 角色進桌、Party Roster、Player Seat、Controller、Session lifecycle；**正在 planning / specification** |
+| P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**規格完成，P2-A 待實作** |
 | P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌 |
 | P4 | Quick Combat | 第一個完整可玩的 Combat MVP；首個 Subphase P4-A 承接 SRD Monster／Beast stat blocks |
 | P5 | Tactical Combat | 同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE 與空間系統 |
@@ -64,8 +80,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## Subphase 進度
 
-以下每個 Subphase 各列一項；✅ 代表該項已關門，未結清的驗收限制仍以上方索引為準。詳細規格、設計與證據由各 Phase 文件承擔。
-
+以下每個 Subphase 各列一項；✅ 代表該項已關門，⬜ 代表正式規格已存在但尚未實作。未結清的驗收限制仍以上方索引為準。詳細規格、設計與證據由各 Phase 文件承擔。
 
 ### P0
 
@@ -77,7 +92,6 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 | **P0-D — Character Rules & Backend API** | ✅ | Character rules / DTO / APIs / overrides |
 | **P0-E — Character Sheet & State UI** | ✅ | 三頁 Character Sheet / state UI / E2E |
 | **P0-F — Full P0 Integration & Closeout** | ✅ | Full regression / persistence / smoke / closeout |
-
 
 ### P1
 
@@ -91,7 +105,6 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 | **P1-F — Equipment, Review & Character Creation** | ✅ | Starting Equipment nested choices、Review、atomic Create Confirm、Version 1 + initial State |
 | **P1-G — Level Up & Character Versions** | ✅ | Level Up Draft、immutable Version N+1、Version History、stale base guard、State reconciliation、correction/build edit |
 | **P1-H — Full P1 Integration & Closeout** | ✅ | P1 full regression、Create / high-level / multiclass / caster / Level Up E2E、P0 regression、migration / restart persistence / smoke closeout |
-
 
 ### M01
 
@@ -113,7 +126,6 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 > **M01 保持 open。** A～M 是目前 baseline；下一個已拍板的 M01 工作從 **M01-N** 起編號。沒有預留給「Full M01 Closeout」的字母。
 
-
 ### M02
 
 | Subphase | 狀態 | 重點 |
@@ -127,7 +139,6 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 | **M02-G — Localized Search, Errors & Completeness Gates** | ✅ | localized search / alias / sort、error code + localized message、policy-driven completeness / orphan guard |
 | **M02-H — Full M02 Integration & Closeout** | ✅ | structured disabled-reason / issue params、全站雙語 crawl + overflow gate、Draft / Character state integrity、translation evidence 彙整、doc-sync / CC BY NOTICE |
 
-
 ### M03
 
 | Subphase | 狀態 | 重點 |
@@ -140,11 +151,23 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 | **M03-F — Windows CI Build, Release & Import Boundary Test** | ✅ | Windows frozen build、artifact flow（本機發版，CI 不建 GitHub Release）、standalone import boundary 與未來 P2 dependency leakage gate |
 | **M03-G — Full M03 Integration & Closeout** | ✅ | web ↔ standalone ↔ standalone JSON round-trip、frozen runtime smoke、雙語 / persistence / migration / capability 全整合 closeout；E.9 乾淨 Windows 11 冷啟動未取得證據 |
 
+### P2
+
+| Subphase | 狀態 | 重點 |
+|---|---|---|
+| **P2-A — Room Foundation & Web Entry** | ⬜ | Room access / Room-first Web landing、Character JSON v1 lock、Alembic shared-vs-web branch split、standalone boundary |
+| **P2-B — Room Character Workspace** | ⬜ | Character / Draft Room scope、atomic workspace association、legacy global data claim、Web global Character route收口、Standalone維持 Room-less |
+| **P2-C — Campaign & Party Roster** | ⬜ | Campaign lifecycle、Room active campaign、same-Room Roster、same Character multi-Campaign shared Current State |
+| **P2-D — Seat, Controller & Lobby** | ⬜ | Room authority vs Seat Role vs Controller、Human / None controller、Lobby selection / presence；AI shape only，不提前接 P3 |
+| **P2-E — Session Lifecycle & Late Join** | ⬜ | Start / End / Abandon、fixed DM Controller、immutable Active Character、late join、active-character concurrency lease、Resume boundary |
+| **P2-F — Full P2 Integration & Closeout** | ⬜ | Room isolation、migration / restart、permission / concurrency、real-backend E2E、standalone frozen regression、human smoke |
 
 ## 接手時必須保留的跨 Phase 約束
 
 - **M01 是 long-running maintenance/content track**：A～M 是目前 baseline，未來從 N 繼續；M01 open 不阻塞 P2+。任何後續 M01 若修改共享 Character contract，必須 regression 當時已存在的後續 P Phase，並同步做 M03 standalone compatibility review。
-- **Standalone boundary 是常駐約束**：角色／內容核心不得依賴多人層，`app.standalone` 不得 import `app.main`。P2 引入多人模組時，必須同步擴充 `tests/test_m03_import_boundary.py` 的 forbidden regex 與 protected modules；不能假設現有字根比對會涵蓋所有新命名。契約見 [M03 實作規格](docs/M03/實作規格.md) 3.2 與 [AGENTS.md](AGENTS.md)。
+- **Web Room-first / Standalone Character-first 是永久產品邊界**：Web Character / Draft在 P2-B 後一定由 Room workspace管理；Standalone不建立 Room。多人層只可依賴 Character Core，Character / Builder / Interop與 `app.standalone`不得反向 import多人層。契約見 [規格企劃.md](規格企劃.md) 第三、四、五章與 [P2 開發設計方針](docs/P2/開發設計方針.md)。
+- **Standalone boundary 是常駐約束**：`app.standalone` 不得 import `app.main` 或 P2+ multiplayer modules。P2-A 引入實際 `rooms` package時，必須同步擴充 `tests/test_m03_import_boundary.py`；P2-A 起 standalone migration只升 shared Character track，不能把 Web multiplayer schema灌進 SQLite。
+- **Character JSON v1 是 P2-A 開始的相容基線**：實作完成後新 export鎖 v1；legacy M03 `unstable`仍可由新版本 import。Room / Campaign / Seat / Session identity不得塞進 Character JSON。
 - **雙語是持續交付要求**：新增、修改或首次呈現給使用者的 system／rules content，必須同一 Subphase 同步交付 `zh-TW`／`en`；locale 只影響呈現，不改角色／草稿資料。細則見 [AGENTS.md](AGENTS.md) 與 [M02 實作規格](docs/M02/實作規格.md)。
 - **P4 承接內容範圍**：P4 的第一個 Subphase 為 P4-A，須承接 P0 延後的 SRD Monster／Beast stat blocks；schema、API 與 combat representation 到 P4 開工才設計。
 - **M Phase 插入不重編既有順序**：可插在另一 M Phase 的 Subphases 之間，也可長期保持 open 與 P Roadmap 並行；只拆當前要做的工作，例外僅為使用者已拍板且插入點確定的 M Phase。完整規則見 [AGENTS.md](AGENTS.md)。
@@ -170,6 +193,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 | M01 | [規格](docs/M01/實作規格.md) | [設計](docs/M01/開發設計方針.md) | [測試](docs/M01/測試指南.md) |
 | M02 | [規格](docs/M02/實作規格.md) | [設計](docs/M02/開發設計方針.md) | [測試](docs/M02/測試指南.md) |
 | M03 | [規格](docs/M03/實作規格.md) | [設計](docs/M03/開發設計方針.md) | [測試](docs/M03/測試指南.md) |
+| P2 | [規格](docs/P2/實作規格.md) | [設計](docs/P2/開發設計方針.md) | [測試](docs/P2/測試指南.md) |
 
 歷史完成過程與驗收證據查各 Phase 目錄的 `*_CLOSEOUT.md`；M01-B 真人創角 Gate 另見 [M01-B_HUMAN_GATE.md](docs/M01/M01-B_HUMAN_GATE.md)。最近整合交付見 [M03-G_CLOSEOUT.md](docs/M03/M03-G_CLOSEOUT.md)。
 
