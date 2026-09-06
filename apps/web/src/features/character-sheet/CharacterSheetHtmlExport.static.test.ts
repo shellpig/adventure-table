@@ -26,8 +26,10 @@ describe('M01-N static boundaries', () => {
     expect(actionSource).toContain("await import('./CharacterSheetPage')")
   })
 
-  it('reuses the already loaded Character Sheet DTO instead of adding an export-only read', () => {
+  it('reuses already-held sheet and presentation data without adding an export-only read', () => {
     expect(actionSource).toContain('queryClient.getQueryData<CharacterSheetDTO>')
+    expect(actionSource).toContain('createFrozenExportQueryClient(queryClient)')
+    expect(actionSource).toContain('staleTime: Infinity')
     expect(actionSource).not.toContain('getCharacterSheet(')
     expect(actionSource).not.toContain('listContent(')
     expect(actionSource).not.toMatch(/\bfetch\s*\(/)

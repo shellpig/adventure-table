@@ -4,7 +4,10 @@ import { describe, expect, it } from 'vitest'
 
 import { LocaleProvider } from '../../i18n/LocaleProvider'
 import { LOCALE_STORAGE_KEY, type Locale, type LocaleStorage } from '../../i18n/locale'
-import { CharacterSheetHtmlExportButton } from './CharacterSheetHtmlExportButton'
+import {
+  CharacterSheetHtmlExportButton,
+  createFrozenExportQueryClient,
+} from './CharacterSheetHtmlExportButton'
 
 function storage(locale: Locale): LocaleStorage {
   return {
@@ -42,5 +45,16 @@ describe('M01-N Character Sheet HTML export action', () => {
     expect(markup).toContain('角色配置')
     expect(markup).toContain('當前快照')
     expect(markup).toContain('匯出 HTML')
+  })
+
+  it('copies already-held query data into a non-stale export cache', () => {
+    const source = new QueryClient()
+    const key = ['content-presentations', 'en', ['srd5.1:class:wizard'], ['name']]
+    const data = { presentations: [{ key: 'srd5.1:class:wizard' }] }
+    source.setQueryData(key, data)
+
+    const frozen = createFrozenExportQueryClient(source)
+    expect(frozen.getQueryData(key)).toEqual(data)
+    expect(frozen.getQueryCache().find({ queryKey: key })?.options.staleTime).toBe(Infinity)
   })
 })
