@@ -40,11 +40,11 @@ test('P2-A Room bootstrap preserves the browser locale across navigation and rel
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW')
 })
 
-test('P2-A Workshop helper keeps a real Room access context before transitional navigation', async ({ page }) => {
+test('P2-B Workshop helper navigates through the authenticated Room namespace', async ({ page }) => {
   const room = await enterRoom(page, { name: 'E2E Workshop Seam' })
 
   await openCharacterWorkshop(page, room)
 
   await expect(page.getByRole('heading', { name: /^(Character Workshop|角色工作坊)$/ })).toBeVisible()
-  await expect(page).toHaveURL(/\/characters\/?$/)
+  await expect(page).toHaveURL(new RegExp(`/rooms/${room.roomId}/characters/?$`))
 })
