@@ -1,2 +1,2 @@
-M01-N non-E2E retrigger after TypeScript test fixes and static review.
-reviewed-head: eab32561f7db5051bd8406c30e82ada68be658c2
+M01-N non-E2E retrigger after review fixes #1, #2, #3, and #5. #4 intentionally unchanged.
+reviewed-head: 9bcfe80bf5d243b2540b35ed837355e179e61445
