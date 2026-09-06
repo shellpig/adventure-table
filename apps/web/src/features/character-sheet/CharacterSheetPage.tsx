@@ -431,6 +431,7 @@ export function CharacterSheetView({
                     type="button"
                     className="condition-chip"
                     key={condition.condition_ref}
+                    data-sheet-index-key={condition.condition_ref}
                     title={condition.note ? `${condition.note} · ${t('sheet.removeCondition')}` : t('sheet.removeCondition')}
                     disabled={busy}
                     onClick={() =>
@@ -660,7 +661,11 @@ export function CharacterSheetView({
                   <strong>{abilityLabel(source.ability, t)}</strong>
                   <div><small>{t('sheet.saveDc')}</small><b>{source.save_dc}</b><small>{t('sheet.attack')}</small><b>{signed(source.attack_modifier)}</b></div>
                   {source.prepared_limit != null ? (
-                    <div className="prepared-limit" data-testid={`prepared-limit-${source.source_key}`}>
+                    <div
+                      className="prepared-limit"
+                      data-testid={`prepared-limit-${source.source_key}`}
+                      data-sheet-index-key={source.source_key}
+                    >
                       <small>{t('sheet.prepared')}</small>
                       <b>{source.prepared_count} / {source.prepared_limit}</b>
                     </div>
@@ -678,7 +683,7 @@ export function CharacterSheetView({
               <div className="panel-title"><h3>{t('sheet.spellSlots')}</h3><span>{t('sheet.serverState')}</span></div>
               <div className="slot-grid">
                 {Object.entries(sheet.spell_slots).sort(([a], [b]) => Number(a) - Number(b)).map(([level, counter]) => (
-                  <div className="slot-card" key={level}>
+                  <div className="slot-card" key={level} data-sheet-index-key={level}>
                     <span>{t('sheet.levelLabel', { level })}</span>
                     <strong data-testid={`spell-slot-${level}-counter`}>{counter.remaining} / {counter.used + counter.remaining}</strong>
                     <small>{t('sheet.remainingTotal')}</small>
@@ -696,7 +701,7 @@ export function CharacterSheetView({
                 <div className="panel-title"><h3>{t('sheet.classResources')}</h3><span>{t('sheet.resources')}</span></div>
                 <div className="resource-list">
                   {Object.entries(sheet.resources).map(([key, counter]) => (
-                    <div key={key}>
+                    <div key={key} data-sheet-index-key={key}>
                       <span>{resourceLabel(key, t, nameFor)}</span>
                       <strong>{counter.remaining} / {counter.used + counter.remaining}</strong>
                       <div className="mini-actions">
