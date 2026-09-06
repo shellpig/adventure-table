@@ -1,0 +1,28 @@
+.character-html-export-action {
+  display: grid;
+  gap: 7px;
+  width: 100%;
+}
+
+.character-html-export-scope {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.character-html-export-scope select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 9px;
+  color: var(--text);
+  background: var(--surface-2);
+  font: inherit;
+}
+
+.character-html-export-scope select:disabled {
+  cursor: wait;
+  opacity: .65;
+}
