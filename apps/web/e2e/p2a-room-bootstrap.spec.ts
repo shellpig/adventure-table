@@ -25,11 +25,24 @@ test('P2-A Room bootstrap creates isolated browser Room contexts', async ({ brow
   }
 })
 
+test('P2-A Room bootstrap preserves the browser locale across navigation and reload', async ({ page }) => {
+  await page.goto('/')
+  await page.getByTestId('locale-option-en').click()
+  await page.getByTestId('locale-option-zh-TW').click()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW')
+
+  await enterRoom(page, { name: 'E2E Locale Preserve' })
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW')
+
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW')
+})
+
 test('P2-A Workshop helper keeps a real Room access context before transitional navigation', async ({ page }) => {
   const room = await enterRoom(page, { name: 'E2E Workshop Seam' })
 
   await openCharacterWorkshop(page, room)
 
-  await expect(page.getByRole('heading', { name: 'Character Workshop' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^(Character Workshop|角色工作坊)$/ })).toBeVisible()
   await expect(page).toHaveURL(/\/characters\/?$/)
 })

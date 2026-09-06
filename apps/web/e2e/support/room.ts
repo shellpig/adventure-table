@@ -43,31 +43,28 @@ export async function enterRoom(
 ): Promise<E2ERoomContext> {
   const name = options.name ?? `E2E Room ${randomUUID().slice(0, 8)}`
 
-  await page.addInitScript(() => {
-    window.localStorage.setItem('adventure-table.locale', 'en')
-  })
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Adventure Table' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Start at the table' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^(Start at the table|先進入跑團房間)$/ })).toBeVisible()
 
-  await page.getByLabel('Room name').fill(name)
-  await page.getByLabel('Room password').first().fill(E2E_ROOM_PASSWORD)
+  await page.getByLabel(/^(Room name|Room 名稱)$/).fill(name)
+  await page.getByLabel(/^(Room password|Room 密碼)$/).first().fill(E2E_ROOM_PASSWORD)
   if (options.displayName) {
-    await page.getByLabel('Display name (optional)').first().fill(options.displayName)
+    await page.getByLabel(/^(Display name \(optional\)|顯示名稱（選填）)$/).first().fill(options.displayName)
   }
 
   const responsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url())
     return url.pathname === '/api/rooms' && response.request().method() === 'POST'
   })
-  await page.getByRole('button', { name: 'Create Room', exact: true }).click()
+  await page.getByRole('button', { name: /^(Create Room|建立 Room)$/ }).click()
   const response = await responsePromise
   if (!response.ok()) {
     throw new Error(`Room bootstrap failed: ${response.status()} ${await response.text()}`)
   }
   const grant = (await response.json()) as RoomGrant
 
-  await expect(page.getByRole('heading', { name: 'Room created' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^(Room created|Room 已建立)$/ })).toBeVisible()
   const stored = await readStoredRoomContext(page)
   expect(stored?.roomId).toBe(grant.room.id)
   expect(stored?.accessToken).toBe(grant.access_token)
