@@ -2,16 +2,18 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Request, Response, status
 
 from app.api.dependencies import get_database_engine
 from app.api.errors import APIError
+from app.api.rooms.dependencies import get_room_workspace_service
 from app.domain.rooms.access import FixedWindowThrottle
 from app.domain.rooms.schemas import (
     CreateRoomRequest,
     EnterRoomRequest,
     HeartbeatResponse,
     Room,
+    RoomAccessAuthority,
     RoomAccessContext,
     RoomAccessGrant,
 )
@@ -23,7 +25,9 @@ from app.domain.rooms.service import (
     RoomScopeMismatchError,
     RoomService,
 )
+from app.domain.rooms.workspace import RoomCharacterWorkspaceService
 from app.persistence.rooms.repository import RoomRepository
+from app.persistence.rooms.workspace import RoomWorkspaceRepository
 
 
 router = APIRouter(prefix="/api/rooms", tags=["rooms"])
@@ -37,9 +41,12 @@ def get_room_service(request: Request) -> RoomService:
     if throttle is None:
         throttle = FixedWindowThrottle()
         request.app.state.room_access_throttle = throttle
+    engine = get_database_engine(request)
+    workspace_repository = RoomWorkspaceRepository(engine)
     return RoomService(
-        RoomRepository(get_database_engine(request)),
+        RoomRepository(engine),
         throttle=throttle,
+        first_room_bootstrap=workspace_repository.claim_all_unscoped_in_transaction,
     )
 
 
@@ -53,11 +60,7 @@ def _map_room_error(exc: Exception) -> APIError:
     if isinstance(exc, RoomNotFoundError):
         return APIError(404, "room_not_found", "room not found")
     if isinstance(exc, RoomAccessThrottledError):
-        return APIError(
-            429,
-            "room_access_throttled",
-            "too many failed Room access attempts; try again later",
-        )
+        return APIError(429, "room_access_throttled", "too many failed Room access attempts; try again later")
     if isinstance(exc, RoomAccessRevokedError):
         return APIError(401, "room_access_revoked", "Room access has been revoked")
     if isinstance(exc, RoomScopeMismatchError):
@@ -127,6 +130,17 @@ def heartbeat(
         return HeartbeatResponse(server_time=service.heartbeat(context))
     except Exception as exc:
         raise _map_room_error(exc) from exc
+
+
+@router.delete("/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
+def hard_delete_room(
+    context: RoomAccessContext = Depends(get_room_access_context),
+    workspace: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
+) -> Response:
+    if context.authority is not RoomAccessAuthority.OWNER:
+        raise APIError(403, "room_owner_required", "Owner authority is required")
+    workspace.workspace_repository.hard_delete_room(context.room_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 __all__ = ["get_room_access_context", "get_room_service", "router"]

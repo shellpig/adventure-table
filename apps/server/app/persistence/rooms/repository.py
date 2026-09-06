@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import insert, select, update
-from sqlalchemy.engine import Engine
+from sqlalchemy import func, insert, select, update
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 
 from app.domain.rooms.schemas import RoomAccessAuthority
@@ -45,15 +46,31 @@ class RoomRepository:
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
 
-    def create_room_with_access(self, *, room: StoredRoom, access: StoredAccessSession) -> None:
+    def create_room_with_access(
+        self,
+        *,
+        room: StoredRoom,
+        access: StoredAccessSession,
+        on_first_room: Callable[[Connection, UUID], None] | None = None,
+    ) -> None:
         try:
             with self.engine.begin() as connection:
                 connection.execute(insert(rooms).values(**room.__dict__))
                 values = dict(access.__dict__)
                 values["authority"] = access.authority.value
                 connection.execute(insert(room_access_sessions).values(**values))
+                if on_first_room is not None:
+                    room_count = int(
+                        connection.scalar(select(func.count()).select_from(rooms)) or 0
+                    )
+                    if room_count == 1:
+                        on_first_room(connection, room.id)
         except IntegrityError as exc:
             raise RoomPersistenceConflictError(str(exc)) from exc
+
+    def count_rooms(self) -> int:
+        with self.engine.connect() as connection:
+            return int(connection.scalar(select(func.count()).select_from(rooms)) or 0)
 
     def get_room_by_code(self, code: str) -> StoredRoom | None:
         with self.engine.connect() as connection:

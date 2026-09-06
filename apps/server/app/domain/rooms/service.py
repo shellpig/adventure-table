@@ -4,6 +4,8 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
+from sqlalchemy.engine import Connection
+
 from app.domain.rooms.access import (
     FixedWindowThrottle,
     generate_password_salt,
@@ -72,10 +74,12 @@ class RoomService:
         *,
         throttle: FixedWindowThrottle | None = None,
         clock: Callable[[], datetime] = _utcnow,
+        first_room_bootstrap: Callable[[Connection, UUID], None] | None = None,
     ) -> None:
         self.repository = repository
         self.throttle = throttle or FixedWindowThrottle()
         self.clock = clock
+        self.first_room_bootstrap = first_room_bootstrap
 
     def create_room(self, request: CreateRoomRequest) -> RoomAccessGrant:
         owner_key = generate_secret()
@@ -109,7 +113,11 @@ class RoomService:
                 revoked_at=None,
             )
             try:
-                self.repository.create_room_with_access(room=room, access=access)
+                self.repository.create_room_with_access(
+                    room=room,
+                    access=access,
+                    on_first_room=self.first_room_bootstrap,
+                )
             except RoomPersistenceConflictError:
                 continue
             return RoomAccessGrant(

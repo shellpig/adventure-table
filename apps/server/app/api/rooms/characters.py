@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.api import characters as core_characters
 from app.api.character_export import export_character as core_export_character
@@ -21,19 +22,33 @@ from app.domain.rules.character_sheet import CharacterSheetDTO
 router = APIRouter(prefix="/api/rooms/{room_id}/characters", tags=["room-characters"])
 
 
+class LegacyCharacterDataStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    character_count: int = Field(ge=0)
+    draft_count: int = Field(ge=0)
+    available: bool
+
+
+class LegacyCharacterDataClaimResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    claimed_character_count: int = Field(ge=0)
+    claimed_draft_count: int = Field(ge=0)
+
+
 def _scope_error(exc: RoomWorkspaceScopeError) -> APIError:
     return APIError(404, "room_resource_not_found", "Room character resource was not found")
 
 
-def _require_character(
-    service: RoomCharacterWorkspaceService,
-    room_id: UUID,
-    character_id: UUID,
-) -> None:
+def _require_character(service: RoomCharacterWorkspaceService, room_id: UUID, character_id: UUID) -> None:
     try:
         service.require_character(room_id, character_id)
     except RoomWorkspaceScopeError as exc:
         raise _scope_error(exc) from exc
+
+
+def _require_owner(context: RoomAccessContext) -> None:
+    if context.authority is not RoomAccessAuthority.OWNER:
+        raise APIError(403, "room_owner_required", "Owner authority is required")
 
 
 @router.get("", response_model=list[core_characters.CharacterListItem])
@@ -47,6 +62,33 @@ def list_characters(
         core_characters._list_item(character, service.character_repository)
         for character in service.list_characters(room_id, archived=archived)
     ]
+
+
+@router.get("/legacy", response_model=LegacyCharacterDataStatus)
+def legacy_character_data_status(
+    context: RoomAccessContext = Depends(get_room_access_context),
+    service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
+) -> LegacyCharacterDataStatus:
+    _require_owner(context)
+    counts = service.workspace_repository.legacy_counts()
+    return LegacyCharacterDataStatus(
+        character_count=counts.characters,
+        draft_count=counts.drafts,
+        available=(counts.characters + counts.drafts) > 0,
+    )
+
+
+@router.post("/legacy/claim", response_model=LegacyCharacterDataClaimResult)
+def claim_legacy_character_data(
+    context: RoomAccessContext = Depends(get_room_access_context),
+    service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
+) -> LegacyCharacterDataClaimResult:
+    _require_owner(context)
+    counts = service.workspace_repository.claim_all_unscoped(context.room_id)
+    return LegacyCharacterDataClaimResult(
+        claimed_character_count=counts.characters,
+        claimed_draft_count=counts.drafts,
+    )
 
 
 @router.get("/{character_id}", response_model=PersistedCharacter)
@@ -80,11 +122,7 @@ def patch_character_state(
     service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
 ) -> CharacterSheetDTO:
     _require_character(service, room_id, character_id)
-    return core_characters.patch_character_state(
-        character_id,
-        patch,
-        service.character_repository,
-    )
+    return core_characters.patch_character_state(character_id, patch, service.character_repository)
 
 
 @router.post("/{character_id}/archive", response_model=core_characters.CharacterListItem)
@@ -117,8 +155,7 @@ def delete_character(
     service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
 ) -> None:
     _require_character(service, room_id, character_id)
-    if context.authority is not RoomAccessAuthority.OWNER:
-        raise APIError(403, "room_owner_required", "Owner authority is required")
+    _require_owner(context)
     core_characters.delete_character(character_id, service.character_repository)
 
 
@@ -133,10 +170,7 @@ def list_character_versions(
     return core_characters.list_character_versions(character_id, service.character_repository)
 
 
-@router.get(
-    "/{character_id}/versions/{version_no}",
-    response_model=CharacterVersionDetail,
-)
+@router.get("/{character_id}/versions/{version_no}", response_model=CharacterVersionDetail)
 def get_character_version(
     room_id: UUID,
     character_id: UUID,
@@ -145,11 +179,7 @@ def get_character_version(
     service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
 ) -> CharacterVersionDetail:
     _require_character(service, room_id, character_id)
-    return core_characters.get_character_version(
-        character_id,
-        version_no,
-        service.character_repository,
-    )
+    return core_characters.get_character_version(character_id, version_no, service.character_repository)
 
 
 @router.get("/{character_id}/export")
@@ -161,11 +191,7 @@ def export_character(
     service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
 ) -> Response:
     _require_character(service, room_id, character_id)
-    return core_export_character(
-        character_id,
-        request,
-        service.character_repository,
-    )
+    return core_export_character(character_id, request, service.character_repository)
 
 
 @router.post("/import", response_model=CharacterImportResult)
@@ -184,12 +210,7 @@ async def import_character(
     if content_length is not None:
         try:
             if int(content_length) > MAX_CHARACTER_IMPORT_BYTES:
-                raise APIError(
-                    413,
-                    "payload_too_large",
-                    "character import exceeds the 5 MB limit",
-                    params={"max_bytes": MAX_CHARACTER_IMPORT_BYTES},
-                )
+                raise APIError(413, "payload_too_large", "character import exceeds the 5 MB limit", params={"max_bytes": MAX_CHARACTER_IMPORT_BYTES})
         except ValueError:
             pass
     document = _parse_document(await request.body())

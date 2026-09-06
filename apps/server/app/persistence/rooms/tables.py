@@ -11,6 +11,7 @@ from sqlalchemy import (
     Table,
     UniqueConstraint,
     Uuid,
+    func,
 )
 
 from app.db import metadata
@@ -58,7 +59,7 @@ room_characters = Table(
         ForeignKey("characters.id", ondelete="CASCADE"),
         primary_key=True,
     ),
-    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     UniqueConstraint("character_id", name="uq_room_characters_character_id"),
 )
 Index("ix_room_characters_room_id", room_characters.c.room_id)
@@ -73,7 +74,7 @@ room_builder_drafts = Table(
         ForeignKey("character_build_drafts.id", ondelete="CASCADE"),
         primary_key=True,
     ),
-    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     UniqueConstraint("draft_id", name="uq_room_builder_drafts_draft_id"),
 )
 Index("ix_room_builder_drafts_room_id", room_builder_drafts.c.room_id)
