@@ -5,14 +5,16 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "p2-non-e2e.yml"
+P2A_BRANCH = "p2-a-room-foundation-web-entry"
 
 
-def test_p2_non_e2e_workflow_is_manual_until_review_gate() -> None:
+def test_p2_non_e2e_workflow_is_scoped_to_post_review_p2a_trigger() -> None:
     source = WORKFLOW.read_text(encoding="utf-8")
 
     assert source.startswith("name: P2 Non-E2E\n")
     assert "workflow_dispatch:" in source
-    assert "\n  push:" not in source
+    assert "\n  push:" in source
+    assert f"      - {P2A_BRANCH}\n" in source
     assert "\n  pull_request:" not in source
 
 
