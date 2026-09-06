@@ -1,4 +1,4 @@
-import type { CharacterSheetDTO } from '../../api/character'
+import type { CharacterSheetDTO, InventoryDTO } from '../../api/character'
 import baseStyles from '../../styles.css?inline'
 import type { Locale } from '../../i18n/locale'
 import { characterSheetExportCopy } from '../../i18n/m01nCharacterSheetExportCopy'
@@ -136,6 +136,19 @@ export function pairCharacterSheetIndexRows<T>(
   return pairs
 }
 
+/**
+ * Reading order for the exported inventory: what the character is wearing or
+ * wielding first, then the rest of their weapons and armour, then everything
+ * else. Equipment categories come from the item rules, so an unknown category
+ * simply falls to the last group instead of breaking the export.
+ */
+export function inventoryExportRank(item: Pick<InventoryDTO, 'equipped' | 'rules'>): number {
+  if (item.equipped) return 0
+  const category = item.rules.equipment_category as { index?: unknown } | undefined
+  const index = typeof category?.index === 'string' ? category.index : ''
+  return index === 'weapon' || index === 'armor' ? 1 : 2
+}
+
 export function buildCharacterSheetHtmlDocument({
   bodyMarkup,
   locale,
@@ -210,6 +223,7 @@ export function createCharacterSheetHtmlExport({
   insertExportDocumentMeta(shell, sheet, scope, locale, now)
   preserveConditionLabels(shell, sheet)
   preserveInventoryQuantities(shell, copy.quantity)
+  if (scope === 'snapshot') sortInventoryCardsForExport(shell, sheet)
   removeInteractiveChrome(shell)
   flattenRoleplayDetails(shell)
 
@@ -325,6 +339,15 @@ function preserveInventoryQuantities(root: HTMLElement, quantityLabel: string): 
     summary.append(label, value)
     inventoryMain.append(summary)
   })
+}
+
+function sortInventoryCardsForExport(root: HTMLElement, sheet: CharacterSheetDTO): void {
+  const list = root.querySelector('.inventory-list')
+  if (!list) return
+  pairCharacterSheetIndexRows(list, '.inventory-card', sheet.inventory, (item) => item.entry_id)
+    .map((pair, order) => ({ ...pair, order }))
+    .sort((a, b) => inventoryExportRank(a.item) - inventoryExportRank(b.item) || a.order - b.order)
+    .forEach(({ row }) => list.append(row))
 }
 
 function removeInteractiveChrome(root: HTMLElement): void {

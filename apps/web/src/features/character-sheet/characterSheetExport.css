@@ -67,6 +67,10 @@
   display: block;
 }
 
+.export-character-page .inventory-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 @media print {
   @page {
     size: A4;
@@ -123,6 +127,10 @@
   }
 
   .export-character-page .spell-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .export-character-page .inventory-list {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 

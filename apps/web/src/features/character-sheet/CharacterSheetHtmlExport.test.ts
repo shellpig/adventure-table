@@ -8,6 +8,7 @@ import {
   buildCharacterSheetExportFilename,
   buildCharacterSheetHtmlDocument,
   formatConditionForExport,
+  inventoryExportRank,
   pairCharacterSheetIndexRows,
   projectCharacterSheetForExport,
   sanitizeFilenameSegment,
@@ -158,6 +159,26 @@ describe('M01-N build-only prepared semantics', () => {
   })
 })
 
+describe('M01-N inventory reading order', () => {
+  const item = (equipped: boolean, category: string | null) => ({
+    equipped,
+    rules: category ? { equipment_category: { index: category } } : {},
+  })
+
+  it('ranks worn gear first, then weapons and armour, then everything else', () => {
+    expect(inventoryExportRank(item(true, 'adventuring-gear'))).toBe(0)
+    expect(inventoryExportRank(item(false, 'weapon'))).toBe(1)
+    expect(inventoryExportRank(item(false, 'armor'))).toBe(1)
+    expect(inventoryExportRank(item(false, 'tools'))).toBe(2)
+    expect(inventoryExportRank(item(false, 'potion'))).toBe(2)
+  })
+
+  it('drops an item with no usable category into the last group', () => {
+    expect(inventoryExportRank(item(false, null))).toBe(2)
+    expect(inventoryExportRank({ equipped: false, rules: { equipment_category: 7 } })).toBe(2)
+  })
+})
+
 describe('M01-N export identity and localization', () => {
   it('marks scope/version in a sanitized filename', () => {
     expect(buildCharacterSheetExportFilename(sheet, 'build')).toBe('Mira- Wizard-Scout--v7-build.html')
@@ -189,6 +210,16 @@ describe('M01-N self-contained document', () => {
     expect(exportCssSource).toContain('@media print')
     expect(exportCssSource).toContain('size: A4')
     expect(exportCssSource).toContain('break-inside: avoid')
+  })
+
+  it('prints three spell cards and two inventory cards per row', () => {
+    const printBlock = exportCssSource.slice(exportCssSource.indexOf('@media print'))
+    expect(printBlock).toMatch(
+      /\.export-character-page \.spell-list \{\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\) !important;/,
+    )
+    expect(printBlock).toMatch(
+      /\.export-character-page \.inventory-list \{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\) !important;/,
+    )
   })
 
   it('escapes title text and rejects interactive/external markup', () => {

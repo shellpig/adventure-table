@@ -819,7 +819,7 @@ export function CharacterSheetView({
                 const ruleDetails = describeRules(item.rules, t, nameFor)
                 const localizedItemName = nameFor(item.item_ref, item.name)
                 return (
-                  <article className="inventory-card" key={item.entry_id} data-testid={`inventory-${item.entry_id}`}>
+                  <article className="inventory-card" key={item.entry_id} data-testid={`inventory-${item.entry_id}`} data-sheet-index-key={item.entry_id}>
                     <div className="inventory-main">
                       <div className="item-monogram" aria-hidden="true">{localizedItemName.slice(0, 1)}</div>
                       <div>

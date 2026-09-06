@@ -50,7 +50,9 @@ describe('M01-N static boundaries', () => {
   })
 
   it('keeps the exporter client-only and type-only at the Character API boundary', () => {
-    expect(exporterSource).toContain("import type { CharacterSheetDTO } from '../../api/character'")
+    expect(exporterSource).toMatch(
+      /^import type \{[^}]*\bCharacterSheetDTO\b[^}]*\} from '\.\.\/\.\.\/api\/character'$/m,
+    )
     expect(exporterSource).not.toContain('getCharacterSheet')
     expect(exporterSource).not.toContain('patchCharacterState')
   })
