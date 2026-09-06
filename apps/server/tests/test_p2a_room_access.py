@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from uuid import UUID
 
 from fastapi.testclient import TestClient
 import pytest
@@ -122,6 +123,7 @@ def test_room_scope_required_and_heartbeat_contract() -> None:
     first = _create_room(client, name="First")
     second = _create_room(client, name="Second")
     room_id = first["room"]["id"]
+    access_session_id = UUID(first["access_session_id"])
     headers = {"Authorization": f"Bearer {first['access_token']}"}
 
     missing = client.post(f"/api/rooms/{room_id}/access/heartbeat")
@@ -142,7 +144,7 @@ def test_room_scope_required_and_heartbeat_contract() -> None:
     with engine.connect() as connection:
         touched = connection.execute(
             select(room_access_sessions.c.last_seen_at).where(
-                room_access_sessions.c.id == first["access_session_id"]
+                room_access_sessions.c.id == access_session_id
             )
         ).scalar_one()
     touched_utc = touched.replace(tzinfo=timezone.utc) if touched.tzinfo is None else touched
@@ -151,7 +153,7 @@ def test_room_scope_required_and_heartbeat_contract() -> None:
     with engine.begin() as connection:
         connection.execute(
             update(room_access_sessions)
-            .where(room_access_sessions.c.id == first["access_session_id"])
+            .where(room_access_sessions.c.id == access_session_id)
             .values(revoked_at=datetime.now(timezone.utc))
         )
     revoked = client.post(f"/api/rooms/{room_id}/access/heartbeat", headers=headers)
@@ -163,8 +165,14 @@ def test_room_scope_required_and_heartbeat_contract() -> None:
 def test_stale_room_context_cannot_heartbeat_after_session_is_revoked() -> None:
     client, engine = _client()
     created = _create_room(client)
-    service = app.state.room_service
-    context = service.resolve_context(created["access_token"], created["room"]["id"])
+    service = RoomService(
+        RoomRepository(engine),
+        throttle=app.state.room_access_throttle,
+    )
+    context = service.authenticate(
+        UUID(created["room"]["id"]),
+        created["access_token"],
+    )
 
     with engine.begin() as connection:
         connection.execute(

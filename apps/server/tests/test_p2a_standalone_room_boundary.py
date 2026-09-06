@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 import pytest
 
@@ -13,6 +14,11 @@ def test_standalone_never_mounts_room_routes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     with loaded_standalone(monkeypatch, tmp_path) as standalone:
+        room_routes = [
+            route.path
+            for route in standalone.app.routes
+            if isinstance(route, APIRoute) and route.path.startswith("/api/rooms")
+        ]
         client = TestClient(standalone.app)
         create = client.post(
             "/api/rooms",
@@ -23,7 +29,8 @@ def test_standalone_never_mounts_room_routes(
         )
         capabilities = client.get("/api/meta/capabilities")
 
-    assert create.status_code == 404
-    assert heartbeat.status_code == 404
+    assert room_routes == []
+    assert create.status_code in {404, 405}
+    assert heartbeat.status_code in {404, 405}
     assert capabilities.status_code == 200
     assert capabilities.json()["capabilities"]["room"] is False
