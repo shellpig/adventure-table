@@ -8,7 +8,7 @@
 
 Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 2014 Web VTT**。真人 DM 主要靠口頭敘事，網站負責共享、同步、計算、保存、權限與外部 AI 接入；不做 CRPG 或包山包海的平台。
 
-- **目前 code 可用**：Character Workshop、Lv1／高等創角、Multiclass／Subclass／ASI／Feat／Spellcasting／Starting Equipment、Character Sheet、Current State 編輯、Level Up、Build Edit、Version History、Archive／永久刪除。P2 尚未開始 coding，因此 Web 現行 code仍是 P2 前的 global Character 入口；Room-first 是已定案、待 P2-A/B 實作的產品契約。
+- **目前 code 可用**：Character Workshop、Lv1／高等創角、Multiclass／Subclass／ASI／Feat／Spellcasting／Starting Equipment、Character Sheet、Current State 編輯、Level Up、Build Edit、Version History、Archive／永久刪除、角色卡 HTML 輸出。P2 尚未開始 coding，因此 Web 現行 code仍是 P2 前的 global Character 入口；Room-first 是已定案、待 P2-A/B 實作的產品契約。
 - **內容與語言**：以 SRD 5.1 為基礎，已擴充多來源角色內容；介面與目前正式呈現的規則內容支援 `zh-TW`／`en`。Enabled pack 清單以程式中的 `Settings.enabled_content_packs` 為準。
 - **已交付單機版**：同一份角色核心與前端可打包成 Windows 離線 portable zip，使用 SQLite 保存；提供 Character JSON 匯入／匯出。**測試指南 E.9 的乾淨 Windows 11 冷啟動已於 2026-09-06 由使用者人工補驗完成。** Standalone 永久保持 Character-first，不導入 Room／Campaign／Session／Seat。
 - **尚未實作**：Room／Campaign／Session／Seat、正式 AI 桌內接入、Exploration／Roll／Combat／Adventure Runtime。角色層可用不代表多人 VTT 已可跑團。
@@ -18,7 +18,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## 當前狀態與下一步
 
-**P0、P1、M02、M03 已完成並關門；M01-A～M01-M 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track；P2 三份正式規格與 Subphase A～F 已完成設計，P2 code 尚未開始。下一步是插入的 M01-N，完成後回到 P2-A。**
+**P0、P1、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track；P2 三份正式規格與 Subphase A～F 已完成設計，P2 code 尚未開始。下一步是 P2-A。**
 
 P2 已拍板的核心方向：
 
@@ -32,10 +32,9 @@ P2 已拍板的核心方向：
 
 下一步依序為：
 
-1. **實作 M01-N — Character Sheet HTML Export**；已完成三份文件，是插在 P2 前的 presentation-only 工作，不碰共享 Character contract。
-2. **實作 P2-A — Room Foundation & Web Entry**；只做該 Subphase 的 code + tests + static review，不提前做 P2-B～F。
-3. P2-A closeout後依序 P2-B → P2-C → P2-D → P2-E；每個 Subphase都獨立實作、驗證、commit。
-4. P2-F 做 Full P2 Integration & Closeout；P3～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
+1. **實作 P2-A — Room Foundation & Web Entry**；只做該 Subphase 的 code + tests + static review，不提前做 P2-B～F。
+2. P2-A closeout後依序 P2-B → P2-C → P2-D → P2-E；每個 Subphase都獨立實作、驗證、commit。
+3. P2-F 做 Full P2 Integration & Closeout；P3～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
 
 P2 的正式契約：
 
@@ -43,7 +42,7 @@ P2 的正式契約：
 - [P2 開發設計方針](docs/P2/開發設計方針.md)
 - [P2 測試指南](docs/P2/測試指南.md)
 
-**M01 不再有「必須 final closeout 後才能開始 P2」的 gate。** A～M 是目前已完成的角色內容 baseline；之後若再拍板新的角色內容或既有角色系統強化，從 **M01-N** 起繼續新增 Subphase。M01 可以在 P2／P3 等正常產品 Roadmap 繼續前進時保持 open，不要求先建立一個假的「全部 D&D 內容已完成」里程碑。
+**M01 不再有「必須 final closeout 後才能開始 P2」的 gate。** A～N 是目前已完成的角色內容 baseline；之後若再拍板新的角色內容或既有角色系統強化，從 **M01-O** 起繼續新增 Subphase。M01 可以在 P2／P3 等正常產品 Roadmap 繼續前進時保持 open，不要求先建立一個假的「全部 D&D 內容已完成」里程碑。
 
 新的 M01 Subphase若只補 content / presentation，依當時既有 regression contract驗證；若碰到 Character Build／State／Version／StableKey／Builder provenance／Character JSON schema 或其他共享角色核心，除了 M01 自身驗證外，還必須同步做**當時已存在的後續 P Phase compatibility review**與 **M03 standalone compatibility review**。P2-A 起 shared Character migration 必須落在 `character` Alembic track，不得讓 maintenance 工作反向依賴多人層。
 
@@ -55,6 +54,7 @@ P2 的正式契約：
 | P1-D ASI 摘要 E2E 不穩定 | 根因未確認；會干擾整套 E2E 與後續 xge-less 測試執行。不得以重跑通過推論根因已修復 | [已知問題.md](已知問題.md) KI-P1D-001 |
 | M01-J 直創／逐級升等等價 E2E | 測試目前 `fixme`，瀏覽器層證據仍有缺口；後端已有相關整合覆蓋 | [已知問題.md](已知問題.md) KI-M01J-001 |
 | Windows Vite E2E 環境 | 使用既有 Docker Linux dev server 路徑驗證；不要走 Windows Playwright 託管 Vite 的整套路徑 | [已知問題.md](已知問題.md) KI-ENV-001；[README.md](README.md) |
+| M01-N 匯出 HTML 缺行為測試 | `createCharacterSheetHtmlExport()` 對真實產出的 HTML 沒有斷言，目前由投影單元測試、原始碼字串斷言與 E2E 下載斷言間接把關；`prepared_limit` 改寫路徑因 fixture 為 `null` 而不在 CI 覆蓋內（已人工驗證） | [M01-N closeout](docs/M01/M01-N_CLOSEOUT.md)「已知限制」 |
 | M03 測試／開發工具遺留 | `Settings()` import-time 快照的測試污染與 dev seed engine 入口未收斂，詳細限制及建議留在 closeout | [M03-G closeout](docs/M03/M03-G_CLOSEOUT.md)「M03 已知限制」與「留給後續 Phase 的建議」 |
 
 以上為接手時須注意的現況索引；問題詳情與歷史測試數字以連結文件為準，不代表本檔每次更新都重跑驗收。
@@ -67,7 +67,7 @@ P2 的正式契約：
 |---|---|---|
 | P0 | Character Core + SRD / Rules Foundation | 角色資料、角色卡、角色相關規則基礎；已關門 |
 | P1 | Character Builder Complete | 完整創角、Progression、Level Up、Character Version；已關門 |
-| M01 | Multi-Source Character Content Expansion | 長期角色內容／角色系統維護 track；A～M 已關門，整體保持 open，未來從 N 繼續，不阻塞 P2+ |
+| M01 | Multi-Source Character Content Expansion | 長期角色內容／角色系統維護 track；A～N 已關門，整體保持 open，未來從 O 繼續，不阻塞 P2+ |
 | M02 | Traditional Chinese / English Localization | 插於 M01-C 與 M01-D 間；雙語呈現、翻譯流程與完整性 gate；已關門 |
 | M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，E.9 乾淨 Windows 11 冷啟動已於 2026-09-06 補驗完成 |
 | P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**規格完成，P2-A 待實作** |
@@ -123,9 +123,9 @@ P2 的正式契約：
 | **M01-K — PHB Feat & Spell Catalog Expansion** | ✅ | PHB non-SRD Feats 41/41、Spells 42/42；Feat structural mechanics / prerequisite / nested choices、Spell catalog/access、既有 M01-I/J spell reconcile、跨來源 provenance、雙語與 focused E2E 已驗收 |
 | **M01-L — VGM & SCAG Remaining Race Expansion / Generic Race Mechanics** | ✅ | VGM remaining 10 races + SCAG remaining 2 subraces；generic Race/Subrace movement grant、signed racial modifier compatibility、Natural Armor Rules Layer primitive、racial spell canonical multi-rest recharge、typed runtime automation classification、no-docs runtime gate；雙語與 FC-E2E-21 已驗收 |
 | **M01-M — MTF Planar Race Expansion & Tiefling Bloodline / Variant System** | ✅ | `mtf` pack、7 個 MTF planar race、Tiefling 9/9 血脈（Asmodeus canonical map + 8 new variants）、SCAG 保守相容、replacement group persistence、Winged conditional movement、Eladrin season State ownership、feature mode default-deny；雙語與 M-E2E-01～05 已驗收 |
-| **M01-N — Character Sheet HTML Export** | ⬜ | 角色卡輸出成單向、只給人看的自足 HTML；使用者自選「角色配置」／「當前快照」，含列印樣式；client-side、不新增 endpoint、永不可 Import |
+| **M01-N — Character Sheet HTML Export** | ✅ | 角色卡輸出成單向、只給人看的自足 HTML；使用者自選「角色配置」／「當前快照」，含 A4 列印樣式與匯出專屬物品閱讀順序；client-side、不新增 endpoint、永不可 Import |
 
-> **M01 保持 open。** A～M 是目前已交付的 baseline；M01-N 已拍板並完成三份文件，尚未開工。再下一個已拍板的 M01 工作從 **M01-O** 起編號。沒有預留給「Full M01 Closeout」的字母。
+> **M01 保持 open。** A～N 是目前已交付的 baseline。再下一個已拍板的 M01 工作從 **M01-O** 起編號。沒有預留給「Full M01 Closeout」的字母。
 
 ### M02
 
@@ -165,7 +165,7 @@ P2 的正式契約：
 
 ## 接手時必須保留的跨 Phase 約束
 
-- **M01 是 long-running maintenance/content track**：A～M 是目前 baseline，未來從 N 繼續；M01 open 不阻塞 P2+。任何後續 M01 若修改共享 Character contract，必須 regression 當時已存在的後續 P Phase，並同步做 M03 standalone compatibility review。
+- **M01 是 long-running maintenance/content track**：A～N 是目前 baseline，未來從 O 繼續；M01 open 不阻塞 P2+。任何後續 M01 若修改共享 Character contract，必須 regression 當時已存在的後續 P Phase，並同步做 M03 standalone compatibility review。
 - **Web Room-first / Standalone Character-first 是永久產品邊界**：Web Character / Draft在 P2-B 後一定由 Room workspace管理；Standalone不建立 Room。多人層只可依賴 Character Core，Character / Builder / Interop與 `app.standalone`不得反向 import多人層。契約見 [規格企劃.md](規格企劃.md) 第三、四、五章與 [P2 開發設計方針](docs/P2/開發設計方針.md)。
 - **Standalone boundary 是常駐約束**：`app.standalone` 不得 import `app.main` 或 P2+ multiplayer modules。P2-A 引入實際 `rooms` package時，必須同步擴充 `tests/test_m03_import_boundary.py`；P2-A 起 standalone migration只升 shared Character track，不能把 Web multiplayer schema灌進 SQLite。
 - **Character JSON v1 是 P2-A 開始的相容基線**：實作完成後新 export鎖 v1；legacy M03 `unstable`仍可由新版本 import。Room / Campaign / Seat / Session identity不得塞進 Character JSON。
