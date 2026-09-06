@@ -1,4 +1,6 @@
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
+import { expect, type APIRequestContext, type Page } from '@playwright/test'
+
+import { openCharacterWorkshop, test } from './support/roomTest'
 
 const FIXTURE_ID = '00000000-0000-4000-8000-0000000000e0'
 const LOCALE_STORAGE_KEY = 'adventure-table.locale'
@@ -110,7 +112,8 @@ for (const locale of ['zh-TW', 'en'] as const) {
     await page.setViewportSize({ width: 1280, height: 720 })
 
     for (const route of ROUTES) {
-      await page.goto(route.path)
+      if (route.path === '/characters') await openCharacterWorkshop(page)
+      else await page.goto(route.path)
       await forceLocale(page, locale)
       await expectRouteMarker(page, route, locale)
       await expectNoKnownOppositeLocaleLeak(page, locale)

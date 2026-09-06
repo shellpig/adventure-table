@@ -1,4 +1,6 @@
-import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+
+import { openCharacterWorkshop, test } from './support/roomTest'
 
 const FIXTURE_ID = '00000000-0000-4000-8000-0000000000e0'
 const LOCALE_STORAGE_KEY = 'adventure-table.locale'
@@ -246,7 +248,7 @@ async function clickDraftSave(page: Page, buttonName: string) {
 
 async function createSimpleCharacter(page: Page, name: string, locale: Locale) {
   const fixture = CREATE_FLOW[locale]
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   if ((await page.locator('html').getAttribute('lang')) !== locale) await setLocale(page, locale)
   await expect(page.locator('html')).toHaveAttribute('lang', locale)
 
@@ -376,7 +378,7 @@ test('M02-H preserves a populated race/subrace/background/class/spells/equipment
   test.slow()
   await page.goto('/')
   await page.evaluate((key) => localStorage.setItem(key, 'en'), LOCALE_STORAGE_KEY)
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await page.getByLabel('Character name').fill('M02-H Complex Draft')
   await page.getByLabel('Target character level').fill('1')
