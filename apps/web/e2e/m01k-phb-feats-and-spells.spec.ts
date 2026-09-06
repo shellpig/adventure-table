@@ -1,4 +1,5 @@
-import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { openCharacterWorkshop, test } from './support/roomTest'
 
 const OBSERVANT = 'phb2014:feat:observant'
 const TOUGH = 'phb2014:feat:tough'
@@ -234,7 +235,7 @@ async function startCreate(
   targetLevel: number,
 ) {
   resetUsedLabels()
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
   await expectDraftSaved(page)
@@ -347,7 +348,7 @@ test('M01-K takes a PHB feat at an ASI during Level Up', async ({ page, request 
   const baseSheet = await readSheet(request, characterId)
 
   for (const level of [2, 3, 4]) {
-    await page.goto('/characters')
+    await openCharacterWorkshop(page)
     const card = page.locator('.workshop-card').filter({ hasText: name })
     await expect(card).toHaveCount(1)
     await card.getByRole('button', { name: 'Level Up' }).click()
