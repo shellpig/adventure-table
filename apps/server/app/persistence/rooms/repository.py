@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.domain.rooms.schemas import RoomAccessAuthority
 from app.persistence.rooms.tables import room_access_sessions, rooms
+from app.persistence.rooms.workspace import RoomWorkspaceAssociationConflictError
 
 
 class RoomPersistenceConflictError(RuntimeError):
@@ -65,7 +66,12 @@ class RoomRepository:
                     )
                     if room_count == 1:
                         on_first_room(connection, room.id)
-        except IntegrityError as exc:
+        except (IntegrityError, RoomWorkspaceAssociationConflictError) as exc:
+            # A concurrent first-Room bootstrap can race while claiming the same
+            # legacy Character/Draft rows. Treat that like the other allocation
+            # conflicts so RoomService retries the whole transaction. The retry
+            # sees the competing Room once it commits and will not guess a new
+            # target for already-scoped legacy data.
             raise RoomPersistenceConflictError(str(exc)) from exc
 
     def count_rooms(self) -> int:

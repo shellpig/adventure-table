@@ -14,6 +14,7 @@ from app.persistence.characters import (
     CharacterNotArchivedError,
     CharacterNotFoundError,
 )
+from app.persistence.rooms.workspace import RoomWorkspaceAssociationConflictError
 
 
 def _error_response(
@@ -65,6 +66,17 @@ def register_exception_handlers(app: FastAPI) -> None:
             409,
             "character_not_archived",
             f"archive the character before deleting it: {exc}",
+        )
+
+    @app.exception_handler(RoomWorkspaceAssociationConflictError)
+    def handle_room_workspace_association_conflict(
+        _request: Request,
+        exc: RoomWorkspaceAssociationConflictError,
+    ) -> JSONResponse:
+        return _error_response(
+            409,
+            "room_workspace_conflict",
+            f"Room workspace changed concurrently: {exc}",
         )
 
     @app.exception_handler(CharacterValidationError)
