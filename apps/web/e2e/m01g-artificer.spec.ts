@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { expect, openCharacterWorkshop, test, type APIRequestContext, type Locator, type Page } from './support/roomTest'
 
 const ARTIFICER = 'tce:class:artificer'
 const ALCHEMIST = 'tce:subclass:alchemist'
@@ -197,7 +197,7 @@ async function prepareCreateReview(
     specialist?: 'Alchemist'
   },
 ) {
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
   await expectDraftSaved(page)
@@ -357,7 +357,7 @@ test('M01-G real backend levels an existing Artificer 2 to 3 and adds Specialist
   })
   expect(patchResponse.ok()).toBeTruthy()
 
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   const card = page.locator('.workshop-card').filter({ hasText: name })
   await expect(card).toHaveCount(1)
   await card.getByRole('button', { name: 'Level Up' }).click()
