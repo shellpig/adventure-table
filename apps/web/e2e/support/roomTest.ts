@@ -19,12 +19,14 @@ const ROOM_CONTEXT_PATH = resolve(
   'test-results',
   'p2-room-context.json',
 )
-const HTTP_METHODS = new Set(['delete', 'fetch', 'get', 'head', 'patch', 'post', 'put'])
+const HTTP_METHODS = ['delete', 'fetch', 'get', 'head', 'patch', 'post', 'put'] as const
 
 type RequestOptions = {
   headers?: Record<string, string>
   [key: string]: unknown
 }
+
+type RequestMethod = (url: unknown, options?: RequestOptions) => unknown
 
 async function readRoomContext(): Promise<E2ERoomContext> {
   const raw = await readFile(ROOM_CONTEXT_PATH, 'utf8')
@@ -46,28 +48,50 @@ function scopeApiUrl(url: unknown, roomId: string): unknown {
   return url
 }
 
+function scopedRequestMethod(
+  target: APIRequestContext,
+  method: RequestMethod,
+  room: E2ERoomContext,
+): RequestMethod {
+  return (url: unknown, options: RequestOptions = {}) => {
+    const headers = {
+      Authorization: `Bearer ${room.accessToken}`,
+      ...(options.headers ?? {}),
+    }
+    return method.call(target, scopeApiUrl(url, room.roomId), { ...options, headers })
+  }
+}
+
 function roomRequestProxy(request: APIRequestContext, room: E2ERoomContext): APIRequestContext {
   return new Proxy(request, {
     get(target, property, receiver) {
       const value = Reflect.get(target, property, receiver)
-      if (typeof property !== 'string' || !HTTP_METHODS.has(property) || typeof value !== 'function') {
+      if (
+        typeof property !== 'string'
+        || !HTTP_METHODS.includes(property as (typeof HTTP_METHODS)[number])
+        || typeof value !== 'function'
+      ) {
         return typeof value === 'function' ? value.bind(target) : value
       }
-      return (url: unknown, options: RequestOptions = {}) => {
-        const headers = {
-          Authorization: `Bearer ${room.accessToken}`,
-          ...(options.headers ?? {}),
-        }
-        return value.call(target, scopeApiUrl(url, room.roomId), { ...options, headers })
-      }
+      return scopedRequestMethod(target, value as RequestMethod, room)
     },
   }) as APIRequestContext
+}
+
+function scopePageRequest(request: APIRequestContext, room: E2ERoomContext): void {
+  const mutable = request as unknown as Record<string, unknown>
+  for (const methodName of HTTP_METHODS) {
+    const method = mutable[methodName]
+    if (typeof method !== 'function') continue
+    mutable[methodName] = scopedRequestMethod(request, method as RequestMethod, room)
+  }
 }
 
 export const test = base.extend<{ roomContext: E2ERoomContext }>({
   roomContext: [
     async ({ page }, use) => {
       const roomContext = await readRoomContext()
+      scopePageRequest(page.request, roomContext)
       await page.goto('/')
       await page.evaluate(
         ({ recentKey, activeKey, room }) => {

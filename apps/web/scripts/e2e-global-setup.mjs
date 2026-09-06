@@ -1,32 +1,16 @@
 // Puts the database into a known state before the suite runs.
 //
+// This setup is intentionally destructive. CI always runs against a disposable
+// Docker volume. Local runs must opt in explicitly with
+// ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET=1 so a developer's real Character
+// data can never be silently claimed into or deleted with the Playwright Room.
+//
 // Three steps, all required:
 //
-//   1. Delete the characters, standalone drafts and Rooms left behind by earlier
-//      runs. Leftovers make specs pass or fail for reasons unrelated to the
-//      branch under test. Names beginning with a non-ASCII character are the
-//      project owner's own and are kept -- no spec creates one, they all start
-//      with "P0 ", "P1-", "M01-" or "M02-".
-//   2. Re-seed the P0 fixture character. character-sheet, m02b-ui-copy,
-//      m02h-bilingual-site-smoke and m02h-localization-state-integrity all
-//      PATCH its state in beforeEach and never create it, so clearing without
-//      re-seeding leaves 19 cases failing on a missing fixture -- which reads
-//      exactly like a real regression.
-//   3. Create one deterministic P2-B baseline Room after the seed. Because the
-//      database has zero Rooms at that point, the P2-B bootstrap path claims the
-//      still-unscoped P0 fixture into this Room. The single Playwright worker then
-//      reuses that Room so the pre-P2 fixed Character ID remains reachable while
-//      every browser/API call still exercises the Room-scoped Web contract.
-//
-// characters cascades to character_versions, character_states and any draft
-// bound to it, so a kept character keeps its whole history. Only drafts with no
-// character_id need the name check of their own; an unnamed draft has no owner
-// to speak of and is treated as leftover.
-//
-// Rooms take no name check: every prior E2E Room is run residue. It is cleared
-// rather than kept because 331 leftover Rooms turned KI-P1D-001 from an
-// intermittent failure into a near-certain one. room_access_sessions goes first;
-// it holds the FK to rooms.
+//   1. Clear Character/Draft/Room state in the dedicated E2E database.
+//   2. Re-seed the deterministic P0 fixture character used by legacy specs.
+//   3. Create one deterministic P2-B baseline Room. With a clean database this
+//      zero-Room bootstrap claims only that known P0 fixture.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -36,20 +20,16 @@ const webRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repoRoot = resolve(webRoot, '..', '..')
 const roomContextPath = resolve(webRoot, 'test-results', 'p2-room-context.json')
 
-const KEEP = "^[^[:ascii:]]"
 const E2E_ROOM_PASSWORD = 'p2-e2e-room-pass'
 
 const SQL = `
-DELETE FROM characters WHERE name !~ '${KEEP}';
-DELETE FROM character_build_drafts
- WHERE character_id IS NULL
-   AND coalesce(draft_payload->'basic'->>'name', '') !~ '${KEEP}';
-SELECT count(*) AS kept_characters FROM characters WHERE name ~ '${KEEP}';
-SELECT count(*) AS kept_drafts FROM character_build_drafts
- WHERE character_id IS NULL
-   AND coalesce(draft_payload->'basic'->>'name', '') ~ '${KEEP}';
+DELETE FROM characters;
+DELETE FROM character_build_drafts;
 DELETE FROM room_access_sessions;
 DELETE FROM rooms;
+SELECT count(*) AS remaining_characters FROM characters;
+SELECT count(*) AS remaining_drafts FROM character_build_drafts;
+SELECT count(*) AS remaining_rooms FROM rooms;
 `
 
 // The SQL goes in on stdin rather than through -c: it is multi-line, and a
@@ -63,6 +43,15 @@ const run = (command, args, input) => {
     shell: true,
   })
   if (result.status !== 0) process.exit(result.status ?? 1)
+}
+
+function requireDisposableDatabase() {
+  const explicitlyAllowed = process.env.ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET === '1'
+  const githubActions = process.env.CI === 'true' && process.env.GITHUB_ACTIONS === 'true'
+  if (explicitlyAllowed || githubActions) return
+  throw new Error(
+    'Refusing destructive Playwright database reset. Run against a disposable database and set ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET=1.',
+  )
 }
 
 async function createBaselineRoom() {
@@ -93,12 +82,14 @@ async function createBaselineRoom() {
 }
 
 export default async function globalSetup() {
-  console.log('[e2e-setup] clearing leftover characters, drafts and Rooms (non-ASCII names are kept)')
+  requireDisposableDatabase()
+
+  console.log('[e2e-setup] clearing Character, Draft and Room state in the disposable E2E database')
   run('docker', ['compose', 'exec', '-T', 'db', 'psql', '-U', 'adventure', '-d', 'adventure_table'], SQL)
 
   console.log('[e2e-setup] re-seeding the P0 fixture character')
   run('docker', ['compose', 'exec', '-T', 'server', 'python', '-m', 'app.scripts.seed_p0_fighter_wizard'])
 
-  console.log('[e2e-setup] creating the shared P2-B Room and claiming legacy fixtures')
+  console.log('[e2e-setup] creating the shared P2-B Room and claiming the known fixture')
   await createBaselineRoom()
 }
