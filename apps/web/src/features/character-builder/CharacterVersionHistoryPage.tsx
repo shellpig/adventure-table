@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 
+import { characterWorkspaceFrontendPath } from '../../api/characterWorkspace'
 import {
   getCharacterVersion,
   listCharacterVersions,
@@ -44,12 +45,12 @@ export function CharacterVersionHistoryPage({
       <div className="workshop-shell">
         <header className="workshop-hero">
           <div>
-            <a href="/characters" className="builder-back">{t('versions.backWorkshop')}</a>
+            <a href={characterWorkspaceFrontendPath('/characters')} className="builder-back">{t('versions.backWorkshop')}</a>
             <p className="eyebrow">{t('versions.eyebrow')}</p>
             <h1>{t('versions.title')}</h1>
             <p>{t('versions.description')}</p>
           </div>
-          <a className="button secondary" href={`/characters/${characterId}`}>
+          <a className="button secondary" href={characterWorkspaceFrontendPath(`/characters/${characterId}`)}>
             {t('versions.openCurrent')}
           </a>
         </header>
@@ -87,7 +88,7 @@ export function CharacterVersionHistoryPage({
                   {version.superseded_by_version_id ? <span>{t('versions.superseded')}</span> : null}
                 </div>
                 {version.change_note ? <p className="builder-hint">{version.change_note}</p> : null}
-                <a className="button secondary full" href={`/characters/${characterId}/versions/${version.version_no}`}>
+                <a className="button secondary full" href={characterWorkspaceFrontendPath(`/characters/${characterId}/versions/${version.version_no}`)}>
                   {t('versions.viewSnapshot')}
                 </a>
               </article>
@@ -102,7 +103,7 @@ export function CharacterVersionHistoryPage({
                 <span>{t('versions.snapshot')}</span>
                 <h2>{t('versions.version', { version: versionNo })}</h2>
               </div>
-              <a className="button secondary" href={`/characters/${characterId}/versions`}>
+              <a className="button secondary" href={characterWorkspaceFrontendPath(`/characters/${characterId}/versions`)}>
                 {t('versions.closeDetail')}
               </a>
             </div>

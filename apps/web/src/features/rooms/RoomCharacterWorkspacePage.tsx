@@ -70,12 +70,7 @@ export function RoomCharacterWorkspacePage({ roomId }: { roomId: string }) {
           {legacy.error ? <div className="error-banner">{legacy.error.message}</div> : null}
         </div>
       </div>
-      {!isOwner ? (
-        <style>{`.room-character-member-scope .workshop-card__quiet-action--danger,.room-character-member-scope .workshop-card__danger{display:none}`}</style>
-      ) : null}
-      <div className={isOwner ? undefined : 'room-character-member-scope'}>
-        <CharacterWorkshopPage />
-      </div>
+      <CharacterWorkshopPage allowPermanentDelete={isOwner} />
     </>
   )
 }
