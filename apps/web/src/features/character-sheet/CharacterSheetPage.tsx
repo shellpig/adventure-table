@@ -726,19 +726,20 @@ export function CharacterSheetView({
                       classNameByRef.get(spell.source_key) ?? nameFor(spell.source_key, titleCase(spell.source_type))
                     return (
                       <article className={spell.prepared ? 'spell-card is-prepared' : 'spell-card'} key={spell.entry_id}>
-                        <div>
-                          <div className="spell-badges">
-                            <span className="level-badge">{spellLevelLabel(spell.level, t)}</span>
-                            <span className="access-badge">{accessLabel(spell.access_type, t)}</span>
-                          </div>
-                          <h3>{localizedSpellName}</h3>
-                          <p>{localizedSourceName}</p>
+                        <div className="spell-badges">
+                          <span className="level-badge">{spellLevelLabel(spell.level, t)}</span>
+                          <span className="access-badge">{accessLabel(spell.access_type, t)}</span>
                         </div>
-                        {spell.level > 0 ? (
-                          <div className="prepared-control">
+                        <h3>{localizedSpellName}</h3>
+                        <div className="spell-card__source">
+                          <p>{localizedSourceName}</p>
+                          {spell.level > 0 ? (
                             <span className={spell.prepared ? 'prepared-badge on' : 'prepared-badge'}>{spell.prepared ? t('sheet.prepared') : t('sheet.unprepared')}</span>
-                            {canPrepare ? (
-                              <button
+                          ) : null}
+                        </div>
+                        {spell.level > 0 && canPrepare ? (
+                          <div className="prepared-control">
+                            <button
                                 type="button"
                                 className="button secondary compact"
                                 disabled={busy || atPreparedLimit}
@@ -773,8 +774,7 @@ export function CharacterSheetView({
                                 }}
                               >
                                 {spell.prepared ? t('sheet.unprepare') : t('sheet.prepare')}
-                              </button>
-                            ) : null}
+                            </button>
                           </div>
                         ) : null}
                       </article>
