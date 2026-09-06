@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { test as base, type APIRequestContext } from '@playwright/test'
+import { test as base, type APIRequestContext, type Page } from '@playwright/test'
 
 import { openCharacterWorkshop, type E2ERoomContext } from './room'
 
@@ -78,36 +78,36 @@ function roomRequestProxy(request: APIRequestContext, room: E2ERoomContext): API
   }) as APIRequestContext
 }
 
-function scopePageRequest(request: APIRequestContext, room: E2ERoomContext): void {
-  const mutable = request as unknown as Record<string, unknown>
-  for (const methodName of HTTP_METHODS) {
-    const method = mutable[methodName]
-    if (typeof method !== 'function') continue
-    mutable[methodName] = scopedRequestMethod(request, method as RequestMethod, room)
-  }
+function roomPageProxy(page: Page, room: E2ERoomContext): Page {
+  const request = roomRequestProxy(page.request, room)
+  return new Proxy(page, {
+    get(target, property, receiver) {
+      if (property === 'request') return request
+      const value = Reflect.get(target, property, receiver)
+      return typeof value === 'function' ? value.bind(target) : value
+    },
+  }) as Page
 }
 
 export const test = base.extend<{ roomContext: E2ERoomContext }>({
-  roomContext: [
-    async ({ page }, use) => {
-      const roomContext = await readRoomContext()
-      scopePageRequest(page.request, roomContext)
-      await page.goto('/')
-      await page.evaluate(
-        ({ recentKey, activeKey, room }) => {
-          window.localStorage.setItem(recentKey, JSON.stringify([room]))
-          window.sessionStorage.setItem(activeKey, room.roomId)
-        },
-        {
-          recentKey: RECENT_ROOMS_STORAGE_KEY,
-          activeKey: ACTIVE_ROOM_STORAGE_KEY,
-          room: roomContext,
-        },
-      )
-      await use(roomContext)
-    },
-    { auto: true },
-  ],
+  roomContext: async ({}, use) => {
+    await use(await readRoomContext())
+  },
+  page: async ({ page, roomContext }, use) => {
+    await page.goto('/')
+    await page.evaluate(
+      ({ recentKey, activeKey, room }) => {
+        window.localStorage.setItem(recentKey, JSON.stringify([room]))
+        window.sessionStorage.setItem(activeKey, room.roomId)
+      },
+      {
+        recentKey: RECENT_ROOMS_STORAGE_KEY,
+        activeKey: ACTIVE_ROOM_STORAGE_KEY,
+        room: roomContext,
+      },
+    )
+    await use(roomPageProxy(page, roomContext))
+  },
   request: async ({ request, roomContext }, use) => {
     await use(roomRequestProxy(request, roomContext))
   },
