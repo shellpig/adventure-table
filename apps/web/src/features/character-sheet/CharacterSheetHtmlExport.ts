@@ -398,17 +398,22 @@ function applyBuildOnlyProjection(
   })
   root.querySelectorAll('.prepared-limit-hint').forEach((node) => node.remove())
 
-  pairCharacterSheetIndexRows(
+  const slotPairs = pairCharacterSheetIndexRows(
     root,
     '.slot-card',
     projection.spellSlots,
     (entry) => entry.level,
-  ).forEach(({ row: card, item: entry }) => {
+  )
+  slotPairs.forEach(({ row: card, item: entry }) => {
     const value = card.querySelector<HTMLElement>('strong')
     const caption = card.querySelector<HTMLElement>('small')
     if (value) value.textContent = String(entry.total)
     if (caption) caption.textContent = copy.total
   })
+  const spellSlotSubtitle = slotPairs[0]?.row
+    .closest('article.panel')
+    ?.querySelector<HTMLElement>('.panel-title span')
+  if (spellSlotSubtitle) spellSlotSubtitle.textContent = copy.capacity
 
   pairCharacterSheetIndexRows(
     root,
