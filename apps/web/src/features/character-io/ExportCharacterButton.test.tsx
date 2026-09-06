@@ -52,6 +52,17 @@ describe('M03-B export button', () => {
     expect(render('en', 'sheet')).toContain('character-export-sheet-action')
     expect(render('en', 'inline')).not.toContain('character-export-sheet-action')
   })
+
+  it('adds the independent M01-N HTML action only on the Character Sheet placement', () => {
+    const sheetMarkup = render('en', 'sheet')
+    expect(sheetMarkup).toContain('character-html-export-action')
+    expect(sheetMarkup).toContain('Export HTML')
+    expect(sheetMarkup).toContain('Current snapshot')
+
+    const inlineMarkup = render('en', 'inline')
+    expect(inlineMarkup).not.toContain('character-html-export-action')
+    expect(inlineMarkup).not.toContain('Export HTML')
+  })
 })
 
 describe('M03-B export mounting', () => {

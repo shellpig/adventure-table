@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { useCharacterIoCopy } from '../../i18n/useCharacterIoCopy'
+import { CharacterSheetHtmlExportButton } from '../character-sheet/CharacterSheetHtmlExportButton'
 import { downloadCharacterExport } from './api'
 import './character-io.css'
 
@@ -50,8 +51,13 @@ export function ExportCharacterButton({
   )
 
   // The sheet owns its own header; this component never reaches outside its
-  // own tree to find a mount point.
+  // own tree to find a mount point. HTML export is a separate human-readable
+  // action beside the existing JSON exchange button and does not change the
+  // JSON export behavior used by inline/workshop placements.
   return placement === 'sheet' ? (
-    <div className="character-export-sheet-action">{body}</div>
+    <div className="character-export-sheet-action">
+      {body}
+      <CharacterSheetHtmlExportButton characterId={characterId} />
+    </div>
   ) : body
 }

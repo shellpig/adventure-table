@@ -2,6 +2,8 @@ import type { Locale } from './locale'
 
 export type CharacterSheetExportCopy = {
   button: string
+  exporting: string
+  failed: string
   scopeLabel: string
   buildScope: string
   snapshotScope: string
@@ -19,6 +21,8 @@ export type CharacterSheetExportCopy = {
 const COPY: Record<Locale, CharacterSheetExportCopy> = {
   en: {
     button: 'Export HTML',
+    exporting: 'Exporting HTML…',
+    failed: 'HTML export failed.',
     scopeLabel: 'Export scope',
     buildScope: 'Build only',
     snapshotScope: 'Current snapshot',
@@ -34,6 +38,8 @@ const COPY: Record<Locale, CharacterSheetExportCopy> = {
   },
   'zh-TW': {
     button: '匯出 HTML',
+    exporting: '正在匯出 HTML…',
+    failed: 'HTML 匯出失敗。',
     scopeLabel: '輸出範圍',
     buildScope: '角色配置',
     snapshotScope: '當前快照',
