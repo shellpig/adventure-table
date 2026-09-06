@@ -9,6 +9,7 @@ from sqlalchemy import (
     LargeBinary,
     String,
     Table,
+    UniqueConstraint,
     Uuid,
 )
 
@@ -47,5 +48,40 @@ room_access_sessions = Table(
 )
 Index("ix_room_access_sessions_room_id", room_access_sessions.c.room_id)
 
+room_characters = Table(
+    "room_characters",
+    metadata,
+    Column("room_id", Uuid(), ForeignKey("rooms.id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "character_id",
+        Uuid(),
+        ForeignKey("characters.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    UniqueConstraint("character_id", name="uq_room_characters_character_id"),
+)
+Index("ix_room_characters_room_id", room_characters.c.room_id)
 
-__all__ = ["room_access_sessions", "rooms"]
+room_builder_drafts = Table(
+    "room_builder_drafts",
+    metadata,
+    Column("room_id", Uuid(), ForeignKey("rooms.id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "draft_id",
+        Uuid(),
+        ForeignKey("character_build_drafts.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    UniqueConstraint("draft_id", name="uq_room_builder_drafts_draft_id"),
+)
+Index("ix_room_builder_drafts_room_id", room_builder_drafts.c.room_id)
+
+
+__all__ = [
+    "room_access_sessions",
+    "room_builder_drafts",
+    "room_characters",
+    "rooms",
+]

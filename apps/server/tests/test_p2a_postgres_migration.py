@@ -21,7 +21,7 @@ pytestmark = pytest.mark.skipif(
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 BRANCH_POINT = "0008_m03c_import_records"
 CHARACTER_HEAD = "0009_p2a_character_head"
-WEB_HEAD = "0010_p2a_web_rooms"
+WEB_HEAD = "0011_p2b_room_character_workspace"
 
 
 def _alembic_config() -> Config:
@@ -204,6 +204,8 @@ def test_fresh_web_postgres_upgrade_heads_and_readiness() -> None:
         "character_import_records",
         "rooms",
         "room_access_sessions",
+        "room_characters",
+        "room_builder_drafts",
     } <= tables
 
     from app.main import app
@@ -230,4 +232,9 @@ def test_legacy_m03_postgres_upgrade_heads_preserves_character_payloads() -> Non
         tables = set(inspect(engine).get_table_names())
     finally:
         engine.dispose()
-    assert {"rooms", "room_access_sessions"} <= tables
+    assert {
+        "rooms",
+        "room_access_sessions",
+        "room_characters",
+        "room_builder_drafts",
+    } <= tables
