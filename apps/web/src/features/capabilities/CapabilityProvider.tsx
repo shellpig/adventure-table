@@ -10,6 +10,7 @@ import {
 
 import { fetchCapabilities } from './api'
 import {
+  CAPABILITY_FETCH_FALLBACK,
   DEFAULT_WEB_CAPABILITIES,
   type CapabilityKey,
   type CapabilitySnapshot,
@@ -55,7 +56,7 @@ export function CapabilityProvider({
       })
       .catch(() => {
         if (!active) return
-        setSnapshot(DEFAULT_WEB_CAPABILITIES)
+        setSnapshot(CAPABILITY_FETCH_FALLBACK)
         setStatus('fallback')
       })
     return () => {

@@ -35,3 +35,19 @@ export const DEFAULT_WEB_CAPABILITIES: CapabilitySnapshot = {
   },
   database_path: null,
 }
+
+export const CAPABILITY_FETCH_FALLBACK: CapabilitySnapshot = {
+  channel: 'web',
+  capabilities: {
+    character_builder: true,
+    character_import_export: true,
+    room: false,
+    campaign: false,
+    session: false,
+    seat: false,
+    combat: false,
+    timeline: false,
+    ai_actor: false,
+  },
+  database_path: null,
+}

@@ -3,7 +3,11 @@ import { describe, expect, it } from 'vitest'
 
 import { CapabilityLink } from './CapabilityLink'
 import { CapabilityProvider, useCapabilities } from './CapabilityProvider'
-import type { CapabilitySnapshot } from './types'
+import {
+  CAPABILITY_FETCH_FALLBACK,
+  DEFAULT_WEB_CAPABILITIES,
+  type CapabilitySnapshot,
+} from './types'
 
 const STANDALONE: CapabilitySnapshot = {
   channel: 'standalone',
@@ -47,5 +51,22 @@ describe('M03-E capability provider', () => {
 
     expect(html).not.toContain('href="/rooms"')
     expect(html).toContain('href="/characters"')
+  })
+
+  it('keeps the normal Web snapshot Room-enabled but fetch failures fail closed', () => {
+    expect(DEFAULT_WEB_CAPABILITIES.capabilities.room).toBe(true)
+    expect(CAPABILITY_FETCH_FALLBACK.capabilities.character_builder).toBe(true)
+    expect(CAPABILITY_FETCH_FALLBACK.capabilities.character_import_export).toBe(true)
+    for (const capability of [
+      'room',
+      'campaign',
+      'session',
+      'seat',
+      'combat',
+      'timeline',
+      'ai_actor',
+    ] as const) {
+      expect(CAPABILITY_FETCH_FALLBACK.capabilities[capability]).toBe(false)
+    }
   })
 })
