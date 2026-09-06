@@ -1,8 +1,8 @@
 import { type FormEvent, useMemo, useState } from 'react'
 
-import { createRoom, enterRoom, type RoomAccessGrant } from '../../api/rooms'
+import { createRoom, enterRoom, RoomApiError, type RoomAccessGrant } from '../../api/rooms'
 import { useLocale } from '../../i18n/LocaleProvider'
-import { roomCopy } from './copy'
+import { roomCopy, roomErrorMessage } from './copy'
 import { persistRoomGrant, readRecentRooms } from './roomStorage'
 
 function navigateToRoom(roomId: string) {
@@ -35,6 +35,10 @@ export function RoomLandingPage() {
     [enterCode, enterPassword],
   )
 
+  function presentError(cause: unknown) {
+    return roomErrorMessage(locale, cause instanceof RoomApiError ? cause.code : 'room_request_failed')
+  }
+
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!canCreate || busy) return
@@ -50,8 +54,8 @@ export function RoomLandingPage() {
       setRecentRooms(readRecentRooms())
       setCreated(grant)
       setCreatePassword('')
-    } catch {
-      setError(copy.requestError)
+    } catch (cause) {
+      setError(presentError(cause))
     } finally {
       setBusy(false)
     }
@@ -71,8 +75,8 @@ export function RoomLandingPage() {
       })
       persistRoomGrant(grant)
       navigateToRoom(grant.room.id)
-    } catch {
-      setError(copy.requestError)
+    } catch (cause) {
+      setError(presentError(cause))
       setBusy(false)
     }
   }

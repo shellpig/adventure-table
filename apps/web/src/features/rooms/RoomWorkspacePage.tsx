@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 
-import { getRoom, heartbeatRoom, type RoomSummary } from '../../api/rooms'
+import { getRoom, heartbeatRoom, RoomApiError, type RoomSummary } from '../../api/rooms'
 import { useLocale } from '../../i18n/LocaleProvider'
-import { roomCopy } from './copy'
+import { roomCopy, roomErrorMessage } from './copy'
 import { startRoomHeartbeat } from './heartbeat'
 import { recentRoomForId } from './roomStorage'
 
@@ -16,6 +16,7 @@ export function RoomWorkspacePage({ roomId }: { roomId: string }) {
   const copy = roomCopy(locale)
   const recent = recentRoomForId(roomId)
   const [room, setRoom] = useState<RoomSummary | null>(null)
+  const [errorCode, setErrorCode] = useState<string | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing' | 'error'>(
     recent ? 'loading' : 'missing',
   )
@@ -28,18 +29,23 @@ export function RoomWorkspacePage({ roomId }: { roomId: string }) {
       .then((next) => {
         if (!active) return
         setRoom(next)
+        setErrorCode(null)
         setStatus('ready')
       })
-      .catch(() => {
+      .catch((cause: unknown) => {
         if (!active) return
+        setErrorCode(cause instanceof RoomApiError ? cause.code : null)
         setStatus('error')
       })
 
     const stopHeartbeat = startRoomHeartbeat(async () => {
       try {
         await heartbeatRoom(roomId, recent.accessToken)
-      } catch {
-        if (active) setStatus('error')
+      } catch (cause) {
+        if (active) {
+          setErrorCode(cause instanceof RoomApiError ? cause.code : null)
+          setStatus('error')
+        }
       }
     })
 
@@ -79,7 +85,7 @@ export function RoomWorkspacePage({ roomId }: { roomId: string }) {
         <section className="landing-card room-workspace-card">
           <p className="eyebrow">{copy.workspaceEyebrow}</p>
           <h1>Adventure Table</h1>
-          <p>{copy.workspaceError}</p>
+          <p>{errorCode ? roomErrorMessage(locale, errorCode) : copy.workspaceError}</p>
           <a className="button secondary" href="/">{copy.backHome}</a>
         </section>
       </main>
