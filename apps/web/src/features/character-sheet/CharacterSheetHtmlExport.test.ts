@@ -7,7 +7,6 @@ import {
   assertSafeCharacterSheetHtml,
   buildCharacterSheetExportFilename,
   buildCharacterSheetHtmlDocument,
-  createCharacterSheetHtmlExport,
   formatConditionForExport,
   pairCharacterSheetIndexRows,
   projectCharacterSheetForExport,
@@ -15,6 +14,7 @@ import {
 } from './CharacterSheetHtmlExport'
 
 const exportCssSource = readFileSync(new URL('./characterSheetExport.css', import.meta.url), 'utf8')
+const exporterSource = readFileSync(new URL('./CharacterSheetHtmlExport.ts', import.meta.url), 'utf8')
 const sheet = {
   name: 'Mira: Wizard/Scout?',
   version_no: 7,
@@ -45,73 +45,15 @@ const sheet = {
   inventory: [{ entry_id: 'inventory:shield' }, { entry_id: 'inventory:potion' }],
 } as unknown as CharacterSheetDTO
 
-const preparedExportSheet = {
-  name: 'Prepared Wizard',
-  version_no: 2,
-  current_hp: 18,
-  max_hp: 24,
-  temporary_hp: 0,
-  conditions: [],
-  hit_dice: [],
-  spell_slots: {},
-  resources: {},
-  spellcasting: [
-    { source_key: 'srd5.1:class:wizard', prepared_limit: 5, prepared_count: 3 },
-  ],
-  spells: [
-    { entry_id: 'wizard:shield', prepared: true },
-    { entry_id: 'wizard:detect-magic', prepared: false },
-  ],
-  inventory: [],
-} as unknown as CharacterSheetDTO
+type FakeRow = {
+  dataset: { sheetIndexKey?: string }
+  textContent?: string
+}
 
-function renderPreparedExportTab(tab: 'attributes' | 'spells' | 'inventory'): string {
-  if (tab === 'attributes') {
-    return `
-      <main class="character-page">
-        <section class="sheet-shell">
-          <header class="character-hero">
-            <div class="hero-stats">
-              <div class="hero-stat"><span>HP</span><strong data-testid="header-hp">18</strong><small>/ 24</small></div>
-            </div>
-          </header>
-          <section class="sheet-content">Attributes</section>
-          <footer class="sheet-footer"><strong>Synced</strong></footer>
-        </section>
-      </main>
-    `
-  }
-  if (tab === 'spells') {
-    return `
-      <main class="character-page">
-        <section class="sheet-shell">
-          <section class="sheet-content">
-            <div class="spellcasting-grid">
-              <article class="spellcasting-card">
-                <div class="prepared-limit" data-sheet-index-key="srd5.1:class:wizard">
-                  <small>Prepared</small><b>3 / 5</b>
-                </div>
-                <p class="prepared-limit-hint">Prepared limit reached: 5</p>
-              </article>
-            </div>
-            <div class="spell-levels">
-              <article class="spell-card is-prepared">
-                <h3>Shield</h3>
-                <span class="prepared-badge on">Prepared</span>
-                <div class="prepared-control"><button type="button">Unprepare</button></div>
-              </article>
-              <article class="spell-card">
-                <h3>Detect Magic</h3>
-                <span class="prepared-badge">Unprepared</span>
-              </article>
-            </div>
-          </section>
-          <footer class="sheet-footer"><strong>Synced</strong></footer>
-        </section>
-      </main>
-    `
-  }
-  return '<main class="character-page"><section class="sheet-shell"><section class="sheet-content">Inventory</section><footer class="sheet-footer"></footer></section></main>'
+function fakeRoot(rows: FakeRow[]): ParentNode {
+  return {
+    querySelectorAll: () => rows,
+  } as unknown as ParentNode
 }
 
 describe('M01-N Character Sheet export projection', () => {
@@ -154,75 +96,65 @@ describe('M01-N Character Sheet export projection', () => {
 
 describe('M01-N keyed export row pairing', () => {
   it('pairs rows by stable key instead of DOM order', () => {
-    const host = document.createElement('div')
-    host.innerHTML = `
-      <div class="row" data-sheet-index-key="second">second row</div>
-      <div class="row" data-sheet-index-key="first">first row</div>
-    `
+    const rows: FakeRow[] = [
+      { dataset: { sheetIndexKey: 'second' }, textContent: 'second row' },
+      { dataset: { sheetIndexKey: 'first' }, textContent: 'first row' },
+    ]
     const items = [
       { key: 'first', value: 1 },
       { key: 'second', value: 2 },
     ]
 
-    const pairs = pairCharacterSheetIndexRows(host, '.row', items, (item) => item.key)
-    expect(pairs.map(({ key, item, row }) => [key, item.value, row.textContent?.trim()])).toEqual([
+    const pairs = pairCharacterSheetIndexRows(fakeRoot(rows), '.row', items, (item) => item.key)
+    expect(pairs.map(({ key, item, row }) => [key, item.value, row.textContent])).toEqual([
       ['second', 2, 'second row'],
       ['first', 1, 'first row'],
     ])
   })
 
   it('fails loudly for duplicate DOM keys', () => {
-    const host = document.createElement('div')
-    host.innerHTML = `
-      <div class="row" data-sheet-index-key="same"></div>
-      <div class="row" data-sheet-index-key="same"></div>
-    `
+    const rows: FakeRow[] = [
+      { dataset: { sheetIndexKey: 'same' } },
+      { dataset: { sheetIndexKey: 'same' } },
+    ]
     expect(() =>
-      pairCharacterSheetIndexRows(host, '.row', [{ key: 'same' }], (item) => item.key),
+      pairCharacterSheetIndexRows(fakeRoot(rows), '.row', [{ key: 'same' }], (item) => item.key),
     ).toThrow(/duplicate key: same/)
   })
 
   it('fails loudly for duplicate item keys and missing row keys', () => {
-    const duplicateItemsHost = document.createElement('div')
-    duplicateItemsHost.innerHTML = '<div class="row" data-sheet-index-key="same"></div>'
     expect(() =>
       pairCharacterSheetIndexRows(
-        duplicateItemsHost,
+        fakeRoot([{ dataset: { sheetIndexKey: 'same' } }]),
         '.row',
         [{ key: 'same' }, { key: 'same' }],
         (item) => item.key,
       ),
     ).toThrow(/duplicate key: same/)
 
-    const missingKeyHost = document.createElement('div')
-    missingKeyHost.innerHTML = '<div class="row"></div>'
     expect(() =>
-      pairCharacterSheetIndexRows(missingKeyHost, '.row', [{ key: 'only' }], (item) => item.key),
+      pairCharacterSheetIndexRows(
+        fakeRoot([{ dataset: {} }]),
+        '.row',
+        [{ key: 'only' }],
+        (item) => item.key,
+      ),
     ).toThrow(/missing data-sheet-index-key/)
   })
 })
 
-describe('M01-N build-only exporter integration', () => {
-  it('keeps prepared capacity and full spell access without current prepared state', () => {
-    const result = createCharacterSheetHtmlExport({
-      sheet: preparedExportSheet,
-      scope: 'build',
-      locale: 'en',
-      renderTab: renderPreparedExportTab,
+describe('M01-N build-only prepared semantics', () => {
+  it('keeps prepared capacity while removing current prepared markers from rendered output', () => {
+    const value = projectCharacterSheetForExport(sheet, 'build')
+    expect(value.spellcasting[0]).toEqual({
+      sourceKey: 'srd5.1:class:wizard',
+      limit: 5,
+      preparedCount: null,
     })
-    const host = document.createElement('div')
-    host.innerHTML = result.html
-
-    const preparedLimit = host.querySelector('.prepared-limit')
-    expect(preparedLimit?.querySelector('small')?.textContent).toBe('Prepared limit')
-    expect(preparedLimit?.querySelector('b')?.textContent).toBe('5')
-    expect(result.html).not.toContain('3 / 5')
-    expect(host.querySelector('.prepared-limit-hint')).toBeNull()
-    expect(host.querySelector('.prepared-badge')).toBeNull()
-    expect(host.querySelector('.prepared-control')).toBeNull()
-    expect(host.querySelector('.spell-card.is-prepared')).toBeNull()
-    expect(result.html).toContain('Shield')
-    expect(result.html).toContain('Detect Magic')
+    expect(value.preparedSpellEntryIds).toBeNull()
+    expect(exporterSource).toContain('value.textContent = String(source.prepared_limit)')
+    expect(exporterSource).toContain("root.querySelectorAll('.spell-card').forEach((card) => card.classList.remove('is-prepared'))")
+    expect(exporterSource).toContain("root.querySelectorAll('.prepared-badge').forEach((node) => node.remove())")
   })
 })
 
