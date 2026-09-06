@@ -1,6 +1,6 @@
 # Adventure Table 專案簡報
 
-最後更新：2026-09-05
+最後更新：2026-09-06
 
 本檔是**當前進度、Roadmap、下一步與文件索引的單一事實來源**，供新的 AI Session 或實作者接手。產品行為以 [規格企劃.md](規格企劃.md) 為準；實作契約與歷史驗收證據請依下方索引查閱，不在本檔重述。
 
@@ -18,15 +18,17 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## 當前狀態與下一步
 
-**P0、P1、M02、M03 已完成並關門；M01-A～M01-M 已逐項關門，但 M01 尚未 full closeout。P2 尚未開工。**
+**P0、P1、M02、M03 已完成並關門；M01-A～M01-M 已逐項關門，M01 改為長期保持 open 的 Character Content Expansion / Maintenance track；P2 現在正式進入 planning / specification。**
 
 下一步依序為：
 
-1. 由使用者拍板是否追加 M01 規則 Subphase 或 UI 調整；未拍板的項目不自行編號或開始實作。
-2. 最終 M01 scope 確定後，安排 **Full M01 Integration & Closeout**；其 Subphase ID 仍為 **TBD**，不預設為 M01-N。
-3. **M01 final closeout 後才正式開始 P2。** 到時依真正存在的 codebase 拆 Subphases，完成對齊的三份 Phase 文件。
+1. 依目前真正存在的 codebase 與 `規格企劃.md`，完成 **P2 — Room / Campaign / Session / Seat** 的前置設計討論。
+2. P2 coding 前拆成可獨立實作、驗證與 commit 的 `P2-A`、`P2-B`…，並建立對齊的三份正式 Phase 文件。
+3. P2 文件拍板後才開始 P2 coding；P3～P8 仍維持大 Phase，不提前設計 schema、API 或模組。
 
-M03 已 closeout 不等於 M01 closeout。M01 可繼續補資料／UI；若碰到 Character Build／State／Version／StableKey／Builder provenance，需同步做 M03 compatibility review。後續 P2～P8 維持大 Phase，不提前設計 schema、API 或模組。
+**M01 不再有「必須 final closeout 後才能開始 P2」的 gate。** A～M 是目前已完成的角色內容 baseline；之後若再拍板新的角色內容或既有角色系統強化，從 **M01-N** 起繼續新增 Subphase。M01 可以在 P2／P3 等正常產品 Roadmap 繼續前進時保持 open，不要求先建立一個假的「全部 D&D 內容已完成」里程碑。
+
+新的 M01 Subphase若只補 content / presentation，依當時既有 regression contract驗證；若碰到 Character Build／State／Version／StableKey／Builder provenance／Character JSON schema 或其他共享角色核心，除了 M01 自身驗證外，還必須同步做**當時已存在的後續 P Phase compatibility review**與 **M03 standalone compatibility review**。不得因 M01 是 maintenance track 就破壞多人層或 standalone boundary。
 
 ## 未結清事項與驗收限制
 
@@ -43,16 +45,16 @@ M03 已 closeout 不等於 M01 closeout。M01 可繼續補資料／UI；若碰�
 
 ## Phase Roadmap
 
-先建立角色與規則基礎，再把角色帶進桌內。M Phase 為插入式維護／擴充，不改寫 P0 → P8 的產品 Roadmap。
+先建立角色與規則基礎，再把角色帶進桌內。M Phase 為插入式維護／擴充，不改寫 P0 → P8 的產品 Roadmap；**M Phase 可以長期保持 open，而正常 P Roadmap 繼續前進。**
 
 | Phase | 主題 | 交付範圍／狀態 |
 |---|---|---|
 | P0 | Character Core + SRD / Rules Foundation | 角色資料、角色卡、角色相關規則基礎；已關門 |
 | P1 | Character Builder Complete | 完整創角、Progression、Level Up、Character Version；已關門 |
-| M01 | Multi-Source Character Content Expansion | 多來源角色內容與既有系統強化；A～M 已關門，整體仍 open |
+| M01 | Multi-Source Character Content Expansion | 長期角色內容／角色系統維護 track；A～M 已關門，整體保持 open，未來從 N 繼續，不阻塞 P2+ |
 | M02 | Traditional Chinese / English Localization | 插於 M01-C 與 M01-D 間；雙語呈現、翻譯流程與完整性 gate；已關門 |
 | M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，保留上列驗收缺口 |
-| P2 | Room / Campaign / Session / Seat | 角色進桌、Party Roster、Player Seat、Controller、Session lifecycle；待 M01 final closeout |
+| P2 | Room / Campaign / Session / Seat | 角色進桌、Party Roster、Player Seat、Controller、Session lifecycle；**正在 planning / specification** |
 | P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌 |
 | P4 | Quick Combat | 第一個完整可玩的 Combat MVP；首個 Subphase P4-A 承接 SRD Monster／Beast stat blocks |
 | P5 | Tactical Combat | 同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE 與空間系統 |
@@ -109,6 +111,8 @@ M03 已 closeout 不等於 M01 closeout。M01 可繼續補資料／UI；若碰�
 | **M01-L — VGM & SCAG Remaining Race Expansion / Generic Race Mechanics** | ✅ | VGM remaining 10 races + SCAG remaining 2 subraces；generic Race/Subrace movement grant、signed racial modifier compatibility、Natural Armor Rules Layer primitive、racial spell canonical multi-rest recharge、typed runtime automation classification、no-docs runtime gate；雙語與 FC-E2E-21 已驗收 |
 | **M01-M — MTF Planar Race Expansion & Tiefling Bloodline / Variant System** | ✅ | `mtf` pack、7 個 MTF planar race、Tiefling 9/9 血脈（Asmodeus canonical map + 8 new variants）、SCAG 保守相容、replacement group persistence、Winged conditional movement、Eladrin season State ownership、feature mode default-deny；雙語與 M-E2E-01～05 已驗收 |
 
+> **M01 保持 open。** A～M 是目前 baseline；下一個已拍板的 M01 工作從 **M01-N** 起編號。沒有預留給「Full M01 Closeout」的字母。
+
 
 ### M02
 
@@ -139,10 +143,11 @@ M03 已 closeout 不等於 M01 closeout。M01 可繼續補資料／UI；若碰�
 
 ## 接手時必須保留的跨 Phase 約束
 
+- **M01 是 long-running maintenance/content track**：A～M 是目前 baseline，未來從 N 繼續；M01 open 不阻塞 P2+。任何後續 M01 若修改共享 Character contract，必須 regression 當時已存在的後續 P Phase，並同步做 M03 standalone compatibility review。
 - **Standalone boundary 是常駐約束**：角色／內容核心不得依賴多人層，`app.standalone` 不得 import `app.main`。P2 引入多人模組時，必須同步擴充 `tests/test_m03_import_boundary.py` 的 forbidden regex 與 protected modules；不能假設現有字根比對會涵蓋所有新命名。契約見 [M03 實作規格](docs/M03/實作規格.md) 3.2 與 [AGENTS.md](AGENTS.md)。
 - **雙語是持續交付要求**：新增、修改或首次呈現給使用者的 system／rules content，必須同一 Subphase 同步交付 `zh-TW`／`en`；locale 只影響呈現，不改角色／草稿資料。細則見 [AGENTS.md](AGENTS.md) 與 [M02 實作規格](docs/M02/實作規格.md)。
 - **P4 承接內容範圍**：P4 的第一個 Subphase 為 P4-A，須承接 P0 延後的 SRD Monster／Beast stat blocks；schema、API 與 combat representation 到 P4 開工才設計。
-- **M Phase 插入不重編既有順序**：可插在另一 M Phase 的 Subphases 之間；只拆當前 Phase，例外僅為使用者已拍板且插入點確定的 M Phase。完整規則見 [AGENTS.md](AGENTS.md)。
+- **M Phase 插入不重編既有順序**：可插在另一 M Phase 的 Subphases 之間，也可長期保持 open 與 P Roadmap 並行；只拆當前要做的工作，例外僅為使用者已拍板且插入點確定的 M Phase。完整規則見 [AGENTS.md](AGENTS.md)。
 
 ## 文件索引與閱讀方式
 

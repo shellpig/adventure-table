@@ -100,10 +100,11 @@ grep -n "M03-B" docs/M03/實作規格.md docs/M03/開發設計方針.md docs/M03
 
 1. **只設計正在準備開工的 Phase。** 尚未輪到的 P / M Phase 保持大 Phase 狀態，不提前設計其 schema / API / module；可以記錄已知的跨 Phase 相容要求（例如 P0 要求 Character 資料模型不得排斥 Multiclass），但不用現在決定 P2 Token table 或 P5 Tactical renderer。後續 Phase 開工時以當時真正存在的 codebase 為基礎再設計，比現在猜測可靠。
 2. **所有正常產品 Phase 在 coding 開始前，都必須先拆成 `P<n>-A`、`P<n>-B`… 的 Subphases。所有 Maintenance / Modification Phase 在 coding 開始前，都必須先拆成 `M<nn>-A`、`M<nn>-B`… 的 Subphases。** 每個 Subphase 必須能獨立實作、驗證並 commit；完成時應處於可執行、可測試、沒有已知編譯／型別／該 Subphase 測試錯誤的狀態。
-3. **M Phase 定位**：`M01`、`M02`… 用於補資料／補設定、既有能力加強、資料 migration、或不構成下一個正常產品里程碑的維護／修改工作。M Phase 可以插在 P Phase 之間，**也可以插在另一個 M Phase 的兩個 Subphase 之間**（目前 M02 就插在 M01-C 與 M01-D 之間）；但不改寫 `P0 → P1 → P2...` 的正常 Roadmap。被暫停的 M Phase 保留原本的 Subphase 編號與順序，恢復後照原順序接續。
+3. **M Phase 定位**：`M01`、`M02`… 用於補資料／補設定、既有能力加強、資料 migration、或不構成下一個正常產品里程碑的維護／修改工作。M Phase 可以插在 P Phase 之間，**也可以插在另一個 M Phase 的兩個 Subphase 之間**；但不改寫 `P0 → P1 → P2...` 的正常 Roadmap。**Maintenance / content 型 M Phase 也可以長期保持 open，讓正常 P Roadmap 繼續前進；除非 `PROJECT_BRIEF.md` 或該 Phase 契約明確指定 dependency，整個 M Phase 的「final closeout」不是進下一個 P Phase 的必要條件。** 每個已拍板的 M Subphase仍各自 closeout，後續新增時照下一個字母接續，不重編已完成項目。
 4. **Subphase 只拆當前 Phase。唯一例外：使用者已明確決定要插入、且插入點已確定的 M Phase，可以在插入點到達前先完成拆分與三份文件**（M02 即為此例，插入點固定在 M01-C closeout 後）。此例外只適用已拍板的插入，不適用「將來可能會做」的 Phase。
 5. 同一 Phase 的 `實作規格.md`、`開發設計方針.md`、`測試指南.md` 必須使用完全一致的 Subphase 名稱與順序，讓實作者可用 Subphase id 精準取得三份契約。
 6. `PROJECT_BRIEF.md` 在當前 Phase 已拆分後，必須一列一個 Subphase 顯示進度，不可再用「P0（含 A～F）」或「M01（含 A～K）」合併成一列。
+7. **長期 M Phase 的跨 Phase 相容性隨 Roadmap 前進而擴大。** 當後續 P Phase 已存在時，新 M Subphase若修改共享 domain / persistence / schema / DTO，除了本 M Subphase自己的 regression，還要 review並驗證所有直接受影響、已完成的後續 P Phase；不能只用「這是舊 M Phase」為理由忽略新 consumer。
 
 ## 修改授權與驗證規則
 
@@ -136,12 +137,12 @@ grep -n "M03-B" docs/M03/實作規格.md docs/M03/開發設計方針.md docs/M03
 4. **網站不接 LLM API。** 後端沒有模型可呼叫，所有 AI 能力來自使用者的外部 AI Session。
 5. **內容逐步擴充，SRD 5.1 是起點不是上限。** 非 SRD 內容依實際需要逐步加入。
 6. **Human UI 與 AI MCP 共用同一份 backend logic**，不做兩套遊戲邏輯。
-7. **M03 已交付單機版，standalone boundary 從此是常駐約束。** 新增任何 P Phase / M Phase 都不得違反 `docs/M03/實作規格.md` 3.2 的界線：`app.standalone` 不得 import `app.main`；`app.content.*`、`app.domain.character*` 與 protected module 不得觸及 Room / Campaign / Session / Seat / Party Roster 等多人層。P2 引入多人模組時，必須同步擴充 `tests/test_m03_import_boundary.py` 的 forbidden regex 與 `EXACT_PROTECTED_MODULES`，否則新命名會讓 gate 靜默放行。
+7. **M03 已交付單機版，standalone boundary 從此是常駐約束。** 新增任何 P Phase / M Phase 都不得違反 `docs/M03/實作規格.md` 3.2 的界線：`app.standalone` 不得 import `app.main`；`app.content.*`、`app.domain.character*` 與 protected module 不得觸及 Room / Campaign / Session / Seat / Party Roster 等多人層。P2 引入多人模組時，必須同步擴充 `tests/test_m03_import_boundary.py` 的 forbidden regex 與 `EXACT_PROTECTED_MODULES`，否則新命名會讓 gate 靜默放行。**之後任何長期 M01 工作若修改 Character Build / State / Version / StableKey / Builder provenance / Character JSON，也必須重新檢查 standalone composition 與 Web↔Standalone exchange 相容性，不能讓角色核心反向依賴多人層。**
 
 ## 工程實作守則
 
 1. **API 簽名預先核對**：呼叫任何專案內模組或 API 前，先 grep / 讀檔核對最新定義與參數列，不憑記憶編寫。
-2. **已授權改動引入的錯誤同 turn 修完**：跑測試或檢查時取得完成結果；已獲修改授權時，本次改動引入的編譯、型別與測試錯誤必須在同一 turn 修復並驗證。驗證模式或發現授權範圍外的既有問題時，只回報問題、影響與證據，不自行擴大修改範圍；若因環境或外部依賴無法完成驗證，明確回報阻礙，不宣稱通過。
+2. **已授權改動引入的錯誤同 turn 修完**：跑測試或檢查時取得完成結果；已獲修改授權時，本次改動引入的編譯、型別與測試錯誤必須在同一 turn修復並驗證。驗證模式或發現授權範圍外的既有問題時，只回報問題、影響與證據，不自行擴大修改範圍；若因環境或外部依賴無法完成驗證，明確回報阻礙，不宣稱通過。
 3. **驗收對應**：每條 Phase / Subphase 驗收契約都要有可定位的測試證據。
 4. **測試分層 gate**：測試範圍依改動範圍決定，不是每次都跑全部。
    - **純文件修改**：未改變產品／實作／驗收契約時，只核對內容一致性、連結與 diff，不適用下列程式改動 gate，也不因合併回 `main` 而重跑全套 E2E。若文件修改涉及上述契約，須核對對應實作與證據，必要時執行受影響的驗證；若是在辦理 Subphase／Phase 關門，仍須確認該階段 gate 的證據完整，不能以純文件提交豁免，也不因整理既有有效證據而重跑測試。
@@ -153,7 +154,7 @@ grep -n "M03-B" docs/M03/實作規格.md docs/M03/開發設計方針.md docs/M03
 5. **權限與可見性必測**：當 Phase 涉及 Role / Seat / Controller 時，除了 happy path，必測不該看到／不該操作的 actor。
 6. **拒絕原子性與 fixture 隔離**：契約要求零副作用的拒絕操作，前後狀態不可被污染；測試 fixture 必須完整還原。
 7. **Supported locale 同步交付**：新增、修改，或因新畫面而首次 expose user-visible system / rules content 時，必須在同一個 Subphase 同步補齊所有正式 supported locale（目前為 `zh-TW` / `en`），包含 UI copy、rules presentation field、validation / error 訊息與 searchable 欄位。缺任一語言視同該 Subphase regression，不得以「先做英文、之後再補 M Phase」結案。
-8. **發版相依不得漂移**：Windows standalone 發版一律依 `apps/server/constraints-standalone-win.txt` 安裝，本機與 CI 共用同一份清單。`pyproject.toml` 只宣告需要哪些套件與相容範圍，實際版本號只住清單，不抄進其他文件。新增 Python 套件、升級既有套件或更換發版 Python 版本時，必須在同一個改動內重新產生清單、跑過 standalone build 與 frozen smoke 再提交。`scripts/check_standalone_env.py` 會在 build 期擋下與清單不符的環境；不得為了讓 build 通過而繞過、放寬或跳過它。操作步驟見 `README.md`。
+8. **發版相依不得漂移**：Windows standalone 發版一律依 `apps/server/constraints-standalone-win.txt` 安裝，本機與 CI 共用同一份清單。`pyproject.toml` 只宣告需要哪些套件與相容範圍，實際版本號只住清單，不抄進其他文件。新增 Python 套件、升級既有套件或更換發版 Python版本時，必須在同一個改動內重新產生清單、跑過 standalone build 與 frozen smoke 再提交。`scripts/check_standalone_env.py` 會在 build 期擋下與清單不符的環境；不得為了讓 build 通過而繞過、放寬或跳過它。操作步驟見 `README.md`。
 
 ## 修改任務的完成條件
 
@@ -199,7 +200,7 @@ cd apps/web && npm run test:e2e:docker
 
 該 script 內的 `--build` 不可省——`web` service 沒有掛 bind mount，略過重建會靜默測到上一版 frontend。
 
-`playwright.config.ts` 會直接擋下 Windows 託管路徑；要重現該 dev server 問題才設 `ALLOW_WINDOWS_VITE_E2E=1`。細節見 `已知問題.md` 的 KI-ENV-001。
+`playwright.config.ts` 會直接擋下 Windows 託管路徑；要重現該 dev server問題才設 `ALLOW_WINDOWS_VITE_E2E=1`。細節見 `已知問題.md` 的 KI-ENV-001。
 
 ### 本機工具
 
