@@ -9,10 +9,12 @@ import App, {
 } from './App'
 import { CapabilityProvider } from './features/capabilities/CapabilityProvider'
 import type { CapabilitySnapshot } from './features/capabilities/types'
+import { roomIdFromPath } from './features/rooms/RoomWorkspacePage'
 import { LocaleProvider } from './i18n/LocaleProvider'
 import { LOCALE_STORAGE_KEY, type LocaleStorage } from './i18n/locale'
 
 const DRAFT_ID = '11111111-1111-4111-8111-111111111111'
+const ROOM_ID = '22222222-2222-4222-8222-222222222222'
 const STANDALONE: CapabilitySnapshot = {
   channel: 'standalone',
   capabilities: {
@@ -48,26 +50,29 @@ function renderApp(snapshot?: CapabilitySnapshot) {
 }
 
 describe('Adventure Table routes', () => {
-  it('renders the localized web landing page and workshop entry', () => {
+  it('renders a Room-first web landing without a global Character Workshop entry', () => {
     const html = renderApp()
 
     expect(html).toContain('Adventure Table')
-    expect(html).toContain('M02-B')
-    expect(html).toContain('Open Character Workshop')
-    expect(html).toContain('/characters')
-    expect(html).toContain(`/characters/${P0_FIXTURE_ID}`)
+    expect(html).toContain('Start at the table')
+    expect(html).toContain('Create Room')
+    expect(html).toContain('Enter Room')
+    expect(html).not.toContain('href="/characters"')
+    expect(html).not.toContain(`/characters/${P0_FIXTURE_ID}`)
   })
 
-  it('shows the concrete SQLite path without exposing the web-only P0 fixture on standalone', () => {
+  it('keeps standalone Character-first with its concrete SQLite path', () => {
     const html = renderApp(STANDALONE)
 
     expect(html).toContain('Local character database')
     expect(html).toContain('C:/Adventure Table/adventure-table.sqlite3')
-    expect(html).not.toContain(`/characters/${P0_FIXTURE_ID}`)
+    expect(html).toContain('Open Character Workshop')
+    expect(html).toContain('href="/characters"')
+    expect(html).not.toContain('Create Room')
   })
 
-  it('renders capability_disabled presentation for a manually entered disabled route', () => {
-    vi.stubGlobal('window', { location: { pathname: '/rooms/demo' } })
+  it('shows capability_disabled presentation for a manually entered disabled Room route', () => {
+    vi.stubGlobal('window', { location: { pathname: `/rooms/${ROOM_ID}` } })
     try {
       const html = renderApp(STANDALONE)
       expect(html).toContain('This feature is not available here')
@@ -78,7 +83,10 @@ describe('Adventure Table routes', () => {
     }
   })
 
-  it('parses character sheet, version history and builder draft routes independently', () => {
+  it('parses Room, character sheet, version history and builder routes independently', () => {
+    expect(roomIdFromPath(`/rooms/${ROOM_ID}`)).toBe(ROOM_ID)
+    expect(roomIdFromPath('/rooms/not-a-uuid')).toBeNull()
+
     expect(characterIdFromPath(`/characters/${P0_FIXTURE_ID}`)).toBe(P0_FIXTURE_ID)
     expect(characterIdFromPath('/characters/not-a-uuid')).toBeNull()
     expect(characterIdFromPath(`/character-builder/${DRAFT_ID}`)).toBeNull()

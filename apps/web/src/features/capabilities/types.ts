@@ -25,7 +25,7 @@ export const DEFAULT_WEB_CAPABILITIES: CapabilitySnapshot = {
   capabilities: {
     character_builder: true,
     character_import_export: true,
-    room: false,
+    room: true,
     campaign: false,
     session: false,
     seat: false,

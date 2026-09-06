@@ -6,6 +6,8 @@ import { capabilityCopy } from './features/capabilities/copy'
 import { protectedCapabilityForPath } from './features/capabilities/routes'
 import { CharacterBuilderRoutePage } from './features/m01m/M01MBuilderRoutePanel'
 import { CharacterSheetRoutePage } from './features/m01m/M01MAncestryRoutePanel'
+import { RoomLandingPage } from './features/rooms/RoomLandingPage'
+import { roomIdFromPath, RoomWorkspacePage } from './features/rooms/RoomWorkspacePage'
 import { useLocale } from './i18n/LocaleProvider'
 import { useUiCopy } from './i18n/useUiCopy'
 
@@ -38,16 +40,18 @@ export default function App() {
   const { t } = useUiCopy()
   const { locale } = useLocale()
   const capabilityPresentation = capabilityCopy(locale)
-  const { snapshot, status, isEnabled } = useCapabilities()
+  const { snapshot, isEnabled } = useCapabilities()
   const pathname = typeof window === 'undefined' ? '/' : window.location.pathname
   const protectedCapability = protectedCapabilityForPath(pathname)
   const versions = characterVersionsFromPath(pathname)
   const characterId = characterIdFromPath(pathname)
   const draftId = builderDraftIdFromPath(pathname)
+  const roomId = roomIdFromPath(pathname)
 
   if (protectedCapability && !isEnabled(protectedCapability)) {
     return <CapabilityDisabledPage />
   }
+  if (roomId) return <RoomWorkspacePage roomId={roomId} />
   if (versions) {
     return (
       <CharacterVersionHistoryPage
@@ -59,6 +63,7 @@ export default function App() {
   if (characterId) return <CharacterSheetRoutePage characterId={characterId} />
   if (draftId) return <CharacterBuilderRoutePage draftId={draftId} />
   if (pathname === '/characters' || pathname === '/characters/') return <CharacterWorkshopPage />
+  if (pathname === '/' && isEnabled('room')) return <RoomLandingPage />
 
   return (
     <main className="landing-page">
@@ -67,7 +72,7 @@ export default function App() {
         <div className="landing-mark" aria-hidden="true">AT</div>
         <h1>Adventure Table</h1>
         <p>{t('landing.description')}</p>
-        {snapshot.channel === 'standalone' && snapshot.database_path ? (
+        {snapshot.database_path ? (
           <div className="landing-data-path">
             <strong>{capabilityPresentation.dataPathLabel}</strong>
             <code>{snapshot.database_path}</code>
@@ -77,11 +82,6 @@ export default function App() {
         <a className="button primary landing-action" href="/characters">
           {t('landing.workshop')}
         </a>
-        {status === 'ready' && snapshot.channel === 'web' ? (
-          <a className="button secondary landing-action" href={`/characters/${P0_FIXTURE_ID}`}>
-            {t('landing.fixture')}
-          </a>
-        ) : null}
       </section>
     </main>
   )
