@@ -110,8 +110,7 @@ export async function openCharacterWorkshop(
   )
   expect(hasRoomContext).toBe(true)
 
-  // P2-A compatibility seam. P2-B changes this one route to
-  // /rooms/{roomId}/characters when Character APIs become Room-scoped.
-  await page.goto('/characters')
-  await expect(page).toHaveURL(/\/characters\/?$/)
+  // P2-B closes the Web Character surface into the active Room namespace.
+  await page.goto(`/rooms/${context!.roomId}/characters`)
+  await expect(page).toHaveURL(new RegExp(`/rooms/${context!.roomId}/characters/?$`))
 }
