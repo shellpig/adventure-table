@@ -87,7 +87,7 @@ export function CharacterSheetHtmlExportButton({ characterId }: CharacterSheetHt
             // useContentPresentations cannot turn an HTML export into a new API read.
             const exportQueryClient = createFrozenExportQueryClient(queryClient)
             try {
-              const { CharacterSheetView } = await import('./CharacterSheetPage')
+              const { CharacterSheetView } = await import('./CharacterSheetView')
               const renderTab = (tab: CharacterSheetExportTab) =>
                 renderCharacterSheetTab({
                   CharacterSheetView,
@@ -162,7 +162,7 @@ function renderCharacterSheetTab({
   locale,
   queryClient,
 }: {
-  CharacterSheetView: typeof import('./CharacterSheetPage').CharacterSheetView
+  CharacterSheetView: typeof import('./CharacterSheetView').CharacterSheetView
   sheet: CharacterSheetDTO
   conditionContent: ContentEntry[]
   inventoryContent: ContentEntry[]
