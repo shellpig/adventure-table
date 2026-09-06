@@ -14,12 +14,14 @@ type RouteCheck = {
   role?: 'heading' | 'tablist'
 }
 
-const ROUTES: RouteCheck[] = [
-  { path: '/', zh: 'Adventure Table', en: 'Adventure Table', role: 'heading' },
-  { path: '/characters', zh: '角色工作坊', en: 'Character Workshop', role: 'heading' },
-  { path: `/characters/${FIXTURE_ID}`, zh: '角色卡分頁', en: 'Character Sheet tabs', role: 'tablist' },
-  { path: `/characters/${FIXTURE_ID}/versions`, zh: '角色版本', en: 'Character Versions', role: 'heading' },
-]
+function routes(roomId: string): RouteCheck[] {
+  return [
+    { path: '/', zh: 'Adventure Table', en: 'Adventure Table', role: 'heading' },
+    { path: `/rooms/${roomId}/characters`, zh: '角色工作坊', en: 'Character Workshop', role: 'heading' },
+    { path: `/rooms/${roomId}/characters/${FIXTURE_ID}`, zh: '角色卡分頁', en: 'Character Sheet tabs', role: 'tablist' },
+    { path: `/rooms/${roomId}/characters/${FIXTURE_ID}/versions`, zh: '角色版本', en: 'Character Versions', role: 'heading' },
+  ]
+}
 
 const BUILDER_STEPS = {
   'zh-TW': [
@@ -102,7 +104,7 @@ async function expectNoKnownOppositeLocaleLeak(page: Page, locale: Locale) {
 }
 
 for (const locale of ['zh-TW', 'en'] as const) {
-  test(`M02-H ${locale} desktop route crawl has localized chrome and no horizontal overflow`, async ({ page }) => {
+  test(`M02-H ${locale} desktop route crawl has localized chrome and no horizontal overflow`, async ({ page, roomContext }) => {
     const pageErrors: string[] = []
     const consoleErrors: string[] = []
     page.on('pageerror', (error) => pageErrors.push(error.message))
@@ -111,8 +113,8 @@ for (const locale of ['zh-TW', 'en'] as const) {
     })
     await page.setViewportSize({ width: 1280, height: 720 })
 
-    for (const route of ROUTES) {
-      if (route.path === '/characters') await openCharacterWorkshop(page)
+    for (const route of routes(roomContext.roomId)) {
+      if (route.path === `/rooms/${roomContext.roomId}/characters`) await openCharacterWorkshop(page)
       else await page.goto(route.path)
       await forceLocale(page, locale)
       await expectRouteMarker(page, route, locale)
@@ -125,13 +127,13 @@ for (const locale of ['zh-TW', 'en'] as const) {
   })
 }
 
-test('M02-H crawls every Builder step in zh-TW and en with localized headings and overflow gate', async ({ page, request }) => {
+test('M02-H crawls every Builder step in zh-TW and en with localized headings and overflow gate', async ({ page, request, roomContext }) => {
   test.slow()
   const draftId = await createDraft(request)
   await page.setViewportSize({ width: 1280, height: 720 })
 
   for (const locale of ['zh-TW', 'en'] as const) {
-    await page.goto(`/character-builder/${draftId}`)
+    await page.goto(`/rooms/${roomContext.roomId}/character-builder/${draftId}`)
     await forceLocale(page, locale)
 
     for (const [buttonName, heading] of BUILDER_STEPS[locale]) {
