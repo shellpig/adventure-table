@@ -6,6 +6,7 @@ import App, {
   builderDraftIdFromPath,
   characterIdFromPath,
   characterVersionsFromPath,
+  roomCharacterRouteFromPath,
 } from './App'
 import { CapabilityProvider } from './features/capabilities/CapabilityProvider'
 import type { CapabilitySnapshot } from './features/capabilities/types'
@@ -105,5 +106,25 @@ describe('Adventure Table routes', () => {
       versionNo: 2,
     })
     expect(characterVersionsFromPath(`/characters/${P0_FIXTURE_ID}/versions/not-a-number`)).toBeNull()
+
+    expect(roomCharacterRouteFromPath(`/rooms/${ROOM_ID}/characters`)).toEqual({
+      kind: 'workshop',
+      roomId: ROOM_ID,
+    })
+    expect(
+      roomCharacterRouteFromPath(`/rooms/${ROOM_ID}/characters/${P0_FIXTURE_ID}/versions/2`),
+    ).toEqual({
+      kind: 'versions',
+      roomId: ROOM_ID,
+      characterId: P0_FIXTURE_ID,
+      versionNo: 2,
+    })
+    expect(
+      roomCharacterRouteFromPath(`/rooms/${ROOM_ID}/character-builder/${DRAFT_ID}`),
+    ).toEqual({
+      kind: 'builder',
+      roomId: ROOM_ID,
+      draftId: DRAFT_ID,
+    })
   })
 })

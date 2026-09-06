@@ -38,6 +38,13 @@ const COPY = {
     legacyClaim: 'Claim Legacy Character Data',
     legacyClaiming: 'Claiming…',
     legacyConfirm: 'Claim {characters} Characters and {drafts} Drafts into “{room}”? This one-time action does not move data already assigned to another Room.',
+    deleteRoomTitle: 'Delete Room permanently',
+    deleteRoomDescription: 'This permanently deletes this Room workspace, including its Characters and Drafts. Export anything you need first.',
+    deleteRoomAction: 'Delete Room permanently',
+    deleteRoomPrompt: 'Type “{room}” to confirm permanent deletion.',
+    deleteRoomCancel: 'Cancel',
+    deleteRoomConfirm: 'Delete Room',
+    deleteRoomDeleting: 'Deleting…',
   },
   'zh-TW': {
     eyebrow: 'P2 · Room 工作區',
@@ -76,6 +83,13 @@ const COPY = {
     legacyClaim: '領取舊版角色資料',
     legacyClaiming: '正在領取…',
     legacyConfirm: '要把 {characters} 個角色與 {drafts} 個草稿領取到「{room}」嗎？這是一次性動作，不會搬動已經屬於其他 Room 的資料。',
+    deleteRoomTitle: '永久刪除 Room',
+    deleteRoomDescription: '這會永久刪除整個 Room 工作區，包括其中的角色與草稿。需要保留的資料請先匯出。',
+    deleteRoomAction: '永久刪除 Room',
+    deleteRoomPrompt: '請輸入「{room}」確認永久刪除。',
+    deleteRoomCancel: '取消',
+    deleteRoomConfirm: '刪除 Room',
+    deleteRoomDeleting: '正在刪除…',
   },
 } as const satisfies Record<Locale, Record<string, string>>
 
