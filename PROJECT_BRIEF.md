@@ -10,7 +10,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 - **目前 code 可用**：Character Workshop、Lv1／高等創角、Multiclass／Subclass／ASI／Feat／Spellcasting／Starting Equipment、Character Sheet、Current State 編輯、Level Up、Build Edit、Version History、Archive／永久刪除。P2 尚未開始 coding，因此 Web 現行 code仍是 P2 前的 global Character 入口；Room-first 是已定案、待 P2-A/B 實作的產品契約。
 - **內容與語言**：以 SRD 5.1 為基礎，已擴充多來源角色內容；介面與目前正式呈現的規則內容支援 `zh-TW`／`en`。Enabled pack 清單以程式中的 `Settings.enabled_content_packs` 為準。
-- **已交付單機版**：同一份角色核心與前端可打包成 Windows 離線 portable zip，使用 SQLite 保存；提供 Character JSON 匯入／匯出。完整乾淨機驗收仍有缺口，見「未結清事項」。Standalone 永久保持 Character-first，不導入 Room／Campaign／Session／Seat。
+- **已交付單機版**：同一份角色核心與前端可打包成 Windows 離線 portable zip，使用 SQLite 保存；提供 Character JSON 匯入／匯出。**測試指南 E.9 的乾淨 Windows 11 冷啟動已於 2026-09-06 由使用者人工補驗完成。** Standalone 永久保持 Character-first，不導入 Room／Campaign／Session／Seat。
 - **尚未實作**：Room／Campaign／Session／Seat、正式 AI 桌內接入、Exploration／Roll／Combat／Adventure Runtime。角色層可用不代表多人 VTT 已可跑團。
 - **技術基礎**：React + TypeScript + Vite；Python + FastAPI + Pydantic；SQLAlchemy + Alembic；網頁版 PostgreSQL、單機版 SQLite。啟動與開發指令見 [README.md](README.md)。
 
@@ -51,7 +51,6 @@ P2 的正式契約：
 
 | 項目 | 當前狀態與影響 | 證據／後續入口 |
 |---|---|---|
-| 乾淨 Windows 11 冷啟動 | M03 已有 frozen build 與 smoke 證據，但尚未在未裝 Python／Node／Docker 的 Windows 11 完成 E.9 驗收；M03 關門不視同此項通過。需用交付 zip 補驗 | [M03-G closeout：未結清的驗收項](docs/M03/M03-G_CLOSEOUT.md)；[M03 測試指南](docs/M03/測試指南.md) E.9 |
 | Character JSON 版本相容 | **產品／設計已拍板**：P2-A 把新 export 鎖成 v1，保留 M03 `unstable` legacy parser / normalizer；目前 code仍是 `unstable`，要到 P2-A implementation 才算交付 | [P2 實作規格](docs/P2/實作規格.md) §6／P2-A；[P2 開發設計方針](docs/P2/開發設計方針.md) §6 |
 | P1-D ASI 摘要 E2E 不穩定 | 根因未確認；會干擾整套 E2E 與後續 xge-less 測試執行。不得以重跑通過推論根因已修復 | [已知問題.md](已知問題.md) KI-P1D-001 |
 | M01-J 直創／逐級升等等價 E2E | 測試目前 `fixme`，瀏覽器層證據仍有缺口；後端已有相關整合覆蓋 | [已知問題.md](已知問題.md) KI-M01J-001 |
@@ -70,7 +69,7 @@ P2 的正式契約：
 | P1 | Character Builder Complete | 完整創角、Progression、Level Up、Character Version；已關門 |
 | M01 | Multi-Source Character Content Expansion | 長期角色內容／角色系統維護 track；A～M 已關門，整體保持 open，未來從 N 繼續，不阻塞 P2+ |
 | M02 | Traditional Chinese / English Localization | 插於 M01-C 與 M01-D 間；雙語呈現、翻譯流程與完整性 gate；已關門 |
-| M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，保留上列驗收缺口 |
+| M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，E.9 乾淨 Windows 11 冷啟動已於 2026-09-06 補驗完成 |
 | P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**規格完成，P2-A 待實作** |
 | P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌 |
 | P4 | Quick Combat | 第一個完整可玩的 Combat MVP；首個 Subphase P4-A 承接 SRD Monster／Beast stat blocks |
@@ -151,7 +150,7 @@ P2 的正式契約：
 | **M03-D — SQLite Migration Chain Gate & FK PRAGMA** | ✅ | SQLite migration chain、foreign key enforcement、standalone DB lifecycle 與 migration compatibility gate |
 | **M03-E — Standalone Packaging & Launcher** | ✅ | `app.standalone` entry、capability endpoint、SPA fallback、PyInstaller、browser launcher、SQLite beside executable |
 | **M03-F — Windows CI Build, Release & Import Boundary Test** | ✅ | Windows frozen build、artifact flow（本機發版，CI 不建 GitHub Release）、standalone import boundary 與未來 P2 dependency leakage gate |
-| **M03-G — Full M03 Integration & Closeout** | ✅ | web ↔ standalone ↔ standalone JSON round-trip、frozen runtime smoke、雙語 / persistence / migration / capability 全整合 closeout；E.9 乾淨 Windows 11 冷啟動未取得證據 |
+| **M03-G — Full M03 Integration & Closeout** | ✅ | web ↔ standalone ↔ standalone JSON round-trip、frozen runtime smoke、雙語 / persistence / migration / capability 全整合 closeout；E.9 乾淨 Windows 11 冷啟動已於 2026-09-06 後續補驗完成 |
 
 ### P2
 
