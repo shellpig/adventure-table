@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.pool import StaticPool
 
 from app.content import load_default_content_registry
 from app.db import metadata
 from app.domain.character_builder.service import CharacterBuilderService
-from app.main import app
 from app.persistence.builder_drafts import BuilderDraftRepository
 from app.persistence.characters import (
     CharacterRepository,
@@ -17,6 +15,7 @@ from app.persistence.characters import (
     character_states,
     character_versions,
 )
+from web_room_support import create_web_room_client
 
 
 def _seed_builder_api():
@@ -27,14 +26,19 @@ def _seed_builder_api():
         poolclass=StaticPool,
     )
     metadata.create_all(engine)
-    app.state.content_registry = registry
-    app.state.character_engine = engine
-    app.state.character_repository = CharacterRepository(engine, registry)
-    app.state.character_builder_service = CharacterBuilderService(
+    character_repository = CharacterRepository(engine, registry)
+    builder_service = CharacterBuilderService(
         BuilderDraftRepository(engine),
         registry,
+        character_repository,
     )
-    return TestClient(app), engine
+    client = create_web_room_client(
+        engine,
+        registry,
+        character_repository=character_repository,
+        builder_service=builder_service,
+    )
+    return client, engine
 
 
 def _count(engine, table) -> int:
@@ -45,9 +49,10 @@ def _count(engine, table) -> int:
 
 def test_character_builder_draft_api_lifecycle_and_machine_errors() -> None:
     client, engine = _seed_builder_api()
+    api = client.builder_api
 
     created = client.post(
-        "/api/character-builder/drafts",
+        f"{api}/drafts",
         json={
             "draft_payload": {
                 "basic": {"name": "Draft Hero"},
@@ -71,12 +76,12 @@ def test_character_builder_draft_api_lifecycle_and_machine_errors() -> None:
     assert _count(engine, character_states) == 0
 
     first_choice_ids = [choice["choice_id"] for choice in view["choices"]]
-    reloaded = client.get(f"/api/character-builder/drafts/{draft_id}")
+    reloaded = client.get(f"{api}/drafts/{draft_id}")
     assert reloaded.status_code == 200
     assert [choice["choice_id"] for choice in reloaded.json()["choices"]] == first_choice_ids
 
     patched = client.patch(
-        f"/api/character-builder/drafts/{draft_id}",
+        f"{api}/drafts/{draft_id}",
         json={
             "expected_revision": 1,
             "draft_payload": {
@@ -96,7 +101,7 @@ def test_character_builder_draft_api_lifecycle_and_machine_errors() -> None:
     assert {"blocking_error", "warning", "non_standard"}.issubset(severities)
 
     stale = client.patch(
-        f"/api/character-builder/drafts/{draft_id}",
+        f"{api}/drafts/{draft_id}",
         json={
             "expected_revision": 1,
             "draft_payload": {"basic": {"name": "Stale overwrite"}},
@@ -105,32 +110,33 @@ def test_character_builder_draft_api_lifecycle_and_machine_errors() -> None:
     assert stale.status_code == 409
     assert stale.json()["error"]["code"] == "stale_draft_revision"
 
-    validated = client.post(f"/api/character-builder/drafts/{draft_id}/validate")
+    validated = client.post(f"{api}/drafts/{draft_id}/validate")
     assert validated.status_code == 200
     assert validated.json()["can_confirm"] is False
     assert validated.json()["non_standard_count"] == 1
 
-    cancelled = client.delete(f"/api/character-builder/drafts/{draft_id}")
+    cancelled = client.delete(f"{api}/drafts/{draft_id}")
     assert cancelled.status_code == 204
-    missing = client.get(f"/api/character-builder/drafts/{draft_id}")
+    missing = client.get(f"{api}/drafts/{draft_id}")
     assert missing.status_code == 404
-    assert missing.json()["error"]["code"] == "builder_draft_not_found"
+    assert missing.json()["error"]["code"] == "room_resource_not_found"
 
     engine.dispose()
 
 
 def test_character_builder_api_rejects_malformed_and_disabled_modes() -> None:
     client, engine = _seed_builder_api()
+    api = client.builder_api
 
     malformed = client.post(
-        "/api/character-builder/drafts",
+        f"{api}/drafts",
         json={"draft_payload": {"target_level": 1, "unexpected": True}},
     )
     assert malformed.status_code == 422
     assert malformed.json()["error"]["code"] == "validation_failed"
 
     illegal_source = client.post(
-        "/api/character-builder/drafts",
+        f"{api}/drafts",
         json={
             "mode": "create",
             "character_id": str(uuid4()),
@@ -141,7 +147,7 @@ def test_character_builder_api_rejects_malformed_and_disabled_modes() -> None:
     assert illegal_source.json()["error"]["code"] == "validation_failed"
 
     disabled = client.post(
-        "/api/character-builder/drafts",
+        f"{api}/drafts",
         json={
             "mode": "level_up",
             "character_id": str(uuid4()),
@@ -157,9 +163,10 @@ def test_character_builder_api_rejects_malformed_and_disabled_modes() -> None:
 
 def test_character_builder_roleplay_profile_partial_patches_merge() -> None:
     client, engine = _seed_builder_api()
+    api = client.builder_api
 
     created = client.post(
-        "/api/character-builder/drafts",
+        f"{api}/drafts",
         json={
             "draft_payload": {
                 "basic": {"name": "Roleplay Hero"},
@@ -180,7 +187,7 @@ def test_character_builder_roleplay_profile_partial_patches_merge() -> None:
     draft_id = view["draft"]["id"]
 
     basic_patch = client.patch(
-        f"/api/character-builder/drafts/{draft_id}",
+        f"{api}/drafts/{draft_id}",
         json={
             "expected_revision": 1,
             "draft_payload": {
@@ -203,7 +210,7 @@ def test_character_builder_roleplay_profile_partial_patches_merge() -> None:
     }
 
     suggestion_patch = client.patch(
-        f"/api/character-builder/drafts/{draft_id}",
+        f"{api}/drafts/{draft_id}",
         json={
             "expected_revision": 2,
             "draft_payload": {
