@@ -1,31 +1,32 @@
 import { expect, test } from '@playwright/test'
 
+import { openCharacterWorkshop, test as roomTest } from './support/roomTest'
+
 const FIXTURE_ID = '00000000-0000-4000-8000-0000000000e0'
 
-test('M02-B switches Landing and Workshop copy and accessibility names immediately', async ({ page }) => {
+test('M02-B switches Room-first landing copy and accessibility names immediately', async ({ page }) => {
   await page.goto('/')
 
-  await expect(page.getByText('A table-first D&D 5e 2014 character tool.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Adventure Table' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Start at the table' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Create Room' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Enter Room' })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Language' })).toBeVisible()
 
   await page.getByTestId('locale-option-zh-TW').click()
-  await expect(page.getByText('以桌上跑團為優先的 D&D 5e 2014 角色工具。')).toBeVisible()
-  await expect(page.getByRole('link', { name: '開啟角色工作坊 →' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '先進入跑團房間' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '建立 Room' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '進入 Room' })).toBeVisible()
   await expect(page.getByRole('group', { name: '語言' })).toBeVisible()
 
-  await page.getByRole('link', { name: '開啟角色工作坊 →' }).click()
-  await expect(page.getByRole('heading', { name: '角色工作坊' })).toBeVisible()
-  await expect(page.getByRole('button', { name: '＋ 建立角色' })).toBeVisible()
-
-  const workshopUrl = page.url()
   await page.getByTestId('locale-option-en').click()
-  await expect(page).toHaveURL(workshopUrl)
-  await expect(page.getByRole('heading', { name: 'Character Workshop' })).toBeVisible()
-  await expect(page.getByRole('button', { name: '+ Create Character' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Start at the table' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Create Room' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Enter Room' })).toBeVisible()
 })
 
-test('M02-B localizes every Builder step without resetting in-progress UI state', async ({ page }) => {
-  await page.goto('/characters')
+roomTest('M02-B localizes every Builder step without resetting in-progress UI state', async ({ page }) => {
+  await openCharacterWorkshop(page)
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
   await expect(page.getByText('Saved on server')).toBeVisible()
@@ -66,7 +67,7 @@ test('M02-B localizes every Builder step without resetting in-progress UI state'
   await expect(page.getByRole('heading', { name: 'Build snapshot & final review' })).toBeVisible()
 })
 
-test('M02-B localizes Character Sheet, shared controls and Version History in place', async ({ page }) => {
+roomTest('M02-B localizes Character Sheet, shared controls and Version History in place', async ({ page }) => {
   await page.goto(`/characters/${FIXTURE_ID}`)
 
   await expect(page.getByRole('tablist', { name: 'Character Sheet tabs' })).toBeVisible()
