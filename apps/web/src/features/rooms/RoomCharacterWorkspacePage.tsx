@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import type { RoomAuthority } from '../../api/rooms'
 import {
   claimLegacyCharacterData,
   getLegacyCharacterDataStatus,
@@ -9,12 +10,18 @@ import { CharacterWorkshopPage } from '../character-builder/CharacterWorkshopPag
 import { roomCopy } from './copy'
 import { recentRoomForId } from './roomStorage'
 
+export function canPermanentlyDeleteRoomCharacters(
+  authority: RoomAuthority | null | undefined,
+): boolean {
+  return authority === 'owner'
+}
+
 export function RoomCharacterWorkspacePage({ roomId }: { roomId: string }) {
   const recent = recentRoomForId(roomId)
   const { locale } = useLocale()
   const copy = roomCopy(locale)
   const queryClient = useQueryClient()
-  const isOwner = recent?.authority === 'owner'
+  const isOwner = canPermanentlyDeleteRoomCharacters(recent?.authority)
   const legacy = useQuery({
     queryKey: ['room-legacy-character-data', roomId],
     queryFn: () => getLegacyCharacterDataStatus(roomId, recent?.accessToken ?? ''),
