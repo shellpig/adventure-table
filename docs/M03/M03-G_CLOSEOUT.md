@@ -5,7 +5,7 @@ M03-G — Full M03 Integration & Closeout closeout scope：
 - [x] **G.1 End-to-end round trip**：實作規格列的六條路徑全部跑過並保留自動化證據。以 `tests/m03g_support.py` 的 `standalone_client()` 起真正的 `app.standalone`（先 `launcher.run_migrations()` 建 file-backed SQLite，再 `importlib.import_module("app.standalone")`），缺 pack 一律以 `Settings.enabled_content_packs` 注入 subset，不刪 pack 目錄。逐條對應見下方「G.1 六條路徑的證據對照」。
 - [x] **G.2 網頁版功能不回歸**：全套 backend `pytest` exit 0；前端 Vitest 26 files / 124 tests 綠；`npm run build` 綠；全套 E2E `npm run test:e2e:docker` 第一輪 **97 passed / 3 skipped（6.8m）**、`e2e-docker.mjs` 拿掉 `xge` 的第二輪 **7 passed（5.8s）**，`apps/web/test-results/.last-run.json` 為 `{"status": "passed", "failedTests": []}`。3 個 skip 中兩個是 `m03c-character-import.spec.ts:74` / `:85`（設計上第一輪跳過、第二輪執行，第二輪皆通過），第三個是 `m01j-subclass-expansion.spec.ts:531` 的 `test.fixme()`，即已記錄的 KI-M01J-001。
 - [x] **G.3 單機版可下載產物（zip 部分）**：本機 `scripts\build-standalone.cmd --version m03` 產出 `dist\adventure-table-standalone-m03.zip`（23,417,795 bytes），內含 `adventure-table.exe`（12,261,851 bytes）、`_internal\`、`data\`、`web\`、`LICENSE.txt`、`README-standalone.zh-TW.txt` / `.en.txt`、`build-id.txt = m03`。將 zip 解壓到一個全新空資料夾後跑 `scripts/smoke_standalone.py`：SQLite 建在 exe 同層、`alembic_version` 等於當時 Alembic head、`/api/meta/capabilities` 回 `channel="standalone"`、`/api/characters` 為空、stdout/stderr 全程不含 `postgresql` / `psycopg`。
-- [ ] **G.3 的乾淨 Windows 11 冷啟動（吸收自測試指南 E.9）仍未執行**。本次是在開發機上以「乾淨解壓資料夾 + 清空 `ADVENTURE_TABLE_DATABASE_PATH` 的環境」做等價驗證，並非契約要求的未裝 Python / Node / Docker 的機器。zip 已備妥，這條隨時可補。詳見下方「未結清的驗收項」。
+- [x] **G.3 的乾淨 Windows 11 冷啟動（吸收自測試指南 E.9）已補驗完成**。M03-G 原始 closeout 當下尚未取得這條證據；**2026-09-06 使用者回報已在符合 E.9 條件的乾淨 Windows 11 環境完成人工冷啟動驗證**。此項因此由後續人工驗收補齊，不再列為未結清事項。詳見下方「後續補驗紀錄」。
 - [x] **G.4 M03 已知限制記錄**：見下方「M03 已知限制」。
 - [x] **G.5 P2 依賴的界線正式生效**：`test_m03_import_boundary.py`（含 `app.standalone` 不可達 `app.main`）、`test_m03_standalone_composition.py`、`test_m03f_workflow_contract.py` 於全套 backend pytest 中綠；`.github/workflows/m03g-non-e2e.yml` 以 backend / frontend / windows-standalone / compose-config 四個 job 覆蓋同一組命令。capability endpoint 於 web 與 standalone 兩個 entry 上分別回 `channel="web"` / `channel="standalone"`，由 composition test 靜態與動態雙鎖。SSOT 更新見「交付內容」。
 - [x] **G.6 Localization 同步**：本 Subphase 未新增任何 user-visible UI copy、rules presentation field 或 error message，因此無新增待譯字串。既有兩語資產維持完整：`README-standalone.zh-TW.txt` / `README-standalone.en.txt` 均隨 zip 出貨；匯出／匯入 UI、20 個 rejection code、`capability_disabled` 頁面的兩語覆蓋由 M03-B / C / E 交付，並由前端兩語 parity 與 hardcoded copy scan 測試、`m02h-bilingual-site-smoke.spec.ts`、`m03b-character-export.spec.ts` 的 `export labels are complete in English and zh-TW`、`m03c-character-import.spec.ts` 的 `import rejection messages are localized in English and zh-TW` 在本次全套 E2E 中一併驗過。
@@ -42,12 +42,13 @@ M03-G — Full M03 Integration & Closeout closeout scope：
 
 ## 順帶結清的 M03-E 遺留項
 
-`docs/M03/M03-E_CLOSEOUT.md` 留下的四點中，第 2、3 點於本 Subphase 結清：
+`docs/M03/M03-E_CLOSEOUT.md` 留下的四點中，第 1、2、3 點現已結清：
 
+- **第 1 點（E.9 乾淨 Windows 11 冷啟動）** → M03-G 原始 closeout 時仍待補；2026-09-06 已由使用者在符合 E.9 條件的乾淨 Windows 11 環境人工驗證完成，見「後續補驗紀錄」。
 - **第 2 點**（`/docs` / `/redoc` / `/openapi.json` 只由 `*_url is None` 間接保證）→ `test_standalone_api_documentation_is_disabled_behind_spa_fallback` 對三個路徑實際發 request，斷言回 200 的 SPA HTML 且不含 `Swagger UI` / `ReDoc`。**注意這條的正確期望是「落到 SPA fallback」而非 404**：`/docs` 不帶 `/api/` prefix，依 M03-E 的 SPA history fallback 契約本來就該回 SPA。M03-E closeout 當時寫的「驗 404」是對契約的誤述，本次以實測修正。
 - **第 3 點**（launcher `KeyboardInterrupt` 回收路徑無測試）→ `test_launcher_keyboard_interrupt_requests_shutdown_and_joins_server` 以 fake uvicorn Config / Server 與會在第一次 `join(0.5)` 丟 `KeyboardInterrupt` 的 fake thread，斷言 `server.should_exit` 被設為 `True`、thread 名稱為 `adventure-table-server`、join timeout 序列為 `[0.5, 10.0]`、最終 thread 不再 alive、`main()` 回 0。
 
-第 1 點（E.9 冷啟動）與第 4 點（`Settings()` import-time 快照跨測試污染，`tests/conftest.py` 仍未加 session autouse fixture）維持未結清。
+僅第 4 點（`Settings()` import-time 快照跨測試污染，`tests/conftest.py` 仍未加 session autouse fixture）維持未結清。
 
 ## M03 已知限制
 
@@ -62,11 +63,11 @@ M03-G — Full M03 Integration & Closeout closeout scope：
 9. **`Settings()` 的 import-time 快照仍會跨測試污染**（M03-D 記錄、M03-E 重申，至今未處理）。只影響測試撰寫方式，不影響 runtime。
 10. **standalone import boundary 的 forbidden regex 依賴字根命名**。P2 引入多人模組時若命名不落在 `room` / `session` / `seat` / `campaign` / `party_roster`（含複數）內，gate 會靜默失效；P2 第一個 Subphase 必須同步擴充該 regex 與 `EXACT_PROTECTED_MODULES`。
 
-## 未結清的驗收項
+## 後續補驗紀錄
 
-**測試指南 E.9 / G.3 的乾淨 Windows 11 冷啟動。** 這條從 M03-E 順延到 M03-F 再順延到 M03-G，三次都因為沒有一台未裝 Python / Node / Docker 的機器而未取得。目前 `dist\adventure-table-standalone-m03.zip` 已備妥，補這條只需要把 zip 複製到那樣一台機器、解壓、雙擊，跑一次 G.1.a 的匯入即可。
+**測試指南 E.9 / G.3 的乾淨 Windows 11 冷啟動已於 2026-09-06 補驗完成。** M03-E → M03-F → M03-G 原始 closeout 過程中，這條因當時沒有符合條件的乾淨機器而一直沒有取得證據；因此歷史文件中會看到它曾被列為 pending。
 
-**在此明確記錄：M03 於本 Subphase 關門時，這條驗收項是未取得證據的狀態**，不因 M03 宣告 closeout 而視為通過。取得後請直接補在本檔。
+2026-09-06，使用者確認已在符合 E.9 條件的乾淨 Windows 11 環境完成實際冷啟動驗證。這是**後續人工驗收證據**，不是當時 M03-G 自動化 run 的一部分，也未宣稱有新的 CI artifact。自此 E.9 / G.3 不再是 M03 的未結清驗收項。
 
 ## G.1 人工 UI 流程以自動化取代的理由
 
@@ -76,7 +77,7 @@ M03-G — Full M03 Integration & Closeout closeout scope：
 - 呈現層本身已有獨立覆蓋：`m03b-character-export.spec.ts`（6 條）與 `m03c-character-import.spec.ts`（7 條，含 xge-less 第二輪）在本次全套 E2E 中綠，涵蓋預覽數字、history-loss 二次確認、duplicate 顯示、兩語 rejection 訊息與真實下載檔名。
 - 單機版 runtime 的真實性由 `standalone_client()` 起真正的 `app.standalone` + 真 migration + file-backed SQLite 保證，並非 mock。
 
-**唯一沒有被這個取代涵蓋的是 frozen exe 上的人工操作**，也就是上面那條未結清的 E.9。
+原本唯一沒有被這個自動化取代涵蓋的是 frozen exe 上的人工冷啟動，也就是 E.9；該項已於 2026-09-06 由使用者後續人工補驗完成。
 
 ## 驗收方式與分層 gate
 
@@ -89,6 +90,7 @@ M03-G 是 Phase 關門，依 `AGENTS.md` 分層 gate 跑全套。實際執行：
 - `docker compose config`：通過。
 - 全套 E2E `npm run test:e2e:docker`：第一輪 **97 passed / 3 skipped（6.8m）**，xge-less 第二輪 **7 passed（5.8s）**，script exit code 0。
 - 本機 frozen build 加乾淨解壓資料夾 smoke：綠（見 G.3）。
+- **2026-09-06 後續人工 E.9：乾淨 Windows 11 冷啟動驗證通過。**
 - `.github/workflows/m03g-non-e2e.yml` 的 CI run 結果請於 GitHub 上確認；本機無 `gh` CLI，未於本檔記錄 run id。
 
 ## M03-G 未涵蓋（依實作規格「本 Subphase 不要求」）
@@ -100,8 +102,7 @@ M03-G 是 Phase 關門，依 `AGENTS.md` 分層 gate 跑全套。實際執行：
 
 ## 留給後續 Phase 的建議
 
-1. **補 E.9 冷啟動**（見上）。
-2. **`Settings()` import-time 快照污染**：建議於 `apps/server/tests/conftest.py` 加 session autouse fixture 把 `settings.database_path` 釘成 `None`，不動 runtime。
-3. **P2 第一個 Subphase 必須擴充 import boundary 的 forbidden regex 與 `EXACT_PROTECTED_MODULES`**，否則新命名的多人模組會讓 gate 靜默放行。
-4. **P2 lock JSON schema 時**，需一併決定既有 `unstable` 匯出檔的處置（拒絕、或提供一次性 upgrade path）。
-5. **`seed_p0_fighter_wizard.py` 仍直接 `create_engine(settings.database_url)`**（M03-E 遺留），只影響 dev seed 腳本，未收斂到 `create_database_engine()`。
+1. **`Settings()` import-time 快照污染**：建議於 `apps/server/tests/conftest.py` 加 session autouse fixture 把 `settings.database_path` 釘成 `None`，不動 runtime。
+2. **P2 第一個 Subphase 必須擴充 import boundary 的 forbidden regex 與 `EXACT_PROTECTED_MODULES`**，否則新命名的多人模組會讓 gate 靜默放行。
+3. **P2 lock JSON schema 時**，需一併決定既有 `unstable` 匯出檔的處置（拒絕、或提供一次性 upgrade path）。
+4. **`seed_p0_fighter_wizard.py` 仍直接 `create_engine(settings.database_url)`**（M03-E 遺留），只影響 dev seed 腳本，未收斂到 `create_database_engine()`。
