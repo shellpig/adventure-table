@@ -9,8 +9,8 @@ const actionSource = readFileSync(
   new URL('./CharacterSheetHtmlExportButton.tsx', import.meta.url),
   'utf8',
 )
-const sheetSource = readFileSync(
-  new URL('./CharacterSheetPage.tsx', import.meta.url),
+const viewSource = readFileSync(
+  new URL('./CharacterSheetView.tsx', import.meta.url),
   'utf8',
 )
 const importDialogSource = readFileSync(
@@ -19,11 +19,19 @@ const importDialogSource = readFileSync(
 )
 
 describe('M01-N static boundaries', () => {
-  it('keeps react-dom/server out of Character Sheet runtime code', () => {
-    for (const source of [exporterSource, actionSource, sheetSource]) {
+  it('keeps react-dom/server out of Character Sheet export runtime code', () => {
+    for (const source of [exporterSource, actionSource, viewSource]) {
       expect(source).not.toContain('react-dom/server')
     }
-    expect(actionSource).toContain("await import('./CharacterSheetPage')")
+    expect(actionSource).toContain("await import('./CharacterSheetView')")
+    expect(actionSource).not.toContain("await import('./CharacterSheetPage')")
+  })
+
+  it('keeps the export renderer separated from page API reads', () => {
+    expect(viewSource).not.toContain('getCharacterSheet')
+    expect(viewSource).not.toContain('listContent')
+    expect(viewSource).not.toContain('patchCharacterState')
+    expect(viewSource).not.toMatch(/\bfetch\s*\(/)
   })
 
   it('reuses already-held sheet and presentation data without adding an export-only read', () => {
