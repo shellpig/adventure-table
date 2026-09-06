@@ -2,11 +2,11 @@
 //
 // Two steps, both required:
 //
-//   1. Delete the characters and standalone drafts left behind by earlier runs.
-//      Leftovers make specs pass or fail for reasons unrelated to the branch
-//      under test. Names beginning with a non-ASCII character are the project
-//      owner's own and are kept -- no spec creates one, they all start with
-//      "P0 ", "P1-", "M01-" or "M02-".
+//   1. Delete the characters, standalone drafts and Rooms left behind by earlier
+//      runs. Leftovers make specs pass or fail for reasons unrelated to the
+//      branch under test. Names beginning with a non-ASCII character are the
+//      project owner's own and are kept -- no spec creates one, they all start
+//      with "P0 ", "P1-", "M01-" or "M02-".
 //   2. Re-seed the P0 fixture character. character-sheet, m02b-ui-copy,
 //      m02h-bilingual-site-smoke and m02h-localization-state-integrity all
 //      PATCH its state in beforeEach and never create it, so clearing without
@@ -17,6 +17,12 @@
 // bound to it, so a kept character keeps its whole history. Only drafts with no
 // character_id need the name check of their own; an unnamed draft has no owner
 // to speak of and is treated as leftover.
+//
+// Rooms take no name check: from P2-A every spec creates one through the auto
+// roomContext fixture, so the whole table is run residue. It is cleared rather
+// than kept because 331 leftover Rooms turned KI-P1D-001 from an intermittent
+// failure into a near-certain one. room_access_sessions goes first; it holds
+// the FK to rooms.
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
@@ -34,6 +40,8 @@ SELECT count(*) AS kept_characters FROM characters WHERE name ~ '${KEEP}';
 SELECT count(*) AS kept_drafts FROM character_build_drafts
  WHERE character_id IS NULL
    AND coalesce(draft_payload->'basic'->>'name', '') ~ '${KEEP}';
+DELETE FROM room_access_sessions;
+DELETE FROM rooms;
 `
 
 // The SQL goes in on stdin rather than through -c: it is multi-line, and a
@@ -50,7 +58,7 @@ const run = (command, args, input) => {
 }
 
 export default function globalSetup() {
-  console.log('[e2e-setup] clearing leftover characters and drafts (non-ASCII names are kept)')
+  console.log('[e2e-setup] clearing leftover characters, drafts and Rooms (non-ASCII names are kept)')
   run('docker', ['compose', 'exec', '-T', 'db', 'psql', '-U', 'adventure', '-d', 'adventure_table'], SQL)
 
   console.log('[e2e-setup] re-seeding the P0 fixture character')
