@@ -3,6 +3,7 @@ import {
   installDynamicLocalizedBuilderPayload,
 } from '../i18n/systemMessages'
 import type { BuilderMode, BuilderView } from './characterBuilder'
+import { characterWorkspaceFetch } from './characterWorkspace'
 
 export type VersionedBuilderMode = Exclude<BuilderMode, 'create'>
 
@@ -63,7 +64,7 @@ type APIErrorPayload = {
 }
 
 async function request<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, {
+  const response = await characterWorkspaceFetch(input, {
     ...init,
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   })

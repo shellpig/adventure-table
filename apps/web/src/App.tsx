@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 
+import { configureCharacterWorkspaceApi } from './api/characterWorkspace'
 import { CharacterVersionHistoryPage } from './features/character-builder/CharacterVersionHistoryPage'
 import { CharacterWorkshopPage } from './features/character-builder/CharacterWorkshopPage'
 import { CapabilityDisabledPage } from './features/capabilities/CapabilityDisabledPage'
@@ -11,7 +12,11 @@ import { CharacterSheetRoutePage } from './features/m01m/M01MAncestryRoutePanel'
 import { RoomCharacterWorkspacePage } from './features/rooms/RoomCharacterWorkspacePage'
 import { RoomLandingPage } from './features/rooms/RoomLandingPage'
 import { roomIdFromPath, RoomWorkspacePage } from './features/rooms/RoomWorkspacePage'
-import { legacyWebRoomRedirectPath } from './features/rooms/roomCharacterRouting'
+import {
+  legacyWebRoomRedirectPath,
+  rememberActiveRoom,
+} from './features/rooms/roomCharacterRouting'
+import { recentRoomForId } from './features/rooms/roomStorage'
 import { useLocale } from './i18n/LocaleProvider'
 import { useUiCopy } from './i18n/useUiCopy'
 
@@ -101,6 +106,17 @@ export default function App() {
   const protectedCapability = protectedCapabilityForPath(pathname)
   const roomCharacterRoute = roomCharacterRouteFromPath(pathname)
   const roomId = roomIdFromPath(pathname)
+
+  if (roomCharacterRoute) {
+    const recent = recentRoomForId(roomCharacterRoute.roomId)
+    rememberActiveRoom(roomCharacterRoute.roomId)
+    configureCharacterWorkspaceApi({
+      roomId: roomCharacterRoute.roomId,
+      accessToken: recent?.accessToken ?? null,
+    })
+  } else {
+    configureCharacterWorkspaceApi(null)
+  }
 
   if (protectedCapability && !isEnabled(protectedCapability)) {
     return <CapabilityDisabledPage />

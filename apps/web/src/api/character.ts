@@ -1,4 +1,5 @@
 import { createLocalizedRequestError } from '../i18n/systemMessages'
+import { characterWorkspaceFetch } from './characterWorkspace'
 
 export type ResourceCounter = {
   used: number
@@ -53,33 +54,11 @@ export type CharacterStatePatch = {
   spell_storing_item?: SpellStoringItemState | null
 }
 
-export type AbilityDTO = {
-  score: number
-  modifier: number
-}
-
-export type ClassLevelDTO = {
-  class_ref: string
-  name: string
-  level: number
-}
-
-export type HitDieDTO = {
-  die: string
-  total: number
-  available: number
-}
-
-export type NamedReferenceDTO = {
-  key: string
-  name: string
-}
-
-export type ConditionDTO = {
-  condition_ref: string
-  name: string
-  note?: string | null
-}
+export type AbilityDTO = { score: number; modifier: number }
+export type ClassLevelDTO = { class_ref: string; name: string; level: number }
+export type HitDieDTO = { die: string; total: number; available: number }
+export type NamedReferenceDTO = { key: string; name: string }
+export type ConditionDTO = { condition_ref: string; name: string; note?: string | null }
 
 export type SpellAccessDTO = {
   entry_id: string
@@ -258,16 +237,13 @@ export type ContentEntry = {
 }
 
 type APIErrorPayload = {
-  error?: {
-    code?: string
-    message?: string
-  }
+  error?: { code?: string; message?: string }
 }
 
 const characterVersionTokens = new Map<string, string>()
 
 async function apiRequest<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, {
+  const response = await characterWorkspaceFetch(input, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -301,8 +277,7 @@ export async function patchCharacterState(
   characterId: string,
   patch: CharacterStatePatch,
 ): Promise<CharacterSheetDTO> {
-  const expectedVersion =
-    patch.expected_current_version_id ?? characterVersionTokens.get(characterId)
+  const expectedVersion = patch.expected_current_version_id ?? characterVersionTokens.get(characterId)
   const body: CharacterStatePatch = expectedVersion
     ? { ...patch, expected_current_version_id: expectedVersion }
     : patch

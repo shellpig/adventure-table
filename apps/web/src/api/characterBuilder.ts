@@ -3,6 +3,7 @@ import {
   createLocalizedRequestError,
   installDynamicLocalizedBuilderPayload,
 } from '../i18n/systemMessages'
+import { characterWorkspaceFetch } from './characterWorkspace'
 
 export type BuilderMode = 'create' | 'level_up' | 'build_edit' | 'correction'
 export type BuilderIssueSeverity = 'blocking_error' | 'warning' | 'non_standard'
@@ -17,16 +18,8 @@ export type BuilderOptionKind =
   | 'category_filter'
   | 'branch'
 
-export type BuilderBasicInput = {
-  name?: string | null
-  ruleset?: 'dnd5e-2014'
-}
-
-export type BuilderReferenceSelection = {
-  reference_id: string
-  source_ref?: string | null
-}
-
+export type BuilderBasicInput = { name?: string | null; ruleset?: 'dnd5e-2014' }
+export type BuilderReferenceSelection = { reference_id: string; source_ref?: string | null }
 export type BuilderAbilityScores = {
   strength: number
   dexterity: number
@@ -35,13 +28,11 @@ export type BuilderAbilityScores = {
   wisdom: number
   charisma: number
 }
-
 export type BuilderAbilityGenerationInput = {
   method: AbilityGenerationMethod
   scores: BuilderAbilityScores
   provenance?: string | null
 }
-
 export type BuilderLevelChoice = {
   character_level: number
   class_ref: string
@@ -49,7 +40,6 @@ export type BuilderLevelChoice = {
   hp_base_gain: number
   subclass_ref?: string | null
 }
-
 export type AbilityGenerationRules = {
   standard_array: number[]
   point_buy_budget: number
@@ -59,21 +49,18 @@ export type AbilityGenerationRules = {
   hard_min: number
   hard_max: number
 }
-
 export type BuilderChoiceSelection = {
   choice_id: string
   selected_option_ids?: string[]
   source_ref?: string | null
   provenance_path?: string | null
 }
-
 export type BuilderSpellChoiceInput = {
   cantrip_keys?: string[]
   known_spell_keys?: string[]
   spellbook_spell_keys?: string[]
   prepared_spell_keys?: string[]
 }
-
 export type BuilderDraftPayload = {
   basic?: BuilderBasicInput | null
   target_level?: number | null
@@ -92,7 +79,6 @@ export type BuilderDraftPayload = {
   numeric_overrides?: { key: string; value: number }[]
   initial_state_seed?: Record<string, unknown>
 }
-
 export type BuilderDraft = {
   id: string
   mode: BuilderMode
@@ -103,9 +89,7 @@ export type BuilderDraft = {
   created_at: string
   updated_at: string
 }
-
 export type BuilderMessageParams = Record<string, unknown>
-
 export type BuilderIssue = {
   code: string
   severity: BuilderIssueSeverity
@@ -114,18 +98,12 @@ export type BuilderIssue = {
   message_params?: BuilderMessageParams
   related_refs: string[]
 }
-
 export type BuilderValidationResult = {
   issues: BuilderIssue[]
   can_confirm: boolean
   non_standard_count: number
 }
-
-export type BuilderChoicePresentationItem = {
-  reference_id: string
-  count: number
-}
-
+export type BuilderChoicePresentationItem = { reference_id: string; count: number }
 export type BuilderChoiceOption = {
   option_id: string
   label: string
@@ -144,7 +122,6 @@ export type BuilderChoiceOption = {
   presentation_has_choice?: boolean
   granted_reference_ids?: string[]
 }
-
 export type BuilderChoice = {
   choice_id: string
   label: string
@@ -159,7 +136,6 @@ export type BuilderChoice = {
   disabled_reason_params?: BuilderMessageParams
   allow_duplicates: boolean
 }
-
 export type BuilderGrantSummary = {
   label: string
   kind: string
@@ -167,7 +143,6 @@ export type BuilderGrantSummary = {
   reference_id?: string | null
   presentation_field?: string | null
 }
-
 export type BuilderAbilityScoreSummary = {
   ability: string
   base: number
@@ -176,7 +151,6 @@ export type BuilderAbilityScoreSummary = {
   effective: number
   overridden: boolean
 }
-
 export type BuilderProgressionNodeSummary = {
   character_level: number
   class_ref: string
@@ -193,13 +167,7 @@ export type BuilderProgressionNodeSummary = {
   subclass_name?: string | null
   automatic_feature_refs: string[]
 }
-
-export type BuilderSpellOptionSummary = {
-  spell_key: string
-  name: string
-  level: number
-}
-
+export type BuilderSpellOptionSummary = { spell_key: string; name: string; level: number }
 export type BuilderSpellcastingProfileSummary = {
   profile_id: string
   source_type: string
@@ -221,19 +189,13 @@ export type BuilderSpellcastingProfileSummary = {
   selected_spellbook_spell_keys: string[]
   selected_prepared_spell_keys: string[]
 }
-
-export type BuilderSpellSlotCapacity = {
-  level: number
-  count: number
-}
-
+export type BuilderSpellSlotCapacity = { level: number; count: number }
 export type BuilderSpellResourcePoolSummary = {
   pool_id: string
   pool_type: BuilderSpellResourcePoolType
   source_profile_id?: string | null
   slots: BuilderSpellSlotCapacity[]
 }
-
 export type BuilderResolvedSummary = {
   name?: string | null
   target_level?: number | null
@@ -254,14 +216,12 @@ export type BuilderResolvedSummary = {
   spellcasting_profiles: BuilderSpellcastingProfileSummary[]
   spell_resource_pools: BuilderSpellResourcePoolSummary[]
 }
-
 export type BuilderView = {
   draft: BuilderDraft
   resolved_summary: BuilderResolvedSummary
   choices: BuilderChoice[]
   validation: BuilderValidationResult
 }
-
 export type BuilderEquipmentSummary = {
   entry_id: string
   item_ref: string
@@ -269,7 +229,6 @@ export type BuilderEquipmentSummary = {
   quantity: number
   source_ref: string
 }
-
 export type BuilderInitialStatePreview = {
   current_hp: number
   temporary_hp: number
@@ -287,7 +246,6 @@ export type BuilderInitialStatePreview = {
     carried: boolean
   }[]
 }
-
 export type BuilderReviewDTO = {
   draft_id: string
   resolved_summary: BuilderResolvedSummary
@@ -304,20 +262,17 @@ export type BuilderReviewDTO = {
   can_confirm: boolean
   non_standard_count: number
 }
-
 export type BuilderConfirmResult = {
   character_id: string
   current_version_id: string
   version_no: number
   character_path: string
 }
-
 export type CharacterListClassItem = {
   class_ref: string
   name: string
   level: number
 }
-
 export type CharacterListItem = {
   id: string
   name: string
@@ -327,19 +282,12 @@ export type CharacterListItem = {
   version_no: number
 }
 
-type APIErrorPayload = {
-  error?: { code?: string; message?: string }
-}
-
-type BuilderPatchQueue = {
-  tail: Promise<void>
-  latestRevision?: number
-}
-
+type APIErrorPayload = { error?: { code?: string; message?: string } }
+type BuilderPatchQueue = { tail: Promise<void>; latestRevision?: number }
 const builderPatchQueues = new Map<string, BuilderPatchQueue>()
 
 async function builderRequest<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, {
+  const response = await characterWorkspaceFetch(input, {
     ...init,
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   })
@@ -364,46 +312,33 @@ async function builderRequest<T>(input: RequestInfo | URL, init?: RequestInit): 
 export function listCharacters(): Promise<CharacterListItem[]> {
   return builderRequest<CharacterListItem[]>('/api/characters')
 }
-
 export function listArchivedCharacters(): Promise<CharacterListItem[]> {
   return builderRequest<CharacterListItem[]>('/api/characters?archived=true')
 }
-
 export function archiveCharacter(characterId: string): Promise<CharacterListItem> {
-  return builderRequest<CharacterListItem>(`/api/characters/${characterId}/archive`, {
-    method: 'POST',
-  })
+  return builderRequest<CharacterListItem>(`/api/characters/${characterId}/archive`, { method: 'POST' })
 }
-
 export function unarchiveCharacter(characterId: string): Promise<CharacterListItem> {
-  return builderRequest<CharacterListItem>(`/api/characters/${characterId}/unarchive`, {
-    method: 'POST',
-  })
+  return builderRequest<CharacterListItem>(`/api/characters/${characterId}/unarchive`, { method: 'POST' })
 }
-
 export function deleteCharacter(characterId: string): Promise<void> {
   return builderRequest<void>(`/api/characters/${characterId}`, { method: 'DELETE' })
 }
-
 export function getAbilityGenerationRules(): Promise<AbilityGenerationRules> {
   return builderRequest<AbilityGenerationRules>('/api/character-builder/rules/ability-generation')
 }
-
 export function createBuilderDraft(draftPayload: BuilderDraftPayload = {}): Promise<BuilderView> {
   return builderRequest<BuilderView>('/api/character-builder/drafts', {
     method: 'POST',
     body: JSON.stringify({ mode: 'create', draft_payload: draftPayload }),
   })
 }
-
 export function listCreateBuilderDrafts(): Promise<BuilderView[]> {
   return builderRequest<BuilderView[]>('/api/character-builder/drafts')
 }
-
 export function getBuilderDraft(draftId: string): Promise<BuilderView> {
   return builderRequest<BuilderView>(`/api/character-builder/drafts/${draftId}`)
 }
-
 export function patchBuilderDraft(
   draftId: string,
   expectedRevision: number,
@@ -414,49 +349,30 @@ export function patchBuilderDraft(
     queue = { tail: Promise.resolve(), latestRevision: expectedRevision }
     builderPatchQueues.set(draftId, queue)
   }
-
-  const run = queue.tail
-    .catch(() => undefined)
-    .then(async () => {
-      const revision = Math.max(expectedRevision, queue?.latestRevision ?? expectedRevision)
-      const view = await builderRequest<BuilderView>(`/api/character-builder/drafts/${draftId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ expected_revision: revision, draft_payload: draftPayload }),
-      })
-      if (queue) queue.latestRevision = view.draft.revision
-      return view
+  const run = queue.tail.catch(() => undefined).then(async () => {
+    const revision = Math.max(expectedRevision, queue?.latestRevision ?? expectedRevision)
+    const view = await builderRequest<BuilderView>(`/api/character-builder/drafts/${draftId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ expected_revision: revision, draft_payload: draftPayload }),
     })
-
-  queue.tail = run.then(
-    () => undefined,
-    () => undefined,
-  )
+    if (queue) queue.latestRevision = view.draft.revision
+    return view
+  })
+  queue.tail = run.then(() => undefined, () => undefined)
   return run
 }
-
 export function validateBuilderDraft(draftId: string): Promise<BuilderValidationResult> {
-  return builderRequest<BuilderValidationResult>(
-    `/api/character-builder/drafts/${draftId}/validate`,
-    { method: 'POST' },
-  )
+  return builderRequest<BuilderValidationResult>(`/api/character-builder/drafts/${draftId}/validate`, { method: 'POST' })
 }
-
 export function getBuilderReview(draftId: string): Promise<BuilderReviewDTO> {
-  return builderRequest<BuilderReviewDTO>(
-    `/api/character-builder/drafts/${draftId}/review`,
-  )
+  return builderRequest<BuilderReviewDTO>(`/api/character-builder/drafts/${draftId}/review`)
 }
-
 export function confirmBuilderDraft(draftId: string): Promise<BuilderConfirmResult> {
-  return builderRequest<BuilderConfirmResult>(
-    `/api/character-builder/drafts/${draftId}/confirm`,
-    { method: 'POST' },
-  ).then((result) => {
+  return builderRequest<BuilderConfirmResult>(`/api/character-builder/drafts/${draftId}/confirm`, { method: 'POST' }).then((result) => {
     builderPatchQueues.delete(draftId)
     return result
   })
 }
-
 export function cancelBuilderDraft(draftId: string): Promise<void> {
   builderPatchQueues.delete(draftId)
   return builderRequest<void>(`/api/character-builder/drafts/${draftId}`, { method: 'DELETE' })
