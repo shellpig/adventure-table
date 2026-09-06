@@ -46,7 +46,7 @@ describe('Room Character workspace authority', () => {
 
   it('passes permanent-delete authority only to the owner', () => {
     vi.mocked(recentRoomForId).mockReturnValue({
-      id: ROOM_ID,
+      roomId: ROOM_ID,
       name: 'Owner Room',
       code: '0123456789',
       authority: 'owner',
@@ -58,7 +58,7 @@ describe('Room Character workspace authority', () => {
 
   it.each(['member', 'dm'] as const)('does not render permanent-delete authority for %s', (authority) => {
     vi.mocked(recentRoomForId).mockReturnValue({
-      id: ROOM_ID,
+      roomId: ROOM_ID,
       name: 'Shared Room',
       code: '0123456789',
       authority,
