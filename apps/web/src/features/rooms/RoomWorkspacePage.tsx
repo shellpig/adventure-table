@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 
 import { getRoom, heartbeatRoom, RoomApiError, type RoomSummary } from '../../api/rooms'
 import { useLocale } from '../../i18n/LocaleProvider'
-import { roomCopy, roomErrorMessage } from './copy'
+import { localizedRoomRequestMessage } from '../../i18n/roomMessages'
+import { roomCopy } from './copy'
 import { startRoomHeartbeat } from './heartbeat'
 import { recentRoomForId } from './roomStorage'
 
@@ -16,7 +17,7 @@ export function RoomWorkspacePage({ roomId }: { roomId: string }) {
   const copy = roomCopy(locale)
   const recent = recentRoomForId(roomId)
   const [room, setRoom] = useState<RoomSummary | null>(null)
-  const [errorCode, setErrorCode] = useState<string | null>(null)
+  const [roomError, setRoomError] = useState<RoomApiError | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing' | 'error'>(
     recent ? 'loading' : 'missing',
   )
@@ -29,12 +30,12 @@ export function RoomWorkspacePage({ roomId }: { roomId: string }) {
       .then((next) => {
         if (!active) return
         setRoom(next)
-        setErrorCode(null)
+        setRoomError(null)
         setStatus('ready')
       })
       .catch((cause: unknown) => {
         if (!active) return
-        setErrorCode(cause instanceof RoomApiError ? cause.code : null)
+        setRoomError(cause instanceof RoomApiError ? cause : null)
         setStatus('error')
       })
 
@@ -43,7 +44,7 @@ export function RoomWorkspacePage({ roomId }: { roomId: string }) {
         await heartbeatRoom(roomId, recent.accessToken)
       } catch (cause) {
         if (active) {
-          setErrorCode(cause instanceof RoomApiError ? cause.code : null)
+          setRoomError(cause instanceof RoomApiError ? cause : null)
           setStatus('error')
         }
       }
@@ -80,12 +81,15 @@ export function RoomWorkspacePage({ roomId }: { roomId: string }) {
   }
 
   if (status === 'error' || !recent) {
+    const message = roomError
+      ? localizedRoomRequestMessage(roomError.code, roomError.status, roomError.message, locale)
+      : copy.workspaceError
     return (
       <main className="landing-page room-workspace-page">
         <section className="landing-card room-workspace-card">
           <p className="eyebrow">{copy.workspaceEyebrow}</p>
           <h1>Adventure Table</h1>
-          <p>{errorCode ? roomErrorMessage(locale, errorCode) : copy.workspaceError}</p>
+          <p>{message}</p>
           <a className="button secondary" href="/">{copy.backHome}</a>
         </section>
       </main>

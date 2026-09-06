@@ -1,16 +1,5 @@
 import type { Locale } from '../../i18n/locale'
 
-export const ROOM_ERROR_CODES = [
-  'room_not_found',
-  'room_access_required',
-  'room_access_denied',
-  'room_access_throttled',
-  'room_access_revoked',
-  'room_scope_mismatch',
-] as const
-
-export type RoomErrorCode = (typeof ROOM_ERROR_CODES)[number]
-
 const COPY = {
   en: {
     eyebrow: 'P2 · Room workspace',
@@ -72,34 +61,8 @@ const COPY = {
   },
 } as const satisfies Record<Locale, Record<string, string>>
 
-const ERROR_COPY = {
-  en: {
-    room_not_found: 'Room not found.',
-    room_access_required: 'Room access is required. Enter the Room again.',
-    room_access_denied: 'The Room password or elevated key is incorrect.',
-    room_access_throttled: 'Too many failed Room access attempts. Try again later.',
-    room_access_revoked: 'This Room access has been revoked. Enter the Room again.',
-    room_scope_mismatch: 'This access token belongs to a different Room. Enter this Room again.',
-  },
-  'zh-TW': {
-    room_not_found: '找不到此 Room。',
-    room_access_required: '需要 Room 存取權限，請重新進入 Room。',
-    room_access_denied: 'Room 密碼或進階 Key 不正確。',
-    room_access_throttled: 'Room 存取失敗次數過多，請稍後再試。',
-    room_access_revoked: '此 Room 存取權限已撤銷，請重新進入 Room。',
-    room_scope_mismatch: '此存取權杖屬於另一個 Room，請重新進入目前的 Room。',
-  },
-} as const satisfies Record<Locale, Record<RoomErrorCode, string>>
-
 export type RoomCopy = (typeof COPY)[Locale]
 
 export function roomCopy(locale: Locale): RoomCopy {
   return COPY[locale]
-}
-
-export function roomErrorMessage(locale: Locale, code: string): string {
-  if ((ROOM_ERROR_CODES as readonly string[]).includes(code)) {
-    return ERROR_COPY[locale][code as RoomErrorCode]
-  }
-  return COPY[locale].requestError
 }
