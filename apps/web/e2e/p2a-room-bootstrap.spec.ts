@@ -19,6 +19,8 @@ test('P2-A Room bootstrap creates isolated browser Room contexts', async ({ brow
     expect(first.roomId).not.toBe(second.roomId)
     expect(first.code).not.toBe(second.code)
     expect(first.accessToken).not.toBe(second.accessToken)
+    await expect(firstPage.locator('html')).toHaveAttribute('lang', 'en')
+    await expect(secondPage.locator('html')).toHaveAttribute('lang', 'en')
   } finally {
     await firstBrowser.close()
     await secondBrowser.close()

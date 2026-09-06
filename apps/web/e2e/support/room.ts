@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
 
 const RECENT_ROOMS_STORAGE_KEY = 'adventure-table.recent-rooms.v1'
+const LOCALE_STORAGE_KEY = 'adventure-table.locale'
 const E2E_ROOM_PASSWORD = 'p2-e2e-room-pass'
 
 export type E2ERoomContext = {
@@ -45,8 +46,17 @@ export async function enterRoom(
 
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Adventure Table' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: /^(Start at the table|先進入跑團房間)$/ })).toBeVisible()
 
+  const storedLocale = await page.evaluate(
+    (storageKey) => window.localStorage.getItem(storageKey),
+    LOCALE_STORAGE_KEY,
+  )
+  if (!storedLocale) {
+    await page.getByTestId('locale-option-en').click()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  }
+
+  await expect(page.getByRole('heading', { name: /^(Start at the table|先進入跑團房間)$/ })).toBeVisible()
   await page.getByLabel(/^(Room name|Room 名稱)$/).fill(name)
   await page.getByLabel(/^(Room password|Room 密碼)$/).first().fill(E2E_ROOM_PASSWORD)
   if (options.displayName) {
