@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test'
-import type { APIRequestContext } from '@playwright/test'
+import { expect, test } from './support/roomTest'
+import type { APIRequestContext } from './support/roomTest'
 
 const FIXTURE_ID = '00000000-0000-4000-8000-0000000000e0'
 const CHARACTER_URL = `/characters/${FIXTURE_ID}`
