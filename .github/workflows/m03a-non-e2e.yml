@@ -33,7 +33,7 @@ jobs:
       - name: Fresh SQLite migration through M03 resolver
         env:
           ADVENTURE_TABLE_DATABASE_PATH: /tmp/adventure-table-m03a-fresh.db
-        run: alembic upgrade head
+        run: alembic upgrade character@head
 
   frontend:
     runs-on: ubuntu-latest
