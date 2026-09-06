@@ -30,10 +30,6 @@ def _prepare_database_path() -> Path:
     """Pin the standalone SQLite path before migrations or app import."""
 
     mark_launcher_mode()
-    # Resolve first: the shared resolver already implements the E.5 order
-    # (env -> settings.database_path -> frozen exe dir -> launcher cwd), so
-    # pinning a default into the environment beforehand would shadow a path
-    # configured through settings rather than through the environment.
     database_path = resolve_database_path()
     if database_path is None:
         raise RuntimeError(
@@ -76,9 +72,9 @@ def _alembic_script_location(config_path: Path) -> Path:
     """Resolve migration scripts independently from the Alembic config file.
 
     The source tree keeps ``alembic.ini`` at ``apps/server/`` and migration
-    scripts under ``apps/server/alembic/``.  The frozen bundle deliberately
+    scripts under ``apps/server/alembic/``. The frozen bundle deliberately
     co-locates the copied config with ``env.py`` and ``versions/`` under
-    ``_MEIPASS/alembic/``.  Keeping these two layouts explicit prevents the
+    ``_MEIPASS/alembic/``. Keeping these two layouts explicit prevents the
     launcher from depending on CWD or Alembic's relative-path semantics.
     """
 
@@ -108,7 +104,7 @@ def run_migrations() -> None:
     config.set_main_option("sqlalchemy.url", database_url)
     config.set_main_option("script_location", str(script_location))
     try:
-        command.upgrade(config, "head")
+        command.upgrade(config, "character@head")
     except Exception as exc:
         raise RuntimeError(
             f"Alembic upgrade failed for {database_url!r} using {config_path}: {exc}"
@@ -189,8 +185,6 @@ def _should_open_browser() -> bool:
 
 
 def main() -> int:
-    # The database path is deliberately the first runtime decision. It must be
-    # pinned before Alembic and before uvicorn imports app.standalone.
     database_path = _prepare_database_path()
     content_root, spa_root = _prepare_resource_roots()
     run_migrations()

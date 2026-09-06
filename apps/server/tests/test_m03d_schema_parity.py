@@ -12,6 +12,15 @@ from app.persistence import character_imports as _character_imports  # noqa: F40
 from app.persistence import characters as _characters  # noqa: F401
 
 
+CHARACTER_TABLES = {
+    "characters",
+    "character_versions",
+    "character_states",
+    "character_build_drafts",
+    "character_import_records",
+}
+
+
 def _alembic_config(server_root: Path) -> Config:
     config = Config(str(server_root / "alembic.ini"))
     config.set_main_option("script_location", str(server_root / "alembic"))
@@ -22,10 +31,12 @@ def _sqlite_url(path: Path) -> str:
     return f"sqlite+pysqlite:///{path.as_posix()}"
 
 
-def _schema_snapshot(engine) -> dict[str, object]:
+def _schema_snapshot(engine, *, allowed: set[str]) -> dict[str, object]:
     inspector = inspect(engine)
     table_names = sorted(
-        name for name in inspector.get_table_names() if name != "alembic_version"
+        name
+        for name in inspector.get_table_names()
+        if name != "alembic_version" and name in allowed
     )
 
     tables: dict[str, object] = {}
@@ -60,7 +71,7 @@ def _schema_snapshot(engine) -> dict[str, object]:
     return tables
 
 
-def test_sqlite_migration_schema_matches_metadata(
+def test_sqlite_character_migration_schema_matches_character_metadata(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -69,13 +80,22 @@ def test_sqlite_migration_schema_matches_metadata(
     metadata_path = tmp_path / "metadata.sqlite3"
     monkeypatch.setenv("ADVENTURE_TABLE_DATABASE_PATH", str(migrated_path))
 
-    command.upgrade(_alembic_config(server_root), "head")
+    command.upgrade(_alembic_config(server_root), "character@head")
 
     migrated_engine = create_engine(_sqlite_url(migrated_path))
     metadata_engine = create_engine(_sqlite_url(metadata_path))
     try:
-        metadata.create_all(metadata_engine)
-        assert _schema_snapshot(migrated_engine) == _schema_snapshot(metadata_engine)
+        metadata.create_all(
+            metadata_engine,
+            tables=[metadata.tables[name] for name in sorted(CHARACTER_TABLES)],
+        )
+        assert set(_schema_snapshot(migrated_engine, allowed=CHARACTER_TABLES)) == CHARACTER_TABLES
+        assert _schema_snapshot(
+            migrated_engine, allowed=CHARACTER_TABLES
+        ) == _schema_snapshot(metadata_engine, allowed=CHARACTER_TABLES)
+        migrated_tables = set(inspect(migrated_engine).get_table_names())
+        assert "rooms" not in migrated_tables
+        assert "room_access_sessions" not in migrated_tables
     finally:
         migrated_engine.dispose()
         metadata_engine.dispose()

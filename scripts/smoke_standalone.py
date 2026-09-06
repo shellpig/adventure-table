@@ -17,37 +17,59 @@ LISTEN_RE = re.compile(r"Listening on:\s+(http://127\.0\.0\.1:\d+/)")
 FORBIDDEN_OUTPUT = ("postgresql", "psycopg")
 
 
-def _assigned_string(node: ast.stmt, name: str) -> str | None:
-    value: ast.expr | None = None
+def _assigned_value(node: ast.stmt, name: str) -> ast.expr | None:
     if isinstance(node, ast.Assign) and len(node.targets) == 1:
         target = node.targets[0]
         if isinstance(target, ast.Name) and target.id == name:
-            value = node.value
-    elif isinstance(node, ast.AnnAssign):
+            return node.value
+    if isinstance(node, ast.AnnAssign):
         target = node.target
         if isinstance(target, ast.Name) and target.id == name:
-            value = node.value
+            return node.value
+    return None
+
+
+def _assigned_string(node: ast.stmt, name: str) -> str | None:
+    value = _assigned_value(node, name)
     if isinstance(value, ast.Constant) and isinstance(value.value, str):
         return value.value
     return None
 
 
+def _assigned_strings(node: ast.stmt, name: str) -> set[str]:
+    value = _assigned_value(node, name)
+    if isinstance(value, ast.Constant) and isinstance(value.value, str):
+        return {value.value}
+    if isinstance(value, (ast.Tuple, ast.List)):
+        result: set[str] = set()
+        for item in value.elts:
+            if isinstance(item, ast.Constant) and isinstance(item.value, str):
+                result.add(item.value)
+        return result
+    return set()
+
+
 def _migration_head(repo_root: Path) -> str:
-    revisions: dict[str, str | None] = {}
+    revisions: dict[str, tuple[str | None, set[str]]] = {}
     for path in sorted((repo_root / "apps/server/alembic/versions").glob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         revision: str | None = None
         down_revision: str | None = None
+        branch_labels: set[str] = set()
         for node in tree.body:
             revision = _assigned_string(node, "revision") or revision
             down_revision = _assigned_string(node, "down_revision") or down_revision
+            branch_labels = _assigned_strings(node, "branch_labels") or branch_labels
         if revision is not None:
-            revisions[revision] = down_revision
-    referenced = {down for down in revisions.values() if down is not None}
+            revisions[revision] = (down_revision, branch_labels)
+    referenced = {down for down, _ in revisions.values() if down is not None}
     heads = sorted(set(revisions) - referenced)
-    if len(heads) != 1:
-        raise RuntimeError(f"expected one Alembic head, found {heads}")
-    return heads[0]
+    character_heads = [head for head in heads if "character" in revisions[head][1]]
+    if len(character_heads) != 1:
+        raise RuntimeError(
+            f"expected one Character Alembic head, found {character_heads}; all heads={heads}"
+        )
+    return character_heads[0]
 
 
 def _reader(stream, sink: list[str]) -> None:
@@ -130,8 +152,19 @@ def run_smoke(artifact_dir: Path, repo_root: Path, timeout: float = 20.0) -> Non
         expected_head = _migration_head(repo_root)
         with sqlite3.connect(database_path) as connection:
             row = connection.execute("SELECT version_num FROM alembic_version").fetchone()
+            tables = {
+                item[0]
+                for item in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
+            }
         if row is None or row[0] != expected_head:
             raise RuntimeError(f"Alembic head mismatch: expected {expected_head}, got {row}")
+        forbidden_tables = {"rooms", "room_access_sessions"} & tables
+        if forbidden_tables:
+            raise RuntimeError(
+                f"standalone Character migration unexpectedly created Web tables: {sorted(forbidden_tables)}"
+            )
     finally:
         if process.poll() is None:
             process.terminate()
