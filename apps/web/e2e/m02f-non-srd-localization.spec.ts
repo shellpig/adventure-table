@@ -1,5 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
+import { openCharacterWorkshop, test as roomTest } from './support/roomTest'
+
 async function expectDraftSaved(page: Page) {
   await expect(page.getByText(/Saved on server|已儲存至伺服器/)).toBeVisible()
 }
@@ -69,7 +71,7 @@ async function fillEmptyComboboxes(page: Page, container: Locator) {
 }
 
 async function startDraft(page: Page, name: string) {
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await page.getByLabel('Character name').fill(name)
   await page.getByLabel('Target character level').fill('1')
@@ -112,8 +114,8 @@ test('M02-F presents PHB, SCAG inheritance, GoS flavor and source collisions by 
   expect(srdAcolyte.key).not.toBe(phbAcolyte.key)
 })
 
-test('M02-F completes a bilingual PHB origin flow without changing selections', async ({ page, request }) => {
-  test.slow()
+roomTest('M02-F completes a bilingual PHB origin flow without changing selections', async ({ page, request }) => {
+  roomTest.slow()
   const name = `M02-F PHB ${Date.now()}`
   await startDraft(page, name)
 
@@ -136,8 +138,6 @@ test('M02-F completes a bilingual PHB origin flow without changing selections', 
   const languageChoice = page.locator('.builder-choice').filter({ hasText: 'Acolyte — Languages' })
   await chooseOption(page, languageChoice.getByRole('combobox', { name: 'Add selection' }), 'Celestial')
   await chooseOption(page, languageChoice.getByRole('combobox', { name: 'Add selection' }), 'Draconic')
-  // Keep this flow future-proof as origin packs grow: any additional required
-  // starting choice must be completed before Review, while optional roleplay stays untouched.
   await fillEmptyComboboxes(page, page.locator('.builder-choice-list'))
 
   await page.getByTestId('builder-step-class').click()
@@ -172,7 +172,7 @@ test('M02-F completes a bilingual PHB origin flow without changing selections', 
   await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible()
 })
 
-test('M02-F keeps a GoS optional flavor selection localized and non-mandatory', async ({ page }) => {
+roomTest('M02-F keeps a GoS optional flavor selection localized and non-mandatory', async ({ page }) => {
   await startDraft(page, `M02-F GoS ${Date.now()}`)
   await page.getByTestId('builder-step-origin').click()
   await chooseSearchable(page, 'Background', 'Fisher')

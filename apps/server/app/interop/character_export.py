@@ -12,8 +12,8 @@ from sqlalchemy import select
 from app.domain.character.schemas import CharacterBuild, CharacterState
 from app.interop.content_ref_walker import collect_build_refs, collect_state_refs
 from app.interop.json_schema import (
-    CharacterExport,
-    Envelope,
+    CharacterExportV1,
+    CharacterExportV1Envelope,
     ExportedCharacter,
     ExportedState,
     ExportedVersion,
@@ -37,7 +37,7 @@ _FILENAME_UNSAFE_UNICODE = re.compile(r"[\\/\x00-\x1f\x7f]+")
 
 @dataclass(frozen=True)
 class CharacterExportArtifact:
-    document: CharacterExport
+    document: CharacterExportV1
     filename: str
     utf8_filename: str
     archived: bool
@@ -106,7 +106,7 @@ def build_character_export(
     *,
     channel: ExportChannel = "web",
 ) -> CharacterExportArtifact:
-    """Build one server-authoritative, read-only Character JSON export."""
+    """Build one server-authoritative, read-only locked-v1 Character JSON export."""
 
     with repository.engine.connect() as connection:
         character_row = connection.execute(
@@ -176,8 +176,8 @@ def build_character_export(
     requirements = [_pack_requirement(repository, pack) for pack in packs]
 
     exported_at = datetime.now(timezone.utc)
-    document = CharacterExport(
-        envelope=Envelope(
+    document = CharacterExportV1(
+        envelope=CharacterExportV1Envelope(
             ruleset=character_row["ruleset"],
             content_requirements=requirements,
             stable_key_refs_summary=stable_key_refs_summary(build_keys, state_keys),

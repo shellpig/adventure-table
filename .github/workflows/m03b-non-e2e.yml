@@ -51,7 +51,7 @@ jobs:
       - name: Fresh SQLite migration
         env:
           ADVENTURE_TABLE_DATABASE_PATH: /tmp/adventure-table-m03b-fresh.db
-        run: alembic upgrade head
+        run: alembic upgrade character@head
       - name: Committed export fixtures still match the endpoint
         run: python tests/generate_m03b_fixtures.py --check
 

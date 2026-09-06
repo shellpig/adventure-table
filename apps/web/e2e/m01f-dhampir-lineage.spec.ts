@@ -1,4 +1,4 @@
-import { expect, test, type APIResponse, type Page } from '@playwright/test'
+import { expect, test, type APIResponse, type Page } from './support/roomTest'
 
 type BuilderView = {
   draft: {

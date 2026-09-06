@@ -1,7 +1,6 @@
 import { readFile } from 'node:fs/promises'
 
-import { expect, test } from '@playwright/test'
-import type { Page } from '@playwright/test'
+import { expect, openCharacterWorkshop, test, type Page } from './support/roomTest'
 
 const FIXTURE_ID = '00000000-0000-4000-8000-0000000000e0'
 
@@ -15,8 +14,8 @@ async function downloadedJson(page: Page, buttonName: string | RegExp) {
   return { download, document }
 }
 
-test('Workshop exports an active character and exposes unstable schema controls', async ({ page }) => {
-  await page.goto('/characters')
+test('Workshop exports an active character with the locked v1 schema', async ({ page }) => {
+  await openCharacterWorkshop(page)
   const card = page.locator('article.workshop-card').filter({ hasText: 'P0 Human Fighter 5 / Wizard 5' })
   await expect(card).toBeVisible()
 
@@ -26,8 +25,9 @@ test('Workshop exports an active character and exposes unstable schema controls'
   const path = await download.path()
   expect(path).not.toBeNull()
   const document = JSON.parse(await readFile(path!, 'utf8'))
-  expect(document.envelope.schema_version).toBe('unstable')
-  expect(document.envelope.schema_status).toBe('unstable')
+  expect(document.envelope.schema_version).toBe('1')
+  expect(document.envelope.schema_status).toBe('locked')
+  expect(document.envelope.export_type).toBe('character')
 })
 
 test('Character Sheet mounts export inside the real sheet header', async ({ page }) => {
@@ -52,7 +52,7 @@ test('archived character remains exportable from Workshop', async ({ page, reque
   const archived = await request.post(`/api/characters/${FIXTURE_ID}/archive`)
   expect(archived.ok()).toBeTruthy()
   try {
-    await page.goto('/characters')
+    await openCharacterWorkshop(page)
     const card = page.locator('article.workshop-card--archived').filter({ hasText: 'P0 Human Fighter 5 / Wizard 5' })
     await expect(card).toBeVisible()
     const downloadPromise = page.waitForEvent('download')

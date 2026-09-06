@@ -10,7 +10,7 @@ from app.main import app as web_app
 from tests.m03e_support import loaded_standalone
 
 
-def test_web_capabilities_are_m03_safe_defaults() -> None:
+def test_web_capabilities_enable_room_only_for_p2a_multiplayer() -> None:
     response = TestClient(web_app).get("/api/meta/capabilities")
 
     assert response.status_code == 200
@@ -19,8 +19,9 @@ def test_web_capabilities_are_m03_safe_defaults() -> None:
     assert payload.database_path is None
     assert payload.capabilities.character_builder is True
     assert payload.capabilities.character_import_export is True
-    assert payload.capabilities.room is False
+    assert payload.capabilities.room is True
     assert payload.capabilities.campaign is False
+    assert payload.capabilities.seat is False
     assert payload.capabilities.session is False
 
 
@@ -37,4 +38,7 @@ def test_standalone_capabilities_identify_channel_and_database(
     assert payload.capabilities.character_builder is True
     assert payload.capabilities.character_import_export is True
     assert payload.capabilities.room is False
+    assert payload.capabilities.campaign is False
+    assert payload.capabilities.seat is False
+    assert payload.capabilities.session is False
     assert payload.database_path == str((tmp_path / "adventure-table.sqlite3").resolve())

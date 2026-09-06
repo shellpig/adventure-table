@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, openCharacterWorkshop, test, type Locator, type Page } from './support/roomTest'
 
 
 async function currentDraftRevision(page: Page) {
@@ -51,7 +51,7 @@ async function chooseIn(container: Locator, value: string) {
 }
 
 async function startLevelOneDraft(page: Page, name: string) {
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
 
@@ -159,7 +159,7 @@ test('M01-C creates, reloads and levels a GoS background character with a PHB su
   await confirmAndReload(page, 'M01-C GoS Hero')
   await expectFisherInventoryOnce(page)
 
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   const card = page.locator('.workshop-card').filter({ hasText: 'M01-C GoS Hero' })
   await expect(card).toHaveCount(1)
   await card.getByRole('button', { name: 'Level Up' }).click()

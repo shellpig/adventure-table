@@ -10,6 +10,7 @@ from app.api import (
 )
 from app.api.error_handlers import register_exception_handlers
 from app.api.meta import create_meta_router
+from app.api.rooms import router as rooms_router
 from app.config import settings
 from app.content import load_default_content_registry
 from app.db import database_is_ready
@@ -20,8 +21,9 @@ app.state.content_registry = content_registry
 app.state.distribution_channel = "web"
 app.include_router(reference_router)
 app.include_router(content_presentation_router)
-app.include_router(characters_router)
-app.include_router(character_builder_router)
+app.include_router(characters_router)  # P2-A compatibility; P2-B removes Web-global Character routes.
+app.include_router(character_builder_router)  # P2-A compatibility; P2-B scopes Builder to Room.
+app.include_router(rooms_router)
 app.include_router(create_meta_router("web"))
 register_exception_handlers(app)
 

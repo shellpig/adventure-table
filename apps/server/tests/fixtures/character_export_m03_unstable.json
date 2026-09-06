@@ -1,0 +1,933 @@
+{
+  "envelope": {
+    "content_requirements": [
+      {
+        "pack": "phb2014",
+        "version": "1.0.0"
+      },
+      {
+        "pack": "srd5.1",
+        "version": "1.0.0"
+      }
+    ],
+    "exported_at": "2026-09-04T00:00:00Z",
+    "ruleset": "dnd5e-2014",
+    "schema_status": "unstable",
+    "schema_version": "unstable",
+    "source_app": {
+      "build": null,
+      "channel": "web",
+      "commit": null,
+      "name": "adventure-table"
+    },
+    "source_character_id": "00000000-0000-4000-8000-00000000c0de",
+    "source_export_id": "00000000-0000-4000-8000-0000000e6b07",
+    "stable_key_refs_summary": 63
+  },
+  "payload": {
+    "character": {
+      "name": "M03-B Multiclass Mixed",
+      "ruleset": "dnd5e-2014"
+    },
+    "current_state": {
+      "state_payload": {
+        "active_infusions": [],
+        "conditions": [],
+        "current_hp": 49,
+        "feature_modes": {},
+        "hit_dice_state": {
+          "d10": 3,
+          "d8": 3
+        },
+        "inventory_state": [
+          {
+            "carried": true,
+            "entry_id": "inventory:start:a1958c49578ad3e9dd6c",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:chain-mail",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:b110f60f8dbe4e335850",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:battleaxe",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:1362517495358b6a642f",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:shield",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:4577c248ef7142f6c498",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:crossbow-light",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:b88537308df83f7b1720",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:crossbow-bolt",
+            "quantity": 20
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:90cce676c361896808ff",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:dungeoneers-pack",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:727dcaadf262b2da5a5c",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:clothes-common",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:bb91c990552b62e8af56",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:pouch",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:e67558eae810b20761a9",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:dice-set",
+            "quantity": 1
+          }
+        ],
+        "prepared_spell_entry_ids": [],
+        "prepared_spells": [],
+        "resources": {},
+        "spell_slots": {
+          "1": {
+            "remaining": 4,
+            "used": 0
+          },
+          "2": {
+            "remaining": 2,
+            "used": 0
+          }
+        },
+        "spell_storing_item": null,
+        "temporary_hp": 0
+      }
+    },
+    "current_version_no": 2,
+    "versions": [
+      {
+        "build_payload": {
+          "ability_scores": {
+            "charisma": 11,
+            "constitution": 15,
+            "dexterity": 13,
+            "intelligence": 9,
+            "strength": 16,
+            "wisdom": 14
+          },
+          "alignment_ref": null,
+          "ancestral_legacy": null,
+          "ancestral_origin_ref": null,
+          "background_ref": "phb2014:background:soldier",
+          "character_level": 5,
+          "class_progression": [
+            "srd5.1:class:fighter",
+            "srd5.1:class:fighter",
+            "srd5.1:class:fighter",
+            "srd5.1:class:cleric",
+            "srd5.1:class:cleric"
+          ],
+          "climb_speed": null,
+          "content_sources": [
+            "phb2014",
+            "srd5.1"
+          ],
+          "feat_acquisitions": [],
+          "feat_refs": [],
+          "feat_resource_grants": [],
+          "feature_grant_sources": [
+            {
+              "feature_ref": "srd5.1:feature:fighter-fighting-style-archery",
+              "grant_kind": "choice",
+              "source_ref": "srd5.1:feature:fighter-fighting-style"
+            }
+          ],
+          "feature_refs": [
+            "srd5.1:feature:fighter-fighting-style",
+            "srd5.1:feature:second-wind",
+            "srd5.1:feature:action-surge-1-use",
+            "srd5.1:feature:martial-archetype",
+            "srd5.1:feature:improved-critical",
+            "srd5.1:feature:spellcasting-cleric",
+            "srd5.1:feature:divine-domain",
+            "srd5.1:feature:domain-spells-1",
+            "srd5.1:feature:bonus-proficiency",
+            "srd5.1:feature:disciple-of-life",
+            "srd5.1:feature:channel-divinity-1-rest",
+            "srd5.1:feature:channel-divinity-turn-undead",
+            "srd5.1:feature:divine-domain-improvement-1",
+            "srd5.1:feature:channel-divinity-preserve-life",
+            "srd5.1:feature:fighter-fighting-style-archery"
+          ],
+          "fly_speed": null,
+          "hp_progression": [
+            10,
+            6,
+            6,
+            5,
+            5
+          ],
+          "infusion_refs": [],
+          "language_refs": [
+            "srd5.1:language:common",
+            "srd5.1:language:dwarvish"
+          ],
+          "lineage_ref": null,
+          "numeric_overrides": [],
+          "proficiencies": [
+            "srd5.1:proficiency:land-vehicles",
+            "srd5.1:proficiency:dice-set",
+            "srd5.1:proficiency:all-armor",
+            "srd5.1:proficiency:shields",
+            "srd5.1:proficiency:simple-weapons",
+            "srd5.1:proficiency:martial-weapons",
+            "srd5.1:proficiency:light-armor",
+            "srd5.1:proficiency:medium-armor"
+          ],
+          "race_ref": "srd5.1:race:human",
+          "race_variant_group_selections": [],
+          "race_variant_ref": null,
+          "roleplay_profile": {
+            "appearance": null,
+            "biography": null,
+            "bonds": [],
+            "custom_fields": {},
+            "flaws": [],
+            "ideals": [],
+            "personality_traits": []
+          },
+          "ruleset": "dnd5e-2014",
+          "saving_throw_proficiencies": [
+            "srd5.1:ability:str",
+            "srd5.1:ability:con"
+          ],
+          "size": null,
+          "skill_choices": [
+            "srd5.1:skill:athletics",
+            "srd5.1:skill:intimidation",
+            "srd5.1:skill:acrobatics",
+            "srd5.1:skill:animal-handling"
+          ],
+          "skill_expertise_refs": [],
+          "spell_access_entries": [
+            {
+              "access_type": "known",
+              "casting_ability": null,
+              "entry_id": "class:cleric:known:guidance",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:cleric",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:guidance",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "known",
+              "casting_ability": null,
+              "entry_id": "class:cleric:known:light",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:cleric",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:light",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "known",
+              "casting_ability": null,
+              "entry_id": "class:cleric:known:mending",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:cleric",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:mending",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "always_prepared",
+              "casting_ability": null,
+              "entry_id": "subclass:life:always_prepared:bless",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:subclass:life",
+              "source_type": "subclass",
+              "spell_key": "srd5.1:spell:bless",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "always_prepared",
+              "casting_ability": null,
+              "entry_id": "subclass:life:always_prepared:cure-wounds",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:subclass:life",
+              "source_type": "subclass",
+              "spell_key": "srd5.1:spell:cure-wounds",
+              "uses_per_rest": null
+            }
+          ],
+          "spell_resource_pools": [
+            {
+              "pool_id": "spell_slots:normal",
+              "pool_type": "normal_multiclass_slots",
+              "slots": [
+                {
+                  "capacity": 3,
+                  "level": 1
+                }
+              ],
+              "source_profile_id": null
+            }
+          ],
+          "spellcasting_profiles": [
+            {
+              "ability": "wisdom",
+              "access_model": "prepared",
+              "class_ref": "srd5.1:class:cleric",
+              "max_spell_level": 1,
+              "prepared_limit": 4,
+              "profile_id": "class:cleric",
+              "resource_pool_type": "normal_multiclass_slots",
+              "source_key": "srd5.1:class:cleric",
+              "source_type": "class"
+            }
+          ],
+          "starting_equipment": [
+            {
+              "entry_id": "start:a1958c49578ad3e9dd6c",
+              "item_ref": "srd5.1:equipment:chain-mail",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:b110f60f8dbe4e335850",
+              "item_ref": "srd5.1:equipment:battleaxe",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:1362517495358b6a642f",
+              "item_ref": "srd5.1:equipment:shield",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:4577c248ef7142f6c498",
+              "item_ref": "srd5.1:equipment:crossbow-light",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:b88537308df83f7b1720",
+              "item_ref": "srd5.1:equipment:crossbow-bolt",
+              "quantity": 20
+            },
+            {
+              "entry_id": "start:90cce676c361896808ff",
+              "item_ref": "srd5.1:equipment:dungeoneers-pack",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:727dcaadf262b2da5a5c",
+              "item_ref": "srd5.1:equipment:clothes-common",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:bb91c990552b62e8af56",
+              "item_ref": "srd5.1:equipment:pouch",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:e67558eae810b20761a9",
+              "item_ref": "srd5.1:equipment:dice-set",
+              "quantity": 1
+            }
+          ],
+          "static_derived_modifiers": [],
+          "subclasses": [
+            {
+              "class_ref": "srd5.1:class:fighter",
+              "subclass_ref": "srd5.1:subclass:champion"
+            },
+            {
+              "class_ref": "srd5.1:class:cleric",
+              "subclass_ref": "srd5.1:subclass:life"
+            }
+          ],
+          "subrace_ref": null,
+          "swim_speed": null,
+          "walking_speed": 30
+        },
+        "builder_provenance": {
+          "ability_generation": {
+            "method": "standard_array",
+            "provenance": "m03b-fixture",
+            "scores": {
+              "charisma": 10,
+              "constitution": 14,
+              "dexterity": 12,
+              "intelligence": 8,
+              "strength": 15,
+              "wisdom": 13
+            }
+          },
+          "alignment_selection": null,
+          "background_selection": {
+            "reference_id": "phb2014:background:soldier",
+            "source_ref": null
+          },
+          "basic": {
+            "name": "M03-B Multiclass Mixed",
+            "ruleset": "dnd5e-2014"
+          },
+          "choice_selections": {
+            "level:1:srd5.1:class:fighter:starting-proficiency:0": {
+              "choice_id": "level:1:srd5.1:class:fighter:starting-proficiency:0",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "srd5.1:proficiency:skill-acrobatics",
+                "srd5.1:proficiency:skill-animal-handling"
+              ],
+              "source_ref": "srd5.1:class:fighter"
+            },
+            "level:1:srd5.1:feature:fighter-fighting-style:feature-specific-subfeature_options": {
+              "choice_id": "level:1:srd5.1:feature:fighter-fighting-style:feature-specific-subfeature_options",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "srd5.1:feature:fighter-fighting-style-archery"
+              ],
+              "source_ref": "srd5.1:feature:fighter-fighting-style"
+            },
+            "phb2014:background:soldier:starting_proficiency_options:0": {
+              "choice_id": "phb2014:background:soldier:starting_proficiency_options:0",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "srd5.1:proficiency:dice-set"
+              ],
+              "source_ref": "phb2014:background:soldier"
+            },
+            "srd5.1:race:human:language_options:0": {
+              "choice_id": "srd5.1:race:human:language_options:0",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "srd5.1:language:dwarvish"
+              ],
+              "source_ref": "srd5.1:race:human"
+            }
+          },
+          "initial_state_seed": {},
+          "level_choices": [
+            {
+              "character_level": 1,
+              "class_ref": "srd5.1:class:fighter",
+              "hp_base_gain": 10,
+              "hp_method": "first_level",
+              "subclass_ref": null
+            },
+            {
+              "character_level": 2,
+              "class_ref": "srd5.1:class:fighter",
+              "hp_base_gain": 6,
+              "hp_method": "fixed_average",
+              "subclass_ref": null
+            },
+            {
+              "character_level": 3,
+              "class_ref": "srd5.1:class:fighter",
+              "hp_base_gain": 6,
+              "hp_method": "fixed_average",
+              "subclass_ref": "srd5.1:subclass:champion"
+            },
+            {
+              "character_level": 4,
+              "class_ref": "srd5.1:class:cleric",
+              "hp_base_gain": 5,
+              "hp_method": "fixed_average",
+              "subclass_ref": "srd5.1:subclass:life"
+            },
+            {
+              "character_level": 5,
+              "class_ref": "srd5.1:class:cleric",
+              "hp_base_gain": 5,
+              "hp_method": "fixed_average",
+              "subclass_ref": null
+            }
+          ],
+          "lineage_selection": null,
+          "numeric_overrides": [],
+          "race_selection": {
+            "reference_id": "srd5.1:race:human",
+            "source_ref": null
+          },
+          "race_variant_selection": null,
+          "roleplay_profile": {},
+          "spell_choices": {
+            "class:cleric": {
+              "cantrip_keys": [
+                "srd5.1:spell:guidance",
+                "srd5.1:spell:light",
+                "srd5.1:spell:mending"
+              ],
+              "known_spell_keys": [],
+              "prepared_spell_keys": [],
+              "spellbook_spell_keys": []
+            }
+          },
+          "starting_equipment_choices": {
+            "equipment:fighter:1fa2e6e89a08": [
+              "equipment:fighter:1fa2e6e89a08:option:0"
+            ],
+            "equipment:fighter:314376f9b062": [
+              "equipment:fighter:314376f9b062:option:0"
+            ],
+            "equipment:fighter:7c33c8b14bf1": [
+              "equipment:fighter:7c33c8b14bf1:option:0"
+            ],
+            "equipment:fighter:a0dcca2c678e": [
+              "equipment:fighter:a0dcca2c678e:option:0"
+            ],
+            "equipment:fighter:b62ba2fcc0df": [
+              "equipment:fighter:b62ba2fcc0df:option:0"
+            ],
+            "equipment:soldier:aedda878879b": [
+              "equipment:soldier:aedda878879b:option:0"
+            ]
+          },
+          "subrace_selection": null,
+          "target_level": 5
+        },
+        "change_note": null,
+        "created_at": "2026-09-04T00:00:00Z",
+        "parent_version_no": null,
+        "superseded_by_version_no": null,
+        "version_kind": "create",
+        "version_no": 1
+      },
+      {
+        "build_payload": {
+          "ability_scores": {
+            "charisma": 11,
+            "constitution": 15,
+            "dexterity": 13,
+            "intelligence": 9,
+            "strength": 16,
+            "wisdom": 14
+          },
+          "alignment_ref": null,
+          "ancestral_legacy": null,
+          "ancestral_origin_ref": null,
+          "background_ref": "phb2014:background:soldier",
+          "character_level": 6,
+          "class_progression": [
+            "srd5.1:class:fighter",
+            "srd5.1:class:fighter",
+            "srd5.1:class:fighter",
+            "srd5.1:class:cleric",
+            "srd5.1:class:cleric",
+            "srd5.1:class:cleric"
+          ],
+          "climb_speed": null,
+          "content_sources": [
+            "phb2014",
+            "srd5.1"
+          ],
+          "feat_acquisitions": [],
+          "feat_refs": [],
+          "feat_resource_grants": [],
+          "feature_grant_sources": [
+            {
+              "feature_ref": "srd5.1:feature:fighter-fighting-style-archery",
+              "grant_kind": "choice",
+              "source_ref": "srd5.1:feature:fighter-fighting-style"
+            }
+          ],
+          "feature_refs": [
+            "srd5.1:feature:fighter-fighting-style",
+            "srd5.1:feature:second-wind",
+            "srd5.1:feature:action-surge-1-use",
+            "srd5.1:feature:martial-archetype",
+            "srd5.1:feature:improved-critical",
+            "srd5.1:feature:spellcasting-cleric",
+            "srd5.1:feature:divine-domain",
+            "srd5.1:feature:domain-spells-1",
+            "srd5.1:feature:bonus-proficiency",
+            "srd5.1:feature:disciple-of-life",
+            "srd5.1:feature:channel-divinity-1-rest",
+            "srd5.1:feature:channel-divinity-turn-undead",
+            "srd5.1:feature:divine-domain-improvement-1",
+            "srd5.1:feature:channel-divinity-preserve-life",
+            "srd5.1:feature:domain-spells-2",
+            "srd5.1:feature:fighter-fighting-style-archery"
+          ],
+          "fly_speed": null,
+          "hp_progression": [
+            10,
+            6,
+            6,
+            5,
+            5,
+            5
+          ],
+          "infusion_refs": [],
+          "language_refs": [
+            "srd5.1:language:common",
+            "srd5.1:language:dwarvish"
+          ],
+          "lineage_ref": null,
+          "numeric_overrides": [],
+          "proficiencies": [
+            "srd5.1:proficiency:land-vehicles",
+            "srd5.1:proficiency:dice-set",
+            "srd5.1:proficiency:all-armor",
+            "srd5.1:proficiency:shields",
+            "srd5.1:proficiency:simple-weapons",
+            "srd5.1:proficiency:martial-weapons",
+            "srd5.1:proficiency:light-armor",
+            "srd5.1:proficiency:medium-armor"
+          ],
+          "race_ref": "srd5.1:race:human",
+          "race_variant_group_selections": [],
+          "race_variant_ref": null,
+          "roleplay_profile": {
+            "appearance": null,
+            "biography": null,
+            "bonds": [],
+            "custom_fields": {},
+            "flaws": [],
+            "ideals": [],
+            "personality_traits": []
+          },
+          "ruleset": "dnd5e-2014",
+          "saving_throw_proficiencies": [
+            "srd5.1:ability:str",
+            "srd5.1:ability:con"
+          ],
+          "size": null,
+          "skill_choices": [
+            "srd5.1:skill:athletics",
+            "srd5.1:skill:intimidation",
+            "srd5.1:skill:acrobatics",
+            "srd5.1:skill:animal-handling"
+          ],
+          "skill_expertise_refs": [],
+          "spell_access_entries": [
+            {
+              "access_type": "known",
+              "casting_ability": null,
+              "entry_id": "class:cleric:known:guidance",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:cleric",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:guidance",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "known",
+              "casting_ability": null,
+              "entry_id": "class:cleric:known:light",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:cleric",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:light",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "known",
+              "casting_ability": null,
+              "entry_id": "class:cleric:known:mending",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:cleric",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:mending",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "always_prepared",
+              "casting_ability": null,
+              "entry_id": "subclass:life:always_prepared:bless",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:subclass:life",
+              "source_type": "subclass",
+              "spell_key": "srd5.1:spell:bless",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "always_prepared",
+              "casting_ability": null,
+              "entry_id": "subclass:life:always_prepared:cure-wounds",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:subclass:life",
+              "source_type": "subclass",
+              "spell_key": "srd5.1:spell:cure-wounds",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "always_prepared",
+              "casting_ability": null,
+              "entry_id": "subclass:life:always_prepared:lesser-restoration",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:subclass:life",
+              "source_type": "subclass",
+              "spell_key": "srd5.1:spell:lesser-restoration",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "always_prepared",
+              "casting_ability": null,
+              "entry_id": "subclass:life:always_prepared:spiritual-weapon",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:subclass:life",
+              "source_type": "subclass",
+              "spell_key": "srd5.1:spell:spiritual-weapon",
+              "uses_per_rest": null
+            }
+          ],
+          "spell_resource_pools": [
+            {
+              "pool_id": "spell_slots:normal",
+              "pool_type": "normal_multiclass_slots",
+              "slots": [
+                {
+                  "capacity": 4,
+                  "level": 1
+                },
+                {
+                  "capacity": 2,
+                  "level": 2
+                }
+              ],
+              "source_profile_id": null
+            }
+          ],
+          "spellcasting_profiles": [
+            {
+              "ability": "wisdom",
+              "access_model": "prepared",
+              "class_ref": "srd5.1:class:cleric",
+              "max_spell_level": 2,
+              "prepared_limit": 5,
+              "profile_id": "class:cleric",
+              "resource_pool_type": "normal_multiclass_slots",
+              "source_key": "srd5.1:class:cleric",
+              "source_type": "class"
+            }
+          ],
+          "starting_equipment": [
+            {
+              "entry_id": "start:a1958c49578ad3e9dd6c",
+              "item_ref": "srd5.1:equipment:chain-mail",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:b110f60f8dbe4e335850",
+              "item_ref": "srd5.1:equipment:battleaxe",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:1362517495358b6a642f",
+              "item_ref": "srd5.1:equipment:shield",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:4577c248ef7142f6c498",
+              "item_ref": "srd5.1:equipment:crossbow-light",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:b88537308df83f7b1720",
+              "item_ref": "srd5.1:equipment:crossbow-bolt",
+              "quantity": 20
+            },
+            {
+              "entry_id": "start:90cce676c361896808ff",
+              "item_ref": "srd5.1:equipment:dungeoneers-pack",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:727dcaadf262b2da5a5c",
+              "item_ref": "srd5.1:equipment:clothes-common",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:bb91c990552b62e8af56",
+              "item_ref": "srd5.1:equipment:pouch",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:e67558eae810b20761a9",
+              "item_ref": "srd5.1:equipment:dice-set",
+              "quantity": 1
+            }
+          ],
+          "static_derived_modifiers": [],
+          "subclasses": [
+            {
+              "class_ref": "srd5.1:class:fighter",
+              "subclass_ref": "srd5.1:subclass:champion"
+            },
+            {
+              "class_ref": "srd5.1:class:cleric",
+              "subclass_ref": "srd5.1:subclass:life"
+            }
+          ],
+          "subrace_ref": null,
+          "swim_speed": null,
+          "walking_speed": 30
+        },
+        "builder_provenance": {
+          "ability_generation": {
+            "method": "standard_array",
+            "provenance": "m03b-fixture",
+            "scores": {
+              "charisma": 10,
+              "constitution": 14,
+              "dexterity": 12,
+              "intelligence": 8,
+              "strength": 15,
+              "wisdom": 13
+            }
+          },
+          "alignment_selection": null,
+          "background_selection": {
+            "reference_id": "phb2014:background:soldier",
+            "source_ref": null
+          },
+          "basic": {
+            "name": "M03-B Multiclass Mixed",
+            "ruleset": "dnd5e-2014"
+          },
+          "choice_selections": {
+            "level:1:srd5.1:class:fighter:starting-proficiency:0": {
+              "choice_id": "level:1:srd5.1:class:fighter:starting-proficiency:0",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "srd5.1:proficiency:skill-acrobatics",
+                "srd5.1:proficiency:skill-animal-handling"
+              ],
+              "source_ref": "srd5.1:class:fighter"
+            },
+            "level:1:srd5.1:feature:fighter-fighting-style:feature-specific-subfeature_options": {
+              "choice_id": "level:1:srd5.1:feature:fighter-fighting-style:feature-specific-subfeature_options",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "srd5.1:feature:fighter-fighting-style-archery"
+              ],
+              "source_ref": "srd5.1:feature:fighter-fighting-style"
+            },
+            "phb2014:background:soldier:starting_proficiency_options:0": {
+              "choice_id": "phb2014:background:soldier:starting_proficiency_options:0",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "srd5.1:proficiency:dice-set"
+              ],
+              "source_ref": "phb2014:background:soldier"
+            },
+            "srd5.1:race:human:language_options:0": {
+              "choice_id": "srd5.1:race:human:language_options:0",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "srd5.1:language:dwarvish"
+              ],
+              "source_ref": "srd5.1:race:human"
+            }
+          },
+          "initial_state_seed": {},
+          "level_choices": [
+            {
+              "character_level": 1,
+              "class_ref": "srd5.1:class:fighter",
+              "hp_base_gain": 10,
+              "hp_method": "first_level",
+              "subclass_ref": null
+            },
+            {
+              "character_level": 2,
+              "class_ref": "srd5.1:class:fighter",
+              "hp_base_gain": 6,
+              "hp_method": "fixed_average",
+              "subclass_ref": null
+            },
+            {
+              "character_level": 3,
+              "class_ref": "srd5.1:class:fighter",
+              "hp_base_gain": 6,
+              "hp_method": "fixed_average",
+              "subclass_ref": "srd5.1:subclass:champion"
+            },
+            {
+              "character_level": 4,
+              "class_ref": "srd5.1:class:cleric",
+              "hp_base_gain": 5,
+              "hp_method": "fixed_average",
+              "subclass_ref": "srd5.1:subclass:life"
+            },
+            {
+              "character_level": 5,
+              "class_ref": "srd5.1:class:cleric",
+              "hp_base_gain": 5,
+              "hp_method": "fixed_average",
+              "subclass_ref": null
+            },
+            {
+              "character_level": 6,
+              "class_ref": "srd5.1:class:cleric",
+              "hp_base_gain": 5,
+              "hp_method": "fixed_average",
+              "subclass_ref": null
+            }
+          ],
+          "lineage_selection": null,
+          "numeric_overrides": [],
+          "race_selection": {
+            "reference_id": "srd5.1:race:human",
+            "source_ref": null
+          },
+          "race_variant_selection": null,
+          "roleplay_profile": {},
+          "spell_choices": {
+            "class:cleric": {
+              "cantrip_keys": [
+                "srd5.1:spell:guidance",
+                "srd5.1:spell:light",
+                "srd5.1:spell:mending"
+              ],
+              "known_spell_keys": [],
+              "prepared_spell_keys": [],
+              "spellbook_spell_keys": []
+            }
+          },
+          "starting_equipment_choices": {},
+          "subrace_selection": null,
+          "target_level": 6
+        },
+        "change_note": null,
+        "created_at": "2026-09-04T00:00:00Z",
+        "parent_version_no": 1,
+        "superseded_by_version_no": null,
+        "version_kind": "level_up",
+        "version_no": 2
+      }
+    ]
+  }
+}

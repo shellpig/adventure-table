@@ -7,13 +7,13 @@
 ![TypeScript](https://img.shields.io/badge/TYPESCRIPT-5.9-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/VITE-8.2-646CFF?logo=vite&logoColor=white)
 ![Ruleset](https://img.shields.io/badge/RULESET-D%26D%205E%202014-purple)
-![Status](https://img.shields.io/badge/STATUS-CHARACTER%20LAYER%20USABLE-orange)
+![Status](https://img.shields.io/badge/STATUS-ROOM%20FOUNDATION-orange)
 
 Adventure Table 是一個**輕量、桌上跑團優先的 D&D 5e 2014 Web VTT**。真人 DM 像實體跑團一樣主要靠口頭敘事，網站只管需要共享、同步、計算、保存、權限與 AI 接入的東西。外部 AI 未來可透過 MCP / Site Tools 正式進桌擔任 DM 或 Player，與真人共用同一套 Game State、規則與權限。
 
 朋友間私人使用，非商品化平台。介面為 `zh-TW` / `en` 雙語。
 
-**目前進度以 [`PROJECT_BRIEF.md`](PROJECT_BRIEF.md) 為單一事實來源**——本檔不複述 Phase 狀態。概略地說：角色端（Character Workshop / Builder / Sheet / Level Up / Version History）可用，Room / Campaign / Session / Combat 尚未實作。
+**目前進度以 [`PROJECT_BRIEF.md`](PROJECT_BRIEF.md) 為單一事實來源**——本檔不複述 Phase 狀態。概略地說：角色端（Character Workshop / Builder / Sheet / Level Up / Version History）可用，Web 已建立 Room foundation；Campaign / Seat / Session / Combat 尚未實作。
 
 文件入口：
 
@@ -23,7 +23,7 @@ Adventure Table 是一個**輕量、桌上跑團優先的 D&D 5e 2014 Web VTT**�
 | [`規格企劃.md`](規格企劃.md) | 產品與玩法的單一事實來源 |
 | [`AGENTS.md`](AGENTS.md) | 開發與 AI agent 的工作規則 |
 | [`已知問題.md`](已知問題.md) | 已確認但決定暫不處理的問題 |
-| `docs/P0/`、`docs/P1/`、`docs/M01/`、`docs/M02/`、`docs/M03/` | 各 Phase 的實作規格、開發設計方針、測試指南與 closeout |
+| `docs/P0/`、`docs/P1/`、`docs/P2/`、`docs/M01/`、`docs/M02/`、`docs/M03/` | 各 Phase 的實作規格、開發設計方針、測試指南與 closeout |
 
 ## 快速啟動
 
@@ -66,11 +66,13 @@ docker compose up --build
 
 ## Database migration
 
-Server container 啟動前會自動執行 `alembic upgrade head`。也可手動驗證：
+P2 起 Alembic 有 shared Character 與 Web multiplayer 兩條 migration track。Web server 必須升到**全部 heads**；Windows standalone launcher 只會升 `character@head`，不會建立 Room tables。
+
+Server container 啟動前會自動執行 `alembic upgrade heads`。也可手動驗證：
 
 ```bash
 docker compose up -d db
-docker compose run --rm server alembic upgrade head
+docker compose run --rm server alembic upgrade heads
 ```
 
 ## Backend 本機開發
@@ -91,7 +93,7 @@ pip install -e ".[dev]"
 # PowerShell: $env:DATABASE_URL="postgresql+psycopg://adventure:adventure@localhost:5432/adventure_table"
 export DATABASE_URL="postgresql+psycopg://adventure:adventure@localhost:5432/adventure_table"
 cd apps/server
-alembic upgrade head
+alembic upgrade heads
 uvicorn app.main:app --reload
 ```
 

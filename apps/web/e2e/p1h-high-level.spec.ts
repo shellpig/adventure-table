@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, openCharacterWorkshop, test, type Locator, type Page } from './support/roomTest'
 
 
 async function currentDraftRevision(page: Page) {
@@ -164,7 +164,7 @@ async function fillExactSpellBuckets(page: Page) {
 test('P1-H creates and confirms a direct Fighter 5 / Wizard 5 character end to end', async ({ page, request }, testInfo) => {
   test.slow()
 
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   await page.screenshot({ path: testInfo.outputPath('p1-h-workshop-desktop.png'), fullPage: true })
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)

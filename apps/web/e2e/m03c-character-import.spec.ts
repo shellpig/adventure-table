@@ -1,13 +1,13 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
-import { expect, test } from '@playwright/test'
+import { expect, openCharacterWorkshop, test, type Page } from './support/roomTest'
 
 const fixturePath = (name: string) =>
   resolve(process.cwd(), '../server/tests/data/m03', name)
 
-async function openImport(page: import('@playwright/test').Page) {
-  await page.goto('/characters')
+async function openImport(page: Page) {
+  await openCharacterWorkshop(page)
   await page.getByRole('button', { name: 'Import character JSON' }).first().click()
 }
 

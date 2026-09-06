@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, openCharacterWorkshop, test, type Locator, type Page } from './support/roomTest'
 
 async function currentDraftRevision(page: Page) {
   const text = (await page.locator('.builder-save-state span').innerText()).trim()
@@ -58,7 +58,7 @@ async function chooseIn(container: Locator, value: string) {
 }
 
 async function startDraft(page: Page, name: string, level: number) {
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
   await page.getByLabel('Character name').fill(name)
@@ -192,7 +192,7 @@ test('M01-D Aasimar level 2 to 3 adds the level-gated transformation in Build v2
   await expect(page.getByText('Healing Hands', { exact: true })).toBeVisible()
   await expect(page.getByText('Radiant Soul', { exact: true })).toHaveCount(0)
 
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   const card = page.locator('.workshop-card').filter({ hasText: 'M01-D Threshold Hero' })
   await card.getByRole('button', { name: 'Level Up' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)

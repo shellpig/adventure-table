@@ -32,7 +32,7 @@ jobs:
           DATABASE_URL: "sqlite+pysqlite:////tmp/adventure-table-m01f-fresh.db"
         run: |
           rm -f /tmp/adventure-table-m01f-fresh.db
-          alembic upgrade head
+          alembic upgrade heads
 
   frontend:
     runs-on: ubuntu-latest

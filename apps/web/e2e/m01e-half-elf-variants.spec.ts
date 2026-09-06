@@ -1,4 +1,4 @@
-import { expect, test, type APIResponse, type Locator, type Page } from '@playwright/test'
+import { expect, openCharacterWorkshop, test, type APIResponse, type Locator, type Page } from './support/roomTest'
 
 type BuilderView = {
   draft: {
@@ -97,7 +97,7 @@ async function chooseIn(container: Locator, value: string) {
 }
 
 async function startDraft(page: Page, name: string, level: number) {
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
   await page.getByLabel('Character name').fill(name)

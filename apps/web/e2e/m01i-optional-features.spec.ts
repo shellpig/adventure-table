@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { expect, openCharacterWorkshop, test, type APIRequestContext, type Locator, type Page } from './support/roomTest'
 
 const SUPERIOR_TECHNIQUE = 'tce:feature:superior-technique'
 const BLESSED_WARRIOR = 'tce:feature:blessed-warrior'
@@ -197,7 +197,7 @@ async function startCreate(
   className: 'Fighter' | 'Paladin' | 'Ranger',
   targetLevel: number,
 ) {
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   await page.getByRole('button', { name: '+ Create Character' }).click()
   await expect(page).toHaveURL(/\/character-builder\/[0-9a-f-]{36}$/)
   await expectDraftSaved(page)
@@ -405,7 +405,7 @@ test('M01-I existing Fighter levels up with Martial Versatility and preserves Ve
   expect(version1.version_no).toBe(1)
   expect(version1.build.feature_refs).toContain(ARCHERY)
 
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   const card = page.locator('.workshop-card').filter({ hasText: name })
   await expect(card).toHaveCount(1)
   await card.getByRole('button', { name: 'Level Up' }).click()

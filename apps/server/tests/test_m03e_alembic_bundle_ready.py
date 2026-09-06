@@ -11,6 +11,17 @@ import pytest
 from app import launcher, paths
 
 
+def _character_head(config: Config) -> str:
+    scripts = ScriptDirectory.from_config(config)
+    candidates = []
+    for head in scripts.get_heads():
+        revision = scripts.get_revision(head)
+        if revision is not None and "character" in revision.branch_labels:
+            candidates.append(head)
+    assert len(candidates) == 1, candidates
+    return candidates[0]
+
+
 def test_frozen_alembic_resources_run_from_meipass(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -32,9 +43,17 @@ def test_frozen_alembic_resources_run_from_meipass(
 
     config = Config(str(bundled_alembic / "alembic.ini"))
     config.set_main_option("script_location", str(bundled_alembic))
-    expected_head = ScriptDirectory.from_config(config).get_current_head()
+    expected_head = _character_head(config)
     with sqlite3.connect(database_path) as connection:
         actual_head = connection.execute(
             "SELECT version_num FROM alembic_version"
         ).fetchone()[0]
+        tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
     assert actual_head == expected_head
+    assert "rooms" not in tables
+    assert "room_access_sessions" not in tables

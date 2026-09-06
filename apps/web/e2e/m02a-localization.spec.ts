@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { openCharacterWorkshop, test as roomTest } from './support/roomTest'
+
 const LOCALE_STORAGE_KEY = 'adventure-table.locale'
 
 type BuilderDraftSnapshot = {
@@ -69,9 +71,9 @@ test('M02-A invalid stored locale safely normalizes to zh-TW', async ({ page }) 
   await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), LOCALE_STORAGE_KEY)).toBe('zh-TW')
 })
 
-test('M02-A locale switching preserves Builder step, URL and Draft domain state', async ({ page }) => {
+roomTest('M02-A locale switching preserves Builder step, URL and Draft domain state', async ({ page }) => {
   await resetLocale(page)
-  await page.goto('/characters')
+  await openCharacterWorkshop(page)
   await expect(page.getByRole('heading', { name: '角色工作坊' })).toBeVisible()
 
   await page.getByRole('button', { name: '＋ 建立角色' }).click()

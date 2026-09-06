@@ -13,7 +13,11 @@ from app.interop.character_import import (
     CharacterImportResult,
     CharacterImportService,
 )
-from app.interop.json_schema import CharacterExport
+from app.interop.json_schema import (
+    CharacterExportV1,
+    normalize_character_export,
+    parse_character_export,
+)
 
 
 router = APIRouter(prefix="/api/characters", tags=["characters"])
@@ -47,7 +51,7 @@ def map_validation_error(exc: ValidationError) -> str:
     return "invalid_payload_shape"
 
 
-def _parse_document(raw_body: bytes) -> CharacterExport:
+def _parse_document(raw_body: bytes) -> CharacterExportV1:
     if len(raw_body) > MAX_CHARACTER_IMPORT_BYTES:
         raise APIError(
             413,
@@ -64,7 +68,7 @@ def _parse_document(raw_body: bytes) -> CharacterExport:
             "request body is not valid JSON",
         ) from exc
     try:
-        document = CharacterExport.model_validate(payload)
+        document = normalize_character_export(parse_character_export(payload))
     except ValidationError as exc:
         raise APIError(400, map_validation_error(exc), str(exc)) from exc
     if not document.payload.character.name.strip():

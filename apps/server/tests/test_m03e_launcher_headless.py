@@ -33,7 +33,18 @@ def _clear_launcher_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delattr(paths.sys, "_MEIPASS", raising=False)
 
 
-def test_run_migrations_upgrades_tmp_sqlite_to_head(
+def _character_head(config: Config) -> str:
+    scripts = ScriptDirectory.from_config(config)
+    candidates = []
+    for head in scripts.get_heads():
+        revision = scripts.get_revision(head)
+        if revision is not None and "character" in revision.branch_labels:
+            candidates.append(head)
+    assert len(candidates) == 1, candidates
+    return candidates[0]
+
+
+def test_run_migrations_upgrades_tmp_sqlite_to_character_head(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -49,12 +60,20 @@ def test_run_migrations_upgrades_tmp_sqlite_to_head(
         "script_location",
         str(launcher._alembic_script_location(config_path)),
     )
-    expected_head = ScriptDirectory.from_config(config).get_current_head()
+    expected_head = _character_head(config)
     with sqlite3.connect(database_path) as connection:
         actual_head = connection.execute(
             "SELECT version_num FROM alembic_version"
         ).fetchone()[0]
+        tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
     assert actual_head == expected_head
+    assert "rooms" not in tables
+    assert "room_access_sessions" not in tables
 
 
 def test_launcher_sets_default_database_path_before_migration_and_opens_browser(
@@ -97,10 +116,6 @@ def test_launcher_keeps_settings_database_path_when_env_var_is_absent(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A path configured through settings (for example a .env file) must win
-    over the launcher's own exe-dir/cwd default, which is last in the E.5 order.
-    """
-
     _clear_launcher_env(monkeypatch)
     monkeypatch.chdir(tmp_path)
     configured = tmp_path / "configured" / "adventure-table.sqlite3"
