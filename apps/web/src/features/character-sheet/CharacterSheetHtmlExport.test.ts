@@ -8,6 +8,7 @@ import {
   buildCharacterSheetExportFilename,
   buildCharacterSheetHtmlDocument,
   formatConditionForExport,
+  pairCharacterSheetIndexRows,
   projectCharacterSheetForExport,
   sanitizeFilenameSegment,
 } from './CharacterSheetHtmlExport'
@@ -78,6 +79,56 @@ describe('M01-N Character Sheet export projection', () => {
       'Poisoned — From spider venom',
     )
     expect(formatConditionForExport('Prone ×')).toBe('Prone')
+  })
+})
+
+describe('M01-N keyed export row pairing', () => {
+  it('pairs rows by stable key instead of DOM order', () => {
+    const host = document.createElement('div')
+    host.innerHTML = `
+      <div class="row" data-sheet-index-key="second">second row</div>
+      <div class="row" data-sheet-index-key="first">first row</div>
+    `
+    const items = [
+      { key: 'first', value: 1 },
+      { key: 'second', value: 2 },
+    ]
+
+    const pairs = pairCharacterSheetIndexRows(host, '.row', items, (item) => item.key)
+    expect(pairs.map(({ key, item, row }) => [key, item.value, row.textContent?.trim()])).toEqual([
+      ['second', 2, 'second row'],
+      ['first', 1, 'first row'],
+    ])
+  })
+
+  it('fails loudly for duplicate DOM keys', () => {
+    const host = document.createElement('div')
+    host.innerHTML = `
+      <div class="row" data-sheet-index-key="same"></div>
+      <div class="row" data-sheet-index-key="same"></div>
+    `
+    expect(() =>
+      pairCharacterSheetIndexRows(host, '.row', [{ key: 'same' }], (item) => item.key),
+    ).toThrow(/duplicate key: same/)
+  })
+
+  it('fails loudly for duplicate item keys and missing row keys', () => {
+    const duplicateItemsHost = document.createElement('div')
+    duplicateItemsHost.innerHTML = '<div class="row" data-sheet-index-key="same"></div>'
+    expect(() =>
+      pairCharacterSheetIndexRows(
+        duplicateItemsHost,
+        '.row',
+        [{ key: 'same' }, { key: 'same' }],
+        (item) => item.key,
+      ),
+    ).toThrow(/duplicate key: same/)
+
+    const missingKeyHost = document.createElement('div')
+    missingKeyHost.innerHTML = '<div class="row"></div>'
+    expect(() =>
+      pairCharacterSheetIndexRows(missingKeyHost, '.row', [{ key: 'only' }], (item) => item.key),
+    ).toThrow(/missing data-sheet-index-key/)
   })
 })
 

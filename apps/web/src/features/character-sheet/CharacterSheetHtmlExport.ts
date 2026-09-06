@@ -26,6 +26,12 @@ export type CharacterSheetExportResult = {
   filename: string
 }
 
+export type CharacterSheetIndexPair<T> = {
+  key: string
+  row: HTMLElement
+  item: T
+}
+
 export function projectCharacterSheetForExport(
   sheet: CharacterSheetDTO,
   scope: CharacterSheetExportScope,
@@ -86,6 +92,48 @@ export function formatConditionForExport(label: string, note?: string | null): s
   const trimmedLabel = label.replace(/\s*×\s*$/, '').trim()
   const trimmedNote = note?.trim()
   return trimmedNote ? `${trimmedLabel} — ${trimmedNote}` : trimmedLabel
+}
+
+export function pairCharacterSheetIndexRows<T>(
+  root: ParentNode,
+  selector: string,
+  items: readonly T[],
+  keyFor: (item: T) => string,
+): CharacterSheetIndexPair<T>[] {
+  const itemByKey = new Map<string, T>()
+  for (const item of items) {
+    const key = keyFor(item).trim()
+    if (!key) throw new Error(`Character Sheet export index item for ${selector} has an empty key`)
+    if (itemByKey.has(key)) {
+      throw new Error(`Character Sheet export index item for ${selector} has duplicate key: ${key}`)
+    }
+    itemByKey.set(key, item)
+  }
+
+  const seenRowKeys = new Set<string>()
+  const pairs = Array.from(root.querySelectorAll<HTMLElement>(selector)).map((row) => {
+    const key = row.dataset.sheetIndexKey?.trim()
+    if (!key) {
+      throw new Error(`Character Sheet export row for ${selector} is missing data-sheet-index-key`)
+    }
+    if (seenRowKeys.has(key)) {
+      throw new Error(`Character Sheet export row for ${selector} has duplicate key: ${key}`)
+    }
+    seenRowKeys.add(key)
+
+    const item = itemByKey.get(key)
+    if (!item) {
+      throw new Error(`Character Sheet export row for ${selector} has unknown key: ${key}`)
+    }
+    return { key, row, item }
+  })
+
+  for (const key of itemByKey.keys()) {
+    if (!seenRowKeys.has(key)) {
+      throw new Error(`Character Sheet export row for ${selector} is missing key: ${key}`)
+    }
+  }
+  return pairs
 }
 
 export function buildCharacterSheetHtmlDocument({
@@ -250,13 +298,15 @@ function insertExportDocumentMeta(
 }
 
 function preserveConditionLabels(root: HTMLElement, sheet: CharacterSheetDTO): void {
-  root.querySelectorAll('button.condition-chip').forEach((button, index) => {
+  pairCharacterSheetIndexRows(
+    root,
+    'button.condition-chip',
+    sheet.conditions,
+    (condition) => condition.condition_ref,
+  ).forEach(({ row: button, item: condition }) => {
     const span = document.createElement('span')
     span.className = button.className
-    span.textContent = formatConditionForExport(
-      button.textContent ?? '',
-      sheet.conditions[index]?.note,
-    )
+    span.textContent = formatConditionForExport(button.textContent ?? '', condition.note)
     button.replaceWith(span)
   })
 }
@@ -335,9 +385,12 @@ function applyBuildOnlyProjection(
   if (hitDiceTitle) hitDiceTitle.textContent = copy.total
 
   const preparedSources = sheet.spellcasting.filter((source) => source.prepared_limit != null)
-  root.querySelectorAll<HTMLElement>('.prepared-limit').forEach((node, index) => {
-    const source = preparedSources[index]
-    if (!source || source.prepared_limit == null) return
+  pairCharacterSheetIndexRows(
+    root,
+    '.prepared-limit',
+    preparedSources,
+    (source) => source.source_key,
+  ).forEach(({ row: node, item: source }) => {
     const label = node.querySelector<HTMLElement>('small')
     const value = node.querySelector<HTMLElement>('b')
     if (label) label.textContent = copy.preparedLimit
@@ -345,18 +398,24 @@ function applyBuildOnlyProjection(
   })
   root.querySelectorAll('.prepared-limit-hint').forEach((node) => node.remove())
 
-  root.querySelectorAll<HTMLElement>('.slot-card').forEach((card, index) => {
-    const entry = projection.spellSlots[index]
-    if (!entry) return
+  pairCharacterSheetIndexRows(
+    root,
+    '.slot-card',
+    projection.spellSlots,
+    (entry) => entry.level,
+  ).forEach(({ row: card, item: entry }) => {
     const value = card.querySelector<HTMLElement>('strong')
     const caption = card.querySelector<HTMLElement>('small')
     if (value) value.textContent = String(entry.total)
     if (caption) caption.textContent = copy.total
   })
 
-  root.querySelectorAll<HTMLElement>('.resource-list > div').forEach((row, index) => {
-    const entry = projection.resources[index]
-    if (!entry) return
+  pairCharacterSheetIndexRows(
+    root,
+    '.resource-list > div',
+    projection.resources,
+    (entry) => entry.key,
+  ).forEach(({ row, item: entry }) => {
     const value = row.querySelector<HTMLElement>('strong')
     if (value) value.textContent = String(entry.total)
     const caption = document.createElement('small')
