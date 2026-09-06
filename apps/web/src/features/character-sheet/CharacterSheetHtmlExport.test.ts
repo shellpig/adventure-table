@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, it } from 'vitest'
 
 import type { CharacterSheetDTO } from '../../api/character'
@@ -10,6 +12,11 @@ import {
   projectCharacterSheetForExport,
   sanitizeFilenameSegment,
 } from './CharacterSheetHtmlExport'
+
+const exportCssSource = readFileSync(
+  new URL('./characterSheetExport.css', import.meta.url),
+  'utf8',
+)
 
 const sheet = {
   name: 'Mira: Wizard/Scout?',
@@ -134,7 +141,7 @@ describe('M01-N Character Sheet export identity', () => {
 })
 
 describe('M01-N self-contained HTML document', () => {
-  it('inlines styles, contains the print block, freezes locale, and emits no external dependency', () => {
+  it('freezes locale, owns a style block, and emits no external dependency', () => {
     const html = buildCharacterSheetHtmlDocument({
       bodyMarkup: '<main class="character-page"><article>Offline</article></main>',
       locale: 'en',
@@ -142,11 +149,16 @@ describe('M01-N self-contained HTML document', () => {
     })
     expect(html).toContain('<html lang="en">')
     expect(html).toContain('<style>')
-    expect(html).toContain('@media print')
     expect(html).not.toMatch(/<script\b/i)
     expect(html).not.toMatch(/https?:\/\//i)
     expect(html).not.toMatch(/\bsrc\s*=/i)
     expect(html).not.toMatch(/\bhref\s*=/i)
+  })
+
+  it('ships explicit A4 print rules in the export stylesheet', () => {
+    expect(exportCssSource).toContain('@media print')
+    expect(exportCssSource).toContain('size: A4')
+    expect(exportCssSource).toContain('break-inside: avoid')
   })
 
   it('escapes document-title text instead of creating markup', () => {
