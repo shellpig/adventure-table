@@ -53,7 +53,7 @@ describe('Room Character workspace authority', () => {
       accessToken: 'owner-token',
     })
     renderPage()
-    expect(screen.getByTestId('workshop-delete-authority')).toHaveTextContent('true')
+    expect(screen.getByTestId('workshop-delete-authority').textContent).toBe('true')
   })
 
   it.each(['member', 'dm'] as const)('does not render permanent-delete authority for %s', (authority) => {
@@ -65,6 +65,6 @@ describe('Room Character workspace authority', () => {
       accessToken: `${authority}-token`,
     })
     renderPage()
-    expect(screen.getByTestId('workshop-delete-authority')).toHaveTextContent('false')
+    expect(screen.getByTestId('workshop-delete-authority').textContent).toBe('false')
   })
 })
