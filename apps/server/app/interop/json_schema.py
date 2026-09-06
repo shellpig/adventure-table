@@ -122,7 +122,8 @@ def normalize_character_export(document: ParsedCharacterExport) -> CharacterExpo
     )
 
 
-# Compatibility names used by the M03 fixture-corpus tests and old direct
-# service tests. New production export code must use CharacterExportV1.
+# Compatibility names used by the committed M03 fixture corpus and older
+# direct service/tests. Keep both aliases on the same legacy schema; new
+# production export code must use CharacterExportV1/CharacterExportV1Envelope.
 CharacterExport = LegacyM03CharacterExport
-Envelope = CharacterExportV1Envelope
+Envelope = LegacyM03Envelope

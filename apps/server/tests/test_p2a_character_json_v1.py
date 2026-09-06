@@ -4,7 +4,9 @@ import json
 from pathlib import Path
 
 from app.interop.json_schema import (
+    CharacterExport,
     CharacterExportV1,
+    Envelope,
     LegacyM03CharacterExport,
     normalize_character_export,
     parse_character_export,
@@ -39,6 +41,21 @@ def test_p2a_legacy_unstable_normalizes_to_locked_v1_without_payload_loss() -> N
     assert normalized.envelope.schema_status == "locked"
     assert normalized.envelope.export_type == "character"
     assert normalized.payload == parsed.payload
+
+
+def test_p2a_legacy_compatibility_aliases_construct_the_same_schema() -> None:
+    payload = _legacy_payload()
+    envelope = Envelope.model_validate(payload["envelope"])
+    document = CharacterExport(
+        envelope=envelope,
+        payload=payload["payload"],
+    )
+
+    assert isinstance(document, LegacyM03CharacterExport)
+    assert document.envelope.schema_version == "unstable"
+    normalized = normalize_character_export(document)
+    assert normalized.envelope.schema_version == "1"
+    assert normalized.payload == document.payload
 
 
 def test_p2a_locked_v1_parse_and_normalize_are_idempotent() -> None:
