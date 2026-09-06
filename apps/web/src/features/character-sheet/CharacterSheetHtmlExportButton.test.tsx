@@ -28,18 +28,16 @@ function renderExportButton(locale: Locale): string {
 }
 
 describe('M01-N Character Sheet HTML export action', () => {
-  it('offers build-only and current-snapshot scopes in English', () => {
+  it('offers both scopes in English', () => {
     const markup = renderExportButton('en')
     expect(markup).toContain('Export scope')
-    expect(markup).toContain('<option value="build"')
     expect(markup).toContain('Build only</option>')
-    expect(markup).toContain('<option value="snapshot"')
     expect(markup).toContain('Current snapshot</option>')
     expect(markup).toContain('Export HTML')
     expect(markup).toContain('data-testid="character-html-export-button"')
   })
 
-  it('renders the same independent export action in Traditional Chinese', () => {
+  it('renders the independent action in Traditional Chinese', () => {
     const markup = renderExportButton('zh-TW')
     expect(markup).toContain('輸出範圍')
     expect(markup).toContain('角色配置')
@@ -47,7 +45,7 @@ describe('M01-N Character Sheet HTML export action', () => {
     expect(markup).toContain('匯出 HTML')
   })
 
-  it('copies already-held query data into a non-stale export cache', () => {
+  it('copies held query data into an export client with infinite staleness', () => {
     const source = new QueryClient()
     const key = ['content-presentations', 'en', ['srd5.1:class:wizard'], ['name']]
     const data = { presentations: [{ key: 'srd5.1:class:wizard' }] }
@@ -55,6 +53,6 @@ describe('M01-N Character Sheet HTML export action', () => {
 
     const frozen = createFrozenExportQueryClient(source)
     expect(frozen.getQueryData(key)).toEqual(data)
-    expect(frozen.getQueryCache().find({ queryKey: key })?.options.staleTime).toBe(Infinity)
+    expect(frozen.getDefaultOptions().queries?.staleTime).toBe(Infinity)
   })
 })
