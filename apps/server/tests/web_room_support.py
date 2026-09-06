@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import Any
 from uuid import UUID
 
 from fastapi.testclient import TestClient
@@ -18,7 +19,13 @@ from app.persistence.rooms.repository import RoomRepository
 
 
 class WebRoomTestClient(TestClient):
-    """`app.main` client carrying one authenticated Room namespace."""
+    """`app.main` client carrying one authenticated Room namespace.
+
+    Older Web regression helpers intentionally keep their pre-P2 URL literals so
+    their behavioral assertions stay focused. This client translates only the
+    Character/Builder Web namespaces at the request boundary; the production app
+    therefore still receives and authorizes the real Room-scoped routes.
+    """
 
     def __init__(
         self,
@@ -36,6 +43,22 @@ class WebRoomTestClient(TestClient):
         self.access_token = access_token
         self.character_api = f"/api/rooms/{room_id}/characters"
         self.builder_api = f"/api/rooms/{room_id}/character-builder"
+
+    def _scope_web_url(self, url: Any) -> Any:
+        if not isinstance(url, str):
+            return url
+        if url == "/api/characters" or url.startswith("/api/characters/") or url.startswith("/api/characters?"):
+            return f"/api/rooms/{self.room_id}{url[len('/api'):]}"
+        if (
+            url == "/api/character-builder"
+            or url.startswith("/api/character-builder/")
+            or url.startswith("/api/character-builder?")
+        ):
+            return f"/api/rooms/{self.room_id}{url[len('/api'):]}"
+        return url
+
+    def request(self, method: str, url: Any, *args: Any, **kwargs: Any):
+        return super().request(method, self._scope_web_url(url), *args, **kwargs)
 
     def scope_character(self, character_id: UUID) -> None:
         app.state.room_workspace_service.workspace_repository.attach_character(
