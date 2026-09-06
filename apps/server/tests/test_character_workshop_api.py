@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 
@@ -13,13 +12,11 @@ from app.domain.character.fixture import (
     build_p0_fighter_wizard_fixture,
     build_p0_fighter_wizard_state,
 )
-from app.domain.character_builder.service import CharacterBuilderService
-from app.main import app
-from app.persistence.builder_drafts import BuilderDraftRepository
 from app.persistence.characters import CharacterRepository
+from web_room_support import create_web_room_client
 
 
-def _seed_workshop_api() -> TestClient:
+def _seed_workshop_api():
     registry = load_default_content_registry()
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
@@ -29,26 +26,24 @@ def _seed_workshop_api() -> TestClient:
     metadata.create_all(engine)
     character_repository = CharacterRepository(engine, registry)
     build = build_p0_fighter_wizard_fixture()
-    character_repository.create_character(
+    character = character_repository.create_character(
         character_id=uuid4(),
         name=P0_FIXTURE_NAME,
         build=build,
         state=build_p0_fighter_wizard_state(build),
     )
-    app.state.content_registry = registry
-    app.state.character_engine = engine
-    app.state.character_repository = character_repository
-    app.state.character_builder_service = CharacterBuilderService(
-        BuilderDraftRepository(engine),
+    return create_web_room_client(
+        engine,
         registry,
+        character_repository=character_repository,
+        character_ids=(character.id,),
     )
-    return TestClient(app)
 
 
 def test_character_workshop_summary_and_create_draft_listing() -> None:
     client = _seed_workshop_api()
 
-    characters = client.get("/api/characters")
+    characters = client.get(client.character_api)
     assert characters.status_code == 200
     payload = characters.json()
     assert payload == [
@@ -66,13 +61,13 @@ def test_character_workshop_summary_and_create_draft_listing() -> None:
     ]
 
     created = client.post(
-        "/api/character-builder/drafts",
+        f"{client.builder_api}/drafts",
         json={"mode": "create", "draft_payload": {"basic": {"name": "Resume Me"}}},
     )
     assert created.status_code == 201
     draft_id = created.json()["draft"]["id"]
 
-    drafts = client.get("/api/character-builder/drafts")
+    drafts = client.get(f"{client.builder_api}/drafts")
     assert drafts.status_code == 200
     assert [item["draft"]["id"] for item in drafts.json()] == [draft_id]
     assert drafts.json()[0]["resolved_summary"]["name"] == "Resume Me"
@@ -80,7 +75,7 @@ def test_character_workshop_summary_and_create_draft_listing() -> None:
 
 def test_ability_rules_api_is_backed_by_versioned_rules_data() -> None:
     client = _seed_workshop_api()
-    response = client.get("/api/character-builder/rules/ability-generation")
+    response = client.get(f"{client.builder_api}/rules/ability-generation")
 
     assert response.status_code == 200
     payload = response.json()
