@@ -19,6 +19,7 @@ const SOURCE_FILES = [
   '../features/character-io/ExportCharacterButton.tsx',
   '../features/character-io/ImportCharacterDialog.tsx',
   '../features/character-sheet/CharacterSheetPage.tsx',
+  '../features/character-sheet/CharacterSheetHtmlExportButton.tsx',
 ] as const
 
 const ALLOWED_LITERAL_TEXT = new Set([

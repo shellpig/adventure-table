@@ -1,0 +1,65 @@
+name: M01-N Non-E2E Regression
+
+on:
+  push:
+    branches:
+      - m01-n-character-sheet-html-export
+    paths:
+      - '.github/m01n-non-e2e.trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install backend
+        run: pip install -e ".[web,dev,standalone]"
+      - name: M03 standalone static compatibility
+        run: pytest tests/test_m03_import_boundary.py tests/test_m03_standalone_composition.py -q
+      - name: Backend pytest
+        run: pytest
+      - name: Localization authoring unit tests
+        working-directory: .
+        run: python -m unittest scripts.test_build_m02d_srd_locale_reviewed scripts.test_run_m02d_srd_locale_authoring
+      - name: Fresh SQLite migration
+        env:
+          DATABASE_URL: sqlite+pysqlite:////tmp/adventure-table-m01n-fresh.db
+        run: alembic upgrade head
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Pin npm
+        run: npm install --global npm@11.6.0
+      - name: Install frontend
+        run: npm ci
+      - name: Frontend unit tests
+        run: npm test -- --run
+      - name: TypeScript and Vite build
+        run: npm run build
+
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose config
+        run: docker compose config
