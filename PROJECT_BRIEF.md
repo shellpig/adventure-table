@@ -18,7 +18,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## 當前狀態與下一步
 
-**P0、P1、M02、M03 已完成並關門；M01-A～M01-M 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track；P2 三份正式規格與 Subphase A～F 已完成設計，P2 code 尚未開始，下一步是 P2-A。**
+**P0、P1、M02、M03 已完成並關門；M01-A～M01-M 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track；P2 三份正式規格與 Subphase A～F 已完成設計，P2 code 尚未開始。下一步是插入的 M01-N，完成後回到 P2-A。**
 
 P2 已拍板的核心方向：
 
@@ -32,9 +32,10 @@ P2 已拍板的核心方向：
 
 下一步依序為：
 
-1. **實作 P2-A — Room Foundation & Web Entry**；只做該 Subphase 的 code + tests + static review，不提前做 P2-B～F。
-2. P2-A closeout後依序 P2-B → P2-C → P2-D → P2-E；每個 Subphase都獨立實作、驗證、commit。
-3. P2-F 做 Full P2 Integration & Closeout；P3～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
+1. **實作 M01-N — Character Sheet HTML Export**；已完成三份文件，是插在 P2 前的 presentation-only 工作，不碰共享 Character contract。
+2. **實作 P2-A — Room Foundation & Web Entry**；只做該 Subphase 的 code + tests + static review，不提前做 P2-B～F。
+3. P2-A closeout後依序 P2-B → P2-C → P2-D → P2-E；每個 Subphase都獨立實作、驗證、commit。
+4. P2-F 做 Full P2 Integration & Closeout；P3～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
 
 P2 的正式契約：
 
@@ -123,8 +124,9 @@ P2 的正式契約：
 | **M01-K — PHB Feat & Spell Catalog Expansion** | ✅ | PHB non-SRD Feats 41/41、Spells 42/42；Feat structural mechanics / prerequisite / nested choices、Spell catalog/access、既有 M01-I/J spell reconcile、跨來源 provenance、雙語與 focused E2E 已驗收 |
 | **M01-L — VGM & SCAG Remaining Race Expansion / Generic Race Mechanics** | ✅ | VGM remaining 10 races + SCAG remaining 2 subraces；generic Race/Subrace movement grant、signed racial modifier compatibility、Natural Armor Rules Layer primitive、racial spell canonical multi-rest recharge、typed runtime automation classification、no-docs runtime gate；雙語與 FC-E2E-21 已驗收 |
 | **M01-M — MTF Planar Race Expansion & Tiefling Bloodline / Variant System** | ✅ | `mtf` pack、7 個 MTF planar race、Tiefling 9/9 血脈（Asmodeus canonical map + 8 new variants）、SCAG 保守相容、replacement group persistence、Winged conditional movement、Eladrin season State ownership、feature mode default-deny；雙語與 M-E2E-01～05 已驗收 |
+| **M01-N — Character Sheet HTML Export** | ⬜ | 角色卡輸出成單向、只給人看的自足 HTML；使用者自選「角色配置」／「當前快照」，含列印樣式；client-side、不新增 endpoint、永不可 Import |
 
-> **M01 保持 open。** A～M 是目前 baseline；下一個已拍板的 M01 工作從 **M01-N** 起編號。沒有預留給「Full M01 Closeout」的字母。
+> **M01 保持 open。** A～M 是目前已交付的 baseline；M01-N 已拍板並完成三份文件，尚未開工。再下一個已拍板的 M01 工作從 **M01-O** 起編號。沒有預留給「Full M01 Closeout」的字母。
 
 ### M02
 
