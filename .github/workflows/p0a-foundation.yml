@@ -35,7 +35,7 @@ jobs:
           DATABASE_URL: "sqlite+pysqlite:////tmp/adventure-table-p1-fresh.db"
         run: |
           rm -f /tmp/adventure-table-p1-fresh.db
-          alembic upgrade head
+          alembic upgrade heads
 
       - name: Validate P0 to P1 migration and legacy character compatibility
         working-directory: apps/server
@@ -108,7 +108,7 @@ jobs:
           )
           engine.dispose()
           PY
-          alembic upgrade head
+          alembic upgrade heads
           python - <<'PY'
           import json
           import os
