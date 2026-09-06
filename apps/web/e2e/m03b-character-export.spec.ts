@@ -14,7 +14,7 @@ async function downloadedJson(page: Page, buttonName: string | RegExp) {
   return { download, document }
 }
 
-test('Workshop exports an active character and exposes unstable schema controls', async ({ page }) => {
+test('Workshop exports an active character with the locked v1 schema', async ({ page }) => {
   await openCharacterWorkshop(page)
   const card = page.locator('article.workshop-card').filter({ hasText: 'P0 Human Fighter 5 / Wizard 5' })
   await expect(card).toBeVisible()
@@ -25,8 +25,9 @@ test('Workshop exports an active character and exposes unstable schema controls'
   const path = await download.path()
   expect(path).not.toBeNull()
   const document = JSON.parse(await readFile(path!, 'utf8'))
-  expect(document.envelope.schema_version).toBe('unstable')
-  expect(document.envelope.schema_status).toBe('unstable')
+  expect(document.envelope.schema_version).toBe('1')
+  expect(document.envelope.schema_status).toBe('locked')
+  expect(document.envelope.export_type).toBe('character')
 })
 
 test('Character Sheet mounts export inside the real sheet header', async ({ page }) => {
