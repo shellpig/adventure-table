@@ -8,6 +8,7 @@ from pydantic import Field, field_validator
 
 from app.domain.rooms.schemas import RoomAccessAuthority, StrictModel
 from app.persistence.rooms.seats import (
+    SeatHistoryReferencedPersistenceError,
     SeatPersistenceConflictError,
     SeatRepository,
     SeatSelectionPersistenceError,
@@ -106,6 +107,10 @@ class SeatControllerError(RuntimeError):
 
 
 class SeatCharacterSelectionError(RuntimeError):
+    pass
+
+
+class SeatHistoryReferencedError(RuntimeError):
     pass
 
 
@@ -254,7 +259,11 @@ class SeatService:
 
     def delete_seat(self, room_id: UUID, campaign_id: UUID, seat_id: UUID) -> None:
         self.get_scoped_seat(room_id, campaign_id, seat_id)
-        if not self.repository.delete_unreferenced(seat_id):
+        try:
+            deleted = self.repository.delete_unreferenced(seat_id)
+        except SeatHistoryReferencedPersistenceError as exc:
+            raise SeatHistoryReferencedError(str(exc)) from exc
+        if not deleted:
             raise SeatNotFoundError(seat_id)
 
     def lobby(
@@ -300,6 +309,7 @@ __all__ = [
     "SeatControllerError",
     "SeatControllerPatch",
     "SeatCreate",
+    "SeatHistoryReferencedError",
     "SeatNotFoundError",
     "SeatRole",
     "SeatService",

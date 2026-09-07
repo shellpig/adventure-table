@@ -18,6 +18,7 @@ from app.domain.rooms.seats import (
     SeatControllerError,
     SeatControllerPatch,
     SeatCreate,
+    SeatHistoryReferencedError,
     SeatNotFoundError,
     SeatRole,
     SeatService,
@@ -50,6 +51,8 @@ def _map_seat_error(exc: Exception) -> APIError:
         return APIError(409, "seat_controller_invalid", str(exc))
     if isinstance(exc, SeatCharacterSelectionError):
         return APIError(409, "seat_character_invalid", str(exc))
+    if isinstance(exc, SeatHistoryReferencedError):
+        return APIError(409, "seat_history_referenced", str(exc))
     raise exc
 
 
