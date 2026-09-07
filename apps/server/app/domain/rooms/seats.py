@@ -168,23 +168,8 @@ class SeatService:
             updated_at=seat.updated_at,
         )
 
-    def _selection_is_eligible(self, campaign_id: UUID, character_id: UUID) -> bool:
-        return self.repository.selection_is_eligible(
-            campaign_id=campaign_id,
-            character_id=character_id,
-        )
-
-    def _reconcile_selections(self, campaign_id: UUID) -> None:
-        for seat in self.repository.list_for_campaign(campaign_id):
-            if seat.selected_character_id is None:
-                continue
-            if self._selection_is_eligible(campaign_id, seat.selected_character_id):
-                continue
-            self.repository.set_selected_character(seat_id=seat.id, character_id=None)
-
     def list_seats(self, room_id: UUID, campaign_id: UUID) -> list[CampaignSeat]:
         self._require_campaign(room_id, campaign_id)
-        self._reconcile_selections(campaign_id)
         return [self._present(seat) for seat in self.repository.list_for_campaign(campaign_id)]
 
     def create_seat(self, room_id: UUID, campaign_id: UUID, payload: SeatCreate) -> CampaignSeat:
@@ -280,7 +265,6 @@ class SeatService:
         caller_access_session_id: UUID | None = None,
     ) -> LobbySnapshot:
         self._require_current_active_campaign(room_id, campaign_id)
-        self._reconcile_selections(campaign_id)
         now = datetime.now(timezone.utc)
         controllers = [
             LobbyController(

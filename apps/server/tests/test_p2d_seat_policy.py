@@ -164,20 +164,6 @@ class _FakeSeatRepository:
         self.seats[seat_id] = updated
         return updated
 
-    def set_selected_character(self, *, seat_id, character_id):
-        seat = self.seats.get(seat_id)
-        if seat is None:
-            return None
-        updated = StoredSeat(
-            **{
-                **seat.__dict__,
-                "selected_character_id": character_id,
-                "updated_at": datetime.now(timezone.utc),
-            }
-        )
-        self.seats[seat_id] = updated
-        return updated
-
     def archive(self, seat_id):
         seat = self.seats.get(seat_id)
         if seat is None:
@@ -358,7 +344,7 @@ def test_player_character_selection_enforces_eligibility_and_uniqueness() -> Non
         service.select_character(repo.room_id, repo.campaign_id, second.id, eligible_a)
 
 
-def test_lobby_reconciles_selection_when_character_becomes_ineligible() -> None:
+def test_lobby_read_does_not_reconcile_stale_selection() -> None:
     repo = _FakeSeatRepository()
     service = SeatService(repo)
     seat = service.create_seat(repo.room_id, repo.campaign_id, SeatCreate(role=SeatRole.PLAYER))
@@ -368,7 +354,8 @@ def test_lobby_reconciles_selection_when_character_becomes_ineligible() -> None:
 
     repo.eligible_characters.remove(character_id)
     snapshot = service.lobby(repo.room_id, repo.campaign_id)
-    assert snapshot.seats[0].selected_character_id is None
+    assert snapshot.seats[0].selected_character_id == character_id
+    assert repo.seats[seat.id].selected_character_id == character_id
 
 
 def test_cross_campaign_seat_lookup_is_rejected() -> None:
