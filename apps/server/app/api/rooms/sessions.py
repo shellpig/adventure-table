@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 
 from app.api.errors import APIError
 from app.api.rooms.access import get_room_access_context
@@ -11,7 +11,11 @@ from app.domain.rooms.schemas import RoomAccessContext
 from app.domain.rooms.sessions import (
     CharacterAlreadyInActiveSessionError,
     DMControllerMismatchError,
+    SessionActiveCharacterLockedError,
+    SessionActiveCharacterPatch,
     SessionAlreadyActiveError,
+    SessionLateJoinError,
+    SessionLateJoinRequest,
     SessionLobbyUnavailableError,
     SessionNotActiveError,
     SessionNotFoundError,
@@ -42,6 +46,10 @@ def _map_session_error(exc: Exception) -> APIError:
         return APIError(403, "dm_controller_mismatch", str(exc))
     if isinstance(exc, SessionNotActiveError):
         return APIError(409, "session_not_active", "Session is not active")
+    if isinstance(exc, SessionActiveCharacterLockedError):
+        return APIError(409, "session_active_character_locked", str(exc))
+    if isinstance(exc, SessionLateJoinError):
+        return APIError(409, "seat_character_invalid", str(exc))
     if isinstance(exc, SessionLobbyUnavailableError):
         return APIError(409, "lobby_unavailable", str(exc))
     raise exc
@@ -85,6 +93,57 @@ def get_session(
         return service.get_session(context.room_id, campaign_id, session_id)
     except Exception as exc:
         raise _map_session_error(exc) from exc
+
+
+@router.post("/sessions/{session_id}/late-join", response_model=SessionSnapshot)
+def late_join(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    payload: SessionLateJoinRequest,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    service: SessionService = Depends(get_session_service),
+) -> SessionSnapshot:
+    try:
+        return service.late_join(
+            context.room_id,
+            campaign_id,
+            session_id,
+            payload,
+            context,
+        )
+    except Exception as exc:
+        raise _map_session_error(exc) from exc
+
+
+@router.patch(
+    "/sessions/{session_id}/participants/{participant_id}/character",
+    status_code=status.HTTP_409_CONFLICT,
+)
+def reject_active_character_change(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    participant_id: UUID,
+    payload: SessionActiveCharacterPatch,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    service: SessionService = Depends(get_session_service),
+) -> Response:
+    try:
+        service.assert_active_character_locked(
+            context.room_id,
+            campaign_id,
+            session_id,
+            participant_id,
+            payload,
+        )
+    except Exception as exc:
+        raise _map_session_error(exc) from exc
+    raise APIError(
+        409,
+        "session_active_character_locked",
+        "Active Character is immutable after Session participation begins",
+    )
 
 
 @router.post("/sessions/{session_id}/end", response_model=SessionSnapshot)

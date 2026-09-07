@@ -5,6 +5,12 @@ from enum import StrEnum
 from uuid import UUID
 
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext, StrictModel
+from app.persistence.rooms.session_live import (
+    LateJoinCharacterLeasedPersistenceError,
+    LateJoinControllerMismatchPersistenceError,
+    LateJoinPersistenceError,
+    SessionLiveRepository,
+)
 from app.persistence.rooms.sessions import (
     CharacterAlreadyLeasedPersistenceError,
     SessionAlreadyActivePersistenceError,
@@ -19,6 +25,14 @@ class SessionStatus(StrEnum):
     ACTIVE = "active"
     ENDED = "ended"
     ABANDONED = "abandoned"
+
+
+class SessionLateJoinRequest(StrictModel):
+    seat_id: UUID
+
+
+class SessionActiveCharacterPatch(StrictModel):
+    active_character_id: UUID
 
 
 class SessionParticipantSnapshot(StrictModel):
@@ -71,9 +85,22 @@ class SessionLobbyUnavailableError(RuntimeError):
     pass
 
 
+class SessionLateJoinError(RuntimeError):
+    pass
+
+
+class SessionActiveCharacterLockedError(RuntimeError):
+    pass
+
+
 class SessionService:
-    def __init__(self, repository: SessionRepository) -> None:
+    def __init__(
+        self,
+        repository: SessionRepository,
+        live_repository: SessionLiveRepository | None = None,
+    ) -> None:
         self.repository = repository
+        self.live_repository = live_repository or SessionLiveRepository(repository.engine)
 
     def _require_campaign(self, room_id: UUID, campaign_id: UUID) -> None:
         if self.repository.campaign_room_id(campaign_id) != room_id:
@@ -173,6 +200,52 @@ class SessionService:
             and context.authority in {RoomAccessAuthority.DM, RoomAccessAuthority.OWNER}
         )
 
+    def late_join(
+        self,
+        room_id: UUID,
+        campaign_id: UUID,
+        session_id: UUID,
+        payload: SessionLateJoinRequest,
+        context: RoomAccessContext,
+    ) -> SessionSnapshot:
+        self._require_active(room_id, campaign_id, session_id)
+        try:
+            self.live_repository.late_join_from_lobby(
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+                caller_access_session_id=context.access_session_id,
+                seat_id=payload.seat_id,
+            )
+        except LateJoinControllerMismatchPersistenceError as exc:
+            raise DMControllerMismatchError(str(exc)) from exc
+        except LateJoinCharacterLeasedPersistenceError as exc:
+            raise CharacterAlreadyInActiveSessionError(str(exc)) from exc
+        except LateJoinPersistenceError as exc:
+            raise SessionLateJoinError(str(exc)) from exc
+        stored = self.repository.get(session_id)
+        if stored is None:
+            raise SessionNotFoundError(session_id)
+        return self._present(stored)
+
+    def assert_active_character_locked(
+        self,
+        room_id: UUID,
+        campaign_id: UUID,
+        session_id: UUID,
+        participant_id: UUID,
+        _payload: SessionActiveCharacterPatch,
+    ) -> None:
+        self._require_active(room_id, campaign_id, session_id)
+        if not self.live_repository.participant_is_active(
+            session_id=session_id,
+            participant_id=participant_id,
+        ):
+            raise SessionNotFoundError(participant_id)
+        raise SessionActiveCharacterLockedError(
+            "Active Character is immutable after Session participation begins"
+        )
+
     def end_session(
         self,
         room_id: UUID,
@@ -211,7 +284,11 @@ class SessionService:
 __all__ = [
     "CharacterAlreadyInActiveSessionError",
     "DMControllerMismatchError",
+    "SessionActiveCharacterLockedError",
+    "SessionActiveCharacterPatch",
     "SessionAlreadyActiveError",
+    "SessionLateJoinError",
+    "SessionLateJoinRequest",
     "SessionLobbyUnavailableError",
     "SessionNotActiveError",
     "SessionNotFoundError",
