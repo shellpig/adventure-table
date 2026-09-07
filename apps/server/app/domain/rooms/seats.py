@@ -117,6 +117,13 @@ class SeatService:
         if self.repository.campaign_room_id(campaign_id) != room_id:
             raise SeatCampaignMismatchError(campaign_id)
 
+    def _require_current_active_campaign(self, room_id: UUID, campaign_id: UUID) -> None:
+        self._require_campaign(room_id, campaign_id)
+        if self.repository.campaign_status(campaign_id) != "active":
+            raise LobbyUnavailableError("Campaign must be active for Lobby operations")
+        if self.repository.active_campaign_id(room_id) != campaign_id:
+            raise LobbyUnavailableError("Campaign must be selected as the Room's active Campaign")
+
     def get_scoped_seat(self, room_id: UUID, campaign_id: UUID, seat_id: UUID) -> StoredSeat:
         self._require_campaign(room_id, campaign_id)
         seat = self.repository.get(seat_id)
@@ -181,7 +188,7 @@ class SeatService:
         return [self._present(seat) for seat in self.repository.list_for_campaign(campaign_id)]
 
     def create_seat(self, room_id: UUID, campaign_id: UUID, payload: SeatCreate) -> CampaignSeat:
-        self._require_campaign(room_id, campaign_id)
+        self._require_current_active_campaign(room_id, campaign_id)
         return self._present(
             self.repository.create(
                 campaign_id=campaign_id,
@@ -197,6 +204,7 @@ class SeatService:
         seat_id: UUID,
         payload: SeatControllerPatch,
     ) -> CampaignSeat:
+        self._require_current_active_campaign(room_id, campaign_id)
         seat = self.get_scoped_seat(room_id, campaign_id, seat_id)
         if payload.controller_kind is ControllerKind.AI:
             raise SeatControllerError("AI controllers are reserved for a later phase")
@@ -232,6 +240,7 @@ class SeatService:
         seat_id: UUID,
         character_id: UUID | None,
     ) -> CampaignSeat:
+        self._require_current_active_campaign(room_id, campaign_id)
         seat = self.get_scoped_seat(room_id, campaign_id, seat_id)
         if seat.role != SeatRole.PLAYER.value:
             raise SeatCharacterSelectionError("only Player Seats can select a Character")
@@ -270,9 +279,7 @@ class SeatService:
         *,
         caller_access_session_id: UUID | None = None,
     ) -> LobbySnapshot:
-        self._require_campaign(room_id, campaign_id)
-        if self.repository.campaign_status(campaign_id) != "active":
-            raise LobbyUnavailableError("Campaign must be active before entering Lobby")
+        self._require_current_active_campaign(room_id, campaign_id)
         self._reconcile_selections(campaign_id)
         now = datetime.now(timezone.utc)
         controllers = [

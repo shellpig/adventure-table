@@ -14,6 +14,7 @@ from app.api.rooms.seats import (
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.seats import (
     ControllerKind,
+    LobbyUnavailableError,
     PresenceStatus,
     SeatCampaignMismatchError,
     SeatCharacterSelectionError,
@@ -65,6 +66,7 @@ class _FakeSeatRepository:
     def __init__(self) -> None:
         self.room_id = uuid4()
         self.campaign_id = uuid4()
+        self.active_campaign = self.campaign_id
         self.status = "active"
         self.seats: dict = {}
         self.access: dict = {}
@@ -75,6 +77,9 @@ class _FakeSeatRepository:
 
     def campaign_status(self, campaign_id):
         return self.status if campaign_id == self.campaign_id else None
+
+    def active_campaign_id(self, room_id):
+        return self.active_campaign if room_id == self.room_id else None
 
     def get(self, seat_id):
         return self.seats.get(seat_id)
@@ -208,6 +213,63 @@ def _access(repo: _FakeSeatRepository, authority="member", *, seen_seconds_ago=0
     )
     repo.access[session_id] = access
     return access
+
+
+def test_lobby_and_seat_creation_require_current_active_campaign() -> None:
+    repo = _FakeSeatRepository()
+    service = SeatService(repo)
+
+    repo.active_campaign = uuid4()
+    with pytest.raises(LobbyUnavailableError):
+        service.lobby(repo.room_id, repo.campaign_id)
+    with pytest.raises(LobbyUnavailableError):
+        service.create_seat(repo.room_id, repo.campaign_id, SeatCreate(role=SeatRole.PLAYER))
+
+    repo.active_campaign = repo.campaign_id
+    for status in ("draft", "completed", "archived"):
+        repo.status = status
+        with pytest.raises(LobbyUnavailableError):
+            service.lobby(repo.room_id, repo.campaign_id)
+        with pytest.raises(LobbyUnavailableError):
+            service.create_seat(repo.room_id, repo.campaign_id, SeatCreate(role=SeatRole.PLAYER))
+
+
+def test_controller_and_character_mutations_require_current_active_campaign() -> None:
+    repo = _FakeSeatRepository()
+    service = SeatService(repo)
+    access = _access(repo)
+    character_id = uuid4()
+    repo.eligible_characters.add(character_id)
+    seat = service.create_seat(repo.room_id, repo.campaign_id, SeatCreate(role=SeatRole.PLAYER))
+
+    repo.active_campaign = uuid4()
+    with pytest.raises(LobbyUnavailableError):
+        service.set_controller(
+            repo.room_id,
+            repo.campaign_id,
+            seat.id,
+            SeatControllerPatch(
+                controller_kind=ControllerKind.HUMAN,
+                controller_access_session_id=access.id,
+            ),
+        )
+    with pytest.raises(LobbyUnavailableError):
+        service.select_character(repo.room_id, repo.campaign_id, seat.id, character_id)
+
+
+def test_seat_cleanup_remains_available_after_campaign_leaves_lobby() -> None:
+    repo = _FakeSeatRepository()
+    service = SeatService(repo)
+    archived_seat = service.create_seat(repo.room_id, repo.campaign_id, SeatCreate(role=SeatRole.PLAYER))
+    deleted_seat = service.create_seat(repo.room_id, repo.campaign_id, SeatCreate(role=SeatRole.SPECTATOR))
+
+    repo.status = "completed"
+    repo.active_campaign = None
+
+    archived = service.archive_seat(repo.room_id, repo.campaign_id, archived_seat.id)
+    assert archived.archived_at is not None
+    service.delete_seat(repo.room_id, repo.campaign_id, deleted_seat.id)
+    assert deleted_seat.id not in repo.seats
 
 
 def test_one_human_controller_can_bind_multiple_player_seats() -> None:
