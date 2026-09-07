@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 from sqlalchemy import and_, delete, insert, select, update
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 
 from app.persistence.characters import characters
@@ -52,7 +52,7 @@ class CampaignRepository:
 
     @staticmethod
     def _clear_seat_selection(
-        connection,
+        connection: Connection,
         *,
         campaign_id: UUID,
         character_id: UUID,
@@ -65,6 +65,27 @@ class CampaignRepository:
                 campaign_seats.c.selected_character_id == character_id,
             )
             .values(selected_character_id=None, updated_at=updated_at)
+        )
+
+    @staticmethod
+    def clear_character_seat_selections_in_transaction(
+        connection: Connection,
+        *,
+        room_id: UUID,
+        character_id: UUID,
+    ) -> None:
+        connection.execute(
+            update(campaign_seats)
+            .where(
+                campaign_seats.c.selected_character_id == character_id,
+                campaign_seats.c.campaign_id.in_(
+                    select(campaigns.c.id).where(campaigns.c.room_id == room_id)
+                ),
+            )
+            .values(
+                selected_character_id=None,
+                updated_at=datetime.now(timezone.utc),
+            )
         )
 
     def create(

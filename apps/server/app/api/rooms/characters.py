@@ -46,6 +46,19 @@ def _require_character(service: RoomCharacterWorkspaceService, room_id: UUID, ch
         raise _scope_error(exc) from exc
 
 
+def _set_archived(
+    service: RoomCharacterWorkspaceService,
+    room_id: UUID,
+    character_id: UUID,
+    archived: bool,
+) -> core_characters.CharacterListItem:
+    try:
+        character = service.set_character_archived(room_id, character_id, archived)
+    except RoomWorkspaceScopeError as exc:
+        raise _scope_error(exc) from exc
+    return core_characters._list_item(character, service.character_repository)
+
+
 def _require_owner(context: RoomAccessContext) -> None:
     if context.authority is not RoomAccessAuthority.OWNER:
         raise APIError(403, "room_owner_required", "Owner authority is required")
@@ -132,8 +145,7 @@ def archive_character(
     _context: RoomAccessContext = Depends(get_room_access_context),
     service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
 ) -> core_characters.CharacterListItem:
-    _require_character(service, room_id, character_id)
-    return core_characters.archive_character(character_id, service.character_repository)
+    return _set_archived(service, room_id, character_id, True)
 
 
 @router.post("/{character_id}/unarchive", response_model=core_characters.CharacterListItem)
@@ -143,8 +155,7 @@ def unarchive_character(
     _context: RoomAccessContext = Depends(get_room_access_context),
     service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
 ) -> core_characters.CharacterListItem:
-    _require_character(service, room_id, character_id)
-    return core_characters.unarchive_character(character_id, service.character_repository)
+    return _set_archived(service, room_id, character_id, False)
 
 
 @router.delete("/{character_id}", status_code=204)
