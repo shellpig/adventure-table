@@ -232,7 +232,7 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
         <p>{copy.status}: {statusLabel(campaign.status)}</p>
         <div className="workshop-card__split-actions">
           <a className="button secondary" href={`/rooms/${roomId}/campaigns`}>{copy.backCampaigns}</a>
-          {campaign.status === 'active' ? (
+          {campaign.status === 'active' && room?.active_campaign_id === campaign.id ? (
             <a className="button primary" href={`/rooms/${roomId}/campaigns/${campaign.id}/lobby`}>{copy.openLobby}</a>
           ) : null}
           {isOwner && room?.active_campaign_id !== campaign.id && campaign.status !== 'archived' ? (

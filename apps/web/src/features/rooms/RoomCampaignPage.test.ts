@@ -43,10 +43,11 @@ describe('Room Campaign routes', () => {
     expect(en.removeConfirm).not.toBe(zhTw.removeConfirm)
   })
 
-  it('requires confirmation before deleting a roster entry and exposes active Campaign Lobby entry', () => {
+  it('requires confirmation before deleting a roster entry and gates Lobby entry to the current active Campaign', () => {
     const source = readFileSync(new URL('./RoomCampaignPage.tsx', import.meta.url), 'utf8')
 
     expect(source).toContain('window.confirm(copy.removeConfirm)')
+    expect(source).toContain("campaign.status === 'active' && room?.active_campaign_id === campaign.id")
     expect(source).toContain('/lobby`}>{copy.openLobby}')
     expect(source).not.toContain('· Lv{character.level}')
   })

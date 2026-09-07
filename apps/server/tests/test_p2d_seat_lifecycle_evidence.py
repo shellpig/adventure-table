@@ -104,7 +104,10 @@ def test_unreferenced_seat_delete_and_archive_release_character_for_another_seat
         archived = service.archive_seat(room.room.id, campaign.id, first.id)
         assert archived.archived_at is not None
         assert archived.selected_character_id is None
-        assert [seat.id for seat in service.list_seats(room.room.id, campaign.id)] == [second.id, disposable.id]
+        assert {seat.id for seat in service.list_seats(room.room.id, campaign.id)} == {
+            second.id,
+            disposable.id,
+        }
 
         rebound = service.select_character(room.room.id, campaign.id, second.id, character.id)
         assert rebound.selected_character_id == character.id

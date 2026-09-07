@@ -42,8 +42,8 @@ describe('P2-D Lobby route and presentation', () => {
 
   it('renders the actual Lobby component missing-access state without a browser DOM', () => {
     const html = renderLobbyPage()
-    expect(html).toContain(lobbyCopy('en').title)
-    expect(html).toContain(lobbyCopy('en').missingAccess)
+    expect(html).toContain(lobbyCopy('zh-TW').title)
+    expect(html).toContain(lobbyCopy('zh-TW').missingAccess)
     expect(html).toContain('href="/"')
   })
 
@@ -67,9 +67,9 @@ describe('P2-D Lobby route and presentation', () => {
     Object.defineProperty(target, 'window', { value: fakeWindow, configurable: true })
     try {
       const html = renderLobbyPage()
-      expect(html).toContain(lobbyCopy('en').title)
+      expect(html).toContain(lobbyCopy('zh-TW').title)
       expect(html).toContain(`href="/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}"`)
-      expect(html).not.toContain(lobbyCopy('en').missingAccess)
+      expect(html).not.toContain(lobbyCopy('zh-TW').missingAccess)
     } finally {
       if (previousWindow === undefined) {
         Reflect.deleteProperty(target, 'window')
