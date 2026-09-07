@@ -7,13 +7,12 @@ from fastapi.testclient import TestClient
 import pytest
 
 from app.api.rooms.access import get_room_access_context
-from app.api.rooms.dependencies import get_session_service
+from app.api.rooms.dependencies import get_session_resume_service, get_session_service
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.sessions import (
     CharacterAlreadyInActiveSessionError,
     DMControllerMismatchError,
     SessionAlreadyActiveError,
-    SessionResume,
     SessionSnapshot,
     SessionStatus,
 )
@@ -33,9 +32,6 @@ class _ApiSessionService:
             raise self.start_error
         return _snapshot(campaign_id)
 
-    def resume(self, room_id, campaign_id):
-        return SessionResume(room_id=room_id, campaign_id=campaign_id, active_session=None)
-
     def get_session(self, room_id, campaign_id, session_id):
         return _snapshot(campaign_id, session_id=session_id)
 
@@ -44,6 +40,42 @@ class _ApiSessionService:
 
     def abandon_session(self, room_id, campaign_id, session_id, context):
         return _snapshot(campaign_id, session_id=session_id, status=SessionStatus.ABANDONED)
+
+
+class _ApiSessionResumeService:
+    def __init__(self, room_id: UUID, campaign_id: UUID) -> None:
+        self.room_id = room_id
+        self.campaign_id = campaign_id
+
+    def resume(self, room_id, campaign_id):
+        assert room_id == self.room_id
+        assert campaign_id == self.campaign_id
+        now = datetime.now(timezone.utc).isoformat()
+        return {
+            "room_id": room_id,
+            "campaign_id": campaign_id,
+            "room": {
+                "id": room_id,
+                "code": "ROOM01",
+                "name": "Room",
+                "active_campaign_id": campaign_id,
+                "created_at": now,
+                "updated_at": now,
+            },
+            "campaign": {
+                "id": campaign_id,
+                "room_id": room_id,
+                "name": "Campaign",
+                "ruleset": "dnd5e-2014",
+                "status": "active",
+                "created_at": now,
+                "updated_at": now,
+            },
+            "active_session": None,
+            "participants": [],
+            "seats": [],
+            "active_characters": [],
+        }
 
 
 def _snapshot(
@@ -75,14 +107,17 @@ def session_api_fixture():
         authority=RoomAccessAuthority.DM,
     )
     service = _ApiSessionService(room_id, campaign_id)
+    resume_service = _ApiSessionResumeService(room_id, campaign_id)
     app.dependency_overrides[get_room_access_context] = lambda: context
     app.dependency_overrides[get_session_service] = lambda: service
+    app.dependency_overrides[get_session_resume_service] = lambda: resume_service
     client = TestClient(app)
     try:
         yield room_id, campaign_id, service, client
     finally:
         app.dependency_overrides.pop(get_room_access_context, None)
         app.dependency_overrides.pop(get_session_service, None)
+        app.dependency_overrides.pop(get_session_resume_service, None)
 
 
 @pytest.mark.parametrize(
@@ -116,7 +151,13 @@ def test_session_routes_expose_start_resume_end_and_abandon(session_api_fixture)
     started = client.post(prefix)
     assert started.status_code == 201
     session_id = started.json()["id"]
-    assert client.get(f"{prefix}/active").status_code == 200
+    resumed = client.get(f"{prefix}/active")
+    assert resumed.status_code == 200
+    assert resumed.json()["room"]["id"] == str(room_id)
+    assert resumed.json()["campaign"]["id"] == str(campaign_id)
+    assert resumed.json()["participants"] == []
+    assert resumed.json()["seats"] == []
+    assert resumed.json()["active_characters"] == []
     assert client.get(f"{prefix}/{session_id}").status_code == 200
     assert client.post(f"{prefix}/{session_id}/end").json()["status"] == "ended"
     assert client.post(f"{prefix}/{session_id}/abandon").json()["status"] == "abandoned"

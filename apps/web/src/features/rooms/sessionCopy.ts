@@ -1,8 +1,10 @@
 import type { Locale } from '../../i18n/locale'
+import { localizedSessionRequestMessage } from '../../i18n/sessionMessages'
 import { SessionApiError } from '../../api/sessions'
 
 const copy = {
   'zh-TW': {
+    locale: 'zh-TW' as const,
     title: '進行中的 Session',
     intro: '本場參與角色在加入時固定；座位控制者可變更，但不會替換已加入的角色。',
     missingAccess: '找不到這個 Room 的本機存取資訊，請重新進入 Room。',
@@ -31,14 +33,10 @@ const copy = {
     abandoned: '已放棄',
     currentDmHint: '只有本場固定的 current DM Controller 可以中途加入與正常結束 Session。',
     ownerAbandonHint: 'Room Owner 若不是本場 DM，只能 Abandon，不能接管或正常 End。',
-    sessionAlreadyActive: '這個 Campaign 已經有進行中的 Session。',
-    characterAlreadyActive: '至少一名所選角色已在另一個進行中的 Session。',
-    dmControllerMismatch: '只有 Room Owner 指派到 DM Seat 的本場 Human controller 可以執行此操作。',
-    sessionNotActive: '這場 Session 已不再是進行中狀態。',
-    seatCharacterInvalid: '這個 Player Seat 目前無法加入 Session。',
     requestFailed: 'Session 操作失敗。',
   },
   en: {
+    locale: 'en' as const,
     title: 'Active Session',
     intro: 'A participant’s active character is fixed when they join. Seat control may change, but it does not replace that character.',
     missingAccess: 'Local access for this Room is missing. Enter the Room again.',
@@ -67,11 +65,6 @@ const copy = {
     abandoned: 'Abandoned',
     currentDmHint: 'Only this Session’s fixed current DM Controller may Late Join or End it normally.',
     ownerAbandonHint: 'A Room Owner who is not the current DM may Abandon, but cannot take over or End normally.',
-    sessionAlreadyActive: 'This Campaign already has an active Session.',
-    characterAlreadyActive: 'At least one selected Character is already in another active Session.',
-    dmControllerMismatch: 'Only the Owner-assigned Human controller of this Session’s DM Seat may perform this action.',
-    sessionNotActive: 'This Session is no longer active.',
-    seatCharacterInvalid: 'This Player Seat cannot join the Session right now.',
     requestFailed: 'Session operation failed.',
   },
 } as const
@@ -84,12 +77,10 @@ export function sessionCopy(locale: Locale): SessionCopy {
 
 export function sessionErrorMessage(error: unknown, presentation: SessionCopy): string {
   if (!(error instanceof SessionApiError)) return presentation.requestFailed
-  switch (error.code) {
-    case 'session_already_active': return presentation.sessionAlreadyActive
-    case 'character_already_in_active_session': return presentation.characterAlreadyActive
-    case 'dm_controller_mismatch': return presentation.dmControllerMismatch
-    case 'session_not_active': return presentation.sessionNotActive
-    case 'seat_character_invalid': return presentation.seatCharacterInvalid
-    default: return presentation.requestFailed
-  }
+  return localizedSessionRequestMessage(
+    error.code,
+    error.status,
+    error.message,
+    presentation.locale,
+  )
 }

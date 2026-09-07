@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, Response, status
 
 from app.api.errors import APIError
 from app.api.rooms.access import get_room_access_context
-from app.api.rooms.dependencies import get_session_service
+from app.api.rooms.dependencies import get_session_resume_service, get_session_service
 from app.domain.rooms.schemas import RoomAccessContext
+from app.domain.rooms.session_resume import SessionResumeDTO, SessionResumeService
 from app.domain.rooms.sessions import (
     CharacterAlreadyInActiveSessionError,
     DMControllerMismatchError,
@@ -19,7 +20,6 @@ from app.domain.rooms.sessions import (
     SessionLobbyUnavailableError,
     SessionNotActiveError,
     SessionNotFoundError,
-    SessionResume,
     SessionService,
     SessionSnapshot,
 )
@@ -68,13 +68,13 @@ def start_session(
         raise _map_session_error(exc) from exc
 
 
-@router.get("/sessions/active", response_model=SessionResume)
+@router.get("/sessions/active", response_model=SessionResumeDTO)
 def resume_session(
     room_id: UUID,
     campaign_id: UUID,
     context: RoomAccessContext = Depends(get_room_access_context),
-    service: SessionService = Depends(get_session_service),
-) -> SessionResume:
+    service: SessionResumeService = Depends(get_session_resume_service),
+) -> SessionResumeDTO:
     try:
         return service.resume(context.room_id, campaign_id)
     except Exception as exc:

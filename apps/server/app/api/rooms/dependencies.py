@@ -8,9 +8,11 @@ from app.api.dependencies import get_content_registry, get_database_engine
 from app.api.errors import APIError
 from app.domain.rooms.campaigns import CampaignService
 from app.domain.rooms.seats import SeatService
+from app.domain.rooms.session_resume import SessionResumeService
 from app.domain.rooms.sessions import SessionService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
 from app.persistence.rooms.campaigns import CampaignRepository
+from app.persistence.rooms.repository import RoomRepository
 from app.persistence.rooms.seats import SeatRepository
 from app.persistence.rooms.session_live import SessionLiveRepository
 from app.persistence.rooms.sessions import SessionRepository
@@ -89,10 +91,26 @@ def get_session_service(request: Request) -> SessionService:
     return service
 
 
+def get_session_resume_service(request: Request) -> SessionResumeService:
+    service = getattr(request.app.state, "session_resume_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        service = SessionResumeService(
+            session_service=get_session_service(request),
+            room_repository=RoomRepository(engine),
+            campaign_service=get_campaign_service(request),
+            seat_service=get_seat_service(request),
+            character_repository=get_room_workspace_service(request).character_repository,
+        )
+        request.app.state.session_resume_service = service
+    return service
+
+
 __all__ = [
     "_HistoryGuardedCharacterRepository",
     "get_campaign_service",
     "get_room_workspace_service",
     "get_seat_service",
+    "get_session_resume_service",
     "get_session_service",
 ]

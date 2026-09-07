@@ -1,3 +1,7 @@
+import type { Campaign } from './campaigns'
+import type { RoomSummary } from './rooms'
+import type { CampaignSeat } from './seats'
+
 export type SessionStatus = 'active' | 'ended' | 'abandoned'
 
 export type SessionParticipantSnapshot = {
@@ -20,10 +24,28 @@ export type SessionSnapshot = {
   participants: SessionParticipantSnapshot[]
 }
 
+export type SessionResumeCharacterClass = {
+  class_ref: string
+  level: number
+}
+
+export type SessionResumeCharacterSummary = {
+  id: string
+  name: string
+  level: number
+  classes: SessionResumeCharacterClass[]
+  version_no: number
+}
+
 export type SessionResume = {
   room_id: string
   campaign_id: string
+  room: RoomSummary
+  campaign: Campaign
   active_session: SessionSnapshot | null
+  participants: SessionParticipantSnapshot[]
+  seats: CampaignSeat[]
+  active_characters: SessionResumeCharacterSummary[]
 }
 
 type ApiErrorPayload = { error?: { code?: string; message?: string } }
