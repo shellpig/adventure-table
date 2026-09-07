@@ -53,8 +53,11 @@ describe('M03-E capability provider', () => {
     expect(html).toContain('href="/characters"')
   })
 
-  it('keeps the normal Web snapshot Room-enabled but fetch failures fail closed', () => {
+  it('keeps the normal P2-C Web snapshot Room/Campaign-enabled but fetch failures fail closed', () => {
     expect(DEFAULT_WEB_CAPABILITIES.capabilities.room).toBe(true)
+    expect(DEFAULT_WEB_CAPABILITIES.capabilities.campaign).toBe(true)
+    expect(DEFAULT_WEB_CAPABILITIES.capabilities.seat).toBe(false)
+    expect(DEFAULT_WEB_CAPABILITIES.capabilities.session).toBe(false)
     expect(CAPABILITY_FETCH_FALLBACK.capabilities.character_builder).toBe(true)
     expect(CAPABILITY_FETCH_FALLBACK.capabilities.character_import_export).toBe(true)
     for (const capability of [

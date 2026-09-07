@@ -27,9 +27,9 @@ class StoredRoom:
     password_hash: bytes
     owner_key_hash: bytes
     dm_key_hash: bytes
-    active_campaign_id: UUID | None
     created_at: datetime
     updated_at: datetime
+    active_campaign_id: UUID | None = None
 
 
 @dataclass(frozen=True)

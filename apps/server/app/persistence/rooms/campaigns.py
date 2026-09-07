@@ -168,20 +168,20 @@ class CampaignRepository:
         status: str,
     ) -> StoredRosterEntry | None:
         now = datetime.now(timezone.utc)
-        with self.engine.begin() as connection:
-            campaign = self.get_in_transaction(connection, campaign_id)
-            if campaign is None or campaign.room_id != room_id:
-                return None
-            if self.character_room_id_in_transaction(connection, character_id) != room_id:
-                raise ValueError("character_not_in_room")
-            existing = self.roster_entry_in_transaction(
-                connection,
-                campaign_id=campaign_id,
-                character_id=character_id,
-            )
-            if existing is not None:
-                return existing
-            try:
+        try:
+            with self.engine.begin() as connection:
+                campaign = self.get_in_transaction(connection, campaign_id)
+                if campaign is None or campaign.room_id != room_id:
+                    return None
+                if self.character_room_id_in_transaction(connection, character_id) != room_id:
+                    raise ValueError("character_not_in_room")
+                existing = self.roster_entry_in_transaction(
+                    connection,
+                    campaign_id=campaign_id,
+                    character_id=character_id,
+                )
+                if existing is not None:
+                    return existing
                 connection.execute(
                     insert(campaign_roster_entries).values(
                         campaign_id=campaign_id,
@@ -191,13 +191,25 @@ class CampaignRepository:
                         updated_at=now,
                     )
                 )
-            except IntegrityError as exc:
-                raise CampaignPersistenceConflictError(str(exc)) from exc
-            return self.roster_entry_in_transaction(
-                connection,
-                campaign_id=campaign_id,
-                character_id=character_id,
-            )
+                return self.roster_entry_in_transaction(
+                    connection,
+                    campaign_id=campaign_id,
+                    character_id=character_id,
+                )
+        except IntegrityError as exc:
+            # Two add requests can both observe no row and race on the unique
+            # (campaign_id, character_id) key. The contract is idempotent, so
+            # after the losing transaction rolls back, return the committed
+            # winner when it exists instead of leaking a database 500.
+            with self.engine.connect() as connection:
+                existing = self.roster_entry_in_transaction(
+                    connection,
+                    campaign_id=campaign_id,
+                    character_id=character_id,
+                )
+            if existing is not None:
+                return existing
+            raise CampaignPersistenceConflictError(str(exc)) from exc
 
     def list_roster(self, campaign_id: UUID) -> tuple[StoredRosterEntry, ...]:
         with self.engine.connect() as connection:
