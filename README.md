@@ -131,6 +131,14 @@ cd apps/web && npm run test:e2e:docker
 
 該 script 會自己 `docker compose up -d --build web`、等埠開、再以容器的 5173 當 base URL 執行。`--build` 不可省——`web` service 沒有掛 bind mount，略過重建會靜默測到上一版 frontend。
 
+**globalSetup 會清空 Character、Draft 與 Room。** 它無條件 `DELETE FROM characters`，不保留任何角色。CI 跑在拋棄式 volume 上會自動放行；本機必須顯式開啟，且開啟前請先確認那個 DB 沒有你要留的資料：
+
+```bash
+cd apps/web && ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET=1 npm run test:e2e:docker
+```
+
+沒有設這個變數時 globalSetup 會直接中止並說明原因，不會動到資料。
+
 Windows 上不要讓 Playwright 自己託管 vite：dev server 會在跑測試途中停止接受連線，造成數十個 `net::ERR_CONNECTION_REFUSED`。`playwright.config.ts` 會直接擋下這條路徑。根因與量測見 [`已知問題.md`](已知問題.md) 的 KI-ENV-001。
 
 第一次執行前先安裝 Chromium：
