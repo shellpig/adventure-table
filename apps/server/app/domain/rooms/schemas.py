@@ -21,6 +21,7 @@ class Room(StrictModel):
     id: UUID
     code: str
     name: str
+    active_campaign_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
 

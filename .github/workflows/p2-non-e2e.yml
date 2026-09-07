@@ -6,6 +6,7 @@ on:
     branches:
       - p2-a-room-foundation-web-entry
       - p2-b-room-character-workspace
+      - p2-c-campaign-party-roster
 
 jobs:
   backend:

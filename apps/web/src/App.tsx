@@ -9,6 +9,7 @@ import { capabilityCopy } from './features/capabilities/copy'
 import { protectedCapabilityForPath } from './features/capabilities/routes'
 import { CharacterBuilderRoutePage } from './features/m01m/M01MBuilderRoutePanel'
 import { CharacterSheetRoutePage } from './features/m01m/M01MAncestryRoutePanel'
+import { RoomCampaignPage, roomCampaignRouteFromPath } from './features/rooms/RoomCampaignPage'
 import { RoomCharacterWorkspacePage } from './features/rooms/RoomCharacterWorkspacePage'
 import { RoomLandingPage } from './features/rooms/RoomLandingPage'
 import { roomIdFromPath, RoomWorkspacePage } from './features/rooms/RoomWorkspacePage'
@@ -104,6 +105,7 @@ export default function App() {
   const { snapshot, isEnabled } = useCapabilities()
   const pathname = typeof window === 'undefined' ? '/' : window.location.pathname
   const protectedCapability = protectedCapabilityForPath(pathname)
+  const roomCampaignRoute = roomCampaignRouteFromPath(pathname)
   const roomCharacterRoute = roomCharacterRouteFromPath(pathname)
   const roomId = roomIdFromPath(pathname)
 
@@ -120,6 +122,14 @@ export default function App() {
 
   if (protectedCapability && !isEnabled(protectedCapability)) {
     return <CapabilityDisabledPage />
+  }
+  if (roomCampaignRoute) {
+    return (
+      <RoomCampaignPage
+        roomId={roomCampaignRoute.roomId}
+        campaignId={roomCampaignRoute.campaignId}
+      />
+    )
   }
   if (roomCharacterRoute) {
     if (roomCharacterRoute.kind === 'workshop') {

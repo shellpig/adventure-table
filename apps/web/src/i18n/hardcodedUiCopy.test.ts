@@ -20,6 +20,7 @@ const SOURCE_FILES = [
   '../features/character-io/ImportCharacterDialog.tsx',
   '../features/character-sheet/CharacterSheetPage.tsx',
   '../features/character-sheet/CharacterSheetHtmlExportButton.tsx',
+  '../features/rooms/RoomCampaignPage.tsx',
   '../features/rooms/RoomLandingPage.tsx',
   '../features/rooms/RoomWorkspacePage.tsx',
 ] as const

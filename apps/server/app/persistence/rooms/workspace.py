@@ -14,7 +14,13 @@ from app.persistence.characters import (
     character_versions,
     characters,
 )
-from app.persistence.rooms.tables import room_builder_drafts, room_characters, rooms
+from app.persistence.rooms.tables import (
+    campaign_roster_entries,
+    campaigns,
+    room_builder_drafts,
+    room_characters,
+    rooms,
+)
 
 
 class RoomWorkspaceAssociationConflictError(RuntimeError):
@@ -202,6 +208,29 @@ class RoomWorkspaceRepository:
                     )
                 ).all()
             )
+            campaign_ids = tuple(
+                connection.scalars(
+                    select(campaigns.c.id).where(campaigns.c.room_id == room_id)
+                ).all()
+            )
+            if campaign_ids:
+                # Campaign Roster is history and therefore RESTRICTs individual
+                # Character delete. Room Hard Delete is the explicit exception:
+                # clear the selected pointer and owned history first, then the
+                # scoped Character rows, all in this transaction.
+                connection.execute(
+                    update(rooms)
+                    .where(rooms.c.id == room_id)
+                    .values(active_campaign_id=None)
+                )
+                connection.execute(
+                    delete(campaign_roster_entries).where(
+                        campaign_roster_entries.c.campaign_id.in_(campaign_ids)
+                    )
+                )
+                connection.execute(
+                    delete(campaigns).where(campaigns.c.id.in_(campaign_ids))
+                )
             if draft_ids:
                 connection.execute(
                     delete(character_import_records).where(

@@ -4,6 +4,7 @@ export type RoomSummary = {
   id: string
   code: string
   name: string
+  active_campaign_id: string | null
   created_at: string
   updated_at: string
 }
