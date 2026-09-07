@@ -69,17 +69,13 @@ def ability_generation_rules(
 def create_builder_draft(
     room_id: UUID,
     request: BuilderDraftCreateInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
+    _context: RoomAccessContext = Depends(get_room_access_context),
     service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
 ) -> BuilderView:
     try:
-        if request.character_id is not None:
-            with live_character_write_scope(
-                service,
-                context=context,
-                character_id=request.character_id,
-            ) as scoped_service:
-                return scoped_service.create_draft(room_id, request)
+        # This generic route is intentionally create-only. Preserve the existing
+        # Builder mode contract before any P2 live Character scope lookup: legal
+        # versioned workflows use /characters/{character_id}/drafts instead.
         return service.create_draft(room_id, request)
     except RoomWorkspaceScopeError as exc:
         raise _scope_error(exc) from exc

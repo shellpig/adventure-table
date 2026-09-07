@@ -312,7 +312,7 @@ def test_versioned_builder_mutations_use_same_live_character_scope() -> None:
         assert denied.status_code == 409
         assert _error_code(denied) == "character_in_active_session"
 
-        denied = client.post(
+        disabled = client.post(
             f"{base}/drafts",
             json={
                 "mode": "build_edit",
@@ -320,8 +320,8 @@ def test_versioned_builder_mutations_use_same_live_character_scope() -> None:
                 "base_version_id": str(mira.current_version_id),
             },
         )
-        assert denied.status_code == 409
-        assert _error_code(denied) == "character_in_active_session"
+        assert disabled.status_code == 422
+        assert _error_code(disabled) == "builder_mode_not_enabled"
 
         context["value"] = rooms.authenticate(owner.room.id, player_a.access_token)
         created = client.post(
