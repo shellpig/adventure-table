@@ -47,10 +47,11 @@ def upgrade() -> None:
             name="ck_campaign_roster_entries_status",
         ),
         sa.ForeignKeyConstraint(["campaign_id"], ["campaigns.id"], ondelete="CASCADE"),
-        # Individual Web delete is guarded at the Room composition layer.
-        # CASCADE keeps Owner Room Hard Delete one transaction: scoped Characters
-        # can be removed before the Room row cascades its Campaigns.
-        sa.ForeignKeyConstraint(["character_id"], ["characters.id"], ondelete="CASCADE"),
+        # Roster membership is Campaign history. Individual Character deletion
+        # must not erase that history; Web guards it first and the database is
+        # the second line of defense. Owner Room Hard Delete explicitly removes
+        # Roster/Campaign rows before scoped Characters in one transaction.
+        sa.ForeignKeyConstraint(["character_id"], ["characters.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("campaign_id", "character_id"),
     )
     op.create_index(

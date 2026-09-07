@@ -21,7 +21,7 @@ pytestmark = pytest.mark.skipif(
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 BRANCH_POINT = "0008_m03c_import_records"
 CHARACTER_HEAD = "0009_p2a_character_head"
-WEB_HEAD = "0011_p2b_room_workspace"
+WEB_HEAD = "0012_p2c_campaigns"
 
 
 def _alembic_config() -> Config:
@@ -76,18 +76,9 @@ def _seed_legacy_m03_data() -> None:
     engine = create_engine(POSTGRES_URL)
     try:
         with engine.begin() as connection:
+            connection.execute(text("INSERT INTO characters (id, name, ruleset, current_version_id) VALUES (:id, 'P2 legacy fixture', 'dnd5e-2014', NULL)"), {"id": character_id})
             connection.execute(
-                text(
-                    """
-                    INSERT INTO characters (id, name, ruleset, current_version_id)
-                    VALUES (:id, 'P2 legacy fixture', 'dnd5e-2014', NULL)
-                    """
-                ),
-                {"id": character_id},
-            )
-            connection.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO character_versions
                         (id, character_id, version_no, build_payload, version_kind,
                          parent_version_id, superseded_by_version_id, change_note,
@@ -97,8 +88,7 @@ def _seed_legacy_m03_data() -> None:
                          NULL, :v2, 'legacy create', NULL),
                         (:v2, :character_id, 2, CAST(:build_two AS jsonb), 'level_up',
                          :v1, NULL, 'legacy level up', CAST(:provenance AS jsonb))
-                    """
-                ),
+                """),
                 {
                     "v1": version_one,
                     "v2": version_two,
@@ -108,30 +98,17 @@ def _seed_legacy_m03_data() -> None:
                     "provenance": provenance,
                 },
             )
+            connection.execute(text("UPDATE characters SET current_version_id = :v2 WHERE id = :id"), {"v2": version_two, "id": character_id})
+            connection.execute(text("INSERT INTO character_states (character_id, state_payload) VALUES (:character_id, CAST(:payload AS jsonb))"), {"character_id": character_id, "payload": current_state})
             connection.execute(
-                text("UPDATE characters SET current_version_id = :v2 WHERE id = :id"),
-                {"v2": version_two, "id": character_id},
-            )
-            connection.execute(
-                text(
-                    """
-                    INSERT INTO character_states (character_id, state_payload)
-                    VALUES (:character_id, CAST(:payload AS jsonb))
-                    """
-                ),
-                {"character_id": character_id, "payload": current_state},
-            )
-            connection.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO character_build_drafts
                         (id, mode, character_id, base_version_id, revision, draft_payload)
                     VALUES
                         (:create_id, 'create', NULL, NULL, 1, CAST(:create_payload AS jsonb)),
                         (:versioned_id, 'level_up', :character_id, :base_version_id, 4,
                          CAST(:versioned_payload AS jsonb))
-                    """
-                ),
+                """),
                 {
                     "create_id": create_draft,
                     "versioned_id": versioned_draft,
@@ -142,16 +119,14 @@ def _seed_legacy_m03_data() -> None:
                 },
             )
             connection.execute(
-                text(
-                    """
+                text("""
                     INSERT INTO character_import_records
                         (id, character_id, draft_id, source_character_id,
                          source_export_id, landing_mode)
                     VALUES
                         (:id, :character_id, NULL, :source_character_id,
                          :source_export_id, 'create')
-                    """
-                ),
+                """),
                 {
                     "id": import_record,
                     "character_id": character_id,
@@ -183,6 +158,27 @@ def _legacy_payload_snapshot() -> dict[str, list[dict[str, object]]]:
         engine.dispose()
 
 
+def _assert_p2c_web_schema(engine) -> None:
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    assert {
+        "rooms",
+        "room_access_sessions",
+        "room_characters",
+        "room_builder_drafts",
+        "campaigns",
+        "campaign_roster_entries",
+    } <= tables
+    room_columns = {column["name"] for column in inspector.get_columns("rooms")}
+    assert "active_campaign_id" in room_columns
+    roster_fks = {
+        tuple(fk["constrained_columns"]): fk
+        for fk in inspector.get_foreign_keys("campaign_roster_entries")
+    }
+    assert roster_fks[("campaign_id",)]["options"].get("ondelete") == "CASCADE"
+    assert roster_fks[("character_id",)]["options"].get("ondelete") == "RESTRICT"
+
+
 def test_fresh_web_postgres_upgrade_heads_and_readiness() -> None:
     _reset_database()
     command.upgrade(_alembic_config(), "heads")
@@ -194,19 +190,16 @@ def test_fresh_web_postgres_upgrade_heads_and_readiness() -> None:
     engine = create_engine(POSTGRES_URL)
     try:
         tables = set(inspect(engine).get_table_names())
+        assert {
+            "characters",
+            "character_versions",
+            "character_states",
+            "character_build_drafts",
+            "character_import_records",
+        } <= tables
+        _assert_p2c_web_schema(engine)
     finally:
         engine.dispose()
-    assert {
-        "characters",
-        "character_versions",
-        "character_states",
-        "character_build_drafts",
-        "character_import_records",
-        "rooms",
-        "room_access_sessions",
-        "room_characters",
-        "room_builder_drafts",
-    } <= tables
 
     from app.main import app
 
@@ -229,12 +222,6 @@ def test_legacy_m03_postgres_upgrade_heads_preserves_character_payloads() -> Non
     assert POSTGRES_URL is not None
     engine = create_engine(POSTGRES_URL)
     try:
-        tables = set(inspect(engine).get_table_names())
+        _assert_p2c_web_schema(engine)
     finally:
         engine.dispose()
-    assert {
-        "rooms",
-        "room_access_sessions",
-        "room_characters",
-        "room_builder_drafts",
-    } <= tables

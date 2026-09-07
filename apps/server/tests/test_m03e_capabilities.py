@@ -10,7 +10,7 @@ from app.main import app as web_app
 from tests.m03e_support import loaded_standalone
 
 
-def test_web_capabilities_enable_room_only_for_p2a_multiplayer() -> None:
+def test_web_capabilities_enable_room_and_campaign_for_p2c() -> None:
     response = TestClient(web_app).get("/api/meta/capabilities")
 
     assert response.status_code == 200
@@ -20,7 +20,7 @@ def test_web_capabilities_enable_room_only_for_p2a_multiplayer() -> None:
     assert payload.capabilities.character_builder is True
     assert payload.capabilities.character_import_export is True
     assert payload.capabilities.room is True
-    assert payload.capabilities.campaign is False
+    assert payload.capabilities.campaign is True
     assert payload.capabilities.seat is False
     assert payload.capabilities.session is False
 
