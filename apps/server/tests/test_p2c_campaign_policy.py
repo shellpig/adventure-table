@@ -232,17 +232,28 @@ class _History:
     def character_is_referenced(self, character_id) -> bool:
         return self.referenced
 
+    def character_is_history_referenced(self, character_id) -> bool:
+        return self.referenced
+
 
 def test_web_character_delete_history_guard_blocks_roster_reference() -> None:
     character_id = uuid4()
     delegate = _Delegate()
-    guarded = _HistoryGuardedCharacterRepository(delegate, _History(True))
+    guarded = _HistoryGuardedCharacterRepository(
+        delegate,
+        _History(True),
+        _History(False),
+    )
     with pytest.raises(APIError) as exc:
         guarded.delete_character(character_id)
     assert exc.value.status_code == 409
     assert exc.value.code == "character_history_referenced"
     assert delegate.deleted == []
 
-    unreferenced = _HistoryGuardedCharacterRepository(delegate, _History(False))
+    unreferenced = _HistoryGuardedCharacterRepository(
+        delegate,
+        _History(False),
+        _History(False),
+    )
     unreferenced.delete_character(character_id)
     assert delegate.deleted == [character_id]
