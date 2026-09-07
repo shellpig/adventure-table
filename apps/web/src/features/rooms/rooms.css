@@ -344,3 +344,12 @@
     gap: 8px;
   }
 }
+
+/* The Room heading strip borrows .workshop-page so its back link lines up with
+   the Workshop shell below, but it is a band above that page rather than a page
+   of its own. Without this the inherited 100vh pushes the Workshop a full
+   viewport down. */
+.room-character-workspace-heading {
+  min-height: 0;
+  padding-bottom: 0;
+}

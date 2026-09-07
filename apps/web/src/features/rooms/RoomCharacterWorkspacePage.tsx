@@ -9,6 +9,7 @@ import { useLocale } from '../../i18n/LocaleProvider'
 import { CharacterWorkshopPage } from '../character-builder/CharacterWorkshopPage'
 import { roomCopy } from './copy'
 import { recentRoomForId } from './roomStorage'
+import './rooms.css'
 
 export function canPermanentlyDeleteRoomCharacters(
   authority: RoomAuthority | null | undefined,
