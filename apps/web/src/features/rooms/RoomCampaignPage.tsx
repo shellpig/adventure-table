@@ -151,7 +151,6 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
     return (
       <main className="landing-page room-workspace-page">
         <section className="landing-card room-workspace-card">
-          <p className="eyebrow">{copy.eyebrow}</p>
           <h1>{copy.campaignsTitle}</h1>
           <p>{copy.campaignsIntro}</p>
           <a className="button secondary" href={`/rooms/${roomId}`}>{copy.backRoom}</a>
@@ -229,7 +228,6 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
   return (
     <main className="landing-page room-workspace-page">
       <section className="landing-card room-workspace-card">
-        <p className="eyebrow">{copy.eyebrow}</p>
         <h1>{campaign.name}</h1>
         <p>{copy.status}: {statusLabel(campaign.status)}</p>
         <div className="workshop-card__split-actions">
@@ -298,7 +296,7 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
               <select value={selectedCharacterId} onChange={(event) => setSelectedCharacterId(event.target.value)}>
                 {availableCharacters.map((character) => (
                   <option value={character.id} key={character.id}>
-                    {character.name} · Lv{character.level} · {character.class_summary}
+                    {character.name} · {copy.levelLabel} {character.level} · {character.class_summary}
                   </option>
                 ))}
               </select>
@@ -341,12 +339,15 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
                       className="button secondary"
                       disabled={pending}
                       type="button"
-                      onClick={() => runMutation(() => removeRosterCharacter(
-                        roomId,
-                        campaign.id,
-                        entry.character_id,
-                        token,
-                      ))}
+                      onClick={() => {
+                        if (!window.confirm(copy.removeConfirm)) return
+                        runMutation(() => removeRosterCharacter(
+                          roomId,
+                          campaign.id,
+                          entry.character_id,
+                          token,
+                        ))
+                      }}
                     >
                       {copy.remove}
                     </button>

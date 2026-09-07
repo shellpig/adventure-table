@@ -2,7 +2,6 @@ import type { Locale } from '../../i18n/locale'
 
 const COPY = {
   en: {
-    eyebrow: 'P2-C · Campaign & Party Roster',
     campaignsTitle: 'Campaigns',
     campaignsIntro: 'Campaigns group the Room characters that participate in the same ongoing game. Character Build and Current State are never copied.',
     createTitle: 'Create Campaign',
@@ -17,8 +16,10 @@ const COPY = {
     rosterTitle: 'Party Roster',
     rosterIntro: 'Roster status belongs to the Campaign. HP, inventory, prepared spells, and resources still belong to the one shared Character.',
     addCharacter: 'Add Character',
+    levelLabel: 'Level',
     addAction: 'Add to Roster',
     remove: 'Remove',
+    removeConfirm: 'Remove this Character from the Party Roster? Re-adding it later will create a new roster entry.',
     noCampaigns: 'No Campaigns yet.',
     noRoster: 'No Characters in this roster yet.',
     noCharacters: 'No available Room Characters to add.',
@@ -39,7 +40,6 @@ const COPY = {
     dead: 'Dead',
   },
   'zh-TW': {
-    eyebrow: 'P2-C · Campaign 與隊伍名冊',
     campaignsTitle: 'Campaigns',
     campaignsIntro: 'Campaign 用來整理同一場長期遊戲中參與的 Room 角色；角色 Build 與 Current State 不會被複製。',
     createTitle: '建立 Campaign',
@@ -54,8 +54,10 @@ const COPY = {
     rosterTitle: '隊伍名冊',
     rosterIntro: '名冊狀態屬於 Campaign；HP、道具、已準備法術與資源仍然只存在同一份角色 Current State。',
     addCharacter: '加入角色',
+    levelLabel: '等級',
     addAction: '加入名冊',
     remove: '移除',
+    removeConfirm: '要從隊伍名冊移除此角色嗎？稍後重新加入會建立新的名冊項目。',
     noCampaigns: '目前還沒有 Campaign。',
     noRoster: '目前名冊中沒有角色。',
     noCharacters: '沒有可加入的 Room 角色。',
