@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { listRoomCharacters, type RoomCharacterSummary } from '../../api/campaigns'
 import { heartbeatRoom } from '../../api/rooms'
-import { getLobby, type LobbySnapshot } from '../../api/seats'
+import { getLobby, type CampaignSeat, type LobbySnapshot } from '../../api/seats'
 import {
   abandonSession,
   endSession,
+  getActiveSession,
   getSession,
   lateJoinSession,
   type SessionSnapshot,
@@ -29,6 +30,15 @@ export function roomSessionRouteFromPath(pathname: string): RoomSessionRoute | n
   return match ? { roomId: match[1], campaignId: match[2], sessionId: match[3] } : null
 }
 
+export function mergeSessionSeatTruth(
+  lobbySeats: CampaignSeat[],
+  resumeSeats: CampaignSeat[],
+): CampaignSeat[] {
+  const byId = new Map(lobbySeats.map((seat) => [seat.id, seat]))
+  for (const seat of resumeSeats) byId.set(seat.id, seat)
+  return [...byId.values()]
+}
+
 export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRoute) {
   const { locale } = useLocale()
   const copy = sessionCopy(locale)
@@ -36,20 +46,23 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   const token = recent?.accessToken ?? ''
   const [snapshot, setSnapshot] = useState<SessionSnapshot | null>(null)
   const [lobby, setLobby] = useState<LobbySnapshot | null>(null)
+  const [resumeSeats, setResumeSeats] = useState<CampaignSeat[]>([])
   const [characters, setCharacters] = useState<RoomCharacterSummary[]>([])
   const [lateJoinSeatId, setLateJoinSeatId] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const reload = async () => {
-    const [nextSession, nextLobby, nextCharacters] = await Promise.all([
+    const [nextSession, nextLobby, nextCharacters, nextResume] = await Promise.all([
       getSession(roomId, campaignId, sessionId, token),
       getLobby(roomId, campaignId, token),
       listRoomCharacters(roomId, token),
+      getActiveSession(roomId, campaignId, token),
     ])
     setSnapshot(nextSession)
     setLobby(nextLobby)
     setCharacters(nextCharacters)
+    setResumeSeats(nextResume.active_session?.id === sessionId ? nextResume.seats : [])
   }
 
   useEffect(() => {
@@ -61,13 +74,15 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     const stopHeartbeat = startRoomHeartbeat(async () => {
       try {
         await heartbeatRoom(roomId, token)
-        const [nextSession, nextLobby] = await Promise.all([
+        const [nextSession, nextLobby, nextResume] = await Promise.all([
           getSession(roomId, campaignId, sessionId, token),
           getLobby(roomId, campaignId, token),
+          getActiveSession(roomId, campaignId, token),
         ])
         if (active) {
           setSnapshot(nextSession)
           setLobby(nextLobby)
+          setResumeSeats(nextResume.active_session?.id === sessionId ? nextResume.seats : [])
         }
       } catch (cause) {
         if (active) setError(sessionErrorMessage(cause, copy))
@@ -92,6 +107,10 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
       !participantSeatIds.has(seat.id)
     )) ?? [],
     [lobby, participantSeatIds],
+  )
+  const sessionSeats = useMemo(
+    () => mergeSessionSeatTruth(lobby?.seats ?? [], resumeSeats),
+    [lobby, resumeSeats],
   )
 
   const mutate = (operation: () => Promise<SessionSnapshot>) => {
@@ -147,7 +166,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   const characterName = (characterId: string | null) =>
     characters.find((character) => character.id === characterId)?.name ?? copy.noCharacter
   const seatLabel = (seatId: string) => {
-    const seat = lobby.seats.find((item) => item.id === seatId)
+    const seat = sessionSeats.find((item) => item.id === seatId)
     if (!seat) return seatId
     return seat.label || (seat.role === 'dm' ? copy.dm : seat.role === 'player' ? copy.player : copy.spectator)
   }
