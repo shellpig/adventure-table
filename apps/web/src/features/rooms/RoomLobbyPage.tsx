@@ -71,6 +71,8 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
     const stopHeartbeat = startRoomHeartbeat(async () => {
       try {
         await heartbeatRoom(roomId, token)
+        const nextLobby = await getLobby(roomId, campaignId, token)
+        if (active) setSnapshot(nextLobby)
       } catch (cause) {
         if (active) setError(message(cause, copy.requestFailed))
       }

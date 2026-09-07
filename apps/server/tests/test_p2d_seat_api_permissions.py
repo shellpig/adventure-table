@@ -28,7 +28,11 @@ class _ApiSeatService:
         return self.seat
 
     def create_seat(self, room_id, campaign_id, payload):
-        return self._present(role=payload.role)
+        return self._present(
+            role=payload.role,
+            controller_kind=ControllerKind.NONE,
+            controller_access_session_id=None,
+        )
 
     def set_controller(self, room_id, campaign_id, seat_id, payload):
         return self._present(role=SeatRole(self.seat.role))
@@ -48,15 +52,21 @@ class _ApiSeatService:
         *,
         role: SeatRole,
         selected_character_id: UUID | None = None,
+        controller_kind: ControllerKind | None = None,
+        controller_access_session_id: UUID | None | object = ...,
     ) -> CampaignSeat:
         now = datetime.now(timezone.utc)
+        if controller_kind is None:
+            controller_kind = ControllerKind(self.seat.controller_kind)
+        if controller_access_session_id is ...:
+            controller_access_session_id = self.seat.controller_access_session_id
         return CampaignSeat(
             id=self.seat.id,
             campaign_id=self.campaign_id,
             role=role,
             label=None,
-            controller_kind=ControllerKind(self.seat.controller_kind),
-            controller_access_session_id=self.seat.controller_access_session_id,
+            controller_kind=controller_kind,
+            controller_access_session_id=controller_access_session_id,
             controller_display_name=None,
             controller_authority=None,
             presence=PresenceStatus.NOT_APPLICABLE,
@@ -105,43 +115,64 @@ def seat_api_fixture():
         app.dependency_overrides.pop(get_seat_service, None)
 
 
-def test_member_cannot_create_or_manage_other_seats_via_http(seat_api_fixture) -> None:
+@pytest.mark.parametrize(
+    ("authority", "role", "expected_status", "expected_code"),
+    [
+        (RoomAccessAuthority.MEMBER, "player", 403, "seat_management_authority_required"),
+        (RoomAccessAuthority.DM, "player", 201, None),
+        (RoomAccessAuthority.OWNER, "player", 201, None),
+        (RoomAccessAuthority.MEMBER, "dm", 403, "room_owner_required"),
+        (RoomAccessAuthority.DM, "dm", 403, "room_owner_required"),
+        (RoomAccessAuthority.OWNER, "dm", 201, None),
+    ],
+)
+def test_create_seat_http_permission_matrix(
+    seat_api_fixture,
+    authority: RoomAccessAuthority,
+    role: str,
+    expected_status: int,
+    expected_code: str | None,
+) -> None:
+    room_id, campaign_id, _seat, _service, context, client = seat_api_fixture
+    context["value"] = RoomAccessContext(
+        room_id=room_id,
+        access_session_id=uuid4(),
+        authority=authority,
+    )
+    response = client.post(
+        f"/api/rooms/{room_id}/campaigns/{campaign_id}/seats",
+        json={"role": role},
+    )
+    assert response.status_code == expected_status
+    if expected_code is not None:
+        assert response.json()["error"]["code"] == expected_code
+
+
+def test_member_cannot_operate_another_members_player_seat_via_http(seat_api_fixture) -> None:
     room_id, campaign_id, seat, _service, context, client = seat_api_fixture
-    base = f"/api/rooms/{room_id}/campaigns/{campaign_id}"
-
-    response = client.post(f"{base}/seats", json={"role": "player"})
-    assert response.status_code == 403
-    assert response.json()["error"]["code"] == "seat_management_authority_required"
-
     context["value"] = RoomAccessContext(
         room_id=room_id,
         access_session_id=uuid4(),
         authority=RoomAccessAuthority.MEMBER,
     )
     response = client.patch(
-        f"{base}/seats/{seat.id}/character",
+        f"/api/rooms/{room_id}/campaigns/{campaign_id}/seats/{seat.id}/character",
         json={"selected_character_id": str(uuid4())},
     )
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "seat_controller_required"
 
 
-def test_dm_cannot_create_or_reassign_dm_seat_via_http(seat_api_fixture) -> None:
+def test_dm_cannot_reassign_dm_seat_via_http(seat_api_fixture) -> None:
     room_id, campaign_id, seat, service, context, client = seat_api_fixture
-    base = f"/api/rooms/{room_id}/campaigns/{campaign_id}"
     context["value"] = RoomAccessContext(
         room_id=room_id,
         access_session_id=uuid4(),
         authority=RoomAccessAuthority.DM,
     )
-
-    response = client.post(f"{base}/seats", json={"role": "dm"})
-    assert response.status_code == 403
-    assert response.json()["error"]["code"] == "room_owner_required"
-
     service.seat = StoredSeat(**{**seat.__dict__, "role": "dm"})
     response = client.patch(
-        f"{base}/seats/{seat.id}/controller",
+        f"/api/rooms/{room_id}/campaigns/{campaign_id}/seats/{seat.id}/controller",
         json={
             "controller_kind": "human",
             "controller_access_session_id": str(context["value"].access_session_id),

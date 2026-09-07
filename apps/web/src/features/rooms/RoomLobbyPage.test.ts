@@ -26,10 +26,12 @@ describe('P2-D Lobby route and presentation', () => {
     }
   })
 
-  it('keeps Room heartbeat active in Lobby and exposes archive lifecycle', () => {
+  it('keeps Room heartbeat active, refreshes presence, and exposes archive lifecycle', () => {
     const source = readFileSync(new URL('./RoomLobbyPage.tsx', import.meta.url), 'utf8')
     expect(source).toContain('startRoomHeartbeat')
     expect(source).toContain('heartbeatRoom(roomId, token)')
+    expect(source).toContain('const nextLobby = await getLobby(roomId, campaignId, token)')
+    expect(source).toContain('setSnapshot(nextLobby)')
     expect(source).toContain('stopHeartbeat()')
     expect(source).toContain('archiveSeat(roomId, campaignId, seat.id, token)')
   })
