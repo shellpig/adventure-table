@@ -7,8 +7,10 @@ from fastapi import Request
 from app.api.dependencies import get_content_registry, get_database_engine
 from app.api.errors import APIError
 from app.domain.rooms.campaigns import CampaignService
+from app.domain.rooms.seats import SeatService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
 from app.persistence.rooms.campaigns import CampaignRepository
+from app.persistence.rooms.seats import SeatRepository
 
 
 class _HistoryGuardedCharacterRepository:
@@ -55,8 +57,17 @@ def get_campaign_service(request: Request) -> CampaignService:
     return service
 
 
+def get_seat_service(request: Request) -> SeatService:
+    service = getattr(request.app.state, "seat_service", None)
+    if service is None:
+        service = SeatService(SeatRepository(get_database_engine(request)))
+        request.app.state.seat_service = service
+    return service
+
+
 __all__ = [
     "_HistoryGuardedCharacterRepository",
     "get_campaign_service",
     "get_room_workspace_service",
+    "get_seat_service",
 ]
