@@ -17,6 +17,7 @@ from app.persistence.rooms.tables import (
     room_characters,
     rooms,
     session_participants,
+    sessions,
 )
 
 
@@ -287,12 +288,23 @@ class SeatRepository:
 
     def delete_unreferenced(self, seat_id: UUID) -> bool:
         with self.engine.begin() as connection:
-            history_id = connection.scalar(
+            seat_query = select(campaign_seats.c.id).where(campaign_seats.c.id == seat_id)
+            if connection.dialect.name == "postgresql":
+                seat_query = seat_query.with_for_update()
+            if connection.scalar(seat_query) is None:
+                return False
+
+            participant_history_id = connection.scalar(
                 select(session_participants.c.id)
                 .where(session_participants.c.seat_id == seat_id)
                 .limit(1)
             )
-            if history_id is not None:
+            dm_history_id = connection.scalar(
+                select(sessions.c.id)
+                .where(sessions.c.dm_seat_id == seat_id)
+                .limit(1)
+            )
+            if participant_history_id is not None or dm_history_id is not None:
                 raise SeatHistoryReferencedPersistenceError(
                     "Seat is referenced by Session history and can only be archived"
                 )

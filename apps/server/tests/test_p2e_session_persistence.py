@@ -134,13 +134,22 @@ def test_session_referenced_seat_cannot_hard_delete_but_can_archive() -> None:
             participants=[_player_seed(player_a.id, character.id)],
         )
 
+        # Cover both non-null historical Seat FKs independently. This persistence
+        # fixture deliberately omits the DM from participants, so dm_seat_id is
+        # the only reference protecting the DM Seat.
+        with pytest.raises(SeatHistoryReferencedError):
+            seats.delete_seat(room.room.id, campaign.id, dm_seat.id)
         with pytest.raises(SeatHistoryReferencedError):
             seats.delete_seat(room.room.id, campaign.id, player_a.id)
 
-        archived = seats.archive_seat(room.room.id, campaign.id, player_a.id)
-        assert archived.archived_at is not None
+        archived_dm = seats.archive_seat(room.room.id, campaign.id, dm_seat.id)
+        archived_player = seats.archive_seat(room.room.id, campaign.id, player_a.id)
+        assert archived_dm.archived_at is not None
+        assert archived_player.archived_at is not None
+
         participant = SessionRepository(engine).list_participants(session.id)[0]
         assert participant.seat_id == player_a.id
+        assert SeatRepository(engine).get(dm_seat.id) is not None
         assert SeatRepository(engine).get(player_a.id) is not None
     finally:
         engine.dispose()
