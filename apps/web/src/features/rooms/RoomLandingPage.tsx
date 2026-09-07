@@ -117,6 +117,7 @@ export function RoomLandingPage() {
           <h1>Adventure Table</h1>
           <h2>{copy.title}</h2>
           <p className="room-card-description">{copy.description}</p>
+          <p className="room-card-hint">{copy.descriptionHint}</p>
         </div>
         {error ? <p className="form-error" role="alert">{error}</p> : null}
 

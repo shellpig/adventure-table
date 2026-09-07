@@ -26,6 +26,14 @@
   line-height: 1.6;
 }
 
+.room-card-hint {
+  max-width: 480px;
+  margin: 6px auto 0;
+  color: var(--quiet);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
 /* 2-Column Grid for Create / Enter */
 .room-entry-grid {
   display: grid;
