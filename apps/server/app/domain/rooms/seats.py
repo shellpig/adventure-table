@@ -173,9 +173,21 @@ class SeatService:
             updated_at=seat.updated_at,
         )
 
-    def list_seats(self, room_id: UUID, campaign_id: UUID) -> list[CampaignSeat]:
+    def list_seats(
+        self,
+        room_id: UUID,
+        campaign_id: UUID,
+        *,
+        include_archived: bool = False,
+    ) -> list[CampaignSeat]:
         self._require_campaign(room_id, campaign_id)
-        return [self._present(seat) for seat in self.repository.list_for_campaign(campaign_id)]
+        return [
+            self._present(seat)
+            for seat in self.repository.list_for_campaign(
+                campaign_id,
+                include_archived=include_archived,
+            )
+        ]
 
     def create_seat(self, room_id: UUID, campaign_id: UUID, payload: SeatCreate) -> CampaignSeat:
         self._require_current_active_campaign(room_id, campaign_id)

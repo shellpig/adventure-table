@@ -121,12 +121,20 @@ def test_resume_composes_current_p2_truth_without_a_second_snapshot() -> None:
         dm_context = rooms.authenticate(owner.room.id, dm.access_token)
         started = session_service.start_session(owner.room.id, campaign.id, dm_context)
 
-        # Controller truth may change after Start; participant-at-join truth must not.
+        # Current Lobby Seat truth may change after Start. The participant-at-join
+        # snapshot stays fixed, and Resume must still include an archived Seat so
+        # that the participant's Seat reference has structured current truth.
         seats.set_controller(
             owner.room.id,
             campaign.id,
             player.id,
             SeatControllerPatch(controller_kind=ControllerKind.NONE),
+        )
+        archived_player = seats.archive_seat(owner.room.id, campaign.id, player.id)
+        assert archived_player.archived_at is not None
+        assert all(
+            seat.id != player.id
+            for seat in seats.list_seats(owner.room.id, campaign.id)
         )
 
         resume = SessionResumeService(
@@ -147,11 +155,14 @@ def test_resume_composes_current_p2_truth_without_a_second_snapshot() -> None:
         participant_by_seat = {participant.seat_id: participant for participant in resume.participants}
         assert participant_by_seat[player.id].controller_kind_at_join == "human"
         assert participant_by_seat[player.id].controller_access_session_id_at_join == owner.access_session_id
+        assert participant_by_seat[player.id].active_character_id == mira.id
 
         seat_by_id = {seat.id: seat for seat in resume.seats}
         assert seat_by_id[dm_seat.id].presence is PresenceStatus.CONNECTED
+        assert seat_by_id[player.id].archived_at is not None
         assert seat_by_id[player.id].controller_kind is ControllerKind.NONE
         assert seat_by_id[player.id].presence is PresenceStatus.NOT_APPLICABLE
+        assert seat_by_id[player.id].selected_character_id is None
 
         assert len(resume.active_characters) == 1
         summary = resume.active_characters[0]

@@ -108,7 +108,11 @@ class SessionResumeService:
         participant_seat_ids = {participant.seat_id for participant in participants}
         seats = [
             seat
-            for seat in self.seat_service.list_seats(room_id, campaign_id)
+            for seat in self.seat_service.list_seats(
+                room_id,
+                campaign_id,
+                include_archived=True,
+            )
             if seat.id in participant_seat_ids
         ]
 
