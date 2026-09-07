@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from uuid import uuid4
-
 import pytest
 from sqlalchemy import create_engine, event, func, select
 from sqlalchemy.pool import StaticPool
@@ -18,8 +16,8 @@ from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.repository import RoomRepository
 from app.persistence.rooms.seats import SeatRepository
 from app.persistence.rooms.sessions import (
+    CharacterAlreadyLeasedPersistenceError,
     ParticipantSeed,
-    SessionPersistenceConflictError,
     SessionRepository,
 )
 from app.persistence.rooms.tables import (
@@ -104,7 +102,7 @@ def test_lease_collision_rolls_back_the_entire_second_session() -> None:
             participants=[_player_seed(player_a.id, character.id)],
         )
 
-        with pytest.raises(SessionPersistenceConflictError):
+        with pytest.raises(CharacterAlreadyLeasedPersistenceError):
             repository.create_with_participants(
                 campaign_id=campaign.id,
                 dm_seat_id=dm_seat.id,
@@ -117,7 +115,9 @@ def test_lease_collision_rolls_back_the_entire_second_session() -> None:
             assert connection.scalar(select(func.count()).select_from(sessions)) == 1
             assert connection.scalar(select(func.count()).select_from(session_participants)) == 1
             assert connection.scalar(select(func.count()).select_from(active_character_session_leases)) == 1
-        assert repository.lease_for_character(character.id).session_id == first.id
+        lease = repository.lease_for_character(character.id)
+        assert lease is not None
+        assert lease.session_id == first.id
     finally:
         engine.dispose()
 
