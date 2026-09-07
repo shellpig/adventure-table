@@ -15,13 +15,15 @@ describe('multiplayer capability route boundary', () => {
     expect(protectedCapabilityForPath('/ai-actors/abc')).toBe('ai_actor')
   })
 
-  it('uses the Seat gate specifically for a Room-scoped Lobby route', () => {
+  it('uses nested Room capability gates before the generic Campaign gate', () => {
     const roomId = '10000000-0000-4000-8000-000000000001'
     const campaignId = '20000000-0000-4000-8000-000000000001'
+    const sessionId = '30000000-0000-4000-8000-000000000001'
 
     expect(protectedCapabilityForPath(`/rooms/${roomId}/campaigns`)).toBe('campaign')
     expect(protectedCapabilityForPath(`/rooms/${roomId}/campaigns/${campaignId}`)).toBe('campaign')
     expect(protectedCapabilityForPath(`/rooms/${roomId}/campaigns/${campaignId}/lobby`)).toBe('seat')
+    expect(protectedCapabilityForPath(`/rooms/${roomId}/campaigns/${campaignId}/sessions/${sessionId}`)).toBe('session')
     expect(protectedCapabilityForPath(`/rooms/${roomId}/characters`)).toBe('room')
   })
 
