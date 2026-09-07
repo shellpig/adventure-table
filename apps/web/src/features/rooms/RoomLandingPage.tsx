@@ -5,6 +5,7 @@ import { useLocale } from '../../i18n/LocaleProvider'
 import { localizedRoomRequestMessage } from '../../i18n/roomMessages'
 import { roomCopy } from './copy'
 import { persistRoomGrant, readRecentRooms } from './roomStorage'
+import './rooms.css'
 
 function navigateToRoom(roomId: string) {
   if (typeof window !== 'undefined') window.location.assign(`/rooms/${roomId}`)
@@ -89,7 +90,7 @@ export function RoomLandingPage() {
         <section className="landing-card room-secret-card">
           <p className="eyebrow">{copy.eyebrow}</p>
           <h1>{copy.createdTitle}</h1>
-          <p>{copy.createdDescription}</p>
+          <p className="room-card-description">{copy.createdDescription}</p>
           <dl className="room-secret-list">
             <div><dt>{copy.roomCodeLabel}</dt><dd><code>{created.room.code}</code></dd></div>
             <div><dt>{copy.ownerKey}</dt><dd><code>{created.owner_key}</code></dd></div>
@@ -110,50 +111,56 @@ export function RoomLandingPage() {
   return (
     <main className="landing-page room-entry-page">
       <section className="landing-card room-entry-card">
-        <p className="eyebrow">{copy.eyebrow}</p>
-        <div className="landing-mark" aria-hidden="true">AT</div>
-        <h1>Adventure Table</h1>
-        <h2>{copy.title}</h2>
-        <p>{copy.description}</p>
+        <div className="room-entry-header">
+          <p className="eyebrow">{copy.eyebrow}</p>
+          <div className="landing-mark" aria-hidden="true">AT</div>
+          <h1>Adventure Table</h1>
+          <h2>{copy.title}</h2>
+          <p className="room-card-description">{copy.description}</p>
+        </div>
         {error ? <p className="form-error" role="alert">{error}</p> : null}
 
         <div className="room-entry-grid">
           <form className="room-entry-form" onSubmit={handleCreate}>
-            <h3>{copy.createTitle}</h3>
-            <label>
+            <div className="room-form-header">
+              <h3>{copy.createTitle}</h3>
+            </div>
+            <label className="room-field">
               <span>{copy.roomName}</span>
               <input value={createName} onChange={(event) => setCreateName(event.target.value)} maxLength={120} required />
             </label>
-            <label>
+            <label className="room-field">
               <span>{copy.password}</span>
               <input type="password" value={createPassword} onChange={(event) => setCreatePassword(event.target.value)} minLength={6} maxLength={128} required />
             </label>
-            <label>
+            <label className="room-field">
               <span>{copy.displayName}</span>
               <input value={createDisplayName} onChange={(event) => setCreateDisplayName(event.target.value)} maxLength={100} />
             </label>
-            <button className="button primary" type="submit" disabled={!canCreate || busy}>{copy.createAction}</button>
+            <button className="button primary room-form-submit" type="submit" disabled={!canCreate || busy}>{copy.createAction}</button>
           </form>
 
           <form className="room-entry-form" onSubmit={handleEnter}>
-            <h3>{copy.enterTitle}</h3>
-            <label>
+            <div className="room-form-header">
+              <h3>{copy.enterTitle}</h3>
+            </div>
+            <label className="room-field">
               <span>{copy.roomCode}</span>
               <input value={enterCode} onChange={(event) => setEnterCode(event.target.value.toUpperCase())} maxLength={10} autoCapitalize="characters" required />
             </label>
-            <label>
+            <label className="room-field">
               <span>{copy.password}</span>
               <input type="password" value={enterPassword} onChange={(event) => setEnterPassword(event.target.value)} minLength={6} maxLength={128} required />
             </label>
-            <label>
+            <label className="room-field">
               <span>{copy.elevatedKey}</span>
               <input type="password" value={enterKey} onChange={(event) => setEnterKey(event.target.value)} maxLength={256} />
             </label>
-            <label>
+            <label className="room-field">
               <span>{copy.displayName}</span>
               <input value={enterDisplayName} onChange={(event) => setEnterDisplayName(event.target.value)} maxLength={100} />
             </label>
-            <button className="button secondary" type="submit" disabled={!canEnter || busy}>{copy.enterAction}</button>
+            <button className="button secondary room-form-submit" type="submit" disabled={!canEnter || busy}>{copy.enterAction}</button>
           </form>
         </div>
 

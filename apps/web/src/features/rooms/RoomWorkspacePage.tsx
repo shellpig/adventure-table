@@ -6,6 +6,7 @@ import { localizedRoomRequestMessage } from '../../i18n/roomMessages'
 import { roomCopy } from './copy'
 import { startRoomHeartbeat } from './heartbeat'
 import { forgetRecentRoom, recentRoomForId } from './roomStorage'
+import './rooms.css'
 
 export function roomIdFromPath(pathname: string): string | null {
   const match = pathname.match(/^\/rooms\/([0-9a-fA-F-]{36})\/?$/)
