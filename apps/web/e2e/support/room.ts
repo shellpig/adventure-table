@@ -60,7 +60,7 @@ export async function enterRoom(
   await page.getByLabel(/^(Room name|Room 名稱)$/).fill(name)
   await page.getByLabel(/^(Room password|Room 密碼)$/).first().fill(E2E_ROOM_PASSWORD)
   if (options.displayName) {
-    await page.getByLabel(/^(Display name \(optional\)|顯示名稱（選填）)$/).first().fill(options.displayName)
+    await page.getByLabel(/^(Player display name \(optional\)|Display name \(optional\)|玩家顯示名稱（選填）|顯示名稱（選填）)$/).first().fill(options.displayName)
   }
 
   const responsePromise = page.waitForResponse((response) => {
