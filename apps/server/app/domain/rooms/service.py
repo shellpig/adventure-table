@@ -62,6 +62,7 @@ def _room_view(room: StoredRoom) -> Room:
         id=room.id,
         code=room.code,
         name=room.name,
+        active_campaign_id=room.active_campaign_id,
         created_at=room.created_at,
         updated_at=room.updated_at,
     )
@@ -99,6 +100,7 @@ class RoomService:
                 password_hash=hash_password(request.password, salt),
                 owner_key_hash=hash_secret(owner_key),
                 dm_key_hash=hash_secret(dm_key),
+                active_campaign_id=None,
                 created_at=now,
                 updated_at=now,
             )

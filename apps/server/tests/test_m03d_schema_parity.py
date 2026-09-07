@@ -24,6 +24,8 @@ FORBIDDEN_MULTIPLAYER_TABLES = {
     "room_access_sessions",
     "room_characters",
     "room_builder_drafts",
+    "campaigns",
+    "campaign_roster_entries",
 }
 
 
