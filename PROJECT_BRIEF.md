@@ -8,17 +8,17 @@
 
 Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 2014 Web VTT**。真人 DM 主要靠口頭敘事，網站負責共享、同步、計算、保存、權限與外部 AI 接入；不做 CRPG 或包山包海的平台。
 
-- **目前 code 可用**：Character Workshop、Lv1／高等創角、Multiclass／Subclass／ASI／Feat／Spellcasting／Starting Equipment、Character Sheet、Current State 編輯、Level Up、Build Edit、Version History、Archive／永久刪除、角色卡 HTML 輸出。Web 已是 Room-first：首頁只有 Create / Enter Room + Recent Rooms，Room access／heartbeat 已交付，**Character／Draft／Import／Export 全部收進 Room Character Workspace**（`/rooms/{roomId}/characters`），舊的 global `/characters`／`/api/characters` 已於 P2-B 收口。
+- **目前 code 可用**：Character Workshop、Lv1／高等創角、Multiclass／Subclass／ASI／Feat／Spellcasting／Starting Equipment、Character Sheet、Current State 編輯、Level Up、Build Edit、Version History、Archive／永久刪除、角色卡 HTML 輸出。Web 已是 Room-first：首頁只有 Create / Enter Room + Recent Rooms，Room access／heartbeat 已交付，**Character／Draft／Import／Export 全部收進 Room Character Workspace**（`/rooms/{roomId}/characters`），舊的 global `/characters`／`/api/characters` 已於 P2-B 收口。Room 另可建立 Campaign 與 Party Roster（`/rooms/{roomId}/campaigns`）：Campaign lifecycle 為 Owner-only，Roster 由 Owner／DM 管理，且只 reference 同 Room Character、不複製 Current State。
 - **內容與語言**：以 SRD 5.1 為基礎，已擴充多來源角色內容；介面與目前正式呈現的規則內容支援 `zh-TW`／`en`。Enabled pack 清單以程式中的 `Settings.enabled_content_packs` 為準。
 - **已交付單機版**：同一份角色核心與前端可打包成 Windows 離線 portable zip，使用 SQLite 保存；提供 Character JSON 匯入／匯出。**測試指南 E.9 的乾淨 Windows 11 冷啟動已於 2026-09-06 由使用者人工補驗完成。** Standalone 永久保持 Character-first，不導入 Room／Campaign／Session／Seat。
-- **尚未實作**：Campaign／Session／Seat、正式 AI 桌內接入、Exploration／Roll／Combat／Adventure Runtime。Room 目前只有 access 與 Character workspace，離可跑團還很遠。
+- **尚未實作**：Session／Seat／Lobby、正式 AI 桌內接入、Exploration／Roll／Combat／Adventure Runtime。Room 目前只有 access、Character workspace 與 Campaign／Party Roster，離可跑團還很遠。
 - **技術基礎**：React + TypeScript + Vite；Python + FastAPI + Pydantic；SQLAlchemy + Alembic；網頁版 PostgreSQL、單機版 SQLite。啟動與開發指令見 [README.md](README.md)。
 
 產品硬原則包含 Server authoritative、Human／AI 共用 backend logic、秘密由 Server 過濾、敘事輔助資料 optional 不變 mandatory。**網站本身不接 LLM API**；未來 AI 能力來自使用者外部 AI Session。完整行為與明確不做項目見產品規格，不以本段取代。
 
 ## 當前狀態與下一步
 
-**P0、P1、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track；P2 三份正式規格與 Subphase A～F 已完成設計，P2-A、P2-B 已實作並關門。下一步是 P2-C。**
+**P0、P1、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track；P2 三份正式規格與 Subphase A～F 已完成設計，P2-A、P2-B、P2-C 已實作並關門。下一步是 P2-D。**
 
 P2 已拍板的核心方向：
 
@@ -32,8 +32,8 @@ P2 已拍板的核心方向：
 
 下一步依序為：
 
-1. **實作 P2-C — Campaign & Party Roster**；只做該 Subphase 的 code + tests + static review，不提前做 P2-D～F。
-2. P2-C closeout後依序 P2-D → P2-E；每個 Subphase都獨立實作、驗證、commit。
+1. **實作 P2-D — Seat, Controller & Lobby**；只做該 Subphase 的 code + tests + static review，不提前做 P2-E～F。
+2. P2-D closeout後接 P2-E；每個 Subphase都獨立實作、驗證、commit。
 3. P2-F 做 Full P2 Integration & Closeout；P3～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
 
 P2 的正式契約：
@@ -52,7 +52,10 @@ P2 的正式契約：
 |---|---|---|
 | Builder Draft 存檔／重取競態 | 根因未確認。**P2-A 驗證期間確認影響範圍不只 P1-D**：至少 `character-builder`、`m01e`、`m01m` 三支 spec 會以同一簽章失敗，失敗的是哪一支不固定，會擋住每一次 Subphase 關門。清乾淨 E2E 資料殘留可壓回偶發水準，但不是根因。**P2-B 關門的全套 E2E 未出現此簽章，但不得以此推論根因已修復** | [已知問題.md](已知問題.md) KI-P1D-001 |
 | P2-A Room 層取捨 | Throttle 為 process-local（多 worker 會稀釋）；`POST /api/rooms` 無 throttle 無授權；Room access token 以明文存 `localStorage` 且無到期機制 | [P2-A closeout](docs/P2/P2-A_CLOSEOUT.md)「已知限制」 |
-| Character permanent delete 的 history guard 尚未有對象 | 驗收條目 13 的「已被 Campaign／Session reference 就不得永久刪除」在 P2-B 是空條件，現行保護只有 Owner-only 與 archived-only。**P2-C／P2-E 建立 reference 後必須回頭補 guard 與測試**，不可因 P2-B 已勾選而視為完成 | [P2-B closeout](docs/P2/P2-B_CLOSEOUT.md)「已知限制」 |
+| Character permanent delete 的 history guard | **P2-C 已補上 Roster reference 這一半**：`campaign_roster_entries.character_id` FK 為 `RESTRICT`，Web permanent delete 回 409 `character_history_referenced`。Session reference 那一半仍待 P2-E 補 | [P2-C closeout](docs/P2/P2-C_CLOSEOUT.md)「承接 P2-B 的未結清項目」 |
+| P2-C 沒有 browser journey | 測試指南 §13 的 Journey 4／7 明訂為「P2-F 前至少要有」，不擋 P2-C 關門；但 `RoomCampaignPage` 目前只有單元測試層證據，Campaign／Roster 的真實後端點擊路徑未驗。**P2-D 或 P2-F 必須補上** | [P2-C closeout](docs/P2/P2-C_CLOSEOUT.md)「已知限制」 |
+| Seat selection 不可沿用前端的 archived 過濾 | P2-C 的 server 端不擋 archived Character 加入 Roster（依規格非違規，archived 後 roster history 必須可查）。**P2-E 的 Seat `selected_character_id` 必須在 server 端擋 archived 與 `retired`／`dead`** | [P2-C closeout](docs/P2/P2-C_CLOSEOUT.md)「關門過程中修正的問題」第 7 項 |
+| draft Campaign hard delete 會 cascade 掉整份 Roster | 符合契約（draft 且無 Session history 才可 hard delete），但 P2-C 沒有 Session，該條件目前恆真，UI 也未顯示會連帶移除幾筆 roster。建議與 Room Hard Delete 的同類問題一起在 P2-F polish 處理 | [P2-C closeout](docs/P2/P2-C_CLOSEOUT.md)「已知限制」 |
 | Room Hard Delete 是目前最容易造成不可逆資料遺失的入口 | 確認 modal 只要求輸入 Room 名稱，未顯示會連帶刪除幾個 Character／Draft，也未提示先匯出。行為符合契約，human smoke 期間實際造成兩隻角色永久遺失；建議 P2-F polish 補數量顯示 | [P2-B closeout](docs/P2/P2-B_CLOSEOUT.md)「已知限制」 |
 | `display_name` 收集後全站無呈現 | Create／Enter Room 都有「玩家顯示名稱（選填）」並存進 `room_access_sessions`，但前端只送不讀，要到 P2-D Lobby／Seat presence 才有去處；目前填了零反饋 | [P2-B closeout](docs/P2/P2-B_CLOSEOUT.md)「已知限制」 |
 | E2E global setup 無條件清空 Character | 已改為 `DELETE FROM characters` 並以 `ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET=1` 當閘門（CI 自動放行）。本機在有真實資料的 DB 上設此變數會直接刪光，跑之前必須自行備份 | [P2-B closeout](docs/P2/P2-B_CLOSEOUT.md)「已知限制」 |
@@ -74,7 +77,7 @@ P2 的正式契約：
 | M01 | Multi-Source Character Content Expansion | 長期角色內容／角色系統維護 track；A～N 已關門，整體保持 open，未來從 O 繼續，不阻塞 P2+ |
 | M02 | Traditional Chinese / English Localization | 插於 M01-C 與 M01-D 間；雙語呈現、翻譯流程與完整性 gate；已關門 |
 | M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，E.9 乾淨 Windows 11 冷啟動已於 2026-09-06 補驗完成 |
-| P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**P2-A、P2-B 已關門，P2-C 待實作** |
+| P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**P2-A、P2-B、P2-C 已關門，P2-D 待實作** |
 | P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌 |
 | P4 | Quick Combat | 第一個完整可玩的 Combat MVP；首個 Subphase P4-A 承接 SRD Monster／Beast stat blocks |
 | P5 | Tactical Combat | 同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE 與空間系統 |
@@ -162,7 +165,7 @@ P2 的正式契約：
 |---|---|---|
 | **P2-A — Room Foundation & Web Entry** | ✅ | Room access / Room-first Web landing、Character JSON v1 lock、Alembic shared-vs-web branch split、standalone boundary |
 | **P2-B — Room Character Workspace** | ✅ | Character / Draft Room scope、atomic workspace association、legacy global data claim、Web global Character route收口、Standalone維持 Room-less |
-| **P2-C — Campaign & Party Roster** | ⬜ | Campaign lifecycle、Room active campaign、same-Room Roster、same Character multi-Campaign shared Current State |
+| **P2-C — Campaign & Party Roster** | ✅ | Campaign lifecycle Owner-only、Room `active_campaign_id` 與 campaign status 分離、same-Room Roster（idempotent add）、same Character multi-Campaign 共用同一份 Current State、Roster reference 擋 Character permanent delete |
 | **P2-D — Seat, Controller & Lobby** | ⬜ | Room authority vs Seat Role vs Controller、Human / None controller、Lobby selection / presence；AI shape only，不提前接 P3 |
 | **P2-E — Session Lifecycle & Late Join** | ⬜ | Start / End / Abandon、fixed DM Controller、immutable Active Character、late join、active-character concurrency lease、Resume boundary |
 | **P2-F — Full P2 Integration & Closeout** | ⬜ | Room isolation、migration / restart、permission / concurrency、real-backend E2E、standalone frozen regression、human smoke |
@@ -171,7 +174,7 @@ P2 的正式契約：
 
 - **M01 是 long-running maintenance/content track**：A～N 是目前 baseline，未來從 O 繼續；M01 open 不阻塞 P2+。任何後續 M01 若修改共享 Character contract，必須 regression 當時已存在的後續 P Phase，並同步做 M03 standalone compatibility review。
 - **Web Room-first / Standalone Character-first 是永久產品邊界**：Web Character / Draft在 P2-B 後一定由 Room workspace管理；Standalone不建立 Room。多人層只可依賴 Character Core，Character / Builder / Interop與 `app.standalone`不得反向 import多人層。契約見 [規格企劃.md](規格企劃.md) 第三、四、五章與 [P2 開發設計方針](docs/P2/開發設計方針.md)。
-- **Standalone boundary 是常駐約束**：`app.standalone` 不得 import `app.main` 或 P2+ multiplayer modules。P2-A 已引入實際 `app.api.rooms` / `app.domain.rooms` / `app.persistence.rooms`，並由 `tests/test_p2a_room_import_boundary.py` 鎖住；P2-B 之後新增多人層 module 時，必須確認 `tests/test_m03_import_boundary.py` 的 `FORBIDDEN_MODULE_RE` 仍涵蓋新命名。standalone migration只升 `character@head`，不能把 Web multiplayer schema灌進 SQLite。
+- **Standalone boundary 是常駐約束**：`app.standalone` 不得 import `app.main` 或 P2+ multiplayer modules。P2-A 已引入實際 `app.api.rooms` / `app.domain.rooms` / `app.persistence.rooms`，並由 `tests/test_p2a_room_import_boundary.py` 鎖住；P2-C 新增的 `app.*.rooms.campaigns` 已落在既有 `FORBIDDEN_MODULE_RE` 範圍內，`campaigns` / `campaign_roster_entries` 也已加進 `tests/test_m03d_schema_parity.py` 的 `FORBIDDEN_MULTIPLAYER_TABLES`。之後每次新增多人層 module 或 table 時，都必須確認這兩份清單仍涵蓋新命名，否則 gate 會靜默放行。standalone migration只升 `character@head`，不能把 Web multiplayer schema灌進 SQLite。
 - **Character JSON v1 是 P2-A 起的相容基線**：新 export 已鎖 v1（`schema_version="1"` / `schema_status="locked"` / `export_type="character"`）；legacy M03 `unstable` 仍可由新版本 import 並 normalize。Room / Campaign / Seat / Session identity不得塞進 Character JSON。
 - **雙語是持續交付要求**：新增、修改或首次呈現給使用者的 system／rules content，必須同一 Subphase 同步交付 `zh-TW`／`en`；locale 只影響呈現，不改角色／草稿資料。細則見 [AGENTS.md](AGENTS.md) 與 [M02 實作規格](docs/M02/實作規格.md)。
 - **P4 承接內容範圍**：P4 的第一個 Subphase 為 P4-A，須承接 P0 延後的 SRD Monster／Beast stat blocks；schema、API 與 combat representation 到 P4 開工才設計。
@@ -200,7 +203,7 @@ P2 的正式契約：
 | M03 | [規格](docs/M03/實作規格.md) | [設計](docs/M03/開發設計方針.md) | [測試](docs/M03/測試指南.md) |
 | P2 | [規格](docs/P2/實作規格.md) | [設計](docs/P2/開發設計方針.md) | [測試](docs/P2/測試指南.md) |
 
-歷史完成過程與驗收證據查各 Phase 目錄的 `*_CLOSEOUT.md`；M01-B 真人創角 Gate 另見 [M01-B_HUMAN_GATE.md](docs/M01/M01-B_HUMAN_GATE.md)。最近整合交付見 [P2-B_CLOSEOUT.md](docs/P2/P2-B_CLOSEOUT.md)。
+歷史完成過程與驗收證據查各 Phase 目錄的 `*_CLOSEOUT.md`；M01-B 真人創角 Gate 另見 [M01-B_HUMAN_GATE.md](docs/M01/M01-B_HUMAN_GATE.md)。最近整合交付見 [P2-C_CLOSEOUT.md](docs/P2/P2-C_CLOSEOUT.md)。
 
 `docs/暫用規則資訊/` 是內容 authoring／review input，**不是 runtime 資料來源**。正式規則與可調數值住 `data/`，runtime 不解析 `docs/`；`舊文件/` 為歷史封存，接手時忽略。
 
