@@ -204,7 +204,7 @@ def _assert_p2d_web_schema(engine) -> None:
         for fk in inspector.get_foreign_keys("campaign_seats")
     }
     assert seat_fks[("campaign_id",)]["options"].get("ondelete") == "CASCADE"
-    assert seat_fks[("controller_access_session_id",)]["options"].get("ondelete") == "SET NULL"
+    assert seat_fks[("controller_access_session_id",)]["options"].get("ondelete") == "RESTRICT"
     assert seat_fks[("selected_character_id",)]["options"].get("ondelete") == "SET NULL"
     seat_uniques = {
         tuple(constraint["column_names"])

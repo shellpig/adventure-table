@@ -50,7 +50,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["controller_access_session_id"],
             ["room_access_sessions.id"],
-            ondelete="SET NULL",
+            ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(["selected_character_id"], ["characters.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),

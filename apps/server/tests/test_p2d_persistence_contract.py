@@ -36,7 +36,7 @@ def test_p2d_campaign_seat_schema_matches_contract() -> None:
         "updated_at",
     ]
     assert _fk_ondelete("campaign_id") == "CASCADE"
-    assert _fk_ondelete("controller_access_session_id") == "SET NULL"
+    assert _fk_ondelete("controller_access_session_id") == "RESTRICT"
     assert _fk_ondelete("selected_character_id") == "SET NULL"
 
     checks = _check_sql()

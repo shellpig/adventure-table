@@ -146,7 +146,7 @@ campaign_seats = Table(
     Column(
         "controller_access_session_id",
         Uuid(),
-        ForeignKey("room_access_sessions.id", ondelete="SET NULL"),
+        ForeignKey("room_access_sessions.id", ondelete="RESTRICT"),
         nullable=True,
     ),
     Column(
