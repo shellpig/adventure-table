@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import and_, delete, insert, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
@@ -14,11 +14,16 @@ from app.persistence.rooms.tables import (
     campaign_seats,
     campaigns,
     room_access_sessions,
+    room_characters,
     rooms,
 )
 
 
 class SeatPersistenceConflictError(RuntimeError):
+    pass
+
+
+class SeatSelectionPersistenceError(RuntimeError):
     pass
 
 
@@ -66,6 +71,28 @@ class SeatRepository:
             display_name=values["display_name"],
             last_seen_at=values["last_seen_at"],
             revoked_at=values["revoked_at"],
+        )
+
+    @staticmethod
+    def _selection_query(campaign_id: UUID, character_id: UUID):
+        return (
+            select(campaign_roster_entries.c.status, characters.c.archived_at)
+            .select_from(
+                campaign_roster_entries
+                .join(campaigns, campaigns.c.id == campaign_roster_entries.c.campaign_id)
+                .join(
+                    room_characters,
+                    and_(
+                        room_characters.c.character_id == campaign_roster_entries.c.character_id,
+                        room_characters.c.room_id == campaigns.c.room_id,
+                    ),
+                )
+                .join(characters, characters.c.id == campaign_roster_entries.c.character_id)
+            )
+            .where(
+                campaign_roster_entries.c.campaign_id == campaign_id,
+                campaign_roster_entries.c.character_id == character_id,
+            )
         )
 
     def campaign_room_id(self, campaign_id: UUID) -> UUID | None:
@@ -157,53 +184,54 @@ class SeatRepository:
             return None
         return self.get(seat_id)
 
-    def roster_status(self, *, campaign_id: UUID, character_id: UUID) -> str | None:
+    def selection_is_eligible(self, *, campaign_id: UUID, character_id: UUID) -> bool:
         with self.engine.connect() as connection:
-            return connection.scalar(
-                select(campaign_roster_entries.c.status).where(
-                    campaign_roster_entries.c.campaign_id == campaign_id,
-                    campaign_roster_entries.c.character_id == character_id,
-                )
-            )
+            row = connection.execute(self._selection_query(campaign_id, character_id)).one_or_none()
+        return row is not None and row.status in {"active", "inactive"} and row.archived_at is None
 
-    def character_is_archived(self, character_id: UUID) -> bool | None:
-        with self.engine.connect() as connection:
-            row = connection.execute(
-                select(characters.c.archived_at).where(characters.c.id == character_id)
-            ).one_or_none()
-        if row is None:
-            return None
-        return row[0] is not None
-
-    def character_selected_elsewhere(
-        self,
-        *,
-        campaign_id: UUID,
-        character_id: UUID,
-        excluding_seat_id: UUID,
-    ) -> bool:
-        with self.engine.connect() as connection:
-            row = connection.scalar(
-                select(campaign_seats.c.id).where(
-                    campaign_seats.c.campaign_id == campaign_id,
-                    campaign_seats.c.id != excluding_seat_id,
-                    campaign_seats.c.archived_at.is_(None),
-                    campaign_seats.c.selected_character_id == character_id,
-                ).limit(1)
-            )
-        return row is not None
-
-    def set_selected_character(
+    def select_character_if_eligible(
         self,
         *,
         seat_id: UUID,
+        campaign_id: UUID,
         character_id: UUID | None,
     ) -> StoredSeat | None:
         try:
             with self.engine.begin() as connection:
+                seat_row = connection.execute(
+                    select(campaign_seats.c.role)
+                    .where(
+                        campaign_seats.c.id == seat_id,
+                        campaign_seats.c.campaign_id == campaign_id,
+                        campaign_seats.c.archived_at.is_(None),
+                    )
+                    .with_for_update()
+                ).one_or_none()
+                if seat_row is None:
+                    return None
+                if seat_row.role != "player":
+                    raise SeatSelectionPersistenceError("only Player Seats can select a Character")
+
+                if character_id is not None:
+                    selection = connection.execute(
+                        self._selection_query(campaign_id, character_id).with_for_update()
+                    ).one_or_none()
+                    if (
+                        selection is None
+                        or selection.status not in {"active", "inactive"}
+                        or selection.archived_at is not None
+                    ):
+                        raise SeatSelectionPersistenceError(
+                            "Character is not eligible in this Campaign roster"
+                        )
+
                 result = connection.execute(
                     update(campaign_seats)
-                    .where(campaign_seats.c.id == seat_id, campaign_seats.c.archived_at.is_(None))
+                    .where(
+                        campaign_seats.c.id == seat_id,
+                        campaign_seats.c.campaign_id == campaign_id,
+                        campaign_seats.c.archived_at.is_(None),
+                    )
                     .values(
                         selected_character_id=character_id,
                         updated_at=datetime.now(timezone.utc),
@@ -211,6 +239,25 @@ class SeatRepository:
                 )
         except IntegrityError as exc:
             raise SeatPersistenceConflictError(str(exc)) from exc
+        if result.rowcount != 1:
+            return None
+        return self.get(seat_id)
+
+    def set_selected_character(
+        self,
+        *,
+        seat_id: UUID,
+        character_id: UUID | None,
+    ) -> StoredSeat | None:
+        with self.engine.begin() as connection:
+            result = connection.execute(
+                update(campaign_seats)
+                .where(campaign_seats.c.id == seat_id, campaign_seats.c.archived_at.is_(None))
+                .values(
+                    selected_character_id=character_id,
+                    updated_at=datetime.now(timezone.utc),
+                )
+            )
         if result.rowcount != 1:
             return None
         return self.get(seat_id)
@@ -244,6 +291,7 @@ class SeatRepository:
 __all__ = [
     "SeatPersistenceConflictError",
     "SeatRepository",
+    "SeatSelectionPersistenceError",
     "StoredSeat",
     "StoredSeatAccessSession",
 ]

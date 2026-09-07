@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { listRoomCharacters, listRoster, type RoomCharacterSummary, type RosterEntry } from '../../api/campaigns'
+import { heartbeatRoom } from '../../api/rooms'
 import {
+  archiveSeat,
   createSeat,
   deleteSeat,
   getLobby,
@@ -13,6 +15,7 @@ import {
   type SeatRole,
 } from '../../api/seats'
 import { useLocale } from '../../i18n/LocaleProvider'
+import { startRoomHeartbeat } from './heartbeat'
 import { lobbyCopy } from './lobbyCopy'
 import { recentRoomForId } from './roomStorage'
 import './rooms.css'
@@ -61,7 +64,21 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
 
   useEffect(() => {
     if (!recent) return
-    void reload().catch((cause) => setError(message(cause, copy.requestFailed)))
+    let active = true
+    void reload().catch((cause) => {
+      if (active) setError(message(cause, copy.requestFailed))
+    })
+    const stopHeartbeat = startRoomHeartbeat(async () => {
+      try {
+        await heartbeatRoom(roomId, token)
+      } catch (cause) {
+        if (active) setError(message(cause, copy.requestFailed))
+      }
+    })
+    return () => {
+      active = false
+      stopHeartbeat()
+    }
     // Room credential and route identify this Lobby.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, campaignId, token])
@@ -221,15 +238,23 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
                   ) : <p>{copy.character}: {selectedCharacterName(seat)}</p>
                 ) : null}
                 {canManageSeat ? (
-                  <button
-                    className="button danger"
-                    disabled={pending}
-                    type="button"
-                    onClick={() => {
-                      if (!window.confirm(copy.removeConfirm)) return
-                      mutate(() => deleteSeat(roomId, campaignId, seat.id, token))
-                    }}
-                  >{copy.remove}</button>
+                  <div className="workshop-card__split-actions">
+                    <button
+                      className="button secondary"
+                      disabled={pending}
+                      type="button"
+                      onClick={() => mutate(() => archiveSeat(roomId, campaignId, seat.id, token))}
+                    >{copy.archive}</button>
+                    <button
+                      className="button danger"
+                      disabled={pending}
+                      type="button"
+                      onClick={() => {
+                        if (!window.confirm(copy.removeConfirm)) return
+                        mutate(() => deleteSeat(roomId, campaignId, seat.id, token))
+                      }}
+                    >{copy.remove}</button>
+                  </div>
                 ) : null}
               </article>
             )

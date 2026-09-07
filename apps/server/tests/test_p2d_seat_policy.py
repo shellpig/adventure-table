@@ -23,7 +23,12 @@ from app.domain.rooms.seats import (
     SeatRole,
     SeatService,
 )
-from app.persistence.rooms.seats import StoredSeat, StoredSeatAccessSession
+from app.persistence.rooms.seats import (
+    SeatPersistenceConflictError,
+    SeatSelectionPersistenceError,
+    StoredSeat,
+    StoredSeatAccessSession,
+)
 
 
 def _context(authority: RoomAccessAuthority, *, session_id=None) -> RoomAccessContext:
@@ -63,17 +68,13 @@ class _FakeSeatRepository:
         self.status = "active"
         self.seats: dict = {}
         self.access: dict = {}
-        self.roster: dict = {}
-        self.archived_characters: set = set()
+        self.eligible_characters: set = set()
 
     def campaign_room_id(self, campaign_id):
         return self.room_id if campaign_id == self.campaign_id else None
 
     def campaign_status(self, campaign_id):
         return self.status if campaign_id == self.campaign_id else None
-
-    def active_campaign_id(self, room_id):
-        return self.campaign_id if room_id == self.room_id else None
 
     def get(self, seat_id):
         return self.seats.get(seat_id)
@@ -126,20 +127,37 @@ class _FakeSeatRepository:
         self.seats[seat_id] = updated
         return updated
 
-    def roster_status(self, *, campaign_id, character_id):
-        return self.roster.get((campaign_id, character_id))
+    def selection_is_eligible(self, *, campaign_id, character_id):
+        return campaign_id == self.campaign_id and character_id in self.eligible_characters
 
-    def character_is_archived(self, character_id):
-        return character_id in self.archived_characters
-
-    def character_selected_elsewhere(self, *, campaign_id, character_id, excluding_seat_id):
-        return any(
-            seat.campaign_id == campaign_id
-            and seat.id != excluding_seat_id
-            and seat.archived_at is None
-            and seat.selected_character_id == character_id
-            for seat in self.seats.values()
+    def select_character_if_eligible(self, *, seat_id, campaign_id, character_id):
+        seat = self.seats.get(seat_id)
+        if seat is None or seat.campaign_id != campaign_id or seat.archived_at is not None:
+            return None
+        if seat.role != "player":
+            raise SeatSelectionPersistenceError("only Player Seats can select a Character")
+        if character_id is not None and not self.selection_is_eligible(
+            campaign_id=campaign_id,
+            character_id=character_id,
+        ):
+            raise SeatSelectionPersistenceError("Character is not eligible in this Campaign roster")
+        if character_id is not None and any(
+            other.id != seat_id
+            and other.campaign_id == campaign_id
+            and other.archived_at is None
+            and other.selected_character_id == character_id
+            for other in self.seats.values()
+        ):
+            raise SeatPersistenceConflictError("duplicate selection")
+        updated = StoredSeat(
+            **{
+                **seat.__dict__,
+                "selected_character_id": character_id,
+                "updated_at": datetime.now(timezone.utc),
+            }
         )
+        self.seats[seat_id] = updated
+        return updated
 
     def set_selected_character(self, *, seat_id, character_id):
         seat = self.seats.get(seat_id)
@@ -259,47 +277,34 @@ def test_controller_must_be_an_active_access_session_from_same_room() -> None:
         )
 
 
-def test_player_character_selection_enforces_roster_status_archive_and_uniqueness() -> None:
+def test_player_character_selection_enforces_eligibility_and_uniqueness() -> None:
     repo = _FakeSeatRepository()
     service = SeatService(repo)
     first = service.create_seat(repo.room_id, repo.campaign_id, SeatCreate(role=SeatRole.PLAYER))
     second = service.create_seat(repo.room_id, repo.campaign_id, SeatCreate(role=SeatRole.PLAYER))
-    active_character = uuid4()
-    inactive_character = uuid4()
-    retired_character = uuid4()
-    archived_character = uuid4()
-    repo.roster[(repo.campaign_id, active_character)] = "active"
-    repo.roster[(repo.campaign_id, inactive_character)] = "inactive"
-    repo.roster[(repo.campaign_id, retired_character)] = "retired"
-    repo.roster[(repo.campaign_id, archived_character)] = "active"
-    repo.archived_characters.add(archived_character)
+    eligible_a = uuid4()
+    eligible_b = uuid4()
+    ineligible = uuid4()
+    repo.eligible_characters.update({eligible_a, eligible_b})
 
-    assert service.select_character(repo.room_id, repo.campaign_id, first.id, active_character).selected_character_id == active_character
-    assert service.select_character(repo.room_id, repo.campaign_id, second.id, inactive_character).selected_character_id == inactive_character
+    assert service.select_character(repo.room_id, repo.campaign_id, first.id, eligible_a).selected_character_id == eligible_a
+    assert service.select_character(repo.room_id, repo.campaign_id, second.id, eligible_b).selected_character_id == eligible_b
 
     with pytest.raises(SeatCharacterSelectionError):
-        service.select_character(repo.room_id, repo.campaign_id, second.id, retired_character)
+        service.select_character(repo.room_id, repo.campaign_id, second.id, ineligible)
     with pytest.raises(SeatCharacterSelectionError):
-        service.select_character(repo.room_id, repo.campaign_id, second.id, archived_character)
-    with pytest.raises(SeatCharacterSelectionError):
-        service.select_character(repo.room_id, repo.campaign_id, second.id, active_character)
+        service.select_character(repo.room_id, repo.campaign_id, second.id, eligible_a)
 
 
-def test_lobby_reconciles_selection_when_roster_or_character_becomes_ineligible() -> None:
+def test_lobby_reconciles_selection_when_character_becomes_ineligible() -> None:
     repo = _FakeSeatRepository()
     service = SeatService(repo)
     seat = service.create_seat(repo.room_id, repo.campaign_id, SeatCreate(role=SeatRole.PLAYER))
     character_id = uuid4()
-    repo.roster[(repo.campaign_id, character_id)] = "active"
+    repo.eligible_characters.add(character_id)
     service.select_character(repo.room_id, repo.campaign_id, seat.id, character_id)
 
-    repo.roster[(repo.campaign_id, character_id)] = "retired"
-    snapshot = service.lobby(repo.room_id, repo.campaign_id)
-    assert snapshot.seats[0].selected_character_id is None
-
-    repo.roster[(repo.campaign_id, character_id)] = "active"
-    service.select_character(repo.room_id, repo.campaign_id, seat.id, character_id)
-    repo.archived_characters.add(character_id)
+    repo.eligible_characters.remove(character_id)
     snapshot = service.lobby(repo.room_id, repo.campaign_id)
     assert snapshot.seats[0].selected_character_id is None
 

@@ -7,7 +7,12 @@ from uuid import UUID
 from pydantic import Field, field_validator
 
 from app.domain.rooms.schemas import RoomAccessAuthority, StrictModel
-from app.persistence.rooms.seats import SeatPersistenceConflictError, SeatRepository, StoredSeat
+from app.persistence.rooms.seats import (
+    SeatPersistenceConflictError,
+    SeatRepository,
+    SeatSelectionPersistenceError,
+    StoredSeat,
+)
 
 
 PRESENCE_TIMEOUT = timedelta(seconds=90)
@@ -157,10 +162,9 @@ class SeatService:
         )
 
     def _selection_is_eligible(self, campaign_id: UUID, character_id: UUID) -> bool:
-        return (
-            self.repository.roster_status(campaign_id=campaign_id, character_id=character_id)
-            in {"active", "inactive"}
-            and self.repository.character_is_archived(character_id) is False
+        return self.repository.selection_is_eligible(
+            campaign_id=campaign_id,
+            character_id=character_id,
         )
 
     def _reconcile_selections(self, campaign_id: UUID) -> None:
@@ -178,7 +182,13 @@ class SeatService:
 
     def create_seat(self, room_id: UUID, campaign_id: UUID, payload: SeatCreate) -> CampaignSeat:
         self._require_campaign(room_id, campaign_id)
-        return self._present(self.repository.create(campaign_id=campaign_id, role=payload.role.value, label=payload.label))
+        return self._present(
+            self.repository.create(
+                campaign_id=campaign_id,
+                role=payload.role.value,
+                label=payload.label,
+            )
+        )
 
     def set_controller(
         self,
@@ -225,19 +235,18 @@ class SeatService:
         seat = self.get_scoped_seat(room_id, campaign_id, seat_id)
         if seat.role != SeatRole.PLAYER.value:
             raise SeatCharacterSelectionError("only Player Seats can select a Character")
-        if character_id is not None:
-            if not self._selection_is_eligible(campaign_id, character_id):
-                raise SeatCharacterSelectionError("Character is not eligible in this Campaign roster")
-            if self.repository.character_selected_elsewhere(
+        try:
+            updated = self.repository.select_character_if_eligible(
+                seat_id=seat_id,
                 campaign_id=campaign_id,
                 character_id=character_id,
-                excluding_seat_id=seat_id,
-            ):
-                raise SeatCharacterSelectionError("Character is already selected by another Player Seat")
-        try:
-            updated = self.repository.set_selected_character(seat_id=seat_id, character_id=character_id)
+            )
+        except SeatSelectionPersistenceError as exc:
+            raise SeatCharacterSelectionError(str(exc)) from exc
         except SeatPersistenceConflictError as exc:
-            raise SeatCharacterSelectionError("Character is already selected by another Player Seat") from exc
+            raise SeatCharacterSelectionError(
+                "Character is already selected by another Player Seat"
+            ) from exc
         if updated is None:
             raise SeatNotFoundError(seat_id)
         return self._present(updated)
@@ -279,7 +288,10 @@ class SeatService:
             room_id=room_id,
             campaign_id=campaign_id,
             caller_access_session_id=caller_access_session_id,
-            seats=[self._present(seat, now=now) for seat in self.repository.list_for_campaign(campaign_id)],
+            seats=[
+                self._present(seat, now=now)
+                for seat in self.repository.list_for_campaign(campaign_id)
+            ],
             controllers=controllers,
         )
 

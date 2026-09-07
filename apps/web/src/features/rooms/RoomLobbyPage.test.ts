@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 import { roomLobbyRouteFromPath } from './RoomLobbyPage'
@@ -23,5 +24,13 @@ describe('P2-D Lobby route and presentation', () => {
         expect(rendered).not.toContain(phase)
       }
     }
+  })
+
+  it('keeps Room heartbeat active in Lobby and exposes archive lifecycle', () => {
+    const source = readFileSync(new URL('./RoomLobbyPage.tsx', import.meta.url), 'utf8')
+    expect(source).toContain('startRoomHeartbeat')
+    expect(source).toContain('heartbeatRoom(roomId, token)')
+    expect(source).toContain('stopHeartbeat()')
+    expect(source).toContain('archiveSeat(roomId, campaignId, seat.id, token)')
   })
 })
