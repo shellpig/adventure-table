@@ -22,14 +22,23 @@ const roomContextPath = resolve(webRoot, 'test-results', 'p2-room-context.json')
 
 const E2E_ROOM_PASSWORD = 'p2-e2e-room-pass'
 
+// Order matters. campaign_roster_entries.character_id and
+// campaign_seats.controller_access_session_id are both RESTRICT, so the
+// Campaign-owned rows have to go before the Characters and access sessions they
+// point at. rooms.active_campaign_id is SET NULL and needs no separate step.
 const SQL = `
-DELETE FROM characters;
-DELETE FROM character_build_drafts;
+DELETE FROM campaign_seats;
+DELETE FROM campaign_roster_entries;
+DELETE FROM campaigns;
 DELETE FROM room_access_sessions;
 DELETE FROM rooms;
+DELETE FROM characters;
+DELETE FROM character_build_drafts;
 SELECT count(*) AS remaining_characters FROM characters;
 SELECT count(*) AS remaining_drafts FROM character_build_drafts;
 SELECT count(*) AS remaining_rooms FROM rooms;
+SELECT count(*) AS remaining_campaigns FROM campaigns;
+SELECT count(*) AS remaining_seats FROM campaign_seats;
 `
 
 // The SQL goes in on stdin rather than through -c: it is multi-line, and a

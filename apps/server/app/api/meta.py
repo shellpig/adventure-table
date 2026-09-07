@@ -42,6 +42,7 @@ def build_capabilities(channel: DistributionChannel) -> Capabilities:
         capabilities=CapabilityFlags(
             room=channel == "web",
             campaign=channel == "web",
+            seat=channel == "web",
         ),
         database_path=database_path,
     )

@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.persistence.rooms.tables import (
     campaign_roster_entries,
+    campaign_seats,
     campaigns,
     room_characters,
     rooms,
@@ -58,6 +59,70 @@ class CampaignRepository:
             select(campaigns).where(campaigns.c.id == campaign_id)
         ).mappings().one_or_none()
         return CampaignRepository._campaign(row)
+
+    @staticmethod
+    def character_room_id_in_transaction(
+        connection: Connection,
+        character_id: UUID,
+    ) -> UUID | None:
+        return connection.scalar(
+            select(room_characters.c.room_id).where(
+                room_characters.c.character_id == character_id
+            )
+        )
+
+    @staticmethod
+    def roster_entry_in_transaction(
+        connection: Connection,
+        *,
+        campaign_id: UUID,
+        character_id: UUID,
+    ) -> StoredRosterEntry | None:
+        row = connection.execute(
+            select(campaign_roster_entries).where(
+                campaign_roster_entries.c.campaign_id == campaign_id,
+                campaign_roster_entries.c.character_id == character_id,
+            )
+        ).mappings().one_or_none()
+        return CampaignRepository._roster(row)
+
+    @staticmethod
+    def _clear_seat_selection(
+        connection: Connection,
+        *,
+        campaign_id: UUID,
+        character_id: UUID,
+        updated_at: datetime,
+    ) -> None:
+        connection.execute(
+            update(campaign_seats)
+            .where(
+                campaign_seats.c.campaign_id == campaign_id,
+                campaign_seats.c.selected_character_id == character_id,
+            )
+            .values(selected_character_id=None, updated_at=updated_at)
+        )
+
+    @staticmethod
+    def clear_character_seat_selections_in_transaction(
+        connection: Connection,
+        *,
+        room_id: UUID,
+        character_id: UUID,
+    ) -> None:
+        connection.execute(
+            update(campaign_seats)
+            .where(
+                campaign_seats.c.selected_character_id == character_id,
+                campaign_seats.c.campaign_id.in_(
+                    select(campaigns.c.id).where(campaigns.c.room_id == room_id)
+                ),
+            )
+            .values(
+                selected_character_id=None,
+                updated_at=datetime.now(timezone.utc),
+            )
+        )
 
     def get(self, campaign_id: UUID) -> StoredCampaign | None:
         with self.engine.connect() as connection:
@@ -114,7 +179,10 @@ class CampaignRepository:
             connection.execute(
                 update(rooms)
                 .where(rooms.c.active_campaign_id == campaign_id)
-                .values(active_campaign_id=None)
+                .values(
+                    active_campaign_id=None,
+                    updated_at=datetime.now(timezone.utc),
+                )
             )
 
     def select_active_campaign(
@@ -127,7 +195,10 @@ class CampaignRepository:
             result = connection.execute(
                 update(rooms)
                 .where(rooms.c.id == room_id)
-                .values(active_campaign_id=campaign_id)
+                .values(
+                    active_campaign_id=campaign_id,
+                    updated_at=datetime.now(timezone.utc),
+                )
             )
             return result.rowcount == 1
 
@@ -135,29 +206,6 @@ class CampaignRepository:
         with self.engine.begin() as connection:
             result = connection.execute(delete(campaigns).where(campaigns.c.id == campaign_id))
             return result.rowcount == 1
-
-    @staticmethod
-    def character_room_id_in_transaction(connection: Connection, character_id: UUID) -> UUID | None:
-        return connection.scalar(
-            select(room_characters.c.room_id).where(
-                room_characters.c.character_id == character_id
-            )
-        )
-
-    @staticmethod
-    def roster_entry_in_transaction(
-        connection: Connection,
-        *,
-        campaign_id: UUID,
-        character_id: UUID,
-    ) -> StoredRosterEntry | None:
-        row = connection.execute(
-            select(campaign_roster_entries).where(
-                campaign_roster_entries.c.campaign_id == campaign_id,
-                campaign_roster_entries.c.character_id == character_id,
-            )
-        ).mappings().one_or_none()
-        return CampaignRepository._roster(row)
 
     def add_roster_entry_same_room(
         self,
@@ -242,6 +290,25 @@ class CampaignRepository:
             )
             if result.rowcount != 1:
                 return None
+            if status in {"retired", "dead"}:
+                self._clear_seat_selection(
+                    connection,
+                    campaign_id=campaign_id,
+                    character_id=character_id,
+                    updated_at=now,
+                )
+            return self.roster_entry_in_transaction(
+                connection,
+                campaign_id=campaign_id,
+                character_id=character_id,
+            )
+
+    def get_roster_entry(
+        self,
+        campaign_id: UUID,
+        character_id: UUID,
+    ) -> StoredRosterEntry | None:
+        with self.engine.connect() as connection:
             return self.roster_entry_in_transaction(
                 connection,
                 campaign_id=campaign_id,
@@ -254,6 +321,7 @@ class CampaignRepository:
         campaign_id: UUID,
         character_id: UUID,
     ) -> bool:
+        now = datetime.now(timezone.utc)
         with self.engine.begin() as connection:
             result = connection.execute(
                 delete(campaign_roster_entries).where(
@@ -261,6 +329,13 @@ class CampaignRepository:
                     campaign_roster_entries.c.character_id == character_id,
                 )
             )
+            if result.rowcount == 1:
+                self._clear_seat_selection(
+                    connection,
+                    campaign_id=campaign_id,
+                    character_id=character_id,
+                    updated_at=now,
+                )
             return result.rowcount == 1
 
     def character_is_referenced(self, character_id: UUID) -> bool:

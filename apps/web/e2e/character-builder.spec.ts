@@ -10,12 +10,32 @@ async function expectDraftSaved(page: Page) {
   await expect(page.getByText('Saved on server')).toBeVisible()
 }
 
+// "Saved on server" alone cannot tell this save apart from the previous one: a
+// click returns before the save request leaves the browser, so the indicator is
+// still showing the prior success and the wait passes instantly. Every other
+// Builder spec keys off the draft revision instead, which only advances once
+// the server has accepted this write and the page has the recomputed summary.
+async function currentDraftRevision(page: Page) {
+  const text = (await page.locator('.builder-save-state span').innerText()).trim()
+  const match = text.match(/^Draft revision (\d+)$/)
+  if (!match) throw new Error(`Cannot parse draft revision from: ${text}`)
+  return Number(match[1])
+}
+
+async function waitForDraftRevision(page: Page, previousRevision: number) {
+  await expect(page.locator('.builder-save-state span')).toHaveText(
+    `Draft revision ${previousRevision + 1}`,
+  )
+  await expectDraftSaved(page)
+}
+
 // Click the option whose label matches exactly. When M01-B introduces the same
 // display name from another content pack, preserve this older P1 regression as
 // an SRD baseline by choosing the SRD row explicitly.
 async function chooseOption(page: Page, input: Locator, value: string) {
   await expectDraftSaved(page)
   await expect(input).toBeEnabled()
+  const revision = await currentDraftRevision(page)
   await input.fill(value)
 
   const listboxId = await input.getAttribute('aria-controls')
@@ -34,7 +54,7 @@ async function chooseOption(page: Page, input: Locator, value: string) {
   await option.click()
 
   await expect(listbox).toBeHidden()
-  await expectDraftSaved(page)
+  await waitForDraftRevision(page, revision)
 }
 
 async function chooseSearchable(page: Page, label: string | RegExp, value: string) {

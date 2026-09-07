@@ -20,6 +20,7 @@ from app.interop.character_import import CharacterImportResult, CharacterImportS
 from app.interop.json_schema import CharacterExport
 from app.persistence.builder_drafts import BuilderDraftRepository
 from app.persistence.characters import CharacterRepository
+from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.workspace import RoomWorkspaceRepository
 from app.persistence.transaction_bound import TransactionBoundEngine
 
@@ -77,6 +78,35 @@ class RoomCharacterWorkspaceService:
     def require_draft(self, room_id: UUID, draft_id: UUID) -> None:
         if self.workspace_repository.draft_room_id(draft_id) != room_id:
             raise RoomWorkspaceScopeError(f"draft {draft_id} is not in Room {room_id}")
+
+    def set_character_archived(
+        self,
+        room_id: UUID,
+        character_id: UUID,
+        archived: bool,
+    ) -> PersistedCharacter:
+        with self.engine.begin() as connection:
+            existing_room = self.workspace_repository.character_room_id_in_transaction(
+                connection,
+                character_id,
+            )
+            if existing_room != room_id:
+                raise RoomWorkspaceScopeError(
+                    f"character {character_id} is not in Room {room_id}"
+                )
+            character_repository, _, _ = self._bound_services(connection)
+            character = character_repository.set_archived(character_id, archived)
+            if character is None:
+                raise RoomWorkspaceScopeError(
+                    f"character {character_id} is not in Room {room_id}"
+                )
+            if archived:
+                CampaignRepository.clear_character_seat_selections_in_transaction(
+                    connection,
+                    room_id=room_id,
+                    character_id=character_id,
+                )
+            return character
 
     def create_draft(self, room_id: UUID, request: BuilderDraftCreateInput) -> BuilderView:
         with self.engine.begin() as connection:

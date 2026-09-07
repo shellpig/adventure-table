@@ -1,12 +1,12 @@
 from app.api.meta import build_capabilities
 
 
-def test_web_channel_advertises_p2c_campaign_capability() -> None:
+def test_web_channel_advertises_p2d_seat_capability() -> None:
     snapshot = build_capabilities("web")
 
     assert snapshot.capabilities.room is True
     assert snapshot.capabilities.campaign is True
-    assert snapshot.capabilities.seat is False
+    assert snapshot.capabilities.seat is True
     assert snapshot.capabilities.session is False
 
 

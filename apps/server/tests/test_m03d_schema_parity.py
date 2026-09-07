@@ -26,6 +26,7 @@ FORBIDDEN_MULTIPLAYER_TABLES = {
     "room_builder_drafts",
     "campaigns",
     "campaign_roster_entries",
+    "campaign_seats",
 }
 
 

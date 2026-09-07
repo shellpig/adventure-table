@@ -22,6 +22,7 @@ const SOURCE_FILES = [
   '../features/character-sheet/CharacterSheetHtmlExportButton.tsx',
   '../features/rooms/RoomCampaignPage.tsx',
   '../features/rooms/RoomLandingPage.tsx',
+  '../features/rooms/RoomLobbyPage.tsx',
   '../features/rooms/RoomWorkspacePage.tsx',
 ] as const
 
