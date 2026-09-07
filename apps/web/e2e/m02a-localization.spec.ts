@@ -17,12 +17,12 @@ async function resetLocale(page: Page) {
   await page.reload()
 }
 
+// Read through page.request, not an in-page fetch: only the Playwright request
+// context is scoped to the Room namespace and carries its access token.
 async function readDraft(page: Page, draftId: string): Promise<BuilderDraftSnapshot> {
-  return page.evaluate(async (id) => {
-    const response = await fetch(`/api/character-builder/drafts/${id}`)
-    if (!response.ok) throw new Error(`Failed to read Builder Draft (${response.status})`)
-    return response.json()
-  }, draftId)
+  const response = await page.request.get(`/api/character-builder/drafts/${draftId}`)
+  if (!response.ok()) throw new Error(`Failed to read Builder Draft (${response.status()})`)
+  return (await response.json()) as BuilderDraftSnapshot
 }
 
 test('M02-A switches locale without reload and persists browser preference', async ({ page, context }) => {

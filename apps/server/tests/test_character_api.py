@@ -1,6 +1,5 @@
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 
@@ -11,8 +10,8 @@ from app.domain.character.fixture import (
     build_p0_fighter_wizard_fixture,
     build_p0_fighter_wizard_state,
 )
-from app.main import app
 from app.persistence.characters import CharacterRepository
+from web_room_support import create_web_room_client
 
 
 def _seed_api():
@@ -31,9 +30,13 @@ def _seed_api():
         build=build,
         state=build_p0_fighter_wizard_state(build),
     )
-    app.state.content_registry = registry
-    app.state.character_repository = repository
-    return TestClient(app), repository, character
+    client = create_web_room_client(
+        engine,
+        registry,
+        character_repository=repository,
+        character_ids=(character.id,),
+    )
+    return client, repository, character
 
 
 def test_reference_api_known_and_unknown_content():
@@ -58,12 +61,13 @@ def test_reference_api_known_and_unknown_content():
 
 def test_character_and_sheet_api_expose_persisted_and_derived_models():
     client, _, character = _seed_api()
+    api = client.character_api
 
-    raw = client.get(f"/api/characters/{character.id}")
+    raw = client.get(f"{api}/{character.id}")
     assert raw.status_code == 200
     assert raw.json()["build"]["character_level"] == 10
 
-    sheet = client.get(f"/api/characters/{character.id}/sheet")
+    sheet = client.get(f"{api}/{character.id}/sheet")
     assert sheet.status_code == 200
     payload = sheet.json()
     assert payload["name"] == P0_FIXTURE_NAME
@@ -90,6 +94,7 @@ def test_character_and_sheet_api_expose_persisted_and_derived_models():
 
 def test_state_patch_covers_p0_mutations_and_keeps_build_immutable():
     client, repository, character = _seed_api()
+    api = client.character_api
     before = repository.load_character(character.id)
     before_build = before.build.model_dump(mode="json")
 
@@ -114,7 +119,7 @@ def test_state_patch_covers_p0_mutations_and_keeps_build_immutable():
     )
 
     patched = client.patch(
-        f"/api/characters/{character.id}/state",
+        f"{api}/{character.id}/state",
         json={
             "current_hp": 60,
             "temporary_hp": 3,
@@ -168,6 +173,7 @@ def test_state_patch_covers_p0_mutations_and_keeps_build_immutable():
 
 def test_invalid_state_requests_are_atomic_and_machine_readable():
     client, repository, character = _seed_api()
+    api = client.character_api
     baseline = repository.load_character(character.id)
     baseline_state = baseline.state.model_dump(mode="json")
     baseline_version_id = baseline.current_version_id
@@ -200,7 +206,7 @@ def test_invalid_state_requests_are_atomic_and_machine_readable():
     ]
 
     for patch in invalid_patches:
-        response = client.patch(f"/api/characters/{character.id}/state", json=patch)
+        response = client.patch(f"{api}/{character.id}/state", json=patch)
         assert response.status_code == 422
         assert response.json()["error"]["code"] == "validation_failed"
         reloaded = repository.load_character(character.id)
@@ -211,14 +217,15 @@ def test_invalid_state_requests_are_atomic_and_machine_readable():
 
 def test_invalid_state_types_and_missing_character_use_machine_codes():
     client, _, character = _seed_api()
+    api = client.character_api
 
     bad_type = client.patch(
-        f"/api/characters/{character.id}/state",
+        f"{api}/{character.id}/state",
         json={"current_hp": "many"},
     )
     assert bad_type.status_code == 422
     assert bad_type.json()["error"]["code"] == "validation_failed"
 
-    missing = client.get(f"/api/characters/{uuid4()}/sheet")
+    missing = client.get(f"{api}/{uuid4()}/sheet")
     assert missing.status_code == 404
-    assert missing.json()["error"]["code"] == "character_not_found"
+    assert missing.json()["error"]["code"] == "room_resource_not_found"

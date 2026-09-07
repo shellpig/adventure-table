@@ -73,6 +73,19 @@ export function persistRoomGrant(
   return recent
 }
 
+export function forgetRecentRoom(
+  roomId: string,
+  storage: RoomStorage | undefined = browserRoomStorage(),
+): void {
+  if (!storage) return
+  try {
+    const next = readRecentRooms(storage).filter((room) => room.roomId !== roomId)
+    storage.setItem(RECENT_ROOMS_STORAGE_KEY, JSON.stringify(next))
+  } catch {
+    // A deleted Room is already gone server-side; local cleanup is best effort.
+  }
+}
+
 export function recentRoomForId(
   roomId: string,
   storage: RoomStorage | undefined = browserRoomStorage(),

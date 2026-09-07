@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { characterWorkspaceFrontendPath } from '../../api/characterWorkspace'
 import {
   archiveCharacter,
   createBuilderDraft,
@@ -28,6 +29,10 @@ type WorkshopCharacter = Awaited<ReturnType<typeof listCharacters>>[number] & {
   }[]
 }
 
+type CharacterWorkshopPageProps = {
+  allowPermanentDelete?: boolean
+}
+
 function localizedClassSummary(
   character: WorkshopCharacter,
   nameFor: ContentNameResolver,
@@ -38,7 +43,7 @@ function localizedClassSummary(
     .join(' / ')
 }
 
-export function CharacterWorkshopPage() {
+export function CharacterWorkshopPage({ allowPermanentDelete = true }: CharacterWorkshopPageProps = {}) {
   const { t } = useUiCopy()
   const queryClient = useQueryClient()
   const characters = useQuery({ queryKey: ['character-list'], queryFn: listCharacters })
@@ -69,14 +74,14 @@ export function CharacterWorkshopPage() {
   const createDraft = useMutation({
     mutationFn: () => createBuilderDraft(),
     onSuccess: (view) => {
-      window.location.assign(`/character-builder/${view.draft.id}`)
+      window.location.assign(characterWorkspaceFrontendPath(`/character-builder/${view.draft.id}`))
     },
   })
   const versionDraft = useMutation({
     mutationFn: ({ characterId, mode }: { characterId: string; mode: VersionedBuilderMode }) =>
       createCharacterVersionDraft(characterId, mode),
     onSuccess: (view) => {
-      window.location.assign(`/character-builder/${view.draft.id}`)
+      window.location.assign(characterWorkspaceFrontendPath(`/character-builder/${view.draft.id}`))
     },
   })
   const refreshLists = () => {
@@ -160,7 +165,7 @@ export function CharacterWorkshopPage() {
                       })}
                     </span>
                   </div>
-                  <a className="button secondary full" href={`/character-builder/${view.draft.id}`}>
+                  <a className="button secondary full" href={characterWorkspaceFrontendPath(`/character-builder/${view.draft.id}`)}>
                     {t('workshop.resumeDraft')}
                   </a>
                 </article>
@@ -196,7 +201,7 @@ export function CharacterWorkshopPage() {
                   <span>{character.level >= 20 ? t('workshop.maxLevel') : t('workshop.ready')}</span>
                 </div>
                 <div className="workshop-card__actions">
-                  <a className="button secondary full" href={`/characters/${character.id}`}>
+                  <a className="button secondary full" href={characterWorkspaceFrontendPath(`/characters/${character.id}`)}>
                     {t('workshop.openSheet')}
                   </a>
                   <ExportCharacterButton characterId={character.id} />
@@ -220,7 +225,7 @@ export function CharacterWorkshopPage() {
                   >
                     {t('workshop.editBuild')}
                   </button>
-                  <a className="button secondary full" href={`/characters/${character.id}/versions`}>
+                  <a className="button secondary full" href={characterWorkspaceFrontendPath(`/characters/${character.id}/versions`)}>
                     {t('workshop.versionHistory')}
                   </a>
                   <button
@@ -271,53 +276,55 @@ export function CharacterWorkshopPage() {
                       {t('workshop.unarchive')}
                     </button>
                   </div>
-                  {deleteTarget === character.id ? (
-                    <div className="workshop-card__danger">
-                      <label htmlFor={`delete-${character.id}`}>
-                        {t('workshop.deleteConfirmPrompt', { name: character.name })}
-                      </label>
-                      <input
-                        id={`delete-${character.id}`}
-                        type="text"
-                        value={deleteConfirmation}
-                        autoComplete="off"
-                        onChange={(event) => setDeleteConfirmation(event.target.value)}
-                      />
-                      <div className="workshop-card__split-actions">
-                        <button
-                          type="button"
-                          className="button secondary"
-                          onClick={() => {
-                            setDeleteTarget(null)
-                            setDeleteConfirmation('')
-                          }}
-                        >
-                          {t('workshop.deleteCancel')}
-                        </button>
-                        <button
-                          type="button"
-                          className="button danger"
-                          disabled={
-                            remove.isPending || deleteConfirmation.trim() !== character.name
-                          }
-                          onClick={() => remove.mutate(character.id)}
-                        >
-                          {t('workshop.deleteConfirm')}
-                        </button>
+                  {allowPermanentDelete ? (
+                    deleteTarget === character.id ? (
+                      <div className="workshop-card__danger">
+                        <label htmlFor={`delete-${character.id}`}>
+                          {t('workshop.deleteConfirmPrompt', { name: character.name })}
+                        </label>
+                        <input
+                          id={`delete-${character.id}`}
+                          type="text"
+                          value={deleteConfirmation}
+                          autoComplete="off"
+                          onChange={(event) => setDeleteConfirmation(event.target.value)}
+                        />
+                        <div className="workshop-card__split-actions">
+                          <button
+                            type="button"
+                            className="button secondary"
+                            onClick={() => {
+                              setDeleteTarget(null)
+                              setDeleteConfirmation('')
+                            }}
+                          >
+                            {t('workshop.deleteCancel')}
+                          </button>
+                          <button
+                            type="button"
+                            className="button danger"
+                            disabled={
+                              remove.isPending || deleteConfirmation.trim() !== character.name
+                            }
+                            onClick={() => remove.mutate(character.id)}
+                          >
+                            {t('workshop.deleteConfirm')}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="workshop-card__quiet-action workshop-card__quiet-action--danger"
-                      onClick={() => {
-                        setDeleteTarget(character.id)
-                        setDeleteConfirmation('')
-                      }}
-                    >
-                      {t('workshop.deleteForever')}
-                    </button>
-                  )}
+                    ) : (
+                      <button
+                        type="button"
+                        className="workshop-card__quiet-action workshop-card__quiet-action--danger"
+                        onClick={() => {
+                          setDeleteTarget(character.id)
+                          setDeleteConfirmation('')
+                        }}
+                      >
+                        {t('workshop.deleteForever')}
+                      </button>
+                    )
+                  ) : null}
                 </article>
               ))}
             </div>

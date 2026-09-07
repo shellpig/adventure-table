@@ -19,6 +19,12 @@ CHARACTER_TABLES = {
     "character_build_drafts",
     "character_import_records",
 }
+FORBIDDEN_MULTIPLAYER_TABLES = {
+    "rooms",
+    "room_access_sessions",
+    "room_characters",
+    "room_builder_drafts",
+}
 
 
 def _alembic_config(server_root: Path) -> Config:
@@ -94,8 +100,7 @@ def test_sqlite_character_migration_schema_matches_character_metadata(
             migrated_engine, allowed=CHARACTER_TABLES
         ) == _schema_snapshot(metadata_engine, allowed=CHARACTER_TABLES)
         migrated_tables = set(inspect(migrated_engine).get_table_names())
-        assert "rooms" not in migrated_tables
-        assert "room_access_sessions" not in migrated_tables
+        assert FORBIDDEN_MULTIPLAYER_TABLES.isdisjoint(migrated_tables)
     finally:
         migrated_engine.dispose()
         metadata_engine.dispose()

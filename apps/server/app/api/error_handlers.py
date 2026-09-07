@@ -30,7 +30,7 @@ def _error_response(
 
 
 def register_exception_handlers(app: FastAPI) -> None:
-    """Register the shared API/domain exception contract on one FastAPI app."""
+    """Register the shared Character/API exception contract on one FastAPI app."""
 
     @app.exception_handler(APIError)
     def handle_api_error(_request: Request, exc: APIError) -> JSONResponse:

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { characterWorkspaceFrontendPath } from '../../api/characterWorkspace'
 import {
   cancelBuilderDraft,
   getAbilityGenerationRules,
@@ -305,7 +306,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
   })
   const cancel = useMutation({
     mutationFn: () => cancelBuilderDraft(draftId),
-    onSuccess: () => window.location.assign('/characters'),
+    onSuccess: () => window.location.assign(characterWorkspaceFrontendPath('/characters')),
   })
 
   const [name, setName] = useState('')
@@ -393,7 +394,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
     return (
       <main className="builder-loading">
         <div className="error-banner">{draftQuery.error?.message ?? t('builder.notFound')}</div>
-        <a className="button secondary" href="/characters">{t('builder.backWorkshop')}</a>
+        <a className="button secondary" href={characterWorkspaceFrontendPath('/characters')}>{t('builder.backWorkshop')}</a>
       </main>
     )
   }
@@ -486,7 +487,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
       <div className="builder-shell">
         <header className="builder-topbar">
           <div className="builder-topbar__main">
-            <a href="/characters" className="builder-back">{t('builder.backWorkshopArrow')}</a>
+            <a href={characterWorkspaceFrontendPath('/characters')} className="builder-back">{t('builder.backWorkshopArrow')}</a>
             <span className="builder-topbar__divider" aria-hidden="true" />
             <h1 className="builder-topbar__title">{view.resolved_summary.name?.trim() || t('builder.unnamedCharacter')}</h1>
             <span className="builder-topbar__badge">{t('builder.eyebrow')}</span>

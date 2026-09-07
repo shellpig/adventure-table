@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { RoomAccessGrant } from '../../api/rooms'
 import {
+  forgetRecentRoom,
   RECENT_ROOMS_STORAGE_KEY,
   persistRoomGrant,
   readRecentRooms,
@@ -34,7 +35,7 @@ const GRANT: RoomAccessGrant = {
   dm_key: 'raw-dm-key-must-not-persist',
 }
 
-describe('P2-A recent Room storage', () => {
+describe('P2 recent Room storage', () => {
   it('persists only Room convenience data and opaque access token', () => {
     const storage = memoryStorage()
     persistRoomGrant(GRANT, storage)
@@ -67,5 +68,14 @@ describe('P2-A recent Room storage', () => {
       authority: 'member',
       accessToken: 'new-token',
     })
+  })
+
+  it('forgets a Room after Owner hard delete', () => {
+    const storage = memoryStorage()
+    persistRoomGrant(GRANT, storage)
+
+    forgetRecentRoom(GRANT.room.id, storage)
+
+    expect(readRecentRooms(storage)).toEqual([])
   })
 })

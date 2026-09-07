@@ -3,14 +3,12 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event, func, select
 from sqlalchemy.pool import StaticPool
 
 from app.content import load_default_content_registry
 from app.db import metadata
 from app.domain.character_builder.service import CharacterBuilderService
-from app.main import app
 from app.persistence.builder_drafts import BuilderDraftRepository, character_build_drafts
 from app.persistence.characters import (
     CharacterRepository,
@@ -18,6 +16,7 @@ from app.persistence.characters import (
     character_states,
     character_versions,
 )
+from web_room_support import WebRoomTestClient, create_web_room_client
 
 
 DIRECT_SOURCES = {
@@ -41,20 +40,24 @@ def _seed(*, raise_server_exceptions: bool = True):
     )
     metadata.create_all(engine)
     character_repository = CharacterRepository(engine, registry)
-    app.state.content_registry = registry
-    app.state.character_engine = engine
-    app.state.character_repository = character_repository
-    app.state.character_builder_service = CharacterBuilderService(
+    builder_service = CharacterBuilderService(
         BuilderDraftRepository(engine),
         registry,
         character_repository,
     )
-    return TestClient(app, raise_server_exceptions=raise_server_exceptions), engine
+    client = create_web_room_client(
+        engine,
+        registry,
+        character_repository=character_repository,
+        builder_service=builder_service,
+        raise_server_exceptions=raise_server_exceptions,
+    )
+    return client, engine
 
 
-def _create_fighter_draft(client: TestClient) -> dict[str, Any]:
+def _create_fighter_draft(client: WebRoomTestClient) -> dict[str, Any]:
     response = client.post(
-        "/api/character-builder/drafts",
+        f"{client.builder_api}/drafts",
         json={
             "draft_payload": {
                 "basic": {"name": "P1-F Fighter"},
@@ -110,7 +113,7 @@ def _selected_generic_refs(view: dict[str, Any]) -> set[str]:
     return result
 
 
-def _fill_generic_choices(client: TestClient, view: dict[str, Any]) -> dict[str, Any]:
+def _fill_generic_choices(client: WebRoomTestClient, view: dict[str, Any]) -> dict[str, Any]:
     draft_id = view["draft"]["id"]
     for _ in range(12):
         selections = dict(view["draft"]["draft_payload"].get("choice_selections") or {})
@@ -168,7 +171,7 @@ def _fill_generic_choices(client: TestClient, view: dict[str, Any]) -> dict[str,
             return view
 
         response = client.patch(
-            f"/api/character-builder/drafts/{draft_id}",
+            f"{client.builder_api}/drafts/{draft_id}",
             json={
                 "expected_revision": view["draft"]["revision"],
                 "draft_payload": {"choice_selections": selections},
@@ -191,7 +194,7 @@ def _equipment_selection(raw: Any) -> list[str]:
     return []
 
 
-def _fill_equipment_choices(client: TestClient, view: dict[str, Any]) -> dict[str, Any]:
+def _fill_equipment_choices(client: WebRoomTestClient, view: dict[str, Any]) -> dict[str, Any]:
     draft_id = view["draft"]["id"]
     for _ in range(12):
         selections = dict(
@@ -220,7 +223,7 @@ def _fill_equipment_choices(client: TestClient, view: dict[str, Any]) -> dict[st
             return view
 
         response = client.patch(
-            f"/api/character-builder/drafts/{draft_id}",
+            f"{client.builder_api}/drafts/{draft_id}",
             json={
                 "expected_revision": view["draft"]["revision"],
                 "draft_payload": {"starting_equipment_choices": selections},
@@ -231,7 +234,7 @@ def _fill_equipment_choices(client: TestClient, view: dict[str, Any]) -> dict[st
     raise AssertionError("equipment choices did not converge")
 
 
-def _complete_fighter_draft(client: TestClient) -> dict[str, Any]:
+def _complete_fighter_draft(client: WebRoomTestClient) -> dict[str, Any]:
     view = _create_fighter_draft(client)
     view = _fill_generic_choices(client, view)
     return _fill_equipment_choices(client, view)
@@ -248,7 +251,7 @@ def test_p1f_review_confirm_is_idempotent_and_inventory_stays_live_state() -> No
     view = _complete_fighter_draft(client)
     draft_id = view["draft"]["id"]
 
-    review = client.get(f"/api/character-builder/drafts/{draft_id}/review")
+    review = client.get(f"{client.builder_api}/drafts/{draft_id}/review")
     assert review.status_code == 200, review.text
     review_payload = review.json()
     assert review_payload["can_confirm"] is True, review_payload["issues"]
@@ -269,14 +272,14 @@ def test_p1f_review_confirm_is_idempotent_and_inventory_stays_live_state() -> No
     for skill in proficiencies:
         assert derived["skill_modifiers"][skill] >= derived["proficiency_bonus"] - 5
 
-    confirmed = client.post(f"/api/character-builder/drafts/{draft_id}/confirm")
+    confirmed = client.post(f"{client.builder_api}/drafts/{draft_id}/confirm")
     assert confirmed.status_code == 200, confirmed.text
     result = confirmed.json()
     character_id = result["character_id"]
     assert result["version_no"] == 1
-    assert result["character_path"] == f"/characters/{character_id}"
+    assert result["character_path"] == f"/rooms/{client.room_id}/characters/{character_id}"
 
-    repeated = client.post(f"/api/character-builder/drafts/{draft_id}/confirm")
+    repeated = client.post(f"{client.builder_api}/drafts/{draft_id}/confirm")
     assert repeated.status_code == 200
     assert repeated.json()["character_id"] == character_id
     assert _count(engine, characters) == 1
@@ -297,7 +300,7 @@ def test_p1f_review_confirm_is_idempotent_and_inventory_stays_live_state() -> No
     assert version["superseded_by_version_id"] is None
     assert version["change_note"] is None
 
-    character = client.get(f"/api/characters/{character_id}").json()
+    character = client.get(f"{client.character_api}/{character_id}").json()
     build_inventory_count = len(character["build"]["starting_equipment"])
     live_inventory = character["state"]["inventory_state"]
     assert len(live_inventory) == build_inventory_count
@@ -305,20 +308,20 @@ def test_p1f_review_confirm_is_idempotent_and_inventory_stays_live_state() -> No
 
     mutated_inventory = live_inventory[1:]
     patched = client.patch(
-        f"/api/characters/{character_id}/state",
+        f"{client.character_api}/{character_id}/state",
         json={"inventory_state": mutated_inventory},
     )
     assert patched.status_code == 200, patched.text
 
     repeated_after_mutation = client.post(
-        f"/api/character-builder/drafts/{draft_id}/confirm"
+        f"{client.builder_api}/drafts/{draft_id}/confirm"
     )
     assert repeated_after_mutation.status_code == 200
-    reloaded = client.get(f"/api/characters/{character_id}").json()
+    reloaded = client.get(f"{client.character_api}/{character_id}").json()
     assert len(reloaded["build"]["starting_equipment"]) == build_inventory_count
     assert reloaded["state"]["inventory_state"] == mutated_inventory
 
-    active_drafts = client.get("/api/character-builder/drafts").json()
+    active_drafts = client.get(f"{client.builder_api}/drafts").json()
     assert all(item["draft"]["id"] != draft_id for item in active_drafts)
 
     engine.dispose()
@@ -329,14 +332,14 @@ def test_p1f_blocked_confirm_and_database_failure_leave_no_partial_character() -
 
     incomplete = _create_fighter_draft(client)
     blocked = client.post(
-        f"/api/character-builder/drafts/{incomplete['draft']['id']}/confirm"
+        f"{client.builder_api}/drafts/{incomplete['draft']['id']}/confirm"
     )
     assert blocked.status_code == 422
     assert _count(engine, characters) == 0
     assert _count(engine, character_versions) == 0
     assert _count(engine, character_states) == 0
 
-    client.delete(f"/api/character-builder/drafts/{incomplete['draft']['id']}")
+    client.delete(f"{client.builder_api}/drafts/{incomplete['draft']['id']}")
     complete = _complete_fighter_draft(client)
     draft_id = complete["draft"]["id"]
 
@@ -346,7 +349,7 @@ def test_p1f_blocked_confirm_and_database_failure_leave_no_partial_character() -
 
     event.listen(engine, "before_cursor_execute", fail_state_insert)
     try:
-        failed = client.post(f"/api/character-builder/drafts/{draft_id}/confirm")
+        failed = client.post(f"{client.builder_api}/drafts/{draft_id}/confirm")
         assert failed.status_code == 500
     finally:
         event.remove(engine, "before_cursor_execute", fail_state_insert)
@@ -362,7 +365,7 @@ def test_p1f_blocked_confirm_and_database_failure_leave_no_partial_character() -
         )
     assert confirmed_character_id is None
 
-    retry = client.post(f"/api/character-builder/drafts/{draft_id}/confirm")
+    retry = client.post(f"{client.builder_api}/drafts/{draft_id}/confirm")
     assert retry.status_code == 200, retry.text
     assert _count(engine, characters) == 1
 

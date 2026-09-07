@@ -60,7 +60,7 @@ export async function enterRoom(
   await page.getByLabel(/^(Room name|Room 名稱)$/).fill(name)
   await page.getByLabel(/^(Room password|Room 密碼)$/).first().fill(E2E_ROOM_PASSWORD)
   if (options.displayName) {
-    await page.getByLabel(/^(Display name \(optional\)|顯示名稱（選填）)$/).first().fill(options.displayName)
+    await page.getByLabel(/^(Player display name \(optional\)|Display name \(optional\)|玩家顯示名稱（選填）|顯示名稱（選填）)$/).first().fill(options.displayName)
   }
 
   const responsePromise = page.waitForResponse((response) => {
@@ -110,8 +110,7 @@ export async function openCharacterWorkshop(
   )
   expect(hasRoomContext).toBe(true)
 
-  // P2-A compatibility seam. P2-B changes this one route to
-  // /rooms/{roomId}/characters when Character APIs become Room-scoped.
-  await page.goto('/characters')
-  await expect(page).toHaveURL(/\/characters\/?$/)
+  // P2-B closes the Web Character surface into the active Room namespace.
+  await page.goto(`/rooms/${context!.roomId}/characters`)
+  await expect(page).toHaveURL(new RegExp(`/rooms/${context!.roomId}/characters/?$`))
 }

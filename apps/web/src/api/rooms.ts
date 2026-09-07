@@ -34,21 +34,23 @@ export class RoomApiError extends Error {
   }
 }
 
+async function roomError(response: Response): Promise<RoomApiError> {
+  let payload: ApiErrorPayload = {}
+  try {
+    payload = (await response.json()) as ApiErrorPayload
+  } catch {
+    // Stable fallback when an intermediary returns non-JSON.
+  }
+  return new RoomApiError(
+    response.status,
+    payload.error?.code ?? 'room_request_failed',
+    payload.error?.message ?? `Room request failed (${response.status})`,
+  )
+}
+
 async function jsonRequest<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init)
-  if (!response.ok) {
-    let payload: ApiErrorPayload = {}
-    try {
-      payload = (await response.json()) as ApiErrorPayload
-    } catch {
-      // Stable fallback when an intermediary returns non-JSON.
-    }
-    throw new RoomApiError(
-      response.status,
-      payload.error?.code ?? 'room_request_failed',
-      payload.error?.message ?? `Room request failed (${response.status})`,
-    )
-  }
+  if (!response.ok) throw await roomError(response)
   return (await response.json()) as T
 }
 
@@ -104,4 +106,12 @@ export async function heartbeatRoom(roomId: string, accessToken: string): Promis
     method: 'POST',
     headers: jsonHeaders(accessToken),
   })
+}
+
+export async function deleteRoom(roomId: string, accessToken: string): Promise<void> {
+  const response = await fetch(`/api/rooms/${roomId}`, {
+    method: 'DELETE',
+    headers: jsonHeaders(accessToken),
+  })
+  if (!response.ok) throw await roomError(response)
 }

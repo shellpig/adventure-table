@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - p2-a-room-foundation-web-entry
+      - p2-b-room-character-workspace
 
 jobs:
   backend:
@@ -50,9 +51,9 @@ jobs:
           cache-dependency-path: apps/server/pyproject.toml
       - name: Install backend
         run: python -m pip install -e "./apps/server[web,dev]"
-      - name: Run P2 PostgreSQL migration gates
+      - name: Run P2 PostgreSQL migration and workspace gates
         working-directory: apps/server
-        run: pytest tests/test_p2a_postgres_migration.py
+        run: pytest tests/test_p2a_postgres_migration.py tests/test_p2b_postgres_workspace.py
 
   frontend:
     runs-on: ubuntu-latest

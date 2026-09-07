@@ -1,3 +1,4 @@
+import { characterWorkspaceFetch } from '../../api/characterWorkspace'
 import { createLocalizedCharacterImportRequestError } from '../../i18n/characterImportMessages'
 
 type APIErrorPayload = {
@@ -40,7 +41,6 @@ export type CharacterImportResult = {
   draft_path?: string | null
 }
 
-/** Parse RFC 6266 / RFC 5987 `Content-Disposition`, preferring the UTF-8 form. */
 export function filenameFromDisposition(value: string | null): string {
   if (!value) return 'character.json'
   const encoded = value.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
@@ -68,7 +68,9 @@ async function parseRequestError(response: Response): Promise<Error> {
 }
 
 export async function downloadCharacterExport(characterId: string): Promise<void> {
-  const response = await fetch(`/api/characters/${encodeURIComponent(characterId)}/export`)
+  const response = await characterWorkspaceFetch(
+    `/api/characters/${encodeURIComponent(characterId)}/export`,
+  )
   if (!response.ok) throw await parseRequestError(response)
 
   const blob = await response.blob()
@@ -90,11 +92,14 @@ async function characterImportRequest(
   documentText: string,
   dryRun: boolean,
 ): Promise<CharacterImportResult> {
-  const response = await fetch(`/api/characters/import${dryRun ? '?dry_run=true' : ''}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: documentText,
-  })
+  const response = await characterWorkspaceFetch(
+    `/api/characters/import${dryRun ? '?dry_run=true' : ''}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: documentText,
+    },
+  )
   if (!response.ok) throw await parseRequestError(response)
   return (await response.json()) as CharacterImportResult
 }
