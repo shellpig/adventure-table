@@ -1,6 +1,6 @@
 # Adventure Table 專案簡報
 
-最後更新：2026-09-07
+最後更新：2026-09-08
 
 本檔是**當前進度、Roadmap、下一步與文件索引的單一事實來源**，供新的 AI Session 或實作者接手。產品行為以 [規格企劃.md](規格企劃.md) 為準；實作契約與歷史驗收證據請依下方索引查閱，不在本檔重述。
 
@@ -8,17 +8,17 @@
 
 Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 2014 Web VTT**。真人 DM 主要靠口頭敘事，網站負責共享、同步、計算、保存、權限與外部 AI 接入；不做 CRPG 或包山包海的平台。
 
-- **目前 code 可用**：Character Workshop、Lv1／高等創角、Multiclass／Subclass／ASI／Feat／Spellcasting／Starting Equipment、Character Sheet、Current State 編輯、Level Up、Build Edit、Version History、Archive／永久刪除、角色卡 HTML 輸出。Web 已是 Room-first：首頁只有 Create / Enter Room + Recent Rooms，Room access／heartbeat 已交付，**Character／Draft／Import／Export 全部收進 Room Character Workspace**（`/rooms/{roomId}/characters`），舊的 global `/characters`／`/api/characters` 已於 P2-B 收口。Room 另可建立 Campaign 與 Party Roster（`/rooms/{roomId}/campaigns`）：Campaign lifecycle 為 Owner-only，Roster 由 Owner／DM 管理，且只 reference 同 Room Character、不複製 Current State。Room 目前選中的 active Campaign 可再進 Lobby（`/rooms/{roomId}/campaigns/{campaignId}/lobby`）：建立 DM／Player／Spectator Seat、指派 Human controller、為 Player Seat 選本場角色，presence 沿用 P2-A heartbeat 顯示 Connected／Offline。DM Seat 的 controller 指派為 Owner-only。
+- **目前 code 可用**：Character Workshop、Lv1／高等創角、Multiclass／Subclass／ASI／Feat／Spellcasting／Starting Equipment、Character Sheet、Current State 編輯、Level Up、Build Edit、Version History、Archive／永久刪除、角色卡 HTML 輸出。Web 已是 Room-first：首頁只有 Create / Enter Room + Recent Rooms，Room access／heartbeat 已交付，**Character／Draft／Import／Export 全部收進 Room Character Workspace**（`/rooms/{roomId}/characters`），舊的 global `/characters`／`/api/characters` 已於 P2-B 收口。Room 另可建立 Campaign 與 Party Roster（`/rooms/{roomId}/campaigns`）：Campaign lifecycle 為 Owner-only，Roster 由 Owner／DM 管理，且只 reference 同 Room Character、不複製 Current State。Room 目前選中的 active Campaign 可再進 Lobby（`/rooms/{roomId}/campaigns/{campaignId}/lobby`）：建立 DM／Player／Spectator Seat、指派 Human controller、為 Player Seat 選本場角色，presence 沿用 P2-A heartbeat 顯示 Connected／Offline。DM Seat 的 controller 指派為 Owner-only。Lobby 之後可由 Owner 事前 assign 的 DM Seat controller Start Session（`/rooms/{roomId}/campaigns/{campaignId}/sessions/{sessionId}`）：本場 DM Controller 與每個 Player Seat 的 Active Character 在 Start 當下固定，支援 Late Join、End、Abandon 與 Resume；同一 Character 不得同時在兩場 active Session，由 DB lease 保證。
 - **內容與語言**：以 SRD 5.1 為基礎，已擴充多來源角色內容；介面與目前正式呈現的規則內容支援 `zh-TW`／`en`。Enabled pack 清單以程式中的 `Settings.enabled_content_packs` 為準。
 - **已交付單機版**：同一份角色核心與前端可打包成 Windows 離線 portable zip，使用 SQLite 保存；提供 Character JSON 匯入／匯出。**測試指南 E.9 的乾淨 Windows 11 冷啟動已於 2026-09-06 由使用者人工補驗完成。** Standalone 永久保持 Character-first，不導入 Room／Campaign／Session／Seat。
-- **尚未實作**：Session lifecycle（Start／End／Abandon／Late Join）、正式 AI 桌內接入、Exploration／Roll／Combat／Adventure Runtime。Room 目前只有 access、Character workspace、Campaign／Party Roster 與 Lobby／Seat 配置；Seat 上的角色選擇只是「下一場開始前的大廳設定」，還開不了 Session，離可跑團還很遠。
+- **尚未實作**：正式 AI 桌內接入、Exploration／Roll／Combat／Adventure Runtime。Room 目前有 access、Character workspace、Campaign／Party Roster、Lobby／Seat 配置與 Session lifecycle；但桌上開場後沒有任何 in-session 玩法面（沒有 Chat／Action／Check／骰子／Combat），Session 目前只是「誰在這一場、用哪隻角色」的權威邊界，離可跑團還很遠。
 - **技術基礎**：React + TypeScript + Vite；Python + FastAPI + Pydantic；SQLAlchemy + Alembic；網頁版 PostgreSQL、單機版 SQLite。啟動與開發指令見 [README.md](README.md)。
 
 產品硬原則包含 Server authoritative、Human／AI 共用 backend logic、秘密由 Server 過濾、敘事輔助資料 optional 不變 mandatory。**網站本身不接 LLM API**；未來 AI 能力來自使用者外部 AI Session。完整行為與明確不做項目見產品規格，不以本段取代。
 
 ## 當前狀態與下一步
 
-**P0、P1、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track；P2 三份正式規格與 Subphase A～F 已完成設計，P2-A、P2-B、P2-C、P2-D 已實作並關門。下一步是 P2-E。**
+**P0、P1、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track；P2 三份正式規格與 Subphase A～F 已完成設計，P2-A、P2-B、P2-C、P2-D、P2-E 已實作並關門。下一步是 P2-F。**
 
 P2 已拍板的核心方向：
 
@@ -32,9 +32,9 @@ P2 已拍板的核心方向：
 
 下一步依序為：
 
-1. **實作 P2-E — Session Lifecycle & Late Join**；只做該 Subphase 的 code + tests + static review，不提前做 P2-F。
-2. P2-E closeout後接 P2-F；每個 Subphase都獨立實作、驗證、commit。
-3. P2-F 做 Full P2 Integration & Closeout；P3～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
+1. **實作 P2-F — Full P2 Integration & Closeout**；Room isolation、migration / restart、permission / concurrency、real-backend E2E、standalone frozen regression、human smoke。
+2. P2-F 需補齊 P2-E 順延下來的兩項：測試指南 §13 的 Journey 5 後半 / 6 / 7 / 8 browser 證據，以及 Seat selection 併發的 PostgreSQL 測試。
+3. P2-F closeout 後 P2 關門；P3～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
 
 P2 的正式契約：
 
@@ -52,11 +52,11 @@ P2 的正式契約：
 |---|---|---|
 | Builder Draft 存檔／重取競態 | **P2-D 解掉一半。** `character-builder` 那一支是測試缺陷：它是唯一還只以「Saved on server」當存檔完成條件的 Builder spec，該文字分不出這次與上一次存檔，已改用其餘十二支早就在用的 draft revision 等待（3 跑 3 敗 → 5 跑 5 過）。**`m01e`／`m01m` 未解**：那兩支本來就用 revision 等待，失敗是真的等滿 5 秒逾時，是延遲而非假通過，根因仍未確認。建議把 KI-P1D-001 拆成兩條 | [P2-D closeout](docs/P2/P2-D_CLOSEOUT.md)「順帶修掉的既有問題」；[已知問題.md](已知問題.md) KI-P1D-001 |
 | P2-A Room 層取捨 | Throttle 為 process-local（多 worker 會稀釋）；`POST /api/rooms` 無 throttle 無授權；Room access token 以明文存 `localStorage` 且無到期機制 | [P2-A closeout](docs/P2/P2-A_CLOSEOUT.md)「已知限制」 |
-| Character permanent delete 的 history guard | **P2-C 已補上 Roster reference 這一半**：`campaign_roster_entries.character_id` FK 為 `RESTRICT`，Web permanent delete 回 409 `character_history_referenced`。Session reference 那一半仍待 P2-E 補 | [P2-C closeout](docs/P2/P2-C_CLOSEOUT.md)「承接 P2-B 的未結清項目」 |
-| Journey 7 仍缺 browser 證據 | **Journey 4（Campaign／Roster）與 Journey 5 的 Session 前半段已於 P2-D 由 `p2d-lobby-seats.spec.ts` 補齊。** 剩 Journey 7（Cross-Campaign same Character）仍只有後端整合測試，瀏覽器層留給 P2-F | [P2-D closeout](docs/P2/P2-D_CLOSEOUT.md)「承接 P2-C 的未結清項目」 |
-| Seat hard delete 的 history guard 是空的 | P2-D 的 `delete_unreferenced()` 無條件刪除，因為還沒有 Session 表可 reference；archive 路徑已完整。**P2-E 必須在同一個 method 補 Session history 檢查並回 409 `seat_history_referenced`** | [P2-D closeout](docs/P2/P2-D_CLOSEOUT.md)「已知限制」 |
-| Seat 選角併發未在 PostgreSQL 驗過 | `with_for_update()` 在 SQLite 是 no-op，`test_p2d_controller_fk_restrict.py` 也是靠手動 `PRAGMA foreign_keys=ON`；真 PostgreSQL 只驗到 schema 層的 FK／unique 宣告。**P2-E 建立 `active_character_session_leases` 時應把 Seat 選角併發一併放進 `P2 Non-E2E` 的 `postgres-migrations` job** | [P2-D closeout](docs/P2/P2-D_CLOSEOUT.md)「已知限制」 |
-| draft Campaign hard delete 會 cascade 掉整份 Roster | 符合契約（draft 且無 Session history 才可 hard delete），但 P2-C 沒有 Session，該條件目前恆真，UI 也未顯示會連帶移除幾筆 roster。建議與 Room Hard Delete 的同類問題一起在 P2-F polish 處理 | [P2-C closeout](docs/P2/P2-C_CLOSEOUT.md)「已知限制」 |
+| Session 層缺 browser journey | 測試指南 §13 的 Journey 5 後半（Start／End）、Journey 6（Late Join）、Journey 8（Active collision）目前只有後端與整合層證據；Journey 7（Cross-Campaign same Character）同樣仍缺。四條一起壓在 P2-F | [P2-E closeout](docs/P2/P2-E_CLOSEOUT.md)「已知限制」 |
+| Seat 選角併發未在 PostgreSQL 驗過 | `with_for_update()` 在 SQLite 是 no-op；P2-E 只把 Session lease 的三條併發測試放進 `P2 Non-E2E` 的 `postgres-migrations` job，`SeatRepository.select_character_if_eligible()` 仍只有 SQLite 證據。**明確順延到 P2-F** | [P2-E closeout](docs/P2/P2-E_CLOSEOUT.md)「承接 P2-D 的未結清項目」 |
+| Resume / Lobby 的 N+1 查詢 | `SessionResumeService` 對每隻 Active Character 各 load 一次完整 Character，Lobby 也對每個 Seat 各查一次 access session；兩處都在 heartbeat 週期重抓。桌上跑團量級可忽略，但 P3 若讓這兩頁變高頻輪詢就必須先併查詢 | [P2-E closeout](docs/P2/P2-E_CLOSEOUT.md)「已知限制」 |
+| Campaign status 仍無 transition 規則 | `active` 已累積「可開 Lobby」與「可開 Session」兩層語意，但 Campaign 仍可從 `completed` 退回 `draft`；`delete_draft_without_session_history()` 因此得同時檢查 status 與 Session history 才安全 | [P2-E closeout](docs/P2/P2-E_CLOSEOUT.md)「已知限制」 |
+| draft Campaign hard delete 會 cascade 掉整份 Roster | 符合契約，且 **P2-E 已把「無 Session history」從恆真變成真的檢查**（`delete_draft_without_session_history()`）。剩下的問題只在 UI：確認流程未顯示會連帶移除幾筆 roster。建議與 Room Hard Delete 的同類問題一起在 P2-F polish 處理 | [P2-C closeout](docs/P2/P2-C_CLOSEOUT.md)「已知限制」；[P2-E closeout](docs/P2/P2-E_CLOSEOUT.md)「承接 P2-D 的未結清項目」 |
 | Room Hard Delete 是目前最容易造成不可逆資料遺失的入口 | 確認 modal 只要求輸入 Room 名稱，未顯示會連帶刪除幾個 Character／Draft，也未提示先匯出。行為符合契約，human smoke 期間實際造成兩隻角色永久遺失；建議 P2-F polish 補數量顯示 | [P2-B closeout](docs/P2/P2-B_CLOSEOUT.md)「已知限制」 |
 | `display_name` 只在 Lobby 有去處 | **P2-D 起 Lobby 的 controller 下拉與 Seat 卡片會顯示它**，P2-B 記錄的「填了零反饋」部分解除；Room landing 與 Character workspace 仍不呈現 | [P2-D closeout](docs/P2/P2-D_CLOSEOUT.md)「已知限制」 |
 | E2E global setup 無條件清空 Character | 已改為 `DELETE FROM characters` 並以 `ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET=1` 當閘門（CI 自動放行）。本機在有真實資料的 DB 上設此變數會直接刪光，跑之前必須自行備份 | [P2-B closeout](docs/P2/P2-B_CLOSEOUT.md)「已知限制」 |
@@ -78,7 +78,7 @@ P2 的正式契約：
 | M01 | Multi-Source Character Content Expansion | 長期角色內容／角色系統維護 track；A～N 已關門，整體保持 open，未來從 O 繼續，不阻塞 P2+ |
 | M02 | Traditional Chinese / English Localization | 插於 M01-C 與 M01-D 間；雙語呈現、翻譯流程與完整性 gate；已關門 |
 | M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，E.9 乾淨 Windows 11 冷啟動已於 2026-09-06 補驗完成 |
-| P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**P2-A、P2-B、P2-C、P2-D 已關門，P2-E 待實作** |
+| P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**P2-A～P2-E 已關門，P2-F 待實作** |
 | P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌 |
 | P4 | Quick Combat | 第一個完整可玩的 Combat MVP；首個 Subphase P4-A 承接 SRD Monster／Beast stat blocks |
 | P5 | Tactical Combat | 同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE 與空間系統 |
@@ -168,14 +168,14 @@ P2 的正式契約：
 | **P2-B — Room Character Workspace** | ✅ | Character / Draft Room scope、atomic workspace association、legacy global data claim、Web global Character route收口、Standalone維持 Room-less |
 | **P2-C — Campaign & Party Roster** | ✅ | Campaign lifecycle Owner-only、Room `active_campaign_id` 與 campaign status 分離、same-Room Roster（idempotent add）、same Character multi-Campaign 共用同一份 Current State、Roster reference 擋 Character permanent delete |
 | **P2-D — Seat, Controller & Lobby** | ✅ | Room authority vs Seat Role vs Controller、DM Seat assignment Owner-only、Human / None controller、Lobby 綁 Room 目前 active Campaign、Player Seat 選角只收 `active` / `inactive` Roster、選角收斂只發生在寫入路徑、presence 沿用 P2-A heartbeat；AI shape only，不提前接 P3 |
-| **P2-E — Session Lifecycle & Late Join** | ⬜ | Start / End / Abandon、fixed DM Controller、immutable Active Character、late join、active-character concurrency lease、Resume boundary |
+| **P2-E — Session Lifecycle & Late Join** | ✅ | Start / End / Abandon、Owner-assigned DM Seat controller 才能 Start、fixed DM Controller（Owner 只能 Abandon 不能接管）、immutable Active Character、Late Join、`active_character_session_leases` 全域併發保證、active Session 期間的 Character / Builder write scope、Seat / Campaign / Character 的 Session history guard、Resume 只組合既有 truth 不建第二份 snapshot |
 | **P2-F — Full P2 Integration & Closeout** | ⬜ | Room isolation、migration / restart、permission / concurrency、real-backend E2E、standalone frozen regression、human smoke |
 
 ## 接手時必須保留的跨 Phase 約束
 
 - **M01 是 long-running maintenance/content track**：A～N 是目前 baseline，未來從 O 繼續；M01 open 不阻塞 P2+。任何後續 M01 若修改共享 Character contract，必須 regression 當時已存在的後續 P Phase，並同步做 M03 standalone compatibility review。
 - **Web Room-first / Standalone Character-first 是永久產品邊界**：Web Character / Draft在 P2-B 後一定由 Room workspace管理；Standalone不建立 Room。多人層只可依賴 Character Core，Character / Builder / Interop與 `app.standalone`不得反向 import多人層。契約見 [規格企劃.md](規格企劃.md) 第三、四、五章與 [P2 開發設計方針](docs/P2/開發設計方針.md)。
-- **Standalone boundary 是常駐約束**：`app.standalone` 不得 import `app.main` 或 P2+ multiplayer modules。P2-A 已引入實際 `app.api.rooms` / `app.domain.rooms` / `app.persistence.rooms`，並由 `tests/test_p2a_room_import_boundary.py` 鎖住；P2-C 新增的 `app.*.rooms.campaigns` 與 P2-D 新增的 `app.*.rooms.seats` 都已落在既有 `FORBIDDEN_MODULE_RE` 範圍內（該 pattern 本來就含 `seats?`），`campaigns` / `campaign_roster_entries` / `campaign_seats` 也已加進 `tests/test_m03d_schema_parity.py` 的 `FORBIDDEN_MULTIPLAYER_TABLES`。之後每次新增多人層 module 或 table 時，都必須確認這兩份清單仍涵蓋新命名，否則 gate 會靜默放行。standalone migration只升 `character@head`，不能把 Web multiplayer schema灌進 SQLite。
+- **Standalone boundary 是常駐約束**：`app.standalone` 不得 import `app.main` 或 P2+ multiplayer modules。P2-A 已引入實際 `app.api.rooms` / `app.domain.rooms` / `app.persistence.rooms`，並由 `tests/test_p2a_room_import_boundary.py` 鎖住；P2-C 新增的 `app.*.rooms.campaigns`、P2-D 新增的 `app.*.rooms.seats` 與 P2-E 新增的 `app.*.rooms.session*` 都已落在既有 `FORBIDDEN_MODULE_RE` 範圍內（該 pattern 本來就含 `seats?` 與 `sessions?`），`campaigns` / `campaign_roster_entries` / `campaign_seats` / `sessions` / `session_participants` / `active_character_session_leases` 也已加進 `tests/test_m03d_schema_parity.py` 的 `FORBIDDEN_MULTIPLAYER_TABLES`。之後每次新增多人層 module 或 table 時，都必須確認這兩份清單仍涵蓋新命名，否則 gate 會靜默放行。standalone migration只升 `character@head`，不能把 Web multiplayer schema灌進 SQLite。
 - **Character JSON v1 是 P2-A 起的相容基線**：新 export 已鎖 v1（`schema_version="1"` / `schema_status="locked"` / `export_type="character"`）；legacy M03 `unstable` 仍可由新版本 import 並 normalize。Room / Campaign / Seat / Session identity不得塞進 Character JSON。
 - **雙語是持續交付要求**：新增、修改或首次呈現給使用者的 system／rules content，必須同一 Subphase 同步交付 `zh-TW`／`en`；locale 只影響呈現，不改角色／草稿資料。細則見 [AGENTS.md](AGENTS.md) 與 [M02 實作規格](docs/M02/實作規格.md)。
 - **P4 承接內容範圍**：P4 的第一個 Subphase 為 P4-A，須承接 P0 延後的 SRD Monster／Beast stat blocks；schema、API 與 combat representation 到 P4 開工才設計。
@@ -204,7 +204,7 @@ P2 的正式契約：
 | M03 | [規格](docs/M03/實作規格.md) | [設計](docs/M03/開發設計方針.md) | [測試](docs/M03/測試指南.md) |
 | P2 | [規格](docs/P2/實作規格.md) | [設計](docs/P2/開發設計方針.md) | [測試](docs/P2/測試指南.md) |
 
-歷史完成過程與驗收證據查各 Phase 目錄的 `*_CLOSEOUT.md`；M01-B 真人創角 Gate 另見 [M01-B_HUMAN_GATE.md](docs/M01/M01-B_HUMAN_GATE.md)。最近整合交付見 [P2-D_CLOSEOUT.md](docs/P2/P2-D_CLOSEOUT.md)。
+歷史完成過程與驗收證據查各 Phase 目錄的 `*_CLOSEOUT.md`；M01-B 真人創角 Gate 另見 [M01-B_HUMAN_GATE.md](docs/M01/M01-B_HUMAN_GATE.md)。最近整合交付見 [P2-E_CLOSEOUT.md](docs/P2/P2-E_CLOSEOUT.md)。
 
 `docs/暫用規則資訊/` 是內容 authoring／review input，**不是 runtime 資料來源**。正式規則與可調數值住 `data/`，runtime 不解析 `docs/`；`舊文件/` 為歷史封存，接手時忽略。
 
