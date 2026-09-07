@@ -153,12 +153,7 @@ def set_selected_character(
     else:
         _require_non_dm_seat_management(context)
     try:
-        return service.select_character(
-            context.room_id,
-            campaign_id,
-            seat_id,
-            payload.selected_character_id,
-        )
+        return service.select_character(context.room_id, campaign_id, seat_id, payload.selected_character_id)
     except Exception as exc:
         raise _map_seat_error(exc) from exc
 
@@ -214,13 +209,13 @@ def get_lobby(
     service: SeatService = Depends(get_seat_service),
 ) -> LobbySnapshot:
     try:
-        return service.lobby(context.room_id, campaign_id)
+        return service.lobby(
+            context.room_id,
+            campaign_id,
+            caller_access_session_id=context.access_session_id,
+        )
     except Exception as exc:
         raise _map_seat_error(exc) from exc
 
 
-__all__ = [
-    "_require_dm_seat_management",
-    "_require_non_dm_seat_management",
-    "router",
-]
+__all__ = ["_require_dm_seat_management", "_require_non_dm_seat_management", "router"]

@@ -12,6 +12,7 @@ import { CharacterSheetRoutePage } from './features/m01m/M01MAncestryRoutePanel'
 import { RoomCampaignPage, roomCampaignRouteFromPath } from './features/rooms/RoomCampaignPage'
 import { RoomCharacterWorkspacePage } from './features/rooms/RoomCharacterWorkspacePage'
 import { RoomLandingPage } from './features/rooms/RoomLandingPage'
+import { RoomLobbyPage, roomLobbyRouteFromPath } from './features/rooms/RoomLobbyPage'
 import { roomIdFromPath, RoomWorkspacePage } from './features/rooms/RoomWorkspacePage'
 import {
   legacyWebRoomRedirectPath,
@@ -105,6 +106,7 @@ export default function App() {
   const { snapshot, isEnabled } = useCapabilities()
   const pathname = typeof window === 'undefined' ? '/' : window.location.pathname
   const protectedCapability = protectedCapabilityForPath(pathname)
+  const roomLobbyRoute = roomLobbyRouteFromPath(pathname)
   const roomCampaignRoute = roomCampaignRouteFromPath(pathname)
   const roomCharacterRoute = roomCharacterRouteFromPath(pathname)
   const roomId = roomIdFromPath(pathname)
@@ -122,6 +124,9 @@ export default function App() {
 
   if (protectedCapability && !isEnabled(protectedCapability)) {
     return <CapabilityDisabledPage />
+  }
+  if (roomLobbyRoute) {
+    return <RoomLobbyPage roomId={roomLobbyRoute.roomId} campaignId={roomLobbyRoute.campaignId} />
   }
   if (roomCampaignRoute) {
     return (

@@ -79,6 +79,7 @@ class LobbyController(StrictModel):
 class LobbySnapshot(StrictModel):
     room_id: UUID
     campaign_id: UUID
+    caller_access_session_id: UUID | None = None
     seats: list[CampaignSeat]
     controllers: list[LobbyController]
 
@@ -124,11 +125,7 @@ class SeatService:
             return PresenceStatus.OFFLINE
         if last_seen_at.tzinfo is None:
             last_seen_at = last_seen_at.replace(tzinfo=timezone.utc)
-        return (
-            PresenceStatus.CONNECTED
-            if now - last_seen_at <= PRESENCE_TIMEOUT
-            else PresenceStatus.OFFLINE
-        )
+        return PresenceStatus.CONNECTED if now - last_seen_at <= PRESENCE_TIMEOUT else PresenceStatus.OFFLINE
 
     def _present(self, seat: StoredSeat, *, now: datetime | None = None) -> CampaignSeat:
         now = now or datetime.now(timezone.utc)
@@ -165,9 +162,7 @@ class SeatService:
 
     def create_seat(self, room_id: UUID, campaign_id: UUID, payload: SeatCreate) -> CampaignSeat:
         self._require_campaign(room_id, campaign_id)
-        return self._present(
-            self.repository.create(campaign_id=campaign_id, role=payload.role.value, label=payload.label)
-        )
+        return self._present(self.repository.create(campaign_id=campaign_id, role=payload.role.value, label=payload.label))
 
     def set_controller(
         self,
@@ -247,24 +242,30 @@ class SeatService:
         if not self.repository.delete_unreferenced(seat_id):
             raise SeatNotFoundError(seat_id)
 
-    def lobby(self, room_id: UUID, campaign_id: UUID) -> LobbySnapshot:
+    def lobby(
+        self,
+        room_id: UUID,
+        campaign_id: UUID,
+        *,
+        caller_access_session_id: UUID | None = None,
+    ) -> LobbySnapshot:
         self._require_campaign(room_id, campaign_id)
         if self.repository.campaign_status(campaign_id) != "active":
             raise LobbyUnavailableError("Campaign must be active before entering Lobby")
         now = datetime.now(timezone.utc)
-        controllers = []
-        for access in self.repository.list_access_sessions(room_id):
-            controllers.append(
-                LobbyController(
-                    access_session_id=access.id,
-                    authority=RoomAccessAuthority(access.authority),
-                    display_name=access.display_name,
-                    presence=self._presence(access.last_seen_at, access.revoked_at, now),
-                )
+        controllers = [
+            LobbyController(
+                access_session_id=access.id,
+                authority=RoomAccessAuthority(access.authority),
+                display_name=access.display_name,
+                presence=self._presence(access.last_seen_at, access.revoked_at, now),
             )
+            for access in self.repository.list_access_sessions(room_id)
+        ]
         return LobbySnapshot(
             room_id=room_id,
             campaign_id=campaign_id,
+            caller_access_session_id=caller_access_session_id,
             seats=[self._present(seat, now=now) for seat in self.repository.list_for_campaign(campaign_id)],
             controllers=controllers,
         )
