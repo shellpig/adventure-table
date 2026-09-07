@@ -119,7 +119,7 @@ campaign_roster_entries = Table(
     Column(
         "character_id",
         Uuid(),
-        ForeignKey("characters.id", ondelete="RESTRICT"),
+        ForeignKey("characters.id", ondelete="CASCADE"),
         primary_key=True,
     ),
     Column("status", String(16), nullable=False),

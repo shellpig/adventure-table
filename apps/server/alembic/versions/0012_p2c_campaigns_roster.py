@@ -24,18 +24,8 @@ def upgrade() -> None:
         sa.Column("name", sa.String(length=120), nullable=False),
         sa.Column("ruleset", sa.String(length=80), nullable=False),
         sa.Column("status", sa.String(length=16), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.CheckConstraint(
             "status IN ('draft', 'active', 'completed', 'archived')",
             name="ck_campaigns_status",
@@ -50,28 +40,17 @@ def upgrade() -> None:
         sa.Column("campaign_id", sa.Uuid(), nullable=False),
         sa.Column("character_id", sa.Uuid(), nullable=False),
         sa.Column("status", sa.String(length=16), nullable=False),
-        sa.Column(
-            "added_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
+        sa.Column("added_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.CheckConstraint(
             "status IN ('active', 'inactive', 'retired', 'dead')",
             name="ck_campaign_roster_entries_status",
         ),
-        sa.ForeignKeyConstraint(
-            ["campaign_id"], ["campaigns.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["character_id"], ["characters.id"], ondelete="RESTRICT"
-        ),
+        sa.ForeignKeyConstraint(["campaign_id"], ["campaigns.id"], ondelete="CASCADE"),
+        # Individual Web delete is guarded at the Room composition layer.
+        # CASCADE keeps Owner Room Hard Delete one transaction: scoped Characters
+        # can be removed before the Room row cascades its Campaigns.
+        sa.ForeignKeyConstraint(["character_id"], ["characters.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("campaign_id", "character_id"),
     )
     op.create_index(

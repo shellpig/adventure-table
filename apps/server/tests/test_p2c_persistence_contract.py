@@ -42,7 +42,7 @@ def test_p2c_campaign_schema_matches_contract() -> None:
     assert _fk_ondelete(rooms, "active_campaign_id") == "SET NULL"
 
 
-def test_p2c_roster_schema_is_reference_only_and_history_safe() -> None:
+def test_p2c_roster_schema_is_reference_only() -> None:
     assert list(campaign_roster_entries.c.keys()) == [
         "campaign_id",
         "character_id",
@@ -55,7 +55,7 @@ def test_p2c_roster_schema_is_reference_only_and_history_safe() -> None:
         "character_id",
     ]
     assert _fk_ondelete(campaign_roster_entries, "campaign_id") == "CASCADE"
-    assert _fk_ondelete(campaign_roster_entries, "character_id") == "RESTRICT"
+    assert _fk_ondelete(campaign_roster_entries, "character_id") == "CASCADE"
     assert not any(
         name in campaign_roster_entries.c
         for name in ("state_payload", "build_payload", "inventory", "hp")
