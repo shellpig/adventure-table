@@ -112,8 +112,6 @@ export function RoomLandingPage() {
     <main className="landing-page room-entry-page">
       <section className="landing-card room-entry-card">
         <div className="room-entry-header">
-          <p className="eyebrow">{copy.eyebrow}</p>
-          <div className="landing-mark" aria-hidden="true">AT</div>
           <h1>Adventure Table</h1>
           <h2>{copy.title}</h2>
           <p className="room-card-description">{copy.description}</p>

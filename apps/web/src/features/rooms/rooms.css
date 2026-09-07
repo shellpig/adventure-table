@@ -4,18 +4,34 @@
 
 /* Room Entry Landing Card */
 .room-entry-card {
-  width: min(840px, 100%);
-  max-width: 840px;
-  padding: 40px 44px 44px;
+  width: min(890px, 100%);
+  max-width: 890px;
+  padding: 40px 46px 44px;
   text-align: center;
 }
 
-.room-entry-header h2 {
-  margin: 6px 0 10px;
+.room-entry-header h1 {
+  margin: 0 0 10px;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.35rem;
+  font-size: clamp(1.9rem, 3.8vw, 2.65rem);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+}
+
+.room-entry-header h2 {
+  margin: 0 0 10px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.3rem;
   font-weight: 600;
   color: var(--gold-bright);
+}
+
+@media (max-width: 560px) {
+  .room-entry-header h1 {
+    font-size: 1.85rem;
+    white-space: normal;
+  }
 }
 
 .room-card-description {
