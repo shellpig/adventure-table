@@ -12,9 +12,10 @@ SERVER_ROOT = Path(__file__).resolve().parents[1]
 CHARACTER_HEAD = "0009_p2a_character_head"
 P2A_WEB_ROOT = "0010_p2a_web_rooms"
 P2B_WEB_REVISION = "0011_p2b_room_workspace"
-WEB_HEAD = "0012_p2c_campaigns"
+P2C_WEB_REVISION = "0012_p2c_campaigns"
+WEB_HEAD = "0013_p2d_campaign_seats"
 BRANCH_POINT = "0008_m03c_import_records"
-WEB_REVISIONS = {P2A_WEB_ROOT, P2B_WEB_REVISION, WEB_HEAD}
+WEB_REVISIONS = {P2A_WEB_ROOT, P2B_WEB_REVISION, P2C_WEB_REVISION, WEB_HEAD}
 
 
 def _scripts() -> ScriptDirectory:
@@ -42,20 +43,24 @@ def test_p2a_character_and_web_tracks_remain_distinct_at_current_heads() -> None
     character = scripts.get_revision(CHARACTER_HEAD)
     p2a_web = scripts.get_revision(P2A_WEB_ROOT)
     p2b_web = scripts.get_revision(P2B_WEB_REVISION)
+    p2c_web = scripts.get_revision(P2C_WEB_REVISION)
     web_head = scripts.get_revision(WEB_HEAD)
     assert character is not None
     assert p2a_web is not None
     assert p2b_web is not None
+    assert p2c_web is not None
     assert web_head is not None
     assert character.down_revision == BRANCH_POINT
     assert p2a_web.down_revision == BRANCH_POINT
     assert p2b_web.down_revision == P2A_WEB_ROOT
-    assert web_head.down_revision == P2B_WEB_REVISION
+    assert p2c_web.down_revision == P2B_WEB_REVISION
+    assert web_head.down_revision == P2C_WEB_REVISION
     assert "character" in character.branch_labels
     assert "web" in p2a_web.branch_labels
     assert character.dependencies is None
     assert p2a_web.dependencies is None
     assert p2b_web.dependencies is None
+    assert p2c_web.dependencies is None
     assert web_head.dependencies is None
 
 
@@ -79,10 +84,12 @@ def test_p2a_split_has_no_cross_track_dependency_or_merge() -> None:
     character = scripts.get_revision(CHARACTER_HEAD)
     p2a_web = scripts.get_revision(P2A_WEB_ROOT)
     p2b_web = scripts.get_revision(P2B_WEB_REVISION)
+    p2c_web = scripts.get_revision(P2C_WEB_REVISION)
     web_head = scripts.get_revision(WEB_HEAD)
     assert character is not None
     assert p2a_web is not None
     assert p2b_web is not None
+    assert p2c_web is not None
     assert web_head is not None
 
     # P2-A starts as two independent descendants of the M03 branch point.
@@ -92,12 +99,15 @@ def test_p2a_split_has_no_cross_track_dependency_or_merge() -> None:
     assert not (_references(character.down_revision) & WEB_REVISIONS)
     assert p2a_web.down_revision == BRANCH_POINT
     assert p2b_web.down_revision == P2A_WEB_ROOT
-    assert web_head.down_revision == P2B_WEB_REVISION
+    assert p2c_web.down_revision == P2B_WEB_REVISION
+    assert web_head.down_revision == P2C_WEB_REVISION
     assert CHARACTER_HEAD not in _references(p2b_web.dependencies)
+    assert CHARACTER_HEAD not in _references(p2c_web.dependencies)
     assert CHARACTER_HEAD not in _references(web_head.dependencies)
     assert len(_references(character.down_revision)) == 1
     assert len(_references(p2a_web.down_revision)) == 1
     assert len(_references(p2b_web.down_revision)) == 1
+    assert len(_references(p2c_web.down_revision)) == 1
     assert len(_references(web_head.down_revision)) == 1
 
 

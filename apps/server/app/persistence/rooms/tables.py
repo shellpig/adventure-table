@@ -135,9 +135,55 @@ Index(
     campaign_roster_entries.c.character_id,
 )
 
+campaign_seats = Table(
+    "campaign_seats",
+    metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("campaign_id", Uuid(), ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False),
+    Column("role", String(16), nullable=False),
+    Column("label", String(100), nullable=True),
+    Column("controller_kind", String(16), nullable=False),
+    Column(
+        "controller_access_session_id",
+        Uuid(),
+        ForeignKey("room_access_sessions.id", ondelete="SET NULL"),
+        nullable=True,
+    ),
+    Column(
+        "selected_character_id",
+        Uuid(),
+        ForeignKey("characters.id", ondelete="SET NULL"),
+        nullable=True,
+    ),
+    Column("archived_at", DateTime(timezone=True), nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    CheckConstraint(
+        "role IN ('dm', 'player', 'spectator')",
+        name="ck_campaign_seats_role",
+    ),
+    CheckConstraint(
+        "controller_kind IN ('human', 'ai', 'none')",
+        name="ck_campaign_seats_controller_kind",
+    ),
+    CheckConstraint(
+        "(controller_kind = 'human' AND controller_access_session_id IS NOT NULL) OR "
+        "(controller_kind IN ('ai', 'none') AND controller_access_session_id IS NULL)",
+        name="ck_campaign_seats_controller_binding",
+    ),
+    CheckConstraint(
+        "role = 'player' OR selected_character_id IS NULL",
+        name="ck_campaign_seats_player_character_only",
+    ),
+)
+Index("ix_campaign_seats_campaign_id", campaign_seats.c.campaign_id)
+Index("ix_campaign_seats_controller_access_session_id", campaign_seats.c.controller_access_session_id)
+Index("ix_campaign_seats_selected_character_id", campaign_seats.c.selected_character_id)
+
 
 __all__ = [
     "campaign_roster_entries",
+    "campaign_seats",
     "campaigns",
     "room_access_sessions",
     "room_builder_drafts",
