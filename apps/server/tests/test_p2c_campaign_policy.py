@@ -47,17 +47,21 @@ def test_roster_management_allows_owner_and_dm_but_not_member() -> None:
 
 
 def test_campaign_router_exposes_only_p2c_surfaces() -> None:
-    methods_by_path = {
-        route.path: set(route.methods or ())
-        for route in router.routes
-    }
+    methods_by_path: dict[str, set[str]] = {}
+    for route in router.routes:
+        methods_by_path.setdefault(route.path, set()).update(route.methods or ())
+
     assert "POST" in methods_by_path["/api/rooms/{room_id}/campaigns"]
     assert "POST" in methods_by_path["/api/rooms/{room_id}/campaigns/{campaign_id}/select"]
     assert "POST" in methods_by_path["/api/rooms/{room_id}/campaigns/{campaign_id}/roster"]
-    assert "PATCH" in methods_by_path[
+    roster_character_path = (
         "/api/rooms/{room_id}/campaigns/{campaign_id}/roster/{character_id}"
-    ]
-    assert not any("/sessions" in path or "/lobby" in path or "/seats" in path for path in methods_by_path)
+    )
+    assert {"PATCH", "DELETE"} <= methods_by_path[roster_character_path]
+    assert not any(
+        "/sessions" in path or "/lobby" in path or "/seats" in path
+        for path in methods_by_path
+    )
 
 
 class _FakeCampaignRepository:

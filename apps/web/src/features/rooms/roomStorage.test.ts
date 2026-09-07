@@ -25,6 +25,7 @@ const GRANT: RoomAccessGrant = {
     id: '22222222-2222-4222-8222-222222222222',
     code: '0123456789',
     name: 'Sunday Table',
+    active_campaign_id: null,
     created_at: '2026-09-06T08:00:00Z',
     updated_at: '2026-09-06T08:00:00Z',
   },
