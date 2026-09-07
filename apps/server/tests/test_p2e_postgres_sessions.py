@@ -16,7 +16,7 @@ from sqlalchemy.engine import Engine
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.sessions import CharacterAlreadyInActiveSessionError, SessionService
 from app.persistence.characters import characters
-from app.persistence.rooms.session_live import SessionLiveRepository
+from app.persistence.rooms.session_live import LateJoinPersistenceError, SessionLiveRepository
 from app.persistence.rooms.sessions import (
     CharacterAlreadyLeasedPersistenceError,
     ParticipantSeed,
@@ -319,3 +319,116 @@ def test_cross_campaign_start_maps_existing_global_lease_to_stable_domain_error(
                 session_participants.c.session_id == first.id
             )
         ) == 2
+
+
+def test_end_and_late_join_serialize_without_partial_lease(
+    postgres_engine: Engine,
+) -> None:
+    (
+        room_id,
+        dm_access_id,
+        character_id,
+        campaign_ids,
+        dm_seat_ids,
+        player_seat_ids,
+    ) = _seed_concurrent_sessions(postgres_engine)
+    campaign_id = campaign_ids[0]
+    repository = SessionRepository(postgres_engine)
+    started = repository.create_with_participants(
+        campaign_id=campaign_id,
+        dm_seat_id=dm_seat_ids[0],
+        dm_controller_kind="human",
+        dm_controller_access_session_id=dm_access_id,
+        participants=_participant_seeds(
+            dm_access_id=dm_access_id,
+            character_id=character_id,
+            dm_seat_id=dm_seat_ids[0],
+            player_seat_id=player_seat_ids[0],
+        ),
+    )
+
+    late_character_id = uuid4()
+    late_seat_id = uuid4()
+    now = datetime.now(timezone.utc)
+    with postgres_engine.begin() as connection:
+        connection.execute(
+            insert(characters).values(
+                id=late_character_id,
+                name="Luna",
+                ruleset="dnd5e-2014",
+                current_version_id=None,
+                archived_at=None,
+            )
+        )
+        connection.execute(
+            insert(room_characters).values(
+                room_id=room_id,
+                character_id=late_character_id,
+                created_at=now,
+            )
+        )
+        connection.execute(
+            insert(campaign_roster_entries).values(
+                campaign_id=campaign_id,
+                character_id=late_character_id,
+                status="active",
+                added_at=now,
+                updated_at=now,
+            )
+        )
+        connection.execute(
+            insert(campaign_seats).values(
+                id=late_seat_id,
+                campaign_id=campaign_id,
+                role="player",
+                label="Late Luna",
+                controller_kind="none",
+                controller_access_session_id=None,
+                selected_character_id=late_character_id,
+                archived_at=None,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+
+    start = Barrier(2)
+
+    def end_attempt() -> str:
+        start.wait(timeout=10)
+        finalized = SessionRepository(postgres_engine).finalize(started.id, status="ended")
+        assert finalized is not None
+        return "ended"
+
+    def join_attempt() -> str:
+        start.wait(timeout=10)
+        try:
+            SessionLiveRepository(postgres_engine).late_join_from_lobby(
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=started.id,
+                caller_access_session_id=dm_access_id,
+                seat_id=late_seat_id,
+            )
+        except LateJoinPersistenceError:
+            return "rejected"
+        return "joined"
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        end_future = executor.submit(end_attempt)
+        join_future = executor.submit(join_attempt)
+        outcomes = {end_future.result(timeout=20), join_future.result(timeout=20)}
+
+    assert "ended" in outcomes
+    assert outcomes & {"joined", "rejected"}
+    persisted = repository.get(started.id)
+    assert persisted is not None
+    assert persisted.status == "ended"
+    assert repository.lease_for_character(character_id) is None
+    assert repository.lease_for_character(late_character_id) is None
+
+    participants = repository.list_participants(started.id)
+    assert len(participants) in {2, 3}
+    if any(participant.active_character_id == late_character_id for participant in participants):
+        assert len(participants) == 3
+    else:
+        assert len(participants) == 2
