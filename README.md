@@ -46,20 +46,6 @@ docker compose up --build
 
 規則內容住在 `data/<pack>/`，全部是 version-controlled 的 normalized JSON。每筆 entry 使用不依賴顯示名稱的 stable key，例如 `srd5.1:spell:fireball`、`tce:class:artificer`。
 
-目前 enabled 的 9 個 pack 共 3,186 筆 entry：
-
-| Pack | 來源 | Entries |
-|---|---|---|
-| `srd5.1` | System Reference Document 5.1（CC BY 4.0） | 1,944 |
-| `phb2014` | Player's Handbook 2014 | 384 |
-| `tce` | Tasha's Cauldron of Everything | 401 |
-| `xge` | Xanathar's Guide to Everything | 266 |
-| `scag` | Sword Coast Adventurer's Guide | 78 |
-| `vgm` | Volo's Guide to Monsters | 64 |
-| `mtf` | Mordenkainen's Tome of Foes | 40 |
-| `vrgr` | Van Richten's Guide to Ravenloft | 5 |
-| `gos` | Ghosts of Saltmarsh | 4 |
-
 啟用清單的單一事實來源是 `Settings.enabled_content_packs`，可用環境變數覆寫。`data/localization/` 放 locale policy 與術語表，各 pack 的 `zh-TW` 呈現字串放在該 pack 的 `locales/` 之下。
 
 `data/srd5.1/NOTICE.md` 保存 SRD 5.1 的 attribution 與繁中翻譯聲明。`scripts/vendor_srd.py` 是 maintainer 用的可重現 vendor 工具，runtime 不會連外下載規則資料。**網站本身不接 LLM API。**
