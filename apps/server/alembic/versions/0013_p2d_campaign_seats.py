@@ -54,6 +54,11 @@ def upgrade() -> None:
         ),
         sa.ForeignKeyConstraint(["selected_character_id"], ["characters.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint(
+            "campaign_id",
+            "selected_character_id",
+            name="uq_campaign_seats_campaign_selected_character",
+        ),
     )
     op.create_index("ix_campaign_seats_campaign_id", "campaign_seats", ["campaign_id"], unique=False)
     op.create_index(

@@ -100,6 +100,7 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
       <main className="landing-page"><section className="landing-card">
         <h1>{copy.title}</h1>
         {error ? <div className="error-banner">{error}</div> : null}
+        <a className="button secondary" href={`/rooms/${roomId}/campaigns/${campaignId}`}>{copy.backCampaign}</a>
       </section></main>
     )
   }
@@ -118,6 +119,9 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
         seat.controller_access_session_id === snapshot.caller_access_session_id
       )
     )
+
+  const selectedCharacterName = (seat: CampaignSeat) =>
+    characters.find((character) => character.id === seat.selected_character_id)?.name ?? copy.noCharacter
 
   return (
     <main className="landing-page room-workspace-page">
@@ -214,7 +218,7 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
                         ))}
                       </select>
                     </label>
-                  ) : <p>{copy.character}: {seat.selected_character_id ?? copy.noCharacter}</p>
+                  ) : <p>{copy.character}: {selectedCharacterName(seat)}</p>
                 ) : null}
                 {canManageSeat ? (
                   <button

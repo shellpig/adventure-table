@@ -55,7 +55,7 @@ def _map_seat_error(exc: Exception) -> APIError:
 
 def _seat_role(service: SeatService, room_id: UUID, campaign_id: UUID, seat_id: UUID) -> SeatRole:
     try:
-        seat = service._require_seat(room_id, campaign_id, seat_id)
+        seat = service.get_scoped_seat(room_id, campaign_id, seat_id)
     except Exception as exc:
         raise _map_seat_error(exc) from exc
     return SeatRole(seat.role)
@@ -140,7 +140,7 @@ def set_selected_character(
     service: SeatService = Depends(get_seat_service),
 ) -> CampaignSeat:
     try:
-        seat = service._require_seat(context.room_id, campaign_id, seat_id)
+        seat = service.get_scoped_seat(context.room_id, campaign_id, seat_id)
     except Exception as exc:
         raise _map_seat_error(exc) from exc
     if context.authority is RoomAccessAuthority.MEMBER:

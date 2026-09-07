@@ -1,5 +1,6 @@
 import type { CapabilityKey } from './types'
 
+const ROOM_LOBBY_ROUTE = /^\/rooms\/[0-9a-fA-F-]{36}\/campaigns\/[0-9a-fA-F-]{36}\/lobby(?:\/|$)/
 const ROOM_CAMPAIGN_ROUTE = /^\/rooms\/[0-9a-fA-F-]{36}\/campaigns(?:\/|$)/
 
 const PROTECTED_PREFIXES: ReadonlyArray<readonly [string, CapabilityKey]> = [
@@ -13,6 +14,7 @@ const PROTECTED_PREFIXES: ReadonlyArray<readonly [string, CapabilityKey]> = [
 ]
 
 export function protectedCapabilityForPath(pathname: string): CapabilityKey | null {
+  if (ROOM_LOBBY_ROUTE.test(pathname)) return 'seat'
   if (ROOM_CAMPAIGN_ROUTE.test(pathname)) return 'campaign'
 
   for (const [prefix, capability] of PROTECTED_PREFIXES) {

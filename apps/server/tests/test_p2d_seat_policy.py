@@ -15,6 +15,7 @@ from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.seats import (
     ControllerKind,
     PresenceStatus,
+    SeatCampaignMismatchError,
     SeatCharacterSelectionError,
     SeatControllerError,
     SeatControllerPatch,
@@ -104,7 +105,11 @@ class _FakeSeatRepository:
         return self.access.get(session_id)
 
     def list_access_sessions(self, room_id):
-        return tuple(access for access in self.access.values() if access.room_id == room_id)
+        return tuple(
+            access
+            for access in self.access.values()
+            if access.room_id == room_id and access.revoked_at is None
+        )
 
     def set_controller(self, *, seat_id, controller_kind, controller_access_session_id):
         seat = self.seats.get(seat_id)
@@ -172,12 +177,12 @@ class _FakeSeatRepository:
         return self.seats.pop(seat_id, None) is not None
 
 
-def _access(repo: _FakeSeatRepository, authority="member", *, seen_seconds_ago=0):
+def _access(repo: _FakeSeatRepository, authority="member", *, seen_seconds_ago=0, room_id=None):
     session_id = uuid4()
     now = datetime.now(timezone.utc)
     access = StoredSeatAccessSession(
         id=session_id,
-        room_id=repo.room_id,
+        room_id=room_id or repo.room_id,
         authority=authority,
         display_name=f"{authority}-controller",
         last_seen_at=now - timedelta(seconds=seen_seconds_ago),
@@ -237,6 +242,23 @@ def test_dm_controller_must_have_dm_or_owner_room_authority() -> None:
         )
 
 
+def test_controller_must_be_an_active_access_session_from_same_room() -> None:
+    repo = _FakeSeatRepository()
+    service = SeatService(repo)
+    other_room = _access(repo, room_id=uuid4())
+    player = service.create_seat(repo.room_id, repo.campaign_id, SeatCreate(role=SeatRole.PLAYER))
+    with pytest.raises(SeatControllerError):
+        service.set_controller(
+            repo.room_id,
+            repo.campaign_id,
+            player.id,
+            SeatControllerPatch(
+                controller_kind=ControllerKind.HUMAN,
+                controller_access_session_id=other_room.id,
+            ),
+        )
+
+
 def test_player_character_selection_enforces_roster_status_archive_and_uniqueness() -> None:
     repo = _FakeSeatRepository()
     service = SeatService(repo)
@@ -261,6 +283,33 @@ def test_player_character_selection_enforces_roster_status_archive_and_uniquenes
         service.select_character(repo.room_id, repo.campaign_id, second.id, archived_character)
     with pytest.raises(SeatCharacterSelectionError):
         service.select_character(repo.room_id, repo.campaign_id, second.id, active_character)
+
+
+def test_lobby_reconciles_selection_when_roster_or_character_becomes_ineligible() -> None:
+    repo = _FakeSeatRepository()
+    service = SeatService(repo)
+    seat = service.create_seat(repo.room_id, repo.campaign_id, SeatCreate(role=SeatRole.PLAYER))
+    character_id = uuid4()
+    repo.roster[(repo.campaign_id, character_id)] = "active"
+    service.select_character(repo.room_id, repo.campaign_id, seat.id, character_id)
+
+    repo.roster[(repo.campaign_id, character_id)] = "retired"
+    snapshot = service.lobby(repo.room_id, repo.campaign_id)
+    assert snapshot.seats[0].selected_character_id is None
+
+    repo.roster[(repo.campaign_id, character_id)] = "active"
+    service.select_character(repo.room_id, repo.campaign_id, seat.id, character_id)
+    repo.archived_characters.add(character_id)
+    snapshot = service.lobby(repo.room_id, repo.campaign_id)
+    assert snapshot.seats[0].selected_character_id is None
+
+
+def test_cross_campaign_seat_lookup_is_rejected() -> None:
+    repo = _FakeSeatRepository()
+    service = SeatService(repo)
+    seat = service.create_seat(repo.room_id, repo.campaign_id, SeatCreate(role=SeatRole.PLAYER))
+    with pytest.raises(SeatCampaignMismatchError):
+        service.get_scoped_seat(repo.room_id, uuid4(), seat.id)
 
 
 def test_lobby_presence_uses_p2a_ninety_second_timeout() -> None:

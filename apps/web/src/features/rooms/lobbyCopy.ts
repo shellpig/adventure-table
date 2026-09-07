@@ -1,4 +1,4 @@
-import type { Locale } from '../../i18n/types'
+import type { Locale } from '../../i18n/locale'
 
 const copy = {
   'zh-TW': {
@@ -15,7 +15,7 @@ const copy = {
     spectator: '旁觀者',
     controller: '控制者',
     unassigned: '未指派',
-    aiReserved: 'AI（P3 保留，尚不可使用）',
+    aiReserved: 'AI（尚未開放）',
     connected: '已連線',
     offline: '離線',
     character: '本場角色',
@@ -42,7 +42,7 @@ const copy = {
     spectator: 'Spectator',
     controller: 'Controller',
     unassigned: 'Unassigned',
-    aiReserved: 'AI (reserved for P3, unavailable)',
+    aiReserved: 'AI (not available yet)',
     connected: 'Connected',
     offline: 'Offline',
     character: 'Active character',

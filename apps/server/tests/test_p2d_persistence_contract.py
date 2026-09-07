@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import CheckConstraint, ForeignKeyConstraint
+from sqlalchemy import CheckConstraint, ForeignKeyConstraint, UniqueConstraint
 
 from app.persistence.rooms.tables import campaign_seats
 
@@ -46,7 +46,12 @@ def test_p2d_campaign_seat_schema_matches_contract() -> None:
     assert any("selected_character_id" in sql and "player" in sql for sql in checks)
 
 
-def test_p2d_controller_binding_is_not_unique() -> None:
+def test_p2d_controller_can_repeat_but_character_selection_is_unique_per_campaign() -> None:
     assert not campaign_seats.c.controller_access_session_id.unique
-    assert campaign_seats.c.selected_character_id.unique is not True
     assert campaign_seats.c.archived_at.nullable is True
+    unique_columns = {
+        tuple(column.name for column in constraint.columns)
+        for constraint in campaign_seats.constraints
+        if isinstance(constraint, UniqueConstraint)
+    }
+    assert ("campaign_id", "selected_character_id") in unique_columns

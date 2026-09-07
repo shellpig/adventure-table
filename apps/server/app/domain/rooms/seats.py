@@ -112,7 +112,7 @@ class SeatService:
         if self.repository.campaign_room_id(campaign_id) != room_id:
             raise SeatCampaignMismatchError(campaign_id)
 
-    def _require_seat(self, room_id: UUID, campaign_id: UUID, seat_id: UUID) -> StoredSeat:
+    def get_scoped_seat(self, room_id: UUID, campaign_id: UUID, seat_id: UUID) -> StoredSeat:
         self._require_campaign(room_id, campaign_id)
         seat = self.repository.get(seat_id)
         if seat is None or seat.campaign_id != campaign_id or seat.archived_at is not None:
@@ -156,8 +156,24 @@ class SeatService:
             updated_at=seat.updated_at,
         )
 
+    def _selection_is_eligible(self, campaign_id: UUID, character_id: UUID) -> bool:
+        return (
+            self.repository.roster_status(campaign_id=campaign_id, character_id=character_id)
+            in {"active", "inactive"}
+            and self.repository.character_is_archived(character_id) is False
+        )
+
+    def _reconcile_selections(self, campaign_id: UUID) -> None:
+        for seat in self.repository.list_for_campaign(campaign_id):
+            if seat.selected_character_id is None:
+                continue
+            if self._selection_is_eligible(campaign_id, seat.selected_character_id):
+                continue
+            self.repository.set_selected_character(seat_id=seat.id, character_id=None)
+
     def list_seats(self, room_id: UUID, campaign_id: UUID) -> list[CampaignSeat]:
         self._require_campaign(room_id, campaign_id)
+        self._reconcile_selections(campaign_id)
         return [self._present(seat) for seat in self.repository.list_for_campaign(campaign_id)]
 
     def create_seat(self, room_id: UUID, campaign_id: UUID, payload: SeatCreate) -> CampaignSeat:
@@ -171,9 +187,9 @@ class SeatService:
         seat_id: UUID,
         payload: SeatControllerPatch,
     ) -> CampaignSeat:
-        seat = self._require_seat(room_id, campaign_id, seat_id)
+        seat = self.get_scoped_seat(room_id, campaign_id, seat_id)
         if payload.controller_kind is ControllerKind.AI:
-            raise SeatControllerError("AI controllers are reserved for P3")
+            raise SeatControllerError("AI controllers are reserved for a later phase")
         if payload.controller_kind is ControllerKind.NONE:
             if payload.controller_access_session_id is not None:
                 raise SeatControllerError("none controller cannot bind an access session")
@@ -206,16 +222,12 @@ class SeatService:
         seat_id: UUID,
         character_id: UUID | None,
     ) -> CampaignSeat:
-        seat = self._require_seat(room_id, campaign_id, seat_id)
+        seat = self.get_scoped_seat(room_id, campaign_id, seat_id)
         if seat.role != SeatRole.PLAYER.value:
             raise SeatCharacterSelectionError("only Player Seats can select a Character")
         if character_id is not None:
-            roster_status = self.repository.roster_status(campaign_id=campaign_id, character_id=character_id)
-            if roster_status not in {"active", "inactive"}:
+            if not self._selection_is_eligible(campaign_id, character_id):
                 raise SeatCharacterSelectionError("Character is not eligible in this Campaign roster")
-            archived = self.repository.character_is_archived(character_id)
-            if archived is not False:
-                raise SeatCharacterSelectionError("archived or missing Character cannot be selected")
             if self.repository.character_selected_elsewhere(
                 campaign_id=campaign_id,
                 character_id=character_id,
@@ -231,14 +243,14 @@ class SeatService:
         return self._present(updated)
 
     def archive_seat(self, room_id: UUID, campaign_id: UUID, seat_id: UUID) -> CampaignSeat:
-        self._require_seat(room_id, campaign_id, seat_id)
+        self.get_scoped_seat(room_id, campaign_id, seat_id)
         archived = self.repository.archive(seat_id)
         if archived is None:
             raise SeatNotFoundError(seat_id)
         return self._present(archived)
 
     def delete_seat(self, room_id: UUID, campaign_id: UUID, seat_id: UUID) -> None:
-        self._require_seat(room_id, campaign_id, seat_id)
+        self.get_scoped_seat(room_id, campaign_id, seat_id)
         if not self.repository.delete_unreferenced(seat_id):
             raise SeatNotFoundError(seat_id)
 
@@ -252,6 +264,7 @@ class SeatService:
         self._require_campaign(room_id, campaign_id)
         if self.repository.campaign_status(campaign_id) != "active":
             raise LobbyUnavailableError("Campaign must be active before entering Lobby")
+        self._reconcile_selections(campaign_id)
         now = datetime.now(timezone.utc)
         controllers = [
             LobbyController(

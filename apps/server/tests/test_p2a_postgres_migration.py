@@ -21,7 +21,7 @@ pytestmark = pytest.mark.skipif(
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 BRANCH_POINT = "0008_m03c_import_records"
 CHARACTER_HEAD = "0009_p2a_character_head"
-WEB_HEAD = "0012_p2c_campaigns"
+WEB_HEAD = "0013_p2d_campaign_seats"
 
 
 def _alembic_config() -> Config:
@@ -183,12 +183,13 @@ def _legacy_payload_snapshot() -> dict[str, list[dict[str, object]]]:
         engine.dispose()
 
 
-def _assert_p2c_web_schema(engine) -> None:
+def _assert_p2d_web_schema(engine) -> None:
     inspector = inspect(engine)
     tables = set(inspector.get_table_names())
     assert {
         "campaigns",
         "campaign_roster_entries",
+        "campaign_seats",
     } <= tables
     room_columns = {column["name"] for column in inspector.get_columns("rooms")}
     assert "active_campaign_id" in room_columns
@@ -198,6 +199,18 @@ def _assert_p2c_web_schema(engine) -> None:
     }
     assert roster_fks[("campaign_id",)]["options"].get("ondelete") == "CASCADE"
     assert roster_fks[("character_id",)]["options"].get("ondelete") == "RESTRICT"
+    seat_fks = {
+        tuple(fk["constrained_columns"]): fk
+        for fk in inspector.get_foreign_keys("campaign_seats")
+    }
+    assert seat_fks[("campaign_id",)]["options"].get("ondelete") == "CASCADE"
+    assert seat_fks[("controller_access_session_id",)]["options"].get("ondelete") == "SET NULL"
+    assert seat_fks[("selected_character_id",)]["options"].get("ondelete") == "SET NULL"
+    seat_uniques = {
+        tuple(constraint["column_names"])
+        for constraint in inspector.get_unique_constraints("campaign_seats")
+    }
+    assert ("campaign_id", "selected_character_id") in seat_uniques
 
 
 def test_fresh_web_postgres_upgrade_heads_and_readiness() -> None:
@@ -211,7 +224,7 @@ def test_fresh_web_postgres_upgrade_heads_and_readiness() -> None:
     engine = create_engine(POSTGRES_URL)
     try:
         tables = set(inspect(engine).get_table_names())
-        _assert_p2c_web_schema(engine)
+        _assert_p2d_web_schema(engine)
     finally:
         engine.dispose()
     assert {
@@ -226,6 +239,7 @@ def test_fresh_web_postgres_upgrade_heads_and_readiness() -> None:
         "room_builder_drafts",
         "campaigns",
         "campaign_roster_entries",
+        "campaign_seats",
     } <= tables
 
     from app.main import app
@@ -250,7 +264,7 @@ def test_legacy_m03_postgres_upgrade_heads_preserves_character_payloads() -> Non
     engine = create_engine(POSTGRES_URL)
     try:
         tables = set(inspect(engine).get_table_names())
-        _assert_p2c_web_schema(engine)
+        _assert_p2d_web_schema(engine)
     finally:
         engine.dispose()
     assert {
@@ -260,4 +274,5 @@ def test_legacy_m03_postgres_upgrade_heads_preserves_character_payloads() -> Non
         "room_builder_drafts",
         "campaigns",
         "campaign_roster_entries",
+        "campaign_seats",
     } <= tables

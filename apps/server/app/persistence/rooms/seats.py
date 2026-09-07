@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 from sqlalchemy import delete, insert, select, update
@@ -128,7 +128,10 @@ class SeatRepository:
         with self.engine.connect() as connection:
             rows = connection.execute(
                 select(room_access_sessions)
-                .where(room_access_sessions.c.room_id == room_id)
+                .where(
+                    room_access_sessions.c.room_id == room_id,
+                    room_access_sessions.c.revoked_at.is_(None),
+                )
                 .order_by(room_access_sessions.c.created_at, room_access_sessions.c.id)
             ).mappings().all()
         return tuple(self._access(row) for row in rows if row is not None)
@@ -147,7 +150,7 @@ class SeatRepository:
                 .values(
                     controller_kind=controller_kind,
                     controller_access_session_id=controller_access_session_id,
-                    updated_at=datetime.now().astimezone(),
+                    updated_at=datetime.now(timezone.utc),
                 )
             )
         if result.rowcount != 1:
@@ -165,11 +168,12 @@ class SeatRepository:
 
     def character_is_archived(self, character_id: UUID) -> bool | None:
         with self.engine.connect() as connection:
-            value = connection.scalar(select(characters.c.archived_at).where(characters.c.id == character_id))
-            exists = connection.scalar(select(characters.c.id).where(characters.c.id == character_id))
-        if exists is None:
+            row = connection.execute(
+                select(characters.c.archived_at).where(characters.c.id == character_id)
+            ).one_or_none()
+        if row is None:
             return None
-        return value is not None
+        return row[0] is not None
 
     def character_selected_elsewhere(
         self,
@@ -200,7 +204,10 @@ class SeatRepository:
                 result = connection.execute(
                     update(campaign_seats)
                     .where(campaign_seats.c.id == seat_id, campaign_seats.c.archived_at.is_(None))
-                    .values(selected_character_id=character_id, updated_at=datetime.now().astimezone())
+                    .values(
+                        selected_character_id=character_id,
+                        updated_at=datetime.now(timezone.utc),
+                    )
                 )
         except IntegrityError as exc:
             raise SeatPersistenceConflictError(str(exc)) from exc
@@ -209,7 +216,7 @@ class SeatRepository:
         return self.get(seat_id)
 
     def archive(self, seat_id: UUID) -> StoredSeat | None:
-        now = datetime.now().astimezone()
+        now = datetime.now(timezone.utc)
         with self.engine.begin() as connection:
             result = connection.execute(
                 update(campaign_seats)

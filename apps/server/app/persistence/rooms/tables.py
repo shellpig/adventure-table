@@ -175,6 +175,11 @@ campaign_seats = Table(
         "role = 'player' OR selected_character_id IS NULL",
         name="ck_campaign_seats_player_character_only",
     ),
+    UniqueConstraint(
+        "campaign_id",
+        "selected_character_id",
+        name="uq_campaign_seats_campaign_selected_character",
+    ),
 )
 Index("ix_campaign_seats_campaign_id", campaign_seats.c.campaign_id)
 Index("ix_campaign_seats_controller_access_session_id", campaign_seats.c.controller_access_session_id)

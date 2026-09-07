@@ -16,11 +16,12 @@ describe('P2-D Lobby route and presentation', () => {
     expect(roomLobbyRouteFromPath(`/rooms/${ROOM_ID}/sessions`)).toBeNull()
   })
 
-  it('keeps internal phase names out of both locales', () => {
+  it('keeps internal phase names out of user-visible copy', () => {
     for (const locale of ['zh-TW', 'en'] as const) {
       const rendered = JSON.stringify(lobbyCopy(locale))
-      expect(rendered).not.toContain('P2-D')
-      expect(rendered).not.toContain('P2D')
+      for (const phase of ['P2-D', 'P2D', 'P3']) {
+        expect(rendered).not.toContain(phase)
+      }
     }
   })
 })
