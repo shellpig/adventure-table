@@ -38,7 +38,9 @@ class ActiveCharacterControl:
     character_id: UUID
     session_id: UUID
     participant_id: UUID
+    seat_id: UUID
     dm_controller_access_session_id: UUID | None
+    player_controller_kind: str
     player_controller_access_session_id: UUID | None
 
 
@@ -184,8 +186,10 @@ class SessionLiveRepository:
                     active_character_session_leases.c.character_id,
                     active_character_session_leases.c.session_id,
                     active_character_session_leases.c.participant_id,
+                    session_participants.c.seat_id,
                     sessions.c.dm_controller_access_session_id,
-                    session_participants.c.controller_access_session_id_at_join.label(
+                    campaign_seats.c.controller_kind.label("player_controller_kind"),
+                    campaign_seats.c.controller_access_session_id.label(
                         "player_controller_access_session_id"
                     ),
                 )
@@ -196,8 +200,12 @@ class SessionLiveRepository:
                         session_participants,
                         session_participants.c.id == active_character_session_leases.c.participant_id,
                     )
+                    .join(campaign_seats, campaign_seats.c.id == session_participants.c.seat_id)
                 )
-                .where(active_character_session_leases.c.character_id == character_id)
+                .where(
+                    active_character_session_leases.c.character_id == character_id,
+                    sessions.c.status == "active",
+                )
             ).mappings().one_or_none()
         return ActiveCharacterControl(**dict(row)) if row is not None else None
 
