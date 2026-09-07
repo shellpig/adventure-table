@@ -15,6 +15,7 @@ from app.persistence.rooms.sessions import (
     CharacterAlreadyLeasedPersistenceError,
     SessionAlreadyActivePersistenceError,
     SessionRepository,
+    SessionStartControllerMismatchPersistenceError,
     SessionStartPersistenceError,
     StoredSession,
     StoredSessionParticipant,
@@ -150,11 +151,10 @@ class SessionService:
             raise SessionAlreadyActiveError(str(exc)) from exc
         except CharacterAlreadyLeasedPersistenceError as exc:
             raise CharacterAlreadyInActiveSessionError(str(exc)) from exc
+        except SessionStartControllerMismatchPersistenceError as exc:
+            raise DMControllerMismatchError(str(exc)) from exc
         except SessionStartPersistenceError as exc:
-            message = str(exc)
-            if "Caller" in message or "Start requires" in message:
-                raise DMControllerMismatchError(message) from exc
-            raise SessionLobbyUnavailableError(message) from exc
+            raise SessionLobbyUnavailableError(str(exc)) from exc
         return self._present(stored)
 
     def get_session(

@@ -39,6 +39,10 @@ class SessionStartPersistenceError(RuntimeError):
     pass
 
 
+class SessionStartControllerMismatchPersistenceError(SessionStartPersistenceError):
+    pass
+
+
 @dataclass(frozen=True)
 class ParticipantSeed:
     seat_id: UUID
@@ -281,7 +285,7 @@ class SessionRepository:
                     or access.authority != caller_authority
                     or caller_authority not in {"dm", "owner"}
                 ):
-                    raise SessionStartPersistenceError(
+                    raise SessionStartControllerMismatchPersistenceError(
                         "Start requires an active DM or Owner Room access session"
                     )
 
@@ -305,7 +309,7 @@ class SessionRepository:
                     None,
                 )
                 if dm_seat is None:
-                    raise SessionStartPersistenceError(
+                    raise SessionStartControllerMismatchPersistenceError(
                         "Caller is not the Owner-assigned Human DM Seat controller"
                     )
 
@@ -483,6 +487,7 @@ __all__ = [
     "SessionAlreadyActivePersistenceError",
     "SessionPersistenceConflictError",
     "SessionRepository",
+    "SessionStartControllerMismatchPersistenceError",
     "SessionStartPersistenceError",
     "StoredCharacterLease",
     "StoredSession",
