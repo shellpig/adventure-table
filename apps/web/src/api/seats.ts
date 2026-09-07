@@ -1,3 +1,6 @@
+import { localizedSeatRequestMessage } from '../i18n/seatMessages'
+import { currentSystemLocale } from '../i18n/systemMessages'
+
 export type SeatRole = 'dm' | 'player' | 'spectator'
 export type ControllerKind = 'human' | 'ai' | 'none'
 export type PresenceStatus = 'connected' | 'offline' | 'not_applicable'
@@ -37,8 +40,18 @@ export type LobbySnapshot = {
 type ApiErrorPayload = { error?: { code?: string; message?: string } }
 
 export class SeatApiError extends Error {
-  constructor(readonly status: number, readonly code: string, message: string) {
-    super(message)
+  constructor(readonly status: number, readonly code: string, originalMessage: string) {
+    super()
+    Object.defineProperty(this, 'message', {
+      configurable: true,
+      enumerable: false,
+      get: () => localizedSeatRequestMessage(
+        code,
+        status,
+        originalMessage,
+        currentSystemLocale(),
+      ),
+    })
   }
 }
 

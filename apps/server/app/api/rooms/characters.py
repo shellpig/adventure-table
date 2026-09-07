@@ -11,6 +11,10 @@ from app.api.character_import import MAX_CHARACTER_IMPORT_BYTES, _parse_document
 from app.api.errors import APIError
 from app.api.rooms.access import get_room_access_context
 from app.api.rooms.dependencies import get_room_workspace_service
+from app.api.rooms.session_scope import (
+    live_character_write_scope,
+    unleased_character_write_scope,
+)
 from app.domain.character.schemas import PersistedCharacter
 from app.domain.character_builder.versions import CharacterVersionDetail, CharacterVersionSummary
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
@@ -131,21 +135,48 @@ def patch_character_state(
     room_id: UUID,
     character_id: UUID,
     patch: core_characters.CharacterStatePatch,
-    _context: RoomAccessContext = Depends(get_room_access_context),
+    context: RoomAccessContext = Depends(get_room_access_context),
     service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
 ) -> CharacterSheetDTO:
-    _require_character(service, room_id, character_id)
-    return core_characters.patch_character_state(character_id, patch, service.character_repository)
+    try:
+        with live_character_write_scope(
+            service,
+            context=context,
+            character_id=character_id,
+        ) as scoped_service:
+            return core_characters.patch_character_state(
+                character_id,
+                patch,
+                scoped_service.character_repository,
+            )
+    except RoomWorkspaceScopeError as exc:
+        raise _scope_error(exc) from exc
 
 
 @router.post("/{character_id}/archive", response_model=core_characters.CharacterListItem)
 def archive_character(
     room_id: UUID,
     character_id: UUID,
-    _context: RoomAccessContext = Depends(get_room_access_context),
+    context: RoomAccessContext = Depends(get_room_access_context),
     service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
 ) -> core_characters.CharacterListItem:
-    return _set_archived(service, room_id, character_id, True)
+    try:
+        with unleased_character_write_scope(
+            service,
+            context=context,
+            character_id=character_id,
+        ) as scoped_service:
+            character = scoped_service.set_character_archived(
+                room_id,
+                character_id,
+                True,
+            )
+            return core_characters._list_item(
+                character,
+                scoped_service.character_repository,
+            )
+    except RoomWorkspaceScopeError as exc:
+        raise _scope_error(exc) from exc
 
 
 @router.post("/{character_id}/unarchive", response_model=core_characters.CharacterListItem)

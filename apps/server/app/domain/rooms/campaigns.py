@@ -8,7 +8,9 @@ from pydantic import Field, field_validator
 
 from app.domain.rooms.schemas import StrictModel
 from app.persistence.rooms.campaigns import (
+    CampaignNotDraftPersistenceError,
     CampaignRepository,
+    CampaignSessionHistoryPersistenceError,
     StoredCampaign,
     StoredRosterEntry,
 )
@@ -162,7 +164,15 @@ class CampaignService:
         campaign = self.get_campaign(room_id, campaign_id)
         if campaign.status is not CampaignStatus.DRAFT:
             raise CampaignLifecycleError("only draft Campaigns can be hard deleted")
-        if not self.repository.delete(campaign_id):
+        try:
+            deleted = self.repository.delete_draft_without_session_history(campaign_id)
+        except CampaignSessionHistoryPersistenceError as exc:
+            raise CampaignLifecycleError(
+                "Campaign with Session history cannot be hard deleted"
+            ) from exc
+        except CampaignNotDraftPersistenceError as exc:
+            raise CampaignLifecycleError("only draft Campaigns can be hard deleted") from exc
+        if not deleted:
             raise CampaignNotFoundError(str(campaign_id))
 
     def list_roster(self, room_id: UUID, campaign_id: UUID) -> list[RosterEntry]:

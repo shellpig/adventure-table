@@ -14,10 +14,17 @@ import {
   type LobbySnapshot,
   type SeatRole,
 } from '../../api/seats'
+import {
+  getActiveSession,
+  SessionApiError,
+  startSession,
+  type SessionSnapshot,
+} from '../../api/sessions'
 import { useLocale } from '../../i18n/LocaleProvider'
 import { startRoomHeartbeat } from './heartbeat'
 import { lobbyCopy } from './lobbyCopy'
 import { recentRoomForId } from './roomStorage'
+import { sessionCopy, sessionErrorMessage } from './sessionCopy'
 import './rooms.css'
 
 const UUID_PATTERN = '[0-9a-fA-F-]{36}'
@@ -31,19 +38,22 @@ export function roomLobbyRouteFromPath(pathname: string): RoomLobbyRoute | null 
   return match ? { roomId: match[1], campaignId: match[2] } : null
 }
 
-function message(error: unknown, fallback: string) {
+function message(error: unknown, fallback: string, sessionPresentation: ReturnType<typeof sessionCopy>) {
+  if (error instanceof SessionApiError) return sessionErrorMessage(error, sessionPresentation)
   return error instanceof SeatApiError ? error.message : fallback
 }
 
 export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
   const { locale } = useLocale()
   const copy = lobbyCopy(locale)
+  const sessionPresentation = sessionCopy(locale)
   const recent = recentRoomForId(roomId)
   const token = recent?.accessToken ?? ''
   const authority = recent?.authority
   const isOwner = authority === 'owner'
   const canManage = authority === 'owner' || authority === 'dm'
   const [snapshot, setSnapshot] = useState<LobbySnapshot | null>(null)
+  const [activeSession, setActiveSession] = useState<SessionSnapshot | null>(null)
   const [roster, setRoster] = useState<RosterEntry[]>([])
   const [characters, setCharacters] = useState<RoomCharacterSummary[]>([])
   const [role, setRole] = useState<SeatRole>('player')
@@ -52,29 +62,37 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
   const [error, setError] = useState<string | null>(null)
 
   const reload = async () => {
-    const [nextLobby, nextRoster, nextCharacters] = await Promise.all([
+    const [nextLobby, nextRoster, nextCharacters, nextResume] = await Promise.all([
       getLobby(roomId, campaignId, token),
       listRoster(roomId, campaignId, token),
       listRoomCharacters(roomId, token),
+      getActiveSession(roomId, campaignId, token),
     ])
     setSnapshot(nextLobby)
     setRoster(nextRoster)
     setCharacters(nextCharacters)
+    setActiveSession(nextResume.active_session)
   }
 
   useEffect(() => {
     if (!recent) return
     let active = true
     void reload().catch((cause) => {
-      if (active) setError(message(cause, copy.requestFailed))
+      if (active) setError(message(cause, copy.requestFailed, sessionPresentation))
     })
     const stopHeartbeat = startRoomHeartbeat(async () => {
       try {
         await heartbeatRoom(roomId, token)
-        const nextLobby = await getLobby(roomId, campaignId, token)
-        if (active) setSnapshot(nextLobby)
+        const [nextLobby, nextResume] = await Promise.all([
+          getLobby(roomId, campaignId, token),
+          getActiveSession(roomId, campaignId, token),
+        ])
+        if (active) {
+          setSnapshot(nextLobby)
+          setActiveSession(nextResume.active_session)
+        }
       } catch (cause) {
-        if (active) setError(message(cause, copy.requestFailed))
+        if (active) setError(message(cause, copy.requestFailed, sessionPresentation))
       }
     })
     return () => {
@@ -98,7 +116,7 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
     setError(null)
     void operation()
       .then(() => reload())
-      .catch((cause) => setError(message(cause, copy.requestFailed)))
+      .catch((cause) => setError(message(cause, copy.requestFailed, sessionPresentation)))
       .finally(() => setPending(false))
   }
 
@@ -142,6 +160,28 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
   const selectedCharacterName = (seat: CampaignSeat) =>
     characters.find((character) => character.id === seat.selected_character_id)?.name ?? copy.noCharacter
 
+  const canStartSession = (
+    activeSession === null &&
+    (authority === 'dm' || authority === 'owner') &&
+    snapshot.seats.some((seat) => (
+      seat.role === 'dm' &&
+      seat.controller_kind === 'human' &&
+      seat.controller_access_session_id === snapshot.caller_access_session_id
+    ))
+  )
+  const sessionPath = (sessionId: string) =>
+    `/rooms/${roomId}/campaigns/${campaignId}/sessions/${sessionId}`
+  const startCurrentSession = () => {
+    setPending(true)
+    setError(null)
+    void startSession(roomId, campaignId, token)
+      .then((started) => {
+        window.location.assign(sessionPath(started.id))
+      })
+      .catch((cause) => setError(sessionErrorMessage(cause, sessionPresentation)))
+      .finally(() => setPending(false))
+  }
+
   return (
     <main className="landing-page room-workspace-page">
       <section className="landing-card room-workspace-card">
@@ -149,7 +189,22 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
         <p>{copy.intro}</p>
         <div className="workshop-card__split-actions">
           <a className="button secondary" href={`/rooms/${roomId}/campaigns/${campaignId}`}>{copy.backCampaign}</a>
+          {activeSession ? (
+            <a className="button primary" href={sessionPath(activeSession.id)}>
+              {sessionPresentation.resume}
+            </a>
+          ) : canStartSession ? (
+            <button
+              className="button primary"
+              disabled={pending}
+              type="button"
+              onClick={startCurrentSession}
+            >
+              {pending ? sessionPresentation.starting : sessionPresentation.start}
+            </button>
+          ) : null}
         </div>
+        {activeSession ? <p>{sessionPresentation.activeHint}</p> : null}
         <p>{copy.dmSeatHint}</p>
         <p>{copy.activeRosterOnly}</p>
         {authority === 'member' ? <p>{copy.memberHint}</p> : null}

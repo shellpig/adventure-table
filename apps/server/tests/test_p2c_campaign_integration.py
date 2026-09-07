@@ -26,6 +26,7 @@ from app.domain.rooms.service import RoomService
 from app.persistence.characters import CharacterRepository
 from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.repository import RoomRepository
+from app.persistence.rooms.session_live import SessionLiveRepository
 from app.persistence.rooms.workspace import RoomWorkspaceRepository
 
 
@@ -165,7 +166,11 @@ def test_real_campaign_rosters_share_one_character_state_and_preserve_history() 
             campaign_service.list_roster(room_a.room.id, campaign_a.id)[0].character_id
             == mira.id
         )
-        guarded = _HistoryGuardedCharacterRepository(character_repository, campaign_repository)
+        guarded = _HistoryGuardedCharacterRepository(
+            character_repository,
+            campaign_repository,
+            SessionLiveRepository(engine),
+        )
         with pytest.raises(APIError) as exc:
             guarded.delete_character(mira.id)
         assert exc.value.code == "character_history_referenced"

@@ -13,6 +13,7 @@ import { RoomCampaignPage, roomCampaignRouteFromPath } from './features/rooms/Ro
 import { RoomCharacterWorkspacePage } from './features/rooms/RoomCharacterWorkspacePage'
 import { RoomLandingPage } from './features/rooms/RoomLandingPage'
 import { RoomLobbyPage, roomLobbyRouteFromPath } from './features/rooms/RoomLobbyPage'
+import { RoomSessionPage, roomSessionRouteFromPath } from './features/rooms/RoomSessionPage'
 import { roomIdFromPath, RoomWorkspacePage } from './features/rooms/RoomWorkspacePage'
 import {
   legacyWebRoomRedirectPath,
@@ -106,6 +107,7 @@ export default function App() {
   const { snapshot, isEnabled } = useCapabilities()
   const pathname = typeof window === 'undefined' ? '/' : window.location.pathname
   const protectedCapability = protectedCapabilityForPath(pathname)
+  const roomSessionRoute = roomSessionRouteFromPath(pathname)
   const roomLobbyRoute = roomLobbyRouteFromPath(pathname)
   const roomCampaignRoute = roomCampaignRouteFromPath(pathname)
   const roomCharacterRoute = roomCharacterRouteFromPath(pathname)
@@ -124,6 +126,15 @@ export default function App() {
 
   if (protectedCapability && !isEnabled(protectedCapability)) {
     return <CapabilityDisabledPage />
+  }
+  if (roomSessionRoute) {
+    return (
+      <RoomSessionPage
+        roomId={roomSessionRoute.roomId}
+        campaignId={roomSessionRoute.campaignId}
+        sessionId={roomSessionRoute.sessionId}
+      />
+    )
   }
   if (roomLobbyRoute) {
     return <RoomLobbyPage roomId={roomLobbyRoute.roomId} campaignId={roomLobbyRoute.campaignId} />

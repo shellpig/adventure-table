@@ -15,11 +15,14 @@ from app.persistence.characters import (
     characters,
 )
 from app.persistence.rooms.tables import (
+    active_character_session_leases,
     campaign_roster_entries,
     campaigns,
     room_builder_drafts,
     room_characters,
     rooms,
+    session_participants,
+    sessions,
 )
 
 
@@ -214,15 +217,33 @@ class RoomWorkspaceRepository:
                 ).all()
             )
             if campaign_ids:
-                # Campaign Roster is history and therefore RESTRICTs individual
-                # Character delete. Room Hard Delete is the explicit exception:
-                # clear the selected pointer and owned history first, then the
-                # scoped Character rows, all in this transaction.
+                # Room Hard Delete is the explicit exception to P2 history retention.
+                # Clear the Room pointer and the Session-owned RESTRICT graph before
+                # deleting Campaign/Seat/Character history, all in this transaction.
                 connection.execute(
                     update(rooms)
                     .where(rooms.c.id == room_id)
                     .values(active_campaign_id=None)
                 )
+                session_ids = tuple(
+                    connection.scalars(
+                        select(sessions.c.id).where(sessions.c.campaign_id.in_(campaign_ids))
+                    ).all()
+                )
+                if session_ids:
+                    connection.execute(
+                        delete(active_character_session_leases).where(
+                            active_character_session_leases.c.session_id.in_(session_ids)
+                        )
+                    )
+                    connection.execute(
+                        delete(session_participants).where(
+                            session_participants.c.session_id.in_(session_ids)
+                        )
+                    )
+                    connection.execute(
+                        delete(sessions).where(sessions.c.id.in_(session_ids))
+                    )
                 connection.execute(
                     delete(campaign_roster_entries).where(
                         campaign_roster_entries.c.campaign_id.in_(campaign_ids)

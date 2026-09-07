@@ -27,6 +27,9 @@ FORBIDDEN_MULTIPLAYER_TABLES = {
     "campaigns",
     "campaign_roster_entries",
     "campaign_seats",
+    "sessions",
+    "session_participants",
+    "active_character_session_leases",
 }
 
 

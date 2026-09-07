@@ -8,6 +8,7 @@ on:
       - p2-b-room-character-workspace
       - p2-c-campaign-party-roster
       - p2-d-seat-controller-lobby
+      - p2-e-session-lifecycle-late-join
 
 jobs:
   backend:
@@ -53,9 +54,9 @@ jobs:
           cache-dependency-path: apps/server/pyproject.toml
       - name: Install backend
         run: python -m pip install -e "./apps/server[web,dev]"
-      - name: Run P2 PostgreSQL migration and workspace gates
+      - name: Run P2 PostgreSQL migration and concurrency gates
         working-directory: apps/server
-        run: pytest tests/test_p2a_postgres_migration.py tests/test_p2b_postgres_workspace.py
+        run: pytest tests/test_p2a_postgres_migration.py tests/test_p2b_postgres_workspace.py tests/test_p2e_postgres_sessions.py
 
   frontend:
     runs-on: ubuntu-latest

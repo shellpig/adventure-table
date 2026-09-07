@@ -8,6 +8,7 @@ from pydantic import Field, field_validator
 
 from app.domain.rooms.schemas import RoomAccessAuthority, StrictModel
 from app.persistence.rooms.seats import (
+    SeatHistoryReferencedPersistenceError,
     SeatPersistenceConflictError,
     SeatRepository,
     SeatSelectionPersistenceError,
@@ -109,6 +110,10 @@ class SeatCharacterSelectionError(RuntimeError):
     pass
 
 
+class SeatHistoryReferencedError(RuntimeError):
+    pass
+
+
 class SeatService:
     def __init__(self, repository: SeatRepository) -> None:
         self.repository = repository
@@ -168,9 +173,21 @@ class SeatService:
             updated_at=seat.updated_at,
         )
 
-    def list_seats(self, room_id: UUID, campaign_id: UUID) -> list[CampaignSeat]:
+    def list_seats(
+        self,
+        room_id: UUID,
+        campaign_id: UUID,
+        *,
+        include_archived: bool = False,
+    ) -> list[CampaignSeat]:
         self._require_campaign(room_id, campaign_id)
-        return [self._present(seat) for seat in self.repository.list_for_campaign(campaign_id)]
+        return [
+            self._present(seat)
+            for seat in self.repository.list_for_campaign(
+                campaign_id,
+                include_archived=include_archived,
+            )
+        ]
 
     def create_seat(self, room_id: UUID, campaign_id: UUID, payload: SeatCreate) -> CampaignSeat:
         self._require_current_active_campaign(room_id, campaign_id)
@@ -254,7 +271,11 @@ class SeatService:
 
     def delete_seat(self, room_id: UUID, campaign_id: UUID, seat_id: UUID) -> None:
         self.get_scoped_seat(room_id, campaign_id, seat_id)
-        if not self.repository.delete_unreferenced(seat_id):
+        try:
+            deleted = self.repository.delete_unreferenced(seat_id)
+        except SeatHistoryReferencedPersistenceError as exc:
+            raise SeatHistoryReferencedError(str(exc)) from exc
+        if not deleted:
             raise SeatNotFoundError(seat_id)
 
     def lobby(
@@ -300,6 +321,7 @@ __all__ = [
     "SeatControllerError",
     "SeatControllerPatch",
     "SeatCreate",
+    "SeatHistoryReferencedError",
     "SeatNotFoundError",
     "SeatRole",
     "SeatService",

@@ -185,8 +185,111 @@ Index("ix_campaign_seats_campaign_id", campaign_seats.c.campaign_id)
 Index("ix_campaign_seats_controller_access_session_id", campaign_seats.c.controller_access_session_id)
 Index("ix_campaign_seats_selected_character_id", campaign_seats.c.selected_character_id)
 
+sessions = Table(
+    "sessions",
+    metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("campaign_id", Uuid(), ForeignKey("campaigns.id", ondelete="RESTRICT"), nullable=False),
+    Column("status", String(16), nullable=False),
+    Column("dm_seat_id", Uuid(), ForeignKey("campaign_seats.id", ondelete="RESTRICT"), nullable=False),
+    Column("dm_controller_kind", String(16), nullable=False),
+    Column(
+        "dm_controller_access_session_id",
+        Uuid(),
+        ForeignKey("room_access_sessions.id", ondelete="RESTRICT"),
+        nullable=True,
+    ),
+    Column("started_at", DateTime(timezone=True), nullable=False),
+    Column("ended_at", DateTime(timezone=True), nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    CheckConstraint(
+        "status IN ('active', 'ended', 'abandoned')",
+        name="ck_sessions_status",
+    ),
+    CheckConstraint(
+        "(dm_controller_kind = 'human' AND dm_controller_access_session_id IS NOT NULL) OR "
+        "(dm_controller_kind IN ('ai', 'none') AND dm_controller_access_session_id IS NULL)",
+        name="ck_sessions_dm_controller_binding",
+    ),
+)
+Index("ix_sessions_campaign_id", sessions.c.campaign_id)
+Index("ix_sessions_dm_seat_id", sessions.c.dm_seat_id)
+Index("ix_sessions_dm_controller_access_session_id", sessions.c.dm_controller_access_session_id)
+Index("ix_sessions_status", sessions.c.status)
+
+session_participants = Table(
+    "session_participants",
+    metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("session_id", Uuid(), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False),
+    Column("seat_id", Uuid(), ForeignKey("campaign_seats.id", ondelete="RESTRICT"), nullable=False),
+    Column("role_snapshot", String(16), nullable=False),
+    Column("controller_kind_at_join", String(16), nullable=False),
+    Column(
+        "controller_access_session_id_at_join",
+        Uuid(),
+        ForeignKey("room_access_sessions.id", ondelete="RESTRICT"),
+        nullable=True,
+    ),
+    Column(
+        "active_character_id",
+        Uuid(),
+        ForeignKey("characters.id", ondelete="RESTRICT"),
+        nullable=True,
+    ),
+    Column("joined_at", DateTime(timezone=True), nullable=False),
+    Column("left_at", DateTime(timezone=True), nullable=True),
+    CheckConstraint(
+        "role_snapshot IN ('dm', 'player', 'spectator')",
+        name="ck_session_participants_role_snapshot",
+    ),
+    CheckConstraint(
+        "controller_kind_at_join IN ('human', 'ai', 'none')",
+        name="ck_session_participants_controller_kind",
+    ),
+    CheckConstraint(
+        "(controller_kind_at_join = 'human' AND controller_access_session_id_at_join IS NOT NULL) OR "
+        "(controller_kind_at_join IN ('ai', 'none') AND controller_access_session_id_at_join IS NULL)",
+        name="ck_session_participants_controller_binding",
+    ),
+    CheckConstraint(
+        "role_snapshot = 'player' OR active_character_id IS NULL",
+        name="ck_session_participants_player_character_only",
+    ),
+    UniqueConstraint("session_id", "seat_id", name="uq_session_participants_session_seat"),
+    UniqueConstraint(
+        "session_id",
+        "active_character_id",
+        name="uq_session_participants_session_character",
+    ),
+)
+Index("ix_session_participants_session_id", session_participants.c.session_id)
+Index("ix_session_participants_seat_id", session_participants.c.seat_id)
+Index("ix_session_participants_active_character_id", session_participants.c.active_character_id)
+
+active_character_session_leases = Table(
+    "active_character_session_leases",
+    metadata,
+    Column(
+        "character_id",
+        Uuid(),
+        ForeignKey("characters.id", ondelete="RESTRICT"),
+        primary_key=True,
+    ),
+    Column("session_id", Uuid(), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False),
+    Column(
+        "participant_id",
+        Uuid(),
+        ForeignKey("session_participants.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    ),
+)
+Index("ix_active_character_session_leases_session_id", active_character_session_leases.c.session_id)
+
 
 __all__ = [
+    "active_character_session_leases",
     "campaign_roster_entries",
     "campaign_seats",
     "campaigns",
@@ -194,4 +297,6 @@ __all__ = [
     "room_builder_drafts",
     "room_characters",
     "rooms",
+    "session_participants",
+    "sessions",
 ]

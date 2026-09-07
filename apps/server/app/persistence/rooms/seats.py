@@ -16,6 +16,8 @@ from app.persistence.rooms.tables import (
     room_access_sessions,
     room_characters,
     rooms,
+    session_participants,
+    sessions,
 )
 
 
@@ -24,6 +26,10 @@ class SeatPersistenceConflictError(RuntimeError):
 
 
 class SeatSelectionPersistenceError(RuntimeError):
+    pass
+
+
+class SeatHistoryReferencedPersistenceError(RuntimeError):
     pass
 
 
@@ -281,14 +287,33 @@ class SeatRepository:
         return self.get(seat_id)
 
     def delete_unreferenced(self, seat_id: UUID) -> bool:
-        # P2-D has no Session tables yet, so every Seat is still unreferenced by
-        # Session history. P2-E extends this method with the RESTRICT/history guard.
         with self.engine.begin() as connection:
+            seat_query = select(campaign_seats.c.id).where(campaign_seats.c.id == seat_id)
+            if connection.dialect.name == "postgresql":
+                seat_query = seat_query.with_for_update()
+            if connection.scalar(seat_query) is None:
+                return False
+
+            participant_history_id = connection.scalar(
+                select(session_participants.c.id)
+                .where(session_participants.c.seat_id == seat_id)
+                .limit(1)
+            )
+            dm_history_id = connection.scalar(
+                select(sessions.c.id)
+                .where(sessions.c.dm_seat_id == seat_id)
+                .limit(1)
+            )
+            if participant_history_id is not None or dm_history_id is not None:
+                raise SeatHistoryReferencedPersistenceError(
+                    "Seat is referenced by Session history and can only be archived"
+                )
             result = connection.execute(delete(campaign_seats).where(campaign_seats.c.id == seat_id))
         return result.rowcount == 1
 
 
 __all__ = [
+    "SeatHistoryReferencedPersistenceError",
     "SeatPersistenceConflictError",
     "SeatRepository",
     "SeatSelectionPersistenceError",

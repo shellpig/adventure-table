@@ -13,6 +13,10 @@ from app.api.character_builder import (
 from app.api.errors import APIError
 from app.api.rooms.access import get_room_access_context
 from app.api.rooms.dependencies import get_room_workspace_service
+from app.api.rooms.session_scope import (
+    live_character_write_scope,
+    live_draft_write_scope,
+)
 from app.domain.character_builder.creation import BuilderConfirmResult, BuilderReviewDTO
 from app.domain.character_builder.schemas import (
     BuilderDraftCreateInput,
@@ -69,7 +73,12 @@ def create_builder_draft(
     service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
 ) -> BuilderView:
     try:
+        # This generic route is intentionally create-only. Preserve the existing
+        # Builder mode contract before any P2 live Character scope lookup: legal
+        # versioned workflows use /characters/{character_id}/drafts instead.
         return service.create_draft(room_id, request)
+    except RoomWorkspaceScopeError as exc:
+        raise _scope_error(exc) from exc
     except BuilderModeNotEnabledError as exc:
         raise APIError(422, "builder_mode_not_enabled", str(exc)) from exc
 
@@ -83,11 +92,20 @@ def create_character_version_draft(
     room_id: UUID,
     character_id: UUID,
     request: VersionDraftCreateInput,
-    _context: RoomAccessContext = Depends(get_room_access_context),
+    context: RoomAccessContext = Depends(get_room_access_context),
     service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
 ) -> BuilderView:
     try:
-        return service.create_version_draft(room_id, character_id, request.mode)
+        with live_character_write_scope(
+            service,
+            context=context,
+            character_id=character_id,
+        ) as scoped_service:
+            return scoped_service.create_version_draft(
+                room_id,
+                character_id,
+                request.mode,
+            )
     except RoomWorkspaceScopeError as exc:
         raise _scope_error(exc) from exc
     except CharacterNotFoundError as exc:
@@ -138,11 +156,16 @@ def patch_builder_draft(
     room_id: UUID,
     draft_id: UUID,
     request: BuilderDraftPatchInput,
-    _context: RoomAccessContext = Depends(get_room_access_context),
+    context: RoomAccessContext = Depends(get_room_access_context),
     service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
 ) -> BuilderView:
     try:
-        return service.patch_draft(room_id, draft_id, request)
+        with live_draft_write_scope(
+            service,
+            context=context,
+            draft_id=draft_id,
+        ) as scoped_service:
+            return scoped_service.patch_draft(room_id, draft_id, request)
     except RoomWorkspaceScopeError as exc:
         raise _scope_error(exc) from exc
     except BuilderDraftNotFoundError as exc:
@@ -190,11 +213,16 @@ def review_builder_draft(
 def confirm_builder_draft(
     room_id: UUID,
     draft_id: UUID,
-    _context: RoomAccessContext = Depends(get_room_access_context),
+    context: RoomAccessContext = Depends(get_room_access_context),
     service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
 ) -> BuilderConfirmResult:
     try:
-        return service.confirm_draft(room_id, draft_id)
+        with live_draft_write_scope(
+            service,
+            context=context,
+            draft_id=draft_id,
+        ) as scoped_service:
+            return scoped_service.confirm_draft(room_id, draft_id)
     except RoomWorkspaceScopeError as exc:
         raise _scope_error(exc) from exc
     except BuilderDraftNotFoundError as exc:
@@ -214,11 +242,16 @@ def confirm_builder_draft(
 def cancel_builder_draft(
     room_id: UUID,
     draft_id: UUID,
-    _context: RoomAccessContext = Depends(get_room_access_context),
+    context: RoomAccessContext = Depends(get_room_access_context),
     service: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
 ) -> Response:
     try:
-        service.cancel_draft(room_id, draft_id)
+        with live_draft_write_scope(
+            service,
+            context=context,
+            draft_id=draft_id,
+        ) as scoped_service:
+            scoped_service.cancel_draft(room_id, draft_id)
     except RoomWorkspaceScopeError as exc:
         raise _scope_error(exc) from exc
     except BuilderDraftNotFoundError as exc:

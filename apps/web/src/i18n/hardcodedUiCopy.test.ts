@@ -23,6 +23,7 @@ const SOURCE_FILES = [
   '../features/rooms/RoomCampaignPage.tsx',
   '../features/rooms/RoomLandingPage.tsx',
   '../features/rooms/RoomLobbyPage.tsx',
+  '../features/rooms/RoomSessionPage.tsx',
   '../features/rooms/RoomWorkspacePage.tsx',
 ] as const
 
