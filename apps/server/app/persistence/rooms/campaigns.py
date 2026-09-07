@@ -14,6 +14,7 @@ from app.persistence.rooms.tables import (
     campaigns,
     room_characters,
     rooms,
+    sessions,
 )
 
 
@@ -38,6 +39,14 @@ class StoredRosterEntry:
 
 
 class CampaignPersistenceConflictError(RuntimeError):
+    pass
+
+
+class CampaignSessionHistoryPersistenceError(RuntimeError):
+    pass
+
+
+class CampaignNotDraftPersistenceError(RuntimeError):
     pass
 
 
@@ -207,6 +216,32 @@ class CampaignRepository:
             result = connection.execute(delete(campaigns).where(campaigns.c.id == campaign_id))
             return result.rowcount == 1
 
+    def delete_draft_without_session_history(self, campaign_id: UUID) -> bool:
+        """Atomically enforce the P2 hard-delete boundary.
+
+        A Campaign may be hard-deleted only while it is still Draft and has
+        never acquired Session history. PostgreSQL locks the Campaign row so a
+        concurrent lifecycle transition cannot invalidate the check before the
+        delete is issued.
+        """
+        with self.engine.begin() as connection:
+            status_query = select(campaigns.c.status).where(campaigns.c.id == campaign_id)
+            if connection.dialect.name == "postgresql":
+                status_query = status_query.with_for_update()
+            status = connection.scalar(status_query)
+            if status is None:
+                return False
+            if status != "draft":
+                raise CampaignNotDraftPersistenceError(campaign_id)
+            if connection.scalar(
+                select(sessions.c.id)
+                .where(sessions.c.campaign_id == campaign_id)
+                .limit(1)
+            ) is not None:
+                raise CampaignSessionHistoryPersistenceError(campaign_id)
+            result = connection.execute(delete(campaigns).where(campaigns.c.id == campaign_id))
+            return result.rowcount == 1
+
     def add_roster_entry_same_room(
         self,
         *,
@@ -351,8 +386,10 @@ class CampaignRepository:
 
 
 __all__ = [
+    "CampaignNotDraftPersistenceError",
     "CampaignPersistenceConflictError",
     "CampaignRepository",
+    "CampaignSessionHistoryPersistenceError",
     "StoredCampaign",
     "StoredRosterEntry",
 ]
