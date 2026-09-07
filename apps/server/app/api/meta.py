@@ -39,7 +39,10 @@ def build_capabilities(channel: DistributionChannel) -> Capabilities:
         database_path = str(resolved) if resolved is not None else None
     return Capabilities(
         channel=channel,
-        capabilities=CapabilityFlags(room=channel == "web"),
+        capabilities=CapabilityFlags(
+            room=channel == "web",
+            campaign=channel == "web",
+        ),
         database_path=database_path,
     )
 
