@@ -5,11 +5,13 @@ from uuid import uuid4
 import pytest
 
 from app.api.characters import _canonicalize_prepared_patch
-from app.content import ContentEntry, ContentRegistry, load_default_content_registry
+from app.content import load_default_content_registry
+from app.content.registry import ContentRegistry, ContentValidationError
+from app.content.schemas import ContentEntry
 from app.domain.character.schemas import (
+    AbilityScores,
     CharacterBuild,
     CharacterState,
-    ClassLevelChoice,
     PersistedCharacter,
     PreparedSpellSelection,
     SpellAccessEntry,
@@ -17,151 +19,118 @@ from app.domain.character.schemas import (
 )
 from app.domain.character.validation import CharacterValidationError, validate_state_against_build
 from app.domain.rules.character_sheet import build_character_sheet
+from app.domain.rules.spellcasting import max_spell_level_for_class, spell_is_on_class_list
+from test_m01a_content_packs import entry, feature, write_pack
 
 
-def _persisted(build: CharacterBuild, state: CharacterState) -> PersistedCharacter:
-    version_id = uuid4()
+def _abilities() -> AbilityScores:
+    return AbilityScores(
+        strength=10,
+        dexterity=12,
+        constitution=12,
+        intelligence=16,
+        wisdom=16,
+        charisma=8,
+    )
+
+
+def _persisted(build: CharacterBuild, state: CharacterState, name: str = "Regression") -> PersistedCharacter:
     return PersistedCharacter(
         id=uuid4(),
-        name="Review fixture",
+        name=name,
         ruleset="dnd5e-2014",
-        current_version_id=version_id,
-        current_version_no=1,
+        current_version_id=uuid4(),
+        version_no=1,
         build=build,
         state=state,
     )
 
 
-def _wizard_build(*, prepared_limit: int) -> CharacterBuild:
-    registry = load_default_content_registry()
-    wizard = registry.stable_key("class", "wizard")
-    magic_missile = registry.stable_key("spell", "magic-missile")
-    shield = registry.stable_key("spell", "shield")
+def _wizard_build(*, prepared_limit: int = 1) -> CharacterBuild:
+    wizard = "srd5.1:class:wizard"
     return CharacterBuild(
-        class_progression=[wizard],
-        class_level_choices=[
-            ClassLevelChoice(
-                class_ref=wizard,
-                class_level=1,
-                hit_die_choice="fixed",
-                hit_die_roll=6,
-            )
-        ],
-        spell_access_entries=[
-            SpellAccessEntry(
-                entry_id="wizard:magic-missile",
-                spell_key=magic_missile,
-                access_type="spellbook",
-                source_type="class",
-                source_key=wizard,
-                source_label="Wizard",
-                origin="build",
-            ),
-            SpellAccessEntry(
-                entry_id="wizard:shield",
-                spell_key=shield,
-                access_type="spellbook",
-                source_type="class",
-                source_key=wizard,
-                source_label="Wizard",
-                origin="build",
-            ),
-        ],
-        spellcasting_profiles=[
+        race_ref="srd5.1:race:human",
+        character_level=1,
+        class_progression=(wizard,),
+        ability_scores=_abilities(),
+        hp_progression=(6,),
+        spellcasting_profiles=(
             SpellcastingProfile(
                 profile_id="class:wizard",
                 source_type="class",
                 source_key=wizard,
-                source_label="Wizard",
+                class_ref=wizard,
                 ability="intelligence",
                 access_model="spellbook",
+                resource_pool_type="normal_multiclass_slots",
+                max_spell_level=1,
                 prepared_limit=prepared_limit,
-            )
-        ],
+            ),
+        ),
+        spell_access_entries=(
+            SpellAccessEntry(
+                entry_id="wizard:magic-missile",
+                spell_key="srd5.1:spell:magic-missile",
+                source_type="class",
+                source_key=wizard,
+                access_type="spellbook",
+            ),
+            SpellAccessEntry(
+                entry_id="wizard:shield",
+                spell_key="srd5.1:spell:shield",
+                source_type="class",
+                source_key=wizard,
+                access_type="spellbook",
+            ),
+        ),
     )
 
 
-def test_duplicate_known_spell_access_does_not_consume_known_count_twice() -> None:
-    registry = load_default_content_registry()
-    bard = registry.stable_key("class", "bard")
-    spell = registry.stable_key("spell", "healing-word")
-    build = CharacterBuild(
-        class_progression=[bard],
-        spell_access_entries=[
-            SpellAccessEntry(
-                entry_id="bard:healing-word:one",
-                spell_key=spell,
-                access_type="known",
-                source_type="class",
-                source_key=bard,
-                source_label="Bard",
-                origin="build",
-            ),
-            SpellAccessEntry(
-                entry_id="bard:healing-word:two",
-                spell_key=spell,
-                access_type="known",
-                source_type="class",
-                source_key=bard,
-                source_label="Bard",
-                origin="build",
-            ),
-        ],
-        spellcasting_profiles=[
-            SpellcastingProfile(
-                profile_id="class:bard",
-                source_type="class",
-                source_key=bard,
-                source_label="Bard",
-                ability="charisma",
-                access_model="known",
-                known_count=1,
+def test_character_sheet_reads_p1_canonical_wizard_prepared_state() -> None:
+    build = _wizard_build(prepared_limit=2)
+    state = CharacterState(
+        current_hp=7,
+        prepared_spells=[
+            PreparedSpellSelection(
+                spell_key="srd5.1:spell:magic-missile",
+                source_profile_id="class:wizard",
+                source_access_entry_id="wizard:magic-missile",
             )
         ],
+        hit_dice_state={"d6": 1},
     )
 
-    validate_state_against_build(CharacterState(current_hp=8), build, registry)
+    sheet = build_character_sheet(_persisted(build, state), load_default_content_registry())
+    magic_missile = next(spell for spell in sheet.spells if spell.spell_key.endswith(":magic-missile"))
+    shield = next(spell for spell in sheet.spells if spell.spell_key.endswith(":shield"))
+
+    assert magic_missile.prepared is True
+    assert magic_missile.source_profile_id == "class:wizard"
+    assert magic_missile.source_access_entry_id == "wizard:magic-missile"
+    assert shield.prepared is False
 
 
-def test_prepared_spell_source_is_rendered_on_character_sheet() -> None:
-    registry = load_default_content_registry()
-    cleric = registry.stable_key("class", "cleric")
-    cure_wounds = registry.stable_key("spell", "cure-wounds")
-    healing_word = registry.stable_key("spell", "healing-word")
+def test_character_sheet_exposes_full_list_prepared_caster_spells() -> None:
+    cleric = "srd5.1:class:cleric"
     build = CharacterBuild(
-        class_progression=[cleric],
-        spell_access_entries=[
-            SpellAccessEntry(
-                entry_id="cleric:cure-wounds",
-                spell_key=cure_wounds,
-                access_type="prepared",
-                source_type="class",
-                source_key=cleric,
-                source_label="Cleric",
-                origin="build",
-            ),
-            SpellAccessEntry(
-                entry_id="cleric:healing-word",
-                spell_key=healing_word,
-                access_type="prepared",
-                source_type="class",
-                source_key=cleric,
-                source_label="Cleric",
-                origin="build",
-            ),
-        ],
-        spellcasting_profiles=[
+        race_ref="srd5.1:race:human",
+        character_level=1,
+        class_progression=(cleric,),
+        ability_scores=_abilities(),
+        hp_progression=(8,),
+        spellcasting_profiles=(
             SpellcastingProfile(
                 profile_id="class:cleric",
                 source_type="class",
                 source_key=cleric,
-                source_label="Cleric",
+                class_ref=cleric,
                 ability="wisdom",
                 access_model="prepared",
+                resource_pool_type="normal_multiclass_slots",
                 max_spell_level=1,
                 prepared_limit=2,
             ),
-        ],
+        ),
     )
     state = CharacterState(
         current_hp=9,
@@ -209,69 +178,88 @@ def test_non_srd_spell_and_class_level_runtime_lookups_are_source_aware() -> Non
     entries = {
         artificer_ref: ContentEntry(
             key=artificer_ref,
-            type="class",
+            index="artificer",
             name="Artificer",
-            source="TCE",
-            description=None,
-            data={
-                "hit_die": 8,
-                "levels": [
-                    {
-                        "level": 1,
-                        "prof_bonus": 2,
-                        "features": [],
-                        "spellcasting": {"cantrips_known": 2, "spells_known": 0},
-                    }
-                ],
-            },
+            source="tce",
+            ruleset="dnd5e-2014",
+            data={"index": "artificer", "name": "Artificer", "hit_die": 8},
         ),
         spell_ref: ContentEntry(
             key=spell_ref,
-            type="spell",
+            index="fixture-spell",
             name="Fixture Spell",
-            source="TCE",
-            description=None,
-            data={"level": 0, "school": "Evocation"},
+            source="tce",
+            ruleset="dnd5e-2014",
+            data={
+                "index": "fixture-spell",
+                "name": "Fixture Spell",
+                "level": 1,
+                "classes": [{"key": artificer_ref, "name": "Artificer"}],
+            },
+        ),
+        "tce:level:artificer-1": ContentEntry(
+            key="tce:level:artificer-1",
+            index="artificer-1",
+            name="Artificer 1",
+            source="tce",
+            ruleset="dnd5e-2014",
+            data={
+                "index": "artificer-1",
+                "name": "Artificer 1",
+                "level": 1,
+                "class": {"key": artificer_ref, "name": "Artificer"},
+                "features": [],
+                "prof_bonus": 2,
+                "spellcasting": {"spell_slots_level_1": 2},
+            },
         ),
     }
-    registry = ContentRegistry([*base_registry.values(), *entries.values()])
-    build = CharacterBuild(
-        class_progression=[artificer_ref],
-        class_level_choices=[
-            ClassLevelChoice(
-                class_ref=artificer_ref,
-                class_level=1,
-                hit_die_choice="fixed",
-                hit_die_roll=5,
-            )
-        ],
-        spell_access_entries=[
-            SpellAccessEntry(
-                entry_id="artificer:fixture-spell",
-                spell_key=spell_ref,
-                access_type="known",
-                source_type="class",
-                source_key=artificer_ref,
-                source_label="Artificer",
-                origin="build",
-            )
-        ],
-        spellcasting_profiles=[
-            SpellcastingProfile(
-                profile_id="class:artificer",
-                source_type="class",
-                source_key=artificer_ref,
-                source_label="Artificer",
-                ability="intelligence",
-                access_model="known",
-                known_count=1,
-            )
-        ],
+    registry = ContentRegistry(
+        base_registry.manifest,
+        entries,
+        {
+            "class": (entries[artificer_ref],),
+            "spell": (entries[spell_ref],),
+            "level": (entries["tce:level:artificer-1"],),
+        },
     )
-    state = CharacterState(current_hp=8)
+    build = CharacterBuild(
+        race_ref="srd5.1:race:human",
+        character_level=1,
+        class_progression=(artificer_ref,),
+        ability_scores=_abilities(),
+        hp_progression=(8,),
+    )
 
-    validate_state_against_build(state, build, registry)
-    sheet = build_character_sheet(_persisted(build, state), registry)
+    assert spell_is_on_class_list(spell_ref, artificer_ref, registry) is True
+    assert max_spell_level_for_class(build, artificer_ref, registry) == 1
 
-    assert sheet.spellcasting[0].source_key == artificer_ref
-    assert any(spell.spell_key == spell_ref for spell in sheet.spells)
+
+def test_equipment_cross_reference_rejects_existing_wrong_kind(tmp_path) -> None:
+    write_pack(
+        tmp_path,
+        "pack-a",
+        "Pack A",
+        {
+            "features": ("feature", [feature("pack-a", "one", "One")]),
+            "equipment-categories": (
+                "equipment-category",
+                [
+                    entry(
+                        "pack-a",
+                        "equipment-category",
+                        "bad-category",
+                        "Bad Category",
+                        {
+                            "equipment": [
+                                {"key": "pack-a:feature:one", "name": "One"}
+                            ]
+                        },
+                    )
+                ],
+            ),
+        },
+    )
+
+    with pytest.raises(ContentValidationError, match="wrong-kind reference"):
+        ContentRegistry.from_root(tmp_path, ("pack-a",))
