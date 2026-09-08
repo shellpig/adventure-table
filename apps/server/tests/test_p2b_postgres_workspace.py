@@ -35,6 +35,7 @@ def _alembic_config() -> Config:
     config.set_main_option("script_location", str(SERVER_ROOT / "alembic"))
     assert POSTGRES_URL is not None
     config.set_main_option("sqlalchemy.url", POSTGRES_URL)
+    config.attributes["target_database_url"] = POSTGRES_URL
     return config
 
 

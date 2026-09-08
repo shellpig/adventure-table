@@ -46,6 +46,7 @@ export type SessionResume = {
   participants: SessionParticipantSnapshot[]
   seats: CampaignSeat[]
   active_characters: SessionResumeCharacterSummary[]
+  caller_access_session_id: string | null
 }
 
 type ApiErrorPayload = { error?: { code?: string; message?: string } }

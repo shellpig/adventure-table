@@ -38,6 +38,9 @@ class SessionResumeDTO(StrictModel):
     participants: list[SessionParticipantSnapshot]
     seats: list[CampaignSeat]
     active_characters: list[SessionResumeCharacterSummary]
+    # Same caller identity the Lobby reports, mirrored here because Resume is the
+    # only Session-scoped read that survives the Room switching active Campaign.
+    caller_access_session_id: UUID | None = None
 
 
 class SessionResumeService:
@@ -84,7 +87,13 @@ class SessionResumeService:
             version_no=character.version_no,
         )
 
-    def resume(self, room_id: UUID, campaign_id: UUID) -> SessionResumeDTO:
+    def resume(
+        self,
+        room_id: UUID,
+        campaign_id: UUID,
+        *,
+        caller_access_session_id: UUID | None = None,
+    ) -> SessionResumeDTO:
         core = self.session_service.resume(room_id, campaign_id)
         stored_room = self.room_repository.get_room(room_id)
         if stored_room is None:
@@ -102,6 +111,7 @@ class SessionResumeService:
                 participants=[],
                 seats=[],
                 active_characters=[],
+                caller_access_session_id=caller_access_session_id,
             )
 
         participants = list(active_session.participants)
@@ -136,6 +146,7 @@ class SessionResumeService:
             active_characters=[
                 self._character_summary(character_id) for character_id in character_ids
             ],
+            caller_access_session_id=caller_access_session_id,
         )
 
 
