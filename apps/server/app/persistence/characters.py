@@ -82,6 +82,7 @@ character_states = Table(
     metadata,
     Column("character_id", Uuid(as_uuid=True), ForeignKey("characters.id", ondelete="CASCADE"), primary_key=True),
     Column("state_payload", json_payload_type, nullable=False),
+    Column("state_revision", Integer, nullable=False, server_default="1"),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
 )
 
@@ -116,6 +117,16 @@ class StaleBuildVersionError(RuntimeError):
         self.character_id = character_id
         self.expected_version_id = expected_version_id
         self.actual_version_id = actual_version_id
+
+
+class StateWriteConflictError(RuntimeError):
+    def __init__(self, character_id: UUID, expected_state_revision: int) -> None:
+        super().__init__(
+            f"character {character_id} state changed while writing revision "
+            f"{expected_state_revision}"
+        )
+        self.character_id = character_id
+        self.expected_state_revision = expected_state_revision
 
 
 class StateReconciliationBlockedError(RuntimeError):
@@ -178,6 +189,7 @@ class CharacterRepository:
                 insert(character_states).values(
                     character_id=character_id,
                     state_payload=state.model_dump(mode="json"),
+                    state_revision=1,
                 )
             )
             connection.execute(
@@ -269,6 +281,7 @@ class CharacterRepository:
                     insert(character_states).values(
                         character_id=created_character_id,
                         state_payload=state.model_dump(mode="json"),
+                        state_revision=1,
                     )
                 )
                 connection.execute(
@@ -449,6 +462,7 @@ class CharacterRepository:
                 .where(character_states.c.character_id == character_id)
                 .values(
                     state_payload=preview.proposed_state.model_dump(mode="json"),
+                    state_revision=character_states.c.state_revision + 1,
                     updated_at=func.now(),
                 )
             )

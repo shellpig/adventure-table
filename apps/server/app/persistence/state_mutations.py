@@ -10,6 +10,7 @@ from app.persistence.characters import (
     CharacterArchivedError,
     CharacterNotFoundError,
     CharacterRepository,
+    StateWriteConflictError,
     StaleBuildVersionError,
     characters,
     character_states,
@@ -24,13 +25,14 @@ def save_state_against_version(
     *,
     expected_current_version_id: UUID,
 ) -> PersistedCharacter:
-    """Validate and persist Current State against one locked Build version.
+    """Validate and persist a complete Current State against one Build version.
 
-    State patches and versioned Builder Confirm both mutate the same live
-    character. The version comparison, Build read, state validation and UPDATE
-    therefore have to share one transaction/lock boundary; otherwise a Level Up
-    can reconcile v3 and a late state patch validated against v2 can overwrite
-    that reconciled state afterwards.
+    Full-state writers are protected by the same monotonic ``state_revision``
+    used by partial patches. A caller that computed a complete State from an old
+    snapshot must receive a conflict instead of silently overwriting a newer
+    committed State. Partial PATCH retry/remerge behavior lives in the atomic
+    patch mutation; this complete-state primitive deliberately never retries an
+    old candidate.
     """
 
     with repository.engine.begin() as connection:
@@ -39,6 +41,7 @@ def save_state_against_version(
                 characters.c.current_version_id,
                 characters.c.archived_at,
                 character_versions.c.build_payload,
+                character_states.c.state_revision,
             )
             .join(
                 character_versions,
@@ -70,17 +73,22 @@ def save_state_against_version(
 
         build = CharacterBuild.model_validate(row["build_payload"])
         validate_state_against_build(state, build, repository.registry)
+        state_revision = int(row["state_revision"])
 
         result = connection.execute(
             update(character_states)
-            .where(character_states.c.character_id == character_id)
+            .where(
+                character_states.c.character_id == character_id,
+                character_states.c.state_revision == state_revision,
+            )
             .values(
                 state_payload=state.model_dump(mode="json"),
+                state_revision=state_revision + 1,
                 updated_at=func.now(),
             )
         )
         if result.rowcount != 1:
-            raise CharacterNotFoundError(str(character_id))
+            raise StateWriteConflictError(character_id, state_revision)
         connection.execute(
             update(characters)
             .where(characters.c.id == character_id)
