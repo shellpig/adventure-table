@@ -13,4 +13,4 @@ def test_smoke_script_reads_character_alembic_revision_head() -> None:
     namespace = runpy.run_path(str(SMOKE_SCRIPT))
     migration_head = cast(Callable[[Path], str], namespace["_migration_head"])
 
-    assert migration_head(REPO_ROOT) == "0009_p2a_character_head"
+    assert migration_head(REPO_ROOT) == "0015_character_state_revision"
