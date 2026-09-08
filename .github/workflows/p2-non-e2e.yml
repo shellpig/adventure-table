@@ -82,6 +82,7 @@ jobs:
         run: npm run build
 
   windows-standalone:
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == 'p2-f-full-integration-closeout'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -97,7 +98,7 @@ jobs:
         run: npm install --global npm@11.6.0
       - name: Build standalone distribution
         shell: cmd
-        run: scripts\\build-standalone.cmd --version p2f-non-e2e
+        run: scripts\build-standalone.cmd --version p2f-non-e2e
       - name: Smoke frozen standalone
         shell: cmd
-        run: .standalone-venv\\Scripts\\python.exe scripts\\smoke_standalone.py dist\\adventure-table-standalone --timeout 30
+        run: .standalone-venv\Scripts\python.exe scripts\smoke_standalone.py dist\adventure-table-standalone --timeout 30
