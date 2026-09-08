@@ -21,7 +21,7 @@ pytestmark = pytest.mark.skipif(
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 BRANCH_POINT = "0008_m03c_import_records"
 CHARACTER_HEAD = "0015_character_state_revision"
-WEB_HEAD = "0014_p2e_sessions"
+WEB_HEAD = "0016_p3a_table_runtime_events"
 
 
 def _alembic_config() -> Config:
