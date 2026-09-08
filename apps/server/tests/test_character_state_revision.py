@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from sqlalchemy import create_engine, select
 from sqlalchemy.pool import StaticPool
@@ -75,10 +75,10 @@ def test_complete_state_writer_advances_revision() -> None:
 def test_level_up_reconciliation_advances_state_revision() -> None:
     client, engine = _seed()
     created = _confirm_level_one_fighter(client)
-    character_id = created["character_id"]
+    character_id = UUID(created["character_id"])
     before_revision = _revision(engine, character_id)
 
-    draft = _complete_fighter_level_two(client, _start_level_up(client, character_id))
+    draft = _complete_fighter_level_two(client, _start_level_up(client, str(character_id)))
     confirmed = client.post(
         f"/api/character-builder/drafts/{draft['draft']['id']}/confirm"
     )
