@@ -10,6 +10,7 @@ import {
   mergeSessionSeatTruth,
   RoomSessionPage,
   roomSessionRouteFromPath,
+  SessionEventConnectionBanner,
 } from './RoomSessionPage'
 import { sessionCopy } from './sessionCopy'
 
@@ -79,6 +80,25 @@ describe('Session route and presentation', () => {
     expect(merged.find((item) => item.id === archivedParticipant.id)?.label).toBe('Archived Mira Seat')
   })
 
+  it('renders persistent reconnect and fatal connection status in both locales', () => {
+    for (const locale of ['zh-TW', 'en'] as const) {
+      const copy = sessionCopy(locale)
+      const reconnecting = renderToStaticMarkup(createElement(SessionEventConnectionBanner, {
+        status: 'reconnecting',
+        copy,
+      }))
+      const fatal = renderToStaticMarkup(createElement(SessionEventConnectionBanner, {
+        status: 'fatal',
+        copy,
+      }))
+
+      expect(reconnecting).toContain(copy.eventReconnecting)
+      expect(reconnecting).toContain('data-session-event-connection="reconnecting"')
+      expect(fatal).toContain(copy.eventDisconnected)
+      expect(fatal).toContain('data-session-event-connection="fatal"')
+    }
+  })
+
   it('keeps internal phase labels out of both locales', () => {
     for (const locale of ['zh-TW', 'en'] as const) {
       const rendered = JSON.stringify(sessionCopy(locale))
@@ -133,6 +153,7 @@ describe('Session route and presentation', () => {
     expect(source).toContain('startRoomHeartbeat')
     expect(source).toContain('heartbeatRoom(roomId, token)')
     expect(source.match(/getActiveSession\(roomId, campaignId, token\)/g) ?? []).toHaveLength(1)
+    expect(source).toContain('runSessionEventPoll({')
     expect(source).toContain('waitSessionEvents(')
     expect(source).toContain('applySessionEventPage(')
     expect(source).toContain('eventStreamFromResume(nextResume)')

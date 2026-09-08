@@ -33,6 +33,8 @@ const copy = {
     abandoned: '已放棄',
     currentDmHint: '只有本場固定的 current DM Controller 可以中途加入與正常結束 Session。',
     ownerAbandonHint: 'Room Owner 若不是本場 DM，只能 Abandon，不能接管或正常 End。',
+    eventReconnecting: 'Session 更新連線暫時中斷，正在重新連線…',
+    eventDisconnected: '已停止接收 Session 更新，請重新進入 Room 或重新整理頁面。',
     requestFailed: 'Session 操作失敗。',
   },
   en: {
@@ -65,6 +67,8 @@ const copy = {
     abandoned: 'Abandoned',
     currentDmHint: 'Only this Session’s fixed current DM Controller may Late Join or End it normally.',
     ownerAbandonHint: 'A Room Owner who is not the current DM may Abandon, but cannot take over or End normally.',
+    eventReconnecting: 'Session updates are temporarily disconnected. Reconnecting…',
+    eventDisconnected: 'Session updates have stopped. Re-enter the Room or refresh this page.',
     requestFailed: 'Session operation failed.',
   },
 } as const

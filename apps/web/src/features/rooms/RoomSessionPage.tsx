@@ -16,11 +16,15 @@ import { useLocale } from '../../i18n/LocaleProvider'
 import { startRoomHeartbeat } from './heartbeat'
 import { recentRoomForId } from './roomStorage'
 import {
+  runSessionEventPoll,
+  type SessionEventConnectionStatus,
+} from './sessionEventPoll'
+import {
   applySessionEventPage,
   eventStreamFromResume,
   type SessionEventStreamState,
 } from './sessionEventStream'
-import { sessionCopy, sessionErrorMessage } from './sessionCopy'
+import { sessionCopy, sessionErrorMessage, type SessionCopy } from './sessionCopy'
 import './rooms.css'
 
 const UUID_PATTERN = '[0-9a-fA-F-]{36}'
@@ -45,6 +49,26 @@ export function mergeSessionSeatTruth(
   return [...byId.values()]
 }
 
+export function SessionEventConnectionBanner({
+  status,
+  copy,
+}: {
+  status: SessionEventConnectionStatus
+  copy: SessionCopy
+}) {
+  if (status === 'connected') return null
+  const message = status === 'reconnecting' ? copy.eventReconnecting : copy.eventDisconnected
+  return (
+    <div
+      className="error-banner"
+      role={status === 'fatal' ? 'alert' : 'status'}
+      data-session-event-connection={status}
+    >
+      {message}
+    </div>
+  )
+}
+
 export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRoute) {
   const { locale } = useLocale()
   const copy = sessionCopy(locale)
@@ -56,6 +80,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   const [callerAccessSessionId, setCallerAccessSessionId] = useState<string | null>(null)
   const [characters, setCharacters] = useState<RoomCharacterSummary[]>([])
   const [eventStream, setEventStream] = useState<SessionEventStreamState | null>(null)
+  const [eventConnectionStatus, setEventConnectionStatus] = useState<SessionEventConnectionStatus>('connected')
   const [lateJoinSeatId, setLateJoinSeatId] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -121,39 +146,33 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   useEffect(() => {
     if (!recent || !eventStreamReady || snapshot?.status !== 'active') return
 
-    let active = true
-    let cursor = eventStream?.cursor ?? 0
     const controller = new AbortController()
+    setEventConnectionStatus('connected')
 
-    const poll = async () => {
-      while (active) {
-        try {
-          const page = await waitSessionEvents(
-            roomId,
-            campaignId,
-            sessionId,
-            cursor,
-            token,
-            { limit: 100, timeout: 30, signal: controller.signal },
-          )
-          if (!active) return
-          cursor = Math.max(cursor, page.cursor)
-          setEventStream((current) => current ? applySessionEventPage(current, page) : current)
-        } catch (cause) {
-          if (!active || (cause as { name?: string }).name === 'AbortError') return
-          setError(sessionErrorMessage(cause, copy))
-          return
-        }
-      }
-    }
+    void runSessionEventPoll({
+      initialCursor: eventStream?.cursor ?? 0,
+      signal: controller.signal,
+      wait: (cursor, signal) => waitSessionEvents(
+        roomId,
+        campaignId,
+        sessionId,
+        cursor,
+        token,
+        { limit: 100, timeout: 30, signal },
+      ),
+      onPage: (page) => {
+        setEventStream((current) => current ? applySessionEventPage(current, page) : current)
+      },
+      onStatus: setEventConnectionStatus,
+      onFatal: (cause) => setError(sessionErrorMessage(cause, copy)),
+    })
 
-    void poll()
     return () => {
-      active = false
       controller.abort()
     }
-    // Cursor progression is local to this long-poll loop; reducer state updates
-    // must not tear down/recreate the waiter on every event.
+    // Cursor progression is owned by the long-poll runner; reducer state updates
+    // must not tear down/recreate the waiter on every event. Reconnect also resumes
+    // from that cursor and never calls the full Session Resume endpoint.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, campaignId, sessionId, token, eventStreamReady, snapshot?.status])
 
@@ -243,6 +262,9 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
           </a>
         </div>
         {error ? <div className="error-banner">{error}</div> : null}
+        {snapshot.status === 'active' ? (
+          <SessionEventConnectionBanner status={eventConnectionStatus} copy={copy} />
+        ) : null}
 
         <h2>{copy.participants}</h2>
         <div className="workshop-list">
