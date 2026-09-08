@@ -38,6 +38,8 @@ def test_p2f_final_non_e2e_workflow_closes_postgres_and_standalone_gates() -> No
     assert "M03C_POSTGRES_URL:" in source
     assert "tests/test_m03c_migration.py" in source
     assert "tests/test_p2f_postgres_seat_selection.py" in source
+    # Seat/Roster lock ordering only misbehaves under real row locks.
+    assert "tests/test_postgres_roster_lock_order.py" in source
     assert "windows-standalone:" in source
     assert "github.ref_name == 'p2-f-full-integration-closeout'" in source
     assert "scripts\\build-standalone.cmd --version p2f-non-e2e" in source

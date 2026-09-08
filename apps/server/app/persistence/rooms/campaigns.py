@@ -113,6 +113,24 @@ class CampaignRepository:
         )
 
     @staticmethod
+    def _lock_campaign_seats(connection: Connection, *, campaign_id: UUID) -> None:
+        """Take the Seat locks before writing Roster rows.
+
+        Session Start locks campaign_seats first and campaign_roster_entries
+        second. Any Roster write that cascades into Seat selection has to take
+        the same two resources in the same order, or PostgreSQL deadlocks the
+        pair. Ordering matches Start's so the individual row locks are acquired
+        in a consistent sequence.
+        """
+
+        connection.execute(
+            select(campaign_seats.c.id)
+            .where(campaign_seats.c.campaign_id == campaign_id)
+            .order_by(campaign_seats.c.created_at, campaign_seats.c.id)
+            .with_for_update()
+        ).all()
+
+    @staticmethod
     def clear_character_seat_selections_in_transaction(
         connection: Connection,
         *,
@@ -314,7 +332,10 @@ class CampaignRepository:
         status: str,
     ) -> StoredRosterEntry | None:
         now = datetime.now(timezone.utc)
+        clears_seat_selection = status in {"retired", "dead"}
         with self.engine.begin() as connection:
+            if clears_seat_selection:
+                self._lock_campaign_seats(connection, campaign_id=campaign_id)
             result = connection.execute(
                 update(campaign_roster_entries)
                 .where(
@@ -325,7 +346,7 @@ class CampaignRepository:
             )
             if result.rowcount != 1:
                 return None
-            if status in {"retired", "dead"}:
+            if clears_seat_selection:
                 self._clear_seat_selection(
                     connection,
                     campaign_id=campaign_id,
@@ -358,6 +379,7 @@ class CampaignRepository:
     ) -> bool:
         now = datetime.now(timezone.utc)
         with self.engine.begin() as connection:
+            self._lock_campaign_seats(connection, campaign_id=campaign_id)
             result = connection.execute(
                 delete(campaign_roster_entries).where(
                     campaign_roster_entries.c.campaign_id == campaign_id,
