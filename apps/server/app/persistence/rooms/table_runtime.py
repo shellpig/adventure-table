@@ -136,6 +136,10 @@ class TableEventSessionNotActivePersistenceError(RuntimeError):
     pass
 
 
+class TableEventActorBindingStalePersistenceError(PermissionError):
+    pass
+
+
 @dataclass(frozen=True)
 class StoredTableRuntime:
     session_id: UUID
@@ -235,51 +239,57 @@ class TableEventRepository:
             query = query.with_for_update()
         return connection.execute(query).mappings().one_or_none()
 
-    def resolve_human_actor(
+    def _human_actor_from_connection(
         self,
+        connection,
         *,
         room_id: UUID,
         campaign_id: UUID,
         session_id: UUID,
         access_session_id: UUID,
+        session_row=None,
+        lock_access: bool = False,
     ) -> StoredTableActorBinding | None:
-        with self.engine.connect() as connection:
+        if session_row is None:
             session_row = self._session_scope_row(
                 connection,
                 room_id=room_id,
                 campaign_id=campaign_id,
                 session_id=session_id,
             )
-            if session_row is None:
-                return None
+        if session_row is None:
+            return None
 
-            access = connection.execute(
-                select(
-                    room_access_sessions.c.id,
-                    room_access_sessions.c.room_id,
-                    room_access_sessions.c.revoked_at,
-                ).where(room_access_sessions.c.id == access_session_id)
-            ).mappings().one_or_none()
-            if (
-                access is None
-                or access["room_id"] != room_id
-                or access["revoked_at"] is not None
-            ):
-                return None
+        access_query = select(
+            room_access_sessions.c.id,
+            room_access_sessions.c.room_id,
+            room_access_sessions.c.revoked_at,
+        ).where(room_access_sessions.c.id == access_session_id)
+        if lock_access:
+            access_query = access_query.with_for_update()
+        access = connection.execute(access_query).mappings().one_or_none()
+        if (
+            access is None
+            or access["room_id"] != room_id
+            or access["revoked_at"] is not None
+        ):
+            return None
 
-            participant_rows = connection.execute(
-                select(
-                    session_participants.c.seat_id,
-                    session_participants.c.role_snapshot,
-                    session_participants.c.controller_kind_at_join,
-                    session_participants.c.controller_access_session_id_at_join,
-                )
-                .where(
-                    session_participants.c.session_id == session_id,
-                    session_participants.c.left_at.is_(None),
-                )
-                .order_by(session_participants.c.joined_at, session_participants.c.id)
-            ).mappings().all()
+        participant_rows = connection.execute(
+            select(
+                session_participants.c.seat_id,
+                session_participants.c.role_snapshot,
+                session_participants.c.controller_kind_at_join,
+                session_participants.c.controller_access_session_id_at_join,
+                session_participants.c.joined_at,
+                session_participants.c.id,
+            )
+            .where(
+                session_participants.c.session_id == session_id,
+                session_participants.c.left_at.is_(None),
+            )
+            .order_by(session_participants.c.joined_at, session_participants.c.id)
+        ).mappings().all()
 
         controlled = tuple(
             row["seat_id"]
@@ -327,6 +337,23 @@ class TableEventRepository:
             is_current_dm=False,
             access_session_id=access_session_id,
         )
+
+    def resolve_human_actor(
+        self,
+        *,
+        room_id: UUID,
+        campaign_id: UUID,
+        session_id: UUID,
+        access_session_id: UUID,
+    ) -> StoredTableActorBinding | None:
+        with self.engine.connect() as connection:
+            return self._human_actor_from_connection(
+                connection,
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+                access_session_id=access_session_id,
+            )
 
     def actor_binding_is_current(self, binding: StoredTableActorBinding) -> bool:
         current = self.resolve_human_actor(
@@ -416,6 +443,7 @@ class TableEventRepository:
         payload_version: int,
         payload: dict[str, Any],
         idempotency_key: str | None,
+        expected_actor_binding: StoredTableActorBinding | None = None,
     ) -> StoredTableEvent:
         event_id = uuid4()
         with self.engine.begin() as connection:
@@ -428,6 +456,21 @@ class TableEventRepository:
             )
             if session_row is None:
                 raise TableEventSessionNotFoundPersistenceError(str(session_id))
+
+            if expected_actor_binding is not None:
+                current_actor = self._human_actor_from_connection(
+                    connection,
+                    room_id=room_id,
+                    campaign_id=campaign_id,
+                    session_id=session_id,
+                    access_session_id=expected_actor_binding.access_session_id,
+                    session_row=session_row,
+                    lock_access=True,
+                )
+                if current_actor != expected_actor_binding:
+                    raise TableEventActorBindingStalePersistenceError(
+                        "Table actor binding is no longer current"
+                    )
 
             if idempotency_key is not None:
                 existing = connection.execute(
@@ -498,6 +541,7 @@ __all__ = [
     "StoredTableActorBinding",
     "StoredTableEvent",
     "StoredTableRuntime",
+    "TableEventActorBindingStalePersistenceError",
     "TableEventRepository",
     "TableEventSessionNotActivePersistenceError",
     "TableEventSessionNotFoundPersistenceError",

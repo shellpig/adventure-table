@@ -13,6 +13,7 @@ from app.persistence.rooms.table_runtime import (
     MAX_EVENT_SCAN_LIMIT,
     StoredTableActorBinding,
     StoredTableEvent,
+    TableEventActorBindingStalePersistenceError,
     TableEventRepository,
     TableEventSessionNotActivePersistenceError,
     TableEventSessionNotFoundPersistenceError,
@@ -365,7 +366,7 @@ class TableEventService:
         actor: TableActorContext,
         request: TableEventAppend,
     ) -> TableEvent:
-        self.require_actor_current(actor)
+        binding = self._stored_binding(actor)
         if request.execution_mode is TableExecutionMode.SYSTEM:
             raise TableEventActorUnauthorizedError(
                 "Human/AI actor requests cannot claim system execution mode"
@@ -391,7 +392,10 @@ class TableEventService:
                 payload_version=request.payload_version,
                 payload=dict(dump["payload"]),
                 idempotency_key=request.idempotency_key,
+                expected_actor_binding=binding,
             )
+        except TableEventActorBindingStalePersistenceError as exc:
+            raise TableEventActorUnauthorizedError(str(exc)) from exc
         except TableEventSessionNotFoundPersistenceError as exc:
             raise TableEventNotFoundError(str(actor.session_id)) from exc
         except TableEventSessionNotActivePersistenceError as exc:
