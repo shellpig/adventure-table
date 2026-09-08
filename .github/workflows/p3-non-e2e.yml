@@ -2,6 +2,9 @@ name: P3 Non-E2E
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - p3-a-session-table-runtime-event-stream
 
 jobs:
   backend:
