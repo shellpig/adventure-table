@@ -10,7 +10,6 @@ on:
       - p2-d-seat-controller-lobby
       - p2-e-session-lifecycle-late-join
       - p2-f-full-integration-closeout
-      - m04-post-p2-defect-fixes
 
 jobs:
   backend:
@@ -83,7 +82,7 @@ jobs:
         run: npm run build
 
   windows-standalone:
-    if: github.event_name == 'workflow_dispatch' || github.ref_name == 'p2-f-full-integration-closeout' || github.ref_name == 'm04-post-p2-defect-fixes'
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == 'p2-f-full-integration-closeout'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
