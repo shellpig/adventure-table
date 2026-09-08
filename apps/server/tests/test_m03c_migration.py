@@ -38,6 +38,10 @@ def test_m03c_postgres_upgrade_downgrade_upgrade() -> None:
     assert "character_import_records" in tables
     assert "rooms" in tables
     assert "room_access_sessions" in tables
+    state_columns = {
+        column["name"] for column in inspect(engine).get_columns("character_states")
+    }
+    assert "state_revision" in state_columns
     with engine.connect() as connection:
         revisions = set(
             connection.execute(text("SELECT version_num FROM alembic_version")).scalars()
@@ -48,9 +52,17 @@ def test_m03c_postgres_upgrade_downgrade_upgrade() -> None:
     command.downgrade(config, "0007_m03b_builder_provenance")
     assert not inspect(engine).has_table("character_import_records")
     assert not inspect(engine).has_table("rooms")
+    downgraded_state_columns = {
+        column["name"] for column in inspect(engine).get_columns("character_states")
+    }
+    assert "state_revision" not in downgraded_state_columns
 
     command.upgrade(config, "heads")
     assert inspect(engine).has_table("character_import_records")
+    restored_state_columns = {
+        column["name"] for column in inspect(engine).get_columns("character_states")
+    }
+    assert "state_revision" in restored_state_columns
     with engine.connect() as connection:
         assert set(
             connection.execute(text("SELECT version_num FROM alembic_version")).scalars()

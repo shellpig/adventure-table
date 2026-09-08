@@ -160,7 +160,7 @@ def test_legacy_sheet_patch_is_translated_before_prepared_limit_validation() -> 
         "prepared_spell_entry_ids": ["wizard:magic-missile", "wizard:shield"]
     }
 
-    _canonicalize_prepared_patch(character, changes)
+    _canonicalize_prepared_patch(build, character.state, changes)
 
     assert changes["prepared_spell_entry_ids"] == []
     assert len(changes["prepared_spells"]) == 2

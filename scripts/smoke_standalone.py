@@ -50,21 +50,45 @@ def _assigned_strings(node: ast.stmt, name: str) -> set[str]:
 
 
 def _migration_head(repo_root: Path) -> str:
-    revisions: dict[str, tuple[str | None, set[str]]] = {}
+    revisions: dict[str, tuple[set[str], set[str]]] = {}
     for path in sorted((repo_root / "apps/server/alembic/versions").glob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         revision: str | None = None
-        down_revision: str | None = None
+        down_revisions: set[str] = set()
         branch_labels: set[str] = set()
         for node in tree.body:
             revision = _assigned_string(node, "revision") or revision
-            down_revision = _assigned_string(node, "down_revision") or down_revision
+            down_revisions = _assigned_strings(node, "down_revision") or down_revisions
             branch_labels = _assigned_strings(node, "branch_labels") or branch_labels
         if revision is not None:
-            revisions[revision] = (down_revision, branch_labels)
-    referenced = {down for down, _ in revisions.values() if down is not None}
+            revisions[revision] = (down_revisions, branch_labels)
+
+    referenced = {
+        down_revision
+        for down_revisions, _ in revisions.values()
+        for down_revision in down_revisions
+    }
     heads = sorted(set(revisions) - referenced)
-    character_heads = [head for head in heads if "character" in revisions[head][1]]
+
+    def inherits_label(revision_id: str, label: str) -> bool:
+        pending = [revision_id]
+        visited: set[str] = set()
+        while pending:
+            current = pending.pop()
+            if current in visited:
+                continue
+            visited.add(current)
+            down_revisions, labels = revisions[current]
+            if label in labels:
+                return True
+            pending.extend(
+                down_revision
+                for down_revision in down_revisions
+                if down_revision in revisions
+            )
+        return False
+
+    character_heads = [head for head in heads if inherits_label(head, "character")]
     if len(character_heads) != 1:
         raise RuntimeError(
             f"expected one Character Alembic head, found {character_heads}; all heads={heads}"
