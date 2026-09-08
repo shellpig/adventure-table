@@ -54,6 +54,10 @@ async function createCampaignWithFixture(
 
   if (!options.withSeats) return { campaign }
 
+  // Seat/Lobby writes are only legal for the Room's currently selected active
+  // Campaign. Select this Campaign for the setup, then the test may switch the
+  // Room selection again to exercise cross-Campaign live-session behavior.
+  await json(await request.post(`/api/rooms/${roomId}/campaigns/${campaign.id}/select`))
   const dmSeat = await json<Seat>(await request.post(
     `/api/rooms/${roomId}/campaigns/${campaign.id}/seats`,
     { data: { role: 'dm', label: `${name} DM` } },
@@ -64,10 +68,7 @@ async function createCampaignWithFixture(
   ))
   const lobby = await json<Lobby>(await request.get(
     `/api/rooms/${roomId}/campaigns/${campaign.id}/lobby`,
-  ).catch(async () => {
-    await json(await request.post(`/api/rooms/${roomId}/campaigns/${campaign.id}/select`))
-    return request.get(`/api/rooms/${roomId}/campaigns/${campaign.id}/lobby`)
-  }))
+  ))
   expect(lobby.caller_access_session_id).not.toBeNull()
   await json(await request.patch(
     `/api/rooms/${roomId}/campaigns/${campaign.id}/seats/${dmSeat.id}/controller`,
