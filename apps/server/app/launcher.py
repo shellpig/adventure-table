@@ -102,6 +102,7 @@ def run_migrations() -> None:
 
     config = Config(str(config_path))
     config.set_main_option("sqlalchemy.url", database_url)
+    config.attributes["target_database_url"] = database_url
     config.set_main_option("script_location", str(script_location))
     try:
         command.upgrade(config, "character@head")

@@ -15,13 +15,27 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", resolve_database_url())
+
+def _target_database_url() -> str:
+    """Resolve which database this run migrates.
+
+    `alembic.ini` always carries a URL, so a caller that only rewrites
+    `sqlalchemy.url` cannot be told apart from the file default — and used to be
+    silently overridden by the shared resolver, migrating a different database
+    than the caller asked for. Callers that own their own URL declare it here.
+    """
+
+    override = config.attributes.get("target_database_url")
+    return str(override) if override else resolve_database_url()
+
+
+config.set_main_option("sqlalchemy.url", _target_database_url())
 target_metadata = metadata
 
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=resolve_database_url(),
+        url=_target_database_url(),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},

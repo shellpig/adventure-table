@@ -21,12 +21,14 @@ SERVER_ROOT = Path(__file__).resolve().parents[1]
 def _alembic_config() -> Config:
     config = Config(str(SERVER_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(SERVER_ROOT / "alembic"))
+    assert POSTGRES_URL is not None
+    config.set_main_option("sqlalchemy.url", POSTGRES_URL)
+    config.attributes["target_database_url"] = POSTGRES_URL
     return config
 
 
 def test_m03c_postgres_upgrade_downgrade_upgrade() -> None:
     assert POSTGRES_URL is not None
-    assert os.environ.get("DATABASE_URL") == POSTGRES_URL
     config = _alembic_config()
     engine = create_engine(POSTGRES_URL)
     expected_heads = set(ScriptDirectory.from_config(config).get_heads())
