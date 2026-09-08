@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from time import sleep
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
@@ -19,6 +20,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import OperationalError
 
 from app.content.registry import ContentRegistry
 from app.db import metadata
@@ -38,6 +40,8 @@ from app.domain.character_builder.versions import (
 
 
 json_payload_type = JSON().with_variant(JSONB(), "postgresql")
+DEFAULT_BUILD_RECONCILIATION_ATTEMPTS = 4
+DEFAULT_BUILD_RECONCILIATION_RETRY_DELAY_SECONDS = 0.005
 
 characters = Table(
     "characters",
@@ -138,6 +142,28 @@ class StateReconciliationBlockedError(RuntimeError):
         )
         super().__init__(message)
         self.preview = preview
+
+
+def _supports_build_reconciliation_retry(engine: object) -> bool:
+    """Only a real Engine owns transactions this repository may restart."""
+
+    return isinstance(engine, Engine)
+
+
+def _is_retryable_sqlite_busy(engine: object, exc: OperationalError) -> bool:
+    if not isinstance(engine, Engine) or engine.dialect.name != "sqlite":
+        return False
+    message = str(exc).lower()
+    return any(
+        marker in message
+        for marker in (
+            "database is locked",
+            "database table is locked",
+            "database is busy",
+            "sqlite_busy",
+            "sqlite_busy_snapshot",
+        )
+    )
 
 
 class CharacterRepository:
@@ -314,12 +340,13 @@ class CharacterRepository:
         version_kind: CharacterVersionKind,
         change_note: str | None = None,
     ) -> tuple[PersistedCharacter, StateReconciliationPreview]:
-        """Atomically append one immutable Build version and reconcile live state.
+        """Atomically append one Build version and reconcile the latest live State.
 
-        The stale-base check intentionally happens inside this transaction, after
-        the draft and character rows are locked. This is the authority boundary
-        that prevents two drafts based on the same version from overwriting each
-        other.
+        Each retry starts a fresh transaction and re-reads Draft, Build, State and
+        ``state_revision`` before recomputing reconciliation. The State write is a
+        CAS. A concurrent State PATCH therefore rolls back the whole Confirm
+        attempt (including Version/current-version/draft writes) and retries from
+        fresh data instead of replaying a stale reconciliation candidate.
         """
 
         from app.persistence.builder_drafts import (
@@ -336,151 +363,193 @@ class CharacterRepository:
             raise ValueError(f"invalid versioned builder kind: {version_kind.value}")
         validate_build_references(new_build, self.registry)
 
-        created_character_id: UUID | None = None
-        preview: StateReconciliationPreview | None = None
-        with self.engine.begin() as connection:
-            draft_row = connection.execute(
-                select(
-                    character_build_drafts.c.id,
-                    character_build_drafts.c.mode,
-                    character_build_drafts.c.character_id,
-                    character_build_drafts.c.base_version_id,
-                    character_build_drafts.c.revision,
-                    character_build_drafts.c.draft_payload,
-                    character_build_drafts.c.confirmed_character_id,
-                    character_build_drafts.c.confirmed_version_id,
-                )
-                .where(character_build_drafts.c.id == draft_id)
-                .with_for_update()
-            ).mappings().one_or_none()
-            if draft_row is None:
-                raise BuilderDraftNotFoundError(str(draft_id))
-            if draft_row["confirmed_character_id"] is not None:
-                existing = self.load_character(draft_row["confirmed_character_id"])
-                # The state is not mutated on idempotent replay, but the caller's
-                # response still needs a valid preview shape.
-                current_preview = reconcile_character_state(
-                    existing.build,
-                    existing.state,
-                    existing.build,
-                    self.registry,
-                )
-                return existing, current_preview
+        attempts = (
+            DEFAULT_BUILD_RECONCILIATION_ATTEMPTS
+            if _supports_build_reconciliation_retry(self.engine)
+            else 1
+        )
+        for attempt in range(attempts):
+            created_character_id: UUID | None = None
+            preview: StateReconciliationPreview | None = None
+            try:
+                with self.engine.begin() as connection:
+                    draft_row = connection.execute(
+                        select(
+                            character_build_drafts.c.id,
+                            character_build_drafts.c.mode,
+                            character_build_drafts.c.character_id,
+                            character_build_drafts.c.base_version_id,
+                            character_build_drafts.c.revision,
+                            character_build_drafts.c.draft_payload,
+                            character_build_drafts.c.confirmed_character_id,
+                            character_build_drafts.c.confirmed_version_id,
+                        )
+                        .where(character_build_drafts.c.id == draft_id)
+                        .with_for_update()
+                    ).mappings().one_or_none()
+                    if draft_row is None:
+                        raise BuilderDraftNotFoundError(str(draft_id))
+                    if draft_row["confirmed_character_id"] is not None:
+                        existing = self.load_character(draft_row["confirmed_character_id"])
+                        current_preview = reconcile_character_state(
+                            existing.build,
+                            existing.state,
+                            existing.build,
+                            self.registry,
+                        )
+                        return existing, current_preview
 
-            actual_revision = int(draft_row["revision"])
-            if actual_revision != expected_revision:
-                raise BuilderDraftRevisionConflictError(
-                    draft_id, expected_revision, actual_revision
-                )
-            builder_provenance = BuilderDraftPayload.model_validate(
-                draft_row["draft_payload"]
-            ).model_dump(mode="json")
-            character_id = draft_row["character_id"]
-            base_version_id = draft_row["base_version_id"]
-            if character_id is None or base_version_id is None:
-                raise ValueError("versioned builder draft requires character_id and base_version_id")
+                    actual_revision = int(draft_row["revision"])
+                    if actual_revision != expected_revision:
+                        raise BuilderDraftRevisionConflictError(
+                            draft_id, expected_revision, actual_revision
+                        )
+                    builder_provenance = BuilderDraftPayload.model_validate(
+                        draft_row["draft_payload"]
+                    ).model_dump(mode="json")
+                    character_id = draft_row["character_id"]
+                    base_version_id = draft_row["base_version_id"]
+                    if character_id is None or base_version_id is None:
+                        raise ValueError(
+                            "versioned builder draft requires character_id and base_version_id"
+                        )
 
-            current_row = connection.execute(
-                select(
-                    characters.c.current_version_id,
-                    characters.c.archived_at,
-                    character_states.c.state_payload,
-                )
-                .join(character_states, character_states.c.character_id == characters.c.id)
-                .where(characters.c.id == character_id)
-                .with_for_update()
-            ).mappings().one_or_none()
-            if current_row is None or current_row["current_version_id"] is None:
-                raise CharacterNotFoundError(str(character_id))
-            # Archiving does not cancel an open draft, so the draft survives and
-            # this is where it is stopped: the character is out of play, and
-            # confirming would append a version and reconcile live state.
-            if current_row["archived_at"] is not None:
-                raise CharacterArchivedError(str(character_id))
-            actual_version_id = current_row["current_version_id"]
-            if actual_version_id != base_version_id:
-                raise StaleBuildVersionError(
-                    character_id,
-                    base_version_id,
-                    actual_version_id,
-                )
+                    current_row = connection.execute(
+                        select(
+                            characters.c.current_version_id,
+                            characters.c.archived_at,
+                            character_states.c.state_payload,
+                            character_states.c.state_revision,
+                        )
+                        .join(
+                            character_states,
+                            character_states.c.character_id == characters.c.id,
+                        )
+                        .where(characters.c.id == character_id)
+                        .with_for_update()
+                    ).mappings().one_or_none()
+                    if current_row is None or current_row["current_version_id"] is None:
+                        raise CharacterNotFoundError(str(character_id))
+                    if current_row["archived_at"] is not None:
+                        raise CharacterArchivedError(str(character_id))
+                    actual_version_id = current_row["current_version_id"]
+                    if actual_version_id != base_version_id:
+                        raise StaleBuildVersionError(
+                            character_id,
+                            base_version_id,
+                            actual_version_id,
+                        )
 
-            base_row = connection.execute(
-                select(
-                    character_versions.c.version_no,
-                    character_versions.c.build_payload,
-                )
-                .where(
-                    character_versions.c.id == base_version_id,
-                    character_versions.c.character_id == character_id,
-                )
-                .with_for_update()
-            ).mappings().one_or_none()
-            if base_row is None:
-                raise CharacterVersionNotFoundError(str(base_version_id))
+                    base_row = connection.execute(
+                        select(
+                            character_versions.c.version_no,
+                            character_versions.c.build_payload,
+                        )
+                        .where(
+                            character_versions.c.id == base_version_id,
+                            character_versions.c.character_id == character_id,
+                        )
+                        .with_for_update()
+                    ).mappings().one_or_none()
+                    if base_row is None:
+                        raise CharacterVersionNotFoundError(str(base_version_id))
 
-            old_build = CharacterBuild.model_validate(base_row["build_payload"])
-            old_state = CharacterState.model_validate(current_row["state_payload"])
-            preview = reconcile_character_state(
-                old_build,
-                old_state,
-                new_build,
-                self.registry,
+                    old_build = CharacterBuild.model_validate(base_row["build_payload"])
+                    old_state = CharacterState.model_validate(current_row["state_payload"])
+                    read_state_revision = int(current_row["state_revision"])
+                    preview = reconcile_character_state(
+                        old_build,
+                        old_state,
+                        new_build,
+                        self.registry,
+                    )
+                    if not preview.can_apply:
+                        raise StateReconciliationBlockedError(preview)
+                    validate_state_against_build(
+                        preview.proposed_state,
+                        new_build,
+                        self.registry,
+                    )
+
+                    new_version_id = uuid4()
+                    new_version_no = int(base_row["version_no"]) + 1
+                    connection.execute(
+                        insert(character_versions).values(
+                            id=new_version_id,
+                            character_id=character_id,
+                            version_no=new_version_no,
+                            build_payload=new_build.model_dump(mode="json"),
+                            builder_provenance=builder_provenance,
+                            version_kind=version_kind.value,
+                            parent_version_id=base_version_id,
+                            superseded_by_version_id=None,
+                            change_note=change_note,
+                        )
+                    )
+                    if version_kind is CharacterVersionKind.CORRECTION:
+                        connection.execute(
+                            update(character_versions)
+                            .where(character_versions.c.id == base_version_id)
+                            .values(superseded_by_version_id=new_version_id)
+                        )
+                    connection.execute(
+                        update(characters)
+                        .where(characters.c.id == character_id)
+                        .values(
+                            current_version_id=new_version_id,
+                            updated_at=func.now(),
+                        )
+                    )
+                    state_result = connection.execute(
+                        update(character_states)
+                        .where(
+                            character_states.c.character_id == character_id,
+                            character_states.c.state_revision == read_state_revision,
+                        )
+                        .values(
+                            state_payload=preview.proposed_state.model_dump(mode="json"),
+                            state_revision=read_state_revision + 1,
+                            updated_at=func.now(),
+                        )
+                    )
+                    if state_result.rowcount != 1:
+                        raise StateWriteConflictError(
+                            character_id,
+                            read_state_revision,
+                        )
+                    connection.execute(
+                        update(character_build_drafts)
+                        .where(character_build_drafts.c.id == draft_id)
+                        .values(
+                            confirmed_character_id=character_id,
+                            confirmed_version_id=new_version_id,
+                            confirmed_at=func.now(),
+                            updated_at=func.now(),
+                        )
+                    )
+                    created_character_id = character_id
+            except StateWriteConflictError:
+                if attempt + 1 >= attempts:
+                    raise
+            except OperationalError as exc:
+                if (
+                    not _is_retryable_sqlite_busy(self.engine, exc)
+                    or attempt + 1 >= attempts
+                ):
+                    raise
+            else:
+                if created_character_id is None or preview is None:
+                    raise RuntimeError(
+                        "version confirmation completed without a result"
+                    )
+                return self.load_character(created_character_id), preview
+
+            sleep(
+                DEFAULT_BUILD_RECONCILIATION_RETRY_DELAY_SECONDS
+                * (attempt + 1)
             )
-            if not preview.can_apply:
-                raise StateReconciliationBlockedError(preview)
-            validate_state_against_build(preview.proposed_state, new_build, self.registry)
 
-            new_version_id = uuid4()
-            new_version_no = int(base_row["version_no"]) + 1
-            connection.execute(
-                insert(character_versions).values(
-                    id=new_version_id,
-                    character_id=character_id,
-                    version_no=new_version_no,
-                    build_payload=new_build.model_dump(mode="json"),
-                    builder_provenance=builder_provenance,
-                    version_kind=version_kind.value,
-                    parent_version_id=base_version_id,
-                    superseded_by_version_id=None,
-                    change_note=change_note,
-                )
-            )
-            if version_kind is CharacterVersionKind.CORRECTION:
-                connection.execute(
-                    update(character_versions)
-                    .where(character_versions.c.id == base_version_id)
-                    .values(superseded_by_version_id=new_version_id)
-                )
-            connection.execute(
-                update(characters)
-                .where(characters.c.id == character_id)
-                .values(current_version_id=new_version_id, updated_at=func.now())
-            )
-            connection.execute(
-                update(character_states)
-                .where(character_states.c.character_id == character_id)
-                .values(
-                    state_payload=preview.proposed_state.model_dump(mode="json"),
-                    state_revision=character_states.c.state_revision + 1,
-                    updated_at=func.now(),
-                )
-            )
-            connection.execute(
-                update(character_build_drafts)
-                .where(character_build_drafts.c.id == draft_id)
-                .values(
-                    confirmed_character_id=character_id,
-                    confirmed_version_id=new_version_id,
-                    confirmed_at=func.now(),
-                    updated_at=func.now(),
-                )
-            )
-            created_character_id = character_id
-
-        if created_character_id is None or preview is None:
-            raise RuntimeError("version confirmation completed without a result")
-        return self.load_character(created_character_id), preview
+        raise RuntimeError("build reconciliation retry loop exhausted without a result")
 
     def list_characters(self, *, archived: bool = False) -> tuple[PersistedCharacter, ...]:
         """List active characters, or archived ones when asked.
@@ -533,10 +602,6 @@ class CharacterRepository:
                 raise CharacterNotFoundError(str(character_id))
             if row["archived_at"] is None:
                 raise CharacterNotArchivedError(str(character_id))
-            # Deleted explicitly rather than left to ON DELETE CASCADE: SQLite
-            # does not enforce foreign keys unless the pragma is on, so relying
-            # on the cascade would leave orphan rows in tests while looking
-            # correct against PostgreSQL.
             connection.execute(
                 character_states.delete().where(
                     character_states.c.character_id == character_id
@@ -683,8 +748,6 @@ class CharacterRepository:
         *,
         expected_current_version_id: UUID | None = None,
     ) -> PersistedCharacter:
-        # Keep the P0 call shape compatible while making every repository state
-        # write pass through the same version-locked transaction used by the API.
         if expected_current_version_id is None:
             expected_current_version_id = self.load_character(
                 character_id
