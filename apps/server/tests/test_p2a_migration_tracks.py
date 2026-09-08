@@ -81,6 +81,7 @@ def test_p2a_character_head_ancestry_never_reaches_web_track() -> None:
     web_head = _track_head(scripts, P2A_WEB_ROOT)
     character_ancestry = _ancestry(scripts, character_head)
     web_ancestry = _ancestry(scripts, web_head)
+    branch_ancestry = _ancestry(scripts, BRANCH_POINT)
     character_track = _track_revisions(
         scripts,
         head=character_head,
@@ -94,11 +95,11 @@ def test_p2a_character_head_ancestry_never_reaches_web_track() -> None:
 
     assert BRANCH_POINT in character_ancestry
     assert BRANCH_POINT in web_ancestry
+    assert character_ancestry & web_ancestry == branch_ancestry
     assert CHARACTER_ROOT in character_track
     assert P2A_WEB_ROOT in web_track
     assert P2A_WEB_ROOT not in character_ancestry
     assert CHARACTER_ROOT not in web_ancestry
-    assert character_track.isdisjoint(web_track)
 
 
 def test_p2a_split_has_no_cross_track_dependency_or_merge() -> None:
