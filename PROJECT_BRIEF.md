@@ -18,7 +18,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## 當前狀態與下一步
 
-**P0、P1、P2、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正；尚未開始 coding，下一步是 P3-A。**
+**P0、P1、P2、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正與 event audience／private visibility 決策定案；尚未開始 coding，下一步是 P3-A。**
 
 P2 已交付並必須繼續維持的核心方向：
 
@@ -43,6 +43,8 @@ P3 已拍板並寫入正式文件的核心方向：
 - **P3-D pre-session AI DM grant不是永久 bearer**：`session_id=NULL` 時必須有有限TTL，只能讀自己DM Seat/Campaign的最小Start context與呼Start；Seat controller變更/rotate/archive/delete、Campaign離開Start-eligible active、Room active Campaign切離、Owner revoke或TTL到期都使未綁grant失效。Start成功後才轉為該Session固定DM credential。
 - **Player `Take Back Control`只認原handoff Human access session**：`Let AI Control`會保存`handoff_return_access_session_id`；其他Room member、相同display name或重新進Room得到的新access session都不能self-service Take Back。P2目前沒有跨裝置持久Human identity；原access session遺失/revoked時，改走Owner/DM既有Player Seat administrative reassignment，並原子revoke AI grant + 前進Seat epoch + audit。
 - **P3-D必須演進P2 controller binding schema**：新的web migration為Seat加入current AI grant + `controller_epoch`，Session fixed DM snapshot、Participant join snapshot加入AI grant + generation，並drop/re-add `ck_campaign_seats_controller_binding`、`ck_sessions_dm_controller_binding`、`ck_session_participants_controller_binding`；不得回頭改歷史`0013` / `0014`。
+- **Seat private event的讀者已定案為「該Seat current controller + current DM」**：P3只有Whisper DM、不做player-to-player private message，DM是每條私密流量的另一端，不得讓private event變成連DM都讀不到的孤兒event。
+- **私密event可見範圍以Seat controller epoch為界**：每個Seat有persisted private visibility floor，Human→AI handoff、AI rotate與administrative reassignment設新floor，接手者讀不到交接前的Whisper DM與Seat private歷史；self-service `Take Back Control`還原handoff前的floor（發起者本來就是交接前那個access session）。floor只擋private面，public event / Stage / pending action / roll / Character Current State一律不受影響。
 - **P3 event不是P7完整Timeline**：P3只保存當場玩法、pending與reconnect需要的durable truth；跨Session history browser / search / Snapshot / Restore仍留P7。
 
 下一步依序為：
@@ -198,10 +200,10 @@ P3 的正式契約：
 
 | Subphase | 狀態 | 重點 |
 |---|---|---|
-| **P3-A — Session Table Runtime & Event Stream** | ⬜ | durable per-Session runtime、ordered event cursor、Server-side audience filter、initial Resume + incremental sync、restart persistence、async/no-DB-hold event wait與waiter starvation gate、避免P2 Resume N+1變高頻同步 |
+| **P3-A — Session Table Runtime & Event Stream** | ⬜ | durable per-Session runtime、ordered event cursor、Server-side audience filter（SEAT_PRIVATE含current DM）、controller-epoch private visibility floor、initial Resume + incremental sync、restart persistence、async/no-DB-hold event wait與waiter starvation gate、避免P2 Resume N+1變高頻同步 |
 | **P3-B — Exploration, Chat & Actions** | ⬜ | Main Stage text/image、最小Room-scoped Stage upload、Dialogue / Action / OOC / Whisper DM / Narration、Stage與Chat分離、不建立Scene/Asset Library |
 | **P3-C — Roll, Check & PendingAction** | ⬜ | RollGroup / RollRequest / Result、Server RNG、Group / Secret / physical / quick roll、PendingAction、formal roll idempotency、actor-neutral Character State + event atomic boundary；AI resolver留P3-D接線 |
-| **P3-D — AI Controller, Scoped Token & Handoff** | ⬜ | typed TableActorContext、P2 Human-only Session/live-write授權入口migration、hashed scoped AI Join Token、Seat current grant + controller_epoch SSOT、Session/Participant grant-generation snapshots與三條CHECK migration、finite-TTL pre-session AI DM grant、origin-only Take Back + Owner/DM admin recovery、Player Human ↔ AI handoff、AI DM可作新Session固定DM Controller |
+| **P3-D — AI Controller, Scoped Token & Handoff** | ⬜ | typed TableActorContext、P2 Human-only Session/live-write授權入口migration、controller epoch + private visibility floor維護、hashed scoped AI Join Token、Seat current grant + controller_epoch SSOT、Session/Participant grant-generation snapshots與三條CHECK migration、finite-TTL pre-session AI DM grant、origin-only Take Back + Owner/DM admin recovery、Player Human ↔ AI handoff、AI DM可作新Session固定DM Controller |
 | **P3-E — AI Tool Surface & Event Delivery** | ⬜ | MCP `2026-07-28` stateless Streamable HTTP入口、shared application services、structured tools/errors、`get_pending_events` / `wait_for_event`沿用P3-A async wait、真external MCP client gate |
 | **P3-F — Full P3 Integration & Closeout** | ⬜ | Human/AI Exploration journeys、secret/group roll、Late Join、AI handoff、AI DM、grant TTL/epoch/Take Back authorization、restart、cross-scope matrix、PostgreSQL concurrency、waiter resource safety、P2 caller regression、standalone / bilingual / full regression closeout |
 
@@ -215,6 +217,7 @@ P3 的正式契約：
 - **P3 controller persistence的current authority在Seat，不在grant row**：新的web migration讓Seat保存current AI grant id + non-null monotonic `controller_epoch`；grant `generation`、Session fixed DM generation、Participant join generation只做snapshot。每個AI request都必須重驗Seat current grant binding + epoch/generation，歷史`0013` / `0014`不可改寫。
 - **P3 pre-session AI DM grant必須有限期且受Seat/Campaign lifecycle約束**：未綁Session時只可minimal pre-session context + Start；TTL、Seat controller變更/rotate/archive/delete、Campaign離開Start-eligible active、Room active Campaign切離或Owner revoke都會使其失效。成功Start後才進Session lifecycle，End/Abandon再原子revoke。
 - **P3 Take Back不假裝有跨裝置Human account identity**：self-service只接受原`Let AI Control`保存的exact `handoff_return_access_session_id`。同Room member、相同display name、新access session都不是可信同一人；原session遺失時由Owner/DM administrative reassignment恢復Player Seat並原子revoke AI + 前進epoch + audit。
+- **Seat private event可見性是產品契約，不是實作細節**：SEAT_PRIVATE的讀者固定為該Seat current controller + current DM；私密event另受Seat controller epoch的private visibility floor約束，交接後的新controller讀不到交接前的private歷史，但public桌面現況一律照給。self-service Take Back還原舊floor，administrative reassignment不還原。
 - **P3 event wait是資源correctness contract**：HTTP wait為async；await期間不持有DB connection / transaction、不長期占sync worker；wake / timeout後以DB cursor recheck，並以受限pool下多waiter不starve一般DB request作自動證據。
 - **P3 durable event不等於P7完整Timeline**：P3只為當場play/reconnect保留canonical event/message/roll/action；cross-Session timeline browser、history search、Snapshot / Restore與broader export仍由P7設計。
 - **AI transport與game logic分離**：P3至少正式交付一條MCP入口，但Human UI / MCP / future Site Tools共用同一application/domain service；網站本身不接LLM API，不保存外部模型API key。
