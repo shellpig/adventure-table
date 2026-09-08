@@ -228,3 +228,25 @@ def test_p3a_migration_backfills_zero_runtime_for_existing_p2_session() -> None:
         assert runtime.last_event_seq == 0
     finally:
         engine.dispose()
+
+
+def test_p3a_migration_matches_metadata_jsonb_payload_types(postgres_engine: Engine) -> None:
+    with postgres_engine.connect() as connection:
+        column_types = dict(
+            connection.execute(
+                text(
+                    """
+                    SELECT column_name, data_type
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                      AND table_name = 'session_events'
+                      AND column_name IN ('recipient_seat_ids', 'payload')
+                    """
+                )
+            ).all()
+        )
+
+    assert column_types == {
+        "payload": "jsonb",
+        "recipient_seat_ids": "jsonb",
+    }

@@ -8,12 +8,15 @@ from __future__ import annotations
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision = "0016_p3a_table_runtime_events"
 down_revision = "0014_p2e_sessions"
 branch_labels = None
 depends_on = None
+
+json_payload_type = sa.JSON().with_variant(postgresql.JSONB(), "postgresql")
 
 
 def upgrade() -> None:
@@ -82,12 +85,12 @@ def upgrade() -> None:
         sa.Column("visibility", sa.String(length=24), nullable=False),
         sa.Column(
             "recipient_seat_ids",
-            sa.JSON(),
+            json_payload_type,
             nullable=False,
             server_default=sa.text("'[]'"),
         ),
         sa.Column("payload_version", sa.Integer(), nullable=False, server_default="1"),
-        sa.Column("payload", sa.JSON(), nullable=False),
+        sa.Column("payload", json_payload_type, nullable=False),
         sa.Column("idempotency_key", sa.String(length=160), nullable=True),
         sa.Column(
             "created_at",
