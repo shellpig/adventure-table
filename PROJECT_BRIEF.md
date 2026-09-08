@@ -18,7 +18,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## 當前狀態與下一步
 
-**P0、P1、P2、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，尚未開始 coding；下一步是 P3-A。**
+**P0、P1、P2、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正；尚未開始 coding，下一步是 P3-A。**
 
 P2 已交付並必須繼續維持的核心方向：
 
@@ -34,14 +34,17 @@ P3 已拍板並寫入正式文件的核心方向：
 
 - **P3 只做 Exploration + Roll + AI**：Quick Combat留P4、Adventure Runtime留P6、完整Timeline / Snapshot留P7。
 - **P3 session runtime / event 必須 durable**：reload、Human / AI reconnect、server restart後可由canonical state + cursor恢復；不依賴舊browser或AI conversation memory。
+- **Event wait必須是非阻塞 async path**：等待期間不持有SQLAlchemy connection / transaction，不把整段30–60秒timeout佔在sync worker；process-local notifier只負責wake，DB cursor仍是canonical truth，並要有並發waiter不餓死一般DB request的測試。
 - **Main Stage只做最小Room-scoped image + text**：不提前建立Asset Library / Scene / Adventure entity。
 - **AI至少交付一條真實可用MCP入口**：底層application service保持transport-neutral；Human UI與AI Tool共用permission / roll / state logic。
+- **P3 gameplay caller統一成typed `TableActorContext`／等價 actor abstraction**：Human以`access_session_id`識別，AI以`grant_id + generation`識別；AI不偽造`RoomAccessAuthority`。P3-C新service先保持actor-neutral，P3-D正式把P2 Human-only Session / live Character authorization入口演進成Human/AI共用。
 - **Player支援Human ↔ AI控制權交接；DM整場固定controller**。P3新增AI DM作為一場新Session的起始DM Controller，但不支援Session中途Human ↔ AI DM handoff。
+- **P3-D必須演進P2 controller binding schema**：新的web migration為Seat current controller、Session fixed DM snapshot、Participant join snapshot加入AI grant + generation，並drop/re-add `ck_campaign_seats_controller_binding`、`ck_sessions_dm_controller_binding`、`ck_session_participants_controller_binding`；不得回頭改歷史`0013` / `0014`。
 - **P3 event不是P7完整Timeline**：P3只保存當場玩法、pending與reconnect需要的durable truth；跨Session history browser / search / Snapshot / Restore仍留P7。
 
 下一步依序為：
 
-1. **實作 P3-A — Session Table Runtime & Event Stream**；先建立 durable ordered event / runtime substrate、visibility projection、incremental cursor與restart evidence，不先做Chat / Roll / AI token。
+1. **實作 P3-A — Session Table Runtime & Event Stream**；先建立 durable ordered event / runtime substrate、visibility projection、incremental cursor、restart evidence與async/no-DB-hold wait path，不先做Chat / Roll / AI token。
 2. 之後依固定順序完成 P3-B → P3-C → P3-D → P3-E → P3-F；每個Subphase都依三份P3正式文件獨立實作、驗證與closeout。
 3. P4～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
 
@@ -96,7 +99,7 @@ P3 的正式契約：
 | M02 | Traditional Chinese / English Localization | 插於 M01-C 與 M01-D 間；雙語呈現、翻譯流程與完整性 gate；已關門 |
 | M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，E.9 乾淨 Windows 11 冷啟動已於 2026-09-06 補驗完成 |
 | P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**A～F 全數關門，Phase 已關門** |
-| P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌；**A～F正式文件已完成，尚未實作，下一步P3-A** |
+| P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌；**A～F正式文件與preflight blocker修正已完成，尚未實作，下一步P3-A** |
 | P4 | Quick Combat | 第一個完整可玩的 Combat MVP；首個 Subphase P4-A 承接 SRD Monster／Beast stat blocks |
 | P5 | Tactical Combat | 同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE 與空間系統 |
 | P6 | Adventure + AI DM Runtime | Adventure Definition／Importer、Campaign Runtime、世界資料、AI DM context／write-back |
@@ -192,12 +195,12 @@ P3 的正式契約：
 
 | Subphase | 狀態 | 重點 |
 |---|---|---|
-| **P3-A — Session Table Runtime & Event Stream** | ⬜ | durable per-Session runtime、ordered event cursor、Server-side audience filter、initial Resume + incremental sync、restart persistence、避免P2 Resume N+1變高頻同步 |
+| **P3-A — Session Table Runtime & Event Stream** | ⬜ | durable per-Session runtime、ordered event cursor、Server-side audience filter、initial Resume + incremental sync、restart persistence、async/no-DB-hold event wait與waiter starvation gate、避免P2 Resume N+1變高頻同步 |
 | **P3-B — Exploration, Chat & Actions** | ⬜ | Main Stage text/image、最小Room-scoped Stage upload、Dialogue / Action / OOC / Whisper DM / Narration、Stage與Chat分離、不建立Scene/Asset Library |
-| **P3-C — Roll, Check & PendingAction** | ⬜ | RollGroup / RollRequest / Result、Server RNG、Group / Secret / physical / quick roll、PendingAction、formal roll idempotency、Character State + event atomic boundary |
-| **P3-D — AI Controller, Scoped Token & Handoff** | ⬜ | Human / AI / None controller、hashed scoped AI Join Token、Player Human ↔ AI handoff與generation revoke、AI DM可作新Session固定DM Controller |
-| **P3-E — AI Tool Surface & Event Delivery** | ⬜ | MCP `2026-07-28` stateless Streamable HTTP入口、shared application services、structured tools/errors、`get_pending_events` / `wait_for_event`、真external MCP client gate |
-| **P3-F — Full P3 Integration & Closeout** | ⬜ | Human/AI Exploration journeys、secret/group roll、Late Join、AI handoff、AI DM、restart、cross-scope matrix、PostgreSQL concurrency、standalone / bilingual / full regression closeout |
+| **P3-C — Roll, Check & PendingAction** | ⬜ | RollGroup / RollRequest / Result、Server RNG、Group / Secret / physical / quick roll、PendingAction、formal roll idempotency、actor-neutral Character State + event atomic boundary；AI resolver留P3-D接線 |
+| **P3-D — AI Controller, Scoped Token & Handoff** | ⬜ | typed TableActorContext、P2 Human-only Session/live-write授權入口migration、hashed scoped AI Join Token、Seat/Session/Participant AI grant+generation binding與三條CHECK migration、Player Human ↔ AI handoff、AI DM可作新Session固定DM Controller |
+| **P3-E — AI Tool Surface & Event Delivery** | ⬜ | MCP `2026-07-28` stateless Streamable HTTP入口、shared application services、structured tools/errors、`get_pending_events` / `wait_for_event`沿用P3-A async wait、真external MCP client gate |
+| **P3-F — Full P3 Integration & Closeout** | ⬜ | Human/AI Exploration journeys、secret/group roll、Late Join、AI handoff、AI DM、restart、cross-scope matrix、PostgreSQL concurrency、waiter resource safety、P2 caller regression、standalone / bilingual / full regression closeout |
 
 ## 接手時必須保留的跨 Phase 約束
 
@@ -205,7 +208,9 @@ P3 的正式契約：
 - **Web Room-first / Standalone Character-first 是永久產品邊界**：Web Character / Draft在 P2-B 後一定由 Room workspace管理；Standalone不建立 Room。多人層只可依賴 Character Core，Character / Builder / Interop與 `app.standalone`不得反向 import多人層。契約見 [規格企劃.md](規格企劃.md) 第三、四、五章與 [P2 開發設計方針](docs/P2/開發設計方針.md)。
 - **Standalone boundary 是常駐約束**：`app.standalone` 不得 import `app.main` 或 P2+ multiplayer modules。P3每新增 multiplayer module / table / MCP route時都必須同步確認 `test_m03_import_boundary.py` 與 `test_m03d_schema_parity.py` 的 forbidden coverage；standalone migration只升 `character@head`，不能把Web multiplayer schema灌進SQLite。
 - **Character JSON v1 是 P2-A 起的相容基線**：新 export 已鎖 v1（`schema_version="1"` / `schema_status="locked"` / `export_type="character"`）；legacy M03 `unstable` 仍可由新版本 import並normalize。Room / Campaign / Seat / Session / P3 runtime identity不得塞進Character JSON。
-- **P2 active Session write scope是P3唯一Character寫入授權地基**：P3 GameAction / MCP action要擴充 `live_character_write_scope()` 系列，不能另建AI-specific或table-specific bypass。
+- **P2 active Session write scope是P3唯一Character寫入授權地基，但caller abstraction必須演進**：P3 GameAction / MCP action要擴充 `live_character_write_scope()` 系列，不能另建AI-specific或table-specific bypass；P3-D把現有Human-only `RoomAccessContext`入口收斂成Human/AI都能resolve的typed `TableActorContext`，Human Room authority與AI gameplay scope保持分離。
+- **P3 controller persistence不是只加token table**：新的web migration必須讓Seat current controller、Session fixed DM snapshot、Participant join snapshot都能保存AI grant + generation，並重建P2三條binding CHECK；歷史`0013` / `0014`不可改寫。
+- **P3 event wait是資源correctness contract**：HTTP wait為async；await期間不持有DB connection / transaction、不長期占sync worker；wake / timeout後以DB cursor recheck，並以受限pool下多waiter不starve一般DB request作自動證據。
 - **P3 durable event不等於P7完整Timeline**：P3只為當場play/reconnect保留canonical event/message/roll/action；cross-Session timeline browser、history search、Snapshot / Restore與broader export仍由P7設計。
 - **AI transport與game logic分離**：P3至少正式交付一條MCP入口，但Human UI / MCP / future Site Tools共用同一application/domain service；網站本身不接LLM API，不保存外部模型API key。
 - **雙語是持續交付要求**：新增、修改或首次呈現給使用者的 system／rules content，必須同一 Subphase 同步交付 `zh-TW`／`en`；locale 只影響呈現，不改角色／草稿／P3 canonical gameplay data。細則見 [AGENTS.md](AGENTS.md) 與 [M02 實作規格](docs/M02/實作規格.md)。
