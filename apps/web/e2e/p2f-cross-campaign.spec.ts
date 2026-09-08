@@ -7,7 +7,9 @@ type Seat = { id: string }
 type Lobby = { caller_access_session_id: string | null }
 
 async function json<T>(response: Awaited<ReturnType<APIRequestContext['get']>>): Promise<T> {
-  expect(response.ok(), await response.text()).toBe(true)
+  if (!response.ok()) {
+    expect(response.ok(), await response.text()).toBe(true)
+  }
   return response.json() as Promise<T>
 }
 
