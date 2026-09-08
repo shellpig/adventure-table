@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from enum import StrEnum
 from typing import Any, Protocol
@@ -50,6 +51,12 @@ class TableEventSessionNotActiveError(RuntimeError):
 
 class TableEventNotifier(Protocol):
     def notify(self, session_id: UUID) -> None: ...
+
+    def register(self, session_id: UUID) -> object: ...
+
+    async def wait(self, handle: object, timeout: float) -> bool: ...
+
+    def unregister(self, handle: object) -> None: ...
 
 
 class TableActorContext(StrictModel):
@@ -119,7 +126,8 @@ class TableEventService:
 
     P3-A has only a Human HTTP resolver. The service itself consumes a typed
     TableActorContext so P3-D can add AI grant resolution without cloning event
-    authorization or audience projection.
+    authorization or audience projection. Durable DB cursors are authoritative;
+    the process-local notifier is only an optional low-latency wake hint.
     """
 
     def __init__(
@@ -146,11 +154,10 @@ class TableEventService:
 
     @staticmethod
     def _stored_binding(actor: TableActorContext) -> StoredTableActorBinding:
-        if (
-            actor.actor_kind is not TableActorKind.HUMAN
-            or actor.access_session_id is None
-        ):
-            raise TableEventActorUnauthorizedError("AI event actor resolver is not available until P3-D")
+        if actor.actor_kind is not TableActorKind.HUMAN or actor.access_session_id is None:
+            raise TableEventActorUnauthorizedError(
+                "AI event actor resolver is not available until P3-D"
+            )
         return StoredTableActorBinding(
             room_id=actor.room_id,
             campaign_id=actor.campaign_id,
@@ -273,6 +280,9 @@ class TableEventService:
         except TableEventSessionNotFoundPersistenceError as exc:
             raise TableEventNotFoundError(str(actor.session_id)) from exc
 
+        # Advance over the bounded raw window, including events this caller may
+        # not see, so a private event cannot make an unauthorized client spin on
+        # the same cursor forever or infer hidden-event details from a flag.
         cursor = raw[-1].seq if raw else bounded_after
         visible = [
             self._present(stored)
@@ -287,6 +297,68 @@ class TableEventService:
             has_more=cursor < runtime.last_event_seq,
             events=visible,
         )
+
+    async def wait_after(
+        self,
+        actor: TableActorContext,
+        *,
+        after_seq: int,
+        limit: int,
+        timeout: float,
+    ) -> TableEventPage:
+        """Wait without occupying a DB connection/transaction or worker thread.
+
+        Only the short authorization/query calls are sent to a worker thread.
+        The idle period awaits an asyncio primitive in this request task. A DB
+        recheck immediately after registration closes the lost-wakeup window; a
+        final DB recheck after wake/timeout makes the durable cursor canonical.
+        """
+
+        bounded_after = max(0, int(after_seq))
+        bounded_timeout = max(0.0, min(float(timeout), 60.0))
+
+        first = await asyncio.to_thread(
+            self.list_after,
+            actor,
+            after_seq=bounded_after,
+            limit=limit,
+        )
+        if first.cursor > bounded_after:
+            return first
+
+        if self.notifier is None:
+            if bounded_timeout > 0:
+                await asyncio.sleep(bounded_timeout)
+            return await asyncio.to_thread(
+                self.list_after,
+                actor,
+                after_seq=bounded_after,
+                limit=limit,
+            )
+
+        handle = self.notifier.register(actor.session_id)
+        try:
+            # Registration happens before this second DB read, therefore an
+            # event committed between the initial read and registration is
+            # observed here even if no process-local notify reaches this worker.
+            second = await asyncio.to_thread(
+                self.list_after,
+                actor,
+                after_seq=bounded_after,
+                limit=limit,
+            )
+            if second.cursor > bounded_after:
+                return second
+
+            await self.notifier.wait(handle, bounded_timeout)
+            return await asyncio.to_thread(
+                self.list_after,
+                actor,
+                after_seq=bounded_after,
+                limit=limit,
+            )
+        finally:
+            self.notifier.unregister(handle)
 
     def append_event(
         self,
