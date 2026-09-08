@@ -42,9 +42,19 @@ def _values_calls_for_character_state_update(tree: ast.AST) -> list[ast.Call]:
     return calls
 
 
-def test_every_character_state_payload_update_advances_revision() -> None:
+def _state_revision_guarded(values_call: ast.Call) -> bool:
+    """The UPDATE expression before .values() must reference state_revision."""
+
+    return any(
+        isinstance(node, ast.Attribute) and node.attr == "state_revision"
+        for node in ast.walk(values_call.func.value)
+    )
+
+
+def test_every_character_state_payload_update_advances_revision_and_uses_cas() -> None:
     update_sites: list[tuple[str, int]] = []
     missing_revision: list[tuple[str, int]] = []
+    missing_cas_guard: list[tuple[str, int]] = []
     raw_sql_sites: list[tuple[str, int]] = []
 
     for path in APP_ROOT.rglob("*.py"):
@@ -67,6 +77,8 @@ def test_every_character_state_payload_update_advances_revision() -> None:
             update_sites.append((relative, call.lineno))
             if "state_revision" not in keywords:
                 missing_revision.append((relative, call.lineno))
+            if not _state_revision_guarded(call):
+                missing_cas_guard.append((relative, call.lineno))
 
     assert not raw_sql_sites, (
         "Character State writes must remain visible to the revision guard; raw UPDATE SQL "
@@ -75,6 +87,10 @@ def test_every_character_state_payload_update_advances_revision() -> None:
     assert not missing_revision, (
         "Every character_states.state_payload UPDATE must advance state_revision in the "
         f"same statement: {missing_revision}"
+    )
+    assert not missing_cas_guard, (
+        "Every character_states.state_payload UPDATE must compare the source "
+        f"state_revision before replacing the payload: {missing_cas_guard}"
     )
 
     detected_files = {path for path, _line in update_sites}
