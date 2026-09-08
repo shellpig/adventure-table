@@ -17,6 +17,7 @@ from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.repository import RoomRepository
 from app.persistence.rooms.seats import SeatRepository
 from app.persistence.rooms.session_live import SessionLiveRepository
+from app.persistence.rooms.session_resume import SessionResumeRepository
 from app.persistence.rooms.sessions import SessionRepository
 from app.persistence.rooms.table_runtime import TableEventRepository
 
@@ -94,21 +95,6 @@ def get_session_service(request: Request) -> SessionService:
     return service
 
 
-def get_session_resume_service(request: Request) -> SessionResumeService:
-    service = getattr(request.app.state, "session_resume_service", None)
-    if service is None:
-        engine = get_database_engine(request)
-        service = SessionResumeService(
-            session_service=get_session_service(request),
-            room_repository=RoomRepository(engine),
-            campaign_service=get_campaign_service(request),
-            seat_service=get_seat_service(request),
-            character_repository=get_room_workspace_service(request).character_repository,
-        )
-        request.app.state.session_resume_service = service
-    return service
-
-
 def get_table_event_notifier(request: Request) -> ProcessLocalTableEventNotifier:
     notifier = getattr(request.app.state, "table_event_notifier", None)
     if notifier is None:
@@ -125,6 +111,23 @@ def get_table_event_service(request: Request) -> TableEventService:
             get_table_event_notifier(request),
         )
         request.app.state.table_event_service = service
+    return service
+
+
+def get_session_resume_service(request: Request) -> SessionResumeService:
+    service = getattr(request.app.state, "session_resume_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        service = SessionResumeService(
+            session_service=get_session_service(request),
+            room_repository=RoomRepository(engine),
+            campaign_service=get_campaign_service(request),
+            seat_service=get_seat_service(request),
+            character_repository=get_room_workspace_service(request).character_repository,
+            summary_repository=SessionResumeRepository(engine),
+            table_event_service=get_table_event_service(request),
+        )
+        request.app.state.session_resume_service = service
     return service
 
 
