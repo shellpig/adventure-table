@@ -11,11 +11,7 @@ from app.content import load_default_content_registry
 from app.db import metadata
 from app.domain.character_builder.service import CharacterBuilderService
 from app.persistence.builder_drafts import BuilderDraftRepository
-from app.persistence.characters import (
-    CharacterRepository,
-    character_states,
-)
-from test_p1f_character_creation import _seed as _unused_seed  # noqa: F401
+from app.persistence.characters import CharacterRepository, character_states
 from test_p1g_character_versions import (
     _complete_fighter_level_two,
     _confirm_level_one_fighter,
@@ -167,7 +163,7 @@ def _assert_confirm_retries_after_concurrent_state_patch(
             json={"temporary_hp": 7},
         )
         assert patched.status_code == 200, patched.text
-        assert patched.json()["hp"]["temporary"] == 7
+        assert patched.json()["temporary_hp"] == 7
         assert _revision(engine, character_id) == before_revision + 1
     finally:
         release.set()
