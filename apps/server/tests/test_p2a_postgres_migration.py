@@ -20,8 +20,6 @@ pytestmark = pytest.mark.skipif(
 )
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 BRANCH_POINT = "0008_m03c_import_records"
-CHARACTER_HEAD = "0015_character_state_revision"
-WEB_HEAD = "0016_p3a_table_runtime_events"
 
 
 def _alembic_config() -> Config:
@@ -241,8 +239,9 @@ def test_fresh_web_postgres_upgrade_heads_and_readiness() -> None:
     _reset_database()
     command.upgrade(_alembic_config(), "heads")
 
-    assert _expected_heads() == {CHARACTER_HEAD, WEB_HEAD}
-    assert _revision_set() == {CHARACTER_HEAD, WEB_HEAD}
+    expected_heads = _expected_heads()
+    assert len(expected_heads) == 2
+    assert _revision_set() == expected_heads
 
     assert POSTGRES_URL is not None
     engine = create_engine(POSTGRES_URL)
@@ -285,7 +284,9 @@ def test_legacy_m03_postgres_upgrade_heads_preserves_character_payloads() -> Non
 
     command.upgrade(_alembic_config(), "heads")
 
-    assert _revision_set() == {CHARACTER_HEAD, WEB_HEAD}
+    expected_heads = _expected_heads()
+    assert len(expected_heads) == 2
+    assert _revision_set() == expected_heads
     assert _legacy_payload_snapshot() == before
     assert POSTGRES_URL is not None
     engine = create_engine(POSTGRES_URL)
