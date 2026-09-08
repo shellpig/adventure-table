@@ -29,6 +29,15 @@ def _revision(engine: Engine, character_id: str) -> int:
     return int(value)
 
 
+def _enable_wal(engine: Engine) -> None:
+    """Let the concurrent PATCH commit while Confirm holds a read snapshot."""
+
+    with engine.connect() as connection:
+        mode = connection.exec_driver_sql("PRAGMA journal_mode=WAL").scalar_one()
+        connection.commit()
+    assert str(mode).lower() == "wal"
+
+
 def _pause_first_reconciliation_state_read(engine: Engine):
     first_read = Event()
     release = Event()
@@ -115,6 +124,7 @@ def _assert_confirm_retries_after_concurrent_state_patch(
         character_id = created["character_id"]
         draft = prepare_draft(confirm_client, character_id)
         engine = module.app.state.character_engine
+        _enable_wal(engine)
         before_revision = _revision(engine, character_id)
 
         # A second TestClient talks to the exact same Standalone app, engine and
