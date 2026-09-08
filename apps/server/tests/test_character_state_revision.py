@@ -13,6 +13,12 @@ from app.domain.character.fixture import (
     build_p0_fighter_wizard_state,
 )
 from app.persistence.characters import CharacterRepository, character_states
+from test_p1g_character_versions import (
+    _complete_fighter_level_two,
+    _confirm_level_one_fighter,
+    _start_level_up,
+)
+from test_p1f_character_creation import _seed
 
 
 def _seed_repository():
@@ -64,3 +70,21 @@ def test_complete_state_writer_advances_revision() -> None:
 
     assert updated.state.current_hp == next_hp
     assert _revision(engine, character.id) == 2
+
+
+def test_level_up_reconciliation_advances_state_revision() -> None:
+    client, engine = _seed()
+    created = _confirm_level_one_fighter(client)
+    character_id = created["character_id"]
+    before_revision = _revision(engine, character_id)
+
+    draft = _complete_fighter_level_two(client, _start_level_up(client, character_id))
+    confirmed = client.post(
+        f"/api/character-builder/drafts/{draft['draft']['id']}/confirm"
+    )
+
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["version_no"] == 2
+    assert _revision(engine, character_id) == before_revision + 1
+
+    engine.dispose()
