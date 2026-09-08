@@ -4,58 +4,18 @@ from queue import Queue
 from threading import Event, Lock, Thread
 from uuid import UUID
 
-from sqlalchemy import create_engine, event, select
-from sqlalchemy.engine import Engine, URL
+from fastapi.testclient import TestClient
+import pytest
+from sqlalchemy import event, select
+from sqlalchemy.engine import Engine
 
-from app.content import load_default_content_registry
-from app.db import metadata
-from app.domain.character_builder.service import CharacterBuilderService
-from app.persistence.builder_drafts import BuilderDraftRepository
-from app.persistence.characters import CharacterRepository, character_states
+from app.persistence.characters import character_states
+from m03g_support import standalone_client
 from test_p1g_character_versions import (
     _complete_fighter_level_two,
     _confirm_level_one_fighter,
     _start_level_up,
 )
-from web_room_support import create_web_room_client
-
-
-def _seed_clients(tmp_path):
-    registry = load_default_content_registry()
-    engine = create_engine(
-        URL.create(
-            "sqlite+pysqlite",
-            database=str(tmp_path / "reconciliation-cas.sqlite3"),
-        ),
-        connect_args={
-            "check_same_thread": False,
-            "timeout": 0.05,
-        },
-    )
-    with engine.connect() as connection:
-        connection.exec_driver_sql("PRAGMA journal_mode=WAL")
-        connection.commit()
-    metadata.create_all(engine)
-
-    character_repository = CharacterRepository(engine, registry)
-    builder_service = CharacterBuilderService(
-        BuilderDraftRepository(engine),
-        registry,
-        character_repository,
-    )
-    confirm_client = create_web_room_client(
-        engine,
-        registry,
-        character_repository=character_repository,
-        builder_service=builder_service,
-    )
-    patch_client = create_web_room_client(
-        engine,
-        registry,
-        character_repository=character_repository,
-        builder_service=builder_service,
-    )
-    return confirm_client, patch_client, engine
 
 
 def _revision(engine: Engine, character_id: str) -> int:
@@ -98,7 +58,7 @@ def _pause_first_reconciliation_state_read(engine: Engine):
     return first_read, release, listener
 
 
-def _run_confirm_in_thread(client, draft_id: str):
+def _run_confirm_in_thread(client: TestClient, draft_id: str):
     results: Queue[object] = Queue()
 
     def worker() -> None:
@@ -116,7 +76,7 @@ def _run_confirm_in_thread(client, draft_id: str):
     return thread, results
 
 
-def _complete_build_edit(client, character_id: str):
+def _complete_build_edit(client: TestClient, character_id: str):
     started = client.post(
         f"/api/character-builder/characters/{character_id}/drafts",
         json={"mode": "build_edit"},
@@ -140,79 +100,97 @@ def _complete_build_edit(client, character_id: str):
 
 
 def _assert_confirm_retries_after_concurrent_state_patch(
+    monkeypatch: pytest.MonkeyPatch,
     tmp_path,
     *,
     prepare_draft,
 ) -> None:
-    confirm_client, patch_client, engine = _seed_clients(tmp_path)
-    created = _confirm_level_one_fighter(confirm_client)
-    character_id = created["character_id"]
-    draft = prepare_draft(confirm_client, character_id)
-    before_revision = _revision(engine, character_id)
+    with standalone_client(monkeypatch, tmp_path) as (confirm_client, module):
+        # Reuse the existing P1-F/P1-G fixture builders against the raw
+        # Standalone routes rather than the Web Room adapter.
+        confirm_client.builder_api = "/api/character-builder"  # type: ignore[attr-defined]
+        confirm_client.character_api = "/api/characters"  # type: ignore[attr-defined]
 
-    first_read, release, listener = _pause_first_reconciliation_state_read(engine)
-    thread, results = _run_confirm_in_thread(
-        confirm_client,
-        draft["draft"]["id"],
-    )
+        created = _confirm_level_one_fighter(confirm_client)
+        character_id = created["character_id"]
+        draft = prepare_draft(confirm_client, character_id)
+        engine = module.app.state.character_engine
+        before_revision = _revision(engine, character_id)
 
-    try:
-        assert first_read.wait(timeout=5), "Confirm never read State revision"
-        patched = patch_client.patch(
-            f"/api/characters/{character_id}/state",
-            json={"temporary_hp": 7},
+        # A second TestClient talks to the exact same Standalone app, engine and
+        # SQLite file. It has no Room identity/ACL surface at all.
+        with TestClient(module.app) as patch_client:
+            first_read, release, listener = _pause_first_reconciliation_state_read(
+                engine
+            )
+            thread, results = _run_confirm_in_thread(
+                confirm_client,
+                draft["draft"]["id"],
+            )
+
+            try:
+                assert first_read.wait(timeout=5), "Confirm never read State revision"
+                patched = patch_client.patch(
+                    f"/api/characters/{character_id}/state",
+                    json={"temporary_hp": 7},
+                )
+                assert patched.status_code == 200, patched.text
+                assert patched.json()["temporary_hp"] == 7
+                assert _revision(engine, character_id) == before_revision + 1
+            finally:
+                release.set()
+                thread.join(timeout=10)
+                event.remove(engine, "after_cursor_execute", listener)
+
+        assert not thread.is_alive()
+        result = results.get_nowait()
+        if isinstance(result, BaseException):
+            raise result
+        assert result.status_code == 200, result.text
+        assert result.json()["version_no"] == 2
+
+        final = confirm_client.get(f"/api/characters/{character_id}")
+        assert final.status_code == 200, final.text
+        final_payload = final.json()
+        assert final_payload["version_no"] == 2
+        assert final_payload["state"]["temporary_hp"] == 7
+        assert _revision(engine, character_id) == before_revision + 2
+
+        history = confirm_client.get(f"/api/characters/{character_id}/versions")
+        assert history.status_code == 200, history.text
+        assert [row["version_no"] for row in history.json()] == [1, 2]
+
+        replay = confirm_client.post(
+            f"/api/character-builder/drafts/{draft['draft']['id']}/confirm"
         )
-        assert patched.status_code == 200, patched.text
-        assert patched.json()["temporary_hp"] == 7
-        assert _revision(engine, character_id) == before_revision + 1
-    finally:
-        release.set()
-        thread.join(timeout=10)
-        event.remove(engine, "after_cursor_execute", listener)
-
-    assert not thread.is_alive()
-    result = results.get_nowait()
-    if isinstance(result, BaseException):
-        raise result
-    assert result.status_code == 200, result.text
-    assert result.json()["version_no"] == 2
-
-    final = confirm_client.get(f"/api/characters/{character_id}")
-    assert final.status_code == 200, final.text
-    final_payload = final.json()
-    assert final_payload["version_no"] == 2
-    assert final_payload["state"]["temporary_hp"] == 7
-    assert _revision(engine, character_id) == before_revision + 2
-
-    history = confirm_client.get(f"/api/characters/{character_id}/versions")
-    assert history.status_code == 200, history.text
-    assert [row["version_no"] for row in history.json()] == [1, 2]
-
-    replay = confirm_client.post(
-        f"/api/character-builder/drafts/{draft['draft']['id']}/confirm"
-    )
-    assert replay.status_code == 200, replay.text
-    assert replay.json()["version_no"] == 2
-    assert _revision(engine, character_id) == before_revision + 2
-
-    engine.dispose()
+        assert replay.status_code == 200, replay.text
+        assert replay.json()["version_no"] == 2
+        assert _revision(engine, character_id) == before_revision + 2
 
 
-def test_level_up_reconciliation_retries_after_concurrent_state_patch(tmp_path) -> None:
-    def prepare(client, character_id: str):
+def test_level_up_reconciliation_retries_after_concurrent_state_patch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    def prepare(client: TestClient, character_id: str):
         return _complete_fighter_level_two(
             client,
             _start_level_up(client, character_id),
         )
 
     _assert_confirm_retries_after_concurrent_state_patch(
+        monkeypatch,
         tmp_path,
         prepare_draft=prepare,
     )
 
 
-def test_build_edit_reconciliation_retries_after_concurrent_state_patch(tmp_path) -> None:
+def test_build_edit_reconciliation_retries_after_concurrent_state_patch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
     _assert_confirm_retries_after_concurrent_state_patch(
+        monkeypatch,
         tmp_path,
         prepare_draft=_complete_build_edit,
     )
