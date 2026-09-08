@@ -8,7 +8,7 @@ import re
 
 APP_ROOT = Path(__file__).resolve().parents[1] / "app"
 FORBIDDEN_MODULE_RE = re.compile(
-    r"(?:^|\.)(?:rooms?|sessions?|seats?|campaigns?|party_rosters?)(?:\.|$)",
+    r"(?:^|\.)(?:rooms?|sessions?|seats?|campaigns?|party_rosters?|table_runtime|table_events?)(?:\.|$)",
     re.IGNORECASE,
 )
 
@@ -87,10 +87,6 @@ def _imports_for(module: str, path: Path, index: dict[str, Path]) -> tuple[set[s
                 if alias.name == "*" or not base:
                     continue
                 candidate = f"{base}.{alias.name}"
-                # ``from app.foo import CampaignThing`` imports a symbol, not a
-                # module.  Only treat the candidate as a module when it really
-                # exists in the local source index; the base module is already
-                # recorded above and remains subject to the forbidden-name gate.
                 if candidate in index:
                     imported_modules.add(candidate)
                     local_targets.add(candidate)
@@ -132,7 +128,7 @@ def test_character_distribution_import_graph_has_no_multiplayer_dependencies() -
 
     assert not violations, (
         "M03-F import boundary violation: standalone character/content code must remain "
-        f"independent from Room/Session/Seat/Campaign modules: {violations}"
+        f"independent from Room/Session/Seat/Campaign/P3 table modules: {violations}"
     )
 
 
@@ -160,11 +156,15 @@ def test_import_boundary_fixture_detects_multiplayer_module(tmp_path: Path) -> N
     (app_root / "room" / "__init__.py").write_text("", encoding="utf-8")
     (app_root / "room" / "fake.py").write_text("VALUE = 1\n", encoding="utf-8")
     (app_root / "api" / "__init__.py").write_text("", encoding="utf-8")
-    # Plural resource module names are the likelier P2 spelling, so the gate has
-    # to catch ``rooms`` as well as ``room``.
     (app_root / "api" / "rooms.py").write_text("VALUE = 2\n", encoding="utf-8")
+    (app_root / "table_events.py").write_text("VALUE = 3\n", encoding="utf-8")
+    (app_root / "table_runtime.py").write_text("VALUE = 4\n", encoding="utf-8")
     (app_root / "domain" / "character_fixture.py").write_text(
-        "from app.room import fake\nimport app.api.rooms\n\nVALUE = fake.VALUE\n",
+        "from app.room import fake\n"
+        "import app.api.rooms\n"
+        "import app.table_events\n"
+        "import app.table_runtime\n\n"
+        "VALUE = fake.VALUE\n",
         encoding="utf-8",
     )
 
@@ -176,14 +176,19 @@ def test_import_boundary_fixture_detects_multiplayer_module(tmp_path: Path) -> N
     assert violations, "negative fixture must prove the M03-F boundary gate can fail"
     assert flagged & {"app.room", "app.room.fake"}
     assert "app.api.rooms" in flagged
+    assert "app.table_events" in flagged
+    assert "app.table_runtime" in flagged
 
 
 def test_forbidden_regex_matches_module_segments_not_substrings() -> None:
     assert FORBIDDEN_MODULE_RE.search("app.room.api")
     assert FORBIDDEN_MODULE_RE.search("app.feature.session")
     assert FORBIDDEN_MODULE_RE.search("app.party_roster")
+    assert FORBIDDEN_MODULE_RE.search("app.table_runtime")
+    assert FORBIDDEN_MODULE_RE.search("app.table_events")
     assert FORBIDDEN_MODULE_RE.search("app.domain.session_scope") is None
     assert FORBIDDEN_MODULE_RE.search("app.content.roommate") is None
+    assert FORBIDDEN_MODULE_RE.search("app.content.event_table") is None
 
 
 def test_forbidden_regex_matches_plural_resource_module_names() -> None:

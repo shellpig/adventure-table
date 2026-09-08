@@ -10,7 +10,7 @@ from app.main import app as web_app
 from tests.m03e_support import loaded_standalone
 
 
-def test_web_capabilities_enable_p2_multiplayer_surface() -> None:
+def test_web_capabilities_enable_p2_multiplayer_and_p3_table_runtime_surface() -> None:
     response = TestClient(web_app).get("/api/meta/capabilities")
 
     assert response.status_code == 200
@@ -23,6 +23,10 @@ def test_web_capabilities_enable_p2_multiplayer_surface() -> None:
     assert payload.capabilities.campaign is True
     assert payload.capabilities.seat is True
     assert payload.capabilities.session is True
+    assert payload.capabilities.table_runtime is True
+    assert payload.capabilities.combat is False
+    assert payload.capabilities.timeline is False
+    assert payload.capabilities.ai_actor is False
 
 
 def test_standalone_capabilities_identify_channel_and_database(
@@ -41,4 +45,8 @@ def test_standalone_capabilities_identify_channel_and_database(
     assert payload.capabilities.campaign is False
     assert payload.capabilities.seat is False
     assert payload.capabilities.session is False
+    assert payload.capabilities.table_runtime is False
+    assert payload.capabilities.combat is False
+    assert payload.capabilities.timeline is False
+    assert payload.capabilities.ai_actor is False
     assert payload.database_path == str((tmp_path / "adventure-table.sqlite3").resolve())
