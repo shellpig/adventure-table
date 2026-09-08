@@ -10,6 +10,7 @@ on:
       - p2-d-seat-controller-lobby
       - p2-e-session-lifecycle-late-join
       - p2-f-full-integration-closeout
+      - fix/character-state-cas
 
 jobs:
   backend:
