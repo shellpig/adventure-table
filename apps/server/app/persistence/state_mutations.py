@@ -247,5 +247,10 @@ def save_state_against_version(
         )
         if result.rowcount != 1:
             raise StateWriteConflictError(character_id, state_revision)
+        connection.execute(
+            update(characters)
+            .where(characters.c.id == character_id)
+            .values(updated_at=func.now())
+        )
 
     return repository.load_character(character_id)
