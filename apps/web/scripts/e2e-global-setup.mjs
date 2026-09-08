@@ -22,15 +22,21 @@ const roomContextPath = resolve(webRoot, 'test-results', 'p2-room-context.json')
 
 const E2E_ROOM_PASSWORD = 'p2-e2e-room-pass'
 
-// Order matters. campaign_roster_entries.character_id and
-// campaign_seats.controller_access_session_id are both RESTRICT, so the
-// Campaign-owned rows have to go before the Characters and access sessions they
-// point at. rooms.active_campaign_id is SET NULL and needs no separate step.
+// Order matters. Session history RESTRICTs the Campaign and Seats it references,
+// and participant/controller references keep access sessions alive. Clear the
+// live lease + participant + Session graph before the older Campaign-owned rows;
+// then clear Room access/workspace state and finally Character/Draft state.
+// rooms.active_campaign_id is SET NULL and needs no separate step.
 const SQL = `
+DELETE FROM active_character_session_leases;
+DELETE FROM session_participants;
+DELETE FROM sessions;
 DELETE FROM campaign_seats;
 DELETE FROM campaign_roster_entries;
 DELETE FROM campaigns;
 DELETE FROM room_access_sessions;
+DELETE FROM room_builder_drafts;
+DELETE FROM room_characters;
 DELETE FROM rooms;
 DELETE FROM characters;
 DELETE FROM character_build_drafts;
@@ -39,6 +45,9 @@ SELECT count(*) AS remaining_drafts FROM character_build_drafts;
 SELECT count(*) AS remaining_rooms FROM rooms;
 SELECT count(*) AS remaining_campaigns FROM campaigns;
 SELECT count(*) AS remaining_seats FROM campaign_seats;
+SELECT count(*) AS remaining_sessions FROM sessions;
+SELECT count(*) AS remaining_participants FROM session_participants;
+SELECT count(*) AS remaining_active_leases FROM active_character_session_leases;
 `
 
 // The SQL goes in on stdin rather than through -c: it is multi-line, and a

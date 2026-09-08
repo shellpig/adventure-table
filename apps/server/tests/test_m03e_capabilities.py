@@ -10,7 +10,7 @@ from app.main import app as web_app
 from tests.m03e_support import loaded_standalone
 
 
-def test_web_capabilities_enable_room_campaign_and_seat_for_p2d() -> None:
+def test_web_capabilities_enable_p2_multiplayer_surface() -> None:
     response = TestClient(web_app).get("/api/meta/capabilities")
 
     assert response.status_code == 200
@@ -22,7 +22,7 @@ def test_web_capabilities_enable_room_campaign_and_seat_for_p2d() -> None:
     assert payload.capabilities.room is True
     assert payload.capabilities.campaign is True
     assert payload.capabilities.seat is True
-    assert payload.capabilities.session is False
+    assert payload.capabilities.session is True
 
 
 def test_standalone_capabilities_identify_channel_and_database(
