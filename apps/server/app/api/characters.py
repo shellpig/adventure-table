@@ -10,6 +10,7 @@ from app.api.dependencies import get_character_repository
 from app.api.errors import APIError
 from app.domain.character.schemas import (
     ActiveInfusion,
+    CharacterBuild,
     CharacterState,
     ConditionState,
     HitDie,
@@ -26,8 +27,10 @@ from app.persistence.characters import (
     CharacterNotFoundError,
     CharacterRepository,
     CharacterVersionNotFoundError,
+    StateWriteConflictError,
     StaleBuildVersionError,
 )
+from app.persistence.state_mutations import mutate_state_against_version
 
 router = APIRouter(prefix="/api/characters", tags=["characters"])
 
@@ -97,7 +100,8 @@ def _class_summary(character: PersistedCharacter, repository: CharacterRepositor
 
 
 def _canonicalize_prepared_patch(
-    character: PersistedCharacter,
+    build: CharacterBuild,
+    state: CharacterState,
     changes: dict[str, object],
 ) -> None:
     """Keep P0 legacy patches readable without letting them bypass P1 limits.
@@ -107,30 +111,34 @@ def _canonicalize_prepared_patch(
     into canonical selections and clear the legacy field before validation.
     Direct canonical patches also clear any previously persisted legacy ids so
     two prepared-state representations cannot continue to diverge.
+
+    This helper is re-run against the latest State on every optimistic retry so
+    a concurrent prepared-state change cannot be replaced by a candidate derived
+    from an older snapshot.
     """
 
     if "prepared_spells" in changes:
         changes["prepared_spell_entry_ids"] = []
         return
-    if "prepared_spell_entry_ids" not in changes or not character.build.spellcasting_profiles:
+    if "prepared_spell_entry_ids" not in changes or not build.spellcasting_profiles:
         return
 
     raw_entry_ids = changes["prepared_spell_entry_ids"]
     if not isinstance(raw_entry_ids, list):
         raise CharacterValidationError("prepared_spell_entry_ids patch must be a list")
 
-    access_by_id = {entry.entry_id: entry for entry in character.build.spell_access_entries}
+    access_by_id = {entry.entry_id: entry for entry in build.spell_access_entries}
     spellbook_profiles = {
         (profile.source_type, profile.source_key): profile
-        for profile in character.build.spellcasting_profiles
+        for profile in build.spellcasting_profiles
         if profile.access_model == "spellbook"
     }
     profile_by_id = {
-        profile.profile_id: profile for profile in character.build.spellcasting_profiles
+        profile.profile_id: profile for profile in build.spellcasting_profiles
     }
     translated: list[PreparedSpellSelection] = [
         selection
-        for selection in character.state.prepared_spells
+        for selection in state.prepared_spells
         if (
             selection.source_profile_id in profile_by_id
             and profile_by_id[selection.source_profile_id].access_model != "spellbook"
@@ -263,7 +271,6 @@ def patch_character_state(
     patch: CharacterStatePatch,
     repository: CharacterRepository = Depends(get_character_repository),
 ) -> CharacterSheetDTO:
-    character = repository.load_character(character_id)
     changes = patch.model_dump(exclude_unset=True, mode="python")
     nullable_state_fields = {"spell_storing_item"}
     if any(
@@ -273,28 +280,28 @@ def patch_character_state(
     ):
         raise CharacterValidationError("state patch fields cannot be null")
 
-    expected_current_version_id = changes.pop(
-        "expected_current_version_id",
-        character.current_version_id,
-    )
-    if expected_current_version_id != character.current_version_id:
-        stale = StaleBuildVersionError(
-            character_id,
-            expected_current_version_id,
-            character.current_version_id,
-        )
-        raise APIError(409, "stale_build_version", str(stale))
+    expected_current_version_id = changes.pop("expected_current_version_id", None)
 
-    _canonicalize_prepared_patch(character, changes)
-    candidate = CharacterState.model_validate(
-        {**character.state.model_dump(mode="python"), **changes}
-    )
+    def apply_patch(
+        build: CharacterBuild,
+        current_state: CharacterState,
+    ) -> CharacterState:
+        attempt_changes = dict(changes)
+        _canonicalize_prepared_patch(build, current_state, attempt_changes)
+        return CharacterState.model_validate(
+            {**current_state.model_dump(mode="python"), **attempt_changes}
+        )
+
     try:
-        updated = repository.save_state(
+        updated = mutate_state_against_version(
+            repository,
             character_id,
-            candidate,
+            apply_patch,
             expected_current_version_id=expected_current_version_id,
         )
     except StaleBuildVersionError as exc:
         raise APIError(409, "stale_build_version", str(exc)) from exc
+    except StateWriteConflictError as exc:
+        raise APIError(409, "state_write_conflict", str(exc)) from exc
+
     return build_character_sheet(updated, repository.registry)
