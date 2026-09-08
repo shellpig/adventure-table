@@ -76,7 +76,11 @@ def resume_session(
     service: SessionResumeService = Depends(get_session_resume_service),
 ) -> SessionResumeDTO:
     try:
-        return service.resume(context.room_id, campaign_id)
+        return service.resume(
+            context.room_id,
+            campaign_id,
+            caller_access_session_id=context.access_session_id,
+        )
     except Exception as exc:
         raise _map_session_error(exc) from exc
 

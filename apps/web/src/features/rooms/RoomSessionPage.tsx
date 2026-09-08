@@ -47,21 +47,29 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   const [snapshot, setSnapshot] = useState<SessionSnapshot | null>(null)
   const [lobby, setLobby] = useState<LobbySnapshot | null>(null)
   const [resumeSeats, setResumeSeats] = useState<CampaignSeat[]>([])
+  const [callerAccessSessionId, setCallerAccessSessionId] = useState<string | null>(null)
   const [characters, setCharacters] = useState<RoomCharacterSummary[]>([])
   const [lateJoinSeatId, setLateJoinSeatId] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // The Lobby is only reachable while this Campaign is the Room's current
+  // active one, but a Session stays manageable after the Owner switches away.
+  // Losing the Lobby costs the Late Join seat list, not the whole page.
+  const optionalLobby = (): Promise<LobbySnapshot | null> =>
+    getLobby(roomId, campaignId, token).catch(() => null)
+
   const reload = async () => {
     const [nextSession, nextLobby, nextCharacters, nextResume] = await Promise.all([
       getSession(roomId, campaignId, sessionId, token),
-      getLobby(roomId, campaignId, token),
+      optionalLobby(),
       listRoomCharacters(roomId, token),
       getActiveSession(roomId, campaignId, token),
     ])
     setSnapshot(nextSession)
     setLobby(nextLobby)
     setCharacters(nextCharacters)
+    setCallerAccessSessionId(nextResume.caller_access_session_id)
     setResumeSeats(nextResume.active_session?.id === sessionId ? nextResume.seats : [])
   }
 
@@ -76,12 +84,13 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
         await heartbeatRoom(roomId, token)
         const [nextSession, nextLobby, nextResume] = await Promise.all([
           getSession(roomId, campaignId, sessionId, token),
-          getLobby(roomId, campaignId, token),
+          optionalLobby(),
           getActiveSession(roomId, campaignId, token),
         ])
         if (active) {
           setSnapshot(nextSession)
           setLobby(nextLobby)
+          setCallerAccessSessionId(nextResume.caller_access_session_id)
           setResumeSeats(nextResume.active_session?.id === sessionId ? nextResume.seats : [])
         }
       } catch (cause) {
@@ -138,7 +147,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     )
   }
 
-  if (!snapshot || !lobby) {
+  if (!snapshot) {
     return (
       <main className="landing-page"><section className="landing-card">
         <h1>{copy.title}</h1>
@@ -150,7 +159,6 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     )
   }
 
-  const callerAccessSessionId = lobby.caller_access_session_id
   const isCurrentDm = (
     snapshot.status === 'active' &&
     snapshot.dm_controller_access_session_id !== null &&

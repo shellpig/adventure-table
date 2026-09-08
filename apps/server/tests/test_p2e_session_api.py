@@ -90,9 +90,10 @@ class _ApiSessionResumeService:
         self.room_id = room_id
         self.campaign_id = campaign_id
 
-    def resume(self, room_id, campaign_id):
+    def resume(self, room_id, campaign_id, *, caller_access_session_id=None):
         assert room_id == self.room_id
         assert campaign_id == self.campaign_id
+        self.caller_access_session_id = caller_access_session_id
         now = datetime.now(timezone.utc).isoformat()
         return {
             "room_id": room_id,

@@ -142,4 +142,22 @@ describe('P2-E Session route and presentation', () => {
     expect(source).not.toContain('spawn')
     expect(source).not.toContain('combat')
   })
+
+  it('does not let a missing Lobby take down the Session surface', () => {
+    const source = readFileSync(new URL('./RoomSessionPage.tsx', import.meta.url), 'utf8')
+
+    // The Lobby is Campaign-current-only; the Session is not. Both fetch sites
+    // must go through the tolerant wrapper, and neither the loading guard nor
+    // the DM check may depend on the Lobby succeeding.
+    expect(source).toContain('getLobby(roomId, campaignId, token).catch(() => null)')
+    expect(source.match(/optionalLobby\(\)/g) ?? []).toHaveLength(2)
+    expect(source).not.toContain('getLobby(roomId, campaignId, token),')
+    expect(source).toContain('if (!snapshot) {')
+    expect(source).not.toContain('if (!snapshot || !lobby)')
+    expect(source).toContain('nextResume.caller_access_session_id')
+    expect(source).not.toContain('lobby.caller_access_session_id')
+    expect(source).not.toContain('ready')
+    expect(source).not.toContain('spawn')
+    expect(source).not.toContain('combat')
+  })
 })
