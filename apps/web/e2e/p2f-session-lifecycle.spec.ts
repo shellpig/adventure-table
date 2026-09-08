@@ -137,5 +137,10 @@ test('P2-F Journey 6 selects a Character after Start and Late Joins through the 
   await expect(participant).toContainText(setup.character.name)
   await expect(page.getByText('No Player Seat is currently eligible to join.')).toBeVisible()
 
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Active Session', level: 1 })).toBeVisible()
+  await expect(participant).toContainText(setup.character.name)
+  await expect(page.getByText('No Player Seat is currently eligible to join.')).toBeVisible()
+
   await endFromSession(page)
 })
