@@ -20,7 +20,7 @@ pytestmark = pytest.mark.skipif(
 )
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 BRANCH_POINT = "0008_m03c_import_records"
-CHARACTER_HEAD = "0009_p2a_character_head"
+CHARACTER_HEAD = "0015_character_state_revision"
 WEB_HEAD = "0014_p2e_sessions"
 
 
@@ -169,7 +169,10 @@ def _legacy_payload_snapshot() -> dict[str, list[dict[str, object]]]:
     queries = {
         "characters": "SELECT * FROM characters ORDER BY id",
         "versions": "SELECT * FROM character_versions ORDER BY version_no",
-        "states": "SELECT * FROM character_states ORDER BY character_id",
+        "states": (
+            "SELECT character_id, state_payload, updated_at "
+            "FROM character_states ORDER BY character_id"
+        ),
         "drafts": "SELECT * FROM character_build_drafts ORDER BY id",
         "imports": "SELECT * FROM character_import_records ORDER BY id",
     }
@@ -195,6 +198,10 @@ def _assert_current_web_schema(engine) -> None:
         "session_participants",
         "active_character_session_leases",
     } <= tables
+    state_columns = {
+        column["name"] for column in inspector.get_columns("character_states")
+    }
+    assert "state_revision" in state_columns
     room_columns = {column["name"] for column in inspector.get_columns("rooms")}
     assert "active_campaign_id" in room_columns
     roster_fks = {
@@ -285,6 +292,15 @@ def test_legacy_m03_postgres_upgrade_heads_preserves_character_payloads() -> Non
     try:
         tables = set(inspect(engine).get_table_names())
         _assert_current_web_schema(engine)
+        with engine.connect() as connection:
+            assert list(
+                connection.execute(
+                    text(
+                        "SELECT state_revision FROM character_states "
+                        "ORDER BY character_id"
+                    )
+                ).scalars()
+            ) == [1]
     finally:
         engine.dispose()
     assert {
