@@ -32,6 +32,7 @@ from app.persistence.characters import (
     CharacterVersionNotFoundError,
     StaleBuildVersionError,
     StateReconciliationBlockedError,
+    StateWriteConflictError,
 )
 
 
@@ -223,6 +224,8 @@ def confirm_builder_draft(
         raise APIError(409, "stale_draft_revision", str(exc)) from exc
     except StaleBuildVersionError as exc:
         raise APIError(409, "stale_build_version", str(exc)) from exc
+    except StateWriteConflictError as exc:
+        raise APIError(409, "state_write_conflict", str(exc)) from exc
     except StateReconciliationBlockedError as exc:
         raise APIError(422, "state_reconciliation_blocked", str(exc)) from exc
     except BuilderCannotConfirmError as exc:
