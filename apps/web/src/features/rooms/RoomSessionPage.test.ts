@@ -60,21 +60,21 @@ describe('Session route and presentation', () => {
     expect(roomSessionRouteFromPath(`/sessions/${SESSION_ID}`)).toBeNull()
   })
 
-  it('merges Resume Seat truth so archived participants keep structured labels', () => {
+  it('unions Resume and Lobby Seat truth while fresh Lobby fields win overlaps', () => {
     const liveLobbySeat = seat('40000000-0000-4000-8000-000000000001', 'Live Seat')
     const archivedParticipant = seat(
       '40000000-0000-4000-8000-000000000002',
       'Archived Mira Seat',
       '2026-09-07T01:00:00Z',
     )
-    const resumeOverride = seat(liveLobbySeat.id, 'Resume Current Truth')
+    const resumeSnapshot = seat(liveLobbySeat.id, 'Resume Current Truth')
 
     const merged = mergeSessionSeatTruth(
       [liveLobbySeat],
-      [resumeOverride, archivedParticipant],
+      [resumeSnapshot, archivedParticipant],
     )
     expect(merged).toHaveLength(2)
-    expect(merged.find((item) => item.id === liveLobbySeat.id)?.label).toBe('Resume Current Truth')
+    expect(merged.find((item) => item.id === liveLobbySeat.id)?.label).toBe('Live Seat')
     expect(merged.find((item) => item.id === archivedParticipant.id)?.archived_at).not.toBeNull()
     expect(merged.find((item) => item.id === archivedParticipant.id)?.label).toBe('Archived Mira Seat')
   })

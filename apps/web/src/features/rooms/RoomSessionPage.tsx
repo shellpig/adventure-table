@@ -40,8 +40,8 @@ export function mergeSessionSeatTruth(
   lobbySeats: CampaignSeat[],
   resumeSeats: CampaignSeat[],
 ): CampaignSeat[] {
-  const byId = new Map(lobbySeats.map((seat) => [seat.id, seat]))
-  for (const seat of resumeSeats) byId.set(seat.id, seat)
+  const byId = new Map(resumeSeats.map((seat) => [seat.id, seat]))
+  for (const seat of lobbySeats) byId.set(seat.id, seat)
   return [...byId.values()]
 }
 
