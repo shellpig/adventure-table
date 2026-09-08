@@ -9,11 +9,17 @@ import {
   getActiveSession,
   getSession,
   lateJoinSession,
+  waitSessionEvents,
   type SessionSnapshot,
 } from '../../api/sessions'
 import { useLocale } from '../../i18n/LocaleProvider'
 import { startRoomHeartbeat } from './heartbeat'
 import { recentRoomForId } from './roomStorage'
+import {
+  applySessionEventPage,
+  eventStreamFromResume,
+  type SessionEventStreamState,
+} from './sessionEventStream'
 import { sessionCopy, sessionErrorMessage } from './sessionCopy'
 import './rooms.css'
 
@@ -49,6 +55,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   const [resumeSeats, setResumeSeats] = useState<CampaignSeat[]>([])
   const [callerAccessSessionId, setCallerAccessSessionId] = useState<string | null>(null)
   const [characters, setCharacters] = useState<RoomCharacterSummary[]>([])
+  const [eventStream, setEventStream] = useState<SessionEventStreamState | null>(null)
   const [lateJoinSeatId, setLateJoinSeatId] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -59,6 +66,9 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   const optionalLobby = (): Promise<LobbySnapshot | null> =>
     getLobby(roomId, campaignId, token).catch(() => null)
 
+  // Full Resume is an initial/explicit-lifecycle read only. Heartbeat deliberately
+  // does not call it: P3-A receives gameplay changes through the incremental
+  // event cursor and avoids multiplying the richer Resume query at heartbeat rate.
   const reload = async () => {
     const [nextSession, nextLobby, nextCharacters, nextResume] = await Promise.all([
       getSession(roomId, campaignId, sessionId, token),
@@ -71,6 +81,11 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     setCharacters(nextCharacters)
     setCallerAccessSessionId(nextResume.caller_access_session_id)
     setResumeSeats(nextResume.active_session?.id === sessionId ? nextResume.seats : [])
+    setEventStream(
+      nextResume.active_session?.id === sessionId
+        ? eventStreamFromResume(nextResume)
+        : null,
+    )
   }
 
   useEffect(() => {
@@ -82,16 +97,13 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     const stopHeartbeat = startRoomHeartbeat(async () => {
       try {
         await heartbeatRoom(roomId, token)
-        const [nextSession, nextLobby, nextResume] = await Promise.all([
+        const [nextSession, nextLobby] = await Promise.all([
           getSession(roomId, campaignId, sessionId, token),
           optionalLobby(),
-          getActiveSession(roomId, campaignId, token),
         ])
         if (active) {
           setSnapshot(nextSession)
           setLobby(nextLobby)
-          setCallerAccessSessionId(nextResume.caller_access_session_id)
-          setResumeSeats(nextResume.active_session?.id === sessionId ? nextResume.seats : [])
         }
       } catch (cause) {
         if (active) setError(sessionErrorMessage(cause, copy))
@@ -104,6 +116,46 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     // Room credential and route identify this Session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, campaignId, sessionId, token])
+
+  const eventStreamReady = eventStream !== null
+  useEffect(() => {
+    if (!recent || !eventStreamReady || snapshot?.status !== 'active') return
+
+    let active = true
+    let cursor = eventStream?.cursor ?? 0
+    const controller = new AbortController()
+
+    const poll = async () => {
+      while (active) {
+        try {
+          const page = await waitSessionEvents(
+            roomId,
+            campaignId,
+            sessionId,
+            cursor,
+            token,
+            { limit: 100, timeout: 30, signal: controller.signal },
+          )
+          if (!active) return
+          cursor = Math.max(cursor, page.cursor)
+          setEventStream((current) => current ? applySessionEventPage(current, page) : current)
+        } catch (cause) {
+          if (!active || (cause as { name?: string }).name === 'AbortError') return
+          setError(sessionErrorMessage(cause, copy))
+          return
+        }
+      }
+    }
+
+    void poll()
+    return () => {
+      active = false
+      controller.abort()
+    }
+    // Cursor progression is local to this long-poll loop; reducer state updates
+    // must not tear down/recreate the waiter on every event.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, campaignId, sessionId, token, eventStreamReady, snapshot?.status])
 
   const participantSeatIds = useMemo(
     () => new Set(snapshot?.participants.map((participant) => participant.seat_id) ?? []),

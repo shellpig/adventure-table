@@ -49,7 +49,7 @@ function seat(id: string, label: string, archivedAt: string | null = null): Camp
   }
 }
 
-describe('P2-E Session route and presentation', () => {
+describe('Session route and presentation', () => {
   it('recognizes the Room/Campaign/Session route only', () => {
     expect(roomSessionRouteFromPath(
       `/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}`,
@@ -128,11 +128,14 @@ describe('P2-E Session route and presentation', () => {
     }
   })
 
-  it('uses heartbeat and Resume truth with only explicit P2-E lifecycle calls', () => {
+  it('uses one initial Resume then incremental event wait instead of heartbeat Resume polling', () => {
     const source = readFileSync(new URL('./RoomSessionPage.tsx', import.meta.url), 'utf8')
     expect(source).toContain('startRoomHeartbeat')
     expect(source).toContain('heartbeatRoom(roomId, token)')
-    expect(source).toContain('getActiveSession(roomId, campaignId, token)')
+    expect(source.match(/getActiveSession\(roomId, campaignId, token\)/g) ?? []).toHaveLength(1)
+    expect(source).toContain('waitSessionEvents(')
+    expect(source).toContain('applySessionEventPage(')
+    expect(source).toContain('eventStreamFromResume(nextResume)')
     expect(source).toContain('mergeSessionSeatTruth(')
     expect(source).toContain('lateJoinSession(')
     expect(source).toContain('endSession(roomId, campaignId, sessionId, token)')
@@ -146,9 +149,9 @@ describe('P2-E Session route and presentation', () => {
   it('does not let a missing Lobby take down the Session surface', () => {
     const source = readFileSync(new URL('./RoomSessionPage.tsx', import.meta.url), 'utf8')
 
-    // The Lobby is Campaign-current-only; the Session is not. Both fetch sites
-    // must go through the tolerant wrapper, and neither the loading guard nor
-    // the DM check may depend on the Lobby succeeding.
+    // The Lobby is Campaign-current-only; the Session is not. Initial load and
+    // lightweight heartbeat both use the tolerant wrapper; event sync is a
+    // separate durable cursor and never depends on Lobby availability.
     expect(source).toContain('getLobby(roomId, campaignId, token).catch(() => null)')
     expect(source.match(/optionalLobby\(\)/g) ?? []).toHaveLength(2)
     expect(source).not.toContain('getLobby(roomId, campaignId, token),')

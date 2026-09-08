@@ -37,6 +37,40 @@ export type SessionResumeCharacterSummary = {
   version_no: number
 }
 
+export type TableEventVisibility = 'public' | 'dm_only' | 'actor_and_dm' | 'seat_private'
+export type TableExecutionMode = 'self' | 'dm_proxy' | 'system'
+
+export type TableRuntimeCursor = {
+  session_id: string
+  revision: number
+  last_event_seq: number
+}
+
+export type TableEvent = {
+  id: string
+  session_id: string
+  seq: number
+  kind: string
+  acting_seat_id: string | null
+  subject_seat_id: string | null
+  subject_character_id: string | null
+  execution_mode: TableExecutionMode | null
+  visibility: TableEventVisibility
+  recipient_seat_ids: string[]
+  payload_version: number
+  payload: Record<string, unknown>
+  created_at: string
+}
+
+export type TableEventPage = {
+  session_id: string
+  after_seq: number
+  cursor: number
+  current_seq: number
+  has_more: boolean
+  events: TableEvent[]
+}
+
 export type SessionResume = {
   room_id: string
   campaign_id: string
@@ -47,6 +81,8 @@ export type SessionResume = {
   seats: CampaignSeat[]
   active_characters: SessionResumeCharacterSummary[]
   caller_access_session_id: string | null
+  table_runtime?: TableRuntimeCursor | null
+  recent_events?: TableEventPage | null
 }
 
 type ApiErrorPayload = { error?: { code?: string; message?: string } }
@@ -81,6 +117,9 @@ async function request<T>(url: string, token: string, init?: RequestInit): Promi
 const base = (roomId: string, campaignId: string) =>
   `/api/rooms/${roomId}/campaigns/${campaignId}/sessions`
 
+const tableBase = (roomId: string, campaignId: string, sessionId: string) =>
+  `${base(roomId, campaignId)}/${sessionId}`
+
 export function getActiveSession(
   roomId: string,
   campaignId: string,
@@ -95,7 +134,37 @@ export function getSession(
   sessionId: string,
   token: string,
 ): Promise<SessionSnapshot> {
-  return request(`${base(roomId, campaignId)}/${sessionId}`, token)
+  return request(tableBase(roomId, campaignId, sessionId), token)
+}
+
+export function listSessionEvents(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  afterSeq: number,
+  token: string,
+  limit = 100,
+): Promise<TableEventPage> {
+  const query = new URLSearchParams({ after: String(afterSeq), limit: String(limit) })
+  return request(`${tableBase(roomId, campaignId, sessionId)}/events?${query}`, token)
+}
+
+export function waitSessionEvents(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  afterSeq: number,
+  token: string,
+  options: { limit?: number; timeout?: number; signal?: AbortSignal } = {},
+): Promise<TableEventPage> {
+  const query = new URLSearchParams({
+    after: String(afterSeq),
+    limit: String(options.limit ?? 100),
+    timeout: String(options.timeout ?? 30),
+  })
+  return request(`${tableBase(roomId, campaignId, sessionId)}/events/wait?${query}`, token, {
+    signal: options.signal,
+  })
 }
 
 export function startSession(
@@ -113,7 +182,7 @@ export function lateJoinSession(
   seatId: string,
   token: string,
 ): Promise<SessionSnapshot> {
-  return request(`${base(roomId, campaignId)}/${sessionId}/late-join`, token, {
+  return request(`${tableBase(roomId, campaignId, sessionId)}/late-join`, token, {
     method: 'POST',
     body: JSON.stringify({ seat_id: seatId }),
   })
@@ -125,7 +194,7 @@ export function endSession(
   sessionId: string,
   token: string,
 ): Promise<SessionSnapshot> {
-  return request(`${base(roomId, campaignId)}/${sessionId}/end`, token, { method: 'POST' })
+  return request(`${tableBase(roomId, campaignId, sessionId)}/end`, token, { method: 'POST' })
 }
 
 export function abandonSession(
@@ -134,5 +203,5 @@ export function abandonSession(
   sessionId: string,
   token: string,
 ): Promise<SessionSnapshot> {
-  return request(`${base(roomId, campaignId)}/${sessionId}/abandon`, token, { method: 'POST' })
+  return request(`${tableBase(roomId, campaignId, sessionId)}/abandon`, token, { method: 'POST' })
 }
