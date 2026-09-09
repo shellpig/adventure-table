@@ -18,6 +18,7 @@ from app.domain.rooms.exploration import (
     ExplorationSubjectNotFoundError,
     StageImageInvalidError,
     StageImageNotFoundPersistenceError,
+    StageRevisionConflictError,
     StageState,
     StageUpdateRequest,
 )
@@ -54,6 +55,8 @@ def _map_exploration_error(exc: Exception) -> APIError:
         return APIError(404, "stage_image_not_found", "Stage image was not found in this Room")
     if isinstance(exc, StageImageInvalidError):
         return APIError(422, "invalid_stage_image", str(exc))
+    if isinstance(exc, StageRevisionConflictError):
+        return APIError(409, "stage_revision_conflict", "Main Stage changed since this editor loaded")
     raise exc
 
 

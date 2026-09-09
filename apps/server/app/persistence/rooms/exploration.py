@@ -69,6 +69,12 @@ session_stages = Table(
         ForeignKey("room_stage_images.id", ondelete="SET NULL"),
         nullable=True,
     ),
+    Column(
+        "updated_by_seat_id",
+        Uuid(),
+        ForeignKey("campaign_seats.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     CheckConstraint("revision >= 0", name="ck_session_stages_revision_nonnegative"),
@@ -78,6 +84,15 @@ Index("ix_session_stages_image_id", session_stages.c.image_id)
 
 class StageImageNotFoundPersistenceError(LookupError):
     pass
+
+
+class StageRevisionConflictPersistenceError(RuntimeError):
+    def __init__(self, expected_revision: int, current_revision: int) -> None:
+        super().__init__(
+            f"Stage revision conflict: expected {expected_revision}, current {current_revision}"
+        )
+        self.expected_revision = expected_revision
+        self.current_revision = current_revision
 
 
 @dataclass(frozen=True)
@@ -98,6 +113,7 @@ class StoredSessionStage:
     image_id: UUID | None
     image_media_type: str | None
     image_filename: str | None
+    updated_by_seat_id: UUID | None
 
 
 class ExplorationRepository:
@@ -137,6 +153,7 @@ class ExplorationRepository:
                 image_id=None,
                 image_media_type=None,
                 image_filename=None,
+                updated_by_seat_id=None,
             )
         return StoredSessionStage(
             session_id=session_id,
@@ -145,6 +162,7 @@ class ExplorationRepository:
             image_id=row["image_id"],
             image_media_type=image_row["media_type"] if image_row is not None else None,
             image_filename=image_row["filename"] if image_row is not None else None,
+            updated_by_seat_id=row["updated_by_seat_id"],
         )
 
     @staticmethod
@@ -158,6 +176,7 @@ class ExplorationRepository:
             image_id=UUID(str(raw_image_id)) if raw_image_id is not None else None,
             image_media_type=payload.get("image_media_type"),
             image_filename=payload.get("image_filename"),
+            updated_by_seat_id=row["acting_seat_id"],
         )
 
     def _session_scope_row(
@@ -275,6 +294,7 @@ class ExplorationRepository:
         self,
         *,
         binding: StoredTableActorBinding,
+        expected_revision: int,
         text: str | None,
         retain_image_id: UUID | None,
         new_image: tuple[str, str | None, bytes] | None,
@@ -317,6 +337,12 @@ class ExplorationRepository:
                 .where(session_stages.c.session_id == session_id)
                 .with_for_update()
             ).mappings().one_or_none()
+            current_revision = int(stage_row["revision"]) if stage_row is not None else 0
+            if current_revision != expected_revision:
+                raise StageRevisionConflictPersistenceError(
+                    expected_revision=expected_revision,
+                    current_revision=current_revision,
+                )
             old_image_id = stage_row["image_id"] if stage_row is not None else None
 
             if new_image is not None:
@@ -352,7 +378,7 @@ class ExplorationRepository:
                 next_image_id = None
                 image_row = None
 
-            next_stage_revision = int(stage_row["revision"]) + 1 if stage_row is not None else 1
+            next_stage_revision = current_revision + 1
             if stage_row is None:
                 connection.execute(
                     insert(session_stages).values(
@@ -360,6 +386,7 @@ class ExplorationRepository:
                         revision=next_stage_revision,
                         text=text,
                         image_id=next_image_id,
+                        updated_by_seat_id=binding.seat_id,
                     )
                 )
             else:
@@ -370,6 +397,7 @@ class ExplorationRepository:
                         revision=next_stage_revision,
                         text=text,
                         image_id=next_image_id,
+                        updated_by_seat_id=binding.seat_id,
                         updated_at=func.now(),
                     )
                 )
@@ -406,6 +434,7 @@ class ExplorationRepository:
                 "image_id": str(next_image_id) if next_image_id is not None else None,
                 "image_media_type": image_row["media_type"] if image_row is not None else None,
                 "image_filename": image_row["filename"] if image_row is not None else None,
+                "updated_by_seat_id": str(binding.seat_id),
             }
             connection.execute(
                 insert(session_events).values(
@@ -446,6 +475,7 @@ class ExplorationRepository:
 __all__ = [
     "ExplorationRepository",
     "StageImageNotFoundPersistenceError",
+    "StageRevisionConflictPersistenceError",
     "StoredSessionStage",
     "StoredStageImage",
     "room_stage_images",

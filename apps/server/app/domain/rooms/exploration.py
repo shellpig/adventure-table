@@ -23,6 +23,7 @@ from app.domain.rooms.table_events import (
 from app.persistence.rooms.exploration import (
     ExplorationRepository,
     StageImageNotFoundPersistenceError,
+    StageRevisionConflictPersistenceError,
     StoredSessionStage,
     StoredStageImage,
 )
@@ -40,7 +41,7 @@ from app.persistence.rooms.table_runtime import (
 
 
 MAX_STAGE_TEXT_LENGTH = 12_000
-MAX_STAGE_IMAGE_BYTES = 8 * 1024 * 1024
+MAX_STAGE_IMAGE_BYTES = 10 * 1024 * 1024
 MAX_STAGE_IMAGE_BASE64_LENGTH = ((MAX_STAGE_IMAGE_BYTES + 2) // 3) * 4 + 16
 MAX_EXPLORATION_TEXT_LENGTH = 8_000
 SUPPORTED_STAGE_IMAGE_TYPES = frozenset({"image/png", "image/jpeg", "image/webp"})
@@ -53,6 +54,7 @@ class StageImageUpload(StrictModel):
 
 
 class StageUpdateRequest(StrictModel):
+    expected_revision: int = Field(ge=0)
     text: str | None = Field(default=None, max_length=MAX_STAGE_TEXT_LENGTH)
     image_id: UUID | None = None
     image: StageImageUpload | None = None
@@ -85,6 +87,10 @@ class StageImageContent(StrictModel):
 
 
 class StageImageInvalidError(ValueError):
+    pass
+
+
+class StageRevisionConflictError(RuntimeError):
     pass
 
 
@@ -210,6 +216,7 @@ class ExplorationStageService:
         try:
             stage, _event = self.repository.replace_stage(
                 binding=_human_binding(actor),
+                expected_revision=request.expected_revision,
                 text=request.text,
                 retain_image_id=request.image_id,
                 new_image=new_image,
@@ -225,6 +232,8 @@ class ExplorationStageService:
             raise TableEventNotFoundError(str(actor.session_id)) from exc
         except TableEventSessionNotActivePersistenceError as exc:
             raise TableEventSessionNotActiveError(str(actor.session_id)) from exc
+        except StageRevisionConflictPersistenceError as exc:
+            raise StageRevisionConflictError(str(exc)) from exc
         if self.table_event_service.notifier is not None:
             self.table_event_service.notifier.notify(actor.session_id)
         return self._present(stage)
@@ -344,6 +353,7 @@ __all__ = [
     "StageImageInvalidError",
     "StageImageNotFoundPersistenceError",
     "StageImageUpload",
+    "StageRevisionConflictError",
     "StageState",
     "StageUpdateRequest",
 ]
