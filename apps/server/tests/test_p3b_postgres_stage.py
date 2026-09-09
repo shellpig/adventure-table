@@ -13,6 +13,9 @@ from sqlalchemy import create_engine, inspect, insert, select, text, update
 from sqlalchemy.engine import Engine
 
 from app.domain.rooms.exploration import (
+    ExplorationActionService,
+    ExplorationInputKind,
+    ExplorationInputRequest,
     ExplorationStageService,
     StageImageUpload,
     StageUpdateRequest,
@@ -27,6 +30,11 @@ from app.persistence.rooms.exploration import (
     room_stage_images,
     session_stages,
 )
+from app.persistence.rooms.exploration_messages import (
+    ExplorationMessageRepository,
+    session_messages,
+)
+from app.persistence.rooms.exploration_subjects import ExplorationSubjectRepository
 from app.persistence.rooms.table_runtime import (
     TableEventRepository,
     session_events,
@@ -214,6 +222,7 @@ def test_p3b_postgres_migration_indexes_and_atomic_stage_event(postgres_engine: 
     stage = stage_service.replace_stage(
         actor,
         StageUpdateRequest(
+            expected_revision=0,
             text="PostgreSQL gate",
             image=_png_upload(),
             idempotency_key="pg-stage-1",
@@ -285,6 +294,7 @@ def test_p3b_postgres_stale_dm_rejection_rolls_back_stage_event_and_image(
         stage_service.replace_stage(
             actor,
             StageUpdateRequest(
+                expected_revision=0,
                 text="Must rollback",
                 image=_png_upload(),
                 idempotency_key="pg-stale",
@@ -306,3 +316,104 @@ def test_p3b_postgres_stale_dm_rejection_rolls_back_stage_event_and_image(
         assert connection.execute(
             select(room_stage_images).where(room_stage_images.c.room_id == room_id)
         ).mappings().all() == []
+
+
+def test_p3b_postgres_message_event_and_cursor_commit_once_on_idempotent_replay(
+    postgres_engine: Engine,
+) -> None:
+    room_id, campaign_id, session_id, dm_access_id = _seed_session(postgres_engine)
+    event_service = TableEventService(TableEventRepository(postgres_engine))
+    action_service = ExplorationActionService(
+        ExplorationSubjectRepository(postgres_engine),
+        ExplorationMessageRepository(postgres_engine),
+        event_service,
+    )
+    actor = _dm_actor(
+        event_service,
+        room_id=room_id,
+        campaign_id=campaign_id,
+        session_id=session_id,
+        dm_access_id=dm_access_id,
+    )
+    request = ExplorationInputRequest(
+        kind=ExplorationInputKind.NARRATION,
+        text="PostgreSQL narration",
+        idempotency_key="pg-message-1",
+    )
+
+    first = action_service.send(actor, request)
+    replay = action_service.send(actor, request)
+
+    assert replay.id == first.id
+    assert replay.seq == first.seq == 1
+    with postgres_engine.connect() as connection:
+        messages = connection.execute(
+            select(session_messages).where(session_messages.c.session_id == session_id)
+        ).mappings().all()
+        events = connection.execute(
+            select(session_events).where(session_events.c.session_id == session_id)
+        ).mappings().all()
+        runtime = connection.execute(
+            select(session_table_runtime).where(
+                session_table_runtime.c.session_id == session_id
+            )
+        ).mappings().one()
+
+    assert len(messages) == 1
+    assert messages[0]["event_id"] == first.id
+    assert messages[0]["kind"] == "narration"
+    assert messages[0]["text"] == "PostgreSQL narration"
+    assert len(events) == 1
+    assert events[0]["id"] == first.id
+    assert events[0]["kind"] == "exploration.narration"
+    assert runtime["revision"] == 1
+    assert runtime["last_event_seq"] == 1
+
+
+def test_p3b_postgres_stale_actor_rolls_back_message_event_and_cursor(
+    postgres_engine: Engine,
+) -> None:
+    room_id, campaign_id, session_id, dm_access_id = _seed_session(postgres_engine)
+    event_service = TableEventService(TableEventRepository(postgres_engine))
+    action_service = ExplorationActionService(
+        ExplorationSubjectRepository(postgres_engine),
+        ExplorationMessageRepository(postgres_engine),
+        event_service,
+    )
+    actor = _dm_actor(
+        event_service,
+        room_id=room_id,
+        campaign_id=campaign_id,
+        session_id=session_id,
+        dm_access_id=dm_access_id,
+    )
+
+    with postgres_engine.begin() as connection:
+        connection.execute(
+            update(room_access_sessions)
+            .where(room_access_sessions.c.id == dm_access_id)
+            .values(revoked_at=datetime.now(timezone.utc))
+        )
+
+    with pytest.raises(TableEventActorUnauthorizedError):
+        action_service.send(
+            actor,
+            ExplorationInputRequest(
+                kind=ExplorationInputKind.NARRATION,
+                text="Must not commit",
+                idempotency_key="pg-message-stale",
+            ),
+        )
+
+    with postgres_engine.connect() as connection:
+        assert connection.execute(
+            select(session_messages).where(session_messages.c.session_id == session_id)
+        ).mappings().all() == []
+        assert connection.execute(
+            select(session_events).where(session_events.c.session_id == session_id)
+        ).mappings().all() == []
+        assert connection.execute(
+            select(session_table_runtime).where(
+                session_table_runtime.c.session_id == session_id
+            )
+        ).mappings().one_or_none() is None
