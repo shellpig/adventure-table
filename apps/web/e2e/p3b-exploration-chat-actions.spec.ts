@@ -14,6 +14,7 @@ const ROOM_PASSWORD = 'p2-e2e-room-pass'
 const RECENT_ROOMS_STORAGE_KEY = 'adventure-table.recent-rooms.v1'
 const ACTIVE_ROOM_STORAGE_KEY = 'adventure-table.active-room.v1'
 const LOCALE_STORAGE_KEY = 'adventure-table.locale'
+const PLAYWRIGHT_BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173'
 const IMPORT_FIXTURE = resolve(
   process.cwd(),
   '../server/tests/data/m03/fixture_low_level_srd.json',
@@ -25,6 +26,10 @@ const ONE_PIXEL_PNG = Buffer.from(
 
 type Campaign = { id: string }
 type CharacterSummary = { id: string; name: string }
+type CharacterImportResult = {
+  character_id: string | null
+  character_preview: { name: string }
+}
 type Seat = {
   id: string
   label: string | null
@@ -60,10 +65,15 @@ async function json<T>(response: Awaited<ReturnType<APIRequestContext['get']>>):
 
 async function importCharacter(request: APIRequestContext): Promise<CharacterSummary> {
   const envelope = await readFile(IMPORT_FIXTURE, 'utf8')
-  return json<CharacterSummary>(await request.post('/api/characters/import', {
+  const result = await json<CharacterImportResult>(await request.post('/api/characters/import', {
     data: envelope,
     headers: { 'Content-Type': 'application/json' },
   }))
+  expect(result.character_id).not.toBeNull()
+  return {
+    id: result.character_id!,
+    name: result.character_preview.name,
+  }
 }
 
 async function enterAsMember(
@@ -168,7 +178,7 @@ async function openSessionAs(
   roomContext: { roomId: string; code: string; name: string },
   sessionUrl: string,
 ): Promise<{ context: BrowserContext; page: Page }> {
-  const context = await browser.newContext()
+  const context = await browser.newContext({ baseURL: PLAYWRIGHT_BASE_URL })
   const page = await context.newPage()
   await page.goto('/')
   await page.evaluate(
