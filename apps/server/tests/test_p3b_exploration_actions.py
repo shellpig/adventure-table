@@ -69,22 +69,12 @@ def _seed(engine):
         connection.execute(update(rooms).where(rooms.c.id == room_id).values(active_campaign_id=campaign_id))
         connection.execute(insert(characters), [
             {
-                "id": characters_by_player["p1"],
-                "name": "Mira",
-                "ruleset": "dnd5e-2014",
-                "current_version_id": None,
-                "archived_at": None,
-                "created_at": now,
-                "updated_at": now,
+                "id": characters_by_player["p1"], "name": "Mira", "ruleset": "dnd5e-2014",
+                "current_version_id": None, "archived_at": None, "created_at": now, "updated_at": now,
             },
             {
-                "id": characters_by_player["p2"],
-                "name": "Serena",
-                "ruleset": "dnd5e-2014",
-                "current_version_id": None,
-                "archived_at": None,
-                "created_at": now,
-                "updated_at": now,
+                "id": characters_by_player["p2"], "name": "Serena", "ruleset": "dnd5e-2014",
+                "current_version_id": None, "archived_at": None, "created_at": now, "updated_at": now,
             },
         ])
         connection.execute(insert(campaign_seats), [
@@ -129,11 +119,21 @@ def _seed(engine):
     return room_id, campaign_id, session_id, access, seats, characters_by_player
 
 
-def _actor(events: TableEventService, room_id: UUID, campaign_id: UUID, session_id: UUID, access_id: UUID, authority: str):
+def _actor(
+    events: TableEventService,
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    access_id: UUID,
+    authority: str,
+):
     return events.resolve_human_actor(
-        room_id=room_id, campaign_id=campaign_id, session_id=session_id,
+        room_id=room_id,
+        campaign_id=campaign_id,
+        session_id=session_id,
         context=RoomAccessContext(
-            room_id=room_id, access_session_id=access_id,
+            room_id=room_id,
+            access_session_id=access_id,
             authority=RoomAccessAuthority(authority),
         ),
     )
@@ -184,14 +184,14 @@ def test_dialogue_action_search_and_dm_proxy_keep_subject_and_acting_identity_di
 
         with engine.connect() as connection:
             rows = connection.execute(
-                select(session_messages)
+                select(session_messages, session_events.c.seq.label("event_seq"))
+                .join(session_events, session_events.c.id == session_messages.c.event_id)
                 .where(session_messages.c.session_id == session_id)
-                .order_by(session_messages.c.created_at, session_messages.c.id)
+                .order_by(session_events.c.seq)
             ).mappings().all()
-        assert len(rows) == 2
-        assert rows[0]["kind"] == "dialogue"
+        assert [row["event_seq"] for row in rows] == [dialogue.seq, proxied.seq]
+        assert [row["kind"] for row in rows] == ["dialogue", "action"]
         assert rows[0]["subject_character_id"] == characters_by_player["p1"]
-        assert rows[1]["kind"] == "action"
         assert rows[1]["acting_seat_id"] == seats["dm"]
         assert rows[1]["subject_seat_id"] == seats["p2"]
         assert rows[1]["execution_mode"] == "dm_proxy"
@@ -254,7 +254,9 @@ def test_one_human_controlling_multiple_player_seats_must_choose_subject_explici
         assert set(p1.controlled_seat_ids) == {seats["p1"], seats["p2"]}
 
         second = actions.send(p1, ExplorationInputRequest(
-            kind=ExplorationInputKind.ACTION, subject_seat_id=seats["p2"], text="Serena opens the door.",
+            kind=ExplorationInputKind.ACTION,
+            subject_seat_id=seats["p2"],
+            text="Serena opens the door.",
         ))
         assert second.acting_seat_id == seats["p2"]
         assert second.execution_mode.value == "self"
