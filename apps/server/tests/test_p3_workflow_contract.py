@@ -40,6 +40,7 @@ def test_p3_non_e2e_workflow_explicitly_runs_p3_and_legacy_postgres_gates() -> N
 
     for test_file in (
         "tests/test_p3a_postgres_events.py",
+        "tests/test_p3b_postgres_stage.py",
         "tests/test_p2a_postgres_migration.py",
         "tests/test_p2b_postgres_workspace.py",
         "tests/test_p2e_postgres_sessions.py",
@@ -57,5 +58,5 @@ def test_p3_non_e2e_workflow_keeps_frontend_and_windows_standalone_gates() -> No
     assert "npm run build" in source
     assert "windows-standalone:" in source
     assert "runs-on: windows-latest" in source
-    assert "scripts\\build-standalone.cmd --version p3a-non-e2e" in source
+    assert "scripts\\build-standalone.cmd --version p3-non-e2e" in source
     assert ".standalone-venv\\Scripts\\python.exe scripts\\smoke_standalone.py" in source
