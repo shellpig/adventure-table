@@ -71,6 +71,38 @@ export type TableEventPage = {
   events: TableEvent[]
 }
 
+export type StageState = {
+  session_id: string
+  revision: number
+  text: string | null
+  image_id: string | null
+  image_media_type: string | null
+  image_filename: string | null
+}
+
+export type StageImageUpload = {
+  media_type: 'image/png' | 'image/jpeg' | 'image/webp'
+  filename?: string | null
+  data_base64: string
+}
+
+export type StageUpdateRequest = {
+  text?: string | null
+  image_id?: string | null
+  image?: StageImageUpload | null
+  idempotency_key?: string | null
+}
+
+export type ExplorationInputKind = 'dialogue' | 'action' | 'ooc' | 'whisper_dm' | 'narration'
+
+export type ExplorationInputRequest = {
+  kind: ExplorationInputKind
+  text: string
+  subject_seat_id?: string | null
+  source_command?: 'search' | null
+  idempotency_key?: string | null
+}
+
 export type SessionResume = {
   room_id: string
   campaign_id: string
@@ -83,6 +115,7 @@ export type SessionResume = {
   caller_access_session_id: string | null
   table_runtime?: TableRuntimeCursor | null
   recent_events?: TableEventPage | null
+  stage?: StageState | null
 }
 
 type ApiErrorPayload = { error?: { code?: string; message?: string } }
@@ -91,6 +124,16 @@ export class SessionApiError extends Error {
   constructor(readonly status: number, readonly code: string, message: string) {
     super(message)
   }
+}
+
+async function apiError(response: Response): Promise<SessionApiError> {
+  let payload: ApiErrorPayload = {}
+  try { payload = (await response.json()) as ApiErrorPayload } catch { /* fallback below */ }
+  return new SessionApiError(
+    response.status,
+    payload.error?.code ?? 'session_request_failed',
+    payload.error?.message ?? `Session request failed (${response.status})`,
+  )
 }
 
 async function request<T>(url: string, token: string, init?: RequestInit): Promise<T> {
@@ -102,15 +145,7 @@ async function request<T>(url: string, token: string, init?: RequestInit): Promi
       ...(init?.headers ?? {}),
     },
   })
-  if (!response.ok) {
-    let payload: ApiErrorPayload = {}
-    try { payload = (await response.json()) as ApiErrorPayload } catch { /* fallback below */ }
-    throw new SessionApiError(
-      response.status,
-      payload.error?.code ?? 'session_request_failed',
-      payload.error?.message ?? `Session request failed (${response.status})`,
-    )
-  }
+  if (!response.ok) throw await apiError(response)
   return (await response.json()) as T
 }
 
@@ -164,6 +199,47 @@ export function waitSessionEvents(
   })
   return request(`${tableBase(roomId, campaignId, sessionId)}/events/wait?${query}`, token, {
     signal: options.signal,
+  })
+}
+
+export function replaceSessionStage(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  update: StageUpdateRequest,
+  token: string,
+): Promise<StageState> {
+  return request(`${tableBase(roomId, campaignId, sessionId)}/stage`, token, {
+    method: 'PUT',
+    body: JSON.stringify(update),
+  })
+}
+
+export async function getSessionStageImage(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  imageId: string,
+  token: string,
+): Promise<Blob> {
+  const response = await fetch(
+    `${tableBase(roomId, campaignId, sessionId)}/stage/images/${imageId}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  )
+  if (!response.ok) throw await apiError(response)
+  return response.blob()
+}
+
+export function sendExplorationInput(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  input: ExplorationInputRequest,
+  token: string,
+): Promise<TableEvent> {
+  return request(`${tableBase(roomId, campaignId, sessionId)}/exploration`, token, {
+    method: 'POST',
+    body: JSON.stringify(input),
   })
 }
 
