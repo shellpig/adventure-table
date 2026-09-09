@@ -28,6 +28,88 @@ export type PendingActionCreateInput = {
   idempotency_key?: string | null
 }
 
+export type RollVisibility = 'public' | 'roller_and_dm' | 'dm_only'
+export type RollModifierMode = 'normal' | 'advantage' | 'disadvantage'
+export type RollRequestType = 'ability' | 'skill' | 'saving_throw' | 'other'
+export type FormalRollSource = 'server' | 'physical'
+
+export type RollRequestView = {
+  id: string
+  session_id: string
+  roll_group_id: string | null
+  target_seat_id: string
+  target_character_id: string | null
+  request_type: RollRequestType
+  ability_ref: string | null
+  skill_ref: string | null
+  dc: number | null
+  modifier_mode: RollModifierMode
+  flat_adjustment: number
+  visibility: RollVisibility
+  status: 'pending' | 'resolved' | 'cancelled'
+  requested_by_seat_id: string
+  version: number
+}
+
+export type RollResultView = {
+  id: string
+  roll_request_id: string | null
+  session_id: string
+  acting_seat_id: string
+  subject_seat_id: string
+  subject_character_id: string | null
+  execution_mode: 'self' | 'dm_proxy' | 'system'
+  source: 'server' | 'physical' | 'quick'
+  formula: string
+  raw_dice: number[]
+  kept_dice: number[]
+  base_modifier: number
+  flat_adjustment: number
+  total: number
+  visibility: RollVisibility
+}
+
+export type RequestCheckInput = {
+  target_seat_ids: string[]
+  request_type: RollRequestType
+  ability_ref?: string | null
+  skill_ref?: string | null
+  dc?: number | null
+  modifier_mode?: RollModifierMode
+  flat_adjustment?: number
+  visibility?: RollVisibility
+  label?: string | null
+  idempotency_key?: string | null
+}
+
+export type RequestCheckResponse = {
+  roll_group_id: string
+  requests: RollRequestView[]
+}
+
+export type FormalRollInput = {
+  roll_request_id: string
+  source?: FormalRollSource
+  raw_dice?: number[] | null
+  idempotency_key?: string | null
+}
+
+export type QuickRollInput = {
+  subject_seat_id: string
+  dice_count?: number
+  die_sides?: number
+  flat_adjustment?: number
+  visibility?: RollVisibility
+  idempotency_key?: string | null
+}
+
+export type RollSubmissionResponse = {
+  result_id: string
+  roll_request_id: string | null
+  hidden: boolean
+  result: RollResultView | null
+}
+
 type ApiErrorPayload = { error?: { code?: string; message?: string } }
 
 async function apiError(response: Response): Promise<SessionApiError> {
@@ -64,6 +146,54 @@ export function createPendingAction(
   token: string,
 ): Promise<PendingActionView> {
   return request(`${tableBase(roomId, campaignId, sessionId)}/pending-actions`, token, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export function requestCheck(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  input: RequestCheckInput,
+  token: string,
+): Promise<RequestCheckResponse> {
+  return request(`${tableBase(roomId, campaignId, sessionId)}/checks`, token, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export function listRollRequests(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  token: string,
+): Promise<RollRequestView[]> {
+  return request(`${tableBase(roomId, campaignId, sessionId)}/roll-requests`, token)
+}
+
+export function submitFormalRoll(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  input: FormalRollInput,
+  token: string,
+): Promise<RollSubmissionResponse> {
+  return request(`${tableBase(roomId, campaignId, sessionId)}/rolls/formal`, token, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export function submitQuickRoll(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  input: QuickRollInput,
+  token: string,
+): Promise<RollSubmissionResponse> {
+  return request(`${tableBase(roomId, campaignId, sessionId)}/rolls/quick`, token, {
     method: 'POST',
     body: JSON.stringify(input),
   })
