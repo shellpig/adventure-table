@@ -1,20 +1,27 @@
 from __future__ import annotations
 
+import base64
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import create_engine, insert, select, update
 from sqlalchemy.pool import StaticPool
 
 from app.db import metadata
 from app.domain.rooms.exploration import (
     ExplorationStageService,
+    StageImageUpload,
     StageUpdateRequest,
 )
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.table_events import TableEventService, TableEventSessionNotActiveError
-from app.persistence.rooms.exploration import ExplorationRepository, session_stages
+from app.persistence.rooms.exploration import (
+    ExplorationRepository,
+    StageImageNotFoundPersistenceError,
+    session_stages,
+)
 from app.persistence.rooms.table_runtime import (
     TableEventRepository,
     session_events,
@@ -130,6 +137,15 @@ def _dm(events, room_id, campaign_id, session_id, access_id):
     )
 
 
+def _png_upload() -> StageImageUpload:
+    raw = b"\x89PNG\r\n\x1a\nP3B-SCOPE"
+    return StageImageUpload(
+        media_type="image/png",
+        filename="scope.png",
+        data_base64=base64.b64encode(raw).decode("ascii"),
+    )
+
+
 def test_stage_reuses_canonical_event_idempotency_before_session_status() -> None:
     engine = _engine()
     try:
@@ -187,3 +203,39 @@ def test_stage_reuses_canonical_event_idempotency_before_session_status() -> Non
         assert stage["text"] == "Original Stage"
     finally:
         engine.dispose()
+
+
+def test_stage_image_is_scoped_to_its_room() -> None:
+    engine = _engine()
+    try:
+        scope_a = _seed_dm(engine)
+        scope_b = _seed_dm(engine)
+        events = TableEventService(TableEventRepository(engine))
+        repository = ExplorationRepository(engine)
+        service = ExplorationStageService(repository, events)
+        dm_a = _dm(events, *scope_a)
+        dm_b = _dm(events, *scope_b)
+
+        stage_a = service.replace_stage(
+            dm_a,
+            StageUpdateRequest(expected_revision=0, image=_png_upload()),
+        )
+        assert stage_a.image_id is not None
+        assert service.get_image(dm_a, stage_a.image_id).media_type == "image/png"
+
+        with pytest.raises(StageImageNotFoundPersistenceError):
+            repository.load_image(room_id=dm_b.room_id, image_id=stage_a.image_id)
+        with pytest.raises(StageImageNotFoundPersistenceError):
+            service.get_image(dm_b, stage_a.image_id)
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize("media_type", ["image/svg+xml", "text/html"])
+def test_stage_upload_schema_explicitly_rejects_active_content_media_types(media_type: str) -> None:
+    with pytest.raises(ValidationError):
+        StageImageUpload.model_validate({
+            "media_type": media_type,
+            "filename": "active-content.txt",
+            "data_base64": base64.b64encode(b"<script>alert(1)</script>").decode("ascii"),
+        })
