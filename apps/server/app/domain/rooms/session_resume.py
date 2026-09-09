@@ -21,6 +21,7 @@ from app.domain.rooms.sessions import (
     SessionSnapshot,
 )
 from app.domain.rooms.table_events import (
+    TableEventActorUnauthorizedError,
     TableEventNotFoundError,
     TableEventPage,
     TableEventService,
@@ -171,17 +172,20 @@ class SessionResumeService:
                 session_id=session_id,
                 context=context,
             )
-        except TableEventNotFoundError:
+            runtime = self.table_event_service.current_cursor(actor)
+            after_seq = max(0, runtime.last_event_seq - RECENT_EVENT_WINDOW)
+            recent = self.table_event_service.list_after(
+                actor,
+                after_seq=after_seq,
+                limit=RECENT_EVENT_WINDOW,
+            )
+            stage = self.stage_service.get_stage(actor) if self.stage_service is not None else None
+        except (TableEventNotFoundError, TableEventActorUnauthorizedError):
+            # P3 projection is supplemental to the P2 Resume DTO. If controller
+            # authority changes while these independently revalidated reads are
+            # being composed, fail the whole P3 projection closed instead of
+            # turning an otherwise valid P2 Resume into a transient 500.
             return None, None, None
-
-        runtime = self.table_event_service.current_cursor(actor)
-        after_seq = max(0, runtime.last_event_seq - RECENT_EVENT_WINDOW)
-        recent = self.table_event_service.list_after(
-            actor,
-            after_seq=after_seq,
-            limit=RECENT_EVENT_WINDOW,
-        )
-        stage = self.stage_service.get_stage(actor) if self.stage_service is not None else None
         return runtime, recent, stage
 
     def resume(
