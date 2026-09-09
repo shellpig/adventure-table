@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from hashlib import sha256
 from typing import Any
 from uuid import UUID, uuid4
@@ -30,13 +29,11 @@ from app.db import metadata
 from app.persistence.rooms.table_runtime import (
     StoredTableActorBinding,
     StoredTableEvent,
-    TableEventActorBindingStalePersistenceError,
-    TableEventSessionNotActivePersistenceError,
+    TableEventRepository,
     TableEventSessionNotFoundPersistenceError,
     session_events,
-    session_table_runtime,
 )
-from app.persistence.rooms.tables import campaigns, room_access_sessions, sessions
+from app.persistence.rooms.tables import campaigns, sessions
 
 
 room_stage_images = Table(
@@ -117,31 +114,11 @@ class StoredSessionStage:
 
 
 class ExplorationRepository:
-    """P3-B canonical Stage persistence plus atomic Stage event emission."""
+    """P3-B Stage projection persisted through the canonical P3 event allocator."""
 
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
-
-    @staticmethod
-    def _stored_event(row: Any) -> StoredTableEvent:
-        return StoredTableEvent(
-            id=row["id"],
-            session_id=row["session_id"],
-            seq=int(row["seq"]),
-            kind=row["kind"],
-            acting_seat_id=row["acting_seat_id"],
-            subject_seat_id=row["subject_seat_id"],
-            subject_character_id=row["subject_character_id"],
-            execution_mode=row["execution_mode"],
-            visibility=row["visibility"],
-            recipient_seat_ids=tuple(
-                UUID(str(value)) for value in (row["recipient_seat_ids"] or [])
-            ),
-            payload_version=int(row["payload_version"]),
-            payload=dict(row["payload"]),
-            idempotency_key=row["idempotency_key"],
-            created_at=row["created_at"],
-        )
+        self.event_repository = TableEventRepository(engine)
 
     @staticmethod
     def _stage(row: Any | None, image_row: Any | None, session_id: UUID) -> StoredSessionStage:
@@ -166,17 +143,17 @@ class ExplorationRepository:
         )
 
     @staticmethod
-    def _stage_from_event(row: Any, session_id: UUID) -> StoredSessionStage:
-        payload = dict(row["payload"])
+    def _stage_from_event(event: StoredTableEvent) -> StoredSessionStage:
+        payload = dict(event.payload)
         raw_image_id = payload.get("image_id")
         return StoredSessionStage(
-            session_id=session_id,
+            session_id=event.session_id,
             revision=int(payload["stage_revision"]),
             text=payload.get("text"),
             image_id=UUID(str(raw_image_id)) if raw_image_id is not None else None,
             image_media_type=payload.get("image_media_type"),
             image_filename=payload.get("image_filename"),
-            updated_by_seat_id=row["acting_seat_id"],
+            updated_by_seat_id=event.acting_seat_id,
         )
 
     def _session_scope_row(
@@ -186,15 +163,10 @@ class ExplorationRepository:
         room_id: UUID,
         campaign_id: UUID,
         session_id: UUID,
-        for_update: bool = False,
     ):
-        query = (
+        return connection.execute(
             select(
                 sessions.c.id,
-                sessions.c.status,
-                sessions.c.dm_seat_id,
-                sessions.c.dm_controller_kind,
-                sessions.c.dm_controller_access_session_id,
                 campaigns.c.room_id,
             )
             .select_from(sessions.join(campaigns, campaigns.c.id == sessions.c.campaign_id))
@@ -203,42 +175,7 @@ class ExplorationRepository:
                 sessions.c.campaign_id == campaign_id,
                 campaigns.c.room_id == room_id,
             )
-        )
-        if for_update:
-            query = query.with_for_update()
-        return connection.execute(query).mappings().one_or_none()
-
-    def _require_current_dm(
-        self,
-        connection,
-        *,
-        binding: StoredTableActorBinding,
-        session_row: Any,
-    ) -> None:
-        access = connection.execute(
-            select(
-                room_access_sessions.c.id,
-                room_access_sessions.c.room_id,
-                room_access_sessions.c.revoked_at,
-            )
-            .where(room_access_sessions.c.id == binding.access_session_id)
-            .with_for_update()
         ).mappings().one_or_none()
-        current = (
-            binding.is_current_dm
-            and binding.role == "dm"
-            and binding.seat_id == session_row["dm_seat_id"]
-            and binding.room_id == session_row["room_id"]
-            and session_row["dm_controller_kind"] == "human"
-            and session_row["dm_controller_access_session_id"] == binding.access_session_id
-            and access is not None
-            and access["room_id"] == binding.room_id
-            and access["revoked_at"] is None
-        )
-        if not current:
-            raise TableEventActorBindingStalePersistenceError(
-                "Stage writer is no longer the current Session DM"
-            )
 
     def _image_row(self, connection, *, room_id: UUID, image_id: UUID | None):
         if image_id is None:
@@ -301,37 +238,10 @@ class ExplorationRepository:
         idempotency_key: str | None,
     ) -> tuple[StoredSessionStage, StoredTableEvent]:
         room_id = binding.room_id
-        campaign_id = binding.campaign_id
         session_id = binding.session_id
-        event_id = uuid4()
+        projected_stage: list[StoredSessionStage] = []
 
-        with self.engine.begin() as connection:
-            session_row = self._session_scope_row(
-                connection,
-                room_id=room_id,
-                campaign_id=campaign_id,
-                session_id=session_id,
-                for_update=True,
-            )
-            if session_row is None:
-                raise TableEventSessionNotFoundPersistenceError(str(session_id))
-            self._require_current_dm(connection, binding=binding, session_row=session_row)
-            if session_row["status"] != "active":
-                raise TableEventSessionNotActivePersistenceError(str(session_id))
-
-            if idempotency_key is not None:
-                existing = connection.execute(
-                    select(session_events).where(
-                        session_events.c.session_id == session_id,
-                        session_events.c.idempotency_key == idempotency_key,
-                    )
-                ).mappings().one_or_none()
-                if existing is not None:
-                    return (
-                        self._stage_from_event(existing, session_id),
-                        self._stored_event(existing),
-                    )
-
+        def persist_stage(connection, event_id: UUID, _event_seq: int) -> None:
             stage_row = connection.execute(
                 select(session_stages)
                 .where(session_stages.c.session_id == session_id)
@@ -402,32 +312,6 @@ class ExplorationRepository:
                     )
                 )
 
-            runtime_row = connection.execute(
-                select(session_table_runtime)
-                .where(session_table_runtime.c.session_id == session_id)
-                .with_for_update()
-            ).mappings().one_or_none()
-            if runtime_row is None:
-                next_seq = 1
-                connection.execute(
-                    insert(session_table_runtime).values(
-                        session_id=session_id,
-                        revision=1,
-                        last_event_seq=1,
-                    )
-                )
-            else:
-                next_seq = int(runtime_row["last_event_seq"]) + 1
-                connection.execute(
-                    update(session_table_runtime)
-                    .where(session_table_runtime.c.session_id == session_id)
-                    .values(
-                        revision=int(runtime_row["revision"]) + 1,
-                        last_event_seq=next_seq,
-                        updated_at=func.now(),
-                    )
-                )
-
             payload = {
                 "stage_revision": next_stage_revision,
                 "text": text,
@@ -437,21 +321,9 @@ class ExplorationRepository:
                 "updated_by_seat_id": str(binding.seat_id),
             }
             connection.execute(
-                insert(session_events).values(
-                    id=event_id,
-                    session_id=session_id,
-                    seq=next_seq,
-                    kind="stage.updated",
-                    acting_seat_id=binding.seat_id,
-                    subject_seat_id=None,
-                    subject_character_id=None,
-                    execution_mode="self",
-                    visibility="public",
-                    recipient_seat_ids=[],
-                    payload_version=1,
-                    payload=payload,
-                    idempotency_key=idempotency_key,
-                )
+                update(session_events)
+                .where(session_events.c.id == event_id)
+                .values(payload=payload)
             )
 
             if old_image_id is not None and old_image_id != next_image_id:
@@ -462,14 +334,28 @@ class ExplorationRepository:
             final_stage_row = connection.execute(
                 select(session_stages).where(session_stages.c.session_id == session_id)
             ).mappings().one()
-            event_row = connection.execute(
-                select(session_events).where(session_events.c.id == event_id)
-            ).mappings().one()
+            projected_stage.append(self._stage(final_stage_row, image_row, session_id))
 
-        return (
-            self._stage(final_stage_row, image_row, session_id),
-            self._stored_event(event_row),
+        stored_event = self.event_repository.append(
+            room_id=binding.room_id,
+            campaign_id=binding.campaign_id,
+            session_id=session_id,
+            kind="stage.updated",
+            acting_seat_id=binding.seat_id,
+            subject_seat_id=None,
+            subject_character_id=None,
+            execution_mode="self",
+            visibility="public",
+            recipient_seat_ids=(),
+            payload_version=1,
+            payload={},
+            idempotency_key=idempotency_key,
+            expected_actor_binding=binding,
+            transaction_projection=persist_stage,
         )
+        if projected_stage:
+            return projected_stage[0], stored_event
+        return self._stage_from_event(stored_event), stored_event
 
 
 __all__ = [
