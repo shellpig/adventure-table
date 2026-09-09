@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   listRollRequests,
   submitFormalRoll,
+  type FormalRollSource,
+  type RollModifierMode,
   type RollRequestView,
   type RollSubmissionResponse,
 } from '../../api/p3c'
@@ -19,6 +21,17 @@ export function visibleRollResultTotal(
     return typeof event.payload.total === 'number' ? event.payload.total : null
   }
   return null
+}
+
+export function parsePhysicalD20(
+  mode: RollModifierMode,
+  raw: string,
+): number[] | null {
+  const values = raw.trim().split(/[\s,]+/).filter(Boolean).map(Number)
+  const required = mode === 'normal' ? 1 : 2
+  if (values.length !== required) return null
+  if (values.some((value) => !Number.isInteger(value) || value < 1 || value > 20)) return null
+  return values
 }
 
 function statusLabel(request: RollRequestView, copy: SessionCopy): string {
@@ -52,7 +65,8 @@ export function SessionRollRequestList({
 }) {
   const [requests, setRequests] = useState<RollRequestView[]>(initialRequests)
   const [submissions, setSubmissions] = useState<Record<string, RollSubmissionResponse>>({})
-  const [rollingId, setRollingId] = useState<string | null>(null)
+  const [rollingKey, setRollingKey] = useState<string | null>(null)
+  const [physicalDice, setPhysicalDice] = useState<Record<string, string>>({})
 
   const rollEventSeq = useMemo(
     () => events.reduce((latest, event) => event.kind.startsWith('roll.') ? Math.max(latest, event.seq) : latest, 0),
@@ -71,12 +85,18 @@ export function SessionRollRequestList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, campaignId, sessionId, token, rollEventSeq])
 
-  const roll = async (request: RollRequestView) => {
-    setRollingId(request.id)
+  const roll = async (
+    request: RollRequestView,
+    source: FormalRollSource,
+    rawDice?: number[],
+  ) => {
+    const rollingKey = `${request.id}:${source}`
+    setRollingKey(rollingKey)
     try {
       const submission = await submitFormalRoll(roomId, campaignId, sessionId, {
         roll_request_id: request.id,
-        source: 'server',
+        source,
+        raw_dice: source === 'physical' ? rawDice : undefined,
         idempotency_key: `formal-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`,
       }, token)
       setSubmissions((current) => ({ ...current, [request.id]: submission }))
@@ -84,7 +104,7 @@ export function SessionRollRequestList({
     } catch (cause) {
       onError(cause)
     } finally {
-      setRollingId(null)
+      setRollingKey(null)
     }
   }
 
@@ -99,6 +119,7 @@ export function SessionRollRequestList({
         const submission = submissions[request.id]
         const eventTotal = visibleRollResultTotal(request.id, events)
         const visibleTotal = submission?.result?.total ?? eventTotal
+        const rawDice = parsePhysicalD20(request.modifier_mode, physicalDice[request.id] ?? '')
         return (
           <article className="session-roll-request" key={request.id} data-roll-request-status={request.status}>
             <header>
@@ -112,14 +133,36 @@ export function SessionRollRequestList({
             {visibleTotal !== null ? <p><strong>{copy.rollTotal}: {visibleTotal}</strong></p> : null}
             {submission?.hidden ? <p>{copy.rollHidden}</p> : null}
             {canRoll ? (
-              <button
-                className="button primary"
-                type="button"
-                disabled={rollingId !== null}
-                onClick={() => void roll(request)}
-              >
-                {rollingId === request.id ? copy.rolling : copy.rollButton}
-              </button>
+              <div className="session-roll-request__actions">
+                <button
+                  className="button primary"
+                  type="button"
+                  disabled={rollingKey !== null}
+                  onClick={() => void roll(request, 'server')}
+                >
+                  {rollingKey === `${request.id}:server` ? copy.rolling : copy.rollButton}
+                </button>
+                <label>
+                  <span>{copy.rollPhysicalDice}</span>
+                  <input
+                    value={physicalDice[request.id] ?? ''}
+                    disabled={rollingKey !== null}
+                    placeholder={request.modifier_mode === 'normal' ? '12' : '12, 17'}
+                    onChange={(event) => setPhysicalDice((current) => ({
+                      ...current,
+                      [request.id]: event.target.value,
+                    }))}
+                  />
+                </label>
+                <button
+                  className="button secondary"
+                  type="button"
+                  disabled={rollingKey !== null || rawDice === null}
+                  onClick={() => rawDice && void roll(request, 'physical', rawDice)}
+                >
+                  {rollingKey === `${request.id}:physical` ? copy.rolling : copy.rollPhysicalSubmit}
+                </button>
+              </div>
             ) : null}
           </article>
         )

@@ -97,6 +97,8 @@ const copy = {
     rolling: '擲骰中…',
     rollHidden: '結果已送交 DM；此結果對玩家隱藏。',
     rollTotal: '總值',
+    rollPhysicalDice: '實體骰原始 d20',
+    rollPhysicalSubmit: '提交實體骰',
   },
   en: {
     locale: 'en' as const,
@@ -192,6 +194,8 @@ const copy = {
     rolling: 'Rolling…',
     rollHidden: 'Result sent to the DM. This result is hidden from the Player.',
     rollTotal: 'Total',
+    rollPhysicalDice: 'Physical raw d20',
+    rollPhysicalSubmit: 'Submit physical dice',
   },
 } as const
 
