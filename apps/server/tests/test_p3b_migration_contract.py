@@ -6,6 +6,7 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 
 from app.persistence.rooms.exploration import room_stage_images, session_stages
+from app.persistence.rooms.exploration_messages import session_messages
 
 
 def test_p3b_web_migration_extends_p3a_without_touching_character_track() -> None:
@@ -20,7 +21,7 @@ def test_p3b_web_migration_extends_p3a_without_touching_character_track() -> Non
     assert "0017_p3b_exploration_stage" in scripts.get_heads()
 
 
-def test_p3b_stage_schema_keeps_images_room_scoped_and_session_state_canonical() -> None:
+def test_p3b_schema_keeps_messages_canonical_and_images_room_scoped() -> None:
     source = (
         Path(__file__).resolve().parents[1]
         / "alembic"
@@ -31,15 +32,19 @@ def test_p3b_stage_schema_keeps_images_room_scoped_and_session_state_canonical()
     assert 'sa.ForeignKey("rooms.id", ondelete="CASCADE")' in source
     assert '"session_stages"' in source
     assert 'sa.ForeignKey("sessions.id", ondelete="CASCADE")' in source
-    assert "asset" not in source.lower()
+    assert '"session_messages"' in source
+    assert 'sa.ForeignKey("session_events.id", ondelete="CASCADE")' in source
+    assert "asset" not in source.lower().replace("stage_images", "")
     assert "scene" not in source.lower()
 
 
-def test_p3b_metadata_and_migration_keep_stage_indexes_in_sync() -> None:
+def test_p3b_metadata_and_migration_keep_indexes_in_sync() -> None:
     image_indexes = {index.name for index in room_stage_images.indexes}
     stage_indexes = {index.name for index in session_stages.indexes}
+    message_indexes = {index.name for index in session_messages.indexes}
     assert image_indexes == {"ix_room_stage_images_room_id"}
     assert stage_indexes == {"ix_session_stages_image_id"}
+    assert message_indexes == {"ix_session_messages_session_id"}
 
     source = (
         Path(__file__).resolve().parents[1]
@@ -47,5 +52,9 @@ def test_p3b_metadata_and_migration_keep_stage_indexes_in_sync() -> None:
         / "versions"
         / "0017_p3b_exploration_stage.py"
     ).read_text(encoding="utf-8")
-    assert '"ix_room_stage_images_room_id"' in source
-    assert '"ix_session_stages_image_id"' in source
+    for index_name in (
+        "ix_room_stage_images_room_id",
+        "ix_session_stages_image_id",
+        "ix_session_messages_session_id",
+    ):
+        assert f'"{index_name}"' in source

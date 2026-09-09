@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Callable
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
@@ -175,6 +175,9 @@ class StoredTableEvent:
     payload: dict[str, Any]
     idempotency_key: str | None
     created_at: datetime
+
+
+TableEventTransactionProjection = Callable[[Any, UUID, int], None]
 
 
 class TableEventRepository:
@@ -444,6 +447,7 @@ class TableEventRepository:
         payload: dict[str, Any],
         idempotency_key: str | None,
         expected_actor_binding: StoredTableActorBinding | None = None,
+        transaction_projection: TableEventTransactionProjection | None = None,
     ) -> StoredTableEvent:
         event_id = uuid4()
         with self.engine.begin() as connection:
@@ -530,6 +534,8 @@ class TableEventRepository:
                     idempotency_key=idempotency_key,
                 )
             )
+            if transaction_projection is not None:
+                transaction_projection(connection, event_id, next_seq)
             row = connection.execute(
                 select(session_events).where(session_events.c.id == event_id)
             ).mappings().one()
@@ -545,6 +551,7 @@ __all__ = [
     "TableEventRepository",
     "TableEventSessionNotActivePersistenceError",
     "TableEventSessionNotFoundPersistenceError",
+    "TableEventTransactionProjection",
     "session_events",
     "session_table_runtime",
 ]

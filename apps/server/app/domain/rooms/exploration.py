@@ -14,7 +14,6 @@ from app.domain.rooms.table_events import (
     TableActorKind,
     TableEvent,
     TableEventActorUnauthorizedError,
-    TableEventAppend,
     TableEventNotFoundError,
     TableEventService,
     TableEventSessionNotActiveError,
@@ -27,6 +26,7 @@ from app.persistence.rooms.exploration import (
     StoredSessionStage,
     StoredStageImage,
 )
+from app.persistence.rooms.exploration_messages import ExplorationMessageRepository
 from app.persistence.rooms.exploration_subjects import (
     ExplorationSubjectRepository,
     StoredExplorationSubject,
@@ -125,6 +125,23 @@ class ExplorationSubjectNotFoundError(LookupError):
     pass
 
 
+def _human_binding(actor: TableActorContext) -> StoredTableActorBinding:
+    if actor.actor_kind is not TableActorKind.HUMAN or actor.access_session_id is None:
+        raise TableEventActorUnauthorizedError(
+            "AI table actor persistence is not available until P3-D"
+        )
+    return StoredTableActorBinding(
+        room_id=actor.room_id,
+        campaign_id=actor.campaign_id,
+        session_id=actor.session_id,
+        seat_id=actor.seat_id,
+        controlled_seat_ids=actor.controlled_seat_ids,
+        role=actor.role,
+        is_current_dm=actor.is_current_dm,
+        access_session_id=actor.access_session_id,
+    )
+
+
 class ExplorationStageService:
     def __init__(
         self,
@@ -133,23 +150,6 @@ class ExplorationStageService:
     ) -> None:
         self.repository = repository
         self.table_event_service = table_event_service
-
-    @staticmethod
-    def _binding(actor: TableActorContext) -> StoredTableActorBinding:
-        if actor.actor_kind is not TableActorKind.HUMAN or actor.access_session_id is None:
-            raise TableEventActorUnauthorizedError(
-                "AI Stage actor resolver is not available until P3-D"
-            )
-        return StoredTableActorBinding(
-            room_id=actor.room_id,
-            campaign_id=actor.campaign_id,
-            session_id=actor.session_id,
-            seat_id=actor.seat_id,
-            controlled_seat_ids=actor.controlled_seat_ids,
-            role=actor.role,
-            is_current_dm=actor.is_current_dm,
-            access_session_id=actor.access_session_id,
-        )
 
     @staticmethod
     def _present(stage: StoredSessionStage) -> StageState:
@@ -209,7 +209,7 @@ class ExplorationStageService:
         new_image = self._decode_image(request.image) if request.image is not None else None
         try:
             stage, _event = self.repository.replace_stage(
-                binding=self._binding(actor),
+                binding=_human_binding(actor),
                 text=request.text,
                 retain_image_id=request.image_id,
                 new_image=new_image,
@@ -251,9 +251,11 @@ class ExplorationActionService:
     def __init__(
         self,
         subject_repository: ExplorationSubjectRepository,
+        message_repository: ExplorationMessageRepository,
         table_event_service: TableEventService,
     ) -> None:
         self.subject_repository = subject_repository
+        self.message_repository = message_repository
         self.table_event_service = table_event_service
 
     def _subject(self, actor: TableActorContext, seat_id: UUID) -> StoredExplorationSubject:
@@ -295,31 +297,36 @@ class ExplorationActionService:
             visibility = TableEventVisibility.SEAT_PRIVATE
             recipient_seat_ids = (actor.seat_id,)
 
-        payload = {
-            "type": request.kind.value,
-            "text": request.text,
-            "source_command": request.source_command,
-        }
-        return self.table_event_service.append_event(
-            actor,
-            TableEventAppend(
-                kind=f"exploration.{request.kind.value}",
+        try:
+            stored = self.message_repository.append_message(
+                binding=_human_binding(actor),
+                message_kind=request.kind.value,
+                text=request.text,
                 acting_seat_id=acting_seat_id,
                 subject_seat_id=subject.seat_id if subject is not None else None,
                 subject_character_id=(
                     subject.active_character_id if subject is not None else None
                 ),
-                execution_mode=execution_mode,
-                visibility=visibility,
+                execution_mode=execution_mode.value,
+                visibility=visibility.value,
                 recipient_seat_ids=recipient_seat_ids,
-                payload=payload,
+                source_command=request.source_command,
                 idempotency_key=(
                     f"p3b-input:{request.idempotency_key}"
                     if request.idempotency_key is not None
                     else None
                 ),
-            ),
-        )
+            )
+        except TableEventActorBindingStalePersistenceError as exc:
+            raise TableEventActorUnauthorizedError(str(exc)) from exc
+        except TableEventSessionNotFoundPersistenceError as exc:
+            raise TableEventNotFoundError(str(actor.session_id)) from exc
+        except TableEventSessionNotActivePersistenceError as exc:
+            raise TableEventSessionNotActiveError(str(actor.session_id)) from exc
+
+        if self.table_event_service.notifier is not None:
+            self.table_event_service.notifier.notify(actor.session_id)
+        return self.table_event_service._present(stored)
 
 
 __all__ = [

@@ -16,6 +16,7 @@ from app.domain.rooms.table_events import TableEventService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
 from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.exploration import ExplorationRepository
+from app.persistence.rooms.exploration_messages import ExplorationMessageRepository
 from app.persistence.rooms.exploration_subjects import ExplorationSubjectRepository
 from app.persistence.rooms.repository import RoomRepository
 from app.persistence.rooms.seats import SeatRepository
@@ -131,8 +132,10 @@ def get_exploration_stage_service(request: Request) -> ExplorationStageService:
 def get_exploration_action_service(request: Request) -> ExplorationActionService:
     service = getattr(request.app.state, "exploration_action_service", None)
     if service is None:
+        engine = get_database_engine(request)
         service = ExplorationActionService(
-            ExplorationSubjectRepository(get_database_engine(request)),
+            ExplorationSubjectRepository(engine),
+            ExplorationMessageRepository(engine),
             get_table_event_service(request),
         )
         request.app.state.exploration_action_service = service

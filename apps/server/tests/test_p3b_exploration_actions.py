@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import create_engine, insert, update
+from sqlalchemy import create_engine, insert, select, update
 from sqlalchemy.pool import StaticPool
 
 from app.db import metadata
@@ -15,8 +15,12 @@ from app.domain.rooms.exploration import (
 )
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.table_events import TableEventActorUnauthorizedError, TableEventService
+from app.persistence.rooms.exploration_messages import (
+    ExplorationMessageRepository,
+    session_messages,
+)
 from app.persistence.rooms.exploration_subjects import ExplorationSubjectRepository
-from app.persistence.rooms.table_runtime import TableEventRepository
+from app.persistence.rooms.table_runtime import TableEventRepository, session_events
 from app.persistence.rooms.tables import (
     campaign_seats,
     campaigns,
@@ -114,12 +118,20 @@ def _actor(events: TableEventService, room_id: UUID, campaign_id: UUID, session_
     )
 
 
+def _actions(engine, events: TableEventService) -> ExplorationActionService:
+    return ExplorationActionService(
+        ExplorationSubjectRepository(engine),
+        ExplorationMessageRepository(engine),
+        events,
+    )
+
+
 def test_dialogue_action_search_and_dm_proxy_keep_subject_and_acting_identity_distinct() -> None:
     engine = _engine()
     try:
         room_id, campaign_id, session_id, access, seats, characters = _seed(engine)
         events = TableEventService(TableEventRepository(engine))
-        actions = ExplorationActionService(ExplorationSubjectRepository(engine), events)
+        actions = _actions(engine, events)
         dm = _actor(events, room_id, campaign_id, session_id, access["dm"], "dm")
         p1 = _actor(events, room_id, campaign_id, session_id, access["p1"], "member")
 
@@ -148,6 +160,22 @@ def test_dialogue_action_search_and_dm_proxy_keep_subject_and_acting_identity_di
         assert proxied.execution_mode.value == "dm_proxy"
         assert proxied.payload["source_command"] == "search"
         assert proxied.kind == "exploration.action"
+
+        with engine.connect() as connection:
+            rows = connection.execute(
+                select(session_messages)
+                .where(session_messages.c.session_id == session_id)
+                .order_by(session_messages.c.created_at, session_messages.c.id)
+            ).mappings().all()
+        assert len(rows) == 2
+        assert rows[0]["kind"] == "dialogue"
+        assert rows[0]["subject_character_id"] == characters["p1"]
+        assert rows[1]["kind"] == "action"
+        assert rows[1]["acting_seat_id"] == seats["dm"]
+        assert rows[1]["subject_seat_id"] == seats["p2"]
+        assert rows[1]["execution_mode"] == "dm_proxy"
+        assert rows[1]["source_command"] == "search"
+        assert {rows[0]["event_id"], rows[1]["event_id"]} == {dialogue.id, proxied.id}
     finally:
         engine.dispose()
 
@@ -157,7 +185,7 @@ def test_whisper_is_server_filtered_to_sender_and_current_dm_and_narration_is_dm
     try:
         room_id, campaign_id, session_id, access, _seats, _characters = _seed(engine)
         events = TableEventService(TableEventRepository(engine))
-        actions = ExplorationActionService(ExplorationSubjectRepository(engine), events)
+        actions = _actions(engine, events)
         dm = _actor(events, room_id, campaign_id, session_id, access["dm"], "dm")
         p1 = _actor(events, room_id, campaign_id, session_id, access["p1"], "member")
         p2 = _actor(events, room_id, campaign_id, session_id, access["p2"], "member")
@@ -200,7 +228,7 @@ def test_one_human_controlling_multiple_player_seats_must_choose_subject_explici
                 .values(controller_access_session_id_at_join=access["p1"])
             )
         events = TableEventService(TableEventRepository(engine))
-        actions = ExplorationActionService(ExplorationSubjectRepository(engine), events)
+        actions = _actions(engine, events)
         p1 = _actor(events, room_id, campaign_id, session_id, access["p1"], "member")
         assert set(p1.controlled_seat_ids) == {seats["p1"], seats["p2"]}
 
@@ -209,5 +237,37 @@ def test_one_human_controlling_multiple_player_seats_must_choose_subject_explici
         ))
         assert second.acting_seat_id == seats["p2"]
         assert second.execution_mode.value == "self"
+    finally:
+        engine.dispose()
+
+
+def test_message_idempotency_never_duplicates_canonical_message_or_event() -> None:
+    engine = _engine()
+    try:
+        room_id, campaign_id, session_id, access, _seats, _characters = _seed(engine)
+        events = TableEventService(TableEventRepository(engine))
+        actions = _actions(engine, events)
+        p1 = _actor(events, room_id, campaign_id, session_id, access["p1"], "member")
+        request = ExplorationInputRequest(
+            kind=ExplorationInputKind.OOC,
+            text="Same request",
+            idempotency_key="same-ooc",
+        )
+
+        first = actions.send(p1, request)
+        replay = actions.send(p1, request)
+        assert replay.id == first.id
+        assert replay.seq == first.seq
+
+        with engine.connect() as connection:
+            message_rows = connection.execute(
+                select(session_messages).where(session_messages.c.session_id == session_id)
+            ).mappings().all()
+            event_rows = connection.execute(
+                select(session_events).where(session_events.c.session_id == session_id)
+            ).mappings().all()
+        assert len(message_rows) == 1
+        assert len(event_rows) == 1
+        assert message_rows[0]["event_id"] == event_rows[0]["id"] == first.id
     finally:
         engine.dispose()
