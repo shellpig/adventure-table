@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+from enum import StrEnum
 from typing import Literal
 from uuid import UUID
 
@@ -11,14 +12,22 @@ from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import (
     TableActorContext,
     TableActorKind,
+    TableEvent,
     TableEventActorUnauthorizedError,
+    TableEventAppend,
     TableEventService,
+    TableEventVisibility,
+    TableExecutionMode,
 )
 from app.persistence.rooms.exploration import (
     ExplorationRepository,
     StageImageNotFoundPersistenceError,
     StoredSessionStage,
     StoredStageImage,
+)
+from app.persistence.rooms.exploration_subjects import (
+    ExplorationSubjectRepository,
+    StoredExplorationSubject,
 )
 from app.persistence.rooms.table_runtime import (
     StoredTableActorBinding,
@@ -28,6 +37,7 @@ from app.persistence.rooms.table_runtime import (
 
 MAX_STAGE_TEXT_LENGTH = 12_000
 MAX_STAGE_IMAGE_BYTES = 8 * 1024 * 1024
+MAX_EXPLORATION_TEXT_LENGTH = 8_000
 SUPPORTED_STAGE_IMAGE_TYPES = frozenset({"image/png", "image/jpeg", "image/webp"})
 
 
@@ -70,6 +80,43 @@ class StageImageContent(StrictModel):
 
 
 class StageImageInvalidError(ValueError):
+    pass
+
+
+class ExplorationInputKind(StrEnum):
+    DIALOGUE = "dialogue"
+    ACTION = "action"
+    OOC = "ooc"
+    WHISPER_DM = "whisper_dm"
+    NARRATION = "narration"
+
+
+class ExplorationInputRequest(StrictModel):
+    kind: ExplorationInputKind
+    text: str = Field(min_length=1, max_length=MAX_EXPLORATION_TEXT_LENGTH)
+    subject_seat_id: UUID | None = None
+    source_command: Literal["search"] | None = None
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> ExplorationInputRequest:
+        self.text = self.text.strip()
+        if not self.text:
+            raise ValueError("exploration text cannot be blank")
+        subject_required = self.kind in {
+            ExplorationInputKind.DIALOGUE,
+            ExplorationInputKind.ACTION,
+        }
+        if subject_required and self.subject_seat_id is None:
+            raise ValueError("dialogue/action requires subject_seat_id")
+        if not subject_required and self.subject_seat_id is not None:
+            raise ValueError("subject_seat_id is only valid for dialogue/action")
+        if self.source_command is not None and self.kind is not ExplorationInputKind.ACTION:
+            raise ValueError("source_command is only valid for action")
+        return self
+
+
+class ExplorationSubjectNotFoundError(LookupError):
     pass
 
 
@@ -185,8 +232,90 @@ class ExplorationStageService:
         )
 
 
+class ExplorationActionService:
+    """Typed Human table input service; P3-D can supply AI TableActorContext unchanged."""
+
+    def __init__(
+        self,
+        subject_repository: ExplorationSubjectRepository,
+        table_event_service: TableEventService,
+    ) -> None:
+        self.subject_repository = subject_repository
+        self.table_event_service = table_event_service
+
+    def _subject(self, actor: TableActorContext, seat_id: UUID) -> StoredExplorationSubject:
+        subject = self.subject_repository.resolve_subject(
+            room_id=actor.room_id,
+            campaign_id=actor.campaign_id,
+            session_id=actor.session_id,
+            seat_id=seat_id,
+        )
+        if subject is None or subject.role != "player" or subject.active_character_id is None:
+            raise ExplorationSubjectNotFoundError(str(seat_id))
+        return subject
+
+    def send(self, actor: TableActorContext, request: ExplorationInputRequest) -> TableEvent:
+        self.table_event_service.require_actor_current(actor)
+        subject: StoredExplorationSubject | None = None
+        execution_mode = TableExecutionMode.SELF
+        acting_seat_id = actor.seat_id
+
+        if request.subject_seat_id is not None:
+            subject = self._subject(actor, request.subject_seat_id)
+            if subject.seat_id in actor.controlled_seat_ids:
+                acting_seat_id = subject.seat_id
+            elif actor.is_current_dm:
+                execution_mode = TableExecutionMode.DM_PROXY
+            else:
+                raise TableEventActorUnauthorizedError(
+                    "Actor does not control the selected Player Seat"
+                )
+
+        if request.kind is ExplorationInputKind.NARRATION and not actor.is_current_dm:
+            raise TableEventActorUnauthorizedError(
+                "Only the current Session DM can send Narration"
+            )
+
+        visibility = TableEventVisibility.PUBLIC
+        recipient_seat_ids: tuple[UUID, ...] = ()
+        if request.kind is ExplorationInputKind.WHISPER_DM:
+            visibility = TableEventVisibility.SEAT_PRIVATE
+            recipient_seat_ids = (actor.seat_id,)
+
+        payload = {
+            "type": request.kind.value,
+            "text": request.text,
+            "source_command": request.source_command,
+        }
+        return self.table_event_service.append_event(
+            actor,
+            TableEventAppend(
+                kind=f"exploration.{request.kind.value}",
+                acting_seat_id=acting_seat_id,
+                subject_seat_id=subject.seat_id if subject is not None else None,
+                subject_character_id=(
+                    subject.active_character_id if subject is not None else None
+                ),
+                execution_mode=execution_mode,
+                visibility=visibility,
+                recipient_seat_ids=recipient_seat_ids,
+                payload=payload,
+                idempotency_key=(
+                    f"p3b-input:{request.idempotency_key}"
+                    if request.idempotency_key is not None
+                    else None
+                ),
+            ),
+        )
+
+
 __all__ = [
+    "ExplorationActionService",
+    "ExplorationInputKind",
+    "ExplorationInputRequest",
     "ExplorationStageService",
+    "ExplorationSubjectNotFoundError",
+    "MAX_EXPLORATION_TEXT_LENGTH",
     "MAX_STAGE_IMAGE_BYTES",
     "MAX_STAGE_TEXT_LENGTH",
     "SUPPORTED_STAGE_IMAGE_TYPES",
