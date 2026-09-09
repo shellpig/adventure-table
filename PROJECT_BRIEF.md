@@ -73,7 +73,8 @@ P3 的正式契約：
 
 | 項目 | 當前狀態與影響 | 證據／後續入口 |
 |---|---|---|
-| Builder Draft 存檔／重取競態 | **P2-D 解掉一半。** `character-builder` 那一支是測試缺陷：它是唯一還只以「Saved on server」當存檔完成條件的 Builder spec，該文字分不出這次與上一次存檔，已改用其餘十二支早就在用的 draft revision 等待（3 跑 3 敗 → 5 跑 5 過）。**`m01e`／`m01m` 未解**：那兩支本來就用 revision 等待，失敗是真的等滿 5 秒逾時，是延遲而非假通過，根因仍未確認。建議把 KI-P1D-001 拆成兩條 | [P2-D closeout](docs/P2/P2-D_CLOSEOUT.md)「順帶修掉的既有問題」；[已知問題.md](已知問題.md) KI-P1D-001 |
+| Builder Draft 存檔／重取競態 | **P2-D 解掉一半**（`character-builder` 是等待條件寫太弱的測試缺陷，已改用 draft revision 等待）。**`m01e`／`m01m`／`m01k:392` 未解**：這幾支本來就用 revision 等待，失敗是真的等滿逾時，根因仍未確認。**2026-09-09 P3-A 關門期間升級為 blocker 級**：全套 E2E 因此紅燈，且已取得 `origin/main` 與 P3-A 分支各 3/3 失敗的對照證據，確認是 main 既有問題、非 P3-A 引入。重現指令已寫進 KI，**下一個該處理的獨立任務就是 diagnose 它** | [已知問題.md](已知問題.md) KI-P1D-001；[P3-A closeout](docs/P3/P3-A_CLOSEOUT.md)「已知限制」 |
+| `m01k:342` 的失敗歸屬未定 | `M01-K takes a PHB feat at an ASI during Level Up` 在 P3-A 分支的兩次全套 E2E 都失敗，但簽章不屬於 KI-P1D-001（`toHaveURL` 逾時於 spec:373、`readSheet` 逾時於 spec:225）。單跑時 main 與分支都通過，缺「main 跑全套」的對照。P3-A 是在這條未結清的情況下依使用者決定合併的 | [P3-A closeout](docs/P3/P3-A_CLOSEOUT.md)「已知限制」；[已知問題.md](已知問題.md) KI-P1D-001「疑似同族但證據不足」 |
 | P2-A Room 層取捨 | Throttle 為 process-local（多 worker 會稀釋）；`POST /api/rooms` 無 throttle 無授權；Room access token 以明文存 `localStorage` 且無到期機制 | [P2-A closeout](docs/P2/P2-A_CLOSEOUT.md)「已知限制」；P3-D因此明確不把新access session / display name視為原handoff Human |
 | Journey 2（多 Room 隔離）只有後端證據 | HTTP 層由 `test_p2b_room_character_api.py::test_room_a_cannot_use_room_b_character_or_draft_ids` 完整覆蓋，但測試指南 §13 描述的「把 Room B 的 UUID 貼進 Room A route 會看到什麼」沒有 browser 斷言。隔離本身有保證，缺的是使用者視角證據 | [P2-F closeout](docs/P2/P2-F_CLOSEOUT.md)「已知限制」 |
 | 雙語 browser crawl 未涵蓋 P2 新畫面 | `m02h-bilingual-site-smoke.spec.ts` 只跑三條 character 路由，沒有 `/campaigns`、`/lobby`、`/sessions/{id}`。目前靠 `hardcodedUiCopy.test.ts` 掃描與各 `*Copy.ts` locale parity 單元測試把關，缺整頁 overflow / raw key 的視覺層 crawl | [P2-F closeout](docs/P2/P2-F_CLOSEOUT.md)「已知限制」；P3-F要求把Session桌面納入完整crawl |

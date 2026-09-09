@@ -95,6 +95,40 @@ Session lifecycle E2E
   透過 npm run test:e2e:docker 執行 e2e/p2f-session-lifecycle.spec.ts
   該 workflow 為本次 handoff 的一次性 gate，證據留存後已於 96b54e6 移除，
   run 紀錄仍保留在 Actions history。
+
+全套 E2E（合併回 main 的 gate，未通過）
+  run 34291904852 @ dca0c87：106 passed / 2 failed / 3 skipped（12.0m）
+  rerun 同一 run：同樣 2 failed
+  兩次失敗都是 e2e/m01k-phb-feats-and-spells.spec.ts 的同兩支。
+  P2-F 關門時（22220df）全套為 111 tests / 108 passed / 0 failed / 3 skipped，
+  總數相同，差別即這兩支。
+
+  失敗歸屬（兩支必須分開看）：
+
+  m01k:392「keeps two Elemental Adept acquisitions and a PHB spellbook spell」
+    簽章：waitForDraftRevision 逾時，revision 停在前值不推進 → KI-P1D-001。
+    已確認為 main 既有問題，與 P3-A 無關：
+      run 34295347049 @ p3a-baseline-e2e-check（= origin/main e07aec6）
+      run 34295350916 @ p3-a-session-table-runtime-event-stream
+      兩者同以 --repeat-each=3 只跑 m01k，結果完全相同：
+      本支 3/3 失敗、卡在同一個 revision 51、同一組 stack。
+    另有 34294956512（main 單跑 m01k 不重複）6 passed，說明單輪綠燈只是運氣，
+    不足以當「main 沒問題」的證據。
+
+  m01k:342「takes a PHB feat at an ASI during Level Up」
+    **歸屬未定，留給後續 diagnose。**
+    只在分支的全套 run 中失敗（2 次全套皆失敗），且簽章不是 KI-P1D-001：
+      第一次 toHaveURL 逾時（spec:373，Confirm Level Up 後未導航）
+      第二次 readSheet 逾時（spec:225）
+    單跑 m01k 時本支在 main 與分支都通過；--repeat-each=3 時本支在兩邊各失敗
+    2/3，但那批失敗的簽章是 toHaveCount(spec:353)——重複執行造成同名角色出現
+    多張 workshop card 的 harness 假象，不是產品缺陷，因此該批對本支不具判別力。
+    缺的是「main 跑全套」的對照；該次基線 run 依使用者指示中止，未取得。
+
+  P3-A 未觸及 Builder / Character 任何程式碼（diff 對
+  app/api/character_builder.py、app/api/characters.py、app/persistence/characters.py、
+  app/persistence/state_mutations.py 與 apps/web/src/features/character-builder/ 皆為空），
+  這是 P3-A 不是成因的結構性理由，但不取代 m01k:342 缺少的那組對照證據。
 ```
 
 ## 關門過程中修正的問題
@@ -125,7 +159,8 @@ Session lifecycle E2E
 - **座位變動的即時同步仍是顯示層權宜。** 上述修正只讓「看得到 Lobby 的 caller」恢復隨心跳更新；`optionalLobby()` 回 `null` 的 caller（無 Lobby 讀取權）其座位資訊仍凍結在 mount 當下。座位變動要成為桌上的一等事件，屬 P3-B 範圍。
 - **PostgreSQL 證據只來自 CI。** 本機未設 `P3_POSTGRES_URL`，`test_p3a_postgres_events.py` 在本機一律 skip；並發、backfill 與 JSONB parity 三條證據取自 P3 Non-E2E 的 `postgres-migrations` job，未另做本機 dedicated DB 覆跑。
 - **E2E 證據來自一支已移除的一次性 workflow。** `p3a-handoff-e2e.yml` 為本次 handoff 建立、跑完即刪；證據以 run 34248269818 保存在 Actions history，repo 內不再有對應檔案。P3-F 會建立常駐的 `p3-e2e.yml`。
-- **KI-P1D-001 未解。** `m01e` / `m01m` 兩支 Builder Draft 存檔競態仍是真逾時而非假通過，根因未確認。P3-A 未觸及 Builder，不影響本次證據，但會持續影響後續每一次 Subphase 關門。
+- **合併回 main 的全套 E2E gate 沒有綠燈就放行。** 依 AGENTS.md，合併回 `main` 要求全套 E2E；本次全套是紅的（見上），仍在使用者明示決定下合併。放行依據是 KI-P1D-001「若失敗全部屬於本編號則視為除本編號外通過」的既有處置，加上 m01k 在 main 與分支的失敗率一致。**但這個放行不乾淨**：`m01k:342` 的簽章不屬於 KI-P1D-001，且缺少 main 跑全套的對照，嚴格說不滿足該處置條款的「全部屬於本編號」。這一項是本次 closeout 最弱的證據，已另開 diagnose 處理。
+- **KI-P1D-001 未解，且範圍擴大到第三支 spec。** 原記錄的 `m01e` / `m01m` 之外，`m01k:392` 已確認同簽章，並取得 main 與分支各 3/3 失敗的對照證據。根因仍未確認。P3-A 未觸及 Builder，不影響本次其餘證據，但會持續影響後續每一次 Subphase 關門。
 
 ## Handoff
 
