@@ -32,6 +32,8 @@ FORBIDDEN_MULTIPLAYER_TABLES = {
     "active_character_session_leases",
     "session_table_runtime",
     "session_events",
+    "room_stage_images",
+    "session_stages",
 }
 
 
