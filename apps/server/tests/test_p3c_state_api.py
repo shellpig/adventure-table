@@ -10,11 +10,17 @@ from app.persistence.rooms.p3c_character_state import (
 )
 
 
+TABLE_STATE_PATH = (
+    "/api/rooms/{room_id}/campaigns/{campaign_id}"
+    "/sessions/{session_id}/character-state/{subject_seat_id}"
+)
+
+
 def test_table_state_route_is_registered_as_session_scoped_patch() -> None:
     matches = [
         route
         for route in rooms_router.routes
-        if getattr(route, "path", "").endswith("/sessions/{session_id}/character-state/{subject_seat_id}")
+        if getattr(route, "path_format", getattr(route, "path", "")) == TABLE_STATE_PATH
     ]
     assert len(matches) == 1
     assert matches[0].methods == {"PATCH"}
