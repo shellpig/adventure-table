@@ -230,7 +230,9 @@ class ExplorationStageService:
         return self._present(stage)
 
     def get_image(self, actor: TableActorContext, image_id: UUID) -> StageImageContent:
-        self.table_event_service.require_actor_current(actor)
+        stage = self.get_stage(actor)
+        if stage.image_id != image_id:
+            raise StageImageNotFoundPersistenceError(str(image_id))
         image: StoredStageImage = self.repository.load_image(
             room_id=actor.room_id,
             image_id=image_id,

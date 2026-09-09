@@ -295,6 +295,8 @@ def test_stage_image_rejects_invalid_content_and_retain_only_accepts_current_ima
             )
         with pytest.raises(StageImageNotFoundPersistenceError):
             service.replace_stage(dm, StageUpdateRequest(image_id=unrelated_image_id))
+        with pytest.raises(StageImageNotFoundPersistenceError):
+            service.get_image(dm, unrelated_image_id)
     finally:
         engine.dispose()
 
