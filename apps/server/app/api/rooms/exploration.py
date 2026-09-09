@@ -137,11 +137,11 @@ def get_stage_image(
             event_service=event_service,
         )
         image = stage_service.get_image(actor, image_id)
-        headers = {"Cache-Control": "private, no-store"}
-        if image.filename:
-            safe_name = image.filename.replace('"', "")
-            headers["Content-Disposition"] = f'inline; filename="{safe_name}"'
-        return Response(content=image.data, media_type=image.media_type, headers=headers)
+        return Response(
+            content=image.data,
+            media_type=image.media_type,
+            headers={"Cache-Control": "private, no-store"},
+        )
     except Exception as exc:
         raise _map_exploration_error(exc) from exc
 

@@ -63,7 +63,7 @@ class _StageService:
         return StageImageContent(
             id=image_id,
             media_type="image/png",
-            filename="stage.png",
+            filename='stage\r\nX-Injected: yes.png',
             data=b"\x89PNG\r\n\x1a\nP3B",
         )
 
@@ -137,6 +137,9 @@ def test_stage_and_exploration_http_surface_share_session_actor_scope(exploratio
     image = client.get(f"{prefix}/stage/images/{image_id}")
     assert image.status_code == 200
     assert image.headers["content-type"] == "image/png"
+    assert image.headers["cache-control"] == "private, no-store"
+    assert "content-disposition" not in image.headers
+    assert "x-injected" not in image.headers
     assert image.content.startswith(b"\x89PNG")
 
     sent = client.post(f"{prefix}/exploration", json={
