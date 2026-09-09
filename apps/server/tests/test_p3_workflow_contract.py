@@ -13,14 +13,14 @@ def _source() -> str:
     return WORKFLOW.read_text(encoding="utf-8")
 
 
-def test_p3_non_e2e_workflow_is_scoped_to_review_clean_push_triggers() -> None:
+def test_p3_non_e2e_workflow_is_scoped_to_post_review_p3_triggers() -> None:
     source = _source()
 
     assert source.startswith("name: P3 Non-E2E\n")
     assert "workflow_dispatch:" in source
     assert "\n  push:" in source
     assert f"      - {P3A_BRANCH}\n" in source
-    assert f"      - {P3B_BRANCH}\n" not in source
+    assert f"      - {P3B_BRANCH}\n" in source
     assert "\n  pull_request:" not in source
 
 
