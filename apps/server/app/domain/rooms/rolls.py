@@ -17,6 +17,7 @@ from app.domain.rooms.table_events import (
 )
 from app.persistence.rooms.exploration_subjects import ExplorationSubjectRepository
 from app.persistence.rooms.p3c_rolls import (
+    FormalRollComputation,
     NewRollRequest,
     RollRepository,
     RollRequestNotFoundPersistenceError,
@@ -412,18 +413,22 @@ class RollService:
             ability_ref=request.ability_ref,
             skill_ref=request.skill_ref,
         )
-        audit = self.engine.d20(
-            mode=RollModifierMode(request.modifier_mode),
-            base_modifier=base_modifier,
-            flat_adjustment=request.flat_adjustment,
-            physical_raw_dice=input.raw_dice if input.source is FormalRollSource.PHYSICAL else None,
-        )
-        try:
-            stored, _event = self.repository.complete_request(
-                binding=_human_binding(actor),
-                request_id=request.id,
-                acting_seat_id=acting_seat_id,
-                execution_mode=execution_mode,
+
+        def compute_result() -> FormalRollComputation:
+            # This closure is invoked by RollRepository only after the Session
+            # and RollRequest serialization boundary confirms the request is
+            # still pending. A concurrent losing submit never consumes RNG.
+            audit = self.engine.d20(
+                mode=RollModifierMode(request.modifier_mode),
+                base_modifier=base_modifier,
+                flat_adjustment=request.flat_adjustment,
+                physical_raw_dice=(
+                    input.raw_dice
+                    if input.source is FormalRollSource.PHYSICAL
+                    else None
+                ),
+            )
+            return FormalRollComputation(
                 source=input.source.value,
                 formula=audit.formula,
                 raw_dice=audit.raw_dice,
@@ -431,7 +436,15 @@ class RollService:
                 base_modifier=audit.base_modifier,
                 flat_adjustment=audit.flat_adjustment,
                 total=audit.total,
-                visibility=request.visibility,
+            )
+
+        try:
+            stored, _event = self.repository.complete_request(
+                binding=_human_binding(actor),
+                request_id=request.id,
+                acting_seat_id=acting_seat_id,
+                execution_mode=execution_mode,
+                result_factory=compute_result,
                 event_visibility=_result_event_visibility(RollVisibility(request.visibility)),
                 idempotency_key=(
                     f"p3c-result:{input.idempotency_key}" if input.idempotency_key else None

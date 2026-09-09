@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -13,6 +14,7 @@ from app.persistence.rooms.table_runtime import (
     StoredTableActorBinding,
     StoredTableEvent,
     TableEventRepository,
+    session_events,
 )
 
 
@@ -70,6 +72,20 @@ class NewRollRequest:
     id: UUID
     target_seat_id: UUID
     target_character_id: UUID | None
+
+
+@dataclass(frozen=True)
+class FormalRollComputation:
+    source: str
+    formula: str
+    raw_dice: tuple[int, ...]
+    kept_dice: tuple[int, ...]
+    base_modifier: int
+    flat_adjustment: int
+    total: int
+
+
+FormalRollComputationFactory = Callable[[], FormalRollComputation]
 
 
 class RollRepository:
@@ -251,21 +267,25 @@ class RollRepository:
         request_id: UUID,
         acting_seat_id: UUID,
         execution_mode: str,
-        source: str,
-        formula: str,
-        raw_dice: tuple[int, ...],
-        kept_dice: tuple[int, ...],
-        base_modifier: int,
-        flat_adjustment: int,
-        total: int,
-        visibility: str,
+        result_factory: FormalRollComputationFactory,
         event_visibility: str,
         idempotency_key: str | None,
     ) -> tuple[StoredRollResult, StoredTableEvent]:
-        result_id = uuid4()
+        """Resolve one formal request, generating dice only after serialization.
 
-        def projection(connection, _event_id: UUID, _seq: int) -> None:
-            request = connection.execute(
+        TableEventRepository locks the Session row before this projection runs;
+        the projection then locks/rechecks the RollRequest. The computation
+        factory is deliberately invoked only after status is still ``pending``.
+        A concurrent loser therefore never consumes another RNG result.
+        """
+
+        result_id = uuid4()
+        request = self.get_request(session_id=binding.session_id, request_id=request_id)
+        if request is None:
+            raise RollRequestNotFoundPersistenceError(str(request_id))
+
+        def projection(connection, event_id: UUID, _seq: int) -> None:
+            locked_request = connection.execute(
                 select(roll_requests)
                 .where(
                     roll_requests.c.id == request_id,
@@ -273,38 +293,62 @@ class RollRepository:
                 )
                 .with_for_update()
             ).mappings().one_or_none()
-            if request is None:
+            if locked_request is None:
                 raise RollRequestNotFoundPersistenceError(str(request_id))
-            if request["status"] != "pending":
+            if locked_request["status"] != "pending":
                 raise RollRequestNotPendingPersistenceError(str(request_id))
+
+            computation = result_factory()
+            visibility = str(locked_request["visibility"])
             connection.execute(
                 insert(roll_results).values(
                     id=result_id,
                     roll_request_id=request_id,
                     session_id=binding.session_id,
                     acting_seat_id=acting_seat_id,
-                    subject_seat_id=request["target_seat_id"],
-                    subject_character_id=request["target_character_id"],
+                    subject_seat_id=locked_request["target_seat_id"],
+                    subject_character_id=locked_request["target_character_id"],
                     execution_mode=execution_mode,
-                    source=source,
-                    formula=formula,
-                    raw_dice=list(raw_dice),
-                    kept_dice=list(kept_dice),
-                    base_modifier=base_modifier,
-                    flat_adjustment=flat_adjustment,
-                    total=total,
+                    source=computation.source,
+                    formula=computation.formula,
+                    raw_dice=list(computation.raw_dice),
+                    kept_dice=list(computation.kept_dice),
+                    base_modifier=computation.base_modifier,
+                    flat_adjustment=computation.flat_adjustment,
+                    total=computation.total,
                     visibility=visibility,
                 )
             )
             connection.execute(
                 update(roll_requests)
                 .where(roll_requests.c.id == request_id)
-                .values(status="resolved", resolved_at=datetime.now().astimezone(), version=roll_requests.c.version + 1)
+                .values(
+                    status="resolved",
+                    resolved_at=datetime.now().astimezone(),
+                    version=roll_requests.c.version + 1,
+                )
+            )
+            # append() reads the event after projection, so replacing the
+            # placeholder payload here keeps the audit event and canonical
+            # result in one commit without generating dice before serialization.
+            connection.execute(
+                update(session_events)
+                .where(session_events.c.id == event_id)
+                .values(
+                    payload={
+                        "roll_request_id": str(request_id),
+                        "source": computation.source,
+                        "formula": computation.formula,
+                        "raw_dice": list(computation.raw_dice),
+                        "kept_dice": list(computation.kept_dice),
+                        "base_modifier": computation.base_modifier,
+                        "flat_adjustment": computation.flat_adjustment,
+                        "total": computation.total,
+                        "visibility": visibility,
+                    }
+                )
             )
 
-        request = self.get_request(session_id=binding.session_id, request_id=request_id)
-        if request is None:
-            raise RollRequestNotFoundPersistenceError(str(request_id))
         event = self.event_repository.append(
             room_id=binding.room_id,
             campaign_id=binding.campaign_id,
@@ -319,14 +363,7 @@ class RollRepository:
             payload_version=1,
             payload={
                 "roll_request_id": str(request_id),
-                "source": source,
-                "formula": formula,
-                "raw_dice": list(raw_dice),
-                "kept_dice": list(kept_dice),
-                "base_modifier": base_modifier,
-                "flat_adjustment": flat_adjustment,
-                "total": total,
-                "visibility": visibility,
+                "visibility": request.visibility,
             },
             idempotency_key=idempotency_key,
             expected_actor_binding=binding,
@@ -417,6 +454,8 @@ class RollRepository:
 
 
 __all__ = [
+    "FormalRollComputation",
+    "FormalRollComputationFactory",
     "NewRollRequest",
     "RollRepository",
     "RollRequestNotFoundPersistenceError",
