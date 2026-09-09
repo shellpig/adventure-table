@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import type { RoomCharacterSummary } from '../../api/campaigns'
 import type { CampaignSeat } from '../../api/seats'
@@ -18,6 +18,11 @@ import {
   isExplorationEvent,
   parseExplorationComposer,
 } from './sessionExploration'
+import {
+  clampSidePanelWidth,
+  readSidePanelWidth,
+  writeSidePanelWidth,
+} from './sessionTableLayout'
 import type { SessionCopy } from './sessionCopy'
 import './sessionTable.css'
 
@@ -39,6 +44,7 @@ type SessionTableSurfaceProps = {
 }
 
 type TableTab = 'chat' | 'dice' | 'log'
+type SessionLayoutStyle = CSSProperties & { '--session-side-width': string }
 
 function requestId(prefix: string): string {
   const random = globalThis.crypto?.randomUUID?.()
@@ -95,6 +101,8 @@ export function SessionTableSurface({
   const [composerText, setComposerText] = useState('')
   const [composerPending, setComposerPending] = useState(false)
   const [composerHint, setComposerHint] = useState<string | null>(null)
+  const [sidePanelWidth, setSidePanelWidth] = useState(() => readSidePanelWidth())
+  const layoutRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setStage(projectedStage)
@@ -154,6 +162,15 @@ export function SessionTableSurface({
     () => events.filter(isExplorationEvent).slice(-100),
     [events],
   )
+
+  const resizeFromPointer = (clientX: number) => {
+    const layout = layoutRef.current
+    if (!layout) return
+    const bounds = layout.getBoundingClientRect()
+    const nextWidth = clampSidePanelWidth(bounds.right - clientX, bounds.width)
+    setSidePanelWidth(nextWidth)
+    writeSidePanelWidth(nextWidth)
+  }
 
   const saveStage = async (clear = false) => {
     setStagePending(true)
@@ -222,6 +239,10 @@ export function SessionTableSurface({
     }
   }
 
+  const layoutStyle: SessionLayoutStyle = {
+    '--session-side-width': `${sidePanelWidth}px`,
+  }
+
   return (
     <section className="session-table" data-session-table="true">
       <div className="session-table__characters" aria-label={copy.tableCharacters}>
@@ -233,7 +254,7 @@ export function SessionTableSurface({
         ))}
       </div>
 
-      <div className="session-table__layout">
+      <div ref={layoutRef} className="session-table__layout" style={layoutStyle}>
         <section className="session-stage" aria-label={copy.mainStage}>
           <header><h2>{copy.mainStage}</h2></header>
           <div className="session-stage__canvas">
@@ -273,6 +294,23 @@ export function SessionTableSurface({
             </div>
           ) : null}
         </section>
+
+        <div
+          className="session-table__divider"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={`${copy.mainStage} / ${copy.chat}`}
+          onPointerDown={(event) => {
+            event.currentTarget.setPointerCapture(event.pointerId)
+            resizeFromPointer(event.clientX)
+          }}
+          onPointerMove={(event) => {
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+              resizeFromPointer(event.clientX)
+            }
+          }}
+          onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}
+        />
 
         <aside className="session-side-panel">
           <nav className="session-side-panel__tabs" aria-label={copy.chat}>
