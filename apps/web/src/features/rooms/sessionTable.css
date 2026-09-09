@@ -248,7 +248,7 @@
   color: var(--gold-bright);
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1080px) {
   .session-table__layout {
     grid-template-columns: 1fr;
   }
