@@ -7,6 +7,7 @@ import {
   SESSION_SIDE_PANEL_STORAGE_KEY,
   clampSidePanelWidth,
   readSidePanelWidth,
+  resolveKeyboardSidePanelWidth,
   writeSidePanelWidth,
 } from './sessionTableLayout'
 
@@ -38,9 +39,30 @@ describe('P3-B Session table layout preference', () => {
     expect(readSidePanelWidth(storage)).toBe(412)
   })
 
-  it('falls back safely for invalid persisted values', () => {
+  it('clamps persisted widths and falls back safely for invalid values', () => {
     const storage = new MemoryStorage()
+
+    storage.setItem(SESSION_SIDE_PANEL_STORAGE_KEY, '100')
+    expect(readSidePanelWidth(storage)).toBe(MIN_SIDE_PANEL_WIDTH)
+
+    storage.setItem(SESSION_SIDE_PANEL_STORAGE_KEY, '900')
+    expect(readSidePanelWidth(storage)).toBe(MAX_SIDE_PANEL_WIDTH)
+
     storage.setItem(SESSION_SIDE_PANEL_STORAGE_KEY, 'not-a-number')
     expect(readSidePanelWidth(storage)).toBe(DEFAULT_SIDE_PANEL_WIDTH)
+  })
+
+  it('supports keyboard resizing without escaping layout bounds', () => {
+    expect(resolveKeyboardSidePanelWidth(360, 'ArrowLeft', 1200)).toBe(384)
+    expect(resolveKeyboardSidePanelWidth(360, 'ArrowRight', 1200)).toBe(336)
+    expect(resolveKeyboardSidePanelWidth(MIN_SIDE_PANEL_WIDTH, 'ArrowRight', 1200)).toBe(
+      MIN_SIDE_PANEL_WIDTH,
+    )
+    expect(resolveKeyboardSidePanelWidth(MAX_SIDE_PANEL_WIDTH, 'ArrowLeft', 1200)).toBe(
+      MAX_SIDE_PANEL_WIDTH,
+    )
+    expect(resolveKeyboardSidePanelWidth(400, 'Home', 1200)).toBe(MIN_SIDE_PANEL_WIDTH)
+    expect(resolveKeyboardSidePanelWidth(400, 'End', 1200)).toBe(MAX_SIDE_PANEL_WIDTH)
+    expect(resolveKeyboardSidePanelWidth(400, 'Enter', 1200)).toBeNull()
   })
 })

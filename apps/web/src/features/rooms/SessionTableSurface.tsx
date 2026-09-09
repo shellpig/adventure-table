@@ -19,8 +19,11 @@ import {
   parseExplorationComposer,
 } from './sessionExploration'
 import {
+  MAX_SIDE_PANEL_WIDTH,
+  MIN_SIDE_PANEL_WIDTH,
   clampSidePanelWidth,
   readSidePanelWidth,
+  resolveKeyboardSidePanelWidth,
   writeSidePanelWidth,
 } from './sessionTableLayout'
 import type { SessionCopy } from './sessionCopy'
@@ -163,13 +166,29 @@ export function SessionTableSurface({
     [events],
   )
 
+  const applySidePanelWidth = (nextWidth: number) => {
+    setSidePanelWidth(nextWidth)
+    writeSidePanelWidth(nextWidth)
+  }
+
   const resizeFromPointer = (clientX: number) => {
     const layout = layoutRef.current
     if (!layout) return
     const bounds = layout.getBoundingClientRect()
-    const nextWidth = clampSidePanelWidth(bounds.right - clientX, bounds.width)
-    setSidePanelWidth(nextWidth)
-    writeSidePanelWidth(nextWidth)
+    applySidePanelWidth(clampSidePanelWidth(bounds.right - clientX, bounds.width))
+  }
+
+  const resizeFromKeyboard = (key: string): boolean => {
+    const layout = layoutRef.current
+    if (!layout) return false
+    const nextWidth = resolveKeyboardSidePanelWidth(
+      sidePanelWidth,
+      key,
+      layout.getBoundingClientRect().width,
+    )
+    if (nextWidth === null) return false
+    applySidePanelWidth(nextWidth)
+    return true
   }
 
   const saveStage = async (clear = false) => {
@@ -298,8 +317,15 @@ export function SessionTableSurface({
         <div
           className="session-table__divider"
           role="separator"
+          tabIndex={0}
           aria-orientation="vertical"
           aria-label={`${copy.mainStage} / ${copy.chat}`}
+          aria-valuemin={MIN_SIDE_PANEL_WIDTH}
+          aria-valuemax={MAX_SIDE_PANEL_WIDTH}
+          aria-valuenow={Math.round(sidePanelWidth)}
+          onKeyDown={(event) => {
+            if (resizeFromKeyboard(event.key)) event.preventDefault()
+          }}
           onPointerDown={(event) => {
             event.currentTarget.setPointerCapture(event.pointerId)
             resizeFromPointer(event.clientX)
