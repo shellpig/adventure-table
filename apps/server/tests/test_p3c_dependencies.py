@@ -20,10 +20,15 @@ def test_p3c_web_dependencies_cache_services_and_share_roll_repository(monkeypat
 
     roll_service = dependencies.get_roll_service(request)  # type: ignore[arg-type]
     pending_service = dependencies.get_pending_action_service(request)  # type: ignore[arg-type]
+    state_service = dependencies.get_table_character_state_service(request)  # type: ignore[arg-type]
 
     assert dependencies.get_roll_service(request) is roll_service  # type: ignore[arg-type]
     assert dependencies.get_pending_action_service(request) is pending_service  # type: ignore[arg-type]
+    assert dependencies.get_table_character_state_service(request) is state_service  # type: ignore[arg-type]
     assert pending_service.roll_repository is roll_service.repository
+    assert state_service.table_event_service is event_service
+    assert state_service.repository.event_repository is event_repository
+    assert state_service.repository.registry is registry
     assert isinstance(roll_service.modifier_resolver, CharacterRollModifierResolver)
     assert roll_service.modifier_resolver.character_repository is character_repository
     assert roll_service.modifier_resolver.registry is registry

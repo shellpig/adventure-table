@@ -15,12 +15,14 @@ from app.domain.rooms.rolls import RollService
 from app.domain.rooms.seats import SeatService
 from app.domain.rooms.session_resume import SessionResumeService
 from app.domain.rooms.sessions import SessionService
+from app.domain.rooms.table_character_state import TableCharacterStateService
 from app.domain.rooms.table_events import TableEventService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
 from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.exploration import ExplorationRepository
 from app.persistence.rooms.exploration_messages import ExplorationMessageRepository
 from app.persistence.rooms.exploration_subjects import ExplorationSubjectRepository
+from app.persistence.rooms.p3c_character_state import TableCharacterStatePersistence
 from app.persistence.rooms.p3c_pending import PendingActionRepository
 from app.persistence.rooms.p3c_rolls import RollRepository
 from app.persistence.rooms.repository import RoomRepository
@@ -182,6 +184,24 @@ def get_pending_action_service(request: Request) -> PendingActionService:
     return service
 
 
+def get_table_character_state_service(request: Request) -> TableCharacterStateService:
+    service = getattr(request.app.state, "table_character_state_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        event_service = get_table_event_service(request)
+        service = TableCharacterStateService(
+            TableCharacterStatePersistence(
+                engine,
+                get_content_registry(request),
+                event_service.repository,
+            ),
+            ExplorationSubjectRepository(engine),
+            event_service,
+        )
+        request.app.state.table_character_state_service = service
+    return service
+
+
 def get_session_resume_service(request: Request) -> SessionResumeService:
     service = getattr(request.app.state, "session_resume_service", None)
     if service is None:
@@ -213,6 +233,7 @@ __all__ = [
     "get_seat_service",
     "get_session_resume_service",
     "get_session_service",
+    "get_table_character_state_service",
     "get_table_event_notifier",
     "get_table_event_service",
 ]
