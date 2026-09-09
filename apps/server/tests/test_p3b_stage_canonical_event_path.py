@@ -69,7 +69,7 @@ def _seed_dm(engine) -> tuple[UUID, UUID, UUID, UUID]:
             id=access_id,
             room_id=room_id,
             authority="dm",
-            token_hash=b"a" * 32,
+            token_hash=access_id.bytes + access_id.bytes,
             display_name="DM",
             created_at=now,
             last_seen_at=now,
