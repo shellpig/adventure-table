@@ -340,7 +340,9 @@ test('M01-K blocks a second acquisition of a non-repeatable feat', async ({ page
 
 // K-E2E-02 — the same feat inventory reached through Level Up.
 test('M01-K takes a PHB feat at an ASI during Level Up', async ({ page, request }) => {
-  const name = 'M01-K Level Up Tough'
+  // This is the only M01-K test that finds its character by name in the
+  // workshop, so the name has to be unique across runs that share a database.
+  const name = `M01-K Level Up Tough ${Date.now()}`
   await startCreate(page, name, 'Human', 'Fighter', 1)
   const { review } = await finishAndReview(page, request)
   expect(review.build_candidate.feat_refs).toEqual([])
