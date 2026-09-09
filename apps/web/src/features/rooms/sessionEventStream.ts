@@ -31,11 +31,10 @@ export function eventStreamFromResume(resume: SessionResume): SessionEventStream
   const initialPage = resume.recent_events ?? null
   return {
     sessionId,
-    // Resume carries a small recent projection for immediate paint, but a new
-    // browser session deliberately replays the durable raw cursor from zero.
-    // The server advances over invisible rows while returning only caller-visible
-    // events, so other seats' private traffic cannot dilute this caller's history.
-    cursor: 0,
+    // Resume already scanned a bounded raw-sequence window ending at the
+    // canonical runtime cursor. Continue from that server-issued cursor rather
+    // than replaying the entire durable history on every browser reload.
+    cursor: initialPage?.session_id === sessionId ? initialPage.cursor : runtime.last_event_seq,
     currentSeq: Math.max(runtime.last_event_seq, initialPage?.current_seq ?? 0),
     events: initialPage?.session_id === sessionId ? mergeEvents([], initialPage.events) : [],
   }

@@ -51,10 +51,10 @@ function resume(): SessionResume {
 }
 
 describe('P3 Session event cursor reducer', () => {
-  it('paints Resume recent events immediately but replays the durable cursor from zero', () => {
+  it('paints Resume recent events and continues from the server-issued Resume cursor', () => {
     const state = eventStreamFromResume(resume())
     expect(state).not.toBeNull()
-    expect(state?.cursor).toBe(0)
+    expect(state?.cursor).toBe(2)
     expect(state?.currentSeq).toBe(2)
     expect(state?.events.map((item) => item.seq)).toEqual([1, 2])
   })
@@ -64,7 +64,7 @@ describe('P3 Session event cursor reducer', () => {
     expect(initial).not.toBeNull()
     const page: TableEventPage = {
       session_id: SESSION_ID,
-      after_seq: 0,
+      after_seq: 2,
       cursor: 4,
       current_seq: 4,
       has_more: false,
@@ -78,7 +78,7 @@ describe('P3 Session event cursor reducer', () => {
     expect(twice.events).toHaveLength(4)
   })
 
-  it('backfills caller-visible events even when raw cursor pages contain hidden gaps', () => {
+  it('does not rescan durable history before the bounded Resume window', () => {
     const longResume = resume()
     longResume.table_runtime!.last_event_seq = 120
     longResume.recent_events = {
@@ -91,34 +91,25 @@ describe('P3 Session event cursor reducer', () => {
     }
     const initial = eventStreamFromResume(longResume)!
 
-    const first = applySessionEventPage(initial, {
+    const staleBackfill = applySessionEventPage(initial, {
       session_id: SESSION_ID,
       after_seq: 0,
       cursor: 100,
       current_seq: 120,
       has_more: true,
-      // The raw page may contain many private events for other seats. Only an
-      // older caller-visible whisper/public event survives server projection.
       events: [event(12)],
     })
-    const second = applySessionEventPage(first, {
-      session_id: SESSION_ID,
-      after_seq: 100,
-      cursor: 120,
-      current_seq: 120,
-      has_more: false,
-      events: [event(119), event(120)],
-    })
 
-    expect(second.cursor).toBe(120)
-    expect(second.events.map((item) => item.seq)).toEqual([12, 119, 120])
+    expect(initial.cursor).toBe(120)
+    expect(staleBackfill).toEqual(initial)
+    expect(staleBackfill.events.map((item) => item.seq)).toEqual([119, 120])
   })
 
   it('ignores stale or wrong-Session pages instead of moving the cursor backward', () => {
     const initial = eventStreamFromResume(resume())!
     const advanced = applySessionEventPage(initial, {
       session_id: SESSION_ID,
-      after_seq: 0,
+      after_seq: 2,
       cursor: 5,
       current_seq: 5,
       has_more: false,
@@ -144,6 +135,15 @@ describe('P3 Session event cursor reducer', () => {
     expect(stale).toEqual(advanced)
     expect(wrongSession).toEqual(advanced)
     expect(advanced.cursor).toBe(5)
+  })
+
+  it('falls back to the runtime cursor when a matching recent projection is absent', () => {
+    const withoutRecent = resume()
+    withoutRecent.table_runtime!.last_event_seq = 9
+    withoutRecent.recent_events = null
+    const state = eventStreamFromResume(withoutRecent)
+    expect(state?.cursor).toBe(9)
+    expect(state?.events).toEqual([])
   })
 
   it('does not invent an incremental stream for callers without P3 projection', () => {
