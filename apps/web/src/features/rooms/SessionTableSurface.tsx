@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import type { RoomCharacterSummary } from '../../api/campaigns'
+import { createPendingAction } from '../../api/p3c'
 import type { CampaignSeat } from '../../api/seats'
 import {
   SessionApiError,
@@ -19,6 +20,10 @@ import {
   isExplorationEvent,
   parseExplorationComposer,
 } from './sessionExploration'
+import {
+  checkIntentDisposition,
+  type CheckIntent,
+} from './sessionCheckIntent'
 import {
   MAX_SIDE_PANEL_WIDTH,
   MIN_SIDE_PANEL_WIDTH,
@@ -109,6 +114,7 @@ export function SessionTableSurface({
   const [composerText, setComposerText] = useState('')
   const [composerPending, setComposerPending] = useState(false)
   const [composerHint, setComposerHint] = useState<string | null>(null)
+  const [checkDraft, setCheckDraft] = useState<CheckIntent | null>(null)
   const [sidePanelWidth, setSidePanelWidth] = useState(() => readSidePanelWidth())
   const layoutRef = useRef<HTMLDivElement>(null)
 
@@ -243,12 +249,36 @@ export function SessionTableSurface({
       composerKind,
       subjectSeatId || null,
     )
-    if (parsed.type === 'blocked_check') {
-      setComposerHint(copy.checkDeferred)
-      return
-    }
     if (parsed.type === 'invalid') {
       setComposerHint(parsed.reason === 'missing_subject' ? copy.subjectRequired : copy.composerPlaceholder)
+      return
+    }
+    if (parsed.type === 'check_intent') {
+      const disposition = checkIntentDisposition(isCurrentDm, parsed)
+      if (disposition.type === 'dm_request_check') {
+        setCheckDraft(disposition.draft)
+        setTab('dice')
+        return
+      }
+      setComposerPending(true)
+      try {
+        await createPendingAction(
+          roomId,
+          campaignId,
+          sessionId,
+          {
+            ...disposition.input,
+            idempotency_key: requestId('check-intent'),
+          },
+          token,
+        )
+        setComposerText('')
+        setComposerHint(copy.checkDeferred)
+      } catch (cause) {
+        onError(cause)
+      } finally {
+        setComposerPending(false)
+      }
       return
     }
     setComposerPending(true)
@@ -426,7 +456,10 @@ export function SessionTableSurface({
               </div>
             </div>
           ) : tab === 'dice' ? (
-            <div className="session-side-panel__placeholder"><p>{copy.dicePlaceholder}</p></div>
+            <div className="session-side-panel__placeholder">
+              <p>{copy.dicePlaceholder}</p>
+              {checkDraft ? <p data-check-draft="true">{checkDraft.text}</p> : null}
+            </div>
           ) : (
             <div className="session-log">
               {events.slice(-100).map((event) => (
