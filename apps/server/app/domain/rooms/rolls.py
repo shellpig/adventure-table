@@ -389,6 +389,13 @@ class RollService:
         if subject.active_character_id != request.target_character_id or request.target_character_id is None:
             raise TableEventActorUnauthorizedError("RollRequest target Character is no longer valid")
 
+        existing = self.repository.get_result_for_request(
+            session_id=actor.session_id,
+            request_id=request.id,
+        )
+        if existing is not None:
+            return self._result_view(existing)
+
         base_modifier = self.modifier_resolver.modifier_for(
             character_id=request.target_character_id,
             request_type=RollRequestType(request.request_type),
