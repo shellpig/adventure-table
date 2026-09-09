@@ -13,6 +13,7 @@ from app.domain.rooms.exploration import (
     ExplorationStageService,
     StageImageInvalidError,
     StageImageUpload,
+    StageRevisionConflictError,
     StageUpdateRequest,
 )
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
@@ -205,13 +206,16 @@ def test_stage_supports_all_four_modes_and_emits_ordered_public_events() -> None
 
         assert service.get_stage(dm).revision == 0
 
-        text_only = service.replace_stage(dm, StageUpdateRequest(text="A dark road"))
+        text_only = service.replace_stage(
+            dm,
+            StageUpdateRequest(expected_revision=0, text="A dark road"),
+        )
         assert text_only.text == "A dark road"
         assert text_only.image_id is None
 
         combined = service.replace_stage(
             dm,
-            StageUpdateRequest(text="Ruined gate", image=_png_upload()),
+            StageUpdateRequest(expected_revision=1, text="Ruined gate", image=_png_upload()),
         )
         assert combined.text == "Ruined gate"
         assert combined.image_id is not None
@@ -220,12 +224,12 @@ def test_stage_supports_all_four_modes_and_emits_ordered_public_events() -> None
 
         image_only = service.replace_stage(
             dm,
-            StageUpdateRequest(image_id=image_id),
+            StageUpdateRequest(expected_revision=2, image_id=image_id),
         )
         assert image_only.text is None
         assert image_only.image_id == image_id
 
-        cleared = service.replace_stage(dm, StageUpdateRequest())
+        cleared = service.replace_stage(dm, StageUpdateRequest(expected_revision=3))
         assert cleared.text is None
         assert cleared.image_id is None
         assert cleared.revision == 4
@@ -251,7 +255,10 @@ def test_only_current_dm_can_change_stage_and_stale_dm_is_rejected_in_transactio
         player = _actor(event_service, room_id, campaign_id, session_id, player_access, "member")
 
         with pytest.raises(TableEventActorUnauthorizedError):
-            service.replace_stage(player, StageUpdateRequest(text="Nope"))
+            service.replace_stage(
+                player,
+                StageUpdateRequest(expected_revision=0, text="Nope"),
+            )
 
         with engine.begin() as connection:
             connection.execute(
@@ -260,7 +267,10 @@ def test_only_current_dm_can_change_stage_and_stale_dm_is_rejected_in_transactio
                 .values(revoked_at=datetime.now(timezone.utc))
             )
         with pytest.raises(TableEventActorUnauthorizedError):
-            service.replace_stage(dm, StageUpdateRequest(text="Stale"))
+            service.replace_stage(
+                dm,
+                StageUpdateRequest(expected_revision=0, text="Stale"),
+            )
     finally:
         engine.dispose()
 
@@ -279,7 +289,10 @@ def test_stage_image_rejects_invalid_content_and_retain_only_accepts_current_ima
             data_base64=base64.b64encode(b"not-a-png").decode("ascii"),
         )
         with pytest.raises(StageImageInvalidError):
-            service.replace_stage(dm, StageUpdateRequest(image=invalid))
+            service.replace_stage(
+                dm,
+                StageUpdateRequest(expected_revision=0, image=invalid),
+            )
 
         unrelated_image_id = uuid4()
         with engine.begin() as connection:
@@ -294,7 +307,10 @@ def test_stage_image_rejects_invalid_content_and_retain_only_accepts_current_ima
                 )
             )
         with pytest.raises(StageImageNotFoundPersistenceError):
-            service.replace_stage(dm, StageUpdateRequest(image_id=unrelated_image_id))
+            service.replace_stage(
+                dm,
+                StageUpdateRequest(expected_revision=0, image_id=unrelated_image_id),
+            )
         with pytest.raises(StageImageNotFoundPersistenceError):
             service.get_image(dm, unrelated_image_id)
     finally:
@@ -309,12 +325,25 @@ def test_stage_idempotent_replay_returns_original_result_after_later_updates() -
         service = ExplorationStageService(ExplorationRepository(engine), event_service)
         dm = _actor(event_service, room_id, campaign_id, session_id, dm_access, "dm")
 
-        original = StageUpdateRequest(text="Stable", idempotency_key="same")
+        original = StageUpdateRequest(
+            expected_revision=0,
+            text="Stable",
+            idempotency_key="same",
+        )
         first = service.replace_stage(dm, original)
         later = service.replace_stage(
             dm,
-            StageUpdateRequest(text="Later", idempotency_key="later"),
+            StageUpdateRequest(
+                expected_revision=1,
+                text="Later",
+                idempotency_key="later",
+            ),
         )
+        with pytest.raises(StageRevisionConflictError):
+            service.replace_stage(
+                dm,
+                StageUpdateRequest(expected_revision=0, text="Stale tab"),
+            )
         replay = service.replace_stage(dm, original)
 
         assert first.revision == 1

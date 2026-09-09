@@ -32,6 +32,9 @@ def test_p3b_schema_keeps_messages_canonical_and_images_room_scoped() -> None:
     assert 'sa.ForeignKey("rooms.id", ondelete="CASCADE")' in source
     assert '"session_stages"' in source
     assert 'sa.ForeignKey("sessions.id", ondelete="CASCADE")' in source
+    assert '"updated_by_seat_id"' in source
+    assert 'sa.ForeignKey("campaign_seats.id", ondelete="RESTRICT")' in source
+    assert session_stages.c.updated_by_seat_id.nullable is False
     assert '"session_messages"' in source
     assert 'sa.ForeignKey("session_events.id", ondelete="CASCADE")' in source
     assert "asset" not in source.lower().replace("stage_images", "")

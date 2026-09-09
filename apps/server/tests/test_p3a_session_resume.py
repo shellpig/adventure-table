@@ -180,7 +180,11 @@ def test_p3_resume_batches_active_character_summary_and_includes_event_cursor_an
         )
         stage_service.replace_stage(
             dm_actor,
-            StageUpdateRequest(text="Persistent Stage", idempotency_key="resume-stage-1"),
+            StageUpdateRequest(
+                expected_revision=0,
+                text="Persistent Stage",
+                idempotency_key="resume-stage-1",
+            ),
         )
 
         character_summary_selects: list[str] = []

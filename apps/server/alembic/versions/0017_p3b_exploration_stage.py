@@ -63,6 +63,12 @@ def upgrade() -> None:
             nullable=True,
         ),
         sa.Column(
+            "updated_by_seat_id",
+            sa.Uuid(),
+            sa.ForeignKey("campaign_seats.id", ondelete="RESTRICT"),
+            nullable=False,
+        ),
+        sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
             nullable=False,

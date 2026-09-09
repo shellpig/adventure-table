@@ -128,9 +128,13 @@ def test_stage_and_exploration_http_surface_share_session_actor_scope(exploratio
     assert loaded.status_code == 200
     assert loaded.json()["text"] == "Gate"
 
-    replaced = client.put(f"{prefix}/stage", json={"text": "Bridge", "idempotency_key": "s1"})
+    replaced = client.put(
+        f"{prefix}/stage",
+        json={"expected_revision": 2, "text": "Bridge", "idempotency_key": "s1"},
+    )
     assert replaced.status_code == 200
     assert replaced.json()["revision"] == 3
+    assert stage.last_request.expected_revision == 2
     assert stage.last_request.idempotency_key == "s1"
 
     image_id = uuid4()
