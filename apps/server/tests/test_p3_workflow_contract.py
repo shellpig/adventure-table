@@ -6,19 +6,21 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "p3-non-e2e.yml"
 P3A_BRANCH = "p3-a-session-table-runtime-event-stream"
+P3B_BRANCH = "p3-b-exploration-chat-actions"
 
 
 def _source() -> str:
     return WORKFLOW.read_text(encoding="utf-8")
 
 
-def test_p3_non_e2e_workflow_is_scoped_to_post_review_p3a_trigger() -> None:
+def test_p3_non_e2e_workflow_is_scoped_to_post_review_p3_triggers() -> None:
     source = _source()
 
     assert source.startswith("name: P3 Non-E2E\n")
     assert "workflow_dispatch:" in source
     assert "\n  push:" in source
     assert f"      - {P3A_BRANCH}\n" in source
+    assert f"      - {P3B_BRANCH}\n" in source
     assert "\n  pull_request:" not in source
 
 
