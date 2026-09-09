@@ -12,6 +12,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Index,
     LargeBinary,
     String,
     Table,
@@ -49,6 +50,7 @@ room_stage_images = Table(
     Column("data", LargeBinary(), nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
 )
+Index("ix_room_stage_images_room_id", room_stage_images.c.room_id)
 
 session_stages = Table(
     "session_stages",
@@ -71,6 +73,7 @@ session_stages = Table(
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     CheckConstraint("revision >= 0", name="ck_session_stages_revision_nonnegative"),
 )
+Index("ix_session_stages_image_id", session_stages.c.image_id)
 
 
 class StageImageNotFoundPersistenceError(LookupError):
@@ -142,6 +145,19 @@ class ExplorationRepository:
             image_id=row["image_id"],
             image_media_type=image_row["media_type"] if image_row is not None else None,
             image_filename=image_row["filename"] if image_row is not None else None,
+        )
+
+    @staticmethod
+    def _stage_from_event(row: Any, session_id: UUID) -> StoredSessionStage:
+        payload = dict(row["payload"])
+        raw_image_id = payload.get("image_id")
+        return StoredSessionStage(
+            session_id=session_id,
+            revision=int(payload["stage_revision"]),
+            text=payload.get("text"),
+            image_id=UUID(str(raw_image_id)) if raw_image_id is not None else None,
+            image_media_type=payload.get("image_media_type"),
+            image_filename=payload.get("image_filename"),
         )
 
     def _session_scope_row(
@@ -291,16 +307,8 @@ class ExplorationRepository:
                     )
                 ).mappings().one_or_none()
                 if existing is not None:
-                    stage_row = connection.execute(
-                        select(session_stages).where(session_stages.c.session_id == session_id)
-                    ).mappings().one_or_none()
-                    image_row = self._image_row(
-                        connection,
-                        room_id=room_id,
-                        image_id=stage_row["image_id"] if stage_row is not None else None,
-                    )
                     return (
-                        self._stage(stage_row, image_row, session_id),
+                        self._stage_from_event(existing, session_id),
                         self._stored_event(existing),
                     )
 
@@ -330,6 +338,8 @@ class ExplorationRepository:
                     image_id=next_image_id,
                 )
             elif retain_image_id is not None:
+                if retain_image_id != old_image_id:
+                    raise StageImageNotFoundPersistenceError(str(retain_image_id))
                 image_row = self._image_row(
                     connection,
                     room_id=room_id,

@@ -20,6 +20,7 @@ from app.domain.rooms.table_events import TableEventActorUnauthorizedError, Tabl
 from app.persistence.rooms.exploration import (
     ExplorationRepository,
     StageImageNotFoundPersistenceError,
+    room_stage_images,
 )
 from app.persistence.rooms.table_runtime import TableEventRepository
 from app.persistence.rooms.tables import (
@@ -164,7 +165,14 @@ def _seed_session(engine):
     return room_id, campaign_id, session_id, dm_access, player_access
 
 
-def _actor(service: TableEventService, room_id: UUID, campaign_id: UUID, session_id: UUID, access_id: UUID, authority: str):
+def _actor(
+    service: TableEventService,
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    access_id: UUID,
+    authority: str,
+):
     return service.resolve_human_actor(
         room_id=room_id,
         campaign_id=campaign_id,
@@ -257,7 +265,7 @@ def test_only_current_dm_can_change_stage_and_stale_dm_is_rejected_in_transactio
         engine.dispose()
 
 
-def test_stage_image_rejects_invalid_content_and_idempotent_replay_does_not_advance_revision() -> None:
+def test_stage_image_rejects_invalid_content_and_retain_only_accepts_current_image() -> None:
     engine = _engine()
     try:
         room_id, campaign_id, session_id, dm_access, _player_access = _seed_session(engine)
@@ -273,11 +281,49 @@ def test_stage_image_rejects_invalid_content_and_idempotent_replay_does_not_adva
         with pytest.raises(StageImageInvalidError):
             service.replace_stage(dm, StageUpdateRequest(image=invalid))
 
-        request = StageUpdateRequest(text="Stable", idempotency_key="same")
-        first = service.replace_stage(dm, request)
-        replay = service.replace_stage(dm, request)
+        unrelated_image_id = uuid4()
+        with engine.begin() as connection:
+            connection.execute(
+                insert(room_stage_images).values(
+                    id=unrelated_image_id,
+                    room_id=room_id,
+                    media_type="image/png",
+                    filename="other.png",
+                    sha256="0" * 64,
+                    data=b"\x89PNG\r\n\x1a\nOTHER",
+                )
+            )
+        with pytest.raises(StageImageNotFoundPersistenceError):
+            service.replace_stage(dm, StageUpdateRequest(image_id=unrelated_image_id))
+    finally:
+        engine.dispose()
+
+
+def test_stage_idempotent_replay_returns_original_result_after_later_updates() -> None:
+    engine = _engine()
+    try:
+        room_id, campaign_id, session_id, dm_access, _player_access = _seed_session(engine)
+        event_service = TableEventService(TableEventRepository(engine))
+        service = ExplorationStageService(ExplorationRepository(engine), event_service)
+        dm = _actor(event_service, room_id, campaign_id, session_id, dm_access, "dm")
+
+        original = StageUpdateRequest(text="Stable", idempotency_key="same")
+        first = service.replace_stage(dm, original)
+        later = service.replace_stage(
+            dm,
+            StageUpdateRequest(text="Later", idempotency_key="later"),
+        )
+        replay = service.replace_stage(dm, original)
+
         assert first.revision == 1
+        assert first.text == "Stable"
+        assert later.revision == 2
+        assert later.text == "Later"
         assert replay.revision == 1
-        assert event_service.current_cursor(dm).last_event_seq == 1
+        assert replay.text == "Stable"
+        current = service.get_stage(dm)
+        assert current.revision == 2
+        assert current.text == "Later"
+        assert event_service.current_cursor(dm).last_event_seq == 2
     finally:
         engine.dispose()
