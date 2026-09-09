@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { StageState, TableEvent } from '../../api/sessions'
+import { sessionCopy } from './sessionCopy'
 import { applyStageEvent, parseExplorationComposer } from './sessionExploration'
 
 const SUBJECT = '40000000-0000-4000-8000-000000000001'
@@ -83,5 +84,15 @@ describe('P3-B Stage event projection', () => {
     expect(updated?.revision).toBe(3)
     expect(updated?.text).toBe('Bridge')
     expect(applyStageEvent(updated, stageEvent(1, 'Old'))).toEqual(updated)
+  })
+})
+
+describe('P3-B localized Session table copy', () => {
+  it('keeps zh-TW and en keys aligned and populated', () => {
+    const zh = sessionCopy('zh-TW')
+    const en = sessionCopy('en')
+    expect(Object.keys(zh).sort()).toEqual(Object.keys(en).sort())
+    for (const value of Object.values(zh)) expect(String(value).trim()).not.toBe('')
+    for (const value of Object.values(en)) expect(String(value).trim()).not.toBe('')
   })
 })
