@@ -30,7 +30,13 @@ describe('Session request message SSOT', () => {
       'exploration_subject_not_found',
       'stage_image_not_found',
       'invalid_stage_image',
+      'stage_revision_conflict',
     ])
+  })
+
+  it('localizes Stage revision conflicts in both supported locales', () => {
+    expect(localizedSessionRequestMessage('stage_revision_conflict', 409, 'raw', 'zh-TW')).toContain('舞台')
+    expect(localizedSessionRequestMessage('stage_revision_conflict', 409, 'raw', 'en')).toContain('Stage')
   })
 
   it('falls back without exposing an unknown raw code', () => {

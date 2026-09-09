@@ -16,6 +16,7 @@ export const P3B_SESSION_REQUEST_CODES = [
   'exploration_subject_not_found',
   'stage_image_not_found',
   'invalid_stage_image',
+  'stage_revision_conflict',
 ] as const
 
 export const SESSION_REQUEST_CODES = [
@@ -73,6 +74,10 @@ export const SESSION_REQUEST_CODE_MESSAGES: Record<SessionRequestCode, Record<Lo
   invalid_stage_image: {
     'zh-TW': '舞台圖片格式或內容無效，請使用有效的 PNG、JPEG 或 WebP 圖片。',
     en: 'The Stage image is invalid. Use a valid PNG, JPEG, or WebP image.',
+  },
+  stage_revision_conflict: {
+    'zh-TW': '舞台已被另一個頁面更新，請重新整理後再編輯。',
+    en: 'The Stage changed in another editor. Refresh before editing again.',
   },
 }
 

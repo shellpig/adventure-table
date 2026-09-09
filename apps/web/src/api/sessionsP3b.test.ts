@@ -16,11 +16,11 @@ afterEach(() => {
 })
 
 describe('P3-B Session API client', () => {
-  it('uses one canonical Stage route and one typed exploration route', async () => {
+  it('uses one canonical Stage route with revision CAS and one typed exploration route', async () => {
     const responses = [
       {
         session_id: SESSION_ID,
-        revision: 1,
+        revision: 3,
         text: 'Gate',
         image_id: null,
         image_media_type: null,
@@ -47,7 +47,13 @@ describe('P3-B Session API client', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => responses[1] })
     vi.stubGlobal('fetch', fetchMock)
 
-    await replaceSessionStage(ROOM_ID, CAMPAIGN_ID, SESSION_ID, { text: 'Gate' }, 'token')
+    await replaceSessionStage(
+      ROOM_ID,
+      CAMPAIGN_ID,
+      SESSION_ID,
+      { expected_revision: 2, text: 'Gate' },
+      'token',
+    )
     await sendExplorationInput(ROOM_ID, CAMPAIGN_ID, SESSION_ID, {
       kind: 'action',
       text: 'Search',
@@ -59,6 +65,10 @@ describe('P3-B Session API client', () => {
       `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/stage`,
     )
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'PUT' })
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
+      expected_revision: 2,
+      text: 'Gate',
+    })
     expect(fetchMock.mock.calls[1][0]).toBe(
       `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/exploration`,
     )

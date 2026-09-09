@@ -87,6 +87,7 @@ export type StageImageUpload = {
 }
 
 export type StageUpdateRequest = {
+  expected_revision: number
   text?: string | null
   image_id?: string | null
   image?: StageImageUpload | null

@@ -159,13 +159,20 @@ export function SessionTableSurface({
     setStagePending(true)
     try {
       const image = !clear && stageFile ? await fileUpload(stageFile) : null
+      const expectedRevision = stage?.revision ?? 0
       const next = await replaceSessionStage(
         roomId,
         campaignId,
         sessionId,
         clear
-          ? { text: null, image_id: null, idempotency_key: requestId('stage-clear') }
+          ? {
+              expected_revision: expectedRevision,
+              text: null,
+              image_id: null,
+              idempotency_key: requestId('stage-clear'),
+            }
           : {
+              expected_revision: expectedRevision,
               text: stageText.trim() || null,
               image_id: image ? null : (stage?.image_id ?? null),
               image,
