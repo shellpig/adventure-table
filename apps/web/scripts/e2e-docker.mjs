@@ -2,8 +2,9 @@
 // local one. The Windows vite dev server drops out mid-run (see KI-ENV-001 in
 // 已知問題.md), so 4173 is not usable for a full-suite invocation on Windows.
 //
-// The rebuild is not optional: the web service bakes apps/web into its image
-// with no bind mount, so skipping it silently tests the previous frontend.
+// The rebuild is not optional: both the server and web images bake repository
+// sources with no bind mount. Rebuilding only web can silently exercise a stale
+// backend whenever a P3 browser journey depends on new server behavior.
 //
 // A full invocation runs the suite twice. The second pass restarts the server
 // with xge removed from ADVENTURE_TABLE_ENABLED_CONTENT_PACKS and re-runs the
@@ -80,8 +81,8 @@ const enabledPacksWithoutXge = () => {
 
 process.env.PLAYWRIGHT_BASE_URL = baseURL
 
-console.log(`[e2e-docker] rebuilding the web service so it serves the current apps/web`)
-runOrExit('docker', ['compose', 'up', '-d', '--build', 'web'], repoRoot)
+console.log('[e2e-docker] rebuilding server + web so browser tests cannot use stale images')
+runOrExit('docker', ['compose', 'up', '-d', '--build', 'server', 'web'], repoRoot)
 await waitForWeb()
 
 console.log(`[e2e-docker] running Playwright against ${baseURL}`)
@@ -90,8 +91,8 @@ runOrExit('npx', ['playwright', 'test', ...playwrightArgs], webDir)
 if (playwrightArgs.length > 0) process.exit(0)
 
 const subset = enabledPacksWithoutXge()
-console.log(`[e2e-docker] restarting the server without xge (${subset})`)
-runOrExit('docker', ['compose', 'up', '-d', 'web'], repoRoot, {
+console.log(`[e2e-docker] restarting server + web without xge (${subset})`)
+runOrExit('docker', ['compose', 'up', '-d', 'server', 'web'], repoRoot, {
   ADVENTURE_TABLE_ENABLED_CONTENT_PACKS: subset,
 })
 await waitForWeb()
@@ -101,8 +102,8 @@ const subsetStatus = run('npx', ['playwright', 'test', SUBSET_SPEC], webDir, {
   M03C_E2E_DISABLE_XGE: '1',
 })
 
-console.log(`[e2e-docker] restoring the server to the full pack list`)
-const restoreStatus = run('docker', ['compose', 'up', '-d', 'web'], repoRoot)
+console.log('[e2e-docker] restoring server + web to the full pack list')
+const restoreStatus = run('docker', ['compose', 'up', '-d', 'server', 'web'], repoRoot)
 
 if (subsetStatus !== 0) process.exit(subsetStatus)
 process.exit(restoreStatus)
