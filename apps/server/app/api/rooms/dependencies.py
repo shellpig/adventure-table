@@ -8,12 +8,16 @@ from app.api.dependencies import get_content_registry, get_database_engine
 from app.api.errors import APIError
 from app.api.rooms.table_event_wait import ProcessLocalTableEventNotifier
 from app.domain.rooms.campaigns import CampaignService
+from app.domain.rooms.exploration import ExplorationActionService, ExplorationStageService
 from app.domain.rooms.seats import SeatService
 from app.domain.rooms.session_resume import SessionResumeService
 from app.domain.rooms.sessions import SessionService
 from app.domain.rooms.table_events import TableEventService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
 from app.persistence.rooms.campaigns import CampaignRepository
+from app.persistence.rooms.exploration import ExplorationRepository
+from app.persistence.rooms.exploration_messages import ExplorationMessageRepository
+from app.persistence.rooms.exploration_subjects import ExplorationSubjectRepository
 from app.persistence.rooms.repository import RoomRepository
 from app.persistence.rooms.seats import SeatRepository
 from app.persistence.rooms.session_live import SessionLiveRepository
@@ -114,6 +118,30 @@ def get_table_event_service(request: Request) -> TableEventService:
     return service
 
 
+def get_exploration_stage_service(request: Request) -> ExplorationStageService:
+    service = getattr(request.app.state, "exploration_stage_service", None)
+    if service is None:
+        service = ExplorationStageService(
+            ExplorationRepository(get_database_engine(request)),
+            get_table_event_service(request),
+        )
+        request.app.state.exploration_stage_service = service
+    return service
+
+
+def get_exploration_action_service(request: Request) -> ExplorationActionService:
+    service = getattr(request.app.state, "exploration_action_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        service = ExplorationActionService(
+            ExplorationSubjectRepository(engine),
+            ExplorationMessageRepository(engine),
+            get_table_event_service(request),
+        )
+        request.app.state.exploration_action_service = service
+    return service
+
+
 def get_session_resume_service(request: Request) -> SessionResumeService:
     service = getattr(request.app.state, "session_resume_service", None)
     if service is None:
@@ -126,6 +154,7 @@ def get_session_resume_service(request: Request) -> SessionResumeService:
             character_repository=get_room_workspace_service(request).character_repository,
             summary_repository=SessionResumeRepository(engine),
             table_event_service=get_table_event_service(request),
+            stage_service=get_exploration_stage_service(request),
         )
         request.app.state.session_resume_service = service
     return service
@@ -134,6 +163,8 @@ def get_session_resume_service(request: Request) -> SessionResumeService:
 __all__ = [
     "_HistoryGuardedCharacterRepository",
     "get_campaign_service",
+    "get_exploration_action_service",
+    "get_exploration_stage_service",
     "get_room_workspace_service",
     "get_seat_service",
     "get_session_resume_service",

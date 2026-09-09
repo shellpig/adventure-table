@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - p3-a-session-table-runtime-event-stream
+      - p3-b-exploration-chat-actions
 
 jobs:
   backend:
@@ -57,6 +58,7 @@ jobs:
         run: >-
           pytest
           tests/test_p3a_postgres_events.py
+          tests/test_p3b_postgres_stage.py
           tests/test_p2a_postgres_migration.py
           tests/test_p2b_postgres_workspace.py
           tests/test_p2e_postgres_sessions.py
@@ -101,7 +103,7 @@ jobs:
         run: npm install --global npm@11.6.0
       - name: Build standalone distribution
         shell: cmd
-        run: scripts\build-standalone.cmd --version p3a-non-e2e
+        run: scripts\build-standalone.cmd --version p3-non-e2e
       - name: Smoke frozen standalone
         shell: cmd
         run: .standalone-venv\Scripts\python.exe scripts\smoke_standalone.py dist\adventure-table-standalone --timeout 30

@@ -11,9 +11,22 @@ export const P2E_SESSION_REQUEST_CODES = [
   'lobby_unavailable',
 ] as const
 
-export type P2ESessionRequestCode = (typeof P2E_SESSION_REQUEST_CODES)[number]
+export const P3B_SESSION_REQUEST_CODES = [
+  'table_actor_unauthorized',
+  'exploration_subject_not_found',
+  'stage_image_not_found',
+  'invalid_stage_image',
+  'stage_revision_conflict',
+] as const
 
-export const SESSION_REQUEST_CODE_MESSAGES: Record<P2ESessionRequestCode, Record<Locale, string>> = {
+export const SESSION_REQUEST_CODES = [
+  ...P2E_SESSION_REQUEST_CODES,
+  ...P3B_SESSION_REQUEST_CODES,
+] as const
+
+export type SessionRequestCode = (typeof SESSION_REQUEST_CODES)[number]
+
+export const SESSION_REQUEST_CODE_MESSAGES: Record<SessionRequestCode, Record<Locale, string>> = {
   session_not_found: {
     'zh-TW': '找不到這場 Session。',
     en: 'Session not found.',
@@ -46,6 +59,26 @@ export const SESSION_REQUEST_CODE_MESSAGES: Record<P2ESessionRequestCode, Record
     'zh-TW': '目前的 Campaign／Lobby 狀態無法執行此 Session 操作。',
     en: 'The current Campaign or Lobby state does not allow this Session operation.',
   },
+  table_actor_unauthorized: {
+    'zh-TW': '你目前沒有權限執行這個桌內操作，請重新整理 Session 狀態。',
+    en: 'You are no longer authorized for this table action. Refresh the Session state.',
+  },
+  exploration_subject_not_found: {
+    'zh-TW': '選擇的 Player Seat 目前不是這場 Session 的有效角色。',
+    en: 'The selected Player Seat is not an active Character in this Session.',
+  },
+  stage_image_not_found: {
+    'zh-TW': '目前舞台使用的圖片已不存在，請重新整理舞台。',
+    en: 'The current Stage image is no longer available. Refresh the Stage.',
+  },
+  invalid_stage_image: {
+    'zh-TW': '舞台圖片格式或內容無效，請使用有效的 PNG、JPEG 或 WebP 圖片。',
+    en: 'The Stage image is invalid. Use a valid PNG, JPEG, or WebP image.',
+  },
+  stage_revision_conflict: {
+    'zh-TW': '舞台已被另一個頁面更新，請重新整理後再編輯。',
+    en: 'The Stage changed in another editor. Refresh before editing again.',
+  },
 }
 
 export function localizedSessionRequestMessage(
@@ -55,7 +88,7 @@ export function localizedSessionRequestMessage(
   locale: Locale,
 ): string {
   if (code && code in SESSION_REQUEST_CODE_MESSAGES) {
-    return SESSION_REQUEST_CODE_MESSAGES[code as P2ESessionRequestCode][locale]
+    return SESSION_REQUEST_CODE_MESSAGES[code as SessionRequestCode][locale]
   }
   if (locale === 'en') return originalMessage || `Session request failed (${status})`
   return `Session 請求失敗（HTTP ${status}），請稍後再試。`

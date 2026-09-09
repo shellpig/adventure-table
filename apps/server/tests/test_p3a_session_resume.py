@@ -7,6 +7,7 @@ from app.content import load_default_content_registry
 from app.db import metadata
 from app.domain.character.fixture import build_p0_fighter_wizard_fixture, build_p0_fighter_wizard_state
 from app.domain.rooms.campaigns import CampaignCreate, CampaignService, CampaignStatus, RosterAdd
+from app.domain.rooms.exploration import ExplorationStageService, StageUpdateRequest
 from app.domain.rooms.schemas import CreateRoomRequest, EnterRoomRequest
 from app.domain.rooms.seats import (
     ControllerKind,
@@ -19,12 +20,14 @@ from app.domain.rooms.service import RoomService
 from app.domain.rooms.session_resume import SessionResumeService
 from app.domain.rooms.sessions import SessionService
 from app.domain.rooms.table_events import (
+    TableEventActorUnauthorizedError,
     TableEventAppend,
     TableEventService,
     TableEventVisibility,
 )
 from app.persistence.characters import CharacterRepository
 from app.persistence.rooms.campaigns import CampaignRepository
+from app.persistence.rooms.exploration import ExplorationRepository
 from app.persistence.rooms.repository import RoomRepository
 from app.persistence.rooms.seats import SeatRepository
 from app.persistence.rooms.session_resume import SessionResumeRepository
@@ -141,7 +144,7 @@ def _setup_active_session(engine):
     )
 
 
-def test_p3_resume_batches_active_character_summary_and_includes_event_cursor() -> None:
+def test_p3_resume_batches_active_character_summary_and_includes_event_cursor_and_stage() -> None:
     engine = _engine()
     try:
         (
@@ -159,6 +162,7 @@ def test_p3_resume_batches_active_character_summary_and_includes_event_cursor() 
             characters,
         ) = _setup_active_session(engine)
         event_service = TableEventService(TableEventRepository(engine))
+        stage_service = ExplorationStageService(ExplorationRepository(engine), event_service)
         dm_actor = event_service.resolve_human_actor(
             room_id=owner.room.id,
             campaign_id=campaign.id,
@@ -172,6 +176,14 @@ def test_p3_resume_batches_active_character_summary_and_includes_event_cursor() 
                 visibility=TableEventVisibility.PUBLIC,
                 payload={"ready": True},
                 idempotency_key="resume-diagnostic-1",
+            ),
+        )
+        stage_service.replace_stage(
+            dm_actor,
+            StageUpdateRequest(
+                expected_revision=0,
+                text="Persistent Stage",
+                idempotency_key="resume-stage-1",
             ),
         )
 
@@ -198,6 +210,7 @@ def test_p3_resume_batches_active_character_summary_and_includes_event_cursor() 
             character_repository=characters,
             summary_repository=SessionResumeRepository(engine),
             table_event_service=event_service,
+            stage_service=stage_service,
         ).resume(
             owner.room.id,
             campaign.id,
@@ -217,16 +230,22 @@ def test_p3_resume_batches_active_character_summary_and_includes_event_cursor() 
         assert len(character_summary_selects) == 1
 
         assert resume.table_runtime is not None
-        assert resume.table_runtime.last_event_seq == 1
-        assert resume.table_runtime.revision == 1
+        assert resume.table_runtime.last_event_seq == 2
+        assert resume.table_runtime.revision == 2
         assert resume.recent_events is not None
-        assert resume.recent_events.cursor == 1
-        assert [item.kind for item in resume.recent_events.events] == ["diagnostic.resume"]
+        assert resume.recent_events.cursor == 2
+        assert [item.kind for item in resume.recent_events.events] == [
+            "diagnostic.resume",
+            "stage.updated",
+        ]
+        assert resume.stage is not None
+        assert resume.stage.revision == 1
+        assert resume.stage.text == "Persistent Stage"
     finally:
         engine.dispose()
 
 
-def test_room_member_outside_session_gets_no_p3_event_projection() -> None:
+def test_room_member_outside_session_gets_no_p3_projection() -> None:
     engine = _engine()
     try:
         (
@@ -251,6 +270,7 @@ def test_room_member_outside_session_gets_no_p3_event_projection() -> None:
             ),
             remote_addr="127.0.0.9",
         )
+        event_service = TableEventService(TableEventRepository(engine))
         resume = SessionResumeService(
             session_service=session_service,
             room_repository=room_repository,
@@ -258,7 +278,8 @@ def test_room_member_outside_session_gets_no_p3_event_projection() -> None:
             seat_service=seats,
             character_repository=characters,
             summary_repository=SessionResumeRepository(engine),
-            table_event_service=TableEventService(TableEventRepository(engine)),
+            table_event_service=event_service,
+            stage_service=ExplorationStageService(ExplorationRepository(engine), event_service),
         ).resume(
             owner.room.id,
             campaign.id,
@@ -268,5 +289,55 @@ def test_room_member_outside_session_gets_no_p3_event_projection() -> None:
         assert resume.active_session is not None
         assert resume.table_runtime is None
         assert resume.recent_events is None
+        assert resume.stage is None
+    finally:
+        engine.dispose()
+
+
+def test_p3_projection_authority_race_does_not_break_p2_resume() -> None:
+    engine = _engine()
+    try:
+        (
+            _rooms,
+            owner,
+            dm,
+            _created,
+            room_repository,
+            campaigns,
+            seats,
+            session_service,
+            campaign,
+            started,
+            _dm_context,
+            characters,
+        ) = _setup_active_session(engine)
+        event_service = TableEventService(TableEventRepository(engine))
+
+        class _StaleStageService:
+            def get_stage(self, actor):
+                assert actor.session_id == started.id
+                raise TableEventActorUnauthorizedError("controller changed during Resume")
+
+        resume = SessionResumeService(
+            session_service=session_service,
+            room_repository=room_repository,
+            campaign_service=campaigns,
+            seat_service=seats,
+            character_repository=characters,
+            summary_repository=SessionResumeRepository(engine),
+            table_event_service=event_service,
+            stage_service=_StaleStageService(),
+        ).resume(
+            owner.room.id,
+            campaign.id,
+            caller_access_session_id=dm.access_session_id,
+        )
+
+        assert resume.active_session is not None
+        assert resume.active_session.id == started.id
+        assert resume.participants
+        assert resume.table_runtime is None
+        assert resume.recent_events is None
+        assert resume.stage is None
     finally:
         engine.dispose()

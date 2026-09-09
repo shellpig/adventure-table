@@ -6,6 +6,7 @@ from uuid import UUID
 
 from app.domain.character.schemas import CharacterBuild
 from app.domain.rooms.campaigns import Campaign, CampaignService
+from app.domain.rooms.exploration import ExplorationStageService, StageState
 from app.domain.rooms.schemas import (
     Room,
     RoomAccessAuthority,
@@ -20,6 +21,7 @@ from app.domain.rooms.sessions import (
     SessionSnapshot,
 )
 from app.domain.rooms.table_events import (
+    TableEventActorUnauthorizedError,
     TableEventNotFoundError,
     TableEventPage,
     TableEventService,
@@ -61,6 +63,9 @@ class SessionResumeDTO(StrictModel):
     # a second persisted Session snapshot and remain absent for non-participants.
     table_runtime: TableRuntimeCursor | None = None
     recent_events: TableEventPage | None = None
+    # P3-B Main Stage is canonical persisted Session state, projected here only
+    # for authorized Session participants alongside the P3-A event projection.
+    stage: StageState | None = None
 
 
 class SessionResumeService:
@@ -76,6 +81,7 @@ class SessionResumeService:
         character_repository: Any,
         summary_repository: SessionResumeRepository | None = None,
         table_event_service: TableEventService | None = None,
+        stage_service: ExplorationStageService | None = None,
     ) -> None:
         self.session_service = session_service
         self.room_repository = room_repository
@@ -84,6 +90,7 @@ class SessionResumeService:
         self.character_repository = character_repository
         self.summary_repository = summary_repository
         self.table_event_service = table_event_service
+        self.stage_service = stage_service
 
     @staticmethod
     def _room(stored) -> Room:
@@ -158,9 +165,9 @@ class SessionResumeService:
         campaign_id: UUID,
         session_id: UUID,
         caller_access_session_id: UUID | None,
-    ) -> tuple[TableRuntimeCursor | None, TableEventPage | None]:
+    ) -> tuple[TableRuntimeCursor | None, TableEventPage | None, StageState | None]:
         if self.table_event_service is None or caller_access_session_id is None:
-            return None, None
+            return None, None, None
 
         # TableEventRepository resolves the authoritative Human access-session
         # binding. The RoomAccessAuthority value is intentionally not used to
@@ -178,19 +185,22 @@ class SessionResumeService:
                 session_id=session_id,
                 context=context,
             )
-        except TableEventNotFoundError:
+            runtime = self.table_event_service.current_cursor(actor)
+            after_seq = max(0, runtime.last_event_seq - RECENT_EVENT_WINDOW)
+            recent = self.table_event_service.list_after(
+                actor,
+                after_seq=after_seq,
+                limit=RECENT_EVENT_WINDOW,
+            )
+            stage = self.stage_service.get_stage(actor) if self.stage_service is not None else None
+        except (TableEventNotFoundError, TableEventActorUnauthorizedError):
             # Room members who are not Session participants may still use the P2
-            # Resume endpoint, but they receive no P3 event/runtime projection.
-            return None, None
-
-        runtime = self.table_event_service.current_cursor(actor)
-        after_seq = max(0, runtime.last_event_seq - RECENT_EVENT_WINDOW)
-        recent = self.table_event_service.list_after(
-            actor,
-            after_seq=after_seq,
-            limit=RECENT_EVENT_WINDOW,
-        )
-        return runtime, recent
+            # Resume endpoint, but they receive no P3 projection. If controller
+            # authority changes while these independently revalidated reads are
+            # composed, fail the whole P3 projection closed instead of turning an
+            # otherwise valid P2 Resume into a transient 500.
+            return None, None, None
+        return runtime, recent, stage
 
     def resume(
         self,
@@ -240,7 +250,7 @@ class SessionResumeService:
             seen_character_ids.add(character_id)
             character_ids.append(character_id)
 
-        table_runtime, recent_events = self._table_projection(
+        table_runtime, recent_events, stage = self._table_projection(
             room_id=room_id,
             campaign_id=campaign_id,
             session_id=active_session.id,
@@ -259,6 +269,7 @@ class SessionResumeService:
             caller_access_session_id=caller_access_session_id,
             table_runtime=table_runtime,
             recent_events=recent_events,
+            stage=stage,
         )
 
 

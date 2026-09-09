@@ -96,6 +96,12 @@ describe('Session route and presentation', () => {
       expect(reconnecting).toContain('data-session-event-connection="reconnecting"')
       expect(fatal).toContain(copy.eventDisconnected)
       expect(fatal).toContain('data-session-event-connection="fatal"')
+
+      // Reconnecting is transient and must not borrow the failure styling.
+      expect(reconnecting).toContain('class="notice-banner"')
+      expect(reconnecting).toContain('role="status"')
+      expect(fatal).toContain('class="error-banner"')
+      expect(fatal).toContain('role="alert"')
     }
   })
 
@@ -148,7 +154,7 @@ describe('Session route and presentation', () => {
     }
   })
 
-  it('uses one initial Resume then incremental event wait instead of heartbeat Resume polling', () => {
+  it('uses one initial Resume then incremental events for Stage and exploration updates', () => {
     const source = readFileSync(new URL('./RoomSessionPage.tsx', import.meta.url), 'utf8')
     expect(source).toContain('startRoomHeartbeat')
     expect(source).toContain('heartbeatRoom(roomId, token)')
@@ -157,6 +163,8 @@ describe('Session route and presentation', () => {
     expect(source).toContain('waitSessionEvents(')
     expect(source).toContain('applySessionEventPage(')
     expect(source).toContain('eventStreamFromResume(nextResume)')
+    expect(source).toContain('setInitialStage(nextResume.active_session?.id === sessionId')
+    expect(source).toContain('<SessionTableSurface')
     expect(source).toContain('mergeSessionSeatTruth(')
     expect(source).toContain('lateJoinSession(')
     expect(source).toContain('endSession(roomId, campaignId, sessionId, token)')
@@ -167,12 +175,22 @@ describe('Session route and presentation', () => {
     expect(source).not.toContain('combat')
   })
 
+  it('keeps the Session table error callback stable across parent renders', () => {
+    const source = readFileSync(new URL('./RoomSessionPage.tsx', import.meta.url), 'utf8')
+    expect(source).toContain('const handleSessionTableError = useCallback(')
+    expect(source).toContain('onError={handleSessionTableError}')
+    expect(source).not.toContain('onError={(cause)')
+  })
+
+  it('keeps the desktop Session table wider than the legacy Room workspace card', () => {
+    const source = readFileSync(new URL('./sessionTable.css', import.meta.url), 'utf8')
+    expect(source).toContain('.room-workspace-card.session-table-card')
+    expect(source).toContain('width: min(1180px, 100%);')
+    expect(source).toContain('@media (max-width: 1080px)')
+  })
+
   it('does not let a missing Lobby take down the Session surface', () => {
     const source = readFileSync(new URL('./RoomSessionPage.tsx', import.meta.url), 'utf8')
-
-    // The Lobby is Campaign-current-only; the Session is not. Initial load and
-    // lightweight heartbeat both use the tolerant wrapper; event sync is a
-    // separate durable cursor and never depends on Lobby availability.
     expect(source).toContain('getLobby(roomId, campaignId, token).catch(() => null)')
     expect(source.match(/optionalLobby\(\)/g) ?? []).toHaveLength(2)
     expect(source).not.toContain('getLobby(roomId, campaignId, token),')

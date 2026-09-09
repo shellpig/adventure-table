@@ -29,12 +29,13 @@ export function eventStreamFromResume(resume: SessionResume): SessionEventStream
   if (!sessionId || !runtime || runtime.session_id !== sessionId) return null
 
   const initialPage = resume.recent_events ?? null
-  const cursor = initialPage?.session_id === sessionId
-    ? initialPage.cursor
-    : runtime.last_event_seq
   return {
     sessionId,
-    cursor,
+    // Resume carries a small recent projection for immediate paint, but a new
+    // browser session deliberately replays the durable raw cursor from zero.
+    // The server advances over invisible rows while returning only caller-visible
+    // events, so other seats' private traffic cannot dilute this caller's history.
+    cursor: 0,
     currentSeq: Math.max(runtime.last_event_seq, initialPage?.current_seq ?? 0),
     events: initialPage?.session_id === sessionId ? mergeEvents([], initialPage.events) : [],
   }
