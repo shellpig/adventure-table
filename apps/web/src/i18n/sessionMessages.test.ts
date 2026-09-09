@@ -34,6 +34,7 @@ describe('Session request message SSOT', () => {
       'stage_revision_conflict',
     ])
     expect(P3C_SESSION_REQUEST_CODES).toEqual([
+      'validation_failed',
       'roll_request_not_found',
       'roll_request_already_resolved',
       'invalid_roll_input',
@@ -54,6 +55,11 @@ describe('Session request message SSOT', () => {
   it('localizes Stage revision conflicts in both supported locales', () => {
     expect(localizedSessionRequestMessage('stage_revision_conflict', 409, 'raw', 'zh-TW')).toContain('舞台')
     expect(localizedSessionRequestMessage('stage_revision_conflict', 409, 'raw', 'en')).toContain('Stage')
+  })
+
+  it('localizes framework request validation for P3-C Session forms', () => {
+    expect(localizedSessionRequestMessage('validation_failed', 422, 'raw', 'zh-TW')).toContain('輸入')
+    expect(localizedSessionRequestMessage('validation_failed', 422, 'raw', 'en')).toContain('invalid')
   })
 
   it('localizes P3-C roll, PendingAction, and state failures in both locales', () => {

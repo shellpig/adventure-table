@@ -20,6 +20,7 @@ export const P3B_SESSION_REQUEST_CODES = [
 ] as const
 
 export const P3C_SESSION_REQUEST_CODES = [
+  'validation_failed',
   'roll_request_not_found',
   'roll_request_already_resolved',
   'invalid_roll_input',
@@ -96,6 +97,10 @@ export const SESSION_REQUEST_CODE_MESSAGES: Record<SessionRequestCode, Record<Lo
   stage_revision_conflict: {
     'zh-TW': '舞台已被另一個頁面更新，請重新整理後再編輯。',
     en: 'The Stage changed in another editor. Refresh before editing again.',
+  },
+  validation_failed: {
+    'zh-TW': '輸入格式或欄位內容無效，請檢查後再試。',
+    en: 'The request contains invalid fields or values. Check the input and try again.',
   },
   roll_request_not_found: {
     'zh-TW': '找不到這個正式 RollRequest，請重新整理骰子面板。',
