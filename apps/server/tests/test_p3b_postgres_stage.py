@@ -417,3 +417,68 @@ def test_p3b_postgres_stale_actor_rolls_back_message_event_and_cursor(
                 session_table_runtime.c.session_id == session_id
             )
         ).mappings().one_or_none() is None
+
+
+def test_p3b_postgres_projection_failure_rolls_back_message_event_and_cursor(
+    postgres_engine: Engine,
+) -> None:
+    room_id, campaign_id, session_id, dm_access_id = _seed_session(postgres_engine)
+    repository = TableEventRepository(postgres_engine)
+    binding = repository.resolve_human_actor(
+        room_id=room_id,
+        campaign_id=campaign_id,
+        session_id=session_id,
+        access_session_id=dm_access_id,
+    )
+    assert binding is not None
+
+    def failing_projection(connection, event_id, _event_seq) -> None:
+        connection.execute(
+            insert(session_messages).values(
+                id=uuid4(),
+                session_id=session_id,
+                event_id=event_id,
+                acting_seat_id=binding.seat_id,
+                subject_seat_id=None,
+                subject_character_id=None,
+                execution_mode="self",
+                kind="narration",
+                text="Must rollback with callback",
+                visibility="public",
+                recipient_seat_ids=[],
+                source_command=None,
+            )
+        )
+        raise RuntimeError("projection failed")
+
+    with pytest.raises(RuntimeError, match="projection failed"):
+        repository.append(
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            kind="exploration.narration",
+            acting_seat_id=binding.seat_id,
+            subject_seat_id=None,
+            subject_character_id=None,
+            execution_mode="self",
+            visibility="public",
+            recipient_seat_ids=(),
+            payload_version=1,
+            payload={"type": "narration", "text": "Must rollback with callback"},
+            idempotency_key="pg-projection-failure",
+            expected_actor_binding=binding,
+            transaction_projection=failing_projection,
+        )
+
+    with postgres_engine.connect() as connection:
+        assert connection.execute(
+            select(session_messages).where(session_messages.c.session_id == session_id)
+        ).mappings().all() == []
+        assert connection.execute(
+            select(session_events).where(session_events.c.session_id == session_id)
+        ).mappings().all() == []
+        assert connection.execute(
+            select(session_table_runtime).where(
+                session_table_runtime.c.session_id == session_id
+            )
+        ).mappings().one_or_none() is None
