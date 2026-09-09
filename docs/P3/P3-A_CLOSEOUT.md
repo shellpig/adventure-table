@@ -103,32 +103,32 @@ Session lifecycle E2E
   P2-F 關門時（22220df）全套為 111 tests / 108 passed / 0 failed / 3 skipped，
   總數相同，差別即這兩支。
 
-  失敗歸屬（兩支必須分開看）：
+  失敗歸屬（closeout 後已查明，非 P3-A 造成）：
 
-  m01k:392「keeps two Elemental Adept acquisitions and a PHB spellbook spell」
-    簽章：waitForDraftRevision 逾時，revision 停在前值不推進 → KI-P1D-001。
-    已確認為 main 既有問題，與 P3-A 無關：
-      run 34295347049 @ p3a-baseline-e2e-check（= origin/main e07aec6）
-      run 34295350916 @ p3-a-session-table-runtime-event-stream
-      兩者同以 --repeat-each=3 只跑 m01k，結果完全相同：
-      本支 3/3 失敗、卡在同一個 revision 51、同一組 stack。
-    另有 34294956512（main 單跑 m01k 不重複）6 passed，說明單輪綠燈只是運氣，
-    不足以當「main 沒問題」的證據。
+  兩支的簽章都是「Test timeout of 30000ms exceeded」——整支測試用完
+  Playwright 預設的 30 秒單測預算，而不是某次存檔沒完成。輸出裡的
+  expect(...).toBeGreaterThan 與沒有前進的 revision，只表示截止當下還沒
+  觀察到下一版；它與 KI-P1D-001 的「Timeout 5000ms exceeded while waiting
+  on the predicate」意義相反，最初被誤讀成同一件事。
 
-  m01k:342「takes a PHB feat at an ASI during Level Up」
-    **歸屬未定，留給後續 diagnose。**
-    只在分支的全套 run 中失敗（2 次全套皆失敗），且簽章不是 KI-P1D-001：
-      第一次 toHaveURL 逾時（spec:373，Confirm Level Up 後未導航）
-      第二次 readSheet 逾時（spec:225）
-    單跑 m01k 時本支在 main 與分支都通過；--repeat-each=3 時本支在兩邊各失敗
-    2/3，但那批失敗的簽章是 toHaveCount(spec:353)——重複執行造成同名角色出現
-    多張 workshop card 的 harness 假象，不是產品缺陷，因此該批對本支不具判別力。
-    缺的是「main 跑全套」的對照；該次基線 run 依使用者指示中止，未取得。
+  決定性量測：run 34298326870
+    只跑 m01k:392，--repeat-each=3 --timeout=180000 --reporter=list
+    3/3 通過，耗時 33.8s / 32.5s / 32.6s——只超出 30 秒上限 2～4 秒。
+
+  為何此時才浮現：`p2-e2e.yml` 從未執行過（gh run list 為空），本次是這套
+  E2E 第一次在 GitHub runner 上跑。先前所有全套證據（含 P2-F 關門的
+  108 passed）都取自本機 Windows→docker，硬體較快，同一支落在 30 秒內。
+
+  m01k:342 的 --repeat-each 失敗另有一個獨立的測試缺陷：固定角色名
+  「M01-K Level Up Tough」在共用資料庫上會產生多張同名 workshop card，
+  使 toHaveCount(1) 失敗。與 timeout 無關，只在重複執行時出現。
+
+  兩者的修法都不在 P3-A 範圍內，於後續 fix/m01k-e2e-timeout 處理：
+  playwright.config.ts 設 timeout: 60_000，m01k:342 的角色名唯一化。
 
   P3-A 未觸及 Builder / Character 任何程式碼（diff 對
   app/api/character_builder.py、app/api/characters.py、app/persistence/characters.py、
-  app/persistence/state_mutations.py 與 apps/web/src/features/character-builder/ 皆為空），
-  這是 P3-A 不是成因的結構性理由，但不取代 m01k:342 缺少的那組對照證據。
+  app/persistence/state_mutations.py 與 apps/web/src/features/character-builder/ 皆為空）。
 ```
 
 ## 關門過程中修正的問題
@@ -159,8 +159,8 @@ Session lifecycle E2E
 - **座位變動的即時同步仍是顯示層權宜。** 上述修正只讓「看得到 Lobby 的 caller」恢復隨心跳更新；`optionalLobby()` 回 `null` 的 caller（無 Lobby 讀取權）其座位資訊仍凍結在 mount 當下。座位變動要成為桌上的一等事件，屬 P3-B 範圍。
 - **PostgreSQL 證據只來自 CI。** 本機未設 `P3_POSTGRES_URL`，`test_p3a_postgres_events.py` 在本機一律 skip；並發、backfill 與 JSONB parity 三條證據取自 P3 Non-E2E 的 `postgres-migrations` job，未另做本機 dedicated DB 覆跑。
 - **E2E 證據來自一支已移除的一次性 workflow。** `p3a-handoff-e2e.yml` 為本次 handoff 建立、跑完即刪；證據以 run 34248269818 保存在 Actions history，repo 內不再有對應檔案。P3-F 會建立常駐的 `p3-e2e.yml`。
-- **合併回 main 的全套 E2E gate 沒有綠燈就放行。** 依 AGENTS.md，合併回 `main` 要求全套 E2E；本次全套是紅的（見上），仍在使用者明示決定下合併。放行依據是 KI-P1D-001「若失敗全部屬於本編號則視為除本編號外通過」的既有處置，加上 m01k 在 main 與分支的失敗率一致。**但這個放行不乾淨**：`m01k:342` 的簽章不屬於 KI-P1D-001，且缺少 main 跑全套的對照，嚴格說不滿足該處置條款的「全部屬於本編號」。這一項是本次 closeout 最弱的證據，已另開 diagnose 處理。
-- **KI-P1D-001 未解，且範圍擴大到第三支 spec。** 原記錄的 `m01e` / `m01m` 之外，`m01k:392` 已確認同簽章，並取得 main 與分支各 3/3 失敗的對照證據。根因仍未確認。P3-A 未觸及 Builder，不影響本次其餘證據，但會持續影響後續每一次 Subphase 關門。
+- **合併回 main 的全套 E2E gate 沒有綠燈就放行。** 依 AGENTS.md，合併回 `main` 要求全套 E2E；本次全套是紅的（見上），仍在使用者明示決定下合併。**關門後已查明根因並修復**：兩支 M01-K 失敗都是整支測試用完 Playwright 預設的 30 秒單測預算，不是 Draft autosave 競態，也與 P3-A 無關——`m01k:392` 實測需 32.5–33.8 秒，把 timeout 拉到 180 秒後 3/3 通過（run 34298326870）。修法為 `playwright.config.ts` 設 `timeout: 60_000`，另把 `m01k:342` 的角色名稱唯一化以修掉重複執行時的同名 workshop card 定位問題。詳見 `已知問題.md` KI-P1D-001「位置」段的排除說明。
+- **KI-P1D-001 未解。** `m01e` / `m01m` 的 Builder Draft revision 競態根因仍未確認，且目前沒有活躍的重現案例。**本次 closeout 曾把 M01-K 誤登記為第三支重現案例，已更正**：M01-K 的簽章是 `Test timeout of 30000ms exceeded`，KI-P1D-001 是 `Timeout 5000ms exceeded while waiting on the predicate`，兩者意義相反。
 
 ## Handoff
 

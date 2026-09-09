@@ -27,6 +27,11 @@ export default defineConfig({
   globalSetup: './scripts/e2e-global-setup.mjs',
   fullyParallel: false,
   workers: 1,
+  // The Builder specs drive one option at a time and wait for the draft revision
+  // after each, so the heaviest of them (a level 8 Wizard) needs a little over
+  // 30 seconds on a GitHub runner. The default 30 s cut them off mid-sweep and
+  // the truncated revision poll read as a save that never landed.
+  timeout: 60_000,
   use: {
     baseURL,
     browserName: 'chromium',
