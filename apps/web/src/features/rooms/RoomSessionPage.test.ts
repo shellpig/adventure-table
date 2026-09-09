@@ -10,6 +10,7 @@ import {
   mergeSessionSeatTruth,
   RoomSessionPage,
   roomSessionRouteFromPath,
+  SessionEventConnectionBanner,
 } from './RoomSessionPage'
 import { sessionCopy } from './sessionCopy'
 
@@ -49,7 +50,7 @@ function seat(id: string, label: string, archivedAt: string | null = null): Camp
   }
 }
 
-describe('P2-E Session route and presentation', () => {
+describe('Session route and presentation', () => {
   it('recognizes the Room/Campaign/Session route only', () => {
     expect(roomSessionRouteFromPath(
       `/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}`,
@@ -60,23 +61,42 @@ describe('P2-E Session route and presentation', () => {
     expect(roomSessionRouteFromPath(`/sessions/${SESSION_ID}`)).toBeNull()
   })
 
-  it('merges Resume Seat truth so archived participants keep structured labels', () => {
+  it('unions Resume and Lobby Seat truth while fresh Lobby fields win overlaps', () => {
     const liveLobbySeat = seat('40000000-0000-4000-8000-000000000001', 'Live Seat')
     const archivedParticipant = seat(
       '40000000-0000-4000-8000-000000000002',
       'Archived Mira Seat',
       '2026-09-07T01:00:00Z',
     )
-    const resumeOverride = seat(liveLobbySeat.id, 'Resume Current Truth')
+    const resumeSnapshot = seat(liveLobbySeat.id, 'Resume Current Truth')
 
     const merged = mergeSessionSeatTruth(
       [liveLobbySeat],
-      [resumeOverride, archivedParticipant],
+      [resumeSnapshot, archivedParticipant],
     )
     expect(merged).toHaveLength(2)
-    expect(merged.find((item) => item.id === liveLobbySeat.id)?.label).toBe('Resume Current Truth')
+    expect(merged.find((item) => item.id === liveLobbySeat.id)?.label).toBe('Live Seat')
     expect(merged.find((item) => item.id === archivedParticipant.id)?.archived_at).not.toBeNull()
     expect(merged.find((item) => item.id === archivedParticipant.id)?.label).toBe('Archived Mira Seat')
+  })
+
+  it('renders persistent reconnect and fatal connection status in both locales', () => {
+    for (const locale of ['zh-TW', 'en'] as const) {
+      const copy = sessionCopy(locale)
+      const reconnecting = renderToStaticMarkup(createElement(SessionEventConnectionBanner, {
+        status: 'reconnecting',
+        copy,
+      }))
+      const fatal = renderToStaticMarkup(createElement(SessionEventConnectionBanner, {
+        status: 'fatal',
+        copy,
+      }))
+
+      expect(reconnecting).toContain(copy.eventReconnecting)
+      expect(reconnecting).toContain('data-session-event-connection="reconnecting"')
+      expect(fatal).toContain(copy.eventDisconnected)
+      expect(fatal).toContain('data-session-event-connection="fatal"')
+    }
   })
 
   it('keeps internal phase labels out of both locales', () => {
@@ -128,11 +148,15 @@ describe('P2-E Session route and presentation', () => {
     }
   })
 
-  it('uses heartbeat and Resume truth with only explicit P2-E lifecycle calls', () => {
+  it('uses one initial Resume then incremental event wait instead of heartbeat Resume polling', () => {
     const source = readFileSync(new URL('./RoomSessionPage.tsx', import.meta.url), 'utf8')
     expect(source).toContain('startRoomHeartbeat')
     expect(source).toContain('heartbeatRoom(roomId, token)')
-    expect(source).toContain('getActiveSession(roomId, campaignId, token)')
+    expect(source.match(/getActiveSession\(roomId, campaignId, token\)/g) ?? []).toHaveLength(1)
+    expect(source).toContain('runSessionEventPoll({')
+    expect(source).toContain('waitSessionEvents(')
+    expect(source).toContain('applySessionEventPage(')
+    expect(source).toContain('eventStreamFromResume(nextResume)')
     expect(source).toContain('mergeSessionSeatTruth(')
     expect(source).toContain('lateJoinSession(')
     expect(source).toContain('endSession(roomId, campaignId, sessionId, token)')
@@ -146,9 +170,9 @@ describe('P2-E Session route and presentation', () => {
   it('does not let a missing Lobby take down the Session surface', () => {
     const source = readFileSync(new URL('./RoomSessionPage.tsx', import.meta.url), 'utf8')
 
-    // The Lobby is Campaign-current-only; the Session is not. Both fetch sites
-    // must go through the tolerant wrapper, and neither the loading guard nor
-    // the DM check may depend on the Lobby succeeding.
+    // The Lobby is Campaign-current-only; the Session is not. Initial load and
+    // lightweight heartbeat both use the tolerant wrapper; event sync is a
+    // separate durable cursor and never depends on Lobby availability.
     expect(source).toContain('getLobby(roomId, campaignId, token).catch(() => null)')
     expect(source.match(/optionalLobby\(\)/g) ?? []).toHaveLength(2)
     expect(source).not.toContain('getLobby(roomId, campaignId, token),')

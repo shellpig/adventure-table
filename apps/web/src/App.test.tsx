@@ -25,6 +25,7 @@ const STANDALONE: CapabilitySnapshot = {
     campaign: false,
     session: false,
     seat: false,
+    table_runtime: false,
     combat: false,
     timeline: false,
     ai_actor: false,

@@ -1,0 +1,119 @@
+import { describe, expect, it } from 'vitest'
+
+import type { SessionResume, TableEvent, TableEventPage } from '../../api/sessions'
+import { applySessionEventPage, eventStreamFromResume } from './sessionEventStream'
+
+const SESSION_ID = '30000000-0000-4000-8000-000000000001'
+
+function event(seq: number, id = `event-${seq}`): TableEvent {
+  return {
+    id,
+    session_id: SESSION_ID,
+    seq,
+    kind: 'diagnostic.test',
+    acting_seat_id: null,
+    subject_seat_id: null,
+    subject_character_id: null,
+    execution_mode: null,
+    visibility: 'public',
+    recipient_seat_ids: [],
+    payload_version: 1,
+    payload: { seq },
+    created_at: '2026-09-08T00:00:00Z',
+  }
+}
+
+function resume(): SessionResume {
+  return {
+    room_id: '10000000-0000-4000-8000-000000000001',
+    campaign_id: '20000000-0000-4000-8000-000000000001',
+    room: {} as SessionResume['room'],
+    campaign: {} as SessionResume['campaign'],
+    active_session: { id: SESSION_ID } as SessionResume['active_session'],
+    participants: [],
+    seats: [],
+    active_characters: [],
+    caller_access_session_id: null,
+    table_runtime: {
+      session_id: SESSION_ID,
+      revision: 2,
+      last_event_seq: 2,
+    },
+    recent_events: {
+      session_id: SESSION_ID,
+      after_seq: 0,
+      cursor: 2,
+      current_seq: 2,
+      has_more: false,
+      events: [event(1), event(2)],
+    },
+  }
+}
+
+describe('P3-A Session event cursor reducer', () => {
+  it('boots from initial Resume cursor/recent event projection', () => {
+    const state = eventStreamFromResume(resume())
+    expect(state).not.toBeNull()
+    expect(state?.cursor).toBe(2)
+    expect(state?.currentSeq).toBe(2)
+    expect(state?.events.map((item) => item.seq)).toEqual([1, 2])
+  })
+
+  it('applies incremental pages and makes duplicate delivery idempotent', () => {
+    const initial = eventStreamFromResume(resume())
+    expect(initial).not.toBeNull()
+    const page: TableEventPage = {
+      session_id: SESSION_ID,
+      after_seq: 2,
+      cursor: 4,
+      current_seq: 4,
+      has_more: false,
+      events: [event(3), event(4)],
+    }
+    const once = applySessionEventPage(initial!, page)
+    const twice = applySessionEventPage(once, page)
+
+    expect(once.cursor).toBe(4)
+    expect(twice.events.map((item) => item.seq)).toEqual([1, 2, 3, 4])
+    expect(twice.events).toHaveLength(4)
+  })
+
+  it('ignores stale or wrong-Session pages instead of moving the cursor backward', () => {
+    const initial = eventStreamFromResume(resume())!
+    const advanced = applySessionEventPage(initial, {
+      session_id: SESSION_ID,
+      after_seq: 2,
+      cursor: 5,
+      current_seq: 5,
+      has_more: false,
+      events: [event(5)],
+    })
+    const stale = applySessionEventPage(advanced, {
+      session_id: SESSION_ID,
+      after_seq: 0,
+      cursor: 2,
+      current_seq: 2,
+      has_more: true,
+      events: [event(1, 'contradictory-id')],
+    })
+    const wrongSession = applySessionEventPage(advanced, {
+      session_id: '30000000-0000-4000-8000-000000000099',
+      after_seq: 5,
+      cursor: 6,
+      current_seq: 6,
+      has_more: false,
+      events: [],
+    })
+
+    expect(stale).toEqual(advanced)
+    expect(wrongSession).toEqual(advanced)
+    expect(advanced.cursor).toBe(5)
+  })
+
+  it('does not invent an incremental stream for callers without P3 projection', () => {
+    const noProjection = resume()
+    noProjection.table_runtime = null
+    noProjection.recent_events = null
+    expect(eventStreamFromResume(noProjection)).toBeNull()
+  })
+})

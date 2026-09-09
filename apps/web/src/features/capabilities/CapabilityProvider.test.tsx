@@ -18,6 +18,7 @@ const STANDALONE: CapabilitySnapshot = {
     campaign: false,
     session: false,
     seat: false,
+    table_runtime: false,
     combat: false,
     timeline: false,
     ai_actor: false,
@@ -30,7 +31,7 @@ function Probe() {
   return <output>{`${snapshot.channel}|${snapshot.database_path}`}</output>
 }
 
-describe('M03-E capability provider', () => {
+describe('capability provider', () => {
   it('uses an injected bootstrap snapshot without changing its channel or database path', () => {
     const html = renderToStaticMarkup(
       <CapabilityProvider initialSnapshot={STANDALONE}>
@@ -53,11 +54,12 @@ describe('M03-E capability provider', () => {
     expect(html).toContain('href="/characters"')
   })
 
-  it('keeps the normal P2-C Web snapshot Room/Campaign-enabled but fetch failures fail closed', () => {
+  it('keeps conservative bootstrap/fetch fallbacks fail-closed for P3 table runtime', () => {
     expect(DEFAULT_WEB_CAPABILITIES.capabilities.room).toBe(true)
     expect(DEFAULT_WEB_CAPABILITIES.capabilities.campaign).toBe(true)
     expect(DEFAULT_WEB_CAPABILITIES.capabilities.seat).toBe(false)
     expect(DEFAULT_WEB_CAPABILITIES.capabilities.session).toBe(false)
+    expect(DEFAULT_WEB_CAPABILITIES.capabilities.table_runtime).toBe(false)
     expect(CAPABILITY_FETCH_FALLBACK.capabilities.character_builder).toBe(true)
     expect(CAPABILITY_FETCH_FALLBACK.capabilities.character_import_export).toBe(true)
     for (const capability of [
@@ -65,6 +67,7 @@ describe('M03-E capability provider', () => {
       'campaign',
       'session',
       'seat',
+      'table_runtime',
       'combat',
       'timeline',
       'ai_actor',

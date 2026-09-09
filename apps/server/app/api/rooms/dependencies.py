@@ -6,16 +6,20 @@ from fastapi import Request
 
 from app.api.dependencies import get_content_registry, get_database_engine
 from app.api.errors import APIError
+from app.api.rooms.table_event_wait import ProcessLocalTableEventNotifier
 from app.domain.rooms.campaigns import CampaignService
 from app.domain.rooms.seats import SeatService
 from app.domain.rooms.session_resume import SessionResumeService
 from app.domain.rooms.sessions import SessionService
+from app.domain.rooms.table_events import TableEventService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
 from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.repository import RoomRepository
 from app.persistence.rooms.seats import SeatRepository
 from app.persistence.rooms.session_live import SessionLiveRepository
+from app.persistence.rooms.session_resume import SessionResumeRepository
 from app.persistence.rooms.sessions import SessionRepository
+from app.persistence.rooms.table_runtime import TableEventRepository
 
 
 class _HistoryGuardedCharacterRepository:
@@ -91,6 +95,25 @@ def get_session_service(request: Request) -> SessionService:
     return service
 
 
+def get_table_event_notifier(request: Request) -> ProcessLocalTableEventNotifier:
+    notifier = getattr(request.app.state, "table_event_notifier", None)
+    if notifier is None:
+        notifier = ProcessLocalTableEventNotifier()
+        request.app.state.table_event_notifier = notifier
+    return notifier
+
+
+def get_table_event_service(request: Request) -> TableEventService:
+    service = getattr(request.app.state, "table_event_service", None)
+    if service is None:
+        service = TableEventService(
+            TableEventRepository(get_database_engine(request)),
+            get_table_event_notifier(request),
+        )
+        request.app.state.table_event_service = service
+    return service
+
+
 def get_session_resume_service(request: Request) -> SessionResumeService:
     service = getattr(request.app.state, "session_resume_service", None)
     if service is None:
@@ -101,6 +124,8 @@ def get_session_resume_service(request: Request) -> SessionResumeService:
             campaign_service=get_campaign_service(request),
             seat_service=get_seat_service(request),
             character_repository=get_room_workspace_service(request).character_repository,
+            summary_repository=SessionResumeRepository(engine),
+            table_event_service=get_table_event_service(request),
         )
         request.app.state.session_resume_service = service
     return service
@@ -113,4 +138,6 @@ __all__ = [
     "get_seat_service",
     "get_session_resume_service",
     "get_session_service",
+    "get_table_event_notifier",
+    "get_table_event_service",
 ]

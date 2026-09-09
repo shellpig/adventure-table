@@ -19,6 +19,7 @@ class CapabilityFlags(BaseModel):
     campaign: bool = False
     session: bool = False
     seat: bool = False
+    table_runtime: bool = False
     combat: bool = False
     timeline: bool = False
     ai_actor: bool = False
@@ -44,6 +45,7 @@ def build_capabilities(channel: DistributionChannel) -> Capabilities:
             campaign=channel == "web",
             session=channel == "web",
             seat=channel == "web",
+            table_runtime=channel == "web",
         ),
         database_path=database_path,
     )

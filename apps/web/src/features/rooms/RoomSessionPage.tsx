@@ -9,12 +9,22 @@ import {
   getActiveSession,
   getSession,
   lateJoinSession,
+  waitSessionEvents,
   type SessionSnapshot,
 } from '../../api/sessions'
 import { useLocale } from '../../i18n/LocaleProvider'
 import { startRoomHeartbeat } from './heartbeat'
 import { recentRoomForId } from './roomStorage'
-import { sessionCopy, sessionErrorMessage } from './sessionCopy'
+import {
+  runSessionEventPoll,
+  type SessionEventConnectionStatus,
+} from './sessionEventPoll'
+import {
+  applySessionEventPage,
+  eventStreamFromResume,
+  type SessionEventStreamState,
+} from './sessionEventStream'
+import { sessionCopy, sessionErrorMessage, type SessionCopy } from './sessionCopy'
 import './rooms.css'
 
 const UUID_PATTERN = '[0-9a-fA-F-]{36}'
@@ -34,9 +44,29 @@ export function mergeSessionSeatTruth(
   lobbySeats: CampaignSeat[],
   resumeSeats: CampaignSeat[],
 ): CampaignSeat[] {
-  const byId = new Map(lobbySeats.map((seat) => [seat.id, seat]))
-  for (const seat of resumeSeats) byId.set(seat.id, seat)
+  const byId = new Map(resumeSeats.map((seat) => [seat.id, seat]))
+  for (const seat of lobbySeats) byId.set(seat.id, seat)
   return [...byId.values()]
+}
+
+export function SessionEventConnectionBanner({
+  status,
+  copy,
+}: {
+  status: SessionEventConnectionStatus
+  copy: SessionCopy
+}) {
+  if (status === 'connected') return null
+  const message = status === 'reconnecting' ? copy.eventReconnecting : copy.eventDisconnected
+  return (
+    <div
+      className="error-banner"
+      role={status === 'fatal' ? 'alert' : 'status'}
+      data-session-event-connection={status}
+    >
+      {message}
+    </div>
+  )
 }
 
 export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRoute) {
@@ -49,6 +79,8 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   const [resumeSeats, setResumeSeats] = useState<CampaignSeat[]>([])
   const [callerAccessSessionId, setCallerAccessSessionId] = useState<string | null>(null)
   const [characters, setCharacters] = useState<RoomCharacterSummary[]>([])
+  const [eventStream, setEventStream] = useState<SessionEventStreamState | null>(null)
+  const [eventConnectionStatus, setEventConnectionStatus] = useState<SessionEventConnectionStatus>('connected')
   const [lateJoinSeatId, setLateJoinSeatId] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -59,6 +91,9 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   const optionalLobby = (): Promise<LobbySnapshot | null> =>
     getLobby(roomId, campaignId, token).catch(() => null)
 
+  // Full Resume is an initial/explicit-lifecycle read only. Heartbeat deliberately
+  // does not call it: P3-A receives gameplay changes through the incremental
+  // event cursor and avoids multiplying the richer Resume query at heartbeat rate.
   const reload = async () => {
     const [nextSession, nextLobby, nextCharacters, nextResume] = await Promise.all([
       getSession(roomId, campaignId, sessionId, token),
@@ -71,6 +106,11 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     setCharacters(nextCharacters)
     setCallerAccessSessionId(nextResume.caller_access_session_id)
     setResumeSeats(nextResume.active_session?.id === sessionId ? nextResume.seats : [])
+    setEventStream(
+      nextResume.active_session?.id === sessionId
+        ? eventStreamFromResume(nextResume)
+        : null,
+    )
   }
 
   useEffect(() => {
@@ -82,16 +122,13 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     const stopHeartbeat = startRoomHeartbeat(async () => {
       try {
         await heartbeatRoom(roomId, token)
-        const [nextSession, nextLobby, nextResume] = await Promise.all([
+        const [nextSession, nextLobby] = await Promise.all([
           getSession(roomId, campaignId, sessionId, token),
           optionalLobby(),
-          getActiveSession(roomId, campaignId, token),
         ])
         if (active) {
           setSnapshot(nextSession)
           setLobby(nextLobby)
-          setCallerAccessSessionId(nextResume.caller_access_session_id)
-          setResumeSeats(nextResume.active_session?.id === sessionId ? nextResume.seats : [])
         }
       } catch (cause) {
         if (active) setError(sessionErrorMessage(cause, copy))
@@ -104,6 +141,40 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     // Room credential and route identify this Session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, campaignId, sessionId, token])
+
+  const eventStreamReady = eventStream !== null
+  useEffect(() => {
+    if (!recent || !eventStreamReady || snapshot?.status !== 'active') return
+
+    const controller = new AbortController()
+    setEventConnectionStatus('connected')
+
+    void runSessionEventPoll({
+      initialCursor: eventStream?.cursor ?? 0,
+      signal: controller.signal,
+      wait: (cursor, signal) => waitSessionEvents(
+        roomId,
+        campaignId,
+        sessionId,
+        cursor,
+        token,
+        { limit: 100, timeout: 30, signal },
+      ),
+      onPage: (page) => {
+        setEventStream((current) => current ? applySessionEventPage(current, page) : current)
+      },
+      onStatus: setEventConnectionStatus,
+      onFatal: (cause) => setError(sessionErrorMessage(cause, copy)),
+    })
+
+    return () => {
+      controller.abort()
+    }
+    // Cursor progression is owned by the long-poll runner; reducer state updates
+    // must not tear down/recreate the waiter on every event. Reconnect also resumes
+    // from that cursor and never calls the full Session Resume endpoint.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, campaignId, sessionId, token, eventStreamReady, snapshot?.status])
 
   const participantSeatIds = useMemo(
     () => new Set(snapshot?.participants.map((participant) => participant.seat_id) ?? []),
@@ -191,6 +262,9 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
           </a>
         </div>
         {error ? <div className="error-banner">{error}</div> : null}
+        {snapshot.status === 'active' ? (
+          <SessionEventConnectionBanner status={eventConnectionStatus} copy={copy} />
+        ) : null}
 
         <h2>{copy.participants}</h2>
         <div className="workshop-list">
