@@ -59,11 +59,14 @@ export function SessionEventConnectionBanner({
   copy: SessionCopy
 }) {
   if (status === 'connected') return null
-  const message = status === 'reconnecting' ? copy.eventReconnecting : copy.eventDisconnected
+  const reconnecting = status === 'reconnecting'
+  const message = reconnecting ? copy.eventReconnecting : copy.eventDisconnected
   return (
     <div
-      className="error-banner"
-      role={status === 'fatal' ? 'alert' : 'status'}
+      // Reconnecting is a transient state, not a failure; only the fatal case
+      // earns the alert styling.
+      className={reconnecting ? 'notice-banner' : 'error-banner'}
+      role={reconnecting ? 'status' : 'alert'}
       data-session-event-connection={status}
     >
       {message}
@@ -167,7 +170,9 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
         setEventStream((current) => current ? applySessionEventPage(current, page) : current)
       },
       onStatus: setEventConnectionStatus,
-      onFatal: (cause) => setError(sessionErrorMessage(cause, copy)),
+      // The fatal connection banner states this and what to do about it, so
+      // raising the generic error banner too would say the same thing twice.
+      onFatal: () => undefined,
     })
 
     return () => {

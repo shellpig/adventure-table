@@ -96,6 +96,12 @@ describe('Session route and presentation', () => {
       expect(reconnecting).toContain('data-session-event-connection="reconnecting"')
       expect(fatal).toContain(copy.eventDisconnected)
       expect(fatal).toContain('data-session-event-connection="fatal"')
+
+      // Reconnecting is transient and must not borrow the failure styling.
+      expect(reconnecting).toContain('class="notice-banner"')
+      expect(reconnecting).toContain('role="status"')
+      expect(fatal).toContain('class="error-banner"')
+      expect(fatal).toContain('role="alert"')
     }
   })
 

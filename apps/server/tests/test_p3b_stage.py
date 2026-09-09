@@ -186,6 +186,53 @@ def _actor(
     )
 
 
+def _seat_second_dm_key_holder(engine, room_id, campaign_id, session_id):
+    """Seat a second Room DM Key holder who is not this Session's DM Controller."""
+    now = datetime.now(timezone.utc)
+    access_id, seat_id = uuid4(), uuid4()
+    with engine.begin() as connection:
+        connection.execute(
+            insert(room_access_sessions).values(
+                id=access_id,
+                room_id=room_id,
+                authority="dm",
+                token_hash=b"x" * 32,
+                display_name="second dm key",
+                created_at=now,
+                last_seen_at=now,
+                revoked_at=None,
+            )
+        )
+        connection.execute(
+            insert(campaign_seats).values(
+                id=seat_id,
+                campaign_id=campaign_id,
+                role="player",
+                label="Second DM Key",
+                controller_kind="human",
+                controller_access_session_id=access_id,
+                selected_character_id=None,
+                archived_at=None,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        connection.execute(
+            insert(session_participants).values(
+                id=uuid4(),
+                session_id=session_id,
+                seat_id=seat_id,
+                role_snapshot="player",
+                controller_kind_at_join="human",
+                controller_access_session_id_at_join=access_id,
+                active_character_id=None,
+                joined_at=now,
+                left_at=None,
+            )
+        )
+    return access_id, seat_id
+
+
 def _png_upload() -> StageImageUpload:
     raw = b"\x89PNG\r\n\x1a\nP3B"
     return StageImageUpload(
@@ -356,5 +403,38 @@ def test_stage_idempotent_replay_returns_original_result_after_later_updates() -
         assert current.revision == 2
         assert current.text == "Later"
         assert event_service.current_cursor(dm).last_event_seq == 2
+    finally:
+        engine.dispose()
+
+
+def test_dm_key_holder_who_is_not_the_session_dm_cannot_change_the_stage() -> None:
+    engine = _engine()
+    try:
+        room_id, campaign_id, session_id, dm_access, _player_access = _seed_session(engine)
+        event_service = TableEventService(TableEventRepository(engine))
+        service = ExplorationStageService(ExplorationRepository(engine), event_service)
+        other_access, _other_seat = _seat_second_dm_key_holder(
+            engine, room_id, campaign_id, session_id
+        )
+
+        other_dm = _actor(
+            event_service, room_id, campaign_id, session_id, other_access, "dm"
+        )
+        assert other_dm.is_current_dm is False
+
+        with pytest.raises(TableEventActorUnauthorizedError):
+            service.replace_stage(
+                other_dm,
+                StageUpdateRequest(expected_revision=0, text="Not this DM's Stage"),
+            )
+
+        # The refusal left no trace: revision 0 is still free for the real current DM.
+        dm = _actor(event_service, room_id, campaign_id, session_id, dm_access, "dm")
+        stage = service.replace_stage(
+            dm,
+            StageUpdateRequest(expected_revision=0, text="Set by the Session DM"),
+        )
+        assert stage.text == "Set by the Session DM"
+        assert stage.revision == 1
     finally:
         engine.dispose()

@@ -11,15 +11,16 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 - **目前 code 可用**：Character Workshop、Lv1／高等創角、Multiclass／Subclass／ASI／Feat／Spellcasting／Starting Equipment、Character Sheet、Current State 編輯、Level Up、Build Edit、Version History、Archive／永久刪除、角色卡 HTML 輸出。Web 已是 Room-first：首頁只有 Create / Enter Room + Recent Rooms，Room access／heartbeat 已交付，**Character／Draft／Import／Export 全部收進 Room Character Workspace**（`/rooms/{roomId}/characters`），舊的 global `/characters`／`/api/characters` 已於 P2-B 收口。Room 另可建立 Campaign 與 Party Roster（`/rooms/{roomId}/campaigns`）：Campaign lifecycle 為 Owner-only，Roster 由 Owner／DM 管理，且只 reference 同 Room Character、不複製 Current State。Room 目前選中的 active Campaign 可再進 Lobby（`/rooms/{roomId}/campaigns/{campaignId}/lobby`）：建立 DM／Player／Spectator Seat、指派 Human controller、為 Player Seat 選本場角色，presence 沿用 P2-A heartbeat 顯示 Connected／Offline。DM Seat 的 controller 指派為 Owner-only。Lobby 之後可由 Owner 事前 assign 的 DM Seat controller Start Session（`/rooms/{roomId}/campaigns/{campaignId}/sessions/{sessionId}`）：本場 DM Controller 與每個 Player Seat 的 Active Character 在 Start 當下固定，支援 Late Join、End、Abandon 與 Resume；同一 Character 不得同時在兩場 active Session，由 DB lease 保證。
 - **內容與語言**：以 SRD 5.1 為基礎，已擴充多來源角色內容；介面與目前正式呈現的規則內容支援 `zh-TW`／`en`。Enabled pack 清單以程式中的 `Settings.enabled_content_packs` 為準。
 - **已交付單機版**：同一份角色核心與前端可打包成 Windows 離線 portable zip，使用 SQLite 保存；提供 Character JSON 匯入／匯出。**測試指南 E.9 的乾淨 Windows 11 冷啟動已於 2026-09-06 由使用者人工補驗完成。** Standalone 永久保持 Character-first，不導入 Room／Campaign／Session／Seat。
-- **Session table runtime（P3-A）**：每場 Session 有自己的 durable ordered event stream 與 runtime revision。event 可標示 public／DM-only／actor+DM／指定 Seat private 四種 audience，一律由 Server 在 projection 階段過濾；browser 初次進場拿完整 Resume，之後只用 `after_seq` cursor 增量補齊，long-poll 等待期間不佔 DB connection，斷線自動重連並沿用同一 cursor，server restart 後順序與 revision 不倒退。**這層目前只是 substrate**，還沒有任何玩家可直接操作的內容寫進去。
-- **尚未實作**：正式 AI 桌內接入、Exploration／Roll／Combat／Adventure Runtime。Room 目前有 access、Character workspace、Campaign／Party Roster、Lobby／Seat 配置、Session lifecycle 與 P3-A 的 event substrate；但桌上開場後仍沒有任何 in-session 玩法面（沒有 Chat／Action／Check／骰子／Combat），Session 目前只是「誰在這一場、用哪隻角色」加上一條還沒有人往裡面寫東西的 event stream，離可跑團還很遠。
+- **Session table runtime（P3-A）**：每場 Session 有自己的 durable ordered event stream 與 runtime revision。event 可標示 public／DM-only／actor+DM／指定 Seat private 四種 audience，一律由 Server 在 projection 階段過濾；browser 初次進場拿完整 Resume，之後只用 `after_seq` cursor 增量補齊，long-poll 等待期間不佔 DB connection，斷線自動重連並沿用同一 cursor，server restart 後順序與 revision 不倒退。
+- **Exploration 桌面（P3-B）**：Session 頁已是可用的 Exploration table。Main Stage 由本場 current DM Controller 設定 Text／Image／兩者／清空，圖片是 Room-scoped 且只服務目前舞台，透過帶授權的 endpoint 取得，不走 public static path。桌上輸入有 Character Dialogue、Action、OOC、Whisper DM 與 DM 專屬的 Narration；`/action`、`/search`、`/whisper`、`/ooc` 只是同一條 typed input 的語法捷徑，`/search` 不會自動選 Skill 或建立 RollRequest。current DM 可代理任意 Player Seat 行動，event 同時保存 acting DM 與 subject Seat／Character 且不改 Seat Controller。Whisper 由 Server 過濾，第三方連 payload 都拿不到。Stage 與訊息都是 canonical row，reload 與 server restart 後仍在。
+- **尚未實作**：正式 AI 桌內接入、Roll／Check／PendingAction、Combat、Adventure Runtime。桌上現在能敘事、能發言、能宣告行動，但**沒有骰子**——需要擲的時候仍得靠口頭與桌邊實體骰，網站不參與。Session 頁的 Dice 與 Log 分頁目前只是佔位與 raw event 列表。
 - **技術基礎**：React + TypeScript + Vite；Python + FastAPI + Pydantic；SQLAlchemy + Alembic；網頁版 PostgreSQL、單機版 SQLite。啟動與開發指令見 [README.md](README.md)。
 
 產品硬原則包含 Server authoritative、Human／AI 共用 backend logic、秘密由 Server 過濾、敘事輔助資料 optional 不變 mandatory。**網站本身不接 LLM API**；未來 AI 能力來自使用者外部 AI Session。完整行為與明確不做項目見產品規格，不以本段取代。
 
 ## 當前狀態與下一步
 
-**P0、P1、P2、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 已於 2026-09-09 關門；下一步是 P3-B。**
+**P0、P1、P2、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門；下一步是 P3-C。**
 
 P2 已交付並必須繼續維持的核心方向：
 
@@ -48,8 +49,8 @@ P3 已拍板並寫入正式文件的核心方向：
 
 下一步依序為：
 
-1. **實作 P3-B — Exploration, Chat & Actions**；在 P3-A 的 event substrate 上做 Main Stage text/image、Dialogue / Action / OOC / Whisper DM / Narration 與 DM proxy，不建立 Scene / Asset Library。開工前先讀 [P3-A closeout](docs/P3/P3-A_CLOSEOUT.md) 的 Handoff 段，該段列出必須沿用而不得另造第二套的 substrate。
-2. 之後依固定順序完成 P3-C → P3-D → P3-E → P3-F；每個Subphase都依三份P3正式文件獨立實作、驗證與closeout。
+1. **實作 P3-C — Roll, Check & PendingAction**；在 P3-B 的 Exploration 桌面上做 RollGroup / RollRequest / Result、Server RNG、Group / Secret / physical / quick roll 與 PendingAction，AI resolver 留 P3-D 接線。開工前先讀 [P3-B closeout](docs/P3/P3-B_CLOSEOUT.md) 的 Handoff 段，該段列出必須沿用而不得另造第二套的 substrate。
+2. 之後依固定順序完成 P3-D → P3-E → P3-F；每個Subphase都依三份P3正式文件獨立實作、驗證與closeout。
 3. P4～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
 
 P2 的正式契約：
@@ -64,6 +65,7 @@ P3 的正式契約：
 - [P3 開發設計方針](docs/P3/開發設計方針.md)
 - [P3 測試指南](docs/P3/測試指南.md)
 - [P3-A closeout](docs/P3/P3-A_CLOSEOUT.md)
+- [P3-B closeout](docs/P3/P3-B_CLOSEOUT.md)
 
 **M01 不再有「必須 final closeout 後才能開始 P2」的 gate。** A～N 是目前已完成的角色內容 baseline；之後若再拍板新的角色內容或既有角色系統強化，從 **M01-O** 起繼續新增 Subphase。M01 可以在 P2／P3 等正常產品 Roadmap 繼續前進時保持 open，不要求先建立一個假的「全部 D&D 內容已完成」里程碑。
 
@@ -79,10 +81,10 @@ P3 的正式契約：
 | Journey 2（多 Room 隔離）只有後端證據 | HTTP 層由 `test_p2b_room_character_api.py::test_room_a_cannot_use_room_b_character_or_draft_ids` 完整覆蓋，但測試指南 §13 描述的「把 Room B 的 UUID 貼進 Room A route 會看到什麼」沒有 browser 斷言。隔離本身有保證，缺的是使用者視角證據 | [P2-F closeout](docs/P2/P2-F_CLOSEOUT.md)「已知限制」 |
 | 雙語 browser crawl 未涵蓋 P2 新畫面 | `m02h-bilingual-site-smoke.spec.ts` 只跑三條 character 路由，沒有 `/campaigns`、`/lobby`、`/sessions/{id}`。目前靠 `hardcodedUiCopy.test.ts` 掃描與各 `*Copy.ts` locale parity 單元測試把關，缺整頁 overflow / raw key 的視覺層 crawl | [P2-F closeout](docs/P2/P2-F_CLOSEOUT.md)「已知限制」；P3-F要求把Session桌面納入完整crawl |
 | Restart 整合測試跑在 SQLite | `test_p2f_restart_integration.py` 用 `metadata.create_all` 建 SQLite，dataset 完整但不是 Alembic 遷移後的 PostgreSQL。migration 面另有真 PostgreSQL 覆蓋，兩者合起來無未驗組合 | [P2-F closeout](docs/P2/P2-F_CLOSEOUT.md)「已知限制」；P3-F要求至少一條真PostgreSQL restart整合證據 |
-| `test:e2e:docker` 只 rebuild `web` | 後端改動若不先 `docker compose up -d --build server`，整套 E2E 會靜默測到舊 backend。目前仍是操作者責任。P3-A 的 E2E 走一次性 workflow 從 clean checkout 執行，未觸發此 trap，也未收斂它 | [P2-F closeout](docs/P2/P2-F_CLOSEOUT.md)「已知限制」；**P3-B 是 P3 第一個有 backend-dependent E2E 的 Subphase，必須在該 Subphase 收斂**，見 [P3-A closeout](docs/P3/P3-A_CLOSEOUT.md) Handoff |
-| Lobby 的 per-Seat N+1 查詢 | **P3-A 解掉 Resume 那一半。** `SessionResumeRepository.load_character_summaries()` 把 Active Character summary 改成單次批次查詢，且整份 Resume 已從 Session 頁的 heartbeat 移除。**Lobby 側未動**：`SeatService.lobby()` 仍對每個 Human-controlled Seat 各查一次 access session，而 Session 頁仍以 heartbeat 週期輪詢 Lobby。P3-A 沒有放大它（輪詢頻率不變、淨查詢量下降），但 P3-B 若讓 Session 頁更依賴 Lobby 衍生資料或提高頻率，必須先批次化 | [P3-A closeout](docs/P3/P3-A_CLOSEOUT.md)「已知限制」；[P2-E closeout](docs/P2/P2-E_CLOSEOUT.md)「已知限制」 |
-| P3-A 的呈現層與測試替身取捨 | 三項：致命錯誤時 `error` banner 與 disconnected banner 會同時出現；重連中的狀態沿用 `error-banner` 告警樣式；waiter starvation 測試借用真實 `wait_after` 但 stub 掉 `list_after`，真實 endpoint 路徑未合成單一端到端資源斷言。都不影響 P3-A 契約，留待 P3-B 一併處理 | [P3-A closeout](docs/P3/P3-A_CLOSEOUT.md)「已知限制」 |
-| 座位變動的即時同步仍是顯示層權宜 | P3-A 修正後，看得到 Lobby 的 caller 已恢復隨心跳更新座位標籤；無 Lobby 讀取權的 caller 其座位資訊仍凍結在進入 Session 頁當下。座位變動要成為桌上的一等事件屬 P3-B 範圍 | [P3-A closeout](docs/P3/P3-A_CLOSEOUT.md)「關門過程中修正的問題」第 1 項與「已知限制」 |
+| ~~`test:e2e:docker` 只 rebuild `web`~~ | **P3-B 已收斂。** `apps/web/scripts/e2e-docker.mjs` 改成 `docker compose up -d --build server web`，`e2eDockerScript.test.ts` 釘住這個行為，stale backend image 不再是操作者責任 | [P3-B closeout](docs/P3/P3-B_CLOSEOUT.md)「Verification evidence」 |
+| Lobby 的 per-Seat N+1 查詢 | **P3-A 解掉 Resume 那一半。** `SessionResumeRepository.load_character_summaries()` 把 Active Character summary 改成單次批次查詢，且整份 Resume 已從 Session 頁的 heartbeat 移除。**Lobby 側未動**：`SeatService.lobby()` 仍對每個 Human-controlled Seat 各查一次 access session，而 Session 頁仍以 heartbeat 週期輪詢 Lobby。P3-A 沒有放大它（輪詢頻率不變、淨查詢量下降），P3-B 也沒有提高 Session 頁對 Lobby 的依賴或輪詢頻率，屬「未惡化」而非「已修復」 | [P3-B closeout](docs/P3/P3-B_CLOSEOUT.md)「已知限制」；[P3-A closeout](docs/P3/P3-A_CLOSEOUT.md)「已知限制」 |
+| P3-A 的呈現層與測試替身取捨 | **P3-B 解掉兩項呈現層問題**：致命錯誤不再同時出現兩則 banner（`onFatal` 不另設 generic error banner），重連中改用 `.notice-banner` + `role="status"`，fatal 才是 `error-banner` + `role="alert"`。**waiter starvation 測試替身未動**：仍借真實 `wait_after` 但 stub `list_after`，真實 endpoint 路徑未合成單一端到端資源斷言，留給 P3-F 的資源安全整合 | [P3-B closeout](docs/P3/P3-B_CLOSEOUT.md)「關門過程中修正的問題」第 3 項與「已知限制」 |
+| 座位變動的即時同步仍是顯示層權宜 | 無 Lobby 讀取權的 caller 其座位資訊仍凍結在進入 Session 頁當下。**P3-B 沒有做**：該 Subphase 的實作規格 18 條沒有列這件事，event kind 只有 `exploration.*` 與 `stage.updated`。**改掛 P3-D**，因為 controller 交接本來就是該 Subphase 的主題 | [P3-B closeout](docs/P3/P3-B_CLOSEOUT.md)「已知限制」 |
 | Campaign status 仍無 transition 規則 | `active` 已累積「可開 Lobby」與「可開 Session」兩層語意，但 Campaign 仍可從 `completed` 退回 `draft`；`delete_draft_without_session_history()` 因此得同時檢查 status 與 Session history 才安全 | [P2-E closeout](docs/P2/P2-E_CLOSEOUT.md)「已知限制」；P3-D pre-session AI DM grant只要Campaign離開Start-eligible active就revoke，不依賴status transition單向性 |
 | draft Campaign hard delete 會 cascade 掉整份 Roster | 符合契約，且 **P2-E 已把「無 Session history」從恆真變成真的檢查**（`delete_draft_without_session_history()`）。剩下的問題只在 UI：確認流程未顯示會連帶移除幾筆 roster。P2 未處理 | [P2-C closeout](docs/P2/P2-C_CLOSEOUT.md)「已知限制」；[P2-F closeout](docs/P2/P2-F_CLOSEOUT.md)「已知限制」 |
 | Room Hard Delete 是目前最容易造成不可逆資料遺失的入口 | 確認 modal 只要求輸入 Room 名稱，未顯示會連帶刪除幾個 Character／Draft／Campaign／Session，也未提示先匯出。行為符合契約，human smoke 期間實際造成兩隻角色永久遺失。P2 未處理 | [P2-B closeout](docs/P2/P2-B_CLOSEOUT.md)「已知限制」；[P2-F closeout](docs/P2/P2-F_CLOSEOUT.md)「已知限制」 |
@@ -107,7 +109,7 @@ P3 的正式契約：
 | M02 | Traditional Chinese / English Localization | 插於 M01-C 與 M01-D 間；雙語呈現、翻譯流程與完整性 gate；已關門 |
 | M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，E.9 乾淨 Windows 11 冷啟動已於 2026-09-06 補驗完成 |
 | P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**A～F 全數關門，Phase 已關門** |
-| P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌；**A～F正式文件與preflight blocker修正已完成，P3-A已關門，下一步P3-B** |
+| P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌；**A～F正式文件與preflight blocker修正已完成，P3-A／P3-B已關門，下一步P3-C** |
 | P4 | Quick Combat | 第一個完整可玩的 Combat MVP；首個 Subphase P4-A 承接 SRD Monster／Beast stat blocks |
 | P5 | Tactical Combat | 同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE 與空間系統 |
 | P6 | Adventure + AI DM Runtime | Adventure Definition／Importer、Campaign Runtime、世界資料、AI DM context／write-back |
@@ -204,7 +206,7 @@ P3 的正式契約：
 | Subphase | 狀態 | 重點 |
 |---|---|---|
 | **P3-A — Session Table Runtime & Event Stream** | ✅ | durable per-Session runtime、ordered event cursor、Server-side audience filter、initial Resume + incremental sync、restart persistence、async/no-DB-hold event wait與waiter starvation gate、避免P2 Resume N+1變高頻同步 |
-| **P3-B — Exploration, Chat & Actions** | ⬜ | Main Stage text/image、最小Room-scoped Stage upload、Dialogue / Action / OOC / Whisper DM / Narration、Stage與Chat分離、不建立Scene/Asset Library |
+| **P3-B — Exploration, Chat & Actions** | ✅ | Main Stage text/image、最小Room-scoped Stage upload、Dialogue / Action / OOC / Whisper DM / Narration、slash command 收斂成同一 typed input、DM proxy 保存 acting/subject、Whisper Server 過濾、Stage與Chat分離、不建立Scene/Asset Library |
 | **P3-C — Roll, Check & PendingAction** | ⬜ | RollGroup / RollRequest / Result、Server RNG、Group / Secret / physical / quick roll、PendingAction、formal roll idempotency、actor-neutral Character State + event atomic boundary；AI resolver留P3-D接線 |
 | **P3-D — AI Controller, Scoped Token & Handoff** | ⬜ | typed TableActorContext、P2 Human-only Session/live-write授權入口migration、hashed scoped AI Join Token、Seat current grant + controller_epoch SSOT、Session/Participant grant-generation snapshots與三條CHECK migration、finite-TTL pre-session AI DM grant、origin-only Take Back + Owner/DM admin recovery、Player Human ↔ AI handoff、AI DM可作新Session固定DM Controller |
 | **P3-E — AI Tool Surface & Event Delivery** | ⬜ | MCP `2026-07-28` stateless Streamable HTTP入口、shared application services、structured tools/errors、`get_pending_events` / `wait_for_event`沿用P3-A async wait、真external MCP client gate |
@@ -251,7 +253,7 @@ P3 的正式契約：
 | P2 | [規格](docs/P2/實作規格.md) | [設計](docs/P2/開發設計方針.md) | [測試](docs/P2/測試指南.md) |
 | P3 | [規格](docs/P3/實作規格.md) | [設計](docs/P3/開發設計方針.md) | [測試](docs/P3/測試指南.md) |
 
-歷史完成過程與驗收證據查各 Phase 目錄的 `*_CLOSEOUT.md`；M01-B 真人創角 Gate 另見 [M01-B_HUMAN_GATE.md](docs/M01/M01-B_HUMAN_GATE.md)。最近**已完成產品Phase**的整合交付見 [P2-F_CLOSEOUT.md](docs/P2/P2-F_CLOSEOUT.md)；P3目前只有正式設計文件，尚無code closeout。
+歷史完成過程與驗收證據查各 Phase 目錄的 `*_CLOSEOUT.md`；M01-B 真人創角 Gate 另見 [M01-B_HUMAN_GATE.md](docs/M01/M01-B_HUMAN_GATE.md)。最近**已完成產品Phase**的整合交付見 [P2-F_CLOSEOUT.md](docs/P2/P2-F_CLOSEOUT.md)；P3 進行中，已關門的 Subphase closeout 為 [P3-A](docs/P3/P3-A_CLOSEOUT.md) 與 [P3-B](docs/P3/P3-B_CLOSEOUT.md)。
 
 `docs/暫用規則資訊/` 是內容 authoring／review input，**不是 runtime 資料來源**。正式規則與可調數值住 `data/`，runtime 不解析 `docs/`；`舊文件/` 為歷史封存，接手時忽略。
 

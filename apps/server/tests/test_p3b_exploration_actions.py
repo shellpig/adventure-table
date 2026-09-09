@@ -147,6 +147,33 @@ def _actions(engine, events: TableEventService) -> ExplorationActionService:
     )
 
 
+def _seat_second_dm_key_holder(engine, room_id, campaign_id, session_id):
+    """Seat a second Room DM Key holder who is not this Session's DM Controller."""
+    now = datetime.now(timezone.utc)
+    access_id, seat_id, character_id = uuid4(), uuid4(), uuid4()
+    with engine.begin() as connection:
+        connection.execute(insert(room_access_sessions).values(
+            id=access_id, room_id=room_id, authority="dm",
+            token_hash=b"	" * 32, display_name="second dm key",
+            created_at=now, last_seen_at=now, revoked_at=None,
+        ))
+        connection.execute(insert(characters).values(
+            id=character_id, name="Tavin", ruleset="dnd5e-2014",
+            current_version_id=None, archived_at=None, created_at=now, updated_at=now,
+        ))
+        connection.execute(insert(campaign_seats).values(
+            id=seat_id, campaign_id=campaign_id, role="player", label="Tavin",
+            controller_kind="human", controller_access_session_id=access_id,
+            selected_character_id=None, archived_at=None, created_at=now, updated_at=now,
+        ))
+        connection.execute(insert(session_participants).values(
+            id=uuid4(), session_id=session_id, seat_id=seat_id, role_snapshot="player",
+            controller_kind_at_join="human", controller_access_session_id_at_join=access_id,
+            active_character_id=character_id, joined_at=now, left_at=None,
+        ))
+    return access_id, seat_id, character_id
+
+
 def test_dialogue_action_search_and_dm_proxy_keep_subject_and_acting_identity_distinct() -> None:
     engine = _engine()
     try:
@@ -292,5 +319,55 @@ def test_message_idempotency_never_duplicates_canonical_message_or_event() -> No
         assert len(message_rows) == 1
         assert len(event_rows) == 1
         assert message_rows[0]["event_id"] == event_rows[0]["id"] == first.id
+    finally:
+        engine.dispose()
+
+
+def test_dm_key_holder_who_is_not_the_session_dm_cannot_proxy_or_narrate() -> None:
+    engine = _engine()
+    try:
+        room_id, campaign_id, session_id, access, seats, _characters = _seed(engine)
+        events = TableEventService(TableEventRepository(engine))
+        actions = _actions(engine, events)
+        other_access, other_seat, other_character = _seat_second_dm_key_holder(
+            engine, room_id, campaign_id, session_id
+        )
+        other = _actor(events, room_id, campaign_id, session_id, other_access, "dm")
+        assert other.is_current_dm is False
+
+        with pytest.raises(TableEventActorUnauthorizedError):
+            actions.send(other, ExplorationInputRequest(
+                kind=ExplorationInputKind.ACTION,
+                subject_seat_id=seats["p1"],
+                text="I rummage through Mira's pack.",
+            ))
+        with pytest.raises(TableEventActorUnauthorizedError):
+            actions.send(other, ExplorationInputRequest(
+                kind=ExplorationInputKind.NARRATION,
+                text="The vault door swings open.",
+            ))
+
+        # Its own Seat still works, so the refusals are about table authority,
+        # not about this actor being unable to reach the Session at all.
+        own = actions.send(other, ExplorationInputRequest(
+            kind=ExplorationInputKind.DIALOGUE,
+            subject_seat_id=other_seat,
+            text="I speak for myself.",
+        ))
+        assert own.acting_seat_id == other_seat
+        assert own.subject_character_id == other_character
+        assert own.execution_mode is not None and own.execution_mode.value == "self"
+
+        # And the Seat it could not proxy is still proxyable by the real current DM.
+        dm = _actor(events, room_id, campaign_id, session_id, access["dm"], "dm")
+        proxied = actions.send(dm, ExplorationInputRequest(
+            kind=ExplorationInputKind.ACTION,
+            subject_seat_id=seats["p1"],
+            text="Mira rummages through her pack.",
+        ))
+        assert proxied.execution_mode is not None
+        assert proxied.execution_mode.value == "dm_proxy"
+        assert proxied.subject_seat_id == seats["p1"]
+        assert proxied.acting_seat_id == seats["dm"]
     finally:
         engine.dispose()
