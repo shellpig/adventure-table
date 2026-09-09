@@ -91,7 +91,7 @@ session_messages = Table(
         name="ck_session_messages_visibility",
     ),
     CheckConstraint(
-        "source_command IS NULL OR source_command = 'search'",
+        "source_command IS NULL OR source_command IN ('search', 'check')",
         name="ck_session_messages_source_command",
     ),
     UniqueConstraint("event_id", name="uq_session_messages_event_id"),

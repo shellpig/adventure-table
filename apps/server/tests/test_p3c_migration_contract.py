@@ -5,12 +5,17 @@ from pathlib import Path
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 
+from app.persistence.rooms.exploration_messages import session_messages
 from app.persistence.rooms.p3c_runtime import (
     pending_actions,
     roll_groups,
     roll_requests,
     roll_results,
 )
+
+
+ROLL_PENDING_REVISION = "0018_p3c_roll_pending"
+CHECK_COMMAND_REVISION = "0019_p3c_check_command"
 
 
 def _migration_source() -> str:
@@ -22,16 +27,49 @@ def _migration_source() -> str:
     ).read_text(encoding="utf-8")
 
 
-def test_p3c_web_migration_extends_p3b_without_touching_character_track() -> None:
+def _check_command_migration_source() -> str:
+    return (
+        Path(__file__).resolve().parents[1]
+        / "alembic"
+        / "versions"
+        / "0019_p3c_check_command.py"
+    ).read_text(encoding="utf-8")
+
+
+def test_p3c_web_migration_chain_has_check_command_as_current_head() -> None:
     server_root = Path(__file__).resolve().parents[1]
     config = Config(str(server_root / "alembic.ini"))
     config.set_main_option("script_location", str(server_root / "alembic"))
     scripts = ScriptDirectory.from_config(config)
 
-    revision = scripts.get_revision("0018_p3c_roll_pending")
-    assert revision is not None
-    assert revision.down_revision == "0017_p3b_exploration_stage"
-    assert "0018_p3c_roll_pending" in scripts.get_heads()
+    roll_revision = scripts.get_revision(ROLL_PENDING_REVISION)
+    assert roll_revision is not None
+    assert roll_revision.down_revision == "0017_p3b_exploration_stage"
+
+    check_revision = scripts.get_revision(CHECK_COMMAND_REVISION)
+    assert check_revision is not None
+    assert check_revision.down_revision == ROLL_PENDING_REVISION
+    assert scripts.get_current_head() == CHECK_COMMAND_REVISION
+
+
+def test_p3c_check_command_constraint_matches_metadata_and_downgrades_safely() -> None:
+    source = _check_command_migration_source()
+    check_text = " ".join(
+        str(constraint.sqltext)
+        for constraint in session_messages.constraints
+        if hasattr(constraint, "sqltext")
+        and constraint.name == "ck_session_messages_source_command"
+    )
+    assert "'search'" in check_text
+    assert "'check'" in check_text
+    assert "source_command IN ('search', 'check')" in source
+
+    downgrade_source = source[source.index("def downgrade") :]
+    normalize_at = downgrade_source.index(
+        "UPDATE session_messages SET source_command = NULL WHERE source_command = 'check'"
+    )
+    restore_at = downgrade_source.index("source_command IS NULL OR source_command = 'search'")
+    assert normalize_at < restore_at
 
 
 def test_p3c_schema_has_canonical_roll_and_pending_tables() -> None:

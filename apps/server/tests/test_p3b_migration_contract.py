@@ -18,7 +18,9 @@ def test_p3b_web_migration_extends_p3a_without_touching_character_track() -> Non
     revision = scripts.get_revision("0017_p3b_exploration_stage")
     assert revision is not None
     assert revision.down_revision == "0016_p3a_table_runtime_events"
-    assert "0017_p3b_exploration_stage" in scripts.get_heads()
+    p3c_revision = scripts.get_revision("0018_p3c_roll_pending")
+    assert p3c_revision is not None
+    assert p3c_revision.down_revision == revision.revision
 
 
 def test_p3b_schema_keeps_messages_canonical_and_images_room_scoped() -> None:
