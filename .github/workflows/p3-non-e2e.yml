@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - p3-a-session-table-runtime-event-stream
-      - p3-b-exploration-chat-actions
 
 jobs:
   backend:
