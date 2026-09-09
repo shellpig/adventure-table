@@ -195,6 +195,8 @@ def get_session_resume_service(request: Request) -> SessionResumeService:
             summary_repository=SessionResumeRepository(engine),
             table_event_service=get_table_event_service(request),
             stage_service=get_exploration_stage_service(request),
+            roll_service=get_roll_service(request),
+            pending_action_service=get_pending_action_service(request),
         )
         request.app.state.session_resume_service = service
     return service
