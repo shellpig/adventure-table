@@ -169,6 +169,19 @@ describe('Session route and presentation', () => {
     expect(source).not.toContain('combat')
   })
 
+  it('keeps the Session table error callback stable across parent renders', () => {
+    const source = readFileSync(new URL('./RoomSessionPage.tsx', import.meta.url), 'utf8')
+    expect(source).toContain('const handleSessionTableError = useCallback(')
+    expect(source).toContain('onError={handleSessionTableError}')
+    expect(source).not.toContain('onError={(cause)')
+  })
+
+  it('keeps the desktop Session table wider than the legacy Room workspace card', () => {
+    const source = readFileSync(new URL('./sessionTable.css', import.meta.url), 'utf8')
+    expect(source).toContain('.room-workspace-card.session-table-card')
+    expect(source).toContain('width: min(1180px, 100%);')
+  })
+
   it('does not let a missing Lobby take down the Session surface', () => {
     const source = readFileSync(new URL('./RoomSessionPage.tsx', import.meta.url), 'utf8')
     expect(source).toContain('getLobby(roomId, campaignId, token).catch(() => null)')

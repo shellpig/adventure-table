@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { listRoomCharacters, type RoomCharacterSummary } from '../../api/campaigns'
 import { heartbeatRoom } from '../../api/rooms'
@@ -87,6 +87,10 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   const [lateJoinSeatId, setLateJoinSeatId] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const handleSessionTableError = useCallback(
+    (cause: unknown) => setError(sessionErrorMessage(cause, copy)),
+    [copy],
+  )
 
   const optionalLobby = (): Promise<LobbySnapshot | null> =>
     getLobby(roomId, campaignId, token).catch(() => null)
@@ -276,7 +280,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
             initialStage={initialStage}
             events={eventStream?.events ?? []}
             copy={copy}
-            onError={(cause) => setError(sessionErrorMessage(cause, copy))}
+            onError={handleSessionTableError}
           />
         ) : null}
 
