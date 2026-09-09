@@ -15,7 +15,9 @@ from app.domain.rooms.table_events import (
     TableEvent,
     TableEventActorUnauthorizedError,
     TableEventAppend,
+    TableEventNotFoundError,
     TableEventService,
+    TableEventSessionNotActiveError,
     TableEventVisibility,
     TableExecutionMode,
 )
@@ -32,11 +34,14 @@ from app.persistence.rooms.exploration_subjects import (
 from app.persistence.rooms.table_runtime import (
     StoredTableActorBinding,
     TableEventActorBindingStalePersistenceError,
+    TableEventSessionNotActivePersistenceError,
+    TableEventSessionNotFoundPersistenceError,
 )
 
 
 MAX_STAGE_TEXT_LENGTH = 12_000
 MAX_STAGE_IMAGE_BYTES = 8 * 1024 * 1024
+MAX_STAGE_IMAGE_BASE64_LENGTH = ((MAX_STAGE_IMAGE_BYTES + 2) // 3) * 4 + 16
 MAX_EXPLORATION_TEXT_LENGTH = 8_000
 SUPPORTED_STAGE_IMAGE_TYPES = frozenset({"image/png", "image/jpeg", "image/webp"})
 
@@ -44,7 +49,7 @@ SUPPORTED_STAGE_IMAGE_TYPES = frozenset({"image/png", "image/jpeg", "image/webp"
 class StageImageUpload(StrictModel):
     media_type: Literal["image/png", "image/jpeg", "image/webp"]
     filename: str | None = Field(default=None, max_length=255)
-    data_base64: str = Field(min_length=1)
+    data_base64: str = Field(min_length=1, max_length=MAX_STAGE_IMAGE_BASE64_LENGTH)
 
 
 class StageUpdateRequest(StrictModel):
@@ -182,13 +187,15 @@ class ExplorationStageService:
 
     def get_stage(self, actor: TableActorContext) -> StageState:
         self.table_event_service.require_actor_current(actor)
-        return self._present(
-            self.repository.load_stage(
+        try:
+            stored = self.repository.load_stage(
                 room_id=actor.room_id,
                 campaign_id=actor.campaign_id,
                 session_id=actor.session_id,
             )
-        )
+        except TableEventSessionNotFoundPersistenceError as exc:
+            raise TableEventNotFoundError(str(actor.session_id)) from exc
+        return self._present(stored)
 
     def replace_stage(
         self,
@@ -214,6 +221,10 @@ class ExplorationStageService:
             )
         except TableEventActorBindingStalePersistenceError as exc:
             raise TableEventActorUnauthorizedError(str(exc)) from exc
+        except TableEventSessionNotFoundPersistenceError as exc:
+            raise TableEventNotFoundError(str(actor.session_id)) from exc
+        except TableEventSessionNotActivePersistenceError as exc:
+            raise TableEventSessionNotActiveError(str(actor.session_id)) from exc
         if self.table_event_service.notifier is not None:
             self.table_event_service.notifier.notify(actor.session_id)
         return self._present(stage)
@@ -316,6 +327,7 @@ __all__ = [
     "ExplorationStageService",
     "ExplorationSubjectNotFoundError",
     "MAX_EXPLORATION_TEXT_LENGTH",
+    "MAX_STAGE_IMAGE_BASE64_LENGTH",
     "MAX_STAGE_IMAGE_BYTES",
     "MAX_STAGE_TEXT_LENGTH",
     "SUPPORTED_STAGE_IMAGE_TYPES",
