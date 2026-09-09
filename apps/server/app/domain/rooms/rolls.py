@@ -234,7 +234,17 @@ class RollEngine:
         )
 
 
-def _event_visibility(visibility: RollVisibility) -> str:
+def _request_event_visibility(visibility: RollVisibility) -> str:
+    # A formal request must wake every target roller even when the DC/result is
+    # secret. The request event omits DC and p3c_rolls records target Seat
+    # recipients, so non-public request wake-ups are Seat-private rather than
+    # actor+DM/dm-only result audiences.
+    if visibility is RollVisibility.PUBLIC:
+        return "public"
+    return "seat_private"
+
+
+def _result_event_visibility(visibility: RollVisibility) -> str:
     if visibility is RollVisibility.PUBLIC:
         return "public"
     if visibility is RollVisibility.ROLLER_AND_DM:
@@ -349,7 +359,7 @@ class RollService:
             flat_adjustment=request.flat_adjustment,
             visibility=request.visibility.value,
             label=request.label,
-            event_visibility=_event_visibility(request.visibility),
+            event_visibility=_request_event_visibility(request.visibility),
             idempotency_key=(
                 f"p3c-request:{request.idempotency_key}" if request.idempotency_key else None
             ),
@@ -422,7 +432,7 @@ class RollService:
                 flat_adjustment=audit.flat_adjustment,
                 total=audit.total,
                 visibility=request.visibility,
-                event_visibility=_event_visibility(RollVisibility(request.visibility)),
+                event_visibility=_result_event_visibility(RollVisibility(request.visibility)),
                 idempotency_key=(
                     f"p3c-result:{input.idempotency_key}" if input.idempotency_key else None
                 ),
@@ -463,7 +473,7 @@ class RollService:
             flat_adjustment=audit.flat_adjustment,
             total=audit.total,
             visibility=input.visibility.value,
-            event_visibility=_event_visibility(input.visibility),
+            event_visibility=_result_event_visibility(input.visibility),
             idempotency_key=(
                 f"p3c-quick:{input.idempotency_key}" if input.idempotency_key else None
             ),
