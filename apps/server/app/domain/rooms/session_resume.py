@@ -56,9 +56,15 @@ class SessionResumeDTO(StrictModel):
     participants: list[SessionParticipantSnapshot]
     seats: list[CampaignSeat]
     active_characters: list[SessionResumeCharacterSummary]
+    # Same caller identity the Lobby reports, mirrored here because Resume is the
+    # only Session-scoped read that survives the Room switching active Campaign.
     caller_access_session_id: UUID | None = None
+    # P3-A adds only a projection of canonical event truth. These fields are not
+    # a second persisted Session snapshot and remain absent for non-participants.
     table_runtime: TableRuntimeCursor | None = None
     recent_events: TableEventPage | None = None
+    # P3-B Main Stage is canonical persisted Session state, projected here only
+    # for authorized Session participants alongside the P3-A event projection.
     stage: StageState | None = None
 
 
@@ -136,6 +142,9 @@ class SessionResumeService:
                 for row in rows
             ]
 
+        # Compatibility fallback for tests/custom adapters that predate P3-A.
+        # Production Web dependency wiring always supplies summary_repository,
+        # which makes this one batch query rather than one Character load/Seat.
         result: list[SessionResumeCharacterSummary] = []
         for character_id in character_ids:
             character = self.character_repository.load_character(character_id)
@@ -160,6 +169,10 @@ class SessionResumeService:
         if self.table_event_service is None or caller_access_session_id is None:
             return None, None, None
 
+        # TableEventRepository resolves the authoritative Human access-session
+        # binding. The RoomAccessAuthority value is intentionally not used to
+        # grant gameplay scope; P3-D will replace this adapter with the shared
+        # Human/AI actor resolver without changing the projection service.
         context = RoomAccessContext(
             room_id=room_id,
             access_session_id=caller_access_session_id,
@@ -181,10 +194,11 @@ class SessionResumeService:
             )
             stage = self.stage_service.get_stage(actor) if self.stage_service is not None else None
         except (TableEventNotFoundError, TableEventActorUnauthorizedError):
-            # P3 projection is supplemental to the P2 Resume DTO. If controller
+            # Room members who are not Session participants may still use the P2
+            # Resume endpoint, but they receive no P3 projection. If controller
             # authority changes while these independently revalidated reads are
-            # being composed, fail the whole P3 projection closed instead of
-            # turning an otherwise valid P2 Resume into a transient 500.
+            # composed, fail the whole P3 projection closed instead of turning an
+            # otherwise valid P2 Resume into a transient 500.
             return None, None, None
         return runtime, recent, stage
 
