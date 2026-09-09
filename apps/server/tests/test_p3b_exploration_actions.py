@@ -15,6 +15,7 @@ from app.domain.rooms.exploration import (
 )
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.table_events import TableEventActorUnauthorizedError, TableEventService
+from app.persistence.characters import characters
 from app.persistence.rooms.exploration_messages import (
     ExplorationMessageRepository,
     session_messages,
@@ -46,7 +47,7 @@ def _seed(engine):
     room_id, campaign_id, session_id = uuid4(), uuid4(), uuid4()
     access = {name: uuid4() for name in ("dm", "p1", "p2")}
     seats = {name: uuid4() for name in ("dm", "p1", "p2")}
-    characters = {name: uuid4() for name in ("p1", "p2")}
+    characters_by_player = {name: uuid4() for name in ("p1", "p2")}
     with engine.begin() as connection:
         connection.execute(insert(rooms).values(
             id=room_id, code="P3BACTION1", name="P3-B Action",
@@ -66,6 +67,26 @@ def _seed(engine):
             ruleset="dnd5e-2014", status="active", created_at=now, updated_at=now,
         ))
         connection.execute(update(rooms).where(rooms.c.id == room_id).values(active_campaign_id=campaign_id))
+        connection.execute(insert(characters), [
+            {
+                "id": characters_by_player["p1"],
+                "name": "Mira",
+                "ruleset": "dnd5e-2014",
+                "current_version_id": None,
+                "archived_at": None,
+                "created_at": now,
+                "updated_at": now,
+            },
+            {
+                "id": characters_by_player["p2"],
+                "name": "Serena",
+                "ruleset": "dnd5e-2014",
+                "current_version_id": None,
+                "archived_at": None,
+                "created_at": now,
+                "updated_at": now,
+            },
+        ])
         connection.execute(insert(campaign_seats), [
             {
                 "id": seats["dm"], "campaign_id": campaign_id, "role": "dm", "label": "DM",
@@ -97,15 +118,15 @@ def _seed(engine):
             {
                 "id": uuid4(), "session_id": session_id, "seat_id": seats["p1"], "role_snapshot": "player",
                 "controller_kind_at_join": "human", "controller_access_session_id_at_join": access["p1"],
-                "active_character_id": characters["p1"], "joined_at": now, "left_at": None,
+                "active_character_id": characters_by_player["p1"], "joined_at": now, "left_at": None,
             },
             {
                 "id": uuid4(), "session_id": session_id, "seat_id": seats["p2"], "role_snapshot": "player",
                 "controller_kind_at_join": "human", "controller_access_session_id_at_join": access["p2"],
-                "active_character_id": characters["p2"], "joined_at": now, "left_at": None,
+                "active_character_id": characters_by_player["p2"], "joined_at": now, "left_at": None,
             },
         ])
-    return room_id, campaign_id, session_id, access, seats, characters
+    return room_id, campaign_id, session_id, access, seats, characters_by_player
 
 
 def _actor(events: TableEventService, room_id: UUID, campaign_id: UUID, session_id: UUID, access_id: UUID, authority: str):
@@ -129,7 +150,7 @@ def _actions(engine, events: TableEventService) -> ExplorationActionService:
 def test_dialogue_action_search_and_dm_proxy_keep_subject_and_acting_identity_distinct() -> None:
     engine = _engine()
     try:
-        room_id, campaign_id, session_id, access, seats, characters = _seed(engine)
+        room_id, campaign_id, session_id, access, seats, characters_by_player = _seed(engine)
         events = TableEventService(TableEventRepository(engine))
         actions = _actions(engine, events)
         dm = _actor(events, room_id, campaign_id, session_id, access["dm"], "dm")
@@ -140,7 +161,7 @@ def test_dialogue_action_search_and_dm_proxy_keep_subject_and_acting_identity_di
         ))
         assert dialogue.acting_seat_id == seats["p1"]
         assert dialogue.subject_seat_id == seats["p1"]
-        assert dialogue.subject_character_id == characters["p1"]
+        assert dialogue.subject_character_id == characters_by_player["p1"]
         assert dialogue.execution_mode.value == "self"
 
         with pytest.raises(TableEventActorUnauthorizedError):
@@ -156,7 +177,7 @@ def test_dialogue_action_search_and_dm_proxy_keep_subject_and_acting_identity_di
         ))
         assert proxied.acting_seat_id == seats["dm"]
         assert proxied.subject_seat_id == seats["p2"]
-        assert proxied.subject_character_id == characters["p2"]
+        assert proxied.subject_character_id == characters_by_player["p2"]
         assert proxied.execution_mode.value == "dm_proxy"
         assert proxied.payload["source_command"] == "search"
         assert proxied.kind == "exploration.action"
@@ -169,7 +190,7 @@ def test_dialogue_action_search_and_dm_proxy_keep_subject_and_acting_identity_di
             ).mappings().all()
         assert len(rows) == 2
         assert rows[0]["kind"] == "dialogue"
-        assert rows[0]["subject_character_id"] == characters["p1"]
+        assert rows[0]["subject_character_id"] == characters_by_player["p1"]
         assert rows[1]["kind"] == "action"
         assert rows[1]["acting_seat_id"] == seats["dm"]
         assert rows[1]["subject_seat_id"] == seats["p2"]
