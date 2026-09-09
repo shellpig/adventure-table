@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { RoomCharacterSummary } from '../../api/campaigns'
 import type { CampaignSeat } from '../../api/seats'
 import {
+  SessionApiError,
   getSessionStageImage,
   replaceSessionStage,
   sendExplorationInput,
@@ -57,7 +58,11 @@ function requestId(prefix: string): string {
 async function fileUpload(file: File): Promise<StageImageUpload> {
   const mediaType = file.type
   if (mediaType !== 'image/png' && mediaType !== 'image/jpeg' && mediaType !== 'image/webp') {
-    throw new Error('unsupported_stage_image')
+    throw new SessionApiError(
+      422,
+      'invalid_stage_image',
+      'Stage image must be PNG, JPEG, or WebP.',
+    )
   }
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
@@ -160,6 +165,11 @@ export function SessionTableSurface({
   }
   const characterName = (characterId: string | null) =>
     characters.find((item) => item.id === characterId)?.name ?? copy.noCharacter
+  const speakerLabel = (event: TableEvent) => {
+    if (event.kind === 'exploration.narration') return copy.dm
+    const speakerSeatId = event.subject_seat_id ?? event.acting_seat_id
+    return speakerSeatId ? seatLabel(speakerSeatId) : copy.ooc
+  }
 
   const explorationEvents = useMemo(
     () => events.filter(isExplorationEvent).slice(-100),
@@ -359,7 +369,8 @@ export function SessionTableSurface({
                 {explorationEvents.map((event) => (
                   <article className="session-chat__message" key={`${event.session_id}:${event.seq}`}>
                     <header>
-                      <strong>{event.subject_seat_id ? seatLabel(event.subject_seat_id) : event.kind === 'exploration.narration' ? copy.dm : copy.ooc}</strong>
+                      <strong>{speakerLabel(event)}</strong>
+                      {event.kind === 'exploration.ooc' ? <span>{copy.ooc}</span> : null}
                       {event.execution_mode === 'dm_proxy' ? <span>{copy.dmProxy}</span> : null}
                       {event.kind === 'exploration.whisper_dm' ? <span>{copy.whisperPrivate}</span> : null}
                     </header>
