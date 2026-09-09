@@ -14,6 +14,7 @@ import {
   type StageState,
   type TableEvent,
 } from '../../api/sessions'
+import { SessionCheckRequestPanel } from './SessionCheckRequestPanel'
 import {
   applyStageEvents,
   explorationEventText,
@@ -456,10 +457,23 @@ export function SessionTableSurface({
               </div>
             </div>
           ) : tab === 'dice' ? (
-            <div className="session-side-panel__placeholder">
-              <p>{copy.dicePlaceholder}</p>
-              {checkDraft ? <p data-check-draft="true">{checkDraft.text}</p> : null}
-            </div>
+            isCurrentDm ? (
+              <SessionCheckRequestPanel
+                roomId={roomId}
+                campaignId={campaignId}
+                sessionId={sessionId}
+                token={token}
+                targets={playerParticipants.map((participant) => ({
+                  seatId: participant.seat_id,
+                  label: `${seatLabel(participant.seat_id)} · ${characterName(participant.active_character_id)}`,
+                }))}
+                intent={checkDraft}
+                copy={copy}
+                onError={onError}
+              />
+            ) : (
+              <div className="session-side-panel__placeholder"><p>{copy.dicePlaceholder}</p></div>
+            )
           ) : (
             <div className="session-log">
               {events.slice(-100).map((event) => (
