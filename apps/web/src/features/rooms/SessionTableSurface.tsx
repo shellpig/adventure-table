@@ -15,6 +15,7 @@ import {
   type TableEvent,
 } from '../../api/sessions'
 import { SessionCheckRequestPanel } from './SessionCheckRequestPanel'
+import { SessionQuickDicePanel } from './SessionQuickDicePanel'
 import { SessionRollRequestList } from './SessionRollRequestList'
 import {
   applyStageEvents,
@@ -152,14 +153,16 @@ export function SessionTableSurface({
     ),
     [snapshot.participants],
   )
-  const subjectParticipants = useMemo(
+  const controlledParticipants = useMemo(
     () => playerParticipants.filter(
-      (participant) => isCurrentDm || (
-        callerAccessSessionId !== null &&
-        participant.controller_access_session_id_at_join === callerAccessSessionId
-      ),
+      (participant) => callerAccessSessionId !== null &&
+        participant.controller_access_session_id_at_join === callerAccessSessionId,
     ),
-    [playerParticipants, isCurrentDm, callerAccessSessionId],
+    [playerParticipants, callerAccessSessionId],
+  )
+  const subjectParticipants = useMemo(
+    () => isCurrentDm ? playerParticipants : controlledParticipants,
+    [playerParticipants, controlledParticipants, isCurrentDm],
   )
 
   useEffect(() => {
@@ -480,8 +483,20 @@ export function SessionTableSurface({
                 sessionId={sessionId}
                 token={token}
                 isCurrentDm={isCurrentDm}
-                controlledSeatIds={subjectParticipants.map((participant) => participant.seat_id)}
+                controlledSeatIds={controlledParticipants.map((participant) => participant.seat_id)}
                 events={events}
+                copy={copy}
+                onError={onError}
+              />
+              <SessionQuickDicePanel
+                roomId={roomId}
+                campaignId={campaignId}
+                sessionId={sessionId}
+                token={token}
+                targets={controlledParticipants.map((participant) => ({
+                  seatId: participant.seat_id,
+                  label: `${seatLabel(participant.seat_id)} · ${characterName(participant.active_character_id)}`,
+                }))}
                 copy={copy}
                 onError={onError}
               />
