@@ -209,9 +209,14 @@ async function sendComposer(
   page: Page,
   options: { kind: 'dialogue' | 'action' | 'ooc' | 'whisper_dm'; text: string; subjectSeatId?: string },
 ) {
-  await page.getByLabel('Type').selectOption(options.kind)
+  // Match the accessible names exactly. getByLabel is a substring match over the
+  // wrapping label's text, which for these selects includes every option label,
+  // and 'Character' also hits the Table Characters region.
+  await page.getByRole('combobox', { name: 'Type', exact: true }).selectOption(options.kind)
   if (options.subjectSeatId) {
-    await page.getByLabel('Character').selectOption(options.subjectSeatId)
+    await page
+      .getByRole('combobox', { name: 'Character', exact: true })
+      .selectOption(options.subjectSeatId)
   }
   await page.getByPlaceholder(/Type here/).fill(options.text)
   await page.getByRole('button', { name: 'Send' }).click()
@@ -314,7 +319,11 @@ test('P3-B Journey B1 keeps Stage, public stream, and own Whisper correct throug
     await page.reload()
     await p1.page.reload()
     await p2.page.reload()
-    await expect(page.getByText('Moonlit archive', { exact: true })).toBeVisible()
+    // The DM's Stage editor repopulates from the saved Stage on reload, so scope
+    // this one to the canvas instead of matching the textarea as well.
+    await expect(
+      page.locator('.session-stage__canvas').getByText('Moonlit archive', { exact: true }),
+    ).toBeVisible()
     await expect(p1.page.getByText('Moonlit archive', { exact: true })).toBeVisible()
     await expect(p1.page.getByText('I found the ledger.', { exact: true })).toBeVisible()
     await expect(p1.page.getByText(secret, { exact: true })).toBeVisible()
