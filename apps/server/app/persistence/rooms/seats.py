@@ -42,12 +42,12 @@ class StoredSeat:
     label: str | None
     controller_kind: str
     controller_access_session_id: UUID | None
-    ai_controller_grant_id: UUID | None
-    controller_epoch: int
     selected_character_id: UUID | None
     archived_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    ai_controller_grant_id: UUID | None = None
+    controller_epoch: int = 0
 
 
 @dataclass(frozen=True)
