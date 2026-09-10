@@ -17,7 +17,14 @@ from app.domain.rooms.campaigns import (
     RosterStatus,
 )
 from app.domain.rooms.schemas import CreateRoomRequest, EnterRoomRequest
-from app.domain.rooms.seats import ControllerKind, SeatControllerPatch, SeatCreate, SeatRole, SeatService
+from app.domain.rooms.seats import (
+    ControllerKind,
+    SeatControllerError,
+    SeatControllerPatch,
+    SeatCreate,
+    SeatRole,
+    SeatService,
+)
 from app.domain.rooms.service import RoomService
 from app.domain.rooms.sessions import (
     DMControllerMismatchError,
@@ -139,15 +146,16 @@ def test_start_freezes_dm_and_selected_players_then_end_releases_lease() -> None
         with pytest.raises(SessionAlreadyActiveError):
             service.start_session(owner.room.id, campaign.id, dm_context)
 
-        seats.set_controller(
-            owner.room.id,
-            campaign.id,
-            dm_seat.id,
-            SeatControllerPatch(
-                controller_kind=ControllerKind.HUMAN,
-                controller_access_session_id=owner.access_session_id,
-            ),
-        )
+        with pytest.raises(SeatControllerError):
+            seats.set_controller(
+                owner.room.id,
+                campaign.id,
+                dm_seat.id,
+                SeatControllerPatch(
+                    controller_kind=ControllerKind.HUMAN,
+                    controller_access_session_id=owner.access_session_id,
+                ),
+            )
         with pytest.raises(DMControllerMismatchError):
             service.end_session(owner.room.id, campaign.id, started.id, owner_context)
 
@@ -242,6 +250,7 @@ def test_start_authority_matrix_offline_players_and_reopen_after_finalization() 
             dm_context,
         ).status is SessionStatus.ENDED
 
+        # Controller reassignment is allowed only after the prior Session closes.
         seats.set_controller(
             owner.room.id,
             campaign.id,
