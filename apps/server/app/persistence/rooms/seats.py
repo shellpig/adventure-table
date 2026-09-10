@@ -124,6 +124,24 @@ class SeatRepository:
             )
         )
 
+    @staticmethod
+    def _active_dm_session_in_transaction(
+        connection: Connection,
+        *,
+        seat_id: UUID,
+    ) -> UUID | None:
+        query = (
+            select(sessions.c.id)
+            .where(
+                sessions.c.dm_seat_id == seat_id,
+                sessions.c.status == "active",
+            )
+            .limit(1)
+        )
+        if connection.dialect.name == "postgresql":
+            query = query.with_for_update()
+        return connection.scalar(query)
+
     def campaign_room_id(self, campaign_id: UUID) -> UUID | None:
         with self.engine.connect() as connection:
             return connection.scalar(select(campaigns.c.room_id).where(campaigns.c.id == campaign_id))
@@ -219,6 +237,7 @@ class SeatRepository:
         now = datetime.now(timezone.utc)
         with self.engine.begin() as connection:
             query = select(
+                campaign_seats.c.role,
                 campaign_seats.c.controller_kind,
                 campaign_seats.c.controller_access_session_id,
                 campaign_seats.c.ai_controller_grant_id,
@@ -239,6 +258,17 @@ class SeatRepository:
                     connection.execute(
                         select(campaign_seats).where(campaign_seats.c.id == seat_id)
                     ).mappings().one()
+                )
+            if (
+                current.role == "dm"
+                and self._active_dm_session_in_transaction(connection, seat_id=seat_id) is not None
+            ):
+                raise SeatPersistenceConflictError(
+                    "DM Seat controller is fixed while its Session is active"
+                )
+            if current.role == "player" and current.controller_kind == "ai":
+                raise SeatPersistenceConflictError(
+                    "AI-controlled Player Seat requires Take Back or administrative reassignment"
                 )
             if current.ai_controller_grant_id is not None:
                 self._revoke_ai_grants_for_seat(connection, seat_id=seat_id, now=now)
@@ -339,6 +369,7 @@ class SeatRepository:
         now = datetime.now(timezone.utc)
         with self.engine.begin() as connection:
             query = select(
+                campaign_seats.c.role,
                 campaign_seats.c.controller_kind,
                 campaign_seats.c.controller_access_session_id,
                 campaign_seats.c.ai_controller_grant_id,
@@ -349,6 +380,17 @@ class SeatRepository:
             current = connection.execute(query).one_or_none()
             if current is None:
                 return None
+            if (
+                current.role == "dm"
+                and self._active_dm_session_in_transaction(connection, seat_id=seat_id) is not None
+            ):
+                raise SeatPersistenceConflictError(
+                    "DM Seat cannot be archived while its Session is active"
+                )
+            if current.role == "player" and current.controller_kind == "ai":
+                raise SeatPersistenceConflictError(
+                    "AI-controlled Player Seat must be recovered before archive"
+                )
             identity_changed = (
                 current.controller_kind != "none"
                 or current.controller_access_session_id is not None
