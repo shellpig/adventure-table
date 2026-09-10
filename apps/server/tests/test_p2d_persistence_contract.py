@@ -30,6 +30,8 @@ def test_p2d_campaign_seat_schema_matches_contract() -> None:
         "label",
         "controller_kind",
         "controller_access_session_id",
+        "ai_controller_grant_id",
+        "controller_epoch",
         "selected_character_id",
         "archived_at",
         "created_at",
@@ -37,12 +39,20 @@ def test_p2d_campaign_seat_schema_matches_contract() -> None:
     ]
     assert _fk_ondelete("campaign_id") == "CASCADE"
     assert _fk_ondelete("controller_access_session_id") == "RESTRICT"
+    assert _fk_ondelete("ai_controller_grant_id") == "SET NULL"
     assert _fk_ondelete("selected_character_id") == "SET NULL"
 
     checks = _check_sql()
     assert any(all(role in sql for role in ("dm", "player", "spectator")) for sql in checks)
     assert any(all(kind in sql for kind in ("human", "ai", "none")) for sql in checks)
-    assert any("controller_access_session_id" in sql and "human" in sql for sql in checks)
+    assert any(
+        "controller_access_session_id" in sql
+        and "ai_controller_grant_id" in sql
+        and "controller_epoch" in sql
+        and "human" in sql
+        and "ai" in sql
+        for sql in checks
+    )
     assert any("selected_character_id" in sql and "player" in sql for sql in checks)
 
 

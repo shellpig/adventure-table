@@ -46,12 +46,14 @@ def test_p3d_revision_is_web_head() -> None:
 
 def test_p3d_migration_replaces_all_three_named_controller_checks() -> None:
     source = _source()
-    for name in (
-        "ck_campaign_seats_controller_binding",
-        "ck_sessions_dm_controller_binding",
-        "ck_session_participants_controller_binding",
-    ):
-        assert source.count(name) >= 2
+    bindings = {
+        "SEAT_BINDING": "ck_campaign_seats_controller_binding",
+        "SESSION_BINDING": "ck_sessions_dm_controller_binding",
+        "PARTICIPANT_BINDING": "ck_session_participants_controller_binding",
+    }
+    for constant, name in bindings.items():
+        assert f'{constant} = "{name}"' in source
+        assert source.count(constant) >= 4
     assert "0013_p2d_campaign_seats.py" not in source
     assert "0014_p2e_sessions.py" not in source
 
@@ -108,12 +110,14 @@ def test_p3d_migration_indexes_match_metadata() -> None:
             assert name in source
 
     downgrade = source[source.index("def downgrade") :]
-    for name in (
-        "ix_campaign_seats_ai_controller_grant_id",
-        "ix_sessions_dm_controller_ai_grant_id",
-        "ix_session_participants_controller_ai_grant_id",
-    ):
-        assert name in downgrade
+    named_indexes = {
+        "SEAT_GRANT_INDEX": "ix_campaign_seats_ai_controller_grant_id",
+        "SESSION_GRANT_INDEX": "ix_sessions_dm_controller_ai_grant_id",
+        "PARTICIPANT_GRANT_INDEX": "ix_session_participants_controller_ai_grant_id",
+    }
+    for constant, name in named_indexes.items():
+        assert f'{constant} = "{name}"' in source
+        assert f"op.drop_index({constant}," in downgrade
 
 
 def test_p3d_grant_schema_never_stores_plaintext_token() -> None:
