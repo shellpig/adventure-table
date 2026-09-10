@@ -224,7 +224,16 @@ def _facade(controller: AIControllerService, events: TableEventService) -> AIToo
     )
 
 
-def _append(repository: TableEventRepository, ids: dict, *, kind: str, visibility: str, payload: dict, acting_seat_id=None, recipients=()):
+def _append(
+    repository: TableEventRepository,
+    ids: dict,
+    *,
+    kind: str,
+    visibility: str,
+    payload: dict,
+    acting_seat_id=None,
+    recipients=(),
+):
     return repository.append(
         room_id=ids["room_id"],
         campaign_id=ids["campaign_id"],
@@ -352,5 +361,56 @@ def test_ai_wait_timeout_is_normal_empty_result_and_preserves_cursor() -> None:
         assert waited["cursor"] == 1
         assert waited["current_seq"] == 1
         assert waited["has_more"] is False
+    finally:
+        engine.dispose()
+
+
+def test_ai_reconnect_replays_events_missed_while_no_process_local_waiter_exists() -> None:
+    engine = _engine()
+    try:
+        ids = _seed_ai_player(engine)
+        first_repo = TableEventRepository(engine)
+        first_events = TableEventService(first_repo)
+        first_controller = AIControllerService(AIControllerGrantRepository(engine), first_events)
+        first_facade = _facade(first_controller, first_events)
+
+        first_event = _append(
+            first_repo,
+            ids,
+            kind="p3e.before_disconnect",
+            visibility="public",
+            payload={"value": "seen before disconnect"},
+        )
+        first_page = first_facade.get_pending_events(
+            ids["token"],
+            EventsInput(after_seq=0, limit=50),
+        )
+        assert [event["id"] for event in first_page["events"]] == [str(first_event.id)]
+        disconnect_cursor = first_page["cursor"]
+
+        # No notifier/waiter is alive here. Persist one event while the AI is
+        # disconnected, then rebuild all P3-E service objects as a fresh process
+        # would and resume strictly from the durable cursor.
+        disconnected_repo = TableEventRepository(engine)
+        missed_event = _append(
+            disconnected_repo,
+            ids,
+            kind="p3e.while_disconnected",
+            visibility="public",
+            payload={"value": "must replay after reconnect"},
+        )
+
+        fresh_events = TableEventService(TableEventRepository(engine))
+        fresh_controller = AIControllerService(AIControllerGrantRepository(engine), fresh_events)
+        fresh_facade = _facade(fresh_controller, fresh_events)
+        resumed = fresh_facade.get_pending_events(
+            ids["token"],
+            EventsInput(after_seq=disconnect_cursor, limit=50),
+        )
+
+        assert [event["id"] for event in resumed["events"]] == [str(missed_event.id)]
+        assert resumed["events"][0]["kind"] == "p3e.while_disconnected"
+        assert resumed["events"][0]["payload"]["value"] == "must replay after reconnect"
+        assert resumed["cursor"] == missed_event.seq
     finally:
         engine.dispose()
