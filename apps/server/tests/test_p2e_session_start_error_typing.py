@@ -47,6 +47,7 @@ def test_start_controller_mapping_depends_on_exception_type_not_message_text() -
             ),
         ),
         live_repository=object(),
+        event_service=object(),
     )
 
     with pytest.raises(DMControllerMismatchError):
@@ -62,6 +63,7 @@ def test_start_lobby_error_does_not_become_dm_mismatch_even_if_wording_mentions_
             SessionStartPersistenceError('Caller wording is irrelevant to the API contract'),
         ),
         live_repository=object(),
+        event_service=object(),
     )
 
     with pytest.raises(SessionLobbyUnavailableError):
