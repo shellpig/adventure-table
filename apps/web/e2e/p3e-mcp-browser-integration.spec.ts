@@ -422,7 +422,7 @@ test('P3-E browser and MCP AI share one canonical action and formal-roll journey
     },
   )
   expect(actionEvent).toMatchObject({
-    kind: 'action',
+    kind: 'exploration.action',
     acting_seat_id: playerSeat.id,
     subject_seat_id: playerSeat.id,
     execution_mode: 'self',
