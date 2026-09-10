@@ -10,7 +10,6 @@ from app.domain.rooms.exploration import ExplorationSubjectNotFoundError
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import (
     TableActorContext,
-    TableActorKind,
     TableEventActorUnauthorizedError,
     TableEventService,
 )
@@ -130,14 +129,6 @@ def validate_pending_roll_binding(
     action: StoredPendingAction,
     request: StoredRollRequest | None,
 ) -> None:
-    """Require a live formal request for the exact PendingAction subject.
-
-    A guessed cross-Session request id resolves to ``None`` before this helper.
-    Same-Session requests must still target the same Seat and the same captured
-    Active Character, and must remain pending when the action enters
-    ``waiting_for_roll``.
-    """
-
     if request is None:
         raise PendingActionRollBindingError("roll_request_not_found")
     if request.session_id != action.session_id:
@@ -150,12 +141,9 @@ def validate_pending_roll_binding(
         raise PendingActionRollBindingError("roll_request_not_pending")
 
 
-def _human_binding(actor: TableActorContext) -> StoredTableActorBinding:
-    if actor.actor_kind is not TableActorKind.HUMAN or actor.access_session_id is None:
-        raise TableEventActorUnauthorizedError(
-            "AI PendingAction persistence is not available until P3-D"
-        )
+def _actor_binding(actor: TableActorContext) -> StoredTableActorBinding:
     return StoredTableActorBinding(
+        actor_kind=actor.actor_kind.value,
         room_id=actor.room_id,
         campaign_id=actor.campaign_id,
         session_id=actor.session_id,
@@ -164,6 +152,8 @@ def _human_binding(actor: TableActorContext) -> StoredTableActorBinding:
         role=actor.role,
         is_current_dm=actor.is_current_dm,
         access_session_id=actor.access_session_id,
+        ai_controller_grant_id=actor.ai_controller_grant_id,
+        grant_generation=actor.grant_generation,
     )
 
 
@@ -223,7 +213,7 @@ class PendingActionService:
                 "Actor cannot create PendingAction for the selected Seat"
             )
         stored, _event = self.repository.create(
-            binding=_human_binding(actor),
+            binding=_actor_binding(actor),
             acting_seat_id=acting_seat_id,
             subject_seat_id=subject.seat_id,
             subject_character_id=subject.active_character_id,
@@ -275,7 +265,7 @@ class PendingActionService:
             roll_request_id = current.roll_request_id
         try:
             stored, _event = self.repository.transition(
-                binding=_human_binding(actor),
+                binding=_actor_binding(actor),
                 action_id=action_id,
                 expected_version=input.expected_version,
                 from_status=current_status.value,
