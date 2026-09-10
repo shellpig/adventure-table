@@ -19,6 +19,9 @@ depends_on = None
 SEAT_BINDING = "ck_campaign_seats_controller_binding"
 SESSION_BINDING = "ck_sessions_dm_controller_binding"
 PARTICIPANT_BINDING = "ck_session_participants_controller_binding"
+SEAT_GRANT_INDEX = "ix_campaign_seats_ai_controller_grant_id"
+SESSION_GRANT_INDEX = "ix_sessions_dm_controller_ai_grant_id"
+PARTICIPANT_GRANT_INDEX = "ix_session_participants_controller_ai_grant_id"
 
 
 def upgrade() -> None:
@@ -101,6 +104,7 @@ def upgrade() -> None:
             "(controller_kind = 'ai' AND controller_access_session_id IS NULL AND ai_controller_grant_id IS NOT NULL) OR "
             "(controller_kind = 'none' AND controller_access_session_id IS NULL AND ai_controller_grant_id IS NULL))",
         )
+    op.create_index(SEAT_GRANT_INDEX, "campaign_seats", ["ai_controller_grant_id"])
 
     with op.batch_alter_table("sessions") as batch_op:
         batch_op.add_column(sa.Column("dm_controller_ai_grant_id", sa.Uuid(), nullable=True))
@@ -122,6 +126,7 @@ def upgrade() -> None:
             "(dm_controller_kind = 'none' AND dm_controller_access_session_id IS NULL "
             "AND dm_controller_ai_grant_id IS NULL AND dm_controller_generation IS NULL)",
         )
+    op.create_index(SESSION_GRANT_INDEX, "sessions", ["dm_controller_ai_grant_id"])
 
     with op.batch_alter_table("session_participants") as batch_op:
         batch_op.add_column(sa.Column("controller_ai_grant_id_at_join", sa.Uuid(), nullable=True))
@@ -143,9 +148,15 @@ def upgrade() -> None:
             "(controller_kind_at_join = 'none' AND controller_access_session_id_at_join IS NULL "
             "AND controller_ai_grant_id_at_join IS NULL AND controller_generation_at_join IS NULL)",
         )
+    op.create_index(
+        PARTICIPANT_GRANT_INDEX,
+        "session_participants",
+        ["controller_ai_grant_id_at_join"],
+    )
 
 
 def downgrade() -> None:
+    op.drop_index(PARTICIPANT_GRANT_INDEX, table_name="session_participants")
     with op.batch_alter_table("session_participants") as batch_op:
         batch_op.drop_constraint(PARTICIPANT_BINDING, type_="check")
         batch_op.drop_constraint(
@@ -160,6 +171,7 @@ def downgrade() -> None:
             "(controller_kind_at_join IN ('ai', 'none') AND controller_access_session_id_at_join IS NULL)",
         )
 
+    op.drop_index(SESSION_GRANT_INDEX, table_name="sessions")
     with op.batch_alter_table("sessions") as batch_op:
         batch_op.drop_constraint(SESSION_BINDING, type_="check")
         batch_op.drop_constraint(
@@ -174,6 +186,7 @@ def downgrade() -> None:
             "(dm_controller_kind IN ('ai', 'none') AND dm_controller_access_session_id IS NULL)",
         )
 
+    op.drop_index(SEAT_GRANT_INDEX, table_name="campaign_seats")
     with op.batch_alter_table("campaign_seats") as batch_op:
         batch_op.drop_constraint(SEAT_BINDING, type_="check")
         batch_op.drop_constraint(
