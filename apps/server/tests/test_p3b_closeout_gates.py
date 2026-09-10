@@ -28,6 +28,7 @@ from app.persistence.rooms.session_live import SessionLiveRepository
 from app.persistence.rooms.sessions import SessionRepository
 from app.persistence.rooms.table_runtime import TableEventRepository
 from app.persistence.rooms.tables import (
+    ai_controller_grants,
     campaign_seats,
     campaigns,
     room_access_sessions,
@@ -243,6 +244,8 @@ def test_dm_proxy_never_changes_human_or_ai_seat_controller() -> None:
         ))
         assert human_proxy.execution_mode.value == "dm_proxy"
 
+        grant_id = uuid4()
+        now = datetime.now(timezone.utc)
         with engine.begin() as connection:
             human_after = connection.execute(
                 select(
@@ -253,10 +256,34 @@ def test_dm_proxy_never_changes_human_or_ai_seat_controller() -> None:
             assert human_after["controller_kind"] == "human"
             assert human_after["controller_access_session_id"] == access["p1"]
 
+            connection.execute(insert(ai_controller_grants).values(
+                id=grant_id,
+                room_id=room_id,
+                campaign_id=campaign_id,
+                seat_id=seats["p2"],
+                role="player",
+                session_id=session_id,
+                secret_hash=b"a" * 32,
+                secret_prefix="proxy-ai",
+                generation=1,
+                status="active",
+                pre_session_expires_at=None,
+                handoff_return_access_session_id=access["p2"],
+                temporary_instruction=None,
+                created_at=now,
+                bound_at=now,
+                revoked_at=None,
+                last_seen_at=None,
+            ))
             connection.execute(
                 update(campaign_seats)
                 .where(campaign_seats.c.id == seats["p2"])
-                .values(controller_kind="ai", controller_access_session_id=None)
+                .values(
+                    controller_kind="ai",
+                    controller_access_session_id=None,
+                    ai_controller_grant_id=grant_id,
+                    controller_epoch=1,
+                )
             )
 
         ai_proxy = actions.send(dm, ExplorationInputRequest(
@@ -271,10 +298,14 @@ def test_dm_proxy_never_changes_human_or_ai_seat_controller() -> None:
                 select(
                     campaign_seats.c.controller_kind,
                     campaign_seats.c.controller_access_session_id,
+                    campaign_seats.c.ai_controller_grant_id,
+                    campaign_seats.c.controller_epoch,
                 ).where(campaign_seats.c.id == seats["p2"])
             ).mappings().one()
         assert ai_after["controller_kind"] == "ai"
         assert ai_after["controller_access_session_id"] is None
+        assert ai_after["ai_controller_grant_id"] == grant_id
+        assert ai_after["controller_epoch"] == 1
     finally:
         engine.dispose()
 
