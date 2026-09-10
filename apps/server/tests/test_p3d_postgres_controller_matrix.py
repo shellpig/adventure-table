@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
 import os
 from pathlib import Path
 from threading import Barrier, Event
 from types import SimpleNamespace
-from uuid import uuid4
 
 from alembic import command
 from alembic.config import Config
@@ -295,9 +293,11 @@ def test_two_let_ai_control_requests_leave_one_current_generation(postgres_engin
         ))
 
     with ThreadPoolExecutor(max_workers=2) as pool:
+        first_future = pool.submit(handoff, "first")
+        second_future = pool.submit(handoff, "second")
         outcomes = [
-            pool.submit(handoff, "first").result(timeout=30),
-            pool.submit(handoff, "second").result(timeout=30),
+            first_future.result(timeout=30),
+            second_future.result(timeout=30),
         ]
 
     winners = [item for item in outcomes if not isinstance(item, Exception)]
