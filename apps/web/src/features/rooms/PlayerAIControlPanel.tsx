@@ -18,6 +18,7 @@ type PlayerAIControlPanelProps = {
   seat: CampaignSeat
   roomToken: string
   callerAccessSessionId: string | null
+  canSelfTakeBack: boolean
   canManage: boolean
   controllers: LobbyController[]
   copy: SessionCopy
@@ -31,6 +32,7 @@ export function PlayerAIControlPanel({
   seat,
   roomToken,
   callerAccessSessionId,
+  canSelfTakeBack,
   canManage,
   controllers,
   copy,
@@ -163,13 +165,15 @@ export function PlayerAIControlPanel({
       {seat.controller_kind === 'ai' ? (
         <>
           <p><strong>{copy.aiControlling}</strong></p>
-          <p>{copy.takeBackExactOriginHint}</p>
-          <button
-            className="button secondary"
-            type="button"
-            disabled={pending}
-            onClick={() => void takeBack()}
-          >{copy.takeBackControl}</button>
+          <p>{canSelfTakeBack ? copy.takeBackExactOriginHint : copy.aiTakeBackFailedRecovery}</p>
+          {canSelfTakeBack ? (
+            <button
+              className="button secondary"
+              type="button"
+              disabled={pending}
+              onClick={() => void takeBack()}
+            >{copy.takeBackControl}</button>
+          ) : null}
         </>
       ) : null}
 

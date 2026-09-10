@@ -23,6 +23,22 @@ const seat: CampaignSeat = {
   updated_at: '2026-09-10T00:00:00Z',
 }
 
+function render(inputSeat: CampaignSeat, canSelfTakeBack: boolean) {
+  return renderToStaticMarkup(createElement(PlayerAIControlPanel, {
+    roomId: '10000000-0000-4000-8000-000000000001',
+    campaignId: inputSeat.campaign_id,
+    sessionId: '30000000-0000-4000-8000-000000000001',
+    seat: inputSeat,
+    roomToken: 'room-token',
+    callerAccessSessionId: seat.controller_access_session_id,
+    canSelfTakeBack,
+    canManage: false,
+    controllers: [],
+    copy: sessionCopy('en'),
+    onChanged: async () => undefined,
+  }))
+}
+
 describe('Player AI control panel', () => {
   it('renders self handoff copy in both locales', () => {
     for (const locale of ['zh-TW', 'en'] as const) {
@@ -34,6 +50,7 @@ describe('Player AI control panel', () => {
         seat,
         roomToken: 'room-token',
         callerAccessSessionId: seat.controller_access_session_id,
+        canSelfTakeBack: false,
         canManage: false,
         controllers: [],
         copy,
@@ -42,6 +59,17 @@ describe('Player AI control panel', () => {
       expect(html).toContain(copy.letAiControl)
       expect(html).toContain(copy.aiHandoffInstruction)
     }
+  })
+
+  it('shows self-service Take Back only for the server-derived exact origin scope', () => {
+    const aiSeat = { ...seat, controller_kind: 'ai' as const, controller_access_session_id: null }
+    const exact = render(aiSeat, true)
+    expect(exact).toContain(sessionCopy('en').takeBackControl)
+    expect(exact).toContain(sessionCopy('en').takeBackExactOriginHint)
+
+    const otherSession = render(aiSeat, false)
+    expect(otherSession).not.toContain(`>${sessionCopy('en').takeBackControl}<`)
+    expect(otherSession).toContain(sessionCopy('en').aiTakeBackFailedRecovery)
   })
 
   it('keeps one-time controller tokens out of browser storage', () => {
@@ -58,7 +86,7 @@ describe('Player AI control panel', () => {
     const source = readFileSync(new URL('./PlayerAIControlPanel.tsx', import.meta.url), 'utf8')
     expect(source).toContain('takeBackPlayer(roomId, campaignId, sessionId, seat.id, roomToken)')
     expect(source).toContain('administrativelyReassignPlayer(')
-    expect(source).toContain('copy.takeBackExactOriginHint')
+    expect(source).toContain('canSelfTakeBack ? copy.takeBackExactOriginHint')
     expect(source).toContain('copy.aiRecoveryHint')
   })
 })

@@ -120,6 +120,7 @@ export type SessionResume = {
   seats: CampaignSeat[]
   active_characters: SessionResumeCharacterSummary[]
   caller_access_session_id: string | null
+  self_take_back_seat_ids?: string[]
   table_runtime?: TableRuntimeCursor | null
   recent_events?: TableEventPage | null
   stage?: StageState | null

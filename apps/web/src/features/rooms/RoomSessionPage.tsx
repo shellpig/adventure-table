@@ -64,9 +64,6 @@ export function sessionTableSnapshotWithCurrentControllers(
       const seat = currentBySeat.get(participant.seat_id)
       return {
         ...participant,
-        // SessionTableSurface predates controller handoff and historically read
-        // the join snapshot. Feed its UI-only controller projection from current
-        // Seat truth so stale Human sessions immediately lose composer scope.
         controller_access_session_id_at_join: seat?.controller_kind === 'human'
           ? seat.controller_access_session_id
           : null,
@@ -105,6 +102,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   const [lobby, setLobby] = useState<LobbySnapshot | null>(null)
   const [resumeSeats, setResumeSeats] = useState<CampaignSeat[]>([])
   const [callerAccessSessionId, setCallerAccessSessionId] = useState<string | null>(null)
+  const [selfTakeBackSeatIds, setSelfTakeBackSeatIds] = useState<Set<string>>(() => new Set())
   const [characters, setCharacters] = useState<RoomCharacterSummary[]>([])
   const [initialStage, setInitialStage] = useState<StageState | null>(null)
   const [eventStream, setEventStream] = useState<SessionEventStreamState | null>(null)
@@ -135,6 +133,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     setLobby(nextLobby)
     setCharacters(nextCharacters)
     setCallerAccessSessionId(nextResume.caller_access_session_id)
+    setSelfTakeBackSeatIds(new Set(nextResume.self_take_back_seat_ids ?? []))
     setResumeSeats(nextResume.active_session?.id === sessionId ? nextResume.seats : [])
     setInitialStage(nextResume.active_session?.id === sessionId ? (nextResume.stage ?? null) : null)
     setEventStream((current) => mergeResumeStream(
@@ -198,9 +197,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
       onFatal: () => undefined,
     })
 
-    return () => {
-      controller.abort()
-    }
+    return () => controller.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, campaignId, sessionId, token, eventStreamReady, snapshot?.status])
 
@@ -324,9 +321,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
                 <p>
                   {participant.role === 'dm' ? copy.dm : participant.role === 'player' ? copy.player : copy.spectator}
                 </p>
-                {participant.role === 'player' ? (
-                  <p>{characterName(participant.active_character_id)}</p>
-                ) : null}
+                {participant.role === 'player' ? <p>{characterName(participant.active_character_id)}</p> : null}
                 {snapshot.status === 'active' && participant.role === 'player' && currentSeat ? (
                   <PlayerAIControlPanel
                     roomId={roomId}
@@ -335,6 +330,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
                     seat={currentSeat}
                     roomToken={token}
                     callerAccessSessionId={callerAccessSessionId}
+                    canSelfTakeBack={selfTakeBackSeatIds.has(currentSeat.id)}
                     canManage={canManage}
                     controllers={lobby?.controllers ?? []}
                     copy={copy}
