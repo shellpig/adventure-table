@@ -272,10 +272,16 @@ class AIControllerGrantRepository:
         campaign_id: UUID,
         session_id: UUID,
         seat_id: UUID,
+        admin_access_session_id: UUID,
         target_access_session_id: UUID,
         now: datetime | None = None,
     ) -> StoredAIControllerGrant:
         now = self._utc(now or datetime.now(timezone.utc))
+        admin_access = self._active_access(connection, admin_access_session_id, room_id)
+        if admin_access.authority not in {"owner", "dm"}:
+            raise AIControllerHandoffPersistenceError(
+                "Administrative reassignment requires active Owner or DM authority"
+            )
         self._active_access(connection, target_access_session_id, room_id)
         seat = connection.execute(
             select(campaign_seats)
