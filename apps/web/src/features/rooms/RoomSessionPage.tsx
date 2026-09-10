@@ -15,6 +15,7 @@ import {
 } from '../../api/sessions'
 import { useLocale } from '../../i18n/LocaleProvider'
 import { startRoomHeartbeat } from './heartbeat'
+import { PlayerAIControlPanel } from './PlayerAIControlPanel'
 import { recentRoomForId } from './roomStorage'
 import {
   runSessionEventPoll,
@@ -52,6 +53,28 @@ export function mergeSessionSeatTruth(
   return [...byId.values()]
 }
 
+export function sessionTableSnapshotWithCurrentControllers(
+  snapshot: SessionSnapshot,
+  seats: CampaignSeat[],
+): SessionSnapshot {
+  const currentBySeat = new Map(seats.map((seat) => [seat.id, seat]))
+  return {
+    ...snapshot,
+    participants: snapshot.participants.map((participant) => {
+      const seat = currentBySeat.get(participant.seat_id)
+      return {
+        ...participant,
+        // SessionTableSurface predates controller handoff and historically read
+        // the join snapshot. Feed its UI-only controller projection from current
+        // Seat truth so stale Human sessions immediately lose composer scope.
+        controller_access_session_id_at_join: seat?.controller_kind === 'human'
+          ? seat.controller_access_session_id
+          : null,
+      }
+    }),
+  }
+}
+
 export function SessionEventConnectionBanner({
   status,
   copy,
@@ -64,8 +87,6 @@ export function SessionEventConnectionBanner({
   const message = reconnecting ? copy.eventReconnecting : copy.eventDisconnected
   return (
     <div
-      // Reconnecting is a transient state, not a failure; only the fatal case
-      // earns the alert styling.
       className={reconnecting ? 'notice-banner' : 'error-banner'}
       role={reconnecting ? 'status' : 'alert'}
       data-session-event-connection={status}
@@ -100,12 +121,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   const optionalLobby = (): Promise<LobbySnapshot | null> =>
     getLobby(roomId, campaignId, token).catch(() => null)
 
-  // Full Resume is initial/lifecycle only. Table changes continue through the
-  // durable incremental cursor; heartbeat intentionally stays lightweight.
   const reload = async () => {
-    // Resume reads race each other: React re-runs the mount effect, and every
-    // lifecycle mutation reloads too. Only the newest one may write, so a slow
-    // earlier read cannot overwrite fresher Session truth.
     const generation = reloadGeneration.current + 1
     reloadGeneration.current = generation
     const [nextSession, nextLobby, nextCharacters, nextResume] = await Promise.all([
@@ -179,8 +195,6 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
         setEventStream((current) => current ? applySessionEventPage(current, page) : current)
       },
       onStatus: setEventConnectionStatus,
-      // The fatal connection banner states this and what to do about it, so
-      // raising the generic error banner too would say the same thing twice.
       onFatal: () => undefined,
     })
 
@@ -250,6 +264,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     snapshot.dm_controller_access_session_id === callerAccessSessionId
   )
   const isOwner = recent.authority === 'owner'
+  const canManage = recent.authority === 'owner' || recent.authority === 'dm'
   const canAbandon = snapshot.status === 'active' && (isCurrentDm || isOwner)
   const statusLabel = snapshot.status === 'active'
     ? copy.active
@@ -263,6 +278,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     if (!seat) return seatId
     return seat.label || (seat.role === 'dm' ? copy.dm : seat.role === 'player' ? copy.player : copy.spectator)
   }
+  const tableSnapshot = sessionTableSnapshotWithCurrentControllers(snapshot, sessionSeats)
 
   return (
     <main className="landing-page room-workspace-page">
@@ -286,7 +302,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
             campaignId={campaignId}
             sessionId={sessionId}
             token={token}
-            snapshot={snapshot}
+            snapshot={tableSnapshot}
             seats={sessionSeats}
             characters={characters}
             callerAccessSessionId={callerAccessSessionId}
@@ -300,17 +316,34 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
 
         <h2>{copy.participants}</h2>
         <div className="workshop-list">
-          {snapshot.participants.length === 0 ? <p>{copy.noParticipants}</p> : snapshot.participants.map((participant) => (
-            <article className="workshop-card" key={participant.id}>
-              <h3>{seatLabel(participant.seat_id)}</h3>
-              <p>
-                {participant.role === 'dm' ? copy.dm : participant.role === 'player' ? copy.player : copy.spectator}
-              </p>
-              {participant.role === 'player' ? (
-                <p>{characterName(participant.active_character_id)}</p>
-              ) : null}
-            </article>
-          ))}
+          {snapshot.participants.length === 0 ? <p>{copy.noParticipants}</p> : snapshot.participants.map((participant) => {
+            const currentSeat = sessionSeats.find((item) => item.id === participant.seat_id)
+            return (
+              <article className="workshop-card" key={participant.id}>
+                <h3>{seatLabel(participant.seat_id)}</h3>
+                <p>
+                  {participant.role === 'dm' ? copy.dm : participant.role === 'player' ? copy.player : copy.spectator}
+                </p>
+                {participant.role === 'player' ? (
+                  <p>{characterName(participant.active_character_id)}</p>
+                ) : null}
+                {snapshot.status === 'active' && participant.role === 'player' && currentSeat ? (
+                  <PlayerAIControlPanel
+                    roomId={roomId}
+                    campaignId={campaignId}
+                    sessionId={sessionId}
+                    seat={currentSeat}
+                    roomToken={token}
+                    callerAccessSessionId={callerAccessSessionId}
+                    canManage={canManage}
+                    controllers={lobby?.controllers ?? []}
+                    copy={copy}
+                    onChanged={reload}
+                  />
+                ) : null}
+              </article>
+            )
+          })}
         </div>
 
         {snapshot.status === 'active' && isCurrentDm ? (

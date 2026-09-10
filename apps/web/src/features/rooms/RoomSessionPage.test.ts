@@ -4,12 +4,14 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 import type { CampaignSeat } from '../../api/seats'
+import type { SessionSnapshot } from '../../api/sessions'
 import { LocaleProvider } from '../../i18n/LocaleProvider'
 import { RECENT_ROOMS_STORAGE_KEY } from './roomStorage'
 import {
   mergeSessionSeatTruth,
   RoomSessionPage,
   roomSessionRouteFromPath,
+  sessionTableSnapshotWithCurrentControllers,
   SessionEventConnectionBanner,
 } from './RoomSessionPage'
 import { sessionCopy } from './sessionCopy'
@@ -80,6 +82,41 @@ describe('Session route and presentation', () => {
     expect(merged.find((item) => item.id === archivedParticipant.id)?.label).toBe('Archived Mira Seat')
   })
 
+  it('projects table composer control from current Seat truth, not join history', () => {
+    const seatId = '40000000-0000-4000-8000-000000000010'
+    const snapshot: SessionSnapshot = {
+      id: SESSION_ID,
+      campaign_id: CAMPAIGN_ID,
+      status: 'active',
+      dm_seat_id: '40000000-0000-4000-8000-000000000099',
+      dm_controller_access_session_id: null,
+      started_at: '2026-09-10T00:00:00Z',
+      ended_at: null,
+      participants: [{
+        id: '70000000-0000-4000-8000-000000000001',
+        seat_id: seatId,
+        role: 'player',
+        controller_kind_at_join: 'human',
+        controller_access_session_id_at_join: 'old-human',
+        active_character_id: '60000000-0000-4000-8000-000000000001',
+      }],
+    }
+    const currentSeat = seat(seatId, 'Mira')
+    currentSeat.controller_kind = 'human'
+    currentSeat.controller_access_session_id = 'new-human'
+
+    const projected = sessionTableSnapshotWithCurrentControllers(snapshot, [currentSeat])
+    expect(projected.participants[0].controller_access_session_id_at_join).toBe('new-human')
+    expect(snapshot.participants[0].controller_access_session_id_at_join).toBe('old-human')
+
+    currentSeat.controller_kind = 'ai'
+    currentSeat.controller_access_session_id = null
+    expect(
+      sessionTableSnapshotWithCurrentControllers(snapshot, [currentSeat])
+        .participants[0].controller_access_session_id_at_join,
+    ).toBeNull()
+  })
+
   it('renders persistent reconnect and fatal connection status in both locales', () => {
     for (const locale of ['zh-TW', 'en'] as const) {
       const copy = sessionCopy(locale)
@@ -96,8 +133,6 @@ describe('Session route and presentation', () => {
       expect(reconnecting).toContain('data-session-event-connection="reconnecting"')
       expect(fatal).toContain(copy.eventDisconnected)
       expect(fatal).toContain('data-session-event-connection="fatal"')
-
-      // Reconnecting is transient and must not borrow the failure styling.
       expect(reconnecting).toContain('class="notice-banner"')
       expect(reconnecting).toContain('role="status"')
       expect(fatal).toContain('class="error-banner"')
@@ -166,6 +201,8 @@ describe('Session route and presentation', () => {
     expect(source).toContain('setInitialStage(nextResume.active_session?.id === sessionId')
     expect(source).toContain('<SessionTableSurface')
     expect(source).toContain('mergeSessionSeatTruth(')
+    expect(source).toContain('sessionTableSnapshotWithCurrentControllers(')
+    expect(source).toContain('<PlayerAIControlPanel')
     expect(source).toContain('lateJoinSession(')
     expect(source).toContain('endSession(roomId, campaignId, sessionId, token)')
     expect(source).toContain('abandonSession(roomId, campaignId, sessionId, token)')
