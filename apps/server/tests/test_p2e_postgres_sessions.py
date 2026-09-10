@@ -407,6 +407,7 @@ def test_end_and_late_join_serialize_without_partial_lease(
                 room_id=room_id,
                 campaign_id=campaign_id,
                 session_id=started.id,
+                caller_actor_kind="human",
                 caller_access_session_id=dm_access_id,
                 seat_id=late_seat_id,
             )
