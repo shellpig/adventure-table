@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 from app.api.rooms.ai_controllers import get_ai_controller_service
 from app.domain.rooms.ai_controllers import AIControllerService
@@ -70,7 +71,14 @@ async def mcp_endpoint(
         return _protocol_error(request_id, exc)
 
     try:
-        authenticated = authenticate_request(request, ai_controller_service)
+        # Token verification resolves the current grant/Seat scope and may touch
+        # persistence. Keep that short synchronous DB work off the ASGI event loop,
+        # matching the Human event-wait actor-resolution path.
+        authenticated = await run_in_threadpool(
+            authenticate_request,
+            request,
+            ai_controller_service,
+        )
     except MCPAuthenticationError as exc:
         return JSONResponse(
             status_code=401,
