@@ -50,6 +50,8 @@ class ParticipantSeed:
     controller_kind_at_join: str
     controller_access_session_id_at_join: UUID | None
     active_character_id: UUID | None
+    controller_ai_grant_id_at_join: UUID | None = None
+    controller_generation_at_join: int | None = None
 
 
 @dataclass(frozen=True)
@@ -60,6 +62,8 @@ class StoredSession:
     dm_seat_id: UUID
     dm_controller_kind: str
     dm_controller_access_session_id: UUID | None
+    dm_controller_ai_grant_id: UUID | None
+    dm_controller_generation: int | None
     started_at: datetime
     ended_at: datetime | None
     created_at: datetime
@@ -73,6 +77,8 @@ class StoredSessionParticipant:
     role_snapshot: str
     controller_kind_at_join: str
     controller_access_session_id_at_join: UUID | None
+    controller_ai_grant_id_at_join: UUID | None
+    controller_generation_at_join: int | None
     active_character_id: UUID | None
     joined_at: datetime
     left_at: datetime | None
@@ -154,6 +160,8 @@ class SessionRepository:
         dm_controller_access_session_id: UUID | None,
         participants: Iterable[ParticipantSeed],
         now: datetime,
+        dm_controller_ai_grant_id: UUID | None = None,
+        dm_controller_generation: int | None = None,
     ) -> None:
         connection.execute(
             insert(sessions).values(
@@ -163,6 +171,8 @@ class SessionRepository:
                 dm_seat_id=dm_seat_id,
                 dm_controller_kind=dm_controller_kind,
                 dm_controller_access_session_id=dm_controller_access_session_id,
+                dm_controller_ai_grant_id=dm_controller_ai_grant_id,
+                dm_controller_generation=dm_controller_generation,
                 started_at=now,
                 ended_at=None,
             )
@@ -178,6 +188,12 @@ class SessionRepository:
                     controller_kind_at_join=participant.controller_kind_at_join,
                     controller_access_session_id_at_join=(
                         participant.controller_access_session_id_at_join
+                    ),
+                    controller_ai_grant_id_at_join=(
+                        participant.controller_ai_grant_id_at_join
+                    ),
+                    controller_generation_at_join=(
+                        participant.controller_generation_at_join
                     ),
                     active_character_id=participant.active_character_id,
                     joined_at=now,
@@ -206,6 +222,8 @@ class SessionRepository:
         dm_controller_kind: str,
         dm_controller_access_session_id: UUID | None,
         participants: Iterable[ParticipantSeed],
+        dm_controller_ai_grant_id: UUID | None = None,
+        dm_controller_generation: int | None = None,
     ) -> StoredSession:
         session_id = uuid4()
         now = datetime.now(timezone.utc)
@@ -218,6 +236,8 @@ class SessionRepository:
                     dm_seat_id=dm_seat_id,
                     dm_controller_kind=dm_controller_kind,
                     dm_controller_access_session_id=dm_controller_access_session_id,
+                    dm_controller_ai_grant_id=dm_controller_ai_grant_id,
+                    dm_controller_generation=dm_controller_generation,
                     participants=participants,
                     now=now,
                 )
@@ -370,6 +390,12 @@ class SessionRepository:
                                 controller_access_session_id_at_join=(
                                     row["controller_access_session_id"]
                                 ),
+                                controller_ai_grant_id_at_join=row["ai_controller_grant_id"],
+                                controller_generation_at_join=(
+                                    row["controller_epoch"]
+                                    if row["controller_kind"] == "ai"
+                                    else None
+                                ),
                                 active_character_id=character_id,
                             )
                         )
@@ -428,6 +454,12 @@ class SessionRepository:
                         controller_kind_at_join=participant.controller_kind_at_join,
                         controller_access_session_id_at_join=(
                             participant.controller_access_session_id_at_join
+                        ),
+                        controller_ai_grant_id_at_join=(
+                            participant.controller_ai_grant_id_at_join
+                        ),
+                        controller_generation_at_join=(
+                            participant.controller_generation_at_join
                         ),
                         active_character_id=participant.active_character_id,
                         joined_at=now,
