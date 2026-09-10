@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from app.api.rooms.ai_controllers import get_ai_controller_service
 from app.domain.rooms.ai_controllers import AIControllerService
 from app.mcp.auth import MCPAuthenticationError, authenticate_request
+from app.mcp.dependencies import get_ai_tool_application_service
 from app.mcp.protocol import (
     MCP_PROTOCOL_VERSION,
     MCPProtocolError,
@@ -15,6 +16,7 @@ from app.mcp.protocol import (
     result_payload,
     validate_request,
 )
+from app.mcp.tools import call_tool, tool_catalog
 
 
 router = APIRouter(tags=["mcp"])
@@ -68,7 +70,7 @@ async def mcp_endpoint(
         return _protocol_error(request_id, exc)
 
     try:
-        authenticate_request(request, ai_controller_service)
+        authenticated = authenticate_request(request, ai_controller_service)
     except MCPAuthenticationError as exc:
         return JSONResponse(
             status_code=401,
@@ -88,7 +90,7 @@ async def mcp_endpoint(
                 envelope.request_id,
                 {
                     "supportedVersions": [MCP_PROTOCOL_VERSION],
-                    "capabilities": {},
+                    "capabilities": {"tools": {}},
                     "instructions": (
                         "Adventure Table external AI transport. Use only the scoped Seat "
                         "capabilities exposed by this server. / Adventure Table 外部 AI "
@@ -98,6 +100,39 @@ async def mcp_endpoint(
                 cacheable=True,
             )
         )
+
+    if envelope.method == "tools/list":
+        return JSONResponse(
+            content=result_payload(
+                envelope.request_id,
+                {"tools": tool_catalog(authenticated.auth)},
+                cacheable=True,
+            )
+        )
+
+    if envelope.method == "tools/call":
+        name = envelope.params.get("name")
+        arguments = envelope.params.get("arguments", {})
+        if not isinstance(name, str) or not name:
+            return JSONResponse(
+                status_code=400,
+                content=error_payload(
+                    envelope.request_id,
+                    rpc_code=-32602,
+                    stable_code="mcp_tool_name_required",
+                    message="tools/call requires a tool name",
+                    message_zh_tw="tools/call 必須指定工具名稱",
+                ),
+            )
+        service = get_ai_tool_application_service(request)
+        result = await call_tool(
+            service,
+            token=authenticated.token,
+            auth=authenticated.auth,
+            name=name,
+            arguments=arguments,
+        )
+        return JSONResponse(content=result_payload(envelope.request_id, result))
 
     return JSONResponse(
         status_code=404,
