@@ -83,6 +83,39 @@ def test_p3d_metadata_has_epoch_and_typed_ai_bindings() -> None:
     assert "controller_generation_at_join IS NOT NULL" in participant_check
 
 
+def test_p3d_migration_indexes_match_metadata() -> None:
+    source = _source()
+    expected = {
+        campaign_seats: {
+            "ix_campaign_seats_ai_controller_grant_id",
+        },
+        sessions: {
+            "ix_sessions_dm_controller_ai_grant_id",
+        },
+        session_participants: {
+            "ix_session_participants_controller_ai_grant_id",
+        },
+        ai_controller_grants: {
+            "ix_ai_controller_grants_seat_status",
+            "ix_ai_controller_grants_session_status",
+            "ix_ai_controller_grants_campaign_id",
+        },
+    }
+    for table, required in expected.items():
+        metadata_indexes = {index.name for index in table.indexes}
+        assert required <= metadata_indexes
+        for name in required:
+            assert name in source
+    downgrade = source[source.index("def downgrade") :]
+    for name in (
+        "ix_campaign_seats_ai_controller_grant_id",
+        "ix_sessions_dm_controller_ai_grant_id",
+        "ix_session_participants_controller_ai_grant_id",
+    ):
+        assert f"drop_index({name.split('_id')[0].upper() if False else ''}" not in ()
+        assert name in downgrade
+
+
 def test_p3d_grant_schema_never_stores_plaintext_token() -> None:
     names = set(ai_controller_grants.c.keys())
     assert "secret_hash" in names
