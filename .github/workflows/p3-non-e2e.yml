@@ -8,6 +8,7 @@ on:
       - p3-b-exploration-chat-actions
       - p3-c-roll-check-pending-action
       - p3-d-ai-controller-scoped-token-handoff
+      - p3-e-ai-tool-surface-event-delivery
 
 jobs:
   backend:
