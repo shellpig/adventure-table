@@ -314,8 +314,8 @@ class AIControllerService:
             temporary_instruction=grant.temporary_instruction,
         )
 
-    def resolve_actor(self, token: str, *, touch: bool = False) -> TableActorContext:
-        auth = self.authenticate(token, touch=touch)
+    @staticmethod
+    def actor_from_auth(auth: AIControllerAuthView) -> TableActorContext:
         if auth.session_id is None:
             raise AIControllerUnauthorizedError(
                 "pre-session AI DM grant is not a gameplay Session actor"
@@ -333,6 +333,9 @@ class AIControllerService:
             ai_controller_grant_id=auth.grant_id,
             grant_generation=auth.generation,
         )
+
+    def resolve_actor(self, token: str, *, touch: bool = False) -> TableActorContext:
+        return self.actor_from_auth(self.authenticate(token, touch=touch))
 
 
 __all__ = [
