@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from sqlalchemy import create_engine, insert, select, update
 from sqlalchemy.pool import StaticPool
@@ -259,6 +259,7 @@ def test_ai_mcp_action_uses_canonical_exploration_message_and_human_event_path()
         assert result["execution_mode"] == "self"
         assert result["payload"]["text"] == "Open the trapped door carefully."
 
+        event_id = UUID(result["id"])
         with engine.connect() as connection:
             stored = connection.execute(
                 select(
@@ -270,9 +271,9 @@ def test_ai_mcp_action_uses_canonical_exploration_message_and_human_event_path()
                     session_events.c.seq,
                 )
                 .join(session_events, session_events.c.id == session_messages.c.event_id)
-                .where(session_messages.c.event_id == result["id"])
+                .where(session_messages.c.event_id == event_id)
             ).mappings().one()
-        assert str(stored["event_id"]) == result["id"]
+        assert stored["event_id"] == event_id
         assert stored["kind"] == "action"
         assert stored["text"] == "Open the trapped door carefully."
         assert stored["subject_seat_id"] == ids["player_seat_id"]
@@ -290,7 +291,7 @@ def test_ai_mcp_action_uses_canonical_exploration_message_and_human_event_path()
             ),
         )
         visible = events.list_after(dm, after_seq=0, limit=50)
-        matching = next(event for event in visible.events if str(event.id) == result["id"])
+        matching = next(event for event in visible.events if event.id == event_id)
         assert matching.kind == "exploration.action"
         assert matching.payload["text"] == "Open the trapped door carefully."
     finally:
