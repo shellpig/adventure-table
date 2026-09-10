@@ -135,7 +135,7 @@ def _seed_active_player(engine):
                 campaign_id=campaign_id,
                 status="active",
                 dm_seat_id=dm_seat_id,
-                dm_controller_kind="human",
+                dm_controller_kind="none",
                 dm_controller_access_session_id=None,
                 dm_controller_ai_grant_id=None,
                 dm_controller_generation=None,
