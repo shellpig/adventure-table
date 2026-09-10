@@ -5,11 +5,12 @@ from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 from sqlalchemy import and_, delete, insert, select, update
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 
 from app.persistence.characters import characters
 from app.persistence.rooms.tables import (
+    ai_controller_grants,
     campaign_roster_entries,
     campaign_seats,
     campaigns,
@@ -103,6 +104,26 @@ class SeatRepository:
             )
         )
 
+    @staticmethod
+    def _revoke_ai_grants_for_seat(
+        connection: Connection,
+        *,
+        seat_id: UUID,
+        now: datetime,
+    ) -> None:
+        connection.execute(
+            update(ai_controller_grants)
+            .where(
+                ai_controller_grants.c.seat_id == seat_id,
+                ai_controller_grants.c.status == "active",
+            )
+            .values(
+                status="revoked",
+                revoked_at=now,
+                temporary_instruction=None,
+            )
+        )
+
     def campaign_room_id(self, campaign_id: UUID) -> UUID | None:
         with self.engine.connect() as connection:
             return connection.scalar(select(campaigns.c.room_id).where(campaigns.c.id == campaign_id))
@@ -114,6 +135,17 @@ class SeatRepository:
     def active_campaign_id(self, room_id: UUID) -> UUID | None:
         with self.engine.connect() as connection:
             return connection.scalar(select(rooms.c.active_campaign_id).where(rooms.c.id == room_id))
+
+    def active_session_for_dm_seat(self, seat_id: UUID) -> UUID | None:
+        with self.engine.connect() as connection:
+            return connection.scalar(
+                select(sessions.c.id)
+                .where(
+                    sessions.c.dm_seat_id == seat_id,
+                    sessions.c.status == "active",
+                )
+                .limit(1)
+            )
 
     def get(self, seat_id: UUID) -> StoredSeat | None:
         with self.engine.connect() as connection:
@@ -208,6 +240,8 @@ class SeatRepository:
                         select(campaign_seats).where(campaign_seats.c.id == seat_id)
                     ).mappings().one()
                 )
+            if current.ai_controller_grant_id is not None:
+                self._revoke_ai_grants_for_seat(connection, seat_id=seat_id, now=now)
             result = connection.execute(
                 update(campaign_seats)
                 .where(campaign_seats.c.id == seat_id, campaign_seats.c.archived_at.is_(None))
@@ -215,7 +249,7 @@ class SeatRepository:
                     controller_kind=controller_kind,
                     controller_access_session_id=controller_access_session_id,
                     ai_controller_grant_id=None,
-                    controller_epoch=current.controller_epoch + 1,
+                    controller_epoch=int(current.controller_epoch) + 1,
                     updated_at=now,
                 )
             )
@@ -320,6 +354,8 @@ class SeatRepository:
                 or current.controller_access_session_id is not None
                 or current.ai_controller_grant_id is not None
             )
+            if current.ai_controller_grant_id is not None:
+                self._revoke_ai_grants_for_seat(connection, seat_id=seat_id, now=now)
             result = connection.execute(
                 update(campaign_seats)
                 .where(campaign_seats.c.id == seat_id, campaign_seats.c.archived_at.is_(None))
@@ -328,7 +364,7 @@ class SeatRepository:
                     controller_kind="none",
                     controller_access_session_id=None,
                     ai_controller_grant_id=None,
-                    controller_epoch=current.controller_epoch + (1 if identity_changed else 0),
+                    controller_epoch=int(current.controller_epoch) + (1 if identity_changed else 0),
                     selected_character_id=None,
                     updated_at=now,
                 )
