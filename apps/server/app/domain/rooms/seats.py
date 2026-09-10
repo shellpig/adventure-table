@@ -294,7 +294,10 @@ class SeatService:
             raise SeatControllerError(
                 "AI-controlled Player Seat must be recovered before it can be archived"
             )
-        archived = self.repository.archive(seat_id)
+        try:
+            archived = self.repository.archive(seat_id)
+        except SeatPersistenceConflictError as exc:
+            raise SeatControllerError(str(exc)) from exc
         if archived is None:
             raise SeatNotFoundError(seat_id)
         return self._present(archived)
