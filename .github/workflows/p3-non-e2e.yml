@@ -7,7 +7,6 @@ on:
       - p3-a-session-table-runtime-event-stream
       - p3-b-exploration-chat-actions
       - p3-c-roll-check-pending-action
-      - p3-d-ai-controller-scoped-token-handoff
 
 jobs:
   backend:
