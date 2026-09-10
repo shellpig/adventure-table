@@ -374,22 +374,21 @@ class TableEventRepository:
         if session_row is None or session_row["status"] != "active":
             return None
 
-        grant_query = select(ai_controller_grants).where(ai_controller_grants.c.id == grant_id)
-        if lock_actor:
-            grant_query = grant_query.with_for_update()
-        grant = connection.execute(grant_query).mappings().one_or_none()
-        if (
-            grant is None
-            or grant["status"] != "active"
-            or grant["room_id"] != room_id
-            or grant["campaign_id"] != campaign_id
-            or grant["session_id"] != session_id
-            or int(grant["generation"]) != int(generation)
-        ):
+        # The grant id comes from an untrusted bearer token. The first read is
+        # only a locator for the authoritative Seat; it intentionally takes no
+        # row lock. Write transactions then serialize Seat -> grant, matching
+        # Take Back/admin reassignment and preventing grant/Seat lock inversion.
+        locator = connection.execute(
+            select(
+                ai_controller_grants.c.seat_id,
+                ai_controller_grants.c.campaign_id,
+            ).where(ai_controller_grants.c.id == grant_id)
+        ).one_or_none()
+        if locator is None or locator.campaign_id != campaign_id:
             return None
 
         seat_query = select(campaign_seats).where(
-            campaign_seats.c.id == grant["seat_id"],
+            campaign_seats.c.id == locator.seat_id,
             campaign_seats.c.campaign_id == campaign_id,
             campaign_seats.c.archived_at.is_(None),
         )
@@ -401,6 +400,21 @@ class TableEventRepository:
             or seat["controller_kind"] != "ai"
             or seat["ai_controller_grant_id"] != grant_id
             or int(seat["controller_epoch"]) != int(generation)
+        ):
+            return None
+
+        grant_query = select(ai_controller_grants).where(ai_controller_grants.c.id == grant_id)
+        if lock_actor:
+            grant_query = grant_query.with_for_update()
+        grant = connection.execute(grant_query).mappings().one_or_none()
+        if (
+            grant is None
+            or grant["seat_id"] != seat["id"]
+            or grant["status"] != "active"
+            or grant["room_id"] != room_id
+            or grant["campaign_id"] != campaign_id
+            or grant["session_id"] != session_id
+            or int(grant["generation"]) != int(generation)
         ):
             return None
 
