@@ -19,6 +19,9 @@ depends_on = None
 SEAT_BINDING = "ck_campaign_seats_controller_binding"
 SESSION_BINDING = "ck_sessions_dm_controller_binding"
 PARTICIPANT_BINDING = "ck_session_participants_controller_binding"
+SEAT_GRANT_FK = "fk_campaign_seats_ai_grant"
+SESSION_GRANT_FK = "fk_sessions_dm_ai_grant"
+PARTICIPANT_GRANT_FK = "fk_session_participants_ai_grant"
 SEAT_GRANT_INDEX = "ix_campaign_seats_ai_controller_grant_id"
 SESSION_GRANT_INDEX = "ix_sessions_dm_controller_ai_grant_id"
 PARTICIPANT_GRANT_INDEX = "ix_session_participants_controller_ai_grant_id"
@@ -72,7 +75,7 @@ def upgrade() -> None:
             sa.Column("controller_epoch", sa.BigInteger(), nullable=False, server_default=sa.text("0"))
         )
         batch_op.create_foreign_key(
-            "fk_campaign_seats_ai_controller_grant_id_ai_controller_grants",
+            SEAT_GRANT_FK,
             "ai_controller_grants",
             ["ai_controller_grant_id"],
             ["id"],
@@ -110,7 +113,7 @@ def upgrade() -> None:
         batch_op.add_column(sa.Column("dm_controller_ai_grant_id", sa.Uuid(), nullable=True))
         batch_op.add_column(sa.Column("dm_controller_generation", sa.BigInteger(), nullable=True))
         batch_op.create_foreign_key(
-            "fk_sessions_dm_controller_ai_grant_id_ai_controller_grants",
+            SESSION_GRANT_FK,
             "ai_controller_grants",
             ["dm_controller_ai_grant_id"],
             ["id"],
@@ -132,7 +135,7 @@ def upgrade() -> None:
         batch_op.add_column(sa.Column("controller_ai_grant_id_at_join", sa.Uuid(), nullable=True))
         batch_op.add_column(sa.Column("controller_generation_at_join", sa.BigInteger(), nullable=True))
         batch_op.create_foreign_key(
-            "fk_session_participants_controller_ai_grant_id_ai_controller_grants",
+            PARTICIPANT_GRANT_FK,
             "ai_controller_grants",
             ["controller_ai_grant_id_at_join"],
             ["id"],
@@ -159,10 +162,7 @@ def downgrade() -> None:
     op.drop_index(PARTICIPANT_GRANT_INDEX, table_name="session_participants")
     with op.batch_alter_table("session_participants") as batch_op:
         batch_op.drop_constraint(PARTICIPANT_BINDING, type_="check")
-        batch_op.drop_constraint(
-            "fk_session_participants_controller_ai_grant_id_ai_controller_grants",
-            type_="foreignkey",
-        )
+        batch_op.drop_constraint(PARTICIPANT_GRANT_FK, type_="foreignkey")
         batch_op.drop_column("controller_generation_at_join")
         batch_op.drop_column("controller_ai_grant_id_at_join")
         batch_op.create_check_constraint(
@@ -174,10 +174,7 @@ def downgrade() -> None:
     op.drop_index(SESSION_GRANT_INDEX, table_name="sessions")
     with op.batch_alter_table("sessions") as batch_op:
         batch_op.drop_constraint(SESSION_BINDING, type_="check")
-        batch_op.drop_constraint(
-            "fk_sessions_dm_controller_ai_grant_id_ai_controller_grants",
-            type_="foreignkey",
-        )
+        batch_op.drop_constraint(SESSION_GRANT_FK, type_="foreignkey")
         batch_op.drop_column("dm_controller_generation")
         batch_op.drop_column("dm_controller_ai_grant_id")
         batch_op.create_check_constraint(
@@ -189,10 +186,7 @@ def downgrade() -> None:
     op.drop_index(SEAT_GRANT_INDEX, table_name="campaign_seats")
     with op.batch_alter_table("campaign_seats") as batch_op:
         batch_op.drop_constraint(SEAT_BINDING, type_="check")
-        batch_op.drop_constraint(
-            "fk_campaign_seats_ai_controller_grant_id_ai_controller_grants",
-            type_="foreignkey",
-        )
+        batch_op.drop_constraint(SEAT_GRANT_FK, type_="foreignkey")
         batch_op.drop_column("controller_epoch")
         batch_op.drop_column("ai_controller_grant_id")
         batch_op.create_check_constraint(
