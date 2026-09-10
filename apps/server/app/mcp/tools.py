@@ -263,17 +263,30 @@ async def call_tool(
         parsed = definition.input_model.model_validate(arguments)
 
         if name == "get_session_context":
-            data = await asyncio.to_thread(service.get_session_context, token)
+            data = await asyncio.to_thread(
+                service.get_session_context,
+                token,
+                authenticated=auth,
+            )
         elif name == "start_session":
-            data = await asyncio.to_thread(service.start_session, token)
+            data = await asyncio.to_thread(
+                service.start_session,
+                token,
+                authenticated=auth,
+            )
         elif name == "get_character_context":
-            data = await asyncio.to_thread(service.get_character_context, token)
+            data = await asyncio.to_thread(
+                service.get_character_context,
+                token,
+                authenticated=auth,
+            )
         elif name == "post_dialogue":
             data = await asyncio.to_thread(
                 service.post_text,
                 token,
                 kind=ExplorationInputKind.DIALOGUE,
                 input=parsed,
+                authenticated=auth,
             )
         elif name == "post_action":
             data = await asyncio.to_thread(
@@ -281,6 +294,7 @@ async def call_tool(
                 token,
                 kind=ExplorationInputKind.ACTION,
                 input=parsed,
+                authenticated=auth,
             )
         elif name == "post_ooc":
             data = await asyncio.to_thread(
@@ -288,6 +302,7 @@ async def call_tool(
                 token,
                 kind=ExplorationInputKind.OOC,
                 input=parsed,
+                authenticated=auth,
             )
         elif name == "whisper_dm":
             data = await asyncio.to_thread(
@@ -295,6 +310,7 @@ async def call_tool(
                 token,
                 kind=ExplorationInputKind.WHISPER_DM,
                 input=parsed,
+                authenticated=auth,
             )
         elif name == "post_narration":
             data = await asyncio.to_thread(
@@ -302,23 +318,63 @@ async def call_tool(
                 token,
                 kind=ExplorationInputKind.NARRATION,
                 input=parsed,
+                authenticated=auth,
             )
         elif name == "set_stage_text":
-            data = await asyncio.to_thread(service.set_stage_text, token, parsed)
+            data = await asyncio.to_thread(
+                service.set_stage_text,
+                token,
+                parsed,
+                authenticated=auth,
+            )
         elif name == "request_check":
-            data = await asyncio.to_thread(service.request_check, token, parsed)
+            data = await asyncio.to_thread(
+                service.request_check,
+                token,
+                parsed,
+                authenticated=auth,
+            )
         elif name == "roll_pending":
-            data = await asyncio.to_thread(service.roll_pending, token, parsed)
+            data = await asyncio.to_thread(
+                service.roll_pending,
+                token,
+                parsed,
+                authenticated=auth,
+            )
         elif name == "submit_physical_roll":
-            data = await asyncio.to_thread(service.submit_physical_roll, token, parsed)
+            data = await asyncio.to_thread(
+                service.submit_physical_roll,
+                token,
+                parsed,
+                authenticated=auth,
+            )
         elif name == "quick_roll":
-            data = await asyncio.to_thread(service.quick_roll, token, parsed)
+            data = await asyncio.to_thread(
+                service.quick_roll,
+                token,
+                parsed,
+                authenticated=auth,
+            )
         elif name == "update_character_state":
-            data = await asyncio.to_thread(service.update_character_state, token, parsed)
+            data = await asyncio.to_thread(
+                service.update_character_state,
+                token,
+                parsed,
+                authenticated=auth,
+            )
         elif name == "get_pending_events":
-            data = await asyncio.to_thread(service.get_pending_events, token, parsed)
+            data = await asyncio.to_thread(
+                service.get_pending_events,
+                token,
+                parsed,
+                authenticated=auth,
+            )
         elif name == "wait_for_event":
-            data = await service.wait_for_event(token, parsed)
+            data = await service.wait_for_event(
+                token,
+                parsed,
+                authenticated=auth,
+            )
         else:  # pragma: no cover - catalog and dispatch are kept exhaustive above.
             return structured_tool_error(
                 "tool_not_implemented",
