@@ -10,6 +10,7 @@ from app.mcp.protocol import (
     CACHE_TTL_MS,
     MCP_HEADER_MISMATCH,
     MCP_PROTOCOL_VERSION,
+    MCP_UNSUPPORTED_PROTOCOL_VERSION,
     SERVER_INFO,
     SERVER_INFO_META_KEY,
 )
@@ -95,6 +96,20 @@ def test_protocol_version_header_and_meta_must_match() -> None:
     assert error["data"]["code"] == "mcp_protocol_version_mismatch"
 
 
+def test_missing_protocol_version_header_is_rejected_before_auth() -> None:
+    client, service = _client()
+    headers = _headers("server/discover")
+    del headers["MCP-Protocol-Version"]
+
+    response = client.post("/mcp", json=_body("server/discover"), headers=headers)
+
+    assert response.status_code == 400
+    error = response.json()["error"]
+    assert error["code"] == MCP_UNSUPPORTED_PROTOCOL_VERSION
+    assert error["data"]["code"] == "mcp_protocol_version_unsupported"
+    assert service.tokens == []
+
+
 def test_modern_request_requires_client_capabilities_meta() -> None:
     client, _ = _client()
     body = _body("server/discover")
@@ -121,6 +136,20 @@ def test_mcp_method_header_must_match_json_rpc_method() -> None:
     assert error["data"]["code"] == "mcp_method_header_mismatch"
 
 
+def test_missing_mcp_method_header_is_rejected_before_auth() -> None:
+    client, service = _client()
+    headers = _headers("server/discover")
+    del headers["Mcp-Method"]
+
+    response = client.post("/mcp", json=_body("server/discover"), headers=headers)
+
+    assert response.status_code == 400
+    error = response.json()["error"]
+    assert error["code"] == MCP_HEADER_MISMATCH
+    assert error["data"]["code"] == "mcp_method_header_mismatch"
+    assert service.tokens == []
+
+
 def test_named_operation_requires_matching_mcp_name_header() -> None:
     client, _ = _client()
 
@@ -132,6 +161,22 @@ def test_named_operation_requires_matching_mcp_name_header() -> None:
 
     assert response.status_code == 400
     assert response.json()["error"]["data"]["code"] == "mcp_name_header_mismatch"
+
+
+def test_named_operation_requires_mcp_name_header() -> None:
+    client, service = _client()
+
+    response = client.post(
+        "/mcp",
+        json=_body("tools/call", params={"name": "post_action", "arguments": {}}),
+        headers=_headers("tools/call"),
+    )
+
+    assert response.status_code == 400
+    error = response.json()["error"]
+    assert error["code"] == MCP_HEADER_MISMATCH
+    assert error["data"]["code"] == "mcp_name_header_mismatch"
+    assert service.tokens == []
 
 
 def test_modern_endpoint_rejects_removed_session_header() -> None:
