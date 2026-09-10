@@ -1,9 +1,9 @@
 from uuid import uuid4
 
-from app.api.rooms import router as rooms_router
 from app.api.rooms.p3c_state import _map_table_state_error
 from app.domain.character.validation import CharacterValidationError
 from app.domain.rooms.table_events import TableEventActorUnauthorizedError
+from app.main import app
 from app.persistence.characters import StateWriteConflictError, StaleBuildVersionError
 from app.persistence.rooms.p3c_character_state import (
     TableCharacterStateSubjectStalePersistenceError,
@@ -17,13 +17,9 @@ TABLE_STATE_PATH = (
 
 
 def test_table_state_route_is_registered_as_session_scoped_patch() -> None:
-    matches = [
-        route
-        for route in rooms_router.routes
-        if getattr(route, "path_format", getattr(route, "path", "")) == TABLE_STATE_PATH
-    ]
-    assert len(matches) == 1
-    assert matches[0].methods == {"PATCH"}
+    path_item = app.openapi()["paths"].get(TABLE_STATE_PATH)
+    assert path_item is not None
+    assert set(path_item) == {"patch"}
 
 
 def test_table_state_errors_map_to_stable_p3c_codes() -> None:
