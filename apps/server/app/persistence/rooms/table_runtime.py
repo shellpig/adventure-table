@@ -262,9 +262,15 @@ class TableEventRepository:
                 campaign_id=campaign_id,
                 session_id=session_id,
             )
-        if session_row is None or session_row["status"] != "active":
+        if session_row is None:
             return None
 
+        # Human Room access sessions are not Session-scoped bearer grants. Keep a
+        # still-valid Human controller binding resolvable after End/Abandon so
+        # committed history and canonical idempotent replays remain available.
+        # append() separately rejects any new mutation when the Session is not
+        # active. AI grants intentionally keep the active-Session requirement in
+        # _ai_actor_from_connection() because lifecycle finalization revokes them.
         access_query = select(
             room_access_sessions.c.id,
             room_access_sessions.c.room_id,
@@ -374,10 +380,6 @@ class TableEventRepository:
         if session_row is None or session_row["status"] != "active":
             return None
 
-        # The grant id comes from an untrusted bearer token. The first read is
-        # only a locator for the authoritative Seat; it intentionally takes no
-        # row lock. Write transactions then serialize Seat -> grant, matching
-        # Take Back/admin reassignment and preventing grant/Seat lock inversion.
         locator = connection.execute(
             select(
                 ai_controller_grants.c.seat_id,
