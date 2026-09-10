@@ -6,6 +6,7 @@ from uuid import uuid4
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, insert, update
+from sqlalchemy.pool import StaticPool
 
 from app.api.rooms.ai_controllers import get_ai_controller_service
 from app.db import metadata
@@ -26,7 +27,11 @@ from app.persistence.rooms.tables import (
 
 
 def _engine():
-    engine = create_engine("sqlite+pysqlite:///:memory:")
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     metadata.create_all(
         engine,
         tables=[
