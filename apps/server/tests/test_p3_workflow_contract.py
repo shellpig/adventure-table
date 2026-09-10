@@ -7,6 +7,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "p3-non-e2e.yml"
 P3A_BRANCH = "p3-a-session-table-runtime-event-stream"
 P3B_BRANCH = "p3-b-exploration-chat-actions"
+P3C_BRANCH = "p3-c-roll-check-pending-action"
+P3D_BRANCH = "p3-d-ai-controller-scoped-token-handoff"
 
 
 def _source() -> str:
@@ -19,8 +21,8 @@ def test_p3_non_e2e_workflow_is_scoped_to_post_review_p3_triggers() -> None:
     assert source.startswith("name: P3 Non-E2E\n")
     assert "workflow_dispatch:" in source
     assert "\n  push:" in source
-    assert f"      - {P3A_BRANCH}\n" in source
-    assert f"      - {P3B_BRANCH}\n" in source
+    for branch in (P3A_BRANCH, P3B_BRANCH, P3C_BRANCH, P3D_BRANCH):
+        assert f"      - {branch}\n" in source
     assert "\n  pull_request:" not in source
 
 
@@ -43,6 +45,8 @@ def test_p3_non_e2e_workflow_explicitly_runs_p3_and_legacy_postgres_gates() -> N
     for test_file in (
         "tests/test_p3a_postgres_events.py",
         "tests/test_p3b_postgres_stage.py",
+        "tests/test_p3c_postgres_rolls.py",
+        "tests/test_p3d_postgres_controller.py",
         "tests/test_p2a_postgres_migration.py",
         "tests/test_p2b_postgres_workspace.py",
         "tests/test_p2e_postgres_sessions.py",
