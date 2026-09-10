@@ -67,6 +67,12 @@ class AIControllerGrantRepository:
     def _grant(row) -> StoredAIControllerGrant | None:
         return StoredAIControllerGrant(**dict(row)) if row is not None else None
 
+    @staticmethod
+    def _utc(value: datetime) -> datetime:
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+
     def get(self, grant_id: UUID) -> StoredAIControllerGrant | None:
         with self.engine.connect() as connection:
             row = connection.execute(
@@ -107,7 +113,7 @@ class AIControllerGrantRepository:
         temporary_instruction: str | None,
         now: datetime | None = None,
     ) -> StoredAIControllerGrant:
-        now = now or datetime.now(timezone.utc)
+        now = self._utc(now or datetime.now(timezone.utc))
         session = connection.execute(
             select(sessions.c.id, sessions.c.campaign_id, sessions.c.status)
             .where(sessions.c.id == session_id)
@@ -158,7 +164,7 @@ class AIControllerGrantRepository:
                 ai_controller_grants.c.seat_id == seat_id,
                 ai_controller_grants.c.status == "active",
             )
-            .values(status="revoked", revoked_at=now)
+            .values(status="revoked", revoked_at=now, temporary_instruction=None)
         )
         generation = int(seat["controller_epoch"]) + 1
         connection.execute(
@@ -209,7 +215,7 @@ class AIControllerGrantRepository:
         caller_access_session_id: UUID,
         now: datetime | None = None,
     ) -> StoredAIControllerGrant:
-        now = now or datetime.now(timezone.utc)
+        now = self._utc(now or datetime.now(timezone.utc))
         self._active_access(connection, caller_access_session_id, room_id)
         seat = connection.execute(
             select(campaign_seats)
@@ -269,7 +275,7 @@ class AIControllerGrantRepository:
         target_access_session_id: UUID,
         now: datetime | None = None,
     ) -> StoredAIControllerGrant:
-        now = now or datetime.now(timezone.utc)
+        now = self._utc(now or datetime.now(timezone.utc))
         self._active_access(connection, target_access_session_id, room_id)
         seat = connection.execute(
             select(campaign_seats)
@@ -299,6 +305,8 @@ class AIControllerGrantRepository:
             grant is None
             or grant.status != "active"
             or grant.session_id != session_id
+            or grant.seat_id != seat_id
+            or grant.campaign_id != campaign_id
             or grant.generation != int(seat["controller_epoch"])
         ):
             raise AIControllerHandoffPersistenceError("Current AI grant is stale")
@@ -333,7 +341,8 @@ class AIControllerGrantRepository:
         expires_at: datetime,
         now: datetime | None = None,
     ) -> StoredAIControllerGrant:
-        now = now or datetime.now(timezone.utc)
+        now = self._utc(now or datetime.now(timezone.utc))
+        expires_at = self._utc(expires_at)
         if expires_at <= now:
             raise AIControllerHandoffPersistenceError("pre-session AI DM grant must have a future expiry")
         with self.engine.begin() as connection:
@@ -378,7 +387,7 @@ class AIControllerGrantRepository:
                     ai_controller_grants.c.seat_id == seat_id,
                     ai_controller_grants.c.status == "active",
                 )
-                .values(status="revoked", revoked_at=now)
+                .values(status="revoked", revoked_at=now, temporary_instruction=None)
             )
             generation = int(seat["controller_epoch"]) + 1
             connection.execute(
@@ -425,7 +434,7 @@ class AIControllerGrantRepository:
         now: datetime | None = None,
         touch: bool = False,
     ) -> StoredAIControllerScope:
-        now = now or datetime.now(timezone.utc)
+        now = self._utc(now or datetime.now(timezone.utc))
         with self.engine.begin() if touch else self.engine.connect() as connection:
             row = connection.execute(
                 select(ai_controller_grants).where(ai_controller_grants.c.id == grant_id)
@@ -460,10 +469,15 @@ class AIControllerGrantRepository:
                 active_campaign_id = connection.scalar(
                     select(rooms.c.active_campaign_id).where(rooms.c.id == grant.room_id)
                 )
+                expires_at = (
+                    self._utc(grant.pre_session_expires_at)
+                    if grant.pre_session_expires_at is not None
+                    else None
+                )
                 if (
                     grant.role != "dm"
-                    or grant.pre_session_expires_at is None
-                    or grant.pre_session_expires_at <= now
+                    or expires_at is None
+                    or expires_at <= now
                     or campaign.status != "active"
                     or active_campaign_id != grant.campaign_id
                 ):
@@ -499,7 +513,11 @@ class AIControllerGrantRepository:
                             session_participants.c.left_at.is_(None),
                         )
                     ).one_or_none()
-                    if participant is None or participant.role_snapshot != "player":
+                    if (
+                        participant is None
+                        or participant.role_snapshot != "player"
+                        or participant.active_character_id is None
+                    ):
                         raise AIControllerGrantUnauthorizedPersistenceError("AI Player is not a live participant")
                     active_character_id = participant.active_character_id
             if touch:
@@ -522,7 +540,7 @@ class AIControllerGrantRepository:
         session_id: UUID,
         now: datetime | None = None,
     ) -> None:
-        now = now or datetime.now(timezone.utc)
+        now = self._utc(now or datetime.now(timezone.utc))
         connection.execute(
             update(ai_controller_grants)
             .where(
