@@ -10,6 +10,7 @@ from app.api.rooms import router as rooms_router
 from app.config import settings
 from app.content import load_default_content_registry
 from app.db import database_is_ready
+from app.mcp import router as mcp_router
 from app.persistence.rooms.workspace import RoomWorkspaceAssociationConflictError
 
 content_registry = load_default_content_registry()
@@ -19,6 +20,7 @@ app.state.distribution_channel = "web"
 app.include_router(reference_router)
 app.include_router(content_presentation_router)
 app.include_router(rooms_router)
+app.include_router(mcp_router)
 app.include_router(create_meta_router("web"))
 register_exception_handlers(app)
 
