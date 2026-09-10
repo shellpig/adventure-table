@@ -6,12 +6,13 @@ from typing import Iterable
 from uuid import UUID, uuid4
 
 from sqlalchemy import and_, delete, insert, select, update
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 
 from app.persistence.characters import characters
 from app.persistence.rooms.tables import (
     active_character_session_leases,
+    ai_controller_grants,
     campaign_roster_entries,
     campaign_seats,
     campaigns,
@@ -250,6 +251,128 @@ class SessionRepository:
             raise RuntimeError("created Session could not be reloaded")
         return stored
 
+    @staticmethod
+    def _lobby_participants(
+        connection: Connection,
+        *,
+        campaign_id: UUID,
+        seat_rows,
+        dm_seat_id: UUID,
+    ) -> list[ParticipantSeed]:
+        participants: list[ParticipantSeed] = []
+        for row in seat_rows:
+            if row["id"] == dm_seat_id:
+                continue
+            role = row["role"]
+            character_id = row["selected_character_id"]
+            if role == "player":
+                if character_id is None:
+                    continue
+                eligibility = connection.execute(
+                    select(campaign_roster_entries.c.status, characters.c.archived_at)
+                    .select_from(
+                        campaign_roster_entries
+                        .join(campaigns, campaigns.c.id == campaign_roster_entries.c.campaign_id)
+                        .join(
+                            room_characters,
+                            and_(
+                                room_characters.c.character_id
+                                == campaign_roster_entries.c.character_id,
+                                room_characters.c.room_id == campaigns.c.room_id,
+                            ),
+                        )
+                        .join(
+                            characters,
+                            characters.c.id == campaign_roster_entries.c.character_id,
+                        )
+                    )
+                    .where(
+                        campaign_roster_entries.c.campaign_id == campaign_id,
+                        campaign_roster_entries.c.character_id == character_id,
+                    )
+                    .with_for_update()
+                ).one_or_none()
+                if (
+                    eligibility is None
+                    or eligibility.status not in {"active", "inactive"}
+                    or eligibility.archived_at is not None
+                ):
+                    raise SessionStartPersistenceError(
+                        f"Player Seat {row['id']} has an unavailable Character"
+                    )
+                participants.append(
+                    ParticipantSeed(
+                        seat_id=row["id"],
+                        role_snapshot="player",
+                        controller_kind_at_join=row["controller_kind"],
+                        controller_access_session_id_at_join=row[
+                            "controller_access_session_id"
+                        ],
+                        controller_ai_grant_id_at_join=row["ai_controller_grant_id"],
+                        controller_generation_at_join=(
+                            int(row["controller_epoch"])
+                            if row["controller_kind"] == "ai"
+                            else None
+                        ),
+                        active_character_id=character_id,
+                    )
+                )
+            elif role == "spectator" and row["controller_kind"] == "human":
+                participants.append(
+                    ParticipantSeed(
+                        seat_id=row["id"],
+                        role_snapshot="spectator",
+                        controller_kind_at_join="human",
+                        controller_access_session_id_at_join=row[
+                            "controller_access_session_id"
+                        ],
+                        active_character_id=None,
+                    )
+                )
+        return participants
+
+    @staticmethod
+    def _lock_start_scope(
+        connection: Connection,
+        *,
+        room_id: UUID,
+        campaign_id: UUID,
+    ):
+        campaign = connection.execute(
+            select(campaigns.c.id, campaigns.c.room_id, campaigns.c.status)
+            .where(campaigns.c.id == campaign_id)
+            .with_for_update()
+        ).one_or_none()
+        if campaign is None or campaign.room_id != room_id:
+            raise SessionStartPersistenceError("Campaign is not in this Room")
+        if campaign.status != "active":
+            raise SessionStartPersistenceError("Campaign must be active")
+        active_campaign_id = connection.scalar(
+            select(rooms.c.active_campaign_id)
+            .where(rooms.c.id == room_id)
+            .with_for_update()
+        )
+        if active_campaign_id != campaign_id:
+            raise SessionStartPersistenceError(
+                "Campaign must be selected as the Room's active Campaign"
+            )
+        if connection.scalar(
+            select(sessions.c.id).where(
+                sessions.c.campaign_id == campaign_id,
+                sessions.c.status == "active",
+            )
+        ) is not None:
+            raise SessionAlreadyActivePersistenceError(str(campaign_id))
+        return connection.execute(
+            select(campaign_seats)
+            .where(
+                campaign_seats.c.campaign_id == campaign_id,
+                campaign_seats.c.archived_at.is_(None),
+            )
+            .order_by(campaign_seats.c.created_at, campaign_seats.c.id)
+            .with_for_update()
+        ).mappings().all()
+
     def start_from_lobby(
         self,
         *,
@@ -262,34 +385,11 @@ class SessionRepository:
         now = datetime.now(timezone.utc)
         try:
             with self.engine.begin() as connection:
-                campaign = connection.execute(
-                    select(campaigns.c.id, campaigns.c.room_id, campaigns.c.status)
-                    .where(campaigns.c.id == campaign_id)
-                    .with_for_update()
-                ).one_or_none()
-                if campaign is None or campaign.room_id != room_id:
-                    raise SessionStartPersistenceError("Campaign is not in this Room")
-                if campaign.status != "active":
-                    raise SessionStartPersistenceError("Campaign must be active")
-
-                active_campaign_id = connection.scalar(
-                    select(rooms.c.active_campaign_id)
-                    .where(rooms.c.id == room_id)
-                    .with_for_update()
+                seat_rows = self._lock_start_scope(
+                    connection,
+                    room_id=room_id,
+                    campaign_id=campaign_id,
                 )
-                if active_campaign_id != campaign_id:
-                    raise SessionStartPersistenceError(
-                        "Campaign must be selected as the Room's active Campaign"
-                    )
-
-                if connection.scalar(
-                    select(sessions.c.id).where(
-                        sessions.c.campaign_id == campaign_id,
-                        sessions.c.status == "active",
-                    )
-                ) is not None:
-                    raise SessionAlreadyActivePersistenceError(str(campaign_id))
-
                 access = connection.execute(
                     select(
                         room_access_sessions.c.id,
@@ -308,16 +408,6 @@ class SessionRepository:
                     raise SessionStartControllerMismatchPersistenceError(
                         "Start requires an active DM or Owner Room access session"
                     )
-
-                seat_rows = connection.execute(
-                    select(campaign_seats)
-                    .where(
-                        campaign_seats.c.campaign_id == campaign_id,
-                        campaign_seats.c.archived_at.is_(None),
-                    )
-                    .order_by(campaign_seats.c.created_at, campaign_seats.c.id)
-                    .with_for_update()
-                ).mappings().all()
                 dm_seat = next(
                     (
                         row
@@ -332,7 +422,6 @@ class SessionRepository:
                     raise SessionStartControllerMismatchPersistenceError(
                         "Caller is not the Owner-assigned Human DM Seat controller"
                     )
-
                 participants = [
                     ParticipantSeed(
                         seat_id=dm_seat["id"],
@@ -340,78 +429,14 @@ class SessionRepository:
                         controller_kind_at_join="human",
                         controller_access_session_id_at_join=caller_access_session_id,
                         active_character_id=None,
-                    )
+                    ),
+                    *self._lobby_participants(
+                        connection,
+                        campaign_id=campaign_id,
+                        seat_rows=seat_rows,
+                        dm_seat_id=dm_seat["id"],
+                    ),
                 ]
-                for row in seat_rows:
-                    if row["id"] == dm_seat["id"]:
-                        continue
-                    role = row["role"]
-                    character_id = row["selected_character_id"]
-                    if role == "player":
-                        if character_id is None:
-                            continue
-                        eligibility = connection.execute(
-                            select(campaign_roster_entries.c.status, characters.c.archived_at)
-                            .select_from(
-                                campaign_roster_entries
-                                .join(campaigns, campaigns.c.id == campaign_roster_entries.c.campaign_id)
-                                .join(
-                                    room_characters,
-                                    and_(
-                                        room_characters.c.character_id
-                                        == campaign_roster_entries.c.character_id,
-                                        room_characters.c.room_id == campaigns.c.room_id,
-                                    ),
-                                )
-                                .join(
-                                    characters,
-                                    characters.c.id == campaign_roster_entries.c.character_id,
-                                )
-                            )
-                            .where(
-                                campaign_roster_entries.c.campaign_id == campaign_id,
-                                campaign_roster_entries.c.character_id == character_id,
-                            )
-                            .with_for_update()
-                        ).one_or_none()
-                        if (
-                            eligibility is None
-                            or eligibility.status not in {"active", "inactive"}
-                            or eligibility.archived_at is not None
-                        ):
-                            raise SessionStartPersistenceError(
-                                f"Player Seat {row['id']} has an unavailable Character"
-                            )
-                        participants.append(
-                            ParticipantSeed(
-                                seat_id=row["id"],
-                                role_snapshot="player",
-                                controller_kind_at_join=row["controller_kind"],
-                                controller_access_session_id_at_join=(
-                                    row["controller_access_session_id"]
-                                ),
-                                controller_ai_grant_id_at_join=row["ai_controller_grant_id"],
-                                controller_generation_at_join=(
-                                    row["controller_epoch"]
-                                    if row["controller_kind"] == "ai"
-                                    else None
-                                ),
-                                active_character_id=character_id,
-                            )
-                        )
-                    elif role == "spectator" and row["controller_kind"] == "human":
-                        participants.append(
-                            ParticipantSeed(
-                                seat_id=row["id"],
-                                role_snapshot="spectator",
-                                controller_kind_at_join="human",
-                                controller_access_session_id_at_join=(
-                                    row["controller_access_session_id"]
-                                ),
-                                active_character_id=None,
-                            )
-                        )
-
                 self._insert_session_rows(
                     connection,
                     session_id=session_id,
@@ -433,6 +458,119 @@ class SessionRepository:
         stored = self.get(session_id)
         if stored is None:
             raise RuntimeError("started Session could not be reloaded")
+        return stored
+
+    def start_from_ai_dm_grant(
+        self,
+        *,
+        room_id: UUID,
+        campaign_id: UUID,
+        grant_id: UUID,
+        generation: int,
+    ) -> StoredSession:
+        session_id = uuid4()
+        now = datetime.now(timezone.utc)
+        try:
+            with self.engine.begin() as connection:
+                seat_rows = self._lock_start_scope(
+                    connection,
+                    room_id=room_id,
+                    campaign_id=campaign_id,
+                )
+                grant = connection.execute(
+                    select(ai_controller_grants)
+                    .where(ai_controller_grants.c.id == grant_id)
+                    .with_for_update()
+                ).mappings().one_or_none()
+                if (
+                    grant is None
+                    or grant["status"] != "active"
+                    or grant["role"] != "dm"
+                    or grant["room_id"] != room_id
+                    or grant["campaign_id"] != campaign_id
+                    or grant["session_id"] is not None
+                    or grant["pre_session_expires_at"] is None
+                    or grant["pre_session_expires_at"] <= now
+                    or int(grant["generation"]) != int(generation)
+                ):
+                    raise SessionStartControllerMismatchPersistenceError(
+                        "AI DM grant is expired, stale, or already bound"
+                    )
+                dm_seat = next(
+                    (
+                        row
+                        for row in seat_rows
+                        if row["id"] == grant["seat_id"]
+                        and row["role"] == "dm"
+                        and row["controller_kind"] == "ai"
+                        and row["ai_controller_grant_id"] == grant_id
+                        and int(row["controller_epoch"]) == int(generation)
+                    ),
+                    None,
+                )
+                if dm_seat is None:
+                    raise SessionStartControllerMismatchPersistenceError(
+                        "AI DM grant is not the current DM Seat binding"
+                    )
+                participants = [
+                    ParticipantSeed(
+                        seat_id=dm_seat["id"],
+                        role_snapshot="dm",
+                        controller_kind_at_join="ai",
+                        controller_access_session_id_at_join=None,
+                        controller_ai_grant_id_at_join=grant_id,
+                        controller_generation_at_join=int(generation),
+                        active_character_id=None,
+                    ),
+                    *self._lobby_participants(
+                        connection,
+                        campaign_id=campaign_id,
+                        seat_rows=seat_rows,
+                        dm_seat_id=dm_seat["id"],
+                    ),
+                ]
+                self._insert_session_rows(
+                    connection,
+                    session_id=session_id,
+                    campaign_id=campaign_id,
+                    dm_seat_id=dm_seat["id"],
+                    dm_controller_kind="ai",
+                    dm_controller_access_session_id=None,
+                    dm_controller_ai_grant_id=grant_id,
+                    dm_controller_generation=int(generation),
+                    participants=participants,
+                    now=now,
+                )
+                bound = connection.execute(
+                    update(ai_controller_grants)
+                    .where(
+                        ai_controller_grants.c.id == grant_id,
+                        ai_controller_grants.c.status == "active",
+                        ai_controller_grants.c.session_id.is_(None),
+                        ai_controller_grants.c.generation == int(generation),
+                    )
+                    .values(
+                        session_id=session_id,
+                        pre_session_expires_at=None,
+                        bound_at=now,
+                        last_seen_at=now,
+                    )
+                )
+                if bound.rowcount != 1:
+                    raise SessionStartControllerMismatchPersistenceError(
+                        "AI DM grant could not be bound exactly once"
+                    )
+        except (
+            CharacterAlreadyLeasedPersistenceError,
+            SessionAlreadyActivePersistenceError,
+            SessionStartPersistenceError,
+        ):
+            raise
+        except IntegrityError as exc:
+            raise SessionPersistenceConflictError(str(exc)) from exc
+        stored = self.get(session_id)
+        if stored is None:
+            raise RuntimeError("AI DM started Session could not be reloaded")
         return stored
 
     def add_participant(
@@ -488,28 +626,56 @@ class SessionRepository:
             raise RuntimeError("created Session participant could not be reloaded")
         return stored
 
-    def finalize(self, session_id: UUID, *, status: str) -> StoredSession | None:
+    def finalize_in_transaction(
+        self,
+        connection: Connection,
+        *,
+        session_id: UUID,
+        status: str,
+        now: datetime | None = None,
+    ) -> bool:
         if status not in {"ended", "abandoned"}:
             raise ValueError("final Session status must be ended or abandoned")
-        now = datetime.now(timezone.utc)
+        now = now or datetime.now(timezone.utc)
+        row = connection.execute(
+            select(sessions.c.status)
+            .where(sessions.c.id == session_id)
+            .with_for_update()
+        ).one_or_none()
+        if row is None or row.status != "active":
+            return False
+        connection.execute(
+            update(ai_controller_grants)
+            .where(
+                ai_controller_grants.c.session_id == session_id,
+                ai_controller_grants.c.status == "active",
+            )
+            .values(
+                status="revoked",
+                revoked_at=now,
+                temporary_instruction=None,
+            )
+        )
+        connection.execute(
+            update(sessions)
+            .where(sessions.c.id == session_id)
+            .values(status=status, ended_at=now)
+        )
+        connection.execute(
+            delete(active_character_session_leases).where(
+                active_character_session_leases.c.session_id == session_id
+            )
+        )
+        return True
+
+    def finalize(self, session_id: UUID, *, status: str) -> StoredSession | None:
         with self.engine.begin() as connection:
-            row = connection.execute(
-                select(sessions.c.status)
-                .where(sessions.c.id == session_id)
-                .with_for_update()
-            ).one_or_none()
-            if row is None or row.status != "active":
+            if not self.finalize_in_transaction(
+                connection,
+                session_id=session_id,
+                status=status,
+            ):
                 return None
-            connection.execute(
-                update(sessions)
-                .where(sessions.c.id == session_id)
-                .values(status=status, ended_at=now)
-            )
-            connection.execute(
-                delete(active_character_session_leases).where(
-                    active_character_session_leases.c.session_id == session_id
-                )
-            )
         return self.get(session_id)
 
 
