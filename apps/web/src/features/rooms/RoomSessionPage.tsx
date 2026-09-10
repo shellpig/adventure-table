@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { listRoomCharacters, type RoomCharacterSummary } from '../../api/campaigns'
 import { heartbeatRoom } from '../../api/rooms'
@@ -23,6 +23,7 @@ import {
 import {
   applySessionEventPage,
   eventStreamFromResume,
+  mergeResumeStream,
   type SessionEventStreamState,
 } from './sessionEventStream'
 import { SessionTableSurface } from './SessionTableSurface'
@@ -90,6 +91,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   const [lateJoinSeatId, setLateJoinSeatId] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const reloadGeneration = useRef(0)
   const handleSessionTableError = useCallback(
     (cause: unknown) => setError(sessionErrorMessage(cause, copy)),
     [copy],
@@ -101,23 +103,30 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   // Full Resume is initial/lifecycle only. Table changes continue through the
   // durable incremental cursor; heartbeat intentionally stays lightweight.
   const reload = async () => {
+    // Resume reads race each other: React re-runs the mount effect, and every
+    // lifecycle mutation reloads too. Only the newest one may write, so a slow
+    // earlier read cannot overwrite fresher Session truth.
+    const generation = reloadGeneration.current + 1
+    reloadGeneration.current = generation
     const [nextSession, nextLobby, nextCharacters, nextResume] = await Promise.all([
       getSession(roomId, campaignId, sessionId, token),
       optionalLobby(),
       listRoomCharacters(roomId, token),
       getActiveSession(roomId, campaignId, token),
     ])
+    if (generation !== reloadGeneration.current) return
     setSnapshot(nextSession)
     setLobby(nextLobby)
     setCharacters(nextCharacters)
     setCallerAccessSessionId(nextResume.caller_access_session_id)
     setResumeSeats(nextResume.active_session?.id === sessionId ? nextResume.seats : [])
     setInitialStage(nextResume.active_session?.id === sessionId ? (nextResume.stage ?? null) : null)
-    setEventStream(
+    setEventStream((current) => mergeResumeStream(
+      current,
       nextResume.active_session?.id === sessionId
         ? eventStreamFromResume(nextResume)
         : null,
-    )
+    ))
   }
 
   useEffect(() => {

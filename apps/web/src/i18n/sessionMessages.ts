@@ -19,9 +19,28 @@ export const P3B_SESSION_REQUEST_CODES = [
   'stage_revision_conflict',
 ] as const
 
+export const P3C_SESSION_REQUEST_CODES = [
+  'validation_failed',
+  'roll_request_not_found',
+  'roll_request_already_resolved',
+  'invalid_roll_input',
+  'roll_character_not_found',
+  'pending_action_not_found',
+  'pending_action_invalid_transition',
+  'pending_action_version_conflict',
+  'pending_action_invalid_roll_binding',
+  'table_state_subject_stale',
+  'character_not_found',
+  'character_archived',
+  'stale_build_version',
+  'state_write_conflict',
+  'invalid_character_state',
+] as const
+
 export const SESSION_REQUEST_CODES = [
   ...P2E_SESSION_REQUEST_CODES,
   ...P3B_SESSION_REQUEST_CODES,
+  ...P3C_SESSION_REQUEST_CODES,
 ] as const
 
 export type SessionRequestCode = (typeof SESSION_REQUEST_CODES)[number]
@@ -78,6 +97,66 @@ export const SESSION_REQUEST_CODE_MESSAGES: Record<SessionRequestCode, Record<Lo
   stage_revision_conflict: {
     'zh-TW': '舞台已被另一個頁面更新，請重新整理後再編輯。',
     en: 'The Stage changed in another editor. Refresh before editing again.',
+  },
+  validation_failed: {
+    'zh-TW': '輸入格式或欄位內容無效，請檢查後再試。',
+    en: 'The request contains invalid fields or values. Check the input and try again.',
+  },
+  roll_request_not_found: {
+    'zh-TW': '找不到這個正式 RollRequest，請重新整理骰子面板。',
+    en: 'This formal RollRequest no longer exists. Refresh the Dice panel.',
+  },
+  roll_request_already_resolved: {
+    'zh-TW': '這個正式 RollRequest 已經完成，不能再次提交結果。',
+    en: 'This formal RollRequest is already resolved and cannot be submitted again.',
+  },
+  invalid_roll_input: {
+    'zh-TW': '擲骰輸入無效；請確認實體骰原始值與優勢／劣勢所需骰數。',
+    en: 'The roll input is invalid. Check raw physical dice and advantage/disadvantage requirements.',
+  },
+  roll_character_not_found: {
+    'zh-TW': '這個檢定綁定的角色已無法使用，請由 DM 重新建立檢定。',
+    en: 'The Character bound to this Check is unavailable. Ask the DM to create a new Check.',
+  },
+  pending_action_not_found: {
+    'zh-TW': '找不到這個 PendingAction，請重新整理目前行動狀態。',
+    en: 'This PendingAction no longer exists. Refresh the current action state.',
+  },
+  pending_action_invalid_transition: {
+    'zh-TW': '這個 PendingAction 不能切換到要求的狀態。',
+    en: 'This PendingAction cannot move to the requested status.',
+  },
+  pending_action_version_conflict: {
+    'zh-TW': '這個 PendingAction 已被其他操作更新，請重新整理後再試。',
+    en: 'This PendingAction changed in another operation. Refresh before trying again.',
+  },
+  pending_action_invalid_roll_binding: {
+    'zh-TW': '這個 PendingAction 無法綁定指定的正式檢定，請重新選擇 RollRequest。',
+    en: 'This PendingAction cannot bind to that formal RollRequest. Choose a current request.',
+  },
+  table_state_subject_stale: {
+    'zh-TW': '角色座位或本場角色在提交前已改變，請重新整理角色狀態。',
+    en: 'The Seat or active Character changed before the state update committed. Refresh Character state.',
+  },
+  character_not_found: {
+    'zh-TW': '找不到這個本場角色，無法更新目前狀態。',
+    en: 'The active Character could not be found for this state update.',
+  },
+  character_archived: {
+    'zh-TW': '這個角色已封存，不能再修改目前狀態。',
+    en: 'This Character is archived and its Current State cannot be changed.',
+  },
+  stale_build_version: {
+    'zh-TW': '角色 Build 已更新；請重新整理角色資料後再修改目前狀態。',
+    en: 'The Character Build changed. Refresh the Character before updating Current State.',
+  },
+  state_write_conflict: {
+    'zh-TW': '角色目前狀態剛被其他操作更新，請重新整理後再試。',
+    en: 'Character Current State changed concurrently. Refresh before trying again.',
+  },
+  invalid_character_state: {
+    'zh-TW': '這次修改會產生不合法的角色目前狀態，請檢查輸入。',
+    en: 'This change would create invalid Character Current State. Check the input.',
   },
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import type { RoomCharacterSummary } from '../../api/campaigns'
+import { createPendingAction } from '../../api/p3c'
 import type { CampaignSeat } from '../../api/seats'
 import {
   SessionApiError,
@@ -13,12 +14,19 @@ import {
   type StageState,
   type TableEvent,
 } from '../../api/sessions'
+import { SessionCheckRequestPanel } from './SessionCheckRequestPanel'
+import { SessionQuickDicePanel } from './SessionQuickDicePanel'
+import { SessionRollRequestList } from './SessionRollRequestList'
 import {
   applyStageEvents,
   explorationEventText,
   isExplorationEvent,
   parseExplorationComposer,
 } from './sessionExploration'
+import {
+  checkIntentDisposition,
+  type CheckIntent,
+} from './sessionCheckIntent'
 import {
   MAX_SIDE_PANEL_WIDTH,
   MIN_SIDE_PANEL_WIDTH,
@@ -109,6 +117,7 @@ export function SessionTableSurface({
   const [composerText, setComposerText] = useState('')
   const [composerPending, setComposerPending] = useState(false)
   const [composerHint, setComposerHint] = useState<string | null>(null)
+  const [checkDraft, setCheckDraft] = useState<CheckIntent | null>(null)
   const [sidePanelWidth, setSidePanelWidth] = useState(() => readSidePanelWidth())
   const layoutRef = useRef<HTMLDivElement>(null)
 
@@ -144,14 +153,16 @@ export function SessionTableSurface({
     ),
     [snapshot.participants],
   )
-  const subjectParticipants = useMemo(
+  const controlledParticipants = useMemo(
     () => playerParticipants.filter(
-      (participant) => isCurrentDm || (
-        callerAccessSessionId !== null &&
-        participant.controller_access_session_id_at_join === callerAccessSessionId
-      ),
+      (participant) => callerAccessSessionId !== null &&
+        participant.controller_access_session_id_at_join === callerAccessSessionId,
     ),
-    [playerParticipants, isCurrentDm, callerAccessSessionId],
+    [playerParticipants, callerAccessSessionId],
+  )
+  const subjectParticipants = useMemo(
+    () => isCurrentDm ? playerParticipants : controlledParticipants,
+    [playerParticipants, controlledParticipants, isCurrentDm],
   )
 
   useEffect(() => {
@@ -243,12 +254,36 @@ export function SessionTableSurface({
       composerKind,
       subjectSeatId || null,
     )
-    if (parsed.type === 'blocked_check') {
-      setComposerHint(copy.checkDeferred)
-      return
-    }
     if (parsed.type === 'invalid') {
       setComposerHint(parsed.reason === 'missing_subject' ? copy.subjectRequired : copy.composerPlaceholder)
+      return
+    }
+    if (parsed.type === 'check_intent') {
+      const disposition = checkIntentDisposition(isCurrentDm, parsed)
+      if (disposition.type === 'dm_request_check') {
+        setCheckDraft(disposition.draft)
+        setTab('dice')
+        return
+      }
+      setComposerPending(true)
+      try {
+        await createPendingAction(
+          roomId,
+          campaignId,
+          sessionId,
+          {
+            ...disposition.input,
+            idempotency_key: requestId('check-intent'),
+          },
+          token,
+        )
+        setComposerText('')
+        setComposerHint(copy.checkDeferred)
+      } catch (cause) {
+        onError(cause)
+      } finally {
+        setComposerPending(false)
+      }
       return
     }
     setComposerPending(true)
@@ -426,7 +461,46 @@ export function SessionTableSurface({
               </div>
             </div>
           ) : tab === 'dice' ? (
-            <div className="session-side-panel__placeholder"><p>{copy.dicePlaceholder}</p></div>
+            <div className="session-dice-panel">
+              {isCurrentDm ? (
+                <SessionCheckRequestPanel
+                  roomId={roomId}
+                  campaignId={campaignId}
+                  sessionId={sessionId}
+                  token={token}
+                  targets={playerParticipants.map((participant) => ({
+                    seatId: participant.seat_id,
+                    label: `${seatLabel(participant.seat_id)} · ${characterName(participant.active_character_id)}`,
+                  }))}
+                  intent={checkDraft}
+                  copy={copy}
+                  onError={onError}
+                />
+              ) : <p>{copy.dicePlaceholder}</p>}
+              <SessionRollRequestList
+                roomId={roomId}
+                campaignId={campaignId}
+                sessionId={sessionId}
+                token={token}
+                isCurrentDm={isCurrentDm}
+                controlledSeatIds={controlledParticipants.map((participant) => participant.seat_id)}
+                events={events}
+                copy={copy}
+                onError={onError}
+              />
+              <SessionQuickDicePanel
+                roomId={roomId}
+                campaignId={campaignId}
+                sessionId={sessionId}
+                token={token}
+                targets={controlledParticipants.map((participant) => ({
+                  seatId: participant.seat_id,
+                  label: `${seatLabel(participant.seat_id)} · ${characterName(participant.active_character_id)}`,
+                }))}
+                copy={copy}
+                onError={onError}
+              />
+            </div>
           ) : (
             <div className="session-log">
               {events.slice(-100).map((event) => (

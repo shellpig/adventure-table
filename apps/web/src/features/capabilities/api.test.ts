@@ -10,6 +10,7 @@ const flags = {
   session: false,
   seat: false,
   table_runtime: false,
+  roll_check: false,
   combat: false,
   timeline: false,
   ai_actor: false,
@@ -35,6 +36,15 @@ describe('capability API contract', () => {
       capabilities: incomplete,
       database_path: null,
     })).toThrow(/table_runtime/)
+  })
+
+  it('requires the P3-C roll_check flag so the web/standalone boundary cannot drift', () => {
+    const { roll_check: _missing, ...incomplete } = flags
+    expect(() => parseCapabilitySnapshot({
+      channel: 'web',
+      capabilities: incomplete,
+      database_path: null,
+    })).toThrow(/roll_check/)
   })
 
   it('rejects an incomplete capability table so existing server keys cannot silently disappear', () => {

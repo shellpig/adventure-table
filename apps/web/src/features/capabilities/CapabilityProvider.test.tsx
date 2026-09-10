@@ -19,6 +19,7 @@ const STANDALONE: CapabilitySnapshot = {
     session: false,
     seat: false,
     table_runtime: false,
+    roll_check: false,
     combat: false,
     timeline: false,
     ai_actor: false,
@@ -60,6 +61,7 @@ describe('capability provider', () => {
     expect(DEFAULT_WEB_CAPABILITIES.capabilities.seat).toBe(false)
     expect(DEFAULT_WEB_CAPABILITIES.capabilities.session).toBe(false)
     expect(DEFAULT_WEB_CAPABILITIES.capabilities.table_runtime).toBe(false)
+    expect(DEFAULT_WEB_CAPABILITIES.capabilities.roll_check).toBe(false)
     expect(CAPABILITY_FETCH_FALLBACK.capabilities.character_builder).toBe(true)
     expect(CAPABILITY_FETCH_FALLBACK.capabilities.character_import_export).toBe(true)
     for (const capability of [
@@ -68,6 +70,7 @@ describe('capability provider', () => {
       'session',
       'seat',
       'table_runtime',
+      'roll_check',
       'combat',
       'timeline',
       'ai_actor',

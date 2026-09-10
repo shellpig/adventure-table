@@ -53,10 +53,16 @@ describe('P3-B exploration composer', () => {
     })
   })
 
-  it('blocks check ownership and never manufactures a roll request', () => {
-    expect(parseExplorationComposer('/check perception', 'action', SUBJECT)).toEqual({
-      type: 'blocked_check',
+  it('projects /check as intent without manufacturing a formal roll request', () => {
+    const parsed = parseExplorationComposer('/check perception', 'action', SUBJECT)
+    expect(parsed).toEqual({
+      type: 'check_intent',
+      subject_seat_id: SUBJECT,
+      text: 'perception',
     })
+    const serialized = JSON.stringify(parsed)
+    expect(serialized).not.toContain('roll_request')
+    expect(serialized).not.toContain('roll_result')
     expect(JSON.stringify(parseExplorationComposer('/search room', 'action', SUBJECT))).not.toContain('roll')
   })
 

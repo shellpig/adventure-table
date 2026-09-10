@@ -1,4 +1,5 @@
 import type { Campaign } from './campaigns'
+import type { PendingActionView, RollRequestView } from './p3c'
 import type { RoomSummary } from './rooms'
 import type { CampaignSeat } from './seats'
 
@@ -117,6 +118,8 @@ export type SessionResume = {
   table_runtime?: TableRuntimeCursor | null
   recent_events?: TableEventPage | null
   stage?: StageState | null
+  roll_requests?: RollRequestView[]
+  pending_actions?: PendingActionView[]
 }
 
 type ApiErrorPayload = { error?: { code?: string; message?: string } }

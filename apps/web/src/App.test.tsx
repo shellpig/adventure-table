@@ -26,6 +26,7 @@ const STANDALONE: CapabilitySnapshot = {
     session: false,
     seat: false,
     table_runtime: false,
+    roll_check: false,
     combat: false,
     timeline: false,
     ai_actor: false,

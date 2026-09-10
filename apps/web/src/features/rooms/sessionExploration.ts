@@ -7,7 +7,7 @@ import type {
 
 export type ComposerParseResult =
   | { type: 'request'; request: ExplorationInputRequest }
-  | { type: 'blocked_check' }
+  | { type: 'check_intent'; text: string; subject_seat_id: string }
   | { type: 'invalid'; reason: 'empty' | 'missing_subject' }
 
 const slashPattern = /^\/(action|search|whisper|ooc|check)(?:\s+|$)/i
@@ -31,8 +31,11 @@ export function parseExplorationComposer(
   if (match) {
     const command = match[1].toLowerCase()
     text = trimmed.slice(match[0].length).trim()
-    if (command === 'check') return { type: 'blocked_check' }
     if (!text) return { type: 'invalid', reason: 'empty' }
+    if (command === 'check') {
+      if (!subjectSeatId) return { type: 'invalid', reason: 'missing_subject' }
+      return { type: 'check_intent', text, subject_seat_id: subjectSeatId }
+    }
     if (command === 'action' || command === 'search') {
       kind = 'action'
       sourceCommand = command === 'search' ? 'search' : null

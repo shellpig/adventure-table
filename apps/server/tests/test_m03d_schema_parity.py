@@ -35,6 +35,10 @@ FORBIDDEN_MULTIPLAYER_TABLES = {
     "session_messages",
     "room_stage_images",
     "session_stages",
+    "roll_groups",
+    "roll_requests",
+    "roll_results",
+    "pending_actions",
 }
 
 

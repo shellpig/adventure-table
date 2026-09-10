@@ -23,21 +23,47 @@ function mergeEvents(current: TableEvent[], incoming: TableEvent[]): TableEvent[
     .slice(-MAX_BUFFERED_EVENTS)
 }
 
+export function mergeResumeStream(
+  current: SessionEventStreamState | null,
+  next: SessionEventStreamState | null,
+): SessionEventStreamState | null {
+  if (next === null || current === null || current.sessionId !== next.sessionId) return next
+  // A Resume that resolves after the incremental poll already delivered events
+  // must not erase them. The poll owns its own cursor and never re-sends a page
+  // it has handed over, so a replaced buffer would lose those events until the
+  // next full Resume.
+  return {
+    sessionId: next.sessionId,
+    cursor: Math.max(current.cursor, next.cursor),
+    currentSeq: Math.max(current.currentSeq, next.currentSeq),
+    events: mergeEvents(current.events, next.events),
+  }
+}
+
 export function eventStreamFromResume(resume: SessionResume): SessionEventStreamState | null {
   const sessionId = resume.active_session?.id
   const runtime = resume.table_runtime ?? null
   if (!sessionId || !runtime || runtime.session_id !== sessionId) return null
 
   const initialPage = resume.recent_events ?? null
+  const matchingRecentPage = initialPage?.session_id === sessionId ? initialPage : null
+  const resumeHistoryIsComplete = matchingRecentPage !== null
+    && matchingRecentPage.after_seq === 0
+    && matchingRecentPage.has_more === false
+    && matchingRecentPage.cursor >= runtime.last_event_seq
+
   return {
     sessionId,
-    // Resume carries a small recent projection for immediate paint, but a new
-    // browser session deliberately replays the durable raw cursor from zero.
-    // The server advances over invisible rows while returning only caller-visible
-    // events, so other seats' private traffic cannot dilute this caller's history.
-    cursor: 0,
-    currentSeq: Math.max(runtime.last_event_seq, initialPage?.current_seq ?? 0),
-    events: initialPage?.session_id === sessionId ? mergeEvents([], initialPage.events) : [],
+    // Resume paints a bounded recent projection immediately. We may continue
+    // directly from its cursor only when that projection proves it covered the
+    // durable history from seq 0 through the current runtime head. Otherwise a
+    // fresh browser must replay from zero so older caller-visible events cannot
+    // disappear merely because private/raw traffic pushed them outside the
+    // bounded Resume window. The reducer remains idempotent, so recent events
+    // already painted by Resume are harmlessly de-duplicated during backfill.
+    cursor: resumeHistoryIsComplete ? matchingRecentPage.cursor : 0,
+    currentSeq: Math.max(runtime.last_event_seq, matchingRecentPage?.current_seq ?? 0),
+    events: matchingRecentPage ? mergeEvents([], matchingRecentPage.events) : [],
   }
 }
 

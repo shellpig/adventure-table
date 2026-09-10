@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import type { SessionResume, TableEvent, TableEventPage } from '../../api/sessions'
-import { applySessionEventPage, eventStreamFromResume } from './sessionEventStream'
+import {
+  applySessionEventPage,
+  eventStreamFromResume,
+  mergeResumeStream,
+} from './sessionEventStream'
 
 const SESSION_ID = '30000000-0000-4000-8000-000000000001'
 
@@ -51,10 +55,10 @@ function resume(): SessionResume {
 }
 
 describe('P3 Session event cursor reducer', () => {
-  it('paints Resume recent events immediately but replays the durable cursor from zero', () => {
+  it('paints a complete Resume window and continues from its server-issued cursor', () => {
     const state = eventStreamFromResume(resume())
     expect(state).not.toBeNull()
-    expect(state?.cursor).toBe(0)
+    expect(state?.cursor).toBe(2)
     expect(state?.currentSeq).toBe(2)
     expect(state?.events.map((item) => item.seq)).toEqual([1, 2])
   })
@@ -64,7 +68,7 @@ describe('P3 Session event cursor reducer', () => {
     expect(initial).not.toBeNull()
     const page: TableEventPage = {
       session_id: SESSION_ID,
-      after_seq: 0,
+      after_seq: 2,
       cursor: 4,
       current_seq: 4,
       has_more: false,
@@ -78,7 +82,7 @@ describe('P3 Session event cursor reducer', () => {
     expect(twice.events).toHaveLength(4)
   })
 
-  it('backfills caller-visible events even when raw cursor pages contain hidden gaps', () => {
+  it('backfills caller-visible events before a bounded Resume window, including hidden raw gaps', () => {
     const longResume = resume()
     longResume.table_runtime!.last_event_seq = 120
     longResume.recent_events = {
@@ -98,7 +102,7 @@ describe('P3 Session event cursor reducer', () => {
       current_seq: 120,
       has_more: true,
       // The raw page may contain many private events for other seats. Only an
-      // older caller-visible whisper/public event survives server projection.
+      // older caller-visible event survives server audience projection.
       events: [event(12)],
     })
     const second = applySessionEventPage(first, {
@@ -110,6 +114,8 @@ describe('P3 Session event cursor reducer', () => {
       events: [event(119), event(120)],
     })
 
+    expect(initial.cursor).toBe(0)
+    expect(first.cursor).toBe(100)
     expect(second.cursor).toBe(120)
     expect(second.events.map((item) => item.seq)).toEqual([12, 119, 120])
   })
@@ -118,7 +124,7 @@ describe('P3 Session event cursor reducer', () => {
     const initial = eventStreamFromResume(resume())!
     const advanced = applySessionEventPage(initial, {
       session_id: SESSION_ID,
-      after_seq: 0,
+      after_seq: 2,
       cursor: 5,
       current_seq: 5,
       has_more: false,
@@ -146,10 +152,65 @@ describe('P3 Session event cursor reducer', () => {
     expect(advanced.cursor).toBe(5)
   })
 
+  it('falls back to durable replay when a recent projection is absent', () => {
+    const withoutRecent = resume()
+    withoutRecent.table_runtime!.last_event_seq = 9
+    withoutRecent.recent_events = null
+    const state = eventStreamFromResume(withoutRecent)
+    expect(state?.cursor).toBe(0)
+    expect(state?.currentSeq).toBe(9)
+    expect(state?.events).toEqual([])
+  })
+
+  it('falls back to durable replay when Resume cannot prove its recent page reached the runtime head', () => {
+    const incompleteRecent = resume()
+    incompleteRecent.table_runtime!.last_event_seq = 9
+    incompleteRecent.recent_events = {
+      session_id: SESSION_ID,
+      after_seq: 0,
+      cursor: 8,
+      current_seq: 9,
+      has_more: false,
+      events: [event(8)],
+    }
+    const state = eventStreamFromResume(incompleteRecent)
+    expect(state?.cursor).toBe(0)
+    expect(state?.events.map((item) => item.seq)).toEqual([8])
+  })
+
   it('does not invent an incremental stream for callers without P3 projection', () => {
     const noProjection = resume()
     noProjection.table_runtime = null
     noProjection.recent_events = null
     expect(eventStreamFromResume(noProjection)).toBeNull()
+  })
+})
+
+describe('Resume merged into a live stream', () => {
+  it('keeps poll-delivered events when a Resume resolves after them', () => {
+    const live = applySessionEventPage(eventStreamFromResume(resume())!, {
+      session_id: SESSION_ID,
+      after_seq: 2,
+      cursor: 3,
+      current_seq: 3,
+      has_more: false,
+      events: [event(3)],
+    })
+    const staleResume = resume()
+
+    const merged = mergeResumeStream(live, eventStreamFromResume(staleResume))
+
+    expect(merged?.events.map((item) => item.seq)).toEqual([1, 2, 3])
+    expect(merged?.cursor).toBe(3)
+    expect(merged?.currentSeq).toBe(3)
+  })
+
+  it('replaces the stream for a different Session or a caller without projection', () => {
+    const live = eventStreamFromResume(resume())!
+    const otherSession = { ...live, sessionId: '30000000-0000-4000-8000-000000000002' }
+
+    expect(mergeResumeStream(live, otherSession)).toEqual(otherSession)
+    expect(mergeResumeStream(live, null)).toBeNull()
+    expect(mergeResumeStream(null, live)).toEqual(live)
   })
 })
