@@ -11,7 +11,7 @@ from app.domain.rooms.ai_controller_tokens import (
     parse_ai_controller_token,
     verify_ai_controller_secret,
 )
-from app.domain.rooms.schemas import RoomAccessContext, StrictModel
+from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext, StrictModel
 from app.domain.rooms.table_events import TableActorContext, TableActorKind, TableEventService
 from app.persistence.rooms.ai_controllers import (
     AIControllerGrantRepository,
@@ -211,6 +211,13 @@ class AIControllerService:
     ) -> None:
         if admin_context.room_id != room_id:
             raise AIControllerHandoffError("Room scope mismatch")
+        if admin_context.authority not in {
+            RoomAccessAuthority.OWNER,
+            RoomAccessAuthority.DM,
+        }:
+            raise AIControllerHandoffError(
+                "Administrative reassignment requires active Owner or DM authority"
+            )
 
         def projection(connection, _event_id, _seq) -> None:
             self.repository.admin_reassign_in_transaction(
@@ -219,6 +226,7 @@ class AIControllerService:
                 campaign_id=campaign_id,
                 session_id=session_id,
                 seat_id=seat_id,
+                admin_access_session_id=admin_context.access_session_id,
                 target_access_session_id=target_access_session_id,
             )
 
