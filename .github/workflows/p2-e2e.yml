@@ -2,9 +2,6 @@ name: P2 Full-Stack E2E
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - p3-c-roll-check-pending-action
 
 jobs:
   playwright:
@@ -49,17 +46,12 @@ jobs:
           curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:8000/ready
           curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:5173
 
-      - name: Run Playwright journey
+      - name: Run complete P2 Playwright suite
         working-directory: apps/web
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:5173
           PLAYWRIGHT_API_BASE_URL: http://127.0.0.1:8000
-        run: |
-          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_NAME" = "p3-c-roll-check-pending-action" ]; then
-            npm run test:e2e -- e2e/p3c-roll-check-pending-action.spec.ts
-          else
-            npm run test:e2e
-          fi
+        run: npm run test:e2e
 
       - name: Print full-stack logs on failure
         if: failure()
