@@ -482,6 +482,13 @@ class SessionRepository:
                     .where(ai_controller_grants.c.id == grant_id)
                     .with_for_update()
                 ).mappings().one_or_none()
+                expires_at = (
+                    grant["pre_session_expires_at"]
+                    if grant is not None
+                    else None
+                )
+                if expires_at is not None and expires_at.tzinfo is None:
+                    expires_at = expires_at.replace(tzinfo=timezone.utc)
                 if (
                     grant is None
                     or grant["status"] != "active"
@@ -489,8 +496,8 @@ class SessionRepository:
                     or grant["room_id"] != room_id
                     or grant["campaign_id"] != campaign_id
                     or grant["session_id"] is not None
-                    or grant["pre_session_expires_at"] is None
-                    or grant["pre_session_expires_at"] <= now
+                    or expires_at is None
+                    or expires_at <= now
                     or int(grant["generation"]) != int(generation)
                 ):
                     raise SessionStartControllerMismatchPersistenceError(
