@@ -21,7 +21,7 @@ function renderLobbyPage() {
   )
 }
 
-describe('P2-D Lobby route and presentation', () => {
+describe('Lobby route and presentation', () => {
   it('recognizes only the Campaign Lobby route', () => {
     expect(roomLobbyRouteFromPath(`/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/lobby`)).toEqual({
       roomId: ROOM_ID,
@@ -34,7 +34,7 @@ describe('P2-D Lobby route and presentation', () => {
   it('keeps internal phase names out of user-visible copy', () => {
     for (const locale of ['zh-TW', 'en'] as const) {
       const rendered = JSON.stringify(lobbyCopy(locale))
-      for (const phase of ['P2-D', 'P2D', 'P3']) {
+      for (const phase of ['P2-D', 'P2D', 'P3', 'P3-D']) {
         expect(rendered).not.toContain(phase)
       }
     }
@@ -90,5 +90,14 @@ describe('P2-D Lobby route and presentation', () => {
     expect(source).toContain('setActiveSession(nextResume.active_session)')
     expect(source).toContain('stopHeartbeat()')
     expect(source).toContain('archiveSeat(roomId, campaignId, seat.id, token)')
+  })
+
+  it('shows AI DM grant controls only to the Owner before Session start', () => {
+    const source = readFileSync(new URL('./RoomLobbyPage.tsx', import.meta.url), 'utf8')
+    expect(source).toContain('seat.role === \'dm\' && isOwner && activeSession === null')
+    expect(source).toContain('<LobbyAIDMGrantPanel')
+    expect(source).toContain("seat.controller_kind !== 'ai'")
+    expect(source).toContain("copy.aiDmController")
+    expect(source).not.toContain('copy.aiReserved')
   })
 })
