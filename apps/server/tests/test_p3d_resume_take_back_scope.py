@@ -91,10 +91,10 @@ def test_resume_repository_returns_only_exact_active_handoff_origin() -> None:
                 campaign_id=campaign_id,
                 role="player",
                 label="Mira",
-                controller_kind="ai",
+                controller_kind="none",
                 controller_access_session_id=None,
-                ai_controller_grant_id=grant_id,
-                controller_epoch=2,
+                ai_controller_grant_id=None,
+                controller_epoch=1,
                 selected_character_id=None,
                 archived_at=None,
             ))
@@ -129,6 +129,16 @@ def test_resume_repository_returns_only_exact_active_handoff_origin() -> None:
                 revoked_at=None,
                 last_seen_at=None,
             ))
+            connection.execute(
+                update(campaign_seats)
+                .where(campaign_seats.c.id == seat_id)
+                .values(
+                    controller_kind="ai",
+                    controller_access_session_id=None,
+                    ai_controller_grant_id=grant_id,
+                    controller_epoch=2,
+                )
+            )
 
         repo = SessionResumeRepository(engine)
         assert repo.self_take_back_seat_ids(
