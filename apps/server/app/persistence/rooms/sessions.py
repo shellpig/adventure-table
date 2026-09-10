@@ -268,6 +268,10 @@ class SessionRepository:
             if role == "player":
                 if character_id is None:
                     continue
+                if row["controller_kind"] == "ai":
+                    raise SessionStartPersistenceError(
+                        f"Player Seat {row['id']} has a session-scoped AI controller; recover it before starting a new Session"
+                    )
                 eligibility = connection.execute(
                     select(campaign_roster_entries.c.status, characters.c.archived_at)
                     .select_from(
@@ -651,6 +655,25 @@ class SessionRepository:
         ).one_or_none()
         if row is None or row.status != "active":
             return False
+
+        active_grant_ids = select(ai_controller_grants.c.id).where(
+            ai_controller_grants.c.session_id == session_id,
+            ai_controller_grants.c.status == "active",
+        )
+        connection.execute(
+            update(campaign_seats)
+            .where(
+                campaign_seats.c.controller_kind == "ai",
+                campaign_seats.c.ai_controller_grant_id.in_(active_grant_ids),
+            )
+            .values(
+                controller_kind="none",
+                controller_access_session_id=None,
+                ai_controller_grant_id=None,
+                controller_epoch=campaign_seats.c.controller_epoch + 1,
+                updated_at=now,
+            )
+        )
         connection.execute(
             update(ai_controller_grants)
             .where(
