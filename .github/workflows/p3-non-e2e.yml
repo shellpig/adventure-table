@@ -60,6 +60,7 @@ jobs:
           pytest
           tests/test_p3a_postgres_events.py
           tests/test_p3b_postgres_stage.py
+          tests/test_p3c_postgres_rolls.py
           tests/test_p2a_postgres_migration.py
           tests/test_p2b_postgres_workspace.py
           tests/test_p2e_postgres_sessions.py
