@@ -24,24 +24,24 @@ class _FakeToolService:
     def __init__(self) -> None:
         self.calls: list[tuple] = []
 
-    def get_session_context(self, token: str):
-        self.calls.append(("get_session_context", token))
+    def get_session_context(self, token: str, *, authenticated=None):
+        self.calls.append(("get_session_context", token, authenticated))
         return {"mode": "active_session", "scope": "fake"}
 
-    def start_session(self, token: str):
-        self.calls.append(("start_session", token))
+    def start_session(self, token: str, *, authenticated=None):
+        self.calls.append(("start_session", token, authenticated))
         return {"id": str(uuid4()), "status": "active"}
 
-    def get_character_context(self, token: str):
-        self.calls.append(("get_character_context", token))
+    def get_character_context(self, token: str, *, authenticated=None):
+        self.calls.append(("get_character_context", token, authenticated))
         return {"id": str(uuid4()), "name": "Ada"}
 
-    def post_text(self, token: str, *, kind, input):
-        self.calls.append(("post_text", token, kind, input))
+    def post_text(self, token: str, *, kind, input, authenticated=None):
+        self.calls.append(("post_text", token, kind, input, authenticated))
         return {"kind": kind.value, "text": input.text}
 
-    async def wait_for_event(self, token: str, input):
-        self.calls.append(("wait_for_event", token, input))
+    async def wait_for_event(self, token: str, input, *, authenticated=None):
+        self.calls.append(("wait_for_event", token, input, authenticated))
         return {
             "after_seq": input.after_seq,
             "cursor": input.after_seq,
@@ -155,7 +155,8 @@ def test_active_dm_catalog_has_fine_grained_tools_but_no_resolve_action() -> Non
 
 
 def test_post_action_dispatches_to_shared_application_facade() -> None:
-    client, tools = _client(_auth(role="player"))
+    auth = _auth(role="player")
+    client, tools = _client(auth)
 
     response = client.post(
         "/mcp",
@@ -179,6 +180,7 @@ def test_post_action_dispatches_to_shared_application_facade() -> None:
     call = tools.calls[0]
     assert call[0:3] == ("post_text", "fake-token", ExplorationInputKind.ACTION)
     assert call[3].text == "I check the doorway."
+    assert call[4] is auth
 
 
 def test_role_forbidden_tool_returns_stable_structured_error_without_dispatch() -> None:
@@ -224,7 +226,8 @@ def test_pre_session_dm_gameplay_tool_returns_active_session_required() -> None:
 
 
 def test_wait_for_event_is_awaited_and_returns_normal_empty_success() -> None:
-    client, tools = _client(_auth(role="player"))
+    auth = _auth(role="player")
+    client, tools = _client(auth)
 
     response = client.post(
         "/mcp",
@@ -244,6 +247,7 @@ def test_wait_for_event_is_awaited_and_returns_normal_empty_success() -> None:
     assert result["structuredContent"]["data"]["events"] == []
     assert result["structuredContent"]["data"]["cursor"] == 9
     assert tools.calls[0][0] == "wait_for_event"
+    assert tools.calls[0][3] is auth
 
 
 def test_invalid_tool_arguments_are_structured_not_transport_exceptions() -> None:
