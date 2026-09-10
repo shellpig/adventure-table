@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import type { SessionResume, TableEvent, TableEventPage } from '../../api/sessions'
-import { applySessionEventPage, eventStreamFromResume } from './sessionEventStream'
+import {
+  applySessionEventPage,
+  eventStreamFromResume,
+  mergeResumeStream,
+} from './sessionEventStream'
 
 const SESSION_ID = '30000000-0000-4000-8000-000000000001'
 
@@ -179,5 +183,34 @@ describe('P3 Session event cursor reducer', () => {
     noProjection.table_runtime = null
     noProjection.recent_events = null
     expect(eventStreamFromResume(noProjection)).toBeNull()
+  })
+})
+
+describe('Resume merged into a live stream', () => {
+  it('keeps poll-delivered events when a Resume resolves after them', () => {
+    const live = applySessionEventPage(eventStreamFromResume(resume())!, {
+      session_id: SESSION_ID,
+      after_seq: 2,
+      cursor: 3,
+      current_seq: 3,
+      has_more: false,
+      events: [event(3)],
+    })
+    const staleResume = resume()
+
+    const merged = mergeResumeStream(live, eventStreamFromResume(staleResume))
+
+    expect(merged?.events.map((item) => item.seq)).toEqual([1, 2, 3])
+    expect(merged?.cursor).toBe(3)
+    expect(merged?.currentSeq).toBe(3)
+  })
+
+  it('replaces the stream for a different Session or a caller without projection', () => {
+    const live = eventStreamFromResume(resume())!
+    const otherSession = { ...live, sessionId: '30000000-0000-4000-8000-000000000002' }
+
+    expect(mergeResumeStream(live, otherSession)).toEqual(otherSession)
+    expect(mergeResumeStream(live, null)).toBeNull()
+    expect(mergeResumeStream(null, live)).toEqual(live)
   })
 })

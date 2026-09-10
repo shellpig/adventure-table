@@ -23,6 +23,23 @@ function mergeEvents(current: TableEvent[], incoming: TableEvent[]): TableEvent[
     .slice(-MAX_BUFFERED_EVENTS)
 }
 
+export function mergeResumeStream(
+  current: SessionEventStreamState | null,
+  next: SessionEventStreamState | null,
+): SessionEventStreamState | null {
+  if (next === null || current === null || current.sessionId !== next.sessionId) return next
+  // A Resume that resolves after the incremental poll already delivered events
+  // must not erase them. The poll owns its own cursor and never re-sends a page
+  // it has handed over, so a replaced buffer would lose those events until the
+  // next full Resume.
+  return {
+    sessionId: next.sessionId,
+    cursor: Math.max(current.cursor, next.cursor),
+    currentSeq: Math.max(current.currentSeq, next.currentSeq),
+    events: mergeEvents(current.events, next.events),
+  }
+}
+
 export function eventStreamFromResume(resume: SessionResume): SessionEventStreamState | null {
   const sessionId = resume.active_session?.id
   const runtime = resume.table_runtime ?? null
