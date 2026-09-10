@@ -106,13 +106,13 @@ def test_p3d_migration_indexes_match_metadata() -> None:
         assert required <= metadata_indexes
         for name in required:
             assert name in source
+
     downgrade = source[source.index("def downgrade") :]
     for name in (
         "ix_campaign_seats_ai_controller_grant_id",
         "ix_sessions_dm_controller_ai_grant_id",
         "ix_session_participants_controller_ai_grant_id",
     ):
-        assert f"drop_index({name.split('_id')[0].upper() if False else ''}" not in ()
         assert name in downgrade
 
 
