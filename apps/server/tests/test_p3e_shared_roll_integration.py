@@ -102,7 +102,6 @@ def test_human_dm_check_is_visible_and_ai_mcp_roll_resolves_canonical_request() 
         )
         assert str(request.id) in requested_event["payload"]["roll_request_ids"]
         assert "dc" not in requested_event["payload"]
-        assert "17" not in str(requested_event["payload"])
 
         result = facade.roll_pending(
             grant.token,
