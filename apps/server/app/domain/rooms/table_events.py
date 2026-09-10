@@ -125,10 +125,9 @@ class TableEventPage(StrictModel):
 class TableEventService:
     """Actor-neutral event application service.
 
-    P3-A has only a Human HTTP resolver. The service itself consumes a typed
-    TableActorContext so P3-D can add AI grant resolution without cloning event
-    authorization or audience projection. Durable DB cursors are authoritative;
-    the process-local notifier is only an optional low-latency wake hint.
+    Human and AI callers are both resolved to the same typed TableActorContext.
+    Durable DB cursors are authoritative; the process-local notifier is only an
+    optional low-latency wake hint.
     """
 
     def __init__(
@@ -142,7 +141,7 @@ class TableEventService:
     @staticmethod
     def _actor(binding: StoredTableActorBinding) -> TableActorContext:
         return TableActorContext(
-            actor_kind=TableActorKind.HUMAN,
+            actor_kind=TableActorKind(binding.actor_kind),
             room_id=binding.room_id,
             campaign_id=binding.campaign_id,
             session_id=binding.session_id,
@@ -151,15 +150,30 @@ class TableEventService:
             role=binding.role,
             is_current_dm=binding.is_current_dm,
             access_session_id=binding.access_session_id,
+            ai_controller_grant_id=binding.ai_controller_grant_id,
+            grant_generation=binding.grant_generation,
         )
 
     @staticmethod
     def _stored_binding(actor: TableActorContext) -> StoredTableActorBinding:
-        if actor.actor_kind is not TableActorKind.HUMAN or actor.access_session_id is None:
-            raise TableEventActorUnauthorizedError(
-                "AI event actor resolver is not available until P3-D"
-            )
+        if actor.actor_kind is TableActorKind.HUMAN:
+            if (
+                actor.access_session_id is None
+                or actor.ai_controller_grant_id is not None
+                or actor.grant_generation is not None
+            ):
+                raise TableEventActorUnauthorizedError("Human actor binding is invalid")
+        elif actor.actor_kind is TableActorKind.AI:
+            if (
+                actor.access_session_id is not None
+                or actor.ai_controller_grant_id is None
+                or actor.grant_generation is None
+            ):
+                raise TableEventActorUnauthorizedError("AI actor binding is invalid")
+        else:
+            raise TableEventActorUnauthorizedError("Unknown table actor kind")
         return StoredTableActorBinding(
+            actor_kind=actor.actor_kind.value,
             room_id=actor.room_id,
             campaign_id=actor.campaign_id,
             session_id=actor.session_id,
@@ -168,6 +182,8 @@ class TableEventService:
             role=actor.role,
             is_current_dm=actor.is_current_dm,
             access_session_id=actor.access_session_id,
+            ai_controller_grant_id=actor.ai_controller_grant_id,
+            grant_generation=actor.grant_generation,
         )
 
     def resolve_human_actor(
@@ -188,6 +204,26 @@ class TableEventService:
         )
         if binding is None:
             raise TableEventNotFoundError(str(session_id))
+        return self._actor(binding)
+
+    def resolve_ai_actor(
+        self,
+        *,
+        room_id: UUID,
+        campaign_id: UUID,
+        session_id: UUID,
+        grant_id: UUID,
+        generation: int,
+    ) -> TableActorContext:
+        binding = self.repository.resolve_ai_actor(
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            grant_id=grant_id,
+            generation=generation,
+        )
+        if binding is None:
+            raise TableEventActorUnauthorizedError("AI table actor binding is not current")
         return self._actor(binding)
 
     def require_actor_current(self, actor: TableActorContext) -> None:
@@ -281,9 +317,6 @@ class TableEventService:
         except TableEventSessionNotFoundPersistenceError as exc:
             raise TableEventNotFoundError(str(actor.session_id)) from exc
 
-        # Advance over the bounded raw window, including events this caller may
-        # not see, so a private event cannot make an unauthorized client spin on
-        # the same cursor forever or infer hidden-event details from a flag.
         cursor = raw[-1].seq if raw else bounded_after
         visible = [
             self._present(stored)
@@ -307,13 +340,7 @@ class TableEventService:
         limit: int,
         timeout: float,
     ) -> TableEventPage:
-        """Wait without occupying a DB connection/transaction or worker thread.
-
-        Only the short authorization/query calls are sent to a worker thread.
-        The idle period awaits an asyncio primitive in this request task. A DB
-        recheck immediately after registration closes the lost-wakeup window; a
-        final DB recheck after wake/timeout makes the durable cursor canonical.
-        """
+        """Wait without occupying a DB connection/transaction or worker thread."""
 
         bounded_after = max(0, int(after_seq))
         bounded_timeout = max(0.0, min(float(timeout), 60.0))
@@ -339,9 +366,6 @@ class TableEventService:
 
         handle = self.notifier.register(actor.session_id)
         try:
-            # Registration happens before this second DB read, therefore an
-            # event committed between the initial read and registration is
-            # observed here even if no process-local notify reaches this worker.
             second = await asyncio.to_thread(
                 self.list_after,
                 actor,
