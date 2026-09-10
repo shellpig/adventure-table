@@ -29,14 +29,24 @@ export function eventStreamFromResume(resume: SessionResume): SessionEventStream
   if (!sessionId || !runtime || runtime.session_id !== sessionId) return null
 
   const initialPage = resume.recent_events ?? null
+  const matchingRecentPage = initialPage?.session_id === sessionId ? initialPage : null
+  const resumeHistoryIsComplete = matchingRecentPage !== null
+    && matchingRecentPage.after_seq === 0
+    && matchingRecentPage.has_more === false
+    && matchingRecentPage.cursor >= runtime.last_event_seq
+
   return {
     sessionId,
-    // Resume already scanned a bounded raw-sequence window ending at the
-    // canonical runtime cursor. Continue from that server-issued cursor rather
-    // than replaying the entire durable history on every browser reload.
-    cursor: initialPage?.session_id === sessionId ? initialPage.cursor : runtime.last_event_seq,
-    currentSeq: Math.max(runtime.last_event_seq, initialPage?.current_seq ?? 0),
-    events: initialPage?.session_id === sessionId ? mergeEvents([], initialPage.events) : [],
+    // Resume paints a bounded recent projection immediately. We may continue
+    // directly from its cursor only when that projection proves it covered the
+    // durable history from seq 0 through the current runtime head. Otherwise a
+    // fresh browser must replay from zero so older caller-visible events cannot
+    // disappear merely because private/raw traffic pushed them outside the
+    // bounded Resume window. The reducer remains idempotent, so recent events
+    // already painted by Resume are harmlessly de-duplicated during backfill.
+    cursor: resumeHistoryIsComplete ? matchingRecentPage.cursor : 0,
+    currentSeq: Math.max(runtime.last_event_seq, matchingRecentPage?.current_seq ?? 0),
+    events: matchingRecentPage ? mergeEvents([], matchingRecentPage.events) : [],
   }
 }
 
