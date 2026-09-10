@@ -9,6 +9,7 @@ from app.domain.rooms.ai_controllers import AIControllerService, AIHandoffReques
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.sessions import SessionService, SessionStatus
 from app.domain.rooms.table_events import TableEventService
+from app.mcp.protocol import MCP_PROTOCOL_VERSION
 from app.persistence.rooms.ai_controllers import AIControllerGrantRepository
 from app.persistence.rooms.sessions import SessionRepository
 from app.persistence.rooms.table_runtime import TableEventRepository
@@ -46,6 +47,31 @@ def _handoff(engine):
     return ids, events, controller, grant
 
 
+def _context_call(client, token: str):
+    return client.post(
+        "/mcp",
+        json={
+            "jsonrpc": "2.0",
+            "id": "context-after-lifecycle",
+            "method": "tools/call",
+            "params": {
+                "name": "get_session_context",
+                "arguments": {},
+                "_meta": {
+                    "io.modelcontextprotocol/protocolVersion": MCP_PROTOCOL_VERSION,
+                    "io.modelcontextprotocol/clientCapabilities": {},
+                },
+            },
+        },
+        headers={
+            "Authorization": f"Bearer {token}",
+            "MCP-Protocol-Version": MCP_PROTOCOL_VERSION,
+            "Mcp-Method": "tools/call",
+            "Mcp-Name": "get_session_context",
+        },
+    )
+
+
 def test_mcp_token_is_rejected_immediately_after_human_dm_ends_session() -> None:
     engine = _engine()
     try:
@@ -70,7 +96,7 @@ def test_mcp_token_is_rejected_immediately_after_human_dm_ends_session() -> None
             )
             assert ended.status is SessionStatus.ENDED
 
-            _assert_unauthorized(_discover(client, grant.token))
+            _assert_unauthorized(_context_call(client, grant.token))
         finally:
             client.close()
     finally:
@@ -114,7 +140,7 @@ def test_mcp_token_is_rejected_after_administrative_human_reassignment() -> None
                 ),
             )
 
-            _assert_unauthorized(_discover(client, grant.token))
+            _assert_unauthorized(_context_call(client, grant.token))
         finally:
             client.close()
     finally:
@@ -183,7 +209,7 @@ def test_mcp_rejects_grant_if_its_session_binding_points_to_another_campaign() -
                     .values(session_id=wrong_session_id)
                 )
 
-            _assert_unauthorized(_discover(client, grant.token))
+            _assert_unauthorized(_context_call(client, grant.token))
         finally:
             client.close()
     finally:
