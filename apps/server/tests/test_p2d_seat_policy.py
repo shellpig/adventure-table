@@ -81,6 +81,9 @@ class _FakeSeatRepository:
     def active_campaign_id(self, room_id):
         return self.active_campaign if room_id == self.room_id else None
 
+    def active_session_for_dm_seat(self, _seat_id):
+        return None
+
     def get(self, seat_id):
         return self.seats.get(seat_id)
 
