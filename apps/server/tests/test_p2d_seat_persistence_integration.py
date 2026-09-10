@@ -14,6 +14,7 @@ from app.persistence.rooms.seats import (
     SeatSelectionPersistenceError,
 )
 from app.persistence.rooms.tables import (
+    ai_controller_grants,
     campaign_roster_entries,
     campaign_seats,
     campaigns,
@@ -35,6 +36,7 @@ def _engine():
             campaigns,
             campaign_roster_entries,
             campaign_seats,
+            ai_controller_grants,
         ],
     )
     return engine
@@ -115,8 +117,6 @@ def test_selection_transaction_rejects_cross_room_roster_corruption_and_duplicat
                         "character_id": same_room_character,
                         "status": "active",
                     },
-                    # Deliberately corrupt the P2-C service invariant at DB level.
-                    # P2-D selection must still refuse a cross-Room Character.
                     {
                         "campaign_id": campaign_id,
                         "character_id": cross_room_character,

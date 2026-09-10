@@ -138,6 +138,7 @@ def test_late_join_revalidation_rejects_stale_ai_dm_epoch() -> None:
     engine = _engine()
     try:
         with engine.begin() as connection:
+            connection.exec_driver_sql("PRAGMA defer_foreign_keys=ON")
             room_id, campaign_id, now = _seed_room_campaign(connection)
             dm_seat_id, session_id = uuid4(), uuid4()
             token = mint_ai_controller_token()

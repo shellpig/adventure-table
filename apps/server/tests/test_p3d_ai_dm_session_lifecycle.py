@@ -8,6 +8,7 @@ from sqlalchemy import create_engine, insert, select, update
 
 from app.db import metadata
 from app.domain.rooms.ai_controller_tokens import mint_ai_controller_token
+from app.persistence.characters import characters
 from app.persistence.rooms.ai_controllers import AIControllerGrantRepository
 from app.persistence.rooms.sessions import (
     SessionAlreadyActivePersistenceError,
@@ -31,6 +32,7 @@ def _engine():
     metadata.create_all(
         engine,
         tables=[
+            characters,
             rooms,
             room_access_sessions,
             campaigns,

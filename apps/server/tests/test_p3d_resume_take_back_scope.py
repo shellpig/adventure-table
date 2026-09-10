@@ -17,6 +17,7 @@ from app.domain.rooms.sessions import (
     SessionSnapshot,
     SessionStatus,
 )
+from app.persistence.characters import characters
 from app.persistence.rooms.session_resume import SessionResumeRepository
 from app.persistence.rooms.tables import (
     ai_controller_grants,
@@ -33,6 +34,7 @@ def _engine():
     metadata.create_all(
         engine,
         tables=[
+            characters,
             rooms,
             room_access_sessions,
             campaigns,

@@ -48,6 +48,7 @@ def _engine():
 
 
 def _seed_live_character(connection, *, player_kind: str):
+    connection.exec_driver_sql("PRAGMA defer_foreign_keys=ON")
     now = datetime.now(timezone.utc)
     room_id, campaign_id, session_id = uuid4(), uuid4(), uuid4()
     character_id, dm_seat_id, player_seat_id = uuid4(), uuid4(), uuid4()
