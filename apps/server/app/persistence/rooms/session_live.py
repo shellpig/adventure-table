@@ -12,9 +12,11 @@ from app.persistence.characters import characters
 from app.persistence.rooms.sessions import StoredSessionParticipant
 from app.persistence.rooms.tables import (
     active_character_session_leases,
+    ai_controller_grants,
     campaign_roster_entries,
     campaign_seats,
     campaigns,
+    room_access_sessions,
     room_characters,
     session_participants,
     sessions,
@@ -81,6 +83,74 @@ class SessionLiveRepository:
             )
         return False
 
+    @staticmethod
+    def _revalidate_current_dm_binding(
+        connection,
+        *,
+        session,
+        campaign_id: UUID,
+        caller_actor_kind: str,
+        caller_access_session_id: UUID | None,
+        caller_ai_grant_id: UUID | None,
+        caller_generation: int | None,
+    ) -> bool:
+        if caller_actor_kind == "human" and caller_access_session_id is not None:
+            access = connection.execute(
+                select(
+                    room_access_sessions.c.id,
+                    room_access_sessions.c.room_id,
+                    room_access_sessions.c.revoked_at,
+                )
+                .where(room_access_sessions.c.id == caller_access_session_id)
+                .with_for_update()
+            ).one_or_none()
+            campaign_room_id = connection.scalar(
+                select(campaigns.c.room_id).where(campaigns.c.id == campaign_id)
+            )
+            return (
+                access is not None
+                and access.room_id == campaign_room_id
+                and access.revoked_at is None
+            )
+
+        if (
+            caller_actor_kind == "ai"
+            and caller_ai_grant_id is not None
+            and caller_generation is not None
+        ):
+            dm_seat = connection.execute(
+                select(campaign_seats)
+                .where(
+                    campaign_seats.c.id == session.dm_seat_id,
+                    campaign_seats.c.campaign_id == campaign_id,
+                    campaign_seats.c.archived_at.is_(None),
+                )
+                .with_for_update()
+            ).mappings().one_or_none()
+            if (
+                dm_seat is None
+                or dm_seat["role"] != "dm"
+                or dm_seat["controller_kind"] != "ai"
+                or dm_seat["ai_controller_grant_id"] != caller_ai_grant_id
+                or int(dm_seat["controller_epoch"]) != int(caller_generation)
+            ):
+                return False
+            grant = connection.execute(
+                select(ai_controller_grants)
+                .where(ai_controller_grants.c.id == caller_ai_grant_id)
+                .with_for_update()
+            ).mappings().one_or_none()
+            return (
+                grant is not None
+                and grant["status"] == "active"
+                and grant["role"] == "dm"
+                and grant["campaign_id"] == campaign_id
+                and grant["session_id"] == session.id
+                and grant["seat_id"] == session.dm_seat_id
+                and int(grant["generation"]) == int(caller_generation)
+            )
+        return False
+
     def late_join_from_lobby(
         self,
         *,
@@ -102,6 +172,7 @@ class SessionLiveRepository:
                         sessions.c.id,
                         sessions.c.campaign_id,
                         sessions.c.status,
+                        sessions.c.dm_seat_id,
                         sessions.c.dm_controller_kind,
                         sessions.c.dm_controller_access_session_id,
                         sessions.c.dm_controller_ai_grant_id,
@@ -123,6 +194,14 @@ class SessionLiveRepository:
                     raise LateJoinPersistenceError("Session Campaign is not in this Room")
                 if not self._caller_is_current_dm(
                     session,
+                    caller_actor_kind=caller_actor_kind,
+                    caller_access_session_id=caller_access_session_id,
+                    caller_ai_grant_id=caller_ai_grant_id,
+                    caller_generation=caller_generation,
+                ) or not self._revalidate_current_dm_binding(
+                    connection,
+                    session=session,
+                    campaign_id=campaign_id,
                     caller_actor_kind=caller_actor_kind,
                     caller_access_session_id=caller_access_session_id,
                     caller_ai_grant_id=caller_ai_grant_id,
