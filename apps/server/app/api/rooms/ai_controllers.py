@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from app.api.dependencies import get_database_engine
 from app.api.errors import APIError
 from app.api.rooms.access import get_room_access_context
-from app.api.rooms.dependencies import get_table_event_service
+from app.api.rooms.dependencies import get_seat_service, get_table_event_service
 from app.domain.rooms.ai_controllers import (
     AIControllerGrantView,
     AIControllerHandoffError,
@@ -16,6 +16,14 @@ from app.domain.rooms.ai_controllers import (
     AIHumanReassignmentRequest,
 )
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
+from app.domain.rooms.seats import (
+    ControllerKind,
+    SeatControllerError,
+    SeatControllerPatch,
+    SeatNotFoundError,
+    SeatRole,
+    SeatService,
+)
 from app.persistence.rooms.ai_controllers import AIControllerGrantRepository
 
 
@@ -39,6 +47,10 @@ def get_ai_controller_service(request: Request) -> AIControllerService:
 def _map_error(exc: Exception) -> APIError:
     if isinstance(exc, AIControllerHandoffError):
         return APIError(409, "ai_controller_handoff_invalid", str(exc))
+    if isinstance(exc, SeatNotFoundError):
+        return APIError(404, "seat_not_found", "Seat was not found in this Campaign")
+    if isinstance(exc, SeatControllerError):
+        return APIError(409, "seat_controller_invalid", str(exc))
     raise exc
 
 
@@ -157,6 +169,33 @@ def configure_pre_session_ai_dm(
         )
     except Exception as exc:
         raise _map_error(exc) from exc
+
+
+@router.delete(
+    "/seats/{seat_id}/ai-dm-grant",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def revoke_pre_session_ai_dm(
+    room_id: UUID,
+    campaign_id: UUID,
+    seat_id: UUID,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    seat_service: SeatService = Depends(get_seat_service),
+) -> Response:
+    _require_owner(context)
+    try:
+        seat = seat_service.get_scoped_seat(context.room_id, campaign_id, seat_id)
+        if seat.role != SeatRole.DM.value or seat.controller_kind != ControllerKind.AI.value:
+            raise SeatControllerError("Seat does not have a current pre-session AI DM grant")
+        seat_service.set_controller(
+            context.room_id,
+            campaign_id,
+            seat_id,
+            SeatControllerPatch(controller_kind=ControllerKind.NONE),
+        )
+    except Exception as exc:
+        raise _map_error(exc) from exc
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 __all__ = ["get_ai_controller_service", "router"]
