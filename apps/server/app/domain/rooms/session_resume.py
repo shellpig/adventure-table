@@ -63,6 +63,9 @@ class SessionResumeDTO(StrictModel):
     # Same caller identity the Lobby reports, mirrored here because Resume is the
     # only Session-scoped read that survives the Room switching active Campaign.
     caller_access_session_id: UUID | None = None
+    # P3-D exposes only the caller-specific boolean-equivalent Seat ids needed by
+    # Human Take Back UX. It never exposes the stored handoff return credential id.
+    self_take_back_seat_ids: list[UUID] = Field(default_factory=list)
     # P3-A adds only a projection of canonical event truth. These fields are not
     # a second persisted Session snapshot and remain absent for non-participants.
     table_runtime: TableRuntimeCursor | None = None
@@ -187,10 +190,6 @@ class SessionResumeService:
         if self.table_event_service is None or caller_access_session_id is None:
             return None, None, None, [], []
 
-        # TableEventRepository resolves the authoritative Human access-session
-        # binding. The RoomAccessAuthority value is intentionally not used to
-        # grant gameplay scope; P3-D will replace this adapter with the shared
-        # Human/AI actor resolver without changing the projection service.
         context = RoomAccessContext(
             room_id=room_id,
             access_session_id=caller_access_session_id,
@@ -222,13 +221,28 @@ class SessionResumeService:
                 else []
             )
         except (TableEventNotFoundError, TableEventActorUnauthorizedError):
-            # Room members who are not Session participants may still use the P2
-            # Resume endpoint, but they receive no P3 projection. If controller
-            # authority changes while these independently revalidated reads are
-            # composed, fail the whole P3 projection closed instead of turning an
-            # otherwise valid P2 Resume into a transient 500.
             return None, None, None, [], []
         return runtime, recent, stage, roll_requests, pending_actions
+
+    def _self_take_back_seat_ids(
+        self,
+        *,
+        room_id: UUID,
+        session_id: UUID,
+        caller_access_session_id: UUID | None,
+    ) -> list[UUID]:
+        if self.summary_repository is None or caller_access_session_id is None:
+            return []
+        reader = getattr(self.summary_repository, "self_take_back_seat_ids", None)
+        if not callable(reader):
+            return []
+        return list(
+            reader(
+                room_id=room_id,
+                session_id=session_id,
+                access_session_id=caller_access_session_id,
+            )
+        )
 
     def resume(
         self,
@@ -284,6 +298,11 @@ class SessionResumeService:
             session_id=active_session.id,
             caller_access_session_id=caller_access_session_id,
         )
+        self_take_back_seat_ids = self._self_take_back_seat_ids(
+            room_id=room_id,
+            session_id=active_session.id,
+            caller_access_session_id=caller_access_session_id,
+        )
 
         return SessionResumeDTO(
             room_id=room_id,
@@ -295,6 +314,7 @@ class SessionResumeService:
             seats=seats,
             active_characters=self._character_summaries(character_ids),
             caller_access_session_id=caller_access_session_id,
+            self_take_back_seat_ids=self_take_back_seat_ids,
             table_runtime=table_runtime,
             recent_events=recent_events,
             stage=stage,
