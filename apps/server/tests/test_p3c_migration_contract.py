@@ -16,6 +16,7 @@ from app.persistence.rooms.p3c_runtime import (
 
 ROLL_PENDING_REVISION = "0018_p3c_roll_pending"
 CHECK_COMMAND_REVISION = "0019_p3c_check_command"
+P3D_REVISION = "0020_p3d_ai_controller_grants"
 
 
 def _migration_source() -> str:
@@ -36,7 +37,7 @@ def _check_command_migration_source() -> str:
     ).read_text(encoding="utf-8")
 
 
-def test_p3c_web_migration_chain_has_check_command_as_web_head() -> None:
+def test_p3c_web_migration_chain_links_check_command_into_current_head() -> None:
     server_root = Path(__file__).resolve().parents[1]
     config = Config(str(server_root / "alembic.ini"))
     config.set_main_option("script_location", str(server_root / "alembic"))
@@ -49,7 +50,11 @@ def test_p3c_web_migration_chain_has_check_command_as_web_head() -> None:
     check_revision = scripts.get_revision(CHECK_COMMAND_REVISION)
     assert check_revision is not None
     assert check_revision.down_revision == ROLL_PENDING_REVISION
-    assert CHECK_COMMAND_REVISION in scripts.get_heads()
+
+    p3d_revision = scripts.get_revision(P3D_REVISION)
+    assert p3d_revision is not None
+    assert p3d_revision.down_revision == CHECK_COMMAND_REVISION
+    assert P3D_REVISION in scripts.get_heads()
 
 
 def test_p3c_check_command_constraint_matches_metadata_and_downgrades_safely() -> None:

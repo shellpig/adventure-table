@@ -199,6 +199,16 @@ class SeatService:
             )
         )
 
+    def _require_mutable_controller(self, seat: StoredSeat) -> None:
+        if seat.role == SeatRole.DM.value and self.repository.active_session_for_dm_seat(seat.id) is not None:
+            raise SeatControllerError(
+                "DM Seat controller is fixed while its Session is active; End or Abandon the Session first"
+            )
+        if seat.role == SeatRole.PLAYER.value and seat.controller_kind == ControllerKind.AI.value:
+            raise SeatControllerError(
+                "AI-controlled Player Seat must use Take Back Control or administrative reassignment"
+            )
+
     def set_controller(
         self,
         room_id: UUID,
@@ -209,7 +219,16 @@ class SeatService:
         self._require_current_active_campaign(room_id, campaign_id)
         seat = self.get_scoped_seat(room_id, campaign_id, seat_id)
         if payload.controller_kind is ControllerKind.AI:
-            raise SeatControllerError("AI controllers are reserved for a later phase")
+            raise SeatControllerError(
+                "AI controller assignment requires the scoped AI control endpoint"
+            )
+        same_identity = (
+            seat.controller_kind == payload.controller_kind.value
+            and seat.controller_access_session_id == payload.controller_access_session_id
+            and seat.ai_controller_grant_id is None
+        )
+        if not same_identity:
+            self._require_mutable_controller(seat)
         if payload.controller_kind is ControllerKind.NONE:
             if payload.controller_access_session_id is not None:
                 raise SeatControllerError("none controller cannot bind an access session")
@@ -226,11 +245,14 @@ class SeatService:
             }:
                 raise SeatControllerError("DM Seat controller requires DM or Owner authority")
             access_session_id = access.id
-        updated = self.repository.set_controller(
-            seat_id=seat.id,
-            controller_kind=payload.controller_kind.value,
-            controller_access_session_id=access_session_id,
-        )
+        try:
+            updated = self.repository.set_controller(
+                seat_id=seat.id,
+                controller_kind=payload.controller_kind.value,
+                controller_access_session_id=access_session_id,
+            )
+        except SeatPersistenceConflictError as exc:
+            raise SeatControllerError(str(exc)) from exc
         if updated is None:
             raise SeatNotFoundError(seat_id)
         return self._present(updated)
@@ -263,14 +285,29 @@ class SeatService:
         return self._present(updated)
 
     def archive_seat(self, room_id: UUID, campaign_id: UUID, seat_id: UUID) -> CampaignSeat:
-        self.get_scoped_seat(room_id, campaign_id, seat_id)
-        archived = self.repository.archive(seat_id)
+        seat = self.get_scoped_seat(room_id, campaign_id, seat_id)
+        if seat.role == SeatRole.DM.value and self.repository.active_session_for_dm_seat(seat.id) is not None:
+            raise SeatControllerError(
+                "DM Seat cannot be archived while its Session is active"
+            )
+        if seat.role == SeatRole.PLAYER.value and seat.controller_kind == ControllerKind.AI.value:
+            raise SeatControllerError(
+                "AI-controlled Player Seat must be recovered before it can be archived"
+            )
+        try:
+            archived = self.repository.archive(seat_id)
+        except SeatPersistenceConflictError as exc:
+            raise SeatControllerError(str(exc)) from exc
         if archived is None:
             raise SeatNotFoundError(seat_id)
         return self._present(archived)
 
     def delete_seat(self, room_id: UUID, campaign_id: UUID, seat_id: UUID) -> None:
-        self.get_scoped_seat(room_id, campaign_id, seat_id)
+        seat = self.get_scoped_seat(room_id, campaign_id, seat_id)
+        if seat.role == SeatRole.DM.value and self.repository.active_session_for_dm_seat(seat.id) is not None:
+            raise SeatControllerError(
+                "DM Seat cannot be deleted while its Session is active"
+            )
         try:
             deleted = self.repository.delete_unreferenced(seat_id)
         except SeatHistoryReferencedPersistenceError as exc:

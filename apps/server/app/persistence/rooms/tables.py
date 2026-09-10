@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import (
+    BigInteger,
     CheckConstraint,
     Column,
     DateTime,
@@ -9,6 +10,7 @@ from sqlalchemy import (
     LargeBinary,
     String,
     Table,
+    Text,
     UniqueConstraint,
     Uuid,
     func,
@@ -150,6 +152,13 @@ campaign_seats = Table(
         nullable=True,
     ),
     Column(
+        "ai_controller_grant_id",
+        Uuid(),
+        ForeignKey("ai_controller_grants.id", ondelete="SET NULL"),
+        nullable=True,
+    ),
+    Column("controller_epoch", BigInteger(), nullable=False, server_default="0"),
+    Column(
         "selected_character_id",
         Uuid(),
         ForeignKey("characters.id", ondelete="SET NULL"),
@@ -167,8 +176,10 @@ campaign_seats = Table(
         name="ck_campaign_seats_controller_kind",
     ),
     CheckConstraint(
-        "(controller_kind = 'human' AND controller_access_session_id IS NOT NULL) OR "
-        "(controller_kind IN ('ai', 'none') AND controller_access_session_id IS NULL)",
+        "controller_epoch IS NOT NULL AND ("
+        "(controller_kind = 'human' AND controller_access_session_id IS NOT NULL AND ai_controller_grant_id IS NULL) OR "
+        "(controller_kind = 'ai' AND controller_access_session_id IS NULL AND ai_controller_grant_id IS NOT NULL) OR "
+        "(controller_kind = 'none' AND controller_access_session_id IS NULL AND ai_controller_grant_id IS NULL))",
         name="ck_campaign_seats_controller_binding",
     ),
     CheckConstraint(
@@ -183,6 +194,7 @@ campaign_seats = Table(
 )
 Index("ix_campaign_seats_campaign_id", campaign_seats.c.campaign_id)
 Index("ix_campaign_seats_controller_access_session_id", campaign_seats.c.controller_access_session_id)
+Index("ix_campaign_seats_ai_controller_grant_id", campaign_seats.c.ai_controller_grant_id)
 Index("ix_campaign_seats_selected_character_id", campaign_seats.c.selected_character_id)
 
 sessions = Table(
@@ -199,6 +211,13 @@ sessions = Table(
         ForeignKey("room_access_sessions.id", ondelete="RESTRICT"),
         nullable=True,
     ),
+    Column(
+        "dm_controller_ai_grant_id",
+        Uuid(),
+        ForeignKey("ai_controller_grants.id", ondelete="RESTRICT"),
+        nullable=True,
+    ),
+    Column("dm_controller_generation", BigInteger(), nullable=True),
     Column("started_at", DateTime(timezone=True), nullable=False),
     Column("ended_at", DateTime(timezone=True), nullable=True),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
@@ -207,14 +226,19 @@ sessions = Table(
         name="ck_sessions_status",
     ),
     CheckConstraint(
-        "(dm_controller_kind = 'human' AND dm_controller_access_session_id IS NOT NULL) OR "
-        "(dm_controller_kind IN ('ai', 'none') AND dm_controller_access_session_id IS NULL)",
+        "(dm_controller_kind = 'human' AND dm_controller_access_session_id IS NOT NULL "
+        "AND dm_controller_ai_grant_id IS NULL AND dm_controller_generation IS NULL) OR "
+        "(dm_controller_kind = 'ai' AND dm_controller_access_session_id IS NULL "
+        "AND dm_controller_ai_grant_id IS NOT NULL AND dm_controller_generation IS NOT NULL) OR "
+        "(dm_controller_kind = 'none' AND dm_controller_access_session_id IS NULL "
+        "AND dm_controller_ai_grant_id IS NULL AND dm_controller_generation IS NULL)",
         name="ck_sessions_dm_controller_binding",
     ),
 )
 Index("ix_sessions_campaign_id", sessions.c.campaign_id)
 Index("ix_sessions_dm_seat_id", sessions.c.dm_seat_id)
 Index("ix_sessions_dm_controller_access_session_id", sessions.c.dm_controller_access_session_id)
+Index("ix_sessions_dm_controller_ai_grant_id", sessions.c.dm_controller_ai_grant_id)
 Index("ix_sessions_status", sessions.c.status)
 
 session_participants = Table(
@@ -232,6 +256,13 @@ session_participants = Table(
         nullable=True,
     ),
     Column(
+        "controller_ai_grant_id_at_join",
+        Uuid(),
+        ForeignKey("ai_controller_grants.id", ondelete="RESTRICT"),
+        nullable=True,
+    ),
+    Column("controller_generation_at_join", BigInteger(), nullable=True),
+    Column(
         "active_character_id",
         Uuid(),
         ForeignKey("characters.id", ondelete="RESTRICT"),
@@ -248,8 +279,12 @@ session_participants = Table(
         name="ck_session_participants_controller_kind",
     ),
     CheckConstraint(
-        "(controller_kind_at_join = 'human' AND controller_access_session_id_at_join IS NOT NULL) OR "
-        "(controller_kind_at_join IN ('ai', 'none') AND controller_access_session_id_at_join IS NULL)",
+        "(controller_kind_at_join = 'human' AND controller_access_session_id_at_join IS NOT NULL "
+        "AND controller_ai_grant_id_at_join IS NULL AND controller_generation_at_join IS NULL) OR "
+        "(controller_kind_at_join = 'ai' AND controller_access_session_id_at_join IS NULL "
+        "AND controller_ai_grant_id_at_join IS NOT NULL AND controller_generation_at_join IS NOT NULL) OR "
+        "(controller_kind_at_join = 'none' AND controller_access_session_id_at_join IS NULL "
+        "AND controller_ai_grant_id_at_join IS NULL AND controller_generation_at_join IS NULL)",
         name="ck_session_participants_controller_binding",
     ),
     CheckConstraint(
@@ -266,6 +301,7 @@ session_participants = Table(
 Index("ix_session_participants_session_id", session_participants.c.session_id)
 Index("ix_session_participants_seat_id", session_participants.c.seat_id)
 Index("ix_session_participants_active_character_id", session_participants.c.active_character_id)
+Index("ix_session_participants_controller_ai_grant_id", session_participants.c.controller_ai_grant_id_at_join)
 
 active_character_session_leases = Table(
     "active_character_session_leases",
@@ -287,9 +323,52 @@ active_character_session_leases = Table(
 )
 Index("ix_active_character_session_leases_session_id", active_character_session_leases.c.session_id)
 
+ai_controller_grants = Table(
+    "ai_controller_grants",
+    metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("room_id", Uuid(), ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False),
+    Column("campaign_id", Uuid(), ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False),
+    Column("seat_id", Uuid(), ForeignKey("campaign_seats.id", ondelete="CASCADE"), nullable=False),
+    Column("role", String(16), nullable=False),
+    Column("session_id", Uuid(), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=True),
+    Column("secret_hash", LargeBinary(32), nullable=False),
+    Column("secret_prefix", String(80), nullable=False),
+    Column("generation", BigInteger(), nullable=False),
+    Column("status", String(16), nullable=False),
+    Column("pre_session_expires_at", DateTime(timezone=True), nullable=True),
+    Column(
+        "handoff_return_access_session_id",
+        Uuid(),
+        ForeignKey("room_access_sessions.id", ondelete="RESTRICT"),
+        nullable=True,
+    ),
+    Column("temporary_instruction", Text(), nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("bound_at", DateTime(timezone=True), nullable=True),
+    Column("revoked_at", DateTime(timezone=True), nullable=True),
+    Column("last_seen_at", DateTime(timezone=True), nullable=True),
+    CheckConstraint("role IN ('dm', 'player')", name="ck_ai_controller_grants_role"),
+    CheckConstraint("status IN ('active', 'revoked')", name="ck_ai_controller_grants_status"),
+    CheckConstraint("generation >= 1", name="ck_ai_controller_grants_generation"),
+    CheckConstraint(
+        "(role = 'player' AND session_id IS NOT NULL AND pre_session_expires_at IS NULL "
+        "AND handoff_return_access_session_id IS NOT NULL) OR "
+        "(role = 'dm' AND handoff_return_access_session_id IS NULL AND "
+        "((session_id IS NULL AND pre_session_expires_at IS NOT NULL) OR "
+        "(session_id IS NOT NULL AND pre_session_expires_at IS NULL)))",
+        name="ck_ai_controller_grants_scope",
+    ),
+    UniqueConstraint("secret_hash", name="uq_ai_controller_grants_secret_hash"),
+)
+Index("ix_ai_controller_grants_seat_status", ai_controller_grants.c.seat_id, ai_controller_grants.c.status)
+Index("ix_ai_controller_grants_session_status", ai_controller_grants.c.session_id, ai_controller_grants.c.status)
+Index("ix_ai_controller_grants_campaign_id", ai_controller_grants.c.campaign_id)
+
 
 __all__ = [
     "active_character_session_leases",
+    "ai_controller_grants",
     "campaign_roster_entries",
     "campaign_seats",
     "campaigns",

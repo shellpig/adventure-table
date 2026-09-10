@@ -12,9 +12,11 @@ from app.persistence.characters import characters
 from app.persistence.rooms.sessions import StoredSessionParticipant
 from app.persistence.rooms.tables import (
     active_character_session_leases,
+    ai_controller_grants,
     campaign_roster_entries,
     campaign_seats,
     campaigns,
+    room_access_sessions,
     room_characters,
     session_participants,
     sessions,
@@ -39,14 +41,115 @@ class ActiveCharacterControl:
     session_id: UUID
     participant_id: UUID
     seat_id: UUID
+    dm_controller_kind: str
     dm_controller_access_session_id: UUID | None
+    dm_controller_ai_grant_id: UUID | None
+    dm_controller_generation: int | None
     player_controller_kind: str
     player_controller_access_session_id: UUID | None
+    player_ai_controller_grant_id: UUID | None
+    player_controller_epoch: int
 
 
 class SessionLiveRepository:
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
+
+    @staticmethod
+    def _caller_is_current_dm(
+        session,
+        *,
+        caller_actor_kind: str,
+        caller_access_session_id: UUID | None,
+        caller_ai_grant_id: UUID | None,
+        caller_generation: int | None,
+    ) -> bool:
+        if caller_actor_kind == "human":
+            return (
+                caller_access_session_id is not None
+                and caller_ai_grant_id is None
+                and caller_generation is None
+                and session.dm_controller_kind == "human"
+                and session.dm_controller_access_session_id == caller_access_session_id
+            )
+        if caller_actor_kind == "ai":
+            return (
+                caller_access_session_id is None
+                and caller_ai_grant_id is not None
+                and caller_generation is not None
+                and session.dm_controller_kind == "ai"
+                and session.dm_controller_ai_grant_id == caller_ai_grant_id
+                and session.dm_controller_generation == caller_generation
+            )
+        return False
+
+    @staticmethod
+    def _revalidate_current_dm_binding(
+        connection,
+        *,
+        session,
+        campaign_id: UUID,
+        caller_actor_kind: str,
+        caller_access_session_id: UUID | None,
+        caller_ai_grant_id: UUID | None,
+        caller_generation: int | None,
+    ) -> bool:
+        if caller_actor_kind == "human" and caller_access_session_id is not None:
+            access = connection.execute(
+                select(
+                    room_access_sessions.c.id,
+                    room_access_sessions.c.room_id,
+                    room_access_sessions.c.revoked_at,
+                )
+                .where(room_access_sessions.c.id == caller_access_session_id)
+                .with_for_update()
+            ).one_or_none()
+            campaign_room_id = connection.scalar(
+                select(campaigns.c.room_id).where(campaigns.c.id == campaign_id)
+            )
+            return (
+                access is not None
+                and access.room_id == campaign_room_id
+                and access.revoked_at is None
+            )
+
+        if (
+            caller_actor_kind == "ai"
+            and caller_ai_grant_id is not None
+            and caller_generation is not None
+        ):
+            dm_seat = connection.execute(
+                select(campaign_seats)
+                .where(
+                    campaign_seats.c.id == session.dm_seat_id,
+                    campaign_seats.c.campaign_id == campaign_id,
+                    campaign_seats.c.archived_at.is_(None),
+                )
+                .with_for_update()
+            ).mappings().one_or_none()
+            if (
+                dm_seat is None
+                or dm_seat["role"] != "dm"
+                or dm_seat["controller_kind"] != "ai"
+                or dm_seat["ai_controller_grant_id"] != caller_ai_grant_id
+                or int(dm_seat["controller_epoch"]) != int(caller_generation)
+            ):
+                return False
+            grant = connection.execute(
+                select(ai_controller_grants)
+                .where(ai_controller_grants.c.id == caller_ai_grant_id)
+                .with_for_update()
+            ).mappings().one_or_none()
+            return (
+                grant is not None
+                and grant["status"] == "active"
+                and grant["role"] == "dm"
+                and grant["campaign_id"] == campaign_id
+                and grant["session_id"] == session.id
+                and grant["seat_id"] == session.dm_seat_id
+                and int(grant["generation"]) == int(caller_generation)
+            )
+        return False
 
     def late_join_from_lobby(
         self,
@@ -54,8 +157,11 @@ class SessionLiveRepository:
         room_id: UUID,
         campaign_id: UUID,
         session_id: UUID,
-        caller_access_session_id: UUID,
+        caller_actor_kind: str,
         seat_id: UUID,
+        caller_access_session_id: UUID | None = None,
+        caller_ai_grant_id: UUID | None = None,
+        caller_generation: int | None = None,
     ) -> StoredSessionParticipant:
         participant_id = uuid4()
         now = datetime.now(timezone.utc)
@@ -66,7 +172,11 @@ class SessionLiveRepository:
                         sessions.c.id,
                         sessions.c.campaign_id,
                         sessions.c.status,
+                        sessions.c.dm_seat_id,
+                        sessions.c.dm_controller_kind,
                         sessions.c.dm_controller_access_session_id,
+                        sessions.c.dm_controller_ai_grant_id,
+                        sessions.c.dm_controller_generation,
                     )
                     .where(sessions.c.id == session_id)
                     .with_for_update()
@@ -82,7 +192,21 @@ class SessionLiveRepository:
                 )
                 if campaign_room_id != room_id:
                     raise LateJoinPersistenceError("Session Campaign is not in this Room")
-                if session.dm_controller_access_session_id != caller_access_session_id:
+                if not self._caller_is_current_dm(
+                    session,
+                    caller_actor_kind=caller_actor_kind,
+                    caller_access_session_id=caller_access_session_id,
+                    caller_ai_grant_id=caller_ai_grant_id,
+                    caller_generation=caller_generation,
+                ) or not self._revalidate_current_dm_binding(
+                    connection,
+                    session=session,
+                    campaign_id=campaign_id,
+                    caller_actor_kind=caller_actor_kind,
+                    caller_access_session_id=caller_access_session_id,
+                    caller_ai_grant_id=caller_ai_grant_id,
+                    caller_generation=caller_generation,
+                ):
                     raise LateJoinControllerMismatchPersistenceError(
                         "Only the current DM Controller may Late Join"
                     )
@@ -149,6 +273,16 @@ class SessionLiveRepository:
                         controller_access_session_id_at_join=(
                             seat["controller_access_session_id"]
                         ),
+                        controller_ai_grant_id_at_join=(
+                            seat["ai_controller_grant_id"]
+                            if seat["controller_kind"] == "ai"
+                            else None
+                        ),
+                        controller_generation_at_join=(
+                            int(seat["controller_epoch"])
+                            if seat["controller_kind"] == "ai"
+                            else None
+                        ),
                         active_character_id=character_id,
                         joined_at=now,
                         left_at=None,
@@ -187,11 +321,18 @@ class SessionLiveRepository:
                     active_character_session_leases.c.session_id,
                     active_character_session_leases.c.participant_id,
                     session_participants.c.seat_id,
+                    sessions.c.dm_controller_kind,
                     sessions.c.dm_controller_access_session_id,
+                    sessions.c.dm_controller_ai_grant_id,
+                    sessions.c.dm_controller_generation,
                     campaign_seats.c.controller_kind.label("player_controller_kind"),
                     campaign_seats.c.controller_access_session_id.label(
                         "player_controller_access_session_id"
                     ),
+                    campaign_seats.c.ai_controller_grant_id.label(
+                        "player_ai_controller_grant_id"
+                    ),
+                    campaign_seats.c.controller_epoch.label("player_controller_epoch"),
                 )
                 .select_from(
                     active_character_session_leases
@@ -207,7 +348,11 @@ class SessionLiveRepository:
                     sessions.c.status == "active",
                 )
             ).mappings().one_or_none()
-        return ActiveCharacterControl(**dict(row)) if row is not None else None
+        if row is None:
+            return None
+        values = dict(row)
+        values["player_controller_epoch"] = int(values["player_controller_epoch"])
+        return ActiveCharacterControl(**values)
 
     def character_is_history_referenced(self, character_id: UUID) -> bool:
         with self.engine.connect() as connection:

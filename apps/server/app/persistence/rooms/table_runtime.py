@@ -28,6 +28,8 @@ from sqlalchemy.engine import Engine
 
 from app.db import metadata
 from app.persistence.rooms.tables import (
+    ai_controller_grants,
+    campaign_seats,
     campaigns,
     room_access_sessions,
     session_participants,
@@ -149,6 +151,7 @@ class StoredTableRuntime:
 
 @dataclass(frozen=True)
 class StoredTableActorBinding:
+    actor_kind: str
     room_id: UUID
     campaign_id: UUID
     session_id: UUID
@@ -156,7 +159,9 @@ class StoredTableActorBinding:
     controlled_seat_ids: tuple[UUID, ...]
     role: str
     is_current_dm: bool
-    access_session_id: UUID
+    access_session_id: UUID | None = None
+    ai_controller_grant_id: UUID | None = None
+    grant_generation: int | None = None
 
 
 @dataclass(frozen=True)
@@ -181,12 +186,7 @@ TableEventTransactionProjection = Callable[[Any, UUID, int], None]
 
 
 class TableEventRepository:
-    """P3 durable cursor/event persistence.
-
-    All append allocation for one Session is serialized by a row lock on the
-    canonical P2 Session row. The implementation never derives a sequence from
-    MAX(seq), so concurrent writers cannot allocate the same sequence.
-    """
+    """P3 durable cursor/event persistence with current actor binding checks."""
 
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
@@ -229,6 +229,8 @@ class TableEventRepository:
                 sessions.c.dm_seat_id,
                 sessions.c.dm_controller_kind,
                 sessions.c.dm_controller_access_session_id,
+                sessions.c.dm_controller_ai_grant_id,
+                sessions.c.dm_controller_generation,
                 campaigns.c.room_id,
             )
             .select_from(sessions.join(campaigns, campaigns.c.id == sessions.c.campaign_id))
@@ -263,6 +265,12 @@ class TableEventRepository:
         if session_row is None:
             return None
 
+        # Human Room access sessions are not Session-scoped bearer grants. Keep a
+        # still-valid Human controller binding resolvable after End/Abandon so
+        # committed history and canonical idempotent replays remain available.
+        # append() separately rejects any new mutation when the Session is not
+        # active. AI grants intentionally keep the active-Session requirement in
+        # _ai_actor_from_connection() because lifecycle finalization revokes them.
         access_query = select(
             room_access_sessions.c.id,
             room_access_sessions.c.room_id,
@@ -282,14 +290,21 @@ class TableEventRepository:
             select(
                 session_participants.c.seat_id,
                 session_participants.c.role_snapshot,
-                session_participants.c.controller_kind_at_join,
-                session_participants.c.controller_access_session_id_at_join,
                 session_participants.c.joined_at,
                 session_participants.c.id,
+                campaign_seats.c.controller_kind,
+                campaign_seats.c.controller_access_session_id,
+            )
+            .select_from(
+                session_participants.join(
+                    campaign_seats,
+                    campaign_seats.c.id == session_participants.c.seat_id,
+                )
             )
             .where(
                 session_participants.c.session_id == session_id,
                 session_participants.c.left_at.is_(None),
+                campaign_seats.c.archived_at.is_(None),
             )
             .order_by(session_participants.c.joined_at, session_participants.c.id)
         ).mappings().all()
@@ -297,8 +312,8 @@ class TableEventRepository:
         controlled = tuple(
             row["seat_id"]
             for row in participant_rows
-            if row["controller_kind_at_join"] == "human"
-            and row["controller_access_session_id_at_join"] == access_session_id
+            if row["controller_kind"] == "human"
+            and row["controller_access_session_id"] == access_session_id
         )
         is_current_dm = (
             session_row["dm_controller_kind"] == "human"
@@ -309,6 +324,7 @@ class TableEventRepository:
             if seat_id not in controlled:
                 controlled = (seat_id, *controlled)
             return StoredTableActorBinding(
+                actor_kind="human",
                 room_id=room_id,
                 campaign_id=campaign_id,
                 session_id=session_id,
@@ -331,6 +347,7 @@ class TableEventRepository:
             controlled[0],
         )
         return StoredTableActorBinding(
+            actor_kind="human",
             room_id=room_id,
             campaign_id=campaign_id,
             session_id=session_id,
@@ -340,6 +357,152 @@ class TableEventRepository:
             is_current_dm=False,
             access_session_id=access_session_id,
         )
+
+    def _ai_actor_from_connection(
+        self,
+        connection,
+        *,
+        room_id: UUID,
+        campaign_id: UUID,
+        session_id: UUID,
+        grant_id: UUID,
+        generation: int,
+        session_row=None,
+        lock_actor: bool = False,
+    ) -> StoredTableActorBinding | None:
+        if session_row is None:
+            session_row = self._session_scope_row(
+                connection,
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+            )
+        if session_row is None or session_row["status"] != "active":
+            return None
+
+        locator = connection.execute(
+            select(
+                ai_controller_grants.c.seat_id,
+                ai_controller_grants.c.campaign_id,
+            ).where(ai_controller_grants.c.id == grant_id)
+        ).one_or_none()
+        if locator is None or locator.campaign_id != campaign_id:
+            return None
+
+        seat_query = select(campaign_seats).where(
+            campaign_seats.c.id == locator.seat_id,
+            campaign_seats.c.campaign_id == campaign_id,
+            campaign_seats.c.archived_at.is_(None),
+        )
+        if lock_actor:
+            seat_query = seat_query.with_for_update()
+        seat = connection.execute(seat_query).mappings().one_or_none()
+        if (
+            seat is None
+            or seat["controller_kind"] != "ai"
+            or seat["ai_controller_grant_id"] != grant_id
+            or int(seat["controller_epoch"]) != int(generation)
+        ):
+            return None
+
+        grant_query = select(ai_controller_grants).where(ai_controller_grants.c.id == grant_id)
+        if lock_actor:
+            grant_query = grant_query.with_for_update()
+        grant = connection.execute(grant_query).mappings().one_or_none()
+        if (
+            grant is None
+            or grant["seat_id"] != seat["id"]
+            or grant["status"] != "active"
+            or grant["room_id"] != room_id
+            or grant["campaign_id"] != campaign_id
+            or grant["session_id"] != session_id
+            or int(grant["generation"]) != int(generation)
+        ):
+            return None
+
+        if grant["role"] == "dm":
+            if (
+                seat["role"] != "dm"
+                or session_row["dm_seat_id"] != seat["id"]
+                or session_row["dm_controller_kind"] != "ai"
+                or session_row["dm_controller_ai_grant_id"] != grant_id
+                or session_row["dm_controller_generation"] != generation
+            ):
+                return None
+            return StoredTableActorBinding(
+                actor_kind="ai",
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+                seat_id=seat["id"],
+                controlled_seat_ids=(seat["id"],),
+                role="dm",
+                is_current_dm=True,
+                ai_controller_grant_id=grant_id,
+                grant_generation=int(generation),
+            )
+
+        if grant["role"] != "player" or seat["role"] != "player":
+            return None
+        participant = connection.execute(
+            select(session_participants.c.id)
+            .where(
+                session_participants.c.session_id == session_id,
+                session_participants.c.seat_id == seat["id"],
+                session_participants.c.left_at.is_(None),
+                session_participants.c.role_snapshot == "player",
+            )
+            .limit(1)
+        ).one_or_none()
+        if participant is None:
+            return None
+        return StoredTableActorBinding(
+            actor_kind="ai",
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            seat_id=seat["id"],
+            controlled_seat_ids=(seat["id"],),
+            role="player",
+            is_current_dm=False,
+            ai_controller_grant_id=grant_id,
+            grant_generation=int(generation),
+        )
+
+    def _actor_from_connection(
+        self,
+        connection,
+        binding: StoredTableActorBinding,
+        *,
+        session_row=None,
+        lock_actor: bool = False,
+    ) -> StoredTableActorBinding | None:
+        if binding.actor_kind == "human" and binding.access_session_id is not None:
+            return self._human_actor_from_connection(
+                connection,
+                room_id=binding.room_id,
+                campaign_id=binding.campaign_id,
+                session_id=binding.session_id,
+                access_session_id=binding.access_session_id,
+                session_row=session_row,
+                lock_access=lock_actor,
+            )
+        if (
+            binding.actor_kind == "ai"
+            and binding.ai_controller_grant_id is not None
+            and binding.grant_generation is not None
+        ):
+            return self._ai_actor_from_connection(
+                connection,
+                room_id=binding.room_id,
+                campaign_id=binding.campaign_id,
+                session_id=binding.session_id,
+                grant_id=binding.ai_controller_grant_id,
+                generation=binding.grant_generation,
+                session_row=session_row,
+                lock_actor=lock_actor,
+            )
+        return None
 
     def resolve_human_actor(
         self,
@@ -358,14 +521,28 @@ class TableEventRepository:
                 access_session_id=access_session_id,
             )
 
+    def resolve_ai_actor(
+        self,
+        *,
+        room_id: UUID,
+        campaign_id: UUID,
+        session_id: UUID,
+        grant_id: UUID,
+        generation: int,
+    ) -> StoredTableActorBinding | None:
+        with self.engine.connect() as connection:
+            return self._ai_actor_from_connection(
+                connection,
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+                grant_id=grant_id,
+                generation=generation,
+            )
+
     def actor_binding_is_current(self, binding: StoredTableActorBinding) -> bool:
-        current = self.resolve_human_actor(
-            room_id=binding.room_id,
-            campaign_id=binding.campaign_id,
-            session_id=binding.session_id,
-            access_session_id=binding.access_session_id,
-        )
-        return current == binding
+        with self.engine.connect() as connection:
+            return self._actor_from_connection(connection, binding) == binding
 
     def current_runtime(
         self,
@@ -462,14 +639,11 @@ class TableEventRepository:
                 raise TableEventSessionNotFoundPersistenceError(str(session_id))
 
             if expected_actor_binding is not None:
-                current_actor = self._human_actor_from_connection(
+                current_actor = self._actor_from_connection(
                     connection,
-                    room_id=room_id,
-                    campaign_id=campaign_id,
-                    session_id=session_id,
-                    access_session_id=expected_actor_binding.access_session_id,
+                    expected_actor_binding,
                     session_row=session_row,
-                    lock_access=True,
+                    lock_actor=True,
                 )
                 if current_actor != expected_actor_binding:
                     raise TableEventActorBindingStalePersistenceError(

@@ -94,18 +94,6 @@ def get_seat_service(request: Request) -> SeatService:
     return service
 
 
-def get_session_service(request: Request) -> SessionService:
-    service = getattr(request.app.state, "session_service", None)
-    if service is None:
-        engine = get_database_engine(request)
-        service = SessionService(
-            SessionRepository(engine),
-            SessionLiveRepository(engine),
-        )
-        request.app.state.session_service = service
-    return service
-
-
 def get_table_event_notifier(request: Request) -> ProcessLocalTableEventNotifier:
     notifier = getattr(request.app.state, "table_event_notifier", None)
     if notifier is None:
@@ -122,6 +110,19 @@ def get_table_event_service(request: Request) -> TableEventService:
             get_table_event_notifier(request),
         )
         request.app.state.table_event_service = service
+    return service
+
+
+def get_session_service(request: Request) -> SessionService:
+    service = getattr(request.app.state, "session_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        service = SessionService(
+            SessionRepository(engine),
+            SessionLiveRepository(engine),
+            get_table_event_service(request),
+        )
+        request.app.state.session_service = service
     return service
 
 

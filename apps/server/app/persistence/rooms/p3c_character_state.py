@@ -8,7 +8,7 @@ from sqlalchemy.engine import Engine
 from app.content.registry import ContentRegistry
 from app.domain.character.schemas import CharacterState, PersistedCharacter
 from app.domain.rooms.table_character_state import TableCharacterStatePatch
-from app.domain.rooms.table_events import TableActorContext, TableActorKind
+from app.domain.rooms.table_events import TableActorContext
 from app.persistence.characters import CharacterRepository
 from app.persistence.rooms.tables import session_participants
 from app.persistence.rooms.table_runtime import (
@@ -27,12 +27,9 @@ class TableCharacterStateActorUnsupportedPersistenceError(PermissionError):
     pass
 
 
-def _human_binding(actor: TableActorContext) -> StoredTableActorBinding:
-    if actor.actor_kind is not TableActorKind.HUMAN or actor.access_session_id is None:
-        raise TableCharacterStateActorUnsupportedPersistenceError(
-            "AI table state persistence is not available until P3-D"
-        )
+def _actor_binding(actor: TableActorContext) -> StoredTableActorBinding:
     return StoredTableActorBinding(
+        actor_kind=actor.actor_kind.value,
         room_id=actor.room_id,
         campaign_id=actor.campaign_id,
         session_id=actor.session_id,
@@ -41,6 +38,8 @@ def _human_binding(actor: TableActorContext) -> StoredTableActorBinding:
         role=actor.role,
         is_current_dm=actor.is_current_dm,
         access_session_id=actor.access_session_id,
+        ai_controller_grant_id=actor.ai_controller_grant_id,
+        grant_generation=actor.grant_generation,
     )
 
 
@@ -67,7 +66,7 @@ class TableCharacterStatePersistence:
         execution_mode: str,
         patch: TableCharacterStatePatch,
     ) -> PersistedCharacter:
-        binding = _human_binding(actor)
+        binding = _actor_binding(actor)
         changes = patch.state_changes()
 
         def projection(connection, _event_id: UUID, _seq: int) -> None:

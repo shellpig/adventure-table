@@ -5,11 +5,12 @@ from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 from sqlalchemy import and_, delete, insert, select, update
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 
 from app.persistence.characters import characters
 from app.persistence.rooms.tables import (
+    ai_controller_grants,
     campaign_roster_entries,
     campaign_seats,
     campaigns,
@@ -45,6 +46,8 @@ class StoredSeat:
     archived_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    ai_controller_grant_id: UUID | None = None
+    controller_epoch: int = 0
 
 
 @dataclass(frozen=True)
@@ -101,6 +104,44 @@ class SeatRepository:
             )
         )
 
+    @staticmethod
+    def _revoke_ai_grants_for_seat(
+        connection: Connection,
+        *,
+        seat_id: UUID,
+        now: datetime,
+    ) -> None:
+        connection.execute(
+            update(ai_controller_grants)
+            .where(
+                ai_controller_grants.c.seat_id == seat_id,
+                ai_controller_grants.c.status == "active",
+            )
+            .values(
+                status="revoked",
+                revoked_at=now,
+                temporary_instruction=None,
+            )
+        )
+
+    @staticmethod
+    def _active_dm_session_in_transaction(
+        connection: Connection,
+        *,
+        seat_id: UUID,
+    ) -> UUID | None:
+        query = (
+            select(sessions.c.id)
+            .where(
+                sessions.c.dm_seat_id == seat_id,
+                sessions.c.status == "active",
+            )
+            .limit(1)
+        )
+        if connection.dialect.name == "postgresql":
+            query = query.with_for_update()
+        return connection.scalar(query)
+
     def campaign_room_id(self, campaign_id: UUID) -> UUID | None:
         with self.engine.connect() as connection:
             return connection.scalar(select(campaigns.c.room_id).where(campaigns.c.id == campaign_id))
@@ -112,6 +153,17 @@ class SeatRepository:
     def active_campaign_id(self, room_id: UUID) -> UUID | None:
         with self.engine.connect() as connection:
             return connection.scalar(select(rooms.c.active_campaign_id).where(rooms.c.id == room_id))
+
+    def active_session_for_dm_seat(self, seat_id: UUID) -> UUID | None:
+        with self.engine.connect() as connection:
+            return connection.scalar(
+                select(sessions.c.id)
+                .where(
+                    sessions.c.dm_seat_id == seat_id,
+                    sessions.c.status == "active",
+                )
+                .limit(1)
+            )
 
     def get(self, seat_id: UUID) -> StoredSeat | None:
         with self.engine.connect() as connection:
@@ -139,6 +191,8 @@ class SeatRepository:
                         label=label,
                         controller_kind="none",
                         controller_access_session_id=None,
+                        ai_controller_grant_id=None,
+                        controller_epoch=0,
                         selected_character_id=None,
                         archived_at=None,
                     )
@@ -176,14 +230,57 @@ class SeatRepository:
         controller_kind: str,
         controller_access_session_id: UUID | None,
     ) -> StoredSeat | None:
+        if controller_kind == "ai":
+            raise SeatPersistenceConflictError(
+                "AI controller assignment requires a P3-D scoped grant"
+            )
+        now = datetime.now(timezone.utc)
         with self.engine.begin() as connection:
+            query = select(
+                campaign_seats.c.role,
+                campaign_seats.c.controller_kind,
+                campaign_seats.c.controller_access_session_id,
+                campaign_seats.c.ai_controller_grant_id,
+                campaign_seats.c.controller_epoch,
+            ).where(campaign_seats.c.id == seat_id, campaign_seats.c.archived_at.is_(None))
+            if connection.dialect.name == "postgresql":
+                query = query.with_for_update()
+            current = connection.execute(query).one_or_none()
+            if current is None:
+                return None
+            same_identity = (
+                current.controller_kind == controller_kind
+                and current.controller_access_session_id == controller_access_session_id
+                and current.ai_controller_grant_id is None
+            )
+            if same_identity:
+                return self._seat(
+                    connection.execute(
+                        select(campaign_seats).where(campaign_seats.c.id == seat_id)
+                    ).mappings().one()
+                )
+            if (
+                current.role == "dm"
+                and self._active_dm_session_in_transaction(connection, seat_id=seat_id) is not None
+            ):
+                raise SeatPersistenceConflictError(
+                    "DM Seat controller is fixed while its Session is active"
+                )
+            if current.role == "player" and current.controller_kind == "ai":
+                raise SeatPersistenceConflictError(
+                    "AI-controlled Player Seat requires Take Back or administrative reassignment"
+                )
+            if current.ai_controller_grant_id is not None:
+                self._revoke_ai_grants_for_seat(connection, seat_id=seat_id, now=now)
             result = connection.execute(
                 update(campaign_seats)
                 .where(campaign_seats.c.id == seat_id, campaign_seats.c.archived_at.is_(None))
                 .values(
                     controller_kind=controller_kind,
                     controller_access_session_id=controller_access_session_id,
-                    updated_at=datetime.now(timezone.utc),
+                    ai_controller_grant_id=None,
+                    controller_epoch=int(current.controller_epoch) + 1,
+                    updated_at=now,
                 )
             )
         if result.rowcount != 1:
@@ -271,6 +368,36 @@ class SeatRepository:
     def archive(self, seat_id: UUID) -> StoredSeat | None:
         now = datetime.now(timezone.utc)
         with self.engine.begin() as connection:
+            query = select(
+                campaign_seats.c.role,
+                campaign_seats.c.controller_kind,
+                campaign_seats.c.controller_access_session_id,
+                campaign_seats.c.ai_controller_grant_id,
+                campaign_seats.c.controller_epoch,
+            ).where(campaign_seats.c.id == seat_id, campaign_seats.c.archived_at.is_(None))
+            if connection.dialect.name == "postgresql":
+                query = query.with_for_update()
+            current = connection.execute(query).one_or_none()
+            if current is None:
+                return None
+            if (
+                current.role == "dm"
+                and self._active_dm_session_in_transaction(connection, seat_id=seat_id) is not None
+            ):
+                raise SeatPersistenceConflictError(
+                    "DM Seat cannot be archived while its Session is active"
+                )
+            if current.role == "player" and current.controller_kind == "ai":
+                raise SeatPersistenceConflictError(
+                    "AI-controlled Player Seat must be recovered before archive"
+                )
+            identity_changed = (
+                current.controller_kind != "none"
+                or current.controller_access_session_id is not None
+                or current.ai_controller_grant_id is not None
+            )
+            if current.ai_controller_grant_id is not None:
+                self._revoke_ai_grants_for_seat(connection, seat_id=seat_id, now=now)
             result = connection.execute(
                 update(campaign_seats)
                 .where(campaign_seats.c.id == seat_id, campaign_seats.c.archived_at.is_(None))
@@ -278,6 +405,8 @@ class SeatRepository:
                     archived_at=now,
                     controller_kind="none",
                     controller_access_session_id=None,
+                    ai_controller_grant_id=None,
+                    controller_epoch=int(current.controller_epoch) + (1 if identity_changed else 0),
                     selected_character_id=None,
                     updated_at=now,
                 )

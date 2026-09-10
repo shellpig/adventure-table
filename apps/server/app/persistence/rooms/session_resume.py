@@ -4,10 +4,15 @@ from dataclasses import dataclass
 from typing import Any, Iterable
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.engine import Engine
 
 from app.persistence.characters import character_versions, characters
+from app.persistence.rooms.tables import (
+    ai_controller_grants,
+    campaign_seats,
+    room_access_sessions,
+)
 
 
 @dataclass(frozen=True)
@@ -62,6 +67,51 @@ class SessionResumeRepository:
         if missing is not None:
             raise LookupError(f"Session Resume Character {missing} was not found")
         return tuple(by_id[character_id] for character_id in ordered_ids)
+
+    def self_take_back_seat_ids(
+        self,
+        *,
+        room_id: UUID,
+        session_id: UUID,
+        access_session_id: UUID,
+    ) -> tuple[UUID, ...]:
+        """Return only current AI Player Seats this active Human credential may reclaim."""
+        with self.engine.connect() as connection:
+            rows = connection.execute(
+                select(ai_controller_grants.c.seat_id)
+                .select_from(
+                    ai_controller_grants
+                    .join(
+                        campaign_seats,
+                        and_(
+                            campaign_seats.c.id == ai_controller_grants.c.seat_id,
+                            campaign_seats.c.campaign_id == ai_controller_grants.c.campaign_id,
+                        ),
+                    )
+                    .join(
+                        room_access_sessions,
+                        room_access_sessions.c.id
+                        == ai_controller_grants.c.handoff_return_access_session_id,
+                    )
+                )
+                .where(
+                    ai_controller_grants.c.room_id == room_id,
+                    ai_controller_grants.c.session_id == session_id,
+                    ai_controller_grants.c.role == "player",
+                    ai_controller_grants.c.status == "active",
+                    ai_controller_grants.c.handoff_return_access_session_id
+                    == access_session_id,
+                    campaign_seats.c.controller_kind == "ai",
+                    campaign_seats.c.ai_controller_grant_id == ai_controller_grants.c.id,
+                    campaign_seats.c.controller_epoch == ai_controller_grants.c.generation,
+                    campaign_seats.c.archived_at.is_(None),
+                    room_access_sessions.c.id == access_session_id,
+                    room_access_sessions.c.room_id == room_id,
+                    room_access_sessions.c.revoked_at.is_(None),
+                )
+                .order_by(ai_controller_grants.c.seat_id)
+            ).scalars().all()
+        return tuple(rows)
 
 
 __all__ = ["SessionResumeRepository", "StoredSessionCharacterSummary"]

@@ -39,6 +39,8 @@ def test_p2e_session_schema_matches_history_contract() -> None:
         "dm_seat_id",
         "dm_controller_kind",
         "dm_controller_access_session_id",
+        "dm_controller_ai_grant_id",
+        "dm_controller_generation",
         "started_at",
         "ended_at",
         "created_at",
@@ -46,9 +48,17 @@ def test_p2e_session_schema_matches_history_contract() -> None:
     assert _fk_ondelete(sessions, "campaign_id") == "RESTRICT"
     assert _fk_ondelete(sessions, "dm_seat_id") == "RESTRICT"
     assert _fk_ondelete(sessions, "dm_controller_access_session_id") == "RESTRICT"
+    assert _fk_ondelete(sessions, "dm_controller_ai_grant_id") == "RESTRICT"
     checks = _check_sql(sessions)
     assert any(all(status in sql for status in ("active", "ended", "abandoned")) for sql in checks)
-    assert any("dm_controller_access_session_id" in sql and "human" in sql for sql in checks)
+    assert any(
+        "dm_controller_access_session_id" in sql
+        and "dm_controller_ai_grant_id" in sql
+        and "dm_controller_generation" in sql
+        and "human" in sql
+        and "ai" in sql
+        for sql in checks
+    )
 
 
 def test_p2e_participant_schema_keeps_non_null_seat_history() -> None:
@@ -59,6 +69,8 @@ def test_p2e_participant_schema_keeps_non_null_seat_history() -> None:
         "role_snapshot",
         "controller_kind_at_join",
         "controller_access_session_id_at_join",
+        "controller_ai_grant_id_at_join",
+        "controller_generation_at_join",
         "active_character_id",
         "joined_at",
         "left_at",
@@ -67,6 +79,7 @@ def test_p2e_participant_schema_keeps_non_null_seat_history() -> None:
     assert _fk_ondelete(session_participants, "session_id") == "CASCADE"
     assert _fk_ondelete(session_participants, "seat_id") == "RESTRICT"
     assert _fk_ondelete(session_participants, "controller_access_session_id_at_join") == "RESTRICT"
+    assert _fk_ondelete(session_participants, "controller_ai_grant_id_at_join") == "RESTRICT"
     assert _fk_ondelete(session_participants, "active_character_id") == "RESTRICT"
     unique_columns = {
         tuple(column.name for column in constraint.columns)
@@ -77,6 +90,14 @@ def test_p2e_participant_schema_keeps_non_null_seat_history() -> None:
     assert ("session_id", "active_character_id") in unique_columns
     checks = _check_sql(session_participants)
     assert any(all(role in sql for role in ("dm", "player", "spectator")) for sql in checks)
+    assert any(
+        "controller_access_session_id_at_join" in sql
+        and "controller_ai_grant_id_at_join" in sql
+        and "controller_generation_at_join" in sql
+        and "human" in sql
+        and "ai" in sql
+        for sql in checks
+    )
     assert any("active_character_id" in sql and "player" in sql for sql in checks)
 
 

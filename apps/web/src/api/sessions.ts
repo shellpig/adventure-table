@@ -11,6 +11,8 @@ export type SessionParticipantSnapshot = {
   role: 'dm' | 'player' | 'spectator'
   controller_kind_at_join: 'human' | 'ai' | 'none'
   controller_access_session_id_at_join: string | null
+  controller_ai_grant_id_at_join?: string | null
+  controller_generation_at_join?: number | null
   active_character_id: string | null
 }
 
@@ -19,7 +21,10 @@ export type SessionSnapshot = {
   campaign_id: string
   status: SessionStatus
   dm_seat_id: string
+  dm_controller_kind?: 'human' | 'ai' | 'none'
   dm_controller_access_session_id: string | null
+  dm_controller_ai_grant_id?: string | null
+  dm_controller_generation?: number | null
   started_at: string
   ended_at: string | null
   participants: SessionParticipantSnapshot[]
@@ -115,6 +120,7 @@ export type SessionResume = {
   seats: CampaignSeat[]
   active_characters: SessionResumeCharacterSummary[]
   caller_access_session_id: string | null
+  self_take_back_seat_ids?: string[]
   table_runtime?: TableRuntimeCursor | null
   recent_events?: TableEventPage | null
   stage?: StageState | null

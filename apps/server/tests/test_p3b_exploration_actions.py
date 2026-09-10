@@ -154,7 +154,7 @@ def _seat_second_dm_key_holder(engine, room_id, campaign_id, session_id):
     with engine.begin() as connection:
         connection.execute(insert(room_access_sessions).values(
             id=access_id, room_id=room_id, authority="dm",
-            token_hash=b"	" * 32, display_name="second dm key",
+            token_hash=b"\t" * 32, display_name="second dm key",
             created_at=now, last_seen_at=now, revoked_at=None,
         ))
         connection.execute(insert(characters).values(
@@ -268,12 +268,14 @@ def test_one_human_controlling_multiple_player_seats_must_choose_subject_explici
         room_id, campaign_id, session_id, access, seats, _characters = _seed(engine)
         with engine.begin() as connection:
             connection.execute(
-                update(session_participants)
-                .where(
-                    session_participants.c.session_id == session_id,
-                    session_participants.c.seat_id == seats["p2"],
+                update(campaign_seats)
+                .where(campaign_seats.c.id == seats["p2"])
+                .values(
+                    controller_kind="human",
+                    controller_access_session_id=access["p1"],
+                    ai_controller_grant_id=None,
+                    controller_epoch=campaign_seats.c.controller_epoch + 1,
                 )
-                .values(controller_access_session_id_at_join=access["p1"])
             )
         events = TableEventService(TableEventRepository(engine))
         actions = _actions(engine, events)
@@ -347,8 +349,6 @@ def test_dm_key_holder_who_is_not_the_session_dm_cannot_proxy_or_narrate() -> No
                 text="The vault door swings open.",
             ))
 
-        # Its own Seat still works, so the refusals are about table authority,
-        # not about this actor being unable to reach the Session at all.
         own = actions.send(other, ExplorationInputRequest(
             kind=ExplorationInputKind.DIALOGUE,
             subject_seat_id=other_seat,
@@ -358,7 +358,6 @@ def test_dm_key_holder_who_is_not_the_session_dm_cannot_proxy_or_narrate() -> No
         assert own.subject_character_id == other_character
         assert own.execution_mode is not None and own.execution_mode.value == "self"
 
-        # And the Seat it could not proxy is still proxyable by the real current DM.
         dm = _actor(events, room_id, campaign_id, session_id, access["dm"], "dm")
         proxied = actions.send(dm, ExplorationInputRequest(
             kind=ExplorationInputKind.ACTION,

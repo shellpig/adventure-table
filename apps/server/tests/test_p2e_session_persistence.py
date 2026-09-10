@@ -126,17 +126,19 @@ def test_session_referenced_seat_cannot_hard_delete_but_can_archive() -> None:
     engine = _engine()
     try:
         room, campaign, character, seats, dm_seat, player_a, _player_b = _seed(engine)
-        session = SessionRepository(engine).create_with_participants(
+        repository = SessionRepository(engine)
+        session = repository.create_with_participants(
             campaign_id=campaign.id,
             dm_seat_id=dm_seat.id,
             dm_controller_kind="none",
             dm_controller_access_session_id=None,
             participants=[_player_seed(player_a.id, character.id)],
         )
+        assert repository.finalize(session.id, status="ended") is not None
 
-        # Cover both non-null historical Seat FKs independently. This persistence
-        # fixture deliberately omits the DM from participants, so dm_seat_id is
-        # the only reference protecting the DM Seat.
+        # Historical non-null Seat FKs remain protected after lifecycle finalization.
+        # P3-D intentionally forbids mutating the active DM Seat, so this history
+        # contract is exercised only after the Session has ended.
         with pytest.raises(SeatHistoryReferencedError):
             seats.delete_seat(room.room.id, campaign.id, dm_seat.id)
         with pytest.raises(SeatHistoryReferencedError):
@@ -147,7 +149,7 @@ def test_session_referenced_seat_cannot_hard_delete_but_can_archive() -> None:
         assert archived_dm.archived_at is not None
         assert archived_player.archived_at is not None
 
-        participant = SessionRepository(engine).list_participants(session.id)[0]
+        participant = repository.list_participants(session.id)[0]
         assert participant.seat_id == player_a.id
         assert SeatRepository(engine).get(dm_seat.id) is not None
         assert SeatRepository(engine).get(player_a.id) is not None

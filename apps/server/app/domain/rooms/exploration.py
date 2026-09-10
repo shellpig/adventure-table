@@ -11,7 +11,6 @@ from pydantic import Field, model_validator
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import (
     TableActorContext,
-    TableActorKind,
     TableEvent,
     TableEventActorUnauthorizedError,
     TableEventNotFoundError,
@@ -131,12 +130,9 @@ class ExplorationSubjectNotFoundError(LookupError):
     pass
 
 
-def _human_binding(actor: TableActorContext) -> StoredTableActorBinding:
-    if actor.actor_kind is not TableActorKind.HUMAN or actor.access_session_id is None:
-        raise TableEventActorUnauthorizedError(
-            "AI table actor persistence is not available until P3-D"
-        )
+def _actor_binding(actor: TableActorContext) -> StoredTableActorBinding:
     return StoredTableActorBinding(
+        actor_kind=actor.actor_kind.value,
         room_id=actor.room_id,
         campaign_id=actor.campaign_id,
         session_id=actor.session_id,
@@ -145,6 +141,8 @@ def _human_binding(actor: TableActorContext) -> StoredTableActorBinding:
         role=actor.role,
         is_current_dm=actor.is_current_dm,
         access_session_id=actor.access_session_id,
+        ai_controller_grant_id=actor.ai_controller_grant_id,
+        grant_generation=actor.grant_generation,
     )
 
 
@@ -215,7 +213,7 @@ class ExplorationStageService:
         new_image = self._decode_image(request.image) if request.image is not None else None
         try:
             stage, _event = self.repository.replace_stage(
-                binding=_human_binding(actor),
+                binding=_actor_binding(actor),
                 expected_revision=request.expected_revision,
                 text=request.text,
                 retain_image_id=request.image_id,
@@ -255,7 +253,7 @@ class ExplorationStageService:
 
 
 class ExplorationActionService:
-    """Typed Human table input service; P3-D can supply AI TableActorContext unchanged."""
+    """Actor-neutral Exploration input service for Human and AI controllers."""
 
     def __init__(
         self,
@@ -308,7 +306,7 @@ class ExplorationActionService:
 
         try:
             stored = self.message_repository.append_message(
-                binding=_human_binding(actor),
+                binding=_actor_binding(actor),
                 message_kind=request.kind.value,
                 text=request.text,
                 acting_seat_id=acting_seat_id,

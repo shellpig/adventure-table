@@ -10,6 +10,7 @@ from app.persistence.characters import characters
 from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.seats import SeatRepository
 from app.persistence.rooms.tables import (
+    ai_controller_grants,
     campaign_roster_entries,
     campaign_seats,
     campaigns,
@@ -31,6 +32,7 @@ def _engine():
             campaigns,
             campaign_roster_entries,
             campaign_seats,
+            ai_controller_grants,
         ],
     )
     return engine

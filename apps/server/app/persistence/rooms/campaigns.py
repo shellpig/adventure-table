@@ -9,6 +9,7 @@ from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 
 from app.persistence.rooms.tables import (
+    ai_controller_grants,
     campaign_roster_entries,
     campaign_seats,
     campaigns,
@@ -63,6 +64,28 @@ class CampaignRepository:
         return StoredRosterEntry(**dict(row)) if row is not None else None
 
     @staticmethod
+    def _revoke_unbound_ai_dm_grants(
+        connection: Connection,
+        *,
+        campaign_id: UUID,
+        now: datetime,
+    ) -> None:
+        connection.execute(
+            update(ai_controller_grants)
+            .where(
+                ai_controller_grants.c.campaign_id == campaign_id,
+                ai_controller_grants.c.role == "dm",
+                ai_controller_grants.c.session_id.is_(None),
+                ai_controller_grants.c.status == "active",
+            )
+            .values(
+                status="revoked",
+                revoked_at=now,
+                temporary_instruction=None,
+            )
+        )
+
+    @staticmethod
     def get_in_transaction(connection: Connection, campaign_id: UUID) -> StoredCampaign | None:
         row = connection.execute(
             select(campaigns).where(campaigns.c.id == campaign_id)
@@ -114,15 +137,6 @@ class CampaignRepository:
 
     @staticmethod
     def _lock_campaign_seats(connection: Connection, *, campaign_id: UUID) -> None:
-        """Take the Seat locks before writing Roster rows.
-
-        Session Start locks campaign_seats first and campaign_roster_entries
-        second. Any Roster write that cascades into Seat selection has to take
-        the same two resources in the same order, or PostgreSQL deadlocks the
-        pair. Ordering matches Start's so the individual row locks are acquired
-        in a consistent sequence.
-        """
-
         connection.execute(
             select(campaign_seats.c.id)
             .where(campaign_seats.c.campaign_id == campaign_id)
@@ -192,6 +206,11 @@ class CampaignRepository:
     def set_status(self, campaign_id: UUID, status: str) -> StoredCampaign | None:
         now = datetime.now(timezone.utc)
         with self.engine.begin() as connection:
+            query = select(campaigns.c.id).where(campaigns.c.id == campaign_id)
+            if connection.dialect.name == "postgresql":
+                query = query.with_for_update()
+            if connection.scalar(query) is None:
+                return None
             result = connection.execute(
                 update(campaigns)
                 .where(campaigns.c.id == campaign_id)
@@ -199,18 +218,31 @@ class CampaignRepository:
             )
             if result.rowcount != 1:
                 return None
+            if status != "active":
+                self._revoke_unbound_ai_dm_grants(
+                    connection,
+                    campaign_id=campaign_id,
+                    now=now,
+                )
             return self.get_in_transaction(connection, campaign_id)
 
     def clear_selection_if_campaign(self, campaign_id: UUID) -> None:
+        now = datetime.now(timezone.utc)
         with self.engine.begin() as connection:
-            connection.execute(
+            changed = connection.execute(
                 update(rooms)
                 .where(rooms.c.active_campaign_id == campaign_id)
                 .values(
                     active_campaign_id=None,
-                    updated_at=datetime.now(timezone.utc),
+                    updated_at=now,
                 )
             )
+            if changed.rowcount:
+                self._revoke_unbound_ai_dm_grants(
+                    connection,
+                    campaign_id=campaign_id,
+                    now=now,
+                )
 
     def select_active_campaign(
         self,
@@ -218,16 +250,35 @@ class CampaignRepository:
         room_id: UUID,
         campaign_id: UUID | None,
     ) -> bool:
+        now = datetime.now(timezone.utc)
         with self.engine.begin() as connection:
+            query = select(rooms.c.active_campaign_id).where(rooms.c.id == room_id)
+            if connection.dialect.name == "postgresql":
+                query = query.with_for_update()
+            current_campaign_id = connection.scalar(query)
+            if current_campaign_id is None and connection.scalar(
+                select(rooms.c.id).where(rooms.c.id == room_id)
+            ) is None:
+                return False
+            if current_campaign_id == campaign_id:
+                return True
             result = connection.execute(
                 update(rooms)
                 .where(rooms.c.id == room_id)
                 .values(
                     active_campaign_id=campaign_id,
-                    updated_at=datetime.now(timezone.utc),
+                    updated_at=now,
                 )
             )
-            return result.rowcount == 1
+            if result.rowcount != 1:
+                return False
+            if current_campaign_id is not None:
+                self._revoke_unbound_ai_dm_grants(
+                    connection,
+                    campaign_id=current_campaign_id,
+                    now=now,
+                )
+            return True
 
     def delete(self, campaign_id: UUID) -> bool:
         with self.engine.begin() as connection:
@@ -235,13 +286,6 @@ class CampaignRepository:
             return result.rowcount == 1
 
     def delete_draft_without_session_history(self, campaign_id: UUID) -> bool:
-        """Atomically enforce the P2 hard-delete boundary.
-
-        A Campaign may be hard-deleted only while it is still Draft and has
-        never acquired Session history. PostgreSQL locks the Campaign row so a
-        concurrent lifecycle transition cannot invalidate the check before the
-        delete is issued.
-        """
         with self.engine.begin() as connection:
             status_query = select(campaigns.c.status).where(campaigns.c.id == campaign_id)
             if connection.dialect.name == "postgresql":
@@ -298,10 +342,6 @@ class CampaignRepository:
                     character_id=character_id,
                 )
         except IntegrityError as exc:
-            # Two add requests can both observe no row and race on the unique
-            # (campaign_id, character_id) key. The contract is idempotent, so
-            # after the losing transaction rolls back, return the committed
-            # winner when it exists instead of leaking a database 500.
             with self.engine.connect() as connection:
                 existing = self.roster_entry_in_transaction(
                     connection,

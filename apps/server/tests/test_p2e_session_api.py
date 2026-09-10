@@ -134,6 +134,7 @@ def _snapshot(
         campaign_id=campaign_id,
         status=status,
         dm_seat_id=uuid4(),
+        dm_controller_kind="human",
         dm_controller_access_session_id=uuid4(),
         started_at=now,
         ended_at=now if status is not SessionStatus.ACTIVE else None,

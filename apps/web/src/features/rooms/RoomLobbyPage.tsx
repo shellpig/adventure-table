@@ -22,6 +22,7 @@ import {
 } from '../../api/sessions'
 import { useLocale } from '../../i18n/LocaleProvider'
 import { startRoomHeartbeat } from './heartbeat'
+import { LobbyAIDMGrantPanel } from './LobbyAIDMGrantPanel'
 import { lobbyCopy } from './lobbyCopy'
 import { recentRoomForId } from './roomStorage'
 import { sessionCopy, sessionErrorMessage } from './sessionCopy'
@@ -240,18 +241,33 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
             const controllerChoices = seat.role === 'dm'
               ? snapshot.controllers.filter((item) => item.authority === 'dm' || item.authority === 'owner')
               : snapshot.controllers
+            const controllerLabel = seat.controller_kind === 'ai'
+              ? copy.aiDmController
+              : (seat.controller_display_name || copy.unassigned)
             return (
               <article className="workshop-card" key={seat.id}>
                 <h2>{seat.label || (seat.role === 'dm' ? copy.dm : seat.role === 'player' ? copy.player : copy.spectator)}</h2>
                 <p>{copy.role}: {seat.role === 'dm' ? copy.dm : seat.role === 'player' ? copy.player : copy.spectator}</p>
                 <p>
-                  {copy.controller}: {seat.controller_display_name || copy.unassigned}
+                  {copy.controller}: {controllerLabel}
                   {seat.controller_kind === 'human' ? ` · ${seat.presence === 'connected' ? copy.connected : copy.offline}` : ''}
                 </p>
-                {canManageSeat ? (
+
+                {seat.role === 'dm' && isOwner && activeSession === null ? (
+                  <LobbyAIDMGrantPanel
+                    roomId={roomId}
+                    campaignId={campaignId}
+                    seat={seat}
+                    roomToken={token}
+                    copy={copy}
+                    onChanged={reload}
+                  />
+                ) : null}
+
+                {canManageSeat && seat.controller_kind !== 'ai' ? (
                   <label>{copy.controller}
                     <select
-                      disabled={pending}
+                      disabled={pending || (seat.role === 'dm' && activeSession !== null)}
                       value={seat.controller_access_session_id ?? ''}
                       onChange={(event) => mutate(() => setSeatController(
                         roomId,
@@ -298,13 +314,13 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
                   <div className="workshop-card__split-actions">
                     <button
                       className="button secondary"
-                      disabled={pending}
+                      disabled={pending || (seat.role === 'dm' && activeSession !== null)}
                       type="button"
                       onClick={() => mutate(() => archiveSeat(roomId, campaignId, seat.id, token))}
                     >{copy.archive}</button>
                     <button
                       className="button danger"
-                      disabled={pending}
+                      disabled={pending || (seat.role === 'dm' && activeSession !== null)}
                       type="button"
                       onClick={() => {
                         if (!window.confirm(copy.removeConfirm)) return
@@ -317,7 +333,6 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
             )
           })}
         </div>
-        <p>{copy.aiReserved}</p>
       </section>
     </main>
   )

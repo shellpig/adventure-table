@@ -7,6 +7,7 @@ on:
       - p3-a-session-table-runtime-event-stream
       - p3-b-exploration-chat-actions
       - p3-c-roll-check-pending-action
+      - p3-d-ai-controller-scoped-token-handoff
 
 jobs:
   backend:
@@ -22,7 +23,14 @@ jobs:
         run: python -m pip install -e "./apps/server[web,dev]"
       - name: Run backend non-E2E regression
         working-directory: apps/server
-        run: pytest
+        run: pytest --junitxml=backend-results.xml
+      - name: Upload backend test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p3-backend-results
+          path: apps/server/backend-results.xml
+          if-no-files-found: warn
 
   postgres-migrations:
     runs-on: ubuntu-latest
@@ -54,7 +62,15 @@ jobs:
           cache-dependency-path: apps/server/pyproject.toml
       - name: Install backend
         run: python -m pip install -e "./apps/server[web,dev]"
-      - name: Run P3 PostgreSQL migration and concurrency gates
+      - name: Run P3-D PostgreSQL controller gates
+        working-directory: apps/server
+        run: >-
+          pytest
+          tests/test_p3d_postgres_controller.py
+          tests/test_p3d_postgres_controller_matrix.py
+          --junitxml=p3d-postgres-results.xml
+      - name: Run P3 and legacy PostgreSQL regression gates
+        if: always()
         working-directory: apps/server
         run: >-
           pytest
@@ -67,6 +83,16 @@ jobs:
           tests/test_p2f_postgres_seat_selection.py
           tests/test_postgres_roster_lock_order.py
           tests/test_m03c_migration.py
+          --junitxml=postgres-regression-results.xml
+      - name: Upload PostgreSQL test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p3-postgres-results
+          path: |
+            apps/server/p3d-postgres-results.xml
+            apps/server/postgres-regression-results.xml
+          if-no-files-found: warn
 
   frontend:
     runs-on: ubuntu-latest
