@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from sqlalchemy import create_engine, event
 
 from app.content import load_default_content_registry
@@ -9,7 +10,14 @@ from app.db import metadata
 from app.domain.character.fixture import build_p0_fighter_wizard_fixture, build_p0_fighter_wizard_state
 from app.domain.rooms.campaigns import CampaignCreate, CampaignService, CampaignStatus, RosterAdd
 from app.domain.rooms.schemas import CreateRoomRequest, EnterRoomRequest
-from app.domain.rooms.seats import ControllerKind, SeatControllerPatch, SeatCreate, SeatRole, SeatService
+from app.domain.rooms.seats import (
+    ControllerKind,
+    SeatControllerError,
+    SeatControllerPatch,
+    SeatCreate,
+    SeatRole,
+    SeatService,
+)
 from app.domain.rooms.service import RoomService
 from app.domain.rooms.sessions import SessionService, SessionStatus
 from app.persistence.characters import CharacterRepository
@@ -122,21 +130,20 @@ def test_restart_preserves_active_session_controller_participants_leases_and_acc
     fixed_dm_access_session_id = started.dm_controller_access_session_id
     assert fixed_dm_access_session_id == dm.access_session_id
 
-    # Change the current Lobby DM Seat controller after Start. The Session must
-    # continue to remember its original fixed current DM across restart.
-    seats1.set_controller(
-        owner.room.id,
-        campaign.id,
-        dm_seat.id,
-        SeatControllerPatch(
-            controller_kind=ControllerKind.HUMAN,
-            controller_access_session_id=owner.access_session_id,
-        ),
-    )
+    # P3-D makes the active Session DM controller immutable. A Lobby mutation
+    # attempt must fail and restart must preserve both Session and Seat binding.
+    with pytest.raises(SeatControllerError):
+        seats1.set_controller(
+            owner.room.id,
+            campaign.id,
+            dm_seat.id,
+            SeatControllerPatch(
+                controller_kind=ControllerKind.HUMAN,
+                controller_access_session_id=owner.access_session_id,
+            ),
+        )
     engine1.dispose()
 
-    # Simulate a server/process restart: construct a fresh Engine and all fresh
-    # services from the persisted database, with no in-memory object reuse.
     engine2 = _engine(database_path)
     rooms2 = RoomService(RoomRepository(engine2))
     dm_context2 = rooms2.authenticate(owner.room.id, dm.access_token)
@@ -161,10 +168,8 @@ def test_restart_preserves_active_session_controller_participants_leases_and_acc
 
     current_dm_seat = SeatRepository(engine2).get(dm_seat.id)
     assert current_dm_seat is not None
-    assert current_dm_seat.controller_access_session_id == owner.access_session_id
+    assert current_dm_seat.controller_access_session_id == dm.access_session_id
 
-    # The original fixed DM token can still End after restart even though the
-    # Lobby Seat now points elsewhere; End persists and releases the lease.
     ended = sessions2.end_session(
         owner.room.id,
         campaign.id,
@@ -182,8 +187,6 @@ def test_restart_preserves_active_session_controller_participants_leases_and_acc
     assert archived_player.archived_at is not None
     engine2.dispose()
 
-    # A second restart must not reconstruct leases for ended history, and an
-    # archived Seat remains a valid non-null historical Session reference.
     engine3 = _engine(database_path)
     rooms3 = RoomService(RoomRepository(engine3))
     assert rooms3.authenticate(owner.room.id, dm.access_token).access_session_id == dm.access_session_id
