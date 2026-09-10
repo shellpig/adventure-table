@@ -236,12 +236,9 @@ class AIToolApplicationService:
         )
         if participant is None or participant.active_character_id is None:
             raise AIToolScopeError("AI Player has no active Character in this Session")
-        self.workspace_service.require_character(
+        character = self.workspace_service.get_character(
             actor.room_id,
             participant.active_character_id,
-        )
-        character = self.workspace_service.character_repository.load_character(
-            participant.active_character_id
         )
         return character.model_dump(mode="json")
 
