@@ -11,7 +11,6 @@ from app.domain.rooms.exploration import ExplorationSubjectNotFoundError
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import (
     TableActorContext,
-    TableActorKind,
     TableEventActorUnauthorizedError,
     TableEventService,
 )
@@ -236,10 +235,6 @@ class RollEngine:
 
 
 def _request_event_visibility(visibility: RollVisibility) -> str:
-    # A formal request must wake every target roller even when the DC/result is
-    # secret. The request event omits DC and p3c_rolls records target Seat
-    # recipients, so non-public request wake-ups are Seat-private rather than
-    # actor+DM/dm-only result audiences.
     if visibility is RollVisibility.PUBLIC:
         return "public"
     return "seat_private"
@@ -253,10 +248,9 @@ def _result_event_visibility(visibility: RollVisibility) -> str:
     return "dm_only"
 
 
-def _human_binding(actor: TableActorContext) -> StoredTableActorBinding:
-    if actor.actor_kind is not TableActorKind.HUMAN or actor.access_session_id is None:
-        raise TableEventActorUnauthorizedError("AI roll persistence is not available until P3-D")
+def _actor_binding(actor: TableActorContext) -> StoredTableActorBinding:
     return StoredTableActorBinding(
+        actor_kind=actor.actor_kind.value,
         room_id=actor.room_id,
         campaign_id=actor.campaign_id,
         session_id=actor.session_id,
@@ -265,6 +259,8 @@ def _human_binding(actor: TableActorContext) -> StoredTableActorBinding:
         role=actor.role,
         is_current_dm=actor.is_current_dm,
         access_session_id=actor.access_session_id,
+        ai_controller_grant_id=actor.ai_controller_grant_id,
+        grant_generation=actor.grant_generation,
     )
 
 
@@ -350,7 +346,7 @@ class RollService:
             for subject in subjects
         )
         group_id, stored, _event = self.repository.create_request_group(
-            binding=_human_binding(actor),
+            binding=_actor_binding(actor),
             requests=new_requests,
             request_type=request.request_type.value,
             ability_ref=request.ability_ref,
@@ -415,9 +411,6 @@ class RollService:
         )
 
         def compute_result() -> FormalRollComputation:
-            # This closure is invoked by RollRepository only after the Session
-            # and RollRequest serialization boundary confirms the request is
-            # still pending. A concurrent losing submit never consumes RNG.
             audit = self.engine.d20(
                 mode=RollModifierMode(request.modifier_mode),
                 base_modifier=base_modifier,
@@ -440,7 +433,7 @@ class RollService:
 
         try:
             stored, _event = self.repository.complete_request(
-                binding=_human_binding(actor),
+                binding=_actor_binding(actor),
                 request_id=request.id,
                 acting_seat_id=acting_seat_id,
                 execution_mode=execution_mode,
@@ -475,7 +468,7 @@ class RollService:
             flat_adjustment=input.flat_adjustment,
         )
         stored, _event = self.repository.record_quick_roll(
-            binding=_human_binding(actor),
+            binding=_actor_binding(actor),
             acting_seat_id=subject.seat_id,
             subject_seat_id=subject.seat_id,
             subject_character_id=subject.active_character_id,
