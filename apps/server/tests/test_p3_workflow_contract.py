@@ -11,6 +11,7 @@ P3B_BRANCH = "p3-b-exploration-chat-actions"
 P3C_BRANCH = "p3-c-roll-check-pending-action"
 P3D_BRANCH = "p3-d-ai-controller-scoped-token-handoff"
 P3E_BRANCH = "p3-e-ai-tool-surface-event-delivery"
+P3F_BRANCH = "p3-f-full-integration-closeout"
 
 
 def _source(path: Path) -> str:
@@ -23,7 +24,14 @@ def test_p3_non_e2e_workflow_is_scoped_to_post_review_p3_triggers() -> None:
     assert source.startswith("name: P3 Non-E2E\n")
     assert "workflow_dispatch:" in source
     assert "\n  push:" in source
-    for branch in (P3A_BRANCH, P3B_BRANCH, P3C_BRANCH, P3D_BRANCH, P3E_BRANCH):
+    for branch in (
+        P3A_BRANCH,
+        P3B_BRANCH,
+        P3C_BRANCH,
+        P3D_BRANCH,
+        P3E_BRANCH,
+        P3F_BRANCH,
+    ):
         assert f"      - {branch}\n" in source
     assert "\n  pull_request:" not in source
 
@@ -50,6 +58,7 @@ def test_p3_non_e2e_workflow_explicitly_runs_p3_and_legacy_postgres_gates() -> N
         "tests/test_p3c_postgres_rolls.py",
         "tests/test_p3d_postgres_controller.py",
         "tests/test_p3d_postgres_controller_matrix.py",
+        "tests/test_p3f_waiter_resource_safety.py",
         "tests/test_p2a_postgres_migration.py",
         "tests/test_p2b_postgres_workspace.py",
         "tests/test_p2e_postgres_sessions.py",
