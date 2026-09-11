@@ -1,0 +1,139 @@
+name: M04-A Build Hardening Restoration Artifact
+
+on:
+  push:
+    branches:
+      - m04a-webchat-preflight
+    paths:
+      - '.github/workflows/m04a-build-hardening-artifact.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install backend development dependencies
+        run: pip install -e "./apps/server[web,dev,standalone]"
+      - name: Restore 682ba1e hardening and add regressions
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          server = Path("tools/m04a-webchat-preflight/server.py")
+          text = server.read_text(encoding="utf-8")
+          old = '''        if not self.test_password:\n            raise ValueError("test_password must not be empty")\n        object.__setattr__(self, "public_base_url", base)\n'''
+          new = '''        if not self.test_password:\n            raise ValueError("test_password must not be empty")\n        if self.access_ttl_seconds <= 0 or self.refresh_ttl_seconds <= 0:\n            raise ValueError("token TTL values must be positive")\n        object.__setattr__(self, "public_base_url", base)\n'''
+          assert text.count(old) == 1, "Config TTL patch anchor drifted"
+          text = text.replace(old, new, 1)
+
+          old = '''            access = _new_secret("access")\n            async with state.lock:\n                family.access_hash = _hash_token(access)\n                family.access_expires_at = _now() + config.access_ttl_seconds\n                state.remember_secret(access)\n'''
+          new = '''            access = _new_secret("access")\n            async with state.lock:\n                if family.revoked or family.refresh_expires_at <= _now():\n                    return _oauth_error(\n                        "invalid_grant",\n                        "refresh token invalid, expired, or revoked",\n                    )\n                family.access_hash = _hash_token(access)\n                family.access_expires_at = _now() + config.access_ttl_seconds\n                state.remember_secret(access)\n'''
+          assert text.count(old) == 1, "refresh lock recheck patch anchor drifted"
+          text = text.replace(old, new, 1)
+          server.write_text(text, encoding="utf-8")
+
+          tests = Path("tools/m04a-webchat-preflight/test_server_contract.py")
+          test_text = tests.read_text(encoding="utf-8")
+          assert "def test_refresh_rechecks_family_authority_inside_lock" not in test_text
+          assert "def test_config_rejects_non_positive_token_ttls" not in test_text
+          import_anchor = "import json\nimport sys\n"
+          assert test_text.count(import_anchor) == 1, "pytest import anchor drifted"
+          test_text = test_text.replace(import_anchor, "import json\nimport sys\n\nimport pytest\n", 1)
+          test_text += r'''
+
+
+@pytest.mark.parametrize(
+    ("access_ttl_seconds", "refresh_ttl_seconds"),
+    [(0, 60), (-1, 60), (60, 0), (60, -1)],
+)
+def test_config_rejects_non_positive_token_ttls(
+    tmp_path: Path,
+    access_ttl_seconds: int,
+    refresh_ttl_seconds: int,
+) -> None:
+    with pytest.raises(ValueError, match="token TTL values must be positive"):
+        Config(
+            public_base_url="https://preflight.example",
+            test_password="test-password",
+            log_path=tmp_path / "preflight.jsonl",
+            access_ttl_seconds=access_ttl_seconds,
+            refresh_ttl_seconds=refresh_ttl_seconds,
+        )
+
+
+def test_refresh_rechecks_family_authority_inside_lock(tmp_path: Path) -> None:
+    async def scenario() -> None:
+        state = PreflightState()
+        app = create_public_app(
+            Config(
+                public_base_url="https://preflight.example",
+                test_password="test-password",
+                log_path=tmp_path / "preflight.jsonl",
+            ),
+            state,
+        )
+        client_id, _, refresh_token = await _authorize_role(app, "dm")
+        original_refresh_family = state.refresh_family
+
+        def revoke_after_precheck(token: str | None):
+            family = original_refresh_family(token)
+            assert family is not None
+            family.revoked = True
+            return family
+
+        state.refresh_family = revoke_after_precheck  # type: ignore[method-assign]
+        status, _, body = await _request(
+            app,
+            method="POST",
+            path="/token",
+            body=_form(
+                {
+                    "grant_type": "refresh_token",
+                    "client_id": client_id,
+                    "refresh_token": refresh_token,
+                }
+            ),
+            headers={"content-type": "application/x-www-form-urlencoded"},
+        )
+        assert status == 400
+        assert _json(body)["error"] == "invalid_grant"
+
+    asyncio.run(scenario())
+'''
+          tests.write_text(test_text, encoding="utf-8")
+          PY
+      - name: Static checks and semantic diff
+        run: |
+          git diff --check
+          git diff -w 682ba1eb4d72ca481b2f326bd50c8bc7b21cd6c8 -- tools/m04a-webchat-preflight/server.py
+          python -m py_compile tools/m04a-webchat-preflight/server.py tools/m04a-webchat-preflight/admin.py tools/m04a-webchat-preflight/test_server_contract.py
+      - name: M04-A standalone harness tests
+        run: >-
+          pytest
+          tools/m04a-webchat-preflight/test_redact.py
+          tools/m04a-webchat-preflight/test_server_contract.py
+          -q
+      - name: M04-A isolation and P3 authorization/MCP regression
+        working-directory: apps/server
+        run: >-
+          pytest
+          tests/test_m04a_preflight_isolation.py
+          tests/test_p3d_*.py
+          tests/test_p3e_*.py
+          -q
+      - uses: actions/upload-artifact@v4
+        with:
+          name: m04a-hardening-restoration
+          path: |
+            tools/m04a-webchat-preflight/server.py
+            tools/m04a-webchat-preflight/test_server_contract.py
+          if-no-files-found: error
