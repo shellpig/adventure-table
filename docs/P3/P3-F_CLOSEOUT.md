@@ -2,7 +2,7 @@
 
 P3-F — Full P3 Integration & Closeout。此文件依 [實作規格](實作規格.md) 與 [測試指南](測試指南.md) 收斂 P3-A～P3-E 的整合證據。
 
-> 狀態：**closeout gates 全部完成**。Automated non-E2E / PostgreSQL / Windows standalone gate 已通過，本機全套 Playwright 已跑過（見下方 Full Playwright evidence），External MCP E1 HTTPS/TLS gate 已於 2026-09-11 執行通過（見下方「External MCP E1 over HTTPS/TLS」）。剩餘唯一待補項是 `p3-e2e.yml` 合併進 `main` 後的 CI dispatch run id，不阻塞 P3-F 關門。
+> 狀態：**closeout gates 全部完成**。Automated non-E2E / PostgreSQL / Windows standalone gate 已通過，本機全套 Playwright 已跑過（見下方 Full Playwright evidence），External MCP E1 HTTPS/TLS gate 已於 2026-09-11 執行通過（見下方「External MCP E1 over HTTPS/TLS」）。`p3-e2e.yml` 合併進 `main` 後的 CI dispatch run 亦已於 2026-09-11 全綠（見下方「P3 Full-Stack E2E」）。
 
 ## P3-F implementation additions
 
@@ -88,15 +88,14 @@ P3-F closeout依賴並重新回歸既有 P3-A～E證據：
 
 以下兩項完成前，**不得**把 P3-F / P3 / P3-E item 14 宣告完成：
 
-### 1. P3 Full-Stack E2E（CI run，合併後補）
+### 1. P3 Full-Stack E2E（CI run）— ✅ 2026-09-11
 
-本機全套證據已在上方；CI 版需等 `p3-e2e.yml` 進 `main` 後手動 dispatch，branch 選當時的 P3 合併 SHA，取得：
+`p3-e2e.yml` 隨 P3 合併 commit `d6b791e` 進 `main` 後手動 dispatch：
 
-- workflow name `P3 Full-Stack E2E`
-- exact tested SHA / run id
-- complete Playwright result
-- `p3-playwright-results` artifact
-- clean Docker rebuild / readiness / cleanup evidence
+- workflow `P3 Full-Stack E2E`，run [`34587347309`](https://github.com/shellpig/adventure-table/actions/runs/34587347309)，tested SHA `d6b791ef5bad893d7357434ee005323cf6495a69`（`main`，P3 merge commit）
+- job `playwright` success；`Run complete P3 Playwright regression suite`：**113 passed, 3 skipped**（10.6m），0 failed
+- artifact `p3-playwright-results`，id `10194544756`（9.09 MB）
+- clean Docker rebuild、readiness 與 always-cleanup 步驟皆在同一 run 內完成
 
 此 workflow 刻意保持 `workflow_dispatch` only；不得為了自動觸發而改成 push / PR trigger。
 
@@ -123,9 +122,9 @@ P3-F closeout依賴並重新回歸既有 P3-A～E證據：
 - Real PostgreSQL concurrency/resource/restart gate：✅
 - Windows frozen standalone：✅
 - Full Playwright（本機 Docker，P2-F 前例）：✅ @ `51176e9`，除 KI-P1D-001 簽章外全綠
-- P3 Full-Stack E2E CI run：⏳ 待 `p3-e2e.yml` 進 `main` 後 dispatch
+- P3 Full-Stack E2E CI run：✅ `34587347309` @ `d6b791e`（113 passed, 3 skipped）
 - External MCP E1 HTTPS/TLS：✅ 2026-09-11（Claude Code 2.1.260 經 Tailscale HTTPS；同時關閉 P3-E 第 14 條）
-- **P3-F closeout gates：✅ 全部完成**；P3 Phase 關門與合併回 `main` 依 PROJECT_BRIEF 流程，合併後補 dispatch CI run id
+- **P3-F / P3 Phase：✅ 關門**，已於 `d6b791e` 合併回 `main`
 
 ## Known limitations / observations
 

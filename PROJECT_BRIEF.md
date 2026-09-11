@@ -23,7 +23,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## 當前狀態與下一步
 
-**P0、P1、P2、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門，P3-E 與 P3-F 已於 2026-09-11 關門（external MCP client HTTPS E1 於 P3-F closeout 合併執行通過）；下一步是 P3 Phase 關門並合併回 `main`。**
+**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門，P3-E 與 P3-F 已於 2026-09-11 關門（external MCP client HTTPS E1 於 P3-F closeout 合併執行通過），P3 Phase 同日以 `d6b791e` 合併回 `main`，`P3 Full-Stack E2E` CI run `34587347309` 全綠；下一步是 P4 開工前的 Subphase 拆分與三份文件。**
 
 P2 已交付並必須繼續維持的核心方向：
 
@@ -52,8 +52,8 @@ P3 已拍板並寫入正式文件的核心方向：
 
 下一步依序為：
 
-1. **P3 Phase 關門並合併回 `main`**：本機全套 E2E 已於 `51176e9` 跑過（除 KI-P1D-001 簽章外全綠）；合併後在 `main` 手動 dispatch `P3 Full-Stack E2E`（`p3-e2e.yml`）補 CI run id 到 [P3-F closeout](docs/P3/P3-F_CLOSEOUT.md)。
-2. P4～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module；P4 開工前先拆 Subphase 與三份文件。
+1. **P4 — Quick Combat 開工前置**：先拆 `P4-A`、`P4-B`… Subphase 並產出 `docs/P4/` 三份文件；P4-A 承接 SRD Monster／Beast stat blocks。
+2. P5～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
 
 P2 的正式契約：
 
@@ -95,7 +95,7 @@ P3 的正式契約：
 | P3-D 的 AI 授權證據全在 domain 層，新 UI 無 browser 證據 | **P3-E 已補 HTTP 入口與 real-backend MCP journey，P3-F E1 已補真 external client（Claude Code 2.1.260 經 HTTPS）證據**；`LobbyAIDMGrantPanel` / `PlayerAIControlPanel` 仍只有 vitest 覆蓋，handoff／Take Back／admin recovery／AI DM Start 的 browser journey 未做，見 P3-F closeout「Known limitations」 | [P3-D closeout](docs/P3/P3-D_CLOSEOUT.md)「已知限制」 |
 | handoff 不改 participant snapshot 只有結構性保證 | 三條 controller mutation 確實沒有寫 `session_participants` 的語句，但沒有測試在 handoff／Take Back／admin reassignment 前後比對 participant row 與 `active_character_id`；日後有人在這三條路徑加寫入，現有測試不會擋。P3-F 的 D1／D1b journey 應補上前後比對 | [P3-D closeout](docs/P3/P3-D_CLOSEOUT.md)「已知限制」 |
 | 桌上訊息只保留最後 200 筆，且長場次 reload 仍是完整 replay | P3-B handoff 要求 P3-C 正面處理「提高上限或改成分頁載入」。P3-C 試過改用 Resume 的 bounded cursor 取代 replay，但那會讓 50 筆視窗之前的可見歷史消失，已回退成「Resume 能自證覆蓋完整歷史才沿用其 cursor，否則 durable replay」。correctness 無誤，但 reload 成本仍隨 event 數線性成長，畫面也只留最後 200 筆，真正的回捲 UX 未做 | [P3-C closeout](docs/P3/P3-C_CLOSEOUT.md)「已知限制」與「關門過程中修正的問題」第 1 項 |
-| E2E Journey C1 沒有 CI 覆蓋 | `p3c-roll-check-pending-action.spec.ts` 只有本機 `npm run test:e2e:docker` 會跑到：`p3-non-e2e.yml` 不含 E2E job，`p2-e2e.yml` 是 `workflow_dispatch`。要進 CI 得先決定整體 E2E 時間預算怎麼分配 | [P3-C closeout](docs/P3/P3-C_CLOSEOUT.md)「已知限制」；留給 P3-F 一起決定 |
+| 全套 E2E 只有 `workflow_dispatch` CI | `p3-e2e.yml` 已涵蓋全部 Playwright spec（含 C1 `p3c-roll-check-pending-action.spec.ts`），但刻意只允許手動 dispatch，不隨 push / PR 自動跑；日常仍靠本機 `npm run test:e2e:docker`。整體 E2E 時間預算（10.6m）要不要進 push gate 未決 | [P3-F closeout](docs/P3/P3-F_CLOSEOUT.md)「P3 Full-Stack E2E」 |
 | Group Check 沒有群組彙總視圖 | `roll_group_id` 只在資料層成立，前端是逐條 request 的清單；「這一組共 4 人、2 人已擲」的彙總呈現沒有做 | [P3-C closeout](docs/P3/P3-C_CLOSEOUT.md)「已知限制」 |
 | Campaign status 仍無 transition 規則 | `active` 已累積「可開 Lobby」與「可開 Session」兩層語意，但 Campaign 仍可從 `completed` 退回 `draft`；`delete_draft_without_session_history()` 因此得同時檢查 status 與 Session history 才安全 | [P2-E closeout](docs/P2/P2-E_CLOSEOUT.md)「已知限制」；P3-D pre-session AI DM grant只要Campaign離開Start-eligible active就revoke，不依賴status transition單向性 |
 | draft Campaign hard delete 會 cascade 掉整份 Roster | 符合契約，且 **P2-E 已把「無 Session history」從恆真變成真的檢查**（`delete_draft_without_session_history()`）。剩下的問題只在 UI：確認流程未顯示會連帶移除幾筆 roster。P2 未處理 | [P2-C closeout](docs/P2/P2-C_CLOSEOUT.md)「已知限制」；[P2-F closeout](docs/P2/P2-F_CLOSEOUT.md)「已知限制」 |
@@ -121,7 +121,7 @@ P3 的正式契約：
 | M02 | Traditional Chinese / English Localization | 插於 M01-C 與 M01-D 間；雙語呈現、翻譯流程與完整性 gate；已關門 |
 | M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，E.9 乾淨 Windows 11 冷啟動已於 2026-09-06 補驗完成 |
 | P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**A～F 全數關門，Phase 已關門** |
-| P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌；**A～F 全數關門；待 Phase 關門合併回 `main`** |
+| P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌；**A～F 全數關門，Phase 已關門並合併回 `main`** |
 | P4 | Quick Combat | 第一個完整可玩的 Combat MVP；首個 Subphase P4-A 承接 SRD Monster／Beast stat blocks |
 | P5 | Tactical Combat | 同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE 與空間系統 |
 | P6 | Adventure + AI DM Runtime | Adventure Definition／Importer、Campaign Runtime、世界資料、AI DM context／write-back |
@@ -222,7 +222,7 @@ P3 的正式契約：
 | **P3-C — Roll, Check & PendingAction** | ✅ | RollGroup / RollRequest / Result、Server RNG、Group / Secret / physical / quick roll、PendingAction、formal roll idempotency、actor-neutral Character State + event atomic boundary；AI resolver留P3-D接線 |
 | **P3-D — AI Controller, Scoped Token & Handoff** | ✅ | typed TableActorContext、P2 Human-only Session/live-write授權入口migration、hashed scoped AI Join Token、Seat current grant + controller_epoch SSOT、Session/Participant grant-generation snapshots與三條CHECK migration、finite-TTL pre-session AI DM grant、origin-only Take Back + Owner/DM admin recovery、Player Human ↔ AI handoff、AI DM可作新Session固定DM Controller |
 | **P3-E — AI Tool Surface & Event Delivery** | ✅ | MCP `2026-07-28` stateless Streamable HTTP入口、shared application services、structured tools/errors、`get_pending_events` / `wait_for_event`沿用P3-A async wait、standalone 不掛 `/mcp`；真 external MCP client HTTPS E1 於 P3-F closeout 由 Claude Code 2.1.260 經 Tailscale HTTPS 執行通過 |
-| **P3-F — Full P3 Integration & Closeout** | ✅ | Human/AI Exploration journeys、secret/group roll、Late Join、AI handoff、AI DM、grant TTL/epoch/Take Back authorization、restart、cross-scope matrix、PostgreSQL concurrency、waiter resource safety、P2 caller regression、standalone / bilingual / full regression closeout；`p3-e2e.yml` CI run id 待合併 `main` 後 dispatch 補上 |
+| **P3-F — Full P3 Integration & Closeout** | ✅ | Human/AI Exploration journeys、secret/group roll、Late Join、AI handoff、AI DM、grant TTL/epoch/Take Back authorization、restart、cross-scope matrix、PostgreSQL concurrency、waiter resource safety、P2 caller regression、standalone / bilingual / full regression closeout；`P3 Full-Stack E2E` CI run `34587347309` 全綠 |
 
 ## 接手時必須保留的跨 Phase 約束
 
