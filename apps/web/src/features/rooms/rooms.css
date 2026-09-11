@@ -192,6 +192,36 @@
   transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
 }
 
+.recent-room-item {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.recent-room-item .recent-room-card {
+  flex: 1;
+  min-width: 0;
+}
+
+.recent-room-remove {
+  flex: none;
+  width: 36px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+
+.recent-room-remove:hover {
+  border-color: var(--gold-dark);
+  background: var(--surface-3);
+  color: var(--text);
+}
+
 .recent-room-card:hover {
   border-color: var(--gold-dark);
   background: var(--surface-3);

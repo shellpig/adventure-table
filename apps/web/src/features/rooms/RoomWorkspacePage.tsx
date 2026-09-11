@@ -13,6 +13,16 @@ export function roomIdFromPath(pathname: string): string | null {
   return match?.[1] ?? null
 }
 
+/**
+ * The stored Recent Rooms entry can never open this Room again: the Room is gone
+ * (404), or its access session no longer exists — Room hard delete cascades the
+ * session away, so a deleted Room actually surfaces as 403 room_access_denied.
+ */
+export function isStaleRecentRoom(cause: unknown): boolean {
+  if (!(cause instanceof RoomApiError)) return false
+  return cause.code === 'room_not_found' || cause.code === 'room_access_denied'
+}
+
 export function RoomWorkspacePage({ roomId }: { roomId: string }) {
   const { locale } = useLocale()
   const copy = roomCopy(locale)
@@ -40,6 +50,7 @@ export function RoomWorkspacePage({ roomId }: { roomId: string }) {
       })
       .catch((cause: unknown) => {
         if (!active) return
+        if (isStaleRecentRoom(cause)) forgetRecentRoom(roomId)
         setRoomError(cause instanceof RoomApiError ? cause : null)
         setStatus('error')
       })
@@ -86,9 +97,11 @@ export function RoomWorkspacePage({ roomId }: { roomId: string }) {
   }
 
   if (status === 'error' || !recent) {
-    const message = roomError
-      ? localizedRoomRequestMessage(roomError.code, roomError.status, roomError.message, locale)
-      : copy.workspaceError
+    const message = isStaleRecentRoom(roomError)
+      ? copy.workspaceStale
+      : roomError
+        ? localizedRoomRequestMessage(roomError.code, roomError.status, roomError.message, locale)
+        : copy.workspaceError
     return (
       <main className="landing-page room-workspace-page">
         <section className="landing-card room-workspace-card">

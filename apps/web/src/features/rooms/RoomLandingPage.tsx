@@ -4,7 +4,7 @@ import { createRoom, enterRoom, RoomApiError, type RoomAccessGrant } from '../..
 import { useLocale } from '../../i18n/LocaleProvider'
 import { localizedRoomRequestMessage } from '../../i18n/roomMessages'
 import { roomCopy } from './copy'
-import { persistRoomGrant, readRecentRooms } from './roomStorage'
+import { forgetRecentRoom, persistRoomGrant, readRecentRooms } from './roomStorage'
 import './rooms.css'
 
 function navigateToRoom(roomId: string) {
@@ -168,10 +168,24 @@ export function RoomLandingPage() {
             <h3>{copy.recentTitle}</h3>
             <div className="recent-room-list">
               {recentRooms.map((room) => (
-                <a className="recent-room-card" href={`/rooms/${room.roomId}`} key={room.roomId}>
-                  <strong>{room.name}</strong>
-                  <code>{room.code}</code>
-                </a>
+                <div className="recent-room-item" key={room.roomId}>
+                  <a className="recent-room-card" href={`/rooms/${room.roomId}`}>
+                    <strong>{room.name}</strong>
+                    <code>{room.code}</code>
+                  </a>
+                  <button
+                    type="button"
+                    className="recent-room-remove"
+                    aria-label={copy.recentRemove.replace('{room}', room.name)}
+                    title={copy.recentRemove.replace('{room}', room.name)}
+                    onClick={() => {
+                      forgetRecentRoom(room.roomId)
+                      setRecentRooms(readRecentRooms())
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
               ))}
             </div>
           </section>
