@@ -104,7 +104,8 @@
   letter-spacing: 0.02em;
 }
 
-.room-field input {
+.room-field input,
+.room-field select {
   width: 100%;
   height: 40px;
   padding: 0 13px;
@@ -118,10 +119,20 @@
   transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
 }
 
-.room-field input:focus {
+.room-field select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23d7b56d' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+.room-field input:focus,
+.room-field select:focus {
   border-color: var(--gold-dark);
-  box-shadow: 0 0 0 3px rgb(215 181 109 / 10%);
-  background: #0f141f;
+  box-shadow: 0 0 0 3px rgb(215 181 109 / 12%);
+  background-color: #0f141f;
   outline: none;
 }
 
@@ -304,7 +315,8 @@
 
 /* Room Workspace Page */
 .room-workspace-card {
-  width: min(680px, 100%);
+  width: min(880px, 100%);
+  max-width: 880px;
   padding: 42px 40px;
   text-align: center;
 }
@@ -503,5 +515,233 @@
     width: 100%;
     justify-content: flex-end;
   }
+}
+
+/* Room Form Row (Side-by-side fields) */
+.room-form-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.room-form-row > .room-field {
+  flex: 1;
+}
+
+@media (max-width: 480px) {
+  .room-form-row {
+    flex-direction: column;
+    gap: 14px;
+  }
+}
+
+/* Campaign 3-Column Grid */
+.campaign-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  margin-top: 24px;
+  text-align: left;
+}
+
+@media (max-width: 820px) {
+  .campaign-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .campaign-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.campaign-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 22px 20px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  text-align: center;
+  box-sizing: border-box;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.campaign-card:hover {
+  border-color: rgb(215 181 109 / 35%);
+  background: var(--surface-3);
+}
+
+.campaign-card h2 {
+  margin: 0 0 6px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.campaign-card__status {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.campaign-card__selected {
+  display: inline-block;
+  margin: 0 auto 12px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: rgb(215 181 109 / 15%);
+  border: 1px solid rgb(215 181 109 / 30%);
+  color: var(--gold-bright);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.campaign-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: auto;
+}
+
+.campaign-card__actions .button {
+  width: 100%;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  box-sizing: border-box;
+}
+
+/* Roster Add Bar */
+.roster-add-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  width: 100%;
+  max-width: 520px;
+  margin: 16px auto 8px;
+  text-align: left;
+}
+
+.roster-add-field {
+  flex: 1;
+  margin: 0;
+}
+
+.roster-add-button {
+  height: 40px;
+  white-space: nowrap;
+  padding: 0 18px;
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .roster-add-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* Lobby Seats List & Cards */
+.lobby-seats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  margin-top: 24px;
+}
+
+.seat-card {
+  padding: 20px 22px 18px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  text-align: left;
+  box-sizing: border-box;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.seat-card:hover {
+  border-color: rgb(215 181 109 / 30%);
+}
+
+.seat-card h2 {
+  margin: 0 0 4px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+}
+
+.seat-card__meta-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 4px 0 10px;
+}
+
+.seat-card__meta-line {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.seat-card__controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  width: 100%;
+  margin: 12px 0 6px;
+  text-align: left;
+}
+
+.seat-card__read-field {
+  height: 40px;
+  padding: 0 13px;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #0c1017;
+  color: var(--text);
+  font-size: 0.92rem;
+  box-sizing: border-box;
+}
+
+.seat-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.seat-card [data-ai-dm-grant-panel] {
+  margin: 14px 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #0c1017;
+}
+
+.seat-card [data-ai-dm-grant-panel] h3 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  color: var(--gold-bright);
 }
 

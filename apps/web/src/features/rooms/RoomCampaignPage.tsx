@@ -205,13 +205,13 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
               {copy.clearSelection}
             </button>
           ) : null}
-          <div className="workshop-list">
+          <div className="campaign-grid">
             {campaigns.length === 0 ? <p>{copy.noCampaigns}</p> : campaigns.map((item) => (
-              <article className="workshop-card" key={item.id}>
+              <article className="workshop-card campaign-card" key={item.id}>
                 <h2>{item.name}</h2>
-                <p>{copy.status}: {statusLabel(item.status)}</p>
-                {room?.active_campaign_id === item.id ? <strong>{copy.selected}</strong> : null}
-                <div className="workshop-card__split-actions">
+                <p className="campaign-card__status">{copy.status}: {statusLabel(item.status)}</p>
+                {room?.active_campaign_id === item.id ? <strong className="campaign-card__selected">{copy.selected}</strong> : null}
+                <div className="campaign-card__actions">
                   <a className="button primary" href={`/rooms/${roomId}/campaigns/${item.id}`}>{copy.open}</a>
                   {isOwner && item.status !== 'archived' && room?.active_campaign_id !== item.id ? (
                     <button
@@ -311,9 +311,9 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
         <h2>{copy.rosterTitle}</h2>
         <p>{copy.rosterIntro}</p>
         {canManageRoster && availableCharacters.length > 0 ? (
-          <div className="workshop-card__split-actions">
-            <label>
-              {copy.addCharacter}
+          <div className="roster-add-bar">
+            <label className="room-field roster-add-field">
+              <span>{copy.addCharacter}</span>
               <select value={selectedCharacterId} onChange={(event) => setSelectedCharacterId(event.target.value)}>
                 {availableCharacters.map((character) => (
                   <option value={character.id} key={character.id}>
@@ -323,7 +323,7 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
               </select>
             </label>
             <button
-              className="button primary"
+              className="button primary roster-add-button"
               type="button"
               disabled={pending || !selectedCharacterId}
               onClick={() => runMutation(() => addRosterCharacter(roomId, campaign.id, selectedCharacterId, token))}

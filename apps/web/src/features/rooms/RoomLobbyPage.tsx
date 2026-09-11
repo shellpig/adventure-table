@@ -221,19 +221,25 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
             }}
           >
             <h2>{copy.createSeat}</h2>
-            <label>{copy.role}
-              <select value={role} onChange={(event) => setRole(event.target.value as SeatRole)}>
-                <option value="player">{copy.player}</option>
-                <option value="spectator">{copy.spectator}</option>
-                {isOwner ? <option value="dm">{copy.dm}</option> : null}
-              </select>
-            </label>
-            <label>{copy.label}<input value={label} onChange={(event) => setLabel(event.target.value)} /></label>
-            <button className="button primary" disabled={pending} type="submit">{copy.createSeat}</button>
+            <div className="room-form-row">
+              <label className="room-field">
+                <span>{copy.role}</span>
+                <select value={role} onChange={(event) => setRole(event.target.value as SeatRole)}>
+                  <option value="player">{copy.player}</option>
+                  <option value="spectator">{copy.spectator}</option>
+                  {isOwner ? <option value="dm">{copy.dm}</option> : null}
+                </select>
+              </label>
+              <label className="room-field">
+                <span>{copy.label}</span>
+                <input value={label} onChange={(event) => setLabel(event.target.value)} />
+              </label>
+            </div>
+            <button className="button primary room-form-submit" disabled={pending} type="submit">{copy.createSeat}</button>
           </form>
         ) : null}
 
-        <div className="workshop-list">
+        <div className="workshop-list lobby-seats-list">
           {snapshot.seats.length === 0 ? <p>{copy.noSeats}</p> : snapshot.seats.map((seat) => {
             const canManageSeat = seat.role === 'dm' ? isOwner : canManage
             const unavailableCharacterIds = selectedElsewhere(seat)
@@ -245,13 +251,15 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
               ? copy.aiDmController
               : (seat.controller_display_name || copy.unassigned)
             return (
-              <article className="workshop-card" key={seat.id}>
+              <article className="workshop-card seat-card" key={seat.id}>
                 <h2>{seat.label || (seat.role === 'dm' ? copy.dm : seat.role === 'player' ? copy.player : copy.spectator)}</h2>
-                <p>{copy.role}: {seat.role === 'dm' ? copy.dm : seat.role === 'player' ? copy.player : copy.spectator}</p>
-                <p>
-                  {copy.controller}: {controllerLabel}
-                  {seat.controller_kind === 'human' ? ` · ${seat.presence === 'connected' ? copy.connected : copy.offline}` : ''}
-                </p>
+                <div className="seat-card__meta-group">
+                  <p className="seat-card__meta-line">{copy.role}: {seat.role === 'dm' ? copy.dm : seat.role === 'player' ? copy.player : copy.spectator}</p>
+                  <p className="seat-card__meta-line">
+                    {copy.controller}: {controllerLabel}
+                    {seat.controller_kind === 'human' ? ` · ${seat.presence === 'connected' ? copy.connected : copy.offline}` : ''}
+                  </p>
+                </div>
 
                 {seat.role === 'dm' && isOwner && activeSession === null ? (
                   <LobbyAIDMGrantPanel
@@ -264,54 +272,63 @@ export function RoomLobbyPage({ roomId, campaignId }: RoomLobbyRoute) {
                   />
                 ) : null}
 
-                {canManageSeat && seat.controller_kind !== 'ai' ? (
-                  <label>{copy.controller}
-                    <select
-                      disabled={pending || (seat.role === 'dm' && activeSession !== null)}
-                      value={seat.controller_access_session_id ?? ''}
-                      onChange={(event) => mutate(() => setSeatController(
-                        roomId,
-                        campaignId,
-                        seat.id,
-                        token,
-                        event.target.value
-                          ? { controller_kind: 'human', controller_access_session_id: event.target.value }
-                          : { controller_kind: 'none', controller_access_session_id: null },
-                      ))}
-                    >
-                      <option value="">{copy.unassigned}</option>
-                      {controllerChoices.map((controller) => (
-                        <option key={controller.access_session_id} value={controller.access_session_id}>
-                          {controller.display_name || controller.access_session_id} · {controller.presence === 'connected' ? copy.connected : copy.offline}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
-                {seat.role === 'player' ? (
-                  canOperateCharacter(seat) ? (
-                    <label>{copy.character}
+                <div className="seat-card__controls">
+                  {canManageSeat && seat.controller_kind !== 'ai' ? (
+                    <label className="room-field">
+                      <span>{copy.controller}</span>
                       <select
-                        disabled={pending}
-                        value={seat.selected_character_id ?? ''}
-                        onChange={(event) => mutate(() => setSeatCharacter(
+                        disabled={pending || (seat.role === 'dm' && activeSession !== null)}
+                        value={seat.controller_access_session_id ?? ''}
+                        onChange={(event) => mutate(() => setSeatController(
                           roomId,
                           campaignId,
                           seat.id,
                           token,
-                          event.target.value || null,
+                          event.target.value
+                            ? { controller_kind: 'human', controller_access_session_id: event.target.value }
+                            : { controller_kind: 'none', controller_access_session_id: null },
                         ))}
                       >
-                        <option value="">{copy.noCharacter}</option>
-                        {choices.map((character) => (
-                          <option value={character.id} key={character.id}>{character.name}</option>
+                        <option value="">{copy.unassigned}</option>
+                        {controllerChoices.map((controller) => (
+                          <option key={controller.access_session_id} value={controller.access_session_id}>
+                            {controller.display_name || controller.access_session_id} · {controller.presence === 'connected' ? copy.connected : copy.offline}
+                          </option>
                         ))}
                       </select>
                     </label>
-                  ) : <p>{copy.character}: {selectedCharacterName(seat)}</p>
-                ) : null}
+                  ) : null}
+                  {seat.role === 'player' ? (
+                    canOperateCharacter(seat) ? (
+                      <label className="room-field">
+                        <span>{copy.character}</span>
+                        <select
+                          disabled={pending}
+                          value={seat.selected_character_id ?? ''}
+                          onChange={(event) => mutate(() => setSeatCharacter(
+                            roomId,
+                            campaignId,
+                            seat.id,
+                            token,
+                            event.target.value || null,
+                          ))}
+                        >
+                          <option value="">{copy.noCharacter}</option>
+                          {choices.map((character) => (
+                            <option value={character.id} key={character.id}>{character.name}</option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : (
+                      <div className="room-field">
+                        <span>{copy.character}</span>
+                        <div className="seat-card__read-field">{selectedCharacterName(seat)}</div>
+                      </div>
+                    )
+                  ) : null}
+                </div>
                 {canManageSeat ? (
-                  <div className="workshop-card__split-actions">
+                  <div className="workshop-card__split-actions seat-card__actions">
                     <button
                       className="button secondary"
                       disabled={pending || (seat.role === 'dm' && activeSession !== null)}
