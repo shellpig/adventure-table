@@ -213,6 +213,10 @@ class RoomCharacterWorkspaceService:
     def preview_import(self, document: CharacterExport) -> CharacterImportResult:
         return self.import_service.preview(document)
 
+    def get_character(self, room_id: UUID, character_id: UUID) -> PersistedCharacter:
+        self.require_character(room_id, character_id)
+        return self.character_repository.load_character(character_id)
+
     def list_characters(
         self,
         room_id: UUID,

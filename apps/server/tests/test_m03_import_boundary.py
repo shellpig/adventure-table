@@ -8,7 +8,7 @@ import re
 
 APP_ROOT = Path(__file__).resolve().parents[1] / "app"
 FORBIDDEN_MODULE_RE = re.compile(
-    r"(?:^|\.)(?:rooms?|sessions?|seats?|campaigns?|party_rosters?|table_runtime|table_events?)(?:\.|$)",
+    r"(?:^|\.)(?:rooms?|sessions?|seats?|campaigns?|party_rosters?|table_runtime|table_events?|mcp)(?:\.|$)",
     re.IGNORECASE,
 )
 
@@ -128,7 +128,7 @@ def test_character_distribution_import_graph_has_no_multiplayer_dependencies() -
 
     assert not violations, (
         "M03-F import boundary violation: standalone character/content code must remain "
-        f"independent from Room/Session/Seat/Campaign/P3 table modules: {violations}"
+        f"independent from Room/Session/Seat/Campaign/P3 table or MCP transport modules: {violations}"
     )
 
 
@@ -151,17 +151,21 @@ def test_import_boundary_fixture_detects_multiplayer_module(tmp_path: Path) -> N
     (app_root / "domain").mkdir(parents=True)
     (app_root / "room").mkdir(parents=True)
     (app_root / "api").mkdir(parents=True)
+    (app_root / "mcp").mkdir(parents=True)
     (app_root / "__init__.py").write_text("", encoding="utf-8")
     (app_root / "domain" / "__init__.py").write_text("", encoding="utf-8")
     (app_root / "room" / "__init__.py").write_text("", encoding="utf-8")
     (app_root / "room" / "fake.py").write_text("VALUE = 1\n", encoding="utf-8")
     (app_root / "api" / "__init__.py").write_text("", encoding="utf-8")
     (app_root / "api" / "rooms.py").write_text("VALUE = 2\n", encoding="utf-8")
+    (app_root / "mcp" / "__init__.py").write_text("", encoding="utf-8")
+    (app_root / "mcp" / "transport.py").write_text("VALUE = 5\n", encoding="utf-8")
     (app_root / "table_events.py").write_text("VALUE = 3\n", encoding="utf-8")
     (app_root / "table_runtime.py").write_text("VALUE = 4\n", encoding="utf-8")
     (app_root / "domain" / "character_fixture.py").write_text(
         "from app.room import fake\n"
         "import app.api.rooms\n"
+        "import app.mcp.transport\n"
         "import app.table_events\n"
         "import app.table_runtime\n\n"
         "VALUE = fake.VALUE\n",
@@ -176,6 +180,7 @@ def test_import_boundary_fixture_detects_multiplayer_module(tmp_path: Path) -> N
     assert violations, "negative fixture must prove the M03-F boundary gate can fail"
     assert flagged & {"app.room", "app.room.fake"}
     assert "app.api.rooms" in flagged
+    assert "app.mcp.transport" in flagged
     assert "app.table_events" in flagged
     assert "app.table_runtime" in flagged
 
@@ -186,9 +191,12 @@ def test_forbidden_regex_matches_module_segments_not_substrings() -> None:
     assert FORBIDDEN_MODULE_RE.search("app.party_roster")
     assert FORBIDDEN_MODULE_RE.search("app.table_runtime")
     assert FORBIDDEN_MODULE_RE.search("app.table_events")
+    assert FORBIDDEN_MODULE_RE.search("app.mcp")
+    assert FORBIDDEN_MODULE_RE.search("app.mcp.server")
     assert FORBIDDEN_MODULE_RE.search("app.domain.session_scope") is None
     assert FORBIDDEN_MODULE_RE.search("app.content.roommate") is None
     assert FORBIDDEN_MODULE_RE.search("app.content.event_table") is None
+    assert FORBIDDEN_MODULE_RE.search("app.content.mcpreview") is None
 
 
 def test_forbidden_regex_matches_plural_resource_module_names() -> None:
