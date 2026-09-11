@@ -1,3 +1,4 @@
+# triggered after exact server blob and regression tests landed
 name: M04-A Restored Hardening Verification
 
 on:
