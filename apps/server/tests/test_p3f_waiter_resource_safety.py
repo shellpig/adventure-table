@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 
 from alembic import command
 from alembic.config import Config
+from anyio import to_thread
 from httpx import ASGITransport, AsyncClient, Response
 import pytest
 from sqlalchemy import create_engine, insert, text, update
@@ -238,6 +239,9 @@ def test_many_asgi_waiters_release_postgres_pool_and_worker_capacity(
             f"/sessions/{actor.session_id}"
         )
         transport = ASGITransport(app=app)
+        worker_limiter = to_thread.current_default_thread_limiter()
+        previous_worker_tokens = worker_limiter.total_tokens
+        worker_limiter.total_tokens = 4
 
         try:
             async with AsyncClient(transport=transport, base_url="http://testserver") as client:
@@ -250,10 +254,12 @@ def test_many_asgi_waiters_release_postgres_pool_and_worker_capacity(
 
                 # Reaching the production notifier wait point proves every ASGI
                 # request completed actor resolution plus both durable scans.
-                # No waiter may keep one of the deliberately tiny DB pool slots.
+                # The worker pool is also deliberately tiny: a sync long-poll
+                # that held one worker per request could never place all 12 here.
                 await asyncio.wait_for(notifier.all_waiting.wait(), timeout=2.0)
                 assert notifier.waiting == notifier.target
                 assert notifier.active_handles == notifier.target
+                assert worker_limiter.borrowed_tokens == 0
                 assert _checked_out(constrained_postgres_engine) == 0
 
                 started = time.perf_counter()
@@ -270,6 +276,7 @@ def test_many_asgi_waiters_release_postgres_pool_and_worker_capacity(
                     task.cancel()
                 await asyncio.gather(*cancelled, return_exceptions=True)
                 assert notifier.active_handles == 8
+                assert worker_limiter.borrowed_tokens == 0
                 assert _checked_out(constrained_postgres_engine) == 0
 
                 # Publish through the real durable TableEventService. notify() is
@@ -288,9 +295,11 @@ def test_many_asgi_waiters_release_postgres_pool_and_worker_capacity(
 
                 responses = list(await asyncio.gather(*waiters[:8]))
                 assert notifier.active_handles == 0
+                assert worker_limiter.borrowed_tokens == 0
                 assert _checked_out(constrained_postgres_engine) == 0
                 return responses, probe_elapsed
         finally:
+            worker_limiter.total_tokens = previous_worker_tokens
             app.dependency_overrides.pop(get_room_access_context, None)
             app.dependency_overrides.pop(get_table_event_service, None)
 
