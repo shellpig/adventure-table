@@ -29,9 +29,10 @@ No Business, Enterprise, or Edu workspace is used to make M04 pass.
 
 - Branch: `m04a-webchat-preflight`
 - Standalone harness path: `tools/m04a-webchat-preflight/`
-- Review-fixed core server commit: `f0c792768729762847b2785c22865a1fc9b81ee4`
-- Focused non-E2E CI head: `587a53396c0eb716e3d4c9b530e805c1cf2edaf1`
-- GitHub Actions run: `34620557614` — **success**
+- Hardening-restored core server commit: `b7b7c07644e2315b1272f04fc09cf65ed40d41da` (`server.py` blob `1ff9145d5367b5afb6a0e58be9399c9c618271b6`; the semantic diff against `682ba1e` is only the review-fix allowlist and loopback-bind validation)
+- Hardening regression tests commit: `f14ae662afd8cf6f78654e4d66ebe5d1802f516a`
+- Focused CI head: `af148d6fbccabb9c863ab507d7e9e14e3d320859`
+- GitHub Actions run: `34624237929` — **success** (one-shot verification workflow; removed after the run, evidence retained here)
 - Public listener: `0.0.0.0:8787`
 - Admin listener: defaults to `127.0.0.1:8788`; startup refuses a non-loopback `M04A_ADMIN_HOST`.
 - Public entry shape for the real run: `https://<temporary-tunnel-origin>/mcp`; the tunnel must forward public port 8787 only. The origin and credentials are intentionally not committed.
@@ -65,8 +66,9 @@ Implemented files:
 - `tools/m04a-webchat-preflight/logs/.gitignore`
 - `tools/m04a-webchat-preflight/test_redact.py`
 - `tools/m04a-webchat-preflight/test_server_contract.py`
+- `tools/m04a-webchat-preflight/test_hardening_regressions.py`
 - `apps/server/tests/test_m04a_preflight_isolation.py`
-- `.github/workflows/m04a-non-e2e.yml` — retained as manual `workflow_dispatch` only after validation; the branch-specific trigger file has been removed.
+- `.github/workflows/m04a-non-e2e.yml` — retained as manual `workflow_dispatch` only after validation; the branch-specific trigger file and the two one-shot hardening-restoration workflows have been removed.
 
 Implemented contract:
 
@@ -87,17 +89,18 @@ Implemented contract:
 - Optional `M04A_FORCE_SSE=1` single-event SSE response mode for a second measurement only if the real client rejects JSON while advertising SSE.
 - Bidirectional isolation gate: the preflight tool cannot import `app.*`, and Adventure Table `app/*` cannot import or reference the standalone preflight tool.
 
-Focused CI validation against the review-fixed pushed branch:
+Focused CI validation against the hardening-restored pushed branch:
 
 ```text
-GitHub Actions: M04-A Non-E2E Regression / run 34620557614    SUCCESS
-CI head: 587a53396c0eb716e3d4c9b530e805c1cf2edaf1
-python -m py_compile server.py admin.py                       PASS
-pytest test_redact.py + test_server_contract.py               7 passed
-pytest test_m04a_preflight_isolation.py + P3-D/P3-E suite     PASS (14 skipped, 0 failed)
+GitHub Actions: M04-A Restored Hardening Verification / run 34624237929    SUCCESS
+CI head: af148d6fbccabb9c863ab507d7e9e14e3d320859
+git hash-object server.py == 1ff9145d5367b5afb6a0e58be9399c9c618271b6      PASS
+python -m py_compile server.py admin.py test_hardening_regressions.py      PASS
+pytest test_redact.py + test_server_contract.py + test_hardening_regressions.py   14 passed
+pytest test_m04a_preflight_isolation.py + P3-D/P3-E suite                  PASS (14 skipped, 0 failed)
 ```
 
-The standalone contract tests cover DCR, PKCE code exchange, failed-PKCE non-consumption, refresh, arbitrary requested protocol version, DM catalog, `get_context`, `post_note`, dynamic `late_tool`, Player catalog filtering, public-admin 404, loopback admin success, startup loopback-bind rejection, revoke-all, safe OAuth/JSON-RPC evidence-field preservation, and actual JSONL plaintext-secret absence. The P3-D/P3-E regression suite remained green. This is **engineering self-check only** and does not substitute for A.2–A.6.
+The standalone contract tests cover DCR, PKCE code exchange, failed-PKCE non-consumption, refresh, arbitrary requested protocol version, DM catalog, `get_context`, `post_note`, dynamic `late_tool`, Player catalog filtering, public-admin 404, loopback admin success, startup loopback-bind rejection, revoke-all, safe OAuth/JSON-RPC evidence-field preservation, and actual JSONL plaintext-secret absence. `test_hardening_regressions.py` locks the restored `682ba1e` hardening: non-positive token TTL rejection, refresh re-validation of family authority inside the lock, `serverInfo.version` `0.2.0`, and the CLI TTL overrides. The P3-D/P3-E regression suite remained green. This is **engineering self-check only** and does not substitute for A.2–A.6.
 
 ### A.1 real-tunnel smoke evidence
 
