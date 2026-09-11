@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import os
 from pathlib import Path
 import time
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from alembic import command
 from alembic.config import Config
@@ -64,6 +64,35 @@ def constrained_postgres_engine() -> Engine:
         yield engine
     finally:
         engine.dispose()
+
+
+class _CountingNotifier:
+    def __init__(self, target: int) -> None:
+        self.target = target
+        self.waiting = 0
+        self.all_waiting = asyncio.Event()
+        self.release = asyncio.Event()
+
+    def notify(self, session_id: UUID) -> None:
+        del session_id
+        self.release.set()
+
+    def register(self, session_id: UUID) -> object:
+        return session_id
+
+    async def wait(self, handle: object, timeout: float) -> bool:
+        del handle
+        self.waiting += 1
+        if self.waiting >= self.target:
+            self.all_waiting.set()
+        try:
+            await asyncio.wait_for(self.release.wait(), timeout=timeout)
+            return True
+        except TimeoutError:
+            return False
+
+    def unregister(self, handle: object) -> None:
+        del handle
 
 
 def _seed_human_dm_actor(engine: Engine) -> TableActorContext:
@@ -180,28 +209,32 @@ def test_many_idle_waiters_release_postgres_pool_between_event_scans(
     constrained_postgres_engine: Engine,
 ) -> None:
     actor = _seed_human_dm_actor(constrained_postgres_engine)
-    event_service = TableEventService(
-        TableEventRepository(constrained_postgres_engine),
-        notifier=None,
-    )
 
     async def exercise() -> tuple[list[object], float]:
+        notifier = _CountingNotifier(target=12)
+        event_service = TableEventService(
+            TableEventRepository(constrained_postgres_engine),
+            notifier=notifier,
+        )
         waiters = [
             asyncio.create_task(
                 event_service.wait_after(
                     actor,
                     after_seq=0,
                     limit=20,
-                    timeout=0.6,
+                    timeout=2.0,
                 )
             )
-            for _ in range(12)
+            for _ in range(notifier.target)
         ]
 
-        # Give every waiter enough time to perform its initial durable scan and
-        # enter the non-DB sleep. With only two pool slots, pinning connections
-        # for the full long-poll would make the probe below time out/fail.
-        await asyncio.sleep(0.15)
+        # This event is only set from the production notifier wait point, after
+        # each waiter has completed both durable scans and released any short-
+        # lived DB connection. With a two-slot pool, pinning a connection for
+        # the long-poll would make it impossible for all 12 waiters to arrive.
+        await asyncio.wait_for(notifier.all_waiting.wait(), timeout=2.0)
+        assert notifier.waiting == notifier.target
+
         started = time.perf_counter()
         probe = await asyncio.wait_for(
             asyncio.to_thread(_probe_database, constrained_postgres_engine),
@@ -210,6 +243,7 @@ def test_many_idle_waiters_release_postgres_pool_between_event_scans(
         elapsed = time.perf_counter() - started
         assert probe == 1
 
+        notifier.release.set()
         pages = await asyncio.gather(*waiters)
         return list(pages), elapsed
 
