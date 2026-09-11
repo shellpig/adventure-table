@@ -17,12 +17,17 @@ jobs:
       - name: Install backend development dependencies
         run: pip install -e "./apps/server[web,dev,standalone]"
       - name: Compile standalone preflight harness
-        run: python -m py_compile tools/m04a-webchat-preflight/server.py tools/m04a-webchat-preflight/admin.py
+        run: >-
+          python -m py_compile
+          tools/m04a-webchat-preflight/server.py
+          tools/m04a-webchat-preflight/admin.py
+          tools/m04a-webchat-preflight/test_hardening_regressions.py
       - name: M04-A standalone harness tests
         run: >-
           pytest
           tools/m04a-webchat-preflight/test_redact.py
           tools/m04a-webchat-preflight/test_server_contract.py
+          tools/m04a-webchat-preflight/test_hardening_regressions.py
           -q
       - name: M04-A isolation and P3 authorization/MCP regression
         working-directory: apps/server
