@@ -20,4 +20,8 @@ def test_standalone_does_not_mount_mcp_transport(
             "/mcp",
             json={"jsonrpc": "2.0", "id": 1, "method": "server/discover", "params": {}},
         )
-        assert response.status_code == 404
+        # The standalone SPA history fallback registers GET /{full_path:path},
+        # so an unmounted POST /mcp answers 405 whenever SPA assets exist and
+        # 404 otherwise. Either way no MCP handler answered.
+        assert response.status_code in {404, 405}
+        assert "jsonrpc" not in response.text
