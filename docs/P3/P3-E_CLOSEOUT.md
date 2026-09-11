@@ -1,6 +1,6 @@
 # P3-E Closeout Checklist
 
-P3-E — AI Tool Surface & Event Delivery closeout scope。編號對應 [實作規格](實作規格.md) 的「完成後必須為真」。**automated implementation gate 已全部收斂（含本機 E2E 與 external client wire preflight）；第 14 條真實 external MCP client E1 依 2026-09-11 決定延至 P3-F closeout 與 P3-F 實作規格第 11 條合併驗收，因此本 Subphase 維持「實作完成、E1 延期」，不標為關門。**
+P3-E — AI Tool Surface & Event Delivery closeout scope。編號對應 [實作規格](實作規格.md) 的「完成後必須為真」。**automated implementation gate 已全部收斂（含本機 E2E 與 external client wire preflight）；第 14 條真實 external MCP client E1 原依 2026-09-11 決定延至 P3-F closeout 與 P3-F 實作規格第 11 條合併驗收，已於 2026-09-11 P3-F closeout 期間以 Claude Code 2.1.260 經 Tailscale HTTPS 入口執行完成（見下方「External MCP E1 執行結果」），本 Subphase 至此關門 ✅。**
 
 - [x] 1. Web channel 提供 `/mcp`，以 MCP `2026-07-28` modern stateless contract 為唯一基準；不要求 legacy `initialize` / `notifications/initialized`，也不建立 `Mcp-Session-Id` correctness dependency。`test_p3e_mcp_protocol.py` 鎖 protocol/header/meta/cache/error contract。
 - [x] 2. 每個 MCP request 都重新以 Adventure Table AI Join Token resolve current scope。`authenticate_request()` 呼 `AIControllerService.authenticate(..., touch=True)`；transport 不保存 authorization session。`test_p3e_mcp_token_lifecycle.py` 直接驗 wrong secret、rotate/revoke、expired、wrong Seat、stale epoch。
@@ -15,7 +15,7 @@ P3-E — AI Tool Surface & Event Delivery closeout scope。編號對應 [實作�
 - [x] 11. Catalog schema只暴露 typed input，不提供 SQL/raw-state escape hatch；`resolve_action` 不在 catalog。architecture/tool tests持續鎖住此邊界。
 - [x] 12. P3-E 沒有高階 `resolve_action()`。AI DM維持 Narration / Request Check / Current State等細粒度共用 tools，P6/P7邊界未提前侵入。
 - [x] 13. Web/MCP transport沒有呼叫 LLM API、沒有外部模型 API key storage，也不主動喚醒外部 conversation；AI只以 scoped inbound bearer request進入。
-- [ ] 14. **DEFERRED to P3-F — External MCP client E1 HTTPS journey 尚未執行。** 2026-09-11 使用者決定：E1 與 P3-F 實作規格第 11 條合併，在 P3-F closeout 一次跑完 HTTPS/TLS journey；P3-E 因此不宣告 ✅。automated 證據（自寫 real-backend Playwright MCP journey、官方 MCP Python SDK v2 wire/parser test）與下方 loopback preflight 都不取代此 gate。P3-F 執行 E1 時仍須記錄 exact client name/version/platform、static Bearer 設定方式、HTTPS/TLS 入口、測試日期，並完成 context → event → action → formal roll/check → Take Back/End → next call rejected。
+- [x] 14. **External MCP client E1 HTTPS journey 已於 2026-09-11 執行完成（P3-F closeout 合併驗收）。** Client：Claude Code 2.1.260（Claude Desktop Code tab，Windows 11；wire `User-Agent: claude-code/2.1.260 (claude-desktop, agent-sdk/0.3.260)`）。static Bearer 以 `claude mcp add table <https url>/mcp --transport http --scope local --header "Authorization: Bearer <AI Join Token>"` 設定，token 只存本機 `~/.claude.json` local scope，不進 repo / log。HTTPS/TLS 入口：`https://greengrape.tail16ce3a.ts.net/mcp`（Tailscale serve，Let's Encrypt 憑證，tailnet only）→ 本機 wire logging proxy `127.0.0.1:8765` → `:8000`。完整 journey：context → events → action → DM Request Check → formal roll → wait timeout → Take Back → 舊 token `tools/call` 401 → End，wire 摘要見下方「External MCP E1 執行結果」。
 - [x] 15. Client disconnect不破壞 Server State；重連靠 canonical DB + cursor恢復。`test_p3e_ai_event_projection.py` 已補 disconnect期間無 waiter/notifier、重建 service後仍補回 missed event的直接證據。
 - [x] 16. Tool surface集中在 transport-neutral `AIToolApplicationService`；未來 Site Tools / agent transport可以包同一 service，不需複製 gameplay logic。
 - [x] 17. Standalone不 mount MCP。除 M03 import boundary外，`test_p3e_standalone_mcp.py` 直接斷言 `/mcp` 不在 standalone OpenAPI，且 POST `/mcp` 只會得到 SPA fallback 的 404/405、不含 JSON-RPC envelope。
@@ -80,7 +80,34 @@ Human Player Let AI Control + Temporary Instruction
 
 未觀察到的項目：兩個 CLI 當次都沒有成功的 model turn（子 Claude Code OAuth session 過期、Codex 要求升級），所以只有啟動時的 discover / tools-list，**沒有 `tools/call`，`Mcp-Name` header 尚無 wire 證據**。P3-F E1 時第一個 `tools/call` 就會補上。
 
-P3-F E1 的預定 client 為 **Claude Code CLI**（Claude Desktop 未驗證）。
+P3-F E1 的預定 client 為 **Claude Code CLI**（Claude Desktop 未驗證）。實際執行改用 Claude Desktop Code tab 內建的同一版 Claude Code 2.1.260（CLI `-p` 當時 `loggedIn: false` 不可用），見下節。
+
+### External MCP E1 執行結果（2026-09-11，Tailscale HTTPS，branch `p3-f-full-integration-closeout`）
+
+- **入口形態**：`https://greengrape.tail16ce3a.ts.net/mcp`，Tailscale serve 終結 TLS（Let's Encrypt 真憑證，tailnet only）→ `http://127.0.0.1:8765` wire logging proxy（`tls_wire_proxy.py --plain`，Authorization 只留 `Bearer at_ai...[redacted]`）→ `http://127.0.0.1:8000`。每筆 wire 都帶 `X-Forwarded-Proto: https`、`X-Forwarded-Host: greengrape.tail16ce3a.ts.net`、`Tailscale-User-Login` 作 TLS 入口證據。
+- **Client**：Claude Code 2.1.260，Claude Desktop Code tab（Windows 11）；`User-Agent: claude-code/2.1.260 (claude-desktop, agent-sdk/0.3.260)`。MCP server 以 `claude mcp add table <url> --transport http --scope local --header "Authorization: Bearer <token>"` 註冊，token 為 P3-D Player Seat `Let AI Control` 產生的 fresh scoped AI Join Token（generation 2），附 Temporary Handoff Instruction。
+- **Wire contract**（全部 request）：`MCP-Protocol-Version: 2026-07-28`、`Mcp-Method`、body `_meta` 含 `io.modelcontextprotocol/protocolVersion: 2026-07-28`、`clientInfo {name: claude-code, version: 2.1.260}`、`clientCapabilities {roots.listChanged, elicitation}`；**沒有 legacy `initialize`、沒有 `Mcp-Session-Id`**。每個 `tools/call` 都帶 `Mcp-Name: <tool>`（補上 preflight 缺的證據）。
+- **Journey（UTC）**：
+
+| # | 端 | wire | 結果 |
+|---|---|---|---|
+| 0 | client 啟動 | `server/discover` 200 → `tools/list` 200 | Player catalog；session instructions 雙語 |
+| 1 | AI | `tools/call get_session_context` 200 | `mode=active_session`、caller role player、`temporary_instruction` 原文可見、`recent_events` cursor 2 |
+| 1 | AI | `tools/call get_pending_events(after_seq=0)` 200 | seq 1 `stage.updated`、seq 2 `controller.changed(human_handoff→ai)` |
+| 1 | AI | `tools/call post_action` 200 | seq 3 `exploration.action`，acting/subject = AI Player Seat，`execution_mode=self` |
+| 2 | Human DM（REST） | Request Check Investigation DC 14，visibility `roller_and_dm` | 201 |
+| 3 | AI | `tools/call get_pending_events(after_seq=3)` 200 | seq 4 `roll.requested`（`seat_private`），**payload 無 `dc`** |
+| 3 | AI | `tools/call roll_pending` 200 | `source=server`、`1d20+1`、raw `[5]`、total 6 |
+| 3 | AI | `tools/call wait_for_event(after_seq=5, timeout=3)` 200 | timeout 回 `events: []`（正常 empty result） |
+| 3 | Human DM（REST） | list requests | `status=resolved`、`dc=14`、version 2 |
+| 4 | Human Player（REST） | Take Back Control | 204 |
+| 5 | raw probe（HTTPS） | `tools/call` with old token | 401 `-32001 ai_token_unauthorized` |
+| 6 | AI | `tools/call get_session_context` | **401 `ai_token_unauthorized`**；client 回報 `MCP server "table" requires re-authorization`，tool 不可用 |
+| 7 | Human DM（REST） | End Session | 200 `status=ended` |
+
+- 步 3 另有一筆 `wait_for_event` 帶錯誤參數名（`timeout_seconds`）→ server 回 `invalid_arguments` 雙語 structured error，schema validation 正常，非契約問題。
+- 步 6 與 CLI preflight 觀察不同：client 已持有 modern 連線，直接對 `tools/call` 收 401，**沒有退回 legacy `initialize`**，屬更乾淨的拒絕路徑。
+- 原始 `wire.jsonl`（token 已 redact）與 `e1_state.json` 留在本機 scratchpad，不進 repo。
 
 ## Verification status
 
@@ -88,10 +115,8 @@ P3-F E1 的預定 client 為 **Claude Code CLI**（Claude Desktop 未驗證）�
 - 本機（2026-09-11，Windows，`.venv` 已安裝 `[dev]` extra 含 `mcp 2.2.0`）：全套 backend pytest 於 `207fc88` 為 `1 failed, 1297 passed, 37 skipped`，唯一紅燈 `test_p3e_standalone_mcp.py` 為斷言寫錯（standalone SPA fallback 讓 POST `/mcp` 回 405 而非 404），已於 `f74c2fe` 修正，P3-E focused 41 passed；前端 vitest 298 passed、`npm run build` 成功；`docker compose config` OK。
 - Playwright P3-E E2E：本機 Docker 跑過兩次皆 1 passed（見上）。
 - GitHub `P3 Non-E2E`：`207fc88` run `34503603243` 只有 backend 因同一條測試 failure，frontend / postgres-migrations / windows-standalone success；`f74c2fe` run `34545415406` **全綠**：backend / frontend / postgres-migrations / windows-standalone 皆 success。
-- External MCP E1：**DEFERRED to P3-F**；loopback wire preflight 已完成（見上表）。
+- External MCP E1：**✅ 2026-09-11 完成**（Claude Code 2.1.260 經 Tailscale HTTPS，見「External MCP E1 執行結果」）；loopback wire preflight 見上表。
 
 ## Boundary / remaining closeout
 
-P3-E automated implementation已具備 modern MCP transport、scoped auth、role tools、canonical action/roll、durable event delivery、async wait與Standalone boundary；但因實作規格第 14 條是產品完成條件，**沒有真 external HTTPS/TLS AI host/client evidence就不能把 P3-E 標成 closed，也不能以官方 SDK或自製 Playwright client替代。**
-
-preflight 已完成，Claude Code CLI 2.1.260 確認能帶 static Bearer 並照 `2026-07-28` 契約送 request。剩下的關門動作固定是：P3-F closeout 時用 Claude Code CLI 經 HTTPS/TLS 入口跑完整 E1 journey（同時滿足 P3-F 實作規格第 11 條），回頭把本文件第 14 條勾起並補上入口形態與日期，P3-E 才標 ✅。
+P3-E automated implementation已具備 modern MCP transport、scoped auth、role tools、canonical action/roll、durable event delivery、async wait與Standalone boundary；實作規格第 14 條的真 external HTTPS/TLS AI client evidence 已於 2026-09-11 由 Claude Code 2.1.260 經 Tailscale HTTPS 入口補齊（同時滿足 P3-F 實作規格第 11 條）。**P3-E 關門 ✅。**

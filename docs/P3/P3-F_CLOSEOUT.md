@@ -2,7 +2,7 @@
 
 P3-F — Full P3 Integration & Closeout。此文件依 [實作規格](實作規格.md) 與 [測試指南](測試指南.md) 收斂 P3-A～P3-E 的整合證據。
 
-> 狀態：**closeout in progress**。Automated non-E2E / PostgreSQL / Windows standalone gate 已通過，本機全套 Playwright 亦已跑過（見下方 Full Playwright evidence）；External MCP E1 HTTPS/TLS gate 尚未執行，因此 P3-F / P3 **尚不可標為 closed**。
+> 狀態：**closeout gates 全部完成**。Automated non-E2E / PostgreSQL / Windows standalone gate 已通過，本機全套 Playwright 已跑過（見下方 Full Playwright evidence），External MCP E1 HTTPS/TLS gate 已於 2026-09-11 執行通過（見下方「External MCP E1 over HTTPS/TLS」）。剩餘唯一待補項是 `p3-e2e.yml` 合併進 `main` 後的 CI dispatch run id，不阻塞 P3-F 關門。
 
 ## P3-F implementation additions
 
@@ -100,21 +100,21 @@ P3-F closeout依賴並重新回歸既有 P3-A～E證據：
 
 此 workflow 刻意保持 `workflow_dispatch` only；不得為了自動觸發而改成 push / PR trigger。
 
-### 2. External MCP E1 over HTTPS/TLS
+### 2. External MCP E1 over HTTPS/TLS — ✅ 2026-09-11 執行完成
 
-依 `P3-E_CLOSEOUT.md` 的 **External MCP auth / wire preflight** 執行。預定 external client：**Claude Code CLI 2.1.260（Windows）**；Codex CLI 0.147.0 已因 legacy `2025-06-18 initialize` preflight failure 排除。
+依 `P3-E_CLOSEOUT.md` 的 **External MCP auth / wire preflight** 執行。預定 external client 為 Claude Code CLI 2.1.260；實際執行時 CLI `-p` 為 `loggedIn: false`，改用 Claude Desktop Code tab 內建的同一版 **Claude Code 2.1.260（Windows 11）**，wire `User-Agent: claude-code/2.1.260 (claude-desktop, agent-sdk/0.3.260)`。Codex CLI 0.147.0 已因 legacy `2025-06-18 initialize` preflight failure 排除。
 
-E1 必須以真 HTTPS/TLS external endpoint + fresh scoped AI Join Token，並記錄：
+實際 evidence（完整 wire 摘要與 journey 表見 [P3-E closeout](P3-E_CLOSEOUT.md)「External MCP E1 執行結果」）：
 
-- exact client name/version/platform/date
-- static `Authorization: Bearer <AI Join Token>` 設定方式（secret 不進 repo/log）
-- raw wire `MCP-Protocol-Version: 2026-07-28`
-- `_meta.protocolVersion` / `clientCapabilities`
-- `Mcp-Method` 與至少一次真 `tools/call` 的 `Mcp-Name`
-- 不依賴 legacy initialize / `Mcp-Session-Id`
-- context → event → action → formal roll/check → Take Back 或 End → next old-token call rejected
+- **HTTPS/TLS 入口**：`https://greengrape.tail16ce3a.ts.net/mcp`，Tailscale serve 終結 TLS（Let's Encrypt 真憑證，tailnet only）→ `127.0.0.1:8765` wire logging proxy → `:8000`；每筆 wire 帶 `X-Forwarded-Proto: https`。
+- **static Bearer**：`claude mcp add table <url> --transport http --scope local --header "Authorization: Bearer <token>"`；token 為 fresh scoped AI Join Token（Player Seat `Let AI Control`，generation 2），只存本機 `~/.claude.json`，不進 repo / log；proxy log 中 Authorization 已 redact。
+- **raw wire**：所有 request 帶 `MCP-Protocol-Version: 2026-07-28` 與 `Mcp-Method`；body `_meta.io.modelcontextprotocol/protocolVersion = 2026-07-28`、`clientInfo {claude-code 2.1.260}`、`clientCapabilities {roots.listChanged, elicitation}`。
+- **`Mcp-Name`**：client 送出的 8 筆 `tools/call`（含 Take Back 後被拒那筆）全部帶 `Mcp-Name`（`get_session_context`、`get_pending_events`、`post_action`、`roll_pending`、`wait_for_event`）。
+- **不依賴 legacy**：全程沒有 `initialize`、沒有 `Mcp-Session-Id`。
+- **journey**：context（含 Temporary Handoff Instruction）→ events（cursor 2）→ `post_action`（seq 3，acting = AI Player Seat）→ Human DM Request Check Investigation DC 14 `roller_and_dm` → AI `get_pending_events` 看到 `roll.requested` **payload 無 `dc`** → `roll_pending`（server RNG，1d20+1 = 6）→ `wait_for_event` timeout 回空 → DM 端 request `resolved` 且 `dc=14` → Human Player Take Back 204 → raw probe 401 `ai_token_unauthorized` → **AI 端下一個 `tools/call get_session_context` 401 `ai_token_unauthorized`**，client 回報 `requires re-authorization` → DM End 200 `ended`。
+- 觀察：client 已持 modern 連線時，Take Back 後直接對 `tools/call` 收 401，不退回 legacy `initialize`；一筆錯誤參數名的 `wait_for_event` 得到 `invalid_arguments` structured error，schema validation 正常。
 
-完成後需回寫 `P3-E_CLOSEOUT.md` 第 14 條為完成，並把本文件此項補成實際 evidence。
+已回寫 `P3-E_CLOSEOUT.md` 第 14 條為完成，P3-E 標 ✅。
 
 ## Closeout status
 
@@ -124,8 +124,8 @@ E1 必須以真 HTTPS/TLS external endpoint + fresh scoped AI Join Token，並�
 - Windows frozen standalone：✅
 - Full Playwright（本機 Docker，P2-F 前例）：✅ @ `51176e9`，除 KI-P1D-001 簽章外全綠
 - P3 Full-Stack E2E CI run：⏳ 待 `p3-e2e.yml` 進 `main` 後 dispatch
-- External MCP E1 HTTPS/TLS：⏳ pending real external-client execution
-- **P3-F / P3 overall：⏳ NOT CLOSED until E1 is green**
+- External MCP E1 HTTPS/TLS：✅ 2026-09-11（Claude Code 2.1.260 經 Tailscale HTTPS；同時關閉 P3-E 第 14 條）
+- **P3-F closeout gates：✅ 全部完成**；P3 Phase 關門與合併回 `main` 依 PROJECT_BRIEF 流程，合併後補 dispatch CI run id
 
 ## Known limitations / observations
 
