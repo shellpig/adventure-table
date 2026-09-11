@@ -29,11 +29,11 @@ No Business, Enterprise, or Edu workspace is used to make M04 pass.
 
 - Branch: `m04a-webchat-preflight`
 - Standalone harness path: `tools/m04a-webchat-preflight/`
-- Hardened core server commit: `682ba1eb4d72ca481b2f326bd50c8bc7b21cd6c8`
-- Focused non-E2E CI head: `03d31ee193c86eaccd1f4c96def3d971c0b5ea37`
-- GitHub Actions run: `34615184815` — **success**
+- Review-fixed core server commit: `f0c792768729762847b2785c22865a1fc9b81ee4`
+- Focused non-E2E CI head: `587a53396c0eb716e3d4c9b530e805c1cf2edaf1`
+- GitHub Actions run: `34620557614` — **success**
 - Public listener: `0.0.0.0:8787`
-- Admin listener: `127.0.0.1:8788` only
+- Admin listener: defaults to `127.0.0.1:8788`; startup refuses a non-loopback `M04A_ADMIN_HOST`.
 - Public entry shape for the real run: `https://<temporary-tunnel-origin>/mcp`; the tunnel must forward public port 8787 only. The origin and credentials are intentionally not committed.
 - One-line server command after environment setup: `.\.venv\Scripts\python.exe .\server.py`
 
@@ -41,8 +41,9 @@ Ladder progress:
 
 ```text
 ChatGPT Plus
-  -> official-plan check: full MCP/write unavailable
-  -> classified as Plan Limitation
+  -> official docs scope full MCP/write to Business + Enterprise/Edu
+  -> Plus is not listed in that documented write-capable set
+  -> support-scope inference; not a live protocol failure
 Claude chat personal
   -> candidate
   -> real A.2–A.6 pending
@@ -65,7 +66,7 @@ Implemented files:
 - `tools/m04a-webchat-preflight/test_redact.py`
 - `tools/m04a-webchat-preflight/test_server_contract.py`
 - `apps/server/tests/test_m04a_preflight_isolation.py`
-- `.github/workflows/m04a-non-e2e.yml`
+- `.github/workflows/m04a-non-e2e.yml` — retained as manual `workflow_dispatch` only after validation; the branch-specific trigger file has been removed.
 
 Implemented contract:
 
@@ -82,20 +83,21 @@ Implemented contract:
 - JSONL request/response logging with one shared redaction function; actual credentials/codes remain masked while a narrow allowlist keeps non-secret OAuth metadata and numeric JSON-RPC `error.code` visible. Observations include protocol version, session-id presence, SSE accept, JSON-RPC method, `_meta`, and an irreversible Authorization fingerprint.
 - `Authorization` remains fully redacted, while `observation.authorization_fingerprint` stores only a deterministic truncated SHA-256 fingerprint so A.5 can compare whether two conversations used the same access credential without logging the credential itself.
 - OAuth `client_id` is left visible for correlation because it is an identifier rather than a secret; access token, refresh token, authorization code, PKCE verifier/challenge, client secret, password, Authorization, and cookie values remain masked.
-- Separate loopback-only admin listener; `/admin/*` is absent from the public app.
+- Separate loopback-only admin listener; startup validates `M04A_ADMIN_HOST` as a literal loopback IP, and `/admin/*` is absent from the public app with loopback middleware as defense in depth.
 - Optional `M04A_FORCE_SSE=1` single-event SSE response mode for a second measurement only if the real client rejects JSON while advertising SSE.
 - Bidirectional isolation gate: the preflight tool cannot import `app.*`, and Adventure Table `app/*` cannot import or reference the standalone preflight tool.
 
-Focused CI validation against the exact pushed branch:
+Focused CI validation against the review-fixed pushed branch:
 
 ```text
-GitHub Actions: M04-A Non-E2E Regression / run 34615184815    SUCCESS
+GitHub Actions: M04-A Non-E2E Regression / run 34620557614    SUCCESS
+CI head: 587a53396c0eb716e3d4c9b530e805c1cf2edaf1
 python -m py_compile server.py admin.py                       PASS
-pytest test_redact.py + test_server_contract.py               5 passed
-pytest test_m04a_preflight_isolation.py + P3-D/P3-E suite     PASS
+pytest test_redact.py + test_server_contract.py               7 passed
+pytest test_m04a_preflight_isolation.py + P3-D/P3-E suite     PASS (14 skipped, 0 failed)
 ```
 
-The standalone contract tests cover DCR, PKCE code exchange, failed-PKCE non-consumption, refresh, arbitrary requested protocol version, DM catalog, `get_context`, `post_note`, dynamic `late_tool`, Player catalog filtering, public-admin 404, loopback admin success, revoke-all, and secret redaction. The P3-D/P3-E regression suite remained green. This is **engineering self-check only** and does not substitute for A.2–A.6.
+The standalone contract tests cover DCR, PKCE code exchange, failed-PKCE non-consumption, refresh, arbitrary requested protocol version, DM catalog, `get_context`, `post_note`, dynamic `late_tool`, Player catalog filtering, public-admin 404, loopback admin success, startup loopback-bind rejection, revoke-all, safe OAuth/JSON-RPC evidence-field preservation, and actual JSONL plaintext-secret absence. The P3-D/P3-E regression suite remained green. This is **engineering self-check only** and does not substitute for A.2–A.6.
 
 ### A.1 real-tunnel smoke evidence
 
@@ -121,23 +123,23 @@ Pending execution with the temporary HTTPS tunnel. Use `tools/m04a-webchat-prefl
 
 ## A.2 OAuth
 
-**Not run by design.** The 2026-09-11 official support check establishes that ChatGPT Plus is not eligible for the full MCP/write capability required by M04. Per the M04 platform ladder this is recorded as a plan limitation, not a protocol failure, and measurement moves to Claude chat personal.
+**Not run by design.** The 2026-09-11 official FAQ scopes full MCP/write to Business and Enterprise/Edu and separately describes Pro as read/fetch-capable. It does not list Plus in the full-MCP/write set. Per the M04 platform ladder, Plus is therefore treated as outside the documented write-capable support scope. This is explicitly a **support-scope inference, not a live Plus protocol failure**, so measurement moves to Claude chat personal.
 
 ## A.3 Scan Tools / protocol
 
-Not applicable after the plan-limitation decision.
+Not applicable after the documented support-scope decision.
 
 ## A.4 Read + write
 
-Not applicable. The write-capable requirement is the blocker.
+Not applicable. The documented write-capable support scope is the blocker.
 
 ## A.5 Tool cache / refresh / re-auth
 
-Not applicable after the plan-limitation decision.
+Not applicable after the documented support-scope decision.
 
 ## A.6 Long-poll tolerance
 
-Not applicable after the plan-limitation decision.
+Not applicable after the documented support-scope decision.
 
 ---
 
@@ -221,7 +223,7 @@ These six conclusions are deliberately **not finalized** until Claude A.2–A.6 
 
 ### Target platform
 
-**Pending.** ChatGPT Plus is eliminated by a documented plan limitation. Claude chat personal is the active candidate and requires the real web gate.
+**Pending.** ChatGPT Plus is outside the current documented full-MCP/write support set used by M04-A; this is a support-scope inference, not a live protocol failure. Claude chat personal is the active candidate and requires the real web gate.
 
 ### OAuth endpoints required
 
