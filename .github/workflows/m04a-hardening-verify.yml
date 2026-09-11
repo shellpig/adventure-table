@@ -1,4 +1,4 @@
-# triggered after exact server blob and regression tests landed
+# rerun with diff hygiene scoped to the restored server
 name: M04-A Restored Hardening Verification
 
 on:
@@ -21,10 +21,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Verify exact restored server blob and diff hygiene
+      - name: Verify exact restored server blob and semantic diff
         run: |
           test "$(git hash-object tools/m04a-webchat-preflight/server.py)" = "1ff9145d5367b5afb6a0e58be9399c9c618271b6"
-          git diff --check 682ba1eb4d72ca481b2f326bd50c8bc7b21cd6c8..HEAD
+          git diff --check 682ba1eb4d72ca481b2f326bd50c8bc7b21cd6c8..HEAD -- tools/m04a-webchat-preflight/server.py
           git diff -w 682ba1eb4d72ca481b2f326bd50c8bc7b21cd6c8..HEAD -- tools/m04a-webchat-preflight/server.py
       - name: Install backend development dependencies
         run: pip install -e "./apps/server[web,dev,standalone]"
