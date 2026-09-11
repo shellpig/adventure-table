@@ -19,7 +19,14 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    Response,
+    StreamingResponse,
+)
 
 from admin import create_admin_app
 
@@ -48,16 +55,26 @@ def _redact_string(value: str, known_secrets: set[str]) -> str:
     return result
 
 
-def redact(value: JsonValue, *, known_secrets: set[str] | None = None, key: str | None = None) -> JsonValue:
-    """Apply the same secret redaction to request and response material."""
+def redact(
+    value: JsonValue,
+    *,
+    known_secrets: set[str] | None = None,
+    key: str | None = None,
+) -> JsonValue:
+    """Apply one symmetric redaction policy to request and response material."""
     known_secrets = known_secrets or set()
     normalized = (key or "").lower().replace("-", "_")
-    if normalized in {"authorization", "cookie", "set_cookie"} or any(marker in normalized for marker in _SECRET_KEY_MARKERS):
+    if normalized in {"authorization", "cookie", "set_cookie"} or any(
+        marker in normalized for marker in _SECRET_KEY_MARKERS
+    ):
         if value in (None, ""):
             return value
         return _masked(value)
     if isinstance(value, dict):
-        return {str(k): redact(v, known_secrets=known_secrets, key=str(k)) for k, v in value.items()}
+        return {
+            str(k): redact(v, known_secrets=known_secrets, key=str(k))
+            for k, v in value.items()
+        }
     if isinstance(value, list):
         return [redact(item, known_secrets=known_secrets) for item in value]
     if isinstance(value, str):
@@ -67,6 +84,12 @@ def redact(value: JsonValue, *, known_secrets: set[str] | None = None, key: str 
 
 def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _fingerprint(value: str | None) -> str | None:
+    if not value:
+        return None
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
 
 
 def _new_secret(prefix: str) -> str:
@@ -96,7 +119,10 @@ def _headers_to_dict(headers: list[tuple[bytes, bytes]]) -> dict[str, str]:
 
 
 def _decode_query(raw: str) -> dict[str, Any]:
-    return {key: values if len(values) > 1 else values[0] for key, values in parse_qs(raw, keep_blank_values=True).items()}
+    return {
+        key: values if len(values) > 1 else values[0]
+        for key, values in parse_qs(raw, keep_blank_values=True).items()
+    }
 
 
 def _decode_body(body: bytes, content_type: str) -> JsonValue:
@@ -134,6 +160,8 @@ class Config:
             raise ValueError("public_base_url must be an absolute http(s) URL")
         if not self.test_password:
             raise ValueError("test_password must not be empty")
+        if self.access_ttl_seconds <= 0 or self.refresh_ttl_seconds <= 0:
+            raise ValueError("token TTL values must be positive")
         object.__setattr__(self, "public_base_url", base)
 
 
@@ -195,8 +223,13 @@ class PreflightState:
         if not token:
             return None
         token_hash = _hash_token(token)
+        now = _now()
         for family in self.families.values():
-            if not family.revoked and family.access_expires_at > _now() and hmac.compare_digest(family.access_hash, token_hash):
+            if (
+                not family.revoked
+                and family.access_expires_at > now
+                and hmac.compare_digest(family.access_hash, token_hash)
+            ):
                 return family
         return None
 
@@ -204,8 +237,13 @@ class PreflightState:
         if not token:
             return None
         token_hash = _hash_token(token)
+        now = _now()
         for family in self.families.values():
-            if not family.revoked and family.refresh_expires_at > _now() and hmac.compare_digest(family.refresh_hash, token_hash):
+            if (
+                not family.revoked
+                and family.refresh_expires_at > now
+                and hmac.compare_digest(family.refresh_hash, token_hash)
+            ):
                 return family
         return None
 
@@ -226,11 +264,20 @@ class JsonlLogger:
 
 
 class AuditMiddleware:
-    def __init__(self, app: Callable[..., Awaitable[None]], logger: JsonlLogger) -> None:
+    def __init__(
+        self,
+        app: Callable[..., Awaitable[None]],
+        logger: JsonlLogger,
+    ) -> None:
         self.app = app
         self.logger = logger
 
-    async def __call__(self, scope: dict[str, Any], receive: Callable[..., Awaitable[dict[str, Any]]], send: Callable[[dict[str, Any]], Awaitable[None]]) -> None:
+    async def __call__(
+        self,
+        scope: dict[str, Any],
+        receive: Callable[..., Awaitable[dict[str, Any]]],
+        send: Callable[[dict[str, Any]], Awaitable[None]],
+    ) -> None:
         if scope.get("type") != "http":
             await self.app(scope, receive, send)
             return
@@ -275,15 +322,24 @@ class AuditMiddleware:
         finally:
             request_headers = _headers_to_dict(scope.get("headers", []))
             response_header_map = _headers_to_dict(response_headers)
-            request_payload = _decode_body(request_body, request_headers.get("content-type", ""))
-            response_payload = _decode_body(b"".join(response_body_parts), response_header_map.get("content-type", ""))
+            request_payload = _decode_body(
+                request_body,
+                request_headers.get("content-type", ""),
+            )
+            response_payload = _decode_body(
+                b"".join(response_body_parts),
+                response_header_map.get("content-type", ""),
+            )
+            authorization = request_headers.get("authorization")
             await self.logger.write(
                 {
                     "ts": _utc_now(),
                     "duration_ms": round((time.monotonic() - started) * 1000, 3),
                     "method": scope.get("method"),
                     "path": scope.get("path"),
-                    "query": _decode_query(scope.get("query_string", b"").decode("utf-8", "replace")),
+                    "query": _decode_query(
+                        scope.get("query_string", b"").decode("utf-8", "replace")
+                    ),
                     "headers": request_headers,
                     "body": request_payload,
                     "status": status,
@@ -292,16 +348,30 @@ class AuditMiddleware:
                     "observation": {
                         "mcp_protocol_version": request_headers.get("mcp-protocol-version"),
                         "mcp_session_id_present": "mcp-session-id" in request_headers,
-                        "accepts_sse": "text/event-stream" in request_headers.get("accept", "").lower(),
-                        "jsonrpc_method": request_payload.get("method") if isinstance(request_payload, dict) else None,
-                        "meta": request_payload.get("params", {}).get("_meta") if isinstance(request_payload, dict) and isinstance(request_payload.get("params"), dict) else None,
+                        "accepts_sse": "text/event-stream"
+                        in request_headers.get("accept", "").lower(),
+                        "jsonrpc_method": request_payload.get("method")
+                        if isinstance(request_payload, dict)
+                        else None,
+                        "meta": request_payload.get("params", {}).get("_meta")
+                        if isinstance(request_payload, dict)
+                        and isinstance(request_payload.get("params"), dict)
+                        else None,
+                        "authorization_fingerprint": _fingerprint(authorization),
                     },
                 }
             )
 
 
-def _oauth_error(error: str, description: str, status: int = 400) -> JSONResponse:
-    return JSONResponse({"error": error, "error_description": description}, status_code=status)
+def _oauth_error(
+    error: str,
+    description: str,
+    status: int = 400,
+) -> JSONResponse:
+    return JSONResponse(
+        {"error": error, "error_description": description},
+        status_code=status,
+    )
 
 
 def _rpc_result(request_id: Any, result: dict[str, Any]) -> dict[str, Any]:
@@ -309,11 +379,26 @@ def _rpc_result(request_id: Any, result: dict[str, Any]) -> dict[str, Any]:
 
 
 def _rpc_error(request_id: Any, code: int, message: str) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
+    return {
+        "jsonrpc": "2.0",
+        "id": request_id,
+        "error": {"code": code, "message": message},
+    }
 
 
 def _tool_result(payload: Any) -> dict[str, Any]:
-    return {"content": [{"type": "text", "text": json.dumps(payload, ensure_ascii=False, separators=(",", ":"))}]}
+    return {
+        "content": [
+            {
+                "type": "text",
+                "text": json.dumps(
+                    payload,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                ),
+            }
+        ]
+    }
 
 
 def _bearer(request: Request) -> str | None:
@@ -333,30 +418,61 @@ def _tool_catalog(state: PreflightState, role: str) -> list[dict[str, Any]]:
         {
             "name": "get_context",
             "description": "Read the simulated role, note count, and server time for the M04-A web-chat MCP preflight.",
-            "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
-            "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False},
+            "inputSchema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False,
+            },
+            "annotations": {
+                "readOnlyHint": True,
+                "destructiveHint": False,
+                "idempotentHint": True,
+                "openWorldHint": False,
+            },
         },
         {
             "name": "post_note",
             "description": "Write one short note to volatile preflight memory and return the new sequence number.",
             "inputSchema": {
                 "type": "object",
-                "properties": {"text": {"type": "string", "minLength": 1, "maxLength": 1000}},
+                "properties": {
+                    "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1000,
+                    }
+                },
                 "required": ["text"],
                 "additionalProperties": False,
             },
-            "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False},
+            "annotations": {
+                "readOnlyHint": False,
+                "destructiveHint": False,
+                "idempotentHint": False,
+                "openWorldHint": False,
+            },
         },
         {
             "name": "wait_seconds",
             "description": "Wait 0 to 120 seconds before replying. This measures web-chat long-poll tolerance only.",
             "inputSchema": {
                 "type": "object",
-                "properties": {"seconds": {"type": "number", "minimum": 0, "maximum": 120}},
+                "properties": {
+                    "seconds": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 120,
+                    }
+                },
                 "required": ["seconds"],
                 "additionalProperties": False,
             },
-            "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False},
+            "annotations": {
+                "readOnlyHint": True,
+                "destructiveHint": False,
+                "idempotentHint": True,
+                "openWorldHint": False,
+            },
         },
     ]
     if role == "dm":
@@ -364,8 +480,17 @@ def _tool_catalog(state: PreflightState, role: str) -> list[dict[str, Any]]:
             {
                 "name": "dm_only_ping",
                 "description": "DM-only discovery probe. Returns pong without changing any state.",
-                "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
-                "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False},
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": False,
+                },
+                "annotations": {
+                    "readOnlyHint": True,
+                    "destructiveHint": False,
+                    "idempotentHint": True,
+                    "openWorldHint": False,
+                },
             }
         )
     if state.late_tool_enabled:
@@ -373,34 +498,62 @@ def _tool_catalog(state: PreflightState, role: str) -> list[dict[str, Any]]:
             {
                 "name": "late_tool",
                 "description": "Late-added read-only probe used to measure connector tool-cache refresh behavior.",
-                "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
-                "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False},
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": False,
+                },
+                "annotations": {
+                    "readOnlyHint": True,
+                    "destructiveHint": False,
+                    "idempotentHint": True,
+                    "openWorldHint": False,
+                },
             }
         )
     return tools
 
 
 def _load_authorize_template() -> str:
-    return (Path(__file__).with_name("authorize.html")).read_text(encoding="utf-8")
+    return Path(__file__).with_name("authorize.html").read_text(encoding="utf-8")
 
 
-def _render_authorize(values: dict[str, str], error: str | None = None) -> str:
+def _render_authorize(
+    values: dict[str, str],
+    error: str | None = None,
+) -> str:
     hidden = "".join(
         f'<input type="hidden" name="{html.escape(key)}" value="{html.escape(value)}">'
         for key, value in values.items()
     )
-    error_html = f'<p style="color:#b00020">{html.escape(error)}</p>' if error else ""
-    return _load_authorize_template().replace("{{HIDDEN_FIELDS}}", hidden).replace("{{ERROR}}", error_html)
+    error_html = (
+        f'<p style="color:#b00020">{html.escape(error)}</p>' if error else ""
+    )
+    return (
+        _load_authorize_template()
+        .replace("{{HIDDEN_FIELDS}}", hidden)
+        .replace("{{ERROR}}", error_html)
+    )
 
 
-def create_public_app(config: Config, state: PreflightState | None = None) -> FastAPI:
+def create_public_app(
+    config: Config,
+    state: PreflightState | None = None,
+) -> FastAPI:
     state = state or PreflightState()
     state.remember_secret(config.test_password)
     logger = JsonlLogger(config.log_path, state)
-    app = FastAPI(title="Adventure Table M04-A Web Chat MCP Preflight", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(
+        title="Adventure Table M04-A Web Chat MCP Preflight",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+    )
     app.state.preflight = state
     app.add_middleware(AuditMiddleware, logger=logger)
-    resource_metadata_url = f"{config.public_base_url}/.well-known/oauth-protected-resource"
+    resource_metadata_url = (
+        f"{config.public_base_url}/.well-known/oauth-protected-resource"
+    )
 
     @app.get("/.well-known/oauth-protected-resource")
     async def protected_resource_metadata() -> dict[str, Any]:
@@ -431,13 +584,24 @@ def create_public_app(config: Config, state: PreflightState | None = None) -> Fa
             payload = await request.json()
         except Exception:
             return _oauth_error("invalid_client_metadata", "JSON body required")
+        if not isinstance(payload, dict):
+            return _oauth_error("invalid_client_metadata", "JSON object required")
         redirect_uris = payload.get("redirect_uris")
-        if not isinstance(redirect_uris, list) or not redirect_uris or not all(isinstance(uri, str) and uri for uri in redirect_uris):
-            return _oauth_error("invalid_redirect_uri", "redirect_uris must be a non-empty string array")
+        if (
+            not isinstance(redirect_uris, list)
+            or not redirect_uris
+            or not all(isinstance(uri, str) and uri for uri in redirect_uris)
+        ):
+            return _oauth_error(
+                "invalid_redirect_uri",
+                "redirect_uris must be a non-empty string array",
+            )
         client_id = _new_secret("client")
         async with state.lock:
-            state.clients[client_id] = OAuthClient(client_id=client_id, redirect_uris=tuple(redirect_uris))
-            state.remember_secret(client_id)
+            state.clients[client_id] = OAuthClient(
+                client_id=client_id,
+                redirect_uris=tuple(redirect_uris),
+            )
         return JSONResponse(
             {
                 "client_id": client_id,
@@ -456,10 +620,13 @@ def create_public_app(config: Config, state: PreflightState | None = None) -> Fa
             return "redirect_uri is not registered"
         if values.get("response_type") != "code":
             return "only response_type=code is supported"
+        challenge = values.get("code_challenge")
         method = values.get("code_challenge_method")
+        if challenge and method != "S256":
+            return "code_challenge requires code_challenge_method=S256"
         if method and method != "S256":
             return "only PKCE S256 is supported"
-        if method and not values.get("code_challenge"):
+        if method and not challenge:
             return "code_challenge is required with code_challenge_method"
         return None
 
@@ -474,42 +641,71 @@ def create_public_app(config: Config, state: PreflightState | None = None) -> Fa
     @app.post("/authorize")
     async def authorize_post(request: Request) -> Response:
         body = (await request.body()).decode("utf-8", "replace")
-        values = {key: entries[-1] for key, entries in parse_qs(body, keep_blank_values=True).items()}
+        values = {
+            key: entries[-1]
+            for key, entries in parse_qs(body, keep_blank_values=True).items()
+        }
         error = validate_authorize_values(values)
         if error:
             return _oauth_error("invalid_request", error)
         role = values.get("role")
         if role not in {"dm", "player"}:
-            safe_values = {key: value for key, value in values.items() if key not in {"role", "password"}}
-            return HTMLResponse(_render_authorize(safe_values, "Choose dm or player."), status_code=400)
-        if not hmac.compare_digest(values.get("password", ""), config.test_password):
-            safe_values = {key: value for key, value in values.items() if key not in {"role", "password"}}
-            return HTMLResponse(_render_authorize(safe_values, "Wrong test password."), status_code=403)
+            safe_values = {
+                key: value
+                for key, value in values.items()
+                if key not in {"role", "password"}
+            }
+            return HTMLResponse(
+                _render_authorize(safe_values, "Choose dm or player."),
+                status_code=400,
+            )
+        if not hmac.compare_digest(
+            values.get("password", ""),
+            config.test_password,
+        ):
+            safe_values = {
+                key: value
+                for key, value in values.items()
+                if key not in {"role", "password"}
+            }
+            return HTMLResponse(
+                _render_authorize(safe_values, "Wrong test password."),
+                status_code=403,
+            )
         requested = [scope for scope in values.get("scope", "").split() if scope]
         allowed = set(_role_scopes(role))
         granted = [scope for scope in requested if scope in allowed] or _role_scopes(role)
         code = _new_secret("code")
+        auth_code = AuthorizationCode(
+            code_hash=_hash_token(code),
+            client_id=values["client_id"],
+            redirect_uri=values["redirect_uri"],
+            role=role,
+            scope=" ".join(granted),
+            code_challenge=values.get("code_challenge") or None,
+            code_challenge_method=values.get("code_challenge_method") or None,
+            expires_at=_now() + 300,
+        )
         async with state.lock:
-            state.authorization_codes[_hash_token(code)] = AuthorizationCode(
-                code_hash=_hash_token(code),
-                client_id=values["client_id"],
-                redirect_uri=values["redirect_uri"],
-                role=role,
-                scope=" ".join(granted),
-                code_challenge=values.get("code_challenge") or None,
-                code_challenge_method=values.get("code_challenge_method") or None,
-                expires_at=_now() + 300,
-            )
+            state.authorization_codes[auth_code.code_hash] = auth_code
             state.remember_secret(code)
-        location = values["redirect_uri"] + ("&" if "?" in values["redirect_uri"] else "?") + urlencode(
-            {"code": code, **({"state": values["state"]} if values.get("state") else {})}
+        location = values["redirect_uri"] + (
+            "&" if "?" in values["redirect_uri"] else "?"
+        ) + urlencode(
+            {
+                "code": code,
+                **({"state": values["state"]} if values.get("state") else {}),
+            }
         )
         return RedirectResponse(location, status_code=302)
 
     @app.post("/token")
     async def token(request: Request) -> Response:
         body = (await request.body()).decode("utf-8", "replace")
-        values = {key: entries[-1] for key, entries in parse_qs(body, keep_blank_values=True).items()}
+        values = {
+            key: entries[-1]
+            for key, entries in parse_qs(body, keep_blank_values=True).items()
+        }
         grant_type = values.get("grant_type")
         client_id = values.get("client_id", "")
         if client_id not in state.clients:
@@ -517,16 +713,38 @@ def create_public_app(config: Config, state: PreflightState | None = None) -> Fa
 
         if grant_type == "authorization_code":
             raw_code = values.get("code", "")
-            async with state.lock:
-                auth_code = state.authorization_codes.pop(_hash_token(raw_code), None)
+            code_hash = _hash_token(raw_code)
+            auth_code = state.authorization_codes.get(code_hash)
             if auth_code is None or auth_code.expires_at <= _now():
-                return _oauth_error("invalid_grant", "authorization code invalid or expired")
-            if auth_code.client_id != client_id or auth_code.redirect_uri != values.get("redirect_uri"):
-                return _oauth_error("invalid_grant", "authorization code binding mismatch")
+                return _oauth_error(
+                    "invalid_grant",
+                    "authorization code invalid or expired",
+                )
+            if (
+                auth_code.client_id != client_id
+                or auth_code.redirect_uri != values.get("redirect_uri")
+            ):
+                return _oauth_error(
+                    "invalid_grant",
+                    "authorization code binding mismatch",
+                )
             if auth_code.code_challenge:
                 verifier = values.get("code_verifier", "")
-                if not verifier or _b64url_sha256(verifier) != auth_code.code_challenge:
+                if (
+                    not verifier
+                    or auth_code.code_challenge_method != "S256"
+                    or _b64url_sha256(verifier) != auth_code.code_challenge
+                ):
                     return _oauth_error("invalid_grant", "PKCE verification failed")
+            async with state.lock:
+                current = state.authorization_codes.get(code_hash)
+                if current is not auth_code:
+                    return _oauth_error(
+                        "invalid_grant",
+                        "authorization code already consumed",
+                    )
+                state.authorization_codes.pop(code_hash, None)
+
             access = _new_secret("access")
             refresh = _new_secret("refresh")
             family_id = _new_secret("family")
@@ -557,9 +775,17 @@ def create_public_app(config: Config, state: PreflightState | None = None) -> Fa
             raw_refresh = values.get("refresh_token", "")
             family = state.refresh_family(raw_refresh)
             if family is None or family.client_id != client_id:
-                return _oauth_error("invalid_grant", "refresh token invalid, expired, or revoked")
+                return _oauth_error(
+                    "invalid_grant",
+                    "refresh token invalid, expired, or revoked",
+                )
             access = _new_secret("access")
             async with state.lock:
+                if family.revoked or family.refresh_expires_at <= _now():
+                    return _oauth_error(
+                        "invalid_grant",
+                        "refresh token invalid, expired, or revoked",
+                    )
                 family.access_hash = _hash_token(access)
                 family.access_expires_at = _now() + config.access_ttl_seconds
                 state.remember_secret(access)
@@ -571,23 +797,50 @@ def create_public_app(config: Config, state: PreflightState | None = None) -> Fa
                 "scope": family.scope,
             }
         else:
-            return _oauth_error("unsupported_grant_type", "authorization_code and refresh_token are supported")
-        return JSONResponse(payload, headers={"Cache-Control": "no-store", "Pragma": "no-cache"})
+            return _oauth_error(
+                "unsupported_grant_type",
+                "authorization_code and refresh_token are supported",
+            )
+        return JSONResponse(
+            payload,
+            headers={"Cache-Control": "no-store", "Pragma": "no-cache"},
+        )
 
     def unauthorized() -> JSONResponse:
         return JSONResponse(
             {"error": "invalid_token"},
             status_code=401,
-            headers={"WWW-Authenticate": f'Bearer resource_metadata="{resource_metadata_url}"'},
+            headers={
+                "WWW-Authenticate": (
+                    f'Bearer resource_metadata="{resource_metadata_url}"'
+                )
+            },
         )
 
-    async def send_rpc(request: Request, payload: dict[str, Any], session_id: str | None) -> Response:
+    async def send_rpc(
+        request: Request,
+        payload: dict[str, Any],
+        session_id: str | None,
+    ) -> Response:
         headers = {"Mcp-Session-Id": session_id} if session_id else {}
-        if config.force_sse and "text/event-stream" in request.headers.get("accept", "").lower():
+        if (
+            config.force_sse
+            and "text/event-stream" in request.headers.get("accept", "").lower()
+        ):
+
             async def stream() -> Any:
-                data = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+                data = json.dumps(
+                    payload,
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                )
                 yield f"event: message\ndata: {data}\n\n".encode("utf-8")
-            return StreamingResponse(stream(), media_type="text/event-stream", headers=headers)
+
+            return StreamingResponse(
+                stream(),
+                media_type="text/event-stream",
+                headers=headers,
+            )
         return JSONResponse(payload, headers=headers)
 
     @app.get("/mcp")
@@ -602,9 +855,15 @@ def create_public_app(config: Config, state: PreflightState | None = None) -> Fa
         try:
             payload = await request.json()
         except Exception:
-            return JSONResponse(_rpc_error(None, -32700, "Parse error"), status_code=400)
+            return JSONResponse(
+                _rpc_error(None, -32700, "Parse error"),
+                status_code=400,
+            )
         if not isinstance(payload, dict):
-            return JSONResponse(_rpc_error(None, -32600, "Invalid Request"), status_code=400)
+            return JSONResponse(
+                _rpc_error(None, -32600, "Invalid Request"),
+                status_code=400,
+            )
         request_id = payload.get("id")
         method = payload.get("method")
         params = payload.get("params") if isinstance(payload.get("params"), dict) else {}
@@ -612,71 +871,191 @@ def create_public_app(config: Config, state: PreflightState | None = None) -> Fa
         response_session = incoming_session
 
         if request_id is None and method == "notifications/initialized":
-            return Response(status_code=202, headers={"Mcp-Session-Id": incoming_session} if incoming_session else None)
+            return Response(
+                status_code=202,
+                headers={"Mcp-Session-Id": incoming_session}
+                if incoming_session
+                else None,
+            )
         if method == "initialize":
             requested_version = params.get("protocolVersion")
-            protocol_version = requested_version if isinstance(requested_version, str) and requested_version else config.default_protocol_version
+            protocol_version = (
+                requested_version
+                if isinstance(requested_version, str) and requested_version
+                else config.default_protocol_version
+            )
             response_session = incoming_session or _new_secret("mcp_session")
             result = {
                 "protocolVersion": protocol_version,
                 "capabilities": {"tools": {"listChanged": True}},
-                "serverInfo": {"name": "adventure-table-m04a-webchat-preflight", "version": "0.1.0"},
-                "instructions": "M04-A measurement harness only. Use tools to probe read/write, role-scoped discovery, cache refresh, and long-poll behavior.",
+                "serverInfo": {
+                    "name": "adventure-table-m04a-webchat-preflight",
+                    "version": "0.2.0",
+                },
+                "instructions": (
+                    "M04-A measurement harness only. Use tools to probe read/write, "
+                    "role-scoped discovery, cache refresh, and long-poll behavior."
+                ),
             }
-            return await send_rpc(request, _rpc_result(request_id, result), response_session)
+            return await send_rpc(
+                request,
+                _rpc_result(request_id, result),
+                response_session,
+            )
         if method == "server/discover":
             result = {
-                "protocolVersion": request.headers.get("mcp-protocol-version") or config.default_protocol_version,
+                "protocolVersion": request.headers.get("mcp-protocol-version")
+                or config.default_protocol_version,
                 "instructions": "M04-A measurement harness only.",
                 "capabilities": {"tools": True},
             }
-            return await send_rpc(request, _rpc_result(request_id, result), response_session)
+            return await send_rpc(
+                request,
+                _rpc_result(request_id, result),
+                response_session,
+            )
         if method == "ping":
-            return await send_rpc(request, _rpc_result(request_id, {}), response_session)
+            return await send_rpc(
+                request,
+                _rpc_result(request_id, {}),
+                response_session,
+            )
         if method == "tools/list":
-            return await send_rpc(request, _rpc_result(request_id, {"tools": _tool_catalog(state, family.role)}), response_session)
+            return await send_rpc(
+                request,
+                _rpc_result(
+                    request_id,
+                    {"tools": _tool_catalog(state, family.role)},
+                ),
+                response_session,
+            )
         if method != "tools/call":
-            return await send_rpc(request, _rpc_error(request_id, -32601, "Method not found"), response_session)
+            return await send_rpc(
+                request,
+                _rpc_error(request_id, -32601, "Method not found"),
+                response_session,
+            )
 
         name = params.get("name")
-        arguments = params.get("arguments") if isinstance(params.get("arguments"), dict) else {}
+        arguments = (
+            params.get("arguments")
+            if isinstance(params.get("arguments"), dict)
+            else {}
+        )
         if name == "get_context":
-            result = {"role": family.role, "note_count": len(state.notes), "server_time": _utc_now()}
+            result = {
+                "role": family.role,
+                "note_count": len(state.notes),
+                "server_time": _utc_now(),
+            }
         elif name == "post_note":
             text = arguments.get("text")
-            if not isinstance(text, str) or not text.strip() or len(text) > 1000:
-                return await send_rpc(request, _rpc_error(request_id, -32602, "text must be 1..1000 characters"), response_session)
+            if (
+                not isinstance(text, str)
+                or not text.strip()
+                or len(text) > 1000
+            ):
+                return await send_rpc(
+                    request,
+                    _rpc_error(
+                        request_id,
+                        -32602,
+                        "text must be 1..1000 characters",
+                    ),
+                    response_session,
+                )
             async with state.lock:
                 state.notes.append(text)
                 result = {"seq": len(state.notes)}
         elif name == "dm_only_ping":
             if family.role != "dm":
-                return await send_rpc(request, _rpc_error(request_id, -32601, "Tool not found for this role"), response_session)
+                return await send_rpc(
+                    request,
+                    _rpc_error(
+                        request_id,
+                        -32601,
+                        "Tool not found for this role",
+                    ),
+                    response_session,
+                )
             result = {"pong": True}
         elif name == "wait_seconds":
             seconds = arguments.get("seconds")
-            if not isinstance(seconds, (int, float)) or isinstance(seconds, bool) or seconds < 0 or seconds > 120:
-                return await send_rpc(request, _rpc_error(request_id, -32602, "seconds must be between 0 and 120"), response_session)
+            if (
+                not isinstance(seconds, (int, float))
+                or isinstance(seconds, bool)
+                or seconds < 0
+                or seconds > 120
+            ):
+                return await send_rpc(
+                    request,
+                    _rpc_error(
+                        request_id,
+                        -32602,
+                        "seconds must be between 0 and 120",
+                    ),
+                    response_session,
+                )
             started = time.monotonic()
             await asyncio.sleep(float(seconds))
             result = {"waited": round(time.monotonic() - started, 3)}
         elif name == "late_tool" and state.late_tool_enabled:
             result = {"late_tool": True}
         else:
-            return await send_rpc(request, _rpc_error(request_id, -32601, "Tool not found"), response_session)
-        return await send_rpc(request, _rpc_result(request_id, _tool_result(result)), response_session)
+            return await send_rpc(
+                request,
+                _rpc_error(request_id, -32601, "Tool not found"),
+                response_session,
+            )
+        return await send_rpc(
+            request,
+            _rpc_result(request_id, _tool_result(result)),
+            response_session,
+        )
 
     return app
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Adventure Table M04-A Web Chat MCP preflight")
-    parser.add_argument("--public-base-url", default=os.environ.get("M04A_PUBLIC_BASE_URL"))
-    parser.add_argument("--test-password", default=os.environ.get("M04A_TEST_PASSWORD"))
-    parser.add_argument("--host", default=os.environ.get("M04A_HOST", "0.0.0.0"))
-    parser.add_argument("--port", type=int, default=int(os.environ.get("M04A_PORT", "8787")))
-    parser.add_argument("--admin-port", type=int, default=int(os.environ.get("M04A_ADMIN_PORT", "8788")))
-    parser.add_argument("--log-path", default=os.environ.get("M04A_LOG_PATH", "logs/m04a-preflight.jsonl"))
+    parser = argparse.ArgumentParser(
+        description="Adventure Table M04-A Web Chat MCP preflight"
+    )
+    parser.add_argument(
+        "--public-base-url",
+        default=os.environ.get("M04A_PUBLIC_BASE_URL"),
+    )
+    parser.add_argument(
+        "--test-password",
+        default=os.environ.get("M04A_TEST_PASSWORD"),
+    )
+    parser.add_argument(
+        "--host",
+        default=os.environ.get("M04A_HOST", "0.0.0.0"),
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("M04A_PORT", "8787")),
+    )
+    parser.add_argument(
+        "--admin-port",
+        type=int,
+        default=int(os.environ.get("M04A_ADMIN_PORT", "8788")),
+    )
+    parser.add_argument(
+        "--log-path",
+        default=os.environ.get("M04A_LOG_PATH", "logs/m04a-preflight.jsonl"),
+    )
+    parser.add_argument(
+        "--access-ttl-seconds",
+        type=int,
+        default=int(os.environ.get("M04A_ACCESS_TTL_SECONDS", "300")),
+    )
+    parser.add_argument(
+        "--refresh-ttl-seconds",
+        type=int,
+        default=int(os.environ.get("M04A_REFRESH_TTL_SECONDS", "86400")),
+    )
     return parser.parse_args()
 
 
@@ -686,19 +1065,41 @@ async def _serve(args: argparse.Namespace) -> None:
     if not args.test_password:
         raise SystemExit("--test-password or M04A_TEST_PASSWORD is required")
     admin_host = "127.0.0.1"
-    assert admin_host == "127.0.0.1", "M04-A admin listener must bind loopback"
-    force_sse = os.environ.get("M04A_FORCE_SSE", "").strip().lower() in {"1", "true", "yes"}
+    assert admin_host == "127.0.0.1", (
+        "M04-A admin listener must bind loopback"
+    )
+    force_sse = os.environ.get("M04A_FORCE_SSE", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }
     config = Config(
         public_base_url=args.public_base_url,
         test_password=args.test_password,
         log_path=Path(args.log_path),
+        access_ttl_seconds=args.access_ttl_seconds,
+        refresh_ttl_seconds=args.refresh_ttl_seconds,
         force_sse=force_sse,
     )
     state = PreflightState()
     public_app = create_public_app(config, state)
     admin_app = create_admin_app(state)
-    public_server = uvicorn.Server(uvicorn.Config(public_app, host=args.host, port=args.port, log_level="info"))
-    admin_server = uvicorn.Server(uvicorn.Config(admin_app, host=admin_host, port=args.admin_port, log_level="info"))
+    public_server = uvicorn.Server(
+        uvicorn.Config(
+            public_app,
+            host=args.host,
+            port=args.port,
+            log_level="info",
+        )
+    )
+    admin_server = uvicorn.Server(
+        uvicorn.Config(
+            admin_app,
+            host=admin_host,
+            port=args.admin_port,
+            log_level="info",
+        )
+    )
     await asyncio.gather(public_server.serve(), admin_server.serve())
 
 
