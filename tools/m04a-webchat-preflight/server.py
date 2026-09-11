@@ -168,6 +168,8 @@ class Config:
             raise ValueError("public_base_url must be an absolute http(s) URL")
         if not self.test_password:
             raise ValueError("test_password must not be empty")
+        if self.access_ttl_seconds <= 0 or self.refresh_ttl_seconds <= 0:
+            raise ValueError("token TTL values must be positive")
         object.__setattr__(self, "public_base_url", base)
 
 
@@ -771,6 +773,11 @@ def create_public_app(
                 )
             access = _new_secret("access")
             async with state.lock:
+                if family.revoked or family.refresh_expires_at <= _now():
+                    return _oauth_error(
+                        "invalid_grant",
+                        "refresh token invalid, expired, or revoked",
+                    )
                 family.access_hash = _hash_token(access)
                 family.access_expires_at = _now() + config.access_ttl_seconds
                 state.remember_secret(access)
@@ -875,7 +882,7 @@ def create_public_app(
                 "capabilities": {"tools": {"listChanged": True}},
                 "serverInfo": {
                     "name": "adventure-table-m04a-webchat-preflight",
-                    "version": "0.1.0",
+                    "version": "0.2.0",
                 },
                 "instructions": "M04-A measurement harness only. Use tools to probe read/write, role-scoped discovery, cache refresh, and long-poll behavior.",
             }
@@ -1022,6 +1029,16 @@ def _parse_args() -> argparse.Namespace:
         "--log-path",
         default=os.environ.get("M04A_LOG_PATH", "logs/m04a-preflight.jsonl"),
     )
+    parser.add_argument(
+        "--access-ttl-seconds",
+        type=int,
+        default=int(os.environ.get("M04A_ACCESS_TTL_SECONDS", "300")),
+    )
+    parser.add_argument(
+        "--refresh-ttl-seconds",
+        type=int,
+        default=int(os.environ.get("M04A_REFRESH_TTL_SECONDS", "86400")),
+    )
     return parser.parse_args()
 
 
@@ -1041,8 +1058,8 @@ async def _serve(args: argparse.Namespace) -> None:
         public_base_url=args.public_base_url,
         test_password=args.test_password,
         log_path=Path(args.log_path),
-        access_ttl_seconds=int(os.environ.get("M04A_ACCESS_TTL_SECONDS", "300")),
-        refresh_ttl_seconds=int(os.environ.get("M04A_REFRESH_TTL_SECONDS", "86400")),
+        access_ttl_seconds=args.access_ttl_seconds,
+        refresh_ttl_seconds=args.refresh_ttl_seconds,
         force_sse=force_sse,
     )
     state = PreflightState()
