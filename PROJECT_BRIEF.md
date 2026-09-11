@@ -15,7 +15,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 - **Exploration 桌面（P3-B）**：Session 頁已是可用的 Exploration table。Main Stage 由本場 current DM Controller 設定 Text／Image／兩者／清空，圖片是 Room-scoped 且只服務目前舞台，透過帶授權的 endpoint 取得，不走 public static path。桌上輸入有 Character Dialogue、Action、OOC、Whisper DM 與 DM 專屬的 Narration；`/action`、`/search`、`/whisper`、`/ooc` 只是同一條 typed input 的語法捷徑，`/search` 不會自動選 Skill 或建立 RollRequest。current DM 可代理任意 Player Seat 行動，event 同時保存 acting DM 與 subject Seat／Character 且不改 Seat Controller。Whisper 由 Server 過濾，第三方連 payload 都拿不到。Stage 與訊息都是 canonical row，reload 與 server restart 後仍在。
 - **Roll / Check / PendingAction（P3-C）**：桌上有正式骰子了。current DM 可從 DM Toolbar 或 Player 的 `/check` 建立 Request Check，支援單人／多人／Party target、Ability／Skill／Saving Throw／其他、optional DC、Normal／Advantage／Disadvantage、optional ±N 與 `public`／`roller+DM`／`dm-only` 三種 visibility；多個 request 由同一 RollGroup 管理。RNG 一律在 Server，raw die、採用 die、modifier、total 與 source 全部保存；實體骰只能提交 raw die，total 由 Server 重算。同一個 RollRequest 只會有一個 result，重送或雙擊不會重擲。Player 的 `/check` 只建立 Check intent，不能自訂 secret DC；secret DC 與 dm-only result 由 Server 過濾，Player 端連 payload 都拿不到。current DM 可代理任意 Player Seat 擲骰，計算用的是 subject Character 的規則資料。Quick Dice 是獨立的便利骰，不會完成任何 pending formal request。PendingAction 有 `pending`／`processing`／`waiting_for_roll`／`resolved`／`cancelled` 五個狀態，transition 由 Server 驗證。Roll 之後的合法 Character Current State 變更走同一條 actor-neutral table action service，Human 自己操作與 DM 代理都會保留 acting 與 subject 身分。
 - **AI Controller 與交接（P3-D）**：Seat controller 正式有 Human／AI／None 三種，`AI + Offline` 是合法狀態。AI 用 Adventure Table 自己的 scoped credential 進場：token 只在建立／rotate 時顯示一次，DB 只留 hash，scope 固定 Room／Campaign／Seat／Role／generation。Human Player 可對自己控制的 Seat `Let AI Control`，可附一句只屬於這次交接的 Temporary Handoff Instruction；`Take Back Control` 只認當初交出去的那個仍有效 Room access session，換裝置或原 session 失效時改由 Owner／DM 做 administrative reassignment，並在同一 transaction 內撤銷舊 grant。每個 Seat 有單調遞增的 controller epoch 當唯一真值，grant 只保存 mint 當下的 generation snapshot，每次授權都要同時對上「Seat 目前綁這張 grant」與「epoch 等於 generation」。Owner 可在 Lobby 事前把 DM Seat 配成 AI 並產生**有限期限**的開場憑證，AI 用它只能讀自己 DM Seat 的最小開場資訊與 Start，Start 成功後才變成該場固定 DM credential；DM controller 一場之內固定，不支援中途交接。Session End／Abandon 會在同一 transaction 內撤銷該場所有 AI grant。
-- **AI 桌內接入（P3-E，實作完成、E1 延期）**：Web channel 已掛 `POST /mcp`，以 MCP `2026-07-28` stateless Streamable HTTP 為唯一契約（每個 request 帶 `MCP-Protocol-Version`／`Mcp-Method`／`_meta`，不需 `initialize`，拒 `Mcp-Session-Id`）。外部 AI 以 P3-D 的 AI Join Token 當 Bearer 進場，每個 request 重新 resolve current grant／epoch；tool catalog 依 Player／DM／pre-session DM 三種 scope 產生，涵蓋 context、own Character、Dialogue／Action／OOC／Whisper／Narration、Stage text、Request Check、formal／physical／quick roll、Current State、`get_pending_events`／`wait_for_event`，沒有 `resolve_action` 或任何 raw-state escape hatch。Human UI 與 MCP 共用同一組 application service；standalone 不掛 `/mcp`。**真實 external client 的 HTTPS E1 gate 依 2026-09-11 決定延至 P3-F closeout 合併驗收**，loopback wire preflight 已確認 Claude Code CLI 2.1.260 照契約送 request。
+- **AI 桌內接入（P3-E）**：Web channel 已掛 `POST /mcp`，以 MCP `2026-07-28` stateless Streamable HTTP 為唯一契約（每個 request 帶 `MCP-Protocol-Version`／`Mcp-Method`／`_meta`，不需 `initialize`，拒 `Mcp-Session-Id`）。外部 AI 以 P3-D 的 AI Join Token 當 Bearer 進場，每個 request 重新 resolve current grant／epoch；tool catalog 依 Player／DM／pre-session DM 三種 scope 產生，涵蓋 context、own Character、Dialogue／Action／OOC／Whisper／Narration、Stage text、Request Check、formal／physical／quick roll、Current State、`get_pending_events`／`wait_for_event`，沒有 `resolve_action` 或任何 raw-state escape hatch。Human UI 與 MCP 共用同一組 application service；standalone 不掛 `/mcp`。真實 external client E1 已於 2026-09-11 P3-F closeout 期間由 Claude Code 2.1.260 經 Tailscale HTTPS 入口跑完整 journey（context → action → formal roll → Take Back → 舊 token 401 → End），wire 全程 `2026-07-28` 契約、每個 `tools/call` 帶 `Mcp-Name`。
 - **尚未實作**：Combat、Adventure Runtime。Session 頁的 Log 分頁目前仍只是 raw event 列表。
 - **技術基礎**：React + TypeScript + Vite；Python + FastAPI + Pydantic；SQLAlchemy + Alembic；網頁版 PostgreSQL、單機版 SQLite。啟動與開發指令見 [README.md](README.md)。
 
@@ -23,7 +23,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## 當前狀態與下一步
 
-**P0、P1、P2、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門；P3-E 於 2026-09-11 完成實作與全部自動化 gate，但實作規格第 14 條的真實 external MCP client HTTPS E1 依使用者決定延至 P3-F closeout 與 P3-F 第 11 條合併驗收，P3-E 因此維持「實作完成、E1 延期」而非 ✅；下一步是 P3-F。**
+**P0、P1、P2、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門，P3-E 與 P3-F 已於 2026-09-11 關門（external MCP client HTTPS E1 於 P3-F closeout 合併執行通過）；下一步是 P3 Phase 關門並合併回 `main`。**
 
 P2 已交付並必須繼續維持的核心方向：
 
@@ -52,9 +52,8 @@ P3 已拍板並寫入正式文件的核心方向：
 
 下一步依序為：
 
-1. **實作 P3-F — Full P3 Integration & Closeout**；P3-F closeout 時同時執行 P3-E 延期的 external MCP client E1：用 **Claude Code CLI**（preflight 已通過的 client）經 HTTPS/TLS 入口跑完整 journey，滿足 P3-F 實作規格第 11 條後回頭勾起 [P3-E closeout](docs/P3/P3-E_CLOSEOUT.md) 第 14 條並把 P3-E 標 ✅。開工前先讀該 closeout 的「External MCP auth / wire preflight」段。
-2. P3-F 關門後 P3 Phase 關門並合併回 `main`（全套 E2E）。
-3. P4～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
+1. **P3 Phase 關門並合併回 `main`**：本機全套 E2E 已於 `51176e9` 跑過（除 KI-P1D-001 簽章外全綠）；合併後在 `main` 手動 dispatch `P3 Full-Stack E2E`（`p3-e2e.yml`）補 CI run id 到 [P3-F closeout](docs/P3/P3-F_CLOSEOUT.md)。
+2. P4～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module；P4 開工前先拆 Subphase 與三份文件。
 
 P2 的正式契約：
 
@@ -71,7 +70,8 @@ P3 的正式契約：
 - [P3-B closeout](docs/P3/P3-B_CLOSEOUT.md)
 - [P3-C closeout](docs/P3/P3-C_CLOSEOUT.md)
 - [P3-D closeout](docs/P3/P3-D_CLOSEOUT.md)
-- [P3-E closeout](docs/P3/P3-E_CLOSEOUT.md)（實作完成、E1 延期）
+- [P3-E closeout](docs/P3/P3-E_CLOSEOUT.md)
+- [P3-F closeout](docs/P3/P3-F_CLOSEOUT.md)
 
 **M01 不再有「必須 final closeout 後才能開始 P2」的 gate。** A～N 是目前已完成的角色內容 baseline；之後若再拍板新的角色內容或既有角色系統強化，從 **M01-O** 起繼續新增 Subphase。M01 可以在 P2／P3 等正常產品 Roadmap 繼續前進時保持 open，不要求先建立一個假的「全部 D&D 內容已完成」里程碑。
 
@@ -92,8 +92,7 @@ P3 的正式契約：
 | P3-A 的呈現層與測試替身取捨 | **P3-B 解掉兩項呈現層問題**：致命錯誤不再同時出現兩則 banner（`onFatal` 不另設 generic error banner），重連中改用 `.notice-banner` + `role="status"`，fatal 才是 `error-banner` + `role="alert"`。**waiter starvation 測試替身未動**：仍借真實 `wait_after` 但 stub `list_after`，真實 endpoint 路徑未合成單一端到端資源斷言，留給 P3-F 的資源安全整合 | [P3-B closeout](docs/P3/P3-B_CLOSEOUT.md)「關門過程中修正的問題」第 3 項與「已知限制」 |
 | 座位變動的即時同步仍是顯示層權宜 | **P3-D 解掉授權面與初次載入面**：Session Resume 現在帶 caller-specific 的 `seats` 與 `self_take_back_seat_ids`，Session 頁不再拿進場當下的 join snapshot 當 controller 真值。**未做的是 event-driven 更新**：`controller.changed` 已是 canonical event，但前端只把它當 log 列，沒有 Lobby 讀取權的 caller 在別人交接後仍要 reload 才會看到新 controller | [P3-D closeout](docs/P3/P3-D_CLOSEOUT.md)「已知限制」；[P3-B closeout](docs/P3/P3-B_CLOSEOUT.md)「已知限制」 |
 | AI grant token 在 DB 留了 6 個字元的 secret 前綴 | `ai_controller_grants.secret_prefix` 存 `at_ai_<grant hex>_<secret 前 6 碼>…` 供 UI 辨識是哪張 grant。測試指南 token 案例 2 的字面要求是「DB row 不含 plaintext」，這是刻意取捨：剩餘 entropy 約 37 個 urlsafe 字元，無實務爆破風險。要收乾淨就改成只存 grant id 前綴 | [P3-D closeout](docs/P3/P3-D_CLOSEOUT.md)「已知限制」 |
-| P3-E external MCP client E1 延至 P3-F | 實作規格第 14 條要求真 external client 經 HTTPS/TLS 完成 context → event → action → formal roll → Take Back/End → 拒絕。P3-E 只有自寫 Playwright MCP journey、官方 MCP Python SDK v2 parser test 與 loopback wire preflight：Claude Code CLI 2.1.260 照 `2026-07-28` 契約送 `server/discover`／`tools/list`；Codex CLI 0.147.0 送 legacy `initialize` 被拒，不可用。**`tools/call` 的 `Mcp-Name` header 尚無 wire 證據**（兩個 CLI 當次都沒有成功的 model turn）。P3-F E1 第一個 `tools/call` 就會補上 | [P3-E closeout](docs/P3/P3-E_CLOSEOUT.md)「External MCP auth / wire preflight」 |
-| P3-D 的 AI 授權證據全在 domain 層，新 UI 無 browser 證據 | **P3-E 已補 HTTP 入口與 real-backend MCP journey**（`p3e-mcp-browser-integration.spec.ts`，本機 Docker 1 passed），AI 進桌的 end-to-end 證據已有，但仍非 external client；`LobbyAIDMGrantPanel` / `PlayerAIControlPanel` 只有 vitest 覆蓋，handoff／Take Back／admin recovery／AI DM Start 的 browser journey 依測試指南掛在 P3-F 第 6～8 條 | [P3-D closeout](docs/P3/P3-D_CLOSEOUT.md)「已知限制」 |
+| P3-D 的 AI 授權證據全在 domain 層，新 UI 無 browser 證據 | **P3-E 已補 HTTP 入口與 real-backend MCP journey，P3-F E1 已補真 external client（Claude Code 2.1.260 經 HTTPS）證據**；`LobbyAIDMGrantPanel` / `PlayerAIControlPanel` 仍只有 vitest 覆蓋，handoff／Take Back／admin recovery／AI DM Start 的 browser journey 未做，見 P3-F closeout「Known limitations」 | [P3-D closeout](docs/P3/P3-D_CLOSEOUT.md)「已知限制」 |
 | handoff 不改 participant snapshot 只有結構性保證 | 三條 controller mutation 確實沒有寫 `session_participants` 的語句，但沒有測試在 handoff／Take Back／admin reassignment 前後比對 participant row 與 `active_character_id`；日後有人在這三條路徑加寫入，現有測試不會擋。P3-F 的 D1／D1b journey 應補上前後比對 | [P3-D closeout](docs/P3/P3-D_CLOSEOUT.md)「已知限制」 |
 | 桌上訊息只保留最後 200 筆，且長場次 reload 仍是完整 replay | P3-B handoff 要求 P3-C 正面處理「提高上限或改成分頁載入」。P3-C 試過改用 Resume 的 bounded cursor 取代 replay，但那會讓 50 筆視窗之前的可見歷史消失，已回退成「Resume 能自證覆蓋完整歷史才沿用其 cursor，否則 durable replay」。correctness 無誤，但 reload 成本仍隨 event 數線性成長，畫面也只留最後 200 筆，真正的回捲 UX 未做 | [P3-C closeout](docs/P3/P3-C_CLOSEOUT.md)「已知限制」與「關門過程中修正的問題」第 1 項 |
 | E2E Journey C1 沒有 CI 覆蓋 | `p3c-roll-check-pending-action.spec.ts` 只有本機 `npm run test:e2e:docker` 會跑到：`p3-non-e2e.yml` 不含 E2E job，`p2-e2e.yml` 是 `workflow_dispatch`。要進 CI 得先決定整體 E2E 時間預算怎麼分配 | [P3-C closeout](docs/P3/P3-C_CLOSEOUT.md)「已知限制」；留給 P3-F 一起決定 |
@@ -122,7 +121,7 @@ P3 的正式契約：
 | M02 | Traditional Chinese / English Localization | 插於 M01-C 與 M01-D 間；雙語呈現、翻譯流程與完整性 gate；已關門 |
 | M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，E.9 乾淨 Windows 11 冷啟動已於 2026-09-06 補驗完成 |
 | P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**A～F 全數關門，Phase 已關門** |
-| P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌；**A～F正式文件與preflight blocker修正已完成，P3-A～P3-D已關門，P3-E 實作完成、E1 延至 P3-F，下一步P3-F** |
+| P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌；**A～F 全數關門；待 Phase 關門合併回 `main`** |
 | P4 | Quick Combat | 第一個完整可玩的 Combat MVP；首個 Subphase P4-A 承接 SRD Monster／Beast stat blocks |
 | P5 | Tactical Combat | 同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE 與空間系統 |
 | P6 | Adventure + AI DM Runtime | Adventure Definition／Importer、Campaign Runtime、世界資料、AI DM context／write-back |
@@ -222,8 +221,8 @@ P3 的正式契約：
 | **P3-B — Exploration, Chat & Actions** | ✅ | Main Stage text/image、最小Room-scoped Stage upload、Dialogue / Action / OOC / Whisper DM / Narration、slash command 收斂成同一 typed input、DM proxy 保存 acting/subject、Whisper Server 過濾、Stage與Chat分離、不建立Scene/Asset Library |
 | **P3-C — Roll, Check & PendingAction** | ✅ | RollGroup / RollRequest / Result、Server RNG、Group / Secret / physical / quick roll、PendingAction、formal roll idempotency、actor-neutral Character State + event atomic boundary；AI resolver留P3-D接線 |
 | **P3-D — AI Controller, Scoped Token & Handoff** | ✅ | typed TableActorContext、P2 Human-only Session/live-write授權入口migration、hashed scoped AI Join Token、Seat current grant + controller_epoch SSOT、Session/Participant grant-generation snapshots與三條CHECK migration、finite-TTL pre-session AI DM grant、origin-only Take Back + Owner/DM admin recovery、Player Human ↔ AI handoff、AI DM可作新Session固定DM Controller |
-| **P3-E — AI Tool Surface & Event Delivery** | 🟡 | MCP `2026-07-28` stateless Streamable HTTP入口、shared application services、structured tools/errors、`get_pending_events` / `wait_for_event`沿用P3-A async wait、standalone 不掛 `/mcp`；**真external MCP client HTTPS E1 延至 P3-F closeout 合併驗收**，loopback preflight 已通過（Claude Code CLI 2.1.260） |
-| **P3-F — Full P3 Integration & Closeout** | ⬜ | Human/AI Exploration journeys、secret/group roll、Late Join、AI handoff、AI DM、grant TTL/epoch/Take Back authorization、restart、cross-scope matrix、PostgreSQL concurrency、waiter resource safety、P2 caller regression、standalone / bilingual / full regression closeout |
+| **P3-E — AI Tool Surface & Event Delivery** | ✅ | MCP `2026-07-28` stateless Streamable HTTP入口、shared application services、structured tools/errors、`get_pending_events` / `wait_for_event`沿用P3-A async wait、standalone 不掛 `/mcp`；真 external MCP client HTTPS E1 於 P3-F closeout 由 Claude Code 2.1.260 經 Tailscale HTTPS 執行通過 |
+| **P3-F — Full P3 Integration & Closeout** | ✅ | Human/AI Exploration journeys、secret/group roll、Late Join、AI handoff、AI DM、grant TTL/epoch/Take Back authorization、restart、cross-scope matrix、PostgreSQL concurrency、waiter resource safety、P2 caller regression、standalone / bilingual / full regression closeout；`p3-e2e.yml` CI run id 待合併 `main` 後 dispatch 補上 |
 
 ## 接手時必須保留的跨 Phase 約束
 
@@ -266,7 +265,7 @@ P3 的正式契約：
 | P2 | [規格](docs/P2/實作規格.md) | [設計](docs/P2/開發設計方針.md) | [測試](docs/P2/測試指南.md) |
 | P3 | [規格](docs/P3/實作規格.md) | [設計](docs/P3/開發設計方針.md) | [測試](docs/P3/測試指南.md) |
 
-歷史完成過程與驗收證據查各 Phase 目錄的 `*_CLOSEOUT.md`；M01-B 真人創角 Gate 另見 [M01-B_HUMAN_GATE.md](docs/M01/M01-B_HUMAN_GATE.md)。最近**已完成產品Phase**的整合交付見 [P2-F_CLOSEOUT.md](docs/P2/P2-F_CLOSEOUT.md)；P3 進行中，已關門的 Subphase closeout 為 [P3-A](docs/P3/P3-A_CLOSEOUT.md)、[P3-B](docs/P3/P3-B_CLOSEOUT.md)、[P3-C](docs/P3/P3-C_CLOSEOUT.md) 與 [P3-D](docs/P3/P3-D_CLOSEOUT.md)；[P3-E](docs/P3/P3-E_CLOSEOUT.md) 實作完成但 E1 延期。
+歷史完成過程與驗收證據查各 Phase 目錄的 `*_CLOSEOUT.md`；M01-B 真人創角 Gate 另見 [M01-B_HUMAN_GATE.md](docs/M01/M01-B_HUMAN_GATE.md)。最近**已完成產品Phase**的整合交付見 [P2-F_CLOSEOUT.md](docs/P2/P2-F_CLOSEOUT.md)；P3 Subphase closeout 為 [P3-A](docs/P3/P3-A_CLOSEOUT.md)、[P3-B](docs/P3/P3-B_CLOSEOUT.md)、[P3-C](docs/P3/P3-C_CLOSEOUT.md)、[P3-D](docs/P3/P3-D_CLOSEOUT.md)、[P3-E](docs/P3/P3-E_CLOSEOUT.md) 與 [P3-F](docs/P3/P3-F_CLOSEOUT.md)；P3 整合交付見 P3-F closeout。
 
 `docs/暫用規則資訊/` 是內容 authoring／review input，**不是 runtime 資料來源**。正式規則與可調數值住 `data/`，runtime 不解析 `docs/`；`舊文件/` 為歷史封存，接手時忽略。
 
