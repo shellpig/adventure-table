@@ -1,0 +1,50 @@
+name: M04-A Restored Hardening Verification
+
+on:
+  push:
+    branches:
+      - m04a-webchat-preflight
+    paths:
+      - '.github/workflows/m04a-hardening-verify.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Verify exact restored server blob and diff hygiene
+        run: |
+          test "$(git hash-object tools/m04a-webchat-preflight/server.py)" = "1ff9145d5367b5afb6a0e58be9399c9c618271b6"
+          git diff --check 682ba1eb4d72ca481b2f326bd50c8bc7b21cd6c8..HEAD
+          git diff -w 682ba1eb4d72ca481b2f326bd50c8bc7b21cd6c8..HEAD -- tools/m04a-webchat-preflight/server.py
+      - name: Install backend development dependencies
+        run: pip install -e "./apps/server[web,dev,standalone]"
+      - name: Compile standalone preflight harness
+        run: >-
+          python -m py_compile
+          tools/m04a-webchat-preflight/server.py
+          tools/m04a-webchat-preflight/admin.py
+          tools/m04a-webchat-preflight/test_hardening_regressions.py
+      - name: M04-A standalone harness tests
+        run: >-
+          pytest
+          tools/m04a-webchat-preflight/test_redact.py
+          tools/m04a-webchat-preflight/test_server_contract.py
+          tools/m04a-webchat-preflight/test_hardening_regressions.py
+          -q
+      - name: M04-A isolation and P3 authorization/MCP regression
+        working-directory: apps/server
+        run: >-
+          pytest
+          tests/test_m04a_preflight_isolation.py
+          tests/test_p3d_*.py
+          tests/test_p3e_*.py
+          -q
