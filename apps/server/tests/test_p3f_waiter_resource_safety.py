@@ -9,15 +9,21 @@ from uuid import UUID, uuid4
 
 from alembic import command
 from alembic.config import Config
+from httpx import ASGITransport, AsyncClient, Response
 import pytest
 from sqlalchemy import create_engine, insert, text, update
 from sqlalchemy.engine import Engine
 
+from app.api.rooms.access import get_room_access_context
+from app.api.rooms.dependencies import get_table_event_service
+from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.table_events import (
     TableActorContext,
     TableActorKind,
+    TableEventAppend,
     TableEventService,
 )
+from app.main import app
 from app.persistence.rooms.table_runtime import TableEventRepository
 from app.persistence.rooms.tables import (
     campaign_seats,
@@ -70,14 +76,17 @@ class _CountingNotifier:
     def __init__(self, target: int) -> None:
         self.target = target
         self.waiting = 0
+        self.active_handles = 0
         self.all_waiting = asyncio.Event()
         self.release = asyncio.Event()
+        self.loop = asyncio.get_running_loop()
 
     def notify(self, session_id: UUID) -> None:
         del session_id
-        self.release.set()
+        self.loop.call_soon_threadsafe(self.release.set)
 
     def register(self, session_id: UUID) -> object:
+        self.active_handles += 1
         return session_id
 
     async def wait(self, handle: object, timeout: float) -> bool:
@@ -93,6 +102,7 @@ class _CountingNotifier:
 
     def unregister(self, handle: object) -> None:
         del handle
+        self.active_handles -= 1
 
 
 def _seed_human_dm_actor(engine: Engine) -> TableActorContext:
@@ -200,58 +210,99 @@ def _seed_human_dm_actor(engine: Engine) -> TableActorContext:
     )
 
 
-def _probe_database(engine: Engine) -> int:
-    with engine.connect() as connection:
-        return int(connection.execute(text("SELECT 1")).scalar_one())
+def _checked_out(engine: Engine) -> int:
+    checkedout = getattr(engine.pool, "checkedout")
+    return int(checkedout())
 
 
-def test_many_idle_waiters_release_postgres_pool_between_event_scans(
+def test_many_asgi_waiters_release_postgres_pool_and_worker_capacity(
     constrained_postgres_engine: Engine,
 ) -> None:
     actor = _seed_human_dm_actor(constrained_postgres_engine)
+    context = RoomAccessContext(
+        room_id=actor.room_id,
+        access_session_id=actor.access_session_id,
+        authority=RoomAccessAuthority.DM,
+    )
 
-    async def exercise() -> tuple[list[object], float]:
+    async def exercise() -> tuple[list[Response], float]:
         notifier = _CountingNotifier(target=12)
         event_service = TableEventService(
             TableEventRepository(constrained_postgres_engine),
             notifier=notifier,
         )
-        waiters = [
-            asyncio.create_task(
-                event_service.wait_after(
-                    actor,
-                    after_seq=0,
-                    limit=20,
-                    timeout=2.0,
-                )
-            )
-            for _ in range(notifier.target)
-        ]
-
-        # This event is only set from the production notifier wait point, after
-        # each waiter has completed both durable scans and released any short-
-        # lived DB connection. With a two-slot pool, pinning a connection for
-        # the long-poll would make it impossible for all 12 waiters to arrive.
-        await asyncio.wait_for(notifier.all_waiting.wait(), timeout=2.0)
-        assert notifier.waiting == notifier.target
-
-        started = time.perf_counter()
-        probe = await asyncio.wait_for(
-            asyncio.to_thread(_probe_database, constrained_postgres_engine),
-            timeout=0.5,
+        app.dependency_overrides[get_room_access_context] = lambda: context
+        app.dependency_overrides[get_table_event_service] = lambda: event_service
+        prefix = (
+            f"/api/rooms/{actor.room_id}/campaigns/{actor.campaign_id}"
+            f"/sessions/{actor.session_id}"
         )
-        elapsed = time.perf_counter() - started
-        assert probe == 1
+        transport = ASGITransport(app=app)
 
-        notifier.release.set()
-        pages = await asyncio.gather(*waiters)
-        return list(pages), elapsed
+        try:
+            async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+                waiters = [
+                    asyncio.create_task(
+                        client.get(f"{prefix}/events/wait?after=0&limit=20&timeout=2")
+                    )
+                    for _ in range(notifier.target)
+                ]
 
-    pages, probe_elapsed = asyncio.run(exercise())
+                # Reaching the production notifier wait point proves every ASGI
+                # request completed actor resolution plus both durable scans.
+                # No waiter may keep one of the deliberately tiny DB pool slots.
+                await asyncio.wait_for(notifier.all_waiting.wait(), timeout=2.0)
+                assert notifier.waiting == notifier.target
+                assert notifier.active_handles == notifier.target
+                assert _checked_out(constrained_postgres_engine) == 0
+
+                started = time.perf_counter()
+                runtime = await asyncio.wait_for(client.get(f"{prefix}/runtime"), timeout=0.5)
+                probe_elapsed = time.perf_counter() - started
+                assert runtime.status_code == 200
+                assert runtime.json()["last_event_seq"] == 0
+
+                # Exercise cancellation cleanup while the other requests remain
+                # pending. The production wait_after() finally block must release
+                # notifier handles even on request cancellation.
+                cancelled = waiters[-4:]
+                for task in cancelled:
+                    task.cancel()
+                await asyncio.gather(*cancelled, return_exceptions=True)
+                assert notifier.active_handles == 8
+                assert _checked_out(constrained_postgres_engine) == 0
+
+                # Publish through the real durable TableEventService. notify() is
+                # thread-safe here because normal sync gameplay routes may append
+                # from a worker thread while long-poll requests live on the loop.
+                event = await asyncio.to_thread(
+                    event_service.append_event,
+                    actor,
+                    TableEventAppend(
+                        kind="diagnostic.waiter_wake",
+                        payload={"source": "p3-f"},
+                        idempotency_key="p3f-waiter-wake",
+                    ),
+                )
+                assert event.seq == 1
+
+                responses = list(await asyncio.gather(*waiters[:8]))
+                assert notifier.active_handles == 0
+                assert _checked_out(constrained_postgres_engine) == 0
+                return responses, probe_elapsed
+        finally:
+            app.dependency_overrides.pop(get_room_access_context, None)
+            app.dependency_overrides.pop(get_table_event_service, None)
+
+    responses, probe_elapsed = asyncio.run(exercise())
 
     assert probe_elapsed < 0.5
-    assert len(pages) == 12
-    for page in pages:
-        assert page.cursor == 0
-        assert page.current_seq == 0
-        assert page.events == []
+    assert len(responses) == 8
+    for response in responses:
+        assert response.status_code == 200
+        body = response.json()
+        assert body["cursor"] == 1
+        assert body["current_seq"] == 1
+        assert [event["kind"] for event in body["events"]] == ["diagnostic.waiter_wake"]
+
+    assert _checked_out(constrained_postgres_engine) == 0
