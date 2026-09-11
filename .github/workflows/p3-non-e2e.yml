@@ -9,6 +9,7 @@ on:
       - p3-c-roll-check-pending-action
       - p3-d-ai-controller-scoped-token-handoff
       - p3-e-ai-tool-surface-event-delivery
+      - p3-f-full-integration-closeout
 
 jobs:
   backend:
@@ -78,6 +79,7 @@ jobs:
           tests/test_p3a_postgres_events.py
           tests/test_p3b_postgres_stage.py
           tests/test_p3c_postgres_rolls.py
+          tests/test_p3f_waiter_resource_safety.py
           tests/test_p2a_postgres_migration.py
           tests/test_p2b_postgres_workspace.py
           tests/test_p2e_postgres_sessions.py
