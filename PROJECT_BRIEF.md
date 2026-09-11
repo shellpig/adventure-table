@@ -1,6 +1,6 @@
 # Adventure Table 專案簡報
 
-最後更新：2026-09-11
+最後更新：2026-09-11（M04 拆分）
 
 本檔是**當前進度、Roadmap、下一步與文件索引的單一事實來源**，供新的 AI Session 或實作者接手。產品行為以 [規格企劃.md](規格企劃.md) 為準；實作契約與歷史驗收證據請依下方索引查閱，不在本檔重述。
 
@@ -23,7 +23,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## 當前狀態與下一步
 
-**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門，P3-E 與 P3-F 已於 2026-09-11 關門（external MCP client HTTPS E1 於 P3-F closeout 合併執行通過），P3 Phase 同日以 `d6b791e` 合併回 `main`，`P3 Full-Stack E2E` CI run `34587347309` 全綠；下一步是 P4 開工前的 Subphase 拆分與三份文件。**
+**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門，P3-E 與 P3-F 已於 2026-09-11 關門（external MCP client HTTPS E1 於 P3-F closeout 合併執行通過），P3 Phase 同日以 `d6b791e` 合併回 `main`，`P3 Full-Stack E2E` CI run `34587347309` 全綠。同日 P3 第一次真實使用暴露「AI 拿到 token 不知道怎麼開始」與「網頁版 AI connector 連不進來」兩個缺口，已拍板插入 **M04 — AI Join Kit & Web AI Connector Compatibility**，拆為 M04-A／M04-B 並完成三份文件；下一步是 M04-A 實作。**
 
 P2 已交付並必須繼續維持的核心方向：
 
@@ -50,10 +50,19 @@ P3 已拍板並寫入正式文件的核心方向：
 - **P3-D必須演進P2 controller binding schema**：新的web migration為Seat加入current AI grant + `controller_epoch`，Session fixed DM snapshot、Participant join snapshot加入AI grant + generation，並drop/re-add `ck_campaign_seats_controller_binding`、`ck_sessions_dm_controller_binding`、`ck_session_participants_controller_binding`；不得回頭改歷史`0013` / `0014`。
 - **P3 event不是P7完整Timeline**：P3只保存當場玩法、pending與reconnect需要的durable truth；跨Session history browser / search / Snapshot / Restore仍留P7。
 
+M04 已拍板的核心方向：
+
+- **AI Join Kit 是唯一的 AI 交付物**：URL + token + 指引指向；DM／Player 用同一份模板，role 由 token 決定。
+- **指引住 server、與 tool catalog 同源**：`GET /mcp/guide`（無認證純文字）、加厚的 tool description、`get_session_context.briefing` 三個通道交付同一份內容；MCP AI 與只有 HTTP 能力的 AI 都拿得到。
+- **不改 P3-D 授權模型、不接 LLM、不提前做 P6 劇本 context。**
+- **M04-B 以 preflight 定範圍**：claude.ai／ChatGPT 網頁版 connector 的認證選項與 protocol version 先實測再決定要做 token-in-path、最小 OAuth 或 legacy protocol 相容層；不因 M04-B 阻塞 P4。
+
 下一步依序為：
 
-1. **P4 — Quick Combat 開工前置**：先拆 `P4-A`、`P4-B`… Subphase 並產出 `docs/P4/` 三份文件；P4-A 承接 SRD Monster／Beast stat blocks。
-2. P5～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
+1. **M04-A — AI Join Kit & Server-hosted Guide 實作**：依 [M04 開發設計方針](docs/M04/開發設計方針.md) 實作，關門條件見 [M04 測試指南](docs/M04/測試指南.md)。
+2. **P4 — Quick Combat 開工前置**：拆 `P4-A`、`P4-B`… Subphase 並產出 `docs/P4/` 三份文件；P4-A 承接 SRD Monster／Beast stat blocks。可與 M04-B preflight 並行。
+3. **M04-B — Web AI Connector Compatibility**：先做 B.0 preflight，依結果定範圍。
+4. P5～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
 
 P2 的正式契約：
 
@@ -72,6 +81,12 @@ P3 的正式契約：
 - [P3-D closeout](docs/P3/P3-D_CLOSEOUT.md)
 - [P3-E closeout](docs/P3/P3-E_CLOSEOUT.md)
 - [P3-F closeout](docs/P3/P3-F_CLOSEOUT.md)
+
+M04 的正式契約：
+
+- [M04 實作規格](docs/M04/實作規格.md)
+- [M04 開發設計方針](docs/M04/開發設計方針.md)
+- [M04 測試指南](docs/M04/測試指南.md)
 
 **M01 不再有「必須 final closeout 後才能開始 P2」的 gate。** A～N 是目前已完成的角色內容 baseline；之後若再拍板新的角色內容或既有角色系統強化，從 **M01-O** 起繼續新增 Subphase。M01 可以在 P2／P3 等正常產品 Roadmap 繼續前進時保持 open，不要求先建立一個假的「全部 D&D 內容已完成」里程碑。
 
@@ -122,6 +137,7 @@ P3 的正式契約：
 | M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，E.9 乾淨 Windows 11 冷啟動已於 2026-09-06 補驗完成 |
 | P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**A～F 全數關門，Phase 已關門** |
 | P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌；**A～F 全數關門，Phase 已關門並合併回 `main`** |
+| M04 | AI Join Kit & Web AI Connector Compatibility | P3 關門後插入；AI Join Kit、server-hosted 指引、網頁版 AI connector 相容；**A～B 已拆分並有三份文件，尚未實作**；不阻塞 P4 |
 | P4 | Quick Combat | 第一個完整可玩的 Combat MVP；首個 Subphase P4-A 承接 SRD Monster／Beast stat blocks |
 | P5 | Tactical Combat | 同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE 與空間系統 |
 | P6 | Adventure + AI DM Runtime | Adventure Definition／Importer、Campaign Runtime、世界資料、AI DM context／write-back |
@@ -224,6 +240,13 @@ P3 的正式契約：
 | **P3-E — AI Tool Surface & Event Delivery** | ✅ | MCP `2026-07-28` stateless Streamable HTTP入口、shared application services、structured tools/errors、`get_pending_events` / `wait_for_event`沿用P3-A async wait、standalone 不掛 `/mcp`；真 external MCP client HTTPS E1 於 P3-F closeout 由 Claude Code 2.1.260 經 Tailscale HTTPS 執行通過 |
 | **P3-F — Full P3 Integration & Closeout** | ✅ | Human/AI Exploration journeys、secret/group roll、Late Join、AI handoff、AI DM、grant TTL/epoch/Take Back authorization、restart、cross-scope matrix、PostgreSQL concurrency、waiter resource safety、P2 caller regression、standalone / bilingual / full regression closeout；`P3 Full-Stack E2E` CI run `34587347309` 全綠 |
 
+### M04
+
+| Subphase | 狀態 | 重點 |
+|---|---|---|
+| **M04-A — AI Join Kit & Server-hosted Guide** | ⬜ | `GET /mcp/guide` 無認證純文字指引、tool description 加厚、`get_session_context.briefing`、`server/discover.instructions` 指向指引、Lobby／Session 面板產出可複製／下載的 AI Join Kit、雙語、真實 AI 只憑 kit 進桌（MCP client 與純 HTTP 各一次） |
+| **M04-B — Web AI Connector Compatibility** | ⬜ | B.0 preflight 先量 claude.ai／ChatGPT connector 的認證選項與 protocol version；依結果做 token-in-path 或最小 OAuth、必要時 legacy protocol 相容層、HTTPS 對外入口文件；真實網頁版 AI 進桌 gate |
+
 ## 接手時必須保留的跨 Phase 約束
 
 - **M01 是 long-running maintenance/content track**：A～N 是目前 baseline，未來從 O 繼續；M01 open 不阻塞 P2+。任何後續 M01 若修改共享 Character contract，必須 regression 當時已存在的後續 P Phase，並同步做 M03 standalone compatibility review。
@@ -238,6 +261,7 @@ P3 的正式契約：
 - **P3 durable event不等於P7完整Timeline**：P3只為當場play/reconnect保留canonical event/message/roll/action；cross-Session timeline browser、history search、Snapshot / Restore與broader export仍由P7設計。
 - **AI transport與game logic分離**：P3至少正式交付一條MCP入口，但Human UI / MCP / future Site Tools共用同一application/domain service；網站本身不接LLM API，不保存外部模型API key。
 - **雙語是持續交付要求**：新增、修改或首次呈現給使用者的 system／rules content，必須同一 Subphase 同步交付 `zh-TW`／`en`；locale 只影響呈現，不改角色／草稿／P3 canonical gameplay data。細則見 [AGENTS.md](AGENTS.md) 與 [M02 實作規格](docs/M02/實作規格.md)。
+- **M04 指引不得變成劇本**：`GET /mcp/guide`、tool description 與 `briefing` 只描述桌的用法與守則；Adventure／Campaign／NPC context 仍留 P6。M04-B 任何認證適配或 protocol 相容層都必須經過 P3-D 的 grant／Seat current binding／epoch 驗證，不得新增繞過入口。
 - **P4 承接內容範圍**：P4 的第一個 Subphase 為 P4-A，須承接 P0 延後的 SRD Monster／Beast stat blocks；schema、API 與 combat representation 到 P4 開工才設計。
 - **M Phase 插入不重編既有順序**：可插在另一 M Phase 的 Subphases 之間，也可長期保持 open 與 P Roadmap 並行；只拆當前要做的工作，例外僅為使用者已拍板且插入點確定的 M Phase。完整規則見 [AGENTS.md](AGENTS.md)。
 
@@ -264,6 +288,7 @@ P3 的正式契約：
 | M03 | [規格](docs/M03/實作規格.md) | [設計](docs/M03/開發設計方針.md) | [測試](docs/M03/測試指南.md) |
 | P2 | [規格](docs/P2/實作規格.md) | [設計](docs/P2/開發設計方針.md) | [測試](docs/P2/測試指南.md) |
 | P3 | [規格](docs/P3/實作規格.md) | [設計](docs/P3/開發設計方針.md) | [測試](docs/P3/測試指南.md) |
+| M04 | [規格](docs/M04/實作規格.md) | [設計](docs/M04/開發設計方針.md) | [測試](docs/M04/測試指南.md) |
 
 歷史完成過程與驗收證據查各 Phase 目錄的 `*_CLOSEOUT.md`；M01-B 真人創角 Gate 另見 [M01-B_HUMAN_GATE.md](docs/M01/M01-B_HUMAN_GATE.md)。最近**已完成產品Phase**的整合交付見 [P2-F_CLOSEOUT.md](docs/P2/P2-F_CLOSEOUT.md)；P3 Subphase closeout 為 [P3-A](docs/P3/P3-A_CLOSEOUT.md)、[P3-B](docs/P3/P3-B_CLOSEOUT.md)、[P3-C](docs/P3/P3-C_CLOSEOUT.md)、[P3-D](docs/P3/P3-D_CLOSEOUT.md)、[P3-E](docs/P3/P3-E_CLOSEOUT.md) 與 [P3-F](docs/P3/P3-F_CLOSEOUT.md)；P3 整合交付見 P3-F closeout。
 
