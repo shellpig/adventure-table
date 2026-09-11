@@ -24,7 +24,7 @@ test('P2-D Owner drives Campaign, Roster and Lobby seats against the real backen
 
   // Journey 4 — make it the Room's current active Campaign and put a Room
   // Character on the Party Roster.
-  await page.getByRole('button', { name: 'Active', exact: true }).click()
+  await page.getByRole('button', { name: 'Start Campaign', exact: true }).click()
   await expect(page.getByText('Status: Active')).toBeVisible()
   await page.getByRole('button', { name: 'Select Campaign' }).click()
   await expect(page.getByRole('link', { name: 'Open Lobby' })).toBeVisible()
@@ -100,7 +100,7 @@ test('P2-D Lobby is reachable only while the Campaign is the Room current active
   await expect(page.getByRole('link', { name: 'Open Lobby' })).toHaveCount(0)
 
   // Active status alone is still not enough.
-  await page.getByRole('button', { name: 'Active', exact: true }).click()
+  await page.getByRole('button', { name: 'Start Campaign', exact: true }).click()
   await expect(page.getByText('Status: Active')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Open Lobby' })).toHaveCount(0)
 

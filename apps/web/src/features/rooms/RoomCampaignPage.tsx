@@ -144,6 +144,18 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
   }
 
   const statusLabel = (status: CampaignStatus) => copy[status]
+  const statusActionLabel = (status: CampaignStatus) => {
+    switch (status) {
+      case 'draft':
+        return copy.statusActionDraft
+      case 'active':
+        return copy.statusActionActive
+      case 'completed':
+        return copy.statusActionCompleted
+      case 'archived':
+        return copy.statusActionArchived
+    }
+  }
   const rosterStatusLabel = (status: RosterStatus) =>
     status === 'active' ? copy.rosterActive : copy[status]
 
@@ -172,9 +184,15 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
               }}
             >
               <h2>{copy.createTitle}</h2>
-              <label>{copy.nameLabel}<input value={name} onChange={(event) => setName(event.target.value)} required /></label>
-              <label>{copy.rulesetLabel}<input value={ruleset} onChange={(event) => setRuleset(event.target.value)} required /></label>
-              <button className="button primary" disabled={pending} type="submit">{copy.createAction}</button>
+              <label className="room-field">
+                <span>{copy.nameLabel}</span>
+                <input value={name} onChange={(event) => setName(event.target.value)} required />
+              </label>
+              <label className="room-field">
+                <span>{copy.rulesetLabel}</span>
+                <input value={ruleset} onChange={(event) => setRuleset(event.target.value)} required />
+              </label>
+              <button className="button primary room-form-submit" disabled={pending} type="submit">{copy.createAction}</button>
             </form>
           ) : <p>{copy.ownerLifecycleHint}</p>}
           {isOwner && room?.active_campaign_id ? (
@@ -266,7 +284,7 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
                 type="button"
                 onClick={() => runMutation(() => setCampaignStatus(roomId, campaign.id, token, status))}
               >
-                {statusLabel(status)}
+                {statusActionLabel(status)}
               </button>
             ))}
             {campaign.status === 'draft' ? (
@@ -314,16 +332,17 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
             </button>
           </div>
         ) : canManageRoster && availableCharacters.length === 0 ? <p>{copy.noCharacters}</p> : null}
-        <div className="workshop-list">
+        <div className="roster-list">
           {roster.length === 0 ? <p>{copy.noRoster}</p> : roster.map((entry) => {
             const character = characters.find((item) => item.id === entry.character_id)
             return (
-              <article className="workshop-card" key={entry.character_id}>
-                <h3>{character?.name ?? entry.character_id}</h3>
-                <p>{copy.status}: {rosterStatusLabel(entry.status)}</p>
+              <article className="roster-row" key={entry.character_id}>
+                <h3 className="roster-row__name">{character?.name ?? entry.character_id}</h3>
                 {canManageRoster ? (
-                  <div className="workshop-card__split-actions">
+                  <div className="roster-row__actions">
                     <select
+                      className="roster-row__select"
+                      aria-label={copy.status}
                       value={entry.status}
                       disabled={pending}
                       onChange={(event) => runMutation(() => setRosterStatus(
@@ -339,7 +358,7 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
                       ))}
                     </select>
                     <button
-                      className="button secondary"
+                      className="button secondary roster-row__remove"
                       disabled={pending}
                       type="button"
                       onClick={() => {
@@ -355,7 +374,9 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
                       {copy.remove}
                     </button>
                   </div>
-                ) : null}
+                ) : (
+                  <span className="roster-row__status-badge">{rosterStatusLabel(entry.status)}</span>
+                )}
               </article>
             )
           })}

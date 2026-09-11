@@ -41,6 +41,12 @@ describe('Room Campaign routes', () => {
     expect(en.openLobby).toBe('Open Lobby')
     expect(zhTw.openLobby).toBe('進入大廳')
     expect(en.removeConfirm).not.toBe(zhTw.removeConfirm)
+    expect(zhTw.statusActionActive).toBe('開始進行')
+    expect(zhTw.statusActionCompleted).toBe('設為已完成')
+    expect(zhTw.statusActionArchived).toBe('設為已封存')
+    expect(en.statusActionActive).toBe('Start Campaign')
+    expect(en.statusActionCompleted).toBe('Mark as Completed')
+    expect(en.statusActionArchived).toBe('Archive')
   })
 
   it('requires confirmation before deleting a roster entry and gates Lobby entry to the current active Campaign', () => {
