@@ -314,7 +314,7 @@ test('P3-F Journey F1 keeps one human exploration-to-roll-to-state path canonica
     await page.getByRole('combobox', { name: 'Skill' }).selectOption('srd5.1:skill:investigation')
     await page.getByLabel('DC (optional)', { exact: true }).fill('17')
     await page.getByRole('combobox', { name: 'Roll mode' }).selectOption('normal')
-    await page.getByRole('combobox', { name: 'Result visibility' }).selectOption('roller_dm')
+    await page.getByRole('combobox', { name: 'Result visibility' }).selectOption('roller_and_dm')
     await page.getByLabel('Label', { exact: true }).fill('Read the star chart')
 
     const checkResponsePromise = page.waitForResponse((response) => (
