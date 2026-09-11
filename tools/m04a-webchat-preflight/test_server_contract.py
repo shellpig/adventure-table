@@ -89,27 +89,39 @@ def _pkce(verifier: str) -> str:
     return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
 
 
-async def _authorize_role(app: Any, role: str) -> tuple[str, str, str]:
+async def _register(app: Any) -> tuple[str, str]:
     redirect_uri = "https://client.example/callback"
     status, _, body = await _request(
         app,
         method="POST",
         path="/register",
-        body=json.dumps({"redirect_uris": [redirect_uri], "token_endpoint_auth_method": "none"}).encode(),
+        body=json.dumps(
+            {
+                "redirect_uris": [redirect_uri],
+                "token_endpoint_auth_method": "none",
+            }
+        ).encode(),
         headers={"content-type": "application/json"},
     )
     assert status == 201
-    client_id = _json(body)["client_id"]
+    return _json(body)["client_id"], redirect_uri
 
-    verifier = "v" * 64
-    challenge = _pkce(verifier)
+
+async def _issue_code(
+    app: Any,
+    *,
+    client_id: str,
+    redirect_uri: str,
+    role: str,
+    verifier: str,
+) -> str:
     values = {
         "client_id": client_id,
         "redirect_uri": redirect_uri,
         "response_type": "code",
         "scope": "mcp:read mcp:write mcp:dm",
         "state": f"state-{role}",
-        "code_challenge": challenge,
+        "code_challenge": _pkce(verifier),
         "code_challenge_method": "S256",
         "role": role,
         "password": "test-password",
@@ -125,8 +137,17 @@ async def _authorize_role(app: Any, role: str) -> tuple[str, str, str]:
     callback = urlparse(headers["location"])
     callback_query = parse_qs(callback.query)
     assert callback_query["state"] == [f"state-{role}"]
-    code = callback_query["code"][0]
+    return callback_query["code"][0]
 
+
+async def _exchange_code(
+    app: Any,
+    *,
+    client_id: str,
+    redirect_uri: str,
+    code: str,
+    verifier: str,
+) -> tuple[int, dict[str, Any]]:
     status, _, body = await _request(
         app,
         method="POST",
@@ -142,17 +163,49 @@ async def _authorize_role(app: Any, role: str) -> tuple[str, str, str]:
         ),
         headers={"content-type": "application/x-www-form-urlencoded"},
     )
+    return status, _json(body)
+
+
+async def _authorize_role(app: Any, role: str) -> tuple[str, str, str]:
+    client_id, redirect_uri = await _register(app)
+    verifier = "v" * 64
+    code = await _issue_code(
+        app,
+        client_id=client_id,
+        redirect_uri=redirect_uri,
+        role=role,
+        verifier=verifier,
+    )
+    status, token = await _exchange_code(
+        app,
+        client_id=client_id,
+        redirect_uri=redirect_uri,
+        code=code,
+        verifier=verifier,
+    )
     assert status == 200
-    token = _json(body)
     return client_id, token["access_token"], token["refresh_token"]
 
 
-async def _rpc(app: Any, access_token: str, method: str, params: dict[str, Any] | None = None, request_id: int = 1) -> dict[str, Any]:
+async def _rpc(
+    app: Any,
+    access_token: str,
+    method: str,
+    params: dict[str, Any] | None = None,
+    request_id: int = 1,
+) -> dict[str, Any]:
     status, _, body = await _request(
         app,
         method="POST",
         path="/mcp",
-        body=json.dumps({"jsonrpc": "2.0", "id": request_id, "method": method, "params": params or {}}).encode(),
+        body=json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "method": method,
+                "params": params or {},
+            }
+        ).encode(),
         headers={
             "authorization": f"Bearer {access_token}",
             "content-type": "application/json",
@@ -176,11 +229,19 @@ def test_public_metadata_oauth_and_mcp_contract(tmp_path: Path) -> None:
             state,
         )
 
-        status, _, body = await _request(app, method="GET", path="/.well-known/oauth-protected-resource")
+        status, _, body = await _request(
+            app,
+            method="GET",
+            path="/.well-known/oauth-protected-resource",
+        )
         assert status == 200
         assert _json(body)["resource"] == "https://preflight.example/mcp"
 
-        status, _, body = await _request(app, method="GET", path="/.well-known/oauth-authorization-server")
+        status, _, body = await _request(
+            app,
+            method="GET",
+            path="/.well-known/oauth-authorization-server",
+        )
         assert status == 200
         metadata = _json(body)
         assert metadata["registration_endpoint"] == "https://preflight.example/register"
@@ -190,11 +251,20 @@ def test_public_metadata_oauth_and_mcp_contract(tmp_path: Path) -> None:
         assert status == 200
         assert body == b"MCP endpoint"
 
-        status, _, _ = await _request(app, method="POST", path="/admin/add-tool")
+        status, _, _ = await _request(
+            app,
+            method="POST",
+            path="/admin/add-tool",
+        )
         assert status == 404
 
         dm_client_id, dm_access, dm_refresh = await _authorize_role(app, "dm")
-        initialize = await _rpc(app, dm_access, "initialize", {"protocolVersion": "2099-01-01"})
+        initialize = await _rpc(
+            app,
+            dm_access,
+            "initialize",
+            {"protocolVersion": "2099-01-01"},
+        )
         assert initialize["result"]["protocolVersion"] == "2099-01-01"
         assert initialize["result"]["capabilities"]["tools"]["listChanged"] is True
 
@@ -223,7 +293,9 @@ def test_public_metadata_oauth_and_mcp_contract(tmp_path: Path) -> None:
 
         await state.enable_late_tool()
         dm_tools_after = await _rpc(app, dm_access, "tools/list", request_id=5)
-        assert "late_tool" in {tool["name"] for tool in dm_tools_after["result"]["tools"]}
+        assert "late_tool" in {
+            tool["name"] for tool in dm_tools_after["result"]["tools"]
+        }
 
         _, player_access, _ = await _authorize_role(app, "player")
         player_tools = await _rpc(app, player_access, "tools/list", request_id=6)
@@ -254,7 +326,10 @@ def test_public_metadata_oauth_and_mcp_contract(tmp_path: Path) -> None:
             method="POST",
             path="/mcp",
             body=b'{"jsonrpc":"2.0","id":7,"method":"tools/list","params":{}}',
-            headers={"authorization": f"Bearer {rotated_access}", "content-type": "application/json"},
+            headers={
+                "authorization": f"Bearer {rotated_access}",
+                "content-type": "application/json",
+            },
         )
         assert status == 401
 
@@ -277,17 +352,79 @@ def test_public_metadata_oauth_and_mcp_contract(tmp_path: Path) -> None:
     asyncio.run(scenario())
 
 
+def test_failed_pkce_does_not_consume_authorization_code(tmp_path: Path) -> None:
+    async def scenario() -> None:
+        app = create_public_app(
+            Config(
+                public_base_url="https://preflight.example",
+                test_password="test-password",
+                log_path=tmp_path / "preflight.jsonl",
+            )
+        )
+        client_id, redirect_uri = await _register(app)
+        verifier = "v" * 64
+        code = await _issue_code(
+            app,
+            client_id=client_id,
+            redirect_uri=redirect_uri,
+            role="dm",
+            verifier=verifier,
+        )
+
+        status, payload = await _exchange_code(
+            app,
+            client_id=client_id,
+            redirect_uri=redirect_uri,
+            code=code,
+            verifier="wrong-verifier",
+        )
+        assert status == 400
+        assert payload["error"] == "invalid_grant"
+
+        status, payload = await _exchange_code(
+            app,
+            client_id=client_id,
+            redirect_uri=redirect_uri,
+            code=code,
+            verifier=verifier,
+        )
+        assert status == 200
+        assert payload["token_type"] == "Bearer"
+
+        status, payload = await _exchange_code(
+            app,
+            client_id=client_id,
+            redirect_uri=redirect_uri,
+            code=code,
+            verifier=verifier,
+        )
+        assert status == 400
+        assert payload["error"] == "invalid_grant"
+
+    asyncio.run(scenario())
+
+
 def test_admin_listener_accepts_loopback_and_rejects_non_loopback() -> None:
     async def scenario() -> None:
         state = PreflightState()
         app = create_admin_app(state)
 
-        status, _, body = await _request(app, method="POST", path="/admin/add-tool", client_host="127.0.0.1")
+        status, _, body = await _request(
+            app,
+            method="POST",
+            path="/admin/add-tool",
+            client_host="127.0.0.1",
+        )
         assert status == 200
         assert _json(body) == {"ok": True, "tool": "late_tool"}
         assert state.late_tool_enabled is True
 
-        status, _, _ = await _request(app, method="POST", path="/admin/revoke-all", client_host="203.0.113.10")
+        status, _, _ = await _request(
+            app,
+            method="POST",
+            path="/admin/revoke-all",
+            client_host="203.0.113.10",
+        )
         assert status == 404
 
     asyncio.run(scenario())
