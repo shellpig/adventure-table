@@ -10,6 +10,8 @@ It exists to measure a real web-chat connector's OAuth discovery, dynamic client
 - Admin listener: hard-bound to `127.0.0.1:8788`. `/admin/*` is not registered on the public app, and the admin app also returns 404 to non-loopback clients.
 - `logs/m04a-preflight.jsonl` is ignored by git. Do not commit raw logs.
 - Request and response records use the same `redact()` function. Authorization/cookie headers and fields whose names contain `token`, `code`, `secret`, `verifier`, `challenge`, or `password` are masked.
+- OAuth `client_id` stays visible because it is an identifier, not a credential. `Authorization` stays fully masked.
+- Each request with an Authorization header also records `observation.authorization_fingerprint`, a truncated SHA-256 fingerprint. Use it only to compare whether two requests used the same access credential; it is not an access token and cannot be used for authentication.
 - OAuth state is volatile memory only. Restarting the process clears clients, codes, token families, notes, and the `late_tool` flag.
 
 ## Install and start (Windows PowerShell 5.1)
@@ -28,7 +30,7 @@ Open a second terminal and expose **port 8787 only** with the same HTTPS-tunnel 
 cloudflared tunnel --url http://127.0.0.1:8787
 ```
 
-Copy the resulting public `https://...` origin, then start the harness in the first terminal. Once the environment variables are set, the final line is the one-line server start command required by M04-A:
+Copy the resulting public `https://...` origin, then start the harness in the first terminal:
 
 ```powershell
 $env:M04A_PUBLIC_BASE_URL="https://YOUR-PUBLIC-HOST"
@@ -43,24 +45,34 @@ M04A_HOST=0.0.0.0
 M04A_PORT=8787
 M04A_ADMIN_PORT=8788
 M04A_LOG_PATH=logs/m04a-preflight.jsonl
+M04A_ACCESS_TTL_SECONDS=300
+M04A_REFRESH_TTL_SECONDS=86400
 M04A_FORCE_SSE=0
+```
+
+For the A.5 refresh probe, it is useful to restart the harness with a short access TTL such as:
+
+```powershell
+$env:M04A_ACCESS_TTL_SECONDS="30"
 ```
 
 `M04A_FORCE_SSE=0` is intentional: even when the client advertises `text/event-stream`, the first measurement returns JSON. If the real platform rejects that behavior, set `M04A_FORCE_SSE=1` and repeat the affected step; record both attempts in `docs/M04/M04-A_PREFLIGHT.md`.
 
 ## Automated self-checks
 
-The repo-root `.venv` already carries the development test dependencies. Run the two M04-A contract tests separately:
+The repo-root `.venv` carries the development test dependencies. Run the M04-A tests separately:
 
 ```powershell
 cd .\tools\m04a-webchat-preflight
-..\..\.venv\Scripts\python.exe -m pytest .\test_redact.py -q
+..\..\.venv\Scripts\python.exe -m pytest .\test_redact.py .\test_server_contract.py -q
 
 cd ..\..\apps\server
-..\..\.venv\Scripts\python.exe -m pytest .\tests\test_m04a_preflight_isolation.py -q
+..\..\.venv\Scripts\python.exe -m pytest .\tests\test_m04a_preflight_isolation.py .\tests\test_p3d_*.py .\tests\test_p3e_*.py -q
 ```
 
-Expected: `test_redact.py` proves symmetric secret masking plus the non-loopback admin 404; the app-side test proves the entire preflight tool never imports `app.*`.
+The tool-side suite covers symmetric secret masking, loopback-admin protection, metadata, DCR, OAuth+PKCE, failed-PKCE code preservation, refresh, role-scoped catalog, read/write calls, dynamic tool addition, and revoke behavior. The app-side isolation test is bidirectional: the preflight tool may not import `app.*`, and Adventure Table `app/*` may not import/reference this standalone tool.
+
+The focused GitHub Actions workflow is `.github/workflows/m04a-non-e2e.yml`. It intentionally runs no Playwright/E2E tests.
 
 ## A.1 curl smoke
 
@@ -200,7 +212,7 @@ For Claude web, add the remote custom connector under Customize → Connectors, 
 1. **A.2 OAuth** — complete one DM authorization. Record which metadata paths were called, whether `/register` was called, redirect URI shape, PKCE, scopes, token grant type, and whether refresh is later used.
 2. **A.3 Scan Tools** — record JSON-RPC method order, `MCP-Protocol-Version`, `Mcp-Session-Id` presence, `Accept`, and `_meta`. The server accepts any requested protocol version and supports `initialize`, `notifications/initialized`, `server/discover`, `tools/list`, `tools/call`, and `ping`.
 3. **A.4 Read + write** — ask Claude to call `get_context`, then `post_note`. Record the write-confirmation UX and whether confirmation can be disabled.
-4. **A.5 cache / refresh / re-auth** — while still authorized as DM, call loopback `POST /admin/add-tool`; observe whether `late_tool` appears without user action. Then re-authorize as Player and observe whether `dm_only_ping` disappears and what refresh/reconnect action is required. Next call loopback `POST /admin/revoke-all` and observe whether the platform refreshes, asks to authorize again, or surfaces an error. Finally compare two conversations using the same connector and note whether they appear to share one access token family.
+4. **A.5 cache / refresh / re-auth** — while still authorized as DM, call loopback `POST /admin/add-tool`; observe whether `late_tool` appears without user action. Then re-authorize as Player and observe whether `dm_only_ping` disappears and what refresh/reconnect action is required. Next call loopback `POST /admin/revoke-all` and observe whether the platform refreshes, asks to authorize again, or surfaces an error. Finally compare two conversations using the same connector: compare their JSONL `observation.authorization_fingerprint` values to determine whether the same access credential was used without exposing the credential itself.
 5. **A.6 long poll** — call `wait_seconds` with 10, 30, and 60. If 60 succeeds, continue with 90 and 120. Record the highest successful value and the first platform timeout.
 
 Do not infer M04-B behavior until those observations are written into `docs/M04/M04-A_PREFLIGHT.md` under the six fixed architecture-conclusion headings.
