@@ -23,7 +23,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## 當前狀態與下一步
 
-**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門，P3-E 與 P3-F 已於 2026-09-11 關門（external MCP client HTTPS E1 於 P3-F closeout 合併執行通過），P3 Phase 同日以 `d6b791e` 合併回 `main`，`P3 Full-Stack E2E` CI run `34587347309` 全綠。同日 P3 第一次真實使用暴露「AI 拿到 token 不知道怎麼開始」與「網頁版 AI connector 連不進來」兩個缺口，已拍板插入 **M04 — AI Join Kit & Web AI Connector Compatibility**，拆為 M04-A／M04-B 並完成三份文件；下一步是 M04-A 實作。**
+**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門，P3-E 與 P3-F 已於 2026-09-11 關門（external MCP client HTTPS E1 於 P3-F closeout 合併執行通過），P3 Phase 同日以 `d6b791e` 合併回 `main`，`P3 Full-Stack E2E` CI run `34587347309` 全綠。同日 P3 第一次真實使用暴露「AI 拿到 token 不知道怎麼開始」與「網頁版 AI connector 連不進來」兩個缺口，已拍板插入 **M04 — ChatGPT Web MCP Integration & AI Join Kit**，拆為 M04-A／M04-B／M04-C 並完成三份文件（同日經 review 重切：ChatGPT Web 是首要目標與 closeout 必要條件，先 preflight 再 integration，Join Kit 最後）；下一步是 M04-A preflight。**
 
 P2 已交付並必須繼續維持的核心方向：
 
@@ -52,17 +52,20 @@ P3 已拍板並寫入正式文件的核心方向：
 
 M04 已拍板的核心方向：
 
-- **AI Join Kit 是唯一的 AI 交付物**：URL + token + 指引指向；DM／Player 用同一份模板，role 由 token 決定。
-- **指引住 server、與 tool catalog 同源**：`GET /mcp/guide`（無認證純文字）、加厚的 tool description、`get_session_context.briefing` 三個通道交付同一份內容；MCP AI 與只有 HTTP 能力的 AI 都拿得到。
-- **不改 P3-D 授權模型、不接 LLM、不提前做 P6 劇本 context。**
-- **M04-B 以 preflight 定範圍**：claude.ai／ChatGPT 網頁版 connector 的認證選項與 protocol version 先實測再決定要做 token-in-path、最小 OAuth 或 legacy protocol 相容層；不因 M04-B 阻塞 P4。
+- **ChatGPT Web 是 M04 的必要成功條件**：朋友在 ChatGPT 網頁版加 connector、OAuth 一次，就能以既有 Seat 的 role 進桌；DM 與 Player 各一場真實迴圈是 closeout gate。claude.ai／Codex CLI／Codex Desktop 只算 compatibility 記錄，不是 gate。
+- **先實測再設計**：M04-A 用獨立的極小 HTTPS 測試 server 對真實 ChatGPT 量 OAuth、Scan Tools、1 read + 1 write、tool cache／refresh／re-auth、long-poll 容忍度；M04-B 的每個設計決定都指到 preflight 記錄。
+- **Seat 先於 OAuth，一個 connection 一個固定 Seat**：OAuth 只取得既有 Seat／grant 的控制權，不建 Seat、不選／不改 Role、不切 Seat；P3-D epoch／revoke／TTL 全保留，OAuth token 與 grant 同生共死。
+- **frozen tool snapshot 撞 role-scoped catalog 是架構問題**：由 preflight 決定沿用 P3 catalog、要求 Refresh，或改 union catalog／per-role URL；`tools/call` 的 server 端 role 檢查永遠是唯一真值。
+- **AI Join Kit 與 server-hosted 指引最後做（M04-C）**：kit 依 M04-B 定案的入口形態產生；`GET /mcp/guide`、tool description、`briefing` 與 tool catalog 同源。
+- **不改 P3-D 授權模型、不接 LLM、不做使用者帳號、不提前做 P6 劇本 context。**
 
 下一步依序為：
 
-1. **M04-A — AI Join Kit & Server-hosted Guide 實作**：依 [M04 開發設計方針](docs/M04/開發設計方針.md) 實作，關門條件見 [M04 測試指南](docs/M04/測試指南.md)。
-2. **P4 — Quick Combat 開工前置**：拆 `P4-A`、`P4-B`… Subphase 並產出 `docs/P4/` 三份文件；P4-A 承接 SRD Monster／Beast stat blocks。可與 M04-B preflight 並行。
-3. **M04-B — Web AI Connector Compatibility**：先做 B.0 preflight，依結果定範圍。
-4. P5～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
+1. **M04-A — ChatGPT Web MCP Preflight**：先確認具完整 MCP write 權限的 ChatGPT workspace，再依 [M04 開發設計方針](docs/M04/開發設計方針.md) §3 建測試 server 並執行 preflight，產出 `docs/M04/M04-A_PREFLIGHT.md`。
+2. **M04-B — Adventure Table ChatGPT Web Integration**：依 preflight 結論實作 OAuth 入口與（若需要）相容層；真實 ChatGPT DM + Player gate。
+3. **M04-C — AI Join Kit, Server-hosted Guide & Other Client Compatibility**。
+4. **P4 — Quick Combat 開工前置**：拆 `P4-A`、`P4-B`… Subphase 並產出 `docs/P4/` 三份文件；P4-A 承接 SRD Monster／Beast stat blocks。
+5. P5～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
 
 P2 的正式契約：
 
@@ -137,7 +140,7 @@ M04 的正式契約：
 | M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，E.9 乾淨 Windows 11 冷啟動已於 2026-09-06 補驗完成 |
 | P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**A～F 全數關門，Phase 已關門** |
 | P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌；**A～F 全數關門，Phase 已關門並合併回 `main`** |
-| M04 | AI Join Kit & Web AI Connector Compatibility | P3 關門後插入；AI Join Kit、server-hosted 指引、網頁版 AI connector 相容；**A～B 已拆分並有三份文件，尚未實作**；不阻塞 P4 |
+| M04 | ChatGPT Web MCP Integration & AI Join Kit | P3 關門後、P4 前插入；ChatGPT Web preflight → OAuth integration → AI Join Kit 與 server-hosted 指引；**A～C 已拆分並有三份文件，尚未實作** |
 | P4 | Quick Combat | 第一個完整可玩的 Combat MVP；首個 Subphase P4-A 承接 SRD Monster／Beast stat blocks |
 | P5 | Tactical Combat | 同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE 與空間系統 |
 | P6 | Adventure + AI DM Runtime | Adventure Definition／Importer、Campaign Runtime、世界資料、AI DM context／write-back |
@@ -244,8 +247,9 @@ M04 的正式契約：
 
 | Subphase | 狀態 | 重點 |
 |---|---|---|
-| **M04-A — AI Join Kit & Server-hosted Guide** | ⬜ | `GET /mcp/guide` 無認證純文字指引、tool description 加厚、`get_session_context.briefing`、`server/discover.instructions` 指向指引、Lobby／Session 面板產出可複製／下載的 AI Join Kit、雙語、真實 AI 只憑 kit 進桌（MCP client 與純 HTTP 各一次） |
-| **M04-B — Web AI Connector Compatibility** | ⬜ | B.0 preflight 先量 claude.ai／ChatGPT connector 的認證選項與 protocol version；依結果做 token-in-path 或最小 OAuth、必要時 legacy protocol 相容層、HTTPS 對外入口文件；真實網頁版 AI 進桌 gate |
+| **M04-A — ChatGPT Web MCP Preflight** | ⬜ | 獨立極小 HTTPS 測試 server（`tools/m04a-chatgpt-preflight/`）；對真實 ChatGPT Web 量 OAuth、Scan Tools、1 read + 1 write、protocol／metadata／callback、tool cache／refresh／re-auth、long-poll 容忍度；產出 `M04-A_PREFLIGHT.md` 與對 M04-B 的架構結論；prerequisite 為具完整 MCP write 權限的 workspace |
+| **M04-B — Adventure Table ChatGPT Web Integration** | ⬜ | Seat 先建好；OAuth 只取得既有 Seat／grant 控制權（貼 AI Join Token 即登入）；一個 connection 一個固定 Seat、不建／不選／不切 Seat；`at_oa_` access token 只留 hash 並與 grant 同生共死；依 preflight 決定相容層、catalog 呈現與 `wait_for_event` 上限；真實 ChatGPT Web DM + Player gate |
+| **M04-C — AI Join Kit, Server-hosted Guide & Other Client Compatibility** | ⬜ | `GET /mcp/guide`、tool description 加厚、`get_session_context.briefing`、`server/discover.instructions`；Lobby／Session 面板產出可複製／下載的 AI Join Kit（依 M04-B 入口形態）；雙語；真實 AI 只憑 kit 進桌（Bearer MCP client 與有 outbound network 的純 HTTP 各一次）；claude.ai／Codex 相容記錄非 gate |
 
 ## 接手時必須保留的跨 Phase 約束
 
@@ -261,7 +265,7 @@ M04 的正式契約：
 - **P3 durable event不等於P7完整Timeline**：P3只為當場play/reconnect保留canonical event/message/roll/action；cross-Session timeline browser、history search、Snapshot / Restore與broader export仍由P7設計。
 - **AI transport與game logic分離**：P3至少正式交付一條MCP入口，但Human UI / MCP / future Site Tools共用同一application/domain service；網站本身不接LLM API，不保存外部模型API key。
 - **雙語是持續交付要求**：新增、修改或首次呈現給使用者的 system／rules content，必須同一 Subphase 同步交付 `zh-TW`／`en`；locale 只影響呈現，不改角色／草稿／P3 canonical gameplay data。細則見 [AGENTS.md](AGENTS.md) 與 [M02 實作規格](docs/M02/實作規格.md)。
-- **M04 指引不得變成劇本**：`GET /mcp/guide`、tool description 與 `briefing` 只描述桌的用法與守則；Adventure／Campaign／NPC context 仍留 P6。M04-B 任何認證適配或 protocol 相容層都必須經過 P3-D 的 grant／Seat current binding／epoch 驗證，不得新增繞過入口。
+- **M04 OAuth 不是第二套授權**：OAuth access token 只用來找到既有 `ai_controller_grants` row，之後與 Bearer AI Join Token 走同一條 P3-D grant／Seat current binding／epoch 驗證；OAuth 流程對 Seat／Session／Participant 零寫入，一個 connection 一個固定 Seat。指引（`GET /mcp/guide`、tool description、`briefing`）只描述桌的用法與守則，Adventure／Campaign／NPC context 仍留 P6。
 - **P4 承接內容範圍**：P4 的第一個 Subphase 為 P4-A，須承接 P0 延後的 SRD Monster／Beast stat blocks；schema、API 與 combat representation 到 P4 開工才設計。
 - **M Phase 插入不重編既有順序**：可插在另一 M Phase 的 Subphases 之間，也可長期保持 open 與 P Roadmap 並行；只拆當前要做的工作，例外僅為使用者已拍板且插入點確定的 M Phase。完整規則見 [AGENTS.md](AGENTS.md)。
 
