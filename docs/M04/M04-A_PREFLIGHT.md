@@ -1,7 +1,7 @@
 # M04-A — Web Chat MCP Preflight Record
 
 > Phase: **M04-A — Web Chat MCP Preflight**  
-> Status: **IN PROGRESS — A.0/A.1 engineering work complete; real Claude web A.2–A.6 pending**  
+> Status: **IN PROGRESS — A.0/A.1 code + CI complete; real-tunnel smoke and Claude web A.2–A.6 pending**  
 > Measurement date started: **2026-09-11**
 
 This file is the evidence record required by `實作規格.md` A.0–A.7 and `測試指南.md`. A.2–A.6 are real-platform gates and must not be filled from mocks, local clients, or assumptions.
@@ -28,7 +28,9 @@ No Business, Enterprise, or Edu workspace is used to make M04 pass.
 
 - Branch: `m04a-webchat-preflight`
 - Standalone harness path: `tools/m04a-webchat-preflight/`
-- Core server implementation commit: `c9e6f05c2188f8ceb3d9f85fff1f516907dc0e0e`
+- Hardened core server commit: `682ba1eb4d72ca481b2f326bd50c8bc7b21cd6c8`
+- Focused non-E2E CI head: `03d31ee193c86eaccd1f4c96def3d971c0b5ea37`
+- GitHub Actions run: `34615184815` — **success**
 - Public listener: `0.0.0.0:8787`
 - Admin listener: `127.0.0.1:8788` only
 - Public entry shape for the real run: `https://<temporary-tunnel-origin>/mcp`; the tunnel must forward public port 8787 only. The origin and credentials are intentionally not committed.
@@ -60,7 +62,9 @@ Implemented files:
 - `tools/m04a-webchat-preflight/README.md`
 - `tools/m04a-webchat-preflight/logs/.gitignore`
 - `tools/m04a-webchat-preflight/test_redact.py`
+- `tools/m04a-webchat-preflight/test_server_contract.py`
 - `apps/server/tests/test_m04a_preflight_isolation.py`
+- `.github/workflows/m04a-non-e2e.yml`
 
 Implemented contract:
 
@@ -68,24 +72,29 @@ Implemented contract:
 - Dynamic client registration at `POST /register`.
 - Minimal role/password authorization form at `GET/POST /authorize`.
 - Authorization-code + PKCE and refresh-token grants at `POST /token`.
+- Authorization code is consumed only after client/redirect/PKCE validation succeeds; a failed verifier does not destroy a valid code.
 - Volatile hashed access/refresh token families with revoke-all support.
+- Access-token TTL is configurable with `M04A_ACCESS_TTL_SECONDS` (default 300) so the real run can force refresh behavior without changing code.
 - `GET /mcp` probe plus `POST /mcp` JSON-RPC handling for `initialize`, `notifications/initialized`, `server/discover`, `tools/list`, `tools/call`, and `ping`.
 - `get_context`, `post_note`, `dm_only_ping`, `wait_seconds`, and dynamically enabled `late_tool`.
 - Role-scoped discovery and server-side DM-only call enforcement.
 - JSONL request/response logging with one shared redaction function and explicit observations for protocol version, session-id presence, SSE accept, JSON-RPC method, and `_meta`.
+- `Authorization` remains fully redacted, while `observation.authorization_fingerprint` stores only a deterministic truncated SHA-256 fingerprint so A.5 can compare whether two conversations used the same access credential without logging the credential itself.
+- OAuth `client_id` is left visible for correlation because it is an identifier rather than a secret; access token, refresh token, authorization code, PKCE verifier/challenge, client secret, password, Authorization, and cookie values remain masked.
 - Separate loopback-only admin listener; `/admin/*` is absent from the public app.
 - Optional `M04A_FORCE_SSE=1` single-event SSE response mode for a second measurement only if the real client rejects JSON while advertising SSE.
+- Bidirectional isolation gate: the preflight tool cannot import `app.*`, and Adventure Table `app/*` cannot import or reference the standalone preflight tool.
 
-Local engineering validation performed against the exact pushed implementation before live-platform measurement:
+Focused CI validation against the exact pushed branch:
 
 ```text
-python -m py_compile server.py admin.py test_redact.py       PASS
-pytest -q tools/m04a-webchat-preflight/test_redact.py         2 passed
-pytest -q apps/server/tests/test_m04a_preflight_isolation.py  1 passed
-in-process OAuth/MCP smoke                                    PASS
+GitHub Actions: M04-A Non-E2E Regression / run 34615184815    SUCCESS
+python -m py_compile server.py admin.py                       PASS
+pytest test_redact.py + test_server_contract.py               5 passed
+pytest test_m04a_preflight_isolation.py + P3-D/P3-E suite     PASS
 ```
 
-The in-process smoke covered DCR, PKCE code exchange, refresh, arbitrary requested protocol version, generated/echoed MCP session id, DM catalog, `get_context`, `post_note`, dynamic `late_tool`, public-admin 404, loopback admin success, revoke-all, and plaintext-secret absence in the JSONL output. This is **engineering self-check only** and does not substitute for A.2–A.6.
+The standalone contract tests cover DCR, PKCE code exchange, failed-PKCE non-consumption, refresh, arbitrary requested protocol version, DM catalog, `get_context`, `post_note`, dynamic `late_tool`, Player catalog filtering, public-admin 404, loopback admin success, revoke-all, and secret redaction. The P3-D/P3-E regression suite remained green. This is **engineering self-check only** and does not substitute for A.2–A.6.
 
 ### A.1 real-tunnel smoke evidence
 
@@ -184,7 +193,7 @@ Status: **PENDING REAL WEB RUN**
 | 2 | loopback `POST /admin/add-tool`, no re-auth | pending | pending | pending |
 | 3 | re-authorize as Player | pending; verify `dm_only_ping` disappears | pending | pending |
 | 4 | loopback `POST /admin/revoke-all` | pending: refresh / re-auth / error | pending | pending |
-| 5 | two conversations, same connector | pending: shared or separate access family | pending | pending |
+| 5 | two conversations, same connector | pending: compare `authorization_fingerprint` values to determine shared/separate access credential | pending | pending |
 
 ## A.6 Long-poll tolerance
 
@@ -225,13 +234,13 @@ These six conclusions are deliberately **not finalized** until Claude A.2–A.6 
 
 ### `wait_for_event` timeout cap
 
-**Pending Claude A.6 evidence.** No production cap is selected from the local smoke.
+**Pending Claude A.6 evidence.** No production cap is selected from the local/CI smoke.
 
 ### Blockers
 
 **Current blocker to M04-A closeout:** A.2–A.6 require a real Claude chat personal-plan connector against the temporary public HTTPS harness. Local/CI clients are explicitly insufficient evidence under the M04 test contract. A.1 real-tunnel smoke should be captured in the same run.
 
-Until those observations are recorded, **M04-A is implemented but not closed**, M04-B must not begin, and no M04-B production OAuth/catalog design may be declared final.
+Until those observations are recorded, **M04-A code is implemented and CI-green but the subphase is not closed**, M04-B must not begin, and no M04-B production OAuth/catalog design may be declared final.
 
 ---
 
