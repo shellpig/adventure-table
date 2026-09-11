@@ -80,6 +80,7 @@ jobs:
           tests/test_p3b_postgres_stage.py
           tests/test_p3c_postgres_rolls.py
           tests/test_p3f_waiter_resource_safety.py
+          tests/test_p3f_postgres_restart_recovery.py
           tests/test_p2a_postgres_migration.py
           tests/test_p2b_postgres_workspace.py
           tests/test_p2e_postgres_sessions.py

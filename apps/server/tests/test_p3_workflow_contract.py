@@ -59,6 +59,7 @@ def test_p3_non_e2e_workflow_explicitly_runs_p3_and_legacy_postgres_gates() -> N
         "tests/test_p3d_postgres_controller.py",
         "tests/test_p3d_postgres_controller_matrix.py",
         "tests/test_p3f_waiter_resource_safety.py",
+        "tests/test_p3f_postgres_restart_recovery.py",
         "tests/test_p2a_postgres_migration.py",
         "tests/test_p2b_postgres_workspace.py",
         "tests/test_p2e_postgres_sessions.py",

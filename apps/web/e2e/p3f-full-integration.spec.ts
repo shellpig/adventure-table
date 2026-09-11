@@ -332,9 +332,8 @@ test('P3-F Journey F1 keeps one human exploration-to-roll-to-state path canonica
     })
 
     await player.page.getByRole('button', { name: 'Dice', exact: true }).click()
-    const playerRequest = player.page.locator('.session-roll-request').filter({
-      has: player.page.getByText('Read the star chart', { exact: true }),
-    })
+    // The list renders one request per Seat; the label is DM-side metadata only.
+    const playerRequest = player.page.locator('.session-roll-request').first()
     await expect(playerRequest).toHaveAttribute('data-roll-request-status', 'pending')
     await expect(playerRequest.getByText('DC 17', { exact: true })).toHaveCount(0)
 
@@ -372,9 +371,7 @@ test('P3-F Journey F1 keeps one human exploration-to-roll-to-state path canonica
     await expect(player.page.getByText('I pry open the brass hatch.', { exact: true })).toBeVisible()
 
     await player.page.getByRole('button', { name: 'Dice', exact: true }).click()
-    const reloadedRequest = player.page.locator('.session-roll-request').filter({
-      has: player.page.getByText('Read the star chart', { exact: true }),
-    })
+    const reloadedRequest = player.page.locator('.session-roll-request').first()
     await expect(reloadedRequest).toHaveAttribute('data-roll-request-status', 'resolved')
     await expect(reloadedRequest.getByText(`Total: ${result.total}`, { exact: true })).toBeVisible()
     await expect(reloadedRequest.getByText('DC 17', { exact: true })).toHaveCount(0)
@@ -383,6 +380,11 @@ test('P3-F Journey F1 keeps one human exploration-to-roll-to-state path canonica
       await request.get(`/api/characters/${character.id}`),
     )
     expect(persistedBeforeEnd.state.temporary_hp).toBe(3)
+
+    // Exploration continues on the reloaded pages before the DM ends the Session.
+    await player.page.getByRole('button', { name: 'Chat', exact: true }).click()
+    await sendSlash(player.page, '/action I climb down through the hatch.')
+    await expect(page.getByText('I climb down through the hatch.', { exact: true })).toBeVisible()
   } finally {
     await player.context.close()
   }
