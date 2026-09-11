@@ -6,6 +6,7 @@ import base64
 import hashlib
 import hmac
 import html
+import ipaddress
 import json
 import os
 import re
@@ -25,6 +26,16 @@ from admin import create_admin_app
 
 JsonValue = dict[str, Any] | list[Any] | str | int | float | bool | None
 _SECRET_KEY_MARKERS = ("token", "code", "secret", "verifier", "challenge", "password")
+_SAFE_EVIDENCE_KEYS = frozenset(
+    {
+        "token_type",
+        "token_endpoint",
+        "token_endpoint_auth_method",
+        "token_endpoint_auth_methods_supported",
+        "code_challenge_method",
+        "code_challenge_methods_supported",
+    }
+)
 _URL_SECRET_RE = re.compile(
     r"([?&](?:[^=&]*(?:token|code|secret|verifier|challenge)[^=&]*)=)([^&#]*)",
     re.IGNORECASE,
@@ -58,6 +69,14 @@ def redact(value: JsonValue, *, known_secrets: set[str] | None = None, key: str 
     """Apply the same secret redaction to request and response material."""
     known_secrets = known_secrets or set()
     normalized = (key or "").lower().replace("-", "_")
+    if normalized in _SAFE_EVIDENCE_KEYS:
+        if isinstance(value, str):
+            return _redact_string(value, known_secrets)
+        if isinstance(value, list):
+            return [redact(item, known_secrets=known_secrets) for item in value]
+        return value
+    if normalized == "code" and isinstance(value, (int, float)) and not isinstance(value, bool):
+        return value
     if normalized in {"authorization", "cookie", "set_cookie"} or any(marker in normalized for marker in _SECRET_KEY_MARKERS):
         if value in (None, ""):
             return value
@@ -69,6 +88,15 @@ def redact(value: JsonValue, *, known_secrets: set[str] | None = None, key: str 
     if isinstance(value, str):
         return _redact_string(value, known_secrets)
     return value
+
+
+def _require_loopback_host(host: str) -> None:
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError as exc:
+        raise RuntimeError("M04-A admin listener host must be a literal loopback IP") from exc
+    if not address.is_loopback:
+        raise RuntimeError(f"M04-A admin listener must bind loopback, got {host!r}")
 
 
 def _hash_token(token: str) -> str:
@@ -1002,8 +1030,8 @@ async def _serve(args: argparse.Namespace) -> None:
         raise SystemExit("--public-base-url or M04A_PUBLIC_BASE_URL is required")
     if not args.test_password:
         raise SystemExit("--test-password or M04A_TEST_PASSWORD is required")
-    admin_host = "127.0.0.1"
-    assert admin_host == "127.0.0.1", "M04-A admin listener must bind loopback"
+    admin_host = os.environ.get("M04A_ADMIN_HOST", "127.0.0.1")
+    _require_loopback_host(admin_host)
     force_sse = os.environ.get("M04A_FORCE_SSE", "").strip().lower() in {
         "1",
         "true",

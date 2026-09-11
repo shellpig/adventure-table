@@ -14,13 +14,14 @@ This file is the evidence record required by `實作規格.md` A.0–A.7 and `�
 
 | Ladder | Plan | Official support observed | M04-A result |
 |---|---|---|---|
-| 1 | ChatGPT Plus personal | OpenAI's current developer-mode documentation says full MCP, including modify/write actions, is available to Business and Enterprise/Edu. The same page separately says Pro can connect MCPs with read/fetch permissions but full MCP is not available to Pro. Plus is therefore not a write-capable full-MCP target under the M04 requirement. | **Plan limitation — not an Adventure Table protocol failure. Skip live A.2–A.6 and continue to ladder step 2.** |
+| 1 | ChatGPT Plus personal | OpenAI FAQ (checked 2026-09-11) says: “Full MCP is only available to Business and Enterprise/Edu users, currently.” It also says Pro users can connect MCPs with read/fetch permissions. The FAQ does not name Plus in the full-MCP/write set; M04-A therefore treats Plus as outside the documented write-capable scope. This is a support-scope inference, not a live Plus protocol failure. | **Documented plan-scope limitation for the M04 write requirement; continue to ladder step 2.** |
 | 2 | Claude chat personal | Anthropic's current remote-MCP documentation says custom remote MCP connectors are available to Free, Pro, Max, Team, and Enterprise users and that a connected Claude can access services and take action in them. | **Candidate target platform. Real A.2–A.6 still required.** |
 
 Sources checked on 2026-09-11:
 
-- OpenAI Help Center — Developer mode and MCP apps in ChatGPT: https://help.openai.com/en/articles/12584461
+- OpenAI Help Center — Developer mode and MCP apps in ChatGPT (FAQ checked 2026-09-11): https://help.openai.com/en/articles/12584461-developer-mode-apps-and-full-mcp-connectors-in-chatgpt-beta
 - Anthropic Help Center — Get started with custom connectors using remote MCP: https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp
+- Cloudflare One docs — Quick Tunnels (checked 2026-09-11; testing/development only; no SSE): https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/
 
 No Business, Enterprise, or Edu workspace is used to make M04 pass.
 
@@ -78,7 +79,7 @@ Implemented contract:
 - `GET /mcp` probe plus `POST /mcp` JSON-RPC handling for `initialize`, `notifications/initialized`, `server/discover`, `tools/list`, `tools/call`, and `ping`.
 - `get_context`, `post_note`, `dm_only_ping`, `wait_seconds`, and dynamically enabled `late_tool`.
 - Role-scoped discovery and server-side DM-only call enforcement.
-- JSONL request/response logging with one shared redaction function and explicit observations for protocol version, session-id presence, SSE accept, JSON-RPC method, and `_meta`.
+- JSONL request/response logging with one shared redaction function; actual credentials/codes remain masked while a narrow allowlist keeps non-secret OAuth metadata and numeric JSON-RPC `error.code` visible. Observations include protocol version, session-id presence, SSE accept, JSON-RPC method, `_meta`, and an irreversible Authorization fingerprint.
 - `Authorization` remains fully redacted, while `observation.authorization_fingerprint` stores only a deterministic truncated SHA-256 fingerprint so A.5 can compare whether two conversations used the same access credential without logging the credential itself.
 - OAuth `client_id` is left visible for correlation because it is an identifier rather than a secret; access token, refresh token, authorization code, PKCE verifier/challenge, client secret, password, Authorization, and cookie values remain masked.
 - Separate loopback-only admin listener; `/admin/*` is absent from the public app.
@@ -199,13 +200,15 @@ Status: **PENDING REAL WEB RUN**
 
 Status: **PENDING REAL WEB RUN**
 
-| `wait_seconds` | Result | Platform timeout/error | JSONL line |
-|---:|---|---|---|
-| 10 | pending | pending | pending |
-| 30 | pending | pending | pending |
-| 60 | pending | pending | pending |
-| 90 (only if 60 passes) | pending | pending | pending |
-| 120 (only if 90 passes) | pending | pending | pending |
+Record the tunnel provider/mode for each attempt. Cloudflare Quick Tunnel is testing-only and does not support SSE; failures at 90/120 seconds observed only through Quick Tunnel are **transport-confounded** until repeated with Tailscale Funnel or a stable/named tunnel. If the SSE fallback is required, do not use Quick Tunnel for that retry.
+
+| `wait_seconds` | Tunnel provider / mode | Result | Platform timeout/error | JSONL line |
+|---:|---|---|---|---|
+| 10 | pending | pending | pending | pending |
+| 30 | pending | pending | pending | pending |
+| 60 | pending | pending | pending | pending |
+| 90 (only if 60 passes) | pending | pending | pending | pending |
+| 120 (only if 90 passes) | pending | pending | pending | pending |
 
 Highest successful value: **pending**  
 First platform timeout: **pending**

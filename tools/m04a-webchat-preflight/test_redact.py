@@ -6,12 +6,14 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 from admin import create_admin_app  # noqa: E402
-from server import PreflightState, redact  # noqa: E402
+from server import PreflightState, _require_loopback_host, redact  # noqa: E402
 
 
 def test_redact_hides_token_code_challenge_verifier_secret_and_location_values() -> None:
@@ -34,6 +36,44 @@ def test_redact_hides_token_code_challenge_verifier_secret_and_location_values()
     for secret in (*secrets, "verifier-plain", "challenge-plain"):
         assert secret not in encoded
     assert "[redacted:" in encoded
+
+
+def test_redact_preserves_safe_protocol_evidence_but_not_secrets() -> None:
+    sample = {
+        "token_endpoint": "https://server.example/token",
+        "token_endpoint_auth_method": "none",
+        "token_endpoint_auth_methods_supported": ["none"],
+        "token_type": "Bearer",
+        "code_challenge_method": "S256",
+        "code_challenge_methods_supported": ["S256"],
+        "error": {"code": -32601},
+        "code": "oauth-code-secret",
+        "code_challenge": "challenge-secret",
+        "access_token": "access-secret",
+    }
+    result = redact(sample)
+    assert isinstance(result, dict)
+    assert result["token_endpoint"] == "https://server.example/token"
+    assert result["token_endpoint_auth_method"] == "none"
+    assert result["token_endpoint_auth_methods_supported"] == ["none"]
+    assert result["token_type"] == "Bearer"
+    assert result["code_challenge_method"] == "S256"
+    assert result["code_challenge_methods_supported"] == ["S256"]
+    assert result["error"] == {"code": -32601}
+    assert result["code"] != "oauth-code-secret"
+    assert result["code_challenge"] != "challenge-secret"
+    assert result["access_token"] != "access-secret"
+
+
+def test_admin_bind_validation_accepts_only_literal_loopback_ips() -> None:
+    _require_loopback_host("127.0.0.1")
+    _require_loopback_host("::1")
+    with pytest.raises(RuntimeError):
+        _require_loopback_host("0.0.0.0")
+    with pytest.raises(RuntimeError):
+        _require_loopback_host("203.0.113.10")
+    with pytest.raises(RuntimeError):
+        _require_loopback_host("localhost")
 
 
 def _run_asgi(app: Any, *, client_host: str, path: str) -> list[dict[str, Any]]:

@@ -303,6 +303,9 @@ def test_public_metadata_oauth_and_mcp_contract(tmp_path: Path) -> None:
         assert "dm_only_ping" not in player_names
         assert "late_tool" in player_names
 
+        unknown = await _rpc(app, dm_access, "unknown/method", request_id=61)
+        assert unknown["error"]["code"] == -32601
+
         status, _, body = await _request(
             app,
             method="POST",
@@ -348,6 +351,16 @@ def test_public_metadata_oauth_and_mcp_contract(tmp_path: Path) -> None:
         )
         assert status == 400
         assert _json(body)["error"] == "invalid_grant"
+
+        log_text = (tmp_path / "preflight.jsonl").read_text(encoding="utf-8")
+        for secret in (dm_access, dm_refresh, rotated_access, player_access):
+            assert secret not in log_text
+        assert '"token_endpoint":"https://preflight.example/token"' in log_text
+        assert '"code_challenge_methods_supported":["S256"]' in log_text
+        assert '"token_endpoint_auth_methods_supported":["none"]' in log_text
+        assert '"token_endpoint_auth_method":"none"' in log_text
+        assert '"token_type":"Bearer"' in log_text
+        assert '"code":-32601' in log_text
 
     asyncio.run(scenario())
 
