@@ -1,11 +1,6 @@
 name: M04-A Non-E2E Regression
 
 on:
-  push:
-    branches:
-      - m04a-webchat-preflight
-    paths:
-      - '.github/m04a-non-e2e.trigger'
   workflow_dispatch:
 
 permissions:
