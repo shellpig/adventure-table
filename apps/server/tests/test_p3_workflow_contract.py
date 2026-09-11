@@ -67,8 +67,8 @@ def test_p3_non_e2e_workflow_keeps_frontend_and_windows_standalone_gates() -> No
     assert "npm run build" in source
     assert "windows-standalone:" in source
     assert "runs-on: windows-latest" in source
-    assert "scripts\\\\build-standalone.cmd --version p3-non-e2e" in source
-    assert ".standalone-venv\\\\Scripts\\\\python.exe scripts\\\\smoke_standalone.py" in source
+    assert "scripts\\build-standalone.cmd --version p3-non-e2e" in source
+    assert ".standalone-venv\\Scripts\\python.exe scripts\\smoke_standalone.py" in source
 
 
 def test_p3_e2e_workflow_rebuilds_the_real_stack_and_runs_complete_playwright() -> None:
