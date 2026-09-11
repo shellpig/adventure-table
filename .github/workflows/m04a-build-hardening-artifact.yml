@@ -26,17 +26,18 @@ jobs:
         shell: bash
         run: |
           python - <<'PY'
+          import base64
           from pathlib import Path
 
           server = Path("tools/m04a-webchat-preflight/server.py")
           text = server.read_text(encoding="utf-8")
-          old = '''        if not self.test_password:\n            raise ValueError("test_password must not be empty")\n        object.__setattr__(self, "public_base_url", base)\n'''
-          new = '''        if not self.test_password:\n            raise ValueError("test_password must not be empty")\n        if self.access_ttl_seconds <= 0 or self.refresh_ttl_seconds <= 0:\n            raise ValueError("token TTL values must be positive")\n        object.__setattr__(self, "public_base_url", base)\n'''
+          old = '        if not self.test_password:\n            raise ValueError("test_password must not be empty")\n        object.__setattr__(self, "public_base_url", base)\n'
+          new = '        if not self.test_password:\n            raise ValueError("test_password must not be empty")\n        if self.access_ttl_seconds <= 0 or self.refresh_ttl_seconds <= 0:\n            raise ValueError("token TTL values must be positive")\n        object.__setattr__(self, "public_base_url", base)\n'
           assert text.count(old) == 1, "Config TTL patch anchor drifted"
           text = text.replace(old, new, 1)
 
-          old = '''            access = _new_secret("access")\n            async with state.lock:\n                family.access_hash = _hash_token(access)\n                family.access_expires_at = _now() + config.access_ttl_seconds\n                state.remember_secret(access)\n'''
-          new = '''            access = _new_secret("access")\n            async with state.lock:\n                if family.revoked or family.refresh_expires_at <= _now():\n                    return _oauth_error(\n                        "invalid_grant",\n                        "refresh token invalid, expired, or revoked",\n                    )\n                family.access_hash = _hash_token(access)\n                family.access_expires_at = _now() + config.access_ttl_seconds\n                state.remember_secret(access)\n'''
+          old = '            access = _new_secret("access")\n            async with state.lock:\n                family.access_hash = _hash_token(access)\n                family.access_expires_at = _now() + config.access_ttl_seconds\n                state.remember_secret(access)\n'
+          new = '            access = _new_secret("access")\n            async with state.lock:\n                if family.revoked or family.refresh_expires_at <= _now():\n                    return _oauth_error(\n                        "invalid_grant",\n                        "refresh token invalid, expired, or revoked",\n                    )\n                family.access_hash = _hash_token(access)\n                family.access_expires_at = _now() + config.access_ttl_seconds\n                state.remember_secret(access)\n'
           assert text.count(old) == 1, "refresh lock recheck patch anchor drifted"
           text = text.replace(old, new, 1)
           server.write_text(text, encoding="utf-8")
@@ -48,67 +49,8 @@ jobs:
           import_anchor = "import json\nimport sys\n"
           assert test_text.count(import_anchor) == 1, "pytest import anchor drifted"
           test_text = test_text.replace(import_anchor, "import json\nimport sys\n\nimport pytest\n", 1)
-          test_text += r'''
-
-
-@pytest.mark.parametrize(
-    ("access_ttl_seconds", "refresh_ttl_seconds"),
-    [(0, 60), (-1, 60), (60, 0), (60, -1)],
-)
-def test_config_rejects_non_positive_token_ttls(
-    tmp_path: Path,
-    access_ttl_seconds: int,
-    refresh_ttl_seconds: int,
-) -> None:
-    with pytest.raises(ValueError, match="token TTL values must be positive"):
-        Config(
-            public_base_url="https://preflight.example",
-            test_password="test-password",
-            log_path=tmp_path / "preflight.jsonl",
-            access_ttl_seconds=access_ttl_seconds,
-            refresh_ttl_seconds=refresh_ttl_seconds,
-        )
-
-
-def test_refresh_rechecks_family_authority_inside_lock(tmp_path: Path) -> None:
-    async def scenario() -> None:
-        state = PreflightState()
-        app = create_public_app(
-            Config(
-                public_base_url="https://preflight.example",
-                test_password="test-password",
-                log_path=tmp_path / "preflight.jsonl",
-            ),
-            state,
-        )
-        client_id, _, refresh_token = await _authorize_role(app, "dm")
-        original_refresh_family = state.refresh_family
-
-        def revoke_after_precheck(token: str | None):
-            family = original_refresh_family(token)
-            assert family is not None
-            family.revoked = True
-            return family
-
-        state.refresh_family = revoke_after_precheck  # type: ignore[method-assign]
-        status, _, body = await _request(
-            app,
-            method="POST",
-            path="/token",
-            body=_form(
-                {
-                    "grant_type": "refresh_token",
-                    "client_id": client_id,
-                    "refresh_token": refresh_token,
-                }
-            ),
-            headers={"content-type": "application/x-www-form-urlencoded"},
-        )
-        assert status == 400
-        assert _json(body)["error"] == "invalid_grant"
-
-    asyncio.run(scenario())
-'''
+          append_b64 = "CgpAcHl0ZXN0Lm1hcmsucGFyYW1ldHJpemUoCiAgICAoImFjY2Vzc190dGxfc2Vjb25kcyIsICJyZWZyZXNoX3R0bF9zZWNvbmRzIiksCiAgICBbKDAsIDYwKSwgKC0xLCA2MCksICg2MCwgMCksICg2MCwgLTEpXSwKKQpkZWYgdGVzdF9jb25maWdfcmVqZWN0c19ub25fcG9zaXRpdmVfdG9rZW5fdHRscygKICAgIHRtcF9wYXRoOiBQYXRoLAogICAgYWNjZXNzX3R0bF9zZWNvbmRzOiBpbnQsCiAgICByZWZyZXNoX3R0bF9zZWNvbmRzOiBpbnQsCikgLT4gTm9uZToKICAgIHdpdGggcHl0ZXN0LnJhaXNlcyhWYWx1ZUVycm9yLCBtYXRjaD0idG9rZW4gVFRMIHZhbHVlcyBtdXN0IGJlIHBvc2l0aXZlIik6CiAgICAgICAgQ29uZmlnKAogICAgICAgICAgICBwdWJsaWNfYmFzZV91cmw9Imh0dHBzOi8vcHJlZmxpZ2h0LmV4YW1wbGUiLAogICAgICAgICAgICB0ZXN0X3Bhc3N3b3JkPSJ0ZXN0LXBhc3N3b3JkIiwKICAgICAgICAgICAgbG9nX3BhdGg9dG1wX3BhdGggLyAicHJlZmxpZ2h0Lmpzb25sIiwKICAgICAgICAgICAgYWNjZXNzX3R0bF9zZWNvbmRzPWFjY2Vzc190dGxfc2Vjb25kcywKICAgICAgICAgICAgcmVmcmVzaF90dGxfc2Vjb25kcz1yZWZyZXNoX3R0bF9zZWNvbmRzLAogICAgICAgICkKCgpkZWYgdGVzdF9yZWZyZXNoX3JlY2hlY2tzX2ZhbWlseV9hdXRob3JpdHlfaW5zaWRlX2xvY2sodG1wX3BhdGg6IFBhdGgpIC0+IE5vbmU6CiAgICBhc3luYyBkZWYgc2NlbmFyaW8oKSAtPiBOb25lOgogICAgICAgIHN0YXRlID0gUHJlZmxpZ2h0U3RhdGUoKQogICAgICAgIGFwcCA9IGNyZWF0ZV9wdWJsaWNfYXBwKAogICAgICAgICAgICBDb25maWcoCiAgICAgICAgICAgICAgICBwdWJsaWNfYmFzZV91cmw9Imh0dHBzOi8vcHJlZmxpZ2h0LmV4YW1wbGUiLAogICAgICAgICAgICAgICAgdGVzdF9wYXNzd29yZD0idGVzdC1wYXNzd29yZCIsCiAgICAgICAgICAgICAgICBsb2dfcGF0aD10bXBfcGF0aCAvICJwcmVmbGlnaHQuanNvbmwiLAogICAgICAgICAgICApLAogICAgICAgICAgICBzdGF0ZSwKICAgICAgICApCiAgICAgICAgY2xpZW50X2lkLCBfLCByZWZyZXNoX3Rva2VuID0gYXdhaXQgX2F1dGhvcml6ZV9yb2xlKGFwcCwgImRtIikKICAgICAgICBvcmlnaW5hbF9yZWZyZXNoX2ZhbWlseSA9IHN0YXRlLnJlZnJlc2hfZmFtaWx5CgogICAgICAgIGRlZiByZXZva2VfYWZ0ZXJfcHJlY2hlY2sodG9rZW46IHN0ciB8IE5vbmUpOgogICAgICAgICAgICBmYW1pbHkgPSBvcmlnaW5hbF9yZWZyZXNoX2ZhbWlseSh0b2tlbikKICAgICAgICAgICAgYXNzZXJ0IGZhbWlseSBpcyBub3QgTm9uZQogICAgICAgICAgICBmYW1pbHkucmV2b2tlZCA9IFRydWUKICAgICAgICAgICAgcmV0dXJuIGZhbWlseQoKICAgICAgICBzdGF0ZS5yZWZyZXNoX2ZhbWlseSA9IHJldm9rZV9hZnRlcl9wcmVjaGVjayAgIyB0eXBlOiBpZ25vcmVbbWV0aG9kLWFzc2lnbl0KICAgICAgICBzdGF0dXMsIF8sIGJvZHkgPSBhd2FpdCBfcmVxdWVzdCgKICAgICAgICAgICAgYXBwLAogICAgICAgICAgICBtZXRob2Q9IlBPU1QiLAogICAgICAgICAgICBwYXRoPSIvdG9rZW4iLAogICAgICAgICAgICBib2R5PV9mb3JtKAogICAgICAgICAgICAgICAgewogICAgICAgICAgICAgICAgICAgICJncmFudF90eXBlIjogInJlZnJlc2hfdG9rZW4iLAogICAgICAgICAgICAgICAgICAgICJjbGllbnRfaWQiOiBjbGllbnRfaWQsCiAgICAgICAgICAgICAgICAgICAgInJlZnJlc2hfdG9rZW4iOiByZWZyZXNoX3Rva2VuLAogICAgICAgICAgICAgICAgfQogICAgICAgICAgICApLAogICAgICAgICAgICBoZWFkZXJzPXsiY29udGVudC10eXBlIjogImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZCJ9LAogICAgICAgICkKICAgICAgICBhc3NlcnQgc3RhdHVzID09IDQwMAogICAgICAgIGFzc2VydCBfanNvbihib2R5KVsiZXJyb3IiXSA9PSAiaW52YWxpZF9ncmFudCIKCiAgICBhc3luY2lvLnJ1bihzY2VuYXJpbygpKQo="
+          test_text += base64.b64decode(append_b64).decode("utf-8")
           tests.write_text(test_text, encoding="utf-8")
           PY
       - name: Static checks and semantic diff
