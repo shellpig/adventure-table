@@ -14,15 +14,15 @@ def role_rule(*, role: str, locale: str) -> str:
         if locale == "zh-TW":
             return (
                 "DM 回應玩家時一律用 post_narration 寫回桌上，不要只在承載 AI 的對話視窗回覆。"
-                "一般敘事以約 100–250 字為目標；秘密資訊不要寫入 Main Stage。需要暗骰時使用 visibility=dm_only。"
-                "所有可帶 idempotency_key 的寫入都要提供唯一值；替 Player 角色說話或行動時必須帶 subject_seat_id。"
-                "正式檢定用 request_check 建立。"
+                "一般敘事以約 100–250 字為目標；秘密資訊不要寫入 Main Stage 或公開 narration。需要暗骰時使用 visibility=dm_only。"
+                "角色 HP、狀態等變更一律使用對應工具寫回桌上。所有可帶 idempotency_key 的寫入都要提供唯一值；"
+                "替 Player 角色說話或行動時必須帶 subject_seat_id。正式檢定用 request_check 建立。"
             )
         return (
             "As DM, write player-facing responses back to the table with post_narration instead of replying only in the host chat. "
-            "Aim for roughly 100–250 words for ordinary narration. Never put secret information on Main Stage; use visibility=dm_only for secret rolls. "
-            "Provide a unique idempotency_key on every write that supports it, and provide subject_seat_id when speaking or acting for a Player Seat. "
-            "Create formal checks with request_check."
+            "Aim for roughly 100–250 words for ordinary narration. Never put secrets on Main Stage or in public narration; use visibility=dm_only for secret rolls. "
+            "Write HP/condition/state changes back through the appropriate tools. Provide a unique idempotency_key on every write that supports it, "
+            "and provide subject_seat_id when speaking or acting for a Player Seat. Create formal checks with request_check."
         )
     if role == "player":
         if locale == "zh-TW":
@@ -40,6 +40,28 @@ def role_rule(*, role: str, locale: str) -> str:
     raise ValueError("unsupported role")
 
 
+def _brief_role_rule(*, role: str, locale: str) -> str:
+    if role == "dm":
+        if locale == "zh-TW":
+            return (
+                "DM：用 post_narration 回桌上；正式檢定用 request_check；秘密不進 Stage／公開 narration，暗骰 visibility=dm_only；"
+                "寫入帶 idempotency_key，代理 Player 帶 subject_seat_id，狀態變更用工具寫回。"
+            )
+        return (
+            "DM: reply via post_narration; use request_check for formal checks; keep secrets off Stage/public narration and use visibility=dm_only; "
+            "send idempotency_key on writes, subject_seat_id when proxying a Player, and write state changes through tools."
+        )
+    if locale == "zh-TW":
+        return (
+            "Player：用 post_dialogue／post_action；正式檢定等 DM 建立後用 roll_pending；quick_roll 只是便利骰；"
+            "狀態用 update_character_state，私訊 DM 用 whisper_dm，寫入帶 idempotency_key。"
+        )
+    return (
+        "Player: use post_dialogue/post_action; wait for the DM's formal Check then use roll_pending; quick_roll is convenience only; "
+        "use update_character_state for state, whisper_dm for private DM messages, and idempotency_key on writes."
+    )
+
+
 def wait_rule(locale: str) -> str:
     if locale == "zh-TW":
         return (
@@ -54,6 +76,12 @@ def wait_rule(locale: str) -> str:
     )
 
 
+def _brief_wait_rule(locale: str) -> str:
+    if locale == "zh-TW":
+        return f"wait_for_event 最多 {WAIT_TIMEOUT_SECONDS} 秒；空結果直接再等，連續 {WAIT_RETRY_COUNT} 次仍無事件就停止並告知人類。"
+    return f"wait_for_event up to {WAIT_TIMEOUT_SECONDS}s; retry empty waits immediately, then stop and tell the human after {WAIT_RETRY_COUNT} consecutive empty waits."
+
+
 def render_briefing(*, role: str, mode: str) -> str:
     if role not in {"dm", "player"}:
         raise ValueError("unsupported role")
@@ -61,17 +89,19 @@ def render_briefing(*, role: str, mode: str) -> str:
         raise ValueError("unsupported mode")
     if mode == "pre_session":
         return (
-            "EN: Read this context, then call start_session. After start_session, refresh/rescan the connector if the host still shows the pre-session tool set. "
+            "EN: Read this context, then call start_session. After start_session, Refresh/rescan if the connector still shows pre-session tools. "
             "Full guide: GET /mcp/guide?locale=en.\n"
-            "zh-TW：先讀取此 context，再呼叫 start_session。若開始後承載平台仍顯示 pre-session 工具，請 Refresh／重新掃描工具。"
-            "完整指引：GET /mcp/guide?locale=zh-TW。"
+            "zh-TW：先讀 context，再呼叫 start_session；開始後若仍顯示 pre-session 工具請 Refresh／重新掃描。完整指引：GET /mcp/guide?locale=zh-TW。"
         )
-    return (
-        f"EN: {role_rule(role=role, locale='en')} {wait_rule('en')} Full guide: GET /mcp/guide?locale=en. "
+    briefing = (
+        f"EN: {_brief_role_rule(role=role, locale='en')} {_brief_wait_rule('en')} Full guide: GET /mcp/guide?locale=en. "
         "If temporary_instruction is non-empty, follow it as an additional temporary instruction.\n"
-        f"zh-TW：{role_rule(role=role, locale='zh-TW')} {wait_rule('zh-TW')} 完整指引：GET /mcp/guide?locale=zh-TW。"
-        "temporary_instruction 若非空，將它視為額外的暫時指示。"
+        f"zh-TW：{_brief_role_rule(role=role, locale='zh-TW')} {_brief_wait_rule('zh-TW')} 完整指引：GET /mcp/guide?locale=zh-TW。"
+        "temporary_instruction 非空時視為額外暫時指示。"
     )
+    if len(briefing) > 1_200:
+        raise RuntimeError("AI briefing exceeded 1200-character contract")
+    return briefing
 
 
 __all__ = ["WAIT_RETRY_COUNT", "WAIT_TIMEOUT_SECONDS", "render_briefing", "role_rule", "wait_rule"]
