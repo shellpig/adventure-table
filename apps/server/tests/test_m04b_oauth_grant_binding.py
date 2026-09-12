@@ -142,7 +142,15 @@ def test_revoke_scoped_to_authorization_family() -> None:
         auth_a = _insert_authorization(connection, grant_id=grant_a, client_id="atc_a")
         auth_b = _insert_authorization(connection, grant_id=grant_b, client_id="atc_b")
         revoke_grant_authorizations_in_transaction(connection, (grant_a,), now=NOW)
-        rows = dict(connection.execute(select(ai_oauth_authorizations.c.id, ai_oauth_authorizations.c.revoked_at)))
+        rows = {
+            row.id: row.revoked_at
+            for row in connection.execute(
+                select(
+                    ai_oauth_authorizations.c.id,
+                    ai_oauth_authorizations.c.revoked_at,
+                )
+            )
+        }
         assert rows[auth_a] is not None
         assert rows[auth_b] is None
 
