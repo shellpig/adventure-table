@@ -22,10 +22,79 @@ from app.domain.rooms.ai_tools import (
     WaitEventsInput,
 )
 from app.domain.rooms.exploration import ExplorationInputKind
+from app.domain.rooms.rolls import CheckReferenceInvalidError
 
 
 class _NoArguments(StrictModel):
     pass
+
+
+_WHEN_TO_USE: dict[str, tuple[str, str]] = {
+    "get_session_context": (
+        "Call first on connection and again whenever Session state, visible events, pending rolls, or control may have changed. Connection status must never be inferred from tool discovery or a connector rescan; call this tool and use its actual result.",
+        "連線後第一個呼叫；Session 狀態、可見事件、待擲骰或控制權可能改變時再次讀取。連線狀態不可從工具清單或重新掃描推測，必須實際呼叫本工具並依其結果判定。",
+    ),
+    "start_session": (
+        "Use only with a pre-session AI DM grant after get_session_context reports mode=pre_session.",
+        "只在 get_session_context 回報 mode=pre_session，且目前是開場前 AI DM grant 時使用。",
+    ),
+    "get_character_context": (
+        "Use when an AI Player needs its own active Character build/context before deciding an action.",
+        "AI Player 需要確認自己目前角色資料再決定行動時使用。",
+    ),
+    "post_dialogue": (
+        "Use for words spoken by a Character; a DM acting for a Player must identify that subject Seat.",
+        "角色實際說出口的話使用；DM 代 Player 說話時要指定 subject Seat。",
+    ),
+    "post_action": (
+        "Use for an intended in-world action before any formal Check is requested.",
+        "描述角色想做的世界內行動；正式 Check 建立前先用這個表達意圖。",
+    ),
+    "post_ooc": (
+        "Use only for table-facing out-of-character coordination, not narration or private DM communication.",
+        "只用於桌上可見的場外協調，不取代敘事或私下 DM 訊息。",
+    ),
+    "whisper_dm": (
+        "Player-only private communication to the current DM when information should not be public.",
+        "Player 要私下告知目前 DM、且內容不應公開時使用。",
+    ),
+    "post_narration": (
+        "DM uses this for player-facing narration and table responses; do not leave the response only in host chat.",
+        "DM 對玩家的敘事與桌面回應使用；不要只回在承載 AI 的聊天視窗。",
+    ),
+    "set_stage_text": (
+        "DM uses this when the persistent Main Stage text itself should change; never place secrets there.",
+        "DM 需要修改持續顯示的 Main Stage 文字時使用；秘密資訊不可放入 Stage。",
+    ),
+    "request_check": (
+        "DM uses this to create a formal ability/skill/check roll after a Player has described the attempt. A successful call automatically posts the scoped roll prompt to table chat; do not call post_narration merely to ask for the same roll. skill_ref takes a skill index like 'investigation'; ability_ref takes an ability like 'dexterity'.",
+        "Player 描述嘗試後，DM 要建立正式能力／技能／檢定擲骰時使用。成功後會自動在桌上聊天顯示符合權限範圍的擲骰提示；不要只為重複要求同一次擲骰而另呼叫 post_narration。skill_ref 用技能名如 'investigation'，ability_ref 用屬性如 'dexterity'。",
+    ),
+    "roll_pending": (
+        "Use only to resolve a visible pending formal roll with server RNG.",
+        "只用來以 server RNG 完成目前可見且待處理的正式擲骰。",
+    ),
+    "submit_physical_roll": (
+        "Use only when resolving a pending formal roll from physical d20 values supplied by the human.",
+        "人類提供實體 d20 點數、要完成待處理正式擲骰時使用。",
+    ),
+    "quick_roll": (
+        "Player convenience dice for non-formal situations; never substitute it for a DM-created formal Check.",
+        "Player 的便利骰，只適用非正式情境；不可取代 DM 建立的正式 Check。",
+    ),
+    "update_character_state": (
+        "Use for legal Current State changes such as HP or conditions; never edit Character Build with it.",
+        "HP、狀態等合法 Current State 變更使用；不可拿來修改 Character Build。",
+    ),
+    "get_pending_events": (
+        "Use to catch up durable visible events after a known cursor without waiting.",
+        "已有 cursor 且要立即補抓之後的 durable 可見事件、不需等待時使用。",
+    ),
+    "wait_for_event": (
+        "Use after processing all known events to wait for new visible table activity; advance the cursor monotonically.",
+        "已處理完已知事件後等待新的可見桌面活動；cursor 只能往前。",
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -36,10 +105,101 @@ class MCPToolDefinition:
     roles: frozenset[str]
     pre_session: bool = False
 
+    def _parameter_summary(self) -> str:
+        schema = self.input_model.model_json_schema()
+        definitions = schema.get("$defs", {})
+
+        def resolved_variants(value: dict[str, Any]) -> list[dict[str, Any]]:
+            variants = [value]
+            variants.extend(
+                item for item in value.get("anyOf", []) if isinstance(item, dict)
+            )
+            resolved: list[dict[str, Any]] = []
+            for item in variants:
+                ref = item.get("$ref")
+                if isinstance(ref, str) and ref.startswith("#/$defs/"):
+                    target = definitions.get(ref.removeprefix("#/$defs/"))
+                    if isinstance(target, dict):
+                        resolved.append(target)
+                resolved.append(item)
+            return resolved
+
+        parts: list[str] = []
+        for name, raw_property in schema.get("properties", {}).items():
+            if not isinstance(raw_property, dict):
+                parts.append(name)
+                continue
+            variants = resolved_variants(raw_property)
+            details: list[str] = []
+            enum_values: list[Any] = []
+            for variant in variants:
+                values = variant.get("enum")
+                if isinstance(values, list):
+                    enum_values.extend(
+                        value for value in values if value not in enum_values
+                    )
+            if enum_values:
+                details.append("enum=" + "|".join(str(value) for value in enum_values))
+            minimum = next(
+                (variant["minimum"] for variant in variants if "minimum" in variant),
+                None,
+            )
+            maximum = next(
+                (variant["maximum"] for variant in variants if "maximum" in variant),
+                None,
+            )
+            if minimum is not None or maximum is not None:
+                lower = minimum if minimum is not None else "-∞"
+                upper = maximum if maximum is not None else "∞"
+                details.append(f"range={lower}..{upper}")
+            if "default" in raw_property:
+                details.append(f"default={raw_property['default']}")
+            parts.append(f"{name} ({'; '.join(details)})" if details else name)
+        return ", ".join(parts) if parts else "none"
+
+    def rich_description(self) -> str:
+        schema = self.input_model.model_json_schema()
+        required = schema.get("required", [])
+        parameter_text = self._parameter_summary()
+        required_text = ", ".join(required) if required else "none"
+        role_text = ", ".join(sorted(self.roles))
+        description_en, separator, description_zh = self.description.partition(" / ")
+        if not separator:
+            description_zh = self.description
+        when_en, when_zh = _WHEN_TO_USE[self.name]
+        availability_en, availability_zh = self._availability()
+        return (
+            f"{description_en} When to use: {when_en} {availability_en} "
+            f"Key parameters and legal values: {parameter_text}; required: {required_text}. "
+            f"Allowed roles: {role_text}. Respect the current scoped Seat, returned cursor/state, "
+            "and idempotency fields when present. / "
+            f"{description_zh} 使用時機：{when_zh}{availability_zh} 關鍵參數與合法值：{parameter_text}；"
+            f"必填：{required_text}；可用角色：{role_text}。必須遵守目前 scoped Seat、"
+            "回傳的 cursor／state，以及存在時的 idempotency 欄位。"
+        )
+
+    def _availability(self) -> tuple[str, str]:
+        # The catalog is the same before and after start_session (see tool_catalog),
+        # so each description states when the call is actually accepted.
+        if self.name == "start_session":
+            return (
+                "Available only before the Session starts; afterwards it returns pre_session_only.",
+                "只在 Session 開始前可用；開始後回 pre_session_only。",
+            )
+        if self.pre_session:
+            return (
+                "Available both before and after the Session starts.",
+                "Session 開始前後皆可用。",
+            )
+        return (
+            "Requires an active Session; before start_session it returns active_session_required.",
+            "需要 active Session；start_session 之前呼叫會回 active_session_required。",
+        )
+
     def wire(self) -> dict[str, Any]:
         return {
             "name": self.name,
-            "description": self.description,
+            "description": self.rich_description(),
             "inputSchema": self.input_model.model_json_schema(),
         }
 
@@ -159,18 +319,33 @@ _TOOL_DEFINITIONS = (
 )
 
 
+def tool_reference_rows(role: str | None) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for definition in _TOOL_DEFINITIONS:
+        if role is not None and role not in definition.roles:
+            continue
+        schema = definition.input_model.model_json_schema()
+        rows.append(
+            {
+                "name": definition.name,
+                "description": definition.rich_description(),
+                "required_params": tuple(schema.get("required", [])),
+                "roles": tuple(sorted(definition.roles)),
+                "pre_session": definition.pre_session,
+            }
+        )
+    return rows
+
+
 def tool_catalog(auth: AIControllerAuthView) -> list[dict[str, Any]]:
-    if auth.session_id is None:
-        return [
-            definition.wire()
-            for definition in _TOOL_DEFINITIONS
-            if definition.pre_session and auth.role in definition.roles
-        ]
+    # Role-scoped only. The list is identical before and after start_session so a
+    # client that snapshots tools/list once (ChatGPT connectors) can go from the
+    # Lobby into the Session without a Refresh; the pre-/active-session gate stays
+    # in call_tool (active_session_required / pre_session_only).
     return [
         definition.wire()
         for definition in _TOOL_DEFINITIONS
-        if (not definition.pre_session or definition.name == "get_session_context")
-        and auth.role in definition.roles
+        if auth.role in definition.roles
     ]
 
 
@@ -399,6 +574,13 @@ async def call_tool(
             "Requested table object was not found in the current scope",
             "目前 scope 找不到指定的桌面物件",
         )
+    except CheckReferenceInvalidError as exc:
+        return structured_tool_error(
+            "unknown_check_ref",
+            f"Unknown skill/ability reference: {exc}. Use a skill index like "
+            "'investigation' or an ability like 'dexterity'.",
+            f"無法解析的技能／屬性參照：{exc}。技能用如 'investigation' 的名稱，屬性用如 'dexterity'。",
+        )
     except ValueError:
         return structured_tool_error(
             "invalid_arguments",
@@ -420,4 +602,5 @@ __all__ = [
     "call_tool",
     "structured_tool_error",
     "tool_catalog",
+    "tool_reference_rows",
 ]

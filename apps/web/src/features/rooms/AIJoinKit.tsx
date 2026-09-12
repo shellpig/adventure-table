@@ -1,0 +1,176 @@
+import { useEffect, useMemo, useState } from 'react'
+
+import { fetchMcpPublicOrigin } from '../../api/aiControllers'
+import type { Locale } from '../../i18n/locale'
+
+export type AIJoinRole = 'dm' | 'player'
+
+export type AIJoinKitUiCopy = {
+  aiJoinKitTitle: string
+  aiJoinKitHint: string
+  aiJoinKitCopy: string
+  aiJoinKitCopied: string
+  aiJoinKitDownload: string
+}
+
+type JoinKitInput = {
+  origin: string
+  remoteOrigin: string | null
+  token: string
+  role: AIJoinRole
+  locale: Locale
+  expiresAt?: string | null
+}
+
+const templateCopy = {
+  'zh-TW': {
+    copyFailed: '無法自動複製 Join Kit，請手動選取文字。',
+    localUrl: 'URL（本機）',
+    remoteUrl: 'URL（公網）',
+    localGuide: 'Guide（本機）',
+    remoteGuide: 'Guide（公網）',
+    role: 'Role',
+    token: 'Token',
+    expires: 'Expires',
+    expiresFallback: '直到 Session 結束或被撤銷',
+    aiDirective: 'AI 請直接照做：你已透過 MCP 連上這張桌，不需要、也不能自己設定 connector。你的第一個動作就是「實際呼叫」get_session_context 工具（真的 tool call，不是嘴上說要呼叫），再依回傳的 briefing 進行。除非某次實際 tool call 回傳錯誤，否則不得宣稱連線失敗；還沒呼叫過就說「尚未測試」。',
+    setupHeader: '接入設定（給架設者；通常已幫你設好，AI 不用做這段）：',
+    which: '在這台機器上跑的 AI 用「本機」URL；網頁版 chat 與機器外的 AI 用「公網」URL。',
+    safety: '安全：此 token 只顯示這一次；勿轉傳；用完請 Owner／DM 在網站撤銷。',
+    refresh: 'Session 開始前後工具清單相同，start_session 後不需 Refresh。換 Role／Seat 必須重新授權；之後工具仍是舊清單就 Refresh／重新掃描 connector 並開新對話。',
+    web: 'ChatGPT Web：由使用者在 ChatGPT 新增 Adventure Table connector，URL 填「公網」URL，OAuth 頁貼上此 token。',
+    client: 'MCP client：以 HTTP transport 連上「本機／公網」URL，header Authorization: Bearer {token}。',
+    http: 'shell／可對外連網 code execution：先讀 Guide，再依 POST /mcp 契約呼叫工具（網頁版 chat 沒有對外網路，請走 connector）。',
+    noRemote: '尚未設定公網入口（ADVENTURE_TABLE_MCP_PUBLIC_ORIGIN）；網頁版 chat 與機器外的 AI 目前連不進來，只有「本機」URL 可用。',
+  },
+  en: {
+    copyFailed: 'Could not copy the Join Kit automatically. Select and copy the text manually.',
+    localUrl: 'URL (local)',
+    remoteUrl: 'URL (remote)',
+    localGuide: 'Guide (local)',
+    remoteGuide: 'Guide (remote)',
+    role: 'Role',
+    token: 'Token',
+    expires: 'Expires',
+    expiresFallback: 'until the Session ends or the grant is revoked',
+    aiDirective: 'AI, do this now: you are already connected over MCP — you do not and cannot set up a connector yourself. Your first action is to actually CALL the get_session_context tool (a real tool call, not a statement that you will), then follow the briefing it returns. Never claim the connection failed unless a real tool call returned an error; if you have not called a tool yet, say it is untested.',
+    setupHeader: 'Connection setup (for the operator; usually already done for you — the AI does not do this):',
+    which: 'An AI running on this machine uses the local URL; web chat and any AI outside this machine use the remote URL.',
+    safety: 'Security: this token is shown only once; do not forward it; ask the Owner/DM to revoke it when finished.',
+    refresh: 'The tool list is the same before and after the Session starts; no Refresh is needed after start_session. Changing Role/Seat requires a new authorization; if tools are still stale afterwards, Refresh/rescan the connector and open a new chat.',
+    web: 'ChatGPT Web: the user adds the Adventure Table connector in ChatGPT with the remote URL and pastes this token on the OAuth page.',
+    client: 'MCP client: connect over HTTP transport to the local/remote URL with header Authorization: Bearer {token}.',
+    http: 'shell / outbound-network code execution: read the Guide, then call tools per the POST /mcp contract (web chat has no outbound network — use the connector).',
+    noRemote: 'No public entry point is configured (ADVENTURE_TABLE_MCP_PUBLIC_ORIGIN); web chat and AIs outside this machine cannot connect yet, only the local URL works.',
+  },
+} as const
+
+function normalizedOrigin(origin: string) {
+  return origin.replace(/\/$/, '')
+}
+
+export function buildAIJoinKit({ origin, remoteOrigin, token, role, locale, expiresAt }: JoinKitInput) {
+  const copy = templateCopy[locale]
+  const local = normalizedOrigin(origin)
+  const remote = remoteOrigin ? normalizedOrigin(remoteOrigin) : null
+  const guidePath = `/mcp/guide?locale=${locale}`
+  const displayRole = role === 'dm' ? 'DM' : 'Player'
+  const lines = [
+    'Adventure Table — AI Join Kit',
+    '==============================',
+    `${copy.localUrl}: ${local}/mcp`,
+    ...(remote ? [`${copy.remoteUrl}: ${remote}/mcp`] : []),
+    `${copy.token}: ${token}`,
+    `${copy.role}: ${displayRole}`,
+    `${copy.expires}: ${expiresAt ?? copy.expiresFallback}`,
+    `${copy.localGuide}: ${local}${guidePath}`,
+    ...(remote ? [`${copy.remoteGuide}: ${remote}${guidePath}`] : []),
+    '',
+    copy.aiDirective,
+    '',
+    copy.setupHeader,
+    `1. ${copy.web}`,
+    `2. ${copy.client.replace('{token}', token)}`,
+    `3. ${copy.http}`,
+    copy.which,
+    copy.refresh,
+    '',
+    copy.safety,
+  ]
+  if (!remote) lines.push('', copy.noRemote)
+  return lines.join('\n')
+}
+
+export function aiJoinKitFilename(role: AIJoinRole, date = new Date()) {
+  const stamp = date.toISOString().slice(0, 10).replaceAll('-', '')
+  return `adventure-table-ai-${role}-${stamp}.txt`
+}
+
+type AIJoinKitProps = Omit<JoinKitInput, 'remoteOrigin'> & { uiCopy: AIJoinKitUiCopy }
+
+export function AIJoinKit({ origin, token, role, locale, expiresAt, uiCopy }: AIJoinKitProps) {
+  const template = templateCopy[locale]
+  const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState(false)
+  // undefined while the public origin is still loading; null when none is configured.
+  const [remoteOrigin, setRemoteOrigin] = useState<string | null | undefined>(undefined)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchMcpPublicOrigin()
+      .then((value) => {
+        if (!cancelled) setRemoteOrigin(value)
+      })
+      .catch(() => {
+        if (!cancelled) setRemoteOrigin(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const kit = useMemo(
+    () =>
+      remoteOrigin === undefined
+        ? null
+        : buildAIJoinKit({ origin, remoteOrigin, token, role, locale, expiresAt }),
+    [origin, remoteOrigin, token, role, locale, expiresAt],
+  )
+
+  if (kit === null) return null
+
+  const copyKit = async () => {
+    try {
+      await navigator.clipboard.writeText(kit)
+      setCopyError(false)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2500)
+    } catch {
+      setCopyError(true)
+    }
+  }
+
+  const downloadKit = () => {
+    const blob = new Blob([kit], { type: 'text/plain;charset=utf-8' })
+    const href = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = href
+    anchor.download = aiJoinKitFilename(role)
+    anchor.click()
+    URL.revokeObjectURL(href)
+  }
+
+  return (
+    <div className="ai-join-kit" data-ai-join-kit={role}>
+      <strong>{uiCopy.aiJoinKitTitle}</strong>
+      <p>{uiCopy.aiJoinKitHint}</p>
+      <pre className="ai-join-kit__text">{kit}</pre>
+      <div className="workshop-card__split-actions">
+        <button className="button secondary" type="button" onClick={() => void copyKit()}>{uiCopy.aiJoinKitCopy}</button>
+        <button className="button secondary" type="button" onClick={downloadKit}>{uiCopy.aiJoinKitDownload}</button>
+        {copied ? <span className="token-copy-feedback" role="status">{uiCopy.aiJoinKitCopied}</span> : null}
+      </div>
+      {copyError ? <div className="error-banner" role="alert">{template.copyFailed}</div> : null}
+    </div>
+  )
+}

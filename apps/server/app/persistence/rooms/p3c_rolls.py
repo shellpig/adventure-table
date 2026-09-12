@@ -240,6 +240,7 @@ class RollRepository:
                 "modifier_mode": modifier_mode,
                 "flat_adjustment": flat_adjustment,
                 "visibility": visibility,
+                "label": label,
                 # DC is intentionally omitted: it is a secret-bearing field and
                 # is projected from roll_requests only for the current DM.
             },

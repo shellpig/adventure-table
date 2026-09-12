@@ -263,6 +263,11 @@
   background: #0c1017;
 }
 
+.session-chat__message--system {
+  border-color: color-mix(in srgb, var(--gold-bright) 45%, var(--line-soft));
+  background: color-mix(in srgb, var(--gold-bright) 7%, #0c1017);
+}
+
 .session-chat__message header {
   display: flex;
   flex-wrap: wrap;

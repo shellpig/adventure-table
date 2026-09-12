@@ -24,6 +24,7 @@ export const P3C_SESSION_REQUEST_CODES = [
   'roll_request_not_found',
   'roll_request_already_resolved',
   'invalid_roll_input',
+  'unknown_check_ref',
   'roll_character_not_found',
   'pending_action_not_found',
   'pending_action_invalid_transition',
@@ -113,6 +114,10 @@ export const SESSION_REQUEST_CODE_MESSAGES: Record<SessionRequestCode, Record<Lo
   invalid_roll_input: {
     'zh-TW': '擲骰輸入無效；請確認實體骰原始值與優勢／劣勢所需骰數。',
     en: 'The roll input is invalid. Check raw physical dice and advantage/disadvantage requirements.',
+  },
+  unknown_check_ref: {
+    'zh-TW': '這個檢定的技能／屬性參照無法解析，請由 DM 用正確的技能或屬性名稱重新建立。',
+    en: 'This Check has an unresolvable skill/ability reference. Ask the DM to recreate it with a valid skill or ability name.',
   },
   roll_character_not_found: {
     'zh-TW': '這個檢定綁定的角色已無法使用，請由 DM 重新建立檢定。',

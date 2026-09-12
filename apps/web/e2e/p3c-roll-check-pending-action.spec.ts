@@ -331,6 +331,12 @@ test('P3-C Journey C1 keeps a formal roll resolved through reload without rollin
     })
     await expect(page.getByRole('status')).toHaveText('Created 1 formal RollRequest(s).')
 
+    const rollPrompt = `The DM asks ${character.name} to make Investigation (Skill Check): Check the door.`
+    await expect(player.page.getByText(rollPrompt, { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Chat', exact: true }).click()
+    await expect(page.getByText(rollPrompt, { exact: true })).toHaveCount(1)
+    await page.getByRole('button', { name: 'Dice', exact: true }).click()
+
     const dmRequest = page.locator('.session-roll-request').first()
     await expect(dmRequest).toHaveAttribute('data-roll-request-status', 'pending')
     await expect(dmRequest.getByText('DC 15', { exact: true })).toBeVisible()

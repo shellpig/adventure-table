@@ -20,6 +20,7 @@ from app.domain.rooms.campaigns import (
 )
 from app.domain.rooms.character_rolls import CharacterRollModifierResolver
 from app.domain.rooms.rolls import (
+    CheckReferenceInvalidError,
     FormalRollInput,
     RequestCheckInput,
     RollModifierMode,
@@ -180,6 +181,7 @@ def _setup(engine) -> Table:
         ExplorationSubjectRepository(engine),
         events,
         modifier_resolver,
+        registry=registry,
     )
 
     def actor(context):
@@ -207,16 +209,36 @@ def test_group_check_tracks_each_seat_from_waiting_to_rolled() -> None:
     engine = _engine()
     try:
         table = _setup(engine)
-        group_id, requests = table.service.request_check(
-            table.dm_actor,
-            RequestCheckInput(
-                target_seat_ids=(table.mira_seat.id, table.bran_seat.id),
-                request_type=RollRequestType.SKILL,
-                skill_ref=PERCEPTION,
-                dc=13,
-                label="Party listens at the door",
-            ),
+        request_input = RequestCheckInput(
+            target_seat_ids=(table.mira_seat.id, table.bran_seat.id),
+            request_type=RollRequestType.SKILL,
+            skill_ref=PERCEPTION,
+            dc=13,
+            label="Party listens at the door",
+            idempotency_key="group-check-prompt",
         )
+        group_id, requests = table.service.request_check(table.dm_actor, request_input)
+
+        replayed_group_id, replayed_requests = table.service.request_check(
+            table.dm_actor, request_input
+        )
+        assert replayed_group_id == group_id
+        assert [request.id for request in replayed_requests] == [request.id for request in requests]
+
+        requested_events = [
+            event
+            for event in table.events.list_after(
+                table.dm_actor, after_seq=0, limit=20
+            ).events
+            if event.kind == "roll.requested"
+        ]
+        assert len(requested_events) == 1
+        assert requested_events[0].recipient_seat_ids == (
+            table.mira_seat.id,
+            table.bran_seat.id,
+        )
+        assert requested_events[0].payload["label"] == "Party listens at the door"
+        assert "dc" not in requested_events[0].payload
 
         assert len({request.roll_group_id for request in requests}) == 1
         assert requests[0].roll_group_id == group_id
@@ -370,5 +392,45 @@ def test_stale_actor_binding_cannot_submit_a_formal_roll() -> None:
         assert [
             item.status for item in table.service.list_requests(table.dm_actor)
         ] == ["pending"]
+    finally:
+        engine.dispose()
+
+
+def test_request_check_accepts_a_bare_skill_name_and_normalises_to_stable_key() -> None:
+    engine = _engine()
+    try:
+        table = _setup(engine)
+        _group_id, requests = table.service.request_check(
+            table.dm_actor,
+            RequestCheckInput(
+                target_seat_ids=(table.mira_seat.id,),
+                request_type=RollRequestType.SKILL,
+                skill_ref="perception",
+            ),
+        )
+        # Stored ref is the stable key, so a server roll resolves the modifier.
+        assert requests[0].skill_ref == "srd5.1:skill:perception"
+        result = table.service.complete_formal(
+            table.mira_actor,
+            FormalRollInput(roll_request_id=requests[0].id),
+        )
+        assert result.total is not None
+    finally:
+        engine.dispose()
+
+
+def test_request_check_rejects_an_unknown_skill_at_creation() -> None:
+    engine = _engine()
+    try:
+        table = _setup(engine)
+        with pytest.raises(CheckReferenceInvalidError):
+            table.service.request_check(
+                table.dm_actor,
+                RequestCheckInput(
+                    target_seat_ids=(table.mira_seat.id,),
+                    request_type=RollRequestType.SKILL,
+                    skill_ref="telepathy",
+                ),
+            )
     finally:
         engine.dispose()

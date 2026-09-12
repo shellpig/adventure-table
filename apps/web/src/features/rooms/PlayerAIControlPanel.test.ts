@@ -82,6 +82,15 @@ describe('Player AI control panel', () => {
     expect(source).not.toContain('setItem(')
   })
 
+  it('builds the Player Join Kit from the issued token and current browser origin', () => {
+    const source = readFileSync(new URL('./PlayerAIControlPanel.tsx', import.meta.url), 'utf8')
+    expect(source).toContain('<AIJoinKit')
+    expect(source).toContain('origin={window.location.origin}')
+    expect(source).toContain('token={issued.token}')
+    expect(source).toContain('role="player"')
+    expect(source).toContain('locale={copy.locale}')
+  })
+
   it('uses exact Take Back and explicit administrative recovery', () => {
     const source = readFileSync(new URL('./PlayerAIControlPanel.tsx', import.meta.url), 'utf8')
     expect(source).toContain('takeBackPlayer(roomId, campaignId, sessionId, seat.id, roomToken)')

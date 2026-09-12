@@ -6,6 +6,7 @@ import {
   type AIControllerGrantView,
 } from '../../api/aiControllers'
 import type { CampaignSeat } from '../../api/seats'
+import { AIJoinKit } from './AIJoinKit'
 import { lobbyCopy } from './lobbyCopy'
 
 
@@ -145,6 +146,14 @@ export function LobbyAIDMGrantPanel({
             </button>
             {copied ? <span className="token-copy-feedback" role="status">{copy.aiDmCopied}</span> : null}
           </div>
+          <AIJoinKit
+            origin={window.location.origin}
+            token={issued.token}
+            role="dm"
+            locale={copy.locale}
+            expiresAt={issued.expires_at}
+            uiCopy={copy}
+          />
         </div>
       ) : null}
 

@@ -53,6 +53,15 @@ describe('Lobby AI DM grant panel', () => {
     expect(source).not.toContain('setItem(')
   })
 
+  it('builds the DM Join Kit from the issued token and current browser origin', () => {
+    const source = readFileSync(new URL('./LobbyAIDMGrantPanel.tsx', import.meta.url), 'utf8')
+    expect(source).toContain('<AIJoinKit')
+    expect(source).toContain('origin={window.location.origin}')
+    expect(source).toContain('token={issued.token}')
+    expect(source).toContain('role="dm"')
+    expect(source).toContain('locale={copy.locale}')
+  })
+
   it('uses explicit rotate and revoke endpoints for configured AI DM seats', () => {
     const source = readFileSync(new URL('./LobbyAIDMGrantPanel.tsx', import.meta.url), 'utf8')
     expect(source).toContain('configurePreSessionAiDm(')

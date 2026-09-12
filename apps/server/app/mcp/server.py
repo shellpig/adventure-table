@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import JSONResponse, PlainTextResponse
 from starlette.concurrency import run_in_threadpool
 
 from app.api.rooms.ai_controllers import get_ai_controller_service
 from app.api.rooms.ai_oauth import get_ai_controller_oauth_service
+from app.config import settings
 from app.domain.rooms.ai_controllers import AIControllerService
 from app.mcp.auth import (
     MCPAuthenticationError,
@@ -15,6 +16,7 @@ from app.mcp.auth import (
     authenticate_request,
 )
 from app.mcp.dependencies import get_ai_tool_application_service
+from app.mcp.guide import render_guide
 from app.mcp.protocol import (
     MCP_PROTOCOL_VERSION,
     MCPProtocolError,
@@ -69,6 +71,50 @@ def _oauth_challenge(request: Request) -> str:
         '"'
     )
 
+def _discover_instructions(origin: str) -> str:
+    guide_url = f"{origin.rstrip('/')}/mcp/guide"
+    return (
+        "Adventure Table external AI transport. Start with get_session_context and "
+        f"read the full bilingual guide at {guide_url}?locale=en. Use only the scoped Seat "
+        "capabilities exposed by this server. / Adventure Table 外部 AI 傳輸入口；"
+        f"先呼叫 get_session_context，完整雙語指引請讀 {guide_url}?locale=zh-TW；"
+        "只能使用目前 scoped Seat 所允許的能力。"
+    )
+
+
+@router.get("/mcp/guide", response_model=None)
+async def mcp_guide(
+    locale: str = Query(default="en"),
+) -> PlainTextResponse | JSONResponse:
+    try:
+        content = render_guide(locale)
+    except ValueError:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "ok": False,
+                "error": {
+                    "code": "mcp_guide_locale_unsupported",
+                    "messages": {
+                        "en": "Supported locales are en and zh-TW",
+                        "zh-TW": "僅支援 en 與 zh-TW",
+                    },
+                },
+            },
+        )
+    return PlainTextResponse(content, headers={"Cache-Control": "public, max-age=300"})
+
+
+@router.get("/api/mcp/public-origin")
+async def mcp_public_origin() -> JSONResponse:
+    # Human UI reads this to print the remote URL in the AI Join Kit. Only the
+    # configured public origin is advertised; the loopback fallback used by
+    # public_origin() is useless to a remote AI, so it is reported as null.
+    configured = settings.mcp_public_origin
+    return JSONResponse(
+        content={"public_origin": configured.rstrip("/") if configured else None}
+    )
+
 
 @router.post("/mcp")
 async def mcp_endpoint(
@@ -121,11 +167,7 @@ async def mcp_endpoint(
                 {
                     "supportedVersions": [MCP_PROTOCOL_VERSION],
                     "capabilities": {"tools": {}},
-                    "instructions": (
-                        "Adventure Table external AI transport. Use only the scoped Seat "
-                        "capabilities exposed by this server. / Adventure Table 外部 AI "
-                        "傳輸入口；只能使用目前 scoped Seat 所允許的能力。"
-                    ),
+                    "instructions": _discover_instructions(public_origin(request)),
                 },
                 cacheable=True,
             )

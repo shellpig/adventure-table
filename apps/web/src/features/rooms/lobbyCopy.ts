@@ -2,6 +2,7 @@ import type { Locale } from '../../i18n/locale'
 
 const copy = {
   'zh-TW': {
+    locale: 'zh-TW' as const,
     title: '大廳與座位',
     intro: '安排這場 Campaign 的 DM、玩家與旁觀座位。角色選擇只代表下一場開始前的大廳設定。',
     backCampaign: '返回 Campaign',
@@ -41,8 +42,14 @@ const copy = {
     aiDmCopied: '已複製',
     aiDmCopyFailed: '無法自動複製，請手動複製 Token。',
     aiDmFailed: 'AI DM 憑證操作失敗。',
+    aiJoinKitTitle: 'AI Join Kit',
+    aiJoinKitHint: '把整份 kit 交給 AI；完整操作規則由 server guide 提供。Token 只顯示一次，請勿轉傳。',
+    aiJoinKitCopy: '複製 Join Kit',
+    aiJoinKitCopied: '已複製 Join Kit',
+    aiJoinKitDownload: '下載 .txt',
   },
   en: {
+    locale: 'en' as const,
     title: 'Lobby & Seats',
     intro: 'Arrange the DM, player, and spectator seats for this Campaign. Character selection is the pre-Session lobby choice only.',
     backCampaign: 'Back to Campaign',
@@ -82,6 +89,11 @@ const copy = {
     aiDmCopied: 'Copied',
     aiDmCopyFailed: 'Automatic copy failed. Copy the Token manually.',
     aiDmFailed: 'AI DM credential operation failed.',
+    aiJoinKitTitle: 'AI Join Kit',
+    aiJoinKitHint: 'Give the whole kit to the AI; the server-hosted guide contains the full operating rules. The token is shown only once; do not forward it.',
+    aiJoinKitCopy: 'Copy Join Kit',
+    aiJoinKitCopied: 'Join Kit copied',
+    aiJoinKitDownload: 'Download .txt',
   },
 } as const
 

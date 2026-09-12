@@ -15,3 +15,6 @@ apps/server/*.egg-info/
 build/
 dist/
 .DS_Store
+
+# Local working files (AI Join Kits, character snapshots)
+chars/

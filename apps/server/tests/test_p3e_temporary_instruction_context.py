@@ -198,7 +198,10 @@ class _SessionService:
 class _StageService:
     @staticmethod
     def get_stage(actor):
-        return SimpleNamespace(model_dump=lambda **_: {"revision": 0, "text": None})
+        return SimpleNamespace(
+            text=None,
+            model_dump=lambda **_: {"revision": 0, "text": None},
+        )
 
 
 class _EmptyListService:
@@ -250,6 +253,10 @@ def test_temporary_instruction_is_current_handoff_only_in_p3e_context() -> None:
         )
         first_context = facade.get_session_context(first.token)
         assert first_context["temporary_instruction"] == "Keep the scout safe"
+        # M04-C: active context carries machine-readable stage hints; a Player is
+        # steered to wait, never to set the DM-only Stage.
+        assert first_context["stage_unset"] is True
+        assert first_context["next_required_action"] == "wait_for_event"
 
         controller.take_back_player(
             room_id=ids["room_id"],

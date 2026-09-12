@@ -163,6 +163,7 @@ def get_roll_service(request: Request) -> RollService:
                 character_repository,
                 get_content_registry(request),
             ),
+            registry=get_content_registry(request),
         )
         request.app.state.roll_service = service
     return service

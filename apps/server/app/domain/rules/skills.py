@@ -13,6 +13,33 @@ from app.domain.rules.abilities import (
 from app.domain.rules.proficiency import proficiency_bonus, total_character_level
 
 
+def resolve_skill_ref(registry: ContentRegistry, ref: str) -> str:
+    """Normalise a skill reference to its stable content key.
+
+    The engine stores skills as stable keys (e.g. ``srd5.1:skill:investigation``)
+    so proficiency and expertise can match ``build.skill_choices``. Callers,
+    including AI DMs, may pass a plain index like ``investigation`` or
+    ``Investigation``; resolve it here rather than forcing the long key.
+    """
+
+    candidate = ref.strip()
+    if not candidate:
+        raise ValueError("skill reference is empty")
+    if registry.get_optional(candidate) is not None:
+        return candidate
+    index = candidate.lower().replace(" ", "-").replace("_", "-")
+    matches = [
+        entry.key
+        for entry in registry.list_kind("skill")
+        if entry.index == index
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        raise ValueError(f"unknown skill: {ref}")
+    raise ValueError(f"ambiguous skill across content packs: {ref}")
+
+
 def saving_throw_modifier(build: CharacterBuild, ability: str) -> int:
     name = ABILITY_INDEX_TO_NAME.get(ability, ability)
     index = ABILITY_NAME_TO_INDEX.get(name)

@@ -97,7 +97,69 @@ function explorationEvent(
   }
 }
 
+function rollRequestedEvent(): TableEvent {
+  return {
+    id: '60000000-0000-4000-8000-000000000003',
+    session_id: SESSION_ID,
+    seq: 3,
+    kind: 'roll.requested',
+    acting_seat_id: DM_SEAT,
+    subject_seat_id: null,
+    subject_character_id: null,
+    execution_mode: 'self',
+    visibility: 'seat_private',
+    recipient_seat_ids: [MIRA_SEAT, SERENA_SEAT],
+    payload_version: 1,
+    payload: {
+      roll_group_id: '70000000-0000-4000-8000-000000000001',
+      roll_request_ids: [
+        '80000000-0000-4000-8000-000000000001',
+        '80000000-0000-4000-8000-000000000002',
+      ],
+      request_type: 'skill',
+      ability_ref: null,
+      skill_ref: 'srd5.1:skill:investigation',
+      modifier_mode: 'advantage',
+      flat_adjustment: -1,
+      visibility: 'roller_and_dm',
+      label: 'Search the door',
+      dc: 12,
+    },
+    created_at: NOW,
+  }
+}
+
 describe('SessionTableSurface message presentation', () => {
+  it('renders one structured roll.requested prompt in chat without exposing DC', () => {
+    for (const locale of ['zh-TW', 'en'] as const) {
+      const markup = renderToStaticMarkup(
+        <SessionTableSurface
+          roomId={ROOM_ID}
+          campaignId={CAMPAIGN_ID}
+          sessionId={SESSION_ID}
+          token="room-token"
+          snapshot={snapshot}
+          seats={seats}
+          characters={characters}
+          callerAccessSessionId="dm-access"
+          isCurrentDm={true}
+          initialStage={null}
+          events={[rollRequestedEvent()]}
+          copy={sessionCopy(locale)}
+          onError={() => undefined}
+        />,
+      )
+
+      expect(markup).toContain('session-chat__message--system')
+      expect(markup).toContain('Mira')
+      expect(markup).toContain('Serena')
+      expect(markup).toContain('Investigation')
+      expect(markup).toContain('Search the door')
+      expect(markup.match(/Search the door/g)).toHaveLength(1)
+      expect(markup).not.toContain('DC 12')
+    }
+  })
+
   it('renders acting-seat speakers for OOC and Whisper events without subjects', () => {
     const markup = renderToStaticMarkup(
       <SessionTableSurface

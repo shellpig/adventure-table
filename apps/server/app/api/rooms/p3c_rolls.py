@@ -9,6 +9,7 @@ from app.api.rooms.access import get_room_access_context
 from app.api.rooms.dependencies import get_roll_service, get_table_event_service
 from app.domain.rooms.exploration import ExplorationSubjectNotFoundError
 from app.domain.rooms.rolls import (
+    CheckReferenceInvalidError,
     FormalRollInput,
     QuickRollInput,
     RequestCheckInput,
@@ -70,6 +71,8 @@ def _map_roll_error(exc: Exception) -> APIError:
         return APIError(404, "roll_request_not_found", "RollRequest was not found in this Session")
     if isinstance(exc, RollRequestAlreadyResolvedError):
         return APIError(409, "roll_request_already_resolved", "RollRequest is already resolved")
+    if isinstance(exc, CheckReferenceInvalidError):
+        return APIError(422, "unknown_check_ref", str(exc))
     if isinstance(exc, RollInputInvalidError):
         return APIError(422, "invalid_roll_input", str(exc))
     if isinstance(exc, CharacterNotFoundError):

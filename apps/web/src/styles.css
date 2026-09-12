@@ -90,6 +90,7 @@ button { color: inherit; }
 .token-display-box { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; width: 100%; }
 .token-display-input { flex: 1 1 300px; min-width: 0; width: 100%; box-sizing: border-box; padding: 8px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .84rem; line-height: 1.45; border-radius: 8px; border: 1px solid var(--line); background: #070a0f; color: #c9d8ec; word-break: break-all; white-space: pre-wrap; resize: vertical; }
 .token-display-input:focus { outline: none; border-color: var(--gold-bright); box-shadow: 0 0 0 1px var(--gold-bright); }
+.ai-join-kit__text { margin: 8px 0; padding: 8px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .84rem; line-height: 1.45; border-radius: 8px; border: 1px solid var(--line); background: #070a0f; color: #c9d8ec; white-space: pre-wrap; word-break: break-all; }
 .token-copy-button { flex: 0 0 auto; min-height: 38px; padding: 0 16px; font-weight: 700; white-space: nowrap; }
 .token-copy-feedback { flex: 0 0 auto; color: #4ade80; font-size: .82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
 .sheet-tabs { position: sticky; z-index: 10; top: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 10px; border-bottom: 1px solid var(--line); background: rgb(14 18 25 / 94%); backdrop-filter: blur(16px); }

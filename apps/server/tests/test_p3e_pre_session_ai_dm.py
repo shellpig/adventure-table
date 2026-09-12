@@ -8,6 +8,7 @@ from app.domain.rooms.ai_controllers import AIControllerService
 from app.domain.rooms.ai_tools import AIToolApplicationService, AIToolScopeError
 from app.domain.rooms.sessions import SessionService
 from app.domain.rooms.table_events import TableEventService
+from app.mcp.guide import render_briefing
 from app.mcp.tools import tool_catalog
 from app.persistence.rooms.ai_controllers import AIControllerGrantRepository
 from app.persistence.rooms.sessions import SessionRepository
@@ -48,10 +49,9 @@ def test_pre_session_ai_dm_context_and_start_use_real_p3d_session_binding() -> N
 
         before = controller.authenticate(grant.token)
         assert before.session_id is None
-        assert [item["name"] for item in tool_catalog(before)] == [
-            "get_session_context",
-            "start_session",
-        ]
+        names_before = [item["name"] for item in tool_catalog(before)]
+        assert names_before[:2] == ["get_session_context", "start_session"]
+        assert "post_narration" in names_before
 
         context = facade.get_session_context(grant.token)
         assert context == {
@@ -61,6 +61,8 @@ def test_pre_session_ai_dm_context_and_start_use_real_p3d_session_binding() -> N
             "seat_id": str(dm_seat_id),
             "role": "dm",
             "start_available": True,
+            "briefing": render_briefing(role="dm", mode="pre_session"),
+            "temporary_instruction": None,
         }
 
         started = facade.start_session(grant.token)
@@ -68,12 +70,16 @@ def test_pre_session_ai_dm_context_and_start_use_real_p3d_session_binding() -> N
         assert started["dm_controller_kind"] == "ai"
         assert started["dm_controller_ai_grant_id"] == str(grant.grant_id)
         assert started["dm_controller_generation"] == grant.generation
+        # M04-C: a freshly started Session has an empty Stage, so the response
+        # itself tells the AI DM to set it before narrating.
+        assert started["stage_unset"] is True
+        assert started["next_required_action"] == "set_stage_text"
 
         after = controller.authenticate(grant.token)
         assert after.session_id is not None
         assert str(after.session_id) == started["id"]
         names = [item["name"] for item in tool_catalog(after)]
-        assert "start_session" not in names
+        assert names == names_before
         assert "post_narration" in names
         assert "request_check" in names
         assert "get_session_context" in names
