@@ -9,8 +9,11 @@ from starlette.concurrency import run_in_threadpool
 from app.api.rooms.ai_controllers import get_ai_controller_service
 from app.api.rooms.ai_oauth import get_ai_controller_oauth_service
 from app.domain.rooms.ai_controllers import AIControllerService
-from app.domain.rooms.ai_oauth import AIControllerOAuthService
-from app.mcp.auth import MCPAuthenticationError, authenticate_request
+from app.mcp.auth import (
+    MCPAuthenticationError,
+    OAUTH_ACCESS_TOKEN_PREFIX,
+    authenticate_request,
+)
 from app.mcp.dependencies import get_ai_tool_application_service
 from app.mcp.protocol import (
     MCP_PROTOCOL_VERSION,
@@ -53,13 +56,15 @@ def _protocol_error(request_id: Any, exc: MCPProtocolError) -> JSONResponse:
     )
 
 
+def _needs_oauth_service(request: Request) -> bool:
+    authorization = request.headers.get("authorization", "")
+    return authorization.startswith(f"Bearer {OAUTH_ACCESS_TOKEN_PREFIX}")
+
+
 @router.post("/mcp")
 async def mcp_endpoint(
     request: Request,
     ai_controller_service: AIControllerService = Depends(get_ai_controller_service),
-    ai_controller_oauth_service: AIControllerOAuthService = Depends(
-        get_ai_controller_oauth_service
-    ),
 ) -> JSONResponse:
     try:
         body = await request.json()
@@ -75,6 +80,11 @@ async def mcp_endpoint(
     except MCPProtocolError as exc:
         return _protocol_error(request_id, exc)
 
+    oauth_service = (
+        get_ai_controller_oauth_service(request)
+        if _needs_oauth_service(request)
+        else None
+    )
     try:
         # Token verification resolves the current grant/Seat scope and may touch
         # persistence. Keep that short synchronous DB work off the ASGI event loop,
@@ -83,7 +93,7 @@ async def mcp_endpoint(
             authenticate_request,
             request,
             ai_controller_service,
-            ai_controller_oauth_service,
+            oauth_service,
         )
     except MCPAuthenticationError as exc:
         return JSONResponse(
