@@ -22,24 +22,12 @@ const roomContextPath = resolve(webRoot, 'test-results', 'p2-room-context.json')
 
 const E2E_ROOM_PASSWORD = 'p2-e2e-room-pass'
 
-// Order matters. Session history RESTRICTs the Campaign and Seats it references,
-// and participant/controller references keep access sessions alive. Clear the
-// live lease + participant + Session graph before the older Campaign-owned rows;
-// then clear Room access/workspace state and finally Character/Draft state.
-// rooms.active_campaign_id is SET NULL and needs no separate step.
+// This database is disposable. Truncate the independent roots and let PostgreSQL
+// follow the complete FK graph; maintaining a manual DELETE order is brittle once
+// Session, AI grant and OAuth tables form cycles. ai_oauth_clients is an
+// independent root, while every other gameplay table hangs from rooms/characters.
 const SQL = `
-DELETE FROM active_character_session_leases;
-DELETE FROM session_participants;
-DELETE FROM sessions;
-DELETE FROM campaign_seats;
-DELETE FROM campaign_roster_entries;
-DELETE FROM campaigns;
-DELETE FROM room_access_sessions;
-DELETE FROM room_builder_drafts;
-DELETE FROM room_characters;
-DELETE FROM rooms;
-DELETE FROM characters;
-DELETE FROM character_build_drafts;
+TRUNCATE TABLE rooms, characters, ai_oauth_clients RESTART IDENTITY CASCADE;
 SELECT count(*) AS remaining_characters FROM characters;
 SELECT count(*) AS remaining_drafts FROM character_build_drafts;
 SELECT count(*) AS remaining_rooms FROM rooms;
@@ -48,6 +36,9 @@ SELECT count(*) AS remaining_seats FROM campaign_seats;
 SELECT count(*) AS remaining_sessions FROM sessions;
 SELECT count(*) AS remaining_participants FROM session_participants;
 SELECT count(*) AS remaining_active_leases FROM active_character_session_leases;
+SELECT count(*) AS remaining_events FROM session_events;
+SELECT count(*) AS remaining_ai_grants FROM ai_controller_grants;
+SELECT count(*) AS remaining_oauth_clients FROM ai_oauth_clients;
 `
 
 // The SQL goes in on stdin rather than through -c: it is multi-line, and a
@@ -103,7 +94,11 @@ export default async function globalSetup() {
   requireDisposableDatabase()
 
   console.log('[e2e-setup] clearing Character, Draft and Room state in the disposable E2E database')
-  run('docker', ['compose', 'exec', '-T', 'db', 'psql', '-U', 'adventure', '-d', 'adventure_table'], SQL)
+  run('docker', [
+    'compose', 'exec', '-T', 'db', 'psql',
+    '-v', 'ON_ERROR_STOP=1', '--single-transaction',
+    '-U', 'adventure', '-d', 'adventure_table',
+  ], SQL)
 
   console.log('[e2e-setup] re-seeding the P0 fixture character')
   run('docker', ['compose', 'exec', '-T', 'server', 'python', '-m', 'app.scripts.seed_p0_fighter_wizard'])
