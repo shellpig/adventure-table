@@ -61,7 +61,7 @@ M04 已拍板的核心方向：
 
 下一步依序為：
 
-1. **M04-C — AI Join Kit, Server-hosted Guide & Other Client Compatibility**：kit 依 M04-B 定案的入口形態（ChatGPT connector URL + OAuth 貼 token）產生；`M04-B_CLOSEOUT.md`「觀察」段列出的 AI 行為缺口（收到事件後不寫回桌上、start_session 後需 Refresh + 新對話）由 guide／briefing 承接。
+1. **M04-C — AI Join Kit, Server-hosted Guide & Other Client Compatibility**：kit 依 M04-B 定案的入口形態（ChatGPT connector URL + OAuth 貼 token）產生；`M04-B_CLOSEOUT.md`「觀察」段列出的 AI 行為缺口（收到事件後不寫回桌上、start_session 後需 Refresh + 新對話）由 guide／briefing 承接；2026-09-12 拍板 MCP `wait_for_event` 上限 60 → 120 秒（M04-A 實測值）與「連續最多等 5 次（約 10 分鐘）後停下請人戳」指引規則，一併在 M04-C 交付。
 2. **P4 — Quick Combat 開工前置**：拆 `P4-A`、`P4-B`… Subphase 並產出 `docs/P4/` 三份文件；P4-A 承接 SRD Monster／Beast stat blocks。
 5. P5～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
 
