@@ -18,7 +18,6 @@ from app.api.dependencies import get_database_engine
 from app.api.rooms.ai_controllers import get_ai_controller_service
 from app.domain.rooms.ai_controllers import AIControllerService, AIControllerUnauthorizedError
 from app.persistence.mcp.oauth import OAuthPersistenceError, OAuthRepository
-from app.persistence.rooms.ai_controllers import AIControllerGrantUnauthorizedPersistenceError
 
 
 router = APIRouter(tags=["mcp-oauth"])
@@ -164,7 +163,9 @@ def _append_redirect_params(uri: str, params: dict[str, str]) -> str:
     current = parse_qs(parsed.query, keep_blank_values=True)
     for key, value in params.items():
         current[key] = [value]
-    query = urlencode([(key, item) for key, values in current.items() for item in values])
+    query = urlencode(
+        [(key, item) for key, values in current.items() for item in values]
+    )
     return urlunparse(parsed._replace(query=query))
 
 
@@ -230,10 +231,7 @@ def _preferred_locale(request: Request, explicit: str | None) -> str:
 
 
 def _validate_current_grant(service: AIControllerService, grant_id: UUID) -> None:
-    try:
-        service.repository.resolve_current_scope(grant_id, touch=True)
-    except AIControllerGrantUnauthorizedPersistenceError as exc:
-        raise AIControllerUnauthorizedError("AI controller grant is invalid") from exc
+    service.authenticate_grant(grant_id, touch=True)
 
 
 @router.get("/.well-known/oauth-protected-resource")
@@ -281,7 +279,9 @@ async def register_client(
                 "Only public clients with token_endpoint_auth_method=none are supported",
             )
         response_types = payload.get("response_types", ["code"])
-        grant_types = payload.get("grant_types", ["authorization_code", "refresh_token"])
+        grant_types = payload.get(
+            "grant_types", ["authorization_code", "refresh_token"]
+        )
         if response_types != ["code"] or not isinstance(grant_types, list):
             raise OAuthRequestError(
                 "invalid_client_metadata",
@@ -293,7 +293,9 @@ async def register_client(
                 "authorization_code grant is required",
             )
         client_name = payload.get("client_name")
-        if client_name is not None and (not isinstance(client_name, str) or len(client_name) > 200):
+        if client_name is not None and (
+            not isinstance(client_name, str) or len(client_name) > 200
+        ):
             raise OAuthRequestError("invalid_client_metadata", "client_name is invalid")
     except OAuthRequestError as exc:
         return _oauth_error(exc.error, exc.description, exc.status_code)
@@ -360,7 +362,11 @@ async def authorize_post(
     locale = _preferred_locale(request, values.get("locale"))
     token = values.get("ai_join_token", "").strip()
     try:
-        auth = await run_in_threadpool(ai_controller_service.authenticate, token, touch=True)
+        auth = await run_in_threadpool(
+            ai_controller_service.authenticate,
+            token,
+            touch=True,
+        )
     except AIControllerUnauthorizedError:
         return HTMLResponse(
             _authorize_page(auth_request, locale=locale, error=True),
@@ -411,20 +417,36 @@ async def _authorization_code_exchange(
     client_id = values.get("client_id", "")
     redirect_uri = values.get("redirect_uri", "")
     if not code or not verifier or not client_id or not redirect_uri:
-        return _oauth_error("invalid_grant", "code, code_verifier, client_id and redirect_uri are required")
+        return _oauth_error(
+            "invalid_grant",
+            "code, code_verifier, client_id and redirect_uri are required",
+        )
 
     code_hash = _hash_secret(code)
     stored = await run_in_threadpool(repository.get_authorization_code, code_hash)
-    if stored is None or stored.consumed_at is not None or _as_utc(stored.expires_at) <= _now():
-        return _oauth_error("invalid_grant", "Authorization code is invalid, expired, or already used")
-    authorization = await run_in_threadpool(repository.get_authorization, stored.authorization_id)
+    if (
+        stored is None
+        or stored.consumed_at is not None
+        or _as_utc(stored.expires_at) <= _now()
+    ):
+        return _oauth_error(
+            "invalid_grant",
+            "Authorization code is invalid, expired, or already used",
+        )
+    authorization = await run_in_threadpool(
+        repository.get_authorization,
+        stored.authorization_id,
+    )
     if (
         authorization is None
         or authorization.revoked_at is not None
         or authorization.client_id != client_id
         or stored.redirect_uri != redirect_uri
     ):
-        return _oauth_error("invalid_grant", "Authorization code does not match this client")
+        return _oauth_error(
+            "invalid_grant",
+            "Authorization code does not match this client",
+        )
     try:
         challenge = _pkce_s256(verifier)
     except (UnicodeEncodeError, ValueError):
@@ -433,14 +455,28 @@ async def _authorization_code_exchange(
         return _oauth_error("invalid_grant", "PKCE verification failed")
 
     try:
-        await run_in_threadpool(_validate_current_grant, service, authorization.grant_id)
+        await run_in_threadpool(
+            _validate_current_grant,
+            service,
+            authorization.grant_id,
+        )
     except AIControllerUnauthorizedError:
         await run_in_threadpool(repository.revoke_authorization, authorization.id)
-        return _oauth_error("invalid_grant", "The bound Adventure Table authorization is no longer active")
+        return _oauth_error(
+            "invalid_grant",
+            "The bound Adventure Table authorization is no longer active",
+        )
 
-    consumed = await run_in_threadpool(repository.consume_authorization_code, code_hash, now=_now())
+    consumed = await run_in_threadpool(
+        repository.consume_authorization_code,
+        code_hash,
+        now=_now(),
+    )
     if not consumed:
-        return _oauth_error("invalid_grant", "Authorization code is invalid, expired, or already used")
+        return _oauth_error(
+            "invalid_grant",
+            "Authorization code is invalid, expired, or already used",
+        )
 
     access_token = _mint(ACCESS_TOKEN_PREFIX)
     refresh_token = _mint(REFRESH_TOKEN_PREFIX)
@@ -455,7 +491,10 @@ async def _authorization_code_exchange(
             refresh_expires_at=now + REFRESH_TOKEN_TTL,
         )
     except OAuthPersistenceError:
-        return _oauth_error("invalid_grant", "The authorization is no longer active")
+        return _oauth_error(
+            "invalid_grant",
+            "The authorization is no longer active",
+        )
     return JSONResponse(
         content={
             "access_token": access_token,
@@ -475,24 +514,46 @@ async def _refresh_exchange(
     refresh_token = values.get("refresh_token", "")
     client_id = values.get("client_id", "")
     if not refresh_token or not client_id:
-        return _oauth_error("invalid_grant", "refresh_token and client_id are required")
+        return _oauth_error(
+            "invalid_grant",
+            "refresh_token and client_id are required",
+        )
     token_hash = _hash_secret(refresh_token)
     stored = await run_in_threadpool(repository.get_token, token_hash)
     if stored is None or stored.kind != "refresh":
         return _oauth_error("invalid_grant", "Refresh token is invalid")
-    authorization = await run_in_threadpool(repository.get_authorization, stored.authorization_id)
+    authorization = await run_in_threadpool(
+        repository.get_authorization,
+        stored.authorization_id,
+    )
     if authorization is None or authorization.client_id != client_id:
-        return _oauth_error("invalid_grant", "Refresh token does not match this client")
+        return _oauth_error(
+            "invalid_grant",
+            "Refresh token does not match this client",
+        )
     if stored.revoked_at is not None:
         await run_in_threadpool(repository.revoke_authorization, authorization.id)
-        return _oauth_error("invalid_grant", "Refresh token reuse revoked this authorization")
+        return _oauth_error(
+            "invalid_grant",
+            "Refresh token reuse revoked this authorization",
+        )
     if authorization.revoked_at is not None or _as_utc(stored.expires_at) <= _now():
-        return _oauth_error("invalid_grant", "Refresh token is invalid or expired")
+        return _oauth_error(
+            "invalid_grant",
+            "Refresh token is invalid or expired",
+        )
     try:
-        await run_in_threadpool(_validate_current_grant, service, authorization.grant_id)
+        await run_in_threadpool(
+            _validate_current_grant,
+            service,
+            authorization.grant_id,
+        )
     except AIControllerUnauthorizedError:
         await run_in_threadpool(repository.revoke_authorization, authorization.id)
-        return _oauth_error("invalid_grant", "The bound Adventure Table authorization is no longer active")
+        return _oauth_error(
+            "invalid_grant",
+            "The bound Adventure Table authorization is no longer active",
+        )
 
     new_access = _mint(ACCESS_TOKEN_PREFIX)
     new_refresh = _mint(REFRESH_TOKEN_PREFIX)
@@ -510,7 +571,10 @@ async def _refresh_exchange(
     except OAuthPersistenceError:
         return _oauth_error("invalid_grant", "Refresh token is invalid")
     if replay:
-        return _oauth_error("invalid_grant", "Refresh token reuse revoked this authorization")
+        return _oauth_error(
+            "invalid_grant",
+            "Refresh token reuse revoked this authorization",
+        )
     return JSONResponse(
         content={
             "access_token": new_access,
@@ -528,18 +592,33 @@ async def token_endpoint(
     repository: OAuthRepository = Depends(get_oauth_repository),
     ai_controller_service: AIControllerService = Depends(get_ai_controller_service),
 ) -> JSONResponse:
-    if request.headers.get("content-type", "").split(";", 1)[0].strip().lower() != "application/x-www-form-urlencoded":
-        return _oauth_error("invalid_request", "Content-Type must be application/x-www-form-urlencoded")
+    content_type = request.headers.get("content-type", "").split(";", 1)[0]
+    if content_type.strip().lower() != "application/x-www-form-urlencoded":
+        return _oauth_error(
+            "invalid_request",
+            "Content-Type must be application/x-www-form-urlencoded",
+        )
     try:
         values = _parse_form_body(await request.body())
     except OAuthRequestError as exc:
         return _oauth_error(exc.error, exc.description, exc.status_code)
     grant_type = values.get("grant_type")
     if grant_type == "authorization_code":
-        return await _authorization_code_exchange(values, repository, ai_controller_service)
+        return await _authorization_code_exchange(
+            values,
+            repository,
+            ai_controller_service,
+        )
     if grant_type == "refresh_token":
-        return await _refresh_exchange(values, repository, ai_controller_service)
-    return _oauth_error("unsupported_grant_type", "Only authorization_code and refresh_token are supported")
+        return await _refresh_exchange(
+            values,
+            repository,
+            ai_controller_service,
+        )
+    return _oauth_error(
+        "unsupported_grant_type",
+        "Only authorization_code and refresh_token are supported",
+    )
 
 
 @router.post("/mcp/oauth/revoke")
@@ -553,8 +632,14 @@ async def revoke_endpoint(
         return Response(status_code=200)
     token = values.get("token", "")
     if token:
-        await run_in_threadpool(repository.revoke_token_family, _hash_secret(token))
-    return Response(status_code=200, headers={"Cache-Control": "no-store"})
+        await run_in_threadpool(
+            repository.revoke_token_family,
+            _hash_secret(token),
+        )
+    return Response(
+        status_code=200,
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 __all__ = [
