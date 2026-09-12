@@ -9,7 +9,7 @@ export type ChatColorItem = {
 
 export const CHAT_COLOR_PALETTE: readonly ChatColorItem[] = [
   { value: '#f8fafc', label: { 'zh-TW': '雪白', en: 'Snow White' } },
-  { value: '#cbd5e1', label: { 'zh-TW': '皓銀', en: 'Silver Gray' } },
+  { value: '#94a3b8', label: { 'zh-TW': '皓灰', en: 'Slate Gray' } },
   { value: '#facc15', label: { 'zh-TW': '金黃', en: 'Radiant Gold' } },
   { value: '#fb923c', label: { 'zh-TW': '琥珀', en: 'Amber Orange' } },
   { value: '#f87171', label: { 'zh-TW': '赤紅', en: 'Coral Red' } },
@@ -63,8 +63,11 @@ export function readSpeakerColors(
     if (typeof parsed !== 'object' || parsed === null) return {}
     const result: Record<string, string> = {}
     for (const [key, val] of Object.entries(parsed)) {
-      if (typeof key === 'string' && typeof val === 'string' && isValidChatColor(val)) {
-        result[key] = val
+      if (typeof key === 'string' && typeof val === 'string') {
+        const normalized = val.toLowerCase() === '#cbd5e1' ? '#94a3b8' : val
+        if (isValidChatColor(normalized)) {
+          result[key] = normalized
+        }
       }
     }
     return result

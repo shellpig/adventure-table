@@ -137,7 +137,23 @@ export function SessionTableSurface({
   const [colorPickerSpeakerKey, setColorPickerSpeakerKey] = useState<string | null>(null)
   const colorPickerRef = useRef<HTMLDivElement>(null)
 
-  const activeSpeakerKey = composerKind === 'narration' ? 'dm' : (subjectSeatId || 'dm')
+  const callerSeatId = useMemo(() => {
+    if (isCurrentDm) return snapshot.dm_seat_id
+    if (callerAccessSessionId) {
+      const match = snapshot.participants.find(
+        (p) => p.controller_access_session_id_at_join === callerAccessSessionId,
+      )
+      if (match) return match.seat_id
+      const seatMatch = seats.find(
+        (s) => s.controller_access_session_id === callerAccessSessionId,
+      )
+      if (seatMatch) return seatMatch.id
+    }
+    return null
+  }, [isCurrentDm, snapshot.dm_seat_id, snapshot.participants, seats, callerAccessSessionId])
+
+  const fallbackSpeakerKey = isCurrentDm ? 'dm' : (callerSeatId || 'dm')
+  const activeSpeakerKey = composerKind === 'narration' ? 'dm' : (subjectSeatId || fallbackSpeakerKey)
   const activeTargetSpeakerKey = colorPickerSpeakerKey || activeSpeakerKey
   const activeColor = speakerColors[activeTargetSpeakerKey] || DEFAULT_CHAT_COLOR
 

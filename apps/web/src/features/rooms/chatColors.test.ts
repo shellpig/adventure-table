@@ -71,6 +71,17 @@ describe('Chat Speaker 16-Color Palette', () => {
     expect(readSpeakerColors(storage)).toEqual({ 'seat-2': '#2dd4bf' })
   })
 
+  it('automatically migrates legacy silver gray #cbd5e1 to darker slate gray #94a3b8', () => {
+    const storage = new MemoryStorage()
+    storage.setItem(
+      CHAT_SPEAKER_COLORS_STORAGE_KEY,
+      JSON.stringify({ 'seat-legacy': '#cbd5e1' }),
+    )
+
+    const colors = readSpeakerColors(storage)
+    expect(colors).toEqual({ 'seat-legacy': '#94a3b8' })
+  })
+
   it('falls back safely when storage is null or throws', () => {
     expect(readSpeakerColors(null)).toEqual({})
     expect(writeSpeakerColor('seat-1', '#facc15', null)).toEqual({})
