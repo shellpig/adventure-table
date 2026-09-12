@@ -11,7 +11,11 @@ from app.domain.rooms.ai_guidance import (
     wait_rule,
 )
 from app.mcp.guide_tool_names import guide_tool_names
-from app.mcp.protocol import MCP_PROTOCOL_VERSION
+from app.mcp.protocol import (
+    CLIENT_CAPABILITIES_META_KEY,
+    MCP_PROTOCOL_VERSION,
+    PROTOCOL_VERSION_META_KEY,
+)
 from app.mcp.tools import tool_reference_rows
 
 Locale = Literal["en", "zh-TW"]
@@ -49,10 +53,13 @@ def call(name, arguments=None):
         "jsonrpc": "2.0",
         "id": name,
         "method": "tools/call",
-        "params": {{"name": name, "arguments": arguments or {{}}}},
-        "_meta": {{
-            "io.modelcontextprotocol/protocolVersion": VERSION,
-            "clientCapabilities": {{}},
+        "params": {{
+            "name": name,
+            "arguments": arguments or {{}},
+            "_meta": {{
+                "{PROTOCOL_VERSION_META_KEY}": VERSION,
+                "{CLIENT_CAPABILITIES_META_KEY}": {{}},
+            }},
         }},
     }}
     req = urllib.request.Request(
@@ -70,7 +77,7 @@ def call(name, arguments=None):
     with urllib.request.urlopen(req, timeout=135) as response:
         return json.load(response)
 
-def wait(after_seq, timeout=120):
+def wait(after_seq, timeout={WAIT_TIMEOUT_SECONDS}):
     return call("{names.wait_event}", {{
         "after_seq": after_seq,
         "limit": 50,
@@ -84,35 +91,29 @@ print(json.dumps(context, ensure_ascii=False, indent=2))
 
 
 def _response_examples(locale: Locale) -> str:
+    names = guide_tool_names()
+    success = (
+        '{"jsonrpc":"2.0","id":"' + names.context
+        + '","result":{"structuredContent":{"ok":true,"data":{"mode":"active_session"}},"isError":false}}'
+    )
+    business = (
+        '{"jsonrpc":"2.0","id":"' + names.request_check
+        + '","result":{"structuredContent":{"ok":false,"error":{"code":"permission_denied","messages":{"en":"...","zh-TW":"..."}}},"isError":true}}'
+    )
+    protocol = '{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"...","data":{"code":"mcp_invalid_request"}}}'
     if locale == "zh-TW":
-        return '''【三種回應形態】
-成功（讀 `result.structuredContent.data`）：
-```json
-{"jsonrpc":"2.0","id":"get_session_context","result":{"structuredContent":{"ok":true,"data":{"mode":"active_session"}},"isError":false}}
-```
-業務錯誤（HTTP 可為 200；讀 `result.isError` 與 `structuredContent.error`）：
-```json
-{"jsonrpc":"2.0","id":"request_check","result":{"structuredContent":{"ok":false,"error":{"code":"permission_denied","messages":{"en":"...","zh-TW":"..."}}},"isError":true}}
-```
-協定錯誤（JSON-RPC `error`，並帶穩定 code）：
-```json
-{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"...","data":{"code":"mcp_invalid_request"}}}
-```
-'''
-    return '''[Three response shapes]
-Success (read `result.structuredContent.data`):
-```json
-{"jsonrpc":"2.0","id":"get_session_context","result":{"structuredContent":{"ok":true,"data":{"mode":"active_session"}},"isError":false}}
-```
-Business error (HTTP may still be 200; read `result.isError` and `structuredContent.error`):
-```json
-{"jsonrpc":"2.0","id":"request_check","result":{"structuredContent":{"ok":false,"error":{"code":"permission_denied","messages":{"en":"...","zh-TW":"..."}}},"isError":true}}
-```
-Protocol error (JSON-RPC `error` with a stable code):
-```json
-{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"...","data":{"code":"mcp_invalid_request"}}}
-```
-'''
+        return (
+            "【三種回應形態】\n"
+            "成功（讀 `result.structuredContent.data`）：\n```json\n" + success + "\n```\n"
+            "業務錯誤（HTTP 可為 200；讀 `result.isError` 與 `structuredContent.error`）：\n```json\n" + business + "\n```\n"
+            "協定錯誤（JSON-RPC `error`，並帶穩定 code）：\n```json\n" + protocol + "\n```\n"
+        )
+    return (
+        "[Three response shapes]\n"
+        "Success (read `result.structuredContent.data`):\n```json\n" + success + "\n```\n"
+        "Business error (HTTP may still be 200; read `result.isError` and `structuredContent.error`):\n```json\n" + business + "\n```\n"
+        "Protocol error (JSON-RPC `error` with a stable code):\n```json\n" + protocol + "\n```\n"
+    )
 
 
 def _http_contract(locale: Locale) -> str:
@@ -120,14 +121,14 @@ def _http_contract(locale: Locale) -> str:
     if locale == "zh-TW":
         header = "【HTTP 契約】"
         notes = (
-            "不要送 Mcp-Session-Id；不需要 initialize。Body 的 _meta 必須包含 "
-            "io.modelcontextprotocol/protocolVersion 與 clientCapabilities。"
+            "不要送 Mcp-Session-Id；不需要 initialize。Body 的 params._meta 必須包含 "
+            f"{PROTOCOL_VERSION_META_KEY} 與 {CLIENT_CAPABILITIES_META_KEY}。"
         )
     else:
         header = "[HTTP contract]"
         notes = (
-            "Do not send Mcp-Session-Id; initialize is not required. Body _meta must include "
-            "io.modelcontextprotocol/protocolVersion and clientCapabilities."
+            "Do not send Mcp-Session-Id; initialize is not required. Body params._meta must include "
+            f"{PROTOCOL_VERSION_META_KEY} and {CLIENT_CAPABILITIES_META_KEY}."
         )
     return f'''{header}
 POST /mcp
