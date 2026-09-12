@@ -14,10 +14,10 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from starlette.concurrency import run_in_threadpool
 
-from app.api.dependencies import get_database_engine
 from app.api.rooms.ai_controllers import get_ai_controller_service
+from app.api.rooms.ai_oauth import get_ai_controller_oauth_service
 from app.domain.rooms.ai_controllers import AIControllerService, AIControllerUnauthorizedError
-from app.persistence.mcp.oauth import OAuthPersistenceError, OAuthRepository
+from app.domain.rooms.ai_oauth import AIControllerOAuthError, AIControllerOAuthService
 
 
 router = APIRouter(tags=["mcp-oauth"])
@@ -47,12 +47,10 @@ class OAuthRequestError(ValueError):
         self.status_code = status_code
 
 
-def get_oauth_repository(request: Request) -> OAuthRepository:
-    repository = getattr(request.app.state, "mcp_oauth_repository", None)
-    if repository is None:
-        repository = OAuthRepository(get_database_engine(request))
-        request.app.state.mcp_oauth_repository = repository
-    return repository
+def get_oauth_repository(request: Request) -> AIControllerOAuthService:
+    """Compatibility dependency name; transport receives the OAuth application service."""
+
+    return get_ai_controller_oauth_service(request)
 
 
 def _now() -> datetime:
@@ -132,7 +130,7 @@ def _validated_redirect_uris(payload: object) -> tuple[str, ...]:
 
 def _validate_authorization_request(
     values: dict[str, str],
-    repository: OAuthRepository,
+    repository: AIControllerOAuthService,
 ) -> AuthorizationRequest:
     if values.get("response_type") != "code":
         raise OAuthRequestError("unsupported_response_type", "response_type must be code")
@@ -263,7 +261,7 @@ def authorization_server_metadata(request: Request) -> dict[str, object]:
 @router.post("/mcp/oauth/register")
 async def register_client(
     request: Request,
-    repository: OAuthRepository = Depends(get_oauth_repository),
+    repository: AIControllerOAuthService = Depends(get_oauth_repository),
 ) -> JSONResponse:
     try:
         payload = await request.json()
@@ -325,7 +323,7 @@ async def register_client(
 @router.get("/mcp/oauth/authorize")
 async def authorize_get(
     request: Request,
-    repository: OAuthRepository = Depends(get_oauth_repository),
+    repository: AIControllerOAuthService = Depends(get_oauth_repository),
 ) -> Response:
     values = {key: value for key, value in request.query_params.items()}
     try:
@@ -346,7 +344,7 @@ async def authorize_get(
 @router.post("/mcp/oauth/authorize")
 async def authorize_post(
     request: Request,
-    repository: OAuthRepository = Depends(get_oauth_repository),
+    repository: AIControllerOAuthService = Depends(get_oauth_repository),
     ai_controller_service: AIControllerService = Depends(get_ai_controller_service),
 ) -> Response:
     try:
@@ -391,7 +389,7 @@ async def authorize_post(
             redirect_uri=auth_request.redirect_uri,
             expires_at=now + AUTHORIZATION_CODE_TTL,
         )
-    except OAuthPersistenceError:
+    except AIControllerOAuthError:
         return HTMLResponse(
             _authorize_page(auth_request, locale=locale, error=True),
             status_code=401,
@@ -409,7 +407,7 @@ async def authorize_post(
 
 async def _authorization_code_exchange(
     values: dict[str, str],
-    repository: OAuthRepository,
+    repository: AIControllerOAuthService,
     service: AIControllerService,
 ) -> JSONResponse:
     code = values.get("code", "")
@@ -490,7 +488,7 @@ async def _authorization_code_exchange(
             refresh_hash=_hash_secret(refresh_token),
             refresh_expires_at=now + REFRESH_TOKEN_TTL,
         )
-    except OAuthPersistenceError:
+    except AIControllerOAuthError:
         return _oauth_error(
             "invalid_grant",
             "The authorization is no longer active",
@@ -508,7 +506,7 @@ async def _authorization_code_exchange(
 
 async def _refresh_exchange(
     values: dict[str, str],
-    repository: OAuthRepository,
+    repository: AIControllerOAuthService,
     service: AIControllerService,
 ) -> JSONResponse:
     refresh_token = values.get("refresh_token", "")
@@ -568,7 +566,7 @@ async def _refresh_exchange(
             new_access_expires_at=now + ACCESS_TOKEN_TTL,
             now=now,
         )
-    except OAuthPersistenceError:
+    except AIControllerOAuthError:
         return _oauth_error("invalid_grant", "Refresh token is invalid")
     if replay:
         return _oauth_error(
@@ -589,7 +587,7 @@ async def _refresh_exchange(
 @router.post("/mcp/oauth/token")
 async def token_endpoint(
     request: Request,
-    repository: OAuthRepository = Depends(get_oauth_repository),
+    repository: AIControllerOAuthService = Depends(get_oauth_repository),
     ai_controller_service: AIControllerService = Depends(get_ai_controller_service),
 ) -> JSONResponse:
     content_type = request.headers.get("content-type", "").split(";", 1)[0]
@@ -624,7 +622,7 @@ async def token_endpoint(
 @router.post("/mcp/oauth/revoke")
 async def revoke_endpoint(
     request: Request,
-    repository: OAuthRepository = Depends(get_oauth_repository),
+    repository: AIControllerOAuthService = Depends(get_oauth_repository),
 ) -> Response:
     try:
         values = _parse_form_body(await request.body())
