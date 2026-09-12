@@ -24,24 +24,26 @@ const templateCopy = {
   'zh-TW': {
     copyFailed: '無法自動複製 Join Kit，請手動選取文字。',
     loopback: '提醒：目前 URL 是 loopback 位址；遠端 AI 必須能連到這台機器，否則請改用可公開存取的 origin。',
-    role: 'Role', endpoint: 'MCP URL', guide: 'Guide', token: 'AI Join Token', expires: 'Expires',
-    first: '第一步：連線後先呼叫 get_session_context。',
-    safety: '安全：Token 只顯示一次；不要轉傳或貼到不受信任的位置；使用完畢請由人類撤銷。',
+    role: 'Role', endpoint: 'URL', guide: 'Guide', token: 'Token', expires: 'Expires',
+    expiresFallback: '直到 Session 結束或被撤銷',
+    first: '連上後第一步一律呼叫 get_session_context。',
+    safety: '安全：此 token 只顯示這一次；勿轉傳；用完請 Owner／DM 在網站撤銷。',
     refresh: '若 Session 開始或改用不同 Role／Seat 後工具仍是舊清單，請 Refresh／重新掃描 connector；換 Role／Seat 必須重新授權。',
-    web: 'ChatGPT Web：新增 Adventure Table connector，URL 使用上方 MCP URL；OAuth 要求憑證時貼上此 token。',
-    client: 'MCP client：以 Bearer token 連到上方 MCP URL。',
-    http: '純 HTTP：只限有 shell 或可對外連網 code execution 的 AI；依 Guide 的 POST /mcp 契約呼叫。',
+    web: 'ChatGPT Web：新增 Adventure Table connector，URL 使用上方 URL；OAuth 要求憑證時貼上此 token。',
+    client: '有 MCP client：HTTP transport，header Authorization: Bearer {token}。',
+    http: '有 shell 或可對外連網 code execution、但沒有 MCP client：先讀上方 Guide，再依說明呼叫工具。網頁版 chat 請走 connector。',
   },
   en: {
     copyFailed: 'Could not copy the Join Kit automatically. Select and copy the text manually.',
     loopback: 'Note: this URL uses a loopback address. A remote AI must be able to reach this machine; otherwise use a publicly reachable origin.',
-    role: 'Role', endpoint: 'MCP URL', guide: 'Guide', token: 'AI Join Token', expires: 'Expires',
-    first: 'First step: after connecting, call get_session_context.',
-    safety: 'Security: this token is shown once; do not forward it or paste it into untrusted places; ask the human to revoke it when finished.',
+    role: 'Role', endpoint: 'URL', guide: 'Guide', token: 'Token', expires: 'Expires',
+    expiresFallback: 'until the Session ends or the grant is revoked',
+    first: 'After connecting, always call get_session_context first.',
+    safety: 'Security: this token is shown only once; do not forward it; ask the Owner/DM to revoke it when finished.',
     refresh: 'If tools are stale after Session start or a Role/Seat change, Refresh/rescan the connector. Changing Role/Seat requires a new authorization.',
-    web: 'ChatGPT Web: add the Adventure Table connector using the MCP URL above; paste this token when OAuth asks for the credential.',
-    client: 'MCP client: connect to the MCP URL above using this token as the Bearer credential.',
-    http: 'Raw HTTP: only for an AI with shell or outbound-network code execution; follow the Guide POST /mcp contract.',
+    web: 'ChatGPT Web: add the Adventure Table connector using the URL above; paste this token when OAuth asks for the credential.',
+    client: 'With an MCP client: use HTTP transport with header Authorization: Bearer {token}.',
+    http: 'With shell or outbound-network code execution but no MCP client: read the Guide above, then call tools as documented. Web chat should use the connector.',
   },
 } as const
 
@@ -59,15 +61,20 @@ export function buildAIJoinKit({ origin, token, role, locale, expiresAt }: JoinK
   const base = normalizedOrigin(origin)
   const endpoint = `${base}/mcp`
   const guide = `${base}/mcp/guide?locale=${locale}`
+  const displayRole = role === 'dm' ? 'DM' : 'Player'
   const lines = [
-    'Adventure Table AI Join Kit',
-    `${copy.role}: ${role}`,
+    'Adventure Table — AI Join Kit',
+    '==============================',
     `${copy.endpoint}: ${endpoint}`,
-    `${copy.guide}: ${guide}`,
     `${copy.token}: ${token}`,
-    `${copy.expires}: ${expiresAt ?? 'session/grant lifetime'}`,
-    '', copy.first, copy.safety, copy.refresh, '',
-    `1. ${copy.web}`, `2. ${copy.client}`, `3. ${copy.http}`,
+    `${copy.role}: ${displayRole}`,
+    `${copy.expires}: ${expiresAt ?? copy.expiresFallback}`,
+    `${copy.guide}: ${guide}`,
+    '', copy.first, copy.refresh, '',
+    `1. ${copy.web}`,
+    `2. ${copy.client.replace('{token}', token)}`,
+    `3. ${copy.http}`,
+    '', copy.safety,
   ]
   if (isLoopbackOrigin(base)) lines.push('', copy.loopback)
   return lines.join('\n')
