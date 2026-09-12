@@ -85,11 +85,14 @@ def authenticate_request(
             raise _unauthorized() from exc
         return MCPAuthenticatedRequest(token=token, auth=auth)
 
-    raise MCPAuthenticationError(
-        "ai_token_required",
-        "Adventure Table AI authorization is required",
-        "需要 Adventure Table AI 授權",
-    )
+    # Preserve the P3-E bearer contract: once a non-empty Bearer value is present,
+    # let the legacy authority parse/reject it. Unknown or malformed credentials are
+    # unauthorized, not equivalent to a missing credential.
+    try:
+        auth = service.authenticate(token, touch=True)
+    except AIControllerUnauthorizedError as exc:
+        raise _unauthorized() from exc
+    return MCPAuthenticatedRequest(token=token, auth=auth)
 
 
 __all__ = [
