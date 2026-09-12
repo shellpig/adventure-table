@@ -26,6 +26,7 @@ const SOURCE_FILES = [
   '../features/rooms/RoomSessionPage.tsx',
   '../features/rooms/SessionTableSurface.tsx',
   '../features/rooms/RoomWorkspacePage.tsx',
+  '../features/rooms/AIJoinKit.tsx',
 ] as const
 
 const ALLOWED_LITERAL_TEXT = new Set([
