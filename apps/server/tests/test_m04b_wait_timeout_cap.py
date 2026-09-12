@@ -7,6 +7,6 @@ from app.domain.rooms.ai_tools import WaitEventsInput
 
 
 def test_mcp_wait_timeout_capped_to_preflight_value() -> None:
-    assert WaitEventsInput(timeout=60).timeout == 60
+    assert WaitEventsInput(timeout=120).timeout == 120
     with pytest.raises(ValidationError):
-        WaitEventsInput(timeout=60.001)
+        WaitEventsInput(timeout=120.001)
