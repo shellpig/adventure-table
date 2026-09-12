@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import { listRoomCharacters, type RoomCharacterSummary } from '../../api/campaigns'
 import { heartbeatRoom } from '../../api/rooms'
@@ -28,6 +28,16 @@ import {
   type SessionEventStreamState,
 } from './sessionEventStream'
 import { SessionTableSurface } from './SessionTableSurface'
+import {
+  clampCardWidth,
+  DEFAULT_CARD_WIDTH,
+  MAX_CARD_WIDTH,
+  MIN_CARD_WIDTH,
+  readCardWidth,
+  resolveKeyboardCardWidth,
+  toggleCardWidth,
+  writeCardWidth,
+} from './sessionTableLayout'
 import { sessionCopy, sessionErrorMessage, type SessionCopy } from './sessionCopy'
 import './rooms.css'
 
@@ -110,6 +120,63 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   const [lateJoinSeatId, setLateJoinSeatId] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [cardWidth, setCardWidth] = useState(() => readCardWidth())
+  const cardRef = useRef<HTMLElement | null>(null)
+
+  const applyCardWidth = (nextWidth: number) => {
+    setCardWidth(nextWidth)
+    writeCardWidth(nextWidth)
+  }
+
+  const resizeCardFromPointer = (clientX: number, side: 'left' | 'right') => {
+    const card = cardRef.current
+    if (!card) return
+    const rect = card.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const targetWidth = side === 'right'
+      ? (clientX - centerX) * 2
+      : (centerX - clientX) * 2
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : undefined
+    applyCardWidth(clampCardWidth(targetWidth, viewportWidth))
+  }
+
+  const resizeCardFromKeyboard = (key: string): boolean => {
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : undefined
+    const nextWidth = resolveKeyboardCardWidth(cardWidth, key, viewportWidth)
+    if (nextWidth === null) return false
+    applyCardWidth(nextWidth)
+    return true
+  }
+
+  const handleToggleCardWidth = () => {
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : undefined
+    applyCardWidth(toggleCardWidth(cardWidth, viewportWidth))
+  }
+
+  const handleCardPointerDown = (
+    event: React.PointerEvent<HTMLDivElement>,
+    side: 'left' | 'right',
+  ) => {
+    if (event.button !== 0) return
+    event.currentTarget.setPointerCapture(event.pointerId)
+    resizeCardFromPointer(event.clientX, side)
+  }
+
+  const handleCardPointerMove = (
+    event: React.PointerEvent<HTMLDivElement>,
+    side: 'left' | 'right',
+  ) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      resizeCardFromPointer(event.clientX, side)
+    }
+  }
+
+  const handleCardPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+  }
+
   const reloadGeneration = useRef(0)
   const handleSessionTableError = useCallback(
     (cause: unknown) => setError(sessionErrorMessage(cause, copy)),
@@ -279,7 +346,47 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
 
   return (
     <main className="landing-page room-workspace-page">
-      <section className="landing-card room-workspace-card session-table-card">
+      <section
+        ref={cardRef}
+        className="landing-card room-workspace-card session-table-card"
+        style={{ '--session-card-width': `${cardWidth}px` } as CSSProperties}
+      >
+        <div
+          className="session-table-card__resize-handle session-table-card__resize-handle--left"
+          role="separator"
+          tabIndex={0}
+          aria-orientation="vertical"
+          aria-label={copy.resizeCard}
+          title={copy.resizeCardHint}
+          aria-valuemin={MIN_CARD_WIDTH}
+          aria-valuemax={MAX_CARD_WIDTH}
+          aria-valuenow={Math.round(cardWidth)}
+          onPointerDown={(event) => handleCardPointerDown(event, 'left')}
+          onPointerMove={(event) => handleCardPointerMove(event, 'left')}
+          onPointerUp={handleCardPointerUp}
+          onDoubleClick={handleToggleCardWidth}
+          onKeyDown={(event) => {
+            if (resizeCardFromKeyboard(event.key)) event.preventDefault()
+          }}
+        />
+        <div
+          className="session-table-card__resize-handle session-table-card__resize-handle--right"
+          role="separator"
+          tabIndex={0}
+          aria-orientation="vertical"
+          aria-label={copy.resizeCard}
+          title={copy.resizeCardHint}
+          aria-valuemin={MIN_CARD_WIDTH}
+          aria-valuemax={MAX_CARD_WIDTH}
+          aria-valuenow={Math.round(cardWidth)}
+          onPointerDown={(event) => handleCardPointerDown(event, 'right')}
+          onPointerMove={(event) => handleCardPointerMove(event, 'right')}
+          onPointerUp={handleCardPointerUp}
+          onDoubleClick={handleToggleCardWidth}
+          onKeyDown={(event) => {
+            if (resizeCardFromKeyboard(event.key)) event.preventDefault()
+          }}
+        />
         <h1>{copy.title}</h1>
         <p>{copy.intro}</p>
         <p><strong>{statusLabel}</strong></p>
@@ -287,6 +394,14 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
           <a className="button secondary" href={`/rooms/${roomId}/campaigns/${campaignId}/lobby`}>
             {copy.backLobby}
           </a>
+          <button
+            type="button"
+            className="button secondary session-table-card__width-toggle"
+            onClick={handleToggleCardWidth}
+            title={copy.resizeCardHint}
+          >
+            {cardWidth > DEFAULT_CARD_WIDTH + 60 ? copy.cardWidthDefault : copy.cardWidthExpand}
+          </button>
         </div>
         {error ? <div className="error-banner">{error}</div> : null}
         {snapshot.status === 'active' ? (

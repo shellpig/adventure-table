@@ -219,10 +219,12 @@ describe('Session route and presentation', () => {
     expect(source).not.toContain('onError={(cause)')
   })
 
-  it('keeps the desktop Session table wider than the legacy Room workspace card', () => {
+  it('keeps the desktop Session table wider than the legacy Room workspace card and supports resizing', () => {
     const source = readFileSync(new URL('./sessionTable.css', import.meta.url), 'utf8')
     expect(source).toContain('.room-workspace-card.session-table-card')
-    expect(source).toContain('width: min(1180px, 100%);')
+    expect(source).toContain('width: min(var(--session-card-width, 1180px), 100%);')
+    expect(source).toContain('min-width: min(1180px, 100%);')
+    expect(source).toContain('.session-table-card__resize-handle')
     expect(source).toContain('@media (max-width: 1080px)')
   })
 

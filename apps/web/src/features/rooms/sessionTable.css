@@ -1,5 +1,65 @@
 .room-workspace-card.session-table-card {
-  width: min(1180px, 100%);
+  position: relative;
+  width: min(var(--session-card-width, 1180px), 100%);
+  min-width: min(1180px, 100%);
+  max-width: min(calc(100vw - 32px), 2560px);
+}
+
+.session-table-card__resize-handle {
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  width: 16px;
+  cursor: ew-resize;
+  touch-action: none;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  outline: none;
+}
+
+.session-table-card__resize-handle--left {
+  left: -8px;
+}
+
+.session-table-card__resize-handle--right {
+  right: -8px;
+}
+
+.session-table-card__resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 28px;
+  bottom: 28px;
+  width: 4px;
+  border-radius: 4px;
+  background: var(--line);
+  opacity: 0.55;
+  transition: opacity 0.15s ease, background 0.15s ease, width 0.15s ease;
+}
+
+.session-table-card__resize-handle:hover::before,
+.session-table-card__resize-handle:active::before {
+  background: var(--gold-bright);
+  opacity: 1;
+  width: 6px;
+}
+
+.session-table-card__resize-handle:focus-visible::before {
+  background: var(--gold-bright);
+  opacity: 1;
+  width: 6px;
+}
+
+.session-table-card__resize-handle:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}
+
+.session-table-card__width-toggle {
+  white-space: nowrap;
 }
 
 .session-table {
@@ -589,6 +649,11 @@
 }
 
 @media (max-width: 1080px) {
+  .session-table-card__resize-handle,
+  .session-table-card__width-toggle {
+    display: none;
+  }
+
   .session-table__layout {
     grid-template-columns: 1fr;
   }
