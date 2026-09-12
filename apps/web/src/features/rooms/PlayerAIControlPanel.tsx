@@ -156,12 +156,9 @@ export function PlayerAIControlPanel({
               onChange={(event) => setInstruction(event.target.value)}
             />
           </label>
-          <button
-            className="button secondary session-ai-btn"
-            type="button"
-            disabled={pending}
-            onClick={() => void handoff()}
-          >{copy.letAiControl}</button>
+          <button className="button secondary session-ai-btn" type="button" disabled={pending} onClick={() => void handoff()}>
+            {copy.letAiControl}
+          </button>
         </div>
       ) : null}
 
@@ -170,17 +167,12 @@ export function PlayerAIControlPanel({
           <div className="session-ai-status-row">
             <p className="session-ai-status-label"><strong>{copy.aiControlling}</strong></p>
             {canSelfTakeBack ? (
-              <button
-                className="button secondary session-ai-btn"
-                type="button"
-                disabled={pending}
-                onClick={() => void takeBack()}
-              >{copy.takeBackControl}</button>
+              <button className="button secondary session-ai-btn" type="button" disabled={pending} onClick={() => void takeBack()}>
+                {copy.takeBackControl}
+              </button>
             ) : null}
           </div>
-          <p className="session-ai-hint">
-            {canSelfTakeBack ? copy.takeBackExactOriginHint : copy.aiTakeBackFailedRecovery}
-          </p>
+          <p className="session-ai-hint">{canSelfTakeBack ? copy.takeBackExactOriginHint : copy.aiTakeBackFailedRecovery}</p>
         </div>
       ) : null}
 
@@ -202,7 +194,14 @@ export function PlayerAIControlPanel({
             </button>
             {copied ? <span className="token-copy-feedback" role="status">{copy.aiTokenCopied}</span> : null}
           </div>
-          <AIJoinKit origin={window.location.origin} token={issued.token} role="player" locale={copy.locale} />
+          <AIJoinKit
+            origin={window.location.origin}
+            token={issued.token}
+            role="player"
+            locale={copy.locale}
+            expiresAt={issued.expires_at}
+            uiCopy={copy}
+          />
         </div>
       ) : null}
 
@@ -213,11 +212,7 @@ export function PlayerAIControlPanel({
           <div className="session-ai-recovery__row">
             <label className="session-ai-recovery__label">
               {copy.aiRecoveryTarget}
-              <select
-                value={recoveryTarget}
-                disabled={pending}
-                onChange={(event) => setRecoveryTarget(event.target.value)}
-              >
+              <select value={recoveryTarget} disabled={pending} onChange={(event) => setRecoveryTarget(event.target.value)}>
                 <option value="">{copy.aiRecoveryChoose}</option>
                 {controllers.map((controller) => (
                   <option key={controller.access_session_id} value={controller.access_session_id}>
@@ -233,7 +228,9 @@ export function PlayerAIControlPanel({
               type="button"
               disabled={pending || !recoveryTarget}
               onClick={() => void recover()}
-            >{copy.aiRecoverToHuman}</button>
+            >
+              {copy.aiRecoverToHuman}
+            </button>
           </div>
         </div>
       ) : null}
