@@ -209,16 +209,36 @@ def test_group_check_tracks_each_seat_from_waiting_to_rolled() -> None:
     engine = _engine()
     try:
         table = _setup(engine)
-        group_id, requests = table.service.request_check(
-            table.dm_actor,
-            RequestCheckInput(
-                target_seat_ids=(table.mira_seat.id, table.bran_seat.id),
-                request_type=RollRequestType.SKILL,
-                skill_ref=PERCEPTION,
-                dc=13,
-                label="Party listens at the door",
-            ),
+        request_input = RequestCheckInput(
+            target_seat_ids=(table.mira_seat.id, table.bran_seat.id),
+            request_type=RollRequestType.SKILL,
+            skill_ref=PERCEPTION,
+            dc=13,
+            label="Party listens at the door",
+            idempotency_key="group-check-prompt",
         )
+        group_id, requests = table.service.request_check(table.dm_actor, request_input)
+
+        replayed_group_id, replayed_requests = table.service.request_check(
+            table.dm_actor, request_input
+        )
+        assert replayed_group_id == group_id
+        assert [request.id for request in replayed_requests] == [request.id for request in requests]
+
+        requested_events = [
+            event
+            for event in table.events.list_after(
+                table.dm_actor, after_seq=0, limit=20
+            ).events
+            if event.kind == "roll.requested"
+        ]
+        assert len(requested_events) == 1
+        assert requested_events[0].recipient_seat_ids == (
+            table.mira_seat.id,
+            table.bran_seat.id,
+        )
+        assert requested_events[0].payload["label"] == "Party listens at the door"
+        assert "dc" not in requested_events[0].payload
 
         assert len({request.roll_group_id for request in requests}) == 1
         assert requests[0].roll_group_id == group_id

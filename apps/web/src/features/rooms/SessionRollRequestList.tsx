@@ -5,70 +5,12 @@ import {
   submitFormalRoll,
   type FormalRollSource,
   type RollModifierMode,
-  type RollRequestType,
   type RollRequestView,
   type RollSubmissionResponse,
 } from '../../api/p3c'
 import type { TableEvent } from '../../api/sessions'
 import type { SessionCopy } from './sessionCopy'
-
-function formatRequestType(type: RollRequestType, copy: SessionCopy): string {
-  switch (type) {
-    case 'ability': return copy.checkAbilityType
-    case 'skill': return copy.checkSkillType
-    case 'saving_throw': return copy.checkSaveType
-    case 'other': return copy.checkOtherType
-    default: return type
-  }
-}
-
-function formatTargetRef(request: RollRequestView, copy: SessionCopy): string | null {
-  if (request.skill_ref) {
-    const map: Record<string, string> = {
-      'srd5.1:skill:acrobatics': copy.skillAcrobatics,
-      'srd5.1:skill:animal-handling': copy.skillAnimalHandling,
-      'srd5.1:skill:arcana': copy.skillArcana,
-      'srd5.1:skill:athletics': copy.skillAthletics,
-      'srd5.1:skill:deception': copy.skillDeception,
-      'srd5.1:skill:history': copy.skillHistory,
-      'srd5.1:skill:insight': copy.skillInsight,
-      'srd5.1:skill:intimidation': copy.skillIntimidation,
-      'srd5.1:skill:investigation': copy.skillInvestigation,
-      'srd5.1:skill:medicine': copy.skillMedicine,
-      'srd5.1:skill:nature': copy.skillNature,
-      'srd5.1:skill:perception': copy.skillPerception,
-      'srd5.1:skill:performance': copy.skillPerformance,
-      'srd5.1:skill:persuasion': copy.skillPersuasion,
-      'srd5.1:skill:religion': copy.skillReligion,
-      'srd5.1:skill:sleight-of-hand': copy.skillSleightOfHand,
-      'srd5.1:skill:stealth': copy.skillStealth,
-      'srd5.1:skill:survival': copy.skillSurvival,
-    }
-    return map[request.skill_ref] ?? request.skill_ref
-  }
-  if (request.ability_ref) {
-    const map: Record<string, string> = {
-      'srd5.1:ability:str': copy.abilityStr,
-      'srd5.1:ability:dex': copy.abilityDex,
-      'srd5.1:ability:con': copy.abilityCon,
-      'srd5.1:ability:int': copy.abilityInt,
-      'srd5.1:ability:wis': copy.abilityWis,
-      'srd5.1:ability:cha': copy.abilityCha,
-    }
-    return map[request.ability_ref] ?? request.ability_ref
-  }
-  return null
-}
-
-function formatModifierMode(mode: RollModifierMode, copy: SessionCopy): string {
-  switch (mode) {
-    case 'advantage': return copy.checkAdvantage
-    case 'disadvantage': return copy.checkDisadvantage
-    case 'normal':
-    default:
-      return copy.checkNormal
-  }
-}
+import { formatModifierMode, formatRequestType, formatTargetRef } from './sessionRollPresentation'
 
 export function visibleRollResultTotal(
   requestId: string,

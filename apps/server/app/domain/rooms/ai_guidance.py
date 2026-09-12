@@ -16,13 +16,13 @@ def role_rule(*, role: str, locale: str) -> str:
                 "DM 回應玩家時一律用 post_narration 寫回桌上，不要只在承載 AI 的對話視窗回覆。"
                 "一般敘事以約 100–250 字為目標；秘密資訊不要寫入 Main Stage 或公開 narration。需要暗骰時使用 visibility=dm_only。"
                 "角色 HP、狀態等變更一律使用對應工具寫回桌上。所有可帶 idempotency_key 的寫入都要提供唯一值；"
-                "替 Player 角色說話或行動時必須帶 subject_seat_id。正式檢定用 request_check 建立，skill_ref 用技能名如 investigation、ability_ref 用屬性如 dexterity。"
+                "替 Player 角色說話或行動時必須帶 subject_seat_id。正式檢定用 request_check 建立；成功後桌上會自動顯示擲骰提示，不要只為同一次要求另發 post_narration。skill_ref 用技能名如 investigation、ability_ref 用屬性如 dexterity。"
             )
         return (
             "As DM, write player-facing responses back to the table with post_narration instead of replying only in the host chat. "
             "Aim for roughly 100–250 words for ordinary narration. Never put secrets on Main Stage or in public narration; use visibility=dm_only for secret rolls. "
             "Write HP/condition/state changes back through the appropriate tools. Provide a unique idempotency_key on every write that supports it, "
-            "and provide subject_seat_id when speaking or acting for a Player Seat. Create formal checks with request_check (skill_ref takes a skill name like investigation, ability_ref an ability like dexterity)."
+            "and provide subject_seat_id when speaking or acting for a Player Seat. Create formal checks with request_check; success automatically posts the roll prompt to table chat, so do not call post_narration merely to ask for the same roll (skill_ref takes a skill name like investigation, ability_ref an ability like dexterity)."
         )
     if role == "player":
         if locale == "zh-TW":
@@ -85,7 +85,7 @@ def _dm_loop(locale: str) -> str:
             "1) 讀 stage；stage_unset 為真（stage.text 空）時先呼叫 set_stage_text 建立目前場景。"
             "2) 用 post_narration 對玩家敘事（約 100–250 字；秘密不進 Stage／公開 narration，暗骰 visibility=dm_only）。"
             f"3) 立即呼叫 wait_for_event（timeout 最多 {WAIT_TIMEOUT_SECONDS} 秒）——不要停、不要回 host chat 等人再提示。"
-            "4) 收到 Player 的 dialogue／action 立即處理；需要檢定用 request_check。"
+            "4) 收到 Player 的 dialogue／action 立即處理；需要檢定用 request_check；它會自動顯示擲骰提示，不要只為同一次要求另發 post_narration。"
             "5) 場景實質變化時再用 set_stage_text 更新。"
             "6) 處理完事件後再次 wait_for_event，持續循環。"
             f"7) 只有連續 {WAIT_RETRY_COUNT} 次無事件（約 10 分鐘）、Session 結束或 host 明確喊停才停止。"
@@ -96,7 +96,7 @@ def _dm_loop(locale: str) -> str:
         "1) Read stage; when stage_unset is true (stage.text empty) call set_stage_text first to establish the current scene. "
         "2) Narrate to players with post_narration (~100-250 words; keep secrets off the Stage/public narration, use visibility=dm_only for hidden rolls). "
         f"3) Immediately call wait_for_event (timeout up to {WAIT_TIMEOUT_SECONDS}s) — do NOT stop or wait for a human prompt. "
-        "4) On a Player dialogue/action resolve it; for a check use request_check. "
+        "4) On a Player dialogue/action resolve it; for a check use request_check, which automatically posts the roll prompt; do not call post_narration merely to ask for the same roll. "
         "5) When the scene materially changes, update set_stage_text. "
         "6) After handling an event call wait_for_event again and repeat. "
         f"7) Stop only after {WAIT_RETRY_COUNT} consecutive empty waits (~10 min), Session end, or the host tells you to stop. "

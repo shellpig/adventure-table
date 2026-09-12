@@ -69,3 +69,13 @@ def test_descriptions_state_when_the_call_is_accepted() -> None:
     for name in DM_CATALOG - {"get_session_context", "start_session"}:
         assert "active_session_required" in rows[name], name
         assert "active_session_required" in rows[name].split(" / ", 1)[1], name
+
+
+def test_request_check_description_prevents_duplicate_roll_narration() -> None:
+    description = {
+        row["name"]: row["description"] for row in tool_reference_rows(None)
+    }["request_check"]
+    assert "automatically posts" in description
+    assert "自動" in description
+    assert "do not call post_narration" in description
+    assert "不要只為重複要求" in description

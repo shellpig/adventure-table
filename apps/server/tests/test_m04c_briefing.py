@@ -13,6 +13,8 @@ def test_active_dm_briefing_excludes_player_tools() -> None:
     briefing = render_briefing(role="dm", mode="active_session")
     assert "post_narration" in briefing
     assert "request_check" in briefing
+    assert "automatically posts the roll prompt" in briefing
+    assert "自動顯示擲骰提示" in briefing
     assert "quick_roll" not in briefing
     assert "whisper_dm" not in briefing
 

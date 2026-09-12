@@ -23,6 +23,7 @@ import {
   isExplorationEvent,
   parseExplorationComposer,
 } from './sessionExploration'
+import { formatRollRequestPrompt, isRollRequestEvent } from './sessionRollPresentation'
 import {
   checkIntentDisposition,
   type CheckIntent,
@@ -248,8 +249,8 @@ export function SessionTableSurface({
     return speakerSeatId ? seatLabel(speakerSeatId) : copy.ooc
   }
 
-  const explorationEvents = useMemo(
-    () => events.filter(isExplorationEvent).slice(-100),
+  const chatEvents = useMemo(
+    () => events.filter((event) => isExplorationEvent(event) || isRollRequestEvent(event)).slice(-100),
     [events],
   )
 
@@ -466,8 +467,22 @@ export function SessionTableSurface({
           {tab === 'chat' ? (
             <div className="session-chat">
               <div className="session-chat__messages" aria-live="polite">
-                {explorationEvents.length === 0 ? <p className="session-stage__empty">{copy.noMessages}</p> : null}
-                {explorationEvents.map((event) => {
+                {chatEvents.length === 0 ? <p className="session-stage__empty">{copy.noMessages}</p> : null}
+                {chatEvents.map((event) => {
+                  if (isRollRequestEvent(event)) {
+                    const targetLabels = event.recipient_seat_ids.map((seatId) => {
+                      const participant = snapshot.participants.find((item) => item.seat_id === seatId)
+                      return participant?.active_character_id
+                        ? characterName(participant.active_character_id)
+                        : seatLabel(seatId)
+                    })
+                    return (
+                      <article className="session-chat__message session-chat__message--system" key={`${event.session_id}:${event.seq}`}>
+                        <header><strong>{copy.system}</strong></header>
+                        <p>{formatRollRequestPrompt(event, targetLabels, copy)}</p>
+                      </article>
+                    )
+                  }
                   const speakerKey = getSpeakerKey(event, snapshot.dm_seat_id)
                   const speakerColor = speakerColors[speakerKey]
                   return (
