@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from functools import lru_cache
 from uuid import uuid4
 
 import pytest
@@ -28,6 +29,11 @@ DIRECT_SOURCES = {
     "content:subclass",
     "builder:ability-generation",
 }
+
+
+@lru_cache(maxsize=1)
+def _registry():
+    return load_default_content_registry()
 
 
 def _draft(payload: BuilderDraftPayload) -> BuilderDraft:
@@ -203,7 +209,7 @@ def _fighter_levels(target: int) -> tuple[BuilderLevelChoice, ...]:
 
 @pytest.mark.parametrize("target_level", range(1, 21))
 def test_ordered_fighter_progression_compiles_level_one_through_twenty(target_level: int) -> None:
-    registry = load_default_content_registry()
+    registry = _registry()
     payload = _payload(_fighter_levels(target_level))
     draft = _with_required_choices(payload, registry)
     result = compile_builder_draft(draft, registry)
@@ -222,7 +228,7 @@ def test_ordered_fighter_progression_compiles_level_one_through_twenty(target_le
 
 
 def test_direct_high_level_create_exposes_one_ordered_class_node_per_character_level() -> None:
-    registry = load_default_content_registry()
+    registry = _registry()
     payload = BuilderDraftPayload(
         basic=BuilderBasicInput(name="Rail"),
         target_level=10,
@@ -237,7 +243,7 @@ def test_direct_high_level_create_exposes_one_ordered_class_node_per_character_l
 
 
 def test_fighter_five_wizard_five_preserves_exact_acquisition_order_and_rebuilds_p0_shape() -> None:
-    registry = load_default_content_registry()
+    registry = _registry()
     levels = (
         _level(1, "fighter", hp=10),
         _level(2, "fighter", hp=6),
@@ -271,7 +277,7 @@ def test_fighter_five_wizard_five_preserves_exact_acquisition_order_and_rebuilds
 
 
 def test_interleaved_progression_tracks_class_level_not_total_level() -> None:
-    registry = load_default_content_registry()
+    registry = _registry()
     levels = (
         _level(1, "wizard", hp=6),
         _level(2, "fighter", hp=6),
@@ -296,7 +302,7 @@ def test_interleaved_progression_tracks_class_level_not_total_level() -> None:
 
 
 def test_starting_class_grants_do_not_reappear_when_multiclassing() -> None:
-    registry = load_default_content_registry()
+    registry = _registry()
     fighter_first = _with_required_choices(
         _payload(
             (
@@ -336,7 +342,7 @@ def test_starting_class_grants_do_not_reappear_when_multiclassing() -> None:
 
 
 def test_multiclass_prerequisites_block_target_and_existing_class_failures() -> None:
-    registry = load_default_content_registry()
+    registry = _registry()
     legal = _payload(
         (
             _level(1, "wizard", hp=6),
@@ -400,7 +406,7 @@ def test_multiclass_prerequisites_block_target_and_existing_class_failures() -> 
 
 
 def test_subclass_timing_rejects_missing_early_and_wrong_class_selections() -> None:
-    registry = load_default_content_registry()
+    registry = _registry()
     missing = compile_builder_draft(_draft(_payload(
         (
             _level(1, "fighter", hp=10),
@@ -429,7 +435,7 @@ def test_subclass_timing_rejects_missing_early_and_wrong_class_selections() -> N
 
 
 def test_automatic_features_follow_reached_class_levels_only() -> None:
-    registry = load_default_content_registry()
+    registry = _registry()
     first = compile_builder_draft(
         _with_required_choices(_payload(_fighter_levels(1)), registry), registry
     )
@@ -443,7 +449,7 @@ def test_automatic_features_follow_reached_class_levels_only() -> None:
 
 
 def test_hp_rules_distinguish_first_character_level_fixed_average_and_manual_rolls() -> None:
-    registry = load_default_content_registry()
+    registry = _registry()
     invalid_first = _payload((_level(1, "fighter", hp=6),))
     raw = invalid_first.model_dump(mode="python")
     raw["level_choices"][0]["hp_method"] = "fixed_average"
@@ -487,7 +493,7 @@ def test_hp_rules_distinguish_first_character_level_fixed_average_and_manual_rol
 
 
 def test_editing_an_earlier_node_marks_stale_downstream_subclass_as_needs_review() -> None:
-    registry = load_default_content_registry()
+    registry = _registry()
     valid = _payload(
         (
             _level(1, "fighter", hp=10),

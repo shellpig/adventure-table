@@ -138,6 +138,8 @@ cd apps/web && ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET=1 npm run test:e2e:do
 
 沒有設這個變數時 globalSetup 會直接中止並說明原因，不會動到資料。
 
+`character-sheet.spec.ts` 的 P0-F 三頁 full-page 截圖 smoke 預設跳過；要重新產出截圖時加 `ADVENTURE_TABLE_E2E_VISUAL_SMOKE=1`。
+
 Windows 上不要讓 Playwright 自己託管 vite：dev server 會在跑測試途中停止接受連線，造成數十個 `net::ERR_CONNECTION_REFUSED`。`playwright.config.ts` 會直接擋下這條路徑。根因與量測見 [`已知問題.md`](已知問題.md) 的 KI-ENV-001。
 
 第一次執行前先安裝 Chromium：

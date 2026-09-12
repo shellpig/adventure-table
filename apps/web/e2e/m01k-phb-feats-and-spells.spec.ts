@@ -48,6 +48,7 @@ async function chooseOption(page: Page, input: Locator, value: string, source?: 
   await expect(option).toHaveCount(1)
   const before = await currentDraftRevision(page)
   await option.click()
+  usedLabels.add(value)
   await expect(listbox).toBeHidden()
   await waitForDraftRevision(page, before)
 }
@@ -129,8 +130,8 @@ async function chooseFirstEnabled(page: Page, input: Locator, used: Set<string>)
 }
 
 async function fillEmptyComboboxes(page: Page, container: Locator) {
+  const used = await collectUsedLabels(page)
   for (let pass = 0; pass < 260; pass += 1) {
-    const used = await collectUsedLabels(page)
     const inputs = container.getByRole('combobox')
     let changed = false
     for (let index = 0; index < (await inputs.count()); index += 1) {
