@@ -8,6 +8,7 @@ from app.domain.rooms.ai_controllers import AIControllerService
 from app.domain.rooms.ai_tools import AIToolApplicationService, AIToolScopeError
 from app.domain.rooms.sessions import SessionService
 from app.domain.rooms.table_events import TableEventService
+from app.mcp.guide import render_briefing
 from app.mcp.tools import tool_catalog
 from app.persistence.rooms.ai_controllers import AIControllerGrantRepository
 from app.persistence.rooms.sessions import SessionRepository
@@ -61,6 +62,8 @@ def test_pre_session_ai_dm_context_and_start_use_real_p3d_session_binding() -> N
             "seat_id": str(dm_seat_id),
             "role": "dm",
             "start_available": True,
+            "briefing": render_briefing(role="dm", mode="pre_session"),
+            "temporary_instruction": None,
         }
 
         started = facade.start_session(grant.token)
