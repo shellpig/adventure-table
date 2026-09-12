@@ -10,15 +10,14 @@ permissions:
 
 jobs:
   housekeeping:
-    if: github.event.head_commit.message == 'chore(m04a): run closeout housekeeping'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Update project brief and remove this one-shot workflow
-        shell: python
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           brief = Path("PROJECT_BRIEF.md")
@@ -38,6 +37,7 @@ jobs:
           brief.write_text(text, encoding="utf-8")
 
           Path(".github/workflows/m04a-closeout-housekeeping.yml").unlink()
+          PY
       - name: Commit closeout SSOT update
         run: |
           git config user.name "github-actions[bot]"
