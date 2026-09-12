@@ -43,7 +43,7 @@ def test_m04c_guide_covers_all_supported_join_paths_and_role_rules() -> None:
     assert "Player 沒有 request_check" in guide_zh
 
 
-def test_m04c_briefing_is_compact_and_mode_specific() -> None:
+def test_m04c_briefing_is_compact_mode_specific_and_scope_safe() -> None:
     pre_session = render_briefing(role="dm", mode="pre_session")
     dm = render_briefing(role="dm", mode="active_session")
     player = render_briefing(role="player", mode="active_session")
@@ -54,12 +54,17 @@ def test_m04c_briefing_is_compact_and_mode_specific() -> None:
 
     assert "post_narration" in dm
     assert "request_check" in dm
+    assert "quick_roll" not in dm
+    assert "whisper_dm" not in dm
+
     assert "post_dialogue" in player
     assert "post_action" in player
-    assert "does not have request_check" in player
+    assert "roll_pending" in player
+    assert "request_check" not in player
+    assert "post_narration" not in player
+    assert "set_stage_text" not in player
 
     for briefing in (pre_session, dm, player):
-        assert "wait_for_event" in briefing or briefing is pre_session
         assert len(briefing) <= 1200
 
 

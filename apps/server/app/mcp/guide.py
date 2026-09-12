@@ -30,6 +30,14 @@ _PLAYER_RULE_ZH = (
     "Player 用 post_dialogue 說話、用 post_action 描述行動意圖。Player 沒有 request_check；"
     "需要檢定時先 post_action，等 DM 建立 Check，再用 roll_pending 或 submit_physical_roll。"
 )
+_PLAYER_BRIEFING_EN = (
+    "As Player, use post_dialogue for speech and post_action for intended actions. For a check, describe the "
+    "attempt with post_action, wait for the DM to create the Check, then use roll_pending or submit_physical_roll."
+)
+_PLAYER_BRIEFING_ZH = (
+    "Player 用 post_dialogue 說話、用 post_action 描述行動意圖。需要檢定時先 post_action，"
+    "等 DM 建立 Check，再用 roll_pending 或 submit_physical_roll 完成。"
+)
 
 
 def _wait_rule(locale: Locale) -> str:
@@ -60,8 +68,12 @@ def render_briefing(*, role: str, mode: str) -> str:
             "完整指引：GET /mcp/guide?locale=zh-TW。"
         )
 
-    role_en = _DM_RULE_EN if role == "dm" else _PLAYER_RULE_EN
-    role_zh = _DM_RULE_ZH if role == "dm" else _PLAYER_RULE_ZH
+    if role == "dm":
+        role_en = _DM_RULE_EN
+        role_zh = _DM_RULE_ZH
+    else:
+        role_en = _PLAYER_BRIEFING_EN
+        role_zh = _PLAYER_BRIEFING_ZH
     return (
         f"EN: {role_en} {_wait_rule('en')} Full guide: GET /mcp/guide?locale=en. "
         "If temporary_instruction is non-empty, follow it as an additional temporary instruction.\n"
