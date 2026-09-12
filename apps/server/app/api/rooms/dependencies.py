@@ -18,6 +18,7 @@ from app.domain.rooms.sessions import SessionService
 from app.domain.rooms.table_character_state import TableCharacterStateService
 from app.domain.rooms.table_events import TableEventService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
+from app.persistence.mcp.room_lifecycle import M04BSeatRepository, M04BSessionRepository
 from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.exploration import ExplorationRepository
 from app.persistence.rooms.exploration_messages import ExplorationMessageRepository
@@ -26,10 +27,8 @@ from app.persistence.rooms.p3c_character_state import TableCharacterStatePersist
 from app.persistence.rooms.p3c_pending import PendingActionRepository
 from app.persistence.rooms.p3c_rolls import RollRepository
 from app.persistence.rooms.repository import RoomRepository
-from app.persistence.rooms.seats import SeatRepository
 from app.persistence.rooms.session_live import SessionLiveRepository
 from app.persistence.rooms.session_resume import SessionResumeRepository
-from app.persistence.rooms.sessions import SessionRepository
 from app.persistence.rooms.table_runtime import TableEventRepository
 
 
@@ -89,7 +88,7 @@ def get_campaign_service(request: Request) -> CampaignService:
 def get_seat_service(request: Request) -> SeatService:
     service = getattr(request.app.state, "seat_service", None)
     if service is None:
-        service = SeatService(SeatRepository(get_database_engine(request)))
+        service = SeatService(M04BSeatRepository(get_database_engine(request)))
         request.app.state.seat_service = service
     return service
 
@@ -118,7 +117,7 @@ def get_session_service(request: Request) -> SessionService:
     if service is None:
         engine = get_database_engine(request)
         service = SessionService(
-            SessionRepository(engine),
+            M04BSessionRepository(engine),
             SessionLiveRepository(engine),
             get_table_event_service(request),
         )
