@@ -4,6 +4,8 @@ This directory is a deliberately standalone measurement harness for **M04-A**. I
 
 It exists to measure a real web-chat connector's OAuth discovery, dynamic client registration, MCP protocol shape, read/write behavior, tool-cache refresh, re-authorization, token refresh, and long-poll tolerance before M04-B chooses a production design.
 
+M04-A closed on 2026-09-12 with **ChatGPT Web on the tested personal Plus account** as the target platform. The retained evidence and architecture conclusions are in `docs/M04/M04-A_PREFLIGHT.md`.
+
 ## Safety boundary
 
 - Public listener: `0.0.0.0:8787` by default. The HTTPS tunnel must forward **only this port**.
@@ -59,7 +61,7 @@ For the A.5 refresh probe, it is useful to restart the harness with a short acce
 $env:M04A_ACCESS_TTL_SECONDS="30"
 ```
 
-`M04A_FORCE_SSE=0` is intentional: even when the client advertises `text/event-stream`, the first measurement returns JSON. If the real platform rejects that behavior, set `M04A_FORCE_SSE=1` and repeat the affected step; record both attempts in `docs/M04/M04-A_PREFLIGHT.md`.
+`M04A_FORCE_SSE=0` is intentional: even when the client advertises `text/event-stream`, the first measurement returns JSON. The real ChatGPT Web run accepted JSON while advertising both JSON and SSE, so the SSE fallback was not required.
 
 ## Automated self-checks
 
@@ -67,7 +69,7 @@ The repo-root `.venv` carries the development test dependencies. Run the M04-A t
 
 ```powershell
 cd .\tools\m04a-webchat-preflight
-..\..\.venv\Scripts\python.exe -m pytest .\test_redact.py .\test_server_contract.py -q
+..\..\.venv\Scripts\python.exe -m pytest .\test_redact.py .\test_server_contract.py .\test_hardening_regressions.py -q
 
 cd ..\..\apps\server
 $p3Regression = @(
@@ -79,7 +81,7 @@ $p3Regression = @(
 
 PowerShell 5.1 does **not** expand wildcard path arguments for native executables, so do not pass `test_p3d_*.py` directly to `python.exe`; the `Get-ChildItem` expansion above intentionally converts them into explicit paths.
 
-The tool-side suite covers symmetric secret masking, safe evidence-field preservation, actual JSONL secret absence, loopback bind/admin protection, metadata, DCR, OAuth+PKCE, failed-PKCE code preservation, refresh, role-scoped catalog, read/write calls, dynamic tool addition, and revoke behavior. The app-side isolation test is bidirectional: the preflight tool may not import `app.*`, and Adventure Table `app/*` may not import/reference this standalone tool.
+The tool-side suite covers symmetric secret masking, safe evidence-field preservation, actual JSONL secret absence, loopback bind/admin protection, metadata, DCR, OAuth+PKCE, failed-PKCE code preservation, refresh, role-scoped catalog, read/write calls, dynamic tool addition, revoke behavior, the restored OAuth-hardening regressions, and the ChatGPT-shaped MCP `2026-07-28` `server/discover` result envelope. The app-side isolation test is bidirectional: the preflight tool may not import `app.*`, and Adventure Table `app/*` may not import/reference this standalone tool.
 
 The focused GitHub Actions workflow is `.github/workflows/m04a-non-e2e.yml`. It intentionally runs no Playwright/E2E tests.
 
@@ -206,22 +208,36 @@ Get-Content .\logs\m04a-preflight.jsonl | ForEach-Object { $i++; "{0,5}: {1}" -f
 
 Record the relevant line numbers in `docs/M04/M04-A_PREFLIGHT.md`.
 
-## A.2-A.6 real web-chat procedure
+## A.2-A.6 real web-chat rerun procedure
 
-Follow the platform ladder in the M04 contract. As of 2026-09-11, the official-document check in `M04-A_PREFLIGHT.md` already classifies ChatGPT Plus as plan-limited for full MCP/write, so the live protocol probe moves to **Claude chat personal plan**.
-
-Use the connector URL:
+The completed M04-A run selected **ChatGPT Web** on the tested personal Plus account. To repeat the measurement, create a Developer Mode custom MCP app pointing at:
 
 ```text
 https://YOUR-PUBLIC-HOST/mcp
 ```
 
-For Claude web, add the remote custom connector under Customize → Connectors, connect it, and complete the OAuth page served by this harness. Then record each step below with the corresponding JSONL line numbers; do not commit the raw log.
+Choose OAuth and let ChatGPT discover the metadata/DCR flow. The harness authorization page uses only its temporary test role/password; production M04-B must instead authorize an already-existing P3-D grant/Seat.
 
-1. **A.2 OAuth** — complete one DM authorization. Record which metadata paths were called, whether `/register` was called, redirect URI shape, PKCE, scopes, token grant type, and whether refresh is later used.
-2. **A.3 Scan Tools** — record JSON-RPC method order, `MCP-Protocol-Version`, `Mcp-Session-Id` presence, `Accept`, and `_meta`. The server accepts any requested protocol version and supports `initialize`, `notifications/initialized`, `server/discover`, `tools/list`, `tools/call`, and `ping`.
-3. **A.4 Read + write** — ask Claude to call `get_context`, then `post_note`. Record the write-confirmation UX and whether confirmation can be disabled.
-4. **A.5 cache / refresh / re-auth** — while still authorized as DM, call loopback `POST /admin/add-tool`; observe whether `late_tool` appears without user action. Then re-authorize as Player and observe whether `dm_only_ping` disappears and what refresh/reconnect action is required. Next call loopback `POST /admin/revoke-all` and observe whether the platform refreshes, asks to authorize again, or surfaces an error. Finally compare two conversations using the same connector: compare their JSONL `observation.authorization_fingerprint` values to determine whether the same access credential was used without exposing the credential itself.
-5. **A.6 long poll** — call `wait_seconds` with 10, 30, and 60. If 60 succeeds, continue with 90 and 120. Record the tunnel provider/mode for every attempt. Any 90/120 failure seen only through a Quick Tunnel must be repeated through Tailscale Funnel or a stable/named tunnel before it is classified as a platform timeout.
+The measured ChatGPT contract is:
 
-Do not infer M04-B behavior until those observations are written into `docs/M04/M04-A_PREFLIGHT.md` under the six fixed architecture-conclusion headings.
+```text
+openai-mcp/1.0.0
+MCP-Protocol-Version: 2026-07-28
+server/discover -> tools/list -> tools/call
+Mcp-Session-Id: absent
+Accept: application/json, text/event-stream
+JSON responses accepted
+```
+
+The first live attempt exposed an important harness defect: ChatGPT stopped after the old placeholder `server/discover` response. Commit `2c02049fdc8a45331e8ca9c7a40b3e7db276db89` aligned the harness with Adventure Table P3-E's formal `2026-07-28` result envelope (`supportedVersions`, `capabilities.tools = {}`, `resultType`, cache fields and `_meta` server info); after restart/reconnect, tool discovery and calls succeeded.
+
+For a rerun:
+
+1. **OAuth** — record metadata/DCR, callback shape, PKCE S256, scopes, code exchange and later refresh.
+2. **Protocol** — confirm the method order and headers above; do not assume legacy `initialize`.
+3. **Read/write** — call `get_context`, then `post_note`, then `get_context` again to verify the note count changed.
+4. **Catalog cache** — enable `late_tool` through the loopback admin listener. The completed run found no automatic refresh even after the advertised 30-second TTL; connector **Refresh** discovered the tool, and a **new conversation** was required to receive the refreshed schema.
+5. **Role/revoke** — DM exposes `dm_only_ping`; Player does not. `revoke-all` made ChatGPT require reconnect; reconnect restored existing conversations when their tool schema was unchanged. Different conversations using the same DM connector were observed with different access-token fingerprints.
+6. **Long poll** — the completed Tailscale Funnel run passed 10, 30, 60, 90 and 120 seconds. Do not infer behavior beyond 120 seconds.
+
+The authoritative closeout evidence and M04-B decisions remain in `docs/M04/M04-A_PREFLIGHT.md`.
