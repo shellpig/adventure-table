@@ -5,16 +5,15 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
+import pytest
 
-from app.api.rooms.ai_oauth import AIControllerOAuthConfig
 from app.domain.rooms.ai_controllers import AIControllerAuthView
 from app.domain.rooms.ai_tools import AIToolApplicationService
-from app.domain.rooms.runtime import build_default_container
 from app.mcp.guide import WAIT_RETRY_COUNT, render_briefing, render_guide
 from app.mcp.protocol import CACHE_SCOPE, CACHE_TTL_MS, MCP_PROTOCOL_VERSION, result_payload
 from app.mcp.server import mcp_guide
-from app.mcp.standalone import create_standalone_mcp_app
 from app.mcp.tools import tool_catalog, tool_reference_rows
+from tests.m03e_support import loaded_standalone
 
 
 PLAYER_ACTIVE_TOOLS = {
@@ -61,17 +60,6 @@ def _auth(*, role: str, active: bool) -> AIControllerAuthView:
     )
 
 
-def _standalone_app(tmp_path: Path):
-    container = build_default_container(tmp_path / "m04c-standalone.db")
-    return create_standalone_mcp_app(
-        container,
-        oauth_config=AIControllerOAuthConfig(
-            public_base_url="https://table.example",
-            client_id="m04c-test-client",
-        ),
-    )
-
-
 def test_m04c_public_guide_is_static_secret_free_and_db_independent() -> None:
     handler_source = inspect.getsource(mcp_guide)
     assert "Depends(" not in handler_source
@@ -86,9 +74,12 @@ def test_m04c_public_guide_is_static_secret_free_and_db_independent() -> None:
         assert "Keep the lantern lit." not in guide
 
 
-def test_m04c_standalone_mcp_does_not_mount_web_guide(tmp_path: Path) -> None:
-    with TestClient(_standalone_app(tmp_path)) as client:
-        response = client.get("/mcp/guide?locale=en")
+def test_m04c_standalone_app_does_not_mount_web_guide(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with loaded_standalone(monkeypatch, tmp_path) as standalone:
+        response = TestClient(standalone.app).get("/mcp/guide?locale=en")
 
     assert response.status_code == 404
 
