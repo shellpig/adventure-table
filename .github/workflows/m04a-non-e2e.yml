@@ -1,0 +1,39 @@
+name: M04-A Non-E2E Regression
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  m04a:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install backend development dependencies
+        run: pip install -e "./apps/server[web,dev,standalone]"
+      - name: Compile standalone preflight harness
+        run: >-
+          python -m py_compile
+          tools/m04a-webchat-preflight/server.py
+          tools/m04a-webchat-preflight/admin.py
+          tools/m04a-webchat-preflight/test_hardening_regressions.py
+      - name: M04-A standalone harness tests
+        run: >-
+          pytest
+          tools/m04a-webchat-preflight/test_redact.py
+          tools/m04a-webchat-preflight/test_server_contract.py
+          tools/m04a-webchat-preflight/test_hardening_regressions.py
+          -q
+      - name: M04-A isolation and P3 authorization/MCP regression
+        working-directory: apps/server
+        run: >-
+          pytest
+          tests/test_m04a_preflight_isolation.py
+          tests/test_p3d_*.py
+          tests/test_p3e_*.py
+          -q

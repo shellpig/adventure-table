@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>M04-A Web Chat MCP Preflight</title>
+</head>
+<body>
+  <main style="max-width:42rem;margin:3rem auto;font-family:system-ui,sans-serif;line-height:1.5">
+    <h1>M04-A authorization probe</h1>
+    <p>This standalone harness simulates taking control of one already-prepared Seat. It never creates, selects, or switches a Seat.</p>
+    {{ERROR}}
+    <form method="post" action="/authorize">
+      {{HIDDEN_FIELDS}}
+      <p>
+        <label>Simulated role
+          <select name="role">
+            <option value="dm">dm</option>
+            <option value="player">player</option>
+          </select>
+        </label>
+      </p>
+      <p><label>Test password <input type="password" name="password" required autocomplete="off"></label></p>
+      <button type="submit">Authorize</button>
+    </form>
+  </main>
+</body>
+</html>
