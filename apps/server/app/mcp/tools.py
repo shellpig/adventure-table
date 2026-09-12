@@ -92,12 +92,15 @@ class MCPToolDefinition:
         parameter_text = self._parameter_summary()
         required_text = ", ".join(required) if required else "none"
         role_text = ", ".join(sorted(self.roles))
+        description_en, separator, description_zh = self.description.partition(" / ")
+        if not separator:
+            description_zh = self.description
         return (
-            f"{self.description} When to use: call this only when the current table state requires "
+            f"{description_en} When to use: call this only when the current table state requires "
             f"{self.name}. Key parameters and legal values: {parameter_text}; required: {required_text}. "
             f"Allowed roles: {role_text}. Respect the current scoped Seat, returned cursor/state, "
             "and idempotency fields when present. / "
-            f"使用時機：目前桌面流程需要 {self.name} 時才呼叫。關鍵參數與合法值：{parameter_text}；"
+            f"{description_zh} 使用時機：目前桌面流程需要 {self.name} 時才呼叫。關鍵參數與合法值：{parameter_text}；"
             f"必填：{required_text}；可用角色：{role_text}。必須遵守目前 scoped Seat、"
             "回傳的 cursor／state，以及存在時的 idempotency 欄位。"
         )
