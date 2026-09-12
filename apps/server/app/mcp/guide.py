@@ -153,7 +153,7 @@ def render_guide(locale: Locale | str) -> str:
         web = (
             "【1. ChatGPT Web／connector】\n"
             "新增 Adventure Table connector，URL 指向 https://<host>/mcp；OAuth 授權頁出現時貼上 AI Join Token。"
-            "換 Seat／Role 必須重新 authorize；開始 Session 或換 Role 後若工具仍是舊快照，請 Refresh／重新掃描工具，必要時開新對話。"
+            "工具清單在 Session 開始前後相同，start_session 後不需要 Refresh。換 Seat／Role 必須重新 authorize；換 Role 後若工具仍是舊快照，請 Refresh／重新掃描工具並開新對話。"
         )
         bearer = "【2. MCP client（Bearer）】\n以 Authorization: Bearer <AI_JOIN_TOKEN> 連到 /mcp。"
         http = (
@@ -172,7 +172,7 @@ def render_guide(locale: Locale | str) -> str:
         web = (
             "[1. ChatGPT Web / connector]\n"
             "Add the Adventure Table connector at https://<host>/mcp and paste the AI Join Token when OAuth asks for it. "
-            "Changing Seat/Role requires a new authorization. After Session start or a role change, Refresh/rescan if the host still shows a stale tool snapshot; a new chat may be required."
+            "The tool list is the same before and after the Session starts, so no Refresh is needed after start_session. Changing Seat/Role requires a new authorization; if the host still shows the old role's tools afterwards, Refresh/rescan and open a new chat."
         )
         bearer = "[2. MCP client (Bearer)]\nConnect to /mcp with Authorization: Bearer <AI_JOIN_TOKEN>."
         http = (

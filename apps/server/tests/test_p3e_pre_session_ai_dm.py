@@ -49,10 +49,9 @@ def test_pre_session_ai_dm_context_and_start_use_real_p3d_session_binding() -> N
 
         before = controller.authenticate(grant.token)
         assert before.session_id is None
-        assert [item["name"] for item in tool_catalog(before)] == [
-            "get_session_context",
-            "start_session",
-        ]
+        names_before = [item["name"] for item in tool_catalog(before)]
+        assert names_before[:2] == ["get_session_context", "start_session"]
+        assert "post_narration" in names_before
 
         context = facade.get_session_context(grant.token)
         assert context == {
@@ -76,7 +75,7 @@ def test_pre_session_ai_dm_context_and_start_use_real_p3d_session_binding() -> N
         assert after.session_id is not None
         assert str(after.session_id) == started["id"]
         names = [item["name"] for item in tool_catalog(after)]
-        assert "start_session" not in names
+        assert names == names_before
         assert "post_narration" in names
         assert "request_check" in names
         assert "get_session_context" in names

@@ -119,20 +119,22 @@ def test_tools_list_works_without_discovery_and_is_player_scoped() -> None:
     assert result["cacheScope"] == "private"
 
 
-def test_pre_session_dm_catalog_is_minimal() -> None:
-    client, _ = _client(_auth(role="dm", session_bound=False))
+def test_pre_session_dm_catalog_matches_active_dm_catalog() -> None:
+    # 2026-09-12 (M04-C): the DM catalog no longer shrinks before start_session;
+    # gameplay tools are listed but reject calls with active_session_required.
+    before, _ = _client(_auth(role="dm", session_bound=False))
+    after, _ = _client(_auth(role="dm"))
 
-    response = client.post(
-        "/mcp",
-        json=_body("tools/list"),
-        headers=_headers("tools/list"),
-    )
+    listed_before = before.post("/mcp", json=_body("tools/list"), headers=_headers("tools/list"))
+    listed_after = after.post("/mcp", json=_body("tools/list"), headers=_headers("tools/list"))
 
-    assert response.status_code == 200
-    assert [item["name"] for item in response.json()["result"]["tools"]] == [
-        "get_session_context",
-        "start_session",
-    ]
+    assert listed_before.status_code == 200
+    names_before = [item["name"] for item in listed_before.json()["result"]["tools"]]
+    names_after = [item["name"] for item in listed_after.json()["result"]["tools"]]
+    assert names_before == names_after
+    assert names_before[:2] == ["get_session_context", "start_session"]
+    assert "post_narration" in names_before
+    assert "quick_roll" not in names_before
 
 
 def test_active_dm_catalog_has_fine_grained_tools_but_no_resolve_action() -> None:

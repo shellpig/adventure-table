@@ -166,14 +166,33 @@ class MCPToolDefinition:
         if not separator:
             description_zh = self.description
         when_en, when_zh = _WHEN_TO_USE[self.name]
+        availability_en, availability_zh = self._availability()
         return (
-            f"{description_en} When to use: {when_en} "
+            f"{description_en} When to use: {when_en} {availability_en} "
             f"Key parameters and legal values: {parameter_text}; required: {required_text}. "
             f"Allowed roles: {role_text}. Respect the current scoped Seat, returned cursor/state, "
             "and idempotency fields when present. / "
-            f"{description_zh} 使用時機：{when_zh} 關鍵參數與合法值：{parameter_text}；"
+            f"{description_zh} 使用時機：{when_zh}{availability_zh} 關鍵參數與合法值：{parameter_text}；"
             f"必填：{required_text}；可用角色：{role_text}。必須遵守目前 scoped Seat、"
             "回傳的 cursor／state，以及存在時的 idempotency 欄位。"
+        )
+
+    def _availability(self) -> tuple[str, str]:
+        # The catalog is the same before and after start_session (see tool_catalog),
+        # so each description states when the call is actually accepted.
+        if self.name == "start_session":
+            return (
+                "Available only before the Session starts; afterwards it returns pre_session_only.",
+                "只在 Session 開始前可用；開始後回 pre_session_only。",
+            )
+        if self.pre_session:
+            return (
+                "Available both before and after the Session starts.",
+                "Session 開始前後皆可用。",
+            )
+        return (
+            "Requires an active Session; before start_session it returns active_session_required.",
+            "需要 active Session；start_session 之前呼叫會回 active_session_required。",
         )
 
     def wire(self) -> dict[str, Any]:
@@ -318,17 +337,14 @@ def tool_reference_rows(role: str | None) -> list[dict[str, Any]]:
 
 
 def tool_catalog(auth: AIControllerAuthView) -> list[dict[str, Any]]:
-    if auth.session_id is None:
-        return [
-            definition.wire()
-            for definition in _TOOL_DEFINITIONS
-            if definition.pre_session and auth.role in definition.roles
-        ]
+    # Role-scoped only. The list is identical before and after start_session so a
+    # client that snapshots tools/list once (ChatGPT connectors) can go from the
+    # Lobby into the Session without a Refresh; the pre-/active-session gate stays
+    # in call_tool (active_session_required / pre_session_only).
     return [
         definition.wire()
         for definition in _TOOL_DEFINITIONS
-        if (not definition.pre_session or definition.name == "get_session_context")
-        and auth.role in definition.roles
+        if auth.role in definition.roles
     ]
 
 

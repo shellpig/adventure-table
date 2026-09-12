@@ -89,9 +89,9 @@ def render_briefing(*, role: str, mode: str) -> str:
         raise ValueError("unsupported mode")
     if mode == "pre_session":
         return (
-            "EN: Read this context, then call start_session. After start_session, Refresh/rescan if the connector still shows pre-session tools. "
+            "EN: Read this context, then call start_session. The tool list is the same before and after start; gameplay tools simply start accepting calls. "
             "Full guide: GET /mcp/guide?locale=en.\n"
-            "zh-TW：先讀 context，再呼叫 start_session；開始後若仍顯示 pre-session 工具請 Refresh／重新掃描。完整指引：GET /mcp/guide?locale=zh-TW。"
+            "zh-TW：先讀 context，再呼叫 start_session；工具清單開始前後相同，開始後 gameplay 工具即可呼叫。完整指引：GET /mcp/guide?locale=zh-TW。"
         )
     briefing = (
         f"EN: {_brief_role_rule(role=role, locale='en')} {_brief_wait_rule('en')} Full guide: GET /mcp/guide?locale=en. "
