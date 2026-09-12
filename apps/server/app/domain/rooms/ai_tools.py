@@ -27,7 +27,10 @@ from app.domain.rooms.rolls import (
 )
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.sessions import SessionService
-from app.domain.rooms.table_character_state import TableCharacterStatePatch, TableCharacterStateService
+from app.domain.rooms.table_character_state import (
+    TableCharacterStatePatch,
+    TableCharacterStateService,
+)
 from app.domain.rooms.table_events import TableActorContext, TableEventService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
 
@@ -102,7 +105,19 @@ class RequestCheckToolInput(StrictModel):
 class AIToolApplicationService:
     """Transport-neutral external-AI facade over the existing P3 application services."""
 
-    def __init__(self, *, ai_controller_service: AIControllerService, session_service: SessionService, stage_service: ExplorationStageService, action_service: ExplorationActionService, roll_service: RollService, state_service: TableCharacterStateService, pending_action_service: PendingActionService, event_service: TableEventService, workspace_service: RoomCharacterWorkspaceService) -> None:
+    def __init__(
+        self,
+        *,
+        ai_controller_service: AIControllerService,
+        session_service: SessionService,
+        stage_service: ExplorationStageService,
+        action_service: ExplorationActionService,
+        roll_service: RollService,
+        state_service: TableCharacterStateService,
+        pending_action_service: PendingActionService,
+        event_service: TableEventService,
+        workspace_service: RoomCharacterWorkspaceService,
+    ) -> None:
         self.ai_controller_service = ai_controller_service
         self.session_service = session_service
         self.stage_service = stage_service
@@ -113,12 +128,25 @@ class AIToolApplicationService:
         self.event_service = event_service
         self.workspace_service = workspace_service
 
-    def _auth(self, token: str, *, authenticated: AIControllerAuthView | None = None, touch: bool = True) -> AIControllerAuthView:
+    def _auth(
+        self,
+        token: str,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+        touch: bool = True,
+    ) -> AIControllerAuthView:
         if authenticated is not None:
             return authenticated
         return self.ai_controller_service.authenticate(token, touch=touch)
 
-    def _actor(self, token: str, *, authenticated: AIControllerAuthView | None = None) -> TableActorContext:
+    def _actor(
+        self,
+        token: str,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> TableActorContext:
+        # P3-D owns credential/current-binding semantics. MCP can pass the auth
+        # result already resolved for this request to avoid redundant DB round trips.
         if authenticated is not None:
             return self.ai_controller_service.actor_from_auth(authenticated)
         return self.ai_controller_service.resolve_actor(token, touch=True)
@@ -135,11 +163,18 @@ class AIToolApplicationService:
 
     @staticmethod
     def _briefing(*, role: str, mode: str) -> str:
+        # Lazy import keeps the transport-neutral domain facade independent from
+        # MCP tool module import order while still sharing M04-C guide wording.
         from app.mcp.guide import render_briefing
 
         return render_briefing(role=role, mode=mode)
 
-    def get_session_context(self, token: str, *, authenticated: AIControllerAuthView | None = None) -> dict[str, Any]:
+    def get_session_context(
+        self,
+        token: str,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
         auth = self._auth(token, authenticated=authenticated, touch=True)
         if auth.session_id is None:
             if auth.role != "dm":
@@ -156,74 +191,291 @@ class AIToolApplicationService:
             }
 
         actor = self._actor(token, authenticated=auth)
-        session = self.session_service.get_session(actor.room_id, actor.campaign_id, actor.session_id)
+        session = self.session_service.get_session(
+            actor.room_id,
+            actor.campaign_id,
+            actor.session_id,
+        )
         runtime = self.event_service.current_cursor(actor)
         after_seq = max(0, runtime.last_event_seq - 50)
-        recent_events = self.event_service.list_after(actor, after_seq=after_seq, limit=50)
+        recent_events = self.event_service.list_after(
+            actor,
+            after_seq=after_seq,
+            limit=50,
+        )
         stage = self.stage_service.get_stage(actor)
         return {
             "mode": "active_session",
-            "caller": {"seat_id": str(actor.seat_id), "role": actor.role, "is_current_dm": actor.is_current_dm},
+            "caller": {
+                "seat_id": str(actor.seat_id),
+                "role": actor.role,
+                "is_current_dm": actor.is_current_dm,
+            },
             "session": {
-                "id": str(session.id), "campaign_id": str(session.campaign_id), "status": session.status.value, "dm_seat_id": str(session.dm_seat_id),
-                "participants": [{"seat_id": str(item.seat_id), "role": item.role, "active_character_id": str(item.active_character_id) if item.active_character_id is not None else None} for item in session.participants],
+                "id": str(session.id),
+                "campaign_id": str(session.campaign_id),
+                "status": session.status.value,
+                "dm_seat_id": str(session.dm_seat_id),
+                "participants": [
+                    {
+                        "seat_id": str(item.seat_id),
+                        "role": item.role,
+                        "active_character_id": (
+                            str(item.active_character_id)
+                            if item.active_character_id is not None
+                            else None
+                        ),
+                    }
+                    for item in session.participants
+                ],
             },
             "stage": stage.model_dump(mode="json"),
             "runtime": runtime.model_dump(mode="json"),
             "recent_events": recent_events.model_dump(mode="json"),
-            "roll_requests": [item.model_dump(mode="json") for item in self.roll_service.list_requests(actor)],
-            "pending_actions": [item.model_dump(mode="json") for item in self.pending_action_service.list(actor)],
+            "roll_requests": [
+                item.model_dump(mode="json")
+                for item in self.roll_service.list_requests(actor)
+            ],
+            "pending_actions": [
+                item.model_dump(mode="json")
+                for item in self.pending_action_service.list(actor)
+            ],
             "briefing": self._briefing(role=actor.role, mode="active_session"),
             "temporary_instruction": auth.temporary_instruction,
         }
 
-    def start_session(self, token: str, *, authenticated: AIControllerAuthView | None = None) -> dict[str, Any]:
+    def start_session(
+        self,
+        token: str,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
         auth = self._auth(token, authenticated=authenticated, touch=True)
-        if auth.session_id is not None or auth.role != "dm": raise AIToolScopeError("Start is only available to an unbound pre-session AI DM")
-        return self.session_service.start_session_as_ai_dm(auth.room_id, auth.campaign_id, grant_id=auth.grant_id, generation=auth.generation).model_dump(mode="json")
+        if auth.session_id is not None or auth.role != "dm":
+            raise AIToolScopeError("Start is only available to an unbound pre-session AI DM")
+        session = self.session_service.start_session_as_ai_dm(
+            auth.room_id,
+            auth.campaign_id,
+            grant_id=auth.grant_id,
+            generation=auth.generation,
+        )
+        return session.model_dump(mode="json")
 
-    def get_character_context(self, token: str, *, authenticated: AIControllerAuthView | None = None) -> dict[str, Any]:
+    def get_character_context(
+        self,
+        token: str,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
         actor = self._actor(token, authenticated=authenticated)
-        if actor.role != "player": raise AIToolScopeError("Only an AI Player has an own Character context")
-        session = self.session_service.get_session(actor.room_id, actor.campaign_id, actor.session_id)
-        participant = next((item for item in session.participants if item.seat_id == actor.seat_id), None)
-        if participant is None or participant.active_character_id is None: raise AIToolScopeError("AI Player has no active Character in this Session")
-        return self.workspace_service.get_character(actor.room_id, participant.active_character_id).model_dump(mode="json")
+        if actor.role != "player":
+            raise AIToolScopeError("Only an AI Player has an own Character context")
+        session = self.session_service.get_session(
+            actor.room_id,
+            actor.campaign_id,
+            actor.session_id,
+        )
+        participant = next(
+            (item for item in session.participants if item.seat_id == actor.seat_id),
+            None,
+        )
+        if participant is None or participant.active_character_id is None:
+            raise AIToolScopeError("AI Player has no active Character in this Session")
+        character = self.workspace_service.get_character(
+            actor.room_id,
+            participant.active_character_id,
+        )
+        return character.model_dump(mode="json")
 
-    def post_text(self, token: str, *, kind: ExplorationInputKind, input: TextActionInput, authenticated: AIControllerAuthView | None = None) -> dict[str, Any]:
-        actor = self._actor(token, authenticated=authenticated); is_subject_action = kind in {ExplorationInputKind.DIALOGUE, ExplorationInputKind.ACTION}
-        if not is_subject_action and input.subject_seat_id is not None: raise AIToolInputError("subject_seat_id is only valid for dialogue/action")
-        subject_seat_id = self._subject_seat(actor, input.subject_seat_id) if is_subject_action else None
-        return self.action_service.send(actor, ExplorationInputRequest(kind=kind, text=input.text, subject_seat_id=subject_seat_id, idempotency_key=input.idempotency_key)).model_dump(mode="json")
+    def post_text(
+        self,
+        token: str,
+        *,
+        kind: ExplorationInputKind,
+        input: TextActionInput,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        is_subject_action = kind in {
+            ExplorationInputKind.DIALOGUE,
+            ExplorationInputKind.ACTION,
+        }
+        if not is_subject_action and input.subject_seat_id is not None:
+            raise AIToolInputError("subject_seat_id is only valid for dialogue/action")
+        subject_seat_id = (
+            self._subject_seat(actor, input.subject_seat_id)
+            if is_subject_action
+            else None
+        )
+        event = self.action_service.send(
+            actor,
+            ExplorationInputRequest(
+                kind=kind,
+                text=input.text,
+                subject_seat_id=subject_seat_id,
+                idempotency_key=input.idempotency_key,
+            ),
+        )
+        return event.model_dump(mode="json")
 
-    def set_stage_text(self, token: str, input: StageTextInput, *, authenticated: AIControllerAuthView | None = None) -> dict[str, Any]:
-        actor = self._actor(token, authenticated=authenticated); current = self.stage_service.get_stage(actor)
-        return self.stage_service.replace_stage(actor, StageUpdateRequest(expected_revision=input.expected_revision, text=input.text, image_id=current.image_id, idempotency_key=input.idempotency_key)).model_dump(mode="json")
+    def set_stage_text(
+        self,
+        token: str,
+        input: StageTextInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        current = self.stage_service.get_stage(actor)
+        stage = self.stage_service.replace_stage(
+            actor,
+            StageUpdateRequest(
+                expected_revision=input.expected_revision,
+                text=input.text,
+                image_id=current.image_id,
+                idempotency_key=input.idempotency_key,
+            ),
+        )
+        return stage.model_dump(mode="json")
 
-    def request_check(self, token: str, input: RequestCheckToolInput, *, authenticated: AIControllerAuthView | None = None) -> dict[str, Any]:
-        actor = self._actor(token, authenticated=authenticated); group_id, requests = self.roll_service.request_check(actor, RequestCheckInput.model_validate(input.model_dump(mode="python")))
-        return {"roll_group_id": str(group_id), "requests": [item.model_dump(mode="json") for item in requests]}
+    def request_check(
+        self,
+        token: str,
+        input: RequestCheckToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        group_id, requests = self.roll_service.request_check(
+            actor,
+            RequestCheckInput.model_validate(input.model_dump(mode="python")),
+        )
+        return {
+            "roll_group_id": str(group_id),
+            "requests": [item.model_dump(mode="json") for item in requests],
+        }
 
-    def roll_pending(self, token: str, input: RollPendingInput, *, authenticated: AIControllerAuthView | None = None) -> dict[str, Any]:
-        actor = self._actor(token, authenticated=authenticated); return self.roll_service.complete_formal(actor, FormalRollInput(roll_request_id=input.roll_request_id, source=FormalRollSource.SERVER, idempotency_key=input.idempotency_key)).model_dump(mode="json")
+    def roll_pending(
+        self,
+        token: str,
+        input: RollPendingInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        result = self.roll_service.complete_formal(
+            actor,
+            FormalRollInput(
+                roll_request_id=input.roll_request_id,
+                source=FormalRollSource.SERVER,
+                idempotency_key=input.idempotency_key,
+            ),
+        )
+        return result.model_dump(mode="json")
 
-    def submit_physical_roll(self, token: str, input: PhysicalRollInput, *, authenticated: AIControllerAuthView | None = None) -> dict[str, Any]:
-        actor = self._actor(token, authenticated=authenticated); return self.roll_service.complete_formal(actor, FormalRollInput(roll_request_id=input.roll_request_id, source=FormalRollSource.PHYSICAL, raw_dice=input.raw_dice, idempotency_key=input.idempotency_key)).model_dump(mode="json")
+    def submit_physical_roll(
+        self,
+        token: str,
+        input: PhysicalRollInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        result = self.roll_service.complete_formal(
+            actor,
+            FormalRollInput(
+                roll_request_id=input.roll_request_id,
+                source=FormalRollSource.PHYSICAL,
+                raw_dice=input.raw_dice,
+                idempotency_key=input.idempotency_key,
+            ),
+        )
+        return result.model_dump(mode="json")
 
-    def quick_roll(self, token: str, input: QuickRollToolInput, *, authenticated: AIControllerAuthView | None = None) -> dict[str, Any]:
-        actor = self._actor(token, authenticated=authenticated); subject_seat_id = self._subject_seat(actor, input.subject_seat_id)
-        return self.roll_service.quick_roll(actor, QuickRollInput(subject_seat_id=subject_seat_id, dice_count=input.dice_count, die_sides=input.die_sides, flat_adjustment=input.flat_adjustment, visibility=input.visibility, idempotency_key=input.idempotency_key)).model_dump(mode="json")
+    def quick_roll(
+        self,
+        token: str,
+        input: QuickRollToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        subject_seat_id = self._subject_seat(actor, input.subject_seat_id)
+        result = self.roll_service.quick_roll(
+            actor,
+            QuickRollInput(
+                subject_seat_id=subject_seat_id,
+                dice_count=input.dice_count,
+                die_sides=input.die_sides,
+                flat_adjustment=input.flat_adjustment,
+                visibility=input.visibility,
+                idempotency_key=input.idempotency_key,
+            ),
+        )
+        return result.model_dump(mode="json")
 
-    def update_character_state(self, token: str, input: CharacterStateToolInput, *, authenticated: AIControllerAuthView | None = None) -> dict[str, Any]:
-        actor = self._actor(token, authenticated=authenticated); subject_seat_id = self._subject_seat(actor, input.subject_seat_id)
-        return self.state_service.apply_patch(actor, subject_seat_id=subject_seat_id, patch=input.patch).model_dump(mode="json")
+    def update_character_state(
+        self,
+        token: str,
+        input: CharacterStateToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        subject_seat_id = self._subject_seat(actor, input.subject_seat_id)
+        character = self.state_service.apply_patch(
+            actor,
+            subject_seat_id=subject_seat_id,
+            patch=input.patch,
+        )
+        return character.model_dump(mode="json")
 
-    def get_pending_events(self, token: str, input: EventsInput, *, authenticated: AIControllerAuthView | None = None) -> dict[str, Any]:
-        actor = self._actor(token, authenticated=authenticated); return self.event_service.list_after(actor, after_seq=input.after_seq, limit=input.limit).model_dump(mode="json")
+    def get_pending_events(
+        self,
+        token: str,
+        input: EventsInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.event_service.list_after(
+            actor,
+            after_seq=input.after_seq,
+            limit=input.limit,
+        ).model_dump(mode="json")
 
-    async def wait_for_event(self, token: str, input: WaitEventsInput, *, authenticated: AIControllerAuthView | None = None) -> dict[str, Any]:
-        actor = await asyncio.to_thread(self._actor, token) if authenticated is None else self._actor(token, authenticated=authenticated)
-        return (await self.event_service.wait_after(actor, after_seq=input.after_seq, limit=input.limit, timeout=input.timeout)).model_dump(mode="json")
+    async def wait_for_event(
+        self,
+        token: str,
+        input: WaitEventsInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        if authenticated is None:
+            actor = await asyncio.to_thread(self._actor, token)
+        else:
+            actor = self._actor(token, authenticated=authenticated)
+        return (
+            await self.event_service.wait_after(
+                actor,
+                after_seq=input.after_seq,
+                limit=input.limit,
+                timeout=input.timeout,
+            )
+        ).model_dump(mode="json")
 
 
-__all__ = ["AIToolApplicationService", "AIToolInputError", "AIToolScopeError", "CharacterStateToolInput", "EventsInput", "PhysicalRollInput", "QuickRollToolInput", "RequestCheckToolInput", "RollPendingInput", "StageTextInput", "TextActionInput", "WaitEventsInput"]
+__all__ = [
+    "AIToolApplicationService",
+    "AIToolInputError",
+    "AIToolScopeError",
+    "CharacterStateToolInput",
+    "EventsInput",
+    "PhysicalRollInput",
+    "QuickRollToolInput",
+    "RequestCheckToolInput",
+    "RollPendingInput",
+    "StageTextInput",
+    "TextActionInput",
+    "WaitEventsInput",
+]
