@@ -71,7 +71,7 @@ def _oauth_challenge(request: Request) -> str:
     )
 
 
-@router.get("/mcp/guide")
+@router.get("/mcp/guide", response_model=None)
 async def mcp_guide(
     locale: str = Query(default="en"),
 ) -> PlainTextResponse | JSONResponse:
