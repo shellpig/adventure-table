@@ -25,7 +25,17 @@ jobs:
       - name: M03 standalone static compatibility
         run: pytest tests/test_m03_import_boundary.py tests/test_m03_standalone_composition.py -q
       - name: M04-C focused regression
-        run: pytest tests/test_m04c_*.py tests/test_p3e_architecture_boundary.py tests/test_p3e_mcp_protocol.py tests/test_p3e_mcp_tools.py tests/test_p3e_official_mcp_client.py -q
+        run: >-
+          pytest
+          tests/test_m04c_*.py
+          tests/test_m04b_*.py
+          tests/test_p3c_migration_contract.py
+          tests/test_p3d_migration_contract.py
+          tests/test_p3e_architecture_boundary.py
+          tests/test_p3e_mcp_protocol.py
+          tests/test_p3e_mcp_tools.py
+          tests/test_p3e_official_mcp_client.py
+          -q
       - name: Backend pytest
         run: pytest
       - name: Localization authoring unit tests
