@@ -386,6 +386,34 @@ def _rpc_result(request_id: Any, result: dict[str, Any]) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
 
+_DISCOVER_PROTOCOL_VERSION = "2026-07-28"
+_SERVER_INFO = {"name": "adventure-table-m04a-webchat-preflight", "version": "0.2.0"}
+_SERVER_INFO_META_KEY = "io.modelcontextprotocol/serverInfo"
+
+
+def _rpc_result_2026(
+    request_id: Any,
+    result: dict[str, Any],
+    *,
+    cacheable: bool = False,
+) -> dict[str, Any]:
+    """2026-07-28 result envelope, mirroring Adventure Table app/mcp/protocol.py.
+
+    ChatGPT (openai-mcp/1.0.0) stopped after the placeholder ``server/discover``
+    reply on 2026-09-11; the live client expects this shape for the
+    ``server/discover`` -> ``tools/list`` -> ``tools/call`` path.
+    """
+    payload = dict(result)
+    payload.setdefault("resultType", "complete")
+    if cacheable:
+        payload["ttlMs"] = 30_000
+        payload["cacheScope"] = "private"
+    meta = dict(payload.get("_meta") or {})
+    meta[_SERVER_INFO_META_KEY] = dict(_SERVER_INFO)
+    payload["_meta"] = meta
+    return {"jsonrpc": "2.0", "id": request_id, "result": payload}
+
+
 def _rpc_error(request_id: Any, code: int, message: str) -> dict[str, Any]:
     return {
         "jsonrpc": "2.0",
@@ -893,14 +921,13 @@ def create_public_app(
             )
         if method == "server/discover":
             result = {
-                "protocolVersion": request.headers.get("mcp-protocol-version")
-                or config.default_protocol_version,
+                "supportedVersions": [_DISCOVER_PROTOCOL_VERSION],
+                "capabilities": {"tools": {}},
                 "instructions": "M04-A measurement harness only.",
-                "capabilities": {"tools": True},
             }
             return await send_rpc(
                 request,
-                _rpc_result(request_id, result),
+                _rpc_result_2026(request_id, result, cacheable=True),
                 response_session,
             )
         if method == "ping":
@@ -912,9 +939,10 @@ def create_public_app(
         if method == "tools/list":
             return await send_rpc(
                 request,
-                _rpc_result(
+                _rpc_result_2026(
                     request_id,
                     {"tools": _tool_catalog(state, family.role)},
+                    cacheable=True,
                 ),
                 response_session,
             )
@@ -992,7 +1020,7 @@ def create_public_app(
             )
         return await send_rpc(
             request,
-            _rpc_result(request_id, _tool_result(result)),
+            _rpc_result_2026(request_id, _tool_result(result)),
             response_session,
         )
 

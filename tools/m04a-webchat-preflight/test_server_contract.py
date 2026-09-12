@@ -192,7 +192,7 @@ async def _rpc(
     access_token: str,
     method: str,
     params: dict[str, Any] | None = None,
-    request_id: int = 1,
+    request_id: int | str = 1,
 ) -> dict[str, Any]:
     status, _, body = await _request(
         app,
@@ -268,7 +268,36 @@ def test_public_metadata_oauth_and_mcp_contract(tmp_path: Path) -> None:
         assert initialize["result"]["protocolVersion"] == "2099-01-01"
         assert initialize["result"]["capabilities"]["tools"]["listChanged"] is True
 
+        # 2026-07-28 shape as sent by ChatGPT openai-mcp/1.0.0 on 2026-09-11
+        # (no initialize; server/discover first, _meta carries client info).
+        discover = await _rpc(
+            app,
+            dm_access,
+            "server/discover",
+            {
+                "_meta": {
+                    "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                    "io.modelcontextprotocol/clientInfo": {"name": "openai-mcp", "version": "1.0.0"},
+                    "io.modelcontextprotocol/clientCapabilities": {},
+                }
+            },
+            request_id="openai-mcp-discover",
+        )
+        discover_result = discover["result"]
+        assert discover_result["supportedVersions"] == ["2026-07-28"]
+        assert discover_result["capabilities"] == {"tools": {}}
+        assert discover_result["resultType"] == "complete"
+        assert discover_result["ttlMs"] == 30_000
+        assert discover_result["cacheScope"] == "private"
+        assert discover_result["_meta"]["io.modelcontextprotocol/serverInfo"]["name"] == (
+            "adventure-table-m04a-webchat-preflight"
+        )
+        assert "protocolVersion" not in discover_result
+
         dm_tools = await _rpc(app, dm_access, "tools/list", request_id=2)
+        assert dm_tools["result"]["resultType"] == "complete"
+        assert dm_tools["result"]["ttlMs"] == 30_000
+        assert "io.modelcontextprotocol/serverInfo" in dm_tools["result"]["_meta"]
         dm_names = {tool["name"] for tool in dm_tools["result"]["tools"]}
         assert {"get_context", "post_note", "wait_seconds", "dm_only_ping"} <= dm_names
         assert "late_tool" not in dm_names
