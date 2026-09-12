@@ -24,6 +24,7 @@ from app.domain.rooms.seats import (
     SeatRole,
     SeatService,
 )
+from app.persistence.mcp.lifecycle import revoke_grant_authorizations_in_transaction
 from app.persistence.rooms.ai_controllers import AIControllerGrantRepository
 
 
@@ -37,7 +38,10 @@ def get_ai_controller_service(request: Request) -> AIControllerService:
     service = getattr(request.app.state, "ai_controller_service", None)
     if service is None:
         service = AIControllerService(
-            AIControllerGrantRepository(get_database_engine(request)),
+            AIControllerGrantRepository(
+                get_database_engine(request),
+                grant_authorization_revoker=revoke_grant_authorizations_in_transaction,
+            ),
             get_table_event_service(request),
         )
         request.app.state.ai_controller_service = service
