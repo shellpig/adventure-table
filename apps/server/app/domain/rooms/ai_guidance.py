@@ -1,7 +1,12 @@
 from __future__ import annotations
 
-WAIT_RETRY_COUNT = 5
-WAIT_TIMEOUT_SECONDS = 120
+from app.domain.rooms.ai_tool_contract import (
+    WAIT_EVENT_EMPTY_RETRY_COUNT,
+    WAIT_EVENT_MAX_TIMEOUT_SECONDS,
+)
+
+WAIT_RETRY_COUNT = WAIT_EVENT_EMPTY_RETRY_COUNT
+WAIT_TIMEOUT_SECONDS = int(WAIT_EVENT_MAX_TIMEOUT_SECONDS)
 
 
 def role_rule(*, role: str, locale: str) -> str:
