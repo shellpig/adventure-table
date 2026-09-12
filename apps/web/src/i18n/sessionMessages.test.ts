@@ -38,6 +38,7 @@ describe('Session request message SSOT', () => {
       'roll_request_not_found',
       'roll_request_already_resolved',
       'invalid_roll_input',
+      'unknown_check_ref',
       'roll_character_not_found',
       'pending_action_not_found',
       'pending_action_invalid_transition',

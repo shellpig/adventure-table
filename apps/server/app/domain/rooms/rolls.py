@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 from pydantic import Field, model_validator
 
+from app.content.registry import ContentRegistry
 from app.domain.rooms.exploration import ExplorationSubjectNotFoundError
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import (
@@ -14,6 +15,8 @@ from app.domain.rooms.table_events import (
     TableEventActorUnauthorizedError,
     TableEventService,
 )
+from app.domain.rules.abilities import normalize_ability_name
+from app.domain.rules.skills import resolve_skill_ref
 from app.persistence.rooms.exploration_subjects import ExplorationSubjectRepository
 from app.persistence.rooms.p3c_rolls import (
     FormalRollComputation,
@@ -53,6 +56,10 @@ class FormalRollSource(StrEnum):
 
 class RollInputInvalidError(ValueError):
     pass
+
+
+class CheckReferenceInvalidError(ValueError):
+    """A Check was requested with a skill/ability reference that cannot resolve."""
 
 
 class RollRequestNotFoundError(LookupError):
@@ -272,12 +279,14 @@ class RollService:
         table_event_service: TableEventService,
         modifier_resolver: RollModifierResolver,
         engine: RollEngine | None = None,
+        registry: ContentRegistry | None = None,
     ) -> None:
         self.repository = repository
         self.subject_repository = subject_repository
         self.table_event_service = table_event_service
         self.modifier_resolver = modifier_resolver
         self.engine = engine or RollEngine()
+        self.registry = registry
 
     @staticmethod
     def _request_view(actor: TableActorContext, request: StoredRollRequest) -> RollRequestView:
@@ -330,12 +339,39 @@ class RollService:
             raise ExplorationSubjectNotFoundError(str(seat_id))
         return subject
 
+    def _normalized_check_refs(
+        self, request: RequestCheckInput
+    ) -> tuple[str | None, str | None]:
+        # Resolve friendly refs (e.g. "investigation", "dex") to the stored form
+        # at creation time so a bad Check is rejected now, not when someone rolls.
+        ability_ref = request.ability_ref
+        skill_ref = request.skill_ref
+        # Without a registry (some unit fixtures) refs are trusted as given; the
+        # app DI always supplies one, so real Checks are normalised and validated.
+        if self.registry is None:
+            return ability_ref, skill_ref
+        try:
+            if request.request_type is RollRequestType.SKILL and skill_ref is not None:
+                skill_ref = resolve_skill_ref(self.registry, skill_ref)
+            if (
+                request.request_type
+                in {RollRequestType.ABILITY, RollRequestType.SAVING_THROW}
+                and ability_ref is not None
+            ):
+                ability_ref = normalize_ability_name(ability_ref)
+        except CheckReferenceInvalidError:
+            raise
+        except ValueError as exc:
+            raise CheckReferenceInvalidError(str(exc)) from exc
+        return ability_ref, skill_ref
+
     def request_check(
         self, actor: TableActorContext, request: RequestCheckInput
     ) -> tuple[UUID, tuple[RollRequestView, ...]]:
         self.table_event_service.require_actor_current(actor)
         if not actor.is_current_dm:
             raise TableEventActorUnauthorizedError("Only the current Session DM can create a formal Check")
+        ability_ref, skill_ref = self._normalized_check_refs(request)
         subjects = tuple(self._subject(actor, seat_id) for seat_id in request.target_seat_ids)
         new_requests = tuple(
             NewRollRequest(
@@ -349,8 +385,8 @@ class RollService:
             binding=_actor_binding(actor),
             requests=new_requests,
             request_type=request.request_type.value,
-            ability_ref=request.ability_ref,
-            skill_ref=request.skill_ref,
+            ability_ref=ability_ref,
+            skill_ref=skill_ref,
             dc=request.dc,
             modifier_mode=request.modifier_mode.value,
             flat_adjustment=request.flat_adjustment,
@@ -496,6 +532,7 @@ __all__ = [
     "RequestCheckInput",
     "RollAudit",
     "RollEngine",
+    "CheckReferenceInvalidError",
     "RollInputInvalidError",
     "RollModifierMode",
     "RollModifierResolver",

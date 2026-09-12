@@ -16,13 +16,13 @@ def role_rule(*, role: str, locale: str) -> str:
                 "DM 回應玩家時一律用 post_narration 寫回桌上，不要只在承載 AI 的對話視窗回覆。"
                 "一般敘事以約 100–250 字為目標；秘密資訊不要寫入 Main Stage 或公開 narration。需要暗骰時使用 visibility=dm_only。"
                 "角色 HP、狀態等變更一律使用對應工具寫回桌上。所有可帶 idempotency_key 的寫入都要提供唯一值；"
-                "替 Player 角色說話或行動時必須帶 subject_seat_id。正式檢定用 request_check 建立。"
+                "替 Player 角色說話或行動時必須帶 subject_seat_id。正式檢定用 request_check 建立，skill_ref 用技能名如 investigation、ability_ref 用屬性如 dexterity。"
             )
         return (
             "As DM, write player-facing responses back to the table with post_narration instead of replying only in the host chat. "
             "Aim for roughly 100–250 words for ordinary narration. Never put secrets on Main Stage or in public narration; use visibility=dm_only for secret rolls. "
             "Write HP/condition/state changes back through the appropriate tools. Provide a unique idempotency_key on every write that supports it, "
-            "and provide subject_seat_id when speaking or acting for a Player Seat. Create formal checks with request_check."
+            "and provide subject_seat_id when speaking or acting for a Player Seat. Create formal checks with request_check (skill_ref takes a skill name like investigation, ability_ref an ability like dexterity)."
         )
     if role == "player":
         if locale == "zh-TW":

@@ -20,6 +20,7 @@ from app.domain.rooms.campaigns import (
 )
 from app.domain.rooms.character_rolls import CharacterRollModifierResolver
 from app.domain.rooms.rolls import (
+    CheckReferenceInvalidError,
     FormalRollInput,
     RequestCheckInput,
     RollModifierMode,
@@ -180,6 +181,7 @@ def _setup(engine) -> Table:
         ExplorationSubjectRepository(engine),
         events,
         modifier_resolver,
+        registry=registry,
     )
 
     def actor(context):
@@ -370,5 +372,45 @@ def test_stale_actor_binding_cannot_submit_a_formal_roll() -> None:
         assert [
             item.status for item in table.service.list_requests(table.dm_actor)
         ] == ["pending"]
+    finally:
+        engine.dispose()
+
+
+def test_request_check_accepts_a_bare_skill_name_and_normalises_to_stable_key() -> None:
+    engine = _engine()
+    try:
+        table = _setup(engine)
+        _group_id, requests = table.service.request_check(
+            table.dm_actor,
+            RequestCheckInput(
+                target_seat_ids=(table.mira_seat.id,),
+                request_type=RollRequestType.SKILL,
+                skill_ref="perception",
+            ),
+        )
+        # Stored ref is the stable key, so a server roll resolves the modifier.
+        assert requests[0].skill_ref == "srd5.1:skill:perception"
+        result = table.service.complete_formal(
+            table.mira_actor,
+            FormalRollInput(roll_request_id=requests[0].id),
+        )
+        assert result.total is not None
+    finally:
+        engine.dispose()
+
+
+def test_request_check_rejects_an_unknown_skill_at_creation() -> None:
+    engine = _engine()
+    try:
+        table = _setup(engine)
+        with pytest.raises(CheckReferenceInvalidError):
+            table.service.request_check(
+                table.dm_actor,
+                RequestCheckInput(
+                    target_seat_ids=(table.mira_seat.id,),
+                    request_type=RollRequestType.SKILL,
+                    skill_ref="telepathy",
+                ),
+            )
     finally:
         engine.dispose()

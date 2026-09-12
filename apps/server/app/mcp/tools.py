@@ -22,6 +22,7 @@ from app.domain.rooms.ai_tools import (
     WaitEventsInput,
 )
 from app.domain.rooms.exploration import ExplorationInputKind
+from app.domain.rooms.rolls import CheckReferenceInvalidError
 
 
 class _NoArguments(StrictModel):
@@ -66,8 +67,8 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
         "DM 需要修改持續顯示的 Main Stage 文字時使用；秘密資訊不可放入 Stage。",
     ),
     "request_check": (
-        "DM uses this to create a formal ability/skill/check roll after a Player has described the attempt.",
-        "Player 描述嘗試後，DM 要建立正式能力／技能／檢定擲骰時使用。",
+        "DM uses this to create a formal ability/skill/check roll after a Player has described the attempt. skill_ref takes a skill index like 'investigation'; ability_ref takes an ability like 'dexterity'.",
+        "Player 描述嘗試後，DM 要建立正式能力／技能／檢定擲骰時使用。skill_ref 用技能名如 'investigation'，ability_ref 用屬性如 'dexterity'。",
     ),
     "roll_pending": (
         "Use only to resolve a visible pending formal roll with server RNG.",
@@ -572,6 +573,13 @@ async def call_tool(
             "not_found",
             "Requested table object was not found in the current scope",
             "目前 scope 找不到指定的桌面物件",
+        )
+    except CheckReferenceInvalidError as exc:
+        return structured_tool_error(
+            "unknown_check_ref",
+            f"Unknown skill/ability reference: {exc}. Use a skill index like "
+            "'investigation' or an ability like 'dexterity'.",
+            f"無法解析的技能／屬性參照：{exc}。技能用如 'investigation' 的名稱，屬性用如 'dexterity'。",
         )
     except ValueError:
         return structured_tool_error(
