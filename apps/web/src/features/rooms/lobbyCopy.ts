@@ -2,6 +2,7 @@ import type { Locale } from '../../i18n/locale'
 
 const copy = {
   'zh-TW': {
+    locale: 'zh-TW' as const,
     title: '大廳與座位',
     intro: '安排這場 Campaign 的 DM、玩家與旁觀座位。角色選擇只代表下一場開始前的大廳設定。',
     backCampaign: '返回 Campaign',
@@ -43,6 +44,7 @@ const copy = {
     aiDmFailed: 'AI DM 憑證操作失敗。',
   },
   en: {
+    locale: 'en' as const,
     title: 'Lobby & Seats',
     intro: 'Arrange the DM, player, and spectator seats for this Campaign. Character selection is the pre-Session lobby choice only.',
     backCampaign: 'Back to Campaign',

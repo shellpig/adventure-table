@@ -8,6 +8,7 @@ import {
   type AIControllerGrantView,
 } from '../../api/aiControllers'
 import type { CampaignSeat, LobbyController } from '../../api/seats'
+import { AIJoinKit } from './AIJoinKit'
 import type { SessionCopy } from './sessionCopy'
 
 
@@ -201,6 +202,7 @@ export function PlayerAIControlPanel({
             </button>
             {copied ? <span className="token-copy-feedback" role="status">{copy.aiTokenCopied}</span> : null}
           </div>
+          <AIJoinKit origin={window.location.origin} token={issued.token} role="player" locale={copy.locale} />
         </div>
       ) : null}
 
