@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Protocol
 from uuid import UUID
 
 from sqlalchemy import insert, select, update
 from sqlalchemy.engine import Connection, Engine
 
-from app.persistence.mcp.lifecycle import revoke_grant_authorizations_in_transaction
 from app.persistence.rooms.tables import (
     ai_controller_grants,
     campaign_seats,
@@ -17,6 +17,16 @@ from app.persistence.rooms.tables import (
     session_participants,
     sessions,
 )
+
+
+class GrantAuthorizationRevoker(Protocol):
+    def __call__(
+        self,
+        connection: Connection,
+        grant_ids: tuple[UUID, ...],
+        *,
+        now: datetime,
+    ) -> None: ...
 
 
 class AIControllerGrantPersistenceError(RuntimeError):
@@ -61,8 +71,13 @@ class StoredAIControllerScope:
 
 
 class AIControllerGrantRepository:
-    def __init__(self, engine: Engine) -> None:
+    def __init__(
+        self,
+        engine: Engine,
+        grant_authorization_revoker: GrantAuthorizationRevoker | None = None,
+    ) -> None:
         self.engine = engine
+        self.grant_authorization_revoker = grant_authorization_revoker
 
     @staticmethod
     def _grant(row) -> StoredAIControllerGrant | None:
@@ -131,8 +146,8 @@ class AIControllerGrantRepository:
             ).all()
         )
 
-    @staticmethod
-    def _revoke_grants_and_oauth(
+    def _revoke_grants(
+        self,
         connection: Connection,
         grant_ids: tuple[UUID, ...],
         *,
@@ -145,7 +160,8 @@ class AIControllerGrantRepository:
             .where(ai_controller_grants.c.id.in_(grant_ids))
             .values(status="revoked", revoked_at=now, temporary_instruction=None)
         )
-        revoke_grant_authorizations_in_transaction(connection, grant_ids, now=now)
+        if self.grant_authorization_revoker is not None:
+            self.grant_authorization_revoker(connection, grant_ids, now=now)
 
     def player_handoff_in_transaction(
         self,
@@ -208,7 +224,7 @@ class AIControllerGrantRepository:
             )
 
         prior_grant_ids = self._active_grant_ids_for_seat(connection, seat_id)
-        self._revoke_grants_and_oauth(connection, prior_grant_ids, now=now)
+        self._revoke_grants(connection, prior_grant_ids, now=now)
         generation = int(seat["controller_epoch"]) + 1
         connection.execute(
             insert(ai_controller_grants).values(
@@ -289,7 +305,7 @@ class AIControllerGrantRepository:
                 "Take Back requires the exact still-active handoff origin access session"
             )
         next_epoch = int(seat["controller_epoch"]) + 1
-        self._revoke_grants_and_oauth(connection, (grant.id,), now=now)
+        self._revoke_grants(connection, (grant.id,), now=now)
         connection.execute(
             update(campaign_seats)
             .where(campaign_seats.c.id == seat_id)
@@ -356,7 +372,7 @@ class AIControllerGrantRepository:
         ):
             raise AIControllerHandoffPersistenceError("Current AI grant is stale")
         next_epoch = int(seat["controller_epoch"]) + 1
-        self._revoke_grants_and_oauth(connection, (grant.id,), now=now)
+        self._revoke_grants(connection, (grant.id,), now=now)
         connection.execute(
             update(campaign_seats)
             .where(campaign_seats.c.id == seat_id)
@@ -423,7 +439,7 @@ class AIControllerGrantRepository:
             if seat is None:
                 raise AIControllerHandoffPersistenceError("active DM Seat was not found")
             prior_grant_ids = self._active_grant_ids_for_seat(connection, seat_id)
-            self._revoke_grants_and_oauth(connection, prior_grant_ids, now=now)
+            self._revoke_grants(connection, prior_grant_ids, now=now)
             generation = int(seat["controller_epoch"]) + 1
             connection.execute(
                 insert(ai_controller_grants).values(
@@ -564,7 +580,7 @@ class AIControllerGrantRepository:
                                 active_character_id = participant.active_character_id
 
                 if denied_reason is not None and touch:
-                    self._revoke_grants_and_oauth(connection, (grant.id,), now=now)
+                    self._revoke_grants(connection, (grant.id,), now=now)
                 elif denied_reason is None and touch:
                     connection.execute(
                         update(ai_controller_grants)
@@ -592,7 +608,7 @@ class AIControllerGrantRepository:
     ) -> None:
         now = self._utc(now or datetime.now(timezone.utc))
         grant_ids = self._active_grant_ids_for_session(connection, session_id)
-        self._revoke_grants_and_oauth(connection, grant_ids, now=now)
+        self._revoke_grants(connection, grant_ids, now=now)
 
 
 __all__ = [
@@ -600,6 +616,7 @@ __all__ = [
     "AIControllerGrantRepository",
     "AIControllerGrantUnauthorizedPersistenceError",
     "AIControllerHandoffPersistenceError",
+    "GrantAuthorizationRevoker",
     "StoredAIControllerGrant",
     "StoredAIControllerScope",
 ]
