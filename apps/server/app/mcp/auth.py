@@ -42,7 +42,7 @@ def _unauthorized() -> MCPAuthenticationError:
 def authenticate_request(
     request: Request,
     service: AIControllerService,
-    oauth_service: AIControllerOAuthService | None = None,
+    oauth_repository: AIControllerOAuthService | None = None,
 ) -> MCPAuthenticatedRequest:
     authorization = request.headers.get("authorization")
     if authorization is None or not authorization.startswith("Bearer "):
@@ -67,9 +67,9 @@ def authenticate_request(
         return MCPAuthenticatedRequest(token=token, auth=auth)
 
     if token.startswith(OAUTH_ACCESS_TOKEN_PREFIX):
-        if oauth_service is None:
+        if oauth_repository is None:
             raise _unauthorized()
-        resolved = oauth_service.resolve_active_access(
+        resolved = oauth_repository.resolve_active_access(
             hashlib.sha256(token.encode("utf-8")).hexdigest(),
             touch=True,
         )
@@ -82,7 +82,7 @@ def authenticate_request(
                 touch=True,
             )
         except AIControllerUnauthorizedError as exc:
-            oauth_service.revoke_authorization(oauth_authorization.id)
+            oauth_repository.revoke_authorization(oauth_authorization.id)
             raise _unauthorized() from exc
         return MCPAuthenticatedRequest(token=token, auth=auth)
 
