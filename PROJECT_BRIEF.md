@@ -1,6 +1,6 @@
 # Adventure Table 專案簡報
 
-最後更新：2026-09-12（M04-C 關門）
+最後更新：2026-09-12（M04 Phase 關門）
 
 本檔是**當前進度、Roadmap、下一步與文件索引的單一事實來源**，供新的 AI Session 或實作者接手。產品行為以 [規格企劃.md](規格企劃.md) 為準；實作契約與歷史驗收證據請依下方索引查閱，不在本檔重述。
 
@@ -24,7 +24,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## 當前狀態與下一步
 
-**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門，P3-E 與 P3-F 已於 2026-09-11 關門（external MCP client HTTPS E1 於 P3-F closeout 合併執行通過），P3 Phase 同日以 `d6b791e` 合併回 `main`，`P3 Full-Stack E2E` CI run `34587347309` 全綠。同日 P3 第一次真實使用暴露「AI 拿到 token 不知道怎麼開始」與「網頁版 AI connector 連不進來」兩個缺口，已拍板插入 **M04 — Web Chat MCP Integration & AI Join Kit**，拆為 M04-A／M04-B／M04-C 並完成三份文件（同日經兩輪 review 定案：網頁版 chat 是首要目標，平台階梯 ChatGPT Plus → Claude chat 個人方案，兩者皆不可行則 M04 標 Platform Blocked / Deferred 直接進 P4；先 preflight 再 integration，Join Kit 最後）；M04-A 已於 2026-09-12 完成真實 ChatGPT Web Plus preflight 並關門：OAuth/DCR、MCP `2026-07-28` `server/discover → tools/list → tools/call`、read/write、role-scoped catalog、Refresh + 新對話的 catalog 更新規則、revoke/reconnect，以及 Tailscale Funnel 下 120 秒 long-poll 均已實測；M04-B 同日於 branch `m04-b-web-chat-integration` 完成 OAuth 入口（DCR、authorize 頁貼 AI Join Token、PKCE、refresh 重驗 P3-D authority、grant 失效聯動、public origin 設定）並以真實 ChatGPT Web Plus 經 Tailscale Funnel 跑完 DM 場與 Player 場 gate 關門（見 `M04-B_CLOSEOUT.md`）；M04-C 同日於 branch `m04-c-ai-join-kit-guide` 交付 `GET /mcp/guide`、與 catalog 同源的 tool description、強制流程 `briefing`、`server/discover.instructions`、Lobby／Session 雙 URL AI Join Kit，並以真實 ChatGPT Web Plus 憑 kit 進桌關門（見 `M04-C_CLOSEOUT.md`；Bearer／純 HTTP 路徑與其他 client 相容記錄依使用者拍板延後）；M04 三個 Subphase 皆已關門，下一步是 M04 Phase 關門（合併回 `main`、全套 E2E）與 P4 開工前置。**
+**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門，P3-E 與 P3-F 已於 2026-09-11 關門（external MCP client HTTPS E1 於 P3-F closeout 合併執行通過），P3 Phase 同日以 `d6b791e` 合併回 `main`，`P3 Full-Stack E2E` CI run `34587347309` 全綠。同日 P3 第一次真實使用暴露「AI 拿到 token 不知道怎麼開始」與「網頁版 AI connector 連不進來」兩個缺口，已拍板插入 **M04 — Web Chat MCP Integration & AI Join Kit**，拆為 M04-A／M04-B／M04-C 並完成三份文件（同日經兩輪 review 定案：網頁版 chat 是首要目標，平台階梯 ChatGPT Plus → Claude chat 個人方案，兩者皆不可行則 M04 標 Platform Blocked / Deferred 直接進 P4；先 preflight 再 integration，Join Kit 最後）；M04-A 已於 2026-09-12 完成真實 ChatGPT Web Plus preflight 並關門：OAuth/DCR、MCP `2026-07-28` `server/discover → tools/list → tools/call`、read/write、role-scoped catalog、Refresh + 新對話的 catalog 更新規則、revoke/reconnect，以及 Tailscale Funnel 下 120 秒 long-poll 均已實測；M04-B 同日於 branch `m04-b-web-chat-integration` 完成 OAuth 入口（DCR、authorize 頁貼 AI Join Token、PKCE、refresh 重驗 P3-D authority、grant 失效聯動、public origin 設定）並以真實 ChatGPT Web Plus 經 Tailscale Funnel 跑完 DM 場與 Player 場 gate 關門（見 `M04-B_CLOSEOUT.md`）；M04-C 同日於 branch `m04-c-ai-join-kit-guide` 交付 `GET /mcp/guide`、與 catalog 同源的 tool description、強制流程 `briefing`、`server/discover.instructions`、Lobby／Session 雙 URL AI Join Kit，並以真實 ChatGPT Web Plus 憑 kit 進桌關門（見 `M04-C_CLOSEOUT.md`；Bearer／純 HTTP 路徑與其他 client 相容記錄依使用者拍板延後）；M04 三個 Subphase 皆已關門，M04 Phase 同日以 `0465788` 合併回 `main`，`P3 Full-Stack E2E` merge-gate CI run `34704122623` 全綠；下一步是 P4 開工前置。**
 
 P2 已交付並必須繼續維持的核心方向：
 
@@ -62,9 +62,8 @@ M04 已拍板的核心方向：
 
 下一步依序為：
 
-1. **M04 Phase 關門**：`m04-c-ai-join-kit-guide` 合併回 `main`，依 AGENTS.md「Phase 關門」跑全套 E2E。M04-C 延後項目（C.8 Bearer／純 HTTP 路徑、C.9 其他 client 相容記錄）不阻塞。
-2. **P4 — Quick Combat 開工前置**：拆 `P4-A`、`P4-B`… Subphase 並產出 `docs/P4/` 三份文件；P4-A 承接 SRD Monster／Beast stat blocks。
-5. P5～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
+1. **P4 — Quick Combat 開工前置**：拆 `P4-A`、`P4-B`… Subphase 並產出 `docs/P4/` 三份文件；P4-A 承接 SRD Monster／Beast stat blocks。
+2. P5～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
 
 P2 的正式契約：
 
@@ -140,7 +139,7 @@ M04 的正式契約：
 | M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，E.9 乾淨 Windows 11 冷啟動已於 2026-09-06 補驗完成 |
 | P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**A～F 全數關門，Phase 已關門** |
 | P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌；**A～F 全數關門，Phase 已關門並合併回 `main`** |
-| M04 | Web Chat MCP Integration & AI Join Kit | P3 關門後、P4 前插入；網頁版 chat preflight（ChatGPT Plus → Claude chat 個人方案）→ OAuth integration → AI Join Kit 與 server-hosted 指引；**M04-A、M04-B、M04-C 皆已於 2026-09-12 關門，目標平台判定為 ChatGPT Web Plus；Phase 關門（合併回 `main`）待辦** |
+| M04 | Web Chat MCP Integration & AI Join Kit | P3 關門後、P4 前插入；網頁版 chat preflight（ChatGPT Plus → Claude chat 個人方案）→ OAuth integration → AI Join Kit 與 server-hosted 指引；**M04-A、M04-B、M04-C 皆已於 2026-09-12 關門，目標平台判定為 ChatGPT Web Plus；M04 Phase 同日以 `0465788` 合併回 `main`，merge-gate E2E run `34704122623` 全綠** |
 | P4 | Quick Combat | 第一個完整可玩的 Combat MVP；首個 Subphase P4-A 承接 SRD Monster／Beast stat blocks |
 | P5 | Tactical Combat | 同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE 與空間系統 |
 | P6 | Adventure + AI DM Runtime | Adventure Definition／Importer、Campaign Runtime、世界資料、AI DM context／write-back |
