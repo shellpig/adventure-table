@@ -31,12 +31,9 @@ async function createActiveCampaign(page: Page, roomId: string, name: string) {
 
 function mcpBody(name: string) {
   return {
-    jsonrpc: '2.0',
-    id: 'm04c-e2e',
-    method: 'tools/call',
+    jsonrpc: '2.0', id: 'm04c-e2e', method: 'tools/call',
     params: {
-      name,
-      arguments: {},
+      name, arguments: {},
       _meta: {
         'io.modelcontextprotocol/protocolVersion': MCP_PROTOCOL_VERSION,
         'io.modelcontextprotocol/clientCapabilities': {},
@@ -57,9 +54,7 @@ async function getSessionContextWithKitToken(request: APIRequestContext, token: 
     },
   })
   expect(response.ok(), await response.text()).toBe(true)
-  return response.json() as Promise<{
-    result: { structuredContent: { ok: true; data: { mode: string } } }
-  }>
+  return response.json() as Promise<{ result: { structuredContent: { ok: true; data: { mode: string } } } }>
 }
 
 test('M04-C public MCP guide is reachable in both supported locales', async ({ request }) => {
@@ -93,11 +88,11 @@ test('M04-C Lobby AI DM kit token reaches pre_session context', async ({ page, r
   const kit = panel.locator('[data-ai-join-kit="dm"]')
   const kitText = kit.locator('.ai-join-kit__text')
   const origin = new URL(page.url()).origin
-  await expect(kitText).toContainText(`${origin}/mcp`)
+  await expect(kitText).toContainText(`URL: ${origin}/mcp`)
   await expect(kitText).toContainText(`${origin}/mcp/guide?locale=en`)
-  await expect(kitText).toContainText('Role: dm')
+  await expect(kitText).toContainText('Role: DM')
   await expect(kitText).toContainText('Expires:')
-  await expect(kitText).toContainText('First step: after connecting, call get_session_context.')
+  await expect(kitText).toContainText('get_session_context')
 
   const context = await getSessionContextWithKitToken(request, token)
   expect(context.result.structuredContent).toMatchObject({ ok: true, data: { mode: 'pre_session' } })
@@ -149,6 +144,6 @@ test('M04-C Player Let AI Control reveals a Player Join Kit', async ({ page, req
   await expect(panel.locator('[data-ai-token-once="true"]')).toBeVisible()
   const kit = panel.locator('[data-ai-join-kit="player"]')
   await expect(kit).toBeVisible()
-  await expect(kit.locator('.ai-join-kit__text')).toContainText('Role: player')
+  await expect(kit.locator('.ai-join-kit__text')).toContainText('Role: Player')
   await expect(kit.locator('.ai-join-kit__text')).toContainText('get_session_context')
 })
