@@ -1,6 +1,6 @@
 # Adventure Table 專案簡報
 
-最後更新：2026-09-11（M04 拆分）
+最後更新：2026-09-12（M04-A 關門）
 
 本檔是**當前進度、Roadmap、下一步與文件索引的單一事實來源**，供新的 AI Session 或實作者接手。產品行為以 [規格企劃.md](規格企劃.md) 為準；實作契約與歷史驗收證據請依下方索引查閱，不在本檔重述。
 
@@ -23,7 +23,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## 當前狀態與下一步
 
-**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門，P3-E 與 P3-F 已於 2026-09-11 關門（external MCP client HTTPS E1 於 P3-F closeout 合併執行通過），P3 Phase 同日以 `d6b791e` 合併回 `main`，`P3 Full-Stack E2E` CI run `34587347309` 全綠。同日 P3 第一次真實使用暴露「AI 拿到 token 不知道怎麼開始」與「網頁版 AI connector 連不進來」兩個缺口，已拍板插入 **M04 — Web Chat MCP Integration & AI Join Kit**，拆為 M04-A／M04-B／M04-C 並完成三份文件（同日經兩輪 review 定案：網頁版 chat 是首要目標，平台階梯 ChatGPT Plus → Claude chat 個人方案，兩者皆不可行則 M04 標 Platform Blocked / Deferred 直接進 P4；先 preflight 再 integration，Join Kit 最後）；下一步是 M04-A preflight。**
+**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門，P3-E 與 P3-F 已於 2026-09-11 關門（external MCP client HTTPS E1 於 P3-F closeout 合併執行通過），P3 Phase 同日以 `d6b791e` 合併回 `main`，`P3 Full-Stack E2E` CI run `34587347309` 全綠。同日 P3 第一次真實使用暴露「AI 拿到 token 不知道怎麼開始」與「網頁版 AI connector 連不進來」兩個缺口，已拍板插入 **M04 — Web Chat MCP Integration & AI Join Kit**，拆為 M04-A／M04-B／M04-C 並完成三份文件（同日經兩輪 review 定案：網頁版 chat 是首要目標，平台階梯 ChatGPT Plus → Claude chat 個人方案，兩者皆不可行則 M04 標 Platform Blocked / Deferred 直接進 P4；先 preflight 再 integration，Join Kit 最後）；M04-A 已於 2026-09-12 完成真實 ChatGPT Web Plus preflight 並關門：OAuth/DCR、MCP `2026-07-28` `server/discover → tools/list → tools/call`、read/write、role-scoped catalog、Refresh + 新對話的 catalog 更新規則、revoke/reconnect，以及 Tailscale Funnel 下 120 秒 long-poll 均已實測；下一步是 M04-B — Adventure Table Web Chat Integration。**
 
 P2 已交付並必須繼續維持的核心方向：
 
