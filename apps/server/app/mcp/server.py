@@ -61,6 +61,15 @@ def _needs_oauth_service(request: Request) -> bool:
     return authorization.startswith(f"Bearer {OAUTH_ACCESS_TOKEN_PREFIX}")
 
 
+def _oauth_challenge(request: Request) -> str:
+    base_url = str(request.base_url).rstrip("/")
+    return (
+        'Bearer resource_metadata="'
+        f"{base_url}/.well-known/oauth-protected-resource"
+        '"'
+    )
+
+
 @router.post("/mcp")
 async def mcp_endpoint(
     request: Request,
@@ -86,9 +95,6 @@ async def mcp_endpoint(
         else None
     )
     try:
-        # Token verification resolves the current grant/Seat scope and may touch
-        # persistence. Keep that short synchronous DB work off the ASGI event loop,
-        # matching the Human event-wait actor-resolution path.
         authenticated = await run_in_threadpool(
             authenticate_request,
             request,
@@ -98,7 +104,7 @@ async def mcp_endpoint(
     except MCPAuthenticationError as exc:
         return JSONResponse(
             status_code=401,
-            headers={"WWW-Authenticate": "Bearer"},
+            headers={"WWW-Authenticate": _oauth_challenge(request)},
             content=error_payload(
                 envelope.request_id,
                 rpc_code=-32001,
