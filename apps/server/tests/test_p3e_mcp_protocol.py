@@ -65,13 +65,7 @@ def _headers(method: str, *, token: str = "at_ai_fake_secret", name: str | None 
 
 def test_discover_is_modern_stateless_first_request_and_cacheable() -> None:
     client, service = _client()
-
-    response = client.post(
-        "/mcp",
-        json=_body("server/discover", request_id="discover-1"),
-        headers=_headers("server/discover"),
-    )
-
+    response = client.post("/mcp", json=_body("server/discover", request_id="discover-1"), headers=_headers("server/discover"))
     assert response.status_code == 200
     result = response.json()["result"]
     assert result["resultType"] == "complete"
@@ -87,9 +81,7 @@ def test_protocol_version_header_and_meta_must_match() -> None:
     client, _ = _client()
     body = _body("server/discover")
     body["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"] = "2025-11-25"
-
     response = client.post("/mcp", json=body, headers=_headers("server/discover"))
-
     assert response.status_code == 400
     error = response.json()["error"]
     assert error["code"] == MCP_HEADER_MISMATCH
@@ -100,9 +92,7 @@ def test_missing_protocol_version_header_is_rejected_before_auth() -> None:
     client, service = _client()
     headers = _headers("server/discover")
     del headers["MCP-Protocol-Version"]
-
     response = client.post("/mcp", json=_body("server/discover"), headers=headers)
-
     assert response.status_code == 400
     error = response.json()["error"]
     assert error["code"] == MCP_UNSUPPORTED_PROTOCOL_VERSION
@@ -114,22 +104,14 @@ def test_modern_request_requires_client_capabilities_meta() -> None:
     client, _ = _client()
     body = _body("server/discover")
     del body["params"]["_meta"]["io.modelcontextprotocol/clientCapabilities"]
-
     response = client.post("/mcp", json=body, headers=_headers("server/discover"))
-
     assert response.status_code == 400
     assert response.json()["error"]["data"]["code"] == "mcp_client_capabilities_required"
 
 
 def test_mcp_method_header_must_match_json_rpc_method() -> None:
     client, _ = _client()
-
-    response = client.post(
-        "/mcp",
-        json=_body("server/discover"),
-        headers=_headers("tools/list"),
-    )
-
+    response = client.post("/mcp", json=_body("server/discover"), headers=_headers("tools/list"))
     assert response.status_code == 400
     error = response.json()["error"]
     assert error["code"] == MCP_HEADER_MISMATCH
@@ -140,9 +122,7 @@ def test_missing_mcp_method_header_is_rejected_before_auth() -> None:
     client, service = _client()
     headers = _headers("server/discover")
     del headers["Mcp-Method"]
-
     response = client.post("/mcp", json=_body("server/discover"), headers=headers)
-
     assert response.status_code == 400
     error = response.json()["error"]
     assert error["code"] == MCP_HEADER_MISMATCH
@@ -152,26 +132,22 @@ def test_missing_mcp_method_header_is_rejected_before_auth() -> None:
 
 def test_named_operation_requires_matching_mcp_name_header() -> None:
     client, _ = _client()
-
     response = client.post(
         "/mcp",
         json=_body("tools/call", params={"name": "post_action", "arguments": {}}),
         headers=_headers("tools/call", name="wrong_tool"),
     )
-
     assert response.status_code == 400
     assert response.json()["error"]["data"]["code"] == "mcp_name_header_mismatch"
 
 
 def test_named_operation_requires_mcp_name_header() -> None:
     client, service = _client()
-
     response = client.post(
         "/mcp",
         json=_body("tools/call", params={"name": "post_action", "arguments": {}}),
         headers=_headers("tools/call"),
     )
-
     assert response.status_code == 400
     error = response.json()["error"]
     assert error["code"] == MCP_HEADER_MISMATCH
@@ -183,22 +159,14 @@ def test_modern_endpoint_rejects_removed_session_header() -> None:
     client, _ = _client()
     headers = _headers("server/discover")
     headers["Mcp-Session-Id"] = "legacy-session"
-
     response = client.post("/mcp", json=_body("server/discover"), headers=headers)
-
     assert response.status_code == 400
     assert response.json()["error"]["data"]["code"] == "mcp_session_id_not_supported"
 
 
 def test_initialize_is_not_a_handshake_fallback() -> None:
     client, _ = _client()
-
-    response = client.post(
-        "/mcp",
-        json=_body("initialize"),
-        headers=_headers("initialize"),
-    )
-
+    response = client.post("/mcp", json=_body("initialize"), headers=_headers("initialize"))
     assert response.status_code == 404
     assert response.json()["error"]["code"] == -32601
     assert response.json()["error"]["data"]["code"] == "mcp_method_not_found"
@@ -206,31 +174,29 @@ def test_initialize_is_not_a_handshake_fallback() -> None:
 
 def test_every_request_requires_bearer_token() -> None:
     client, _ = _client()
-
     response = client.post(
         "/mcp",
         json=_body("server/discover"),
-        headers={
-            "MCP-Protocol-Version": MCP_PROTOCOL_VERSION,
-            "Mcp-Method": "server/discover",
-        },
+        headers={"MCP-Protocol-Version": MCP_PROTOCOL_VERSION, "Mcp-Method": "server/discover"},
     )
-
     assert response.status_code == 401
-    assert response.headers["www-authenticate"] == "Bearer"
+    assert response.headers["www-authenticate"] == (
+        'Bearer resource_metadata="http://testserver/.well-known/oauth-protected-resource"'
+    )
     assert response.json()["error"]["data"]["code"] == "ai_token_required"
 
 
 def test_invalid_bearer_is_mapped_to_stable_structured_error() -> None:
     client, _ = _client(_FakeAIControllerService(reject=True))
-
     response = client.post(
         "/mcp",
         json=_body("server/discover"),
         headers=_headers("server/discover", token="bad"),
     )
-
     assert response.status_code == 401
+    assert response.headers["www-authenticate"] == (
+        'Bearer resource_metadata="http://testserver/.well-known/oauth-protected-resource"'
+    )
     error = response.json()["error"]
     assert error["code"] == -32001
     assert error["data"]["code"] == "ai_token_unauthorized"

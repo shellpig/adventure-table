@@ -17,6 +17,7 @@ from app.persistence.rooms.p3c_runtime import (
 ROLL_PENDING_REVISION = "0018_p3c_roll_pending"
 CHECK_COMMAND_REVISION = "0019_p3c_check_command"
 P3D_REVISION = "0020_p3d_ai_controller_grants"
+M04B_REVISION = "0021_m04b_ai_oauth"
 
 
 def _migration_source() -> str:
@@ -54,7 +55,11 @@ def test_p3c_web_migration_chain_links_check_command_into_current_head() -> None
     p3d_revision = scripts.get_revision(P3D_REVISION)
     assert p3d_revision is not None
     assert p3d_revision.down_revision == CHECK_COMMAND_REVISION
-    assert P3D_REVISION in scripts.get_heads()
+
+    m04b_revision = scripts.get_revision(M04B_REVISION)
+    assert m04b_revision is not None
+    assert m04b_revision.down_revision == P3D_REVISION
+    assert M04B_REVISION in scripts.get_heads()
 
 
 def test_p3c_check_command_constraint_matches_metadata_and_downgrades_safely() -> None:

@@ -24,6 +24,10 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("ADVENTURE_TABLE_SPA_ROOT"),
     )
+    mcp_public_origin: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("ADVENTURE_TABLE_MCP_PUBLIC_ORIGIN"),
+    )
     enabled_content_packs: Annotated[tuple[str, ...], NoDecode] = Field(
         default=(
             "srd5.1",

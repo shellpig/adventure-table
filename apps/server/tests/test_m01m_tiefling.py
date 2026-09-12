@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
 from uuid import uuid4
 
 import pytest
@@ -33,9 +34,33 @@ BLOODLINES = [
 ]
 
 
-def _baseline_abilities() -> dict[str, int]:
+@lru_cache(maxsize=1)
+def _baseline_ability_items() -> tuple[tuple[str, int], ...]:
     result, _ = M.ancestry(race=M.TIEFLING)
-    return M.effective_abilities(result)
+    return tuple(M.effective_abilities(result).items())
+
+
+def _baseline_abilities() -> dict[str, int]:
+    return dict(_baseline_ability_items())
+
+
+@lru_cache(maxsize=None)
+def _bloodline_result(variant: str, option: str, level: int = 1):
+    result, _ = M.ancestry(
+        race=M.TIEFLING,
+        variant=variant,
+        options={"bloodline": option},
+        level=level,
+    )
+    return result
+
+
+@lru_cache(maxsize=1)
+def _standard_level_five_sources() -> frozenset[str]:
+    standard, _ = M.ancestry(race=M.TIEFLING, level=5)
+    return frozenset(
+        entry.source_key for entry in standard.build_candidate.spell_access_entries
+    )
 
 
 @pytest.mark.parametrize(("variant", "option", "legacy", "raised"), BLOODLINES)
@@ -45,7 +70,7 @@ def test_bloodline_replaces_both_standard_packages_without_stacking(
     legacy: str,
     raised: str,
 ) -> None:
-    result, _ = M.ancestry(race=M.TIEFLING, variant=variant, options={"bloodline": option})
+    result = _bloodline_result(variant, option)
     build = result.build_candidate
 
     assert result.validation.issues == ()
@@ -76,7 +101,7 @@ def test_bloodline_ability_package_is_not_added_on_top_of_the_standard_one(
     raised: str,
 ) -> None:
     baseline = _baseline_abilities()
-    result, _ = M.ancestry(race=M.TIEFLING, variant=variant, options={"bloodline": option})
+    result = _bloodline_result(variant, option)
     abilities = M.effective_abilities(result)
 
     # Every bloodline is CHA +2 plus one other +1. Charisma therefore matches the
@@ -97,12 +122,9 @@ def test_bloodline_legacy_spells_replace_the_standard_infernal_list(
     legacy: str,
     raised: str,
 ) -> None:
-    standard, _ = M.ancestry(race=M.TIEFLING, level=5)
-    bloodline, _ = M.ancestry(
-        race=M.TIEFLING, variant=variant, options={"bloodline": option}, level=5
-    )
+    bloodline = _bloodline_result(variant, option, level=5)
 
-    standard_sources = {entry.source_key for entry in standard.build_candidate.spell_access_entries}
+    standard_sources = _standard_level_five_sources()
     bloodline_entries = bloodline.build_candidate.spell_access_entries
     bloodline_sources = {entry.source_key for entry in bloodline_entries}
 

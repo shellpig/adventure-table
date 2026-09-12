@@ -25,3 +25,27 @@ def test_standalone_does_not_mount_mcp_transport(
         # 404 otherwise. Either way no MCP handler answered.
         assert response.status_code in {404, 405}
         assert "jsonrpc" not in response.text
+
+
+def test_standalone_has_no_oauth_routes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with loaded_standalone(monkeypatch, tmp_path) as standalone:
+        app = standalone.app
+        paths = app.openapi()["paths"]
+        oauth_paths = (
+            "/.well-known/oauth-protected-resource",
+            "/.well-known/oauth-authorization-server",
+            "/mcp/oauth/register",
+            "/mcp/oauth/authorize",
+            "/mcp/oauth/token",
+            "/mcp/oauth/revoke",
+        )
+        for path in oauth_paths:
+            assert path not in paths
+
+        client = TestClient(app)
+        for path in oauth_paths:
+            response = client.get(path) if path.startswith("/.well-known/") else client.post(path)
+            assert response.status_code in {404, 405}

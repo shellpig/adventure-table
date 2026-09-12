@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 import m01k_support as S
 from app.domain.rules.hit_points import calculate_max_hp
 from app.domain.rules.skills import passive_investigation, passive_perception
@@ -39,7 +41,9 @@ PINNED_NESTED = {
 }
 
 
-def _build_for(content, feat_ref: str):
+@lru_cache(maxsize=None)
+def _build_for(feat_ref: str):
+    content = S.registry()
     spec = S.WIZARD_L8 if feat_ref in SPELLCASTING_FEATS else S.FIGHTER_L4
     result, _, _ = S.feat_draft(
         feat_ref,
@@ -123,12 +127,12 @@ def test_static_modifier_targets_stay_inside_the_whitelist() -> None:
 
 def test_static_derived_feats_actually_move_the_sheet_numbers() -> None:
     content = S.registry()
-    baseline = _build_for(content, "phb2014:feat:alert")
+    baseline = _build_for("phb2014:feat:alert")
 
-    tough = _build_for(content, "phb2014:feat:tough")
+    tough = _build_for("phb2014:feat:tough")
     assert calculate_max_hp(tough) > calculate_max_hp(baseline)
 
-    observant = _build_for(content, "phb2014:feat:observant")
+    observant = _build_for("phb2014:feat:observant")
     assert passive_perception(observant, content) > passive_perception(baseline, content)
     assert passive_investigation(observant, content) > passive_investigation(baseline, content)
 
@@ -142,7 +146,7 @@ def test_no_deferred_feat_quietly_changes_a_derived_value() -> None:
     for feat_ref, classification in sorted(classifications.items()):
         if classification == "static_derived":
             continue
-        build = _build_for(content, feat_ref)
+        build = _build_for(feat_ref)
         if build.static_derived_modifiers:
             offenders.append(feat_ref)
     assert offenders == []
@@ -165,7 +169,7 @@ def test_deferred_feats_still_persist_identity_and_their_structural_part() -> No
         assert entry.data["desc"]
         assert isinstance(entry.data["prerequisites"], list)
 
-        build = _build_for(content, feat_ref)
+        build = _build_for(feat_ref)
         assert feat_ref in build.feat_refs
         acquisition = next(item for item in build.feat_acquisitions if item.feat_ref == feat_ref)
         assert acquisition.source_opportunity
@@ -186,7 +190,7 @@ def test_lucky_materializes_its_own_pool_without_touching_superiority_dice() -> 
     from app.domain.rules.feature_resources import feature_resource_capacities
 
     content = S.registry()
-    build = _build_for(content, "phb2014:feat:lucky")
+    build = _build_for("phb2014:feat:lucky")
     grant = next(
         item for item in build.feat_resource_grants if item.resource_id == "luck-points"
     )

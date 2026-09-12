@@ -7,8 +7,13 @@ from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
 from app.api.rooms.ai_controllers import get_ai_controller_service
+from app.api.rooms.ai_oauth import get_ai_controller_oauth_service
 from app.domain.rooms.ai_controllers import AIControllerService
-from app.mcp.auth import MCPAuthenticationError, authenticate_request
+from app.mcp.auth import (
+    MCPAuthenticationError,
+    OAUTH_ACCESS_TOKEN_PREFIX,
+    authenticate_request,
+)
 from app.mcp.dependencies import get_ai_tool_application_service
 from app.mcp.protocol import (
     MCP_PROTOCOL_VERSION,
@@ -18,6 +23,7 @@ from app.mcp.protocol import (
     validate_request,
 )
 from app.mcp.tools import call_tool, tool_catalog
+from app.mcp.public_origin import public_origin
 
 
 router = APIRouter(tags=["mcp"])
@@ -51,6 +57,19 @@ def _protocol_error(request_id: Any, exc: MCPProtocolError) -> JSONResponse:
     )
 
 
+def _needs_oauth_service(request: Request) -> bool:
+    authorization = request.headers.get("authorization", "")
+    return authorization.startswith(f"Bearer {OAUTH_ACCESS_TOKEN_PREFIX}")
+
+
+def _oauth_challenge(request: Request) -> str:
+    return (
+        'Bearer resource_metadata="'
+        f"{public_origin(request)}/.well-known/oauth-protected-resource"
+        '"'
+    )
+
+
 @router.post("/mcp")
 async def mcp_endpoint(
     request: Request,
@@ -70,19 +89,22 @@ async def mcp_endpoint(
     except MCPProtocolError as exc:
         return _protocol_error(request_id, exc)
 
+    oauth_service = (
+        get_ai_controller_oauth_service(request)
+        if _needs_oauth_service(request)
+        else None
+    )
     try:
-        # Token verification resolves the current grant/Seat scope and may touch
-        # persistence. Keep that short synchronous DB work off the ASGI event loop,
-        # matching the Human event-wait actor-resolution path.
         authenticated = await run_in_threadpool(
             authenticate_request,
             request,
             ai_controller_service,
+            oauth_service,
         )
     except MCPAuthenticationError as exc:
         return JSONResponse(
             status_code=401,
-            headers={"WWW-Authenticate": "Bearer"},
+            headers={"WWW-Authenticate": _oauth_challenge(request)},
             content=error_payload(
                 envelope.request_id,
                 rpc_code=-32001,

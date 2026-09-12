@@ -52,8 +52,8 @@ def test_mcp_authentication_runs_outside_asgi_event_loop(monkeypatch) -> None:
     )
     saw_running_loop: list[bool] = []
 
-    def fake_authenticate(request, service):
-        del request, service
+    def fake_authenticate(request, service, oauth_repository=None):
+        del request, service, oauth_repository
         try:
             asyncio.get_running_loop()
         except RuntimeError:

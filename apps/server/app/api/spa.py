@@ -20,7 +20,14 @@ def mount_spa(app: FastAPI, spa_root: Path | None) -> None:
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa_fallback(full_path: str) -> FileResponse:
-        if full_path == "api" or full_path.startswith("api/"):
+        if (
+            full_path == "api"
+            or full_path.startswith("api/")
+            or full_path == "mcp"
+            or full_path.startswith("mcp/")
+            or full_path == ".well-known"
+            or full_path.startswith(".well-known/")
+        ):
             raise HTTPException(status_code=404, detail="Not Found")
 
         candidate = (root / full_path).resolve()

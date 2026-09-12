@@ -39,6 +39,10 @@ FORBIDDEN_MULTIPLAYER_TABLES = {
     "roll_requests",
     "roll_results",
     "pending_actions",
+    "ai_oauth_clients",
+    "ai_oauth_authorizations",
+    "ai_oauth_authorization_codes",
+    "ai_oauth_tokens",
 }
 
 

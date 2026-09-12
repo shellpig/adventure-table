@@ -61,6 +61,45 @@ docker compose up -d db
 docker compose run --rm server alembic upgrade heads
 ```
 
+## Web Chat MCP / OAuth 部署
+
+Web Chat connector 使用公開 HTTPS MCP 入口 `/mcp`。OAuth discovery 會公開 `/.well-known/oauth-protected-resource` 與 `/.well-known/oauth-authorization-server`；public client 透過 `/mcp/oauth/register` 做 DCR，再走 `/mcp/oauth/authorize` 與 `/mcp/oauth/token` 的 authorization-code + PKCE S256 流程。部署 web track 時可明確執行：
+
+```bash
+cd apps/server
+alembic upgrade web@head
+```
+
+OAuth **不會建立、選擇、切換或改變 Seat / Role**。在 Adventure Table 端必須先建立既有的 AI Seat，並由 Lobby / Player handoff 產生一次性的 **AI Join Token**；OAuth authorize 只把外部 client 綁到該既有 P3-D grant。授權完成後只保存 hash 與 OAuth authorization/token 狀態，不應把 AI Join Token 或 OAuth credential 寫進 README、log、commit 或部署設定範例。
+
+Access / refresh token 與 authorization 會保存在 Web database，因此 server restart 後仍可驗證；但 P3-D grant 仍是唯一 authority。Take Back / revoke、Seat controller epoch 改變、Session End / Abandon、pre-session TTL 到期都會使對應 OAuth family 失效；MCP request 與 refresh 也會重新進 P3-D authority 驗證。Windows standalone 不掛載 MCP/OAuth routes，也不建立 OAuth tables。
+
+### 讓網頁版 chat 連進來
+
+網頁版 chat 的 connector 需要一個公網 HTTPS 入口。**只轉發 `/mcp*` 與兩個 OAuth discovery 路徑，不把 Room UI（`/`、`/api/*`）露出公網**；TLS 由入口終結，server 本身仍聽 HTTP。
+
+server 只看得到 loopback 的 origin，metadata 與 401 challenge 裡的 URL 要靠 `ADVENTURE_TABLE_MCP_PUBLIC_ORIGIN` 指到公網 origin（不含路徑、不含尾斜線）。`docker-compose.yml` 會把這個環境變數透傳給 `server`；未設定時退回 request origin，只適合本機直連。
+
+以 Tailscale Funnel 為例（M04-A／M04-B 實測的入口形態）。`--set-path` 的 target **必須帶同一個路徑**，否則 Tailscale 會把 mount 前綴剝掉再轉給後端：
+
+```bash
+ADVENTURE_TABLE_MCP_PUBLIC_ORIGIN=https://<node>.<tailnet>.ts.net docker compose up -d --build server
+```
+
+```bash
+tailscale funnel --bg --set-path /mcp http://127.0.0.1:8000/mcp
+```
+
+```bash
+tailscale funnel --bg --set-path /.well-known/oauth-protected-resource http://127.0.0.1:8000/.well-known/oauth-protected-resource
+```
+
+```bash
+tailscale funnel --bg --set-path /.well-known/oauth-authorization-server http://127.0.0.1:8000/.well-known/oauth-authorization-server
+```
+
+connector URL 填 `https://<node>.<tailnet>.ts.net/mcp`。驗證：`GET /.well-known/oauth-authorization-server` 的 `issuer` 是公網 origin；`GET /api/rooms` 在入口就 404。收工用 `tailscale funnel reset`。
+
 ## Backend 本機開發
 
 Python 3.12+。venv 建在**專案根目錄**，讓所有人與 agent 看到一致結果：
@@ -124,6 +163,8 @@ cd apps/web && ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET=1 npm run test:e2e:do
 ```
 
 沒有設這個變數時 globalSetup 會直接中止並說明原因，不會動到資料。
+
+`character-sheet.spec.ts` 的 P0-F 三頁 full-page 截圖 smoke 預設跳過；要重新產出截圖時加 `ADVENTURE_TABLE_E2E_VISUAL_SMOKE=1`。
 
 Windows 上不要讓 Playwright 自己託管 vite：dev server 會在跑測試途中停止接受連線，造成數十個 `net::ERR_CONNECTION_REFUSED`。`playwright.config.ts` 會直接擋下這條路徑。根因與量測見 [`已知問題.md`](已知問題.md) 的 KI-ENV-001。
 

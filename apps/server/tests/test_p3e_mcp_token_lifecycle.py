@@ -147,7 +147,9 @@ def _discover(client: TestClient, token: str):
 
 def _assert_unauthorized(response) -> None:
     assert response.status_code == 401
-    assert response.headers["www-authenticate"] == "Bearer"
+    assert response.headers["www-authenticate"] == (
+        'Bearer resource_metadata="http://testserver/.well-known/oauth-protected-resource"'
+    )
     error = response.json()["error"]
     assert error["code"] == -32001
     assert error["data"]["code"] == "ai_token_unauthorized"

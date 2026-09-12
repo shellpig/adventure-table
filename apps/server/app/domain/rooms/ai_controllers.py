@@ -292,8 +292,16 @@ class AIControllerService:
         grant = self.repository.get(parsed.grant_id)
         if grant is None or not verify_ai_controller_secret(parsed.secret, grant.secret_hash):
             raise AIControllerUnauthorizedError("AI controller token is invalid")
+        return self.authenticate_grant(parsed.grant_id, touch=touch)
+
+    def authenticate_grant(
+        self,
+        grant_id: UUID,
+        *,
+        touch: bool = False,
+    ) -> AIControllerAuthView:
         try:
-            scope = self.repository.resolve_current_scope(parsed.grant_id, touch=touch)
+            scope = self.repository.resolve_current_scope(grant_id, touch=touch)
         except AIControllerGrantUnauthorizedPersistenceError as exc:
             raise AIControllerUnauthorizedError(str(exc)) from exc
         return self._auth_view(scope)

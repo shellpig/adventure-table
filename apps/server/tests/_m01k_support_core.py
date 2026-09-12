@@ -9,6 +9,7 @@ restart contracts. Keeping them here avoids six near-identical copies.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from functools import lru_cache
 from typing import Any
 from uuid import uuid4
 
@@ -67,7 +68,10 @@ DEFAULT_ABILITIES = {
 }
 
 
+@lru_cache(maxsize=1)
 def registry():
+    """Share the immutable default content baseline across rule matrix tests."""
+
     return load_default_content_registry()
 
 

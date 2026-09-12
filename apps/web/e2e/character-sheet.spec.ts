@@ -3,6 +3,7 @@ import type { APIRequestContext } from './support/roomTest'
 
 const FIXTURE_ID = '00000000-0000-4000-8000-0000000000e0'
 const CHARACTER_URL = `/characters/${FIXTURE_ID}`
+const manualSmokeTest = process.env.ADVENTURE_TABLE_E2E_VISUAL_SMOKE === '1' ? test : test.skip
 
 async function resetFixture(request: APIRequestContext) {
   const response = await request.patch(`/api/characters/${FIXTURE_ID}/state`, {
@@ -51,7 +52,7 @@ test('opens the three-page P0 character sheet', async ({ page }) => {
   await expect(page.getByRole('combobox', { name: 'Item name' })).toBeVisible()
 })
 
-test('captures P0-F manual smoke views', async ({ page }, testInfo) => {
+manualSmokeTest('captures P0-F manual smoke views', async ({ page }, testInfo) => {
   await page.goto(CHARACTER_URL)
   await expect(page.getByRole('heading', { name: 'P0 Human Fighter 5 / Wizard 5' })).toBeVisible()
   await page.screenshot({
