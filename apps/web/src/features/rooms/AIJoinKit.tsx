@@ -24,7 +24,7 @@ const labels = {
     endpoint: 'MCP URL',
     guide: 'Guide',
     token: 'AI Join Token',
-    web: '網頁版 chat：新增 connector，URL 使用上方 MCP URL；OAuth 要求憑證時貼上此 token。',
+    web: 'ChatGPT Web：新增 Adventure Table connector，URL 使用上方 MCP URL；OAuth 要求憑證時貼上此 token。',
     client: 'MCP client：以 Bearer token 連到上方 MCP URL。',
     http: '純 HTTP：只限有 shell 或可對外連網 code execution 的 AI；依 Guide 的 POST /mcp 契約呼叫。',
   },
@@ -40,7 +40,7 @@ const labels = {
     endpoint: 'MCP URL',
     guide: 'Guide',
     token: 'AI Join Token',
-    web: 'Web chat: add a connector using the MCP URL above; paste this token when OAuth asks for the credential.',
+    web: 'ChatGPT Web: add the Adventure Table connector using the MCP URL above; paste this token when OAuth asks for the credential.',
     client: 'MCP client: connect to the MCP URL above using this token as the Bearer credential.',
     http: 'Raw HTTP: only for an AI with shell or outbound-network code execution; follow the Guide POST /mcp contract.',
   },
@@ -53,7 +53,12 @@ function normalizedOrigin(origin: string) {
 export function isLoopbackOrigin(origin: string) {
   try {
     const hostname = new URL(origin).hostname
-    return hostname === 'localhost' || hostname === '::1' || hostname.startsWith('127.')
+    return (
+      hostname === 'localhost' ||
+      hostname === '::1' ||
+      hostname === '[::1]' ||
+      hostname.startsWith('127.')
+    )
   } catch {
     return false
   }
@@ -89,7 +94,10 @@ export function AIJoinKit({ origin, token, role, locale }: AIJoinKitProps) {
   const copy = labels[locale]
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState(false)
-  const kit = useMemo(() => buildAIJoinKit({ origin, token, role, locale }), [origin, token, role, locale])
+  const kit = useMemo(
+    () => buildAIJoinKit({ origin, token, role, locale }),
+    [origin, token, role, locale],
+  )
 
   const copyKit = async () => {
     try {

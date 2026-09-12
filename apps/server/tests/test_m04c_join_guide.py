@@ -27,23 +27,27 @@ def test_m04c_guide_covers_all_supported_join_paths_and_role_rules() -> None:
     guide_en = render_guide("en")
     guide_zh = render_guide("zh-TW")
 
-    assert "Web chat / connector" in guide_en
+    assert "ChatGPT Web / connector" in guide_en
     assert "MCP client (Bearer)" in guide_en
     assert "raw HTTP" in guide_en
+    assert "Minimal outbound client example" in guide_en
+    assert "curl -sS -X POST" in guide_en
+    assert "Mcp-Session-Id" in guide_en
+    assert "initialize is not required" in guide_en
     assert "post_narration" in guide_en
     assert "request_check" in guide_en
     assert "post_dialogue" in guide_en
     assert "post_action" in guide_en
     assert "Player does not have request_check" in guide_en
 
-    assert "網頁版 chat／connector" in guide_zh
+    assert "ChatGPT Web／connector" in guide_zh
     assert "MCP client（Bearer）" in guide_zh
     assert "純 HTTP" in guide_zh
     assert "DM 回應玩家時一律用 post_narration" in guide_zh
     assert "Player 沒有 request_check" in guide_zh
 
 
-def test_m04c_briefing_is_compact_mode_specific_and_scope_safe() -> None:
+def test_m04c_briefing_is_mode_specific_and_scope_safe() -> None:
     pre_session = render_briefing(role="dm", mode="pre_session")
     dm = render_briefing(role="dm", mode="active_session")
     player = render_briefing(role="player", mode="active_session")
@@ -64,9 +68,6 @@ def test_m04c_briefing_is_compact_mode_specific_and_scope_safe() -> None:
     assert "post_narration" not in player
     assert "set_stage_text" not in player
 
-    for briefing in (pre_session, dm, player):
-        assert len(briefing) <= 1200
-
 
 def test_m04c_tool_reference_rows_are_derived_from_catalog_contract() -> None:
     all_rows = {row["name"]: row for row in tool_reference_rows(None)}
@@ -81,16 +82,20 @@ def test_m04c_tool_reference_rows_are_derived_from_catalog_contract() -> None:
     assert "wait_for_event" in player_rows & dm_rows
 
     wait_description = all_rows["wait_for_event"]["description"]
-    assert "Key parameters" in wait_description
-    assert "required" in wait_description
+    assert "Key parameters and legal values" in wait_description
+    assert "timeout (range=0.0..120.0; default=30.0)" in wait_description
     assert "Allowed roles" in wait_description
-    assert "關鍵參數" in wait_description
+    assert "關鍵參數與合法值" in wait_description
     assert "可用角色" in wait_description
+
+    request_description = all_rows["request_check"]["description"]
+    assert "enum=" in request_description
 
 
 def test_m04c_guide_endpoint_is_public_and_has_stable_locale_error() -> None:
     response = asyncio.run(mcp_guide("en"))
     assert response.status_code == 200
+    assert response.headers["content-type"] == "text/plain; charset=utf-8"
     assert b"Adventure Table AI Join Guide" in response.body
 
     invalid = asyncio.run(mcp_guide("ja"))

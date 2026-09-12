@@ -79,22 +79,22 @@ def render_briefing(*, role: str, mode: str) -> str:
         "If temporary_instruction is non-empty, follow it as an additional temporary instruction.\n"
         f"zh-TW：{role_zh} {_wait_rule('zh-TW')} 完整指引：GET /mcp/guide?locale=zh-TW。"
         "temporary_instruction 若非空，將它視為額外的暫時指示。"
-    )[:1200]
+    )
 
 
 def render_guide(locale: Locale) -> str:
     rows = tool_reference_rows(None)
     if locale == "zh-TW":
-        intro = "Adventure Table AI 接入指引（網頁版 chat／MCP client／純 HTTP）"
+        intro = "Adventure Table AI 接入指引（ChatGPT Web／MCP client／純 HTTP）"
         web = (
-            "【1. 網頁版 chat／connector】\n"
-            "新增 Adventure Table connector，URL 指向 https://<host>/mcp；OAuth 授權頁出現時貼上 AI Join Token。"
+            "【1. ChatGPT Web／connector】\n"
+            "在 ChatGPT Web 新增 Adventure Table connector，URL 指向 https://<host>/mcp；OAuth 授權頁出現時貼上 AI Join Token。"
             "若 start_session 後工具仍未更新，請 Refresh／重新掃描工具，必要時開新對話。"
         )
         bearer = "【2. MCP client（Bearer）】\n以 Authorization: Bearer <AI_JOIN_TOKEN> 連到 /mcp。"
         http = (
             "【3. 有 shell 或可對外連網 code execution 的 AI：純 HTTP】\n"
-            "本段只適用於能直接對外連網的 AI。網頁版 chat sandbox 通常不能直接連外，請改用 connector。"
+            "本段只適用於能直接對外連網的 AI。網頁版 chat sandbox 通常不能直接連外，請改走 connector。"
         )
         flow = (
             "【進場與事件迴圈】\n先 get_session_context；mode=pre_session 時呼叫 start_session，mode=active_session 時直接續場。"
@@ -103,10 +103,11 @@ def render_guide(locale: Locale) -> str:
         rules = f"【DM 守則】\n{_DM_RULE_ZH}\n【Player 守則】\n{_PLAYER_RULE_ZH}"
         unauth = "收到 401 ai_token_unauthorized 時停止並告知使用者，不要重試。"
     else:
-        intro = "Adventure Table AI Join Guide (web chat / MCP client / raw HTTP)"
+        intro = "Adventure Table AI Join Guide (ChatGPT Web / MCP client / raw HTTP)"
         web = (
-            "[1. Web chat / connector]\nAdd the Adventure Table connector with URL https://<host>/mcp. When OAuth asks for the AI Join Token, paste it there. "
-            "After start_session, Refresh/rescan tools if the host still exposes the pre-session catalog; opening a new chat may be required."
+            "[1. ChatGPT Web / connector]\nAdd the Adventure Table connector in ChatGPT Web with URL https://<host>/mcp. "
+            "When OAuth asks for the AI Join Token, paste it there. After start_session, Refresh/rescan tools if the host still exposes "
+            "the pre-session catalog; opening a new chat may be required."
         )
         bearer = "[2. MCP client (Bearer)]\nConnect to /mcp with Authorization: Bearer <AI_JOIN_TOKEN>."
         http = (
@@ -124,7 +125,9 @@ def render_guide(locale: Locale) -> str:
     for row in rows:
         required = ", ".join(row["required_params"]) or "-"
         roles = ", ".join(row["roles"])
-        tool_lines.append(f"- {row['name']} | required: {required} | role: {roles} | {row['description']}")
+        tool_lines.append(
+            f"- {row['name']} | required: {required} | role: {roles} | {row['description']}"
+        )
 
     contract = f"""[HTTP contract]
 POST /mcp
@@ -136,8 +139,16 @@ Mcp-Name: get_session_context
 Do not send Mcp-Session-Id. initialize is not required.
 Body _meta must include io.modelcontextprotocol/protocolVersion and clientCapabilities.
 
-Example tools/call:
-{{"jsonrpc":"2.0","id":"1","method":"tools/call","params":{{"name":"get_session_context","arguments":{{}}}},"_meta":{{"io.modelcontextprotocol/protocolVersion":"{MCP_PROTOCOL_VERSION}","clientCapabilities":{{}}}}}}
+Minimal outbound client example (shell; only for an AI with outbound network access):
+AT_MCP_URL=https://<host>/mcp
+AI_JOIN_TOKEN=<AI_JOIN_TOKEN>
+curl -sS -X POST "$AT_MCP_URL" \\
+  -H "Authorization: Bearer $AI_JOIN_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -H "MCP-Protocol-Version: {MCP_PROTOCOL_VERSION}" \\
+  -H "Mcp-Method: tools/call" \\
+  -H "Mcp-Name: get_session_context" \\
+  --data '{{"jsonrpc":"2.0","id":"1","method":"tools/call","params":{{"name":"get_session_context","arguments":{{}}}},"_meta":{{"io.modelcontextprotocol/protocolVersion":"{MCP_PROTOCOL_VERSION}","clientCapabilities":{{}}}}}}'
 
 Success: result.structuredContent.data
 Business error: result.isError=true with structuredContent.error
@@ -161,6 +172,7 @@ Protocol error: JSON-RPC error payload with stable error code
 
 
 __all__ = [
+    "Locale",
     "WAIT_RETRY_COUNT",
     "WAIT_TIMEOUT_SECONDS",
     "render_briefing",

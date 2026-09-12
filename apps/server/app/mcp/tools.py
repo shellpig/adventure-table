@@ -36,21 +36,70 @@ class MCPToolDefinition:
     roles: frozenset[str]
     pre_session: bool = False
 
+    def _parameter_summary(self) -> str:
+        schema = self.input_model.model_json_schema()
+        definitions = schema.get("$defs", {})
+
+        def resolved_variants(value: dict[str, Any]) -> list[dict[str, Any]]:
+            variants = [value]
+            variants.extend(
+                item for item in value.get("anyOf", []) if isinstance(item, dict)
+            )
+            resolved: list[dict[str, Any]] = []
+            for item in variants:
+                ref = item.get("$ref")
+                if isinstance(ref, str) and ref.startswith("#/$defs/"):
+                    target = definitions.get(ref.removeprefix("#/$defs/"))
+                    if isinstance(target, dict):
+                        resolved.append(target)
+                resolved.append(item)
+            return resolved
+
+        parts: list[str] = []
+        for name, raw_property in schema.get("properties", {}).items():
+            if not isinstance(raw_property, dict):
+                parts.append(name)
+                continue
+            variants = resolved_variants(raw_property)
+            details: list[str] = []
+            enum_values: list[Any] = []
+            for variant in variants:
+                values = variant.get("enum")
+                if isinstance(values, list):
+                    enum_values.extend(value for value in values if value not in enum_values)
+            if enum_values:
+                details.append(
+                    "enum=" + "|".join(str(value) for value in enum_values)
+                )
+            minimum = next(
+                (variant["minimum"] for variant in variants if "minimum" in variant),
+                None,
+            )
+            maximum = next(
+                (variant["maximum"] for variant in variants if "maximum" in variant),
+                None,
+            )
+            if minimum is not None or maximum is not None:
+                details.append(f"range={minimum if minimum is not None else '-∞'}..{maximum if maximum is not None else '∞'}")
+            if "default" in raw_property:
+                details.append(f"default={raw_property['default']}")
+            parts.append(f"{name} ({'; '.join(details)})" if details else name)
+        return ", ".join(parts) if parts else "none"
+
     def rich_description(self) -> str:
         schema = self.input_model.model_json_schema()
-        properties = schema.get("properties", {})
         required = schema.get("required", [])
-        parameters = ", ".join(properties) if properties else "none"
+        parameter_text = self._parameter_summary()
         required_text = ", ".join(required) if required else "none"
         role_text = ", ".join(sorted(self.roles))
         return (
             f"{self.description} When to use: call this only when the current table state requires "
-            f"{self.name}. Key parameters: {parameters}; required: {required_text}. "
+            f"{self.name}. Key parameters and legal values: {parameter_text}; required: {required_text}. "
             f"Allowed roles: {role_text}. Respect the current scoped Seat, returned cursor/state, "
-            "schema enum values, and idempotency fields when present. / "
-            f"使用時機：目前桌面流程需要 {self.name} 時才呼叫。關鍵參數：{parameters}；"
+            "and idempotency fields when present. / "
+            f"使用時機：目前桌面流程需要 {self.name} 時才呼叫。關鍵參數與合法值：{parameter_text}；"
             f"必填：{required_text}；可用角色：{role_text}。必須遵守目前 scoped Seat、"
-            "回傳的 cursor／state、schema 合法列舉值，以及存在時的 idempotency 欄位。"
+            "回傳的 cursor／state，以及存在時的 idempotency 欄位。"
         )
 
     def wire(self) -> dict[str, Any]:
