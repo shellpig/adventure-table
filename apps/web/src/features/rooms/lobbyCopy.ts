@@ -42,6 +42,11 @@ const copy = {
     aiDmCopied: '已複製',
     aiDmCopyFailed: '無法自動複製，請手動複製 Token。',
     aiDmFailed: 'AI DM 憑證操作失敗。',
+    aiJoinKitTitle: 'AI Join Kit',
+    aiJoinKitHint: '把整份 kit 交給 AI；完整操作規則由 server guide 提供。Token 只顯示一次，請勿轉傳。',
+    aiJoinKitCopy: '複製 Join Kit',
+    aiJoinKitCopied: '已複製 Join Kit',
+    aiJoinKitDownload: '下載 .txt',
   },
   en: {
     locale: 'en' as const,
@@ -84,6 +89,11 @@ const copy = {
     aiDmCopied: 'Copied',
     aiDmCopyFailed: 'Automatic copy failed. Copy the Token manually.',
     aiDmFailed: 'AI DM credential operation failed.',
+    aiJoinKitTitle: 'AI Join Kit',
+    aiJoinKitHint: 'Give the whole kit to the AI; the server-hosted guide contains the full operating rules. The token is shown only once; do not forward it.',
+    aiJoinKitCopy: 'Copy Join Kit',
+    aiJoinKitCopied: 'Join Kit copied',
+    aiJoinKitDownload: 'Download .txt',
   },
 } as const
 
