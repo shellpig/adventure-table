@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import insert, select, update
 from sqlalchemy.engine import Connection, Engine
 
+from app.persistence.mcp.lifecycle import revoke_grant_authorizations_in_transaction
 from app.persistence.rooms.tables import (
     ai_controller_grants,
     campaign_seats,
@@ -98,6 +99,54 @@ class AIControllerGrantRepository:
             )
         return row
 
+    @staticmethod
+    def _active_grant_ids_for_seat(
+        connection: Connection,
+        seat_id: UUID,
+    ) -> tuple[UUID, ...]:
+        return tuple(
+            connection.scalars(
+                select(ai_controller_grants.c.id)
+                .where(
+                    ai_controller_grants.c.seat_id == seat_id,
+                    ai_controller_grants.c.status == "active",
+                )
+                .with_for_update()
+            ).all()
+        )
+
+    @staticmethod
+    def _active_grant_ids_for_session(
+        connection: Connection,
+        session_id: UUID,
+    ) -> tuple[UUID, ...]:
+        return tuple(
+            connection.scalars(
+                select(ai_controller_grants.c.id)
+                .where(
+                    ai_controller_grants.c.session_id == session_id,
+                    ai_controller_grants.c.status == "active",
+                )
+                .with_for_update()
+            ).all()
+        )
+
+    @staticmethod
+    def _revoke_grants_and_oauth(
+        connection: Connection,
+        grant_ids: tuple[UUID, ...],
+        *,
+        now: datetime,
+    ) -> None:
+        if not grant_ids:
+            return
+        connection.execute(
+            update(ai_controller_grants)
+            .where(ai_controller_grants.c.id.in_(grant_ids))
+            .values(status="revoked", revoked_at=now, temporary_instruction=None)
+        )
+        revoke_grant_authorizations_in_transaction(connection, grant_ids, now=now)
+
     def player_handoff_in_transaction(
         self,
         connection: Connection,
@@ -158,14 +207,8 @@ class AIControllerGrantRepository:
                 "Player Seat is not an active Character participant in this Session"
             )
 
-        connection.execute(
-            update(ai_controller_grants)
-            .where(
-                ai_controller_grants.c.seat_id == seat_id,
-                ai_controller_grants.c.status == "active",
-            )
-            .values(status="revoked", revoked_at=now, temporary_instruction=None)
-        )
+        prior_grant_ids = self._active_grant_ids_for_seat(connection, seat_id)
+        self._revoke_grants_and_oauth(connection, prior_grant_ids, now=now)
         generation = int(seat["controller_epoch"]) + 1
         connection.execute(
             insert(ai_controller_grants).values(
@@ -246,11 +289,7 @@ class AIControllerGrantRepository:
                 "Take Back requires the exact still-active handoff origin access session"
             )
         next_epoch = int(seat["controller_epoch"]) + 1
-        connection.execute(
-            update(ai_controller_grants)
-            .where(ai_controller_grants.c.id == grant.id)
-            .values(status="revoked", revoked_at=now, temporary_instruction=None)
-        )
+        self._revoke_grants_and_oauth(connection, (grant.id,), now=now)
         connection.execute(
             update(campaign_seats)
             .where(campaign_seats.c.id == seat_id)
@@ -317,11 +356,7 @@ class AIControllerGrantRepository:
         ):
             raise AIControllerHandoffPersistenceError("Current AI grant is stale")
         next_epoch = int(seat["controller_epoch"]) + 1
-        connection.execute(
-            update(ai_controller_grants)
-            .where(ai_controller_grants.c.id == grant.id)
-            .values(status="revoked", revoked_at=now, temporary_instruction=None)
-        )
+        self._revoke_grants_and_oauth(connection, (grant.id,), now=now)
         connection.execute(
             update(campaign_seats)
             .where(campaign_seats.c.id == seat_id)
@@ -387,14 +422,8 @@ class AIControllerGrantRepository:
             ).mappings().one_or_none()
             if seat is None:
                 raise AIControllerHandoffPersistenceError("active DM Seat was not found")
-            connection.execute(
-                update(ai_controller_grants)
-                .where(
-                    ai_controller_grants.c.seat_id == seat_id,
-                    ai_controller_grants.c.status == "active",
-                )
-                .values(status="revoked", revoked_at=now, temporary_instruction=None)
-            )
+            prior_grant_ids = self._active_grant_ids_for_seat(connection, seat_id)
+            self._revoke_grants_and_oauth(connection, prior_grant_ids, now=now)
             generation = int(seat["controller_epoch"]) + 1
             connection.execute(
                 insert(ai_controller_grants).values(
@@ -441,97 +470,112 @@ class AIControllerGrantRepository:
         touch: bool = False,
     ) -> StoredAIControllerScope:
         now = self._utc(now or datetime.now(timezone.utc))
+        denied_reason: str | None = None
+        grant: StoredAIControllerGrant | None = None
+        active_character_id = None
+        is_current_dm = False
+
         with self.engine.begin() if touch else self.engine.connect() as connection:
             row = connection.execute(
                 select(ai_controller_grants).where(ai_controller_grants.c.id == grant_id)
             ).mappings().one_or_none()
             grant = self._grant(row)
             if grant is None or grant.status != "active":
-                raise AIControllerGrantUnauthorizedPersistenceError("AI controller grant is revoked or unknown")
-            seat = connection.execute(
-                select(campaign_seats)
-                .where(
-                    campaign_seats.c.id == grant.seat_id,
-                    campaign_seats.c.campaign_id == grant.campaign_id,
-                    campaign_seats.c.archived_at.is_(None),
-                )
-            ).mappings().one_or_none()
-            if (
-                seat is None
-                or seat["controller_kind"] != "ai"
-                or seat["ai_controller_grant_id"] != grant.id
-                or int(seat["controller_epoch"]) != grant.generation
-            ):
-                raise AIControllerGrantUnauthorizedPersistenceError("AI controller grant is stale")
-            campaign = connection.execute(
-                select(campaigns.c.room_id, campaigns.c.status).where(campaigns.c.id == grant.campaign_id)
-            ).one_or_none()
-            if campaign is None or campaign.room_id != grant.room_id:
-                raise AIControllerGrantUnauthorizedPersistenceError("AI controller grant scope is invalid")
-
-            active_character_id = None
-            is_current_dm = False
-            if grant.session_id is None:
-                active_campaign_id = connection.scalar(
-                    select(rooms.c.active_campaign_id).where(rooms.c.id == grant.room_id)
-                )
-                expires_at = (
-                    self._utc(grant.pre_session_expires_at)
-                    if grant.pre_session_expires_at is not None
-                    else None
-                )
-                if (
-                    grant.role != "dm"
-                    or expires_at is None
-                    or expires_at <= now
-                    or campaign.status != "active"
-                    or active_campaign_id != grant.campaign_id
-                ):
-                    raise AIControllerGrantUnauthorizedPersistenceError(
-                        "pre-session AI DM grant is expired or no longer Start-eligible"
-                    )
+                denied_reason = "AI controller grant is revoked or unknown"
             else:
-                session = connection.execute(
-                    select(sessions).where(sessions.c.id == grant.session_id)
+                seat = connection.execute(
+                    select(campaign_seats)
+                    .where(
+                        campaign_seats.c.id == grant.seat_id,
+                        campaign_seats.c.campaign_id == grant.campaign_id,
+                        campaign_seats.c.archived_at.is_(None),
+                    )
                 ).mappings().one_or_none()
                 if (
-                    session is None
-                    or session["campaign_id"] != grant.campaign_id
-                    or session["status"] != "active"
+                    seat is None
+                    or seat["controller_kind"] != "ai"
+                    or seat["ai_controller_grant_id"] != grant.id
+                    or int(seat["controller_epoch"]) != grant.generation
                 ):
-                    raise AIControllerGrantUnauthorizedPersistenceError("AI grant Session is not active")
-                if grant.role == "dm":
-                    is_current_dm = (
-                        session["dm_controller_kind"] == "ai"
-                        and session["dm_controller_ai_grant_id"] == grant.id
-                        and session["dm_controller_generation"] == grant.generation
-                    )
-                    if not is_current_dm:
-                        raise AIControllerGrantUnauthorizedPersistenceError("AI DM grant is not fixed current DM")
+                    denied_reason = "AI controller grant is stale"
                 else:
-                    participant = connection.execute(
-                        select(
-                            session_participants.c.active_character_id,
-                            session_participants.c.role_snapshot,
-                        ).where(
-                            session_participants.c.session_id == grant.session_id,
-                            session_participants.c.seat_id == grant.seat_id,
-                            session_participants.c.left_at.is_(None),
+                    campaign = connection.execute(
+                        select(campaigns.c.room_id, campaigns.c.status).where(
+                            campaigns.c.id == grant.campaign_id
                         )
                     ).one_or_none()
-                    if (
-                        participant is None
-                        or participant.role_snapshot != "player"
-                        or participant.active_character_id is None
-                    ):
-                        raise AIControllerGrantUnauthorizedPersistenceError("AI Player is not a live participant")
-                    active_character_id = participant.active_character_id
-            if touch:
-                connection.execute(
-                    update(ai_controller_grants)
-                    .where(ai_controller_grants.c.id == grant.id)
-                    .values(last_seen_at=now)
-                )
+                    if campaign is None or campaign.room_id != grant.room_id:
+                        denied_reason = "AI controller grant scope is invalid"
+                    elif grant.session_id is None:
+                        active_campaign_id = connection.scalar(
+                            select(rooms.c.active_campaign_id).where(rooms.c.id == grant.room_id)
+                        )
+                        expires_at = (
+                            self._utc(grant.pre_session_expires_at)
+                            if grant.pre_session_expires_at is not None
+                            else None
+                        )
+                        if (
+                            grant.role != "dm"
+                            or expires_at is None
+                            or expires_at <= now
+                            or campaign.status != "active"
+                            or active_campaign_id != grant.campaign_id
+                        ):
+                            denied_reason = (
+                                "pre-session AI DM grant is expired or no longer Start-eligible"
+                            )
+                    else:
+                        session = connection.execute(
+                            select(sessions).where(sessions.c.id == grant.session_id)
+                        ).mappings().one_or_none()
+                        if (
+                            session is None
+                            or session["campaign_id"] != grant.campaign_id
+                            or session["status"] != "active"
+                        ):
+                            denied_reason = "AI grant Session is not active"
+                        elif grant.role == "dm":
+                            is_current_dm = (
+                                session["dm_controller_kind"] == "ai"
+                                and session["dm_controller_ai_grant_id"] == grant.id
+                                and session["dm_controller_generation"] == grant.generation
+                            )
+                            if not is_current_dm:
+                                denied_reason = "AI DM grant is not fixed current DM"
+                        else:
+                            participant = connection.execute(
+                                select(
+                                    session_participants.c.active_character_id,
+                                    session_participants.c.role_snapshot,
+                                ).where(
+                                    session_participants.c.session_id == grant.session_id,
+                                    session_participants.c.seat_id == grant.seat_id,
+                                    session_participants.c.left_at.is_(None),
+                                )
+                            ).one_or_none()
+                            if (
+                                participant is None
+                                or participant.role_snapshot != "player"
+                                or participant.active_character_id is None
+                            ):
+                                denied_reason = "AI Player is not a live participant"
+                            else:
+                                active_character_id = participant.active_character_id
+
+                if denied_reason is not None and touch:
+                    self._revoke_grants_and_oauth(connection, (grant.id,), now=now)
+                elif denied_reason is None and touch:
+                    connection.execute(
+                        update(ai_controller_grants)
+                        .where(ai_controller_grants.c.id == grant.id)
+                        .values(last_seen_at=now)
+                    )
+
+        if denied_reason is not None or grant is None:
+            raise AIControllerGrantUnauthorizedPersistenceError(
+                denied_reason or "AI controller grant is revoked or unknown"
+            )
         return StoredAIControllerScope(
             grant=grant,
             session_id=grant.session_id,
@@ -547,14 +591,8 @@ class AIControllerGrantRepository:
         now: datetime | None = None,
     ) -> None:
         now = self._utc(now or datetime.now(timezone.utc))
-        connection.execute(
-            update(ai_controller_grants)
-            .where(
-                ai_controller_grants.c.session_id == session_id,
-                ai_controller_grants.c.status == "active",
-            )
-            .values(status="revoked", revoked_at=now, temporary_instruction=None)
-        )
+        grant_ids = self._active_grant_ids_for_session(connection, session_id)
+        self._revoke_grants_and_oauth(connection, grant_ids, now=now)
 
 
 __all__ = [
