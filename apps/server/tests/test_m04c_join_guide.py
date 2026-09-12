@@ -31,6 +31,7 @@ def test_m04c_guide_covers_all_supported_join_paths_and_role_rules() -> None:
     assert "MCP client (Bearer)" in guide_en
     assert "raw HTTP" in guide_en
     assert "Minimal outbound client example" in guide_en
+    assert "web chat should use the connector" in guide_en
     assert "curl -sS -X POST" in guide_en
     assert "Mcp-Session-Id" in guide_en
     assert "initialize is not required" in guide_en
@@ -38,16 +39,15 @@ def test_m04c_guide_covers_all_supported_join_paths_and_role_rules() -> None:
     assert "request_check" in guide_en
     assert "post_dialogue" in guide_en
     assert "post_action" in guide_en
-    assert "Player does not have request_check" in guide_en
 
     assert "ChatGPT Web／connector" in guide_zh
     assert "MCP client（Bearer）" in guide_zh
     assert "純 HTTP" in guide_zh
+    assert "網頁版 chat sandbox" in guide_zh
     assert "DM 回應玩家時一律用 post_narration" in guide_zh
-    assert "Player 沒有 request_check" in guide_zh
 
 
-def test_m04c_briefing_is_mode_specific_and_scope_safe() -> None:
+def test_m04c_briefing_is_mode_specific_scope_safe_and_compact() -> None:
     pre_session = render_briefing(role="dm", mode="pre_session")
     dm = render_briefing(role="dm", mode="active_session")
     player = render_briefing(role="player", mode="active_session")
@@ -67,6 +67,13 @@ def test_m04c_briefing_is_mode_specific_and_scope_safe() -> None:
     assert "request_check" not in player
     assert "post_narration" not in player
     assert "set_stage_text" not in player
+
+    for briefing in (pre_session, dm, player):
+        assert len(briefing) <= 1200
+        assert "at_ai_" not in briefing
+    for active in (dm, player):
+        assert "120" in active
+        assert "5" in active
 
 
 def test_m04c_tool_reference_rows_are_derived_from_catalog_contract() -> None:
