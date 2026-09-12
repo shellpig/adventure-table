@@ -7,7 +7,9 @@ from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
 from app.api.rooms.ai_controllers import get_ai_controller_service
+from app.api.rooms.ai_oauth import get_ai_controller_oauth_service
 from app.domain.rooms.ai_controllers import AIControllerService
+from app.domain.rooms.ai_oauth import AIControllerOAuthService
 from app.mcp.auth import MCPAuthenticationError, authenticate_request
 from app.mcp.dependencies import get_ai_tool_application_service
 from app.mcp.protocol import (
@@ -55,6 +57,9 @@ def _protocol_error(request_id: Any, exc: MCPProtocolError) -> JSONResponse:
 async def mcp_endpoint(
     request: Request,
     ai_controller_service: AIControllerService = Depends(get_ai_controller_service),
+    ai_controller_oauth_service: AIControllerOAuthService = Depends(
+        get_ai_controller_oauth_service
+    ),
 ) -> JSONResponse:
     try:
         body = await request.json()
@@ -78,6 +83,7 @@ async def mcp_endpoint(
             authenticate_request,
             request,
             ai_controller_service,
+            ai_controller_oauth_service,
         )
     except MCPAuthenticationError as exc:
         return JSONResponse(
