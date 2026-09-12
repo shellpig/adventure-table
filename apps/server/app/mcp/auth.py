@@ -11,7 +11,7 @@ from app.domain.rooms.ai_controllers import (
     AIControllerService,
     AIControllerUnauthorizedError,
 )
-from app.persistence.mcp.oauth import OAuthRepository
+from app.domain.rooms.ai_oauth import AIControllerOAuthService
 
 
 OAUTH_ACCESS_TOKEN_PREFIX = "at_oa_"
@@ -42,7 +42,7 @@ def _unauthorized() -> MCPAuthenticationError:
 def authenticate_request(
     request: Request,
     service: AIControllerService,
-    oauth_repository: OAuthRepository | None = None,
+    oauth_service: AIControllerOAuthService | None = None,
 ) -> MCPAuthenticatedRequest:
     authorization = request.headers.get("authorization")
     if authorization is None or not authorization.startswith("Bearer "):
@@ -67,8 +67,9 @@ def authenticate_request(
         return MCPAuthenticatedRequest(token=token, auth=auth)
 
     if token.startswith(OAUTH_ACCESS_TOKEN_PREFIX):
-        repository = oauth_repository or OAuthRepository(service.repository.engine)
-        resolved = repository.resolve_active_access(
+        if oauth_service is None:
+            raise _unauthorized()
+        resolved = oauth_service.resolve_active_access(
             hashlib.sha256(token.encode("utf-8")).hexdigest(),
             touch=True,
         )
@@ -81,7 +82,7 @@ def authenticate_request(
                 touch=True,
             )
         except AIControllerUnauthorizedError as exc:
-            repository.revoke_authorization(oauth_authorization.id)
+            oauth_service.revoke_authorization(oauth_authorization.id)
             raise _unauthorized() from exc
         return MCPAuthenticatedRequest(token=token, auth=auth)
 
