@@ -1,0 +1,110 @@
+name: M04-C Non-E2E Regression
+
+on:
+  push:
+    branches:
+      - m04-c-ai-join-kit-guide
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install backend
+        run: pip install -e ".[web,dev,standalone]"
+      - name: M03 standalone static compatibility
+        run: pytest tests/test_m03_import_boundary.py tests/test_m03_standalone_composition.py -q
+      - name: M04-C focused regression
+        run: pytest tests/test_m04c_*.py tests/test_p3e_architecture_boundary.py tests/test_p3e_mcp_protocol.py tests/test_p3e_mcp_tools.py tests/test_p3e_official_mcp_client.py -q
+      - name: Backend pytest
+        run: pytest
+      - name: Localization authoring unit tests
+        working-directory: .
+        run: python -m unittest scripts.test_build_m02d_srd_locale_reviewed scripts.test_run_m02d_srd_locale_authoring
+
+  migration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: adventure_table
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d adventure_table"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: apps/server
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/adventure_table
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install backend
+        run: pip install -e ".[web,dev,standalone]"
+      - name: Upgrade web migration head
+        run: alembic upgrade web@head
+      - name: Assert OAuth tables exist
+        run: >-
+          python -c "from sqlalchemy import create_engine, inspect; import os; names=set(inspect(create_engine(os.environ['DATABASE_URL'])).get_table_names()); expected={'ai_oauth_clients','ai_oauth_authorizations','ai_oauth_authorization_codes','ai_oauth_tokens'}; assert expected <= names, (expected-names)"
+      - name: Downgrade M04-B migration
+        run: alembic downgrade 0020_p3d_ai_controller_grants
+      - name: Assert OAuth tables removed
+        run: >-
+          python -c "from sqlalchemy import create_engine, inspect; import os; names=set(inspect(create_engine(os.environ['DATABASE_URL'])).get_table_names()); forbidden={'ai_oauth_clients','ai_oauth_authorizations','ai_oauth_authorization_codes','ai_oauth_tokens'}; assert not (forbidden & names), (forbidden & names)"
+      - name: Re-upgrade web migration head
+        run: alembic upgrade web@head
+      - name: Reset database for standalone track
+        run: >-
+          python -c "from sqlalchemy import create_engine; import os; e=create_engine(os.environ['DATABASE_URL']); c=e.connect().execution_options(isolation_level='AUTOCOMMIT'); c.exec_driver_sql('DROP SCHEMA public CASCADE'); c.exec_driver_sql('CREATE SCHEMA public'); c.close()"
+      - name: Upgrade standalone character track
+        run: alembic upgrade character@head
+      - name: Assert standalone has no OAuth tables
+        run: >-
+          python -c "from sqlalchemy import create_engine, inspect; import os; names=set(inspect(create_engine(os.environ['DATABASE_URL'])).get_table_names()); forbidden={'ai_oauth_clients','ai_oauth_authorizations','ai_oauth_authorization_codes','ai_oauth_tokens'}; assert not (forbidden & names), (forbidden & names)"
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Pin npm
+        run: npm install --global npm@11.6.0
+      - name: Install frontend
+        run: npm ci
+      - name: Frontend unit tests
+        run: npm test -- --run
+      - name: TypeScript and Vite build
+        run: npm run build
+
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose config
+        run: docker compose config
