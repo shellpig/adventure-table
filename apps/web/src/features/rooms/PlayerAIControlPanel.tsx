@@ -140,42 +140,47 @@ export function PlayerAIControlPanel({
   if (!isHumanSelf && seat.controller_kind !== 'ai') return null
 
   return (
-    <section className="room-form" data-ai-controller-panel={seat.id}>
-      <h4>{copy.aiControlTitle}</h4>
+    <section className="room-form session-ai-panel" data-ai-controller-panel={seat.id}>
+      <h4 className="session-ai-panel__title">{copy.aiControlTitle}</h4>
       {isHumanSelf ? (
-        <>
+        <div className="session-ai-handoff">
           <label>
             {copy.aiHandoffInstruction}
             <textarea
               value={instruction}
               maxLength={2000}
               disabled={pending}
+              rows={2}
               placeholder={copy.aiHandoffInstructionPlaceholder}
               onChange={(event) => setInstruction(event.target.value)}
             />
           </label>
           <button
-            className="button secondary"
+            className="button secondary session-ai-btn"
             type="button"
             disabled={pending}
             onClick={() => void handoff()}
           >{copy.letAiControl}</button>
-        </>
+        </div>
       ) : null}
 
       {seat.controller_kind === 'ai' ? (
-        <>
-          <p><strong>{copy.aiControlling}</strong></p>
-          <p>{canSelfTakeBack ? copy.takeBackExactOriginHint : copy.aiTakeBackFailedRecovery}</p>
-          {canSelfTakeBack ? (
-            <button
-              className="button secondary"
-              type="button"
-              disabled={pending}
-              onClick={() => void takeBack()}
-            >{copy.takeBackControl}</button>
-          ) : null}
-        </>
+        <div className="session-ai-status-card">
+          <div className="session-ai-status-row">
+            <p className="session-ai-status-label"><strong>{copy.aiControlling}</strong></p>
+            {canSelfTakeBack ? (
+              <button
+                className="button secondary session-ai-btn"
+                type="button"
+                disabled={pending}
+                onClick={() => void takeBack()}
+              >{copy.takeBackControl}</button>
+            ) : null}
+          </div>
+          <p className="session-ai-hint">
+            {canSelfTakeBack ? copy.takeBackExactOriginHint : copy.aiTakeBackFailedRecovery}
+          </p>
+        </div>
       ) : null}
 
       {issued ? (
@@ -200,32 +205,34 @@ export function PlayerAIControlPanel({
       ) : null}
 
       {seat.controller_kind === 'ai' && canManage ? (
-        <div className="room-form" data-ai-recovery="true">
-          <h4>{copy.aiRecoveryTitle}</h4>
-          <p>{copy.aiRecoveryHint}</p>
-          <label>
-            {copy.aiRecoveryTarget}
-            <select
-              value={recoveryTarget}
-              disabled={pending}
-              onChange={(event) => setRecoveryTarget(event.target.value)}
-            >
-              <option value="">{copy.aiRecoveryChoose}</option>
-              {controllers.map((controller) => (
-                <option key={controller.access_session_id} value={controller.access_session_id}>
-                  {controller.display_name || controller.access_session_id}
-                  {' · '}
-                  {controller.presence === 'connected' ? copy.aiConnected : copy.aiOffline}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            className="button secondary"
-            type="button"
-            disabled={pending || !recoveryTarget}
-            onClick={() => void recover()}
-          >{copy.aiRecoverToHuman}</button>
+        <div className="room-form session-ai-recovery" data-ai-recovery="true">
+          <h4 className="session-ai-recovery__title">{copy.aiRecoveryTitle}</h4>
+          <p className="session-ai-hint">{copy.aiRecoveryHint}</p>
+          <div className="session-ai-recovery__row">
+            <label className="session-ai-recovery__label">
+              {copy.aiRecoveryTarget}
+              <select
+                value={recoveryTarget}
+                disabled={pending}
+                onChange={(event) => setRecoveryTarget(event.target.value)}
+              >
+                <option value="">{copy.aiRecoveryChoose}</option>
+                {controllers.map((controller) => (
+                  <option key={controller.access_session_id} value={controller.access_session_id}>
+                    {controller.display_name || controller.access_session_id}
+                    {' · '}
+                    {controller.presence === 'connected' ? copy.aiConnected : copy.aiOffline}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="button secondary session-ai-btn session-ai-recovery__btn"
+              type="button"
+              disabled={pending || !recoveryTarget}
+              onClick={() => void recover()}
+            >{copy.aiRecoverToHuman}</button>
+          </div>
         </div>
       ) : null}
 

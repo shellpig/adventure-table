@@ -40,6 +40,7 @@ import {
 } from './sessionTableLayout'
 import { sessionCopy, sessionErrorMessage, type SessionCopy } from './sessionCopy'
 import './rooms.css'
+import './sessionTable.css'
 
 const UUID_PATTERN = '[0-9a-fA-F-]{36}'
 
@@ -426,43 +427,79 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
           />
         ) : null}
 
-        <h2>{copy.participants}</h2>
-        <div className="workshop-list">
-          {snapshot.participants.length === 0 ? <p>{copy.noParticipants}</p> : snapshot.participants.map((participant) => {
-            const currentSeat = sessionSeats.find((item) => item.id === participant.seat_id)
-            return (
-              <article className="workshop-card" key={participant.id}>
-                <h3>{seatLabel(participant.seat_id)}</h3>
-                <p>
-                  {participant.role === 'dm' ? copy.dm : participant.role === 'player' ? copy.player : copy.spectator}
-                </p>
-                {participant.role === 'player' ? <p>{characterName(participant.active_character_id)}</p> : null}
-                {snapshot.status === 'active' && participant.role === 'player' && currentSeat ? (
-                  <PlayerAIControlPanel
-                    roomId={roomId}
-                    campaignId={campaignId}
-                    sessionId={sessionId}
-                    seat={currentSeat}
-                    roomToken={token}
-                    callerAccessSessionId={callerAccessSessionId}
-                    canSelfTakeBack={selfTakeBackSeatIds.has(currentSeat.id)}
-                    canManage={canManage}
-                    controllers={lobby?.controllers ?? []}
-                    copy={copy}
-                    onChanged={reload}
-                  />
-                ) : null}
-              </article>
-            )
-          })}
+        <h2 className="session-participants-title">{copy.participants}</h2>
+        <div className="workshop-list session-participants-list">
+          {snapshot.participants.length === 0 ? (
+            <p className="session-participants-empty">{copy.noParticipants}</p>
+          ) : (
+            snapshot.participants.map((participant) => {
+              const currentSeat = sessionSeats.find((item) => item.id === participant.seat_id)
+              const isDm = participant.role === 'dm'
+              const isPlayer = participant.role === 'player'
+              const isAiControlled = currentSeat?.controller_kind === 'ai'
+              const roleCardClass = isDm
+                ? 'session-participant-card--dm'
+                : isAiControlled
+                  ? 'session-participant-card--ai-controlled'
+                  : 'session-participant-card--player'
+
+              return (
+                <article
+                  className={`workshop-card session-participant-card ${roleCardClass}`}
+                  key={participant.id}
+                  data-participant-role={participant.role}
+                  data-seat-id={participant.seat_id}
+                >
+                  <div className="session-participant-card__header">
+                    <div className="session-participant-card__identity">
+                      <h3 className="session-participant-card__name">{seatLabel(participant.seat_id)}</h3>
+                      <span className={`session-participant-badge session-participant-badge--${participant.role}`}>
+                        {isDm ? copy.dm : isPlayer ? copy.player : copy.spectator}
+                      </span>
+                      {isAiControlled ? (
+                        <span className="session-participant-badge session-participant-badge--ai">
+                          {copy.aiControlTitle}
+                        </span>
+                      ) : null}
+                    </div>
+                    {isPlayer && participant.active_character_id ? (
+                      <div className="session-participant-card__meta">
+                        <span className="session-participant-card__char-tag">
+                          {characterName(participant.active_character_id)}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                  {snapshot.status === 'active' && isPlayer && currentSeat ? (
+                    <PlayerAIControlPanel
+                      roomId={roomId}
+                      campaignId={campaignId}
+                      sessionId={sessionId}
+                      seat={currentSeat}
+                      roomToken={token}
+                      callerAccessSessionId={callerAccessSessionId}
+                      canSelfTakeBack={selfTakeBackSeatIds.has(currentSeat.id)}
+                      canManage={canManage}
+                      controllers={lobby?.controllers ?? []}
+                      copy={copy}
+                      onChanged={reload}
+                    />
+                  ) : null}
+                </article>
+              )
+            })
+          )}
         </div>
 
         {snapshot.status === 'active' && isCurrentDm ? (
-          <section className="room-form">
-            <h2>{copy.lateJoin}</h2>
-            {lateJoinSeats.length === 0 ? <p>{copy.noLateJoinSeats}</p> : (
-              <>
-                <label>{copy.lateJoinSeat}
+          <section className="room-form session-late-join-form">
+            <h2 className="session-late-join-title">{copy.lateJoin}</h2>
+            {lateJoinSeats.length === 0 ? (
+              <p className="session-late-join-empty">{copy.noLateJoinSeats}</p>
+            ) : (
+              <div className="session-late-join-controls">
+                <label className="session-late-join-label">
+                  {copy.lateJoinSeat}
                   <select
                     disabled={pending}
                     value={lateJoinSeatId}
@@ -477,7 +514,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
                   </select>
                 </label>
                 <button
-                  className="button primary"
+                  className="button primary session-late-join-btn"
                   type="button"
                   disabled={pending || !lateJoinSeatId}
                   onClick={() => mutate(() => lateJoinSession(
@@ -488,7 +525,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
                     token,
                   ))}
                 >{copy.join}</button>
-              </>
+              </div>
             )}
           </section>
         ) : null}

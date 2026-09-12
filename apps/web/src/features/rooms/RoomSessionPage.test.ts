@@ -241,4 +241,15 @@ describe('Session route and presentation', () => {
     expect(source).not.toContain('spawn')
     expect(source).not.toContain('combat')
   })
+
+  it('styles participant seat cards with bold distinct role borders and compact layout', () => {
+    const css = readFileSync(new URL('./sessionTable.css', import.meta.url), 'utf8')
+    expect(css).toContain('.session-participant-card--dm')
+    expect(css).toContain('border: 2px solid var(--gold-dark);')
+    expect(css).toContain('.session-participant-card--player')
+    expect(css).toContain('.session-participant-card--ai-controlled')
+    expect(css).toContain('.session-participant-badge--dm')
+    expect(css).toContain('.session-participant-badge--player')
+    expect(css).toContain('.session-participant-card__header')
+  })
 })

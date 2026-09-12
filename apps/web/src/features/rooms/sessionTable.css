@@ -648,6 +648,345 @@
   text-align: center;
 }
 
+/* ==========================================================================
+   Session Participants & Compact Seat Cards
+   ========================================================================== */
+
+.session-participants-title {
+  margin: 32px 0 14px;
+  text-align: left;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 8px;
+}
+
+.session-participants-empty {
+  margin: 0;
+  padding: 16px;
+  text-align: center;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.workshop-list.session-participants-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin: 0 0 24px;
+}
+
+/* Base Participant Card */
+.workshop-card.session-participant-card {
+  position: relative;
+  min-height: unset;
+  padding: 12px 18px;
+  border-radius: 14px;
+  text-align: left;
+  box-sizing: border-box;
+  background: var(--surface-2);
+  border: 2px solid var(--line-bright, #3a4556);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.workshop-card.session-participant-card p {
+  min-height: unset;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* Distinct Seat Border Styling */
+.workshop-card.session-participant-card--dm {
+  border: 2px solid var(--gold-dark);
+  background: linear-gradient(135deg, rgb(215 181 109 / 9%) 0%, var(--surface-2) 100%);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 25%);
+}
+
+.workshop-card.session-participant-card--dm:hover {
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 14px rgb(215 181 109 / 22%);
+}
+
+.workshop-card.session-participant-card--player {
+  border: 2px solid rgb(134 169 220 / 45%);
+  background: linear-gradient(135deg, rgb(134 169 220 / 6%) 0%, var(--surface-2) 100%);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 25%);
+}
+
+.workshop-card.session-participant-card--player:hover {
+  border-color: rgb(134 169 220 / 80%);
+  box-shadow: 0 0 14px rgb(134 169 220 / 18%);
+}
+
+.workshop-card.session-participant-card--ai-controlled {
+  border: 2px solid rgb(180 130 240 / 55%);
+  background: linear-gradient(135deg, rgb(180 130 240 / 9%) 0%, var(--surface-2) 100%);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 25%);
+}
+
+.workshop-card.session-participant-card--ai-controlled:hover {
+  border-color: rgb(200 150 255 / 85%);
+  box-shadow: 0 0 14px rgb(180 130 240 / 25%);
+}
+
+/* Header Row */
+.session-participant-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.session-participant-card__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.workshop-card.session-participant-card h3.session-participant-card__name {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+/* Role Badges */
+.session-participant-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.session-participant-badge--dm {
+  background: rgb(215 181 109 / 18%);
+  color: var(--gold-bright);
+  border: 1px solid rgb(215 181 109 / 55%);
+}
+
+.session-participant-badge--player {
+  background: rgb(134 169 220 / 16%);
+  color: #b7cbea;
+  border: 1px solid rgb(134 169 220 / 45%);
+}
+
+.session-participant-badge--spectator {
+  background: var(--surface-3);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.session-participant-badge--ai {
+  background: rgb(180 130 240 / 22%);
+  color: #d8b4fe;
+  border: 1px solid rgb(180 130 240 / 65%);
+}
+
+/* Character Tag */
+.session-participant-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.session-participant-card__char-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 8px;
+  background: #080b10;
+  border: 1px solid var(--line-soft);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.session-participant-card__char-tag::before {
+  content: '✦';
+  color: var(--gold-bright);
+  font-size: 0.75rem;
+}
+
+/* Player AI Control Panel */
+.session-participant-card .session-ai-panel {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #080c13;
+  border: 1px solid var(--line-soft);
+  text-align: left;
+  max-width: 100%;
+}
+
+.session-participant-card .session-ai-panel h4 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  color: #d8b4fe;
+  font-weight: 700;
+  text-align: left;
+}
+
+.session-ai-status-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.session-ai-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.session-ai-status-label {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text);
+}
+
+.session-ai-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--quiet);
+  line-height: 1.45;
+}
+
+.session-ai-btn {
+  width: auto;
+  align-self: flex-start;
+  padding: 6px 14px;
+  font-size: 0.84rem;
+}
+
+.session-ai-handoff {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-ai-handoff textarea {
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  box-sizing: border-box;
+}
+
+.session-participant-card .session-ai-recovery {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #0d121c;
+  border: 1px solid var(--line-soft);
+  text-align: left;
+}
+
+.session-participant-card .session-ai-recovery h4 {
+  margin: 0 0 4px;
+  font-size: 0.86rem;
+  color: var(--gold-bright);
+}
+
+.session-ai-recovery__row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.session-ai-recovery__label {
+  flex: 1 1 200px;
+  margin: 0;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.session-ai-recovery__label select {
+  width: 100%;
+  margin-top: 4px;
+  height: 36px;
+  padding: 4px 8px;
+  font-size: 0.84rem;
+}
+
+.session-ai-recovery__btn {
+  height: 36px;
+  padding: 0 14px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* Late Join Section */
+.session-late-join-form {
+  margin: 20px 0 16px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 1px dashed var(--line-soft);
+  background: #080b10;
+  text-align: left;
+}
+
+.session-late-join-title {
+  margin: 0 0 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+}
+
+.session-late-join-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.session-late-join-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.session-late-join-label {
+  flex: 1 1 240px;
+  margin: 0;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.session-late-join-label select {
+  width: 100%;
+  margin-top: 4px;
+  height: 38px;
+  padding: 4px 10px;
+}
+
+.session-late-join-btn {
+  height: 38px;
+  padding: 0 18px;
+  margin: 0;
+  white-space: nowrap;
+}
+
 @media (max-width: 1080px) {
   .session-table-card__resize-handle,
   .session-table-card__width-toggle {
