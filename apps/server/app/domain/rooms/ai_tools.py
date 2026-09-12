@@ -8,6 +8,7 @@ from pydantic import Field
 
 from app.domain.rooms.ai_controllers import AIControllerAuthView, AIControllerService
 from app.domain.rooms.ai_guidance import render_briefing
+from app.domain.rooms.ai_tool_contract import WAIT_EVENT_MAX_TIMEOUT_SECONDS
 from app.domain.rooms.exploration import (
     ExplorationActionService,
     ExplorationInputKind,
@@ -87,7 +88,11 @@ class EventsInput(StrictModel):
 
 
 class WaitEventsInput(EventsInput):
-    timeout: float = Field(default=30.0, ge=0.0, le=120.0)
+    timeout: float = Field(
+        default=30.0,
+        ge=0.0,
+        le=WAIT_EVENT_MAX_TIMEOUT_SECONDS,
+    )
 
 
 class RequestCheckToolInput(StrictModel):
