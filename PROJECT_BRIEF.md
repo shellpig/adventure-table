@@ -61,10 +61,9 @@ M04 已拍板的核心方向：
 
 下一步依序為：
 
-1. **M04-A — Web Chat MCP Preflight**：依 [M04 開發設計方針](docs/M04/開發設計方針.md) §3 建獨立測試 server，先以 ChatGPT Plus 個人帳號跑 preflight，不可行再驗 Claude chat 個人方案，產出 `docs/M04/M04-A_PREFLIGHT.md` 與目標平台判定；兩者皆不可行則標 Platform Blocked / Deferred 直接進 P4。
-2. **M04-B — Adventure Table Web Chat Integration**：依 preflight 結論實作 OAuth 入口與（若需要）相容層；真實目標平台 DM + Player gate。
-3. **M04-C — AI Join Kit, Server-hosted Guide & Other Client Compatibility**。
-4. **P4 — Quick Combat 開工前置**：拆 `P4-A`、`P4-B`… Subphase 並產出 `docs/P4/` 三份文件；P4-A 承接 SRD Monster／Beast stat blocks。
+1. **M04-B — Adventure Table Web Chat Integration**：依 [M04-A_PREFLIGHT.md](docs/M04/M04-A_PREFLIGHT.md) A.7 結論實作 OAuth 入口（目標平台 ChatGPT Web Plus；沿用 P3-E `2026-07-28` stateless 契約，不需 legacy 相容層）；真實目標平台 DM + Player gate。
+2. **M04-C — AI Join Kit, Server-hosted Guide & Other Client Compatibility**。
+3. **P4 — Quick Combat 開工前置**：拆 `P4-A`、`P4-B`… Subphase 並產出 `docs/P4/` 三份文件；P4-A 承接 SRD Monster／Beast stat blocks。
 5. P5～P8 仍維持大 Phase，不提前拆分或設計 schema / API / module。
 
 P2 的正式契約：
@@ -140,7 +139,7 @@ M04 的正式契約：
 | M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，E.9 乾淨 Windows 11 冷啟動已於 2026-09-06 補驗完成 |
 | P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**A～F 全數關門，Phase 已關門** |
 | P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌；**A～F 全數關門，Phase 已關門並合併回 `main`** |
-| M04 | Web Chat MCP Integration & AI Join Kit | P3 關門後、P4 前插入；網頁版 chat preflight（ChatGPT Plus → Claude chat 個人方案）→ OAuth integration → AI Join Kit 與 server-hosted 指引；**A～C 已拆分並有三份文件，尚未實作**；兩平台皆不可行則標 Platform Blocked / Deferred 直接進 P4 |
+| M04 | Web Chat MCP Integration & AI Join Kit | P3 關門後、P4 前插入；網頁版 chat preflight（ChatGPT Plus → Claude chat 個人方案）→ OAuth integration → AI Join Kit 與 server-hosted 指引；**M04-A 已於 2026-09-12 關門，目標平台判定為 ChatGPT Web Plus；M04-B／M04-C 待開工** |
 | P4 | Quick Combat | 第一個完整可玩的 Combat MVP；首個 Subphase P4-A 承接 SRD Monster／Beast stat blocks |
 | P5 | Tactical Combat | 同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE 與空間系統 |
 | P6 | Adventure + AI DM Runtime | Adventure Definition／Importer、Campaign Runtime、世界資料、AI DM context／write-back |
@@ -247,7 +246,7 @@ M04 的正式契約：
 
 | Subphase | 狀態 | 重點 |
 |---|---|---|
-| **M04-A — Web Chat MCP Preflight** | ⬜ | 獨立極小 HTTPS 測試 server（`tools/m04a-webchat-preflight/`，管理 endpoint 只監聽 loopback、request／response 同等遮罩）；依 ChatGPT Plus → Claude chat 個人方案階梯量 OAuth、Scan Tools、1 read + 1 write、protocol／metadata／callback、tool cache／refresh／re-auth、long-poll 容忍度；產出 `M04-A_PREFLIGHT.md`、目標平台判定與對 M04-B 的架構結論；兩者皆不可行則 Platform Blocked / Deferred |
+| **M04-A — Web Chat MCP Preflight** | ✅ | 獨立極小 HTTPS 測試 server（`tools/m04a-webchat-preflight/`，管理 endpoint 只監聽 loopback、request／response 同等遮罩）；2026-09-12 以真實 ChatGPT Web Plus 經 Tailscale Funnel 實測 OAuth/DCR、`2026-07-28` `server/discover → tools/list → tools/call`、read/write、role-scoped catalog、Refresh + 新對話的 catalog 更新規則、revoke/reconnect、120 秒 long-poll；目標平台判定 ChatGPT Web Plus，Claude chat 階梯未觸發；結論見 `M04-A_PREFLIGHT.md` A.7；Closeout CI run `34663200995`，Merge Gate E2E `34663806640` |
 | **M04-B — Adventure Table Web Chat Integration** | ⬜ | Seat 先建好；OAuth 只取得既有 Seat／grant 控制權（貼 AI Join Token 即登入）；一個 authorization 一個 token family 一張 grant，不建／不選／不切 Seat，`client_id` 非授權識別；refresh 每次重驗 P3-D authority；`at_oa_` token 只留 hash 並與 grant 同生共死；依 preflight 決定相容層、catalog 呈現與 `wait_for_event` 上限；真實目標平台 DM + Player gate |
 | **M04-C — AI Join Kit, Server-hosted Guide & Other Client Compatibility** | ⬜ | `GET /mcp/guide`、tool description 加厚、`get_session_context.briefing`、`server/discover.instructions`；Lobby／Session 面板產出可複製／下載的 AI Join Kit（依 M04-B 入口形態）；雙語；真實 AI 只憑 kit 進桌（Bearer MCP client 與有 outbound network 的純 HTTP 各一次）；非目標平台／Codex 相容記錄非 gate |
 
