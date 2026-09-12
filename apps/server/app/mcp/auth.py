@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
-from uuid import UUID
 
 from fastapi import Request
 
@@ -13,7 +12,6 @@ from app.domain.rooms.ai_controllers import (
     AIControllerUnauthorizedError,
 )
 from app.persistence.mcp.oauth import OAuthRepository
-from app.persistence.rooms.ai_controllers import AIControllerGrantUnauthorizedPersistenceError
 
 
 OAUTH_ACCESS_TOKEN_PREFIX = "at_oa_"
@@ -31,19 +29,6 @@ class MCPAuthenticationError(PermissionError):
 class MCPAuthenticatedRequest:
     token: str
     auth: AIControllerAuthView
-
-
-def authenticate_grant(
-    service: AIControllerService,
-    grant_id: UUID,
-    *,
-    touch: bool = False,
-) -> AIControllerAuthView:
-    try:
-        scope = service.repository.resolve_current_scope(grant_id, touch=touch)
-    except AIControllerGrantUnauthorizedPersistenceError as exc:
-        raise AIControllerUnauthorizedError(str(exc)) from exc
-    return service._auth_view(scope)
 
 
 def _unauthorized() -> MCPAuthenticationError:
@@ -91,8 +76,7 @@ def authenticate_request(
             raise _unauthorized()
         _, oauth_authorization = resolved
         try:
-            auth = authenticate_grant(
-                service,
+            auth = service.authenticate_grant(
                 oauth_authorization.grant_id,
                 touch=True,
             )
@@ -112,6 +96,5 @@ __all__ = [
     "MCPAuthenticatedRequest",
     "MCPAuthenticationError",
     "OAUTH_ACCESS_TOKEN_PREFIX",
-    "authenticate_grant",
     "authenticate_request",
 ]
