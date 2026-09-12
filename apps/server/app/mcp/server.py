@@ -8,6 +8,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.api.rooms.ai_controllers import get_ai_controller_service
 from app.api.rooms.ai_oauth import get_ai_controller_oauth_service
+from app.config import settings
 from app.domain.rooms.ai_controllers import AIControllerService
 from app.mcp.auth import (
     MCPAuthenticationError,
@@ -102,6 +103,17 @@ async def mcp_guide(
             },
         )
     return PlainTextResponse(content, headers={"Cache-Control": "public, max-age=300"})
+
+
+@router.get("/api/mcp/public-origin")
+async def mcp_public_origin() -> JSONResponse:
+    # Human UI reads this to print the remote URL in the AI Join Kit. Only the
+    # configured public origin is advertised; the loopback fallback used by
+    # public_origin() is useless to a remote AI, so it is reported as null.
+    configured = settings.mcp_public_origin
+    return JSONResponse(
+        content={"public_origin": configured.rstrip("/") if configured else None}
+    )
 
 
 @router.post("/mcp")

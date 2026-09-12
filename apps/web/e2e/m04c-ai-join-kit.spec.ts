@@ -5,8 +5,8 @@ import { expect, test, type APIRequestContext, type Page } from './support/roomT
 
 const IMPORT_FIXTURE = resolve(process.cwd(), '../server/tests/data/m03/fixture_low_level_srd.json')
 const MCP_PROTOCOL_VERSION = '2026-07-28'
-// The vite dev server only proxies /api; /mcp and /mcp/guide are reached on the
-// backend directly, the same way p3e-mcp-browser-integration does.
+// Direct backend MCP endpoint, the same way p3e-mcp-browser-integration reaches it.
+// The browser-origin path through the dev-server proxy is covered separately below.
 const MCP_ENDPOINT = process.env.PLAYWRIGHT_MCP_URL ?? 'http://127.0.0.1:8000/mcp'
 
 type Campaign = { id: string }
@@ -74,6 +74,23 @@ test('M04-C public MCP guide is reachable in both supported locales', async ({ r
   }
 })
 
+test('M04-C browser origin serves the local kit URLs and the public-origin lookup', async ({ request }) => {
+  // The kit's local URL is the browser origin; the dev server must forward /mcp like a same-origin deploy.
+  const guide = await request.get('/mcp/guide?locale=en')
+  expect(guide.ok(), await guide.text()).toBe(true)
+  expect(await guide.text()).toContain('Adventure Table AI Join Guide')
+
+  const unauthenticated = await request.post('/mcp', {
+    data: mcpBody('get_session_context'),
+    headers: { 'Content-Type': 'application/json', 'MCP-Protocol-Version': MCP_PROTOCOL_VERSION, 'Mcp-Method': 'tools/call', 'Mcp-Name': 'get_session_context' },
+  })
+  expect(unauthenticated.status()).toBe(401)
+
+  const publicOrigin = await request.get('/api/mcp/public-origin')
+  expect(publicOrigin.ok()).toBe(true)
+  expect(await publicOrigin.json()).toEqual({ public_origin: null })
+})
+
 test('M04-C Lobby AI DM kit token reaches pre_session context', async ({ page, request, roomContext }) => {
   await createActiveCampaign(page, roomContext.roomId, 'M04-C Join Kit Journey')
   await page.getByLabel('Role').selectOption('dm')
@@ -91,10 +108,13 @@ test('M04-C Lobby AI DM kit token reaches pre_session context', async ({ page, r
   const kit = panel.locator('[data-ai-join-kit="dm"]')
   const kitText = kit.locator('.ai-join-kit__text')
   const origin = new URL(page.url()).origin
-  await expect(kitText).toContainText(`URL: ${origin}/mcp`)
-  await expect(kitText).toContainText(`${origin}/mcp/guide?locale=en`)
+  await expect(kitText).toContainText(`URL (local): ${origin}/mcp`)
+  await expect(kitText).toContainText(`Guide (local): ${origin}/mcp/guide?locale=en`)
   await expect(kitText).toContainText('Role: DM')
   await expect(kitText).toContainText('Expires:')
+  // The E2E stack has no ADVENTURE_TABLE_MCP_PUBLIC_ORIGIN, so the kit must say so instead of printing a remote URL.
+  await expect(kitText).not.toContainText('URL (remote)')
+  await expect(kitText).toContainText('No public entry point is configured')
   await expect(kitText).toContainText('get_session_context')
 
   const context = await getSessionContextWithKitToken(request, token)
@@ -124,8 +144,9 @@ test('M04-C Lobby AI DM kit renders in zh-TW', async ({ page, request, roomConte
   const token = await once.getByLabel('AI DM Token（僅顯示這一次）').inputValue()
   const kitText = panel.locator('[data-ai-join-kit="dm"] .ai-join-kit__text')
   const origin = new URL(page.url()).origin
-  await expect(kitText).toContainText(`URL: ${origin}/mcp`)
-  await expect(kitText).toContainText(`${origin}/mcp/guide?locale=zh-TW`)
+  await expect(kitText).toContainText(`URL（本機）: ${origin}/mcp`)
+  await expect(kitText).toContainText(`Guide（本機）: ${origin}/mcp/guide?locale=zh-TW`)
+  await expect(kitText).toContainText('尚未設定公網入口')
   await expect(kitText).toContainText('Role: DM')
   await expect(kitText).toContainText('連上後第一步一律呼叫 get_session_context')
   await expect(kitText).toContainText('安全：此 token 只顯示這一次')

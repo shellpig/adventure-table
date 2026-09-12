@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   administrativelyReassignPlayer,
   configurePreSessionAiDm,
+  fetchMcpPublicOrigin,
   letAiControlPlayer,
   revokePreSessionAiDm,
   takeBackPlayer,
@@ -111,5 +112,16 @@ describe('AI controller API client', () => {
     )
     expect((fetchMock.mock.calls[0][1] as RequestInit).method).toBe('POST')
     expect((fetchMock.mock.calls[1][1] as RequestInit).method).toBe('DELETE')
+  })
+
+  it('reads the public MCP origin without a Room token and passes null through', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(okJson({ public_origin: 'https://table.example.ts.net' }))
+      .mockResolvedValueOnce(okJson({ public_origin: null }))
+
+    expect(await fetchMcpPublicOrigin()).toBe('https://table.example.ts.net')
+    expect(await fetchMcpPublicOrigin()).toBeNull()
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/mcp/public-origin')
+    expect(fetchMock.mock.calls[0][1]).toBeUndefined()
   })
 })

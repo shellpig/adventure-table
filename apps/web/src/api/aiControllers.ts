@@ -119,3 +119,14 @@ export function revokePreSessionAiDm(
     { method: 'DELETE' },
   )
 }
+
+export type McpPublicOriginView = { public_origin: string | null }
+
+// Deployment setting (ADVENTURE_TABLE_MCP_PUBLIC_ORIGIN) the AI Join Kit prints
+// as the remote URL. Unauthenticated: it only reveals the public entry point.
+export async function fetchMcpPublicOrigin(): Promise<string | null> {
+  const response = await fetch('/api/mcp/public-origin')
+  if (!response.ok) throw await apiError(response)
+  const payload = (await response.json()) as McpPublicOriginView
+  return payload.public_origin
+}
