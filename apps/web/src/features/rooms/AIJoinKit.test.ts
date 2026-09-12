@@ -12,18 +12,19 @@ describe('M04-C AI Join Kit', () => {
       expiresAt: '2026-09-12T10:00:00Z',
     })
 
-    expect(kit).toContain('Role: dm')
-    expect(kit).toContain('MCP URL: https://table.example.test/mcp')
+    expect(kit).toContain('Adventure Table — AI Join Kit')
+    expect(kit).toContain('Role: DM')
+    expect(kit).toContain('URL: https://table.example.test/mcp')
     expect(kit).toContain('Guide: https://table.example.test/mcp/guide?locale=en')
-    expect(kit).toContain('AI Join Token: at_ai_example_secret')
+    expect(kit).toContain('Token: at_ai_example_secret')
     expect(kit).toContain('Expires: 2026-09-12T10:00:00Z')
-    expect(kit).toContain('First step: after connecting, call get_session_context.')
+    expect(kit).toContain('always call get_session_context first')
     expect(kit).toContain('do not forward it')
     expect(kit).toContain('revoke it when finished')
     expect(kit).toContain('Refresh/rescan the connector')
     expect(kit).toContain('ChatGPT Web: add the Adventure Table connector')
-    expect(kit).toContain('MCP client: connect')
-    expect(kit).toContain('Raw HTTP: only for an AI with shell or outbound-network code execution')
+    expect(kit).toContain('Authorization: Bearer at_ai_example_secret')
+    expect(kit).toContain('shell or outbound-network code execution')
   })
 
   it('builds a Traditional Chinese Player kit and warns for loopback', () => {
@@ -34,12 +35,12 @@ describe('M04-C AI Join Kit', () => {
       locale: 'zh-TW',
     })
 
-    expect(kit).toContain('Role: player')
-    expect(kit).toContain('http://127.0.0.1:8000/mcp')
+    expect(kit).toContain('Role: Player')
+    expect(kit).toContain('URL: http://127.0.0.1:8000/mcp')
     expect(kit).toContain('/mcp/guide?locale=zh-TW')
-    expect(kit).toContain('Expires: session/grant lifetime')
-    expect(kit).toContain('第一步：連線後先呼叫 get_session_context')
-    expect(kit).toContain('不要轉傳')
+    expect(kit).toContain('Expires: 直到 Session 結束或被撤銷')
+    expect(kit).toContain('第一步一律呼叫 get_session_context')
+    expect(kit).toContain('勿轉傳')
     expect(kit).toContain('Refresh／重新掃描 connector')
     expect(kit).toContain('ChatGPT Web')
     expect(kit).toContain('OAuth 要求憑證時貼上此 token')
