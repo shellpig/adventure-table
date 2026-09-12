@@ -77,7 +77,14 @@ export function LobbyAIDMGrantPanel({ roomId, campaignId, seat, roomToken, copy,
             <button className="button secondary token-copy-button" type="button" onClick={() => void copyToken()}>{copy.aiDmCopy}</button>
             {copied ? <span className="token-copy-feedback" role="status">{copy.aiDmCopied}</span> : null}
           </div>
-          <AIJoinKit origin={window.location.origin} token={issued.token} role="dm" locale={copy.locale} expiresAt={issued.expires_at} />
+          <AIJoinKit
+            origin={window.location.origin}
+            token={issued.token}
+            role="dm"
+            locale={copy.locale}
+            expiresAt={issued.expires_at}
+            uiCopy={copy}
+          />
         </div>
       ) : null}
       {error ? <div className="error-banner" role="alert">{error}</div> : null}
