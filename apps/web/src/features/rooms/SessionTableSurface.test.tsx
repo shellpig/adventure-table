@@ -125,4 +125,63 @@ describe('SessionTableSurface message presentation', () => {
     expect(markup).toContain('<strong>Serena Player</strong><span>You + DM only</span>')
     expect(markup).toContain('Serena secret')
   })
+
+  it('renders chat color selector controls and applies stored speaker color to message text and speaker name', () => {
+    const originalLocalStorage = globalThis.localStorage
+    const store: Record<string, string> = {
+      'adventure-table.chat-speaker-colors': JSON.stringify({
+        [MIRA_SEAT]: '#38bdf8',
+      }),
+    }
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: {
+        getItem: (key: string) => store[key] ?? null,
+        setItem: (key: string, val: string) => {
+          store[key] = val
+        },
+        removeItem: (key: string) => {
+          delete store[key]
+        },
+        clear: () => {
+          for (const k in store) delete store[k]
+        },
+      },
+      configurable: true,
+      writable: true,
+    })
+
+    try {
+      const markup = renderToStaticMarkup(
+        <SessionTableSurface
+          roomId={ROOM_ID}
+          campaignId={CAMPAIGN_ID}
+          sessionId={SESSION_ID}
+          token="room-token"
+          snapshot={snapshot}
+          seats={seats}
+          characters={characters}
+          callerAccessSessionId="dm-access"
+          isCurrentDm={true}
+          initialStage={null}
+          events={[
+            explorationEvent(1, 'exploration.ooc', MIRA_SEAT, 'Mira colored line'),
+          ]}
+          copy={sessionCopy('zh-TW')}
+          onError={() => undefined}
+        />,
+      )
+
+      expect(markup).toContain('class="session-chat__color-dot-btn"')
+      expect(markup).toContain('class="session-composer__color-btn"')
+      expect(markup).toContain('style="color:#38bdf8"')
+      expect(markup).toContain('Mira colored line')
+    } finally {
+      Object.defineProperty(globalThis, 'localStorage', {
+        value: originalLocalStorage,
+        configurable: true,
+        writable: true,
+      })
+    }
+  })
 })
+

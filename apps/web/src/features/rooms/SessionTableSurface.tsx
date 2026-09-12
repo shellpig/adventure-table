@@ -36,6 +36,12 @@ import {
   writeSidePanelWidth,
 } from './sessionTableLayout'
 import type { SessionCopy } from './sessionCopy'
+import {
+  CHAT_COLOR_PALETTE,
+  DEFAULT_CHAT_COLOR,
+  readSpeakerColors,
+  writeSpeakerColor,
+} from './chatColors'
 import './sessionTable.css'
 
 
@@ -87,6 +93,12 @@ async function fileUpload(file: File): Promise<StageImageUpload> {
   }
 }
 
+function getSpeakerKey(event: TableEvent, dmSeatId?: string | null): string {
+  if (event.kind === 'exploration.narration') return 'dm'
+  if (event.acting_seat_id && dmSeatId && event.acting_seat_id === dmSeatId && !event.subject_seat_id) return 'dm'
+  return event.subject_seat_id ?? event.acting_seat_id ?? 'dm'
+}
+
 export function SessionTableSurface({
   roomId,
   campaignId,
@@ -120,6 +132,44 @@ export function SessionTableSurface({
   const [checkDraft, setCheckDraft] = useState<CheckIntent | null>(null)
   const [sidePanelWidth, setSidePanelWidth] = useState(() => readSidePanelWidth())
   const layoutRef = useRef<HTMLDivElement>(null)
+  const [speakerColors, setSpeakerColors] = useState<Record<string, string>>(() => readSpeakerColors())
+  const [colorPickerOpen, setColorPickerOpen] = useState(false)
+  const [colorPickerSpeakerKey, setColorPickerSpeakerKey] = useState<string | null>(null)
+  const colorPickerRef = useRef<HTMLDivElement>(null)
+
+  const activeSpeakerKey = composerKind === 'narration' ? 'dm' : (subjectSeatId || 'dm')
+  const activeTargetSpeakerKey = colorPickerSpeakerKey || activeSpeakerKey
+  const activeColor = speakerColors[activeTargetSpeakerKey] || DEFAULT_CHAT_COLOR
+
+  const handleSelectColor = (color: string) => {
+    const targetKey = colorPickerSpeakerKey || activeSpeakerKey
+    writeSpeakerColor(targetKey, color)
+    setSpeakerColors((prev) => ({ ...prev, [targetKey]: color }))
+    setColorPickerOpen(false)
+    setColorPickerSpeakerKey(null)
+  }
+
+  useEffect(() => {
+    if (!colorPickerOpen) return
+    const handleClickOutside = (event: MouseEvent) => {
+      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
+        setColorPickerOpen(false)
+        setColorPickerSpeakerKey(null)
+      }
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setColorPickerOpen(false)
+        setColorPickerSpeakerKey(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [colorPickerOpen])
 
   useEffect(() => {
     setStage(projectedStage)
@@ -401,17 +451,34 @@ export function SessionTableSurface({
             <div className="session-chat">
               <div className="session-chat__messages" aria-live="polite">
                 {explorationEvents.length === 0 ? <p className="session-stage__empty">{copy.noMessages}</p> : null}
-                {explorationEvents.map((event) => (
-                  <article className="session-chat__message" key={`${event.session_id}:${event.seq}`}>
-                    <header>
-                      <strong>{speakerLabel(event)}</strong>
-                      {event.kind === 'exploration.ooc' ? <span>{copy.ooc}</span> : null}
-                      {event.execution_mode === 'dm_proxy' ? <span>{copy.dmProxy}</span> : null}
-                      {event.kind === 'exploration.whisper_dm' ? <span>{copy.whisperPrivate}</span> : null}
-                    </header>
-                    <p>{explorationEventText(event)}</p>
-                  </article>
-                ))}
+                {explorationEvents.map((event) => {
+                  const speakerKey = getSpeakerKey(event, snapshot.dm_seat_id)
+                  const speakerColor = speakerColors[speakerKey]
+                  return (
+                    <article className="session-chat__message" key={`${event.session_id}:${event.seq}`}>
+                      <header>
+                        <button
+                          type="button"
+                          className="session-chat__color-dot-btn"
+                          style={{ backgroundColor: speakerColor || DEFAULT_CHAT_COLOR }}
+                          title={`${speakerLabel(event)}: ${copy.selectChatColor}`}
+                          aria-label={`${speakerLabel(event)}: ${copy.selectChatColor}`}
+                          onClick={() => {
+                            setColorPickerSpeakerKey(speakerKey)
+                            setColorPickerOpen(true)
+                          }}
+                        />
+                        <strong style={speakerColor ? { color: speakerColor } : undefined}>
+                          {speakerLabel(event)}
+                        </strong>
+                        {event.kind === 'exploration.ooc' ? <span>{copy.ooc}</span> : null}
+                        {event.execution_mode === 'dm_proxy' ? <span>{copy.dmProxy}</span> : null}
+                        {event.kind === 'exploration.whisper_dm' ? <span>{copy.whisperPrivate}</span> : null}
+                      </header>
+                      <p style={speakerColor ? { color: speakerColor } : undefined}>{explorationEventText(event)}</p>
+                    </article>
+                  )
+                })}
               </div>
 
               <div className="session-composer">
@@ -431,7 +498,10 @@ export function SessionTableSurface({
                     <select
                       value={subjectSeatId}
                       disabled={subjectParticipants.length === 0}
-                      onChange={(event) => setSubjectSeatId(event.target.value)}
+                      onChange={(event) => {
+                        setSubjectSeatId(event.target.value)
+                        setColorPickerSpeakerKey(null)
+                      }}
                     >
                       <option value="">—</option>
                       {subjectParticipants.map((participant) => (
@@ -441,6 +511,60 @@ export function SessionTableSurface({
                       ))}
                     </select>
                   </label>
+                  <div className="session-composer__color-wrap" ref={colorPickerRef}>
+                    <label>
+                      <span>{copy.chatTextColor}</span>
+                      <button
+                        type="button"
+                        className="session-composer__color-btn"
+                        onClick={() => {
+                          setColorPickerSpeakerKey(null)
+                          setColorPickerOpen(!colorPickerOpen)
+                        }}
+                        title={copy.selectChatColor}
+                        aria-label={copy.selectChatColor}
+                      >
+                        <span
+                          className="session-composer__color-swatch-sample"
+                          style={{ backgroundColor: activeColor }}
+                        />
+                      </button>
+                    </label>
+
+                    {colorPickerOpen ? (
+                      <div className="session-color-picker-popover" role="dialog" aria-label={copy.selectChatColor}>
+                        <div className="session-color-picker-header">
+                          <span>{copy.selectChatColor}</span>
+                          <button
+                            type="button"
+                            className="session-color-picker-close"
+                            onClick={() => {
+                              setColorPickerOpen(false)
+                              setColorPickerSpeakerKey(null)
+                            }}
+                            aria-label={copy.close}
+                          >×</button>
+                        </div>
+                        <div className="session-color-picker-grid">
+                          {CHAT_COLOR_PALETTE.map((item) => (
+                            <button
+                              key={item.value}
+                              type="button"
+                              className={`session-color-palette-item ${activeColor === item.value ? 'selected' : ''}`}
+                              style={{ backgroundColor: item.value }}
+                              title={item.label[copy.locale]}
+                              aria-label={item.label[copy.locale]}
+                              onClick={() => handleSelectColor(item.value)}
+                            >
+                              {activeColor === item.value ? (
+                                <span className="session-color-palette-check">✓</span>
+                              ) : null}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
                 <textarea
                   value={composerText}
