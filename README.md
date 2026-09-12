@@ -61,6 +61,19 @@ docker compose up -d db
 docker compose run --rm server alembic upgrade heads
 ```
 
+## Web Chat MCP / OAuth 部署
+
+Web Chat connector 使用公開 HTTPS MCP 入口 `/mcp`。OAuth discovery 會公開 `/.well-known/oauth-protected-resource` 與 `/.well-known/oauth-authorization-server`；public client 透過 `/mcp/oauth/register` 做 DCR，再走 `/mcp/oauth/authorize` 與 `/mcp/oauth/token` 的 authorization-code + PKCE S256 流程。部署 web track 時可明確執行：
+
+```bash
+cd apps/server
+alembic upgrade web@head
+```
+
+OAuth **不會建立、選擇、切換或改變 Seat / Role**。在 Adventure Table 端必須先建立既有的 AI Seat，並由 Lobby / Player handoff 產生一次性的 **AI Join Token**；OAuth authorize 只把外部 client 綁到該既有 P3-D grant。授權完成後只保存 hash 與 OAuth authorization/token 狀態，不應把 AI Join Token 或 OAuth credential 寫進 README、log、commit 或部署設定範例。
+
+Access / refresh token 與 authorization 會保存在 Web database，因此 server restart 後仍可驗證；但 P3-D grant 仍是唯一 authority。Take Back / revoke、Seat controller epoch 改變、Session End / Abandon、pre-session TTL 到期都會使對應 OAuth family 失效；MCP request 與 refresh 也會重新進 P3-D authority 驗證。Windows standalone 不掛載 MCP/OAuth routes，也不建立 OAuth tables。
+
 ## Backend 本機開發
 
 Python 3.12+。venv 建在**專案根目錄**，讓所有人與 agent 看到一致結果：
