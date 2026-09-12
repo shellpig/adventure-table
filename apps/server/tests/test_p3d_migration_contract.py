@@ -14,6 +14,7 @@ from app.persistence.rooms.tables import (
 
 
 REVISION = "0020_p3d_ai_controller_grants"
+M04B_REVISION = "0021_m04b_ai_oauth"
 
 
 def _source() -> str:
@@ -33,7 +34,7 @@ def _check(table, name: str) -> str:
     )
 
 
-def test_p3d_revision_is_web_head() -> None:
+def test_p3d_revision_carries_forward_to_current_web_head() -> None:
     server_root = Path(__file__).resolve().parents[1]
     config = Config(str(server_root / "alembic.ini"))
     config.set_main_option("script_location", str(server_root / "alembic"))
@@ -41,7 +42,11 @@ def test_p3d_revision_is_web_head() -> None:
     revision = scripts.get_revision(REVISION)
     assert revision is not None
     assert revision.down_revision == "0019_p3c_check_command"
-    assert REVISION in scripts.get_heads()
+
+    m04b_revision = scripts.get_revision(M04B_REVISION)
+    assert m04b_revision is not None
+    assert m04b_revision.down_revision == REVISION
+    assert M04B_REVISION in scripts.get_heads()
 
 
 def test_p3d_migration_replaces_all_three_named_controller_checks() -> None:
