@@ -22,15 +22,24 @@ def _request(token: str) -> Request:
 
 
 class FakeService:
-    def __init__(self, *, current_scope=None, grant_error: Exception | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        current_scope=None,
+        grant_error: Exception | None = None,
+        legacy_error: Exception | None = None,
+    ) -> None:
         self.repository = SimpleNamespace(engine=object())
         self.current_scope = current_scope
         self.grant_error = grant_error
+        self.legacy_error = legacy_error
         self.legacy_calls: list[tuple[str, bool]] = []
         self.grant_calls: list[tuple[object, bool]] = []
 
     def authenticate(self, token: str, *, touch: bool = False):
         self.legacy_calls.append((token, touch))
+        if self.legacy_error is not None:
+            raise self.legacy_error
         return SimpleNamespace(grant_id=uuid4(), role="player")
 
     def authenticate_grant(self, grant_id, *, touch: bool = False):
@@ -127,9 +136,11 @@ def test_oauth_access_revokes_family_when_p3_authority_is_stale() -> None:
     assert service.grant_calls == [(grant_id, True)]
 
 
-def test_unknown_bearer_prefix_is_not_treated_as_legacy_join_token() -> None:
-    service = FakeService()
+def test_unknown_bearer_prefix_uses_legacy_authority_and_is_unauthorized() -> None:
+    service = FakeService(
+        legacy_error=AIControllerUnauthorizedError("invalid")
+    )
     with pytest.raises(MCPAuthenticationError) as exc_info:
         authenticate_request(_request("something-else"), service)
-    assert exc_info.value.stable_code == "ai_token_required"
-    assert service.legacy_calls == []
+    assert exc_info.value.stable_code == "ai_token_unauthorized"
+    assert service.legacy_calls == [("something-else", True)]
