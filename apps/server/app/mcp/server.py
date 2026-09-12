@@ -45,6 +45,15 @@ def _oauth_challenge(request: Request) -> str:
     return f'Bearer resource_metadata="{public_origin(request)}/.well-known/oauth-protected-resource"'
 
 
+def _discover_instructions(origin: str) -> str:
+    guide_url = f"{origin.rstrip('/')}/mcp/guide"
+    return (
+        f"Adventure Table external AI transport. Start with get_session_context and read the full bilingual guide at {guide_url}?locale=en. "
+        "Use only the scoped Seat capabilities exposed by this server. / Adventure Table 外部 AI 傳輸入口；"
+        f"先呼叫 get_session_context，完整雙語指引請讀 {guide_url}?locale=zh-TW；只能使用目前 scoped Seat 所允許的能力。"
+    )
+
+
 @router.get("/mcp/guide", response_model=None)
 async def mcp_guide(locale: str = Query(default="en")) -> PlainTextResponse | JSONResponse:
     try:
@@ -74,15 +83,10 @@ async def mcp_endpoint(request: Request, ai_controller_service: AIControllerServ
         return JSONResponse(status_code=401, headers={"WWW-Authenticate": _oauth_challenge(request)}, content=error_payload(envelope.request_id, rpc_code=-32001, stable_code=exc.stable_code, message=exc.message, message_zh_tw=exc.message_zh_tw))
 
     if envelope.method == "server/discover":
-        guide_url = f"{public_origin(request)}/mcp/guide"
         return JSONResponse(content=result_payload(envelope.request_id, {
             "supportedVersions": [MCP_PROTOCOL_VERSION],
             "capabilities": {"tools": {}},
-            "instructions": (
-                f"Adventure Table external AI transport. Start with get_session_context and read the full bilingual guide at {guide_url}?locale=en. "
-                "Use only the scoped Seat capabilities exposed by this server. / Adventure Table 外部 AI 傳輸入口；"
-                f"先呼叫 get_session_context，完整雙語指引請讀 {guide_url}?locale=zh-TW；只能使用目前 scoped Seat 所允許的能力。"
-            ),
+            "instructions": _discover_instructions(public_origin(request)),
         }, cacheable=True))
 
     if envelope.method == "tools/list":
