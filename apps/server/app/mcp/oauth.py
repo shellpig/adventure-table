@@ -18,6 +18,7 @@ from app.api.rooms.ai_controllers import get_ai_controller_service
 from app.api.rooms.ai_oauth import get_ai_controller_oauth_service
 from app.domain.rooms.ai_controllers import AIControllerService, AIControllerUnauthorizedError
 from app.domain.rooms.ai_oauth import AIControllerOAuthError, AIControllerOAuthService
+from app.mcp.public_origin import public_origin
 
 
 router = APIRouter(tags=["mcp-oauth"])
@@ -74,10 +75,6 @@ def _mint(prefix: str) -> str:
 def _pkce_s256(verifier: str) -> str:
     digest = hashlib.sha256(verifier.encode("ascii")).digest()
     return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
-
-
-def _origin(request: Request) -> str:
-    return str(request.base_url).rstrip("/")
 
 
 def _oauth_error(error: str, description: str, status_code: int = 400) -> JSONResponse:
@@ -234,7 +231,7 @@ def _validate_current_grant(service: AIControllerService, grant_id: UUID) -> Non
 
 @router.get("/.well-known/oauth-protected-resource")
 def protected_resource_metadata(request: Request) -> dict[str, object]:
-    origin = _origin(request)
+    origin = public_origin(request)
     return {
         "resource": f"{origin}/mcp",
         "authorization_servers": [origin],
@@ -244,7 +241,7 @@ def protected_resource_metadata(request: Request) -> dict[str, object]:
 
 @router.get("/.well-known/oauth-authorization-server")
 def authorization_server_metadata(request: Request) -> dict[str, object]:
-    origin = _origin(request)
+    origin = public_origin(request)
     return {
         "issuer": origin,
         "authorization_endpoint": f"{origin}/mcp/oauth/authorize",

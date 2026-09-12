@@ -23,6 +23,7 @@ from app.mcp.protocol import (
     validate_request,
 )
 from app.mcp.tools import call_tool, tool_catalog
+from app.mcp.public_origin import public_origin
 
 
 router = APIRouter(tags=["mcp"])
@@ -62,10 +63,9 @@ def _needs_oauth_service(request: Request) -> bool:
 
 
 def _oauth_challenge(request: Request) -> str:
-    base_url = str(request.base_url).rstrip("/")
     return (
         'Bearer resource_metadata="'
-        f"{base_url}/.well-known/oauth-protected-resource"
+        f"{public_origin(request)}/.well-known/oauth-protected-resource"
         '"'
     )
 

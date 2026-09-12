@@ -24,6 +24,9 @@ services:
       # Empty falls back to the full default list in app/config.py. The E2E
       # runner sets a subset here to exercise the missing-pack import contracts.
       ADVENTURE_TABLE_ENABLED_CONTENT_PACKS: ${ADVENTURE_TABLE_ENABLED_CONTENT_PACKS:-}
+      # Public https origin advertised in OAuth metadata when a TLS proxy
+      # (e.g. Tailscale serve/funnel) fronts /mcp. Empty = request origin.
+      ADVENTURE_TABLE_MCP_PUBLIC_ORIGIN: ${ADVENTURE_TABLE_MCP_PUBLIC_ORIGIN:-}
     command: >-
       sh -c "alembic upgrade heads &&
       uvicorn app.main:app --host 0.0.0.0 --port 8000"
