@@ -24,7 +24,11 @@ const templateCopy = {
   'zh-TW': {
     copyFailed: '無法自動複製 Join Kit，請手動選取文字。',
     loopback: '提醒：目前 URL 是 loopback 位址；遠端 AI 必須能連到這台機器，否則請改用可公開存取的 origin。',
-    role: 'Role', endpoint: 'URL', guide: 'Guide', token: 'Token', expires: 'Expires',
+    role: 'Role',
+    endpoint: 'URL',
+    guide: 'Guide',
+    token: 'Token',
+    expires: 'Expires',
     expiresFallback: '直到 Session 結束或被撤銷',
     first: '連上後第一步一律呼叫 get_session_context。',
     safety: '安全：此 token 只顯示這一次；勿轉傳；用完請 Owner／DM 在網站撤銷。',
@@ -36,7 +40,11 @@ const templateCopy = {
   en: {
     copyFailed: 'Could not copy the Join Kit automatically. Select and copy the text manually.',
     loopback: 'Note: this URL uses a loopback address. A remote AI must be able to reach this machine; otherwise use a publicly reachable origin.',
-    role: 'Role', endpoint: 'URL', guide: 'Guide', token: 'Token', expires: 'Expires',
+    role: 'Role',
+    endpoint: 'URL',
+    guide: 'Guide',
+    token: 'Token',
+    expires: 'Expires',
     expiresFallback: 'until the Session ends or the grant is revoked',
     first: 'After connecting, always call get_session_context first.',
     safety: 'Security: this token is shown only once; do not forward it; ask the Owner/DM to revoke it when finished.',
@@ -47,13 +55,22 @@ const templateCopy = {
   },
 } as const
 
-function normalizedOrigin(origin: string) { return origin.replace(/\/$/, '') }
+function normalizedOrigin(origin: string) {
+  return origin.replace(/\/$/, '')
+}
 
 export function isLoopbackOrigin(origin: string) {
   try {
     const hostname = new URL(origin).hostname
-    return hostname === 'localhost' || hostname === '::1' || hostname === '[::1]' || hostname.startsWith('127.')
-  } catch { return false }
+    return (
+      hostname === 'localhost' ||
+      hostname === '::1' ||
+      hostname === '[::1]' ||
+      hostname.startsWith('127.')
+    )
+  } catch {
+    return false
+  }
 }
 
 export function buildAIJoinKit({ origin, token, role, locale, expiresAt }: JoinKitInput) {
@@ -70,11 +87,15 @@ export function buildAIJoinKit({ origin, token, role, locale, expiresAt }: JoinK
     `${copy.role}: ${displayRole}`,
     `${copy.expires}: ${expiresAt ?? copy.expiresFallback}`,
     `${copy.guide}: ${guide}`,
-    '', copy.first, copy.refresh, '',
+    '',
+    copy.first,
+    copy.refresh,
+    '',
     `1. ${copy.web}`,
     `2. ${copy.client.replace('{token}', token)}`,
     `3. ${copy.http}`,
-    '', copy.safety,
+    '',
+    copy.safety,
   ]
   if (isLoopbackOrigin(base)) lines.push('', copy.loopback)
   return lines.join('\n')
@@ -91,26 +112,36 @@ export function AIJoinKit({ origin, token, role, locale, expiresAt, uiCopy }: AI
   const template = templateCopy[locale]
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState(false)
-  const kit = useMemo(() => buildAIJoinKit({ origin, token, role, locale, expiresAt }), [origin, token, role, locale, expiresAt])
+  const kit = useMemo(
+    () => buildAIJoinKit({ origin, token, role, locale, expiresAt }),
+    [origin, token, role, locale, expiresAt],
+  )
 
   const copyKit = async () => {
     try {
       await navigator.clipboard.writeText(kit)
-      setCopyError(false); setCopied(true)
+      setCopyError(false)
+      setCopied(true)
       window.setTimeout(() => setCopied(false), 2500)
-    } catch { setCopyError(true) }
+    } catch {
+      setCopyError(true)
+    }
   }
 
   const downloadKit = () => {
     const blob = new Blob([kit], { type: 'text/plain;charset=utf-8' })
     const href = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
-    anchor.href = href; anchor.download = aiJoinKitFilename(role); anchor.click(); URL.revokeObjectURL(href)
+    anchor.href = href
+    anchor.download = aiJoinKitFilename(role)
+    anchor.click()
+    URL.revokeObjectURL(href)
   }
 
   return (
     <div className="ai-join-kit" data-ai-join-kit={role}>
-      <strong>{uiCopy.aiJoinKitTitle}</strong><p>{uiCopy.aiJoinKitHint}</p>
+      <strong>{uiCopy.aiJoinKitTitle}</strong>
+      <p>{uiCopy.aiJoinKitHint}</p>
       {isLoopbackOrigin(origin) ? <p className="session-ai-hint">{template.loopback}</p> : null}
       <pre className="ai-join-kit__text">{kit}</pre>
       <div className="workshop-card__split-actions">

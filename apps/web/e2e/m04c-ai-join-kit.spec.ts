@@ -5,6 +5,9 @@ import { expect, test, type APIRequestContext, type Page } from './support/roomT
 
 const IMPORT_FIXTURE = resolve(process.cwd(), '../server/tests/data/m03/fixture_low_level_srd.json')
 const MCP_PROTOCOL_VERSION = '2026-07-28'
+// The vite dev server only proxies /api; /mcp and /mcp/guide are reached on the
+// backend directly, the same way p3e-mcp-browser-integration does.
+const MCP_ENDPOINT = process.env.PLAYWRIGHT_MCP_URL ?? 'http://127.0.0.1:8000/mcp'
 
 type Campaign = { id: string }
 type Lobby = { caller_access_session_id: string | null }
@@ -43,7 +46,7 @@ function mcpBody(name: string) {
 }
 
 async function getSessionContextWithKitToken(request: APIRequestContext, token: string) {
-  const response = await request.post('/mcp', {
+  const response = await request.post(MCP_ENDPOINT, {
     data: mcpBody('get_session_context'),
     headers: {
       Authorization: `Bearer ${token}`,
@@ -59,7 +62,7 @@ async function getSessionContextWithKitToken(request: APIRequestContext, token: 
 
 test('M04-C public MCP guide is reachable in both supported locales', async ({ request }) => {
   for (const locale of ['en', 'zh-TW'] as const) {
-    const response = await request.get(`/mcp/guide?locale=${locale}`)
+    const response = await request.get(`${MCP_ENDPOINT}/guide?locale=${locale}`)
     expect(response.ok(), await response.text()).toBe(true)
     expect(response.headers()['cache-control']).toBe('public, max-age=300')
     const guide = await response.text()
@@ -102,6 +105,35 @@ test('M04-C Lobby AI DM kit token reaches pre_session context', async ({ page, r
   const download = await downloadPromise
   expect(download.suggestedFilename()).toMatch(/^adventure-table-ai-dm-\d{8}\.txt$/)
   expect(download.suggestedFilename()).not.toContain('token')
+})
+
+test('M04-C Lobby AI DM kit renders in zh-TW', async ({ page, request, roomContext }) => {
+  await createActiveCampaign(page, roomContext.roomId, 'M04-C Join Kit zh-TW')
+  await page.getByRole('button', { name: 'Traditional Chinese' }).click()
+  await expect(page.getByRole('heading', { name: '大廳與座位', level: 1 })).toBeVisible()
+
+  await page.getByLabel('角色').selectOption('dm')
+  await page.getByLabel('座位名稱').fill('M04-C AI DM zh')
+  await page.getByRole('button', { name: '新增座位' }).click()
+
+  const panel = page.locator('[data-ai-dm-grant-panel]').filter({ has: page.getByRole('heading', { name: 'AI DM 開場憑證' }) })
+  await panel.getByRole('button', { name: '建立 AI DM Token' }).click()
+
+  const once = panel.locator('[data-ai-dm-token-once="true"]')
+  await expect(once).toBeVisible()
+  const token = await once.getByLabel('AI DM Token（僅顯示這一次）').inputValue()
+  const kitText = panel.locator('[data-ai-join-kit="dm"] .ai-join-kit__text')
+  const origin = new URL(page.url()).origin
+  await expect(kitText).toContainText(`URL: ${origin}/mcp`)
+  await expect(kitText).toContainText(`${origin}/mcp/guide?locale=zh-TW`)
+  await expect(kitText).toContainText('Role: DM')
+  await expect(kitText).toContainText('連上後第一步一律呼叫 get_session_context')
+  await expect(kitText).toContainText('安全：此 token 只顯示這一次')
+  await expect(panel.getByRole('button', { name: '複製 Join Kit' })).toBeVisible()
+  await expect(panel.getByRole('button', { name: '下載 .txt' })).toBeVisible()
+
+  const context = await getSessionContextWithKitToken(request, token)
+  expect(context.result.structuredContent).toMatchObject({ ok: true, data: { mode: 'pre_session' } })
 })
 
 test('M04-C Player Let AI Control reveals a Player Join Kit', async ({ page, request, roomContext }) => {
