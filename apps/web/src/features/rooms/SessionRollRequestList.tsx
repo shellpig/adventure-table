@@ -5,11 +5,70 @@ import {
   submitFormalRoll,
   type FormalRollSource,
   type RollModifierMode,
+  type RollRequestType,
   type RollRequestView,
   type RollSubmissionResponse,
 } from '../../api/p3c'
 import type { TableEvent } from '../../api/sessions'
 import type { SessionCopy } from './sessionCopy'
+
+function formatRequestType(type: RollRequestType, copy: SessionCopy): string {
+  switch (type) {
+    case 'ability': return copy.checkAbilityType
+    case 'skill': return copy.checkSkillType
+    case 'saving_throw': return copy.checkSaveType
+    case 'other': return copy.checkOtherType
+    default: return type
+  }
+}
+
+function formatTargetRef(request: RollRequestView, copy: SessionCopy): string | null {
+  if (request.skill_ref) {
+    const map: Record<string, string> = {
+      'srd5.1:skill:acrobatics': copy.skillAcrobatics,
+      'srd5.1:skill:animal-handling': copy.skillAnimalHandling,
+      'srd5.1:skill:arcana': copy.skillArcana,
+      'srd5.1:skill:athletics': copy.skillAthletics,
+      'srd5.1:skill:deception': copy.skillDeception,
+      'srd5.1:skill:history': copy.skillHistory,
+      'srd5.1:skill:insight': copy.skillInsight,
+      'srd5.1:skill:intimidation': copy.skillIntimidation,
+      'srd5.1:skill:investigation': copy.skillInvestigation,
+      'srd5.1:skill:medicine': copy.skillMedicine,
+      'srd5.1:skill:nature': copy.skillNature,
+      'srd5.1:skill:perception': copy.skillPerception,
+      'srd5.1:skill:performance': copy.skillPerformance,
+      'srd5.1:skill:persuasion': copy.skillPersuasion,
+      'srd5.1:skill:religion': copy.skillReligion,
+      'srd5.1:skill:sleight-of-hand': copy.skillSleightOfHand,
+      'srd5.1:skill:stealth': copy.skillStealth,
+      'srd5.1:skill:survival': copy.skillSurvival,
+    }
+    return map[request.skill_ref] ?? request.skill_ref
+  }
+  if (request.ability_ref) {
+    const map: Record<string, string> = {
+      'srd5.1:ability:str': copy.abilityStr,
+      'srd5.1:ability:dex': copy.abilityDex,
+      'srd5.1:ability:con': copy.abilityCon,
+      'srd5.1:ability:int': copy.abilityInt,
+      'srd5.1:ability:wis': copy.abilityWis,
+      'srd5.1:ability:cha': copy.abilityCha,
+    }
+    return map[request.ability_ref] ?? request.ability_ref
+  }
+  return null
+}
+
+function formatModifierMode(mode: RollModifierMode, copy: SessionCopy): string {
+  switch (mode) {
+    case 'advantage': return copy.checkAdvantage
+    case 'disadvantage': return copy.checkDisadvantage
+    case 'normal':
+    default:
+      return copy.checkNormal
+  }
+}
 
 export function visibleRollResultTotal(
   requestId: string,
@@ -112,61 +171,80 @@ export function SessionRollRequestList({
     <section className="session-roll-requests" aria-label={copy.rollRequestsTitle}>
       <h3>{copy.rollRequestsTitle}</h3>
       {requests.length === 0 ? <p>{copy.rollNoRequests}</p> : null}
-      {requests.map((request) => {
-        const canRoll = request.status === 'pending' && (
-          isCurrentDm || controlledSeatIds.includes(request.target_seat_id)
-        )
-        const submission = submissions[request.id]
-        const eventTotal = visibleRollResultTotal(request.id, events)
-        const visibleTotal = submission?.result?.total ?? eventTotal
-        const rawDice = parsePhysicalD20(request.modifier_mode, physicalDice[request.id] ?? '')
-        return (
-          <article className="session-roll-request" key={request.id} data-roll-request-status={request.status}>
-            <header>
-              <strong>{request.request_type}</strong>
-              <span>{statusLabel(request, copy)}</span>
-              {isCurrentDm && request.dc !== null ? <span>DC {request.dc}</span> : null}
-            </header>
-            {request.skill_ref ? <p>{request.skill_ref}</p> : null}
-            {request.ability_ref ? <p>{request.ability_ref}</p> : null}
-            <p>{request.modifier_mode}</p>
-            {visibleTotal !== null ? <p><strong>{copy.rollTotal}: {visibleTotal}</strong></p> : null}
-            {submission?.hidden ? <p>{copy.rollHidden}</p> : null}
-            {canRoll ? (
-              <div className="session-roll-request__actions">
-                <button
-                  className="button primary"
-                  type="button"
-                  disabled={rollingKey !== null}
-                  onClick={() => void roll(request, 'server')}
-                >
-                  {rollingKey === `${request.id}:server` ? copy.rolling : copy.rollButton}
-                </button>
-                <label>
-                  <span>{copy.rollPhysicalDice}</span>
-                  <input
-                    value={physicalDice[request.id] ?? ''}
-                    disabled={rollingKey !== null}
-                    placeholder={request.modifier_mode === 'normal' ? '12' : '12, 17'}
-                    onChange={(event) => setPhysicalDice((current) => ({
-                      ...current,
-                      [request.id]: event.target.value,
-                    }))}
-                  />
-                </label>
-                <button
-                  className="button secondary"
-                  type="button"
-                  disabled={rollingKey !== null || rawDice === null}
-                  onClick={() => rawDice && void roll(request, 'physical', rawDice)}
-                >
-                  {rollingKey === `${request.id}:physical` ? copy.rolling : copy.rollPhysicalSubmit}
-                </button>
+      <div className="session-roll-request-list">
+        {requests.map((request) => {
+          const canRoll = request.status === 'pending' && (
+            isCurrentDm || controlledSeatIds.includes(request.target_seat_id)
+          )
+          const submission = submissions[request.id]
+          const eventTotal = visibleRollResultTotal(request.id, events)
+          const visibleTotal = submission?.result?.total ?? eventTotal
+          const rawDice = parsePhysicalD20(request.modifier_mode, physicalDice[request.id] ?? '')
+          const targetRefText = formatTargetRef(request, copy)
+          return (
+            <article className="session-roll-request" key={request.id} data-roll-request-status={request.status}>
+              <header>
+                <div className="session-roll-request__title-group">
+                  <strong className="session-roll-request__type">{formatRequestType(request.request_type, copy)}</strong>
+                  {targetRefText ? <span className="session-roll-request__ref">{targetRefText}</span> : null}
+                </div>
+                <div className="session-roll-request__badges">
+                  {isCurrentDm && request.dc !== null ? <span className="session-roll-badge dc">DC {request.dc}</span> : null}
+                  <span className={`session-roll-badge status ${request.status}`}>{statusLabel(request, copy)}</span>
+                </div>
+              </header>
+
+              <div className="session-roll-request__meta">
+                <span className="session-roll-badge mode">{formatModifierMode(request.modifier_mode, copy)}</span>
+                {request.flat_adjustment !== 0 ? (
+                  <span className="session-roll-badge adjustment">{request.flat_adjustment > 0 ? `+${request.flat_adjustment}` : request.flat_adjustment}</span>
+                ) : null}
               </div>
-            ) : null}
-          </article>
-        )
-      })}
+
+              {visibleTotal !== null ? (
+                <p className="session-roll-request__total">
+                  <strong>{copy.rollTotal}: {visibleTotal}</strong>
+                </p>
+              ) : null}
+              {submission?.hidden ? <p className="session-roll-request__hidden">{copy.rollHidden}</p> : null}
+              {canRoll ? (
+                <div className="session-roll-request__actions">
+                  <button
+                    className="button primary session-roll-button"
+                    type="button"
+                    disabled={rollingKey !== null}
+                    onClick={() => void roll(request, 'server')}
+                  >
+                    {rollingKey === `${request.id}:server` ? copy.rolling : copy.rollButton}
+                  </button>
+                  <div className="session-roll-physical-group">
+                    <label className="session-field">
+                      <span>{copy.rollPhysicalDice}</span>
+                      <input
+                        value={physicalDice[request.id] ?? ''}
+                        disabled={rollingKey !== null}
+                        placeholder={request.modifier_mode === 'normal' ? '12' : '12, 17'}
+                        onChange={(event) => setPhysicalDice((current) => ({
+                          ...current,
+                          [request.id]: event.target.value,
+                        }))}
+                      />
+                    </label>
+                    <button
+                      className="button secondary"
+                      type="button"
+                      disabled={rollingKey !== null || rawDice === null}
+                      onClick={() => rawDice && void roll(request, 'physical', rawDice)}
+                    >
+                      {rollingKey === `${request.id}:physical` ? copy.rolling : copy.rollPhysicalSubmit}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </article>
+          )
+        })}
+      </div>
     </section>
   )
 }

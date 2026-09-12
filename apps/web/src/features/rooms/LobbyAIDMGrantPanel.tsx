@@ -88,6 +88,7 @@ export function LobbyAIDMGrantPanel({
     try {
       await navigator.clipboard.writeText(issued.token)
       setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
     } catch {
       setError(copy.aiDmCopyFailed)
     }
@@ -130,10 +131,20 @@ export function LobbyAIDMGrantPanel({
               {expired ? ` · ${copy.aiDmExpired}` : ''}
             </p>
           ) : null}
-          <textarea readOnly value={issued.token} aria-label={copy.aiDmTokenOnceTitle} />
-          <button className="button secondary" type="button" onClick={() => void copyToken()}>
-            {copied ? copy.aiDmCopied : copy.aiDmCopy}
-          </button>
+          <div className="token-display-box">
+            <textarea
+              readOnly
+              rows={2}
+              value={issued.token}
+              aria-label={copy.aiDmTokenOnceTitle}
+              className="token-display-input"
+              onClick={(event) => (event.target as HTMLTextAreaElement).select()}
+            />
+            <button className="button secondary token-copy-button" type="button" onClick={() => void copyToken()}>
+              {copy.aiDmCopy}
+            </button>
+            {copied ? <span className="token-copy-feedback" role="status">{copy.aiDmCopied}</span> : null}
+          </div>
         </div>
       ) : null}
 

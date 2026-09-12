@@ -93,36 +93,45 @@ export function SessionQuickDicePanel({
   return (
     <section className="session-quick-dice" aria-label={copy.quickDiceTitle}>
       <h3>{copy.quickDiceTitle}</h3>
-      <label>
-        <span>{copy.quickTarget}</span>
-        <select value={subjectSeatId} disabled={pending} onChange={(event) => setSubjectSeatId(event.target.value)}>
-          {targets.map((target) => <option value={target.seatId} key={target.seatId}>{target.label}</option>)}
-        </select>
-      </label>
-      <label>
-        <span>{copy.quickCount}</span>
-        <input type="number" min="1" max="20" value={diceCount} disabled={pending} onChange={(event) => setDiceCount(event.target.value)} />
-      </label>
-      <label>
-        <span>{copy.quickSides}</span>
-        <input type="number" min="2" max="1000" value={dieSides} disabled={pending} onChange={(event) => setDieSides(event.target.value)} />
-      </label>
-      <label>
-        <span>{copy.quickAdjustment}</span>
-        <input type="number" min="-1000" max="1000" value={flatAdjustment} disabled={pending} onChange={(event) => setFlatAdjustment(event.target.value)} />
-      </label>
-      <label>
-        <span>{copy.checkVisibility}</span>
-        <select value={visibility} disabled={pending} onChange={(event) => setVisibility(event.target.value as RollVisibility)}>
-          <option value="public">{copy.checkPublic}</option>
-          <option value="roller_and_dm">{copy.checkRollerDm}</option>
-          <option value="dm_only">{copy.checkDmOnly}</option>
-        </select>
-      </label>
-      <button className="button secondary" type="button" disabled={pending || input === null} onClick={() => void submit()}>
+      <div className="session-form-grid">
+        <label className="session-field full-width">
+          <span>{copy.quickTarget}</span>
+          <select value={subjectSeatId} disabled={pending} onChange={(event) => setSubjectSeatId(event.target.value)}>
+            {targets.map((target) => <option value={target.seatId} key={target.seatId}>{target.label}</option>)}
+          </select>
+        </label>
+
+        <div className="session-quick-dice__formula-row full-width">
+          <label className="session-field">
+            <span>{copy.quickCount}</span>
+            <input type="number" min="1" max="20" value={diceCount} disabled={pending} onChange={(event) => setDiceCount(event.target.value)} />
+          </label>
+          <span className="session-quick-dice__separator">d</span>
+          <label className="session-field">
+            <span>{copy.quickSides}</span>
+            <input type="number" min="2" max="1000" value={dieSides} disabled={pending} onChange={(event) => setDieSides(event.target.value)} />
+          </label>
+          <span className="session-quick-dice__separator">±</span>
+          <label className="session-field">
+            <span>{copy.quickAdjustment}</span>
+            <input type="number" min="-1000" max="1000" value={flatAdjustment} disabled={pending} onChange={(event) => setFlatAdjustment(event.target.value)} />
+          </label>
+        </div>
+
+        <label className="session-field full-width">
+          <span>{copy.checkVisibility}</span>
+          <select value={visibility} disabled={pending} onChange={(event) => setVisibility(event.target.value as RollVisibility)}>
+            <option value="public">{copy.checkPublic}</option>
+            <option value="roller_and_dm">{copy.checkRollerDm}</option>
+            <option value="dm_only">{copy.checkDmOnly}</option>
+          </select>
+        </label>
+      </div>
+
+      <button className="button secondary session-quick-dice__submit" type="button" disabled={pending || input === null} onClick={() => void submit()}>
         {pending ? copy.quickRolling : copy.quickRoll}
       </button>
-      {resultText ? <p role="status">{resultText}</p> : null}
+      {resultText ? <div className="session-quick-dice__result" role="status">{resultText}</div> : null}
     </section>
   )
 }

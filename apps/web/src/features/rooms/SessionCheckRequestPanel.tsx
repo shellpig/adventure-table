@@ -25,6 +25,40 @@ const SKILLS = [
   'performance', 'persuasion', 'religion', 'sleight-of-hand', 'stealth', 'survival',
 ] as const
 
+function getAbilityOptions(copy: SessionCopy) {
+  return [
+    ['srd5.1:ability:str', copy.abilityStr],
+    ['srd5.1:ability:dex', copy.abilityDex],
+    ['srd5.1:ability:con', copy.abilityCon],
+    ['srd5.1:ability:int', copy.abilityInt],
+    ['srd5.1:ability:wis', copy.abilityWis],
+    ['srd5.1:ability:cha', copy.abilityCha],
+  ] as const
+}
+
+function getSkillOptions(copy: SessionCopy) {
+  return [
+    ['srd5.1:skill:acrobatics', copy.skillAcrobatics],
+    ['srd5.1:skill:animal-handling', copy.skillAnimalHandling],
+    ['srd5.1:skill:arcana', copy.skillArcana],
+    ['srd5.1:skill:athletics', copy.skillAthletics],
+    ['srd5.1:skill:deception', copy.skillDeception],
+    ['srd5.1:skill:history', copy.skillHistory],
+    ['srd5.1:skill:insight', copy.skillInsight],
+    ['srd5.1:skill:intimidation', copy.skillIntimidation],
+    ['srd5.1:skill:investigation', copy.skillInvestigation],
+    ['srd5.1:skill:medicine', copy.skillMedicine],
+    ['srd5.1:skill:nature', copy.skillNature],
+    ['srd5.1:skill:perception', copy.skillPerception],
+    ['srd5.1:skill:performance', copy.skillPerformance],
+    ['srd5.1:skill:persuasion', copy.skillPersuasion],
+    ['srd5.1:skill:religion', copy.skillReligion],
+    ['srd5.1:skill:sleight-of-hand', copy.skillSleightOfHand],
+    ['srd5.1:skill:stealth', copy.skillStealth],
+    ['srd5.1:skill:survival', copy.skillSurvival],
+  ] as const
+}
+
 export type CheckTargetOption = { seatId: string; label: string }
 
 export type CheckRequestDraft = {
@@ -144,88 +178,96 @@ export function SessionCheckRequestPanel({
   return (
     <section className="session-check-request" aria-label={copy.checkRequestTitle}>
       <h3>{copy.checkRequestTitle}</h3>
-      {intent ? <p><strong>{copy.checkIntentLabel}:</strong> {intent.text}</p> : null}
+      {intent ? (
+        <div className="session-check-request__intent">
+          <strong>{copy.checkIntentLabel}:</strong> {intent.text}
+        </div>
+      ) : null}
 
-      <fieldset disabled={pending}>
+      <fieldset disabled={pending} className="session-check-request__fieldset">
         <legend>{copy.checkTargets}</legend>
-        {targets.map((target) => (
-          <label key={target.seatId}>
-            <input
-              type="checkbox"
-              checked={targetSeatIds.includes(target.seatId)}
-              onChange={() => toggleTarget(target.seatId)}
-            />
-            {target.label}
-          </label>
-        ))}
+        <div className="session-check-request__targets">
+          {targets.map((target) => (
+            <label key={target.seatId} className="session-check-request__target-chip">
+              <input
+                type="checkbox"
+                checked={targetSeatIds.includes(target.seatId)}
+                onChange={() => toggleTarget(target.seatId)}
+              />
+              <span>{target.label}</span>
+            </label>
+          ))}
+        </div>
       </fieldset>
 
-      <label>
-        <span>{copy.checkType}</span>
-        <select value={requestType} disabled={pending} onChange={(event) => setRequestType(event.target.value as RollRequestType | '')}>
-          <option value="">{copy.checkChooseType}</option>
-          <option value="ability">{copy.checkAbilityType}</option>
-          <option value="skill">{copy.checkSkillType}</option>
-          <option value="saving_throw">{copy.checkSaveType}</option>
-          <option value="other">{copy.checkOtherType}</option>
-        </select>
-      </label>
-
-      {requestType === 'ability' || requestType === 'saving_throw' ? (
-        <label>
-          <span>{copy.checkAbility}</span>
-          <select value={abilityRef} disabled={pending} onChange={(event) => setAbilityRef(event.target.value)}>
-            <option value="">—</option>
-            {ABILITIES.map(([ref, labelText]) => <option value={ref} key={ref}>{labelText}</option>)}
+      <div className="session-form-grid">
+        <label className={`session-field ${requestType === '' || requestType === 'other' ? 'full-width' : ''}`}>
+          <span>{copy.checkType}</span>
+          <select value={requestType} disabled={pending} onChange={(event) => setRequestType(event.target.value as RollRequestType | '')}>
+            <option value="">{copy.checkChooseType}</option>
+            <option value="ability">{copy.checkAbilityType}</option>
+            <option value="skill">{copy.checkSkillType}</option>
+            <option value="saving_throw">{copy.checkSaveType}</option>
+            <option value="other">{copy.checkOtherType}</option>
           </select>
         </label>
-      ) : null}
 
-      {requestType === 'skill' ? (
-        <label>
-          <span>{copy.checkSkill}</span>
-          <select value={skillRef} disabled={pending} onChange={(event) => setSkillRef(event.target.value)}>
-            <option value="">—</option>
-            {SKILLS.map((skill) => (
-              <option value={`srd5.1:skill:${skill}`} key={skill}>{skill}</option>
-            ))}
+        {requestType === 'ability' || requestType === 'saving_throw' ? (
+          <label className="session-field">
+            <span>{copy.checkAbility}</span>
+            <select value={abilityRef} disabled={pending} onChange={(event) => setAbilityRef(event.target.value)}>
+              <option value="">—</option>
+              {getAbilityOptions(copy).map(([ref, labelText]) => <option value={ref} key={ref}>{labelText}</option>)}
+            </select>
+          </label>
+        ) : null}
+
+        {requestType === 'skill' ? (
+          <label className="session-field">
+            <span>{copy.checkSkill}</span>
+            <select value={skillRef} disabled={pending} onChange={(event) => setSkillRef(event.target.value)}>
+              <option value="">—</option>
+              {getSkillOptions(copy).map(([ref, labelText]) => (
+                <option value={ref} key={ref}>{labelText}</option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+
+        <label className="session-field">
+          <span>{copy.checkDc}</span>
+          <input type="number" min="0" max="999" value={dc} disabled={pending} placeholder="10" onChange={(event) => setDc(event.target.value)} />
+        </label>
+        <label className="session-field">
+          <span>{copy.checkModifier}</span>
+          <select value={modifierMode} disabled={pending} onChange={(event) => setModifierMode(event.target.value as RollModifierMode)}>
+            <option value="normal">{copy.checkNormal}</option>
+            <option value="advantage">{copy.checkAdvantage}</option>
+            <option value="disadvantage">{copy.checkDisadvantage}</option>
           </select>
         </label>
-      ) : null}
+        <label className="session-field">
+          <span>{copy.checkAdjustment}</span>
+          <input type="number" min="-100" max="100" value={flatAdjustment} disabled={pending} onChange={(event) => setFlatAdjustment(event.target.value)} />
+        </label>
+        <label className="session-field">
+          <span>{copy.checkVisibility}</span>
+          <select value={visibility} disabled={pending} onChange={(event) => setVisibility(event.target.value as RollVisibility)}>
+            <option value="public">{copy.checkPublic}</option>
+            <option value="roller_and_dm">{copy.checkRollerDm}</option>
+            <option value="dm_only">{copy.checkDmOnly}</option>
+          </select>
+        </label>
+        <label className="session-field full-width">
+          <span>{copy.checkLabel}</span>
+          <input value={label} maxLength={160} disabled={pending} placeholder={copy.checkLabelPlaceholder} onChange={(event) => setLabel(event.target.value)} />
+        </label>
+      </div>
 
-      <label>
-        <span>{copy.checkDc}</span>
-        <input type="number" min="0" max="999" value={dc} disabled={pending} onChange={(event) => setDc(event.target.value)} />
-      </label>
-      <label>
-        <span>{copy.checkModifier}</span>
-        <select value={modifierMode} disabled={pending} onChange={(event) => setModifierMode(event.target.value as RollModifierMode)}>
-          <option value="normal">{copy.checkNormal}</option>
-          <option value="advantage">{copy.checkAdvantage}</option>
-          <option value="disadvantage">{copy.checkDisadvantage}</option>
-        </select>
-      </label>
-      <label>
-        <span>{copy.checkAdjustment}</span>
-        <input type="number" min="-100" max="100" value={flatAdjustment} disabled={pending} onChange={(event) => setFlatAdjustment(event.target.value)} />
-      </label>
-      <label>
-        <span>{copy.checkVisibility}</span>
-        <select value={visibility} disabled={pending} onChange={(event) => setVisibility(event.target.value as RollVisibility)}>
-          <option value="public">{copy.checkPublic}</option>
-          <option value="roller_and_dm">{copy.checkRollerDm}</option>
-          <option value="dm_only">{copy.checkDmOnly}</option>
-        </select>
-      </label>
-      <label>
-        <span>{copy.checkLabel}</span>
-        <input value={label} maxLength={160} disabled={pending} onChange={(event) => setLabel(event.target.value)} />
-      </label>
-
-      <button className="button primary" type="button" disabled={pending || payload === null} onClick={() => void submit()}>
+      <button className="button primary session-check-request__submit" type="button" disabled={pending || payload === null} onClick={() => void submit()}>
         {pending ? copy.checkSubmitting : copy.checkSubmit}
       </button>
-      {createdCount !== null ? <p role="status">{copy.checkCreated.replace('{count}', String(createdCount))}</p> : null}
+      {createdCount !== null ? <div className="session-check-request__success" role="status">{copy.checkCreated.replace('{count}', String(createdCount))}</div> : null}
     </section>
   )
 }

@@ -131,6 +131,7 @@ export function PlayerAIControlPanel({
     try {
       await navigator.clipboard.writeText(issued.token)
       setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
     } catch {
       setError(copy.aiCopyFailed)
     }
@@ -181,10 +182,20 @@ export function PlayerAIControlPanel({
         <div className="notice-banner" role="status" data-ai-token-once="true">
           <strong>{copy.aiTokenOnceTitle}</strong>
           <p>{copy.aiTokenOnceHint}</p>
-          <textarea readOnly value={issued.token} aria-label={copy.aiTokenOnceTitle} />
-          <button className="button secondary" type="button" onClick={() => void copyToken()}>
-            {copied ? copy.aiTokenCopied : copy.aiCopyToken}
-          </button>
+          <div className="token-display-box">
+            <textarea
+              readOnly
+              rows={2}
+              value={issued.token}
+              aria-label={copy.aiTokenOnceTitle}
+              className="token-display-input"
+              onClick={(event) => (event.target as HTMLTextAreaElement).select()}
+            />
+            <button className="button secondary token-copy-button" type="button" onClick={() => void copyToken()}>
+              {copy.aiCopyToken}
+            </button>
+            {copied ? <span className="token-copy-feedback" role="status">{copy.aiTokenCopied}</span> : null}
+          </div>
         </div>
       ) : null}
 
