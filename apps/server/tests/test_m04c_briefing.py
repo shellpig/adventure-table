@@ -35,8 +35,8 @@ def test_briefing_keeps_temporary_instruction_separate() -> None:
 
 def test_briefing_length_cap() -> None:
     for role in ("dm", "player"):
-        assert len(render_briefing(role=role, mode="active_session")) <= 4_000
-    assert len(render_briefing(role="dm", mode="pre_session")) <= 2_000
+        assert len(render_briefing(role=role, mode="active_session")) <= 1_200
+    assert len(render_briefing(role="dm", mode="pre_session")) <= 1_200
 
 
 def test_briefing_wait_rule_and_write_back() -> None:
