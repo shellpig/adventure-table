@@ -20,7 +20,7 @@ jobs:
           python-version: "3.13"
       - name: Static whitespace check for M04-A code and tests
         run: >-
-          git diff --check main...HEAD --
+          git diff --check origin/main...HEAD --
           tools/m04a-webchat-preflight/server.py
           tools/m04a-webchat-preflight/admin.py
           tools/m04a-webchat-preflight/test_redact.py
