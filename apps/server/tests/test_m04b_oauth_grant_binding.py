@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
-from types import SimpleNamespace
 from uuid import uuid4
 
 from sqlalchemy import create_engine, insert, select
@@ -90,12 +89,20 @@ def test_oauth_source_gets_same_role_scoped_catalog() -> None:
 
 def _engine_with_oauth_tables():
     engine = create_engine("sqlite+pysqlite:///:memory:")
+    with engine.begin() as connection:
+        connection.exec_driver_sql(
+            "CREATE TABLE ai_controller_grants (id CHAR(32) PRIMARY KEY)"
+        )
     ai_oauth_clients.create(engine)
     ai_oauth_authorizations.create(engine)
     return engine
 
 
 def _insert_authorization(connection, *, grant_id, client_id="atc_test"):
+    connection.exec_driver_sql(
+        "INSERT OR IGNORE INTO ai_controller_grants (id) VALUES (?)",
+        (grant_id.hex,),
+    )
     connection.execute(
         insert(ai_oauth_clients).values(
             id=uuid4(), client_id=client_id, client_secret_hash=None,
