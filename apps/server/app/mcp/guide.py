@@ -162,7 +162,10 @@ def render_guide(locale: Locale | str) -> str:
         )
         flow = (
             f"【進場與事件迴圈】\n第一步永遠呼叫 {names.context}。mode=pre_session 時再呼叫 {names.start}；"
-            "mode=active_session 時直接續場。事件 cursor 使用 runtime.last_event_seq／回傳 cursor，永遠只往前。"
+            "mode=active_session 時直接續場。事件 cursor 使用 runtime.last_event_seq／回傳 cursor，永遠只往前。\n"
+            f"開場後 Stage 是空的：context 的 stage_unset／next_required_action 會指出下一步。"
+            f"DM 在 stage_unset 為真時先呼叫 {names.stage_text} 建立場景，再 {names.narration} 敘事。\n"
+            "連線判定：只有本回合實際執行工具並取得結果才算呼叫 MCP；查看工具清單或重新掃描不算，也不可據此宣稱連線成功或失敗。"
         )
         rules = f"【DM 守則】\n{role_rule(role='dm', locale=locale)}\n\n【Player 守則】\n{role_rule(role='player', locale=locale)}"
         unauth = "收到 401 ai_token_unauthorized 時停止並告知使用者，不要重試；token 用完或不再需要時請由人類撤銷。"
@@ -181,7 +184,10 @@ def render_guide(locale: Locale | str) -> str:
         )
         flow = (
             f"[Entry and event loop]\nAlways call {names.context} first. If mode=pre_session, call {names.start}; "
-            "if mode=active_session, continue the table. Advance from runtime.last_event_seq / returned cursors and never move the cursor backwards."
+            "if mode=active_session, continue the table. Advance from runtime.last_event_seq / returned cursors and never move the cursor backwards.\n"
+            f"After start the Stage is empty: the context's stage_unset / next_required_action name the next step. "
+            f"While stage_unset is true a DM calls {names.stage_text} to set the scene before narrating with {names.narration}.\n"
+            "Connection check: only an actual tool call this turn that returns a result counts as calling MCP; listing or rescanning tools does not, and connection success/failure must never be inferred from it."
         )
         rules = f"[DM rules]\n{role_rule(role='dm', locale=locale)}\n\n[Player rules]\n{role_rule(role='player', locale=locale)}"
         unauth = "On 401 ai_token_unauthorized, stop and tell the user; do not retry. Ask the human to revoke the token when it is no longer needed."

@@ -14,6 +14,7 @@ from app.domain.rooms.exploration import (
     ExplorationInputKind,
     ExplorationInputRequest,
     ExplorationStageService,
+    StageState,
     StageUpdateRequest,
 )
 from app.domain.rooms.pending_actions import PendingActionService
@@ -167,6 +168,15 @@ class AIToolApplicationService:
     def _briefing(*, role: str, mode: str) -> str:
         return render_briefing(role=role, mode=mode)
 
+    @staticmethod
+    def _stage_hint(stage: StageState, *, role: str) -> tuple[bool, str]:
+        # Machine-readable companion to the DM briefing loop: a DM whose Stage is
+        # empty should set it before narrating. Guidance only; never enforced.
+        stage_unset = stage.text is None or not stage.text.strip()
+        if role == "dm" and stage_unset:
+            return True, "set_stage_text"
+        return stage_unset, "wait_for_event"
+
     def get_session_context(
         self,
         token: str,
@@ -202,6 +212,7 @@ class AIToolApplicationService:
             limit=50,
         )
         stage = self.stage_service.get_stage(actor)
+        stage_unset, next_required_action = self._stage_hint(stage, role=actor.role)
         return {
             "mode": "active_session",
             "caller": {
@@ -228,6 +239,8 @@ class AIToolApplicationService:
                 ],
             },
             "stage": stage.model_dump(mode="json"),
+            "stage_unset": stage_unset,
+            "next_required_action": next_required_action,
             "runtime": runtime.model_dump(mode="json"),
             "recent_events": recent_events.model_dump(mode="json"),
             "roll_requests": [
@@ -257,7 +270,13 @@ class AIToolApplicationService:
             grant_id=auth.grant_id,
             generation=auth.generation,
         )
-        return session.model_dump(mode="json")
+        # A newly started Session always has an empty Stage, so the response tells
+        # the AI DM to set it before narrating without an extra Stage read.
+        return {
+            **session.model_dump(mode="json"),
+            "stage_unset": True,
+            "next_required_action": "set_stage_text",
+        }
 
     def get_character_context(
         self,

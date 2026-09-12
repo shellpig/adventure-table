@@ -30,8 +30,8 @@ class _NoArguments(StrictModel):
 
 _WHEN_TO_USE: dict[str, tuple[str, str]] = {
     "get_session_context": (
-        "Call first on connection and again whenever Session state, visible events, pending rolls, or control may have changed.",
-        "連線後第一個呼叫；Session 狀態、可見事件、待擲骰或控制權可能改變時再次讀取。",
+        "Call first on connection and again whenever Session state, visible events, pending rolls, or control may have changed. Connection status must never be inferred from tool discovery or a connector rescan; call this tool and use its actual result.",
+        "連線後第一個呼叫；Session 狀態、可見事件、待擲骰或控制權可能改變時再次讀取。連線狀態不可從工具清單或重新掃描推測，必須實際呼叫本工具並依其結果判定。",
     ),
     "start_session": (
         "Use only with a pre-session AI DM grant after get_session_context reports mode=pre_session.",

@@ -70,6 +70,10 @@ def test_pre_session_ai_dm_context_and_start_use_real_p3d_session_binding() -> N
         assert started["dm_controller_kind"] == "ai"
         assert started["dm_controller_ai_grant_id"] == str(grant.grant_id)
         assert started["dm_controller_generation"] == grant.generation
+        # M04-C: a freshly started Session has an empty Stage, so the response
+        # itself tells the AI DM to set it before narrating.
+        assert started["stage_unset"] is True
+        assert started["next_required_action"] == "set_stage_text"
 
         after = controller.authenticate(grant.token)
         assert after.session_id is not None
