@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 from starlette.requests import Request
 
+from app.domain.rooms.ai_controllers import AIControllerUnauthorizedError
 from app.mcp.auth import MCPAuthenticationError, authenticate_request
-from app.persistence.rooms.ai_controllers import AIControllerGrantUnauthorizedPersistenceError
 
 
 def _request(token: str) -> Request:
@@ -22,29 +21,23 @@ def _request(token: str) -> Request:
     )
 
 
-@dataclass
-class FakeGrantRepository:
-    current_scope: object | None = None
-    error: Exception | None = None
-
-    def resolve_current_scope(self, grant_id, *, touch=False):
-        if self.error is not None:
-            raise self.error
-        return self.current_scope
-
-
 class FakeService:
-    def __init__(self, repository: FakeGrantRepository) -> None:
-        self.repository = repository
+    def __init__(self, *, current_scope=None, grant_error: Exception | None = None) -> None:
+        self.repository = SimpleNamespace(engine=object())
+        self.current_scope = current_scope
+        self.grant_error = grant_error
         self.legacy_calls: list[tuple[str, bool]] = []
+        self.grant_calls: list[tuple[object, bool]] = []
 
     def authenticate(self, token: str, *, touch: bool = False):
         self.legacy_calls.append((token, touch))
         return SimpleNamespace(grant_id=uuid4(), role="player")
 
-    @staticmethod
-    def _auth_view(scope):
-        return scope
+    def authenticate_grant(self, grant_id, *, touch: bool = False):
+        self.grant_calls.append((grant_id, touch))
+        if self.grant_error is not None:
+            raise self.grant_error
+        return self.current_scope
 
 
 class FakeOAuthRepository:
@@ -64,7 +57,7 @@ class FakeOAuthRepository:
 
 
 def test_legacy_ai_join_token_path_is_unchanged() -> None:
-    service = FakeService(FakeGrantRepository())
+    service = FakeService()
     result = authenticate_request(
         _request("at_ai_12345678123456781234567812345678_long-enough-secret"),
         service,
@@ -73,13 +66,14 @@ def test_legacy_ai_join_token_path_is_unchanged() -> None:
     assert service.legacy_calls == [
         ("at_ai_12345678123456781234567812345678_long-enough-secret", True)
     ]
+    assert service.grant_calls == []
 
 
 def test_oauth_access_resolves_family_then_revalidates_current_grant() -> None:
     grant_id = uuid4()
     authorization_id = uuid4()
     current = SimpleNamespace(grant_id=grant_id, role="dm")
-    service = FakeService(FakeGrantRepository(current_scope=current))
+    service = FakeService(current_scope=current)
     oauth = FakeOAuthRepository(
         SimpleNamespace(id=authorization_id, grant_id=grant_id)
     )
@@ -93,10 +87,11 @@ def test_oauth_access_resolves_family_then_revalidates_current_grant() -> None:
     assert result.auth is current
     assert oauth.seen_hash is not None
     assert oauth.revoked == []
+    assert service.grant_calls == [(grant_id, True)]
 
 
 def test_oauth_access_denies_revoked_family_before_grant_lookup() -> None:
-    service = FakeService(FakeGrantRepository(current_scope=SimpleNamespace()))
+    service = FakeService(current_scope=SimpleNamespace())
     oauth = FakeOAuthRepository()
 
     with pytest.raises(MCPAuthenticationError) as exc_info:
@@ -107,15 +102,14 @@ def test_oauth_access_denies_revoked_family_before_grant_lookup() -> None:
         )
 
     assert exc_info.value.stable_code == "ai_token_unauthorized"
+    assert service.grant_calls == []
 
 
 def test_oauth_access_revokes_family_when_p3_authority_is_stale() -> None:
     grant_id = uuid4()
     authorization_id = uuid4()
     service = FakeService(
-        FakeGrantRepository(
-            error=AIControllerGrantUnauthorizedPersistenceError("stale")
-        )
+        grant_error=AIControllerUnauthorizedError("stale")
     )
     oauth = FakeOAuthRepository(
         SimpleNamespace(id=authorization_id, grant_id=grant_id)
@@ -130,10 +124,11 @@ def test_oauth_access_revokes_family_when_p3_authority_is_stale() -> None:
 
     assert exc_info.value.stable_code == "ai_token_unauthorized"
     assert oauth.revoked == [authorization_id]
+    assert service.grant_calls == [(grant_id, True)]
 
 
 def test_unknown_bearer_prefix_is_not_treated_as_legacy_join_token() -> None:
-    service = FakeService(FakeGrantRepository())
+    service = FakeService()
     with pytest.raises(MCPAuthenticationError) as exc_info:
         authenticate_request(_request("something-else"), service)
     assert exc_info.value.stable_code == "ai_token_required"
