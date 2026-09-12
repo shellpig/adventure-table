@@ -4,6 +4,14 @@ import type { Locale } from '../../i18n/locale'
 
 export type AIJoinRole = 'dm' | 'player'
 
+export type AIJoinKitUiCopy = {
+  aiJoinKitTitle: string
+  aiJoinKitHint: string
+  aiJoinKitCopy: string
+  aiJoinKitCopied: string
+  aiJoinKitDownload: string
+}
+
 type JoinKitInput = {
   origin: string
   token: string
@@ -12,10 +20,9 @@ type JoinKitInput = {
   expiresAt?: string | null
 }
 
-const labels = {
+const templateCopy = {
   'zh-TW': {
-    title: 'AI Join Kit', hint: '把整份 kit 交給 AI；完整操作規則由 server guide 提供。Token 只顯示一次，請勿轉傳。',
-    copy: '複製 Join Kit', copied: '已複製 Join Kit', copyFailed: '無法自動複製 Join Kit，請手動選取文字。', download: '下載 .txt',
+    copyFailed: '無法自動複製 Join Kit，請手動選取文字。',
     loopback: '提醒：目前 URL 是 loopback 位址；遠端 AI 必須能連到這台機器，否則請改用可公開存取的 origin。',
     role: 'Role', endpoint: 'MCP URL', guide: 'Guide', token: 'AI Join Token', expires: 'Expires',
     first: '第一步：連線後先呼叫 get_session_context。',
@@ -26,8 +33,7 @@ const labels = {
     http: '純 HTTP：只限有 shell 或可對外連網 code execution 的 AI；依 Guide 的 POST /mcp 契約呼叫。',
   },
   en: {
-    title: 'AI Join Kit', hint: 'Give the whole kit to the AI; the server-hosted guide contains the full operating rules. The token is shown only once; do not forward it.',
-    copy: 'Copy Join Kit', copied: 'Join Kit copied', copyFailed: 'Could not copy the Join Kit automatically. Select and copy the text manually.', download: 'Download .txt',
+    copyFailed: 'Could not copy the Join Kit automatically. Select and copy the text manually.',
     loopback: 'Note: this URL uses a loopback address. A remote AI must be able to reach this machine; otherwise use a publicly reachable origin.',
     role: 'Role', endpoint: 'MCP URL', guide: 'Guide', token: 'AI Join Token', expires: 'Expires',
     first: 'First step: after connecting, call get_session_context.',
@@ -49,7 +55,7 @@ export function isLoopbackOrigin(origin: string) {
 }
 
 export function buildAIJoinKit({ origin, token, role, locale, expiresAt }: JoinKitInput) {
-  const copy = labels[locale]
+  const copy = templateCopy[locale]
   const base = normalizedOrigin(origin)
   const endpoint = `${base}/mcp`
   const guide = `${base}/mcp/guide?locale=${locale}`
@@ -72,10 +78,10 @@ export function aiJoinKitFilename(role: AIJoinRole, date = new Date()) {
   return `adventure-table-ai-${role}-${stamp}.txt`
 }
 
-type AIJoinKitProps = JoinKitInput
+type AIJoinKitProps = JoinKitInput & { uiCopy: AIJoinKitUiCopy }
 
-export function AIJoinKit({ origin, token, role, locale, expiresAt }: AIJoinKitProps) {
-  const copy = labels[locale]
+export function AIJoinKit({ origin, token, role, locale, expiresAt, uiCopy }: AIJoinKitProps) {
+  const template = templateCopy[locale]
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState(false)
   const kit = useMemo(() => buildAIJoinKit({ origin, token, role, locale, expiresAt }), [origin, token, role, locale, expiresAt])
@@ -97,15 +103,15 @@ export function AIJoinKit({ origin, token, role, locale, expiresAt }: AIJoinKitP
 
   return (
     <div className="ai-join-kit" data-ai-join-kit={role}>
-      <strong>{copy.title}</strong><p>{copy.hint}</p>
-      {isLoopbackOrigin(origin) ? <p className="session-ai-hint">{copy.loopback}</p> : null}
+      <strong>{uiCopy.aiJoinKitTitle}</strong><p>{uiCopy.aiJoinKitHint}</p>
+      {isLoopbackOrigin(origin) ? <p className="session-ai-hint">{template.loopback}</p> : null}
       <pre className="ai-join-kit__text">{kit}</pre>
       <div className="workshop-card__split-actions">
-        <button className="button secondary" type="button" onClick={() => void copyKit()}>{copy.copy}</button>
-        <button className="button secondary" type="button" onClick={downloadKit}>{copy.download}</button>
-        {copied ? <span className="token-copy-feedback" role="status">{copy.copied}</span> : null}
+        <button className="button secondary" type="button" onClick={() => void copyKit()}>{uiCopy.aiJoinKitCopy}</button>
+        <button className="button secondary" type="button" onClick={downloadKit}>{uiCopy.aiJoinKitDownload}</button>
+        {copied ? <span className="token-copy-feedback" role="status">{uiCopy.aiJoinKitCopied}</span> : null}
       </div>
-      {copyError ? <div className="error-banner" role="alert">{copy.copyFailed}</div> : null}
+      {copyError ? <div className="error-banner" role="alert">{template.copyFailed}</div> : null}
     </div>
   )
 }
