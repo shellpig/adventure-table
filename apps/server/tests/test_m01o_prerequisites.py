@@ -9,14 +9,14 @@ def test_ancestry_prerequisite_distinguishes_missing_context_from_mismatch() -> 
 
     assert m01o_requirement_failure(requirement, M01OPrerequisiteContext()) == {
         "type": "ancestry_context_missing",
-        "allowed_refs": ("srd5.1:race:elf",),
+        "allowed_refs": ["srd5.1:race:elf"],
     }
     assert m01o_requirement_failure(
         requirement,
         M01OPrerequisiteContext(ancestry_ref="srd5.1:race:human"),
     ) == {
         "type": "ancestry",
-        "allowed_refs": ("srd5.1:race:elf",),
+        "allowed_refs": ["srd5.1:race:elf"],
         "actual_ref": "srd5.1:race:human",
     }
     assert m01o_requirement_failure(
@@ -30,12 +30,12 @@ def test_size_prerequisite_distinguishes_missing_context_from_mismatch() -> None
 
     assert m01o_requirement_failure(requirement, M01OPrerequisiteContext()) == {
         "type": "size_context_missing",
-        "allowed_sizes": ("small",),
+        "allowed_sizes": ["small"],
     }
     assert m01o_requirement_failure(
         requirement,
         M01OPrerequisiteContext(size="Medium"),
-    ) == {"type": "size", "allowed_sizes": ("small",), "actual_size": "medium"}
+    ) == {"type": "size", "allowed_sizes": ["small"], "actual_size": "medium"}
     assert m01o_requirement_failure(requirement, M01OPrerequisiteContext(size="small")) is None
 
 

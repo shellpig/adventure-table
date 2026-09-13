@@ -556,7 +556,14 @@ def _option_failure(
 # without the class levels the pool natively requires. The opt-in lives on the
 # source content, and the same narrow rule is enforced again on the final Build
 # by ``validate_final_feature_pool_dependencies``.
-SOURCE_GRANTED_POOL_BY_CHOICE_KIND = {"maneuver": "battle-master-maneuver"}
+SOURCE_GRANTED_POOL_BY_CHOICE_KIND = {
+    "maneuver": "battle-master-maneuver",
+    # M01-O: Fighting Initiate / Eldritch Adept / Metamagic Adept reuse the canonical
+    # class option pools; the feat replaces only the class gate.
+    "fighting_style": "fighting-style",
+    "invocation": "eldritch-invocation",
+    "metamagic": "metamagic",
+}
 
 
 def _source_granted_pool(

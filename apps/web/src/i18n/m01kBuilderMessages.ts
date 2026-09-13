@@ -29,13 +29,20 @@ const PROFICIENCY_LABELS: Record<Locale, Record<string, string>> = {
     'srd5.1:proficiency:medium-armor': '中甲熟練',
     'srd5.1:proficiency:heavy-armor': '重甲熟練',
     'srd5.1:proficiency:shields': '盾牌熟練',
+    'srd5.1:proficiency:martial-weapons': '軍用武器熟練',
   },
   en: {
     'srd5.1:proficiency:light-armor': 'light armor proficiency',
     'srd5.1:proficiency:medium-armor': 'medium armor proficiency',
     'srd5.1:proficiency:heavy-armor': 'heavy armor proficiency',
     'srd5.1:proficiency:shields': 'shield proficiency',
+    'srd5.1:proficiency:martial-weapons': 'martial weapon proficiency',
   },
+}
+
+const SIZE_LABELS: Record<Locale, Record<string, string>> = {
+  'zh-TW': { tiny: '微型', small: '小型', medium: '中型', large: '大型' },
+  en: { tiny: 'Tiny', small: 'Small', medium: 'Medium', large: 'Large' },
 }
 
 function requirementLabel(value: unknown, locale: Locale): string | undefined {
@@ -66,6 +73,37 @@ function requirementLabel(value: unknown, locale: Locale): string | undefined {
 
   if (type === 'spellcasting') {
     return locale === 'zh-TW' ? '至少能施放一個法術' : 'the ability to cast at least one spell'
+  }
+
+  // M01-O origin / pool prerequisite atoms. Allowed refs stay in params for detail
+  // surfaces; the inline label only names the kind of requirement.
+  if (type === 'ancestry') {
+    return locale === 'zh-TW' ? '特定種族' : 'a specific ancestry'
+  }
+  if (type === 'lineage') {
+    return locale === 'zh-TW' ? '特定亞種或血脈' : 'a specific subrace or lineage'
+  }
+  if (type === 'size') {
+    const sizes = Array.isArray(requirement.allowed_sizes)
+      ? requirement.allowed_sizes.filter((item): item is string => typeof item === 'string')
+      : []
+    const labels = sizes.map((size) => SIZE_LABELS[locale][size] ?? size)
+    if (!labels.length) return locale === 'zh-TW' ? '特定體型' : 'a specific size'
+    return locale === 'zh-TW' ? `體型為${labels.join('或')}` : `${labels.join(' or ')} size`
+  }
+  if (type === 'proficiency') {
+    const refs = Array.isArray(requirement.required_refs)
+      ? requirement.required_refs.filter((item): item is string => typeof item === 'string')
+      : []
+    const labels = refs.map((ref) => PROFICIENCY_LABELS[locale][ref] ?? ref)
+    if (!labels.length) return locale === 'zh-TW' ? '特定熟練' : 'a specific proficiency'
+    return labels.join(locale === 'zh-TW' ? '或' : ' or ')
+  }
+  if (type === 'feature') {
+    return locale === 'zh-TW' ? '特定職業特性' : 'a specific class feature'
+  }
+  if (type === 'ancestry_context_missing' || type === 'lineage_context_missing' || type === 'size_context_missing') {
+    return locale === 'zh-TW' ? '先完成種族選擇' : 'choose your race first'
   }
 
   if (type === 'any_of') {
@@ -121,6 +159,22 @@ function disabledReason(code: string, params: MessageParams, locale: Locale): st
       ? '此職業在 5e 2014 規則中沒有需要攻擊擲骰的戲法。'
       : 'This class has no cantrips that require an attack roll in 5e 2014 rules.'
   }
+  if (code === 'feat_fighting_style_already_known') {
+    return locale === 'zh-TW' ? '已經擁有這個戰鬥風格。' : 'This fighting style is already known.'
+  }
+  if (code === 'feat_pool_option_nested_unsupported') {
+    return locale === 'zh-TW'
+      ? '此戰鬥風格附帶額外選擇，目前無法由專長授予。'
+      : 'This fighting style carries a nested choice the feat cannot grant.'
+  }
+  if (code === 'feat_invocation_prerequisite_not_met') {
+    return locale === 'zh-TW'
+      ? '此祈喚有先決條件，只有符合條件的契約師才能選擇。'
+      : 'This invocation has a prerequisite that only a qualifying Warlock can meet.'
+  }
+  if (code === 'skill_already_has_expertise') {
+    return locale === 'zh-TW' ? '此技能已經擁有專精。' : 'This skill already has expertise.'
+  }
   return undefined
 }
 
@@ -152,6 +206,21 @@ function issueMessage(code: string, params: MessageParams, locale: Locale): stri
     return locale === 'zh-TW'
       ? '再次取得此專長時必須選擇不同的專長選項。'
       : 'A repeated acquisition of this feat must use a different feat option.'
+  }
+  if (code === 'feat_retraining_requires_level_up') {
+    return locale === 'zh-TW'
+      ? '專長附帶的選項只能在升級時替換，不能透過 Build Edit 更改。'
+      : 'Feat-linked options can only be replaced through Level Up, not Build Edit.'
+  }
+  if (code === 'feat_retraining_not_available') {
+    return locale === 'zh-TW'
+      ? '此專長選項只能在取得屬性值提升的升級時替換。'
+      : 'This feat option can only be replaced at a Level Up that grants an Ability Score Improvement.'
+  }
+  if (code === 'feat_retraining_limit_exceeded') {
+    return locale === 'zh-TW'
+      ? '每次升級只能替換此專長的一個選項。'
+      : 'Only one option of this feat can be replaced per Level Up.'
   }
   return undefined
 }

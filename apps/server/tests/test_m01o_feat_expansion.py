@@ -197,3 +197,86 @@ def test_gunner_keeps_firearms_as_deferred_typed_fact() -> None:
     assert data["automation"] == "structured_deferred_combat"
     assert data["weapon_proficiency_categories"] == ["firearms"]
     assert "srd5.1:proficiency:firearms" not in data.get("proficiency_grants", [])
+
+
+def test_selecting_a_feat_with_an_unmet_origin_prerequisite_reports_a_structured_issue() -> None:
+    # Ancestry / lineage / size failures must serialize into BuilderIssue params
+    # instead of crashing the compile when a client patches a disabled option.
+    result, _, _ = S.feat_draft(
+        SQUAT_NIMBLENESS,
+        race="srd5.1:race:human",
+        nested={"ability": ("ability:strength",)},
+        fill_rest=False,
+    )
+
+    assert "feat_prerequisite_not_met" in S.issue_codes(result)
+    issue = next(issue for issue in result.validation.issues if issue.code == "feat_prerequisite_not_met")
+    assert issue.message_params["requirements"][0]["type"] == "any_of"
+
+
+def test_eldritch_adept_offers_the_canonical_invocation_pool_with_warlock_only_prerequisites() -> None:
+    result, _, opportunity = S.feat_draft(ELDRITCH_ADEPT, spec=S.WIZARD_L8, fill_rest=False)
+    options = {option.option_id: option for option in _child(result, opportunity, "invocation").options}
+
+    assert "srd5.1:feature:eldritch-invocation-devils-sight" in options
+    assert options["srd5.1:feature:eldritch-invocation-devils-sight"].disabled_reason is None
+    assert options["tce:feature:eldritch-mind"].disabled_reason is None
+    assert (
+        options["srd5.1:feature:eldritch-invocation-agonizing-blast"].disabled_reason_code
+        == "feat_invocation_prerequisite_not_met"
+    )
+    assert (
+        options["srd5.1:feature:eldritch-invocation-mire-the-mind"].disabled_reason_params["required_warlock_level"]
+        == 5
+    )
+
+    legal, _, _ = S.feat_draft(
+        ELDRITCH_ADEPT,
+        spec=S.WIZARD_L8,
+        nested={"invocation": ("srd5.1:feature:eldritch-invocation-devils-sight",)},
+    )
+    assert S.issue_codes(legal) == set()
+    assert "srd5.1:feature:eldritch-invocation-devils-sight" in legal.build_candidate.feature_refs
+
+
+def test_dragon_hide_natural_armor_joins_the_unarmored_ac_candidates() -> None:
+    from app.domain.character.schemas import CharacterState
+    from app.domain.rules.armor_class import calculate_armor_class
+
+    result, _, _ = S.feat_draft(
+        "xge:feat:dragon-hide",
+        race="srd5.1:race:dragonborn",
+        nested={"ability": ("ability:strength",)},
+    )
+    build = result.build_candidate
+    dexterity_modifier = (build.ability_scores.dexterity - 10) // 2
+
+    assert S.issue_codes(result) == set()
+    assert calculate_armor_class(build, CharacterState(current_hp=10), S.registry()) == 13 + dexterity_modifier
+
+
+def test_squat_nimbleness_adds_five_feet_to_walking_speed_once() -> None:
+    result, _, _ = S.feat_draft(
+        SQUAT_NIMBLENESS,
+        race="vgm:race:goblin",
+        spec=S.WIZARD_L8,
+        nested={"ability": ("ability:dexterity",), "skill": ("srd5.1:proficiency:skill-athletics",)},
+    )
+
+    assert S.issue_codes(result) == set()
+    assert result.build_candidate.walking_speed == S.registry().get("vgm:race:goblin").data["speed"] + 5
+
+
+def test_fighting_initiate_excludes_the_style_the_fighter_already_knows() -> None:
+    result, _, opportunity = S.feat_draft("tce:feat:fighting-initiate", spec=S.FIGHTER_L4)
+    build = result.build_candidate
+    feat_style = build.feat_acquisitions[0].selections["style"][0]
+    class_style = next(
+        ref for ref in build.feature_refs if ref.startswith("srd5.1:feature:fighter-fighting-style-") and ref != feat_style
+    )
+    options = {option.option_id: option for option in _child(result, opportunity, "style").options}
+
+    assert S.issue_codes(result) == set()
+    assert options[class_style].disabled_reason_code == "feat_fighting_style_already_known"
+    assert options[feat_style].disabled_reason is None
+    assert "tce:feature:blessed-warrior" not in options

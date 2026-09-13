@@ -13,7 +13,8 @@ def _natural_armor_candidates(
     body_armor_equipped: bool,
 ) -> tuple[int, ...]:
     candidates: list[int] = []
-    for feature_ref in build.feature_refs:
+    # Feats (Dragon Hide) declare the same typed ``natural_armor`` shape as race features.
+    for feature_ref in (*build.feature_refs, *build.feat_refs):
         feature = registry.get_optional(feature_ref)
         if feature is None:
             continue

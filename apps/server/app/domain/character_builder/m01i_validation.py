@@ -7,6 +7,7 @@ from app.content.registry import ContentRegistry
 from app.domain.character.schemas import CharacterBuild, SpellAccessEntry
 from app.domain.character_builder.choices import deterministic_choice_id
 from app.domain.character_builder.optional_class_features import (
+    SOURCE_GRANTED_POOL_BY_CHOICE_KIND,
     OptionalFeatureRuntime,
     _choice_id,
     _pool_option_spec,
@@ -234,8 +235,7 @@ def _has_source_granted_pool_entitlement(
     for choice in choices:
         if not isinstance(choice, dict) or choice.get("source_granted_entitlement") is not True:
             continue
-        kind = choice.get("kind")
-        if kind == "maneuver" and target_spec.pool == "battle-master-maneuver":
+        if SOURCE_GRANTED_POOL_BY_CHOICE_KIND.get(str(choice.get("kind"))) == target_spec.pool:
             return True
     return False
 

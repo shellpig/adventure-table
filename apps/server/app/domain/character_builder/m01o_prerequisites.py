@@ -50,20 +50,22 @@ class M01OPrerequisiteContext:
         return frozenset(features)
 
 
-def _strings(value: object) -> tuple[str, ...]:
+def _strings(value: object) -> list[str]:
+    # Lists, not tuples: these values are embedded verbatim in
+    # ``BuilderIssue.message_params`` / ``disabled_reason_params`` (JsonValue).
     if isinstance(value, str):
-        return (value,)
+        return [value]
     if not isinstance(value, Iterable) or isinstance(value, (bytes, bytearray, Mapping)):
-        return ()
-    return tuple(item for item in value if isinstance(item, str))
+        return []
+    return [item for item in value if isinstance(item, str)]
 
 
-def _refs(requirement: Mapping[str, object], *keys: str) -> tuple[str, ...]:
+def _refs(requirement: Mapping[str, object], *keys: str) -> list[str]:
     for key in keys:
         values = _strings(requirement.get(key))
         if values:
             return values
-    return ()
+    return []
 
 
 def _normalized_size(size: str | None) -> str | None:
@@ -134,8 +136,11 @@ def m01o_requirement_failure(
         return None
 
     if req_type == "size":
-        allowed = tuple(_normalized_size(size) for size in _refs(requirement, "sizes", "size"))
-        allowed = tuple(size for size in allowed if size is not None)
+        allowed = [
+            normalized
+            for size in _refs(requirement, "sizes", "size")
+            if (normalized := _normalized_size(size)) is not None
+        ]
         if not allowed:
             return {"type": "unsupported"}
         actual = _normalized_size(context.size)

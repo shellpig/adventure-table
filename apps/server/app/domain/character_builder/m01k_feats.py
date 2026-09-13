@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections import Counter
+from collections.abc import Mapping
+from dataclasses import dataclass, field, replace
 from hashlib import sha256
 
 from app.content.identity import parse_stable_key, reference_to_stable_key, stable_key, stable_key_is_kind
@@ -66,6 +68,38 @@ class FeatEvaluationContext:
     feature_refs: frozenset[str] = frozenset()
     skill_refs: frozenset[str] = frozenset()
     expertise_refs: frozenset[str] = frozenset()
+    spell_refs: frozenset[str] = frozenset()
+    class_levels: Mapping[str, int] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class FeatRetrainingPolicy:
+    """Feat-linked retraining declared by content (``retraining`` on the feat)."""
+
+    policy: str
+    replace_choices: tuple[str, ...]
+
+
+FEAT_RETRAINING_POLICIES = frozenset({"on_any_level_up", "on_asi_level_up"})
+
+
+def feat_retraining_policy(feat: ContentEntry | None) -> FeatRetrainingPolicy | None:
+    raw = feat.data.get("retraining") if feat is not None else None
+    if not isinstance(raw, dict) or raw.get("policy") not in FEAT_RETRAINING_POLICIES:
+        return None
+    fields = raw.get("replace_choices")
+    if not isinstance(fields, list):
+        return None
+    return FeatRetrainingPolicy(
+        policy=str(raw["policy"]),
+        replace_choices=tuple(item for item in fields if isinstance(item, str)),
+    )
+
+
+def nested_feat_choice_field(choice_id: str) -> str:
+    """``feat:<digest>:<field>`` -> ``<field>`` (see ``_child_choice_id``)."""
+
+    return choice_id.split(":", 2)[2] if choice_id.startswith("feat:") else ""
 
 
 @dataclass(frozen=True)
@@ -87,6 +121,7 @@ class FeatCompilation:
     static_modifiers: tuple[StaticDerivedModifier, ...]
     resource_grants: tuple[FeatResourceGrant, ...]
     spell_access_entries: tuple[SpellAccessEntry, ...]
+    walking_speed_bonus: int
     issues: tuple[BuilderIssue, ...]
 
 
@@ -352,6 +387,7 @@ def build_evaluation_context(
             for node in nodes
             for feature_ref in node.automatic_feature_refs
         ),
+        class_levels=dict(Counter(item.class_ref for item in payload.level_choices)),
     )
 
 
@@ -497,18 +533,108 @@ def _choice_pool_options(
     )
 
 
+FIGHTER_CLASS_REF = "srd5.1:class:fighter"
+WARLOCK_CLASS_REF = "srd5.1:class:warlock"
+ELDRITCH_INVOCATIONS_FEATURE = "srd5.1:feature:eldritch-invocations"
+
+
 def _fighter_fighting_style_options(registry: ContentRegistry) -> tuple[ContentEntry, ...]:
-    keys = {
-        "srd5.1:feature:fighter-fighting-style-archery",
-        "srd5.1:feature:fighter-fighting-style-defense",
-        "srd5.1:feature:fighter-fighting-style-dueling",
-        "srd5.1:feature:fighter-fighting-style-great-weapon-fighting",
-        "srd5.1:feature:fighter-fighting-style-protection",
-        "srd5.1:feature:fighter-fighting-style-two-weapon-fighting",
-    }
-    result = [entry for key in keys if (entry := registry.get_optional(key)) is not None]
-    result.extend(_choice_pool_options(registry, "fighting-style"))
+    """Fighting Initiate reuses the canonical Fighter Fighting Style pool."""
+
+    return tuple(
+        entry
+        for entry in _choice_pool_options(registry, "fighting-style")
+        if FIGHTER_CLASS_REF in entry.data["choice_pool_option"].get("eligible_class_refs", ())
+    )
+
+
+def _eldritch_invocation_options(registry: ContentRegistry) -> tuple[ContentEntry, ...]:
+    """Canonical Eldritch Invocation pool: SRD invocation list plus later-source pool options."""
+
+    result: list[ContentEntry] = []
+    root = registry.get_optional(ELDRITCH_INVOCATIONS_FEATURE)
+    feature_specific = root.data.get("feature_specific") if root is not None else None
+    invocations = feature_specific.get("invocations") if isinstance(feature_specific, dict) else None
+    if isinstance(invocations, list):
+        for reference in invocations:
+            if not isinstance(reference, dict):
+                continue
+            key = reference_to_stable_key(reference, kinds={"feature"})
+            entry = registry.get_optional(key) if key is not None else None
+            if entry is not None:
+                result.append(entry)
+    result.extend(_choice_pool_options(registry, "eldritch-invocation"))
     return tuple({entry.key: entry for entry in result}.values())
+
+
+def _srd_url_key(url: object, *, kind: str) -> str | None:
+    """SRD invocation prerequisites reference features/spells by API url only."""
+
+    if not isinstance(url, str) or not url:
+        return None
+    return reference_to_stable_key({"index": url.rstrip("/").rsplit("/", 1)[-1], "url": url}, kinds={kind})
+
+
+def _invocation_prerequisite_failure(
+    entry: ContentEntry,
+    context: FeatEvaluationContext | None,
+) -> dict[str, object] | None:
+    """Eldritch Adept: invocations without prerequisites are open to anyone; the rest need a qualifying Warlock.
+
+    SRD invocations carry ``prerequisites`` (level / feature / spell). Later-source pool
+    options express the same thing through ``choice_pool_option``; a bare Warlock 2 gate is
+    the pool baseline, not an invocation prerequisite.
+    """
+
+    warlock_level = context.class_levels.get(WARLOCK_CLASS_REF, 0) if context is not None else 0
+    features = context.feature_refs if context is not None else frozenset()
+    spells = context.spell_refs if context is not None else frozenset()
+    required_level = 0
+    required_features: list[str] = []
+    required_spells: list[str] = []
+
+    raw_prerequisites = entry.data.get("prerequisites")
+    if isinstance(raw_prerequisites, list):
+        for raw in raw_prerequisites:
+            if not isinstance(raw, dict):
+                continue
+            if raw.get("type") == "level" and isinstance(raw.get("level"), int):
+                required_level = max(required_level, raw["level"])
+            elif raw.get("type") == "feature":
+                key = _srd_url_key(raw.get("feature"), kind="feature")
+                if key is not None:
+                    required_features.append(key)
+            elif raw.get("type") == "spell":
+                key = _srd_url_key(raw.get("spell"), kind="spell")
+                if key is not None:
+                    required_spells.append(key)
+    pool = entry.data.get("choice_pool_option")
+    if isinstance(pool, dict):
+        minimum = pool.get("minimum_class_level")
+        if isinstance(minimum, int) and minimum > 2:
+            required_level = max(required_level, minimum)
+        required_features.extend(
+            ref for ref in pool.get("required_feature_refs", ()) if isinstance(ref, str)
+        )
+
+    if not required_level and not required_features and not required_spells:
+        return None
+    if warlock_level < max(required_level, 1):
+        return {
+            "code": "feat_invocation_prerequisite_not_met",
+            "reason": "This invocation has a prerequisite that only a qualifying Warlock can meet.",
+            "required_warlock_level": max(required_level, 1),
+        }
+    missing_features = [ref for ref in required_features if ref not in features]
+    missing_spells = [ref for ref in required_spells if ref not in spells]
+    if missing_features or missing_spells:
+        return {
+            "code": "feat_invocation_prerequisite_not_met",
+            "reason": "This invocation requires another Warlock feature or spell.",
+            "required_feature_refs": missing_features,
+            "required_spell_refs": missing_spells,
+        }
+    return None
 
 
 def _filter_allowed_choice_options(
@@ -655,25 +781,37 @@ def _feat_nested_choices(
             options = _reference_options(_choice_pool_options(registry, "battle-master-maneuver"))
         elif kind == "fighting_style":
             owned = set(context.feature_refs if context is not None else ())
-            options = tuple(
-                option.model_copy(
-                    update={
-                        "disabled_reason": (
-                            "This fighting style is already known."
-                            if option.option_id in owned
-                            else None
-                        ),
-                        "disabled_reason_code": (
-                            "feat_fighting_style_already_known"
-                            if option.option_id in owned
-                            else None
-                        ),
-                    }
-                )
-                for option in _reference_options(_fighter_fighting_style_options(registry))
-            )
+            style_options: list[BuilderChoiceOption] = []
+            for entry in _fighter_fighting_style_options(registry):
+                option = _reference_options((entry,))[0]
+                if entry.key in owned:
+                    option = option.model_copy(update={
+                        "disabled_reason": "This fighting style is already known.",
+                        "disabled_reason_code": "feat_fighting_style_already_known",
+                    })
+                elif isinstance(entry.data["choice_pool_option"].get("nested"), dict):
+                    # A style with its own nested choice (Superior Technique) needs the
+                    # class optional-feature runtime; the feat path cannot host it yet.
+                    option = option.model_copy(update={
+                        "disabled_reason": "This fighting style carries a nested choice the feat cannot grant.",
+                        "disabled_reason_code": "feat_pool_option_nested_unsupported",
+                    })
+                style_options.append(option)
+            options = tuple(style_options)
         elif kind == "invocation":
-            options = _reference_options(_choice_pool_options(registry, "eldritch-invocation"))
+            invocation_options: list[BuilderChoiceOption] = []
+            for entry in _eldritch_invocation_options(registry):
+                option = _reference_options((entry,))[0]
+                failure = _invocation_prerequisite_failure(entry, context)
+                if failure is not None:
+                    params = {key: value for key, value in failure.items() if key not in {"code", "reason"}}
+                    option = option.model_copy(update={
+                        "disabled_reason": failure["reason"],
+                        "disabled_reason_code": failure["code"],
+                        "disabled_reason_params": {"option_ref": entry.key, **params},
+                    })
+                invocation_options.append(option)
+            options = tuple(invocation_options)
         elif kind == "metamagic":
             options = _reference_options(
                 (
@@ -781,6 +919,35 @@ def _feat_nested_choices(
     return tuple(result)
 
 
+def _with_selected_grants(
+    choices: tuple[BuilderChoice, ...],
+    context: FeatEvaluationContext,
+) -> FeatEvaluationContext:
+    """Add features / spells the draft already selected (class style, Pact Boon, cantrips...).
+
+    Only the submitted class/origin choices count; nested feat choices are compiled
+    later, so a feat's own selection can never disable itself.
+    """
+
+    features = set(context.feature_refs)
+    spells = set(context.spell_refs)
+    for choice in choices:
+        option_by_id = {option.option_id: option for option in choice.options}
+        for option_id in choice.selected_option_ids:
+            option = option_by_id.get(option_id)
+            reference = option.reference_id if option is not None else None
+            if reference is None:
+                continue
+            try:
+                if stable_key_is_kind(reference, "feature"):
+                    features.add(reference)
+                elif stable_key_is_kind(reference, "spell"):
+                    spells.add(reference)
+            except ValueError:
+                continue
+    return replace(context, feature_refs=frozenset(features), spell_refs=frozenset(spells))
+
+
 def enrich_feat_choices(
     draft: BuilderDraft,
     registry: ContentRegistry,
@@ -791,6 +958,7 @@ def enrich_feat_choices(
 
     result: list[BuilderChoice] = []
     acquired: list[str] = []
+    context = _with_selected_grants(choices, context)
     for choice in choices:
         if choice.option_source not in FEAT_CHOICE_SOURCES:
             result.append(choice)
@@ -876,6 +1044,7 @@ def compile_feat_acquisitions(
     languages: list[str] = []
     features: list[str] = []
     static_modifiers: list[StaticDerivedModifier] = []
+    walking_speed_bonus = 0
     resources: list[FeatResourceGrant] = []
     spell_access: list[SpellAccessEntry] = []
     issues: list[BuilderIssue] = []
@@ -944,6 +1113,14 @@ def compile_feat_acquisitions(
                 per_level = raw_modifier.get("per_level", False)
                 if target in {"max_hp", "passive_perception", "passive_investigation"} and isinstance(value, int) and isinstance(per_level, bool):
                     static_modifiers.append(StaticDerivedModifier(target=target, value=value, per_level=per_level, source_ref=feat.key))
+
+        for raw_mechanic in feat.data.get("mechanics", []):
+            if (
+                isinstance(raw_mechanic, dict)
+                and raw_mechanic.get("kind") == "walking_speed_bonus"
+                and isinstance(raw_mechanic.get("value"), int)
+            ):
+                walking_speed_bonus += raw_mechanic["value"]
 
         raw_resource = feat.data.get("resource")
         if isinstance(raw_resource, dict):
@@ -1105,6 +1282,7 @@ def compile_feat_acquisitions(
         language_refs=tuple(dict.fromkeys(languages)),
         feature_refs=tuple(dict.fromkeys(features)),
         static_modifiers=tuple(static_modifiers),
+        walking_speed_bonus=walking_speed_bonus,
         resource_grants=tuple(resources),
         spell_access_entries=tuple({entry.entry_id: entry for entry in spell_access}.values()),
         issues=tuple(issues),

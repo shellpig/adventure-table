@@ -16,12 +16,15 @@ from app.domain.character_builder.m01k_feats import (
     _class_has_attack_roll_cantrip,
     feat_failure_detail,
     feat_failure_reason,
+    feat_retraining_policy,
+    nested_feat_choice_field,
 )
 from app.domain.character_builder.schemas import (
     BuilderChoice,
     BuilderDraft,
     BuilderIssue,
     BuilderIssueSeverity,
+    BuilderMode,
 )
 from app.domain.character_builder.progression import progression_summary
 from app.domain.character_builder.validation import make_validation_result
@@ -799,6 +802,113 @@ def _validate_nested_feat_choices(
     return tuple(issues)
 
 
+def _target_level_grants_asi(draft: BuilderDraft, choices: tuple[BuilderChoice, ...]) -> bool:
+    prefix = f"level:{draft.draft_payload.target_level}:"
+    return any(
+        choice.option_source in {"content:asi-feat", "content:asi-ability"}
+        and choice.choice_id.startswith(prefix)
+        for choice in choices
+    )
+
+
+def open_feat_retraining_choice_ids(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+    choices: tuple[BuilderChoice, ...],
+) -> frozenset[str]:
+    """Nested feat choices this Level Up may replace under the feat's retraining policy.
+
+    ``on_any_level_up`` opens on every Level Up; ``on_asi_level_up`` only when the new
+    level itself grants an Ability Score Improvement. Other modes never open (Build Edit
+    keeps its correction semantics and is not a free retraining path).
+    """
+
+    if draft.mode is not BuilderMode.LEVEL_UP:
+        return frozenset()
+    asi_level = _target_level_grants_asi(draft, choices)
+    result: set[str] = set()
+    for choice in choices:
+        if not (choice.option_source or "").startswith("content:feat:"):
+            continue
+        policy = feat_retraining_policy(registry.get_optional(choice.source_ref or ""))
+        if policy is None or nested_feat_choice_field(choice.choice_id) not in policy.replace_choices:
+            continue
+        if policy.policy == "on_any_level_up" or (policy.policy == "on_asi_level_up" and asi_level):
+            result.add(choice.choice_id)
+    return frozenset(result)
+
+
+def _feat_retraining_issues(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+    choices: tuple[BuilderChoice, ...],
+    base_build: CharacterBuild | None,
+) -> tuple[BuilderIssue, ...]:
+    """Compare retrainable nested selections against the base Version.
+
+    Level Up may replace at most one option per retrainable choice, and only while the
+    policy is open; Build Edit is rejected outright; Correction keeps its explicit
+    DM-correction semantics and is not gated here.
+    """
+
+    if base_build is None or draft.mode is BuilderMode.CORRECTION:
+        return ()
+    open_ids = open_feat_retraining_choice_ids(draft, registry, choices)
+    issues: list[BuilderIssue] = []
+    for choice in choices:
+        if not (choice.option_source or "").startswith("content:feat:"):
+            continue
+        feat_ref = choice.source_ref or ""
+        policy = feat_retraining_policy(registry.get_optional(feat_ref))
+        field = nested_feat_choice_field(choice.choice_id)
+        if policy is None or field not in policy.replace_choices:
+            continue
+        base_acquisitions = [
+            acquisition
+            for acquisition in base_build.feat_acquisitions
+            if acquisition.feat_ref == feat_ref
+        ]
+        if len(base_acquisitions) != 1:
+            continue
+        previous = set(base_acquisitions[0].selections.get(field, ()))
+        selected = draft.draft_payload.choice_selections.get(choice.choice_id)
+        current = set(selected.selected_option_ids) if selected is not None else set()
+        if previous == current:
+            continue
+        path = f"draft_payload.choice_selections.{choice.choice_id}"
+        params: dict[str, object] = {
+            "feat_ref": feat_ref,
+            "choice_id": choice.choice_id,
+            "policy": policy.policy,
+            "previous_option_ids": sorted(previous),
+        }
+        if draft.mode is not BuilderMode.LEVEL_UP:
+            issues.append(_blocking(
+                "feat_retraining_requires_level_up",
+                path,
+                "Feat-linked options can only be replaced through Level Up, not Build Edit.",
+                feat_ref,
+                params=params,
+            ))
+        elif choice.choice_id not in open_ids:
+            issues.append(_blocking(
+                "feat_retraining_not_available",
+                path,
+                "This feat option can only be replaced at a Level Up that grants an Ability Score Improvement.",
+                feat_ref,
+                params=params,
+            ))
+        elif len(previous - current) > 1:
+            issues.append(_blocking(
+                "feat_retraining_limit_exceeded",
+                path,
+                "Only one option of this feat can be replaced per Level Up.",
+                feat_ref,
+                params=params,
+            ))
+    return tuple(issues)
+
+
 def _feat_spell_source_ability(
     build: CharacterBuild,
     feat_ref: str,
@@ -896,6 +1006,7 @@ def apply_m01k_post_compile(
     )
     choices, spell_sniper_issues = _spell_sniper_choices(draft, registry, choices)
     nested_issues = _validate_nested_feat_choices(draft, choices)
+    retraining_issues = _feat_retraining_issues(draft, registry, choices, base_build)
     build = compiled.build_candidate
     if build is not None:
         build = _normalize_feat_spell_access(build, registry)
@@ -906,6 +1017,7 @@ def apply_m01k_post_compile(
             *prerequisite_issues,
             *spell_sniper_issues,
             *nested_issues,
+            *retraining_issues,
         )
     )
     return replace(

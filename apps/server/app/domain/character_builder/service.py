@@ -8,6 +8,7 @@ from app.domain.character.validation import CharacterValidationError, validate_b
 from app.domain.character_builder.choices import deterministic_choice_id
 from app.domain.character_builder.compiler import BuilderCompileResult
 from app.domain.character_builder.m01i_compiler import compile_builder_draft
+from app.domain.character_builder.m01k_integration import open_feat_retraining_choice_ids
 from app.domain.character_builder.creation import (
     BuilderConfirmResult,
     BuilderReviewDTO,
@@ -330,8 +331,16 @@ class CharacterBuilderService:
                 for choice in current_compiled.choices
                 if (choice.option_source or "").startswith("content:feat:")
             }
+            retrainable_feat_choice_ids = open_feat_retraining_choice_ids(
+                current,
+                self.registry,
+                current_compiled.choices,
+            )
             for choice_id, old_selection in current_selections.items():
                 if choice_id.startswith(f"level:{target_level}:"):
+                    continue
+                if choice_id in retrainable_feat_choice_ids:
+                    # M01-O feat-linked retraining; compile validation bounds the change.
                     continue
                 proposed_selection = proposed.get(choice_id)
                 old_dump = old_selection.model_dump(mode="python")

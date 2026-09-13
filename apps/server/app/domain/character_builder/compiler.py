@@ -315,6 +315,14 @@ def _variant_summary(
     return apply_race_variant_summary(draft, registry, choices, summary)
 
 
+def _with_walking_speed_bonus(base: int | None, bonus: int) -> int | None:
+    # Feat contributions (Squat Nimbleness +5 ft) stack on the origin walking speed;
+    # without a base origin speed there is nothing to add to.
+    if base is None or bonus == 0:
+        return base
+    return base + bonus
+
+
 def compile_builder_draft(
     draft: BuilderDraft,
     registry: ContentRegistry,
@@ -714,7 +722,10 @@ def compile_builder_draft(
                     choices,
                     base_build=base_build,
                 ),
-                walking_speed=(lineage.walking_speed if active_lineage else race_variant.walking_speed),
+                walking_speed=_with_walking_speed_bonus(
+                    lineage.walking_speed if active_lineage else race_variant.walking_speed,
+                    feat_compilation.walking_speed_bonus,
+                ),
                 swim_speed=(lineage.swim_speed if active_lineage else race_variant.swim_speed),
                 climb_speed=(lineage.climb_speed if active_lineage else race_variant.climb_speed),
                 fly_speed=(lineage.fly_speed if active_lineage else race_variant.fly_speed),
