@@ -1,6 +1,6 @@
 # Adventure Table 專案簡報
 
-最後更新：2026-09-13（M01-O XGE / TCE Feat Expansion 規格完成；P4-A 開工前置維持完成）
+最後更新：2026-09-13（M01-O XGE / TCE Feat Expansion 關門；P4-A 開工前置維持完成）
 
 本檔是**當前進度、Roadmap、下一步與文件索引的單一事實來源**，供新的 AI Session 或實作者接手。產品行為以 [規格企劃.md](規格企劃.md) 為準；實作契約與歷史驗收證據請依下方索引查閱，不在本檔重述。
 
@@ -17,14 +17,14 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 - **AI Controller 與交接（P3-D）**：Seat controller 正式有 Human／AI／None 三種，`AI + Offline` 是合法狀態。AI 用 Adventure Table 自己的 scoped credential 進場：token 只在建立／rotate 時顯示一次，DB 只留 hash，scope 固定 Room／Campaign／Seat／Role／generation。Human Player 可對自己控制的 Seat `Let AI Control`，可附一句只屬於這次交接的 Temporary Handoff Instruction；`Take Back Control` 只認當初交出去的那個仍有效 Room access session，換裝置或原 session 失效時改由 Owner／DM 做 administrative reassignment，並在同一 transaction 內撤銷舊 grant。每個 Seat 有單調遞增的 controller epoch 當唯一真值，grant 只保存 mint 當下的 generation snapshot，每次授權都要同時對上「Seat 目前綁這張 grant」與「epoch 等於 generation」。Owner 可在 Lobby 事前把 DM Seat 配成 AI 並產生**有限期限**的開場憑證，AI 用它只能讀自己 DM Seat 的最小開場資訊與 Start，Start 成功後才變成該場固定 DM credential；DM controller 一場之內固定，不支援中途交接。Session End／Abandon 會在同一 transaction 內撤銷該場所有 AI grant。
 - **AI 桌內接入（P3-E）**：Web channel 已掛 `POST /mcp`，以 MCP `2026-07-28` stateless Streamable HTTP 為唯一契約（每個 request 帶 `MCP-Protocol-Version`／`Mcp-Method`／`_meta`，不需 `initialize`，拒 `Mcp-Session-Id`）。外部 AI 以 P3-D 的 AI Join Token 當 Bearer 進場，每個 request 重新 resolve current grant／epoch；tool catalog 依 Player／DM／pre-session DM 三種 scope 產生，涵蓋 context、own Character、Dialogue／Action／OOC／Whisper／Narration、Stage text、Request Check、formal／physical／quick roll、Current State、`get_pending_events`／`wait_for_event`，沒有 `resolve_action` 或任何 raw-state escape hatch。Human UI 與 MCP 共用同一組 application service；standalone 不掛 `/mcp`。真實 external client E1 已於 2026-09-11 P3-F closeout 期間由 Claude Code 2.1.260 經 Tailscale HTTPS 入口跑完整 journey（context → action → formal roll → Take Back → 舊 token 401 → End），wire 全程 `2026-07-28` 契約、每個 `tools/call` 帶 `Mcp-Name`。
 - **網頁版 chat 接入與 AI Join Kit（M04）**：ChatGPT Web Plus 可用 connector + OAuth（authorize 頁貼 AI Join Token）以既有 Seat 的 role 進桌，OAuth token 只對應既有 P3-D grant。Lobby／Session 在發 token 的同一畫面產出可複製／下載的雙語 AI Join Kit（本機／公網雙 URL、role、到期、三種接入方式）；`GET /mcp/guide` 無需認證提供與 tool catalog 同源的完整指引；`get_session_context.briefing` 是強制逐步迴圈；`wait_for_event` 上限 120 秒。
-- **尚未實作**：M01-O XGE / TCE Feat Expansion、Quick Combat 的 code（P4 三份正式文件與 A～F 拆分已完成）、Adventure Runtime。Session 頁的 Log 分頁目前仍只是 raw event 列表。
+- **尚未實作**：Quick Combat 的 code（P4 三份正式文件與 A～F 拆分已完成）、Adventure Runtime。Session 頁的 Log 分頁目前仍只是 raw event 列表。
 - **技術基礎**：React + TypeScript + Vite；Python + FastAPI + Pydantic；SQLAlchemy + Alembic；網頁版 PostgreSQL、單機版 SQLite。啟動與開發指令見 [README.md](README.md)。
 
 產品硬原則包含 Server authoritative、Human／AI 共用 backend logic、秘密由 Server 過濾、敘事輔助資料 optional 不變 mandatory。**網站本身不接 LLM API**；未來 AI 能力來自使用者外部 AI Session。完整行為與明確不做項目見產品規格，不以本段取代。
 
 ## 當前狀態與下一步
 
-**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01-O — XGE & TCE Feat Expansion 已完成三份正式文件、尚未實作，M01 仍是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門，P3-E 與 P3-F 已於 2026-09-11 關門（external MCP client HTTPS E1 於 P3-F closeout 合併執行通過），P3 Phase 同日以 `d6b791e` 合併回 `main`，`P3 Full-Stack E2E` CI run `34587347309` 全綠。同日 P3 第一次真實使用暴露「AI 拿到 token 不知道怎麼開始」與「網頁版 AI connector 連不進來」兩個缺口，已拍板插入 **M04 — Web Chat MCP Integration & AI Join Kit**，拆為 M04-A／M04-B／M04-C 並完成三份文件（同日經兩輪 review 定案：網頁版 chat 是首要目標，平台階梯 ChatGPT Plus → Claude chat 個人方案，兩者皆不可行則 M04 標 Platform Blocked / Deferred 直接進 P4；先 preflight 再 integration，Join Kit 最後）；M04-A 已於 2026-09-12 完成真實 ChatGPT Web Plus preflight並關門：OAuth/DCR、MCP `2026-07-28` `server/discover → tools/list → tools/call`、read/write、role-scoped catalog、Refresh + 新對話的 catalog 更新規則、revoke/reconnect，以及 Tailscale Funnel 下 120 秒 long-poll 均已實測；M04-B 同日於 branch `m04-b-web-chat-integration` 完成 OAuth 入口（DCR、authorize 頁貼 AI Join Token、PKCE、refresh 重驗 P3-D authority、grant 失效聯動、public origin 設定）並以真實 ChatGPT Web Plus 經 Tailscale Funnel 跑完 DM 場與 Player 場 gate 關門（見 `M04-B_CLOSEOUT.md`）；M04-C 同日於 branch `m04-c-ai-join-kit-guide` 交付 `GET /mcp/guide`、與 catalog 同源的 tool description、強制流程 `briefing`、`server/discover.instructions`、Lobby／Session 雙 URL AI Join Kit，並以真實 ChatGPT Web Plus 憑 kit 進桌關門（見 `M04-C_CLOSEOUT.md`；Bearer／純 HTTP 路徑與其他 client 相容記錄依使用者拍板延後）；M04 三個 Subphase 皆已關門，M04 Phase 同日以 `0465788` 合併回 `main`，`P3 Full-Stack E2E` merge-gate CI run `34704122623` 全綠；**P4 開工前置已於 2026-09-13 完成**：P4-A～P4-F 拆分與 `docs/P4/` 三份正式文件已定案；P4-A authoritative Monster source 鎖定 `5e-bits/5e-database@ce47a18dfeb3e41a1b2a2dfe00a25761c3c3a4f1` 的 `src/2014/en/5e-SRD-Monsters.json`，manifest gate 為 **334 筆 Monster records / 87 筆 Beast subset**；產品主線下一步仍是 P4-A — Monster & Combatant Foundation 實作，M01-O 可作為 long-running maintenance track 獨立開工而不重編 P Roadmap。**
+**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-O 已逐項關門（M01-O — XGE & TCE Feat Expansion 於 2026-09-13 在 branch `m01-o-implementation` 關門，見 `M01-O_CLOSEOUT.md`），M01 仍是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門，P3-E 與 P3-F 已於 2026-09-11 關門（external MCP client HTTPS E1 於 P3-F closeout 合併執行通過），P3 Phase 同日以 `d6b791e` 合併回 `main`，`P3 Full-Stack E2E` CI run `34587347309` 全綠。同日 P3 第一次真實使用暴露「AI 拿到 token 不知道怎麼開始」與「網頁版 AI connector 連不進來」兩個缺口，已拍板插入 **M04 — Web Chat MCP Integration & AI Join Kit**，拆為 M04-A／M04-B／M04-C 並完成三份文件（同日經兩輪 review 定案：網頁版 chat 是首要目標，平台階梯 ChatGPT Plus → Claude chat 個人方案，兩者皆不可行則 M04 標 Platform Blocked / Deferred 直接進 P4；先 preflight 再 integration，Join Kit 最後）；M04-A 已於 2026-09-12 完成真實 ChatGPT Web Plus preflight並關門：OAuth/DCR、MCP `2026-07-28` `server/discover → tools/list → tools/call`、read/write、role-scoped catalog、Refresh + 新對話的 catalog 更新規則、revoke/reconnect，以及 Tailscale Funnel 下 120 秒 long-poll 均已實測；M04-B 同日於 branch `m04-b-web-chat-integration` 完成 OAuth 入口（DCR、authorize 頁貼 AI Join Token、PKCE、refresh 重驗 P3-D authority、grant 失效聯動、public origin 設定）並以真實 ChatGPT Web Plus 經 Tailscale Funnel 跑完 DM 場與 Player 場 gate 關門（見 `M04-B_CLOSEOUT.md`）；M04-C 同日於 branch `m04-c-ai-join-kit-guide` 交付 `GET /mcp/guide`、與 catalog 同源的 tool description、強制流程 `briefing`、`server/discover.instructions`、Lobby／Session 雙 URL AI Join Kit，並以真實 ChatGPT Web Plus 憑 kit 進桌關門（見 `M04-C_CLOSEOUT.md`；Bearer／純 HTTP 路徑與其他 client 相容記錄依使用者拍板延後）；M04 三個 Subphase 皆已關門，M04 Phase 同日以 `0465788` 合併回 `main`，`P3 Full-Stack E2E` merge-gate CI run `34704122623` 全綠；**P4 開工前置已於 2026-09-13 完成**：P4-A～P4-F 拆分與 `docs/P4/` 三份正式文件已定案；P4-A authoritative Monster source 鎖定 `5e-bits/5e-database@ce47a18dfeb3e41a1b2a2dfe00a25761c3c3a4f1` 的 `src/2014/en/5e-SRD-Monsters.json`，manifest gate 為 **334 筆 Monster records / 87 筆 Beast subset**；產品主線下一步仍是 P4-A — Monster & Combatant Foundation 實作；M01 track 下一個未使用字母為 M01-P，尚無已拍板 scope。**
 
 P2 已交付並必須繼續維持的核心方向：
 
@@ -108,7 +108,7 @@ P4 的正式契約：
 - [P4 開發設計方針](docs/P4/開發設計方針.md)
 - [P4 測試指南](docs/P4/測試指南.md)
 
-**M01 不再有「必須 final closeout 後才能開始 P2」的 gate。** A～N 是目前已完成的角色內容 baseline；**M01-O — XGE & TCE Feat Expansion 已正式拍板並完成三份 M01 文件，尚未實作；下一個未使用字母是 M01-P。** M01 可以在 P2／P3／P4 等正常產品 Roadmap 繼續前進時保持 open，不要求先建立一個假的「全部 D&D 內容已完成」里程碑。
+**M01 不再有「必須 final closeout 後才能開始 P2」的 gate。** A～O 是目前已完成的角色內容 baseline；**下一個未使用字母是 M01-P，尚無已拍板 scope。** M01 可以在 P2／P3／P4 等正常產品 Roadmap 繼續前進時保持 open，不要求先建立一個假的「全部 D&D 內容已完成」里程碑。
 
 新的 M01 Subphase若只補 content / presentation，依當時既有 regression contract驗證；若碰到 Character Build／State／Version／StableKey／Builder provenance／Character JSON schema 或其他共享角色核心，除了 M01 自身驗證外，還必須同步做**當時已存在的後續 P Phase compatibility review**與 **M03 standalone compatibility review**。P2-A 起 shared Character migration 必須落在 `character` Alembic track，不得讓 maintenance 工作反向依賴多人層。
 
@@ -141,6 +141,7 @@ P4 的正式契約：
 | M01-J 直創／逐級升等等價 E2E | 測試目前 `fixme`，瀏覽器層證據仍有缺口；後端已有相關整合覆蓋 | [已知問題.md](已知問題.md) KI-M01J-001 |
 | Windows Vite E2E 環境 | 使用既有 Docker Linux dev server 路徑驗證；不要走 Windows Playwright 託管 Vite 的整套路徑 | [已知問題.md](已知問題.md) KI-ENV-001；[README.md](README.md) |
 | M01-N 匯出 HTML 缺行為測試 | `createCharacterSheetHtmlExport()` 對真實產出的 HTML 沒有斷言，目前由投影單元測試、原始碼字串斷言與 E2E 下載斷言間接把關；`prepared_limit` 改寫路徑因 fixture 為 `null` 而不在 CI 覆蓋內（已人工驗證） | [M01-N closeout](docs/M01/M01-N_CLOSEOUT.md)「已知限制」 |
+| M01-O 真人 smoke 未執行；15 個 deferred Feats | 10.12 Human smoke 未由真人執行，只有 O-E2E-01 / 02 / 05 / 06 的真實瀏覽器覆蓋；Bountiful Luck、Dragon Fear、Elven Accuracy、Poisoner 等 15 個 Feats 的 Combat / Reaction / Roll / Rest / Inventory 效果為 structured + deferred，等 P4+ 對應 substrate，UI 只列出不自動套用 | [M01-O closeout](docs/M01/M01-O_CLOSEOUT.md)「Closeout Evidence」 |
 | M03 測試／開發工具遺留 | `Settings()` import-time 快照的測試污染與 dev seed engine 入口未收斂，詳細限制及建議留在 closeout | [M03-G closeout](docs/M03/M03-G_CLOSEOUT.md)「M03 已知限制」與「留給後續 Phase 的建議」 |
 
 以上為接手時須注意的現況索引；問題詳情與歷史測試數字以連結文件為準，不代表本檔每次更新都重跑驗收。
@@ -153,7 +154,7 @@ P4 的正式契約：
 |---|---|---|
 | P0 | Character Core + SRD / Rules Foundation | 角色資料、角色卡、角色相關規則基礎；已關門 |
 | P1 | Character Builder Complete | 完整創角、Progression、Level Up、Character Version；已關門 |
-| M01 | Multi-Source Character Content Expansion | 長期角色內容／角色系統維護 track；A～N 已關門，M01-O 已完成正式規格、尚未實作，整體保持 open，下一個未使用字母為 P，不阻塞 P2+ |
+| M01 | Multi-Source Character Content Expansion | 長期角色內容／角色系統維護 track；A～O 已關門，整體保持 open，下一個未使用字母為 P，不阻塞 P2+ |
 | M02 | Traditional Chinese / English Localization | 插於 M01-C 與 M01-D 間；雙語呈現、翻譯流程與完整性 gate；已關門 |
 | M03 | Standalone Character Builder Distribution | P2 前插入；Windows 單機版、Character JSON exchange、standalone boundary；已關門，E.9 乾淨 Windows 11 冷啟動已於 2026-09-06 補驗完成 |
 | P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**A～F 全數關門，Phase 已關門** |
@@ -211,9 +212,9 @@ P4 的正式契約：
 | **M01-L — VGM & SCAG Remaining Race Expansion / Generic Race Mechanics** | ✅ | VGM remaining 10 races + SCAG remaining 2 subraces；generic Race/Subrace movement grant、signed racial modifier compatibility、Natural Armor Rules Layer primitive、racial spell canonical multi-rest recharge、typed runtime automation classification、no-docs runtime gate；雙語與 FC-E2E-21 已驗收 |
 | **M01-M — MTF Planar Race Expansion & Tiefling Bloodline / Variant System** | ✅ | `mtf` pack、7 個 MTF planar race、Tiefling 9/9 血脈（Asmodeus canonical map + 8 new variants）、SCAG 保守相容、replacement group persistence、Winged conditional movement、Eladrin season State ownership、feature mode default-deny；雙語與 M-E2E-01～05 已驗收 |
 | **M01-N — Character Sheet HTML Export** | ✅ | 角色卡輸出成單向、只給人看的自足 HTML；使用者自選「角色配置」／「當前快照」，含 A4 列印樣式與匯出專屬物品閱讀順序；client-side、不新增 endpoint、永不可 Import |
-| **M01-O — XGE & TCE Feat Expansion** | ⬜ | XGE 15 個 Racial Feats + TCE 15 個 Feats；沿用 M01-K Feat acquisition / prerequisite / nested-choice 地基，補 ancestry/size prerequisite、canonical Fighting Style / Invocation / Metamagic option-pool reuse、Feat-granted spells、retraining、Metamagic Adept restricted Sorcery Points、雙語與 focused E2E；Combat/Reaction/Roll 效果不偷跑 P4 |
+| **M01-O — XGE & TCE Feat Expansion** | ✅ | XGE 15 個 Racial Feats + TCE 15 個 Feats；沿用 M01-K Feat acquisition / prerequisite / nested-choice 地基，補 ancestry/size prerequisite、canonical Fighting Style / Invocation / Metamagic option-pool reuse、Feat-granted spells、retraining、Metamagic Adept restricted Sorcery Points、雙語與 focused E2E；Combat/Reaction/Roll 效果不偷跑 P4 |
 
-> **M01 保持 open。** A～N 是目前已交付的 baseline；M01-O 已正式規格化、尚未實作。下一個未使用字母是 **M01-P**，沒有預留給「Full M01 Closeout」的字母。
+> **M01 保持 open。** A～O 是目前已交付的 baseline。下一個未使用字母是 **M01-P**，沒有預留給「Full M01 Closeout」的字母。
 
 ### M02
 
@@ -283,7 +284,7 @@ P4 的正式契約：
 
 ## 接手時必須保留的跨 Phase 約束
 
-- **M01 是 long-running maintenance/content track**：A～N 是已完成 baseline；M01-O — XGE & TCE Feat Expansion 已完成正式規格、尚未實作；下一個未使用字母為 P。M01 open 不阻塞 P2+。M01-O 與後續 M01 若修改共享 Character contract，必須 regression 當時已存在的後續 P Phase，並同步做 M03 standalone compatibility review；需要 Combat / Reaction / Roll substrate 的 Feat 效果可以 structured + deferred，但不得藉 M01 偷跑 P4。
+- **M01 是 long-running maintenance/content track**：A～O 是已完成 baseline；下一個未使用字母為 P。M01 open 不阻塞 P2+。後續 M01 若修改共享 Character contract，必須 regression 當時已存在的後續 P Phase，並同步做 M03 standalone compatibility review；需要 Combat / Reaction / Roll substrate 的 Feat 效果可以 structured + deferred，但不得藉 M01 偷跑 P4。
 - **Web Room-first / Standalone Character-first 是永久產品邊界**：Web Character / Draft在 P2-B 後一定由 Room workspace管理；Standalone不建立 Room。多人層只可依賴 Character Core，Character / Builder / Interop與 `app.standalone`不得反向 import多人層。契約見 [規格企劃.md](規格企劃.md) 第三、四、五章與 [P2 開發設計方針](docs/P2/開發設計方針.md)。
 - **Standalone boundary 是常駐約束**：`app.standalone` 不得 import `app.main` 或 P2+ multiplayer modules。P3每新增 multiplayer module / table / MCP route時都必須同步確認 `test_m03_import_boundary.py` 與 `test_m03d_schema_parity.py` 的 forbidden coverage；standalone migration只升 `character@head`，不能把Web multiplayer schema灌進SQLite。
 - **Character JSON v1 是 P2-A 起的相容基線**：新 export 已鎖 v1（`schema_version="1"` / `schema_status="locked"` / `export_type="character"`）；legacy M03 `unstable` 仍可由新版本 import並normalize。Room / Campaign / Seat / Session / P3 runtime identity不得塞進Character JSON。
