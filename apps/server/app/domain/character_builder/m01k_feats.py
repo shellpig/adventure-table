@@ -677,9 +677,9 @@ def compile_feat_acquisitions(
                         if isinstance(allowed, list) and ability in allowed:
                             ability_bonuses[ability] = ability_bonuses.get(ability, 0) + value
                         else:
-                            issues.append(_issue("invalid_feat_choice", choice.choice_id, "Feat ability choice is not legal.", feat.key))
+                            issues.append(_issue("invalid_feat_choice", f"draft_payload.choice_selections.{choice.choice_id}", "Feat ability choice is not legal.", feat.key))
                     else:
-                        issues.append(_issue("incomplete_feat_choice", choice.choice_id, "Feat ability choice is incomplete.", feat.key))
+                        issues.append(_issue("incomplete_feat_choice", f"draft_payload.choice_selections.{choice.choice_id}", "Feat ability choice is incomplete.", feat.key))
 
         raw_grants = feat.data.get("proficiency_grants")
         if isinstance(raw_grants, list):
@@ -726,7 +726,7 @@ def compile_feat_acquisitions(
                 if child is not None and child.disabled_reason is not None:
                     continue
                 if isinstance(expected, int) and len(values) != expected:
-                    issues.append(_issue("incomplete_feat_choice", choice.choice_id, f"{feat.name} requires {expected} selection(s) for {field}.", feat.key))
+                    issues.append(_issue("incomplete_feat_choice", f"draft_payload.choice_selections.{choice.choice_id}", f"{feat.name} requires {expected} selection(s) for {field}.", feat.key))
                     continue
                 kind = raw.get("kind")
                 if kind == "language":
@@ -748,7 +748,7 @@ def compile_feat_acquisitions(
                     bucket = repeat_distinct.setdefault(feat.key, set())
                     overlap = bucket.intersection(values)
                     if overlap:
-                        issues.append(_issue("repeatable_feat_choice_must_differ", choice.choice_id, f"{feat.name} requires a different repeated option.", feat.key))
+                        issues.append(_issue("repeatable_feat_choice_must_differ", f"draft_payload.choice_selections.{choice.choice_id}", f"{feat.name} requires a different repeated option.", feat.key))
                     bucket.update(values)
                 elif kind == "spell":
                     source_choice = raw.get("from_source_choice")

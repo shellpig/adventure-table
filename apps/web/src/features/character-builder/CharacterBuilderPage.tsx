@@ -24,7 +24,7 @@ import { type ContentNameResolver, useContentPresentations } from '../../i18n/us
 import { useUiCopy } from '../../i18n/useUiCopy'
 import { assignStandardArrayScore } from './abilityAssignment'
 import { formatSignedBonus } from './abilityPresentation'
-import { choiceAnchorId, issueChoiceId } from './choiceAnchor'
+import { choiceAnchorId, issueChoiceId, issueStep } from './choiceAnchor'
 import { ClassProgressionStep } from './ClassProgressionStep'
 import { EquipmentReviewStep, EquipmentStep } from './EquipmentReviewStep'
 import {
@@ -866,6 +866,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                 {view.validation.issues.map((issue, index) => {
                   const targetChoiceId = issueChoiceId(issue.path)
                   const target = targetChoiceId ? choicesById.get(targetChoiceId) : undefined
+                  const targetStep = target ? stepForChoice(target) : issueStep(issue.path)
                   const body = (
                     <>
                       <strong className={target ? undefined : 'summary-validation__code'}>
@@ -878,14 +879,14 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   )
                   return (
                     <li className={`issue-${issue.severity}`} key={`${issue.code}:${issue.path}:${index}`}>
-                      {target ? (
+                      {targetStep ? (
                         <button
                           type="button"
                           className="summary-validation__jump"
-                          title={t('builder.summary.jumpToChoice')}
+                          title={t(target ? 'builder.summary.jumpToChoice' : 'builder.summary.jumpToStep')}
                           onClick={() => {
-                            setStep(stepForChoice(target))
-                            setPendingChoiceId(target.choice_id)
+                            setStep(targetStep)
+                            if (target) setPendingChoiceId(target.choice_id)
                           }}
                         >
                           {body}

@@ -608,3 +608,15 @@ def test_spell_sniper_disables_bard_and_cleric_spell_sources() -> None:
     assert build is not None
     assert any(spell.spell_key == "phb2014:spell:thorn-whip" for spell in build.spell_access_entries)
 
+
+
+# Feat issues address the feat opportunity by its full draft path so the Builder
+# summary can jump to it; a bare choice id used to leave these rows inert.
+def test_incomplete_feat_choice_path_addresses_a_live_choice() -> None:
+    content = S.registry()
+    result, _, opportunity_id = S.feat_draft(RESILIENT, content=content, fill_rest=False)
+
+    issues = S.issues_with_code(result, "incomplete_feat_choice")
+    assert issues
+    assert {issue.path for issue in issues} == {f"draft_payload.choice_selections.{opportunity_id}"}
+    assert S.choice_by_id(result, opportunity_id) is not None
