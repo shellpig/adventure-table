@@ -1,6 +1,6 @@
 # Adventure Table 專案簡報
 
-最後更新：2026-09-13（P4 開工前置文件完成）
+最後更新：2026-09-13（P4-A 開工前置與 Monster source/count 校正完成）
 
 本檔是**當前進度、Roadmap、下一步與文件索引的單一事實來源**，供新的 AI Session 或實作者接手。產品行為以 [規格企劃.md](規格企劃.md) 為準；實作契約與歷史驗收證據請依下方索引查閱，不在本檔重述。
 
@@ -24,7 +24,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## 當前狀態與下一步
 
-**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門，P3-E 與 P3-F 已於 2026-09-11 關門（external MCP client HTTPS E1 於 P3-F closeout 合併執行通過），P3 Phase 同日以 `d6b791e` 合併回 `main`，`P3 Full-Stack E2E` CI run `34587347309` 全綠。同日 P3 第一次真實使用暴露「AI 拿到 token 不知道怎麼開始」與「網頁版 AI connector 連不進來」兩個缺口，已拍板插入 **M04 — Web Chat MCP Integration & AI Join Kit**，拆為 M04-A／M04-B／M04-C 並完成三份文件（同日經兩輪 review 定案：網頁版 chat 是首要目標，平台階梯 ChatGPT Plus → Claude chat 個人方案，兩者皆不可行則 M04 標 Platform Blocked / Deferred 直接進 P4；先 preflight 再 integration，Join Kit 最後）；M04-A 已於 2026-09-12 完成真實 ChatGPT Web Plus preflight並關門：OAuth/DCR、MCP `2026-07-28` `server/discover → tools/list → tools/call`、read/write、role-scoped catalog、Refresh + 新對話的 catalog 更新規則、revoke/reconnect，以及 Tailscale Funnel 下 120 秒 long-poll 均已實測；M04-B 同日於 branch `m04-b-web-chat-integration` 完成 OAuth 入口（DCR、authorize 頁貼 AI Join Token、PKCE、refresh 重驗 P3-D authority、grant 失效聯動、public origin 設定）並以真實 ChatGPT Web Plus 經 Tailscale Funnel 跑完 DM 場與 Player 場 gate 關門（見 `M04-B_CLOSEOUT.md`）；M04-C 同日於 branch `m04-c-ai-join-kit-guide` 交付 `GET /mcp/guide`、與 catalog 同源的 tool description、強制流程 `briefing`、`server/discover.instructions`、Lobby／Session 雙 URL AI Join Kit，並以真實 ChatGPT Web Plus 憑 kit 進桌關門（見 `M04-C_CLOSEOUT.md`；Bearer／純 HTTP 路徑與其他 client 相容記錄依使用者拍板延後）；M04 三個 Subphase 皆已關門，M04 Phase 同日以 `0465788` 合併回 `main`，`P3 Full-Stack E2E` merge-gate CI run `34704122623` 全綠；**P4 開工前置已於 2026-09-13 完成**：P4-A～P4-F 拆分與 `docs/P4/` 三份正式文件已定案，下一步是 P4-A — Monster & Combatant Foundation 實作。**
+**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-N 已逐項關門，M01 是長期保持 open 的 Character Content Expansion / Maintenance track。P3 已完成 Subphase A～F 拆分與三份正式文件，並於 2026-09-08 完成 P3 開工前 preflight blocker 文件修正。P3-A 與 P3-B 已於 2026-09-09 關門，P3-C 與 P3-D 已於 2026-09-10 關門，P3-E 與 P3-F 已於 2026-09-11 關門（external MCP client HTTPS E1 於 P3-F closeout 合併執行通過），P3 Phase 同日以 `d6b791e` 合併回 `main`，`P3 Full-Stack E2E` CI run `34587347309` 全綠。同日 P3 第一次真實使用暴露「AI 拿到 token 不知道怎麼開始」與「網頁版 AI connector 連不進來」兩個缺口，已拍板插入 **M04 — Web Chat MCP Integration & AI Join Kit**，拆為 M04-A／M04-B／M04-C 並完成三份文件（同日經兩輪 review 定案：網頁版 chat 是首要目標，平台階梯 ChatGPT Plus → Claude chat 個人方案，兩者皆不可行則 M04 標 Platform Blocked / Deferred 直接進 P4；先 preflight 再 integration，Join Kit 最後）；M04-A 已於 2026-09-12 完成真實 ChatGPT Web Plus preflight並關門：OAuth/DCR、MCP `2026-07-28` `server/discover → tools/list → tools/call`、read/write、role-scoped catalog、Refresh + 新對話的 catalog 更新規則、revoke/reconnect，以及 Tailscale Funnel 下 120 秒 long-poll 均已實測；M04-B 同日於 branch `m04-b-web-chat-integration` 完成 OAuth 入口（DCR、authorize 頁貼 AI Join Token、PKCE、refresh 重驗 P3-D authority、grant 失效聯動、public origin 設定）並以真實 ChatGPT Web Plus 經 Tailscale Funnel 跑完 DM 場與 Player 場 gate 關門（見 `M04-B_CLOSEOUT.md`）；M04-C 同日於 branch `m04-c-ai-join-kit-guide` 交付 `GET /mcp/guide`、與 catalog 同源的 tool description、強制流程 `briefing`、`server/discover.instructions`、Lobby／Session 雙 URL AI Join Kit，並以真實 ChatGPT Web Plus 憑 kit 進桌關門（見 `M04-C_CLOSEOUT.md`；Bearer／純 HTTP 路徑與其他 client 相容記錄依使用者拍板延後）；M04 三個 Subphase 皆已關門，M04 Phase 同日以 `0465788` 合併回 `main`，`P3 Full-Stack E2E` merge-gate CI run `34704122623` 全綠；**P4 開工前置已於 2026-09-13 完成**：P4-A～P4-F 拆分與 `docs/P4/` 三份正式文件已定案；P4-A authoritative Monster source 鎖定 `5e-bits/5e-database@ce47a18dfeb3e41a1b2a2dfe00a25761c3c3a4f1` 的 `src/2014/en/5e-SRD-Monsters.json`，manifest gate 為 **334 筆 Monster records / 87 筆 Beast subset**；下一步是 P4-A — Monster & Combatant Foundation 實作。**
 
 P2 已交付並必須繼續維持的核心方向：
 
@@ -67,13 +67,15 @@ P4 已拍板並寫入正式文件的核心方向：
 - **正常命中直接 resolve**：必要 target / rule facts 已知時，Server 直接完成 roll → outcome → damage/healing/effect → state/event transaction；不讓每一擊都停給 DM approve，只有 Quick 無法判定的 range / cover / affected targets / OA /特殊能力才進 DM adjudication。
 - **Turn / action economy 是正式 Server 規則**：一般 Action / Bonus Action只在自己 Turn；Reaction走 durable ReactionRequest；DM proxy消耗 subject combatant自己的 economy；Freeform仍保留 DM裁定彈性。
 - **敵人資訊 Server-side secrecy**：DM可見完整 enemy HP / AC / resources；Player / AI Player預設只收到公開名稱／Condition／outcome與可選模糊傷勢層級，不收到精確 HP、AC、recharge或 hidden resources。
-- **P4-A 完整承接 SRD 5.1 Monster / Beast templates**：常見 attack/save/damage/recharge結構化，複雜能力保留 description + DM adjudication；Template / Instance / Combatant分離。
+- **P4-A Monster corpus 與 locale scope 已鎖定**：authoritative source 是 `5e-bits/5e-database@ce47a18dfeb3e41a1b2a2dfe00a25761c3c3a4f1` 的 `src/2014/en/5e-SRD-Monsters.json`，共 **334** 筆 Monster records，其中 `type=beast` 共 **87** 筆；manifest 必須對兩個 count 做 gate。P4-A 至少同步交付 Monster name 與 Trait / Action / Bonus Action / Reaction / Legendary Action 等命名欄位的 `en` / `zh-TW`；long-form description 可延後到首次 user-visible exposure，但 English fallback 不算 supported-locale completeness。
+- **Template / Instance / Combatant 分離，Standalone 只共用 Template content**：Monster Template content 可進共用 `data/srd5.1/` / standalone ContentRegistry；Monster Instance、Combat persistence tables、routes / services 不進 Standalone，也不能用名稱含 `monster` 的 blanket regex 把 Template content 一起擋掉。
+- **Monster spellcasting 是合法 casting source**：P4-D 的 `ResolvedCombatSpell.casting_source` 同時接受 Character spellcasting source 與 Monster stat-block source；Monster 的 spellcasting ability、spell attack bonus、save DC、usage / slots 由 resolved stat block 提供，不偽造 Character class source。
 - **Combat 是 Campaign gameplay state，可跨 Session 延續**：Session End不自動 End Combat；下一 Session可 resume同一 Round / Current Turn / combatants / pending state。
 - **P4 關門包含真實 ChatGPT Web Combat gate**：沿用 M04 connector / OAuth / AI Join Kit完成一場實際 Quick Combat journey，不能只靠 protocol mock。
 
 下一步依序為：
 
-1. **P4-A — Monster & Combatant Foundation 實作**：先建立 Monster Template / Instance / Combatant foundation，完整導入 SRD 5.1 Monster / Beast，從第一段就建立 enemy secrecy projection 與 standalone boundary。
+1. **P4-A — Monster & Combatant Foundation 實作**：先建立 Monster Template / Instance / Combatant foundation，materialize pinned SRD 5.1 Monster corpus **334 筆／Beast subset 87 筆**，從第一段就建立 locale completeness gate、enemy secrecy projection 與 standalone Template-vs-Instance boundary。
 2. P4-B～P4-F 依三份 P4 文件順序逐段實作、review、驗收；P5～P8 仍維持大 Phase，不提前拆分或設計其 schema / API / module。
 
 P2 的正式契約：
@@ -157,7 +159,7 @@ P4 的正式契約：
 | P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**A～F 全數關門，Phase 已關門** |
 | P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌；**A～F 全數關門，Phase 已關門並合併回 `main`** |
 | M04 | Web Chat MCP Integration & AI Join Kit | P3 關門後、P4 前插入；網頁版 chat preflight（ChatGPT Plus → Claude chat 個人方案）→ OAuth integration → AI Join Kit 與 server-hosted 指引；**M04-A、M04-B、M04-C 皆已於 2026-09-12 關門，目標平台判定為 ChatGPT Web Plus；M04 Phase 同日以 `0465788` 合併回 `main`，merge-gate E2E run `34704122623` 全綠** |
-| P4 | Quick Combat | 第一個完整可玩的 Combat MVP；**A～F 已完成拆分與三份正式文件，code 尚未開始；下一步 P4-A** |
+| P4 | Quick Combat | 第一個完整可玩的 Combat MVP；**A～F 已完成拆分與三份正式文件，P4-A preflight source/count/locale/standalone/spell-source 契約已同步，code 尚未開始；下一步 P4-A** |
 | P5 | Tactical Combat | 同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE 與空間系統 |
 | P6 | Adventure + AI DM Runtime | Adventure Definition／Importer、Campaign Runtime、世界資料、AI DM context／write-back |
 | P7 | Snapshot / Export | Timeline、Snapshot／Restore、broader Archive／Import／Export；角色 JSON exchange 已由 M03 先行，不做 Undo |
@@ -271,10 +273,10 @@ P4 的正式契約：
 
 | Subphase | 狀態 | 重點 |
 |---|---|---|
-| **P4-A — Monster & Combatant Foundation** | ⬜ | 完整 SRD 5.1 Monster / Beast、Monster Template / Instance / Combatant、Quick Enemy、enemy secrecy projection、standalone boundary |
+| **P4-A — Monster & Combatant Foundation** | ⬜ | pinned SRD 5.1 Monster corpus 334 / Beast 87、Monster Template / Instance / Combatant、Quick Enemy、locale completeness、enemy secrecy projection、Standalone Template content / multiplayer Instance boundary |
 | **P4-B — Combat Lifecycle, Initiative & Action Economy** | ⬜ | Campaign-scoped durable Combat、initiative / round / turn、Action / Bonus / Reaction、跨 Session resume、Combat End cleanup |
 | **P4-C — Attack, Damage & Core Action Resolution** | ⬜ | P3 formal-roll reuse、Attack / Save / Damage / Healing / Crit、resistance / Temp HP、Grapple / Shove、0 HP / Death Save、atomic idempotent resolve |
-| **P4-D — Spells, Conditions, Concentration & Reactions** | ⬜ | Spell skeleton / upcast、2014 Conditions、Temporary Effects、Concentration、ReactionRequest / Ready、Quick OA 由 DM trigger |
+| **P4-D — Spells, Conditions, Concentration & Reactions** | ⬜ | Spell skeleton / upcast、Character + Monster stat-block casting source、2014 Conditions、Temporary Effects、Concentration、ReactionRequest / Ready、Quick OA 由 DM trigger |
 | **P4-E — Quick Combat UI, DM Adjudication & AI Tool Surface** | ⬜ | Session table Quick Combat UX、enemy secrecy UI、range/cover/AoE/OA adjudication、Combat MCP tools、guide / briefing 雙語接線 |
 | **P4-F — Full P4 Integration & Closeout** | ⬜ | browser / restart / Session-boundary / PostgreSQL / standalone / regression closeout + 真實 ChatGPT Web Combat journey |
 
@@ -293,7 +295,7 @@ P4 的正式契約：
 - **AI transport與game logic分離**：P3至少正式交付一條MCP入口，但Human UI / MCP / future Site Tools共用同一application/domain service；網站本身不接LLM API，不保存外部模型API key。
 - **雙語是持續交付要求**：新增、修改或首次呈現給使用者的 system／rules content，必須同一 Subphase 同步交付 `zh-TW`／`en`；locale 只影響呈現，不改角色／草稿／P3 canonical gameplay data。細則見 [AGENTS.md](AGENTS.md) 與 [M02 實作規格](docs/M02/實作規格.md)。
 - **M04 OAuth 不是第二套授權**：OAuth access token 只用來找到既有 `ai_controller_grants` row，之後與 Bearer AI Join Token 走同一條 P3-D grant／Seat current binding／epoch 驗證；refresh 同樣重驗，refresh token 未過期不構成授權；OAuth 流程對 Seat／Session／Participant 零寫入；一個 authorization 一個 token family 一張 grant，`client_id` 不是 Seat 授權識別。指引（`GET /mcp/guide`、tool description、`briefing`）只描述桌的用法與守則，Adventure／Campaign／NPC context 仍留 P6。
-- **P4 已完成開工前置**：P4-A～F 與三份正式文件已於 2026-09-13 定案。P4-A 承接完整 SRD 5.1 Monster／Beast；Combat canonical state以 Campaign為 lifecycle root、可跨 Session延續；Quick Combat不做 geometry；敵人精確 HP／AC／hidden resources在 Server projection層對 Player隔離。
+- **P4 已完成開工前置**：P4-A～F 與三份正式文件已於 2026-09-13 定案；Monster source/count 後續校正為同一 pinned corpus **334 筆／Beast 87 筆**。P4-A 的 Monster Template content 可進共用/standalone ContentRegistry，但 Monster Instance / Combat tables / services 不進 Standalone；P4-D spell resolution 同時接受 Character 與 Monster stat-block casting source；Combat canonical state以 Campaign為 lifecycle root、可跨 Session延續；Quick Combat不做 geometry；敵人精確 HP／AC／hidden resources在 Server projection層對 Player隔離。
 - **M Phase 插入不重編既有順序**：可插在另一 M Phase 的 Subphases 之間，也可長期保持 open 與 P Roadmap 並行；只拆當前要做的工作，例外僅為使用者已拍板且插入點確定的 M Phase。完整規則見 [AGENTS.md](AGENTS.md)。
 
 ## 文件索引與閱讀方式
