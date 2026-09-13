@@ -397,12 +397,66 @@ class CharacterBuilderService:
             if not choice_id.startswith(previous_prefix)
         }
 
+    def _prune_orphaned_level_choice_selections(
+        self,
+        current: BuilderDraft,
+        payload_data: dict[str, object],
+        changes: dict[str, object],
+    ) -> None:
+        """Drop selections that a level_choices change leaves without an owner.
+
+        Switching a class or shortening the progression removes the choices that
+        depended on the old levels (starting proficiencies, ASI/feat slots, class
+        feature options...). Their ids do not share a common prefix, so compare the
+        compiled choice sets before and after instead: a selection is orphaned when
+        its choice existed before and now either vanished or moved to another
+        source_ref. As with the race variant prune, an explicit ``choice_selections``
+        in the same patch is left alone so validation can reject a forged payload.
+        """
+
+        if "level_choices" not in changes or "choice_selections" in changes:
+            return
+        if not current.draft_payload.choice_selections:
+            return
+        candidate_data = dict(payload_data)
+        candidate_data.update(
+            {key: value for key, value in changes.items() if key != "roleplay_profile"}
+        )
+        candidate = BuilderDraftPayload.model_validate(candidate_data)
+        previous_levels = [
+            level.model_dump(mode="python") for level in current.draft_payload.level_choices
+        ]
+        candidate_levels = [level.model_dump(mode="python") for level in candidate.level_choices]
+        if previous_levels == candidate_levels:
+            return
+
+        def owned_choices(draft: BuilderDraft) -> dict[str, str | None]:
+            return {
+                choice.choice_id: choice.source_ref
+                for choice in self._compile(draft).choices
+                if choice.option_source != "draft:selection"
+            }
+
+        before = owned_choices(current)
+        after = owned_choices(current.model_copy(update={"draft_payload": candidate}))
+        kept = {
+            choice_id: selection.model_dump(mode="python")
+            for choice_id, selection in current.draft_payload.choice_selections.items()
+            if not (
+                choice_id in before
+                and (choice_id not in after or after[choice_id] != before[choice_id])
+            )
+        }
+        if len(kept) != len(current.draft_payload.choice_selections):
+            changes["choice_selections"] = kept
+
     def patch_draft(self, draft_id: UUID, request: BuilderDraftPatchInput) -> BuilderView:
         current = self.repository.load_draft(draft_id)
         payload_data = current.draft_payload.model_dump(mode="python")
         changes = request.draft_payload.model_dump(mode="python", exclude_unset=True)
         self._guard_level_up_patch(current, changes)
         self._prune_previous_race_variant_branch(current, changes)
+        self._prune_orphaned_level_choice_selections(current, payload_data, changes)
         if "roleplay_profile" in changes:
             proposed_profile = changes["roleplay_profile"]
             if proposed_profile is None:
