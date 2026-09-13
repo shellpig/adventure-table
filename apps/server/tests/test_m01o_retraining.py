@@ -54,11 +54,16 @@ WIZARD_RAIL = [
 ]
 
 
-def _draft_payload(*, name: str, levels: list[dict[str, Any]]):
+def _draft_payload(
+    *,
+    name: str,
+    levels: list[dict[str, Any]],
+    race: str = "phb2014:race:variant-human",
+):
     return {
         "basic": {"name": name},
         "target_level": len(levels),
-        "race_selection": {"reference_id": "phb2014:race:variant-human"},
+        "race_selection": {"reference_id": race},
         "background_selection": {"reference_id": "srd5.1:background:acolyte"},
         "ability_generation": {
             "method": "standard_array",
@@ -148,14 +153,33 @@ def _acquisition(build: dict[str, Any], feat_ref: str) -> dict[str, Any]:
     return next(item for item in build["feat_acquisitions"] if item["feat_ref"] == feat_ref)
 
 
-def _create_with_race_feat(client, *, name: str, levels, feat_ref: str, nested: dict[str, list[str]]):
-    view = S.http_create_draft(client, _draft_payload(name=name, levels=levels))
-    view = _set_choice(client, view, _choice(view, "content:race-feat"), [feat_ref])
+def _create_with_feat(
+    client,
+    *,
+    name: str,
+    levels,
+    feat_ref: str,
+    nested: dict[str, list[str]],
+    race: str = "phb2014:race:variant-human",
+    opportunity_source: str = "content:race-feat",
+):
+    view = S.http_create_draft(client, _draft_payload(name=name, levels=levels, race=race))
+    view = _set_choice(client, view, _choice(view, opportunity_source), [feat_ref])
     for source, option_ids in nested.items():
         view = _set_choice(client, view, _choice(view, source, source_ref=feat_ref), option_ids)
     view = _finish(client, view)
     assert _review(client, view)["can_confirm"] is True, _review(client, view)["issues"]
     return S.http_confirm(client, view)["character_id"]
+
+
+def _create_with_race_feat(client, *, name: str, levels, feat_ref: str, nested: dict[str, list[str]]):
+    return _create_with_feat(
+        client,
+        name=name,
+        levels=levels,
+        feat_ref=feat_ref,
+        nested=nested,
+    )
 
 
 def _level_up(client, character_id: str, levels: list[dict[str, Any]]):
@@ -285,3 +309,148 @@ def test_build_edit_is_not_a_free_retraining_path() -> None:
     assert review["can_confirm"] is False
     assert "feat_retraining_requires_level_up" in {issue["code"] for issue in review["issues"]}
     assert _acquisition(_build(client, character_id, 1), ELDRITCH_ADEPT)["selections"]["invocation"] == [DEVILS_SIGHT]
+
+
+def _version_history(client, character_id: str) -> list[dict[str, Any]]:
+    response = client.get(f"/api/characters/{character_id}/versions")
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def _character_snapshot(client, character_id: str) -> dict[str, Any]:
+    character = client.get(f"/api/characters/{character_id}")
+    assert character.status_code == 200, character.text
+    build = character.json()["build"]
+    return {
+        "version_history": _version_history(client, character_id),
+        "feat_refs": build["feat_refs"],
+        "feat_acquisitions": build["feat_acquisitions"],
+        "feat_resource_grants": build["feat_resource_grants"],
+        "feat_static_facts": build["feat_static_facts"],
+        "spell_access_entries": [
+            entry for entry in build["spell_access_entries"] if entry["source_type"] == "feat"
+        ],
+        "feature_refs": build["feature_refs"],
+        "skill_choices": build["skill_choices"],
+        "skill_expertise_refs": build["skill_expertise_refs"],
+        "language_refs": build["language_refs"],
+        "content_sources": build["content_sources"],
+    }
+
+
+def test_m01o_representative_builds_survive_reload_restart_and_history() -> None:
+    client, engine = S.seed_http()
+
+    representatives = {
+        "dragon-hide": _create_with_feat(
+            client,
+            name="M01-O Restart Dragon Hide",
+            race="srd5.1:race:dragonborn",
+            levels=FIGHTER_RAIL,
+            opportunity_source="content:asi-feat",
+            feat_ref="xge:feat:dragon-hide",
+            nested={"content:feat:ability": ["ability:strength"]},
+        ),
+        "prodigy": _create_with_feat(
+            client,
+            name="M01-O Restart Prodigy",
+            levels=FIGHTER_RAIL[:1],
+            feat_ref="xge:feat:prodigy",
+            nested={
+                "content:feat:skill": ["srd5.1:proficiency:skill-investigation"],
+                "content:feat:tool": ["srd5.1:proficiency:thieves-tools"],
+                "content:feat:language": ["srd5.1:language:elvish"],
+                "content:feat:expertise": ["srd5.1:skill:investigation"],
+            },
+        ),
+        "fey-touched": _create_with_feat(
+            client,
+            name="M01-O Restart Fey Touched",
+            levels=WIZARD_RAIL[:1],
+            feat_ref="tce:feat:fey-touched",
+            nested={
+                "content:feat:ability": ["ability:wisdom"],
+                "content:feat:spell": ["srd5.1:spell:charm-person"],
+            },
+        ),
+        "fighting-initiate": _create_with_feat(
+            client,
+            name="M01-O Restart Fighting Initiate",
+            levels=FIGHTER_RAIL[:1],
+            feat_ref=FIGHTING_INITIATE,
+            nested={"content:feat:fighting_style": [STYLE_DEFENSE]},
+        ),
+        "eldritch-adept": _create_with_feat(
+            client,
+            name="M01-O Restart Eldritch Adept",
+            levels=WIZARD_RAIL[:1],
+            feat_ref=ELDRITCH_ADEPT,
+            nested={"content:feat:invocation": [DEVILS_SIGHT]},
+        ),
+        "metamagic-adept": _create_with_feat(
+            client,
+            name="M01-O Restart Metamagic Adept",
+            levels=WIZARD_RAIL[:1],
+            feat_ref=METAMAGIC_ADEPT,
+            nested={"content:feat:metamagic": [CAREFUL, SUBTLE]},
+        ),
+        "artificer-initiate": _create_with_feat(
+            client,
+            name="M01-O Restart Artificer Initiate",
+            levels=WIZARD_RAIL[:1],
+            feat_ref="tce:feat:artificer-initiate",
+            nested={
+                "content:feat:artisan_tool": ["srd5.1:proficiency:tinkers-tools"],
+                "content:feat:spell": ["srd5.1:spell:mending", "srd5.1:spell:cure-wounds"],
+            },
+        ),
+        "gunner": _create_with_feat(
+            client,
+            name="M01-O Restart Gunner",
+            levels=FIGHTER_RAIL[:1],
+            feat_ref="tce:feat:gunner",
+            nested={},
+        ),
+    }
+    before = {
+        label: _character_snapshot(client, character_id)
+        for label, character_id in representatives.items()
+    }
+
+    restarted = S.rebind_http(engine)
+    after = {
+        label: _character_snapshot(restarted, character_id)
+        for label, character_id in representatives.items()
+    }
+
+    assert after == before
+    assert before["dragon-hide"]["feat_acquisitions"][0]["selections"]["ability"] == ["ability:strength"]
+    assert before["prodigy"]["skill_expertise_refs"] == ["srd5.1:skill:investigation"]
+    assert {
+        entry["spell_key"]: entry["casting_ability"]
+        for entry in before["fey-touched"]["spell_access_entries"]
+    } == {
+        "srd5.1:spell:misty-step": "wisdom",
+        "srd5.1:spell:charm-person": "wisdom",
+    }
+    assert STYLE_DEFENSE in before["fighting-initiate"]["feature_refs"]
+    assert DEVILS_SIGHT in before["eldritch-adept"]["feature_refs"]
+    metamagic_grant = before["metamagic-adept"]["feat_resource_grants"][0]
+    assert metamagic_grant["resource_id"] == "metamagic-adept-sorcery-points"
+    assert metamagic_grant["allowed_spend_tags"] == ["metamagic"]
+    assert before["artificer-initiate"]["feat_static_facts"] == [
+        {
+            "kind": "spellcasting_focus",
+            "tool_ref": "srd5.1:proficiency:tinkers-tools",
+            "casting_ability": "intelligence",
+            "source_ref": "tce:feat:artificer-initiate",
+        }
+    ]
+    assert before["gunner"]["feat_static_facts"] == [
+        {
+            "kind": "weapon_proficiency_category",
+            "category": "firearms",
+            "source_ref": "tce:feat:gunner",
+        }
+    ]
+    assert all(snapshot["version_history"][0]["version_no"] == 1 for snapshot in before.values())
