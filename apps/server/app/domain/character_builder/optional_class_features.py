@@ -21,6 +21,7 @@ from app.domain.character_builder.schemas import (
     BuilderIssueSeverity,
     BuilderMode,
     BuilderOptionKind,
+    BuilderProgressionNodeSummary,
 )
 from app.domain.character_builder.structural import StructuralCompilation, compile_structural_selections
 
@@ -1099,6 +1100,42 @@ def apply_optional_feature_replacements(
         if runtime.specs[feature_ref].mode != "expanded_choice"
     )
     return tuple(dict.fromkeys(refs)), tuple(issues)
+
+
+def apply_optional_feature_replacements_to_progression(
+    nodes: tuple[BuilderProgressionNodeSummary, ...],
+    runtime: OptionalFeatureRuntime,
+) -> tuple[BuilderProgressionNodeSummary, ...]:
+    """Presentation twin of apply_optional_feature_replacements for the level rail.
+
+    The compiled Build already carries the replaced feature set; the per-level
+    summary is what the Builder shows, so it must drop the same base features
+    and list each adopted optional feature at the class level that unlocks it.
+    """
+
+    adopted = [
+        (feature_ref, runtime.specs[feature_ref])
+        for feature_ref in runtime.active_feature_refs
+        if runtime.specs[feature_ref].mode != "expanded_choice"
+    ]
+    if not adopted:
+        return nodes
+    replacement_specs = [spec for _ref, spec in adopted if spec.mode == "replacement"]
+    result: list[BuilderProgressionNodeSummary] = []
+    for node in nodes:
+        refs = [
+            ref
+            for ref in node.automatic_feature_refs
+            if not any(_matches_replacement(ref, spec) for spec in replacement_specs)
+        ]
+        refs.extend(
+            feature_ref
+            for feature_ref, spec in adopted
+            if spec.parent_class_ref == node.class_ref
+            and spec.minimum_class_level == node.class_level
+        )
+        result.append(node.model_copy(update={"automatic_feature_refs": tuple(dict.fromkeys(refs))}))
+    return tuple(result)
 
 
 def suppress_replaced_choices(

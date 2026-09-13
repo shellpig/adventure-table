@@ -41,6 +41,7 @@ from app.domain.character_builder.m01m_variant_validation import (
 from app.domain.character_builder.optional_class_features import (
     apply_feature_pool_retraining,
     apply_optional_feature_replacements,
+    apply_optional_feature_replacements_to_progression,
     apply_optional_pool_eligibility,
     build_optional_nested_choices,
     build_optional_retraining_choices,
@@ -315,6 +316,14 @@ def compile_builder_draft(
         compiled.resolved_summary,
         m01j,
         build,
+    )
+    resolved_summary = resolved_summary.model_copy(
+        update={
+            "progression": apply_optional_feature_replacements_to_progression(
+                resolved_summary.progression,
+                runtime,
+            )
+        }
     )
     validation = make_validation_result(tuple(issues))
     return BuilderCompileResult(

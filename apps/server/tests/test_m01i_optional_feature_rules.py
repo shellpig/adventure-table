@@ -10,10 +10,12 @@ from app.domain.character_builder.m01i_runtime import prepare_optional_class_fea
 from app.domain.character_builder.optional_class_features import (
     _choice_id,
     apply_optional_feature_replacements,
+    apply_optional_feature_replacements_to_progression,
     build_optional_nested_choices,
     compile_nested_feature_selections,
     compile_nested_spell_access,
 )
+from app.domain.character_builder.progression import progression_summary
 from app.domain.character_builder.schemas import (
     BuilderChoice,
     BuilderChoiceOption,
@@ -182,6 +184,41 @@ def test_superior_technique_has_exactly_one_shared_maneuver_choice_and_stale_chi
     active_children = build_optional_nested_choices(draft, registry, (blind_parent,))
     assert active_children == ()
     assert compile_nested_feature_selections(draft, registry, active_children).feature_refs == ()
+
+
+def test_ranger_replacement_chain_is_mirrored_on_the_level_rail() -> None:
+    """The per-level summary the Builder shows must agree with the compiled Build."""
+
+    registry = load_default_content_registry()
+    draft = _create_draft(RANGER, 3)
+    for feature_ref in (
+        "tce:feature:deft-explorer",
+        "tce:feature:favored-foe",
+        "tce:feature:primal-awareness",
+        "tce:feature:ranger-spellcasting-focus",
+    ):
+        choice_id = _choice_id(draft, "optional-feature", feature_ref)
+        draft = _with_selection(draft, choice_id, feature_ref, source_ref=feature_ref)
+
+    runtime = prepare_optional_class_features_for_m01i(draft, registry)
+    nodes = progression_summary(draft, registry)
+    assert any("favored-enemy-" in ref for node in nodes for ref in node.automatic_feature_refs)
+
+    mirrored = apply_optional_feature_replacements_to_progression(nodes, runtime)
+    by_level = {node.class_level: node.automatic_feature_refs for node in mirrored}
+
+    assert "tce:feature:deft-explorer" in by_level[1]
+    assert "tce:feature:favored-foe" in by_level[1]
+    assert "tce:feature:ranger-spellcasting-focus" in by_level[2]
+    assert "tce:feature:primal-awareness" in by_level[3]
+    flattened = [ref for refs in by_level.values() for ref in refs]
+    assert not any("natural-explorer-" in ref or "favored-enemy-" in ref for ref in flattened)
+    assert "srd5.1:feature:primeval-awareness" not in flattened
+    # Untouched nodes keep their identity and non-replaced features.
+    assert [node.character_level for node in mirrored] == [node.character_level for node in nodes]
+    # No adoption: the rail is returned as-is.
+    empty_runtime = prepare_optional_class_features_for_m01i(_create_draft(RANGER, 3), registry)
+    assert apply_optional_feature_replacements_to_progression(nodes, empty_runtime) == nodes
 
 
 def test_ranger_replacement_chain_removes_base_features_from_compiled_refs() -> None:

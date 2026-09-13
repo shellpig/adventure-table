@@ -25,6 +25,7 @@ import {
   grantPresentationFields,
   grantPresentationReferences,
   isVisibleGrant,
+  pairFeatureRows,
   pairGrantsByKind,
   sortGrantsByKind,
 } from './grants'
@@ -488,6 +489,31 @@ export function EquipmentReviewStep({
               )}
               {!review.resolved_summary.grants.filter(isVisibleGrant).length ? (
                 <small>{t('review.noOriginGrants')}</small>
+              ) : null}
+            </div>
+
+            <div className="summary-grants summary-grants--paired">
+              <h3>{t('review.classFeatures')}</h3>
+              {pairFeatureRows(
+                review.resolved_summary.progression.flatMap((node) =>
+                  node.automatic_feature_refs.map((featureRef) => ({
+                    key: `${node.character_level}:${featureRef}`,
+                    source: `${nameFor(node.class_ref, node.class_name)} ${node.class_level}`,
+                    featureRef,
+                  })),
+                ),
+              ).map((row, rowIndex) => (
+                <div className="grant-row" key={`features:${rowIndex}`}>
+                  {row.map((feature) => (
+                    <div key={feature.key}>
+                      <span>{feature.source}</span>
+                      <strong>{nameFor(feature.featureRef, feature.featureRef)}</strong>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              {!review.resolved_summary.progression.some((node) => node.automatic_feature_refs.length) ? (
+                <small>{t('review.noClassFeatures')}</small>
               ) : null}
             </div>
 

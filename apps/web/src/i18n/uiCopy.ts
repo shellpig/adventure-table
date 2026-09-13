@@ -32,6 +32,7 @@ const en = {
   'shared.search.expand': '{label}: expand list',
   'shared.search.collapse': '{label}: collapse list',
   'shared.search.empty': 'No items match “{query}”',
+  'shared.search.clear': '{label}: clear selection',
 
   'landing.eyebrow': 'M02-B · Localized Character Tools',
   'landing.description': 'A table-first D&D 5e 2014 character tool.',
@@ -273,6 +274,8 @@ const en = {
   'review.base': 'Base {value}',
   'review.override': 'override',
   'review.resolvedGrants': 'Resolved grants',
+  'review.classFeatures': 'Class features',
+  'review.noClassFeatures': 'No class features are granted at these levels.',
   'review.noOriginGrants': 'No resolved origin grants.',
   'review.startingBaseline': 'Starting equipment baseline',
   'review.resolvedStarting': 'Starting equipment & items',
@@ -484,6 +487,7 @@ const zhTW: Record<UiCopyKey, string> = {
   'shared.search.expand': '{label}：展開選單',
   'shared.search.collapse': '{label}：收合選單',
   'shared.search.empty': '找不到符合「{query}」的項目',
+  'shared.search.clear': '{label}：清除選擇',
 
   'landing.eyebrow': 'M02-B · 雙語角色工具',
   'landing.description': '以桌上跑團為優先的 D&D 5e 2014 角色工具。',
@@ -725,6 +729,8 @@ const zhTW: Record<UiCopyKey, string> = {
   'review.base': '基礎 {value}',
   'review.override': '覆寫',
   'review.resolvedGrants': '已解析授予項目',
+  'review.classFeatures': '職業特性',
+  'review.noClassFeatures': '這些等級沒有授予職業特性。',
   'review.noOriginGrants': '沒有已解析的出身授予項目。',
   'review.startingBaseline': '起始裝備基準',
   'review.resolvedStarting': '起始裝備與物品',

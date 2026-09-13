@@ -21,6 +21,8 @@ type SearchableSelectProps = {
   placeholder?: string
   disabled?: boolean
   secondaryMode?: 'always' | 'duplicates'
+  /** Show a clear button when a value is selected; for optional choices. */
+  clearable?: boolean
 }
 
 type OptionDisplay = {
@@ -96,6 +98,7 @@ export function SearchableSelect({
   placeholder,
   disabled = false,
   secondaryMode = 'always',
+  clearable = false,
 }: SearchableSelectProps) {
   const { t } = useUiCopy()
   const contentReferences = useMemo(
@@ -225,6 +228,22 @@ export function SearchableSelect({
             }
           }}
         />
+        {clearable && value ? (
+          <button
+            type="button"
+            className="combobox-clear"
+            aria-label={t('shared.search.clear', { label })}
+            disabled={disabled}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => {
+              onChange('')
+              setQuery('')
+              setOpen(false)
+            }}
+          >
+            ×
+          </button>
+        ) : null}
         <button
           type="button"
           className="combobox-toggle"

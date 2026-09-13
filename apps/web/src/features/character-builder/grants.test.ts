@@ -6,6 +6,7 @@ import {
   grantPresentationFields,
   grantPresentationReferences,
   isVisibleGrant,
+  pairFeatureRows,
   pairGrantsByKind,
   sortGrantsByKind,
 } from './grants'
@@ -127,5 +128,17 @@ describe('isVisibleGrant and sortGrantsByKind filtering', () => {
     expect(isVisibleGrant(featureGrant)).toBe(true)
     const sorted = sortGrantsByKind([lineageGrant, featureGrant])
     expect(sorted).toEqual([featureGrant])
+  })
+})
+
+describe('pairFeatureRows', () => {
+  it('pairs adjacent features from the same class level and starts a new row otherwise', () => {
+    const rows = pairFeatureRows([
+      { source: 'Ranger 1', featureRef: 'a' },
+      { source: 'Ranger 1', featureRef: 'b' },
+      { source: 'Ranger 1', featureRef: 'c' },
+      { source: 'Ranger 3', featureRef: 'd' },
+    ])
+    expect(rows.map((row) => row.map((f) => f.featureRef))).toEqual([['a', 'b'], ['c'], ['d']])
   })
 })

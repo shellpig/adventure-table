@@ -93,3 +93,17 @@ export function pairGrantsByKind<T extends BuilderGrantSummary>(
   }
   return rows
 }
+
+/** Pair adjacent rows that share a source label, mirroring pairGrantsByKind. */
+export function pairFeatureRows<T extends { source: string }>(features: readonly T[]): T[][] {
+  const rows: T[][] = []
+  for (const feature of features) {
+    const last = rows[rows.length - 1]
+    if (last && last.length === 1 && last[0].source === feature.source) {
+      last.push(feature)
+    } else {
+      rows.push([feature])
+    }
+  }
+  return rows
+}

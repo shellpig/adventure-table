@@ -187,6 +187,7 @@ function ChoiceEditor({ choice, view, disabled, onSave, nameFor, locale }: Choic
           disabled={disabled}
           options={selectionOptions(choice, nameFor, locale)}
           secondaryMode="duplicates"
+          clearable={!choice.required}
           onChange={(value) => saveSelected(value ? [value] : [])}
         />
       </div>

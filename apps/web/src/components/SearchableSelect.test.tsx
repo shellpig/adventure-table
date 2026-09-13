@@ -1,11 +1,23 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
+import { LocaleProvider } from '../i18n/LocaleProvider'
+import { LOCALE_STORAGE_KEY, type Locale, type LocaleStorage } from '../i18n/locale'
 import {
   duplicateOptionNames,
   optionDisplay,
   rankSearchOptions,
+  SearchableSelect,
   sortSearchOptions,
 } from './SearchableSelect'
+
+function localeStorage(locale: Locale): LocaleStorage {
+  return {
+    getItem: (key) => (key === LOCALE_STORAGE_KEY ? locale : null),
+    setItem: () => undefined,
+  }
+}
 
 
 describe('SearchableSelect source-aware labels', () => {
@@ -97,5 +109,34 @@ describe('SearchableSelect source-aware labels', () => {
     ]
 
     expect(sortSearchOptions(options, 'zh-TW')).toEqual(options)
+  })
+})
+
+describe('SearchableSelect clearable', () => {
+  const options = [
+    { value: 'tce:feature:favored-foe', label: 'Favored Foe' },
+  ]
+
+  function markup(props: { value: string; clearable?: boolean }) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    return renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <LocaleProvider storage={localeStorage('zh-TW')} documentTarget={null}>
+          <SearchableSelect label="Optional feature" options={options} onChange={() => undefined} {...props} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    )
+  }
+
+  it('renders a clear button only when clearable and a value is selected', () => {
+    expect(markup({ value: 'tce:feature:favored-foe', clearable: true })).toContain('combobox-clear')
+    expect(markup({ value: '', clearable: true })).not.toContain('combobox-clear')
+    expect(markup({ value: 'tce:feature:favored-foe' })).not.toContain('combobox-clear')
+  })
+
+  it('labels the clear button in the active locale', () => {
+    expect(markup({ value: 'tce:feature:favored-foe', clearable: true })).toContain(
+      'aria-label="Optional feature：清除選擇"',
+    )
   })
 })
