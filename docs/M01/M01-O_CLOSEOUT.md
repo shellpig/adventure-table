@@ -45,6 +45,18 @@ ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET=1 npm run test:e2e:docker -- e2e/m01
 
 E2E 走容器化 `web` / `server`（KI-ENV-001 規避路徑），reset 前已確認 DB 只有 P0 fixture 與前次 E2E 殘留角色，並以 `pg_dump` 備份。
 
+合併回 `main` 前於 `56310b0` 執行全套 E2E：
+
+```text
+ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET=1 npm run test:e2e:docker
+127 total：120 passed, 3 failed, 4 skipped (10.1m)
+
+ADVENTURE_TABLE_MCP_PUBLIC_ORIGIN= ... npm run test:e2e:docker -- e2e/m04c-ai-join-kit.spec.ts
+5 passed
+```
+
+3 個 failed 全在 `m04c-ai-join-kit.spec.ts`，原因是本機 `.env` 帶著 M04-B 真實 ChatGPT 測試留下的 `ADVENTURE_TABLE_MCP_PUBLIC_ORIGIN`，compose 轉給 server 後 `/api/mcp/public-origin` 回傳 Tailscale origin，而該 spec 斷言「尚未設定公網入口」狀態（M04-C closeout 的 E2E 證據來自未設此變數的 CI）。把變數清空重跑 5 / 5 通過，與 M01-O 無關。4 個 skipped 為既有靜態 gate：`character-sheet` visual smoke、`KI-M01J-001` fixme、`m03c` 兩條 xge-less 專用案例。
+
 M01-O backend 覆蓋為 7 個測試檔（`tests/test_m01o_*.py`）共 50 個測試，加上 `scripts/verify_m01o_feat_inventory.py`；各契約與測試的逐條對照見 `測試指南.md` §10.14。瀏覽器覆蓋為 `apps/web/e2e/m01o-feats.spec.ts`（O-E2E-01～06，FC-E2E-23），共用 helper `e2e/support/builderUi.ts`。前端單元測試新增 `src/i18n/m01oBuilderMessages.test.ts`。
 
 ## M01-O Closeout Evidence
