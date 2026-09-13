@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "xge",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "xge:feat:bountiful-luck": {"name": "慷慨幸運", "data.desc.0": "你可以用反應讓 30 呎內可見盟友重擲一次 d20 的 1；你的幸運特質到下回合結束前無法使用。"},
+    "xge:feat:dragon-fear": {"name": "龍裔恐懼", "data.desc.0": "力量、體質或魅力 +1；你可以消耗吐息武器次數，使 30 呎內指定生物陷入恐懼。"},
+    "xge:feat:dragon-hide": {"name": "龍裔鱗甲", "data.desc.0": "力量、體質或魅力 +1；你的鱗片提供未著甲 AC 候選值，且利爪可作為天生武器使用。"},
+    "xge:feat:drow-high-magic": {"name": "卓爾高等魔法", "data.desc.0": "你可隨意施展偵測魔法，並可各以魅力每日一次施展浮空術與解除魔法。"},
+    "xge:feat:dwarven-fortitude": {"name": "矮人堅毅", "data.desc.0": "體質 +1；當你在戰鬥中採取閃避動作時，可以花費生命骰恢復生命值。"},
+    "xge:feat:elven-accuracy": {"name": "精靈精準", "data.desc.0": "敏捷、智力、感知或魅力 +1；以這些屬性進行有優勢的攻擊時，可以重擲其中一顆骰。"},
+    "xge:feat:fade-away": {"name": "隱沒", "data.desc.0": "敏捷或智力 +1；受傷後可以用反應隱形，直到下回合結束或你攻擊、造成傷害、迫使豁免為止。"},
+    "xge:feat:fey-teleportation": {"name": "妖精傳送", "data.desc.0": "智力或魅力 +1，學會森林語，並可用智力每短休或長休一次施展迷蹤步。"},
+    "xge:feat:flames-of-phlegethos": {"name": "弗萊格索斯之焰", "data.desc.0": "智力或魅力 +1；強化火焰法術傷害骰，並在施展火焰法術後以火焰環繞自身。"},
+    "xge:feat:infernal-constitution": {"name": "煉獄體質", "data.desc.0": "體質 +1，獲得寒冷與毒素傷害抗性，並對抗中毒的豁免具有優勢。"},
+    "xge:feat:orcish-fury": {"name": "獸人狂怒", "data.desc.0": "力量或體質 +1；每次休息一次，在命中時加入額外武器傷害骰，並在堅韌耐力觸發後取得反應攻擊機會。"},
+    "xge:feat:prodigy": {"name": "奇才", "data.desc.0": "獲得一項技能熟練、一項工具熟練、一種語言，並在一項已熟練技能上取得專精。"},
+    "xge:feat:second-chance": {"name": "第二次機會", "data.desc.0": "敏捷、體質或魅力 +1；可在可見生物命中你時用反應迫使重擲，並在休息或先攻時恢復。"},
+    "xge:feat:squat-nimbleness": {"name": "矮小靈巧", "data.desc.0": "力量或敏捷 +1，步行速度 +5 呎，獲得特技或運動熟練，並更擅長掙脫擒抱。"},
+    "xge:feat:wood-elf-magic": {"name": "木精靈魔法", "data.desc.0": "學會一個德魯伊戲法，並可用感知每日一次施展大步奔行與行蹤無跡。"}
+  }
+}

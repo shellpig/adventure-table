@@ -18,7 +18,8 @@
     {"name": "levels-m01j-01", "kind": "level", "file": "levels-m01j-01.json", "count": 80},
     {"name": "levels-m01j-02", "kind": "level", "file": "levels-m01j-02.json", "count": 46},
     {"name": "subclasses-m01j-01", "kind": "subclass", "file": "subclasses-m01j-01.json", "count": 31},
-    {"name": "spells-m01l", "kind": "spell", "file": "spells-m01l.json", "count": 1}
+    {"name": "spells-m01l", "kind": "spell", "file": "spells-m01l.json", "count": 1},
+    {"name": "feats-m01o", "kind": "feat", "file": "feats-m01o.json", "count": 15}
   ],
-  "total_entries": 266
+  "total_entries": 281
 }

@@ -686,6 +686,13 @@ def compile_builder_draft(
                         )
                     )
                 ),
+                    skill_expertise_refs=tuple(
+                        dict.fromkeys(
+                            (
+                                *feat_compilation.expertise_refs,
+                            )
+                        )
+                    ),
                 language_refs=tuple(dict.fromkeys((*base_languages, *feat_compilation.language_refs))),
                 feature_refs=tuple(
                     dict.fromkeys(

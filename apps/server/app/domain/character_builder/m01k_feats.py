@@ -12,6 +12,11 @@ from app.domain.character.schemas import (
     SpellAccessEntry,
     StaticDerivedModifier,
 )
+from app.domain.character_builder.m01o_prerequisites import (
+    M01OPrerequisiteContext,
+    is_m01o_prerequisite_type,
+    m01o_requirement_failure,
+)
 from app.domain.character_builder.basics import resolve_creation_summary
 from app.domain.character_builder.schemas import (
     BuilderChoice,
@@ -21,6 +26,7 @@ from app.domain.character_builder.schemas import (
     BuilderIssueSeverity,
     BuilderOptionKind,
 )
+from app.domain.character_builder.progression import progression_summary
 from app.domain.character_builder.structural import compile_structural_selections
 
 
@@ -33,6 +39,9 @@ ABILITY_TO_INDEX = {
     "charisma": "cha",
 }
 ABILITY_LABELS = {key: value.upper() for key, value in ABILITY_TO_INDEX.items()}
+VARIANT_ANCESTRY_OVERRIDES = {
+    "phb2014:race:variant-human": "srd5.1:race:human",
+}
 FEAT_CHOICE_SOURCES = {"content:race-feat", "content:asi-feat"}
 FEAT_ABILITY_CAP = 20
 ARMOR_PROFICIENCY_IMPLICATIONS = {
@@ -51,6 +60,12 @@ class FeatEvaluationContext:
     abilities: dict[str, int] | None
     proficiencies: frozenset[str]
     has_spellcasting: bool
+    ancestry_ref: str | None = None
+    lineage_ref: str | None = None
+    size: str | None = None
+    feature_refs: frozenset[str] = frozenset()
+    skill_refs: frozenset[str] = frozenset()
+    expertise_refs: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -66,6 +81,7 @@ class FeatCompilation:
     proficiencies: tuple[str, ...]
     saving_throw_proficiencies: tuple[str, ...]
     skill_refs: tuple[str, ...]
+    expertise_refs: tuple[str, ...]
     language_refs: tuple[str, ...]
     feature_refs: tuple[str, ...]
     static_modifiers: tuple[StaticDerivedModifier, ...]
@@ -170,6 +186,20 @@ def _requirement_failure(
             failures.append(failure)
         return {"type": "any_of", "options": failures}
 
+    if is_m01o_prerequisite_type(req_type):
+        return m01o_requirement_failure(
+            requirement,
+            M01OPrerequisiteContext(
+                ability_scores=context.abilities,
+                ancestry_ref=context.ancestry_ref,
+                lineage_ref=context.lineage_ref,
+                size=context.size,
+                feature_refs=context.feature_refs,
+                proficiency_refs=context.proficiencies,
+                has_spellcasting=context.has_spellcasting,
+            ),
+        )
+
     return {"type": "unsupported"}
 
 
@@ -247,6 +277,16 @@ def feat_failure_reason(detail: FeatFailureDetail | None) -> str | None:
                 labels.append("the ability to cast at least one spell")
             elif failure_type == "any_of":
                 labels.append("one of the listed prerequisite alternatives")
+            elif failure_type == "ancestry":
+                labels.append("a specific ancestry")
+            elif failure_type == "lineage":
+                labels.append("a specific lineage")
+            elif failure_type == "size":
+                labels.append("a specific size")
+            elif failure_type == "proficiency":
+                labels.append("a required proficiency")
+            elif str(failure_type).endswith("_context_missing"):
+                labels.append("more character origin information")
     return "Requires " + (" and ".join(labels) if labels else "the feat prerequisites") + "."
 
 
@@ -283,10 +323,35 @@ def build_evaluation_context(
     extra_proficiencies: tuple[str, ...] = (),
 ) -> FeatEvaluationContext:
     classes = [registry.get_optional(item.class_ref) for item in draft.draft_payload.level_choices]
+    payload = draft.draft_payload
+    race_ref = (
+        payload.race_selection.reference_id
+        if payload.race_selection is not None
+        else None
+    )
+    race = registry.get_optional(race_ref) if race_ref is not None else None
+    race_size = race.data.get("size") if race is not None else None
+    nodes = progression_summary(draft, registry)
     return FeatEvaluationContext(
         abilities=abilities,
         proficiencies=frozenset((*_class_starting_proficiencies(draft, registry), *extra_proficiencies)),
         has_spellcasting=any(entry is not None and _class_has_spellcasting(entry) for entry in classes),
+        ancestry_ref=VARIANT_ANCESTRY_OVERRIDES.get(race_ref, race_ref),
+        lineage_ref=(
+            payload.lineage_selection.reference_id
+            if payload.lineage_selection is not None
+            else (
+                payload.subrace_selection.reference_id
+                if payload.subrace_selection is not None
+                else None
+            )
+        ),
+        size=race_size.lower() if isinstance(race_size, str) else None,
+        feature_refs=frozenset(
+            feature_ref
+            for node in nodes
+            for feature_ref in node.automatic_feature_refs
+        ),
     )
 
 
@@ -353,14 +418,40 @@ def _spell_options(
     source_class_ref: str | None,
     level: int | None,
     ritual: bool | None,
+    schools: tuple[str, ...] = (),
 ) -> tuple[ContentEntry, ...]:
     result: list[ContentEntry] = []
+    class_spell_refs: set[str] | None = None
+    if source_class_ref is not None:
+        class_entry = registry.get_optional(source_class_ref)
+        raw_spell_list = class_entry.data.get("spell_list") if class_entry is not None else None
+        if isinstance(raw_spell_list, list):
+            class_spell_refs = {
+                key
+                for item in raw_spell_list
+                if isinstance(item, dict)
+                if (key := reference_to_stable_key(item, kinds={"spell"})) is not None
+            }
     for spell in registry.list_kind("spell"):
         if level is not None and spell.data.get("level") != level:
             continue
         if ritual is not None and spell.data.get("ritual") is not ritual:
             continue
+        if schools:
+            school = spell.data.get("school")
+            school_index = None
+            if isinstance(school, dict):
+                school_index = school.get("index")
+                if school_index is None and isinstance(school.get("key"), str):
+                    school_index = parse_stable_key(school["key"]).index
+            if school_index not in schools:
+                continue
         if source_class_ref is not None:
+            if class_spell_refs is not None:
+                if spell.key not in class_spell_refs:
+                    continue
+                result.append(spell)
+                continue
             raw_classes = spell.data.get("classes")
             if not isinstance(raw_classes, list):
                 continue
@@ -394,11 +485,55 @@ def _class_has_attack_roll_cantrip(registry: ContentRegistry, class_ref: str) ->
     return False
 
 
+def _choice_pool_options(
+    registry: ContentRegistry,
+    pool: str,
+) -> tuple[ContentEntry, ...]:
+    return tuple(
+        entry
+        for entry in registry.list_kind("feature")
+        if isinstance(entry.data.get("choice_pool_option"), dict)
+        and entry.data["choice_pool_option"].get("pool") == pool
+    )
+
+
+def _fighter_fighting_style_options(registry: ContentRegistry) -> tuple[ContentEntry, ...]:
+    keys = {
+        "srd5.1:feature:fighter-fighting-style-archery",
+        "srd5.1:feature:fighter-fighting-style-defense",
+        "srd5.1:feature:fighter-fighting-style-dueling",
+        "srd5.1:feature:fighter-fighting-style-great-weapon-fighting",
+        "srd5.1:feature:fighter-fighting-style-protection",
+        "srd5.1:feature:fighter-fighting-style-two-weapon-fighting",
+    }
+    result = [entry for key in keys if (entry := registry.get_optional(key)) is not None]
+    result.extend(_choice_pool_options(registry, "fighting-style"))
+    return tuple({entry.key: entry for entry in result}.values())
+
+
+def _filter_allowed_choice_options(
+    options: tuple[BuilderChoiceOption, ...],
+    raw: dict[str, object],
+) -> tuple[BuilderChoiceOption, ...]:
+    allowed_refs = raw.get("allowed_refs")
+    if not isinstance(allowed_refs, list):
+        return options
+    allowed = {item for item in allowed_refs if isinstance(item, str)}
+    if not allowed:
+        return ()
+    return tuple(
+        option
+        for option in options
+        if option.option_id in allowed or option.reference_id in allowed
+    )
+
+
 def _feat_nested_choices(
     draft: BuilderDraft,
     registry: ContentRegistry,
     opportunity_id: str,
     feat: ContentEntry,
+    context: FeatEvaluationContext | None = None,
 ) -> tuple[BuilderChoice, ...]:
     result: list[BuilderChoice] = []
     ability = feat.data.get("ability_increase")
@@ -444,14 +579,114 @@ def _feat_nested_choices(
                 )
         elif kind == "language":
             options = _reference_options(registry.list_kind("language"))
-        elif kind == "maneuver":
-            maneuvers = tuple(
-                entry
-                for entry in registry.list_kind("feature")
-                if isinstance(entry.data.get("choice_pool_option"), dict)
-                and entry.data["choice_pool_option"].get("pool") == "battle-master-maneuver"
+        elif kind == "skill":
+            options = _reference_options(
+                tuple(
+                    entry
+                    for entry in registry.list_kind("proficiency")
+                    if entry.data.get("type") == "Skills"
+                )
             )
-            options = _reference_options(maneuvers)
+        elif kind == "tool":
+            options = _reference_options(
+                tuple(
+                    entry
+                    for entry in registry.list_kind("proficiency")
+                    if entry.data.get("type") not in {"Armor", "Weapons", "Skills"}
+                )
+            )
+        elif kind == "artisan_tool":
+            allowed = {
+                "alchemists-supplies",
+                "brewers-supplies",
+                "calligraphers-supplies",
+                "carpenters-tools",
+                "cartographers-tools",
+                "cobblers-tools",
+                "cooks-utensils",
+                "glassblowers-tools",
+                "jewelers-tools",
+                "leatherworkers-tools",
+                "masons-tools",
+                "painters-supplies",
+                "potters-tools",
+                "smiths-tools",
+                "tinkers-tools",
+                "weavers-tools",
+                "woodcarvers-tools",
+            }
+            options = _reference_options(
+                tuple(
+                    entry
+                    for entry in registry.list_kind("proficiency")
+                    if parse_stable_key(entry.key).index in allowed
+                )
+            )
+        elif kind == "expertise":
+            skill_refs = set(context.skill_refs if context is not None else ())
+            prerequisite_choice = raw.get("include_from_choice")
+            if isinstance(prerequisite_choice, str) and prerequisite_choice in choice_ids:
+                for selected in _selection(draft, choice_ids[prerequisite_choice]):
+                    if stable_key_is_kind(selected, "proficiency"):
+                        parsed = parse_stable_key(selected)
+                        if parsed.index.startswith("skill-"):
+                            skill_refs.add(stable_key(parsed.source, "skill", parsed.index.removeprefix("skill-")))
+            expertise_refs = set(context.expertise_refs if context is not None else ())
+            options = tuple(
+                BuilderChoiceOption(
+                    option_id=skill_ref,
+                    label=_entry_label(entry) if (entry := registry.get_optional(skill_ref)) is not None else skill_ref,
+                    kind=BuilderOptionKind.REFERENCE,
+                    reference_id=skill_ref,
+                    disabled_reason=(
+                        "This skill already has expertise."
+                        if skill_ref in expertise_refs
+                        else None
+                    ),
+                    disabled_reason_code=(
+                        "skill_already_has_expertise"
+                        if skill_ref in expertise_refs
+                        else None
+                    ),
+                )
+                for skill_ref in sorted(skill_refs)
+            )
+        elif kind == "maneuver":
+            options = _reference_options(_choice_pool_options(registry, "battle-master-maneuver"))
+        elif kind == "fighting_style":
+            owned = set(context.feature_refs if context is not None else ())
+            options = tuple(
+                option.model_copy(
+                    update={
+                        "disabled_reason": (
+                            "This fighting style is already known."
+                            if option.option_id in owned
+                            else None
+                        ),
+                        "disabled_reason_code": (
+                            "feat_fighting_style_already_known"
+                            if option.option_id in owned
+                            else None
+                        ),
+                    }
+                )
+                for option in _reference_options(_fighter_fighting_style_options(registry))
+            )
+        elif kind == "invocation":
+            options = _reference_options(_choice_pool_options(registry, "eldritch-invocation"))
+        elif kind == "metamagic":
+            options = _reference_options(
+                (
+                    *_choice_pool_options(registry, "metamagic"),
+                    *tuple(
+                        entry
+                        for entry in registry.list_kind("feature", source="srd5.1")
+                        if parse_stable_key(entry.key).index.startswith("metamagic-")
+                        and parse_stable_key(entry.key).index
+                        not in {"metamagic-1", "metamagic-2", "metamagic-3"}
+                    ),
+                )
+            )
         elif kind == "spellcasting_source":
             refs = raw.get("class_refs")
             entries = tuple(
@@ -488,7 +723,7 @@ def _feat_nested_choices(
                 options = _reference_options(entries)
         elif kind == "spell":
             source_choice = raw.get("from_source_choice")
-            source_ref = None
+            source_ref = raw.get("source_class_ref") if isinstance(raw.get("source_class_ref"), str) else None
             if isinstance(source_choice, str) and source_choice in choice_ids:
                 selected_source = _selection(draft, choice_ids[source_choice])
                 if len(selected_source) == 1:
@@ -498,8 +733,15 @@ def _feat_nested_choices(
                     disabled_code = "feat_spell_source_required"
             level = raw.get("level") if isinstance(raw.get("level"), int) else None
             ritual = raw.get("ritual") if isinstance(raw.get("ritual"), bool) else None
+            schools = tuple(item for item in raw.get("schools", ()) if isinstance(item, str))
             options = _reference_options(
-                _spell_options(registry, source_class_ref=source_ref, level=level, ritual=ritual)
+                _spell_options(
+                    registry,
+                    source_class_ref=source_ref,
+                    level=level,
+                    ritual=ritual,
+                    schools=schools,
+                )
             ) if disabled_reason is None else ()
         elif kind == "skill_or_tool_proficiency":
             entries = tuple(
@@ -521,6 +763,7 @@ def _feat_nested_choices(
             )
             options = _reference_options(entries)
 
+        options = _filter_allowed_choice_options(options, raw)
         result.append(
             BuilderChoice(
                 choice_id=choice_id,
@@ -576,7 +819,7 @@ def enrich_feat_choices(
             continue
         if not stable_key_is_kind(feat.key, "feat"):
             continue
-        result.extend(_feat_nested_choices(draft, registry, choice.choice_id, feat))
+        result.extend(_feat_nested_choices(draft, registry, choice.choice_id, feat, context))
         acquired.append(feat.key)
     return tuple(result)
 
@@ -629,6 +872,7 @@ def compile_feat_acquisitions(
     proficiencies: list[str] = []
     saves: list[str] = []
     skills: list[str] = []
+    expertise: list[str] = []
     languages: list[str] = []
     features: list[str] = []
     static_modifiers: list[StaticDerivedModifier] = []
@@ -704,11 +948,15 @@ def compile_feat_acquisitions(
         raw_resource = feat.data.get("resource")
         if isinstance(raw_resource, dict):
             recharge = raw_resource.get("recharge")
+            allowed_spend_tags = raw_resource.get("allowed_spend_tags")
             resources.append(FeatResourceGrant(
                 resource_id=str(raw_resource.get("resource_id")),
                 capacity=int(raw_resource.get("capacity", 1)),
                 die_size=(int(raw_resource["die_size"]) if isinstance(raw_resource.get("die_size"), int) else None),
                 recharge=tuple(item for item in recharge if item in {"short_rest", "long_rest"}) if isinstance(recharge, list) else (),
+                allowed_spend_tags=tuple(
+                    item for item in allowed_spend_tags if isinstance(item, str)
+                ) if isinstance(allowed_spend_tags, list) else (),
                 stacking="aggregate-superiority-dice" if raw_resource.get("stacking") == "aggregate-superiority-dice" else "separate",
                 source_ref=feat.key,
             ))
@@ -731,9 +979,21 @@ def compile_feat_acquisitions(
                 kind = raw.get("kind")
                 if kind == "language":
                     languages.extend(value for value in values if stable_key_is_kind(value, "language"))
-                elif kind == "maneuver":
+                elif kind in {"maneuver", "fighting_style", "invocation", "metamagic"}:
                     features.extend(value for value in values if stable_key_is_kind(value, "feature"))
-                elif kind in {"skill_or_tool_proficiency", "weapon_proficiency"}:
+                elif kind == "skill":
+                    for value in values:
+                        if stable_key_is_kind(value, "proficiency"):
+                            parsed = parse_stable_key(value)
+                            if parsed.index.startswith("skill-"):
+                                skill_ref = stable_key(parsed.source, "skill", parsed.index.removeprefix("skill-"))
+                                if registry.get_optional(skill_ref) is not None:
+                                    skills.append(skill_ref)
+                elif kind == "expertise":
+                    for value in values:
+                        if stable_key_is_kind(value, "skill"):
+                            expertise.append(value)
+                elif kind in {"skill_or_tool_proficiency", "weapon_proficiency", "tool", "artisan_tool"}:
                     for value in values:
                         if not stable_key_is_kind(value, "proficiency"):
                             continue
@@ -755,6 +1015,15 @@ def compile_feat_acquisitions(
                     source_values = selections.get(str(source_choice), ()) if source_choice is not None else ()
                     source_key = source_values[0] if len(source_values) == 1 else feat.key
                     access_type = "granted"
+                    selected_ability = None
+                    selected = selections.get("ability", ())
+                    if len(selected) == 1 and selected[0].startswith("ability:"):
+                        selected_ability = selected[0].removeprefix("ability:")
+                    casting_ability = raw.get("casting_ability")
+                    if casting_ability == "$ability_choice":
+                        casting_ability = selected_ability
+                    recharge = raw.get("recharge_types")
+                    uses = raw.get("uses_per_rest")
                     for spell_ref in values:
                         if not stable_key_is_kind(spell_ref, "spell"):
                             continue
@@ -765,7 +1034,51 @@ def compile_feat_acquisitions(
                             source_type="feat",
                             source_key=feat.key,
                             access_type=access_type,
+                            casting_ability=casting_ability if isinstance(casting_ability, str) else None,
+                            uses_per_rest=uses if isinstance(uses, int) else None,
+                            recharge_types=tuple(
+                                item for item in recharge if item in {"short_rest", "long_rest"}
+                            ) if isinstance(recharge, list) else (),
                         ))
+
+        raw_languages = feat.data.get("language_grants")
+        if isinstance(raw_languages, list):
+            languages.extend(value for value in raw_languages if isinstance(value, str))
+
+        raw_features = feat.data.get("feature_grants")
+        if isinstance(raw_features, list):
+            features.extend(value for value in raw_features if isinstance(value, str))
+
+        raw_spell_grants = feat.data.get("spell_grants")
+        if isinstance(raw_spell_grants, list):
+            selected_ability = None
+            selected = selections.get("ability", ())
+            if len(selected) == 1 and selected[0].startswith("ability:"):
+                selected_ability = selected[0].removeprefix("ability:")
+            for raw_spell in raw_spell_grants:
+                if not isinstance(raw_spell, dict):
+                    continue
+                spell_ref = raw_spell.get("spell_ref")
+                if not isinstance(spell_ref, str) or not stable_key_is_kind(spell_ref, "spell"):
+                    continue
+                ability = raw_spell.get("casting_ability")
+                if ability == "$ability_choice":
+                    ability = selected_ability
+                recharge = raw_spell.get("recharge_types")
+                uses = raw_spell.get("uses_per_rest")
+                digest = sha256(f"{choice.choice_id}|fixed|{spell_ref}".encode("utf-8")).hexdigest()[:20]
+                spell_access.append(SpellAccessEntry(
+                    entry_id=f"feat:{digest}",
+                    spell_key=spell_ref,
+                    source_type="feat",
+                    source_key=feat.key,
+                    access_type="granted",
+                    casting_ability=ability if isinstance(ability, str) else None,
+                    uses_per_rest=uses if isinstance(uses, int) else None,
+                    recharge_types=tuple(
+                        item for item in recharge if item in {"short_rest", "long_rest"}
+                    ) if isinstance(recharge, list) else (),
+                ))
 
         acquisition = FeatAcquisition(
             acquisition_id=_acquisition_id(choice.choice_id),
@@ -788,6 +1101,7 @@ def compile_feat_acquisitions(
         proficiencies=tuple(dict.fromkeys(proficiencies)),
         saving_throw_proficiencies=tuple(dict.fromkeys(saves)),
         skill_refs=tuple(dict.fromkeys(skills)),
+        expertise_refs=tuple(dict.fromkeys(expertise)),
         language_refs=tuple(dict.fromkeys(languages)),
         feature_refs=tuple(dict.fromkeys(features)),
         static_modifiers=tuple(static_modifiers),

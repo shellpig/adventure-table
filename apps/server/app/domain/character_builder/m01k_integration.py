@@ -12,6 +12,7 @@ from app.domain.character_builder.basics import resolve_creation_summary
 from app.domain.character_builder.compiler import BuilderCompileResult
 from app.domain.character_builder.m01k_feats import (
     FeatEvaluationContext,
+    VARIANT_ANCESTRY_OVERRIDES,
     _class_has_attack_roll_cantrip,
     feat_failure_detail,
     feat_failure_reason,
@@ -22,6 +23,7 @@ from app.domain.character_builder.schemas import (
     BuilderIssue,
     BuilderIssueSeverity,
 )
+from app.domain.character_builder.progression import progression_summary
 from app.domain.character_builder.validation import make_validation_result
 from app.domain.rules.spellcasting import spellcasting_ability
 
@@ -46,7 +48,6 @@ SPELLCASTING_START_LEVEL = {
     "paladin": 2,
     "ranger": 2,
 }
-
 
 def _blocking(
     code: str,
@@ -359,6 +360,16 @@ def _class_spellcasting_through_level(
         if minimum is not None and class_level >= minimum:
             return True
 
+    nodes = progression_summary(draft, registry)
+    for node in nodes[:character_level]:
+        if any(
+            feature_ref.lower().replace("_", "-").endswith("-spellcasting")
+            or feature_ref.lower().replace("_", "-").endswith(":feature:spellcasting")
+            or feature_ref.lower().replace("_", "-").endswith(":feature:pact-magic")
+            for feature_ref in node.automatic_feature_refs
+        ):
+            return True
+
     if build is None:
         return False
 
@@ -513,6 +524,64 @@ def registry_safe_feat_id(value: str) -> bool:
         return False
 
 
+def _ancestry_ref(build: CharacterBuild | None) -> str | None:
+    if build is None:
+        return None
+    if build.ancestral_origin_ref is not None:
+        return build.ancestral_origin_ref
+    return VARIANT_ANCESTRY_OVERRIDES.get(build.race_ref, build.race_ref)
+
+
+def _draft_ancestry_ref(draft: BuilderDraft) -> str | None:
+    race = draft.draft_payload.race_selection
+    if race is None:
+        return None
+    return VARIANT_ANCESTRY_OVERRIDES.get(race.reference_id, race.reference_id)
+
+
+def _draft_lineage_ref(draft: BuilderDraft) -> str | None:
+    payload = draft.draft_payload
+    if payload.lineage_selection is not None:
+        return payload.lineage_selection.reference_id
+    if payload.subrace_selection is not None:
+        return payload.subrace_selection.reference_id
+    return None
+
+
+def _origin_size(build: CharacterBuild | None, registry: ContentRegistry) -> str | None:
+    if build is None:
+        return None
+    if build.size is not None:
+        return build.size
+    race = registry.get_optional(build.race_ref)
+    raw = race.data.get("size") if race is not None else None
+    return raw.lower() if isinstance(raw, str) else None
+
+
+def _draft_origin_size(draft: BuilderDraft, registry: ContentRegistry) -> str | None:
+    race_ref = _draft_ancestry_ref(draft)
+    if race_ref is None:
+        return None
+    race = registry.get_optional(race_ref)
+    raw = race.data.get("size") if race is not None else None
+    return raw.lower() if isinstance(raw, str) else None
+
+
+def _feature_refs_through_level(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+    character_level: int | None,
+) -> frozenset[str]:
+    nodes = progression_summary(draft, registry)
+    if character_level is None:
+        character_level = len(nodes)
+    return frozenset(
+        feature_ref
+        for node in nodes[:character_level]
+        for feature_ref in node.automatic_feature_refs
+    )
+
+
 def _apply_ordered_feat_prerequisites(
     draft: BuilderDraft,
     registry: ContentRegistry,
@@ -547,6 +616,20 @@ def _apply_ordered_feat_prerequisites(
                 feat_spellcasting
                 or _class_spellcasting_through_level(draft, registry, build, level)
             ),
+            ancestry_ref=_ancestry_ref(build) if build is not None else _draft_ancestry_ref(draft),
+            lineage_ref=(
+                (build.lineage_ref or build.subrace_ref)
+                if build is not None
+                else _draft_lineage_ref(draft)
+            ),
+            size=_origin_size(build, registry) if build is not None else _draft_origin_size(draft, registry),
+            feature_refs=(
+                frozenset(build.feature_refs)
+                if build is not None
+                else _feature_refs_through_level(draft, registry, level)
+            ),
+            skill_refs=frozenset(build.skill_choices if build is not None else ()),
+            expertise_refs=frozenset(build.skill_expertise_refs if build is not None else ()),
         )
         options = []
         for option in choice.options:

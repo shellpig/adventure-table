@@ -42,6 +42,7 @@ NON_REF_BUILD_FIELDS = frozenset(
         "feat_acquisitions.selections",
         "feat_acquisitions.source_opportunity",
         "feat_resource_grants",
+        "feat_resource_grants.allowed_spend_tags",
         "feat_resource_grants.capacity",
         "feat_resource_grants.die_size",
         "feat_resource_grants.recharge",

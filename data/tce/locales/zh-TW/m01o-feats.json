@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "source": "tce",
+  "review_status": "draft-human-review-required",
+  "entries": {
+    "tce:feat:artificer-initiate": {"name": "奇械學徒", "data.desc.0": "學會一個奇械師戲法與一個 1 環奇械師法術，獲得一項工匠工具熟練，並可用該工具作為智力法術的施法法器。"},
+    "tce:feat:chef": {"name": "廚師", "data.desc.0": "體質或感知 +1，獲得廚師用具熟練，並取得與休息料理和點心相關的支援能力。"},
+    "tce:feat:crusher": {"name": "碎擊者", "data.desc.0": "力量或體質 +1；鈍擊攻擊可推移目標，且鈍擊重擊能讓攻擊該目標更有利。"},
+    "tce:feat:eldritch-adept": {"name": "奧秘祈喚學徒", "data.desc.0": "前提為施法或契約魔法。學會一項魔能祈喚；有前提的祈喚限符合資格的術士選擇，升級時可替換。"},
+    "tce:feat:fey-touched": {"name": "妖精眷顧", "data.desc.0": "智力、感知或魅力 +1；學會迷蹤步與一個 1 環預言或惑控法術，並使用所選屬性施法。"},
+    "tce:feat:fighting-initiate": {"name": "戰鬥學徒", "data.desc.0": "前提為擁有軍用武器熟練。學會一項戰士戰鬥風格，並可在取得 ASI 等級時替換。"},
+    "tce:feat:gunner": {"name": "槍手", "data.desc.0": "敏捷 +1 並獲得火器熟練；裝填與近距離遠程攻擊相關效果保留為戰鬥延後處理。"},
+    "tce:feat:metamagic-adept": {"name": "超魔學徒", "data.desc.0": "前提為施法或契約魔法。學會兩項不同超魔選項，並獲得 2 點只能用於超魔的術法點。"},
+    "tce:feat:piercer": {"name": "穿刺者", "data.desc.0": "力量或敏捷 +1；穿刺傷害可每回合重擲一次傷害骰，且穿刺重擊可加入額外傷害骰。"},
+    "tce:feat:poisoner": {"name": "毒師", "data.desc.0": "獲得製毒工具熟練；忽略毒素抗性與製毒、塗毒效果保留為物品與戰鬥延後處理。"},
+    "tce:feat:shadow-touched": {"name": "陰影眷顧", "data.desc.0": "智力、感知或魅力 +1；學會隱形術與一個 1 環幻術或死靈法術，並使用所選屬性施法。"},
+    "tce:feat:skill-expert": {"name": "技能專家", "data.desc.0": "任一屬性 +1，獲得一項技能熟練，並在一項已熟練技能上取得專精。"},
+    "tce:feat:slasher": {"name": "斬擊者", "data.desc.0": "力量或敏捷 +1；斬擊傷害可降低速度，且斬擊重擊會造成攻擊劣勢。"},
+    "tce:feat:telekinetic": {"name": "念動力", "data.desc.0": "智力、感知或魅力 +1；學會或強化法師之手，並取得保留為戰鬥延後處理的念動推移。"},
+    "tce:feat:telepathic": {"name": "心靈感應", "data.desc.0": "智力、感知或魅力 +1；可在 60 呎內單向心靈溝通，並可用所選屬性每日一次施展偵測思想。"}
+  }
+}

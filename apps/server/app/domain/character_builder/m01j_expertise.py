@@ -82,7 +82,7 @@ def apply_m01j_skill_expertise(
     """
 
     class_levels = Counter(build.class_progression)
-    refs: list[str] = []
+    refs: list[str] = list(build.skill_expertise_refs)
 
     for selection in build.subclasses:
         grant = EXPERTISE_GRANTS.get(selection.subclass_ref)

@@ -288,6 +288,7 @@ class FeatResourceGrant(FrozenModel):
     capacity: int = Field(ge=1)
     die_size: int | None = Field(default=None, ge=2, le=20)
     recharge: tuple[RestType, ...] = ()
+    allowed_spend_tags: tuple[str, ...] = ()
     stacking: Literal["separate", "aggregate-superiority-dice"] = "separate"
     source_ref: StableKey
 
@@ -301,6 +302,13 @@ class FeatResourceGrant(FrozenModel):
     def recharge_values_are_unique(cls, value: tuple[str, ...]) -> tuple[str, ...]:
         if len(value) != len(set(value)):
             raise ValueError("feat resource recharge values must be unique")
+        return value
+
+    @field_validator("allowed_spend_tags")
+    @classmethod
+    def allowed_spend_tags_are_unique(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if len(value) != len(set(value)):
+            raise ValueError("feat resource spend tags must be unique")
         return value
 
 
