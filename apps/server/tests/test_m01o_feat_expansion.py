@@ -3,17 +3,26 @@
 from __future__ import annotations
 
 import m01k_support as S
+import m01m_support
 from app.content.localization_files import load_content_localization_catalog
 from app.paths import resolve_content_root
 
 
 PRODIGY = "xge:feat:prodigy"
 SQUAT_NIMBLENESS = "xge:feat:squat-nimbleness"
+DRAGON_FEAR = "xge:feat:dragon-fear"
+DROW_HIGH_MAGIC = "xge:feat:drow-high-magic"
+ELVEN_ACCURACY = "xge:feat:elven-accuracy"
+INFERNAL_CONSTITUTION = "xge:feat:infernal-constitution"
+FLAMES_OF_PHLEGETHOS = "xge:feat:flames-of-phlegethos"
 ARTIFICER_INITIATE = "tce:feat:artificer-initiate"
+CHEF = "tce:feat:chef"
 ELDRITCH_ADEPT = "tce:feat:eldritch-adept"
 FEY_TOUCHED = "tce:feat:fey-touched"
+FIGHTING_INITIATE = "tce:feat:fighting-initiate"
 GUNNER = "tce:feat:gunner"
 METAMAGIC_ADEPT = "tce:feat:metamagic-adept"
+POISONER = "tce:feat:poisoner"
 SKILL_EXPERT = "tce:feat:skill-expert"
 
 
@@ -364,3 +373,296 @@ def test_typed_static_facts_land_on_the_build_and_round_trip() -> None:
     ]
     for build in (gunner.build_candidate, telepathic.build_candidate, artificer.build_candidate):
         assert CharacterBuild.model_validate_json(build.model_dump_json()) == build
+
+
+def test_dragon_fear_requires_dragonborn_ancestry() -> None:
+    dragonborn = _available_result(race="srd5.1:race:dragonborn")
+    human = _available_result(race="srd5.1:race:human")
+
+    assert _feat_option(dragonborn, DRAGON_FEAR).disabled_reason is None
+    human_option = _feat_option(human, DRAGON_FEAR)
+    assert human_option.disabled_reason_code == "feat_prerequisite_not_met"
+
+    # Reject selection zero-side-effect assert
+    rejected_result, _, _ = S.feat_draft(
+        DRAGON_FEAR,
+        race="srd5.1:race:human",
+        nested={"ability": ("ability:strength",)},
+        fill_rest=False,
+    )
+    assert "feat_prerequisite_not_met" in S.issue_codes(rejected_result)
+    assert rejected_result.build_candidate is None or not any(
+        fa.feat_ref == DRAGON_FEAR for fa in rejected_result.build_candidate.feat_acquisitions
+    )
+    baseline = S.auto_fill(S.payload(S.levels_for(S.FIGHTER_L4), race="srd5.1:race:human"), S.registry())
+    baseline_res, _ = S.compile_payload(baseline, S.registry())
+    effective_str = next(a.effective for a in rejected_result.resolved_summary.ability_scores if a.ability == "strength")
+    baseline_str = next(a.effective for a in baseline_res.resolved_summary.ability_scores if a.ability == "strength")
+    assert effective_str == baseline_str
+
+
+def test_drow_high_magic_requires_drow_lineage_not_any_elf() -> None:
+    content = S.registry()
+    levels = S.levels_for(S.FIGHTER_L4)
+
+    # 1. Drow -> eligible
+    drow_payload = m01m_support.with_subrace(
+        S.payload(levels, race="srd5.1:race:elf"),
+        "phb2014:subrace:drow",
+    )
+    drow_base = S.auto_fill(drow_payload, content)
+    drow_result, _ = S.compile_payload(drow_base, content)
+    assert _feat_option(drow_result, DROW_HIGH_MAGIC).disabled_reason is None
+
+    # 2. High Elf -> feat_prerequisite_not_met, requirements[0]["type"] == "lineage"
+    high_elf_payload = m01m_support.with_subrace(
+        S.payload(levels, race="srd5.1:race:elf"),
+        "srd5.1:subrace:high-elf",
+    )
+    high_elf_base = S.auto_fill(high_elf_payload, content)
+    high_elf_result, _ = S.compile_payload(high_elf_base, content)
+    high_elf_option = _feat_option(high_elf_result, DROW_HIGH_MAGIC)
+    assert high_elf_option.disabled_reason_code == "feat_prerequisite_not_met"
+    assert high_elf_option.disabled_reason_params["requirements"][0]["type"] == "lineage"
+
+    # 3. Half-Elf (no subrace) -> rejected
+    half_elf_result = _available_result(race="srd5.1:race:half-elf")
+    half_elf_option = _feat_option(half_elf_result, DROW_HIGH_MAGIC)
+    assert half_elf_option.disabled_reason_code == "feat_prerequisite_not_met"
+
+    # Rejection selection zero-side-effect assert
+    opp = S.feat_opportunities(high_elf_result)[0]
+    rejected_payload = S.with_selections(
+        high_elf_base,
+        {opp.choice_id: S.selection(opp.choice_id, DROW_HIGH_MAGIC, source_ref=opp.source_ref)},
+    )
+    rejected_result, _ = S.compile_payload(rejected_payload, content)
+    assert "feat_prerequisite_not_met" in S.issue_codes(rejected_result)
+    issue = next(i for i in rejected_result.validation.issues if i.code == "feat_prerequisite_not_met")
+    assert issue.message_params["requirements"][0]["type"] == "lineage"
+    assert rejected_result.build_candidate is None or not any(
+        fa.feat_ref == DROW_HIGH_MAGIC for fa in rejected_result.build_candidate.feat_acquisitions
+    )
+
+
+def test_elven_accuracy_accepts_elf_and_half_elf_and_rejects_human() -> None:
+    elf = _available_result(race="srd5.1:race:elf")
+    half_elf = _available_result(race="srd5.1:race:half-elf")
+    human = _available_result(race="srd5.1:race:human")
+
+    assert _feat_option(elf, ELVEN_ACCURACY).disabled_reason is None
+    assert _feat_option(half_elf, ELVEN_ACCURACY).disabled_reason is None
+    human_option = _feat_option(human, ELVEN_ACCURACY)
+    assert human_option.disabled_reason_code == "feat_prerequisite_not_met"
+
+    # Rejection selection zero-side-effect assert
+    rejected_result, _, _ = S.feat_draft(
+        ELVEN_ACCURACY,
+        race="srd5.1:race:human",
+        nested={"ability": ("ability:dexterity",)},
+        fill_rest=False,
+    )
+    assert "feat_prerequisite_not_met" in S.issue_codes(rejected_result)
+    assert rejected_result.build_candidate is None or not any(
+        fa.feat_ref == ELVEN_ACCURACY for fa in rejected_result.build_candidate.feat_acquisitions
+    )
+    baseline = S.auto_fill(S.payload(S.levels_for(S.FIGHTER_L4), race="srd5.1:race:human"), S.registry())
+    baseline_res, _ = S.compile_payload(baseline, S.registry())
+    effective_dex = next(a.effective for a in rejected_result.resolved_summary.ability_scores if a.ability == "dexterity")
+    baseline_dex = next(a.effective for a in baseline_res.resolved_summary.ability_scores if a.ability == "dexterity")
+    assert effective_dex == baseline_dex
+
+
+def test_fighting_initiate_rejects_a_build_without_martial_weapon_proficiency() -> None:
+    wizard = _available_result(spec=S.WIZARD_L8)
+    fighter = _available_result(spec=S.FIGHTER_L4)
+
+    wizard_option = _feat_option(wizard, FIGHTING_INITIATE)
+    assert wizard_option.disabled_reason_code == "feat_prerequisite_not_met"
+    assert wizard_option.disabled_reason_params["requirements"][0]["type"] == "proficiency"
+    assert _feat_option(fighter, FIGHTING_INITIATE).disabled_reason is None
+
+    # Rejection selection zero-side-effect assert
+    rejected_result, _, _ = S.feat_draft(
+        FIGHTING_INITIATE,
+        spec=S.WIZARD_L8,
+        nested={"style": ("srd5.1:feature:fighter-fighting-style-defense",)},
+        fill_rest=False,
+    )
+    assert "feat_prerequisite_not_met" in S.issue_codes(rejected_result)
+    assert rejected_result.build_candidate is None or not any(
+        fa.feat_ref == FIGHTING_INITIATE for fa in rejected_result.build_candidate.feat_acquisitions
+    )
+
+
+def test_race_variants_keep_their_base_ancestry_for_racial_feats() -> None:
+    content = S.registry()
+    levels = S.levels_for(S.FIGHTER_L4)
+
+    # Half-Elf + scag:race-variant:half-elf-wood-descent -> Elven Accuracy, Prodigy both available
+    half_elf_wood = m01m_support.with_variant(
+        S.payload(levels, race="srd5.1:race:half-elf"),
+        "scag:race-variant:half-elf-wood-descent",
+    )
+    half_elf_res, _ = S.compile_payload(S.auto_fill(half_elf_wood, content), content)
+    assert _feat_option(half_elf_res, ELVEN_ACCURACY).disabled_reason is None
+    assert _feat_option(half_elf_res, PRODIGY).disabled_reason is None
+
+    # Tiefling + mtf:race-variant:zariel-tiefling -> Infernal Constitution, Flames of Phlegethos both available
+    zariel_tiefling = m01m_support.with_variant(
+        S.payload(levels, race="srd5.1:race:tiefling"),
+        "mtf:race-variant:zariel-tiefling",
+    )
+    zariel_res, _ = S.compile_payload(S.auto_fill(zariel_tiefling, content), content)
+    assert _feat_option(zariel_res, INFERNAL_CONSTITUTION).disabled_reason is None
+    assert _feat_option(zariel_res, FLAMES_OF_PHLEGETHOS).disabled_reason is None
+
+    # Variant Human: Prodigy available, build.race_ref remains phb2014:race:variant-human
+    var_human_res = _available_result(race="phb2014:race:variant-human")
+    assert _feat_option(var_human_res, PRODIGY).disabled_reason is None
+    var_human_draft, _, _ = S.feat_draft(
+        PRODIGY,
+        race="phb2014:race:variant-human",
+        nested={
+            "skill": ("srd5.1:proficiency:skill-investigation",),
+            "tool": ("srd5.1:proficiency:thieves-tools",),
+            "language": ("srd5.1:language:elvish",),
+            "expertise": ("srd5.1:skill:investigation",),
+        },
+    )
+    assert var_human_draft.build_candidate.race_ref == "phb2014:race:variant-human"
+
+
+def test_chef_and_poisoner_reuse_the_canonical_tool_proficiency_identity() -> None:
+    content = S.registry()
+    assert [e.key for e in content.list_kind("proficiency") if "cooks-utensils" in e.key] == ["srd5.1:proficiency:cooks-utensils"]
+    assert [e.key for e in content.list_kind("proficiency") if "poisoners-kit" in e.key] == ["srd5.1:proficiency:poisoners-kit"]
+    assert not any("chef" in e.key or e.key.startswith("tce:proficiency:") for e in content.list_kind("proficiency"))
+
+    chef_res, _, _ = S.feat_draft(
+        CHEF,
+        spec=S.FIGHTER_L4,
+        nested={"ability": ("ability:constitution",)},
+    )
+    chef_build = chef_res.build_candidate
+    assert chef_build.proficiencies.count("srd5.1:proficiency:cooks-utensils") == 1
+
+    poisoner_res, _, _ = S.feat_draft(
+        POISONER,
+        spec=S.FIGHTER_L4,
+    )
+    poisoner_build = poisoner_res.build_candidate
+    assert poisoner_build.proficiencies.count("srd5.1:proficiency:poisoners-kit") == 1
+
+    # Background deduplication: Folk Hero with cooks-utensils chosen doesn't duplicate with Chef
+    folk_payload = S.payload(
+        S.levels_for(S.FIGHTER_L4),
+        background="phb2014:background:folk-hero",
+    )
+    folk_base = S.auto_fill(folk_payload, content)
+    compiled_first, _ = S.compile_payload(folk_base, content)
+    artisan_choice = next(
+        (c for c in compiled_first.choices if any("cooks-utensils" in opt.option_id for opt in c.options)),
+        None,
+    )
+    if artisan_choice is not None:
+        folk_base = S.with_selections(
+            folk_base,
+            {artisan_choice.choice_id: S.selection(artisan_choice.choice_id, "srd5.1:proficiency:cooks-utensils", source_ref=artisan_choice.source_ref)},
+        )
+    compiled_second, _ = S.compile_payload(folk_base, content)
+    opp = S.feat_opportunities(compiled_second)[0]
+    folk_chef_payload = S.with_selections(
+        folk_base,
+        {
+            opp.choice_id: S.selection(opp.choice_id, CHEF, source_ref=opp.source_ref),
+            **S.nested_selections(opp.choice_id, CHEF, {"ability": ("ability:constitution",)}),
+        },
+    )
+    folk_chef_res, _ = S.compile_payload(S.auto_fill(folk_chef_payload, content), content)
+    assert S.issue_codes(folk_chef_res) == set()
+    assert folk_chef_res.build_candidate.proficiencies.count("srd5.1:proficiency:cooks-utensils") == 1
+
+
+def test_metamagic_adept_rejects_duplicate_metamagic_selection() -> None:
+    result, _, opportunity = S.feat_draft(
+        METAMAGIC_ADEPT,
+        spec=S.WIZARD_L8,
+        nested={
+            "metamagic": (
+                "srd5.1:feature:metamagic-careful-spell",
+                "srd5.1:feature:metamagic-careful-spell",
+            )
+        },
+        fill_rest=False,
+    )
+
+    assert "duplicate_choice_option" in S.issue_codes(result)
+    issue = next(i for i in result.validation.issues if i.code == "duplicate_choice_option")
+    assert issue.message_params["choice_id"] == S.child_choice_id(opportunity, "metamagic")
+    assert result.build_candidate is None or not any(
+        grant.resource_id == "metamagic-adept-sorcery-points" for grant in result.build_candidate.feat_resource_grants
+    )
+
+
+def test_infernal_constitution_exposes_resistances_and_poison_save_advantage() -> None:
+    content = S.registry()
+    data = content.get(INFERNAL_CONSTITUTION).data
+    mechanics = data.get("mechanics", [])
+
+    res_mech = next(m for m in mechanics if m.get("kind") == "damage_resistance")
+    assert set(res_mech["damage_types"]) == {"cold", "poison"}
+    save_mech = next(m for m in mechanics if m.get("kind") == "save_advantage")
+    assert save_mech["against"] == "poisoned_condition"
+
+    baseline = S.auto_fill(
+        S.payload(S.levels_for(S.FIGHTER_L4), race="srd5.1:race:tiefling"),
+        content,
+    )
+    base_res, _ = S.compile_payload(baseline, content)
+    base_con = next(a.effective for a in base_res.resolved_summary.ability_scores if a.ability == "constitution")
+
+    result, _, _ = S.feat_draft(
+        INFERNAL_CONSTITUTION,
+        race="srd5.1:race:tiefling",
+        spec=S.FIGHTER_L4,
+    )
+    assert S.issue_codes(result) == set()
+    build = result.build_candidate
+    assert build.ability_scores.constitution == base_con + 1
+
+
+def test_expanded_spellcasting_atom_unlocks_phb_caster_feats_for_subclass_casters() -> None:
+    phb_caster_feats = (
+        "phb2014:feat:elemental-adept",
+        "phb2014:feat:spell-sniper",
+        "phb2014:feat:war-caster",
+    )
+
+    eldritch_knight_levels = S.class_levels(
+        "fighter",
+        4,
+        first_hp=10,
+        later_hp=6,
+        subclass_ref="phb2014:subclass:eldritch-knight",
+        subclass_level=3,
+    )
+    arcane_trickster_levels = S.class_levels(
+        "rogue",
+        4,
+        first_hp=8,
+        later_hp=5,
+        subclass_ref="phb2014:subclass:arcane-trickster",
+        subclass_level=3,
+    )
+
+    eldritch_knight = _available_result(levels=eldritch_knight_levels)
+    arcane_trickster = _available_result(levels=arcane_trickster_levels)
+    champion = _available_result(spec=S.FIGHTER_L4)
+    wizard = _available_result(spec=S.WIZARD_L8)
+
+    for feat_key in phb_caster_feats:
+        assert _feat_option(eldritch_knight, feat_key).disabled_reason is None
+        assert _feat_option(arcane_trickster, feat_key).disabled_reason is None
+        assert _feat_option(champion, feat_key).disabled_reason_code == "feat_prerequisite_not_met"
+        assert _feat_option(wizard, feat_key).disabled_reason is None
