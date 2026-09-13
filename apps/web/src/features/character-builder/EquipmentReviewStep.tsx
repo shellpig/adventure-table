@@ -18,6 +18,7 @@ import {
 import type { Locale } from '../../i18n/locale'
 import type { UiCopyKey } from '../../i18n/uiCopy'
 import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
+import { formatSkillWithAbility } from '../../i18n/skillPresentation'
 import { useUiCopy, type UiTranslator } from '../../i18n/useUiCopy'
 import { choiceAnchorId } from './choiceAnchor'
 import {
@@ -624,7 +625,13 @@ export function EquipmentReviewStep({
                         proficientSkills.has(skill) ? 'is-proficient' : undefined
                       }
                     >
-                      <span>{nameFor(`srd5.1:skill:${skill}`, titleCase(skill))}</span>
+                      <span>
+                        {formatSkillWithAbility(
+                          nameFor(`srd5.1:skill:${skill}`, titleCase(skill)),
+                          skill,
+                          t,
+                        )}
+                      </span>
                       <strong>{signed(modifier)}</strong>
                     </div>
                   ),

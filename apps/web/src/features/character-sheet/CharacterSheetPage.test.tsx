@@ -83,6 +83,9 @@ describe('P0-E Character Sheet', () => {
     expect(html).toContain('Roleplay / Biography')
     expect(html).toContain('No roleplay information has been entered yet')
     expect(html).toContain('role="combobox"')
+    expect(html).toContain('Athletics (STR)')
+    expect(html).toContain('Arcana (INT)')
+    expect(html).toContain('Perception (WIS)')
   })
 
   it('keeps spell access and prepared state visibly distinct without leaking raw source types', () => {

@@ -15,6 +15,7 @@ import type { SearchOption } from '../../components/SearchableSelect'
 import type { UiCopyKey } from '../../i18n/uiCopy'
 import { passiveInvestigationLabel } from '../../i18n/m01kCharacterSheetCopy'
 import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
+import { formatSkillWithAbility } from '../../i18n/skillPresentation'
 import { useUiCopy, type UiTranslator } from '../../i18n/useUiCopy'
 
 export type CharacterTab = 'attributes' | 'spells' | 'inventory'
@@ -523,7 +524,13 @@ export function CharacterSheetView({
                       key={key}
                       className={proficientSkills.has(key) ? 'is-proficient' : undefined}
                     >
-                      <span>{nameFor(`srd5.1:skill:${key}`, titleCase(key))}</span>
+                      <span>
+                        {formatSkillWithAbility(
+                          nameFor(`srd5.1:skill:${key}`, titleCase(key)),
+                          key,
+                          t,
+                        )}
+                      </span>
                       <strong>{signed(value)}</strong>
                     </div>
                   ))}
