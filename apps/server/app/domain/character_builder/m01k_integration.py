@@ -26,6 +26,7 @@ from app.domain.character_builder.schemas import (
     BuilderIssueSeverity,
     BuilderMode,
 )
+from app.domain.character_builder.optional_class_features import _pool_option_spec
 from app.domain.character_builder.progression import progression_summary
 from app.domain.character_builder.validation import make_validation_result
 from app.domain.rules.spellcasting import spellcasting_ability
@@ -800,6 +801,56 @@ def _validate_nested_feat_choices(
                 )
             )
     return tuple(issues)
+
+
+def disable_feat_granted_pool_options(
+    draft: BuilderDraft,
+    registry: ContentRegistry,
+    choices: tuple[BuilderChoice, ...],
+) -> tuple[BuilderChoice, ...]:
+    """Mirror of the feat-side exclusion: class pool choices cannot re-pick a feat grant.
+
+    Fighting Initiate / Martial Adept / Metamagic Adept selections are pool options
+    the class chooser must treat as already owned, so the Fighter style slot (or
+    Battle Master / Sorcerer slots) shows them disabled instead of only failing later
+    with ``duplicate_optional_pool_selection``.
+    """
+
+    granted: dict[str, str] = {}
+    for choice in choices:
+        if not (choice.option_source or "").startswith("content:feat:") or choice.disabled_reason is not None:
+            continue
+        option_by_id = {option.option_id: option for option in choice.options}
+        selected = draft.draft_payload.choice_selections.get(choice.choice_id)
+        for option_id in (selected.selected_option_ids if selected is not None else ()):
+            option = option_by_id.get(option_id)
+            reference = option.reference_id if option is not None else None
+            if reference is None or option.disabled_reason is not None:
+                continue
+            entry = registry.get_optional(reference)
+            if entry is not None and _pool_option_spec(entry) is not None:
+                granted[reference] = choice.source_ref or ""
+    if not granted:
+        return choices
+
+    result: list[BuilderChoice] = []
+    for choice in choices:
+        source = choice.option_source or ""
+        if source.startswith("content:feat:") or source.startswith("content:optional-feature:retraining-from:"):
+            result.append(choice)
+            continue
+        options = tuple(
+            option.model_copy(update={
+                "disabled_reason": "This option is already granted by a feat.",
+                "disabled_reason_code": "pool_option_granted_by_feat",
+                "disabled_reason_params": {"option_ref": option.reference_id, "feat_ref": granted[option.reference_id]},
+            })
+            if option.reference_id in granted and option.disabled_reason is None
+            else option
+            for option in choice.options
+        )
+        result.append(choice.model_copy(update={"options": options}))
+    return tuple(result)
 
 
 def _target_level_grants_asi(draft: BuilderDraft, choices: tuple[BuilderChoice, ...]) -> bool:

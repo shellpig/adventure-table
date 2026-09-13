@@ -55,6 +55,11 @@ def build_content_reference_keys(build: CharacterBuild) -> tuple[str, ...]:
     refs.extend(build.language_refs)
     refs.extend(build.feature_refs)
     refs.extend(build.feat_refs)
+    for fact in build.feat_static_facts:
+        refs.append(fact.source_ref)
+        tool_ref = getattr(fact, "tool_ref", None)
+        if tool_ref is not None:
+            refs.append(tool_ref)
     refs.extend(build.infusion_refs)
     for profile in build.spellcasting_profiles:
         refs.extend((profile.source_key, profile.class_ref))

@@ -10,6 +10,9 @@ from app.content.registry import ContentRegistry
 from app.content.schemas import ContentEntry
 from app.domain.character.schemas import (
     FeatAcquisition,
+    SpellcastingFocusFact,
+    TelepathyFact,
+    WeaponProficiencyCategoryFact,
     FeatResourceGrant,
     SpellAccessEntry,
     StaticDerivedModifier,
@@ -122,6 +125,7 @@ class FeatCompilation:
     resource_grants: tuple[FeatResourceGrant, ...]
     spell_access_entries: tuple[SpellAccessEntry, ...]
     walking_speed_bonus: int
+    static_facts: tuple[WeaponProficiencyCategoryFact | TelepathyFact | SpellcastingFocusFact, ...]
     issues: tuple[BuilderIssue, ...]
 
 
@@ -789,13 +793,6 @@ def _feat_nested_choices(
                         "disabled_reason": "This fighting style is already known.",
                         "disabled_reason_code": "feat_fighting_style_already_known",
                     })
-                elif isinstance(entry.data["choice_pool_option"].get("nested"), dict):
-                    # A style with its own nested choice (Superior Technique) needs the
-                    # class optional-feature runtime; the feat path cannot host it yet.
-                    option = option.model_copy(update={
-                        "disabled_reason": "This fighting style carries a nested choice the feat cannot grant.",
-                        "disabled_reason_code": "feat_pool_option_nested_unsupported",
-                    })
                 style_options.append(option)
             options = tuple(style_options)
         elif kind == "invocation":
@@ -1045,6 +1042,7 @@ def compile_feat_acquisitions(
     features: list[str] = []
     static_modifiers: list[StaticDerivedModifier] = []
     walking_speed_bonus = 0
+    static_facts: list[WeaponProficiencyCategoryFact | TelepathyFact | SpellcastingFocusFact] = []
     resources: list[FeatResourceGrant] = []
     spell_access: list[SpellAccessEntry] = []
     issues: list[BuilderIssue] = []
@@ -1257,6 +1255,34 @@ def compile_feat_acquisitions(
                     ) if isinstance(recharge, list) else (),
                 ))
 
+        for raw_mechanic in feat.data.get("mechanics", []):
+            if not isinstance(raw_mechanic, dict):
+                continue
+            mechanic_kind = raw_mechanic.get("kind")
+            if mechanic_kind == "weapon_proficiency_category":
+                static_facts.append(WeaponProficiencyCategoryFact(
+                    category=raw_mechanic.get("category"),
+                    source_ref=feat.key,
+                ))
+            elif mechanic_kind == "one_way_telepathy":
+                static_facts.append(TelepathyFact(
+                    range_ft=raw_mechanic.get("range_ft"),
+                    requires_visible_target=bool(raw_mechanic.get("requires_visible_target")),
+                    requires_shared_language=bool(raw_mechanic.get("requires_shared_language")),
+                    grants_reply=bool(raw_mechanic.get("grants_reply")),
+                    source_ref=feat.key,
+                ))
+            elif mechanic_kind == "spellcasting_focus_from_selected_tool":
+                # The focus is the very tool the acquisition selected; one choice, one fact.
+                tool_choice = raw_mechanic.get("tool_choice")
+                selected_tools = selections.get(str(tool_choice), ()) if tool_choice is not None else ()
+                if len(selected_tools) == 1 and stable_key_is_kind(selected_tools[0], "proficiency"):
+                    static_facts.append(SpellcastingFocusFact(
+                        tool_ref=selected_tools[0],
+                        casting_ability=raw_mechanic.get("applies_to_casting_ability"),
+                        source_ref=feat.key,
+                    ))
+
         acquisition = FeatAcquisition(
             acquisition_id=_acquisition_id(choice.choice_id),
             feat_ref=feat.key,
@@ -1283,6 +1309,7 @@ def compile_feat_acquisitions(
         feature_refs=tuple(dict.fromkeys(features)),
         static_modifiers=tuple(static_modifiers),
         walking_speed_bonus=walking_speed_bonus,
+        static_facts=tuple(static_facts),
         resource_grants=tuple(resources),
         spell_access_entries=tuple({entry.entry_id: entry for entry in spell_access}.values()),
         issues=tuple(issues),

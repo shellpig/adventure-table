@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -312,6 +312,57 @@ class FeatResourceGrant(FrozenModel):
         return value
 
 
+class WeaponProficiencyCategoryFact(FrozenModel):
+    """Proficiency with a weapon category that has no equipment entity yet (Gunner)."""
+
+    kind: Literal["weapon_proficiency_category"] = "weapon_proficiency_category"
+    category: Literal["firearms"]
+    source_ref: StableKey
+
+    @field_validator("source_ref")
+    @classmethod
+    def source_ref_is_stable(cls, value: str) -> str:
+        return require_stable_key(value)
+
+
+class TelepathyFact(FrozenModel):
+    """Build-owned one-way telepathic communication (Telepathic)."""
+
+    kind: Literal["one_way_telepathy"] = "one_way_telepathy"
+    range_ft: int = Field(ge=1)
+    requires_visible_target: bool
+    requires_shared_language: bool
+    grants_reply: bool
+    source_ref: StableKey
+
+    @field_validator("source_ref")
+    @classmethod
+    def source_ref_is_stable(cls, value: str) -> str:
+        return require_stable_key(value)
+
+
+class SpellcastingFocusFact(FrozenModel):
+    """A selected tool usable as a spellcasting focus for one casting ability (Artificer Initiate)."""
+
+    kind: Literal["spellcasting_focus"] = "spellcasting_focus"
+    tool_ref: StableKey
+    casting_ability: Literal["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]
+    source_ref: StableKey
+
+    @field_validator("tool_ref", "source_ref")
+    @classmethod
+    def refs_are_stable(cls, value: str) -> str:
+        return require_stable_key(value)
+
+
+# Typed static facts feats contribute to the Build. Each kind is a closed shape the
+# Rules Layer can read without a combat engine; presentation may lag behind.
+FeatStaticFact = Annotated[
+    WeaponProficiencyCategoryFact | TelepathyFact | SpellcastingFocusFact,
+    Field(discriminator="kind"),
+]
+
+
 class CharacterBuild(FrozenModel):
     ruleset: str = Field(default="dnd5e-2014", min_length=1)
     content_sources: tuple[str, ...] = ("srd5.1",)
@@ -340,6 +391,7 @@ class CharacterBuild(FrozenModel):
     feat_acquisitions: tuple[FeatAcquisition, ...] = ()
     static_derived_modifiers: tuple[StaticDerivedModifier, ...] = ()
     feat_resource_grants: tuple[FeatResourceGrant, ...] = ()
+    feat_static_facts: tuple[FeatStaticFact, ...] = ()
     infusion_refs: tuple[StableKey, ...] = ()
     walking_speed: int | None = Field(default=None, ge=0)
     swim_speed: int | None = Field(default=None, ge=0)

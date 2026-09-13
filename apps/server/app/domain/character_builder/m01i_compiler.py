@@ -33,6 +33,7 @@ from app.domain.character_builder.m01j_runtime import (
 )
 from app.domain.character_builder.m01k_integration import (
     apply_m01k_post_compile,
+    disable_feat_granted_pool_options,
     prepare_m01k_core_registry,
 )
 from app.domain.character_builder.m01m_variant_validation import (
@@ -197,6 +198,7 @@ def compile_builder_draft(
         core_choices,
         base_build=base_build,
     )
+    core_choices = disable_feat_granted_pool_options(draft, runtime.registry, core_choices)
     core_choices = suppress_replaced_choices(core_choices, runtime)
 
     nested_choices = build_optional_nested_choices(

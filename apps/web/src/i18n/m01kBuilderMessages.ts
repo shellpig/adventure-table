@@ -162,10 +162,8 @@ function disabledReason(code: string, params: MessageParams, locale: Locale): st
   if (code === 'feat_fighting_style_already_known') {
     return locale === 'zh-TW' ? '已經擁有這個戰鬥風格。' : 'This fighting style is already known.'
   }
-  if (code === 'feat_pool_option_nested_unsupported') {
-    return locale === 'zh-TW'
-      ? '此戰鬥風格附帶額外選擇，目前無法由專長授予。'
-      : 'This fighting style carries a nested choice the feat cannot grant.'
+  if (code === 'pool_option_granted_by_feat') {
+    return locale === 'zh-TW' ? '此選項已由專長授予。' : 'This option is already granted by a feat.'
   }
   if (code === 'feat_invocation_prerequisite_not_met') {
     return locale === 'zh-TW'

@@ -46,6 +46,8 @@ EXPECTED_BUILD_PATHS = {
     "feat_acquisitions[].feat_ref",
     "static_derived_modifiers[].source_ref",
     "feat_resource_grants[].source_ref",
+    "feat_static_facts[].source_ref",
+    "feat_static_facts[].tool_ref",
     "infusion_refs[]",
     "spellcasting_profiles[].source_key",
     "spellcasting_profiles[].class_ref",

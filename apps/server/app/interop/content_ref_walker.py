@@ -33,6 +33,8 @@ BUILD_STABLE_KEY_PATHS = frozenset(
         "feat_acquisitions[].feat_ref",
         "static_derived_modifiers[].source_ref",
         "feat_resource_grants[].source_ref",
+        "feat_static_facts[].source_ref",
+        "feat_static_facts[].tool_ref",
         "infusion_refs[]",
         "spellcasting_profiles[].source_key",
         "spellcasting_profiles[].class_ref",
@@ -200,6 +202,11 @@ def collect_build_refs(
     keys.extend(item.feat_ref for item in build.feat_acquisitions)
     keys.extend(item.source_ref for item in build.static_derived_modifiers)
     keys.extend(item.source_ref for item in build.feat_resource_grants)
+    for fact in build.feat_static_facts:
+        keys.append(fact.source_ref)
+        tool_ref = getattr(fact, "tool_ref", None)
+        if tool_ref is not None:
+            keys.append(tool_ref)
     keys.extend(build.infusion_refs)
     for profile in build.spellcasting_profiles:
         keys.extend((profile.source_key, profile.class_ref))

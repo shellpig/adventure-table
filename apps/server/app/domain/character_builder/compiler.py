@@ -717,6 +717,7 @@ def compile_builder_draft(
                 feat_acquisitions=feat_compilation.acquisitions,
                 static_derived_modifiers=feat_compilation.static_modifiers,
                 feat_resource_grants=feat_compilation.resource_grants,
+                feat_static_facts=feat_compilation.static_facts,
                 infusion_refs=compile_artificer_infusion_refs(
                     draft,
                     choices,

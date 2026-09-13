@@ -280,3 +280,87 @@ def test_fighting_initiate_excludes_the_style_the_fighter_already_knows() -> Non
     assert options[class_style].disabled_reason_code == "feat_fighting_style_already_known"
     assert options[feat_style].disabled_reason is None
     assert "tce:feature:blessed-warrior" not in options
+
+
+def test_class_fighting_style_slot_disables_the_style_a_feat_already_granted() -> None:
+    result, _, _ = S.feat_draft(
+        "tce:feat:fighting-initiate",
+        race="phb2014:race:variant-human",
+        spec=S.FIGHTER_L4,
+        nested={"style": ("srd5.1:feature:fighter-fighting-style-defense",)},
+        fill_rest=False,
+    )
+    class_slot = next(
+        choice
+        for choice in result.choices
+        if choice.choice_id.startswith("level:1:srd5.1:feature:fighter-fighting-style")
+    )
+    option = S.option_by_id(class_slot, "srd5.1:feature:fighter-fighting-style-defense")
+
+    assert option.disabled_reason_code == "pool_option_granted_by_feat"
+    assert option.disabled_reason_params["feat_ref"] == "tce:feat:fighting-initiate"
+
+
+def test_superior_technique_through_fighting_initiate_exposes_its_maneuver_choice() -> None:
+    result, _, opportunity = S.feat_draft(
+        "tce:feat:fighting-initiate",
+        spec=S.FIGHTER_L4,
+        nested={"style": ("tce:feature:superior-technique",)},
+    )
+    build = result.build_candidate
+    nested = next(choice for choice in result.choices if choice.source_ref == "tce:feature:superior-technique")
+    maneuver = nested.selected_option_ids[0]
+
+    assert S.issue_codes(result) == set()
+    assert nested.option_source == "content:feature:optional-nested"
+    assert maneuver.startswith("phb2014:feature:maneuver-")
+    assert "tce:feature:superior-technique" in build.feature_refs
+    assert maneuver in build.feature_refs
+    assert {
+        (source.feature_ref, source.source_ref)
+        for source in build.feature_grant_sources
+        if source.feature_ref in {maneuver, "tce:feature:superior-technique"}
+    } == {
+        (maneuver, "tce:feature:superior-technique"),
+        ("tce:feature:superior-technique", "tce:feat:fighting-initiate"),
+    }
+
+
+def test_typed_static_facts_land_on_the_build_and_round_trip() -> None:
+    from app.domain.character.schemas import CharacterBuild
+
+    gunner, _, _ = S.feat_draft(GUNNER, spec=S.FIGHTER_L4)
+    telepathic, _, _ = S.feat_draft("tce:feat:telepathic", spec=S.WIZARD_L8, nested={"ability": ("ability:charisma",)})
+    artificer, _, _ = S.feat_draft(
+        ARTIFICER_INITIATE,
+        spec=S.WIZARD_L8,
+        nested={
+            "tool": ("srd5.1:proficiency:tinkers-tools",),
+            "cantrip": ("srd5.1:spell:mending",),
+            "spell": ("srd5.1:spell:cure-wounds",),
+        },
+    )
+
+    assert [fact.model_dump() for fact in gunner.build_candidate.feat_static_facts] == [
+        {"kind": "weapon_proficiency_category", "category": "firearms", "source_ref": GUNNER}
+    ]
+    assert [fact.model_dump() for fact in telepathic.build_candidate.feat_static_facts] == [
+        {
+            "kind": "one_way_telepathy",
+            "range_ft": 60,
+            "requires_visible_target": True,
+            "requires_shared_language": True,
+            "grants_reply": False,
+            "source_ref": "tce:feat:telepathic",
+        }
+    ]
+    assert [fact.model_dump() for fact in artificer.build_candidate.feat_static_facts] == [
+        {
+            "kind": "spellcasting_focus",
+            "tool_ref": "srd5.1:proficiency:tinkers-tools",
+            "casting_ability": "intelligence",
+            "source_ref": ARTIFICER_INITIATE,
+        }
+    ]
+    for build in (gunner.build_candidate, telepathic.build_candidate, artificer.build_candidate):
+        assert CharacterBuild.model_validate_json(build.model_dump_json()) == build
