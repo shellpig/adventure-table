@@ -13,7 +13,7 @@ import {
 import type { Locale } from '../../i18n/locale'
 import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy } from '../../i18n/useUiCopy'
-import { choiceAnchorId } from './choiceAnchor'
+import { choiceAnchorId, levelAnchorId } from './choiceAnchor'
 import './progression.css'
 
 type Props = {
@@ -280,6 +280,7 @@ export function ClassProgressionStep({ view, disabled, onSave }: Props) {
             <section
               className={`level-node ${current ? 'is-filled' : ''} ${node?.multiclass_entry ? 'is-multiclass' : ''}`}
               key={level}
+              id={levelAnchorId(level)}
               data-testid={`level-node-${level}`}
             >
               <div className="level-node__index">

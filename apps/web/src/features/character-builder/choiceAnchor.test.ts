@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { issueChoiceId, issueStep } from './choiceAnchor'
+import { issueAnchorId, issueChoiceId, issueStep } from './choiceAnchor'
 
 describe('issueStep', () => {
   it.each([
@@ -45,5 +45,27 @@ describe('issueChoiceId', () => {
   it('returns null for group-level and unrelated paths', () => {
     expect(issueChoiceId('draft_payload.choice_selections')).toBeNull()
     expect(issueChoiceId('draft_payload.level_choices')).toBeNull()
+  })
+})
+
+describe('issueAnchorId', () => {
+  it('maps a 0-based level_choices index to the 1-based level node', () => {
+    expect(issueAnchorId('draft_payload.level_choices.0.class_ref')).toBe('builder-level-1')
+    expect(issueAnchorId('draft_payload.level_choices.2.subclass_ref')).toBe('builder-level-3')
+  })
+
+  it('maps spell_choices to the profile, and to the bucket when the suffix is one', () => {
+    expect(issueAnchorId('draft_payload.spell_choices.wizard-1')).toBe('builder-spell-wizard-1')
+    expect(issueAnchorId('draft_payload.spell_choices.wizard-1.prepared_spell_keys')).toBe(
+      'builder-spell-wizard-1-prepared_spell_keys',
+    )
+    expect(issueAnchorId('draft_payload.spell_choices.wizard-1.unknown')).toBe('builder-spell-wizard-1')
+  })
+
+  it('returns null for group-level and unrelated paths', () => {
+    expect(issueAnchorId('draft_payload.level_choices')).toBeNull()
+    expect(issueAnchorId('draft_payload.level_choices.x')).toBeNull()
+    expect(issueAnchorId('draft_payload.spell_choices.')).toBeNull()
+    expect(issueAnchorId('draft_payload.race_selection')).toBeNull()
   })
 })

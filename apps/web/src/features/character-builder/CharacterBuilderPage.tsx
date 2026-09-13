@@ -24,7 +24,7 @@ import { type ContentNameResolver, useContentPresentations } from '../../i18n/us
 import { useUiCopy } from '../../i18n/useUiCopy'
 import { assignStandardArrayScore } from './abilityAssignment'
 import { formatSignedBonus } from './abilityPresentation'
-import { choiceAnchorId, issueChoiceId, issueStep } from './choiceAnchor'
+import { choiceAnchorId, issueAnchorId, issueChoiceId, issueStep } from './choiceAnchor'
 import { ClassProgressionStep } from './ClassProgressionStep'
 import { EquipmentReviewStep, EquipmentStep } from './EquipmentReviewStep'
 import {
@@ -243,7 +243,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
   const { t } = useUiCopy()
   const queryClient = useQueryClient()
   const [step, setStep] = useState<BuilderStep>('basic')
-  const [pendingChoiceId, setPendingChoiceId] = useState<string | null>(null)
+  const [pendingAnchorId, setPendingAnchorId] = useState<string | null>(null)
   const draftQuery = useQuery({
     queryKey: ['builder-draft', draftId],
     queryFn: () => getBuilderDraft(draftId),
@@ -351,15 +351,15 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
   )
 
   useEffect(() => {
-    if (!pendingChoiceId) return
-    setPendingChoiceId(null)
-    const anchor = document.getElementById(choiceAnchorId(pendingChoiceId))
+    if (!pendingAnchorId) return
+    setPendingAnchorId(null)
+    const anchor = document.getElementById(pendingAnchorId)
     if (!anchor) return
     anchor.scrollIntoView({ block: 'center' })
     anchor
       .querySelector<HTMLElement>('input:not([disabled]), select:not([disabled]), button:not([disabled])')
       ?.focus({ preventScroll: true })
-  }, [pendingChoiceId, step])
+  }, [pendingAnchorId, step])
   const variantBranchChoices = useMemo(
     () =>
       view?.choices.filter((choice) =>
@@ -867,6 +867,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                   const targetChoiceId = issueChoiceId(issue.path)
                   const target = targetChoiceId ? choicesById.get(targetChoiceId) : undefined
                   const targetStep = target ? stepForChoice(target) : issueStep(issue.path)
+                  const targetAnchorId = target ? choiceAnchorId(target.choice_id) : issueAnchorId(issue.path)
                   const body = (
                     <>
                       <strong className={target ? undefined : 'summary-validation__code'}>
@@ -886,7 +887,7 @@ export function CharacterBuilderPage({ draftId }: { draftId: string }) {
                           title={t(target ? 'builder.summary.jumpToChoice' : 'builder.summary.jumpToStep')}
                           onClick={() => {
                             setStep(targetStep)
-                            if (target) setPendingChoiceId(target.choice_id)
+                            if (targetAnchorId) setPendingAnchorId(targetAnchorId)
                           }}
                         >
                           {body}

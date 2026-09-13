@@ -9,6 +9,7 @@ import { optionDisplay, SearchableSelect } from '../../components/SearchableSele
 import type { UiCopyKey } from '../../i18n/uiCopy'
 import { type ContentNameResolver, useContentPresentations } from '../../i18n/useContentPresentations'
 import { useUiCopy, type UiTranslator } from '../../i18n/useUiCopy'
+import { spellProfileAnchorId } from './choiceAnchor'
 import './spellcasting.css'
 
 type Props = {
@@ -106,7 +107,11 @@ function SpellBucketEditor({
   }
 
   return (
-    <div className="spell-bucket" data-testid={`spell-bucket-${profile.profile_id}-${bucket}`}>
+    <div
+      className="spell-bucket"
+      id={spellProfileAnchorId(profile.profile_id, bucket)}
+      data-testid={`spell-bucket-${profile.profile_id}-${bucket}`}
+    >
       <div className="spell-bucket__heading">
         <div>
           <strong>{label}</strong>
@@ -172,7 +177,11 @@ function SpellcastingProfile({
 }) {
   const { t } = useUiCopy()
   return (
-    <section className="spell-profile" data-testid={`spell-profile-${profile.profile_id}`}>
+    <section
+      className="spell-profile"
+      id={spellProfileAnchorId(profile.profile_id)}
+      data-testid={`spell-profile-${profile.profile_id}`}
+    >
       <div className="spell-profile__title">
         <div>
           <p className="eyebrow">{t(ACCESS_KEYS[profile.access_model])}</p>
