@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -61,7 +62,7 @@ def test_m01o_inventory_verifier_script_passes() -> None:
     assert "XGE 15 / TCE 15 / total 30" in result.stdout
 
 
-def test_runtime_does_not_read_reference_markdown() -> None:
+def test_runtime_does_not_read_reference_markdown(tmp_path: Path, monkeypatch) -> None:
     # 1. Static assert: Scan all .py in apps/server/app/
     # No app code may reference "暫用規則資訊" or "docs/"
     for py_file in APP_ROOT.rglob("*.py"):
@@ -69,17 +70,17 @@ def test_runtime_does_not_read_reference_markdown() -> None:
         assert "暫用規則資訊" not in text, f"{py_file.name} references 暫用規則資訊"
         assert "docs/" not in text, f"{py_file.name} references docs/"
 
-    # 2. Dynamic assert: temporarily rename docs/暫用規則資訊
-    ref_dir = ROOT / "docs" / "暫用規則資訊"
-    temp_renamed = ROOT / "docs" / "暫用規則資訊_temp_renamed"
-    was_renamed = False
+    # 2. Dynamic assert: copy content root to tmp_path (which does not contain docs/)
+    real_content_root = resolve_content_root()
+    tmp_content_root = tmp_path / "data"
+    shutil.copytree(real_content_root, tmp_content_root)
+    assert not (tmp_path / "docs").exists()
 
-    if ref_dir.exists():
-        ref_dir.rename(temp_renamed)
-        was_renamed = True
+    monkeypatch.setenv("ADVENTURE_TABLE_CONTENT_ROOT", str(tmp_content_root))
 
+    S.registry.cache_clear()
     try:
-        S.registry.cache_clear()
+        assert resolve_content_root() == tmp_content_root
         registry = load_default_content_registry()
 
         # Assert all 30 feats exist in registry
@@ -127,6 +128,4 @@ def test_runtime_does_not_read_reference_markdown() -> None:
         assert en_field.value == "Prodigy"
         assert not en_field.fallback_used
     finally:
-        if was_renamed and temp_renamed.exists():
-            temp_renamed.rename(ref_dir)
         S.registry.cache_clear()

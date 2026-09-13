@@ -233,9 +233,13 @@ def test_telepathic_grants_detect_thoughts_free_cast_on_the_chosen_ability() -> 
 def test_feat_spell_access_does_not_pollute_class_known_or_prepared_lists() -> None:
     content = S.registry()
     baseline = S.auto_fill(S.payload(S.levels_for(S.WIZARD_L8), race="srd5.1:race:human"), content)
+    baseline = S.auto_fill(baseline, content, skip_sources=set())
     baseline = S.fill_spell_choices(baseline, content)
     base_res = S.compile_payload(baseline, content)[0]
+    base_build = base_res.build_candidate
+    assert base_build is not None
     base_wiz_prof = next(p for p in base_res.resolved_summary.spellcasting_profiles if p.class_ref == "srd5.1:class:wizard")
+    baseline_class_spell_keys = {e.spell_key for e in base_build.spell_access_entries if e.source_type == "class"}
 
     result, _, _ = S.feat_draft(
         FEY_TOUCHED,
@@ -262,7 +266,8 @@ def test_feat_spell_access_does_not_pollute_class_known_or_prepared_lists() -> N
         assert e.source_key == FEY_TOUCHED
         assert e.casting_ability == "wisdom"
 
-    # Class entries do not carry the feat source key
+    # Class entries do not carry the feat source key and match baseline class spell keys exactly
     class_entries = [e for e in build.spell_access_entries if e.source_type == "class"]
+    assert {e.spell_key for e in class_entries} == baseline_class_spell_keys
     assert all(e.source_key != FEY_TOUCHED for e in class_entries)
     assert all(e.source_key.startswith("srd5.1:class:wizard") for e in class_entries)
