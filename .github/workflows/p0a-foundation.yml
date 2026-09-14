@@ -1,14 +1,155 @@
-# Deprecated by U01-A. This historical P1 closeout workflow mixed old
-# persistence checks with the pre-isolation Playwright stack. Current browser
-# regression is owned by P3 Full-Stack E2E; non-E2E contracts stay in their
-# maintained regression workflows/tests.
-name: P1 Full Regression (deprecated)
+# U01-A removes the historical browser/full-stack portion of this workflow.
+# Cumulative browser regression is owned by P3 Full-Stack E2E on the isolated
+# server-e2e/web-e2e stack. Keep the unique P0 -> P1 migration/legacy data
+# compatibility checks here as an explicit manually-dispatchable non-E2E gate.
+name: P1 Legacy Migration Regression
 
 on:
   workflow_dispatch:
 
 jobs:
-  deprecated:
+  p1-legacy-migration:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+
     steps:
-      - run: echo "::notice::Deprecated historical workflow. Dispatch 'P3 Full-Stack E2E' for cumulative browser regression; use current non-E2E workflows/tests for backend and migration gates."
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install backend
+        working-directory: apps/server
+        run: pip install -e ".[dev]"
+
+      - name: Run M02-D authoring regression
+        run: >-
+          python -m unittest
+          scripts.test_build_m02d_srd_locale_reviewed
+          scripts.test_run_m02d_srd_locale_authoring
+
+      - name: Validate Alembic fresh database
+        working-directory: apps/server
+        env:
+          DATABASE_URL: "sqlite+pysqlite:////tmp/adventure-table-p1-fresh.db"
+        run: |
+          rm -f /tmp/adventure-table-p1-fresh.db
+          alembic upgrade heads
+
+      - name: Validate P0 to P1 migration and legacy character compatibility
+        working-directory: apps/server
+        env:
+          DATABASE_URL: "sqlite+pysqlite:////tmp/adventure-table-p0-to-p1.db"
+        run: |
+          rm -f /tmp/adventure-table-p0-to-p1.db /tmp/adventure-table-p0-before-p1.json
+          alembic upgrade 0002_p0c_character_core
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from uuid import uuid4
+
+          from sqlalchemy import MetaData, create_engine
+
+          from app.domain.character.fixture import (
+              P0_FIXTURE_ID,
+              P0_FIXTURE_NAME,
+              build_p0_fighter_wizard_fixture,
+              build_p0_fighter_wizard_state,
+          )
+
+          engine = create_engine(os.environ["DATABASE_URL"])
+          metadata = MetaData()
+          metadata.reflect(
+              engine,
+              only=["characters", "character_versions", "character_states"],
+          )
+          characters = metadata.tables["characters"]
+          versions = metadata.tables["character_versions"]
+          states = metadata.tables["character_states"]
+
+          build = build_p0_fighter_wizard_fixture()
+          state = build_p0_fighter_wizard_state(build)
+          version_id = uuid4()
+          build_payload = build.model_dump(mode="json")
+          state_payload = state.model_dump(mode="json")
+
+          # SQLite reflects sa.Uuid columns as CHAR(32), so write the same hex
+          # representation SQLAlchemy's Uuid bind processor used in P0.
+          with engine.begin() as connection:
+              connection.execute(
+                  characters.insert().values(
+                      id=P0_FIXTURE_ID.hex,
+                      name=P0_FIXTURE_NAME,
+                      ruleset=build.ruleset,
+                      current_version_id=version_id.hex,
+                  )
+              )
+              connection.execute(
+                  versions.insert().values(
+                      id=version_id.hex,
+                      character_id=P0_FIXTURE_ID.hex,
+                      version_no=1,
+                      build_payload=build_payload,
+                  )
+              )
+              connection.execute(
+                  states.insert().values(
+                      character_id=P0_FIXTURE_ID.hex,
+                      state_payload=state_payload,
+                  )
+              )
+
+          Path("/tmp/adventure-table-p0-before-p1.json").write_text(
+              json.dumps({"build": build_payload, "state": state_payload}),
+              encoding="utf-8",
+          )
+          engine.dispose()
+          PY
+          alembic upgrade heads
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          from sqlalchemy import MetaData, create_engine, inspect, select
+
+          from app.content import load_default_content_registry
+          from app.domain.character.fixture import P0_FIXTURE_ID
+          from app.persistence.characters import CharacterRepository
+
+          engine = create_engine(os.environ["DATABASE_URL"])
+          expected = json.loads(
+              Path("/tmp/adventure-table-p0-before-p1.json").read_text(encoding="utf-8")
+          )
+          repository = CharacterRepository(engine, load_default_content_registry())
+          character = repository.load_character(P0_FIXTURE_ID)
+
+          assert character.build.model_dump(mode="json") == expected["build"]
+          assert character.state.model_dump(mode="json") == expected["state"]
+
+          metadata = MetaData()
+          metadata.reflect(engine, only=["character_versions"])
+          versions = metadata.tables["character_versions"]
+          with engine.connect() as connection:
+              row = connection.execute(
+                  select(
+                      versions.c.version_kind,
+                      versions.c.parent_version_id,
+                      versions.c.superseded_by_version_id,
+                  ).where(versions.c.character_id == P0_FIXTURE_ID.hex)
+              ).mappings().one()
+          assert row["version_kind"] == "legacy"
+          assert row["parent_version_id"] is None
+          assert row["superseded_by_version_id"] is None
+
+          inspector = inspect(engine)
+          table_names = set(inspector.get_table_names())
+          assert "character_build_drafts" in table_names
+          draft_columns = {
+              column["name"] for column in inspector.get_columns("character_build_drafts")
+          }
+          assert {"base_version_id", "confirmed_version_id"} <= draft_columns
+          engine.dispose()
+          PY
