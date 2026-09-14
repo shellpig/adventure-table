@@ -30,6 +30,7 @@
     {"name": "levels", "kind": "level", "file": "levels.json", "upstream_file": "5e-SRD-Levels.json", "count": 290},
     {"name": "items", "kind": "item", "file": "items.json", "upstream_file": "5e-SRD-Magic-Items.json", "count": 362},
     {"name": "magic-schools", "kind": "magic-school", "file": "magic-schools.json", "upstream_file": "5e-SRD-Magic-Schools.json", "count": 8},
+    {"name": "monsters", "kind": "monster", "file": "monsters.json", "upstream_file": "src/2014/en/5e-SRD-Monsters.json", "upstream_blob_sha": "4193e12e8be65e3c97da4787f5591233c4333111", "count": 334},
     {"name": "proficiencies", "kind": "proficiency", "file": "proficiencies.json", "upstream_file": "5e-SRD-Proficiencies.json", "count": 117},
     {"name": "races", "kind": "race", "file": "races.json", "upstream_file": "5e-SRD-Races.json", "count": 9},
     {"name": "skills", "kind": "skill", "file": "skills.json", "upstream_file": "5e-SRD-Skills.json", "count": 18},
@@ -39,5 +40,5 @@
     {"name": "traits", "kind": "trait", "file": "traits.json", "upstream_file": "5e-SRD-Traits.json", "count": 38},
     {"name": "weapon-properties", "kind": "weapon-property", "file": "weapon-properties.json", "upstream_file": "5e-SRD-Weapon-Properties.json", "count": 11}
   ],
-  "total_entries": 1944
+  "total_entries": 2278
 }
