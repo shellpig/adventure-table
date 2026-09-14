@@ -9,6 +9,10 @@ from uuid import UUID, uuid4
 from sqlalchemy import insert, select, update
 from sqlalchemy.engine import Engine
 
+from app.content.p4a_combat_templates import (
+    MonsterActionNormalizationError,
+    normalize_monster_action,
+)
 from app.persistence.combat.tables import monster_instances, monster_templates
 
 
@@ -201,7 +205,10 @@ class MonsterRepository:
             "speed": deepcopy(speed),
         }
         if attack is not None:
-            rules["attacks"] = [deepcopy(attack)]
+            try:
+                rules["actions"] = [normalize_monster_action(attack)]
+            except MonsterActionNormalizationError as exc:
+                raise MonsterPersistenceError(f"invalid quick enemy attack: {exc}") from exc
         return self.create_instance(
             campaign_id=campaign_id,
             name=name,

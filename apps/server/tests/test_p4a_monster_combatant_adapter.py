@@ -85,6 +85,34 @@ def test_monster_instance_adapter_preserves_dm_mechanics_and_visibility_partitio
         engine.dispose()
 
 
+def test_quick_enemy_attack_reaches_canonical_combatant_dm_view() -> None:
+    repository, engine, campaign_id = _repository()
+    try:
+        monster = repository.create_quick_enemy(
+            campaign_id=campaign_id,
+            name="Club Guard",
+            armor_class=13,
+            max_hp=11,
+            speed={"walk": "30 ft."},
+            attack={"name": "Club", "attack_bonus": 4, "damage": "1d6+2"},
+        )
+        state = monster_instance_to_combatant(monster)
+        assert len(state.actions) == 1
+        action = state.actions[0]
+        assert action["name"] == "Club"
+        assert action["kind"] == "attack"
+        assert action["attack_bonus"] == 4
+        assert action["damage_parts"] == [{"dice": "1d6+2", "damage_type": None}]
+
+        dm = project_combatant(state, audience="dm", enemy=True)
+        assert dm is not None
+        assert dm["actions"][0]["name"] == "Club"
+        assert dm["actions"][0]["attack_bonus"] == 4
+        assert dm["actions"][0]["damage_parts"][0]["dice"] == "1d6+2"
+    finally:
+        engine.dispose()
+
+
 def test_adapter_and_projection_keep_enemy_private_state_server_side() -> None:
     repository, engine, campaign_id = _repository()
     try:

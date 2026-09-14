@@ -46,7 +46,7 @@ def _repository() -> tuple[MonsterRepository, object, object]:
     return MonsterRepository(engine), engine, campaign_id
 
 
-def test_quick_enemy_persists_minimum_rules_and_live_state() -> None:
+def test_quick_enemy_persists_minimum_rules_and_canonical_action() -> None:
     repository, engine, campaign_id = _repository()
     try:
         enemy = repository.create_quick_enemy(
@@ -62,7 +62,13 @@ def test_quick_enemy_persists_minimum_rules_and_live_state() -> None:
         assert enemy.custom_template_id is None
         assert enemy.current_hp == 11
         assert enemy.rules_snapshot["armor_class"] == 12
-        assert enemy.rules_snapshot["attacks"][0]["name"] == "Scimitar"
+        assert "attacks" not in enemy.rules_snapshot
+        action = enemy.rules_snapshot["actions"][0]
+        assert action["name"] == "Scimitar"
+        assert action["kind"] == "attack"
+        assert action["attack_bonus"] == 3
+        assert action["damage_parts"] == [{"dice": "1d6+1", "damage_type": None}]
+        assert action["automation_level"] == "partial"
 
         updated = repository.update_live_state(
             enemy.id,
@@ -78,6 +84,56 @@ def test_quick_enemy_persists_minimum_rules_and_live_state() -> None:
         assert updated.conditions == ["poisoned"]
         assert updated.initiative == 17
         assert updated.reaction_available is False
+    finally:
+        engine.dispose()
+
+
+def test_goblin_template_instances_keep_independent_live_state() -> None:
+    repository, engine, campaign_id = _repository()
+    try:
+        rules = {
+            "armor_class": 15,
+            "max_hp": 7,
+            "speed": {"walk": "30 ft."},
+            "actions": [
+                {
+                    "name": "Scimitar",
+                    "kind": "attack",
+                    "attack_kind": "melee",
+                    "attack_bonus": 4,
+                    "damage_parts": [{"dice": "1d6+2", "damage_type": "slashing"}],
+                    "automation_level": "structured",
+                }
+            ],
+        }
+        template = repository.create_template(
+            campaign_id=campaign_id,
+            name="Goblin",
+            source_key="srd5.1:monster:goblin",
+            rules=rules,
+        )
+        instance_a = repository.create_instance_from_template(template.id, name="Goblin A")
+        instance_b = repository.create_instance_from_template(template.id, name="Goblin B")
+
+        changed_a = repository.update_live_state(
+            instance_a.id,
+            current_hp=2,
+            initiative=18,
+            reaction_available=False,
+        )
+        unchanged_b = repository.get_instance(instance_b.id)
+        unchanged_template = repository.get_template(template.id)
+
+        assert changed_a.current_hp == 2
+        assert changed_a.initiative == 18
+        assert changed_a.reaction_available is False
+        assert unchanged_b is not None
+        assert unchanged_b.current_hp == 7
+        assert unchanged_b.initiative is None
+        assert unchanged_b.reaction_available is True
+        assert unchanged_b.rules_snapshot == rules
+        assert unchanged_template is not None
+        assert unchanged_template.rules == rules
     finally:
         engine.dispose()
 
@@ -183,6 +239,22 @@ def test_rules_and_template_source_validation() -> None:
                 rules_snapshot={"armor_class": 10, "max_hp": 1, "speed": {"walk": "30 ft."}},
                 template_key="srd5.1:monster:goblin",
                 custom_template_id=uuid4(),
+            )
+    finally:
+        engine.dispose()
+
+
+def test_quick_enemy_rejects_malformed_attack() -> None:
+    repository, engine, campaign_id = _repository()
+    try:
+        with pytest.raises(MonsterPersistenceError, match="invalid quick enemy attack"):
+            repository.create_quick_enemy(
+                campaign_id=campaign_id,
+                name="Broken",
+                armor_class=10,
+                max_hp=1,
+                speed={"walk": "30 ft."},
+                attack={"attack_bonus": 4, "damage": "1d6+2"},
             )
     finally:
         engine.dispose()
