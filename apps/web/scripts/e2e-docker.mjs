@@ -1,25 +1,28 @@
-// Runs the Playwright suite against the containerised dev server instead of a
-// local one. The Windows vite dev server drops out mid-run (see KI-ENV-001 in
-// 已知問題.md), so 4173 is not usable for a full-suite invocation on Windows.
+// Runs the Playwright suite against an isolated containerised E2E stack.
+// U01-A keeps the daily server/web on 8000/5173 and daily PostgreSQL database
+// untouched while browser tests use server-e2e/web-e2e and adventure_table_e2e.
 //
-// The rebuild is not optional: both the server and web images bake repository
-// sources with no bind mount. Rebuilding only web can silently exercise a stale
-// backend whenever a P3 browser journey depends on new server behavior.
-//
-// A full invocation runs the suite twice. The second pass restarts the server
-// with xge removed from ADVENTURE_TABLE_ENABLED_CONTENT_PACKS and re-runs the
-// M03-C import spec, because its unresolved-ref contracts (Draft landing and
-// draft_reconstruction_unavailable) can only be observed against a backend that
-// is missing a pack. Passing extra Playwright arguments skips that second pass.
+// A full invocation runs the suite twice. The second pass restarts only the E2E
+// services with xge removed and re-runs the M03-C missing-pack import contract.
+// Passing extra Playwright arguments skips that second pass.
 //
 // Usage: npm run test:e2e:docker [-- <playwright args>]
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
+import {
+  E2E_API_BASE_URL,
+  E2E_BASE_URL,
+  E2E_COMPOSE_PROFILE,
+  E2E_DATABASE,
+  E2E_MCP_URL,
+  E2E_SERVER_SERVICE,
+  E2E_WEB_SERVICE,
+} from './e2e-env.mjs'
+
 const webDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repoRoot = resolve(webDir, '..', '..')
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:5173'
 const playwrightArgs = process.argv.slice(2)
 const SUBSET_SPEC = 'e2e/m03c-character-import.spec.ts'
 
@@ -38,72 +41,123 @@ const runOrExit = (command, args, cwd, env = {}) => {
   if (status !== 0) process.exit(status)
 }
 
+const composeE2E = (...args) => ['compose', '--profile', E2E_COMPOSE_PROFILE, ...args]
+
+const ensureE2EDatabase = () => {
+  const postgresUser = process.env.POSTGRES_USER ?? 'adventure'
+  console.log('[e2e-docker] ensuring PostgreSQL is running')
+  runOrExit('docker', ['compose', 'up', '-d', 'db'], repoRoot)
+
+  const query = `SELECT 1 FROM pg_database WHERE datname = '${E2E_DATABASE}';\n`
+  const result = spawnSync(
+    'docker',
+    ['compose', 'exec', '-T', 'db', 'psql', '-U', postgresUser, '-d', 'postgres', '-tA'],
+    {
+      cwd: repoRoot,
+      shell: true,
+      encoding: 'utf8',
+      input: query,
+    },
+  )
+  if (result.status !== 0) {
+    process.stderr.write(result.stderr ?? '')
+    console.error('[e2e-docker] could not inspect PostgreSQL databases')
+    process.exit(result.status ?? 1)
+  }
+
+  if (result.stdout.trim() === '1') return
+
+  console.log(`[e2e-docker] creating ${E2E_DATABASE}`)
+  runOrExit(
+    'docker',
+    ['compose', 'exec', '-T', 'db', 'createdb', '-U', postgresUser, E2E_DATABASE],
+    repoRoot,
+  )
+}
+
 const waitForWeb = async () => {
-  console.log(`[e2e-docker] waiting for ${baseURL}`)
+  console.log(`[e2e-docker] waiting for ${E2E_BASE_URL}`)
   const deadline = Date.now() + 60_000
   for (;;) {
     try {
-      const response = await fetch(baseURL, { signal: AbortSignal.timeout(3000) })
+      const response = await fetch(E2E_BASE_URL, { signal: AbortSignal.timeout(3000) })
       if (response.ok) return
     } catch {
       // not up yet
     }
     if (Date.now() > deadline) {
-      console.error(`[e2e-docker] ${baseURL} did not become available within 60s`)
+      console.error(`[e2e-docker] ${E2E_BASE_URL} did not become available within 60s`)
       process.exit(1)
     }
-    await new Promise((r) => setTimeout(r, 1000))
+    await new Promise((resolveWait) => setTimeout(resolveWait, 1000))
   }
 }
 
-// The enabled-pack list lives in app/config.py; ask the running server for it
-// rather than restating it here, so the subset stays correct as packs are added.
 const enabledPacksWithoutXge = () => {
   const script =
     "from app.config import Settings; " +
     "print(','.join(p for p in Settings().enabled_content_packs if p != 'xge'))"
   const result = spawnSync(
-    `docker compose exec -T server python -c "${script}"`,
-    [],
+    'docker',
+    composeE2E('exec', '-T', E2E_SERVER_SERVICE, 'python', '-c', script),
     { cwd: repoRoot, shell: true, encoding: 'utf8' },
   )
   if (result.status !== 0) {
-    console.error('[e2e-docker] could not read the enabled pack list from the server container')
+    console.error('[e2e-docker] could not read the enabled pack list from server-e2e')
     process.exit(result.status ?? 1)
   }
   const packs = result.stdout.trim()
-  if (!packs || packs.includes('xge')) {
-    console.error(`[e2e-docker] unexpected pack subset from the server container: ${packs}`)
+  if (!packs || packs.split(',').includes('xge')) {
+    console.error(`[e2e-docker] unexpected pack subset from server-e2e: ${packs}`)
     process.exit(1)
   }
   return packs
 }
 
-process.env.PLAYWRIGHT_BASE_URL = baseURL
+const playwrightEnv = {
+  PLAYWRIGHT_BASE_URL: E2E_BASE_URL,
+  PLAYWRIGHT_API_BASE_URL: E2E_API_BASE_URL,
+  PLAYWRIGHT_MCP_URL: E2E_MCP_URL,
+}
+Object.assign(process.env, playwrightEnv)
 
-console.log('[e2e-docker] rebuilding server + web so browser tests cannot use stale images')
-runOrExit('docker', ['compose', 'up', '-d', '--build', 'server', 'web'], repoRoot)
+ensureE2EDatabase()
+
+console.log('[e2e-docker] rebuilding isolated server-e2e + web-e2e')
+runOrExit(
+  'docker',
+  composeE2E('up', '-d', '--build', E2E_SERVER_SERVICE, E2E_WEB_SERVICE),
+  repoRoot,
+)
 await waitForWeb()
 
-console.log(`[e2e-docker] running Playwright against ${baseURL}`)
-runOrExit('npx', ['playwright', 'test', ...playwrightArgs], webDir)
+console.log(`[e2e-docker] running Playwright against ${E2E_BASE_URL}`)
+runOrExit('npx', ['playwright', 'test', ...playwrightArgs], webDir, playwrightEnv)
 
 if (playwrightArgs.length > 0) process.exit(0)
 
 const subset = enabledPacksWithoutXge()
-console.log(`[e2e-docker] restarting server + web without xge (${subset})`)
-runOrExit('docker', ['compose', 'up', '-d', 'server', 'web'], repoRoot, {
-  ADVENTURE_TABLE_ENABLED_CONTENT_PACKS: subset,
-})
+console.log(`[e2e-docker] restarting isolated E2E services without xge (${subset})`)
+runOrExit(
+  'docker',
+  composeE2E('up', '-d', E2E_SERVER_SERVICE, E2E_WEB_SERVICE),
+  repoRoot,
+  { ADVENTURE_TABLE_ENABLED_CONTENT_PACKS: subset },
+)
 await waitForWeb()
 
 console.log(`[e2e-docker] re-running ${SUBSET_SPEC} against the xge-less backend`)
 const subsetStatus = run('npx', ['playwright', 'test', SUBSET_SPEC], webDir, {
+  ...playwrightEnv,
   M03C_E2E_DISABLE_XGE: '1',
 })
 
-console.log('[e2e-docker] restoring server + web to the full pack list')
-const restoreStatus = run('docker', ['compose', 'up', '-d', 'server', 'web'], repoRoot)
+console.log('[e2e-docker] restoring isolated E2E services to the full pack list')
+const restoreStatus = run(
+  'docker',
+  composeE2E('up', '-d', E2E_SERVER_SERVICE, E2E_WEB_SERVICE),
+  repoRoot,
+)
 
 if (subsetStatus !== 0) process.exit(subsetStatus)
 process.exit(restoreStatus)
