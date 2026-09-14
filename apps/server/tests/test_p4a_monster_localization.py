@@ -1,18 +1,28 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
+import re
 from typing import Any
 
 from app.content.localization import ContentLocalizationCatalog, LocalizableFieldPolicy
+from app.content.p4a_inventory import EXPECTED_SRD_MONSTER_COUNT
+from app.content.p4a_monsters import install_p4a_content_models
+from app.content.registry import ContentRegistry
 
 
-POLICY_PATH = (
-    Path(__file__).resolve().parents[3]
-    / "data"
-    / "localization"
-    / "localizable-fields.json"
-)
+DATA_ROOT = Path(__file__).resolve().parents[3] / "data"
+POLICY_PATH = DATA_ROOT / "localization" / "localizable-fields.json"
 MONSTER_KEY = "srd5.1:monster:localization-fixture"
+_HAN_RE = re.compile(r"[\u3400-\u9fff]")
+_ASCII_WORD_RE = re.compile(r"[A-Za-z]{2,}")
+_AFFORDANCE_COLLECTIONS = (
+    "special_abilities",
+    "actions",
+    "bonus_actions",
+    "reactions",
+    "legendary_actions",
+)
 
 _MONSTER_PAYLOAD: dict[str, Any] = {
     "key": MONSTER_KEY,
@@ -96,6 +106,20 @@ def _catalog(
     )
 
 
+def _required_monster_labels(entry: Any) -> list[tuple[str, str]]:
+    payload = entry.model_dump(mode="python")
+    required = [("name", payload["name"])]
+    data = payload["data"]
+    for collection in _AFFORDANCE_COLLECTIONS:
+        for index, affordance in enumerate(data.get(collection, []) or []):
+            if not isinstance(affordance, dict):
+                continue
+            name = affordance.get("name")
+            if isinstance(name, str) and name.strip():
+                required.append((f"data.{collection}.{index}.name", name))
+    return required
+
+
 def test_monster_policy_requires_current_labels_but_defers_descriptions() -> None:
     policy = _policy()
 
@@ -159,3 +183,34 @@ def test_explicit_zh_tw_monster_labels_clear_completeness_gate() -> None:
     )
     assert deferred_desc.fallback_used is True
     assert deferred_desc.missing_required is False
+
+
+def test_checked_in_srd_monster_labels_are_explicit_zh_tw() -> None:
+    install_p4a_content_models()
+    registry = ContentRegistry.from_directory(DATA_ROOT / "srd5.1")
+    monsters = registry.list_kind("monster", source="srd5.1")
+    assert len(monsters) == EXPECTED_SRD_MONSTER_COUNT
+
+    catalog = ContentLocalizationCatalog.from_root(registry, DATA_ROOT)
+    assert catalog.completeness_issues(
+        locales=("zh-TW",),
+        sources={"srd5.1"},
+        kinds={"monster"},
+    ) == ()
+
+    overlay = json.loads(
+        (DATA_ROOT / "srd5.1" / "locales" / "zh-TW.json").read_text(encoding="utf-8")
+    )
+    localized_entries = overlay["entries"]
+    checked = 0
+    for monster in monsters:
+        fields = localized_entries[monster.key]
+        for field_path, canonical in _required_monster_labels(monster):
+            value = fields[field_path]
+            assert value != canonical, f"English fallback committed for {monster.key} {field_path}"
+            assert _HAN_RE.search(value), f"zh-TW label has no Han text: {monster.key} {field_path}"
+            assert not _ASCII_WORD_RE.search(value), (
+                f"zh-TW label still contains English text: {monster.key} {field_path}: {value}"
+            )
+            checked += 1
+    assert checked > EXPECTED_SRD_MONSTER_COUNT
