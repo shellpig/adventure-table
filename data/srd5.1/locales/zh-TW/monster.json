@@ -1,0 +1,2513 @@
+{
+  "schema_version": 1,
+  "locale": "zh-TW",
+  "review_status": "p4a-explicit-label-coverage",
+  "translation_method": "pinned-reference-plus-project-terminology",
+  "entries": {
+    "srd5.1:monster:aboleth": {
+      "name": "底棲魔魚",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "粘液之雲",
+      "data.special_abilities.2.name": "探查感應",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "觸鬚",
+      "data.actions.2.name": "尾擊",
+      "data.actions.3.name": "奴役",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "擺尾",
+      "data.legendary_actions.2.name": "吸取心靈（消耗2次動作）"
+    },
+    "srd5.1:monster:acolyte": {
+      "name": "侍僧",
+      "data.special_abilities.0.name": "施法",
+      "data.actions.0.name": "短棍"
+    },
+    "srd5.1:monster:adult-black-dragon": {
+      "name": "成年黑龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "強酸吐息",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:adult-blue-dragon": {
+      "name": "成年藍龍",
+      "data.special_abilities.0.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "閃電吐息",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:adult-brass-dragon": {
+      "name": "成年黃銅龍",
+      "data.special_abilities.0.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "吐息武器",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:adult-bronze-dragon": {
+      "name": "成年青銅龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "吐息武器",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:adult-copper-dragon": {
+      "name": "成年赤銅龍",
+      "data.special_abilities.0.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "吐息武器",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:adult-gold-dragon": {
+      "name": "成年金龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "吐息武器",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:adult-green-dragon": {
+      "name": "成年綠龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "毒素吐息",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:adult-red-dragon": {
+      "name": "成年紅龍",
+      "data.special_abilities.0.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "火焰吐息",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:adult-silver-dragon": {
+      "name": "成年銀龍",
+      "data.special_abilities.0.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "吐息武器",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:adult-white-dragon": {
+      "name": "成年白龍",
+      "data.special_abilities.0.name": "冰上行走",
+      "data.special_abilities.1.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "冷凍吐息",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:air-elemental": {
+      "name": "氣元素",
+      "data.special_abilities.0.name": "空氣形態",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "猛擊",
+      "data.actions.2.name": "旋風"
+    },
+    "srd5.1:monster:ancient-black-dragon": {
+      "name": "遠古黑龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "強酸吐息",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:ancient-blue-dragon": {
+      "name": "遠古藍龍",
+      "data.special_abilities.0.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "閃電吐息",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:ancient-brass-dragon": {
+      "name": "遠古黃銅龍",
+      "data.special_abilities.0.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "吐息武器",
+      "data.actions.6.name": "變形",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:ancient-bronze-dragon": {
+      "name": "遠古青銅龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "吐息武器",
+      "data.actions.6.name": "變形",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:ancient-copper-dragon": {
+      "name": "遠古赤銅龍",
+      "data.special_abilities.0.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "吐息武器",
+      "data.actions.6.name": "變形",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:ancient-gold-dragon": {
+      "name": "遠古金龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "吐息武器",
+      "data.actions.6.name": "變形",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:ancient-green-dragon": {
+      "name": "遠古綠龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "毒素吐息",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:ancient-red-dragon": {
+      "name": "遠古紅龍",
+      "data.special_abilities.0.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "火焰吐息",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:ancient-silver-dragon": {
+      "name": "遠古銀龍",
+      "data.special_abilities.0.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "吐息武器",
+      "data.actions.6.name": "變形",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:ancient-white-dragon": {
+      "name": "遠古白龍",
+      "data.special_abilities.0.name": "冰上行走",
+      "data.special_abilities.1.name": "傳奇抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "駭人威儀",
+      "data.actions.5.name": "冷凍吐息",
+      "data.legendary_actions.0.name": "偵查",
+      "data.legendary_actions.1.name": "尾擊",
+      "data.legendary_actions.2.name": "振翅攻擊（消耗2次動作）"
+    },
+    "srd5.1:monster:androsphinx": {
+      "name": "男面斯芬克斯",
+      "data.special_abilities.0.name": "神祕莫測",
+      "data.special_abilities.1.name": "魔法武器",
+      "data.special_abilities.2.name": "施法",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "爪擊",
+      "data.actions.2.name": "咆哮",
+      "data.legendary_actions.0.name": "爪擊攻擊",
+      "data.legendary_actions.1.name": "傳送（消耗2次動作）",
+      "data.legendary_actions.2.name": "施展法術（消耗3次動作）"
+    },
+    "srd5.1:monster:animated-armor": {
+      "name": "活化盔甲",
+      "data.special_abilities.0.name": "反魔法易感",
+      "data.special_abilities.1.name": "虛假外貌",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "猛擊"
+    },
+    "srd5.1:monster:ankheg": {
+      "name": "掘地蟲",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "酸液噴射"
+    },
+    "srd5.1:monster:ape": {
+      "name": "猿",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "拳擊",
+      "data.actions.2.name": "擲石"
+    },
+    "srd5.1:monster:archmage": {
+      "name": "大法師",
+      "data.special_abilities.0.name": "魔法抗性",
+      "data.special_abilities.1.name": "施法",
+      "data.actions.0.name": "匕首"
+    },
+    "srd5.1:monster:assassin": {
+      "name": "刺客",
+      "data.special_abilities.0.name": "暗殺",
+      "data.special_abilities.1.name": "反射閃避",
+      "data.special_abilities.2.name": "偷襲（1/驅散）",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "短劍",
+      "data.actions.2.name": "輕弩"
+    },
+    "srd5.1:monster:awakened-shrub": {
+      "name": "啓蒙灌木",
+      "data.special_abilities.0.name": "虛假外貌",
+      "data.actions.0.name": "刮擦"
+    },
+    "srd5.1:monster:awakened-tree": {
+      "name": "啓蒙樹木",
+      "data.special_abilities.0.name": "虛假外貌",
+      "data.actions.0.name": "猛擊"
+    },
+    "srd5.1:monster:axe-beak": {
+      "name": "斧嘴鳥",
+      "data.actions.0.name": "喙啄"
+    },
+    "srd5.1:monster:azer": {
+      "name": "火矮人",
+      "data.special_abilities.0.name": "灼熱之軀",
+      "data.special_abilities.1.name": "灼熱武器",
+      "data.special_abilities.2.name": "照明",
+      "data.actions.0.name": "戰錘"
+    },
+    "srd5.1:monster:baboon": {
+      "name": "狒狒",
+      "data.special_abilities.0.name": "集羣戰術",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:badger": {
+      "name": "獾",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:balor": {
+      "name": "巴洛炎魔",
+      "data.special_abilities.0.name": "焚身爆",
+      "data.special_abilities.1.name": "火焰靈光",
+      "data.special_abilities.2.name": "魔法抗性",
+      "data.special_abilities.3.name": "魔法武器",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "長劍",
+      "data.actions.2.name": "鞭擊",
+      "data.actions.3.name": "傳送"
+    },
+    "srd5.1:monster:bandit": {
+      "name": "強盜",
+      "data.actions.0.name": "彎刀",
+      "data.actions.1.name": "輕弩"
+    },
+    "srd5.1:monster:bandit-captain": {
+      "name": "強盜首領",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "彎刀",
+      "data.actions.2.name": "匕首",
+      "data.reactions.0.name": "格擋"
+    },
+    "srd5.1:monster:barbed-devil": {
+      "name": "蝟魔",
+      "data.special_abilities.0.name": "蝟皮",
+      "data.special_abilities.1.name": "魔鬼視界",
+      "data.special_abilities.2.name": "魔法抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "爪擊",
+      "data.actions.2.name": "尾擊",
+      "data.actions.3.name": "拋入火焰"
+    },
+    "srd5.1:monster:basilisk": {
+      "name": "石化蜥蜴",
+      "data.special_abilities.0.name": "石化凝視",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:bat": {
+      "name": "蝙蝠",
+      "data.special_abilities.0.name": "回聲定位",
+      "data.special_abilities.1.name": "敏銳聽覺",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:bearded-devil": {
+      "name": "須魔",
+      "data.special_abilities.0.name": "魔鬼視界",
+      "data.special_abilities.1.name": "魔法抗性",
+      "data.special_abilities.2.name": "堅定",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "須刺",
+      "data.actions.2.name": "長柄刀"
+    },
+    "srd5.1:monster:behir": {
+      "name": "青足龍蛇",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "纏勒",
+      "data.actions.3.name": "閃電吐息",
+      "data.actions.4.name": "吞嚥"
+    },
+    "srd5.1:monster:berserker": {
+      "name": "狂戰士",
+      "data.special_abilities.0.name": "魯莽",
+      "data.actions.0.name": "巨斧"
+    },
+    "srd5.1:monster:black-bear": {
+      "name": "黑熊",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊"
+    },
+    "srd5.1:monster:black-dragon-wyrmling": {
+      "name": "黑龍雛龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "強酸吐息"
+    },
+    "srd5.1:monster:black-pudding": {
+      "name": "黑布丁",
+      "data.special_abilities.0.name": "無定形",
+      "data.special_abilities.1.name": "腐蝕形態",
+      "data.special_abilities.2.name": "蛛行",
+      "data.actions.0.name": "僞足",
+      "data.reactions.0.name": "分裂"
+    },
+    "srd5.1:monster:blink-dog": {
+      "name": "閃現犬",
+      "data.special_abilities.0.name": "敏銳嗅聽覺",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "傳送"
+    },
+    "srd5.1:monster:blood-hawk": {
+      "name": "血鷹",
+      "data.special_abilities.0.name": "敏銳視覺",
+      "data.special_abilities.1.name": "集羣戰術",
+      "data.actions.0.name": "喙啄"
+    },
+    "srd5.1:monster:blue-dragon-wyrmling": {
+      "name": "藍龍雛龍",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "閃電吐息"
+    },
+    "srd5.1:monster:boar": {
+      "name": "野豬",
+      "data.special_abilities.0.name": "衝鋒",
+      "data.special_abilities.1.name": "堅韌",
+      "data.actions.0.name": "牙撕"
+    },
+    "srd5.1:monster:bone-devil": {
+      "name": "骨魔",
+      "data.special_abilities.0.name": "魔鬼視界",
+      "data.special_abilities.1.name": "魔法抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "爪擊",
+      "data.actions.2.name": "釘刺"
+    },
+    "srd5.1:monster:brass-dragon-wyrmling": {
+      "name": "黃銅龍雛龍",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "吐息武器"
+    },
+    "srd5.1:monster:bronze-dragon-wyrmling": {
+      "name": "青銅龍雛龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "吐息武器"
+    },
+    "srd5.1:monster:brown-bear": {
+      "name": "棕熊",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊"
+    },
+    "srd5.1:monster:bugbear": {
+      "name": "熊地精",
+      "data.special_abilities.0.name": "殘暴",
+      "data.special_abilities.1.name": "突襲打擊",
+      "data.actions.0.name": "釘頭錘",
+      "data.actions.1.name": "標槍"
+    },
+    "srd5.1:monster:bulette": {
+      "name": "鯊蜥獸",
+      "data.special_abilities.0.name": "立定跳躍",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "致命一躍"
+    },
+    "srd5.1:monster:camel": {
+      "name": "駱駝",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:cat": {
+      "name": "貓",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.actions.0.name": "爪擊"
+    },
+    "srd5.1:monster:centaur": {
+      "name": "人馬",
+      "data.special_abilities.0.name": "衝鋒",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "長矛",
+      "data.actions.2.name": "蹄擊",
+      "data.actions.3.name": "長弓"
+    },
+    "srd5.1:monster:chain-devil": {
+      "name": "鏈魔",
+      "data.special_abilities.0.name": "魔鬼視界",
+      "data.special_abilities.1.name": "魔法抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "鏈擊",
+      "data.actions.2.name": "活化魔鏈",
+      "data.reactions.0.name": "不安面具"
+    },
+    "srd5.1:monster:chimera": {
+      "name": "奇美拉",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "角擊",
+      "data.actions.3.name": "爪擊",
+      "data.actions.4.name": "火焰吐息"
+    },
+    "srd5.1:monster:chuul": {
+      "name": "甲伏怪",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "感知魔法",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "鉗擊",
+      "data.actions.2.name": "觸鬚"
+    },
+    "srd5.1:monster:clay-golem": {
+      "name": "粘土魔像",
+      "data.special_abilities.0.name": "強酸吸收",
+      "data.special_abilities.1.name": "失心狂怒",
+      "data.special_abilities.2.name": "不變形態",
+      "data.special_abilities.3.name": "魔法抗性",
+      "data.special_abilities.4.name": "魔法武器",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "猛擊",
+      "data.actions.2.name": "加速"
+    },
+    "srd5.1:monster:cloaker": {
+      "name": "蟄伏僞怪",
+      "data.special_abilities.0.name": "傷害轉嫁",
+      "data.special_abilities.1.name": "虛假外貌",
+      "data.special_abilities.2.name": "光照敏感",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "尾擊",
+      "data.actions.3.name": "低吟",
+      "data.actions.4.name": "幻象"
+    },
+    "srd5.1:monster:cloud-giant": {
+      "name": "雲巨人",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.special_abilities.1.name": "天生施法",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "釘頭錘",
+      "data.actions.2.name": "擲石"
+    },
+    "srd5.1:monster:cockatrice": {
+      "name": "蛇雞獸",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:commoner": {
+      "name": "平民",
+      "data.actions.0.name": "短棍"
+    },
+    "srd5.1:monster:constrictor-snake": {
+      "name": "蟒蛇",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "纏勒"
+    },
+    "srd5.1:monster:copper-dragon-wyrmling": {
+      "name": "赤銅龍雛龍",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "吐息武器"
+    },
+    "srd5.1:monster:couatl": {
+      "name": "羽蛇",
+      "data.special_abilities.0.name": "天生施法",
+      "data.special_abilities.1.name": "魔法武器",
+      "data.special_abilities.2.name": "屏蔽心靈",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "纏勒",
+      "data.actions.2.name": "變形"
+    },
+    "srd5.1:monster:crab": {
+      "name": "蟹",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.actions.0.name": "爪擊"
+    },
+    "srd5.1:monster:crocodile": {
+      "name": "鱷魚",
+      "data.special_abilities.0.name": "屏息",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:cult-fanatic": {
+      "name": "邪教狂信者",
+      "data.special_abilities.0.name": "黑暗忠誠",
+      "data.special_abilities.1.name": "施法",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "匕首"
+    },
+    "srd5.1:monster:cultist": {
+      "name": "邪教徒",
+      "data.special_abilities.0.name": "黑暗忠誠",
+      "data.actions.0.name": "彎刀"
+    },
+    "srd5.1:monster:darkmantle": {
+      "name": "暗幕魔獸",
+      "data.special_abilities.0.name": "回聲定位",
+      "data.special_abilities.1.name": "虛假外貌",
+      "data.actions.0.name": "碾壓",
+      "data.actions.1.name": "黑暗靈光"
+    },
+    "srd5.1:monster:death-dog": {
+      "name": "亡命惡犬",
+      "data.special_abilities.0.name": "雙頭",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬"
+    },
+    "srd5.1:monster:deep-gnome-svirfneblin": {
+      "name": "深地侏儒（斯弗涅布林）",
+      "data.special_abilities.0.name": "巖地僞裝",
+      "data.special_abilities.1.name": "侏儒狡黠",
+      "data.special_abilities.2.name": "天生施法",
+      "data.actions.0.name": "戰鎬",
+      "data.actions.1.name": "毒鏢"
+    },
+    "srd5.1:monster:deer": {
+      "name": "鹿",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:deva": {
+      "name": "梵天神侍",
+      "data.special_abilities.0.name": "天使武器",
+      "data.special_abilities.1.name": "天生施法",
+      "data.special_abilities.2.name": "魔法抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "硬頭錘",
+      "data.actions.2.name": "治癒之觸",
+      "data.actions.3.name": "變形"
+    },
+    "srd5.1:monster:dire-wolf": {
+      "name": "恐狼",
+      "data.special_abilities.0.name": "敏銳嗅聽覺",
+      "data.special_abilities.1.name": "集羣戰術",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:djinni": {
+      "name": "氣巨靈",
+      "data.special_abilities.0.name": "元素消亡",
+      "data.special_abilities.1.name": "天生施法",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "彎刀",
+      "data.actions.2.name": "生成旋風"
+    },
+    "srd5.1:monster:doppelganger": {
+      "name": "變形怪",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "伏擊",
+      "data.special_abilities.2.name": "突襲打擊",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "猛擊",
+      "data.actions.2.name": "讀心"
+    },
+    "srd5.1:monster:draft-horse": {
+      "name": "馱用馬",
+      "data.actions.0.name": "蹄擊"
+    },
+    "srd5.1:monster:dragon-turtle": {
+      "name": "龍龜",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "蒸汽吐息"
+    },
+    "srd5.1:monster:dretch": {
+      "name": "怯魔",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "污臭之雲"
+    },
+    "srd5.1:monster:drider": {
+      "name": "蛛化精靈",
+      "data.special_abilities.0.name": "精類血統",
+      "data.special_abilities.1.name": "天生施法",
+      "data.special_abilities.2.name": "蛛行",
+      "data.special_abilities.3.name": "日照敏感",
+      "data.special_abilities.4.name": "蛛網行者",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "長劍",
+      "data.actions.3.name": "長弓"
+    },
+    "srd5.1:monster:drow": {
+      "name": "卓爾",
+      "data.special_abilities.0.name": "精類血統",
+      "data.special_abilities.1.name": "天生施法",
+      "data.special_abilities.2.name": "日照敏感",
+      "data.actions.0.name": "短劍",
+      "data.actions.1.name": "手弩"
+    },
+    "srd5.1:monster:druid": {
+      "name": "德魯伊",
+      "data.special_abilities.0.name": "施法",
+      "data.actions.0.name": "長棍"
+    },
+    "srd5.1:monster:dryad": {
+      "name": "樹精",
+      "data.special_abilities.0.name": "天生施法",
+      "data.special_abilities.1.name": "魔法抗性",
+      "data.special_abilities.2.name": "動植物交談",
+      "data.special_abilities.3.name": "樹躍",
+      "data.actions.0.name": "短棍",
+      "data.actions.1.name": "妖精魅惑"
+    },
+    "srd5.1:monster:duergar": {
+      "name": "灰矮人",
+      "data.special_abilities.0.name": "灰矮人體魄",
+      "data.special_abilities.1.name": "日照敏感",
+      "data.actions.0.name": "變巨",
+      "data.actions.1.name": "戰鎬",
+      "data.actions.2.name": "標槍",
+      "data.actions.3.name": "隱形術"
+    },
+    "srd5.1:monster:dust-mephit": {
+      "name": "塵魔蝠",
+      "data.special_abilities.0.name": "死亡爆發",
+      "data.special_abilities.1.name": "天生施法",
+      "data.actions.0.name": "爪擊",
+      "data.actions.1.name": "致盲吐息"
+    },
+    "srd5.1:monster:eagle": {
+      "name": "雕",
+      "data.special_abilities.0.name": "敏銳視覺",
+      "data.actions.0.name": "禽爪"
+    },
+    "srd5.1:monster:earth-elemental": {
+      "name": "土元素",
+      "data.special_abilities.0.name": "遁地",
+      "data.special_abilities.1.name": "攻城怪物",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "猛擊"
+    },
+    "srd5.1:monster:efreeti": {
+      "name": "火巨靈",
+      "data.special_abilities.0.name": "元素消亡",
+      "data.special_abilities.1.name": "天生施法",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "彎刀",
+      "data.actions.2.name": "拋入火焰"
+    },
+    "srd5.1:monster:elephant": {
+      "name": "象",
+      "data.special_abilities.0.name": "踐踏衝鋒",
+      "data.actions.0.name": "頂撞",
+      "data.actions.1.name": "踐踏"
+    },
+    "srd5.1:monster:elk": {
+      "name": "麋鹿",
+      "data.special_abilities.0.name": "衝鋒",
+      "data.actions.0.name": "衝撞",
+      "data.actions.1.name": "蹄擊"
+    },
+    "srd5.1:monster:erinyes": {
+      "name": "欲魔",
+      "data.special_abilities.0.name": "地獄武器",
+      "data.special_abilities.1.name": "魔法抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "長劍",
+      "data.actions.2.name": "長弓",
+      "data.reactions.0.name": "格擋"
+    },
+    "srd5.1:monster:ettercap": {
+      "name": "伊特怪",
+      "data.special_abilities.0.name": "蛛行",
+      "data.special_abilities.1.name": "蛛網感知",
+      "data.special_abilities.2.name": "蛛網行者",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "蛛網"
+    },
+    "srd5.1:monster:ettin": {
+      "name": "雙頭巨人",
+      "data.special_abilities.0.name": "雙頭",
+      "data.special_abilities.1.name": "警醒",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "戰斧",
+      "data.actions.2.name": "釘頭錘"
+    },
+    "srd5.1:monster:fire-elemental": {
+      "name": "火元素",
+      "data.special_abilities.0.name": "火焰形態",
+      "data.special_abilities.1.name": "照明",
+      "data.special_abilities.2.name": "水體易感",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "觸擊"
+    },
+    "srd5.1:monster:fire-giant": {
+      "name": "火巨人",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "巨劍",
+      "data.actions.2.name": "擲石"
+    },
+    "srd5.1:monster:flesh-golem": {
+      "name": "肉身魔像",
+      "data.special_abilities.0.name": "失心狂怒",
+      "data.special_abilities.1.name": "厭火",
+      "data.special_abilities.2.name": "不變形態",
+      "data.special_abilities.3.name": "閃電吸收",
+      "data.special_abilities.4.name": "魔法抗性",
+      "data.special_abilities.5.name": "魔法武器",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "猛擊"
+    },
+    "srd5.1:monster:flying-snake": {
+      "name": "飛蛇",
+      "data.special_abilities.0.name": "飛掠",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:flying-sword": {
+      "name": "凌空劍",
+      "data.special_abilities.0.name": "反魔法易感",
+      "data.special_abilities.1.name": "虛假外貌",
+      "data.actions.0.name": "長劍"
+    },
+    "srd5.1:monster:frog": {
+      "name": "青蛙",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "立定跳躍"
+    },
+    "srd5.1:monster:frost-giant": {
+      "name": "霜巨人",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "巨斧",
+      "data.actions.2.name": "擲石"
+    },
+    "srd5.1:monster:gargoyle": {
+      "name": "石像鬼",
+      "data.special_abilities.0.name": "虛假外貌",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊"
+    },
+    "srd5.1:monster:gelatinous-cube": {
+      "name": "膠質方塊",
+      "data.special_abilities.0.name": "泥怪方塊",
+      "data.special_abilities.1.name": "透明",
+      "data.actions.0.name": "僞足",
+      "data.actions.1.name": "吞沒"
+    },
+    "srd5.1:monster:ghast": {
+      "name": "妖鬼",
+      "data.special_abilities.0.name": "惡臭",
+      "data.special_abilities.1.name": "硬受驅散",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "爪擊"
+    },
+    "srd5.1:monster:ghost": {
+      "name": "幽魂",
+      "data.special_abilities.0.name": "以太視界",
+      "data.special_abilities.1.name": "虛體移動",
+      "data.actions.0.name": "枯萎觸擊",
+      "data.actions.1.name": "以太化",
+      "data.actions.2.name": "恐懼面容",
+      "data.actions.3.name": "附身"
+    },
+    "srd5.1:monster:ghoul": {
+      "name": "食屍鬼",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "爪擊"
+    },
+    "srd5.1:monster:giant-ape": {
+      "name": "巨猿",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "拳擊",
+      "data.actions.2.name": "擲石"
+    },
+    "srd5.1:monster:giant-badger": {
+      "name": "巨獾",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊"
+    },
+    "srd5.1:monster:giant-bat": {
+      "name": "巨蝙蝠",
+      "data.special_abilities.0.name": "回聲定位",
+      "data.special_abilities.1.name": "敏銳聽覺",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:giant-boar": {
+      "name": "鉅野豬",
+      "data.special_abilities.0.name": "衝鋒",
+      "data.special_abilities.1.name": "堅韌",
+      "data.actions.0.name": "牙撕"
+    },
+    "srd5.1:monster:giant-centipede": {
+      "name": "巨蜈蚣",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:giant-constrictor-snake": {
+      "name": "巨蟒蛇",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "纏勒"
+    },
+    "srd5.1:monster:giant-crab": {
+      "name": "巨蟹",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.actions.0.name": "爪擊"
+    },
+    "srd5.1:monster:giant-crocodile": {
+      "name": "巨鱷",
+      "data.special_abilities.0.name": "屏息",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "尾擊"
+    },
+    "srd5.1:monster:giant-eagle": {
+      "name": "巨雕",
+      "data.special_abilities.0.name": "敏銳視覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "喙啄",
+      "data.actions.2.name": "禽爪"
+    },
+    "srd5.1:monster:giant-elk": {
+      "name": "巨麋鹿",
+      "data.special_abilities.0.name": "衝鋒",
+      "data.actions.0.name": "衝撞",
+      "data.actions.1.name": "蹄擊"
+    },
+    "srd5.1:monster:giant-fire-beetle": {
+      "name": "巨火甲蟲",
+      "data.special_abilities.0.name": "照明",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:giant-frog": {
+      "name": "巨蛙",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "立定跳躍",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "吞嚥"
+    },
+    "srd5.1:monster:giant-goat": {
+      "name": "巨山羊",
+      "data.special_abilities.0.name": "衝鋒",
+      "data.special_abilities.1.name": "穩步",
+      "data.actions.0.name": "衝撞"
+    },
+    "srd5.1:monster:giant-hyena": {
+      "name": "巨鬣狗",
+      "data.special_abilities.0.name": "橫行",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:giant-lizard": {
+      "name": "巨蜥",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:giant-octopus": {
+      "name": "巨章魚",
+      "data.special_abilities.0.name": "屏息",
+      "data.special_abilities.1.name": "水下僞裝",
+      "data.special_abilities.2.name": "水下呼吸",
+      "data.actions.0.name": "觸鬚",
+      "data.actions.1.name": "墨汁雲"
+    },
+    "srd5.1:monster:giant-owl": {
+      "name": "巨貓頭鷹",
+      "data.special_abilities.0.name": "飛掠",
+      "data.special_abilities.1.name": "敏銳視聽覺",
+      "data.actions.0.name": "禽爪"
+    },
+    "srd5.1:monster:giant-poisonous-snake": {
+      "name": "巨毒蛇",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:giant-rat": {
+      "name": "巨鼠",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.special_abilities.1.name": "集羣戰術",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:giant-rat-diseased": {
+      "name": "巨鼠（致病）",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.special_abilities.1.name": "集羣戰術",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:giant-scorpion": {
+      "name": "巨蠍",
+      "data.actions.0.name": "爪擊",
+      "data.actions.1.name": "多重攻擊",
+      "data.actions.2.name": "釘刺"
+    },
+    "srd5.1:monster:giant-sea-horse": {
+      "name": "巨海馬",
+      "data.special_abilities.0.name": "衝鋒",
+      "data.special_abilities.1.name": "水下呼吸",
+      "data.actions.0.name": "衝撞"
+    },
+    "srd5.1:monster:giant-shark": {
+      "name": "巨鯊",
+      "data.special_abilities.0.name": "血腥狂怒",
+      "data.special_abilities.1.name": "水下呼吸",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:giant-spider": {
+      "name": "巨蜘蛛",
+      "data.special_abilities.0.name": "蛛行",
+      "data.special_abilities.1.name": "蛛網感知",
+      "data.special_abilities.2.name": "蛛網行者",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "蛛網"
+    },
+    "srd5.1:monster:giant-toad": {
+      "name": "巨蟾蜍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "立定跳躍",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "吞嚥"
+    },
+    "srd5.1:monster:giant-vulture": {
+      "name": "巨禿鷲",
+      "data.special_abilities.0.name": "敏銳視嗅覺",
+      "data.special_abilities.1.name": "集羣戰術",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "喙啄",
+      "data.actions.2.name": "禽爪"
+    },
+    "srd5.1:monster:giant-wasp": {
+      "name": "巨黃蜂",
+      "data.actions.0.name": "釘刺"
+    },
+    "srd5.1:monster:giant-weasel": {
+      "name": "巨鼬",
+      "data.special_abilities.0.name": "敏銳嗅聽覺",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:giant-wolf-spider": {
+      "name": "巨狼蛛",
+      "data.special_abilities.0.name": "蛛行",
+      "data.special_abilities.1.name": "蛛網感知",
+      "data.special_abilities.2.name": "蛛網行者",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:gibbering-mouther": {
+      "name": "懼噬體",
+      "data.special_abilities.0.name": "怪異之地",
+      "data.special_abilities.1.name": "囈語",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "致盲唾沫"
+    },
+    "srd5.1:monster:glabrezu": {
+      "name": "迷誘魔",
+      "data.special_abilities.0.name": "天生施法",
+      "data.special_abilities.1.name": "魔法抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "鉗擊",
+      "data.actions.2.name": "拳擊"
+    },
+    "srd5.1:monster:gladiator": {
+      "name": "角鬥士",
+      "data.special_abilities.0.name": "勇氣",
+      "data.special_abilities.1.name": "殘暴",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "矛",
+      "data.actions.2.name": "盾擊",
+      "data.reactions.0.name": "格擋"
+    },
+    "srd5.1:monster:gnoll": {
+      "name": "豺狼人",
+      "data.special_abilities.0.name": "橫行",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "矛",
+      "data.actions.2.name": "長弓"
+    },
+    "srd5.1:monster:goat": {
+      "name": "山羊",
+      "data.special_abilities.0.name": "衝鋒",
+      "data.special_abilities.1.name": "穩步",
+      "data.actions.0.name": "衝撞"
+    },
+    "srd5.1:monster:goblin": {
+      "name": "地精",
+      "data.special_abilities.0.name": "迅捷逃逸",
+      "data.actions.0.name": "彎刀",
+      "data.actions.1.name": "短弓"
+    },
+    "srd5.1:monster:gold-dragon-wyrmling": {
+      "name": "金龍雛龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "吐息武器"
+    },
+    "srd5.1:monster:gorgon": {
+      "name": "石化牛",
+      "data.special_abilities.0.name": "踐踏衝鋒",
+      "data.actions.0.name": "頂撞",
+      "data.actions.1.name": "蹄擊",
+      "data.actions.2.name": "石化吐息"
+    },
+    "srd5.1:monster:gray-ooze": {
+      "name": "灰泥怪",
+      "data.special_abilities.0.name": "無定形",
+      "data.special_abilities.1.name": "腐蝕金屬",
+      "data.special_abilities.2.name": "虛假外貌",
+      "data.actions.0.name": "僞足"
+    },
+    "srd5.1:monster:green-dragon-wyrmling": {
+      "name": "綠龍雛龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "毒素吐息"
+    },
+    "srd5.1:monster:green-hag": {
+      "name": "綠鬼婆",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "天生施法",
+      "data.special_abilities.2.name": "擬聲",
+      "data.actions.0.name": "爪擊",
+      "data.actions.1.name": "幻形",
+      "data.actions.2.name": "隱形通道"
+    },
+    "srd5.1:monster:grick": {
+      "name": "穴居攫怪",
+      "data.special_abilities.0.name": "巖地僞裝",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "觸鬚",
+      "data.actions.2.name": "喙啄"
+    },
+    "srd5.1:monster:griffon": {
+      "name": "獅鷲",
+      "data.special_abilities.0.name": "敏銳視覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "喙啄",
+      "data.actions.2.name": "爪擊"
+    },
+    "srd5.1:monster:grimlock": {
+      "name": "石盲蠻族",
+      "data.special_abilities.0.name": "盲感",
+      "data.special_abilities.1.name": "敏銳嗅聽覺",
+      "data.special_abilities.2.name": "巖地僞裝",
+      "data.actions.0.name": "骨刺短棒"
+    },
+    "srd5.1:monster:guard": {
+      "name": "警衛",
+      "data.actions.0.name": "矛"
+    },
+    "srd5.1:monster:guardian-naga": {
+      "name": "巡守納迦",
+      "data.special_abilities.0.name": "復生",
+      "data.special_abilities.1.name": "施法",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "噴毒"
+    },
+    "srd5.1:monster:gynosphinx": {
+      "name": "女面斯芬克斯",
+      "data.special_abilities.0.name": "神祕莫測",
+      "data.special_abilities.1.name": "魔法武器",
+      "data.special_abilities.2.name": "施法",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "爪擊",
+      "data.legendary_actions.0.name": "爪擊攻擊",
+      "data.legendary_actions.1.name": "傳送（消耗2次動作）",
+      "data.legendary_actions.2.name": "施展法術（消耗3次動作）"
+    },
+    "srd5.1:monster:half-red-dragon-veteran": {
+      "name": "半紅龍老兵",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "長劍",
+      "data.actions.2.name": "短劍",
+      "data.actions.3.name": "重弩",
+      "data.actions.4.name": "火焰吐息"
+    },
+    "srd5.1:monster:harpy": {
+      "name": "鳥妖",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "爪擊",
+      "data.actions.2.name": "短棍",
+      "data.actions.3.name": "誘惑之歌"
+    },
+    "srd5.1:monster:hawk": {
+      "name": "鷹",
+      "data.special_abilities.0.name": "敏銳視覺",
+      "data.actions.0.name": "禽爪"
+    },
+    "srd5.1:monster:hell-hound": {
+      "name": "地獄犬",
+      "data.special_abilities.0.name": "敏銳嗅聽覺",
+      "data.special_abilities.1.name": "集羣戰術",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "火焰吐息"
+    },
+    "srd5.1:monster:hezrou": {
+      "name": "狂戰魔",
+      "data.special_abilities.0.name": "魔法抗性",
+      "data.special_abilities.1.name": "惡臭",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊"
+    },
+    "srd5.1:monster:hill-giant": {
+      "name": "山丘巨人",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "巨棒",
+      "data.actions.2.name": "擲石"
+    },
+    "srd5.1:monster:hippogriff": {
+      "name": "鷲馬",
+      "data.special_abilities.0.name": "敏銳視覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "喙啄",
+      "data.actions.2.name": "爪擊"
+    },
+    "srd5.1:monster:hobgoblin": {
+      "name": "大地精",
+      "data.special_abilities.0.name": "成軍優勢",
+      "data.actions.0.name": "長劍",
+      "data.actions.1.name": "長弓"
+    },
+    "srd5.1:monster:homunculus": {
+      "name": "造妖",
+      "data.special_abilities.0.name": "傳念連接",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:horned-devil": {
+      "name": "角魔",
+      "data.special_abilities.0.name": "魔鬼視界",
+      "data.special_abilities.1.name": "魔法抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "叉擊",
+      "data.actions.2.name": "尾擊",
+      "data.actions.3.name": "拋入火焰"
+    },
+    "srd5.1:monster:hunter-shark": {
+      "name": "尋獵鯊",
+      "data.special_abilities.0.name": "血腥狂怒",
+      "data.special_abilities.1.name": "水下呼吸",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:hydra": {
+      "name": "多頭蛇蜥",
+      "data.special_abilities.0.name": "屏息",
+      "data.special_abilities.1.name": "多頭",
+      "data.special_abilities.2.name": "多頭反應",
+      "data.special_abilities.3.name": "警醒",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬"
+    },
+    "srd5.1:monster:hyena": {
+      "name": "鬣狗",
+      "data.special_abilities.0.name": "集羣戰術",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:ice-devil": {
+      "name": "冰魔",
+      "data.special_abilities.0.name": "魔鬼視界",
+      "data.special_abilities.1.name": "魔法抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾擊",
+      "data.actions.4.name": "冰牆"
+    },
+    "srd5.1:monster:ice-mephit": {
+      "name": "冰魔蝠",
+      "data.special_abilities.0.name": "死亡爆發",
+      "data.special_abilities.1.name": "虛假外貌",
+      "data.special_abilities.2.name": "天生施法",
+      "data.actions.0.name": "爪擊",
+      "data.actions.1.name": "冷凍吐息"
+    },
+    "srd5.1:monster:imp": {
+      "name": "小魔鬼",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "魔鬼視界",
+      "data.special_abilities.2.name": "魔法抗性",
+      "data.actions.0.name": "釘刺（野獸形態時改為啃咬）",
+      "data.actions.1.name": "隱形術"
+    },
+    "srd5.1:monster:invisible-stalker": {
+      "name": "隱形追獵者",
+      "data.special_abilities.0.name": "隱形術",
+      "data.special_abilities.1.name": "完美追蹤者",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "猛擊"
+    },
+    "srd5.1:monster:iron-golem": {
+      "name": "鋼鐵魔像",
+      "data.special_abilities.0.name": "火焰吸收",
+      "data.special_abilities.1.name": "不變形態",
+      "data.special_abilities.2.name": "魔法抗性",
+      "data.special_abilities.3.name": "魔法武器",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "猛擊",
+      "data.actions.2.name": "劍擊",
+      "data.actions.3.name": "毒素吐息"
+    },
+    "srd5.1:monster:jackal": {
+      "name": "豺狗",
+      "data.special_abilities.0.name": "敏銳嗅聽覺",
+      "data.special_abilities.1.name": "集羣戰術",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:killer-whale": {
+      "name": "虎鯨",
+      "data.special_abilities.0.name": "回聲定位",
+      "data.special_abilities.1.name": "屏息",
+      "data.special_abilities.2.name": "敏銳聽覺",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:knight": {
+      "name": "騎士",
+      "data.special_abilities.0.name": "勇氣",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "巨劍",
+      "data.actions.2.name": "重弩",
+      "data.actions.3.name": "領導",
+      "data.reactions.0.name": "格擋"
+    },
+    "srd5.1:monster:kobold": {
+      "name": "狗頭人",
+      "data.special_abilities.0.name": "日照敏感",
+      "data.special_abilities.1.name": "集羣戰術",
+      "data.actions.0.name": "匕首",
+      "data.actions.1.name": "投石索"
+    },
+    "srd5.1:monster:kraken": {
+      "name": "克拉肯",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "行動自如",
+      "data.special_abilities.2.name": "攻城怪物",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "觸鬚",
+      "data.actions.3.name": "拋擲",
+      "data.actions.4.name": "閃電風暴",
+      "data.legendary_actions.0.name": "觸手攻擊或拋擲",
+      "data.legendary_actions.1.name": "閃電風暴（消耗2次動作）",
+      "data.legendary_actions.2.name": "墨汁雲（消耗3次動作）"
+    },
+    "srd5.1:monster:lamia": {
+      "name": "拉米亞",
+      "data.special_abilities.0.name": "天生施法",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "爪擊",
+      "data.actions.2.name": "匕首",
+      "data.actions.3.name": "醉人觸擊"
+    },
+    "srd5.1:monster:lemure": {
+      "name": "劣魔",
+      "data.special_abilities.0.name": "魔鬼視界",
+      "data.special_abilities.1.name": "地獄回生",
+      "data.actions.0.name": "拳擊"
+    },
+    "srd5.1:monster:lich": {
+      "name": "巫妖",
+      "data.special_abilities.0.name": "傳奇抗性",
+      "data.special_abilities.1.name": "復生",
+      "data.special_abilities.2.name": "施法",
+      "data.special_abilities.3.name": "抵抗驅散",
+      "data.actions.0.name": "麻痹觸擊",
+      "data.legendary_actions.0.name": "戲法",
+      "data.legendary_actions.1.name": "麻痹觸擊（消耗2次動作）",
+      "data.legendary_actions.2.name": "恐懼凝視（消耗2次動作）",
+      "data.legendary_actions.3.name": "擾亂生命（消耗3次動作）"
+    },
+    "srd5.1:monster:lion": {
+      "name": "獅子",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.special_abilities.1.name": "集羣戰術",
+      "data.special_abilities.2.name": "猛撲",
+      "data.special_abilities.3.name": "助跑起跳",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "爪擊"
+    },
+    "srd5.1:monster:lizard": {
+      "name": "蜥蜴",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:lizardfolk": {
+      "name": "蜥蜴人",
+      "data.special_abilities.0.name": "屏息",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "重棒",
+      "data.actions.3.name": "標槍",
+      "data.actions.4.name": "刺盾"
+    },
+    "srd5.1:monster:mage": {
+      "name": "魔法師",
+      "data.special_abilities.0.name": "施法",
+      "data.actions.0.name": "匕首"
+    },
+    "srd5.1:monster:magma-mephit": {
+      "name": "熔岩魔蝠",
+      "data.special_abilities.0.name": "死亡爆發",
+      "data.special_abilities.1.name": "虛假外貌",
+      "data.special_abilities.2.name": "天生施法",
+      "data.actions.0.name": "爪擊",
+      "data.actions.1.name": "火焰吐息"
+    },
+    "srd5.1:monster:magmin": {
+      "name": "火童",
+      "data.special_abilities.0.name": "死亡爆發",
+      "data.special_abilities.1.name": "燃火照明",
+      "data.actions.0.name": "觸擊"
+    },
+    "srd5.1:monster:mammoth": {
+      "name": "猛獁",
+      "data.special_abilities.0.name": "踐踏衝鋒",
+      "data.actions.0.name": "頂撞",
+      "data.actions.1.name": "踐踏"
+    },
+    "srd5.1:monster:manticore": {
+      "name": "蠍尾獅",
+      "data.special_abilities.0.name": "尾釘再生",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "尾釘"
+    },
+    "srd5.1:monster:marilith": {
+      "name": "六臂蛇魔",
+      "data.special_abilities.0.name": "魔法抗性",
+      "data.special_abilities.1.name": "魔法武器",
+      "data.special_abilities.2.name": "靈敏反應",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "長劍",
+      "data.actions.2.name": "尾擊",
+      "data.actions.3.name": "傳送",
+      "data.reactions.0.name": "格擋"
+    },
+    "srd5.1:monster:mastiff": {
+      "name": "獒犬",
+      "data.special_abilities.0.name": "敏銳嗅聽覺",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:medusa": {
+      "name": "美杜莎",
+      "data.special_abilities.0.name": "石化凝視",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "蛇發",
+      "data.actions.2.name": "短劍",
+      "data.actions.3.name": "長弓"
+    },
+    "srd5.1:monster:merfolk": {
+      "name": "人魚",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.actions.0.name": "矛"
+    },
+    "srd5.1:monster:merrow": {
+      "name": "邁羅人魚",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "魚叉"
+    },
+    "srd5.1:monster:mimic": {
+      "name": "擬身怪",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "黏著（僅物件形態）",
+      "data.special_abilities.2.name": "虛假外貌（僅物件形態）",
+      "data.special_abilities.3.name": "擒抱者",
+      "data.actions.0.name": "僞足",
+      "data.actions.1.name": "啃咬"
+    },
+    "srd5.1:monster:minotaur": {
+      "name": "牛頭人",
+      "data.special_abilities.0.name": "衝鋒",
+      "data.special_abilities.1.name": "迷宮追憶",
+      "data.special_abilities.2.name": "魯莽",
+      "data.actions.0.name": "巨斧",
+      "data.actions.1.name": "頂撞"
+    },
+    "srd5.1:monster:minotaur-skeleton": {
+      "name": "骷髏牛頭人",
+      "data.special_abilities.0.name": "衝鋒",
+      "data.actions.0.name": "巨斧",
+      "data.actions.1.name": "頂撞"
+    },
+    "srd5.1:monster:mule": {
+      "name": "騾子",
+      "data.special_abilities.0.name": "馱獸",
+      "data.special_abilities.1.name": "穩步",
+      "data.actions.0.name": "蹄擊"
+    },
+    "srd5.1:monster:mummy": {
+      "name": "木乃伊",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "腐朽拳擊",
+      "data.actions.2.name": "恐怖怒視"
+    },
+    "srd5.1:monster:mummy-lord": {
+      "name": "木乃伊領主",
+      "data.special_abilities.0.name": "魔法抗性",
+      "data.special_abilities.1.name": "復生",
+      "data.special_abilities.2.name": "施法",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "腐朽拳擊",
+      "data.actions.2.name": "恐怖怒視",
+      "data.legendary_actions.0.name": "攻擊",
+      "data.legendary_actions.1.name": "致盲粉塵",
+      "data.legendary_actions.2.name": "瀆神之語（消耗2次動作）",
+      "data.legendary_actions.3.name": "引導負能量（消耗2次動作）",
+      "data.legendary_actions.4.name": "沙旋風（消耗2次動作）"
+    },
+    "srd5.1:monster:nalfeshnee": {
+      "name": "判魂魔",
+      "data.special_abilities.0.name": "魔法抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "恐懼光環",
+      "data.actions.4.name": "傳送"
+    },
+    "srd5.1:monster:night-hag": {
+      "name": "夜鬼婆",
+      "data.special_abilities.0.name": "天生施法",
+      "data.special_abilities.1.name": "魔法抗性",
+      "data.special_abilities.2.name": "夜鬼婆物品",
+      "data.actions.0.name": "爪擊（僅鬼婆形態）",
+      "data.actions.1.name": "變形",
+      "data.actions.2.name": "以太化",
+      "data.actions.3.name": "噩夢纏身"
+    },
+    "srd5.1:monster:nightmare": {
+      "name": "夢魘",
+      "data.special_abilities.0.name": "賦予火焰抗性",
+      "data.special_abilities.1.name": "照明",
+      "data.actions.0.name": "蹄擊",
+      "data.actions.1.name": "以太跳躍"
+    },
+    "srd5.1:monster:noble": {
+      "name": "貴族",
+      "data.actions.0.name": "刺劍",
+      "data.reactions.0.name": "格擋"
+    },
+    "srd5.1:monster:ochre-jelly": {
+      "name": "赭凍怪",
+      "data.special_abilities.0.name": "無定形",
+      "data.special_abilities.1.name": "蛛行",
+      "data.actions.0.name": "僞足",
+      "data.reactions.0.name": "分裂"
+    },
+    "srd5.1:monster:octopus": {
+      "name": "章魚",
+      "data.special_abilities.0.name": "屏息",
+      "data.special_abilities.1.name": "水下僞裝",
+      "data.special_abilities.2.name": "水下呼吸",
+      "data.actions.0.name": "觸鬚",
+      "data.actions.1.name": "墨汁雲"
+    },
+    "srd5.1:monster:ogre": {
+      "name": "食人魔",
+      "data.actions.0.name": "巨棒",
+      "data.actions.1.name": "標槍"
+    },
+    "srd5.1:monster:ogre-zombie": {
+      "name": "食人魔殭屍",
+      "data.special_abilities.0.name": "不死堅韌",
+      "data.actions.0.name": "釘頭錘"
+    },
+    "srd5.1:monster:oni": {
+      "name": "惡鬼",
+      "data.special_abilities.0.name": "天生施法",
+      "data.special_abilities.1.name": "魔法武器",
+      "data.special_abilities.2.name": "再生",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "爪擊（僅惡鬼形態）",
+      "data.actions.2.name": "長柄刀",
+      "data.actions.3.name": "變形"
+    },
+    "srd5.1:monster:orc": {
+      "name": "獸人",
+      "data.special_abilities.0.name": "好鬥",
+      "data.actions.0.name": "巨斧",
+      "data.actions.1.name": "標槍"
+    },
+    "srd5.1:monster:otyugh": {
+      "name": "食腐獸",
+      "data.special_abilities.0.name": "有限感應",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "觸鬚",
+      "data.actions.3.name": "觸鬚猛擊"
+    },
+    "srd5.1:monster:owl": {
+      "name": "貓頭鷹",
+      "data.special_abilities.0.name": "飛掠",
+      "data.special_abilities.1.name": "敏銳視聽覺",
+      "data.actions.0.name": "禽爪"
+    },
+    "srd5.1:monster:owlbear": {
+      "name": "梟熊",
+      "data.special_abilities.0.name": "敏銳視嗅覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "喙啄",
+      "data.actions.2.name": "爪擊"
+    },
+    "srd5.1:monster:panther": {
+      "name": "黑豹",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.special_abilities.1.name": "猛撲",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "爪擊"
+    },
+    "srd5.1:monster:pegasus": {
+      "name": "飛馬",
+      "data.actions.0.name": "蹄擊"
+    },
+    "srd5.1:monster:phase-spider": {
+      "name": "相位蜘蛛",
+      "data.special_abilities.0.name": "以太漫遊",
+      "data.special_abilities.1.name": "蛛行",
+      "data.special_abilities.2.name": "蛛網行者",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:pit-fiend": {
+      "name": "深獄煉魔",
+      "data.special_abilities.0.name": "恐懼靈光",
+      "data.special_abilities.1.name": "魔法抗性",
+      "data.special_abilities.2.name": "魔法武器",
+      "data.special_abilities.3.name": "天生施法",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "硬頭錘",
+      "data.actions.4.name": "尾擊"
+    },
+    "srd5.1:monster:planetar": {
+      "name": "異界神侍",
+      "data.special_abilities.0.name": "天使武器",
+      "data.special_abilities.1.name": "神性警覺",
+      "data.special_abilities.2.name": "天生施法",
+      "data.special_abilities.3.name": "魔法抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "巨劍",
+      "data.actions.2.name": "治癒之觸"
+    },
+    "srd5.1:monster:plesiosaurus": {
+      "name": "蛇頸龍",
+      "data.special_abilities.0.name": "屏息",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:poisonous-snake": {
+      "name": "毒蛇",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:polar-bear": {
+      "name": "白熊",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊"
+    },
+    "srd5.1:monster:pony": {
+      "name": "矮種馬",
+      "data.actions.0.name": "蹄擊"
+    },
+    "srd5.1:monster:priest": {
+      "name": "祭司",
+      "data.special_abilities.0.name": "神聖啓示",
+      "data.special_abilities.1.name": "施法",
+      "data.actions.0.name": "硬頭錘"
+    },
+    "srd5.1:monster:pseudodragon": {
+      "name": "僞龍",
+      "data.special_abilities.0.name": "敏銳感官",
+      "data.special_abilities.1.name": "魔法抗性",
+      "data.special_abilities.2.name": "有限感應",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "釘刺"
+    },
+    "srd5.1:monster:purple-worm": {
+      "name": "紫蟲",
+      "data.special_abilities.0.name": "掘道者",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "尾刺"
+    },
+    "srd5.1:monster:quasit": {
+      "name": "誇塞魔",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "魔法抗性",
+      "data.actions.0.name": "爪擊（野獸形態時改為啃咬）",
+      "data.actions.1.name": "驚嚇",
+      "data.actions.2.name": "隱形術"
+    },
+    "srd5.1:monster:quipper": {
+      "name": "食人魚",
+      "data.special_abilities.0.name": "血腥狂怒",
+      "data.special_abilities.1.name": "水下呼吸",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:rakshasa": {
+      "name": "羅剎",
+      "data.special_abilities.0.name": "有限魔免",
+      "data.special_abilities.1.name": "天生施法",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "爪擊"
+    },
+    "srd5.1:monster:rat": {
+      "name": "老鼠",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:raven": {
+      "name": "渡鴉",
+      "data.special_abilities.0.name": "擬聲",
+      "data.actions.0.name": "喙啄"
+    },
+    "srd5.1:monster:red-dragon-wyrmling": {
+      "name": "紅龍雛龍",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "火焰吐息"
+    },
+    "srd5.1:monster:reef-shark": {
+      "name": "礁鯊",
+      "data.special_abilities.0.name": "集羣戰術",
+      "data.special_abilities.1.name": "水下呼吸",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:remorhaz": {
+      "name": "百足魔獸",
+      "data.special_abilities.0.name": "灼熱之軀",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "吞嚥"
+    },
+    "srd5.1:monster:rhinoceros": {
+      "name": "犀牛",
+      "data.special_abilities.0.name": "衝鋒",
+      "data.actions.0.name": "頂撞"
+    },
+    "srd5.1:monster:riding-horse": {
+      "name": "乘用馬",
+      "data.actions.0.name": "蹄擊"
+    },
+    "srd5.1:monster:roc": {
+      "name": "鵬鳥",
+      "data.special_abilities.0.name": "敏銳視覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "喙啄",
+      "data.actions.2.name": "禽爪"
+    },
+    "srd5.1:monster:roper": {
+      "name": "樹繩妖",
+      "data.special_abilities.0.name": "虛假外貌",
+      "data.special_abilities.1.name": "擒抱卷鬚",
+      "data.special_abilities.2.name": "蛛行",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "卷鬚",
+      "data.actions.3.name": "拖拽"
+    },
+    "srd5.1:monster:rug-of-smothering": {
+      "name": "悶人毯",
+      "data.special_abilities.0.name": "反魔法易感",
+      "data.special_abilities.1.name": "傷害轉嫁",
+      "data.special_abilities.2.name": "虛假外貌",
+      "data.actions.0.name": "卷緊"
+    },
+    "srd5.1:monster:rust-monster": {
+      "name": "鏽蝕怪",
+      "data.special_abilities.0.name": "鐵質嗅覺",
+      "data.special_abilities.1.name": "鏽蝕金屬",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "觸角"
+    },
+    "srd5.1:monster:saber-toothed-tiger": {
+      "name": "劍齒虎",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.special_abilities.1.name": "猛撲",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "爪擊"
+    },
+    "srd5.1:monster:sahuagin": {
+      "name": "沙華魚人",
+      "data.special_abilities.0.name": "血腥狂怒",
+      "data.special_abilities.1.name": "有限兩棲",
+      "data.special_abilities.2.name": "鯊心感應",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "矛"
+    },
+    "srd5.1:monster:salamander": {
+      "name": "火蜥蜴",
+      "data.special_abilities.0.name": "灼熱之軀",
+      "data.special_abilities.1.name": "灼熱武器",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "矛",
+      "data.actions.2.name": "尾擊"
+    },
+    "srd5.1:monster:satyr": {
+      "name": "半羊人",
+      "data.special_abilities.0.name": "魔法抗性",
+      "data.actions.0.name": "衝撞",
+      "data.actions.1.name": "短劍",
+      "data.actions.2.name": "短弓"
+    },
+    "srd5.1:monster:scorpion": {
+      "name": "蠍子",
+      "data.actions.0.name": "釘刺"
+    },
+    "srd5.1:monster:scout": {
+      "name": "斥候",
+      "data.special_abilities.0.name": "敏銳視聽覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "短劍",
+      "data.actions.2.name": "長弓"
+    },
+    "srd5.1:monster:sea-hag": {
+      "name": "海鬼婆",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "恐怖形象",
+      "data.actions.0.name": "爪擊",
+      "data.actions.1.name": "死亡怒視",
+      "data.actions.2.name": "幻形"
+    },
+    "srd5.1:monster:sea-horse": {
+      "name": "海馬",
+      "data.special_abilities.0.name": "水下呼吸"
+    },
+    "srd5.1:monster:shadow": {
+      "name": "幽影",
+      "data.special_abilities.0.name": "無定形",
+      "data.special_abilities.1.name": "暗影隱匿",
+      "data.special_abilities.2.name": "日照弱點",
+      "data.actions.0.name": "吸取力量"
+    },
+    "srd5.1:monster:shambling-mound": {
+      "name": "蔓生怪",
+      "data.special_abilities.0.name": "閃電吸收",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "猛擊",
+      "data.actions.2.name": "吞沒"
+    },
+    "srd5.1:monster:shield-guardian": {
+      "name": "盾衛",
+      "data.special_abilities.0.name": "連接",
+      "data.special_abilities.1.name": "再生",
+      "data.special_abilities.2.name": "法術存儲",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "拳擊",
+      "data.reactions.0.name": "護盾術"
+    },
+    "srd5.1:monster:shrieker": {
+      "name": "尖叫蕈",
+      "data.special_abilities.0.name": "虛假外貌",
+      "data.reactions.0.name": "尖叫"
+    },
+    "srd5.1:monster:silver-dragon-wyrmling": {
+      "name": "銀龍雛龍",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "吐息武器"
+    },
+    "srd5.1:monster:skeleton": {
+      "name": "骷髏",
+      "data.actions.0.name": "短劍",
+      "data.actions.1.name": "短弓"
+    },
+    "srd5.1:monster:solar": {
+      "name": "熾天神侍",
+      "data.special_abilities.0.name": "天使武器",
+      "data.special_abilities.1.name": "神性警覺",
+      "data.special_abilities.2.name": "天生施法",
+      "data.special_abilities.3.name": "魔法抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "巨劍",
+      "data.actions.2.name": "殺戮長弓",
+      "data.actions.3.name": "凌空劍",
+      "data.actions.4.name": "治癒之觸",
+      "data.legendary_actions.0.name": "傳送",
+      "data.legendary_actions.1.name": "熾炎爆（消耗2次動作）",
+      "data.legendary_actions.2.name": "目盲凝視（消耗3次動作）"
+    },
+    "srd5.1:monster:specter": {
+      "name": "幽靈",
+      "data.special_abilities.0.name": "虛體移動",
+      "data.special_abilities.1.name": "日照敏感",
+      "data.actions.0.name": "吸取生命"
+    },
+    "srd5.1:monster:spider": {
+      "name": "蜘蛛",
+      "data.special_abilities.0.name": "蛛行",
+      "data.special_abilities.1.name": "蛛網感知",
+      "data.special_abilities.2.name": "蛛網行者",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:spirit-naga": {
+      "name": "精魂納迦",
+      "data.special_abilities.0.name": "復生",
+      "data.special_abilities.1.name": "施法",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:sprite": {
+      "name": "小妖精",
+      "data.actions.0.name": "長劍",
+      "data.actions.1.name": "短弓",
+      "data.actions.2.name": "心之視界",
+      "data.actions.3.name": "隱形術"
+    },
+    "srd5.1:monster:spy": {
+      "name": "密探",
+      "data.special_abilities.0.name": "靈巧動作",
+      "data.special_abilities.1.name": "偷襲（1/驅散）",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "短劍",
+      "data.actions.2.name": "手弩"
+    },
+    "srd5.1:monster:steam-mephit": {
+      "name": "蒸汽魔蝠",
+      "data.special_abilities.0.name": "死亡爆發",
+      "data.special_abilities.1.name": "天生施法",
+      "data.actions.0.name": "爪擊",
+      "data.actions.1.name": "蒸汽吐息"
+    },
+    "srd5.1:monster:stirge": {
+      "name": "蚊蝠",
+      "data.actions.0.name": "吸取血液"
+    },
+    "srd5.1:monster:stone-giant": {
+      "name": "石巨人",
+      "data.special_abilities.0.name": "巖地僞裝",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "巨棒",
+      "data.actions.2.name": "擲石",
+      "data.reactions.0.name": "接石"
+    },
+    "srd5.1:monster:stone-golem": {
+      "name": "石魔像",
+      "data.special_abilities.0.name": "不變形態",
+      "data.special_abilities.1.name": "魔法抗性",
+      "data.special_abilities.2.name": "魔法武器",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "猛擊",
+      "data.actions.2.name": "緩速術"
+    },
+    "srd5.1:monster:storm-giant": {
+      "name": "風暴巨人",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.special_abilities.1.name": "天生施法",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "巨劍",
+      "data.actions.2.name": "擲石",
+      "data.actions.3.name": "閃電打擊"
+    },
+    "srd5.1:monster:succubus-incubus": {
+      "name": "魅魔／夢魔",
+      "data.special_abilities.0.name": "傳念連接",
+      "data.special_abilities.1.name": "變形生物",
+      "data.actions.0.name": "爪擊（僅邪魔形態）",
+      "data.actions.1.name": "魅惑",
+      "data.actions.2.name": "汲命之吻",
+      "data.actions.3.name": "以太化"
+    },
+    "srd5.1:monster:swarm-of-bats": {
+      "name": "蝙蝠羣",
+      "data.special_abilities.0.name": "回聲定位",
+      "data.special_abilities.1.name": "敏銳聽覺",
+      "data.special_abilities.2.name": "集羣",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:swarm-of-beetles": {
+      "name": "甲蟲羣",
+      "data.special_abilities.0.name": "集羣",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:swarm-of-centipedes": {
+      "name": "蜈蚣羣",
+      "data.special_abilities.0.name": "集羣",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:swarm-of-insects": {
+      "name": "蟲羣",
+      "data.special_abilities.0.name": "集羣",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:swarm-of-poisonous-snakes": {
+      "name": "毒蛇羣",
+      "data.special_abilities.0.name": "集羣",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:swarm-of-quippers": {
+      "name": "食人魚羣",
+      "data.special_abilities.0.name": "血腥狂怒",
+      "data.special_abilities.1.name": "集羣",
+      "data.special_abilities.2.name": "水下呼吸",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:swarm-of-rats": {
+      "name": "鼠羣",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.special_abilities.1.name": "集羣",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:swarm-of-ravens": {
+      "name": "渡鴉羣",
+      "data.special_abilities.0.name": "集羣",
+      "data.actions.0.name": "喙啄"
+    },
+    "srd5.1:monster:swarm-of-spiders": {
+      "name": "蜘蛛羣",
+      "data.special_abilities.0.name": "集羣",
+      "data.special_abilities.1.name": "蛛行",
+      "data.special_abilities.2.name": "蛛網感知",
+      "data.special_abilities.3.name": "蛛網行者",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:swarm-of-wasps": {
+      "name": "黃蜂羣",
+      "data.special_abilities.0.name": "集羣",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:tarrasque": {
+      "name": "泰拉斯奎巨獸",
+      "data.special_abilities.0.name": "傳奇抗性",
+      "data.special_abilities.1.name": "魔法抗性",
+      "data.special_abilities.2.name": "反彈甲殼",
+      "data.special_abilities.3.name": "攻城怪物",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "角擊",
+      "data.actions.4.name": "尾擊",
+      "data.actions.5.name": "駭人威儀",
+      "data.actions.6.name": "吞嚥",
+      "data.legendary_actions.0.name": "攻擊",
+      "data.legendary_actions.1.name": "移動",
+      "data.legendary_actions.2.name": "咀嚼（消耗2次動作）"
+    },
+    "srd5.1:monster:thug": {
+      "name": "暴徒",
+      "data.special_abilities.0.name": "集羣戰術",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "硬頭錘",
+      "data.actions.2.name": "重弩"
+    },
+    "srd5.1:monster:tiger": {
+      "name": "老虎",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.special_abilities.1.name": "猛撲",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "爪擊"
+    },
+    "srd5.1:monster:treant": {
+      "name": "樹人",
+      "data.special_abilities.0.name": "虛假外貌",
+      "data.special_abilities.1.name": "攻城怪物",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "猛擊",
+      "data.actions.2.name": "擲石",
+      "data.actions.3.name": "活化樹木"
+    },
+    "srd5.1:monster:tribal-warrior": {
+      "name": "部族武者",
+      "data.special_abilities.0.name": "集羣戰術",
+      "data.actions.0.name": "矛"
+    },
+    "srd5.1:monster:triceratops": {
+      "name": "三角龍",
+      "data.special_abilities.0.name": "踐踏衝鋒",
+      "data.actions.0.name": "頂撞",
+      "data.actions.1.name": "踐踏"
+    },
+    "srd5.1:monster:troll": {
+      "name": "巨魔",
+      "data.special_abilities.0.name": "敏銳嗅覺",
+      "data.special_abilities.1.name": "再生",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊"
+    },
+    "srd5.1:monster:tyrannosaurus-rex": {
+      "name": "霸王龍",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "尾擊"
+    },
+    "srd5.1:monster:unicorn": {
+      "name": "獨角獸",
+      "data.special_abilities.0.name": "衝鋒",
+      "data.special_abilities.1.name": "天生施法",
+      "data.special_abilities.2.name": "魔法抗性",
+      "data.special_abilities.3.name": "魔法武器",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "蹄擊",
+      "data.actions.2.name": "角擊",
+      "data.actions.3.name": "治癒之觸",
+      "data.actions.4.name": "傳送",
+      "data.legendary_actions.0.name": "蹄擊",
+      "data.legendary_actions.1.name": "閃光護盾（消耗2次動作）",
+      "data.legendary_actions.2.name": "自愈（消耗3次動作）"
+    },
+    "srd5.1:monster:vampire-bat": {
+      "name": "吸血鬼（蝙蝠形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "傳奇抗性",
+      "data.special_abilities.2.name": "霧遁",
+      "data.special_abilities.3.name": "再生",
+      "data.special_abilities.4.name": "蛛行",
+      "data.special_abilities.5.name": "吸血鬼弱點",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "魅惑",
+      "data.actions.2.name": "夜之子",
+      "data.legendary_actions.0.name": "移動",
+      "data.legendary_actions.1.name": "徒手打擊",
+      "data.legendary_actions.2.name": "啃咬（消耗2次動作）"
+    },
+    "srd5.1:monster:vampire-mist": {
+      "name": "吸血鬼（霧氣形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "傳奇抗性",
+      "data.special_abilities.2.name": "霧遁",
+      "data.special_abilities.3.name": "再生",
+      "data.special_abilities.4.name": "蛛行",
+      "data.special_abilities.5.name": "吸血鬼弱點",
+      "data.legendary_actions.0.name": "移動",
+      "data.legendary_actions.1.name": "徒手打擊",
+      "data.legendary_actions.2.name": "啃咬（消耗2次動作）"
+    },
+    "srd5.1:monster:vampire-spawn": {
+      "name": "吸血鬼衍體",
+      "data.special_abilities.0.name": "再生",
+      "data.special_abilities.1.name": "蛛行",
+      "data.special_abilities.2.name": "吸血鬼弱點",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊"
+    },
+    "srd5.1:monster:vampire-vampire": {
+      "name": "吸血鬼（吸血鬼形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "傳奇抗性",
+      "data.special_abilities.2.name": "霧遁",
+      "data.special_abilities.3.name": "再生",
+      "data.special_abilities.4.name": "蛛行",
+      "data.special_abilities.5.name": "吸血鬼弱點",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "徒手打擊",
+      "data.actions.2.name": "啃咬",
+      "data.actions.3.name": "魅惑",
+      "data.actions.4.name": "夜之子",
+      "data.legendary_actions.0.name": "移動",
+      "data.legendary_actions.1.name": "徒手打擊",
+      "data.legendary_actions.2.name": "啃咬（消耗2次動作）"
+    },
+    "srd5.1:monster:veteran": {
+      "name": "老兵",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "長劍",
+      "data.actions.2.name": "短劍",
+      "data.actions.3.name": "重弩"
+    },
+    "srd5.1:monster:violet-fungus": {
+      "name": "紫蕈",
+      "data.special_abilities.0.name": "虛假外貌",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "腐爛觸擊"
+    },
+    "srd5.1:monster:vrock": {
+      "name": "弗洛魔",
+      "data.special_abilities.0.name": "魔法抗性",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "喙啄",
+      "data.actions.2.name": "禽爪",
+      "data.actions.3.name": "孢子",
+      "data.actions.4.name": "震懾尖叫"
+    },
+    "srd5.1:monster:vulture": {
+      "name": "禿鷲",
+      "data.special_abilities.0.name": "敏銳視嗅覺",
+      "data.special_abilities.1.name": "集羣戰術",
+      "data.actions.0.name": "喙啄"
+    },
+    "srd5.1:monster:warhorse": {
+      "name": "戰馬",
+      "data.special_abilities.0.name": "踐踏衝鋒",
+      "data.actions.0.name": "蹄擊"
+    },
+    "srd5.1:monster:warhorse-skeleton": {
+      "name": "骷髏戰馬",
+      "data.actions.0.name": "蹄擊"
+    },
+    "srd5.1:monster:water-elemental": {
+      "name": "水元素",
+      "data.special_abilities.0.name": "流水形態",
+      "data.special_abilities.1.name": "凍結",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "猛擊",
+      "data.actions.2.name": "淹沒"
+    },
+    "srd5.1:monster:weasel": {
+      "name": "鼬鼠",
+      "data.special_abilities.0.name": "敏銳嗅聽覺",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:werebear-bear": {
+      "name": "熊人（熊形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "敏銳嗅覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊"
+    },
+    "srd5.1:monster:werebear-human": {
+      "name": "熊人（人類形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "敏銳嗅覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "巨斧"
+    },
+    "srd5.1:monster:werebear-hybrid": {
+      "name": "熊人（混合形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "敏銳嗅覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "巨斧"
+    },
+    "srd5.1:monster:wereboar-boar": {
+      "name": "野豬人（野豬形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "衝鋒（僅野豬與半人形態）",
+      "data.special_abilities.2.name": "堅韌",
+      "data.actions.0.name": "獠牙"
+    },
+    "srd5.1:monster:wereboar-human": {
+      "name": "野豬人（人類形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "堅韌",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "巨錘"
+    },
+    "srd5.1:monster:wereboar-hybrid": {
+      "name": "野豬人（混合形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "衝鋒（僅野豬與半人形態）",
+      "data.special_abilities.2.name": "堅韌",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "巨錘",
+      "data.actions.2.name": "獠牙"
+    },
+    "srd5.1:monster:wererat-human": {
+      "name": "鼠人（人類形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "敏銳嗅覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "短劍",
+      "data.actions.2.name": "手弩"
+    },
+    "srd5.1:monster:wererat-hybrid": {
+      "name": "鼠人（混合形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "敏銳嗅覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "短劍",
+      "data.actions.3.name": "手弩"
+    },
+    "srd5.1:monster:wererat-rat": {
+      "name": "鼠人（老鼠形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "敏銳嗅覺",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:weretiger-human": {
+      "name": "虎人（人類形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "敏銳嗅聽覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "彎刀",
+      "data.actions.2.name": "長弓"
+    },
+    "srd5.1:monster:weretiger-hybrid": {
+      "name": "虎人（混合形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "敏銳嗅聽覺",
+      "data.special_abilities.2.name": "猛撲",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "彎刀",
+      "data.actions.4.name": "長弓"
+    },
+    "srd5.1:monster:weretiger-tiger": {
+      "name": "虎人（老虎形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "敏銳嗅聽覺",
+      "data.special_abilities.2.name": "猛撲",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "爪擊"
+    },
+    "srd5.1:monster:werewolf-human": {
+      "name": "狼人（人類形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "敏銳嗅聽覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "矛"
+    },
+    "srd5.1:monster:werewolf-hybrid": {
+      "name": "狼人（混合形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "敏銳嗅聽覺",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊"
+    },
+    "srd5.1:monster:werewolf-wolf": {
+      "name": "狼人（狼形態）",
+      "data.special_abilities.0.name": "變形生物",
+      "data.special_abilities.1.name": "敏銳嗅聽覺",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:white-dragon-wyrmling": {
+      "name": "白龍雛龍",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "冷凍吐息"
+    },
+    "srd5.1:monster:wight": {
+      "name": "屍妖",
+      "data.special_abilities.0.name": "日照敏感",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "吸取生命",
+      "data.actions.2.name": "長劍",
+      "data.actions.3.name": "長弓"
+    },
+    "srd5.1:monster:will-o-wisp": {
+      "name": "鬼火",
+      "data.special_abilities.0.name": "攝食生命",
+      "data.special_abilities.1.name": "轉瞬即逝",
+      "data.special_abilities.2.name": "虛體移動",
+      "data.special_abilities.3.name": "多變照明",
+      "data.actions.0.name": "衝擊",
+      "data.actions.1.name": "隱形術"
+    },
+    "srd5.1:monster:winter-wolf": {
+      "name": "冬狼",
+      "data.special_abilities.0.name": "敏銳嗅聽覺",
+      "data.special_abilities.1.name": "集羣戰術",
+      "data.special_abilities.2.name": "雪地僞裝",
+      "data.actions.0.name": "啃咬",
+      "data.actions.1.name": "冷凍吐息"
+    },
+    "srd5.1:monster:wolf": {
+      "name": "狼",
+      "data.special_abilities.0.name": "敏銳嗅聽覺",
+      "data.special_abilities.1.name": "集羣戰術",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:worg": {
+      "name": "座狼",
+      "data.special_abilities.0.name": "敏銳嗅聽覺",
+      "data.actions.0.name": "啃咬"
+    },
+    "srd5.1:monster:wraith": {
+      "name": "縛靈",
+      "data.special_abilities.0.name": "虛體移動",
+      "data.special_abilities.1.name": "日照敏感",
+      "data.actions.0.name": "吸取生命",
+      "data.actions.1.name": "生成幽靈"
+    },
+    "srd5.1:monster:wyvern": {
+      "name": "飛龍",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "刺針"
+    },
+    "srd5.1:monster:xorn": {
+      "name": "索爾石怪",
+      "data.special_abilities.0.name": "遁地",
+      "data.special_abilities.1.name": "巖地僞裝",
+      "data.special_abilities.2.name": "財寶感知",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊"
+    },
+    "srd5.1:monster:young-black-dragon": {
+      "name": "青年黑龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "強酸吐息"
+    },
+    "srd5.1:monster:young-blue-dragon": {
+      "name": "青年藍龍",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "閃電吐息"
+    },
+    "srd5.1:monster:young-brass-dragon": {
+      "name": "青年黃銅龍",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "吐息武器"
+    },
+    "srd5.1:monster:young-bronze-dragon": {
+      "name": "青年青銅龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "吐息武器"
+    },
+    "srd5.1:monster:young-copper-dragon": {
+      "name": "青年赤銅龍",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "吐息武器"
+    },
+    "srd5.1:monster:young-gold-dragon": {
+      "name": "青年金龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "吐息武器"
+    },
+    "srd5.1:monster:young-green-dragon": {
+      "name": "青年綠龍",
+      "data.special_abilities.0.name": "水陸兩棲",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "毒素吐息"
+    },
+    "srd5.1:monster:young-red-dragon": {
+      "name": "青年紅龍",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "火焰吐息"
+    },
+    "srd5.1:monster:young-silver-dragon": {
+      "name": "幼年銀龍",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "吐息武器"
+    },
+    "srd5.1:monster:young-white-dragon": {
+      "name": "青年白龍",
+      "data.special_abilities.0.name": "冰上行走",
+      "data.actions.0.name": "多重攻擊",
+      "data.actions.1.name": "啃咬",
+      "data.actions.2.name": "爪擊",
+      "data.actions.3.name": "冷凍吐息"
+    },
+    "srd5.1:monster:zombie": {
+      "name": "殭屍",
+      "data.special_abilities.0.name": "不死堅韌",
+      "data.actions.0.name": "猛擊"
+    }
+  }
+}
