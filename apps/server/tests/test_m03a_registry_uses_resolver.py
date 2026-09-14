@@ -7,6 +7,7 @@ import shutil
 import pytest
 
 import app.content.registry as registry_module
+from app.content.p4a_inventory import EXPECTED_SRD_MONSTER_COUNT
 from app.content.registry import ContentRegistry, ContentValidationError
 from app.paths import resolve_content_root, resolve_srd_content_root
 from tests.m03_baseline import M03A_START_PACK_ENTRY_COUNTS
@@ -68,7 +69,7 @@ def test_environment_content_root_changes_actual_registry_source(
     assert registry.get("srd5.1:race:human").source_label == "M03-A Temporary SRD"
 
 
-def test_default_full_registry_matches_m03a_start_snapshot(
+def test_default_full_registry_matches_m03a_snapshot_plus_p4a_monsters(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     content_root = resolve_content_root()
@@ -82,8 +83,11 @@ def test_default_full_registry_matches_m03a_start_snapshot(
 
     registry = registry_module.load_default_content_registry()
     assert registry.enabled_pack_ids == tuple(FULL_PACK_ENTRY_COUNTS)
-    assert len(registry) == sum(FULL_PACK_ENTRY_COUNTS.values())
-    for source, expected_count in FULL_PACK_ENTRY_COUNTS.items():
+
+    expected_counts = dict(FULL_PACK_ENTRY_COUNTS)
+    expected_counts["srd5.1"] += EXPECTED_SRD_MONSTER_COUNT
+    assert len(registry) == sum(expected_counts.values())
+    for source, expected_count in expected_counts.items():
         manifest = registry.get_source_manifest(source)
         assert manifest.total_entries == expected_count
 
