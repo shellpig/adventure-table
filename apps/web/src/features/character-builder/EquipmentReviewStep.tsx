@@ -47,7 +47,7 @@ type P1GReview = BuilderReviewDTO & {
   reconciliation?: StateReconciliationPreview | null
 }
 
-const GRANT_KIND_KEYS: Record<string, UiCopyKey> = {
+export const GRANT_KIND_KEYS: Record<string, UiCopyKey> = {
   language: 'builder.grant.language',
   feature: 'builder.grant.feature',
   background_feature: 'builder.grant.background_feature',
@@ -56,6 +56,7 @@ const GRANT_KIND_KEYS: Record<string, UiCopyKey> = {
   skill: 'builder.grant.skill',
   spell: 'builder.grant.spell',
   infusion: 'builder.grant.infusion',
+  feat: 'builder.grant.feat',
 }
 
 function selectedIds(raw: unknown): string[] {
@@ -360,7 +361,7 @@ export function EquipmentReviewStep({
         ),
       ]
     : []
-  const { nameFor, fieldFor, locale } = useContentPresentations(
+  const { nameFor, fieldFor } = useContentPresentations(
     reviewReferences,
     review ? grantPresentationFields(review.resolved_summary.grants) : {},
   )
@@ -469,11 +470,9 @@ export function EquipmentReviewStep({
                     {row.map((grant, index) => (
                       <div key={`${grant.source_ref}:${grant.reference_id ?? grant.label}:${index}`}>
                         <span>
-                          {grant.kind === 'feat'
-                            ? locale === 'zh-TW' ? '專長' : 'feat'
-                            : GRANT_KIND_KEYS[grant.kind]
-                              ? t(GRANT_KIND_KEYS[grant.kind])
-                              : grant.kind}
+                          {GRANT_KIND_KEYS[grant.kind]
+                            ? t(GRANT_KIND_KEYS[grant.kind])
+                            : grant.kind}
                         </span>
                         <strong>
                           {grantDisplayName(

@@ -39,4 +39,11 @@ describe('M02-B UI copy resources', () => {
     expect(UI_COPY.en['sheet.noInventory']).toContain('No items')
     expect(UI_COPY['zh-TW']['sheet.noInventory']).toContain('沒有符合搜尋條件')
   })
+
+  it('provides localized builder grant kinds in both locales', () => {
+    expect(translateUi('en', 'builder.grant.feat')).toBe('feat')
+    expect(translateUi('zh-TW', 'builder.grant.feat')).toBe('專長')
+    expect(translateUi('en', 'builder.grant.skill')).toBe('skill')
+    expect(translateUi('zh-TW', 'builder.grant.skill')).toBe('技能')
+  })
 })

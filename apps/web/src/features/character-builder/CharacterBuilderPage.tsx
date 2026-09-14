@@ -101,12 +101,16 @@ const ABILITY_METHOD_KEYS: Record<AbilityGenerationMethod, UiCopyKey> = {
   manual: 'builder.abilities.manual',
 }
 
-const GRANT_KIND_KEYS: Record<string, UiCopyKey> = {
+export const GRANT_KIND_KEYS: Record<string, UiCopyKey> = {
   language: 'builder.grant.language',
   feature: 'builder.grant.feature',
   background_feature: 'builder.grant.background_feature',
   trait: 'builder.grant.trait',
   proficiency: 'builder.grant.proficiency',
+  skill: 'builder.grant.skill',
+  spell: 'builder.grant.spell',
+  infusion: 'builder.grant.infusion',
+  feat: 'builder.grant.feat',
 }
 
 const ABILITY_KEYS = Object.keys(ABILITY_COPY_KEYS) as (keyof BuilderAbilityScores)[]

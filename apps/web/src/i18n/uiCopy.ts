@@ -167,6 +167,7 @@ const en = {
   'builder.grant.skill': 'skill',
   'builder.grant.spell': 'spell',
   'builder.grant.infusion': 'infusion',
+  'builder.grant.feat': 'feat',
 
   'class.targetFirst': 'Set a target level first.',
   'class.step': 'STEP 04',
@@ -629,6 +630,7 @@ const zhTW: Record<UiCopyKey, string> = {
   'builder.grant.skill': '技能',
   'builder.grant.spell': '法術',
   'builder.grant.infusion': '灌注',
+  'builder.grant.feat': '專長',
 
   'class.targetFirst': '請先設定目標等級。',
   'class.step': '步驟 04',
