@@ -1,6 +1,6 @@
 # Adventure Table 專案簡報
 
-最後更新：2026-09-14（U01-A — E2E Database Isolation & Fast Test Foundation 已開工；P4-A 開工前置維持完成）
+最後更新：2026-09-14（U01-A — E2E Database Isolation & Fast Test Foundation 關門；P4-A 開工前置維持完成）
 
 本檔是**當前進度、Roadmap、下一步與文件索引的單一事實來源**，供新的 AI Session 或實作者接手。產品行為以 [規格企劃.md](規格企劃.md) 為準；實作契約與歷史驗收證據請依下方索引查閱，不在本檔重述。
 
@@ -24,7 +24,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## 當前狀態與下一步
 
-**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-O 已逐項關門，M01 仍是長期保持 open 的 Character Content Expansion / Maintenance track；M04-A～M04-C 已於 2026-09-12 關門。P4 開工前置已於 2026-09-13 完成，產品主線下一步仍是 P4-A — Monster & Combatant Foundation。工程優化軌 `U01` 已建立，`U01-A — E2E Database Isolation & Fast Test Foundation` 於 2026-09-14 在 branch `u01-a-e2e-isolation` 開工；U01 不改寫 P Roadmap，可與 P4 並行。M01 track 下一個未使用字母為 M01-P，尚無已拍板 scope。**
+**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-O 已逐項關門，M01 仍是長期保持 open 的 Character Content Expansion / Maintenance track；M04-A～M04-C 已於 2026-09-12 關門。P4 開工前置已於 2026-09-13 完成，產品主線下一步仍是 P4-A — Monster & Combatant Foundation。工程優化軌 `U01` 已建立，`U01-A — E2E Database Isolation & Fast Test Foundation` 於 2026-09-14 在 branch `u01-a-e2e-isolation` 關門（`docs/U01/U01-A.md` §14）：E2E 改走獨立 `adventure_table_e2e` + `server-e2e` 8001 / `web-e2e` 5174，reset 有 `current_database()` hard guard，本機 `npm run test:e2e:docker` 不再碰 daily `adventure_table` 也不再重啟 daily `server` / `web`；同機 Playwright 主套件 10.1m → 10.1m 無倒退，wrapper 總 wall-clock 10.6 分成為後續 U01 加速 baseline。U01 整體維持 open，不改寫 P Roadmap，可與 P4 並行。M01 track 下一個未使用字母為 M01-P，尚無已拍板 scope。**
 
 P2 已交付並必須繼續維持的核心方向：
 
@@ -76,7 +76,7 @@ P4 已拍板並寫入正式文件的核心方向：
 下一步依序為：
 
 1. **產品主線：P4-A — Monster & Combatant Foundation 實作**：建立 Monster Template / Instance / Combatant foundation，materialize pinned SRD 5.1 Monster corpus **334 筆／Beast subset 87 筆**，從第一段就建立 locale completeness gate、enemy secrecy projection 與 standalone Template-vs-Instance boundary。
-2. **工程優化線：U01-A — E2E Database Isolation & Fast Test Foundation**：在 `u01-a-e2e-isolation` 實作 E2E 專用 database + `server-e2e` / `web-e2e`，加 destructive reset hard guard；不阻塞 P4 Roadmap，但在大量 P4 E2E 前完成可降低真實資料風險。
+2. **工程優化線：U01 下一項目未拍板**。U01-A 已關門；後續加速項目（Docker rebuild、Playwright helper O(n²)、重複 seed／fixture、suite partition／多 worker）依 `docs/U01/U01-A.md` §8 與 10.6 分 baseline 續編，不阻塞 P4。
 3. P4-B～P4-F 依三份 P4 文件順序逐段實作、review、驗收；P5～P8 仍維持大 Phase，不提前拆分或設計其 schema / API / module。
 
 P2 的正式契約：
@@ -141,7 +141,7 @@ U01 的正式契約採單檔格式：
 | draft Campaign hard delete 會 cascade 掉整份 Roster | 符合契約，且 **P2-E 已把「無 Session history」從恆真變成真的檢查**（`delete_draft_without_session_history()`）。剩下的問題只在 UI：確認流程未顯示會連帶移除幾筆 roster。P2 未處理 | [P2-C closeout](docs/P2/P2-C_CLOSEOUT.md)「已知限制」；[P2-F closeout](docs/P2/P2-F_CLOSEOUT.md)「已知限制」 |
 | Room Hard Delete 是目前最容易造成不可逆資料遺失的入口 | 確認 modal 只要求輸入 Room 名稱，未顯示會連帶刪除幾個 Character／Draft／Campaign／Session，也未提示先匯出。行為符合契約，human smoke 期間實際造成兩隻角色永久遺失。P2 未處理 | [P2-B closeout](docs/P2/P2-B_CLOSEOUT.md)「已知限制」；[P2-F closeout](docs/P2/P2-F_CLOSEOUT.md)「已知限制」 |
 | `display_name` 只在 Lobby 有去處 | **P2-D 起 Lobby 的 controller 下拉與 Seat 卡片會顯示它**，P2-B 記錄的「填了零反饋」部分解除；Room landing 與 Character workspace 仍不呈現 | [P2-D closeout](docs/P2/P2-D_CLOSEOUT.md)「已知限制」 |
-| E2E global setup 無條件清空 Character | **U01-A 已開工但尚未關門。** 目前 main 仍以 `TRUNCATE rooms, characters, ai_oauth_clients … CASCADE` 清空同一個 `adventure_table`；本機若對真實 DB 設 `ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET=1` 仍可能刪光資料。U01-A 將改為獨立 `adventure_table_e2e` + `server-e2e` / `web-e2e` + DB identity hard guard；完成前仍需自行備份 | [U01-A](docs/U01/U01-A.md) |
+| E2E destructive reset 只作用於 `adventure_table_e2e` | **U01-A 已收斂。** reset 抽成 `e2e-reset-db.mjs`，同一 `psql --single-transaction` 內先檢查 `current_database() == 'adventure_table_e2e'` 再 truncate，guard 名稱是常數、無 env override；本機仍需 `ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET=1` opt-in，但不再需要因 E2E 備份 daily DB。**殘留**：`--database` 值經 `shell: true` 直接拼進命令（Node `DEP0190` warning），只供操作者使用 | [U01-A](docs/U01/U01-A.md) §14.5 / §14.7 |
 | M04-C 真實 AI 進桌只驗了目標平台 | C.8 的 Bearer MCP client 與純 HTTP 兩條路徑、C.9 非目標平台／Codex 相容記錄，2026-09-12 由使用者拍板延後；kit 的 Bearer 段與最小 HTTP client 範例只有單元／E2E 對契約的斷言，沒有真實 AI 憑 kit 走這兩條路的證據 | [M04-C closeout](docs/M04/M04-C_CLOSEOUT.md)「延後項目」 |
 | M01-J 直創／逐級升等等價 E2E | 測試目前 `fixme`，瀏覽器層證據仍有缺口；後端已有相關整合覆蓋 | [已知問題.md](已知問題.md) KI-M01J-001 |
 | Windows Vite E2E 環境 | 使用既有 Docker Linux dev server 路徑驗證；不要走 Windows Playwright 託管 Vite 的整套路徑 | [已知問題.md](已知問題.md) KI-ENV-001；[README.md](README.md) |
@@ -165,7 +165,7 @@ U01 的正式契約採單檔格式：
 | P2 | Room / Campaign / Session / Seat | Room-first Web、Room Character Workspace、Campaign / Roster、Seat / Controller / Lobby、Session lifecycle；**A～F 全數關門，Phase 已關門** |
 | P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌；**A～F 全數關門，Phase 已關門並合併回 `main`** |
 | M04 | Web Chat MCP Integration & AI Join Kit | P3 關門後、P4 前插入；網頁版 chat preflight（ChatGPT Plus → Claude chat 個人方案）→ OAuth integration → AI Join Kit 與 server-hosted 指引；**M04-A、M04-B、M04-C 皆已於 2026-09-12 關門，目標平台判定為 ChatGPT Web Plus；M04 Phase 同日以 `0465788` 合併回 `main`，merge-gate E2E run `34704122623` 全綠** |
-| U01 | Test / Development Efficiency Optimization | 長期測試／開發效率與可靠性優化軌；**U01-A 已於 2026-09-14 開工，整體保持 open，不阻塞 P4** |
+| U01 | Test / Development Efficiency Optimization | 長期測試／開發效率與可靠性優化軌；**U01-A 已於 2026-09-14 關門，整體保持 open，不阻塞 P4** |
 | P4 | Quick Combat | 第一個完整可玩的 Combat MVP；**A～F 已完成拆分與三份正式文件，P4-A preflight source/count/locale/standalone/spell-source 契約已同步，code 尚未開始；下一步 P4-A** |
 | P5 | Tactical Combat | 同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE 與空間系統 |
 | P6 | Adventure + AI DM Runtime | Adventure Definition／Importer、Campaign Runtime、世界資料、AI DM context／write-back |
@@ -281,7 +281,7 @@ U01 的正式契約採單檔格式：
 
 | Subphase | 狀態 | 重點 |
 |---|---|---|
-| **U01-A — E2E Database Isolation & Fast Test Foundation** | 🟡 | 已於 2026-09-14 在 `u01-a-e2e-isolation` 開工；目標為 `adventure_table_e2e`、`server-e2e` / `web-e2e`、wrong-DB hard guard、CI 單一路徑與後續 E2E 加速基礎；尚未 closeout |
+| **U01-A — E2E Database Isolation & Fast Test Foundation** | ✅ | 2026-09-14 關門：`adventure_table_e2e`、`server-e2e` 8001 / `web-e2e` 5174、wrong-DB hard guard、`p3-e2e.yml` 改走同一支 `test:e2e:docker`（CI 補上 xge-less 第二輪）、歷史 E2E workflow deprecated；CI run `34800987506` 全綠，同機主套件 10.1m → 10.1m |
 
 > **U01 保持 open。** U 類是 Test / Development Efficiency Optimization 長期優化軌，不改寫 P Roadmap；每個 Subphase 使用 `docs/Uxx/` 單檔格式，各自關門並留下證據。
 
@@ -299,7 +299,7 @@ U01 的正式契約採單檔格式：
 ## 接手時必須保留的跨 Phase 約束
 
 - **M01 是 long-running maintenance/content track**：A～O 是已完成 baseline；下一個未使用字母為 P。M01 open 不阻塞 P2+。後續 M01 若修改共享 Character contract，必須 regression 當時已存在的後續 P Phase，並同步做 M03 standalone compatibility review；需要 Combat / Reaction / Roll substrate 的 Feat 效果可以 structured + deferred，但不得藉 M01 偷跑 P4。
-- **U01 是 long-running test/development-efficiency track**：不改寫 P Roadmap、不承擔產品功能；每個 U Subphase 使用單檔契約並各自 closeout，任何「加速」不得犧牲 correctness、資料隔離或既有產品行為。U01-A closeout 前，本機 destructive E2E 仍視為真實資料風險。
+- **U01 是 long-running test/development-efficiency track**：不改寫 P Roadmap、不承擔產品功能；每個 U Subphase 使用單檔契約並各自 closeout，任何「加速」不得犧牲 correctness、資料隔離或既有產品行為。U01-A 關門後本機 E2E 只作用於 `adventure_table_e2e`，不再視為 daily 資料風險。
 - **Web Room-first / Standalone Character-first 是永久產品邊界**：Web Character / Draft在 P2-B 後一定由 Room workspace管理；Standalone不建立 Room。多人層只可依賴 Character Core，Character / Builder / Interop與 `app.standalone`不得反向 import多人層。契約見 [規格企劃.md](規格企劃.md) 第三、四、五章與 [P2 開發設計方針](docs/P2/開發設計方針.md)。
 - **Standalone boundary 是常駐約束**：`app.standalone` 不得 import `app.main` 或 P2+ multiplayer modules。P3每新增 multiplayer module / table / MCP route時都必須同步確認 `test_m03_import_boundary.py` 與 `test_m03d_schema_parity.py` 的 forbidden coverage；standalone migration只升 `character@head`，不能把Web multiplayer schema灌進SQLite。
 - **Character JSON v1 是 P2-A 起的相容基線**：新 export 已鎖 v1（`schema_version="1"` / `schema_status="locked"` / `export_type="character"`）；legacy M03 `unstable` 仍可由新版本 import並normalize。Room / Campaign / Seat / Session / P3 runtime identity不得塞進Character JSON。
