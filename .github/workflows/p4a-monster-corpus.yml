@@ -51,7 +51,7 @@ jobs:
       - name: Commit materialized corpus when changed
         working-directory: .
         run: |
-          if git diff --quiet -- data/srd5.1/monsters.json; then
+          if [ -z "$(git status --porcelain -- data/srd5.1/monsters.json)" ]; then
             echo "Monster corpus already matches the pinned importer output."
             exit 0
           fi
