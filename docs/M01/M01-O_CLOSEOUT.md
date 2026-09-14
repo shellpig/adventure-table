@@ -71,7 +71,7 @@ Runtime without docs: PASS（`test_runtime_does_not_read_reference_markdown`：`
 Focused API integration: PASS（`test_m01o_retraining.py` 走 Room-scoped HTTP：Create / Level Up / Version draft / History）
 Focused Playwright: 6 / 6（O-E2E-01～06，容器化 web / server）
 Restart persistence: PASS（8 個代表 Build 經 `rebind_http` 重啟）
-Human smoke: 未由真人執行；O-E2E-01（racial prerequisite）、O-E2E-02（Prodigy 四段 nested）、O-E2E-05 / 06（spell / option pool）已用真實瀏覽器走過 10.12 指定的三類 Feat 的 disabled reason、choice 順序、Review 與 Sheet 呈現。真人 UX smoke 由使用者決定是否補跑，不阻塞本次 closeout
+Human smoke: PASS（2026-09-14 由使用者真人執行 10.12 三類代表 Feat：racial prerequisite / 多段 nested / spell-option pool，含 disabled reason、choice 順序、Review 與 Sheet 呈現，以及 deferred Combat 效果未被 UI 誤導為自動套用；O-E2E-01 / 02 / 05 / 06 另有真實瀏覽器覆蓋。過程發現 Builder 側欄「已解析授予項目」的 `feat` kind 標籤在 zh-TW 顯示 raw `FEAT`，已由 `f3a7b18` 補 `builder.grant.feat` 並統一 summary / review 的 `GRANT_KIND_KEYS`）
 M03 standalone compatibility: PASS（standalone round trip、import boundary、schema inventory、ref walker）
 Downstream P compatibility: P2 PASS（O-E2E 全走 Room Character Workspace；全套 pytest 含 P2 suites）；P3 PASS（全套 pytest 含 P3 suites；Character identity / sheet payload contract 未改，新欄位為 optional）
 Existing focused regression: PASS（m01i / m01k / m01l / m01m / m03 import boundary / m03b 皆綠）

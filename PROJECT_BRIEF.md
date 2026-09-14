@@ -1,6 +1,6 @@
 # Adventure Table 專案簡報
 
-最後更新：2026-09-14（U01-A — E2E Database Isolation & Fast Test Foundation 關門；P4-A 開工前置維持完成）
+最後更新：2026-09-14（U01-A — E2E Database Isolation & Fast Test Foundation 關門；M01-O 真人 smoke 補跑完成；P4-A 開工前置維持完成）
 
 本檔是**當前進度、Roadmap、下一步與文件索引的單一事實來源**，供新的 AI Session 或實作者接手。產品行為以 [規格企劃.md](規格企劃.md) 為準；實作契約與歷史驗收證據請依下方索引查閱，不在本檔重述。
 
@@ -146,7 +146,7 @@ U01 的正式契約採單檔格式：
 | M01-J 直創／逐級升等等價 E2E | 測試目前 `fixme`，瀏覽器層證據仍有缺口；後端已有相關整合覆蓋 | [已知問題.md](已知問題.md) KI-M01J-001 |
 | Windows Vite E2E 環境 | 使用既有 Docker Linux dev server 路徑驗證；不要走 Windows Playwright 託管 Vite 的整套路徑 | [已知問題.md](已知問題.md) KI-ENV-001；[README.md](README.md) |
 | M01-N 匯出 HTML 缺行為測試 | `createCharacterSheetHtmlExport()` 對真實產出的 HTML 沒有斷言，目前由投影單元測試、原始碼字串斷言與 E2E 下載斷言間接把關；`prepared_limit` 改寫路徑因 fixture 為 `null` 而不在 CI 覆蓋內（已人工驗證） | [M01-N closeout](docs/M01/M01-N_CLOSEOUT.md)「已知限制」 |
-| M01-O 真人 smoke 未執行；15 個 deferred Feats | 10.12 Human smoke 未由真人執行，只有 O-E2E-01 / 02 / 05 / 06 的真實瀏覽器覆蓋；Bountiful Luck、Dragon Fear、Elven Accuracy、Poisoner 等 15 個 Feats 的 Combat / Reaction / Roll / Rest / Inventory 效果為 structured + deferred，等 P4+ 對應 substrate，UI 只列出不自動套用 | [M01-O closeout](docs/M01/M01-O_CLOSEOUT.md)「Closeout Evidence」 |
+| M01-O 15 個 deferred Feats | 10.12 Human smoke 已於 2026-09-14 由真人執行通過；Bountiful Luck、Dragon Fear、Elven Accuracy、Poisoner 等 15 個 Feats 的 Combat / Reaction / Roll / Rest / Inventory 效果為 structured + deferred，等 P4+ 對應 substrate，UI 只列出不自動套用 | [M01-O closeout](docs/M01/M01-O_CLOSEOUT.md)「Closeout Evidence」 |
 | M03 測試／開發工具遺留 | `Settings()` import-time 快照的測試污染與 dev seed engine 入口未收斂，詳細限制及建議留在 closeout | [M03-G closeout](docs/M03/M03-G_CLOSEOUT.md)「M03 已知限制」與「留給後續 Phase 的建議」 |
 
 以上為接手時須注意的現況索引；問題詳情與歷史測試數字以連結文件為準，不代表本檔每次更新都重跑驗收。
