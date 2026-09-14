@@ -2,6 +2,9 @@ name: P3 Full-Stack E2E
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - u01-a-e2e-isolation
 
 jobs:
   playwright:
