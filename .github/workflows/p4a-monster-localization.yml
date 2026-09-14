@@ -15,6 +15,8 @@ on:
       - data/localization/m02d-srd-zh-tw-token-overrides.json
       - data/localization/m02d-srd-zh-tw-token-overrides-singletons.json
       - data/srd5.1/monsters.json
+      - apps/server/app/content/localization.py
+      - apps/server/tests/test_p4a_locale_shards.py
       - apps/server/tests/test_p4a_monster_localization.py
   workflow_dispatch:
 
@@ -56,18 +58,22 @@ jobs:
         working-directory: apps/server
         run: pip install -e ".[dev]"
 
-      - name: Verify real Monster localization completeness
+      - name: Verify locale shards and real Monster completeness
         working-directory: apps/server
-        run: pytest tests/test_p4a_monster_localization.py -q
+        run: |
+          pytest \
+            tests/test_p4a_locale_shards.py \
+            tests/test_p4a_monster_localization.py \
+            -q
 
       - name: Commit generated locale coverage when changed
         run: |
-          if [[ -z "$(git status --porcelain -- data/srd5.1/locales/zh-TW.json data/localization/p4a-monster-zh-tw-report.json)" ]]; then
+          if [[ -z "$(git status --porcelain -- data/srd5.1/locales/zh-TW/monster.json data/localization/p4a-monster-zh-tw-report.json)" ]]; then
             echo "Monster locale coverage already matches the pinned authoring inputs."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/srd5.1/locales/zh-TW.json data/localization/p4a-monster-zh-tw-report.json
+          git add data/srd5.1/locales/zh-TW/monster.json data/localization/p4a-monster-zh-tw-report.json
           git commit -m "data(p4-a): add SRD monster zh-TW labels"
           git push origin HEAD:p4-a-monster-combatant-foundation
