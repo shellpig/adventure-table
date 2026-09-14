@@ -1,0 +1,62 @@
+name: P4-A Monster Corpus
+
+on:
+  push:
+    branches:
+      - p4-a-monster-combatant-foundation
+    paths:
+      - .github/workflows/p4a-monster-corpus.yml
+      - apps/server/app/content/p4a_import_monsters.py
+      - apps/server/app/content/p4a_inventory.py
+      - data/srd5.1/manifest.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize-and-verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: p4-a-monster-combatant-foundation
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install backend
+        run: pip install -e ".[dev]"
+      - name: Fetch pinned SRD Monster source
+        working-directory: .
+        run: |
+          curl --fail --silent --show-error --location \
+            "https://raw.githubusercontent.com/5e-bits/5e-database/ce47a18dfeb3e41a1b2a2dfe00a25761c3c3a4f1/src/2014/en/5e-SRD-Monsters.json" \
+            --output /tmp/5e-SRD-Monsters.json
+      - name: Materialize checked-in Monster content
+        run: |
+          python -m app.content.p4a_import_monsters \
+            /tmp/5e-SRD-Monsters.json \
+            ../../data/srd5.1/monsters.json
+      - name: Focused P4-A content tests
+        run: |
+          pytest \
+            tests/test_p4a_import_monsters.py \
+            tests/test_p4a_monster_registry.py \
+            tests/test_p4a_monster_schema.py \
+            tests/test_p4a_monster_template_normalization.py \
+            -q
+      - name: Commit materialized corpus when changed
+        working-directory: .
+        run: |
+          if git diff --quiet -- data/srd5.1/monsters.json; then
+            echo "Monster corpus already matches the pinned importer output."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/srd5.1/monsters.json
+          git commit -m "data(p4-a): materialize pinned SRD monster corpus"
+          git push origin HEAD:p4-a-monster-combatant-foundation
