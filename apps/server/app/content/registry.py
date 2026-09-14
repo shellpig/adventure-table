@@ -298,25 +298,8 @@ class ContentRegistry:
                 f"content pack directory/id mismatch: directory={root.name}, manifest={manifest.id}"
             )
 
-        if manifest.id == "srd5.1":
-            forbidden = [root / "monsters.json", root / "beasts.json"]
-            present_forbidden = [path.name for path in forbidden if path.exists()]
-            if present_forbidden:
-                raise ContentValidationError(
-                    "P0 scope violation: Monster/Beast data must remain deferred to P4-A: "
-                    + ", ".join(present_forbidden)
-                )
-
         entries: dict[str, ContentEntry] = {}
         for category in manifest.categories:
-            if manifest.id == "srd5.1" and (
-                category.kind in {"monster", "beast"}
-                or category.name in {"monsters", "beasts"}
-            ):
-                raise ContentValidationError(
-                    f"P0 scope violation in manifest category: {category.name}"
-                )
-
             category_path = root / category.file
             try:
                 payload = json.loads(category_path.read_text(encoding="utf-8"))

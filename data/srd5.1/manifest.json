@@ -39,9 +39,5 @@
     {"name": "traits", "kind": "trait", "file": "traits.json", "upstream_file": "5e-SRD-Traits.json", "count": 38},
     {"name": "weapon-properties", "kind": "weapon-property", "file": "weapon-properties.json", "upstream_file": "5e-SRD-Weapon-Properties.json", "count": 11}
   ],
-  "total_entries": 1944,
-  "scope_guard": {
-    "excluded_categories": ["monsters", "beasts"],
-    "deferred_to": "P4-A"
-  }
+  "total_entries": 1944
 }

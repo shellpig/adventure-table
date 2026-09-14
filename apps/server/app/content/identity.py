@@ -26,6 +26,7 @@ URL_ROUTE_TO_KIND = {
     "lineages": "lineage",
     "magic-items": "item",
     "magic-schools": "magic-school",
+    "monsters": "monster",
     "proficiencies": "proficiency",
     "races": "race",
     "race-variants": "race-variant",

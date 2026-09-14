@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import Field, field_validator
 
-from app.content.schemas import APIReference, StrictModel
+from app.content.schemas import APIReference, DATA_MODELS, StrictModel
 
 
 class MonsterSpeedData(StrictModel):
@@ -182,3 +182,9 @@ class MonsterData(StrictModel):
     @property
     def is_beast(self) -> bool:
         return self.type.casefold() == "beast"
+
+
+def install_p4a_content_models() -> None:
+    """Register P4-A's Monster kind before content packs are loaded."""
+
+    DATA_MODELS["monster"] = MonsterData  # type: ignore[assignment]
