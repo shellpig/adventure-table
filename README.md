@@ -148,21 +148,26 @@ npm run build          # tsc --noEmit + vite build
 
 ## E2E 測試
 
-**整套 Playwright 一律走容器裡的 Linux dev server：**
+**整套 Playwright 一律走隔離的容器 Linux dev stack；日常網站不會被重建或切換 DB：**
 
 ```bash
 cd apps/web && npm run test:e2e:docker
 ```
 
-該 script 會自己 `docker compose up -d --build web`、等埠開、再以容器的 5173 當 base URL 執行。`--build` 不可省——`web` service 沒有掛 bind mount，略過重建會靜默測到上一版 frontend。
+U01-A 後，這個單一入口會確保共用的 PostgreSQL container 已健康、建立（若尚不存在）`adventure_table_e2e`，再啟動 profile `e2e` 下的 `server-e2e` / `web-e2e`。測試固定使用：
 
-**globalSetup 會清空 Character、Draft 與 Room。** 它無條件 `DELETE FROM characters`，不保留任何角色。CI 跑在拋棄式 volume 上會自動放行；本機必須顯式開啟，且開啟前請先確認那個 DB 沒有你要留的資料：
+- daily：`server` 8000 / `web` 5173 / database `adventure_table`
+- E2E：`server-e2e` 8001 / `web-e2e` 5174 / database `adventure_table_e2e`
+
+`server-e2e` / `web-e2e` 與 daily services 共用相同 Dockerfile / build context，因此 rebuild 可沿用 Docker layer cache；xge-less 第二輪也只 recreate E2E services，不會重啟 daily `server` / `web`。
+
+Playwright global setup 的 destructive reset **只允許作用在 `adventure_table_e2e`**。本機仍需顯式 opt-in：
 
 ```bash
 cd apps/web && ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET=1 npm run test:e2e:docker
 ```
 
-沒有設這個變數時 globalSetup 會直接中止並說明原因，不會動到資料。
+reset 在同一個 `psql --single-transaction` 內先檢查 `current_database() == 'adventure_table_e2e'`，再執行 truncate；即使誤把 `--database adventure_table` 指到日常 DB，也會 fail closed。CI 可免手動 opt-in，但不能繞過 database identity guard。**不再需要因執行 E2E 而先備份日常 `adventure_table`。**
 
 `character-sheet.spec.ts` 的 P0-F 三頁 full-page 截圖 smoke 預設跳過；要重新產出截圖時加 `ADVENTURE_TABLE_E2E_VISUAL_SMOKE=1`。
 
