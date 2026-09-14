@@ -45,8 +45,8 @@ const composeE2E = (...args) => ['compose', '--profile', E2E_COMPOSE_PROFILE, ..
 
 const ensureE2EDatabase = () => {
   const postgresUser = process.env.POSTGRES_USER ?? 'adventure'
-  console.log('[e2e-docker] ensuring PostgreSQL is running')
-  runOrExit('docker', ['compose', 'up', '-d', 'db'], repoRoot)
+  console.log('[e2e-docker] ensuring PostgreSQL is healthy')
+  runOrExit('docker', ['compose', 'up', '-d', '--wait', '--wait-timeout', '60', 'db'], repoRoot)
 
   const query = `SELECT 1 FROM pg_database WHERE datname = '${E2E_DATABASE}';\n`
   const result = spawnSync(

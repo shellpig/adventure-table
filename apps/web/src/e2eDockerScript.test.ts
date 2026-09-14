@@ -14,11 +14,15 @@ describe('Docker E2E wrapper', () => {
     expect(source).not.toContain("['compose', 'up', '-d', 'server', 'web']")
   })
 
+  it('waits for PostgreSQL health before inspecting or creating the E2E database', () => {
+    expect(source).toContain("['compose', 'up', '-d', '--wait', '--wait-timeout', '60', 'db']")
+    expect(source.indexOf("'--wait-timeout', '60'")).toBeLessThan(source.indexOf("'psql'"))
+  })
+
   it('targets the isolated E2E database and fixed browser/API ports', () => {
     expect(envSource).toContain("E2E_DATABASE = 'adventure_table_e2e'")
     expect(envSource).toContain('E2E_SERVER_PORT = 8001')
     expect(envSource).toContain('E2E_WEB_PORT = 5174')
-    expect(source).toContain("['compose', 'up', '-d', 'db']")
     expect(source).toContain("'createdb', '-U', postgresUser, E2E_DATABASE")
   })
 

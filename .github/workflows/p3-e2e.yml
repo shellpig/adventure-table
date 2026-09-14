@@ -27,6 +27,10 @@ jobs:
         working-directory: apps/web
         run: npm ci
 
+      - name: Frontend unit tests
+        working-directory: apps/web
+        run: npm test -- --run
+
       - name: TypeScript and Vite build
         working-directory: apps/web
         run: npm run build
