@@ -1,3 +1,4 @@
+from app.persistence.combat.combatants import MonsterRevealState, monster_instance_to_combatant
 from app.persistence.combat.repository import (
     MonsterPersistenceError,
     MonsterRepository,
@@ -7,7 +8,9 @@ from app.persistence.combat.repository import (
 
 __all__ = [
     "MonsterPersistenceError",
+    "MonsterRevealState",
     "MonsterRepository",
     "StoredMonsterInstance",
     "StoredMonsterTemplate",
+    "monster_instance_to_combatant",
 ]
