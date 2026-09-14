@@ -55,6 +55,11 @@ def _wolf() -> dict[str, object]:
                 "success_type": "none",
             },
         }],
+        "bonus_actions": [{
+            "name": "Phase Step",
+            "desc": "The wolf teleports 10 ft.",
+            "usage": {"type": "per day", "times": 2},
+        }],
         "url": "/api/2014/monsters/wolf",
     }
 
@@ -70,6 +75,10 @@ def test_monster_schema_preserves_structured_combat_fields() -> None:
     assert getattr(damage, "damage_dice") == "2d4+2"
     assert monster.actions[0].dc is not None
     assert monster.actions[0].dc.dc_value == 11
+    assert monster.bonus_actions is not None
+    assert monster.bonus_actions[0].name == "Phase Step"
+    assert monster.bonus_actions[0].usage is not None
+    assert monster.bonus_actions[0].usage.times == 2
 
 
 def test_monster_schema_rejects_unknown_top_level_fields() -> None:

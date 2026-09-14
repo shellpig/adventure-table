@@ -162,6 +162,7 @@ class MonsterData(StrictModel):
     xp: int = Field(ge=0)
     special_abilities: list[MonsterSpecialAbilityData] | None = None
     actions: list[MonsterActionData] | None = None
+    bonus_actions: list[MonsterActionData] | None = None
     legendary_actions: list[MonsterLegendaryActionData] | None = None
     reactions: list[MonsterReactionData] | None = None
     forms: list[APIReference] | None = None
