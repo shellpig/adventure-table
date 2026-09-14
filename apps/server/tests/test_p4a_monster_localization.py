@@ -13,6 +13,7 @@ from app.content.registry import ContentRegistry
 
 DATA_ROOT = Path(__file__).resolve().parents[3] / "data"
 POLICY_PATH = DATA_ROOT / "localization" / "localizable-fields.json"
+MONSTER_LOCALE_PATH = DATA_ROOT / "srd5.1" / "locales" / "zh-TW" / "monster.json"
 MONSTER_KEY = "srd5.1:monster:localization-fixture"
 _HAN_RE = re.compile(r"[\u3400-\u9fff]")
 _ASCII_WORD_RE = re.compile(r"[A-Za-z]{2,}")
@@ -198,9 +199,7 @@ def test_checked_in_srd_monster_labels_are_explicit_zh_tw() -> None:
         kinds={"monster"},
     ) == ()
 
-    overlay = json.loads(
-        (DATA_ROOT / "srd5.1" / "locales" / "zh-TW.json").read_text(encoding="utf-8")
-    )
+    overlay = json.loads(MONSTER_LOCALE_PATH.read_text(encoding="utf-8"))
     localized_entries = overlay["entries"]
     checked = 0
     for monster in monsters:
