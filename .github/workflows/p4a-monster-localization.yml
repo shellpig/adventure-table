@@ -14,6 +14,7 @@ on:
       - data/localization/m02d-srd-zh-tw-token-aliases.json
       - data/localization/m02d-srd-zh-tw-token-overrides.json
       - data/localization/m02d-srd-zh-tw-token-overrides-singletons.json
+      - data/srd5.1/manifest.json
       - data/srd5.1/monsters.json
       - apps/server/app/content/localization.py
       - apps/server/tests/test_p4a_locale_shards.py
