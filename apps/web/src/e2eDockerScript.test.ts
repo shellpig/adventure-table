@@ -24,6 +24,6 @@ describe('Docker E2E wrapper', () => {
 
   it('keeps the xge subset and restore passes on the isolated services', () => {
     expect(source.match(/composeE2E\('up', '-d', E2E_SERVER_SERVICE, E2E_WEB_SERVICE\)/g)?.length).toBe(2)
-    expect(source).toContain("composeE2E('exec', '-T', E2E_SERVER_SERVICE")
+    expect(source).toContain('docker compose --profile ${E2E_COMPOSE_PROFILE} exec -T ${E2E_SERVER_SERVICE}')
   })
 })

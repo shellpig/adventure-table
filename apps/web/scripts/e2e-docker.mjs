@@ -97,11 +97,8 @@ const enabledPacksWithoutXge = () => {
   const script =
     "from app.config import Settings; " +
     "print(','.join(p for p in Settings().enabled_content_packs if p != 'xge'))"
-  const result = spawnSync(
-    'docker',
-    composeE2E('exec', '-T', E2E_SERVER_SERVICE, 'python', '-c', script),
-    { cwd: repoRoot, shell: true, encoding: 'utf8' },
-  )
+  const command = `docker compose --profile ${E2E_COMPOSE_PROFILE} exec -T ${E2E_SERVER_SERVICE} python -c "${script}"`
+  const result = spawnSync(command, [], { cwd: repoRoot, shell: true, encoding: 'utf8' })
   if (result.status !== 0) {
     console.error('[e2e-docker] could not read the enabled pack list from server-e2e')
     process.exit(result.status ?? 1)
