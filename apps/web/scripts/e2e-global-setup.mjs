@@ -1,20 +1,17 @@
-// Puts the database into a known state before the suite runs.
-//
-// This setup is intentionally destructive. CI always runs against a disposable
-// Docker volume. Local runs must opt in explicitly with
-// ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET=1 so a developer's real Character
-// data can never be silently claimed into or deleted with the Playwright Room.
-//
-// Three steps, all required:
-//
-//   1. Clear Character/Draft/Room state in the dedicated E2E database.
-//   2. Re-seed the deterministic P0 fixture character used by legacy specs.
-//   3. Create one deterministic P2-B baseline Room. With a clean database this
-//      zero-Room bootstrap claims only that known P0 fixture.
+// Puts only the dedicated U01-A E2E database into a known state before the suite.
+// The destructive SQL and database identity guard live in e2e-reset-db.mjs so
+// the wrong-database rejection can be exercised without running Playwright.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
+
+import {
+  E2E_API_BASE_URL,
+  E2E_COMPOSE_PROFILE,
+  E2E_SERVER_SERVICE,
+} from './e2e-env.mjs'
+import { resetE2EDatabase } from './e2e-reset-db.mjs'
 
 const webRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repoRoot = resolve(webRoot, '..', '..')
@@ -22,49 +19,18 @@ const roomContextPath = resolve(webRoot, 'test-results', 'p2-room-context.json')
 
 const E2E_ROOM_PASSWORD = 'p2-e2e-room-pass'
 
-// This database is disposable. Truncate the independent roots and let PostgreSQL
-// follow the complete FK graph; maintaining a manual DELETE order is brittle once
-// Session, AI grant and OAuth tables form cycles. ai_oauth_clients is an
-// independent root, while every other gameplay table hangs from rooms/characters.
-const SQL = `
-TRUNCATE TABLE rooms, characters, ai_oauth_clients RESTART IDENTITY CASCADE;
-SELECT count(*) AS remaining_characters FROM characters;
-SELECT count(*) AS remaining_drafts FROM character_build_drafts;
-SELECT count(*) AS remaining_rooms FROM rooms;
-SELECT count(*) AS remaining_campaigns FROM campaigns;
-SELECT count(*) AS remaining_seats FROM campaign_seats;
-SELECT count(*) AS remaining_sessions FROM sessions;
-SELECT count(*) AS remaining_participants FROM session_participants;
-SELECT count(*) AS remaining_active_leases FROM active_character_session_leases;
-SELECT count(*) AS remaining_events FROM session_events;
-SELECT count(*) AS remaining_ai_grants FROM ai_controller_grants;
-SELECT count(*) AS remaining_oauth_clients FROM ai_oauth_clients;
-`
-
-// The SQL goes in on stdin rather than through -c: it is multi-line, and a
-// shell-quoted argument arrives at psql with the newlines still escaped, which
-// psql then reads as backslash commands.
-const run = (command, args, input) => {
+const run = (command, args) => {
   const result = spawnSync(command, args, {
     cwd: repoRoot,
-    input,
-    stdio: [input === undefined ? 'inherit' : 'pipe', 'inherit', 'inherit'],
+    stdio: 'inherit',
     shell: true,
+    env: process.env,
   })
-  if (result.status !== 0) process.exit(result.status ?? 1)
-}
-
-function requireDisposableDatabase() {
-  const explicitlyAllowed = process.env.ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET === '1'
-  const githubActions = process.env.CI === 'true' && process.env.GITHUB_ACTIONS === 'true'
-  if (explicitlyAllowed || githubActions) return
-  throw new Error(
-    'Refusing destructive Playwright database reset. Run against a disposable database and set ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET=1.',
-  )
+  if (result.status !== 0) throw new Error(`${command} exited with ${result.status ?? 1}`)
 }
 
 async function createBaselineRoom() {
-  const apiBaseUrl = process.env.PLAYWRIGHT_API_BASE_URL ?? 'http://127.0.0.1:8000'
+  const apiBaseUrl = process.env.PLAYWRIGHT_API_BASE_URL ?? E2E_API_BASE_URL
   const response = await fetch(`${apiBaseUrl}/api/rooms`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -91,18 +57,25 @@ async function createBaselineRoom() {
 }
 
 export default async function globalSetup() {
-  requireDisposableDatabase()
+  console.log('[e2e-setup] resetting the dedicated U01-A E2E database')
+  const resetStatus = resetE2EDatabase()
+  if (resetStatus !== 0) {
+    throw new Error(`dedicated E2E database reset failed with exit code ${resetStatus}`)
+  }
 
-  console.log('[e2e-setup] clearing Character, Draft and Room state in the disposable E2E database')
+  console.log('[e2e-setup] re-seeding the P0 fixture character in server-e2e')
   run('docker', [
-    'compose', 'exec', '-T', 'db', 'psql',
-    '-v', 'ON_ERROR_STOP=1', '--single-transaction',
-    '-U', 'adventure', '-d', 'adventure_table',
-  ], SQL)
+    'compose',
+    '--profile',
+    E2E_COMPOSE_PROFILE,
+    'exec',
+    '-T',
+    E2E_SERVER_SERVICE,
+    'python',
+    '-m',
+    'app.scripts.seed_p0_fighter_wizard',
+  ])
 
-  console.log('[e2e-setup] re-seeding the P0 fixture character')
-  run('docker', ['compose', 'exec', '-T', 'server', 'python', '-m', 'app.scripts.seed_p0_fighter_wizard'])
-
-  console.log('[e2e-setup] creating the shared P2-B Room and claiming the known fixture')
+  console.log('[e2e-setup] creating the shared P2-B Room in the dedicated E2E database')
   await createBaselineRoom()
 }

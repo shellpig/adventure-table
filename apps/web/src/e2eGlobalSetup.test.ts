@@ -4,17 +4,18 @@ import { describe, expect, it } from 'vitest'
 
 const source = readFileSync(resolve(process.cwd(), 'scripts/e2e-global-setup.mjs'), 'utf8')
 
-describe('E2E global database reset', () => {
-  it('truncates every root data graph instead of maintaining a brittle delete order', () => {
-    expect(source).toContain('TRUNCATE TABLE')
-    expect(source).toContain('rooms,')
-    expect(source).toContain('characters,')
-    expect(source).toContain('ai_oauth_clients')
-    expect(source).toContain('RESTART IDENTITY CASCADE')
-    expect(source).not.toContain('DELETE FROM')
+describe('E2E global setup', () => {
+  it('delegates destructive reset to the guarded dedicated reset script', () => {
+    expect(source).toContain("from './e2e-reset-db.mjs'")
+    expect(source).toContain('resetE2EDatabase()')
+    expect(source).not.toContain('TRUNCATE TABLE')
+    expect(source).not.toContain("'-d', 'adventure_table'")
   })
 
-  it('fails the setup on the first psql error and rolls the reset back', () => {
-    expect(source).toContain("'-v', 'ON_ERROR_STOP=1', '--single-transaction'")
+  it('seeds through server-e2e and creates the baseline Room on the E2E API', () => {
+    expect(source).toContain('E2E_SERVER_SERVICE')
+    expect(source).toContain('E2E_COMPOSE_PROFILE')
+    expect(source).toContain('E2E_API_BASE_URL')
+    expect(source).toContain('app.scripts.seed_p0_fighter_wizard')
   })
 })

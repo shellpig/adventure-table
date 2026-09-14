@@ -1,12 +1,16 @@
-name: P1 Full Regression
+# U01-A removes the historical browser/full-stack portion of this workflow.
+# Cumulative browser regression is owned by P3 Full-Stack E2E on the isolated
+# server-e2e/web-e2e stack. Keep the unique P0 -> P1 migration/legacy data
+# compatibility checks here as an explicit manually-dispatchable non-E2E gate.
+name: P1 Legacy Migration Regression
 
 on:
   workflow_dispatch:
 
 jobs:
-  p1-full-regression:
+  p1-legacy-migration:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
@@ -19,11 +23,7 @@ jobs:
         working-directory: apps/server
         run: pip install -e ".[dev]"
 
-      - name: Run backend tests
-        working-directory: apps/server
-        run: pytest
-
-      - name: Run M02-D authoring tests
+      - name: Run M02-D authoring regression
         run: >-
           python -m unittest
           scripts.test_build_m02d_srd_locale_reviewed
@@ -75,9 +75,8 @@ jobs:
           build_payload = build.model_dump(mode="json")
           state_payload = state.model_dump(mode="json")
 
-          # SQLite reflects sa.Uuid columns as CHAR(32), so this deliberately
-          # writes the same hex representation SQLAlchemy's Uuid bind processor
-          # would have stored from the original P0 models.
+          # SQLite reflects sa.Uuid columns as CHAR(32), so write the same hex
+          # representation SQLAlchemy's Uuid bind processor used in P0.
           with engine.begin() as connection:
               connection.execute(
                   characters.insert().values(
@@ -154,252 +153,3 @@ jobs:
           assert {"base_version_id", "confirmed_version_id"} <= draft_columns
           engine.dispose()
           PY
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      - name: Pin npm
-        run: npm install --global npm@11.6.0
-
-      - name: Install frontend
-        working-directory: apps/web
-        run: npm install
-
-      - name: Build frontend
-        working-directory: apps/web
-        run: npm run build
-
-      - name: Run Vitest
-        working-directory: apps/web
-        run: npm test -- --run
-
-      - name: Install Playwright Chromium
-        working-directory: apps/web
-        run: npx playwright install --with-deps chromium
-
-      - name: Validate Docker Compose
-        run: docker compose config
-
-      - name: Start full stack
-        run: docker compose up -d --build
-
-      - name: Verify full stack readiness
-        run: |
-          curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8000/health
-          curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8000/ready
-          curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://localhost:5173
-
-      - name: Seed deterministic P0 fixture
-        run: docker compose exec -T server python -m app.scripts.seed_p0_fighter_wizard
-
-      - name: Run Playwright P0 and P1 flows
-        working-directory: apps/web
-        env:
-          PLAYWRIGHT_BASE_URL: http://127.0.0.1:5173
-        run: npm run test:e2e
-
-      - name: Upload closeout smoke screenshots
-        uses: actions/upload-artifact@v4
-        with:
-          name: p1-closeout-smoke-screenshots
-          path: apps/web/test-results/**/*.png
-          if-no-files-found: error
-
-      - name: Prepare P0 and P1 restart persistence state
-        run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          from urllib.request import Request, urlopen
-
-          base = "http://127.0.0.1:8000"
-          p0_character_id = "00000000-0000-4000-8000-0000000000e0"
-
-          def get_json(path: str):
-              with urlopen(f"{base}{path}") as response:
-                  return json.load(response)
-
-          before = get_json(f"/api/characters/{p0_character_id}")
-          payload = {
-              "current_hp": 63,
-              "temporary_hp": 5,
-              "conditions": [
-                  {
-                      "condition_ref": "srd5.1:condition:poisoned",
-                      "note": "P0-F restart regression",
-                  }
-              ],
-              "prepared_spell_entry_ids": ["wizard:shield", "wizard:fireball"],
-              "spell_slots": {
-                  "1": {"used": 2, "remaining": 2},
-                  "2": {"used": 0, "remaining": 3},
-                  "3": {"used": 1, "remaining": 1},
-              },
-              "resources": {
-                  "wizard:arcane-recovery": {"used": 1, "remaining": 0}
-              },
-              "hit_dice_state": {"d10": 4, "d6": 5},
-              "inventory_state": [
-                  {
-                      "entry_id": "inventory:chain-mail",
-                      "item_ref": "srd5.1:equipment:chain-mail",
-                      "quantity": 1,
-                      "equipped": True,
-                      "carried": True,
-                  },
-                  {
-                      "entry_id": "inventory:shield",
-                      "item_ref": "srd5.1:equipment:shield",
-                      "quantity": 1,
-                      "equipped": False,
-                      "carried": True,
-                  },
-                  {
-                      "entry_id": "inventory:longsword",
-                      "item_ref": "srd5.1:equipment:longsword",
-                      "quantity": 1,
-                      "equipped": True,
-                      "carried": True,
-                  },
-                  {
-                      "entry_id": "inventory:healing-potion",
-                      "item_ref": "srd5.1:item:potion-of-healing-common",
-                      "quantity": 1,
-                      "equipped": False,
-                      "carried": True,
-                  },
-              ],
-          }
-          request = Request(
-              f"{base}/api/characters/{p0_character_id}/state",
-              data=json.dumps(payload).encode("utf-8"),
-              method="PATCH",
-              headers={"Content-Type": "application/json"},
-          )
-          with urlopen(request) as response:
-              json.load(response)
-
-          mutated = get_json(f"/api/characters/{p0_character_id}")
-          assert mutated["current_version_id"] == before["current_version_id"]
-          assert mutated["version_no"] == before["version_no"] == 1
-          assert mutated["build"] == before["build"]
-          assert mutated["state"]["current_hp"] == 63
-          assert mutated["state"]["hit_dice_state"] == {"d10": 4, "d6": 5}
-          assert mutated["state"]["prepared_spell_entry_ids"] == [
-              "wizard:shield",
-              "wizard:fireball",
-          ]
-
-          Path("/tmp/p0f-before-restart.json").write_text(
-              json.dumps(
-                  {
-                      "current_version_id": mutated["current_version_id"],
-                      "version_no": mutated["version_no"],
-                      "build": mutated["build"],
-                      "state": mutated["state"],
-                  }
-              ),
-              encoding="utf-8",
-          )
-
-          active_drafts = get_json("/api/character-builder/drafts")
-          p1_draft = next(
-              item
-              for item in active_drafts
-              if item["resolved_summary"].get("name") == "P1-D Browser Hero"
-          )
-          characters = get_json("/api/characters")
-          p1_summary = next(
-              item for item in characters if item["name"] == "P1-G Browser Hero"
-          )
-          p1_character = get_json(f"/api/characters/{p1_summary['id']}")
-          p1_versions = get_json(f"/api/characters/{p1_summary['id']}/versions")
-          assert p1_character["version_no"] == 2
-          assert len(p1_versions) == 2
-
-          Path("/tmp/p1h-before-restart.json").write_text(
-              json.dumps(
-                  {
-                      "draft_id": p1_draft["draft"]["id"],
-                      "draft": p1_draft["draft"],
-                      "resolved_summary": p1_draft["resolved_summary"],
-                      "character_id": p1_summary["id"],
-                      "character": p1_character,
-                      "versions": p1_versions,
-                  }
-              ),
-              encoding="utf-8",
-          )
-          PY
-
-      - name: Restart server and verify P0 and P1 persistence
-        run: |
-          docker compose restart server
-          curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8000/ready
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          from urllib.request import urlopen
-
-          base = "http://127.0.0.1:8000"
-          p0_character_id = "00000000-0000-4000-8000-0000000000e0"
-
-          def get_json(path: str):
-              with urlopen(f"{base}{path}") as response:
-                  return json.load(response)
-
-          expected = json.loads(
-              Path("/tmp/p0f-before-restart.json").read_text(encoding="utf-8")
-          )
-          character = get_json(f"/api/characters/{p0_character_id}")
-          sheet = get_json(f"/api/characters/{p0_character_id}/sheet")
-
-          assert character["current_version_id"] == expected["current_version_id"]
-          assert character["version_no"] == expected["version_no"] == 1
-          assert character["build"] == expected["build"]
-          assert character["state"] == expected["state"]
-
-          assert sheet["current_hp"] == 63
-          assert sheet["temporary_hp"] == 5
-          assert sheet["armor_class"] == 16
-          assert {entry["die"]: entry["available"] for entry in sheet["hit_dice"]} == {
-              "d10": 4,
-              "d6": 5,
-          }
-          prepared = {entry["entry_id"]: entry["prepared"] for entry in sheet["spells"]}
-          assert prepared["wizard:magic-missile"] is False
-          assert prepared["wizard:shield"] is True
-          inventory = {entry["entry_id"]: entry for entry in sheet["inventory"]}
-          assert inventory["inventory:shield"]["equipped"] is False
-          assert inventory["inventory:healing-potion"]["quantity"] == 1
-
-          expected_p1 = json.loads(
-              Path("/tmp/p1h-before-restart.json").read_text(encoding="utf-8")
-          )
-          draft = get_json(
-              f"/api/character-builder/drafts/{expected_p1['draft_id']}"
-          )
-          p1_character = get_json(
-              f"/api/characters/{expected_p1['character_id']}"
-          )
-          p1_versions = get_json(
-              f"/api/characters/{expected_p1['character_id']}/versions"
-          )
-
-          assert draft["draft"] == expected_p1["draft"]
-          assert draft["resolved_summary"] == expected_p1["resolved_summary"]
-          assert p1_character == expected_p1["character"]
-          assert p1_versions == expected_p1["versions"]
-          assert p1_character["version_no"] == 2
-          assert p1_character["state"]["current_hp"] == 18
-          assert p1_character["state"]["temporary_hp"] == 3
-          PY
-
-      - name: Show container logs on failure
-        if: failure()
-        run: docker compose logs
-
-      - name: Stop stack
-        if: always()
-        run: docker compose down -v

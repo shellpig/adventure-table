@@ -1,0 +1,9 @@
+export const E2E_COMPOSE_PROFILE = 'e2e'
+export const E2E_DATABASE = 'adventure_table_e2e'
+export const E2E_SERVER_SERVICE = 'server-e2e'
+export const E2E_WEB_SERVICE = 'web-e2e'
+export const E2E_SERVER_PORT = 8001
+export const E2E_WEB_PORT = 5174
+export const E2E_API_BASE_URL = `http://127.0.0.1:${E2E_SERVER_PORT}`
+export const E2E_BASE_URL = `http://127.0.0.1:${E2E_WEB_PORT}`
+export const E2E_MCP_URL = `${E2E_API_BASE_URL}/mcp`
