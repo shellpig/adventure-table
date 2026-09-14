@@ -4,9 +4,9 @@ P4-A requires explicit Traditional Chinese coverage for every Monster name and
 for every user-visible named combat affordance. Canonical English descriptions
 remain untouched until a later P4 subphase exposes those long-form fields.
 
-This script augments the existing M02-D ``data/srd5.1/locales/zh-TW.json``
-overlay. Runtime never reads the external reference checkout; only the generated
-checked-in overlay is consumed at runtime.
+This script owns ``data/srd5.1/locales/zh-TW/monster.json``. Runtime never reads
+the external reference checkout; only the generated checked-in locale shard is
+consumed at runtime.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ import build_m02d_srd_locale_reviewed as reviewed
 import run_m02d_srd_locale_authoring as authoring
 
 MONSTERS_PATH = ROOT / "data" / "srd5.1" / "monsters.json"
-DEFAULT_OVERLAY = ROOT / "data" / "srd5.1" / "locales" / "zh-TW.json"
+DEFAULT_OVERLAY = ROOT / "data" / "srd5.1" / "locales" / "zh-TW" / "monster.json"
 DEFAULT_REPORT = ROOT / "data" / "localization" / "p4a-monster-zh-tw-report.json"
 REFERENCE_COMMIT = authoring.AUTHORING_REFERENCE_COMMIT
 REFERENCE_SUBDIR = authoring.AUTHORING_REFERENCE_SUBDIR
@@ -151,6 +151,16 @@ def _load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _empty_overlay() -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "locale": "zh-TW",
+        "review_status": "p4a-explicit-label-coverage",
+        "translation_method": "pinned-reference-plus-project-terminology",
+        "entries": {},
+    }
+
+
 def _iter_display_names(value: Any) -> Iterable[str]:
     if isinstance(value, dict):
         name = value.get("name")
@@ -262,6 +272,8 @@ def augment_overlay(
     reference_names: dict[str, str],
     token_overrides: dict[str, str],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
+    if overlay.get("schema_version") != 1 or overlay.get("locale") != "zh-TW":
+        raise ValueError("P4-A Monster locale shard must be schema_version 1 / locale zh-TW")
     entries = overlay.get("entries")
     if not isinstance(entries, dict):
         raise ValueError("zh-TW locale overlay entries must be an object")
@@ -343,7 +355,7 @@ def write_overlay(
     *,
     strict: bool,
 ) -> int:
-    overlay = _load_json(overlay_path)
+    overlay = _load_json(overlay_path) if overlay_path.is_file() else _empty_overlay()
     if not isinstance(overlay, dict):
         raise ValueError(f"locale overlay must be an object: {overlay_path}")
     reference_names = load_deep_reference_names(_reference_root(reference_checkout))
@@ -354,6 +366,7 @@ def write_overlay(
         token_overrides=token_overrides,
     )
 
+    overlay_path.parent.mkdir(parents=True, exist_ok=True)
     overlay_path.write_text(
         json.dumps(overlay, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
