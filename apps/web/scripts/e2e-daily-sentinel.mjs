@@ -1,15 +1,19 @@
 // U01-A acceptance helper for CI. It creates recognizable sentinel data in the
 // daily database, snapshots those rows plus the daily server StartedAt value,
 // and verifies that isolated E2E work never changes any of them.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { isDeepStrictEqual } from 'node:util'
 import { spawnSync } from 'node:child_process'
 
 const webRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repoRoot = resolve(webRoot, '..', '..')
-const statePath = resolve(webRoot, 'test-results', 'u01a-daily-sentinel.json')
+const statePath = join(
+  tmpdir(),
+  `adventure-table-u01a-daily-sentinel-${process.env.GITHUB_RUN_ID ?? 'local'}.json`,
+)
 
 const DAILY_DATABASE = 'adventure_table'
 const DAILY_API_BASE_URL = 'http://127.0.0.1:8000'
@@ -102,6 +106,16 @@ SELECT json_build_object(
   return parsed
 }
 
+function loadState() {
+  try {
+    return JSON.parse(readFileSync(statePath, 'utf8'))
+  } catch (error) {
+    throw new Error(
+      `daily sentinel state is unavailable at ${statePath}: ${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+}
+
 async function prepare() {
   await requireUrl(`${DAILY_API_BASE_URL}/ready`)
   await requireUrl(DAILY_WEB_URL)
@@ -154,14 +168,14 @@ async function prepare() {
   }
   state.snapshot = snapshotRows(state)
 
-  mkdirSync(dirname(statePath), { recursive: true })
   writeFileSync(statePath, JSON.stringify(state, null, 2), 'utf8')
+  console.log(`[u01-a] daily sentinel state stored outside Playwright output at ${statePath}`)
   console.log(`[u01-a] daily sentinel prepared: room=${state.roomId}, character=${state.characterId}, oauth=${state.oauthClientId}`)
   console.log(`[u01-a] daily server StartedAt=${state.serverStartedAt}`)
 }
 
 async function verify() {
-  const state = JSON.parse(readFileSync(statePath, 'utf8'))
+  const state = loadState()
   await requireUrl(`${DAILY_API_BASE_URL}/ready`)
   await requireUrl(DAILY_WEB_URL)
 
@@ -200,6 +214,7 @@ async function wrongDatabaseGuard() {
     throw new Error(`wrong-database reset failed for an unexpected reason:\n${output}`)
   }
   await verify()
+  unlinkSync(statePath)
   console.log('[u01-a] wrong-database hard guard rejected adventure_table and left every daily sentinel unchanged')
 }
 

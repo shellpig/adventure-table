@@ -62,6 +62,10 @@ jobs:
         working-directory: apps/web
         run: node scripts/e2e-daily-sentinel.mjs verify
 
+      - name: Verify E2E destructive reset and baseline recovery
+        working-directory: apps/web
+        run: node scripts/e2e-reset-acceptance.mjs
+
       - name: Verify wrong-database hard guard
         working-directory: apps/web
         run: node scripts/e2e-daily-sentinel.mjs wrong-db
