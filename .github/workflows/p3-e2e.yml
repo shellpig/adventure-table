@@ -33,30 +33,20 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Validate Docker Compose
-        run: docker compose config
-
-      - name: Start clean full stack
         run: |
-          docker compose down -v --remove-orphans || true
-          docker compose up -d --build
+          docker compose config
+          docker compose --profile e2e config
 
-      - name: Verify full stack readiness
-        run: |
-          curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:8000/health
-          curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:8000/ready
-          curl --fail --retry 30 --retry-delay 2 --retry-all-errors http://127.0.0.1:5173
+      - name: Start from a clean disposable CI volume
+        run: docker compose --profile e2e down -v --remove-orphans || true
 
-      - name: Run complete P3 Playwright regression suite
+      - name: Run complete isolated Playwright regression suite
         working-directory: apps/web
-        env:
-          PLAYWRIGHT_BASE_URL: http://127.0.0.1:5173
-          PLAYWRIGHT_API_BASE_URL: http://127.0.0.1:8000
-          PLAYWRIGHT_MCP_URL: http://127.0.0.1:8000/mcp
-        run: npm run test:e2e
+        run: npm run test:e2e:docker
 
-      - name: Print full-stack logs on failure
+      - name: Print isolated full-stack logs on failure
         if: failure()
-        run: docker compose logs --no-color
+        run: docker compose --profile e2e logs --no-color db server-e2e web-e2e
 
       - name: Upload Playwright results
         if: always()
@@ -69,6 +59,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Stop full stack
+      - name: Stop isolated full stack
         if: always()
-        run: docker compose down -v --remove-orphans
+        run: docker compose --profile e2e down -v --remove-orphans
