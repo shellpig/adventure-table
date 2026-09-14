@@ -1,0 +1,73 @@
+name: P4-A Monster Localization
+
+on:
+  push:
+    branches:
+      - p4-a-monster-combatant-foundation
+    paths:
+      - .github/workflows/p4a-monster-localization.yml
+      - scripts/build_p4a_monster_locale.py
+      - scripts/build_m02d_srd_locale.py
+      - scripts/build_m02d_srd_locale_reviewed.py
+      - scripts/run_m02d_srd_locale_authoring.py
+      - data/localization/localizable-fields.json
+      - data/localization/m02d-srd-zh-tw-token-aliases.json
+      - data/localization/m02d-srd-zh-tw-token-overrides.json
+      - data/localization/m02d-srd-zh-tw-token-overrides-singletons.json
+      - data/srd5.1/monsters.json
+      - apps/server/tests/test_p4a_monster_localization.py
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  author-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: p4-a-monster-combatant-foundation
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Fetch pinned Traditional Chinese Monster reference
+        run: |
+          rm -rf /tmp/p4a-monster-reference
+          git init /tmp/p4a-monster-reference
+          git -C /tmp/p4a-monster-reference remote add origin https://github.com/hktrpg/fvtt-5e-classpack-zh-tw.git
+          git -C /tmp/p4a-monster-reference sparse-checkout init --cone
+          git -C /tmp/p4a-monster-reference sparse-checkout set \
+            translated-zh-tw/packs/monster \
+            translated-zh-tw/packs/monsterspack
+          git -C /tmp/p4a-monster-reference fetch --depth=1 origin 74276e1c4915d35b4d22539157fd49ef8717e105
+          git -C /tmp/p4a-monster-reference checkout --detach FETCH_HEAD
+          test "$(git -C /tmp/p4a-monster-reference rev-parse HEAD)" = "74276e1c4915d35b4d22539157fd49ef8717e105"
+
+      - name: Author explicit P4-A zh-TW Monster labels
+        run: |
+          python scripts/build_p4a_monster_locale.py \
+            --reference-checkout /tmp/p4a-monster-reference \
+            --strict
+
+      - name: Install backend
+        working-directory: apps/server
+        run: pip install -e ".[dev]"
+
+      - name: Verify real Monster localization completeness
+        working-directory: apps/server
+        run: pytest tests/test_p4a_monster_localization.py -q
+
+      - name: Commit generated locale coverage when changed
+        run: |
+          if [[ -z "$(git status --porcelain -- data/srd5.1/locales/zh-TW.json data/localization/p4a-monster-zh-tw-report.json)" ]]; then
+            echo "Monster locale coverage already matches the pinned authoring inputs."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/srd5.1/locales/zh-TW.json data/localization/p4a-monster-zh-tw-report.json
+          git commit -m "data(p4-a): add SRD monster zh-TW labels"
+          git push origin HEAD:p4-a-monster-combatant-foundation
