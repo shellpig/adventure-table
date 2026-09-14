@@ -47,13 +47,28 @@ jobs:
       - name: Start from a clean disposable CI volume
         run: docker compose --profile e2e down -v --remove-orphans || true
 
+      - name: Start daily stack for isolation sentinel
+        run: docker compose up -d --build --wait server web
+
+      - name: Create daily Room Character and OAuth sentinel
+        working-directory: apps/web
+        run: node scripts/e2e-daily-sentinel.mjs prepare
+
       - name: Run complete isolated Playwright regression suite
         working-directory: apps/web
         run: npm run test:e2e:docker
 
-      - name: Print isolated full-stack logs on failure
+      - name: Verify daily stack stayed untouched
+        working-directory: apps/web
+        run: node scripts/e2e-daily-sentinel.mjs verify
+
+      - name: Verify wrong-database hard guard
+        working-directory: apps/web
+        run: node scripts/e2e-daily-sentinel.mjs wrong-db
+
+      - name: Print full-stack logs on failure
         if: failure()
-        run: docker compose --profile e2e logs --no-color db server-e2e web-e2e
+        run: docker compose --profile e2e logs --no-color db server web server-e2e web-e2e
 
       - name: Upload Playwright results
         if: always()
@@ -66,6 +81,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Stop isolated full stack
+      - name: Stop full stack
         if: always()
         run: docker compose --profile e2e down -v --remove-orphans
