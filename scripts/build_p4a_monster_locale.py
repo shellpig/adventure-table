@@ -44,10 +44,14 @@ AFFORDANCE_COLLECTIONS = (
 HAN_RE = re.compile(r"[\u3400-\u9fff]")
 ASCII_WORD_RE = re.compile(r"[A-Za-z]{2,}")
 UNTRANSLATED_RE = re.compile(r"〔未譯:[^〕]+〕")
+COST_SUFFIX_RE = re.compile(r"^(?P<base>.+) \(Costs (?P<count>\d+) Actions?\)$")
+FORM_ONLY_RE = re.compile(r"^(?P<base>.+) \((?P<form>Object|Hag|Fiend) Form Only\)$")
+BEAST_BITE_RE = re.compile(r"^(?P<base>.+) \(Bite in Beast Form\)$")
+CREATURE_FORM_RE = re.compile(
+    r"^(?P<creature>Vampire|Werebear|Wereboar|Wererat|Weretiger|Werewolf), "
+    r"(?P<form>Bat|Mist|Vampire|Bear|Boar|Human|Hybrid|Rat|Tiger|Wolf) Form$"
+)
 
-# Small project-owned terminology layer for common SRD Monster labels. Exact
-# reference matches still win; these close predictable gaps when the pinned
-# community reference uses a different source/version shape.
 P4A_EXACT_NAMES: dict[str, str] = {
     "Multiattack": "多重攻擊",
     "Spellcasting": "施法",
@@ -99,7 +103,30 @@ P4A_EXACT_NAMES: dict[str, str] = {
     "Actions": "動作",
     "Detect": "偵測",
     "Tail Swipe": "掃尾",
+    "Tail Attack": "尾擊",
     "Wing Attack": "翼擊",
+    "Psychic Drain": "心靈吸取",
+    "Teleport": "傳送",
+    "Cast a Spell": "施放法術",
+    "Fling": "拋擲",
+    "Tentacle Attack or Fling": "觸手攻擊或拋擲",
+    "Lightning Storm": "閃電風暴",
+    "Ink Cloud": "墨雲",
+    "Paralyzing Touch": "麻痺之觸",
+    "Frightening Gaze": "恐懼凝視",
+    "Disrupt Life": "擾亂生命",
+    "Adhesive": "黏著",
+    "Blasphemous Word": "褻瀆之言",
+    "Channel Negative Energy": "引導負能量",
+    "Whirlwind of Sand": "沙之旋風",
+    "Night Hag Items": "夜鬼婆物品",
+    "Shadow Stealth": "暗影隱匿",
+    "Searing Burst": "灼熱爆發",
+    "Blinding Gaze": "致盲凝視",
+    "Chomp": "大口啃咬",
+    "Shimmering Shield": "閃耀護盾",
+    "Heal Self": "自我治療",
+    "Tusks": "獠牙",
     "Bite": "啃咬",
     "Claw": "爪擊",
     "Claws": "爪擊",
@@ -144,6 +171,36 @@ P4A_EXACT_NAMES: dict[str, str] = {
     "Rock": "岩石",
     "Enslave": "奴役",
     "Frightful Presence": "恐懼威儀",
+    "Adult Brass Dragon": "成年黃銅龍",
+    "Young Silver Dragon": "幼年銀龍",
+    "Deep Gnome (Svirfneblin)": "深地侏儒（斯弗涅布林）",
+    "Succubus/Incubus": "魅魔／夢魔",
+}
+
+CREATURE_FORM_NAMES = {
+    "Vampire": "吸血鬼",
+    "Werebear": "熊人",
+    "Wereboar": "野豬人",
+    "Wererat": "鼠人",
+    "Weretiger": "虎人",
+    "Werewolf": "狼人",
+}
+FORM_NAMES = {
+    "Bat": "蝙蝠",
+    "Mist": "霧氣",
+    "Vampire": "吸血鬼",
+    "Bear": "熊",
+    "Boar": "野豬",
+    "Human": "人類",
+    "Hybrid": "混合",
+    "Rat": "老鼠",
+    "Tiger": "老虎",
+    "Wolf": "狼",
+}
+FORM_ONLY_NAMES = {
+    "Object": "物件",
+    "Hag": "鬼婆",
+    "Fiend": "邪魔",
 }
 
 
@@ -243,6 +300,46 @@ def _translate_label(
     exact = P4A_EXACT_NAMES.get(canonical)
     if exact is not None:
         return exact, "project_exact"
+
+    cost_match = COST_SUFFIX_RE.match(canonical)
+    if cost_match:
+        root, root_source = _translate_label(
+            cost_match.group("base"),
+            key=key,
+            reference_names=reference_names,
+            token_overrides=token_overrides,
+        )
+        if root is not None:
+            return f"{root}（消耗{cost_match.group('count')}次動作）", f"structured:{root_source}"
+
+    only_match = FORM_ONLY_RE.match(canonical)
+    if only_match:
+        root, root_source = _translate_label(
+            only_match.group("base"),
+            key=key,
+            reference_names=reference_names,
+            token_overrides=token_overrides,
+        )
+        if root is not None:
+            form = FORM_ONLY_NAMES[only_match.group("form")]
+            return f"{root}（僅{form}形態）", f"structured:{root_source}"
+
+    beast_match = BEAST_BITE_RE.match(canonical)
+    if beast_match:
+        root, root_source = _translate_label(
+            beast_match.group("base"),
+            key=key,
+            reference_names=reference_names,
+            token_overrides=token_overrides,
+        )
+        if root is not None:
+            return f"{root}（野獸形態時改為啃咬）", f"structured:{root_source}"
+
+    creature_form = CREATURE_FORM_RE.match(canonical)
+    if creature_form:
+        creature = CREATURE_FORM_NAMES[creature_form.group("creature")]
+        form = FORM_NAMES[creature_form.group("form")]
+        return f"{creature}（{form}形態）", "structured:creature_form"
 
     exact = base.EXACT.get(canonical)
     if exact is not None and _acceptable_translation(exact, canonical):
