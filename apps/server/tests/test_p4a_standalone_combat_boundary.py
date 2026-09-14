@@ -62,7 +62,11 @@ def test_standalone_character_migration_does_not_create_p4a_combat_schema(
     db_path = tmp_path / "standalone.sqlite3"
     monkeypatch.setenv("ADVENTURE_TABLE_DATABASE_PATH", str(db_path))
 
-    launcher.upgrade_standalone_database()
+    # Match the current standalone launcher startup sequence: pin launcher mode
+    # and the SQLite path first, then run only the shared Character migration
+    # head. P4-A combat schema must remain web-only.
+    launcher._prepare_database_path()
+    launcher.run_migrations()
 
     with sqlite3.connect(db_path) as connection:
         tables = {
