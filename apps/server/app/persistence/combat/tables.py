@@ -134,6 +134,7 @@ combat_entries = Table(
     ),
     Column("display_name", String(160), nullable=False),
     Column("status", String(16), nullable=False, server_default="active"),
+    Column("is_hostile", Boolean(), nullable=False, server_default="0"),
     Column("initiative_group_key", String(120), nullable=True),
     Column("initiative_roll_request_id", Uuid(), nullable=True),
     Column("initiative_roll_result_id", Uuid(), nullable=True),
