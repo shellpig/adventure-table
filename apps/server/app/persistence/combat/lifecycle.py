@@ -13,7 +13,6 @@ from app.persistence.characters import characters
 from app.persistence.combat.tables import combat_actions, combat_entries, combats
 from app.persistence.rooms.table_runtime import (
     StoredTableActorBinding,
-    StoredTableEvent,
     TableEventRepository,
     session_events,
 )
@@ -246,13 +245,15 @@ class CombatRepository:
             character_id=entry.character_id, monster_instance_id=entry.monster_instance_id,
             display_name=entry.display_name, status="active", initiative_group_key=entry.initiative_group_key,
             surprised=entry.surprised, action_available=True, bonus_action_available=True,
-            reaction_available=True, attacks_allowed=max(1, int(entry.attacks_allowed)), attacks_used=0,
+            reaction_available=not entry.surprised,
+            attacks_allowed=max(1, int(entry.attacks_allowed)), attacks_used=0,
             ready_state={}, pending_reaction_state={},
         ))
 
     def create_quick_combat(self, *, binding: StoredTableActorBinding, entries: tuple[NewCombatEntry, ...], idempotency_key: str | None):
         combat_id = uuid4()
         entry_ids = tuple(uuid4() for _ in entries)
+
         def projection(connection, _event_id: UUID, _seq: int) -> None:
             connection.execute(insert(combats).values(
                 id=combat_id, campaign_id=binding.campaign_id, started_session_id=binding.session_id,
@@ -260,6 +261,7 @@ class CombatRepository:
             ))
             for entry_id, entry in zip(entry_ids, entries, strict=True):
                 self._insert_entry(connection, combat_id, entry, entry_id=entry_id)
+
         try:
             event = self.event_repository.append(
                 room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
@@ -281,6 +283,7 @@ class CombatRepository:
 
     def add_entry(self, *, binding: StoredTableActorBinding, combat_id: UUID, entry: NewCombatEntry, idempotency_key: str | None):
         entry_id = uuid4()
+
         def projection(connection, _event_id: UUID, _seq: int) -> None:
             combat = connection.execute(select(combats).where(
                 combats.c.id == combat_id, combats.c.campaign_id == binding.campaign_id
@@ -293,6 +296,7 @@ class CombatRepository:
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
                 revision=combats.c.revision + 1, updated_at=datetime.now().astimezone()
             ))
+
         try:
             event = self.event_repository.append(
                 room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
@@ -359,17 +363,20 @@ class CombatRepository:
                 raise CombatStateConflictPersistenceError("initiative order must contain every active Combat entry exactly once")
             if any(row["initiative_total"] is None for row in rows):
                 raise CombatStateConflictPersistenceError("all active entries require initiative")
+            by_id = {row["id"]: row for row in rows}
             for index, target_id in enumerate(ordered_entry_ids):
+                row = by_id[target_id]
                 connection.execute(update(combat_entries).where(combat_entries.c.id == target_id).values(
-                    turn_order=index, action_available=True, bonus_action_available=True, attacks_used=0,
+                    turn_order=index, action_available=True, bonus_action_available=True,
+                    reaction_available=not bool(row["surprised"]), attacks_used=0,
                     ready_state={}, pending_reaction_state={}, updated_at=datetime.now().astimezone(),
                 ))
             first = ordered_entry_ids[0]
-            connection.execute(update(combat_entries).where(combat_entries.c.id == first).values(reaction_available=True))
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
                 status="running", round_number=1, current_turn_entry_id=first,
                 revision=combats.c.revision + 1, updated_at=datetime.now().astimezone(),
             ))
+
         event = self.event_repository.append(
             room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
             kind="combat.initiative_ordered", acting_seat_id=binding.seat_id, subject_seat_id=None,
@@ -403,11 +410,29 @@ class CombatRepository:
                 current_index = ids.index(combat["current_turn_entry_id"])
             except ValueError as exc:
                 raise CombatStateConflictPersistenceError("current turn entry is not active") from exc
+
+            current_row = rows[current_index]
+            current_was_surprised = bool(current_row["surprised"])
+            if current_was_surprised:
+                # 5e 2014 surprise ends when that creature's first turn ends. It
+                # can react immediately after that turn, even before round 1 ends.
+                connection.execute(update(combat_entries).where(
+                    combat_entries.c.id == current_row["id"]
+                ).values(
+                    surprised=False,
+                    reaction_available=True,
+                    updated_at=datetime.now().astimezone(),
+                ))
+
             next_index = (current_index + 1) % len(ids)
             next_entry_id = ids[next_index]
             round_number = int(combat["round_number"]) + (1 if next_index == 0 else 0)
+            next_surprised = bool(rows[next_index]["surprised"])
+            if next_entry_id == current_row["id"] and current_was_surprised:
+                next_surprised = False
             connection.execute(update(combat_entries).where(combat_entries.c.id == next_entry_id).values(
-                action_available=True, bonus_action_available=True, reaction_available=True,
+                action_available=True, bonus_action_available=True,
+                reaction_available=not next_surprised,
                 attacks_used=0, ready_state={}, pending_reaction_state={}, updated_at=datetime.now().astimezone(),
             ))
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
@@ -417,6 +442,7 @@ class CombatRepository:
             connection.execute(update(session_events).where(session_events.c.id == event_id).values(payload={
                 "combat_id": str(combat_id), "round": round_number, "current_turn_entry_id": str(next_entry_id)
             }))
+
         event = self.event_repository.append(
             room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
             kind="combat.turn_advanced", acting_seat_id=binding.seat_id, subject_seat_id=None,
@@ -435,6 +461,7 @@ class CombatRepository:
                        economy_cost: str, payload: dict[str, Any], idempotency_key: str | None,
                        attack_use: bool = False):
         action_id = uuid4()
+
         def projection(connection, event_id: UUID, _seq: int) -> None:
             combat = connection.execute(select(combats).where(
                 combats.c.id == combat_id, combats.c.campaign_id == binding.campaign_id
@@ -452,6 +479,10 @@ class CombatRepository:
             values: dict[str, Any] = {"updated_at": datetime.now().astimezone()}
             if economy_cost in {"action", "bonus_action"} and combat["current_turn_entry_id"] != entry_id:
                 raise CombatStateConflictPersistenceError(f"{economy_cost} can only be used on the entry's current turn")
+            if entry["surprised"] and economy_cost in {"action", "bonus_action"}:
+                raise CombatStateConflictPersistenceError(
+                    "Surprised combatant cannot use an Action or Bonus Action on its first turn"
+                )
             if economy_cost == "action":
                 if attack_use and int(entry["attacks_used"]) > 0:
                     if int(entry["attacks_used"]) >= int(entry["attacks_allowed"]):
@@ -489,6 +520,7 @@ class CombatRepository:
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
                 revision=combats.c.revision + 1, updated_at=datetime.now().astimezone()
             ))
+
         event = self.event_repository.append(
             room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
             kind="combat.action_used", acting_seat_id=binding.seat_id, subject_seat_id=subject_seat_id,
@@ -514,6 +546,7 @@ class CombatRepository:
             ).values(pending_reaction_state=dict(state), updated_at=datetime.now().astimezone()))
             if result.rowcount != 1:
                 raise CombatNotFoundPersistenceError(str(entry_id))
+
         event = self.event_repository.append(
             room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
             kind="combat.reaction_window", acting_seat_id=binding.seat_id, subject_seat_id=None,
@@ -527,34 +560,76 @@ class CombatRepository:
             raise CombatNotFoundPersistenceError(str(entry_id))
         return stored, event
 
-    def withdraw_entry(self, *, binding: StoredTableActorBinding, combat_id: UUID, entry_id: UUID, idempotency_key: str | None):
-        def projection(connection, _event_id: UUID, _seq: int) -> None:
-            combat = connection.execute(select(combats).where(combats.c.id == combat_id).with_for_update()).mappings().one_or_none()
-            if combat is None or combat["campaign_id"] != binding.campaign_id:
+    def _set_entry_status(self, *, binding: StoredTableActorBinding, combat_id: UUID, entry_id: UUID,
+                          status: str, event_kind: str, idempotency_prefix: str,
+                          idempotency_key: str | None):
+        if status not in {"withdrawn", "removed"}:
+            raise ValueError("unsupported inactive CombatEntry status")
+
+        def projection(connection, event_id: UUID, _seq: int) -> None:
+            combat = connection.execute(select(combats).where(
+                combats.c.id == combat_id, combats.c.campaign_id == binding.campaign_id
+            ).with_for_update()).mappings().one_or_none()
+            if combat is None:
                 raise CombatNotFoundPersistenceError(str(combat_id))
-            if combat["current_turn_entry_id"] == entry_id and combat["status"] == "running":
-                raise CombatStateConflictPersistenceError("advance the turn before withdrawing the current turn entry")
-            result = connection.execute(update(combat_entries).where(
-                combat_entries.c.id == entry_id, combat_entries.c.combat_id == combat_id,
-                combat_entries.c.status == "active",
-            ).values(status="withdrawn", updated_at=datetime.now().astimezone()))
-            if result.rowcount != 1:
+            entry = connection.execute(select(combat_entries).where(
+                combat_entries.c.id == entry_id, combat_entries.c.combat_id == combat_id
+            ).with_for_update()).mappings().one_or_none()
+            if entry is None or entry["status"] != "active":
                 raise CombatNotFoundPersistenceError(str(entry_id))
+            if combat["current_turn_entry_id"] == entry_id and combat["status"] == "running":
+                raise CombatStateConflictPersistenceError(
+                    f"advance the turn before marking the current turn entry {status}"
+                )
+            connection.execute(update(session_events).where(session_events.c.id == event_id).values(
+                subject_character_id=entry["character_id"]
+            ))
+            connection.execute(update(combat_entries).where(
+                combat_entries.c.id == entry_id
+            ).values(
+                status=status,
+                ready_state={},
+                pending_reaction_state={},
+                updated_at=datetime.now().astimezone(),
+            ))
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
                 revision=combats.c.revision + 1, updated_at=datetime.now().astimezone()
             ))
+
         event = self.event_repository.append(
             room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
-            kind="combat.entry_withdrawn", acting_seat_id=binding.seat_id, subject_seat_id=None,
+            kind=event_kind, acting_seat_id=binding.seat_id, subject_seat_id=None,
             subject_character_id=None, execution_mode="self", visibility="public", recipient_seat_ids=(),
-            payload_version=1, payload={"combat_id": str(combat_id), "entry_id": str(entry_id)},
-            idempotency_key=f"p4b-entry-withdraw:{idempotency_key}" if idempotency_key else None,
+            payload_version=1, payload={"combat_id": str(combat_id), "entry_id": str(entry_id), "status": status},
+            idempotency_key=f"{idempotency_prefix}:{idempotency_key}" if idempotency_key else None,
             expected_actor_binding=binding, transaction_projection=projection,
         )
         stored = self.get_entry(UUID(str(event.payload["entry_id"])))
         if stored is None:
             raise CombatNotFoundPersistenceError(str(entry_id))
         return stored, event
+
+    def withdraw_entry(self, *, binding: StoredTableActorBinding, combat_id: UUID, entry_id: UUID, idempotency_key: str | None):
+        return self._set_entry_status(
+            binding=binding,
+            combat_id=combat_id,
+            entry_id=entry_id,
+            status="withdrawn",
+            event_kind="combat.entry_withdrawn",
+            idempotency_prefix="p4b-entry-withdraw",
+            idempotency_key=idempotency_key,
+        )
+
+    def remove_entry(self, *, binding: StoredTableActorBinding, combat_id: UUID, entry_id: UUID, idempotency_key: str | None):
+        return self._set_entry_status(
+            binding=binding,
+            combat_id=combat_id,
+            entry_id=entry_id,
+            status="removed",
+            event_kind="combat.entry_removed",
+            idempotency_prefix="p4b-entry-remove",
+            idempotency_key=idempotency_key,
+        )
 
     def end_combat(self, *, binding: StoredTableActorBinding, combat_id: UUID, idempotency_key: str | None):
         def projection(connection, _event_id: UUID, _seq: int) -> None:
@@ -575,6 +650,7 @@ class CombatRepository:
                 ended_session_id=binding.session_id, status="ended", round_number=None,
                 current_turn_entry_id=None, ended_at=now, revision=combats.c.revision + 1, updated_at=now,
             ))
+
         event = self.event_repository.append(
             room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
             kind="combat.ended", acting_seat_id=binding.seat_id, subject_seat_id=None,
