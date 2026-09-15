@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from app.content import load_default_content_registry
 from app.domain.combat.attack_definitions import AttackDefinitionResolver
 from app.domain.combat.attacks import (
@@ -9,10 +11,13 @@ from app.domain.combat.attacks import (
 )
 from app.domain.combat.initiative import FinalizeInitiativeInput, RequestInitiativeInput
 from app.domain.combat.lifecycle import AddMonsterInput, StartCombatInput
+from app.domain.combat.semantic_hp import CombatResolutionService, SemanticDamageInput
 from app.domain.rooms.rolls import FormalRollInput, FormalRollSource
+from app.domain.rooms.table_events import TableEventActorUnauthorizedError
 from app.persistence.characters import CharacterRepository
 from app.persistence.combat.adjudication import CombatAdjudicationRepository
 from app.persistence.combat.attacks import CombatAttackRepository
+from app.persistence.combat.resolution import CombatResolutionRepository
 import tests.test_p4b_combat_lifecycle as support
 
 
@@ -189,5 +194,39 @@ def test_dm_in_range_resumes_same_action_then_formal_roll_resolves_it() -> None:
         assert duplicate == result
         after_retry = _entry(table, attacker_id)
         assert after_retry.attacks_used == 1
+    finally:
+        table.engine.dispose()
+
+
+def test_player_cannot_operate_enemy_combatant_or_directly_mutate_enemy_hp() -> None:
+    table, attacks, attacker_id, target_id, _source_ref = _running_table()
+    try:
+        with pytest.raises(TableEventActorUnauthorizedError):
+            attacks.request_attack(
+                table.player_actor,
+                AttackRequestInput(
+                    attacker_entry_id=target_id,
+                    target_entry_id=attacker_id,
+                    source_ref="authorization-must-fail-before-definition-resolution",
+                    range_confirmed=True,
+                    idempotency_key="player-cannot-drive-enemy",
+                ),
+            )
+
+        resolution = CombatResolutionService(
+            CombatResolutionRepository(table.engine, table.events.repository),
+            table.combat.repository,
+            table.combat,
+            table.events,
+        )
+        with pytest.raises(TableEventActorUnauthorizedError):
+            resolution.apply_damage(
+                table.player_actor,
+                SemanticDamageInput(
+                    target_entry_id=target_id,
+                    amount=1,
+                    idempotency_key="player-cannot-direct-damage-enemy",
+                ),
+            )
     finally:
         table.engine.dispose()

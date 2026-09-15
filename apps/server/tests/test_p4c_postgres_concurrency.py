@@ -15,7 +15,7 @@ from app.domain.combat.semantic_hp import CombatResolutionService, SemanticDamag
 from app.domain.rooms.rolls import FormalRollInput, FormalRollSource
 from app.persistence.characters import character_states
 from app.persistence.combat.resolution import CombatResolutionRepository
-from app.persistence.rooms.table_runtime import session_events
+from app.persistence.rooms.table_runtime import TableEventRepository, session_events, session_table_runtime
 import tests.test_p4b_combat_lifecycle as support
 
 
@@ -102,6 +102,25 @@ def _running_table(monkeypatch):
     return engine, table, character_entry.id, resolution
 
 
+class _InjectedFailureEventRepository(TableEventRepository):
+    def __init__(self, engine, *, after_projection: bool) -> None:
+        super().__init__(engine)
+        self.after_projection = after_projection
+
+    def append(self, *args, **kwargs):
+        original_projection = kwargs.get("transaction_projection")
+        assert original_projection is not None
+
+        def injected_projection(connection, event_id, seq):
+            if not self.after_projection:
+                raise RuntimeError("injected failure after event insert before HP projection")
+            original_projection(connection, event_id, seq)
+            raise RuntimeError("injected failure after HP projection before commit")
+
+        kwargs["transaction_projection"] = injected_projection
+        return super().append(*args, **kwargs)
+
+
 def _hp(engine, character_id) -> int:
     with engine.connect() as connection:
         payload = connection.execute(
@@ -138,5 +157,59 @@ def test_concurrent_duplicate_semantic_damage_changes_hp_once(monkeypatch) -> No
                 )
             )
         assert event_count == 1
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize("after_projection", [False, True])
+def test_semantic_damage_transaction_failure_leaves_no_half_state(monkeypatch, after_projection: bool) -> None:
+    engine, table, target_entry_id, _resolution = _running_table(monkeypatch)
+    try:
+        before_hp = _hp(engine, table.character_id)
+        with engine.connect() as connection:
+            before_runtime = connection.execute(
+                select(
+                    session_table_runtime.c.revision,
+                    session_table_runtime.c.last_event_seq,
+                ).where(session_table_runtime.c.session_id == table.session_id)
+            ).one()
+
+        failing_events = _InjectedFailureEventRepository(
+            engine,
+            after_projection=after_projection,
+        )
+        resolution = CombatResolutionService(
+            CombatResolutionRepository(engine, failing_events),
+            table.combat.repository,
+            table.combat,
+            table.events,
+        )
+        key = f"rollback-{'after' if after_projection else 'before'}-projection"
+        with pytest.raises(RuntimeError, match="injected failure"):
+            resolution.apply_damage(
+                table.player_actor,
+                SemanticDamageInput(
+                    target_entry_id=target_entry_id,
+                    amount=7,
+                    idempotency_key=key,
+                ),
+            )
+
+        assert _hp(engine, table.character_id) == before_hp
+        with engine.connect() as connection:
+            event_count = connection.scalar(
+                select(func.count()).select_from(session_events).where(
+                    session_events.c.session_id == table.session_id,
+                    session_events.c.idempotency_key == f"p4c-damage:{key}",
+                )
+            )
+            after_runtime = connection.execute(
+                select(
+                    session_table_runtime.c.revision,
+                    session_table_runtime.c.last_event_seq,
+                ).where(session_table_runtime.c.session_id == table.session_id)
+            ).one()
+        assert event_count == 0
+        assert after_runtime == before_runtime
     finally:
         engine.dispose()
