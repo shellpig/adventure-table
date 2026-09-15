@@ -46,6 +46,31 @@ class CombatOrderService:
         self.combat_service = combat_service
         self.table_event_service = table_event_service
 
+    def _validate_order_preserves_totals(
+        self,
+        combat_id: UUID,
+        ordered_entry_ids: tuple[UUID, ...],
+    ) -> None:
+        entries = tuple(
+            entry
+            for entry in self.combat_service.repository.list_entries(combat_id)
+            if entry.status == "active"
+        )
+        by_id = {entry.id: entry for entry in entries}
+        if set(ordered_entry_ids) != set(by_id) or len(ordered_entry_ids) != len(by_id):
+            raise CombatStateConflictError(
+                "initiative order must contain every active Combat entry exactly once"
+            )
+        if any(entry.initiative_total is None for entry in entries):
+            raise CombatStateConflictError(
+                "all active entries require initiative before reordering"
+            )
+        totals = [int(by_id[entry_id].initiative_total or 0) for entry_id in ordered_entry_ids]
+        if any(left < right for left, right in zip(totals, totals[1:])):
+            raise CombatStateConflictError(
+                "initiative order may only change ordering among tied totals"
+            )
+
     def reorder_running(
         self,
         actor: TableActorContext,
@@ -59,6 +84,7 @@ class CombatOrderService:
         combat = self.combat_service.repository.get_active(actor.campaign_id)
         if combat is None:
             raise CombatNotFoundError("Campaign has no active Combat")
+        self._validate_order_preserves_totals(combat.id, request.ordered_entry_ids)
         try:
             self.repository.reorder_running(
                 binding=actor_binding(actor),
