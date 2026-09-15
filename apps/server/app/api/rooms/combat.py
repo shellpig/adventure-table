@@ -8,6 +8,7 @@ from app.api.errors import APIError
 from app.api.rooms.access import get_room_access_context
 from app.api.rooms.dependencies import (
     get_combat_attack_service,
+    get_combat_core_roll_service,
     get_combat_initiative_service,
     get_combat_order_service,
     get_combat_resolution_service,
@@ -24,6 +25,15 @@ from app.domain.combat.attacks import (
     AttackRequestView,
     AttackResolutionView,
     CombatAttackService,
+)
+from app.domain.combat.core_rolls import (
+    CombatCoreRollService,
+    DeathSaveRequestInput,
+    DeathSaveRequestView,
+    DeathSaveResultView,
+    SavingThrowInput,
+    SavingThrowRequestResponse,
+    SavingThrowResultView,
 )
 from app.domain.combat.initiative import (
     CombatInitiativeService,
@@ -67,6 +77,10 @@ from app.persistence.combat.attacks import (
     AttackRequestNotPendingPersistenceError,
     AttackStateConflictPersistenceError,
 )
+from app.persistence.combat.core_rolls import (
+    CombatCoreRollNotFoundError,
+    CombatCoreRollStateConflictError,
+)
 from app.persistence.combat.initiative import (
     InitiativeRequestNotFoundPersistenceError,
     InitiativeRequestNotPendingPersistenceError,
@@ -101,46 +115,18 @@ class CombatMutationInput(StrictModel):
 
 
 def _map_combat_error(exc: Exception) -> APIError:
-    if isinstance(
-        exc,
-        (
-            TableEventNotFoundError,
-            TableEventSessionNotFoundPersistenceError,
-        ),
-    ):
+    if isinstance(exc, (TableEventNotFoundError, TableEventSessionNotFoundPersistenceError)):
         return APIError(404, "session_not_found", "Session was not found for this table actor")
-    if isinstance(
-        exc,
-        (
-            TableEventActorUnauthorizedError,
-            TableEventActorBindingStalePersistenceError,
-        ),
-    ):
+    if isinstance(exc, (TableEventActorUnauthorizedError, TableEventActorBindingStalePersistenceError)):
         return APIError(403, "table_actor_unauthorized", str(exc))
-    if isinstance(
-        exc,
-        (
-            TableEventSessionNotActiveError,
-            TableEventSessionNotActivePersistenceError,
-        ),
-    ):
+    if isinstance(exc, (TableEventSessionNotActiveError, TableEventSessionNotActivePersistenceError)):
         return APIError(409, "session_not_active", "Session is not active")
-    if isinstance(
-        exc,
-        (
-            CombatNotFoundError,
-            CombatNotFoundPersistenceError,
-        ),
-    ):
+    if isinstance(exc, (CombatNotFoundError, CombatNotFoundPersistenceError)):
         return APIError(404, "combat_not_found", str(exc))
-    if isinstance(
-        exc,
-        (
-            AttackRequestNotFoundPersistenceError,
-            AttackDefinitionNotFoundError,
-        ),
-    ):
+    if isinstance(exc, (AttackRequestNotFoundPersistenceError, AttackDefinitionNotFoundError)):
         return APIError(404, "attack_not_found", str(exc))
+    if isinstance(exc, CombatCoreRollNotFoundError):
+        return APIError(404, "combat_roll_not_found", str(exc))
     if isinstance(exc, CombatResolutionTargetNotFoundError):
         return APIError(404, "combat_target_not_found", str(exc))
     if isinstance(exc, ActiveCombatExistsError):
@@ -153,6 +139,7 @@ def _map_combat_error(exc: Exception) -> APIError:
             InitiativeRequestNotPendingPersistenceError,
             AttackRequestNotPendingPersistenceError,
             AttackStateConflictPersistenceError,
+            CombatCoreRollStateConflictError,
             CombatResolutionStateConflictError,
         ),
     ):
@@ -163,15 +150,14 @@ def _map_combat_error(exc: Exception) -> APIError:
         return APIError(422, "invalid_initiative_input", str(exc))
     if isinstance(exc, AttackDefinitionInvalidError):
         return APIError(422, "invalid_attack_definition", str(exc))
-    if isinstance(exc, RollInputInvalidError):
-        return APIError(422, "invalid_roll_input", str(exc))
+    if isinstance(exc, (RollInputInvalidError, ValueError)):
+        return APIError(422, "invalid_combat_input", str(exc))
     if isinstance(exc, CharacterNotFoundError):
         return APIError(404, "character_not_found", str(exc))
     raise exc
 
 
-def _resolve_actor(
-    *,
+def _actor_from_request(
     room_id: UUID,
     campaign_id: UUID,
     session_id: UUID,
@@ -186,340 +172,259 @@ def _resolve_actor(
     )
 
 
-def _actor_from_request(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    context: RoomAccessContext,
-    event_service: TableEventService,
-) -> TableActorContext:
-    return _resolve_actor(
-        room_id=room_id,
-        campaign_id=campaign_id,
-        session_id=session_id,
-        context=context,
-        event_service=event_service,
-    )
-
-
 @router.get("", response_model=CombatView | None)
-def get_active_combat(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatService = Depends(get_combat_service),
-) -> CombatView | None:
+def get_active_combat(room_id: UUID, campaign_id: UUID, session_id: UUID,
+                      context: RoomAccessContext = Depends(get_room_access_context),
+                      event_service: TableEventService = Depends(get_table_event_service),
+                      service: CombatService = Depends(get_combat_service)) -> CombatView | None:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.get_active_combat(actor)
+        return service.get_active_combat(_actor_from_request(room_id, campaign_id, session_id, context, event_service))
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.post("/start", response_model=CombatView)
-def start_combat(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    payload: StartCombatInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatService = Depends(get_combat_service),
-) -> CombatView:
+def start_combat(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: StartCombatInput,
+                 context: RoomAccessContext = Depends(get_room_access_context),
+                 event_service: TableEventService = Depends(get_table_event_service),
+                 service: CombatService = Depends(get_combat_service)) -> CombatView:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.start_quick_combat(actor, payload)
+        return service.start_quick_combat(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.post("/entries/characters", response_model=CombatView)
-def add_character(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    payload: AddCharacterInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatService = Depends(get_combat_service),
-) -> CombatView:
+def add_character(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: AddCharacterInput,
+                  context: RoomAccessContext = Depends(get_room_access_context),
+                  event_service: TableEventService = Depends(get_table_event_service),
+                  service: CombatService = Depends(get_combat_service)) -> CombatView:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.add_character(actor, payload)
+        return service.add_character(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.post("/entries/monsters", response_model=CombatView)
-def add_monster(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    payload: AddMonsterInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatService = Depends(get_combat_service),
-) -> CombatView:
+def add_monster(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: AddMonsterInput,
+                context: RoomAccessContext = Depends(get_room_access_context),
+                event_service: TableEventService = Depends(get_table_event_service),
+                service: CombatService = Depends(get_combat_service)) -> CombatView:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.add_monster(actor, payload)
+        return service.add_monster(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.post("/initiative/request", response_model=InitiativeRequestResponse)
-def request_initiative(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    payload: RequestInitiativeInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatInitiativeService = Depends(get_combat_initiative_service),
-) -> InitiativeRequestResponse:
+def request_initiative(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: RequestInitiativeInput,
+                       context: RoomAccessContext = Depends(get_room_access_context),
+                       event_service: TableEventService = Depends(get_table_event_service),
+                       service: CombatInitiativeService = Depends(get_combat_initiative_service)) -> InitiativeRequestResponse:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.request_initiative(actor, payload)
+        return service.request_initiative(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.post("/initiative/roll", response_model=InitiativeRollResponse)
-def roll_initiative(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    payload: FormalRollInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatInitiativeService = Depends(get_combat_initiative_service),
-) -> InitiativeRollResponse:
+def roll_initiative(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: FormalRollInput,
+                    context: RoomAccessContext = Depends(get_room_access_context),
+                    event_service: TableEventService = Depends(get_table_event_service),
+                    service: CombatInitiativeService = Depends(get_combat_initiative_service)) -> InitiativeRollResponse:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.complete_initiative(actor, payload)
+        return service.complete_initiative(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.get("/initiative/suggested-order", response_model=list[UUID])
-def suggested_order(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatInitiativeService = Depends(get_combat_initiative_service),
-) -> tuple[UUID, ...]:
+def suggested_order(room_id: UUID, campaign_id: UUID, session_id: UUID,
+                    context: RoomAccessContext = Depends(get_room_access_context),
+                    event_service: TableEventService = Depends(get_table_event_service),
+                    service: CombatInitiativeService = Depends(get_combat_initiative_service)) -> tuple[UUID, ...]:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.suggested_order(actor)
+        return service.suggested_order(_actor_from_request(room_id, campaign_id, session_id, context, event_service))
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.get("/initiative/ties", response_model=dict[int, tuple[UUID, ...]])
-def initiative_ties(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatInitiativeService = Depends(get_combat_initiative_service),
-) -> dict[int, tuple[UUID, ...]]:
+def initiative_ties(room_id: UUID, campaign_id: UUID, session_id: UUID,
+                    context: RoomAccessContext = Depends(get_room_access_context),
+                    event_service: TableEventService = Depends(get_table_event_service),
+                    service: CombatInitiativeService = Depends(get_combat_initiative_service)) -> dict[int, tuple[UUID, ...]]:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.tied_totals(actor)
+        return service.tied_totals(_actor_from_request(room_id, campaign_id, session_id, context, event_service))
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.post("/initiative/finalize", response_model=CombatView)
-def finalize_initiative(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    payload: FinalizeInitiativeInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatInitiativeService = Depends(get_combat_initiative_service),
-) -> CombatView:
+def finalize_initiative(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: FinalizeInitiativeInput,
+                        context: RoomAccessContext = Depends(get_room_access_context),
+                        event_service: TableEventService = Depends(get_table_event_service),
+                        service: CombatInitiativeService = Depends(get_combat_initiative_service)) -> CombatView:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.finalize_initiative(actor, payload)
+        return service.finalize_initiative(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.post("/initiative/reorder", response_model=CombatView)
-def reorder_initiative(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    payload: ReorderInitiativeInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatOrderService = Depends(get_combat_order_service),
-) -> CombatView:
+def reorder_initiative(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: ReorderInitiativeInput,
+                       context: RoomAccessContext = Depends(get_room_access_context),
+                       event_service: TableEventService = Depends(get_table_event_service),
+                       service: CombatOrderService = Depends(get_combat_order_service)) -> CombatView:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.reorder_running(actor, payload)
+        return service.reorder_running(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.post("/turn/advance", response_model=CombatView)
-def advance_turn(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    payload: CombatMutationInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatService = Depends(get_combat_service),
-) -> CombatView:
+def advance_turn(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: CombatMutationInput,
+                 context: RoomAccessContext = Depends(get_room_access_context),
+                 event_service: TableEventService = Depends(get_table_event_service),
+                 service: CombatService = Depends(get_combat_service)) -> CombatView:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.advance_turn(actor, idempotency_key=payload.idempotency_key)
+        return service.advance_turn(
+            _actor_from_request(room_id, campaign_id, session_id, context, event_service),
+            idempotency_key=payload.idempotency_key,
+        )
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.get("/entries/{entry_id}/attacks", response_model=list[AttackDefinitionView])
-def list_attacks(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    entry_id: UUID,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatAttackService = Depends(get_combat_attack_service),
-) -> tuple[AttackDefinitionView, ...]:
+def list_attacks(room_id: UUID, campaign_id: UUID, session_id: UUID, entry_id: UUID,
+                 context: RoomAccessContext = Depends(get_room_access_context),
+                 event_service: TableEventService = Depends(get_table_event_service),
+                 service: CombatAttackService = Depends(get_combat_attack_service)) -> tuple[AttackDefinitionView, ...]:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.available_attacks(actor, entry_id)
+        return service.available_attacks(_actor_from_request(room_id, campaign_id, session_id, context, event_service), entry_id)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.post("/attacks/request", response_model=AttackRequestView)
-def request_attack(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    payload: AttackRequestInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatAttackService = Depends(get_combat_attack_service),
-) -> AttackRequestView:
+def request_attack(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: AttackRequestInput,
+                   context: RoomAccessContext = Depends(get_room_access_context),
+                   event_service: TableEventService = Depends(get_table_event_service),
+                   service: CombatAttackService = Depends(get_combat_attack_service)) -> AttackRequestView:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.request_attack(actor, payload)
+        return service.request_attack(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.post("/attacks/roll", response_model=AttackResolutionView)
-def roll_attack(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    payload: FormalRollInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatAttackService = Depends(get_combat_attack_service),
-) -> AttackResolutionView:
+def roll_attack(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: FormalRollInput,
+                context: RoomAccessContext = Depends(get_room_access_context),
+                event_service: TableEventService = Depends(get_table_event_service),
+                service: CombatAttackService = Depends(get_combat_attack_service)) -> AttackResolutionView:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.complete_attack(actor, payload)
+        return service.complete_attack(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
+@router.post("/saving-throws/request", response_model=SavingThrowRequestResponse)
+def request_saving_throws(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: SavingThrowInput,
+                          context: RoomAccessContext = Depends(get_room_access_context),
+                          event_service: TableEventService = Depends(get_table_event_service),
+                          service: CombatCoreRollService = Depends(get_combat_core_roll_service)) -> SavingThrowRequestResponse:
+    try:
+        return service.request_saving_throws(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
+@router.post("/saving-throws/roll", response_model=SavingThrowResultView)
+def roll_saving_throw(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: FormalRollInput,
+                      context: RoomAccessContext = Depends(get_room_access_context),
+                      event_service: TableEventService = Depends(get_table_event_service),
+                      service: CombatCoreRollService = Depends(get_combat_core_roll_service)) -> SavingThrowResultView:
+    try:
+        return service.complete_saving_throw(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
+@router.post("/death-saves/request", response_model=DeathSaveRequestView)
+def request_death_save(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: DeathSaveRequestInput,
+                       context: RoomAccessContext = Depends(get_room_access_context),
+                       event_service: TableEventService = Depends(get_table_event_service),
+                       service: CombatCoreRollService = Depends(get_combat_core_roll_service)) -> DeathSaveRequestView:
+    try:
+        return service.request_death_save(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
+@router.post("/death-saves/roll", response_model=DeathSaveResultView)
+def roll_death_save(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: FormalRollInput,
+                    context: RoomAccessContext = Depends(get_room_access_context),
+                    event_service: TableEventService = Depends(get_table_event_service),
+                    service: CombatCoreRollService = Depends(get_combat_core_roll_service)) -> DeathSaveResultView:
+    try:
+        return service.complete_death_save(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.post("/damage")
-def apply_damage(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    payload: SemanticDamageInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatResolutionService = Depends(get_combat_resolution_service),
-) -> StoredSemanticResolution:
+def apply_damage(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: SemanticDamageInput,
+                 context: RoomAccessContext = Depends(get_room_access_context),
+                 event_service: TableEventService = Depends(get_table_event_service),
+                 service: CombatResolutionService = Depends(get_combat_resolution_service)) -> StoredSemanticResolution:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.apply_damage(actor, payload)
+        return service.apply_damage(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.post("/healing")
-def apply_healing(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    payload: SemanticHealingInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatResolutionService = Depends(get_combat_resolution_service),
-) -> StoredSemanticResolution:
+def apply_healing(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: SemanticHealingInput,
+                  context: RoomAccessContext = Depends(get_room_access_context),
+                  event_service: TableEventService = Depends(get_table_event_service),
+                  service: CombatResolutionService = Depends(get_combat_resolution_service)) -> StoredSemanticResolution:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.apply_healing(actor, payload)
+        return service.apply_healing(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.post("/actions", response_model=CombatActionView)
-def use_action(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    payload: CombatActionInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatService = Depends(get_combat_service),
-) -> CombatActionView:
+def use_action(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: CombatActionInput,
+               context: RoomAccessContext = Depends(get_room_access_context),
+               event_service: TableEventService = Depends(get_table_event_service),
+               service: CombatService = Depends(get_combat_service)) -> CombatActionView:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.use_action(actor, payload)
+        return service.use_action(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.post("/reaction-window", response_model=CombatView)
-def set_reaction_window(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    payload: ReactionWindowInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatService = Depends(get_combat_service),
-) -> CombatView:
+def set_reaction_window(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: ReactionWindowInput,
+                        context: RoomAccessContext = Depends(get_room_access_context),
+                        event_service: TableEventService = Depends(get_table_event_service),
+                        service: CombatService = Depends(get_combat_service)) -> CombatView:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.set_reaction_window(actor, payload)
+        return service.set_reaction_window(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
 @router.post("/entries/{entry_id}/withdraw", response_model=CombatView)
-def withdraw_entry(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    entry_id: UUID,
-    payload: CombatMutationInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatService = Depends(get_combat_service),
-) -> CombatView:
+def withdraw_entry(room_id: UUID, campaign_id: UUID, session_id: UUID, entry_id: UUID, payload: CombatMutationInput,
+                   context: RoomAccessContext = Depends(get_room_access_context),
+                   event_service: TableEventService = Depends(get_table_event_service),
+                   service: CombatService = Depends(get_combat_service)) -> CombatView:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
         return service.withdraw_entry(
-            actor,
+            _actor_from_request(room_id, campaign_id, session_id, context, event_service),
             entry_id,
             idempotency_key=payload.idempotency_key,
         )
@@ -528,20 +433,13 @@ def withdraw_entry(
 
 
 @router.post("/entries/{entry_id}/remove", response_model=CombatView)
-def remove_entry(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    entry_id: UUID,
-    payload: CombatMutationInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatService = Depends(get_combat_service),
-) -> CombatView:
+def remove_entry(room_id: UUID, campaign_id: UUID, session_id: UUID, entry_id: UUID, payload: CombatMutationInput,
+                 context: RoomAccessContext = Depends(get_room_access_context),
+                 event_service: TableEventService = Depends(get_table_event_service),
+                 service: CombatService = Depends(get_combat_service)) -> CombatView:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
         return service.remove_entry(
-            actor,
+            _actor_from_request(room_id, campaign_id, session_id, context, event_service),
             entry_id,
             idempotency_key=payload.idempotency_key,
         )
@@ -550,18 +448,15 @@ def remove_entry(
 
 
 @router.post("/end", response_model=CombatView)
-def end_combat(
-    room_id: UUID,
-    campaign_id: UUID,
-    session_id: UUID,
-    payload: CombatMutationInput,
-    context: RoomAccessContext = Depends(get_room_access_context),
-    event_service: TableEventService = Depends(get_table_event_service),
-    service: CombatService = Depends(get_combat_service),
-) -> CombatView:
+def end_combat(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: CombatMutationInput,
+               context: RoomAccessContext = Depends(get_room_access_context),
+               event_service: TableEventService = Depends(get_table_event_service),
+               service: CombatService = Depends(get_combat_service)) -> CombatView:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        return service.end_combat(actor, idempotency_key=payload.idempotency_key)
+        return service.end_combat(
+            _actor_from_request(room_id, campaign_id, session_id, context, event_service),
+            idempotency_key=payload.idempotency_key,
+        )
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
