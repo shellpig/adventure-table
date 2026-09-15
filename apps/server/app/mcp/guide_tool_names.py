@@ -42,6 +42,20 @@ _EXPECTED = {
     "update_character_state",
     "get_pending_events",
     "wait_for_event",
+    "combat_get_active",
+    "combat_list_attacks",
+    "combat_request_attack",
+    "combat_adjudicate_attack",
+    "combat_roll_attack",
+    "combat_apply_damage",
+    "combat_apply_healing",
+    "combat_request_saving_throws",
+    "combat_roll_saving_throw",
+    "combat_request_death_save",
+    "combat_roll_death_save",
+    "combat_request_special_attack",
+    "combat_adjudicate_special_attack",
+    "combat_roll_special_attack",
 }
 
 

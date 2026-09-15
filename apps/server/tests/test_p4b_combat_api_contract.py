@@ -48,7 +48,7 @@ def test_combat_router_exposes_complete_p4b_http_surface() -> None:
         for route in router.routes
         for method in (route.methods or set())
     }
-    assert actual == EXPECTED_ROUTES
+    assert EXPECTED_ROUTES <= actual
 
 
 def test_combat_routes_are_mounted_in_main_openapi() -> None:

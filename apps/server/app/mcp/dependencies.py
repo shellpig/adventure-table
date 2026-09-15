@@ -4,6 +4,11 @@ from fastapi import Request
 
 from app.api.rooms.ai_controllers import get_ai_controller_service
 from app.api.rooms.dependencies import (
+    get_combat_attack_service,
+    get_combat_core_roll_service,
+    get_combat_resolution_service,
+    get_combat_service,
+    get_combat_special_attack_service,
     get_exploration_action_service,
     get_exploration_stage_service,
     get_pending_action_service,
@@ -13,13 +18,14 @@ from app.api.rooms.dependencies import (
     get_table_character_state_service,
     get_table_event_service,
 )
+from app.domain.combat.ai_tools import CombatAIToolApplicationService
 from app.domain.rooms.ai_tools import AIToolApplicationService
 
 
 def get_ai_tool_application_service(request: Request) -> AIToolApplicationService:
     service = getattr(request.app.state, "ai_tool_application_service", None)
     if service is None:
-        service = AIToolApplicationService(
+        service = CombatAIToolApplicationService(
             ai_controller_service=get_ai_controller_service(request),
             session_service=get_session_service(request),
             stage_service=get_exploration_stage_service(request),
@@ -29,6 +35,11 @@ def get_ai_tool_application_service(request: Request) -> AIToolApplicationServic
             pending_action_service=get_pending_action_service(request),
             event_service=get_table_event_service(request),
             workspace_service=get_room_workspace_service(request),
+            combat_service=get_combat_service(request),
+            combat_attack_service=get_combat_attack_service(request),
+            combat_resolution_service=get_combat_resolution_service(request),
+            combat_core_roll_service=get_combat_core_roll_service(request),
+            combat_special_attack_service=get_combat_special_attack_service(request),
         )
         request.app.state.ai_tool_application_service = service
     return service

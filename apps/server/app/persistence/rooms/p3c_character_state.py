@@ -7,9 +7,13 @@ from sqlalchemy.engine import Engine
 
 from app.content.registry import ContentRegistry
 from app.domain.character.schemas import CharacterState, PersistedCharacter
-from app.domain.rooms.table_character_state import TableCharacterStatePatch
+from app.domain.rooms.table_character_state import (
+    TableCharacterStateCombatMutationError,
+    TableCharacterStatePatch,
+)
 from app.domain.rooms.table_events import TableActorContext
 from app.persistence.characters import CharacterRepository
+from app.persistence.combat.tables import combats
 from app.persistence.rooms.tables import session_participants
 from app.persistence.rooms.table_runtime import (
     StoredTableActorBinding,
@@ -91,6 +95,27 @@ class TableCharacterStatePersistence:
                     "Table state subject binding is no longer current"
                 )
 
+            hp_fields = {"current_hp", "temporary_hp"} & set(changes)
+            if hp_fields:
+                active_combat = connection.execute(
+                    select(combats.c.id)
+                    .where(
+                        combats.c.campaign_id == actor.campaign_id,
+                        combats.c.status.in_(("initiative_pending", "running")),
+                    )
+                    .with_for_update()
+                    .limit(1)
+                ).scalar_one_or_none()
+                if active_combat is not None:
+                    if not actor.is_current_dm:
+                        raise TableCharacterStateCombatMutationError(
+                            "Active Combat HP changes must use semantic damage/healing resolution"
+                        )
+                    if not patch.correction_reason:
+                        raise TableCharacterStateCombatMutationError(
+                            "Active Combat raw HP correction requires correction_reason"
+                        )
+
             bound_repository = CharacterRepository(
                 TransactionBoundEngine(connection),  # type: ignore[arg-type]
                 self.registry,
@@ -108,6 +133,13 @@ class TableCharacterStatePersistence:
                 expected_current_version_id=patch.expected_current_version_id,
             )
 
+        payload: dict[str, object] = {
+            "changed_fields": sorted(changes),
+        }
+        if patch.correction_reason is not None:
+            payload["correction_reason"] = patch.correction_reason
+            payload["correction"] = True
+
         self.event_repository.append(
             room_id=actor.room_id,
             campaign_id=actor.campaign_id,
@@ -120,9 +152,7 @@ class TableCharacterStatePersistence:
             visibility="public",
             recipient_seat_ids=(),
             payload_version=1,
-            payload={
-                "changed_fields": sorted(changes),
-            },
+            payload=payload,
             idempotency_key=(
                 f"p3c-state:{patch.idempotency_key}"
                 if patch.idempotency_key

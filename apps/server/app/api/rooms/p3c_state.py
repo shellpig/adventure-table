@@ -15,6 +15,7 @@ from app.domain.character.validation import CharacterValidationError
 from app.domain.rooms.exploration import ExplorationSubjectNotFoundError
 from app.domain.rooms.schemas import RoomAccessContext, StrictModel
 from app.domain.rooms.table_character_state import (
+    TableCharacterStateCombatMutationError,
     TableCharacterStatePatch,
     TableCharacterStateService,
 )
@@ -85,6 +86,8 @@ def _map_table_state_error(exc: Exception) -> APIError:
         return APIError(404, "exploration_subject_not_found", "Player Seat is not active in this Session")
     if isinstance(exc, TableCharacterStateSubjectStalePersistenceError):
         return APIError(409, "table_state_subject_stale", "Player Seat or Active Character changed before commit")
+    if isinstance(exc, TableCharacterStateCombatMutationError):
+        return APIError(409, "active_combat_semantic_hp_required", str(exc))
     if isinstance(exc, CharacterNotFoundError):
         return APIError(404, "character_not_found", "Active Character was not found")
     if isinstance(exc, CharacterArchivedError):

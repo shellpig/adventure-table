@@ -18,6 +18,7 @@ M04B_REVISION = "0021_m04b_ai_oauth"
 P4A_REVISION = "0022_p4a_monster_instances"
 P4B_LIFECYCLE_REVISION = "0023_p4b_combat_lifecycle"
 P4B_ROLL_TARGETS_REVISION = "0024_p4b_combat_roll_targets"
+P4C_REVISION = "0025_p4c_core_resolution"
 
 
 def _source() -> str:
@@ -61,7 +62,10 @@ def test_p3d_revision_carries_forward_to_current_web_head() -> None:
     p4b_roll_targets = scripts.get_revision(P4B_ROLL_TARGETS_REVISION)
     assert p4b_roll_targets is not None
     assert p4b_roll_targets.down_revision == P4B_LIFECYCLE_REVISION
-    assert P4B_ROLL_TARGETS_REVISION in scripts.get_heads()
+    p4c_revision = scripts.get_revision(P4C_REVISION)
+    assert p4c_revision is not None
+    assert p4c_revision.down_revision == P4B_ROLL_TARGETS_REVISION
+    assert P4C_REVISION in scripts.get_heads()
 
 
 def test_p3d_migration_replaces_all_three_named_controller_checks() -> None:
