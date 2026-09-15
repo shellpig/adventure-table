@@ -4,7 +4,13 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Sequence
 
-from app.domain.combat.effect_resolver import ActiveEffect, EffectSpec
+from app.domain.character.schemas import (
+    CharacterConcentrationState,
+    CharacterState,
+    PersistentTemporaryEffect,
+    TemporaryEffectModifier,
+)
+from app.domain.combat.effect_resolver import DurationKind, EffectSpec
 from app.domain.combat.resolution import (
     DamageRollPart,
     DamageType,
@@ -16,6 +22,12 @@ from app.domain.combat.resolution import (
     apply_healing,
     raw_damage_by_type,
     resolve_attack_roll,
+)
+from app.domain.combat.spell_resources import (
+    CharacterSpellAuthorization,
+    MonsterSpellSource,
+    spend_character_spell,
+    spend_monster_spell,
 )
 
 
@@ -76,11 +88,20 @@ class SpellCastRequest:
 
 @dataclass(frozen=True)
 class SpellResolution:
-    remaining_slots: dict[int, int]
+    character_state: CharacterState
     target_hp: HitPointState | None
     target_death_saves: DeathSaveState | None
-    applied_effects: tuple[ActiveEffect, ...]
+    applied_effects: tuple[PersistentTemporaryEffect, ...]
     concentration_started: bool
+    events: tuple[dict[str, object], ...]
+
+
+@dataclass(frozen=True)
+class MonsterSpellResolution:
+    resources: dict[str, object]
+    target_hp: HitPointState | None
+    target_death_saves: DeathSaveState | None
+    applied_effects: tuple[PersistentTemporaryEffect, ...]
     events: tuple[dict[str, object], ...]
 
 
@@ -95,21 +116,40 @@ def half_damage_parts(parts: Sequence[DamageRollPart]) -> tuple[DamageRollPart, 
     )
 
 
-def resolve_spell(
-    *,
-    spec: SpellResolutionSpec,
-    request: SpellCastRequest,
-    target: SpellTargetState | None,
-    spell_slots: dict[int, int],
-    effect_id_prefix: str = "spell-effect",
-) -> SpellResolution:
-    """Resolve one spell atomically from already-authoritative roll inputs.
+def _persistent_effect(effect_id: str, spec: EffectSpec, *, concentration: bool) -> PersistentTemporaryEffect:
+    if spec.duration.kind is DurationKind.UNTIL_SHORT_REST:
+        duration = "short_rest"
+    elif spec.duration.kind is DurationKind.UNTIL_LONG_REST:
+        duration = "long_rest"
+    elif spec.duration.kind is DurationKind.UNTIL_CONCENTRATION_ENDS or concentration:
+        duration = "concentration"
+    elif spec.duration.kind is DurationKind.MANUAL:
+        duration = "manual"
+    else:
+        # Round/turn lifetime is combat-local timing state and must not be
+        # silently persisted as a different duration in CharacterState.
+        raise ValueError("round/turn spell effects require durable combat timing persistence")
+    return PersistentTemporaryEffect(
+        effect_id=effect_id,
+        source_ref=spec.source_ref,
+        tag=spec.tag,
+        duration=duration,
+        modifiers=tuple(
+            TemporaryEffectModifier(
+                scope=modifier.scope.value,
+                mode=modifier.mode.value,
+                value=modifier.value,
+                target=modifier.target,
+            )
+            for modifier in spec.modifiers
+        ),
+        note=spec.note,
+    )
 
-    Structural, target, and resource validation completes before slot
-    expenditure. The input slot map is never mutated, allowing the application
-    layer to persist state and emitted semantic events in one transaction.
-    """
 
+def _validate_resolution_inputs(
+    *, spec: SpellResolutionSpec, request: SpellCastRequest, target: SpellTargetState | None
+) -> None:
     if not request.caster_ref.strip():
         raise ValueError("caster_ref cannot be blank")
     if request.slot_level < spec.minimum_slot_level:
@@ -118,9 +158,6 @@ def resolve_spell(
         raise ValueError("slot level must be between 0 and 9")
     if spec.minimum_slot_level > 0 and request.slot_level == 0:
         raise ValueError("this spell requires a spell slot")
-    if request.slot_level > 0 and int(spell_slots.get(request.slot_level, 0)) <= 0:
-        raise ValueError(f"no level {request.slot_level} spell slot remains")
-
     if spec.cast_mode in {SpellCastMode.ATTACK, SpellCastMode.SAVE, SpellCastMode.HEAL} and target is None:
         raise ValueError("this spell requires a target")
     if spec.cast_mode is SpellCastMode.ATTACK:
@@ -143,14 +180,18 @@ def resolve_spell(
         if request.healing_amount < 0:
             raise ValueError("healing amount cannot be negative")
 
-    remaining = dict(spell_slots)
-    events: list[dict[str, object]] = []
-    if request.slot_level > 0:
-        remaining[request.slot_level] -= 1
-        events.append(
-            {"type": "resource_spent", "resource": "spell_slot", "level": request.slot_level, "amount": 1}
-        )
 
+def _resolve_semantics(
+    *,
+    spec: SpellResolutionSpec,
+    request: SpellCastRequest,
+    target: SpellTargetState | None,
+    effect_id_prefix: str,
+    resource_event: dict[str, object] | None,
+) -> tuple[HitPointState | None, DeathSaveState | None, tuple[PersistentTemporaryEffect, ...], tuple[dict[str, object], ...]]:
+    events: list[dict[str, object]] = []
+    if resource_event is not None:
+        events.append(resource_event)
     target_hp = target.hp if target is not None else None
     target_death_saves = target.death_saves if target is not None else None
     should_apply_effects = True
@@ -163,49 +204,30 @@ def resolve_spell(
             target_ac=target.target_ac,
             mode=request.attack_mode,
         )
-        events.append(
-            {
-                "type": "attack_roll",
-                "spell_ref": spec.spell_ref,
-                "d20": attack.selected_d20,
-                "total": attack.total,
-                "target_ac": attack.target_ac,
-                "hit": attack.hit,
-                "critical": attack.critical,
-            }
-        )
+        events.append({
+            "type": "attack_roll", "spell_ref": spec.spell_ref,
+            "d20": attack.selected_d20, "total": attack.total,
+            "target_ac": attack.target_ac, "hit": attack.hit, "critical": attack.critical,
+        })
         should_apply_effects = attack.hit
         if attack.hit and request.damage_parts:
             assert target.hp is not None
             damage = apply_damage(
-                target.hp,
-                request.damage_parts,
-                target_kind=target.target_kind,
-                critical=attack.critical,
-                death_saves=target.death_saves,
+                target.hp, request.damage_parts, target_kind=target.target_kind,
+                critical=attack.critical, death_saves=target.death_saves,
             )
-            target_hp = damage.after
-            target_death_saves = damage.death_saves
-            events.append(
-                {"type": "damage", "spell_ref": spec.spell_ref, "amount": damage.adjusted_total, "target_ref": target.target_ref}
-            )
-
+            target_hp, target_death_saves = damage.after, damage.death_saves
+            events.append({"type": "damage", "spell_ref": spec.spell_ref, "amount": damage.adjusted_total, "target_ref": target.target_ref})
     elif spec.cast_mode is SpellCastMode.SAVE:
         assert target is not None and target.save_modifier is not None
         assert request.save_d20 is not None and spec.save_dc is not None
         total = request.save_d20 + target.save_modifier
         saved = total >= spec.save_dc
-        events.append(
-            {
-                "type": "saving_throw",
-                "spell_ref": spec.spell_ref,
-                "d20": request.save_d20,
-                "modifier": target.save_modifier,
-                "total": total,
-                "dc": spec.save_dc,
-                "success": saved,
-            }
-        )
+        events.append({
+            "type": "saving_throw", "spell_ref": spec.spell_ref,
+            "d20": request.save_d20, "modifier": target.save_modifier,
+            "total": total, "dc": spec.save_dc, "success": saved,
+        })
         should_apply_effects = not saved
         damage_parts = request.damage_parts
         if saved and spec.save_damage_mode is SaveDamageMode.NONE:
@@ -214,70 +236,113 @@ def resolve_spell(
             damage_parts = half_damage_parts(damage_parts)
         if damage_parts:
             assert target.hp is not None
-            damage = apply_damage(
-                target.hp,
-                damage_parts,
-                target_kind=target.target_kind,
-                death_saves=target.death_saves,
-            )
-            target_hp = damage.after
-            target_death_saves = damage.death_saves
-            events.append(
-                {"type": "damage", "spell_ref": spec.spell_ref, "amount": damage.adjusted_total, "target_ref": target.target_ref}
-            )
-
+            damage = apply_damage(target.hp, damage_parts, target_kind=target.target_kind, death_saves=target.death_saves)
+            target_hp, target_death_saves = damage.after, damage.death_saves
+            events.append({"type": "damage", "spell_ref": spec.spell_ref, "amount": damage.adjusted_total, "target_ref": target.target_ref})
     elif spec.cast_mode is SpellCastMode.HEAL:
         assert target is not None and target.hp is not None
-        healing = apply_healing(
-            target.hp,
-            request.healing_amount,
-            target_kind=target.target_kind,
-            death_saves=target.death_saves,
-        )
-        target_hp = healing.after
-        target_death_saves = healing.death_saves
-        events.append(
-            {
-                "type": "heal",
-                "spell_ref": spec.spell_ref,
-                "requested": request.healing_amount,
-                "restored": healing.restored,
-                "target_ref": target.target_ref,
-            }
-        )
+        healing = apply_healing(target.hp, request.healing_amount, target_kind=target.target_kind, death_saves=target.death_saves)
+        target_hp, target_death_saves = healing.after, healing.death_saves
+        events.append({
+            "type": "heal", "spell_ref": spec.spell_ref,
+            "requested": request.healing_amount, "restored": healing.restored,
+            "target_ref": target.target_ref,
+        })
 
-    effects: list[ActiveEffect] = []
+    effects: list[PersistentTemporaryEffect] = []
     if should_apply_effects:
         for index, effect_spec in enumerate(spec.apply_effects, start=1):
-            effect = ActiveEffect.create(
-                f"{effect_id_prefix}:{index}",
-                effect_spec,
-                concentration_owner_ref=request.caster_ref if spec.concentration else None,
-            )
+            effect = _persistent_effect(f"{effect_id_prefix}:{index}", effect_spec, concentration=spec.concentration)
             effects.append(effect)
-            events.append(
-                {
-                    "type": "condition_applied" if effect_spec.effect_type == "condition" else "effect_applied",
-                    "effect_id": effect.effect_id,
-                    "tag": effect_spec.tag,
-                    "source_ref": effect_spec.source_ref,
-                }
-            )
+            events.append({
+                "type": "condition_applied" if effect_spec.effect_type == "condition" else "effect_applied",
+                "effect_id": effect.effect_id, "tag": effect.tag, "source_ref": effect.source_ref,
+            })
+    return target_hp, target_death_saves, tuple(effects), tuple(events)
 
+
+def resolve_spell(
+    *,
+    spec: SpellResolutionSpec,
+    request: SpellCastRequest,
+    target: SpellTargetState | None,
+    state: CharacterState,
+    authorization: CharacterSpellAuthorization,
+    effect_id_prefix: str = "spell-effect",
+) -> SpellResolution:
+    """Resolve one character spell through the canonical CharacterState resource layer."""
+
+    _validate_resolution_inputs(spec=spec, request=request, target=target)
+    if authorization.spell_ref != spec.spell_ref or authorization.slot_level != request.slot_level:
+        raise ValueError("spell authorization does not match cast request")
+
+    spend = spend_character_spell(state=state, authorization=authorization)
+    target_hp, target_death_saves, effects, events = _resolve_semantics(
+        spec=spec, request=request, target=target, effect_id_prefix=effect_id_prefix,
+        resource_event=spend.event,
+    )
+    next_state = spend.state
     if spec.concentration:
-        events.append(
-            {
-                "type": "concentration_started",
-                "source_ref": spec.spell_ref,
-                "effect_ids": [effect.effect_id for effect in effects],
-            }
+        previous = next_state.concentration
+        removed_ids = set(previous.effect_ids) if previous is not None else set()
+        kept = [effect for effect in next_state.temporary_effects if effect.effect_id not in removed_ids]
+        kept.extend(effects)
+        next_state = next_state.model_copy(update={
+            "temporary_effects": kept,
+            "concentration": CharacterConcentrationState(
+                source_ref=spec.spell_ref,
+                effect_ids=tuple(effect.effect_id for effect in effects),
+            ),
+        }, deep=True)
+        concentration_events: list[dict[str, object]] = []
+        if previous is not None:
+            concentration_events.append({
+                "type": "concentration_ended", "source_ref": previous.source_ref,
+                "reason": "replaced", "removed_effect_ids": sorted(removed_ids),
+            })
+        concentration_events.append({
+            "type": "concentration_started", "source_ref": spec.spell_ref,
+            "effect_ids": [effect.effect_id for effect in effects],
+        })
+        events = (*events, *concentration_events)
+    elif effects:
+        next_state = next_state.model_copy(
+            update={"temporary_effects": [*next_state.temporary_effects, *effects]}, deep=True
         )
 
     return SpellResolution(
-        remaining_slots=remaining,
+        character_state=next_state,
         target_hp=target_hp,
         target_death_saves=target_death_saves,
-        applied_effects=tuple(effects),
+        applied_effects=effects,
         concentration_started=spec.concentration,
-        events=tuple(events),
+        events=events,
+    )
+
+
+def resolve_monster_spell(
+    *,
+    spec: SpellResolutionSpec,
+    request: SpellCastRequest,
+    target: SpellTargetState | None,
+    resources: dict[str, object],
+    source: MonsterSpellSource,
+    effect_id_prefix: str = "spell-effect",
+) -> MonsterSpellResolution:
+    """Resolve one monster spell through the canonical monster resource layer."""
+
+    _validate_resolution_inputs(spec=spec, request=request, target=target)
+    if source.spell_ref != spec.spell_ref:
+        raise ValueError("monster spell source does not match cast request")
+    spend = spend_monster_spell(resources=resources, source=source)
+    target_hp, target_death_saves, effects, events = _resolve_semantics(
+        spec=spec, request=request, target=target, effect_id_prefix=effect_id_prefix,
+        resource_event=spend.event,
+    )
+    return MonsterSpellResolution(
+        resources=dict(spend.resources),
+        target_hp=target_hp,
+        target_death_saves=target_death_saves,
+        applied_effects=effects,
+        events=events,
     )
