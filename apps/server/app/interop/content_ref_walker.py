@@ -53,6 +53,8 @@ STATE_STABLE_KEY_PATHS = frozenset(
         "inventory_state[].item_ref",
         "active_infusions[].infusion_ref",
         "spell_storing_item.spell_ref",
+        "concentration.source_ref",
+        "temporary_effects[].source_ref",
     }
 )
 
@@ -247,6 +249,9 @@ def collect_state_refs(
     keys.extend(item.infusion_ref for item in state.active_infusions)
     if state.spell_storing_item is not None:
         keys.append(state.spell_storing_item.spell_ref)
+    if state.concentration is not None:
+        keys.append(state.concentration.source_ref)
+    keys.extend(item.source_ref for item in state.temporary_effects)
     refs = _collect(keys)
     assert_no_unwalked_stable_keys(
         state.model_dump(mode="python"),
