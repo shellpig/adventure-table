@@ -15,12 +15,31 @@ from app.domain.combat.initiative import CombatInitiativeService, InitiativeInpu
 from app.domain.combat.lifecycle import CombatService, CombatStateConflictError
 from app.domain.combat.order import CombatOrderService
 from app.domain.rooms.table_events import TableEventActorUnauthorizedError
+from app.main import app as main_app
 
 
 PREFIX = (
     "/api/rooms/{room_id}/campaigns/{campaign_id}"
     "/sessions/{session_id}/combat"
 )
+EXPECTED_ROUTES = {
+    (PREFIX, "GET"),
+    (f"{PREFIX}/start", "POST"),
+    (f"{PREFIX}/entries/characters", "POST"),
+    (f"{PREFIX}/entries/monsters", "POST"),
+    (f"{PREFIX}/initiative/request", "POST"),
+    (f"{PREFIX}/initiative/roll", "POST"),
+    (f"{PREFIX}/initiative/suggested-order", "GET"),
+    (f"{PREFIX}/initiative/ties", "GET"),
+    (f"{PREFIX}/initiative/finalize", "POST"),
+    (f"{PREFIX}/initiative/reorder", "POST"),
+    (f"{PREFIX}/turn/advance", "POST"),
+    (f"{PREFIX}/actions", "POST"),
+    (f"{PREFIX}/reaction-window", "POST"),
+    (f"{PREFIX}/entries/{{entry_id}}/withdraw", "POST"),
+    (f"{PREFIX}/entries/{{entry_id}}/remove", "POST"),
+    (f"{PREFIX}/end", "POST"),
+}
 
 
 def test_combat_router_exposes_complete_p4b_http_surface() -> None:
@@ -29,24 +48,14 @@ def test_combat_router_exposes_complete_p4b_http_surface() -> None:
         for route in router.routes
         for method in (route.methods or set())
     }
-    assert actual == {
-        (PREFIX, "GET"),
-        (f"{PREFIX}/start", "POST"),
-        (f"{PREFIX}/entries/characters", "POST"),
-        (f"{PREFIX}/entries/monsters", "POST"),
-        (f"{PREFIX}/initiative/request", "POST"),
-        (f"{PREFIX}/initiative/roll", "POST"),
-        (f"{PREFIX}/initiative/suggested-order", "GET"),
-        (f"{PREFIX}/initiative/ties", "GET"),
-        (f"{PREFIX}/initiative/finalize", "POST"),
-        (f"{PREFIX}/initiative/reorder", "POST"),
-        (f"{PREFIX}/turn/advance", "POST"),
-        (f"{PREFIX}/actions", "POST"),
-        (f"{PREFIX}/reaction-window", "POST"),
-        (f"{PREFIX}/entries/{{entry_id}}/withdraw", "POST"),
-        (f"{PREFIX}/entries/{{entry_id}}/remove", "POST"),
-        (f"{PREFIX}/end", "POST"),
-    }
+    assert actual == EXPECTED_ROUTES
+
+
+def test_combat_routes_are_mounted_in_main_openapi() -> None:
+    paths = main_app.openapi()["paths"]
+    for path, method in EXPECTED_ROUTES:
+        assert path in paths
+        assert method.lower() in paths[path]
 
 
 def test_combat_http_errors_have_stable_codes() -> None:
