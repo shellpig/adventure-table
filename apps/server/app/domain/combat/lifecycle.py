@@ -127,6 +127,7 @@ class CombatView(StrictModel):
     current_turn_entry_id: UUID | None
     revision: int
     entries: tuple[CombatEntryView, ...]
+    warnings: tuple[str, ...] = ()
 
 
 class CombatActionView(StrictModel):
@@ -188,11 +189,22 @@ class CombatService:
         )
 
     def _view(self, combat: StoredCombat) -> CombatView:
+        stored_entries = self.repository.list_entries(combat.id)
+        warnings: tuple[str, ...] = ()
+        if combat.status in {"initiative_pending", "running"} and not any(
+            entry.status == "active" and entry.subject_kind == "monster"
+            for entry in stored_entries
+        ):
+            # P4-B has no faction/allegiance model. Monster entries are the
+            # hostile candidates for this lifecycle warning only; the warning
+            # never ends Combat automatically.
+            warnings = ("no_hostile_combatants",)
         return CombatView(
             id=combat.id, campaign_id=combat.campaign_id, mode=combat.mode, status=combat.status,
             round_number=combat.round_number, current_turn_entry_id=combat.current_turn_entry_id,
             revision=combat.revision,
-            entries=tuple(self._entry_view(entry) for entry in self.repository.list_entries(combat.id)),
+            entries=tuple(self._entry_view(entry) for entry in stored_entries),
+            warnings=warnings,
         )
 
     def get_active_combat(self, actor: TableActorContext) -> CombatView | None:
@@ -346,9 +358,24 @@ class CombatService:
         self._require_dm(actor)
         combat = self.repository.get_active(actor.campaign_id)
         if combat is None: raise CombatNotFoundError("Campaign has no active Combat")
-        self.repository.withdraw_entry(
-            binding=actor_binding(actor), combat_id=combat.id, entry_id=entry_id, idempotency_key=idempotency_key
-        )
+        try:
+            self.repository.withdraw_entry(
+                binding=actor_binding(actor), combat_id=combat.id, entry_id=entry_id, idempotency_key=idempotency_key
+            )
+        except CombatStateConflictPersistenceError as exc:
+            raise CombatStateConflictError(str(exc)) from exc
+        return self._view(self.repository.get(combat.id) or combat)
+
+    def remove_entry(self, actor: TableActorContext, entry_id: UUID, *, idempotency_key: str | None = None) -> CombatView:
+        self._require_dm(actor)
+        combat = self.repository.get_active(actor.campaign_id)
+        if combat is None: raise CombatNotFoundError("Campaign has no active Combat")
+        try:
+            self.repository.remove_entry(
+                binding=actor_binding(actor), combat_id=combat.id, entry_id=entry_id, idempotency_key=idempotency_key
+            )
+        except CombatStateConflictPersistenceError as exc:
+            raise CombatStateConflictError(str(exc)) from exc
         return self._view(self.repository.get(combat.id) or combat)
 
     def end_combat(self, actor: TableActorContext, *, idempotency_key: str | None = None) -> CombatView:
