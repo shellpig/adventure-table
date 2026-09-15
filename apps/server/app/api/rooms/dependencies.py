@@ -26,6 +26,7 @@ from app.domain.rooms.sessions import SessionService
 from app.domain.rooms.table_character_state import TableCharacterStateService
 from app.domain.rooms.table_events import TableEventService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
+from app.persistence.combat.adjudication import CombatAdjudicationRepository
 from app.persistence.combat.attacks import CombatAttackRepository
 from app.persistence.combat.core_rolls import CombatCoreRollRepository
 from app.persistence.combat.initiative import CombatInitiativeRepository
@@ -49,12 +50,7 @@ from app.persistence.rooms.table_runtime import TableEventRepository
 class _HistoryGuardedCharacterRepository:
     """Web-only adapter that keeps multiplayer history out of Character Core."""
 
-    def __init__(
-        self,
-        delegate: Any,
-        campaigns: CampaignRepository,
-        sessions: SessionLiveRepository,
-    ) -> None:
+    def __init__(self, delegate: Any, campaigns: CampaignRepository, sessions: SessionLiveRepository) -> None:
         self._delegate = delegate
         self._campaigns = campaigns
         self._sessions = sessions
@@ -63,14 +59,8 @@ class _HistoryGuardedCharacterRepository:
         return getattr(self._delegate, name)
 
     def delete_character(self, character_id) -> None:
-        if self._campaigns.character_is_referenced(character_id) or self._sessions.character_is_history_referenced(
-            character_id
-        ):
-            raise APIError(
-                409,
-                "character_history_referenced",
-                "Character is referenced by Campaign or Session history and cannot be permanently deleted",
-            )
+        if self._campaigns.character_is_referenced(character_id) or self._sessions.character_is_history_referenced(character_id):
+            raise APIError(409, "character_history_referenced", "Character is referenced by Campaign or Session history and cannot be permanently deleted")
         self._delegate.delete_character(character_id)
 
 
@@ -78,14 +68,9 @@ def get_room_workspace_service(request: Request) -> RoomCharacterWorkspaceServic
     service = getattr(request.app.state, "room_workspace_service", None)
     if service is None:
         engine = get_database_engine(request)
-        service = RoomCharacterWorkspaceService(
-            engine,
-            get_content_registry(request),
-        )
+        service = RoomCharacterWorkspaceService(engine, get_content_registry(request))
         service.character_repository = _HistoryGuardedCharacterRepository(
-            service.character_repository,
-            CampaignRepository(engine),
-            SessionLiveRepository(engine),
+            service.character_repository, CampaignRepository(engine), SessionLiveRepository(engine)
         )
         request.app.state.room_workspace_service = service
     return service
@@ -118,10 +103,7 @@ def get_table_event_notifier(request: Request) -> ProcessLocalTableEventNotifier
 def get_table_event_service(request: Request) -> TableEventService:
     service = getattr(request.app.state, "table_event_service", None)
     if service is None:
-        service = TableEventService(
-            TableEventRepository(get_database_engine(request)),
-            get_table_event_notifier(request),
-        )
+        service = TableEventService(TableEventRepository(get_database_engine(request)), get_table_event_notifier(request))
         request.app.state.table_event_service = service
     return service
 
@@ -130,11 +112,7 @@ def get_session_service(request: Request) -> SessionService:
     service = getattr(request.app.state, "session_service", None)
     if service is None:
         engine = get_database_engine(request)
-        service = SessionService(
-            M04BSessionRepository(engine),
-            SessionLiveRepository(engine),
-            get_table_event_service(request),
-        )
+        service = SessionService(M04BSessionRepository(engine), SessionLiveRepository(engine), get_table_event_service(request))
         request.app.state.session_service = service
     return service
 
@@ -142,10 +120,7 @@ def get_session_service(request: Request) -> SessionService:
 def get_exploration_stage_service(request: Request) -> ExplorationStageService:
     service = getattr(request.app.state, "exploration_stage_service", None)
     if service is None:
-        service = ExplorationStageService(
-            ExplorationRepository(get_database_engine(request)),
-            get_table_event_service(request),
-        )
+        service = ExplorationStageService(ExplorationRepository(get_database_engine(request)), get_table_event_service(request))
         request.app.state.exploration_stage_service = service
     return service
 
@@ -154,11 +129,7 @@ def get_exploration_action_service(request: Request) -> ExplorationActionService
     service = getattr(request.app.state, "exploration_action_service", None)
     if service is None:
         engine = get_database_engine(request)
-        service = ExplorationActionService(
-            ExplorationSubjectRepository(engine),
-            ExplorationMessageRepository(engine),
-            get_table_event_service(request),
-        )
+        service = ExplorationActionService(ExplorationSubjectRepository(engine), ExplorationMessageRepository(engine), get_table_event_service(request))
         request.app.state.exploration_action_service = service
     return service
 
@@ -173,10 +144,7 @@ def get_roll_service(request: Request) -> RollService:
             CombatAwareRollRepository(engine, event_service.repository),
             ExplorationSubjectRepository(engine),
             event_service,
-            CharacterRollModifierResolver(
-                character_repository,
-                get_content_registry(request),
-            ),
+            CharacterRollModifierResolver(character_repository, get_content_registry(request)),
             registry=get_content_registry(request),
         )
         request.app.state.roll_service = service
@@ -188,12 +156,11 @@ def get_pending_action_service(request: Request) -> PendingActionService:
     if service is None:
         engine = get_database_engine(request)
         event_service = get_table_event_service(request)
-        roll_repository = get_roll_service(request).repository
         service = PendingActionService(
             PendingActionRepository(engine, event_service.repository),
             ExplorationSubjectRepository(engine),
             event_service,
-            roll_repository,
+            get_roll_service(request).repository,
         )
         request.app.state.pending_action_service = service
     return service
@@ -205,11 +172,7 @@ def get_table_character_state_service(request: Request) -> TableCharacterStateSe
         engine = get_database_engine(request)
         event_service = get_table_event_service(request)
         service = TableCharacterStateService(
-            TableCharacterStatePersistence(
-                engine,
-                get_content_registry(request),
-                event_service.repository,
-            ),
+            TableCharacterStatePersistence(engine, get_content_registry(request), event_service.repository),
             ExplorationSubjectRepository(engine),
             event_service,
         )
@@ -239,10 +202,7 @@ def get_combat_resolution_service(request: Request) -> CombatResolutionService:
         event_service = get_table_event_service(request)
         combat_service = get_combat_service(request)
         service = CombatResolutionService(
-            CombatResolutionRepository(engine, event_service.repository),
-            combat_service.repository,
-            combat_service,
-            event_service,
+            CombatResolutionRepository(engine, event_service.repository), combat_service.repository, combat_service, event_service
         )
         request.app.state.combat_resolution_service = service
     return service
@@ -254,13 +214,13 @@ def get_combat_attack_service(request: Request) -> CombatAttackService:
         engine = get_database_engine(request)
         event_service = get_table_event_service(request)
         combat_service = get_combat_service(request)
-        character_repository = get_room_workspace_service(request).character_repository
         service = CombatAttackService(
             CombatAttackRepository(engine, event_service.repository),
+            CombatAdjudicationRepository(engine, event_service.repository),
             combat_service.repository,
             combat_service,
             AttackDefinitionResolver(
-                character_repository,
+                get_room_workspace_service(request).character_repository,
                 combat_service.monster_repository,
                 get_content_registry(request),
             ),
@@ -312,11 +272,7 @@ def get_combat_order_service(request: Request) -> CombatOrderService:
     if service is None:
         engine = get_database_engine(request)
         event_service = get_table_event_service(request)
-        service = CombatOrderService(
-            CombatOrderRepository(engine, event_service.repository),
-            get_combat_service(request),
-            event_service,
-        )
+        service = CombatOrderService(CombatOrderRepository(engine, event_service.repository), get_combat_service(request), event_service)
         request.app.state.combat_order_service = service
     return service
 
