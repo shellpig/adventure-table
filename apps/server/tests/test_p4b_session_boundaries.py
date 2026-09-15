@@ -8,7 +8,7 @@ from app.domain.character.fixture import (
     build_p0_fighter_wizard_fixture,
     build_p0_fighter_wizard_state,
 )
-from app.domain.combat.initiative import RequestInitiativeInput
+from app.domain.combat.initiative import FinalizeInitiativeInput, RequestInitiativeInput
 from app.domain.combat.lifecycle import (
     AddCharacterInput,
     AddMonsterInput,
@@ -69,7 +69,7 @@ def test_changed_party_and_abandoned_session_do_not_rebind_or_clear_combat() -> 
         order = table.initiative.suggested_order(table.dm_actor)
         running = table.initiative.finalize_initiative(
             table.dm_actor,
-            __import__("app.domain.combat.initiative", fromlist=["FinalizeInitiativeInput"]).FinalizeInitiativeInput(
+            FinalizeInitiativeInput(
                 ordered_entry_ids=order,
                 idempotency_key="finalize",
             ),
@@ -224,5 +224,87 @@ def test_changed_party_and_abandoned_session_do_not_rebind_or_clear_combat() -> 
         assert after_abandon.round_number == reordered.round_number
         assert after_abandon.current_turn_entry_id == reordered.current_turn_entry_id
         assert [entry.id for entry in after_abandon.entries] == [entry.id for entry in reordered.entries]
+    finally:
+        table.engine.dispose()
+
+
+def test_same_character_in_next_session_keeps_existing_entry_authority() -> None:
+    table = _setup()
+    try:
+        initial = table.combat.start_quick_combat(
+            table.dm_actor,
+            StartCombatInput(idempotency_key="start"),
+        )
+        entry = next(entry for entry in initial.entries if entry.character_id == table.character_id)
+        monster = _quick_enemy(table, "Guard")
+        table.combat.add_monster(
+            table.dm_actor,
+            AddMonsterInput(monster_instance_id=monster.id, idempotency_key="guard"),
+        )
+        requests = table.initiative.request_initiative(
+            table.dm_actor,
+            RequestInitiativeInput(idempotency_key="init"),
+        )
+        for request in requests.requests:
+            if request.target_character_id == table.character_id:
+                _roll(table, table.player_actor, request.id, 20, "character")
+            else:
+                _roll(table, table.dm_actor, request.id, 1, "monster")
+        running = table.initiative.finalize_initiative(
+            table.dm_actor,
+            FinalizeInitiativeInput(
+                ordered_entry_ids=table.initiative.suggested_order(table.dm_actor),
+                idempotency_key="finalize",
+            ),
+        )
+        assert running.current_turn_entry_id == entry.id
+
+        table.session_service.end_session(
+            table.room_id,
+            table.campaign_id,
+            table.session_id,
+            table.dm_context,
+        )
+
+        # Same Character, same Player Seat in Session B: the Session B controller
+        # operates the existing CombatEntry as self; no duplicate entry is created.
+        session_b = table.session_service.start_session(
+            table.room_id,
+            table.campaign_id,
+            table.dm_context,
+        )
+        player_b = table.actor_for_session(session_b.id, table.player_context)
+        dm_b = table.actor_for_session(session_b.id, table.dm_context)
+        resumed = table.combat.get_active_combat(player_b)
+        assert resumed is not None
+        assert [e.id for e in resumed.entries if e.character_id == table.character_id] == [entry.id]
+
+        acted = table.combat.use_action(
+            player_b,
+            CombatActionInput(
+                entry_id=entry.id,
+                action_kind=CombatActionKind.DODGE,
+                economy_cost=CombatEconomyCost.ACTION,
+                idempotency_key="session-b-self-action",
+            ),
+        )
+        assert acted.execution_mode == "self"
+        assert acted.subject_seat_id == table.player_seat_id
+        assert acted.acting_seat_id == table.player_seat_id
+        assert acted.session_id == session_b.id
+
+        with table.engine.connect() as connection:
+            audit = connection.execute(
+                select(session_events).where(
+                    session_events.c.session_id == session_b.id,
+                    session_events.c.idempotency_key == "p4b-action:session-b-self-action",
+                )
+            ).mappings().one()
+        assert audit["execution_mode"] == "self"
+        assert audit["subject_character_id"] == table.character_id
+
+        after = table.combat.get_active_combat(dm_b)
+        assert len(after.entries) == len(resumed.entries)
+        assert next(e for e in after.entries if e.id == entry.id).action_available is False
     finally:
         table.engine.dispose()
