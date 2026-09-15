@@ -75,6 +75,18 @@ class CombatActionInput(StrictModel):
     payload: dict[str, Any] = Field(default_factory=dict)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
 
+    @model_validator(mode="after")
+    def structured_actions_require_action_economy(self):
+        if (
+            self.action_kind is not CombatActionKind.FREEFORM
+            and self.economy_cost is not CombatEconomyCost.ACTION
+        ):
+            raise ValueError(
+                f"{self.action_kind.value} requires Action economy; "
+                "only freeform actions may choose another economy cost"
+            )
+        return self
+
 
 class ReactionWindowInput(StrictModel):
     entry_id: UUID
