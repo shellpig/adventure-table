@@ -242,6 +242,29 @@ class CombatInitiativeService:
                 result[total] = tuple(entry.id for entry in entries)
         return result
 
+    def _validate_order_preserves_totals(
+        self,
+        combat_id: UUID,
+        ordered_entry_ids: tuple[UUID, ...],
+    ) -> None:
+        entries = tuple(
+            entry
+            for entry in self.combat_repository.list_entries(combat_id)
+            if entry.status == "active"
+        )
+        by_id = {entry.id: entry for entry in entries}
+        if set(ordered_entry_ids) != set(by_id) or len(ordered_entry_ids) != len(by_id):
+            raise CombatStateConflictError(
+                "initiative order must contain every active Combat entry exactly once"
+            )
+        if any(entry.initiative_total is None for entry in entries):
+            raise CombatStateConflictError("Every active CombatEntry must resolve initiative first")
+        totals = [int(by_id[entry_id].initiative_total or 0) for entry_id in ordered_entry_ids]
+        if any(left < right for left, right in zip(totals, totals[1:])):
+            raise CombatStateConflictError(
+                "initiative order may only change ordering among tied totals"
+            )
+
     def finalize_initiative(self, actor: TableActorContext, request: FinalizeInitiativeInput):
         self._require_dm(actor)
         combat = self.combat_repository.get_active(actor.campaign_id)
@@ -249,6 +272,7 @@ class CombatInitiativeService:
             raise CombatNotFoundError("Campaign has no active Combat")
         if combat.status != "initiative_pending":
             raise CombatStateConflictError("Initial initiative can only be finalized before Round 1")
+        self._validate_order_preserves_totals(combat.id, request.ordered_entry_ids)
         return self.combat_service.resolve_initiative_order(
             actor, ResolveInitiativeOrderInput(
                 ordered_entry_ids=request.ordered_entry_ids, idempotency_key=request.idempotency_key,
