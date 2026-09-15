@@ -108,6 +108,13 @@ class TableCharacterStatePersistence:
                 expected_current_version_id=patch.expected_current_version_id,
             )
 
+        payload: dict[str, object] = {
+            "changed_fields": sorted(changes),
+        }
+        if patch.correction_reason is not None:
+            payload["correction_reason"] = patch.correction_reason
+            payload["correction"] = True
+
         self.event_repository.append(
             room_id=actor.room_id,
             campaign_id=actor.campaign_id,
@@ -120,9 +127,7 @@ class TableCharacterStatePersistence:
             visibility="public",
             recipient_seat_ids=(),
             payload_version=1,
-            payload={
-                "changed_fields": sorted(changes),
-            },
+            payload=payload,
             idempotency_key=(
                 f"p3c-state:{patch.idempotency_key}"
                 if patch.idempotency_key
