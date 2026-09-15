@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from sqlalchemy import select
 
 from app.content import load_default_content_registry
 from app.domain.character.fixture import (
@@ -24,6 +25,7 @@ from app.domain.rooms.table_events import TableEventActorUnauthorizedError
 from app.persistence.characters import CharacterRepository
 from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.seats import SeatRepository
+from app.persistence.rooms.table_runtime import session_events
 from app.persistence.rooms.workspace import RoomWorkspaceRepository
 from tests.test_p4b_combat_lifecycle import _quick_enemy, _setup
 
@@ -143,7 +145,8 @@ def test_changed_party_and_abandoned_session_do_not_rebind_or_clear_combat() -> 
             )
 
         # The current DM may explicitly proxy that durable Character entry; the
-        # audit intentionally has no fabricated subject Seat for the absent PC.
+        # audit intentionally has no fabricated subject Seat for the absent PC,
+        # while retaining the durable Character and CombatEntry identities.
         proxied = table.combat.use_action(
             dm_b,
             CombatActionInput(
@@ -156,6 +159,17 @@ def test_changed_party_and_abandoned_session_do_not_rebind_or_clear_combat() -> 
         assert proxied.execution_mode == "dm_proxy"
         assert proxied.subject_seat_id is None
         assert proxied.acting_seat_id == dm_b.seat_id
+        with table.engine.connect() as connection:
+            audit = connection.execute(
+                select(session_events).where(
+                    session_events.c.session_id == session_b.id,
+                    session_events.c.idempotency_key == "p4b-action:dm-proxy-old-entry",
+                )
+            ).mappings().one()
+        assert audit["acting_seat_id"] == dm_b.seat_id
+        assert audit["subject_seat_id"] is None
+        assert audit["subject_character_id"] == table.character_id
+        assert audit["payload"]["entry_id"] == str(old_entry.id)
 
         # New Session Character joins only through an explicit mid-combat entrant.
         before_add = table.combat.get_active_combat(dm_b)
