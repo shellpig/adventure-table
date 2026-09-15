@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     Column,
@@ -12,6 +13,7 @@ from sqlalchemy import (
     String,
     Table,
     Text,
+    UniqueConstraint,
     Uuid,
     func,
     true,
@@ -77,3 +79,133 @@ monster_instances = Table(
 )
 Index("ix_monster_instances_campaign_id", monster_instances.c.campaign_id)
 Index("ix_monster_instances_custom_template_id", monster_instances.c.custom_template_id)
+
+
+combats = Table(
+    "combats",
+    metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("campaign_id", Uuid(), ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False),
+    Column("started_session_id", Uuid(), ForeignKey("sessions.id", ondelete="RESTRICT"), nullable=False),
+    Column("ended_session_id", Uuid(), ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True),
+    Column("mode", String(16), nullable=False, server_default="quick"),
+    Column("status", String(24), nullable=False, server_default="initiative_pending"),
+    Column("round_number", Integer(), nullable=True),
+    Column("current_turn_entry_id", Uuid(), nullable=True),
+    Column("revision", BigInteger(), nullable=False, server_default="1"),
+    Column("started_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("ended_at", DateTime(timezone=True), nullable=True),
+    Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    CheckConstraint("mode = 'quick'", name="ck_combats_mode_quick"),
+    CheckConstraint(
+        "status IN ('initiative_pending', 'running', 'ended')",
+        name="ck_combats_status",
+    ),
+    CheckConstraint(
+        "(status = 'running' AND round_number IS NOT NULL AND round_number >= 1 "
+        "AND current_turn_entry_id IS NOT NULL) OR "
+        "(status != 'running' AND (round_number IS NULL OR round_number >= 1))",
+        name="ck_combats_running_turn_state",
+    ),
+    CheckConstraint("revision > 0", name="ck_combats_revision_positive"),
+)
+Index("ix_combats_campaign_id", combats.c.campaign_id)
+Index(
+    "uq_combats_campaign_active",
+    combats.c.campaign_id,
+    unique=True,
+    postgresql_where=combats.c.status.in_(("initiative_pending", "running")),
+    sqlite_where=combats.c.status.in_(("initiative_pending", "running")),
+)
+
+
+combat_entries = Table(
+    "combat_entries",
+    metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("combat_id", Uuid(), ForeignKey("combats.id", ondelete="CASCADE"), nullable=False),
+    Column("subject_kind", String(16), nullable=False),
+    Column("character_id", Uuid(), ForeignKey("characters.id", ondelete="RESTRICT"), nullable=True),
+    Column(
+        "monster_instance_id",
+        Uuid(),
+        ForeignKey("monster_instances.id", ondelete="RESTRICT"),
+        nullable=True,
+    ),
+    Column("display_name", String(160), nullable=False),
+    Column("status", String(16), nullable=False, server_default="active"),
+    Column("initiative_group_key", String(120), nullable=True),
+    Column("initiative_roll_request_id", Uuid(), nullable=True),
+    Column("initiative_roll_result_id", Uuid(), nullable=True),
+    Column("initiative_total", Integer(), nullable=True),
+    Column("turn_order", Integer(), nullable=True),
+    Column("surprised", Boolean(), nullable=False, server_default="0"),
+    Column("action_available", Boolean(), nullable=False, server_default=true()),
+    Column("bonus_action_available", Boolean(), nullable=False, server_default=true()),
+    Column("reaction_available", Boolean(), nullable=False, server_default=true()),
+    Column("attacks_allowed", Integer(), nullable=False, server_default="1"),
+    Column("attacks_used", Integer(), nullable=False, server_default="0"),
+    Column("ready_state", JSON(), nullable=False),
+    Column("pending_reaction_state", JSON(), nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    CheckConstraint(
+        "(subject_kind = 'character' AND character_id IS NOT NULL AND monster_instance_id IS NULL) OR "
+        "(subject_kind = 'monster' AND character_id IS NULL AND monster_instance_id IS NOT NULL)",
+        name="ck_combat_entries_subject",
+    ),
+    CheckConstraint(
+        "status IN ('active', 'withdrawn', 'removed')",
+        name="ck_combat_entries_status",
+    ),
+    CheckConstraint("turn_order IS NULL OR turn_order >= 0", name="ck_combat_entries_turn_order"),
+    CheckConstraint("attacks_allowed >= 1", name="ck_combat_entries_attacks_allowed"),
+    CheckConstraint(
+        "attacks_used >= 0 AND attacks_used <= attacks_allowed",
+        name="ck_combat_entries_attacks_used",
+    ),
+    UniqueConstraint("combat_id", "character_id", name="uq_combat_entries_character"),
+    UniqueConstraint("combat_id", "monster_instance_id", name="uq_combat_entries_monster"),
+)
+Index("ix_combat_entries_combat_id", combat_entries.c.combat_id)
+Index("ix_combat_entries_character_id", combat_entries.c.character_id)
+Index("ix_combat_entries_monster_instance_id", combat_entries.c.monster_instance_id)
+Index("ix_combat_entries_turn_order", combat_entries.c.combat_id, combat_entries.c.turn_order)
+
+
+combat_actions = Table(
+    "combat_actions",
+    metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("combat_id", Uuid(), ForeignKey("combats.id", ondelete="CASCADE"), nullable=False),
+    Column("entry_id", Uuid(), ForeignKey("combat_entries.id", ondelete="CASCADE"), nullable=False),
+    Column("session_id", Uuid(), ForeignKey("sessions.id", ondelete="RESTRICT"), nullable=False),
+    Column("acting_seat_id", Uuid(), ForeignKey("campaign_seats.id", ondelete="RESTRICT"), nullable=False),
+    Column("subject_seat_id", Uuid(), ForeignKey("campaign_seats.id", ondelete="RESTRICT"), nullable=True),
+    Column("execution_mode", String(16), nullable=False),
+    Column("action_kind", String(32), nullable=False),
+    Column("economy_cost", String(16), nullable=False),
+    Column("payload", JSON(), nullable=False),
+    Column("idempotency_key", String(160), nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    CheckConstraint(
+        "execution_mode IN ('self', 'dm_proxy')",
+        name="ck_combat_actions_execution_mode",
+    ),
+    CheckConstraint(
+        "economy_cost IN ('action', 'bonus_action', 'reaction', 'none')",
+        name="ck_combat_actions_economy_cost",
+    ),
+    UniqueConstraint("combat_id", "idempotency_key", name="uq_combat_actions_idempotency"),
+)
+Index("ix_combat_actions_combat_id", combat_actions.c.combat_id)
+Index("ix_combat_actions_entry_id", combat_actions.c.entry_id)
+
+
+__all__ = [
+    "combat_actions",
+    "combat_entries",
+    "combats",
+    "monster_instances",
+    "monster_templates",
+]
