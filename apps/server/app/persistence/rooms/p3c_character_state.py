@@ -7,9 +7,13 @@ from sqlalchemy.engine import Engine
 
 from app.content.registry import ContentRegistry
 from app.domain.character.schemas import CharacterState, PersistedCharacter
-from app.domain.rooms.table_character_state import TableCharacterStatePatch
+from app.domain.rooms.table_character_state import (
+    TableCharacterStateCombatMutationError,
+    TableCharacterStatePatch,
+)
 from app.domain.rooms.table_events import TableActorContext
 from app.persistence.characters import CharacterRepository
+from app.persistence.combat.tables import combats
 from app.persistence.rooms.tables import session_participants
 from app.persistence.rooms.table_runtime import (
     StoredTableActorBinding,
@@ -90,6 +94,27 @@ class TableCharacterStatePersistence:
                 raise TableCharacterStateSubjectStalePersistenceError(
                     "Table state subject binding is no longer current"
                 )
+
+            hp_fields = {"current_hp", "temporary_hp"} & set(changes)
+            if hp_fields:
+                active_combat = connection.execute(
+                    select(combats.c.id)
+                    .where(
+                        combats.c.campaign_id == actor.campaign_id,
+                        combats.c.status.in_(("initiative_pending", "running")),
+                    )
+                    .with_for_update()
+                    .limit(1)
+                ).scalar_one_or_none()
+                if active_combat is not None:
+                    if not actor.is_current_dm:
+                        raise TableCharacterStateCombatMutationError(
+                            "Active Combat HP changes must use semantic damage/healing resolution"
+                        )
+                    if not patch.correction_reason:
+                        raise TableCharacterStateCombatMutationError(
+                            "Active Combat raw HP correction requires correction_reason"
+                        )
 
             bound_repository = CharacterRepository(
                 TransactionBoundEngine(connection),  # type: ignore[arg-type]
