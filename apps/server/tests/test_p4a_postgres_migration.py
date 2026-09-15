@@ -153,7 +153,9 @@ def test_p4a_schema_survives_full_postgres_upgrade_to_heads() -> None:
     _reset_database()
     command.upgrade(_alembic_config(), "heads")
 
-    assert P4A_REVISION in _revision_set()
+    # P4-A is no longer necessarily an Alembic head once later P4 revisions
+    # descend from it. The durable contract is that a full upgrade still
+    # materializes the P4-A schema unchanged.
     _assert_p4a_schema()
 
 
