@@ -72,6 +72,7 @@ def _assert_schema() -> None:
             "subject_kind",
             "character_id",
             "monster_instance_id",
+            "is_hostile",
             "initiative_roll_request_id",
             "initiative_roll_result_id",
             "initiative_total",
@@ -82,6 +83,7 @@ def _assert_schema() -> None:
             "attacks_allowed",
             "attacks_used",
         } <= entry_columns.keys()
+        assert entry_columns["is_hostile"]["nullable"] is False
 
         request_columns = {column["name"]: column for column in inspector.get_columns("roll_requests")}
         result_columns = {column["name"]: column for column in inspector.get_columns("roll_results")}
