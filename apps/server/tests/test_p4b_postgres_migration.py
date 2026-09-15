@@ -17,6 +17,9 @@ pytestmark = pytest.mark.skipif(
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 P4B_PARENT = "0022_p4a_monster_instances"
 P4B_HEAD = "0024_p4b_combat_roll_targets"
+# Alembic stores only branch heads in alembic_version. Once P4-C becomes a
+# descendant of P4-B, seeing the P4-C head proves that 0024 was applied too.
+P4B_APPLIED_HEADS = {P4B_HEAD, "0025_p4c_core_resolution"}
 
 
 def _config() -> Config:
@@ -47,6 +50,10 @@ def _revision_set() -> set[str]:
             return set(connection.execute(text("SELECT version_num FROM alembic_version")).scalars())
     finally:
         engine.dispose()
+
+
+def _assert_p4b_applied() -> None:
+    assert _revision_set() & P4B_APPLIED_HEADS
 
 
 def _assert_schema() -> None:
@@ -125,12 +132,12 @@ def test_p4b_real_postgres_upgrade_from_p4a_parent() -> None:
     command.upgrade(_config(), P4B_PARENT)
     assert P4B_HEAD not in _revision_set()
     command.upgrade(_config(), "heads")
-    assert P4B_HEAD in _revision_set()
+    _assert_p4b_applied()
     _assert_schema()
 
 
 def test_p4b_schema_survives_fresh_upgrade_to_heads() -> None:
     _reset()
     command.upgrade(_config(), "heads")
-    assert P4B_HEAD in _revision_set()
+    _assert_p4b_applied()
     _assert_schema()
