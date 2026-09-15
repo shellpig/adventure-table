@@ -5,6 +5,7 @@ from app.api.rooms.ai_controllers import router as ai_controllers_router
 from app.api.rooms.campaigns import router as campaigns_router
 from app.api.rooms.character_builder import router as character_builder_router
 from app.api.rooms.characters import router as characters_router
+from app.api.rooms.combat import router as combat_router
 from app.api.rooms.exploration import router as exploration_router
 from app.api.rooms.p3c_pending import router as p3c_pending_router
 from app.api.rooms.p3c_rolls import router as p3c_rolls_router
@@ -25,6 +26,7 @@ router.include_router(exploration_router)
 router.include_router(p3c_rolls_router)
 router.include_router(p3c_pending_router)
 router.include_router(p3c_state_router)
+router.include_router(combat_router)
 router.include_router(characters_router)
 router.include_router(character_builder_router)
 

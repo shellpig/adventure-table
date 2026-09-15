@@ -7,6 +7,10 @@ from fastapi import Request
 from app.api.dependencies import get_content_registry, get_database_engine
 from app.api.errors import APIError
 from app.api.rooms.table_event_wait import ProcessLocalTableEventNotifier
+from app.domain.combat.initiative import CombatInitiativeService
+from app.domain.combat.lifecycle import CombatService
+from app.domain.combat.order import CombatOrderService
+from app.domain.combat.roll_compat import CombatAwareRollRepository
 from app.domain.rooms.campaigns import CampaignService
 from app.domain.rooms.character_rolls import CharacterRollModifierResolver
 from app.domain.rooms.exploration import ExplorationActionService, ExplorationStageService
@@ -18,6 +22,10 @@ from app.domain.rooms.sessions import SessionService
 from app.domain.rooms.table_character_state import TableCharacterStateService
 from app.domain.rooms.table_events import TableEventService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
+from app.persistence.combat.initiative import CombatInitiativeRepository
+from app.persistence.combat.lifecycle import CombatRepository
+from app.persistence.combat.order import CombatOrderRepository
+from app.persistence.combat.repository import MonsterRepository
 from app.persistence.mcp.room_lifecycle import M04BSeatRepository, M04BSessionRepository
 from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.exploration import ExplorationRepository
@@ -25,7 +33,6 @@ from app.persistence.rooms.exploration_messages import ExplorationMessageReposit
 from app.persistence.rooms.exploration_subjects import ExplorationSubjectRepository
 from app.persistence.rooms.p3c_character_state import TableCharacterStatePersistence
 from app.persistence.rooms.p3c_pending import PendingActionRepository
-from app.persistence.rooms.p3c_rolls import RollRepository
 from app.persistence.rooms.repository import RoomRepository
 from app.persistence.rooms.session_live import SessionLiveRepository
 from app.persistence.rooms.session_resume import SessionResumeRepository
@@ -156,7 +163,7 @@ def get_roll_service(request: Request) -> RollService:
         event_service = get_table_event_service(request)
         character_repository = get_room_workspace_service(request).character_repository
         service = RollService(
-            RollRepository(engine, event_service.repository),
+            CombatAwareRollRepository(engine, event_service.repository),
             ExplorationSubjectRepository(engine),
             event_service,
             CharacterRollModifierResolver(
@@ -203,6 +210,53 @@ def get_table_character_state_service(request: Request) -> TableCharacterStateSe
     return service
 
 
+def get_combat_service(request: Request) -> CombatService:
+    service = getattr(request.app.state, "combat_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        event_service = get_table_event_service(request)
+        service = CombatService(
+            CombatRepository(engine, event_service.repository),
+            event_service,
+            get_room_workspace_service(request).character_repository,
+            MonsterRepository(engine),
+        )
+        request.app.state.combat_service = service
+    return service
+
+
+def get_combat_initiative_service(request: Request) -> CombatInitiativeService:
+    service = getattr(request.app.state, "combat_initiative_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        event_service = get_table_event_service(request)
+        combat_service = get_combat_service(request)
+        service = CombatInitiativeService(
+            CombatInitiativeRepository(engine, event_service.repository),
+            combat_service.repository,
+            combat_service,
+            combat_service.monster_repository,
+            get_roll_service(request),
+            event_service,
+        )
+        request.app.state.combat_initiative_service = service
+    return service
+
+
+def get_combat_order_service(request: Request) -> CombatOrderService:
+    service = getattr(request.app.state, "combat_order_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        event_service = get_table_event_service(request)
+        service = CombatOrderService(
+            CombatOrderRepository(engine, event_service.repository),
+            get_combat_service(request),
+            event_service,
+        )
+        request.app.state.combat_order_service = service
+    return service
+
+
 def get_session_resume_service(request: Request) -> SessionResumeService:
     service = getattr(request.app.state, "session_resume_service", None)
     if service is None:
@@ -226,6 +280,9 @@ def get_session_resume_service(request: Request) -> SessionResumeService:
 __all__ = [
     "_HistoryGuardedCharacterRepository",
     "get_campaign_service",
+    "get_combat_initiative_service",
+    "get_combat_order_service",
+    "get_combat_service",
     "get_exploration_action_service",
     "get_exploration_stage_service",
     "get_pending_action_service",
