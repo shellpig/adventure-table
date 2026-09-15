@@ -399,6 +399,28 @@ def withdraw_entry(
         raise _map_combat_error(exc) from exc
 
 
+@router.post("/entries/{entry_id}/remove", response_model=CombatView)
+def remove_entry(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    entry_id: UUID,
+    payload: CombatMutationInput,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CombatService = Depends(get_combat_service),
+) -> CombatView:
+    try:
+        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
+        return service.remove_entry(
+            actor,
+            entry_id,
+            idempotency_key=payload.idempotency_key,
+        )
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
 @router.post("/end", response_model=CombatView)
 def end_combat(
     room_id: UUID,
