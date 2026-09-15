@@ -155,3 +155,27 @@ def test_p4a_schema_survives_full_postgres_upgrade_to_heads() -> None:
 
     assert P4A_REVISION in _revision_set()
     _assert_p4a_schema()
+
+
+def test_p4a_migration_downgrade_removes_only_combat_tables_on_real_postgres() -> None:
+    _reset_database()
+    command.upgrade(_alembic_config(), P4A_REVISION)
+    _assert_p4a_schema()
+
+    assert POSTGRES_URL is not None
+    engine = create_engine(POSTGRES_URL)
+    try:
+        before = set(inspect(engine).get_table_names())
+    finally:
+        engine.dispose()
+
+    command.downgrade(_alembic_config(), P4A_PARENT)
+
+    assert P4A_REVISION not in _revision_set()
+    assert P4A_PARENT in _revision_set()
+    engine = create_engine(POSTGRES_URL)
+    try:
+        after = set(inspect(engine).get_table_names())
+    finally:
+        engine.dispose()
+    assert before - after == {"monster_templates", "monster_instances"}

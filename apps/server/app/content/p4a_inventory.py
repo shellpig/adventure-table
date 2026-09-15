@@ -11,10 +11,9 @@ def validate_p4a_monster_inventory(registry: ContentRegistry) -> ContentRegistry
     """Fail when the checked-in SRD Monster inventory drifts from P4-A scope."""
 
     monsters = registry.list_kind("monster", source="srd5.1")
-    # This validator is installed before the large canonical Monster dataset is
-    # checked in so the foundation commit can remain independently loadable.
-    # Once the manifest exposes the monster category, category count validation
-    # guarantees that an empty result is no longer possible.
+    # M03-A lets a deployment disable the srd5.1 pack. With no SRD monsters
+    # loaded there is no corpus to gate; any partially loaded corpus still
+    # fails the exact-count checks below.
     if not monsters:
         return registry
 

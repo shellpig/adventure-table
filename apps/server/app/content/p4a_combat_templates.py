@@ -143,12 +143,6 @@ def _attack_kind(action: Mapping[str, Any], desc: str | None) -> str | None:
     explicit = action.get("attack_kind")
     if explicit in _CANONICAL_ATTACK_KINDS:
         return str(explicit)
-    # Transitional compatibility for pre-contract P4-A fixtures. New persisted
-    # actions always use the four canonical values from the P4 design contract.
-    if explicit == "melee":
-        return "melee_weapon"
-    if explicit == "ranged":
-        return "ranged_weapon"
     if not isinstance(action.get("attack_bonus"), int):
         return None
     if desc:
