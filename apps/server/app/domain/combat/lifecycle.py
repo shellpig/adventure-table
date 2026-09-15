@@ -283,7 +283,11 @@ class CombatService:
         )
         if subject_seat_id is None:
             if actor.is_current_dm:
-                raise CombatStateConflictError("Character is absent from this Session; DM must skip or withdraw it instead of silently proxying")
+                # CombatEntry identity is the Character, not a historical Session Seat.
+                # When that Character is absent in a later Session the current DM may
+                # explicitly proxy it; the action remains audited as dm_proxy with the
+                # durable CombatEntry/Character as subject and no fabricated Seat.
+                return None, "dm_proxy"
             raise TableEventActorUnauthorizedError("Character Combat entry is not controlled in this Session")
         if subject_seat_id in actor.controlled_seat_ids: return subject_seat_id, "self"
         if actor.is_current_dm: return subject_seat_id, "dm_proxy"
