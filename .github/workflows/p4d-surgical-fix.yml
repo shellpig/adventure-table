@@ -1,0 +1,148 @@
+name: P4-D Surgical Fix
+
+on:
+  push:
+    branches:
+      - feat/p4d-spells-effects-reactions
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: "!contains(github.event.head_commit.message, '[p4d-surgical-fix]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/p4d-spells-effects-reactions
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Apply reviewed P4-D surgical patches
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one replacement, found {count}: {old[:80]!r}")
+              p.write_text(text.replace(old, new, 1))
+
+          # #5: persist the already-validated/normalized canonical CharacterState.
+          replace_once(
+              'apps/server/app/interop/character_import.py',
+              'state_payload=dict(document.payload.current_state.state_payload),',
+              'state_payload=prepared.state.model_dump(mode="json"),',
+          )
+
+          # #6: restore comments/formatting unrelated to P4-D.
+          path = Path('apps/server/app/domain/character/schemas.py')
+          text = path.read_text()
+          text = text.replace(
+              '    rest_type: RestType | None = None\n',
+              '    # Compatibility field for pre-M01-L persisted Builds. New writers use only\n'
+              '    # recharge_types; legacy singleton rest_type is normalized on read.\n'
+              '    rest_type: RestType | None = None\n',
+              1,
+          )
+          text = text.replace(
+              '            raise ValueError("spell access uses_per_rest and recharge_types must be declared together")',
+              '            raise ValueError(\n'
+              '                "spell access uses_per_rest and recharge_types must be declared together"\n'
+              '            )',
+              1,
+          )
+          text = text.replace(
+              'FeatStaticFact = Annotated[',
+              '# Typed static facts feats contribute to the Build. Each kind is a closed shape the\n'
+              '# Rules Layer can read without a combat engine; presentation may lag behind.\n'
+              'FeatStaticFact = Annotated[',
+              1,
+          )
+          text = text.replace(
+              '        variant_group_ids = [(selection.race_variant_ref, selection.replacement_group_id) for selection in self.race_variant_group_selections]',
+              '        variant_group_ids = [\n'
+              '            (selection.race_variant_ref, selection.replacement_group_id)\n'
+              '            for selection in self.race_variant_group_selections\n'
+              '        ]',
+              1,
+          )
+          text = text.replace(
+              '        if any(selection.race_variant_ref != self.race_variant_ref for selection in self.race_variant_group_selections):',
+              '        if any(\n'
+              '            selection.race_variant_ref != self.race_variant_ref\n'
+              '            for selection in self.race_variant_group_selections\n'
+              '        ):',
+              1,
+          )
+          text = text.replace(
+              '        armor_parts = [entry.arcane_armor_part for entry in self.active_infusions if entry.arcane_armor_part is not None]',
+              '        armor_parts = [\n'
+              '            entry.arcane_armor_part\n'
+              '            for entry in self.active_infusions\n'
+              '            if entry.arcane_armor_part is not None\n'
+              '        ]',
+              1,
+          )
+          path.write_text(text)
+
+          # #1/#8: make ReactionWindow the typed durable payload while preserving legacy callers.
+          path = Path('apps/server/app/persistence/combat/lifecycle.py')
+          text = path.read_text()
+          marker = 'from sqlalchemy.exc import IntegrityError\n\n'
+          if 'from app.domain.combat.reaction_service import ReactionWindow, resolve_reaction\n' not in text:
+              text = text.replace(
+                  marker,
+                  marker + 'from app.domain.combat.reaction_service import ReactionWindow, resolve_reaction\n',
+                  1,
+              )
+          old = '''    def set_reaction_window(self, *, binding: StoredTableActorBinding, combat_id: UUID, entry_id: UUID,\n                            state: dict[str, Any], idempotency_key: str | None):\n        def projection(connection, _event_id: UUID, _seq: int) -> None:\n            result = connection.execute(update(combat_entries).where(\n                combat_entries.c.id == entry_id, combat_entries.c.combat_id == combat_id,\n                combat_entries.c.status == "active",\n            ).values(pending_reaction_state=dict(state), updated_at=datetime.now().astimezone()))\n            if result.rowcount != 1:\n                raise CombatNotFoundPersistenceError(str(entry_id))\n\n        event = self.event_repository.append(\n            room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,\n            kind="combat.reaction_window", acting_seat_id=binding.seat_id, subject_seat_id=None,\n            subject_character_id=None, execution_mode="self", visibility="public", recipient_seat_ids=(),\n            payload_version=1, payload={"combat_id": str(combat_id), "entry_id": str(entry_id), "open": bool(state.get("open"))},\n            idempotency_key=f"p4b-reaction-window:{idempotency_key}" if idempotency_key else None,\n            expected_actor_binding=binding, transaction_projection=projection,\n        )\n        stored = self.get_entry(UUID(str(event.payload["entry_id"])))\n        if stored is None:\n            raise CombatNotFoundPersistenceError(str(entry_id))\n        return stored, event\n'''
+          new = '''    def get_reaction_window(self, entry_id: UUID) -> ReactionWindow | None:\n        stored = self.get_entry(entry_id)\n        if stored is None or not stored.pending_reaction_state:\n            return None\n        payload = dict(stored.pending_reaction_state)\n        if not payload.get("window_id"):\n            return None\n        return ReactionWindow.from_payload(payload)\n\n    def set_reaction_window(self, *, binding: StoredTableActorBinding, combat_id: UUID, entry_id: UUID,\n                            state: ReactionWindow | dict[str, Any], idempotency_key: str | None):\n        if isinstance(state, ReactionWindow):\n            if state.entry_id != str(entry_id):\n                raise ValueError("reaction window owner does not match CombatEntry")\n            payload = state.to_payload()\n        else:\n            # P4-B compatibility: legacy tests/callers may still provide the old\n            # minimal dict. Any P4-D payload is parsed through the typed model.\n            raw = dict(state)\n            payload = ReactionWindow.from_payload(raw).to_payload() if raw.get("window_id") else raw\n\n        def projection(connection, _event_id: UUID, _seq: int) -> None:\n            result = connection.execute(update(combat_entries).where(\n                combat_entries.c.id == entry_id, combat_entries.c.combat_id == combat_id,\n                combat_entries.c.status == "active",\n            ).values(pending_reaction_state=payload, updated_at=datetime.now().astimezone()))\n            if result.rowcount != 1:\n                raise CombatNotFoundPersistenceError(str(entry_id))\n\n        event = self.event_repository.append(\n            room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,\n            kind="combat.reaction_window", acting_seat_id=binding.seat_id, subject_seat_id=None,\n            subject_character_id=None, execution_mode="self", visibility="public", recipient_seat_ids=(),\n            payload_version=1, payload={"combat_id": str(combat_id), "entry_id": str(entry_id), "open": bool(payload.get("open")),\n                "window_id": payload.get("window_id"), "status": payload.get("status")},\n            idempotency_key=f"p4b-reaction-window:{idempotency_key}" if idempotency_key else None,\n            expected_actor_binding=binding, transaction_projection=projection,\n        )\n        stored = self.get_entry(UUID(str(event.payload["entry_id"])))\n        if stored is None:\n            raise CombatNotFoundPersistenceError(str(entry_id))\n        return stored, event\n\n    def resolve_reaction_window(self, *, binding: StoredTableActorBinding, combat_id: UUID,\n                                entry_id: UUID, actor_entry_id: UUID, accept: bool,\n                                idempotency_key: str | None):\n        def projection(connection, event_id: UUID, _seq: int) -> None:\n            entry = connection.execute(select(combat_entries).where(\n                combat_entries.c.id == entry_id, combat_entries.c.combat_id == combat_id\n            ).with_for_update()).mappings().one_or_none()\n            if entry is None or entry["status"] != "active":\n                raise CombatNotFoundPersistenceError(str(entry_id))\n            payload = dict(entry["pending_reaction_state"] or {})\n            if not payload.get("window_id"):\n                raise CombatStateConflictPersistenceError("No typed reaction window is open")\n            window = ReactionWindow.from_payload(payload)\n            resolved = resolve_reaction(\n                window=window, actor_entry_id=str(actor_entry_id),\n                reaction_available=bool(entry["reaction_available"]), accept=accept,\n            )\n            connection.execute(update(combat_entries).where(combat_entries.c.id == entry_id).values(\n                reaction_available=resolved.reaction_available,\n                pending_reaction_state=resolved.window.to_payload(),\n                updated_at=datetime.now().astimezone(),\n            ))\n            connection.execute(update(combats).where(combats.c.id == combat_id).values(\n                revision=combats.c.revision + 1, updated_at=datetime.now().astimezone()\n            ))\n            connection.execute(update(session_events).where(session_events.c.id == event_id).values(payload={\n                "combat_id": str(combat_id), "entry_id": str(entry_id),\n                "window_id": resolved.window.window_id, "status": resolved.window.status,\n                "accepted": accept,\n            }))\n\n        event = self.event_repository.append(\n            room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,\n            kind="combat.reaction_resolved", acting_seat_id=binding.seat_id, subject_seat_id=None,\n            subject_character_id=None, execution_mode="self", visibility="public", recipient_seat_ids=(),\n            payload_version=1, payload={"combat_id": str(combat_id), "entry_id": str(entry_id), "accepted": accept},\n            idempotency_key=f"p4d-reaction-resolve:{idempotency_key}" if idempotency_key else None,\n            expected_actor_binding=binding, transaction_projection=projection,\n        )\n        stored = self.get_entry(UUID(str(event.payload["entry_id"])))\n        if stored is None:\n            raise CombatNotFoundPersistenceError(str(entry_id))\n        return stored, event\n'''
+          if old not in text:
+              raise SystemExit('lifecycle reaction block not found')
+          path.write_text(text.replace(old, new, 1))
+
+          # #1/#4: semantic damage creates a formal durable CON-save request in\n          # the same event transaction as CharacterState HP persistence.
+          path = Path('apps/server/app/persistence/combat/resolution.py')
+          text = path.read_text()
+          text = text.replace('from uuid import UUID\n', 'from uuid import UUID, uuid4\n', 1)
+          text = text.replace('from sqlalchemy import func, select, update\n', 'from sqlalchemy import func, insert, select, update\n', 1)
+          text = text.replace(
+              'from app.domain.rules.hit_points import calculate_max_hp\n',
+              'from app.domain.combat.concentration_triggers import concentration_check_for_damage\n'
+              'from app.domain.rules.hit_points import calculate_max_hp\n',
+              1,
+          )
+          text = text.replace(
+              'from app.persistence.rooms.table_runtime import (\n',
+              'from app.persistence.rooms.p3c_runtime import roll_groups, roll_requests\n'
+              'from app.persistence.rooms.table_runtime import (\n',
+              1,
+          )
+          needle = '''                state_payload = state.model_dump(mode="json")\n                state_payload["current_hp"] = outcome.after.current_hp\n'''
+          replacement = '''                concentration_request = concentration_check_for_damage(\n                    owner_ref=str(target["character_id"]),\n                    current=state.concentration,\n                    outcome=outcome,\n                )\n                concentration_roll_group_id = None\n                concentration_roll_request_id = None\n                if concentration_request is not None:\n                    concentration_roll_group_id = uuid4()\n                    concentration_roll_request_id = uuid4()\n                    connection.execute(insert(roll_groups).values(\n                        id=concentration_roll_group_id,\n                        session_id=binding.session_id,\n                        requested_by_seat_id=binding.seat_id,\n                        label="Concentration",\n                        visibility="public",\n                        version=1,\n                    ))\n                    connection.execute(insert(roll_requests).values(\n                        id=concentration_roll_request_id,\n                        session_id=binding.session_id,\n                        roll_group_id=concentration_roll_group_id,\n                        target_seat_id=subject_seat_id,\n                        target_character_id=target["character_id"],\n                        target_combat_entry_id=target_entry_id,\n                        request_type="saving_throw",\n                        ability_ref="srd5.1:ability:constitution",\n                        skill_ref=None,\n                        dc=concentration_request.dc,\n                        modifier_mode="normal",\n                        flat_adjustment=0,\n                        visibility="public",\n                        status="pending",\n                        requested_by_seat_id=binding.seat_id,\n                        version=1,\n                    ))\n\n                state_payload = state.model_dump(mode="json")\n                state_payload["current_hp"] = outcome.after.current_hp\n'''
+          if needle not in text:
+              raise SystemExit('resolution state payload insertion point not found')
+          text = text.replace(needle, replacement, 1)
+          needle = '''                "affinities": {\n                    "resistances": [item.value for item in resistances],\n                    "immunities": [item.value for item in immunities],\n                    "vulnerabilities": [item.value for item in vulnerabilities],\n                },\n            }\n'''
+          replacement = '''                "affinities": {\n                    "resistances": [item.value for item in resistances],\n                    "immunities": [item.value for item in immunities],\n                    "vulnerabilities": [item.value for item in vulnerabilities],\n                },\n                "concentration_check": (\n                    {\n                        "source_ref": concentration_request.source_ref,\n                        "damage_taken": concentration_request.damage_taken,\n                        "dc": concentration_request.dc,\n                        "roll_group_id": str(concentration_roll_group_id),\n                        "roll_request_id": str(concentration_roll_request_id),\n                    }\n                    if target["subject_kind"] == "character" and concentration_request is not None\n                    else None\n                ),\n            }\n'''
+          if needle not in text:
+              raise SystemExit('resolution event payload insertion point not found')
+          path.write_text(text.replace(needle, replacement, 1))
+
+          # Remove this one-shot workflow from the resulting branch commit.
+          Path('.github/workflows/p4d-surgical-fix.yml').unlink()
+          PY
+      - name: Commit and push surgical fixes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'fix(P4-D): wire durable combat state [p4d-surgical-fix]'
+          git push origin HEAD:feat/p4d-spells-effects-reactions
