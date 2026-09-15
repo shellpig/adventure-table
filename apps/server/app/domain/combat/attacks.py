@@ -67,30 +67,21 @@ class AttackDefinitionView(StrictModel):
 
 
 class AttackRequestView(StrictModel):
+    """One durable Attack action across adjudication and formal-roll states."""
+
     action_id: UUID
     combat_id: UUID
     attacker_entry_id: UUID
     target_entry_id: UUID
-    roll_request_id: UUID
+    roll_request_id: UUID | None
     source_ref: str
     name: str
     modifier_mode: str
     attack_bonus: int
     target_ac: int
     status: str
-
-
-class AttackAdjudicationView(StrictModel):
-    action_id: UUID
-    combat_id: UUID
-    attacker_entry_id: UUID
-    target_entry_id: UUID
-    source_ref: str
-    name: str
-    status: str
-    roll_request_id: UUID | None
-    in_range: bool | None
-    resolution_result: dict[str, Any] | None
+    in_range: bool | None = None
+    resolution_result: dict[str, Any] | None = None
 
 
 class AttackResolutionView(StrictModel):
@@ -167,21 +158,27 @@ class CombatAttackService:
             attack_bonus=request.attack_bonus,
             target_ac=request.target_ac,
             status=request.status,
+            in_range=True,
         )
 
     @staticmethod
-    def _adjudication_view(item: StoredAttackAdjudication) -> AttackAdjudicationView:
-        return AttackAdjudicationView(
+    def _adjudication_view(item: StoredAttackAdjudication) -> AttackRequestView:
+        return AttackRequestView(
             action_id=item.action_id,
             combat_id=item.combat_id,
             attacker_entry_id=item.attacker_entry_id,
             target_entry_id=item.target_entry_id,
+            roll_request_id=item.roll_request_id,
             source_ref=item.source_ref,
             name=item.name,
+            modifier_mode=item.modifier_mode,
+            attack_bonus=item.attack_bonus,
+            target_ac=item.target_ac,
             status=item.status,
-            roll_request_id=item.roll_request_id,
             in_range=item.in_range,
-            resolution_result=dict(item.resolution_result) if item.resolution_result else None,
+            resolution_result=(
+                dict(item.resolution_result) if item.resolution_result else None
+            ),
         )
 
     @staticmethod
@@ -219,43 +216,57 @@ class CombatAttackService:
         self.table_event_service.require_actor_current(actor)
         entry = self._active_entry(actor, entry_id)
         self.combat_service._authorize_entry(actor, entry)
-        return tuple(self._definition_view(item) for item in self.definition_resolver.attacks_for(entry))
+        return tuple(
+            self._definition_view(item)
+            for item in self.definition_resolver.attacks_for(entry)
+        )
 
     def request_attack(
         self,
         actor: TableActorContext,
         request: AttackRequestInput,
-    ) -> AttackRequestView | AttackAdjudicationView:
+    ) -> AttackRequestView:
         self.table_event_service.require_actor_current(actor)
         attacker = self._active_entry(actor, request.attacker_entry_id)
         target = self._active_entry(actor, request.target_entry_id)
         if attacker.combat_id != target.combat_id:
-            raise CombatStateConflictError("Attacker and target must belong to the same Combat")
+            raise CombatStateConflictError(
+                "Attacker and target must belong to the same Combat"
+            )
         if attacker.id == target.id:
-            raise CombatStateConflictError("Attack target must be a different CombatEntry")
+            raise CombatStateConflictError(
+                "Attack target must be a different CombatEntry"
+            )
         if request.range_confirmed is False:
-            raise CombatStateConflictError("Out-of-range Attack is invalid and consumes no action economy")
-        subject_seat_id, execution_mode = self.combat_service._authorize_entry(actor, attacker)
+            raise CombatStateConflictError(
+                "Out-of-range Attack is invalid and consumes no action economy"
+            )
+        subject_seat_id, execution_mode = self.combat_service._authorize_entry(
+            actor, attacker
+        )
         try:
             attack = self.definition_resolver.resolve(attacker, request.source_ref)
             target_ac = self.definition_resolver.armor_class_for(target)
             # Geometry is authoritative only when supplied by the current DM.
-            # Player/AI Player assertions never skip the pending adjudication.
-            range_is_authoritative = actor.is_current_dm and request.range_confirmed is True
+            range_is_authoritative = (
+                actor.is_current_dm and request.range_confirmed is True
+            )
             if not range_is_authoritative:
-                stored_adjudication, _event = self.adjudication_repository.request_attack_adjudication(
-                    binding=actor_binding(actor),
-                    combat_id=attacker.combat_id,
-                    attacker_entry_id=attacker.id,
-                    target_entry_id=target.id,
-                    subject_seat_id=subject_seat_id,
-                    execution_mode=execution_mode,
-                    attack=attack,
-                    target_ac=target_ac,
-                    modifier_mode=RollMode(request.modifier_mode.value),
-                    idempotency_key=request.idempotency_key,
+                stored, _event = (
+                    self.adjudication_repository.request_attack_adjudication(
+                        binding=actor_binding(actor),
+                        combat_id=attacker.combat_id,
+                        attacker_entry_id=attacker.id,
+                        target_entry_id=target.id,
+                        subject_seat_id=subject_seat_id,
+                        execution_mode=execution_mode,
+                        attack=attack,
+                        target_ac=target_ac,
+                        modifier_mode=RollMode(request.modifier_mode.value),
+                        idempotency_key=request.idempotency_key,
+                    )
                 )
-                result: AttackRequestView | AttackAdjudicationView = self._adjudication_view(stored_adjudication)
+                result = self._adjudication_view(stored)
             else:
                 stored, _event = self.repository.declare_attack(
                     binding=actor_binding(actor),
@@ -270,7 +281,10 @@ class CombatAttackService:
                     idempotency_key=request.idempotency_key,
                 )
                 result = self._request_view(stored)
-        except (AttackStateConflictPersistenceError, CombatAdjudicationStateConflictError) as exc:
+        except (
+            AttackStateConflictPersistenceError,
+            CombatAdjudicationStateConflictError,
+        ) as exc:
             raise CombatStateConflictError(str(exc)) from exc
         if self.table_event_service.notifier is not None:
             self.table_event_service.notifier.notify(actor.session_id)
@@ -280,7 +294,7 @@ class CombatAttackService:
         self,
         actor: TableActorContext,
         request: AttackAdjudicationInput,
-    ) -> AttackRequestView | AttackAdjudicationView:
+    ) -> AttackRequestView:
         self.table_event_service.require_actor_current(actor)
         if not actor.is_current_dm:
             raise TableEventActorUnauthorizedError(
@@ -304,7 +318,9 @@ class CombatAttackService:
             roll_request_id=stored.roll_request_id,
         )
         if attack_request is None:
-            raise AttackRequestNotFoundPersistenceError(str(stored.roll_request_id))
+            raise AttackRequestNotFoundPersistenceError(
+                str(stored.roll_request_id)
+            )
         return self._request_view(attack_request)
 
     def complete_attack(
@@ -318,11 +334,20 @@ class CombatAttackService:
             roll_request_id=request.roll_request_id,
         )
         if stored_request is None:
-            raise AttackRequestNotFoundPersistenceError(str(request.roll_request_id))
+            raise AttackRequestNotFoundPersistenceError(
+                str(request.roll_request_id)
+            )
         attacker = self._active_entry(actor, stored_request.attacker_entry_id)
-        subject_seat_id, execution_mode = self.combat_service._authorize_entry(actor, attacker)
-        if stored_request.subject_seat_id != subject_seat_id and not actor.is_current_dm:
-            raise CombatStateConflictError("Attack RollRequest is no longer controlled by this actor")
+        subject_seat_id, execution_mode = self.combat_service._authorize_entry(
+            actor, attacker
+        )
+        if (
+            stored_request.subject_seat_id != subject_seat_id
+            and not actor.is_current_dm
+        ):
+            raise CombatStateConflictError(
+                "Attack RollRequest is no longer controlled by this actor"
+            )
         acting_seat_id = (
             subject_seat_id
             if execution_mode == "self" and subject_seat_id is not None
@@ -335,7 +360,9 @@ class CombatAttackService:
                 base_modifier=0,
                 flat_adjustment=stored_request.attack_bonus,
                 physical_raw_dice=(
-                    request.raw_dice if request.source is FormalRollSource.PHYSICAL else None
+                    request.raw_dice
+                    if request.source is FormalRollSource.PHYSICAL
+                    else None
                 ),
             )
             return AttackRollComputation(
@@ -357,7 +384,9 @@ class CombatAttackService:
                 )
                 critical_dice = (
                     tuple(
-                        self.roll_service.engine.rng.randint(1, formula.die_size)
+                        self.roll_service.engine.rng.randint(
+                            1, formula.die_size
+                        )
                         for _ in range(formula.dice_count)
                     )
                     if critical
@@ -386,7 +415,9 @@ class CombatAttackService:
         except AttackStateConflictPersistenceError as exc:
             raise CombatStateConflictError(str(exc)) from exc
         except AttackRequestNotPendingPersistenceError:
-            current = self.repository.get_resolution(action_id=stored_request.action_id)
+            current = self.repository.get_resolution(
+                action_id=stored_request.action_id
+            )
             if current is None:
                 raise
             result = current
@@ -397,7 +428,6 @@ class CombatAttackService:
 
 __all__ = [
     "AttackAdjudicationInput",
-    "AttackAdjudicationView",
     "AttackDefinitionNotFoundError",
     "AttackDefinitionView",
     "AttackRequestInput",
