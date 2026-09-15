@@ -201,6 +201,17 @@ class CombatRepository:
             ).mappings().all()
         return tuple(self._entry(row) for row in rows)
 
+    def has_active_hostile(self, combat_id: UUID) -> bool:
+        with self.engine.connect() as connection:
+            hostile_id = connection.execute(
+                select(combat_entries.c.id).where(
+                    combat_entries.c.combat_id == combat_id,
+                    combat_entries.c.status == "active",
+                    combat_entries.c.is_hostile.is_(True),
+                ).limit(1)
+            ).scalar_one_or_none()
+        return hostile_id is not None
+
     def entries_for_initiative_request(self, combat_id: UUID, request_id: UUID) -> tuple[StoredCombatEntry, ...]:
         with self.engine.connect() as connection:
             rows = connection.execute(select(combat_entries).where(
@@ -243,7 +254,9 @@ class CombatRepository:
         connection.execute(insert(combat_entries).values(
             id=entry_id, combat_id=combat_id, subject_kind=entry.subject_kind,
             character_id=entry.character_id, monster_instance_id=entry.monster_instance_id,
-            display_name=entry.display_name, status="active", initiative_group_key=entry.initiative_group_key,
+            display_name=entry.display_name, status="active",
+            is_hostile=entry.subject_kind == "monster",
+            initiative_group_key=entry.initiative_group_key,
             surprised=entry.surprised, action_available=True, bonus_action_available=True,
             reaction_available=not entry.surprised,
             attacks_allowed=max(1, int(entry.attacks_allowed)), attacks_used=0,
