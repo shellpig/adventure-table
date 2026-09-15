@@ -32,7 +32,7 @@ def upgrade() -> None:
         )
         batch.create_check_constraint(
             "ck_combat_entries_death_save_terminal",
-            "NOT (death_save_stable = 1 AND death_save_dead = 1)",
+            "NOT (death_save_stable AND death_save_dead)",
         )
 
     with op.batch_alter_table("combat_actions") as batch:
