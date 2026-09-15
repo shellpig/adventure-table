@@ -11,6 +11,7 @@ from app.domain.combat.initiative import CombatInitiativeService
 from app.domain.combat.lifecycle import CombatService
 from app.domain.combat.order import CombatOrderService
 from app.domain.combat.roll_compat import CombatAwareRollRepository
+from app.domain.combat.semantic_hp import CombatResolutionService
 from app.domain.rooms.campaigns import CampaignService
 from app.domain.rooms.character_rolls import CharacterRollModifierResolver
 from app.domain.rooms.exploration import ExplorationActionService, ExplorationStageService
@@ -26,6 +27,7 @@ from app.persistence.combat.initiative import CombatInitiativeRepository
 from app.persistence.combat.lifecycle import CombatRepository
 from app.persistence.combat.order import CombatOrderRepository
 from app.persistence.combat.repository import MonsterRepository
+from app.persistence.combat.resolution import CombatResolutionRepository
 from app.persistence.mcp.room_lifecycle import M04BSeatRepository, M04BSessionRepository
 from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.exploration import ExplorationRepository
@@ -225,6 +227,22 @@ def get_combat_service(request: Request) -> CombatService:
     return service
 
 
+def get_combat_resolution_service(request: Request) -> CombatResolutionService:
+    service = getattr(request.app.state, "combat_resolution_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        event_service = get_table_event_service(request)
+        combat_service = get_combat_service(request)
+        service = CombatResolutionService(
+            CombatResolutionRepository(engine, event_service.repository),
+            combat_service.repository,
+            combat_service,
+            event_service,
+        )
+        request.app.state.combat_resolution_service = service
+    return service
+
+
 def get_combat_initiative_service(request: Request) -> CombatInitiativeService:
     service = getattr(request.app.state, "combat_initiative_service", None)
     if service is None:
@@ -282,6 +300,7 @@ __all__ = [
     "get_campaign_service",
     "get_combat_initiative_service",
     "get_combat_order_service",
+    "get_combat_resolution_service",
     "get_combat_service",
     "get_exploration_action_service",
     "get_exploration_stage_service",
