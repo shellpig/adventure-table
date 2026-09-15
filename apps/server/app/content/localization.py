@@ -112,7 +112,6 @@ class LocalizableFieldPolicy:
         matches = [rule for rule in self.rules if rule.matches(pack, kind, field_path)]
         if not matches:
             return None
-        # Prefer source-specific, then kind-specific, then the most concrete path.
         return max(
             matches,
             key=lambda rule: (
@@ -193,6 +192,63 @@ def _iter_matching_paths(root: Any, pattern: str) -> Iterable[str]:
     yield from walk(root, 0, [])
 
 
+def _read_locale_overlay_file(
+    path: Path,
+    *,
+    source: str,
+    locale: str,
+    registry: ContentRegistry,
+) -> dict[str, dict[str, Any]]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ContentValidationError(f"cannot load locale overlay {path}: {exc}") from exc
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise ContentValidationError(f"locale overlay {path} schema_version must be 1")
+    if payload.get("locale") != locale:
+        raise ContentValidationError(f"locale overlay {path} locale mismatch")
+    raw_entries = payload.get("entries")
+    if not isinstance(raw_entries, dict):
+        raise ContentValidationError(f"locale overlay {path} entries must be an object")
+
+    normalized: dict[str, dict[str, Any]] = {}
+    for key, fields in raw_entries.items():
+        if not isinstance(key, str) or not isinstance(fields, dict):
+            raise ContentValidationError(f"locale overlay {path} has invalid entry payload")
+        parsed = parse_stable_key(key)
+        if parsed.source != source:
+            raise ContentValidationError(f"locale overlay {path} contains cross-pack key {key}")
+        if registry.get_optional(key) is None:
+            raise ContentValidationError(
+                f"locale overlay {path} references unknown content key {key}"
+            )
+        normalized[key] = dict(fields)
+    return normalized
+
+
+def _merge_locale_overlay(
+    destination: dict[str, dict[str, Any]],
+    incoming: Mapping[str, Mapping[str, Any]],
+    *,
+    path: Path,
+) -> None:
+    """Merge one locale shard while rejecting duplicate field ownership.
+
+    A StableKey may intentionally span shards (for example a short-name shard
+    and a later long-description shard), but one concrete field path must have
+    exactly one owner so shard ordering can never silently change presentation.
+    """
+
+    for key, fields in incoming.items():
+        target = destination.setdefault(key, {})
+        for field_path, value in fields.items():
+            if field_path in target:
+                raise ContentValidationError(
+                    f"locale overlay {path} duplicates field {key} {field_path}"
+                )
+            target[field_path] = value
+
+
 class ContentLocalizationCatalog:
     """Resolve presentation fields without changing StableKey or mechanics.
 
@@ -229,35 +285,30 @@ class ContentLocalizationCatalog:
         )
         overlays: dict[tuple[str, str], dict[str, dict[str, Any]]] = {}
         for source in registry.enabled_pack_ids:
+            locale_root = content_root / source / "locales"
             for locale in SUPPORTED_CONTENT_LOCALES:
-                path = content_root / source / "locales" / f"{locale}.json"
-                if not path.is_file():
+                monolith = locale_root / f"{locale}.json"
+                shard_root = locale_root / locale
+                paths: list[Path] = []
+                if monolith.is_file():
+                    paths.append(monolith)
+                if shard_root.is_dir():
+                    paths.extend(sorted(shard_root.glob("*.json")))
+                if not paths:
                     continue
-                try:
-                    payload = json.loads(path.read_text(encoding="utf-8"))
-                except (OSError, json.JSONDecodeError) as exc:
-                    raise ContentValidationError(f"cannot load locale overlay {path}: {exc}") from exc
-                if not isinstance(payload, dict) or payload.get("schema_version") != 1:
-                    raise ContentValidationError(f"locale overlay {path} schema_version must be 1")
-                if payload.get("locale") != locale:
-                    raise ContentValidationError(f"locale overlay {path} locale mismatch")
-                raw_entries = payload.get("entries")
-                if not isinstance(raw_entries, dict):
-                    raise ContentValidationError(f"locale overlay {path} entries must be an object")
+
                 normalized: dict[str, dict[str, Any]] = {}
-                for key, fields in raw_entries.items():
-                    if not isinstance(key, str) or not isinstance(fields, dict):
-                        raise ContentValidationError(f"locale overlay {path} has invalid entry payload")
-                    parsed = parse_stable_key(key)
-                    if parsed.source != source:
-                        raise ContentValidationError(
-                            f"locale overlay {path} contains cross-pack key {key}"
-                        )
-                    if registry.get_optional(key) is None:
-                        raise ContentValidationError(
-                            f"locale overlay {path} references unknown content key {key}"
-                        )
-                    normalized[key] = dict(fields)
+                for path in paths:
+                    _merge_locale_overlay(
+                        normalized,
+                        _read_locale_overlay_file(
+                            path,
+                            source=source,
+                            locale=locale,
+                            registry=registry,
+                        ),
+                        path=path,
+                    )
                 overlays[(source, locale)] = normalized
         return cls(registry, policy, overlays)
 
@@ -287,8 +338,6 @@ class ContentLocalizationCatalog:
                 missing_required=False,
             )
 
-        # Canonical English is authoritative and is resolved through the same
-        # service contract rather than bypassing localization in callers.
         if locale == "en":
             return LocalizedField(
                 key=key,
@@ -372,9 +421,7 @@ class ContentLocalizationCatalog:
         tables: list[LocalizedOptionalRoleplayTable] = []
         for table_id, values in raw_tables.items():
             if not isinstance(table_id, str) or not isinstance(values, list):
-                raise ContentValidationError(
-                    f"{background_key}: invalid optional roleplay table"
-                )
+                raise ContentValidationError(f"{background_key}: invalid optional roleplay table")
             label = self.resolve_field(
                 background_key,
                 f"data.optional_roleplay_table_labels.{table_id}",

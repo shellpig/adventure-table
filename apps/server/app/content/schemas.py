@@ -24,6 +24,7 @@ StableKind = Literal[
     "lineage",
     "item",
     "magic-school",
+    "monster",
     "proficiency",
     "race",
     "race-variant",
@@ -541,14 +542,6 @@ class ContentManifest(StrictModel):
         if self.total_entries != sum(category.count for category in self.categories):
             raise ValueError("manifest total_entries does not match category counts")
 
-        if self.id == "srd5.1":
-            if self.license is None or self.extraction is None or self.scope_guard is None:
-                raise ValueError(
-                    "legacy srd5.1 manifest must retain license, extraction, and scope_guard"
-                )
-            required = {"monsters", "beasts"}
-            if not required.issubset(set(self.scope_guard.excluded_categories)):
-                raise ValueError("P0 scope guard must exclude monsters and beasts")
-            if self.scope_guard.deferred_to != "P4-A":
-                raise ValueError("srd5.1 scope guard must remain deferred to P4-A")
+        if self.id == "srd5.1" and (self.license is None or self.extraction is None):
+            raise ValueError("srd5.1 manifest must retain license and extraction metadata")
         return self

@@ -29,6 +29,7 @@ EXPECTED_KINDS = {
     "level",
     "item",
     "magic-school",
+    "monster",
     "proficiency",
     "race",
     "skill",
@@ -63,11 +64,8 @@ def test_full_character_relevant_srd_loads() -> None:
 
     assert len(registry) == registry.manifest.total_entries
     assert set(category.kind for category in registry.manifest.categories) == EXPECTED_KINDS
-    assert registry.manifest.scope_guard.deferred_to == "P4-A"
-    assert {"monsters", "beasts"}.issubset(
-        set(registry.manifest.scope_guard.excluded_categories)
-    )
-    assert not (root / "monsters.json").exists()
+    assert registry.manifest.scope_guard is None
+    assert (root / "monsters.json").is_file()
     assert not (root / "beasts.json").exists()
 
 
@@ -149,9 +147,9 @@ def test_dangling_reference_fails(tmp_path: Path) -> None:
         ContentRegistry.from_directory(root)
 
 
-def test_monster_file_is_rejected_by_p0_scope_guard(tmp_path: Path) -> None:
+def test_monster_file_count_drift_is_rejected(tmp_path: Path) -> None:
     root = copy_content(tmp_path)
     write_json(root / "monsters.json", [])
 
-    with pytest.raises(ContentValidationError, match="P0 scope violation"):
+    with pytest.raises(ContentValidationError, match="category monsters count mismatch"):
         ContentRegistry.from_directory(root)

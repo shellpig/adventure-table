@@ -14,6 +14,7 @@ from app.persistence.mcp.tables import (
 
 
 REVISION = "0021_m04b_ai_oauth"
+P4A_REVISION = "0022_p4a_monster_instances"
 EXPECTED_TABLES = {
     "ai_oauth_clients",
     "ai_oauth_authorizations",
@@ -35,7 +36,7 @@ def _source() -> str:
     ).read_text(encoding="utf-8")
 
 
-def test_m04b_revision_is_current_web_head_and_links_p3d() -> None:
+def test_m04b_revision_links_p3d_and_carries_forward_to_p4a_head() -> None:
     server_root = _server_root()
     config = Config(str(server_root / "alembic.ini"))
     config.set_main_option("script_location", str(server_root / "alembic"))
@@ -44,7 +45,11 @@ def test_m04b_revision_is_current_web_head_and_links_p3d() -> None:
     revision = scripts.get_revision(REVISION)
     assert revision is not None
     assert revision.down_revision == "0020_p3d_ai_controller_grants"
-    assert REVISION in scripts.get_heads()
+
+    p4a_revision = scripts.get_revision(P4A_REVISION)
+    assert p4a_revision is not None
+    assert p4a_revision.down_revision == REVISION
+    assert P4A_REVISION in scripts.get_heads()
 
 
 def test_m04b_metadata_contains_only_documented_oauth_tables() -> None:

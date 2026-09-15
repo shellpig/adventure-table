@@ -15,6 +15,7 @@ from app.persistence.rooms.tables import (
 
 REVISION = "0020_p3d_ai_controller_grants"
 M04B_REVISION = "0021_m04b_ai_oauth"
+P4A_REVISION = "0022_p4a_monster_instances"
 
 
 def _source() -> str:
@@ -46,7 +47,11 @@ def test_p3d_revision_carries_forward_to_current_web_head() -> None:
     m04b_revision = scripts.get_revision(M04B_REVISION)
     assert m04b_revision is not None
     assert m04b_revision.down_revision == REVISION
-    assert M04B_REVISION in scripts.get_heads()
+
+    p4a_revision = scripts.get_revision(P4A_REVISION)
+    assert p4a_revision is not None
+    assert p4a_revision.down_revision == M04B_REVISION
+    assert P4A_REVISION in scripts.get_heads()
 
 
 def test_p3d_migration_replaces_all_three_named_controller_checks() -> None:

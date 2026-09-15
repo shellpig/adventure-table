@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "phase": "P4-A",
+  "pack": "srd5.1",
+  "locale": "zh-TW",
+  "reference_repository": "hktrpg/fvtt-5e-classpack-zh-tw",
+  "reference_commit": "74276e1c4915d35b4d22539157fd49ef8717e105",
+  "reference_name_count": 1139,
+  "monster_count": 334,
+  "required_label_count": 1837,
+  "translated_label_count": 1837,
+  "translation_sources": {
+    "project_composition": 10,
+    "project_exact": 142,
+    "project_existing_exact": 8,
+    "reference": 1612,
+    "structured:creature_form": 18,
+    "structured:project_exact": 6,
+    "structured:reference": 41
+  },
+  "missing_count": 0,
+  "missing": [],
+  "long_form_descriptions": "deferred-until-first-user-visible-exposure"
+}

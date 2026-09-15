@@ -14,6 +14,8 @@ from app.content.m01l_models import install_m01l_content_models
 from app.content.m01m_inventory import validate_m01m_inventory
 from app.content.m01m_models import install_m01m_content_models
 from app.content.m01m_overrides import apply_m01m_entry_overrides
+from app.content.p4a_inventory import validate_p4a_monster_inventory
+from app.content.p4a_monsters import install_p4a_content_models
 from app.content.phb_roleplay import apply_phb_background_roleplay
 from app.content.registry import (
     ContentNotFoundError,
@@ -25,6 +27,7 @@ from app.paths import resolve_content_root
 
 install_m01l_content_models()
 install_m01m_content_models()
+install_p4a_content_models()
 
 
 _M01I_REQUIRED_PACKS = frozenset({"srd5.1", "tce"})
@@ -42,6 +45,7 @@ def _has_enabled_packs(registry: ContentRegistry, required: frozenset[str]) -> b
 
 def load_default_content_registry() -> ContentRegistry:
     registry = _registry.load_default_content_registry()
+    registry = validate_p4a_monster_inventory(registry)
     registry = validate_builder_content(registry)
 
     # Phase closeout validators describe a complete source set. In M03 a

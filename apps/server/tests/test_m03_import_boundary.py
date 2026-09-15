@@ -8,7 +8,7 @@ import re
 
 APP_ROOT = Path(__file__).resolve().parents[1] / "app"
 FORBIDDEN_MODULE_RE = re.compile(
-    r"(?:^|\.)(?:rooms?|sessions?|seats?|campaigns?|party_rosters?|table_runtime|table_events?|mcp)(?:\.|$)",
+    r"(?:^|\.)(?:(?:rooms?|sessions?|seats?|campaigns?|party_rosters?|table_runtime|table_events?|mcp|combats?)|monster(?:s|_[a-z0-9_]+)?)(?:\.|$)",
     re.IGNORECASE,
 )
 
@@ -128,7 +128,8 @@ def test_character_distribution_import_graph_has_no_multiplayer_dependencies() -
 
     assert not violations, (
         "M03-F import boundary violation: standalone character/content code must remain "
-        f"independent from Room/Session/Seat/Campaign/P3 table or MCP transport modules: {violations}"
+        "independent from Room/Session/Seat/Campaign/P3/MCP/P4 combat or monster runtime "
+        f"modules: {violations}"
     )
 
 
@@ -152,6 +153,7 @@ def test_import_boundary_fixture_detects_multiplayer_module(tmp_path: Path) -> N
     (app_root / "room").mkdir(parents=True)
     (app_root / "api").mkdir(parents=True)
     (app_root / "mcp").mkdir(parents=True)
+    (app_root / "combat").mkdir(parents=True)
     (app_root / "__init__.py").write_text("", encoding="utf-8")
     (app_root / "domain" / "__init__.py").write_text("", encoding="utf-8")
     (app_root / "room" / "__init__.py").write_text("", encoding="utf-8")
@@ -160,12 +162,17 @@ def test_import_boundary_fixture_detects_multiplayer_module(tmp_path: Path) -> N
     (app_root / "api" / "rooms.py").write_text("VALUE = 2\n", encoding="utf-8")
     (app_root / "mcp" / "__init__.py").write_text("", encoding="utf-8")
     (app_root / "mcp" / "transport.py").write_text("VALUE = 5\n", encoding="utf-8")
+    (app_root / "combat" / "__init__.py").write_text("", encoding="utf-8")
+    (app_root / "combat" / "runtime.py").write_text("VALUE = 6\n", encoding="utf-8")
+    (app_root / "monster_runtime.py").write_text("VALUE = 7\n", encoding="utf-8")
     (app_root / "table_events.py").write_text("VALUE = 3\n", encoding="utf-8")
     (app_root / "table_runtime.py").write_text("VALUE = 4\n", encoding="utf-8")
     (app_root / "domain" / "character_fixture.py").write_text(
         "from app.room import fake\n"
         "import app.api.rooms\n"
         "import app.mcp.transport\n"
+        "import app.combat.runtime\n"
+        "import app.monster_runtime\n"
         "import app.table_events\n"
         "import app.table_runtime\n\n"
         "VALUE = fake.VALUE\n",
@@ -181,6 +188,8 @@ def test_import_boundary_fixture_detects_multiplayer_module(tmp_path: Path) -> N
     assert flagged & {"app.room", "app.room.fake"}
     assert "app.api.rooms" in flagged
     assert "app.mcp.transport" in flagged
+    assert "app.combat.runtime" in flagged
+    assert "app.monster_runtime" in flagged
     assert "app.table_events" in flagged
     assert "app.table_runtime" in flagged
 
@@ -193,10 +202,17 @@ def test_forbidden_regex_matches_module_segments_not_substrings() -> None:
     assert FORBIDDEN_MODULE_RE.search("app.table_events")
     assert FORBIDDEN_MODULE_RE.search("app.mcp")
     assert FORBIDDEN_MODULE_RE.search("app.mcp.server")
+    assert FORBIDDEN_MODULE_RE.search("app.persistence.combat")
+    assert FORBIDDEN_MODULE_RE.search("app.domain.combats.runtime")
+    assert FORBIDDEN_MODULE_RE.search("app.persistence.monster_instances")
+    assert FORBIDDEN_MODULE_RE.search("app.persistence.monster_templates")
     assert FORBIDDEN_MODULE_RE.search("app.domain.session_scope") is None
     assert FORBIDDEN_MODULE_RE.search("app.content.roommate") is None
     assert FORBIDDEN_MODULE_RE.search("app.content.event_table") is None
     assert FORBIDDEN_MODULE_RE.search("app.content.mcpreview") is None
+    assert FORBIDDEN_MODULE_RE.search("app.content.combatant") is None
+    assert FORBIDDEN_MODULE_RE.search("app.content.monsteroid") is None
+    assert FORBIDDEN_MODULE_RE.search("app.content.p4a_monsters") is None
 
 
 def test_forbidden_regex_matches_plural_resource_module_names() -> None:
@@ -205,4 +221,5 @@ def test_forbidden_regex_matches_plural_resource_module_names() -> None:
     assert FORBIDDEN_MODULE_RE.search("app.api.seats")
     assert FORBIDDEN_MODULE_RE.search("app.domain.campaigns")
     assert FORBIDDEN_MODULE_RE.search("app.domain.party_rosters")
+    assert FORBIDDEN_MODULE_RE.search("app.persistence.monsters")
     assert FORBIDDEN_MODULE_RE.search("app.content.roomservice") is None

@@ -81,20 +81,20 @@ def test_p3_non_e2e_workflow_keeps_frontend_and_windows_standalone_gates() -> No
     assert ".standalone-venv\\Scripts\\python.exe scripts\\smoke_standalone.py" in source
 
 
-def test_p3_e2e_workflow_rebuilds_the_real_stack_and_runs_complete_playwright() -> None:
+def test_p3_e2e_workflow_uses_isolated_u01_stack_and_runs_complete_playwright() -> None:
     source = _source(E2E_WORKFLOW)
 
     assert source.startswith("name: P3 Full-Stack E2E\n")
     assert "workflow_dispatch:" in source
     assert "\n  push:" not in source
     assert "\n  pull_request:" not in source
-    assert "docker compose down -v --remove-orphans" in source
-    assert "docker compose up -d --build" in source
-    assert "http://127.0.0.1:8000/health" in source
-    assert "http://127.0.0.1:8000/ready" in source
-    assert "http://127.0.0.1:5173" in source
-    assert "PLAYWRIGHT_MCP_URL: http://127.0.0.1:8000/mcp" in source
-    assert "npm run test:e2e" in source
+    assert "docker compose --profile e2e down -v --remove-orphans" in source
+    assert "docker compose up -d --build --wait server web" in source
+    assert "npm run test:e2e:docker" in source
+    assert "node scripts/e2e-daily-sentinel.mjs prepare" in source
+    assert "node scripts/e2e-daily-sentinel.mjs verify" in source
+    assert "node scripts/e2e-reset-acceptance.mjs" in source
+    assert "node scripts/e2e-daily-sentinel.mjs wrong-db" in source
 
 
 def test_p3_e2e_workflow_always_uploads_playwright_evidence_and_cleans_up() -> None:
@@ -105,4 +105,4 @@ def test_p3_e2e_workflow_always_uploads_playwright_evidence_and_cleans_up() -> N
     assert "name: p3-playwright-results" in source
     assert "apps/web/test-results" in source
     assert "apps/web/playwright-report" in source
-    assert source.count("docker compose down -v --remove-orphans") >= 2
+    assert source.count("docker compose --profile e2e down -v --remove-orphans") >= 2

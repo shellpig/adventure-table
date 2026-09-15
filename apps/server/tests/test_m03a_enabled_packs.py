@@ -5,6 +5,7 @@ import pytest
 import app.content as content_module
 import app.content.registry as registry_module
 from app.config import Settings
+from app.content.p4a_inventory import EXPECTED_SRD_MONSTER_COUNT
 from app.content.registry import ContentRegistry, ContentValidationError
 from app.paths import resolve_content_root
 from tests.m03_baseline import M03A_START_ENTRY_COUNT, M03A_START_PACKS
@@ -145,7 +146,7 @@ def test_application_registry_can_start_with_intentional_pack_subset(
     assert (root / "xge").is_dir()
 
 
-def test_default_full_registry_matches_m03a_start_baseline(
+def test_default_full_registry_extends_m03a_start_baseline_with_p4a_monsters(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = resolve_content_root()
@@ -154,7 +155,7 @@ def test_default_full_registry_matches_m03a_start_baseline(
 
     registry = registry_module.load_default_content_registry()
     assert registry.enabled_pack_ids == FULL_PACKS
-    assert len(registry) == M03A_START_ENTRY_COUNT
+    assert len(registry) == M03A_START_ENTRY_COUNT + EXPECTED_SRD_MONSTER_COUNT
 
 
 def test_registry_module_no_longer_owns_enabled_pack_constant() -> None:
