@@ -189,9 +189,9 @@ def test_turn_action_bonus_reaction_extra_attack_and_round_refresh() -> None:
                 table.player_actor,
                 CombatActionInput(
                     entry_id=character_entry.id,
-                    action_kind=CombatActionKind.DODGE,
+                    action_kind=CombatActionKind.ATTACK_BUDGET,
                     economy_cost=CombatEconomyCost.ACTION,
-                    idempotency_key="wrong-turn-action",
+                    idempotency_key="wrong-turn-attack",
                 ),
             )
 
