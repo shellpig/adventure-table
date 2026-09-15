@@ -435,7 +435,7 @@ class CombatRepository:
                        economy_cost: str, payload: dict[str, Any], idempotency_key: str | None,
                        attack_use: bool = False):
         action_id = uuid4()
-        def projection(connection, _event_id: UUID, _seq: int) -> None:
+        def projection(connection, event_id: UUID, _seq: int) -> None:
             combat = connection.execute(select(combats).where(
                 combats.c.id == combat_id, combats.c.campaign_id == binding.campaign_id
             ).with_for_update()).mappings().one_or_none()
@@ -446,6 +446,9 @@ class CombatRepository:
                 raise CombatNotFoundPersistenceError(str(combat_id))
             if combat["status"] != "running" or entry["status"] != "active":
                 raise CombatStateConflictPersistenceError("Combat entry is not active in a running Combat")
+            connection.execute(update(session_events).where(session_events.c.id == event_id).values(
+                subject_character_id=entry["character_id"]
+            ))
             values: dict[str, Any] = {"updated_at": datetime.now().astimezone()}
             if economy_cost in {"action", "bonus_action"} and combat["current_turn_entry_id"] != entry_id:
                 raise CombatStateConflictPersistenceError(f"{economy_cost} can only be used on the entry's current turn")
