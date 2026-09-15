@@ -36,6 +36,9 @@ class StoredAttackAdjudication:
     target_entry_id: UUID
     source_ref: str
     name: str
+    modifier_mode: str
+    attack_bonus: int
+    target_ac: int
     status: str
     roll_request_id: UUID | None
     in_range: bool | None
@@ -56,6 +59,9 @@ def _stored(row) -> StoredAttackAdjudication:
         target_entry_id=target_entry_id,
         source_ref=str(attack["source_ref"]),
         name=str(attack["name"]),
+        modifier_mode=str(payload["modifier_mode"]),
+        attack_bonus=int(attack["attack_bonus"]),
+        target_ac=int(payload["target_ac"]),
         status=str(row["resolution_status"]),
         roll_request_id=row["roll_request_id"],
         in_range=adjudication.get("in_range"),
@@ -84,11 +90,17 @@ class CombatAdjudicationRepository:
     @staticmethod
     def _validate_attack_turn(combat, attacker) -> None:
         if combat["status"] != "running" or attacker["status"] != "active":
-            raise CombatAdjudicationStateConflictError("Attack requires an active combatant in a running Combat")
+            raise CombatAdjudicationStateConflictError(
+                "Attack requires an active combatant in a running Combat"
+            )
         if combat["current_turn_entry_id"] != attacker["id"]:
-            raise CombatAdjudicationStateConflictError("Attack can only be declared on the attacker's current turn")
+            raise CombatAdjudicationStateConflictError(
+                "Attack can only be declared on the attacker's current turn"
+            )
         if attacker["surprised"]:
-            raise CombatAdjudicationStateConflictError("Surprised combatant cannot Attack on its first turn")
+            raise CombatAdjudicationStateConflictError(
+                "Surprised combatant cannot Attack on its first turn"
+            )
 
     @staticmethod
     def _consume_attack_budget(connection, attacker) -> None:
@@ -103,7 +115,9 @@ class CombatAdjudicationRepository:
             values["action_available"] = False
         values["attacks_used"] = used + 1
         connection.execute(
-            update(combat_entries).where(combat_entries.c.id == attacker["id"]).values(**values)
+            update(combat_entries)
+            .where(combat_entries.c.id == attacker["id"])
+            .values(**values)
         )
 
     def request_attack_adjudication(
@@ -131,7 +145,10 @@ class CombatAdjudicationRepository:
         def projection(connection, event_id: UUID, _seq: int) -> None:
             combat = connection.execute(
                 select(combats)
-                .where(combats.c.id == combat_id, combats.c.campaign_id == binding.campaign_id)
+                .where(
+                    combats.c.id == combat_id,
+                    combats.c.campaign_id == binding.campaign_id,
+                )
                 .with_for_update()
             ).mappings().one_or_none()
             attacker = connection.execute(
@@ -150,9 +167,15 @@ class CombatAdjudicationRepository:
                 )
                 .with_for_update()
             ).mappings().one_or_none()
-            if combat is None or attacker is None or target is None or target["status"] != "active":
+            if (
+                combat is None
+                or attacker is None
+                or target is None
+                or target["status"] != "active"
+            ):
                 raise CombatAdjudicationNotFoundError(str(combat_id))
             self._validate_attack_turn(combat, attacker)
+            now = datetime.now().astimezone()
             connection.execute(
                 insert(combat_actions).values(
                     id=action_id,
@@ -169,6 +192,11 @@ class CombatAdjudicationRepository:
                     resolution_status="dm_adjudication_required",
                     idempotency_key=idempotency_key,
                 )
+            )
+            connection.execute(
+                update(combats)
+                .where(combats.c.id == combat_id)
+                .values(revision=combats.c.revision + 1, updated_at=now)
             )
             connection.execute(
                 update(session_events)
@@ -196,11 +224,18 @@ class CombatAdjudicationRepository:
                 "kind": "range",
                 "status": "dm_adjudication_required",
             },
-            idempotency_key=f"p4c-attack-adjudication:{idempotency_key}" if idempotency_key else None,
+            idempotency_key=(
+                f"p4c-attack-adjudication:{idempotency_key}"
+                if idempotency_key
+                else None
+            ),
             expected_actor_binding=binding,
             transaction_projection=projection,
         )
-        stored = self.get(session_id=binding.session_id, action_id=UUID(str(event.payload["combat_action_id"])))
+        stored = self.get(
+            session_id=binding.session_id,
+            action_id=UUID(str(event.payload["combat_action_id"])),
+        )
         if stored is None:
             raise CombatAdjudicationNotFoundError(str(action_id))
         return stored, event
@@ -229,10 +264,15 @@ class CombatAdjudicationRepository:
             if action is None:
                 raise CombatAdjudicationNotFoundError(str(action_id))
             if action["resolution_status"] != "dm_adjudication_required":
-                raise CombatAdjudicationStateConflictError("Attack no longer requires DM adjudication")
+                raise CombatAdjudicationStateConflictError(
+                    "Attack no longer requires DM adjudication"
+                )
             combat = connection.execute(
                 select(combats)
-                .where(combats.c.id == action["combat_id"], combats.c.campaign_id == binding.campaign_id)
+                .where(
+                    combats.c.id == action["combat_id"],
+                    combats.c.campaign_id == binding.campaign_id,
+                )
                 .with_for_update()
             ).mappings().one_or_none()
             attacker = connection.execute(
@@ -245,7 +285,12 @@ class CombatAdjudicationRepository:
                 .where(combat_entries.c.id == action["target_entry_id"])
                 .with_for_update()
             ).mappings().one_or_none()
-            if combat is None or attacker is None or target is None or target["status"] != "active":
+            if (
+                combat is None
+                or attacker is None
+                or target is None
+                or target["status"] != "active"
+            ):
                 raise CombatAdjudicationNotFoundError(str(action_id))
             self._validate_attack_turn(combat, attacker)
             payload = dict(action["payload"] or {})
@@ -315,11 +360,6 @@ class CombatAdjudicationRepository:
                         roll_request_id=roll_request_id,
                     )
                 )
-                connection.execute(
-                    update(combats)
-                    .where(combats.c.id == action["combat_id"])
-                    .values(revision=combats.c.revision + 1, updated_at=now)
-                )
                 event_payload = {
                     "combat_id": str(action["combat_id"]),
                     "combat_action_id": str(action_id),
@@ -330,10 +370,20 @@ class CombatAdjudicationRepository:
                     "roll_group_id": str(roll_group_id),
                     "roll_request_id": str(roll_request_id),
                 }
+            # Both the pending->resolved and pending->waiting transition are
+            # canonical combat-state mutations and advance the combat revision.
+            connection.execute(
+                update(combats)
+                .where(combats.c.id == action["combat_id"])
+                .values(revision=combats.c.revision + 1, updated_at=now)
+            )
             connection.execute(
                 update(session_events)
                 .where(session_events.c.id == event_id)
-                .values(subject_character_id=attacker["character_id"], payload=event_payload)
+                .values(
+                    subject_character_id=attacker["character_id"],
+                    payload=event_payload,
+                )
             )
 
         event = self.event_repository.append(
@@ -349,11 +399,18 @@ class CombatAdjudicationRepository:
             recipient_seat_ids=(),
             payload_version=1,
             payload={"combat_action_id": str(action_id), "in_range": in_range},
-            idempotency_key=f"p4c-attack-adjudication-result:{idempotency_key}" if idempotency_key else None,
+            idempotency_key=(
+                f"p4c-attack-adjudication-result:{idempotency_key}"
+                if idempotency_key
+                else None
+            ),
             expected_actor_binding=binding,
             transaction_projection=projection,
         )
-        stored = self.get(session_id=binding.session_id, action_id=UUID(str(event.payload["combat_action_id"])))
+        stored = self.get(
+            session_id=binding.session_id,
+            action_id=UUID(str(event.payload["combat_action_id"])),
+        )
         if stored is None:
             raise CombatAdjudicationNotFoundError(str(action_id))
         return stored, event
