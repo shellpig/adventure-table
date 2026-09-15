@@ -23,7 +23,7 @@ def _running_table():
         StartCombatInput(idempotency_key="p4c-adjudication-start"),
     )
     enemy = support._quick_enemy(table, "Range Target")
-    combat = table.combat.add_monster(
+    table.combat.add_monster(
         table.dm_actor,
         AddMonsterInput(
             monster_instance_id=enemy.id,
@@ -69,11 +69,9 @@ def _running_table():
         table.rolls,
         table.events,
     )
-    source_ref = next(
-        item.source_ref
-        for item in attacks.available_attacks(table.player_actor, attacker.id)
-        if item.source_ref == "srd5.1:equipment:longsword"
-    )
+    available = attacks.available_attacks(table.player_actor, attacker.id)
+    assert available
+    source_ref = available[0].source_ref
     return table, attacks, attacker.id, target.id, source_ref
 
 
