@@ -15,6 +15,7 @@ from app.domain.combat.lifecycle import CombatService
 from app.domain.combat.order import CombatOrderService
 from app.domain.combat.roll_compat import CombatAwareRollRepository
 from app.domain.combat.semantic_hp import CombatResolutionService
+from app.domain.combat.special_attacks import CombatSpecialAttackService
 from app.domain.rooms.campaigns import CampaignService
 from app.domain.rooms.character_rolls import CharacterRollModifierResolver
 from app.domain.rooms.exploration import ExplorationActionService, ExplorationStageService
@@ -34,6 +35,7 @@ from app.persistence.combat.lifecycle import CombatRepository
 from app.persistence.combat.order import CombatOrderRepository
 from app.persistence.combat.repository import MonsterRepository
 from app.persistence.combat.resolution import CombatResolutionRepository
+from app.persistence.combat.special_attacks import SpecialAttackRepository
 from app.persistence.mcp.room_lifecycle import M04BSeatRepository, M04BSessionRepository
 from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.exploration import ExplorationRepository
@@ -249,6 +251,27 @@ def get_combat_core_roll_service(request: Request) -> CombatCoreRollService:
     return service
 
 
+def get_combat_special_attack_service(request: Request) -> CombatSpecialAttackService:
+    service = getattr(request.app.state, "combat_special_attack_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        event_service = get_table_event_service(request)
+        combat_service = get_combat_service(request)
+        service = CombatSpecialAttackService(
+            SpecialAttackRepository(engine, event_service.repository),
+            CombatCoreRollRepository(engine, event_service.repository),
+            combat_service.repository,
+            combat_service,
+            get_room_workspace_service(request).character_repository,
+            combat_service.monster_repository,
+            get_content_registry(request),
+            get_roll_service(request),
+            event_service,
+        )
+        request.app.state.combat_special_attack_service = service
+    return service
+
+
 def get_combat_initiative_service(request: Request) -> CombatInitiativeService:
     service = getattr(request.app.state, "combat_initiative_service", None)
     if service is None:
@@ -306,6 +329,7 @@ __all__ = [
     "get_combat_order_service",
     "get_combat_resolution_service",
     "get_combat_service",
+    "get_combat_special_attack_service",
     "get_exploration_action_service",
     "get_exploration_stage_service",
     "get_pending_action_service",
