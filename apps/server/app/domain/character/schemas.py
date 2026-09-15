@@ -21,6 +21,9 @@ LineageSize = Literal["small", "medium"]
 ArcaneArmorPart = Literal["armor", "boots", "helmet", "special_weapon"]
 FeatureGrantKind = Literal["choice", "optional_feature", "nested_choice", "retraining"]
 DerivedModifierTarget = Literal["max_hp", "passive_perception", "passive_investigation"]
+TemporaryModifierScope = Literal["ac", "speed", "attack", "save", "check", "damage"]
+TemporaryModifierMode = Literal["bonus", "advantage", "disadvantage"]
+PersistentEffectDuration = Literal["manual", "short_rest", "long_rest", "concentration"]
 
 
 def require_stable_key(value: str, *, kinds: set[str] | None = None) -> str:
@@ -69,8 +72,6 @@ class SpellAccessEntry(FrozenModel):
     casting_ability: str | None = Field(default=None, max_length=40)
     uses_per_rest: int | None = Field(default=None, ge=1)
     recharge_types: tuple[RestType, ...] = ()
-    # Compatibility field for pre-M01-L persisted Builds. New writers use only
-    # recharge_types; legacy singleton rest_type is normalized on read.
     rest_type: RestType | None = None
 
     @model_validator(mode="before")
@@ -108,9 +109,7 @@ class SpellAccessEntry(FrozenModel):
     @model_validator(mode="after")
     def usage_metadata_is_consistent(self) -> "SpellAccessEntry":
         if (self.uses_per_rest is None) != (len(self.recharge_types) == 0):
-            raise ValueError(
-                "spell access uses_per_rest and recharge_types must be declared together"
-            )
+            raise ValueError("spell access uses_per_rest and recharge_types must be declared together")
         if self.rest_type is not None and self.rest_type not in self.recharge_types:
             raise ValueError("legacy spell access rest_type must be included in recharge_types")
         return self
@@ -355,8 +354,6 @@ class SpellcastingFocusFact(FrozenModel):
         return require_stable_key(value)
 
 
-# Typed static facts feats contribute to the Build. Each kind is a closed shape the
-# Rules Layer can read without a combat engine; presentation may lag behind.
 FeatStaticFact = Annotated[
     WeaponProficiencyCategoryFact | TelepathyFact | SpellcastingFocusFact,
     Field(discriminator="kind"),
@@ -518,18 +515,12 @@ class CharacterBuild(FrozenModel):
         elif self.ancestral_legacy is None or self.size is None:
             raise ValueError("lineage_ref requires ancestral_legacy and size")
 
-        variant_group_ids = [
-            (selection.race_variant_ref, selection.replacement_group_id)
-            for selection in self.race_variant_group_selections
-        ]
+        variant_group_ids = [(selection.race_variant_ref, selection.replacement_group_id) for selection in self.race_variant_group_selections]
         if len(variant_group_ids) != len(set(variant_group_ids)):
             raise ValueError("race variant replacement groups must be unique")
         if self.race_variant_ref is None and self.race_variant_group_selections:
             raise ValueError("race variant group selections require race_variant_ref")
-        if any(
-            selection.race_variant_ref != self.race_variant_ref
-            for selection in self.race_variant_group_selections
-        ):
+        if any(selection.race_variant_ref != self.race_variant_ref for selection in self.race_variant_group_selections):
             raise ValueError("race variant group selections must match race_variant_ref")
 
         progression_classes = set(self.class_progression)
@@ -635,6 +626,67 @@ class SpellStoringItemState(FrozenModel):
         return require_stable_key(value, kinds={"spell"})
 
 
+class CharacterDeathSaveState(FrozenModel):
+    successes: int = Field(default=0, ge=0, le=2)
+    failures: int = Field(default=0, ge=0, le=2)
+    stable: bool = False
+    dead: bool = False
+
+    @model_validator(mode="after")
+    def terminal_state_is_consistent(self) -> "CharacterDeathSaveState":
+        if self.stable and self.dead:
+            raise ValueError("death save state cannot be both stable and dead")
+        return self
+
+
+class CharacterConcentrationState(FrozenModel):
+    source_ref: StableKey
+    effect_ids: tuple[str, ...] = ()
+
+    @field_validator("source_ref")
+    @classmethod
+    def source_ref_is_stable(cls, value: str) -> str:
+        return require_stable_key(value)
+
+    @field_validator("effect_ids")
+    @classmethod
+    def effect_ids_are_unique(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if len(value) != len(set(value)):
+            raise ValueError("concentration effect_ids must be unique")
+        if any(not effect_id.strip() for effect_id in value):
+            raise ValueError("concentration effect_ids cannot be blank")
+        return value
+
+
+class TemporaryEffectModifier(FrozenModel):
+    scope: TemporaryModifierScope
+    mode: TemporaryModifierMode
+    value: int = 0
+    target: str | None = Field(default=None, max_length=120)
+
+    @model_validator(mode="after")
+    def modifier_shape_is_valid(self) -> "TemporaryEffectModifier":
+        if self.mode != "bonus" and self.value != 0:
+            raise ValueError("advantage/disadvantage temporary modifier cannot carry a numeric value")
+        if self.target is not None and not self.target.strip():
+            raise ValueError("temporary modifier target cannot be blank")
+        return self
+
+
+class PersistentTemporaryEffect(FrozenModel):
+    effect_id: str = Field(min_length=1, max_length=160)
+    source_ref: StableKey | None = None
+    tag: str = Field(min_length=1, max_length=160)
+    duration: PersistentEffectDuration = "manual"
+    modifiers: tuple[TemporaryEffectModifier, ...] = ()
+    note: str | None = None
+
+    @field_validator("source_ref")
+    @classmethod
+    def source_ref_is_stable(cls, value: str | None) -> str | None:
+        return None if value is None else require_stable_key(value)
+
+
 class CharacterState(MutableModel):
     current_hp: int = Field(ge=0)
     temporary_hp: int = Field(default=0, ge=0)
@@ -648,6 +700,10 @@ class CharacterState(MutableModel):
     active_infusions: list[ActiveInfusion] = Field(default_factory=list)
     feature_modes: dict[str, str] = Field(default_factory=dict)
     spell_storing_item: SpellStoringItemState | None = None
+    concentration: CharacterConcentrationState | None = None
+    exhaustion_level: int = Field(default=0, ge=0, le=6)
+    death_saves: CharacterDeathSaveState = Field(default_factory=CharacterDeathSaveState)
+    temporary_effects: list[PersistentTemporaryEffect] = Field(default_factory=list)
 
     @field_validator("prepared_spell_entry_ids")
     @classmethod
@@ -681,15 +737,17 @@ class CharacterState(MutableModel):
         infusion_targets = [entry.inventory_entry_id for entry in self.active_infusions]
         if len(infusion_targets) != len(set(infusion_targets)):
             raise ValueError("an inventory item can have at most one active infusion")
-        armor_parts = [
-            entry.arcane_armor_part
-            for entry in self.active_infusions
-            if entry.arcane_armor_part is not None
-        ]
+        armor_parts = [entry.arcane_armor_part for entry in self.active_infusions if entry.arcane_armor_part is not None]
         if len(armor_parts) != len(set(armor_parts)):
             raise ValueError("each arcane armor part can host at most one active infusion")
         if any(not key.strip() or not value.strip() for key, value in self.feature_modes.items()):
             raise ValueError("feature mode keys and values cannot be blank")
+        condition_refs = [entry.condition_ref for entry in self.conditions]
+        if len(condition_refs) != len(set(condition_refs)):
+            raise ValueError("condition refs must be unique in Current State")
+        effect_ids = [entry.effect_id for entry in self.temporary_effects]
+        if len(effect_ids) != len(set(effect_ids)):
+            raise ValueError("temporary effect ids must be unique")
         return self
 
 
