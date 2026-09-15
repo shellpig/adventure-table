@@ -44,6 +44,8 @@ class AttackRequestInput(StrictModel):
     target_entry_id: UUID
     source_ref: str = Field(min_length=1, max_length=320)
     modifier_mode: RollModifierMode = RollModifierMode.NORMAL
+    # Quick Combat does not own geometry. Only the current DM may authoritatively
+    # set True here; Player/AI Player input remains a durable adjudication request.
     range_confirmed: bool | None = None
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
 
@@ -237,7 +239,10 @@ class CombatAttackService:
         try:
             attack = self.definition_resolver.resolve(attacker, request.source_ref)
             target_ac = self.definition_resolver.armor_class_for(target)
-            if request.range_confirmed is None:
+            # Geometry is authoritative only when supplied by the current DM.
+            # Player/AI Player assertions never skip the pending adjudication.
+            range_is_authoritative = actor.is_current_dm and request.range_confirmed is True
+            if not range_is_authoritative:
                 stored_adjudication, _event = self.adjudication_repository.request_attack_adjudication(
                     binding=actor_binding(actor),
                     combat_id=attacker.combat_id,
@@ -278,7 +283,9 @@ class CombatAttackService:
     ) -> AttackRequestView | AttackAdjudicationView:
         self.table_event_service.require_actor_current(actor)
         if not actor.is_current_dm:
-            raise TableEventActorUnauthorizedError("Only the current Session DM can adjudicate Quick Combat geometry")
+            raise TableEventActorUnauthorizedError(
+                "Only the current Session DM can adjudicate Quick Combat geometry"
+            )
         try:
             stored, _event = self.adjudication_repository.adjudicate_attack_range(
                 binding=actor_binding(actor),
@@ -316,14 +323,20 @@ class CombatAttackService:
         subject_seat_id, execution_mode = self.combat_service._authorize_entry(actor, attacker)
         if stored_request.subject_seat_id != subject_seat_id and not actor.is_current_dm:
             raise CombatStateConflictError("Attack RollRequest is no longer controlled by this actor")
-        acting_seat_id = subject_seat_id if execution_mode == "self" and subject_seat_id is not None else actor.seat_id
+        acting_seat_id = (
+            subject_seat_id
+            if execution_mode == "self" and subject_seat_id is not None
+            else actor.seat_id
+        )
 
         def roll_factory() -> AttackRollComputation:
             audit = self.roll_service.engine.d20(
                 mode=RollModifierMode(stored_request.modifier_mode.value),
                 base_modifier=0,
                 flat_adjustment=stored_request.attack_bonus,
-                physical_raw_dice=request.raw_dice if request.source is FormalRollSource.PHYSICAL else None,
+                physical_raw_dice=(
+                    request.raw_dice if request.source is FormalRollSource.PHYSICAL else None
+                ),
             )
             return AttackRollComputation(
                 source=request.source.value,
