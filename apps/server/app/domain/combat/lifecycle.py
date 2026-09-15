@@ -191,13 +191,11 @@ class CombatService:
     def _view(self, combat: StoredCombat) -> CombatView:
         stored_entries = self.repository.list_entries(combat.id)
         warnings: tuple[str, ...] = ()
-        if combat.status in {"initiative_pending", "running"} and not any(
-            entry.status == "active" and entry.subject_kind == "monster"
-            for entry in stored_entries
+        if (
+            combat.status in {"initiative_pending", "running"}
+            and not self.repository.has_active_hostile(combat.id)
         ):
-            # P4-B has no faction/allegiance model. Monster entries are the
-            # hostile candidates for this lifecycle warning only; the warning
-            # never ends Combat automatically.
+            # Warning only: P4-B never auto-ends a Combat when hostiles disappear.
             warnings = ("no_hostile_combatants",)
         return CombatView(
             id=combat.id, campaign_id=combat.campaign_id, mode=combat.mode, status=combat.status,
