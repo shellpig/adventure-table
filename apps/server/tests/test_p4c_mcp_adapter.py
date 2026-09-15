@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from app.domain.combat.ai_tools import CombatAIToolApplicationService, CombatRollToolInput
 from app.domain.combat.attacks import AttackRequestInput
@@ -178,7 +178,7 @@ def test_mcp_facade_uses_server_formal_roll_and_shared_attack_service() -> None:
     assert spy.input is not None
     assert spy.input.roll_request_id == request_id
     assert spy.input.source is FormalRollSource.SERVER
-    assert spy.input.raw_dice == ()
+    assert spy.input.raw_dice is None
     assert spy.input.idempotency_key == "mcp-roll"
 
 
