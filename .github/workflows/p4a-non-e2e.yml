@@ -61,7 +61,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install backend
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[web,dev]"
       - name: Run P4-A and legacy PostgreSQL migration regression
         run: >-
           pytest
