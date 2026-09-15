@@ -56,6 +56,7 @@ def upgrade() -> None:
         sa.Column("monster_instance_id", sa.Uuid(), sa.ForeignKey("monster_instances.id", ondelete="RESTRICT"), nullable=True),
         sa.Column("display_name", sa.String(length=160), nullable=False),
         sa.Column("status", sa.String(length=16), nullable=False, server_default="active"),
+        sa.Column("is_hostile", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("initiative_group_key", sa.String(length=120), nullable=True),
         sa.Column("initiative_roll_request_id", sa.Uuid(), nullable=True),
         sa.Column("initiative_roll_result_id", sa.Uuid(), nullable=True),
