@@ -23,6 +23,9 @@ class TargetKind(StrEnum):
 
 
 class DamageType(StrEnum):
+    """2014 damage types plus an application-only semantic manual-damage sentinel."""
+
+    UNTYPED = "untyped"
     ACID = "acid"
     BLUDGEONING = "bludgeoning"
     COLD = "cold"
@@ -304,9 +307,9 @@ def adjust_damage_by_affinity(
     immunities: Iterable[DamageType] = (),
     vulnerabilities: Iterable[DamageType] = (),
 ) -> dict[str, int]:
-    resistant = {item.value for item in resistances}
-    immune = {item.value for item in immunities}
-    vulnerable = {item.value for item in vulnerabilities}
+    resistant = {item.value for item in resistances if item is not DamageType.UNTYPED}
+    immune = {item.value for item in immunities if item is not DamageType.UNTYPED}
+    vulnerable = {item.value for item in vulnerabilities if item is not DamageType.UNTYPED}
     adjusted: dict[str, int] = {}
     for damage_type, amount in raw.items():
         value = max(0, int(amount))
@@ -371,7 +374,9 @@ def apply_damage(
     monster_outcome_required = False
 
     if target_kind is TargetKind.CHARACTER and hp_after == 0:
-        if instant_death:
+        if death_saves is not None and death_saves.dead:
+            next_death_saves = death_saves
+        elif instant_death:
             next_death_saves = DeathSaveState(dead=True)
         else:
             apply_unconscious = True
@@ -418,6 +423,8 @@ def apply_healing(
 ) -> HealingOutcome:
     if amount < 0:
         raise ValueError("healing amount cannot be negative")
+    if target_kind is TargetKind.CHARACTER and death_saves is not None and death_saves.dead:
+        raise ValueError("ordinary healing cannot restore a dead character")
     restored = min(amount, state.max_hp - state.current_hp)
     hp_after = state.current_hp + restored
     recovered_from_zero = state.current_hp == 0 and hp_after > 0
