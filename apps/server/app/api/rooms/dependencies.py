@@ -7,6 +7,8 @@ from fastapi import Request
 from app.api.dependencies import get_content_registry, get_database_engine
 from app.api.errors import APIError
 from app.api.rooms.table_event_wait import ProcessLocalTableEventNotifier
+from app.domain.combat.attack_definitions import AttackDefinitionResolver
+from app.domain.combat.attacks import CombatAttackService
 from app.domain.combat.initiative import CombatInitiativeService
 from app.domain.combat.lifecycle import CombatService
 from app.domain.combat.order import CombatOrderService
@@ -23,6 +25,7 @@ from app.domain.rooms.sessions import SessionService
 from app.domain.rooms.table_character_state import TableCharacterStateService
 from app.domain.rooms.table_events import TableEventService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
+from app.persistence.combat.attacks import CombatAttackRepository
 from app.persistence.combat.initiative import CombatInitiativeRepository
 from app.persistence.combat.lifecycle import CombatRepository
 from app.persistence.combat.order import CombatOrderRepository
@@ -243,6 +246,29 @@ def get_combat_resolution_service(request: Request) -> CombatResolutionService:
     return service
 
 
+def get_combat_attack_service(request: Request) -> CombatAttackService:
+    service = getattr(request.app.state, "combat_attack_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        event_service = get_table_event_service(request)
+        combat_service = get_combat_service(request)
+        character_repository = get_room_workspace_service(request).character_repository
+        service = CombatAttackService(
+            CombatAttackRepository(engine, event_service.repository),
+            combat_service.repository,
+            combat_service,
+            AttackDefinitionResolver(
+                character_repository,
+                combat_service.monster_repository,
+                get_content_registry(request),
+            ),
+            get_roll_service(request),
+            event_service,
+        )
+        request.app.state.combat_attack_service = service
+    return service
+
+
 def get_combat_initiative_service(request: Request) -> CombatInitiativeService:
     service = getattr(request.app.state, "combat_initiative_service", None)
     if service is None:
@@ -298,6 +324,7 @@ def get_session_resume_service(request: Request) -> SessionResumeService:
 __all__ = [
     "_HistoryGuardedCharacterRepository",
     "get_campaign_service",
+    "get_combat_attack_service",
     "get_combat_initiative_service",
     "get_combat_order_service",
     "get_combat_resolution_service",
