@@ -193,15 +193,17 @@ def test_changed_party_and_abandoned_session_do_not_rebind_or_clear_combat() -> 
         _roll(table, player_b, request.id, 12, "new-entrant-roll")
 
         before_reorder = table.combat.get_active_combat(dm_b)
+        canonical_order = table.initiative.suggested_order(dm_b)
         reordered = table.order.reorder_running(
             dm_b,
             ReorderInitiativeInput(
-                ordered_entry_ids=tuple(entry.id for entry in before_reorder.entries),
+                ordered_entry_ids=canonical_order,
                 idempotency_key="new-entrant-order",
             ),
         )
         assert reordered.round_number == 3
         assert reordered.current_turn_entry_id == old_entry.id
+        assert tuple(entry.id for entry in reordered.entries) == canonical_order
 
         # Abandoning the Session also leaves Campaign Combat state intact.
         table.session_service.abandon_session(
