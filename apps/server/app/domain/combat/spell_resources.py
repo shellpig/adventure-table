@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+import re
 from typing import Any, Mapping
 
 from app.domain.character.schemas import (
@@ -225,6 +226,65 @@ class MonsterSpellSource:
     resource_key: str | None
 
 
+@dataclass(frozen=True)
+class MonsterSpellSpend:
+    source: MonsterSpellSource
+    resources: dict[str, int | ResourceCounter]
+    event: dict[str, object] | None
+
+
+def _slug(value: str) -> str:
+    value = value.strip().lower()
+    if "/" in value:
+        value = value.rstrip("/").rsplit("/", 1)[-1]
+    if ":" in value:
+        value = value.rsplit(":", 1)[-1]
+    value = re.sub(r"[^a-z0-9]+", "-", value).strip("-")
+    return value
+
+
+def _monster_casting_sources(rules_snapshot: Mapping[str, Any]) -> tuple[Mapping[str, Any], ...]:
+    """Return every spellcasting block accepted from P4-A snapshots.
+
+    P4-A stores SRD API trait payloads under ``traits[].spellcasting`` (or the
+    innate equivalent). The older top-level normalized form remains accepted
+    so persisted pre-P4-D fixtures continue to load.
+    """
+
+    found: list[Mapping[str, Any]] = []
+    for key in ("spellcasting", "innate_spellcasting"):
+        value = rules_snapshot.get(key)
+        if isinstance(value, Mapping):
+            found.append(value)
+
+    traits = rules_snapshot.get("traits")
+    if isinstance(traits, (list, tuple)):
+        for trait in traits:
+            if not isinstance(trait, Mapping):
+                continue
+            for key in ("spellcasting", "innate_spellcasting"):
+                value = trait.get(key)
+                if isinstance(value, Mapping):
+                    found.append(value)
+    return tuple(found)
+
+
+def _monster_spell_matches(candidate: object, spell_ref: str) -> Mapping[str, Any] | None:
+    requested_slug = _slug(spell_ref)
+    if isinstance(candidate, str):
+        return {"spell_ref": candidate} if _slug(candidate) == requested_slug else None
+    if not isinstance(candidate, Mapping):
+        return None
+    values = (
+        candidate.get("spell_ref"),
+        candidate.get("url"),
+        candidate.get("name"),
+    )
+    if any(isinstance(value, str) and _slug(value) == requested_slug for value in values):
+        return candidate
+    return None
+
+
 def resolve_monster_spell_source(
     *,
     rules_snapshot: Mapping[str, Any],
@@ -233,55 +293,112 @@ def resolve_monster_spell_source(
     spell_level: int,
     slot_level: int | None = None,
 ) -> MonsterSpellSource:
-    """Resolve normalized Monster stat-block casting without inventing a class.
+    """Resolve a spell against the real P4-A Monster rules snapshot.
 
-    P4-A snapshots may contain either a ``spellcasting`` mapping or an
-    ``innate_spellcasting`` mapping. Both are normalized here to the same
-    source contract. The caller remains responsible for atomically persisting
-    the returned resource spend with the combat resolution.
+    SRD monster snapshots preserve the upstream shape under
+    ``traits[].spellcasting``: spells use ``name``/``url`` while spellcasting
+    attack/DC values use ``modifier``/``dc``. Older normalized fields remain
+    readable for backward compatibility; they are not required for new data.
     """
 
-    casting = rules_snapshot.get("spellcasting")
-    if not isinstance(casting, Mapping):
-        casting = rules_snapshot.get("innate_spellcasting")
-    if not isinstance(casting, Mapping):
-        raise ValueError("monster stat block has no spellcasting source")
+    if spell_level < 0 or spell_level > 9:
+        raise ValueError("spell_level must be between 0 and 9")
 
-    spells = casting.get("spells")
-    if not isinstance(spells, (list, tuple)):
-        raise ValueError("monster spellcasting source has no normalized spells")
+    matched_casting: Mapping[str, Any] | None = None
     row: Mapping[str, Any] | None = None
-    for candidate in spells:
-        if isinstance(candidate, str) and candidate == spell_ref:
-            row = {"spell_ref": candidate, "level": spell_level}
+    for casting in _monster_casting_sources(rules_snapshot):
+        spells = casting.get("spells")
+        if not isinstance(spells, (list, tuple)):
+            continue
+        for candidate in spells:
+            matched = _monster_spell_matches(candidate, spell_ref)
+            if matched is not None:
+                matched_casting = casting
+                row = matched
+                break
+        if row is not None:
             break
-        if isinstance(candidate, Mapping) and candidate.get("spell_ref") == spell_ref:
-            row = candidate
-            break
-    if row is None:
+
+    if not _monster_casting_sources(rules_snapshot):
+        raise ValueError("monster stat block has no spellcasting source")
+    if row is None or matched_casting is None:
         raise ValueError("monster does not have requested spell")
-    declared_level = row.get("level", spell_level)
-    if not isinstance(declared_level, int) or declared_level != spell_level:
-        raise ValueError("monster spell level does not match stat block")
+
+    declared_level = row.get("level")
+    if declared_level is not None:
+        try:
+            normalized_level = int(declared_level)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("monster spell level is invalid") from exc
+        if normalized_level != spell_level:
+            raise ValueError("monster spell level does not match stat block")
 
     resource_key: str | None = None
     if spell_level > 0:
         effective_slot = slot_level if slot_level is not None else spell_level
         if effective_slot < spell_level:
             raise ValueError("monster slot level cannot be below spell level")
+
+        declared_slots = matched_casting.get("slots")
+        if isinstance(declared_slots, Mapping):
+            declared_capacity = declared_slots.get(str(effective_slot), declared_slots.get(effective_slot))
+            if declared_capacity is None:
+                raise ValueError(f"monster stat block has no level {effective_slot} spell slots")
+
         explicit = row.get("resource_key")
-        resource_key = str(explicit) if isinstance(explicit, str) and explicit else f"spell_slot:{effective_slot}"
+        resource_key = (
+            str(explicit)
+            if isinstance(explicit, str) and explicit
+            else f"spell_slot:{effective_slot}"
+        )
         counter = resources.get(resource_key)
         remaining = counter.remaining if isinstance(counter, ResourceCounter) else counter
         if not isinstance(remaining, int) or remaining <= 0:
             raise ValueError(f"monster spell resource is unavailable: {resource_key}")
 
-    attack_bonus = casting.get("attack_bonus")
-    save_dc = casting.get("save_dc")
+    attack_bonus = matched_casting.get("attack_bonus", matched_casting.get("modifier"))
+    save_dc = matched_casting.get("save_dc", matched_casting.get("dc"))
     return MonsterSpellSource(
         spell_ref=spell_ref,
         spell_level=spell_level,
         attack_bonus=int(attack_bonus) if isinstance(attack_bonus, int) else None,
         save_dc=int(save_dc) if isinstance(save_dc, int) else None,
         resource_key=resource_key,
+    )
+
+
+def spend_monster_spell(
+    *,
+    resources: Mapping[str, int | ResourceCounter],
+    source: MonsterSpellSource,
+) -> MonsterSpellSpend:
+    """Spend a previously authorized monster spell resource without mutating input."""
+
+    next_resources: dict[str, int | ResourceCounter] = dict(resources)
+    if source.resource_key is None:
+        return MonsterSpellSpend(source=source, resources=next_resources, event=None)
+
+    current = resources.get(source.resource_key)
+    if isinstance(current, ResourceCounter):
+        if current.remaining <= 0:
+            raise ValueError(f"monster spell resource is unavailable: {source.resource_key}")
+        next_resources[source.resource_key] = ResourceCounter(
+            used=current.used + 1,
+            remaining=current.remaining - 1,
+        )
+    elif isinstance(current, int):
+        if current <= 0:
+            raise ValueError(f"monster spell resource is unavailable: {source.resource_key}")
+        next_resources[source.resource_key] = current - 1
+    else:
+        raise ValueError(f"monster spell resource is unavailable: {source.resource_key}")
+
+    return MonsterSpellSpend(
+        source=source,
+        resources=next_resources,
+        event={
+            "type": "monster_spell_resource_spent",
+            "spell_ref": source.spell_ref,
+            "resource_key": source.resource_key,
+        },
     )
