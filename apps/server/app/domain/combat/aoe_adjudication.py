@@ -3,8 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Literal, Mapping
 
+from app.domain.character.schemas import CharacterState, ResourceCounter
 from app.domain.combat.resolution import DamageRollPart, HitPointState, TargetKind, apply_damage
 from app.domain.combat.spell_resolver import SaveDamageMode, SpellCastMode, SpellResolutionSpec, half_damage_parts
+from app.domain.combat.spell_resources import (
+    CharacterSpellAuthorization,
+    MonsterSpellSource,
+    spend_character_spell,
+    spend_monster_spell,
+)
 
 
 AoeStatus = Literal["proposed", "confirmed", "resolved", "cancelled"]
@@ -38,6 +45,16 @@ class AoeAdjudication:
             "status": self.status,
         }
 
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, object]) -> "AoeAdjudication":
+        return cls(
+            command_id=str(payload["command_id"]),
+            acting_entry_id=str(payload["acting_entry_id"]),
+            proposed_target_ids=tuple(str(value) for value in payload.get("proposed_target_ids", ())),
+            confirmed_target_ids=tuple(str(value) for value in payload.get("confirmed_target_ids", ())),
+            status=str(payload.get("status", "proposed")),  # type: ignore[arg-type]
+        )
+
 
 @dataclass(frozen=True)
 class AoeTargetState:
@@ -59,9 +76,10 @@ class AoeTargetOutcome:
 @dataclass(frozen=True)
 class AoeResolution:
     adjudication: AoeAdjudication
-    remaining_slots: dict[int, int]
     outcomes: tuple[AoeTargetOutcome, ...]
     events: tuple[dict[str, object], ...]
+    character_state: CharacterState | None = None
+    monster_resources: dict[str, int | ResourceCounter] | None = None
 
 
 def propose_aoe(*, command_id: str, acting_entry_id: str, target_ids: tuple[str, ...]) -> AoeAdjudication:
@@ -88,26 +106,19 @@ def cancel_aoe(adjudication: AoeAdjudication) -> AoeAdjudication:
     return replace(adjudication, status="cancelled")
 
 
-def resolve_aoe_save_spell(
+def _resolve_confirmed_targets(
     *,
     adjudication: AoeAdjudication,
     spec: SpellResolutionSpec,
-    slot_level: int,
-    spell_slots: Mapping[int, int],
     targets: Mapping[str, AoeTargetState],
     save_d20s: Mapping[str, int],
     damage_parts: tuple[DamageRollPart, ...],
-) -> AoeResolution:
-    """Resolve one confirmed save-based AoE with exactly one spell-slot spend."""
-
+    resource_event: dict[str, object] | None,
+) -> tuple[tuple[AoeTargetOutcome, ...], tuple[dict[str, object], ...]]:
     if adjudication.status != "confirmed":
         raise ValueError("AoE must be DM-confirmed before resolution")
     if spec.cast_mode is not SpellCastMode.SAVE or spec.save_dc is None:
         raise ValueError("AoE group resolver requires a save-based spell")
-    if slot_level < spec.minimum_slot_level or slot_level > 9:
-        raise ValueError("invalid AoE spell slot level")
-    if slot_level > 0 and int(spell_slots.get(slot_level, 0)) <= 0:
-        raise ValueError(f"no level {slot_level} spell slot remains")
 
     confirmed = adjudication.confirmed_target_ids
     if set(targets) != set(confirmed) or set(save_d20s) != set(confirmed):
@@ -115,7 +126,6 @@ def resolve_aoe_save_spell(
     if any(value < 1 or value > 20 for value in save_d20s.values()):
         raise ValueError("AoE saving throw d20 must be between 1 and 20")
 
-    remaining = dict(spell_slots)
     events: list[dict[str, object]] = [
         {
             "type": "aoe_targets_confirmed",
@@ -123,9 +133,8 @@ def resolve_aoe_save_spell(
             "target_entry_ids": list(confirmed),
         }
     ]
-    if slot_level > 0:
-        remaining[slot_level] -= 1
-        events.append({"type": "resource_spent", "resource": "spell_slot", "level": slot_level, "amount": 1})
+    if resource_event is not None:
+        events.append(resource_event)
 
     outcomes: list[AoeTargetOutcome] = []
     for entry_id in confirmed:
@@ -156,10 +165,68 @@ def resolve_aoe_save_spell(
                 "damage": amount,
             }
         )
+    return tuple(outcomes), tuple(events)
 
+
+def resolve_aoe_save_spell(
+    *,
+    adjudication: AoeAdjudication,
+    spec: SpellResolutionSpec,
+    state: CharacterState,
+    authorization: CharacterSpellAuthorization,
+    targets: Mapping[str, AoeTargetState],
+    save_d20s: Mapping[str, int],
+    damage_parts: tuple[DamageRollPart, ...],
+) -> AoeResolution:
+    """Resolve a character AoE and spend through the canonical spell resource layer."""
+
+    if authorization.spell_ref != spec.spell_ref:
+        raise ValueError("AoE spell authorization does not match resolution spec")
+    if authorization.slot_level < spec.minimum_slot_level:
+        raise ValueError("AoE spell authorization is below the spell minimum")
+    spend = spend_character_spell(state=state, authorization=authorization)
+    outcomes, events = _resolve_confirmed_targets(
+        adjudication=adjudication,
+        spec=spec,
+        targets=targets,
+        save_d20s=save_d20s,
+        damage_parts=damage_parts,
+        resource_event=spend.event,
+    )
     return AoeResolution(
         adjudication=replace(adjudication, status="resolved"),
-        remaining_slots=remaining,
-        outcomes=tuple(outcomes),
-        events=tuple(events),
+        outcomes=outcomes,
+        events=events,
+        character_state=spend.state,
+    )
+
+
+def resolve_monster_aoe_save_spell(
+    *,
+    adjudication: AoeAdjudication,
+    spec: SpellResolutionSpec,
+    resources: Mapping[str, int | ResourceCounter],
+    source: MonsterSpellSource,
+    targets: Mapping[str, AoeTargetState],
+    save_d20s: Mapping[str, int],
+    damage_parts: tuple[DamageRollPart, ...],
+) -> AoeResolution:
+    """Resolve a monster AoE using the same authoritative monster resource spend."""
+
+    if source.spell_ref != spec.spell_ref:
+        raise ValueError("AoE monster spell source does not match resolution spec")
+    spend = spend_monster_spell(resources=resources, source=source)
+    outcomes, events = _resolve_confirmed_targets(
+        adjudication=adjudication,
+        spec=spec,
+        targets=targets,
+        save_d20s=save_d20s,
+        damage_parts=damage_parts,
+        resource_event=spend.event,
+    )
+    return AoeResolution(
+        adjudication=replace(adjudication, status="resolved"),
+        outcomes=outcomes,
+        events=events,
+        monster_resources=spend.resources,
     )
