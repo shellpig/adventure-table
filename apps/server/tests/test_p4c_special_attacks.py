@@ -5,7 +5,6 @@ from sqlalchemy import update
 
 from app.content import load_default_content_registry
 from app.domain.character.schemas import CharacterState
-from app.domain.combat.core_rolls import CombatCoreRollRepository
 from app.domain.combat.initiative import FinalizeInitiativeInput, RequestInitiativeInput
 from app.domain.combat.lifecycle import AddMonsterInput, CombatStateConflictError, StartCombatInput
 from app.domain.combat.resolution import SpecialAttackKind
@@ -16,6 +15,7 @@ from app.domain.combat.special_attacks import (
 )
 from app.domain.rooms.rolls import FormalRollInput, FormalRollSource
 from app.persistence.characters import CharacterRepository, character_states
+from app.persistence.combat.core_rolls import CombatCoreRollRepository
 from app.persistence.combat.special_attacks import GRAPPLED_REF, SpecialAttackRepository
 import tests.test_p4b_combat_lifecycle as support
 
@@ -279,10 +279,7 @@ def test_shove_prone_uses_same_formal_flow_and_applies_prone() -> None:
 
 
 def test_too_large_target_is_invalid_before_geometry_and_spends_nothing() -> None:
-    table, service, attacker_id, target_id, _monster_id = _running_table(
-        target_size="Huge",
-        free_hand=True,
-    )
+    table, service, attacker_id, target_id, _monster_id = _running_table(target_size="Huge", free_hand=True)
     try:
         with pytest.raises(CombatStateConflictError, match="target_too_large"):
             service.request_special_attack(
