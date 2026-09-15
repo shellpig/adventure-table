@@ -33,7 +33,7 @@ P4-A — Monster & Combatant Foundation closeout scope。編號對應 [實作規
 
 ## Verification evidence
 
-分支 `p4-a-monster-combatant-foundation`，最終 code SHA `19c76b1e`。本 closeout 文件與 `PROJECT_BRIEF.md` 更新為其後的 docs-only commit，不動產品碼與測試。
+分支 `p4-a-monster-combatant-foundation`，最終 code SHA `19c76b1e`。本 closeout 文件、`PROJECT_BRIEF.md` 與 P4 三份文件的合併規則修正為其後的 docs-only commit，不動產品碼與測試。依使用者 2026-09-15 拍板，P4 每個 Subphase 關門後各自合併回 `main`（見 [實作規格](實作規格.md) 第 11 條），P4-A 於同日以 `--no-ff` 合併。
 
 ```text
 Alembic heads（apps/server: alembic heads）
@@ -81,9 +81,13 @@ Frontend unit / build
 docker compose config
   exit 0（本機）；GitHub compose-config job success
 
-E2E
-  依 AGENTS.md 工程實作守則 4：diff 未動 apps/web、DTO、machine code 或 locale 字串，
-  屬 backend-only Subphase，關門不跑 E2E。全套 E2E 留給 P4 Phase merge gate。
+E2E（Subphase 關門本身不需要：backend-only diff；以下為合併回 main 的 gate）
+  本機 npm run test:e2e:docker（ADVENTURE_TABLE_E2E_ALLOW_DESTRUCTIVE_RESET=1，
+  走 U01-A 的 adventure_table_e2e + server-e2e / web-e2e，rebuild server + web image）
+  執行於 19c76b1e 工作樹（僅多本 closeout 的 docs 變更）：
+    主套件 127 tests：123 passed / 4 skipped（9.9m）
+    disabled-pack 套件 7 tests：7 passed
+  exit 0
 
 GitHub Actions @ 19c76b1e
   P4-A Non-E2E Regression run 34919130863：backend / postgres-migrations / frontend / compose-config 全 success

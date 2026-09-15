@@ -25,7 +25,7 @@ Adventure Table 是朋友間私人使用的**輕量、桌上跑團優先 D&D 5e 
 
 ## 當前狀態與下一步
 
-**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-O 已逐項關門，M01 仍是長期保持 open 的 Character Content Expansion / Maintenance track；M04-A～M04-C 已於 2026-09-12 關門。P4 開工前置已於 2026-09-13 完成，`P4-A — Monster & Combatant Foundation` 於 2026-09-15 在 branch `p4-a-monster-combatant-foundation` 關門（[P4-A closeout](docs/P4/P4-A_CLOSEOUT.md)，code SHA `19c76b1e`），產品主線下一步是 P4-B — Combat Lifecycle, Initiative & Action Economy。工程優化軌 `U01` 已建立，`U01-A — E2E Database Isolation & Fast Test Foundation` 於 2026-09-14 在 branch `u01-a-e2e-isolation` 關門（`docs/U01/U01-A.md` §14）：E2E 改走獨立 `adventure_table_e2e` + `server-e2e` 8001 / `web-e2e` 5174，reset 有 `current_database()` hard guard，本機 `npm run test:e2e:docker` 不再碰 daily `adventure_table` 也不再重啟 daily `server` / `web`；同機 Playwright 主套件 10.1m → 10.1m 無倒退，wrapper 總 wall-clock 10.6 分成為後續 U01 加速 baseline。U01 整體維持 open，不改寫 P Roadmap，可與 P4 並行。M01 track 下一個未使用字母為 M01-P，尚無已拍板 scope。**
+**P0、P1、P2、P3、M02、M03 已完成並關門；M01-A～M01-O 已逐項關門，M01 仍是長期保持 open 的 Character Content Expansion / Maintenance track；M04-A～M04-C 已於 2026-09-12 關門。P4 開工前置已於 2026-09-13 完成，`P4-A — Monster & Combatant Foundation` 於 2026-09-15 在 branch `p4-a-monster-combatant-foundation` 關門並合併回 `main`（[P4-A closeout](docs/P4/P4-A_CLOSEOUT.md)，code SHA `19c76b1e`，merge-gate 本機全套 E2E 123 passed / 4 skipped）。P4 起每個 Subphase 關門後各自合併回 `main`。產品主線下一步是 P4-B — Combat Lifecycle, Initiative & Action Economy。工程優化軌 `U01` 已建立，`U01-A — E2E Database Isolation & Fast Test Foundation` 於 2026-09-14 在 branch `u01-a-e2e-isolation` 關門（`docs/U01/U01-A.md` §14）：E2E 改走獨立 `adventure_table_e2e` + `server-e2e` 8001 / `web-e2e` 5174，reset 有 `current_database()` hard guard，本機 `npm run test:e2e:docker` 不再碰 daily `adventure_table` 也不再重啟 daily `server` / `web`；同機 Playwright 主套件 10.1m → 10.1m 無倒退，wrapper 總 wall-clock 10.6 分成為後續 U01 加速 baseline。U01 整體維持 open，不改寫 P Roadmap，可與 P4 並行。M01 track 下一個未使用字母為 M01-P，尚無已拍板 scope。**
 
 P2 已交付並必須繼續維持的核心方向：
 
@@ -168,7 +168,7 @@ U01 的正式契約採單檔格式：
 | P3 | Exploration + Roll + AI | Exploration、Chat／Action／Check、正式骰子、PendingAction、Human／AI 共桌；**A～F 全數關門，Phase 已關門並合併回 `main`** |
 | M04 | Web Chat MCP Integration & AI Join Kit | P3 關門後、P4 前插入；網頁版 chat preflight（ChatGPT Plus → Claude chat 個人方案）→ OAuth integration → AI Join Kit 與 server-hosted 指引；**M04-A、M04-B、M04-C 皆已於 2026-09-12 關門，目標平台判定為 ChatGPT Web Plus；M04 Phase 同日以 `0465788` 合併回 `main`，merge-gate E2E run `34704122623` 全綠** |
 | U01 | Test / Development Efficiency Optimization | 長期測試／開發效率與可靠性優化軌；**U01-A 已於 2026-09-14 關門，整體保持 open，不阻塞 P4** |
-| P4 | Quick Combat | 第一個完整可玩的 Combat MVP；**A～F 已完成拆分與三份正式文件；P4-A 已於 2026-09-15 關門；下一步 P4-B** |
+| P4 | Quick Combat | 第一個完整可玩的 Combat MVP；**A～F 已完成拆分與三份正式文件；P4-A 已於 2026-09-15 關門並合併回 `main`，每個 Subphase 各自合併；下一步 P4-B** |
 | P5 | Tactical Combat | 同一 Combat Engine 上增加 Grid、Battle Map、Movement、Range、AoE 與空間系統 |
 | P6 | Adventure + AI DM Runtime | Adventure Definition／Importer、Campaign Runtime、世界資料、AI DM context／write-back |
 | P7 | Snapshot / Export | Timeline、Snapshot／Restore、broader Archive／Import／Export；角色 JSON exchange 已由 M03 先行，不做 Undo |
