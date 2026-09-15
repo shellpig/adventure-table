@@ -25,12 +25,20 @@ from app.domain.rooms.table_events import (
 from app.persistence.rooms.exploration_subjects import ExplorationSubjectRepository
 
 
+class TableCharacterStateCombatMutationError(RuntimeError):
+    """Raw HP patch tried to bypass P4-C semantic combat resolution."""
+
+
+class ActiveCombatLookup(Protocol):
+    def get_active(self, campaign_id: UUID): ...
+
+
 class TableCharacterStatePatch(StrictModel):
     """Canonical Current State fields available to in-table gameplay actions.
 
-    P3 intentionally omits the legacy prepared_spell_entry_ids compatibility
-    field. Table actions write the canonical prepared_spells representation and
-    the existing Character validation remains authoritative in persistence.
+    During an active Combat, current_hp/temporary_hp are correction-only fields:
+    normal gameplay must use the P4-C semantic damage/healing pipeline. The
+    current DM may still perform an audited correction with correction_reason.
     """
 
     expected_current_version_id: UUID | None = None
@@ -45,6 +53,7 @@ class TableCharacterStatePatch(StrictModel):
     active_infusions: list[ActiveInfusion] | None = None
     feature_modes: dict[str, str] | None = None
     spell_storing_item: SpellStoringItemState | None = None
+    correction_reason: str | None = Field(default=None, min_length=1, max_length=500)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
 
     @model_validator(mode="after")
@@ -60,6 +69,7 @@ class TableCharacterStatePatch(StrictModel):
     def state_changes(self) -> dict[str, object]:
         changes = self.model_dump(exclude_unset=True, mode="python")
         changes.pop("expected_current_version_id", None)
+        changes.pop("correction_reason", None)
         changes.pop("idempotency_key", None)
         return changes
 
@@ -85,10 +95,12 @@ class TableCharacterStateService:
         repository: TableCharacterStateRepository,
         subject_repository: ExplorationSubjectRepository,
         table_event_service: TableEventService,
+        active_combat_lookup: ActiveCombatLookup | None = None,
     ) -> None:
         self.repository = repository
         self.subject_repository = subject_repository
         self.table_event_service = table_event_service
+        self.active_combat_lookup = active_combat_lookup
 
     def apply_patch(
         self,
@@ -118,6 +130,23 @@ class TableCharacterStateService:
                 "Actor cannot mutate Current State for the selected Seat"
             )
 
+        changes = patch.state_changes()
+        hp_fields = {"current_hp", "temporary_hp"} & set(changes)
+        active_combat = (
+            self.active_combat_lookup.get_active(actor.campaign_id)
+            if self.active_combat_lookup is not None
+            else None
+        )
+        if hp_fields and active_combat is not None:
+            if not actor.is_current_dm:
+                raise TableCharacterStateCombatMutationError(
+                    "Active Combat HP changes must use semantic damage/healing resolution"
+                )
+            if not patch.correction_reason:
+                raise TableCharacterStateCombatMutationError(
+                    "Active Combat raw HP correction requires correction_reason"
+                )
+
         updated = self.repository.apply_patch(
             actor=actor,
             acting_seat_id=acting_seat_id,
@@ -132,6 +161,8 @@ class TableCharacterStateService:
 
 
 __all__ = [
+    "ActiveCombatLookup",
+    "TableCharacterStateCombatMutationError",
     "TableCharacterStatePatch",
     "TableCharacterStateRepository",
     "TableCharacterStateService",
