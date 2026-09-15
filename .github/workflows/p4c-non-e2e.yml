@@ -62,8 +62,8 @@ jobs:
           python-version: "3.13"
       - name: Install backend
         run: pip install -e ".[web,dev]"
-      - name: Alembic upgrade head
-        run: alembic upgrade head
+      - name: Alembic upgrade heads
+        run: alembic upgrade heads
       - name: P4-C and legacy PostgreSQL regression
         run: >-
           pytest
