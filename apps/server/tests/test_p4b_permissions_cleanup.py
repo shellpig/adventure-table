@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 from pydantic import ValidationError
 
@@ -36,6 +38,35 @@ def test_only_current_dm_controls_combat_lifecycle_and_mode_is_fixed_quick() -> 
             table.combat.end_combat(table.player_actor, idempotency_key="player-end")
     finally:
         table.engine.dispose()
+
+
+def test_structured_actions_cannot_bypass_action_economy() -> None:
+    entry_id = uuid4()
+    with pytest.raises(ValidationError):
+        CombatActionInput(
+            entry_id=entry_id,
+            action_kind=CombatActionKind.ATTACK_BUDGET,
+            economy_cost=CombatEconomyCost.NONE,
+        )
+    with pytest.raises(ValidationError):
+        CombatActionInput(
+            entry_id=entry_id,
+            action_kind=CombatActionKind.DASH,
+            economy_cost=CombatEconomyCost.BONUS_ACTION,
+        )
+
+    # Freeform remains the explicit tabletop escape hatch for DM-adjudicated
+    # actions whose economy cost is not one of P4-B's structured base actions.
+    assert CombatActionInput(
+        entry_id=entry_id,
+        action_kind=CombatActionKind.FREEFORM,
+        economy_cost=CombatEconomyCost.NONE,
+    ).economy_cost is CombatEconomyCost.NONE
+    assert CombatActionInput(
+        entry_id=entry_id,
+        action_kind=CombatActionKind.FREEFORM,
+        economy_cost=CombatEconomyCost.REACTION,
+    ).economy_cost is CombatEconomyCost.REACTION
 
 
 def test_end_combat_clears_only_combat_bookkeeping() -> None:
