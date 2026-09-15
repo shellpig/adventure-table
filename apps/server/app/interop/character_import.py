@@ -598,7 +598,7 @@ class CharacterImportService:
                 connection.execute(
                     insert(character_states).values(
                         character_id=character_id,
-                        state_payload=prepared.state.model_dump(mode="json"),
+                        state_payload=dict(document.payload.current_state.state_payload),
                     )
                 )
                 connection.execute(
