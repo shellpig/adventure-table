@@ -72,6 +72,8 @@ class SpellAccessEntry(FrozenModel):
     casting_ability: str | None = Field(default=None, max_length=40)
     uses_per_rest: int | None = Field(default=None, ge=1)
     recharge_types: tuple[RestType, ...] = ()
+    # Compatibility field for pre-M01-L persisted Builds. New writers use only
+    # recharge_types; legacy singleton rest_type is normalized on read.
     rest_type: RestType | None = None
 
     @model_validator(mode="before")
@@ -109,7 +111,9 @@ class SpellAccessEntry(FrozenModel):
     @model_validator(mode="after")
     def usage_metadata_is_consistent(self) -> "SpellAccessEntry":
         if (self.uses_per_rest is None) != (len(self.recharge_types) == 0):
-            raise ValueError("spell access uses_per_rest and recharge_types must be declared together")
+            raise ValueError(
+                "spell access uses_per_rest and recharge_types must be declared together"
+            )
         if self.rest_type is not None and self.rest_type not in self.recharge_types:
             raise ValueError("legacy spell access rest_type must be included in recharge_types")
         return self
@@ -354,6 +358,8 @@ class SpellcastingFocusFact(FrozenModel):
         return require_stable_key(value)
 
 
+# Typed static facts feats contribute to the Build. Each kind is a closed shape the
+# Rules Layer can read without a combat engine; presentation may lag behind.
 FeatStaticFact = Annotated[
     WeaponProficiencyCategoryFact | TelepathyFact | SpellcastingFocusFact,
     Field(discriminator="kind"),
@@ -515,12 +521,18 @@ class CharacterBuild(FrozenModel):
         elif self.ancestral_legacy is None or self.size is None:
             raise ValueError("lineage_ref requires ancestral_legacy and size")
 
-        variant_group_ids = [(selection.race_variant_ref, selection.replacement_group_id) for selection in self.race_variant_group_selections]
+        variant_group_ids = [
+            (selection.race_variant_ref, selection.replacement_group_id)
+            for selection in self.race_variant_group_selections
+        ]
         if len(variant_group_ids) != len(set(variant_group_ids)):
             raise ValueError("race variant replacement groups must be unique")
         if self.race_variant_ref is None and self.race_variant_group_selections:
             raise ValueError("race variant group selections require race_variant_ref")
-        if any(selection.race_variant_ref != self.race_variant_ref for selection in self.race_variant_group_selections):
+        if any(
+            selection.race_variant_ref != self.race_variant_ref
+            for selection in self.race_variant_group_selections
+        ):
             raise ValueError("race variant group selections must match race_variant_ref")
 
         progression_classes = set(self.class_progression)
@@ -737,7 +749,11 @@ class CharacterState(MutableModel):
         infusion_targets = [entry.inventory_entry_id for entry in self.active_infusions]
         if len(infusion_targets) != len(set(infusion_targets)):
             raise ValueError("an inventory item can have at most one active infusion")
-        armor_parts = [entry.arcane_armor_part for entry in self.active_infusions if entry.arcane_armor_part is not None]
+        armor_parts = [
+            entry.arcane_armor_part
+            for entry in self.active_infusions
+            if entry.arcane_armor_part is not None
+        ]
         if len(armor_parts) != len(set(armor_parts)):
             raise ValueError("each arcane armor part can host at most one active infusion")
         if any(not key.strip() or not value.strip() for key, value in self.feature_modes.items()):
