@@ -49,8 +49,14 @@ roll_requests = Table(
     Column("id", Uuid(), primary_key=True),
     Column("session_id", Uuid(), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False),
     Column("roll_group_id", Uuid(), ForeignKey("roll_groups.id", ondelete="CASCADE"), nullable=True),
-    Column("target_seat_id", Uuid(), ForeignKey("campaign_seats.id", ondelete="RESTRICT"), nullable=False),
+    Column("target_seat_id", Uuid(), ForeignKey("campaign_seats.id", ondelete="RESTRICT"), nullable=True),
     Column("target_character_id", Uuid(), ForeignKey("characters.id", ondelete="RESTRICT"), nullable=True),
+    Column(
+        "target_combat_entry_id",
+        Uuid(),
+        ForeignKey("combat_entries.id", ondelete="CASCADE"),
+        nullable=True,
+    ),
     Column("request_type", String(32), nullable=False),
     Column("ability_ref", String(80), nullable=True),
     Column("skill_ref", String(120), nullable=True),
@@ -79,12 +85,17 @@ roll_requests = Table(
         "status IN ('pending', 'resolved', 'cancelled')",
         name="ck_roll_requests_status",
     ),
+    CheckConstraint(
+        "target_seat_id IS NOT NULL OR target_combat_entry_id IS NOT NULL",
+        name="ck_roll_requests_target_present",
+    ),
     CheckConstraint("dc IS NULL OR dc >= 0", name="ck_roll_requests_dc_nonnegative"),
     CheckConstraint("version > 0", name="ck_roll_requests_version_positive"),
 )
 Index("ix_roll_requests_session_status", roll_requests.c.session_id, roll_requests.c.status)
 Index("ix_roll_requests_group_id", roll_requests.c.roll_group_id)
 Index("ix_roll_requests_target_seat_id", roll_requests.c.target_seat_id)
+Index("ix_roll_requests_target_combat_entry_id", roll_requests.c.target_combat_entry_id)
 
 
 roll_results = Table(
@@ -94,8 +105,14 @@ roll_results = Table(
     Column("roll_request_id", Uuid(), ForeignKey("roll_requests.id", ondelete="CASCADE"), nullable=True),
     Column("session_id", Uuid(), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False),
     Column("acting_seat_id", Uuid(), ForeignKey("campaign_seats.id", ondelete="RESTRICT"), nullable=False),
-    Column("subject_seat_id", Uuid(), ForeignKey("campaign_seats.id", ondelete="RESTRICT"), nullable=False),
+    Column("subject_seat_id", Uuid(), ForeignKey("campaign_seats.id", ondelete="RESTRICT"), nullable=True),
     Column("subject_character_id", Uuid(), ForeignKey("characters.id", ondelete="RESTRICT"), nullable=True),
+    Column(
+        "subject_combat_entry_id",
+        Uuid(),
+        ForeignKey("combat_entries.id", ondelete="CASCADE"),
+        nullable=True,
+    ),
     Column("execution_mode", String(16), nullable=False),
     Column("source", String(16), nullable=False),
     Column("formula", String(120), nullable=False),
@@ -127,6 +144,7 @@ roll_results = Table(
 )
 Index("ix_roll_results_session_id", roll_results.c.session_id)
 Index("ix_roll_results_subject_seat_id", roll_results.c.subject_seat_id)
+Index("ix_roll_results_subject_combat_entry_id", roll_results.c.subject_combat_entry_id)
 
 
 pending_actions = Table(

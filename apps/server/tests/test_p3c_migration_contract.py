@@ -19,6 +19,8 @@ CHECK_COMMAND_REVISION = "0019_p3c_check_command"
 P3D_REVISION = "0020_p3d_ai_controller_grants"
 M04B_REVISION = "0021_m04b_ai_oauth"
 P4A_REVISION = "0022_p4a_monster_instances"
+P4B_LIFECYCLE_REVISION = "0023_p4b_combat_lifecycle"
+P4B_ROLL_TARGETS_REVISION = "0024_p4b_combat_roll_targets"
 
 
 def _migration_source() -> str:
@@ -36,6 +38,15 @@ def _check_command_migration_source() -> str:
         / "alembic"
         / "versions"
         / "0019_p3c_check_command.py"
+    ).read_text(encoding="utf-8")
+
+
+def _p4b_roll_target_migration_source() -> str:
+    return (
+        Path(__file__).resolve().parents[1]
+        / "alembic"
+        / "versions"
+        / "0024_p4b_combat_roll_targets.py"
     ).read_text(encoding="utf-8")
 
 
@@ -64,7 +75,15 @@ def test_p3c_web_migration_chain_links_check_command_into_current_head() -> None
     p4a_revision = scripts.get_revision(P4A_REVISION)
     assert p4a_revision is not None
     assert p4a_revision.down_revision == M04B_REVISION
-    assert P4A_REVISION in scripts.get_heads()
+
+    p4b_lifecycle = scripts.get_revision(P4B_LIFECYCLE_REVISION)
+    assert p4b_lifecycle is not None
+    assert p4b_lifecycle.down_revision == P4A_REVISION
+
+    p4b_roll_targets = scripts.get_revision(P4B_ROLL_TARGETS_REVISION)
+    assert p4b_roll_targets is not None
+    assert p4b_roll_targets.down_revision == P4B_LIFECYCLE_REVISION
+    assert P4B_ROLL_TARGETS_REVISION in scripts.get_heads()
 
 
 def test_p3c_check_command_constraint_matches_metadata_and_downgrades_safely() -> None:
@@ -108,10 +127,12 @@ def test_p3c_metadata_and_migration_indexes_match() -> None:
             "ix_roll_requests_session_status",
             "ix_roll_requests_group_id",
             "ix_roll_requests_target_seat_id",
+            "ix_roll_requests_target_combat_entry_id",
         },
         "roll_results": {
             "ix_roll_results_session_id",
             "ix_roll_results_subject_seat_id",
+            "ix_roll_results_subject_combat_entry_id",
         },
         "pending_actions": {
             "ix_pending_actions_session_status",
@@ -124,12 +145,13 @@ def test_p3c_metadata_and_migration_indexes_match() -> None:
         "roll_results": roll_results,
         "pending_actions": pending_actions,
     }
-    source = _migration_source()
+    p3c_source = _migration_source()
+    p4b_source = _p4b_roll_target_migration_source()
 
     for name, table in tables.items():
         assert {index.name for index in table.indexes} == expected[name]
         for index_name in expected[name]:
-            assert f'"{index_name}"' in source
+            assert f'"{index_name}"' in p3c_source or f'"{index_name}"' in p4b_source
 
 
 def test_formal_result_is_unique_per_request_and_quick_roll_is_unbound() -> None:

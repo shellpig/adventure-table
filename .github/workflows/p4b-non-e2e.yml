@@ -1,0 +1,142 @@
+name: P4-B Non-E2E Regression
+
+on:
+  push:
+    branches:
+      - p4-b-combat-lifecycle-initiative-action-economy
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install backend
+        run: pip install -e ".[dev]"
+      - name: P4-B focused pytest
+        run: pytest tests/test_p4b_*.py -q
+      - name: Full backend pytest
+        run: pytest
+
+  postgres-migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: adventure_table_p4
+          POSTGRES_USER: adventure
+          POSTGRES_PASSWORD: adventure
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U adventure -d adventure_table_p4"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql+psycopg://adventure:adventure@127.0.0.1:5432/adventure_table_p4
+      P4_POSTGRES_URL: postgresql+psycopg://adventure:adventure@127.0.0.1:5432/adventure_table_p4
+      P3_POSTGRES_URL: postgresql+psycopg://adventure:adventure@127.0.0.1:5432/adventure_table_p4
+      P2_POSTGRES_URL: postgresql+psycopg://adventure:adventure@127.0.0.1:5432/adventure_table_p4
+      M03C_POSTGRES_URL: postgresql+psycopg://adventure:adventure@127.0.0.1:5432/adventure_table_p4
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install backend
+        run: pip install -e ".[web,dev]"
+      - name: P4-B and legacy PostgreSQL regression
+        run: >-
+          pytest
+          tests/test_p4b_postgres_migration.py
+          tests/test_p4b_postgres_concurrency.py
+          tests/test_p4a_postgres_migration.py
+          tests/test_p3a_postgres_events.py
+          tests/test_p3b_postgres_stage.py
+          tests/test_p3c_postgres_rolls.py
+          tests/test_p3f_waiter_resource_safety.py
+          tests/test_p3f_postgres_restart_recovery.py
+          tests/test_p2a_postgres_migration.py
+          tests/test_p2b_postgres_workspace.py
+          tests/test_p2e_postgres_sessions.py
+          tests/test_p2f_postgres_seat_selection.py
+          tests/test_postgres_roster_lock_order.py
+          tests/test_m03c_migration.py
+          --junitxml=p4b-postgres-results.xml
+      - name: Assert PostgreSQL gate has zero skips
+        if: always()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree as ET
+
+          path = Path("p4b-postgres-results.xml")
+          if not path.exists():
+              raise SystemExit("P4-B PostgreSQL JUnit evidence is missing")
+          root = ET.parse(path).getroot()
+          suites = [root] if root.tag == "testsuite" else list(root.findall("testsuite"))
+          totals = {
+              key: sum(int(suite.attrib.get(key, "0")) for suite in suites)
+              for key in ("tests", "skipped", "failures", "errors")
+          }
+          passed = totals["tests"] - totals["skipped"] - totals["failures"] - totals["errors"]
+          print(
+              "P4-B PostgreSQL gate: "
+              f"tests={totals['tests']} passed={passed} skipped={totals['skipped']} "
+              f"failures={totals['failures']} errors={totals['errors']}"
+          )
+          if totals["skipped"] or totals["failures"] or totals["errors"]:
+              raise SystemExit("P4-B PostgreSQL gate requires 0 skips / 0 failures / 0 errors")
+          PY
+      - name: Upload PostgreSQL evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p4b-postgres-results
+          path: apps/server/p4b-postgres-results.xml
+          if-no-files-found: error
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Pin npm
+        run: npm install --global npm@11.6.0
+      - name: Install frontend
+        run: npm ci
+      - name: Frontend unit tests
+        run: npm test -- --run
+      - name: TypeScript and Vite build
+        run: npm run build
+
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose config
+        run: docker compose config
