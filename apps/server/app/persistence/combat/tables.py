@@ -146,6 +146,10 @@ combat_entries = Table(
     Column("reaction_available", Boolean(), nullable=False, server_default=true()),
     Column("attacks_allowed", Integer(), nullable=False, server_default="1"),
     Column("attacks_used", Integer(), nullable=False, server_default="0"),
+    Column("death_save_successes", Integer(), nullable=False, server_default="0"),
+    Column("death_save_failures", Integer(), nullable=False, server_default="0"),
+    Column("death_save_stable", Boolean(), nullable=False, server_default="0"),
+    Column("death_save_dead", Boolean(), nullable=False, server_default="0"),
     Column("ready_state", JSON(), nullable=False),
     Column("pending_reaction_state", JSON(), nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
@@ -165,6 +169,18 @@ combat_entries = Table(
         "attacks_used >= 0 AND attacks_used <= attacks_allowed",
         name="ck_combat_entries_attacks_used",
     ),
+    CheckConstraint(
+        "death_save_successes >= 0 AND death_save_successes <= 2",
+        name="ck_combat_entries_death_save_successes",
+    ),
+    CheckConstraint(
+        "death_save_failures >= 0 AND death_save_failures <= 2",
+        name="ck_combat_entries_death_save_failures",
+    ),
+    CheckConstraint(
+        "NOT (death_save_stable AND death_save_dead)",
+        name="ck_combat_entries_death_save_terminal",
+    ),
     UniqueConstraint("combat_id", "character_id", name="uq_combat_entries_character"),
     UniqueConstraint("combat_id", "monster_instance_id", name="uq_combat_entries_monster"),
 )
@@ -180,6 +196,7 @@ combat_actions = Table(
     Column("id", Uuid(), primary_key=True),
     Column("combat_id", Uuid(), ForeignKey("combats.id", ondelete="CASCADE"), nullable=False),
     Column("entry_id", Uuid(), ForeignKey("combat_entries.id", ondelete="CASCADE"), nullable=False),
+    Column("target_entry_id", Uuid(), ForeignKey("combat_entries.id", ondelete="CASCADE"), nullable=True),
     Column("session_id", Uuid(), ForeignKey("sessions.id", ondelete="RESTRICT"), nullable=False),
     Column("acting_seat_id", Uuid(), ForeignKey("campaign_seats.id", ondelete="RESTRICT"), nullable=False),
     Column("subject_seat_id", Uuid(), ForeignKey("campaign_seats.id", ondelete="RESTRICT"), nullable=True),
@@ -187,6 +204,10 @@ combat_actions = Table(
     Column("action_kind", String(32), nullable=False),
     Column("economy_cost", String(16), nullable=False),
     Column("payload", JSON(), nullable=False),
+    Column("resolution_status", String(32), nullable=False, server_default="resolved"),
+    Column("roll_request_id", Uuid(), nullable=True),
+    Column("roll_result_id", Uuid(), nullable=True),
+    Column("resolution_result", JSON(), nullable=True),
     Column("idempotency_key", String(160), nullable=True),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     CheckConstraint(
@@ -197,10 +218,16 @@ combat_actions = Table(
         "economy_cost IN ('action', 'bonus_action', 'reaction', 'none')",
         name="ck_combat_actions_economy_cost",
     ),
+    CheckConstraint(
+        "resolution_status IN ('waiting_for_roll', 'dm_adjudication_required', 'resolved', 'cancelled')",
+        name="ck_combat_actions_resolution_status",
+    ),
     UniqueConstraint("combat_id", "idempotency_key", name="uq_combat_actions_idempotency"),
 )
 Index("ix_combat_actions_combat_id", combat_actions.c.combat_id)
 Index("ix_combat_actions_entry_id", combat_actions.c.entry_id)
+Index("ix_combat_actions_target_entry_id", combat_actions.c.target_entry_id)
+Index("ix_combat_actions_roll_request_id", combat_actions.c.roll_request_id)
 
 
 __all__ = [
