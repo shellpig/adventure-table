@@ -486,7 +486,7 @@ class SpecialAttackRepository:
             if character_id is None:
                 raise SpecialAttackStateConflictError("Character target has no Character identity")
             row = connection.execute(
-                select(character_states.c.state_payload)
+                select(character_states.c.state_payload, character_states.c.state_revision)
                 .where(character_states.c.character_id == character_id)
                 .with_for_update()
             ).mappings().one_or_none()
@@ -498,15 +498,22 @@ class SpecialAttackRepository:
             _add_condition(conditions, condition_ref, note)
             payload["conditions"] = conditions
             CharacterState.model_validate(payload)
-            connection.execute(
+            state_update = connection.execute(
                 update(character_states)
-                .where(character_states.c.character_id == character_id)
+                .where(
+                    character_states.c.character_id == character_id,
+                    character_states.c.state_revision == int(row["state_revision"]),
+                )
                 .values(
                     state_payload=payload,
-                    state_revision=character_states.c.state_revision + 1,
+                    state_revision=int(row["state_revision"]) + 1,
                     updated_at=func.now(),
                 )
             )
+            if state_update.rowcount != 1:
+                raise SpecialAttackStateConflictError(
+                    "Character State changed while applying Special Attack condition"
+                )
             return
         if target["subject_kind"] == "monster":
             monster_id = target["monster_instance_id"]

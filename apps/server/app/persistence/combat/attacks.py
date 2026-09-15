@@ -514,7 +514,11 @@ class CombatAttackRepository:
                     if character_id is None:
                         raise AttackStateConflictPersistenceError("Character target has no Character identity")
                     state_row = connection.execute(
-                        select(character_states.c.state_payload, character_versions.c.build_payload)
+                        select(
+                            character_states.c.state_payload,
+                            character_states.c.state_revision,
+                            character_versions.c.build_payload,
+                        )
                         .select_from(
                             character_states.join(characters, characters.c.id == character_states.c.character_id).join(
                                 character_versions,
@@ -547,15 +551,22 @@ class CombatAttackRepository:
                         _add_condition(conditions, PRONE_REF, "P4-C: dropped to zero hit points")
                     state_payload["conditions"] = conditions
                     CharacterState.model_validate(state_payload)
-                    connection.execute(
+                    state_update = connection.execute(
                         update(character_states)
-                        .where(character_states.c.character_id == character_id)
+                        .where(
+                            character_states.c.character_id == character_id,
+                            character_states.c.state_revision == int(state_row["state_revision"]),
+                        )
                         .values(
                             state_payload=state_payload,
-                            state_revision=character_states.c.state_revision + 1,
+                            state_revision=int(state_row["state_revision"]) + 1,
                             updated_at=now,
                         )
                     )
+                    if state_update.rowcount != 1:
+                        raise AttackStateConflictPersistenceError(
+                            "Character State changed while resolving Attack damage"
+                        )
                     connection.execute(
                         update(combat_entries).where(combat_entries.c.id == target["id"]).values(
                             **_death_values(damage_outcome.death_saves),

@@ -178,10 +178,11 @@ class CombatResolutionRepository:
         return combat, target
 
     @staticmethod
-    def _character_state(connection, character_id: UUID) -> tuple[CharacterState, int]:
+    def _character_state(connection, character_id: UUID) -> tuple[CharacterState, int, int]:
         row = connection.execute(
             select(
                 character_states.c.state_payload,
+                character_states.c.state_revision,
                 character_versions.c.build_payload,
             )
             .select_from(
@@ -197,7 +198,7 @@ class CombatResolutionRepository:
             raise CombatResolutionTargetNotFoundError(str(character_id))
         state = CharacterState.model_validate(row["state_payload"])
         build = CharacterBuild.model_validate(row["build_payload"])
-        return state, calculate_max_hp(build)
+        return state, calculate_max_hp(build), int(row["state_revision"])
 
     @staticmethod
     def _monster_state(connection, monster_instance_id: UUID):
@@ -238,7 +239,7 @@ class CombatResolutionRepository:
             if target["subject_kind"] == "character":
                 if target["character_id"] is None:
                     raise CombatResolutionStateConflictError("Character target has no Character identity")
-                state, max_hp = self._character_state(connection, target["character_id"])
+                state, max_hp, state_revision = self._character_state(connection, target["character_id"])
                 before = HitPointState(
                     current_hp=state.current_hp,
                     max_hp=max_hp,
@@ -262,15 +263,22 @@ class CombatResolutionRepository:
                     _add_condition(conditions, PRONE_REF, "P4-C: dropped to zero hit points")
                 state_payload["conditions"] = conditions
                 CharacterState.model_validate(state_payload)
-                connection.execute(
+                state_update = connection.execute(
                     update(character_states)
-                    .where(character_states.c.character_id == target["character_id"])
+                    .where(
+                        character_states.c.character_id == target["character_id"],
+                        character_states.c.state_revision == state_revision,
+                    )
                     .values(
                         state_payload=state_payload,
-                        state_revision=character_states.c.state_revision + 1,
+                        state_revision=state_revision + 1,
                         updated_at=func.now(),
                     )
                 )
+                if state_update.rowcount != 1:
+                    raise CombatResolutionStateConflictError(
+                        "Character State changed during semantic HP resolution"
+                    )
                 connection.execute(
                     update(combat_entries)
                     .where(combat_entries.c.id == target_entry_id)
@@ -412,7 +420,7 @@ class CombatResolutionRepository:
             if target["subject_kind"] == "character":
                 if target["character_id"] is None:
                     raise CombatResolutionStateConflictError("Character target has no Character identity")
-                state, max_hp = self._character_state(connection, target["character_id"])
+                state, max_hp, state_revision = self._character_state(connection, target["character_id"])
                 before = HitPointState(state.current_hp, max_hp, state.temporary_hp)
                 outcome = apply_healing(
                     before,
@@ -428,15 +436,22 @@ class CombatResolutionRepository:
                         UNCONSCIOUS_REF,
                     )
                 CharacterState.model_validate(state_payload)
-                connection.execute(
+                state_update = connection.execute(
                     update(character_states)
-                    .where(character_states.c.character_id == target["character_id"])
+                    .where(
+                        character_states.c.character_id == target["character_id"],
+                        character_states.c.state_revision == state_revision,
+                    )
                     .values(
                         state_payload=state_payload,
-                        state_revision=character_states.c.state_revision + 1,
+                        state_revision=state_revision + 1,
                         updated_at=func.now(),
                     )
                 )
+                if state_update.rowcount != 1:
+                    raise CombatResolutionStateConflictError(
+                        "Character State changed during semantic HP resolution"
+                    )
                 connection.execute(
                     update(combat_entries)
                     .where(combat_entries.c.id == target_entry_id)

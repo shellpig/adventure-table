@@ -9,6 +9,10 @@ PLAYER_ACTIVE = {
     "get_session_context", "get_character_context", "post_dialogue", "post_action",
     "post_ooc", "whisper_dm", "roll_pending", "submit_physical_roll", "quick_roll",
     "update_character_state", "get_pending_events", "wait_for_event",
+    "combat_get_active", "combat_list_attacks", "combat_request_attack",
+    "combat_roll_attack", "combat_apply_damage", "combat_apply_healing",
+    "combat_roll_saving_throw", "combat_request_death_save", "combat_roll_death_save",
+    "combat_request_special_attack", "combat_roll_special_attack",
 }
 # The DM catalog is one fixed set before and after start_session (2026-09-12
 # revision): a connector that snapshots tools/list in the Lobby must not need a
@@ -17,6 +21,12 @@ DM_CATALOG = {
     "get_session_context", "start_session", "post_dialogue", "post_action", "post_ooc",
     "post_narration", "set_stage_text", "request_check", "roll_pending",
     "submit_physical_roll", "update_character_state", "get_pending_events", "wait_for_event",
+    "combat_get_active", "combat_list_attacks", "combat_request_attack",
+    "combat_roll_attack", "combat_apply_damage", "combat_apply_healing",
+    "combat_roll_saving_throw", "combat_request_death_save", "combat_roll_death_save",
+    "combat_request_special_attack", "combat_roll_special_attack",
+    "combat_adjudicate_attack", "combat_request_saving_throws",
+    "combat_adjudicate_special_attack",
 }
 
 

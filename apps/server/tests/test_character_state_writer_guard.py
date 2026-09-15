@@ -8,6 +8,10 @@ APP_ROOT = Path(__file__).resolve().parents[1] / "app"
 ALLOWED_STATE_UPDATE_FILES = {
     "persistence/characters.py",
     "persistence/state_mutations.py",
+    "persistence/combat/attacks.py",
+    "persistence/combat/core_rolls.py",
+    "persistence/combat/resolution.py",
+    "persistence/combat/special_attacks.py",
 }
 
 

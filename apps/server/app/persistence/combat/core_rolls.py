@@ -431,7 +431,7 @@ class CombatCoreRollRepository:
             if entry["subject_kind"] != "character" or entry["character_id"] != target_character_id:
                 raise CombatCoreRollStateConflictError("Only Character CombatEntries make Death Saves")
             state_row = connection.execute(
-                select(character_states.c.state_payload)
+                select(character_states.c.state_payload, character_states.c.state_revision)
                 .where(character_states.c.character_id == target_character_id)
                 .with_for_update()
             ).mappings().one_or_none()
@@ -596,7 +596,7 @@ class CombatCoreRollRepository:
             if entry["character_id"] is None:
                 raise CombatCoreRollStateConflictError("Death Save target has no Character")
             state_row = connection.execute(
-                select(character_states.c.state_payload)
+                select(character_states.c.state_payload, character_states.c.state_revision)
                 .where(character_states.c.character_id == entry["character_id"])
                 .with_for_update()
             ).mappings().one_or_none()
@@ -644,15 +644,22 @@ class CombatCoreRollRepository:
                     UNCONSCIOUS_REF,
                 )
             CharacterState.model_validate(state_payload)
-            connection.execute(
+            state_update = connection.execute(
                 update(character_states)
-                .where(character_states.c.character_id == entry["character_id"])
+                .where(
+                    character_states.c.character_id == entry["character_id"],
+                    character_states.c.state_revision == int(state_row["state_revision"]),
+                )
                 .values(
                     state_payload=state_payload,
-                    state_revision=character_states.c.state_revision + 1,
+                    state_revision=int(state_row["state_revision"]) + 1,
                     updated_at=now,
                 )
             )
+            if state_update.rowcount != 1:
+                raise CombatCoreRollStateConflictError(
+                    "Character State changed while resolving Death Save"
+                )
             connection.execute(
                 update(combat_entries)
                 .where(combat_entries.c.id == entry["id"])
