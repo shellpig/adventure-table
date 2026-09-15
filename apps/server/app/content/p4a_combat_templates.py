@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from copy import deepcopy
 from collections.abc import Mapping
+from copy import deepcopy
 import re
 from typing import Any, Literal, Protocol
 
@@ -22,7 +22,12 @@ class MonsterAction(BaseModel):
 
     name: str = Field(min_length=1)
     kind: Literal["attack", "save", "utility", "other"]
-    attack_kind: Literal["melee", "ranged", "spell", "other"] | None = None
+    attack_kind: Literal[
+        "melee_weapon",
+        "ranged_weapon",
+        "melee_spell",
+        "ranged_spell",
+    ] | None = None
     attack_bonus: int | None = None
     target: str | None = None
     range_normal: int | None = Field(default=None, ge=0)
@@ -48,10 +53,13 @@ class MonsterActionNormalizationError(ValueError):
 
 
 _ATTACK_KIND_PREFIXES: tuple[tuple[str, str], ...] = (
-    ("Melee Spell Attack:", "spell"),
-    ("Ranged Spell Attack:", "spell"),
-    ("Melee Weapon Attack:", "melee"),
-    ("Ranged Weapon Attack:", "ranged"),
+    ("Melee Spell Attack:", "melee_spell"),
+    ("Ranged Spell Attack:", "ranged_spell"),
+    ("Melee Weapon Attack:", "melee_weapon"),
+    ("Ranged Weapon Attack:", "ranged_weapon"),
+)
+_CANONICAL_ATTACK_KINDS = frozenset(
+    {"melee_weapon", "ranged_weapon", "melee_spell", "ranged_spell"}
 )
 _REACH_RE = re.compile(r"\breach\s+(\d+)\s*ft\.?", re.IGNORECASE)
 _RANGE_RE = re.compile(r"\brange\s+(\d+)(?:/(\d+))?\s*ft\.?", re.IGNORECASE)
@@ -133,8 +141,14 @@ def _damage_parts(action: Mapping[str, Any]) -> list[DamagePart]:
 
 def _attack_kind(action: Mapping[str, Any], desc: str | None) -> str | None:
     explicit = action.get("attack_kind")
-    if explicit in {"melee", "ranged", "spell", "other"}:
+    if explicit in _CANONICAL_ATTACK_KINDS:
         return str(explicit)
+    # Transitional compatibility for pre-contract P4-A fixtures. New persisted
+    # actions always use the four canonical values from the P4 design contract.
+    if explicit == "melee":
+        return "melee_weapon"
+    if explicit == "ranged":
+        return "ranged_weapon"
     if not isinstance(action.get("attack_bonus"), int):
         return None
     if desc:
@@ -142,7 +156,7 @@ def _attack_kind(action: Mapping[str, Any], desc: str | None) -> str | None:
         for prefix, attack_kind in _ATTACK_KIND_PREFIXES:
             if prefix.casefold() in folded:
                 return attack_kind
-    return "other"
+    return None
 
 
 def _save_fields(action: Mapping[str, Any]) -> tuple[str | None, int | None]:
@@ -200,7 +214,7 @@ def _automation_level(
     simple_attack = (
         kind == "attack"
         and attack_bonus is not None
-        and attack_kind in {"melee", "ranged", "spell"}
+        and attack_kind in _CANONICAL_ATTACK_KINDS
         and bool(damage_parts)
         and save_dc is None
         and not has_complex_structure

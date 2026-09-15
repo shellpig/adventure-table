@@ -148,13 +148,53 @@ def test_common_attack_gets_canonical_monster_action_shape() -> None:
     )
     validated = MonsterAction.model_validate(action)
     assert validated.kind == "attack"
-    assert validated.attack_kind == "melee"
+    assert validated.attack_kind == "melee_weapon"
     assert validated.attack_bonus == 4
     assert validated.reach == 5
     assert validated.target == "one target"
     assert validated.damage_parts[0].dice == "1d6+2"
     assert validated.damage_parts[0].damage_type == "slashing"
     assert validated.automation_level == "structured"
+
+
+def test_spell_attack_preserves_melee_vs_ranged_kind() -> None:
+    melee = normalize_monster_action(
+        {
+            "name": "Spectral Touch",
+            "desc": "Melee Spell Attack: +5 to hit, reach 5 ft., one target.",
+            "attack_bonus": 5,
+            "damage": "2d6+3",
+        }
+    )
+    ranged = normalize_monster_action(
+        {
+            "name": "Arcane Bolt",
+            "desc": "Ranged Spell Attack: +5 to hit, range 120 ft., one target.",
+            "attack_bonus": 5,
+            "damage": "2d8+3",
+        }
+    )
+    assert melee["attack_kind"] == "melee_spell"
+    assert melee["reach"] == 5
+    assert melee["automation_level"] == "structured"
+    assert ranged["attack_kind"] == "ranged_spell"
+    assert ranged["range_normal"] == 120
+    assert ranged["automation_level"] == "structured"
+
+
+def test_ranged_weapon_attack_keeps_weapon_kind() -> None:
+    action = normalize_monster_action(
+        {
+            "name": "Longbow",
+            "desc": "Ranged Weapon Attack: +6 to hit, range 150/600 ft., one target.",
+            "attack_bonus": 6,
+            "damage": "1d8+4",
+        }
+    )
+    assert action["attack_kind"] == "ranged_weapon"
+    assert action["range_normal"] == 150
+    assert action["range_long"] == 600
+    assert action["automation_level"] == "structured"
 
 
 def test_prose_only_action_is_explicit_dm_adjudication() -> None:
@@ -178,7 +218,7 @@ def test_normalizer_preserves_structured_monster_mechanics() -> None:
 
     bite = rules["actions"][0]
     assert bite["kind"] == "attack"
-    assert bite["attack_kind"] == "melee"
+    assert bite["attack_kind"] == "melee_weapon"
     assert bite["attack_bonus"] == 6
     assert bite["reach"] == 5
     assert bite["damage_parts"] == [{"dice": "2d8+4", "damage_type": "piercing"}]

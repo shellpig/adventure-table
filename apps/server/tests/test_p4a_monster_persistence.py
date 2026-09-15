@@ -46,7 +46,7 @@ def _repository() -> tuple[MonsterRepository, object, object]:
     return MonsterRepository(engine), engine, campaign_id
 
 
-def test_quick_enemy_persists_minimum_rules_and_canonical_action() -> None:
+def test_quick_enemy_persists_minimum_rules_and_structured_canonical_action() -> None:
     repository, engine, campaign_id = _repository()
     try:
         enemy = repository.create_quick_enemy(
@@ -66,9 +66,10 @@ def test_quick_enemy_persists_minimum_rules_and_canonical_action() -> None:
         action = enemy.rules_snapshot["actions"][0]
         assert action["name"] == "Scimitar"
         assert action["kind"] == "attack"
+        assert action["attack_kind"] == "melee_weapon"
         assert action["attack_bonus"] == 3
         assert action["damage_parts"] == [{"dice": "1d6+1", "damage_type": None}]
-        assert action["automation_level"] == "partial"
+        assert action["automation_level"] == "structured"
 
         updated = repository.update_live_state(
             enemy.id,
@@ -88,6 +89,29 @@ def test_quick_enemy_persists_minimum_rules_and_canonical_action() -> None:
         engine.dispose()
 
 
+def test_quick_enemy_preserves_explicit_ranged_attack_kind() -> None:
+    repository, engine, campaign_id = _repository()
+    try:
+        enemy = repository.create_quick_enemy(
+            campaign_id=campaign_id,
+            name="Archer",
+            armor_class=12,
+            max_hp=9,
+            speed={"walk": "30 ft."},
+            attack={
+                "name": "Shortbow",
+                "attack_kind": "ranged_weapon",
+                "attack_bonus": 4,
+                "damage": "1d6+2",
+            },
+        )
+        action = enemy.rules_snapshot["actions"][0]
+        assert action["attack_kind"] == "ranged_weapon"
+        assert action["automation_level"] == "structured"
+    finally:
+        engine.dispose()
+
+
 def test_goblin_template_instances_keep_independent_live_state() -> None:
     repository, engine, campaign_id = _repository()
     try:
@@ -99,7 +123,7 @@ def test_goblin_template_instances_keep_independent_live_state() -> None:
                 {
                     "name": "Scimitar",
                     "kind": "attack",
-                    "attack_kind": "melee",
+                    "attack_kind": "melee_weapon",
                     "attack_bonus": 4,
                     "damage_parts": [{"dice": "1d6+2", "damage_type": "slashing"}],
                     "automation_level": "structured",

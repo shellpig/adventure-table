@@ -206,7 +206,9 @@ class MonsterRepository:
         }
         if attack is not None:
             try:
-                rules["actions"] = [normalize_monster_action(attack)]
+                quick_attack = deepcopy(attack)
+                quick_attack.setdefault("attack_kind", "melee_weapon")
+                rules["actions"] = [normalize_monster_action(quick_attack)]
             except MonsterActionNormalizationError as exc:
                 raise MonsterPersistenceError(f"invalid quick enemy attack: {exc}") from exc
         return self.create_instance(
