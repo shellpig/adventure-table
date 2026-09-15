@@ -7,12 +7,14 @@ from typing import Sequence
 from app.domain.combat.effect_resolver import ActiveEffect, EffectSpec
 from app.domain.combat.resolution import (
     DamageRollPart,
+    DamageType,
     DeathSaveState,
     HitPointState,
     RollMode,
     TargetKind,
     apply_damage,
     apply_healing,
+    raw_damage_by_type,
     resolve_attack_roll,
 )
 
@@ -82,13 +84,15 @@ class SpellResolution:
     events: tuple[dict[str, object], ...]
 
 
-def _half_damage(parts: Sequence[DamageRollPart]) -> tuple[DamageRollPart, ...]:
-    # Saving-throw half damage applies to the aggregate instance. Re-express it
-    # as one already-rolled amount so the P4-C HP pipeline remains authoritative.
-    from app.domain.combat.resolution import DamageType
+def half_damage_parts(parts: Sequence[DamageRollPart]) -> tuple[DamageRollPart, ...]:
+    """Apply save-for-half before affinity while retaining each damage type."""
 
-    total = sum(max(0, sum(part.dice) + part.flat_modifier) for part in parts)
-    return (DamageRollPart(damage_type=DamageType.UNTYPED, flat_modifier=total // 2),)
+    raw = raw_damage_by_type(parts)
+    return tuple(
+        DamageRollPart(damage_type=DamageType(damage_type), flat_modifier=amount // 2)
+        for damage_type, amount in raw.items()
+        if amount > 0
+    )
 
 
 def resolve_spell(
@@ -207,7 +211,7 @@ def resolve_spell(
         if saved and spec.save_damage_mode is SaveDamageMode.NONE:
             damage_parts = ()
         elif saved and spec.save_damage_mode is SaveDamageMode.HALF:
-            damage_parts = _half_damage(damage_parts)
+            damage_parts = half_damage_parts(damage_parts)
         if damage_parts:
             assert target.hp is not None
             damage = apply_damage(
