@@ -281,20 +281,12 @@ def test_character_cast_spell_via_rest_and_player_redaction(combat_routes_fixtur
     )
 
     # Player casts single-target save spell (hold-person) on hostile mage
+    # Rule parameters (DC, save modifier, d20, concentration) are all derived by server!
     cast_payload = {
         "caster_entry_id": str(char_entry_id),
         "target_entry_id": str(mage_entry_id),
         "spell_ref": "srd5.1:spell:hold-person",
-        "profile_id": "wizard",
-        "spell_level": 2,
         "slot_level": 2,
-        "cast_mode": "save",
-        "save_ability_ref": "wis",
-        "save_dc": 15,
-        "save_modifier": 2,
-        "save_d20": 4,
-        "concentration": True,
-        "roll_source": "physical",
         "idempotency_key": "routes-cast-hp-1",
     }
     response = client.post(
@@ -314,6 +306,31 @@ def test_character_cast_spell_via_rest_and_player_redaction(combat_routes_fixtur
     assert res["concentration_started"] is True
 
 
+def test_cast_spell_rejects_raw_rule_fields_with_422(combat_routes_fixture) -> None:
+    table, char_entry_id, mage_entry_id, _ = combat_routes_fixture
+    client = TestClient(app)
+    url = (
+        f"/api/rooms/{table.room_id}/campaigns/{table.campaign_id}"
+        f"/sessions/{table.session_id}/combat/spells/cast"
+    )
+
+    # Attempting to supply raw rule overrides like save_dc or attack_modifier is rejected with 422
+    for forbidden_field in ("save_dc", "attack_modifier", "target_ac", "damage_parts"):
+        payload = {
+            "caster_entry_id": str(char_entry_id),
+            "target_entry_id": str(mage_entry_id),
+            "spell_ref": "srd5.1:spell:hold-person",
+            "slot_level": 2,
+            forbidden_field: 15,
+        }
+        resp = client.post(
+            url,
+            json=payload,
+            headers={"Authorization": f"Bearer {table.player_token}"},
+        )
+        assert resp.status_code == 422, f"Expected 422 when providing {forbidden_field}"
+
+
 def test_monster_cast_spell_via_rest_and_authorization(combat_routes_fixture) -> None:
     table, char_entry_id, mage_entry_id, _ = combat_routes_fixture
     client = TestClient(app)
@@ -326,20 +343,11 @@ def test_monster_cast_spell_via_rest_and_authorization(combat_routes_fixture) ->
         f"/sessions/{table.session_id}/combat/spells/cast"
     )
 
-    # Player attempts to cast with monster -> 403 Forbidden
+    # Clean payload without raw rule overrides
     cast_payload = {
         "caster_entry_id": str(mage_entry_id),
         "target_entry_id": str(char_entry_id),
         "spell_ref": "srd5.1:spell:fire-bolt",
-        "spell_level": 0,
-        "cast_mode": "attack",
-        "attack_modifier": 6,
-        "attack_d20s": [18],
-        "target_ac": 12,
-        "damage_parts": [
-            {"damage_type": "fire", "dice": [5], "flat_modifier": 0, "critical_dice": []}
-        ],
-        "roll_source": "physical",
         "idempotency_key": "routes-mage-firebolt-1",
     }
     forbidden_resp = client.post(
@@ -358,8 +366,9 @@ def test_monster_cast_spell_via_rest_and_authorization(combat_routes_fixture) ->
     assert dm_resp.status_code == 200
     dm_data = dm_resp.json()
     assert dm_data["status"] == "resolved"
-    assert dm_data["resolution_result"]["damage"] == 5
-    assert dm_data["resolution_result"]["roll"]["total"] == 24
+    assert dm_data["spell_ref"] == "srd5.1:spell:fire-bolt"
+    assert dm_data["cast_mode"] == "attack"
+    assert dm_data["resolution_result"] is not None
 
 
 def test_aoe_propose_and_resolve_via_rest(combat_routes_fixture) -> None:
@@ -375,16 +384,11 @@ def test_aoe_propose_and_resolve_via_rest(combat_routes_fixture) -> None:
         f"/sessions/{table.session_id}/combat/spells/aoe/resolve"
     )
 
-    # 1. Propose AoE by Player
+    # 1. Propose AoE by Player - clean payload without client-specified DC
     propose_payload = {
         "caster_entry_id": str(char_entry_id),
-        "profile_id": "wizard",
         "spell_ref": "srd5.1:spell:fireball",
-        "spell_level": 3,
         "slot_level": 3,
-        "save_ability_ref": "dex",
-        "save_dc": 15,
-        "save_damage_mode": "half",
         "proposed_target_ids": [str(mage_entry_id)],
         "idempotency_key": "routes-propose-fb-1",
     }
@@ -402,12 +406,6 @@ def test_aoe_propose_and_resolve_via_rest(combat_routes_fixture) -> None:
     resolve_payload = {
         "action_id": action_id,
         "confirmed_target_ids": [str(mage_entry_id)],
-        "save_modifiers": {str(mage_entry_id): 2},
-        "save_d20s": {str(mage_entry_id): 10},
-        "damage_parts": [
-            {"damage_type": "fire", "dice": [4, 4, 4, 4, 4, 4, 4, 4], "flat_modifier": 0, "critical_dice": []}
-        ],
-        "roll_source": "physical",
         "idempotency_key": "routes-resolve-fb-1",
     }
     forbidden_resp = client.post(
@@ -417,7 +415,7 @@ def test_aoe_propose_and_resolve_via_rest(combat_routes_fixture) -> None:
     )
     assert forbidden_resp.status_code == 403
 
-    # 3. DM resolves AoE -> 200
+    # 3. DM resolves AoE -> 200 (server resolves default damage and d20s)
     dm_resp = client.post(
         resolve_url,
         json=resolve_payload,
@@ -427,6 +425,7 @@ def test_aoe_propose_and_resolve_via_rest(combat_routes_fixture) -> None:
     res_data = dm_resp.json()
     assert res_data["status"] == "resolved"
     assert res_data["resolution_result"] is not None
+
 
 
 def test_reaction_window_open_resolve_and_get(combat_routes_fixture) -> None:

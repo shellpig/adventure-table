@@ -71,12 +71,14 @@
 - 測試：`tests/test_p4e_event_secrecy.py` 7 條（Player event stream 無敵人 HP 但有 amount + injury level / long-poll 與 list 一致 / 友方 Character 精確 / stored resolution 對 Player 與 DM 的 view 差異 + DM REST / Player attack 結果與 `roll.resolved` event 無 AC、DM 有 / hostile caster spell payload 無 DC、modifier / 非 combat kind 不動）。gate 186 passed（含 P3-A/B/C/E/F、M04、P4-B/C/D regression）。
 ### E5 — Spell / reaction / concentration REST route
 
-- 起始：2026-09-16。
+- 起始：2026-09-16；修復：2026-09-17。
 - 交付：
-  1. `CombatSpellService`（`app/domain/combat/spell_service.py`）：封裝 `cast_spell`（Character 與 Monster 施法，支援 single-target / self / utility，AC、attack bonus、save modifier 自動 fallback，且 resolution view 依 actor 走 `project_combat_event_payload` 進行 secrecy 過濾）、`propose_aoe`（AoE 提案）、`resolve_aoe`（DM 專屬裁定，自動補充未填的 save modifier / d20，完成 AoE 結算）。
-  2. `CombatReactionService`（`app/domain/combat/reaction_service.py`）：封裝 `open_reaction_window`、`resolve_reaction`、`get_reaction_window`，處理反應窗口與 reaction economy，內部 locally 委派 `actor_binding` 避免循環相依。
-  3. `CombatConcentrationRepository.drop_concentration` / `CombatConcentrationService.drop_concentration`（`app/persistence/combat/concentration.py` & `app/domain/combat/concentration.py`）：支援主動中斷專注，呼叫 `strip_linked_effects` 移除關聯效果並發送 `combat.concentration_changed` 事件。
-  4. REST Routes：
+  1. `SpellDefinitionResolver`（`app/domain/combat/spell_content_adapter.py`）：完整從 `ContentRegistry` 解析法術模式（Attack / Save / Heal / Utility）、升環與戲法 scaling 傷害骰（例如 `"8d6"`, `"1d10"`）、`"1d8 + MOD"` 治療加值、狀態效果，並由 Character（`spell_save_dc`、`spell_attack_modifier`、multiclass profile 匹配）與 Monster（`resolve_monster_spell_source`）權威解析 DC、Attack modifier、目標 AC 與目標豁免加值。
+  2. `CombatSpellService`（`app/domain/combat/spell_service.py`）：整合 `SpellDefinitionResolver`；`CastSpellInput` 與 `ProposeAoeSpellInput` 收斂為純識別與配置欄位（繼承 `StrictModel`，`extra="forbid"`），徹底封閉 client 傳遞 `save_dc`、`attack_modifier`、`target_ac` 等 raw rule 參數的 escape hatch（違者 422 拒絕）。
+  3. P3-C RNG 串接：所有 d20 與傷害骰全面經由 `roll_service.engine` 擲骰，淘汰 `random.randint`，且對敵人豁免嚴格限制不得由攻擊方 client 藉 `raw_dice` 指定數值。
+  4. `CombatReactionService`（`app/domain/combat/reaction_service.py`）：封裝 `open_reaction_window`、`resolve_reaction`、`get_reaction_window`，處理反應窗口與 reaction economy，內部 locally 委派 `actor_binding` 避免循環相依。
+  5. `CombatConcentrationRepository.drop_concentration` / `CombatConcentrationService.drop_concentration`（`app/persistence/combat/concentration.py` & `app/domain/combat/concentration.py`）：支援主動中斷專注，呼叫 `strip_linked_effects` 移除關聯效果並發送 `combat.concentration_changed` 事件。
+  6. REST Routes 與 DI：
      - `POST .../combat/spells/cast`
      - `POST .../combat/spells/aoe/propose`
      - `POST .../combat/spells/aoe/resolve`
@@ -85,7 +87,7 @@
      - `POST .../combat/reactions/open`
      - `POST .../combat/reactions/resolve`
      - `GET .../combat/reactions`
-  5. DI providers：`get_combat_spell_service`、`get_combat_reaction_service`。
-- 測試：`tests/test_p4e_spells_reactions_routes.py` 5 條（Character single-target cast、Monster spell cast 與權限拒絕、AoE propose 與 resolve、Concentration drop 與 linked effects 移除、Reaction window open/resolve/get 完整生命週期）。
-- 驗證：P4-E focused tests 40 passed (2 skipped for postgres)；`tests/test_m03_import_boundary.py` 5 passed。
+     - DI providers：`get_combat_spell_service`、`get_combat_reaction_service`。
+- 測試：`tests/test_p4e_spells_reactions_routes.py` 6 條（含 `test_cast_spell_rejects_raw_rule_fields_with_422`、Character single-target cast、Monster spell cast 與權限拒絕、AoE propose 與 resolve、Concentration drop 與 linked effects 移除、Reaction window open/resolve/get 完整生命週期）。
+- 驗證：P4-E focused tests 41 passed (2 skipped for postgres)；`tests/test_m03_import_boundary.py` 5 passed；P4-B/C/D 回歸 48 passed。
 
