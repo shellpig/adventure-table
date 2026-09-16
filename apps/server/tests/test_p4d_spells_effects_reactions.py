@@ -337,9 +337,63 @@ def test_p4d_d1_save_half_retains_damage_types() -> None:
 
 # Existing unified single-target spell resolver remains the semantic core.
 def test_p4d_single_target_attack_and_heal_resolution() -> None:
+    base_build, base_state = _caster_build_and_state()
+    wizard = base_build.spellcasting_profiles[0].model_copy(update={"max_spell_level": 2})
+    scorching_ray = "srd5.1:spell:scorching-ray"
+    cure_wounds = "srd5.1:spell:cure-wounds"
+    build = base_build.model_copy(
+        update={
+            "spellcasting_profiles": (wizard, *base_build.spellcasting_profiles[1:]),
+            "spell_access_entries": (
+                *base_build.spell_access_entries,
+                SpellAccessEntry(
+                    entry_id="wizard:scorching-ray",
+                    spell_key=scorching_ray,
+                    source_type="class",
+                    source_key=wizard.source_key,
+                    access_type="known",
+                    casting_ability="intelligence",
+                ),
+                SpellAccessEntry(
+                    entry_id="wizard:cure-wounds",
+                    spell_key=cure_wounds,
+                    source_type="class",
+                    source_key=wizard.source_key,
+                    access_type="known",
+                    casting_ability="intelligence",
+                ),
+            ),
+        },
+        deep=True,
+    )
+    state = base_state.model_copy(
+        update={
+            "prepared_spells": [
+                PreparedSpellSelection(
+                    spell_key=scorching_ray,
+                    source_profile_id="wizard",
+                    source_access_entry_id="wizard:scorching-ray",
+                ),
+                PreparedSpellSelection(
+                    spell_key=cure_wounds,
+                    source_profile_id="wizard",
+                    source_access_entry_id="wizard:cure-wounds",
+                ),
+            ]
+        },
+        deep=True,
+    )
+    attack_authorization = authorize_character_spell(
+        build=build,
+        state=state,
+        profile_id="wizard",
+        spell_ref=scorching_ray,
+        spell_level=2,
+        slot_level=2,
+    )
     attack = resolve_spell(
         spec=SpellResolutionSpec(
-            spell_ref="srd5.1:spell:scorching-ray",
+            spell_ref=scorching_ray,
             cast_mode=SpellCastMode.ATTACK,
             minimum_slot_level=2,
             attack_modifier=6,
@@ -356,14 +410,23 @@ def test_p4d_single_target_attack_and_heal_resolution() -> None:
             hp=HitPointState(current_hp=20, max_hp=20),
             target_ac=13,
         ),
-        spell_slots={2: 1},
+        state=state,
+        authorization=attack_authorization,
     )
     assert attack.target_hp == HitPointState(current_hp=11, max_hp=20)
-    assert attack.remaining_slots == {2: 0}
+    assert attack.character_state.spell_slots[2] == ResourceCounter(used=1, remaining=0)
 
+    heal_authorization = authorize_character_spell(
+        build=build,
+        state=attack.character_state,
+        profile_id="wizard",
+        spell_ref=cure_wounds,
+        spell_level=1,
+        slot_level=1,
+    )
     healed = resolve_spell(
         spec=SpellResolutionSpec(
-            spell_ref="srd5.1:spell:cure-wounds",
+            spell_ref=cure_wounds,
             cast_mode=SpellCastMode.HEAL,
             minimum_slot_level=1,
         ),
@@ -373,9 +436,11 @@ def test_p4d_single_target_attack_and_heal_resolution() -> None:
             target_kind=TargetKind.CHARACTER,
             hp=HitPointState(current_hp=8, max_hp=12),
         ),
-        spell_slots={1: 1},
+        state=attack.character_state,
+        authorization=heal_authorization,
     )
     assert healed.target_hp == HitPointState(current_hp=12, max_hp=12)
+    assert healed.character_state.spell_slots[1] == ResourceCounter(used=1, remaining=1)
 
 
 # D.2 — identity-only AoE + DM-confirmed affected set + one canonical resource spend.
