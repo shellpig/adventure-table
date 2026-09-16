@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import Field, field_validator
 
+from app.domain.combat.concentration import CombatConcentrationService
+from app.domain.combat.concentration_triggers import monster_save_modifier
 from app.domain.combat.lifecycle import CombatNotFoundError, CombatService, CombatStateConflictError
 from app.domain.rooms.rolls import (
     FormalRollInput,
@@ -122,6 +124,7 @@ class CombatCoreRollService:
         monster_repository: MonsterRepository,
         roll_service: RollService,
         table_event_service: TableEventService,
+        concentration_service: CombatConcentrationService | None = None,
     ) -> None:
         self.repository = repository
         self.combat_repository = combat_repository
@@ -129,6 +132,7 @@ class CombatCoreRollService:
         self.monster_repository = monster_repository
         self.roll_service = roll_service
         self.table_event_service = table_event_service
+        self.concentration_service = concentration_service
 
     def _active_entry(self, actor: TableActorContext, entry_id: UUID) -> StoredCombatEntry:
         combat = self.combat_repository.get_active(actor.campaign_id)
@@ -141,37 +145,15 @@ class CombatCoreRollService:
 
     @staticmethod
     def _monster_save_modifier(rules: dict, ability: str) -> int:
-        scores = rules.get("ability_scores", {})
-        score = scores.get(ability, 10) if isinstance(scores, dict) else 10
-        base = ability_modifier(score if isinstance(score, int) else 10)
-        abbreviations = {
-            "strength": "str",
-            "dexterity": "dex",
-            "constitution": "con",
-            "intelligence": "int",
-            "wisdom": "wis",
-            "charisma": "cha",
-        }
-        expected = {
-            f"saving-throw-{abbreviations[ability]}",
-            f"saving-throw-{ability}",
-        }
-        proficiencies = rules.get("proficiencies", [])
-        if not isinstance(proficiencies, list):
-            return base
-        for raw in proficiencies:
-            if not isinstance(raw, dict):
-                continue
-            reference = raw.get("proficiency")
-            index = None
-            if isinstance(reference, dict):
-                candidate = reference.get("index") or reference.get("name")
-                if isinstance(candidate, str):
-                    index = candidate.strip().casefold().replace(" ", "-")
-            value = raw.get("value")
-            if index in expected and isinstance(value, int):
-                return value
-        return base
+        return monster_save_modifier(rules, ability)
+
+    @staticmethod
+    def _is_concentration_request(request: StoredCombatCoreRollRequest) -> bool:
+        return (
+            request.roll_group_label == "Concentration"
+            and request.request_type == "saving_throw"
+            and request.ability_ref in {"srd5.1:ability:constitution", "constitution"}
+        )
 
     def _save_unit(self, actor: TableActorContext, entry: StoredCombatEntry, ability: str) -> NewSavingThrowUnit:
         if entry.subject_kind == "character":
@@ -292,6 +274,18 @@ class CombatCoreRollService:
         )
         if request is None or request.request_type != "saving_throw":
             raise CombatCoreRollNotFoundError(str(input.roll_request_id))
+
+        if self._is_concentration_request(request):
+            if self.concentration_service is not None:
+                conc_result = self.concentration_service.complete_check(actor, input)
+                return SavingThrowResultView(
+                    result_id=conc_result.result_id,
+                    roll_request_id=conc_result.roll_request_id,
+                    target_entry_id=conc_result.target_entry_id,
+                    total=conc_result.total,
+                    succeeded=conc_result.succeeded,
+                )
+
         acting_seat_id, execution_mode = self._authorize_roll(actor, request)
 
         def compute() -> CoreRollComputation:

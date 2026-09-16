@@ -9,6 +9,7 @@ from app.api.errors import APIError
 from app.api.rooms.table_event_wait import ProcessLocalTableEventNotifier
 from app.domain.combat.attack_definitions import AttackDefinitionResolver
 from app.domain.combat.attacks import CombatAttackService
+from app.domain.combat.concentration import CombatConcentrationService
 from app.domain.combat.core_rolls import CombatCoreRollService
 from app.domain.combat.initiative import CombatInitiativeService
 from app.domain.combat.lifecycle import CombatService
@@ -29,6 +30,7 @@ from app.domain.rooms.table_events import TableEventService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
 from app.persistence.combat.adjudication import CombatAdjudicationRepository
 from app.persistence.combat.attacks import CombatAttackRepository
+from app.persistence.combat.concentration import CombatConcentrationRepository
 from app.persistence.combat.core_rolls import CombatCoreRollRepository
 from app.persistence.combat.initiative import CombatInitiativeRepository
 from app.persistence.combat.lifecycle import CombatRepository
@@ -233,6 +235,23 @@ def get_combat_attack_service(request: Request) -> CombatAttackService:
     return service
 
 
+def get_combat_concentration_service(request: Request) -> CombatConcentrationService:
+    service = getattr(request.app.state, "combat_concentration_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        event_service = get_table_event_service(request)
+        combat_service = get_combat_service(request)
+        service = CombatConcentrationService(
+            CombatConcentrationRepository(engine, event_service.repository),
+            combat_service.repository,
+            combat_service.monster_repository,
+            get_roll_service(request),
+            event_service,
+        )
+        request.app.state.combat_concentration_service = service
+    return service
+
+
 def get_combat_core_roll_service(request: Request) -> CombatCoreRollService:
     service = getattr(request.app.state, "combat_core_roll_service", None)
     if service is None:
@@ -246,6 +265,7 @@ def get_combat_core_roll_service(request: Request) -> CombatCoreRollService:
             combat_service.monster_repository,
             get_roll_service(request),
             event_service,
+            concentration_service=get_combat_concentration_service(request),
         )
         request.app.state.combat_core_roll_service = service
     return service
@@ -324,6 +344,7 @@ __all__ = [
     "_HistoryGuardedCharacterRepository",
     "get_campaign_service",
     "get_combat_attack_service",
+    "get_combat_concentration_service",
     "get_combat_core_roll_service",
     "get_combat_initiative_service",
     "get_combat_order_service",

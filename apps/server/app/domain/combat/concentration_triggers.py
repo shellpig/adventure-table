@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from app.domain.character.schemas import CharacterConcentrationState, CharacterState
 from app.domain.combat.resolution import DamageOutcome
+from app.domain.rules.abilities import ability_modifier
 
 
 @dataclass(frozen=True)
@@ -134,3 +135,48 @@ def resolve_concentration_check(
         state=next_state,
         events=tuple(events),
     )
+
+
+def monster_save_modifier(rules: dict, ability: str) -> int:
+    scores = rules.get("ability_scores", {})
+    score = scores.get(ability, 10) if isinstance(scores, dict) else 10
+    base = ability_modifier(score if isinstance(score, int) else 10)
+    abbreviations = {
+        "strength": "str",
+        "dexterity": "dex",
+        "constitution": "con",
+        "intelligence": "int",
+        "wisdom": "wis",
+        "charisma": "cha",
+    }
+    expected = {
+        f"saving-throw-{abbreviations.get(ability, ability)}",
+        f"saving-throw-{ability}",
+    }
+    proficiencies = rules.get("proficiencies", [])
+    if not isinstance(proficiencies, list):
+        return base
+    for raw in proficiencies:
+        if not isinstance(raw, dict):
+            continue
+        reference = raw.get("proficiency")
+        index = None
+        if isinstance(reference, dict):
+            candidate = reference.get("index") or reference.get("name")
+            if isinstance(candidate, str):
+                index = candidate.strip().casefold().replace(" ", "-")
+        value = raw.get("value")
+        if index in expected and isinstance(value, int):
+            return value
+    return base
+
+
+__all__ = [
+    "ConcentrationCheckRequest",
+    "ConcentrationCheckResolution",
+    "concentration_check_for_damage",
+    "concentration_dc",
+    "evaluate_concentration_check",
+    "monster_save_modifier",
+    "resolve_concentration_check",
+]

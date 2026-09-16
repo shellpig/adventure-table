@@ -38,6 +38,24 @@ class CombatConcentrationStateConflictError(RuntimeError):
 
 
 @dataclass(frozen=True)
+class StoredConcentrationRequest:
+    id: UUID
+    roll_group_id: UUID | None
+    session_id: UUID
+    target_seat_id: UUID | None
+    target_character_id: UUID | None
+    target_combat_entry_id: UUID
+    request_type: str
+    ability_ref: str | None
+    dc: int | None
+    modifier_mode: str
+    flat_adjustment: int
+    visibility: str
+    status: str
+    roll_group_label: str | None
+
+
+@dataclass(frozen=True)
 class StoredConcentrationResolution:
     event_id: UUID
     roll_request_id: UUID
@@ -97,6 +115,68 @@ class CombatConcentrationRepository:
                     if isinstance(item, dict) and str(item.get("roll_request_id")) == request_text:
                         return dict(item)
         raise CombatConcentrationNotFoundError(str(request_id))
+
+    @staticmethod
+    def _existing_resolution(
+        connection, *, session_id: UUID, request_id: UUID
+    ) -> StoredTableEvent | None:
+        rows = connection.execute(
+            select(session_events)
+            .where(
+                session_events.c.session_id == session_id,
+                session_events.c.kind == "combat.concentration_resolved",
+            )
+            .order_by(session_events.c.seq.desc())
+        ).mappings()
+        request_text = str(request_id)
+        for row in rows:
+            payload = dict(row["payload"] or {})
+            if str(payload.get("roll_request_id")) == request_text:
+                return TableEventRepository._event(row)
+        return None
+
+    def get_request(
+        self, *, session_id: UUID, request_id: UUID
+    ) -> StoredConcentrationRequest | None:
+        with self.engine.connect() as connection:
+            row = connection.execute(
+                select(
+                    roll_requests,
+                    roll_groups.c.label.label("roll_group_label"),
+                )
+                .outerjoin(roll_groups, roll_groups.c.id == roll_requests.c.roll_group_id)
+                .where(
+                    roll_requests.c.id == request_id,
+                    roll_requests.c.session_id == session_id,
+                    roll_requests.c.target_combat_entry_id.is_not(None),
+                )
+            ).mappings().one_or_none()
+        if row is None:
+            return None
+        return StoredConcentrationRequest(
+            id=row["id"],
+            roll_group_id=row["roll_group_id"],
+            session_id=row["session_id"],
+            target_seat_id=row["target_seat_id"],
+            target_character_id=row["target_character_id"],
+            target_combat_entry_id=row["target_combat_entry_id"],
+            request_type=row["request_type"],
+            ability_ref=row["ability_ref"],
+            dc=row["dc"],
+            modifier_mode=row["modifier_mode"],
+            flat_adjustment=int(row["flat_adjustment"]),
+            visibility=row["visibility"],
+            status=row["status"],
+            roll_group_label=row["roll_group_label"],
+        )
+
+    def get_resolution_event(
+        self, *, session_id: UUID, request_id: UUID
+    ) -> StoredTableEvent | None:
+        with self.engine.connect() as connection:
+            return self._existing_resolution(
+                connection, session_id=session_id, request_id=request_id
+            )
 
     def complete_check(
         self,
@@ -384,5 +464,6 @@ __all__ = [
     "CombatConcentrationNotFoundError",
     "CombatConcentrationRepository",
     "CombatConcentrationStateConflictError",
+    "StoredConcentrationRequest",
     "StoredConcentrationResolution",
 ]

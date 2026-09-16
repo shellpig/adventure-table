@@ -54,6 +54,7 @@ class StoredCombatCoreRollRequest:
     flat_adjustment: int
     visibility: str
     status: str
+    roll_group_label: str | None = None
 
 
 @dataclass(frozen=True)
@@ -130,12 +131,18 @@ class CombatCoreRollRepository:
             flat_adjustment=int(row["flat_adjustment"]),
             visibility=row["visibility"],
             status=row["status"],
+            roll_group_label=row.get("roll_group_label"),
         )
 
     def get_request(self, *, session_id: UUID, request_id: UUID) -> StoredCombatCoreRollRequest | None:
         with self.engine.connect() as connection:
             row = connection.execute(
-                select(roll_requests).where(
+                select(
+                    roll_requests,
+                    roll_groups.c.label.label("roll_group_label"),
+                )
+                .outerjoin(roll_groups, roll_groups.c.id == roll_requests.c.roll_group_id)
+                .where(
                     roll_requests.c.id == request_id,
                     roll_requests.c.session_id == session_id,
                     roll_requests.c.target_combat_entry_id.is_not(None),
@@ -272,6 +279,10 @@ class CombatCoreRollRepository:
         request = self.get_request(session_id=binding.session_id, request_id=request_id)
         if request is None or request.request_type != "saving_throw" or request.dc is None:
             raise CombatCoreRollNotFoundError(str(request_id))
+        if request.roll_group_label == "Concentration":
+            raise CombatCoreRollStateConflictError(
+                "Concentration saving throws must be completed via CombatConcentrationRepository"
+            )
         existing = self._result_row(session_id=binding.session_id, request_id=request_id)
         if existing is not None:
             return (
@@ -297,6 +308,16 @@ class CombatCoreRollRepository:
             ).mappings().one_or_none()
             if locked is None or locked["request_type"] != "saving_throw":
                 raise CombatCoreRollNotFoundError(str(request_id))
+            locked_group_label = connection.scalar(
+                select(roll_groups.c.label).where(
+                    roll_groups.c.id == locked["roll_group_id"],
+                    roll_groups.c.session_id == binding.session_id,
+                )
+            )
+            if locked_group_label == "Concentration":
+                raise CombatCoreRollStateConflictError(
+                    "Concentration saving throws must be completed via CombatConcentrationRepository"
+                )
             if locked["status"] != "pending":
                 raise CombatCoreRollStateConflictError("Saving Throw RollRequest is already resolved")
             target = connection.execute(

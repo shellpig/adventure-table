@@ -14,7 +14,7 @@
 |---|---|---|---|
 | E1 | Monster persisted cast：`CombatSpellRepository.cast_monster_spell` | 實作規格 14；設計 §8.5「Monster cast」；測試 E.5 第 1 點 | ✅ |
 | E2 | Monster concentration canonical state + 受傷 CON save | 實作規格 15；設計 §8.5「Monster concentration」；測試 E.5 | ✅ |
-| E3 | Concentration roll routing：通用 resolve 拒絕，只走 `complete_check` | 實作規格 16；設計 §8.5「Concentration roll routing」；測試 E.5 | ⬜ |
+| E3 | Concentration roll routing：通用 resolve 拒絕，只走 `complete_check` | 實作規格 16；設計 §8.5「Concentration roll routing」；測試 E.5 | ✅ |
 | E4 | Combat DTO / projection：DM 完整 vs Player secrecy | 實作規格 3；測試 E.2 | ⬜ |
 | E5 | Spell / reaction / concentration REST route | 實作規格 7、11；設計 §8.1、§8.2 | ⬜ |
 | E6 | DM adjudication REST（range / cover / AoE / OA） | 實作規格 5；設計 §8.3 | ⬜ |
@@ -44,4 +44,13 @@
 - 清理：`strip_monster_items` 改公開名；Monster concentration 一律在讀取點 normalize 成 `CharacterConcentrationState`，不在 domain 接 `Mapping`；移除 `create_instance` 未使用的 `concentration` 參數。
 - 測試：`tests/test_p4e_monster_concentration.py` 8 條；`tests/test_p4e_postgres_migration.py` 2 條（`P4_POSTGRES_URL` gated）；既有 migration head 斷言更新到 `0026`。focused gate 108 passed。
 - 留給 E3：Concentration roll routing（通用 resolve 拒絕 / 轉送）。
+
+### E3 — Concentration roll routing
+
+- 起始：2026-09-16，agy worker 一輪（709s）+ Claude 小清理。
+- 實際漏洞：P3-C 通用路徑已由 `CombatAwareRollRepository` 在 DI 層擋掉 combat-targeted row，但 P4-C `CombatCoreRollRepository.complete_saving_throw` 會把 Concentration request 當一般 save 解掉、pointer 不清——這才是「靜默殘留」入口。
+- 交付：新 domain service `CombatConcentrationService.complete_check`（`app/domain/combat/concentration.py`）：驗 Concentration request、沿用 P4-C `_authorize_roll` 規則（Monster target 只有 DM）、Character CON modifier 走 P3-C `modifier_resolver`、Monster 走共用 `monster_save_modifier`（自 `CombatCoreRollService` 抽到 `concentration_triggers.py`）、server / physical d20、已 resolved 時 replay 既有結果。`CombatCoreRollService.complete_saving_throw` 遇 Concentration request 轉送到該 service（DI 注入 `concentration_service`）；`CombatCoreRollRepository.complete_saving_throw` 與 `RollRepository.complete_request` 在 lock 內拒絕 label=`Concentration` 的 request，零副作用。`dependencies.py` 新增 `get_combat_concentration_service`。
+- 清理：移除 `RollRepository.complete_request` 每次 formal roll 多打一次的 pre-lock label 查詢，只留 lock 內檢查。
+- 測試：`tests/test_p4e_concentration_routing.py` 6 條；focused gate 103 passed，P3-C API / P3-E regression 62 passed。
+- 備註：`get_resolution_event` 沿用 P4-D `_source_metadata` 的 session event Python 掃描方式（O(n)），未新增索引查詢；長場次可在 P4-F 收斂。
 
