@@ -9,6 +9,7 @@ from sqlalchemy import insert, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
+from app.domain.combat.reaction_service import ReactionWindow
 from app.persistence.characters import characters
 from app.persistence.combat.tables import combat_actions, combat_entries, combats
 from app.persistence.rooms.table_runtime import (
@@ -551,12 +552,22 @@ class CombatRepository:
         return self._action(row), event
 
     def set_reaction_window(self, *, binding: StoredTableActorBinding, combat_id: UUID, entry_id: UUID,
-                            state: dict[str, Any], idempotency_key: str | None):
+                            state: ReactionWindow | dict[str, Any], idempotency_key: str | None):
+        if isinstance(state, ReactionWindow):
+            if state.entry_id != str(entry_id):
+                raise ValueError("reaction window owner does not match CombatEntry")
+            payload = state.to_payload()
+        else:
+            # P4-B compatibility: legacy tests/callers may still provide the old
+            # minimal dict. Any P4-D payload is parsed through the typed model.
+            raw = dict(state)
+            payload = ReactionWindow.from_payload(raw).to_payload() if raw.get("window_id") else raw
+
         def projection(connection, _event_id: UUID, _seq: int) -> None:
             result = connection.execute(update(combat_entries).where(
                 combat_entries.c.id == entry_id, combat_entries.c.combat_id == combat_id,
                 combat_entries.c.status == "active",
-            ).values(pending_reaction_state=dict(state), updated_at=datetime.now().astimezone()))
+            ).values(pending_reaction_state=payload, updated_at=datetime.now().astimezone()))
             if result.rowcount != 1:
                 raise CombatNotFoundPersistenceError(str(entry_id))
 
@@ -564,7 +575,8 @@ class CombatRepository:
             room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
             kind="combat.reaction_window", acting_seat_id=binding.seat_id, subject_seat_id=None,
             subject_character_id=None, execution_mode="self", visibility="public", recipient_seat_ids=(),
-            payload_version=1, payload={"combat_id": str(combat_id), "entry_id": str(entry_id), "open": bool(state.get("open"))},
+            payload_version=1, payload={"combat_id": str(combat_id), "entry_id": str(entry_id), "open": bool(payload.get("open")),
+                "window_id": payload.get("window_id"), "status": payload.get("status")},
             idempotency_key=f"p4b-reaction-window:{idempotency_key}" if idempotency_key else None,
             expected_actor_binding=binding, transaction_projection=projection,
         )

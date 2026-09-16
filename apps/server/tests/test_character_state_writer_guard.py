@@ -9,9 +9,12 @@ ALLOWED_STATE_UPDATE_FILES = {
     "persistence/characters.py",
     "persistence/state_mutations.py",
     "persistence/combat/attacks.py",
+    "persistence/combat/concentration.py",
     "persistence/combat/core_rolls.py",
+    "persistence/combat/effects.py",
     "persistence/combat/resolution.py",
     "persistence/combat/special_attacks.py",
+    "persistence/combat/spells.py",
 }
 
 

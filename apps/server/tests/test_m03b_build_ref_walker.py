@@ -64,6 +64,8 @@ EXPECTED_STATE_PATHS = {
     "inventory_state[].item_ref",
     "active_infusions[].infusion_ref",
     "spell_storing_item.spell_ref",
+    "concentration.source_ref",
+    "temporary_effects[].source_ref",
 }
 
 # P0-C deterministic fixture, listed by hand so a walker change has to be

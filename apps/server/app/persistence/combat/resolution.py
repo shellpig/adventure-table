@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Iterable
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, insert, select, update
 from sqlalchemy.engine import Engine
 
 from app.domain.character.schemas import CharacterBuild, CharacterState
@@ -18,9 +18,11 @@ from app.domain.combat.resolution import (
     apply_damage,
     apply_healing,
 )
+from app.domain.combat.concentration_triggers import concentration_check_for_damage
 from app.domain.rules.hit_points import calculate_max_hp
 from app.persistence.characters import character_states, character_versions, characters
 from app.persistence.combat.tables import combat_entries, combats, monster_instances
+from app.persistence.rooms.p3c_runtime import roll_groups, roll_requests
 from app.persistence.rooms.table_runtime import (
     StoredTableActorBinding,
     StoredTableEvent,
@@ -253,6 +255,43 @@ class CombatResolutionRepository:
                     death_saves=_death_state(target),
                     zero_hp_failure_count=2 if critical else 1,
                 )
+                concentration_request = concentration_check_for_damage(
+                    owner_ref=str(target["character_id"]),
+                    current=state.concentration,
+                    outcome=outcome,
+                )
+                concentration_roll_group_id = None
+                concentration_roll_request_id = None
+                if concentration_request is not None:
+                    concentration_roll_group_id = uuid4()
+                    concentration_roll_request_id = uuid4()
+                    connection.execute(insert(roll_groups).values(
+                        id=concentration_roll_group_id,
+                        session_id=binding.session_id,
+                        requested_by_seat_id=binding.seat_id,
+                        label="Concentration",
+                        visibility="public",
+                        version=1,
+                    ))
+                    connection.execute(insert(roll_requests).values(
+                        id=concentration_roll_request_id,
+                        session_id=binding.session_id,
+                        roll_group_id=concentration_roll_group_id,
+                        target_seat_id=subject_seat_id,
+                        target_character_id=target["character_id"],
+                        target_combat_entry_id=target_entry_id,
+                        request_type="saving_throw",
+                        ability_ref="srd5.1:ability:constitution",
+                        skill_ref=None,
+                        dc=concentration_request.dc,
+                        modifier_mode="normal",
+                        flat_adjustment=0,
+                        visibility="public",
+                        status="pending",
+                        requested_by_seat_id=binding.seat_id,
+                        version=1,
+                    ))
+
                 state_payload = state.model_dump(mode="json")
                 state_payload["current_hp"] = outcome.after.current_hp
                 state_payload["temporary_hp"] = outcome.after.temp_hp
@@ -359,6 +398,17 @@ class CombatResolutionRepository:
                     "immunities": [item.value for item in immunities],
                     "vulnerabilities": [item.value for item in vulnerabilities],
                 },
+                "concentration_check": (
+                    {
+                        "source_ref": concentration_request.source_ref,
+                        "damage_taken": concentration_request.damage_taken,
+                        "dc": concentration_request.dc,
+                        "roll_group_id": str(concentration_roll_group_id),
+                        "roll_request_id": str(concentration_roll_request_id),
+                    }
+                    if target["subject_kind"] == "character" and concentration_request is not None
+                    else None
+                ),
             }
             connection.execute(
                 update(session_events)

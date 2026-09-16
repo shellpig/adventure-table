@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy import event, insert, select
 from sqlalchemy.exc import IntegrityError
 
+from app.domain.character.schemas import CharacterState
 from app.interop.json_schema import CharacterExport
 from app.persistence.builder_drafts import character_build_drafts
 from app.persistence.character_imports import character_import_records
@@ -78,7 +79,11 @@ def test_commit_import_as_character_preserves_chain_provenance_and_state() -> No
         state = connection.execute(
             select(character_states).where(character_states.c.character_id == result.character_id)
         ).mappings().one()
-        assert state["state_payload"] == payload["payload"]["current_state"]["state_payload"]
+        expected_state = CharacterState.model_validate(
+            payload["payload"]["current_state"]["state_payload"]
+        )
+        assert CharacterState.model_validate(state["state_payload"]) == expected_state
+        assert state["state_payload"] == expected_state.model_dump(mode="json")
 
         record = connection.execute(
             select(character_import_records).where(
