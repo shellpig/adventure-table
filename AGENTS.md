@@ -234,7 +234,7 @@ cd apps/web && npm run test:e2e:docker
 cmd /c "C:\Users\User\AppData\Local\agy\bin\agy.exe -p `\"<任務>`\" --model `\"<模型>`\" --add-dir `\"C:\_work\AI_Work\Projects\adventure-table`\" --dangerously-skip-permissions --print-timeout 540s < NUL > <輸出檔> 2>&1"
 ```
 
-`--add-dir` 讓 reviewer 讀到專案，`--dangerously-skip-permissions` 單次生效不動持久設定，兩者都不可省。Model：`--model` 用 `agy models` 列出的完整顯示字串，未指定時預設 `"Gemini 3.5 Flash (High)"`。
+`--add-dir` 讓 reviewer 讀到專案，`--dangerously-skip-permissions` 單次生效不動持久設定，兩者都不可省。Model：`--model` 用 `agy models` 列出的完整顯示字串，未指定時預設 `"Gemini 3.8 Flash (High)"`。
 
 **Codex CLI (OpenAI)**：用預設 `CODEX_HOME`。
 
