@@ -235,6 +235,7 @@ cmd /c "C:\Users\User\AppData\Local\agy\bin\agy.exe -p `\"<任務>`\" --model `\
 ```
 
 - `--add-dir` 讓 agy 讀到專案，`--dangerously-skip-permissions` 單次生效不動持久設定，兩者都不可省。
+- **`-p` 只能放單行短句，任務本文寫進檔案讓 agy 自己讀**（例：`-p "Your full task is in C:\_work\AI_Work\Toolsgy-runs\<步驟>.prompt.txt. Read it first, then follow every instruction in it."`，並多加一個 `--add-dir C:\_work\AI_Work\Toolsgy-runs`）。多行 prompt 經 `cmd /c` 會在第一個換行截斷，後面的 flag 與重導全部遺失，agy 會以無權限狀態靜默結束。
 - **一律 `run_in_background` 啟動**，不同步等；結束時 Claude 會被喚醒，直接讀輸出檔審結果。輸出落在 repo 外的 `C:\_work\AI_Work\Tools\agy-runs\`，session 中斷也找得回。不再使用寫死的 `--print-timeout 540s`。
 - `--output-format json` 回傳 `conversation_id`／`status`／`duration_seconds`／`usage`。**同一步驟的修改回合用 `--conversation <id>` 接續**（已驗證可在 `--print` 模式保留脈絡；每輪整段重送、無 cache，累積數輪即換新對話）。**換下一步驟一律開新對話**。
 - **拆步原則**：每個 agy 任務要在 15～20 分鐘內收斂到可驗證狀態；prompt 自足，只指向該步要讀的規格段落，明列交付物、focused test 指令與「不得 commit」。Subphase 進度寫在該 Phase 的 `<Subphase>實作紀錄.md`（例：`docs/P4/P4-D實作紀錄.md`），新對話讀它接手；agy 對話 ID 遺失不影響交接。
