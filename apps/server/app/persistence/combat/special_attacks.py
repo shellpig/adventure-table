@@ -281,10 +281,19 @@ class SpecialAttackRepository:
                     idempotency_key=idempotency_key,
                 )
             )
+            event_payload = {
+                "combat_id": str(combat_id),
+                "combat_action_id": str(action_id),
+                "attacker_entry_id": str(attacker_entry_id),
+                "target_entry_id": str(target_entry_id),
+                "target_is_hostile": bool(target["is_hostile"]),
+                "kind": kind.value,
+                "status": "dm_adjudication_required",
+            }
             connection.execute(
                 update(session_events)
                 .where(session_events.c.id == event_id)
-                .values(subject_character_id=attacker["character_id"])
+                .values(subject_character_id=attacker["character_id"], payload=event_payload)
             )
 
         event = self.event_repository.append(
@@ -356,6 +365,7 @@ class SpecialAttackRepository:
                     "combat_action_id": str(action_id),
                     "attacker_entry_id": str(attacker["id"]),
                     "target_entry_id": str(target["id"]),
+                    "target_is_hostile": bool(target["is_hostile"]),
                     "kind": payload["kind"],
                     "in_reach": False,
                     "status": "resolved",
@@ -441,6 +451,7 @@ class SpecialAttackRepository:
                     "combat_action_id": str(action_id),
                     "attacker_entry_id": str(attacker["id"]),
                     "target_entry_id": str(target["id"]),
+                    "target_is_hostile": bool(target["is_hostile"]),
                     "kind": payload["kind"],
                     "in_reach": True,
                     "status": "waiting_for_roll",
@@ -664,6 +675,7 @@ class SpecialAttackRepository:
                 "roll_request_id": str(request_id),
                 "roll_result_id": str(result_id),
                 "target_entry_id": str(request["target_combat_entry_id"]),
+                "target_is_hostile": bool(target["is_hostile"]),
                 "total": computation.total,
                 "status": status,
                 "resolution_result": final_result,

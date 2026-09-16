@@ -23,6 +23,7 @@ from app.domain.combat.aoe_adjudication import (
 )
 from app.domain.combat.concentration_triggers import concentration_dc
 from app.domain.combat.effect_resolver import EffectSpec
+from app.domain.combat.projection import calculate_injury_level
 from app.domain.combat.resolution import DamageRollPart, HitPointState, RollMode, TargetKind
 from app.domain.combat.spell_resolver import (
     SaveDamageMode,
@@ -329,10 +330,19 @@ class CombatSpellRepository:
                 .where(combats.c.id == combat_id)
                 .values(revision=combats.c.revision + 1, updated_at=now)
             )
+            event_payload = {
+                "combat_id": str(combat_id),
+                "action_id": str(action_id),
+                "caster_entry_id": str(caster_entry_id),
+                "caster_is_hostile": bool(caster["is_hostile"]),
+                "spell_ref": spell_ref,
+                "proposed_target_ids": [str(value) for value in proposed_target_ids],
+                "status": "dm_adjudication_required",
+            }
             connection.execute(
                 update(session_events)
                 .where(session_events.c.id == event_id)
-                .values(subject_character_id=caster["character_id"])
+                .values(subject_character_id=caster["character_id"], payload=event_payload)
             )
 
         event = self.event_repository.append(
@@ -680,6 +690,7 @@ class CombatSpellRepository:
                 roll_payloads.append(
                     {
                         "target_entry_id": str(target_id),
+                        "target_is_hostile": bool(target_entries[target_id]["is_hostile"]),
                         "roll_request_id": str(request_id),
                         "roll_result_id": str(result_id),
                         "d20": d20,
@@ -735,6 +746,7 @@ class CombatSpellRepository:
                 concentration_payloads.append(
                     {
                         "target_entry_id": str(target_id),
+                        "target_is_hostile": bool(target_entries[target_id]["is_hostile"]),
                         "target_character_id": str(character_id),
                         "source_ref": current.source_ref,
                         "damage_taken": outcome.damage_taken,
@@ -753,6 +765,8 @@ class CombatSpellRepository:
                 "outcomes": [
                     {
                         "target_entry_id": row.entry_id,
+                        "target_is_hostile": bool(target_entries[UUID(row.entry_id)]["is_hostile"]),
+                        "target_injury_level": calculate_injury_level(row.hp.current_hp, row.hp.max_hp),
                         "save_total": row.save_total,
                         "saved": row.saved,
                         "damage": row.damage_taken,
@@ -789,6 +803,7 @@ class CombatSpellRepository:
                         "combat_id": str(action["combat_id"]),
                         "action_id": str(action_id),
                         "caster_entry_id": str(caster["id"]),
+                        "caster_is_hostile": bool(caster["is_hostile"]),
                         **resolution_payload,
                     },
                 )
@@ -1092,10 +1107,18 @@ class CombatSpellRepository:
                 damage_taken=damage_taken,
             )
 
+            target_injury_level = (
+                calculate_injury_level(resolution.target_hp.current_hp, resolution.target_hp.max_hp)
+                if resolution.target_hp is not None
+                else None
+            )
             resolution_payload: dict[str, Any] = {
                 "spell_ref": spell_ref,
                 "cast_mode": cast_mode.value,
                 "target_entry_id": str(target_entry_id) if target_entry_id is not None else None,
+                "target_is_hostile": bool(target_entry["is_hostile"]) if target_entry is not None else False,
+                "target_injury_level": target_injury_level,
+                "caster_is_hostile": bool(caster["is_hostile"]),
                 "roll": roll_payload,
                 "damage": damage_taken,
                 "target_current_hp": resolution.target_hp.current_hp if resolution.target_hp else None,
@@ -1470,10 +1493,18 @@ class CombatSpellRepository:
                     "effect_ids": [effect.effect_id for effect in resolution.applied_effects],
                 })
 
+            target_injury_level = (
+                calculate_injury_level(resolution.target_hp.current_hp, resolution.target_hp.max_hp)
+                if resolution.target_hp is not None
+                else None
+            )
             resolution_payload: dict[str, Any] = {
                 "spell_ref": spell_ref,
                 "cast_mode": cast_mode.value,
                 "target_entry_id": str(target_entry_id) if target_entry_id is not None else None,
+                "target_is_hostile": bool(target_entry["is_hostile"]) if target_entry is not None else False,
+                "target_injury_level": target_injury_level,
+                "caster_is_hostile": bool(caster["is_hostile"]),
                 "roll": roll_payload,
                 "damage": damage_taken,
                 "target_current_hp": resolution.target_hp.current_hp if resolution.target_hp else None,

@@ -52,17 +52,26 @@ class CombatantState:
             raise ValueError("combatant exhaustion_level must not be negative")
 
 
-def injury_level(state: CombatantState) -> Literal["down", "critical", "wounded", "healthy"]:
-    if state.current_hp <= 0 or state.combat_status in {"down", "dead"}:
+def calculate_injury_level(
+    current_hp: int,
+    max_hp: int,
+    combat_status: str = "active",
+) -> Literal["down", "critical", "wounded", "healthy"]:
+    if current_hp <= 0 or combat_status in {"down", "dead"}:
         return "down"
-    if state.max_hp <= 0:
+    if max_hp <= 0:
         return "critical"
-    ratio = state.current_hp / state.max_hp
+    ratio = current_hp / max_hp
     if ratio <= 0.25:
         return "critical"
     if ratio <= 0.5:
         return "wounded"
     return "healthy"
+
+
+def injury_level(state: CombatantState) -> Literal["down", "critical", "wounded", "healthy"]:
+    return calculate_injury_level(state.current_hp, state.max_hp, state.combat_status)
+
 
 
 def _full_projection(state: CombatantState) -> dict[str, Any]:
@@ -147,6 +156,7 @@ __all__ = [
     "CombatantAudience",
     "CombatantKind",
     "CombatantState",
+    "calculate_injury_level",
     "injury_level",
     "project_combatant",
 ]

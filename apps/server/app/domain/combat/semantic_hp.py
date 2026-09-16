@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from pydantic import Field
 
+from app.domain.combat.event_projection import project_combat_event_payload
 from app.domain.combat.lifecycle import CombatNotFoundError, CombatService
+from app.domain.combat.projection import CombatantAudience
 from app.domain.combat.resolution import DamageRollPart, DamageType
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import (
@@ -30,6 +33,21 @@ class SemanticHealingInput(StrictModel):
     target_entry_id: UUID
     amount: int = Field(ge=0, le=1_000_000)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+
+
+class SemanticResolutionView(StrictModel):
+    event_id: UUID
+    combat_id: UUID
+    target_entry_id: UUID
+    kind: str
+    before_hp: int | None = None
+    after_hp: int | None = None
+    before_temp_hp: int | None = None
+    after_temp_hp: int | None = None
+    amount: int
+    target_is_hostile: bool = False
+    target_injury_level: str | None = None
+    payload: dict[str, Any]
 
 
 class CombatResolutionService:
@@ -83,11 +101,35 @@ class CombatResolutionService:
             )
         return subject_seat_id, "self"
 
+    @staticmethod
+    def _project_resolution(
+        actor: TableActorContext,
+        stored: StoredSemanticResolution,
+    ) -> SemanticResolutionView:
+        audience: CombatantAudience = "dm" if actor.is_current_dm else "player"
+        redact = audience == "player" and stored.target_is_hostile
+        return SemanticResolutionView(
+            event_id=stored.event_id,
+            combat_id=stored.combat_id,
+            target_entry_id=stored.target_entry_id,
+            kind=stored.kind,
+            before_hp=None if redact else stored.before_hp,
+            after_hp=None if redact else stored.after_hp,
+            before_temp_hp=None if redact else stored.before_temp_hp,
+            after_temp_hp=None if redact else stored.after_temp_hp,
+            amount=stored.amount,
+            target_is_hostile=stored.target_is_hostile,
+            target_injury_level=stored.target_injury_level,
+            payload=project_combat_event_payload(
+                f"combat.{stored.kind}_applied", stored.payload, audience=audience
+            ),
+        )
+
     def apply_damage(
         self,
         actor: TableActorContext,
         request: SemanticDamageInput,
-    ) -> StoredSemanticResolution:
+    ) -> SemanticResolutionView:
         self.table_event_service.require_actor_current(actor)
         target = self._active_target(actor, request.target_entry_id)
         subject_seat_id, execution_mode = self._authorize_manual_target(actor, target)
@@ -110,13 +152,13 @@ class CombatResolutionService:
         )
         if self.table_event_service.notifier is not None:
             self.table_event_service.notifier.notify(actor.session_id)
-        return result
+        return self._project_resolution(actor, result)
 
     def apply_healing(
         self,
         actor: TableActorContext,
         request: SemanticHealingInput,
-    ) -> StoredSemanticResolution:
+    ) -> SemanticResolutionView:
         self.table_event_service.require_actor_current(actor)
         target = self._active_target(actor, request.target_entry_id)
         subject_seat_id, execution_mode = self._authorize_manual_target(actor, target)
@@ -132,11 +174,12 @@ class CombatResolutionService:
         )
         if self.table_event_service.notifier is not None:
             self.table_event_service.notifier.notify(actor.session_id)
-        return result
+        return self._project_resolution(actor, result)
 
 
 __all__ = [
     "CombatResolutionService",
     "SemanticDamageInput",
     "SemanticHealingInput",
+    "SemanticResolutionView",
 ]

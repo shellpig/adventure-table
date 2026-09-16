@@ -198,10 +198,19 @@ class CombatAdjudicationRepository:
                 .where(combats.c.id == combat_id)
                 .values(revision=combats.c.revision + 1, updated_at=now)
             )
+            event_payload = {
+                "combat_id": str(combat_id),
+                "combat_action_id": str(action_id),
+                "attacker_entry_id": str(attacker_entry_id),
+                "target_entry_id": str(target_entry_id),
+                "target_is_hostile": bool(target["is_hostile"]),
+                "kind": "range",
+                "status": "dm_adjudication_required",
+            }
             connection.execute(
                 update(session_events)
                 .where(session_events.c.id == event_id)
-                .values(subject_character_id=attacker["character_id"])
+                .values(subject_character_id=attacker["character_id"], payload=event_payload)
             )
 
         event = self.event_repository.append(
@@ -314,6 +323,7 @@ class CombatAdjudicationRepository:
                     "combat_action_id": str(action_id),
                     "attacker_entry_id": str(action["entry_id"]),
                     "target_entry_id": str(action["target_entry_id"]),
+                    "target_is_hostile": bool(target["is_hostile"]),
                     "in_range": False,
                     "status": "resolved",
                     "resolution_result": result,
@@ -365,6 +375,7 @@ class CombatAdjudicationRepository:
                     "combat_action_id": str(action_id),
                     "attacker_entry_id": str(action["entry_id"]),
                     "target_entry_id": str(action["target_entry_id"]),
+                    "target_is_hostile": bool(target["is_hostile"]),
                     "in_range": True,
                     "status": "waiting_for_roll",
                     "roll_group_id": str(roll_group_id),

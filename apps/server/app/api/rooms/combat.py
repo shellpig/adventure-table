@@ -62,6 +62,7 @@ from app.domain.combat.semantic_hp import (
     CombatResolutionService,
     SemanticDamageInput,
     SemanticHealingInput,
+    SemanticResolutionView,
 )
 from app.domain.rooms.rolls import FormalRollInput, RollInputInvalidError
 from app.domain.rooms.schemas import RoomAccessContext, StrictModel
@@ -391,22 +392,22 @@ def roll_death_save(room_id: UUID, campaign_id: UUID, session_id: UUID, payload:
         raise _map_combat_error(exc) from exc
 
 
-@router.post("/damage")
+@router.post("/damage", response_model=SemanticResolutionView, response_model_exclude_none=True)
 def apply_damage(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: SemanticDamageInput,
                  context: RoomAccessContext = Depends(get_room_access_context),
                  event_service: TableEventService = Depends(get_table_event_service),
-                 service: CombatResolutionService = Depends(get_combat_resolution_service)) -> StoredSemanticResolution:
+                 service: CombatResolutionService = Depends(get_combat_resolution_service)) -> SemanticResolutionView:
     try:
         return service.apply_damage(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
-@router.post("/healing")
+@router.post("/healing", response_model=SemanticResolutionView, response_model_exclude_none=True)
 def apply_healing(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: SemanticHealingInput,
                   context: RoomAccessContext = Depends(get_room_access_context),
                   event_service: TableEventService = Depends(get_table_event_service),
-                  service: CombatResolutionService = Depends(get_combat_resolution_service)) -> StoredSemanticResolution:
+                  service: CombatResolutionService = Depends(get_combat_resolution_service)) -> SemanticResolutionView:
     try:
         return service.apply_healing(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:

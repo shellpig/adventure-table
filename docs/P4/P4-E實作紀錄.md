@@ -16,7 +16,7 @@
 | E2 | Monster concentration canonical state + 受傷 CON save | 實作規格 15；設計 §8.5「Monster concentration」；測試 E.5 | ✅ |
 | E3 | Concentration roll routing：通用 resolve 拒絕，只走 `complete_check` | 實作規格 16；設計 §8.5「Concentration roll routing」；測試 E.5 | ✅ |
 | E4a | Combat detail projection + `GET .../combat/detail`：DM 完整 vs Player secrecy | 實作規格 2、3；設計 §4.3、§8.1；測試 E.2（REST） | ✅ |
-| E4b | Event payload projector + 既有 P4-C mutation response 對 Player 的 redaction | 設計 §8.2「Player-safe event payload」；測試 E.2（event / response） | ⬜ |
+| E4b | Event payload projector + 既有 P4-C mutation response 對 Player 的 redaction | 設計 §8.2「Player-safe event payload」；測試 E.2（event / response） | ✅ |
 | E5 | Spell / reaction / concentration REST route | 實作規格 7、11；設計 §8.1、§8.2 | ⬜ |
 | E6 | DM adjudication REST（range / cover / AoE / OA） | 實作規格 5；設計 §8.3 | ⬜ |
 | E7 | Combat MCP tools（DM / Player catalog） | 實作規格 8、10、11；設計 §8.4；測試 E.3 | ⬜ |
@@ -62,4 +62,12 @@
 - 清理：拿掉 agy 版的 `getattr` / `Any` 防禦式寫法、`lru_cache` fallback registry、`NewCombatEntry.is_hostile` override（P4-B 契約：只由 subject kind 決定）與重複的 `/active/detail` route。
 - 測試：`tests/test_p4e_combat_detail_secrecy.py` 7 條（DM 完整 / Player raw JSON key 缺席 / 自己角色精確 / hidden monster 省略 / 非本場 participant 拒絕 / DM+Player token REST / 無 active combat → null）。focused gate 106 passed。
 - 未做（E4b）：event payload projection、既有 `POST /damage` 等 P4-C mutation response 對 Player 的 redaction；MonsterRevealState 尚未持久化（DM reveal 行為留 E6 / E10）。
+
+### E4b — Player-safe event payloads and mutation responses
+
+- 起始：2026-09-16，agy worker 一輪在 1434s 撞到 quota（429，partial：16 檔已改、測試未寫）；其餘由 Claude 收尾。
+- 交付：各 combat repository 在 payload 寫入 `target_is_hostile` / `caster_is_hostile` / `target_injury_level`（write-time facts，DM 內容不變）；單一 projector `project_combat_event_payload(kind, payload, audience)`（`app/domain/combat/event_projection.py`）對 Player 移除 hostile target 的 HP / AC / resources / affinities / adjusted_by_type / hp_lost / temp_hp_absorbed 等精確欄位，保留 amount / hit / critical / injury level；掛在 `TableEventService._present(stored, actor=...)`——list / long-poll / Resume / MCP 全部經過同一點，`actor` 為必填（fail-closed）。`POST /damage` / `/healing` 改回 `SemanticResolutionView`，`AttackResolutionView` 對 Player 遇 hostile target 時 `target_ac` / `before_hp` / `after_hp` 為 None，`resolution_result` 走同一 projector；MCP adapter 直接 `model_dump(exclude_none=True)` 同一 view。`injury_level` 拆出 `calculate_injury_level(current, max, status)` 供 write-time 使用。
+- 清理：移除 agy 在 `request_death_save` 加的壞掉 payload 重寫（`event_id` 未定義、death save 永遠是 Character）；`_present` / `_resolution_view` 的 `actor=None` 預設改為必填；兩處重複的 view 建構收成一份。
+- 測試：`tests/test_p4e_event_secrecy.py` 7 條（Player event stream 無敵人 HP 但有 amount + injury level / long-poll 與 list 一致 / 友方 Character 精確 / stored resolution 對 Player 與 DM 的 view 差異 + DM REST / Player attack 結果與 `roll.resolved` event 無 AC、DM 有 / hostile caster spell payload 無 DC、modifier / 非 combat kind 不動）。gate 186 passed（含 P3-A/B/C/E/F、M04、P4-B/C/D regression）。
+- 備註：agy 為了在 projection 內加旗標，把數個 event 的 append payload 在 projection 裡整份重寫一次（`update(session_events).values(payload=...)`），與 append 端的 payload 重複；hostility 其實在 append 前就可由 subject kind 得知，P4-F 可把旗標前移、刪掉重寫段。Monster 的 save modifier 仍可由 `roll.resolved` 的 total − d20 推得，視為桌面可見資訊，未列入 secrecy。
 

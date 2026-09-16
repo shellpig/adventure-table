@@ -118,10 +118,23 @@ class CombatReactionRepository:
                 .where(combats.c.id == combat_id)
                 .values(revision=combats.c.revision + 1, updated_at=now)
             )
+            event_payload = {
+                "combat_id": str(combat_id),
+                "entry_id": str(entry_id),
+                "window_id": window.window_id,
+                "kind": window.kind.value,
+                "reason": window.reason,
+                "source_entry_id": window.source_entry_id,
+                "eligible_entry_ids": list(window.eligible),
+                "target_entry_id": window.target_entry_id,
+                "target_is_hostile": bool(entry["is_hostile"]),
+                "safe_payload": dict(window.safe_payload or {}),
+                "status": window.status,
+            }
             connection.execute(
                 update(session_events)
                 .where(session_events.c.id == event_id)
-                .values(subject_character_id=entry["character_id"])
+                .values(subject_character_id=entry["character_id"], payload=event_payload)
             )
 
         event = self.event_repository.append(
@@ -225,6 +238,9 @@ class CombatReactionRepository:
                 )
             event_payload.update(
                 {
+                    "target_entry_id": str(owner_entry_id),
+                    "target_is_hostile": bool(owner["is_hostile"]),
+                    "actor_is_hostile": bool(actor["is_hostile"]),
                     "window_id": window.window_id,
                     "kind": window.kind.value,
                     "status": resolution.window.status,

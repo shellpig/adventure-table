@@ -422,6 +422,7 @@ class CombatConcentrationRepository:
                         "roll_request_id": str(request_id),
                         "roll_result_id": str(result_id),
                         "target_entry_id": str(target_entry_id),
+                        "target_is_hostile": bool(entry["is_hostile"]),
                         "source_ref": str(metadata["source_ref"]),
                         "damage_taken": int(metadata["damage_taken"]),
                         "dc": dc,

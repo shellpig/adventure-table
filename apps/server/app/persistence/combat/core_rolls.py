@@ -368,6 +368,7 @@ class CombatCoreRollRepository:
                         "roll_request_id": str(request_id),
                         "roll_result_id": str(result_id),
                         "target_entry_id": str(target["id"]),
+                        "target_is_hostile": bool(target["is_hostile"]),
                         "request_type": "saving_throw",
                         "ability_ref": locked["ability_ref"],
                         "formula": computation.formula,
@@ -720,6 +721,7 @@ class CombatCoreRollRepository:
                         "roll_request_id": str(request_id),
                         "roll_result_id": str(result_id),
                         "target_entry_id": str(entry["id"]),
+                        "target_is_hostile": bool(entry["is_hostile"]),
                         **result_payload,
                     },
                 )

@@ -20,6 +20,7 @@ from app.domain.combat.semantic_hp import (
     CombatResolutionService,
     SemanticDamageInput,
     SemanticHealingInput,
+    SemanticResolutionView,
 )
 from app.domain.combat.special_attacks import (
     CombatSpecialAttackService,
@@ -67,19 +68,10 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         self.combat_special_attack_service = combat_special_attack_service
 
     @staticmethod
-    def _semantic_resolution(result: Any) -> dict[str, Any]:
-        return {
-            "event_id": str(result.event_id),
-            "combat_id": str(result.combat_id),
-            "target_entry_id": str(result.target_entry_id),
-            "kind": result.kind,
-            "before_hp": result.before_hp,
-            "after_hp": result.after_hp,
-            "before_temp_hp": result.before_temp_hp,
-            "after_temp_hp": result.after_temp_hp,
-            "amount": result.amount,
-            "payload": result.payload,
-        }
+    def _semantic_resolution(result: SemanticResolutionView) -> dict[str, Any]:
+        # The view is already projected for the acting actor; redacted HP fields
+        # are dropped rather than sent as null so a Player never sees the key.
+        return result.model_dump(mode="json", exclude_none=True)
 
     @staticmethod
     def _server_roll(input: CombatRollToolInput) -> FormalRollInput:

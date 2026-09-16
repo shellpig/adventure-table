@@ -9,6 +9,7 @@ from sqlalchemy import func, insert, select, update
 from sqlalchemy.engine import Engine
 
 from app.domain.character.schemas import CharacterBuild, CharacterConcentrationState, CharacterState
+from app.domain.combat.projection import calculate_injury_level
 from app.domain.combat.resolution import (
     DamageRollPart,
     DamageType,
@@ -59,6 +60,8 @@ class StoredSemanticResolution:
     after_temp_hp: int
     amount: int
     payload: dict[str, Any]
+    target_is_hostile: bool = False
+    target_injury_level: str | None = None
 
 
 def _death_state(row: Any) -> DeathSaveState:
@@ -145,6 +148,8 @@ def _resolution_from_event(event: StoredTableEvent) -> StoredSemanticResolution:
         after_temp_hp=int(payload["after"]["temp_hp"]),
         amount=int(payload["amount"]),
         payload=payload,
+        target_is_hostile=bool(payload.get("target_is_hostile", False)),
+        target_injury_level=payload.get("target_injury_level"),
     )
 
 
@@ -375,6 +380,11 @@ class CombatResolutionRepository:
             payload = {
                 "combat_id": str(combat_id),
                 "target_entry_id": str(target_entry_id),
+                "target_is_hostile": bool(target["is_hostile"]),
+                "target_injury_level": calculate_injury_level(
+                    outcome.after.current_hp,
+                    outcome.after.max_hp,
+                ),
                 "source_entry_id": str(source_entry_id) if source_entry_id else None,
                 "kind": "damage",
                 "critical": critical,
@@ -542,6 +552,11 @@ class CombatResolutionRepository:
             payload = {
                 "combat_id": str(combat_id),
                 "target_entry_id": str(target_entry_id),
+                "target_is_hostile": bool(target["is_hostile"]),
+                "target_injury_level": calculate_injury_level(
+                    outcome.after.current_hp,
+                    outcome.after.max_hp,
+                ),
                 "source_entry_id": str(source_entry_id) if source_entry_id else None,
                 "kind": "healing",
                 "amount": outcome.restored,

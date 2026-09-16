@@ -7,7 +7,7 @@ from uuid import uuid4
 from app.domain.combat.ai_tools import CombatAIToolApplicationService, CombatRollToolInput
 from app.domain.combat.attacks import AttackRequestInput
 from app.domain.combat.resolution import DamageType
-from app.domain.combat.semantic_hp import SemanticDamageInput
+from app.domain.combat.semantic_hp import SemanticDamageInput, SemanticResolutionView
 from app.domain.rooms.ai_controllers import AIControllerAuthView
 from app.domain.rooms.rolls import FormalRollInput, FormalRollSource
 from app.mcp.tools import call_tool, tool_catalog
@@ -145,7 +145,7 @@ class _DamageServiceSpy:
     def apply_damage(self, actor, input: SemanticDamageInput):
         self.actor = actor
         self.input = input
-        return SimpleNamespace(
+        return SemanticResolutionView(
             event_id=uuid4(),
             combat_id=uuid4(),
             target_entry_id=input.target_entry_id,
