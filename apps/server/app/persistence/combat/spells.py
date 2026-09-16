@@ -16,6 +16,7 @@ from app.domain.combat.aoe_adjudication import (
     propose_aoe,
     resolve_aoe_save_spell,
 )
+from app.domain.combat.concentration_triggers import concentration_dc
 from app.domain.combat.resolution import DamageRollPart, HitPointState, TargetKind
 from app.domain.combat.spell_resolver import SaveDamageMode, SpellCastMode, SpellResolutionSpec
 from app.domain.combat.spell_resources import authorize_character_spell
@@ -102,12 +103,11 @@ def _damage_payload(parts: tuple[DamageRollPart, ...]) -> list[dict[str, object]
 
 
 class CombatSpellRepository:
-    """P4-D durable spell/AoE transaction boundary.
+    """Durable P4-D AoE spell transaction boundary.
 
-    The domain resolvers stay persistence-free. This repository binds a DM-confirmed
-    identity-only AoE to the canonical Combat action, formal Roll tables, Character
-    spell resources, target HP/death state, and one durable Session event in the same
-    TableEventRepository transaction projection.
+    Target confirmation, formal save results, the caster spell resource, action
+    economy, every target state mutation, concentration follow-up requests and
+    the durable Session event commit through one TableEventRepository projection.
     """
 
     def __init__(self, engine: Engine, event_repository: TableEventRepository) -> None:
@@ -128,7 +128,7 @@ class CombatSpellRepository:
         return _stored_aoe(row) if row is not None else None
 
     @staticmethod
-    def _lock_combat_entry(connection, *, combat_id: UUID, entry_id: UUID):
+    def _lock_entry(connection, *, combat_id: UUID, entry_id: UUID):
         row = connection.execute(
             select(combat_entries)
             .where(
@@ -191,6 +191,9 @@ class CombatSpellRepository:
     ) -> tuple[StoredAoeSpellAction, StoredTableEvent]:
         if not proposed_target_ids:
             raise ValueError("AoE requires at least one proposed target")
+        if len(proposed_target_ids) != len(set(proposed_target_ids)):
+            raise ValueError("AoE proposed targets must be unique")
+
         action_id = uuid4()
         adjudication = propose_aoe(
             command_id=str(action_id),
@@ -219,25 +222,19 @@ class CombatSpellRepository:
                 )
                 .with_for_update()
             ).mappings().one_or_none()
-            if combat is None:
-                raise CombatSpellNotFoundError(str(combat_id))
-            caster = self._lock_combat_entry(
+            if combat is None or combat["status"] != "running":
+                raise CombatSpellStateConflictError("AoE requires a running Combat")
+            caster = self._lock_entry(
                 connection,
                 combat_id=combat_id,
                 entry_id=caster_entry_id,
             )
-            if combat["status"] != "running":
-                raise CombatSpellStateConflictError("AoE requires a running Combat")
             if combat["current_turn_entry_id"] != caster_entry_id:
                 raise CombatSpellStateConflictError("Spell can only be proposed on the caster's turn")
             if caster["surprised"]:
                 raise CombatSpellStateConflictError("Surprised combatant cannot cast on its first turn")
             for target_id in sorted(set(proposed_target_ids), key=str):
-                self._lock_combat_entry(
-                    connection,
-                    combat_id=combat_id,
-                    entry_id=target_id,
-                )
+                self._lock_entry(connection, combat_id=combat_id, entry_id=target_id)
 
             connection.execute(
                 insert(combat_actions).values(
@@ -259,18 +256,16 @@ class CombatSpellRepository:
                     idempotency_key=idempotency_key,
                 )
             )
+            now = datetime.now().astimezone()
+            connection.execute(
+                update(combats)
+                .where(combats.c.id == combat_id)
+                .values(revision=combats.c.revision + 1, updated_at=now)
+            )
             connection.execute(
                 update(session_events)
                 .where(session_events.c.id == event_id)
                 .values(subject_character_id=caster["character_id"])
-            )
-            connection.execute(
-                update(combats)
-                .where(combats.c.id == combat_id)
-                .values(
-                    revision=combats.c.revision + 1,
-                    updated_at=datetime.now().astimezone(),
-                )
             )
 
         event = self.event_repository.append(
@@ -319,17 +314,19 @@ class CombatSpellRepository:
         damage_parts: tuple[DamageRollPart, ...],
         roll_source: str,
         idempotency_key: str | None,
+        target_seat_ids: Mapping[UUID, UUID | None] | None = None,
     ) -> tuple[StoredAoeSpellAction, StoredTableEvent]:
         if roll_source not in {"server", "physical"}:
             raise ValueError("AoE formal save roll_source must be server or physical")
+        if not confirmed_target_ids or len(confirmed_target_ids) != len(set(confirmed_target_ids)):
+            raise ValueError("confirmed AoE targets must be a non-empty unique set")
         existing = self.get_aoe_action(session_id=binding.session_id, action_id=action_id)
         if existing is None:
             raise CombatSpellNotFoundError(str(action_id))
 
+        target_seat_ids = dict(target_seat_ids or {})
         roll_group_id = uuid4()
-        roll_ids = {
-            target_id: (uuid4(), uuid4()) for target_id in confirmed_target_ids
-        }
+        roll_ids = {target_id: (uuid4(), uuid4()) for target_id in confirmed_target_ids}
 
         def projection(connection, event_id: UUID, _seq: int) -> None:
             action = connection.execute(
@@ -356,7 +353,7 @@ class CombatSpellRepository:
             ).mappings().one_or_none()
             if combat is None or combat["status"] != "running":
                 raise CombatSpellStateConflictError("AoE requires a running Combat")
-            caster = self._lock_combat_entry(
+            caster = self._lock_entry(
                 connection,
                 combat_id=action["combat_id"],
                 entry_id=action["entry_id"],
@@ -381,14 +378,13 @@ class CombatSpellRepository:
                 raise ValueError("save d20s must exactly match confirmed AoE targets")
 
             target_entries = {
-                target_id: self._lock_combat_entry(
+                target_id: self._lock_entry(
                     connection,
                     combat_id=action["combat_id"],
                     entry_id=target_id,
                 )
                 for target_id in sorted(set(confirmed_target_ids), key=str)
             }
-
             character_ids = {
                 row["character_id"]
                 for row in target_entries.values()
@@ -397,10 +393,7 @@ class CombatSpellRepository:
             character_ids.add(caster["character_id"])
             character_rows: dict[UUID, tuple[CharacterBuild, CharacterState, int]] = {}
             for character_id in sorted(character_ids, key=str):
-                character_rows[character_id] = self._load_character_state(
-                    connection,
-                    character_id,
-                )
+                character_rows[character_id] = self._load_character_state(connection, character_id)
 
             caster_build, caster_state, _caster_revision = character_rows[caster["character_id"]]
             authorization = authorize_character_spell(
@@ -503,9 +496,17 @@ class CombatSpellRepository:
                         }
                     conditions = list(state_payload.get("conditions", []))
                     if outcome.apply_unconscious:
-                        _add_condition(conditions, UNCONSCIOUS_REF, "P4-D: AoE reduced target to zero hit points")
+                        _add_condition(
+                            conditions,
+                            UNCONSCIOUS_REF,
+                            "P4-D: AoE reduced target to zero hit points",
+                        )
                     if outcome.apply_prone:
-                        _add_condition(conditions, PRONE_REF, "P4-D: AoE reduced target to zero hit points")
+                        _add_condition(
+                            conditions,
+                            PRONE_REF,
+                            "P4-D: AoE reduced target to zero hit points",
+                        )
                     state_payload["conditions"] = conditions
                     next_states[character_id] = CharacterState.model_validate(state_payload)
                     connection.execute(
@@ -573,7 +574,7 @@ class CombatSpellRepository:
                         id=request_id,
                         session_id=binding.session_id,
                         roll_group_id=roll_group_id,
-                        target_seat_id=None,
+                        target_seat_id=target_seat_ids.get(target_id),
                         target_character_id=entry["character_id"],
                         target_combat_entry_id=target_id,
                         request_type="saving_throw",
@@ -595,7 +596,7 @@ class CombatSpellRepository:
                         roll_request_id=request_id,
                         session_id=binding.session_id,
                         acting_seat_id=binding.seat_id,
-                        subject_seat_id=None,
+                        subject_seat_id=target_seat_ids.get(target_id),
                         subject_character_id=entry["character_id"],
                         subject_combat_entry_id=target_id,
                         execution_mode="system",
@@ -620,6 +621,62 @@ class CombatSpellRepository:
                     }
                 )
 
+            concentration_payloads: list[dict[str, object]] = []
+            for target_id, entry in target_entries.items():
+                if entry["subject_kind"] != "character":
+                    continue
+                character_id = entry["character_id"]
+                assert character_id is not None
+                outcome = outcomes_by_id[target_id]
+                next_state = next_states[character_id]
+                current = next_state.concentration
+                if current is None or outcome.damage_taken <= 0:
+                    continue
+                concentration_group_id = uuid4()
+                concentration_request_id = uuid4()
+                dc = concentration_dc(outcome.damage_taken)
+                connection.execute(
+                    insert(roll_groups).values(
+                        id=concentration_group_id,
+                        session_id=binding.session_id,
+                        requested_by_seat_id=binding.seat_id,
+                        label="Concentration",
+                        visibility="public",
+                        version=1,
+                    )
+                )
+                connection.execute(
+                    insert(roll_requests).values(
+                        id=concentration_request_id,
+                        session_id=binding.session_id,
+                        roll_group_id=concentration_group_id,
+                        target_seat_id=target_seat_ids.get(target_id),
+                        target_character_id=character_id,
+                        target_combat_entry_id=target_id,
+                        request_type="saving_throw",
+                        ability_ref="srd5.1:ability:constitution",
+                        skill_ref=None,
+                        dc=dc,
+                        modifier_mode="normal",
+                        flat_adjustment=0,
+                        visibility="public",
+                        status="pending",
+                        requested_by_seat_id=binding.seat_id,
+                        version=1,
+                    )
+                )
+                concentration_payloads.append(
+                    {
+                        "target_entry_id": str(target_id),
+                        "target_character_id": str(character_id),
+                        "source_ref": current.source_ref,
+                        "damage_taken": outcome.damage_taken,
+                        "dc": dc,
+                        "roll_group_id": str(concentration_group_id),
+                        "roll_request_id": str(concentration_request_id),
+                    }
+                )
+
             resolution_payload = {
                 "spell_ref": spec.spell_ref,
                 "adjudication": resolution.adjudication.to_payload(),
@@ -639,6 +696,7 @@ class CombatSpellRepository:
                     }
                     for row in resolution.outcomes
                 ],
+                "concentration_checks": concentration_payloads,
                 "domain_events": list(resolution.events),
             }
             first_target = confirmed_target_ids[0]
@@ -680,8 +738,7 @@ class CombatSpellRepository:
             session_id=binding.session_id,
             kind="combat.spell_aoe_resolved",
             acting_seat_id=binding.seat_id,
-            subject_seat_id=existing.adjudication.acting_entry_id
-            and None,
+            subject_seat_id=None,
             subject_character_id=None,
             execution_mode="dm_proxy" if binding.is_current_dm else "self",
             visibility="public",
