@@ -4,6 +4,13 @@ from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Literal
 
+from app.domain.character.schemas import (
+    CharacterConcentrationState,
+    ConditionState,
+    PersistentTemporaryEffect,
+    TemporaryEffectModifier,
+)
+
 
 class Condition(StrEnum):
     BLINDED = "blinded"
@@ -163,6 +170,22 @@ CONDITION_SEMANTICS: dict[Condition, ConditionSemantics] = {
 }
 
 
+def condition_to_state(condition: Condition, *, note: str | None = None) -> ConditionState:
+    """Convert the combat enum to the canonical CharacterState StableKey shape."""
+
+    return ConditionState(condition_ref=f"srd5.1:condition:{condition.value}", note=note)
+
+
+def condition_from_state(state: ConditionState) -> Condition:
+    """Convert a canonical CharacterState condition back to combat semantics."""
+
+    slug = state.condition_ref.rsplit(":", 1)[-1]
+    try:
+        return Condition(slug)
+    except ValueError as exc:
+        raise ValueError(f"unsupported 2014 combat condition: {state.condition_ref}") from exc
+
+
 @dataclass(frozen=True)
 class ExhaustionSemantics:
     level: int
@@ -288,11 +311,103 @@ class ActiveEffect:
         )
 
 
+_PERSISTENT_DURATION_BY_KIND = {
+    DurationKind.MANUAL: "manual",
+    DurationKind.UNTIL_SHORT_REST: "short_rest",
+    DurationKind.UNTIL_LONG_REST: "long_rest",
+    DurationKind.UNTIL_CONCENTRATION_ENDS: "concentration",
+}
+_DURATION_KIND_BY_PERSISTENT = {value: key for key, value in _PERSISTENT_DURATION_BY_KIND.items()}
+
+
+def active_effect_to_persistent(effect: ActiveEffect) -> PersistentTemporaryEffect:
+    """Persist a losslessly representable combat effect into CharacterState.
+
+    Round/turn-boundary effects carry timing data that the current CharacterState
+    schema cannot represent. Reject them instead of silently degrading them to
+    ``manual``; those effects remain owned by combat/session state until the
+    canonical state schema gains an explicit timing cursor.
+    """
+
+    persistent_duration = _PERSISTENT_DURATION_BY_KIND.get(effect.spec.duration.kind)
+    if persistent_duration is None:
+        raise ValueError(
+            f"effect duration {effect.spec.duration.kind.value} cannot be losslessly persisted in CharacterState"
+        )
+    return PersistentTemporaryEffect(
+        effect_id=effect.effect_id,
+        source_ref=effect.spec.source_ref,
+        tag=effect.spec.tag,
+        duration=persistent_duration,
+        modifiers=tuple(
+            TemporaryEffectModifier(
+                scope=modifier.scope.value,
+                mode=modifier.mode.value,
+                value=modifier.value,
+                target=modifier.target,
+            )
+            for modifier in effect.spec.modifiers
+        ),
+        note=effect.spec.note,
+    )
+
+
+def active_effect_from_persistent(
+    effect: PersistentTemporaryEffect,
+    *,
+    effect_type: Literal["condition", "buff", "debuff", "movement_lock", "reaction_modifier"],
+    concentration_owner_ref: str | None = None,
+) -> ActiveEffect:
+    """Restore a persisted CharacterState effect without guessing lost semantics."""
+
+    if effect.source_ref is None:
+        raise ValueError("persistent combat effect requires source_ref")
+    duration_kind = _DURATION_KIND_BY_PERSISTENT[effect.duration]
+    spec = EffectSpec(
+        effect_type=effect_type,
+        tag=effect.tag,
+        duration=DurationSpec(duration_kind),
+        source_ref=effect.source_ref,
+        modifiers=tuple(
+            TypedModifier(
+                scope=ModifierScope(modifier.scope),
+                mode=ModifierMode(modifier.mode),
+                value=modifier.value,
+                target=modifier.target,
+            )
+            for modifier in effect.modifiers
+        ),
+        note=effect.note,
+    )
+    return ActiveEffect.create(
+        effect.effect_id,
+        spec,
+        concentration_owner_ref=concentration_owner_ref,
+    )
+
+
 @dataclass(frozen=True)
 class Concentration:
     owner_ref: str
     source_ref: str
     effect_ids: tuple[str, ...] = ()
+
+
+def concentration_to_state(current: Concentration | None) -> CharacterConcentrationState | None:
+    if current is None:
+        return None
+    return CharacterConcentrationState(source_ref=current.source_ref, effect_ids=current.effect_ids)
+
+
+def concentration_from_state(
+    owner_ref: str,
+    state: CharacterConcentrationState | None,
+) -> Concentration | None:
+    if state is None:
+        return None
+    if not owner_ref.strip():
+        raise ValueError("concentration owner_ref cannot be blank")
+    return Concentration(owner_ref=owner_ref, source_ref=state.source_ref, effect_ids=state.effect_ids)
 
 
 @dataclass(frozen=True)
