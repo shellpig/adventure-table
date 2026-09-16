@@ -163,6 +163,54 @@ def _caster_build_and_state() -> tuple[CharacterBuild, CharacterState]:
     return build, state
 
 
+def _fireball_caster_build_and_state() -> tuple[CharacterBuild, CharacterState]:
+    build, state = _caster_build_and_state()
+    fireball = "srd5.1:spell:fireball"
+    wizard = build.spellcasting_profiles[0].model_copy(update={"max_spell_level": 3})
+    normal_pool = build.spell_resource_pools[0].model_copy(
+        update={
+            "slots": (
+                *build.spell_resource_pools[0].slots,
+                SpellSlotCapacity(level=3, capacity=1),
+            )
+        }
+    )
+    fireball_access = SpellAccessEntry(
+        entry_id="wizard:fireball",
+        spell_key=fireball,
+        source_type="class",
+        source_key=wizard.source_key,
+        access_type="known",
+        casting_ability="intelligence",
+    )
+    next_build = build.model_copy(
+        update={
+            "spellcasting_profiles": (wizard, *build.spellcasting_profiles[1:]),
+            "spell_access_entries": (*build.spell_access_entries, fireball_access),
+            "spell_resource_pools": (normal_pool, *build.spell_resource_pools[1:]),
+        },
+        deep=True,
+    )
+    next_state = state.model_copy(
+        update={
+            "prepared_spells": [
+                *state.prepared_spells,
+                PreparedSpellSelection(
+                    spell_key=fireball,
+                    source_profile_id="wizard",
+                    source_access_entry_id="wizard:fireball",
+                ),
+            ],
+            "spell_slots": {
+                **state.spell_slots,
+                3: ResourceCounter(used=0, remaining=1),
+            },
+        },
+        deep=True,
+    )
+    return next_build, next_state
+
+
 # D.0 — canonical Character Current State / backwards compatibility.
 def test_p4d_d0_character_state_additive_defaults_and_roundtrip() -> None:
     legacy = CharacterState.model_validate({"current_hp": 7})
@@ -249,14 +297,24 @@ def test_p4d_d1_unprepared_spell_fails_before_resource_spend() -> None:
     assert unprepared.spell_slots[1] == ResourceCounter(used=0, remaining=2)
 
 
-def test_p4d_d1_monster_spell_source_uses_snapshot_and_live_resource() -> None:
+def test_p4d_d1_monster_spell_source_uses_p4a_snapshot_and_live_resource() -> None:
     source = resolve_monster_spell_source(
         rules_snapshot={
-            "spellcasting": {
-                "attack_bonus": 7,
-                "save_dc": 15,
-                "spells": [{"spell_ref": "srd5.1:spell:fireball", "level": 3}],
-            }
+            "traits": [
+                {
+                    "spellcasting": {
+                        "modifier": 7,
+                        "dc": 15,
+                        "slots": {"3": 3},
+                        "spells": [
+                            {
+                                "name": "Fireball",
+                                "url": "/api/2014/spells/fireball",
+                            }
+                        ],
+                    }
+                }
+            ]
         },
         resources={"spell_slot:3": 1},
         spell_ref="srd5.1:spell:fireball",
@@ -320,8 +378,17 @@ def test_p4d_single_target_attack_and_heal_resolution() -> None:
     assert healed.target_hp == HitPointState(current_hp=12, max_hp=12)
 
 
-# D.2 — identity-only AoE + DM-confirmed affected set + one resource spend.
+# D.2 — identity-only AoE + DM-confirmed affected set + one canonical resource spend.
 def test_p4d_d2_aoe_requires_confirmation_and_resolves_each_confirmed_target_once() -> None:
+    build, state = _fireball_caster_build_and_state()
+    authorization = authorize_character_spell(
+        build=build,
+        state=state,
+        profile_id="wizard",
+        spell_ref="srd5.1:spell:fireball",
+        spell_level=3,
+        slot_level=3,
+    )
     proposed = propose_aoe(command_id="cast:1", acting_entry_id="caster", target_ids=("a", "b", "c"))
     assert "radius" not in proposed.to_payload()
     confirmed = confirm_aoe(proposed, confirmed_target_ids=("a", "c"))
@@ -335,8 +402,8 @@ def test_p4d_d2_aoe_requires_confirmation_and_resolves_each_confirmed_target_onc
     result = resolve_aoe_save_spell(
         adjudication=confirmed,
         spec=spec,
-        slot_level=3,
-        spell_slots={3: 1},
+        state=state,
+        authorization=authorization,
         targets={
             "a": AoeTargetState("a", TargetKind.MONSTER, HitPointState(30, 30), 2),
             "c": AoeTargetState("c", TargetKind.MONSTER, HitPointState(30, 30), 5),
@@ -344,7 +411,9 @@ def test_p4d_d2_aoe_requires_confirmation_and_resolves_each_confirmed_target_onc
         save_d20s={"a": 5, "c": 12},
         damage_parts=(_damage(DamageType.FIRE, 8, 8),),
     )
-    assert result.remaining_slots == {3: 0}
+    assert result.character_state is not None
+    assert state.spell_slots[3] == ResourceCounter(used=0, remaining=1)
+    assert result.character_state.spell_slots[3] == ResourceCounter(used=1, remaining=0)
     assert result.adjudication.status == "resolved"
     assert [(row.entry_id, row.saved, row.damage_taken) for row in result.outcomes] == [
         ("a", False, 16),
