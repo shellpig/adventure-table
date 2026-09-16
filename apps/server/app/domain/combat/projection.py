@@ -39,12 +39,17 @@ class CombatantState:
     armor_class_revealed: bool = False
     description_revealed: bool = False
     position_note_revealed: bool = False
+    concentration: dict[str, Any] | None = None
+    death_saves: dict[str, Any] | None = None
+    exhaustion_level: int = 0
 
     def __post_init__(self) -> None:
         if self.current_hp < 0 or self.max_hp < 0 or self.temp_hp < 0:
             raise ValueError("combatant HP values must not be negative")
         if self.armor_class is not None and self.armor_class < 0:
             raise ValueError("combatant armor_class must not be negative")
+        if self.exhaustion_level < 0:
+            raise ValueError("combatant exhaustion_level must not be negative")
 
 
 def injury_level(state: CombatantState) -> Literal["down", "critical", "wounded", "healthy"]:
@@ -85,6 +90,9 @@ def _full_projection(state: CombatantState) -> dict[str, Any]:
         "reaction_available": state.reaction_available,
         "position_note": state.position_note,
         "dm_notes": state.dm_notes,
+        "concentration": deepcopy(state.concentration) if state.concentration is not None else None,
+        "death_saves": deepcopy(state.death_saves) if state.death_saves is not None else None,
+        "exhaustion_level": state.exhaustion_level,
     }
 
 

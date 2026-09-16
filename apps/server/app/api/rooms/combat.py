@@ -49,6 +49,7 @@ from app.domain.combat.lifecycle import (
     AddMonsterInput,
     CombatActionInput,
     CombatActionView,
+    CombatDetailView,
     CombatNotFoundError,
     CombatService,
     CombatStateConflictError,
@@ -179,6 +180,23 @@ def get_active_combat(room_id: UUID, campaign_id: UUID, session_id: UUID,
                       service: CombatService = Depends(get_combat_service)) -> CombatView | None:
     try:
         return service.get_active_combat(_actor_from_request(room_id, campaign_id, session_id, context, event_service))
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
+@router.get("/detail", response_model=CombatDetailView | None)
+def get_active_combat_detail(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CombatService = Depends(get_combat_service),
+) -> CombatDetailView | None:
+    try:
+        return service.get_active_combat_detail(
+            _actor_from_request(room_id, campaign_id, session_id, context, event_service)
+        )
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 

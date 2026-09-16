@@ -15,7 +15,8 @@
 | E1 | Monster persisted cast：`CombatSpellRepository.cast_monster_spell` | 實作規格 14；設計 §8.5「Monster cast」；測試 E.5 第 1 點 | ✅ |
 | E2 | Monster concentration canonical state + 受傷 CON save | 實作規格 15；設計 §8.5「Monster concentration」；測試 E.5 | ✅ |
 | E3 | Concentration roll routing：通用 resolve 拒絕，只走 `complete_check` | 實作規格 16；設計 §8.5「Concentration roll routing」；測試 E.5 | ✅ |
-| E4 | Combat DTO / projection：DM 完整 vs Player secrecy | 實作規格 3；測試 E.2 | ⬜ |
+| E4a | Combat detail projection + `GET .../combat/detail`：DM 完整 vs Player secrecy | 實作規格 2、3；設計 §4.3、§8.1；測試 E.2（REST） | ✅ |
+| E4b | Event payload projector + 既有 P4-C mutation response 對 Player 的 redaction | 設計 §8.2「Player-safe event payload」；測試 E.2（event / response） | ⬜ |
 | E5 | Spell / reaction / concentration REST route | 實作規格 7、11；設計 §8.1、§8.2 | ⬜ |
 | E6 | DM adjudication REST（range / cover / AoE / OA） | 實作規格 5；設計 §8.3 | ⬜ |
 | E7 | Combat MCP tools（DM / Player catalog） | 實作規格 8、10、11；設計 §8.4；測試 E.3 | ⬜ |
@@ -53,4 +54,12 @@
 - 清理：移除 `RollRepository.complete_request` 每次 formal roll 多打一次的 pre-lock label 查詢，只留 lock 內檢查。
 - 測試：`tests/test_p4e_concentration_routing.py` 6 條；focused gate 103 passed，P3-C API / P3-E regression 62 passed。
 - 備註：`get_resolution_event` 沿用 P4-D `_source_metadata` 的 session event Python 掃描方式（O(n)），未新增索引查詢；長場次可在 P4-F 收斂。
+
+### E4a — Combat detail projection
+
+- 起始：2026-09-16，agy worker 一輪（905s）+ Claude 重寫 `character_to_combatant`。
+- 交付：`CombatantState` additive 加 `concentration` / `death_saves` / `exhaustion_level`（full projection 含，enemy allowlist 不變）；`character_to_combatant(character, *, entry, registry)`（max HP `calculate_max_hp`、AC `calculate_armor_class`、speed `effective_movement`、conditions 以 `condition_ref` 呈現、effects 以 `tag`）；`monster_instance_to_combatant` 可帶 `entry` 取 P4-B 的 initiative / reaction economy，並把 P4-D 型 `{condition_ref, effect_id}` 條目納入 public / hidden 名單；`StoredCombatEntry` 補讀 `is_hostile` 與 death-save 欄位；`CombatService.get_active_combat_detail` → `CombatDetailView`（`CombatView` + `combatants[]`，hidden enemy 對 Player 整筆省略）；route `GET .../sessions/{session}/combat/detail`。`CombatService` 改為必帶 `ContentRegistry`。
+- 清理：拿掉 agy 版的 `getattr` / `Any` 防禦式寫法、`lru_cache` fallback registry、`NewCombatEntry.is_hostile` override（P4-B 契約：只由 subject kind 決定）與重複的 `/active/detail` route。
+- 測試：`tests/test_p4e_combat_detail_secrecy.py` 7 條（DM 完整 / Player raw JSON key 缺席 / 自己角色精確 / hidden monster 省略 / 非本場 participant 拒絕 / DM+Player token REST / 無 active combat → null）。focused gate 106 passed。
+- 未做（E4b）：event payload projection、既有 `POST /damage` 等 P4-C mutation response 對 Player 的 redaction；MonsterRevealState 尚未持久化（DM reveal 行為留 E6 / E10）。
 

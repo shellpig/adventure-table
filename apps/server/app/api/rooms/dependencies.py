@@ -194,6 +194,7 @@ def get_combat_service(request: Request) -> CombatService:
             event_service,
             get_room_workspace_service(request).character_repository,
             MonsterRepository(engine),
+            get_content_registry(request),
         )
         request.app.state.combat_service = service
     return service

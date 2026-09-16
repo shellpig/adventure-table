@@ -7,9 +7,16 @@ from uuid import UUID
 
 from pydantic import Field, model_validator
 
+from app.content.registry import ContentRegistry
+from app.domain.combat.projection import CombatantAudience, project_combatant
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import TableActorContext, TableEventActorUnauthorizedError, TableEventService
 from app.persistence.characters import CharacterRepository
+from app.persistence.combat.combatants import (
+    MonsterRevealState,
+    character_to_combatant,
+    monster_instance_to_combatant,
+)
 from app.persistence.combat.lifecycle import (
     ActiveCombatExistsPersistenceError, CombatRepository, CombatStateConflictPersistenceError,
     NewCombatEntry, StoredCombat, StoredCombatEntry, actor_binding,
@@ -130,6 +137,17 @@ class CombatView(StrictModel):
     warnings: tuple[str, ...] = ()
 
 
+class CombatantDetailView(StrictModel):
+    entry_id: UUID
+    subject_kind: str
+    is_hostile: bool
+    projection: dict[str, Any]
+
+
+class CombatDetailView(CombatView):
+    combatants: tuple[CombatantDetailView, ...] = ()
+
+
 class CombatActionView(StrictModel):
     id: UUID
     combat_id: UUID
@@ -159,11 +177,13 @@ def _extra_attack_budget(character) -> int:
 class CombatService:
     """Actor-neutral P4-B application service shared by Human and AI adapters."""
     def __init__(self, repository: CombatRepository, table_event_service: TableEventService,
-                 character_repository: CharacterRepository, monster_repository: MonsterRepository) -> None:
+                 character_repository: CharacterRepository, monster_repository: MonsterRepository,
+                 registry: ContentRegistry) -> None:
         self.repository = repository
         self.table_event_service = table_event_service
         self.character_repository = character_repository
         self.monster_repository = monster_repository
+        self.registry = registry
 
     def _current(self, actor: TableActorContext) -> None:
         self.table_event_service.require_actor_current(actor)
@@ -209,6 +229,61 @@ class CombatService:
         self._current(actor)
         combat = self.repository.get_active(actor.campaign_id)
         return self._view(combat) if combat is not None else None
+
+    def get_active_combat_detail(self, actor: TableActorContext) -> CombatDetailView | None:
+        self._current(actor)
+        combat = self.repository.get_active(actor.campaign_id)
+        if combat is None:
+            return None
+        base_view = self._view(combat)
+        audience: CombatantAudience = "dm" if actor.is_current_dm else "player"
+        stored_entries = self.repository.list_entries(combat.id)
+        combatant_views: list[CombatantDetailView] = []
+        for entry in stored_entries:
+            enemy = bool(entry.is_hostile)
+            if entry.subject_kind == "character":
+                if entry.character_id is None:
+                    continue
+                character = self.character_repository.load_character(entry.character_id)
+                combatant_state = character_to_combatant(character, entry=entry, registry=self.registry)
+            elif entry.subject_kind == "monster":
+                if entry.monster_instance_id is None:
+                    continue
+                instance = self.monster_repository.get_instance(entry.monster_instance_id)
+                if instance is None:
+                    continue
+                # reveal toggles are not persisted yet; DM reveal actions arrive in a later step.
+                reveals = MonsterRevealState()
+                combatant_state = monster_instance_to_combatant(instance, reveals=reveals, entry=entry)
+            else:
+                continue
+
+            projected = project_combatant(combatant_state, audience=audience, enemy=enemy)
+            if projected is None:
+                # None-projected hidden enemies are omitted entirely from the tuple.
+                continue
+
+            combatant_views.append(
+                CombatantDetailView(
+                    entry_id=entry.id,
+                    subject_kind=entry.subject_kind,
+                    is_hostile=enemy,
+                    projection=projected,
+                )
+            )
+
+        return CombatDetailView(
+            id=base_view.id,
+            campaign_id=base_view.campaign_id,
+            mode=base_view.mode,
+            status=base_view.status,
+            round_number=base_view.round_number,
+            current_turn_entry_id=base_view.current_turn_entry_id,
+            revision=base_view.revision,
+            entries=base_view.entries,
+            warnings=base_view.warnings,
+            combatants=tuple(combatant_views),
+        )
 
     def start_quick_combat(self, actor: TableActorContext, request: StartCombatInput) -> CombatView:
         self._require_dm(actor)
@@ -388,7 +463,7 @@ class CombatService:
 
 __all__ = [
     "ActiveCombatExistsError", "AddCharacterInput", "AddMonsterInput", "CombatActionInput", "CombatActionKind",
-    "CombatActionView", "CombatEconomyCost", "CombatEntryView", "CombatLifecycleError", "CombatNotFoundError",
-    "CombatService", "CombatStateConflictError", "CombatView", "ReactionWindowInput",
-    "ResolveInitiativeOrderInput", "StartCombatInput", "_extra_attack_budget",
+    "CombatActionView", "CombatDetailView", "CombatantDetailView", "CombatEconomyCost", "CombatEntryView",
+    "CombatLifecycleError", "CombatNotFoundError", "CombatService", "CombatStateConflictError", "CombatView",
+    "ReactionWindowInput", "ResolveInitiativeOrderInput", "StartCombatInput", "_extra_attack_budget",
 ]
