@@ -41,6 +41,14 @@ class ConcentrationCheckResultView(StrictModel):
     linked_effects_removed_from: tuple[dict[str, Any], ...] = ()
 
 
+class DropConcentrationView(StrictModel):
+    combat_id: UUID
+    entry_id: UUID
+    dropped: bool
+    linked_effect_ids: tuple[str, ...] = ()
+    linked_effects_removed_from: tuple[dict[str, Any], ...] = ()
+
+
 class CombatConcentrationService:
     """Actor-neutral Concentration saving throw application service."""
 
@@ -185,12 +193,69 @@ class CombatConcentrationService:
             ),
         )
 
+    def drop_concentration(
+        self,
+        actor: TableActorContext,
+        entry_id: UUID,
+        *,
+        idempotency_key: str | None = None,
+    ) -> DropConcentrationView:
+        self.table_event_service.require_actor_current(actor)
+        combat = self.combat_repository.get_active(actor.campaign_id)
+        if combat is None:
+            raise CombatConcentrationStateConflictError("Campaign has no active Combat")
+        entry = self.combat_repository.get_entry(entry_id)
+        if entry is None or entry.combat_id != combat.id or entry.status != "active":
+            raise CombatConcentrationNotFoundError(str(entry_id))
+
+        if entry.subject_kind == "monster":
+            if not actor.is_current_dm:
+                raise TableEventActorUnauthorizedError("Only the current Session DM can manage Monster concentration")
+            acting_seat_id = actor.seat_id
+            execution_mode = "self"
+        elif entry.subject_kind == "character":
+            subject_seat_id = self.combat_repository.controlling_seat_for_character(
+                campaign_id=actor.campaign_id,
+                session_id=actor.session_id,
+                character_id=entry.character_id,
+            )
+            if subject_seat_id in actor.controlled_seat_ids:
+                acting_seat_id = subject_seat_id
+                execution_mode = "self"
+            elif actor.is_current_dm:
+                acting_seat_id = actor.seat_id
+                execution_mode = "dm_proxy"
+            else:
+                raise TableEventActorUnauthorizedError("Actor cannot drop concentration for this combatant")
+        else:
+            raise CombatConcentrationStateConflictError(f"unsupported combatant kind: {entry.subject_kind}")
+
+        dropped, linked_effects, event = self.repository.drop_concentration(
+            binding=actor_binding(actor),
+            combat_id=combat.id,
+            entry_id=entry_id,
+            acting_seat_id=acting_seat_id,
+            execution_mode=execution_mode,
+            idempotency_key=idempotency_key,
+        )
+        if self.table_event_service.notifier is not None:
+            self.table_event_service.notifier.notify(actor.session_id)
+        payload = dict(event.payload or {})
+        return DropConcentrationView(
+            combat_id=combat.id,
+            entry_id=entry_id,
+            dropped=dropped,
+            linked_effect_ids=tuple(str(x) for x in payload.get("linked_effect_ids", linked_effects)),
+            linked_effects_removed_from=tuple(dict(x) for x in payload.get("linked_effects_removed_from", ())),
+        )
+
 
 __all__ = [
     "CombatConcentrationNotFoundError",
     "CombatConcentrationService",
     "CombatConcentrationStateConflictError",
     "ConcentrationCheckResultView",
+    "DropConcentrationView",
     "StoredConcentrationRequest",
     "StoredConcentrationResolution",
 ]

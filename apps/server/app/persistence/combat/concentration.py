@@ -460,6 +460,182 @@ class CombatConcentrationRepository:
         )
         return _stored(event), event
 
+    def drop_concentration(
+        self,
+        *,
+        binding: StoredTableActorBinding,
+        combat_id: UUID,
+        entry_id: UUID,
+        acting_seat_id: UUID,
+        execution_mode: str,
+        idempotency_key: str | None = None,
+    ) -> tuple[bool, tuple[str, ...], StoredTableEvent]:
+        dropped = False
+        linked_effect_ids: tuple[str, ...] = ()
+
+        def projection(connection, event_id: UUID, _seq: int) -> None:
+            nonlocal dropped, linked_effect_ids
+            now = datetime.now().astimezone()
+            combat = connection.execute(
+                select(combats)
+                .where(
+                    combats.c.id == combat_id,
+                    combats.c.campaign_id == binding.campaign_id,
+                )
+                .with_for_update()
+            ).mappings().one_or_none()
+            entry = connection.execute(
+                select(combat_entries)
+                .where(
+                    combat_entries.c.id == entry_id,
+                    combat_entries.c.combat_id == combat_id,
+                )
+                .with_for_update()
+            ).mappings().one_or_none()
+            if combat is None or entry is None:
+                raise CombatConcentrationNotFoundError(str(entry_id))
+            if combat["status"] != "running" or entry["status"] != "active":
+                raise CombatConcentrationStateConflictError("Combat is not running or entry is inactive")
+
+            target_character_id: UUID | None = None
+            removed_from: list[dict[str, Any]] = []
+
+            if entry["subject_kind"] == "character":
+                target_character_id = entry["character_id"]
+                if target_character_id is None:
+                    raise CombatConcentrationStateConflictError("Character entry has no Character identity")
+                state_row = connection.execute(
+                    select(character_states.c.state_payload, character_states.c.state_revision)
+                    .where(character_states.c.character_id == target_character_id)
+                    .with_for_update()
+                ).mappings().one_or_none()
+                if state_row is None:
+                    raise CombatConcentrationNotFoundError(str(target_character_id))
+                state_payload = dict(state_row["state_payload"])
+                current_conc = state_payload.get("concentration")
+                if current_conc is not None:
+                    dropped = True
+                    raw_ids = current_conc.get("effect_ids", [])
+                    linked_effect_ids = tuple(str(x) for x in raw_ids)
+                    next_payload = dict(state_payload)
+                    next_payload["concentration"] = None
+                    if linked_effect_ids:
+                        strip_effects_from_state_payload(next_payload, set(linked_effect_ids))
+                        removed_from = strip_linked_effects(
+                            connection,
+                            combat_id=combat_id,
+                            effect_ids=linked_effect_ids,
+                            now=now,
+                            skip_character_ids=(target_character_id,),
+                        )
+                    revision = int(state_row["state_revision"])
+                    state_update = connection.execute(
+                        update(character_states)
+                        .where(
+                            character_states.c.character_id == target_character_id,
+                            character_states.c.state_revision == revision,
+                        )
+                        .values(
+                            state_payload=CharacterState.model_validate(next_payload).model_dump(mode="json"),
+                            state_revision=revision + 1,
+                            updated_at=now,
+                        )
+                    )
+                    if state_update.rowcount != 1:
+                        raise CombatConcentrationStateConflictError("Character State conflict while dropping concentration")
+            elif entry["subject_kind"] == "monster":
+                monster_id = entry["monster_instance_id"]
+                if monster_id is None:
+                    raise CombatConcentrationStateConflictError("Monster entry has no Monster identity")
+                monster = connection.execute(
+                    select(monster_instances)
+                    .where(monster_instances.c.id == monster_id)
+                    .with_for_update()
+                ).mappings().one_or_none()
+                if monster is None:
+                    raise CombatConcentrationNotFoundError(str(monster_id))
+                current_conc = monster["concentration"]
+                if current_conc is not None:
+                    dropped = True
+                    raw_ids = current_conc.get("effect_ids", [])
+                    linked_effect_ids = tuple(str(x) for x in raw_ids)
+                    conditions, _ = strip_monster_items(list(monster["conditions"] or []), set(linked_effect_ids))
+                    effects, _ = strip_monster_items(list(monster["effects"] or []), set(linked_effect_ids))
+                    connection.execute(
+                        update(monster_instances)
+                        .where(monster_instances.c.id == monster_id)
+                        .values(
+                            concentration=None,
+                            conditions=conditions,
+                            effects=effects,
+                            updated_at=now,
+                        )
+                    )
+                    removed_from = strip_linked_effects(
+                        connection,
+                        combat_id=combat_id,
+                        effect_ids=linked_effect_ids,
+                        now=now,
+                        skip_monster_ids=(monster_id,),
+                    )
+            else:
+                raise CombatConcentrationStateConflictError(f"unsupported combat entry kind: {entry['subject_kind']}")
+
+            if dropped:
+                connection.execute(
+                    update(combats)
+                    .where(combats.c.id == combat_id)
+                    .values(revision=combats.c.revision + 1, updated_at=now)
+                )
+
+            connection.execute(
+                update(session_events)
+                .where(session_events.c.id == event_id)
+                .values(
+                    subject_character_id=target_character_id,
+                    payload={
+                        "combat_id": str(combat_id),
+                        "entry_id": str(entry_id),
+                        "target_is_hostile": bool(entry["is_hostile"]),
+                        "dropped": dropped,
+                        "linked_effect_ids": list(linked_effect_ids),
+                        "linked_effects_removed_from": removed_from,
+                    },
+                )
+            )
+
+        event = self.event_repository.append(
+            room_id=binding.room_id,
+            campaign_id=binding.campaign_id,
+            session_id=binding.session_id,
+            kind="combat.concentration_changed",
+            acting_seat_id=acting_seat_id,
+            subject_seat_id=None,
+            subject_character_id=None,
+            execution_mode=execution_mode,
+            visibility="public",
+            recipient_seat_ids=(),
+            payload_version=1,
+            payload={
+                "combat_id": str(combat_id),
+                "entry_id": str(entry_id),
+                "dropped": True,
+            },
+            idempotency_key=(
+                f"p4e-concentration-drop:{idempotency_key}"
+                if idempotency_key
+                else None
+            ),
+            expected_actor_binding=binding,
+            transaction_projection=projection,
+        )
+        payload = dict(event.payload or {})
+        return (
+            bool(payload.get("dropped", dropped)),
+            tuple(str(x) for x in payload.get("linked_effect_ids", linked_effect_ids)),
+            event,
+        )
+
 
 __all__ = [
     "CombatConcentrationNotFoundError",

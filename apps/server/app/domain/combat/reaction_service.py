@@ -2,7 +2,25 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from enum import StrEnum
-from typing import Any, Literal, Mapping
+from typing import TYPE_CHECKING, Any, Literal, Mapping
+from uuid import UUID, uuid4
+
+if TYPE_CHECKING:
+    from app.domain.combat.lifecycle import CombatService
+    from app.persistence.combat.lifecycle import CombatRepository
+    from app.persistence.combat.reactions import CombatReactionRepository
+from app.domain.rooms.schemas import StrictModel
+from app.domain.rooms.table_events import (
+    TableActorContext,
+    TableEventActorUnauthorizedError,
+    TableEventService,
+)
+from app.persistence.rooms.table_runtime import StoredTableActorBinding
+
+def _actor_binding(actor: TableActorContext) -> StoredTableActorBinding:
+    from app.persistence.combat.lifecycle import actor_binding
+
+    return actor_binding(actor)
 
 
 class ReactionKind(StrEnum):
@@ -313,3 +331,202 @@ def spend_legendary_action(
         "cost": cost,
         "remaining": remaining,
     }
+
+
+class OpenReactionInput(StrictModel):
+    entry_id: UUID
+    kind: ReactionKind = ReactionKind.OTHER
+    reason: str
+    source_entry_id: UUID | None = None
+    eligible_entry_ids: tuple[UUID, ...] = ()
+    target_entry_id: UUID | None = None
+    safe_payload: dict[str, Any] | None = None
+    secret_payload: dict[str, Any] | None = None
+    idempotency_key: str | None = None
+
+
+class ResolveReactionInput(StrictModel):
+    owner_entry_id: UUID
+    actor_entry_id: UUID | None = None
+    accept: bool
+    idempotency_key: str | None = None
+
+
+class ReactionWindowView(StrictModel):
+    window_id: str
+    entry_id: UUID
+    kind: ReactionKind
+    reason: str
+    source_entry_id: UUID | None = None
+    status: str
+    eligible_entry_ids: tuple[UUID, ...] = ()
+    target_entry_id: UUID | None = None
+    safe_payload: dict[str, Any] | None = None
+
+
+class ReactionResolutionView(StrictModel):
+    combat_id: UUID
+    entry_id: UUID
+    actor_entry_id: UUID
+    accepted: bool
+    status: str
+    window_id: str
+    kind: ReactionKind
+
+from app.persistence.combat.reactions import (
+    CombatReactionNotFoundError,
+    CombatReactionStateConflictError,
+)
+
+
+class CombatReactionService:
+    """Application service orchestrating combat reaction windows and responses."""
+
+    def __init__(
+        self,
+        repository: CombatReactionRepository,
+        combat_repository: CombatRepository,
+        combat_service: CombatService,
+        table_event_service: TableEventService,
+    ) -> None:
+        self.repository = repository
+        self.combat_repository = combat_repository
+        self.combat_service = combat_service
+        self.table_event_service = table_event_service
+
+    def open_reaction_window(
+        self,
+        actor: TableActorContext,
+        request: OpenReactionInput,
+    ) -> ReactionWindowView:
+        self.table_event_service.require_actor_current(actor)
+        if not actor.is_current_dm:
+            raise TableEventActorUnauthorizedError("Only the current Session DM can open reaction windows")
+        combat = self.combat_repository.get_active(actor.campaign_id)
+        if combat is None:
+            raise CombatReactionStateConflictError("Campaign has no active Combat")
+        entry = self.combat_repository.get_entry(request.entry_id)
+        if entry is None or entry.combat_id != combat.id or entry.status != "active":
+            raise CombatReactionNotFoundError(str(request.entry_id))
+
+        eligible = (
+            tuple(str(item) for item in request.eligible_entry_ids)
+            if request.eligible_entry_ids
+            else (str(request.entry_id),)
+        )
+        window_id = f"reaction-{uuid4()}"
+        window = open_reaction_window(
+            window_id=window_id,
+            entry_id=str(request.entry_id),
+            kind=request.kind,
+            reason=request.reason,
+            source_entry_id=str(request.source_entry_id) if request.source_entry_id else None,
+            eligible_entry_ids=eligible,
+            target_entry_id=str(request.target_entry_id) if request.target_entry_id else None,
+            safe_payload=request.safe_payload,
+            secret_payload=request.secret_payload,
+            session_ref=str(actor.session_id),
+        )
+        stored, _event = self.repository.set_window(
+            binding=_actor_binding(actor),
+            combat_id=combat.id,
+            entry_id=request.entry_id,
+            window=window,
+            idempotency_key=request.idempotency_key,
+        )
+        if self.table_event_service.notifier is not None:
+            self.table_event_service.notifier.notify(actor.session_id)
+        return self._view(stored)
+
+    def resolve_reaction(
+        self,
+        actor: TableActorContext,
+        request: ResolveReactionInput,
+    ) -> ReactionResolutionView:
+        self.table_event_service.require_actor_current(actor)
+        combat = self.combat_repository.get_active(actor.campaign_id)
+        if combat is None:
+            raise CombatReactionStateConflictError("Campaign has no active Combat")
+        owner_entry = self.combat_repository.get_entry(request.owner_entry_id)
+        if owner_entry is None or owner_entry.combat_id != combat.id or owner_entry.status != "active":
+            raise CombatReactionNotFoundError(str(request.owner_entry_id))
+
+        actor_entry_id = request.actor_entry_id or request.owner_entry_id
+        actor_entry = (
+            owner_entry
+            if actor_entry_id == request.owner_entry_id
+            else self.combat_repository.get_entry(actor_entry_id)
+        )
+        if actor_entry is None or actor_entry.combat_id != combat.id or actor_entry.status != "active":
+            raise CombatReactionNotFoundError(str(actor_entry_id))
+
+        _subject_seat_id, execution_mode = self.combat_service._authorize_entry(actor, actor_entry)
+
+        event = self.repository.resolve_window(
+            binding=_actor_binding(actor),
+            combat_id=combat.id,
+            owner_entry_id=request.owner_entry_id,
+            actor_entry_id=actor_entry_id,
+            accept=request.accept,
+            idempotency_key=request.idempotency_key,
+            execution_mode=execution_mode,
+        )
+        if self.table_event_service.notifier is not None:
+            self.table_event_service.notifier.notify(actor.session_id)
+        payload = dict(event.payload or {})
+        return ReactionResolutionView(
+            combat_id=combat.id,
+            entry_id=request.owner_entry_id,
+            actor_entry_id=actor_entry_id,
+            accepted=request.accept,
+            status=str(payload.get("status", "resolved" if request.accept else "declined")),
+            window_id=str(payload.get("window_id", "")),
+            kind=ReactionKind(str(payload.get("kind", "other"))),
+        )
+
+    def get_reaction_window(
+        self,
+        actor: TableActorContext,
+        entry_id: UUID,
+    ) -> ReactionWindowView | None:
+        self.table_event_service.require_actor_current(actor)
+        combat = self.combat_repository.get_active(actor.campaign_id)
+        if combat is None:
+            return None
+        window = self.repository.get(combat_id=combat.id, entry_id=entry_id)
+        return self._view(window) if window is not None else None
+
+    @staticmethod
+    def _view(window: ReactionWindow) -> ReactionWindowView:
+        return ReactionWindowView(
+            window_id=window.window_id,
+            entry_id=UUID(window.entry_id),
+            kind=window.kind,
+            reason=window.reason,
+            source_entry_id=UUID(window.source_entry_id) if window.source_entry_id else None,
+            status=window.status,
+            eligible_entry_ids=tuple(UUID(item) for item in window.eligible),
+            target_entry_id=UUID(window.target_entry_id) if window.target_entry_id else None,
+            safe_payload=dict(window.safe_payload or {}) if window.safe_payload else None,
+        )
+
+
+__all__ = [
+    "CombatReactionService",
+    "OpenReactionInput",
+    "ReactionKind",
+    "ReactionResolution",
+    "ReactionResolutionView",
+    "ReactionStatus",
+    "ReactionWindow",
+    "ReactionWindowView",
+    "ReadyState",
+    "ResolveReactionInput",
+    "cancel_reaction_window",
+    "expire_ready_at_turn_start",
+    "open_opportunity_attack_window",
+    "open_reaction_window",
+    "ready_trigger_matches",
+    "resolve_reaction",
+    "spend_legendary_action",
+]
