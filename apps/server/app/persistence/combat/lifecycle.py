@@ -115,6 +115,29 @@ class StoredCombatAction:
     payload: dict[str, Any]
     idempotency_key: str | None
     created_at: datetime
+    target_entry_id: UUID | None
+    resolution_status: str
+    resolution_result: dict[str, Any] | None
+
+
+def combat_action_from_row(row) -> StoredCombatAction:
+    return StoredCombatAction(
+        id=row["id"],
+        combat_id=row["combat_id"],
+        entry_id=row["entry_id"],
+        session_id=row["session_id"],
+        acting_seat_id=row["acting_seat_id"],
+        subject_seat_id=row["subject_seat_id"],
+        execution_mode=row["execution_mode"],
+        action_kind=row["action_kind"],
+        economy_cost=row["economy_cost"],
+        payload=dict(row["payload"] or {}),
+        idempotency_key=row["idempotency_key"],
+        created_at=row["created_at"],
+        target_entry_id=row["target_entry_id"],
+        resolution_status=row["resolution_status"],
+        resolution_result=dict(row["resolution_result"]) if row["resolution_result"] is not None else None,
+    )
 
 
 def actor_binding(actor) -> StoredTableActorBinding:
@@ -176,14 +199,7 @@ class CombatRepository:
 
     @staticmethod
     def _action(row) -> StoredCombatAction:
-        return StoredCombatAction(
-            id=row["id"], combat_id=row["combat_id"], entry_id=row["entry_id"],
-            session_id=row["session_id"], acting_seat_id=row["acting_seat_id"],
-            subject_seat_id=row["subject_seat_id"], execution_mode=row["execution_mode"],
-            action_kind=row["action_kind"], economy_cost=row["economy_cost"],
-            payload=dict(row["payload"] or {}), idempotency_key=row["idempotency_key"],
-            created_at=row["created_at"],
-        )
+        return combat_action_from_row(row)
 
     def get_active(self, campaign_id: UUID) -> StoredCombat | None:
         with self.engine.connect() as connection:
@@ -703,5 +719,5 @@ class CombatRepository:
 __all__ = [
     "ActiveCombatExistsPersistenceError", "CombatNotFoundPersistenceError", "CombatPersistenceError",
     "CombatRepository", "CombatStateConflictPersistenceError", "NewCombatEntry", "SessionCharacterBinding",
-    "StoredCombat", "StoredCombatAction", "StoredCombatEntry", "actor_binding",
+    "StoredCombat", "StoredCombatAction", "StoredCombatEntry", "actor_binding", "combat_action_from_row",
 ]

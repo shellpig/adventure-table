@@ -1,6 +1,6 @@
 # P4-E — Quick Combat UI, DM Adjudication & AI Tool Surface 實作紀錄
 
-最後更新：2026-09-16
+最後更新：2026-09-17
 
 ## 目標與邊界
 
@@ -18,7 +18,7 @@
 | E4a | Combat detail projection + `GET .../combat/detail`：DM 完整 vs Player secrecy | 實作規格 2、3；設計 §4.3、§8.1；測試 E.2（REST） | ✅ |
 | E4b | Event payload projector + 既有 P4-C mutation response 對 Player 的 redaction | 設計 §8.2「Player-safe event payload」；測試 E.2（event / response） | ✅ |
 | E5 | Spell / reaction / concentration REST route | 實作規格 7、11；設計 §8.1、§8.2 | ✅ |
-| E6 | DM adjudication REST（range / cover / AoE / OA） | 實作規格 5；設計 §8.3 | ⬜ |
+| E6 | DM adjudication REST（range / cover / AoE / OA） | 實作規格 5；設計 §8.3 | ✅ |
 | E7 | Combat MCP tools（DM / Player catalog） | 實作規格 8、10、11；設計 §8.4；測試 E.3 | ⬜ |
 | E8 | `get_session_context` / briefing Combat context | 實作規格 9；設計 §8.6；測試 E.4 | ⬜ |
 | E9 | Session page：Combat Header + Initiative + Combatants UI | 實作規格 1、2、4、6；測試 E.1 | ⬜ |
@@ -91,3 +91,18 @@
 - 測試：`tests/test_p4e_spells_reactions_routes.py` 6 條（含 `test_cast_spell_rejects_raw_rule_fields_with_422`、Character single-target cast、Monster spell cast 與權限拒絕、AoE propose 與 resolve、Concentration drop 與 linked effects 移除、Reaction window open/resolve/get 完整生命週期）。
 - 驗證：P4-E focused tests 41 passed (2 skipped for postgres)；`tests/test_m03_import_boundary.py` 5 passed；P4-B/C/D 回歸 48 passed。
 
+### E6 — DM adjudication REST（range / cover / AoE / OA）
+
+- 起始：2026-09-17，agy worker 一輪（715s）+ 一輪 review 修正（1263s）+ Claude 小清理。
+- 既有 substrate：P4-C 已有 range（attack）/ reach（grapple / shove）adjudication，P4-D 已有 AoE affected-target propose / resolve；三者都以 `combat_actions.resolution_status="dm_adjudication_required"` + `payload["adjudication"]` 存放。E6 不重做這些，只補統一讀取與缺的兩種 kind。
+- 交付：
+  1. `CombatAdjudicationService`（`app/domain/combat/adjudication_service.py`）+ `CombatAdjudicationView`（kind = `range | reach | affected_targets | opportunity_attack | special`；`dm_hints` 只給 DM，Player 一律 `None`）；`list_pending` 對 Player 只回自己 seat 為 subject 的 request。單一 `row_to_adjudication_view(StoredCombatAction)` mapper。
+  2. `AttackAdjudicationInput` 加 `roll_mode`（cover / circumstance 的 adv / disadv override）與 `note`；`adjudicate_attack_range` 以 override 建立 formal Attack RollRequest 的 `modifier_mode`，decision 寫進 payload 與 `combat.adjudication_resolved`。不加 cover AC bonus（實作規格 5 只要 adv/disadv）。
+  3. Opportunity attack：`POST .../combat/adjudications/opportunity-attack`（Player 需控制 reactor 或 mover；`action_kind="opportunity_attack"`、`economy_cost="none"`）；DM `POST .../adjudications/{action_id}/resolve` `trigger=True` 時在**同一個 transaction_projection** 內以 `open_opportunity_attack_window(dm_adjudicated=True)` 寫 reactor 的 reaction window（`CombatReactionRepository.set_window` 的 projection 抽成 module-level `write_reaction_window` / `load_reaction_scope` 共用）；window 寫入失敗整筆 rollback、row 仍 pending。
+  4. Special / freeform：`POST .../combat/adjudications/special`（`action_kind="special_adjudication"`，question 必填）；resolve 需 `ruling`，只做 bookkeeping 不改 state。
+  5. 通用 resolve route 對 range / reach / affected_targets row 回 409 並指名專用 route；不在本 Session 的 action_id 回 404。
+  6. `GET .../combat/adjudications`、DI `get_combat_adjudication_service`；`_map_combat_error` 納入 adjudication / reaction 的 not-found / conflict。
+  7. `StoredCombatAction` additive 加 `target_entry_id` / `resolution_status` / `resolution_result`，`combat_action_from_row` 抽成 module-level。
+- 清理：拿掉 raw dict rows、try/except 授權控制流、未用的 `get_adjudication`、function 內 import、兩段重複的 request projection（收成 `_insert_pending_adjudication`）、硬寫的 `target_is_hostile: False`、`combat_action_from_row` 的 `"col" in row` 防禦讀。
+- 測試：`tests/test_p4e_adjudication_routes.py` 7 條（DM / acting Player / 其他 Player 的 pending 可見性與 `dm_hints` 缺席、disadvantage override、OA trigger 原子開窗 + 強制失敗零副作用、OA no-trigger、special 宣告 / Player 不可 resolve / 缺 ruling 拒絕 / event 可見、通用 resolve 拒絕 range row + 404、Player 不可替非受控 reactor 宣告）。gate：E6 focused + P4-B/C/D/E regression + M03 boundary 117 passed。
+- 留給 E7：MCP tools（`combat_list_adjudications` / `combat_request_opportunity_attack` / `combat_request_special_adjudication` / `combat_resolve_adjudication`，加上 E5 的 spell / reaction / concentration / detail）；留給 E8：`get_session_context` 的 pending adjudication / reaction 摘要。MonsterRevealState 持久化與 DM combatant bookkeeping（實作規格 7）仍未做，排 E10 前處理。

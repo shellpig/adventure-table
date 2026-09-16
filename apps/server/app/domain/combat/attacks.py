@@ -55,6 +55,8 @@ class AttackRequestInput(StrictModel):
 class AttackAdjudicationInput(StrictModel):
     action_id: UUID
     in_range: bool
+    roll_mode: RollMode | None = None
+    note: str | None = Field(default=None, max_length=500)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
 
 
@@ -319,6 +321,8 @@ class CombatAttackService:
                 binding=actor_binding(actor),
                 action_id=request.action_id,
                 in_range=request.in_range,
+                roll_mode=request.roll_mode,
+                note=request.note,
                 idempotency_key=request.idempotency_key,
             )
         except CombatAdjudicationStateConflictError as exc:

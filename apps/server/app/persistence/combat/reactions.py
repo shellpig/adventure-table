@@ -24,6 +24,93 @@ class CombatReactionStateConflictError(RuntimeError):
     pass
 
 
+def load_reaction_scope(
+    connection,
+    *,
+    binding: StoredTableActorBinding,
+    combat_id: UUID,
+    entry_id: UUID,
+):
+    combat = connection.execute(
+        select(combats)
+        .where(
+            combats.c.id == combat_id,
+            combats.c.campaign_id == binding.campaign_id,
+        )
+        .with_for_update()
+    ).mappings().one_or_none()
+    entry = connection.execute(
+        select(combat_entries)
+        .where(
+            combat_entries.c.id == entry_id,
+            combat_entries.c.combat_id == combat_id,
+        )
+        .with_for_update()
+    ).mappings().one_or_none()
+    if combat is None or entry is None:
+        raise CombatReactionNotFoundError(str(entry_id))
+    if combat["status"] != "running" or entry["status"] != "active":
+        raise CombatReactionStateConflictError(
+            "Reaction window requires an active combat entry in a running Combat"
+        )
+    return combat, entry
+
+
+def write_reaction_window(
+    connection,
+    *,
+    binding: StoredTableActorBinding,
+    combat_id: UUID,
+    entry_id: UUID,
+    window: ReactionWindow,
+    event_id: UUID | None = None,
+) -> tuple[Any, dict[str, Any]]:
+    _combat, entry = load_reaction_scope(
+        connection,
+        binding=binding,
+        combat_id=combat_id,
+        entry_id=entry_id,
+    )
+    pending = dict(entry["pending_reaction_state"] or {})
+    if pending:
+        current = ReactionWindow.from_payload(pending)
+        if current.window_id != window.window_id:
+            raise CombatReactionStateConflictError(
+                "combat entry already has a pending reaction window"
+            )
+    now = datetime.now().astimezone()
+    connection.execute(
+        update(combat_entries)
+        .where(combat_entries.c.id == entry_id)
+        .values(pending_reaction_state=window.to_payload(), updated_at=now)
+    )
+    connection.execute(
+        update(combats)
+        .where(combats.c.id == combat_id)
+        .values(revision=combats.c.revision + 1, updated_at=now)
+    )
+    event_payload = {
+        "combat_id": str(combat_id),
+        "entry_id": str(entry_id),
+        "window_id": window.window_id,
+        "kind": window.kind.value,
+        "reason": window.reason,
+        "source_entry_id": window.source_entry_id,
+        "eligible_entry_ids": list(window.eligible),
+        "target_entry_id": window.target_entry_id,
+        "target_is_hostile": bool(entry["is_hostile"]),
+        "safe_payload": dict(window.safe_payload or {}),
+        "status": window.status,
+    }
+    if event_id is not None:
+        connection.execute(
+            update(session_events)
+            .where(session_events.c.id == event_id)
+            .values(subject_character_id=entry["character_id"], payload=event_payload)
+        )
+    return entry, event_payload
+
+
 class CombatReactionRepository:
     """Durable P4-D reaction windows backed by ``combat_entries``.
 
@@ -52,29 +139,12 @@ class CombatReactionRepository:
 
     @staticmethod
     def _load_scope(connection, *, binding: StoredTableActorBinding, combat_id: UUID, entry_id: UUID):
-        combat = connection.execute(
-            select(combats)
-            .where(
-                combats.c.id == combat_id,
-                combats.c.campaign_id == binding.campaign_id,
-            )
-            .with_for_update()
-        ).mappings().one_or_none()
-        entry = connection.execute(
-            select(combat_entries)
-            .where(
-                combat_entries.c.id == entry_id,
-                combat_entries.c.combat_id == combat_id,
-            )
-            .with_for_update()
-        ).mappings().one_or_none()
-        if combat is None or entry is None:
-            raise CombatReactionNotFoundError(str(entry_id))
-        if combat["status"] != "running" or entry["status"] != "active":
-            raise CombatReactionStateConflictError(
-                "Reaction window requires an active combat entry in a running Combat"
-            )
-        return combat, entry
+        return load_reaction_scope(
+            connection,
+            binding=binding,
+            combat_id=combat_id,
+            entry_id=entry_id,
+        )
 
     def set_window(
         self,
@@ -94,47 +164,13 @@ class CombatReactionRepository:
             raise ValueError("only an open reaction window can be persisted as pending")
 
         def projection(connection, event_id: UUID, _seq: int) -> None:
-            _combat, entry = self._load_scope(
+            write_reaction_window(
                 connection,
                 binding=binding,
                 combat_id=combat_id,
                 entry_id=entry_id,
-            )
-            pending = dict(entry["pending_reaction_state"] or {})
-            if pending:
-                current = ReactionWindow.from_payload(pending)
-                if current.window_id != window.window_id:
-                    raise CombatReactionStateConflictError(
-                        "combat entry already has a pending reaction window"
-                    )
-            now = datetime.now().astimezone()
-            connection.execute(
-                update(combat_entries)
-                .where(combat_entries.c.id == entry_id)
-                .values(pending_reaction_state=window.to_payload(), updated_at=now)
-            )
-            connection.execute(
-                update(combats)
-                .where(combats.c.id == combat_id)
-                .values(revision=combats.c.revision + 1, updated_at=now)
-            )
-            event_payload = {
-                "combat_id": str(combat_id),
-                "entry_id": str(entry_id),
-                "window_id": window.window_id,
-                "kind": window.kind.value,
-                "reason": window.reason,
-                "source_entry_id": window.source_entry_id,
-                "eligible_entry_ids": list(window.eligible),
-                "target_entry_id": window.target_entry_id,
-                "target_is_hostile": bool(entry["is_hostile"]),
-                "safe_payload": dict(window.safe_payload or {}),
-                "status": window.status,
-            }
-            connection.execute(
-                update(session_events)
-                .where(session_events.c.id == event_id)
-                .values(subject_character_id=entry["character_id"], payload=event_payload)
+                window=window,
+                event_id=event_id,
             )
 
         event = self.event_repository.append(
@@ -285,4 +321,6 @@ __all__ = [
     "CombatReactionNotFoundError",
     "CombatReactionRepository",
     "CombatReactionStateConflictError",
+    "load_reaction_scope",
+    "write_reaction_window",
 ]

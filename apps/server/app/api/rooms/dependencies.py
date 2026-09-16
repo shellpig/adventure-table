@@ -7,6 +7,7 @@ from fastapi import Request
 from app.api.dependencies import get_content_registry, get_database_engine
 from app.api.errors import APIError
 from app.api.rooms.table_event_wait import ProcessLocalTableEventNotifier
+from app.domain.combat.adjudication_service import CombatAdjudicationService
 from app.domain.combat.attack_definitions import AttackDefinitionResolver
 from app.domain.combat.attacks import CombatAttackService
 from app.domain.combat.concentration import CombatConcentrationService
@@ -240,6 +241,22 @@ def get_combat_attack_service(request: Request) -> CombatAttackService:
     return service
 
 
+def get_combat_adjudication_service(request: Request) -> CombatAdjudicationService:
+    service = getattr(request.app.state, "combat_adjudication_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        event_service = get_table_event_service(request)
+        combat_service = get_combat_service(request)
+        service = CombatAdjudicationService(
+            repository=CombatAdjudicationRepository(engine, event_service.repository),
+            combat_repository=combat_service.repository,
+            combat_service=combat_service,
+            table_event_service=event_service,
+        )
+        request.app.state.combat_adjudication_service = service
+    return service
+
+
 def get_combat_concentration_service(request: Request) -> CombatConcentrationService:
     service = getattr(request.app.state, "combat_concentration_service", None)
     if service is None:
@@ -384,6 +401,7 @@ def get_combat_spell_service(request: Request) -> CombatSpellService:
 __all__ = [
     "_HistoryGuardedCharacterRepository",
     "get_campaign_service",
+    "get_combat_adjudication_service",
     "get_combat_attack_service",
     "get_combat_concentration_service",
     "get_combat_core_roll_service",

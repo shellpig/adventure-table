@@ -74,6 +74,10 @@ from app.domain.rooms.table_events import (
     TableEventSessionNotActiveError,
 )
 from app.persistence.characters import CharacterNotFoundError
+from app.persistence.combat.adjudication import (
+    CombatAdjudicationNotFoundError,
+    CombatAdjudicationStateConflictError,
+)
 from app.persistence.combat.attacks import (
     AttackRequestNotFoundPersistenceError,
     AttackRequestNotPendingPersistenceError,
@@ -90,6 +94,10 @@ from app.persistence.combat.initiative import (
 from app.persistence.combat.lifecycle import (
     CombatNotFoundPersistenceError,
     CombatStateConflictPersistenceError,
+)
+from app.persistence.combat.reactions import (
+    CombatReactionNotFoundError,
+    CombatReactionStateConflictError,
 )
 from app.persistence.combat.resolution import (
     CombatResolutionStateConflictError,
@@ -123,7 +131,15 @@ def _map_combat_error(exc: Exception) -> APIError:
         return APIError(403, "table_actor_unauthorized", str(exc))
     if isinstance(exc, (TableEventSessionNotActiveError, TableEventSessionNotActivePersistenceError)):
         return APIError(409, "session_not_active", "Session is not active")
-    if isinstance(exc, (CombatNotFoundError, CombatNotFoundPersistenceError)):
+    if isinstance(
+        exc,
+        (
+            CombatNotFoundError,
+            CombatNotFoundPersistenceError,
+            CombatAdjudicationNotFoundError,
+            CombatReactionNotFoundError,
+        ),
+    ):
         return APIError(404, "combat_not_found", str(exc))
     if isinstance(exc, (AttackRequestNotFoundPersistenceError, AttackDefinitionNotFoundError)):
         return APIError(404, "attack_not_found", str(exc))
@@ -138,6 +154,8 @@ def _map_combat_error(exc: Exception) -> APIError:
         (
             CombatStateConflictError,
             CombatStateConflictPersistenceError,
+            CombatAdjudicationStateConflictError,
+            CombatReactionStateConflictError,
             InitiativeRequestNotPendingPersistenceError,
             AttackRequestNotPendingPersistenceError,
             AttackStateConflictPersistenceError,
