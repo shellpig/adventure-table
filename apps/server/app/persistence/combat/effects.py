@@ -60,7 +60,7 @@ def strip_effects_from_state_payload(
     return changed
 
 
-def _strip_monster_items(items: list[Any], effect_ids: set[str]) -> tuple[list[Any], bool]:
+def strip_monster_items(items: list[Any], effect_ids: set[str]) -> tuple[list[Any], bool]:
     kept = [
         item
         for item in items
@@ -76,18 +76,20 @@ def strip_linked_effects(
     effect_ids: Iterable[str],
     now: datetime,
     skip_character_ids: Iterable[UUID] = (),
+    skip_monster_ids: Iterable[UUID] = (),
 ) -> list[dict[str, Any]]:
     """Remove ``effect_ids`` from every other combatant in ``combat_id``.
 
-    Characters whose state the caller is already rewriting in this transaction
-    must be listed in ``skip_character_ids`` — they are handled by the caller
-    and must not be double-updated under the revision CAS.
+    Characters and monsters whose state the caller is already rewriting in
+    this transaction must be listed in ``skip_character_ids`` / ``skip_monster_ids``
+    — they are handled by the caller and must not be double-updated.
     """
 
     ids = {str(value) for value in effect_ids}
     if not ids:
         return []
     skip = set(skip_character_ids)
+    skip_monsters = set(skip_monster_ids)
     removed: list[dict[str, Any]] = []
     entries = connection.execute(
         select(combat_entries).where(
@@ -130,7 +132,7 @@ def strip_linked_effects(
             removed.append({"entry_id": str(entry["id"]), "character_id": str(character_id)})
         elif entry["subject_kind"] == "monster":
             monster_id = entry["monster_instance_id"]
-            if monster_id is None:
+            if monster_id is None or monster_id in skip_monsters:
                 continue
             monster = connection.execute(
                 select(monster_instances.c.conditions, monster_instances.c.effects)
@@ -139,8 +141,8 @@ def strip_linked_effects(
             ).mappings().one_or_none()
             if monster is None:
                 continue
-            conditions, conditions_changed = _strip_monster_items(list(monster["conditions"] or []), ids)
-            effects, effects_changed = _strip_monster_items(list(monster["effects"] or []), ids)
+            conditions, conditions_changed = strip_monster_items(list(monster["conditions"] or []), ids)
+            effects, effects_changed = strip_monster_items(list(monster["effects"] or []), ids)
             if not (conditions_changed or effects_changed):
                 continue
             connection.execute(
@@ -154,6 +156,7 @@ def strip_linked_effects(
 
 __all__ = [
     "LinkedEffectStateConflictError",
+    "strip_monster_items",
     "condition_ref_for_effect",
     "monster_effect_entry",
     "strip_effects_from_state_payload",

@@ -10,6 +10,7 @@ from sqlalchemy.engine import Engine
 
 from app.domain.character.schemas import (
     CharacterBuild,
+    CharacterConcentrationState,
     CharacterState,
     PersistentTemporaryEffect,
 )
@@ -39,6 +40,7 @@ from app.domain.combat.spell_resources import (
 from app.domain.rules.hit_points import calculate_max_hp
 from app.persistence.characters import character_states, character_versions, characters
 from app.persistence.combat.effects import (
+    strip_monster_items,
     condition_ref_for_effect,
     monster_effect_entry,
     strip_effects_from_state_payload,
@@ -68,6 +70,14 @@ class CombatSpellNotFoundError(LookupError):
 
 class CombatSpellStateConflictError(RuntimeError):
     pass
+
+
+@dataclass(frozen=True)
+class _DamagedTargetConcentration:
+    entry_id: UUID
+    character_id: UUID | None
+    concentration: CharacterConcentrationState
+    target_seat_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -979,7 +989,7 @@ class CombatSpellRepository:
             now = datetime.now().astimezone()
 
             replaced_ids = set(resolution.replaced_concentration_effect_ids)
-            damaged_character: tuple[UUID, dict[str, Any]] | None = None
+            damaged_target: _DamagedTargetConcentration | None = None
 
             # Caster state: spend + concentration pointer (+ self-target HP/effects).
             caster_payload = resolution.character_state.model_dump(mode="json")
@@ -993,7 +1003,14 @@ class CombatSpellRepository:
                     .where(combat_entries.c.id == caster_entry_id)
                     .values(**_death_values(resolution.target_death_saves), updated_at=now)
                 )
-                damaged_character = (caster_character_id, caster_payload)
+                state_after_dmg = CharacterState.model_validate(caster_payload)
+                if state_after_dmg.concentration is not None:
+                    damaged_target = _DamagedTargetConcentration(
+                        entry_id=caster_entry_id,
+                        character_id=caster_character_id,
+                        concentration=state_after_dmg.concentration,
+                        target_seat_id=subject_seat_id,
+                    )
             if target_is_caster or domain_target is None:
                 self._attach_effects_to_payload(caster_payload, resolution.applied_effects, spell_ref)
             self._write_character_state(
@@ -1003,7 +1020,7 @@ class CombatSpellRepository:
             # Target state.
             if domain_target is not None and not target_is_caster:
                 assert target_entry is not None
-                damaged_character = self._write_spell_target_state(
+                damaged_target = self._write_spell_target_state(
                     connection,
                     target_entry=target_entry,
                     target_character=target_character,
@@ -1025,6 +1042,11 @@ class CombatSpellRepository:
                     {caster_character_id, target_entry["character_id"]}
                     if target_character is not None and target_entry is not None
                     else {caster_character_id}
+                ),
+                skip_monster_ids=(
+                    {target_monster["id"]}
+                    if target_monster is not None
+                    else ()
                 ),
             )
 
@@ -1061,10 +1083,10 @@ class CombatSpellRepository:
             )
 
             damage_taken = resolution.damage.adjusted_total if resolution.damage is not None else 0
-            concentration_payload = self._request_concentration_check_for_damaged_character(
+            concentration_payload = self._request_concentration_check_for_damaged_target(
                 connection,
                 binding=binding,
-                damaged_character=damaged_character,
+                damaged_target=damaged_target,
                 target_entry_id=target_entry_id,
                 target_seat_id=(subject_seat_id if target_is_caster else target_seat_id),
                 damage_taken=damage_taken,
@@ -1276,19 +1298,30 @@ class CombatSpellRepository:
             )
             now = datetime.now().astimezone()
 
-            damaged_character: tuple[UUID, dict[str, Any]] | None = None
+            previous_concentration = (
+                dict(caster_monster["concentration"])
+                if caster_monster["concentration"]
+                else None
+            )
+            replaced_ids = (
+                set(previous_concentration.get("effect_ids", []))
+                if (concentration and previous_concentration)
+                else set()
+            )
+
+            damaged_target: _DamagedTargetConcentration | None = None
 
             # 1) Target state mutation (if target is not the caster).
             if domain_target is not None and not target_is_caster:
                 assert target_entry is not None
-                damaged_character = self._write_spell_target_state(
+                damaged_target = self._write_spell_target_state(
                     connection,
                     target_entry=target_entry,
                     target_character=target_character,
                     target_monster=target_monster,
                     resolution=resolution,
                     spell_ref=spell_ref,
-                    replaced_ids=set(),
+                    replaced_ids=replaced_ids,
                     note_prefix="P4-E",
                     now=now,
                 )
@@ -1298,12 +1331,32 @@ class CombatSpellRepository:
                 "resources": resolution.resources,
                 "updated_at": now,
             }
+            if concentration:
+                caster_values["concentration"] = {
+                    "source_ref": spell_ref,
+                    "effect_ids": [effect.effect_id for effect in resolution.applied_effects],
+                }
+
+            conditions = list(caster_monster["conditions"] or [])
+            effects = list(caster_monster["effects"] or [])
+            if replaced_ids:
+                conditions, _ = strip_monster_items(conditions, replaced_ids)
+                effects, _ = strip_monster_items(effects, replaced_ids)
+                caster_values["conditions"] = conditions
+                caster_values["effects"] = effects
+
             if target_is_caster or domain_target is None:
-                conditions = list(caster_monster["conditions"] or [])
-                effects = list(caster_monster["effects"] or [])
                 if target_is_caster and resolution.target_hp is not None:
                     caster_values["current_hp"] = resolution.target_hp.current_hp
                     caster_values["temp_hp"] = resolution.target_hp.temp_hp
+                    caster_conc = caster_values.get("concentration", caster_monster["concentration"])
+                    if caster_conc is not None:
+                        damaged_target = _DamagedTargetConcentration(
+                            entry_id=caster_entry_id,
+                            character_id=None,
+                            concentration=CharacterConcentrationState.model_validate(caster_conc),
+                            target_seat_id=subject_seat_id,
+                        )
                 self._append_monster_effects_and_conditions(
                     conditions=conditions,
                     effects=effects,
@@ -1318,6 +1371,24 @@ class CombatSpellRepository:
                 update(monster_instances)
                 .where(monster_instances.c.id == caster_monster_id)
                 .values(**caster_values)
+            )
+
+            # Replacing concentration ends the previous spell's effects everywhere.
+            replaced = strip_linked_effects(
+                connection,
+                combat_id=combat_id,
+                effect_ids=replaced_ids,
+                now=now,
+                skip_character_ids=(
+                    {target_entry["character_id"]}
+                    if target_character is not None and target_entry is not None and target_entry["character_id"]
+                    else set()
+                ),
+                skip_monster_ids=(
+                    {caster_monster_id, target_monster["id"]}
+                    if target_monster is not None
+                    else {caster_monster_id}
+                ),
             )
 
             # 3) Caster action economy spent.
@@ -1354,19 +1425,17 @@ class CombatSpellRepository:
                 now=now,
             )
 
-            # 5) A concentrating Character target that took damage owes a CON save.
+            # 5) A concentrating target that took damage owes a CON save.
             damage_taken = resolution.damage.adjusted_total if resolution.damage is not None else 0
-            concentration_payload = self._request_concentration_check_for_damaged_character(
+            concentration_payload = self._request_concentration_check_for_damaged_target(
                 connection,
                 binding=binding,
-                damaged_character=damaged_character,
+                damaged_target=damaged_target,
                 target_entry_id=target_entry_id,
                 target_seat_id=target_seat_id,
                 damage_taken=damage_taken,
             )
 
-            # TODO(E2): Monster concentration canonical state will be implemented in step E2.
-            # For now, concentration spells cast by a monster do not record a concentration pointer.
             spell_payload = {
                 "spell_ref": spell_ref,
                 "spell_level": spell_level,
@@ -1385,6 +1454,22 @@ class CombatSpellRepository:
                     for item in apply_effects
                 ],
             }
+
+            domain_events = list(resolution.events)
+            if concentration:
+                if previous_concentration is not None:
+                    domain_events.append({
+                        "type": "concentration_ended",
+                        "source_ref": previous_concentration["source_ref"],
+                        "reason": "replaced",
+                        "removed_effect_ids": sorted(replaced_ids),
+                    })
+                domain_events.append({
+                    "type": "concentration_started",
+                    "source_ref": spell_ref,
+                    "effect_ids": [effect.effect_id for effect in resolution.applied_effects],
+                })
+
             resolution_payload: dict[str, Any] = {
                 "spell_ref": spell_ref,
                 "cast_mode": cast_mode.value,
@@ -1398,11 +1483,11 @@ class CombatSpellRepository:
                     bool(resolution.damage.monster_outcome_required) if resolution.damage else False
                 ),
                 "applied_effect_ids": [effect.effect_id for effect in resolution.applied_effects],
-                "concentration_started": False,
-                "replaced_concentration_effect_ids": [],
-                "replaced_effects_removed_from": [],
+                "concentration_started": concentration,
+                "replaced_concentration_effect_ids": sorted(replaced_ids),
+                "replaced_effects_removed_from": replaced,
                 "concentration_check": concentration_payload,
-                "domain_events": list(resolution.events),
+                "domain_events": domain_events,
             }
 
             self._write_spell_action_and_event(
@@ -1574,7 +1659,7 @@ class CombatSpellRepository:
         replaced_ids: set[str] = frozenset(),
         note_prefix: str = "P4-D",
         now: datetime,
-    ) -> tuple[UUID, dict[str, Any]] | None:
+    ) -> _DamagedTargetConcentration | None:
         if target_character is not None:
             _build, state, revision = target_character
             payload = state.model_dump(mode="json")
@@ -1595,11 +1680,21 @@ class CombatSpellRepository:
             self._write_character_state(
                 connection, target_entry["character_id"], revision, payload
             )
-            return (target_entry["character_id"], payload)
+            state_after = CharacterState.model_validate(payload)
+            if state_after.concentration is not None:
+                return _DamagedTargetConcentration(
+                    entry_id=target_entry["id"],
+                    character_id=target_entry["character_id"],
+                    concentration=state_after.concentration,
+                )
+            return None
         elif target_monster is not None:
             values: dict[str, Any] = {"updated_at": now}
             conditions = list(target_monster["conditions"] or [])
             effects = list(target_monster["effects"] or [])
+            if replaced_ids:
+                conditions, _ = strip_monster_items(conditions, replaced_ids)
+                effects, _ = strip_monster_items(effects, replaced_ids)
             if resolution.target_hp is not None:
                 values["current_hp"] = resolution.target_hp.current_hp
                 values["temp_hp"] = resolution.target_hp.temp_hp
@@ -1617,6 +1712,14 @@ class CombatSpellRepository:
                 .where(monster_instances.c.id == target_monster["id"])
                 .values(**values)
             )
+            if target_monster.get("concentration") is not None:
+                return _DamagedTargetConcentration(
+                    entry_id=target_entry["id"],
+                    character_id=None,
+                    concentration=CharacterConcentrationState.model_validate(
+                        target_monster["concentration"]
+                    ),
+                )
             return None
         return None
 
@@ -1739,22 +1842,18 @@ class CombatSpellRepository:
         }
 
     @staticmethod
-    def _request_concentration_check_for_damaged_character(
+    def _request_concentration_check_for_damaged_target(
         connection,
         *,
         binding: StoredTableActorBinding,
-        damaged_character: tuple[UUID, dict[str, Any]] | None,
+        damaged_target: _DamagedTargetConcentration | None,
         target_entry_id: UUID | None,
         target_seat_id: UUID | None,
         damage_taken: int,
     ) -> dict[str, object] | None:
-        if damaged_character is None or target_entry_id is None or damage_taken <= 0:
+        if damaged_target is None or target_entry_id is None or damage_taken <= 0:
             return None
-        target_character_id, damaged_payload = damaged_character
-        current_state = CharacterState.model_validate(damaged_payload)
-        if current_state.concentration is None:
-            return None
-
+        source_ref = damaged_target.concentration.source_ref
         concentration_group_id = uuid4()
         concentration_request_id = uuid4()
         dc = concentration_dc(damage_taken)
@@ -1768,14 +1867,19 @@ class CombatSpellRepository:
                 version=1,
             )
         )
+        effective_target_seat = (
+            damaged_target.target_seat_id
+            if damaged_target.target_seat_id is not None
+            else target_seat_id
+        )
         connection.execute(
             insert(roll_requests).values(
                 id=concentration_request_id,
                 session_id=binding.session_id,
                 roll_group_id=concentration_group_id,
-                target_seat_id=target_seat_id,
-                target_character_id=target_character_id,
-                target_combat_entry_id=target_entry_id,
+                target_seat_id=effective_target_seat,
+                target_character_id=damaged_target.character_id,
+                target_combat_entry_id=damaged_target.entry_id,
                 request_type="saving_throw",
                 ability_ref="srd5.1:ability:constitution",
                 skill_ref=None,
@@ -1789,9 +1893,13 @@ class CombatSpellRepository:
             )
         )
         return {
-            "target_entry_id": str(target_entry_id),
-            "target_character_id": str(target_character_id),
-            "source_ref": current_state.concentration.source_ref,
+            "target_entry_id": str(damaged_target.entry_id),
+            "target_character_id": (
+                str(damaged_target.character_id)
+                if damaged_target.character_id is not None
+                else None
+            ),
+            "source_ref": str(source_ref),
             "damage_taken": damage_taken,
             "dc": dc,
             "roll_group_id": str(concentration_group_id),

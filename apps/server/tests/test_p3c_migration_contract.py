@@ -22,6 +22,7 @@ P4A_REVISION = "0022_p4a_monster_instances"
 P4B_LIFECYCLE_REVISION = "0023_p4b_combat_lifecycle"
 P4B_ROLL_TARGETS_REVISION = "0024_p4b_combat_roll_targets"
 P4C_REVISION = "0025_p4c_core_resolution"
+P4E_REVISION = "0026_p4e_monster_concentration"
 
 
 def _migration_source() -> str:
@@ -87,7 +88,10 @@ def test_p3c_web_migration_chain_links_check_command_into_current_head() -> None
     p4c_revision = scripts.get_revision(P4C_REVISION)
     assert p4c_revision is not None
     assert p4c_revision.down_revision == P4B_ROLL_TARGETS_REVISION
-    assert P4C_REVISION in scripts.get_heads()
+    p4e_revision = scripts.get_revision(P4E_REVISION)
+    assert p4e_revision is not None
+    assert p4e_revision.down_revision == P4C_REVISION
+    assert P4E_REVISION in scripts.get_heads()
 
 
 def test_p3c_check_command_constraint_matches_metadata_and_downgrades_safely() -> None:

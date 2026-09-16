@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.engine import Engine
 
-from app.domain.character.schemas import CharacterBuild, CharacterState
+from app.domain.character.schemas import CharacterBuild, CharacterConcentrationState, CharacterState
 from app.domain.combat.resolution import (
     DamageRollPart,
     DamageType,
@@ -255,42 +255,10 @@ class CombatResolutionRepository:
                     death_saves=_death_state(target),
                     zero_hp_failure_count=2 if critical else 1,
                 )
-                concentration_request = concentration_check_for_damage(
-                    owner_ref=str(target["character_id"]),
-                    current=state.concentration,
-                    outcome=outcome,
-                )
-                concentration_roll_group_id = None
-                concentration_roll_request_id = None
-                if concentration_request is not None:
-                    concentration_roll_group_id = uuid4()
-                    concentration_roll_request_id = uuid4()
-                    connection.execute(insert(roll_groups).values(
-                        id=concentration_roll_group_id,
-                        session_id=binding.session_id,
-                        requested_by_seat_id=binding.seat_id,
-                        label="Concentration",
-                        visibility="public",
-                        version=1,
-                    ))
-                    connection.execute(insert(roll_requests).values(
-                        id=concentration_roll_request_id,
-                        session_id=binding.session_id,
-                        roll_group_id=concentration_roll_group_id,
-                        target_seat_id=subject_seat_id,
-                        target_character_id=target["character_id"],
-                        target_combat_entry_id=target_entry_id,
-                        request_type="saving_throw",
-                        ability_ref="srd5.1:ability:constitution",
-                        skill_ref=None,
-                        dc=concentration_request.dc,
-                        modifier_mode="normal",
-                        flat_adjustment=0,
-                        visibility="public",
-                        status="pending",
-                        requested_by_seat_id=binding.seat_id,
-                        version=1,
-                    ))
+                current_concentration = state.concentration
+                target_character_id = target["character_id"]
+                target_seat_for_check = subject_seat_id
+                owner_ref = str(target["character_id"])
 
                 state_payload = state.model_dump(mode="json")
                 state_payload["current_hp"] = outcome.after.current_hp
@@ -356,8 +324,53 @@ class CombatResolutionRepository:
                         updated_at=now,
                     )
                 )
+                current_concentration = (
+                    CharacterConcentrationState.model_validate(monster["concentration"])
+                    if monster["concentration"]
+                    else None
+                )
+                target_character_id = None
+                target_seat_for_check = None
+                owner_ref = str(target["monster_instance_id"])
             else:
                 raise CombatResolutionStateConflictError("unsupported CombatEntry subject kind")
+
+            concentration_request = concentration_check_for_damage(
+                owner_ref=owner_ref,
+                current=current_concentration,
+                outcome=outcome,
+            )
+            concentration_roll_group_id = None
+            concentration_roll_request_id = None
+            if concentration_request is not None:
+                concentration_roll_group_id = uuid4()
+                concentration_roll_request_id = uuid4()
+                connection.execute(insert(roll_groups).values(
+                    id=concentration_roll_group_id,
+                    session_id=binding.session_id,
+                    requested_by_seat_id=binding.seat_id,
+                    label="Concentration",
+                    visibility="public",
+                    version=1,
+                ))
+                connection.execute(insert(roll_requests).values(
+                    id=concentration_roll_request_id,
+                    session_id=binding.session_id,
+                    roll_group_id=concentration_roll_group_id,
+                    target_seat_id=target_seat_for_check,
+                    target_character_id=target_character_id,
+                    target_combat_entry_id=target_entry_id,
+                    request_type="saving_throw",
+                    ability_ref="srd5.1:ability:constitution",
+                    skill_ref=None,
+                    dc=concentration_request.dc,
+                    modifier_mode="normal",
+                    flat_adjustment=0,
+                    visibility="public",
+                    status="pending",
+                    requested_by_seat_id=binding.seat_id,
+                    version=1,
+                ))
 
             payload = {
                 "combat_id": str(combat_id),
@@ -406,7 +419,7 @@ class CombatResolutionRepository:
                         "roll_group_id": str(concentration_roll_group_id),
                         "roll_request_id": str(concentration_roll_request_id),
                     }
-                    if target["subject_kind"] == "character" and concentration_request is not None
+                    if concentration_request is not None
                     else None
                 ),
             }

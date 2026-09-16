@@ -7,17 +7,19 @@ from uuid import UUID, uuid4
 from sqlalchemy import insert, select, update
 from sqlalchemy.engine import Engine
 
-from app.domain.character.schemas import CharacterState
+from app.domain.character.schemas import CharacterConcentrationState, CharacterState
 from app.domain.combat.concentration_triggers import (
     ConcentrationCheckRequest,
+    evaluate_concentration_check,
     resolve_concentration_check,
 )
 from app.persistence.characters import character_states
 from app.persistence.combat.effects import (
+    strip_monster_items,
     strip_effects_from_state_payload,
     strip_linked_effects,
 )
-from app.persistence.combat.tables import combat_entries, combats
+from app.persistence.combat.tables import combat_entries, combats, monster_instances
 from app.persistence.rooms.p3c_runtime import roll_groups, roll_requests, roll_results
 from app.persistence.rooms.table_runtime import (
     StoredTableActorBinding,
@@ -145,32 +147,20 @@ class CombatConcentrationRepository:
                     "Concentration RollRequest is already resolved"
                 )
             target_entry_id = request["target_combat_entry_id"]
-            target_character_id = request["target_character_id"]
-            if target_entry_id is None or target_character_id is None:
+            if target_entry_id is None:
                 raise CombatConcentrationStateConflictError(
-                    "Concentration save must target a Character CombatEntry"
+                    "Concentration save must target a CombatEntry"
                 )
             entry = connection.execute(
                 select(combat_entries)
                 .where(
                     combat_entries.c.id == target_entry_id,
-                    combat_entries.c.character_id == target_character_id,
                     combat_entries.c.status == "active",
                 )
                 .with_for_update()
             ).mappings().one_or_none()
             if entry is None:
                 raise CombatConcentrationNotFoundError(str(target_entry_id))
-            state_row = connection.execute(
-                select(
-                    character_states.c.state_payload,
-                    character_states.c.state_revision,
-                )
-                .where(character_states.c.character_id == target_character_id)
-                .with_for_update()
-            ).mappings().one_or_none()
-            if state_row is None:
-                raise CombatConcentrationNotFoundError(str(target_character_id))
 
             metadata = self._source_metadata(
                 connection,
@@ -182,38 +172,132 @@ class CombatConcentrationRepository:
                 raise CombatConcentrationStateConflictError(
                     "Concentration request DC no longer matches its source event"
                 )
-            concentration_request = ConcentrationCheckRequest(
-                owner_ref=str(target_character_id),
-                source_ref=str(metadata["source_ref"]),
-                damage_taken=int(metadata["damage_taken"]),
-                dc=dc,
-            )
-            state = CharacterState.model_validate(state_row["state_payload"])
-            linked_effect_ids = (
-                tuple(state.concentration.effect_ids) if state.concentration is not None else ()
-            )
-            resolved = resolve_concentration_check(
-                request=concentration_request,
-                state=state,
-                d20=d20,
-                constitution_save_modifier=constitution_save_modifier,
-            )
-            now = datetime.now().astimezone()
-            next_payload = resolved.state.model_dump(mode="json")
-            removed_from: list[dict[str, object]] = []
-            if not resolved.success:
-                # The domain already dropped the owner's linked temporary effects;
-                # conditions those effects applied, and effects living on other
-                # combatants, end in the same transaction.
-                strip_effects_from_state_payload(next_payload, set(linked_effect_ids))
-                removed_from = strip_linked_effects(
-                    connection,
-                    combat_id=entry["combat_id"],
-                    effect_ids=linked_effect_ids,
-                    now=now,
-                    skip_character_ids=(target_character_id,),
-                )
+
             total = d20 + constitution_save_modifier
+            now = datetime.now().astimezone()
+
+            if entry["subject_kind"] == "character":
+                target_character_id = request["target_character_id"]
+                if target_character_id is None or entry["character_id"] != target_character_id:
+                    raise CombatConcentrationStateConflictError(
+                        "Concentration save must target a Character CombatEntry"
+                    )
+                state_row = connection.execute(
+                    select(
+                        character_states.c.state_payload,
+                        character_states.c.state_revision,
+                    )
+                    .where(character_states.c.character_id == target_character_id)
+                    .with_for_update()
+                ).mappings().one_or_none()
+                if state_row is None:
+                    raise CombatConcentrationNotFoundError(str(target_character_id))
+
+                concentration_request = ConcentrationCheckRequest(
+                    owner_ref=str(target_character_id),
+                    source_ref=str(metadata["source_ref"]),
+                    damage_taken=int(metadata["damage_taken"]),
+                    dc=dc,
+                )
+                state = CharacterState.model_validate(state_row["state_payload"])
+                linked_effect_ids = (
+                    tuple(state.concentration.effect_ids) if state.concentration is not None else ()
+                )
+                resolved = resolve_concentration_check(
+                    request=concentration_request,
+                    state=state,
+                    d20=d20,
+                    constitution_save_modifier=constitution_save_modifier,
+                )
+                succeeded = resolved.success
+                domain_events = list(resolved.events)
+                next_payload = resolved.state.model_dump(mode="json")
+                removed_from: list[dict[str, object]] = []
+                if not succeeded:
+                    strip_effects_from_state_payload(next_payload, set(linked_effect_ids))
+                    removed_from = strip_linked_effects(
+                        connection,
+                        combat_id=entry["combat_id"],
+                        effect_ids=linked_effect_ids,
+                        now=now,
+                        skip_character_ids=(target_character_id,),
+                    )
+                revision = int(state_row["state_revision"])
+                state_update = connection.execute(
+                    update(character_states)
+                    .where(
+                        character_states.c.character_id == target_character_id,
+                        character_states.c.state_revision == revision,
+                    )
+                    .values(
+                        state_payload=CharacterState.model_validate(next_payload).model_dump(mode="json"),
+                        state_revision=revision + 1,
+                        updated_at=now,
+                    )
+                )
+                if state_update.rowcount != 1:
+                    raise CombatConcentrationStateConflictError(
+                        "Character State changed while resolving Concentration"
+                    )
+            elif entry["subject_kind"] == "monster":
+                monster_id = entry["monster_instance_id"]
+                if monster_id is None:
+                    raise CombatConcentrationStateConflictError(
+                        "Monster CombatEntry has no Monster Instance identity"
+                    )
+                monster = connection.execute(
+                    select(monster_instances)
+                    .where(monster_instances.c.id == monster_id)
+                    .with_for_update()
+                ).mappings().one_or_none()
+                if monster is None:
+                    raise CombatConcentrationNotFoundError(str(monster_id))
+
+                current_conc = (
+                    CharacterConcentrationState.model_validate(monster["concentration"])
+                    if monster["concentration"]
+                    else None
+                )
+                concentration_request = ConcentrationCheckRequest(
+                    owner_ref=str(monster_id),
+                    source_ref=str(metadata["source_ref"]),
+                    damage_taken=int(metadata["damage_taken"]),
+                    dc=dc,
+                )
+                succeeded, total, domain_events = evaluate_concentration_check(
+                    request=concentration_request,
+                    current=current_conc,
+                    d20=d20,
+                    constitution_save_modifier=constitution_save_modifier,
+                )
+                target_character_id = None
+                linked_effect_ids = (
+                    tuple(current_conc.effect_ids) if current_conc is not None else ()
+                )
+                removed_from = []
+                if not succeeded:
+                    conditions, _ = strip_monster_items(list(monster["conditions"] or []), set(linked_effect_ids))
+                    effects, _ = strip_monster_items(list(monster["effects"] or []), set(linked_effect_ids))
+                    connection.execute(
+                        update(monster_instances)
+                        .where(monster_instances.c.id == monster_id)
+                        .values(
+                            concentration=None,
+                            conditions=conditions,
+                            effects=effects,
+                            updated_at=now,
+                        )
+                    )
+                    removed_from = strip_linked_effects(
+                        connection,
+                        combat_id=entry["combat_id"],
+                        effect_ids=linked_effect_ids,
+                        now=now,
+                        skip_monster_ids=(monster_id,),
+                    )
+            else:
+                raise CombatConcentrationStateConflictError("unsupported CombatEntry subject kind")
+
             connection.execute(
                 insert(roll_results).values(
                     id=result_id,
@@ -243,23 +327,6 @@ class CombatConcentrationRepository:
                     version=roll_requests.c.version + 1,
                 )
             )
-            revision = int(state_row["state_revision"])
-            state_update = connection.execute(
-                update(character_states)
-                .where(
-                    character_states.c.character_id == target_character_id,
-                    character_states.c.state_revision == revision,
-                )
-                .values(
-                    state_payload=CharacterState.model_validate(next_payload).model_dump(mode="json"),
-                    state_revision=revision + 1,
-                    updated_at=now,
-                )
-            )
-            if state_update.rowcount != 1:
-                raise CombatConcentrationStateConflictError(
-                    "Character State changed while resolving Concentration"
-                )
             connection.execute(
                 update(combats)
                 .where(combats.c.id == entry["combat_id"])
@@ -275,16 +342,16 @@ class CombatConcentrationRepository:
                         "roll_request_id": str(request_id),
                         "roll_result_id": str(result_id),
                         "target_entry_id": str(target_entry_id),
-                        "source_ref": concentration_request.source_ref,
-                        "damage_taken": concentration_request.damage_taken,
-                        "dc": concentration_request.dc,
+                        "source_ref": str(metadata["source_ref"]),
+                        "damage_taken": int(metadata["damage_taken"]),
+                        "dc": dc,
                         "d20": d20,
                         "modifier": constitution_save_modifier,
                         "total": total,
-                        "succeeded": resolved.success,
+                        "succeeded": succeeded,
                         "linked_effect_ids": list(linked_effect_ids),
                         "linked_effects_removed_from": removed_from,
-                        "domain_events": list(resolved.events),
+                        "domain_events": domain_events,
                     },
                 )
             )

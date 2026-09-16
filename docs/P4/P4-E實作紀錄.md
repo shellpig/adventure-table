@@ -13,7 +13,7 @@
 | 步 | 內容 | 對應契約 | 狀態 |
 |---|---|---|---|
 | E1 | Monster persisted cast：`CombatSpellRepository.cast_monster_spell` | 實作規格 14；設計 §8.5「Monster cast」；測試 E.5 第 1 點 | ✅ |
-| E2 | Monster concentration canonical state + 受傷 CON save | 實作規格 15；設計 §8.5「Monster concentration」；測試 E.5 | ⬜ |
+| E2 | Monster concentration canonical state + 受傷 CON save | 實作規格 15；設計 §8.5「Monster concentration」；測試 E.5 | ✅ |
 | E3 | Concentration roll routing：通用 resolve 拒絕，只走 `complete_check` | 實作規格 16；設計 §8.5「Concentration roll routing」；測試 E.5 | ⬜ |
 | E4 | Combat DTO / projection：DM 完整 vs Player secrecy | 實作規格 3；測試 E.2 | ⬜ |
 | E5 | Spell / reaction / concentration REST route | 實作規格 7、11；設計 §8.1、§8.2 | ⬜ |
@@ -36,3 +36,12 @@
 - 與 `cast_character_spell` 共用五個 private helper（`_load_spell_target`、`_write_spell_target_state`、`_insert_spell_formal_roll`、`_request_concentration_check_for_damaged_character`、`_write_spell_action_and_event`）+ `_append_monster_effects_and_conditions`；Character 版行為與測試期望不變。
 - 測試：`tests/test_p4e_monster_cast.py` 7 條（slot 扣一次 / duplicate idempotency / insufficient slot 零副作用 / 無 spellcasting / unknown spell / wrong caster kind / stat-block attack bonus fallback）。focused gate：p4e + p4d + p4c_resolution + m03 boundary 58 passed。
 - 留給 E2：monster concentration pointer 未記錄（`TODO(E2)`）；留給 E3：Concentration roll routing。
+
+### E2 — Monster concentration canonical state
+
+- 起始：2026-09-16，agy worker 一輪（1054s）+ Claude 小清理。
+- 交付：web migration `0026_p4e_monster_concentration`（`monster_instances.concentration` nullable JSON，同 `CharacterConcentrationState` 形狀；standalone / character track 不動）；`cast_monster_spell` 記錄 / 替換 concentration pointer 並以 `strip_linked_effects` 清舊 linked effects；`apply_damage` Character / Monster 分支共用同一段 CON save request 建立；`complete_check` 接受 Monster target，失敗清 pointer 與所有 combatant 的 linked effects；domain 新增 `evaluate_concentration_check` 供 Character / Monster 共用判定。
+- 清理：`strip_monster_items` 改公開名；Monster concentration 一律在讀取點 normalize 成 `CharacterConcentrationState`，不在 domain 接 `Mapping`；移除 `create_instance` 未使用的 `concentration` 參數。
+- 測試：`tests/test_p4e_monster_concentration.py` 8 條；`tests/test_p4e_postgres_migration.py` 2 條（`P4_POSTGRES_URL` gated）；既有 migration head 斷言更新到 `0026`。focused gate 108 passed。
+- 留給 E3：Concentration roll routing（通用 resolve 拒絕 / 轉送）。
+
