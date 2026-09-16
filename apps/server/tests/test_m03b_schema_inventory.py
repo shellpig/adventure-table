@@ -120,6 +120,7 @@ NON_REF_STATE_FIELDS = frozenset(
         "concentration",
         "concentration.effect_ids",
         "conditions",
+        "conditions.effect_id",
         "conditions.note",
         "current_hp",
         "death_saves",

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Sequence
+from typing import Literal, Sequence
 
 from app.domain.character.schemas import (
     CharacterConcentrationState,
@@ -12,6 +12,7 @@ from app.domain.character.schemas import (
 )
 from app.domain.combat.effect_resolver import DurationKind, EffectSpec
 from app.domain.combat.resolution import (
+    DamageOutcome,
     DamageRollPart,
     DamageType,
     DeathSaveState,
@@ -73,6 +74,9 @@ class SpellTargetState:
     target_ac: int | None = None
     save_modifier: int | None = None
     death_saves: DeathSaveState | None = None
+    resistances: tuple[DamageType, ...] = ()
+    immunities: tuple[DamageType, ...] = ()
+    vulnerabilities: tuple[DamageType, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -94,6 +98,8 @@ class SpellResolution:
     applied_effects: tuple[PersistentTemporaryEffect, ...]
     concentration_started: bool
     events: tuple[dict[str, object], ...]
+    damage: DamageOutcome | None = None
+    replaced_concentration_effect_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -103,6 +109,7 @@ class MonsterSpellResolution:
     target_death_saves: DeathSaveState | None
     applied_effects: tuple[PersistentTemporaryEffect, ...]
     events: tuple[dict[str, object], ...]
+    damage: DamageOutcome | None = None
 
 
 def half_damage_parts(parts: Sequence[DamageRollPart]) -> tuple[DamageRollPart, ...]:
@@ -188,13 +195,29 @@ def _resolve_semantics(
     target: SpellTargetState | None,
     effect_id_prefix: str,
     resource_event: dict[str, object] | None,
-) -> tuple[HitPointState | None, DeathSaveState | None, tuple[PersistentTemporaryEffect, ...], tuple[dict[str, object], ...]]:
+) -> tuple[
+    HitPointState | None,
+    DeathSaveState | None,
+    tuple[PersistentTemporaryEffect, ...],
+    tuple[dict[str, object], ...],
+    DamageOutcome | None,
+]:
     events: list[dict[str, object]] = []
     if resource_event is not None:
         events.append(resource_event)
     target_hp = target.hp if target is not None else None
     target_death_saves = target.death_saves if target is not None else None
     should_apply_effects = True
+    damage: DamageOutcome | None = None
+    affinities = (
+        {
+            "resistances": target.resistances,
+            "immunities": target.immunities,
+            "vulnerabilities": target.vulnerabilities,
+        }
+        if target is not None
+        else {}
+    )
 
     if spec.cast_mode is SpellCastMode.ATTACK:
         assert target is not None and target.target_ac is not None and spec.attack_modifier is not None
@@ -214,7 +237,7 @@ def _resolve_semantics(
             assert target.hp is not None
             damage = apply_damage(
                 target.hp, request.damage_parts, target_kind=target.target_kind,
-                critical=attack.critical, death_saves=target.death_saves,
+                critical=attack.critical, death_saves=target.death_saves, **affinities,
             )
             target_hp, target_death_saves = damage.after, damage.death_saves
             events.append({"type": "damage", "spell_ref": spec.spell_ref, "amount": damage.adjusted_total, "target_ref": target.target_ref})
@@ -236,7 +259,10 @@ def _resolve_semantics(
             damage_parts = half_damage_parts(damage_parts)
         if damage_parts:
             assert target.hp is not None
-            damage = apply_damage(target.hp, damage_parts, target_kind=target.target_kind, death_saves=target.death_saves)
+            damage = apply_damage(
+                target.hp, damage_parts, target_kind=target.target_kind,
+                death_saves=target.death_saves, **affinities,
+            )
             target_hp, target_death_saves = damage.after, damage.death_saves
             events.append({"type": "damage", "spell_ref": spec.spell_ref, "amount": damage.adjusted_total, "target_ref": target.target_ref})
     elif spec.cast_mode is SpellCastMode.HEAL:
@@ -258,7 +284,7 @@ def _resolve_semantics(
                 "type": "condition_applied" if effect_spec.effect_type == "condition" else "effect_applied",
                 "effect_id": effect.effect_id, "tag": effect.tag, "source_ref": effect.source_ref,
             })
-    return target_hp, target_death_saves, tuple(effects), tuple(events)
+    return target_hp, target_death_saves, tuple(effects), tuple(events), damage
 
 
 def resolve_spell(
@@ -269,24 +295,35 @@ def resolve_spell(
     state: CharacterState,
     authorization: CharacterSpellAuthorization,
     effect_id_prefix: str = "spell-effect",
+    effects_target: Literal["caster", "target"] = "caster",
 ) -> SpellResolution:
-    """Resolve one character spell through the canonical CharacterState resource layer."""
+    """Resolve one character spell through the canonical CharacterState resource layer.
+
+    ``effects_target="target"`` keeps ``applied_effects`` out of the caster's
+    ``temporary_effects`` so the persistence layer can attach them to the
+    creature that was actually targeted; the caster still owns the
+    concentration pointer to those effect ids.
+    """
 
     _validate_resolution_inputs(spec=spec, request=request, target=target)
     if authorization.spell_ref != spec.spell_ref or authorization.slot_level != request.slot_level:
         raise ValueError("spell authorization does not match cast request")
+    if effects_target == "target" and target is None:
+        raise ValueError("effects_target='target' requires a target")
 
     spend = spend_character_spell(state=state, authorization=authorization)
-    target_hp, target_death_saves, effects, events = _resolve_semantics(
+    target_hp, target_death_saves, effects, events, damage = _resolve_semantics(
         spec=spec, request=request, target=target, effect_id_prefix=effect_id_prefix,
         resource_event=spend.event,
     )
     next_state = spend.state
+    caster_effects = effects if effects_target == "caster" else ()
+    removed_ids: set[str] = set()
     if spec.concentration:
         previous = next_state.concentration
         removed_ids = set(previous.effect_ids) if previous is not None else set()
         kept = [effect for effect in next_state.temporary_effects if effect.effect_id not in removed_ids]
-        kept.extend(effects)
+        kept.extend(caster_effects)
         next_state = next_state.model_copy(update={
             "temporary_effects": kept,
             "concentration": CharacterConcentrationState(
@@ -305,9 +342,9 @@ def resolve_spell(
             "effect_ids": [effect.effect_id for effect in effects],
         })
         events = (*events, *concentration_events)
-    elif effects:
+    elif caster_effects:
         next_state = next_state.model_copy(
-            update={"temporary_effects": [*next_state.temporary_effects, *effects]}, deep=True
+            update={"temporary_effects": [*next_state.temporary_effects, *caster_effects]}, deep=True
         )
 
     return SpellResolution(
@@ -317,6 +354,8 @@ def resolve_spell(
         applied_effects=effects,
         concentration_started=spec.concentration,
         events=events,
+        damage=damage,
+        replaced_concentration_effect_ids=tuple(sorted(removed_ids)),
     )
 
 
@@ -335,7 +374,7 @@ def resolve_monster_spell(
     if source.spell_ref != spec.spell_ref:
         raise ValueError("monster spell source does not match cast request")
     spend = spend_monster_spell(resources=resources, source=source)
-    target_hp, target_death_saves, effects, events = _resolve_semantics(
+    target_hp, target_death_saves, effects, events, damage = _resolve_semantics(
         spec=spec, request=request, target=target, effect_id_prefix=effect_id_prefix,
         resource_event=spend.event,
     )
@@ -345,4 +384,5 @@ def resolve_monster_spell(
         target_death_saves=target_death_saves,
         applied_effects=effects,
         events=events,
+        damage=damage,
     )

@@ -326,6 +326,7 @@ def test_m01f_http_existing_character_transforms_to_version_n_plus_one_with_reco
             {
                 "condition_ref": "srd5.1:condition:poisoned",
                 "note": "must survive M01-F Build Edit",
+                "effect_id": None,
             }
         ]
         assert reconciled["inventory_state"] == live_inventory

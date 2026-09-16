@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
+import pytest
+
 from sqlalchemy import func, select, update
 
 from app.content import load_default_content_registry
@@ -10,6 +12,7 @@ from app.domain.character.schemas import (
     CharacterConcentrationState,
     CharacterState,
     PersistentTemporaryEffect,
+    SpellAccessEntry,
     SpellResourcePool,
     SpellSlotCapacity,
     SpellcastingProfile,
@@ -18,7 +21,8 @@ from app.domain.combat.initiative import FinalizeInitiativeInput, RequestInitiat
 from app.domain.combat.lifecycle import AddMonsterInput, StartCombatInput
 from app.domain.combat.reaction_service import ReactionKind, open_reaction_window
 from app.domain.combat.resolution import DamageRollPart, DamageType
-from app.domain.combat.spell_resolver import SaveDamageMode
+from app.domain.combat.effect_resolver import DurationKind, DurationSpec, EffectSpec
+from app.domain.combat.spell_resolver import SaveDamageMode, SpellCastMode
 from app.domain.rooms.rolls import FormalRollInput, FormalRollSource
 from app.persistence.characters import (
     CharacterRepository,
@@ -29,7 +33,7 @@ from app.persistence.characters import (
 from app.persistence.combat.concentration import CombatConcentrationRepository
 from app.persistence.combat.reactions import CombatReactionRepository
 from app.persistence.combat.resolution import CombatResolutionRepository
-from app.persistence.combat.spells import CombatSpellRepository
+from app.persistence.combat.spells import CombatSpellRepository, CombatSpellStateConflictError
 from app.persistence.combat.tables import combat_entries, combats, monster_instances
 from app.persistence.rooms.p3c_runtime import roll_requests, roll_results
 from app.persistence.rooms.table_runtime import session_events
@@ -702,3 +706,342 @@ def test_reaction_window_survives_reload_and_retry_without_double_spend() -> Non
         assert final_revision == revision_after_resolve
     finally:
         table.engine.dispose()
+
+
+def _enable_spellbook_spell(table, *, spell_key: str, entry_id: str) -> None:
+    """Grant the fixture wizard one more prepared spellbook spell."""
+
+    with table.engine.begin() as connection:
+        version_id = connection.scalar(
+            select(characters.c.current_version_id).where(
+                characters.c.id == table.character_id
+            )
+        )
+        assert version_id is not None
+        build_row = connection.execute(
+            select(character_versions.c.build_payload).where(
+                character_versions.c.id == version_id
+            )
+        ).mappings().one()
+        build = CharacterBuild.model_validate(build_row["build_payload"])
+        access = SpellAccessEntry(
+            entry_id=entry_id,
+            spell_key=spell_key,
+            source_type="class",
+            source_key="srd5.1:class:wizard",
+            access_type="spellbook",
+        )
+        next_build = build.model_copy(
+            update={"spell_access_entries": (*build.spell_access_entries, access)},
+            deep=True,
+        )
+        connection.execute(
+            update(character_versions)
+            .where(character_versions.c.id == version_id)
+            .values(build_payload=next_build.model_dump(mode="json"))
+        )
+        state_row = connection.execute(
+            select(character_states.c.state_payload, character_states.c.state_revision).where(
+                character_states.c.character_id == table.character_id
+            )
+        ).mappings().one()
+        state = CharacterState.model_validate(state_row["state_payload"])
+        prepared = [*state.prepared_spell_entry_ids, entry_id]
+        next_state = state.model_copy(update={"prepared_spell_entry_ids": prepared}, deep=True)
+        revision = int(state_row["state_revision"])
+        result = connection.execute(
+            update(character_states)
+            .where(
+                character_states.c.character_id == table.character_id,
+                character_states.c.state_revision == revision,
+            )
+            .values(
+                state_payload=next_state.model_dump(mode="json"),
+                state_revision=revision + 1,
+                updated_at=func.now(),
+            )
+        )
+        assert result.rowcount == 1
+
+
+def test_single_target_spell_cast_is_atomic_durable_and_idempotent() -> None:
+    table, running, caster, target, enemy = _running_aoe_table()
+    hold_person = "srd5.1:spell:hold-person"
+    paralyzed_ref = "srd5.1:condition:paralyzed"
+    try:
+        _enable_fireball_profile(table)
+        _enable_spellbook_spell(table, spell_key=hold_person, entry_id="wizard:hold-person")
+        caster_hp = _set_concentration(table)  # web:1 lives on the caster state
+        registry = load_default_content_registry()
+        before = CharacterRepository(table.engine, registry).load_character(table.character_id)
+        assert before.state.spell_slots[2].remaining == 3
+        assert before.state.concentration is not None
+        assert before.state.concentration.source_ref == "srd5.1:spell:web"
+
+        repository = CombatSpellRepository(table.engine, table.events.repository)
+        player_binding = table.events._stored_binding(table.player_actor)
+        cast_args = dict(
+            binding=player_binding,
+            combat_id=running.id,
+            caster_entry_id=caster.id,
+            subject_seat_id=table.player_seat_id,
+            execution_mode="self",
+            profile_id="wizard",
+            spell_ref=hold_person,
+            spell_level=2,
+            slot_level=2,
+            cast_mode=SpellCastMode.SAVE,
+            target_entry_id=target.id,
+            target_seat_id=None,
+            save_ability_ref="srd5.1:ability:wis",
+            save_dc=15,
+            save_modifier=0,
+            save_d20=5,
+            concentration=True,
+            apply_effects=(
+                EffectSpec(
+                    effect_type="condition",
+                    tag="paralyzed",
+                    duration=DurationSpec(kind=DurationKind.UNTIL_CONCENTRATION_ENDS),
+                    source_ref=hold_person,
+                ),
+            ),
+            roll_source="physical",
+            idempotency_key="p4d-hold-person-cast",
+        )
+        stored, event = repository.cast_character_spell(**cast_args)
+        assert stored.status == "resolved"
+        assert stored.cast_mode is SpellCastMode.SAVE
+        assert stored.target_entry_id == target.id
+        assert event.kind == "combat.spell_cast_resolved"
+        assert stored.resolution_result is not None
+        assert stored.resolution_result["concentration_started"] is True
+        assert stored.resolution_result["replaced_concentration_effect_ids"] == ["web:1"]
+        assert stored.resolution_result["roll"]["total"] == 5
+        applied_ids = stored.resolution_result["applied_effect_ids"]
+        assert len(applied_ids) == 1
+        effect_id = applied_ids[0]
+
+        after = CharacterRepository(table.engine, registry).load_character(table.character_id)
+        assert after.state.spell_slots[2].used == 1
+        assert after.state.spell_slots[2].remaining == 2
+        assert after.state.current_hp == caster_hp
+        assert after.state.concentration is not None
+        assert after.state.concentration.source_ref == hold_person
+        assert after.state.concentration.effect_ids == (effect_id,)
+        # Replaced concentration removed the caster-side web effect; the new
+        # effect lives on the target, not on the caster.
+        assert [item.effect_id for item in after.state.temporary_effects] == []
+
+        with table.engine.connect() as connection:
+            monster = connection.execute(
+                select(monster_instances).where(monster_instances.c.id == enemy.id)
+            ).mappings().one()
+            caster_row = connection.execute(
+                select(combat_entries.c.action_available).where(
+                    combat_entries.c.id == caster.id
+                )
+            ).mappings().one()
+            save_requests = connection.execute(
+                select(roll_requests).where(
+                    roll_requests.c.session_id == table.session_id,
+                    roll_requests.c.ability_ref == "srd5.1:ability:wis",
+                    roll_requests.c.target_combat_entry_id == target.id,
+                )
+            ).mappings().all()
+            revision_after_cast = connection.scalar(
+                select(combats.c.revision).where(combats.c.id == running.id)
+            )
+        assert monster["current_hp"] == 9
+        assert [item["condition_ref"] for item in monster["conditions"]] == [paralyzed_ref]
+        assert monster["conditions"][0]["effect_id"] == effect_id
+        assert [item["effect_id"] for item in monster["effects"]] == [effect_id]
+        assert caster_row["action_available"] is False
+        assert len(save_requests) == 1
+        assert save_requests[0]["status"] == "resolved"
+        assert save_requests[0]["dc"] == 15
+
+        duplicate, duplicate_event = CombatSpellRepository(
+            table.engine,
+            table.events.repository,
+        ).cast_character_spell(**cast_args)
+        assert duplicate == stored
+        assert duplicate_event.id == event.id
+        after_retry = CharacterRepository(table.engine, registry).load_character(table.character_id)
+        assert after_retry.state.spell_slots[2].remaining == 2
+        with table.engine.connect() as connection:
+            assert len(
+                connection.execute(
+                    select(roll_requests).where(
+                        roll_requests.c.session_id == table.session_id,
+                        roll_requests.c.ability_ref == "srd5.1:ability:wis",
+                        roll_requests.c.target_combat_entry_id == target.id,
+                    )
+                ).mappings().all()
+            ) == 1
+            assert connection.scalar(
+                select(combats.c.revision).where(combats.c.id == running.id)
+            ) == revision_after_cast
+
+        # Damage to the concentrating caster -> pending CON save; failing it
+        # ends hold person and removes the paralyzed condition from the monster.
+        dm_binding = table.events._stored_binding(table.dm_actor)
+        damage = CombatResolutionRepository(table.engine, table.events.repository).apply_damage(
+            binding=dm_binding,
+            combat_id=running.id,
+            target_entry_id=caster.id,
+            damage_parts=(DamageRollPart(damage_type=DamageType.FORCE, dice=(6, 6)),),
+            critical=False,
+            source_entry_id=target.id,
+            subject_seat_id=table.player_seat_id,
+            execution_mode="dm_proxy",
+            idempotency_key="p4d-hold-person-damage",
+        )
+        check = damage.payload["concentration_check"]
+        assert check is not None
+        assert check["source_ref"] == hold_person
+        failed, failed_event = CombatConcentrationRepository(
+            table.engine,
+            table.events.repository,
+        ).complete_check(
+            binding=player_binding,
+            request_id=UUID(check["roll_request_id"]),
+            acting_seat_id=table.player_actor.seat_id,
+            execution_mode="self",
+            d20=1,
+            constitution_save_modifier=0,
+            roll_source="physical",
+            idempotency_key="p4d-hold-person-concentration-fail",
+        )
+        assert failed.succeeded is False
+        assert failed_event.payload["linked_effect_ids"] == [effect_id]
+        assert failed_event.payload["linked_effects_removed_from"] == [
+            {"entry_id": str(target.id), "monster_instance_id": str(enemy.id)}
+        ]
+        final = CharacterRepository(table.engine, registry).load_character(table.character_id)
+        assert final.state.concentration is None
+        with table.engine.connect() as connection:
+            monster = connection.execute(
+                select(monster_instances).where(monster_instances.c.id == enemy.id)
+            ).mappings().one()
+        assert monster["conditions"] == []
+        assert monster["effects"] == []
+    finally:
+        table.engine.dispose()
+
+
+def test_single_target_heal_and_attack_cast_use_semantic_hp_boundary() -> None:
+    table, running, caster, target, enemy = _running_aoe_table()
+    try:
+        _enable_fireball_profile(table)
+        registry = load_default_content_registry()
+        repository = CombatSpellRepository(table.engine, table.events.repository)
+        player_binding = table.events._stored_binding(table.player_actor)
+
+        # Attack cast against the monster: hit, damage through the affinity pipeline.
+        attack, _event = repository.cast_character_spell(
+            binding=player_binding,
+            combat_id=running.id,
+            caster_entry_id=caster.id,
+            subject_seat_id=table.player_seat_id,
+            execution_mode="self",
+            profile_id="wizard",
+            spell_ref="srd5.1:spell:magic-missile",
+            spell_level=1,
+            slot_level=1,
+            cast_mode=SpellCastMode.ATTACK,
+            target_entry_id=target.id,
+            attack_modifier=5,
+            attack_d20s=(10,),
+            damage_parts=(DamageRollPart(damage_type=DamageType.FORCE, dice=(2, 2)),),
+            roll_source="physical",
+            idempotency_key="p4d-attack-cast",
+        )
+        assert attack.resolution_result is not None
+        assert attack.resolution_result["roll"]["total"] == 15
+        assert attack.resolution_result["damage"] == 4
+        with table.engine.connect() as connection:
+            assert connection.scalar(
+                select(monster_instances.c.current_hp).where(monster_instances.c.id == enemy.id)
+            ) == 5
+            attack_requests = connection.execute(
+                select(roll_requests).where(
+                    roll_requests.c.session_id == table.session_id,
+                    roll_requests.c.request_type == "other",
+                    roll_requests.c.target_combat_entry_id == caster.id,
+                )
+            ).mappings().all()
+        assert len(attack_requests) == 1
+        after_attack = CharacterRepository(table.engine, registry).load_character(table.character_id)
+        assert after_attack.state.spell_slots[1].remaining == 2
+
+        # Action already spent on this turn: the next cast is refused with no
+        # resource or state side effect.
+        with pytest.raises(CombatSpellStateConflictError, match="Action is already spent"):
+            repository.cast_character_spell(
+                binding=player_binding,
+                combat_id=running.id,
+                caster_entry_id=caster.id,
+                subject_seat_id=table.player_seat_id,
+                execution_mode="self",
+                profile_id="wizard",
+                spell_ref="srd5.1:spell:magic-missile",
+                spell_level=1,
+                slot_level=1,
+                cast_mode=SpellCastMode.HEAL,
+                target_entry_id=caster.id,
+                healing_amount=5,
+                roll_source="physical",
+                idempotency_key="p4d-heal-cast-refused",
+            )
+        refused = CharacterRepository(table.engine, registry).load_character(table.character_id)
+        assert refused.state.spell_slots[1].remaining == 2
+
+        # Restore the Action and heal self: healing lands on the caster state.
+        with table.engine.begin() as connection:
+            connection.execute(
+                update(combat_entries)
+                .where(combat_entries.c.id == caster.id)
+                .values(action_available=True)
+            )
+        hurt_hp = _damage_caster(table, running, caster, target, amount=10)
+        heal, _event = repository.cast_character_spell(
+            binding=player_binding,
+            combat_id=running.id,
+            caster_entry_id=caster.id,
+            subject_seat_id=table.player_seat_id,
+            execution_mode="self",
+            profile_id="wizard",
+            spell_ref="srd5.1:spell:magic-missile",
+            spell_level=1,
+            slot_level=1,
+            cast_mode=SpellCastMode.HEAL,
+            target_entry_id=caster.id,
+            healing_amount=6,
+            roll_source="physical",
+            idempotency_key="p4d-heal-cast",
+        )
+        assert heal.resolution_result is not None
+        assert heal.resolution_result["roll"] is None
+        assert heal.resolution_result["target_current_hp"] == hurt_hp + 6
+        healed = CharacterRepository(table.engine, registry).load_character(table.character_id)
+        assert healed.state.current_hp == hurt_hp + 6
+        assert healed.state.spell_slots[1].remaining == 1
+    finally:
+        table.engine.dispose()
+
+
+def _damage_caster(table, running, caster, target, *, amount: int) -> int:
+    dm_binding = table.events._stored_binding(table.dm_actor)
+    result = CombatResolutionRepository(table.engine, table.events.repository).apply_damage(
+        binding=dm_binding,
+        combat_id=running.id,
+        target_entry_id=caster.id,
+        damage_parts=(DamageRollPart(damage_type=DamageType.FORCE, dice=(amount,)),),
+        critical=False,
+        source_entry_id=target.id,
+        subject_seat_id=table.player_seat_id,
+        execution_mode="dm_proxy",
+        idempotency_key=f"p4d-damage-caster-{amount}",
+    )
+    return result.after_hp

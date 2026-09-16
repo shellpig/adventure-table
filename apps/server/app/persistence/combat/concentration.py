@@ -13,6 +13,10 @@ from app.domain.combat.concentration_triggers import (
     resolve_concentration_check,
 )
 from app.persistence.characters import character_states
+from app.persistence.combat.effects import (
+    strip_effects_from_state_payload,
+    strip_linked_effects,
+)
 from app.persistence.combat.tables import combat_entries, combats
 from app.persistence.rooms.p3c_runtime import roll_groups, roll_requests, roll_results
 from app.persistence.rooms.table_runtime import (
@@ -185,6 +189,9 @@ class CombatConcentrationRepository:
                 dc=dc,
             )
             state = CharacterState.model_validate(state_row["state_payload"])
+            linked_effect_ids = (
+                tuple(state.concentration.effect_ids) if state.concentration is not None else ()
+            )
             resolved = resolve_concentration_check(
                 request=concentration_request,
                 state=state,
@@ -192,6 +199,20 @@ class CombatConcentrationRepository:
                 constitution_save_modifier=constitution_save_modifier,
             )
             now = datetime.now().astimezone()
+            next_payload = resolved.state.model_dump(mode="json")
+            removed_from: list[dict[str, object]] = []
+            if not resolved.success:
+                # The domain already dropped the owner's linked temporary effects;
+                # conditions those effects applied, and effects living on other
+                # combatants, end in the same transaction.
+                strip_effects_from_state_payload(next_payload, set(linked_effect_ids))
+                removed_from = strip_linked_effects(
+                    connection,
+                    combat_id=entry["combat_id"],
+                    effect_ids=linked_effect_ids,
+                    now=now,
+                    skip_character_ids=(target_character_id,),
+                )
             total = d20 + constitution_save_modifier
             connection.execute(
                 insert(roll_results).values(
@@ -230,7 +251,7 @@ class CombatConcentrationRepository:
                     character_states.c.state_revision == revision,
                 )
                 .values(
-                    state_payload=resolved.state.model_dump(mode="json"),
+                    state_payload=CharacterState.model_validate(next_payload).model_dump(mode="json"),
                     state_revision=revision + 1,
                     updated_at=now,
                 )
@@ -261,6 +282,8 @@ class CombatConcentrationRepository:
                         "modifier": constitution_save_modifier,
                         "total": total,
                         "succeeded": resolved.success,
+                        "linked_effect_ids": list(linked_effect_ids),
+                        "linked_effects_removed_from": removed_from,
                         "domain_events": list(resolved.events),
                     },
                 )

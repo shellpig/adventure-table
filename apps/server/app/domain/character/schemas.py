@@ -590,6 +590,9 @@ class CharacterBuild(FrozenModel):
 class ConditionState(FrozenModel):
     condition_ref: StableKey
     note: str | None = None
+    # P4-D: links a condition to the spell effect that applied it so ending
+    # that effect (concentration drop, expiry) can remove the condition too.
+    effect_id: str | None = Field(default=None, min_length=1, max_length=160)
 
     @field_validator("condition_ref")
     @classmethod
