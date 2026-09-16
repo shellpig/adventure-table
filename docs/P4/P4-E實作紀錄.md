@@ -12,7 +12,7 @@
 
 | 步 | 內容 | 對應契約 | 狀態 |
 |---|---|---|---|
-| E1 | Monster persisted cast：`CombatSpellRepository.cast_monster_spell` | 實作規格 14；設計 §8.5「Monster cast」；測試 E.5 第 1 點 | 🟡 進行中 |
+| E1 | Monster persisted cast：`CombatSpellRepository.cast_monster_spell` | 實作規格 14；設計 §8.5「Monster cast」；測試 E.5 第 1 點 | ✅ |
 | E2 | Monster concentration canonical state + 受傷 CON save | 實作規格 15；設計 §8.5「Monster concentration」；測試 E.5 | ⬜ |
 | E3 | Concentration roll routing：通用 resolve 拒絕，只走 `complete_check` | 實作規格 16；設計 §8.5「Concentration roll routing」；測試 E.5 | ⬜ |
 | E4 | Combat DTO / projection：DM 完整 vs Player secrecy | 實作規格 3；測試 E.2 | ⬜ |
@@ -31,4 +31,8 @@
 
 ### E1 — Monster persisted cast
 
-- 起始：2026-09-16，agy worker。
+- 起始：2026-09-16，agy worker（Gemini 3.8 Flash High）；兩輪：實作 + refactor。
+- 交付：`CombatSpellRepository.cast_monster_spell`，走 `resolve_monster_spell_source` + `resolve_monster_spell`，扣 `monster_instances.resources`、target state、roll record、`combat_actions`、event 同一 transaction；`attack_modifier` / `save_dc` 未傳時 fallback 到 stat block；self-target / utility 的 effects 落在 caster 自己的 `effects[]`。
+- 與 `cast_character_spell` 共用五個 private helper（`_load_spell_target`、`_write_spell_target_state`、`_insert_spell_formal_roll`、`_request_concentration_check_for_damaged_character`、`_write_spell_action_and_event`）+ `_append_monster_effects_and_conditions`；Character 版行為與測試期望不變。
+- 測試：`tests/test_p4e_monster_cast.py` 7 條（slot 扣一次 / duplicate idempotency / insufficient slot 零副作用 / 無 spellcasting / unknown spell / wrong caster kind / stat-block attack bonus fallback）。focused gate：p4e + p4d + p4c_resolution + m03 boundary 58 passed。
+- 留給 E2：monster concentration pointer 未記錄（`TODO(E2)`）；留給 E3：Concentration roll routing。

@@ -29,9 +29,13 @@ from app.domain.combat.spell_resolver import (
     SpellCastRequest,
     SpellResolutionSpec,
     SpellTargetState,
+    resolve_monster_spell,
     resolve_spell,
 )
-from app.domain.combat.spell_resources import authorize_character_spell
+from app.domain.combat.spell_resources import (
+    authorize_character_spell,
+    resolve_monster_spell_source,
+)
 from app.domain.rules.hit_points import calculate_max_hp
 from app.persistence.characters import character_states, character_versions, characters
 from app.persistence.combat.effects import (
@@ -950,73 +954,18 @@ class CombatSpellRepository:
                 healing_amount=healing_amount,
             )
 
-            target_entry = None
-            target_character: tuple[CharacterBuild, CharacterState, int] | None = None
-            target_monster: Mapping[str, Any] | None = None
-            domain_target: SpellTargetState | None = None
             target_is_caster = target_entry_id == caster_entry_id
-            if target_entry_id is not None:
-                target_entry = (
-                    caster
-                    if target_is_caster
-                    else self._lock_entry(connection, combat_id=combat_id, entry_id=target_entry_id)
+            target_entry, target_character, target_monster, domain_target = (
+                self._load_spell_target(
+                    connection,
+                    combat_id=combat_id,
+                    target_entry_id=target_entry_id,
+                    caster_entry=caster,
+                    caster_character=(caster_build, caster_state, caster_revision),
+                    target_ac=target_ac,
+                    save_modifier=save_modifier,
                 )
-                if target_entry["subject_kind"] == "character":
-                    character_id = target_entry["character_id"]
-                    if character_id is None:
-                        raise CombatSpellStateConflictError("Character target has no Character identity")
-                    target_character = (
-                        (caster_build, caster_state, caster_revision)
-                        if character_id == caster_character_id
-                        else self._load_character_state(connection, character_id)
-                    )
-                    build, state, _revision = target_character
-                    domain_target = SpellTargetState(
-                        target_ref=str(target_entry_id),
-                        target_kind=TargetKind.CHARACTER,
-                        hp=HitPointState(
-                            current_hp=state.current_hp,
-                            max_hp=calculate_max_hp(build),
-                            temp_hp=state.temporary_hp,
-                        ),
-                        target_ac=target_ac,
-                        save_modifier=save_modifier,
-                        death_saves=_death_state(target_entry),
-                    )
-                elif target_entry["subject_kind"] == "monster":
-                    monster_id = target_entry["monster_instance_id"]
-                    if monster_id is None:
-                        raise CombatSpellStateConflictError("Monster target has no Monster identity")
-                    target_monster = connection.execute(
-                        select(monster_instances)
-                        .where(monster_instances.c.id == monster_id)
-                        .with_for_update()
-                    ).mappings().one_or_none()
-                    if target_monster is None:
-                        raise CombatSpellNotFoundError(str(monster_id))
-                    rules = dict(target_monster["rules_snapshot"] or {})
-                    resistances, immunities, vulnerabilities = _damage_affinities(rules)
-                    monster_ac = rules.get("armor_class")
-                    domain_target = SpellTargetState(
-                        target_ref=str(target_entry_id),
-                        target_kind=TargetKind.MONSTER,
-                        hp=HitPointState(
-                            current_hp=int(target_monster["current_hp"]),
-                            max_hp=int(rules["max_hp"]),
-                            temp_hp=int(target_monster["temp_hp"]),
-                        ),
-                        target_ac=(
-                            target_ac
-                            if target_ac is not None
-                            else (int(monster_ac) if isinstance(monster_ac, int) else None)
-                        ),
-                        save_modifier=save_modifier,
-                        resistances=resistances,
-                        immunities=immunities,
-                        vulnerabilities=vulnerabilities,
-                    )
-                else:
-                    raise CombatSpellStateConflictError("unsupported spell target kind")
+            )
 
             resolution = resolve_spell(
                 spec=spec,
@@ -1036,7 +985,9 @@ class CombatSpellRepository:
             caster_payload = resolution.character_state.model_dump(mode="json")
             strip_effects_from_state_payload(caster_payload, replaced_ids)
             if target_is_caster and resolution.target_hp is not None:
-                self._apply_target_hp_to_payload(caster_payload, resolution, "P4-D: spell reduced target to zero hit points")
+                self._apply_target_hp_to_payload(
+                    caster_payload, resolution, "P4-D: spell reduced target to zero hit points"
+                )
                 connection.execute(
                     update(combat_entries)
                     .where(combat_entries.c.id == caster_entry_id)
@@ -1051,47 +1002,18 @@ class CombatSpellRepository:
 
             # Target state.
             if domain_target is not None and not target_is_caster:
-                assert target_entry is not None and target_entry_id is not None
-                if target_character is not None:
-                    _build, state, revision = target_character
-                    payload = state.model_dump(mode="json")
-                    strip_effects_from_state_payload(payload, replaced_ids)
-                    if resolution.target_hp is not None:
-                        self._apply_target_hp_to_payload(payload, resolution, "P4-D: spell reduced target to zero hit points")
-                        connection.execute(
-                            update(combat_entries)
-                            .where(combat_entries.c.id == target_entry_id)
-                            .values(**_death_values(resolution.target_death_saves), updated_at=now)
-                        )
-                    self._attach_effects_to_payload(payload, resolution.applied_effects, spell_ref)
-                    self._write_character_state(connection, target_entry["character_id"], revision, payload)
-                    damaged_character = (target_entry["character_id"], payload)
-                else:
-                    assert target_monster is not None
-                    values: dict[str, Any] = {"updated_at": now}
-                    conditions = list(target_monster["conditions"] or [])
-                    effects = list(target_monster["effects"] or [])
-                    if resolution.target_hp is not None:
-                        values["current_hp"] = resolution.target_hp.current_hp
-                        values["temp_hp"] = resolution.target_hp.temp_hp
-                    for effect in resolution.applied_effects:
-                        effects.append(monster_effect_entry(effect))
-                        condition_ref = condition_ref_for_effect(effect)
-                        if condition_ref is not None:
-                            conditions.append(
-                                {
-                                    "condition_ref": condition_ref,
-                                    "note": f"P4-D: {spell_ref}",
-                                    "effect_id": effect.effect_id,
-                                }
-                            )
-                    values["conditions"] = conditions
-                    values["effects"] = effects
-                    connection.execute(
-                        update(monster_instances)
-                        .where(monster_instances.c.id == target_monster["id"])
-                        .values(**values)
-                    )
+                assert target_entry is not None
+                damaged_character = self._write_spell_target_state(
+                    connection,
+                    target_entry=target_entry,
+                    target_character=target_character,
+                    target_monster=target_monster,
+                    resolution=resolution,
+                    spell_ref=spell_ref,
+                    replaced_ids=replaced_ids,
+                    note_prefix="P4-D",
+                    now=now,
+                )
 
             # Replacing concentration ends the previous spell's effects everywhere.
             replaced = strip_linked_effects(
@@ -1112,144 +1034,41 @@ class CombatSpellRepository:
                 .values(action_available=False, updated_at=now)
             )
 
-            # Formal roll record for the attack or the target's save.
-            roll_payload: dict[str, object] | None = None
-            if cast_mode in {SpellCastMode.ATTACK, SpellCastMode.SAVE}:
-                assert target_entry is not None and target_entry_id is not None
-                if cast_mode is SpellCastMode.ATTACK:
-                    attack_event = next(item for item in resolution.events if item["type"] == "attack_roll")
-                    modifier = int(attack_modifier or 0)
-                    raw_dice = list(attack_d20s)
-                    kept_dice = [int(attack_event["d20"])]
-                    total = int(attack_event["total"])
-                    request_type, ability_ref, dc = "other", None, None
-                    label = f"Spell attack: {spell_ref}"
-                    request_target_seat = subject_seat_id
-                    request_target_character = caster_character_id
-                    request_target_entry = caster_entry_id
-                    subject_character_id = caster_character_id
-                else:
-                    save_event = next(item for item in resolution.events if item["type"] == "saving_throw")
-                    modifier = int(save_modifier or 0)
-                    raw_dice = [int(save_d20 or 0)]
-                    kept_dice = raw_dice
-                    total = int(save_event["total"])
-                    request_type, ability_ref, dc = "saving_throw", save_ability_ref, save_dc
-                    label = f"Spell save: {spell_ref}"
-                    request_target_seat = target_seat_id
-                    request_target_character = target_entry["character_id"]
-                    request_target_entry = target_entry_id
-                    subject_character_id = target_entry["character_id"]
-                connection.execute(
-                    insert(roll_groups).values(
-                        id=roll_group_id,
-                        session_id=binding.session_id,
-                        requested_by_seat_id=binding.seat_id,
-                        label=label,
-                        visibility="public",
-                        version=1,
-                    )
-                )
-                connection.execute(
-                    insert(roll_requests).values(
-                        id=roll_request_id,
-                        session_id=binding.session_id,
-                        roll_group_id=roll_group_id,
-                        target_seat_id=request_target_seat,
-                        target_character_id=request_target_character,
-                        target_combat_entry_id=request_target_entry,
-                        request_type=request_type,
-                        ability_ref=ability_ref,
-                        skill_ref=None,
-                        dc=dc,
-                        modifier_mode=attack_mode.value if cast_mode is SpellCastMode.ATTACK else "normal",
-                        flat_adjustment=0,
-                        visibility="public",
-                        status="resolved",
-                        requested_by_seat_id=binding.seat_id,
-                        resolved_at=now,
-                        version=2,
-                    )
-                )
-                connection.execute(
-                    insert(roll_results).values(
-                        id=roll_result_id,
-                        roll_request_id=roll_request_id,
-                        session_id=binding.session_id,
-                        acting_seat_id=binding.seat_id,
-                        subject_seat_id=request_target_seat,
-                        subject_character_id=subject_character_id,
-                        subject_combat_entry_id=request_target_entry,
-                        execution_mode="system",
-                        source=roll_source,
-                        formula=f"1d20 + {modifier}",
-                        raw_dice=raw_dice,
-                        kept_dice=kept_dice,
-                        base_modifier=modifier,
-                        flat_adjustment=0,
-                        total=total,
-                        visibility="public",
-                    )
-                )
-                roll_payload = {
-                    "roll_group_id": str(roll_group_id),
-                    "roll_request_id": str(roll_request_id),
-                    "roll_result_id": str(roll_result_id),
-                    "raw_dice": raw_dice,
-                    "kept_dice": kept_dice,
-                    "modifier": modifier,
-                    "total": total,
-                }
+            roll_payload = self._insert_spell_formal_roll(
+                connection,
+                binding=binding,
+                cast_mode=cast_mode,
+                resolution=resolution,
+                attack_modifier=attack_modifier,
+                attack_d20s=attack_d20s,
+                attack_mode=attack_mode,
+                save_ability_ref=save_ability_ref,
+                save_dc=save_dc,
+                save_modifier=save_modifier,
+                save_d20=save_d20,
+                spell_ref=spell_ref,
+                subject_seat_id=subject_seat_id,
+                target_seat_id=target_seat_id,
+                caster_entry_id=caster_entry_id,
+                target_entry_id=target_entry_id,
+                caster_character_id=caster_character_id,
+                target_character_id=target_entry["character_id"] if target_entry is not None else None,
+                roll_source=roll_source,
+                roll_group_id=roll_group_id,
+                roll_request_id=roll_request_id,
+                roll_result_id=roll_result_id,
+                now=now,
+            )
 
-            # A concentrating Character target that actually took damage owes a CON save.
-            concentration_payload: dict[str, object] | None = None
             damage_taken = resolution.damage.adjusted_total if resolution.damage is not None else 0
-            if damaged_character is not None and target_entry_id is not None and damage_taken > 0:
-                target_character_id, damaged_payload = damaged_character
-                current_state = CharacterState.model_validate(damaged_payload)
-                if current_state.concentration is not None:
-                    concentration_group_id = uuid4()
-                    concentration_request_id = uuid4()
-                    dc = concentration_dc(damage_taken)
-                    connection.execute(
-                        insert(roll_groups).values(
-                            id=concentration_group_id,
-                            session_id=binding.session_id,
-                            requested_by_seat_id=binding.seat_id,
-                            label="Concentration",
-                            visibility="public",
-                            version=1,
-                        )
-                    )
-                    connection.execute(
-                        insert(roll_requests).values(
-                            id=concentration_request_id,
-                            session_id=binding.session_id,
-                            roll_group_id=concentration_group_id,
-                            target_seat_id=(subject_seat_id if target_is_caster else target_seat_id),
-                            target_character_id=target_character_id,
-                            target_combat_entry_id=target_entry_id,
-                            request_type="saving_throw",
-                            ability_ref="srd5.1:ability:constitution",
-                            skill_ref=None,
-                            dc=dc,
-                            modifier_mode="normal",
-                            flat_adjustment=0,
-                            visibility="public",
-                            status="pending",
-                            requested_by_seat_id=binding.seat_id,
-                            version=1,
-                        )
-                    )
-                    concentration_payload = {
-                        "target_entry_id": str(target_entry_id),
-                        "target_character_id": str(target_character_id),
-                        "source_ref": current_state.concentration.source_ref,
-                        "damage_taken": damage_taken,
-                        "dc": dc,
-                        "roll_group_id": str(concentration_group_id),
-                        "roll_request_id": str(concentration_request_id),
-                    }
+            concentration_payload = self._request_concentration_check_for_damaged_character(
+                connection,
+                binding=binding,
+                damaged_character=damaged_character,
+                target_entry_id=target_entry_id,
+                target_seat_id=(subject_seat_id if target_is_caster else target_seat_id),
+                damage_taken=damage_taken,
+            )
 
             resolution_payload: dict[str, Any] = {
                 "spell_ref": spell_ref,
@@ -1270,43 +1089,25 @@ class CombatSpellRepository:
                 "concentration_check": concentration_payload,
                 "domain_events": list(resolution.events),
             }
-            connection.execute(
-                insert(combat_actions).values(
-                    id=action_id,
-                    combat_id=combat_id,
-                    entry_id=caster_entry_id,
-                    target_entry_id=target_entry_id,
-                    session_id=binding.session_id,
-                    acting_seat_id=binding.seat_id,
-                    subject_seat_id=subject_seat_id,
-                    execution_mode=execution_mode,
-                    action_kind="spell_cast",
-                    economy_cost="action",
-                    payload={"spell": spell_payload},
-                    resolution_status="resolved",
-                    roll_request_id=roll_request_id if roll_payload is not None else None,
-                    roll_result_id=roll_result_id if roll_payload is not None else None,
-                    resolution_result=resolution_payload,
-                    idempotency_key=idempotency_key,
-                )
-            )
-            connection.execute(
-                update(session_events)
-                .where(session_events.c.id == event_id)
-                .values(
-                    subject_character_id=caster_character_id,
-                    payload={
-                        "combat_id": str(combat_id),
-                        "action_id": str(action_id),
-                        "caster_entry_id": str(caster_entry_id),
-                        **resolution_payload,
-                    },
-                )
-            )
-            connection.execute(
-                update(combats)
-                .where(combats.c.id == combat_id)
-                .values(revision=combats.c.revision + 1, updated_at=now)
+
+            self._write_spell_action_and_event(
+                connection,
+                event_id=event_id,
+                binding=binding,
+                combat_id=combat_id,
+                action_id=action_id,
+                caster_entry_id=caster_entry_id,
+                target_entry_id=target_entry_id,
+                subject_seat_id=subject_seat_id,
+                subject_character_id=caster_character_id,
+                execution_mode=execution_mode,
+                spell_payload=spell_payload,
+                resolution_payload=resolution_payload,
+                roll_payload=roll_payload,
+                roll_request_id=roll_request_id,
+                roll_result_id=roll_result_id,
+                idempotency_key=idempotency_key,
+                now=now,
             )
 
         event = self.event_repository.append(
@@ -1334,6 +1135,729 @@ class CombatSpellRepository:
             raise CombatSpellNotFoundError(str(canonical_action_id))
         return stored, event
 
+    def cast_monster_spell(
+        self,
+        *,
+        binding: StoredTableActorBinding,
+        combat_id: UUID,
+        caster_entry_id: UUID,
+        subject_seat_id: UUID | None,
+        execution_mode: str,
+        spell_ref: str,
+        spell_level: int,
+        slot_level: int | None = None,
+        cast_mode: SpellCastMode,
+        target_entry_id: UUID | None,
+        roll_source: str,
+        idempotency_key: str | None,
+        target_seat_id: UUID | None = None,
+        attack_modifier: int | None = None,
+        attack_d20s: tuple[int, ...] = (),
+        attack_mode: RollMode = RollMode.NORMAL,
+        target_ac: int | None = None,
+        save_ability_ref: str | None = None,
+        save_dc: int | None = None,
+        save_modifier: int | None = None,
+        save_d20: int | None = None,
+        save_damage_mode: SaveDamageMode = SaveDamageMode.NONE,
+        damage_parts: tuple[DamageRollPart, ...] = (),
+        healing_amount: int = 0,
+        concentration: bool = False,
+        apply_effects: tuple[EffectSpec, ...] = (),
+    ) -> tuple[StoredSpellCastAction, StoredTableEvent]:
+        """Resolve one single-target (or self / utility) Monster spell atomically.
+
+        Mirrors cast_character_spell, resolving resources via
+        resolve_monster_spell_source and resolve_monster_spell on the monster
+        instance's rules_snapshot and live resources. Slot deduction, target
+        state mutation, roll records and the Session event commit together.
+        """
+
+        if roll_source not in {"server", "physical"}:
+            raise ValueError("spell formal roll_source must be server or physical")
+        if cast_mode is SpellCastMode.SAVE and save_ability_ref is None:
+            raise ValueError("save spells require save_ability_ref")
+        if cast_mode is SpellCastMode.ATTACK and any(d20 < 1 or d20 > 20 for d20 in attack_d20s):
+            raise ValueError("attack d20 must be between 1 and 20")
+
+        action_id = uuid4()
+        roll_group_id = uuid4()
+        roll_request_id = uuid4()
+        roll_result_id = uuid4()
+        effective_slot_level = slot_level if slot_level is not None else spell_level
+
+        def projection(connection, event_id: UUID, _seq: int) -> None:
+            combat = connection.execute(
+                select(combats)
+                .where(
+                    combats.c.id == combat_id,
+                    combats.c.campaign_id == binding.campaign_id,
+                )
+                .with_for_update()
+            ).mappings().one_or_none()
+            if combat is None or combat["status"] != "running":
+                raise CombatSpellStateConflictError("Spell requires a running Combat")
+            caster = self._lock_entry(connection, combat_id=combat_id, entry_id=caster_entry_id)
+            if combat["current_turn_entry_id"] != caster_entry_id:
+                raise CombatSpellStateConflictError("Spell can only be cast on the caster's turn")
+            if caster["surprised"]:
+                raise CombatSpellStateConflictError("Surprised combatant cannot cast on its first turn")
+            if not caster["action_available"]:
+                raise CombatSpellStateConflictError("Caster Action is already spent")
+            if caster["subject_kind"] != "monster":
+                raise CombatSpellStateConflictError("Monster spell caster must be a monster combatant")
+            caster_monster_id = caster["monster_instance_id"]
+            if caster_monster_id is None:
+                raise CombatSpellStateConflictError("Monster spell caster has no Monster Instance identity")
+
+            caster_monster = connection.execute(
+                select(monster_instances)
+                .where(monster_instances.c.id == caster_monster_id)
+                .with_for_update()
+            ).mappings().one_or_none()
+            if caster_monster is None:
+                raise CombatSpellNotFoundError(str(caster_monster_id))
+
+            rules_snapshot = dict(caster_monster["rules_snapshot"] or {})
+            live_resources = dict(caster_monster["resources"] or {})
+            source = resolve_monster_spell_source(
+                rules_snapshot=rules_snapshot,
+                resources=live_resources,
+                spell_ref=spell_ref,
+                spell_level=spell_level,
+                slot_level=effective_slot_level,
+            )
+
+            effective_attack_modifier = (
+                attack_modifier if attack_modifier is not None else source.attack_bonus
+            )
+            effective_save_dc = save_dc if save_dc is not None else source.save_dc
+
+            spec = SpellResolutionSpec(
+                spell_ref=spell_ref,
+                cast_mode=cast_mode,
+                minimum_slot_level=spell_level,
+                attack_modifier=effective_attack_modifier,
+                save_dc=effective_save_dc,
+                save_damage_mode=save_damage_mode,
+                concentration=concentration,
+                apply_effects=apply_effects,
+            )
+            request = SpellCastRequest(
+                caster_ref=str(caster_entry_id),
+                slot_level=effective_slot_level,
+                attack_d20s=attack_d20s,
+                attack_mode=attack_mode,
+                save_d20=save_d20,
+                damage_parts=damage_parts,
+                healing_amount=healing_amount,
+            )
+
+            target_is_caster = target_entry_id == caster_entry_id
+            target_entry, target_character, target_monster, domain_target = (
+                self._load_spell_target(
+                    connection,
+                    combat_id=combat_id,
+                    target_entry_id=target_entry_id,
+                    caster_entry=caster,
+                    caster_monster=caster_monster,
+                    target_ac=target_ac,
+                    save_modifier=save_modifier,
+                )
+            )
+
+            resolution = resolve_monster_spell(
+                spec=spec,
+                request=request,
+                target=domain_target,
+                resources=live_resources,
+                source=source,
+                effect_id_prefix=f"{spell_ref}:{action_id}",
+            )
+            now = datetime.now().astimezone()
+
+            damaged_character: tuple[UUID, dict[str, Any]] | None = None
+
+            # 1) Target state mutation (if target is not the caster).
+            if domain_target is not None and not target_is_caster:
+                assert target_entry is not None
+                damaged_character = self._write_spell_target_state(
+                    connection,
+                    target_entry=target_entry,
+                    target_character=target_character,
+                    target_monster=target_monster,
+                    resolution=resolution,
+                    spell_ref=spell_ref,
+                    replaced_ids=set(),
+                    note_prefix="P4-E",
+                    now=now,
+                )
+
+            # 2) Caster monster state: deduct resource slot, plus self-target HP / effects if target_is_caster or utility.
+            caster_values: dict[str, Any] = {
+                "resources": resolution.resources,
+                "updated_at": now,
+            }
+            if target_is_caster or domain_target is None:
+                conditions = list(caster_monster["conditions"] or [])
+                effects = list(caster_monster["effects"] or [])
+                if target_is_caster and resolution.target_hp is not None:
+                    caster_values["current_hp"] = resolution.target_hp.current_hp
+                    caster_values["temp_hp"] = resolution.target_hp.temp_hp
+                self._append_monster_effects_and_conditions(
+                    conditions=conditions,
+                    effects=effects,
+                    applied_effects=resolution.applied_effects,
+                    spell_ref=spell_ref,
+                    note_prefix="P4-E",
+                )
+                caster_values["conditions"] = conditions
+                caster_values["effects"] = effects
+
+            connection.execute(
+                update(monster_instances)
+                .where(monster_instances.c.id == caster_monster_id)
+                .values(**caster_values)
+            )
+
+            # 3) Caster action economy spent.
+            connection.execute(
+                update(combat_entries)
+                .where(combat_entries.c.id == caster_entry_id)
+                .values(action_available=False, updated_at=now)
+            )
+
+            # 4) Formal roll record for attack or saving throw.
+            roll_payload = self._insert_spell_formal_roll(
+                connection,
+                binding=binding,
+                cast_mode=cast_mode,
+                resolution=resolution,
+                attack_modifier=effective_attack_modifier,
+                attack_d20s=attack_d20s,
+                attack_mode=attack_mode,
+                save_ability_ref=save_ability_ref,
+                save_dc=effective_save_dc,
+                save_modifier=save_modifier,
+                save_d20=save_d20,
+                spell_ref=spell_ref,
+                subject_seat_id=subject_seat_id,
+                target_seat_id=target_seat_id,
+                caster_entry_id=caster_entry_id,
+                target_entry_id=target_entry_id,
+                caster_character_id=None,
+                target_character_id=target_entry["character_id"] if target_entry is not None else None,
+                roll_source=roll_source,
+                roll_group_id=roll_group_id,
+                roll_request_id=roll_request_id,
+                roll_result_id=roll_result_id,
+                now=now,
+            )
+
+            # 5) A concentrating Character target that took damage owes a CON save.
+            damage_taken = resolution.damage.adjusted_total if resolution.damage is not None else 0
+            concentration_payload = self._request_concentration_check_for_damaged_character(
+                connection,
+                binding=binding,
+                damaged_character=damaged_character,
+                target_entry_id=target_entry_id,
+                target_seat_id=target_seat_id,
+                damage_taken=damage_taken,
+            )
+
+            # TODO(E2): Monster concentration canonical state will be implemented in step E2.
+            # For now, concentration spells cast by a monster do not record a concentration pointer.
+            spell_payload = {
+                "spell_ref": spell_ref,
+                "spell_level": spell_level,
+                "slot_level": effective_slot_level,
+                "cast_mode": cast_mode.value,
+                "concentration": concentration,
+                "save_ability_ref": save_ability_ref,
+                "save_dc": effective_save_dc,
+                "save_damage_mode": save_damage_mode.value,
+                "attack_modifier": effective_attack_modifier,
+                "attack_mode": attack_mode.value,
+                "damage_parts": _damage_payload(damage_parts),
+                "healing_amount": healing_amount,
+                "effects": [
+                    {"effect_type": item.effect_type, "tag": item.tag, "source_ref": item.source_ref}
+                    for item in apply_effects
+                ],
+            }
+            resolution_payload: dict[str, Any] = {
+                "spell_ref": spell_ref,
+                "cast_mode": cast_mode.value,
+                "target_entry_id": str(target_entry_id) if target_entry_id is not None else None,
+                "roll": roll_payload,
+                "damage": damage_taken,
+                "target_current_hp": resolution.target_hp.current_hp if resolution.target_hp else None,
+                "target_temp_hp": resolution.target_hp.temp_hp if resolution.target_hp else None,
+                "instant_death": bool(resolution.damage.instant_death) if resolution.damage else False,
+                "monster_outcome_required": (
+                    bool(resolution.damage.monster_outcome_required) if resolution.damage else False
+                ),
+                "applied_effect_ids": [effect.effect_id for effect in resolution.applied_effects],
+                "concentration_started": False,
+                "replaced_concentration_effect_ids": [],
+                "replaced_effects_removed_from": [],
+                "concentration_check": concentration_payload,
+                "domain_events": list(resolution.events),
+            }
+
+            self._write_spell_action_and_event(
+                connection,
+                event_id=event_id,
+                binding=binding,
+                combat_id=combat_id,
+                action_id=action_id,
+                caster_entry_id=caster_entry_id,
+                target_entry_id=target_entry_id,
+                subject_seat_id=subject_seat_id,
+                subject_character_id=None,
+                execution_mode=execution_mode,
+                spell_payload=spell_payload,
+                resolution_payload=resolution_payload,
+                roll_payload=roll_payload,
+                roll_request_id=roll_request_id,
+                roll_result_id=roll_result_id,
+                idempotency_key=idempotency_key,
+                now=now,
+            )
+
+        event = self.event_repository.append(
+            room_id=binding.room_id,
+            campaign_id=binding.campaign_id,
+            session_id=binding.session_id,
+            kind="combat.spell_cast_resolved",
+            acting_seat_id=binding.seat_id,
+            subject_seat_id=subject_seat_id,
+            subject_character_id=None,
+            execution_mode=execution_mode,
+            visibility="public",
+            recipient_seat_ids=(),
+            payload_version=1,
+            payload={"combat_id": str(combat_id), "action_id": str(action_id)},
+            idempotency_key=(
+                f"p4e-monster-cast:{idempotency_key}" if idempotency_key else None
+            ),
+            expected_actor_binding=binding,
+            transaction_projection=projection,
+        )
+        canonical_action_id = UUID(str(event.payload["action_id"]))
+        stored = self.get_cast_action(session_id=binding.session_id, action_id=canonical_action_id)
+        if stored is None:
+            raise CombatSpellNotFoundError(str(canonical_action_id))
+        return stored, event
+
+    @staticmethod
+    def _append_monster_effects_and_conditions(
+        conditions: list[dict[str, Any]],
+        effects: list[dict[str, Any]],
+        applied_effects: tuple[PersistentTemporaryEffect, ...],
+        spell_ref: str,
+        note_prefix: str = "P4-D",
+    ) -> None:
+        for effect in applied_effects:
+            effects.append(monster_effect_entry(effect))
+            condition_ref = condition_ref_for_effect(effect)
+            if condition_ref is not None:
+                conditions.append(
+                    {
+                        "condition_ref": condition_ref,
+                        "note": f"{note_prefix}: {spell_ref}",
+                        "effect_id": effect.effect_id,
+                    }
+                )
+
+    def _load_spell_target(
+        self,
+        connection,
+        *,
+        combat_id: UUID,
+        target_entry_id: UUID | None,
+        caster_entry: Mapping[str, Any],
+        caster_character: tuple[CharacterBuild, CharacterState, int] | None = None,
+        caster_monster: Mapping[str, Any] | None = None,
+        target_ac: int | None = None,
+        save_modifier: int | None = None,
+    ) -> tuple[
+        Mapping[str, Any] | None,
+        tuple[CharacterBuild, CharacterState, int] | None,
+        Mapping[str, Any] | None,
+        SpellTargetState | None,
+    ]:
+        if target_entry_id is None:
+            return None, None, None, None
+
+        target_is_caster = target_entry_id == caster_entry["id"]
+        target_entry = (
+            caster_entry
+            if target_is_caster
+            else self._lock_entry(connection, combat_id=combat_id, entry_id=target_entry_id)
+        )
+        target_character: tuple[CharacterBuild, CharacterState, int] | None = None
+        target_monster: Mapping[str, Any] | None = None
+
+        if target_entry["subject_kind"] == "character":
+            character_id = target_entry["character_id"]
+            if character_id is None:
+                raise CombatSpellStateConflictError("Character target has no Character identity")
+            target_character = (
+                caster_character
+                if (caster_character is not None and character_id == caster_entry.get("character_id"))
+                else self._load_character_state(connection, character_id)
+            )
+            build, state, _revision = target_character
+            domain_target = SpellTargetState(
+                target_ref=str(target_entry_id),
+                target_kind=TargetKind.CHARACTER,
+                hp=HitPointState(
+                    current_hp=state.current_hp,
+                    max_hp=calculate_max_hp(build),
+                    temp_hp=state.temporary_hp,
+                ),
+                target_ac=target_ac,
+                save_modifier=save_modifier,
+                death_saves=_death_state(target_entry),
+            )
+        elif target_entry["subject_kind"] == "monster":
+            monster_id = target_entry["monster_instance_id"]
+            if monster_id is None:
+                raise CombatSpellStateConflictError("Monster target has no Monster identity")
+            target_monster = (
+                caster_monster
+                if (caster_monster is not None and target_is_caster)
+                else connection.execute(
+                    select(monster_instances)
+                    .where(monster_instances.c.id == monster_id)
+                    .with_for_update()
+                ).mappings().one_or_none()
+            )
+            if target_monster is None:
+                raise CombatSpellNotFoundError(str(monster_id))
+            rules = dict(target_monster["rules_snapshot"] or {})
+            resistances, immunities, vulnerabilities = _damage_affinities(rules)
+            monster_ac = rules.get("armor_class")
+            domain_target = SpellTargetState(
+                target_ref=str(target_entry_id),
+                target_kind=TargetKind.MONSTER,
+                hp=HitPointState(
+                    current_hp=int(target_monster["current_hp"]),
+                    max_hp=int(rules["max_hp"]),
+                    temp_hp=int(target_monster["temp_hp"]),
+                ),
+                target_ac=(
+                    target_ac
+                    if target_ac is not None
+                    else (int(monster_ac) if isinstance(monster_ac, int) else None)
+                ),
+                save_modifier=save_modifier,
+                resistances=resistances,
+                immunities=immunities,
+                vulnerabilities=vulnerabilities,
+            )
+        else:
+            raise CombatSpellStateConflictError("unsupported spell target kind")
+
+        return target_entry, target_character, target_monster, domain_target
+
+    def _write_spell_target_state(
+        self,
+        connection,
+        *,
+        target_entry: Mapping[str, Any],
+        target_character: tuple[CharacterBuild, CharacterState, int] | None,
+        target_monster: Mapping[str, Any] | None,
+        resolution: Any,
+        spell_ref: str,
+        replaced_ids: set[str] = frozenset(),
+        note_prefix: str = "P4-D",
+        now: datetime,
+    ) -> tuple[UUID, dict[str, Any]] | None:
+        if target_character is not None:
+            _build, state, revision = target_character
+            payload = state.model_dump(mode="json")
+            if replaced_ids:
+                strip_effects_from_state_payload(payload, replaced_ids)
+            if resolution.target_hp is not None:
+                self._apply_target_hp_to_payload(
+                    payload, resolution, f"{note_prefix}: spell reduced target to zero hit points"
+                )
+                connection.execute(
+                    update(combat_entries)
+                    .where(combat_entries.c.id == target_entry["id"])
+                    .values(**_death_values(resolution.target_death_saves), updated_at=now)
+                )
+            self._attach_effects_to_payload(
+                payload, resolution.applied_effects, spell_ref, note_prefix=note_prefix
+            )
+            self._write_character_state(
+                connection, target_entry["character_id"], revision, payload
+            )
+            return (target_entry["character_id"], payload)
+        elif target_monster is not None:
+            values: dict[str, Any] = {"updated_at": now}
+            conditions = list(target_monster["conditions"] or [])
+            effects = list(target_monster["effects"] or [])
+            if resolution.target_hp is not None:
+                values["current_hp"] = resolution.target_hp.current_hp
+                values["temp_hp"] = resolution.target_hp.temp_hp
+            self._append_monster_effects_and_conditions(
+                conditions=conditions,
+                effects=effects,
+                applied_effects=resolution.applied_effects,
+                spell_ref=spell_ref,
+                note_prefix=note_prefix,
+            )
+            values["conditions"] = conditions
+            values["effects"] = effects
+            connection.execute(
+                update(monster_instances)
+                .where(monster_instances.c.id == target_monster["id"])
+                .values(**values)
+            )
+            return None
+        return None
+
+    @staticmethod
+    def _insert_spell_formal_roll(
+        connection,
+        *,
+        binding: StoredTableActorBinding,
+        cast_mode: SpellCastMode,
+        resolution: Any,
+        attack_modifier: int | None,
+        attack_d20s: tuple[int, ...],
+        attack_mode: RollMode,
+        save_ability_ref: str | None,
+        save_dc: int | None,
+        save_modifier: int | None,
+        save_d20: int | None,
+        spell_ref: str,
+        subject_seat_id: UUID | None,
+        target_seat_id: UUID | None,
+        caster_entry_id: UUID,
+        target_entry_id: UUID | None,
+        caster_character_id: UUID | None,
+        target_character_id: UUID | None,
+        roll_source: str,
+        roll_group_id: UUID,
+        roll_request_id: UUID,
+        roll_result_id: UUID,
+        now: datetime,
+    ) -> dict[str, object] | None:
+        if cast_mode not in {SpellCastMode.ATTACK, SpellCastMode.SAVE}:
+            return None
+        assert target_entry_id is not None
+        if cast_mode is SpellCastMode.ATTACK:
+            attack_event = next(item for item in resolution.events if item["type"] == "attack_roll")
+            modifier = int(attack_modifier or 0)
+            raw_dice = list(attack_d20s)
+            kept_dice = [int(attack_event["d20"])]
+            total = int(attack_event["total"])
+            request_type, ability_ref, dc = "other", None, None
+            label = f"Spell attack: {spell_ref}"
+            request_target_seat = subject_seat_id
+            request_target_character = caster_character_id
+            request_target_entry = caster_entry_id
+            subject_character_id = caster_character_id
+            subject_combat_entry_id = caster_entry_id
+        else:
+            save_event = next(item for item in resolution.events if item["type"] == "saving_throw")
+            modifier = int(save_modifier or 0)
+            raw_dice = [int(save_d20 or 0)]
+            kept_dice = raw_dice
+            total = int(save_event["total"])
+            request_type, ability_ref, dc = "saving_throw", save_ability_ref, save_dc
+            label = f"Spell save: {spell_ref}"
+            request_target_seat = target_seat_id
+            request_target_character = target_character_id
+            request_target_entry = target_entry_id
+            subject_character_id = target_character_id
+            subject_combat_entry_id = target_entry_id
+
+        connection.execute(
+            insert(roll_groups).values(
+                id=roll_group_id,
+                session_id=binding.session_id,
+                requested_by_seat_id=binding.seat_id,
+                label=label,
+                visibility="public",
+                version=1,
+            )
+        )
+        connection.execute(
+            insert(roll_requests).values(
+                id=roll_request_id,
+                session_id=binding.session_id,
+                roll_group_id=roll_group_id,
+                target_seat_id=request_target_seat,
+                target_character_id=request_target_character,
+                target_combat_entry_id=request_target_entry,
+                request_type=request_type,
+                ability_ref=ability_ref,
+                skill_ref=None,
+                dc=dc,
+                modifier_mode=attack_mode.value if cast_mode is SpellCastMode.ATTACK else "normal",
+                flat_adjustment=0,
+                visibility="public",
+                status="resolved",
+                requested_by_seat_id=binding.seat_id,
+                resolved_at=now,
+                version=2,
+            )
+        )
+        connection.execute(
+            insert(roll_results).values(
+                id=roll_result_id,
+                roll_request_id=roll_request_id,
+                session_id=binding.session_id,
+                acting_seat_id=binding.seat_id,
+                subject_seat_id=request_target_seat,
+                subject_character_id=subject_character_id,
+                subject_combat_entry_id=subject_combat_entry_id,
+                execution_mode="system",
+                source=roll_source,
+                formula=f"1d20 + {modifier}",
+                raw_dice=raw_dice,
+                kept_dice=kept_dice,
+                base_modifier=modifier,
+                flat_adjustment=0,
+                total=total,
+                visibility="public",
+            )
+        )
+        return {
+            "roll_group_id": str(roll_group_id),
+            "roll_request_id": str(roll_request_id),
+            "roll_result_id": str(roll_result_id),
+            "raw_dice": raw_dice,
+            "kept_dice": kept_dice,
+            "modifier": modifier,
+            "total": total,
+        }
+
+    @staticmethod
+    def _request_concentration_check_for_damaged_character(
+        connection,
+        *,
+        binding: StoredTableActorBinding,
+        damaged_character: tuple[UUID, dict[str, Any]] | None,
+        target_entry_id: UUID | None,
+        target_seat_id: UUID | None,
+        damage_taken: int,
+    ) -> dict[str, object] | None:
+        if damaged_character is None or target_entry_id is None or damage_taken <= 0:
+            return None
+        target_character_id, damaged_payload = damaged_character
+        current_state = CharacterState.model_validate(damaged_payload)
+        if current_state.concentration is None:
+            return None
+
+        concentration_group_id = uuid4()
+        concentration_request_id = uuid4()
+        dc = concentration_dc(damage_taken)
+        connection.execute(
+            insert(roll_groups).values(
+                id=concentration_group_id,
+                session_id=binding.session_id,
+                requested_by_seat_id=binding.seat_id,
+                label="Concentration",
+                visibility="public",
+                version=1,
+            )
+        )
+        connection.execute(
+            insert(roll_requests).values(
+                id=concentration_request_id,
+                session_id=binding.session_id,
+                roll_group_id=concentration_group_id,
+                target_seat_id=target_seat_id,
+                target_character_id=target_character_id,
+                target_combat_entry_id=target_entry_id,
+                request_type="saving_throw",
+                ability_ref="srd5.1:ability:constitution",
+                skill_ref=None,
+                dc=dc,
+                modifier_mode="normal",
+                flat_adjustment=0,
+                visibility="public",
+                status="pending",
+                requested_by_seat_id=binding.seat_id,
+                version=1,
+            )
+        )
+        return {
+            "target_entry_id": str(target_entry_id),
+            "target_character_id": str(target_character_id),
+            "source_ref": current_state.concentration.source_ref,
+            "damage_taken": damage_taken,
+            "dc": dc,
+            "roll_group_id": str(concentration_group_id),
+            "roll_request_id": str(concentration_request_id),
+        }
+
+    @staticmethod
+    def _write_spell_action_and_event(
+        connection,
+        *,
+        event_id: UUID,
+        binding: StoredTableActorBinding,
+        combat_id: UUID,
+        action_id: UUID,
+        caster_entry_id: UUID,
+        target_entry_id: UUID | None,
+        subject_seat_id: UUID | None,
+        subject_character_id: UUID | None,
+        execution_mode: str,
+        spell_payload: dict[str, Any],
+        resolution_payload: dict[str, Any],
+        roll_payload: dict[str, object] | None,
+        roll_request_id: UUID,
+        roll_result_id: UUID,
+        idempotency_key: str | None,
+        now: datetime,
+    ) -> None:
+        connection.execute(
+            insert(combat_actions).values(
+                id=action_id,
+                combat_id=combat_id,
+                entry_id=caster_entry_id,
+                target_entry_id=target_entry_id,
+                session_id=binding.session_id,
+                acting_seat_id=binding.seat_id,
+                subject_seat_id=subject_seat_id,
+                execution_mode=execution_mode,
+                action_kind="spell_cast",
+                economy_cost="action",
+                payload={"spell": spell_payload},
+                resolution_status="resolved",
+                roll_request_id=roll_request_id if roll_payload is not None else None,
+                roll_result_id=roll_result_id if roll_payload is not None else None,
+                resolution_result=resolution_payload,
+                idempotency_key=idempotency_key,
+            )
+        )
+        connection.execute(
+            update(session_events)
+            .where(session_events.c.id == event_id)
+            .values(
+                subject_character_id=subject_character_id,
+                payload={
+                    "combat_id": str(combat_id),
+                    "action_id": str(action_id),
+                    "caster_entry_id": str(caster_entry_id),
+                    **resolution_payload,
+                },
+            )
+        )
+        connection.execute(
+            update(combats)
+            .where(combats.c.id == combat_id)
+            .values(revision=combats.c.revision + 1, updated_at=now)
+        )
+
     @staticmethod
     def _apply_target_hp_to_payload(payload: dict[str, Any], resolution, note: str) -> None:
         assert resolution.target_hp is not None
@@ -1356,7 +1880,10 @@ class CombatSpellRepository:
 
     @staticmethod
     def _attach_effects_to_payload(
-        payload: dict[str, Any], effects: tuple[PersistentTemporaryEffect, ...], spell_ref: str
+        payload: dict[str, Any],
+        effects: tuple[PersistentTemporaryEffect, ...],
+        spell_ref: str,
+        note_prefix: str = "P4-D",
     ) -> None:
         temporary_effects = list(payload.get("temporary_effects", []))
         conditions = list(payload.get("conditions", []))
@@ -1369,7 +1896,11 @@ class CombatSpellRepository:
                 item.get("condition_ref") == condition_ref for item in conditions
             ):
                 conditions.append(
-                    {"condition_ref": condition_ref, "note": f"P4-D: {spell_ref}", "effect_id": effect.effect_id}
+                    {
+                        "condition_ref": condition_ref,
+                        "note": f"{note_prefix}: {spell_ref}",
+                        "effect_id": effect.effect_id,
+                    }
                 )
         payload["temporary_effects"] = temporary_effects
         payload["conditions"] = conditions
