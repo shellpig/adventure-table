@@ -4,8 +4,20 @@ from dataclasses import dataclass, replace
 from typing import Literal, Mapping
 
 from app.domain.character.schemas import CharacterState, ResourceCounter
-from app.domain.combat.resolution import DamageRollPart, HitPointState, TargetKind, apply_damage
-from app.domain.combat.spell_resolver import SaveDamageMode, SpellCastMode, SpellResolutionSpec, half_damage_parts
+from app.domain.combat.resolution import (
+    DamageRollPart,
+    DamageType,
+    DeathSaveState,
+    HitPointState,
+    TargetKind,
+    apply_damage,
+)
+from app.domain.combat.spell_resolver import (
+    SaveDamageMode,
+    SpellCastMode,
+    SpellResolutionSpec,
+    half_damage_parts,
+)
 from app.domain.combat.spell_resources import (
     CharacterSpellAuthorization,
     MonsterSpellSource,
@@ -50,8 +62,12 @@ class AoeAdjudication:
         return cls(
             command_id=str(payload["command_id"]),
             acting_entry_id=str(payload["acting_entry_id"]),
-            proposed_target_ids=tuple(str(value) for value in payload.get("proposed_target_ids", ())),
-            confirmed_target_ids=tuple(str(value) for value in payload.get("confirmed_target_ids", ())),
+            proposed_target_ids=tuple(
+                str(value) for value in payload.get("proposed_target_ids", ())
+            ),
+            confirmed_target_ids=tuple(
+                str(value) for value in payload.get("confirmed_target_ids", ())
+            ),
             status=str(payload.get("status", "proposed")),  # type: ignore[arg-type]
         )
 
@@ -62,6 +78,10 @@ class AoeTargetState:
     target_kind: TargetKind
     hp: HitPointState
     save_modifier: int
+    death_saves: DeathSaveState | None = None
+    resistances: tuple[DamageType, ...] = ()
+    immunities: tuple[DamageType, ...] = ()
+    vulnerabilities: tuple[DamageType, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -71,6 +91,11 @@ class AoeTargetOutcome:
     saved: bool
     hp: HitPointState
     damage_taken: int
+    death_saves: DeathSaveState | None = None
+    apply_unconscious: bool = False
+    apply_prone: bool = False
+    instant_death: bool = False
+    monster_outcome_required: bool = False
 
 
 @dataclass(frozen=True)
@@ -82,7 +107,9 @@ class AoeResolution:
     monster_resources: dict[str, int | ResourceCounter] | None = None
 
 
-def propose_aoe(*, command_id: str, acting_entry_id: str, target_ids: tuple[str, ...]) -> AoeAdjudication:
+def propose_aoe(
+    *, command_id: str, acting_entry_id: str, target_ids: tuple[str, ...]
+) -> AoeAdjudication:
     """Create identity-only Quick Combat targeting; no fake geometry is stored."""
 
     return AoeAdjudication(command_id, acting_entry_id, target_ids)
@@ -97,7 +124,11 @@ def confirm_aoe(
         raise ValueError("confirmed AoE target set cannot be empty")
     if not set(confirmed_target_ids).issubset(set(adjudication.proposed_target_ids)):
         raise ValueError("confirmed AoE targets must come from the proposed identity set")
-    return replace(adjudication, confirmed_target_ids=confirmed_target_ids, status="confirmed")
+    return replace(
+        adjudication,
+        confirmed_target_ids=confirmed_target_ids,
+        status="confirmed",
+    )
 
 
 def cancel_aoe(adjudication: AoeAdjudication) -> AoeAdjudication:
@@ -148,13 +179,44 @@ def _resolve_confirmed_targets(
         elif saved and spec.save_damage_mode is SaveDamageMode.HALF:
             parts = half_damage_parts(parts)
         if parts:
-            damage = apply_damage(target.hp, parts, target_kind=target.target_kind)
+            damage = apply_damage(
+                target.hp,
+                parts,
+                target_kind=target.target_kind,
+                resistances=target.resistances,
+                immunities=target.immunities,
+                vulnerabilities=target.vulnerabilities,
+                death_saves=target.death_saves,
+            )
             hp = damage.after
             amount = damage.adjusted_total
+            death_saves = damage.death_saves
+            apply_unconscious = damage.apply_unconscious
+            apply_prone = damage.apply_prone
+            instant_death = damage.instant_death
+            monster_outcome_required = damage.monster_outcome_required
         else:
             hp = target.hp
             amount = 0
-        outcomes.append(AoeTargetOutcome(entry_id, total, saved, hp, amount))
+            death_saves = target.death_saves
+            apply_unconscious = False
+            apply_prone = False
+            instant_death = False
+            monster_outcome_required = False
+        outcomes.append(
+            AoeTargetOutcome(
+                entry_id=entry_id,
+                save_total=total,
+                saved=saved,
+                hp=hp,
+                damage_taken=amount,
+                death_saves=death_saves,
+                apply_unconscious=apply_unconscious,
+                apply_prone=apply_prone,
+                instant_death=instant_death,
+                monster_outcome_required=monster_outcome_required,
+            )
+        )
         events.append(
             {
                 "type": "aoe_target_resolved",
