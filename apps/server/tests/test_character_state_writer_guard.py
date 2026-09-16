@@ -12,6 +12,7 @@ ALLOWED_STATE_UPDATE_FILES = {
     "persistence/combat/core_rolls.py",
     "persistence/combat/resolution.py",
     "persistence/combat/special_attacks.py",
+    "persistence/combat/spells.py",
 }
 
 
