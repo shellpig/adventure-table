@@ -13,6 +13,7 @@ import {
   getSuggestedInitiativeOrder,
   listAdjudications,
   listAttacks,
+  listCastableSpells,
   listPendingCombatRolls,
   requestAttack,
   requestInitiative,
@@ -214,6 +215,19 @@ describe('Combat API client', () => {
     )
     for (const [, init] of fetchMock.mock.calls)
       expect(init.headers.Authorization).toBe(`Bearer ${TOKEN}`)
+  })
+
+  it('calls castable spell list endpoint with GET and Bearer auth', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok([]))
+    vi.stubGlobal('fetch', fetchMock)
+    await listCastableSpells(ROOM_ID, CAMPAIGN_ID, SESSION_ID, 'entry-1', TOKEN)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe(
+      `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/combat/entries/entry-1/spells`,
+    )
+    expect(init.method).toBeUndefined()
+    expect(init.body).toBeUndefined()
+    expect(init.headers.Authorization).toBe(`Bearer ${TOKEN}`)
   })
 
   it('calls saving throw, death save, concentration, and special-attack roll endpoints', async () => {

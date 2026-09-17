@@ -1,4 +1,5 @@
-from typing import Any
+from collections.abc import Mapping
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import Field
@@ -15,6 +16,11 @@ from app.domain.combat.projection import CombatantAudience
 from app.domain.combat.resolution import DamageRollPart, RollMode
 from app.domain.combat.spell_content_adapter import SpellDefinitionResolver
 from app.domain.combat.spell_resolver import SaveDamageMode, SpellCastMode
+from app.domain.combat.spell_resources import (
+    authorize_character_spell,
+    monster_casting_sources,
+    resolve_monster_spell_source,
+)
 from app.domain.rooms.rolls import FormalRollSource, RollService
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import (
@@ -63,6 +69,17 @@ class ResolveAoeSpellInput(StrictModel):
     damage_parts: tuple[DamageRollPart, ...] = ()
     roll_source: str = "server"
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+
+
+class CastableSpellView(StrictModel):
+    spell_ref: str
+    name: str
+    level: int
+    profile_id: str | None
+    concentration: bool
+    targeting: Literal["single", "self", "aoe"]
+    cast_mode: SpellCastMode
+    castable_slot_levels: tuple[int, ...]
 
 
 class SpellCastView(StrictModel):
@@ -133,6 +150,162 @@ class CombatSpellService:
         if entry is None or entry.combat_id != combat.id or entry.status != "active":
             raise CombatSpellNotFoundError(str(entry_id))
         return entry
+
+    @staticmethod
+    def _cast_mode(spell_data: Mapping[str, object]) -> SpellCastMode:
+        if spell_data.get("attack_type"):
+            return SpellCastMode.ATTACK
+        if spell_data.get("dc"):
+            return SpellCastMode.SAVE
+        if spell_data.get("heal_at_slot_level"):
+            return SpellCastMode.HEAL
+        return SpellCastMode.UTILITY
+
+    @staticmethod
+    def _targeting(spell_data: Mapping[str, object]) -> Literal["single", "self", "aoe"]:
+        if spell_data.get("area_of_effect"):
+            return "aoe"
+        spell_range = spell_data.get("range")
+        if isinstance(spell_range, str) and spell_range.strip().lower() == "self":
+            return "self"
+        return "single"
+
+    @staticmethod
+    def _monster_spell_ref(candidate: object) -> str | None:
+        value: str | None = None
+        if isinstance(candidate, str):
+            value = candidate
+        elif isinstance(candidate, Mapping):
+            explicit = candidate.get("spell_ref")
+            if isinstance(explicit, str) and explicit:
+                return explicit
+            url = candidate.get("url")
+            name = candidate.get("name")
+            if isinstance(url, str) and url:
+                value = url
+            elif isinstance(name, str) and name:
+                value = name
+        if not value:
+            return None
+        if ":spell:" in value:
+            return value
+        slug = value.rstrip("/").rsplit("/", 1)[-1].strip().lower().replace(" ", "-")
+        return f"srd5.1:spell:{slug}" if slug else None
+
+    def _castable_spell_view(
+        self,
+        spell_ref: str,
+        *,
+        profile_id: str | None,
+        castable_slot_levels: tuple[int, ...],
+    ) -> CastableSpellView:
+        spell_entry = self.registry.get(spell_ref)
+        spell_data = spell_entry.data
+        return CastableSpellView(
+            spell_ref=spell_ref,
+            name=spell_entry.name,
+            level=int(spell_data.get("level", 0)),
+            profile_id=profile_id,
+            concentration=bool(spell_data.get("concentration", False)),
+            targeting=self._targeting(spell_data),
+            cast_mode=self._cast_mode(spell_data),
+            castable_slot_levels=castable_slot_levels,
+        )
+
+    def available_spells(
+        self,
+        actor: TableActorContext,
+        entry_id: UUID,
+    ) -> tuple[CastableSpellView, ...]:
+        self.table_event_service.require_actor_current(actor)
+        entry = self._active_entry(actor, entry_id)
+        self.combat_service._authorize_entry(actor, entry)
+
+        views: list[CastableSpellView] = []
+        if entry.subject_kind == "character":
+            if entry.character_id is None:
+                raise CombatSpellStateConflictError("Character entry has no character_id")
+            character = self.character_repository.load_character(entry.character_id)
+            seen: set[tuple[str, str]] = set()
+            for profile in character.build.spellcasting_profiles:
+                for access in character.build.spell_access_entries:
+                    source_matches = access.source_key == profile.source_key or (
+                        access.source_type == "class" and access.source_key == profile.class_ref
+                    )
+                    key = (profile.profile_id, access.spell_key)
+                    if not source_matches or key in seen:
+                        continue
+                    seen.add(key)
+                    spell_entry = self.registry.get(access.spell_key)
+                    spell_level = int(spell_entry.data.get("level", 0))
+                    castable_levels: list[int] = []
+                    levels = (0,) if spell_level == 0 else range(spell_level, 10)
+                    for slot_level in levels:
+                        try:
+                            authorize_character_spell(
+                                build=character.build,
+                                state=character.state,
+                                profile_id=profile.profile_id,
+                                spell_ref=access.spell_key,
+                                spell_level=spell_level,
+                                slot_level=slot_level,
+                            )
+                        except ValueError:
+                            continue
+                        castable_levels.append(slot_level)
+                    if castable_levels:
+                        views.append(
+                            self._castable_spell_view(
+                                access.spell_key,
+                                profile_id=profile.profile_id,
+                                castable_slot_levels=tuple(castable_levels),
+                            )
+                        )
+        elif entry.subject_kind == "monster":
+            if entry.monster_instance_id is None:
+                raise CombatSpellStateConflictError("Monster entry has no monster_instance_id")
+            monster = self.monster_repository.get_instance(entry.monster_instance_id)
+            if monster is None:
+                raise CombatSpellNotFoundError(str(entry.monster_instance_id))
+            seen_refs: set[str] = set()
+            for casting in monster_casting_sources(monster.rules_snapshot):
+                candidates = casting.get("spells")
+                if not isinstance(candidates, (list, tuple)):
+                    continue
+                for candidate in candidates:
+                    spell_ref = self._monster_spell_ref(candidate)
+                    if spell_ref is None or spell_ref in seen_refs:
+                        continue
+                    seen_refs.add(spell_ref)
+                    spell_entry = self.registry.get(spell_ref)
+                    spell_level = int(spell_entry.data.get("level", 0))
+                    castable_levels = []
+                    levels = (0,) if spell_level == 0 else range(spell_level, 10)
+                    for slot_level in levels:
+                        try:
+                            resolve_monster_spell_source(
+                                rules_snapshot=monster.rules_snapshot,
+                                resources=monster.resources,
+                                spell_ref=spell_ref,
+                                spell_level=spell_level,
+                                slot_level=slot_level,
+                            )
+                        except ValueError:
+                            continue
+                        castable_levels.append(slot_level)
+                    if castable_levels:
+                        views.append(
+                            self._castable_spell_view(
+                                spell_ref,
+                                profile_id=None,
+                                castable_slot_levels=tuple(castable_levels),
+                            )
+                        )
+        else:
+            raise CombatSpellStateConflictError(
+                f"Unsupported caster kind: {entry.subject_kind}"
+            )
+        return tuple(views)
 
     def cast_spell(self, actor: TableActorContext, input: CastSpellInput) -> SpellCastView:
         self.table_event_service.require_actor_current(actor)
@@ -362,6 +535,7 @@ class CombatSpellService:
 __all__ = [
     "AoeSpellProposalView",
     "AoeSpellResolutionView",
+    "CastableSpellView",
     "CastSpellInput",
     "CombatSpellNotFoundError",
     "CombatSpellService",

@@ -22,6 +22,7 @@ from app.domain.combat.lifecycle import CombatNotFoundError, CombatStateConflict
 from app.domain.combat.spell_service import (
     AoeSpellProposalView,
     AoeSpellResolutionView,
+    CastableSpellView,
     CastSpellInput,
     CombatSpellNotFoundError,
     CombatSpellService,
@@ -88,6 +89,24 @@ def _map_error(exc: Exception) -> APIError:
 
 class DropConcentrationInput(StrictModel):
     idempotency_key: str | None = None
+
+
+@router.get("/entries/{entry_id}/spells", response_model=list[CastableSpellView])
+def list_castable_spells(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    entry_id: UUID,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CombatSpellService = Depends(get_combat_spell_service),
+) -> tuple[CastableSpellView, ...]:
+    try:
+        return service.available_spells(
+            _actor(room_id, campaign_id, session_id, context, event_service), entry_id
+        )
+    except Exception as exc:
+        raise _map_error(exc) from exc
 
 
 @router.post("/spells/cast", response_model=SpellCastView)

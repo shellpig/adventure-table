@@ -223,6 +223,17 @@ export type AttackDefinitionView = {
   notes: string[]
 }
 
+export type CastableSpellView = {
+  spell_ref: string
+  name: string
+  level: number
+  profile_id: string | null
+  concentration: boolean
+  targeting: 'single' | 'self' | 'aoe'
+  cast_mode: 'attack' | 'save' | 'heal' | 'utility'
+  castable_slot_levels: number[]
+}
+
 export type AttackRequestView = {
   action_id: string
   combat_id: string
@@ -518,6 +529,16 @@ export function listAttacks(
   token: string,
 ): Promise<AttackDefinitionView[]> {
   return request(`${combatBase(roomId, campaignId, sessionId)}/entries/${entryId}/attacks`, token)
+}
+
+export function listCastableSpells(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  entryId: string,
+  token: string,
+): Promise<CastableSpellView[]> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/entries/${entryId}/spells`, token)
 }
 
 export function requestAttack(
