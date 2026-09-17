@@ -11,11 +11,14 @@ from app.api.errors import APIError
 from app.domain.character.schemas import (
     ActiveInfusion,
     CharacterBuild,
+    CharacterConcentrationState,
+    CharacterDeathSaveState,
     CharacterState,
     ConditionState,
     HitDie,
     InventoryEntry,
     PersistedCharacter,
+    PersistentTemporaryEffect,
     PreparedSpellSelection,
     ResourceCounter,
     SpellStoringItemState,
@@ -74,6 +77,10 @@ class CharacterStatePatch(BaseModel):
     active_infusions: list[ActiveInfusion] | None = None
     feature_modes: dict[str, str] | None = None
     spell_storing_item: SpellStoringItemState | None = None
+    concentration: CharacterConcentrationState | None = None
+    exhaustion_level: int | None = Field(default=None, ge=0, le=6)
+    death_saves: CharacterDeathSaveState | None = None
+    temporary_effects: list[PersistentTemporaryEffect] | None = None
 
 
 def _class_entries(
@@ -272,7 +279,7 @@ def patch_character_state(
     repository: CharacterRepository = Depends(get_character_repository),
 ) -> CharacterSheetDTO:
     changes = patch.model_dump(exclude_unset=True, mode="python")
-    nullable_state_fields = {"spell_storing_item"}
+    nullable_state_fields = {"spell_storing_item", "concentration"}
     if any(
         value is None
         for key, value in changes.items()

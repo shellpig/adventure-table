@@ -7,10 +7,13 @@ from pydantic import Field, model_validator
 
 from app.domain.character.schemas import (
     ActiveInfusion,
+    CharacterConcentrationState,
+    CharacterDeathSaveState,
     ConditionState,
     HitDie,
     InventoryEntry,
     PersistedCharacter,
+    PersistentTemporaryEffect,
     PreparedSpellSelection,
     ResourceCounter,
     SpellStoringItemState,
@@ -24,9 +27,19 @@ from app.domain.rooms.table_events import (
 )
 from app.persistence.rooms.exploration_subjects import ExplorationSubjectRepository
 
+# These fields are owned by the P4-C/P4-D combat pipelines during an active Combat.
+COMBAT_CORRECTION_ONLY_FIELDS: frozenset[str] = frozenset({
+    "current_hp",
+    "temporary_hp",
+    "concentration",
+    "exhaustion_level",
+    "death_saves",
+    "temporary_effects",
+})
+
 
 class TableCharacterStateCombatMutationError(RuntimeError):
-    """Raw HP patch tried to bypass P4-C semantic combat resolution."""
+    """Raw Combat-owned state patch tried to bypass P4-C/P4-D semantic combat resolution."""
 
 
 class ActiveCombatLookup(Protocol):
@@ -36,8 +49,8 @@ class ActiveCombatLookup(Protocol):
 class TableCharacterStatePatch(StrictModel):
     """Canonical Current State fields available to in-table gameplay actions.
 
-    During an active Combat, current_hp/temporary_hp are correction-only fields:
-    normal gameplay must use the P4-C semantic damage/healing pipeline. The
+    During an active Combat, COMBAT_CORRECTION_ONLY_FIELDS are correction-only fields:
+    normal gameplay must use the P4-C/P4-D semantic combat pipelines. The
     current DM may still perform an audited correction with correction_reason.
     """
 
@@ -53,6 +66,10 @@ class TableCharacterStatePatch(StrictModel):
     active_infusions: list[ActiveInfusion] | None = None
     feature_modes: dict[str, str] | None = None
     spell_storing_item: SpellStoringItemState | None = None
+    concentration: CharacterConcentrationState | None = None
+    exhaustion_level: int | None = Field(default=None, ge=0, le=6)
+    death_saves: CharacterDeathSaveState | None = None
+    temporary_effects: list[PersistentTemporaryEffect] | None = None
     correction_reason: str | None = Field(default=None, min_length=1, max_length=500)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
 
@@ -61,7 +78,7 @@ class TableCharacterStatePatch(StrictModel):
         changes = self.state_changes()
         if not changes:
             raise ValueError("table Character State patch requires at least one state field")
-        nullable = {"spell_storing_item"}
+        nullable = {"spell_storing_item", "concentration"}
         if any(value is None for key, value in changes.items() if key not in nullable):
             raise ValueError("table Character State patch fields cannot be null")
         return self
@@ -131,20 +148,20 @@ class TableCharacterStateService:
             )
 
         changes = patch.state_changes()
-        hp_fields = {"current_hp", "temporary_hp"} & set(changes)
+        combat_fields = COMBAT_CORRECTION_ONLY_FIELDS & set(changes)
         active_combat = (
             self.active_combat_lookup.get_active(actor.campaign_id)
             if self.active_combat_lookup is not None
             else None
         )
-        if hp_fields and active_combat is not None:
+        if combat_fields and active_combat is not None:
             if not actor.is_current_dm:
                 raise TableCharacterStateCombatMutationError(
-                    "Active Combat HP changes must use semantic damage/healing resolution"
+                    "Combat-owned state changes during active Combat must use semantic combat resolution"
                 )
             if not patch.correction_reason:
                 raise TableCharacterStateCombatMutationError(
-                    "Active Combat raw HP correction requires correction_reason"
+                    "Combat-owned state correction during active Combat requires correction_reason"
                 )
 
         updated = self.repository.apply_patch(
@@ -162,6 +179,7 @@ class TableCharacterStateService:
 
 __all__ = [
     "ActiveCombatLookup",
+    "COMBAT_CORRECTION_ONLY_FIELDS",
     "TableCharacterStateCombatMutationError",
     "TableCharacterStatePatch",
     "TableCharacterStateRepository",

@@ -8,6 +8,7 @@ from sqlalchemy.engine import Engine
 from app.content.registry import ContentRegistry
 from app.domain.character.schemas import CharacterState, PersistedCharacter
 from app.domain.rooms.table_character_state import (
+    COMBAT_CORRECTION_ONLY_FIELDS,
     TableCharacterStateCombatMutationError,
     TableCharacterStatePatch,
 )
@@ -95,8 +96,8 @@ class TableCharacterStatePersistence:
                     "Table state subject binding is no longer current"
                 )
 
-            hp_fields = {"current_hp", "temporary_hp"} & set(changes)
-            if hp_fields:
+            combat_fields = COMBAT_CORRECTION_ONLY_FIELDS & set(changes)
+            if combat_fields:
                 active_combat = connection.execute(
                     select(combats.c.id)
                     .where(
@@ -109,11 +110,11 @@ class TableCharacterStatePersistence:
                 if active_combat is not None:
                     if not actor.is_current_dm:
                         raise TableCharacterStateCombatMutationError(
-                            "Active Combat HP changes must use semantic damage/healing resolution"
+                            "Combat-owned state changes during active Combat must use semantic combat resolution"
                         )
                     if not patch.correction_reason:
                         raise TableCharacterStateCombatMutationError(
-                            "Active Combat raw HP correction requires correction_reason"
+                            "Combat-owned state correction during active Combat requires correction_reason"
                         )
 
             bound_repository = CharacterRepository(
