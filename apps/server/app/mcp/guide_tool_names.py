@@ -23,6 +23,12 @@ class GuideToolNames:
     character_state: str
     pending_events: str
     wait_event: str
+    combat_context: str
+    resolve_adjudication: str
+    respond_reaction: str
+    request_adjudication: str
+    roll_concentration: str
+    advance_turn: str
 
 
 _EXPECTED = {
@@ -109,6 +115,12 @@ def guide_tool_names() -> GuideToolNames:
         character_state="update_character_state",
         pending_events="get_pending_events",
         wait_event="wait_for_event",
+        combat_context="get_combat_context",
+        resolve_adjudication="combat_resolve_adjudication",
+        respond_reaction="combat_respond_to_reaction",
+        request_adjudication="combat_request_adjudication",
+        roll_concentration="combat_roll_concentration",
+        advance_turn="combat_advance_turn",
     )
 
 

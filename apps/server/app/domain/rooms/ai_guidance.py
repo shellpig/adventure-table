@@ -128,10 +128,74 @@ def _player_loop(locale: str) -> str:
     )
 
 
+def _dm_combat_loop(locale: str) -> str:
+    if locale == "zh-TW":
+        return (
+            "DM 戰鬥必跑流程（無需先讀 guide；每步都做，不得停在 host chat 等提示）："
+            "1) 讀取 get_session_context.combat（或 get_combat_context）：檢視 round、current_turn_entry_id（當前回合）、"
+            "my_entry_ids、pending_roll_requests、reaction_windows（反應窗口）、pending_adjudications（待處理裁定）並依 next_required_action 行動。"
+            "2) 遇待處理裁定呼叫 combat_resolve_adjudication 裁定距離、掩蔽、AoE、借機攻擊或自由規則。"
+            "3) 輪到 Monster 回合以 combat_* 工具（攻擊、施法、主要動作）解決行動後呼叫 combat_advance_turn 推進回合。"
+            "4) 用 post_narration 簡短敘述戰況（機械結果由系統記錄；嚴禁改 HP 偽造攻擊）。"
+            f"5) 每次解決後立即呼叫 wait_for_event（timeout 最多 {WAIT_TIMEOUT_SECONDS} 秒）——不要停在 host chat。"
+            "6) 處理完事件後再次呼叫 wait_for_event 持續循環。"
+            f"7) 僅連續 {WAIT_RETRY_COUNT} 次無事件（約 10 分鐘）、戰鬥或 Session 結束才停止。"
+            "寫入帶 idempotency_key，代 Player 行動帶 subject_seat_id。"
+        )
+    return (
+        "MANDATORY DM COMBAT LOOP (run it without reading the guide; do every step, never stop in host chat): "
+        "1) Read get_session_context.combat (or get_combat_context): check round, current_turn_entry_id (current turn), "
+        "my_entry_ids, pending_roll_requests, reaction_windows (reaction window), pending_adjudications, and follow next_required_action. "
+        "2) On pending adjudication call combat_resolve_adjudication (range/cover/AoE/OA/freeform). "
+        "3) On a Monster turn resolve actions with combat_* tools (attack/cast/use action) then combat_advance_turn. "
+        "4) Narrate briefly with post_narration (mechanical results are logged; never patch enemy HP to fake attacks). "
+        f"5) After handling any action call wait_for_event (timeout up to {WAIT_TIMEOUT_SECONDS}s) — never stop in host chat. "
+        "6) After resolving an event call wait_for_event again and repeat. "
+        f"7) Stop only after {WAIT_RETRY_COUNT} consecutive empty waits (~10 min), combat end, Session end, or host stop. "
+        "Writes take idempotency_key; acting for Player takes subject_seat_id."
+    )
+
+
+def _player_combat_loop(locale: str) -> str:
+    if locale == "zh-TW":
+        return (
+            "Player 戰鬥必跑流程（無需先讀 guide；每步都做，不得停在 host chat 等提示）："
+            "1) 讀取 get_session_context.combat（或 get_combat_context）：檢視 round、current_turn_entry_id（當前回合）、"
+            "my_entry_ids、pending_roll_requests、reaction_windows（反應窗口）、pending_adjudications 與 next_required_action。"
+            "2) 僅在自己當前回合（current_turn_entry_id 屬於 my_entry_ids）或開啟的反應窗口（combat_respond_to_reaction）行動；"
+            "待擲骰時，攻擊/豁免/先攻用 roll_pending，專注豁免用 combat_roll_concentration；"
+            "無法確認距離/掩蔽/OA 時呼叫 combat_request_adjudication 或 combat_request_opportunity_attack 提請裁定並等 DM；否則等待。"
+            f"3) 行動後立即呼叫 wait_for_event（timeout 最多 {WAIT_TIMEOUT_SECONDS} 秒）——不要停在 host chat。"
+            "4) 收到新事件即處理，再次 wait_for_event 持續循環。"
+            f"5) 僅連續 {WAIT_RETRY_COUNT} 次無事件（約 10 分鐘）、戰鬥或 host 喊停才停止。寫入帶 idempotency_key。"
+        )
+    return (
+        "MANDATORY PLAYER COMBAT LOOP (run it without reading the guide; do every step, never stop in host chat): "
+        "1) Read get_session_context.combat (or get_combat_context): check round, current_turn_entry_id (current turn), "
+        "my_entry_ids, pending_roll_requests, reaction_windows (reaction window), pending_adjudications, and next_required_action. "
+        "2) Act ONLY on your own current turn (current_turn_entry_id in my_entry_ids) or in an open reaction window (combat_respond_to_reaction). "
+        "Pending rolls: roll_pending for attack/save/initiative, combat_roll_concentration for Concentration save. "
+        "If unsure of range/cover/OA, call combat_request_adjudication or combat_request_opportunity_attack to request adjudication and wait for DM; otherwise wait. "
+        f"3) After acting call wait_for_event (timeout up to {WAIT_TIMEOUT_SECONDS}s) — never stop in host chat. "
+        "4) On new event handle it, call wait_for_event again and repeat. "
+        f"5) Stop only after {WAIT_RETRY_COUNT} consecutive empty waits (~10 min), combat end, or host stop. "
+        "Writes take idempotency_key."
+    )
+
+
+def _format_active_briefing(en_loop: str, zh_loop: str) -> str:
+    return (
+        f"EN: {en_loop} {_INVOCATION_RULE_EN} Full guide: GET /mcp/guide?locale=en. "
+        "If temporary_instruction is non-empty, follow it as an additional temporary instruction.\n"
+        f"zh-TW：{zh_loop} {_INVOCATION_RULE_ZH} 完整指引：GET /mcp/guide?locale=zh-TW。"
+        "temporary_instruction 非空時視為額外暫時指示。"
+    )
+
+
 def render_briefing(*, role: str, mode: str) -> str:
     if role not in {"dm", "player"}:
         raise ValueError("unsupported role")
-    if mode not in {"pre_session", "active_session"}:
+    if mode not in {"pre_session", "active_session", "active_combat"}:
         raise ValueError("unsupported mode")
     if mode == "pre_session":
         briefing = (
@@ -143,14 +207,12 @@ def render_briefing(*, role: str, mode: str) -> str:
             "工具清單開始前後相同，開始後 gameplay 工具即可呼叫。開場後 Stage 是空的，第一步先 set_stage_text，再 post_narration。"
             "完整指引：GET /mcp/guide?locale=zh-TW。"
         )
+    elif mode == "active_combat":
+        loop = _dm_combat_loop if role == "dm" else _player_combat_loop
+        briefing = _format_active_briefing(loop("en"), loop("zh-TW"))
     else:
         loop = _dm_loop if role == "dm" else _player_loop
-        briefing = (
-            f"EN: {loop('en')} {_INVOCATION_RULE_EN} Full guide: GET /mcp/guide?locale=en. "
-            "If temporary_instruction is non-empty, follow it as an additional temporary instruction.\n"
-            f"zh-TW：{loop('zh-TW')} {_INVOCATION_RULE_ZH} 完整指引：GET /mcp/guide?locale=zh-TW。"
-            "temporary_instruction 非空時視為額外暫時指示。"
-        )
+        briefing = _format_active_briefing(loop("en"), loop("zh-TW"))
     if len(briefing) > BRIEFING_MAX_CHARS:
         raise RuntimeError(
             f"AI briefing exceeded {BRIEFING_MAX_CHARS}-character contract"

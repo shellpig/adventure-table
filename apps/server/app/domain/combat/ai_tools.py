@@ -76,6 +76,7 @@ from app.domain.rooms.ai_controllers import AIControllerAuthView
 from app.domain.rooms.ai_tools import AIToolApplicationService
 from app.domain.rooms.rolls import FormalRollInput, FormalRollSource
 from app.domain.rooms.schemas import StrictModel
+from app.domain.rooms.table_events import TableActorContext
 
 
 class CombatEntryToolInput(StrictModel):
@@ -480,13 +481,7 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         actor = self._actor(token, authenticated=authenticated)
         return self.combat_service.end_combat(actor, idempotency_key=input.idempotency_key).model_dump(mode="json")
 
-    def combat_get_context(
-        self,
-        token: str,
-        *,
-        authenticated: AIControllerAuthView | None = None,
-    ) -> dict[str, Any]:
-        actor = self._actor(token, authenticated=authenticated)
+    def _combat_context(self, actor: TableActorContext) -> dict[str, Any]:
         detail = self.combat_service.get_active_combat_detail(actor)
         current_turn_entry_id = detail.current_turn_entry_id if detail is not None else None
 
@@ -542,6 +537,36 @@ class CombatAIToolApplicationService(AIToolApplicationService):
             "pending_adjudications": [item.model_dump(mode="json") for item in adjudications],
             "next_required_action": next_action,
         }
+
+    def combat_get_context(
+        self,
+        token: str,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self._combat_context(actor)
+
+    def get_session_context(
+        self,
+        token: str,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        payload = super().get_session_context(token, authenticated=authenticated)
+        if payload.get("mode") != "active_session":
+            return payload
+
+        actor = self._actor(token, authenticated=authenticated)
+        combat_ctx = self._combat_context(actor)
+        if combat_ctx["combat"] is None:
+            payload["combat"] = None
+            return payload
+
+        payload["combat"] = combat_ctx
+        payload["next_required_action"] = combat_ctx["next_required_action"]
+        payload["briefing"] = self._briefing(role=actor.role, mode="active_combat")
+        return payload
 
     def combat_cast_spell(
         self,

@@ -58,6 +58,8 @@ from app.domain.rooms.ai_controllers import (
     AIHandoffRequest,
 )
 from app.domain.rooms.character_rolls import CharacterRollModifierResolver
+from app.domain.rooms.exploration import ExplorationStageService
+from app.domain.rooms.pending_actions import PendingActionService
 from app.domain.rooms.rolls import FormalRollInput, FormalRollSource, RollService
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.service import RoomService
@@ -76,7 +78,9 @@ from app.persistence.combat.special_attacks import SpecialAttackRepository
 from app.persistence.combat.spells import CombatSpellRepository
 from app.persistence.combat.tables import combat_entries, monster_instances
 from app.persistence.rooms.ai_controllers import AIControllerGrantRepository
+from app.persistence.rooms.exploration import ExplorationRepository
 from app.persistence.rooms.exploration_subjects import ExplorationSubjectRepository
+from app.persistence.rooms.p3c_pending import PendingActionRepository
 from app.persistence.rooms.p3c_rolls import RollRepository
 from app.persistence.rooms.p3c_runtime import roll_requests
 from app.persistence.rooms.repository import RoomRepository
@@ -418,11 +422,16 @@ def mcp_combat_fixture():
         combat_ai_tool_service = CombatAIToolApplicationService(
             ai_controller_service=ai_controller_service,
             session_service=table.session_service,
-            stage_service=object(),
+            stage_service=ExplorationStageService(ExplorationRepository(table.engine), table.events),
             action_service=object(),
             roll_service=roll_service,
             state_service=object(),
-            pending_action_service=object(),
+            pending_action_service=PendingActionService(
+                PendingActionRepository(table.engine, table.events.repository),
+                ExplorationSubjectRepository(table.engine),
+                table.events,
+                plain_roll_repo,
+            ),
             event_service=table.events,
             workspace_service=object(),
             combat_service=table.combat,
