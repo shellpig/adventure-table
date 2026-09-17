@@ -24,7 +24,9 @@ from app.persistence.characters import CharacterRepository
 from app.persistence.combat.core_rolls import CombatCoreRollRepository
 from app.persistence.combat.lifecycle import CombatRepository, StoredCombatEntry, actor_binding
 from app.persistence.combat.repository import MonsterRepository
+from app.persistence.combat.resolution import _condition_ref
 from app.persistence.combat.special_attacks import (
+    GRAPPLED_REF,
     SpecialAttackNotFoundError,
     SpecialAttackRepository,
     SpecialAttackRollComputation,
@@ -263,6 +265,45 @@ class CombatSpecialAttackService:
             )
         raise CombatStateConflictError(f"unsupported CombatEntry kind: {entry.subject_kind}")
 
+    def _is_grappled(self, entry: StoredCombatEntry) -> bool:
+        if entry.subject_kind == "character":
+            if entry.character_id is None:
+                raise CombatStateConflictError("Character CombatEntry has no Character identity")
+            character = self.character_repository.load_character(entry.character_id)
+            return any(c.condition_ref == GRAPPLED_REF for c in character.state.conditions)
+        if entry.subject_kind == "monster":
+            if entry.monster_instance_id is None:
+                raise CombatStateConflictError("Monster CombatEntry has no Monster identity")
+            monster = self.monster_repository.get_instance(entry.monster_instance_id)
+            if monster is None:
+                raise CombatNotFoundError("Monster Instance was not found")
+            return any(_condition_ref(c) == GRAPPLED_REF for c in monster.conditions)
+        raise CombatStateConflictError(f"unsupported CombatEntry kind: {entry.subject_kind}")
+
+    def _best_escape_unit(
+        self,
+        actor: TableActorContext,
+        entry: StoredCombatEntry,
+        mode: RollModifierMode,
+        *,
+        role: str,
+    ) -> SpecialAttackRollUnit:
+        athletics = self._skill_unit(
+            actor,
+            entry,
+            ATHLETICS_REF,
+            mode,
+            role=role,
+        )
+        acrobatics = self._skill_unit(
+            actor,
+            entry,
+            ACROBATICS_REF,
+            mode,
+            role=role,
+        )
+        return acrobatics if acrobatics.modifier > athletics.modifier else athletics
+
     def request_special_attack(
         self,
         actor: TableActorContext,
@@ -276,6 +317,41 @@ class CombatSpecialAttackService:
         if attacker.id == target.id:
             raise CombatStateConflictError("Special Attack target must be a different CombatEntry")
         subject_seat_id, execution_mode = self.combat_service._authorize_entry(actor, attacker)
+
+        if request.kind is SpecialAttackKind.ESCAPE_GRAPPLE:
+            if not self._is_grappled(attacker):
+                raise CombatStateConflictError("Combatant is not grappled")
+            attacker_unit = self._best_escape_unit(
+                actor,
+                attacker,
+                request.attacker_modifier_mode,
+                role="attacker",
+            )
+            defender_unit = self._skill_unit(
+                actor,
+                target,
+                ATHLETICS_REF,
+                request.defender_modifier_mode,
+                role="defender",
+            )
+            try:
+                stored, _event = self.repository.request_escape(
+                    binding=actor_binding(actor),
+                    combat_id=attacker.combat_id,
+                    attacker_entry_id=attacker.id,
+                    target_entry_id=target.id,
+                    subject_seat_id=subject_seat_id,
+                    execution_mode=execution_mode,
+                    attacker_unit=attacker_unit,
+                    defender_unit=defender_unit,
+                    idempotency_key=request.idempotency_key,
+                )
+            except SpecialAttackStateConflictError as exc:
+                raise CombatStateConflictError(str(exc)) from exc
+            if self.table_event_service.notifier is not None:
+                self.table_event_service.notifier.notify(actor.session_id)
+            return _view(stored)
+
         attacker_size = self._size(attacker)
         target_size = self._size(target)
         free_hand = self._has_free_hand(attacker)
@@ -300,24 +376,11 @@ class CombatSpecialAttackService:
             request.attacker_modifier_mode,
             role="attacker",
         )
-        defender_athletics = self._skill_unit(
+        defender_unit = self._best_escape_unit(
             actor,
             target,
-            ATHLETICS_REF,
             request.defender_modifier_mode,
             role="defender",
-        )
-        defender_acrobatics = self._skill_unit(
-            actor,
-            target,
-            ACROBATICS_REF,
-            request.defender_modifier_mode,
-            role="defender",
-        )
-        defender_unit = (
-            defender_acrobatics
-            if defender_acrobatics.modifier > defender_athletics.modifier
-            else defender_athletics
         )
         try:
             stored, _event = self.repository.request(

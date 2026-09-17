@@ -54,6 +54,7 @@ class SpecialAttackKind(StrEnum):
     GRAPPLE = "grapple"
     SHOVE_PRONE = "shove_prone"
     SHOVE_PUSH = "shove_push"
+    ESCAPE_GRAPPLE = "escape_grapple"
 
 
 @dataclass(frozen=True)
@@ -207,6 +208,7 @@ class SpecialAttackOutcome:
     status: Literal["success", "failure", "invalid", "dm_adjudication_required"]
     reason: str | None = None
     condition_to_apply: Literal["grappled", "prone"] | None = None
+    condition_to_remove: Literal["grappled"] | None = None
     push_distance_ft: int | None = None
 
 
@@ -493,6 +495,8 @@ def resolve_grapple_or_shove(
     caller must persist a DM adjudication request and resume this same action.
     """
 
+    if kind is SpecialAttackKind.ESCAPE_GRAPPLE:
+        raise ValueError("resolve_grapple_or_shove does not handle escape_grapple")
     if target_size > attacker_size + 1:
         return SpecialAttackOutcome(kind=kind, status="invalid", reason="target_too_large")
     if kind is SpecialAttackKind.GRAPPLE and not attacker_has_free_hand:
@@ -513,6 +517,24 @@ def resolve_grapple_or_shove(
     if kind is SpecialAttackKind.SHOVE_PRONE:
         return SpecialAttackOutcome(kind=kind, status="success", condition_to_apply="prone")
     return SpecialAttackOutcome(kind=kind, status="success", push_distance_ft=5)
+
+
+def resolve_escape_grapple(
+    *,
+    escaper_check_total: int,
+    grappler_check_total: int,
+) -> SpecialAttackOutcome:
+    if escaper_check_total <= grappler_check_total:
+        return SpecialAttackOutcome(
+            kind=SpecialAttackKind.ESCAPE_GRAPPLE,
+            status="failure",
+            reason="opposed_check_lost_or_tied",
+        )
+    return SpecialAttackOutcome(
+        kind=SpecialAttackKind.ESCAPE_GRAPPLE,
+        status="success",
+        condition_to_remove="grappled",
+    )
 
 
 __all__ = [
@@ -539,5 +561,6 @@ __all__ = [
     "raw_damage_by_type",
     "resolve_attack_roll",
     "resolve_death_save",
+    "resolve_escape_grapple",
     "resolve_grapple_or_shove",
 ]

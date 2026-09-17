@@ -188,16 +188,21 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
         "以 server RNG 完成待處理 Death Save；次數、Nat 1/Nat 20、stable/dead、HP 與 event 原子提交。",
     ),
     "combat_request_special_attack": (
-        "Declare a 2014 Grapple or Shove. Size/free-hand rules are validated first and reach becomes durable DM adjudication.",
-        "宣告 2014 Grapple 或 Shove。先驗證 size/free-hand，再把 reach 建成 durable DM adjudication。",
+        "Declare a 2014 Grapple, Shove, or grapple escape "
+        "(kind escape_grapple with grappled combatant as attacker and grappler as target). "
+        "Size/free-hand rules are validated first for grapple/shove; escape immediately opens opposed checks.",
+        "宣告 2014 Grapple、Shove 或脫離擒抱（kind 為 escape_grapple，被擒抱者為 attacker，擒抱者為 target）。"
+        "Grapple/Shove 先驗證 size/free-hand 並建 reach 裁定，脫離擒抱則立即開啟對抗檢定。",
     ),
     "combat_adjudicate_special_attack": (
         "Current DM resolves pending Grapple/Shove reach. Legal reach consumes one Attack budget and creates canonical opposed checks.",
         "目前 DM 裁定 Grapple/Shove reach。合法 reach 才消耗一個 Attack 次數並建立 canonical opposed checks。",
     ),
     "combat_roll_special_attack": (
-        "Resolve one pending Grapple/Shove opposed RollRequest with server RNG; the second completed roll atomically applies Grappled/Prone or records the push result.",
-        "以 server RNG 完成一個 Grapple/Shove opposed RollRequest；第二個擲骰完成時原子套用 Grappled/Prone 或記錄 push 結果。",
+        "Resolve one pending Grapple, Shove, or grapple escape opposed RollRequest with server RNG; "
+        "the second completed roll atomically applies Grappled/Prone, records the push result, or removes Grappled on successful escape.",
+        "以 server RNG 完成一個 Grapple/Shove 或脫離擒抱 opposed RollRequest；"
+        "第二個擲骰完成時原子套用 Grappled/Prone、記錄 push 結果，或在成功脫離時移除 Grappled。",
     ),
     "combat_start": (
         "Current DM initiates Quick Combat; active Session party characters are included by default unless overridden.",
@@ -454,9 +459,27 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("combat_roll_saving_throw", _desc("Resolve a pending Combat Saving Throw with server RNG.", "以 Server RNG 完成待處理 Combat Saving Throw。"), CombatRollToolInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_request_death_save", _desc("Create a formal Death Save request.", "建立正式 Death Save 請求。"), DeathSaveRequestInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_roll_death_save", _desc("Resolve a pending Death Save with server RNG.", "以 Server RNG 完成待處理 Death Save。"), CombatRollToolInput, frozenset({"player", "dm"})),
-    MCPToolDefinition("combat_request_special_attack", _desc("Declare a formal 2014 Grapple or Shove.", "宣告正式 2014 Grapple 或 Shove。"), SpecialAttackRequestInput, frozenset({"player", "dm"})),
-    MCPToolDefinition("combat_adjudicate_special_attack", _desc("Resolve pending Grapple/Shove reach adjudication.", "裁定待處理 Grapple/Shove reach。"), SpecialAttackAdjudicationInput, frozenset({"dm"})),
-    MCPToolDefinition("combat_roll_special_attack", _desc("Resolve a pending Grapple/Shove opposed roll with server RNG.", "以 Server RNG 完成待處理 Grapple/Shove opposed roll。"), CombatRollToolInput, frozenset({"player", "dm"})),
+    MCPToolDefinition(
+        "combat_request_special_attack",
+        _desc("Declare a formal 2014 Grapple, Shove, or grapple escape.", "宣告正式 2014 Grapple、Shove 或脫離擒抱。"),
+        SpecialAttackRequestInput,
+        frozenset({"player", "dm"}),
+    ),
+    MCPToolDefinition(
+        "combat_adjudicate_special_attack",
+        _desc("Resolve pending Grapple/Shove reach adjudication.", "裁定待處理 Grapple/Shove reach。"),
+        SpecialAttackAdjudicationInput,
+        frozenset({"dm"}),
+    ),
+    MCPToolDefinition(
+        "combat_roll_special_attack",
+        _desc(
+            "Resolve a pending Grapple, Shove, or grapple escape opposed roll with server RNG.",
+            "以 Server RNG 完成待處理 Grapple、Shove 或脫離擒抱 opposed roll。",
+        ),
+        CombatRollToolInput,
+        frozenset({"player", "dm"}),
+    ),
     MCPToolDefinition("combat_start", _desc("Start Quick Combat for the current Campaign.", "為目前 Campaign 啟動 Quick Combat。"), StartCombatInput, frozenset({"dm"})),
     MCPToolDefinition("combat_add_character", _desc("Add an active Session character to running Combat.", "將目前 Session 的角色加入進行中的 Combat。"), AddCharacterInput, frozenset({"dm"})),
     MCPToolDefinition("combat_add_monster", _desc("Add a Campaign monster instance into active Combat.", "將 Campaign 內的怪物實例加入目前 Combat。"), AddMonsterInput, frozenset({"dm"})),

@@ -18,7 +18,9 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 | F2 | Monster Instance bookkeeping：DM PATCH name / visibility / position_note + reveal toggles（AC / description / position note）；`MonsterRevealState` 持久化（migration `0028`）；REST + MCP + event | 實作規格 P4-E 7（部分→完整）、3 | ✅ |
 | F3a | F3 前半：DM detail projection 帶 `reveal` flags（Player 不得收到）；web client `setMonsterOutcome` / `updateMonsterInstance`；新 entry status 標籤 unconscious / surrendered / fled；combat log 兩個新 event；雙語 | 實作規格 P4-E 2、3、12、13 | ✅ |
 | F3b | F3 後半：DM 卡片 per-monster 控制元件（outcome / visibility / reveal toggles / position note）接進 Stage；Player 不渲染；雙語 copy；tests | 實作規格 P4-E 1、2、7、13 | ✅ |
-| F4 | `grappled` escape action + Character state PATCH DTO 補 `concentration` / `exhaustion_level` / `death_saves` / `temporary_effects` | P4-C / P4-D closeout 留下 | ⬜ |
+| F4a | `escape_grapple`：新 `SpecialAttackKind`，走 P4-C opposed-check substrate；耗整個 Action、免 reach 裁定、成功同 transaction 移除 `grappled`；REST / MCP 共用既有 `kind` | P4-C closeout 留下 | ✅ |
+| F4b | Character state PATCH DTO（`/characters/{id}/state` 與 table `TableCharacterStatePatch`）補 `concentration` / `exhaustion_level` / `death_saves` / `temporary_effects`；active Combat 中比照 HP 走 DM correction-only | P4-D closeout 留下 | ⬜ |
+| F4c | web：action bar 加 escape 選項、combat log 處理 `combat.escape_grapple_requested` 與 `escape_grapple` result、雙語 | 實作規格 P4-E 4、12、13 | ⬜ |
 | F5 | 真 PostgreSQL + server restart / reconnect：Round ≥ 2、pending save 或 reaction → restart → 狀態完整、resolve 一次不重擲 | 實作規格 P4-F 3；測試指南 F.1 | ⬜ |
 | F6 | Full browser journey spec（F.2 全項：spell / save、damage / healing、condition、concentration 或 reaction、0 HP outcome、Session boundary resume、End cleanup）+ `P4 Full-Stack E2E` workflow | 實作規格 P4-F 1、2、4、5、6；測試指南 F.2 | ⬜ |
 | F7 | `ConditionSemantics` 接進 attack / save modifier pipeline（advantage / disadvantage / auto-fail / adjacent crit） | P4-D closeout 留下；P4-F 已拍板納入 | ⬜ |
@@ -62,4 +64,13 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 - **Claude 審核修正**：`projection.reveal && typeof projection.reveal === 'object'` 多餘 guard → `projection.reveal ?? null`；vitest 案例名 `(1)`～`(6)` 前綴移除。其餘零修改。
 - 測試：`SessionCombatMonsterControls.test.tsx` 6 條（reveal 全 false / armor_class true 勾選 / current turn 停用 + hint / fled 無 outcome 但保留其他控制 / hidden 顯示「Show to Players」/ zh-TW 文案）；`SessionCombatStage.test.tsx` +1（DM 有 goblin 控制、character 卡無、Player 完全無 `data-monster-controls`）。`npm test -- --run` 86 files / 476 passed；`npm run build` 乾淨。對照 `e2e/p4e-quick-combat.spec.ts` 的卡片斷言（`not.toContainText('Position Note:')`、scoped `getByLabel`）不受新表單影響；瀏覽器實測留給 F6 full journey。
 - F3 完成。留給 F4：`grappled` escape action + Character state PATCH DTO。
+
+### F4a — escape_grapple
+
+- 2026-09-18，agy worker（Gemini 3.8 Flash (High)，1 回合 8 分鐘），Claude 審核修正與 commit。prompt：`C:\_work\AI_Work\Tools\agy-runs\agy-p4f-f4a.prompt.txt`。
+- 設計：抓者由 escaper 明確指定 `target_entry_id`（不從 condition note 反推）；escaper 用 Athletics / Acrobatics 較高者、抓者用 Athletics；tie 逃脫失敗（同 grapple 規則）；不做 reach 裁定，request 直接開兩張 roll request；耗整個 Action（`action_available=False`，`attacks_used` 不動）。
+- 交付：`SpecialAttackKind.ESCAPE_GRAPPLE`、`SpecialAttackOutcome.condition_to_remove`、`resolve_escape_grapple`（`resolve_grapple_or_shove` 對 escape 拋 ValueError）；service `_is_grappled` / `_best_escape_unit`（grapple defender 與 escape attacker 共用）、`request_special_attack` escape 分支 → 新 repository `request_escape`（event `combat.escape_grapple_requested`，idempotency prefix `p4f-escape-request:`，`_validate_escape_turn` / `_consume_action`）；`adjudicate_reach` 的 in_reach 分支抽成 `_open_opposed_rolls` 與 escape 共用；`_apply_condition` 改為 `_mutate_conditions` + `_remove_condition_from_entry`；`complete_roll` 依 kind 分派 resolver，result 統一多 `condition_to_remove` key，escape 成功移除 escaper 的 `grappled`。MCP `_WHEN_TO_USE` / `_desc` 兩個 special-attack tool 文案補 escape（雙語），無新 tool、無新 route、無 migration（`combat_actions.action_kind` 無 CHECK）。
+- **Claude 審核修正**：① `request` / `request_escape` 兩份相同的 combat / attacker / target 鎖定區塊 → 抽 `_lock_request_context`；② `request_escape` 對 `_open_opposed_rolls` 回傳值重設 `kind` / `status`（已由 helper 設定）→ 移除；③ `complete_roll` 巢狀 `if kind is ESCAPE / else` 三層 → 攤平成單層 `condition_to_remove` / `condition_to_apply` 鏈；④ 測試 `escape_actions` 查了沒斷言 → 補 `== []`；測試名 `test_1_`～`test_5_` 前綴移除。
+- 測試：`tests/test_p4f_escape_grapple.py` 5 條（Monster 逃脫成功 + idempotency；失敗與 tie 保留 grappled 且 Action 已耗；Character 逃脫成功、其他 condition 保留、`state_revision` +1；四種拒絕零副作用 + grapple 仍需裁定；REST `POST .../special-attacks/request` + MCP `combat_request_special_attack` / `combat_roll_special_attack` parity）。焦點 11 檔 76 passed；P4-B～F + M04-C + M03 boundary 全通過（exit 0）；長行對照 HEAD 無新增。
+- 留給 F4b：Character state PATCH DTO；F4c：web action bar + log。
 

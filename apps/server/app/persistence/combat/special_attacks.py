@@ -13,10 +13,11 @@ from app.domain.character.schemas import CharacterState
 from app.domain.combat.resolution import (
     SizeCategory,
     SpecialAttackKind,
+    resolve_escape_grapple,
     resolve_grapple_or_shove,
 )
 from app.persistence.characters import character_states
-from app.persistence.combat.resolution import PRONE_REF, _add_condition
+from app.persistence.combat.resolution import PRONE_REF, _add_condition, _remove_condition
 from app.persistence.combat.tables import combat_actions, combat_entries, combats, monster_instances
 from app.persistence.rooms.p3c_runtime import roll_groups, roll_requests, roll_results
 from app.persistence.rooms.table_runtime import (
@@ -159,6 +160,17 @@ class SpecialAttackRepository:
             raise SpecialAttackStateConflictError("Action is already spent")
 
     @staticmethod
+    def _validate_escape_turn(combat: Any, attacker: Any) -> None:
+        if combat["status"] != "running" or attacker["status"] != "active":
+            raise SpecialAttackStateConflictError("Special Attack requires an active combatant in a running Combat")
+        if combat["current_turn_entry_id"] != attacker["id"]:
+            raise SpecialAttackStateConflictError("Special Attack can only be declared on the attacker's current turn")
+        if attacker["surprised"]:
+            raise SpecialAttackStateConflictError("Surprised combatant cannot use a Special Attack on its first turn")
+        if not attacker["action_available"]:
+            raise SpecialAttackStateConflictError("Action is already spent")
+
+    @staticmethod
     def _consume_attack_budget(connection: Any, attacker: Any) -> None:
         used = int(attacker["attacks_used"])
         allowed = int(attacker["attacks_allowed"])
@@ -175,6 +187,44 @@ class SpecialAttackRepository:
         connection.execute(
             update(combat_entries).where(combat_entries.c.id == attacker["id"]).values(**values)
         )
+
+    @staticmethod
+    def _consume_action(connection: Any, attacker: Any) -> None:
+        if not attacker["action_available"]:
+            raise SpecialAttackStateConflictError("Action is already spent")
+        connection.execute(
+            update(combat_entries)
+            .where(combat_entries.c.id == attacker["id"])
+            .values(action_available=False, updated_at=datetime.now().astimezone())
+        )
+
+    @staticmethod
+    def _lock_request_context(
+        connection: Any,
+        *,
+        binding: StoredTableActorBinding,
+        combat_id: UUID,
+        attacker_entry_id: UUID,
+        target_entry_id: UUID,
+    ):
+        combat = connection.execute(
+            select(combats)
+            .where(combats.c.id == combat_id, combats.c.campaign_id == binding.campaign_id)
+            .with_for_update()
+        ).mappings().one_or_none()
+        attacker = connection.execute(
+            select(combat_entries)
+            .where(combat_entries.c.id == attacker_entry_id, combat_entries.c.combat_id == combat_id)
+            .with_for_update()
+        ).mappings().one_or_none()
+        target = connection.execute(
+            select(combat_entries)
+            .where(combat_entries.c.id == target_entry_id, combat_entries.c.combat_id == combat_id)
+            .with_for_update()
+        ).mappings().one_or_none()
+        if combat is None or attacker is None or target is None or target["status"] != "active":
+            raise SpecialAttackNotFoundError(str(combat_id))
+        return combat, attacker, target
 
     @staticmethod
     def _lock_action_context(connection: Any, *, binding: StoredTableActorBinding, action_id: UUID):
@@ -246,23 +296,13 @@ class SpecialAttackRepository:
         }
 
         def projection(connection: Any, event_id: UUID, _seq: int) -> None:
-            combat = connection.execute(
-                select(combats)
-                .where(combats.c.id == combat_id, combats.c.campaign_id == binding.campaign_id)
-                .with_for_update()
-            ).mappings().one_or_none()
-            attacker = connection.execute(
-                select(combat_entries)
-                .where(combat_entries.c.id == attacker_entry_id, combat_entries.c.combat_id == combat_id)
-                .with_for_update()
-            ).mappings().one_or_none()
-            target = connection.execute(
-                select(combat_entries)
-                .where(combat_entries.c.id == target_entry_id, combat_entries.c.combat_id == combat_id)
-                .with_for_update()
-            ).mappings().one_or_none()
-            if combat is None or attacker is None or target is None or target["status"] != "active":
-                raise SpecialAttackNotFoundError(str(combat_id))
+            combat, attacker, target = self._lock_request_context(
+                connection,
+                binding=binding,
+                combat_id=combat_id,
+                attacker_entry_id=attacker_entry_id,
+                target_entry_id=target_entry_id,
+            )
             self._validate_attack_turn(combat, attacker)
             connection.execute(
                 insert(combat_actions).values(
@@ -328,6 +368,105 @@ class SpecialAttackRepository:
             raise SpecialAttackNotFoundError(str(action_id))
         return stored, event
 
+    @staticmethod
+    def _open_opposed_rolls(
+        connection: Any,
+        *,
+        binding: StoredTableActorBinding,
+        action_id: UUID,
+        combat_id: UUID,
+        payload: dict[str, Any],
+        attacker: Any,
+        target: Any,
+        group_id: UUID,
+        attacker_request_id: UUID,
+        defender_request_id: UUID,
+    ) -> dict[str, Any]:
+        roll_ids = {
+            "attacker": str(attacker_request_id),
+            "defender": str(defender_request_id),
+        }
+        payload["roll_request_ids"] = roll_ids
+        connection.execute(
+            insert(roll_groups).values(
+                id=group_id,
+                session_id=binding.session_id,
+                requested_by_seat_id=binding.seat_id,
+                label=str(payload["kind"]).replace("_", " ").title(),
+                visibility="public",
+                version=1,
+            )
+        )
+        for role, request_id, entry, seat_key, char_key, skill_key, modifier_key, mode_key in (
+            (
+                "attacker",
+                attacker_request_id,
+                attacker,
+                "attacker_target_seat_id",
+                "attacker_target_character_id",
+                "attacker_skill",
+                "attacker_modifier",
+                "attacker_modifier_mode",
+            ),
+            (
+                "defender",
+                defender_request_id,
+                target,
+                "defender_target_seat_id",
+                "defender_target_character_id",
+                "defender_skill",
+                "defender_modifier",
+                "defender_modifier_mode",
+            ),
+        ):
+            seat_id = UUID(payload[seat_key]) if payload.get(seat_key) else None
+            character_id = UUID(payload[char_key]) if payload.get(char_key) else None
+            connection.execute(
+                insert(roll_requests).values(
+                    id=request_id,
+                    session_id=binding.session_id,
+                    roll_group_id=group_id,
+                    target_seat_id=seat_id,
+                    target_character_id=character_id,
+                    target_combat_entry_id=entry["id"],
+                    request_type="skill",
+                    ability_ref=None,
+                    skill_ref=str(payload[skill_key]),
+                    dc=None,
+                    modifier_mode=str(payload[mode_key]),
+                    flat_adjustment=int(payload[modifier_key]),
+                    visibility="public",
+                    status="pending",
+                    requested_by_seat_id=binding.seat_id,
+                    version=1,
+                )
+            )
+        connection.execute(
+            update(combat_actions)
+            .where(combat_actions.c.id == action_id)
+            .values(
+                payload=payload,
+                resolution_status="waiting_for_roll",
+                roll_request_id=attacker_request_id,
+            )
+        )
+        connection.execute(
+            update(combats)
+            .where(combats.c.id == combat_id)
+            .values(revision=combats.c.revision + 1, updated_at=datetime.now().astimezone())
+        )
+        return {
+            "combat_id": str(combat_id),
+            "combat_action_id": str(action_id),
+            "attacker_entry_id": str(attacker["id"]),
+            "target_entry_id": str(target["id"]),
+            "target_is_hostile": bool(target["is_hostile"]),
+            "kind": payload["kind"],
+            "status": "waiting_for_roll",
+            "roll_group_id": str(group_id),
+            "roll_request_ids": roll_ids,
+        }
+
     def adjudicate_reach(
         self,
         *,
@@ -373,91 +512,19 @@ class SpecialAttackRepository:
                 }
             else:
                 self._consume_attack_budget(connection, attacker)
-                roll_ids = {
-                    "attacker": str(attacker_request_id),
-                    "defender": str(defender_request_id),
-                }
-                payload["roll_request_ids"] = roll_ids
-                connection.execute(
-                    insert(roll_groups).values(
-                        id=group_id,
-                        session_id=binding.session_id,
-                        requested_by_seat_id=binding.seat_id,
-                        label=str(payload["kind"]).replace("_", " ").title(),
-                        visibility="public",
-                        version=1,
-                    )
+                event_payload = self._open_opposed_rolls(
+                    connection,
+                    binding=binding,
+                    action_id=action_id,
+                    combat_id=action["combat_id"],
+                    payload=payload,
+                    attacker=attacker,
+                    target=target,
+                    group_id=group_id,
+                    attacker_request_id=attacker_request_id,
+                    defender_request_id=defender_request_id,
                 )
-                for role, request_id, entry, seat_key, char_key, skill_key, modifier_key, mode_key in (
-                    (
-                        "attacker",
-                        attacker_request_id,
-                        attacker,
-                        "attacker_target_seat_id",
-                        "attacker_target_character_id",
-                        "attacker_skill",
-                        "attacker_modifier",
-                        "attacker_modifier_mode",
-                    ),
-                    (
-                        "defender",
-                        defender_request_id,
-                        target,
-                        "defender_target_seat_id",
-                        "defender_target_character_id",
-                        "defender_skill",
-                        "defender_modifier",
-                        "defender_modifier_mode",
-                    ),
-                ):
-                    seat_id = UUID(payload[seat_key]) if payload.get(seat_key) else None
-                    character_id = UUID(payload[char_key]) if payload.get(char_key) else None
-                    connection.execute(
-                        insert(roll_requests).values(
-                            id=request_id,
-                            session_id=binding.session_id,
-                            roll_group_id=group_id,
-                            target_seat_id=seat_id,
-                            target_character_id=character_id,
-                            target_combat_entry_id=entry["id"],
-                            request_type="skill",
-                            ability_ref=None,
-                            skill_ref=str(payload[skill_key]),
-                            dc=None,
-                            modifier_mode=str(payload[mode_key]),
-                            flat_adjustment=int(payload[modifier_key]),
-                            visibility="public",
-                            status="pending",
-                            requested_by_seat_id=binding.seat_id,
-                            version=1,
-                        )
-                    )
-                connection.execute(
-                    update(combat_actions)
-                    .where(combat_actions.c.id == action_id)
-                    .values(
-                        payload=payload,
-                        resolution_status="waiting_for_roll",
-                        roll_request_id=attacker_request_id,
-                    )
-                )
-                connection.execute(
-                    update(combats)
-                    .where(combats.c.id == action["combat_id"])
-                    .values(revision=combats.c.revision + 1, updated_at=datetime.now().astimezone())
-                )
-                event_payload = {
-                    "combat_id": str(action["combat_id"]),
-                    "combat_action_id": str(action_id),
-                    "attacker_entry_id": str(attacker["id"]),
-                    "target_entry_id": str(target["id"]),
-                    "target_is_hostile": bool(target["is_hostile"]),
-                    "kind": payload["kind"],
-                    "in_reach": True,
-                    "status": "waiting_for_roll",
-                    "roll_group_id": str(group_id),
-                    "roll_request_ids": roll_ids,
-                }
+                event_payload["in_reach"] = True
             connection.execute(
                 update(session_events)
                 .where(session_events.c.id == event_id)
@@ -489,13 +556,127 @@ class SpecialAttackRepository:
             raise SpecialAttackNotFoundError(str(action_id))
         return stored, event
 
+    def request_escape(
+        self,
+        *,
+        binding: StoredTableActorBinding,
+        combat_id: UUID,
+        attacker_entry_id: UUID,
+        target_entry_id: UUID,
+        subject_seat_id: UUID | None,
+        execution_mode: str,
+        attacker_unit: SpecialAttackRollUnit,
+        defender_unit: SpecialAttackRollUnit,
+        idempotency_key: str | None,
+    ) -> tuple[StoredSpecialAttackAction, StoredTableEvent]:
+        action_id = uuid4()
+        group_id = uuid4()
+        attacker_request_id = uuid4()
+        defender_request_id = uuid4()
+        payload = {
+            "kind": SpecialAttackKind.ESCAPE_GRAPPLE.value,
+            "attacker_skill": attacker_unit.skill_ref,
+            "defender_skill": defender_unit.skill_ref,
+            "attacker_modifier": attacker_unit.modifier,
+            "defender_modifier": defender_unit.modifier,
+            "attacker_modifier_mode": attacker_unit.modifier_mode,
+            "defender_modifier_mode": defender_unit.modifier_mode,
+            "attacker_target_seat_id": str(attacker_unit.target_seat_id) if attacker_unit.target_seat_id else None,
+            "attacker_target_character_id": str(attacker_unit.target_character_id) if attacker_unit.target_character_id else None,
+            "defender_target_seat_id": str(defender_unit.target_seat_id) if defender_unit.target_seat_id else None,
+            "defender_target_character_id": str(defender_unit.target_character_id) if defender_unit.target_character_id else None,
+            "adjudication": None,
+            "roll_request_ids": {},
+        }
+
+        def projection(connection: Any, event_id: UUID, _seq: int) -> None:
+            combat, attacker, target = self._lock_request_context(
+                connection,
+                binding=binding,
+                combat_id=combat_id,
+                attacker_entry_id=attacker_entry_id,
+                target_entry_id=target_entry_id,
+            )
+            self._validate_escape_turn(combat, attacker)
+            connection.execute(
+                insert(combat_actions).values(
+                    id=action_id,
+                    combat_id=combat_id,
+                    entry_id=attacker_entry_id,
+                    target_entry_id=target_entry_id,
+                    session_id=binding.session_id,
+                    acting_seat_id=binding.seat_id,
+                    subject_seat_id=subject_seat_id,
+                    execution_mode=execution_mode,
+                    action_kind=SpecialAttackKind.ESCAPE_GRAPPLE.value,
+                    economy_cost="action",
+                    payload=payload,
+                    resolution_status="waiting_for_roll",
+                    idempotency_key=idempotency_key,
+                )
+            )
+            self._consume_action(connection, attacker)
+            event_payload = self._open_opposed_rolls(
+                connection,
+                binding=binding,
+                action_id=action_id,
+                combat_id=combat_id,
+                payload=payload,
+                attacker=attacker,
+                target=target,
+                group_id=group_id,
+                attacker_request_id=attacker_request_id,
+                defender_request_id=defender_request_id,
+            )
+            connection.execute(
+                update(session_events)
+                .where(session_events.c.id == event_id)
+                .values(subject_character_id=attacker["character_id"], payload=event_payload)
+            )
+
+        event = self.event_repository.append(
+            room_id=binding.room_id,
+            campaign_id=binding.campaign_id,
+            session_id=binding.session_id,
+            kind="combat.escape_grapple_requested",
+            acting_seat_id=binding.seat_id,
+            subject_seat_id=subject_seat_id,
+            subject_character_id=None,
+            execution_mode=execution_mode,
+            visibility="public",
+            recipient_seat_ids=(),
+            payload_version=1,
+            payload={
+                "combat_id": str(combat_id),
+                "combat_action_id": str(action_id),
+                "attacker_entry_id": str(attacker_entry_id),
+                "target_entry_id": str(target_entry_id),
+                "kind": SpecialAttackKind.ESCAPE_GRAPPLE.value,
+                "status": "waiting_for_roll",
+            },
+            idempotency_key=f"p4f-escape-request:{idempotency_key}" if idempotency_key else None,
+            expected_actor_binding=binding,
+            transaction_projection=projection,
+        )
+        stored = self.get(
+            session_id=binding.session_id,
+            action_id=UUID(str(event.payload["combat_action_id"])),
+        )
+        if stored is None:
+            raise SpecialAttackNotFoundError(str(action_id))
+        return stored, event
+
     @staticmethod
-    def _apply_condition(connection: Any, target: Any, *, condition_ref: str, note: str) -> None:
+    def _mutate_conditions(
+        connection: Any,
+        entry: Any,
+        mutate: Callable[[list[dict[str, Any]]], list[dict[str, Any]]],
+    ) -> None:
         now = datetime.now().astimezone()
-        if target["subject_kind"] == "character":
-            character_id = target["character_id"]
+        if entry["subject_kind"] == "character":
+            character_id = entry["character_id"]
             if character_id is None:
-                raise SpecialAttackStateConflictError("Character target has no Character identity")
+                raise SpecialAttackStateConflictError("Character entry has no Character identity")
             row = connection.execute(
                 select(character_states.c.state_payload, character_states.c.state_revision)
                 .where(character_states.c.character_id == character_id)
@@ -506,8 +687,7 @@ class SpecialAttackRepository:
             state = CharacterState.model_validate(row["state_payload"])
             payload = state.model_dump(mode="json")
             conditions = list(payload.get("conditions", []))
-            _add_condition(conditions, condition_ref, note)
-            payload["conditions"] = conditions
+            payload["conditions"] = mutate(conditions)
             CharacterState.model_validate(payload)
             state_update = connection.execute(
                 update(character_states)
@@ -523,13 +703,13 @@ class SpecialAttackRepository:
             )
             if state_update.rowcount != 1:
                 raise SpecialAttackStateConflictError(
-                    "Character State changed while applying Special Attack condition"
+                    "Character State changed while mutating Special Attack condition"
                 )
             return
-        if target["subject_kind"] == "monster":
-            monster_id = target["monster_instance_id"]
+        if entry["subject_kind"] == "monster":
+            monster_id = entry["monster_instance_id"]
             if monster_id is None:
-                raise SpecialAttackStateConflictError("Monster target has no Monster identity")
+                raise SpecialAttackStateConflictError("Monster entry has no Monster identity")
             row = connection.execute(
                 select(monster_instances.c.conditions)
                 .where(monster_instances.c.id == monster_id)
@@ -538,14 +718,29 @@ class SpecialAttackRepository:
             if row is None:
                 raise SpecialAttackNotFoundError(str(monster_id))
             conditions = list(row["conditions"] or [])
-            _add_condition(conditions, condition_ref, note)
+            mutated = mutate(conditions)
             connection.execute(
                 update(monster_instances)
                 .where(monster_instances.c.id == monster_id)
-                .values(conditions=conditions, updated_at=now)
+                .values(conditions=mutated, updated_at=now)
             )
             return
-        raise SpecialAttackStateConflictError("unsupported Special Attack target kind")
+        raise SpecialAttackStateConflictError("unsupported Special Attack combat entry kind")
+
+    @classmethod
+    def _apply_condition(cls, connection: Any, target: Any, *, condition_ref: str, note: str) -> None:
+        def mutate(conditions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            _add_condition(conditions, condition_ref, note)
+            return conditions
+
+        cls._mutate_conditions(connection, target, mutate)
+
+    @classmethod
+    def _remove_condition_from_entry(cls, connection: Any, entry: Any, *, condition_ref: str) -> None:
+        def mutate(conditions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            return _remove_condition(conditions, condition_ref)
+
+        cls._mutate_conditions(connection, entry, mutate)
 
     def complete_roll(
         self,
@@ -620,15 +815,21 @@ class SpecialAttackRepository:
             final_result: dict[str, Any] | None = None
             status = "waiting_for_roll"
             if all(str(value) in totals for value in ids):
-                outcome = resolve_grapple_or_shove(
-                    kind=SpecialAttackKind(str(payload["kind"])),
-                    attacker_size=SizeCategory(int(payload["attacker_size"])),
-                    target_size=SizeCategory(int(payload["target_size"])),
-                    attacker_check_total=totals[str(ids[0])],
-                    target_check_total=totals[str(ids[1])],
-                    attacker_has_free_hand=bool(payload["attacker_has_free_hand"]),
-                    reach_confirmed=True,
-                )
+                if payload["kind"] == SpecialAttackKind.ESCAPE_GRAPPLE.value:
+                    outcome = resolve_escape_grapple(
+                        escaper_check_total=totals[str(ids[0])],
+                        grappler_check_total=totals[str(ids[1])],
+                    )
+                else:
+                    outcome = resolve_grapple_or_shove(
+                        kind=SpecialAttackKind(str(payload["kind"])),
+                        attacker_size=SizeCategory(int(payload["attacker_size"])),
+                        target_size=SizeCategory(int(payload["target_size"])),
+                        attacker_check_total=totals[str(ids[0])],
+                        target_check_total=totals[str(ids[1])],
+                        attacker_has_free_hand=bool(payload["attacker_has_free_hand"]),
+                        reach_confirmed=True,
+                    )
                 final_result = {
                     "kind": outcome.kind.value,
                     "status": outcome.status,
@@ -638,9 +839,12 @@ class SpecialAttackRepository:
                     "attacker_skill": payload["attacker_skill"],
                     "defender_skill": payload["defender_skill"],
                     "condition_to_apply": outcome.condition_to_apply,
+                    "condition_to_remove": outcome.condition_to_remove,
                     "push_distance_ft": outcome.push_distance_ft,
                 }
-                if outcome.status == "success" and outcome.condition_to_apply == "grappled":
+                if outcome.status == "success" and outcome.condition_to_remove == "grappled":
+                    self._remove_condition_from_entry(connection, attacker, condition_ref=GRAPPLED_REF)
+                elif outcome.status == "success" and outcome.condition_to_apply == "grappled":
                     self._apply_condition(
                         connection,
                         target,
