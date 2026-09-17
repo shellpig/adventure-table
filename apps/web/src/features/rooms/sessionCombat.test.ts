@@ -9,6 +9,7 @@ import {
   latestCombatEventSeq,
   myEntryIds,
   orderedEntries,
+  pendingCombatRollHandler,
 } from './sessionCombat'
 
 function makeEvent(seq: number, kind: string): TableEvent {
@@ -196,6 +197,26 @@ describe('sessionCombat helpers', () => {
     expect(conditionLabel({ condition_ref: 'blinded' })).toBe('blinded')
     expect(conditionLabel({ tag: 'shield_spell' })).toBe('shield_spell')
     expect(conditionLabel({})).toBe('')
+  })
+
+  it('dispatches every pending combat roll type and rejects initiative or unknown types', () => {
+    const handlers = {
+      attack: async () => undefined,
+      saving_throw: async () => undefined,
+      death_save: async () => undefined,
+      concentration: async () => undefined,
+      grapple: async () => undefined,
+      shove: async () => undefined,
+    }
+
+    expect(pendingCombatRollHandler('attack', handlers)).toBe(handlers.attack)
+    expect(pendingCombatRollHandler('saving_throw', handlers)).toBe(handlers.saving_throw)
+    expect(pendingCombatRollHandler('death_save', handlers)).toBe(handlers.death_save)
+    expect(pendingCombatRollHandler('concentration', handlers)).toBe(handlers.concentration)
+    expect(pendingCombatRollHandler('grapple', handlers)).toBe(handlers.grapple)
+    expect(pendingCombatRollHandler('shove', handlers)).toBe(handlers.shove)
+    expect(pendingCombatRollHandler('initiative', handlers)).toBeUndefined()
+    expect(pendingCombatRollHandler('other', handlers)).toBeUndefined()
   })
 
   it('returns own current turn entry for a running Player combat', () => {

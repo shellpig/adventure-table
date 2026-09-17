@@ -4,20 +4,35 @@ import {
   listAttacks,
   requestAttack,
   rollAttack,
+  rollConcentration,
+  rollDeathSave,
+  rollSavingThrow,
+  rollSpecialAttack,
   type AttackDefinitionView,
   type AttackResolutionView,
   type CombatAdjudicationView,
   type CombatDetailView,
   type CombatPendingRollView,
+  type ConcentrationCheckResultView,
+  type DeathSaveResultView,
+  type SavingThrowResultView,
 } from '../../api/combat'
 import {
   actingEntryId,
   adjudicationKindLabel,
   combatInjuryLabel,
+  pendingCombatRollHandler,
   runCombatMutation,
+  type PendingCombatRollDispatchTable,
 } from './sessionCombat'
 import type { SessionCopy } from './sessionCopy'
 import { requestId } from './SessionTableSurface'
+
+type CombatRollResult =
+  | { kind: 'attack'; value: AttackResolutionView }
+  | { kind: 'saving_throw'; value: SavingThrowResultView }
+  | { kind: 'death_save'; value: DeathSaveResultView }
+  | { kind: 'concentration'; value: ConcentrationCheckResultView }
 
 type SessionCombatActionBarProps = {
   combat: CombatDetailView
@@ -64,7 +79,7 @@ export function SessionCombatActionBar({
   const [rangeConfirmed, setRangeConfirmed] = useState(true)
   const [pending, setPending] = useState(false)
   const [localRollRequestId, setLocalRollRequestId] = useState<string | null>(null)
-  const [resolution, setResolution] = useState<AttackResolutionView | null>(null)
+  const [rollResult, setRollResult] = useState<CombatRollResult | null>(null)
   const [pendingActionId, setPendingActionId] = useState<string | null>(null)
   const [pendingActionSeen, setPendingActionSeen] = useState(false)
 
@@ -75,7 +90,7 @@ export function SessionCombatActionBar({
     setModifierMode('normal')
     setRangeConfirmed(true)
     setLocalRollRequestId(null)
-    setResolution(null)
+    setRollResult(null)
     setPendingActionId(null)
     setPendingActionSeen(false)
     if (currentActingEntryId === null) return
@@ -145,7 +160,7 @@ export function SessionCombatActionBar({
           },
           token,
         )
-        setResolution(null)
+        setRollResult(null)
         if (response.roll_request_id !== null) {
           setLocalRollRequestId(response.roll_request_id)
           setPendingActionId(null)
@@ -162,33 +177,110 @@ export function SessionCombatActionBar({
     )
   }
 
-  const handleRollAttack = (rollRequestId: string) =>
-    runCombatMutation(
+  const rollBody = (rollRequestId: string, prefix: string) => ({
+    roll_request_id: rollRequestId,
+    source: 'server' as const,
+    idempotency_key: requestId(prefix),
+  })
+
+  const rollHandlers: PendingCombatRollDispatchTable = {
+    attack: async (rollRequestId) => {
+      const value = await rollAttack(
+        roomId,
+        campaignId,
+        sessionId,
+        rollBody(rollRequestId, 'attack-roll'),
+        token,
+      )
+      setRollResult({ kind: 'attack', value })
+      if (localRollRequestId === rollRequestId) {
+        setLocalRollRequestId(null)
+      }
+    },
+    saving_throw: async (rollRequestId) => {
+      const value = await rollSavingThrow(
+        roomId,
+        campaignId,
+        sessionId,
+        rollBody(rollRequestId, 'saving-throw-roll'),
+        token,
+      )
+      setRollResult({ kind: 'saving_throw', value })
+    },
+    death_save: async (rollRequestId) => {
+      const value = await rollDeathSave(
+        roomId,
+        campaignId,
+        sessionId,
+        rollBody(rollRequestId, 'death-save-roll'),
+        token,
+      )
+      setRollResult({ kind: 'death_save', value })
+    },
+    concentration: async (rollRequestId) => {
+      const value = await rollConcentration(
+        roomId,
+        campaignId,
+        sessionId,
+        rollBody(rollRequestId, 'concentration-roll'),
+        token,
+      )
+      setRollResult({ kind: 'concentration', value })
+    },
+    grapple: async (rollRequestId) => {
+      await rollSpecialAttack(
+        roomId,
+        campaignId,
+        sessionId,
+        rollBody(rollRequestId, 'grapple-roll'),
+        token,
+      )
+      setRollResult(null)
+    },
+    shove: async (rollRequestId) => {
+      await rollSpecialAttack(
+        roomId,
+        campaignId,
+        sessionId,
+        rollBody(rollRequestId, 'shove-roll'),
+        token,
+      )
+      setRollResult(null)
+    },
+  }
+
+  const handlePendingRoll = (requestType: string, rollRequestId: string) => {
+    const handler = pendingCombatRollHandler(requestType, rollHandlers)
+    if (!handler) return Promise.resolve()
+    return runCombatMutation(
       setPending,
-      async () => {
-        const result = await rollAttack(
-          roomId,
-          campaignId,
-          sessionId,
-          {
-            roll_request_id: rollRequestId,
-            source: 'server',
-            idempotency_key: requestId('attack-roll'),
-          },
-          token,
-        )
-        setResolution(result)
-        if (localRollRequestId === rollRequestId) {
-          setLocalRollRequestId(null)
-        }
-      },
+      () => handler(rollRequestId),
       refresh,
       onError,
     )
+  }
 
-  // E10c owns saving throws, death saves, concentration rolls, and other Combat roll types.
-  const attackRolls = pendingRolls.filter(
-    (roll) => roll.request_type === 'attack' && roll.id !== localRollRequestId,
+  const requestTypeLabel = (requestType: string): string => {
+    switch (requestType) {
+      case 'attack':
+        return copy.combatRollTypeAttack
+      case 'saving_throw':
+        return copy.combatRollTypeSavingThrow
+      case 'death_save':
+        return copy.combatRollTypeDeathSave
+      case 'concentration':
+        return copy.combatRollTypeConcentration
+      case 'grapple':
+        return copy.combatRollTypeGrapple
+      case 'shove':
+        return copy.combatRollTypeShove
+      default:
+        return requestType
+    }
+  }
+
+  const pendingRows = pendingRolls.filter(
+    (roll) => roll.request_type !== 'initiative' && roll.id !== localRollRequestId,
   )
 
   const actionState = currentActingEntryId === null
@@ -197,10 +289,10 @@ export function SessionCombatActionBar({
       ? 'adjudication-pending'
       : 'ready'
 
-  const resultStatus = resolution
-    ? resolution.critical
+  const attackResultStatus = rollResult?.kind === 'attack'
+    ? rollResult.value.critical
       ? copy.combatAttackCritical
-      : resolution.hit
+      : rollResult.value.hit
         ? copy.combatAttackHit
         : copy.combatAttackMiss
     : null
@@ -299,26 +391,37 @@ export function SessionCombatActionBar({
           className="button primary compact"
           data-attack-roll={localRollRequestId}
           disabled={pending}
-          onClick={() => void handleRollAttack(localRollRequestId)}
+          onClick={() => void handlePendingRoll('attack', localRollRequestId)}
         >
           {copy.combatRollAttack}
         </button>
       ) : null}
 
       <div className="session-combat-actions__pending-rolls">
-        <h4 className="session-combat__sub-heading">{copy.combatPendingAttackRollsHeading}</h4>
-        {attackRolls.map((roll) => (
-          <button
-            key={roll.id}
-            type="button"
-            className="button secondary compact"
-            data-pending-roll={roll.id}
-            disabled={pending}
-            onClick={() => void handleRollAttack(roll.id)}
-          >
-            {copy.combatRollAttack}
-          </button>
-        ))}
+        <h4 className="session-combat__sub-heading">{copy.combatPendingRollsHeading}</h4>
+        {pendingRows.map((roll) => {
+          const handler = pendingCombatRollHandler(roll.request_type, rollHandlers)
+          return (
+            <div key={roll.id} className="session-combat-actions__pending-roll-row">
+              <span>
+                {roll.label ?? requestTypeLabel(roll.request_type)}
+                {roll.request_type === 'saving_throw' && roll.ability_ref ? ` · ${roll.ability_ref}` : ''}
+                {roll.request_type === 'saving_throw' && typeof roll.dc === 'number' ? ` · DC ${roll.dc}` : ''}
+              </span>
+              {handler ? (
+                <button
+                  type="button"
+                  className="button secondary compact"
+                  data-pending-roll={roll.id}
+                  disabled={pending}
+                  onClick={() => void handlePendingRoll(roll.request_type, roll.id)}
+                >
+                  {copy.combatRollPending}
+                </button>
+              ) : null}
+            </div>
+          )
+        })}
       </div>
 
       {!isCurrentDm ? (
@@ -334,16 +437,39 @@ export function SessionCombatActionBar({
         </div>
       ) : null}
 
-      {resolution && resultStatus ? (
+      {rollResult?.kind === 'attack' && attackResultStatus ? (
         <p className="session-combat-actions__result" data-attack-result="true">
-          <strong>{resultStatus}</strong>
+          <strong>{attackResultStatus}</strong>
           {' · '}
-          {copy.combatAttackDamage.replace('{damage}', String(resolution.damage_total))}
-          {typeof resolution.after_hp === 'number' ? (
-            <> · {copy.combatHp}: {resolution.after_hp}</>
-          ) : resolution.target_injury_level ? (
-            <> · {combatInjuryLabel(resolution.target_injury_level, copy)}</>
+          {copy.combatAttackDamage.replace('{damage}', String(rollResult.value.damage_total))}
+          {typeof rollResult.value.after_hp === 'number' ? (
+            <> · {copy.combatHp}: {rollResult.value.after_hp}</>
+          ) : rollResult.value.target_injury_level ? (
+            <> · {combatInjuryLabel(rollResult.value.target_injury_level, copy)}</>
           ) : null}
+        </p>
+      ) : rollResult?.kind === 'saving_throw' ? (
+        <p className="session-combat-actions__result" data-roll-result="saving_throw">
+          {copy.combatSavingThrowResult.replace('{total}', String(rollResult.value.total))}
+          {' · '}
+          {rollResult.value.succeeded ? copy.combatSaveSuccess : copy.combatSaveFailure}
+        </p>
+      ) : rollResult?.kind === 'death_save' ? (
+        <p className="session-combat-actions__result" data-roll-result="death_save">
+          {copy.combatDeathSaveResult
+            .replace('{d20}', String(rollResult.value.d20))
+            .replace('{successes}', String(rollResult.value.successes))
+            .replace('{failures}', String(rollResult.value.failures))}
+          {rollResult.value.stable ? ` · ${copy.combatDeathSaveStable}` : null}
+          {rollResult.value.dead ? ` · ${copy.combatDeathSaveDead}` : null}
+        </p>
+      ) : rollResult?.kind === 'concentration' ? (
+        <p className="session-combat-actions__result" data-roll-result="concentration">
+          {copy.combatConcentrationResult
+            .replace('{total}', String(rollResult.value.total))
+            .replace('{dc}', String(rollResult.value.dc))}
+          {' · '}
+          {rollResult.value.succeeded ? copy.combatConcentrationKept : copy.combatConcentrationLost}
         </p>
       ) : null}
     </section>

@@ -18,7 +18,11 @@ import {
   requestSpecialAdjudication,
   resolveAdjudication,
   rollAttack,
+  rollConcentration,
+  rollDeathSave,
   rollInitiative,
+  rollSavingThrow,
+  rollSpecialAttack,
   startCombat,
 } from './combat'
 
@@ -232,6 +236,37 @@ describe('Combat API client', () => {
       roll_request_id: 'roll-request-1',
       source: 'server',
       idempotency_key: 'attack-roll-1',
+    })
+  })
+
+  it('calls saving throw, death save, concentration, and special-attack roll endpoints', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok({}))
+    vi.stubGlobal('fetch', fetchMock)
+    const body = {
+      roll_request_id: 'roll-request-1',
+      source: 'server' as const,
+      idempotency_key: 'pending-roll-1',
+    }
+
+    await rollSavingThrow(ROOM_ID, CAMPAIGN_ID, SESSION_ID, body, TOKEN)
+    await rollDeathSave(ROOM_ID, CAMPAIGN_ID, SESSION_ID, body, TOKEN)
+    await rollConcentration(ROOM_ID, CAMPAIGN_ID, SESSION_ID, body, TOKEN)
+    await rollSpecialAttack(ROOM_ID, CAMPAIGN_ID, SESSION_ID, body, TOKEN)
+
+    const paths = [
+      'saving-throws/roll',
+      'death-saves/roll',
+      'concentration/roll',
+      'special-attacks/roll',
+    ]
+    paths.forEach((path, index) => {
+      const [url, init] = fetchMock.mock.calls[index]
+      expect(url).toBe(
+        `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/combat/${path}`,
+      )
+      expect(init.method).toBe('POST')
+      expect(init.headers.Authorization).toBe(`Bearer ${TOKEN}`)
+      expect(JSON.parse(init.body as string)).toEqual(body)
     })
   })
 

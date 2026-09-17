@@ -128,6 +128,16 @@ def _request_event_visibility(visibility: RollVisibility) -> str:
     return "seat_private"
 
 
+def pending_combat_roll_request_type(request: StoredCombatCoreRollRequest) -> str:
+    if request.action_kind in {"attack", "death_save", "grapple", "shove"}:
+        return request.action_kind
+    if request.action_kind is None and request.roll_group_label == "Concentration":
+        return "concentration"
+    if request.action_kind is None and request.roll_group_label == "Initiative":
+        return "initiative"
+    return request.request_type
+
+
 class CombatCoreRollService:
     """Actor-neutral formal Saving Throw and Death Save application service."""
 
@@ -236,8 +246,7 @@ class CombatCoreRollService:
                     id=request.id,
                     roll_group_id=request.roll_group_id,
                     label=request.roll_group_label,
-                    # Attack rolls are stored as ``other``; the linked Attack action is the discriminator.
-                    request_type="attack" if request.action_kind == "attack" else request.request_type,
+                    request_type=pending_combat_roll_request_type(request),
                     target_entry_id=request.target_combat_entry_id,
                     target_seat_id=request.target_seat_id,
                     ability_ref=request.ability_ref,
@@ -461,4 +470,5 @@ __all__ = [
     "SavingThrowRequestResponse",
     "SavingThrowRequestView",
     "SavingThrowResultView",
+    "pending_combat_roll_request_type",
 ]

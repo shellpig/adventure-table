@@ -114,6 +114,32 @@ export function adjudicationKindLabel(
   }
 }
 
+export type PendingCombatRollHandler = (rollRequestId: string) => Promise<void>
+
+export type PendingCombatRollDispatchTable = {
+  attack: PendingCombatRollHandler
+  saving_throw: PendingCombatRollHandler
+  death_save: PendingCombatRollHandler
+  concentration: PendingCombatRollHandler
+  grapple: PendingCombatRollHandler
+  shove: PendingCombatRollHandler
+}
+
+export function pendingCombatRollHandler(
+  requestType: string,
+  handlers: PendingCombatRollDispatchTable,
+): PendingCombatRollHandler | undefined {
+  const dispatch: Record<string, PendingCombatRollHandler | undefined> = {
+    attack: handlers.attack,
+    saving_throw: handlers.saving_throw,
+    death_save: handlers.death_save,
+    concentration: handlers.concentration,
+    grapple: handlers.grapple,
+    shove: handlers.shove,
+  }
+  return dispatch[requestType]
+}
+
 export async function runCombatMutation(
   setPending: (value: boolean) => void,
   mutation: () => Promise<void>,

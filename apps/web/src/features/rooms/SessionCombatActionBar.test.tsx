@@ -17,6 +17,10 @@ vi.mock('../../api/combat', async (importOriginal) => {
     listAttacks: vi.fn().mockResolvedValue([]),
     requestAttack: vi.fn(),
     rollAttack: vi.fn(),
+    rollSavingThrow: vi.fn(),
+    rollDeathSave: vi.fn(),
+    rollConcentration: vi.fn(),
+    rollSpecialAttack: vi.fn(),
   }
 })
 
@@ -67,7 +71,11 @@ function combat(currentTurnEntryId: string): CombatDetailView {
   }
 }
 
-function pendingRoll(id: string, requestType: string): CombatPendingRollView {
+function pendingRoll(
+  id: string,
+  requestType: string,
+  options?: Partial<CombatPendingRollView>,
+): CombatPendingRollView {
   return {
     id,
     roll_group_id: null,
@@ -79,6 +87,7 @@ function pendingRoll(id: string, requestType: string): CombatPendingRollView {
     dc: null,
     modifier_mode: 'normal',
     status: 'pending',
+    ...options,
   }
 }
 
@@ -150,15 +159,62 @@ describe('SessionCombatActionBar', () => {
     expect(markup).toContain(copy.combatRangeConfirmed)
   })
 
-  it('renders only pending attack rolls and leaves save rolls for E10c', () => {
+  it('renders every pending combat roll type except initiative', () => {
     const markup = renderActionBar({
       detail: combat('entry-player'),
       isCurrentDm: false,
-      rolls: [pendingRoll('attack-roll-1', 'attack'), pendingRoll('save-roll-1', 'saving_throw')],
+      rolls: [
+        pendingRoll('attack-roll-1', 'attack'),
+        pendingRoll('save-roll-1', 'saving_throw'),
+        pendingRoll('death-roll-1', 'death_save'),
+        pendingRoll('concentration-roll-1', 'concentration'),
+        pendingRoll('grapple-roll-1', 'grapple'),
+        pendingRoll('shove-roll-1', 'shove'),
+        pendingRoll('initiative-roll-1', 'initiative'),
+      ],
     })
 
-    expect(markup).toContain('data-pending-roll="attack-roll-1"')
-    expect(markup).not.toContain('data-pending-roll="save-roll-1"')
+    for (const id of [
+      'attack-roll-1',
+      'save-roll-1',
+      'death-roll-1',
+      'concentration-roll-1',
+      'grapple-roll-1',
+      'shove-roll-1',
+    ]) {
+      expect(markup).toContain(`data-pending-roll="${id}"`)
+    }
+    expect(markup).not.toContain('data-pending-roll="initiative-roll-1"')
+  })
+
+  it('shows saving-throw DC to the DM and omits a hidden Player DC', () => {
+    const dmMarkup = renderActionBar({
+      detail: combat('entry-enemy'),
+      isCurrentDm: true,
+      rolls: [
+        pendingRoll('save-dm', 'saving_throw', {
+          label: 'Saving Throw',
+          ability_ref: 'dexterity',
+          dc: 16,
+        }),
+      ],
+    })
+    expect(dmMarkup).toContain('dexterity')
+    expect(dmMarkup).toContain('DC 16')
+
+    const playerMarkup = renderActionBar({
+      detail: combat('entry-player'),
+      isCurrentDm: false,
+      rolls: [
+        pendingRoll('save-player', 'saving_throw', {
+          label: 'Saving Throw',
+          ability_ref: 'dexterity',
+          dc: null,
+        }),
+      ],
+    })
+    expect(playerMarkup).toContain('dexterity')
+    expect(playerMarkup).not.toContain('DC 16')
   })
 
   it('renders the Player own pending adjudication as read-only', () => {

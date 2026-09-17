@@ -257,6 +257,56 @@ export type AttackResolutionView = {
   resolution_result: Record<string, unknown>
 }
 
+export type SavingThrowResultView = {
+  result_id: string
+  roll_request_id: string
+  target_entry_id: string
+  total: number
+  succeeded: boolean
+}
+
+export type DeathSaveResultView = {
+  combat_action_id: string
+  result_id: string
+  roll_request_id: string
+  entry_id: string
+  d20: number
+  current_hp: number
+  successes: number
+  failures: number
+  stable: boolean
+  dead: boolean
+  natural_20_recovery: boolean
+}
+
+export type ConcentrationCheckResultView = {
+  result_id: string
+  roll_request_id: string
+  target_entry_id: string
+  d20: number
+  modifier: number
+  total: number
+  dc: number
+  succeeded: boolean
+  linked_effect_ids: string[]
+  linked_effects_removed_from: Array<Record<string, unknown>>
+}
+
+export type SpecialAttackView = {
+  action_id: string
+  combat_id: string
+  attacker_entry_id: string
+  target_entry_id: string
+  kind: 'grapple' | 'shove'
+  status: string
+  in_reach: boolean | null
+  attacker_roll_request_id: string | null
+  defender_roll_request_id: string | null
+  attacker_skill: string
+  defender_skill: string
+  resolution_result: Record<string, unknown> | null
+}
+
 export type CombatAdjudicationView = {
   action_id: string
   kind: 'range' | 'reach' | 'affected_targets' | 'opportunity_attack' | 'special'
@@ -306,6 +356,9 @@ export type CombatPendingRollView = {
 
 const combatBase = (roomId: string, campaignId: string, sessionId: string) =>
   `${tableBase(roomId, campaignId, sessionId)}/combat`
+
+const specialAttacksBase = (roomId: string, campaignId: string, sessionId: string) =>
+  `${combatBase(roomId, campaignId, sessionId)}/special-attacks`
 
 const monsterInstancesBase = (roomId: string, campaignId: string, sessionId: string) =>
   `${tableBase(roomId, campaignId, sessionId)}/monster-instances`
@@ -441,6 +494,58 @@ export function rollAttack(
   token: string,
 ): Promise<AttackResolutionView> {
   return request(`${combatBase(roomId, campaignId, sessionId)}/attacks/roll`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function rollSavingThrow(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: FormalRollInput,
+  token: string,
+): Promise<SavingThrowResultView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/saving-throws/roll`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function rollDeathSave(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: FormalRollInput,
+  token: string,
+): Promise<DeathSaveResultView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/death-saves/roll`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function rollConcentration(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: FormalRollInput,
+  token: string,
+): Promise<ConcentrationCheckResultView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/concentration/roll`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function rollSpecialAttack(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: FormalRollInput,
+  token: string,
+): Promise<SpecialAttackView> {
+  return request(`${specialAttacksBase(roomId, campaignId, sessionId)}/roll`, token, {
     method: 'POST',
     body: JSON.stringify(body),
   })
