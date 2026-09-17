@@ -34,6 +34,7 @@ from app.domain.character.schemas import (
 from app.domain.combat.concentration import CombatConcentrationService
 from app.domain.combat.initiative import FinalizeInitiativeInput, RequestInitiativeInput
 from app.domain.combat.lifecycle import AddMonsterInput, StartCombatInput
+from app.domain.combat.monster_instances import initial_monster_resources
 from app.domain.combat.reaction_service import CombatReactionService
 from app.domain.combat.resolution import DamageRollPart, DamageType, RollMode
 from app.domain.combat.spell_resolver import SaveDamageMode, SpellCastMode
@@ -55,8 +56,7 @@ def _mage_rules_and_resources() -> tuple[dict[str, Any], dict[str, int]]:
     registry = load_default_content_registry()
     mage_entry = registry.get("srd5.1:monster:mage")
     rules = monster_to_reusable_rules(MonsterData.model_validate(mage_entry.data))
-    slots = rules["traits"][0]["spellcasting"]["slots"]
-    resources = {f"spell_slot:{level}": count for level, count in slots.items()}
+    resources = initial_monster_resources(rules)
     return rules, resources
 
 

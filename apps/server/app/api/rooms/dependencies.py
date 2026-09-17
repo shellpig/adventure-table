@@ -14,6 +14,7 @@ from app.domain.combat.concentration import CombatConcentrationService
 from app.domain.combat.core_rolls import CombatCoreRollService
 from app.domain.combat.initiative import CombatInitiativeService
 from app.domain.combat.lifecycle import CombatService
+from app.domain.combat.monster_instances import MonsterInstanceService
 from app.domain.combat.order import CombatOrderService
 from app.domain.combat.reaction_service import CombatReactionService
 from app.domain.combat.roll_compat import CombatAwareRollRepository
@@ -398,6 +399,19 @@ def get_combat_spell_service(request: Request) -> CombatSpellService:
     return service
 
 
+def get_monster_instance_service(request: Request) -> MonsterInstanceService:
+    service = getattr(request.app.state, "monster_instance_service", None)
+    if service is None:
+        combat_service = get_combat_service(request)
+        service = MonsterInstanceService(
+            monster_repository=combat_service.monster_repository,
+            content_registry=get_content_registry(request),
+            table_event_service=get_table_event_service(request),
+        )
+        request.app.state.monster_instance_service = service
+    return service
+
+
 __all__ = [
     "_HistoryGuardedCharacterRepository",
     "get_campaign_service",
@@ -414,6 +428,7 @@ __all__ = [
     "get_combat_spell_service",
     "get_exploration_action_service",
     "get_exploration_stage_service",
+    "get_monster_instance_service",
     "get_pending_action_service",
     "get_roll_service",
     "get_room_workspace_service",

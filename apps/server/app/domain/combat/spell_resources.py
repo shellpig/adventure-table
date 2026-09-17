@@ -243,7 +243,7 @@ def _slug(value: str) -> str:
     return value
 
 
-def _monster_casting_sources(rules_snapshot: Mapping[str, Any]) -> tuple[Mapping[str, Any], ...]:
+def monster_casting_sources(rules_snapshot: Mapping[str, Any]) -> tuple[Mapping[str, Any], ...]:
     """Return every spellcasting block accepted from P4-A snapshots.
 
     P4-A stores SRD API trait payloads under ``traits[].spellcasting`` (or the
@@ -306,7 +306,7 @@ def resolve_monster_spell_source(
 
     matched_casting: Mapping[str, Any] | None = None
     row: Mapping[str, Any] | None = None
-    for casting in _monster_casting_sources(rules_snapshot):
+    for casting in monster_casting_sources(rules_snapshot):
         spells = casting.get("spells")
         if not isinstance(spells, (list, tuple)):
             continue
@@ -319,7 +319,7 @@ def resolve_monster_spell_source(
         if row is not None:
             break
 
-    if not _monster_casting_sources(rules_snapshot):
+    if not monster_casting_sources(rules_snapshot):
         raise ValueError("monster stat block has no spellcasting source")
     if row is None or matched_casting is None:
         raise ValueError("monster does not have requested spell")

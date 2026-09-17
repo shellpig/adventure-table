@@ -11,6 +11,7 @@ from app.api.rooms.combat_reactions import router as combat_reactions_router
 from app.api.rooms.combat_special_attacks import router as combat_special_attacks_router
 from app.api.rooms.combat_spells import router as combat_spells_router
 from app.api.rooms.exploration import router as exploration_router
+from app.api.rooms.monster_instances import router as monster_instances_router
 from app.api.rooms.p3c_pending import router as p3c_pending_router
 from app.api.rooms.p3c_rolls import router as p3c_rolls_router
 from app.api.rooms.p3c_state import router as p3c_state_router
@@ -35,6 +36,7 @@ router.include_router(combat_adjudication_router)
 router.include_router(combat_special_attacks_router)
 router.include_router(combat_reactions_router)
 router.include_router(combat_spells_router)
+router.include_router(monster_instances_router)
 router.include_router(characters_router)
 router.include_router(character_builder_router)
 

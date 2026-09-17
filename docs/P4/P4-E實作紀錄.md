@@ -19,7 +19,9 @@
 | E4b | Event payload projector + 既有 P4-C mutation response 對 Player 的 redaction | 設計 §8.2「Player-safe event payload」；測試 E.2（event / response） | ✅ |
 | E5 | Spell / reaction / concentration REST route | 實作規格 7、11；設計 §8.1、§8.2 | ✅ |
 | E6 | DM adjudication REST（range / cover / AoE / OA） | 實作規格 5；設計 §8.3 | ✅ |
-| E7 | Combat MCP tools（DM / Player catalog） | 實作規格 8、10、11；設計 §8.4；測試 E.3 | ⬜ |
+| E7a | Monster Instance REST（DM-only：from-content / quick-enemy / list） | 實作規格 7、10；設計 §4.2 | ✅ |
+| E7b | Combat MCP tools：lifecycle / monster / initiative / turn / action | 實作規格 8、10、11；設計 §8.4；測試 E.3 | ⬜ |
+| E7c | Combat MCP tools：spell / reaction / concentration / adjudication + `get_combat_context` | 實作規格 8、10、11；設計 §8.4；測試 E.3 | ⬜ |
 | E8 | `get_session_context` / briefing Combat context | 實作規格 9；設計 §8.6；測試 E.4 | ⬜ |
 | E9 | Session page：Combat Header + Initiative + Combatants UI | 實作規格 1、2、4、6；測試 E.1 | ⬜ |
 | E10 | Quick Action Bar + target 選擇 + adjudication UI | 實作規格 4、5；測試 E.1 | ⬜ |
@@ -106,3 +108,12 @@
 - 清理：拿掉 raw dict rows、try/except 授權控制流、未用的 `get_adjudication`、function 內 import、兩段重複的 request projection（收成 `_insert_pending_adjudication`）、硬寫的 `target_is_hostile: False`、`combat_action_from_row` 的 `"col" in row` 防禦讀。
 - 測試：`tests/test_p4e_adjudication_routes.py` 7 條（DM / acting Player / 其他 Player 的 pending 可見性與 `dm_hints` 缺席、disadvantage override、OA trigger 原子開窗 + 強制失敗零副作用、OA no-trigger、special 宣告 / Player 不可 resolve / 缺 ruling 拒絕 / event 可見、通用 resolve 拒絕 range row + 404、Player 不可替非受控 reactor 宣告）。gate：E6 focused + P4-B/C/D/E regression + M03 boundary 117 passed。
 - 留給 E7：MCP tools（`combat_list_adjudications` / `combat_request_opportunity_attack` / `combat_request_special_adjudication` / `combat_resolve_adjudication`，加上 E5 的 spell / reaction / concentration / detail）；留給 E8：`get_session_context` 的 pending adjudication / reaction 摘要。MonsterRevealState 持久化與 DM combatant bookkeeping（實作規格 7）仍未做，排 E10 前處理。
+
+### E7a — Monster Instance REST
+
+- 起始：2026-09-17，agy worker 一輪（578s）+ Claude 小清理。
+- 為什麼有這步：P4-A closeout 記錄 `monster_instances` 只有 repository、沒有 REST / MCP 入口；E9 的 Human DM UI 與 E7b 的 AI DM 都需要建立 SRD Monster / Quick Enemy 的 server 入口。
+- 交付：`MonsterInstanceService`（`app/domain/combat/monster_instances.py`，DM-only，`require_actor_current` 後非 DM 一律 403）：`create_from_content`（`content_key` 經 `parse_stable_key` 驗 kind=monster → `monster_to_reusable_rules` → `template_key=content_key`）、`create_quick_enemy`（走既有 `MonsterRepository.create_quick_enemy` / `normalize_monster_action`）、`list_instances`（只回本 Campaign）；`MonsterInstanceView` 為 DM 完整視圖，Player 只能經 E4a detail projection 看到 monster。`initial_monster_resources(rules_snapshot)` 以 `monster_casting_sources`（自 `spell_resources` 公開）同一組 casting block 種下 `spell_slot:<level>`；innate / recharge 未種。Idempotency 無專表：`uuid5(campaign_id, idempotency_key)` 決定 instance id，重送回既有 row。Routes：`GET/POST .../sessions/{session}/monster-instances`、`/from-content`、`/quick-enemy`；`_map_combat_error` 納入 `ContentNotFoundError` → 404、`MonsterPersistenceError` → 409。不發 session event（加入 Combat 時已有 `combat.entry_added`）。
+- 清理：改用 `monster_casting_sources` 取代自行重掃 traits、抽 `_idempotent_instance` 去掉兩份重複、移除未用 import。既有 E1 / E5 測試的手工 `spell_slot` dict 改呼叫 `initial_monster_resources`。
+- 測試：`tests/test_p4e_monster_instance_routes.py` 6 條（SRD mage from-content → 加入 Combat → cast / Quick Enemy 有無 attack / Player 403 零 row / unknown key 與非 monster key 拒絕 / idempotency 同 id 一 row / list 只含本 Campaign）。gate 78 passed。
+- 限制：template search 沿用既有 `GET /api/rules/content/monsters`；Monster long-form `desc` 仍未 expose 給 UI，首次 expose 的步驟要補 zh-TW。

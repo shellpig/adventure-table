@@ -15,6 +15,7 @@ from app.api.rooms.dependencies import (
     get_combat_service,
     get_table_event_service,
 )
+from app.content.registry import ContentNotFoundError
 from app.domain.combat.attack_definitions import (
     AttackDefinitionInvalidError,
     AttackDefinitionNotFoundError,
@@ -99,6 +100,7 @@ from app.persistence.combat.reactions import (
     CombatReactionNotFoundError,
     CombatReactionStateConflictError,
 )
+from app.persistence.combat.repository import MonsterPersistenceError
 from app.persistence.combat.resolution import (
     CombatResolutionStateConflictError,
     CombatResolutionTargetNotFoundError,
@@ -131,6 +133,10 @@ def _map_combat_error(exc: Exception) -> APIError:
         return APIError(403, "table_actor_unauthorized", str(exc))
     if isinstance(exc, (TableEventSessionNotActiveError, TableEventSessionNotActivePersistenceError)):
         return APIError(409, "session_not_active", "Session is not active")
+    if isinstance(exc, ContentNotFoundError):
+        return APIError(404, "unknown_reference", str(exc))
+    if isinstance(exc, MonsterPersistenceError):
+        return APIError(409, "monster_instance_conflict", str(exc))
     if isinstance(
         exc,
         (
