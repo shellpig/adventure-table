@@ -32,7 +32,7 @@
 | E10d-1 | `GET .../combat/entries/{entry}/spells`：可施法術清單（含可用 slot level）+ web client | 實作規格 4、14 | ✅ |
 | E10d-2a | spell cast / AoE client 呼叫 + DM `affected_targets` 目標確認 | 實作規格 5、14 | ✅ |
 | E10d-2b | Quick Action Bar 的 Spell 動作（單體 / self / AoE propose、slot level） | 實作規格 4、14 | ✅ |
-| E11 | Chat / Log 呈現 + 雙語 copy + guide | 實作規格 12、13；測試 E.4 | ⬜ |
+| E11 | Chat / Log 呈現 + 雙語 copy + guide | 實作規格 12、13；測試 E.4 | ✅ |
 | E12 | focused E2E spec + Subphase 關門 gate | 測試指南 P4-E 全段 | ⬜ |
 
 步驟粒度可在實作中再切；新增子步以 `E9a` 之類接續，不重編已完成項目。
@@ -274,3 +274,13 @@ E10a / E10b / E10c-1 / E10c-2 / E10d-1 / E10d-2a / E10d-2b 全部交付並驗證
 - Claude 收尾：worker 留下的 `saves_requested` 把 ability 吞成 null，改為 fallback 到 ability 短碼（`srd5.1:ability:dex` → `DEX`）；`sessionCombatLog.test.ts` 68 處呼叫缺第 5 個 resolver 導致 `npm run build` 型別失敗，已補 `fallbackContentField`；移除 `combatLogContentReferences` 內重複的 `ability_ref` 收集。`test_p4e_session_context_combat.py` 第 5 條同時加嚴 briefing parity 斷言（Player 不得出現 DM-only tool），briefing 本文未改。
 - 驗證：`npm test -- --run` 85 files / 465 passed；`npm run build` 通過；`pytest tests/test_p4e_*.py tests/test_p4d_*.py tests/test_p4c_*.py` 通過（含 skip）；`git diff --check` 通過。
 - 尚未完成：E11b guide / catalog / briefing parity 正式交付、browser 證據、E12。E11 仍未驗收完成。
+
+### E11b — Combat REST error codes 雙語 + `combat_not_found` 統一
+
+- 2026-09-17，agy worker（Gemini 3.8 Flash (High)，1 回合 5.5 分鐘），Claude 審核與 commit。prompt：`C:\_work\AI_Work\Toolsgy-runsgy-p4e-e11b.prompt.txt`。
+- 派工前查證：guide / tool description / briefing 的 combat parity 已在 E8 交付並由 `test_p4e_session_context_combat.py::test_5` 覆蓋（fix3 已加嚴 Player 不得出現 DM-only tool），E11b 不再碰 `app/mcp/*` 與 `ai_guidance.py`。真正缺口是 P4 combat router 的 REST error code 在 web 端沒有 zh-TW / en 訊息，zh-TW 使用者會看到 server 原始英文 `str(exc)`。
+- 交付：`sessionMessages.ts` 新增 `P4E_SESSION_REQUEST_CODES`（13 個 code：`unknown_reference`、`monster_instance_conflict`、`combat_not_found`、`attack_not_found`、`combat_roll_not_found`、`combat_target_not_found`、`active_combat_exists`、`combat_state_conflict`、`initiative_request_not_found`、`invalid_initiative_input`、`invalid_attack_definition`、`invalid_combat_input`、`special_attack_not_found`）與雙語訊息，沿用既有 array + spread + record SSOT；`combat_reactions.py` / `combat_spells.py` 的裸 `not_found` 統一為 `combat_not_found`，`combat_special_attacks.py` 拆成 `CombatNotFoundError → combat_not_found`、`SpecialAttackNotFoundError → special_attack_not_found`。MCP 端沿用 `structured_tool_error` 既有雙語粗粒度 code，不受影響。
+- 測試：新增 `tests/test_p4e_combat_error_codes.py`（四個 mapper 的 404 對應 + 全部 emitted code 集合鎖定）；`sessionMessages.test.ts` ownership test 加 P4-E 段與 `combat_state_conflict` 雙語斷言。
+- 指揮者審核：diff 無越界、無防禦式寫法；文案語氣與 P3C 一致。code 集合測試是手寫 frozenset 對手寫期望（依 prompt 要求不解析原始碼），只能鎖住已知集合、無法自動偵測新增 code——新增 REST code 時需同步改此測試與 web SSOT。
+- 驗證：pytest `test_p4b_* / p4c_* / p4d_* / p4e_* / test_m03_import_boundary` 200 collected 全通過（10 skipped）；`npm test -- --run` 85 files / 466 passed；`npm run build` 通過；`git diff --check` 通過。
+- E11 至此交付完成（實作規格 12、13 均有自動化證據）。Log 呈現的 browser 證據併入 E12 focused E2E。

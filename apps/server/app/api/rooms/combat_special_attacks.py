@@ -63,7 +63,9 @@ def _map_error(exc: Exception) -> APIError:
         return APIError(403, "table_actor_unauthorized", str(exc))
     if isinstance(exc, (TableEventSessionNotActiveError, TableEventSessionNotActivePersistenceError)):
         return APIError(409, "session_not_active", "Session is not active")
-    if isinstance(exc, (CombatNotFoundError, SpecialAttackNotFoundError)):
+    if isinstance(exc, CombatNotFoundError):
+        return APIError(404, "combat_not_found", str(exc))
+    if isinstance(exc, SpecialAttackNotFoundError):
         return APIError(404, "special_attack_not_found", str(exc))
     if isinstance(exc, (CombatStateConflictError, SpecialAttackStateConflictError)):
         return APIError(409, "combat_state_conflict", str(exc))

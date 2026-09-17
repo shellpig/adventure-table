@@ -79,7 +79,7 @@ def _map_error(exc: Exception) -> APIError:
     if isinstance(exc, (TableEventSessionNotActiveError, TableEventSessionNotActivePersistenceError)):
         return APIError(409, "session_not_active", "Session is not active")
     if isinstance(exc, (CombatNotFoundError, CombatSpellNotFoundError, CombatConcentrationNotFoundError)):
-        return APIError(404, "not_found", str(exc))
+        return APIError(404, "combat_not_found", str(exc))
     if isinstance(exc, (CombatStateConflictError, CombatSpellStateConflictError, CombatConcentrationStateConflictError)):
         return APIError(409, "combat_state_conflict", str(exc))
     if isinstance(exc, (RollInputInvalidError, ValueError)):
