@@ -1,6 +1,6 @@
 # P4-E — Quick Combat UI, DM Adjudication & AI Tool Surface 實作紀錄
 
-最後更新：2026-09-17
+最後更新：2026-09-17（E12 關門）
 
 ## 目標與邊界
 
@@ -33,7 +33,7 @@
 | E10d-2a | spell cast / AoE client 呼叫 + DM `affected_targets` 目標確認 | 實作規格 5、14 | ✅ |
 | E10d-2b | Quick Action Bar 的 Spell 動作（單體 / self / AoE propose、slot level） | 實作規格 4、14 | ✅ |
 | E11 | Chat / Log 呈現 + 雙語 copy + guide | 實作規格 12、13；測試 E.4 | ✅ |
-| E12 | focused E2E spec + Subphase 關門 gate | 測試指南 P4-E 全段 | ⬜ |
+| E12 | focused E2E spec + Subphase 關門 gate | 測試指南 P4-E 全段 | ✅ |
 
 步驟粒度可在實作中再切；新增子步以 `E9a` 之類接續，不重編已完成項目。
 
@@ -284,3 +284,14 @@ E10a / E10b / E10c-1 / E10c-2 / E10d-1 / E10d-2a / E10d-2b 全部交付並驗證
 - 指揮者審核：diff 無越界、無防禦式寫法；文案語氣與 P3C 一致。code 集合測試是手寫 frozenset 對手寫期望（依 prompt 要求不解析原始碼），只能鎖住已知集合、無法自動偵測新增 code——新增 REST code 時需同步改此測試與 web SSOT。
 - 驗證：pytest `test_p4b_* / p4c_* / p4d_* / p4e_* / test_m03_import_boundary` 200 collected 全通過（10 skipped）；`npm test -- --run` 85 files / 466 passed；`npm run build` 通過；`git diff --check` 通過。
 - E11 至此交付完成（實作規格 12、13 均有自動化證據）。Log 呈現的 browser 證據併入 E12 focused E2E。
+
+### E12 — focused E2E spec + Subphase 關門 gate
+
+- 2026-09-17，指揮者自己做（contract-bearing、需跑 Docker E2E）。commit `08e46b19`（code）+ 本 closeout docs commit。
+- 交付：`apps/web/e2e/p4e-quick-combat.spec.ts`——測試指南 E.1 十點的單一 DM + Player journey：Start Combat（Party auto include）→ SRD Goblin + Quick Enemy「Bandit Thug」（AC 1、Position Note）→ DM Request Initiative、Player 自己 entry Roll Initiative、DM 補怪物、Finalize → enemy secrecy（Player 卡片 / detail API / Log 皆無敵人 HP、AC；DM 全有）→ Player 自己 turn Request Attack → DM range adjudication「In range」→ Player pending roll → 命中後 DM 卡片 HP、detail API、DM Log 行三者一致 → Advance Turn 後 Player action bar `waiting`、REST off-turn attack 409 且 adjudication 零 row → End Combat 兩側 Stage 消失。natural 1 以最多 6 輪迴圈處理。
+- **E2E 揭露的兩個產品缺陷（unit / API 測試都沒抓到，因為都是單頁 refresh 路徑）**：
+  1. `CombatService` 全部 mutation 與 `CombatOrderService.reorder_running` 不呼叫 `TableEventService.notifier.notify`，其他參與者的 long-poll 要等 30 s timeout 才看到 Start / 加敵 / advance / End（其他 P4-C～E service 都有）。修：`CombatService._notify(actor)`；`tests/test_p4e_combat_wake_notifications.py`（stash 驗證修前 fail）。
+  2. 前端 `isCombatEvent` 只認 `combat.*`，initiative / attack 的 `roll.requested` / `roll.resolved` 不觸發 Combat refetch，Player 看不到自己的 Roll Initiative 按鈕。修：帶 `combat_id` 的 `roll.*` 也算；initiative `roll.resolved` projection 補 `combat_id`（其他 combat roll event 本來就有）；`sessionCombat.test.ts` +2 斷言。
+- 新增 `.github/workflows/p4e-non-e2e.yml`（P4-D 版改 branch / focused / `test_p4e_postgres_migration.py`），run 35235702182 四個 job 全 success，PostgreSQL gate tests=37 passed=37 skipped=0。
+- 關門 gate：全套 backend pytest 1693 passed / 52 skipped（PostgreSQL env-gated）；`npm test -- --run` 85 files / 466 passed；`npm run build` 通過；`docker compose config` exit 0；`npm run test:e2e:docker` 主套件 124 passed / 4 skipped（12.3m，與 backend 全套並行）+ disabled-pack 7 passed。
+- Closeout：`docs/P4/P4-E_CLOSEOUT.md`（實作規格 1～16 逐條證據；第 7 點標為部分，Monster reveal / bookkeeping UI 歸 P4-F）。`--no-ff` 合併回 `main` 待使用者指示。
