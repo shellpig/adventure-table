@@ -105,6 +105,12 @@ const dmCombatDetail: CombatDetailView = {
         combat_status: 'active',
         dm_notes: 'Secretly carrying a magical key',
         position_note: 'Behind barrels',
+        visibility: 'public',
+        reveal: {
+          armor_class: false,
+          description: false,
+          position_note: false,
+        },
         conditions: ['frightened'],
         effects: [],
       },
@@ -377,4 +383,42 @@ describe('SessionCombatStage component', () => {
 
     expect(markup).toContain(copyEn.combatStatusFled)
   })
+
+  it('renders monster controls for monster entries when DM, never in player view', () => {
+    const dmMarkup = renderStage(
+      <SessionCombatStage
+        combat={dmCombatDetail}
+        myEntryIds={['entry-mira']}
+        copy={copyEn}
+        isCurrentDm={true}
+        roomId="room"
+        campaignId="campaign"
+        sessionId="session"
+        token="token"
+        events={[]}
+        onError={() => undefined}
+        refresh={() => undefined}
+      />,
+    )
+    expect(dmMarkup).toContain('data-monster-controls="entry-goblin"')
+    expect(dmMarkup).not.toContain('data-monster-controls="entry-mira"')
+
+    const playerMarkup = renderStage(
+      <SessionCombatStage
+        combat={playerCombatDetail}
+        myEntryIds={['entry-mira']}
+        copy={copyEn}
+        isCurrentDm={false}
+        roomId="room"
+        campaignId="campaign"
+        sessionId="session"
+        token="token"
+        events={[]}
+        onError={() => undefined}
+        refresh={() => undefined}
+      />,
+    )
+    expect(playerMarkup).not.toContain('data-monster-controls')
+  })
 })
+

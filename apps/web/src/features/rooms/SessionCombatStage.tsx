@@ -6,6 +6,7 @@ import type { TableEvent } from '../../api/sessions'
 import { SessionCombatActionBar } from './SessionCombatActionBar'
 import { SessionCombatAdjudicationPanel } from './SessionCombatAdjudicationPanel'
 import { SessionCombatDmControls } from './SessionCombatDmControls'
+import { SessionCombatMonsterControls } from './SessionCombatMonsterControls'
 import {
   combatantFor,
   combatInjuryLabel,
@@ -350,6 +351,23 @@ export function SessionCombatStage({
                       <span className="session-combat__stat-label">{copy.combatDmNotes}:</span>
                       <span>{proj.dm_notes}</span>
                     </div>
+                  ) : null}
+                  {isCurrentDm &&
+                  entry.subject_kind === 'monster' &&
+                  entry.monster_instance_id !== null ? (
+                    <SessionCombatMonsterControls
+                      combat={combat}
+                      entry={entry}
+                      projection={proj}
+                      instanceId={entry.monster_instance_id}
+                      copy={copy}
+                      roomId={roomId}
+                      campaignId={campaignId}
+                      sessionId={sessionId}
+                      token={token}
+                      onError={onError}
+                      refresh={refreshCombatResources}
+                    />
                   ) : null}
                 </div>
               )

@@ -17,7 +17,7 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 | F1 | Monster 0 HP outcome：DM 選 dead / unconscious / surrendered / fled / other；migration `0027` 放寬 `combat_entries.status` / `monster_instances.combat_status`；REST + MCP + event | 實作規格 P4-C 10、P4-E 7、P4-F 1；規格企劃「Monster 0 HP / Combat End」 | ✅ |
 | F2 | Monster Instance bookkeeping：DM PATCH name / visibility / position_note + reveal toggles（AC / description / position note）；`MonsterRevealState` 持久化（migration `0028`）；REST + MCP + event | 實作規格 P4-E 7（部分→完整）、3 | ✅ |
 | F3a | F3 前半：DM detail projection 帶 `reveal` flags（Player 不得收到）；web client `setMonsterOutcome` / `updateMonsterInstance`；新 entry status 標籤 unconscious / surrendered / fled；combat log 兩個新 event；雙語 | 實作規格 P4-E 2、3、12、13 | ✅ |
-| F3b | F3 後半：DM 卡片 per-monster 控制元件（outcome / visibility / reveal toggles / position note）接進 Stage；Player 不渲染；雙語 copy；tests | 實作規格 P4-E 1、2、7、13 | ⬜ |
+| F3b | F3 後半：DM 卡片 per-monster 控制元件（outcome / visibility / reveal toggles / position note）接進 Stage；Player 不渲染；雙語 copy；tests | 實作規格 P4-E 1、2、7、13 | ✅ |
 | F4 | `grappled` escape action + Character state PATCH DTO 補 `concentration` / `exhaustion_level` / `death_saves` / `temporary_effects` | P4-C / P4-D closeout 留下 | ⬜ |
 | F5 | 真 PostgreSQL + server restart / reconnect：Round ≥ 2、pending save 或 reaction → restart → 狀態完整、resolve 一次不重擲 | 實作規格 P4-F 3；測試指南 F.1 | ⬜ |
 | F6 | Full browser journey spec（F.2 全項：spell / save、damage / healing、condition、concentration 或 reaction、0 HP outcome、Session boundary resume、End cleanup）+ `P4 Full-Stack E2E` workflow | 實作規格 P4-F 1、2、4、5、6；測試指南 F.2 | ⬜ |
@@ -53,5 +53,13 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 - 交付：`project_combatant` DM audience 且 `kind == "monster"` 時加 `reveal: {armor_class, description, position_note}`；Player friendly / enemy projection 不帶該 key（secrecy test forbidden_keys 加 `reveal`，own character 斷言無 `reveal`；`test_p4f_monster_reveal_toggles` 斷言 DM `reveal` 隨 PATCH 翻轉）。web `api/combat.ts`：`CombatantProjection.reveal?`、`MonsterOutcome` / `MonsterOutcomeInput` / `MonsterRevealPatch` / `MonsterInstancePatchInput`、`setMonsterOutcome`（POST `.../combat/entries/{entryId}/outcome`）、`updateMonsterInstance`（PATCH `.../monster-instances/{instanceId}`）。`sessionCopy.ts` 加 `combatStatusUnconscious` / `combatStatusSurrendered` / `combatStatusFled`（雙語），`SessionCombatStage.getStatusLabel` 處理三種新 status。`sessionCombatLog.ts`：`combat.monster_outcome_set`（`<entry> · <outcome label>`，note 作 detail）與 `combat.monster_instance_updated`（`<name> · 敵人資訊已更新`，`changed` 欄位名 localized 作 detail，不印 reveal bool）；copy 10 key 雙語。
 - **Claude 審核修正**：只有 vitest 案例名多了 `(i)` 前綴，直接改掉；其餘零修改。
 - 測試：pytest 焦點 5 檔 32 passed；P4-B～F + M04-C + M03 boundary 全通過（exit 0）；`npm test -- --run` 85 files / 469 passed；`npm run build` 乾淨。長行數對照 HEAD 無新增。
-- 留給 F3b：per-card DM 控制元件與 Stage 接線、Player 不渲染測試。
+- 留給 F3b：per-card DM 控制元件與 Stage 接線、Player 不渲染測試。（已完成，見下）
+
+### F3b — DM 卡片 Monster 控制元件
+
+- 2026-09-18，agy worker（Gemini 3.8 Flash (High)，1 回合 4.5 分鐘），Claude 審核與 commit。prompt：`C:\_work\AI_Work\Tools\agy-runs\agy-p4f-f3b.prompt.txt`。
+- 交付：新元件 `SessionCombatMonsterControls.tsx`（root `data-monster-controls=<entry.id>`）：reveal 三個 checkbox（`data-monster-reveal`，由 DM projection `reveal` 驅動，缺 `reveal` 時不渲染該列）、visibility 切換鈕（`data-monster-visibility`）、name + position note 表單（`data-monster-save`，只送有變更的欄位，空 note 送 `null`，無變更不呼叫 API）、outcome 表單（`data-monster-outcome` / `-note` / `-submit`，只在 `entry.status === 'active'` 渲染；running 且該 entry 為 current turn 時停用並顯示 `combatOutcomeCurrentTurnHint`；`other` 缺 note 停用）。全部走 `runCombatMutation` + `requestId`。`SessionCombatStage` 只在 `isCurrentDm && subject_kind === 'monster' && monster_instance_id !== null` 時於卡片尾端渲染，`refresh` 用 `refreshCombatResources`。`sessionCopy.ts` 19 個 key 雙語；`sessionTable.css` 兩個 class。
+- **Claude 審核修正**：`projection.reveal && typeof projection.reveal === 'object'` 多餘 guard → `projection.reveal ?? null`；vitest 案例名 `(1)`～`(6)` 前綴移除。其餘零修改。
+- 測試：`SessionCombatMonsterControls.test.tsx` 6 條（reveal 全 false / armor_class true 勾選 / current turn 停用 + hint / fled 無 outcome 但保留其他控制 / hidden 顯示「Show to Players」/ zh-TW 文案）；`SessionCombatStage.test.tsx` +1（DM 有 goblin 控制、character 卡無、Player 完全無 `data-monster-controls`）。`npm test -- --run` 86 files / 476 passed；`npm run build` 乾淨。對照 `e2e/p4e-quick-combat.spec.ts` 的卡片斷言（`not.toContainText('Position Note:')`、scoped `getByLabel`）不受新表單影響；瀏覽器實測留給 F6 full journey。
+- F3 完成。留給 F4：`grappled` escape action + Character state PATCH DTO。
 
