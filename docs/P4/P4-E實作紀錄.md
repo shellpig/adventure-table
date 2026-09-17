@@ -266,3 +266,11 @@ E10a / E10b / E10c-1 / E10c-2 / E10d-1 / E10d-2a / E10d-2b 全部交付並驗證
 - 本機驗證：85 files / 461 passed，`npm run build` 通過，`git diff --check` 通過；最終 tree 對上一有效 HEAD 僅兩個預期檔案有差異。
 - Worker 操作問題：回合多次誤建空檔 `__do_not_use*`（commit `95267fd4` 等），均已由後續 worker commits 刪除；歷史保留，不 force/rebase。此類探測提交不應重複，下一步 prompt 必須再次禁止 create-file 探測。
 - 尚未完成：special-attack與其他既有 lifecycle/action/entry events、runtime attack 名稱雙語接線、E11b parity、browser證據；E11仍未驗收完成。
+
+#### E11a-fix3 — 其餘 Combat events + runtime attack 名稱 provenance
+
+- 2026-09-17，本機 worker 交付、Claude 收尾與 commit。Server：`ResolvedAttack` 新增 `content_ref` / `presentation_field`（inventory 攻擊指向 item StableKey 的 `name`；Monster 攻擊依 template `actions[]` 名稱對回 `data.actions.<idx>.name`，Quick Enemy / 自訂名稱為 `None`），隨 attack payload、`AttackDefinitionView` / `AttackRequestView` / adjudication view 與 `roll.resolved` 一起送出；新增 `tests/test_p4e_attack_provenance.py`（HTTP / MCP parity、secrecy、custom name 不假造 content ref）。
+- Web：`sessionCombatLog.ts` 補 `combat.entry_added` / `entry_withdrawn` / `entry_removed` / `initiative_reordered` / `action_used` / `reaction_window` / `saves_requested` / `special_attack_*` 三種事件的 compact 呈現與雙語 copy；attack 名稱改由 `content_ref` + `presentation_field` 經 `useContentPresentations.fieldFor` 解析，runtime 自訂名稱保留原字串；新增 `combatLogContentFields` 供 `SessionTableSurface` 帶入額外 presentation field。所有 payload 欄位名已對照 `persistence/combat/lifecycle.py`、`order.py`、`special_attacks.py`、`core_rolls.py`。
+- Claude 收尾：worker 留下的 `saves_requested` 把 ability 吞成 null，改為 fallback 到 ability 短碼（`srd5.1:ability:dex` → `DEX`）；`sessionCombatLog.test.ts` 68 處呼叫缺第 5 個 resolver 導致 `npm run build` 型別失敗，已補 `fallbackContentField`；移除 `combatLogContentReferences` 內重複的 `ability_ref` 收集。`test_p4e_session_context_combat.py` 第 5 條同時加嚴 briefing parity 斷言（Player 不得出現 DM-only tool），briefing 本文未改。
+- 驗證：`npm test -- --run` 85 files / 465 passed；`npm run build` 通過；`pytest tests/test_p4e_*.py tests/test_p4d_*.py tests/test_p4c_*.py` 通過（含 skip）；`git diff --check` 通過。
+- 尚未完成：E11b guide / catalog / briefing parity 正式交付、browser 證據、E12。E11 仍未驗收完成。

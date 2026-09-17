@@ -77,6 +77,8 @@ class StoredAttackRequest:
     attack_bonus: int
     target_ac: int
     status: str
+    content_ref: str | None = None
+    presentation_field: str | None = None
 
 
 @dataclass(frozen=True)
@@ -133,6 +135,8 @@ def _attack_payload(attack: ResolvedAttack) -> dict[str, Any]:
             for item in attack.modifier_sources
         ],
         "notes": list(attack.notes),
+        "content_ref": attack.content_ref,
+        "presentation_field": attack.presentation_field,
     }
 
 
@@ -156,6 +160,8 @@ def _attack_from_payload(payload: dict[str, Any]) -> ResolvedAttack:
             for item in payload.get("modifier_sources", [])
         ),
         notes=tuple(str(item) for item in payload.get("notes", [])),
+        content_ref=payload.get("content_ref"),
+        presentation_field=payload.get("presentation_field"),
     )
 
 
@@ -181,6 +187,8 @@ def _request_from_row(row: Any) -> StoredAttackRequest:
         attack_bonus=int(attack["attack_bonus"]),
         target_ac=int(payload["target_ac"]),
         status=str(row["resolution_status"]),
+        content_ref=attack.get("content_ref"),
+        presentation_field=attack.get("presentation_field"),
     )
 
 
@@ -375,6 +383,8 @@ class CombatAttackRepository:
                 "target_entry_id": str(target_entry_id),
                 "target_is_hostile": bool(target["is_hostile"]),
                 "source_ref": attack.source_ref,
+                "content_ref": attack.content_ref,
+                "presentation_field": attack.presentation_field,
             }
             connection.execute(
                 update(session_events).where(session_events.c.id == event_id).values(
@@ -679,6 +689,8 @@ class CombatAttackRepository:
                 "attack": {
                     "source_ref": resolved_attack.source_ref,
                     "name": resolved_attack.name,
+                    "content_ref": resolved_attack.content_ref,
+                    "presentation_field": resolved_attack.presentation_field,
                     "modifier_mode": mode.value,
                     "raw_d20": list(attack_outcome.raw_d20),
                     "selected_d20": attack_outcome.selected_d20,

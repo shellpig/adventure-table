@@ -224,6 +224,8 @@ class AttackDefinitionResolver:
                     ),
                     modifier_sources=tuple(sources),
                     notes=(f"item_ref={inventory.item_ref}",),
+                    content_ref=inventory.item_ref,
+                    presentation_field="name",
                 )
             )
         return tuple(attacks)
@@ -233,6 +235,15 @@ class AttackDefinitionResolver:
         raw_actions = monster.rules_snapshot.get("actions", [])
         if not isinstance(raw_actions, list):
             return ()
+        template_key = monster.template_key
+        template_entry = (
+            self.registry.get_optional(template_key) if template_key else None
+        )
+        template_actions = (
+            template_entry.data.get("actions", [])
+            if template_entry and isinstance(template_entry.data, dict)
+            else []
+        )
         attacks: list[ResolvedAttack] = []
         for index, raw in enumerate(raw_actions):
             if not isinstance(raw, dict) or raw.get("kind") != "attack":
@@ -259,6 +270,20 @@ class AttackDefinitionResolver:
                 continue
             kind = AttackKind.MELEE if attack_kind_raw.startswith("melee") else AttackKind.RANGED
             name = str(raw.get("name") or f"Attack {index + 1}")
+            content_ref = None
+            presentation_field = None
+            if template_entry:
+                canonical_idx: int | None = None
+                if index < len(template_actions) and isinstance(template_actions[index], dict) and template_actions[index].get("name") == name:
+                    canonical_idx = index
+                else:
+                    for c_idx, c_action in enumerate(template_actions):
+                        if isinstance(c_action, dict) and c_action.get("name") == name:
+                            canonical_idx = c_idx
+                            break
+                if canonical_idx is not None:
+                    content_ref = template_key
+                    presentation_field = f"data.actions.{canonical_idx}.name"
             attacks.append(
                 ResolvedAttack(
                     source_ref=f"monster-action:{index}",
@@ -270,6 +295,8 @@ class AttackDefinitionResolver:
                         ModifierSource(source="monster_snapshot:attack_bonus", value=attack_bonus),
                     ),
                     notes=(f"monster_instance_id={monster.id}",),
+                    content_ref=content_ref,
+                    presentation_field=presentation_field,
                 )
             )
         return tuple(attacks)

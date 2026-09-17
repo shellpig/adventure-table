@@ -1,6 +1,6 @@
 import type { TableEvent } from '../../api/sessions'
 import type { Locale } from '../../i18n/locale'
-import type { ContentNameResolver } from '../../i18n/useContentPresentations'
+import type { ContentFieldResolver, ContentNameResolver } from '../../i18n/useContentPresentations'
 
 export type CombatEntryLabelResolver = (entryId: string) => string | null
 
@@ -65,6 +65,35 @@ type CombatLogCopy = {
   adjudicationAffectedTargets: string
   adjudicationOpportunityAttack: string
   adjudicationSpecial: string
+  entryAdded: string
+  entryWithdrawn: string
+  entryRemoved: string
+  initiativeReordered: string
+  actionUsed: string
+  actionDash: string
+  actionDisengage: string
+  actionDodge: string
+  actionHelp: string
+  actionHide: string
+  actionReady: string
+  actionSearch: string
+  actionUseObject: string
+  actionOther: string
+  reactionWindowOpened: string
+  reactionWindowClosed: string
+  specialAttack: string
+  grapple: string
+  shove: string
+  shoveProne: string
+  shovePush: string
+  waitingForRoll: string
+  success: string
+  failure: string
+  inReach: string
+  outOfReach: string
+  savesRequested: string
+  attackerTotal: string
+  targetTotal: string
 }
 
 const COMBAT_LOG_COPY = {
@@ -124,6 +153,35 @@ const COMBAT_LOG_COPY = {
     adjudicationAffectedTargets: '受影響目標',
     adjudicationOpportunityAttack: '機會攻擊',
     adjudicationSpecial: '特殊裁定',
+    entryAdded: '加入戰鬥',
+    entryWithdrawn: '脫離戰鬥',
+    entryRemoved: '移出戰鬥',
+    initiativeReordered: '先攻順序調整',
+    actionUsed: '執行動作',
+    actionDash: '疾走',
+    actionDisengage: '撤離',
+    actionDodge: '閃避',
+    actionHelp: '協助',
+    actionHide: '躲藏',
+    actionReady: '準備動作',
+    actionSearch: '搜尋',
+    actionUseObject: '使用物品',
+    actionOther: '其他動作',
+    reactionWindowOpened: '反應窗口開啟',
+    reactionWindowClosed: '反應窗口關閉',
+    specialAttack: '特殊攻擊',
+    grapple: '擒抱',
+    shove: '推撞',
+    shoveProne: '推倒',
+    shovePush: '推開',
+    waitingForRoll: '等待對抗擲骰',
+    success: '成功',
+    failure: '失敗',
+    inReach: '在觸及範圍內',
+    outOfReach: '超出觸及範圍',
+    savesRequested: '等待豁免檢定',
+    attackerTotal: '攻擊方總值',
+    targetTotal: '目標總值',
   },
   en: {
     combatStarted: 'Combat started',
@@ -181,6 +239,35 @@ const COMBAT_LOG_COPY = {
     adjudicationAffectedTargets: 'Affected targets',
     adjudicationOpportunityAttack: 'Opportunity attack',
     adjudicationSpecial: 'Special',
+    entryAdded: 'Joined combat',
+    entryWithdrawn: 'Withdrawn',
+    entryRemoved: 'Removed from combat',
+    initiativeReordered: 'Initiative reordered',
+    actionUsed: 'Action used',
+    actionDash: 'Dash',
+    actionDisengage: 'Disengage',
+    actionDodge: 'Dodge',
+    actionHelp: 'Help',
+    actionHide: 'Hide',
+    actionReady: 'Ready',
+    actionSearch: 'Search',
+    actionUseObject: 'Use object',
+    actionOther: 'Other action',
+    reactionWindowOpened: 'Reaction window opened',
+    reactionWindowClosed: 'Reaction window closed',
+    specialAttack: 'Special attack',
+    grapple: 'Grapple',
+    shove: 'Shove',
+    shoveProne: 'Shove prone',
+    shovePush: 'Shove push',
+    waitingForRoll: 'Awaiting contest roll',
+    success: 'Success',
+    failure: 'Failure',
+    inReach: 'In reach',
+    outOfReach: 'Out of reach',
+    savesRequested: 'Saving throws requested',
+    attackerTotal: 'Attacker total',
+    targetTotal: 'Target total',
   },
 } satisfies Record<Locale, CombatLogCopy>
 
@@ -268,6 +355,53 @@ function adjudicationKindLabel(kind: string | null, copy: CombatLogCopy): string
   }
 }
 
+function actionKindLabel(kind: string | null, copy: CombatLogCopy): string {
+  switch (kind) {
+    case 'dash':
+      return copy.actionDash
+    case 'disengage':
+      return copy.actionDisengage
+    case 'dodge':
+      return copy.actionDodge
+    case 'help':
+      return copy.actionHelp
+    case 'hide':
+      return copy.actionHide
+    case 'ready':
+      return copy.actionReady
+    case 'search':
+      return copy.actionSearch
+    case 'use_object':
+      return copy.actionUseObject
+    case 'attack':
+      return copy.attack
+    case 'spell':
+    case 'cast_spell':
+      return copy.spell
+    case 'grapple':
+      return copy.grapple
+    case 'shove':
+      return copy.shove
+    default:
+      return copy.actionOther
+  }
+}
+
+function specialAttackKindLabel(kind: string | null, copy: CombatLogCopy): string {
+  switch (kind) {
+    case 'grapple':
+      return copy.grapple
+    case 'shove_prone':
+      return copy.shoveProne
+    case 'shove_push':
+      return copy.shovePush
+    case 'shove':
+      return copy.shove
+    default:
+      return copy.specialAttack
+  }
+}
+
 function hpDetail(source: Record<string, unknown>, copy: CombatLogCopy): string | null {
   const after = asRecord(source.after)
   const currentHp = numberField(after, 'current_hp')
@@ -326,14 +460,27 @@ function isContentReference(reference: string): boolean {
 export function combatLogContentReferences(events: readonly TableEvent[]): string[] {
   const references = new Set<string>()
   for (const event of events) {
+    const abilityRef = stringField(event.payload, 'ability_ref')
+    if (event.kind === 'combat.saves_requested' && abilityRef) references.add(abilityRef)
     const spellRef = stringField(event.payload, 'spell_ref')
     if (spellRef) references.add(spellRef)
 
     if (event.kind === 'roll.resolved' && typeof event.payload.combat_id === 'string') {
       const resolution = asRecord(event.payload.attack_resolution)
       const attack = resolution ? asRecord(resolution.attack) : null
-      const attackSourceRef = attack ? stringField(attack, 'source_ref') : null
-      if (attackSourceRef && isContentReference(attackSourceRef)) references.add(attackSourceRef)
+      const contentRef = attack ? stringField(attack, 'content_ref') : null
+      if (contentRef) {
+        references.add(contentRef)
+      } else {
+        const attackSourceRef = attack ? stringField(attack, 'source_ref') : null
+        if (attackSourceRef && isContentReference(attackSourceRef)) references.add(attackSourceRef)
+      }
+    }
+
+    if (event.kind === 'combat.special_attack_roll_resolved') {
+      const res = asRecord(event.payload.resolution_result)
+      const condition = res ? stringField(res, 'condition_to_apply') : null
+      if (condition) references.add(`srd5.1:condition:${condition}`)
     }
 
     const domainEvents = event.payload.domain_events
@@ -346,6 +493,27 @@ export function combatLogContentReferences(events: readonly TableEvent[]): strin
     }
   }
   return [...references]
+}
+
+export function combatLogContentFields(events: readonly TableEvent[]): Record<string, string[]> {
+  const fieldsByRef: Record<string, Set<string>> = {}
+  for (const event of events) {
+    if (event.kind === 'roll.resolved' && typeof event.payload.combat_id === 'string') {
+      const resolution = asRecord(event.payload.attack_resolution)
+      const attack = resolution ? asRecord(resolution.attack) : null
+      const contentRef = attack ? stringField(attack, 'content_ref') : null
+      const presentationField = attack ? stringField(attack, 'presentation_field') : null
+      if (contentRef && presentationField) {
+        if (!fieldsByRef[contentRef]) fieldsByRef[contentRef] = new Set()
+        fieldsByRef[contentRef].add(presentationField)
+      }
+    }
+  }
+  const result: Record<string, string[]> = {}
+  for (const [ref, fields] of Object.entries(fieldsByRef)) {
+    result[ref] = [...fields]
+  }
+  return result
 }
 
 function formatDamageOrHealing(
@@ -373,6 +541,7 @@ function formatAttack(
   copy: CombatLogCopy,
   resolveEntryLabel: CombatEntryLabelResolver,
   resolveContentName: ContentNameResolver,
+  resolveContentField: ContentFieldResolver,
 ): CombatLogPresentation | null {
   const resolution = asRecord(payload.attack_resolution)
   if (!resolution) return null
@@ -382,9 +551,20 @@ function formatAttack(
   const attacker = entryLabel(payload, 'attacker_entry_id', resolveEntryLabel)
   const target = entryLabel(payload, 'target_entry_id', resolveEntryLabel)
   const attackSourceRef = stringField(attack, 'source_ref')
-  const attackName = attackSourceRef && isContentReference(attackSourceRef)
-    ? resolveContentName(attackSourceRef, copy.attack)
-    : stringField(attack, 'name') ?? copy.attack
+  const contentRef = stringField(attack, 'content_ref')
+  const presentationField = stringField(attack, 'presentation_field')
+
+  let attackName: string
+  if (contentRef && presentationField) {
+    attackName = resolveContentField(contentRef, presentationField, copy.attack)
+  } else if (contentRef) {
+    attackName = resolveContentName(contentRef, copy.attack)
+  } else if (attackSourceRef && isContentReference(attackSourceRef)) {
+    attackName = resolveContentName(attackSourceRef, copy.attack)
+  } else {
+    attackName = stringField(attack, 'name') ?? copy.attack
+  }
+
   const hit = booleanField(attack, 'hit')
   const critical = booleanField(attack, 'critical') === true
   const outcome = critical ? copy.critical : hit === true ? copy.hit : hit === false ? copy.miss : null
@@ -613,6 +793,7 @@ export function formatCombatLogEvent(
   locale: Locale,
   resolveEntryLabel: CombatEntryLabelResolver,
   resolveContentName: ContentNameResolver,
+  resolveContentField: ContentFieldResolver,
 ): CombatLogPresentation | null {
   const copy = COMBAT_LOG_COPY[locale]
   const payload = event.payload
@@ -622,11 +803,43 @@ export function formatCombatLogEvent(
       return { summary: copy.combatStarted, detail: null }
     case 'combat.ended':
       return { summary: copy.combatEnded, detail: null }
+    case 'combat.entry_added': {
+      const displayName = stringField(payload, 'display_name')
+      const target = displayName ?? entryLabel(payload, 'entry_id', resolveEntryLabel)
+      return {
+        summary: [target, copy.entryAdded].filter(Boolean).join(' · ') || copy.entryAdded,
+        detail: null,
+      }
+    }
+    case 'combat.entry_withdrawn': {
+      const target = entryLabel(payload, 'entry_id', resolveEntryLabel)
+      return {
+        summary: [target, copy.entryWithdrawn].filter(Boolean).join(' · ') || copy.entryWithdrawn,
+        detail: null,
+      }
+    }
+    case 'combat.entry_removed': {
+      const target = entryLabel(payload, 'entry_id', resolveEntryLabel)
+      return {
+        summary: [target, copy.entryRemoved].filter(Boolean).join(' · ') || copy.entryRemoved,
+        detail: null,
+      }
+    }
     case 'combat.initiative_ordered': {
       const round = numberField(payload, 'round')
       return {
         summary: copy.initiative,
         detail: round === null ? null : localizedTemplate(copy.round, 'round', round),
+      }
+    }
+    case 'combat.initiative_reordered': {
+      const ids = Array.isArray(payload.ordered_entry_ids) ? payload.ordered_entry_ids : []
+      const names = ids
+        .map((id) => (typeof id === 'string' ? resolveEntryLabel(id) : null))
+        .filter(Boolean)
+      return {
+        summary: copy.initiativeReordered,
+        detail: names.length > 0 ? names.join(' → ') : null,
       }
     }
     case 'combat.turn_advanced': {
@@ -635,6 +848,23 @@ export function formatCombatLogEvent(
       return {
         summary: [copy.turn, turnEntry].filter(Boolean).join(' · '),
         detail: round === null ? null : localizedTemplate(copy.round, 'round', round),
+      }
+    }
+    case 'combat.action_used': {
+      const actor = entryLabel(payload, 'entry_id', resolveEntryLabel)
+      const kind = actionKindLabel(stringField(payload, 'action_kind'), copy)
+      return {
+        summary: [actor, kind].filter(Boolean).join(' · ') || copy.actionUsed,
+        detail: null,
+      }
+    }
+    case 'combat.reaction_window': {
+      const actor = entryLabel(payload, 'entry_id', resolveEntryLabel)
+      const open = booleanField(payload, 'open')
+      const windowStatus = open === true ? copy.reactionWindowOpened : copy.reactionWindowClosed
+      return {
+        summary: [actor, windowStatus].filter(Boolean).join(' · ') || copy.reaction,
+        detail: null,
       }
     }
     case 'combat.damage_applied':
@@ -650,6 +880,23 @@ export function formatCombatLogEvent(
       return formatConcentration(payload, copy, resolveEntryLabel)
     case 'combat.concentration_changed':
       return formatConcentrationChange(payload, copy, resolveEntryLabel)
+    case 'combat.saves_requested': {
+      const targetIds = Array.isArray(payload.target_entry_ids) ? payload.target_entry_ids : []
+      const targetLabels = targetIds
+        .map((id) => (typeof id === 'string' ? resolveEntryLabel(id) : null))
+        .filter(Boolean)
+      const targetText = targetLabels.length > 0
+        ? targetLabels.join(', ')
+        : targetIds.length > 0
+          ? `${targetIds.length} ${copy.targets}`
+          : null
+      const abilityRef = stringField(payload, 'ability_ref')
+      const abilityFallback = abilityRef?.split(':').pop()?.toUpperCase() ?? null
+      return {
+        summary: [targetText, copy.savingThrow, copy.savesRequested].filter(Boolean).join(' · '),
+        detail: abilityRef ? resolveContentName(abilityRef, abilityFallback ?? abilityRef) : null,
+      }
+    }
     case 'combat.save_resolved':
       return formatSave(payload, copy, resolveEntryLabel)
     case 'combat.death_save_resolved':
@@ -662,9 +909,83 @@ export function formatCombatLogEvent(
       return formatAdjudication(payload, copy, resolveEntryLabel, false)
     case 'combat.adjudication_resolved':
       return formatAdjudication(payload, copy, resolveEntryLabel, true)
+    case 'combat.special_attack_adjudication_requested': {
+      const attacker = entryLabel(payload, 'attacker_entry_id', resolveEntryLabel)
+      const target = entryLabel(payload, 'target_entry_id', resolveEntryLabel)
+      const kind = specialAttackKindLabel(stringField(payload, 'kind'), copy)
+      return {
+        summary: [
+          attacker,
+          `${copy.adjudication}: ${kind}`,
+          target ? `→ ${target}` : null,
+          copy.adjudicationRequested,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        detail: null,
+      }
+    }
+    case 'combat.special_attack_adjudicated': {
+      const attacker = entryLabel(payload, 'attacker_entry_id', resolveEntryLabel)
+      const target = entryLabel(payload, 'target_entry_id', resolveEntryLabel)
+      const kind = specialAttackKindLabel(stringField(payload, 'kind'), copy)
+      const inReach = booleanField(payload, 'in_reach')
+      const reachStatus = inReach === true ? copy.inReach : inReach === false ? copy.outOfReach : null
+      return {
+        summary: [
+          attacker,
+          kind ? `${copy.adjudication}: ${kind}` : copy.adjudication,
+          reachStatus,
+          target ? `→ ${target}` : null,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        detail: null,
+      }
+    }
+    case 'combat.special_attack_roll_resolved': {
+      const target = entryLabel(payload, 'target_entry_id', resolveEntryLabel)
+      const total = numberField(payload, 'total')
+      const res = asRecord(payload.resolution_result)
+      if (!res || stringField(payload, 'status') === 'waiting_for_roll') {
+        return {
+          summary: [target, copy.specialAttack, copy.waitingForRoll].filter(Boolean).join(' · '),
+          detail: total === null ? null : `${copy.total} ${total}`,
+        }
+      }
+      const outcomeStatus = stringField(res, 'status')
+      const outcome = outcomeStatus === 'success'
+        ? copy.success
+        : outcomeStatus === 'failure'
+          ? copy.failure
+          : null
+      const kind = specialAttackKindLabel(stringField(res, 'kind'), copy)
+      const attackerTotal = numberField(res, 'attacker_total')
+      const targetTotal = numberField(res, 'target_total')
+      const pushDistance = numberField(res, 'push_distance_ft')
+      const condition = stringField(res, 'condition_to_apply')
+      let conditionLabel: string | null = null
+      if (condition) {
+        const resolved = resolveContentName(`srd5.1:condition:${condition}`, copy.condition)
+        conditionLabel = resolved === copy.condition ? copy.condition : `${copy.condition}: ${resolved}`
+      }
+
+      const summaryParts = [target, kind, outcome].filter(Boolean)
+      const detailParts = [
+        attackerTotal !== null ? `${copy.attackerTotal} ${attackerTotal}` : null,
+        targetTotal !== null ? `${copy.targetTotal} ${targetTotal}` : null,
+        pushDistance !== null && pushDistance > 0 ? `${pushDistance} ft` : null,
+        conditionLabel,
+      ].filter(Boolean)
+
+      return {
+        summary: summaryParts.join(' · ') || copy.specialAttack,
+        detail: detailParts.length > 0 ? detailParts.join(' · ') : null,
+      }
+    }
     case 'roll.resolved':
       return typeof payload.combat_id === 'string'
-        ? formatAttack(payload, copy, resolveEntryLabel, resolveContentName)
+        ? formatAttack(payload, copy, resolveEntryLabel, resolveContentName, resolveContentField)
         : null
     default:
       return null

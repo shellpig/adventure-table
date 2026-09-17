@@ -221,6 +221,8 @@ export type AttackDefinitionView = {
   damage_parts: Array<Record<string, unknown>>
   modifier_sources: Array<Record<string, unknown>>
   notes: string[]
+  content_ref?: string | null
+  presentation_field?: string | null
 }
 
 export type CastableSpellView = {

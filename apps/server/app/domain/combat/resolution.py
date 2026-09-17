@@ -89,6 +89,8 @@ class ResolvedAttack:
     damage_parts: tuple[DamageFormulaPart, ...]
     modifier_sources: tuple[ModifierSource, ...] = ()
     notes: tuple[str, ...] = ()
+    content_ref: str | None = None
+    presentation_field: str | None = None
 
     def __post_init__(self) -> None:
         if not self.source_ref.strip():

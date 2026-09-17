@@ -68,6 +68,8 @@ class AttackDefinitionView(StrictModel):
     damage_parts: tuple[dict[str, Any], ...]
     modifier_sources: tuple[dict[str, Any], ...]
     notes: tuple[str, ...]
+    content_ref: str | None = None
+    presentation_field: str | None = None
 
 
 class AttackRequestView(StrictModel):
@@ -86,6 +88,8 @@ class AttackRequestView(StrictModel):
     status: str
     in_range: bool | None = None
     resolution_result: dict[str, Any] | None = None
+    content_ref: str | None = None
+    presentation_field: str | None = None
 
 
 class AttackResolutionView(StrictModel):
@@ -148,6 +152,8 @@ class CombatAttackService:
                 for item in attack.modifier_sources
             ),
             notes=attack.notes,
+            content_ref=attack.content_ref,
+            presentation_field=attack.presentation_field,
         )
 
     @staticmethod
@@ -165,6 +171,8 @@ class CombatAttackService:
             target_ac=request.target_ac,
             status=request.status,
             in_range=True,
+            content_ref=request.content_ref,
+            presentation_field=request.presentation_field,
         )
 
     @staticmethod
@@ -185,6 +193,8 @@ class CombatAttackService:
             resolution_result=(
                 dict(item.resolution_result) if item.resolution_result else None
             ),
+            content_ref=item.content_ref,
+            presentation_field=item.presentation_field,
         )
 
     @staticmethod

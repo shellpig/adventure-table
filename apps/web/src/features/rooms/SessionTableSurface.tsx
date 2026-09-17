@@ -48,6 +48,7 @@ import { endCombat, startCombat } from '../../api/combat'
 import { SessionCombatStage } from './SessionCombatStage'
 import { myEntryIds, useActiveCombat } from './sessionCombat'
 import {
+  combatLogContentFields,
   combatLogContentReferences,
   formatCombatLogEvent,
 } from './sessionCombatLog'
@@ -132,7 +133,14 @@ export function SessionTableSurface({
     () => combatLogContentReferences(combatLogEvents),
     [combatLogEvents],
   )
-  const { nameFor: resolveCombatContentName } = useContentPresentations(combatLogContentRefs)
+  const combatLogExtraFields = useMemo(
+    () => combatLogContentFields(combatLogEvents),
+    [combatLogEvents],
+  )
+  const { nameFor: resolveCombatContentName, fieldFor: resolveCombatContentField } = useContentPresentations(
+    combatLogContentRefs,
+    combatLogExtraFields,
+  )
   const [stage, setStage] = useState<StageState | null>(projectedStage)
   const [stageText, setStageText] = useState(projectedStage?.text ?? '')
   const [stageFile, setStageFile] = useState<File | null>(null)
@@ -788,6 +796,7 @@ export function SessionTableSurface({
                   copy.locale,
                   combatEntryLabel,
                   resolveCombatContentName,
+                  resolveCombatContentField,
                 )
                 return (
                   <p key={`log:${event.session_id}:${event.seq}`}>

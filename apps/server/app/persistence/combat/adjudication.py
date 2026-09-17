@@ -46,6 +46,8 @@ class StoredAttackAdjudication:
     roll_request_id: UUID | None
     in_range: bool | None
     resolution_result: dict[str, Any] | None
+    content_ref: str | None = None
+    presentation_field: str | None = None
 
 
 def _stored(row) -> StoredAttackAdjudication:
@@ -69,6 +71,8 @@ def _stored(row) -> StoredAttackAdjudication:
         roll_request_id=row["roll_request_id"],
         in_range=adjudication.get("in_range"),
         resolution_result=dict(row["resolution_result"] or {}) or None,
+        content_ref=attack.get("content_ref"),
+        presentation_field=attack.get("presentation_field"),
     )
 
 

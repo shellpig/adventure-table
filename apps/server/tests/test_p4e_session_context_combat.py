@@ -231,7 +231,32 @@ def test_5_guide_briefing_parity_and_length_cap() -> None:
             briefing = render_briefing(role=role, mode="active_combat")
             assert tokens["current_turn"] in briefing
             assert tokens["reaction_window"] in briefing
-            if role == "dm":
-                assert tokens["adjudication"] in briefing
+            assert tokens["adjudication"] in briefing
             assert tokens["wait"] in briefing
             assert len(briefing) <= BRIEFING_MAX_CHARS
+
+            if role == "player":
+                # Player restrictions: restricted to own turn & open reaction window, requests adjudication
+                if locale == "en":
+                    assert "Act ONLY on your own current turn" in briefing
+                    assert "combat_respond_to_reaction" in briefing
+                    assert "combat_request_adjudication" in briefing
+                    assert "wait_for_event" in briefing
+                else:
+                    assert "僅在自己當前回合" in briefing
+                    assert "combat_respond_to_reaction" in briefing
+                    assert "提請裁定" in briefing
+                    assert "wait_for_event" in briefing
+                # DM-only tools must never appear in Player briefing
+                assert "combat_resolve_adjudication" not in briefing
+                assert "combat_advance_turn" not in briefing
+            elif role == "dm":
+                # DM capabilities: resolves adjudication, advances turn, monster actions
+                if locale == "en":
+                    assert "combat_resolve_adjudication" in briefing
+                    assert "combat_advance_turn" in briefing
+                    assert "wait_for_event" in briefing
+                else:
+                    assert "combat_resolve_adjudication" in briefing
+                    assert "combat_advance_turn" in briefing
+                    assert "wait_for_event" in briefing

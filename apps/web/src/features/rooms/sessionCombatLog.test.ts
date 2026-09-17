@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { TableEvent } from '../../api/sessions'
 import {
+  combatLogContentFields,
   combatLogContentReferences,
   formatCombatLogEvent,
 } from './sessionCombatLog'
@@ -14,6 +15,7 @@ const ENTRY_LABELS: Record<string, string> = {
 
 const resolveEntryLabel = (entryId: string) => ENTRY_LABELS[entryId] ?? null
 const fallbackContentName = (_reference: string | null | undefined, fallback = '') => fallback
+const fallbackContentField = (_reference: string | null | undefined, _field: string | null | undefined, fallback = '') => fallback
 
 function contentNameResolver(names: Record<string, string>) {
   return (reference: string | null | undefined, fallback = '') =>
@@ -55,7 +57,7 @@ describe('P4-E E11a compact combat log presentation', () => {
         },
       })
       expect(combatLogContentReferences([attack])).toEqual([])
-      expect(text(formatCombatLogEvent(attack, 'en', resolveEntryLabel, fallbackContentName)))
+      expect(text(formatCombatLogEvent(attack, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
         .toBe('Aria · Custom Slash · → Goblin · Hit')
     }
   })
@@ -100,13 +102,13 @@ describe('P4-E E11a compact combat log presentation', () => {
       'srd5.1:equipment:longsword': 'Longsword',
     })
 
-    expect(text(formatCombatLogEvent(spell, 'zh-TW', resolveEntryLabel, zhNames))).toBe(
+    expect(text(formatCombatLogEvent(spell, 'zh-TW', resolveEntryLabel, zhNames, fallbackContentField))).toBe(
       'Aria · 法術: 人類定身術 · → Goblin · 開始專注 · 狀態: 麻痺',
     )
-    expect(text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, enNames))).toBe(
+    expect(text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, enNames, fallbackContentField))).toBe(
       'Aria · Spell: Hold Person · → Goblin · Concentration started · Condition: Paralyzed',
     )
-    expect(text(formatCombatLogEvent(attack, 'zh-TW', resolveEntryLabel, zhNames))).toContain(
+    expect(text(formatCombatLogEvent(attack, 'zh-TW', resolveEntryLabel, zhNames, fallbackContentField))).toContain(
       'Aria · 長劍 · → Goblin · 命中',
     )
   })
@@ -123,7 +125,7 @@ describe('P4-E E11a compact combat log presentation', () => {
       ],
     })
 
-    const rendered = text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, fallbackContentName))
+    const rendered = text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField))
     expect(rendered).toContain('Damage 7 · HP 5')
     expect(rendered.match(/Damage 7/g)).toHaveLength(1)
   })
@@ -140,7 +142,7 @@ describe('P4-E E11a compact combat log presentation', () => {
       ],
     })
 
-    const rendered = text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, fallbackContentName))
+    const rendered = text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField))
     expect(rendered).toContain('Healing 6')
     expect(rendered).toContain('HP 10')
     expect(rendered).not.toContain('Damage 0')
@@ -157,7 +159,7 @@ describe('P4-E E11a compact combat log presentation', () => {
       ],
     })
 
-    const rendered = text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, fallbackContentName))
+    const rendered = text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField))
     expect(rendered).not.toContain('Damage')
     expect(rendered).not.toContain('Healing')
   })
@@ -174,7 +176,7 @@ describe('P4-E E11a compact combat log presentation', () => {
       ],
     })
 
-    const rendered = text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, fallbackContentName))
+    const rendered = text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField))
     expect(rendered).toContain('Damage 7')
     expect(rendered).not.toContain('HP')
     expect(rendered).not.toContain('?')
@@ -194,7 +196,7 @@ describe('P4-E E11a compact combat log presentation', () => {
       ],
     })
 
-    const rendered = text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, fallbackContentName))
+    const rendered = text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField))
     expect(rendered).toContain('2 targets')
     expect(rendered).toContain('Goblin · Damage 7')
     expect(rendered).toContain('Aria · Damage 3 · HP 9')
@@ -215,17 +217,17 @@ describe('P4-E E11a compact combat log presentation', () => {
       succeeded: false,
     })
 
-    expect(text(formatCombatLogEvent(success, 'zh-TW', resolveEntryLabel, fallbackContentName)))
+    expect(text(formatCombatLogEvent(success, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Aria · 豁免 · 成功 · 總值 18')
-    expect(text(formatCombatLogEvent(failure, 'zh-TW', resolveEntryLabel, fallbackContentName)))
+    expect(text(formatCombatLogEvent(failure, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Goblin · 豁免 · 失敗 · 總值 7')
-    expect(text(formatCombatLogEvent(success, 'en', resolveEntryLabel, fallbackContentName)))
+    expect(text(formatCombatLogEvent(success, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Aria · Saving throw · Success · Total 18')
-    expect(text(formatCombatLogEvent(failure, 'en', resolveEntryLabel, fallbackContentName)))
+    expect(text(formatCombatLogEvent(failure, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Goblin · Saving throw · Failure · Total 7')
 
     for (const source of [success, failure]) {
-      const rendered = text(formatCombatLogEvent(source, 'en', resolveEntryLabel, fallbackContentName))
+      const rendered = text(formatCombatLogEvent(source, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField))
       expect(rendered).not.toContain(source.kind)
       expect(rendered).not.toContain('DC')
       expect(rendered).not.toContain('srd5.1:ability:')
@@ -264,21 +266,21 @@ describe('P4-E E11a compact combat log presentation', () => {
       natural_20_recovery: true,
     })
 
-    expect(text(formatCombatLogEvent(stable, 'zh-TW', resolveEntryLabel, fallbackContentName)))
+    expect(text(formatCombatLogEvent(stable, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Aria · 死亡豁免 · d20 12 · HP 0 · 成功 3 · 失敗 1 · 穩定')
-    expect(text(formatCombatLogEvent(stable, 'en', resolveEntryLabel, fallbackContentName)))
+    expect(text(formatCombatLogEvent(stable, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Aria · Death save · d20 12 · HP 0 · Successes 3 · Failures 1 · Stable')
-    expect(text(formatCombatLogEvent(dead, 'zh-TW', resolveEntryLabel, fallbackContentName)))
+    expect(text(formatCombatLogEvent(dead, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Aria · 死亡豁免 · d20 4 · HP 0 · 成功 1 · 失敗 3 · 死亡')
-    expect(text(formatCombatLogEvent(dead, 'en', resolveEntryLabel, fallbackContentName)))
+    expect(text(formatCombatLogEvent(dead, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Aria · Death save · d20 4 · HP 0 · Successes 1 · Failures 3 · Dead')
-    expect(text(formatCombatLogEvent(recovered, 'zh-TW', resolveEntryLabel, fallbackContentName)))
+    expect(text(formatCombatLogEvent(recovered, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Aria · 死亡豁免 · d20 20 · HP 1 · 成功 0 · 失敗 0 · 自然 20 恢復')
-    expect(text(formatCombatLogEvent(recovered, 'en', resolveEntryLabel, fallbackContentName)))
+    expect(text(formatCombatLogEvent(recovered, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Aria · Death save · d20 20 · HP 1 · Successes 0 · Failures 0 · Natural 20 recovery')
 
     for (const source of [stable, dead, recovered]) {
-      const rendered = text(formatCombatLogEvent(source, 'en', resolveEntryLabel, fallbackContentName))
+      const rendered = text(formatCombatLogEvent(source, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField))
       expect(rendered).not.toContain(source.kind)
       expect(rendered).not.toContain('DC')
     }
@@ -297,13 +299,13 @@ describe('P4-E E11a compact combat log presentation', () => {
       natural_20_recovery: false,
     })
 
-    expect(text(formatCombatLogEvent(save, 'en', resolveEntryLabel, fallbackContentName)))
+    expect(text(formatCombatLogEvent(save, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Saving throw')
-    expect(text(formatCombatLogEvent(deathSave, 'en', resolveEntryLabel, fallbackContentName)))
+    expect(text(formatCombatLogEvent(deathSave, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Death save')
 
     for (const source of [save, deathSave]) {
-      const rendered = text(formatCombatLogEvent(source, 'en', resolveEntryLabel, fallbackContentName))
+      const rendered = text(formatCombatLogEvent(source, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField))
       expect(rendered).not.toContain(hiddenId)
       expect(rendered).not.toContain(source.kind)
       expect(rendered).not.toContain('DC')
@@ -347,12 +349,12 @@ describe('P4-E E11a compact combat log presentation', () => {
       },
     })
 
-    const spellText = text(formatCombatLogEvent(spell, 'zh-TW', resolveEntryLabel, fallbackContentName))
+    const spellText = text(formatCombatLogEvent(spell, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField))
     const canonicalAttackText = text(
-      formatCombatLogEvent(canonicalAttack, 'zh-TW', resolveEntryLabel, fallbackContentName),
+      formatCombatLogEvent(canonicalAttack, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField),
     )
     const customAttackText = text(
-      formatCombatLogEvent(customAttack, 'zh-TW', resolveEntryLabel, fallbackContentName),
+      formatCombatLogEvent(customAttack, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField),
     )
 
     expect(spellText).toBe('Aria · 法術 · → Goblin · 開始專注 · 狀態')
@@ -411,10 +413,10 @@ describe('P4-E E11a compact combat log presentation', () => {
     })
 
     const characterText = text(
-      formatCombatLogEvent(characterDamage, 'zh-TW', resolveEntryLabel, fallbackContentName),
+      formatCombatLogEvent(characterDamage, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField),
     )
     const monsterText = text(
-      formatCombatLogEvent(monsterDamage, 'zh-TW', resolveEntryLabel, fallbackContentName),
+      formatCombatLogEvent(monsterDamage, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField),
     )
     expect(characterText).toBe('Aria · 傷害 · 7 · HP 0/12 · 傷勢: 倒下')
     expect(monsterText).toBe('Goblin · 傷害 · 7 · HP 0/7 · 傷勢: 倒下')
@@ -451,10 +453,10 @@ describe('P4-E E11a compact combat log presentation', () => {
     })
 
     const attackText = text(
-      formatCombatLogEvent(attack, 'en', resolveEntryLabel, fallbackContentName),
+      formatCombatLogEvent(attack, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField),
     )
     const concentrationText = text(
-      formatCombatLogEvent(concentration, 'en', resolveEntryLabel, fallbackContentName),
+      formatCombatLogEvent(concentration, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField),
     )
     expect(attackText).toContain('Aria · Custom Slash · → Goblin · Hit')
     expect(attackText).toContain('Damage 7')
@@ -494,10 +496,10 @@ describe('P4-E E11a compact combat log presentation', () => {
       succeeded: true,
     })
 
-    expect(text(formatCombatLogEvent(attack, 'en', resolveEntryLabel, fallbackContentName))).toContain(
+    expect(text(formatCombatLogEvent(attack, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField))).toContain(
       'Total 18 · AC 15 · Damage 7 · HP 5/20',
     )
-    expect(text(formatCombatLogEvent(concentration, 'en', resolveEntryLabel, fallbackContentName))).toBe(
+    expect(text(formatCombatLogEvent(concentration, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField))).toBe(
       'Goblin · Concentration maintained · Total 16 · DC 12',
     )
   })
@@ -509,10 +511,10 @@ describe('P4-E E11a compact combat log presentation', () => {
     })
 
     expect(text(
-      formatCombatLogEvent(concentrationChanged, 'zh-TW', resolveEntryLabel, fallbackContentName),
+      formatCombatLogEvent(concentrationChanged, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField),
     )).toBe('Aria · 專注中斷')
     expect(text(
-      formatCombatLogEvent(concentrationChanged, 'en', resolveEntryLabel, fallbackContentName),
+      formatCombatLogEvent(concentrationChanged, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField),
     )).toBe('Aria · Concentration lost')
   })
 
@@ -541,7 +543,7 @@ describe('P4-E E11a compact combat log presentation', () => {
 
     for (const [source, expected] of cases) {
       const rendered = text(
-        formatCombatLogEvent(source, 'en', resolveEntryLabel, fallbackContentName),
+        formatCombatLogEvent(source, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField),
       )
       expect(rendered).toBe(expected)
       expect(rendered).not.toContain(source.kind)
@@ -558,10 +560,294 @@ describe('P4-E E11a compact combat log presentation', () => {
 
   it('keeps unknown events compatible by returning no combat-specific presentation', () => {
     expect(
-      formatCombatLogEvent(event('combat.future_event', { safe: true }), 'en', resolveEntryLabel, fallbackContentName),
+      formatCombatLogEvent(event('combat.future_event', { safe: true }), 'en', resolveEntryLabel, fallbackContentName, fallbackContentField),
     ).toBeNull()
     expect(
-      formatCombatLogEvent(event('stage.updated', {}), 'zh-TW', resolveEntryLabel, fallbackContentName),
+      formatCombatLogEvent(event('stage.updated', {}), 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField),
     ).toBeNull()
+  })
+
+  it('localizes canonical weapon and monster attack names using content_ref and presentation_field in both locales', () => {
+    const weaponAttack = event('roll.resolved', {
+      combat_id: 'combat-1',
+      attacker_entry_id: 'hero',
+      target_entry_id: 'enemy',
+      attack_resolution: {
+        attack: {
+          source_ref: 'inventory:item-1',
+          name: 'Longsword',
+          content_ref: 'srd5.1:equipment:longsword',
+          presentation_field: 'name',
+          hit: true,
+          critical: false,
+        },
+      },
+    })
+    const monsterAttack = event('roll.resolved', {
+      combat_id: 'combat-1',
+      attacker_entry_id: 'enemy',
+      target_entry_id: 'hero',
+      attack_resolution: {
+        attack: {
+          source_ref: 'monster-action:0',
+          name: 'Scimitar',
+          content_ref: 'srd5.1:monster:goblin',
+          presentation_field: 'data.actions.0.name',
+          hit: true,
+          critical: false,
+        },
+      },
+    })
+    const customAttack = event('roll.resolved', {
+      combat_id: 'combat-1',
+      attacker_entry_id: 'enemy',
+      target_entry_id: 'hero',
+      attack_resolution: {
+        attack: {
+          source_ref: 'monster-action:1',
+          name: 'Rusty Cleaver',
+          content_ref: null,
+          presentation_field: null,
+          hit: false,
+          critical: false,
+        },
+      },
+    })
+
+    const zhFieldResolver = (ref: string | null | undefined, field: string | null | undefined, fb = '') => {
+      if (ref === 'srd5.1:equipment:longsword' && field === 'name') return '長劍'
+      if (ref === 'srd5.1:monster:goblin' && field === 'data.actions.0.name') return '彎刀'
+      return fb
+    }
+    const enFieldResolver = (ref: string | null | undefined, field: string | null | undefined, fb = '') => {
+      if (ref === 'srd5.1:equipment:longsword' && field === 'name') return 'Longsword'
+      if (ref === 'srd5.1:monster:goblin' && field === 'data.actions.0.name') return 'Scimitar'
+      return fb
+    }
+    const zhNameResolver = (ref: string | null | undefined, fb = '') => {
+      if (ref === 'srd5.1:equipment:longsword') return '長劍'
+      return fb
+    }
+    const enNameResolver = (ref: string | null | undefined, fb = '') => {
+      if (ref === 'srd5.1:equipment:longsword') return 'Longsword'
+      return fb
+    }
+
+    // zh-TW localized
+    expect(text(formatCombatLogEvent(weaponAttack, 'zh-TW', resolveEntryLabel, zhNameResolver, zhFieldResolver)))
+      .toContain('Aria · 長劍 · → Goblin · 命中')
+    expect(text(formatCombatLogEvent(monsterAttack, 'zh-TW', resolveEntryLabel, zhNameResolver, zhFieldResolver)))
+      .toContain('Goblin · 彎刀 · → Aria · 命中')
+    expect(text(formatCombatLogEvent(customAttack, 'zh-TW', resolveEntryLabel, zhNameResolver, zhFieldResolver)))
+      .toContain('Goblin · Rusty Cleaver · → Aria · 未命中')
+
+    // en localized
+    expect(text(formatCombatLogEvent(weaponAttack, 'en', resolveEntryLabel, enNameResolver, enFieldResolver)))
+      .toContain('Aria · Longsword · → Goblin · Hit')
+    expect(text(formatCombatLogEvent(monsterAttack, 'en', resolveEntryLabel, enNameResolver, enFieldResolver)))
+      .toContain('Goblin · Scimitar · → Aria · Hit')
+    expect(text(formatCombatLogEvent(customAttack, 'en', resolveEntryLabel, enNameResolver, enFieldResolver)))
+      .toContain('Goblin · Rusty Cleaver · → Aria · Miss')
+  })
+
+  it('extracts extra presentation fields for monster actions via combatLogContentFields', () => {
+    const events = [
+      event('roll.resolved', {
+        combat_id: 'combat-1',
+        attack_resolution: {
+          attack: {
+            content_ref: 'srd5.1:monster:goblin',
+            presentation_field: 'data.actions.0.name',
+          },
+        },
+      }),
+      event('roll.resolved', {
+        combat_id: 'combat-1',
+        attack_resolution: {
+          attack: {
+            content_ref: 'srd5.1:equipment:longsword',
+            presentation_field: 'name',
+          },
+        },
+      }),
+      event('combat.turn_advanced', { round: 1 }),
+    ]
+
+    expect(combatLogContentFields(events)).toEqual({
+      'srd5.1:monster:goblin': ['data.actions.0.name'],
+      'srd5.1:equipment:longsword': ['name'],
+    })
+    expect(combatLogContentReferences(events)).toEqual([
+      'srd5.1:monster:goblin',
+      'srd5.1:equipment:longsword',
+    ])
+  })
+
+  it('formats all lifecycle, action, reaction, adjudication, and save events in zh-TW and en', () => {
+    const entryAdded = event('combat.entry_added', {
+      entry_id: 'enemy',
+      display_name: 'Goblin',
+    })
+    const entryWithdrawn = event('combat.entry_withdrawn', {
+      entry_id: 'enemy',
+    })
+    const entryRemoved = event('combat.entry_removed', {
+      entry_id: 'enemy',
+    })
+    const initiativeReordered = event('combat.initiative_reordered', {
+      ordered_entry_ids: ['hero', 'enemy'],
+    })
+    const actionUsed = event('combat.action_used', {
+      entry_id: 'hero',
+      action_kind: 'dash',
+    })
+    const reactionWindowOpen = event('combat.reaction_window', {
+      entry_id: 'hero',
+      open: true,
+    })
+    const reactionWindowClosed = event('combat.reaction_window', {
+      entry_id: 'hero',
+      open: false,
+    })
+    const specialAdjReq = event('combat.special_attack_adjudication_requested', {
+      attacker_entry_id: 'hero',
+      target_entry_id: 'enemy',
+      kind: 'grapple',
+    })
+    const specialAdjReach = event('combat.special_attack_adjudicated', {
+      attacker_entry_id: 'hero',
+      target_entry_id: 'enemy',
+      kind: 'grapple',
+      in_reach: true,
+    })
+    const specialAdjOutOfReach = event('combat.special_attack_adjudicated', {
+      attacker_entry_id: 'hero',
+      target_entry_id: 'enemy',
+      kind: 'shove_push',
+      in_reach: false,
+    })
+    const savesReq = event('combat.saves_requested', {
+      target_entry_ids: ['enemy'],
+      ability_ref: 'DEX',
+    })
+
+    // zh-TW checks
+    expect(text(formatCombatLogEvent(entryAdded, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Goblin · 加入戰鬥')
+    expect(text(formatCombatLogEvent(entryWithdrawn, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Goblin · 脫離戰鬥')
+    expect(text(formatCombatLogEvent(entryRemoved, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Goblin · 移出戰鬥')
+    expect(text(formatCombatLogEvent(initiativeReordered, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('先攻順序調整 · Aria → Goblin')
+    expect(text(formatCombatLogEvent(actionUsed, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Aria · 疾走')
+    expect(text(formatCombatLogEvent(reactionWindowOpen, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Aria · 反應窗口開啟')
+    expect(text(formatCombatLogEvent(reactionWindowClosed, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Aria · 反應窗口關閉')
+    expect(text(formatCombatLogEvent(specialAdjReq, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Aria · 裁定: 擒抱 · → Goblin · 等待 DM 裁定')
+    expect(text(formatCombatLogEvent(specialAdjReach, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Aria · 裁定: 擒抱 · 在觸及範圍內 · → Goblin')
+    expect(text(formatCombatLogEvent(specialAdjOutOfReach, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Aria · 裁定: 推開 · 超出觸及範圍 · → Goblin')
+    expect(text(formatCombatLogEvent(savesReq, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Goblin · 豁免 · 等待豁免檢定 · DEX')
+
+    // en checks
+    expect(text(formatCombatLogEvent(entryAdded, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Goblin · Joined combat')
+    expect(text(formatCombatLogEvent(entryWithdrawn, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Goblin · Withdrawn')
+    expect(text(formatCombatLogEvent(entryRemoved, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Goblin · Removed from combat')
+    expect(text(formatCombatLogEvent(initiativeReordered, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Initiative reordered · Aria → Goblin')
+    expect(text(formatCombatLogEvent(actionUsed, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Aria · Dash')
+    expect(text(formatCombatLogEvent(reactionWindowOpen, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Aria · Reaction window opened')
+    expect(text(formatCombatLogEvent(reactionWindowClosed, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Aria · Reaction window closed')
+    expect(text(formatCombatLogEvent(specialAdjReq, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Aria · Adjudication: Grapple · → Goblin · Awaiting DM adjudication')
+    expect(text(formatCombatLogEvent(specialAdjReach, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Aria · Adjudication: Grapple · In reach · → Goblin')
+    expect(text(formatCombatLogEvent(specialAdjOutOfReach, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Aria · Adjudication: Shove push · Out of reach · → Goblin')
+    expect(text(formatCombatLogEvent(savesReq, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Goblin · Saving throw · Saving throws requested · DEX')
+  })
+
+  it('formats special_attack_roll_resolved for both waiting and resolved outcomes with conditions and distance', () => {
+    const waiting = event('combat.special_attack_roll_resolved', {
+      target_entry_id: 'enemy',
+      total: 14,
+      status: 'waiting_for_roll',
+      resolution_result: null,
+    })
+    const resolvedGrappleSuccess = event('combat.special_attack_roll_resolved', {
+      target_entry_id: 'enemy',
+      total: 12,
+      status: 'resolved',
+      resolution_result: {
+        kind: 'grapple',
+        status: 'success',
+        attacker_total: 18,
+        target_total: 12,
+        condition_to_apply: 'grappled',
+      },
+    })
+    const resolvedShovePush = event('combat.special_attack_roll_resolved', {
+      target_entry_id: 'enemy',
+      total: 10,
+      status: 'resolved',
+      resolution_result: {
+        kind: 'shove_push',
+        status: 'success',
+        attacker_total: 16,
+        target_total: 10,
+        push_distance_ft: 5,
+      },
+    })
+    const resolvedFailure = event('combat.special_attack_roll_resolved', {
+      target_entry_id: 'enemy',
+      total: 19,
+      status: 'resolved',
+      resolution_result: {
+        kind: 'grapple',
+        status: 'failure',
+        attacker_total: 11,
+        target_total: 19,
+      },
+    })
+
+    const zhConditionResolver = contentNameResolver({
+      'srd5.1:condition:grappled': '擒抱',
+    })
+    const enConditionResolver = contentNameResolver({
+      'srd5.1:condition:grappled': 'Grappled',
+    })
+
+    // zh-TW
+    expect(text(formatCombatLogEvent(waiting, 'zh-TW', resolveEntryLabel, zhConditionResolver, fallbackContentField)))
+      .toBe('Goblin · 特殊攻擊 · 等待對抗擲骰 · 總值 14')
+    expect(text(formatCombatLogEvent(resolvedGrappleSuccess, 'zh-TW', resolveEntryLabel, zhConditionResolver, fallbackContentField)))
+      .toBe('Goblin · 擒抱 · 成功 · 攻擊方總值 18 · 目標總值 12 · 狀態: 擒抱')
+    expect(text(formatCombatLogEvent(resolvedShovePush, 'zh-TW', resolveEntryLabel, zhConditionResolver, fallbackContentField)))
+      .toBe('Goblin · 推開 · 成功 · 攻擊方總值 16 · 目標總值 10 · 5 ft')
+    expect(text(formatCombatLogEvent(resolvedFailure, 'zh-TW', resolveEntryLabel, zhConditionResolver, fallbackContentField)))
+      .toBe('Goblin · 擒抱 · 失敗 · 攻擊方總值 11 · 目標總值 19')
+
+    // en
+    expect(text(formatCombatLogEvent(waiting, 'en', resolveEntryLabel, enConditionResolver, fallbackContentField)))
+      .toBe('Goblin · Special attack · Awaiting contest roll · Total 14')
+    expect(text(formatCombatLogEvent(resolvedGrappleSuccess, 'en', resolveEntryLabel, enConditionResolver, fallbackContentField)))
+      .toBe('Goblin · Grapple · Success · Attacker total 18 · Target total 12 · Condition: Grappled')
+    expect(text(formatCombatLogEvent(resolvedShovePush, 'en', resolveEntryLabel, enConditionResolver, fallbackContentField)))
+      .toBe('Goblin · Shove push · Success · Attacker total 16 · Target total 10 · 5 ft')
+    expect(text(formatCombatLogEvent(resolvedFailure, 'en', resolveEntryLabel, enConditionResolver, fallbackContentField)))
+      .toBe('Goblin · Grapple · Failure · Attacker total 11 · Target total 19')
   })
 })
