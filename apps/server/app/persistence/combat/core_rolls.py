@@ -54,6 +54,8 @@ class StoredCombatCoreRollRequest:
     flat_adjustment: int
     visibility: str
     status: str
+    roll_group_label: str | None = None
+    action_kind: str | None = None
 
 
 @dataclass(frozen=True)
@@ -130,18 +132,46 @@ class CombatCoreRollRepository:
             flat_adjustment=int(row["flat_adjustment"]),
             visibility=row["visibility"],
             status=row["status"],
+            roll_group_label=row.get("roll_group_label"),
+            action_kind=row.get("action_kind"),
         )
 
     def get_request(self, *, session_id: UUID, request_id: UUID) -> StoredCombatCoreRollRequest | None:
         with self.engine.connect() as connection:
             row = connection.execute(
-                select(roll_requests).where(
+                select(
+                    roll_requests,
+                    roll_groups.c.label.label("roll_group_label"),
+                )
+                .outerjoin(roll_groups, roll_groups.c.id == roll_requests.c.roll_group_id)
+                .where(
                     roll_requests.c.id == request_id,
                     roll_requests.c.session_id == session_id,
                     roll_requests.c.target_combat_entry_id.is_not(None),
                 )
             ).mappings().one_or_none()
         return self._request(row) if row is not None else None
+
+    def list_pending_requests(self, *, session_id: UUID) -> tuple[StoredCombatCoreRollRequest, ...]:
+        """Every pending Combat-targeted formal roll (initiative, attack, save, death save,
+        concentration); the legacy P3 Check surface deliberately hides these rows."""
+        with self.engine.connect() as connection:
+            rows = connection.execute(
+                select(
+                    roll_requests,
+                    roll_groups.c.label.label("roll_group_label"),
+                    combat_actions.c.action_kind.label("action_kind"),
+                )
+                .outerjoin(roll_groups, roll_groups.c.id == roll_requests.c.roll_group_id)
+                .outerjoin(combat_actions, combat_actions.c.roll_request_id == roll_requests.c.id)
+                .where(
+                    roll_requests.c.session_id == session_id,
+                    roll_requests.c.target_combat_entry_id.is_not(None),
+                    roll_requests.c.status == "pending",
+                )
+                .order_by(roll_requests.c.created_at, roll_requests.c.id)
+            ).mappings().all()
+        return tuple(self._request(row) for row in rows)
 
     def _result_row(self, *, session_id: UUID, request_id: UUID):
         with self.engine.connect() as connection:
@@ -272,6 +302,10 @@ class CombatCoreRollRepository:
         request = self.get_request(session_id=binding.session_id, request_id=request_id)
         if request is None or request.request_type != "saving_throw" or request.dc is None:
             raise CombatCoreRollNotFoundError(str(request_id))
+        if request.roll_group_label == "Concentration":
+            raise CombatCoreRollStateConflictError(
+                "Concentration saving throws must be completed via CombatConcentrationRepository"
+            )
         existing = self._result_row(session_id=binding.session_id, request_id=request_id)
         if existing is not None:
             return (
@@ -297,6 +331,16 @@ class CombatCoreRollRepository:
             ).mappings().one_or_none()
             if locked is None or locked["request_type"] != "saving_throw":
                 raise CombatCoreRollNotFoundError(str(request_id))
+            locked_group_label = connection.scalar(
+                select(roll_groups.c.label).where(
+                    roll_groups.c.id == locked["roll_group_id"],
+                    roll_groups.c.session_id == binding.session_id,
+                )
+            )
+            if locked_group_label == "Concentration":
+                raise CombatCoreRollStateConflictError(
+                    "Concentration saving throws must be completed via CombatConcentrationRepository"
+                )
             if locked["status"] != "pending":
                 raise CombatCoreRollStateConflictError("Saving Throw RollRequest is already resolved")
             target = connection.execute(
@@ -347,6 +391,7 @@ class CombatCoreRollRepository:
                         "roll_request_id": str(request_id),
                         "roll_result_id": str(result_id),
                         "target_entry_id": str(target["id"]),
+                        "target_is_hostile": bool(target["is_hostile"]),
                         "request_type": "saving_throw",
                         "ability_ref": locked["ability_ref"],
                         "formula": computation.formula,
@@ -699,6 +744,7 @@ class CombatCoreRollRepository:
                         "roll_request_id": str(request_id),
                         "roll_result_id": str(result_id),
                         "target_entry_id": str(entry["id"]),
+                        "target_is_hostile": bool(entry["is_hostile"]),
                         **result_payload,
                     },
                 )

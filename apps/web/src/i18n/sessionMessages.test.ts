@@ -4,6 +4,7 @@ import {
   P2E_SESSION_REQUEST_CODES,
   P3B_SESSION_REQUEST_CODES,
   P3C_SESSION_REQUEST_CODES,
+  P4E_SESSION_REQUEST_CODES,
   SESSION_REQUEST_CODES,
   SESSION_REQUEST_CODE_MESSAGES,
   localizedSessionRequestMessage,
@@ -24,7 +25,7 @@ describe('Session request message SSOT', () => {
     })
   }
 
-  it('keeps P2-E, P3-B, and P3-C code ownership explicit', () => {
+  it('keeps P2-E, P3-B, P3-C, and P4-E code ownership explicit', () => {
     expect(P2E_SESSION_REQUEST_CODES).toContain('session_not_active')
     expect(P3B_SESSION_REQUEST_CODES).toEqual([
       'table_actor_unauthorized',
@@ -51,6 +52,21 @@ describe('Session request message SSOT', () => {
       'state_write_conflict',
       'invalid_character_state',
     ])
+    expect(P4E_SESSION_REQUEST_CODES).toEqual([
+      'unknown_reference',
+      'monster_instance_conflict',
+      'combat_not_found',
+      'attack_not_found',
+      'combat_roll_not_found',
+      'combat_target_not_found',
+      'active_combat_exists',
+      'combat_state_conflict',
+      'initiative_request_not_found',
+      'invalid_initiative_input',
+      'invalid_attack_definition',
+      'invalid_combat_input',
+      'special_attack_not_found',
+    ])
   })
 
   it('localizes Stage revision conflicts in both supported locales', () => {
@@ -70,6 +86,15 @@ describe('Session request message SSOT', () => {
     expect(localizedSessionRequestMessage('pending_action_version_conflict', 409, 'raw', 'en')).toContain('PendingAction')
     expect(localizedSessionRequestMessage('state_write_conflict', 409, 'raw', 'zh-TW')).toContain('角色')
     expect(localizedSessionRequestMessage('state_write_conflict', 409, 'raw', 'en')).toContain('Character')
+  })
+
+  it('localizes P4-E combat state conflicts in both locales', () => {
+    expect(localizedSessionRequestMessage('combat_state_conflict', 409, 'raw server text', 'zh-TW')).toBe(
+      '戰鬥狀態已變更，這個動作現在不能執行，請重新整理後再試。',
+    )
+    expect(localizedSessionRequestMessage('combat_state_conflict', 409, 'raw server text', 'en')).toBe(
+      'Combat state changed and this action is no longer allowed. Refresh and try again.',
+    )
   })
 
   it('falls back without exposing an unknown raw code', () => {

@@ -8,6 +8,8 @@ from uuid import UUID
 
 from pydantic import Field
 
+from app.domain.combat.event_projection import project_combat_event_payload
+from app.domain.combat.projection import CombatantAudience
 from app.domain.rooms.schemas import RoomAccessContext, StrictModel
 from app.persistence.rooms.table_runtime import (
     MAX_EVENT_SCAN_LIMIT,
@@ -232,7 +234,12 @@ class TableEventService:
             raise TableEventActorUnauthorizedError("Table actor binding is no longer current")
 
     @staticmethod
-    def _present(stored: StoredTableEvent) -> TableEvent:
+    def _present(stored: StoredTableEvent, *, actor: TableActorContext) -> TableEvent:
+        # Enemy secrecy is decided here, once, for every path an event can take
+        # (list / long-poll / Resume / MCP): the projector is a no-op for the DM.
+        audience: CombatantAudience = "dm" if actor.is_current_dm else "player"
+        payload = project_combat_event_payload(stored.kind, stored.payload, audience=audience)
+
         return TableEvent(
             id=stored.id,
             session_id=stored.session_id,
@@ -249,7 +256,7 @@ class TableEventService:
             visibility=TableEventVisibility(stored.visibility),
             recipient_seat_ids=stored.recipient_seat_ids,
             payload_version=stored.payload_version,
-            payload=stored.payload,
+            payload=payload,
             created_at=stored.created_at,
         )
 
@@ -319,7 +326,7 @@ class TableEventService:
 
         cursor = raw[-1].seq if raw else bounded_after
         visible = [
-            self._present(stored)
+            self._present(stored, actor=actor)
             for stored in raw
             if self._visible(actor, stored)
         ]
@@ -427,7 +434,7 @@ class TableEventService:
 
         if self.notifier is not None:
             self.notifier.notify(actor.session_id)
-        return self._present(stored)
+        return self._present(stored, actor=actor)
 
 
 __all__ = [

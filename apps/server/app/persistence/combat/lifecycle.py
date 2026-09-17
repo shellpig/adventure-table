@@ -79,6 +79,7 @@ class StoredCombatEntry:
     monster_instance_id: UUID | None
     display_name: str
     status: str
+    is_hostile: bool
     initiative_group_key: str | None
     initiative_roll_request_id: UUID | None
     initiative_roll_result_id: UUID | None
@@ -94,6 +95,10 @@ class StoredCombatEntry:
     pending_reaction_state: dict[str, Any]
     created_at: datetime
     updated_at: datetime
+    death_save_successes: int = 0
+    death_save_failures: int = 0
+    death_save_stable: bool = False
+    death_save_dead: bool = False
 
 
 @dataclass(frozen=True)
@@ -110,6 +115,29 @@ class StoredCombatAction:
     payload: dict[str, Any]
     idempotency_key: str | None
     created_at: datetime
+    target_entry_id: UUID | None
+    resolution_status: str
+    resolution_result: dict[str, Any] | None
+
+
+def combat_action_from_row(row) -> StoredCombatAction:
+    return StoredCombatAction(
+        id=row["id"],
+        combat_id=row["combat_id"],
+        entry_id=row["entry_id"],
+        session_id=row["session_id"],
+        acting_seat_id=row["acting_seat_id"],
+        subject_seat_id=row["subject_seat_id"],
+        execution_mode=row["execution_mode"],
+        action_kind=row["action_kind"],
+        economy_cost=row["economy_cost"],
+        payload=dict(row["payload"] or {}),
+        idempotency_key=row["idempotency_key"],
+        created_at=row["created_at"],
+        target_entry_id=row["target_entry_id"],
+        resolution_status=row["resolution_status"],
+        resolution_result=dict(row["resolution_result"]) if row["resolution_result"] is not None else None,
+    )
 
 
 def actor_binding(actor) -> StoredTableActorBinding:
@@ -151,6 +179,7 @@ class CombatRepository:
             id=row["id"], combat_id=row["combat_id"], subject_kind=row["subject_kind"],
             character_id=row["character_id"], monster_instance_id=row["monster_instance_id"],
             display_name=row["display_name"], status=row["status"],
+            is_hostile=bool(row["is_hostile"]),
             initiative_group_key=row["initiative_group_key"],
             initiative_roll_request_id=row["initiative_roll_request_id"],
             initiative_roll_result_id=row["initiative_roll_result_id"],
@@ -162,18 +191,15 @@ class CombatRepository:
             ready_state=dict(row["ready_state"] or {}),
             pending_reaction_state=dict(row["pending_reaction_state"] or {}),
             created_at=row["created_at"], updated_at=row["updated_at"],
+            death_save_successes=int(row["death_save_successes"]),
+            death_save_failures=int(row["death_save_failures"]),
+            death_save_stable=bool(row["death_save_stable"]),
+            death_save_dead=bool(row["death_save_dead"]),
         )
 
     @staticmethod
     def _action(row) -> StoredCombatAction:
-        return StoredCombatAction(
-            id=row["id"], combat_id=row["combat_id"], entry_id=row["entry_id"],
-            session_id=row["session_id"], acting_seat_id=row["acting_seat_id"],
-            subject_seat_id=row["subject_seat_id"], execution_mode=row["execution_mode"],
-            action_kind=row["action_kind"], economy_cost=row["economy_cost"],
-            payload=dict(row["payload"] or {}), idempotency_key=row["idempotency_key"],
-            created_at=row["created_at"],
-        )
+        return combat_action_from_row(row)
 
     def get_active(self, campaign_id: UUID) -> StoredCombat | None:
         with self.engine.connect() as connection:
@@ -693,5 +719,5 @@ class CombatRepository:
 __all__ = [
     "ActiveCombatExistsPersistenceError", "CombatNotFoundPersistenceError", "CombatPersistenceError",
     "CombatRepository", "CombatStateConflictPersistenceError", "NewCombatEntry", "SessionCharacterBinding",
-    "StoredCombat", "StoredCombatAction", "StoredCombatEntry", "actor_binding",
+    "StoredCombat", "StoredCombatAction", "StoredCombatEntry", "actor_binding", "combat_action_from_row",
 ]

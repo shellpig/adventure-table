@@ -9,11 +9,13 @@ from app.domain.combat.attack_definitions import (
     AttackDefinitionNotFoundError,
     AttackDefinitionResolver,
 )
+from app.domain.combat.event_projection import project_combat_event_payload
 from app.domain.combat.lifecycle import (
     CombatNotFoundError,
     CombatService,
     CombatStateConflictError,
 )
+from app.domain.combat.projection import CombatantAudience
 from app.domain.combat.resolution import DamageRollPart, RollMode
 from app.domain.rooms.rolls import FormalRollInput, FormalRollSource, RollModifierMode, RollService
 from app.domain.rooms.schemas import StrictModel
@@ -53,6 +55,8 @@ class AttackRequestInput(StrictModel):
 class AttackAdjudicationInput(StrictModel):
     action_id: UUID
     in_range: bool
+    roll_mode: RollMode | None = None
+    note: str | None = Field(default=None, max_length=500)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
 
 
@@ -64,6 +68,8 @@ class AttackDefinitionView(StrictModel):
     damage_parts: tuple[dict[str, Any], ...]
     modifier_sources: tuple[dict[str, Any], ...]
     notes: tuple[str, ...]
+    content_ref: str | None = None
+    presentation_field: str | None = None
 
 
 class AttackRequestView(StrictModel):
@@ -82,6 +88,8 @@ class AttackRequestView(StrictModel):
     status: str
     in_range: bool | None = None
     resolution_result: dict[str, Any] | None = None
+    content_ref: str | None = None
+    presentation_field: str | None = None
 
 
 class AttackResolutionView(StrictModel):
@@ -93,10 +101,12 @@ class AttackResolutionView(StrictModel):
     hit: bool
     critical: bool
     attack_total: int
-    target_ac: int
+    target_ac: int | None = None
     damage_total: int
-    before_hp: int | None
-    after_hp: int | None
+    before_hp: int | None = None
+    after_hp: int | None = None
+    target_is_hostile: bool = False
+    target_injury_level: str | None = None
     resolution_result: dict[str, Any]
 
 
@@ -142,6 +152,8 @@ class CombatAttackService:
                 for item in attack.modifier_sources
             ),
             notes=attack.notes,
+            content_ref=attack.content_ref,
+            presentation_field=attack.presentation_field,
         )
 
     @staticmethod
@@ -159,6 +171,8 @@ class CombatAttackService:
             target_ac=request.target_ac,
             status=request.status,
             in_range=True,
+            content_ref=request.content_ref,
+            presentation_field=request.presentation_field,
         )
 
     @staticmethod
@@ -179,10 +193,18 @@ class CombatAttackService:
             resolution_result=(
                 dict(item.resolution_result) if item.resolution_result else None
             ),
+            content_ref=item.content_ref,
+            presentation_field=item.presentation_field,
         )
 
     @staticmethod
-    def _resolution_view(result: StoredAttackResolution) -> AttackResolutionView:
+    def _resolution_view(
+        result: StoredAttackResolution,
+        *,
+        actor: TableActorContext,
+    ) -> AttackResolutionView:
+        audience: CombatantAudience = "dm" if actor.is_current_dm else "player"
+        redact = audience == "player" and result.target_is_hostile
         return AttackResolutionView(
             action_id=result.action_id,
             roll_request_id=result.roll_request_id,
@@ -192,11 +214,15 @@ class CombatAttackService:
             hit=result.hit,
             critical=result.critical,
             attack_total=result.attack_total,
-            target_ac=result.target_ac,
+            target_ac=None if redact else result.target_ac,
             damage_total=result.damage_total,
-            before_hp=result.before_hp,
-            after_hp=result.after_hp,
-            resolution_result=dict(result.resolution_result),
+            before_hp=None if redact else result.before_hp,
+            after_hp=None if redact else result.after_hp,
+            target_is_hostile=result.target_is_hostile,
+            target_injury_level=result.target_injury_level,
+            resolution_result=project_combat_event_payload(
+                "combat.attack_resolved", result.resolution_result, audience=audience
+            ),
         )
 
     def _active_entry(self, actor: TableActorContext, entry_id: UUID) -> StoredCombatEntry:
@@ -305,6 +331,8 @@ class CombatAttackService:
                 binding=actor_binding(actor),
                 action_id=request.action_id,
                 in_range=request.in_range,
+                roll_mode=request.roll_mode,
+                note=request.note,
                 idempotency_key=request.idempotency_key,
             )
         except CombatAdjudicationStateConflictError as exc:
@@ -423,7 +451,7 @@ class CombatAttackService:
             result = current
         if self.table_event_service.notifier is not None:
             self.table_event_service.notifier.notify(actor.session_id)
-        return self._resolution_view(result)
+        return self._resolution_view(result, actor=actor)
 
 
 __all__ = [

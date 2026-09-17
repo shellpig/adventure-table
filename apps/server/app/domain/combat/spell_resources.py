@@ -243,7 +243,7 @@ def _slug(value: str) -> str:
     return value
 
 
-def _monster_casting_sources(rules_snapshot: Mapping[str, Any]) -> tuple[Mapping[str, Any], ...]:
+def monster_casting_sources(rules_snapshot: Mapping[str, Any]) -> tuple[Mapping[str, Any], ...]:
     """Return every spellcasting block accepted from P4-A snapshots.
 
     P4-A stores SRD API trait payloads under ``traits[].spellcasting`` (or the
@@ -267,6 +267,30 @@ def _monster_casting_sources(rules_snapshot: Mapping[str, Any]) -> tuple[Mapping
                 if isinstance(value, Mapping):
                     found.append(value)
     return tuple(found)
+
+
+def monster_spell_ref(candidate: object) -> str | None:
+    """Canonical ``srd5.1:spell:<slug>`` ref for one stat-block spell entry (str, or
+    a mapping carrying ``spell_ref`` / ``url`` / ``name``); None when unusable."""
+    if isinstance(candidate, str):
+        value: str | None = candidate
+    elif isinstance(candidate, Mapping):
+        value = next(
+            (
+                item
+                for item in (candidate.get("spell_ref"), candidate.get("url"), candidate.get("name"))
+                if isinstance(item, str) and item
+            ),
+            None,
+        )
+    else:
+        value = None
+    if not value:
+        return None
+    if ":spell:" in value:
+        return value
+    slug = _slug(value)
+    return f"srd5.1:spell:{slug}" if slug else None
 
 
 def _monster_spell_matches(candidate: object, spell_ref: str) -> Mapping[str, Any] | None:
@@ -306,7 +330,7 @@ def resolve_monster_spell_source(
 
     matched_casting: Mapping[str, Any] | None = None
     row: Mapping[str, Any] | None = None
-    for casting in _monster_casting_sources(rules_snapshot):
+    for casting in monster_casting_sources(rules_snapshot):
         spells = casting.get("spells")
         if not isinstance(spells, (list, tuple)):
             continue
@@ -319,7 +343,7 @@ def resolve_monster_spell_source(
         if row is not None:
             break
 
-    if not _monster_casting_sources(rules_snapshot):
+    if not monster_casting_sources(rules_snapshot):
         raise ValueError("monster stat block has no spellcasting source")
     if row is None or matched_casting is None:
         raise ValueError("monster does not have requested spell")

@@ -333,7 +333,7 @@ class ExplorationActionService:
 
         if self.table_event_service.notifier is not None:
             self.table_event_service.notifier.notify(actor.session_id)
-        return self.table_event_service._present(stored)
+        return self.table_event_service._present(stored, actor=actor)
 
 
 __all__ = [

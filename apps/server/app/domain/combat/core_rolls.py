@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import Field, field_validator
 
+from app.domain.combat.concentration import CombatConcentrationService
+from app.domain.combat.concentration_triggers import monster_save_modifier
 from app.domain.combat.lifecycle import CombatNotFoundError, CombatService, CombatStateConflictError
 from app.domain.rooms.rolls import (
     FormalRollInput,
@@ -64,6 +66,21 @@ class SavingThrowRequestView(StrictModel):
     status: str
 
 
+class CombatPendingRollView(StrictModel):
+    """Compact pending Combat roll for get_combat_context; ``dc`` is DM-only."""
+
+    id: UUID
+    roll_group_id: UUID | None
+    label: str | None
+    request_type: str
+    target_entry_id: UUID
+    target_seat_id: UUID | None
+    ability_ref: str | None
+    dc: int | None
+    modifier_mode: RollModifierMode
+    status: str
+
+
 class SavingThrowRequestResponse(StrictModel):
     roll_group_id: UUID
     requests: tuple[SavingThrowRequestView, ...]
@@ -111,6 +128,16 @@ def _request_event_visibility(visibility: RollVisibility) -> str:
     return "seat_private"
 
 
+def pending_combat_roll_request_type(request: StoredCombatCoreRollRequest) -> str:
+    if request.action_kind in {"attack", "death_save", "grapple", "shove"}:
+        return request.action_kind
+    if request.action_kind is None and request.roll_group_label == "Concentration":
+        return "concentration"
+    if request.action_kind is None and request.roll_group_label == "Initiative":
+        return "initiative"
+    return request.request_type
+
+
 class CombatCoreRollService:
     """Actor-neutral formal Saving Throw and Death Save application service."""
 
@@ -122,6 +149,7 @@ class CombatCoreRollService:
         monster_repository: MonsterRepository,
         roll_service: RollService,
         table_event_service: TableEventService,
+        concentration_service: CombatConcentrationService | None = None,
     ) -> None:
         self.repository = repository
         self.combat_repository = combat_repository
@@ -129,6 +157,7 @@ class CombatCoreRollService:
         self.monster_repository = monster_repository
         self.roll_service = roll_service
         self.table_event_service = table_event_service
+        self.concentration_service = concentration_service
 
     def _active_entry(self, actor: TableActorContext, entry_id: UUID) -> StoredCombatEntry:
         combat = self.combat_repository.get_active(actor.campaign_id)
@@ -141,37 +170,15 @@ class CombatCoreRollService:
 
     @staticmethod
     def _monster_save_modifier(rules: dict, ability: str) -> int:
-        scores = rules.get("ability_scores", {})
-        score = scores.get(ability, 10) if isinstance(scores, dict) else 10
-        base = ability_modifier(score if isinstance(score, int) else 10)
-        abbreviations = {
-            "strength": "str",
-            "dexterity": "dex",
-            "constitution": "con",
-            "intelligence": "int",
-            "wisdom": "wis",
-            "charisma": "cha",
-        }
-        expected = {
-            f"saving-throw-{abbreviations[ability]}",
-            f"saving-throw-{ability}",
-        }
-        proficiencies = rules.get("proficiencies", [])
-        if not isinstance(proficiencies, list):
-            return base
-        for raw in proficiencies:
-            if not isinstance(raw, dict):
-                continue
-            reference = raw.get("proficiency")
-            index = None
-            if isinstance(reference, dict):
-                candidate = reference.get("index") or reference.get("name")
-                if isinstance(candidate, str):
-                    index = candidate.strip().casefold().replace(" ", "-")
-            value = raw.get("value")
-            if index in expected and isinstance(value, int):
-                return value
-        return base
+        return monster_save_modifier(rules, ability)
+
+    @staticmethod
+    def _is_concentration_request(request: StoredCombatCoreRollRequest) -> bool:
+        return (
+            request.roll_group_label == "Concentration"
+            and request.request_type == "saving_throw"
+            and request.ability_ref in {"srd5.1:ability:constitution", "constitution"}
+        )
 
     def _save_unit(self, actor: TableActorContext, entry: StoredCombatEntry, ability: str) -> NewSavingThrowUnit:
         if entry.subject_kind == "character":
@@ -225,6 +232,30 @@ class CombatCoreRollService:
             visibility=RollVisibility(request.visibility),
             status=request.status,
         )
+
+    def list_pending_rolls(self, actor: TableActorContext) -> tuple[CombatPendingRollView, ...]:
+        """DM sees every pending Combat roll with its DC; a Player only sees rolls that
+        target a Seat they control, without the DC (monster save DCs are enemy secrets)."""
+        self.table_event_service.require_actor_current(actor)
+        views: list[CombatPendingRollView] = []
+        for request in self.repository.list_pending_requests(session_id=actor.session_id):
+            if not actor.is_current_dm and request.target_seat_id not in actor.controlled_seat_ids:
+                continue
+            views.append(
+                CombatPendingRollView(
+                    id=request.id,
+                    roll_group_id=request.roll_group_id,
+                    label=request.roll_group_label,
+                    request_type=pending_combat_roll_request_type(request),
+                    target_entry_id=request.target_combat_entry_id,
+                    target_seat_id=request.target_seat_id,
+                    ability_ref=request.ability_ref,
+                    dc=request.dc if actor.is_current_dm else None,
+                    modifier_mode=RollModifierMode(request.modifier_mode),
+                    status=request.status,
+                )
+            )
+        return tuple(views)
 
     def request_saving_throws(
         self,
@@ -292,6 +323,18 @@ class CombatCoreRollService:
         )
         if request is None or request.request_type != "saving_throw":
             raise CombatCoreRollNotFoundError(str(input.roll_request_id))
+
+        if self._is_concentration_request(request):
+            if self.concentration_service is not None:
+                conc_result = self.concentration_service.complete_check(actor, input)
+                return SavingThrowResultView(
+                    result_id=conc_result.result_id,
+                    roll_request_id=conc_result.roll_request_id,
+                    target_entry_id=conc_result.target_entry_id,
+                    total=conc_result.total,
+                    succeeded=conc_result.succeeded,
+                )
+
         acting_seat_id, execution_mode = self._authorize_roll(actor, request)
 
         def compute() -> CoreRollComputation:
@@ -427,4 +470,5 @@ __all__ = [
     "SavingThrowRequestResponse",
     "SavingThrowRequestView",
     "SavingThrowResultView",
+    "pending_combat_roll_request_type",
 ]

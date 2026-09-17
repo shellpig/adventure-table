@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from app.domain.character.schemas import CharacterConcentrationState, CharacterState
 from app.domain.combat.resolution import DamageOutcome
+from app.domain.rules.abilities import ability_modifier
 
 
 @dataclass(frozen=True)
@@ -47,23 +48,21 @@ def concentration_check_for_damage(
     )
 
 
-def resolve_concentration_check(
+def evaluate_concentration_check(
     *,
     request: ConcentrationCheckRequest,
-    state: CharacterState,
+    current: CharacterConcentrationState | None,
     d20: int,
     constitution_save_modifier: int,
-) -> ConcentrationCheckResolution:
-    """Resolve a pending check against canonical Character Current State.
+) -> tuple[bool, int, list[dict[str, object]]]:
+    """Judge a pending check against the owner's current concentration pointer.
 
-    On failure the concentration pointer and every linked persistent temporary
-    effect are removed together in the returned state. The caller persists the
-    returned state and event in its existing transaction/idempotency boundary.
+    Shared by Character and Monster owners: the caller decides how the
+    resulting success / events are applied to its own state shape.
     """
 
     if d20 < 1 or d20 > 20:
         raise ValueError("concentration saving throw d20 must be between 1 and 20")
-    current = state.concentration
     if current is None:
         raise ValueError("concentration ended before the pending check resolved")
     if current.source_ref != request.source_ref:
@@ -82,10 +81,44 @@ def resolve_concentration_check(
             "success": success,
         }
     ]
+    if not success:
+        events.append(
+            {
+                "type": "concentration_ended",
+                "owner_ref": request.owner_ref,
+                "source_ref": request.source_ref,
+                "removed_effect_ids": sorted(current.effect_ids),
+                "reason": "failed_damage_save",
+            }
+        )
+    return success, total, events
+
+
+def resolve_concentration_check(
+    *,
+    request: ConcentrationCheckRequest,
+    state: CharacterState,
+    d20: int,
+    constitution_save_modifier: int,
+) -> ConcentrationCheckResolution:
+    """Resolve a pending check against canonical Character Current State.
+
+    On failure the concentration pointer and every linked persistent temporary
+    effect are removed together in the returned state. The caller persists the
+    returned state and event in its existing transaction/idempotency boundary.
+    """
+
+    success, total, events = evaluate_concentration_check(
+        request=request,
+        current=state.concentration,
+        d20=d20,
+        constitution_save_modifier=constitution_save_modifier,
+    )
     if success:
         next_state = state.model_copy(deep=True)
     else:
-        linked = set(current.effect_ids)
+        assert state.concentration is not None
+        linked = set(state.concentration.effect_ids)
         next_state = state.model_copy(
             update={
                 "concentration": None,
@@ -95,16 +128,6 @@ def resolve_concentration_check(
             },
             deep=True,
         )
-        events.append(
-            {
-                "type": "concentration_ended",
-                "owner_ref": request.owner_ref,
-                "source_ref": request.source_ref,
-                "removed_effect_ids": sorted(linked),
-                "reason": "failed_damage_save",
-            }
-        )
-
     return ConcentrationCheckResolution(
         request=request,
         total=total,
@@ -112,3 +135,48 @@ def resolve_concentration_check(
         state=next_state,
         events=tuple(events),
     )
+
+
+def monster_save_modifier(rules: dict, ability: str) -> int:
+    scores = rules.get("ability_scores", {})
+    score = scores.get(ability, 10) if isinstance(scores, dict) else 10
+    base = ability_modifier(score if isinstance(score, int) else 10)
+    abbreviations = {
+        "strength": "str",
+        "dexterity": "dex",
+        "constitution": "con",
+        "intelligence": "int",
+        "wisdom": "wis",
+        "charisma": "cha",
+    }
+    expected = {
+        f"saving-throw-{abbreviations.get(ability, ability)}",
+        f"saving-throw-{ability}",
+    }
+    proficiencies = rules.get("proficiencies", [])
+    if not isinstance(proficiencies, list):
+        return base
+    for raw in proficiencies:
+        if not isinstance(raw, dict):
+            continue
+        reference = raw.get("proficiency")
+        index = None
+        if isinstance(reference, dict):
+            candidate = reference.get("index") or reference.get("name")
+            if isinstance(candidate, str):
+                index = candidate.strip().casefold().replace(" ", "-")
+        value = raw.get("value")
+        if index in expected and isinstance(value, int):
+            return value
+    return base
+
+
+__all__ = [
+    "ConcentrationCheckRequest",
+    "ConcentrationCheckResolution",
+    "concentration_check_for_damage",
+    "concentration_dc",
+    "evaluate_concentration_check",
+    "monster_save_modifier",
+    "resolve_concentration_check",
+]

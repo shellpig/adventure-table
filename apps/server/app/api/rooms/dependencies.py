@@ -7,15 +7,20 @@ from fastapi import Request
 from app.api.dependencies import get_content_registry, get_database_engine
 from app.api.errors import APIError
 from app.api.rooms.table_event_wait import ProcessLocalTableEventNotifier
+from app.domain.combat.adjudication_service import CombatAdjudicationService
 from app.domain.combat.attack_definitions import AttackDefinitionResolver
 from app.domain.combat.attacks import CombatAttackService
+from app.domain.combat.concentration import CombatConcentrationService
 from app.domain.combat.core_rolls import CombatCoreRollService
 from app.domain.combat.initiative import CombatInitiativeService
 from app.domain.combat.lifecycle import CombatService
+from app.domain.combat.monster_instances import MonsterInstanceService
 from app.domain.combat.order import CombatOrderService
+from app.domain.combat.reaction_service import CombatReactionService
 from app.domain.combat.roll_compat import CombatAwareRollRepository
 from app.domain.combat.semantic_hp import CombatResolutionService
 from app.domain.combat.special_attacks import CombatSpecialAttackService
+from app.domain.combat.spell_service import CombatSpellService
 from app.domain.rooms.campaigns import CampaignService
 from app.domain.rooms.character_rolls import CharacterRollModifierResolver
 from app.domain.rooms.exploration import ExplorationActionService, ExplorationStageService
@@ -29,13 +34,16 @@ from app.domain.rooms.table_events import TableEventService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
 from app.persistence.combat.adjudication import CombatAdjudicationRepository
 from app.persistence.combat.attacks import CombatAttackRepository
+from app.persistence.combat.concentration import CombatConcentrationRepository
 from app.persistence.combat.core_rolls import CombatCoreRollRepository
 from app.persistence.combat.initiative import CombatInitiativeRepository
 from app.persistence.combat.lifecycle import CombatRepository
 from app.persistence.combat.order import CombatOrderRepository
+from app.persistence.combat.reactions import CombatReactionRepository
 from app.persistence.combat.repository import MonsterRepository
 from app.persistence.combat.resolution import CombatResolutionRepository
 from app.persistence.combat.special_attacks import SpecialAttackRepository
+from app.persistence.combat.spells import CombatSpellRepository
 from app.persistence.mcp.room_lifecycle import M04BSeatRepository, M04BSessionRepository
 from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.exploration import ExplorationRepository
@@ -192,6 +200,7 @@ def get_combat_service(request: Request) -> CombatService:
             event_service,
             get_room_workspace_service(request).character_repository,
             MonsterRepository(engine),
+            get_content_registry(request),
         )
         request.app.state.combat_service = service
     return service
@@ -233,6 +242,39 @@ def get_combat_attack_service(request: Request) -> CombatAttackService:
     return service
 
 
+def get_combat_adjudication_service(request: Request) -> CombatAdjudicationService:
+    service = getattr(request.app.state, "combat_adjudication_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        event_service = get_table_event_service(request)
+        combat_service = get_combat_service(request)
+        service = CombatAdjudicationService(
+            repository=CombatAdjudicationRepository(engine, event_service.repository),
+            combat_repository=combat_service.repository,
+            combat_service=combat_service,
+            table_event_service=event_service,
+        )
+        request.app.state.combat_adjudication_service = service
+    return service
+
+
+def get_combat_concentration_service(request: Request) -> CombatConcentrationService:
+    service = getattr(request.app.state, "combat_concentration_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        event_service = get_table_event_service(request)
+        combat_service = get_combat_service(request)
+        service = CombatConcentrationService(
+            CombatConcentrationRepository(engine, event_service.repository),
+            combat_service.repository,
+            combat_service.monster_repository,
+            get_roll_service(request),
+            event_service,
+        )
+        request.app.state.combat_concentration_service = service
+    return service
+
+
 def get_combat_core_roll_service(request: Request) -> CombatCoreRollService:
     service = getattr(request.app.state, "combat_core_roll_service", None)
     if service is None:
@@ -246,6 +288,7 @@ def get_combat_core_roll_service(request: Request) -> CombatCoreRollService:
             combat_service.monster_repository,
             get_roll_service(request),
             event_service,
+            concentration_service=get_combat_concentration_service(request),
         )
         request.app.state.combat_core_roll_service = service
     return service
@@ -320,18 +363,72 @@ def get_session_resume_service(request: Request) -> SessionResumeService:
     return service
 
 
+def get_combat_reaction_service(request: Request) -> CombatReactionService:
+    service = getattr(request.app.state, "combat_reaction_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        event_service = get_table_event_service(request)
+        combat_service = get_combat_service(request)
+        service = CombatReactionService(
+            repository=CombatReactionRepository(engine, event_service.repository),
+            combat_repository=combat_service.repository,
+            combat_service=combat_service,
+            table_event_service=event_service,
+        )
+        request.app.state.combat_reaction_service = service
+    return service
+
+
+def get_combat_spell_service(request: Request) -> CombatSpellService:
+    service = getattr(request.app.state, "combat_spell_service", None)
+    if service is None:
+        engine = get_database_engine(request)
+        event_service = get_table_event_service(request)
+        combat_service = get_combat_service(request)
+        service = CombatSpellService(
+            repository=CombatSpellRepository(engine, event_service.repository),
+            combat_repository=combat_service.repository,
+            combat_service=combat_service,
+            table_event_service=event_service,
+            monster_repository=combat_service.monster_repository,
+            character_repository=get_room_workspace_service(request).character_repository,
+            roll_service=get_roll_service(request),
+            registry=get_content_registry(request),
+        )
+        request.app.state.combat_spell_service = service
+    return service
+
+
+def get_monster_instance_service(request: Request) -> MonsterInstanceService:
+    service = getattr(request.app.state, "monster_instance_service", None)
+    if service is None:
+        combat_service = get_combat_service(request)
+        service = MonsterInstanceService(
+            monster_repository=combat_service.monster_repository,
+            content_registry=get_content_registry(request),
+            table_event_service=get_table_event_service(request),
+        )
+        request.app.state.monster_instance_service = service
+    return service
+
+
 __all__ = [
     "_HistoryGuardedCharacterRepository",
     "get_campaign_service",
+    "get_combat_adjudication_service",
     "get_combat_attack_service",
+    "get_combat_concentration_service",
     "get_combat_core_roll_service",
     "get_combat_initiative_service",
     "get_combat_order_service",
+    "get_combat_reaction_service",
     "get_combat_resolution_service",
     "get_combat_service",
     "get_combat_special_attack_service",
+    "get_combat_spell_service",
     "get_exploration_action_service",
     "get_exploration_stage_service",
+    "get_monster_instance_service",
     "get_pending_action_service",
     "get_roll_service",
     "get_room_workspace_service",
@@ -342,3 +439,4 @@ __all__ = [
     "get_table_event_notifier",
     "get_table_event_service",
 ]
+

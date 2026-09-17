@@ -23,6 +23,12 @@ class GuideToolNames:
     character_state: str
     pending_events: str
     wait_event: str
+    combat_context: str
+    resolve_adjudication: str
+    respond_reaction: str
+    request_adjudication: str
+    roll_concentration: str
+    advance_turn: str
 
 
 _EXPECTED = {
@@ -56,6 +62,31 @@ _EXPECTED = {
     "combat_request_special_attack",
     "combat_adjudicate_special_attack",
     "combat_roll_special_attack",
+    "combat_start",
+    "combat_add_character",
+    "combat_add_monster",
+    "combat_create_monster",
+    "combat_create_quick_enemy",
+    "combat_list_monster_instances",
+    "combat_request_initiative",
+    "combat_finalize_initiative",
+    "combat_advance_turn",
+    "combat_end",
+    "combat_remove_entry",
+    "combat_roll_initiative",
+    "combat_use_action",
+    "combat_withdraw_entry",
+    "get_combat_context",
+    "combat_cast_spell",
+    "combat_propose_aoe_spell",
+    "combat_resolve_aoe_spell",
+    "combat_roll_concentration",
+    "combat_drop_concentration",
+    "combat_open_reaction_window",
+    "combat_respond_to_reaction",
+    "combat_request_opportunity_attack",
+    "combat_request_adjudication",
+    "combat_resolve_adjudication",
 }
 
 
@@ -84,6 +115,12 @@ def guide_tool_names() -> GuideToolNames:
         character_state="update_character_state",
         pending_events="get_pending_events",
         wait_event="wait_for_event",
+        combat_context="get_combat_context",
+        resolve_adjudication="combat_resolve_adjudication",
+        respond_reaction="combat_respond_to_reaction",
+        request_adjudication="combat_request_adjudication",
+        roll_concentration="combat_roll_concentration",
+        advance_turn="combat_advance_turn",
     )
 
 

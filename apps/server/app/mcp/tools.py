@@ -7,13 +7,46 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from app.domain.combat.ai_tools import CombatEntryToolInput, CombatRollToolInput
+from app.domain.combat.adjudication_service import (
+    OpportunityAttackRequestInput,
+    SpecialAdjudicationRequestInput,
+)
+from app.domain.combat.ai_tools import (
+    CombatAdjudicationDecisionToolInput,
+    CombatEntryMutationToolInput,
+    CombatEntryToolInput,
+    CombatMutationToolInput,
+    CombatRollToolInput,
+)
 from app.domain.combat.attacks import AttackAdjudicationInput, AttackRequestInput
 from app.domain.combat.core_rolls import DeathSaveRequestInput, SavingThrowInput
+from app.domain.combat.initiative import (
+    FinalizeInitiativeInput,
+    RequestInitiativeInput,
+)
+from app.domain.combat.lifecycle import (
+    AddCharacterInput,
+    AddMonsterInput,
+    CombatActionInput,
+    StartCombatInput,
+)
+from app.domain.combat.monster_instances import (
+    CreateMonsterFromContentInput,
+    CreateQuickEnemyInput,
+)
+from app.domain.combat.reaction_service import (
+    OpenReactionInput,
+    ResolveReactionInput,
+)
 from app.domain.combat.semantic_hp import SemanticDamageInput, SemanticHealingInput
 from app.domain.combat.special_attacks import (
     SpecialAttackAdjudicationInput,
     SpecialAttackRequestInput,
+)
+from app.domain.combat.spell_service import (
+    CastSpellInput,
+    ProposeAoeSpellInput,
+    ResolveAoeSpellInput,
 )
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.ai_controllers import AIControllerAuthView
@@ -39,8 +72,14 @@ class _NoArguments(StrictModel):
 
 _WHEN_TO_USE: dict[str, tuple[str, str]] = {
     "get_session_context": (
-        "Call first on connection and again whenever Session state, visible events, pending rolls, or control may have changed. Connection status must never be inferred from tool discovery or a connector rescan; call this tool and use its actual result.",
-        "連線後第一個呼叫；Session 狀態、可見事件、待擲骰或控制權可能改變時再次讀取。連線狀態不可從工具清單或重新掃描推測，必須實際呼叫本工具並依其結果判定。",
+        "Call first on connection and again whenever Session state, visible events, pending rolls, or control may have changed. "
+        "In active Combat, the response carries a compact combat context (round, current turn, own entries, pending roll, reaction window, adjudication) "
+        "and next_required_action; callers should act only on their own current turn or inside an open reaction window, and return to wait_for_event after resolving. "
+        "Connection status must never be inferred from tool discovery or a connector rescan; call this tool and use its actual result.",
+        "連線後第一個呼叫；Session 狀態、可見事件、待擲骰或控制權可能改變時再次讀取。"
+        "在戰鬥進行中，回傳包含精簡戰鬥情境（round、當前回合、自身戰鬥者、待擲骰、反應窗口、裁定）"
+        "與 next_required_action；呼叫方應僅在自己的當前回合或開啟的反應窗口內行動，解決後立即返回 wait_for_event。"
+        "連線狀態不可從工具清單或重新掃描推測，必須實際呼叫本工具並依其結果判定。",
     ),
     "start_session": (
         "Use only with a pre-session AI DM grant after get_session_context reports mode=pre_session.",
@@ -157,6 +196,106 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
     "combat_roll_special_attack": (
         "Resolve one pending Grapple/Shove opposed RollRequest with server RNG; the second completed roll atomically applies Grappled/Prone or records the push result.",
         "以 server RNG 完成一個 Grapple/Shove opposed RollRequest；第二個擲骰完成時原子套用 Grappled/Prone 或記錄 push 結果。",
+    ),
+    "combat_start": (
+        "Current DM initiates Quick Combat; active Session party characters are included by default unless overridden.",
+        "目前 DM 啟動 Quick Combat 時使用；預設納入目前 Session 隊伍角色。",
+    ),
+    "combat_add_character": (
+        "Current DM adds a late-joining or newly entered Session character to active Combat.",
+        "目前 DM 將新進場或中途加入 Session 的角色加入目前 Combat 時使用。",
+    ),
+    "combat_add_monster": (
+        "Current DM places an existing Monster Instance into active Combat as an enemy combatant.",
+        "目前 DM 將既有的 Monster Instance 作為敵方單位加入目前 Combat 時使用。",
+    ),
+    "combat_create_monster": (
+        "Current DM instantiates an authoritative SRD monster template for the Campaign before or during encounter play.",
+        "目前 DM 在遭遇開始前或戰鬥中從權威 SRD 模板建立怪物實例時使用。",
+    ),
+    "combat_create_quick_enemy": (
+        "Current DM quickly defines an ad-hoc enemy with custom stats without using a formal rulebook template.",
+        "目前 DM 需要臨時建立自訂數值的敵方怪物、不使用正式規則模板時使用。",
+    ),
+    "combat_list_monster_instances": (
+        "Current DM inspects all created Monster Instances in the current Campaign including hidden stats and resources.",
+        "目前 DM 檢視目前 Campaign 內所有已建立的怪物實例，包含完整隱藏數值與資源。",
+    ),
+    "combat_request_initiative": (
+        "Current DM opens initiative roll requests for PCs and rolls grouped monster initiative.",
+        "目前 DM 為玩家角色建立先攻擲骰請求，並依分組計算怪物先攻時使用。",
+    ),
+    "combat_finalize_initiative": (
+        "Current DM locks in the resolved initiative sequence and advances Combat from initiative_pending to Round 1.",
+        "目前 DM 確認已完成的先攻順序，並將 Combat 從先攻等待狀態推進到第一輪時使用。",
+    ),
+    "combat_advance_turn": (
+        "Current DM advances the active turn order, refreshing economy and incrementing rounds when cycling.",
+        "目前 DM 推進戰鬥輪次，刷新行動經濟並在輪替時推進回合數。",
+    ),
+    "combat_end": (
+        "Current DM formally concludes active Combat, clearing initiative and transient economy while preserving HP and conditions.",
+        "目前 DM 正式結束目前戰鬥，清除先攻與暫時行動經濟，並保留 HP 與狀態效果。",
+    ),
+    "combat_remove_entry": (
+        "Current DM removes an entry permanently from turn order due to death, defeat, or departure.",
+        "目前 DM 因陣亡、擊潰或離場而將特定單位自先攻輪次中移除時使用。",
+    ),
+    "combat_roll_initiative": (
+        "Resolve a pending character initiative roll request using server RNG and record the total.",
+        "以 server RNG 完成待處理的角色先攻擲骰請求並記錄點數。",
+    ),
+    "combat_use_action": (
+        "Combatant spends action economy on standard actions like Dash, Disengage, Dodge, Search, Ready, or Freeform.",
+        "戰鬥單位消耗行動經濟以執行 Dash、Disengage、Dodge、Search、Ready 或 Freeform 等標準行動。",
+    ),
+    "combat_withdraw_entry": (
+        "Current DM marks a combatant as withdrawn (fled or retreated) while keeping its entry for the record; a Player narrates the retreat and asks the DM.",
+        "目前 DM 將戰鬥單位標記為退出（逃離或撤退）並保留其紀錄；Player 以敘事表達撤退並請 DM 處理。",
+    ),
+    "get_combat_context": (
+        "Read compact active combat state, turn order, pending roll requests, reaction windows, pending adjudications, and the next required action for the caller.",
+        "讀取緊湊的當前戰鬥狀態、輪次順序、待處理擲骰、反應窗口、待裁定事項以及呼叫者下一步所需行動。",
+    ),
+    "combat_cast_spell": (
+        "Cast a single-target or self spell using authoritative spell slots, concentration tracking, and target resolution rules.",
+        "使用權威法術位、專注追蹤與目標解析規則施放單一目標或自身法術。",
+    ),
+    "combat_propose_aoe_spell": (
+        "Propose an area-of-effect spell declaration pending DM resolution for line of effect, cover, and affected targets.",
+        "宣告範圍法術提案，等待 DM 裁定效果線、掩蔽與受影響目標。",
+    ),
+    "combat_resolve_aoe_spell": (
+        "DM resolves a proposed area-of-effect spell, confirming final targets, saving throw DC, and spell damage or effects.",
+        "DM 裁定範圍法術提案，確認最終目標、豁免檢定 DC 以及法術傷害或效果。",
+    ),
+    "combat_roll_concentration": (
+        "Roll an authoritative Constitution saving throw to maintain concentration after taking damage during combat.",
+        "在戰鬥中受到傷害後，進行權威體質豁免擲骰以維持專注狀態。",
+    ),
+    "combat_drop_concentration": (
+        "Voluntarily end concentration on an active spell at any time without spending an action or reaction.",
+        "在任何時刻自願中斷當前法術的專注狀態，不消耗動作或反應。",
+    ),
+    "combat_open_reaction_window": (
+        "DM explicitly opens a reaction window for combatants in response to a trigger such as movement, spellcasting, or attacks.",
+        "DM 針對移動、施法或攻擊等觸發條件，顯式開啟戰鬥者的反應窗口。",
+    ),
+    "combat_respond_to_reaction": (
+        "Combatant responds to an open reaction window by taking an available reaction action or passing the opportunity.",
+        "戰鬥者針對開放的反應窗口做出回應，執行可用的反應動作或放棄機會。",
+    ),
+    "combat_request_opportunity_attack": (
+        "Request an opportunity attack trigger adjudication from the DM when a hostile creature moves out of reach.",
+        "當敵對生物移出觸及範圍時，向 DM 申請借機攻擊觸發裁定。",
+    ),
+    "combat_request_adjudication": (
+        "Request a custom DM adjudication for non-standard combat actions, cover modifiers, or special tactical situations.",
+        "針對非標準戰鬥動作、掩蔽調整值或特殊戰術情境，向 DM 申請自訂戰鬥裁定。",
+    ),
+    "combat_resolve_adjudication": (
+        "DM resolves a pending combat adjudication, determining success, consequences, conditions, or resulting roll requests.",
+        "DM 裁定待處理的戰鬥裁定事項，決定是否成立、後果、狀態或後續擲骰請求。",
     ),
 }
 
@@ -308,6 +447,31 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("combat_request_special_attack", _desc("Declare a formal 2014 Grapple or Shove.", "宣告正式 2014 Grapple 或 Shove。"), SpecialAttackRequestInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_adjudicate_special_attack", _desc("Resolve pending Grapple/Shove reach adjudication.", "裁定待處理 Grapple/Shove reach。"), SpecialAttackAdjudicationInput, frozenset({"dm"})),
     MCPToolDefinition("combat_roll_special_attack", _desc("Resolve a pending Grapple/Shove opposed roll with server RNG.", "以 Server RNG 完成待處理 Grapple/Shove opposed roll。"), CombatRollToolInput, frozenset({"player", "dm"})),
+    MCPToolDefinition("combat_start", _desc("Start Quick Combat for the current Campaign.", "為目前 Campaign 啟動 Quick Combat。"), StartCombatInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_add_character", _desc("Add an active Session character to running Combat.", "將目前 Session 的角色加入進行中的 Combat。"), AddCharacterInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_add_monster", _desc("Add a Campaign monster instance into active Combat.", "將 Campaign 內的怪物實例加入目前 Combat。"), AddMonsterInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_create_monster", _desc("Create a Monster Instance from SRD rules content.", "從 SRD 規則內容建立 Monster Instance。"), CreateMonsterFromContentInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_create_quick_enemy", _desc("Create an ad-hoc Quick Enemy monster instance.", "建立臨時的 Quick Enemy 怪物實例。"), CreateQuickEnemyInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_list_monster_instances", _desc("List all Campaign Monster Instances with full DM stats.", "列出 Campaign 內所有怪物實例的完整 DM 資訊。"), _NoArguments, frozenset({"dm"})),
+    MCPToolDefinition("combat_request_initiative", _desc("Request initiative rolls for active combatants.", "為活躍戰鬥單位發起先攻擲骰請求。"), RequestInitiativeInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_finalize_initiative", _desc("Finalize initiative turn order to begin Round 1.", "確認先攻順序以開始第一回合。"), FinalizeInitiativeInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_advance_turn", _desc("Advance Combat to the next turn or round.", "將 Combat 推進至下一個輪次或回合。"), CombatMutationToolInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_end", _desc("End the active Combat and clean up transient state.", "結束目前 Combat 並清除戰鬥暫態。"), CombatMutationToolInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_remove_entry", _desc("Remove a combatant entry completely from Combat.", "將戰鬥單位完全自 Combat 中移除。"), CombatEntryMutationToolInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_roll_initiative", _desc("Resolve a pending initiative RollRequest with server RNG.", "以 Server RNG 完成待處理的先攻 RollRequest。"), CombatRollToolInput, frozenset({"player", "dm"})),
+    MCPToolDefinition("combat_use_action", _desc("Perform a non-attack combat action such as Dash or Dodge.", "執行 Dash 或 Dodge 等非攻擊型戰鬥行動。"), CombatActionInput, frozenset({"player", "dm"})),
+    MCPToolDefinition("combat_withdraw_entry", _desc("Withdraw a combatant entry from active combat.", "將戰鬥單位標記為退出戰鬥。"), CombatEntryMutationToolInput, frozenset({"dm"})),
+    MCPToolDefinition("get_combat_context", _desc("Read compact active combat state and next required action.", "讀取緊湊的目前戰鬥狀態與下一步所需行動。"), _NoArguments, frozenset({"player", "dm"})),
+    MCPToolDefinition("combat_cast_spell", _desc("Cast a single-target, self, or utility spell.", "施放單一目標、自身或公用型法術。"), CastSpellInput, frozenset({"player", "dm"})),
+    MCPToolDefinition("combat_propose_aoe_spell", _desc("Propose an area-of-effect spell declaration pending DM resolution.", "宣告範圍法術提案以待 DM 裁定。"), ProposeAoeSpellInput, frozenset({"player", "dm"})),
+    MCPToolDefinition("combat_resolve_aoe_spell", _desc("Resolve a proposed area-of-effect spell declaration.", "裁定範圍法術提案。"), ResolveAoeSpellInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_roll_concentration", _desc("Resolve a pending Concentration check with server RNG.", "以 Server RNG 完成待處理的專注檢定。"), CombatRollToolInput, frozenset({"player", "dm"})),
+    MCPToolDefinition("combat_drop_concentration", _desc("Voluntarily drop concentration on an active spell.", "自願中斷目前法術的專注狀態。"), CombatEntryMutationToolInput, frozenset({"player", "dm"})),
+    MCPToolDefinition("combat_open_reaction_window", _desc("Open a reaction window for combatants in response to a trigger.", "針對觸發事件為戰鬥單位開啟反應窗口。"), OpenReactionInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_respond_to_reaction", _desc("Respond to an open reaction window by acting or passing.", "針對開放的反應窗口執行反應動作或放棄。"), ResolveReactionInput, frozenset({"player", "dm"})),
+    MCPToolDefinition("combat_request_opportunity_attack", _desc("Request an opportunity attack trigger adjudication.", "申請借機攻擊觸發裁定。"), OpportunityAttackRequestInput, frozenset({"player", "dm"})),
+    MCPToolDefinition("combat_request_adjudication", _desc("Request a DM adjudication for a special tactical situation.", "針對特殊戰術情境向 DM 申請戰鬥裁定。"), SpecialAdjudicationRequestInput, frozenset({"player", "dm"})),
+    MCPToolDefinition("combat_resolve_adjudication", _desc("Resolve a pending combat adjudication ruling.", "裁定待處理的戰鬥裁定事項。"), CombatAdjudicationDecisionToolInput, frozenset({"dm"})),
 )
 
 
@@ -441,6 +605,56 @@ async def call_tool(
             data = await asyncio.to_thread(service.combat_adjudicate_special_attack, token, parsed, authenticated=auth)
         elif name == "combat_roll_special_attack":
             data = await asyncio.to_thread(service.combat_roll_special_attack, token, parsed, authenticated=auth)
+        elif name == "combat_start":
+            data = await asyncio.to_thread(service.combat_start, token, parsed, authenticated=auth)
+        elif name == "combat_add_character":
+            data = await asyncio.to_thread(service.combat_add_character, token, parsed, authenticated=auth)
+        elif name == "combat_add_monster":
+            data = await asyncio.to_thread(service.combat_add_monster, token, parsed, authenticated=auth)
+        elif name == "combat_create_monster":
+            data = await asyncio.to_thread(service.combat_create_monster, token, parsed, authenticated=auth)
+        elif name == "combat_create_quick_enemy":
+            data = await asyncio.to_thread(service.combat_create_quick_enemy, token, parsed, authenticated=auth)
+        elif name == "combat_list_monster_instances":
+            data = await asyncio.to_thread(service.combat_list_monster_instances, token, authenticated=auth)
+        elif name == "combat_request_initiative":
+            data = await asyncio.to_thread(service.combat_request_initiative, token, parsed, authenticated=auth)
+        elif name == "combat_roll_initiative":
+            data = await asyncio.to_thread(service.combat_roll_initiative, token, parsed, authenticated=auth)
+        elif name == "combat_finalize_initiative":
+            data = await asyncio.to_thread(service.combat_finalize_initiative, token, parsed, authenticated=auth)
+        elif name == "combat_advance_turn":
+            data = await asyncio.to_thread(service.combat_advance_turn, token, parsed, authenticated=auth)
+        elif name == "combat_use_action":
+            data = await asyncio.to_thread(service.combat_use_action, token, parsed, authenticated=auth)
+        elif name == "combat_withdraw_entry":
+            data = await asyncio.to_thread(service.combat_withdraw_entry, token, parsed, authenticated=auth)
+        elif name == "combat_remove_entry":
+            data = await asyncio.to_thread(service.combat_remove_entry, token, parsed, authenticated=auth)
+        elif name == "combat_end":
+            data = await asyncio.to_thread(service.combat_end, token, parsed, authenticated=auth)
+        elif name == "get_combat_context":
+            data = await asyncio.to_thread(service.combat_get_context, token, authenticated=auth)
+        elif name == "combat_cast_spell":
+            data = await asyncio.to_thread(service.combat_cast_spell, token, parsed, authenticated=auth)
+        elif name == "combat_propose_aoe_spell":
+            data = await asyncio.to_thread(service.combat_propose_aoe_spell, token, parsed, authenticated=auth)
+        elif name == "combat_resolve_aoe_spell":
+            data = await asyncio.to_thread(service.combat_resolve_aoe_spell, token, parsed, authenticated=auth)
+        elif name == "combat_roll_concentration":
+            data = await asyncio.to_thread(service.combat_roll_concentration, token, parsed, authenticated=auth)
+        elif name == "combat_drop_concentration":
+            data = await asyncio.to_thread(service.combat_drop_concentration, token, parsed, authenticated=auth)
+        elif name == "combat_open_reaction_window":
+            data = await asyncio.to_thread(service.combat_open_reaction_window, token, parsed, authenticated=auth)
+        elif name == "combat_respond_to_reaction":
+            data = await asyncio.to_thread(service.combat_respond_to_reaction, token, parsed, authenticated=auth)
+        elif name == "combat_request_opportunity_attack":
+            data = await asyncio.to_thread(service.combat_request_opportunity_attack, token, parsed, authenticated=auth)
+        elif name == "combat_request_adjudication":
+            data = await asyncio.to_thread(service.combat_request_adjudication, token, parsed, authenticated=auth)
+        elif name == "combat_resolve_adjudication":
+            data = await asyncio.to_thread(service.combat_resolve_adjudication, token, parsed, authenticated=auth)
         else:  # pragma: no cover
             return structured_tool_error("tool_not_implemented", "Tool dispatch is not implemented", "工具 dispatch 尚未實作")
     except ValidationError:

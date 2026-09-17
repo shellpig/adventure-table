@@ -167,6 +167,14 @@ def render_guide(locale: Locale | str) -> str:
             f"DM 在 stage_unset 為真時先呼叫 {names.stage_text} 建立場景，再 {names.narration} 敘事。\n"
             "連線判定：只有本回合實際執行工具並取得結果才算呼叫 MCP；查看工具清單或重新掃描不算，也不可據此宣稱連線成功或失敗。"
         )
+        combat = (
+            f"【戰鬥】\n戰鬥進行中，以 {names.context} 或 {names.combat_context} 讀取當前回合、各戰鬥者與 pending 狀態。"
+            f"Player 僅在自己的當前回合或開啟的反應窗口內以 {names.respond_reaction} 行動；"
+            f"待擲骰用 {names.roll_pending}，專注豁免用 {names.roll_concentration}。"
+            f"空間或規則不確定時由 Player 以 {names.request_adjudication} 提請裁定，DM 以 {names.resolve_adjudication} 裁定。"
+            f"輪到怪物時 DM 結算敵方動作並呼叫 {names.advance_turn} 推進回合。"
+            f"每次結算後立即呼叫 {names.wait_event}，不要停在 host chat。"
+        )
         rules = f"【DM 守則】\n{role_rule(role='dm', locale=locale)}\n\n【Player 守則】\n{role_rule(role='player', locale=locale)}"
         unauth = "收到 401 ai_token_unauthorized 時停止並告知使用者，不要重試；token 用完或不再需要時請由人類撤銷。"
         tool_heading = "【工具表】"
@@ -189,6 +197,15 @@ def render_guide(locale: Locale | str) -> str:
             f"While stage_unset is true a DM calls {names.stage_text} to set the scene before narrating with {names.narration}.\n"
             "Connection check: only an actual tool call this turn that returns a result counts as calling MCP; listing or rescanning tools does not, and connection success/failure must never be inferred from it."
         )
+        combat = (
+            f"[Combat]\nIn active Combat, call {names.context} or {names.combat_context} to read round, current turn, combatants, and pending actions. "
+            f"A Player acts only on their own current turn or within an open reaction window via {names.respond_reaction}; "
+            f"pending rolls use {names.roll_pending}, and concentration saves use {names.roll_concentration}. "
+            f"When range, cover, or OA is uncertain, a Player calls {names.request_adjudication} to request DM adjudication, "
+            f"and the DM resolves it with {names.resolve_adjudication}. "
+            f"On a Monster turn the DM resolves enemy actions then calls {names.advance_turn} to advance the turn. "
+            f"After each resolution, immediately call {names.wait_event} and never stop in host chat."
+        )
         rules = f"[DM rules]\n{role_rule(role='dm', locale=locale)}\n\n[Player rules]\n{role_rule(role='player', locale=locale)}"
         unauth = "On 401 ai_token_unauthorized, stop and tell the user; do not retry. Ask the human to revoke the token when it is no longer needed."
         tool_heading = "[Tools]"
@@ -208,6 +225,7 @@ def render_guide(locale: Locale | str) -> str:
             _http_contract(locale),
             "\n".join(tool_lines),
             flow,
+            combat,
             wait_rule(locale),
             rules,
             unauth,

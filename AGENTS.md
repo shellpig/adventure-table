@@ -33,6 +33,7 @@ Report to user: current progress, and any issues with their scope of impact.
 | 診斷 bug、分析錯誤、找根因、效能回歸 | `diagnose` |
 | 使用者要求深入訪談／壓力測試設計，或存在無法由既有規格解決的核心產品分歧 | `grill-me` |
 | 前端／本機 web app 驗證、UI 行為除錯、瀏覽器截圖或 console log | `webapp-testing` |
+| 被指定為**指揮者**：叫 agy / ChatGPT 實作、自己驗證與收尾 | `docs/others/conductor-handbook.md`（整份讀；含 prompt 骨架、驗證 gate、兩種 worker 的踩坑表） |
 
 判斷任務類型是開工的第一步，不是可選項。
 
@@ -216,7 +217,9 @@ cd apps/web && npm run test:e2e:docker
 | Codex DeepSeek home | `C:\_work\AI_Work\Tools\codex-deepseek-home` | DS reviewer 環境 |
 | Antigravity CLI | `C:\Users\User\AppData\Local\agy\bin\agy.exe` | agy reviewer |
 
-### 外部 Reviewer CLI
+### 外部 Reviewer / Worker CLI
+
+把 agy 或 ChatGPT 當 **worker**（實作而非 review）時，流程、step 粒度、檢查節奏與踩坑一律看 `docs/others/conductor-handbook.md`；本段只保留啟動指令。
 
 三個 reviewer 共通：**預設 read-only**——不寫檔、不刪檔、不 stage、不 commit、不 push，不讀 `.env` 與 `C:\_work\AI_Work\Tools\`；非互動呼叫必須 `< NUL` 關閉 stdin，否則會停在等待輸入永久卡死；輸出重導到檔案保留；結果只當第二意見，回報前先自己審一遍，並以 `git status` / `git diff` 確認實際改動。
 
@@ -235,10 +238,12 @@ cmd /c "C:\Users\User\AppData\Local\agy\bin\agy.exe -p `\"<任務>`\" --model `\
 ```
 
 - `--add-dir` 讓 agy 讀到專案，`--dangerously-skip-permissions` 單次生效不動持久設定，兩者都不可省。
+- **`-p` 只能放單行短句，任務本文寫進檔案讓 agy 自己讀**（例：`-p "Your full task is in C:\_work\AI_Work\Tools\agy-runs\<步驟>.prompt.txt. Read it first, then follow every instruction in it."`，並多加一個 `--add-dir C:\_work\AI_Work\Tools\agy-runs`）。多行 prompt 經 `cmd /c` 會在第一個換行截斷，後面的 flag 與重導全部遺失，agy 會以無權限狀態靜默結束。
 - **一律 `run_in_background` 啟動**，不同步等；結束時 Claude 會被喚醒，直接讀輸出檔審結果。輸出落在 repo 外的 `C:\_work\AI_Work\Tools\agy-runs\`，session 中斷也找得回。不再使用寫死的 `--print-timeout 540s`。
 - `--output-format json` 回傳 `conversation_id`／`status`／`duration_seconds`／`usage`。**同一步驟的修改回合用 `--conversation <id>` 接續**（已驗證可在 `--print` 模式保留脈絡；每輪整段重送、無 cache，累積數輪即換新對話）。**換下一步驟一律開新對話**。
+- **prompt 骨架**：一律從 `C:\_work\AI_Work\Tools\agy-runs\TEMPLATE.prompt.txt` 複製再填：必讀清單（AGENTS.md → 該 Subphase `實作紀錄.md` → 三份 Phase 文件對應段 → 要動的程式檔）→ scope（含「不該看到／不該操作」的 actor 測試）→ code quality 條款 → 測試指令 → hard rules → final report。**code quality 條款不可省**：agy 未被明講時會用 `getattr` / `Any` / 吞錯 try-except / `lru_cache` fallback global、加沒人呼叫的參數或重複 route、整段複製既有函式；每個要共用的既有 helper 都要在 prompt 點名。
 - **拆步原則**：每個 agy 任務要在 15～20 分鐘內收斂到可驗證狀態；prompt 自足，只指向該步要讀的規格段落，明列交付物、focused test 指令與「不得 commit」。Subphase 進度寫在該 Phase 的 `<Subphase>實作紀錄.md`（例：`docs/P4/P4-D實作紀錄.md`），新對話讀它接手；agy 對話 ID 遺失不影響交接。
-- 每步結束後 Claude 以 `git diff` 審改動、跑該步 focused test，通過才 commit；失敗把錯誤餵回同一對話修。
+- 每步結束後 Claude 以 `git diff` 審改動、跑該步 focused test，通過才 commit；失敗把錯誤餵回同一對話修。**審完若剩餘修改很小（幾行、單一檔案、不需重新理解脈絡），Claude 直接自己改完再 commit，不再開 agy 回合。**
 - Model：`--model` 用 `agy models` 列出的完整顯示字串，未指定時預設 `"Gemini 3.8 Flash (High)"`。
 
 **Codex CLI (OpenAI)**：用預設 `CODEX_HOME`。

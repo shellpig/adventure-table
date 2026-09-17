@@ -54,6 +54,7 @@ monster_instances = Table(
     Column("temp_hp", Integer(), nullable=False, server_default="0"),
     Column("conditions", JSON(), nullable=False),
     Column("effects", JSON(), nullable=False),
+    Column("concentration", JSON(), nullable=True),
     Column("combat_status", String(16), nullable=False),
     Column("initiative", Integer(), nullable=True),
     Column("reaction_available", Boolean(), nullable=False, server_default=true()),

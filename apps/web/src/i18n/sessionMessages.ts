@@ -38,10 +38,27 @@ export const P3C_SESSION_REQUEST_CODES = [
   'invalid_character_state',
 ] as const
 
+export const P4E_SESSION_REQUEST_CODES = [
+  'unknown_reference',
+  'monster_instance_conflict',
+  'combat_not_found',
+  'attack_not_found',
+  'combat_roll_not_found',
+  'combat_target_not_found',
+  'active_combat_exists',
+  'combat_state_conflict',
+  'initiative_request_not_found',
+  'invalid_initiative_input',
+  'invalid_attack_definition',
+  'invalid_combat_input',
+  'special_attack_not_found',
+] as const
+
 export const SESSION_REQUEST_CODES = [
   ...P2E_SESSION_REQUEST_CODES,
   ...P3B_SESSION_REQUEST_CODES,
   ...P3C_SESSION_REQUEST_CODES,
+  ...P4E_SESSION_REQUEST_CODES,
 ] as const
 
 export type SessionRequestCode = (typeof SESSION_REQUEST_CODES)[number]
@@ -162,6 +179,58 @@ export const SESSION_REQUEST_CODE_MESSAGES: Record<SessionRequestCode, Record<Lo
   invalid_character_state: {
     'zh-TW': '這次修改會產生不合法的角色目前狀態，請檢查輸入。',
     en: 'This change would create invalid Character Current State. Check the input.',
+  },
+  unknown_reference: {
+    'zh-TW': '找不到指定的內容參照或規則資料，請確認資料來源。',
+    en: 'The requested content reference or rules data could not be found. Check the content source.',
+  },
+  monster_instance_conflict: {
+    'zh-TW': '怪物實體狀態發生衝突，請重新整理戰鬥後再試。',
+    en: 'Monster instance state conflict occurred. Refresh the Combat and try again.',
+  },
+  combat_not_found: {
+    'zh-TW': '找不到進行中的戰鬥，請確認戰鬥是否已開始或已結束。',
+    en: 'Active Combat could not be found. Confirm whether Combat has started or already ended.',
+  },
+  attack_not_found: {
+    'zh-TW': '找不到這項攻擊請求或攻擊定義，請重新整理戰鬥面板。',
+    en: 'This attack request or definition no longer exists. Refresh the Combat panel.',
+  },
+  combat_roll_not_found: {
+    'zh-TW': '找不到這筆待處理的戰鬥擲骰，請重新整理擲骰面板。',
+    en: 'This pending combat roll could not be found. Refresh the roll panel.',
+  },
+  combat_target_not_found: {
+    'zh-TW': '戰鬥目標已不在這場戰鬥中，請重新選擇目標。',
+    en: 'The combat target is no longer in this Combat. Select another target.',
+  },
+  active_combat_exists: {
+    'zh-TW': '這個 Campaign 已有進行中的戰鬥。',
+    en: 'This Campaign already has an active Combat.',
+  },
+  combat_state_conflict: {
+    'zh-TW': '戰鬥狀態已變更，這個動作現在不能執行，請重新整理後再試。',
+    en: 'Combat state changed and this action is no longer allowed. Refresh and try again.',
+  },
+  initiative_request_not_found: {
+    'zh-TW': '找不到這項先攻擲骰請求，可能已被結算或取消。',
+    en: 'This initiative roll request could not be found. It may have been resolved or canceled.',
+  },
+  invalid_initiative_input: {
+    'zh-TW': '先攻數值無效，請輸入合法的先攻擲骰結果。',
+    en: 'Invalid initiative value. Provide a valid initiative roll result.',
+  },
+  invalid_attack_definition: {
+    'zh-TW': '攻擊定義內容無效，請確認射程、傷害或加值設定。',
+    en: 'The attack definition is invalid. Check range, damage, or modifier settings.',
+  },
+  invalid_combat_input: {
+    'zh-TW': '戰鬥輸入不合法，請檢查目標、骰值或參數。',
+    en: 'Invalid combat input. Check the target, roll, or parameters.',
+  },
+  special_attack_not_found: {
+    'zh-TW': '找不到這項特殊攻擊請求，請重新整理後再試。',
+    en: 'This special attack request no longer exists. Refresh and try again.',
   },
 }
 

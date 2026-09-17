@@ -15,6 +15,7 @@ from app.api.rooms.dependencies import (
     get_combat_service,
     get_table_event_service,
 )
+from app.content.registry import ContentNotFoundError
 from app.domain.combat.attack_definitions import (
     AttackDefinitionInvalidError,
     AttackDefinitionNotFoundError,
@@ -28,6 +29,7 @@ from app.domain.combat.attacks import (
 )
 from app.domain.combat.core_rolls import (
     CombatCoreRollService,
+    CombatPendingRollView,
     DeathSaveRequestInput,
     DeathSaveRequestView,
     DeathSaveResultView,
@@ -49,6 +51,7 @@ from app.domain.combat.lifecycle import (
     AddMonsterInput,
     CombatActionInput,
     CombatActionView,
+    CombatDetailView,
     CombatNotFoundError,
     CombatService,
     CombatStateConflictError,
@@ -61,6 +64,7 @@ from app.domain.combat.semantic_hp import (
     CombatResolutionService,
     SemanticDamageInput,
     SemanticHealingInput,
+    SemanticResolutionView,
 )
 from app.domain.rooms.rolls import FormalRollInput, RollInputInvalidError
 from app.domain.rooms.schemas import RoomAccessContext, StrictModel
@@ -72,6 +76,10 @@ from app.domain.rooms.table_events import (
     TableEventSessionNotActiveError,
 )
 from app.persistence.characters import CharacterNotFoundError
+from app.persistence.combat.adjudication import (
+    CombatAdjudicationNotFoundError,
+    CombatAdjudicationStateConflictError,
+)
 from app.persistence.combat.attacks import (
     AttackRequestNotFoundPersistenceError,
     AttackRequestNotPendingPersistenceError,
@@ -89,6 +97,11 @@ from app.persistence.combat.lifecycle import (
     CombatNotFoundPersistenceError,
     CombatStateConflictPersistenceError,
 )
+from app.persistence.combat.reactions import (
+    CombatReactionNotFoundError,
+    CombatReactionStateConflictError,
+)
+from app.persistence.combat.repository import MonsterPersistenceError
 from app.persistence.combat.resolution import (
     CombatResolutionStateConflictError,
     CombatResolutionTargetNotFoundError,
@@ -121,7 +134,19 @@ def _map_combat_error(exc: Exception) -> APIError:
         return APIError(403, "table_actor_unauthorized", str(exc))
     if isinstance(exc, (TableEventSessionNotActiveError, TableEventSessionNotActivePersistenceError)):
         return APIError(409, "session_not_active", "Session is not active")
-    if isinstance(exc, (CombatNotFoundError, CombatNotFoundPersistenceError)):
+    if isinstance(exc, ContentNotFoundError):
+        return APIError(404, "unknown_reference", str(exc))
+    if isinstance(exc, MonsterPersistenceError):
+        return APIError(409, "monster_instance_conflict", str(exc))
+    if isinstance(
+        exc,
+        (
+            CombatNotFoundError,
+            CombatNotFoundPersistenceError,
+            CombatAdjudicationNotFoundError,
+            CombatReactionNotFoundError,
+        ),
+    ):
         return APIError(404, "combat_not_found", str(exc))
     if isinstance(exc, (AttackRequestNotFoundPersistenceError, AttackDefinitionNotFoundError)):
         return APIError(404, "attack_not_found", str(exc))
@@ -136,6 +161,8 @@ def _map_combat_error(exc: Exception) -> APIError:
         (
             CombatStateConflictError,
             CombatStateConflictPersistenceError,
+            CombatAdjudicationStateConflictError,
+            CombatReactionStateConflictError,
             InitiativeRequestNotPendingPersistenceError,
             AttackRequestNotPendingPersistenceError,
             AttackStateConflictPersistenceError,
@@ -179,6 +206,23 @@ def get_active_combat(room_id: UUID, campaign_id: UUID, session_id: UUID,
                       service: CombatService = Depends(get_combat_service)) -> CombatView | None:
     try:
         return service.get_active_combat(_actor_from_request(room_id, campaign_id, session_id, context, event_service))
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
+@router.get("/detail", response_model=CombatDetailView | None)
+def get_active_combat_detail(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CombatService = Depends(get_combat_service),
+) -> CombatDetailView | None:
+    try:
+        return service.get_active_combat_detail(
+            _actor_from_request(room_id, campaign_id, session_id, context, event_service)
+        )
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
@@ -329,6 +373,21 @@ def roll_attack(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: For
         raise _map_combat_error(exc) from exc
 
 
+@router.get("/pending-rolls", response_model=list[CombatPendingRollView])
+def list_pending_combat_rolls(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CombatCoreRollService = Depends(get_combat_core_roll_service),
+) -> tuple[CombatPendingRollView, ...]:
+    try:
+        return service.list_pending_rolls(_actor_from_request(room_id, campaign_id, session_id, context, event_service))
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
 @router.post("/saving-throws/request", response_model=SavingThrowRequestResponse)
 def request_saving_throws(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: SavingThrowInput,
                           context: RoomAccessContext = Depends(get_room_access_context),
@@ -373,22 +432,22 @@ def roll_death_save(room_id: UUID, campaign_id: UUID, session_id: UUID, payload:
         raise _map_combat_error(exc) from exc
 
 
-@router.post("/damage")
+@router.post("/damage", response_model=SemanticResolutionView, response_model_exclude_none=True)
 def apply_damage(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: SemanticDamageInput,
                  context: RoomAccessContext = Depends(get_room_access_context),
                  event_service: TableEventService = Depends(get_table_event_service),
-                 service: CombatResolutionService = Depends(get_combat_resolution_service)) -> StoredSemanticResolution:
+                 service: CombatResolutionService = Depends(get_combat_resolution_service)) -> SemanticResolutionView:
     try:
         return service.apply_damage(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 
 
-@router.post("/healing")
+@router.post("/healing", response_model=SemanticResolutionView, response_model_exclude_none=True)
 def apply_healing(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: SemanticHealingInput,
                   context: RoomAccessContext = Depends(get_room_access_context),
                   event_service: TableEventService = Depends(get_table_event_service),
-                  service: CombatResolutionService = Depends(get_combat_resolution_service)) -> StoredSemanticResolution:
+                  service: CombatResolutionService = Depends(get_combat_resolution_service)) -> SemanticResolutionView:
     try:
         return service.apply_healing(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
     except Exception as exc:

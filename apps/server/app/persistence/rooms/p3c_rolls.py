@@ -296,6 +296,14 @@ class RollRepository:
             ).mappings().one_or_none()
             if locked_request is None:
                 raise RollRequestNotFoundPersistenceError(str(request_id))
+            locked_group_label = connection.scalar(
+                select(roll_groups.c.label).where(
+                    roll_groups.c.id == locked_request["roll_group_id"],
+                    roll_groups.c.session_id == binding.session_id,
+                )
+            )
+            if locked_group_label == "Concentration":
+                raise RollRequestNotFoundPersistenceError(str(request_id))
             if locked_request["status"] != "pending":
                 raise RollRequestNotPendingPersistenceError(str(request_id))
 

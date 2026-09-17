@@ -17,6 +17,7 @@ pytestmark = pytest.mark.skipif(
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 P4C_PARENT = "0024_p4b_combat_roll_targets"
 P4C_HEAD = "0025_p4c_core_resolution"
+P4C_APPLIED_HEADS = {P4C_HEAD, "0026_p4e_monster_concentration"}
 
 
 def _config() -> Config:
@@ -107,12 +108,12 @@ def test_p4c_real_postgres_upgrade_from_p4b_parent() -> None:
     command.upgrade(_config(), P4C_PARENT)
     assert P4C_HEAD not in _revision_set()
     command.upgrade(_config(), "heads")
-    assert P4C_HEAD in _revision_set()
+    assert _revision_set() & P4C_APPLIED_HEADS
     _assert_schema()
 
 
 def test_p4c_schema_survives_fresh_upgrade_to_heads() -> None:
     _reset()
     command.upgrade(_config(), "heads")
-    assert P4C_HEAD in _revision_set()
+    assert _revision_set() & P4C_APPLIED_HEADS
     _assert_schema()

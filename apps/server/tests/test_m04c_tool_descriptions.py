@@ -13,6 +13,11 @@ PLAYER_ACTIVE = {
     "combat_roll_attack", "combat_apply_damage", "combat_apply_healing",
     "combat_roll_saving_throw", "combat_request_death_save", "combat_roll_death_save",
     "combat_request_special_attack", "combat_roll_special_attack",
+    "combat_roll_initiative", "combat_use_action",
+    "get_combat_context", "combat_cast_spell", "combat_propose_aoe_spell",
+    "combat_roll_concentration", "combat_drop_concentration",
+    "combat_respond_to_reaction", "combat_request_opportunity_attack",
+    "combat_request_adjudication",
 }
 # The DM catalog is one fixed set before and after start_session (2026-09-12
 # revision): a connector that snapshots tools/list in the Lobby must not need a
@@ -27,6 +32,16 @@ DM_CATALOG = {
     "combat_request_special_attack", "combat_roll_special_attack",
     "combat_adjudicate_attack", "combat_request_saving_throws",
     "combat_adjudicate_special_attack",
+    "combat_start", "combat_add_character", "combat_add_monster",
+    "combat_create_monster", "combat_create_quick_enemy", "combat_list_monster_instances",
+    "combat_request_initiative", "combat_finalize_initiative", "combat_advance_turn",
+    "combat_end", "combat_remove_entry", "combat_roll_initiative",
+    "combat_use_action", "combat_withdraw_entry",
+    "get_combat_context", "combat_cast_spell", "combat_propose_aoe_spell",
+    "combat_resolve_aoe_spell", "combat_roll_concentration", "combat_drop_concentration",
+    "combat_open_reaction_window", "combat_respond_to_reaction",
+    "combat_request_opportunity_attack", "combat_request_adjudication",
+    "combat_resolve_adjudication",
 }
 
 

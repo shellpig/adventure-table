@@ -208,7 +208,8 @@ class CombatInitiativeRepository:
                 "formula": computation.formula, "raw_dice": list(computation.raw_dice),
                 "kept_dice": list(computation.kept_dice), "base_modifier": computation.base_modifier,
                 "flat_adjustment": computation.flat_adjustment, "total": computation.total,
-                "visibility": "public", "combat_entry_ids": [str(row["id"]) for row in entry_rows],
+                "visibility": "public", "combat_id": str(entry_rows[0]["combat_id"]),
+                "combat_entry_ids": [str(row["id"]) for row in entry_rows],
             }))
 
         event = self.event_repository.append(

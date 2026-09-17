@@ -1145,3 +1145,475 @@
     flex-direction: column;
   }
 }
+
+/* Quick Combat Stage (E9a) */
+.session-combat {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.session-combat__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.session-combat__round-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.session-combat__round-badge {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--gold-bright);
+}
+
+.session-combat__turn-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.session-combat__turn-label {
+  color: var(--muted);
+}
+
+.session-combat__turn-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.session-combat__your-turn-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: var(--gold-dark);
+  color: #fff;
+}
+
+.session-combat__section-heading {
+  margin: 0 0 6px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.session-combat__initiative {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.session-combat__initiative-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session-combat__initiative-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.session-combat__initiative-row--current {
+  border-color: var(--gold-bright);
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.session-combat__initiative-row--hostile {
+  border-left: 3px solid #e05252;
+}
+
+.session-combat__turn-order {
+  min-width: 24px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.session-combat__entry-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.session-combat__initiative-total {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.session-combat__hostile-badge {
+  font-size: 0.72rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(224, 82, 82, 0.15);
+  color: #e05252;
+  border: 1px solid rgba(224, 82, 82, 0.3);
+}
+
+.session-combat__status-badge {
+  font-size: 0.72rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface-muted);
+  color: var(--muted);
+}
+
+.session-combat__combatants {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.session-combat__cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.session-combat__card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 0.82rem;
+}
+
+.session-combat__card--hostile {
+  border-color: rgba(224, 82, 82, 0.35);
+  background: rgba(224, 82, 82, 0.03);
+}
+
+.session-combat__card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.session-combat__card-name {
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.session-combat__stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.session-combat__stat {
+  display: inline-flex;
+  align-items: center;
+}
+
+.session-combat__stat-label {
+  color: var(--muted);
+  font-weight: 500;
+  margin-right: 3px;
+}
+
+.session-combat__injury-badge {
+  font-size: 0.75rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(224, 82, 82, 0.12);
+  color: #e05252;
+  border: 1px solid rgba(224, 82, 82, 0.25);
+  font-weight: 600;
+}
+
+.session-combat__conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.session-combat__condition-pill {
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--surface-muted);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
+.session-combat__economy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.session-combat__economy-pill {
+  font-size: 0.7rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--surface-muted);
+}
+
+.session-combat__economy-pill--available {
+  color: var(--gold-bright);
+  border-color: var(--gold-dark);
+  background: rgba(212, 175, 55, 0.08);
+  font-weight: 600;
+}
+
+.session-combat__attacks {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+.session-combat__position-note,
+.session-combat__dm-notes {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.session-combat__empty {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+.session-table__combat-toolbar {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.session-combat__roll-init-btn {
+  margin-left: auto;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+}
+
+.session-combat__dm-controls {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.session-combat__dm-initiative-bar,
+.session-combat__dm-running-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.session-combat__dm-hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.session-combat__add-enemy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-combat__sub-heading {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.session-combat__mode-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.session-combat__tab-btn {
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.session-combat__tab-btn--active {
+  color: var(--text);
+  border-color: var(--gold-bright);
+  background: rgba(212, 175, 55, 0.12);
+  font-weight: 600;
+}
+
+.session-combat__form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-combat__form label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.session-combat__form input,
+.session-combat__form select {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0c1017;
+  color: var(--text);
+  font: inherit;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+}
+
+.session-combat__form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.session-combat__form-row > label {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.session-combat__form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.session-combat-actions,
+.session-combat-adjudications {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.session-combat-actions__waiting,
+.session-combat-actions__result,
+.session-combat-actions__pending-adjudications p,
+.session-combat-adjudications__row p {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.session-combat-actions__pending-rolls,
+.session-combat-actions__pending-adjudications,
+.session-combat-adjudications__list,
+.session-combat-adjudications__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.session-combat-actions__range-confirmed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.session-combat-adjudications__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+
+.session-combat-adjudications__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.session-combat-adjudications__hints {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  font-size: 0.76rem;
+}
+
+.session-combat-adjudications__hints > div {
+  display: flex;
+  gap: 6px;
+}
+
+.session-combat-adjudications__hints dt {
+  color: var(--muted);
+}
+
+.session-combat-adjudications__hints dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.session-combat-adjudications textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 72px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0c1017;
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}

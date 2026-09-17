@@ -146,7 +146,7 @@ async function apiError(response: Response): Promise<SessionApiError> {
   )
 }
 
-async function request<T>(url: string, token: string, init?: RequestInit): Promise<T> {
+export async function request<T>(url: string, token: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     ...init,
     headers: {
@@ -162,7 +162,7 @@ async function request<T>(url: string, token: string, init?: RequestInit): Promi
 const base = (roomId: string, campaignId: string) =>
   `/api/rooms/${roomId}/campaigns/${campaignId}/sessions`
 
-const tableBase = (roomId: string, campaignId: string, sessionId: string) =>
+export const tableBase = (roomId: string, campaignId: string, sessionId: string) =>
   `${base(roomId, campaignId)}/${sessionId}`
 
 export function getActiveSession(

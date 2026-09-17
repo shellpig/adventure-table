@@ -10,6 +10,7 @@ from sqlalchemy import insert, select, update
 from sqlalchemy.engine import Engine
 
 from app.domain.character.schemas import CharacterBuild, CharacterState
+from app.domain.combat.projection import calculate_injury_level
 from app.domain.combat.resolution import (
     AttackKind,
     DamageFormulaPart,
@@ -76,6 +77,8 @@ class StoredAttackRequest:
     attack_bonus: int
     target_ac: int
     status: str
+    content_ref: str | None = None
+    presentation_field: str | None = None
 
 
 @dataclass(frozen=True)
@@ -104,6 +107,8 @@ class StoredAttackResolution:
     before_hp: int | None
     after_hp: int | None
     resolution_result: dict[str, Any]
+    target_is_hostile: bool = False
+    target_injury_level: str | None = None
 
 
 AttackRollFactory = Callable[[], AttackRollComputation]
@@ -130,6 +135,8 @@ def _attack_payload(attack: ResolvedAttack) -> dict[str, Any]:
             for item in attack.modifier_sources
         ],
         "notes": list(attack.notes),
+        "content_ref": attack.content_ref,
+        "presentation_field": attack.presentation_field,
     }
 
 
@@ -153,6 +160,8 @@ def _attack_from_payload(payload: dict[str, Any]) -> ResolvedAttack:
             for item in payload.get("modifier_sources", [])
         ),
         notes=tuple(str(item) for item in payload.get("notes", [])),
+        content_ref=payload.get("content_ref"),
+        presentation_field=payload.get("presentation_field"),
     )
 
 
@@ -178,6 +187,8 @@ def _request_from_row(row: Any) -> StoredAttackRequest:
         attack_bonus=int(attack["attack_bonus"]),
         target_ac=int(payload["target_ac"]),
         status=str(row["resolution_status"]),
+        content_ref=attack.get("content_ref"),
+        presentation_field=attack.get("presentation_field"),
     )
 
 
@@ -190,6 +201,8 @@ def _resolution_from_row(row: Any) -> StoredAttackResolution:
         raise AttackRequestNotPendingPersistenceError("Attack does not have a durable resolution")
     before = result.get("damage", {}).get("before") if isinstance(result.get("damage"), dict) else None
     after = result.get("damage", {}).get("after") if isinstance(result.get("damage"), dict) else None
+    target_is_hostile = bool(result.get("target_is_hostile", False))
+    target_injury_level = result.get("target_injury_level")
     return StoredAttackResolution(
         action_id=row["id"],
         roll_request_id=roll_request_id,
@@ -204,6 +217,8 @@ def _resolution_from_row(row: Any) -> StoredAttackResolution:
         before_hp=int(before["current_hp"]) if isinstance(before, dict) else None,
         after_hp=int(after["current_hp"]) if isinstance(after, dict) else None,
         resolution_result=result,
+        target_is_hostile=target_is_hostile,
+        target_injury_level=target_injury_level,
     )
 
 
@@ -354,9 +369,27 @@ class CombatAttackRepository:
                     idempotency_key=idempotency_key,
                 )
             )
+            event_payload = {
+                "roll_group_id": str(roll_group_id),
+                "roll_request_ids": [str(roll_request_id)],
+                "roll_request_id": str(roll_request_id),
+                "request_type": "attack",
+                "modifier_mode": modifier_mode.value,
+                "visibility": "public",
+                "label": f"Attack: {attack.name}",
+                "combat_id": str(combat_id),
+                "action_id": str(action_id),
+                "attacker_entry_id": str(attacker_entry_id),
+                "target_entry_id": str(target_entry_id),
+                "target_is_hostile": bool(target["is_hostile"]),
+                "source_ref": attack.source_ref,
+                "content_ref": attack.content_ref,
+                "presentation_field": attack.presentation_field,
+            }
             connection.execute(
                 update(session_events).where(session_events.c.id == event_id).values(
-                    subject_character_id=attacker["character_id"]
+                    subject_character_id=attacker["character_id"],
+                    payload=event_payload,
                 )
             )
             connection.execute(
@@ -507,6 +540,7 @@ class CombatAttackRepository:
             )
 
             damage_result: dict[str, Any] | None = None
+            damage_outcome = None
             if attack_outcome.hit:
                 damage_parts = damage_factory(resolved_attack, attack_outcome.critical)
                 if target["subject_kind"] == "character":
@@ -640,10 +674,23 @@ class CombatAttackRepository:
                     "monster_outcome_required": damage_outcome.monster_outcome_required,
                 }
 
+            target_injury_level = (
+                calculate_injury_level(damage_outcome.after.current_hp, damage_outcome.after.max_hp)
+                if damage_outcome is not None
+                else None
+            )
+            if damage_result is not None:
+                damage_result["target_is_hostile"] = bool(target["is_hostile"])
+                damage_result["target_injury_level"] = target_injury_level
+
             resolution_result = {
+                "target_is_hostile": bool(target["is_hostile"]),
+                "target_injury_level": target_injury_level,
                 "attack": {
                     "source_ref": resolved_attack.source_ref,
                     "name": resolved_attack.name,
+                    "content_ref": resolved_attack.content_ref,
+                    "presentation_field": resolved_attack.presentation_field,
                     "modifier_mode": mode.value,
                     "raw_d20": list(attack_outcome.raw_d20),
                     "selected_d20": attack_outcome.selected_d20,
@@ -685,6 +732,8 @@ class CombatAttackRepository:
                         "action_id": str(action["id"]),
                         "attacker_entry_id": str(attacker["id"]),
                         "target_entry_id": str(target["id"]),
+                        "target_is_hostile": bool(target["is_hostile"]),
+                        "target_injury_level": target_injury_level,
                         "attack_resolution": resolution_result,
                     },
                 )

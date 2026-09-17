@@ -42,7 +42,7 @@ def _actor(*, dm: bool) -> TableActorContext:
 
 
 def _service(subject_seat_id):
-    return CombatService(_Repository(subject_seat_id), _Events(), None, None)
+    return CombatService(_Repository(subject_seat_id), _Events(), None, None, None)
 
 
 def test_current_dm_can_explicitly_proxy_character_absent_from_new_session() -> None:

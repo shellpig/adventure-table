@@ -54,6 +54,7 @@ class StoredMonsterInstance:
     position_note: str | None
     created_at: datetime
     updated_at: datetime
+    concentration: dict[str, Any] | None = None
 
 
 def _now() -> datetime:
@@ -88,6 +89,9 @@ def _instance_from_row(row: Any) -> StoredMonsterInstance:
     values["conditions"] = deepcopy(values["conditions"])
     values["effects"] = deepcopy(values["effects"])
     values["resources"] = deepcopy(values["resources"])
+    values["concentration"] = (
+        deepcopy(values["concentration"]) if values.get("concentration") is not None else None
+    )
     return StoredMonsterInstance(**values)
 
 
@@ -172,6 +176,7 @@ class MonsterRepository:
             "temp_hp": temp_hp,
             "conditions": deepcopy(conditions or []),
             "effects": deepcopy(effects or []),
+            "concentration": None,
             "combat_status": combat_status,
             "initiative": initiative,
             "reaction_available": reaction_available,

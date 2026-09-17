@@ -83,6 +83,8 @@ class CombatTable:
     session_id: UUID
     dm_actor: TableActorContext
     player_actor: TableActorContext
+    dm_token: str | None = None
+    player_token: str | None = None
 
     def actor_for_session(self, session_id: UUID, context: object) -> TableActorContext:
         return self.events.resolve_human_actor(
@@ -179,7 +181,7 @@ def _setup() -> CombatTable:
 
     combat_repository = CombatRepository(engine, events.repository)
     monsters = MonsterRepository(engine)
-    combat = CombatService(combat_repository, events, characters, monsters)
+    combat = CombatService(combat_repository, events, characters, monsters, registry)
     roll_service = RollService(
         CombatAwareRollRepository(engine, events.repository),
         ExplorationSubjectRepository(engine),
@@ -226,6 +228,8 @@ def _setup() -> CombatTable:
         session_id=started.id,
         dm_actor=actor(dm_context),
         player_actor=actor(player_context),
+        dm_token=dm.access_token,
+        player_token=owner.access_token,
     )
 
 

@@ -14,13 +14,14 @@ import {
   type StageState,
   type TableEvent,
 } from '../../api/sessions'
+import { useContentPresentations } from '../../i18n/useContentPresentations'
 import { SessionCheckRequestPanel } from './SessionCheckRequestPanel'
 import { SessionQuickDicePanel } from './SessionQuickDicePanel'
 import { SessionRollRequestList } from './SessionRollRequestList'
 import {
   applyStageEvents,
   explorationEventText,
-  isExplorationEvent,
+  isSessionChatEvent,
   parseExplorationComposer,
 } from './sessionExploration'
 import { formatRollRequestPrompt, isRollRequestEvent } from './sessionRollPresentation'
@@ -43,6 +44,14 @@ import {
   readSpeakerColors,
   writeSpeakerColor,
 } from './chatColors'
+import { endCombat, startCombat } from '../../api/combat'
+import { SessionCombatStage } from './SessionCombatStage'
+import { myEntryIds, useActiveCombat } from './sessionCombat'
+import {
+  combatLogContentFields,
+  combatLogContentReferences,
+  formatCombatLogEvent,
+} from './sessionCombatLog'
 import './sessionTable.css'
 
 
@@ -65,7 +74,7 @@ type SessionTableSurfaceProps = {
 type TableTab = 'chat' | 'dice' | 'log'
 type SessionLayoutStyle = CSSProperties & { '--session-side-width': string }
 
-function requestId(prefix: string): string {
+export function requestId(prefix: string): string {
   const random = globalThis.crypto?.randomUUID?.()
   return random ? `${prefix}-${random}` : `${prefix}-${Date.now()}-${Math.random()}`
 }
@@ -118,6 +127,19 @@ export function SessionTableSurface({
   const projectedStage = useMemo(
     () => applyStageEvents(initialStage, events),
     [initialStage, events],
+  )
+  const combatLogEvents = useMemo(() => events.slice(-100), [events])
+  const combatLogContentRefs = useMemo(
+    () => combatLogContentReferences(combatLogEvents),
+    [combatLogEvents],
+  )
+  const combatLogExtraFields = useMemo(
+    () => combatLogContentFields(combatLogEvents),
+    [combatLogEvents],
+  )
+  const { nameFor: resolveCombatContentName, fieldFor: resolveCombatContentField } = useContentPresentations(
+    combatLogContentRefs,
+    combatLogExtraFields,
   )
   const [stage, setStage] = useState<StageState | null>(projectedStage)
   const [stageText, setStageText] = useState(projectedStage?.text ?? '')
@@ -232,6 +254,66 @@ export function SessionTableSurface({
     [playerParticipants, controlledParticipants, isCurrentDm],
   )
 
+  const ownCharacterIds = useMemo(() => {
+    const participants = isCurrentDm ? snapshot.participants : controlledParticipants
+    return participants
+      .map((participant) => participant.active_character_id)
+      .filter((id): id is string => Boolean(id))
+  }, [isCurrentDm, snapshot.participants, controlledParticipants])
+
+  const [combatPending, setCombatPending] = useState(false)
+
+  const { combat, refresh } = useActiveCombat({
+    roomId,
+    campaignId,
+    sessionId,
+    token,
+    events,
+    onError,
+  })
+
+  const derivedMyEntryIds = useMemo(
+    () => myEntryIds(combat, ownCharacterIds),
+    [combat, ownCharacterIds],
+  )
+
+  const handleStartCombat = async () => {
+    setCombatPending(true)
+    try {
+      await startCombat(
+        roomId,
+        campaignId,
+        sessionId,
+        { include_active_party: true, idempotency_key: requestId('combat-start') },
+        token,
+      )
+      refresh()
+    } catch (cause) {
+      onError(cause)
+    } finally {
+      setCombatPending(false)
+    }
+  }
+
+  const handleEndCombat = async () => {
+    if (!window.confirm(copy.combatEndConfirm)) return
+    setCombatPending(true)
+    try {
+      await endCombat(
+        roomId,
+        campaignId,
+        sessionId,
+        { idempotency_key: requestId('combat-end') },
+        token,
+      )
+      refresh()
+    } catch (cause) {
+      onError(cause)
+    } finally {
+      setCombatPending(false)
+    }
+  }
+
   useEffect(() => {
     if (subjectSeatId && subjectParticipants.some((item) => item.seat_id === subjectSeatId)) return
     setSubjectSeatId(subjectParticipants[0]?.seat_id ?? '')
@@ -243,6 +325,18 @@ export function SessionTableSurface({
   }
   const characterName = (characterId: string | null) =>
     characters.find((item) => item.id === characterId)?.name ?? copy.noCharacter
+  const combatEntryLabel = (entryId: string): string | null => {
+    const activeEntry = combat?.entries.find((item) => item.id === entryId)
+    if (activeEntry) return activeEntry.display_name
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const candidate = events[index]
+      if (candidate.kind !== 'combat.entry_added') continue
+      if (candidate.payload.entry_id !== entryId) continue
+      const displayName = candidate.payload.display_name
+      if (typeof displayName === 'string' && displayName.length > 0) return displayName
+    }
+    return null
+  }
   const speakerLabel = (event: TableEvent) => {
     if (event.kind === 'exploration.narration') return copy.dm
     const speakerSeatId = event.subject_seat_id ?? event.acting_seat_id
@@ -250,7 +344,7 @@ export function SessionTableSurface({
   }
 
   const chatEvents = useMemo(
-    () => events.filter((event) => isExplorationEvent(event) || isRollRequestEvent(event)).slice(-100),
+    () => events.filter(isSessionChatEvent).slice(-100),
     [events],
   )
 
@@ -383,11 +477,49 @@ export function SessionTableSurface({
             {seatLabel(participant.seat_id)} · {characterName(participant.active_character_id)}
           </span>
         ))}
+        {isCurrentDm ? (
+          <div className="session-table__combat-toolbar">
+            {combat === null ? (
+              <button
+                type="button"
+                className="button secondary compact"
+                disabled={combatPending}
+                onClick={() => void handleStartCombat()}
+              >
+                {copy.combatStart}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="button secondary compact"
+                disabled={combatPending}
+                onClick={() => void handleEndCombat()}
+              >
+                {copy.combatEnd}
+              </button>
+            )}
+          </div>
+        ) : null}
       </div>
 
       <div ref={layoutRef} className="session-table__layout" style={layoutStyle}>
         <section className="session-stage" aria-label={copy.mainStage}>
           <header><h2>{copy.mainStage}</h2></header>
+          {combat ? (
+            <SessionCombatStage
+              combat={combat}
+              myEntryIds={derivedMyEntryIds}
+              copy={copy}
+              roomId={roomId}
+              campaignId={campaignId}
+              sessionId={sessionId}
+              token={token}
+              events={events}
+              isCurrentDm={isCurrentDm}
+              onError={onError}
+              refresh={refresh}
+            />
+          ) : null}
           <div className="session-stage__canvas">
             {imageUrl ? <img src={imageUrl} alt={stage?.image_filename || copy.mainStage} /> : null}
             {stage?.text ? <p>{stage.text}</p> : null}
@@ -658,9 +790,28 @@ export function SessionTableSurface({
             </div>
           ) : (
             <div className="session-log">
-              {events.slice(-100).map((event) => (
-                <p key={`log:${event.session_id}:${event.seq}`}><code>#{event.seq}</code> {event.kind}</p>
-              ))}
+              {combatLogEvents.map((event) => {
+                const presentation = formatCombatLogEvent(
+                  event,
+                  copy.locale,
+                  combatEntryLabel,
+                  resolveCombatContentName,
+                  resolveCombatContentField,
+                )
+                return (
+                  <p key={`log:${event.session_id}:${event.seq}`}>
+                    <code>#{event.seq}</code>{' '}
+                    {presentation ? (
+                      <>
+                        <strong>{presentation.summary}</strong>
+                        {presentation.detail ? <span> · {presentation.detail}</span> : null}
+                      </>
+                    ) : (
+                      <span>{copy.system} · <code>{event.kind}</code></span>
+                    )}
+                  </p>
+                )
+              })}
             </div>
           )}
         </aside>
