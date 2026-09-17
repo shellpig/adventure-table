@@ -13,6 +13,7 @@ from app.api.rooms.dependencies import (
 from app.domain.combat.monster_instances import (
     CreateMonsterFromContentInput,
     CreateQuickEnemyInput,
+    MonsterInstancePatchInput,
     MonsterInstanceService,
     MonsterInstanceView,
 )
@@ -75,6 +76,24 @@ def create_quick_enemy(
     try:
         actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
         return service.create_quick_enemy(actor, input_data)
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
+@router.patch("/{instance_id}", response_model=MonsterInstanceView)
+def update_monster_instance(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    instance_id: UUID,
+    input_data: MonsterInstancePatchInput,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: MonsterInstanceService = Depends(get_monster_instance_service),
+) -> MonsterInstanceView:
+    try:
+        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
+        return service.update_instance(actor, instance_id, input_data)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 

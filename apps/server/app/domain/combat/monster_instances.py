@@ -4,20 +4,62 @@ from collections.abc import Mapping
 from typing import Any, Literal
 from uuid import UUID, uuid5
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from app.content.identity import parse_stable_key
 from app.content.p4a_combat_templates import monster_to_reusable_rules
 from app.content.p4a_monsters import MonsterData
 from app.content.registry import ContentRegistry
+from app.domain.combat.lifecycle import CombatNotFoundError
+from app.domain.combat.spell_resources import monster_casting_sources
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import (
     TableActorContext,
     TableEventActorUnauthorizedError,
     TableEventService,
 )
-from app.domain.combat.spell_resources import monster_casting_sources
-from app.persistence.combat.repository import MonsterRepository, StoredMonsterInstance
+from app.persistence.combat.lifecycle import (
+    CombatNotFoundPersistenceError,
+    actor_binding,
+)
+from app.persistence.combat.monster_bookkeeping import MonsterBookkeepingRepository
+from app.persistence.combat.repository import (
+    _UNSET,
+    MonsterRepository,
+    StoredMonsterInstance,
+)
+
+
+class MonsterRevealPatch(StrictModel):
+    armor_class: bool | None = None
+    description: bool | None = None
+    position_note: bool | None = None
+
+
+class MonsterInstancePatchInput(StrictModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    visibility: Literal["public", "hidden"] | None = None
+    position_note: str | None = Field(default=None, max_length=500)
+    reveal: MonsterRevealPatch | None = None
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+
+    @model_validator(mode="after")
+    def validate_non_empty(self) -> MonsterInstancePatchInput:
+        patch_fields = self.model_fields_set - {"idempotency_key", "instance_id"}
+        if not patch_fields:
+            raise ValueError("at least one monster instance field or reveal toggle must be updated")
+        if "reveal" in patch_fields and len(patch_fields) == 1:
+            if self.reveal is None or (
+                self.reveal.armor_class is None
+                and self.reveal.description is None
+                and self.reveal.position_note is None
+            ):
+                raise ValueError("at least one monster instance field or reveal toggle must be updated")
+        return self
+
+
+class MonsterInstanceUpdateToolInput(MonsterInstancePatchInput):
+    instance_id: UUID
 
 
 class QuickEnemyAttackInput(StrictModel):
@@ -116,6 +158,10 @@ class MonsterInstanceService:
         self.monster_repository = monster_repository
         self.content_registry = content_registry
         self.table_event_service = table_event_service
+        # Bookkeeping writes are event-backed, so they need the table event repository too.
+        self.bookkeeping_repository = MonsterBookkeepingRepository(
+            monster_repository.engine, table_event_service.repository,
+        )
 
     def _require_dm(self, actor: TableActorContext) -> None:
         self.table_event_service.require_actor_current(actor)
@@ -199,12 +245,48 @@ class MonsterInstanceService:
         instances = self.monster_repository.list_instances(actor.campaign_id)
         return tuple(stored_to_monster_instance_view(inst) for inst in instances)
 
+    def update_instance(
+        self,
+        actor: TableActorContext,
+        instance_id: UUID,
+        input_data: MonsterInstancePatchInput,
+    ) -> MonsterInstanceView:
+        self._require_dm(actor)
+
+        name = input_data.name if "name" in input_data.model_fields_set else _UNSET
+        visibility = input_data.visibility if "visibility" in input_data.model_fields_set else _UNSET
+        position_note = input_data.position_note if "position_note" in input_data.model_fields_set else _UNSET
+
+        reveal_patch = input_data.reveal.model_dump(exclude_none=True) if input_data.reveal is not None else None
+
+        binding = actor_binding(actor)
+        try:
+            stored, _event = self.bookkeeping_repository.update_instance(
+                binding=binding,
+                instance_id=instance_id,
+                name=name,
+                visibility=visibility,
+                position_note=position_note,
+                reveal_patch=reveal_patch,
+                idempotency_key=input_data.idempotency_key,
+            )
+        except CombatNotFoundPersistenceError as exc:
+            raise CombatNotFoundError(str(exc)) from exc
+
+        if self.table_event_service.notifier is not None:
+            self.table_event_service.notifier.notify(actor.session_id)
+
+        return stored_to_monster_instance_view(stored)
+
 
 __all__ = [
     "CreateMonsterFromContentInput",
     "CreateQuickEnemyInput",
+    "MonsterInstancePatchInput",
     "MonsterInstanceService",
+    "MonsterInstanceUpdateToolInput",
     "MonsterInstanceView",
+    "MonsterRevealPatch",
     "QuickEnemyAttackInput",
     "initial_monster_resources",
     "stored_to_monster_instance_view",

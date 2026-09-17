@@ -18,7 +18,7 @@ pytestmark = pytest.mark.skipif(
 )
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 P4F_PARENT = "0026_p4e_monster_concentration"
-P4F_HEAD = "0027_p4f_monster_outcome"
+P4F_HEAD = "0028_p4f_monster_reveal_state"
 
 
 def _config() -> Config:
@@ -137,3 +137,34 @@ def test_p4f_schema_survives_fresh_upgrade_to_heads() -> None:
     command.upgrade(_config(), "heads")
     assert P4F_HEAD in _revision_set()
     _assert_surrendered_status_accepted()
+
+
+def test_p4f_real_postgres_monster_reveal_state_upgrade_and_downgrade() -> None:
+    _reset()
+    command.upgrade(_config(), "0027_p4f_monster_outcome")
+    assert "0028_p4f_monster_reveal_state" not in _revision_set()
+    _assert_surrendered_status_accepted()
+
+    command.upgrade(_config(), "heads")
+    assert "0028_p4f_monster_reveal_state" in _revision_set()
+
+    assert POSTGRES_URL is not None
+    engine = create_engine(POSTGRES_URL)
+    try:
+        with engine.connect() as connection:
+            value = connection.execute(
+                text("SELECT reveal_state FROM monster_instances WHERE combat_status = 'surrendered'")
+            ).scalar()
+            assert value == {} or value == "{}"
+    finally:
+        engine.dispose()
+
+    command.downgrade(_config(), "0027_p4f_monster_outcome")
+    assert "0028_p4f_monster_reveal_state" not in _revision_set()
+    engine = create_engine(POSTGRES_URL)
+    try:
+        with pytest.raises(Exception):
+            with engine.connect() as connection:
+                connection.execute(text("SELECT reveal_state FROM monster_instances")).all()
+    finally:
+        engine.dispose()

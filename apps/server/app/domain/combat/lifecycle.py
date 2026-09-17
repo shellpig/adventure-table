@@ -13,7 +13,6 @@ from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import TableActorContext, TableEventActorUnauthorizedError, TableEventService
 from app.persistence.characters import CharacterRepository
 from app.persistence.combat.combatants import (
-    MonsterRevealState,
     character_to_combatant,
     monster_instance_to_combatant,
 )
@@ -278,9 +277,7 @@ class CombatService:
                 instance = self.monster_repository.get_instance(entry.monster_instance_id)
                 if instance is None:
                     continue
-                # reveal toggles are not persisted yet; DM reveal actions arrive in a later step.
-                reveals = MonsterRevealState()
-                combatant_state = monster_instance_to_combatant(instance, reveals=reveals, entry=entry)
+                combatant_state = monster_instance_to_combatant(instance, entry=entry)
             else:
                 continue
 

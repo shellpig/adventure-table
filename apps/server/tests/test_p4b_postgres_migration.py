@@ -22,6 +22,7 @@ P4B_APPLIED_HEADS = {
     "0025_p4c_core_resolution",
     "0026_p4e_monster_concentration",
     "0027_p4f_monster_outcome",
+    "0028_p4f_monster_reveal_state",
 }
 
 

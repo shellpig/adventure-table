@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass
+from collections.abc import Mapping
 from typing import Any
 
 from app.content.registry import ContentRegistry
@@ -19,6 +20,25 @@ class MonsterRevealState:
     armor_class: bool = False
     description: bool = False
     position_note: bool = False
+
+    @classmethod
+    def from_mapping(cls, mapping: Mapping[str, Any] | None) -> MonsterRevealState:
+        if not mapping:
+            return cls()
+        kwargs: dict[str, bool] = {}
+        for key in ("armor_class", "description", "position_note"):
+            if key in mapping:
+                val = mapping[key]
+                if isinstance(val, bool):
+                    kwargs[key] = val
+        return cls(**kwargs)
+
+    def to_mapping(self) -> dict[str, bool]:
+        return {
+            "armor_class": self.armor_class,
+            "description": self.description,
+            "position_note": self.position_note,
+        }
 
 
 def _partition_visible_names(
@@ -49,7 +69,11 @@ def monster_instance_to_combatant(
     rules = instance.rules_snapshot
     public_conditions, hidden_conditions = _partition_visible_names(instance.conditions)
     public_effects, hidden_effects = _partition_visible_names(instance.effects)
-    reveal_state = reveals or MonsterRevealState()
+    reveal_state = (
+        reveals
+        if reveals is not None
+        else MonsterRevealState.from_mapping(instance.reveal_state)
+    )
     # P4-B moved initiative and reaction economy onto combat_entries; the
     # instance columns only remain for pre-combat / template-level state.
     initiative = entry.initiative_total if entry is not None else instance.initiative

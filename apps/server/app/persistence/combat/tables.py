@@ -16,6 +16,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
     func,
+    text,
     true,
 )
 
@@ -61,6 +62,7 @@ monster_instances = Table(
     Column("resources", JSON(), nullable=False),
     Column("visibility", String(16), nullable=False),
     Column("position_note", Text(), nullable=True),
+    Column("reveal_state", JSON(), nullable=False, server_default=text("'{}'")),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     CheckConstraint(

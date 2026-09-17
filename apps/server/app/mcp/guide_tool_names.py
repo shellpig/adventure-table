@@ -68,6 +68,7 @@ _EXPECTED = {
     "combat_create_monster",
     "combat_create_quick_enemy",
     "combat_list_monster_instances",
+    "combat_update_monster_instance",
     "combat_request_initiative",
     "combat_finalize_initiative",
     "combat_advance_turn",

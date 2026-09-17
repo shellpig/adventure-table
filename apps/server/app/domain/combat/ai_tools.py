@@ -61,6 +61,7 @@ from app.domain.combat.monster_instances import (
     CreateMonsterFromContentInput,
     CreateQuickEnemyInput,
     MonsterInstanceService,
+    MonsterInstanceUpdateToolInput,
 )
 from app.domain.combat.semantic_hp import (
     CombatResolutionService,
@@ -399,6 +400,18 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         actor = self._actor(token, authenticated=authenticated)
         instances = self.monster_instance_service.list_instances(actor)
         return {"instances": [inst.model_dump(mode="json") for inst in instances]}
+
+    def combat_update_monster_instance(
+        self,
+        token: str,
+        input: MonsterInstanceUpdateToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.monster_instance_service.update_instance(
+            actor, input.instance_id, input
+        ).model_dump(mode="json")
 
     def combat_request_initiative(
         self,

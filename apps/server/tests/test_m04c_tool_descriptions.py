@@ -34,6 +34,7 @@ DM_CATALOG = {
     "combat_adjudicate_special_attack",
     "combat_start", "combat_add_character", "combat_add_monster",
     "combat_create_monster", "combat_create_quick_enemy", "combat_list_monster_instances",
+    "combat_update_monster_instance",
     "combat_request_initiative", "combat_finalize_initiative", "combat_advance_turn",
     "combat_end", "combat_remove_entry", "combat_roll_initiative",
     "combat_use_action", "combat_withdraw_entry", "combat_set_monster_outcome",

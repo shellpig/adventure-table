@@ -34,6 +34,7 @@ from app.domain.combat.lifecycle import (
 from app.domain.combat.monster_instances import (
     CreateMonsterFromContentInput,
     CreateQuickEnemyInput,
+    MonsterInstanceUpdateToolInput,
 )
 from app.domain.combat.reaction_service import (
     OpenReactionInput,
@@ -221,6 +222,10 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
     "combat_list_monster_instances": (
         "Current DM inspects all created Monster Instances in the current Campaign including hidden stats and resources.",
         "目前 DM 檢視目前 Campaign 內所有已建立的怪物實例，包含完整隱藏數值與資源。",
+    ),
+    "combat_update_monster_instance": (
+        "Current DM renames a monster, toggles its visibility (public/hidden), updates its position note, or reveals its AC, description, or position note to Players; Players cannot.",
+        "目前 DM 修改怪物名稱、切換公開／隱藏狀態、更新位置備註，或向玩家揭露其 AC、描述或位置備註時使用；Player 不可使用。",
     ),
     "combat_request_initiative": (
         "Current DM opens initiative roll requests for PCs and rolls grouped monster initiative.",
@@ -458,6 +463,7 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("combat_create_monster", _desc("Create a Monster Instance from SRD rules content.", "從 SRD 規則內容建立 Monster Instance。"), CreateMonsterFromContentInput, frozenset({"dm"})),
     MCPToolDefinition("combat_create_quick_enemy", _desc("Create an ad-hoc Quick Enemy monster instance.", "建立臨時的 Quick Enemy 怪物實例。"), CreateQuickEnemyInput, frozenset({"dm"})),
     MCPToolDefinition("combat_list_monster_instances", _desc("List all Campaign Monster Instances with full DM stats.", "列出 Campaign 內所有怪物實例的完整 DM 資訊。"), _NoArguments, frozenset({"dm"})),
+    MCPToolDefinition("combat_update_monster_instance", _desc("Update Monster Instance details or reveal stats to Players.", "更新怪物實例資訊或向玩家揭露其戰鬥數值。"), MonsterInstanceUpdateToolInput, frozenset({"dm"})),
     MCPToolDefinition("combat_request_initiative", _desc("Request initiative rolls for active combatants.", "為活躍戰鬥單位發起先攻擲骰請求。"), RequestInitiativeInput, frozenset({"dm"})),
     MCPToolDefinition("combat_finalize_initiative", _desc("Finalize initiative turn order to begin Round 1.", "確認先攻順序以開始第一回合。"), FinalizeInitiativeInput, frozenset({"dm"})),
     MCPToolDefinition("combat_advance_turn", _desc("Advance Combat to the next turn or round.", "將 Combat 推進至下一個輪次或回合。"), CombatMutationToolInput, frozenset({"dm"})),
@@ -623,6 +629,8 @@ async def call_tool(
             data = await asyncio.to_thread(service.combat_create_quick_enemy, token, parsed, authenticated=auth)
         elif name == "combat_list_monster_instances":
             data = await asyncio.to_thread(service.combat_list_monster_instances, token, authenticated=auth)
+        elif name == "combat_update_monster_instance":
+            data = await asyncio.to_thread(service.combat_update_monster_instance, token, parsed, authenticated=auth)
         elif name == "combat_request_initiative":
             data = await asyncio.to_thread(service.combat_request_initiative, token, parsed, authenticated=auth)
         elif name == "combat_roll_initiative":
