@@ -24,7 +24,9 @@ const EMPTY_ADJUDICATIONS: CombatAdjudicationView[] = []
 const EMPTY_REACTION_WINDOWS: ReactionWindowView[] = []
 
 export function isCombatEvent(event: TableEvent): boolean {
-  return event.kind.startsWith('combat.')
+  if (event.kind.startsWith('combat.')) return true
+  // Initiative / attack / save rolls are P3 roll.* events; combat_id marks them as Combat state changes.
+  return event.kind.startsWith('roll.') && typeof event.payload.combat_id === 'string'
 }
 
 export function latestCombatEventSeq(events: TableEvent[]): number {

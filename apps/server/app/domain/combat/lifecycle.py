@@ -193,6 +193,11 @@ class CombatService:
         if not actor.is_current_dm:
             raise TableEventActorUnauthorizedError("Only the current Session DM can perform this Combat operation")
 
+    def _notify(self, actor: TableActorContext) -> None:
+        # Wake long-poll event waiters (Player pages / AI wait_for_event) after a Combat mutation.
+        if self.table_event_service.notifier is not None:
+            self.table_event_service.notifier.notify(actor.session_id)
+
     @staticmethod
     def _entry_view(entry: StoredCombatEntry) -> CombatEntryView:
         return CombatEntryView(
@@ -303,6 +308,7 @@ class CombatService:
             )
         except ActiveCombatExistsPersistenceError as exc:
             raise ActiveCombatExistsError("Campaign already has an active Combat") from exc
+        self._notify(actor)
         return self._view(combat)
 
     def add_character(self, actor: TableActorContext, request: AddCharacterInput) -> CombatView:
@@ -323,6 +329,7 @@ class CombatService:
             )
         except CombatStateConflictPersistenceError as exc:
             raise CombatStateConflictError(str(exc)) from exc
+        self._notify(actor)
         return self._view(self.repository.get(combat.id) or combat)
 
     def add_monster(self, actor: TableActorContext, request: AddMonsterInput) -> CombatView:
@@ -341,6 +348,7 @@ class CombatService:
             )
         except CombatStateConflictPersistenceError as exc:
             raise CombatStateConflictError(str(exc)) from exc
+        self._notify(actor)
         return self._view(self.repository.get(combat.id) or combat)
 
     def resolve_initiative_order(self, actor: TableActorContext, request: ResolveInitiativeOrderInput) -> CombatView:
@@ -354,6 +362,7 @@ class CombatService:
             )
         except CombatStateConflictPersistenceError as exc:
             raise CombatStateConflictError(str(exc)) from exc
+        self._notify(actor)
         return self._view(stored)
 
     def advance_turn(self, actor: TableActorContext, *, idempotency_key: str | None = None) -> CombatView:
@@ -366,6 +375,7 @@ class CombatService:
             )
         except CombatStateConflictPersistenceError as exc:
             raise CombatStateConflictError(str(exc)) from exc
+        self._notify(actor)
         return self._view(stored)
 
     def _authorize_entry(self, actor: TableActorContext, entry: StoredCombatEntry) -> tuple[UUID | None, str]:
@@ -407,6 +417,7 @@ class CombatService:
             )
         except CombatStateConflictPersistenceError as exc:
             raise CombatStateConflictError(str(exc)) from exc
+        self._notify(actor)
         return CombatActionView(
             id=stored.id, combat_id=stored.combat_id, entry_id=stored.entry_id,
             session_id=stored.session_id, acting_seat_id=stored.acting_seat_id,
@@ -425,6 +436,7 @@ class CombatService:
             binding=actor_binding(actor), combat_id=combat.id, entry_id=request.entry_id,
             state=state if request.open else {}, idempotency_key=request.idempotency_key,
         )
+        self._notify(actor)
         return self._view(self.repository.get(combat.id) or combat)
 
     def withdraw_entry(self, actor: TableActorContext, entry_id: UUID, *, idempotency_key: str | None = None) -> CombatView:
@@ -437,6 +449,7 @@ class CombatService:
             )
         except CombatStateConflictPersistenceError as exc:
             raise CombatStateConflictError(str(exc)) from exc
+        self._notify(actor)
         return self._view(self.repository.get(combat.id) or combat)
 
     def remove_entry(self, actor: TableActorContext, entry_id: UUID, *, idempotency_key: str | None = None) -> CombatView:
@@ -449,6 +462,7 @@ class CombatService:
             )
         except CombatStateConflictPersistenceError as exc:
             raise CombatStateConflictError(str(exc)) from exc
+        self._notify(actor)
         return self._view(self.repository.get(combat.id) or combat)
 
     def end_combat(self, actor: TableActorContext, *, idempotency_key: str | None = None) -> CombatView:
@@ -458,6 +472,7 @@ class CombatService:
         stored, _event = self.repository.end_combat(
             binding=actor_binding(actor), combat_id=combat.id, idempotency_key=idempotency_key
         )
+        self._notify(actor)
         return self._view(stored)
 
 

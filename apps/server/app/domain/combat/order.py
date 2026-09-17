@@ -99,6 +99,7 @@ class CombatOrderService:
         refreshed = self.combat_service.get_active_combat(actor)
         if refreshed is None:
             raise CombatNotFoundError("Campaign has no active Combat")
+        self.combat_service._notify(actor)
         return refreshed
 
 

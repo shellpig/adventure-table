@@ -18,7 +18,7 @@ import {
   pendingCombatRollHandler,
 } from './sessionCombat'
 
-function makeEvent(seq: number, kind: string): TableEvent {
+function makeEvent(seq: number, kind: string, payload: Record<string, unknown> = {}): TableEvent {
   return {
     id: `event-${seq}`,
     session_id: 'sess-1',
@@ -31,7 +31,7 @@ function makeEvent(seq: number, kind: string): TableEvent {
     visibility: 'public',
     recipient_seat_ids: [],
     payload_version: 1,
-    payload: {},
+    payload,
     created_at: '2026-09-17T00:00:00Z',
   }
 }
@@ -106,6 +106,9 @@ describe('sessionCombat helpers', () => {
     expect(isCombatEvent(makeEvent(4, 'exploration.action'))).toBe(false)
     expect(isCombatEvent(makeEvent(5, 'roll.requested'))).toBe(false)
     expect(isCombatEvent(makeEvent(6, 'stage.updated'))).toBe(false)
+    // Initiative / attack rolls stay P3 roll.* events but carry combat_id, so they must refetch Combat state.
+    expect(isCombatEvent(makeEvent(7, 'roll.requested', { combat_id: 'combat-1' }))).toBe(true)
+    expect(isCombatEvent(makeEvent(8, 'roll.resolved', { combat_id: 'combat-1' }))).toBe(true)
   })
 
   it('determines the latest combat event sequence number', () => {
