@@ -269,6 +269,30 @@ def monster_casting_sources(rules_snapshot: Mapping[str, Any]) -> tuple[Mapping[
     return tuple(found)
 
 
+def monster_spell_ref(candidate: object) -> str | None:
+    """Canonical ``srd5.1:spell:<slug>`` ref for one stat-block spell entry (str, or
+    a mapping carrying ``spell_ref`` / ``url`` / ``name``); None when unusable."""
+    if isinstance(candidate, str):
+        value: str | None = candidate
+    elif isinstance(candidate, Mapping):
+        value = next(
+            (
+                item
+                for item in (candidate.get("spell_ref"), candidate.get("url"), candidate.get("name"))
+                if isinstance(item, str) and item
+            ),
+            None,
+        )
+    else:
+        value = None
+    if not value:
+        return None
+    if ":spell:" in value:
+        return value
+    slug = _slug(value)
+    return f"srd5.1:spell:{slug}" if slug else None
+
+
 def _monster_spell_matches(candidate: object, spell_ref: str) -> Mapping[str, Any] | None:
     requested_slug = _slug(spell_ref)
     if isinstance(candidate, str):

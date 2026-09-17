@@ -29,7 +29,8 @@
 | E10b | Quick Action Bar（attack → target → roll）+ `GET .../combat/pending-rolls` + DM adjudication panel（range / OA / special） | 實作規格 4、5；測試 E.1 第 5–8、10 點 | ✅ |
 | E10c-1 | pending roll 全類型：domain `pending_combat_roll_request_type` 判定 + 4 個 roll client + Action Bar 各類型擲骰列與結果 | 實作規格 4、16 | ✅ |
 | E10c-2 | reaction window 接受 / 拒絕、Grapple / Shove 動作、DM reach 裁定 | 實作規格 4、5 | ✅ |
-| E10d | spell cast（單體）/ AoE propose–resolve UI、affected_targets adjudication | 實作規格 4、5、14 | ⬜ |
+| E10d-1 | `GET .../combat/entries/{entry}/spells`：可施法術清單（含可用 slot level）+ web client | 實作規格 4、14 | ✅ |
+| E10d-2 | spell cast（單體 / self）UI、AoE propose–resolve UI、`affected_targets` 裁定 | 實作規格 4、5、14 | ⬜ |
 | E11 | Chat / Log 呈現 + 雙語 copy + guide | 實作規格 12、13；測試 E.4 | ⬜ |
 | E12 | focused E2E spec + Subphase 關門 gate | 測試指南 P4-E 全段 | ⬜ |
 
@@ -205,3 +206,11 @@
 - 教訓（已寫進 worker 流程）：**不要叫 ChatGPT「不用重讀」**——它會憑記憶重生檔案；每次寫入必須以 HEAD 的新鮮讀取為底，且只做最小 diff。
 - 測試：`npm test -- --run` 84 files / 438 passed；build 通過。
 - 留給 E10d：spell cast（單體）/ AoE propose–resolve UI、`affected_targets` 裁定；E11 接 Chat / Log 呈現。
+
+### E10d-1 — 可施法術清單 route
+
+- 起始：2026-09-17，ChatGPT 兩回合（第一回合整段花在 mandatory reading，沒建任何 blob；第二回合明講「不要再讀 docs/，只在寫入前重讀該檔 HEAD」後完成）。commit `e0ab444c`。
+- 交付：`CombatSpellService.available_spells(actor, entry_id) -> tuple[CastableSpellView, ...]`（`spell_ref` / `name` / `level` / `profile_id` / `concentration` / `targeting` single｜self｜aoe / `cast_mode` / `castable_slot_levels`）。Character 逐 (profile, access entry, slot level) 呼叫 P4-D 的 `authorize_character_spell`，成功才收錄——資源與 prepared / known 規則不在此重寫；Monster 走 `monster_casting_sources` + `resolve_monster_spell_source`。授權沿用 `require_actor_current` + `combat_service._authorize_entry`（DM 任意 entry、Player 只限受控）。Route `GET .../combat/entries/{entry_id}/spells`，`_map_error` 沿用。`api/combat.ts` 加 `CastableSpellView` 與 `listCastableSpells`。
+- **指揮者審核修正**：① ChatGPT 在 service 內自寫 `_monster_spell_ref`（自行 slug 化 url / name），與 `spell_resources.py` 既有 `_slug` / `_monster_spell_matches` 重複且規則可能漂移 → 抽成 `spell_resources.monster_spell_ref()` 公開函式並改為呼叫它。② Player 拒絕測試比對 `/attacks` route 的整份 JSON body，訊息字串不同而失敗，且跨 service 呼叫在整包執行時因未 override attack service 而噴 `no such table: sessions` → 改為只斷言本 route 的 403 + `table_actor_unauthorized` + 訊息關鍵字，零副作用斷言保留。
+- 測試：P4-D + P4-E 全部 backend 檔 + M03 boundary 無 failure（2 skip 為 PostgreSQL gated）；P4-A/B/C regression 無 failure；`npm test -- --run` 84 files / 439 passed；build 通過。
+- 留給 E10d-2：Action Bar 的 spell 動作（單體 / self 走 `POST /spells/cast`；AoE 走 `propose` → DM 確認 targets → `resolve`）、`affected_targets` 裁定控制項。

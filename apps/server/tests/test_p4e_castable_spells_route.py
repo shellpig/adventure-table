@@ -161,10 +161,6 @@ def test_player_cannot_list_uncontrolled_monster_spells_and_get_has_no_side_effe
 ) -> None:
     table, _, mage_entry_id, _ = combat_routes_fixture
     client = TestClient(app)
-    attack_url = (
-        f"/api/rooms/{table.room_id}/campaigns/{table.campaign_id}"
-        f"/sessions/{table.session_id}/combat/entries/{mage_entry_id}/attacks"
-    )
     spell_url = _spell_list_url(table, mage_entry_id)
 
     with table.engine.connect() as connection:
@@ -175,11 +171,12 @@ def test_player_cannot_list_uncontrolled_monster_spells_and_get_has_no_side_effe
         )
 
     headers = {"Authorization": f"Bearer {table.player_token}"}
-    attack_response = client.get(attack_url, headers=headers)
     spell_response = client.get(spell_url, headers=headers)
 
-    assert spell_response.status_code == attack_response.status_code == 403
-    assert spell_response.json() == attack_response.json()
+    # Same refusal as every other entry-scoped Combat read (_authorize_entry).
+    assert spell_response.status_code == 403
+    assert spell_response.json()["error"]["code"] == "table_actor_unauthorized"
+    assert "Only the current Session DM" in spell_response.json()["error"]["message"]
 
     with table.engine.connect() as connection:
         after = (

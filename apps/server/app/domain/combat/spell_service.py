@@ -19,6 +19,7 @@ from app.domain.combat.spell_resolver import SaveDamageMode, SpellCastMode
 from app.domain.combat.spell_resources import (
     authorize_character_spell,
     monster_casting_sources,
+    monster_spell_ref,
     resolve_monster_spell_source,
 )
 from app.domain.rooms.rolls import FormalRollSource, RollService
@@ -170,28 +171,6 @@ class CombatSpellService:
             return "self"
         return "single"
 
-    @staticmethod
-    def _monster_spell_ref(candidate: object) -> str | None:
-        value: str | None = None
-        if isinstance(candidate, str):
-            value = candidate
-        elif isinstance(candidate, Mapping):
-            explicit = candidate.get("spell_ref")
-            if isinstance(explicit, str) and explicit:
-                return explicit
-            url = candidate.get("url")
-            name = candidate.get("name")
-            if isinstance(url, str) and url:
-                value = url
-            elif isinstance(name, str) and name:
-                value = name
-        if not value:
-            return None
-        if ":spell:" in value:
-            return value
-        slug = value.rstrip("/").rsplit("/", 1)[-1].strip().lower().replace(" ", "-")
-        return f"srd5.1:spell:{slug}" if slug else None
-
     def _castable_spell_view(
         self,
         spell_ref: str,
@@ -273,7 +252,7 @@ class CombatSpellService:
                 if not isinstance(candidates, (list, tuple)):
                     continue
                 for candidate in candidates:
-                    spell_ref = self._monster_spell_ref(candidate)
+                    spell_ref = monster_spell_ref(candidate)
                     if spell_ref is None or spell_ref in seen_refs:
                         continue
                     seen_refs.add(spell_ref)
