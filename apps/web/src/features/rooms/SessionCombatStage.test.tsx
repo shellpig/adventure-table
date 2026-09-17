@@ -179,7 +179,7 @@ describe('SessionCombatStage component', () => {
 
   it('(a) renders full DM view with exact HP, AC, round number, and current turn name', () => {
     const markup = renderStage(
-      <SessionCombatStage combat={dmCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" onError={() => undefined} refresh={() => undefined} />,
+      <SessionCombatStage combat={dmCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" events={[]} onError={() => undefined} refresh={() => undefined} />,
     )
 
     expect(markup).toContain('Round 2')
@@ -194,7 +194,7 @@ describe('SessionCombatStage component', () => {
 
   it('(b) renders Player view with enemy secrecy (wounded label, own HP, no enemy HP/AC, no dm_notes, no ?)', () => {
     const markup = renderStage(
-      <SessionCombatStage combat={playerCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" onError={() => undefined} refresh={() => undefined} />,
+      <SessionCombatStage combat={playerCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" events={[]} onError={() => undefined} refresh={() => undefined} />,
     )
 
     // Player's own character has exact HP and AC
@@ -218,12 +218,12 @@ describe('SessionCombatStage component', () => {
 
   it('(c) shows position note only when present and non-empty', () => {
     const withoutNote = renderStage(
-      <SessionCombatStage combat={playerCombatDetail} myEntryIds={['entry-mira']} copy={copyZh} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" onError={() => undefined} refresh={() => undefined} />,
+      <SessionCombatStage combat={playerCombatDetail} myEntryIds={['entry-mira']} copy={copyZh} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" events={[]} onError={() => undefined} refresh={() => undefined} />,
     )
     expect(withoutNote).not.toContain(copyZh.combatPositionNote)
 
     const withNote = renderStage(
-      <SessionCombatStage combat={dmCombatDetail} myEntryIds={['entry-mira']} copy={copyZh} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" onError={() => undefined} refresh={() => undefined} />,
+      <SessionCombatStage combat={dmCombatDetail} myEntryIds={['entry-mira']} copy={copyZh} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" events={[]} onError={() => undefined} refresh={() => undefined} />,
     )
     expect(withNote).toContain(copyZh.combatPositionNote)
     expect(withNote).toContain('Behind barrels')
@@ -231,7 +231,7 @@ describe('SessionCombatStage component', () => {
 
   it('(d) shows your-turn badge when current turn is in myEntryIds, and omits it otherwise', () => {
     const notMyTurn = renderStage(
-      <SessionCombatStage combat={dmCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" onError={() => undefined} refresh={() => undefined} />,
+      <SessionCombatStage combat={dmCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" events={[]} onError={() => undefined} refresh={() => undefined} />,
     )
     expect(notMyTurn).not.toContain(copyEn.combatYourTurn)
 
@@ -240,14 +240,14 @@ describe('SessionCombatStage component', () => {
       current_turn_entry_id: 'entry-mira',
     }
     const isMyTurn = renderStage(
-      <SessionCombatStage combat={myTurnCombat} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" onError={() => undefined} refresh={() => undefined} />,
+      <SessionCombatStage combat={myTurnCombat} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" events={[]} onError={() => undefined} refresh={() => undefined} />,
     )
     expect(isMyTurn).toContain(copyEn.combatYourTurn)
   })
 
   it('(e) renders display_name row in initiative list even when entry has no combatant detail', () => {
     const markup = renderStage(
-      <SessionCombatStage combat={playerCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" onError={() => undefined} refresh={() => undefined} />,
+      <SessionCombatStage combat={playerCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" events={[]} onError={() => undefined} refresh={() => undefined} />,
     )
     // entry-hidden is omitted from playerCombatDetail.combatants, but in initiative list:
     expect(markup).toContain('Ambush Lurker')
@@ -281,6 +281,7 @@ describe('SessionCombatStage component', () => {
         campaignId="campaign"
         sessionId="session"
         token="token"
+        events={[]}
         onError={() => undefined}
         refresh={() => undefined}
       />,
@@ -319,6 +320,7 @@ describe('SessionCombatStage component', () => {
         campaignId="campaign"
         sessionId="session"
         token="token"
+        events={[]}
         onError={() => undefined}
         refresh={() => undefined}
       />,
@@ -327,5 +329,24 @@ describe('SessionCombatStage component', () => {
     expect(markup).not.toContain('data-combat-dm-controls')
     expect(markup).toContain('data-initiative-roll="entry-mira"')
     expect(markup).not.toContain('data-initiative-roll="entry-goblin"')
+  })
+
+  it('(h) mounts action bar for both roles while running and adjudication panel only for DM', () => {
+    const dmMarkup = renderStage(
+      <SessionCombatStage combat={dmCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={true} roomId="room" campaignId="campaign" sessionId="session" token="token" events={[]} onError={() => undefined} refresh={() => undefined} />,
+    )
+    const playerMarkup = renderStage(
+      <SessionCombatStage combat={playerCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" events={[]} onError={() => undefined} refresh={() => undefined} />,
+    )
+    expect(dmMarkup).toContain('data-combat-action-bar="true"')
+    expect(playerMarkup).toContain('data-combat-action-bar="true"')
+    expect(dmMarkup).toContain('data-combat-adjudications="true"')
+    expect(playerMarkup).not.toContain('data-combat-adjudications')
+
+    const pendingDm = renderStage(
+      <SessionCombatStage combat={{ ...dmCombatDetail, status: 'initiative_pending' }} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={true} roomId="room" campaignId="campaign" sessionId="session" token="token" events={[]} onError={() => undefined} refresh={() => undefined} />,
+    )
+    expect(pendingDm).not.toContain('data-combat-action-bar')
+    expect(pendingDm).not.toContain('data-combat-adjudications')
   })
 })

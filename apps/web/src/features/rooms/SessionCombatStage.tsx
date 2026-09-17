@@ -2,8 +2,18 @@ import { useState } from 'react'
 
 import type { CombatDetailView, CombatEntryView, CombatantDetailView } from '../../api/combat'
 import { conditionLabel, rollInitiative } from '../../api/combat'
+import type { TableEvent } from '../../api/sessions'
+import { SessionCombatActionBar } from './SessionCombatActionBar'
+import { SessionCombatAdjudicationPanel } from './SessionCombatAdjudicationPanel'
 import { SessionCombatDmControls } from './SessionCombatDmControls'
-import { combatantFor, orderedEntries, useMonsterOptions } from './sessionCombat'
+import {
+  combatantFor,
+  combatInjuryLabel,
+  orderedEntries,
+  useMonsterOptions,
+  usePendingAdjudications,
+  usePendingCombatRolls,
+} from './sessionCombat'
 import type { SessionCopy } from './sessionCopy'
 import { requestId } from './SessionTableSurface'
 
@@ -15,6 +25,7 @@ type SessionCombatStageProps = {
   campaignId: string
   sessionId: string
   token: string
+  events: TableEvent[]
   isCurrentDm: boolean
   onError: (cause: unknown) => void
   refresh: () => void
@@ -37,21 +48,6 @@ function getStatusLabel(status: string, copy: SessionCopy): string {
   }
 }
 
-function getInjuryLevelLabel(level: string, copy: SessionCopy): string {
-  switch (level) {
-    case 'healthy':
-      return copy.combatInjuryHealthy
-    case 'wounded':
-      return copy.combatInjuryWounded
-    case 'critical':
-      return copy.combatInjuryCritical
-    case 'down':
-      return copy.combatInjuryDown
-    default:
-      return level
-  }
-}
-
 export function SessionCombatStage({
   combat,
   myEntryIds,
@@ -60,12 +56,36 @@ export function SessionCombatStage({
   campaignId,
   sessionId,
   token,
+  events,
   isCurrentDm,
   onError,
   refresh,
 }: SessionCombatStageProps) {
   const monsterOptions = useMonsterOptions(isCurrentDm)
   const [rollingEntryId, setRollingEntryId] = useState<string | null>(null)
+  const { rolls, refresh: refreshRolls } = usePendingCombatRolls({
+    roomId,
+    campaignId,
+    sessionId,
+    token,
+    events,
+    onError,
+  })
+  const { adjudications, refresh: refreshAdjudications } = usePendingAdjudications({
+    roomId,
+    campaignId,
+    sessionId,
+    token,
+    events,
+    onError,
+    enabled: combat.status === 'running',
+  })
+
+  const refreshCombatResources = () => {
+    refresh()
+    refreshRolls()
+    refreshAdjudications()
+  }
 
   const roundText = typeof combat.round_number === 'number'
     ? copy.combatRound.replace('{round}', String(combat.round_number))
@@ -282,7 +302,7 @@ export function SessionCombatStage({
                     {proj.injury_level ? (
                       <span className="session-combat__stat">
                         <span className="session-combat__injury-badge">
-                          {getInjuryLevelLabel(proj.injury_level, copy)}
+                          {combatInjuryLabel(proj.injury_level, copy)}
                         </span>
                       </span>
                     ) : null}
@@ -320,6 +340,38 @@ export function SessionCombatStage({
           </div>
         )}
       </div>
+
+      {combat.status === 'running' ? (
+        <>
+          <SessionCombatActionBar
+            combat={combat}
+            myEntryIds={myEntryIds}
+            pendingRolls={rolls}
+            pendingAdjudications={adjudications}
+            copy={copy}
+            roomId={roomId}
+            campaignId={campaignId}
+            sessionId={sessionId}
+            token={token}
+            isCurrentDm={isCurrentDm}
+            onError={onError}
+            refresh={refreshCombatResources}
+          />
+          {isCurrentDm ? (
+            <SessionCombatAdjudicationPanel
+              combat={combat}
+              adjudications={adjudications}
+              copy={copy}
+              roomId={roomId}
+              campaignId={campaignId}
+              sessionId={sessionId}
+              token={token}
+              onError={onError}
+              refresh={refreshCombatResources}
+            />
+          ) : null}
+        </>
+      ) : null}
     </section>
   )
 }

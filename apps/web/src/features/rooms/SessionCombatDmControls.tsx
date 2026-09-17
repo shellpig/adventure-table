@@ -11,6 +11,7 @@ import {
   type CombatDetailView,
 } from '../../api/combat'
 import { SearchableSelect, type SearchOption } from '../../components/SearchableSelect'
+import { runCombatMutation } from './sessionCombat'
 import type { SessionCopy } from './sessionCopy'
 import { requestId } from './SessionTableSurface'
 
@@ -68,17 +69,8 @@ export function SessionCombatDmControls({
     activeEntries.length > 0 &&
     activeEntries.every((entry) => typeof entry.initiative_total === 'number')
 
-  const runMutation = async (mutation: () => Promise<void>) => {
-    setPending(true)
-    try {
-      await mutation()
-      refresh()
-    } catch (cause) {
-      onError(cause)
-    } finally {
-      setPending(false)
-    }
-  }
+  const runMutation = (mutation: () => Promise<void>) =>
+    runCombatMutation(setPending, mutation, refresh, onError)
 
   const handleAddSrdMonster = async (event: React.FormEvent) => {
     event.preventDefault()

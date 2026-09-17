@@ -4,13 +4,21 @@ import { useQuery } from '@tanstack/react-query'
 import { listContent } from '../../api/character'
 import {
   getActiveCombatDetail,
+  listAdjudications,
+  listPendingCombatRolls,
+  type CombatAdjudicationView,
   type CombatDetailView,
   type CombatEntryView,
+  type CombatPendingRollView,
   type CombatantDetailView,
 } from '../../api/combat'
 import type { TableEvent } from '../../api/sessions'
 import type { SearchOption } from '../../components/SearchableSelect'
 import { useContentPresentations } from '../../i18n/useContentPresentations'
+import type { SessionCopy } from './sessionCopy'
+
+const EMPTY_PENDING_COMBAT_ROLLS: CombatPendingRollView[] = []
+const EMPTY_ADJUDICATIONS: CombatAdjudicationView[] = []
 
 export function isCombatEvent(event: TableEvent): boolean {
   return event.kind.startsWith('combat.')
@@ -61,27 +69,92 @@ export function combatantFor(
   return detail?.combatants?.find((c) => c.entry_id === entryId)
 }
 
-export type UseActiveCombatOptions = {
+export function actingEntryId(
+  combat: CombatDetailView,
+  ownEntryIds: string[],
+  isCurrentDm: boolean,
+): string | null {
+  if (combat.status !== 'running' || combat.current_turn_entry_id === null) return null
+  if (isCurrentDm || ownEntryIds.includes(combat.current_turn_entry_id)) {
+    return combat.current_turn_entry_id
+  }
+  return null
+}
+
+export function combatInjuryLabel(level: string, copy: SessionCopy): string {
+  switch (level) {
+    case 'healthy':
+      return copy.combatInjuryHealthy
+    case 'wounded':
+      return copy.combatInjuryWounded
+    case 'critical':
+      return copy.combatInjuryCritical
+    case 'down':
+      return copy.combatInjuryDown
+    default:
+      return level
+  }
+}
+
+export function adjudicationKindLabel(
+  kind: CombatAdjudicationView['kind'],
+  copy: SessionCopy,
+): string {
+  switch (kind) {
+    case 'range':
+      return copy.combatAdjudicationKindRange
+    case 'reach':
+      return copy.combatAdjudicationKindReach
+    case 'affected_targets':
+      return copy.combatAdjudicationKindAffectedTargets
+    case 'opportunity_attack':
+      return copy.combatAdjudicationKindOpportunityAttack
+    case 'special':
+      return copy.combatAdjudicationKindSpecial
+  }
+}
+
+export async function runCombatMutation(
+  setPending: (value: boolean) => void,
+  mutation: () => Promise<void>,
+  refresh: () => void,
+  onError: (cause: unknown) => void,
+): Promise<void> {
+  setPending(true)
+  try {
+    await mutation()
+    refresh()
+  } catch (cause) {
+    onError(cause)
+  } finally {
+    setPending(false)
+  }
+}
+
+type CombatEventResourceOptions<T> = {
   roomId: string
   campaignId: string
   sessionId: string
   token: string
   events: TableEvent[]
   onError?: (error: unknown) => void
+  enabled: boolean
+  load: (roomId: string, campaignId: string, sessionId: string, token: string) => Promise<T>
+  initialValue: T
 }
 
-export function useActiveCombat({
+function useCombatEventResource<T>({
   roomId,
   campaignId,
   sessionId,
   token,
   events,
   onError,
-}: UseActiveCombatOptions): {
-  combat: CombatDetailView | null
-  refresh: () => void
-} {
-  const [combat, setCombat] = useState<CombatDetailView | null>(null)
+  enabled,
+  load,
+  initialValue,
+}: CombatEventResourceOptions<T>): { data: T; refresh: () => void } {
+  const [data, setData] = useState<T>(initialValue)
   const [refreshCounter, setRefreshCounter] = useState(0)
   const latestSeq = useMemo(() => latestCombatEventSeq(events), [events])
   const onErrorRef = useRef(onError)
@@ -95,13 +168,18 @@ export function useActiveCombat({
   }, [])
 
   useEffect(() => {
+    if (!enabled) {
+      setData(initialValue)
+      return
+    }
+
     let active = true
 
     const run = async () => {
       try {
-        const detail = await getActiveCombatDetail(roomId, campaignId, sessionId, token)
+        const next = await load(roomId, campaignId, sessionId, token)
         if (active) {
-          setCombat(detail)
+          setData(next)
         }
       } catch (err) {
         if (active) {
@@ -115,9 +193,64 @@ export function useActiveCombat({
     return () => {
       active = false
     }
-  }, [roomId, campaignId, sessionId, token, latestSeq, refreshCounter])
+  }, [roomId, campaignId, sessionId, token, latestSeq, refreshCounter, enabled, load, initialValue])
 
-  return { combat, refresh }
+  return { data, refresh }
+}
+
+export type UseActiveCombatOptions = {
+  roomId: string
+  campaignId: string
+  sessionId: string
+  token: string
+  events: TableEvent[]
+  onError?: (error: unknown) => void
+}
+
+export function useActiveCombat(options: UseActiveCombatOptions): {
+  combat: CombatDetailView | null
+  refresh: () => void
+} {
+  const resource = useCombatEventResource({
+    ...options,
+    enabled: true,
+    load: getActiveCombatDetail,
+    initialValue: null,
+  })
+  return { combat: resource.data, refresh: resource.refresh }
+}
+
+export function usePendingCombatRolls(options: UseActiveCombatOptions): {
+  rolls: CombatPendingRollView[]
+  refresh: () => void
+} {
+  const resource = useCombatEventResource({
+    ...options,
+    enabled: true,
+    load: listPendingCombatRolls,
+    initialValue: EMPTY_PENDING_COMBAT_ROLLS,
+  })
+  return { rolls: resource.data, refresh: resource.refresh }
+}
+
+export type UsePendingAdjudicationsOptions = UseActiveCombatOptions & {
+  enabled: boolean
+}
+
+export function usePendingAdjudications({
+  enabled,
+  ...options
+}: UsePendingAdjudicationsOptions): {
+  adjudications: CombatAdjudicationView[]
+  refresh: () => void
+} {
+  const resource = useCombatEventResource({
+    ...options,
+    enabled,
+    load: listAdjudications,
+    initialValue: EMPTY_ADJUDICATIONS,
+  })
+  return { adjudications: resource.data, refresh: resource.refresh }
 }
 
 export function useMonsterOptions(enabled = true): SearchOption[] {
@@ -152,4 +285,3 @@ export function useMonsterOptions(enabled = true): SearchOption[] {
     [query.data, nameFor, searchAliasesFor],
   )
 }
-

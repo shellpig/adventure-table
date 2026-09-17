@@ -483,6 +483,7 @@ export function SessionTableSurface({
               campaignId={campaignId}
               sessionId={sessionId}
               token={token}
+              events={events}
               isCurrentDm={isCurrentDm}
               onError={onError}
               refresh={refresh}

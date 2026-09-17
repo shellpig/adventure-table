@@ -1530,3 +1530,90 @@
   margin-top: 4px;
 }
 
+.session-combat-actions,
+.session-combat-adjudications {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.session-combat-actions__waiting,
+.session-combat-actions__result,
+.session-combat-actions__pending-adjudications p,
+.session-combat-adjudications__row p {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.session-combat-actions__pending-rolls,
+.session-combat-actions__pending-adjudications,
+.session-combat-adjudications__list,
+.session-combat-adjudications__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.session-combat-actions__range-confirmed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.session-combat-adjudications__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+
+.session-combat-adjudications__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.session-combat-adjudications__hints {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  font-size: 0.76rem;
+}
+
+.session-combat-adjudications__hints > div {
+  display: flex;
+  gap: 6px;
+}
+
+.session-combat-adjudications__hints dt {
+  color: var(--muted);
+}
+
+.session-combat-adjudications__hints dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.session-combat-adjudications textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 72px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0c1017;
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}

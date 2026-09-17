@@ -29,6 +29,7 @@ from app.domain.combat.attacks import (
 )
 from app.domain.combat.core_rolls import (
     CombatCoreRollService,
+    CombatPendingRollView,
     DeathSaveRequestInput,
     DeathSaveRequestView,
     DeathSaveResultView,
@@ -368,6 +369,34 @@ def roll_attack(room_id: UUID, campaign_id: UUID, session_id: UUID, payload: For
                 service: CombatAttackService = Depends(get_combat_attack_service)) -> AttackResolutionView:
     try:
         return service.complete_attack(_actor_from_request(room_id, campaign_id, session_id, context, event_service), payload)
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
+@router.get("/pending-rolls", response_model=list[CombatPendingRollView])
+def list_pending_combat_rolls(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CombatCoreRollService = Depends(get_combat_core_roll_service),
+    attack_service: CombatAttackService = Depends(get_combat_attack_service),
+) -> tuple[CombatPendingRollView, ...]:
+    try:
+        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
+        pending = service.list_pending_rolls(actor)
+        normalized: list[CombatPendingRollView] = []
+        for item in pending:
+            if item.request_type == "other":
+                attack = attack_service.repository.get_request(
+                    session_id=actor.session_id,
+                    roll_request_id=item.id,
+                )
+                if attack is not None:
+                    item = item.model_copy(update={"request_type": "attack"})
+            normalized.append(item)
+        return tuple(normalized)
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 

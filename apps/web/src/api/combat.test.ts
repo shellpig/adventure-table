@@ -11,6 +11,7 @@ import {
   getSuggestedInitiativeOrder,
   listAdjudications,
   listAttacks,
+  listPendingCombatRolls,
   requestAttack,
   requestInitiative,
   requestOpportunityAttack,
@@ -232,6 +233,21 @@ describe('Combat API client', () => {
       source: 'server',
       idempotency_key: 'attack-roll-1',
     })
+  })
+
+  it('calls pending combat rolls endpoint with GET and Bearer auth', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok([]))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await listPendingCombatRolls(ROOM_ID, CAMPAIGN_ID, SESSION_ID, TOKEN)
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe(
+      `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/combat/pending-rolls`,
+    )
+    expect(init.method).toBeUndefined()
+    expect(init.body).toBeUndefined()
+    expect(init.headers.Authorization).toBe(`Bearer ${TOKEN}`)
   })
 
   it('calls range, list, and resolve adjudication endpoints with expected request details', async () => {

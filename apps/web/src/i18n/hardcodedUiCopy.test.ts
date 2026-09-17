@@ -26,6 +26,8 @@ const SOURCE_FILES = [
   '../features/rooms/RoomSessionPage.tsx',
   '../features/rooms/SessionTableSurface.tsx',
   '../features/rooms/SessionCombatStage.tsx',
+  '../features/rooms/SessionCombatActionBar.tsx',
+  '../features/rooms/SessionCombatAdjudicationPanel.tsx',
   '../features/rooms/SessionCombatDmControls.tsx',
   '../features/rooms/RoomWorkspacePage.tsx',
   '../features/rooms/AIJoinKit.tsx',

@@ -291,6 +291,19 @@ export type AdjudicationDecisionInput = {
   idempotency_key?: string | null
 }
 
+export type CombatPendingRollView = {
+  id: string
+  roll_group_id: string | null
+  label: string | null
+  request_type: string
+  target_entry_id: string
+  target_seat_id: string | null
+  ability_ref: string | null
+  dc: number | null
+  modifier_mode: 'normal' | 'advantage' | 'disadvantage'
+  status: string
+}
+
 const combatBase = (roomId: string, campaignId: string, sessionId: string) =>
   `${tableBase(roomId, campaignId, sessionId)}/combat`
 
@@ -453,6 +466,15 @@ export function listAdjudications(
   token: string,
 ): Promise<CombatAdjudicationView[]> {
   return request(`${combatBase(roomId, campaignId, sessionId)}/adjudications`, token)
+}
+
+export function listPendingCombatRolls(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  token: string,
+): Promise<CombatPendingRollView[]> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/pending-rolls`, token)
 }
 
 export function requestOpportunityAttack(

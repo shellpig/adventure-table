@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { conditionLabel, type CombatDetailView, type CombatEntryView } from '../../api/combat'
 import type { TableEvent } from '../../api/sessions'
 import {
+  actingEntryId,
   combatantFor,
   isCombatEvent,
   latestCombatEventSeq,
@@ -56,6 +57,23 @@ function makeEntry(
     ready_state: {},
     pending_reaction_state: {},
     ...options,
+  }
+}
+
+function makeDetail(status: string, currentTurnEntryId: string | null): CombatDetailView {
+  return {
+    id: 'combat-1',
+    campaign_id: 'camp-1',
+    mode: 'quick',
+    status,
+    round_number: status === 'running' ? 1 : null,
+    current_turn_entry_id: currentTurnEntryId,
+    revision: 1,
+    entries: [
+      makeEntry('entry-mira', 'Mira', 'char-mira', 1),
+      makeEntry('entry-goblin', 'Goblin', null, 2),
+    ],
+    combatants: [],
   }
 }
 
@@ -180,4 +198,19 @@ describe('sessionCombat helpers', () => {
     expect(conditionLabel({})).toBe('')
   })
 
+  it('returns own current turn entry for a running Player combat', () => {
+    expect(actingEntryId(makeDetail('running', 'entry-mira'), ['entry-mira'], false)).toBe('entry-mira')
+  })
+
+  it('returns any current turn entry for the current DM', () => {
+    expect(actingEntryId(makeDetail('running', 'entry-goblin'), ['entry-mira'], true)).toBe('entry-goblin')
+  })
+
+  it('returns null when the running turn belongs to another entry', () => {
+    expect(actingEntryId(makeDetail('running', 'entry-goblin'), ['entry-mira'], false)).toBeNull()
+  })
+
+  it('returns null before initiative is finalized', () => {
+    expect(actingEntryId(makeDetail('initiative_pending', null), ['entry-mira'], true)).toBeNull()
+  })
 })
