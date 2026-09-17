@@ -20,7 +20,7 @@
 | E5 | Spell / reaction / concentration REST route | 實作規格 7、11；設計 §8.1、§8.2 | ✅ |
 | E6 | DM adjudication REST（range / cover / AoE / OA） | 實作規格 5；設計 §8.3 | ✅ |
 | E7a | Monster Instance REST（DM-only：from-content / quick-enemy / list） | 實作規格 7、10；設計 §4.2 | ✅ |
-| E7b | Combat MCP tools：lifecycle / monster / initiative / turn / action | 實作規格 8、10、11；設計 §8.4；測試 E.3 | ⬜ |
+| E7b | Combat MCP tools：lifecycle / monster / initiative / turn / action | 實作規格 8、10、11；設計 §8.4；測試 E.3 | ✅ |
 | E7c | Combat MCP tools：spell / reaction / concentration / adjudication + `get_combat_context` | 實作規格 8、10、11；設計 §8.4；測試 E.3 | ⬜ |
 | E8 | `get_session_context` / briefing Combat context | 實作規格 9；設計 §8.6；測試 E.4 | ⬜ |
 | E9 | Session page：Combat Header + Initiative + Combatants UI | 實作規格 1、2、4、6；測試 E.1 | ⬜ |
@@ -117,3 +117,15 @@
 - 清理：改用 `monster_casting_sources` 取代自行重掃 traits、抽 `_idempotent_instance` 去掉兩份重複、移除未用 import。既有 E1 / E5 測試的手工 `spell_slot` dict 改呼叫 `initial_monster_resources`。
 - 測試：`tests/test_p4e_monster_instance_routes.py` 6 條（SRD mage from-content → 加入 Combat → cast / Quick Enemy 有無 attack / Player 403 零 row / unknown key 與非 monster key 拒絕 / idempotency 同 id 一 row / list 只含本 Campaign）。gate 78 passed。
 - 限制：template search 沿用既有 `GET /api/rules/content/monsters`；Monster long-form `desc` 仍未 expose 給 UI，首次 expose 的步驟要補 zh-TW。
+
+### E7b — Combat MCP tools：lifecycle / monster / initiative / turn / action
+
+- 起始：2026-09-17，agy worker 一輪（811s）+ Claude 小修正。
+- 交付：`CombatAIToolApplicationService` 擴充 14 個 facade 方法（只做 actor 解析 + 委派 + `model_dump`，無規則邏輯），DI 注入 `CombatInitiativeService` 與 E7a `MonsterInstanceService`。新 MCP tools：
+  - DM-only：`combat_start`、`combat_add_character`、`combat_add_monster`、`combat_create_monster`（E7a from-content）、`combat_create_quick_enemy`、`combat_list_monster_instances`（DM 完整視圖）、`combat_request_initiative`、`combat_finalize_initiative`、`combat_advance_turn`、`combat_end`、`combat_remove_entry`、`combat_withdraw_entry`。
+  - Shared：`combat_roll_initiative`（`_server_roll` → `complete_initiative`）、`combat_use_action`。
+  - 不提供：suggested-order / ties / reorder、P4-B `set_reaction_window`（P4-D reaction service 取代）、任何 raw HP / turn / JSON setter。
+  - `CombatMutationToolInput` / `CombatEntryMutationToolInput` 定義在 `ai_tools.py`（不從 `app.api` import）。`_WHEN_TO_USE` 雙語、DM gameplay 描述含 `active_session_required`；`guide_tool_names._EXPECTED` 與 `test_m04c_tool_descriptions` 的固定 catalog 同步。
+- 修正：agy 把 `combat_withdraw_entry` 設成 shared，但 `CombatService.withdraw_entry` 是 `_require_dm`——改為 DM-only，避免 Player catalog 廣告一個永遠失敗的 tool；描述改為「Player 以敘事表達撤退並請 DM 處理」。
+- 測試：`tests/test_p4e_mcp_combat_lifecycle.py` 5 條（catalog 角色面 + pre-session DM catalog 相等 / AI DM wire-level journey：quick enemy → start → add monster → initiative request / roll / finalize → advance → end，並與 REST `GET .../combat` 對照同一 state / AI Player 呼叫 DM tool 在 facade 前被拒 + 非受控 entry 的 `combat_use_action` 零 row / Take Back 與 Session End 後舊 token 的 combat tool 回同一 invalidation error 零副作用 / DM from-content + list）。gate（E7b focused + P4-C MCP adapter + M04-C descriptions / guide parity / briefing + P3-E MCP tools / invalidation / event loop / protocol / official client + P4-B API + E7a）80 passed。
+- 留給 E7c：spell / reaction / concentration / adjudication tools 與 `get_combat_context`（Player 版無 enemy secrets）。

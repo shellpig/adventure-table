@@ -15,7 +15,23 @@ from app.domain.combat.core_rolls import (
     DeathSaveRequestInput,
     SavingThrowInput,
 )
-from app.domain.combat.lifecycle import CombatService
+from app.domain.combat.initiative import (
+    CombatInitiativeService,
+    FinalizeInitiativeInput,
+    RequestInitiativeInput,
+)
+from app.domain.combat.lifecycle import (
+    AddCharacterInput,
+    AddMonsterInput,
+    CombatActionInput,
+    CombatService,
+    StartCombatInput,
+)
+from app.domain.combat.monster_instances import (
+    CreateMonsterFromContentInput,
+    CreateQuickEnemyInput,
+    MonsterInstanceService,
+)
 from app.domain.combat.semantic_hp import (
     CombatResolutionService,
     SemanticDamageInput,
@@ -42,6 +58,15 @@ class CombatRollToolInput(StrictModel):
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
 
 
+class CombatMutationToolInput(StrictModel):
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+
+
+class CombatEntryMutationToolInput(StrictModel):
+    entry_id: UUID
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+
+
 class CombatAIToolApplicationService(AIToolApplicationService):
     """P4-C MCP facade that delegates every rule decision to shared Combat services.
 
@@ -58,6 +83,8 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         combat_resolution_service: CombatResolutionService,
         combat_core_roll_service: CombatCoreRollService,
         combat_special_attack_service: CombatSpecialAttackService,
+        combat_initiative_service: CombatInitiativeService,
+        monster_instance_service: MonsterInstanceService,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -66,6 +93,8 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         self.combat_resolution_service = combat_resolution_service
         self.combat_core_roll_service = combat_core_roll_service
         self.combat_special_attack_service = combat_special_attack_service
+        self.combat_initiative_service = combat_initiative_service
+        self.monster_instance_service = monster_instance_service
 
     @staticmethod
     def _semantic_resolution(result: SemanticResolutionView) -> dict[str, Any]:
@@ -242,9 +271,153 @@ class CombatAIToolApplicationService(AIToolApplicationService):
             actor, self._server_roll(input)
         ).model_dump(mode="json")
 
+    def combat_start(
+        self,
+        token: str,
+        input: StartCombatInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_service.start_quick_combat(actor, input).model_dump(mode="json")
+
+    def combat_add_character(
+        self,
+        token: str,
+        input: AddCharacterInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_service.add_character(actor, input).model_dump(mode="json")
+
+    def combat_add_monster(
+        self,
+        token: str,
+        input: AddMonsterInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_service.add_monster(actor, input).model_dump(mode="json")
+
+    def combat_create_monster(
+        self,
+        token: str,
+        input: CreateMonsterFromContentInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.monster_instance_service.create_from_content(actor, input).model_dump(mode="json")
+
+    def combat_create_quick_enemy(
+        self,
+        token: str,
+        input: CreateQuickEnemyInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.monster_instance_service.create_quick_enemy(actor, input).model_dump(mode="json")
+
+    def combat_list_monster_instances(
+        self,
+        token: str,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        instances = self.monster_instance_service.list_instances(actor)
+        return {"instances": [inst.model_dump(mode="json") for inst in instances]}
+
+    def combat_request_initiative(
+        self,
+        token: str,
+        input: RequestInitiativeInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_initiative_service.request_initiative(actor, input).model_dump(mode="json")
+
+    def combat_roll_initiative(
+        self,
+        token: str,
+        input: CombatRollToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_initiative_service.complete_initiative(
+            actor, self._server_roll(input)
+        ).model_dump(mode="json")
+
+    def combat_finalize_initiative(
+        self,
+        token: str,
+        input: FinalizeInitiativeInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_initiative_service.finalize_initiative(actor, input).model_dump(mode="json")
+
+    def combat_advance_turn(
+        self,
+        token: str,
+        input: CombatMutationToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_service.advance_turn(actor, idempotency_key=input.idempotency_key).model_dump(mode="json")
+
+    def combat_use_action(
+        self,
+        token: str,
+        input: CombatActionInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_service.use_action(actor, input).model_dump(mode="json")
+
+    def combat_withdraw_entry(
+        self,
+        token: str,
+        input: CombatEntryMutationToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_service.withdraw_entry(actor, input.entry_id, idempotency_key=input.idempotency_key).model_dump(mode="json")
+
+    def combat_remove_entry(
+        self,
+        token: str,
+        input: CombatEntryMutationToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_service.remove_entry(actor, input.entry_id, idempotency_key=input.idempotency_key).model_dump(mode="json")
+
+    def combat_end(
+        self,
+        token: str,
+        input: CombatMutationToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_service.end_combat(actor, idempotency_key=input.idempotency_key).model_dump(mode="json")
+
 
 __all__ = [
     "CombatAIToolApplicationService",
+    "CombatEntryMutationToolInput",
     "CombatEntryToolInput",
+    "CombatMutationToolInput",
     "CombatRollToolInput",
 ]
