@@ -258,3 +258,11 @@ E10a / E10b / E10c-1 / E10c-2 / E10d-1 / E10d-2a / E10d-2b 全部交付並驗證
 - 指揮者修正：派工摘要誤將 heal event 描述為 `amount`；真 `spell_resolver.py` 是 `requested` / `restored`。Codex 將 formatter 改讀 `restored`，fixture 改成 requested 8 / restored 6，確認呈現的是實際恢復量，不把 requested 當恢復量。
 - 完成結果：85 files / 458 passed，`npm run build` 通過；AoE `outcomes[].damage/current_hp` 已核對 persistence。Player 缺 HP 時省略；utility damage=0 不假造傷害；单體 amount 不重複。
 - 本步限施法 amount/HP details；save/death-save/special-attack、其他 event 種類、runtime attack name 雙語 mapping、E11b parity 與 browser 證據仍未完成。
+
+#### E11a-fix2b — Save and death-save logs
+
+- 2026-09-17，ChatGPT worker 提交 `70119fe4`，新增 save / death-save formatter、9 個雙語 copy 欄位與3條測試。
+- `combat.save_resolved` 顯示 projected `succeeded` / `total`，不虛構 DC；`combat.death_save_resolved` 顯示 canonical d20 / HP / successes / failures 與 stable / dead / natural_20_recovery flags，不重算規則或自動結束戰鬥。
+- 本機驗證：85 files / 461 passed，`npm run build` 通過，`git diff --check` 通過；最終 tree 對上一有效 HEAD 僅兩個預期檔案有差異。
+- Worker 操作問題：回合多次誤建空檔 `__do_not_use*`（commit `95267fd4` 等），均已由後續 worker commits 刪除；歷史保留，不 force/rebase。此類探測提交不應重複，下一步 prompt 必須再次禁止 create-file 探測。
+- 尚未完成：special-attack與其他既有 lifecycle/action/entry events、runtime attack 名稱雙語接線、E11b parity、browser證據；E11仍未驗收完成。
