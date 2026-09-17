@@ -44,6 +44,22 @@ function text(presentation: ReturnType<typeof formatCombatLogEvent>): string {
 }
 
 describe('P4-E E11a compact combat log presentation', () => {
+  it('preserves projected runtime attack names and excludes runtime locators from content requests', () => {
+    for (const sourceRef of ['inventory:weapon-1', 'inventory:item:weapon-1', 'monster-action:0']) {
+      const attack = event('roll.resolved', {
+        combat_id: 'combat-1',
+        attacker_entry_id: 'hero',
+        target_entry_id: 'enemy',
+        attack_resolution: {
+          attack: { source_ref: sourceRef, name: 'Custom Slash', hit: true },
+        },
+      })
+      expect(combatLogContentReferences([attack])).toEqual([])
+      expect(text(formatCombatLogEvent(attack, 'en', resolveEntryLabel, fallbackContentName)))
+        .toBe('Aria · Custom Slash · → Goblin · Hit')
+    }
+  })
+
   it('localizes canonical spell condition tags and attack source refs without raw English slugs', () => {
     const spell = event('combat.spell_cast_resolved', {
       caster_entry_id: 'hero',

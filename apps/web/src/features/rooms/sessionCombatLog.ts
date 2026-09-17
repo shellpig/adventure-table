@@ -290,6 +290,12 @@ function targetCount(source: Record<string, unknown>): number | null {
   return Array.isArray(proposed) ? proposed.length : null
 }
 
+function isContentReference(reference: string): boolean {
+  return !reference.startsWith('inventory:')
+    && !reference.startsWith('monster-action:')
+    && /^[^:]+:[^:]+:[^:]+$/.test(reference)
+}
+
 export function combatLogContentReferences(events: readonly TableEvent[]): string[] {
   const references = new Set<string>()
   for (const event of events) {
@@ -300,7 +306,7 @@ export function combatLogContentReferences(events: readonly TableEvent[]): strin
       const resolution = asRecord(event.payload.attack_resolution)
       const attack = resolution ? asRecord(resolution.attack) : null
       const attackSourceRef = attack ? stringField(attack, 'source_ref') : null
-      if (attackSourceRef) references.add(attackSourceRef)
+      if (attackSourceRef && isContentReference(attackSourceRef)) references.add(attackSourceRef)
     }
 
     const domainEvents = event.payload.domain_events
@@ -349,7 +355,7 @@ function formatAttack(
   const attacker = entryLabel(payload, 'attacker_entry_id', resolveEntryLabel)
   const target = entryLabel(payload, 'target_entry_id', resolveEntryLabel)
   const attackSourceRef = stringField(attack, 'source_ref')
-  const attackName = attackSourceRef
+  const attackName = attackSourceRef && isContentReference(attackSourceRef)
     ? resolveContentName(attackSourceRef, copy.attack)
     : stringField(attack, 'name') ?? copy.attack
   const hit = booleanField(attack, 'hit')

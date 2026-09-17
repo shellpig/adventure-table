@@ -245,3 +245,9 @@ E10a / E10b / E10c-1 / E10c-2 / E10d-1 / E10d-2a / E10d-2b 全部交付並驗證
 - Worker 執行限制：fix1b 兩輪訊息遞送逾時；無工具診斷回覆沒有持續 connector 封鎖、沒有已完成正式 blobs/tree，工作停在讀檔搜尋。指揮者已縮為只改 `sessionCombatLog.ts`，禁止額外搜尋。
 - 清理：worker 誤提交 `d02fb6c6` noop 空檔 `__tmp_should_not_exist`；指揮者移除該 orphan，保留既有歷史，不 force/rebase。
 - 留給下一步：runtime attack source／可見名稱修正與真 payload regression；save/death-save/special-attack 等已存在事件及 spell damage/heal compact outcome（fix2）；E11b guide/catalog/briefing parity。E12 未開始。
+
+#### E11a runtime attack source 小修
+
+- 2026-09-17：單檔 worker 回合再次訊息遞送逾時，沒有正式提交；剩餘修正只有 source 判定，Codex 依指揮者小修原則本機收尾。
+- `isContentReference` 排除 `inventory:` / `monster-action:` locator，僅 canonical 三段 reference 可走 attack name presentation；runtime attack 保留既有可見 `attack.name`。測試涵蓋 inventory id 內含 colon，避免誤判為 StableKey。
+- `npm test -- --run`：85 files / 453 passed；`npm run build` 通過。尚缺 runtime source 至 content 的雙語名稱 mapping，不能將保留英文 canonical name 視為翻譯完成；需後續 E11 小步補真實來源接線。fix2 / E11b 尚未完成。
