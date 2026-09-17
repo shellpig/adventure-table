@@ -234,6 +234,63 @@ export type CastableSpellView = {
   castable_slot_levels: number[]
 }
 
+export type SpellCastView = {
+  action_id: string
+  combat_id: string
+  caster_entry_id: string
+  target_entry_id: string | null
+  spell_ref: string
+  cast_mode: string
+  status: string
+  roll_request_id: string | null
+  roll_result_id: string | null
+  resolution_result?: Record<string, unknown> | null
+}
+
+export type AoeSpellProposalView = {
+  action_id: string
+  combat_id: string
+  caster_entry_id: string
+  spell_ref: string
+  status: string
+  proposed_target_ids: string[]
+}
+
+export type AoeSpellResolutionView = {
+  action_id: string
+  combat_id: string
+  caster_entry_id: string
+  spell_ref: string
+  status: string
+  confirmed_target_ids: string[]
+  resolution_result?: Record<string, unknown> | null
+}
+
+export type CastSpellInput = {
+  caster_entry_id: string
+  target_entry_id?: string | null
+  spell_ref: string
+  slot_level?: number | null
+  profile_id?: string | null
+  attack_mode?: 'normal' | 'advantage' | 'disadvantage'
+  idempotency_key?: string | null
+}
+
+export type ProposeAoeSpellInput = {
+  caster_entry_id: string
+  spell_ref: string
+  slot_level?: number | null
+  profile_id?: string | null
+  proposed_target_ids: string[]
+  idempotency_key?: string | null
+}
+
+export type ResolveAoeSpellInput = {
+  action_id: string
+  confirmed_target_ids: string[]
+  idempotency_key?: string | null
+}
+
 export type AttackRequestView = {
   action_id: string
   combat_id: string
@@ -539,6 +596,45 @@ export function listCastableSpells(
   token: string,
 ): Promise<CastableSpellView[]> {
   return request(`${combatBase(roomId, campaignId, sessionId)}/entries/${entryId}/spells`, token)
+}
+
+export function castSpell(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: CastSpellInput,
+  token: string,
+): Promise<SpellCastView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/spells/cast`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function proposeAoeSpell(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: ProposeAoeSpellInput,
+  token: string,
+): Promise<AoeSpellProposalView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/spells/aoe/propose`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function resolveAoeSpell(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: ResolveAoeSpellInput,
+  token: string,
+): Promise<AoeSpellResolutionView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/spells/aoe/resolve`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
 export function requestAttack(

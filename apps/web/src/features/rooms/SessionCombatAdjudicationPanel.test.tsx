@@ -12,6 +12,7 @@ vi.mock('../../api/combat', async (importOriginal) => {
     adjudicateAttackRange: vi.fn(),
     adjudicateSpecialAttack: vi.fn(),
     resolveAdjudication: vi.fn(),
+    resolveAoeSpell: vi.fn(),
   }
 })
 
@@ -47,7 +48,11 @@ const detail: CombatDetailView = {
   round_number: 1,
   current_turn_entry_id: 'entry-player',
   revision: 1,
-  entries: [entry('entry-player', 'Mira'), entry('entry-enemy', 'Goblin')],
+  entries: [
+    entry('entry-player', 'Mira'),
+    entry('entry-enemy', 'Goblin'),
+    entry('entry-enemy-2', 'Orc'),
+  ],
   combatants: [],
 }
 
@@ -134,11 +139,19 @@ describe('SessionCombatAdjudicationPanel', () => {
     expect(markup).toContain(copy.combatRuling)
   })
 
-  it('leaves affected-target adjudication control-less for E10d', () => {
-    const markup = renderPanel([item('aoe-1', 'affected_targets')])
+  it('renders affected targets as checked boxes with a resolve button', () => {
+    const copy = sessionCopy('en')
+    const markup = renderPanel([
+      item('aoe-1', 'affected_targets', {
+        proposed_target_entry_ids: ['entry-enemy', 'entry-enemy-2'],
+      }),
+    ])
 
     expect(markup).toContain('data-adjudication-kind="affected_targets"')
-    expect(markup).not.toContain('<button')
+    expect(markup.match(/type="checkbox"/g)).toHaveLength(2)
+    expect(markup.match(/checked=""/g)).toHaveLength(2)
+    expect(markup).toContain(copy.combatConfirmTargets)
+    expect(markup).toContain(copy.combatResolveAoe)
   })
 
   it('renders the empty state when there are no pending adjudications', () => {

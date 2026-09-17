@@ -5,6 +5,7 @@ import {
   adjudicateAttackRange,
   adjudicateSpecialAttack,
   advanceTurn,
+  castSpell,
   createMonsterFromContent,
   createQuickEnemy,
   endCombat,
@@ -15,12 +16,14 @@ import {
   listAttacks,
   listCastableSpells,
   listPendingCombatRolls,
+  proposeAoeSpell,
   requestAttack,
   requestInitiative,
   requestOpportunityAttack,
   requestSpecialAdjudication,
   requestSpecialAttack,
   resolveAdjudication,
+  resolveAoeSpell,
   resolveReaction,
   rollAttack,
   rollConcentration,
@@ -228,6 +231,51 @@ describe('Combat API client', () => {
     expect(init.method).toBeUndefined()
     expect(init.body).toBeUndefined()
     expect(init.headers.Authorization).toBe(`Bearer ${TOKEN}`)
+  })
+
+  it('calls spell cast, AoE propose, and AoE resolve endpoints', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok({}))
+    vi.stubGlobal('fetch', fetchMock)
+    const castBody = {
+      caster_entry_id: 'entry-1',
+      target_entry_id: 'entry-2',
+      spell_ref: 'srd5.1:spell:fire-bolt',
+      slot_level: 0,
+      profile_id: 'wizard',
+      attack_mode: 'advantage' as const,
+      idempotency_key: 'spell-cast-1',
+    }
+    await castSpell(ROOM_ID, CAMPAIGN_ID, SESSION_ID, castBody, TOKEN)
+    const proposeBody = {
+      caster_entry_id: 'entry-1',
+      spell_ref: 'srd5.1:spell:fireball',
+      slot_level: 3,
+      profile_id: 'wizard',
+      proposed_target_ids: ['entry-2', 'entry-3'],
+      idempotency_key: 'spell-aoe-propose-1',
+    }
+    await proposeAoeSpell(ROOM_ID, CAMPAIGN_ID, SESSION_ID, proposeBody, TOKEN)
+    const resolveBody = {
+      action_id: 'action-aoe-1',
+      confirmed_target_ids: ['entry-2'],
+      idempotency_key: 'spell-aoe-resolve-1',
+    }
+    await resolveAoeSpell(ROOM_ID, CAMPAIGN_ID, SESSION_ID, resolveBody, TOKEN)
+
+    const expected = [
+      ['spells/cast', castBody],
+      ['spells/aoe/propose', proposeBody],
+      ['spells/aoe/resolve', resolveBody],
+    ] as const
+    expected.forEach(([path, body], index) => {
+      const [url, init] = fetchMock.mock.calls[index]
+      expect(url).toBe(
+        `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/combat/${path}`,
+      )
+      expect(init.method).toBe('POST')
+      expect(init.headers.Authorization).toBe(`Bearer ${TOKEN}`)
+      expect(JSON.parse(init.body as string)).toEqual(body)
+    })
   })
 
   it('calls saving throw, death save, concentration, and special-attack roll endpoints', async () => {

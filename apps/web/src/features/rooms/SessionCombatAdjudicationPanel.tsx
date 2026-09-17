@@ -4,6 +4,7 @@ import {
   adjudicateAttackRange,
   adjudicateSpecialAttack,
   resolveAdjudication,
+  resolveAoeSpell,
   type CombatAdjudicationView,
   type CombatDetailView,
 } from '../../api/combat'
@@ -47,6 +48,7 @@ export function SessionCombatAdjudicationPanel({
   const [rangeModes, setRangeModes] = useState<Record<string, RollModeChoice>>({})
   const [notes, setNotes] = useState<Record<string, string>>({})
   const [rulings, setRulings] = useState<Record<string, string>>({})
+  const [confirmedTargets, setConfirmedTargets] = useState<Record<string, string[]>>({})
 
   const entryName = (entryId: string): string =>
     combat.entries.find((entry) => entry.id === entryId)?.display_name ??
@@ -101,6 +103,22 @@ export function SessionCombatAdjudicationPanel({
       )
     })
 
+  const resolveAffectedTargets = (item: CombatAdjudicationView) =>
+    runMutation(async () => {
+      await resolveAoeSpell(
+        roomId,
+        campaignId,
+        sessionId,
+        {
+          action_id: item.action_id,
+          confirmed_target_ids:
+            confirmedTargets[item.action_id] ?? item.proposed_target_entry_ids,
+          idempotency_key: requestId('aoe-resolve'),
+        },
+        token,
+      )
+    })
+
   const resolveSpecial = (item: CombatAdjudicationView) => {
     const ruling = (rulings[item.action_id] ?? '').trim()
     if (!ruling) return Promise.resolve()
@@ -126,6 +144,8 @@ export function SessionCombatAdjudicationPanel({
           {adjudications.map((item) => {
             const targets = item.proposed_target_entry_ids.map(entryName)
             const ruling = rulings[item.action_id] ?? ''
+            const selectedTargets =
+              confirmedTargets[item.action_id] ?? item.proposed_target_entry_ids
             return (
               <article
                 key={item.action_id}
@@ -251,6 +271,40 @@ export function SessionCombatAdjudicationPanel({
                     >
                       {copy.combatNoTrigger}
                     </button>
+                  </div>
+                ) : item.kind === 'affected_targets' ? (
+                  <div className="session-combat-adjudications__controls">
+                    <span>{copy.combatConfirmTargets}</span>
+                    {item.proposed_target_entry_ids.map((entryId) => (
+                      <label key={entryId}>
+                        <input
+                          type="checkbox"
+                          checked={selectedTargets.includes(entryId)}
+                          disabled={pending}
+                          onChange={(event) =>
+                            setConfirmedTargets((current) => {
+                              const selected = current[item.action_id] ??
+                                item.proposed_target_entry_ids
+                              const next = event.target.checked
+                                ? [...selected, entryId]
+                                : selected.filter((id) => id !== entryId)
+                              return { ...current, [item.action_id]: next }
+                            })
+                          }
+                        />
+                        <span>{entryName(entryId)}</span>
+                      </label>
+                    ))}
+                    <div className="session-combat__form-actions">
+                      <button
+                        type="button"
+                        className="button primary compact"
+                        disabled={pending}
+                        onClick={() => void resolveAffectedTargets(item)}
+                      >
+                        {copy.combatResolveAoe}
+                      </button>
+                    </div>
                   </div>
                 ) : item.kind === 'special' ? (
                   <div className="session-combat-adjudications__controls">
