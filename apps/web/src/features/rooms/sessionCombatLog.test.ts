@@ -111,6 +111,96 @@ describe('P4-E E11a compact combat log presentation', () => {
     )
   })
 
+  it('shows one projected single-target spell damage result without duplicating its domain event', () => {
+    const spell = event('combat.spell_cast_resolved', {
+      caster_entry_id: 'hero',
+      target_entry_id: 'enemy',
+      spell_ref: 'srd5.1:spell:magic-missile',
+      damage: 7,
+      target_current_hp: 5,
+      domain_events: [
+        { type: 'damage', amount: 7, target_ref: 'enemy' },
+      ],
+    })
+
+    const rendered = text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, fallbackContentName))
+    expect(rendered).toContain('Damage 7 · HP 5')
+    expect(rendered.match(/Damage 7/g)).toHaveLength(1)
+  })
+
+  it('shows healing only from a projected heal domain event', () => {
+    const spell = event('combat.spell_cast_resolved', {
+      caster_entry_id: 'hero',
+      target_entry_id: 'hero',
+      spell_ref: 'srd5.1:spell:cure-wounds',
+      damage: 0,
+      target_current_hp: 10,
+      domain_events: [
+        { type: 'heal', amount: 6, target_ref: 'hero' },
+      ],
+    })
+
+    const rendered = text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, fallbackContentName))
+    expect(rendered).toContain('Healing 6')
+    expect(rendered).toContain('HP 10')
+    expect(rendered).not.toContain('Damage 0')
+  })
+
+  it('does not present a utility spell damage=0 field as a damage result', () => {
+    const spell = event('combat.spell_cast_resolved', {
+      caster_entry_id: 'hero',
+      target_entry_id: 'enemy',
+      spell_ref: 'srd5.1:spell:hold-person',
+      damage: 0,
+      domain_events: [
+        { type: 'saving_throw', target_ref: 'enemy', succeeded: false },
+      ],
+    })
+
+    const rendered = text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, fallbackContentName))
+    expect(rendered).not.toContain('Damage')
+    expect(rendered).not.toContain('Healing')
+  })
+
+  it('omits spell target HP when the Player projected payload does not contain it', () => {
+    const spell = event('combat.spell_cast_resolved', {
+      caster_entry_id: 'hero',
+      target_entry_id: 'enemy',
+      target_is_hostile: true,
+      spell_ref: 'srd5.1:spell:magic-missile',
+      damage: 7,
+      domain_events: [
+        { type: 'damage', amount: 7, target_ref: 'enemy' },
+      ],
+    })
+
+    const rendered = text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, fallbackContentName))
+    expect(rendered).toContain('Damage 7')
+    expect(rendered).not.toContain('HP')
+    expect(rendered).not.toContain('?')
+  })
+
+  it('shows projected AoE target count damage and only present per-target HP fields', () => {
+    const spell = event('combat.spell_aoe_resolved', {
+      caster_entry_id: 'hero',
+      spell_ref: 'srd5.1:spell:burning-hands',
+      outcomes: [
+        { target_entry_id: 'enemy', damage: 7 },
+        { target_entry_id: 'hero', damage: 3, current_hp: 9 },
+      ],
+      domain_events: [
+        { type: 'damage', amount: 7, target_ref: 'enemy' },
+        { type: 'damage', amount: 3, target_ref: 'hero' },
+      ],
+    })
+
+    const rendered = text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, fallbackContentName))
+    expect(rendered).toContain('2 targets')
+    expect(rendered).toContain('Goblin · Damage 7')
+    expect(rendered).toContain('Aria · Damage 3 · HP 9')
+    expect(rendered).not.toContain('Goblin · Damage 7 · HP')
+  })
+
   it('uses localized generic categories while content names are unavailable and preserves custom attack names', () => {
     const spell = event('combat.spell_cast_resolved', {
       caster_entry_id: 'hero',

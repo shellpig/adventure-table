@@ -381,6 +381,43 @@ function formatAttack(
   return { summary, detail: detail || null }
 }
 
+function spellDomainEventAmount(source: Record<string, unknown>, type: 'damage' | 'heal'): number | null {
+  const domainEvents = source.domain_events
+  if (!Array.isArray(domainEvents)) return null
+  for (const raw of domainEvents) {
+    const domainEvent = asRecord(raw)
+    if (!domainEvent || stringField(domainEvent, 'type') !== type) continue
+    const amount = numberField(domainEvent, 'amount')
+    if (amount !== null) return amount
+  }
+  return null
+}
+
+function spellOutcomeDetails(
+  source: Record<string, unknown>,
+  copy: CombatLogCopy,
+  resolveEntryLabel: CombatEntryLabelResolver,
+): string[] {
+  const outcomes = source.outcomes
+  if (!Array.isArray(outcomes)) return []
+
+  const details: string[] = []
+  for (const raw of outcomes) {
+    const outcome = asRecord(raw)
+    if (!outcome) continue
+    const target = entryLabel(outcome, 'target_entry_id', resolveEntryLabel)
+    const damage = numberField(outcome, 'damage')
+    const currentHp = numberField(outcome, 'current_hp')
+    const detail = [
+      target,
+      damage === null ? null : `${copy.damage} ${damage}`,
+      currentHp === null ? null : `${copy.hp} ${currentHp}`,
+    ].filter(Boolean).join(' · ')
+    if (detail) details.push(detail)
+  }
+  return details
+}
+
 function formatSpell(
   source: Record<string, unknown>,
   copy: CombatLogCopy,
@@ -396,7 +433,20 @@ function formatSpell(
   const count = targetCount(source)
   const subject = [caster, spellLabel, target ? `→ ${target}` : null].filter(Boolean).join(' · ')
   const detailParts: Array<string | null> = []
+  const outcomeDetails = spellOutcomeDetails(source, copy, resolveEntryLabel)
   if (count !== null) detailParts.push(`${count} ${copy.targets}`)
+  if (outcomeDetails.length > 0) {
+    detailParts.push(...outcomeDetails)
+  } else {
+    const domainDamage = spellDomainEventAmount(source, 'damage')
+    const payloadDamage = numberField(source, 'damage')
+    const damage = domainDamage ?? (payloadDamage !== null && payloadDamage > 0 ? payloadDamage : null)
+    if (damage !== null) detailParts.push(`${copy.damage} ${damage}`)
+    const currentHp = numberField(source, 'target_current_hp')
+    if (currentHp !== null) detailParts.push(`${copy.hp} ${currentHp}`)
+  }
+  const healing = spellDomainEventAmount(source, 'heal')
+  if (healing !== null) detailParts.push(`${copy.healing} ${healing}`)
   if (adjudicationRequested) detailParts.push(copy.adjudicationRequested)
   if (source.concentration_started === true) detailParts.push(copy.concentrationStarted)
   const injury = injuryLabel(stringField(source, 'target_injury_level'), copy)
