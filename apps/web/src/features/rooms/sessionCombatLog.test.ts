@@ -201,6 +201,116 @@ describe('P4-E E11a compact combat log presentation', () => {
     expect(rendered).not.toContain('Goblin · Damage 7 · HP')
   })
 
+  it('formats projected save success and failure bilingually without DC or raw kinds', () => {
+    const success = event('combat.save_resolved', {
+      target_entry_id: 'hero',
+      ability_ref: 'srd5.1:ability:dexterity',
+      total: 18,
+      succeeded: true,
+    })
+    const failure = event('combat.save_resolved', {
+      target_entry_id: 'enemy',
+      ability_ref: 'srd5.1:ability:wisdom',
+      total: 7,
+      succeeded: false,
+    })
+
+    expect(text(formatCombatLogEvent(success, 'zh-TW', resolveEntryLabel, fallbackContentName)))
+      .toBe('Aria · 豁免 · 成功 · 總值 18')
+    expect(text(formatCombatLogEvent(failure, 'zh-TW', resolveEntryLabel, fallbackContentName)))
+      .toBe('Goblin · 豁免 · 失敗 · 總值 7')
+    expect(text(formatCombatLogEvent(success, 'en', resolveEntryLabel, fallbackContentName)))
+      .toBe('Aria · Saving throw · Success · Total 18')
+    expect(text(formatCombatLogEvent(failure, 'en', resolveEntryLabel, fallbackContentName)))
+      .toBe('Goblin · Saving throw · Failure · Total 7')
+
+    for (const source of [success, failure]) {
+      const rendered = text(formatCombatLogEvent(source, 'en', resolveEntryLabel, fallbackContentName))
+      expect(rendered).not.toContain(source.kind)
+      expect(rendered).not.toContain('DC')
+      expect(rendered).not.toContain('srd5.1:ability:')
+    }
+  })
+
+  it('formats death-save stable dead and natural-20 recovery from projected flags bilingually', () => {
+    const stable = event('combat.death_save_resolved', {
+      target_entry_id: 'hero',
+      d20: 12,
+      current_hp: 0,
+      successes: 3,
+      failures: 1,
+      stable: true,
+      dead: false,
+      natural_20_recovery: false,
+    })
+    const dead = event('combat.death_save_resolved', {
+      target_entry_id: 'hero',
+      d20: 4,
+      current_hp: 0,
+      successes: 1,
+      failures: 3,
+      stable: false,
+      dead: true,
+      natural_20_recovery: false,
+    })
+    const recovered = event('combat.death_save_resolved', {
+      target_entry_id: 'hero',
+      d20: 20,
+      current_hp: 1,
+      successes: 0,
+      failures: 0,
+      stable: false,
+      dead: false,
+      natural_20_recovery: true,
+    })
+
+    expect(text(formatCombatLogEvent(stable, 'zh-TW', resolveEntryLabel, fallbackContentName)))
+      .toBe('Aria · 死亡豁免 · d20 12 · HP 0 · 成功 3 · 失敗 1 · 穩定')
+    expect(text(formatCombatLogEvent(stable, 'en', resolveEntryLabel, fallbackContentName)))
+      .toBe('Aria · Death save · d20 12 · HP 0 · Successes 3 · Failures 1 · Stable')
+    expect(text(formatCombatLogEvent(dead, 'zh-TW', resolveEntryLabel, fallbackContentName)))
+      .toBe('Aria · 死亡豁免 · d20 4 · HP 0 · 成功 1 · 失敗 3 · 死亡')
+    expect(text(formatCombatLogEvent(dead, 'en', resolveEntryLabel, fallbackContentName)))
+      .toBe('Aria · Death save · d20 4 · HP 0 · Successes 1 · Failures 3 · Dead')
+    expect(text(formatCombatLogEvent(recovered, 'zh-TW', resolveEntryLabel, fallbackContentName)))
+      .toBe('Aria · 死亡豁免 · d20 20 · HP 1 · 成功 0 · 失敗 0 · 自然 20 恢復')
+    expect(text(formatCombatLogEvent(recovered, 'en', resolveEntryLabel, fallbackContentName)))
+      .toBe('Aria · Death save · d20 20 · HP 1 · Successes 0 · Failures 0 · Natural 20 recovery')
+
+    for (const source of [stable, dead, recovered]) {
+      const rendered = text(formatCombatLogEvent(source, 'en', resolveEntryLabel, fallbackContentName))
+      expect(rendered).not.toContain(source.kind)
+      expect(rendered).not.toContain('DC')
+    }
+  })
+
+  it('omits missing save fields and never falls back to raw target identifiers', () => {
+    const hiddenId = '123e4567-e89b-12d3-a456-426614174000'
+    const save = event('combat.save_resolved', {
+      target_entry_id: hiddenId,
+      ability_ref: 'srd5.1:ability:wisdom',
+    })
+    const deathSave = event('combat.death_save_resolved', {
+      target_entry_id: hiddenId,
+      stable: false,
+      dead: false,
+      natural_20_recovery: false,
+    })
+
+    expect(text(formatCombatLogEvent(save, 'en', resolveEntryLabel, fallbackContentName)))
+      .toBe('Saving throw')
+    expect(text(formatCombatLogEvent(deathSave, 'en', resolveEntryLabel, fallbackContentName)))
+      .toBe('Death save')
+
+    for (const source of [save, deathSave]) {
+      const rendered = text(formatCombatLogEvent(source, 'en', resolveEntryLabel, fallbackContentName))
+      expect(rendered).not.toContain(hiddenId)
+      expect(rendered).not.toContain(source.kind)
+      expect(rendered).not.toContain('DC')
+      expect(rendered).not.toContain('?')
+    }
+  })
+
   it('uses localized generic categories while content names are unavailable and preserves custom attack names', () => {
     const spell = event('combat.spell_cast_resolved', {
       caster_entry_id: 'hero',

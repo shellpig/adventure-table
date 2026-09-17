@@ -27,6 +27,15 @@ type CombatLogCopy = {
   concentrationStarted: string
   concentrationMaintained: string
   concentrationLost: string
+  savingThrow: string
+  saveSuccess: string
+  saveFailure: string
+  deathSave: string
+  deathSaveSuccesses: string
+  deathSaveFailures: string
+  stable: string
+  dead: string
+  natural20Recovery: string
   reaction: string
   reactionRequested: string
   reactionAccepted: string
@@ -77,6 +86,15 @@ const COMBAT_LOG_COPY = {
     concentrationStarted: '開始專注',
     concentrationMaintained: '專注維持',
     concentrationLost: '專注中斷',
+    savingThrow: '豁免',
+    saveSuccess: '成功',
+    saveFailure: '失敗',
+    deathSave: '死亡豁免',
+    deathSaveSuccesses: '成功',
+    deathSaveFailures: '失敗',
+    stable: '穩定',
+    dead: '死亡',
+    natural20Recovery: '自然 20 恢復',
     reaction: '反應',
     reactionRequested: '等待反應',
     reactionAccepted: '已使用反應',
@@ -125,6 +143,15 @@ const COMBAT_LOG_COPY = {
     concentrationStarted: 'Concentration started',
     concentrationMaintained: 'Concentration maintained',
     concentrationLost: 'Concentration lost',
+    savingThrow: 'Saving throw',
+    saveSuccess: 'Success',
+    saveFailure: 'Failure',
+    deathSave: 'Death save',
+    deathSaveSuccesses: 'Successes',
+    deathSaveFailures: 'Failures',
+    stable: 'Stable',
+    dead: 'Dead',
+    natural20Recovery: 'Natural 20 recovery',
     reaction: 'Reaction',
     reactionRequested: 'Reaction requested',
     reactionAccepted: 'Reaction used',
@@ -496,6 +523,50 @@ function formatConcentrationChange(
   }
 }
 
+function formatSave(
+  source: Record<string, unknown>,
+  copy: CombatLogCopy,
+  resolveEntryLabel: CombatEntryLabelResolver,
+): CombatLogPresentation {
+  const target = entryLabel(source, 'target_entry_id', resolveEntryLabel)
+  const succeeded = booleanField(source, 'succeeded')
+  const outcome = succeeded === true
+    ? copy.saveSuccess
+    : succeeded === false
+      ? copy.saveFailure
+      : null
+  const total = numberField(source, 'total')
+  return {
+    summary: [target, copy.savingThrow, outcome].filter(Boolean).join(' · ') || copy.savingThrow,
+    detail: total === null ? null : `${copy.total} ${total}`,
+  }
+}
+
+function formatDeathSave(
+  source: Record<string, unknown>,
+  copy: CombatLogCopy,
+  resolveEntryLabel: CombatEntryLabelResolver,
+): CombatLogPresentation {
+  const target = entryLabel(source, 'target_entry_id', resolveEntryLabel)
+  const d20 = numberField(source, 'd20')
+  const currentHp = numberField(source, 'current_hp')
+  const successes = numberField(source, 'successes')
+  const failures = numberField(source, 'failures')
+  const detail = [
+    d20 === null ? null : `d20 ${d20}`,
+    currentHp === null ? null : `${copy.hp} ${currentHp}`,
+    successes === null ? null : `${copy.deathSaveSuccesses} ${successes}`,
+    failures === null ? null : `${copy.deathSaveFailures} ${failures}`,
+    booleanField(source, 'stable') === true ? copy.stable : null,
+    booleanField(source, 'dead') === true ? copy.dead : null,
+    booleanField(source, 'natural_20_recovery') === true ? copy.natural20Recovery : null,
+  ].filter(Boolean).join(' · ')
+  return {
+    summary: [target, copy.deathSave].filter(Boolean).join(' · ') || copy.deathSave,
+    detail: detail || null,
+  }
+}
+
 function formatReaction(
   source: Record<string, unknown>,
   copy: CombatLogCopy,
@@ -579,6 +650,10 @@ export function formatCombatLogEvent(
       return formatConcentration(payload, copy, resolveEntryLabel)
     case 'combat.concentration_changed':
       return formatConcentrationChange(payload, copy, resolveEntryLabel)
+    case 'combat.save_resolved':
+      return formatSave(payload, copy, resolveEntryLabel)
+    case 'combat.death_save_resolved':
+      return formatDeathSave(payload, copy, resolveEntryLabel)
     case 'combat.reaction_requested':
       return formatReaction(payload, copy, resolveEntryLabel, false)
     case 'combat.reaction_resolved':
