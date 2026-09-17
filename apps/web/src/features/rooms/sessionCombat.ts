@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
+import { listContent } from '../../api/character'
 import {
   getActiveCombatDetail,
   type CombatDetailView,
@@ -7,6 +9,8 @@ import {
   type CombatantDetailView,
 } from '../../api/combat'
 import type { TableEvent } from '../../api/sessions'
+import type { SearchOption } from '../../components/SearchableSelect'
+import { useContentPresentations } from '../../i18n/useContentPresentations'
 
 export function isCombatEvent(event: TableEvent): boolean {
   return event.kind.startsWith('combat.')
@@ -115,3 +119,37 @@ export function useActiveCombat({
 
   return { combat, refresh }
 }
+
+export function useMonsterOptions(enabled = true): SearchOption[] {
+  const query = useQuery({
+    queryKey: ['rules-content', 'monsters'],
+    queryFn: () => listContent('monsters'),
+    enabled,
+  })
+
+  const monsterKeys = useMemo(
+    () => (query.data ?? []).map((entry) => entry.key),
+    [query.data],
+  )
+
+  const { nameFor, searchAliasesFor } = useContentPresentations(
+    monsterKeys,
+    {},
+    { includeSearchAliases: true },
+  )
+
+  return useMemo(
+    () =>
+      (query.data ?? []).map((entry) => {
+        const cr = entry.data?.challenge_rating
+        return {
+          value: entry.key,
+          label: nameFor(entry.key, entry.name),
+          description: cr !== undefined && cr !== null ? `CR ${String(cr)}` : undefined,
+          searchAliases: searchAliasesFor(entry.key, entry.name),
+        }
+      }),
+    [query.data, nameFor, searchAliasesFor],
+  )
+}
+

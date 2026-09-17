@@ -99,3 +99,232 @@ export function getActiveCombatDetail(
     token,
   )
 }
+
+export type StartCombatInput = {
+  include_active_party?: boolean
+  idempotency_key: string
+}
+
+export type CombatMutationInput = {
+  idempotency_key: string
+}
+
+export type AddMonsterInput = {
+  monster_instance_id: string
+  surprised?: boolean
+  initiative_group_key?: string | null
+  idempotency_key: string
+}
+
+export type RequestInitiativeInput = {
+  entry_ids?: string[]
+  modifier_mode?: 'normal' | 'advantage' | 'disadvantage'
+  idempotency_key: string
+}
+
+export type RollInitiativeInput = {
+  roll_request_id: string
+  source: 'server'
+  idempotency_key: string
+}
+
+export type FinalizeInitiativeInput = {
+  ordered_entry_ids: string[]
+  idempotency_key: string
+}
+
+export type CreateMonsterFromContentInput = {
+  content_key: string
+  name?: string | null
+  visibility?: 'public' | 'hidden'
+  position_note?: string | null
+  idempotency_key: string
+}
+
+export type QuickEnemyAttackInput = {
+  name: string
+  attack_bonus?: number | null
+  damage: string
+  attack_kind?: string | null
+}
+
+export type CreateQuickEnemyInput = {
+  name: string
+  armor_class: number
+  max_hp: number
+  speed?: Record<string, string>
+  attack?: QuickEnemyAttackInput | null
+  visibility?: 'public' | 'hidden'
+  position_note?: string | null
+  idempotency_key: string
+}
+
+export type MonsterInstanceView = {
+  id: string
+  campaign_id: string
+  name: string
+  current_hp: number
+  max_hp: number
+  armor_class?: number | null
+  visibility: string
+  position_note?: string | null
+}
+
+export type InitiativeRequestView = {
+  id: string
+  roll_group_id: string
+  target_seat_id: string | null
+  target_character_id: string | null
+  target_combat_entry_id: string
+  request_type: string
+  ability_ref: string | null
+  modifier_mode: string
+  flat_adjustment: number
+  status: string
+  grouped_entry_ids: string[]
+}
+
+export type InitiativeRequestResponse = {
+  roll_group_id: string
+  requests: InitiativeRequestView[]
+}
+
+export type InitiativeRollResponse = {
+  result_id: string
+  roll_request_id: string
+  total: number
+  combat_entry_ids: string[]
+}
+
+const combatBase = (roomId: string, campaignId: string, sessionId: string) =>
+  `${tableBase(roomId, campaignId, sessionId)}/combat`
+
+const monsterInstancesBase = (roomId: string, campaignId: string, sessionId: string) =>
+  `${tableBase(roomId, campaignId, sessionId)}/monster-instances`
+
+export function startCombat(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: StartCombatInput,
+  token: string,
+): Promise<CombatView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/start`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function endCombat(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: CombatMutationInput,
+  token: string,
+): Promise<CombatView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/end`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function addMonsterToCombat(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: AddMonsterInput,
+  token: string,
+): Promise<CombatView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/entries/monsters`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function requestInitiative(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: RequestInitiativeInput,
+  token: string,
+): Promise<InitiativeRequestResponse> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/initiative/request`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function rollInitiative(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: RollInitiativeInput,
+  token: string,
+): Promise<InitiativeRollResponse> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/initiative/roll`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function getSuggestedInitiativeOrder(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  token: string,
+): Promise<string[]> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/initiative/suggested-order`, token)
+}
+
+export function finalizeInitiative(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: FinalizeInitiativeInput,
+  token: string,
+): Promise<CombatView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/initiative/finalize`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function advanceTurn(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: CombatMutationInput,
+  token: string,
+): Promise<CombatView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/turn/advance`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function createMonsterFromContent(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: CreateMonsterFromContentInput,
+  token: string,
+): Promise<MonsterInstanceView> {
+  return request(`${monsterInstancesBase(roomId, campaignId, sessionId)}/from-content`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function createQuickEnemy(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: CreateQuickEnemyInput,
+  token: string,
+): Promise<MonsterInstanceView> {
+  return request(`${monsterInstancesBase(roomId, campaignId, sessionId)}/quick-enemy`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+

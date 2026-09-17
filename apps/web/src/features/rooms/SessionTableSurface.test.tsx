@@ -247,3 +247,58 @@ describe('SessionTableSurface message presentation', () => {
   })
 })
 
+describe('SessionTableSurface combat toolbar', () => {
+  it('renders Start Combat button for DM when combat is null', () => {
+    for (const locale of ['zh-TW', 'en'] as const) {
+      const copy = sessionCopy(locale)
+      const markup = renderToStaticMarkup(
+        <SessionTableSurface
+          roomId={ROOM_ID}
+          campaignId={CAMPAIGN_ID}
+          sessionId={SESSION_ID}
+          token="room-token"
+          snapshot={snapshot}
+          seats={seats}
+          characters={characters}
+          callerAccessSessionId="dm-access"
+          isCurrentDm={true}
+          initialStage={null}
+          events={[]}
+          copy={copy}
+          onError={() => undefined}
+        />,
+      )
+
+      expect(markup).toContain('class="session-table__combat-toolbar"')
+      expect(markup).toContain(copy.combatStart)
+    }
+  })
+
+  it('does not render combat toolbar or Start Combat button for Player', () => {
+    for (const locale of ['zh-TW', 'en'] as const) {
+      const copy = sessionCopy(locale)
+      const markup = renderToStaticMarkup(
+        <SessionTableSurface
+          roomId={ROOM_ID}
+          campaignId={CAMPAIGN_ID}
+          sessionId={SESSION_ID}
+          token="room-token"
+          snapshot={snapshot}
+          seats={seats}
+          characters={characters}
+          callerAccessSessionId="mira-access"
+          isCurrentDm={false}
+          initialStage={null}
+          events={[]}
+          copy={copy}
+          onError={() => undefined}
+        />,
+      )
+
+      expect(markup).not.toContain('class="session-table__combat-toolbar"')
+      expect(markup).not.toContain(copy.combatStart)
+      expect(markup).not.toContain(copy.combatEnd)
+    }
+  })
+})
+

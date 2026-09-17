@@ -1,9 +1,30 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
 import type { CombatDetailView, CombatEntryView } from '../../api/combat'
+import { LocaleProvider } from '../../i18n/LocaleProvider'
+import { LOCALE_STORAGE_KEY, type LocaleStorage } from '../../i18n/locale'
 import { SessionCombatStage } from './SessionCombatStage'
 import { sessionCopy } from './sessionCopy'
+
+function testStorage(): LocaleStorage {
+  return {
+    getItem: (key) => (key === LOCALE_STORAGE_KEY ? 'en' : null),
+    setItem: () => undefined,
+  }
+}
+
+function renderStage(ui: React.ReactElement) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return renderToStaticMarkup(
+    <QueryClientProvider client={queryClient}>
+      <LocaleProvider storage={testStorage()} documentTarget={null}>
+        {ui}
+      </LocaleProvider>
+    </QueryClientProvider>,
+  )
+}
 
 function makeEntry(
   id: string,
@@ -157,8 +178,8 @@ describe('SessionCombatStage component', () => {
   const copyEn = sessionCopy('en')
 
   it('(a) renders full DM view with exact HP, AC, round number, and current turn name', () => {
-    const markup = renderToStaticMarkup(
-      <SessionCombatStage combat={dmCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} />,
+    const markup = renderStage(
+      <SessionCombatStage combat={dmCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" onError={() => undefined} refresh={() => undefined} />,
     )
 
     expect(markup).toContain('Round 2')
@@ -172,8 +193,8 @@ describe('SessionCombatStage component', () => {
   })
 
   it('(b) renders Player view with enemy secrecy (wounded label, own HP, no enemy HP/AC, no dm_notes, no ?)', () => {
-    const markup = renderToStaticMarkup(
-      <SessionCombatStage combat={playerCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} />,
+    const markup = renderStage(
+      <SessionCombatStage combat={playerCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" onError={() => undefined} refresh={() => undefined} />,
     )
 
     // Player's own character has exact HP and AC
@@ -196,21 +217,21 @@ describe('SessionCombatStage component', () => {
   })
 
   it('(c) shows position note only when present and non-empty', () => {
-    const withoutNote = renderToStaticMarkup(
-      <SessionCombatStage combat={playerCombatDetail} myEntryIds={['entry-mira']} copy={copyZh} />,
+    const withoutNote = renderStage(
+      <SessionCombatStage combat={playerCombatDetail} myEntryIds={['entry-mira']} copy={copyZh} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" onError={() => undefined} refresh={() => undefined} />,
     )
     expect(withoutNote).not.toContain(copyZh.combatPositionNote)
 
-    const withNote = renderToStaticMarkup(
-      <SessionCombatStage combat={dmCombatDetail} myEntryIds={['entry-mira']} copy={copyZh} />,
+    const withNote = renderStage(
+      <SessionCombatStage combat={dmCombatDetail} myEntryIds={['entry-mira']} copy={copyZh} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" onError={() => undefined} refresh={() => undefined} />,
     )
     expect(withNote).toContain(copyZh.combatPositionNote)
     expect(withNote).toContain('Behind barrels')
   })
 
   it('(d) shows your-turn badge when current turn is in myEntryIds, and omits it otherwise', () => {
-    const notMyTurn = renderToStaticMarkup(
-      <SessionCombatStage combat={dmCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} />,
+    const notMyTurn = renderStage(
+      <SessionCombatStage combat={dmCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" onError={() => undefined} refresh={() => undefined} />,
     )
     expect(notMyTurn).not.toContain(copyEn.combatYourTurn)
 
@@ -218,17 +239,93 @@ describe('SessionCombatStage component', () => {
       ...dmCombatDetail,
       current_turn_entry_id: 'entry-mira',
     }
-    const isMyTurn = renderToStaticMarkup(
-      <SessionCombatStage combat={myTurnCombat} myEntryIds={['entry-mira']} copy={copyEn} />,
+    const isMyTurn = renderStage(
+      <SessionCombatStage combat={myTurnCombat} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" onError={() => undefined} refresh={() => undefined} />,
     )
     expect(isMyTurn).toContain(copyEn.combatYourTurn)
   })
 
   it('(e) renders display_name row in initiative list even when entry has no combatant detail', () => {
-    const markup = renderToStaticMarkup(
-      <SessionCombatStage combat={playerCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} />,
+    const markup = renderStage(
+      <SessionCombatStage combat={playerCombatDetail} myEntryIds={['entry-mira']} copy={copyEn} isCurrentDm={false} roomId="room" campaignId="campaign" sessionId="session" token="token" onError={() => undefined} refresh={() => undefined} />,
     )
     // entry-hidden is omitted from playerCombatDetail.combatants, but in initiative list:
     expect(markup).toContain('Ambush Lurker')
+  })
+
+  it('(f) renders DM controls region and roll button on pending enemy row when isCurrentDm is true', () => {
+    const pendingEntryMira = makeEntry('entry-mira', 'Mira', 'char-mira', null, {
+      initiative_roll_request_id: 'req-mira',
+      initiative_roll_result_id: null,
+      initiative_total: null,
+    })
+    const pendingEntryGoblin = makeEntry('entry-goblin', 'Goblin Scout', null, null, {
+      initiative_roll_request_id: 'req-goblin',
+      initiative_roll_result_id: null,
+      initiative_total: null,
+    })
+    const pendingCombatDetail: CombatDetailView = {
+      ...dmCombatDetail,
+      status: 'initiative_pending',
+      round_number: null,
+      entries: [pendingEntryMira, pendingEntryGoblin],
+    }
+
+    const markup = renderStage(
+      <SessionCombatStage
+        combat={pendingCombatDetail}
+        myEntryIds={['entry-mira']}
+        copy={copyEn}
+        isCurrentDm={true}
+        roomId="room"
+        campaignId="campaign"
+        sessionId="session"
+        token="token"
+        onError={() => undefined}
+        refresh={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('data-combat-dm-controls="true"')
+    expect(markup).toContain('data-initiative-roll="entry-goblin"')
+    expect(markup).toContain('data-initiative-roll="entry-mira"')
+  })
+
+  it('(g) renders NO DM controls and roll button only for player entry, none on enemy row when isCurrentDm is false', () => {
+    const pendingEntryMira = makeEntry('entry-mira', 'Mira', 'char-mira', null, {
+      initiative_roll_request_id: 'req-mira',
+      initiative_roll_result_id: null,
+      initiative_total: null,
+    })
+    const pendingEntryGoblin = makeEntry('entry-goblin', 'Goblin Scout', null, null, {
+      initiative_roll_request_id: 'req-goblin',
+      initiative_roll_result_id: null,
+      initiative_total: null,
+    })
+    const pendingCombatDetail: CombatDetailView = {
+      ...playerCombatDetail,
+      status: 'initiative_pending',
+      round_number: null,
+      entries: [pendingEntryMira, pendingEntryGoblin],
+    }
+
+    const markup = renderStage(
+      <SessionCombatStage
+        combat={pendingCombatDetail}
+        myEntryIds={['entry-mira']}
+        copy={copyEn}
+        isCurrentDm={false}
+        roomId="room"
+        campaignId="campaign"
+        sessionId="session"
+        token="token"
+        onError={() => undefined}
+        refresh={() => undefined}
+      />,
+    )
+
+    expect(markup).not.toContain('data-combat-dm-controls')
+    expect(markup).toContain('data-initiative-roll="entry-mira"')
+    expect(markup).not.toContain('data-initiative-roll="entry-goblin"')
   })
 })

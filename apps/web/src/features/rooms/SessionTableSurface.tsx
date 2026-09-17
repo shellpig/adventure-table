@@ -43,6 +43,7 @@ import {
   readSpeakerColors,
   writeSpeakerColor,
 } from './chatColors'
+import { endCombat, startCombat } from '../../api/combat'
 import { SessionCombatStage } from './SessionCombatStage'
 import { myEntryIds, useActiveCombat } from './sessionCombat'
 import './sessionTable.css'
@@ -67,7 +68,7 @@ type SessionTableSurfaceProps = {
 type TableTab = 'chat' | 'dice' | 'log'
 type SessionLayoutStyle = CSSProperties & { '--session-side-width': string }
 
-function requestId(prefix: string): string {
+export function requestId(prefix: string): string {
   const random = globalThis.crypto?.randomUUID?.()
   return random ? `${prefix}-${random}` : `${prefix}-${Date.now()}-${Math.random()}`
 }
@@ -241,7 +242,9 @@ export function SessionTableSurface({
       .filter((id): id is string => Boolean(id))
   }, [isCurrentDm, snapshot.participants, controlledParticipants])
 
-  const { combat } = useActiveCombat({
+  const [combatPending, setCombatPending] = useState(false)
+
+  const { combat, refresh } = useActiveCombat({
     roomId,
     campaignId,
     sessionId,
@@ -254,6 +257,43 @@ export function SessionTableSurface({
     () => myEntryIds(combat, ownCharacterIds),
     [combat, ownCharacterIds],
   )
+
+  const handleStartCombat = async () => {
+    setCombatPending(true)
+    try {
+      await startCombat(
+        roomId,
+        campaignId,
+        sessionId,
+        { include_active_party: true, idempotency_key: requestId('combat-start') },
+        token,
+      )
+      refresh()
+    } catch (cause) {
+      onError(cause)
+    } finally {
+      setCombatPending(false)
+    }
+  }
+
+  const handleEndCombat = async () => {
+    if (!window.confirm(copy.combatEndConfirm)) return
+    setCombatPending(true)
+    try {
+      await endCombat(
+        roomId,
+        campaignId,
+        sessionId,
+        { idempotency_key: requestId('combat-end') },
+        token,
+      )
+      refresh()
+    } catch (cause) {
+      onError(cause)
+    } finally {
+      setCombatPending(false)
+    }
+  }
 
   useEffect(() => {
     if (subjectSeatId && subjectParticipants.some((item) => item.seat_id === subjectSeatId)) return
@@ -406,6 +446,29 @@ export function SessionTableSurface({
             {seatLabel(participant.seat_id)} · {characterName(participant.active_character_id)}
           </span>
         ))}
+        {isCurrentDm ? (
+          <div className="session-table__combat-toolbar">
+            {combat === null ? (
+              <button
+                type="button"
+                className="button secondary compact"
+                disabled={combatPending}
+                onClick={() => void handleStartCombat()}
+              >
+                {copy.combatStart}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="button secondary compact"
+                disabled={combatPending}
+                onClick={() => void handleEndCombat()}
+              >
+                {copy.combatEnd}
+              </button>
+            )}
+          </div>
+        ) : null}
       </div>
 
       <div ref={layoutRef} className="session-table__layout" style={layoutStyle}>
@@ -416,6 +479,13 @@ export function SessionTableSurface({
               combat={combat}
               myEntryIds={derivedMyEntryIds}
               copy={copy}
+              roomId={roomId}
+              campaignId={campaignId}
+              sessionId={sessionId}
+              token={token}
+              isCurrentDm={isCurrentDm}
+              onError={onError}
+              refresh={refresh}
             />
           ) : null}
           <div className="session-stage__canvas">

@@ -1,12 +1,23 @@
+import { useState } from 'react'
+
 import type { CombatDetailView, CombatEntryView, CombatantDetailView } from '../../api/combat'
-import { conditionLabel } from '../../api/combat'
-import { combatantFor, orderedEntries } from './sessionCombat'
+import { conditionLabel, rollInitiative } from '../../api/combat'
+import { SessionCombatDmControls } from './SessionCombatDmControls'
+import { combatantFor, orderedEntries, useMonsterOptions } from './sessionCombat'
 import type { SessionCopy } from './sessionCopy'
+import { requestId } from './SessionTableSurface'
 
 type SessionCombatStageProps = {
   combat: CombatDetailView
   myEntryIds: string[]
   copy: SessionCopy
+  roomId: string
+  campaignId: string
+  sessionId: string
+  token: string
+  isCurrentDm: boolean
+  onError: (cause: unknown) => void
+  refresh: () => void
 }
 
 function getStatusLabel(status: string, copy: SessionCopy): string {
@@ -41,7 +52,21 @@ function getInjuryLevelLabel(level: string, copy: SessionCopy): string {
   }
 }
 
-export function SessionCombatStage({ combat, myEntryIds, copy }: SessionCombatStageProps) {
+export function SessionCombatStage({
+  combat,
+  myEntryIds,
+  copy,
+  roomId,
+  campaignId,
+  sessionId,
+  token,
+  isCurrentDm,
+  onError,
+  refresh,
+}: SessionCombatStageProps) {
+  const monsterOptions = useMonsterOptions(isCurrentDm)
+  const [rollingEntryId, setRollingEntryId] = useState<string | null>(null)
+
   const roundText = typeof combat.round_number === 'number'
     ? copy.combatRound.replace('{round}', String(combat.round_number))
     : copy.combatPreInitiative
@@ -65,6 +90,29 @@ export function SessionCombatStage({ combat, myEntryIds, copy }: SessionCombatSt
     }
   }
 
+  const handleRollInitiative = async (entry: CombatEntryView) => {
+    if (!entry.initiative_roll_request_id) return
+    setRollingEntryId(entry.id)
+    try {
+      await rollInitiative(
+        roomId,
+        campaignId,
+        sessionId,
+        {
+          roll_request_id: entry.initiative_roll_request_id,
+          source: 'server',
+          idempotency_key: requestId('roll-init'),
+        },
+        token,
+      )
+      refresh()
+    } catch (cause) {
+      onError(cause)
+    } finally {
+      setRollingEntryId(null)
+    }
+  }
+
   return (
     <section className="session-combat" aria-label={copy.combatTitle}>
       <header
@@ -84,6 +132,20 @@ export function SessionCombatStage({ combat, myEntryIds, copy }: SessionCombatSt
         </div>
       </header>
 
+      {isCurrentDm ? (
+        <SessionCombatDmControls
+          combat={combat}
+          copy={copy}
+          roomId={roomId}
+          campaignId={campaignId}
+          sessionId={sessionId}
+          token={token}
+          monsterOptions={monsterOptions}
+          onError={onError}
+          refresh={refresh}
+        />
+      ) : null}
+
       <div className="session-combat__initiative">
         <h3 className="session-combat__section-heading">{copy.combatInitiativeHeading}</h3>
         <ol className="session-combat__initiative-list">
@@ -96,6 +158,10 @@ export function SessionCombatStage({ combat, myEntryIds, copy }: SessionCombatSt
               : copy.combatAwaitingInitiative
             const hasInitTotal = typeof entry.initiative_total === 'number'
             const isInactive = entry.status !== 'active'
+            const canRollInitiative =
+              entry.initiative_roll_request_id !== null &&
+              entry.initiative_roll_result_id === null &&
+              (isCurrentDm || myEntryIds.includes(entry.id))
 
             return (
               <li
@@ -108,6 +174,19 @@ export function SessionCombatStage({ combat, myEntryIds, copy }: SessionCombatSt
                 <span className="session-combat__entry-name">{entry.display_name}</span>
                 {hasInitTotal ? (
                   <span className="session-combat__initiative-total">{entry.initiative_total}</span>
+                ) : null}
+                {canRollInitiative ? (
+                  <button
+                    type="button"
+                    className="button secondary compact session-combat__roll-init-btn"
+                    data-initiative-roll={entry.id}
+                    disabled={rollingEntryId === entry.id}
+                    onClick={() => void handleRollInitiative(entry)}
+                  >
+                    {rollingEntryId === entry.id
+                      ? copy.combatRollingInitiative
+                      : copy.combatRollInitiative}
+                  </button>
                 ) : null}
                 {isHostile ? (
                   <span className="session-combat__hostile-badge">{copy.combatHostile}</span>

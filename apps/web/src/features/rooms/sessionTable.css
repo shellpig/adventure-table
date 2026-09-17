@@ -1408,3 +1408,125 @@
   font-size: 0.82rem;
   margin: 0;
 }
+
+.session-table__combat-toolbar {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.session-combat__roll-init-btn {
+  margin-left: auto;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+}
+
+.session-combat__dm-controls {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.session-combat__dm-initiative-bar,
+.session-combat__dm-running-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.session-combat__dm-hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.session-combat__add-enemy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-combat__sub-heading {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.session-combat__mode-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.session-combat__tab-btn {
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.session-combat__tab-btn--active {
+  color: var(--text);
+  border-color: var(--gold-bright);
+  background: rgba(212, 175, 55, 0.12);
+  font-weight: 600;
+}
+
+.session-combat__form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-combat__form label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.session-combat__form input,
+.session-combat__form select {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0c1017;
+  color: var(--text);
+  font: inherit;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+}
+
+.session-combat__form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.session-combat__form-row > label {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.session-combat__form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
