@@ -333,7 +333,8 @@ export function SessionCombatActionBar({
           return
         }
 
-        if (actionKind === 'spell' && selectedSpell) {
+        if (actionKind === 'spell') {
+          if (!selectedSpell) return
           const selectedSlotLevel = slotLevel ?? selectedSpell.castable_slot_levels[0] ?? null
           if (selectedSpell.targeting === 'aoe') {
             const response = await proposeAoeSpell(

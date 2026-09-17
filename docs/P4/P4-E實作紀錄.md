@@ -30,7 +30,8 @@
 | E10c-1 | pending roll 全類型：domain `pending_combat_roll_request_type` 判定 + 4 個 roll client + Action Bar 各類型擲骰列與結果 | 實作規格 4、16 | ✅ |
 | E10c-2 | reaction window 接受 / 拒絕、Grapple / Shove 動作、DM reach 裁定 | 實作規格 4、5 | ✅ |
 | E10d-1 | `GET .../combat/entries/{entry}/spells`：可施法術清單（含可用 slot level）+ web client | 實作規格 4、14 | ✅ |
-| E10d-2 | spell cast（單體 / self）UI、AoE propose–resolve UI、`affected_targets` 裁定 | 實作規格 4、5、14 | ⬜ |
+| E10d-2a | spell cast / AoE client 呼叫 + DM `affected_targets` 目標確認 | 實作規格 5、14 | ✅ |
+| E10d-2b | Quick Action Bar 的 Spell 動作（單體 / self / AoE propose、slot level） | 實作規格 4、14 | ✅ |
 | E11 | Chat / Log 呈現 + 雙語 copy + guide | 實作規格 12、13；測試 E.4 | ⬜ |
 | E12 | focused E2E spec + Subphase 關門 gate | 測試指南 P4-E 全段 | ⬜ |
 
@@ -214,3 +215,23 @@
 - **指揮者審核修正**：① ChatGPT 在 service 內自寫 `_monster_spell_ref`（自行 slug 化 url / name），與 `spell_resources.py` 既有 `_slug` / `_monster_spell_matches` 重複且規則可能漂移 → 抽成 `spell_resources.monster_spell_ref()` 公開函式並改為呼叫它。② Player 拒絕測試比對 `/attacks` route 的整份 JSON body，訊息字串不同而失敗，且跨 service 呼叫在整包執行時因未 override attack service 而噴 `no such table: sessions` → 改為只斷言本 route 的 403 + `table_actor_unauthorized` + 訊息關鍵字，零副作用斷言保留。
 - 測試：P4-D + P4-E 全部 backend 檔 + M03 boundary 無 failure（2 skip 為 PostgreSQL gated）；P4-A/B/C regression 無 failure；`npm test -- --run` 84 files / 439 passed；build 通過。
 - 留給 E10d-2：Action Bar 的 spell 動作（單體 / self 走 `POST /spells/cast`；AoE 走 `propose` → DM 確認 targets → `resolve`）、`affected_targets` 裁定控制項。
+
+### E10d-2a — spell / AoE client 與受影響目標確認
+
+- 起始：2026-09-17，ChatGPT 一回合（E10d-2 原本一整包連兩回合死在時間上限與「訊息遞送逾時」，拆成 2a / 2b 後各一回合完成）。commit `b5f108f7`。
+- 交付：`api/combat.ts` 加 `SpellCastView` / `AoeSpellProposalView` / `AoeSpellResolutionView` / `CastSpellInput` / `ProposeAoeSpellInput` / `ResolveAoeSpellInput` 與 `castSpell` / `proposeAoeSpell` / `resolveAoeSpell`；輸入型別刻意不含 `save_dc` / `attack_modifier` / `target_ac` / `raw_dice`（E5 起 server 對 raw rule 欄位回 422）與 `save_modifiers` / `save_d20s` / `damage_parts` / `roll_source`（server 端預設）。`SessionCombatAdjudicationPanel` 的 `affected_targets` 列加每個 proposed target 一個 checkbox（預設全勾、名稱查 `combat.entries`）與 Resolve → `resolveAoeSpell`，允許零目標。兩 locale 各 +2 key。
+- **指揮者審核修正**：無。型別、URL、排版、測試皆正確。
+- 過程備註：worker 撞到 parent hash 過期（我在它跑的期間推了文件 commit），它正確地拒絕 force push 並改用當前 HEAD——prompt 的 GIT 段因此改為「以你 fetch 到的 HEAD 為 parent」，已寫進指揮者手冊。
+- 測試：`npm test -- --run` 84 files / 440 passed；build 通過。
+
+### E10d-2b — Quick Action Bar 的 Spell 動作
+
+- 起始：2026-09-17，ChatGPT 兩回合（第一回合「訊息遞送逾時」死掉、無 push）。commit `26aeed4c`。
+- 交付：action kind 加 `spell`（Attack / Grapple / Shove / Spell）；既有那個 `listAttacks` effect 改成 `Promise.all([listAttacks, listCastableSpells])`，不另開 effect；抽出 `SpellActionFields` 子元件（spell select、`castable_slot_levels` 多於一個時才出現的 slot level select、`targeting === 'single'` 才出現的 target select，`data-combat-spell*` 屬性供 E12）。送出分流：`aoe` → `proposeAoeSpell`（`proposed_target_ids` 為除施法者外全部 active entry）→ 進既有 adjudication-pending 狀態；否則 `castSpell`（`self` 送 `target_entry_id: null`），有 `roll_request_id` 走既有 local roll 按鈕，否則顯示由 `cast_mode` + `status` 組出的一行狀態。submit disabled 條件依 action kind 分開。兩 locale 各 +9 key。
+- **指揮者審核修正**：`if (actionKind === 'spell' && selectedSpell)` 讓 TS 無法把後續的 `actionKind` 收斂成 `'grapple' | 'shove'`，`npm run build` TS2322 失敗（vitest 全綠，型別錯誤只有 build 會抓）→ 改成 `if (actionKind === 'spell') { if (!selectedSpell) return; … }`。
+- 已知限制：spell 欄位的測試直接 render 匯出的 `SpellActionFields`，沒有透過 Action Bar 走「選 Spell → 非同步取 spells → 顯示欄位」的完整路徑；該接線留給 E12 的 Playwright journey。
+- 測試：`npm test -- --run` 84 files / 442 passed；build 通過。
+
+## E10 完成
+
+E10a / E10b / E10c-1 / E10c-2 / E10d-1 / E10d-2a / E10d-2b 全部交付並驗證。Quick Combat UI 現在涵蓋：唯讀 Stage、DM 控制與 initiative、attack 流程、全類型 pending roll、reaction window 回應、Grapple / Shove、spell cast 與 AoE propose、DM 的 range / reach / OA / special / affected_targets 裁定。**依使用者指示，P4-E 在此暫停**；E11（Chat / Log 呈現 + 雙語 + guide）與 E12（focused E2E + Subphase 關門 gate）尚未開工。
