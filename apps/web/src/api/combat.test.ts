@@ -2,13 +2,21 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   addMonsterToCombat,
+  adjudicateAttackRange,
   advanceTurn,
   createMonsterFromContent,
   createQuickEnemy,
   endCombat,
   finalizeInitiative,
   getSuggestedInitiativeOrder,
+  listAdjudications,
+  listAttacks,
+  requestAttack,
   requestInitiative,
+  requestOpportunityAttack,
+  requestSpecialAdjudication,
+  resolveAdjudication,
+  rollAttack,
   rollInitiative,
   startCombat,
 } from './combat'
@@ -162,5 +170,183 @@ describe('Combat API client', () => {
     expect(fetchMock.mock.calls[1][0]).toBe(
       `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/monster-instances/quick-enemy`,
     )
+  })
+
+  it('calls attack list, request, and roll endpoints with expected request details', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok({}))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await listAttacks(ROOM_ID, CAMPAIGN_ID, SESSION_ID, 'entry-1', TOKEN)
+    const [listUrl, listInit] = fetchMock.mock.calls[0]
+    expect(listUrl).toBe(
+      `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/combat/entries/entry-1/attacks`,
+    )
+    expect(listInit.method).toBeUndefined()
+    expect(listInit.body).toBeUndefined()
+    expect(listInit.headers.Authorization).toBe(`Bearer ${TOKEN}`)
+
+    await requestAttack(
+      ROOM_ID,
+      CAMPAIGN_ID,
+      SESSION_ID,
+      {
+        attacker_entry_id: 'entry-1',
+        target_entry_id: 'entry-2',
+        source_ref: 'weapon:longsword',
+        modifier_mode: 'advantage',
+        range_confirmed: true,
+        idempotency_key: 'attack-request-1',
+      },
+      TOKEN,
+    )
+    const [requestUrl, requestInit] = fetchMock.mock.calls[1]
+    expect(requestUrl).toBe(
+      `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/combat/attacks/request`,
+    )
+    expect(requestInit.method).toBe('POST')
+    expect(requestInit.headers.Authorization).toBe(`Bearer ${TOKEN}`)
+    expect(JSON.parse(requestInit.body as string)).toEqual({
+      attacker_entry_id: 'entry-1',
+      target_entry_id: 'entry-2',
+      source_ref: 'weapon:longsword',
+      modifier_mode: 'advantage',
+      range_confirmed: true,
+      idempotency_key: 'attack-request-1',
+    })
+
+    await rollAttack(
+      ROOM_ID,
+      CAMPAIGN_ID,
+      SESSION_ID,
+      { roll_request_id: 'roll-request-1', source: 'server', idempotency_key: 'attack-roll-1' },
+      TOKEN,
+    )
+    const [rollUrl, rollInit] = fetchMock.mock.calls[2]
+    expect(rollUrl).toBe(
+      `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/combat/attacks/roll`,
+    )
+    expect(rollInit.method).toBe('POST')
+    expect(rollInit.headers.Authorization).toBe(`Bearer ${TOKEN}`)
+    expect(JSON.parse(rollInit.body as string)).toEqual({
+      roll_request_id: 'roll-request-1',
+      source: 'server',
+      idempotency_key: 'attack-roll-1',
+    })
+  })
+
+  it('calls range, list, and resolve adjudication endpoints with expected request details', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok({}))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await adjudicateAttackRange(
+      ROOM_ID,
+      CAMPAIGN_ID,
+      SESSION_ID,
+      {
+        action_id: 'action-1',
+        in_range: true,
+        roll_mode: 'normal',
+        note: 'Within bow range',
+        idempotency_key: 'range-1',
+      },
+      TOKEN,
+    )
+    const [rangeUrl, rangeInit] = fetchMock.mock.calls[0]
+    expect(rangeUrl).toBe(
+      `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/combat/attacks/adjudicate`,
+    )
+    expect(rangeInit.method).toBe('POST')
+    expect(rangeInit.headers.Authorization).toBe(`Bearer ${TOKEN}`)
+    expect(JSON.parse(rangeInit.body as string)).toEqual({
+      action_id: 'action-1',
+      in_range: true,
+      roll_mode: 'normal',
+      note: 'Within bow range',
+      idempotency_key: 'range-1',
+    })
+
+    await listAdjudications(ROOM_ID, CAMPAIGN_ID, SESSION_ID, TOKEN)
+    const [listUrl, listInit] = fetchMock.mock.calls[1]
+    expect(listUrl).toBe(
+      `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/combat/adjudications`,
+    )
+    expect(listInit.method).toBeUndefined()
+    expect(listInit.body).toBeUndefined()
+    expect(listInit.headers.Authorization).toBe(`Bearer ${TOKEN}`)
+
+    await resolveAdjudication(
+      ROOM_ID,
+      CAMPAIGN_ID,
+      SESSION_ID,
+      'action-2',
+      { trigger: true, ruling: 'The reaction triggers', idempotency_key: 'resolve-1' },
+      TOKEN,
+    )
+    const [resolveUrl, resolveInit] = fetchMock.mock.calls[2]
+    expect(resolveUrl).toBe(
+      `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/combat/adjudications/action-2/resolve`,
+    )
+    expect(resolveInit.method).toBe('POST')
+    expect(resolveInit.headers.Authorization).toBe(`Bearer ${TOKEN}`)
+    expect(JSON.parse(resolveInit.body as string)).toEqual({
+      trigger: true,
+      ruling: 'The reaction triggers',
+      idempotency_key: 'resolve-1',
+    })
+  })
+
+  it('calls opportunity-attack and special adjudication endpoints with expected request details', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(ok({}))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await requestOpportunityAttack(
+      ROOM_ID,
+      CAMPAIGN_ID,
+      SESSION_ID,
+      {
+        mover_entry_id: 'entry-2',
+        reactor_entry_id: 'entry-1',
+        question: 'Does leaving reach trigger an opportunity attack?',
+        idempotency_key: 'oa-1',
+      },
+      TOKEN,
+    )
+    const [oaUrl, oaInit] = fetchMock.mock.calls[0]
+    expect(oaUrl).toBe(
+      `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/combat/adjudications/opportunity-attack`,
+    )
+    expect(oaInit.method).toBe('POST')
+    expect(oaInit.headers.Authorization).toBe(`Bearer ${TOKEN}`)
+    expect(JSON.parse(oaInit.body as string)).toEqual({
+      mover_entry_id: 'entry-2',
+      reactor_entry_id: 'entry-1',
+      question: 'Does leaving reach trigger an opportunity attack?',
+      idempotency_key: 'oa-1',
+    })
+
+    await requestSpecialAdjudication(
+      ROOM_ID,
+      CAMPAIGN_ID,
+      SESSION_ID,
+      {
+        subject_entry_id: 'entry-1',
+        target_entry_ids: ['entry-2', 'entry-3'],
+        question: 'Can this improvised action affect both targets?',
+        idempotency_key: 'special-1',
+      },
+      TOKEN,
+    )
+    const [specialUrl, specialInit] = fetchMock.mock.calls[1]
+    expect(specialUrl).toBe(
+      `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/combat/adjudications/special`,
+    )
+    expect(specialInit.method).toBe('POST')
+    expect(specialInit.headers.Authorization).toBe(`Bearer ${TOKEN}`)
+    expect(JSON.parse(specialInit.body as string)).toEqual({
+      subject_entry_id: 'entry-1',
+      target_entry_ids: ['entry-2', 'entry-3'],
+      question: 'Can this improvised action affect both targets?',
+      idempotency_key: 'special-1',
+    })
   })
 })
