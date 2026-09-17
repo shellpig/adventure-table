@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import Field, model_validator
@@ -18,7 +18,8 @@ from app.persistence.combat.combatants import (
     monster_instance_to_combatant,
 )
 from app.persistence.combat.lifecycle import (
-    ActiveCombatExistsPersistenceError, CombatRepository, CombatStateConflictPersistenceError,
+    ActiveCombatExistsPersistenceError, CombatNotFoundPersistenceError,
+    CombatRepository, CombatStateConflictPersistenceError,
     NewCombatEntry, StoredCombat, StoredCombatEntry, actor_binding,
 )
 from app.persistence.combat.repository import MonsterRepository
@@ -101,6 +102,26 @@ class ReactionWindowInput(StrictModel):
     reason: str | None = Field(default=None, max_length=240)
     source_entry_id: UUID | None = None
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+
+
+MonsterOutcome = Literal["dead", "unconscious", "surrendered", "fled", "other"]
+
+
+class MonsterOutcomeChoice(StrictModel):
+    """DM ruling on a Monster entry; the REST body (entry id travels in the path)."""
+    outcome: MonsterOutcome
+    note: str | None = Field(default=None, max_length=500)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+
+    @model_validator(mode="after")
+    def note_required_when_other(self):
+        if self.outcome == "other" and (self.note is None or not self.note.strip()):
+            raise ValueError("note is required when outcome is 'other'")
+        return self
+
+
+class MonsterOutcomeInput(MonsterOutcomeChoice):
+    entry_id: UUID
 
 
 class CombatEntryView(StrictModel):
@@ -465,6 +486,22 @@ class CombatService:
         self._notify(actor)
         return self._view(self.repository.get(combat.id) or combat)
 
+    def set_monster_outcome(self, actor: TableActorContext, request: MonsterOutcomeInput) -> CombatView:
+        self._require_dm(actor)
+        combat = self.repository.get_active(actor.campaign_id)
+        if combat is None: raise CombatNotFoundError("Campaign has no active Combat")
+        try:
+            self.repository.set_monster_outcome(
+                binding=actor_binding(actor), combat_id=combat.id, entry_id=request.entry_id,
+                outcome=request.outcome, note=request.note, idempotency_key=request.idempotency_key,
+            )
+        except CombatStateConflictPersistenceError as exc:
+            raise CombatStateConflictError(str(exc)) from exc
+        except CombatNotFoundPersistenceError as exc:
+            raise CombatNotFoundError(str(exc)) from exc
+        self._notify(actor)
+        return self._view(self.repository.get(combat.id) or combat)
+
     def end_combat(self, actor: TableActorContext, *, idempotency_key: str | None = None) -> CombatView:
         self._require_dm(actor)
         combat = self.repository.get_active(actor.campaign_id)
@@ -480,5 +517,6 @@ __all__ = [
     "ActiveCombatExistsError", "AddCharacterInput", "AddMonsterInput", "CombatActionInput", "CombatActionKind",
     "CombatActionView", "CombatDetailView", "CombatantDetailView", "CombatEconomyCost", "CombatEntryView",
     "CombatLifecycleError", "CombatNotFoundError", "CombatService", "CombatStateConflictError", "CombatView",
+    "MonsterOutcome", "MonsterOutcomeChoice", "MonsterOutcomeInput",
     "ReactionWindowInput", "ResolveInitiativeOrderInput", "StartCombatInput", "_extra_attack_budget",
 ]

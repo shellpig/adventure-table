@@ -14,7 +14,7 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 
 | 步 | 內容 | 對應契約 | 狀態 |
 |---|---|---|---|
-| F1 | Monster 0 HP outcome：DM 選 dead / unconscious / surrendered / fled / other；migration `0027` 放寬 `combat_entries.status` / `monster_instances.combat_status`；REST + MCP + event | 實作規格 P4-C 10、P4-E 7、P4-F 1；規格企劃「Monster 0 HP / Combat End」 | ⬜ |
+| F1 | Monster 0 HP outcome：DM 選 dead / unconscious / surrendered / fled / other；migration `0027` 放寬 `combat_entries.status` / `monster_instances.combat_status`；REST + MCP + event | 實作規格 P4-C 10、P4-E 7、P4-F 1；規格企劃「Monster 0 HP / Combat End」 | ✅ |
 | F2 | Monster Instance bookkeeping：DM PATCH name / visibility / position_note + reveal toggles（AC / description / position note）；`MonsterRevealState` 持久化（migration `0028`）；REST + MCP + event | 實作規格 P4-E 7（部分→完整）、3 | ⬜ |
 | F3 | F1 / F2 的 Session table UI：DM 卡片 outcome / visibility / reveal / position note 控制、新 entry status 標籤、Player 可見 outcome、雙語 copy、web client | 實作規格 P4-E 1、2、13 | ⬜ |
 | F4 | `grappled` escape action + Character state PATCH DTO 補 `concentration` / `exhaustion_level` / `death_saves` / `temporary_effects` | P4-C / P4-D closeout 留下 | ⬜ |
@@ -27,3 +27,12 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 步驟粒度可在實作中再切；新增子步以 `F1a` 之類接續，不重編已完成項目。
 
 ## 步驟紀錄
+
+### F1 — Monster 0 HP outcome
+
+- 2026-09-17，agy worker（Gemini 3.8 Flash (High)，1 回合 11.5 分鐘），Claude 審核修正與 commit。prompt：`C:\_work\AI_Work\Tools\agy-runs\agy-p4f-f1.prompt.txt`。
+- 交付：migration `0027_p4f_monster_outcome`（`combat_entries.status` 加 dead / unconscious / surrendered / fled；`monster_instances.combat_status` 加 unconscious / surrendered / fled；downgrade 還原）；`MonsterOutcomeChoice`（outcome / note / idempotency_key，`other` 必填 note）與 `MonsterOutcomeInput`（+ entry_id）；`CombatRepository.set_monster_outcome` → `_set_entry_status(monster_outcome=True, extra_payload=...)` 同一 transaction 改 entry status + `monster_instances.combat_status`、append 公開 event `combat.monster_outcome_set`（payload：combat_id / entry_id / monster_instance_id / outcome / status / note）；`other` → status `removed`；`CombatService.set_monster_outcome`（DM-only、current-turn guard、`_notify`）；REST `POST .../combat/entries/{entry_id}/outcome`（body `MonsterOutcomeChoice`）；MCP `combat_set_monster_outcome`（DM，input 直接用 `MonsterOutcomeInput`）；`calculate_injury_level` 把 `unconscious` 視為 down。migration head 引用（m04b / p3c / p3d / p4b / p4c / p4e）全部改到 `0027`。
+- **Claude 審核修正**：agy 把 `_set_entry_status` 的 transaction 整段複製成第二份（~35 行）→ 改為 `_set_entry_status` 加 `extra_payload` / `monster_outcome` 兩個參數，`set_monster_outcome` 只做 Monster entry 前置檢查後委派；REST body `MonsterOutcomeBody` 與 MCP `CombatMonsterOutcomeToolInput(pass)` 各自重複 validator → 收成 `MonsterOutcomeChoice` 基底 + `MonsterOutcomeInput` 子類，REST / MCP 直接用。
+- 測試：`tests/test_p4f_monster_outcome.py` 6 條（四種 outcome 的 entry / instance / event / Player projection；`other` 缺 note 在寫入前拒絕；Player 拒絕零副作用；current-turn guard 與 advance 後成功；idempotency 與 Character entry 拒絕；End Combat 保留 outcome；REST + MCP parity）；`tests/test_p4f_postgres_migration.py` 2 條（PostgreSQL gate：0026 → heads → downgrade，constraint 接受 / 拒絕 `surrendered`）。本機 P4-B～F + M04-C + M03 + migration contract 全通過；`alembic heads` = `0015` / `0027`。
+- 新增 `.github/workflows/p4f-non-e2e.yml`（P4-E 版改 branch / focused / `test_p4f_postgres_migration.py`）。
+- 留給 F3：UI 的 outcome 控制與新 status 標籤；F2：Monster Instance bookkeeping。

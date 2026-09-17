@@ -28,6 +28,7 @@ from app.domain.combat.lifecycle import (
     AddCharacterInput,
     AddMonsterInput,
     CombatActionInput,
+    MonsterOutcomeInput,
     StartCombatInput,
 )
 from app.domain.combat.monster_instances import (
@@ -253,6 +254,10 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
         "Current DM marks a combatant as withdrawn (fled or retreated) while keeping its entry for the record; a Player narrates the retreat and asks the DM.",
         "目前 DM 將戰鬥單位標記為退出（逃離或撤退）並保留其紀錄；Player 以敘事表達撤退並請 DM 處理。",
     ),
+    "combat_set_monster_outcome": (
+        "Current DM records the outcome when a monster hits 0 HP or is ruled out of the fight (dead, unconscious, surrendered, fled, or other); Players narrate and ask the DM.",
+        "目前 DM 於怪物降至 0 HP 或裁定脫離戰鬥時記錄其結果（dead、unconscious、surrendered、fled 或 other）；Player 以敘事表達並請 DM 處理。",
+    ),
     "get_combat_context": (
         "Read compact active combat state, turn order, pending roll requests, reaction windows, pending adjudications, and the next required action for the caller.",
         "讀取緊湊的當前戰鬥狀態、輪次順序、待處理擲骰、反應窗口、待裁定事項以及呼叫者下一步所需行動。",
@@ -461,6 +466,7 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("combat_roll_initiative", _desc("Resolve a pending initiative RollRequest with server RNG.", "以 Server RNG 完成待處理的先攻 RollRequest。"), CombatRollToolInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_use_action", _desc("Perform a non-attack combat action such as Dash or Dodge.", "執行 Dash 或 Dodge 等非攻擊型戰鬥行動。"), CombatActionInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_withdraw_entry", _desc("Withdraw a combatant entry from active combat.", "將戰鬥單位標記為退出戰鬥。"), CombatEntryMutationToolInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_set_monster_outcome", _desc("Record the final outcome for a monster combatant (dead, unconscious, surrendered, fled, or other).", "記錄怪物戰鬥單位的最終結果（dead、unconscious、surrendered、fled 或 other）。"), MonsterOutcomeInput, frozenset({"dm"})),
     MCPToolDefinition("get_combat_context", _desc("Read compact active combat state and next required action.", "讀取緊湊的目前戰鬥狀態與下一步所需行動。"), _NoArguments, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_cast_spell", _desc("Cast a single-target, self, or utility spell.", "施放單一目標、自身或公用型法術。"), CastSpellInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_propose_aoe_spell", _desc("Propose an area-of-effect spell declaration pending DM resolution.", "宣告範圍法術提案以待 DM 裁定。"), ProposeAoeSpellInput, frozenset({"player", "dm"})),
@@ -629,6 +635,8 @@ async def call_tool(
             data = await asyncio.to_thread(service.combat_use_action, token, parsed, authenticated=auth)
         elif name == "combat_withdraw_entry":
             data = await asyncio.to_thread(service.combat_withdraw_entry, token, parsed, authenticated=auth)
+        elif name == "combat_set_monster_outcome":
+            data = await asyncio.to_thread(service.combat_set_monster_outcome, token, parsed, authenticated=auth)
         elif name == "combat_remove_entry":
             data = await asyncio.to_thread(service.combat_remove_entry, token, parsed, authenticated=auth)
         elif name == "combat_end":

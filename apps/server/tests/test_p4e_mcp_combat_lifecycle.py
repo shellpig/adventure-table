@@ -126,6 +126,7 @@ def test_mcp_combat_lifecycle_catalogs() -> None:
         "combat_end",
         "combat_remove_entry",
         "combat_withdraw_entry",
+        "combat_set_monster_outcome",
     }
     shared_lifecycle = {
         "combat_roll_initiative",

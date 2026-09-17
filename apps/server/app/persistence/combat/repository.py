@@ -319,7 +319,7 @@ class MonsterRepository:
         if effects is not None:
             values["effects"] = deepcopy(effects)
         if combat_status is not None:
-            if combat_status not in {"active", "down", "dead", "removed"}:
+            if combat_status not in {"active", "down", "dead", "removed", "unconscious", "surrendered", "fled"}:
                 raise MonsterPersistenceError(f"unsupported combat status: {combat_status}")
             values["combat_status"] = combat_status
         if initiative is not _UNSET:

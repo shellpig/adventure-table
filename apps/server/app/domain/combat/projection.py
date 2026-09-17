@@ -57,7 +57,7 @@ def calculate_injury_level(
     max_hp: int,
     combat_status: str = "active",
 ) -> Literal["down", "critical", "wounded", "healthy"]:
-    if current_hp <= 0 or combat_status in {"down", "dead"}:
+    if current_hp <= 0 or combat_status in {"down", "dead", "unconscious"}:
         return "down"
     if max_hp <= 0:
         return "critical"

@@ -38,6 +38,7 @@ from app.domain.combat.lifecycle import (
     CombatActionInput,
     CombatDetailView,
     CombatService,
+    MonsterOutcomeInput,
     StartCombatInput,
 )
 from app.domain.combat.reaction_service import (
@@ -470,6 +471,16 @@ class CombatAIToolApplicationService(AIToolApplicationService):
     ) -> dict[str, Any]:
         actor = self._actor(token, authenticated=authenticated)
         return self.combat_service.remove_entry(actor, input.entry_id, idempotency_key=input.idempotency_key).model_dump(mode="json")
+
+    def combat_set_monster_outcome(
+        self,
+        token: str,
+        input: MonsterOutcomeInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_service.set_monster_outcome(actor, input).model_dump(mode="json")
 
     def combat_end(
         self,

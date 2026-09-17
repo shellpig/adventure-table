@@ -70,7 +70,7 @@ monster_instances = Table(
     CheckConstraint("current_hp >= 0", name="ck_monster_instances_current_hp"),
     CheckConstraint("temp_hp >= 0", name="ck_monster_instances_temp_hp"),
     CheckConstraint(
-        "combat_status IN ('active', 'down', 'dead', 'removed')",
+        "combat_status IN ('active', 'down', 'dead', 'removed', 'unconscious', 'surrendered', 'fled')",
         name="ck_monster_instances_combat_status",
     ),
     CheckConstraint(
@@ -161,7 +161,7 @@ combat_entries = Table(
         name="ck_combat_entries_subject",
     ),
     CheckConstraint(
-        "status IN ('active', 'withdrawn', 'removed')",
+        "status IN ('active', 'withdrawn', 'removed', 'dead', 'unconscious', 'surrendered', 'fled')",
         name="ck_combat_entries_status",
     ),
     CheckConstraint("turn_order IS NULL OR turn_order >= 0", name="ck_combat_entries_turn_order"),

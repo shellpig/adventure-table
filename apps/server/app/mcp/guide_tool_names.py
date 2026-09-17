@@ -76,6 +76,7 @@ _EXPECTED = {
     "combat_roll_initiative",
     "combat_use_action",
     "combat_withdraw_entry",
+    "combat_set_monster_outcome",
     "get_combat_context",
     "combat_cast_spell",
     "combat_propose_aoe_spell",

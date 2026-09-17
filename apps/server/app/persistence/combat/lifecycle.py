@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.domain.combat.reaction_service import ReactionWindow
 from app.persistence.characters import characters
-from app.persistence.combat.tables import combat_actions, combat_entries, combats
+from app.persistence.combat.tables import combat_actions, combat_entries, combats, monster_instances
 from app.persistence.rooms.table_runtime import (
     StoredTableActorBinding,
     TableEventRepository,
@@ -613,8 +613,9 @@ class CombatRepository:
 
     def _set_entry_status(self, *, binding: StoredTableActorBinding, combat_id: UUID, entry_id: UUID,
                           status: str, event_kind: str, idempotency_prefix: str,
-                          idempotency_key: str | None):
-        if status not in {"withdrawn", "removed"}:
+                          idempotency_key: str | None, extra_payload: dict[str, Any] | None = None,
+                          monster_outcome: bool = False):
+        if status not in {"withdrawn", "removed", "dead", "unconscious", "surrendered", "fled"}:
             raise ValueError("unsupported inactive CombatEntry status")
 
         def projection(connection, event_id: UUID, _seq: int) -> None:
@@ -628,6 +629,8 @@ class CombatRepository:
             ).with_for_update()).mappings().one_or_none()
             if entry is None or entry["status"] != "active":
                 raise CombatNotFoundPersistenceError(str(entry_id))
+            if monster_outcome and (entry["subject_kind"] != "monster" or entry["monster_instance_id"] is None):
+                raise CombatStateConflictPersistenceError("only Monster entries take outcomes")
             if combat["current_turn_entry_id"] == entry_id and combat["status"] == "running":
                 raise CombatStateConflictPersistenceError(
                     f"advance the turn before marking the current turn entry {status}"
@@ -635,6 +638,11 @@ class CombatRepository:
             connection.execute(update(session_events).where(session_events.c.id == event_id).values(
                 subject_character_id=entry["character_id"]
             ))
+            if monster_outcome:
+                # A DM outcome is a ruling on the instance too, so End Combat keeps it (實作規格 P4-C 13).
+                connection.execute(update(monster_instances).where(
+                    monster_instances.c.id == entry["monster_instance_id"]
+                ).values(combat_status=status, updated_at=datetime.now().astimezone()))
             connection.execute(update(combat_entries).where(
                 combat_entries.c.id == entry_id
             ).values(
@@ -651,7 +659,8 @@ class CombatRepository:
             room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
             kind=event_kind, acting_seat_id=binding.seat_id, subject_seat_id=None,
             subject_character_id=None, execution_mode="self", visibility="public", recipient_seat_ids=(),
-            payload_version=1, payload={"combat_id": str(combat_id), "entry_id": str(entry_id), "status": status},
+            payload_version=1,
+            payload={"combat_id": str(combat_id), "entry_id": str(entry_id), "status": status, **(extra_payload or {})},
             idempotency_key=f"{idempotency_prefix}:{idempotency_key}" if idempotency_key else None,
             expected_actor_binding=binding, transaction_projection=projection,
         )
@@ -680,6 +689,21 @@ class CombatRepository:
             event_kind="combat.entry_removed",
             idempotency_prefix="p4b-entry-remove",
             idempotency_key=idempotency_key,
+        )
+
+    def set_monster_outcome(self, *, binding: StoredTableActorBinding, combat_id: UUID, entry_id: UUID,
+                            outcome: str, note: str | None, idempotency_key: str | None):
+        entry = self.get_entry(entry_id)
+        if entry is None:
+            raise CombatNotFoundPersistenceError(str(entry_id))
+        if entry.subject_kind != "monster" or entry.monster_instance_id is None:
+            raise CombatStateConflictPersistenceError("only Monster entries take outcomes")
+        return self._set_entry_status(
+            binding=binding, combat_id=combat_id, entry_id=entry_id,
+            status="removed" if outcome == "other" else outcome,
+            event_kind="combat.monster_outcome_set", idempotency_prefix="p4f-monster-outcome",
+            idempotency_key=idempotency_key, monster_outcome=True,
+            extra_payload={"monster_instance_id": str(entry.monster_instance_id), "outcome": outcome, "note": note},
         )
 
     def end_combat(self, *, binding: StoredTableActorBinding, combat_id: UUID, idempotency_key: str | None):

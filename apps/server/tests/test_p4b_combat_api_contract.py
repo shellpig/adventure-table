@@ -38,6 +38,7 @@ EXPECTED_ROUTES = {
     (f"{PREFIX}/reaction-window", "POST"),
     (f"{PREFIX}/entries/{{entry_id}}/withdraw", "POST"),
     (f"{PREFIX}/entries/{{entry_id}}/remove", "POST"),
+    (f"{PREFIX}/entries/{{entry_id}}/outcome", "POST"),
     (f"{PREFIX}/end", "POST"),
 }
 

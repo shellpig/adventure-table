@@ -20,6 +20,7 @@ P4B_LIFECYCLE_REVISION = "0023_p4b_combat_lifecycle"
 P4B_ROLL_TARGETS_REVISION = "0024_p4b_combat_roll_targets"
 P4C_REVISION = "0025_p4c_core_resolution"
 P4E_REVISION = "0026_p4e_monster_concentration"
+P4F_REVISION = "0027_p4f_monster_outcome"
 
 
 def _source() -> str:
@@ -69,7 +70,10 @@ def test_p3d_revision_carries_forward_to_current_web_head() -> None:
     p4e_revision = scripts.get_revision(P4E_REVISION)
     assert p4e_revision is not None
     assert p4e_revision.down_revision == P4C_REVISION
-    assert P4E_REVISION in scripts.get_heads()
+    p4f_revision = scripts.get_revision(P4F_REVISION)
+    assert p4f_revision is not None
+    assert p4f_revision.down_revision == P4E_REVISION
+    assert P4F_REVISION in scripts.get_heads()
 
 
 def test_p3d_migration_replaces_all_three_named_controller_checks() -> None:
