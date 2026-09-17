@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
-import { conditionLabel, type CombatDetailView, type CombatEntryView } from '../../api/combat'
+import {
+  conditionLabel,
+  type CombatDetailView,
+  type CombatEntryView,
+  type ReactionWindowView,
+} from '../../api/combat'
 import type { TableEvent } from '../../api/sessions'
 import {
   actingEntryId,
   combatantFor,
+  eligibleReactionEntry,
   isCombatEvent,
   latestCombatEventSeq,
   myEntryIds,
@@ -78,6 +84,20 @@ function makeDetail(status: string, currentTurnEntryId: string | null): CombatDe
   }
 }
 
+function reactionWindow(eligibleEntryIds: string[]): ReactionWindowView {
+  return {
+    window_id: 'reaction-1',
+    entry_id: 'entry-owner',
+    kind: 'opportunity_attack',
+    reason: 'Enemy leaves reach',
+    source_entry_id: 'entry-goblin',
+    status: 'open',
+    eligible_entry_ids: eligibleEntryIds,
+    target_entry_id: 'entry-goblin',
+    safe_payload: null,
+  }
+}
+
 describe('sessionCombat helpers', () => {
   it('identifies combat events correctly with isCombatEvent', () => {
     expect(isCombatEvent(makeEvent(1, 'combat.started'))).toBe(true)
@@ -90,7 +110,6 @@ describe('sessionCombat helpers', () => {
 
   it('determines the latest combat event sequence number', () => {
     expect(latestCombatEventSeq([])).toBe(0)
-
     const events = [
       makeEvent(1, 'combat.started'),
       makeEvent(2, 'exploration.action'),
@@ -99,12 +118,10 @@ describe('sessionCombat helpers', () => {
       makeEvent(4, 'combat.action_declared'),
     ]
     expect(latestCombatEventSeq(events)).toBe(5)
-
-    const nonCombatEvents = [
+    expect(latestCombatEventSeq([
       makeEvent(10, 'exploration.action'),
       makeEvent(20, 'stage.updated'),
-    ]
-    expect(latestCombatEventSeq(nonCombatEvents)).toBe(0)
+    ])).toBe(0)
   })
 
   it('sorts entries by turn_order ascending and appends awaiting entries in original order', () => {
@@ -113,7 +130,6 @@ describe('sessionCombat helpers', () => {
     const entryFirst = makeEntry('entry-1', 'First', null, 1)
     const entryAwaiting2 = makeEntry('entry-wait-2', 'Awaiting 2', null, null)
     const entryThird = makeEntry('entry-3', 'Third', 'char-3', 3)
-
     const detail: CombatDetailView = {
       id: 'combat-1',
       campaign_id: 'camp-1',
@@ -125,23 +141,13 @@ describe('sessionCombat helpers', () => {
       entries: [entryAwaiting1, entrySecond, entryFirst, entryAwaiting2, entryThird],
       combatants: [],
     }
-
-    const ordered = orderedEntries(detail)
-    expect(ordered.map((e) => e.id)).toEqual([
-      'entry-1',
-      'entry-2',
-      'entry-3',
-      'entry-wait-1',
-      'entry-wait-2',
+    expect(orderedEntries(detail).map((entry) => entry.id)).toEqual([
+      'entry-1', 'entry-2', 'entry-3', 'entry-wait-1', 'entry-wait-2',
     ])
     expect(orderedEntries(null)).toEqual([])
   })
 
   it('extracts myEntryIds according to controlled character IDs', () => {
-    const entryMira = makeEntry('entry-mira', 'Mira', 'char-mira', 1)
-    const entrySerena = makeEntry('entry-serena', 'Serena', 'char-serena', 2)
-    const entryGoblin = makeEntry('entry-goblin', 'Goblin', null, 3)
-
     const detail: CombatDetailView = {
       id: 'combat-1',
       campaign_id: 'camp-1',
@@ -150,10 +156,13 @@ describe('sessionCombat helpers', () => {
       round_number: 1,
       current_turn_entry_id: 'entry-mira',
       revision: 1,
-      entries: [entryMira, entrySerena, entryGoblin],
+      entries: [
+        makeEntry('entry-mira', 'Mira', 'char-mira', 1),
+        makeEntry('entry-serena', 'Serena', 'char-serena', 2),
+        makeEntry('entry-goblin', 'Goblin', null, 3),
+      ],
       combatants: [],
     }
-
     expect(myEntryIds(detail, ['char-mira'])).toEqual(['entry-mira'])
     expect(myEntryIds(detail, ['char-mira', 'char-serena'])).toEqual(['entry-mira', 'entry-serena'])
     expect(myEntryIds(detail, ['char-other'])).toEqual([])
@@ -170,23 +179,15 @@ describe('sessionCombat helpers', () => {
       current_turn_entry_id: 'entry-1',
       revision: 1,
       entries: [makeEntry('entry-1', 'Mira', 'char-mira', 1)],
-      combatants: [
-        {
-          entry_id: 'entry-1',
-          subject_kind: 'character',
-          is_hostile: false,
-          projection: {
-            id: 'proj-1',
-            kind: 'character',
-            name: 'Mira',
-            combat_status: 'active',
-            conditions: [],
-            effects: [],
-          },
+      combatants: [{
+        entry_id: 'entry-1',
+        subject_kind: 'character',
+        is_hostile: false,
+        projection: {
+          id: 'proj-1', kind: 'character', name: 'Mira', combat_status: 'active', conditions: [], effects: [],
         },
-      ],
+      }],
     }
-
     expect(combatantFor(detail, 'entry-1')?.projection.name).toBe('Mira')
     expect(combatantFor(detail, 'entry-hidden')).toBeUndefined()
     expect(combatantFor(null, 'entry-1')).toBeUndefined()
@@ -208,7 +209,6 @@ describe('sessionCombat helpers', () => {
       grapple: async () => undefined,
       shove: async () => undefined,
     }
-
     expect(pendingCombatRollHandler('attack', handlers)).toBe(handlers.attack)
     expect(pendingCombatRollHandler('saving_throw', handlers)).toBe(handlers.saving_throw)
     expect(pendingCombatRollHandler('death_save', handlers)).toBe(handlers.death_save)
@@ -217,6 +217,14 @@ describe('sessionCombat helpers', () => {
     expect(pendingCombatRollHandler('shove', handlers)).toBe(handlers.shove)
     expect(pendingCombatRollHandler('initiative', handlers)).toBeUndefined()
     expect(pendingCombatRollHandler('other', handlers)).toBeUndefined()
+  })
+
+  it('selects the first caller-controlled eligible reaction entry', () => {
+    const window = reactionWindow(['entry-goblin', 'entry-mira', 'entry-serena'])
+    expect(eligibleReactionEntry(window, ['entry-mira', 'entry-serena'])).toBe('entry-mira')
+    expect(eligibleReactionEntry(window, ['entry-goblin', 'entry-mira'])).toBe('entry-goblin')
+    expect(eligibleReactionEntry(window, ['entry-other'])).toBeNull()
+    expect(eligibleReactionEntry(reactionWindow([]), ['entry-mira'])).toBeNull()
   })
 
   it('returns own current turn entry for a running Player combat', () => {

@@ -10,6 +10,7 @@ vi.mock('../../api/combat', async (importOriginal) => {
   return {
     ...actual,
     adjudicateAttackRange: vi.fn(),
+    adjudicateSpecialAttack: vi.fn(),
     resolveAdjudication: vi.fn(),
   }
 })
@@ -101,6 +102,15 @@ describe('SessionCombatAdjudicationPanel', () => {
     expect(markup).toContain('15')
   })
 
+  it('renders reach adjudication with in-reach and out-of-reach controls', () => {
+    const copy = sessionCopy('en')
+    const markup = renderPanel([item('reach-1', 'reach')])
+
+    expect(markup).toContain('data-adjudication-kind="reach"')
+    expect(markup).toContain(copy.combatInReach)
+    expect(markup).toContain(copy.combatOutOfReach)
+  })
+
   it('renders opportunity attack trigger controls', () => {
     const copy = sessionCopy('en')
     const markup = renderPanel([
@@ -124,10 +134,10 @@ describe('SessionCombatAdjudicationPanel', () => {
     expect(markup).toContain(copy.combatRuling)
   })
 
-  it('renders reach adjudication without E10c controls', () => {
-    const markup = renderPanel([item('reach-1', 'reach')])
+  it('leaves affected-target adjudication control-less for E10d', () => {
+    const markup = renderPanel([item('aoe-1', 'affected_targets')])
 
-    expect(markup).toContain('data-adjudication-kind="reach"')
+    expect(markup).toContain('data-adjudication-kind="affected_targets"')
     expect(markup).not.toContain('<button')
   })
 

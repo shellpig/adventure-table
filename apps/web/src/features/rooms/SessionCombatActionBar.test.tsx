@@ -6,6 +6,7 @@ import type {
   CombatDetailView,
   CombatEntryView,
   CombatPendingRollView,
+  ReactionWindowView,
 } from '../../api/combat'
 import { SessionCombatActionBar } from './SessionCombatActionBar'
 import { sessionCopy } from './sessionCopy'
@@ -16,6 +17,8 @@ vi.mock('../../api/combat', async (importOriginal) => {
     ...actual,
     listAttacks: vi.fn().mockResolvedValue([]),
     requestAttack: vi.fn(),
+    requestSpecialAttack: vi.fn(),
+    resolveReaction: vi.fn(),
     rollAttack: vi.fn(),
     rollSavingThrow: vi.fn(),
     rollDeathSave: vi.fn(),
@@ -91,6 +94,20 @@ function pendingRoll(
   }
 }
 
+function reactionWindow(windowId: string, eligibleEntryIds: string[]): ReactionWindowView {
+  return {
+    window_id: windowId,
+    entry_id: 'entry-player',
+    kind: 'opportunity_attack',
+    reason: 'Enemy leaves reach',
+    source_entry_id: 'entry-enemy',
+    status: 'open',
+    eligible_entry_ids: eligibleEntryIds,
+    target_entry_id: 'entry-enemy',
+    safe_payload: { trigger: 'movement' },
+  }
+}
+
 function adjudication(): CombatAdjudicationView {
   return {
     action_id: 'action-range-1',
@@ -112,6 +129,7 @@ function renderActionBar(options: {
   isCurrentDm: boolean
   rolls?: CombatPendingRollView[]
   adjudications?: CombatAdjudicationView[]
+  reactions?: ReactionWindowView[]
 }): string {
   return renderToStaticMarkup(
     <SessionCombatActionBar
@@ -119,6 +137,8 @@ function renderActionBar(options: {
       myEntryIds={['entry-player']}
       pendingRolls={options.rolls ?? []}
       pendingAdjudications={options.adjudications ?? []}
+      reactionEntryIds={options.isCurrentDm ? ['entry-player', 'entry-enemy'] : ['entry-player']}
+      reactionWindows={options.reactions ?? []}
       copy={sessionCopy('en')}
       roomId="room"
       campaignId="campaign"
@@ -135,7 +155,6 @@ describe('SessionCombatActionBar', () => {
   it('renders Player attack and target selects on own turn without the DM range checkbox', () => {
     const copy = sessionCopy('en')
     const markup = renderActionBar({ detail: combat('entry-player'), isCurrentDm: false })
-
     expect(markup).toContain('data-combat-action-state="ready"')
     expect(markup).toContain(copy.combatAttackLabel)
     expect(markup).toContain(copy.combatTargetLabel)
@@ -145,7 +164,6 @@ describe('SessionCombatActionBar', () => {
 
   it('renders waiting state with no attack selects on an enemy turn', () => {
     const markup = renderActionBar({ detail: combat('entry-enemy'), isCurrentDm: false })
-
     expect(markup).toContain('data-combat-action-state="waiting"')
     expect(markup).not.toContain('<select')
   })
@@ -153,13 +171,12 @@ describe('SessionCombatActionBar', () => {
   it('renders the range-confirmed checkbox for the DM on a monster turn', () => {
     const copy = sessionCopy('en')
     const markup = renderActionBar({ detail: combat('entry-enemy'), isCurrentDm: true })
-
     expect(markup).toContain('data-combat-action-state="ready"')
     expect(markup).toContain('type="checkbox"')
     expect(markup).toContain(copy.combatRangeConfirmed)
   })
 
-  it('renders every pending combat roll type except initiative', () => {
+  it('renders every E10c pending roll type and omits initiative rolls', () => {
     const markup = renderActionBar({
       detail: combat('entry-player'),
       isCurrentDm: false,
@@ -173,57 +190,55 @@ describe('SessionCombatActionBar', () => {
         pendingRoll('initiative-roll-1', 'initiative'),
       ],
     })
-
-    for (const id of [
-      'attack-roll-1',
-      'save-roll-1',
-      'death-roll-1',
-      'concentration-roll-1',
-      'grapple-roll-1',
-      'shove-roll-1',
-    ]) {
+    for (const id of ['attack-roll-1', 'save-roll-1', 'death-roll-1', 'concentration-roll-1', 'grapple-roll-1', 'shove-roll-1']) {
       expect(markup).toContain(`data-pending-roll="${id}"`)
     }
     expect(markup).not.toContain('data-pending-roll="initiative-roll-1"')
   })
 
-  it('shows saving-throw DC to the DM and omits a hidden Player DC', () => {
+  it('shows save DC to the DM and omits hidden Player DC', () => {
     const dmMarkup = renderActionBar({
       detail: combat('entry-enemy'),
       isCurrentDm: true,
-      rolls: [
-        pendingRoll('save-dm', 'saving_throw', {
-          label: 'Saving Throw',
-          ability_ref: 'dexterity',
-          dc: 16,
-        }),
-      ],
+      rolls: [pendingRoll('save-dm', 'saving_throw', { label: 'Saving Throw', ability_ref: 'dexterity', dc: 16 })],
     })
     expect(dmMarkup).toContain('dexterity')
     expect(dmMarkup).toContain('DC 16')
-
     const playerMarkup = renderActionBar({
       detail: combat('entry-player'),
       isCurrentDm: false,
-      rolls: [
-        pendingRoll('save-player', 'saving_throw', {
-          label: 'Saving Throw',
-          ability_ref: 'dexterity',
-          dc: null,
-        }),
-      ],
+      rolls: [pendingRoll('save-player', 'saving_throw', { label: 'Saving Throw', ability_ref: 'dexterity', dc: null })],
     })
     expect(playerMarkup).toContain('dexterity')
     expect(playerMarkup).not.toContain('DC 16')
+    expect(playerMarkup).not.toContain('DC ?')
+  })
+
+  it('renders an eligible open reaction with accept and decline controls', () => {
+    const copy = sessionCopy('en')
+    const markup = renderActionBar({ detail: combat('entry-player'), isCurrentDm: false, reactions: [reactionWindow('reaction-1', ['entry-player'])] })
+    expect(markup).toContain('data-reaction-window="reaction-1"')
+    expect(markup).toContain(copy.combatReactionAccept)
+    expect(markup).toContain(copy.combatReactionDecline)
+    expect(markup).toContain('trigger')
+    expect(markup).toContain('movement')
+  })
+
+  it('does not render a reaction whose eligible entries the Player does not control', () => {
+    const markup = renderActionBar({ detail: combat('entry-player'), isCurrentDm: false, reactions: [reactionWindow('reaction-other', ['entry-enemy'])] })
+    expect(markup).not.toContain('data-reaction-window="reaction-other"')
+  })
+
+  it('renders the action-kind select with grapple and shove choices', () => {
+    const copy = sessionCopy('en')
+    const markup = renderActionBar({ detail: combat('entry-player'), isCurrentDm: false })
+    expect(markup).toContain('data-combat-action-kind="true"')
+    expect(markup).toContain(copy.combatActionKindGrapple)
+    expect(markup).toContain(copy.combatActionKindShove)
   })
 
   it('renders the Player own pending adjudication as read-only', () => {
-    const markup = renderActionBar({
-      detail: combat('entry-player'),
-      isCurrentDm: false,
-      adjudications: [adjudication()],
-    })
-
+    const markup = renderActionBar({ detail: combat('entry-player'), isCurrentDm: false, adjudications: [adjudication()] })
     expect(markup).toContain('data-adjudication-pending="action-range-1"')
   })
 })

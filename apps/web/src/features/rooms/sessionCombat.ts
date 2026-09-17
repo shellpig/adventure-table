@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { listContent } from '../../api/character'
 import {
   getActiveCombatDetail,
+  getReactionWindow,
   listAdjudications,
   listPendingCombatRolls,
   type CombatAdjudicationView,
@@ -11,6 +12,7 @@ import {
   type CombatEntryView,
   type CombatPendingRollView,
   type CombatantDetailView,
+  type ReactionWindowView,
 } from '../../api/combat'
 import type { TableEvent } from '../../api/sessions'
 import type { SearchOption } from '../../components/SearchableSelect'
@@ -19,6 +21,7 @@ import type { SessionCopy } from './sessionCopy'
 
 const EMPTY_PENDING_COMBAT_ROLLS: CombatPendingRollView[] = []
 const EMPTY_ADJUDICATIONS: CombatAdjudicationView[] = []
+const EMPTY_REACTION_WINDOWS: ReactionWindowView[] = []
 
 export function isCombatEvent(event: TableEvent): boolean {
   return event.kind.startsWith('combat.')
@@ -112,6 +115,14 @@ export function adjudicationKindLabel(
     case 'special':
       return copy.combatAdjudicationKindSpecial
   }
+}
+
+export function eligibleReactionEntry(
+  window: ReactionWindowView,
+  controlledEntryIds: string[],
+): string | null {
+  const controlled = new Set(controlledEntryIds)
+  return window.eligible_entry_ids.find((entryId) => controlled.has(entryId)) ?? null
 }
 
 export type PendingCombatRollHandler = (rollRequestId: string) => Promise<void>
@@ -277,6 +288,36 @@ export function usePendingAdjudications({
     initialValue: EMPTY_ADJUDICATIONS,
   })
   return { adjudications: resource.data, refresh: resource.refresh }
+}
+
+export type UseReactionWindowsOptions = UseActiveCombatOptions & {
+  entryIds: string[]
+}
+
+export function useReactionWindows({
+  entryIds,
+  ...options
+}: UseReactionWindowsOptions): {
+  windows: ReactionWindowView[]
+  refresh: () => void
+} {
+  // There is no reaction-window list route, so fetch the canonical resource per entry.
+  const load = useCallback(
+    async (roomId: string, campaignId: string, sessionId: string, token: string) => {
+      const items = await Promise.all(
+        entryIds.map((entryId) => getReactionWindow(roomId, campaignId, sessionId, entryId, token)),
+      )
+      return items.filter((item): item is ReactionWindowView => item !== null && item.status === 'open')
+    },
+    [entryIds],
+  )
+  const resource = useCombatEventResource({
+    ...options,
+    enabled: entryIds.length > 0,
+    load,
+    initialValue: EMPTY_REACTION_WINDOWS,
+  })
+  return { windows: resource.data, refresh: resource.refresh }
 }
 
 export function useMonsterOptions(enabled = true): SearchOption[] {

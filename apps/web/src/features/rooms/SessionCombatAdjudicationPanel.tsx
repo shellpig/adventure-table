@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import {
   adjudicateAttackRange,
+  adjudicateSpecialAttack,
   resolveAdjudication,
   type CombatAdjudicationView,
   type CombatDetailView,
@@ -72,6 +73,21 @@ export function SessionCombatAdjudicationPanel({
       )
     })
 
+  const resolveReach = (item: CombatAdjudicationView, inReach: boolean) =>
+    runMutation(async () => {
+      await adjudicateSpecialAttack(
+        roomId,
+        campaignId,
+        sessionId,
+        {
+          action_id: item.action_id,
+          in_reach: inReach,
+          idempotency_key: requestId('reach-adjudicate'),
+        },
+        token,
+      )
+    })
+
   const resolveOpportunityAttack = (item: CombatAdjudicationView, trigger: boolean) =>
     runMutation(async () => {
       await resolveAdjudication(
@@ -110,12 +126,7 @@ export function SessionCombatAdjudicationPanel({
             const targets = item.proposed_target_entry_ids.map(entryName)
             const ruling = rulings[item.action_id] ?? ''
             return (
-              <article
-                key={item.action_id}
-                className="session-combat-adjudications__row"
-                data-adjudication-kind={item.kind}
-                data-adjudication-id={item.action_id}
-              >
+              <article key={item.action_id} className="session-combat-adjudications__row" data-adjudication-kind={item.kind} data-adjudication-id={item.action_id}>
                 <div className="session-combat-adjudications__summary">
                   <strong>{adjudicationKindLabel(item.kind, copy)}</strong>
                   <span>{entryName(item.subject_entry_id)}</span>
@@ -127,10 +138,7 @@ export function SessionCombatAdjudicationPanel({
                 {item.dm_hints ? (
                   <dl className="session-combat-adjudications__hints">
                     {Object.entries(item.dm_hints).map(([key, value]) => (
-                      <div key={key}>
-                        <dt>{key}</dt>
-                        <dd>{hintValue(value)}</dd>
-                      </div>
+                      <div key={key}><dt>{key}</dt><dd>{hintValue(value)}</dd></div>
                     ))}
                   </dl>
                 ) : null}
@@ -163,78 +171,32 @@ export function SessionCombatAdjudicationPanel({
                       </label>
                       <label>
                         <span>{copy.combatAdjudicationNote}</span>
-                        <input
-                          type="text"
-                          value={notes[item.action_id] ?? ''}
-                          maxLength={500}
-                          disabled={pending}
-                          onChange={(event) =>
-                            setNotes((current) => ({ ...current, [item.action_id]: event.target.value }))
-                          }
-                        />
+                        <input type="text" value={notes[item.action_id] ?? ''} maxLength={500} disabled={pending} onChange={(event) => setNotes((current) => ({ ...current, [item.action_id]: event.target.value }))} />
                       </label>
                     </div>
                     <div className="session-combat__form-actions">
-                      <button
-                        type="button"
-                        className="button primary compact"
-                        disabled={pending}
-                        onClick={() => void resolveRange(item, true)}
-                      >
-                        {copy.combatInRange}
-                      </button>
-                      <button
-                        type="button"
-                        className="button secondary compact"
-                        disabled={pending}
-                        onClick={() => void resolveRange(item, false)}
-                      >
-                        {copy.combatOutOfRange}
-                      </button>
+                      <button type="button" className="button primary compact" disabled={pending} onClick={() => void resolveRange(item, true)}>{copy.combatInRange}</button>
+                      <button type="button" className="button secondary compact" disabled={pending} onClick={() => void resolveRange(item, false)}>{copy.combatOutOfRange}</button>
                     </div>
+                  </div>
+                ) : item.kind === 'reach' ? (
+                  <div className="session-combat__form-actions">
+                    <button type="button" className="button primary compact" disabled={pending} onClick={() => void resolveReach(item, true)}>{copy.combatInReach}</button>
+                    <button type="button" className="button secondary compact" disabled={pending} onClick={() => void resolveReach(item, false)}>{copy.combatOutOfReach}</button>
                   </div>
                 ) : item.kind === 'opportunity_attack' ? (
                   <div className="session-combat__form-actions">
-                    <button
-                      type="button"
-                      className="button primary compact"
-                      disabled={pending}
-                      onClick={() => void resolveOpportunityAttack(item, true)}
-                    >
-                      {copy.combatTrigger}
-                    </button>
-                    <button
-                      type="button"
-                      className="button secondary compact"
-                      disabled={pending}
-                      onClick={() => void resolveOpportunityAttack(item, false)}
-                    >
-                      {copy.combatNoTrigger}
-                    </button>
+                    <button type="button" className="button primary compact" disabled={pending} onClick={() => void resolveOpportunityAttack(item, true)}>{copy.combatTrigger}</button>
+                    <button type="button" className="button secondary compact" disabled={pending} onClick={() => void resolveOpportunityAttack(item, false)}>{copy.combatNoTrigger}</button>
                   </div>
                 ) : item.kind === 'special' ? (
                   <div className="session-combat-adjudications__controls">
                     <label>
                       <span>{copy.combatRuling}</span>
-                      <textarea
-                        value={ruling}
-                        maxLength={1000}
-                        required
-                        disabled={pending}
-                        onChange={(event) =>
-                          setRulings((current) => ({ ...current, [item.action_id]: event.target.value }))
-                        }
-                      />
+                      <textarea value={ruling} maxLength={1000} required disabled={pending} onChange={(event) => setRulings((current) => ({ ...current, [item.action_id]: event.target.value }))} />
                     </label>
                     <div className="session-combat__form-actions">
-                      <button
-                        type="button"
-                        className="button primary compact"
-                        disabled={pending || !ruling.trim()}
-                        onClick={() => void resolveSpecial(item)}
-                      >
-                        {copy.combatResolve}
-                      </button>
+                      <button type="button" className="button primary compact" disabled={pending || !ruling.trim()} onClick={() => void resolveSpecial(item)}>{copy.combatResolve}</button>
                     </div>
                   </div>
                 ) : null}
