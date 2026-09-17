@@ -70,6 +70,17 @@ _EXPECTED = {
     "combat_roll_initiative",
     "combat_use_action",
     "combat_withdraw_entry",
+    "get_combat_context",
+    "combat_cast_spell",
+    "combat_propose_aoe_spell",
+    "combat_resolve_aoe_spell",
+    "combat_roll_concentration",
+    "combat_drop_concentration",
+    "combat_open_reaction_window",
+    "combat_respond_to_reaction",
+    "combat_request_opportunity_attack",
+    "combat_request_adjudication",
+    "combat_resolve_adjudication",
 }
 
 

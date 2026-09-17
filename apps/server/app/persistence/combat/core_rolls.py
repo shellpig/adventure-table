@@ -150,6 +150,25 @@ class CombatCoreRollRepository:
             ).mappings().one_or_none()
         return self._request(row) if row is not None else None
 
+    def list_pending_requests(self, *, session_id: UUID) -> tuple[StoredCombatCoreRollRequest, ...]:
+        """Every pending Combat-targeted formal roll (initiative, attack, save, death save,
+        concentration); the legacy P3 Check surface deliberately hides these rows."""
+        with self.engine.connect() as connection:
+            rows = connection.execute(
+                select(
+                    roll_requests,
+                    roll_groups.c.label.label("roll_group_label"),
+                )
+                .outerjoin(roll_groups, roll_groups.c.id == roll_requests.c.roll_group_id)
+                .where(
+                    roll_requests.c.session_id == session_id,
+                    roll_requests.c.target_combat_entry_id.is_not(None),
+                    roll_requests.c.status == "pending",
+                )
+                .order_by(roll_requests.c.created_at, roll_requests.c.id)
+            ).mappings().all()
+        return tuple(self._request(row) for row in rows)
+
     def _result_row(self, *, session_id: UUID, request_id: UUID):
         with self.engine.connect() as connection:
             return connection.execute(

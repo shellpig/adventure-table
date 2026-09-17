@@ -169,6 +169,10 @@ def test_wire_ai_dm_combat_lifecycle_journey() -> None:
         combat_special_attack_service=object(),
         combat_initiative_service=table.initiative,
         monster_instance_service=monster_service,
+        combat_spell_service=object(),
+        combat_concentration_service=object(),
+        combat_reaction_service=object(),
+        combat_adjudication_service=object(),
     )
 
     app.state.ai_tool_application_service = combat_ai_tool_service
@@ -433,6 +437,10 @@ def test_ai_player_role_permission_and_unowned_action_rejection() -> None:
         combat_special_attack_service=object(),
         combat_initiative_service=table.initiative,
         monster_instance_service=monster_service,
+        combat_spell_service=object(),
+        combat_concentration_service=object(),
+        combat_reaction_service=object(),
+        combat_adjudication_service=object(),
     )
 
     app.state.ai_tool_application_service = combat_ai_tool_service
@@ -490,6 +498,10 @@ def test_take_back_and_session_end_invalidate_combat_mcp_tokens() -> None:
         combat_special_attack_service=object(),
         combat_initiative_service=table.initiative,
         monster_instance_service=monster_service,
+        combat_spell_service=object(),
+        combat_concentration_service=object(),
+        combat_reaction_service=object(),
+        combat_adjudication_service=object(),
     )
 
     app.state.ai_tool_application_service = combat_ai_tool_service
@@ -645,6 +657,10 @@ def test_dm_creates_monster_from_content_and_lists_instances() -> None:
         combat_special_attack_service=object(),
         combat_initiative_service=table.initiative,
         monster_instance_service=monster_service,
+        combat_spell_service=object(),
+        combat_concentration_service=object(),
+        combat_reaction_service=object(),
+        combat_adjudication_service=object(),
     )
 
     app.state.ai_tool_application_service = combat_ai_tool_service

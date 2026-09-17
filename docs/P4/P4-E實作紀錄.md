@@ -21,7 +21,7 @@
 | E6 | DM adjudication REST（range / cover / AoE / OA） | 實作規格 5；設計 §8.3 | ✅ |
 | E7a | Monster Instance REST（DM-only：from-content / quick-enemy / list） | 實作規格 7、10；設計 §4.2 | ✅ |
 | E7b | Combat MCP tools：lifecycle / monster / initiative / turn / action | 實作規格 8、10、11；設計 §8.4；測試 E.3 | ✅ |
-| E7c | Combat MCP tools：spell / reaction / concentration / adjudication + `get_combat_context` | 實作規格 8、10、11；設計 §8.4；測試 E.3 | ⬜ |
+| E7c | Combat MCP tools：spell / reaction / concentration / adjudication + `get_combat_context` | 實作規格 8、10、11；設計 §8.4；測試 E.3 | ✅ |
 | E8 | `get_session_context` / briefing Combat context | 實作規格 9；設計 §8.6；測試 E.4 | ⬜ |
 | E9 | Session page：Combat Header + Initiative + Combatants UI | 實作規格 1、2、4、6；測試 E.1 | ⬜ |
 | E10 | Quick Action Bar + target 選擇 + adjudication UI | 實作規格 4、5；測試 E.1 | ⬜ |
@@ -129,3 +129,17 @@
 - 修正：agy 把 `combat_withdraw_entry` 設成 shared，但 `CombatService.withdraw_entry` 是 `_require_dm`——改為 DM-only，避免 Player catalog 廣告一個永遠失敗的 tool；描述改為「Player 以敘事表達撤退並請 DM 處理」。
 - 測試：`tests/test_p4e_mcp_combat_lifecycle.py` 5 條（catalog 角色面 + pre-session DM catalog 相等 / AI DM wire-level journey：quick enemy → start → add monster → initiative request / roll / finalize → advance → end，並與 REST `GET .../combat` 對照同一 state / AI Player 呼叫 DM tool 在 facade 前被拒 + 非受控 entry 的 `combat_use_action` 零 row / Take Back 與 Session End 後舊 token 的 combat tool 回同一 invalidation error 零副作用 / DM from-content + list）。gate（E7b focused + P4-C MCP adapter + M04-C descriptions / guide parity / briefing + P3-E MCP tools / invalidation / event loop / protocol / official client + P4-B API + E7a）80 passed。
 - 留給 E7c：spell / reaction / concentration / adjudication tools 與 `get_combat_context`（Player 版無 enemy secrets）。
+
+### E7c — Combat MCP tools：spell / reaction / concentration / adjudication + `get_combat_context`
+
+- 起始：2026-09-17，agy worker 一輪在 1176s 撞 print-timeout（production 已改、測試未過）+ 一輪測試修復（2460s）+ Claude 審核修正。
+- 交付：11 個 MCP tools（facade 委派 E5 / E6 service，無規則邏輯）：
+  - Shared：`get_combat_context`、`combat_cast_spell`、`combat_propose_aoe_spell`、`combat_roll_concentration`（`_server_roll` → `CombatConcentrationService.complete_check`，唯一可解 Concentration request 的 MCP 路徑）、`combat_drop_concentration`、`combat_respond_to_reaction`、`combat_request_opportunity_attack`、`combat_request_adjudication`。
+  - DM-only：`combat_resolve_aoe_spell`、`combat_open_reaction_window`、`combat_resolve_adjudication`（`CombatAdjudicationDecisionToolInput` 繼承 `AdjudicationDecisionInput` 加 `action_id`）。
+  - `get_combat_context` 回 compact dict：`combat`（E4a `CombatDetailView`，Player 版本身即 enemy-safe）、`current_turn_entry_id`、`round`、`my_entry_ids`、`pending_roll_requests`、`reaction_windows`（只列 caller 可代表的 entry，`ReactionWindowView` 本就不含 `secret_payload`）、`pending_adjudications`（E6 `list_pending`，Player 無 `dm_hints`）、`next_required_action`。決策表住 `next_combat_action()`（`ai_tools.py`）供 E8 共用：DM → 有 pending adjudication `resolve_adjudication`／current turn 是 Monster `take_turn`／否則 `wait_for_event`；Player → 有針對自己的 pending roll `roll_pending`／自己 entry 有 open window `respond_to_reaction`／輪到自己 `take_turn`／否則 `wait_for_event`。
+- **Claude 審核發現並修正**：
+  1. agy 把既有 20 個 `_WHEN_TO_USE` 文案（M04-C 契約）與 `MCPToolDefinition.wire()` 的 enum / range / default 呈現、`tool_catalog` / `_definition` 全部改寫——已從 HEAD 還原，`tools.py` 只剩純新增。
+  2. 四個新 service 改為必填建構參數，移除每個方法的 `is None → RuntimeError` 防禦；移除未用的 `get_combat_context` alias；`my_entry_ids` 改 `frozenset[UUID]` 不再 str 來回轉換。
+  3. **真正的 production gap**：agy 的 `pending_roll_requests` 走 `roll_service.list_requests`，但 production 的 `CombatAwareRollRepository` 刻意排除所有 combat-targeted rows（P4-B 起 initiative / attack / save / concentration 都有 `target_combat_entry_id`），所以 production 下 combat roll 永遠不會出現；agy 測試用一個 test-only repository 子類掩蓋了這點。修正：`CombatCoreRollRepository.list_pending_requests(session_id)` + `CombatCoreRollService.list_pending_rolls(actor)` → `CombatPendingRollView`（DM 全部含 DC；Player 只看 target 自己 seat 的 request 且 `dc=None`，因 monster save DC 是敵方秘密），`combat_get_context` 改走此路徑；測試改回 production `CombatAwareRollRepository`，並加 Player `dc is None` / DM `dc` 存在的斷言。
+- 測試：`tests/test_p4e_mcp_combat_context_and_effects.py` 6 條（catalog 角色面 / Player context raw JSON 無敵人 HP、AC、resources、hidden conditions、concentration，無 `rules_snapshot` 字串，adjudication `dm_hints` 為 None，window 無 `secret_payload` / DM context 精確 HP + pending range adjudication → `resolve_adjudication` → 解決後不再是 / Concentration CON save → Player `roll_pending` + DC 隱藏 → `combat_roll_concentration` 解決、失敗清 concentration、`roll_pending` 對同 request 仍拒絕（實作規格 16）/ Player cast 結果無敵方 AC、DC，DM-only tools 在 facade 前被拒 / Player 宣告 OA → DM `combat_resolve_adjudication(trigger=True)` → Player context 見 window 且 `respond_to_reaction` → 接受後關閉）。gate（E7c + E7b + P4-C MCP adapter + M04-C 描述 / guide parity / guide / briefing / discover + P3-E MCP tools / invalidation / event loop / protocol / official client / shared roll + P4-C core rolls + E3 / E5 / E6 / E4a / E4b / E7a + M03 boundary）123 passed。
+- 留給 E8：`get_session_context` 在 active Combat 時附 compact combat context（可直接重用 `combat_get_context` 的組裝與 `next_combat_action`）、briefing 的 combat mandatory loop 雙語、E.4 parity 測試。

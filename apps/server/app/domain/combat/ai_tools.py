@@ -5,10 +5,22 @@ from uuid import UUID
 
 from pydantic import Field
 
+from app.domain.combat.adjudication_service import (
+    AdjudicationDecisionInput,
+    CombatAdjudicationService,
+    CombatAdjudicationView,
+    OpportunityAttackRequestInput,
+    SpecialAdjudicationRequestInput,
+)
 from app.domain.combat.attacks import (
     AttackAdjudicationInput,
     AttackRequestInput,
     CombatAttackService,
+)
+from app.domain.combat.concentration import (
+    CombatConcentrationService,
+    ConcentrationCheckResultView,
+    DropConcentrationView,
 )
 from app.domain.combat.core_rolls import (
     CombatCoreRollService,
@@ -24,8 +36,25 @@ from app.domain.combat.lifecycle import (
     AddCharacterInput,
     AddMonsterInput,
     CombatActionInput,
+    CombatDetailView,
     CombatService,
     StartCombatInput,
+)
+from app.domain.combat.reaction_service import (
+    CombatReactionService,
+    OpenReactionInput,
+    ReactionResolutionView,
+    ReactionWindowView,
+    ResolveReactionInput,
+)
+from app.domain.combat.spell_service import (
+    AoeSpellProposalView,
+    AoeSpellResolutionView,
+    CastSpellInput,
+    CombatSpellService,
+    ProposeAoeSpellInput,
+    ResolveAoeSpellInput,
+    SpellCastView,
 )
 from app.domain.combat.monster_instances import (
     CreateMonsterFromContentInput,
@@ -67,6 +96,36 @@ class CombatEntryMutationToolInput(StrictModel):
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
 
 
+class CombatAdjudicationDecisionToolInput(AdjudicationDecisionInput):
+    action_id: UUID
+
+
+def next_combat_action(
+    *,
+    is_dm: bool,
+    current_turn_entry_id: UUID | None,
+    current_turn_is_monster: bool,
+    my_entry_ids: frozenset[UUID],
+    has_pending_adjudication: bool,
+    has_open_reaction: bool,
+    has_pending_roll: bool,
+) -> str:
+    """Compact next-step hint shared by get_combat_context and (E8) get_session_context."""
+    if is_dm:
+        if has_pending_adjudication:
+            return "resolve_adjudication"
+        if current_turn_is_monster:
+            return "take_turn"
+        return "wait_for_event"
+    if has_pending_roll:
+        return "roll_pending"
+    if has_open_reaction:
+        return "respond_to_reaction"
+    if current_turn_entry_id is not None and current_turn_entry_id in my_entry_ids:
+        return "take_turn"
+    return "wait_for_event"
+
+
 class CombatAIToolApplicationService(AIToolApplicationService):
     """P4-C MCP facade that delegates every rule decision to shared Combat services.
 
@@ -85,6 +144,10 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         combat_special_attack_service: CombatSpecialAttackService,
         combat_initiative_service: CombatInitiativeService,
         monster_instance_service: MonsterInstanceService,
+        combat_spell_service: CombatSpellService,
+        combat_concentration_service: CombatConcentrationService,
+        combat_reaction_service: CombatReactionService,
+        combat_adjudication_service: CombatAdjudicationService,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -95,6 +158,10 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         self.combat_special_attack_service = combat_special_attack_service
         self.combat_initiative_service = combat_initiative_service
         self.monster_instance_service = monster_instance_service
+        self.combat_spell_service = combat_spell_service
+        self.combat_concentration_service = combat_concentration_service
+        self.combat_reaction_service = combat_reaction_service
+        self.combat_adjudication_service = combat_adjudication_service
 
     @staticmethod
     def _semantic_resolution(result: SemanticResolutionView) -> dict[str, Any]:
@@ -413,11 +480,190 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         actor = self._actor(token, authenticated=authenticated)
         return self.combat_service.end_combat(actor, idempotency_key=input.idempotency_key).model_dump(mode="json")
 
+    def combat_get_context(
+        self,
+        token: str,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        detail = self.combat_service.get_active_combat_detail(actor)
+        current_turn_entry_id = detail.current_turn_entry_id if detail is not None else None
+
+        my_entry_ids: set[UUID] = set()
+        current_turn_is_monster = False
+        if detail is not None:
+            for entry in detail.entries:
+                if entry.id == current_turn_entry_id and entry.subject_kind == "monster":
+                    current_turn_is_monster = True
+                if entry.status != "active":
+                    continue
+                if actor.is_current_dm:
+                    my_entry_ids.add(entry.id)
+                elif entry.character_id is not None:
+                    controlling_seat = self.combat_service.repository.controlling_seat_for_character(
+                        campaign_id=actor.campaign_id,
+                        session_id=actor.session_id,
+                        character_id=entry.character_id,
+                    )
+                    if controlling_seat in actor.controlled_seat_ids:
+                        my_entry_ids.add(entry.id)
+
+        pending_requests = self.combat_core_roll_service.list_pending_rolls(actor)
+        has_pending_roll = any(
+            request.target_seat_id in actor.controlled_seat_ids for request in pending_requests
+        )
+
+        reaction_windows = []
+        adjudications = ()
+        if detail is not None:
+            for entry_id in my_entry_ids:
+                window = self.combat_reaction_service.get_reaction_window(actor, entry_id)
+                if window is not None and window.status == "open":
+                    reaction_windows.append(window)
+            adjudications = self.combat_adjudication_service.list_pending(actor)
+
+        next_action = next_combat_action(
+            is_dm=actor.is_current_dm,
+            current_turn_entry_id=current_turn_entry_id,
+            current_turn_is_monster=current_turn_is_monster,
+            my_entry_ids=frozenset(my_entry_ids),
+            has_pending_adjudication=bool(adjudications),
+            has_open_reaction=bool(reaction_windows),
+            has_pending_roll=has_pending_roll,
+        )
+        return {
+            "combat": detail.model_dump(mode="json") if detail is not None else None,
+            "current_turn_entry_id": str(current_turn_entry_id) if current_turn_entry_id else None,
+            "round": detail.round_number if detail is not None else None,
+            "my_entry_ids": [str(entry_id) for entry_id in sorted(my_entry_ids, key=str)],
+            "pending_roll_requests": [request.model_dump(mode="json") for request in pending_requests],
+            "reaction_windows": [window.model_dump(mode="json") for window in reaction_windows],
+            "pending_adjudications": [item.model_dump(mode="json") for item in adjudications],
+            "next_required_action": next_action,
+        }
+
+    def combat_cast_spell(
+        self,
+        token: str,
+        input: CastSpellInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_spell_service.cast_spell(actor, input).model_dump(mode="json")
+
+    def combat_propose_aoe_spell(
+        self,
+        token: str,
+        input: ProposeAoeSpellInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_spell_service.propose_aoe(actor, input).model_dump(mode="json")
+
+    def combat_resolve_aoe_spell(
+        self,
+        token: str,
+        input: ResolveAoeSpellInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_spell_service.resolve_aoe(actor, input).model_dump(mode="json")
+
+    def combat_roll_concentration(
+        self,
+        token: str,
+        input: CombatRollToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_concentration_service.complete_check(
+            actor, self._server_roll(input)
+        ).model_dump(mode="json")
+
+    def combat_drop_concentration(
+        self,
+        token: str,
+        input: CombatEntryMutationToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_concentration_service.drop_concentration(
+            actor, input.entry_id, idempotency_key=input.idempotency_key
+        ).model_dump(mode="json")
+
+    def combat_open_reaction_window(
+        self,
+        token: str,
+        input: OpenReactionInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_reaction_service.open_reaction_window(
+            actor, input
+        ).model_dump(mode="json")
+
+    def combat_respond_to_reaction(
+        self,
+        token: str,
+        input: ResolveReactionInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_reaction_service.resolve_reaction(
+            actor, input
+        ).model_dump(mode="json")
+
+    def combat_request_opportunity_attack(
+        self,
+        token: str,
+        input: OpportunityAttackRequestInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_adjudication_service.request_opportunity_attack(
+            actor, input
+        ).model_dump(mode="json")
+
+    def combat_request_adjudication(
+        self,
+        token: str,
+        input: SpecialAdjudicationRequestInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_adjudication_service.request_special(
+            actor, input
+        ).model_dump(mode="json")
+
+    def combat_resolve_adjudication(
+        self,
+        token: str,
+        input: CombatAdjudicationDecisionToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_adjudication_service.resolve_adjudication(
+            actor, input.action_id, input
+        ).model_dump(mode="json")
+
 
 __all__ = [
     "CombatAIToolApplicationService",
+    "CombatAdjudicationDecisionToolInput",
     "CombatEntryMutationToolInput",
     "CombatEntryToolInput",
     "CombatMutationToolInput",
     "CombatRollToolInput",
+    "next_combat_action",
 ]

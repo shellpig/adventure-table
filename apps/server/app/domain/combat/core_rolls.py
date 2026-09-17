@@ -66,6 +66,21 @@ class SavingThrowRequestView(StrictModel):
     status: str
 
 
+class CombatPendingRollView(StrictModel):
+    """Compact pending Combat roll for get_combat_context; ``dc`` is DM-only."""
+
+    id: UUID
+    roll_group_id: UUID | None
+    label: str | None
+    request_type: str
+    target_entry_id: UUID
+    target_seat_id: UUID | None
+    ability_ref: str | None
+    dc: int | None
+    modifier_mode: RollModifierMode
+    status: str
+
+
 class SavingThrowRequestResponse(StrictModel):
     roll_group_id: UUID
     requests: tuple[SavingThrowRequestView, ...]
@@ -207,6 +222,30 @@ class CombatCoreRollService:
             visibility=RollVisibility(request.visibility),
             status=request.status,
         )
+
+    def list_pending_rolls(self, actor: TableActorContext) -> tuple[CombatPendingRollView, ...]:
+        """DM sees every pending Combat roll with its DC; a Player only sees rolls that
+        target a Seat they control, without the DC (monster save DCs are enemy secrets)."""
+        self.table_event_service.require_actor_current(actor)
+        views: list[CombatPendingRollView] = []
+        for request in self.repository.list_pending_requests(session_id=actor.session_id):
+            if not actor.is_current_dm and request.target_seat_id not in actor.controlled_seat_ids:
+                continue
+            views.append(
+                CombatPendingRollView(
+                    id=request.id,
+                    roll_group_id=request.roll_group_id,
+                    label=request.roll_group_label,
+                    request_type=request.request_type,
+                    target_entry_id=request.target_combat_entry_id,
+                    target_seat_id=request.target_seat_id,
+                    ability_ref=request.ability_ref,
+                    dc=request.dc if actor.is_current_dm else None,
+                    modifier_mode=RollModifierMode(request.modifier_mode),
+                    status=request.status,
+                )
+            )
+        return tuple(views)
 
     def request_saving_throws(
         self,
