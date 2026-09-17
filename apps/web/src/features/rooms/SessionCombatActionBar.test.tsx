@@ -2,20 +2,24 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
 import type {
+  CastableSpellView,
   CombatAdjudicationView,
   CombatDetailView,
   CombatEntryView,
   CombatPendingRollView,
   ReactionWindowView,
 } from '../../api/combat'
-import { SessionCombatActionBar } from './SessionCombatActionBar'
+import { SessionCombatActionBar, SpellActionFields } from './SessionCombatActionBar'
 import { sessionCopy } from './sessionCopy'
 
 vi.mock('../../api/combat', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../api/combat')>()
   return {
     ...actual,
+    castSpell: vi.fn(),
     listAttacks: vi.fn().mockResolvedValue([]),
+    listCastableSpells: vi.fn().mockResolvedValue([]),
+    proposeAoeSpell: vi.fn(),
     requestAttack: vi.fn(),
     requestSpecialAttack: vi.fn(),
     resolveReaction: vi.fn(),
@@ -124,6 +128,23 @@ function adjudication(): CombatAdjudicationView {
   }
 }
 
+function spell(
+  targeting: CastableSpellView['targeting'],
+  options?: Partial<CastableSpellView>,
+): CastableSpellView {
+  return {
+    spell_ref: targeting === 'aoe' ? 'srd5.1:spell:fireball' : 'srd5.1:spell:fire-bolt',
+    name: targeting === 'aoe' ? 'Fireball' : 'Fire Bolt',
+    level: targeting === 'aoe' ? 3 : 0,
+    profile_id: 'wizard',
+    concentration: false,
+    targeting,
+    cast_mode: targeting === 'aoe' ? 'save' : 'attack',
+    castable_slot_levels: targeting === 'aoe' ? [3, 4] : [0],
+    ...options,
+  }
+}
+
 function renderActionBar(options: {
   detail: CombatDetailView
   isCurrentDm: boolean
@@ -147,6 +168,23 @@ function renderActionBar(options: {
       isCurrentDm={options.isCurrentDm}
       onError={() => undefined}
       refresh={() => undefined}
+    />,
+  )
+}
+
+function renderSpellFields(item: CastableSpellView): string {
+  return renderToStaticMarkup(
+    <SpellActionFields
+      spells={[item]}
+      spellRef={item.spell_ref}
+      slotLevel={item.castable_slot_levels[0]}
+      targetEntryId=""
+      targetEntries={[enemyEntry]}
+      disabled={false}
+      copy={sessionCopy('en')}
+      onSpellRefChange={() => undefined}
+      onSlotLevelChange={() => undefined}
+      onTargetEntryIdChange={() => undefined}
     />,
   )
 }
@@ -256,12 +294,27 @@ describe('SessionCombatActionBar', () => {
     expect(markup).not.toContain('data-reaction-window="reaction-other"')
   })
 
-  it('renders the action-kind select with grapple and shove choices', () => {
+  it('renders the action-kind select with grapple, shove, and spell choices', () => {
     const copy = sessionCopy('en')
     const markup = renderActionBar({ detail: combat('entry-player'), isCurrentDm: false })
     expect(markup).toContain('data-combat-action-kind="true"')
     expect(markup).toContain(copy.combatActionKindGrapple)
     expect(markup).toContain(copy.combatActionKindShove)
+    expect(markup).toContain(copy.combatActionKindSpell)
+  })
+
+  it('renders spell and target selects for a single-target spell', () => {
+    const markup = renderSpellFields(spell('single'))
+    expect(markup).toContain('data-combat-spell="true"')
+    expect(markup).toContain('data-combat-spell-target="true"')
+    expect(markup).not.toContain('data-combat-spell-slot="true"')
+  })
+
+  it('renders an AoE spell select and slot level without a target select', () => {
+    const markup = renderSpellFields(spell('aoe'))
+    expect(markup).toContain('data-combat-spell="true"')
+    expect(markup).toContain('data-combat-spell-slot="true"')
+    expect(markup).not.toContain('data-combat-spell-target="true"')
   })
 
   it('renders the Player own pending adjudication as read-only', () => {

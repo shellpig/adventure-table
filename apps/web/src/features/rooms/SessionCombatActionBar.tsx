@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 
 import {
+  castSpell,
   listAttacks,
+  listCastableSpells,
+  proposeAoeSpell,
   requestAttack,
   requestSpecialAttack,
   resolveReaction,
@@ -12,6 +15,7 @@ import {
   rollSpecialAttack,
   type AttackDefinitionView,
   type AttackResolutionView,
+  type CastableSpellView,
   type CombatAdjudicationView,
   type CombatDetailView,
   type CombatPendingRollView,
@@ -39,7 +43,90 @@ type CombatRollResult =
   | { kind: 'death_save'; value: DeathSaveResultView }
   | { kind: 'concentration'; value: ConcentrationCheckResultView }
 
-type ActionKind = 'attack' | 'grapple' | 'shove'
+type ActionKind = 'attack' | 'grapple' | 'shove' | 'spell'
+
+type SpellActionFieldsProps = {
+  spells: CastableSpellView[]
+  spellRef: string
+  slotLevel: number | null
+  targetEntryId: string
+  targetEntries: Array<{ id: string; display_name: string }>
+  disabled: boolean
+  copy: SessionCopy
+  onSpellRefChange: (spellRef: string) => void
+  onSlotLevelChange: (slotLevel: number) => void
+  onTargetEntryIdChange: (entryId: string) => void
+}
+
+export function SpellActionFields({
+  spells,
+  spellRef,
+  slotLevel,
+  targetEntryId,
+  targetEntries,
+  disabled,
+  copy,
+  onSpellRefChange,
+  onSlotLevelChange,
+  onTargetEntryIdChange,
+}: SpellActionFieldsProps) {
+  const spell = spells.find((item) => item.spell_ref === spellRef) ?? null
+  return (
+    <>
+      <label>
+        <span>{copy.combatSpellLabel}</span>
+        <select
+          data-combat-spell="true"
+          value={spellRef}
+          disabled={disabled}
+          onChange={(event) => onSpellRefChange(event.target.value)}
+        >
+          <option value="">—</option>
+          {spells.map((item) => (
+            <option key={item.spell_ref} value={item.spell_ref}>
+              {`${item.name} (Lv ${item.level})`}
+            </option>
+          ))}
+        </select>
+      </label>
+      {spell && spell.castable_slot_levels.length > 1 ? (
+        <label>
+          <span>{copy.combatSpellSlotLevel}</span>
+          <select
+            data-combat-spell-slot="true"
+            value={slotLevel ?? spell.castable_slot_levels[0]}
+            disabled={disabled}
+            onChange={(event) => onSlotLevelChange(Number(event.target.value))}
+          >
+            {spell.castable_slot_levels.map((level) => (
+              <option key={level} value={level}>
+                {level}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      {spell?.targeting === 'single' ? (
+        <label>
+          <span>{copy.combatTargetLabel}</span>
+          <select
+            data-combat-spell-target="true"
+            value={targetEntryId}
+            disabled={disabled}
+            onChange={(event) => onTargetEntryIdChange(event.target.value)}
+          >
+            <option value="">—</option>
+            {targetEntries.map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.display_name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+    </>
+  )
+}
 
 type SessionCombatActionBarProps = {
   combat: CombatDetailView
@@ -109,8 +196,11 @@ export function SessionCombatActionBar({
   const currentTurnName = currentTurnEntry?.display_name ?? copy.combatUnknownCombatant
 
   const [attacks, setAttacks] = useState<AttackDefinitionView[]>([])
+  const [spells, setSpells] = useState<CastableSpellView[]>([])
   const [actionKind, setActionKind] = useState<ActionKind>('attack')
   const [attackRef, setAttackRef] = useState('')
+  const [spellRef, setSpellRef] = useState('')
+  const [slotLevel, setSlotLevel] = useState<number | null>(null)
   const [targetEntryId, setTargetEntryId] = useState('')
   const [modifierMode, setModifierMode] = useState<'normal' | 'advantage' | 'disadvantage'>(
     'normal',
@@ -119,28 +209,39 @@ export function SessionCombatActionBar({
   const [pending, setPending] = useState(false)
   const [localRollRequestId, setLocalRollRequestId] = useState<string | null>(null)
   const [rollResult, setRollResult] = useState<CombatRollResult | null>(null)
+  const [spellStatus, setSpellStatus] = useState<{ castMode: string; status: string } | null>(null)
   const [pendingActionId, setPendingActionId] = useState<string | null>(null)
   const [pendingActionSeen, setPendingActionSeen] = useState(false)
 
   useEffect(() => {
     setAttacks([])
+    setSpells([])
     setActionKind('attack')
     setAttackRef('')
+    setSpellRef('')
+    setSlotLevel(null)
     setTargetEntryId('')
     setModifierMode('normal')
     setRangeConfirmed(true)
     setLocalRollRequestId(null)
     setRollResult(null)
+    setSpellStatus(null)
     setPendingActionId(null)
     setPendingActionSeen(false)
     if (currentActingEntryId === null) return
 
     let active = true
-    void listAttacks(roomId, campaignId, sessionId, currentActingEntryId, token)
-      .then((items) => {
+    void Promise.all([
+      listAttacks(roomId, campaignId, sessionId, currentActingEntryId, token),
+      listCastableSpells(roomId, campaignId, sessionId, currentActingEntryId, token),
+    ])
+      .then(([attackItems, spellItems]) => {
         if (!active) return
-        setAttacks(items)
-        setAttackRef(items[0]?.source_ref ?? '')
+        setAttacks(attackItems)
+        setAttackRef(attackItems[0]?.source_ref ?? '')
+        setSpells(spellItems)
+        setSpellRef(spellItems[0]?.spell_ref ?? '')
+        setSlotLevel(spellItems[0]?.castable_slot_levels[0] ?? null)
       })
       .catch((cause) => {
         if (active) onError(cause)
@@ -165,6 +266,7 @@ export function SessionCombatActionBar({
   const targetEntries = combat.entries.filter(
     (entry) => entry.id !== currentActingEntryId && entry.status === 'active',
   )
+  const selectedSpell = spells.find((spell) => spell.spell_ref === spellRef) ?? null
   const hasAttackEconomy = Boolean(
     actingEntry &&
     actingEntry.action_available &&
@@ -174,20 +276,35 @@ export function SessionCombatActionBar({
 
   const clearActionForm = () => {
     setAttackRef(attacks[0]?.source_ref ?? '')
+    setSpellRef(spells[0]?.spell_ref ?? '')
+    setSlotLevel(spells[0]?.castable_slot_levels[0] ?? null)
     setTargetEntryId('')
     setModifierMode('normal')
     setRangeConfirmed(true)
   }
 
+  const handleSpellRefChange = (nextSpellRef: string) => {
+    setSpellRef(nextSpellRef)
+    const spell = spells.find((item) => item.spell_ref === nextSpellRef)
+    setSlotLevel(spell?.castable_slot_levels[0] ?? null)
+    setTargetEntryId('')
+  }
+
   const handleRequestAction = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (currentActingEntryId === null || !targetEntryId || !hasAttackEconomy) return
-    if (actionKind === 'attack' && !attackRef) return
+    if (currentActingEntryId === null || !hasAttackEconomy) return
+    if (actionKind === 'attack' && (!targetEntryId || !attackRef)) return
+    if ((actionKind === 'grapple' || actionKind === 'shove') && !targetEntryId) return
+    if (actionKind === 'spell') {
+      if (!selectedSpell) return
+      if (selectedSpell.targeting === 'single' && !targetEntryId) return
+    }
 
     await runCombatMutation(
       setPending,
       async () => {
         setRollResult(null)
+        setSpellStatus(null)
         if (actionKind === 'attack') {
           const response = await requestAttack(
             roomId,
@@ -211,6 +328,57 @@ export function SessionCombatActionBar({
             setLocalRollRequestId(null)
             setPendingActionId(response.action_id)
             setPendingActionSeen(false)
+            clearActionForm()
+          }
+          return
+        }
+
+        if (actionKind === 'spell' && selectedSpell) {
+          const selectedSlotLevel = slotLevel ?? selectedSpell.castable_slot_levels[0] ?? null
+          if (selectedSpell.targeting === 'aoe') {
+            const response = await proposeAoeSpell(
+              roomId,
+              campaignId,
+              sessionId,
+              {
+                caster_entry_id: currentActingEntryId,
+                spell_ref: selectedSpell.spell_ref,
+                slot_level: selectedSlotLevel,
+                ...(selectedSpell.profile_id ? { profile_id: selectedSpell.profile_id } : {}),
+                proposed_target_ids: targetEntries.map((entry) => entry.id),
+                idempotency_key: requestId('aoe-propose'),
+              },
+              token,
+            )
+            setLocalRollRequestId(null)
+            setPendingActionId(response.action_id)
+            setPendingActionSeen(false)
+            clearActionForm()
+            return
+          }
+
+          const response = await castSpell(
+            roomId,
+            campaignId,
+            sessionId,
+            {
+              caster_entry_id: currentActingEntryId,
+              target_entry_id: selectedSpell.targeting === 'self' ? null : targetEntryId,
+              spell_ref: selectedSpell.spell_ref,
+              slot_level: selectedSlotLevel,
+              ...(selectedSpell.profile_id ? { profile_id: selectedSpell.profile_id } : {}),
+              attack_mode: modifierMode,
+              idempotency_key: requestId('spell-cast'),
+            },
+            token,
+          )
+          setPendingActionId(null)
+          setPendingActionSeen(false)
+          if (response.roll_request_id !== null) {
+            setLocalRollRequestId(response.roll_request_id)
+          } else {
+            setLocalRollRequestId(null)
+            setSpellStatus({ castMode: response.cast_mode, status: response.status })
             clearActionForm()
           }
           return
@@ -360,6 +528,19 @@ export function SessionCombatActionBar({
     }
   }
 
+  const spellModeLabel = (castMode: string): string => {
+    switch (castMode) {
+      case 'attack':
+        return copy.combatSpellModeAttack
+      case 'save':
+        return copy.combatSpellModeSave
+      case 'heal':
+        return copy.combatSpellModeHeal
+      default:
+        return copy.combatSpellModeUtility
+    }
+  }
+
   const pendingRows = pendingRolls.filter(
     (roll) => roll.request_type !== 'initiative' && roll.id !== localRollRequestId,
   )
@@ -389,7 +570,15 @@ export function SessionCombatActionBar({
       ? copy.combatRequestAttack
       : actionKind === 'grapple'
         ? copy.combatActionKindGrapple
-        : copy.combatActionKindShove
+        : actionKind === 'shove'
+          ? copy.combatActionKindShove
+          : copy.combatCastSpell
+  const submitDisabled =
+    formDisabled ||
+    (actionKind === 'attack' && (!targetEntryId || !attackRef)) ||
+    ((actionKind === 'grapple' || actionKind === 'shove') && !targetEntryId) ||
+    (actionKind === 'spell' &&
+      (!selectedSpell || (selectedSpell.targeting === 'single' && !targetEntryId)))
 
   return (
     <section
@@ -476,13 +665,17 @@ export function SessionCombatActionBar({
                       ? 'grapple'
                       : event.target.value === 'shove'
                         ? 'shove'
-                        : 'attack'
+                        : event.target.value === 'spell'
+                          ? 'spell'
+                          : 'attack'
                   setActionKind(next)
+                  setTargetEntryId('')
                 }}
               >
                 <option value="attack">{copy.combatActionKindAttack}</option>
                 <option value="grapple">{copy.combatActionKindGrapple}</option>
                 <option value="shove">{copy.combatActionKindShove}</option>
+                <option value="spell">{copy.combatActionKindSpell}</option>
               </select>
             </label>
             {actionKind === 'attack' ? (
@@ -501,22 +694,53 @@ export function SessionCombatActionBar({
                   ))}
                 </select>
               </label>
-            ) : null}
-            <label>
-              <span>{copy.combatTargetLabel}</span>
-              <select
-                value={targetEntryId}
+            ) : actionKind === 'spell' ? (
+              <SpellActionFields
+                spells={spells}
+                spellRef={spellRef}
+                slotLevel={slotLevel}
+                targetEntryId={targetEntryId}
+                targetEntries={targetEntries}
                 disabled={formDisabled}
-                onChange={(event) => setTargetEntryId(event.target.value)}
-              >
-                <option value="">—</option>
-                {targetEntries.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.display_name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                copy={copy}
+                onSpellRefChange={handleSpellRefChange}
+                onSlotLevelChange={setSlotLevel}
+                onTargetEntryIdChange={setTargetEntryId}
+              />
+            ) : (
+              <label>
+                <span>{copy.combatTargetLabel}</span>
+                <select
+                  value={targetEntryId}
+                  disabled={formDisabled}
+                  onChange={(event) => setTargetEntryId(event.target.value)}
+                >
+                  <option value="">—</option>
+                  {targetEntries.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.display_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {actionKind === 'attack' ? (
+              <label>
+                <span>{copy.combatTargetLabel}</span>
+                <select
+                  value={targetEntryId}
+                  disabled={formDisabled}
+                  onChange={(event) => setTargetEntryId(event.target.value)}
+                >
+                  <option value="">—</option>
+                  {targetEntries.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.display_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <label>
               <span>{copy.checkModifier}</span>
               <select
@@ -553,7 +777,7 @@ export function SessionCombatActionBar({
             <button
               type="submit"
               className="button primary compact"
-              disabled={formDisabled || !targetEntryId || (actionKind === 'attack' && !attackRef)}
+              disabled={submitDisabled}
             >
               {pending ? copy.sending : submitLabel}
             </button>
@@ -617,7 +841,11 @@ export function SessionCombatActionBar({
         </div>
       ) : null}
 
-      {rollResult?.kind === 'attack' && attackResultStatus ? (
+      {spellStatus ? (
+        <p className="session-combat-actions__result" data-spell-result="true">
+          {copy.combatSpellResolved} · {spellModeLabel(spellStatus.castMode)} · {spellStatus.status}
+        </p>
+      ) : rollResult?.kind === 'attack' && attackResultStatus ? (
         <p className="session-combat-actions__result" data-attack-result="true">
           <strong>{attackResultStatus}</strong>
           {' · '}
