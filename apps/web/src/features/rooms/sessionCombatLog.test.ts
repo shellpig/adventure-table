@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import type { TableEvent } from '../../api/sessions'
-import { formatCombatLogEvent } from './sessionCombatLog'
+import {
+  combatLogContentReferences,
+  formatCombatLogEvent,
+} from './sessionCombatLog'
 import { isSessionChatEvent } from './sessionExploration'
 
 const ENTRY_LABELS: Record<string, string> = {
@@ -10,6 +13,12 @@ const ENTRY_LABELS: Record<string, string> = {
 }
 
 const resolveEntryLabel = (entryId: string) => ENTRY_LABELS[entryId] ?? null
+const fallbackContentName = (_reference: string | null | undefined, fallback = '') => fallback
+
+function contentNameResolver(names: Record<string, string>) {
+  return (reference: string | null | undefined, fallback = '') =>
+    reference ? names[reference] ?? fallback : fallback
+}
 
 function event(kind: string, payload: Record<string, unknown> = {}): TableEvent {
   return {
@@ -35,21 +44,168 @@ function text(presentation: ReturnType<typeof formatCombatLogEvent>): string {
 }
 
 describe('P4-E E11a compact combat log presentation', () => {
-  it('formats compact zh-TW and en damage logs with projected condition state', () => {
-    const damage = event('combat.damage_applied', {
+  it('localizes canonical spell condition tags and attack source refs without raw English slugs', () => {
+    const spell = event('combat.spell_cast_resolved', {
+      caster_entry_id: 'hero',
       target_entry_id: 'enemy',
-      amount: 7,
-      target_injury_level: 'wounded',
-      dropped_to_zero: true,
-      after: { current_hp: 5, max_hp: 12, temp_hp: 0 },
+      spell_ref: 'srd5.1:spell:hold-person',
+      concentration_started: true,
+      domain_events: [
+        {
+          type: 'condition_applied',
+          tag: 'paralyzed',
+          effect_id: 'spell-effect:1',
+        },
+      ],
+    })
+    const attack = event('roll.resolved', {
+      combat_id: 'combat-1',
+      attacker_entry_id: 'hero',
+      target_entry_id: 'enemy',
+      attack_resolution: {
+        attack: {
+          source_ref: 'srd5.1:equipment:longsword',
+          name: 'Longsword',
+          total: 18,
+          hit: true,
+          critical: false,
+        },
+      },
     })
 
-    expect(text(formatCombatLogEvent(damage, 'zh-TW', resolveEntryLabel))).toBe(
-      'Goblin · 傷害 · 7 · HP 5/12 · 傷勢: 受傷 · 狀態: 昏迷, 倒地',
+    const zhNames = contentNameResolver({
+      'srd5.1:spell:hold-person': '人類定身術',
+      'srd5.1:condition:paralyzed': '麻痺',
+      'srd5.1:equipment:longsword': '長劍',
+    })
+    const enNames = contentNameResolver({
+      'srd5.1:spell:hold-person': 'Hold Person',
+      'srd5.1:condition:paralyzed': 'Paralyzed',
+      'srd5.1:equipment:longsword': 'Longsword',
+    })
+
+    expect(text(formatCombatLogEvent(spell, 'zh-TW', resolveEntryLabel, zhNames))).toBe(
+      'Aria · 法術: 人類定身術 · → Goblin · 開始專注 · 狀態: 麻痺',
     )
-    expect(text(formatCombatLogEvent(damage, 'en', resolveEntryLabel))).toBe(
-      'Goblin · Damage · 7 · HP 5/12 · Injury: Wounded · Condition: Unconscious, Prone',
+    expect(text(formatCombatLogEvent(spell, 'en', resolveEntryLabel, enNames))).toBe(
+      'Aria · Spell: Hold Person · → Goblin · Concentration started · Condition: Paralyzed',
     )
+    expect(text(formatCombatLogEvent(attack, 'zh-TW', resolveEntryLabel, zhNames))).toContain(
+      'Aria · 長劍 · → Goblin · 命中',
+    )
+  })
+
+  it('uses localized generic categories while content names are unavailable and preserves custom attack names', () => {
+    const spell = event('combat.spell_cast_resolved', {
+      caster_entry_id: 'hero',
+      target_entry_id: 'enemy',
+      spell_ref: 'srd5.1:spell:hold-person',
+      concentration_started: true,
+      domain_events: [
+        { type: 'condition_applied', tag: 'paralyzed' },
+      ],
+    })
+    const canonicalAttack = event('roll.resolved', {
+      combat_id: 'combat-1',
+      attacker_entry_id: 'hero',
+      target_entry_id: 'enemy',
+      attack_resolution: {
+        attack: {
+          source_ref: 'srd5.1:equipment:longsword',
+          name: 'Longsword',
+          hit: true,
+          critical: false,
+        },
+      },
+    })
+    const customAttack = event('roll.resolved', {
+      combat_id: 'combat-1',
+      attacker_entry_id: 'hero',
+      target_entry_id: 'enemy',
+      attack_resolution: {
+        attack: {
+          name: '媽媽的平底鍋',
+          hit: true,
+          critical: false,
+        },
+      },
+    })
+
+    const spellText = text(formatCombatLogEvent(spell, 'zh-TW', resolveEntryLabel, fallbackContentName))
+    const canonicalAttackText = text(
+      formatCombatLogEvent(canonicalAttack, 'zh-TW', resolveEntryLabel, fallbackContentName),
+    )
+    const customAttackText = text(
+      formatCombatLogEvent(customAttack, 'zh-TW', resolveEntryLabel, fallbackContentName),
+    )
+
+    expect(spellText).toBe('Aria · 法術 · → Goblin · 開始專注 · 狀態')
+    expect(spellText).not.toContain('hold person')
+    expect(spellText).not.toContain('paralyzed')
+    expect(canonicalAttackText).toContain('Aria · 攻擊 · → Goblin · 命中')
+    expect(canonicalAttackText).not.toContain('Longsword')
+    expect(customAttackText).toContain('Aria · 媽媽的平底鍋 · → Goblin · 命中')
+  })
+
+  it('collects visible canonical content references for one batched presentation request', () => {
+    const refs = combatLogContentReferences([
+      event('combat.spell_cast_resolved', {
+        spell_ref: 'srd5.1:spell:hold-person',
+        domain_events: [
+          {
+            type: 'condition_applied',
+            tag: 'paralyzed',
+          },
+        ],
+      }),
+      event('roll.resolved', {
+        combat_id: 'combat-1',
+        attack_resolution: {
+          attack: {
+            source_ref: 'srd5.1:equipment:longsword',
+            name: 'Longsword',
+          },
+        },
+      }),
+    ])
+
+    expect(new Set(refs)).toEqual(new Set([
+      'srd5.1:spell:hold-person',
+      'srd5.1:condition:paralyzed',
+      'srd5.1:equipment:longsword',
+    ]))
+    expect(refs).not.toContain('paralyzed')
+  })
+
+  it('does not infer character or monster conditions from dropped_to_zero alone', () => {
+    const characterDamage = event('combat.damage_applied', {
+      target_entry_id: 'hero',
+      amount: 7,
+      target_injury_level: 'down',
+      dropped_to_zero: true,
+      after: { current_hp: 0, max_hp: 12, temp_hp: 0 },
+    })
+    const monsterDamage = event('combat.damage_applied', {
+      target_entry_id: 'enemy',
+      amount: 7,
+      target_injury_level: 'down',
+      dropped_to_zero: true,
+      monster_outcome_required: true,
+      after: { current_hp: 0, max_hp: 7, temp_hp: 0 },
+    })
+
+    const characterText = text(
+      formatCombatLogEvent(characterDamage, 'zh-TW', resolveEntryLabel, fallbackContentName),
+    )
+    const monsterText = text(
+      formatCombatLogEvent(monsterDamage, 'zh-TW', resolveEntryLabel, fallbackContentName),
+    )
+    expect(characterText).toBe('Aria · 傷害 · 7 · HP 0/12 · 傷勢: 倒下')
+    expect(monsterText).toBe('Goblin · 傷害 · 7 · HP 0/7 · 傷勢: 倒下')
+    expect(characterText).not.toContain('昏迷')
+    expect(characterText).not.toContain('倒地')
+    expect(monsterText).not.toContain('昏迷')
+    expect(monsterText).not.toContain('倒地')
   })
 
   it('omits hostile exact HP AC and DC when Player projected payloads do not contain them', () => {
@@ -61,7 +217,7 @@ describe('P4-E E11a compact combat log presentation', () => {
       target_injury_level: 'wounded',
       attack_resolution: {
         attack: {
-          name: 'Longsword',
+          name: 'Custom Slash',
           total: 18,
           hit: true,
           critical: false,
@@ -78,9 +234,13 @@ describe('P4-E E11a compact combat log presentation', () => {
       succeeded: true,
     })
 
-    const attackText = text(formatCombatLogEvent(attack, 'en', resolveEntryLabel))
-    const concentrationText = text(formatCombatLogEvent(concentration, 'en', resolveEntryLabel))
-    expect(attackText).toContain('Aria · Longsword · → Goblin · Hit')
+    const attackText = text(
+      formatCombatLogEvent(attack, 'en', resolveEntryLabel, fallbackContentName),
+    )
+    const concentrationText = text(
+      formatCombatLogEvent(concentration, 'en', resolveEntryLabel, fallbackContentName),
+    )
+    expect(attackText).toContain('Aria · Custom Slash · → Goblin · Hit')
     expect(attackText).toContain('Damage 7')
     expect(attackText).not.toContain('AC')
     expect(attackText).not.toContain('HP')
@@ -98,7 +258,7 @@ describe('P4-E E11a compact combat log presentation', () => {
       target_injury_level: 'critical',
       attack_resolution: {
         attack: {
-          name: 'Longsword',
+          name: 'Custom Slash',
           total: 18,
           target_ac: 15,
           hit: true,
@@ -118,30 +278,32 @@ describe('P4-E E11a compact combat log presentation', () => {
       succeeded: true,
     })
 
-    expect(text(formatCombatLogEvent(attack, 'en', resolveEntryLabel))).toContain(
+    expect(text(formatCombatLogEvent(attack, 'en', resolveEntryLabel, fallbackContentName))).toContain(
       'Total 18 · AC 15 · Damage 7 · HP 5/20',
     )
-    expect(text(formatCombatLogEvent(concentration, 'en', resolveEntryLabel))).toBe(
+    expect(text(formatCombatLogEvent(concentration, 'en', resolveEntryLabel, fallbackContentName))).toBe(
       'Goblin · Concentration maintained · Total 16 · DC 12',
     )
   })
 
-  it('formats turn healing spell condition reaction and adjudication events without raw event kinds', () => {
+  it('formats active concentration drop as a bilingual compact outcome', () => {
+    const concentrationChanged = event('combat.concentration_changed', {
+      entry_id: 'hero',
+      dropped: true,
+    })
+
+    expect(text(
+      formatCombatLogEvent(concentrationChanged, 'zh-TW', resolveEntryLabel, fallbackContentName),
+    )).toBe('Aria · 專注中斷')
+    expect(text(
+      formatCombatLogEvent(concentrationChanged, 'en', resolveEntryLabel, fallbackContentName),
+    )).toBe('Aria · Concentration lost')
+  })
+
+  it('formats turn healing reaction and adjudication events without raw event kinds', () => {
     const cases: Array<[TableEvent, string]> = [
       [event('combat.turn_advanced', { round: 2, current_turn_entry_id: 'hero' }), 'Turn · Aria · Round 2'],
       [event('combat.healing_applied', { target_entry_id: 'hero', amount: 4 }), 'Aria · Healing · 4'],
-      [
-        event('combat.spell_cast_resolved', {
-          caster_entry_id: 'hero',
-          target_entry_id: 'enemy',
-          spell_ref: 'srd5.1:spell:hold-person',
-          concentration_started: true,
-          domain_events: [
-            { type: 'condition_applied', tag: 'paralyzed', effect_id: 'spell-effect:1' },
-          ],
-        }),
-        'Aria · Spell: hold person · → Goblin · Concentration started · Condition: paralyzed',
-      ],
       [
         event('combat.reaction_requested', {
           entry_id: 'hero',
@@ -162,7 +324,9 @@ describe('P4-E E11a compact combat log presentation', () => {
     ]
 
     for (const [source, expected] of cases) {
-      const rendered = text(formatCombatLogEvent(source, 'en', resolveEntryLabel))
+      const rendered = text(
+        formatCombatLogEvent(source, 'en', resolveEntryLabel, fallbackContentName),
+      )
       expect(rendered).toBe(expected)
       expect(rendered).not.toContain(source.kind)
     }
@@ -177,7 +341,11 @@ describe('P4-E E11a compact combat log presentation', () => {
   })
 
   it('keeps unknown events compatible by returning no combat-specific presentation', () => {
-    expect(formatCombatLogEvent(event('combat.future_event', { safe: true }), 'en', resolveEntryLabel)).toBeNull()
-    expect(formatCombatLogEvent(event('stage.updated', {}), 'zh-TW', resolveEntryLabel)).toBeNull()
+    expect(
+      formatCombatLogEvent(event('combat.future_event', { safe: true }), 'en', resolveEntryLabel, fallbackContentName),
+    ).toBeNull()
+    expect(
+      formatCombatLogEvent(event('stage.updated', {}), 'zh-TW', resolveEntryLabel, fallbackContentName),
+    ).toBeNull()
   })
 })

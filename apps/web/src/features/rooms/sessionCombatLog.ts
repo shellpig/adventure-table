@@ -1,5 +1,6 @@
 import type { TableEvent } from '../../api/sessions'
 import type { Locale } from '../../i18n/locale'
+import type { ContentNameResolver } from '../../i18n/useContentPresentations'
 
 export type CombatEntryLabelResolver = (entryId: string) => string | null
 
@@ -40,8 +41,6 @@ type CombatLogCopy = {
   total: string
   injury: string
   targets: string
-  unconscious: string
-  prone: string
   injuryHealthy: string
   injuryWounded: string
   injuryCritical: string
@@ -92,8 +91,6 @@ const COMBAT_LOG_COPY = {
     total: '總值',
     injury: '傷勢',
     targets: '個目標',
-    unconscious: '昏迷',
-    prone: '倒地',
     injuryHealthy: '健康',
     injuryWounded: '受傷',
     injuryCritical: '危急',
@@ -142,8 +139,6 @@ const COMBAT_LOG_COPY = {
     total: 'Total',
     injury: 'Injury',
     targets: 'targets',
-    unconscious: 'Unconscious',
-    prone: 'Prone',
     injuryHealthy: 'Healthy',
     injuryWounded: 'Wounded',
     injuryCritical: 'Critical',
@@ -186,12 +181,6 @@ function booleanField(source: Record<string, unknown> | null, key: string): bool
 
 function localizedTemplate(template: string, key: string, value: string | number): string {
   return template.replace(`{${key}}`, String(value))
-}
-
-function humanizeRef(value: string): string {
-  const pieces = value.split(':')
-  const suffix = pieces[pieces.length - 1] || value
-  return suffix.replace(/[-_]+/g, ' ')
 }
 
 function entryLabel(
@@ -260,23 +249,36 @@ function hpDetail(source: Record<string, unknown>, copy: CombatLogCopy): string 
   return maxHp === null ? `${copy.hp} ${currentHp}` : `${copy.hp} ${currentHp}/${maxHp}`
 }
 
-function conditionDetail(source: Record<string, unknown>, copy: CombatLogCopy): string | null {
-  if (source.dropped_to_zero === true) {
-    return `${copy.condition}: ${copy.unconscious}, ${copy.prone}`
-  }
+function conditionContentReference(event: Record<string, unknown>): string | null {
+  const type = stringField(event, 'type')
+  if (!type?.includes('condition')) return null
+  const direct = stringField(event, 'condition_ref') ?? stringField(event, 'condition')
+  if (direct) return direct
+  const tag = stringField(event, 'tag')
+  return tag ? `srd5.1:condition:${tag}` : null
+}
+
+function conditionDetail(
+  source: Record<string, unknown>,
+  copy: CombatLogCopy,
+  resolveContentName: ContentNameResolver,
+): string | null {
   const domainEvents = source.domain_events
   if (!Array.isArray(domainEvents)) return null
+
+  const conditions = new Set<string>()
   for (const raw of domainEvents) {
     const event = asRecord(raw)
     if (!event) continue
-    const type = stringField(event, 'type')
-    if (!type?.includes('condition')) continue
-    const condition = stringField(event, 'condition_ref')
-      ?? stringField(event, 'condition')
-      ?? stringField(event, 'tag')
-    if (condition) return `${copy.condition}: ${humanizeRef(condition)}`
+    const conditionRef = conditionContentReference(event)
+    if (!conditionRef) continue
+    conditions.add(resolveContentName(conditionRef, copy.condition))
   }
-  return null
+  if (conditions.size === 0) return null
+
+  const labels = [...conditions]
+  if (labels.length === 1 && labels[0] === copy.condition) return copy.condition
+  return `${copy.condition}: ${labels.join(', ')}`
 }
 
 function targetCount(source: Record<string, unknown>): number | null {
@@ -288,10 +290,36 @@ function targetCount(source: Record<string, unknown>): number | null {
   return Array.isArray(proposed) ? proposed.length : null
 }
 
+export function combatLogContentReferences(events: readonly TableEvent[]): string[] {
+  const references = new Set<string>()
+  for (const event of events) {
+    const spellRef = stringField(event.payload, 'spell_ref')
+    if (spellRef) references.add(spellRef)
+
+    if (event.kind === 'roll.resolved' && typeof event.payload.combat_id === 'string') {
+      const resolution = asRecord(event.payload.attack_resolution)
+      const attack = resolution ? asRecord(resolution.attack) : null
+      const attackSourceRef = attack ? stringField(attack, 'source_ref') : null
+      if (attackSourceRef) references.add(attackSourceRef)
+    }
+
+    const domainEvents = event.payload.domain_events
+    if (!Array.isArray(domainEvents)) continue
+    for (const raw of domainEvents) {
+      const domainEvent = asRecord(raw)
+      if (!domainEvent) continue
+      const conditionRef = conditionContentReference(domainEvent)
+      if (conditionRef) references.add(conditionRef)
+    }
+  }
+  return [...references]
+}
+
 function formatDamageOrHealing(
   source: Record<string, unknown>,
   copy: CombatLogCopy,
   resolveEntryLabel: CombatEntryLabelResolver,
+  resolveContentName: ContentNameResolver,
   kind: 'damage' | 'healing',
 ): CombatLogPresentation {
   const label = kind === 'damage' ? copy.damage : copy.healing
@@ -302,7 +330,7 @@ function formatDamageOrHealing(
   const detail = [
     hpDetail(source, copy),
     injury ? `${copy.injury}: ${injury}` : null,
-    conditionDetail(source, copy),
+    conditionDetail(source, copy, resolveContentName),
   ].filter(Boolean).join(' · ')
   return { summary, detail: detail || null }
 }
@@ -311,6 +339,7 @@ function formatAttack(
   payload: Record<string, unknown>,
   copy: CombatLogCopy,
   resolveEntryLabel: CombatEntryLabelResolver,
+  resolveContentName: ContentNameResolver,
 ): CombatLogPresentation | null {
   const resolution = asRecord(payload.attack_resolution)
   if (!resolution) return null
@@ -319,7 +348,10 @@ function formatAttack(
   const damage = asRecord(resolution.damage)
   const attacker = entryLabel(payload, 'attacker_entry_id', resolveEntryLabel)
   const target = entryLabel(payload, 'target_entry_id', resolveEntryLabel)
-  const attackName = stringField(attack, 'name') ?? copy.attack
+  const attackSourceRef = stringField(attack, 'source_ref')
+  const attackName = attackSourceRef
+    ? resolveContentName(attackSourceRef, copy.attack)
+    : stringField(attack, 'name') ?? copy.attack
   const hit = booleanField(attack, 'hit')
   const critical = booleanField(attack, 'critical') === true
   const outcome = critical ? copy.critical : hit === true ? copy.hit : hit === false ? copy.miss : null
@@ -347,21 +379,23 @@ function formatSpell(
   source: Record<string, unknown>,
   copy: CombatLogCopy,
   resolveEntryLabel: CombatEntryLabelResolver,
+  resolveContentName: ContentNameResolver,
   adjudicationRequested: boolean,
 ): CombatLogPresentation {
   const caster = entryLabel(source, 'caster_entry_id', resolveEntryLabel)
   const target = entryLabel(source, 'target_entry_id', resolveEntryLabel)
   const spellRef = stringField(source, 'spell_ref')
-  const spellName = spellRef ? humanizeRef(spellRef) : copy.spell
+  const spellName = spellRef ? resolveContentName(spellRef, copy.spell) : copy.spell
+  const spellLabel = spellName === copy.spell ? copy.spell : `${copy.spell}: ${spellName}`
   const count = targetCount(source)
-  const subject = [caster, `${copy.spell}: ${spellName}`, target ? `→ ${target}` : null].filter(Boolean).join(' · ')
+  const subject = [caster, spellLabel, target ? `→ ${target}` : null].filter(Boolean).join(' · ')
   const detailParts: Array<string | null> = []
   if (count !== null) detailParts.push(`${count} ${copy.targets}`)
   if (adjudicationRequested) detailParts.push(copy.adjudicationRequested)
   if (source.concentration_started === true) detailParts.push(copy.concentrationStarted)
   const injury = injuryLabel(stringField(source, 'target_injury_level'), copy)
   if (injury) detailParts.push(`${copy.injury}: ${injury}`)
-  const condition = conditionDetail(source, copy)
+  const condition = conditionDetail(source, copy, resolveContentName)
   if (condition) detailParts.push(condition)
   return { summary: subject || copy.spell, detail: detailParts.filter(Boolean).join(' · ') || null }
 }
@@ -386,6 +420,24 @@ function formatConcentration(
     dc === null ? null : `${copy.dc} ${dc}`,
   ].filter(Boolean).join(' · ')
   return { summary, detail: detail || null }
+}
+
+function formatConcentrationChange(
+  source: Record<string, unknown>,
+  copy: CombatLogCopy,
+  resolveEntryLabel: CombatEntryLabelResolver,
+): CombatLogPresentation {
+  const actor = entryLabel(source, 'entry_id', resolveEntryLabel)
+  const dropped = booleanField(source, 'dropped')
+  const outcome = dropped === true
+    ? copy.concentrationLost
+    : dropped === false
+      ? copy.concentrationMaintained
+      : copy.concentration
+  return {
+    summary: [actor, outcome].filter(Boolean).join(' · ') || copy.concentration,
+    detail: null,
+  }
 }
 
 function formatReaction(
@@ -433,6 +485,7 @@ export function formatCombatLogEvent(
   event: TableEvent,
   locale: Locale,
   resolveEntryLabel: CombatEntryLabelResolver,
+  resolveContentName: ContentNameResolver,
 ): CombatLogPresentation | null {
   const copy = COMBAT_LOG_COPY[locale]
   const payload = event.payload
@@ -458,16 +511,18 @@ export function formatCombatLogEvent(
       }
     }
     case 'combat.damage_applied':
-      return formatDamageOrHealing(payload, copy, resolveEntryLabel, 'damage')
+      return formatDamageOrHealing(payload, copy, resolveEntryLabel, resolveContentName, 'damage')
     case 'combat.healing_applied':
-      return formatDamageOrHealing(payload, copy, resolveEntryLabel, 'healing')
+      return formatDamageOrHealing(payload, copy, resolveEntryLabel, resolveContentName, 'healing')
     case 'combat.spell_cast_resolved':
     case 'combat.spell_aoe_resolved':
-      return formatSpell(payload, copy, resolveEntryLabel, false)
+      return formatSpell(payload, copy, resolveEntryLabel, resolveContentName, false)
     case 'combat.spell_aoe_adjudication_requested':
-      return formatSpell(payload, copy, resolveEntryLabel, true)
+      return formatSpell(payload, copy, resolveEntryLabel, resolveContentName, true)
     case 'combat.concentration_resolved':
       return formatConcentration(payload, copy, resolveEntryLabel)
+    case 'combat.concentration_changed':
+      return formatConcentrationChange(payload, copy, resolveEntryLabel)
     case 'combat.reaction_requested':
       return formatReaction(payload, copy, resolveEntryLabel, false)
     case 'combat.reaction_resolved':
@@ -478,7 +533,7 @@ export function formatCombatLogEvent(
       return formatAdjudication(payload, copy, resolveEntryLabel, true)
     case 'roll.resolved':
       return typeof payload.combat_id === 'string'
-        ? formatAttack(payload, copy, resolveEntryLabel)
+        ? formatAttack(payload, copy, resolveEntryLabel, resolveContentName)
         : null
     default:
       return null

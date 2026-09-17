@@ -14,6 +14,7 @@ import {
   type StageState,
   type TableEvent,
 } from '../../api/sessions'
+import { useContentPresentations } from '../../i18n/useContentPresentations'
 import { SessionCheckRequestPanel } from './SessionCheckRequestPanel'
 import { SessionQuickDicePanel } from './SessionQuickDicePanel'
 import { SessionRollRequestList } from './SessionRollRequestList'
@@ -46,7 +47,10 @@ import {
 import { endCombat, startCombat } from '../../api/combat'
 import { SessionCombatStage } from './SessionCombatStage'
 import { myEntryIds, useActiveCombat } from './sessionCombat'
-import { formatCombatLogEvent } from './sessionCombatLog'
+import {
+  combatLogContentReferences,
+  formatCombatLogEvent,
+} from './sessionCombatLog'
 import './sessionTable.css'
 
 
@@ -123,6 +127,12 @@ export function SessionTableSurface({
     () => applyStageEvents(initialStage, events),
     [initialStage, events],
   )
+  const combatLogEvents = useMemo(() => events.slice(-100), [events])
+  const combatLogContentRefs = useMemo(
+    () => combatLogContentReferences(combatLogEvents),
+    [combatLogEvents],
+  )
+  const { nameFor: resolveCombatContentName } = useContentPresentations(combatLogContentRefs)
   const [stage, setStage] = useState<StageState | null>(projectedStage)
   const [stageText, setStageText] = useState(projectedStage?.text ?? '')
   const [stageFile, setStageFile] = useState<File | null>(null)
@@ -772,8 +782,13 @@ export function SessionTableSurface({
             </div>
           ) : (
             <div className="session-log">
-              {events.slice(-100).map((event) => {
-                const presentation = formatCombatLogEvent(event, copy.locale, combatEntryLabel)
+              {combatLogEvents.map((event) => {
+                const presentation = formatCombatLogEvent(
+                  event,
+                  copy.locale,
+                  combatEntryLabel,
+                  resolveCombatContentName,
+                )
                 return (
                   <p key={`log:${event.session_id}:${event.seq}`}>
                     <code>#{event.seq}</code>{' '}
