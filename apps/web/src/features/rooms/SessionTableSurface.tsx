@@ -43,6 +43,8 @@ import {
   readSpeakerColors,
   writeSpeakerColor,
 } from './chatColors'
+import { SessionCombatStage } from './SessionCombatStage'
+import { myEntryIds, useActiveCombat } from './sessionCombat'
 import './sessionTable.css'
 
 
@@ -232,6 +234,27 @@ export function SessionTableSurface({
     [playerParticipants, controlledParticipants, isCurrentDm],
   )
 
+  const ownCharacterIds = useMemo(() => {
+    const participants = isCurrentDm ? snapshot.participants : controlledParticipants
+    return participants
+      .map((participant) => participant.active_character_id)
+      .filter((id): id is string => Boolean(id))
+  }, [isCurrentDm, snapshot.participants, controlledParticipants])
+
+  const { combat } = useActiveCombat({
+    roomId,
+    campaignId,
+    sessionId,
+    token,
+    events,
+    onError,
+  })
+
+  const derivedMyEntryIds = useMemo(
+    () => myEntryIds(combat, ownCharacterIds),
+    [combat, ownCharacterIds],
+  )
+
   useEffect(() => {
     if (subjectSeatId && subjectParticipants.some((item) => item.seat_id === subjectSeatId)) return
     setSubjectSeatId(subjectParticipants[0]?.seat_id ?? '')
@@ -388,6 +411,13 @@ export function SessionTableSurface({
       <div ref={layoutRef} className="session-table__layout" style={layoutStyle}>
         <section className="session-stage" aria-label={copy.mainStage}>
           <header><h2>{copy.mainStage}</h2></header>
+          {combat ? (
+            <SessionCombatStage
+              combat={combat}
+              myEntryIds={derivedMyEntryIds}
+              copy={copy}
+            />
+          ) : null}
           <div className="session-stage__canvas">
             {imageUrl ? <img src={imageUrl} alt={stage?.image_filename || copy.mainStage} /> : null}
             {stage?.text ? <p>{stage.text}</p> : null}

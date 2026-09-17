@@ -25,6 +25,7 @@ const SOURCE_FILES = [
   '../features/rooms/RoomLobbyPage.tsx',
   '../features/rooms/RoomSessionPage.tsx',
   '../features/rooms/SessionTableSurface.tsx',
+  '../features/rooms/SessionCombatStage.tsx',
   '../features/rooms/RoomWorkspacePage.tsx',
   '../features/rooms/AIJoinKit.tsx',
 ] as const
