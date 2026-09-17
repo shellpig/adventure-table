@@ -251,3 +251,10 @@ E10a / E10b / E10c-1 / E10c-2 / E10d-1 / E10d-2a / E10d-2b 全部交付並驗證
 - 2026-09-17：單檔 worker 回合再次訊息遞送逾時，沒有正式提交；剩餘修正只有 source 判定，Codex 依指揮者小修原則本機收尾。
 - `isContentReference` 排除 `inventory:` / `monster-action:` locator，僅 canonical 三段 reference 可走 attack name presentation；runtime attack 保留既有可見 `attack.name`。測試涵蓋 inventory id 內含 colon，避免誤判為 StableKey。
 - `npm test -- --run`：85 files / 453 passed；`npm run build` 通過。尚缺 runtime source 至 content 的雙語名稱 mapping，不能將保留英文 canonical name 視為翻譯完成；需後續 E11 小步補真實來源接線。fix2 / E11b 尚未完成。
+
+#### E11a-fix2a — Projected spell outcomes
+
+- 2026-09-17，ChatGPT worker 提交 `21bff4b6`：單體 damage/heal、AoE per-target damage/可見 HP 的 compact details，5 條新測試。
+- 指揮者修正：派工摘要誤將 heal event 描述為 `amount`；真 `spell_resolver.py` 是 `requested` / `restored`。Codex 將 formatter 改讀 `restored`，fixture 改成 requested 8 / restored 6，確認呈現的是實際恢復量，不把 requested 當恢復量。
+- 完成結果：85 files / 458 passed，`npm run build` 通過；AoE `outcomes[].damage/current_hp` 已核對 persistence。Player 缺 HP 時省略；utility damage=0 不假造傷害；单體 amount 不重複。
+- 本步限施法 amount/HP details；save/death-save/special-attack、其他 event 種類、runtime attack name 雙語 mapping、E11b parity 與 browser 證據仍未完成。

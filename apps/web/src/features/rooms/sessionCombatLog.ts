@@ -387,7 +387,7 @@ function spellDomainEventAmount(source: Record<string, unknown>, type: 'damage' 
   for (const raw of domainEvents) {
     const domainEvent = asRecord(raw)
     if (!domainEvent || stringField(domainEvent, 'type') !== type) continue
-    const amount = numberField(domainEvent, 'amount')
+    const amount = numberField(domainEvent, type === 'heal' ? 'restored' : 'amount')
     if (amount !== null) return amount
   }
   return null

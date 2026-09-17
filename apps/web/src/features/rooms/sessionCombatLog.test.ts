@@ -136,7 +136,7 @@ describe('P4-E E11a compact combat log presentation', () => {
       damage: 0,
       target_current_hp: 10,
       domain_events: [
-        { type: 'heal', amount: 6, target_ref: 'hero' },
+        { type: 'heal', requested: 8, restored: 6, target_ref: 'hero' },
       ],
     })
 
