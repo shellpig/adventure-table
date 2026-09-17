@@ -235,3 +235,13 @@
 ## E10 完成
 
 E10a / E10b / E10c-1 / E10c-2 / E10d-1 / E10d-2a / E10d-2b 全部交付並驗證。Quick Combat UI 現在涵蓋：唯讀 Stage、DM 控制與 initiative、attack 流程、全類型 pending roll、reaction window 回應、Grapple / Shove、spell cast 與 AoE propose、DM 的 range / reach / OA / special / affected_targets 裁定。**依使用者指示，P4-E 在此暫停**；E11（Chat / Log 呈現 + 雙語 + guide）與 E12（focused E2E + Subphase 關門 gate）尚未開工。
+
+### E11a — Compact Combat Log（驗證與修正中）
+
+- 起始：2026-09-17，ChatGPT Web worker；指揮者為 Codex。首輪提交 `fb6b318d`，雙語／狀態修正 `a2072bd4`；尚未完成 E11a 驗收，不代表 E11 關門。
+- 交付：`sessionCombatLog.ts` 與 formatter tests；`SessionTableSurface` 的 Log 接線、Chat predicate、可見 content name 批次解析。
+- 指揮者審核：首輪英文 slug 被當繁中名稱、Monster `dropped_to_zero` 被推論為 unconscious/prone、主動解除專注 event 無呈現，已退回 fix1；再次核對 production，attack `source_ref` 是 `inventory:<id>` / `monster-action:<index>`，不能當 content StableKey，已縮成單檔派工待交付。
+- 本機小修：新增 hook 使既有 5 個 `SessionTableSurface` 測試缺 Provider；`75ae8535` 使用真 `QueryClientProvider` / `LocaleProvider`，保留全部原斷言。`npm test -- --run`：85 files / 452 passed；`npm run build` 通過。此證據只涵蓋目前 tree，不表示 runtime attack 修正或完整 E11 驗收已完成。
+- Worker 執行限制：fix1b 兩輪訊息遞送逾時；無工具診斷回覆沒有持續 connector 封鎖、沒有已完成正式 blobs/tree，工作停在讀檔搜尋。指揮者已縮為只改 `sessionCombatLog.ts`，禁止額外搜尋。
+- 清理：worker 誤提交 `d02fb6c6` noop 空檔 `__tmp_should_not_exist`；指揮者移除該 orphan，保留既有歷史，不 force/rebase。
+- 留給下一步：runtime attack source／可見名稱修正與真 payload regression；save/death-save/special-attack 等已存在事件及 spell damage/heal compact outcome（fix2）；E11b guide/catalog/briefing parity。E12 未開始。
