@@ -27,7 +27,9 @@
 | E9b | Session page：DM Combat 控制（Start / End、加 SRD Monster / Quick Enemy、initiative request / roll / finalize、advance turn）+ Player initiative roll | 實作規格 1、4、7；測試 E.1 第 1–4 點 | ✅ |
 | E10a | attack / adjudication API client（型別鏡射 server model） | 實作規格 4、5 | ✅ |
 | E10b | Quick Action Bar（attack → target → roll）+ `GET .../combat/pending-rolls` + DM adjudication panel（range / OA / special） | 實作規格 4、5；測試 E.1 第 5–8、10 點 | ✅ |
-| E10c | Quick Action Bar 其餘動作：saving throw / death save / concentration roll、spell cast / AoE、reaction window 回應、reach / affected_targets adjudication | 實作規格 4、5、16；測試 E.1 | ⬜ |
+| E10c-1 | pending roll 全類型：domain `pending_combat_roll_request_type` 判定 + 4 個 roll client + Action Bar 各類型擲骰列與結果 | 實作規格 4、16 | ✅ |
+| E10c-2 | reaction window 接受 / 拒絕、Grapple / Shove 動作、DM reach 裁定 | 實作規格 4、5 | ⬜ |
+| E10d | spell cast（單體）/ AoE propose–resolve UI、affected_targets adjudication | 實作規格 4、5、14 | ⬜ |
 | E11 | Chat / Log 呈現 + 雙語 copy + guide | 實作規格 12、13；測試 E.4 | ⬜ |
 | E12 | focused E2E spec + Subphase 關門 gate | 測試指南 P4-E 全段 | ⬜ |
 
@@ -187,3 +189,10 @@
 - **Claude 審核修正**：ChatGPT 在 route 層把 `request_type == "other"` 的 roll 逐筆查 `attack_service.repository.get_request` 再改成 `"attack"`（N+1，且 REST 與 MCP `get_combat_context` 對同一 view 給不同 `request_type`）。改為 `CombatCoreRollRepository.list_pending_requests` outer join `combat_actions.action_kind`，`StoredCombatCoreRollRequest.action_kind` additive，`list_pending_rolls` 以 `action_kind == "attack"` 判定 `request_type="attack"`，route 只剩委派；MCP 同步受益。test 3 把 `/detail` 的拒絕狀態硬寫成 403，實際是 404（E4a 已斷言 `{403, 404}`），改成同 E4a 並加 body 相等斷言。
 - 測試：pytest E10b focused + E6 / E7c / E8 / P4-C core rolls / E3 / M03 boundary 34 passed；P4-B/C/D/E 全部 37 個檔案無 failure（PostgreSQL gated 者 skip）。`npm test -- --run` 84 files / 428 passed；build 通過。
 - 留給 E10c：其餘 roll 種類的 pending 列表與擲骰（saving throw `/saving-throws/roll`、death save、concentration 走 `/concentration/roll`）、spell cast / AoE propose-resolve UI、reaction window 回應、reach / affected_targets adjudication 控制；attack roll request 的 `roll_groups.label` 兩條路徑不一致（`Attack: <name>` vs `<name>`）可順手統一。
+
+### E10c-1 — pending roll 全類型
+
+- 起始：2026-09-17，ChatGPT。原 E10c（rolls + reactions + grapple/shove + reach）連續兩回合 30 分鐘 timeout 零輸出；用「不呼叫工具只回答三題」診斷出**任務以附件送出時，OpenAI 會封鎖 GitHub 寫入工具**（「無法確定要求的安全狀態」），改把全文貼進對話後一回合完成。commit `07319cb3`（+574/-59）。
+- 交付：domain `pending_combat_roll_request_type(StoredCombatCoreRollRequest)`（attack / death_save / grapple / shove 由 `action_kind`，Concentration / Initiative 由 `roll_group_label`，其餘沿用 stored `request_type`），`list_pending_rolls` 與 MCP `get_combat_context` 共用；parametrize 7 分支 + Player GET 同時列 saving_throw（`dc` null）與 death_save 的 route 案例。`api/combat.ts` 加 `rollSavingThrow` / `rollDeathSave` / `rollConcentration` / `rollSpecialAttack` 與 `SavingThrowResultView` / `DeathSaveResultView` / `ConcentrationCheckResultView` / `SpecialAttackView`。`sessionCombat.ts` 加 `PendingCombatRollDispatchTable` / `pendingCombatRollHandler`。Action Bar pending 列表改列 initiative 以外全部類型（label、saving throw 的 ability + DM-only DC），每列依 `request_type` 派送；結果列依類型顯示（attack 沿用；save total + 成功／失敗；death save d20 + 成功／失敗次數 + stable / dead；concentration total vs DC + 維持／失去；grapple / shove 只 refresh）。兩 locale 各 +17 key。
+- Claude 修正：parametrize 參數名 `request` 是 pytest 保留字，collection error → 改 `stored`。
+- 測試：pytest E10c-1 focused + E7c / E8 / P4-C core rolls / E3 / M03 boundary 35 passed；`npm test -- --run` 84 files / 431 passed；build 通過。

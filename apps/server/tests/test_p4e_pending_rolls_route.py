@@ -108,7 +108,7 @@ def _stored_request(
 
 
 @pytest.mark.parametrize(
-    ("request", "expected"),
+    ("stored", "expected"),
     (
         (_stored_request(request_type="other", action_kind="attack"), "attack"),
         (_stored_request(request_type="other", action_kind="death_save"), "death_save"),
@@ -120,10 +120,10 @@ def _stored_request(
     ),
 )
 def test_pending_combat_roll_request_type_is_canonical(
-    request: StoredCombatCoreRollRequest,
+    stored: StoredCombatCoreRollRequest,
     expected: str,
 ) -> None:
-    assert pending_combat_roll_request_type(request) == expected
+    assert pending_combat_roll_request_type(stored) == expected
 
 
 def test_1_player_get_lists_attack_roll_with_hidden_dc(adjudication_routes_fixture) -> None:
