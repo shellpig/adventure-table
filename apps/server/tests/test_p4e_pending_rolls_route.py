@@ -182,8 +182,10 @@ def test_3_non_participant_token_is_rejected_without_roll_side_effects(
     reference = client.get(f"{_combat_url(table)}/detail", headers=headers)
     response = client.get(f"{_combat_url(table)}/pending-rolls", headers=headers)
 
-    assert reference.status_code == 403
+    # Same rejection as GET /detail (E4a asserts {403, 404} for an unseated Room member).
+    assert reference.status_code in {403, 404}
     assert response.status_code == reference.status_code
+    assert response.json() == reference.json()
     with table.engine.connect() as connection:
         after = tuple(connection.execute(select(roll_requests.c.id)).scalars())
     assert after == before

@@ -55,6 +55,7 @@ class StoredCombatCoreRollRequest:
     visibility: str
     status: str
     roll_group_label: str | None = None
+    action_kind: str | None = None
 
 
 @dataclass(frozen=True)
@@ -132,6 +133,7 @@ class CombatCoreRollRepository:
             visibility=row["visibility"],
             status=row["status"],
             roll_group_label=row.get("roll_group_label"),
+            action_kind=row.get("action_kind"),
         )
 
     def get_request(self, *, session_id: UUID, request_id: UUID) -> StoredCombatCoreRollRequest | None:
@@ -158,8 +160,10 @@ class CombatCoreRollRepository:
                 select(
                     roll_requests,
                     roll_groups.c.label.label("roll_group_label"),
+                    combat_actions.c.action_kind.label("action_kind"),
                 )
                 .outerjoin(roll_groups, roll_groups.c.id == roll_requests.c.roll_group_id)
+                .outerjoin(combat_actions, combat_actions.c.roll_request_id == roll_requests.c.id)
                 .where(
                     roll_requests.c.session_id == session_id,
                     roll_requests.c.target_combat_entry_id.is_not(None),

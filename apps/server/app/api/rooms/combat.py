@@ -381,22 +381,9 @@ def list_pending_combat_rolls(
     context: RoomAccessContext = Depends(get_room_access_context),
     event_service: TableEventService = Depends(get_table_event_service),
     service: CombatCoreRollService = Depends(get_combat_core_roll_service),
-    attack_service: CombatAttackService = Depends(get_combat_attack_service),
 ) -> tuple[CombatPendingRollView, ...]:
     try:
-        actor = _actor_from_request(room_id, campaign_id, session_id, context, event_service)
-        pending = service.list_pending_rolls(actor)
-        normalized: list[CombatPendingRollView] = []
-        for item in pending:
-            if item.request_type == "other":
-                attack = attack_service.repository.get_request(
-                    session_id=actor.session_id,
-                    roll_request_id=item.id,
-                )
-                if attack is not None:
-                    item = item.model_copy(update={"request_type": "attack"})
-            normalized.append(item)
-        return tuple(normalized)
+        return service.list_pending_rolls(_actor_from_request(room_id, campaign_id, session_id, context, event_service))
     except Exception as exc:
         raise _map_combat_error(exc) from exc
 

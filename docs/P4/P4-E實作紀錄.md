@@ -25,7 +25,9 @@
 | E8 | `get_session_context` / briefing Combat context | 實作規格 9；設計 §8.6；測試 E.4 | ✅ |
 | E9a | Session page：combat API client + `useActiveCombat` + 唯讀 Combat Stage（Header / Initiative / Combatants、enemy secrecy 呈現） | 實作規格 1、2、3、6；測試 E.1 第 6–9 點呈現面 | ✅ |
 | E9b | Session page：DM Combat 控制（Start / End、加 SRD Monster / Quick Enemy、initiative request / roll / finalize、advance turn）+ Player initiative roll | 實作規格 1、4、7；測試 E.1 第 1–4 點 | ✅ |
-| E10 | Quick Action Bar + target 選擇 + adjudication UI | 實作規格 4、5；測試 E.1 | ⬜ |
+| E10a | attack / adjudication API client（型別鏡射 server model） | 實作規格 4、5 | ✅ |
+| E10b | Quick Action Bar（attack → target → roll）+ `GET .../combat/pending-rolls` + DM adjudication panel（range / OA / special） | 實作規格 4、5；測試 E.1 第 5–8、10 點 | ✅ |
+| E10c | Quick Action Bar 其餘動作：saving throw / death save / concentration roll、spell cast / AoE、reaction window 回應、reach / affected_targets adjudication | 實作規格 4、5、16；測試 E.1 | ⬜ |
 | E11 | Chat / Log 呈現 + 雙語 copy + guide | 實作規格 12、13；測試 E.4 | ⬜ |
 | E12 | focused E2E spec + Subphase 關門 gate | 測試指南 P4-E 全段 | ⬜ |
 
@@ -168,3 +170,20 @@
 - **Claude 審核修正**：agy 把 `roomId` / `campaignId` / `sessionId` / `token` / `isCurrentDm` / `onError` / `refresh` / `monsterOptions` 全部宣告成 optional 並在每個 handler 前加 `if (!roomId || ...) return` 防禦——改為 required prop、刪掉空值 guard 與 `refresh?.()` / `onError?.()`；Stage 不再接受 `monsterOptions` prop 覆寫，直接 `useMonsterOptions(isCurrentDm)`；DmControls 五段重複的 pending / try / refresh / onError / finally 收成 `runMutation()`；Quick Enemy 的 attack 只在 name 與 damage 都填時才送，不再用 `'Attack'` / `'1d6'` 補值偽造；測試改傳 required props。
 - 測試：`SessionCombatDmControls.test.tsx` 5 條（加敵表單與模式 tab；一個 entry 缺 initiative → Request enabled / Finalize disabled + 提示；全有 total → Finalize enabled / Request disabled；`running` 只剩 Advance turn；`initiative_pending` 無 Advance turn）、`SessionCombatStage.test.tsx` +2（DM 有 controls 區與敵人 row 的 roll button；Player 無 controls、roll button 只在自己 entry、敵人 row 沒有）、`SessionTableSurface.test.tsx` +2（DM 有 Start Combat、Player 無 toolbar）、`api/combat.test.ts` 4 條（start / roll initiative / suggested-order / quick-enemy 的 URL、method、body、Bearer）。`npm test -- --run` 82 files / 407 passed；`npm run build` 通過。
 - 未做 / 留給後續：browser 證據（E.1 第 1–4 點的 Playwright journey）在 E12；E10 需要 Quick Action Bar、target 選擇、attack / adjudication UI，可沿用 `runMutation` 模式與 `next_required_action`。
+
+### E10a — attack / adjudication API client
+
+- 起始：2026-09-17，改由 ChatGPT（GitHub connector，直接 commit + push 到 P4-E branch）實作，Claude pull 後審核；第一步刻意縮小以驗證 round trip。commit `acf64fc8`，4m34s。
+- 交付：`api/combat.ts` 加 `listAttacks` / `requestAttack` / `rollAttack` / `adjudicateAttackRange` / `listAdjudications` / `requestOpportunityAttack` / `requestSpecialAdjudication` / `resolveAdjudication` 與對應型別（`AttackRequestInput` / `AttackAdjudicationInput` / `AttackDefinitionView` / `AttackRequestView` / `AttackResolutionView` / `CombatAdjudicationView` / `OpportunityAttackRequestInput` / `SpecialAdjudicationRequestInput` / `AdjudicationDecisionInput`）；`RollInitiativeInput` 改名 `FormalRollInput` 供 initiative / attack 共用。
+- 審核：URL / method / body / 型別全部對 server；無越界改動。小瑕疵未改：View 型別把 server 必回欄位標成 optional、Input 的 `idempotency_key?: string | null` 與 E9b 的必填 `string` 不一致（皆合 server contract）。
+- 測試：`combat.test.ts` +3；`npm test -- --run` 82 files / 410 passed；build 通過。
+
+### E10b — Quick Action Bar attack flow + pending-rolls route + DM adjudication panel
+
+- 起始：2026-09-17，ChatGPT 一輪（第一輪連線中斷、blobs 已備但未 commit；補一句「繼續」後完成）。commit `bb3eb32f` + Claude 審核修正 commit。
+- 交付：
+  - Server：`GET .../combat/pending-rolls` → `CombatCoreRollService.list_pending_rolls`（E7c 只給 MCP 的方法首次接 REST）；`tests/test_p4e_pending_rolls_route.py` 3 條（Player 只見自己的 attack roll 且 `dc` null / DM 見全部含 saving throw `dc`、無受控 seat 的第二個 Player 得空 list / 非本場 participant 與 `GET /detail` 同一拒絕、零 `roll_requests` 副作用）。
+  - Web：`sessionCombat.ts` 把 `useActiveCombat` 抽成泛型 `useCombatEventResource`（mount + `combat.*` event seq 變動 refetch、stale 丟棄、`enabled` 關閉時回 initial），新增 `usePendingCombatRolls` / `usePendingAdjudications` / `actingEntryId` / `combatInjuryLabel`（自 Stage 搬出）/ `adjudicationKindLabel` / `runCombatMutation`（E9b DmControls 的 `runMutation` 抽成共用）。`SessionCombatActionBar.tsx`（`running` 時兩角色都掛，`data-combat-action-state` = `waiting` / `ready` / `adjudication-pending`）：attack select（`listAttacks(actingEntryId)`，只顯示名稱與 bonus）、target select（其他 active entry）、modifier、DM-only `range_confirmed` checkbox；`requestAttack` 回 `roll_request_id` 則顯示 Roll attack（`data-attack-roll`），為 null 則進 adjudication-pending 並等 `pendingAdjudications` 出現又消失後回 ready；pending attack roll 列表（`data-pending-roll`，Player 在 DM 裁定 in range 後由此擲）；Player 自己的 pending adjudication 唯讀列（`data-adjudication-pending`）；結果列 hit / miss / critical + damage，`after_hp` 為數字才顯示，否則顯示 injury label。`SessionCombatAdjudicationPanel.tsx`（DM-only，`data-combat-adjudications`）：range → roll_mode override + note + In range / Out of range（`adjudicateAttackRange`）、opportunity_attack → Trigger / No trigger、special → ruling textarea → `resolveAdjudication`；reach / affected_targets 只列不控（E10c）。Stage 接 `events` prop、`refreshCombatResources` 同時刷新 combat / rolls / adjudications。`sessionCopy.ts` 兩 locale 各 +29 key；CSS +87 行。
+- **Claude 審核修正**：ChatGPT 在 route 層把 `request_type == "other"` 的 roll 逐筆查 `attack_service.repository.get_request` 再改成 `"attack"`（N+1，且 REST 與 MCP `get_combat_context` 對同一 view 給不同 `request_type`）。改為 `CombatCoreRollRepository.list_pending_requests` outer join `combat_actions.action_kind`，`StoredCombatCoreRollRequest.action_kind` additive，`list_pending_rolls` 以 `action_kind == "attack"` 判定 `request_type="attack"`，route 只剩委派；MCP 同步受益。test 3 把 `/detail` 的拒絕狀態硬寫成 403，實際是 404（E4a 已斷言 `{403, 404}`），改成同 E4a 並加 body 相等斷言。
+- 測試：pytest E10b focused + E6 / E7c / E8 / P4-C core rolls / E3 / M03 boundary 34 passed；P4-B/C/D/E 全部 37 個檔案無 failure（PostgreSQL gated 者 skip）。`npm test -- --run` 84 files / 428 passed；build 通過。
+- 留給 E10c：其餘 roll 種類的 pending 列表與擲骰（saving throw `/saving-throws/roll`、death save、concentration 走 `/concentration/roll`）、spell cast / AoE propose-resolve UI、reaction window 回應、reach / affected_targets adjudication 控制；attack roll request 的 `roll_groups.label` 兩條路徑不一致（`Attack: <name>` vs `<name>`）可順手統一。

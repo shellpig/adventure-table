@@ -236,7 +236,8 @@ class CombatCoreRollService:
                     id=request.id,
                     roll_group_id=request.roll_group_id,
                     label=request.roll_group_label,
-                    request_type=request.request_type,
+                    # Attack rolls are stored as ``other``; the linked Attack action is the discriminator.
+                    request_type="attack" if request.action_kind == "attack" else request.request_type,
                     target_entry_id=request.target_combat_entry_id,
                     target_seat_id=request.target_seat_id,
                     ability_ref=request.ability_ref,
