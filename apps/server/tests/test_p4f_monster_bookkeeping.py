@@ -249,18 +249,24 @@ def test_p4f_monster_reveal_toggles() -> None:
             AddMonsterInput(monster_instance_id=enemy.id, idempotency_key="add-beast"),
         )
 
-        # Before reveals: Player sees no AC, no description, no position_note
+        # Before reveals: Player sees no AC, no description, no position_note, no reveal
         p_detail = table.combat.get_active_combat_detail(table.player_actor)
         p_combatant = next(c for c in p_detail.combatants if c.projection["id"] == str(enemy.id))
         assert "armor_class" not in p_combatant.projection
         assert "description" not in p_combatant.projection
         assert "position_note" not in p_combatant.projection
+        assert "reveal" not in p_combatant.projection
 
         dm_detail = table.combat.get_active_combat_detail(table.dm_actor)
         dm_combatant = next(c for c in dm_detail.combatants if c.projection["id"] == str(enemy.id))
         assert dm_combatant.projection["armor_class"] == 17
         assert dm_combatant.projection["description"] == "A massive draconic monster."
         assert dm_combatant.projection["position_note"] == "perched on the ledge"
+        assert dm_combatant.projection["reveal"] == {
+            "armor_class": False,
+            "description": False,
+            "position_note": False,
+        }
 
         # Patch 1: Reveal armor_class = True
         monster_service.update_instance(
@@ -277,6 +283,15 @@ def test_p4f_monster_reveal_toggles() -> None:
         assert "current_hp" not in p_combatant_1.projection
         assert "description" not in p_combatant_1.projection
         assert "position_note" not in p_combatant_1.projection
+        assert "reveal" not in p_combatant_1.projection
+
+        dm_detail_1 = table.combat.get_active_combat_detail(table.dm_actor)
+        dm_combatant_1 = next(c for c in dm_detail_1.combatants if c.projection["id"] == str(enemy.id))
+        assert dm_combatant_1.projection["reveal"] == {
+            "armor_class": True,
+            "description": False,
+            "position_note": False,
+        }
 
         # Patch 2: Reveal position_note = True and update note
         monster_service.update_instance(
@@ -293,14 +308,20 @@ def test_p4f_monster_reveal_toggles() -> None:
         assert p_combatant_2.projection["armor_class"] == 17
         assert p_combatant_2.projection["position_note"] == "hovering near the ceiling"
         assert "current_hp" not in p_combatant_2.projection
+        assert "reveal" not in p_combatant_2.projection
 
-        # DM projection remains unchanged and complete throughout
+        # DM projection remains complete throughout with updated reveal flags
         dm_detail_final = table.combat.get_active_combat_detail(table.dm_actor)
         dm_combatant_final = next(c for c in dm_detail_final.combatants if c.projection["id"] == str(enemy.id))
         assert dm_combatant_final.projection["armor_class"] == 17
         assert dm_combatant_final.projection["description"] == "A massive draconic monster."
         assert dm_combatant_final.projection["position_note"] == "hovering near the ceiling"
         assert dm_combatant_final.projection["current_hp"] == 110
+        assert dm_combatant_final.projection["reveal"] == {
+            "armor_class": True,
+            "description": False,
+            "position_note": True,
+        }
     finally:
         table.engine.dispose()
 

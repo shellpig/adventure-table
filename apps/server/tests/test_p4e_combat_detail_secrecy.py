@@ -150,6 +150,11 @@ def test_dm_detail_contains_exact_monster_mechanics_and_secrets(secrecy_table) -
         "effect_ids": ["eff-fly"],
     }
     assert proj["position_note"] == "behind pillar"
+    assert proj["reveal"] == {
+        "armor_class": False,
+        "description": False,
+        "position_note": False,
+    }
 
 
 def test_player_detail_redacts_monster_secrecy_and_preserves_injury_level(secrecy_table) -> None:
@@ -195,6 +200,7 @@ def test_player_detail_redacts_monster_secrecy_and_preserves_injury_level(secrec
         "reactions",
         "legendary_actions",
         "reaction_available",
+        "reveal",
     ]
     for key in forbidden_keys:
         assert key not in raw_proj, f"Forbidden key '{key}' leaked into player monster projection: {raw_proj}"
@@ -251,6 +257,7 @@ def test_player_detail_contains_exact_own_character_mechanics(secrecy_table) -> 
     assert proj["death_saves"]["dead"] is False
 
     assert proj["exhaustion_level"] == 1
+    assert "reveal" not in proj
 
 
 def test_hidden_visibility_monster_omitted_for_player_but_present_for_dm(secrecy_table) -> None:

@@ -1,6 +1,6 @@
 # P4-F — Full P4 Integration & Closeout 實作紀錄
 
-最後更新：2026-09-17
+最後更新：2026-09-18
 
 ## 目標與邊界
 
@@ -16,7 +16,8 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 |---|---|---|---|
 | F1 | Monster 0 HP outcome：DM 選 dead / unconscious / surrendered / fled / other；migration `0027` 放寬 `combat_entries.status` / `monster_instances.combat_status`；REST + MCP + event | 實作規格 P4-C 10、P4-E 7、P4-F 1；規格企劃「Monster 0 HP / Combat End」 | ✅ |
 | F2 | Monster Instance bookkeeping：DM PATCH name / visibility / position_note + reveal toggles（AC / description / position note）；`MonsterRevealState` 持久化（migration `0028`）；REST + MCP + event | 實作規格 P4-E 7（部分→完整）、3 | ✅ |
-| F3 | F1 / F2 的 Session table UI：DM 卡片 outcome / visibility / reveal / position note 控制、新 entry status 標籤、Player 可見 outcome、雙語 copy、web client | 實作規格 P4-E 1、2、13 | ⬜ |
+| F3a | F3 前半：DM detail projection 帶 `reveal` flags（Player 不得收到）；web client `setMonsterOutcome` / `updateMonsterInstance`；新 entry status 標籤 unconscious / surrendered / fled；combat log 兩個新 event；雙語 | 實作規格 P4-E 2、3、12、13 | ✅ |
+| F3b | F3 後半：DM 卡片 per-monster 控制元件（outcome / visibility / reveal toggles / position note）接進 Stage；Player 不渲染；雙語 copy；tests | 實作規格 P4-E 1、2、7、13 | ⬜ |
 | F4 | `grappled` escape action + Character state PATCH DTO 補 `concentration` / `exhaustion_level` / `death_saves` / `temporary_effects` | P4-C / P4-D closeout 留下 | ⬜ |
 | F5 | 真 PostgreSQL + server restart / reconnect：Round ≥ 2、pending save 或 reaction → restart → 狀態完整、resolve 一次不重擲 | 實作規格 P4-F 3；測試指南 F.1 | ⬜ |
 | F6 | Full browser journey spec（F.2 全項：spell / save、damage / healing、condition、concentration 或 reaction、0 HP outcome、Session boundary resume、End cleanup）+ `P4 Full-Stack E2E` workflow | 實作規格 P4-F 1、2、4、5、6；測試指南 F.2 | ⬜ |
@@ -43,4 +44,14 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 - 交付：migration `0028_p4f_monster_reveal_state`（`monster_instances.reveal_state` JSON NOT NULL default `{}`）；`StoredMonsterInstance.reveal_state`；`MonsterRevealState.from_mapping` / `to_mapping`，`monster_instance_to_combatant` 未傳 reveals 時直接讀 instance 持久化狀態（`get_active_combat_detail` 的「尚未持久化」占位移除）；`MonsterRevealPatch` / `MonsterInstancePatchInput`（name / visibility / position_note / reveal，`model_fields_set` 區分省略與 null，空 patch 拒絕）；新 `MonsterBookkeepingRepository.update_instance`（單一 `append(transaction_projection=...)`：鎖 instance、merge reveal、name 變更同步 active `combat_entries.display_name` 並 bump `combats.revision`、公開 event `combat.monster_instance_updated`，payload 只有 monster_instance_id / combat_entry_id / name / visibility / changed / reveal flags）；`MonsterInstanceService.update_instance`（DM-only、notifier wake）；REST `PATCH .../monster-instances/{instance_id}`；MCP `combat_update_monster_instance`（DM）。head 引用改到 `0028`。
 - **Claude 審核修正**：① `MonsterInstanceService` 新增 optional `bookkeeping_repository` 參數並在 None 時自建 → 改為永遠由 service 自建（它本來就有 engine 與 event repository），dependencies.py 與測試 fixture 不再注入；② `MonsterRepository.update_instance` 加了沒人呼叫的 `reveal_state` 參數 → 移除；③ repository 內對已是 bool 的 reveal patch 再 `isinstance` 過濾、對 Literal 已驗證的 visibility 再驗一次 → 移除；④ agy 改 `test_p4c_postgres_migration.py` head 集合時把 `P4C_HEAD =` 那行刪掉，P4 regression collection 直接 NameError → 補回。
 - 測試：`tests/test_p4f_monster_bookkeeping.py` 6 條（name 傳播到 entry + revision + event + idempotency；hidden → public 後 Player detail 才出現且仍無 AC / HP；reveal AC / position note 只開放對應欄位；Player 拒絕零副作用 / 他 Campaign instance 404 / 空 patch；REST + MCP parity；event payload 無秘密）；`tests/test_p4f_postgres_migration.py` +1（0027 → heads 加欄位、既有 row 得 `{}`、downgrade 移除）。本機 P4-B～F + M04-C + M03 + migration contract 全通過；`alembic heads` = `0015` / `0028`。
-- 留給 F3：UI（DM 卡片 outcome / visibility / reveal / position note 控制、新 status 標籤、Player 端呈現）。依使用者指示 F3 暫不派工。
+- 留給 F3：UI（DM 卡片 outcome / visibility / reveal / position note 控制、新 status 標籤、Player 端呈現）。
+
+### F3a — DM projection reveal flags、web client、status 標籤、combat log
+
+- 2026-09-18，agy worker（Gemini 3.8 Flash (High)，1 回合 9 分鐘），Claude 審核與 commit。prompt：`C:\_work\AI_Work\Toolsgy-runsgy-p4f-f3a.prompt.txt`。F3 拆成 F3a / F3b 兩步，避免 UI 大步 timeout。
+- 契約缺口（Claude 派工前發現）：DM detail projection 只有 `visibility`，沒帶 F2 持久化的 reveal 狀態，UI 無法呈現 toggle 現況；F3a 補上。
+- 交付：`project_combatant` DM audience 且 `kind == "monster"` 時加 `reveal: {armor_class, description, position_note}`；Player friendly / enemy projection 不帶該 key（secrecy test forbidden_keys 加 `reveal`，own character 斷言無 `reveal`；`test_p4f_monster_reveal_toggles` 斷言 DM `reveal` 隨 PATCH 翻轉）。web `api/combat.ts`：`CombatantProjection.reveal?`、`MonsterOutcome` / `MonsterOutcomeInput` / `MonsterRevealPatch` / `MonsterInstancePatchInput`、`setMonsterOutcome`（POST `.../combat/entries/{entryId}/outcome`）、`updateMonsterInstance`（PATCH `.../monster-instances/{instanceId}`）。`sessionCopy.ts` 加 `combatStatusUnconscious` / `combatStatusSurrendered` / `combatStatusFled`（雙語），`SessionCombatStage.getStatusLabel` 處理三種新 status。`sessionCombatLog.ts`：`combat.monster_outcome_set`（`<entry> · <outcome label>`，note 作 detail）與 `combat.monster_instance_updated`（`<name> · 敵人資訊已更新`，`changed` 欄位名 localized 作 detail，不印 reveal bool）；copy 10 key 雙語。
+- **Claude 審核修正**：只有 vitest 案例名多了 `(i)` 前綴，直接改掉；其餘零修改。
+- 測試：pytest 焦點 5 檔 32 passed；P4-B～F + M04-C + M03 boundary 全通過（exit 0）；`npm test -- --run` 85 files / 469 passed；`npm run build` 乾淨。長行數對照 HEAD 無新增。
+- 留給 F3b：per-card DM 控制元件與 Stage 接線、Player 不渲染測試。
+

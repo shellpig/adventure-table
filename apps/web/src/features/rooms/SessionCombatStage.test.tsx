@@ -349,4 +349,32 @@ describe('SessionCombatStage component', () => {
     expect(pendingDm).not.toContain('data-combat-action-bar')
     expect(pendingDm).not.toContain('data-combat-adjudications')
   })
+
+  it('renders Fled badge for a Player render when an entry has status fled', () => {
+    const fledGoblin = makeEntry('entry-goblin', 'Goblin Scout', null, 2, {
+      status: 'fled',
+    })
+    const combatWithFledEnemy: CombatDetailView = {
+      ...playerCombatDetail,
+      entries: [entryMira, fledGoblin, entryHidden],
+    }
+
+    const markup = renderStage(
+      <SessionCombatStage
+        combat={combatWithFledEnemy}
+        myEntryIds={['entry-mira']}
+        copy={copyEn}
+        isCurrentDm={false}
+        roomId="room"
+        campaignId="campaign"
+        sessionId="session"
+        token="token"
+        events={[]}
+        onError={() => undefined}
+        refresh={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain(copyEn.combatStatusFled)
+  })
 })

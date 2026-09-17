@@ -67,6 +67,11 @@ export type CombatantProjection = {
   position_note?: string | null
   description?: string | null
   dm_notes?: string | null
+  reveal?: {
+    armor_class: boolean
+    description: boolean
+    position_note: boolean
+  } | null
   concentration?: Record<string, unknown> | null
   death_saves?: Record<string, unknown> | null
   exhaustion_level?: number | null
@@ -168,6 +173,28 @@ export type MonsterInstanceView = {
   armor_class?: number | null
   visibility: string
   position_note?: string | null
+}
+
+export type MonsterOutcome = 'dead' | 'unconscious' | 'surrendered' | 'fled' | 'other'
+
+export type MonsterOutcomeInput = {
+  outcome: MonsterOutcome
+  note?: string | null
+  idempotency_key: string
+}
+
+export type MonsterRevealPatch = {
+  armor_class?: boolean
+  description?: boolean
+  position_note?: boolean
+}
+
+export type MonsterInstancePatchInput = {
+  name?: string
+  visibility?: 'public' | 'hidden'
+  position_note?: string | null
+  reveal?: MonsterRevealPatch
+  idempotency_key: string
 }
 
 export type InitiativeRequestView = {
@@ -861,6 +888,34 @@ export function createQuickEnemy(
 ): Promise<MonsterInstanceView> {
   return request(`${monsterInstancesBase(roomId, campaignId, sessionId)}/quick-enemy`, token, {
     method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function setMonsterOutcome(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  entryId: string,
+  body: MonsterOutcomeInput,
+  token: string,
+): Promise<CombatView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/entries/${entryId}/outcome`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function updateMonsterInstance(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  instanceId: string,
+  body: MonsterInstancePatchInput,
+  token: string,
+): Promise<MonsterInstanceView> {
+  return request(`${monsterInstancesBase(roomId, campaignId, sessionId)}/${instanceId}`, token, {
+    method: 'PATCH',
     body: JSON.stringify(body),
   })
 }

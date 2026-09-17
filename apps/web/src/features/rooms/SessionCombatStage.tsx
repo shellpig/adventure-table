@@ -44,6 +44,12 @@ function getStatusLabel(status: string, copy: SessionCopy): string {
       return copy.combatStatusDead
     case 'removed':
       return copy.combatStatusRemoved
+    case 'unconscious':
+      return copy.combatStatusUnconscious
+    case 'surrendered':
+      return copy.combatStatusSurrendered
+    case 'fled':
+      return copy.combatStatusFled
     default:
       return status
   }

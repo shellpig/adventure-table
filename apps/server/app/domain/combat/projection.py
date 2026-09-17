@@ -120,7 +120,14 @@ def project_combatant(
     """
 
     if audience == "dm":
-        return _full_projection(state)
+        projected = _full_projection(state)
+        if state.kind == "monster":
+            projected["reveal"] = {
+                "armor_class": state.armor_class_revealed,
+                "description": state.description_revealed,
+                "position_note": state.position_note_revealed,
+            }
+        return projected
     if audience != "player":
         raise ValueError(f"unsupported combatant audience: {audience}")
 

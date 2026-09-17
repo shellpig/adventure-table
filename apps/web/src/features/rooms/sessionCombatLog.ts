@@ -94,6 +94,16 @@ type CombatLogCopy = {
   savesRequested: string
   attackerTotal: string
   targetTotal: string
+  outcomeDead: string
+  outcomeUnconscious: string
+  outcomeSurrendered: string
+  outcomeFled: string
+  outcomeOther: string
+  enemyUpdated: string
+  changedName: string
+  changedVisibility: string
+  changedPositionNote: string
+  changedReveal: string
 }
 
 const COMBAT_LOG_COPY = {
@@ -182,6 +192,16 @@ const COMBAT_LOG_COPY = {
     savesRequested: '等待豁免檢定',
     attackerTotal: '攻擊方總值',
     targetTotal: '目標總值',
+    outcomeDead: '死亡',
+    outcomeUnconscious: '昏迷',
+    outcomeSurrendered: '投降',
+    outcomeFled: '逃離',
+    outcomeOther: '其他結果',
+    enemyUpdated: '敵人資訊已更新',
+    changedName: '名稱',
+    changedVisibility: '能見度',
+    changedPositionNote: '位置備註',
+    changedReveal: '公開資訊',
   },
   en: {
     combatStarted: 'Combat started',
@@ -268,6 +288,16 @@ const COMBAT_LOG_COPY = {
     savesRequested: 'Saving throws requested',
     attackerTotal: 'Attacker total',
     targetTotal: 'Target total',
+    outcomeDead: 'Dead',
+    outcomeUnconscious: 'Unconscious',
+    outcomeSurrendered: 'Surrendered',
+    outcomeFled: 'Fled',
+    outcomeOther: 'Other outcome',
+    enemyUpdated: 'Enemy updated',
+    changedName: 'Name',
+    changedVisibility: 'Visibility',
+    changedPositionNote: 'Position note',
+    changedReveal: 'Revealed info',
   },
 } satisfies Record<Locale, CombatLogCopy>
 
@@ -399,6 +429,38 @@ function specialAttackKindLabel(kind: string | null, copy: CombatLogCopy): strin
       return copy.shove
     default:
       return copy.specialAttack
+  }
+}
+
+function monsterOutcomeLabel(outcome: string | null, copy: CombatLogCopy): string | null {
+  switch (outcome) {
+    case 'dead':
+      return copy.outcomeDead
+    case 'unconscious':
+      return copy.outcomeUnconscious
+    case 'surrendered':
+      return copy.outcomeSurrendered
+    case 'fled':
+      return copy.outcomeFled
+    case 'other':
+      return copy.outcomeOther
+    default:
+      return null
+  }
+}
+
+function monsterChangedFieldLabel(field: string, copy: CombatLogCopy): string | null {
+  switch (field) {
+    case 'name':
+      return copy.changedName
+    case 'visibility':
+      return copy.changedVisibility
+    case 'position_note':
+      return copy.changedPositionNote
+    case 'reveal':
+      return copy.changedReveal
+    default:
+      return null
   }
 }
 
@@ -823,6 +885,27 @@ export function formatCombatLogEvent(
       return {
         summary: [target, copy.entryRemoved].filter(Boolean).join(' · ') || copy.entryRemoved,
         detail: null,
+      }
+    }
+    case 'combat.monster_outcome_set': {
+      const target = entryLabel(payload, 'entry_id', resolveEntryLabel)
+      const outcome = monsterOutcomeLabel(stringField(payload, 'outcome'), copy)
+      const note = stringField(payload, 'note')
+      return {
+        summary: [target, outcome].filter(Boolean).join(' · ') || copy.outcomeOther,
+        detail: note,
+      }
+    }
+    case 'combat.monster_instance_updated': {
+      const name = stringField(payload, 'name')
+      const rawChanged = Array.isArray(payload.changed) ? payload.changed : []
+      const changedLabels = rawChanged
+        .map((field) => (typeof field === 'string' ? monsterChangedFieldLabel(field, copy) : null))
+        .filter(Boolean)
+      const detail = changedLabels.length > 0 ? changedLabels.join(', ') : null
+      return {
+        summary: [name, copy.enemyUpdated].filter(Boolean).join(' · ') || copy.enemyUpdated,
+        detail,
       }
     }
     case 'combat.initiative_ordered': {
