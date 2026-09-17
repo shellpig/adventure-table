@@ -1,5 +1,9 @@
 import { renderToStaticMarkup } from 'react-dom/server'
+import type { ComponentProps, ReactElement } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
+import { LocaleProvider } from '../../i18n/LocaleProvider'
+import { LOCALE_STORAGE_KEY } from '../../i18n/locale'
 
 import type { RoomCharacterSummary } from '../../api/campaigns'
 import type { CampaignSeat } from '../../api/seats'
@@ -16,6 +20,23 @@ const SERENA_SEAT = '40000000-0000-4000-8000-000000000003'
 const MIRA_CHARACTER = '50000000-0000-4000-8000-000000000001'
 const SERENA_CHARACTER = '50000000-0000-4000-8000-000000000002'
 const NOW = '2026-09-09T00:00:00Z'
+
+function renderSurface(element: ReactElement<ComponentProps<typeof SessionTableSurface>>) {
+  const client = new QueryClient()
+  return renderToStaticMarkup(
+    <QueryClientProvider client={client}>
+      <LocaleProvider
+        storage={{
+          getItem: (key) => key === LOCALE_STORAGE_KEY ? element.props.copy.locale : null,
+          setItem: () => undefined,
+        }}
+        documentTarget={null}
+      >
+        {element}
+      </LocaleProvider>
+    </QueryClientProvider>,
+  )
+}
 
 const snapshot: SessionSnapshot = {
   id: SESSION_ID,
@@ -132,7 +153,7 @@ function rollRequestedEvent(): TableEvent {
 describe('SessionTableSurface message presentation', () => {
   it('renders one structured roll.requested prompt in chat without exposing DC', () => {
     for (const locale of ['zh-TW', 'en'] as const) {
-      const markup = renderToStaticMarkup(
+      const markup = renderSurface(
         <SessionTableSurface
           roomId={ROOM_ID}
           campaignId={CAMPAIGN_ID}
@@ -161,7 +182,7 @@ describe('SessionTableSurface message presentation', () => {
   })
 
   it('renders acting-seat speakers for OOC and Whisper events without subjects', () => {
-    const markup = renderToStaticMarkup(
+    const markup = renderSurface(
       <SessionTableSurface
         roomId={ROOM_ID}
         campaignId={CAMPAIGN_ID}
@@ -213,7 +234,7 @@ describe('SessionTableSurface message presentation', () => {
     })
 
     try {
-      const markup = renderToStaticMarkup(
+      const markup = renderSurface(
         <SessionTableSurface
           roomId={ROOM_ID}
           campaignId={CAMPAIGN_ID}
@@ -251,7 +272,7 @@ describe('SessionTableSurface combat toolbar', () => {
   it('renders Start Combat button for DM when combat is null', () => {
     for (const locale of ['zh-TW', 'en'] as const) {
       const copy = sessionCopy(locale)
-      const markup = renderToStaticMarkup(
+      const markup = renderSurface(
         <SessionTableSurface
           roomId={ROOM_ID}
           campaignId={CAMPAIGN_ID}
@@ -277,7 +298,7 @@ describe('SessionTableSurface combat toolbar', () => {
   it('does not render combat toolbar or Start Combat button for Player', () => {
     for (const locale of ['zh-TW', 'en'] as const) {
       const copy = sessionCopy(locale)
-      const markup = renderToStaticMarkup(
+      const markup = renderSurface(
         <SessionTableSurface
           roomId={ROOM_ID}
           campaignId={CAMPAIGN_ID}
