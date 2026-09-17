@@ -323,12 +323,7 @@ export type SpecialAttackAdjudicationInput = {
 }
 
 export type ReactionKind =
-  | 'opportunity_attack'
-  | 'shield'
-  | 'counterspell'
-  | 'ready'
-  | 'legendary_action'
-  | 'other'
+  'opportunity_attack' | 'shield' | 'counterspell' | 'ready' | 'legendary_action' | 'other'
 
 export type ReactionWindowView = {
   window_id: string
@@ -415,110 +410,338 @@ const specialAttacksBase = (roomId: string, campaignId: string, sessionId: strin
 const monsterInstancesBase = (roomId: string, campaignId: string, sessionId: string) =>
   `${tableBase(roomId, campaignId, sessionId)}/monster-instances`
 
-export function startCombat(roomId: string, campaignId: string, sessionId: string, body: StartCombatInput, token: string): Promise<CombatView> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/start`, token, { method: 'POST', body: JSON.stringify(body) })
+export function startCombat(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: StartCombatInput,
+  token: string,
+): Promise<CombatView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/start`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function endCombat(roomId: string, campaignId: string, sessionId: string, body: CombatMutationInput, token: string): Promise<CombatView> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/end`, token, { method: 'POST', body: JSON.stringify(body) })
+export function endCombat(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: CombatMutationInput,
+  token: string,
+): Promise<CombatView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/end`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function addMonsterToCombat(roomId: string, campaignId: string, sessionId: string, body: AddMonsterInput, token: string): Promise<CombatView> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/entries/monsters`, token, { method: 'POST', body: JSON.stringify(body) })
+export function addMonsterToCombat(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: AddMonsterInput,
+  token: string,
+): Promise<CombatView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/entries/monsters`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function requestInitiative(roomId: string, campaignId: string, sessionId: string, body: RequestInitiativeInput, token: string): Promise<InitiativeRequestResponse> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/initiative/request`, token, { method: 'POST', body: JSON.stringify(body) })
+export function requestInitiative(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: RequestInitiativeInput,
+  token: string,
+): Promise<InitiativeRequestResponse> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/initiative/request`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function rollInitiative(roomId: string, campaignId: string, sessionId: string, body: FormalRollInput, token: string): Promise<InitiativeRollResponse> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/initiative/roll`, token, { method: 'POST', body: JSON.stringify(body) })
+export function rollInitiative(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: FormalRollInput,
+  token: string,
+): Promise<InitiativeRollResponse> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/initiative/roll`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function getSuggestedInitiativeOrder(roomId: string, campaignId: string, sessionId: string, token: string): Promise<string[]> {
+export function getSuggestedInitiativeOrder(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  token: string,
+): Promise<string[]> {
   return request(`${combatBase(roomId, campaignId, sessionId)}/initiative/suggested-order`, token)
 }
 
-export function finalizeInitiative(roomId: string, campaignId: string, sessionId: string, body: FinalizeInitiativeInput, token: string): Promise<CombatView> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/initiative/finalize`, token, { method: 'POST', body: JSON.stringify(body) })
+export function finalizeInitiative(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: FinalizeInitiativeInput,
+  token: string,
+): Promise<CombatView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/initiative/finalize`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function advanceTurn(roomId: string, campaignId: string, sessionId: string, body: CombatMutationInput, token: string): Promise<CombatView> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/turn/advance`, token, { method: 'POST', body: JSON.stringify(body) })
+export function advanceTurn(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: CombatMutationInput,
+  token: string,
+): Promise<CombatView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/turn/advance`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function listAttacks(roomId: string, campaignId: string, sessionId: string, entryId: string, token: string): Promise<AttackDefinitionView[]> {
+export function listAttacks(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  entryId: string,
+  token: string,
+): Promise<AttackDefinitionView[]> {
   return request(`${combatBase(roomId, campaignId, sessionId)}/entries/${entryId}/attacks`, token)
 }
 
-export function requestAttack(roomId: string, campaignId: string, sessionId: string, body: AttackRequestInput, token: string): Promise<AttackRequestView> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/attacks/request`, token, { method: 'POST', body: JSON.stringify(body) })
+export function requestAttack(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: AttackRequestInput,
+  token: string,
+): Promise<AttackRequestView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/attacks/request`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function rollAttack(roomId: string, campaignId: string, sessionId: string, body: FormalRollInput, token: string): Promise<AttackResolutionView> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/attacks/roll`, token, { method: 'POST', body: JSON.stringify(body) })
+export function rollAttack(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: FormalRollInput,
+  token: string,
+): Promise<AttackResolutionView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/attacks/roll`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function rollSavingThrow(roomId: string, campaignId: string, sessionId: string, body: FormalRollInput, token: string): Promise<SavingThrowResultView> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/saving-throws/roll`, token, { method: 'POST', body: JSON.stringify(body) })
+export function rollSavingThrow(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: FormalRollInput,
+  token: string,
+): Promise<SavingThrowResultView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/saving-throws/roll`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function rollDeathSave(roomId: string, campaignId: string, sessionId: string, body: FormalRollInput, token: string): Promise<DeathSaveResultView> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/death-saves/roll`, token, { method: 'POST', body: JSON.stringify(body) })
+export function rollDeathSave(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: FormalRollInput,
+  token: string,
+): Promise<DeathSaveResultView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/death-saves/roll`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function rollConcentration(roomId: string, campaignId: string, sessionId: string, body: FormalRollInput, token: string): Promise<ConcentrationCheckResultView> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/concentration/roll`, token, { method: 'POST', body: JSON.stringify(body) })
+export function rollConcentration(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: FormalRollInput,
+  token: string,
+): Promise<ConcentrationCheckResultView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/concentration/roll`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function rollSpecialAttack(roomId: string, campaignId: string, sessionId: string, body: FormalRollInput, token: string): Promise<SpecialAttackView> {
-  return request(`${specialAttacksBase(roomId, campaignId, sessionId)}/roll`, token, { method: 'POST', body: JSON.stringify(body) })
+export function rollSpecialAttack(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: FormalRollInput,
+  token: string,
+): Promise<SpecialAttackView> {
+  return request(`${specialAttacksBase(roomId, campaignId, sessionId)}/roll`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function requestSpecialAttack(roomId: string, campaignId: string, sessionId: string, body: SpecialAttackRequestInput, token: string): Promise<SpecialAttackView> {
-  return request(`${specialAttacksBase(roomId, campaignId, sessionId)}/request`, token, { method: 'POST', body: JSON.stringify(body) })
+export function requestSpecialAttack(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: SpecialAttackRequestInput,
+  token: string,
+): Promise<SpecialAttackView> {
+  return request(`${specialAttacksBase(roomId, campaignId, sessionId)}/request`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function adjudicateSpecialAttack(roomId: string, campaignId: string, sessionId: string, body: SpecialAttackAdjudicationInput, token: string): Promise<SpecialAttackView> {
-  return request(`${specialAttacksBase(roomId, campaignId, sessionId)}/adjudicate`, token, { method: 'POST', body: JSON.stringify(body) })
+export function adjudicateSpecialAttack(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: SpecialAttackAdjudicationInput,
+  token: string,
+): Promise<SpecialAttackView> {
+  return request(`${specialAttacksBase(roomId, campaignId, sessionId)}/adjudicate`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function getReactionWindow(roomId: string, campaignId: string, sessionId: string, entryId: string, token: string): Promise<ReactionWindowView | null> {
+export function getReactionWindow(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  entryId: string,
+  token: string,
+): Promise<ReactionWindowView | null> {
   return request(`${combatBase(roomId, campaignId, sessionId)}/entries/${entryId}/reaction`, token)
 }
 
-export function resolveReaction(roomId: string, campaignId: string, sessionId: string, body: ResolveReactionInput, token: string): Promise<ReactionResolutionView> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/reactions/resolve`, token, { method: 'POST', body: JSON.stringify(body) })
+export function resolveReaction(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: ResolveReactionInput,
+  token: string,
+): Promise<ReactionResolutionView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/reactions/resolve`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function adjudicateAttackRange(roomId: string, campaignId: string, sessionId: string, body: AttackAdjudicationInput, token: string): Promise<AttackRequestView> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/attacks/adjudicate`, token, { method: 'POST', body: JSON.stringify(body) })
+export function adjudicateAttackRange(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: AttackAdjudicationInput,
+  token: string,
+): Promise<AttackRequestView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/attacks/adjudicate`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function listAdjudications(roomId: string, campaignId: string, sessionId: string, token: string): Promise<CombatAdjudicationView[]> {
+export function listAdjudications(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  token: string,
+): Promise<CombatAdjudicationView[]> {
   return request(`${combatBase(roomId, campaignId, sessionId)}/adjudications`, token)
 }
 
-export function listPendingCombatRolls(roomId: string, campaignId: string, sessionId: string, token: string): Promise<CombatPendingRollView[]> {
+export function listPendingCombatRolls(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  token: string,
+): Promise<CombatPendingRollView[]> {
   return request(`${combatBase(roomId, campaignId, sessionId)}/pending-rolls`, token)
 }
 
-export function requestOpportunityAttack(roomId: string, campaignId: string, sessionId: string, body: OpportunityAttackRequestInput, token: string): Promise<CombatAdjudicationView> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/adjudications/opportunity-attack`, token, { method: 'POST', body: JSON.stringify(body) })
+export function requestOpportunityAttack(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: OpportunityAttackRequestInput,
+  token: string,
+): Promise<CombatAdjudicationView> {
+  return request(
+    `${combatBase(roomId, campaignId, sessionId)}/adjudications/opportunity-attack`,
+    token,
+    { method: 'POST', body: JSON.stringify(body) },
+  )
 }
 
-export function requestSpecialAdjudication(roomId: string, campaignId: string, sessionId: string, body: SpecialAdjudicationRequestInput, token: string): Promise<CombatAdjudicationView> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/adjudications/special`, token, { method: 'POST', body: JSON.stringify(body) })
+export function requestSpecialAdjudication(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: SpecialAdjudicationRequestInput,
+  token: string,
+): Promise<CombatAdjudicationView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/adjudications/special`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function resolveAdjudication(roomId: string, campaignId: string, sessionId: string, actionId: string, body: AdjudicationDecisionInput, token: string): Promise<CombatAdjudicationView> {
-  return request(`${combatBase(roomId, campaignId, sessionId)}/adjudications/${actionId}/resolve`, token, { method: 'POST', body: JSON.stringify(body) })
+export function resolveAdjudication(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  actionId: string,
+  body: AdjudicationDecisionInput,
+  token: string,
+): Promise<CombatAdjudicationView> {
+  return request(
+    `${combatBase(roomId, campaignId, sessionId)}/adjudications/${actionId}/resolve`,
+    token,
+    { method: 'POST', body: JSON.stringify(body) },
+  )
 }
 
-export function createMonsterFromContent(roomId: string, campaignId: string, sessionId: string, body: CreateMonsterFromContentInput, token: string): Promise<MonsterInstanceView> {
-  return request(`${monsterInstancesBase(roomId, campaignId, sessionId)}/from-content`, token, { method: 'POST', body: JSON.stringify(body) })
+export function createMonsterFromContent(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: CreateMonsterFromContentInput,
+  token: string,
+): Promise<MonsterInstanceView> {
+  return request(`${monsterInstancesBase(roomId, campaignId, sessionId)}/from-content`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
-export function createQuickEnemy(roomId: string, campaignId: string, sessionId: string, body: CreateQuickEnemyInput, token: string): Promise<MonsterInstanceView> {
-  return request(`${monsterInstancesBase(roomId, campaignId, sessionId)}/quick-enemy`, token, { method: 'POST', body: JSON.stringify(body) })
+export function createQuickEnemy(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: CreateQuickEnemyInput,
+  token: string,
+): Promise<MonsterInstanceView> {
+  return request(`${monsterInstancesBase(roomId, campaignId, sessionId)}/quick-enemy`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }

@@ -101,10 +101,10 @@ export function SessionCombatActionBar({
 }: SessionCombatActionBarProps) {
   const currentActingEntryId = actingEntryId(combat, myEntryIds, isCurrentDm)
   const actingEntry = currentActingEntryId
-    ? combat.entries.find((entry) => entry.id === currentActingEntryId) ?? null
+    ? (combat.entries.find((entry) => entry.id === currentActingEntryId) ?? null)
     : null
   const currentTurnEntry = combat.current_turn_entry_id
-    ? combat.entries.find((entry) => entry.id === combat.current_turn_entry_id) ?? null
+    ? (combat.entries.find((entry) => entry.id === combat.current_turn_entry_id) ?? null)
     : null
   const currentTurnName = currentTurnEntry?.display_name ?? copy.combatUnknownCombatant
 
@@ -112,7 +112,9 @@ export function SessionCombatActionBar({
   const [actionKind, setActionKind] = useState<ActionKind>('attack')
   const [attackRef, setAttackRef] = useState('')
   const [targetEntryId, setTargetEntryId] = useState('')
-  const [modifierMode, setModifierMode] = useState<'normal' | 'advantage' | 'disadvantage'>('normal')
+  const [modifierMode, setModifierMode] = useState<'normal' | 'advantage' | 'disadvantage'>(
+    'normal',
+  )
   const [rangeConfirmed, setRangeConfirmed] = useState(true)
   const [pending, setPending] = useState(false)
   const [localRollRequestId, setLocalRollRequestId] = useState<string | null>(null)
@@ -165,8 +167,8 @@ export function SessionCombatActionBar({
   )
   const hasAttackEconomy = Boolean(
     actingEntry &&
-      actingEntry.action_available &&
-      actingEntry.attacks_used < actingEntry.attacks_allowed,
+    actingEntry.action_available &&
+    actingEntry.attacks_used < actingEntry.attacks_allowed,
   )
   const formDisabled = pending || !hasAttackEconomy
 
@@ -271,28 +273,64 @@ export function SessionCombatActionBar({
 
   const rollHandlers: PendingCombatRollDispatchTable = {
     attack: async (rollRequestId) => {
-      const value = await rollAttack(roomId, campaignId, sessionId, rollBody(rollRequestId, 'attack-roll'), token)
+      const value = await rollAttack(
+        roomId,
+        campaignId,
+        sessionId,
+        rollBody(rollRequestId, 'attack-roll'),
+        token,
+      )
       setRollResult({ kind: 'attack', value })
       if (localRollRequestId === rollRequestId) setLocalRollRequestId(null)
     },
     saving_throw: async (rollRequestId) => {
-      const value = await rollSavingThrow(roomId, campaignId, sessionId, rollBody(rollRequestId, 'saving-throw-roll'), token)
+      const value = await rollSavingThrow(
+        roomId,
+        campaignId,
+        sessionId,
+        rollBody(rollRequestId, 'saving-throw-roll'),
+        token,
+      )
       setRollResult({ kind: 'saving_throw', value })
     },
     death_save: async (rollRequestId) => {
-      const value = await rollDeathSave(roomId, campaignId, sessionId, rollBody(rollRequestId, 'death-save-roll'), token)
+      const value = await rollDeathSave(
+        roomId,
+        campaignId,
+        sessionId,
+        rollBody(rollRequestId, 'death-save-roll'),
+        token,
+      )
       setRollResult({ kind: 'death_save', value })
     },
     concentration: async (rollRequestId) => {
-      const value = await rollConcentration(roomId, campaignId, sessionId, rollBody(rollRequestId, 'concentration-roll'), token)
+      const value = await rollConcentration(
+        roomId,
+        campaignId,
+        sessionId,
+        rollBody(rollRequestId, 'concentration-roll'),
+        token,
+      )
       setRollResult({ kind: 'concentration', value })
     },
     grapple: async (rollRequestId) => {
-      await rollSpecialAttack(roomId, campaignId, sessionId, rollBody(rollRequestId, 'grapple-roll'), token)
+      await rollSpecialAttack(
+        roomId,
+        campaignId,
+        sessionId,
+        rollBody(rollRequestId, 'grapple-roll'),
+        token,
+      )
       setRollResult(null)
     },
     shove: async (rollRequestId) => {
-      await rollSpecialAttack(roomId, campaignId, sessionId, rollBody(rollRequestId, 'shove-roll'), token)
+      await rollSpecialAttack(
+        roomId,
+        campaignId,
+        sessionId,
+        rollBody(rollRequestId, 'shove-roll'),
+        token,
+      )
       setRollResult(null)
     },
   }
@@ -305,13 +343,20 @@ export function SessionCombatActionBar({
 
   const requestTypeLabel = (requestType: string): string => {
     switch (requestType) {
-      case 'attack': return copy.combatRollTypeAttack
-      case 'saving_throw': return copy.combatRollTypeSavingThrow
-      case 'death_save': return copy.combatRollTypeDeathSave
-      case 'concentration': return copy.combatRollTypeConcentration
-      case 'grapple': return copy.combatRollTypeGrapple
-      case 'shove': return copy.combatRollTypeShove
-      default: return requestType
+      case 'attack':
+        return copy.combatRollTypeAttack
+      case 'saving_throw':
+        return copy.combatRollTypeSavingThrow
+      case 'death_save':
+        return copy.combatRollTypeDeathSave
+      case 'concentration':
+        return copy.combatRollTypeConcentration
+      case 'grapple':
+        return copy.combatRollTypeGrapple
+      case 'shove':
+        return copy.combatRollTypeShove
+      default:
+        return requestType
     }
   }
 
@@ -323,28 +368,35 @@ export function SessionCombatActionBar({
     return actorEntryId === null ? [] : [{ window, actorEntryId }]
   })
 
-  const actionState = currentActingEntryId === null
-    ? 'waiting'
-    : pendingActionId !== null
-      ? 'adjudication-pending'
-      : 'ready'
+  const actionState =
+    currentActingEntryId === null
+      ? 'waiting'
+      : pendingActionId !== null
+        ? 'adjudication-pending'
+        : 'ready'
 
-  const attackResultStatus = rollResult?.kind === 'attack'
-    ? rollResult.value.critical
-      ? copy.combatAttackCritical
-      : rollResult.value.hit
-        ? copy.combatAttackHit
-        : copy.combatAttackMiss
-    : null
+  const attackResultStatus =
+    rollResult?.kind === 'attack'
+      ? rollResult.value.critical
+        ? copy.combatAttackCritical
+        : rollResult.value.hit
+          ? copy.combatAttackHit
+          : copy.combatAttackMiss
+      : null
 
-  const submitLabel = actionKind === 'attack'
-    ? copy.combatRequestAttack
-    : actionKind === 'grapple'
-      ? copy.combatActionKindGrapple
-      : copy.combatActionKindShove
+  const submitLabel =
+    actionKind === 'attack'
+      ? copy.combatRequestAttack
+      : actionKind === 'grapple'
+        ? copy.combatActionKindGrapple
+        : copy.combatActionKindShove
 
   return (
-    <section className="session-combat-actions" data-combat-action-bar="true" data-combat-action-state={actionState}>
+    <section
+      className="session-combat-actions"
+      data-combat-action-bar="true"
+      data-combat-action-state={actionState}
+    >
       <h3 className="session-combat__section-heading">{copy.combatActionBarHeading}</h3>
 
       {eligibleWindows.length > 0 ? (
@@ -352,28 +404,45 @@ export function SessionCombatActionBar({
           <h4 className="session-combat__sub-heading">{copy.combatReactionsHeading}</h4>
           {eligibleWindows.map(({ window, actorEntryId }) => {
             const sourceName = window.source_entry_id
-              ? combat.entries.find((entry) => entry.id === window.source_entry_id)?.display_name ?? copy.combatUnknownCombatant
+              ? (combat.entries.find((entry) => entry.id === window.source_entry_id)
+                  ?.display_name ?? copy.combatUnknownCombatant)
               : copy.combatUnknownCombatant
             const payload = window.safe_payload ? Object.entries(window.safe_payload) : []
             return (
               <article key={window.window_id} className="session-combat-actions__reaction-row">
                 <div>
                   <strong>{reactionKindLabel(window.kind, copy)}</strong>
-                  {' · '}{window.reason}
-                  {' · '}{sourceName}
+                  {' · '}
+                  {window.reason}
+                  {' · '}
+                  {sourceName}
                 </div>
                 {payload.length > 0 ? (
                   <div className="session-combat-actions__reaction-payload">
                     {payload.map(([key, value]) => (
-                      <span key={key}>{key}: {payloadValue(value)}</span>
+                      <span key={key}>
+                        {key}: {payloadValue(value)}
+                      </span>
                     ))}
                   </div>
                 ) : null}
                 <div className="session-combat__form-actions">
-                  <button type="button" className="button primary compact" data-reaction-window={window.window_id} disabled={pending} onClick={() => void resolveWindow(window, actorEntryId, true)}>
+                  <button
+                    type="button"
+                    className="button primary compact"
+                    data-reaction-window={window.window_id}
+                    disabled={pending}
+                    onClick={() => void resolveWindow(window, actorEntryId, true)}
+                  >
                     {copy.combatReactionAccept}
                   </button>
-                  <button type="button" className="button secondary compact" data-reaction-window={window.window_id} disabled={pending} onClick={() => void resolveWindow(window, actorEntryId, false)}>
+                  <button
+                    type="button"
+                    className="button secondary compact"
+                    data-reaction-window={window.window_id}
+                    disabled={pending}
+                    onClick={() => void resolveWindow(window, actorEntryId, false)}
+                  >
                     {copy.combatReactionDecline}
                   </button>
                 </div>
@@ -384,11 +453,16 @@ export function SessionCombatActionBar({
       ) : null}
 
       {currentActingEntryId === null ? (
-        <p className="session-combat-actions__waiting">{copy.combatWaitingForTurn.replace('{name}', currentTurnName)}</p>
+        <p className="session-combat-actions__waiting">
+          {copy.combatWaitingForTurn.replace('{name}', currentTurnName)}
+        </p>
       ) : pendingActionId !== null ? (
         <p className="session-combat-actions__waiting">{copy.combatAwaitingAdjudication}</p>
       ) : (
-        <form className="session-combat__form session-combat-actions__form" onSubmit={handleRequestAction}>
+        <form
+          className="session-combat__form session-combat-actions__form"
+          onSubmit={handleRequestAction}
+        >
           <div className="session-combat__form-row">
             <label>
               <span>{copy.combatActionKindLabel}</span>
@@ -397,11 +471,12 @@ export function SessionCombatActionBar({
                 value={actionKind}
                 disabled={formDisabled}
                 onChange={(event) => {
-                  const next: ActionKind = event.target.value === 'grapple'
-                    ? 'grapple'
-                    : event.target.value === 'shove'
-                      ? 'shove'
-                      : 'attack'
+                  const next: ActionKind =
+                    event.target.value === 'grapple'
+                      ? 'grapple'
+                      : event.target.value === 'shove'
+                        ? 'shove'
+                        : 'attack'
                   setActionKind(next)
                 }}
               >
@@ -413,18 +488,33 @@ export function SessionCombatActionBar({
             {actionKind === 'attack' ? (
               <label>
                 <span>{copy.combatAttackLabel}</span>
-                <select value={attackRef} disabled={formDisabled} onChange={(event) => setAttackRef(event.target.value)}>
+                <select
+                  value={attackRef}
+                  disabled={formDisabled}
+                  onChange={(event) => setAttackRef(event.target.value)}
+                >
                   {attacks.map((attack) => (
-                    <option key={attack.source_ref} value={attack.source_ref}>{`${attack.name} (+${attack.attack_bonus})`}</option>
+                    <option
+                      key={attack.source_ref}
+                      value={attack.source_ref}
+                    >{`${attack.name} (+${attack.attack_bonus})`}</option>
                   ))}
                 </select>
               </label>
             ) : null}
             <label>
               <span>{copy.combatTargetLabel}</span>
-              <select value={targetEntryId} disabled={formDisabled} onChange={(event) => setTargetEntryId(event.target.value)}>
+              <select
+                value={targetEntryId}
+                disabled={formDisabled}
+                onChange={(event) => setTargetEntryId(event.target.value)}
+              >
                 <option value="">—</option>
-                {targetEntries.map((entry) => <option key={entry.id} value={entry.id}>{entry.display_name}</option>)}
+                {targetEntries.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.display_name}
+                  </option>
+                ))}
               </select>
             </label>
             <label>
@@ -432,13 +522,15 @@ export function SessionCombatActionBar({
               <select
                 value={modifierMode}
                 disabled={formDisabled}
-                onChange={(event) => setModifierMode(
-                  event.target.value === 'advantage'
-                    ? 'advantage'
-                    : event.target.value === 'disadvantage'
-                      ? 'disadvantage'
-                      : 'normal',
-                )}
+                onChange={(event) =>
+                  setModifierMode(
+                    event.target.value === 'advantage'
+                      ? 'advantage'
+                      : event.target.value === 'disadvantage'
+                        ? 'disadvantage'
+                        : 'normal',
+                  )
+                }
               >
                 <option value="normal">{copy.checkNormal}</option>
                 <option value="advantage">{copy.checkAdvantage}</option>
@@ -448,12 +540,21 @@ export function SessionCombatActionBar({
           </div>
           {isCurrentDm && actionKind === 'attack' ? (
             <label className="session-combat-actions__range-confirmed">
-              <input type="checkbox" checked={rangeConfirmed} disabled={formDisabled} onChange={(event) => setRangeConfirmed(event.target.checked)} />
+              <input
+                type="checkbox"
+                checked={rangeConfirmed}
+                disabled={formDisabled}
+                onChange={(event) => setRangeConfirmed(event.target.checked)}
+              />
               <span>{copy.combatRangeConfirmed}</span>
             </label>
           ) : null}
           <div className="session-combat__form-actions">
-            <button type="submit" className="button primary compact" disabled={formDisabled || !targetEntryId || (actionKind === 'attack' && !attackRef)}>
+            <button
+              type="submit"
+              className="button primary compact"
+              disabled={formDisabled || !targetEntryId || (actionKind === 'attack' && !attackRef)}
+            >
               {pending ? copy.sending : submitLabel}
             </button>
           </div>
@@ -461,7 +562,13 @@ export function SessionCombatActionBar({
       )}
 
       {localRollRequestId !== null ? (
-        <button type="button" className="button primary compact" data-attack-roll={localRollRequestId} disabled={pending} onClick={() => void handlePendingRoll('attack', localRollRequestId)}>
+        <button
+          type="button"
+          className="button primary compact"
+          data-attack-roll={localRollRequestId}
+          disabled={pending}
+          onClick={() => void handlePendingRoll('attack', localRollRequestId)}
+        >
           {copy.combatRollAttack}
         </button>
       ) : null}
@@ -474,11 +581,21 @@ export function SessionCombatActionBar({
             <div key={roll.id} className="session-combat-actions__pending-roll-row">
               <span>
                 {roll.label ?? requestTypeLabel(roll.request_type)}
-                {roll.request_type === 'saving_throw' && roll.ability_ref ? ` · ${roll.ability_ref}` : ''}
-                {roll.request_type === 'saving_throw' && typeof roll.dc === 'number' ? ` · DC ${roll.dc}` : ''}
+                {roll.request_type === 'saving_throw' && roll.ability_ref
+                  ? ` · ${roll.ability_ref}`
+                  : ''}
+                {roll.request_type === 'saving_throw' && typeof roll.dc === 'number'
+                  ? ` · DC ${roll.dc}`
+                  : ''}
               </span>
               {handler ? (
-                <button type="button" className="button secondary compact" data-pending-roll={roll.id} disabled={pending} onClick={() => void handlePendingRoll(roll.request_type, roll.id)}>
+                <button
+                  type="button"
+                  className="button secondary compact"
+                  data-pending-roll={roll.id}
+                  disabled={pending}
+                  onClick={() => void handlePendingRoll(roll.request_type, roll.id)}
+                >
                   {copy.combatRollPending}
                 </button>
               ) : null}
@@ -491,7 +608,10 @@ export function SessionCombatActionBar({
         <div className="session-combat-actions__pending-adjudications">
           {pendingAdjudications.map((item) => (
             <p key={item.action_id} data-adjudication-pending={item.action_id}>
-              {copy.combatAwaitingDmRuling.replace('{kind}', adjudicationKindLabel(item.kind, copy))}
+              {copy.combatAwaitingDmRuling.replace(
+                '{kind}',
+                adjudicationKindLabel(item.kind, copy),
+              )}
             </p>
           ))}
         </div>
@@ -499,17 +619,22 @@ export function SessionCombatActionBar({
 
       {rollResult?.kind === 'attack' && attackResultStatus ? (
         <p className="session-combat-actions__result" data-attack-result="true">
-          <strong>{attackResultStatus}</strong>{' · '}
+          <strong>{attackResultStatus}</strong>
+          {' · '}
           {copy.combatAttackDamage.replace('{damage}', String(rollResult.value.damage_total))}
           {typeof rollResult.value.after_hp === 'number' ? (
-            <> · {copy.combatHp}: {rollResult.value.after_hp}</>
+            <>
+              {' '}
+              · {copy.combatHp}: {rollResult.value.after_hp}
+            </>
           ) : rollResult.value.target_injury_level ? (
             <> · {combatInjuryLabel(rollResult.value.target_injury_level, copy)}</>
           ) : null}
         </p>
       ) : rollResult?.kind === 'saving_throw' ? (
         <p className="session-combat-actions__result" data-roll-result="saving_throw">
-          {copy.combatSavingThrowResult.replace('{total}', String(rollResult.value.total))}{' · '}
+          {copy.combatSavingThrowResult.replace('{total}', String(rollResult.value.total))}
+          {' · '}
           {rollResult.value.succeeded ? copy.combatSaveSuccess : copy.combatSaveFailure}
         </p>
       ) : rollResult?.kind === 'death_save' ? (
@@ -523,7 +648,10 @@ export function SessionCombatActionBar({
         </p>
       ) : rollResult?.kind === 'concentration' ? (
         <p className="session-combat-actions__result" data-roll-result="concentration">
-          {copy.combatConcentrationResult.replace('{total}', String(rollResult.value.total)).replace('{dc}', String(rollResult.value.dc))}{' · '}
+          {copy.combatConcentrationResult
+            .replace('{total}', String(rollResult.value.total))
+            .replace('{dc}', String(rollResult.value.dc))}
+          {' · '}
           {rollResult.value.succeeded ? copy.combatConcentrationKept : copy.combatConcentrationLost}
         </p>
       ) : null}

@@ -28,7 +28,7 @@
 | E10a | attack / adjudication API client（型別鏡射 server model） | 實作規格 4、5 | ✅ |
 | E10b | Quick Action Bar（attack → target → roll）+ `GET .../combat/pending-rolls` + DM adjudication panel（range / OA / special） | 實作規格 4、5；測試 E.1 第 5–8、10 點 | ✅ |
 | E10c-1 | pending roll 全類型：domain `pending_combat_roll_request_type` 判定 + 4 個 roll client + Action Bar 各類型擲骰列與結果 | 實作規格 4、16 | ✅ |
-| E10c-2 | reaction window 接受 / 拒絕、Grapple / Shove 動作、DM reach 裁定 | 實作規格 4、5 | ⬜ |
+| E10c-2 | reaction window 接受 / 拒絕、Grapple / Shove 動作、DM reach 裁定 | 實作規格 4、5 | ✅ |
 | E10d | spell cast（單體）/ AoE propose–resolve UI、affected_targets adjudication | 實作規格 4、5、14 | ⬜ |
 | E11 | Chat / Log 呈現 + 雙語 copy + guide | 實作規格 12、13；測試 E.4 | ⬜ |
 | E12 | focused E2E spec + Subphase 關門 gate | 測試指南 P4-E 全段 | ⬜ |
@@ -196,3 +196,12 @@
 - 交付：domain `pending_combat_roll_request_type(StoredCombatCoreRollRequest)`（attack / death_save / grapple / shove 由 `action_kind`，Concentration / Initiative 由 `roll_group_label`，其餘沿用 stored `request_type`），`list_pending_rolls` 與 MCP `get_combat_context` 共用；parametrize 7 分支 + Player GET 同時列 saving_throw（`dc` null）與 death_save 的 route 案例。`api/combat.ts` 加 `rollSavingThrow` / `rollDeathSave` / `rollConcentration` / `rollSpecialAttack` 與 `SavingThrowResultView` / `DeathSaveResultView` / `ConcentrationCheckResultView` / `SpecialAttackView`。`sessionCombat.ts` 加 `PendingCombatRollDispatchTable` / `pendingCombatRollHandler`。Action Bar pending 列表改列 initiative 以外全部類型（label、saving throw 的 ability + DM-only DC），每列依 `request_type` 派送；結果列依類型顯示（attack 沿用；save total + 成功／失敗；death save d20 + 成功／失敗次數 + stable / dead；concentration total vs DC + 維持／失去；grapple / shove 只 refresh）。兩 locale 各 +17 key。
 - Claude 修正：parametrize 參數名 `request` 是 pytest 保留字，collection error → 改 `stored`。
 - 測試：pytest E10c-1 focused + E7c / E8 / P4-C core rolls / E3 / M03 boundary 35 passed；`npm test -- --run` 84 files / 431 passed；build 通過。
+
+### E10c-2 — reaction window / Grapple–Shove / reach 裁定
+
+- 起始：2026-09-17，ChatGPT。第一回合在 `create_blob` 途中撞時間上限（未被封鎖）；第二回合我為了省時叫它「不要重讀檔案、沿用 blobs」，結果它**憑記憶重生整份檔案並壓成長單行**（`combat.ts` / `combat.test.ts` / `SessionCombatStage.tsx` / `SessionCombatActionBar.tsx` / `SessionCombatAdjudicationPanel.tsx` 等，140 字以上的行從 3 行變 84 行，-991 行的 diff 幾乎全是排版）。commit `733d41d9`。
+- 交付（語意面，已用 prettier 兩側比對確認只有新增）：`api/combat.ts` 加 `getReactionWindow` / `resolveReaction` / `requestSpecialAttack` / `adjudicateSpecialAttack` 與 `ReactionKind` / `ReactionWindowView` / `ReactionResolutionView` / `SpecialAttackRequestInput` / `SpecialAttackAdjudicationInput`；`sessionCombat.ts` 加 `useReactionWindows`（per-entry `GET /entries/{id}/reaction`，無 list route）與 `eligibleReactionEntry`；Action Bar 加 action kind select（Attack / Grapple / Shove，grapple / shove 走 `requestSpecialAttack`，無 roll id 時進 adjudication-pending）、reaction windows 區（`data-combat-reactions`、每個 window Accept / Decline `data-reaction-window`、`safe_payload` key: value）；panel 的 reach 列加 In reach / Out of reach → `adjudicateSpecialAttack`；Stage 依角色算 `reactionEntryIds`（DM 全部 active entry、Player 自己）並一起 refresh。兩 locale 各 +18 key。
+- **Claude 審核修正**：用 `prettier@3 --no-semi --single-quote --print-width 100 --trailing-comma all` 把被壓扁的 6 個檔案重新展開（此設定與既有手寫風格只差 35 行 / 377 行，可視為專案風格），並以 prettier(6dd4faa4) vs prettier(733d41d9) 比對確認語意只有新增。專案未引入 prettier 依賴，只是一次性 `npx`。
+- 教訓（已寫進 worker 流程）：**不要叫 ChatGPT「不用重讀」**——它會憑記憶重生檔案；每次寫入必須以 HEAD 的新鮮讀取為底，且只做最小 diff。
+- 測試：`npm test -- --run` 84 files / 438 passed；build 通過。
+- 留給 E10d：spell cast（單體）/ AoE propose–resolve UI、`affected_targets` 裁定；E11 接 Chat / Log 呈現。

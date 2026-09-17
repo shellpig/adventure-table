@@ -190,7 +190,14 @@ describe('SessionCombatActionBar', () => {
         pendingRoll('initiative-roll-1', 'initiative'),
       ],
     })
-    for (const id of ['attack-roll-1', 'save-roll-1', 'death-roll-1', 'concentration-roll-1', 'grapple-roll-1', 'shove-roll-1']) {
+    for (const id of [
+      'attack-roll-1',
+      'save-roll-1',
+      'death-roll-1',
+      'concentration-roll-1',
+      'grapple-roll-1',
+      'shove-roll-1',
+    ]) {
       expect(markup).toContain(`data-pending-roll="${id}"`)
     }
     expect(markup).not.toContain('data-pending-roll="initiative-roll-1"')
@@ -200,14 +207,26 @@ describe('SessionCombatActionBar', () => {
     const dmMarkup = renderActionBar({
       detail: combat('entry-enemy'),
       isCurrentDm: true,
-      rolls: [pendingRoll('save-dm', 'saving_throw', { label: 'Saving Throw', ability_ref: 'dexterity', dc: 16 })],
+      rolls: [
+        pendingRoll('save-dm', 'saving_throw', {
+          label: 'Saving Throw',
+          ability_ref: 'dexterity',
+          dc: 16,
+        }),
+      ],
     })
     expect(dmMarkup).toContain('dexterity')
     expect(dmMarkup).toContain('DC 16')
     const playerMarkup = renderActionBar({
       detail: combat('entry-player'),
       isCurrentDm: false,
-      rolls: [pendingRoll('save-player', 'saving_throw', { label: 'Saving Throw', ability_ref: 'dexterity', dc: null })],
+      rolls: [
+        pendingRoll('save-player', 'saving_throw', {
+          label: 'Saving Throw',
+          ability_ref: 'dexterity',
+          dc: null,
+        }),
+      ],
     })
     expect(playerMarkup).toContain('dexterity')
     expect(playerMarkup).not.toContain('DC 16')
@@ -216,7 +235,11 @@ describe('SessionCombatActionBar', () => {
 
   it('renders an eligible open reaction with accept and decline controls', () => {
     const copy = sessionCopy('en')
-    const markup = renderActionBar({ detail: combat('entry-player'), isCurrentDm: false, reactions: [reactionWindow('reaction-1', ['entry-player'])] })
+    const markup = renderActionBar({
+      detail: combat('entry-player'),
+      isCurrentDm: false,
+      reactions: [reactionWindow('reaction-1', ['entry-player'])],
+    })
     expect(markup).toContain('data-reaction-window="reaction-1"')
     expect(markup).toContain(copy.combatReactionAccept)
     expect(markup).toContain(copy.combatReactionDecline)
@@ -225,7 +248,11 @@ describe('SessionCombatActionBar', () => {
   })
 
   it('does not render a reaction whose eligible entries the Player does not control', () => {
-    const markup = renderActionBar({ detail: combat('entry-player'), isCurrentDm: false, reactions: [reactionWindow('reaction-other', ['entry-enemy'])] })
+    const markup = renderActionBar({
+      detail: combat('entry-player'),
+      isCurrentDm: false,
+      reactions: [reactionWindow('reaction-other', ['entry-enemy'])],
+    })
     expect(markup).not.toContain('data-reaction-window="reaction-other"')
   })
 
@@ -238,7 +265,11 @@ describe('SessionCombatActionBar', () => {
   })
 
   it('renders the Player own pending adjudication as read-only', () => {
-    const markup = renderActionBar({ detail: combat('entry-player'), isCurrentDm: false, adjudications: [adjudication()] })
+    const markup = renderActionBar({
+      detail: combat('entry-player'),
+      isCurrentDm: false,
+      adjudications: [adjudication()],
+    })
     expect(markup).toContain('data-adjudication-pending="action-range-1"')
   })
 })
