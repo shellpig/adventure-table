@@ -89,6 +89,10 @@ export function isExplorationEvent(event: TableEvent): boolean {
   return event.kind.startsWith('exploration.')
 }
 
+export function isSessionChatEvent(event: TableEvent): boolean {
+  return isExplorationEvent(event) || event.kind === 'roll.requested'
+}
+
 export function explorationEventText(event: TableEvent): string {
   return typeof event.payload.text === 'string' ? event.payload.text : ''
 }

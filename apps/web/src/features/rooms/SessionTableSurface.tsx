@@ -20,7 +20,7 @@ import { SessionRollRequestList } from './SessionRollRequestList'
 import {
   applyStageEvents,
   explorationEventText,
-  isExplorationEvent,
+  isSessionChatEvent,
   parseExplorationComposer,
 } from './sessionExploration'
 import { formatRollRequestPrompt, isRollRequestEvent } from './sessionRollPresentation'
@@ -46,6 +46,7 @@ import {
 import { endCombat, startCombat } from '../../api/combat'
 import { SessionCombatStage } from './SessionCombatStage'
 import { myEntryIds, useActiveCombat } from './sessionCombat'
+import { formatCombatLogEvent } from './sessionCombatLog'
 import './sessionTable.css'
 
 
@@ -306,6 +307,18 @@ export function SessionTableSurface({
   }
   const characterName = (characterId: string | null) =>
     characters.find((item) => item.id === characterId)?.name ?? copy.noCharacter
+  const combatEntryLabel = (entryId: string): string | null => {
+    const activeEntry = combat?.entries.find((item) => item.id === entryId)
+    if (activeEntry) return activeEntry.display_name
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const candidate = events[index]
+      if (candidate.kind !== 'combat.entry_added') continue
+      if (candidate.payload.entry_id !== entryId) continue
+      const displayName = candidate.payload.display_name
+      if (typeof displayName === 'string' && displayName.length > 0) return displayName
+    }
+    return null
+  }
   const speakerLabel = (event: TableEvent) => {
     if (event.kind === 'exploration.narration') return copy.dm
     const speakerSeatId = event.subject_seat_id ?? event.acting_seat_id
@@ -313,7 +326,7 @@ export function SessionTableSurface({
   }
 
   const chatEvents = useMemo(
-    () => events.filter((event) => isExplorationEvent(event) || isRollRequestEvent(event)).slice(-100),
+    () => events.filter(isSessionChatEvent).slice(-100),
     [events],
   )
 
@@ -759,9 +772,22 @@ export function SessionTableSurface({
             </div>
           ) : (
             <div className="session-log">
-              {events.slice(-100).map((event) => (
-                <p key={`log:${event.session_id}:${event.seq}`}><code>#{event.seq}</code> {event.kind}</p>
-              ))}
+              {events.slice(-100).map((event) => {
+                const presentation = formatCombatLogEvent(event, copy.locale, combatEntryLabel)
+                return (
+                  <p key={`log:${event.session_id}:${event.seq}`}>
+                    <code>#{event.seq}</code>{' '}
+                    {presentation ? (
+                      <>
+                        <strong>{presentation.summary}</strong>
+                        {presentation.detail ? <span> · {presentation.detail}</span> : null}
+                      </>
+                    ) : (
+                      <span>{copy.system} · <code>{event.kind}</code></span>
+                    )}
+                  </p>
+                )
+              })}
             </div>
           )}
         </aside>
