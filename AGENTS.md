@@ -33,6 +33,7 @@ Report to user: current progress, and any issues with their scope of impact.
 | 診斷 bug、分析錯誤、找根因、效能回歸 | `diagnose` |
 | 使用者要求深入訪談／壓力測試設計，或存在無法由既有規格解決的核心產品分歧 | `grill-me` |
 | 前端／本機 web app 驗證、UI 行為除錯、瀏覽器截圖或 console log | `webapp-testing` |
+| 被指定為**指揮者**：叫 agy / ChatGPT 實作、自己驗證與收尾 | `docs/指揮者手冊.md`（整份讀；含 prompt 骨架、驗證 gate、兩種 worker 的踩坑表） |
 
 判斷任務類型是開工的第一步，不是可選項。
 
@@ -216,7 +217,9 @@ cd apps/web && npm run test:e2e:docker
 | Codex DeepSeek home | `C:\_work\AI_Work\Tools\codex-deepseek-home` | DS reviewer 環境 |
 | Antigravity CLI | `C:\Users\User\AppData\Local\agy\bin\agy.exe` | agy reviewer |
 
-### 外部 Reviewer CLI
+### 外部 Reviewer / Worker CLI
+
+把 agy 或 ChatGPT 當 **worker**（實作而非 review）時，流程、step 粒度、檢查節奏與踩坑一律看 `docs/指揮者手冊.md`；本段只保留啟動指令。
 
 三個 reviewer 共通：**預設 read-only**——不寫檔、不刪檔、不 stage、不 commit、不 push，不讀 `.env` 與 `C:\_work\AI_Work\Tools\`；非互動呼叫必須 `< NUL` 關閉 stdin，否則會停在等待輸入永久卡死；輸出重導到檔案保留；結果只當第二意見，回報前先自己審一遍，並以 `git status` / `git diff` 確認實際改動。
 
