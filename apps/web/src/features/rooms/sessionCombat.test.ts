@@ -211,6 +211,7 @@ describe('sessionCombat helpers', () => {
       concentration: async () => undefined,
       grapple: async () => undefined,
       shove: async () => undefined,
+      escape_grapple: async () => undefined,
     }
     expect(pendingCombatRollHandler('attack', handlers)).toBe(handlers.attack)
     expect(pendingCombatRollHandler('saving_throw', handlers)).toBe(handlers.saving_throw)
@@ -218,6 +219,7 @@ describe('sessionCombat helpers', () => {
     expect(pendingCombatRollHandler('concentration', handlers)).toBe(handlers.concentration)
     expect(pendingCombatRollHandler('grapple', handlers)).toBe(handlers.grapple)
     expect(pendingCombatRollHandler('shove', handlers)).toBe(handlers.shove)
+    expect(pendingCombatRollHandler('escape_grapple', handlers)).toBe(handlers.escape_grapple)
     expect(pendingCombatRollHandler('initiative', handlers)).toBeUndefined()
     expect(pendingCombatRollHandler('other', handlers)).toBeUndefined()
   })

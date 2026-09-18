@@ -225,6 +225,7 @@ describe('SessionCombatActionBar', () => {
         pendingRoll('concentration-roll-1', 'concentration'),
         pendingRoll('grapple-roll-1', 'grapple'),
         pendingRoll('shove-roll-1', 'shove'),
+        pendingRoll('escape-roll-1', 'escape_grapple'),
         pendingRoll('initiative-roll-1', 'initiative'),
       ],
     })
@@ -235,6 +236,7 @@ describe('SessionCombatActionBar', () => {
       'concentration-roll-1',
       'grapple-roll-1',
       'shove-roll-1',
+      'escape-roll-1',
     ]) {
       expect(markup).toContain(`data-pending-roll="${id}"`)
     }
@@ -294,13 +296,54 @@ describe('SessionCombatActionBar', () => {
     expect(markup).not.toContain('data-reaction-window="reaction-other"')
   })
 
-  it('renders the action-kind select with grapple, shove, and spell choices', () => {
+  it('renders action-kind select with grapple, shove (prone), shove (push), and omits escape when not grappled', () => {
     const copy = sessionCopy('en')
     const markup = renderActionBar({ detail: combat('entry-player'), isCurrentDm: false })
     expect(markup).toContain('data-combat-action-kind="true"')
     expect(markup).toContain(copy.combatActionKindGrapple)
-    expect(markup).toContain(copy.combatActionKindShove)
+    expect(markup).toContain(copy.combatActionKindShoveProne)
+    expect(markup).toContain(copy.combatActionKindShovePush)
+    expect(markup).not.toContain(copy.combatActionKindEscapeGrapple)
+    expect(markup).not.toContain('value="escape_grapple"')
     expect(markup).toContain(copy.combatActionKindSpell)
+  })
+
+  it('renders the escape_grapple option when the acting combatant has the grappled condition', () => {
+    const copy = sessionCopy('en')
+    const detail = combat('entry-player')
+    const grappledDetail: CombatDetailView = {
+      ...detail,
+      combatants: [
+        {
+          entry_id: 'entry-player',
+          subject_kind: 'character',
+          is_hostile: false,
+          projection: {
+            id: 'combatant-player',
+            kind: 'character',
+            name: 'Mira',
+            combat_status: 'active',
+            conditions: ['srd5.1:condition:grappled'],
+            effects: [],
+          },
+        },
+      ],
+    }
+    const markup = renderActionBar({ detail: grappledDetail, isCurrentDm: false })
+    expect(markup).toContain('data-combat-action-kind="true"')
+    expect(markup).toContain('value="escape_grapple"')
+    expect(markup).toContain(copy.combatActionKindEscapeGrapple)
+  })
+
+  it('renders a pending roll with request_type escape_grapple with escape label and roll button', () => {
+    const copy = sessionCopy('en')
+    const markup = renderActionBar({
+      detail: combat('entry-player'),
+      isCurrentDm: false,
+      rolls: [pendingRoll('escape-roll-1', 'escape_grapple')],
+    })
+    expect(markup).toContain('data-pending-roll="escape-roll-1"')
+    expect(markup).toContain(copy.combatRollTypeEscapeGrapple)
   })
 
   it('renders spell and target selects for a single-target spell', () => {

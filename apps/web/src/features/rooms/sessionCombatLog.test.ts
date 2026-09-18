@@ -726,6 +726,11 @@ describe('P4-E E11a compact combat log presentation', () => {
       kind: 'shove_push',
       in_reach: false,
     })
+    const escapeReq = event('combat.escape_grapple_requested', {
+      attacker_entry_id: 'hero',
+      target_entry_id: 'enemy',
+      kind: 'escape_grapple',
+    })
     const savesReq = event('combat.saves_requested', {
       target_entry_ids: ['enemy'],
       ability_ref: 'DEX',
@@ -752,6 +757,8 @@ describe('P4-E E11a compact combat log presentation', () => {
       .toBe('Aria · 裁定: 擒抱 · 在觸及範圍內 · → Goblin')
     expect(text(formatCombatLogEvent(specialAdjOutOfReach, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Aria · 裁定: 推開 · 超出觸及範圍 · → Goblin')
+    expect(text(formatCombatLogEvent(escapeReq, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Aria · 脫離擒抱 → Goblin · 等待對抗擲骰')
     expect(text(formatCombatLogEvent(savesReq, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Goblin · 豁免 · 等待豁免檢定 · DEX')
 
@@ -776,6 +783,8 @@ describe('P4-E E11a compact combat log presentation', () => {
       .toBe('Aria · Adjudication: Grapple · In reach · → Goblin')
     expect(text(formatCombatLogEvent(specialAdjOutOfReach, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Aria · Adjudication: Shove push · Out of reach · → Goblin')
+    expect(text(formatCombatLogEvent(escapeReq, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Aria · Escape grapple → Goblin · Awaiting contest roll')
     expect(text(formatCombatLogEvent(savesReq, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
       .toBe('Goblin · Saving throw · Saving throws requested · DEX')
   })
@@ -822,6 +831,18 @@ describe('P4-E E11a compact combat log presentation', () => {
         target_total: 19,
       },
     })
+    const resolvedEscapeSuccess = event('combat.special_attack_roll_resolved', {
+      target_entry_id: 'enemy',
+      total: 15,
+      status: 'resolved',
+      resolution_result: {
+        kind: 'escape_grapple',
+        status: 'success',
+        attacker_total: 17,
+        target_total: 13,
+        condition_to_remove: 'grappled',
+      },
+    })
 
     const zhConditionResolver = contentNameResolver({
       'srd5.1:condition:grappled': '擒抱',
@@ -839,6 +860,9 @@ describe('P4-E E11a compact combat log presentation', () => {
       .toBe('Goblin · 推開 · 成功 · 攻擊方總值 16 · 目標總值 10 · 5 ft')
     expect(text(formatCombatLogEvent(resolvedFailure, 'zh-TW', resolveEntryLabel, zhConditionResolver, fallbackContentField)))
       .toBe('Goblin · 擒抱 · 失敗 · 攻擊方總值 11 · 目標總值 19')
+    expect(
+      text(formatCombatLogEvent(resolvedEscapeSuccess, 'zh-TW', resolveEntryLabel, zhConditionResolver, fallbackContentField)),
+    ).toBe('Goblin · 脫離擒抱 · 成功 · 攻擊方總值 17 · 目標總值 13 · 移除狀態: 擒抱')
 
     // en
     expect(text(formatCombatLogEvent(waiting, 'en', resolveEntryLabel, enConditionResolver, fallbackContentField)))
@@ -849,6 +873,9 @@ describe('P4-E E11a compact combat log presentation', () => {
       .toBe('Goblin · Shove push · Success · Attacker total 16 · Target total 10 · 5 ft')
     expect(text(formatCombatLogEvent(resolvedFailure, 'en', resolveEntryLabel, enConditionResolver, fallbackContentField)))
       .toBe('Goblin · Grapple · Failure · Attacker total 11 · Target total 19')
+    expect(
+      text(formatCombatLogEvent(resolvedEscapeSuccess, 'en', resolveEntryLabel, enConditionResolver, fallbackContentField)),
+    ).toBe('Goblin · Escape grapple · Success · Attacker total 17 · Target total 13 · Condition removed: Grappled')
   })
 
   it('formats combat.monster_outcome_set and combat.monster_instance_updated events in en and zh-TW', () => {

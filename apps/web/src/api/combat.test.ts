@@ -403,7 +403,7 @@ describe('Combat API client', () => {
     const requestBody = {
       attacker_entry_id: 'entry-1',
       target_entry_id: 'entry-2',
-      kind: 'grapple' as const,
+      kind: 'shove_prone' as const,
       attacker_modifier_mode: 'advantage' as const,
       defender_modifier_mode: 'normal' as const,
       idempotency_key: 'special-request-1',
@@ -416,13 +416,29 @@ describe('Combat API client', () => {
     expect(requestInit.method).toBe('POST')
     expect(requestInit.headers.Authorization).toBe(`Bearer ${TOKEN}`)
     expect(JSON.parse(requestInit.body as string)).toEqual(requestBody)
+
+    const escapeBody = {
+      attacker_entry_id: 'entry-1',
+      target_entry_id: 'entry-2',
+      kind: 'escape_grapple' as const,
+      idempotency_key: 'special-request-2',
+    }
+    await requestSpecialAttack(ROOM_ID, CAMPAIGN_ID, SESSION_ID, escapeBody, TOKEN)
+    const [escapeUrl, escapeInit] = fetchMock.mock.calls[1]
+    expect(escapeUrl).toBe(
+      `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/combat/special-attacks/request`,
+    )
+    expect(escapeInit.method).toBe('POST')
+    expect(escapeInit.headers.Authorization).toBe(`Bearer ${TOKEN}`)
+    expect(JSON.parse(escapeInit.body as string)).toEqual(escapeBody)
+
     const adjudicateBody = {
       action_id: 'special-action-1',
       in_reach: true,
       idempotency_key: 'special-adjudicate-1',
     }
     await adjudicateSpecialAttack(ROOM_ID, CAMPAIGN_ID, SESSION_ID, adjudicateBody, TOKEN)
-    const [adjudicateUrl, adjudicateInit] = fetchMock.mock.calls[1]
+    const [adjudicateUrl, adjudicateInit] = fetchMock.mock.calls[2]
     expect(adjudicateUrl).toBe(
       `/api/rooms/${ROOM_ID}/campaigns/${CAMPAIGN_ID}/sessions/${SESSION_ID}/combat/special-attacks/adjudicate`,
     )

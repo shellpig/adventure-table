@@ -21,7 +21,7 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 | F4a | `escape_grapple`：新 `SpecialAttackKind`，走 P4-C opposed-check substrate；耗整個 Action、免 reach 裁定、成功同 transaction 移除 `grappled`；REST / MCP 共用既有 `kind` | P4-C closeout 留下 | ✅ |
 | F4b | Character state PATCH DTO（`/characters/{id}/state` 與 table `TableCharacterStatePatch`）補 `concentration` / `exhaustion_level` / `death_saves` / `temporary_effects`；active Combat 中比照 HP 走 DM correction-only | P4-D closeout 留下 | ✅ |
 | F4c | server：special-attack 骰與 reach 裁定的 canonical 判別（修 P4-E 遺留：`shove_*` / 防守方骰落成 `skill`、`shove_*` 裁定未歸 reach）+ `escape_grapple` 判別 | 實作規格 P4-E 4、8；P4-E 遺留 | ✅ |
-| F4d | web：kind 改 `shove_prone` / `shove_push` / `escape_grapple`（修 UI shove 422）、escape 選項只在自己被 grappled 時出現、roll handler、combat log、雙語 | 實作規格 P4-E 4、12、13 | ⬜ |
+| F4d | web：kind 改 `shove_prone` / `shove_push` / `escape_grapple`（修 UI shove 422）、escape 選項只在自己被 grappled 時出現、roll handler、combat log、雙語 | 實作規格 P4-E 4、12、13 | ✅ |
 | F5 | 真 PostgreSQL + server restart / reconnect：Round ≥ 2、pending save 或 reaction → restart → 狀態完整、resolve 一次不重擲 | 實作規格 P4-F 3；測試指南 F.1 | ⬜ |
 | F6 | Full browser journey spec（F.2 全項：spell / save、damage / healing、condition、concentration 或 reaction、0 HP outcome、Session boundary resume、End cleanup）+ `P4 Full-Stack E2E` workflow | 實作規格 P4-F 1、2、4、5、6；測試指南 F.2 | ⬜ |
 | F7 | `ConditionSemantics` 接進 attack / save modifier pipeline（advantage / disadvantage / auto-fail / adjacent crit） | P4-D closeout 留下；P4-F 已拍板納入 | ⬜ |
@@ -90,5 +90,13 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 - 交付：`resolution.REACH_ADJUDICATED_KINDS`（grapple / shove_prone / shove_push，不含 escape）供 `row_to_adjudication_view` 與 `resolve_adjudication` 共用；`core_rolls.special_attack_request_type`（`shove_*`→`"shove"`、`escape_grapple`→`"escape_grapple"`）與 `_SPECIAL_ATTACK_LABEL_TO_KIND`（由 `SpecialAttackKind` 派生的 title-case label 對照）；`pending_combat_roll_request_type` 在 `action_kind` 為 None 時改用 `roll_groups.label` 判別（同 Concentration / Initiative 既有慣例，無 JSON SQL、無額外 query）；`get_request` 補上與 `list_pending_requests` 相同的 `combat_actions` outer join。
 - **Claude 審核修正**：`pending_combat_roll_request_type` 的 if / elif 兩段各自呼叫 helper → 合併為「先解 kind（action_kind 或 label）再一次查表」並加註解；其餘零修改。
 - 測試：`test_p4e_pending_rolls_route.py` parametrize 改為 `shove_prone` / `shove_push` / `escape_grapple` 與 label 路徑（移除不可能的 `action_kind="shove"`）；`test_p4c_special_attacks.py` +1 parametrize（grapple / shove_prone / escape 真實流程：DM 看到兩張 request_type 一致的骰、Player 只看到自己那張）；`test_p4e_adjudication_routes.py` +2（`shove_prone` 裁定列為 `reach`、dm_hints 同 grapple；`resolve_adjudication` 導向專用 route 的 conflict）。焦點 10 檔 64 passed；P4-B～F + P3-C + M04-C + M03 共 71 檔全通過（exit 0）；長行對照 HEAD 無新增。
-- 留給 F4d：web。
+- 留給 F4d：web（已完成，見下）。
+
+### F4d — web：special-attack kinds 與 escape UI
+
+- 2026-09-18，agy worker（Gemini 3.8 Flash (High)，1 回合 8 分鐘），Claude 審核修正與 commit。prompt：`C:\_work\AI_Work\Tools\agy-runs\agy-p4f-f4d.prompt.txt`。
+- 交付：`api/combat.ts` 新 `SpecialAttackKind` union（grapple / shove_prone / shove_push / escape_grapple），`SpecialAttackRequestInput.kind` 改用（修 UI Shove 送 `'shove'` 被 422 的 P4-E bug）。`SessionCombatActionBar`：`ActionKind` 擴為六種，select 改由 `ACTION_KINDS` allowed-list 收窄（無 `as` cast），選項順序 attack / grapple / shove (prone) / shove (push) / escape grapple（只在 `combatantFor(acting).projection.conditions` 含 `srd5.1:condition:grappled` 時出現，失去 grappled 時自動退回 attack）/ spell；`isSpecialAttackKind` 統一四種 special kind 的 target 必填與 submit label；roll handler `escape_grapple` → `rollSpecialAttack`；`requestTypeLabel` 加 escape。`sessionCombat.pendingCombatRollHandler` 加 `escape_grapple`。`sessionCombatLog`：`combat.escape_grapple_requested` 行、`specialAttackKindLabel` 加 escape、`condition_to_apply` / `condition_to_remove` 共用新 `formatConditionRefDetail`。copy：`combatActionKindShove` 拆成 `ShoveProne` / `ShovePush`，新 `combatActionKindEscapeGrapple` / `combatRollTypeEscapeGrapple`，log copy `escapeGrapple` / `conditionRemoved`，皆雙語。
+- **Claude 審核修正**：`SpecialAttackView.kind: SpecialAttackKind | string`（等於 string）→ `string`；`escape_grapple_requested` 的 `stringField(payload,'kind') ?? 'escape_grapple'` 多餘 fallback → 直接用 `copy.escapeGrapple`。其餘零修改。
+- 測試：`SessionCombatActionBar.test.tsx` +3（無 grappled 時無 escape 選項且有兩種 shove；有 grappled 時出現 `value="escape_grapple"`；`request_type: 'escape_grapple'` pending roll 顯示 escape label 並派給 `rollSpecialAttack`）、`sessionCombat.test.ts` +1、`sessionCombatLog.test.ts` +3（requested 雙語、resolved escape 顯示移除狀態、grapple 仍顯示套用狀態）、`combat.test.ts` 改送 `shove_prone`。`npm test -- --run` 86 files / 478 passed；`npm run build` 乾淨；長行對照 HEAD 無新增。`e2e/p4e-quick-combat.spec.ts` 不碰 grapple / shove 文案，不受影響。
+- **F4 完成**（F4a～F4d）。瀏覽器實測 escape 流程留給 F6 full journey。
 

@@ -86,9 +86,11 @@ type CombatLogCopy = {
   shove: string
   shoveProne: string
   shovePush: string
+  escapeGrapple: string
   waitingForRoll: string
   success: string
   failure: string
+  conditionRemoved: string
   inReach: string
   outOfReach: string
   savesRequested: string
@@ -184,9 +186,11 @@ const COMBAT_LOG_COPY = {
     shove: '推撞',
     shoveProne: '推倒',
     shovePush: '推開',
+    escapeGrapple: '脫離擒抱',
     waitingForRoll: '等待對抗擲骰',
     success: '成功',
     failure: '失敗',
+    conditionRemoved: '移除狀態',
     inReach: '在觸及範圍內',
     outOfReach: '超出觸及範圍',
     savesRequested: '等待豁免檢定',
@@ -280,9 +284,11 @@ const COMBAT_LOG_COPY = {
     shove: 'Shove',
     shoveProne: 'Shove prone',
     shovePush: 'Shove push',
+    escapeGrapple: 'Escape grapple',
     waitingForRoll: 'Awaiting contest roll',
     success: 'Success',
     failure: 'Failure',
+    conditionRemoved: 'Condition removed',
     inReach: 'In reach',
     outOfReach: 'Out of reach',
     savesRequested: 'Saving throws requested',
@@ -427,9 +433,21 @@ function specialAttackKindLabel(kind: string | null, copy: CombatLogCopy): strin
       return copy.shovePush
     case 'shove':
       return copy.shove
+    case 'escape_grapple':
+      return copy.escapeGrapple
     default:
       return copy.specialAttack
   }
+}
+
+function formatConditionRefDetail(
+  condition: string | null,
+  prefix: string,
+  resolveContentName: ContentNameResolver,
+): string | null {
+  if (!condition) return null
+  const resolved = resolveContentName(`srd5.1:condition:${condition}`, prefix)
+  return resolved === prefix ? prefix : `${prefix}: ${resolved}`
 }
 
 function monsterOutcomeLabel(outcome: string | null, copy: CombatLogCopy): string | null {
@@ -1026,6 +1044,21 @@ export function formatCombatLogEvent(
         detail: null,
       }
     }
+    case 'combat.escape_grapple_requested': {
+      const attacker = entryLabel(payload, 'attacker_entry_id', resolveEntryLabel)
+      const target = entryLabel(payload, 'target_entry_id', resolveEntryLabel)
+      const kind = copy.escapeGrapple
+      return {
+        summary: [
+          attacker,
+          target ? `${kind} → ${target}` : kind,
+          copy.waitingForRoll,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        detail: null,
+      }
+    }
     case 'combat.special_attack_roll_resolved': {
       const target = entryLabel(payload, 'target_entry_id', resolveEntryLabel)
       const total = numberField(payload, 'total')
@@ -1046,19 +1079,24 @@ export function formatCombatLogEvent(
       const attackerTotal = numberField(res, 'attacker_total')
       const targetTotal = numberField(res, 'target_total')
       const pushDistance = numberField(res, 'push_distance_ft')
-      const condition = stringField(res, 'condition_to_apply')
-      let conditionLabel: string | null = null
-      if (condition) {
-        const resolved = resolveContentName(`srd5.1:condition:${condition}`, copy.condition)
-        conditionLabel = resolved === copy.condition ? copy.condition : `${copy.condition}: ${resolved}`
-      }
+      const conditionToApply = formatConditionRefDetail(
+        stringField(res, 'condition_to_apply'),
+        copy.condition,
+        resolveContentName,
+      )
+      const conditionToRemove = formatConditionRefDetail(
+        stringField(res, 'condition_to_remove'),
+        copy.conditionRemoved,
+        resolveContentName,
+      )
 
       const summaryParts = [target, kind, outcome].filter(Boolean)
       const detailParts = [
         attackerTotal !== null ? `${copy.attackerTotal} ${attackerTotal}` : null,
         targetTotal !== null ? `${copy.targetTotal} ${targetTotal}` : null,
         pushDistance !== null && pushDistance > 0 ? `${pushDistance} ft` : null,
-        conditionLabel,
+        conditionToApply,
+        conditionToRemove,
       ].filter(Boolean)
 
       return {

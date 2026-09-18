@@ -389,12 +389,18 @@ export type ConcentrationCheckResultView = {
   linked_effects_removed_from: Array<Record<string, unknown>>
 }
 
+export type SpecialAttackKind =
+  | 'grapple'
+  | 'shove_prone'
+  | 'shove_push'
+  | 'escape_grapple'
+
 export type SpecialAttackView = {
   action_id: string
   combat_id: string
   attacker_entry_id: string
   target_entry_id: string
-  kind: 'grapple' | 'shove'
+  kind: string
   status: string
   in_reach: boolean | null
   attacker_roll_request_id: string | null
@@ -407,7 +413,7 @@ export type SpecialAttackView = {
 export type SpecialAttackRequestInput = {
   attacker_entry_id: string
   target_entry_id: string
-  kind: 'grapple' | 'shove'
+  kind: SpecialAttackKind
   attacker_modifier_mode?: 'normal' | 'advantage' | 'disadvantage'
   defender_modifier_mode?: 'normal' | 'advantage' | 'disadvantage'
   idempotency_key?: string | null
