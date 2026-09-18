@@ -94,6 +94,22 @@ def _reference_key(value: object) -> str | None:
     return None
 
 
+def split_damage_expression(value: str) -> tuple[str, str | None]:
+    """Split a damage expression into dice formula and optional damage type."""
+    cleaned = value.strip()
+    if not cleaned:
+        return "", None
+    parts = cleaned.split(None, 1)
+    dice = parts[0]
+    damage_type: str | None = None
+    if len(parts) > 1:
+        type_str = parts[1].strip().casefold()
+        if type_str.endswith(" damage"):
+            type_str = type_str[:-7].strip()
+        damage_type = type_str or None
+    return dice, damage_type
+
+
 def _damage_parts(action: Mapping[str, Any]) -> list[DamagePart]:
     raw_parts = action.get("damage_parts")
     if isinstance(raw_parts, list):
@@ -118,8 +134,8 @@ def _damage_parts(action: Mapping[str, Any]) -> list[DamagePart]:
 
     raw_damage = action.get("damage")
     if isinstance(raw_damage, str):
-        dice = raw_damage.strip()
-        return [DamagePart(dice=dice)] if dice else []
+        dice, damage_type = split_damage_expression(raw_damage)
+        return [DamagePart(dice=dice, damage_type=damage_type)] if dice else []
     if not isinstance(raw_damage, list):
         return []
 
@@ -373,4 +389,5 @@ __all__ = [
     "MonsterTemplateSource",
     "monster_to_reusable_rules",
     "normalize_monster_action",
+    "split_damage_expression",
 ]

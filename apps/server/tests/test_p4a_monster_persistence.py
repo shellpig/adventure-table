@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy import create_engine, insert
 
 from app.db import metadata
+from app.domain.combat.monster_instances import QuickEnemyAttackInput
 from app.persistence.combat.repository import MonsterPersistenceError, MonsterRepository
 from app.persistence.combat.tables import monster_instances, monster_templates
 from app.persistence.rooms.tables import campaigns, rooms
@@ -108,6 +109,40 @@ def test_quick_enemy_preserves_explicit_ranged_attack_kind() -> None:
         action = enemy.rules_snapshot["actions"][0]
         assert action["attack_kind"] == "ranged_weapon"
         assert action["automation_level"] == "structured"
+    finally:
+        engine.dispose()
+
+
+def test_quick_enemy_maps_melee_attack_kind_alias() -> None:
+    # The alias lives in the shared input model (REST + MCP); the repository only
+    # sees the validated dump and defaults a missing kind to melee_weapon.
+    assert (
+        QuickEnemyAttackInput(name="Scimitar", damage="1d6+2", attack_kind="melee").attack_kind
+        == "melee_weapon"
+    )
+    assert (
+        QuickEnemyAttackInput(name="Bow", damage="1d6", attack_kind="ranged").attack_kind
+        == "ranged_weapon"
+    )
+
+
+def test_quick_enemy_damage_with_type_persists_split_parts() -> None:
+    repository, engine, campaign_id = _repository()
+    try:
+        enemy = repository.create_quick_enemy(
+            campaign_id=campaign_id,
+            name="Scimitar Bandit",
+            armor_class=12,
+            max_hp=11,
+            speed={"walk": "30 ft."},
+            attack={
+                "name": "Scimitar",
+                "attack_bonus": 4,
+                "damage": "1d6+2 slashing",
+            },
+        )
+        action = enemy.rules_snapshot["actions"][0]
+        assert action["damage_parts"] == [{"dice": "1d6+2", "damage_type": "slashing"}]
     finally:
         engine.dispose()
 

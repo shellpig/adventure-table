@@ -1,16 +1,21 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from typing import Any, Literal
 from uuid import UUID, uuid5
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from app.content.identity import parse_stable_key
-from app.content.p4a_combat_templates import monster_to_reusable_rules
+from app.content.p4a_combat_templates import (
+    monster_to_reusable_rules,
+    split_damage_expression,
+)
 from app.content.p4a_monsters import MonsterData
 from app.content.registry import ContentRegistry
 from app.domain.combat.lifecycle import CombatNotFoundError
+from app.domain.combat.resolution import DamageType
 from app.domain.combat.spell_resources import monster_casting_sources
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import (
@@ -28,6 +33,8 @@ from app.persistence.combat.repository import (
     MonsterRepository,
     StoredMonsterInstance,
 )
+
+_QUICK_ENEMY_DICE_RE = re.compile(r"^\d+d\d+([+-]\d+)?$")
 
 
 class MonsterRevealPatch(StrictModel):
@@ -65,8 +72,56 @@ class MonsterInstanceUpdateToolInput(MonsterInstancePatchInput):
 class QuickEnemyAttackInput(StrictModel):
     name: str = Field(min_length=1, max_length=120)
     attack_bonus: int | None = None
-    damage: str = Field(min_length=1, max_length=60)
-    attack_kind: str | None = None
+    damage: str = Field(
+        min_length=1,
+        max_length=60,
+        description=(
+            "Damage dice formula optionally followed by a damage type, e.g. '1d6+2' or '1d6+2 slashing'."
+        ),
+    )
+    attack_kind: Literal[
+        "melee_weapon",
+        "ranged_weapon",
+        "melee_spell",
+        "ranged_spell",
+        "melee",
+        "ranged",
+    ] | None = Field(
+        default=None,
+        description=(
+            "Attack kind: one of 'melee_weapon', 'ranged_weapon', 'melee_spell', 'ranged_spell' "
+            "('melee' and 'ranged' accepted as aliases, default 'melee_weapon')."
+        ),
+    )
+
+    @field_validator("attack_kind", mode="after")
+    @classmethod
+    def normalize_attack_kind(
+        cls, value: str | None
+    ) -> Literal["melee_weapon", "ranged_weapon", "melee_spell", "ranged_spell"] | None:
+        if value is None:
+            return None
+        if value == "melee":
+            return "melee_weapon"
+        if value == "ranged":
+            return "ranged_weapon"
+        return value
+
+    @field_validator("damage", mode="after")
+    @classmethod
+    def validate_damage(cls, value: str) -> str:
+        message = "damage must be a dice formula like 1d6+2, optionally followed by a damage type"
+        dice, damage_type = split_damage_expression(value)
+        if not _QUICK_ENEMY_DICE_RE.match(dice):
+            raise ValueError(message)
+        if damage_type is not None:
+            try:
+                parsed = DamageType(damage_type.replace("_", "-"))
+            except ValueError:
+                raise ValueError(message) from None
+            if parsed is DamageType.UNTYPED:
+                raise ValueError(message)
+        return value
 
 
 class CreateQuickEnemyInput(StrictModel):
