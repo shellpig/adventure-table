@@ -203,6 +203,20 @@ describe('P4-E E11a compact combat log presentation', () => {
     expect(rendered).not.toContain('Goblin · Damage 7 · HP')
   })
 
+  it('marks an auto-failed save bilingually and never as a success', () => {
+    const autoFail = event('combat.save_resolved', {
+      target_entry_id: 'enemy',
+      ability_ref: 'srd5.1:ability:dexterity',
+      total: 22,
+      succeeded: false,
+      auto_fail: true,
+    })
+    expect(text(formatCombatLogEvent(autoFail, 'zh-TW', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Goblin · 豁免 · 失敗 · 自動失敗 · 總值 22')
+    expect(text(formatCombatLogEvent(autoFail, 'en', resolveEntryLabel, fallbackContentName, fallbackContentField)))
+      .toBe('Goblin · Saving throw · Failure · Auto-fail · Total 22')
+  })
+
   it('formats projected save success and failure bilingually without DC or raw kinds', () => {
     const success = event('combat.save_resolved', {
       target_entry_id: 'hero',

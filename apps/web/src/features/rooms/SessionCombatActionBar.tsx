@@ -892,6 +892,9 @@ export function SessionCombatActionBar({
                 {roll.request_type === 'saving_throw' && typeof roll.dc === 'number'
                   ? ` · DC ${roll.dc}`
                   : ''}
+                {roll.request_type === 'saving_throw' && roll.auto_fail
+                  ? ` · ${copy.combatSaveAutoFail}`
+                  : ''}
               </span>
               {handler ? (
                 <button
@@ -945,6 +948,7 @@ export function SessionCombatActionBar({
           {copy.combatSavingThrowResult.replace('{total}', String(rollResult.value.total))}
           {' · '}
           {rollResult.value.succeeded ? copy.combatSaveSuccess : copy.combatSaveFailure}
+          {rollResult.value.auto_fail ? ` · ${copy.combatSaveAutoFail}` : null}
         </p>
       ) : rollResult?.kind === 'death_save' ? (
         <p className="session-combat-actions__result" data-roll-result="death_save">

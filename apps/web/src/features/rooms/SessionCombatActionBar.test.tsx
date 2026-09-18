@@ -97,6 +97,7 @@ function pendingRoll(
     ability_ref: null,
     dc: null,
     modifier_mode: 'normal',
+    auto_fail: false,
     status: 'pending',
     ...options,
   }
@@ -278,6 +279,28 @@ describe('SessionCombatActionBar', () => {
     expect(playerMarkup).toContain('dexterity')
     expect(playerMarkup).not.toContain('DC 16')
     expect(playerMarkup).not.toContain('DC ?')
+  })
+
+  it('marks a pending saving throw that auto-fails and omits the marker otherwise', () => {
+    const copy = sessionCopy('en')
+    const autoFailMarkup = renderActionBar({
+      detail: combat('entry-player'),
+      isCurrentDm: false,
+      rolls: [
+        pendingRoll('save-auto', 'saving_throw', {
+          label: 'Saving Throw',
+          ability_ref: 'strength',
+          auto_fail: true,
+        }),
+      ],
+    })
+    expect(autoFailMarkup).toContain(copy.combatSaveAutoFail)
+    const plainMarkup = renderActionBar({
+      detail: combat('entry-player'),
+      isCurrentDm: false,
+      rolls: [pendingRoll('save-plain', 'saving_throw', { label: 'Saving Throw', ability_ref: 'strength' })],
+    })
+    expect(plainMarkup).not.toContain(copy.combatSaveAutoFail)
   })
 
   it('renders an eligible open reaction with accept and decline controls', () => {

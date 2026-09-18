@@ -360,6 +360,7 @@ export type SavingThrowResultView = {
   target_entry_id: string
   total: number
   succeeded: boolean
+  auto_fail: boolean
 }
 
 export type DeathSaveResultView = {
@@ -501,6 +502,7 @@ export type CombatPendingRollView = {
   ability_ref: string | null
   dc: number | null
   modifier_mode: 'normal' | 'advantage' | 'disadvantage'
+  auto_fail: boolean
   status: string
 }
 

@@ -30,6 +30,7 @@ type CombatLogCopy = {
   savingThrow: string
   saveSuccess: string
   saveFailure: string
+  saveAutoFail: string
   deathSave: string
   deathSaveSuccesses: string
   deathSaveFailures: string
@@ -130,6 +131,7 @@ const COMBAT_LOG_COPY = {
     savingThrow: '豁免',
     saveSuccess: '成功',
     saveFailure: '失敗',
+    saveAutoFail: '自動失敗',
     deathSave: '死亡豁免',
     deathSaveSuccesses: '成功',
     deathSaveFailures: '失敗',
@@ -228,6 +230,7 @@ const COMBAT_LOG_COPY = {
     savingThrow: 'Saving throw',
     saveSuccess: 'Success',
     saveFailure: 'Failure',
+    saveAutoFail: 'Auto-fail',
     deathSave: 'Death save',
     deathSaveSuccesses: 'Successes',
     deathSaveFailures: 'Failures',
@@ -795,9 +798,10 @@ function formatSave(
     : succeeded === false
       ? copy.saveFailure
       : null
+  const autoFail = booleanField(source, 'auto_fail') === true ? copy.saveAutoFail : null
   const total = numberField(source, 'total')
   return {
-    summary: [target, copy.savingThrow, outcome].filter(Boolean).join(' · ') || copy.savingThrow,
+    summary: [target, copy.savingThrow, outcome, autoFail].filter(Boolean).join(' · ') || copy.savingThrow,
     detail: total === null ? null : `${copy.total} ${total}`,
   }
 }
