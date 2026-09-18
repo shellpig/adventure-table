@@ -20,7 +20,8 @@ P4B_ROLL_TARGETS_REVISION = "0024_p4b_combat_roll_targets"
 P4C_REVISION = "0025_p4c_core_resolution"
 P4E_REVISION = "0026_p4e_monster_concentration"
 P4F_OUTCOME_REVISION = "0027_p4f_monster_outcome"
-P4F_REVISION = "0028_p4f_monster_reveal_state"
+P4F_REVEAL_REVISION = "0028_p4f_monster_reveal_state"
+P4F_REVISION = "0029_p4f_roll_request_auto_fail"
 EXPECTED_TABLES = {
     "ai_oauth_clients",
     "ai_oauth_authorizations",
@@ -72,9 +73,12 @@ def test_m04b_revision_links_p3d_and_carries_forward_to_current_web_head() -> No
     p4f_outcome = scripts.get_revision(P4F_OUTCOME_REVISION)
     assert p4f_outcome is not None
     assert p4f_outcome.down_revision == P4E_REVISION
+    p4f_reveal = scripts.get_revision(P4F_REVEAL_REVISION)
+    assert p4f_reveal is not None
+    assert p4f_reveal.down_revision == P4F_OUTCOME_REVISION
     p4f_revision = scripts.get_revision(P4F_REVISION)
     assert p4f_revision is not None
-    assert p4f_revision.down_revision == P4F_OUTCOME_REVISION
+    assert p4f_revision.down_revision == P4F_REVEAL_REVISION
     assert P4F_REVISION in scripts.get_heads()
 
 
