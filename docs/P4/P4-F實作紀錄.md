@@ -22,7 +22,7 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 | F4b | Character state PATCH DTO（`/characters/{id}/state` 與 table `TableCharacterStatePatch`）補 `concentration` / `exhaustion_level` / `death_saves` / `temporary_effects`；active Combat 中比照 HP 走 DM correction-only | P4-D closeout 留下 | ✅ |
 | F4c | server：special-attack 骰與 reach 裁定的 canonical 判別（修 P4-E 遺留：`shove_*` / 防守方骰落成 `skill`、`shove_*` 裁定未歸 reach）+ `escape_grapple` 判別 | 實作規格 P4-E 4、8；P4-E 遺留 | ✅ |
 | F4d | web：kind 改 `shove_prone` / `shove_push` / `escape_grapple`（修 UI shove 422）、escape 選項只在自己被 grappled 時出現、roll handler、combat log、雙語 | 實作規格 P4-E 4、12、13 | ✅ |
-| F5 | 真 PostgreSQL + server restart / reconnect：Round ≥ 2、pending save 或 reaction → restart → 狀態完整、resolve 一次不重擲 | 實作規格 P4-F 3；測試指南 F.1 | ⬜ |
+| F5 | 真 PostgreSQL + server restart / reconnect：Round ≥ 2、pending save 或 reaction → restart → 狀態完整、resolve 一次不重擲 | 實作規格 P4-F 3；測試指南 F.1 | ✅ |
 | F6 | Full browser journey spec（F.2 全項：spell / save、damage / healing、condition、concentration 或 reaction、0 HP outcome、Session boundary resume、End cleanup）+ `P4 Full-Stack E2E` workflow | 實作規格 P4-F 1、2、4、5、6；測試指南 F.2 | ⬜ |
 | F7 | `ConditionSemantics` 接進 attack / save modifier pipeline（advantage / disadvantage / auto-fail / adjacent crit） | P4-D closeout 留下；P4-F 已拍板納入 | ⬜ |
 | F8 | 真實 ChatGPT Web Combat gate（人工，含 `wait_for_event` / reconnect continuity）+ DM proxy audit 與 secrecy 三層證據彙整 | 實作規格 P4-F 5、6、9、10；測試指南 F.3 | ⬜ |
@@ -99,4 +99,15 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 - **Claude 審核修正**：`SpecialAttackView.kind: SpecialAttackKind | string`（等於 string）→ `string`；`escape_grapple_requested` 的 `stringField(payload,'kind') ?? 'escape_grapple'` 多餘 fallback → 直接用 `copy.escapeGrapple`。其餘零修改。
 - 測試：`SessionCombatActionBar.test.tsx` +3（無 grappled 時無 escape 選項且有兩種 shove；有 grappled 時出現 `value="escape_grapple"`；`request_type: 'escape_grapple'` pending roll 顯示 escape label 並派給 `rollSpecialAttack`）、`sessionCombat.test.ts` +1、`sessionCombatLog.test.ts` +3（requested 雙語、resolved escape 顯示移除狀態、grapple 仍顯示套用狀態）、`combat.test.ts` 改送 `shove_prone`。`npm test -- --run` 86 files / 478 passed；`npm run build` 乾淨；長行對照 HEAD 無新增。`e2e/p4e-quick-combat.spec.ts` 不碰 grapple / shove 文案，不受影響。
 - **F4 完成**（F4a～F4d）。瀏覽器實測 escape 流程留給 F6 full journey。
+
+### F5 — 真 PostgreSQL restart / reconnect
+
+- 2026-09-18，agy worker（Gemini 3.8 Flash (High)，1 回合 19.7 分鐘），Claude 審核修正與 commit。prompt：`C:\_work\AI_Work\Tools\agy-runs\agy-p4f-f5.prompt.txt`。
+- Restart 模型：沿用 P3-F 先例（`test_p3f_postgres_restart_recovery.py`）——process 內丟掉 engine / pool / notifier / 全部 service 物件，只留 JSON-plain 的 `ids` dict，再從 PostgreSQL 重建 `_Services`（constructor 對照 `app/api/rooms/dependencies.py` 逐一接線，含 `ProcessLocalTableEventNotifier`）。真 process 層級的 restart 留給 F6 Docker E2E 補。
+- 交付：`tests/test_p4f_postgres_restart_recovery.py`（`P4_POSTGRES_URL` gate，schema reset + `alembic upgrade heads`）。場景：`support._setup()` 以 monkeypatch 的 PostgreSQL engine 建世界 → 1 Character + 2 quick enemy → Quick Combat → initiative → 推到 Round 4 Player turn → 同時掛著一張 pending saving throw、一個 open reaction window（advance_turn 會清 incoming combatant 的 `pending_reaction_state`，所以 window 在推到 Player turn 之後才開）、一個 Player attack 的 `dm_adjudication_required` 裁定 → dispose + del → 重建 → Human DM / Human Player / AI participant 重新驗證 → DM detail、Player detail（仍無 monster `current_hp` / `armor_class`）、DM + Player pending rolls、reaction window、adjudication list 逐欄等於 restart 前 dump，`combats.revision` 與 `session_events` max seq 不變（重連不寫 event）→ AI participant 經 `CombatAIToolApplicationService.combat_get_active` / `combat_get_context` 看到同一 Round / current turn → save 用實體骰 resolve 一次（`roll_results` 恰一列，同 key retry 不增、revision 不變）、reaction resolve + retry、DM in-range 裁定 + retry → 第二次 restart 確認落地。`.github/workflows/p4f-non-e2e.yml` postgres job 加入該檔。
+- 契約說明：Session 的 DM controller 單值（human 或 ai），Human DM 在場時 AI DM grant 不能驗證，所以「AI reconnect」以 AI participant（`let_ai_control_player`）證明；產品規格如此，非缺口。
+- **Claude 審核修正**：helper `ai_dm` 實際是 AI participant → 改名 `ai_participant`。
+- **順帶修 CI（P4-F PostgreSQL job 自 F1 起紅，本機因 gate 跳過而未察覺）**：① `test_p4f_postgres_migration.py` 的 raw `INSERT INTO rooms (id, name)` 缺 `code` / password / key hash / timestamps 等 NOT NULL 欄 → 抽 `_seed_room_and_campaign` 補齊全部 NOT NULL 欄；② `test_p4e_postgres_migration.py` 在 `upgrade heads` 後斷言 `P4E_HEAD in _revision_set()`，但 head 已是 `0028` → 改為 `P4E_APPLIED_HEADS` 交集（同 P4-C 測試既有做法）。
+- 測試：本機 `P4_POSTGRES_URL`（專用 DB `adventure_table_p4f`）跑 P4-A～F 全部 PostgreSQL migration / concurrency / restart 測試 exit 0；無 env 時 restart 測試 SKIPPED（gate 生效）。
+- 留給 F6：full browser journey + Docker `docker compose restart server` 補真 process restart。
 

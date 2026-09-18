@@ -51,6 +51,25 @@ def _revision_set() -> set[str]:
         engine.dispose()
 
 
+def _seed_room_and_campaign(connection, *, room_id, campaign_id) -> None:
+    """Minimal parent rows for a monster_instances insert; every NOT NULL column is filled."""
+    connection.execute(
+        text(
+            "INSERT INTO rooms (id, code, name, password_salt, password_hash, owner_key_hash, dm_key_hash, "
+            "created_at, updated_at) VALUES (:room_id, :code, 'test room', :salt, :hash, :owner, :dm, now(), now())"
+        ),
+        {"room_id": room_id, "code": str(room_id)[:10], "salt": bytes(32), "hash": bytes(64),
+         "owner": bytes(32), "dm": bytes(32)},
+    )
+    connection.execute(
+        text(
+            "INSERT INTO campaigns (id, room_id, name, ruleset, status) "
+            "VALUES (:campaign_id, :room_id, 'test campaign', 'dnd5e-2014', 'active')"
+        ),
+        {"campaign_id": campaign_id, "room_id": room_id},
+    )
+
+
 def _assert_surrendered_status_accepted() -> None:
     assert POSTGRES_URL is not None
     engine = create_engine(POSTGRES_URL)
@@ -59,14 +78,7 @@ def _assert_surrendered_status_accepted() -> None:
         campaign_id = uuid4()
         instance_id = uuid4()
         with engine.begin() as connection:
-            connection.execute(
-                text("INSERT INTO rooms (id, name) VALUES (:room_id, 'test room')"),
-                {"room_id": room_id},
-            )
-            connection.execute(
-                text("INSERT INTO campaigns (id, room_id, name) VALUES (:campaign_id, :room_id, 'test campaign')"),
-                {"campaign_id": campaign_id, "room_id": room_id},
-            )
+            _seed_room_and_campaign(connection, room_id=room_id, campaign_id=campaign_id)
             connection.execute(
                 text(
                     "INSERT INTO monster_instances ("
@@ -91,14 +103,7 @@ def _assert_surrendered_status_rejected() -> None:
         instance_id = uuid4()
         with pytest.raises(IntegrityError):
             with engine.begin() as connection:
-                connection.execute(
-                    text("INSERT INTO rooms (id, name) VALUES (:room_id, 'test room')"),
-                    {"room_id": room_id},
-                )
-                connection.execute(
-                    text("INSERT INTO campaigns (id, room_id, name) VALUES (:campaign_id, :room_id, 'test campaign')"),
-                    {"campaign_id": campaign_id, "room_id": room_id},
-                )
+                _seed_room_and_campaign(connection, room_id=room_id, campaign_id=campaign_id)
                 connection.execute(
                     text(
                         "INSERT INTO monster_instances ("
