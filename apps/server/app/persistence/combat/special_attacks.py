@@ -729,8 +729,10 @@ class SpecialAttackRepository:
 
     @classmethod
     def _apply_condition(cls, connection: Any, target: Any, *, condition_ref: str, note: str) -> None:
+        public = target["subject_kind"] == "monster"
+
         def mutate(conditions: list[dict[str, Any]]) -> list[dict[str, Any]]:
-            _add_condition(conditions, condition_ref, note)
+            _add_condition(conditions, condition_ref, note, public=public)
             return conditions
 
         cls._mutate_conditions(connection, target, mutate)

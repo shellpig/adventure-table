@@ -14,6 +14,7 @@ from app.domain.combat.lifecycle import CombatRepository
 from app.domain.combat.resolution import DamageRollPart, DamageType, RollMode
 from app.domain.combat.spell_resolver import SaveDamageMode, SpellCastMode
 from app.domain.combat.spell_resources import (
+    access_matches_profile,
     authorize_character_spell,
     resolve_monster_spell_source,
 )
@@ -65,16 +66,10 @@ def resolve_character_profile(
 
     matching: list[SpellcastingProfile] = []
     for p in build.spellcasting_profiles:
-        accesses = [
-            entry
+        if any(
+            entry.spell_key == spell_ref and access_matches_profile(build, access=entry, profile=p)
             for entry in build.spell_access_entries
-            if entry.spell_key == spell_ref
-            and (
-                entry.source_key == p.source_key
-                or (entry.source_type == "class" and entry.source_key == p.class_ref)
-            )
-        ]
-        if accesses:
+        ):
             matching.append(p)
 
     if len(matching) == 1:

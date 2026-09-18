@@ -199,8 +199,10 @@ def _resolution_from_row(row: Any) -> StoredAttackResolution:
     target_entry_id = row["target_entry_id"]
     if roll_request_id is None or roll_result_id is None or target_entry_id is None or not result:
         raise AttackRequestNotPendingPersistenceError("Attack does not have a durable resolution")
-    before = result.get("damage", {}).get("before") if isinstance(result.get("damage"), dict) else None
-    after = result.get("damage", {}).get("after") if isinstance(result.get("damage"), dict) else None
+    # A miss stores ``"damage": None``; only a hit carries the damage block.
+    damage = result["damage"] if isinstance(result.get("damage"), dict) else None
+    before = damage.get("before") if damage is not None else None
+    after = damage.get("after") if damage is not None else None
     target_is_hostile = bool(result.get("target_is_hostile", False))
     target_injury_level = result.get("target_injury_level")
     return StoredAttackResolution(
@@ -213,7 +215,7 @@ def _resolution_from_row(row: Any) -> StoredAttackResolution:
         critical=bool(result["attack"]["critical"]),
         attack_total=int(result["attack"]["total"]),
         target_ac=int(result["attack"]["target_ac"]),
-        damage_total=int(result.get("damage", {}).get("adjusted_total", 0)),
+        damage_total=int(damage.get("adjusted_total", 0)) if damage is not None else 0,
         before_hp=int(before["current_hp"]) if isinstance(before, dict) else None,
         after_hp=int(after["current_hp"]) if isinstance(after, dict) else None,
         resolution_result=result,

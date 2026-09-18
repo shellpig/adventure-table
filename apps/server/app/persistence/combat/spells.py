@@ -1583,6 +1583,7 @@ class CombatSpellRepository:
                         "condition_ref": condition_ref,
                         "note": f"{note_prefix}: {spell_ref}",
                         "effect_id": effect.effect_id,
+                        "visibility": "public",
                     }
                 )
 

@@ -47,17 +47,31 @@ def _profile(build: CharacterBuild, profile_id: str) -> SpellcastingProfile:
     raise ValueError(f"unknown spellcasting profile: {profile_id}")
 
 
+def access_matches_profile(
+    build: CharacterBuild, *, access: SpellAccessEntry, profile: SpellcastingProfile
+) -> bool:
+    """Whether one Build access row is cast through the given spellcasting profile.
+
+    Subclass-granted rows (a Life Domain always-prepared spell) belong to the class
+    profile of the subclass the Build actually selected.
+    """
+    if access.source_key == profile.source_key:
+        return True
+    if access.source_type == "class" and access.source_key == profile.class_ref:
+        return True
+    return access.source_type == "subclass" and any(
+        selection.class_ref == profile.class_ref and selection.subclass_ref == access.source_key
+        for selection in build.subclasses
+    )
+
+
 def _matching_access(
     build: CharacterBuild, *, profile: SpellcastingProfile, spell_ref: str
 ) -> tuple[SpellAccessEntry, ...]:
     return tuple(
         entry
         for entry in build.spell_access_entries
-        if entry.spell_key == spell_ref
-        and (
-            entry.source_key == profile.source_key
-            or (entry.source_type == "class" and entry.source_key == profile.class_ref)
-        )
+        if entry.spell_key == spell_ref and access_matches_profile(build, access=entry, profile=profile)
     )
 
 
@@ -94,7 +108,10 @@ def authorize_character_spell(
     )
     access = direct or (accesses[0] if accesses else None)
 
-    if direct is None:
+    # Cantrips are never prepared: any access row through this profile is enough.
+    if direct is None and spell_level == 0 and access is None:
+        raise ValueError("spell is not known for this spellcasting source")
+    if direct is None and spell_level > 0:
         if profile.access_model == "known":
             if access is None or access.access_type not in {"known", "granted", "always_prepared"}:
                 raise ValueError("spell is not known for this spellcasting source")

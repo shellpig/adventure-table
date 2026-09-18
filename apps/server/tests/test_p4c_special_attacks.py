@@ -275,6 +275,11 @@ def test_shove_prone_uses_same_formal_flow_and_applies_prone() -> None:
             for condition in monster.conditions
         }
         assert PRONE_REF in refs
+        # P4-C 4.5: prone is a public condition, so the Player-facing enemy projection carries it.
+        player_detail = table.combat.get_active_combat_detail(table.player_actor)
+        assert player_detail is not None
+        target_view = next(item for item in player_detail.combatants if item.entry_id == target_id)
+        assert PRONE_REF in target_view.projection["conditions"]
     finally:
         table.engine.dispose()
 

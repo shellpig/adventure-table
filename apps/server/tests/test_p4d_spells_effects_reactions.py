@@ -14,6 +14,7 @@ from app.domain.character.schemas import (
     SpellResourcePool,
     SpellSlotCapacity,
     SpellcastingProfile,
+    SubclassSelection,
     TemporaryEffectModifier,
 )
 from app.domain.combat.aoe_adjudication import (
@@ -62,6 +63,7 @@ from app.domain.combat.spell_resolver import (
     half_damage_parts,
     resolve_spell,
 )
+from app.domain.combat.spell_content_adapter import resolve_character_profile
 from app.domain.combat.spell_resources import (
     SpellResourceKind,
     authorize_character_spell,
@@ -280,6 +282,109 @@ def test_p4d_d1_known_pact_magic_stays_separate_from_normal_slots() -> None:
     assert spent.state.spell_slots[1] == state.spell_slots[1]
     with pytest.raises(ValueError, match="Pact Magic slot remains"):
         spend_character_spell(state=spent.state, authorization=authorization)
+
+
+def _life_cleric_build_and_state() -> tuple[CharacterBuild, CharacterState]:
+    """Prepared-model Cleric whose Life Domain rows are subclass-sourced and whose cantrip is known."""
+    cleric = "srd5.1:class:cleric"
+    life = "srd5.1:subclass:life"
+    build = CharacterBuild(
+        race_ref="srd5.1:race:human",
+        character_level=2,
+        class_progression=(cleric, cleric),
+        subclasses=(SubclassSelection(class_ref=cleric, subclass_ref=life),),
+        ability_scores=AbilityScores(
+            strength=10,
+            dexterity=12,
+            constitution=14,
+            intelligence=10,
+            wisdom=16,
+            charisma=10,
+        ),
+        hp_progression=(8, 5),
+        spellcasting_profiles=(
+            SpellcastingProfile(
+                profile_id="class:cleric",
+                source_type="class",
+                source_key=cleric,
+                class_ref=cleric,
+                ability="wisdom",
+                access_model="prepared",
+                resource_pool_type="normal_multiclass_slots",
+                max_spell_level=1,
+                prepared_limit=4,
+            ),
+        ),
+        spell_access_entries=(
+            SpellAccessEntry(
+                entry_id="class:cleric:known:guidance",
+                spell_key="srd5.1:spell:guidance",
+                source_type="class",
+                source_key=cleric,
+                access_type="known",
+            ),
+            SpellAccessEntry(
+                entry_id="subclass:life:always_prepared:cure-wounds",
+                spell_key="srd5.1:spell:cure-wounds",
+                source_type="subclass",
+                source_key=life,
+                access_type="always_prepared",
+            ),
+            SpellAccessEntry(
+                entry_id="subclass:war:always_prepared:shield-of-faith",
+                spell_key="srd5.1:spell:shield-of-faith",
+                source_type="subclass",
+                source_key="srd5.1:subclass:war",
+                access_type="always_prepared",
+            ),
+        ),
+        spell_resource_pools=(
+            SpellResourcePool(
+                pool_id="spell_slots:normal",
+                pool_type="normal_multiclass_slots",
+                slots=(SpellSlotCapacity(level=1, capacity=3),),
+            ),
+        ),
+    )
+    state = CharacterState(
+        current_hp=13,
+        spell_slots={1: ResourceCounter(used=0, remaining=3)},
+    )
+    return build, state
+
+
+def test_p4d_d1_subclass_always_prepared_and_known_cantrip_cast_through_class_profile() -> None:
+    build, state = _life_cleric_build_and_state()
+    # Life Domain "always prepared" row is cast through the Cleric profile the Build selected it for.
+    cure = authorize_character_spell(
+        build=build,
+        state=state,
+        profile_id="class:cleric",
+        spell_ref="srd5.1:spell:cure-wounds",
+        spell_level=1,
+        slot_level=1,
+    )
+    assert cure.resource_kind is SpellResourceKind.NORMAL_SLOT
+    assert resolve_character_profile(build, state, "srd5.1:spell:cure-wounds").profile_id == "class:cleric"
+    # Cantrips are never prepared: a known row is enough even under the prepared access model.
+    guidance = authorize_character_spell(
+        build=build,
+        state=state,
+        profile_id="class:cleric",
+        spell_ref="srd5.1:spell:guidance",
+        spell_level=0,
+    )
+    assert guidance.resource_kind is SpellResourceKind.CANTRIP
+    # A subclass the Build did not select does not leak its spells into the profile.
+    with pytest.raises(ValueError, match="not prepared"):
+        authorize_character_spell(
+            build=build,
+            state=state,
+            profile_id="class:cleric",
+            spell_ref="srd5.1:spell:shield-of-faith",
+            spell_level=1,
+            slot_level=1,
+        )
 
 
 def test_p4d_d1_unprepared_spell_fails_before_resource_spend() -> None:
