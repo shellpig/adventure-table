@@ -237,6 +237,7 @@ def resolve_attack_roll(
     target_ac: int,
     mode: RollMode = RollMode.NORMAL,
     modifier_sources: Iterable[ModifierSource] = (),
+    critical_on_hit: bool = False,
 ) -> AttackRollOutcome:
     """Resolve a 2014 attack roll without owning formal Roll persistence."""
 
@@ -281,6 +282,7 @@ def resolve_attack_roll(
             automatic="automatic_miss",
             modifier_sources=tuple(modifier_sources),
         )
+    hit = total >= target_ac
     return AttackRollOutcome(
         mode=mode,
         raw_d20=rolls,
@@ -288,8 +290,8 @@ def resolve_attack_roll(
         modifier=modifier,
         total=total,
         target_ac=target_ac,
-        hit=total >= target_ac,
-        critical=False,
+        hit=hit,
+        critical=hit and critical_on_hit,
         modifier_sources=tuple(modifier_sources),
     )
 

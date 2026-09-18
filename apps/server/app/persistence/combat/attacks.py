@@ -263,6 +263,7 @@ class CombatAttackRepository:
         attack: ResolvedAttack,
         target_ac: int,
         modifier_mode: RollMode,
+        modifier_decision: dict[str, Any],
         idempotency_key: str | None,
     ) -> tuple[StoredAttackRequest, StoredTableEvent]:
         action_id = uuid4()
@@ -363,6 +364,7 @@ class CombatAttackRepository:
                         "resolved_attack": attack_payload,
                         "target_ac": target_ac,
                         "modifier_mode": modifier_mode.value,
+                        "modifier_decision": modifier_decision,
                     },
                     resolution_status="waiting_for_roll",
                     roll_request_id=roll_request_id,
@@ -387,6 +389,7 @@ class CombatAttackRepository:
                 "source_ref": attack.source_ref,
                 "content_ref": attack.content_ref,
                 "presentation_field": attack.presentation_field,
+                "modifier_decision": modifier_decision,
             }
             connection.execute(
                 update(session_events).where(session_events.c.id == event_id).values(
@@ -426,6 +429,7 @@ class CombatAttackRepository:
                 "attacker_entry_id": str(attacker_entry_id),
                 "target_entry_id": str(target_entry_id),
                 "source_ref": attack.source_ref,
+                "modifier_decision": modifier_decision,
             },
             idempotency_key=f"p4c-attack-request:{idempotency_key}" if idempotency_key else None,
             expected_actor_binding=binding,
@@ -503,6 +507,8 @@ class CombatAttackRepository:
             resolved_attack = _attack_from_payload(dict(payload["resolved_attack"]))
             target_ac = int(payload["target_ac"])
             mode = RollMode(str(payload["modifier_mode"]))
+            # Actions requested before F7b carry no modifier_decision; they never force a critical.
+            decision = payload.get("modifier_decision")
             computation = roll_factory()
             attack_outcome = resolve_attack_roll(
                 d20_rolls=computation.raw_dice,
@@ -510,6 +516,7 @@ class CombatAttackRepository:
                 target_ac=target_ac,
                 mode=mode,
                 modifier_sources=resolved_attack.modifier_sources,
+                critical_on_hit=bool(decision["critical_on_hit"]) if decision is not None else False,
             )
 
             connection.execute(

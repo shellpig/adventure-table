@@ -37,6 +37,8 @@ class NewSavingThrowUnit:
     target_seat_id: UUID | None
     target_character_id: UUID | None
     modifier: int
+    modifier_mode: str
+    decision: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -248,7 +250,7 @@ class CombatCoreRollRepository:
                         ability_ref=ability_ref,
                         skill_ref=None,
                         dc=dc,
-                        modifier_mode=modifier_mode,
+                        modifier_mode=unit.modifier_mode,
                         flat_adjustment=unit.modifier,
                         visibility=visibility,
                         status="pending",
@@ -257,6 +259,10 @@ class CombatCoreRollRepository:
                     )
                 )
 
+        decisions = {
+            str(request_id): unit.decision
+            for request_id, unit in zip(request_ids, units, strict=True)
+        }
         event = self.event_repository.append(
             room_id=binding.room_id,
             campaign_id=binding.campaign_id,
@@ -278,6 +284,7 @@ class CombatCoreRollRepository:
                 "ability_ref": ability_ref,
                 "modifier_mode": modifier_mode,
                 "visibility": visibility,
+                "decisions": decisions,
             },
             idempotency_key=f"p4c-save-request:{idempotency_key}" if idempotency_key else None,
             expected_actor_binding=binding,

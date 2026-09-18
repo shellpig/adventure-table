@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Any, Iterable
 
 from app.domain.combat.effect_resolver import CONDITION_SEMANTICS, Condition, exhaustion_semantics
 from app.domain.combat.resolution import AttackKind, RollMode
@@ -18,13 +18,19 @@ def _normalize_ability(ability_ref: str) -> str:
     return _ABILITY_ALIASES.get(slug, slug)
 
 
-def conditions_from_refs(refs: Iterable[str]) -> frozenset[Condition]:
+def conditions_from_refs(
+    refs: Iterable[str],
+    *,
+    ignore_unknown: bool = False,
+) -> frozenset[Condition]:
     """Parse 2014 condition references or bare slugs into Condition enum values."""
     result: set[Condition] = set()
     for ref in refs:
         try:
             result.add(Condition(ref.rsplit(":", 1)[-1]))
         except ValueError as exc:
+            if ignore_unknown:
+                continue
             raise ValueError(f"unsupported 2014 combat condition: {ref}") from exc
     return frozenset(result)
 
@@ -45,6 +51,7 @@ class AttackModifierDecision:
     advantage_sources: tuple[str, ...]
     disadvantage_sources: tuple[str, ...]
     unresolved: tuple[str, ...]
+    chosen: RollMode = RollMode.NORMAL
 
 
 @dataclass(frozen=True)
@@ -54,6 +61,29 @@ class SaveModifierDecision:
     advantage_sources: tuple[str, ...]
     disadvantage_sources: tuple[str, ...]
     auto_fail_sources: tuple[str, ...]
+    chosen: RollModifierMode = RollModifierMode.NORMAL
+
+
+def attack_decision_payload(decision: AttackModifierDecision) -> dict[str, Any]:
+    return {
+        "chosen": decision.chosen.value,
+        "mode": decision.mode.value,
+        "critical_on_hit": decision.critical_on_hit,
+        "advantage_sources": list(decision.advantage_sources),
+        "disadvantage_sources": list(decision.disadvantage_sources),
+        "unresolved": list(decision.unresolved),
+    }
+
+
+def save_decision_payload(decision: SaveModifierDecision) -> dict[str, Any]:
+    return {
+        "chosen": decision.chosen.value,
+        "mode": decision.mode.value,
+        "auto_fail": decision.auto_fail,
+        "advantage_sources": list(decision.advantage_sources),
+        "disadvantage_sources": list(decision.disadvantage_sources),
+        "auto_fail_sources": list(decision.auto_fail_sources),
+    }
 
 
 def attack_modifiers(
@@ -65,8 +95,14 @@ def attack_modifiers(
     attacker_exhaustion: int = 0,
 ) -> AttackModifierDecision:
     """Evaluate conditions and exhaustion for an attack roll."""
-    parsed_attacker = sorted(conditions_from_refs(attacker_conditions), key=lambda c: c.value)
-    parsed_target = sorted(conditions_from_refs(target_conditions), key=lambda c: c.value)
+    parsed_attacker = sorted(
+        conditions_from_refs(attacker_conditions, ignore_unknown=True),
+        key=lambda c: c.value,
+    )
+    parsed_target = sorted(
+        conditions_from_refs(target_conditions, ignore_unknown=True),
+        key=lambda c: c.value,
+    )
     exhaustion = exhaustion_semantics(attacker_exhaustion)
 
     adv_sources: list[str] = ["chosen:advantage"] if chosen is RollMode.ADVANTAGE else []
@@ -105,6 +141,7 @@ def attack_modifiers(
         advantage_sources=tuple(adv_sources),
         disadvantage_sources=tuple(dis_sources),
         unresolved=tuple(unresolved),
+        chosen=chosen,
     )
 
 
@@ -117,7 +154,10 @@ def save_modifiers(
 ) -> SaveModifierDecision:
     """Evaluate conditions and exhaustion for a saving throw."""
     ability = _normalize_ability(ability_ref)
-    parsed_target = sorted(conditions_from_refs(target_conditions), key=lambda c: c.value)
+    parsed_target = sorted(
+        conditions_from_refs(target_conditions, ignore_unknown=True),
+        key=lambda c: c.value,
+    )
     exhaustion = exhaustion_semantics(target_exhaustion)
 
     auto_fail_sources: list[str] = []
@@ -142,4 +182,17 @@ def save_modifiers(
         advantage_sources=tuple(adv_sources),
         disadvantage_sources=tuple(dis_sources),
         auto_fail_sources=tuple(auto_fail_sources),
+        chosen=chosen,
     )
+
+
+__all__ = [
+    "AttackModifierDecision",
+    "SaveModifierDecision",
+    "attack_decision_payload",
+    "attack_modifiers",
+    "conditions_from_refs",
+    "save_decision_payload",
+    "save_modifiers",
+]
+

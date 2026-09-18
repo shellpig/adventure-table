@@ -6,6 +6,7 @@ from pydantic import Field, field_validator
 
 from app.domain.combat.concentration import CombatConcentrationService
 from app.domain.combat.concentration_triggers import monster_save_modifier
+from app.domain.combat.condition_modifiers import save_decision_payload, save_modifiers
 from app.domain.combat.lifecycle import CombatNotFoundError, CombatService, CombatStateConflictError
 from app.domain.combat.resolution import SpecialAttackKind
 from app.domain.rooms.rolls import (
@@ -206,7 +207,21 @@ class CombatCoreRollService:
             and request.ability_ref in {"srd5.1:ability:constitution", "constitution"}
         )
 
-    def _save_unit(self, actor: TableActorContext, entry: StoredCombatEntry, ability: str) -> NewSavingThrowUnit:
+    def _save_unit(
+        self,
+        actor: TableActorContext,
+        entry: StoredCombatEntry,
+        ability: str,
+        chosen_mode: RollModifierMode,
+    ) -> NewSavingThrowUnit:
+        ctx = self.combat_service.condition_context(entry)
+        decision = save_modifiers(
+            chosen=chosen_mode,
+            ability_ref=ability,
+            target_conditions=ctx.conditions,
+            target_exhaustion=ctx.exhaustion_level,
+        )
+        decision_payload = save_decision_payload(decision)
         if entry.subject_kind == "character":
             if entry.character_id is None:
                 raise CombatStateConflictError("Character CombatEntry has no Character identity")
@@ -226,6 +241,8 @@ class CombatCoreRollService:
                 target_seat_id=seat_id,
                 target_character_id=entry.character_id,
                 modifier=modifier,
+                modifier_mode=decision.mode.value,
+                decision=decision_payload,
             )
         if entry.subject_kind == "monster":
             if entry.monster_instance_id is None:
@@ -238,6 +255,8 @@ class CombatCoreRollService:
                 target_seat_id=None,
                 target_character_id=None,
                 modifier=self._monster_save_modifier(monster.rules_snapshot, ability),
+                modifier_mode=decision.mode.value,
+                decision=decision_payload,
             )
         raise CombatStateConflictError(f"unsupported CombatEntry kind: {entry.subject_kind}")
 
@@ -299,7 +318,7 @@ class CombatCoreRollService:
         if combat is None or combat.status != "running":
             raise CombatNotFoundError("Campaign has no running Combat")
         entries = tuple(self._active_entry(actor, entry_id) for entry_id in request.target_entry_ids)
-        units = tuple(self._save_unit(actor, entry, ability) for entry in entries)
+        units = tuple(self._save_unit(actor, entry, ability, request.modifier_mode) for entry in entries)
         recipients = tuple(
             dict.fromkeys(unit.target_seat_id for unit in units if unit.target_seat_id is not None)
         )

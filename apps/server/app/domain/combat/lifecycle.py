@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Literal
 from uuid import UUID
@@ -16,6 +17,7 @@ from app.persistence.combat.combatants import (
     character_to_combatant,
     monster_instance_to_combatant,
 )
+from app.persistence.combat.core_rolls import _condition_ref
 from app.persistence.combat.lifecycle import (
     ActiveCombatExistsPersistenceError, CombatNotFoundPersistenceError,
     CombatRepository, CombatStateConflictPersistenceError,
@@ -194,6 +196,12 @@ def _extra_attack_budget(character) -> int:
     return 1
 
 
+@dataclass(frozen=True)
+class EntryConditionContext:
+    conditions: tuple[str, ...]
+    exhaustion_level: int
+
+
 class CombatService:
     """Actor-neutral P4-B application service shared by Human and AI adapters."""
     def __init__(self, repository: CombatRepository, table_event_service: TableEventService,
@@ -204,6 +212,33 @@ class CombatService:
         self.character_repository = character_repository
         self.monster_repository = monster_repository
         self.registry = registry
+
+    def condition_context(self, entry: StoredCombatEntry) -> EntryConditionContext:
+        if entry.subject_kind == "character":
+            if entry.character_id is None:
+                raise CombatStateConflictError("Character CombatEntry has no Character identity")
+            character = self.character_repository.load_character(entry.character_id)
+            conditions = tuple(str(item.condition_ref) for item in character.state.conditions)
+            return EntryConditionContext(
+                conditions=conditions,
+                exhaustion_level=int(character.state.exhaustion_level),
+            )
+        if entry.subject_kind == "monster":
+            if entry.monster_instance_id is None:
+                raise CombatStateConflictError("Monster CombatEntry has no Monster identity")
+            monster = self.monster_repository.get_instance(entry.monster_instance_id)
+            if monster is None:
+                raise CombatNotFoundError("Monster Instance was not found")
+            conditions = tuple(
+                ref
+                for item in monster.conditions
+                if (ref := _condition_ref(item)) is not None
+            )
+            return EntryConditionContext(
+                conditions=conditions,
+                exhaustion_level=0,
+            )
+        raise CombatStateConflictError(f"unsupported CombatEntry kind: {entry.subject_kind}")
 
     def _current(self, actor: TableActorContext) -> None:
         self.table_event_service.require_actor_current(actor)
@@ -514,6 +549,6 @@ __all__ = [
     "ActiveCombatExistsError", "AddCharacterInput", "AddMonsterInput", "CombatActionInput", "CombatActionKind",
     "CombatActionView", "CombatDetailView", "CombatantDetailView", "CombatEconomyCost", "CombatEntryView",
     "CombatLifecycleError", "CombatNotFoundError", "CombatService", "CombatStateConflictError", "CombatView",
-    "MonsterOutcome", "MonsterOutcomeChoice", "MonsterOutcomeInput",
+    "EntryConditionContext", "MonsterOutcome", "MonsterOutcomeChoice", "MonsterOutcomeInput",
     "ReactionWindowInput", "ResolveInitiativeOrderInput", "StartCombatInput", "_extra_attack_budget",
 ]

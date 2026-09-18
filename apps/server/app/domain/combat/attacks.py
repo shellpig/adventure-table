@@ -9,6 +9,11 @@ from app.domain.combat.attack_definitions import (
     AttackDefinitionNotFoundError,
     AttackDefinitionResolver,
 )
+from app.domain.combat.condition_modifiers import (
+    AttackModifierDecision,
+    attack_decision_payload,
+    attack_modifiers,
+)
 from app.domain.combat.event_projection import project_combat_event_payload
 from app.domain.combat.lifecycle import (
     CombatNotFoundError,
@@ -16,7 +21,7 @@ from app.domain.combat.lifecycle import (
     CombatStateConflictError,
 )
 from app.domain.combat.projection import CombatantAudience
-from app.domain.combat.resolution import DamageRollPart, RollMode
+from app.domain.combat.resolution import AttackKind, DamageRollPart, RollMode
 from app.domain.rooms.rolls import FormalRollInput, FormalRollSource, RollModifierMode, RollService
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import (
@@ -234,6 +239,24 @@ class CombatAttackService:
             raise CombatNotFoundError("Combat entry is missing or inactive")
         return entry
 
+    def _evaluate_attack_modifiers(
+        self,
+        *,
+        chosen: RollMode,
+        attack_kind: AttackKind,
+        attacker: StoredCombatEntry,
+        target: StoredCombatEntry,
+    ) -> AttackModifierDecision:
+        attacker_ctx = self.combat_service.condition_context(attacker)
+        target_ctx = self.combat_service.condition_context(target)
+        return attack_modifiers(
+            chosen=chosen,
+            attack_kind=attack_kind,
+            attacker_conditions=attacker_ctx.conditions,
+            target_conditions=target_ctx.conditions,
+            attacker_exhaustion=attacker_ctx.exhaustion_level,
+        )
+
     def available_attacks(
         self,
         actor: TableActorContext,
@@ -273,6 +296,13 @@ class CombatAttackService:
         try:
             attack = self.definition_resolver.resolve(attacker, request.source_ref)
             target_ac = self.definition_resolver.armor_class_for(target)
+            decision = self._evaluate_attack_modifiers(
+                chosen=RollMode(request.modifier_mode.value),
+                attack_kind=attack.attack_kind,
+                attacker=attacker,
+                target=target,
+            )
+            decision_payload = attack_decision_payload(decision)
             # Geometry is authoritative only when supplied by the current DM.
             range_is_authoritative = (
                 actor.is_current_dm and request.range_confirmed is True
@@ -288,7 +318,8 @@ class CombatAttackService:
                         execution_mode=execution_mode,
                         attack=attack,
                         target_ac=target_ac,
-                        modifier_mode=RollMode(request.modifier_mode.value),
+                        modifier_mode=decision.mode,
+                        modifier_decision=decision_payload,
                         idempotency_key=request.idempotency_key,
                     )
                 )
@@ -303,7 +334,8 @@ class CombatAttackService:
                     execution_mode=execution_mode,
                     attack=attack,
                     target_ac=target_ac,
-                    modifier_mode=RollMode(request.modifier_mode.value),
+                    modifier_mode=decision.mode,
+                    modifier_decision=decision_payload,
                     idempotency_key=request.idempotency_key,
                 )
                 result = self._request_view(stored)
@@ -326,12 +358,38 @@ class CombatAttackService:
             raise TableEventActorUnauthorizedError(
                 "Only the current Session DM can adjudicate Quick Combat geometry"
             )
+        roll_mode = request.roll_mode
+        decision_payload: dict[str, Any] | None = None
+        if request.in_range:
+            # Conditions may have changed since the request: re-evaluate at ruling time with
+            # the DM's roll_mode (or the originally chosen mode) as the chosen baseline.
+            action = self.adjudication_repository.get_action(
+                session_id=actor.session_id, action_id=request.action_id
+            )
+            if action is None or action.target_entry_id is None:
+                raise CombatNotFoundError("Combat action was not found")
+            payload = action.payload
+            if request.roll_mode is None:
+                # Actions requested before F7b carry no modifier_decision; their stored mode is the chosen one.
+                stored_decision = payload.get("modifier_decision")
+                chosen = RollMode(str(stored_decision["chosen"] if stored_decision else payload["modifier_mode"]))
+            else:
+                chosen = request.roll_mode
+            decision = self._evaluate_attack_modifiers(
+                chosen=chosen,
+                attack_kind=AttackKind(str(payload["resolved_attack"]["attack_kind"])),
+                attacker=self._active_entry(actor, action.entry_id),
+                target=self._active_entry(actor, action.target_entry_id),
+            )
+            roll_mode = decision.mode
+            decision_payload = attack_decision_payload(decision)
         try:
             stored, _event = self.adjudication_repository.adjudicate_attack_range(
                 binding=actor_binding(actor),
                 action_id=request.action_id,
                 in_range=request.in_range,
-                roll_mode=request.roll_mode,
+                roll_mode=roll_mode,
+                modifier_decision=decision_payload,
                 note=request.note,
                 idempotency_key=request.idempotency_key,
             )

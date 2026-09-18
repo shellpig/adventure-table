@@ -24,7 +24,6 @@ from app.persistence.characters import CharacterRepository
 from app.persistence.combat.core_rolls import CombatCoreRollRepository
 from app.persistence.combat.lifecycle import CombatRepository, StoredCombatEntry, actor_binding
 from app.persistence.combat.repository import MonsterRepository
-from app.persistence.combat.resolution import _condition_ref
 from app.persistence.combat.special_attacks import (
     GRAPPLED_REF,
     SpecialAttackNotFoundError,
@@ -266,19 +265,8 @@ class CombatSpecialAttackService:
         raise CombatStateConflictError(f"unsupported CombatEntry kind: {entry.subject_kind}")
 
     def _is_grappled(self, entry: StoredCombatEntry) -> bool:
-        if entry.subject_kind == "character":
-            if entry.character_id is None:
-                raise CombatStateConflictError("Character CombatEntry has no Character identity")
-            character = self.character_repository.load_character(entry.character_id)
-            return any(c.condition_ref == GRAPPLED_REF for c in character.state.conditions)
-        if entry.subject_kind == "monster":
-            if entry.monster_instance_id is None:
-                raise CombatStateConflictError("Monster CombatEntry has no Monster identity")
-            monster = self.monster_repository.get_instance(entry.monster_instance_id)
-            if monster is None:
-                raise CombatNotFoundError("Monster Instance was not found")
-            return any(_condition_ref(c) == GRAPPLED_REF for c in monster.conditions)
-        raise CombatStateConflictError(f"unsupported CombatEntry kind: {entry.subject_kind}")
+        ctx = self.combat_service.condition_context(entry)
+        return GRAPPLED_REF in ctx.conditions
 
     def _best_escape_unit(
         self,

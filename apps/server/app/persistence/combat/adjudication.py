@@ -161,12 +161,14 @@ class CombatAdjudicationRepository:
         attack: ResolvedAttack,
         target_ac: int,
         modifier_mode: RollMode,
+        modifier_decision: dict[str, Any],
         idempotency_key: str | None,
     ) -> tuple[StoredAttackAdjudication, StoredTableEvent]:
         action_id = uuid4()
         payload = {
             "resolved_attack": _attack_payload(attack),
             "modifier_mode": modifier_mode.value,
+            "modifier_decision": modifier_decision,
             "target_ac": target_ac,
             "adjudication": {"kind": "range", "in_range": None},
         }
@@ -235,6 +237,7 @@ class CombatAdjudicationRepository:
                 "target_is_hostile": bool(target["is_hostile"]),
                 "kind": "range",
                 "status": "dm_adjudication_required",
+                "modifier_decision": modifier_decision,
             }
             connection.execute(
                 update(session_events)
@@ -261,6 +264,7 @@ class CombatAdjudicationRepository:
                 "target_entry_id": str(target_entry_id),
                 "kind": "range",
                 "status": "dm_adjudication_required",
+                "modifier_decision": modifier_decision,
             },
             idempotency_key=(
                 f"p4c-attack-adjudication:{idempotency_key}"
@@ -285,6 +289,7 @@ class CombatAdjudicationRepository:
         action_id: UUID,
         in_range: bool,
         roll_mode: RollMode | None = None,
+        modifier_decision: dict[str, Any] | None = None,
         note: str | None = None,
         idempotency_key: str | None,
     ) -> tuple[StoredAttackAdjudication, StoredTableEvent]:
@@ -375,6 +380,11 @@ class CombatAdjudicationRepository:
                 effective_modifier_mode = (
                     roll_mode.value if roll_mode is not None else payload["modifier_mode"]
                 )
+                # F7b: the service re-evaluates conditions at ruling time; the action keeps
+                # the effective mode and decision the roll request was created with.
+                payload["modifier_mode"] = effective_modifier_mode
+                if modifier_decision is not None:
+                    payload["modifier_decision"] = modifier_decision
                 connection.execute(
                     insert(roll_groups).values(
                         id=roll_group_id,
@@ -425,6 +435,7 @@ class CombatAdjudicationRepository:
                     "roll_group_id": str(roll_group_id),
                     "roll_request_id": str(roll_request_id),
                     "decision": decision,
+                    "modifier_decision": modifier_decision,
                 }
             # Both the pending->resolved and pending->waiting transition are
             # canonical combat-state mutations and advance the combat revision.
@@ -458,6 +469,7 @@ class CombatAdjudicationRepository:
                 "combat_action_id": str(action_id),
                 "in_range": in_range,
                 "decision": decision,
+                "modifier_decision": modifier_decision,
             },
             idempotency_key=(
                 f"p4c-attack-adjudication-result:{idempotency_key}"
