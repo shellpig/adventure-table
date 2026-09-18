@@ -18,7 +18,12 @@ SERVER_ROOT = Path(__file__).resolve().parents[1]
 P4E_PARENT = "0025_p4c_core_resolution"
 P4E_HEAD = "0026_p4e_monster_concentration"
 # Later P4-F migrations move the web head past P4E_HEAD; "heads" lands on one of these.
-P4E_APPLIED_HEADS = {P4E_HEAD, "0027_p4f_monster_outcome", "0028_p4f_monster_reveal_state"}
+P4E_APPLIED_HEADS = {
+    P4E_HEAD,
+    "0027_p4f_monster_outcome",
+    "0028_p4f_monster_reveal_state",
+    "0029_p4f_roll_request_auto_fail",
+}
 
 
 def _config() -> Config:

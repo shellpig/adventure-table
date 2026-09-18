@@ -23,6 +23,7 @@ P4B_APPLIED_HEADS = {
     "0026_p4e_monster_concentration",
     "0027_p4f_monster_outcome",
     "0028_p4f_monster_reveal_state",
+    "0029_p4f_roll_request_auto_fail",
 }
 
 

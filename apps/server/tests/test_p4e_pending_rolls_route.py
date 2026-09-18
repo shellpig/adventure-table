@@ -100,6 +100,7 @@ def _stored_request(
         dc=None,
         modifier_mode="normal",
         flat_adjustment=0,
+        auto_fail=False,
         visibility="public",
         status="pending",
         roll_group_label=label,

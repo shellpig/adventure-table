@@ -38,6 +38,7 @@ class NewSavingThrowUnit:
     target_character_id: UUID | None
     modifier: int
     modifier_mode: str
+    auto_fail: bool
     decision: dict[str, Any]
 
 
@@ -54,6 +55,7 @@ class StoredCombatCoreRollRequest:
     dc: int | None
     modifier_mode: str
     flat_adjustment: int
+    auto_fail: bool
     visibility: str
     status: str
     roll_group_label: str | None = None
@@ -81,6 +83,7 @@ class StoredSavingThrowResult:
     target_entry_id: UUID
     total: int
     succeeded: bool
+    auto_fail: bool
 
 
 @dataclass(frozen=True)
@@ -132,6 +135,7 @@ class CombatCoreRollRepository:
             dc=row["dc"],
             modifier_mode=row["modifier_mode"],
             flat_adjustment=int(row["flat_adjustment"]),
+            auto_fail=bool(row["auto_fail"]),
             visibility=row["visibility"],
             status=row["status"],
             roll_group_label=row.get("roll_group_label"),
@@ -252,6 +256,7 @@ class CombatCoreRollRepository:
                         dc=dc,
                         modifier_mode=unit.modifier_mode,
                         flat_adjustment=unit.modifier,
+                        auto_fail=unit.auto_fail,
                         visibility=visibility,
                         status="pending",
                         requested_by_seat_id=binding.seat_id,
@@ -317,13 +322,15 @@ class CombatCoreRollRepository:
             )
         existing = self._result_row(session_id=binding.session_id, request_id=request_id)
         if existing is not None:
+            succeeded = (not request.auto_fail) and int(existing["total"]) >= int(request.dc)
             return (
                 StoredSavingThrowResult(
                     result_id=existing["id"],
                     roll_request_id=request_id,
                     target_entry_id=request.target_combat_entry_id,
                     total=int(existing["total"]),
-                    succeeded=int(existing["total"]) >= int(request.dc),
+                    succeeded=succeeded,
+                    auto_fail=request.auto_fail,
                 ),
                 None,
             )
@@ -389,7 +396,7 @@ class CombatCoreRollRepository:
                 .where(roll_requests.c.id == request_id)
                 .values(status="resolved", resolved_at=now, version=roll_requests.c.version + 1)
             )
-            succeeded = computation.total >= int(locked["dc"])
+            succeeded = (not locked["auto_fail"]) and computation.total >= int(locked["dc"])
             connection.execute(
                 update(session_events)
                 .where(session_events.c.id == event_id)
@@ -408,6 +415,7 @@ class CombatCoreRollRepository:
                         "kept_dice": list(computation.kept_dice),
                         "total": computation.total,
                         "succeeded": succeeded,
+                        "auto_fail": bool(locked["auto_fail"]),
                         "visibility": locked["visibility"],
                     },
                 )
@@ -440,6 +448,7 @@ class CombatCoreRollRepository:
                 target_entry_id=UUID(str(event.payload["target_entry_id"])),
                 total=int(event.payload["total"]),
                 succeeded=bool(event.payload["succeeded"]),
+                auto_fail=bool(event.payload["auto_fail"]),
             ),
             event,
         )

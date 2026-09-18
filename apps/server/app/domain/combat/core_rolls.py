@@ -64,6 +64,7 @@ class SavingThrowRequestView(StrictModel):
     dc: int | None
     modifier: int
     modifier_mode: RollModifierMode
+    auto_fail: bool
     visibility: RollVisibility
     status: str
 
@@ -80,6 +81,7 @@ class CombatPendingRollView(StrictModel):
     ability_ref: str | None
     dc: int | None
     modifier_mode: RollModifierMode
+    auto_fail: bool
     status: str
 
 
@@ -94,6 +96,7 @@ class SavingThrowResultView(StrictModel):
     target_entry_id: UUID
     total: int
     succeeded: bool
+    auto_fail: bool
 
 
 class DeathSaveRequestInput(StrictModel):
@@ -242,6 +245,7 @@ class CombatCoreRollService:
                 target_character_id=entry.character_id,
                 modifier=modifier,
                 modifier_mode=decision.mode.value,
+                auto_fail=decision.auto_fail,
                 decision=decision_payload,
             )
         if entry.subject_kind == "monster":
@@ -256,6 +260,7 @@ class CombatCoreRollService:
                 target_character_id=None,
                 modifier=self._monster_save_modifier(monster.rules_snapshot, ability),
                 modifier_mode=decision.mode.value,
+                auto_fail=decision.auto_fail,
                 decision=decision_payload,
             )
         raise CombatStateConflictError(f"unsupported CombatEntry kind: {entry.subject_kind}")
@@ -274,6 +279,7 @@ class CombatCoreRollService:
             dc=request.dc if actor.is_current_dm else None,
             modifier=request.flat_adjustment,
             modifier_mode=RollModifierMode(request.modifier_mode),
+            auto_fail=request.auto_fail,
             visibility=RollVisibility(request.visibility),
             status=request.status,
         )
@@ -297,6 +303,7 @@ class CombatCoreRollService:
                     ability_ref=request.ability_ref,
                     dc=request.dc if actor.is_current_dm else None,
                     modifier_mode=RollModifierMode(request.modifier_mode),
+                    auto_fail=request.auto_fail,
                     status=request.status,
                 )
             )
@@ -378,6 +385,7 @@ class CombatCoreRollService:
                     target_entry_id=conc_result.target_entry_id,
                     total=conc_result.total,
                     succeeded=conc_result.succeeded,
+                    auto_fail=False,
                 )
 
         acting_seat_id, execution_mode = self._authorize_roll(actor, request)
@@ -415,6 +423,7 @@ class CombatCoreRollService:
             target_entry_id=stored.target_entry_id,
             total=stored.total,
             succeeded=stored.succeeded,
+            auto_fail=stored.auto_fail,
         )
 
     def request_death_save(
