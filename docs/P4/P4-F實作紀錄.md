@@ -23,7 +23,9 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 | F4c | server：special-attack 骰與 reach 裁定的 canonical 判別（修 P4-E 遺留：`shove_*` / 防守方骰落成 `skill`、`shove_*` 裁定未歸 reach）+ `escape_grapple` 判別 | 實作規格 P4-E 4、8；P4-E 遺留 | ✅ |
 | F4d | web：kind 改 `shove_prone` / `shove_push` / `escape_grapple`（修 UI shove 422）、escape 選項只在自己被 grappled 時出現、roll handler、combat log、雙語 | 實作規格 P4-E 4、12、13 | ✅ |
 | F5 | 真 PostgreSQL + server restart / reconnect：Round ≥ 2、pending save 或 reaction → restart → 狀態完整、resolve 一次不重擲 | 實作規格 P4-F 3；測試指南 F.1 | ✅ |
-| F6 | Full browser journey spec（F.2 全項：spell / save、damage / healing、condition、concentration 或 reaction、0 HP outcome、Session boundary resume、End cleanup）+ `P4 Full-Stack E2E` workflow | 實作規格 P4-F 1、2、4、5、6；測試指南 F.2 | ⬜ |
+| F6a | F6 前置：spell 自我目標（heal / utility 單體法術可選施法者本人）；`e2e/p4e-quick-combat.spec.ts` 的 Quick Combat helper 抽到 `e2e/support/quickCombat.ts`；`e2e-docker.mjs` 匯出 `PLAYWRIGHT_E2E_SERVER_SERVICE`，support 提供 `restartE2EServer()`（`docker compose --profile e2e restart server-e2e` + 等 `/api/meta`） | 實作規格 P4-E 4；測試指南 F.2 前置 | ✅ |
+| F6b | `e2e/p4f-full-combat-journey.spec.ts` 前半：Fighter/Cleric fixture、SRD Goblin + Quick Enemy、initiative、shove_prone（condition）、Cure Wounds（healing）、Bless（concentration）、DM 要求 DEX save → Player 擲、attack → Quick Enemy 0 HP → DM outcome、Player secrecy、暫以 End Combat 收尾 | 實作規格 P4-F 1、2、5；測試指南 F.2 | ⬜ |
+| F6c | 後半：Session boundary resume（End Session → Start Session 同一 Combat）、`restartE2EServer()` 真 process restart 後 pending save 只 resolve 一次、End Combat cleanup / preserved state 斷言；`.github/workflows/p4-e2e.yml`（`P4 Full-Stack E2E`） | 實作規格 P4-F 3、4、6；測試指南 F.1（process 層）、F.2 | ⬜ |
 | F7 | `ConditionSemantics` 接進 attack / save modifier pipeline（advantage / disadvantage / auto-fail / adjacent crit） | P4-D closeout 留下；P4-F 已拍板納入 | ⬜ |
 | F8 | 真實 ChatGPT Web Combat gate（人工，含 `wait_for_event` / reconnect continuity）+ DM proxy audit 與 secrecy 三層證據彙整 | 實作規格 P4-F 5、6、9、10；測試指南 F.3 | ⬜ |
 | F9 | static review + Non-E2E / PostgreSQL / standalone boundary regression 彙整 + P4-F closeout + P4 Phase closeout | 實作規格 P4-F 7、8、11；測試指南 F.4 | ⬜ |
@@ -111,3 +113,12 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 - 測試：本機 `P4_POSTGRES_URL`（專用 DB `adventure_table_p4f`）跑 P4-A～F 全部 PostgreSQL migration / concurrency / restart 測試 exit 0；無 env 時 restart 測試 SKIPPED（gate 生效）。
 - 留給 F6：full browser journey + Docker `docker compose restart server` 補真 process restart。
 
+
+### F6a — F6 前置：spell 自我目標、E2E helper 抽出、backend restart hook
+
+- 2026-09-18，agy worker（Gemini 3.8 Flash (High)，1 回合 7.5 分鐘），Claude 審核修正與 commit。prompt：`C:\_work\AI_Work\Toolsgy-runsgy-p4f-f6a.prompt.txt`。
+- 起因：F6 journey 需要 Cleric 對自己 Cure Wounds / Bless，但 action bar 的目標清單一律排除施法者（server 本來就接受自我目標）；p4e spec 的 helper 全是檔案內私有；沒有任何方式讓 spec 做真 process restart。
+- 交付：① `SessionCombatActionBar.tsx` 新 `spellTargetEntries(selectedSpell, actingEntry, targetEntries)`：`targeting === 'single'` 且 `cast_mode` 為 `heal` / `utility` 時把施法者本人放在清單最前，attack / save 法術與所有 special attack 維持排除自己；只影響 `SpellActionFields` 的 target select，AoE `proposed_target_ids` 不變。② 新 `e2e/support/quickCombat.ts`：p4e spec 的型別、常數與 19 個 helper 原樣搬出並 export；`importCharacter(request, fixturePath = IMPORT_FIXTURE)`、`addSeat` / `addPlayerSeat` 加 `labelPrefix = 'P4-E'`；p4e spec 只剩三個常數與 test 本體，斷言不變。③ `restartE2EServer(request)`：讀 `PLAYWRIGHT_E2E_SERVER_SERVICE`（缺則 throw，不靜默跳過）→ `docker compose --profile e2e restart <service>`（cwd repo root）→ 每秒 poll `/api/meta/capabilities` 至多 60 秒；`e2e-docker.mjs` 的 `playwrightEnv` 多匯出該變數（本機與 CI 同路徑）。
+- **Claude 審核修正**：helper 原名 `computeSpellTargetEntries(actionKind: string, ...)` 多帶一個只會是 `'spell'` 的字串參數 → 移除，改名 `spellTargetEntries`；restart poll 對不存在的 `/api/meta`（404）做 fallback → 移除，只 poll `/api/meta/capabilities`；兩個新 vitest 案例名縮短；agy 順手刪掉的一行空行還原。
+- 測試：`SessionCombatActionBar.test.tsx` +2（heal 法術施法者排第一、save 法術不含施法者）15 passed；`e2eDockerScript.test.ts` 4 passed；`npm run build` 與 `npx tsc --noEmit` 乾淨；`npm run test:e2e:docker -- e2e/p4e-quick-combat.spec.ts` 1 passed（7.1s）。長行對照 HEAD 無新增。
+- 留給 F6b：journey spec 前半。`restartE2EServer` 的實際驗證在 F6c。

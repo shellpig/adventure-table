@@ -9,7 +9,11 @@ import type {
   CombatPendingRollView,
   ReactionWindowView,
 } from '../../api/combat'
-import { SessionCombatActionBar, SpellActionFields } from './SessionCombatActionBar'
+import {
+  SessionCombatActionBar,
+  SpellActionFields,
+  spellTargetEntries,
+} from './SessionCombatActionBar'
 import { sessionCopy } from './sessionCopy'
 
 vi.mock('../../api/combat', async (importOriginal) => {
@@ -172,14 +176,17 @@ function renderActionBar(options: {
   )
 }
 
-function renderSpellFields(item: CastableSpellView): string {
+function renderSpellFields(
+  item: CastableSpellView,
+  targetEntries: CombatEntryView[] = [enemyEntry],
+): string {
   return renderToStaticMarkup(
     <SpellActionFields
       spells={[item]}
       spellRef={item.spell_ref}
       slotLevel={item.castable_slot_levels[0]}
       targetEntryId=""
-      targetEntries={[enemyEntry]}
+      targetEntries={targetEntries}
       disabled={false}
       copy={sessionCopy('en')}
       onSpellRefChange={() => undefined}
@@ -351,6 +358,39 @@ describe('SessionCombatActionBar', () => {
     expect(markup).toContain('data-combat-spell="true"')
     expect(markup).toContain('data-combat-spell-target="true"')
     expect(markup).not.toContain('data-combat-spell-slot="true"')
+  })
+
+  it('lists the acting combatant first for a single-target heal spell', () => {
+    const healSpell = spell('single', {
+      spell_ref: 'srd5.1:spell:cure-wounds',
+      name: 'Cure Wounds',
+      cast_mode: 'heal',
+    })
+    const entries = spellTargetEntries(healSpell, playerEntry, [enemyEntry])
+    expect(entries).toEqual([playerEntry, enemyEntry])
+    const markup = renderSpellFields(healSpell, entries)
+    expect(markup).toContain('data-combat-spell-target="true"')
+    expect(markup).toContain(`value="${playerEntry.id}"`)
+    expect(markup).toContain(playerEntry.display_name)
+    expect(markup).toContain(`value="${enemyEntry.id}"`)
+    expect(markup).toContain(enemyEntry.display_name)
+    const playerIndex = markup.indexOf(`value="${playerEntry.id}"`)
+    const enemyIndex = markup.indexOf(`value="${enemyEntry.id}"`)
+    expect(playerIndex).toBeLessThan(enemyIndex)
+  })
+
+  it('omits the acting combatant for a single-target save spell', () => {
+    const saveSpell = spell('single', {
+      spell_ref: 'srd5.1:spell:sacred-flame',
+      name: 'Sacred Flame',
+      cast_mode: 'save',
+    })
+    const entries = spellTargetEntries(saveSpell, playerEntry, [enemyEntry])
+    expect(entries).toEqual([enemyEntry])
+    const markup = renderSpellFields(saveSpell, entries)
+    expect(markup).toContain('data-combat-spell-target="true"')
+    expect(markup).not.toContain(`value="${playerEntry.id}"`)
+    expect(markup).toContain(`value="${enemyEntry.id}"`)
   })
 
   it('renders an AoE spell select and slot level without a target select', () => {

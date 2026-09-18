@@ -19,6 +19,7 @@ import {
   type CastableSpellView,
   type CombatAdjudicationView,
   type CombatDetailView,
+  type CombatEntryView,
   type CombatPendingRollView,
   type ConcentrationCheckResultView,
   type DeathSaveResultView,
@@ -157,6 +158,23 @@ export function SpellActionFields({
       ) : null}
     </>
   )
+}
+
+/** Heal / utility single-target spells may target the caster; attack / save spells never do. */
+export function spellTargetEntries(
+  selectedSpell: CastableSpellView | null,
+  actingEntry: CombatEntryView | null,
+  targetEntries: CombatEntryView[],
+): CombatEntryView[] {
+  if (
+    selectedSpell !== null &&
+    actingEntry !== null &&
+    selectedSpell.targeting === 'single' &&
+    (selectedSpell.cast_mode === 'heal' || selectedSpell.cast_mode === 'utility')
+  ) {
+    return [actingEntry, ...targetEntries]
+  }
+  return targetEntries
 }
 
 type SessionCombatActionBarProps = {
@@ -308,11 +326,11 @@ export function SessionCombatActionBar({
       setPendingActionSeen(false)
     }
   }, [pendingActionId, pendingActionSeen, pendingAdjudications])
-
   const targetEntries = combat.entries.filter(
     (entry) => entry.id !== currentActingEntryId && entry.status === 'active',
   )
   const selectedSpell = spells.find((spell) => spell.spell_ref === spellRef) ?? null
+  const castTargetEntries = spellTargetEntries(selectedSpell, actingEntry, targetEntries)
   const hasAttackEconomy = Boolean(
     actingEntry &&
     actingEntry.action_available &&
@@ -761,7 +779,7 @@ export function SessionCombatActionBar({
                 spellRef={spellRef}
                 slotLevel={slotLevel}
                 targetEntryId={targetEntryId}
-                targetEntries={targetEntries}
+                targetEntries={castTargetEntries}
                 disabled={formDisabled}
                 copy={copy}
                 onSpellRefChange={handleSpellRefChange}
