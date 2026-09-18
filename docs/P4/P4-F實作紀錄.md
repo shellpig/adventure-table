@@ -30,7 +30,8 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 | F7b | 接進 attack request / roll 與 saving-throw request pipeline（REST / MCP 共用 service）、event payload 帶 sources、regression | 同上；實作規格 P4-C 4、P4-D 3 | ✅ |
 | F7c | saving-throw auto-fail 強制執行：migration `0029` `roll_requests.auto_fail`、`complete_saving_throw` 兩條路徑強制 `succeeded=False`（骰仍擲、仍存一列）、request / pending / result view 與 `combat.save_resolved` 帶 `auto_fail`；web pending row / 結果列 / Combat Log 雙語「自動失敗」標記 | P4-D closeout 留下；F7b 留下；工程實作守則 7 | ✅ |
 | F8 | 真實 ChatGPT Web Combat gate（人工，含 `wait_for_event` / reconnect continuity）+ DM proxy audit 與 secrecy 三層證據彙整 | 實作規格 P4-F 5、6、9、10；測試指南 F.3 | ⬜ |
-| F9 | static review + Non-E2E / PostgreSQL / standalone boundary regression 彙整 + P4-F closeout + P4 Phase closeout | 實作規格 P4-F 7、8、11；測試指南 F.4 | ⬜ |
+| F9a | static review + 全套 backend（真 PostgreSQL）/ vitest / build / compose config / 本機全套 E2E 彙整；`P4-F_CLOSEOUT.md` 草稿（第 9、10 項與 F.3 留白） | 實作規格 P4-F 7、8、11；測試指南 F.4 | ✅ |
+| F9b | F8 結果填入 closeout → P4-F 關門 → `--no-ff` 合併回 `main` → P4 Phase closeout、`PROJECT_BRIEF.md` | 實作規格 P4-F 11；測試指南 F.4、§5 | ⬜ |
 
 步驟粒度可在實作中再切；新增子步以 `F1a` 之類接續，不重編已完成項目。
 
@@ -172,3 +173,11 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 - F7c-2 交付（web）：`api/combat.ts` `CombatPendingRollView` / `SavingThrowResultView` 加 `auto_fail: boolean`（web 沒有 `SavingThrowRequestView`）；`sessionCopy.ts` `combatSaveAutoFail`、`sessionCombatLog.ts` `CombatLogCopy.saveAutoFail`（zh-TW「自動失敗」/ en "Auto-fail"）；action bar pending row 在 DC 後接 ` · 自動失敗`，`[data-roll-result="saving_throw"]` 結果列在成功/失敗後接同標記；`formatSave` 的 summary 在 outcome 後接同標記（`auto_fail` 缺省或 false 時不出現，舊 event 不受影響）。
 - 測試：`tests/test_p4f_auto_fail_saves.py` 7 條（paralyzed DEX 擲 20 仍失敗 + 恰一列 + event payload、同 key retry 同 `result_id`、WIS 不 auto-fail、restrained DEX disadvantage 兩顆骰仍可成功、Player pending view 有 `auto_fail` 無 `dc` 且不能擲 Monster 的 request、Concentration request `auto_fail False`、REST `GET .../combat/pending-rolls` 帶 `auto_fail`）；`test_p4f_postgres_migration.py` 加 0029 legacy upgrade / downgrade（`information_schema.columns` 斷言 NOT NULL + default false）。本機 `P4_POSTGRES_URL`（`adventure_table_p4f`）跑 P4-A～F + P3-C + M04-C + boundary **451 passed / 3 skipped / 0 failed**（4:12）。web vitest 86 files / 482 passed（新增 `sessionCombatLog.test.ts` auto-fail 雙語一條、`SessionCombatActionBar.test.tsx` pending row 有/無標記一條），`npm run build` 綠。E2E：`npm run test:e2e:docker -- e2e/p4f-full-combat-journey.spec.ts e2e/p4e-quick-combat.spec.ts` **2 passed（29.9s）**，`server-e2e` 重建後 migration 0029 於 `adventure_table_e2e` 落地。
 - 留給 F8 / F9：spell AoE save（`persistence/combat/spells.py` 在同 transaction 內自行擲骰、`status="resolved"` 直接落地）沒有走 `save_modifiers`，conditions 對 spell save 的 adv / disadv / auto-fail 仍未套用——這是 F7a 起就存在的範圍限制，F9 closeout「已知限制」要記。Log / UI 顯示 modifier 來源（sources）仍可選、未做。
+
+### F9a — static review、regression 彙整、closeout 草稿
+
+- 2026-09-18，指揮者自己做（handbook §6：closeout 文件屬指揮者）。產出 `docs/P4/P4-F_CLOSEOUT.md`：實作規格 1～8、11 打勾並指向證據，9、10 與 F.3 留白給 F8；static review 8 項（S1～S3 不改：`special_attacks.py` `: Any` 沿用既有、`tools.py` 單行 desc、一條 vitest 標題 > 140；S4～S8 通過）。
+- **F9a 修正**：F7c-1 只補了五份 chain 測試，`test_m04b_oauth_schema.py` / `test_p3d_migration_contract.py` 仍釘 0028 為 head，被 push 觸發的 `P4-F Non-E2E Regression` run 35345830928 backend job 抓到 → `6c2082b4` 同手法補 0029；全域 grep `0028_p4f_monster_reveal_state` 確認無其他寫死的 head（其餘 `get_heads()` 用法皆動態）。
+- 證據（`6c2082b4`，產品碼同 `7f39df33`）：本機全套 backend 1787 passed / 39 skipped（18:50；skip 全為 P2 / P3 / M03 PostgreSQL env gate，P4 檔 0 skip）；vitest 482 / build 綠（`7f39df33`，之後未動 web）；`docker compose config` exit 0；本機全套 E2E 125 passed / 4 skipped（10.2m）+ disabled-pack 7 passed；push 觸發 run 35347332303 四個 job 全 success（postgres-migrations 42 passed / 0 skipped）。
+- CI 全套 E2E（`p3-e2e.yml --ref` 本分支）run 35346913894：`p4e-quick-combat.spec.ts` 180s timeout、其餘 124 passed；本機同 spec 5.4s。重跑 run 35349598481 啟動後，使用者拍板「本機能跑的一律本機，只有本機不能跑的才用 GitHub CI」，不再等結果也不追查。`p4-e2e.yml` 上 `main` 前無法 dispatch。
+- 留給 F8 / F9b：F8 人工 gate（測試指南 F.3）結果填入 closeout 第 9、10 項與 evidence；F9b 關門、`--no-ff` 合併、`PROJECT_BRIEF.md` 更新為 P4-F ✅ 與 P4 Phase closeout。
