@@ -57,6 +57,15 @@ class SpecialAttackKind(StrEnum):
     ESCAPE_GRAPPLE = "escape_grapple"
 
 
+REACH_ADJUDICATED_KINDS: frozenset[str] = frozenset(
+    {
+        SpecialAttackKind.GRAPPLE.value,
+        SpecialAttackKind.SHOVE_PRONE.value,
+        SpecialAttackKind.SHOVE_PUSH.value,
+    }
+)
+
+
 @dataclass(frozen=True)
 class ModifierSource:
     source: str
@@ -549,6 +558,7 @@ __all__ = [
     "HealingOutcome",
     "HitPointState",
     "ModifierSource",
+    "REACH_ADJUDICATED_KINDS",
     "ResolvedAttack",
     "RollMode",
     "SizeCategory",

@@ -9,7 +9,7 @@ from sqlalchemy import insert, select, update
 from sqlalchemy.engine import Engine
 
 from app.domain.combat.reaction_service import open_opportunity_attack_window
-from app.domain.combat.resolution import ResolvedAttack, RollMode
+from app.domain.combat.resolution import REACH_ADJUDICATED_KINDS, ResolvedAttack, RollMode
 from app.persistence.combat.attacks import _attack_payload
 from app.persistence.combat.lifecycle import StoredCombatAction, combat_action_from_row
 from app.persistence.combat.reactions import write_reaction_window
@@ -741,7 +741,7 @@ class CombatAdjudicationRepository:
             raise CombatAdjudicationStateConflictError(
                 "Range adjudication must be resolved via POST /attacks/adjudicate"
             )
-        if action_kind in ("grapple", "shove"):
+        if action_kind in REACH_ADJUDICATED_KINDS:
             raise CombatAdjudicationStateConflictError(
                 "Reach adjudication must be resolved via dedicated special-attack route"
             )

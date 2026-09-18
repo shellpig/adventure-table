@@ -142,8 +142,10 @@ class CombatCoreRollRepository:
                 select(
                     roll_requests,
                     roll_groups.c.label.label("roll_group_label"),
+                    combat_actions.c.action_kind.label("action_kind"),
                 )
                 .outerjoin(roll_groups, roll_groups.c.id == roll_requests.c.roll_group_id)
+                .outerjoin(combat_actions, combat_actions.c.roll_request_id == roll_requests.c.id)
                 .where(
                     roll_requests.c.id == request_id,
                     roll_requests.c.session_id == session_id,

@@ -20,7 +20,8 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 | F3b | F3 後半：DM 卡片 per-monster 控制元件（outcome / visibility / reveal toggles / position note）接進 Stage；Player 不渲染；雙語 copy；tests | 實作規格 P4-E 1、2、7、13 | ✅ |
 | F4a | `escape_grapple`：新 `SpecialAttackKind`，走 P4-C opposed-check substrate；耗整個 Action、免 reach 裁定、成功同 transaction 移除 `grappled`；REST / MCP 共用既有 `kind` | P4-C closeout 留下 | ✅ |
 | F4b | Character state PATCH DTO（`/characters/{id}/state` 與 table `TableCharacterStatePatch`）補 `concentration` / `exhaustion_level` / `death_saves` / `temporary_effects`；active Combat 中比照 HP 走 DM correction-only | P4-D closeout 留下 | ✅ |
-| F4c | web：action bar 加 escape 選項、combat log 處理 `combat.escape_grapple_requested` 與 `escape_grapple` result、雙語 | 實作規格 P4-E 4、12、13 | ⬜ |
+| F4c | server：special-attack 骰與 reach 裁定的 canonical 判別（修 P4-E 遺留：`shove_*` / 防守方骰落成 `skill`、`shove_*` 裁定未歸 reach）+ `escape_grapple` 判別 | 實作規格 P4-E 4、8；P4-E 遺留 | ✅ |
+| F4d | web：kind 改 `shove_prone` / `shove_push` / `escape_grapple`（修 UI shove 422）、escape 選項只在自己被 grappled 時出現、roll handler、combat log、雙語 | 實作規格 P4-E 4、12、13 | ⬜ |
 | F5 | 真 PostgreSQL + server restart / reconnect：Round ≥ 2、pending save 或 reaction → restart → 狀態完整、resolve 一次不重擲 | 實作規格 P4-F 3；測試指南 F.1 | ⬜ |
 | F6 | Full browser journey spec（F.2 全項：spell / save、damage / healing、condition、concentration 或 reaction、0 HP outcome、Session boundary resume、End cleanup）+ `P4 Full-Stack E2E` workflow | 實作規格 P4-F 1、2、4、5、6；測試指南 F.2 | ⬜ |
 | F7 | `ConditionSemantics` 接進 attack / save modifier pipeline（advantage / disadvantage / auto-fail / adjacent crit） | P4-D closeout 留下；P4-F 已拍板納入 | ⬜ |
@@ -80,5 +81,14 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 - 交付：`TableCharacterStatePatch`（table）與 `CharacterStatePatch`（Workshop / standalone `/api/characters/{id}/state`）各加 `concentration` / `exhaustion_level`（0..6）/ `death_saves` / `temporary_effects`；nullable 集合加 `concentration`（null = 清除；其餘三欄不得 null）。新常數 `COMBAT_CORRECTION_ONLY_FIELDS`（六欄：HP 兩欄 + 這四欄）取代 service 與 persistence 兩處內嵌的 `{"current_hp","temporary_hp"}` guard：active Combat 中 Player 拒絕、DM 需 `correction_reason`，event 照舊記 `correction` / `changed_fields`。Workshop 路由維持無 Room / Combat import。明確非目標：raw `concentration: null` 不清其他 combatant 的 linked effects（歸 `CombatConcentrationRepository.complete_check`），寫在測試 docstring。
 - **Claude 審核修正**：錯誤訊息 "Active Combat Combat-owned state changes…" 語病 → "Combat-owned state changes during active Combat…"（兩處四句）；`test_table_state_patch_p4d_validation_rejects_before_any_write` 建了沒用到的 service / actor / events → 移除。
 - 測試：`test_p4c_semantic_hp_boundary.py` +1（四欄 outside Combat 正常、active Combat Player 零副作用拒絕、DM 無 reason 拒絕、DM 有 reason 成功且 event 帶 correction；既有 HP 測試改用共用 `_assert_combat_mutation_refused_zero_side_effects` helper，並補零副作用斷言）；`test_p3c_table_character_state.py` +1（`exhaustion_level=7` / `death_saves.successes=3` / `death_saves=null` 寫入前拒絕；`concentration=None` 單獨算真實變更）；`test_p1g_character_versions.py` +1（Workshop 路由 200 / 422）。P4-B～F + P3-C + M03 + P1-F/G + character_state 共 79 檔全通過（exit 0）。
-- F4 剩 F4c（web）。
+- F4 剩 F4c（server 判別修正）與 F4d（web）。
+
+### F4c — special-attack 骰與裁定的 canonical 判別
+
+- 2026-09-18，agy worker（Gemini 3.8 Flash (High)，1 回合 10 分鐘），Claude 審核修正與 commit。prompt：`C:\_work\AI_Work\Tools\agy-runs\agy-p4f-f4c.prompt.txt`。
+- 起因（Claude 準備 web escape UI 時發現，P4-E 遺留）：① web 送 `kind: 'shove'`，server enum 只有 `shove_prone` / `shove_push`（UI Shove 會 422，F4d 修）；② `pending_combat_roll_request_type` 只認 `"grapple"` / `"shove"`（後者永不出現），且 `list_pending_requests` 只透過 `combat_actions.roll_request_id` join 到攻方那張骰 → shove 兩張骰、grapple 防守方那張骰都變 `request_type="skill"`，前端無 handler；③ adjudication 分類用 `("grapple","shove")` → `shove_*` reach 裁定不歸 `reach`、不導向專用 route。
+- 交付：`resolution.REACH_ADJUDICATED_KINDS`（grapple / shove_prone / shove_push，不含 escape）供 `row_to_adjudication_view` 與 `resolve_adjudication` 共用；`core_rolls.special_attack_request_type`（`shove_*`→`"shove"`、`escape_grapple`→`"escape_grapple"`）與 `_SPECIAL_ATTACK_LABEL_TO_KIND`（由 `SpecialAttackKind` 派生的 title-case label 對照）；`pending_combat_roll_request_type` 在 `action_kind` 為 None 時改用 `roll_groups.label` 判別（同 Concentration / Initiative 既有慣例，無 JSON SQL、無額外 query）；`get_request` 補上與 `list_pending_requests` 相同的 `combat_actions` outer join。
+- **Claude 審核修正**：`pending_combat_roll_request_type` 的 if / elif 兩段各自呼叫 helper → 合併為「先解 kind（action_kind 或 label）再一次查表」並加註解；其餘零修改。
+- 測試：`test_p4e_pending_rolls_route.py` parametrize 改為 `shove_prone` / `shove_push` / `escape_grapple` 與 label 路徑（移除不可能的 `action_kind="shove"`）；`test_p4c_special_attacks.py` +1 parametrize（grapple / shove_prone / escape 真實流程：DM 看到兩張 request_type 一致的骰、Player 只看到自己那張）；`test_p4e_adjudication_routes.py` +2（`shove_prone` 裁定列為 `reach`、dm_hints 同 grapple；`resolve_adjudication` 導向專用 route 的 conflict）。焦點 10 檔 64 passed；P4-B～F + P3-C + M04-C + M03 共 71 檔全通過（exit 0）；長行對照 HEAD 無新增。
+- 留給 F4d：web。
 
