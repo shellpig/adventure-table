@@ -103,20 +103,32 @@ class CombatAdjudicationDecisionToolInput(AdjudicationDecisionInput):
     action_id: UUID
 
 
+_ADJUDICATION_KIND_TO_HINT: dict[str, str] = {
+    "range": "adjudicate_attack",
+    "reach": "adjudicate_special_attack",
+    "affected_targets": "resolve_aoe_spell",
+    "opportunity_attack": "resolve_adjudication",
+    "special": "resolve_adjudication",
+}
+
+
 def next_combat_action(
     *,
     is_dm: bool,
     current_turn_entry_id: UUID | None,
     current_turn_is_monster: bool,
     my_entry_ids: frozenset[UUID],
-    has_pending_adjudication: bool,
+    pending_adjudication_kinds: tuple[str, ...],
     has_open_reaction: bool,
     has_pending_roll: bool,
 ) -> str:
     """Compact next-step hint shared by get_combat_context and (E8) get_session_context."""
     if is_dm:
-        if has_pending_adjudication:
-            return "resolve_adjudication"
+        if pending_adjudication_kinds:
+            first_kind = pending_adjudication_kinds[0]
+            if first_kind not in _ADJUDICATION_KIND_TO_HINT:
+                raise ValueError(f"Unknown adjudication kind: {first_kind}")
+            return _ADJUDICATION_KIND_TO_HINT[first_kind]
         if current_turn_is_monster:
             return "take_turn"
         return "wait_for_event"
@@ -542,12 +554,15 @@ class CombatAIToolApplicationService(AIToolApplicationService):
                     reaction_windows.append(window)
             adjudications = self.combat_adjudication_service.list_pending(actor)
 
+        pending_adjudication_kinds = tuple(
+            adj.kind for adj in sorted(adjudications, key=lambda a: a.created_at)
+        )
         next_action = next_combat_action(
             is_dm=actor.is_current_dm,
             current_turn_entry_id=current_turn_entry_id,
             current_turn_is_monster=current_turn_is_monster,
             my_entry_ids=frozenset(my_entry_ids),
-            has_pending_adjudication=bool(adjudications),
+            pending_adjudication_kinds=pending_adjudication_kinds,
             has_open_reaction=bool(reaction_windows),
             has_pending_roll=has_pending_roll,
         )

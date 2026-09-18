@@ -635,7 +635,10 @@ def test_6_resolve_refuses_range_row_and_unknown_action_id(adjudication_routes_f
         headers={"Authorization": f"Bearer {table.dm_token}"},
     )
     assert resolve_range_res.status_code == 409
-    assert "Range adjudication must be resolved via POST /attacks/adjudicate" in resolve_range_res.json()["error"]["message"]
+    assert (
+        "Range adjudication must be resolved through attack adjudication (combat_adjudicate_attack / POST .../attacks/adjudicate)"
+        in resolve_range_res.json()["error"]["message"]
+    )
 
     # Row stays pending
     range_row = adjudication_repo.get_action(session_id=table.session_id, action_id=UUID(range_action_id))
@@ -752,7 +755,7 @@ def test_8_shove_prone_adjudication_is_reach_with_hints_and_resolve_refuses(
     )
     assert grapple_resolve_res.status_code == 409
     assert (
-        "Reach adjudication must be resolved via dedicated special-attack route"
+        "Reach adjudication must be resolved through special-attack adjudication (combat_adjudicate_special_attack / POST .../special-attacks/adjudicate)"
         in grapple_resolve_res.json()["error"]["message"]
     )
 
@@ -787,7 +790,7 @@ def test_8_shove_prone_adjudication_is_reach_with_hints_and_resolve_refuses(
     )
     assert shove_resolve_res.status_code == 409
     assert (
-        "Reach adjudication must be resolved via dedicated special-attack route"
+        "Reach adjudication must be resolved through special-attack adjudication (combat_adjudicate_special_attack / POST .../special-attacks/adjudicate)"
         in shove_resolve_res.json()["error"]["message"]
     )
 

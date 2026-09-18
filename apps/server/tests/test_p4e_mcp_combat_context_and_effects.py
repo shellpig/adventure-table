@@ -705,12 +705,12 @@ def test_3_dm_get_combat_context_and_adjudication_lifecycle(mcp_combat_fixture) 
     assert attack_res["isError"] is False
     action_id = attack_res["structuredContent"]["data"]["action_id"]
 
-    # DM calls get_combat_context -> sees pending adjudication and next_required_action == "resolve_adjudication"
+    # DM calls get_combat_context -> sees pending adjudication and next_required_action == "adjudicate_attack"
     dm_resp2 = _mcp_call(client, dm_token, "get_combat_context", {})
     assert dm_resp2["isError"] is False
     dm_data2 = dm_resp2["structuredContent"]["data"]
     assert len(dm_data2["pending_adjudications"]) >= 1
-    assert dm_data2["next_required_action"] == "resolve_adjudication"
+    assert dm_data2["next_required_action"] == "adjudicate_attack"
 
     # DM resolves range adjudication via combat_adjudicate_attack
     resolve_res = _mcp_call(

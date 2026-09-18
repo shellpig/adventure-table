@@ -751,15 +751,15 @@ class CombatAdjudicationRepository:
         action_kind = existing.action_kind
         if action_kind == "attack":
             raise CombatAdjudicationStateConflictError(
-                "Range adjudication must be resolved via POST /attacks/adjudicate"
+                "Range adjudication must be resolved through attack adjudication (combat_adjudicate_attack / POST .../attacks/adjudicate)"
             )
         if action_kind in REACH_ADJUDICATED_KINDS:
             raise CombatAdjudicationStateConflictError(
-                "Reach adjudication must be resolved via dedicated special-attack route"
+                "Reach adjudication must be resolved through special-attack adjudication (combat_adjudicate_special_attack / POST .../special-attacks/adjudicate)"
             )
         if action_kind == "spell_aoe":
             raise CombatAdjudicationStateConflictError(
-                "AoE adjudication must be resolved via POST /combat/spells/aoe/resolve"
+                "AoE adjudication must be resolved through AoE spell resolution (combat_resolve_aoe_spell / POST .../combat/spells/aoe/resolve)"
             )
         if action_kind == "opportunity_attack":
             if trigger is None:

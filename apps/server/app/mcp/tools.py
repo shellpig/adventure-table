@@ -545,10 +545,22 @@ def _structured_result(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def structured_tool_error(code: str, message: str, message_zh_tw: str) -> dict[str, Any]:
+def structured_tool_error(
+    code: str,
+    message: str,
+    message_zh_tw: str,
+    *,
+    detail: str | None = None,
+) -> dict[str, Any]:
+    error_payload: dict[str, Any] = {
+        "code": code,
+        "messages": {"en": message, "zh-TW": message_zh_tw},
+    }
+    if detail is not None:
+        error_payload["detail"] = detail
     structured = {
         "ok": False,
-        "error": {"code": code, "messages": {"en": message, "zh-TW": message_zh_tw}},
+        "error": error_payload,
     }
     return {
         "content": [{"type": "text", "text": json.dumps(structured, ensure_ascii=False, separators=(",", ":"))}],
@@ -710,8 +722,13 @@ async def call_tool(
         )
     except ValueError:
         return structured_tool_error("invalid_arguments", "Tool arguments are not valid for the current table state", "工具 arguments 不符合目前桌面狀態")
-    except RuntimeError:
-        return structured_tool_error("table_conflict", "The table state changed or does not allow this action", "桌面狀態已變更或目前不允許此動作")
+    except RuntimeError as exc:
+        return structured_tool_error(
+            "table_conflict",
+            "The table state changed or does not allow this action",
+            "桌面狀態已變更或目前不允許此動作",
+            detail=str(exc) or None,
+        )
 
     return _structured_result(data)
 

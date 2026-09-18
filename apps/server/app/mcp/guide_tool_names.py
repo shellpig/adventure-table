@@ -29,6 +29,9 @@ class GuideToolNames:
     request_adjudication: str
     roll_concentration: str
     advance_turn: str
+    adjudicate_attack: str
+    adjudicate_special_attack: str
+    resolve_aoe_spell: str
 
 
 _EXPECTED = {
@@ -123,6 +126,9 @@ def guide_tool_names() -> GuideToolNames:
         request_adjudication="combat_request_adjudication",
         roll_concentration="combat_roll_concentration",
         advance_turn="combat_advance_turn",
+        adjudicate_attack="combat_adjudicate_attack",
+        adjudicate_special_attack="combat_adjudicate_special_attack",
+        resolve_aoe_spell="combat_resolve_aoe_spell",
     )
 
 
