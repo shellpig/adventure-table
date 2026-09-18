@@ -581,6 +581,8 @@ export function SessionCombatActionBar({
   const handlePendingRoll = (requestType: string, rollRequestId: string) => {
     const handler = pendingCombatRollHandler(requestType, rollHandlers)
     if (!handler) return Promise.resolve()
+    // A fresh roll replaces whatever result line is showing, including a resolved spell cast.
+    setSpellStatus(null)
     return runCombatMutation(setPending, () => handler(rollRequestId), refresh, onError)
   }
 

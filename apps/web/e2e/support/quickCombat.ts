@@ -42,6 +42,9 @@ export type CombatEntry = {
   character_id: string | null
   display_name: string
   status: string
+  action_available: boolean
+  attacks_allowed: number
+  attacks_used: number
 }
 export type CombatantProjection = {
   name: string
@@ -49,6 +52,8 @@ export type CombatantProjection = {
   current_hp?: number | null
   max_hp?: number | null
   position_note?: string | null
+  conditions: string[]
+  concentration?: Record<string, unknown> | null
 }
 export type CombatDetail = {
   id: string
