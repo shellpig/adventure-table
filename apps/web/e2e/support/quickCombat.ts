@@ -60,6 +60,7 @@ export type CombatDetail = {
   status: string
   round_number: number | null
   current_turn_entry_id: string | null
+  revision: number
   entries: CombatEntry[]
   combatants: Array<{ entry_id: string; is_hostile: boolean; projection: CombatantProjection }>
 }

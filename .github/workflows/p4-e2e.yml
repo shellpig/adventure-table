@@ -1,0 +1,87 @@
+name: P4 Full-Stack E2E
+
+on:
+  workflow_dispatch:
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@11.6.0
+
+      - name: Install frontend dependencies
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Frontend unit tests
+        working-directory: apps/web
+        run: npm test -- --run
+
+      - name: TypeScript and Vite build
+        working-directory: apps/web
+        run: npm run build
+
+      - name: Install Playwright Chromium
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate Docker Compose
+        run: |
+          docker compose config
+          docker compose --profile e2e config
+
+      - name: Start from a clean disposable CI volume
+        run: docker compose --profile e2e down -v --remove-orphans || true
+
+      - name: Start daily stack for isolation sentinel
+        run: docker compose up -d --build --wait server web
+
+      - name: Create daily Room Character and OAuth sentinel
+        working-directory: apps/web
+        run: node scripts/e2e-daily-sentinel.mjs prepare
+
+      - name: Run complete isolated Playwright regression suite
+        working-directory: apps/web
+        run: npm run test:e2e:docker
+
+      - name: Verify daily stack stayed untouched
+        working-directory: apps/web
+        run: node scripts/e2e-daily-sentinel.mjs verify
+
+      - name: Verify E2E destructive reset and baseline recovery
+        working-directory: apps/web
+        run: node scripts/e2e-reset-acceptance.mjs
+
+      - name: Verify wrong-database hard guard
+        working-directory: apps/web
+        run: node scripts/e2e-daily-sentinel.mjs wrong-db
+
+      - name: Print full-stack logs on failure
+        if: failure()
+        run: docker compose --profile e2e logs --no-color db server web server-e2e web-e2e
+
+      - name: Upload Playwright results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p4-playwright-results
+          path: |
+            apps/web/test-results
+            apps/web/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Stop full stack
+        if: always()
+        run: docker compose --profile e2e down -v --remove-orphans

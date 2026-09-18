@@ -19,6 +19,7 @@ import {
   playerAttack,
   readDetail,
   responseJson,
+  restartE2EServer,
   startSession,
   type AttackResolution,
   type CombatAdjudication,
@@ -75,6 +76,52 @@ type PendingRollItem = {
   request_type: string
   target_entry_id: string
   dc: number | null
+}
+
+type CombatEndEntry = {
+  id: string
+  initiative_total: number | null
+  turn_order: number | null
+  action_available: boolean
+  bonus_action_available: boolean
+  reaction_available: boolean
+  attacks_used: number
+}
+
+type CombatEndView = {
+  id: string
+  status: string
+  round_number: number | null
+  current_turn_entry_id: string | null
+  entries: CombatEndEntry[]
+}
+
+type ResourceCounterView = {
+  used: number
+  remaining: number
+}
+
+type CharacterSheetSummary = {
+  character_id: string
+  current_hp: number
+  spell_slots: Record<string, ResourceCounterView>
+}
+
+type CharacterExportDocument = {
+  payload: {
+    current_state: {
+      state_payload: {
+        concentration: Record<string, unknown> | null
+      }
+    }
+  }
+}
+
+async function endFromSession(page: Page): Promise<void> {
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: 'End Session' }).click()
+  await expect(page.getByText('Ended', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'End Session' })).toHaveCount(0)
 }
 
 async function dmAdvanceTurn(page: Page): Promise<void> {
@@ -427,11 +474,128 @@ test('P4-F F.2 full Quick Combat journey: condition, healing, concentration, sav
       expect(projection.armor_class ?? null).toBeNull()
     }
 
-    // 11. End Combat: Clears stage on both DM and Player pages.
+    // 10a. Session boundary: End Session, Start Session on the same Campaign, the same Combat resumes.
+    const detailBeforeSessionEnd = await readDetail(request, prefix)
+    await endFromSession(page)
+    const sessionId2 = await startSession(page, roomContext.roomId, campaign.id)
+    const sessionUrl2 = `/rooms/${roomContext.roomId}/campaigns/${campaign.id}/sessions/${sessionId2}`
+    const prefix2 = `/api/rooms/${roomContext.roomId}/campaigns/${campaign.id}/sessions/${sessionId2}`
+
+    await player.page.goto(sessionUrl2)
+    await expect(player.page.getByRole('heading', { name: 'Active Session', level: 1 })).toBeVisible()
+
+    await expect(combatStage(page)).toBeVisible()
+    await expect(combatStage(player.page)).toBeVisible()
+
+    const detail2 = await readDetail(request, prefix2)
+    expect(detail2.id).toBe(detailBeforeSessionEnd.id)
+    expect(detail2.status).toBe('running')
+    expect(detail2.round_number).toBe(detailBeforeSessionEnd.round_number)
+    expect(detail2.current_turn_entry_id).toBe(detailBeforeSessionEnd.current_turn_entry_id)
+    expect(detail2.entries).toHaveLength(3)
+    expect(entryNamed(detail2, QUICK_ENEMY.name).status).toBe('surrendered')
+    expect(combatantOf(detail2, goblinEntry.id).projection.conditions).toContain(PRONE_REF)
+
+    await expect(combatantCard(page, goblinEntry.id).locator('.session-combat__condition-pill')).toContainText('prone')
+    await expect(combatantCard(player.page, goblinEntry.id).locator('.session-combat__condition-pill')).toContainText('prone')
+    await expect(initiativeRow(page, thugEntry.id).locator('.session-combat__status-badge')).toHaveText('Surrendered')
+    await expect(initiativeRow(player.page, thugEntry.id).locator('.session-combat__status-badge')).toHaveText('Surrendered')
+
+    for (const enemyId of [goblinEntry.id, thugEntry.id]) {
+      await expect(combatantCard(player.page, enemyId)).not.toContainText('HP:')
+      await expect(combatantCard(player.page, enemyId)).not.toContainText('AC:')
+    }
+
+    // 10b. Real backend process restart with a pending save: state intact, the save resolves exactly once.
+    const restartSaveRequest = await json<SavingThrowRequestResponse>(await request.post(
+      `${prefix2}/combat/saving-throws/request`,
+      {
+        data: {
+          target_entry_ids: [heroEntry.id],
+          ability_ref: 'wisdom',
+          dc: 5,
+          idempotency_key: 'p4f-e2e-restart-save',
+        },
+      },
+    ))
+    expect(restartSaveRequest.requests).toHaveLength(1)
+    const restartSaveId = restartSaveRequest.requests[0].id
+
+    const beforeRestart = await readDetail(request, prefix2)
+    await restartE2EServer(request)
+
+    await page.reload()
+    await expect(page.getByRole('heading', { name: 'Active Session', level: 1 })).toBeVisible()
+    await expect(combatStage(page)).toBeVisible()
+
+    await player.page.reload()
+    await expect(player.page.getByRole('heading', { name: 'Active Session', level: 1 })).toBeVisible()
+    await expect(combatStage(player.page)).toBeVisible()
+
+    const afterRestart = await readDetail(request, prefix2)
+    expect(afterRestart.id).toBe(beforeRestart.id)
+    expect(afterRestart.revision).toBe(beforeRestart.revision)
+    expect(afterRestart.round_number).toBe(beforeRestart.round_number)
+    expect(afterRestart.current_turn_entry_id).toBe(beforeRestart.current_turn_entry_id)
+    expect(afterRestart.entries.map((entry) => [entry.id, entry.status])).toEqual(
+      beforeRestart.entries.map((entry) => [entry.id, entry.status]),
+    )
+
+    const restartSaveButton = player.page.locator(`[data-pending-roll="${restartSaveId}"]`)
+    await expect(restartSaveButton).toBeVisible()
+    const restartSaveRolled = player.page.waitForResponse((response) => (
+      response.request().method() === 'POST'
+      && response.url().includes(`/sessions/${sessionId2}/combat/saving-throws/roll`)
+    ))
+    await restartSaveButton.click()
+    const restartSaveResult = await responseJson<SavingThrowRollResponse>(await restartSaveRolled)
+    expect(typeof restartSaveResult.total).toBe('number')
+    expect(typeof restartSaveResult.succeeded).toBe('boolean')
+
+    await expect(player.page.locator(`[data-pending-roll="${restartSaveId}"]`)).toHaveCount(0)
+    const dmPendingRollsAfterRestart = await json<PendingRollItem[]>(await request.get(
+      `${prefix2}/combat/pending-rolls`,
+    ))
+    expect(dmPendingRollsAfterRestart.some((roll) => roll.id === restartSaveId)).toBe(false)
+    await expect(player.page.locator('[data-roll-result="saving_throw"]')).toBeVisible()
+
+    // 11. End Combat: DM ends combat, verify CombatView cleanup fields on response.
     page.once('dialog', (dialog) => dialog.accept())
+    const combatEnded = page.waitForResponse((response) => (
+      response.request().method() === 'POST'
+      && response.url().includes(`/sessions/${sessionId2}/combat/end`)
+    ))
     await page.getByRole('button', { name: 'End Combat' }).click()
+    const endView = await responseJson<CombatEndView>(await combatEnded)
+    expect(endView.status).toBe('ended')
+    expect(endView.round_number).toBeNull()
+    expect(endView.current_turn_entry_id).toBeNull()
+    expect(endView.entries.length).toBeGreaterThan(0)
+    for (const entry of endView.entries) {
+      expect(entry.initiative_total).toBeNull()
+      expect(entry.turn_order).toBeNull()
+      expect(entry.action_available).toBe(true)
+      expect(entry.bonus_action_available).toBe(true)
+      expect(entry.reaction_available).toBe(true)
+      expect(entry.attacks_used).toBe(0)
+    }
+
+    // 12. Preserved state after End Combat: Character HP, spell slots, and concentration survive.
+    const sheet = await json<CharacterSheetSummary>(
+      await request.get(`/api/characters/${character.id}/sheet`),
+    )
+    expect(sheet.current_hp).toBe(heroAfterHeal.current_hp)
+    expect(sheet.spell_slots['1']?.used).toBe(2)
+
+    const exportDocument = await json<CharacterExportDocument>(
+      await request.get(`/api/characters/${character.id}/export`),
+    )
+    expect(exportDocument.payload.current_state.state_payload.concentration).not.toBeNull()
+
+    // 13. Both pages: combatStage count 0 and Player page shows no [data-monster-controls].
     await expect(combatStage(page)).toHaveCount(0)
     await expect(combatStage(player.page)).toHaveCount(0)
+    await expect(player.page.locator('[data-monster-controls]')).toHaveCount(0)
   } finally {
     await player.context.close()
   }
