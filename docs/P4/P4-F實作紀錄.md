@@ -36,7 +36,7 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 | F8b-2 | web：entry 卡片 / initiative 列「閃避中 / Dodging」標籤；雙語；vitest；E2E 兩支 spec 回歸 | 工程實作守則 7 | ✅ |
 | F8c | F8 第二／三場回饋：`healthy` 文案、Player action 用完提示、`next_required_action=advance_turn`、briefing / guide 補 adjudication 分流（briefing 在 F8a-1 漏改）、環境傷害 `quick_roll` → `combat_apply_damage`、敘事不說精確 HP；`BRIEFING_MAX_CHARS` 2,400 → 3,000 | 實作規格 P4-E 8、9、12；工程實作守則 7 | ✅ |
 | F9a | static review + 全套 backend（真 PostgreSQL）/ vitest / build / compose config / 本機全套 E2E 彙整；`P4-F_CLOSEOUT.md` 草稿（第 9、10 項與 F.3 留白） | 實作規格 P4-F 7、8、11；測試指南 F.4 | ✅ |
-| F9b | F8 結果填入 closeout → P4-F 關門 → `--no-ff` 合併回 `main` → P4 Phase closeout、`PROJECT_BRIEF.md` | 實作規格 P4-F 11；測試指南 F.4、§5 | ⬜ |
+| F9b | F8 結果填入 closeout → P4-F 關門 → `--no-ff` 合併回 `main` → P4 Phase closeout、`PROJECT_BRIEF.md` | 實作規格 P4-F 11；測試指南 F.4、§5 | ✅ |
 
 步驟粒度可在實作中再切；新增子步以 `F1a` 之類接續，不重編已完成項目。
 
@@ -239,3 +239,10 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 - 指揮者審核修正：無（自己做）。**建議 verifier 同步文件**：`docs/M04/測試指南.md`、`docs/M04/開發設計方針.md` 寫死的「2,400」需改 3,000（本步未動 M04 文件）。
 - 測試：`test_p4f_adjudication_routing.py` +1（`advance_turn` 條件矩陣：done → advance、open reaction / pending adjudication / monster turn 優先）；`test_p4e_session_context_combat.py::test_5_guide_briefing_parity_and_length_cap` 逼出 en 步驟 1 的「current turn」token 不可省；backend 11 個模組 **72 passed**；vitest 86 files / **484 passed**（ActionBar +1：action 用完有提示且無 `<select>`、未用完無提示）、build 綠；E2E `p4e-quick-combat` + `p4f-full-combat-journey` **2 passed（29.0s）**。
 - 留給 F9b：closeout 第 9、10 項與 F.4 填入三場證據；已知限制加 4、8、「死亡 vs 倒地不起」；M04 文件 2,400 → 3,000。
+
+### F9b — 關門、合併、P4 Phase closeout
+
+- 2026-09-19，指揮者自己做。code SHA `651a14d0`（F8c）為關門碼。
+- gate（全部本機）：全套 backend（`P4_POSTGRES_URL` → `adventure_table_p4f`）**1809 passed / 39 skipped**（12:04；skip 全為 P2 / P3 / M03 env gate）；vitest 484 / build 綠（F8c）；`docker compose config` exit 0；全套 E2E **125 passed / 4 skipped**（10.1m，含 `p4e-quick-combat` 未 flake）+ disabled-pack **7 passed**（帶 `--reporter=line` 會讓 `e2e-docker.mjs` 跳過第二趟，故手動照 script 的同一流程跑：xge-less 重啟 server-e2e → `M03C_E2E_DISABLE_XGE=1` → 還原）。
+- 文件：`P4-F_CLOSEOUT.md` 第 9、10 項與 F.4 填入三場證據、決定表加 0030 / Dodge / Quick Enemy 輸入 / AI 引導、已知限制加 F8 回饋 4 / 8 / 死亡 vs 倒地不起 / AI 不會被叫醒 / `wait_for_event` 無硬證據；`docs/M04/測試指南.md`、`開發設計方針.md` 的 `BRIEFING_MAX_CHARS` 2,400 → 3,000；`PROJECT_BRIEF.md` P4-F ✅、P4 Phase 關門、下一步。
+- 合併：`git merge --no-ff feat/p4f-full-p4-integration-closeout` 回 `main`，merge hash 記於 `PROJECT_BRIEF.md`。
