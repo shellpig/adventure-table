@@ -2,7 +2,7 @@
 
 最後更新：2026-09-19
 
-本檔是**當前進度、下一步、Roadmap 與索引的單一事實來源**，上限 **12,000 UTF-8 bytes**。歷史進度見 [ROADMAP_HISTORY](docs/ROADMAP_HISTORY.md)，未解問題見 [已知問題](已知問題.md)；不在本檔累加歷史過程、測試數字或決策全文。
+本檔是**當前進度、下一步、Roadmap 與索引的單一事實來源**，上限 **16,000 UTF-8 bytes**。歷史進度見 [ROADMAP_HISTORY](docs/ROADMAP_HISTORY.md)，未解問題見 [已知問題](已知問題.md)；不在本檔累加歷史過程、測試數字或決策全文。
 
 ## 專案定位與目前能力
 

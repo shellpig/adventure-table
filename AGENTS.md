@@ -13,7 +13,7 @@
 
 **Layer 1 — 必讀：**
 1. `AGENTS.md`（本檔；最新全文已由工具載入上下文時，不再重複讀取）
-2. `PROJECT_BRIEF.md`（精簡當前狀態、Roadmap、文件索引；≤ 12,000 UTF-8 bytes）
+2. `PROJECT_BRIEF.md`（精簡當前狀態、Roadmap、文件索引；≤ 16,000 UTF-8 bytes）
 3. `git log --oneline -10`
 
 **Layer 2 — 按任務讀對應文件／段落：**
@@ -94,7 +94,7 @@ U 類例外採單檔格式，直接讀對應 `docs/Uxx/Uxx-<letter>.md`。
 | 住哪 | 放什麼 |
 |---|---|
 | **`規格企劃.md`** | 產品行為與為什麼：跑團方式、權限、規則選擇、UI 行為、明確不做 |
-| **`PROJECT_BRIEF.md`** | 精簡當前狀態、當前 Phase 逐項進度、未來 Roadmap、下一步、跨 Phase 約束摘要、索引；≤ 12,000 UTF-8 bytes |
+| **`PROJECT_BRIEF.md`** | 精簡當前狀態、當前 Phase 逐項進度、未來 Roadmap、下一步、跨 Phase 約束摘要、索引；≤ 16,000 UTF-8 bytes |
 | **`docs/ROADMAP_HISTORY.md`** | 已關門 Subphase 進度表與關門摘要（包含仍 open 的 M／U track 已完成項）；不承擔當前待辦 |
 | **`已知問題.md`** | 未解問題、跨 Phase 已知限制與驗收缺口索引；不因來源 Phase 關門而歸檔 |
 | **`<Subphase>實作紀錄.md` / `<Subphase>_steps/`** | 接手摘要與唯一 step 進度板／各步計畫及詳細紀錄；格式見指揮者手冊 §2.4，不取代正式契約 |
@@ -104,7 +104,7 @@ U 類例外採單檔格式，直接讀對應 `docs/Uxx/Uxx-<letter>.md`。
 | **`docs/Px/測試指南.md` / `docs/Mxx/測試指南.md`** | 該 Phase / Subphase 的自動／人工驗收流程與測試證據要求 |
 | **`docs/Uxx/Uxx-<letter>.md`** | U 類單一 Subphase 的實作目標、技術設計、測試／效能驗收與 closeout 證據；不套三份文件制 |
 | **SRD / 規則資料檔** | 所有規則內容與可調數值 |
-| **`待決事項.md`** | 真正無法從既有規格推導、且會影響核心玩法／方向的未決問題 |
+| **`規格企劃.md`「十三、目前待決事項」** | 真正無法從既有規格推導、且會影響核心玩法／方向的未決問題；不另建獨立檔案 |
 
 **文件裡不重複抄規則數值**，一律指向資料檔。
 
@@ -152,7 +152,7 @@ U 類例外採單檔格式，直接讀對應 `docs/Uxx/Uxx-<letter>.md`。
 4. **網站不接 LLM API。** 後端沒有模型可呼叫，所有 AI 能力來自使用者的外部 AI Session。
 5. **內容逐步擴充，SRD 5.1 是起點不是上限。** 非 SRD 內容依實際需要逐步加入。
 6. **Human UI 與 AI MCP 共用同一份 backend logic**，不做兩套遊戲邏輯。
-7. **M03 已交付單機版，standalone boundary 從此是常駐約束。** 新增任何 P Phase / M Phase 都不得違反 `docs/M03/實作規格.md` 3.2 的界線：`app.standalone` 不得 import `app.main`；`app.content.*`、`app.domain.character*` 與 protected module 不得觸及 Room / Campaign / Session / Seat / Party Roster 等多人層。P2 引入多人模組時，必須同步擴充 `tests/test_m03_import_boundary.py` 的 forbidden regex 與 `EXACT_PROTECTED_MODULES`，否則新命名會讓 gate 靜默放行。**之後任何長期 M01 工作若修改 Character Build / State / Version / StableKey / Builder provenance / Character JSON，也必須重新檢查 standalone composition 與 Web↔Standalone exchange 相容性，不能讓角色核心反向依賴多人層。**
+7. **M03 已交付單機版，standalone boundary 從此是常駐約束。** 新增任何 P Phase / M Phase 都不得違反 `docs/M03/實作規格.md` 3.2 的界線：`app.standalone` 不得 import `app.main`；`app.content.*`、`app.domain.character*` 與 protected module 不得觸及 Room / Campaign / Session / Seat / Party Roster 等多人層。任何 Subphase 新增多人 module／package（P2 的 Room 層、P4 的 Combat、P5 的 Spatial / Battle Map 等）時，都必須在同一 commit 擴充 `tests/test_m03_import_boundary.py` 的 forbidden regex 與 `EXACT_PROTECTED_MODULES`，否則新命名會讓 gate 靜默放行。**之後任何長期 M01 工作若修改 Character Build / State / Version / StableKey / Builder provenance / Character JSON，也必須重新檢查 standalone composition 與 Web↔Standalone exchange 相容性，不能讓角色核心反向依賴多人層。**
 
 ## 工程實作守則
 
