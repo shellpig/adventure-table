@@ -129,13 +129,22 @@ export function SessionTableSurface({
     [initialStage, events],
   )
   const combatLogEvents = useMemo(() => events.slice(-100), [events])
+  const chatEvents = useMemo(
+    () => events.filter(isSessionChatEvent).slice(-100),
+    [events],
+  )
+  // Chat roll prompts name attacks via the same content presentations as the log.
+  const presentedEvents = useMemo(
+    () => [...combatLogEvents, ...chatEvents],
+    [combatLogEvents, chatEvents],
+  )
   const combatLogContentRefs = useMemo(
-    () => combatLogContentReferences(combatLogEvents),
-    [combatLogEvents],
+    () => combatLogContentReferences(presentedEvents),
+    [presentedEvents],
   )
   const combatLogExtraFields = useMemo(
-    () => combatLogContentFields(combatLogEvents),
-    [combatLogEvents],
+    () => combatLogContentFields(presentedEvents),
+    [presentedEvents],
   )
   const { nameFor: resolveCombatContentName, fieldFor: resolveCombatContentField } = useContentPresentations(
     combatLogContentRefs,
@@ -343,10 +352,12 @@ export function SessionTableSurface({
     return speakerSeatId ? seatLabel(speakerSeatId) : copy.ooc
   }
 
-  const chatEvents = useMemo(
-    () => events.filter(isSessionChatEvent).slice(-100),
-    [events],
-  )
+  const chatMessagesRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const container = chatMessagesRef.current
+    if (!container || tab !== 'chat') return
+    container.scrollTop = container.scrollHeight
+  }, [chatEvents, tab])
 
   const applySidePanelWidth = (nextWidth: number) => {
     setSidePanelWidth(nextWidth)
@@ -598,7 +609,7 @@ export function SessionTableSurface({
 
           {tab === 'chat' ? (
             <div className="session-chat">
-              <div className="session-chat__messages" aria-live="polite">
+              <div className="session-chat__messages" aria-live="polite" ref={chatMessagesRef}>
                 {chatEvents.length === 0 ? <p className="session-stage__empty">{copy.noMessages}</p> : null}
                 {chatEvents.map((event) => {
                   if (isRollRequestEvent(event)) {
@@ -611,7 +622,13 @@ export function SessionTableSurface({
                     return (
                       <article className="session-chat__message session-chat__message--system" key={`${event.session_id}:${event.seq}`}>
                         <header><strong>{copy.system}</strong></header>
-                        <p>{formatRollRequestPrompt(event, targetLabels, copy)}</p>
+                        <p>
+                          {formatRollRequestPrompt(event, targetLabels, copy, {
+                            entryLabel: combatEntryLabel,
+                            contentName: resolveCombatContentName,
+                            contentField: resolveCombatContentField,
+                          })}
+                        </p>
                       </article>
                     )
                   }

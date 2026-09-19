@@ -1,15 +1,82 @@
 import type { RollModifierMode, RollRequestType, RollRequestView } from '../../api/p3c'
 import type { TableEvent } from '../../api/sessions'
+import type { ContentFieldResolver, ContentNameResolver } from '../../i18n/useContentPresentations'
+import { isContentReference } from './sessionCombatLog'
 import type { SessionCopy } from './sessionCopy'
 
-export function formatRequestType(type: RollRequestType, copy: SessionCopy): string {
+// Combat roll.requested events (P4) reuse the P3 chat prompt with server-side
+// request types and English labels; these are presented via copy instead.
+type CombatRollRequestType = 'initiative' | 'attack' | 'death_save'
+
+const SERVER_LABEL_BY_TYPE: Record<CombatRollRequestType, string> = {
+  initiative: 'Initiative',
+  attack: 'Attack: ',
+  death_save: 'Death Save',
+}
+
+export type RollRequestPromptResolvers = {
+  entryLabel?: (entryId: string) => string | null
+  contentName?: ContentNameResolver
+  contentField?: ContentFieldResolver
+}
+
+export function formatRequestType(type: RollRequestType | CombatRollRequestType, copy: SessionCopy): string {
   switch (type) {
     case 'ability': return copy.checkAbilityType
     case 'skill': return copy.checkSkillType
     case 'saving_throw': return copy.checkSaveType
     case 'other': return copy.checkOtherType
+    case 'initiative': return copy.checkInitiativeType
+    case 'attack': return copy.checkAttackType
+    case 'death_save': return copy.checkDeathSaveType
     default: return type
   }
+}
+
+function isCombatRollRequestType(type: unknown): type is CombatRollRequestType {
+  return type === 'initiative' || type === 'attack' || type === 'death_save'
+}
+
+function combatEntryTargets(event: TableEvent, requestType: CombatRollRequestType): string[] {
+  const payload = event.payload
+  const ids: string[] = []
+  if (requestType === 'initiative' && Array.isArray(payload.combat_entry_ids)) {
+    for (const unit of payload.combat_entry_ids) {
+      if (Array.isArray(unit)) ids.push(...unit.filter((id): id is string => typeof id === 'string'))
+    }
+  } else if (requestType === 'attack' && typeof payload.attacker_entry_id === 'string') {
+    ids.push(payload.attacker_entry_id)
+  } else if (requestType === 'death_save' && typeof payload.target_entry_id === 'string') {
+    ids.push(payload.target_entry_id)
+  }
+  return ids
+}
+
+function combatRollLabel(
+  event: TableEvent,
+  requestType: CombatRollRequestType,
+  resolvers: RollRequestPromptResolvers,
+): string | null {
+  const rawLabel = typeof event.payload.label === 'string' ? event.payload.label.trim() : ''
+  if (requestType !== 'attack') {
+    return rawLabel && rawLabel !== SERVER_LABEL_BY_TYPE[requestType] ? rawLabel : null
+  }
+  const fallback = rawLabel.startsWith(SERVER_LABEL_BY_TYPE.attack)
+    ? rawLabel.slice(SERVER_LABEL_BY_TYPE.attack.length).trim()
+    : rawLabel
+  const contentRef = typeof event.payload.content_ref === 'string' ? event.payload.content_ref : null
+  const presentationField = typeof event.payload.presentation_field === 'string'
+    ? event.payload.presentation_field
+    : null
+  const sourceRef = typeof event.payload.source_ref === 'string' ? event.payload.source_ref : null
+  if (contentRef && presentationField && resolvers.contentField) {
+    return resolvers.contentField(contentRef, presentationField, fallback)
+  }
+  if (contentRef && resolvers.contentName) return resolvers.contentName(contentRef, fallback)
+  if (sourceRef && isContentReference(sourceRef) && resolvers.contentName) {
+    return resolvers.contentName(sourceRef, fallback)
+  }
+  return fallback || null
 }
 
 export function formatTargetRef(
@@ -78,13 +145,20 @@ export function formatRollRequestPrompt(
   event: TableEvent,
   targetLabels: string[],
   copy: SessionCopy,
+  resolvers: RollRequestPromptResolvers = {},
 ): string {
   const requestType = event.payload.request_type
   const modifierMode = event.payload.modifier_mode
   const flatAdjustment = event.payload.flat_adjustment
   const skillRef = event.payload.skill_ref
   const abilityRef = event.payload.ability_ref
-  const label = event.payload.label
+  const combatType = isCombatRollRequestType(requestType) ? requestType : null
+  const label = combatType ? combatRollLabel(event, combatType, resolvers) : event.payload.label
+  if (combatType && targetLabels.length === 0 && resolvers.entryLabel) {
+    targetLabels = combatEntryTargets(event, combatType)
+      .map((entryId) => resolvers.entryLabel?.(entryId) ?? null)
+      .filter((value): value is string => Boolean(value))
+  }
 
   const type = typeof requestType === 'string'
     ? formatRequestType(requestType as RollRequestType, copy)

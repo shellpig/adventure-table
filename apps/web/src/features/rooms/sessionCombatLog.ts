@@ -534,7 +534,7 @@ function targetCount(source: Record<string, unknown>): number | null {
   return Array.isArray(proposed) ? proposed.length : null
 }
 
-function isContentReference(reference: string): boolean {
+export function isContentReference(reference: string): boolean {
   return !reference.startsWith('inventory:')
     && !reference.startsWith('monster-action:')
     && /^[^:]+:[^:]+:[^:]+$/.test(reference)
@@ -556,6 +556,16 @@ export function combatLogContentReferences(events: readonly TableEvent[]): strin
         references.add(contentRef)
       } else {
         const attackSourceRef = attack ? stringField(attack, 'source_ref') : null
+        if (attackSourceRef && isContentReference(attackSourceRef)) references.add(attackSourceRef)
+      }
+    }
+
+    if (event.kind === 'roll.requested' && event.payload.request_type === 'attack') {
+      const contentRef = stringField(event.payload, 'content_ref')
+      if (contentRef) {
+        references.add(contentRef)
+      } else {
+        const attackSourceRef = stringField(event.payload, 'source_ref')
         if (attackSourceRef && isContentReference(attackSourceRef)) references.add(attackSourceRef)
       }
     }
@@ -586,6 +596,14 @@ export function combatLogContentFields(events: readonly TableEvent[]): Record<st
       const attack = resolution ? asRecord(resolution.attack) : null
       const contentRef = attack ? stringField(attack, 'content_ref') : null
       const presentationField = attack ? stringField(attack, 'presentation_field') : null
+      if (contentRef && presentationField) {
+        if (!fieldsByRef[contentRef]) fieldsByRef[contentRef] = new Set()
+        fieldsByRef[contentRef].add(presentationField)
+      }
+    }
+    if (event.kind === 'roll.requested' && event.payload.request_type === 'attack') {
+      const contentRef = stringField(event.payload, 'content_ref')
+      const presentationField = stringField(event.payload, 'presentation_field')
       if (contentRef && presentationField) {
         if (!fieldsByRef[contentRef]) fieldsByRef[contentRef] = new Set()
         fieldsByRef[contentRef].add(presentationField)

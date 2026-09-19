@@ -1,5 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
+
+import { LocaleProvider } from '../../i18n/LocaleProvider'
 
 import type {
   CastableSpellView,
@@ -158,23 +161,31 @@ function renderActionBar(options: {
   adjudications?: CombatAdjudicationView[]
   reactions?: ReactionWindowView[]
 }): string {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return renderToStaticMarkup(
-    <SessionCombatActionBar
-      combat={options.detail}
-      myEntryIds={['entry-player']}
-      pendingRolls={options.rolls ?? []}
-      pendingAdjudications={options.adjudications ?? []}
-      reactionEntryIds={options.isCurrentDm ? ['entry-player', 'entry-enemy'] : ['entry-player']}
-      reactionWindows={options.reactions ?? []}
-      copy={sessionCopy('en')}
-      roomId="room"
-      campaignId="campaign"
-      sessionId="session"
-      token="token"
-      isCurrentDm={options.isCurrentDm}
-      onError={() => undefined}
-      refresh={() => undefined}
-    />,
+    <QueryClientProvider client={queryClient}>
+      <LocaleProvider
+        storage={{ getItem: () => 'en', setItem: () => undefined }}
+        documentTarget={null}
+      >
+        <SessionCombatActionBar
+          combat={options.detail}
+          myEntryIds={['entry-player']}
+          pendingRolls={options.rolls ?? []}
+          pendingAdjudications={options.adjudications ?? []}
+          reactionEntryIds={options.isCurrentDm ? ['entry-player', 'entry-enemy'] : ['entry-player']}
+          reactionWindows={options.reactions ?? []}
+          copy={sessionCopy('en')}
+          roomId="room"
+          campaignId="campaign"
+          sessionId="session"
+          token="token"
+          isCurrentDm={options.isCurrentDm}
+          onError={() => undefined}
+          refresh={() => undefined}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
   )
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   castSpell,
@@ -38,6 +38,8 @@ import {
   runCombatMutation,
   type PendingCombatRollDispatchTable,
 } from './sessionCombat'
+import { useContentPresentations } from '../../i18n/useContentPresentations'
+import { isContentReference } from './sessionCombatLog'
 import type { SessionCopy } from './sessionCopy'
 import { requestId } from './SessionTableSurface'
 
@@ -253,6 +255,34 @@ export function SessionCombatActionBar({
   const currentTurnName = currentTurnEntry?.display_name ?? copy.combatUnknownCombatant
 
   const [attacks, setAttacks] = useState<AttackDefinitionView[]>([])
+  const attackContentRefs = useMemo(
+    () => attacks.flatMap((attack) => {
+      if (attack.content_ref) return [attack.content_ref]
+      return isContentReference(attack.source_ref) ? [attack.source_ref] : []
+    }),
+    [attacks],
+  )
+  const attackContentFields = useMemo(() => {
+    const fields: Record<string, string[]> = {}
+    for (const attack of attacks) {
+      if (attack.content_ref && attack.presentation_field) {
+        fields[attack.content_ref] = [...(fields[attack.content_ref] ?? []), attack.presentation_field]
+      }
+    }
+    return fields
+  }, [attacks])
+  const { nameFor: attackContentName, fieldFor: attackContentField } = useContentPresentations(
+    attackContentRefs,
+    attackContentFields,
+  )
+  const attackName = (attack: AttackDefinitionView): string => {
+    if (attack.content_ref && attack.presentation_field) {
+      return attackContentField(attack.content_ref, attack.presentation_field, attack.name)
+    }
+    if (attack.content_ref) return attackContentName(attack.content_ref, attack.name)
+    if (isContentReference(attack.source_ref)) return attackContentName(attack.source_ref, attack.name)
+    return attack.name
+  }
   const [spells, setSpells] = useState<CastableSpellView[]>([])
   const [actionKind, setActionKind] = useState<ActionKind>('attack')
   const [attackRef, setAttackRef] = useState('')
@@ -775,7 +805,7 @@ export function SessionCombatActionBar({
                     <option
                       key={attack.source_ref}
                       value={attack.source_ref}
-                    >{`${attack.name} (+${attack.attack_bonus})`}</option>
+                    >{`${attackName(attack)} (+${attack.attack_bonus})`}</option>
                   ))}
                 </select>
               </label>
