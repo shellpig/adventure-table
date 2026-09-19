@@ -28,11 +28,13 @@ from app.domain.combat.lifecycle import (
     AddCharacterInput,
     AddMonsterInput,
     CombatActionInput,
+    MonsterOutcomeInput,
     StartCombatInput,
 )
 from app.domain.combat.monster_instances import (
     CreateMonsterFromContentInput,
     CreateQuickEnemyInput,
+    MonsterInstanceUpdateToolInput,
 )
 from app.domain.combat.reaction_service import (
     OpenReactionInput,
@@ -186,16 +188,21 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
         "以 server RNG 完成待處理 Death Save；次數、Nat 1/Nat 20、stable/dead、HP 與 event 原子提交。",
     ),
     "combat_request_special_attack": (
-        "Declare a 2014 Grapple or Shove. Size/free-hand rules are validated first and reach becomes durable DM adjudication.",
-        "宣告 2014 Grapple 或 Shove。先驗證 size/free-hand，再把 reach 建成 durable DM adjudication。",
+        "Declare a 2014 Grapple, Shove, or grapple escape "
+        "(kind escape_grapple with grappled combatant as attacker and grappler as target). "
+        "Size/free-hand rules are validated first for grapple/shove; escape immediately opens opposed checks.",
+        "宣告 2014 Grapple、Shove 或脫離擒抱（kind 為 escape_grapple，被擒抱者為 attacker，擒抱者為 target）。"
+        "Grapple/Shove 先驗證 size/free-hand 並建 reach 裁定，脫離擒抱則立即開啟對抗檢定。",
     ),
     "combat_adjudicate_special_attack": (
         "Current DM resolves pending Grapple/Shove reach. Legal reach consumes one Attack budget and creates canonical opposed checks.",
         "目前 DM 裁定 Grapple/Shove reach。合法 reach 才消耗一個 Attack 次數並建立 canonical opposed checks。",
     ),
     "combat_roll_special_attack": (
-        "Resolve one pending Grapple/Shove opposed RollRequest with server RNG; the second completed roll atomically applies Grappled/Prone or records the push result.",
-        "以 server RNG 完成一個 Grapple/Shove opposed RollRequest；第二個擲骰完成時原子套用 Grappled/Prone 或記錄 push 結果。",
+        "Resolve one pending Grapple, Shove, or grapple escape opposed RollRequest with server RNG; "
+        "the second completed roll atomically applies Grappled/Prone, records the push result, or removes Grappled on successful escape.",
+        "以 server RNG 完成一個 Grapple/Shove 或脫離擒抱 opposed RollRequest；"
+        "第二個擲骰完成時原子套用 Grappled/Prone、記錄 push 結果，或在成功脫離時移除 Grappled。",
     ),
     "combat_start": (
         "Current DM initiates Quick Combat; active Session party characters are included by default unless overridden.",
@@ -220,6 +227,10 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
     "combat_list_monster_instances": (
         "Current DM inspects all created Monster Instances in the current Campaign including hidden stats and resources.",
         "目前 DM 檢視目前 Campaign 內所有已建立的怪物實例，包含完整隱藏數值與資源。",
+    ),
+    "combat_update_monster_instance": (
+        "Current DM renames a monster, toggles its visibility (public/hidden), updates its position note, or reveals its AC, description, or position note to Players; Players cannot.",
+        "目前 DM 修改怪物名稱、切換公開／隱藏狀態、更新位置備註，或向玩家揭露其 AC、描述或位置備註時使用；Player 不可使用。",
     ),
     "combat_request_initiative": (
         "Current DM opens initiative roll requests for PCs and rolls grouped monster initiative.",
@@ -252,6 +263,10 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
     "combat_withdraw_entry": (
         "Current DM marks a combatant as withdrawn (fled or retreated) while keeping its entry for the record; a Player narrates the retreat and asks the DM.",
         "目前 DM 將戰鬥單位標記為退出（逃離或撤退）並保留其紀錄；Player 以敘事表達撤退並請 DM 處理。",
+    ),
+    "combat_set_monster_outcome": (
+        "Current DM records the outcome when a monster hits 0 HP or is ruled out of the fight (dead, unconscious, surrendered, fled, or other); Players narrate and ask the DM.",
+        "目前 DM 於怪物降至 0 HP 或裁定脫離戰鬥時記錄其結果（dead、unconscious、surrendered、fled 或 other）；Player 以敘事表達並請 DM 處理。",
     ),
     "get_combat_context": (
         "Read compact active combat state, turn order, pending roll requests, reaction windows, pending adjudications, and the next required action for the caller.",
@@ -444,15 +459,34 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("combat_roll_saving_throw", _desc("Resolve a pending Combat Saving Throw with server RNG.", "以 Server RNG 完成待處理 Combat Saving Throw。"), CombatRollToolInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_request_death_save", _desc("Create a formal Death Save request.", "建立正式 Death Save 請求。"), DeathSaveRequestInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_roll_death_save", _desc("Resolve a pending Death Save with server RNG.", "以 Server RNG 完成待處理 Death Save。"), CombatRollToolInput, frozenset({"player", "dm"})),
-    MCPToolDefinition("combat_request_special_attack", _desc("Declare a formal 2014 Grapple or Shove.", "宣告正式 2014 Grapple 或 Shove。"), SpecialAttackRequestInput, frozenset({"player", "dm"})),
-    MCPToolDefinition("combat_adjudicate_special_attack", _desc("Resolve pending Grapple/Shove reach adjudication.", "裁定待處理 Grapple/Shove reach。"), SpecialAttackAdjudicationInput, frozenset({"dm"})),
-    MCPToolDefinition("combat_roll_special_attack", _desc("Resolve a pending Grapple/Shove opposed roll with server RNG.", "以 Server RNG 完成待處理 Grapple/Shove opposed roll。"), CombatRollToolInput, frozenset({"player", "dm"})),
+    MCPToolDefinition(
+        "combat_request_special_attack",
+        _desc("Declare a formal 2014 Grapple, Shove, or grapple escape.", "宣告正式 2014 Grapple、Shove 或脫離擒抱。"),
+        SpecialAttackRequestInput,
+        frozenset({"player", "dm"}),
+    ),
+    MCPToolDefinition(
+        "combat_adjudicate_special_attack",
+        _desc("Resolve pending Grapple/Shove reach adjudication.", "裁定待處理 Grapple/Shove reach。"),
+        SpecialAttackAdjudicationInput,
+        frozenset({"dm"}),
+    ),
+    MCPToolDefinition(
+        "combat_roll_special_attack",
+        _desc(
+            "Resolve a pending Grapple, Shove, or grapple escape opposed roll with server RNG.",
+            "以 Server RNG 完成待處理 Grapple、Shove 或脫離擒抱 opposed roll。",
+        ),
+        CombatRollToolInput,
+        frozenset({"player", "dm"}),
+    ),
     MCPToolDefinition("combat_start", _desc("Start Quick Combat for the current Campaign.", "為目前 Campaign 啟動 Quick Combat。"), StartCombatInput, frozenset({"dm"})),
     MCPToolDefinition("combat_add_character", _desc("Add an active Session character to running Combat.", "將目前 Session 的角色加入進行中的 Combat。"), AddCharacterInput, frozenset({"dm"})),
     MCPToolDefinition("combat_add_monster", _desc("Add a Campaign monster instance into active Combat.", "將 Campaign 內的怪物實例加入目前 Combat。"), AddMonsterInput, frozenset({"dm"})),
     MCPToolDefinition("combat_create_monster", _desc("Create a Monster Instance from SRD rules content.", "從 SRD 規則內容建立 Monster Instance。"), CreateMonsterFromContentInput, frozenset({"dm"})),
     MCPToolDefinition("combat_create_quick_enemy", _desc("Create an ad-hoc Quick Enemy monster instance.", "建立臨時的 Quick Enemy 怪物實例。"), CreateQuickEnemyInput, frozenset({"dm"})),
     MCPToolDefinition("combat_list_monster_instances", _desc("List all Campaign Monster Instances with full DM stats.", "列出 Campaign 內所有怪物實例的完整 DM 資訊。"), _NoArguments, frozenset({"dm"})),
+    MCPToolDefinition("combat_update_monster_instance", _desc("Update Monster Instance details or reveal stats to Players.", "更新怪物實例資訊或向玩家揭露其戰鬥數值。"), MonsterInstanceUpdateToolInput, frozenset({"dm"})),
     MCPToolDefinition("combat_request_initiative", _desc("Request initiative rolls for active combatants.", "為活躍戰鬥單位發起先攻擲骰請求。"), RequestInitiativeInput, frozenset({"dm"})),
     MCPToolDefinition("combat_finalize_initiative", _desc("Finalize initiative turn order to begin Round 1.", "確認先攻順序以開始第一回合。"), FinalizeInitiativeInput, frozenset({"dm"})),
     MCPToolDefinition("combat_advance_turn", _desc("Advance Combat to the next turn or round.", "將 Combat 推進至下一個輪次或回合。"), CombatMutationToolInput, frozenset({"dm"})),
@@ -461,6 +495,7 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("combat_roll_initiative", _desc("Resolve a pending initiative RollRequest with server RNG.", "以 Server RNG 完成待處理的先攻 RollRequest。"), CombatRollToolInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_use_action", _desc("Perform a non-attack combat action such as Dash or Dodge.", "執行 Dash 或 Dodge 等非攻擊型戰鬥行動。"), CombatActionInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_withdraw_entry", _desc("Withdraw a combatant entry from active combat.", "將戰鬥單位標記為退出戰鬥。"), CombatEntryMutationToolInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_set_monster_outcome", _desc("Record the final outcome for a monster combatant (dead, unconscious, surrendered, fled, or other).", "記錄怪物戰鬥單位的最終結果（dead、unconscious、surrendered、fled 或 other）。"), MonsterOutcomeInput, frozenset({"dm"})),
     MCPToolDefinition("get_combat_context", _desc("Read compact active combat state and next required action.", "讀取緊湊的目前戰鬥狀態與下一步所需行動。"), _NoArguments, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_cast_spell", _desc("Cast a single-target, self, or utility spell.", "施放單一目標、自身或公用型法術。"), CastSpellInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_propose_aoe_spell", _desc("Propose an area-of-effect spell declaration pending DM resolution.", "宣告範圍法術提案以待 DM 裁定。"), ProposeAoeSpellInput, frozenset({"player", "dm"})),
@@ -510,10 +545,22 @@ def _structured_result(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def structured_tool_error(code: str, message: str, message_zh_tw: str) -> dict[str, Any]:
+def structured_tool_error(
+    code: str,
+    message: str,
+    message_zh_tw: str,
+    *,
+    detail: str | None = None,
+) -> dict[str, Any]:
+    error_payload: dict[str, Any] = {
+        "code": code,
+        "messages": {"en": message, "zh-TW": message_zh_tw},
+    }
+    if detail is not None:
+        error_payload["detail"] = detail
     structured = {
         "ok": False,
-        "error": {"code": code, "messages": {"en": message, "zh-TW": message_zh_tw}},
+        "error": error_payload,
     }
     return {
         "content": [{"type": "text", "text": json.dumps(structured, ensure_ascii=False, separators=(",", ":"))}],
@@ -617,6 +664,8 @@ async def call_tool(
             data = await asyncio.to_thread(service.combat_create_quick_enemy, token, parsed, authenticated=auth)
         elif name == "combat_list_monster_instances":
             data = await asyncio.to_thread(service.combat_list_monster_instances, token, authenticated=auth)
+        elif name == "combat_update_monster_instance":
+            data = await asyncio.to_thread(service.combat_update_monster_instance, token, parsed, authenticated=auth)
         elif name == "combat_request_initiative":
             data = await asyncio.to_thread(service.combat_request_initiative, token, parsed, authenticated=auth)
         elif name == "combat_roll_initiative":
@@ -629,6 +678,8 @@ async def call_tool(
             data = await asyncio.to_thread(service.combat_use_action, token, parsed, authenticated=auth)
         elif name == "combat_withdraw_entry":
             data = await asyncio.to_thread(service.combat_withdraw_entry, token, parsed, authenticated=auth)
+        elif name == "combat_set_monster_outcome":
+            data = await asyncio.to_thread(service.combat_set_monster_outcome, token, parsed, authenticated=auth)
         elif name == "combat_remove_entry":
             data = await asyncio.to_thread(service.combat_remove_entry, token, parsed, authenticated=auth)
         elif name == "combat_end":
@@ -671,8 +722,13 @@ async def call_tool(
         )
     except ValueError:
         return structured_tool_error("invalid_arguments", "Tool arguments are not valid for the current table state", "工具 arguments 不符合目前桌面狀態")
-    except RuntimeError:
-        return structured_tool_error("table_conflict", "The table state changed or does not allow this action", "桌面狀態已變更或目前不允許此動作")
+    except RuntimeError as exc:
+        return structured_tool_error(
+            "table_conflict",
+            "The table state changed or does not allow this action",
+            "桌面狀態已變更或目前不允許此動作",
+            detail=str(exc) or None,
+        )
 
     return _structured_result(data)
 

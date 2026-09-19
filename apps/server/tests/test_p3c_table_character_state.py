@@ -5,6 +5,8 @@ from uuid import uuid4
 
 import pytest
 
+from pydantic import ValidationError
+
 from app.domain.character.fixture import build_p0_fighter_wizard_fixture, build_p0_fighter_wizard_state
 from app.domain.character.schemas import PersistedCharacter
 from app.domain.rooms.table_character_state import (
@@ -84,6 +86,25 @@ def test_table_state_patch_requires_a_real_canonical_change() -> None:
 
     patch = TableCharacterStatePatch(current_hp=7, temporary_hp=3)
     assert patch.state_changes() == {"current_hp": 7, "temporary_hp": 3}
+
+    # concentration=None alone counts as a real change
+    clear_conc_patch = TableCharacterStatePatch(concentration=None)
+    assert clear_conc_patch.state_changes() == {"concentration": None}
+
+
+def test_table_state_patch_p4d_validation_rejects_before_any_write() -> None:
+    repository = _Repository(uuid4())
+
+    with pytest.raises(ValidationError):
+        TableCharacterStatePatch(exhaustion_level=7)
+
+    with pytest.raises(ValidationError):
+        TableCharacterStatePatch(death_saves={"successes": 3})  # type: ignore[arg-type]
+
+    with pytest.raises(ValueError, match="cannot be null"):
+        TableCharacterStatePatch(death_saves=None)
+
+    assert len(repository.calls) == 0
 
 
 def test_controlled_player_state_write_uses_self_execution_identity() -> None:

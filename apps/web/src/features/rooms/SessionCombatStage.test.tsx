@@ -52,6 +52,7 @@ function makeEntry(
     attacks_allowed: 1,
     attacks_used: 0,
     ready_state: {},
+    dodging: false,
     pending_reaction_state: {},
     ...options,
   }
@@ -105,6 +106,12 @@ const dmCombatDetail: CombatDetailView = {
         combat_status: 'active',
         dm_notes: 'Secretly carrying a magical key',
         position_note: 'Behind barrels',
+        visibility: 'public',
+        reveal: {
+          armor_class: false,
+          description: false,
+          position_note: false,
+        },
         conditions: ['frightened'],
         effects: [],
       },
@@ -349,4 +356,129 @@ describe('SessionCombatStage component', () => {
     expect(pendingDm).not.toContain('data-combat-action-bar')
     expect(pendingDm).not.toContain('data-combat-adjudications')
   })
+
+  it('renders Fled badge for a Player render when an entry has status fled', () => {
+    const fledGoblin = makeEntry('entry-goblin', 'Goblin Scout', null, 2, {
+      status: 'fled',
+    })
+    const combatWithFledEnemy: CombatDetailView = {
+      ...playerCombatDetail,
+      entries: [entryMira, fledGoblin, entryHidden],
+    }
+
+    const markup = renderStage(
+      <SessionCombatStage
+        combat={combatWithFledEnemy}
+        myEntryIds={['entry-mira']}
+        copy={copyEn}
+        isCurrentDm={false}
+        roomId="room"
+        campaignId="campaign"
+        sessionId="session"
+        token="token"
+        events={[]}
+        onError={() => undefined}
+        refresh={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain(copyEn.combatStatusFled)
+  })
+
+  it('renders Dodging badge for a dodging entry in both audiences and omits it otherwise', () => {
+    const dodgingGoblin = makeEntry('entry-goblin', 'Goblin Scout', null, 2, { dodging: true })
+    const combatWithDodgingEnemy: CombatDetailView = {
+      ...playerCombatDetail,
+      entries: [entryMira, dodgingGoblin, entryHidden],
+    }
+
+    const playerMarkup = renderStage(
+      <SessionCombatStage
+        combat={combatWithDodgingEnemy}
+        myEntryIds={['entry-mira']}
+        copy={copyEn}
+        isCurrentDm={false}
+        roomId="room"
+        campaignId="campaign"
+        sessionId="session"
+        token="token"
+        events={[]}
+        onError={() => undefined}
+        refresh={() => undefined}
+      />,
+    )
+    expect(playerMarkup).toContain(copyEn.combatDodging)
+
+    const dmMarkupZh = renderStage(
+      <SessionCombatStage
+        combat={{ ...dmCombatDetail, entries: [entryMira, dodgingGoblin, entryHidden] }}
+        myEntryIds={['entry-mira']}
+        copy={copyZh}
+        isCurrentDm={true}
+        roomId="room"
+        campaignId="campaign"
+        sessionId="session"
+        token="token"
+        events={[]}
+        onError={() => undefined}
+        refresh={() => undefined}
+      />,
+    )
+    expect(dmMarkupZh).toContain(copyZh.combatDodging)
+
+    const baselineMarkup = renderStage(
+      <SessionCombatStage
+        combat={playerCombatDetail}
+        myEntryIds={['entry-mira']}
+        copy={copyEn}
+        isCurrentDm={false}
+        roomId="room"
+        campaignId="campaign"
+        sessionId="session"
+        token="token"
+        events={[]}
+        onError={() => undefined}
+        refresh={() => undefined}
+      />,
+    )
+    expect(baselineMarkup).not.toContain(copyEn.combatDodging)
+  })
+
+  it('renders monster controls for monster entries when DM, never in player view', () => {
+    const dmMarkup = renderStage(
+      <SessionCombatStage
+        combat={dmCombatDetail}
+        myEntryIds={['entry-mira']}
+        copy={copyEn}
+        isCurrentDm={true}
+        roomId="room"
+        campaignId="campaign"
+        sessionId="session"
+        token="token"
+        events={[]}
+        onError={() => undefined}
+        refresh={() => undefined}
+      />,
+    )
+    expect(dmMarkup).toContain('data-monster-controls="entry-goblin"')
+    expect(dmMarkup).not.toContain('data-monster-controls="entry-mira"')
+
+    const playerMarkup = renderStage(
+      <SessionCombatStage
+        combat={playerCombatDetail}
+        myEntryIds={['entry-mira']}
+        copy={copyEn}
+        isCurrentDm={false}
+        roomId="room"
+        campaignId="campaign"
+        sessionId="session"
+        token="token"
+        events={[]}
+        onError={() => undefined}
+        refresh={() => undefined}
+      />,
+    )
+    expect(playerMarkup).not.toContain('data-monster-controls')
+  })
 })
+

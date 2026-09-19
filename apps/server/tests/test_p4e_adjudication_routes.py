@@ -13,6 +13,7 @@ from app.api.rooms.dependencies import (
     get_combat_attack_service,
     get_combat_reaction_service,
     get_combat_service,
+    get_combat_special_attack_service,
     get_room_workspace_service,
     get_table_event_service,
 )
@@ -23,6 +24,7 @@ from app.domain.combat.attacks import CombatAttackService
 from app.domain.combat.initiative import FinalizeInitiativeInput, RequestInitiativeInput
 from app.domain.combat.lifecycle import AddMonsterInput, StartCombatInput
 from app.domain.combat.reaction_service import CombatReactionService
+from app.domain.combat.special_attacks import CombatSpecialAttackService
 from app.domain.rooms.rolls import FormalRollInput, FormalRollSource
 from app.domain.rooms.schemas import EnterRoomRequest
 from app.domain.rooms.seats import ControllerKind, SeatControllerPatch, SeatCreate, SeatRole, SeatService
@@ -30,13 +32,16 @@ from app.domain.rooms.service import RoomService
 from app.main import app
 from app.persistence.combat.adjudication import CombatAdjudicationRepository
 from app.persistence.combat.attacks import CombatAttackRepository
+from app.persistence.combat.core_rolls import CombatCoreRollRepository
 from app.persistence.combat.reactions import CombatReactionRepository
-from app.persistence.combat.tables import combat_actions, combat_entries
+from app.persistence.combat.special_attacks import SpecialAttackRepository
+from app.persistence.combat.tables import combat_actions, combat_entries, monster_instances
 from app.persistence.rooms.p3c_runtime import roll_requests
 from app.persistence.rooms.repository import RoomRepository
 from app.persistence.rooms.seats import SeatRepository
 from app.persistence.rooms.tables import session_participants
 import tests.test_p4b_combat_lifecycle as support
+from tests.test_p4c_special_attacks import _unequip_shield
 
 
 @pytest.fixture
@@ -170,6 +175,17 @@ def adjudication_routes_fixture():
             combat_service=table.combat,
             table_event_service=table.events,
         )
+        special_attack_service = CombatSpecialAttackService(
+            repository=SpecialAttackRepository(table.engine, table.events.repository),
+            core_roll_repository=CombatCoreRollRepository(table.engine, table.events.repository),
+            combat_repository=table.combat.repository,
+            combat_service=table.combat,
+            character_repository=table.combat.character_repository,
+            monster_repository=table.monsters,
+            registry=registry,
+            roll_service=table.rolls,
+            table_event_service=table.events,
+        )
 
         app.dependency_overrides[get_database_engine] = lambda: table.engine
         app.dependency_overrides[get_room_service] = lambda: room_service
@@ -178,6 +194,7 @@ def adjudication_routes_fixture():
         app.dependency_overrides[get_combat_attack_service] = lambda: attack_service
         app.dependency_overrides[get_combat_reaction_service] = lambda: reaction_service
         app.dependency_overrides[get_combat_adjudication_service] = lambda: adjudication_service
+        app.dependency_overrides[get_combat_special_attack_service] = lambda: special_attack_service
 
         yield table, char_entry["id"], target_entry["id"], p2_token, adjudication_repo, attack_service
     finally:
@@ -618,7 +635,10 @@ def test_6_resolve_refuses_range_row_and_unknown_action_id(adjudication_routes_f
         headers={"Authorization": f"Bearer {table.dm_token}"},
     )
     assert resolve_range_res.status_code == 409
-    assert "Range adjudication must be resolved via POST /attacks/adjudicate" in resolve_range_res.json()["error"]["message"]
+    assert (
+        "Range adjudication must be resolved through attack adjudication (combat_adjudicate_attack / POST .../attacks/adjudicate)"
+        in resolve_range_res.json()["error"]["message"]
+    )
 
     # Row stays pending
     range_row = adjudication_repo.get_action(session_id=table.session_id, action_id=UUID(range_action_id))
@@ -667,3 +687,110 @@ def test_7_player_cannot_declare_opportunity_attack_for_uncontrolled_reactor(adj
             )
         )
         assert oa_count is None
+
+
+def test_8_shove_prone_adjudication_is_reach_with_hints_and_resolve_refuses(
+    adjudication_routes_fixture,
+) -> None:
+    """8. Pending grapple and shove_prone requests are listed with kind == 'reach' for DM
+
+    with identical dm_hints structure; generic resolve_adjudication on each raises the
+    'dedicated special-attack route' conflict.
+    """
+    table, char_entry_id, target_entry_id, _p2_token, _adjudication_repo, _attack_service = (
+        adjudication_routes_fixture
+    )
+    client = TestClient(app)
+    base_combat_url = (
+        f"/api/rooms/{table.room_id}/campaigns/{table.campaign_id}"
+        f"/sessions/{table.session_id}/combat"
+    )
+
+    _unequip_shield(table)
+    with table.engine.begin() as connection:
+        connection.execute(
+            update(monster_instances).values(
+                rules_snapshot={
+                    "armor_class": 12,
+                    "max_hp": 9,
+                    "speed": {"walk": "30 ft."},
+                    "size": "Small",
+                }
+            )
+        )
+
+    # 1. Declare grapple
+    grapple_res = client.post(
+        f"{base_combat_url}/special-attacks/request",
+        json={
+            "attacker_entry_id": str(char_entry_id),
+            "target_entry_id": str(target_entry_id),
+            "kind": "grapple",
+            "idempotency_key": "test-8-grapple-req",
+        },
+        headers={"Authorization": f"Bearer {table.player_token}"},
+    )
+    assert grapple_res.status_code == 200
+    grapple_action_id = grapple_res.json()["action_id"]
+
+    dm_res_1 = client.get(
+        f"{base_combat_url}/adjudications",
+        headers={"Authorization": f"Bearer {table.dm_token}"},
+    )
+    assert dm_res_1.status_code == 200
+    grapple_item = next(i for i in dm_res_1.json() if i["action_id"] == grapple_action_id)
+    assert grapple_item["kind"] == "reach"
+    assert grapple_item["status"] == "pending"
+    assert grapple_item["dm_hints"] is not None
+    assert "attacker_size" in grapple_item["dm_hints"]
+    assert "target_size" in grapple_item["dm_hints"]
+    assert "attacker_has_free_hand" in grapple_item["dm_hints"]
+    assert "attacker_skill" in grapple_item["dm_hints"]
+    assert "defender_skill" in grapple_item["dm_hints"]
+
+    grapple_resolve_res = client.post(
+        f"{base_combat_url}/adjudications/{grapple_action_id}/resolve",
+        json={"ruling": "approve"},
+        headers={"Authorization": f"Bearer {table.dm_token}"},
+    )
+    assert grapple_resolve_res.status_code == 409
+    assert (
+        "Reach adjudication must be resolved through special-attack adjudication (combat_adjudicate_special_attack / POST .../special-attacks/adjudicate)"
+        in grapple_resolve_res.json()["error"]["message"]
+    )
+
+    # 2. Declare shove_prone
+    shove_res = client.post(
+        f"{base_combat_url}/special-attacks/request",
+        json={
+            "attacker_entry_id": str(char_entry_id),
+            "target_entry_id": str(target_entry_id),
+            "kind": "shove_prone",
+            "idempotency_key": "test-8-shove-req",
+        },
+        headers={"Authorization": f"Bearer {table.player_token}"},
+    )
+    assert shove_res.status_code == 200
+    shove_action_id = shove_res.json()["action_id"]
+
+    dm_res_2 = client.get(
+        f"{base_combat_url}/adjudications",
+        headers={"Authorization": f"Bearer {table.dm_token}"},
+    )
+    assert dm_res_2.status_code == 200
+    shove_item = next(i for i in dm_res_2.json() if i["action_id"] == shove_action_id)
+    assert shove_item["kind"] == "reach"
+    assert shove_item["status"] == "pending"
+    assert shove_item["dm_hints"] == grapple_item["dm_hints"]
+
+    shove_resolve_res = client.post(
+        f"{base_combat_url}/adjudications/{shove_action_id}/resolve",
+        json={"ruling": "approve"},
+        headers={"Authorization": f"Bearer {table.dm_token}"},
+    )
+    assert shove_resolve_res.status_code == 409
+    assert (
+        "Reach adjudication must be resolved through special-attack adjudication (combat_adjudicate_special_attack / POST .../special-attacks/adjudicate)"
+        in shove_resolve_res.json()["error"]["message"]
+    )
+

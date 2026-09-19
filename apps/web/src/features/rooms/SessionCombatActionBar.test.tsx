@@ -9,7 +9,11 @@ import type {
   CombatPendingRollView,
   ReactionWindowView,
 } from '../../api/combat'
-import { SessionCombatActionBar, SpellActionFields } from './SessionCombatActionBar'
+import {
+  SessionCombatActionBar,
+  SpellActionFields,
+  spellTargetEntries,
+} from './SessionCombatActionBar'
 import { sessionCopy } from './sessionCopy'
 
 vi.mock('../../api/combat', async (importOriginal) => {
@@ -56,6 +60,7 @@ function makeEntry(
     attacks_allowed: 1,
     attacks_used: 0,
     ready_state: {},
+    dodging: false,
     pending_reaction_state: {},
     ...options,
   }
@@ -93,6 +98,7 @@ function pendingRoll(
     ability_ref: null,
     dc: null,
     modifier_mode: 'normal',
+    auto_fail: false,
     status: 'pending',
     ...options,
   }
@@ -172,14 +178,17 @@ function renderActionBar(options: {
   )
 }
 
-function renderSpellFields(item: CastableSpellView): string {
+function renderSpellFields(
+  item: CastableSpellView,
+  targetEntries: CombatEntryView[] = [enemyEntry],
+): string {
   return renderToStaticMarkup(
     <SpellActionFields
       spells={[item]}
       spellRef={item.spell_ref}
       slotLevel={item.castable_slot_levels[0]}
       targetEntryId=""
-      targetEntries={[enemyEntry]}
+      targetEntries={targetEntries}
       disabled={false}
       copy={sessionCopy('en')}
       onSpellRefChange={() => undefined}
@@ -206,6 +215,21 @@ describe('SessionCombatActionBar', () => {
     expect(markup).not.toContain('<select')
   })
 
+  it('tells the Player to wait for the DM once the action is spent on their own turn', () => {
+    const copy = sessionCopy('en')
+    const spent = combat('entry-player')
+    spent.entries = spent.entries.map((entry) =>
+      entry.id === 'entry-player' ? { ...entry, action_available: false, attacks_used: 1 } : entry,
+    )
+    const markup = renderActionBar({ detail: spent, isCurrentDm: false })
+    expect(markup).toContain('data-combat-action-spent="true"')
+    expect(markup).toContain(copy.combatActionSpentWaitingDm)
+    expect(markup).not.toContain('<select')
+
+    const fresh = renderActionBar({ detail: combat('entry-player'), isCurrentDm: false })
+    expect(fresh).not.toContain(copy.combatActionSpentWaitingDm)
+  })
+
   it('renders the range-confirmed checkbox for the DM on a monster turn', () => {
     const copy = sessionCopy('en')
     const markup = renderActionBar({ detail: combat('entry-enemy'), isCurrentDm: true })
@@ -225,6 +249,7 @@ describe('SessionCombatActionBar', () => {
         pendingRoll('concentration-roll-1', 'concentration'),
         pendingRoll('grapple-roll-1', 'grapple'),
         pendingRoll('shove-roll-1', 'shove'),
+        pendingRoll('escape-roll-1', 'escape_grapple'),
         pendingRoll('initiative-roll-1', 'initiative'),
       ],
     })
@@ -235,6 +260,7 @@ describe('SessionCombatActionBar', () => {
       'concentration-roll-1',
       'grapple-roll-1',
       'shove-roll-1',
+      'escape-roll-1',
     ]) {
       expect(markup).toContain(`data-pending-roll="${id}"`)
     }
@@ -271,6 +297,28 @@ describe('SessionCombatActionBar', () => {
     expect(playerMarkup).not.toContain('DC ?')
   })
 
+  it('marks a pending saving throw that auto-fails and omits the marker otherwise', () => {
+    const copy = sessionCopy('en')
+    const autoFailMarkup = renderActionBar({
+      detail: combat('entry-player'),
+      isCurrentDm: false,
+      rolls: [
+        pendingRoll('save-auto', 'saving_throw', {
+          label: 'Saving Throw',
+          ability_ref: 'strength',
+          auto_fail: true,
+        }),
+      ],
+    })
+    expect(autoFailMarkup).toContain(copy.combatSaveAutoFail)
+    const plainMarkup = renderActionBar({
+      detail: combat('entry-player'),
+      isCurrentDm: false,
+      rolls: [pendingRoll('save-plain', 'saving_throw', { label: 'Saving Throw', ability_ref: 'strength' })],
+    })
+    expect(plainMarkup).not.toContain(copy.combatSaveAutoFail)
+  })
+
   it('renders an eligible open reaction with accept and decline controls', () => {
     const copy = sessionCopy('en')
     const markup = renderActionBar({
@@ -294,13 +342,54 @@ describe('SessionCombatActionBar', () => {
     expect(markup).not.toContain('data-reaction-window="reaction-other"')
   })
 
-  it('renders the action-kind select with grapple, shove, and spell choices', () => {
+  it('renders action-kind select with grapple, shove (prone), shove (push), and omits escape when not grappled', () => {
     const copy = sessionCopy('en')
     const markup = renderActionBar({ detail: combat('entry-player'), isCurrentDm: false })
     expect(markup).toContain('data-combat-action-kind="true"')
     expect(markup).toContain(copy.combatActionKindGrapple)
-    expect(markup).toContain(copy.combatActionKindShove)
+    expect(markup).toContain(copy.combatActionKindShoveProne)
+    expect(markup).toContain(copy.combatActionKindShovePush)
+    expect(markup).not.toContain(copy.combatActionKindEscapeGrapple)
+    expect(markup).not.toContain('value="escape_grapple"')
     expect(markup).toContain(copy.combatActionKindSpell)
+  })
+
+  it('renders the escape_grapple option when the acting combatant has the grappled condition', () => {
+    const copy = sessionCopy('en')
+    const detail = combat('entry-player')
+    const grappledDetail: CombatDetailView = {
+      ...detail,
+      combatants: [
+        {
+          entry_id: 'entry-player',
+          subject_kind: 'character',
+          is_hostile: false,
+          projection: {
+            id: 'combatant-player',
+            kind: 'character',
+            name: 'Mira',
+            combat_status: 'active',
+            conditions: ['srd5.1:condition:grappled'],
+            effects: [],
+          },
+        },
+      ],
+    }
+    const markup = renderActionBar({ detail: grappledDetail, isCurrentDm: false })
+    expect(markup).toContain('data-combat-action-kind="true"')
+    expect(markup).toContain('value="escape_grapple"')
+    expect(markup).toContain(copy.combatActionKindEscapeGrapple)
+  })
+
+  it('renders a pending roll with request_type escape_grapple with escape label and roll button', () => {
+    const copy = sessionCopy('en')
+    const markup = renderActionBar({
+      detail: combat('entry-player'),
+      isCurrentDm: false,
+      rolls: [pendingRoll('escape-roll-1', 'escape_grapple')],
+    })
+    expect(markup).toContain('data-pending-roll="escape-roll-1"')
+    expect(markup).toContain(copy.combatRollTypeEscapeGrapple)
   })
 
   it('renders spell and target selects for a single-target spell', () => {
@@ -308,6 +397,39 @@ describe('SessionCombatActionBar', () => {
     expect(markup).toContain('data-combat-spell="true"')
     expect(markup).toContain('data-combat-spell-target="true"')
     expect(markup).not.toContain('data-combat-spell-slot="true"')
+  })
+
+  it('lists the acting combatant first for a single-target heal spell', () => {
+    const healSpell = spell('single', {
+      spell_ref: 'srd5.1:spell:cure-wounds',
+      name: 'Cure Wounds',
+      cast_mode: 'heal',
+    })
+    const entries = spellTargetEntries(healSpell, playerEntry, [enemyEntry])
+    expect(entries).toEqual([playerEntry, enemyEntry])
+    const markup = renderSpellFields(healSpell, entries)
+    expect(markup).toContain('data-combat-spell-target="true"')
+    expect(markup).toContain(`value="${playerEntry.id}"`)
+    expect(markup).toContain(playerEntry.display_name)
+    expect(markup).toContain(`value="${enemyEntry.id}"`)
+    expect(markup).toContain(enemyEntry.display_name)
+    const playerIndex = markup.indexOf(`value="${playerEntry.id}"`)
+    const enemyIndex = markup.indexOf(`value="${enemyEntry.id}"`)
+    expect(playerIndex).toBeLessThan(enemyIndex)
+  })
+
+  it('omits the acting combatant for a single-target save spell', () => {
+    const saveSpell = spell('single', {
+      spell_ref: 'srd5.1:spell:sacred-flame',
+      name: 'Sacred Flame',
+      cast_mode: 'save',
+    })
+    const entries = spellTargetEntries(saveSpell, playerEntry, [enemyEntry])
+    expect(entries).toEqual([enemyEntry])
+    const markup = renderSpellFields(saveSpell, entries)
+    expect(markup).toContain('data-combat-spell-target="true"')
+    expect(markup).not.toContain(`value="${playerEntry.id}"`)
+    expect(markup).toContain(`value="${enemyEntry.id}"`)
   })
 
   it('renders an AoE spell select and slot level without a target select', () => {

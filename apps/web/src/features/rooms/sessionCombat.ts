@@ -136,6 +136,7 @@ export type PendingCombatRollDispatchTable = {
   concentration: PendingCombatRollHandler
   grapple: PendingCombatRollHandler
   shove: PendingCombatRollHandler
+  escape_grapple: PendingCombatRollHandler
 }
 
 export function pendingCombatRollHandler(
@@ -149,6 +150,7 @@ export function pendingCombatRollHandler(
     concentration: handlers.concentration,
     grapple: handlers.grapple,
     shove: handlers.shove,
+    escape_grapple: handlers.escape_grapple,
   }
   return dispatch[requestType]
 }

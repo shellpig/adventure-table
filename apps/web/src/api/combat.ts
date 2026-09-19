@@ -33,6 +33,7 @@ export type CombatEntryView = {
   attacks_used: number
   ready_state: Record<string, unknown>
   pending_reaction_state: Record<string, unknown>
+  dodging: boolean
 }
 
 export type CombatView = {
@@ -67,6 +68,11 @@ export type CombatantProjection = {
   position_note?: string | null
   description?: string | null
   dm_notes?: string | null
+  reveal?: {
+    armor_class: boolean
+    description: boolean
+    position_note: boolean
+  } | null
   concentration?: Record<string, unknown> | null
   death_saves?: Record<string, unknown> | null
   exhaustion_level?: number | null
@@ -168,6 +174,28 @@ export type MonsterInstanceView = {
   armor_class?: number | null
   visibility: string
   position_note?: string | null
+}
+
+export type MonsterOutcome = 'dead' | 'unconscious' | 'surrendered' | 'fled' | 'other'
+
+export type MonsterOutcomeInput = {
+  outcome: MonsterOutcome
+  note?: string | null
+  idempotency_key: string
+}
+
+export type MonsterRevealPatch = {
+  armor_class?: boolean
+  description?: boolean
+  position_note?: boolean
+}
+
+export type MonsterInstancePatchInput = {
+  name?: string
+  visibility?: 'public' | 'hidden'
+  position_note?: string | null
+  reveal?: MonsterRevealPatch
+  idempotency_key: string
 }
 
 export type InitiativeRequestView = {
@@ -333,6 +361,7 @@ export type SavingThrowResultView = {
   target_entry_id: string
   total: number
   succeeded: boolean
+  auto_fail: boolean
 }
 
 export type DeathSaveResultView = {
@@ -362,12 +391,18 @@ export type ConcentrationCheckResultView = {
   linked_effects_removed_from: Array<Record<string, unknown>>
 }
 
+export type SpecialAttackKind =
+  | 'grapple'
+  | 'shove_prone'
+  | 'shove_push'
+  | 'escape_grapple'
+
 export type SpecialAttackView = {
   action_id: string
   combat_id: string
   attacker_entry_id: string
   target_entry_id: string
-  kind: 'grapple' | 'shove'
+  kind: string
   status: string
   in_reach: boolean | null
   attacker_roll_request_id: string | null
@@ -380,7 +415,7 @@ export type SpecialAttackView = {
 export type SpecialAttackRequestInput = {
   attacker_entry_id: string
   target_entry_id: string
-  kind: 'grapple' | 'shove'
+  kind: SpecialAttackKind
   attacker_modifier_mode?: 'normal' | 'advantage' | 'disadvantage'
   defender_modifier_mode?: 'normal' | 'advantage' | 'disadvantage'
   idempotency_key?: string | null
@@ -468,6 +503,7 @@ export type CombatPendingRollView = {
   ability_ref: string | null
   dc: number | null
   modifier_mode: 'normal' | 'advantage' | 'disadvantage'
+  auto_fail: boolean
   status: string
 }
 
@@ -861,6 +897,34 @@ export function createQuickEnemy(
 ): Promise<MonsterInstanceView> {
   return request(`${monsterInstancesBase(roomId, campaignId, sessionId)}/quick-enemy`, token, {
     method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function setMonsterOutcome(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  entryId: string,
+  body: MonsterOutcomeInput,
+  token: string,
+): Promise<CombatView> {
+  return request(`${combatBase(roomId, campaignId, sessionId)}/entries/${entryId}/outcome`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function updateMonsterInstance(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  instanceId: string,
+  body: MonsterInstancePatchInput,
+  token: string,
+): Promise<MonsterInstanceView> {
+  return request(`${monsterInstancesBase(roomId, campaignId, sessionId)}/${instanceId}`, token, {
+    method: 'PATCH',
     body: JSON.stringify(body),
   })
 }

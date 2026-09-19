@@ -11,6 +11,7 @@ from app.domain.combat.lifecycle import (
     CombatService,
     CombatStateConflictError,
 )
+from app.domain.combat.resolution import REACH_ADJUDICATED_KINDS
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import (
     TableActorContext,
@@ -103,7 +104,7 @@ def row_to_adjudication_view(action: StoredCombatAction, *, is_dm: bool) -> Comb
                 "resolved_attack": payload.get("resolved_attack"),
             }
 
-    elif action_kind in ("grapple", "shove"):
+    elif action_kind in REACH_ADJUDICATED_KINDS:
         kind = "reach"
         if target_entry_id is not None:
             proposed_target_entry_ids = (target_entry_id,)

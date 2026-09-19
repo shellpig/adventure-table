@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import {
   castSpell,
+  conditionLabel,
   listAttacks,
   listCastableSpells,
   proposeAoeSpell,
@@ -18,17 +19,20 @@ import {
   type CastableSpellView,
   type CombatAdjudicationView,
   type CombatDetailView,
+  type CombatEntryView,
   type CombatPendingRollView,
   type ConcentrationCheckResultView,
   type DeathSaveResultView,
   type ReactionKind,
   type ReactionWindowView,
   type SavingThrowResultView,
+  type SpecialAttackKind,
 } from '../../api/combat'
 import {
   actingEntryId,
   adjudicationKindLabel,
   combatInjuryLabel,
+  combatantFor,
   eligibleReactionEntry,
   pendingCombatRollHandler,
   runCombatMutation,
@@ -43,7 +47,35 @@ type CombatRollResult =
   | { kind: 'death_save'; value: DeathSaveResultView }
   | { kind: 'concentration'; value: ConcentrationCheckResultView }
 
-type ActionKind = 'attack' | 'grapple' | 'shove' | 'spell'
+type ActionKind =
+  | 'attack'
+  | 'grapple'
+  | 'shove_prone'
+  | 'shove_push'
+  | 'escape_grapple'
+  | 'spell'
+
+const ACTION_KINDS: readonly ActionKind[] = [
+  'attack',
+  'grapple',
+  'shove_prone',
+  'shove_push',
+  'escape_grapple',
+  'spell',
+]
+
+function isActionKind(value: string): value is ActionKind {
+  return (ACTION_KINDS as readonly string[]).includes(value)
+}
+
+function isSpecialAttackKind(kind: ActionKind): kind is SpecialAttackKind {
+  return (
+    kind === 'grapple' ||
+    kind === 'shove_prone' ||
+    kind === 'shove_push' ||
+    kind === 'escape_grapple'
+  )
+}
 
 type SpellActionFieldsProps = {
   spells: CastableSpellView[]
@@ -128,6 +160,23 @@ export function SpellActionFields({
   )
 }
 
+/** Heal / utility single-target spells may target the caster; attack / save spells never do. */
+export function spellTargetEntries(
+  selectedSpell: CastableSpellView | null,
+  actingEntry: CombatEntryView | null,
+  targetEntries: CombatEntryView[],
+): CombatEntryView[] {
+  if (
+    selectedSpell !== null &&
+    actingEntry !== null &&
+    selectedSpell.targeting === 'single' &&
+    (selectedSpell.cast_mode === 'heal' || selectedSpell.cast_mode === 'utility')
+  ) {
+    return [actingEntry, ...targetEntries]
+  }
+  return targetEntries
+}
+
 type SessionCombatActionBarProps = {
   combat: CombatDetailView
   myEntryIds: string[]
@@ -190,6 +239,14 @@ export function SessionCombatActionBar({
   const actingEntry = currentActingEntryId
     ? (combat.entries.find((entry) => entry.id === currentActingEntryId) ?? null)
     : null
+  const actingCombatant = currentActingEntryId
+    ? combatantFor(combat, currentActingEntryId)
+    : undefined
+  const actingIsGrappled = Boolean(
+    actingCombatant?.projection.conditions.some(
+      (item) => conditionLabel(item) === 'srd5.1:condition:grappled',
+    ),
+  )
   const currentTurnEntry = combat.current_turn_entry_id
     ? (combat.entries.find((entry) => entry.id === combat.current_turn_entry_id) ?? null)
     : null
@@ -212,6 +269,13 @@ export function SessionCombatActionBar({
   const [spellStatus, setSpellStatus] = useState<{ castMode: string; status: string } | null>(null)
   const [pendingActionId, setPendingActionId] = useState<string | null>(null)
   const [pendingActionSeen, setPendingActionSeen] = useState(false)
+
+  useEffect(() => {
+    if (actionKind === 'escape_grapple' && !actingIsGrappled) {
+      setActionKind('attack')
+      setTargetEntryId('')
+    }
+  }, [actionKind, actingIsGrappled])
 
   useEffect(() => {
     setAttacks([])
@@ -262,11 +326,11 @@ export function SessionCombatActionBar({
       setPendingActionSeen(false)
     }
   }, [pendingActionId, pendingActionSeen, pendingAdjudications])
-
   const targetEntries = combat.entries.filter(
     (entry) => entry.id !== currentActingEntryId && entry.status === 'active',
   )
   const selectedSpell = spells.find((spell) => spell.spell_ref === spellRef) ?? null
+  const castTargetEntries = spellTargetEntries(selectedSpell, actingEntry, targetEntries)
   const hasAttackEconomy = Boolean(
     actingEntry &&
     actingEntry.action_available &&
@@ -294,7 +358,7 @@ export function SessionCombatActionBar({
     event.preventDefault()
     if (currentActingEntryId === null || !hasAttackEconomy) return
     if (actionKind === 'attack' && (!targetEntryId || !attackRef)) return
-    if ((actionKind === 'grapple' || actionKind === 'shove') && !targetEntryId) return
+    if (isSpecialAttackKind(actionKind) && !targetEntryId) return
     if (actionKind === 'spell') {
       if (!selectedSpell) return
       if (selectedSpell.targeting === 'single' && !targetEntryId) return
@@ -502,11 +566,23 @@ export function SessionCombatActionBar({
       )
       setRollResult(null)
     },
+    escape_grapple: async (rollRequestId) => {
+      await rollSpecialAttack(
+        roomId,
+        campaignId,
+        sessionId,
+        rollBody(rollRequestId, 'escape-roll'),
+        token,
+      )
+      setRollResult(null)
+    },
   }
 
   const handlePendingRoll = (requestType: string, rollRequestId: string) => {
     const handler = pendingCombatRollHandler(requestType, rollHandlers)
     if (!handler) return Promise.resolve()
+    // A fresh roll replaces whatever result line is showing, including a resolved spell cast.
+    setSpellStatus(null)
     return runCombatMutation(setPending, () => handler(rollRequestId), refresh, onError)
   }
 
@@ -524,6 +600,8 @@ export function SessionCombatActionBar({
         return copy.combatRollTypeGrapple
       case 'shove':
         return copy.combatRollTypeShove
+      case 'escape_grapple':
+        return copy.combatRollTypeEscapeGrapple
       default:
         return requestType
     }
@@ -571,13 +649,17 @@ export function SessionCombatActionBar({
       ? copy.combatRequestAttack
       : actionKind === 'grapple'
         ? copy.combatActionKindGrapple
-        : actionKind === 'shove'
-          ? copy.combatActionKindShove
-          : copy.combatCastSpell
+        : actionKind === 'shove_prone'
+          ? copy.combatActionKindShoveProne
+          : actionKind === 'shove_push'
+            ? copy.combatActionKindShovePush
+            : actionKind === 'escape_grapple'
+              ? copy.combatActionKindEscapeGrapple
+              : copy.combatCastSpell
   const submitDisabled =
     formDisabled ||
     (actionKind === 'attack' && (!targetEntryId || !attackRef)) ||
-    ((actionKind === 'grapple' || actionKind === 'shove') && !targetEntryId) ||
+    (isSpecialAttackKind(actionKind) && !targetEntryId) ||
     (actionKind === 'spell' &&
       (!selectedSpell || (selectedSpell.targeting === 'single' && !targetEntryId)))
 
@@ -648,6 +730,10 @@ export function SessionCombatActionBar({
         </p>
       ) : pendingActionId !== null ? (
         <p className="session-combat-actions__waiting">{copy.combatAwaitingAdjudication}</p>
+      ) : actingEntry && !actingEntry.action_available && !isCurrentDm ? (
+        <p className="session-combat-actions__waiting" data-combat-action-spent="true">
+          {copy.combatActionSpentWaitingDm}
+        </p>
       ) : (
         <form
           className="session-combat__form session-combat-actions__form"
@@ -661,21 +747,19 @@ export function SessionCombatActionBar({
                 value={actionKind}
                 disabled={formDisabled}
                 onChange={(event) => {
-                  const next: ActionKind =
-                    event.target.value === 'grapple'
-                      ? 'grapple'
-                      : event.target.value === 'shove'
-                        ? 'shove'
-                        : event.target.value === 'spell'
-                          ? 'spell'
-                          : 'attack'
+                  const value = event.target.value
+                  const next: ActionKind = isActionKind(value) ? value : 'attack'
                   setActionKind(next)
                   setTargetEntryId('')
                 }}
               >
                 <option value="attack">{copy.combatActionKindAttack}</option>
                 <option value="grapple">{copy.combatActionKindGrapple}</option>
-                <option value="shove">{copy.combatActionKindShove}</option>
+                <option value="shove_prone">{copy.combatActionKindShoveProne}</option>
+                <option value="shove_push">{copy.combatActionKindShovePush}</option>
+                {actingIsGrappled ? (
+                  <option value="escape_grapple">{copy.combatActionKindEscapeGrapple}</option>
+                ) : null}
                 <option value="spell">{copy.combatActionKindSpell}</option>
               </select>
             </label>
@@ -701,7 +785,7 @@ export function SessionCombatActionBar({
                 spellRef={spellRef}
                 slotLevel={slotLevel}
                 targetEntryId={targetEntryId}
-                targetEntries={targetEntries}
+                targetEntries={castTargetEntries}
                 disabled={formDisabled}
                 copy={copy}
                 onSpellRefChange={handleSpellRefChange}
@@ -812,6 +896,9 @@ export function SessionCombatActionBar({
                 {roll.request_type === 'saving_throw' && typeof roll.dc === 'number'
                   ? ` · DC ${roll.dc}`
                   : ''}
+                {roll.request_type === 'saving_throw' && roll.auto_fail
+                  ? ` · ${copy.combatSaveAutoFail}`
+                  : ''}
               </span>
               {handler ? (
                 <button
@@ -865,6 +952,7 @@ export function SessionCombatActionBar({
           {copy.combatSavingThrowResult.replace('{total}', String(rollResult.value.total))}
           {' · '}
           {rollResult.value.succeeded ? copy.combatSaveSuccess : copy.combatSaveFailure}
+          {rollResult.value.auto_fail ? ` · ${copy.combatSaveAutoFail}` : null}
         </p>
       ) : rollResult?.kind === 'death_save' ? (
         <p className="session-combat-actions__result" data-roll-result="death_save">

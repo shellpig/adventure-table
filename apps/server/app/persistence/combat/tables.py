@@ -15,7 +15,9 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     Uuid,
+    false,
     func,
+    text,
     true,
 )
 
@@ -61,6 +63,7 @@ monster_instances = Table(
     Column("resources", JSON(), nullable=False),
     Column("visibility", String(16), nullable=False),
     Column("position_note", Text(), nullable=True),
+    Column("reveal_state", JSON(), nullable=False, server_default=text("'{}'")),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     CheckConstraint(
@@ -70,7 +73,7 @@ monster_instances = Table(
     CheckConstraint("current_hp >= 0", name="ck_monster_instances_current_hp"),
     CheckConstraint("temp_hp >= 0", name="ck_monster_instances_temp_hp"),
     CheckConstraint(
-        "combat_status IN ('active', 'down', 'dead', 'removed')",
+        "combat_status IN ('active', 'down', 'dead', 'removed', 'unconscious', 'surrendered', 'fled')",
         name="ck_monster_instances_combat_status",
     ),
     CheckConstraint(
@@ -153,6 +156,7 @@ combat_entries = Table(
     Column("death_save_dead", Boolean(), nullable=False, server_default="0"),
     Column("ready_state", JSON(), nullable=False),
     Column("pending_reaction_state", JSON(), nullable=False),
+    Column("dodging", Boolean(), nullable=False, server_default=false()),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     CheckConstraint(
@@ -161,7 +165,7 @@ combat_entries = Table(
         name="ck_combat_entries_subject",
     ),
     CheckConstraint(
-        "status IN ('active', 'withdrawn', 'removed')",
+        "status IN ('active', 'withdrawn', 'removed', 'dead', 'unconscious', 'surrendered', 'fled')",
         name="ck_combat_entries_status",
     ),
     CheckConstraint("turn_order IS NULL OR turn_order >= 0", name="ck_combat_entries_turn_order"),

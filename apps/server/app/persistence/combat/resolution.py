@@ -92,10 +92,19 @@ def _condition_ref(item: object) -> str | None:
     return None
 
 
-def _add_condition(items: list[dict[str, Any]], ref: str, note: str) -> None:
+def _add_condition(items: list[dict[str, Any]], ref: str, note: str, *, public: bool = False) -> None:
+    """Append a rules-applied condition once.
+
+    ``public`` marks a Monster Instance entry visible to Players (P4-C 4.5: prone from a
+    shove or a failed save is a public condition; only DM-entered items default hidden).
+    Character conditions never carry the key (``ConditionState`` forbids extras).
+    """
     if any(_condition_ref(item) == ref for item in items):
         return
-    items.append({"condition_ref": ref, "note": note})
+    item: dict[str, Any] = {"condition_ref": ref, "note": note}
+    if public:
+        item["visibility"] = "public"
+    items.append(item)
 
 
 def _remove_condition(items: list[dict[str, Any]], ref: str) -> list[dict[str, Any]]:

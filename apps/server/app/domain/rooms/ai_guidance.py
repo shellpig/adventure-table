@@ -58,7 +58,7 @@ def wait_rule(locale: str) -> str:
 # description, so an AI runs the core table loop correctly without first reading
 # GET /mcp/guide. It is guidance only: the server never enforces it (for example
 # narration works even when the Stage is unset — Optional stays optional).
-BRIEFING_MAX_CHARS = 2_400
+BRIEFING_MAX_CHARS = 3_000
 
 # Connectors expose tool discovery separately from tool execution; a model can
 # mistake "I can see / rescanned the tools" for "I called the tool". This rule
@@ -134,21 +134,28 @@ def _dm_combat_loop(locale: str) -> str:
             "DM 戰鬥必跑流程（無需先讀 guide；每步都做，不得停在 host chat 等提示）："
             "1) 讀取 get_session_context.combat（或 get_combat_context）：檢視 round、current_turn_entry_id（當前回合）、"
             "my_entry_ids、pending_roll_requests、reaction_windows（反應窗口）、pending_adjudications（待處理裁定）並依 next_required_action 行動。"
-            "2) 遇待處理裁定呼叫 combat_resolve_adjudication 裁定距離、掩蔽、AoE、借機攻擊或自由規則。"
-            "3) 輪到 Monster 回合以 combat_* 工具（攻擊、施法、主要動作）解決行動後呼叫 combat_advance_turn 推進回合。"
-            "4) 用 post_narration 簡短敘述戰況（機械結果由系統記錄；嚴禁改 HP 偽造攻擊）。"
+            "2) 遇待處理裁定依 next_required_action 選工具：Attack 距離用 combat_adjudicate_attack（in_range）、"
+            "reach 用 combat_adjudicate_special_attack、AoE 用 combat_resolve_aoe_spell、借機攻擊／自由規則用 combat_resolve_adjudication。"
+            "3) 輪到 Monster 回合以 combat_* 工具（攻擊、施法、主要動作）解決行動後呼叫 combat_advance_turn 推進回合；"
+            "next_required_action=advance_turn（Player action 用完、無待處理）時也由你推進。"
+            "環境傷害用 quick_roll 擲骰再 combat_apply_damage，不要自訂數字。"
+            "4) 用 post_narration 簡短敘述戰況（機械結果由系統記錄；嚴禁改 HP 偽造攻擊；只說傷勢，不說敵人精確 HP）。"
             f"5) 每次解決後立即呼叫 wait_for_event（timeout 最多 {WAIT_TIMEOUT_SECONDS} 秒）——不要停在 host chat。"
             "6) 處理完事件後再次呼叫 wait_for_event 持續循環。"
             f"7) 僅連續 {WAIT_RETRY_COUNT} 次無事件（約 10 分鐘）、戰鬥或 Session 結束才停止。"
             "寫入帶 idempotency_key，代 Player 行動帶 subject_seat_id。"
         )
     return (
-        "MANDATORY DM COMBAT LOOP (run it without reading the guide; do every step, never stop in host chat): "
+        "MANDATORY DM COMBAT LOOP (no need to read the guide; do every step, never stop in host chat): "
         "1) Read get_session_context.combat (or get_combat_context): check round, current_turn_entry_id (current turn), "
         "my_entry_ids, pending_roll_requests, reaction_windows (reaction window), pending_adjudications, and follow next_required_action. "
-        "2) On pending adjudication call combat_resolve_adjudication (range/cover/AoE/OA/freeform). "
-        "3) On a Monster turn resolve actions with combat_* tools (attack/cast/use action) then combat_advance_turn. "
-        "4) Narrate briefly with post_narration (mechanical results are logged; never patch enemy HP to fake attacks). "
+        "2) On pending adjudication use the tool next_required_action names: range -> combat_adjudicate_attack (in_range), "
+        "reach -> combat_adjudicate_special_attack, AoE -> combat_resolve_aoe_spell, OA/freeform -> combat_resolve_adjudication. "
+        "3) On a Monster turn resolve actions with combat_* tools (attack/cast/use) then combat_advance_turn; "
+        "also call combat_advance_turn when next_required_action=advance_turn (Player action spent, nothing pending). "
+        "Environmental damage: quick_roll, then combat_apply_damage; never invent the number. "
+        "4) Narrate briefly with post_narration (mechanical results are logged; never patch enemy HP to fake attacks; "
+        "narrate injury level, never exact enemy HP). "
         f"5) After handling any action call wait_for_event (timeout up to {WAIT_TIMEOUT_SECONDS}s) — never stop in host chat. "
         "6) After resolving an event call wait_for_event again and repeat. "
         f"7) Stop only after {WAIT_RETRY_COUNT} consecutive empty waits (~10 min), combat end, Session end, or host stop. "

@@ -199,8 +199,10 @@ def _resolution_from_row(row: Any) -> StoredAttackResolution:
     target_entry_id = row["target_entry_id"]
     if roll_request_id is None or roll_result_id is None or target_entry_id is None or not result:
         raise AttackRequestNotPendingPersistenceError("Attack does not have a durable resolution")
-    before = result.get("damage", {}).get("before") if isinstance(result.get("damage"), dict) else None
-    after = result.get("damage", {}).get("after") if isinstance(result.get("damage"), dict) else None
+    # A miss stores ``"damage": None``; only a hit carries the damage block.
+    damage = result["damage"] if isinstance(result.get("damage"), dict) else None
+    before = damage.get("before") if damage is not None else None
+    after = damage.get("after") if damage is not None else None
     target_is_hostile = bool(result.get("target_is_hostile", False))
     target_injury_level = result.get("target_injury_level")
     return StoredAttackResolution(
@@ -213,7 +215,7 @@ def _resolution_from_row(row: Any) -> StoredAttackResolution:
         critical=bool(result["attack"]["critical"]),
         attack_total=int(result["attack"]["total"]),
         target_ac=int(result["attack"]["target_ac"]),
-        damage_total=int(result.get("damage", {}).get("adjusted_total", 0)),
+        damage_total=int(damage.get("adjusted_total", 0)) if damage is not None else 0,
         before_hp=int(before["current_hp"]) if isinstance(before, dict) else None,
         after_hp=int(after["current_hp"]) if isinstance(after, dict) else None,
         resolution_result=result,
@@ -261,6 +263,7 @@ class CombatAttackRepository:
         attack: ResolvedAttack,
         target_ac: int,
         modifier_mode: RollMode,
+        modifier_decision: dict[str, Any],
         idempotency_key: str | None,
     ) -> tuple[StoredAttackRequest, StoredTableEvent]:
         action_id = uuid4()
@@ -361,6 +364,7 @@ class CombatAttackRepository:
                         "resolved_attack": attack_payload,
                         "target_ac": target_ac,
                         "modifier_mode": modifier_mode.value,
+                        "modifier_decision": modifier_decision,
                     },
                     resolution_status="waiting_for_roll",
                     roll_request_id=roll_request_id,
@@ -385,6 +389,7 @@ class CombatAttackRepository:
                 "source_ref": attack.source_ref,
                 "content_ref": attack.content_ref,
                 "presentation_field": attack.presentation_field,
+                "modifier_decision": modifier_decision,
             }
             connection.execute(
                 update(session_events).where(session_events.c.id == event_id).values(
@@ -424,6 +429,7 @@ class CombatAttackRepository:
                 "attacker_entry_id": str(attacker_entry_id),
                 "target_entry_id": str(target_entry_id),
                 "source_ref": attack.source_ref,
+                "modifier_decision": modifier_decision,
             },
             idempotency_key=f"p4c-attack-request:{idempotency_key}" if idempotency_key else None,
             expected_actor_binding=binding,
@@ -501,6 +507,8 @@ class CombatAttackRepository:
             resolved_attack = _attack_from_payload(dict(payload["resolved_attack"]))
             target_ac = int(payload["target_ac"])
             mode = RollMode(str(payload["modifier_mode"]))
+            # Actions requested before F7b carry no modifier_decision; they never force a critical.
+            decision = payload.get("modifier_decision")
             computation = roll_factory()
             attack_outcome = resolve_attack_roll(
                 d20_rolls=computation.raw_dice,
@@ -508,6 +516,7 @@ class CombatAttackRepository:
                 target_ac=target_ac,
                 mode=mode,
                 modifier_sources=resolved_attack.modifier_sources,
+                critical_on_hit=bool(decision["critical_on_hit"]) if decision is not None else False,
             )
 
             connection.execute(

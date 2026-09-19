@@ -6,6 +6,7 @@ import type { TableEvent } from '../../api/sessions'
 import { SessionCombatActionBar } from './SessionCombatActionBar'
 import { SessionCombatAdjudicationPanel } from './SessionCombatAdjudicationPanel'
 import { SessionCombatDmControls } from './SessionCombatDmControls'
+import { SessionCombatMonsterControls } from './SessionCombatMonsterControls'
 import {
   combatantFor,
   combatInjuryLabel,
@@ -44,6 +45,12 @@ function getStatusLabel(status: string, copy: SessionCopy): string {
       return copy.combatStatusDead
     case 'removed':
       return copy.combatStatusRemoved
+    case 'unconscious':
+      return copy.combatStatusUnconscious
+    case 'surrendered':
+      return copy.combatStatusSurrendered
+    case 'fled':
+      return copy.combatStatusFled
     default:
       return status
   }
@@ -226,6 +233,9 @@ export function SessionCombatStage({
                 {isHostile ? (
                   <span className="session-combat__hostile-badge">{copy.combatHostile}</span>
                 ) : null}
+                {entry.dodging ? (
+                  <span className="session-combat__dodging-badge">{copy.combatDodging}</span>
+                ) : null}
                 {isInactive ? (
                   <span className="session-combat__status-badge">
                     {getStatusLabel(entry.status, copy)}
@@ -276,6 +286,9 @@ export function SessionCombatStage({
                     </span>
                     {isHostile ? (
                       <span className="session-combat__hostile-badge">{copy.combatHostile}</span>
+                    ) : null}
+                    {entry.dodging ? (
+                      <span className="session-combat__dodging-badge">{copy.combatDodging}</span>
                     ) : null}
                   </div>
                   <div className="session-combat__economy">
@@ -344,6 +357,23 @@ export function SessionCombatStage({
                       <span className="session-combat__stat-label">{copy.combatDmNotes}:</span>
                       <span>{proj.dm_notes}</span>
                     </div>
+                  ) : null}
+                  {isCurrentDm &&
+                  entry.subject_kind === 'monster' &&
+                  entry.monster_instance_id !== null ? (
+                    <SessionCombatMonsterControls
+                      combat={combat}
+                      entry={entry}
+                      projection={proj}
+                      instanceId={entry.monster_instance_id}
+                      copy={copy}
+                      roomId={roomId}
+                      campaignId={campaignId}
+                      sessionId={sessionId}
+                      token={token}
+                      onError={onError}
+                      refresh={refreshCombatResources}
+                    />
                   ) : null}
                 </div>
               )

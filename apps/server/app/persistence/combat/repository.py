@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
@@ -55,6 +55,7 @@ class StoredMonsterInstance:
     created_at: datetime
     updated_at: datetime
     concentration: dict[str, Any] | None = None
+    reveal_state: dict[str, Any] = field(default_factory=dict)
 
 
 def _now() -> datetime:
@@ -92,6 +93,7 @@ def _instance_from_row(row: Any) -> StoredMonsterInstance:
     values["concentration"] = (
         deepcopy(values["concentration"]) if values.get("concentration") is not None else None
     )
+    values["reveal_state"] = deepcopy(values.get("reveal_state") or {})
     return StoredMonsterInstance(**values)
 
 
@@ -144,6 +146,7 @@ class MonsterRepository:
         resources: dict[str, Any] | None = None,
         visibility: str = "public",
         position_note: str | None = None,
+        reveal_state: dict[str, Any] | None = None,
         now: datetime | None = None,
     ) -> StoredMonsterInstance:
         if template_key is not None and custom_template_id is not None:
@@ -183,6 +186,7 @@ class MonsterRepository:
             "resources": deepcopy(resources or {}),
             "visibility": visibility,
             "position_note": position_note,
+            "reveal_state": deepcopy(reveal_state or {}),
             "created_at": moment,
             "updated_at": moment,
         }
@@ -319,7 +323,7 @@ class MonsterRepository:
         if effects is not None:
             values["effects"] = deepcopy(effects)
         if combat_status is not None:
-            if combat_status not in {"active", "down", "dead", "removed"}:
+            if combat_status not in {"active", "down", "dead", "removed", "unconscious", "surrendered", "fled"}:
                 raise MonsterPersistenceError(f"unsupported combat status: {combat_status}")
             values["combat_status"] = combat_status
         if initiative is not _UNSET:

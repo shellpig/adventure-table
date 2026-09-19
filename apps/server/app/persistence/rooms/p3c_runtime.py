@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy import (
     JSON,
     BigInteger,
+    Boolean,
     CheckConstraint,
     Column,
     DateTime,
@@ -14,6 +15,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     Uuid,
+    false,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -63,6 +65,7 @@ roll_requests = Table(
     Column("dc", Integer, nullable=True),
     Column("modifier_mode", String(16), nullable=False),
     Column("flat_adjustment", Integer, nullable=False, server_default="0"),
+    Column("auto_fail", Boolean, nullable=False, server_default=false()),
     Column("visibility", String(24), nullable=False),
     Column("status", String(16), nullable=False, server_default="pending"),
     Column("requested_by_seat_id", Uuid(), ForeignKey("campaign_seats.id", ondelete="RESTRICT"), nullable=False),

@@ -29,6 +29,10 @@ class GuideToolNames:
     request_adjudication: str
     roll_concentration: str
     advance_turn: str
+    adjudicate_attack: str
+    adjudicate_special_attack: str
+    resolve_aoe_spell: str
+    apply_damage: str
 
 
 _EXPECTED = {
@@ -68,6 +72,7 @@ _EXPECTED = {
     "combat_create_monster",
     "combat_create_quick_enemy",
     "combat_list_monster_instances",
+    "combat_update_monster_instance",
     "combat_request_initiative",
     "combat_finalize_initiative",
     "combat_advance_turn",
@@ -76,6 +81,7 @@ _EXPECTED = {
     "combat_roll_initiative",
     "combat_use_action",
     "combat_withdraw_entry",
+    "combat_set_monster_outcome",
     "get_combat_context",
     "combat_cast_spell",
     "combat_propose_aoe_spell",
@@ -121,6 +127,10 @@ def guide_tool_names() -> GuideToolNames:
         request_adjudication="combat_request_adjudication",
         roll_concentration="combat_roll_concentration",
         advance_turn="combat_advance_turn",
+        adjudicate_attack="combat_adjudicate_attack",
+        adjudicate_special_attack="combat_adjudicate_special_attack",
+        resolve_aoe_spell="combat_resolve_aoe_spell",
+        apply_damage="combat_apply_damage",
     )
 
 

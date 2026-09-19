@@ -56,6 +56,8 @@ from app.domain.combat.lifecycle import (
     CombatService,
     CombatStateConflictError,
     CombatView,
+    MonsterOutcomeChoice,
+    MonsterOutcomeInput,
     ReactionWindowInput,
     StartCombatInput,
 )
@@ -501,6 +503,26 @@ def remove_entry(room_id: UUID, campaign_id: UUID, session_id: UUID, entry_id: U
             _actor_from_request(room_id, campaign_id, session_id, context, event_service),
             entry_id,
             idempotency_key=payload.idempotency_key,
+        )
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
+@router.post("/entries/{entry_id}/outcome", response_model=CombatView)
+def set_monster_outcome(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    entry_id: UUID,
+    payload: MonsterOutcomeChoice,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CombatService = Depends(get_combat_service),
+) -> CombatView:
+    try:
+        return service.set_monster_outcome(
+            _actor_from_request(room_id, campaign_id, session_id, context, event_service),
+            MonsterOutcomeInput(entry_id=entry_id, **payload.model_dump()),
         )
     except Exception as exc:
         raise _map_combat_error(exc) from exc

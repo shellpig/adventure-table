@@ -6,7 +6,9 @@ from pydantic import Field, field_validator
 
 from app.domain.combat.concentration import CombatConcentrationService
 from app.domain.combat.concentration_triggers import monster_save_modifier
+from app.domain.combat.condition_modifiers import save_decision_payload, save_modifiers
 from app.domain.combat.lifecycle import CombatNotFoundError, CombatService, CombatStateConflictError
+from app.domain.combat.resolution import SpecialAttackKind
 from app.domain.rooms.rolls import (
     FormalRollInput,
     FormalRollSource,
@@ -62,6 +64,7 @@ class SavingThrowRequestView(StrictModel):
     dc: int | None
     modifier: int
     modifier_mode: RollModifierMode
+    auto_fail: bool
     visibility: RollVisibility
     status: str
 
@@ -78,6 +81,7 @@ class CombatPendingRollView(StrictModel):
     ability_ref: str | None
     dc: int | None
     modifier_mode: RollModifierMode
+    auto_fail: bool
     status: str
 
 
@@ -92,6 +96,7 @@ class SavingThrowResultView(StrictModel):
     target_entry_id: UUID
     total: int
     succeeded: bool
+    auto_fail: bool
 
 
 class DeathSaveRequestInput(StrictModel):
@@ -128,9 +133,34 @@ def _request_event_visibility(visibility: RollVisibility) -> str:
     return "seat_private"
 
 
+_SPECIAL_ATTACK_REQUEST_TYPES: dict[str, str] = {
+    SpecialAttackKind.GRAPPLE.value: SpecialAttackKind.GRAPPLE.value,
+    SpecialAttackKind.SHOVE_PRONE.value: "shove",
+    SpecialAttackKind.SHOVE_PUSH.value: "shove",
+    SpecialAttackKind.ESCAPE_GRAPPLE.value: SpecialAttackKind.ESCAPE_GRAPPLE.value,
+}
+
+_SPECIAL_ATTACK_LABEL_TO_KIND: dict[str, str] = {
+    kind.value.replace("_", " ").title(): kind.value for kind in SpecialAttackKind
+}
+
+
+def special_attack_request_type(kind: str) -> str | None:
+    return _SPECIAL_ATTACK_REQUEST_TYPES.get(kind)
+
+
 def pending_combat_roll_request_type(request: StoredCombatCoreRollRequest) -> str:
-    if request.action_kind in {"attack", "death_save", "grapple", "shove"}:
+    if request.action_kind in {"attack", "death_save"}:
         return request.action_kind
+    # The defender half of an opposed check has no combat_actions link; its
+    # roll_groups.label carries the special-attack kind (see _open_opposed_rolls).
+    kind = request.action_kind
+    if kind is None and request.roll_group_label is not None:
+        kind = _SPECIAL_ATTACK_LABEL_TO_KIND.get(request.roll_group_label)
+    if kind is not None:
+        special_type = special_attack_request_type(kind)
+        if special_type is not None:
+            return special_type
     if request.action_kind is None and request.roll_group_label == "Concentration":
         return "concentration"
     if request.action_kind is None and request.roll_group_label == "Initiative":
@@ -180,7 +210,22 @@ class CombatCoreRollService:
             and request.ability_ref in {"srd5.1:ability:constitution", "constitution"}
         )
 
-    def _save_unit(self, actor: TableActorContext, entry: StoredCombatEntry, ability: str) -> NewSavingThrowUnit:
+    def _save_unit(
+        self,
+        actor: TableActorContext,
+        entry: StoredCombatEntry,
+        ability: str,
+        chosen_mode: RollModifierMode,
+    ) -> NewSavingThrowUnit:
+        ctx = self.combat_service.condition_context(entry)
+        decision = save_modifiers(
+            chosen=chosen_mode,
+            ability_ref=ability,
+            target_conditions=ctx.conditions,
+            target_exhaustion=ctx.exhaustion_level,
+            target_dodging=ctx.dodging,
+        )
+        decision_payload = save_decision_payload(decision)
         if entry.subject_kind == "character":
             if entry.character_id is None:
                 raise CombatStateConflictError("Character CombatEntry has no Character identity")
@@ -200,6 +245,9 @@ class CombatCoreRollService:
                 target_seat_id=seat_id,
                 target_character_id=entry.character_id,
                 modifier=modifier,
+                modifier_mode=decision.mode.value,
+                auto_fail=decision.auto_fail,
+                decision=decision_payload,
             )
         if entry.subject_kind == "monster":
             if entry.monster_instance_id is None:
@@ -212,6 +260,9 @@ class CombatCoreRollService:
                 target_seat_id=None,
                 target_character_id=None,
                 modifier=self._monster_save_modifier(monster.rules_snapshot, ability),
+                modifier_mode=decision.mode.value,
+                auto_fail=decision.auto_fail,
+                decision=decision_payload,
             )
         raise CombatStateConflictError(f"unsupported CombatEntry kind: {entry.subject_kind}")
 
@@ -229,6 +280,7 @@ class CombatCoreRollService:
             dc=request.dc if actor.is_current_dm else None,
             modifier=request.flat_adjustment,
             modifier_mode=RollModifierMode(request.modifier_mode),
+            auto_fail=request.auto_fail,
             visibility=RollVisibility(request.visibility),
             status=request.status,
         )
@@ -252,6 +304,7 @@ class CombatCoreRollService:
                     ability_ref=request.ability_ref,
                     dc=request.dc if actor.is_current_dm else None,
                     modifier_mode=RollModifierMode(request.modifier_mode),
+                    auto_fail=request.auto_fail,
                     status=request.status,
                 )
             )
@@ -273,7 +326,7 @@ class CombatCoreRollService:
         if combat is None or combat.status != "running":
             raise CombatNotFoundError("Campaign has no running Combat")
         entries = tuple(self._active_entry(actor, entry_id) for entry_id in request.target_entry_ids)
-        units = tuple(self._save_unit(actor, entry, ability) for entry in entries)
+        units = tuple(self._save_unit(actor, entry, ability, request.modifier_mode) for entry in entries)
         recipients = tuple(
             dict.fromkeys(unit.target_seat_id for unit in units if unit.target_seat_id is not None)
         )
@@ -333,6 +386,7 @@ class CombatCoreRollService:
                     target_entry_id=conc_result.target_entry_id,
                     total=conc_result.total,
                     succeeded=conc_result.succeeded,
+                    auto_fail=False,
                 )
 
         acting_seat_id, execution_mode = self._authorize_roll(actor, request)
@@ -370,6 +424,7 @@ class CombatCoreRollService:
             target_entry_id=stored.target_entry_id,
             total=stored.total,
             succeeded=stored.succeeded,
+            auto_fail=stored.auto_fail,
         )
 
     def request_death_save(
@@ -471,4 +526,5 @@ __all__ = [
     "SavingThrowRequestView",
     "SavingThrowResultView",
     "pending_combat_roll_request_type",
+    "special_attack_request_type",
 ]

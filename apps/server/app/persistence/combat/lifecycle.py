@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.domain.combat.reaction_service import ReactionWindow
 from app.persistence.characters import characters
-from app.persistence.combat.tables import combat_actions, combat_entries, combats
+from app.persistence.combat.tables import combat_actions, combat_entries, combats, monster_instances
 from app.persistence.rooms.table_runtime import (
     StoredTableActorBinding,
     TableEventRepository,
@@ -95,6 +95,7 @@ class StoredCombatEntry:
     pending_reaction_state: dict[str, Any]
     created_at: datetime
     updated_at: datetime
+    dodging: bool = False
     death_save_successes: int = 0
     death_save_failures: int = 0
     death_save_stable: bool = False
@@ -191,6 +192,7 @@ class CombatRepository:
             ready_state=dict(row["ready_state"] or {}),
             pending_reaction_state=dict(row["pending_reaction_state"] or {}),
             created_at=row["created_at"], updated_at=row["updated_at"],
+            dodging=bool(row["dodging"]),
             death_save_successes=int(row["death_save_successes"]),
             death_save_failures=int(row["death_save_failures"]),
             death_save_stable=bool(row["death_save_stable"]),
@@ -287,7 +289,7 @@ class CombatRepository:
             surprised=entry.surprised, action_available=True, bonus_action_available=True,
             reaction_available=not entry.surprised,
             attacks_allowed=max(1, int(entry.attacks_allowed)), attacks_used=0,
-            ready_state={}, pending_reaction_state={},
+            ready_state={}, pending_reaction_state={}, dodging=False,
         ))
 
     def create_quick_combat(self, *, binding: StoredTableActorBinding, entries: tuple[NewCombatEntry, ...], idempotency_key: str | None):
@@ -409,7 +411,7 @@ class CombatRepository:
                 connection.execute(update(combat_entries).where(combat_entries.c.id == target_id).values(
                     turn_order=index, action_available=True, bonus_action_available=True,
                     reaction_available=not bool(row["surprised"]), attacks_used=0,
-                    ready_state={}, pending_reaction_state={}, updated_at=datetime.now().astimezone(),
+                    ready_state={}, pending_reaction_state={}, dodging=False, updated_at=datetime.now().astimezone(),
                 ))
             first = ordered_entry_ids[0]
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
@@ -473,7 +475,7 @@ class CombatRepository:
             connection.execute(update(combat_entries).where(combat_entries.c.id == next_entry_id).values(
                 action_available=True, bonus_action_available=True,
                 reaction_available=not next_surprised,
-                attacks_used=0, ready_state={}, pending_reaction_state={}, updated_at=datetime.now().astimezone(),
+                attacks_used=0, ready_state={}, pending_reaction_state={}, dodging=False, updated_at=datetime.now().astimezone(),
             ))
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
                 round_number=round_number, current_turn_entry_id=next_entry_id,
@@ -551,6 +553,8 @@ class CombatRepository:
                 raise CombatStateConflictPersistenceError("unsupported action economy cost")
             if action_kind == "ready":
                 values["ready_state"] = dict(payload)
+            elif action_kind == "dodge":
+                values["dodging"] = True
             connection.execute(update(combat_entries).where(combat_entries.c.id == entry_id).values(**values))
             connection.execute(insert(combat_actions).values(
                 id=action_id, combat_id=combat_id, entry_id=entry_id, session_id=binding.session_id,
@@ -613,8 +617,9 @@ class CombatRepository:
 
     def _set_entry_status(self, *, binding: StoredTableActorBinding, combat_id: UUID, entry_id: UUID,
                           status: str, event_kind: str, idempotency_prefix: str,
-                          idempotency_key: str | None):
-        if status not in {"withdrawn", "removed"}:
+                          idempotency_key: str | None, extra_payload: dict[str, Any] | None = None,
+                          monster_outcome: bool = False):
+        if status not in {"withdrawn", "removed", "dead", "unconscious", "surrendered", "fled"}:
             raise ValueError("unsupported inactive CombatEntry status")
 
         def projection(connection, event_id: UUID, _seq: int) -> None:
@@ -628,6 +633,8 @@ class CombatRepository:
             ).with_for_update()).mappings().one_or_none()
             if entry is None or entry["status"] != "active":
                 raise CombatNotFoundPersistenceError(str(entry_id))
+            if monster_outcome and (entry["subject_kind"] != "monster" or entry["monster_instance_id"] is None):
+                raise CombatStateConflictPersistenceError("only Monster entries take outcomes")
             if combat["current_turn_entry_id"] == entry_id and combat["status"] == "running":
                 raise CombatStateConflictPersistenceError(
                     f"advance the turn before marking the current turn entry {status}"
@@ -635,12 +642,18 @@ class CombatRepository:
             connection.execute(update(session_events).where(session_events.c.id == event_id).values(
                 subject_character_id=entry["character_id"]
             ))
+            if monster_outcome:
+                # A DM outcome is a ruling on the instance too, so End Combat keeps it (實作規格 P4-C 13).
+                connection.execute(update(monster_instances).where(
+                    monster_instances.c.id == entry["monster_instance_id"]
+                ).values(combat_status=status, updated_at=datetime.now().astimezone()))
             connection.execute(update(combat_entries).where(
                 combat_entries.c.id == entry_id
             ).values(
                 status=status,
                 ready_state={},
                 pending_reaction_state={},
+                dodging=False,
                 updated_at=datetime.now().astimezone(),
             ))
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
@@ -651,7 +664,8 @@ class CombatRepository:
             room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
             kind=event_kind, acting_seat_id=binding.seat_id, subject_seat_id=None,
             subject_character_id=None, execution_mode="self", visibility="public", recipient_seat_ids=(),
-            payload_version=1, payload={"combat_id": str(combat_id), "entry_id": str(entry_id), "status": status},
+            payload_version=1,
+            payload={"combat_id": str(combat_id), "entry_id": str(entry_id), "status": status, **(extra_payload or {})},
             idempotency_key=f"{idempotency_prefix}:{idempotency_key}" if idempotency_key else None,
             expected_actor_binding=binding, transaction_projection=projection,
         )
@@ -682,6 +696,21 @@ class CombatRepository:
             idempotency_key=idempotency_key,
         )
 
+    def set_monster_outcome(self, *, binding: StoredTableActorBinding, combat_id: UUID, entry_id: UUID,
+                            outcome: str, note: str | None, idempotency_key: str | None):
+        entry = self.get_entry(entry_id)
+        if entry is None:
+            raise CombatNotFoundPersistenceError(str(entry_id))
+        if entry.subject_kind != "monster" or entry.monster_instance_id is None:
+            raise CombatStateConflictPersistenceError("only Monster entries take outcomes")
+        return self._set_entry_status(
+            binding=binding, combat_id=combat_id, entry_id=entry_id,
+            status="removed" if outcome == "other" else outcome,
+            event_kind="combat.monster_outcome_set", idempotency_prefix="p4f-monster-outcome",
+            idempotency_key=idempotency_key, monster_outcome=True,
+            extra_payload={"monster_instance_id": str(entry.monster_instance_id), "outcome": outcome, "note": note},
+        )
+
     def end_combat(self, *, binding: StoredTableActorBinding, combat_id: UUID, idempotency_key: str | None):
         def projection(connection, _event_id: UUID, _seq: int) -> None:
             combat = connection.execute(select(combats).where(
@@ -695,7 +724,7 @@ class CombatRepository:
             connection.execute(update(combat_entries).where(combat_entries.c.combat_id == combat_id).values(
                 initiative_roll_request_id=None, initiative_roll_result_id=None, initiative_total=None,
                 turn_order=None, surprised=False, action_available=True, bonus_action_available=True,
-                reaction_available=True, attacks_used=0, ready_state={}, pending_reaction_state={}, updated_at=now,
+                reaction_available=True, attacks_used=0, ready_state={}, pending_reaction_state={}, dodging=False, updated_at=now,
             ))
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
                 ended_session_id=binding.session_id, status="ended", round_number=None,

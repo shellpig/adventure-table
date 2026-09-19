@@ -198,6 +198,50 @@ def test_dm_in_range_resumes_same_action_then_formal_roll_resolves_it() -> None:
         table.engine.dispose()
 
 
+def test_natural_one_miss_resolves_with_zero_damage_and_no_hp_change() -> None:
+    table, attacks, attacker_id, target_id, source_ref = _running_table()
+    try:
+        pending = attacks.request_attack(
+            table.player_actor,
+            AttackRequestInput(
+                attacker_entry_id=attacker_id,
+                target_entry_id=target_id,
+                source_ref=source_ref,
+                idempotency_key="miss-request",
+            ),
+        )
+        resumed = attacks.adjudicate_attack(
+            table.dm_actor,
+            AttackAdjudicationInput(
+                action_id=pending.action_id,
+                in_range=True,
+                idempotency_key="miss-range-accept",
+            ),
+        )
+        assert resumed.roll_request_id is not None
+        # P4-F: a miss stores "damage": None; reading the durable resolution back must not fail.
+        result = attacks.complete_attack(
+            table.player_actor,
+            FormalRollInput(
+                roll_request_id=resumed.roll_request_id,
+                source=FormalRollSource.PHYSICAL,
+                raw_dice=(1,),
+                idempotency_key="miss-roll",
+            ),
+        )
+        assert result.action_id == pending.action_id
+        assert result.hit is False
+        assert result.damage_total == 0
+        assert result.before_hp is None
+        assert result.after_hp is None
+        target = table.combat.get_active_combat_detail(table.dm_actor)
+        assert target is not None
+        projection = next(item for item in target.combatants if item.entry_id == target_id).projection
+        assert projection["current_hp"] == projection["max_hp"]
+    finally:
+        table.engine.dispose()
+
+
 def test_player_cannot_operate_enemy_combatant_or_directly_mutate_enemy_hp() -> None:
     table, attacks, attacker_id, target_id, _source_ref = _running_table()
     try:

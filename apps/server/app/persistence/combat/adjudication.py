@@ -9,7 +9,7 @@ from sqlalchemy import insert, select, update
 from sqlalchemy.engine import Engine
 
 from app.domain.combat.reaction_service import open_opportunity_attack_window
-from app.domain.combat.resolution import ResolvedAttack, RollMode
+from app.domain.combat.resolution import REACH_ADJUDICATED_KINDS, ResolvedAttack, RollMode
 from app.persistence.combat.attacks import _attack_payload
 from app.persistence.combat.lifecycle import StoredCombatAction, combat_action_from_row
 from app.persistence.combat.reactions import write_reaction_window
@@ -161,12 +161,14 @@ class CombatAdjudicationRepository:
         attack: ResolvedAttack,
         target_ac: int,
         modifier_mode: RollMode,
+        modifier_decision: dict[str, Any],
         idempotency_key: str | None,
     ) -> tuple[StoredAttackAdjudication, StoredTableEvent]:
         action_id = uuid4()
         payload = {
             "resolved_attack": _attack_payload(attack),
             "modifier_mode": modifier_mode.value,
+            "modifier_decision": modifier_decision,
             "target_ac": target_ac,
             "adjudication": {"kind": "range", "in_range": None},
         }
@@ -235,6 +237,7 @@ class CombatAdjudicationRepository:
                 "target_is_hostile": bool(target["is_hostile"]),
                 "kind": "range",
                 "status": "dm_adjudication_required",
+                "modifier_decision": modifier_decision,
             }
             connection.execute(
                 update(session_events)
@@ -261,6 +264,7 @@ class CombatAdjudicationRepository:
                 "target_entry_id": str(target_entry_id),
                 "kind": "range",
                 "status": "dm_adjudication_required",
+                "modifier_decision": modifier_decision,
             },
             idempotency_key=(
                 f"p4c-attack-adjudication:{idempotency_key}"
@@ -285,6 +289,7 @@ class CombatAdjudicationRepository:
         action_id: UUID,
         in_range: bool,
         roll_mode: RollMode | None = None,
+        modifier_decision: dict[str, Any] | None = None,
         note: str | None = None,
         idempotency_key: str | None,
     ) -> tuple[StoredAttackAdjudication, StoredTableEvent]:
@@ -375,6 +380,11 @@ class CombatAdjudicationRepository:
                 effective_modifier_mode = (
                     roll_mode.value if roll_mode is not None else payload["modifier_mode"]
                 )
+                # F7b: the service re-evaluates conditions at ruling time; the action keeps
+                # the effective mode and decision the roll request was created with.
+                payload["modifier_mode"] = effective_modifier_mode
+                if modifier_decision is not None:
+                    payload["modifier_decision"] = modifier_decision
                 connection.execute(
                     insert(roll_groups).values(
                         id=roll_group_id,
@@ -425,6 +435,7 @@ class CombatAdjudicationRepository:
                     "roll_group_id": str(roll_group_id),
                     "roll_request_id": str(roll_request_id),
                     "decision": decision,
+                    "modifier_decision": modifier_decision,
                 }
             # Both the pending->resolved and pending->waiting transition are
             # canonical combat-state mutations and advance the combat revision.
@@ -458,6 +469,7 @@ class CombatAdjudicationRepository:
                 "combat_action_id": str(action_id),
                 "in_range": in_range,
                 "decision": decision,
+                "modifier_decision": modifier_decision,
             },
             idempotency_key=(
                 f"p4c-attack-adjudication-result:{idempotency_key}"
@@ -739,15 +751,15 @@ class CombatAdjudicationRepository:
         action_kind = existing.action_kind
         if action_kind == "attack":
             raise CombatAdjudicationStateConflictError(
-                "Range adjudication must be resolved via POST /attacks/adjudicate"
+                "Range adjudication must be resolved through attack adjudication (combat_adjudicate_attack / POST .../attacks/adjudicate)"
             )
-        if action_kind in ("grapple", "shove"):
+        if action_kind in REACH_ADJUDICATED_KINDS:
             raise CombatAdjudicationStateConflictError(
-                "Reach adjudication must be resolved via dedicated special-attack route"
+                "Reach adjudication must be resolved through special-attack adjudication (combat_adjudicate_special_attack / POST .../special-attacks/adjudicate)"
             )
         if action_kind == "spell_aoe":
             raise CombatAdjudicationStateConflictError(
-                "AoE adjudication must be resolved via POST /combat/spells/aoe/resolve"
+                "AoE adjudication must be resolved through AoE spell resolution (combat_resolve_aoe_spell / POST .../combat/spells/aoe/resolve)"
             )
         if action_kind == "opportunity_attack":
             if trigger is None:

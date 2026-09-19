@@ -57,7 +57,7 @@ def calculate_injury_level(
     max_hp: int,
     combat_status: str = "active",
 ) -> Literal["down", "critical", "wounded", "healthy"]:
-    if current_hp <= 0 or combat_status in {"down", "dead"}:
+    if current_hp <= 0 or combat_status in {"down", "dead", "unconscious"}:
         return "down"
     if max_hp <= 0:
         return "critical"
@@ -120,7 +120,14 @@ def project_combatant(
     """
 
     if audience == "dm":
-        return _full_projection(state)
+        projected = _full_projection(state)
+        if state.kind == "monster":
+            projected["reveal"] = {
+                "armor_class": state.armor_class_revealed,
+                "description": state.description_revealed,
+                "position_note": state.position_note_revealed,
+            }
+        return projected
     if audience != "player":
         raise ValueError(f"unsupported combatant audience: {audience}")
 

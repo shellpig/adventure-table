@@ -17,7 +17,14 @@ pytestmark = pytest.mark.skipif(
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 P4C_PARENT = "0024_p4b_combat_roll_targets"
 P4C_HEAD = "0025_p4c_core_resolution"
-P4C_APPLIED_HEADS = {P4C_HEAD, "0026_p4e_monster_concentration"}
+P4C_APPLIED_HEADS = {
+    P4C_HEAD,
+    "0026_p4e_monster_concentration",
+    "0027_p4f_monster_outcome",
+    "0028_p4f_monster_reveal_state",
+    "0029_p4f_roll_request_auto_fail",
+    "0030_p4f_entry_dodging",
+}
 
 
 def _config() -> Config:

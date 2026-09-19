@@ -17,6 +17,7 @@ from app.domain.combat.resolution import DamageRollPart, RollMode
 from app.domain.combat.spell_content_adapter import SpellDefinitionResolver
 from app.domain.combat.spell_resolver import SaveDamageMode, SpellCastMode
 from app.domain.combat.spell_resources import (
+    access_matches_profile,
     authorize_character_spell,
     monster_casting_sources,
     monster_spell_ref,
@@ -208,11 +209,10 @@ class CombatSpellService:
             seen: set[tuple[str, str]] = set()
             for profile in character.build.spellcasting_profiles:
                 for access in character.build.spell_access_entries:
-                    source_matches = access.source_key == profile.source_key or (
-                        access.source_type == "class" and access.source_key == profile.class_ref
-                    )
                     key = (profile.profile_id, access.spell_key)
-                    if not source_matches or key in seen:
+                    if key in seen or not access_matches_profile(
+                        character.build, access=access, profile=profile
+                    ):
                         continue
                     seen.add(key)
                     spell_entry = self.registry.get(access.spell_key)

@@ -30,6 +30,7 @@ type CombatLogCopy = {
   savingThrow: string
   saveSuccess: string
   saveFailure: string
+  saveAutoFail: string
   deathSave: string
   deathSaveSuccesses: string
   deathSaveFailures: string
@@ -86,14 +87,26 @@ type CombatLogCopy = {
   shove: string
   shoveProne: string
   shovePush: string
+  escapeGrapple: string
   waitingForRoll: string
   success: string
   failure: string
+  conditionRemoved: string
   inReach: string
   outOfReach: string
   savesRequested: string
   attackerTotal: string
   targetTotal: string
+  outcomeDead: string
+  outcomeUnconscious: string
+  outcomeSurrendered: string
+  outcomeFled: string
+  outcomeOther: string
+  enemyUpdated: string
+  changedName: string
+  changedVisibility: string
+  changedPositionNote: string
+  changedReveal: string
 }
 
 const COMBAT_LOG_COPY = {
@@ -118,6 +131,7 @@ const COMBAT_LOG_COPY = {
     savingThrow: '豁免',
     saveSuccess: '成功',
     saveFailure: '失敗',
+    saveAutoFail: '自動失敗',
     deathSave: '死亡豁免',
     deathSaveSuccesses: '成功',
     deathSaveFailures: '失敗',
@@ -174,14 +188,26 @@ const COMBAT_LOG_COPY = {
     shove: '推撞',
     shoveProne: '推倒',
     shovePush: '推開',
+    escapeGrapple: '脫離擒抱',
     waitingForRoll: '等待對抗擲骰',
     success: '成功',
     failure: '失敗',
+    conditionRemoved: '移除狀態',
     inReach: '在觸及範圍內',
     outOfReach: '超出觸及範圍',
     savesRequested: '等待豁免檢定',
     attackerTotal: '攻擊方總值',
     targetTotal: '目標總值',
+    outcomeDead: '死亡',
+    outcomeUnconscious: '昏迷',
+    outcomeSurrendered: '投降',
+    outcomeFled: '逃離',
+    outcomeOther: '其他結果',
+    enemyUpdated: '敵人資訊已更新',
+    changedName: '名稱',
+    changedVisibility: '能見度',
+    changedPositionNote: '位置備註',
+    changedReveal: '公開資訊',
   },
   en: {
     combatStarted: 'Combat started',
@@ -204,6 +230,7 @@ const COMBAT_LOG_COPY = {
     savingThrow: 'Saving throw',
     saveSuccess: 'Success',
     saveFailure: 'Failure',
+    saveAutoFail: 'Auto-fail',
     deathSave: 'Death save',
     deathSaveSuccesses: 'Successes',
     deathSaveFailures: 'Failures',
@@ -260,14 +287,26 @@ const COMBAT_LOG_COPY = {
     shove: 'Shove',
     shoveProne: 'Shove prone',
     shovePush: 'Shove push',
+    escapeGrapple: 'Escape grapple',
     waitingForRoll: 'Awaiting contest roll',
     success: 'Success',
     failure: 'Failure',
+    conditionRemoved: 'Condition removed',
     inReach: 'In reach',
     outOfReach: 'Out of reach',
     savesRequested: 'Saving throws requested',
     attackerTotal: 'Attacker total',
     targetTotal: 'Target total',
+    outcomeDead: 'Dead',
+    outcomeUnconscious: 'Unconscious',
+    outcomeSurrendered: 'Surrendered',
+    outcomeFled: 'Fled',
+    outcomeOther: 'Other outcome',
+    enemyUpdated: 'Enemy updated',
+    changedName: 'Name',
+    changedVisibility: 'Visibility',
+    changedPositionNote: 'Position note',
+    changedReveal: 'Revealed info',
   },
 } satisfies Record<Locale, CombatLogCopy>
 
@@ -397,8 +436,52 @@ function specialAttackKindLabel(kind: string | null, copy: CombatLogCopy): strin
       return copy.shovePush
     case 'shove':
       return copy.shove
+    case 'escape_grapple':
+      return copy.escapeGrapple
     default:
       return copy.specialAttack
+  }
+}
+
+function formatConditionRefDetail(
+  condition: string | null,
+  prefix: string,
+  resolveContentName: ContentNameResolver,
+): string | null {
+  if (!condition) return null
+  const resolved = resolveContentName(`srd5.1:condition:${condition}`, prefix)
+  return resolved === prefix ? prefix : `${prefix}: ${resolved}`
+}
+
+function monsterOutcomeLabel(outcome: string | null, copy: CombatLogCopy): string | null {
+  switch (outcome) {
+    case 'dead':
+      return copy.outcomeDead
+    case 'unconscious':
+      return copy.outcomeUnconscious
+    case 'surrendered':
+      return copy.outcomeSurrendered
+    case 'fled':
+      return copy.outcomeFled
+    case 'other':
+      return copy.outcomeOther
+    default:
+      return null
+  }
+}
+
+function monsterChangedFieldLabel(field: string, copy: CombatLogCopy): string | null {
+  switch (field) {
+    case 'name':
+      return copy.changedName
+    case 'visibility':
+      return copy.changedVisibility
+    case 'position_note':
+      return copy.changedPositionNote
+    case 'reveal':
+      return copy.changedReveal
+    default:
+      return null
   }
 }
 
@@ -715,9 +798,10 @@ function formatSave(
     : succeeded === false
       ? copy.saveFailure
       : null
+  const autoFail = booleanField(source, 'auto_fail') === true ? copy.saveAutoFail : null
   const total = numberField(source, 'total')
   return {
-    summary: [target, copy.savingThrow, outcome].filter(Boolean).join(' · ') || copy.savingThrow,
+    summary: [target, copy.savingThrow, outcome, autoFail].filter(Boolean).join(' · ') || copy.savingThrow,
     detail: total === null ? null : `${copy.total} ${total}`,
   }
 }
@@ -823,6 +907,27 @@ export function formatCombatLogEvent(
       return {
         summary: [target, copy.entryRemoved].filter(Boolean).join(' · ') || copy.entryRemoved,
         detail: null,
+      }
+    }
+    case 'combat.monster_outcome_set': {
+      const target = entryLabel(payload, 'entry_id', resolveEntryLabel)
+      const outcome = monsterOutcomeLabel(stringField(payload, 'outcome'), copy)
+      const note = stringField(payload, 'note')
+      return {
+        summary: [target, outcome].filter(Boolean).join(' · ') || copy.outcomeOther,
+        detail: note,
+      }
+    }
+    case 'combat.monster_instance_updated': {
+      const name = stringField(payload, 'name')
+      const rawChanged = Array.isArray(payload.changed) ? payload.changed : []
+      const changedLabels = rawChanged
+        .map((field) => (typeof field === 'string' ? monsterChangedFieldLabel(field, copy) : null))
+        .filter(Boolean)
+      const detail = changedLabels.length > 0 ? changedLabels.join(', ') : null
+      return {
+        summary: [name, copy.enemyUpdated].filter(Boolean).join(' · ') || copy.enemyUpdated,
+        detail,
       }
     }
     case 'combat.initiative_ordered': {
@@ -943,6 +1048,21 @@ export function formatCombatLogEvent(
         detail: null,
       }
     }
+    case 'combat.escape_grapple_requested': {
+      const attacker = entryLabel(payload, 'attacker_entry_id', resolveEntryLabel)
+      const target = entryLabel(payload, 'target_entry_id', resolveEntryLabel)
+      const kind = copy.escapeGrapple
+      return {
+        summary: [
+          attacker,
+          target ? `${kind} → ${target}` : kind,
+          copy.waitingForRoll,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        detail: null,
+      }
+    }
     case 'combat.special_attack_roll_resolved': {
       const target = entryLabel(payload, 'target_entry_id', resolveEntryLabel)
       const total = numberField(payload, 'total')
@@ -963,19 +1083,24 @@ export function formatCombatLogEvent(
       const attackerTotal = numberField(res, 'attacker_total')
       const targetTotal = numberField(res, 'target_total')
       const pushDistance = numberField(res, 'push_distance_ft')
-      const condition = stringField(res, 'condition_to_apply')
-      let conditionLabel: string | null = null
-      if (condition) {
-        const resolved = resolveContentName(`srd5.1:condition:${condition}`, copy.condition)
-        conditionLabel = resolved === copy.condition ? copy.condition : `${copy.condition}: ${resolved}`
-      }
+      const conditionToApply = formatConditionRefDetail(
+        stringField(res, 'condition_to_apply'),
+        copy.condition,
+        resolveContentName,
+      )
+      const conditionToRemove = formatConditionRefDetail(
+        stringField(res, 'condition_to_remove'),
+        copy.conditionRemoved,
+        resolveContentName,
+      )
 
       const summaryParts = [target, kind, outcome].filter(Boolean)
       const detailParts = [
         attackerTotal !== null ? `${copy.attackerTotal} ${attackerTotal}` : null,
         targetTotal !== null ? `${copy.targetTotal} ${targetTotal}` : null,
         pushDistance !== null && pushDistance > 0 ? `${pushDistance} ft` : null,
-        conditionLabel,
+        conditionToApply,
+        conditionToRemove,
       ].filter(Boolean)
 
       return {

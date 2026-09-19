@@ -5,6 +5,7 @@ from sqlalchemy import update
 
 from app.content import load_default_content_registry
 from app.domain.character.schemas import CharacterState
+from app.domain.combat.core_rolls import CombatCoreRollService
 from app.domain.combat.initiative import FinalizeInitiativeInput, RequestInitiativeInput
 from app.domain.combat.lifecycle import AddMonsterInput, CombatStateConflictError, StartCombatInput
 from app.domain.combat.resolution import SpecialAttackKind
@@ -274,6 +275,11 @@ def test_shove_prone_uses_same_formal_flow_and_applies_prone() -> None:
             for condition in monster.conditions
         }
         assert PRONE_REF in refs
+        # P4-C 4.5: prone is a public condition, so the Player-facing enemy projection carries it.
+        player_detail = table.combat.get_active_combat_detail(table.player_actor)
+        assert player_detail is not None
+        target_view = next(item for item in player_detail.combatants if item.entry_id == target_id)
+        assert PRONE_REF in target_view.projection["conditions"]
     finally:
         table.engine.dispose()
 
@@ -329,3 +335,89 @@ def test_out_of_reach_adjudication_resolves_without_consuming_attack() -> None:
         assert attacker.attacks_used == 0
     finally:
         table.engine.dispose()
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected_request_type"),
+    (
+        (SpecialAttackKind.GRAPPLE, "grapple"),
+        (SpecialAttackKind.SHOVE_PRONE, "shove"),
+        (SpecialAttackKind.ESCAPE_GRAPPLE, "escape_grapple"),
+    ),
+)
+def test_special_attack_pending_rolls_have_canonical_discriminators(
+    kind: SpecialAttackKind,
+    expected_request_type: str,
+) -> None:
+    table, service, player_entry_id, monster_entry_id, _monster_id = _running_table(free_hand=True)
+    core_rolls = CombatCoreRollService(
+        repository=CombatCoreRollRepository(table.engine, table.events.repository),
+        combat_repository=table.combat.repository,
+        combat_service=table.combat,
+        monster_repository=table.monsters,
+        roll_service=table.rolls,
+        table_event_service=table.events,
+    )
+    try:
+        if kind is SpecialAttackKind.ESCAPE_GRAPPLE:
+            init_grapple = service.request_special_attack(
+                table.player_actor,
+                SpecialAttackRequestInput(
+                    attacker_entry_id=player_entry_id,
+                    target_entry_id=monster_entry_id,
+                    kind=SpecialAttackKind.GRAPPLE,
+                    idempotency_key="escape-setup-grapple",
+                ),
+            )
+            _resolve_success(table, service, init_grapple)
+            table.combat.advance_turn(table.dm_actor, idempotency_key="adv-to-monster-escape")
+            action = service.request_special_attack(
+                table.dm_actor,
+                SpecialAttackRequestInput(
+                    attacker_entry_id=monster_entry_id,
+                    target_entry_id=player_entry_id,
+                    kind=SpecialAttackKind.ESCAPE_GRAPPLE,
+                    idempotency_key="monster-escape-req",
+                ),
+            )
+            expected_attacker_id = monster_entry_id
+            expected_defender_id = player_entry_id
+            player_expected_target_id = player_entry_id
+        else:
+            pending = service.request_special_attack(
+                table.player_actor,
+                SpecialAttackRequestInput(
+                    attacker_entry_id=player_entry_id,
+                    target_entry_id=monster_entry_id,
+                    kind=kind,
+                    idempotency_key=f"special-{kind}-req",
+                ),
+            )
+            action = service.adjudicate_special_attack(
+                table.dm_actor,
+                SpecialAttackAdjudicationInput(
+                    action_id=pending.action_id,
+                    in_reach=True,
+                    idempotency_key=f"special-{kind}-reach",
+                ),
+            )
+            expected_attacker_id = player_entry_id
+            expected_defender_id = monster_entry_id
+            player_expected_target_id = player_entry_id
+
+        assert action.status == "waiting_for_roll"
+
+        dm_pending = core_rolls.list_pending_rolls(table.dm_actor)
+        assert len(dm_pending) == 2
+        dm_entries = {roll.target_entry_id for roll in dm_pending}
+        assert dm_entries == {expected_attacker_id, expected_defender_id}
+        for roll in dm_pending:
+            assert roll.request_type == expected_request_type
+
+        player_pending = core_rolls.list_pending_rolls(table.player_actor)
+        assert len(player_pending) == 1
+        assert player_pending[0].target_entry_id == player_expected_target_id
+        assert player_pending[0].request_type == expected_request_type
+    finally:
+        table.engine.dispose()
+

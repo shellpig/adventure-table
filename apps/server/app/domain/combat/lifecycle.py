@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import Field, model_validator
@@ -13,12 +14,13 @@ from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import TableActorContext, TableEventActorUnauthorizedError, TableEventService
 from app.persistence.characters import CharacterRepository
 from app.persistence.combat.combatants import (
-    MonsterRevealState,
     character_to_combatant,
     monster_instance_to_combatant,
 )
+from app.persistence.combat.core_rolls import _condition_ref
 from app.persistence.combat.lifecycle import (
-    ActiveCombatExistsPersistenceError, CombatRepository, CombatStateConflictPersistenceError,
+    ActiveCombatExistsPersistenceError, CombatNotFoundPersistenceError,
+    CombatRepository, CombatStateConflictPersistenceError,
     NewCombatEntry, StoredCombat, StoredCombatEntry, actor_binding,
 )
 from app.persistence.combat.repository import MonsterRepository
@@ -103,6 +105,26 @@ class ReactionWindowInput(StrictModel):
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
 
 
+MonsterOutcome = Literal["dead", "unconscious", "surrendered", "fled", "other"]
+
+
+class MonsterOutcomeChoice(StrictModel):
+    """DM ruling on a Monster entry; the REST body (entry id travels in the path)."""
+    outcome: MonsterOutcome
+    note: str | None = Field(default=None, max_length=500)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+
+    @model_validator(mode="after")
+    def note_required_when_other(self):
+        if self.outcome == "other" and (self.note is None or not self.note.strip()):
+            raise ValueError("note is required when outcome is 'other'")
+        return self
+
+
+class MonsterOutcomeInput(MonsterOutcomeChoice):
+    entry_id: UUID
+
+
 class CombatEntryView(StrictModel):
     id: UUID
     subject_kind: str
@@ -123,6 +145,7 @@ class CombatEntryView(StrictModel):
     attacks_used: int
     ready_state: dict[str, Any]
     pending_reaction_state: dict[str, Any]
+    dodging: bool = False
 
 
 class CombatView(StrictModel):
@@ -174,6 +197,13 @@ def _extra_attack_budget(character) -> int:
     return 1
 
 
+@dataclass(frozen=True)
+class EntryConditionContext:
+    conditions: tuple[str, ...]
+    exhaustion_level: int
+    dodging: bool = False
+
+
 class CombatService:
     """Actor-neutral P4-B application service shared by Human and AI adapters."""
     def __init__(self, repository: CombatRepository, table_event_service: TableEventService,
@@ -184,6 +214,35 @@ class CombatService:
         self.character_repository = character_repository
         self.monster_repository = monster_repository
         self.registry = registry
+
+    def condition_context(self, entry: StoredCombatEntry) -> EntryConditionContext:
+        if entry.subject_kind == "character":
+            if entry.character_id is None:
+                raise CombatStateConflictError("Character CombatEntry has no Character identity")
+            character = self.character_repository.load_character(entry.character_id)
+            conditions = tuple(str(item.condition_ref) for item in character.state.conditions)
+            return EntryConditionContext(
+                conditions=conditions,
+                exhaustion_level=int(character.state.exhaustion_level),
+                dodging=entry.dodging,
+            )
+        if entry.subject_kind == "monster":
+            if entry.monster_instance_id is None:
+                raise CombatStateConflictError("Monster CombatEntry has no Monster identity")
+            monster = self.monster_repository.get_instance(entry.monster_instance_id)
+            if monster is None:
+                raise CombatNotFoundError("Monster Instance was not found")
+            conditions = tuple(
+                ref
+                for item in monster.conditions
+                if (ref := _condition_ref(item)) is not None
+            )
+            return EntryConditionContext(
+                conditions=conditions,
+                exhaustion_level=0,
+                dodging=entry.dodging,
+            )
+        raise CombatStateConflictError(f"unsupported CombatEntry kind: {entry.subject_kind}")
 
     def _current(self, actor: TableActorContext) -> None:
         self.table_event_service.require_actor_current(actor)
@@ -211,6 +270,7 @@ class CombatService:
             bonus_action_available=entry.bonus_action_available, reaction_available=entry.reaction_available,
             attacks_allowed=entry.attacks_allowed, attacks_used=entry.attacks_used,
             ready_state=dict(entry.ready_state), pending_reaction_state=dict(entry.pending_reaction_state),
+            dodging=entry.dodging,
         )
 
     def _view(self, combat: StoredCombat) -> CombatView:
@@ -257,9 +317,7 @@ class CombatService:
                 instance = self.monster_repository.get_instance(entry.monster_instance_id)
                 if instance is None:
                     continue
-                # reveal toggles are not persisted yet; DM reveal actions arrive in a later step.
-                reveals = MonsterRevealState()
-                combatant_state = monster_instance_to_combatant(instance, reveals=reveals, entry=entry)
+                combatant_state = monster_instance_to_combatant(instance, entry=entry)
             else:
                 continue
 
@@ -465,6 +523,22 @@ class CombatService:
         self._notify(actor)
         return self._view(self.repository.get(combat.id) or combat)
 
+    def set_monster_outcome(self, actor: TableActorContext, request: MonsterOutcomeInput) -> CombatView:
+        self._require_dm(actor)
+        combat = self.repository.get_active(actor.campaign_id)
+        if combat is None: raise CombatNotFoundError("Campaign has no active Combat")
+        try:
+            self.repository.set_monster_outcome(
+                binding=actor_binding(actor), combat_id=combat.id, entry_id=request.entry_id,
+                outcome=request.outcome, note=request.note, idempotency_key=request.idempotency_key,
+            )
+        except CombatStateConflictPersistenceError as exc:
+            raise CombatStateConflictError(str(exc)) from exc
+        except CombatNotFoundPersistenceError as exc:
+            raise CombatNotFoundError(str(exc)) from exc
+        self._notify(actor)
+        return self._view(self.repository.get(combat.id) or combat)
+
     def end_combat(self, actor: TableActorContext, *, idempotency_key: str | None = None) -> CombatView:
         self._require_dm(actor)
         combat = self.repository.get_active(actor.campaign_id)
@@ -480,5 +554,6 @@ __all__ = [
     "ActiveCombatExistsError", "AddCharacterInput", "AddMonsterInput", "CombatActionInput", "CombatActionKind",
     "CombatActionView", "CombatDetailView", "CombatantDetailView", "CombatEconomyCost", "CombatEntryView",
     "CombatLifecycleError", "CombatNotFoundError", "CombatService", "CombatStateConflictError", "CombatView",
+    "EntryConditionContext", "MonsterOutcome", "MonsterOutcomeChoice", "MonsterOutcomeInput",
     "ReactionWindowInput", "ResolveInitiativeOrderInput", "StartCombatInput", "_extra_attack_budget",
 ]

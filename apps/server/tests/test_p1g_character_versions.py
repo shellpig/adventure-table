@@ -297,3 +297,35 @@ def test_p1g_reconciliation_preserves_resource_usage_hit_dice_and_blocks_illegal
         issue.code == "prepared_spell_reconciliation_required"
         for issue in blocked.blocking_issues
     )
+
+
+def test_p1g_workshop_character_state_patch_p4d_fields() -> None:
+    client, engine = _seed()
+    try:
+        created = _confirm_level_one_fighter(client)
+        character_id = created["character_id"]
+
+        bad_null = client.patch(
+            f"/api/characters/{character_id}/state",
+            json={"death_saves": None},
+        )
+        assert bad_null.status_code == 422
+        assert "state patch fields cannot be null" in bad_null.text
+
+        patch_response = client.patch(
+            f"/api/characters/{character_id}/state",
+            json={
+                "exhaustion_level": 2,
+                "concentration": None,
+            },
+        )
+        assert patch_response.status_code == 200, patch_response.text
+        sheet = patch_response.json()
+        assert sheet["character_id"] == character_id
+
+        persisted = client.get(f"/api/characters/{character_id}").json()
+        assert persisted["state"]["exhaustion_level"] == 2
+        assert persisted["state"]["concentration"] is None
+    finally:
+        engine.dispose()
+

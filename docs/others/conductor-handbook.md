@@ -75,6 +75,30 @@ Subphase 關門與合併回 `main` 的 gate 照 `AGENTS.md`「工程實作守則
 3. 跑 §2.3 gate。失敗把錯誤訊息餵回**同一個** `--conversation`；換 step 開新對話。
 4. 審完剩餘修改很小 → 自己改，不再開 agy 回合。
 
+### 3.1 中途監看與判死（不要傻等 print-timeout）
+
+背景啟動後**不能只等結束通知**：agy 會把 pytest 丟到背景然後「等待完成」直到 `--print-timeout` 整個吃完，輸出檔只有一句話、零檔案改動（2026-09-18 F7b 第一回合，35 分鐘全浪費）。
+
+啟動後立刻掛一個 `Monitor`（或等價的背景 loop），每 4～5 分鐘印一行：
+
+```bash
+git status --short --untracked-files=all -- apps/server | wc -l   # 改動檔數
+git status --short --untracked-files=all -- apps/server | awk '{print $2}' | xargs -r ls -t | head -1   # 最新被改的檔
+tasklist | grep -ci python.exe                                     # 有沒有測試在跑
+```
+
+輸出檔（`<步驟>.json`）非空即結束，loop 退出。判斷規則：
+
+| 觀察 | 判定 | 動作 |
+|---|---|---|
+| 檔數在增加、或最新檔在變 | 正常 | 不打擾 |
+| 前 5 分鐘 0 檔改動 | 正常（讀檔階段） | 不打擾 |
+| 連續 2 次（≈8～10 分鐘）檔數不變、最新檔 mtime 不變 | 卡住（多半在等自己丟到背景的測試） | 殺 agy 程序，讀輸出檔與已寫的檔，小則自己收尾、大則開新對話重送 |
+| python 程序常駐 + 檔案不變 | 同上 | 同上 |
+| 輸出檔開頭 `print timeout after ... with turn in progress` | 已死 | 同上 |
+
+重送時 prompt 加一句硬規則：「所有指令前景執行並等它回來；不得把測試丟到背景再等；先寫程式、最後只跑一次測試」。F7b 第二回合即以此重送。
+
 **agy 已知缺陷（P4-E E1～E9b 統計，每步都要在 prompt 裡點名禁止）**
 
 | 類型 | 實例 |
@@ -84,7 +108,7 @@ Subphase 關門與合併回 `main` 的 gate 照 `AGENTS.md`「工程實作守則
 | 壞掉的半成品 | E4b `request_death_save` payload 引用未定義 `event_id`；E9a 不存在的 `status === 'preparing'` 分支 |
 | 防禦式寫法 | `getattr` / `Any` / `lru_cache` fallback、try/except 當授權控制流、`"col" in row`、`is None → RuntimeError`、props 全 optional + `if (!x) return` |
 | 測試品質 | E8 在每個 test 內 mutate fixture；E9b 用 `'Attack'` / `'1d6'` 補值偽造 |
-| 執行穩定度 | quota 429（E4b）、print-timeout（E7c）、stream 中斷（E9b）；大 step 常收不了尾 |
+| 執行穩定度 | quota 429（E4b、P4-F F6b）、print-timeout（E7c）、stream 中斷（E9b）、把測試丟背景後空等到 timeout（P4-F F7b）；大 step 常收不了尾。監看與判死見 §3.1 |
 
 淨效益：backend domain 步驟省時最多（指揮者只做小清理）；碰既有契約面或 UI 的步驟，審核修正量接近重寫一半。
 
