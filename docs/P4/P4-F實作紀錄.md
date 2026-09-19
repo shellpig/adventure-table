@@ -222,4 +222,4 @@ branch：`feat/p4f-full-p4-integration-closeout`（自 `main` `6ed11d24` 開出�
 
 - 2026-09-19，指揮者自己做（handbook §6：剩餘量幾行、雙語 copy）。
 - 交付：`api/combat.ts` `CombatEntryView.dodging: boolean`；`SessionCombatStage` initiative 列與 combatant 卡片 header 在 `entry.dodging` 時渲染 `.session-combat__dodging-badge`（`sessionTable.css` 藍色系，與 hostile 紅色 badge 同版型）；`sessionCopy.ts` `combatDodging` zh-TW「閃避中」/ en「Dodging」；六個 vitest fixture 補 `dodging: false`；`SessionCombatStage.test.tsx` 新增一條（Player en 視角有標籤、DM zh-TW 視角有標籤、無 dodging 的 baseline 沒有）。
-- 測試：vitest 86 files / **483 passed**、`npm run build` 綠。E2E 見下一段。
+- 測試：vitest 86 files / **483 passed**、`npm run build` 綠。E2E（`npm run test:e2e:docker -- e2e/p4f-full-combat-journey.spec.ts e2e/p4e-quick-combat.spec.ts`，`server-e2e` 重建後 `adventure_table_e2e` 落到 `0030`）：journey **passed**（3.4m），`p4e-quick-combat` 排在它之後跑到 180s test timeout（頁面停在 Session 頁）；單獨重跑 **1 passed（7.7s）**。與 F9a CI 上同一支 spec 的 180s timeout 是同一症狀——`p4f-full-combat-journey` 內的 `restartE2EServer()` 之後緊接的 spec 偶發卡住，非本步改動；記為已知 flake，關門全套 E2E 若再現則單獨重跑該 spec。
