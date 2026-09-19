@@ -4,6 +4,8 @@
 
 本檔是流程與踩坑紀錄，不是 Phase 契約。Phase 要做什麼看 `docs/Px/` 三份文件；本檔只講「怎麼讓別人做、怎麼確認做對」。
 
+按角色／工作讀取：指揮者讀 §1、§2、§5、§7，再讀所選 worker 的 §3 或 §4；選 worker 時才讀 §6。只建立實作紀錄時讀 §2.4。Windows 指令與外部 CLI 另見 [local-tools.md](local-tools.md) 對應段落，不必每次整份重讀。
+
 首次成型：2026-09-17，P4-E（E1～E9b 由 agy、E10a 起由 ChatGPT）。
 
 ---
@@ -30,10 +32,10 @@
 
 ### 2.2 prompt 骨架
 
-從 `C:\_work\AI_Work\Tools\agy-runs\TEMPLATE.prompt.txt` 複製（本機路徑，見 `AGENTS.md`「本機 Windows 環境專用」），固定段落：
+從 `C:\_work\AI_Work\Tools\agy-runs\TEMPLATE.prompt.txt` 複製（本機路徑，見 [local-tools.md](local-tools.md)「外部 Reviewer / Worker CLI」），固定段落：
 
 1. **身分與狀態**：step 名、branch、HEAD hash、已完成的 step。
-2. **MANDATORY READING**：`AGENTS.md` 要點 → 該 Subphase `實作紀錄.md` → 三份 Phase 文件對應段 → **要動的每個程式檔（列檔名 + 它是做什麼的 / 現在缺什麼）**。server contract 一律把 route、input / view model 的欄位寫出來，不要只寫檔名。
+2. **MANDATORY READING**：確認完整且最新的 `AGENTS.md`（已載入則不重讀）→ 精簡 `PROJECT_BRIEF.md` → 該 Subphase 接手摘要／步驟板與自己的 step 檔案 → 三份 Phase 文件對應段及必要共用前言 → **要動的每個程式檔與相關 API 定義（列檔名 + 用途 / 現在缺什麼）**。依賴其他 step 才額外列該步，不要求整份讀實作紀錄或 ROADMAP_HISTORY。server contract 把 route、input / view model 欄位與來源段落寫進 prompt；摘要不取代正式契約，修改前仍須讀該程式檔最新 HEAD。續做同一步時，不重讀已取得且未變更的背景文件。
 3. **SCOPE**：A/B/C… 條列，含測試案例清單，**必列「不該看到 / 不該操作」的 actor**（Player 看不到 DM 控制、非本場 participant 被拒且零副作用）。
 4. **Do not touch**：明列不可碰的檔案 / 區域。
 5. **CODE QUALITY**：不可省。點名要共用的既有 helper；禁 `getattr` / `Any` / 吞錯 try-except / optional-everything props + 空值 guard / 假資料補值 / `"?"` 佔位；「貼超過 ~20 行就抽 helper」。
@@ -52,7 +54,7 @@ git pull --ff-only（ChatGPT）或 git diff（agy 直接改本機）
 → npm test -- --run、npm run build（cwd apps/web，只要動到 apps/web）
 → 讀 diff（見 §5 checklist）
 → 修小錯（幾行、單一目的）
-→ 更新 <Subphase>實作紀錄.md 的步驟表 + 步驟紀錄
+→ 更新 <Subphase>實作紀錄.md 的接手摘要／步驟表 + 該 step 詳細紀錄（§2.4）
 → commit + push
 ```
 
@@ -60,13 +62,22 @@ Subphase 關門與合併回 `main` 的 gate 照 `AGENTS.md`「工程實作守則
 
 ### 2.4 實作紀錄格式
 
-每個 step 一段 `### <step> — <標題>`，固定寫：起始（日期、worker、回合數與時長）、交付（具體到函式 / route / 元件 / copy key 數）、**指揮者審核修正**（worker 犯了什麼、改成什麼）、測試（指令與數字）、留給下一步。這段是下一個指揮者接手時唯一需要讀的東西，寫具體。
+本節是實作紀錄格式的唯一來源，**只適用之後新建的紀錄；P4-F 等既有紀錄不回溯拆分**。它是工作紀錄，不取代三份 Phase 契約。由指揮者／紀錄維護者更新，worker 的文件修改權仍依任務授權。
+
+`docs/<Phase>/<Subphase>實作紀錄.md` 只放：
+
+- **接手摘要**（頂部，≤ **3,000 UTF-8 bytes**）：更新日期、目標與邊界、branch、最近已驗證 commit、下一步、阻礙／未審 worker commit、必要跨步依賴與正式契約入口。覆寫目前摘要，不追加日誌；HEAD 變更時核對 diff 與證據適用範圍，不直接宣稱新 commit 已驗證，也不重跑仍有效的檢查。
+- **步驟進度**：唯一 step 狀態來源。每步一列，只列 step id、短標題、狀態、依賴與詳細紀錄連結；長篇 scope、API 清單、測試數字不放表格。狀態須分清待做／進行中／待驗證／完成。
+
+每步另存 `docs/<Phase>/<Subphase>_steps/<step>.md`。派工前先寫該步 scope、對應契約標題、必要輸入／前置依賴與驗收方式；結束後補齊：起始（日期、worker、回合數與時長）、交付（函式／route／元件）、**指揮者審核修正**、測試（指令、結果、驗證 commit）、未解問題與下一步。詳細檔不另維護第二份 step 狀態；修正回合沿用同一步檔案，子步連結從步驟板可定位。
+
+Worker／新指揮者先讀接手摘要與步驟板，再讀自己的 step；只有依賴或待審項目才讀其他步。三份契約的相關段落、必要共用前言與最新程式碼仍須核對。接手舊格式時按標題讀步驟板及相關紀錄，不要求整份讀，也不為符合新格式回頭搬檔。
 
 ---
 
 ## 3. agy（Antigravity CLI）流程
 
-啟動指令、`--add-dir`、`-p` 單行限制、背景執行、`--conversation` 接續、model 名稱：全部見 `AGENTS.md`「Antigravity CLI」，本檔不重抄。
+啟動指令、`--add-dir`、`-p` 單行限制、背景執行、`--conversation` 接續、model 名稱：全部見 [local-tools.md](local-tools.md)「Antigravity CLI」，本檔不重抄。
 
 指揮者要做的：
 
@@ -205,7 +216,7 @@ if (btn && !btn.disabled) btn.click();
 
 ## 7. 接手流程（新指揮者 session）
 
-1. 讀 `AGENTS.md` → `PROJECT_BRIEF.md` → 本檔 → 當前 Subphase 的 `實作紀錄.md`（步驟表 + 最後一段紀錄）。
+1. 確認最新 `AGENTS.md`（已完整載入則不重讀）→ 精簡 `PROJECT_BRIEF.md` → 本檔共通段落與所選 worker 段落 → 當前 Subphase 接手摘要／步驟板 → 本步及必要前置／待審紀錄。舊格式按 §2.4 定位，不整份讀；ROADMAP_HISTORY 不列入固定必讀。
 2. `git fetch` + `git log origin/<branch> --oneline -5`，確認 remote 與本機一致；有未審的 worker commit 先走 §2.3 gate。
 3. 看 `C:\_work\AI_Work\Tools\agy-runs\` 最新的 prompt 檔，知道上一步送了什麼。
 4. ChatGPT 對話 URL 與帳號在指揮者 memory（`chatgpt-worker-workflow`）；agy conversation id 遺失不影響，開新對話讀實作紀錄即可。

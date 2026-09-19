@@ -7,23 +7,25 @@
 ![TypeScript](https://img.shields.io/badge/TYPESCRIPT-5.9-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/VITE-8.2-646CFF?logo=vite&logoColor=white)
 ![Ruleset](https://img.shields.io/badge/RULESET-D%26D%205E%202014-purple)
-![Status](https://img.shields.io/badge/STATUS-ROOM%20FOUNDATION-orange)
 
 Adventure Table 是一個**輕量、桌上跑團優先的 D&D 5e 2014 Web VTT**。真人 DM 像實體跑團一樣主要靠口頭敘事，網站只管需要共享、同步、計算、保存、權限與 AI 接入的東西。外部 AI 未來可透過 MCP / Site Tools 正式進桌擔任 DM 或 Player，與真人共用同一套 Game State、規則與權限。
 
 朋友間私人使用，非商品化平台。介面為 `zh-TW` / `en` 雙語。
 
-**目前進度以 [`PROJECT_BRIEF.md`](PROJECT_BRIEF.md) 為單一事實來源**——本檔不複述 Phase 狀態。概略地說：角色端（Character Workshop / Builder / Sheet / Level Up / Version History）可用，Web 已建立 Room foundation；Campaign / Seat / Session / Combat 尚未實作。
+**目前進度以 [`PROJECT_BRIEF.md`](PROJECT_BRIEF.md) 為單一事實來源**——本檔不複述 Phase 狀態。
 
 文件入口：
 
 | 檔案 | 內容 |
 |---|---|
-| [`PROJECT_BRIEF.md`](PROJECT_BRIEF.md) | 當前 Phase、Roadmap、Subphase 進度、文件索引 |
+| [`PROJECT_BRIEF.md`](PROJECT_BRIEF.md) | 精簡當前狀態、當前 Subphase、Roadmap、下一步與文件索引 |
+| [`docs/ROADMAP_HISTORY.md`](docs/ROADMAP_HISTORY.md) | 已關門 Subphase 進度與關門摘要，按需查閱 |
 | [`規格企劃.md`](規格企劃.md) | 產品與玩法的單一事實來源 |
 | [`AGENTS.md`](AGENTS.md) | 開發與 AI agent 的工作規則 |
-| [`已知問題.md`](已知問題.md) | 已確認但決定暫不處理的問題 |
-| `docs/P0/`、`docs/P1/`、`docs/P2/`、`docs/M01/`、`docs/M02/`、`docs/M03/` | 各 Phase 的實作規格、開發設計方針、測試指南與 closeout |
+| [`已知問題.md`](已知問題.md) | 未解問題、跨 Phase 限制與驗收缺口索引 |
+| [`docs/others/local-tools.md`](docs/others/local-tools.md) | 本機 Python／E2E／發版例外與外部 reviewer／worker 指令 |
+| [`docs/others/conductor-handbook.md`](docs/others/conductor-handbook.md) | 派工與接手流程；§2.4 定義新實作紀錄格式 |
+| `docs/Px/`、`docs/Mxx/`、`docs/Uxx/` | P／M 三份正式文件與 closeout；U 使用單一 Subphase 文件，入口見簡報 |
 
 ## 快速啟動
 

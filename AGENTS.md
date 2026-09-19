@@ -12,8 +12,8 @@
 ## New Conversation Opening Check
 
 **Layer 1 — 必讀：**
-1. `AGENTS.md`（本檔）
-2. `PROJECT_BRIEF.md`（當前 Phase、Roadmap、文件索引）
+1. `AGENTS.md`（本檔；最新全文已由工具載入上下文時，不再重複讀取）
+2. `PROJECT_BRIEF.md`（精簡當前狀態、Roadmap、文件索引；≤ 12,000 UTF-8 bytes）
 3. `git log --oneline -10`
 
 **Layer 2 — 按任務讀對應文件／段落：**
@@ -21,6 +21,8 @@
 - `技術棧討論.md` — 只在基礎技術選型／Framework 討論時讀；不要把它當成全專案 architecture spec
 - `docs/Px/` / `docs/Mxx/` — 某個產品／維護 Phase 開工後，該 Phase 的正式實作規格、開發設計與測試文件
 - `docs/Uxx/` — Test / Development Efficiency 優化軌；每個 U Subphase 使用單一文件承載實作、設計、測試與 closeout 證據
+- `docs/ROADMAP_HISTORY.md` — 已關門 Subphase 進度與證據入口；只在查歷史時按 Phase／Subphase 讀，不列為開場或 worker 固定必讀
+- `已知問題.md` — 未解問題、跨 Phase 限制與驗收缺口；依任務查索引及相關條目
 
 > 不要為了「先想完整」而提前設計後續 Phase。資料模型、API、事件、權限實作、Snapshot、Combat、Tactical 等細節，原則上等對應 Phase 再決定。
 
@@ -33,7 +35,9 @@ Report to user: current progress, and any issues with their scope of impact.
 | 診斷 bug、分析錯誤、找根因、效能回歸 | `diagnose` |
 | 使用者要求深入訪談／壓力測試設計，或存在無法由既有規格解決的核心產品分歧 | `grill-me` |
 | 前端／本機 web app 驗證、UI 行為除錯、瀏覽器截圖或 console log | `webapp-testing` |
-| 被指定為**指揮者**：叫 agy / ChatGPT 實作、自己驗證與收尾 | `docs/others/conductor-handbook.md`（整份讀；含 prompt 骨架、驗證 gate、兩種 worker 的踩坑表） |
+| 本機 Python／測試／服務啟動／Standalone 打包，或呼叫外部 reviewer／worker | `docs/others/local-tools.md` 的對應段落；含 venv／cwd、Windows E2E、發版例外與 CLI 指令 |
+| 被指定為**指揮者**：叫 agy / ChatGPT 實作、自己驗證與收尾 | `docs/others/conductor-handbook.md` §1、§2、§5、§7，再讀所選 worker 的 §3 或 §4；選 worker 才讀 §6 |
+| 建立新 Subphase 實作紀錄或接手 step | `docs/others/conductor-handbook.md` §2.4；摘要＋步驟板＋該步檔案，既有紀錄不回溯拆分 |
 
 判斷任務類型是開工的第一步，不是可選項。
 
@@ -41,7 +45,9 @@ Report to user: current progress, and any issues with their scope of impact.
 
 ## 文件查閱規則
 
-`AGENTS.md` 與 `PROJECT_BRIEF.md` 開場整份讀。**`規格企劃.md` 一律標題 grep 定位、只讀該段**（讀到下一個同級標題為止），整份讀會被工具截斷。
+開場須取得完整且最新的 `AGENTS.md` 與 `PROJECT_BRIEF.md`；已完整載入上下文的 AGENTS 不再全文重讀。歷史進度、實作紀錄詳細步驟與本機工具不自動加入必讀清單。**`規格企劃.md` 一律標題 grep 定位、只讀該段**（讀到下一個同級標題為止），整份讀會被工具截斷。
+
+Worker 同樣只讀精簡簡報、接手摘要／步驟板、自己的 step、相關正式契約與必要共用前言，不整份讀歷史實作紀錄；依賴其他 step 時才讀該步。這不免除核對 API 定義與修改前讀取最新程式檔的義務。新紀錄格式只住指揮者手冊 §2.4。
 
 **不要依賴行號**——行號隨編輯漂移，一律以標題或關鍵字定位。
 
@@ -88,7 +94,10 @@ U 類例外採單檔格式，直接讀對應 `docs/Uxx/Uxx-<letter>.md`。
 | 住哪 | 放什麼 |
 |---|---|
 | **`規格企劃.md`** | 產品行為與為什麼：跑團方式、權限、規則選擇、UI 行為、明確不做 |
-| **`PROJECT_BRIEF.md`** | 當前 Phase、Roadmap、Subphase 進度、下一步、文件索引 |
+| **`PROJECT_BRIEF.md`** | 精簡當前狀態、當前 Phase 逐項進度、未來 Roadmap、下一步、跨 Phase 約束摘要、索引；≤ 12,000 UTF-8 bytes |
+| **`docs/ROADMAP_HISTORY.md`** | 已關門 Subphase 進度表與關門摘要（包含仍 open 的 M／U track 已完成項）；不承擔當前待辦 |
+| **`已知問題.md`** | 未解問題、跨 Phase 已知限制與驗收缺口索引；不因來源 Phase 關門而歸檔 |
+| **`<Subphase>實作紀錄.md` / `<Subphase>_steps/`** | 接手摘要與唯一 step 進度板／各步計畫及詳細紀錄；格式見指揮者手冊 §2.4，不取代正式契約 |
 | **`技術棧討論.md`** | 暫時性的基礎技術選型討論：語言、Framework、DB、基本測試／部署工具 |
 | **`docs/Px/實作規格.md` / `docs/Mxx/實作規格.md`** | 該 Phase / Subphase 完成後什麼必須為真、驗收意圖；不寫具體 DB/API |
 | **`docs/Px/開發設計方針.md` / `docs/Mxx/開發設計方針.md`** | 該 Phase / Subphase 的具體實作契約：資料模型、模組、API、資料流、接線、必要技術決策 |
@@ -109,7 +118,7 @@ U 類例外採單檔格式，直接讀對應 `docs/Uxx/Uxx-<letter>.md`。
 4. **U Phase 定位**：`U01`、`U02`… 用於 Test / Development Efficiency Optimization，例如測試速度、開發迴圈成本、CI 效率與相關可靠性。U 類不改寫產品 `P0 → P1 → ...` Roadmap，也不是內容 Maintenance；可以與 P / M 工作並行，整體長期保持 open、不設 Full Closeout。每個具體項目仍使用 `U<nn>-A`、`U<nn>-B`…，各自實作、驗證、commit 與 closeout。**U 類每個 Subphase 使用單一文件** `docs/Uxx/Uxx-<letter>.md`，同檔承載實作規格、開發設計、測試與證據，不套 P / M 的三份文件制；優化不得犧牲 correctness、資料隔離或既有產品行為。
 5. **Subphase 只拆當前 Phase。唯一例外：使用者已明確決定要插入、且插入點已確定的 M Phase，可以在插入點到達前先完成拆分與三份文件**（M02 即為此例，插入點固定在 M01-C closeout 後）。此例外只適用已拍板的插入，不適用「將來可能會做」的 Phase。
 6. 同一 Phase 的 `實作規格.md`、`開發設計方針.md`、`測試指南.md` 必須使用完全一致的 Subphase 名稱與順序，讓實作者可用 Subphase id 精準取得三份契約；U 類依第 4 條使用單檔格式。
-7. `PROJECT_BRIEF.md` 在當前 Phase 已拆分後，必須一列一個 Subphase 顯示進度，不可再用「P0（含 A～F）」或「M01（含 A～K）」合併成一列；U 類同樣一列一個 Subphase。
+7. `PROJECT_BRIEF.md` 在當前 Phase 已拆分後，必須一列一個 Subphase 顯示進度，不可合併成一列；U 類同樣適用。產品 Phase 全部關門後，把逐項表移到 `docs/ROADMAP_HISTORY.md`；長期 open 的 M／U track 逐項移出已關門 Subphase，只保留當前已拍板工作與下一個未使用字母。移出後不在兩檔維護同一份進度表；未解問題仍留在 `已知問題.md`，有效約束仍在簡報保留摘要與正式契約入口。
 8. **長期 M Phase 的跨 Phase 相容性隨 Roadmap 前進而擴大。** 當後續 P Phase 已存在時，新 M Subphase若修改共享 domain / persistence / schema / DTO，除了本 M Subphase自己的 regression，還要 review並驗證所有直接受影響、已完成的後續 P Phase；不能只用「這是舊 M Phase」為理由忽略新 consumer。
 
 ## 修改授權與驗證規則
@@ -172,84 +181,3 @@ U 類例外採單檔格式，直接讀對應 `docs/Uxx/Uxx-<letter>.md`。
 - 若驗證或推送受阻，明確回報原因與未完成步驟，不宣稱任務完成。
 - 純詢問、分析與驗證仍不構成修改授權，依「修改授權與驗證規則」處理。
 - 此授權不包含合併分支、強制推送或部署。
-
----
-
-## 本機 Windows 環境專用
-
-> 本段僅適用於使用者本機 Windows 環境（工具都在 `C:\`）。**remote / CI / Linux session 沒有這些路徑與工具，跳過本段。**
-
-專案路徑：`C:\_work\AI_Work\Projects\adventure-table`
-
-### Python 執行環境規則
-
-一律使用專案根目錄的 `.\.venv\Scripts\python.exe`，讓 agent 與使用者看到一致結果。
-
-Backend server app 的指令（`pytest`、`alembic`、`uvicorn`）cwd 一律為 `apps/server`，直譯器一律 `..\..\.venv\Scripts\python.exe`。兩行分開下，**不要用 `cd ... && ...` 串成單行**——本機是 Windows PowerShell 5.1，沒有 `&&`：
-
-```
-cd apps/server
-..\..\.venv\Scripts\python.exe -m pytest tests/test_<subphase>_*.py
-```
-
-`tests/test_m03b_migration.py` 等測試用裸相對路徑讀 `alembic.ini` 與 `alembic/versions/`，cwd 不在 `apps/server` 會失敗；pytest 的 rootdir 解析到 `apps/server/pyproject.toml` 不代表 cwd 也跟著換。
-
-例外：`scripts\` 底下的發版與 smoke 工具從 repo root 執行，並使用工程實作守則第 8 條指定的 `.standalone-venv` / `STANDALONE_PYTHON`，不是這裡的 `.venv`。
-
-### E2E 測試執行規則
-
-**Windows 上不得讓 Playwright 託管 vite。** dev server 會在跑測試途中停止接受連線，造成數十個 `net::ERR_CONNECTION_REFUSED`（KI-ENV-001，上游 vite 未修）。整套 E2E 一律走容器裡的 Linux dev server：
-
-```
-cd apps/web && npm run test:e2e:docker
-```
-
-該 script 內的 `--build` 不可省——`web` service 沒有掛 bind mount，略過重建會靜默測到上一版 frontend。
-
-`playwright.config.ts` 會直接擋下 Windows 託管路徑；要重現該 dev server問題才設 `ALLOW_WINDOWS_VITE_E2E=1`。細節見 `已知問題.md` 的 KI-ENV-001。
-
-### 本機工具
-
-外部工具不放進本專案 repo。
-
-| 工具 | 路徑 | 用途 |
-|---|---|---|
-| Codex DeepSeek home | `C:\_work\AI_Work\Tools\codex-deepseek-home` | DS reviewer 環境 |
-| Antigravity CLI | `C:\Users\User\AppData\Local\agy\bin\agy.exe` | agy reviewer |
-
-### 外部 Reviewer / Worker CLI
-
-把 agy 或 ChatGPT 當 **worker**（實作而非 review）時，流程、step 粒度、檢查節奏與踩坑一律看 `docs/others/conductor-handbook.md`；本段只保留啟動指令。
-
-三個 reviewer 共通：**預設 read-only**——不寫檔、不刪檔、不 stage、不 commit、不 push，不讀 `.env` 與 `C:\_work\AI_Work\Tools\`；非互動呼叫必須 `< NUL` 關閉 stdin，否則會停在等待輸入永久卡死；輸出重導到檔案保留；結果只當第二意見，回報前先自己審一遍，並以 `git status` / `git diff` 確認實際改動。
-
-| 觸發語 | 走哪個 |
-|---|---|
-| 「要 ds4 / ds4 pro / ds4 flash 做 XXX」 | DeepSeek via Codex CLI |
-| 「要 agy 做 XXX」「用 agy 審 / 驗證 XXX」 | Antigravity CLI |
-| 「要 codex 做 XXX」（不帶 `ds4`） | Codex CLI (OpenAI) |
-
-**DeepSeek via Codex CLI**：透過本機 Moon Bridge DeepSeek 設定，用 `CODEX_HOME=C:\_work\AI_Work\Tools\codex-deepseek-home`。Model：`ds4 pro` → `deepseek-v4-pro`；`ds4 flash` → `deepseek-v4-flash`；只說 `ds4` 用 `deepseek-v4-pro`。
-
-**Antigravity CLI**：binary 在 user PATH，但部分 shell 的 PATH 快照可能沒有，直接用完整路徑最穩。agy 有兩種用法：**review**（沿用上方 read-only 共通規則）與 **worker**（可寫程式與測試，但仍不得 stage / commit / push；commit 權在 Claude）。
-
-```powershell
-cmd /c "C:\Users\User\AppData\Local\agy\bin\agy.exe -p `\"<任務>`\" --model `\"<模型>`\" --add-dir `\"C:\_work\AI_Work\Projects\adventure-table`\" --dangerously-skip-permissions --output-format json --print-timeout 20m < NUL > C:\_work\AI_Work\Tools\agy-runs\<步驟>.json 2>&1"
-```
-
-- `--add-dir` 讓 agy 讀到專案，`--dangerously-skip-permissions` 單次生效不動持久設定，兩者都不可省。
-- **`-p` 只能放單行短句，任務本文寫進檔案讓 agy 自己讀**（例：`-p "Your full task is in C:\_work\AI_Work\Tools\agy-runs\<步驟>.prompt.txt. Read it first, then follow every instruction in it."`，並多加一個 `--add-dir C:\_work\AI_Work\Tools\agy-runs`）。多行 prompt 經 `cmd /c` 會在第一個換行截斷，後面的 flag 與重導全部遺失，agy 會以無權限狀態靜默結束。
-- **一律 `run_in_background` 啟動**，不同步等；結束時 Claude 會被喚醒，直接讀輸出檔審結果。輸出落在 repo 外的 `C:\_work\AI_Work\Tools\agy-runs\`，session 中斷也找得回。不再使用寫死的 `--print-timeout 540s`。
-- `--output-format json` 回傳 `conversation_id`／`status`／`duration_seconds`／`usage`。**同一步驟的修改回合用 `--conversation <id>` 接續**（已驗證可在 `--print` 模式保留脈絡；每輪整段重送、無 cache，累積數輪即換新對話）。**換下一步驟一律開新對話**。
-- **prompt 骨架**：一律從 `C:\_work\AI_Work\Tools\agy-runs\TEMPLATE.prompt.txt` 複製再填：必讀清單（AGENTS.md → 該 Subphase `實作紀錄.md` → 三份 Phase 文件對應段 → 要動的程式檔）→ scope（含「不該看到／不該操作」的 actor 測試）→ code quality 條款 → 測試指令 → hard rules → final report。**code quality 條款不可省**：agy 未被明講時會用 `getattr` / `Any` / 吞錯 try-except / `lru_cache` fallback global、加沒人呼叫的參數或重複 route、整段複製既有函式；每個要共用的既有 helper 都要在 prompt 點名。
-- **拆步原則**：每個 agy 任務要在 15～20 分鐘內收斂到可驗證狀態；prompt 自足，只指向該步要讀的規格段落，明列交付物、focused test 指令與「不得 commit」。Subphase 進度寫在該 Phase 的 `<Subphase>實作紀錄.md`（例：`docs/P4/P4-D實作紀錄.md`），新對話讀它接手；agy 對話 ID 遺失不影響交接。
-- 每步結束後 Claude 以 `git diff` 審改動、跑該步 focused test，通過才 commit；失敗把錯誤餵回同一對話修。**審完若剩餘修改很小（幾行、單一檔案、不需重新理解脈絡），Claude 直接自己改完再 commit，不再開 agy 回合。**
-- Model：`--model` 用 `agy models` 列出的完整顯示字串，未指定時預設 `"Gemini 3.8 Flash (High)"`。
-
-**Codex CLI (OpenAI)**：用預設 `CODEX_HOME`。
-
-```powershell
-cmd /c "codex exec `\"<任務>`\" --sandbox read-only -C `\"C:\_work\AI_Work\Projects\adventure-table`\" --ephemeral -o `\"<結果檔>`\" < NUL > `\"<過程log檔>`\" 2>&1"
-```
-
-`--sandbox read-only` 是引擎層強制唯讀，寫入任務才改 `--sandbox workspace-write`；`-o <結果檔>` 只寫最終回覆，與 stdout 的完整過程 log 分離。Model：預設依本機 Codex 設定，要換用 `-m <model>`，專注程度用 `-c model_reasoning_effort="low/medium/high"` 覆蓋。
