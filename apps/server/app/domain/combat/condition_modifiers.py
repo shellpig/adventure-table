@@ -86,6 +86,28 @@ def save_decision_payload(decision: SaveModifierDecision) -> dict[str, Any]:
     }
 
 
+def _dodge_benefit_active(
+    parsed_target_conditions: Iterable[Condition],
+    *,
+    dodging: bool,
+) -> bool:
+    """Evaluate if the 2014 SRD 5.1 Dodge benefit is active.
+
+    Under SRD 5.1: until the start of your next turn, any attack roll made against
+    you has disadvantage if you can see the attacker, and you make Dexterity saving
+    throws with advantage. You lose the benefit if you are incapacitated or if your
+    speed drops to 0.
+    Note: "if you can see the attacker" is not modelled geometrically and is DM-adjudicated.
+    """
+    if not dodging:
+        return False
+    for cond in parsed_target_conditions:
+        sem = CONDITION_SEMANTICS[cond]
+        if sem.blocks_actions or sem.speed_zero:
+            return False
+    return True
+
+
 def attack_modifiers(
     *,
     chosen: RollMode,
@@ -93,8 +115,9 @@ def attack_modifiers(
     attacker_conditions: Iterable[str],
     target_conditions: Iterable[str],
     attacker_exhaustion: int = 0,
+    target_dodging: bool = False,
 ) -> AttackModifierDecision:
-    """Evaluate conditions and exhaustion for an attack roll."""
+    """Evaluate conditions, exhaustion, and dodging for an attack roll."""
     parsed_attacker = sorted(
         conditions_from_refs(attacker_conditions, ignore_unknown=True),
         key=lambda c: c.value,
@@ -135,6 +158,9 @@ def attack_modifiers(
         if sem.adjacent_hit_is_critical and attack_kind is AttackKind.MELEE:
             critical_on_hit = True
 
+    if _dodge_benefit_active(parsed_target, dodging=target_dodging):
+        dis_sources.append("target:dodging")
+
     return AttackModifierDecision(
         mode=_combine(adv_sources, dis_sources),
         critical_on_hit=critical_on_hit,
@@ -151,8 +177,9 @@ def save_modifiers(
     ability_ref: str,
     target_conditions: Iterable[str],
     target_exhaustion: int = 0,
+    target_dodging: bool = False,
 ) -> SaveModifierDecision:
-    """Evaluate conditions and exhaustion for a saving throw."""
+    """Evaluate conditions, exhaustion, and dodging for a saving throw."""
     ability = _normalize_ability(ability_ref)
     parsed_target = sorted(
         conditions_from_refs(target_conditions, ignore_unknown=True),
@@ -175,6 +202,9 @@ def save_modifiers(
 
     if exhaustion.saves_disadvantage:
         dis_sources.append(f"target:exhaustion:{target_exhaustion}")
+
+    if ability == "dexterity" and _dodge_benefit_active(parsed_target, dodging=target_dodging):
+        adv_sources.append("target:dodging")
 
     return SaveModifierDecision(
         mode=RollModifierMode(_combine(adv_sources, dis_sources).value),

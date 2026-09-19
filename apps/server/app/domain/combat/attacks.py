@@ -255,6 +255,7 @@ class CombatAttackService:
             attacker_conditions=attacker_ctx.conditions,
             target_conditions=target_ctx.conditions,
             attacker_exhaustion=attacker_ctx.exhaustion_level,
+            target_dodging=target_ctx.dodging,
         )
 
     def available_attacks(

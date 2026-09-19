@@ -223,6 +223,7 @@ class CombatCoreRollService:
             ability_ref=ability,
             target_conditions=ctx.conditions,
             target_exhaustion=ctx.exhaustion_level,
+            target_dodging=ctx.dodging,
         )
         decision_payload = save_decision_payload(decision)
         if entry.subject_kind == "character":

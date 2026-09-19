@@ -15,6 +15,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     Uuid,
+    false,
     func,
     text,
     true,
@@ -155,6 +156,7 @@ combat_entries = Table(
     Column("death_save_dead", Boolean(), nullable=False, server_default="0"),
     Column("ready_state", JSON(), nullable=False),
     Column("pending_reaction_state", JSON(), nullable=False),
+    Column("dodging", Boolean(), nullable=False, server_default=false()),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     CheckConstraint(

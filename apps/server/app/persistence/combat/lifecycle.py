@@ -95,6 +95,7 @@ class StoredCombatEntry:
     pending_reaction_state: dict[str, Any]
     created_at: datetime
     updated_at: datetime
+    dodging: bool = False
     death_save_successes: int = 0
     death_save_failures: int = 0
     death_save_stable: bool = False
@@ -191,6 +192,7 @@ class CombatRepository:
             ready_state=dict(row["ready_state"] or {}),
             pending_reaction_state=dict(row["pending_reaction_state"] or {}),
             created_at=row["created_at"], updated_at=row["updated_at"],
+            dodging=bool(row["dodging"]),
             death_save_successes=int(row["death_save_successes"]),
             death_save_failures=int(row["death_save_failures"]),
             death_save_stable=bool(row["death_save_stable"]),
@@ -287,7 +289,7 @@ class CombatRepository:
             surprised=entry.surprised, action_available=True, bonus_action_available=True,
             reaction_available=not entry.surprised,
             attacks_allowed=max(1, int(entry.attacks_allowed)), attacks_used=0,
-            ready_state={}, pending_reaction_state={},
+            ready_state={}, pending_reaction_state={}, dodging=False,
         ))
 
     def create_quick_combat(self, *, binding: StoredTableActorBinding, entries: tuple[NewCombatEntry, ...], idempotency_key: str | None):
@@ -409,7 +411,7 @@ class CombatRepository:
                 connection.execute(update(combat_entries).where(combat_entries.c.id == target_id).values(
                     turn_order=index, action_available=True, bonus_action_available=True,
                     reaction_available=not bool(row["surprised"]), attacks_used=0,
-                    ready_state={}, pending_reaction_state={}, updated_at=datetime.now().astimezone(),
+                    ready_state={}, pending_reaction_state={}, dodging=False, updated_at=datetime.now().astimezone(),
                 ))
             first = ordered_entry_ids[0]
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
@@ -473,7 +475,7 @@ class CombatRepository:
             connection.execute(update(combat_entries).where(combat_entries.c.id == next_entry_id).values(
                 action_available=True, bonus_action_available=True,
                 reaction_available=not next_surprised,
-                attacks_used=0, ready_state={}, pending_reaction_state={}, updated_at=datetime.now().astimezone(),
+                attacks_used=0, ready_state={}, pending_reaction_state={}, dodging=False, updated_at=datetime.now().astimezone(),
             ))
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
                 round_number=round_number, current_turn_entry_id=next_entry_id,
@@ -551,6 +553,8 @@ class CombatRepository:
                 raise CombatStateConflictPersistenceError("unsupported action economy cost")
             if action_kind == "ready":
                 values["ready_state"] = dict(payload)
+            elif action_kind == "dodge":
+                values["dodging"] = True
             connection.execute(update(combat_entries).where(combat_entries.c.id == entry_id).values(**values))
             connection.execute(insert(combat_actions).values(
                 id=action_id, combat_id=combat_id, entry_id=entry_id, session_id=binding.session_id,
@@ -649,6 +653,7 @@ class CombatRepository:
                 status=status,
                 ready_state={},
                 pending_reaction_state={},
+                dodging=False,
                 updated_at=datetime.now().astimezone(),
             ))
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
@@ -719,7 +724,7 @@ class CombatRepository:
             connection.execute(update(combat_entries).where(combat_entries.c.combat_id == combat_id).values(
                 initiative_roll_request_id=None, initiative_roll_result_id=None, initiative_total=None,
                 turn_order=None, surprised=False, action_available=True, bonus_action_available=True,
-                reaction_available=True, attacks_used=0, ready_state={}, pending_reaction_state={}, updated_at=now,
+                reaction_available=True, attacks_used=0, ready_state={}, pending_reaction_state={}, dodging=False, updated_at=now,
             ))
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
                 ended_session_id=binding.session_id, status="ended", round_number=None,

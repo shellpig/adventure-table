@@ -18,7 +18,7 @@ pytestmark = pytest.mark.skipif(
 )
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 P4F_PARENT = "0026_p4e_monster_concentration"
-P4F_HEAD = "0029_p4f_roll_request_auto_fail"
+P4F_HEAD = "0030_p4f_entry_dodging"
 
 
 def _config() -> Config:
@@ -189,7 +189,7 @@ def test_p4f_real_postgres_roll_request_auto_fail_upgrade_and_downgrade() -> Non
     finally:
         engine.dispose()
 
-    command.upgrade(_config(), "heads")
+    command.upgrade(_config(), "0029_p4f_roll_request_auto_fail")
     assert "0029_p4f_roll_request_auto_fail" in _revision_set()
 
     engine = create_engine(POSTGRES_URL)
@@ -216,6 +216,51 @@ def test_p4f_real_postgres_roll_request_auto_fail_upgrade_and_downgrade() -> Non
         with pytest.raises(Exception):
             with engine.connect() as connection:
                 connection.execute(text("SELECT auto_fail FROM roll_requests")).all()
+    finally:
+        engine.dispose()
+
+
+def test_p4f_real_postgres_entry_dodging_upgrade_and_downgrade() -> None:
+    _reset()
+    command.upgrade(_config(), "0029_p4f_roll_request_auto_fail")
+    assert "0030_p4f_entry_dodging" not in _revision_set()
+
+    assert POSTGRES_URL is not None
+    engine = create_engine(POSTGRES_URL)
+    try:
+        with pytest.raises(Exception):
+            with engine.connect() as connection:
+                connection.execute(text("SELECT dodging FROM combat_entries")).all()
+    finally:
+        engine.dispose()
+
+    command.upgrade(_config(), "heads")
+    assert "0030_p4f_entry_dodging" in _revision_set()
+
+    engine = create_engine(POSTGRES_URL)
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT dodging FROM combat_entries")).all()
+            col = connection.execute(
+                text(
+                    "SELECT column_name, is_nullable, column_default "
+                    "FROM information_schema.columns "
+                    "WHERE table_name = 'combat_entries' AND column_name = 'dodging'"
+                )
+            ).one_or_none()
+            assert col is not None
+            assert col[1] == "NO"
+            assert "false" in str(col[2]).lower()
+    finally:
+        engine.dispose()
+
+    command.downgrade(_config(), "0029_p4f_roll_request_auto_fail")
+    assert "0030_p4f_entry_dodging" not in _revision_set()
+    engine = create_engine(POSTGRES_URL)
+    try:
+        with pytest.raises(Exception):
+            with engine.connect() as connection:
+                connection.execute(text("SELECT dodging FROM combat_entries")).all()
     finally:
         engine.dispose()
 
