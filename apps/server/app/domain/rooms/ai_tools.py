@@ -205,10 +205,9 @@ class AIToolApplicationService:
             actor.session_id,
         )
         runtime = self.event_service.current_cursor(actor)
-        after_seq = max(0, runtime.last_event_seq - 50)
-        recent_events = self.event_service.list_after(
+        recent_events = self.event_service.list_before(
             actor,
-            after_seq=after_seq,
+            before_seq=runtime.last_event_seq + 1,
             limit=50,
         )
         stage = self.stage_service.get_stage(actor)

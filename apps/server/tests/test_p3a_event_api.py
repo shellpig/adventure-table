@@ -67,6 +67,19 @@ class _ApiTableEventService:
             events=[],
         )
 
+    def list_before(self, actor, *, before_seq: int, limit: int):
+        assert actor.session_id == self.session_id
+        assert limit <= 200
+        cursor = max(0, min(before_seq - 1, 12))
+        return TableEventPage(
+            session_id=self.session_id,
+            after_seq=0,
+            cursor=cursor,
+            current_seq=12,
+            has_more=cursor < 12,
+            events=[],
+        )
+
     async def wait_after(self, actor, *, after_seq: int, limit: int, timeout: float):
         assert actor.session_id == self.session_id
         assert timeout >= 0
@@ -132,3 +145,29 @@ def test_event_http_validation_and_scope_errors_do_not_expose_hidden_session(
     response = client.get(f"{prefix}/events")
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "session_not_found"
+
+
+def test_event_history_http_endpoint_validation_and_scope_parity(
+    table_event_api_fixture,
+) -> None:
+    room_id, campaign_id, session_id, service, client = table_event_api_fixture
+    prefix = f"/api/rooms/{room_id}/campaigns/{campaign_id}/sessions/{session_id}"
+
+    assert client.get(f"{prefix}/events/history").status_code == 422
+    assert client.get(f"{prefix}/events/history?before=0").status_code == 422
+    assert client.get(f"{prefix}/events/history?before=-1").status_code == 422
+    assert client.get(f"{prefix}/events/history?before=10&limit=201").status_code == 422
+
+    valid = client.get(f"{prefix}/events/history?before=5&limit=10")
+    assert valid.status_code == 200
+    assert valid.json()["cursor"] == 4
+    assert valid.json()["current_seq"] == 12
+    assert valid.json()["has_more"] is True
+
+    service.resolve_error = TableEventNotFoundError(str(session_id))
+    history_resp = client.get(f"{prefix}/events/history?before=5")
+    events_resp = client.get(f"{prefix}/events")
+    assert history_resp.status_code == 404
+    assert history_resp.json() == events_resp.json()
+    assert history_resp.json()["error"]["code"] == "session_not_found"
+

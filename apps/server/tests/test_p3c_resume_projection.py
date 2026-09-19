@@ -64,13 +64,13 @@ def test_p3c_resume_projects_canonical_roll_and_pending_truth_for_actor() -> Non
             assert resolved_actor == actor
             return TableRuntimeCursor(session_id=session_id, revision=7, last_event_seq=11)
 
-        def list_after(self, resolved_actor, *, after_seq, limit):
+        def list_before(self, resolved_actor, *, before_seq, limit):
             assert resolved_actor == actor
-            assert after_seq == 0
+            assert before_seq == 12
             assert limit == 50
             return TableEventPage(
                 session_id=session_id,
-                after_seq=after_seq,
+                after_seq=0,
                 cursor=11,
                 current_seq=11,
                 has_more=False,

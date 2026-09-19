@@ -544,6 +544,24 @@ class TableEventRepository:
         with self.engine.connect() as connection:
             return self._actor_from_connection(connection, binding) == binding
 
+    def _require_session_scope(
+        self,
+        connection,
+        *,
+        room_id: UUID,
+        campaign_id: UUID,
+        session_id: UUID,
+    ):
+        session_row = self._session_scope_row(
+            connection,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+        )
+        if session_row is None:
+            raise TableEventSessionNotFoundPersistenceError(str(session_id))
+        return session_row
+
     def current_runtime(
         self,
         *,
@@ -552,14 +570,12 @@ class TableEventRepository:
         session_id: UUID,
     ) -> StoredTableRuntime:
         with self.engine.connect() as connection:
-            session_row = self._session_scope_row(
+            self._require_session_scope(
                 connection,
                 room_id=room_id,
                 campaign_id=campaign_id,
                 session_id=session_id,
             )
-            if session_row is None:
-                raise TableEventSessionNotFoundPersistenceError(str(session_id))
             row = connection.execute(
                 select(session_table_runtime).where(
                     session_table_runtime.c.session_id == session_id
@@ -588,14 +604,12 @@ class TableEventRepository:
     ) -> tuple[StoredTableEvent, ...]:
         bounded_limit = max(1, min(int(scan_limit), MAX_EVENT_SCAN_LIMIT))
         with self.engine.connect() as connection:
-            session_row = self._session_scope_row(
+            self._require_session_scope(
                 connection,
                 room_id=room_id,
                 campaign_id=campaign_id,
                 session_id=session_id,
             )
-            if session_row is None:
-                raise TableEventSessionNotFoundPersistenceError(str(session_id))
             rows = connection.execute(
                 select(session_events)
                 .where(
@@ -606,6 +620,34 @@ class TableEventRepository:
                 .limit(bounded_limit)
             ).mappings().all()
         return tuple(self._event(row) for row in rows)
+
+    def list_before(
+        self,
+        *,
+        room_id: UUID,
+        campaign_id: UUID,
+        session_id: UUID,
+        before_seq: int,
+        scan_limit: int,
+    ) -> tuple[StoredTableEvent, ...]:
+        bounded_limit = max(1, min(int(scan_limit), MAX_EVENT_SCAN_LIMIT))
+        with self.engine.connect() as connection:
+            self._require_session_scope(
+                connection,
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+            )
+            rows = connection.execute(
+                select(session_events)
+                .where(
+                    session_events.c.session_id == session_id,
+                    session_events.c.seq < int(before_seq),
+                )
+                .order_by(session_events.c.seq.desc())
+                .limit(bounded_limit)
+            ).mappings().all()
+        return tuple(self._event(row) for row in reversed(rows))
 
     def append(
         self,

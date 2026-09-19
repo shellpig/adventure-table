@@ -203,10 +203,9 @@ class SessionResumeService:
                 context=context,
             )
             runtime = self.table_event_service.current_cursor(actor)
-            after_seq = max(0, runtime.last_event_seq - RECENT_EVENT_WINDOW)
-            recent = self.table_event_service.list_after(
+            recent = self.table_event_service.list_before(
                 actor,
-                after_seq=after_seq,
+                before_seq=runtime.last_event_seq + 1,
                 limit=RECENT_EVENT_WINDOW,
             )
             stage = self.stage_service.get_stage(actor) if self.stage_service is not None else None

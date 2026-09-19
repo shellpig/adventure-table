@@ -11,6 +11,7 @@ from sqlalchemy.pool import StaticPool
 from app.db import metadata
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.table_events import (
+    TableEventActorUnauthorizedError,
     TableEventAppend,
     TableEventNotFoundError,
     TableEventService,
@@ -430,3 +431,166 @@ def test_event_append_contract_rejects_unknown_fields_and_unstable_kind() -> Non
                 "include_dm_only": True,
             }
         )
+
+
+def test_table_event_history_backward_paging_and_visibility() -> None:
+    engine = _engine()
+    try:
+        room_id, campaign_id, session_id, access_ids, seat_ids = _seed_session(engine)
+        repository = TableEventRepository(engine)
+        service = TableEventService(repository)
+        actors = _actors(service, room_id, campaign_id, session_id, access_ids)
+        dm = actors["dm"]
+        player1 = actors["player1"]
+        player2 = actors["player2"]
+
+        # Mix: 3 public, 120 dm_only, 2 public, 1 seat_private for player2, 1 public
+        for n in range(1, 4):
+            repository.append(
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+                kind=f"diagnostic.public.{n}",
+                acting_seat_id=dm.seat_id,
+                subject_seat_id=None,
+                subject_character_id=None,
+                execution_mode="self",
+                visibility="public",
+                recipient_seat_ids=(),
+                payload_version=1,
+                payload={"n": n},
+                idempotency_key=None,
+            )
+        for n in range(4, 124):
+            repository.append(
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+                kind=f"diagnostic.dm.{n}",
+                acting_seat_id=dm.seat_id,
+                subject_seat_id=None,
+                subject_character_id=None,
+                execution_mode="self",
+                visibility="dm_only",
+                recipient_seat_ids=(),
+                payload_version=1,
+                payload={"n": n},
+                idempotency_key=None,
+            )
+        for n in (124, 125):
+            repository.append(
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+                kind=f"diagnostic.public.{n}",
+                acting_seat_id=dm.seat_id,
+                subject_seat_id=None,
+                subject_character_id=None,
+                execution_mode="self",
+                visibility="public",
+                recipient_seat_ids=(),
+                payload_version=1,
+                payload={"n": n},
+                idempotency_key=None,
+            )
+        repository.append(
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            kind="diagnostic.p2_private",
+            acting_seat_id=dm.seat_id,
+            subject_seat_id=None,
+            subject_character_id=None,
+            execution_mode="self",
+            visibility="seat_private",
+            recipient_seat_ids=(seat_ids["player2"],),
+            payload_version=1,
+            payload={"n": 126},
+            idempotency_key=None,
+        )
+        repository.append(
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            kind="diagnostic.public.127",
+            acting_seat_id=dm.seat_id,
+            subject_seat_id=None,
+            subject_character_id=None,
+            execution_mode="self",
+            visibility="public",
+            recipient_seat_ids=(),
+            payload_version=1,
+            payload={"n": 127},
+            idempotency_key=None,
+        )
+
+        head = 127
+        # 1. Player1 list_before(before_seq=head+1, limit=5)
+        page1 = service.list_before(player1, before_seq=head + 1, limit=5)
+        assert [event.seq for event in page1.events] == [2, 3, 124, 125, 127]
+        assert page1.after_seq == 1
+        assert page1.cursor == head
+        assert page1.has_more is False
+
+        # 2. Page again with before_seq=after_seq+1
+        page2 = service.list_before(player1, before_seq=page1.after_seq + 1, limit=5)
+        assert [event.seq for event in page2.events] == [1]
+        assert page2.after_seq == 0
+
+        # 3. DM sees dm_only rows in its window
+        dm_page = service.list_before(dm, before_seq=head + 1, limit=10)
+        assert [event.seq for event in dm_page.events] == list(range(118, 128))
+        assert any(event.visibility == TableEventVisibility.DM_ONLY for event in dm_page.events)
+
+        # 4. Member outside session / non-current actor is rejected exactly like list_after
+        with pytest.raises(TableEventNotFoundError):
+            service.resolve_human_actor(
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+                context=_context(room_id, access_ids["owner"], "owner"),
+            )
+
+        with engine.begin() as connection:
+            connection.execute(
+                update(campaign_seats)
+                .where(campaign_seats.c.id == seat_ids["player2"])
+                .values(archived_at=datetime.now(timezone.utc))
+            )
+        with pytest.raises(TableEventActorUnauthorizedError):
+            service.list_after(player2, after_seq=0, limit=5)
+        with pytest.raises(TableEventActorUnauthorizedError):
+            service.list_before(player2, before_seq=head + 1, limit=5)
+
+        # 5. before_seq=1 on populated session yields empty events and after_seq 0
+        empty_page = service.list_before(player1, before_seq=1, limit=5)
+        assert empty_page.events == []
+        assert empty_page.after_seq == 0
+        assert empty_page.cursor == 0
+        assert empty_page.has_more is True
+
+        # 6. Chunk bound: > 5*MAX_EVENT_SCAN_LIMIT consecutive dm_only rows
+        flood_count = 5 * MAX_EVENT_SCAN_LIMIT + 5
+        for n in range(flood_count):
+            repository.append(
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+                kind="diagnostic.flood_dm",
+                acting_seat_id=dm.seat_id,
+                subject_seat_id=None,
+                subject_character_id=None,
+                execution_mode="self",
+                visibility="dm_only",
+                recipient_seat_ids=(),
+                payload_version=1,
+                payload={"n": n},
+                idempotency_key=None,
+            )
+        runtime = service.current_cursor(dm)
+        bound_page = service.list_before(player1, before_seq=runtime.last_event_seq + 1, limit=5)
+        assert bound_page.events == []
+        assert bound_page.after_seq > 0
+    finally:
+        engine.dispose()
+

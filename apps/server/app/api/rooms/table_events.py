@@ -96,6 +96,29 @@ def list_table_events(
         raise _map_table_event_error(exc) from exc
 
 
+@router.get("/events/history", response_model=TableEventPage)
+def list_table_event_history(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    before: int = Query(ge=1),
+    limit: int = Query(default=100, ge=1, le=200),
+    context: RoomAccessContext = Depends(get_room_access_context),
+    service: TableEventService = Depends(get_table_event_service),
+) -> TableEventPage:
+    try:
+        actor = _resolve_actor(
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+            service=service,
+        )
+        return service.list_before(actor, before_seq=before, limit=limit)
+    except Exception as exc:
+        raise _map_table_event_error(exc) from exc
+
+
 @router.get("/events/wait", response_model=TableEventPage)
 async def wait_table_events(
     room_id: UUID,
@@ -133,4 +156,4 @@ async def wait_table_events(
         raise _map_table_event_error(exc) from exc
 
 
-__all__ = ["router", "wait_table_events"]
+__all__ = ["list_table_event_history", "router", "wait_table_events"]

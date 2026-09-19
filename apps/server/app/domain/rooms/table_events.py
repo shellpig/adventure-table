@@ -22,6 +22,9 @@ from app.persistence.rooms.table_runtime import (
 )
 
 
+MAX_HISTORY_SCAN_CHUNKS = 5
+
+
 class TableActorKind(StrEnum):
     HUMAN = "human"
     AI = "ai"
@@ -339,6 +342,90 @@ class TableEventService:
             events=visible,
         )
 
+    def list_before(
+        self,
+        actor: TableActorContext,
+        *,
+        before_seq: int,
+        limit: int,
+    ) -> TableEventPage:
+        self.require_actor_current(actor)
+        bounded_limit = max(1, min(int(limit), MAX_EVENT_SCAN_LIMIT))
+        try:
+            runtime = self.repository.current_runtime(
+                room_id=actor.room_id,
+                campaign_id=actor.campaign_id,
+                session_id=actor.session_id,
+            )
+        except TableEventSessionNotFoundPersistenceError as exc:
+            raise TableEventNotFoundError(str(actor.session_id)) from exc
+
+        cursor = max(0, min(int(before_seq) - 1, runtime.last_event_seq))
+        if before_seq <= 1 or runtime.last_event_seq == 0:
+            return TableEventPage(
+                session_id=actor.session_id,
+                after_seq=0,
+                cursor=cursor,
+                current_seq=runtime.last_event_seq,
+                has_more=cursor < runtime.last_event_seq,
+                events=[],
+            )
+
+        # Walk backwards through raw rows in chunks until `limit` visible events
+        # are found or seq 1 is reached, bounded to MAX_HISTORY_SCAN_CHUNKS.
+        collected_events_desc: list[TableEvent] = []
+        current_before = int(before_seq)
+        smallest_scanned_seq: int | None = None
+        reached_start = False
+
+        for _ in range(MAX_HISTORY_SCAN_CHUNKS):
+            if current_before <= 1:
+                reached_start = True
+                break
+            try:
+                raw_chunk = self.repository.list_before(
+                    room_id=actor.room_id,
+                    campaign_id=actor.campaign_id,
+                    session_id=actor.session_id,
+                    before_seq=current_before,
+                    scan_limit=MAX_EVENT_SCAN_LIMIT,
+                )
+            except TableEventSessionNotFoundPersistenceError as exc:
+                raise TableEventNotFoundError(str(actor.session_id)) from exc
+
+            if not raw_chunk:
+                reached_start = True
+                break
+
+            for stored in reversed(raw_chunk):
+                smallest_scanned_seq = stored.seq
+                if self._visible(actor, stored):
+                    collected_events_desc.append(self._present(stored, actor=actor))
+                    if len(collected_events_desc) == bounded_limit:
+                        break
+
+            if len(collected_events_desc) == bounded_limit:
+                break
+
+            current_before = raw_chunk[0].seq
+            if current_before <= 1:
+                reached_start = True
+                break
+
+        if reached_start or smallest_scanned_seq is None:
+            after_seq = 0
+        else:
+            after_seq = max(0, smallest_scanned_seq - 1)
+
+        return TableEventPage(
+            session_id=actor.session_id,
+            after_seq=after_seq,
+            cursor=cursor,
+            current_seq=runtime.last_event_seq,
+            has_more=cursor < runtime.last_event_seq,
+            events=list(reversed(collected_events_desc)),
+        )
+
     async def wait_after(
         self,
         actor: TableActorContext,
@@ -438,6 +525,7 @@ class TableEventService:
 
 
 __all__ = [
+    "MAX_HISTORY_SCAN_CHUNKS",
     "TableActorContext",
     "TableActorKind",
     "TableEvent",

@@ -341,3 +341,74 @@ def test_p3_projection_authority_race_does_not_break_p2_resume() -> None:
         assert resume.stage is None
     finally:
         engine.dispose()
+
+
+def test_resume_recent_events_preserves_player_visible_events_across_dm_only_flood() -> None:
+    engine = _engine()
+    try:
+        (
+            _rooms,
+            owner,
+            dm,
+            _created,
+            room_repository,
+            campaigns,
+            seats,
+            session_service,
+            campaign,
+            started,
+            dm_context,
+            characters,
+        ) = _setup_active_session(engine)
+        event_service = TableEventService(TableEventRepository(engine))
+        dm_actor = event_service.resolve_human_actor(
+            room_id=owner.room.id,
+            campaign_id=campaign.id,
+            session_id=started.id,
+            context=dm_context,
+        )
+        event_service.append_event(
+            dm_actor,
+            TableEventAppend(
+                kind="diagnostic.player_visible",
+                visibility=TableEventVisibility.PUBLIC,
+                payload={"visible": True},
+                idempotency_key="player-visible-1",
+            ),
+        )
+        for idx in range(60):
+            event_service.append_event(
+                dm_actor,
+                TableEventAppend(
+                    kind="diagnostic.dm_secret",
+                    visibility=TableEventVisibility.DM_ONLY,
+                    payload={"secret": idx},
+                    idempotency_key=f"dm-secret-{idx}",
+                ),
+            )
+
+        resume = SessionResumeService(
+            session_service=session_service,
+            room_repository=room_repository,
+            campaign_service=campaigns,
+            seat_service=seats,
+            character_repository=characters,
+            summary_repository=SessionResumeRepository(engine),
+            table_event_service=event_service,
+        ).resume(
+            owner.room.id,
+            campaign.id,
+            caller_access_session_id=owner.access_session_id,
+        )
+
+        assert resume.active_session is not None
+        assert resume.table_runtime is not None
+        assert resume.table_runtime.last_event_seq == 61
+        assert resume.recent_events is not None
+        assert resume.recent_events.cursor == resume.table_runtime.last_event_seq
+        assert [item.kind for item in resume.recent_events.events] == [
+            "diagnostic.player_visible"
+        ]
+    finally:
+        engine.dispose()
+
