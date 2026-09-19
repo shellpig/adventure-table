@@ -15,27 +15,28 @@
 ## 當前狀態與下一步
 
 - **P4 已全部關門並合併回 `main`**：P4-F code `651a14d0`，merge `7ef02d13`；證據見 [P4-F closeout](docs/P4/P4-F_CLOSEOUT.md)。歷史步驟不再作開場必讀。
-- **下一步 P5-A — Battle Map & Spatial Foundation**。P5 契約於 2026-09-19 建立（`a9586d99`），固定 A～G；讀 [實作規格 §5](docs/P5/實作規格.md#5-p5-a--battle-map--spatial-foundation) 與必要共用前言。列出下一步不代表 coding 授權。
+- **下一步改為 P6-A — Adventure Definition & Campaign Attachment**。2026-09-19 使用者拍板讓 P6 先於 P5 執行，以先完成「世界／冒險資料 → Exploration → Quick Combat → 世界狀態跨 Session 保存」的可玩 Campaign loop；Phase 編號不重編，P5 契約完整保留，P6 關門後再回 P5。
+- **P6 契約已定案，固定 A～G**；開工讀 [P6 實作規格](docs/P6/實作規格.md)、[開發設計方針](docs/P6/開發設計方針.md)、[測試指南](docs/P6/測試指南.md) 的 P6-A 與必要共用前言。列出下一步不代表 coding 授權。
 - **M01／U01 保持 open，不阻塞 P Roadmap**。M01-A～O、U01-A 已關門；下一個未使用字母分別為 M01-P、U01-B，兩者下一項 scope 均未拍板，不建立虛構的待辦 Subphase。
-- **P6～P8 保持大 Phase**，不提前拆分或設計 schema／API／module。
+- **P5 已有完整契約但暫後移；P7～P8 保持大 Phase**，不提前拆分或設計 schema／API／module。
 
-### P5 Subphase 進度
+### P6 Subphase 進度
 
 ⬜＝正式契約已存在、尚未實作。當前 Phase 一列一個 Subphase；完成的 step 狀態只住該 Subphase 實作紀錄，不寫進本檔。
 
 | Subphase | 狀態 |
 |---|---|
-| P5-A — Battle Map & Spatial Foundation | ⬜ |
-| P5-B — Movement & Path Resolution | ⬜ |
-| P5-C — Range, Reach & Spatial Targeting | ⬜ |
-| P5-D — AoE & Tactical Spell Geometry | ⬜ |
-| P5-E — Opportunity Attack & Spatial Reactions | ⬜ |
-| P5-F — Tactical Combat UI & AI Tool Surface | ⬜ |
-| P5-G — Full P5 Integration & Closeout | ⬜ |
+| P6-A — Adventure Definition & Campaign Attachment | ⬜ |
+| P6-B — Campaign Runtime World State | ⬜ |
+| P6-C — AI Context & Retrieval | ⬜ |
+| P6-D — AI DM Write-back & Exploration Integration | ⬜ |
+| P6-E — Adventure Source & Import Draft | ⬜ |
+| P6-F — Import Review, Finalization & Importer MCP | ⬜ |
+| P6-G — Full P6 Integration & Closeout | ⬜ |
 
 ## Phase Roadmap
 
-正常產品順序為 P0 → P8；M 為插入式維護／內容擴充，U 為測試／開發效率優化，兩者均可長期 open。
+Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **P0→P4 → P6 → P5 → P7 → P8**。這不是重編 Phase：P5 仍是 Tactical Combat、P6 仍是 Adventure / Campaign Runtime。M 為插入式維護／內容擴充，U 為測試／開發效率優化，兩者均可長期 open。
 
 | Phase | 主題／狀態 |
 |---|---|
@@ -46,8 +47,8 @@
 | M04 | Web Chat MCP／OAuth／AI Join Kit；已關門，目標平台為 ChatGPT Web Plus |
 | U01 | Test / Development Efficiency；長期 open |
 | P4 | Quick Combat；已關門 |
-| P5 | Tactical Combat；契約已定案，下一步 P5-A |
-| P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back |
+| P5 | Tactical Combat；契約已定案，依使用者決定延至 P6 關門後實作 |
+| P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；**當前 Phase，下一步 P6-A** |
 | P7 | Timeline、Snapshot／Restore、broader Archive／Import／Export；角色 JSON 已由 M03 先行，不做 gameplay Undo |
 | P8 | 全流程 QA／Polish、權限、reconnect、效能、Responsive UI |
 
@@ -67,14 +68,16 @@
 - **事件與 wait**：durable event＋DB cursor 是真值；HTTP wait async，await 不持有 DB connection／transaction、不長占 sync worker，wake／timeout 後重查 cursor，保留 waiter 不餓死一般 request 的證據。P3 event 不等於 P7 跨 Session Timeline／Snapshot。見 [P3 設計](docs/P3/開發設計方針.md)。
 - **Combat／Standalone**：Combat 以 Campaign 為 root，可跨 Session End／Abandon 延續；entry identity 是 Character／Monster Instance。Monster Template 可共用於 Standalone，Instance／Combat schema 不可。Monster 長文 `desc` 首次 expose 時須補齊 zh-TW；來源與 count 以 P4-A pinned manifest 為準。見 [P4 設計](docs/P4/開發設計方針.md)。
 - **Combat 共用寫入邊界**：active Combat HP 只經 semantic damage／healing，Player raw patch 被拒、DM absolute set 要 `correction_reason`；Concentration／Exhaustion／Death Save／Temporary Effects 住 shared Character Current State。Spell cast 沿用 `authorize_character_spell` → `spend_character_spell`，Character／Monster casting source 都合法；Concentration CON save 由 `CombatConcentrationRepository.complete_check` 消費。敵人精確 HP／AC／hidden resources 不送 Player。Combat mutation 須呼叫 `TableEventService.notifier`，前端把帶 `combat_id` 的 `roll.*` 視為 Combat 變更。見 P4-C～E 正式契約。
-- **P5 承接 P4**：Quick 不依賴 Tactical geometry；Tactical 以 2D ground spatial facts 接入既有 P4 resolution，不另造戰鬥／施法／Reaction／RNG／secrecy；不提前做 P6 world state 或 P7 Snapshot。見 [P5 規格 §3、§4](docs/P5/實作規格.md)。
+- **P6 先於 P5 的邊界**：P6 必須在沒有 Tactical geometry 的情況下完整運作；Adventure 是可附加的世界／冒險資料包，Campaign 可零或多個 Adventure，真正 mutable truth 在 Campaign Runtime。Current Scene／Situation optional；P6 map/image 只作 Stage／世界素材；AI DM 重要世界變化需 write-back，Player projection 不得含 secret。見 [P6 規格](docs/P6/實作規格.md)。
+- **P5 承接 P4＋P6**：Quick 不依賴 Tactical geometry；Tactical 以 2D ground spatial facts 接入既有 P4 resolution，不另造戰鬥／施法／Reaction／RNG／secrecy。P5 Combat board runtime 不自動升格成 P6 Campaign world truth；需要永久世界改變時走 P6 world service。見 [P5 規格 §3、§4](docs/P5/實作規格.md)。
 - **U01 隔離與 M／U 範圍**：加速不得犧牲 correctness、資料隔離或既有行為。U01-A 的 E2E 只使用 `adventure_table_e2e`＋獨立服務（8001／5174），不碰 daily DB。M 插入不重編既有順序；每個已拍板 Subphase 各自關門，完整規則見 AGENTS。
 
 ## 未結清事項與驗收限制
 
 完整索引見 [已知問題](已知問題.md#跨-phase-限制與驗收索引)。未解項目不因 Phase 關門而完成；舊驗收缺口先核對後續 closeout，不直接當成目前缺陷。
 
-- **P5 接手**：Quick range 裁定、Dodge「能看見攻擊者」、frightened 來源可見性，依 [P4-F closeout](docs/P4/P4-F_CLOSEOUT.md) 已知限制與 P5 契約處理。
+- **P6 接手**：先交付不依賴 Importer 的可玩 loop（manual Adventure／空 Campaign、Runtime、AI context/write-back）；Importer 後置於 P6-E/F。P6 不放寬 P3-D pre-session AI grant，也不提前做 P5 geometry 或 P7 Timeline／Snapshot。
+- **後續 P5 接手**：Quick range 裁定、Dodge「能看見攻擊者」、frightened 來源可見性，依 [P4-F closeout](docs/P4/P4-F_CLOSEOUT.md) 已知限制與 P5 契約處理。
 - **後續 M、尚未拍板**：spell save 的 conditions pipeline、`get_resolution_event` O(n)、Monster `desc` 尚未 expose、死亡／倒地不起標籤；另有 Character 抗性缺 machine-readable 欄位、`is_hostile` 仍由 subject kind 決定等既有邊界。見 P4 各 Subphase closeout／設計，不自行擴入 P5。
 - **延期驗收／內容**：M04-C Bearer／純 HTTP／非目標平台相容記錄、M01-O deferred Feats，見限制索引。
 - **測試效率／環境**：Builder 等待、M01-J browser 缺口、Windows Vite 見 KI 條目；U01 後續依 [U01-A §8 與 baseline](docs/U01/U01-A.md)。
@@ -102,6 +105,7 @@ P／M 三份文件：**實作規格＝完成後必須為真；開發設計方針
 | M01 | [規格](docs/M01/實作規格.md) | [設計](docs/M01/開發設計方針.md) | [測試](docs/M01/測試指南.md) |
 | P4 | [規格](docs/P4/實作規格.md) | [設計](docs/P4/開發設計方針.md) | [測試](docs/P4/測試指南.md) |
 | P5 | [規格](docs/P5/實作規格.md) | [設計](docs/P5/開發設計方針.md) | [測試](docs/P5/測試指南.md) |
+| P6 | [規格](docs/P6/實作規格.md) | [設計](docs/P6/開發設計方針.md) | [測試](docs/P6/測試指南.md) |
 
 其餘已交付 Phase 的三份文件見 [歷史文件索引](docs/ROADMAP_HISTORY.md#已交付-phase-文件索引)。
 
