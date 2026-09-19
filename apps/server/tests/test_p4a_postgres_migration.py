@@ -10,10 +10,14 @@ from sqlalchemy import create_engine, inspect, text
 
 
 POSTGRES_URL = os.environ.get("P4_POSTGRES_URL")
-pytestmark = pytest.mark.skipif(
-    not POSTGRES_URL,
-    reason="P4_POSTGRES_URL is only supplied by the P4-A PostgreSQL job",
-)
+# All Postgres tests reset the one shared database: keep them on a single xdist worker.
+pytestmark = [
+    pytest.mark.xdist_group("postgres"),
+    pytest.mark.skipif(
+        not POSTGRES_URL,
+        reason="P4_POSTGRES_URL is only supplied by the P4-A PostgreSQL job",
+    ),
+]
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 P4A_PARENT = "0021_m04b_ai_oauth"
 P4A_REVISION = "0022_p4a_monster_instances"

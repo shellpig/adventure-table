@@ -124,7 +124,7 @@ alembic upgrade heads
 uvicorn app.main:app --reload
 ```
 
-Backend tests：
+Backend tests（`pip install -e ".[web,dev]"` 後；預設 8 個 pytest-xdist worker，`-n 0` 可關）：
 
 ```bash
 cd apps/server && pytest

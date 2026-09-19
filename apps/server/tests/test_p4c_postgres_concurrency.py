@@ -20,10 +20,14 @@ import tests.test_p4b_combat_lifecycle as support
 
 
 POSTGRES_URL = os.environ.get("P4_POSTGRES_URL")
-pytestmark = pytest.mark.skipif(
-    not POSTGRES_URL,
-    reason="P4_POSTGRES_URL is only supplied by the P4 PostgreSQL job",
-)
+# All Postgres tests reset the one shared database: keep them on a single xdist worker.
+pytestmark = [
+    pytest.mark.xdist_group("postgres"),
+    pytest.mark.skipif(
+        not POSTGRES_URL,
+        reason="P4_POSTGRES_URL is only supplied by the P4 PostgreSQL job",
+    ),
+]
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 
 

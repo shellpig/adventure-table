@@ -24,6 +24,7 @@ dev = [
   "mcp>=2.1,<3",
   "psycopg[binary]>=3.2,<4",
   "pytest>=9,<10",
+  "pytest-xdist>=3.6,<4",
 ]
 standalone = [
   "pyinstaller>=6.10,<7",
@@ -34,5 +35,7 @@ include = ["app*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+# 8 workers: full suite ~4 min -> ~1 min locally; focused runs pay ~2s startup.
+# loadgroup keeps the xdist_group("postgres") tests on one worker. Pass -n 0 to opt out.
+addopts = "-q -n 8 --dist loadgroup"
 pythonpath = ["."]

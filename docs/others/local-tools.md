@@ -26,6 +26,8 @@ cd apps/server
 ..\..\.venv\Scripts\python.exe -m pytest tests/test_<subphase>_*.py
 ```
 
+`pyproject.toml` 的 addopts 預設 `-n 8 --dist loadgroup`（pytest-xdist，dev extra）：全套約 1 分鐘，focused run 多付約 2 秒 worker 啟動；要單程序跑（例如 `--pdb` 或看 print）加 `-n 0`。Postgres 測試以 `xdist_group("postgres")` 固定在同一個 worker，因為它們共用並重置同一個 `P4_POSTGRES_URL` 資料庫。parametrize id 不得含隨機值（`uuid4()` 等），否則各 worker 收集結果不一致、xdist 拒跑。
+
 `tests/test_m03b_migration.py` 等測試用裸相對路徑讀 `alembic.ini` 與 `alembic/versions/`，cwd 不在 `apps/server` 會失敗；pytest 的 rootdir 解析到 `apps/server/pyproject.toml` 不代表 cwd 也跟著換。
 
 例外：`scripts\` 底下的發版與 smoke 工具從 repo root 執行，並使用 AGENTS.md「工程實作守則」第 8 條指定的 `.standalone-venv` / `STANDALONE_PYTHON`，不是這裡的 `.venv`。

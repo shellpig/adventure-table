@@ -42,7 +42,9 @@ def test_ai_token_display_hint_does_not_contain_plaintext_secret() -> None:
         "",
         "at_human_deadbeef_secret",
         "at_ai_not-a-uuid_secret",
-        f"at_ai_{uuid4().hex}_short",
+        # Fixed hex: a fresh uuid4() here gives every pytest-xdist worker a
+        # different test id and the run refuses to start.
+        "at_ai_3e355a041daf41408512f6c28c025554_short",
     ],
 )
 def test_ai_token_parser_rejects_malformed_values(token: str) -> None:
