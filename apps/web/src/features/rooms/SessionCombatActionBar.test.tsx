@@ -60,6 +60,7 @@ function makeEntry(
     attacks_allowed: 1,
     attacks_used: 0,
     ready_state: {},
+    dodging: false,
     pending_reaction_state: {},
     ...options,
   }

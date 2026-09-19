@@ -1282,6 +1282,15 @@
   color: var(--muted);
 }
 
+.session-combat__dodging-badge {
+  font-size: 0.72rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(82, 160, 224, 0.15);
+  color: #52a0e0;
+  border: 1px solid rgba(82, 160, 224, 0.3);
+}
+
 .session-combat__combatants {
   display: flex;
   flex-direction: column;

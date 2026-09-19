@@ -52,6 +52,7 @@ function makeEntry(
     attacks_allowed: 1,
     attacks_used: 0,
     ready_state: {},
+    dodging: false,
     pending_reaction_state: {},
     ...options,
   }
@@ -382,6 +383,65 @@ describe('SessionCombatStage component', () => {
     )
 
     expect(markup).toContain(copyEn.combatStatusFled)
+  })
+
+  it('renders Dodging badge for a dodging entry in both audiences and omits it otherwise', () => {
+    const dodgingGoblin = makeEntry('entry-goblin', 'Goblin Scout', null, 2, { dodging: true })
+    const combatWithDodgingEnemy: CombatDetailView = {
+      ...playerCombatDetail,
+      entries: [entryMira, dodgingGoblin, entryHidden],
+    }
+
+    const playerMarkup = renderStage(
+      <SessionCombatStage
+        combat={combatWithDodgingEnemy}
+        myEntryIds={['entry-mira']}
+        copy={copyEn}
+        isCurrentDm={false}
+        roomId="room"
+        campaignId="campaign"
+        sessionId="session"
+        token="token"
+        events={[]}
+        onError={() => undefined}
+        refresh={() => undefined}
+      />,
+    )
+    expect(playerMarkup).toContain(copyEn.combatDodging)
+
+    const dmMarkupZh = renderStage(
+      <SessionCombatStage
+        combat={{ ...dmCombatDetail, entries: [entryMira, dodgingGoblin, entryHidden] }}
+        myEntryIds={['entry-mira']}
+        copy={copyZh}
+        isCurrentDm={true}
+        roomId="room"
+        campaignId="campaign"
+        sessionId="session"
+        token="token"
+        events={[]}
+        onError={() => undefined}
+        refresh={() => undefined}
+      />,
+    )
+    expect(dmMarkupZh).toContain(copyZh.combatDodging)
+
+    const baselineMarkup = renderStage(
+      <SessionCombatStage
+        combat={playerCombatDetail}
+        myEntryIds={['entry-mira']}
+        copy={copyEn}
+        isCurrentDm={false}
+        roomId="room"
+        campaignId="campaign"
+        sessionId="session"
+        token="token"
+        events={[]}
+        onError={() => undefined}
+        refresh={() => undefined}
+      />,
+    )
+    expect(baselineMarkup).not.toContain(copyEn.combatDodging)
   })
 
   it('renders monster controls for monster entries when DM, never in player view', () => {

@@ -233,6 +233,9 @@ export function SessionCombatStage({
                 {isHostile ? (
                   <span className="session-combat__hostile-badge">{copy.combatHostile}</span>
                 ) : null}
+                {entry.dodging ? (
+                  <span className="session-combat__dodging-badge">{copy.combatDodging}</span>
+                ) : null}
                 {isInactive ? (
                   <span className="session-combat__status-badge">
                     {getStatusLabel(entry.status, copy)}
@@ -283,6 +286,9 @@ export function SessionCombatStage({
                     </span>
                     {isHostile ? (
                       <span className="session-combat__hostile-badge">{copy.combatHostile}</span>
+                    ) : null}
+                    {entry.dodging ? (
+                      <span className="session-combat__dodging-badge">{copy.combatDodging}</span>
                     ) : null}
                   </div>
                   <div className="session-combat__economy">

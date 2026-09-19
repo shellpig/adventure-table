@@ -33,6 +33,7 @@ export type CombatEntryView = {
   attacks_used: number
   ready_state: Record<string, unknown>
   pending_reaction_state: Record<string, unknown>
+  dodging: boolean
 }
 
 export type CombatView = {
