@@ -44,6 +44,10 @@ import {
   readSpeakerColors,
   writeSpeakerColor,
 } from './chatColors'
+import {
+  countUnseenChatMessages,
+  isChatAtBottom,
+} from './chatFollow'
 import { endCombat, startCombat } from '../../api/combat'
 import { SessionCombatStage } from './SessionCombatStage'
 import { myEntryIds, useActiveCombat } from './sessionCombat'
@@ -352,12 +356,42 @@ export function SessionTableSurface({
     return speakerSeatId ? seatLabel(speakerSeatId) : copy.ooc
   }
 
+  const [followChat, setFollowChat] = useState(true)
+  const [lastSeenSeq, setLastSeenSeq] = useState(0)
   const chatMessagesRef = useRef<HTMLDivElement>(null)
+
+  // Follow chat only when reader is already at bottom or explicitly jumps
   useEffect(() => {
     const container = chatMessagesRef.current
     if (!container || tab !== 'chat') return
+    if (!followChat) return
     container.scrollTop = container.scrollHeight
-  }, [chatEvents, tab])
+    const newestSeq = chatEvents.length > 0 ? chatEvents[chatEvents.length - 1].seq : 0
+    setLastSeenSeq(newestSeq)
+  }, [chatEvents, tab, followChat])
+
+  const handleChatScroll = () => {
+    const container = chatMessagesRef.current
+    if (!container) return
+    const atBottom = isChatAtBottom(container)
+    setFollowChat(atBottom)
+    if (atBottom) {
+      const newestSeq = chatEvents.length > 0 ? chatEvents[chatEvents.length - 1].seq : 0
+      setLastSeenSeq(newestSeq)
+    }
+  }
+
+  const handleJumpToBottom = () => {
+    setFollowChat(true)
+    const container = chatMessagesRef.current
+    if (container) {
+      container.scrollTop = container.scrollHeight
+    }
+    const newestSeq = chatEvents.length > 0 ? chatEvents[chatEvents.length - 1].seq : 0
+    setLastSeenSeq(newestSeq)
+  }
+
+  const unseenChatCount = countUnseenChatMessages(chatEvents, lastSeenSeq)
 
   const applySidePanelWidth = (nextWidth: number) => {
     setSidePanelWidth(nextWidth)
@@ -451,6 +485,7 @@ export function SessionTableSurface({
         )
         setComposerText('')
         setComposerHint(copy.checkDeferred)
+        setFollowChat(true)
       } catch (cause) {
         onError(cause)
       } finally {
@@ -468,6 +503,7 @@ export function SessionTableSurface({
         token,
       )
       setComposerText('')
+      setFollowChat(true)
     } catch (cause) {
       onError(cause)
     } finally {
@@ -609,56 +645,70 @@ export function SessionTableSurface({
 
           {tab === 'chat' ? (
             <div className="session-chat">
-              <div className="session-chat__messages" aria-live="polite" ref={chatMessagesRef}>
-                {chatEvents.length === 0 ? <p className="session-stage__empty">{copy.noMessages}</p> : null}
-                {chatEvents.map((event) => {
-                  if (isRollRequestEvent(event)) {
-                    const targetLabels = event.recipient_seat_ids.map((seatId) => {
-                      const participant = snapshot.participants.find((item) => item.seat_id === seatId)
-                      return participant?.active_character_id
-                        ? characterName(participant.active_character_id)
-                        : seatLabel(seatId)
-                    })
+              <div className="session-chat__messages-wrap">
+                <div
+                  className="session-chat__messages"
+                  aria-live="polite"
+                  ref={chatMessagesRef}
+                  onScroll={handleChatScroll}
+                >
+                  {chatEvents.length === 0 ? <p className="session-stage__empty">{copy.noMessages}</p> : null}
+                  {chatEvents.map((event) => {
+                    if (isRollRequestEvent(event)) {
+                      const targetLabels = event.recipient_seat_ids.map((seatId) => {
+                        const participant = snapshot.participants.find((item) => item.seat_id === seatId)
+                        return participant?.active_character_id
+                          ? characterName(participant.active_character_id)
+                          : seatLabel(seatId)
+                      })
+                      return (
+                        <article className="session-chat__message session-chat__message--system" key={`${event.session_id}:${event.seq}`}>
+                          <header><strong>{copy.system}</strong></header>
+                          <p>
+                            {formatRollRequestPrompt(event, targetLabels, copy, {
+                              entryLabel: combatEntryLabel,
+                              contentName: resolveCombatContentName,
+                              contentField: resolveCombatContentField,
+                            })}
+                          </p>
+                        </article>
+                      )
+                    }
+                    const speakerKey = getSpeakerKey(event, snapshot.dm_seat_id)
+                    const speakerColor = speakerColors[speakerKey]
                     return (
-                      <article className="session-chat__message session-chat__message--system" key={`${event.session_id}:${event.seq}`}>
-                        <header><strong>{copy.system}</strong></header>
-                        <p>
-                          {formatRollRequestPrompt(event, targetLabels, copy, {
-                            entryLabel: combatEntryLabel,
-                            contentName: resolveCombatContentName,
-                            contentField: resolveCombatContentField,
-                          })}
-                        </p>
+                      <article className="session-chat__message" key={`${event.session_id}:${event.seq}`}>
+                        <header>
+                          <button
+                            type="button"
+                            className="session-chat__color-dot-btn"
+                            style={{ backgroundColor: speakerColor || DEFAULT_CHAT_COLOR }}
+                            title={`${speakerLabel(event)}: ${copy.selectChatColor}`}
+                            aria-label={`${speakerLabel(event)}: ${copy.selectChatColor}`}
+                            onClick={() => {
+                              setColorPickerSpeakerKey(speakerKey)
+                              setColorPickerOpen(true)
+                            }}
+                          />
+                          <strong style={speakerColor ? { color: speakerColor } : undefined}>
+                            {speakerLabel(event)}
+                          </strong>
+                          {event.kind === 'exploration.ooc' ? <span>{copy.ooc}</span> : null}
+                          {event.execution_mode === 'dm_proxy' ? <span>{copy.dmProxy}</span> : null}
+                          {event.kind === 'exploration.whisper_dm' ? <span>{copy.whisperPrivate}</span> : null}
+                        </header>
+                        <p style={speakerColor ? { color: speakerColor } : undefined}>{explorationEventText(event)}</p>
                       </article>
                     )
-                  }
-                  const speakerKey = getSpeakerKey(event, snapshot.dm_seat_id)
-                  const speakerColor = speakerColors[speakerKey]
-                  return (
-                    <article className="session-chat__message" key={`${event.session_id}:${event.seq}`}>
-                      <header>
-                        <button
-                          type="button"
-                          className="session-chat__color-dot-btn"
-                          style={{ backgroundColor: speakerColor || DEFAULT_CHAT_COLOR }}
-                          title={`${speakerLabel(event)}: ${copy.selectChatColor}`}
-                          aria-label={`${speakerLabel(event)}: ${copy.selectChatColor}`}
-                          onClick={() => {
-                            setColorPickerSpeakerKey(speakerKey)
-                            setColorPickerOpen(true)
-                          }}
-                        />
-                        <strong style={speakerColor ? { color: speakerColor } : undefined}>
-                          {speakerLabel(event)}
-                        </strong>
-                        {event.kind === 'exploration.ooc' ? <span>{copy.ooc}</span> : null}
-                        {event.execution_mode === 'dm_proxy' ? <span>{copy.dmProxy}</span> : null}
-                        {event.kind === 'exploration.whisper_dm' ? <span>{copy.whisperPrivate}</span> : null}
-                      </header>
-                      <p style={speakerColor ? { color: speakerColor } : undefined}>{explorationEventText(event)}</p>
-                    </article>
-                  )
-                })}
+                  })}
+                </div>
+                {!followChat && unseenChatCount > 0 ? (
+                  <ChatJumpButton
+                    count={unseenChatCount}
+                    copy={copy}
+                    onClick={handleJumpToBottom}
+                  />
+                ) : null}
               </div>
 
               <div className="session-composer">
@@ -836,3 +886,25 @@ export function SessionTableSurface({
     </section>
   )
 }
+
+export function ChatJumpButton({
+  count,
+  copy,
+  onClick,
+}: {
+  count: number
+  copy: SessionCopy
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className="session-chat__jump"
+      data-chat-jump
+      onClick={onClick}
+    >
+      {copy.newMessages.replace('{count}', String(count))}
+    </button>
+  )
+}
+
