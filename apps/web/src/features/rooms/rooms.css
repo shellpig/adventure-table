@@ -745,3 +745,28 @@
   color: var(--gold-bright);
 }
 
+/* Delete Room Inventory */
+.room-delete-inventory {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.room-delete-inventory-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.room-delete-inventory-group strong {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.room-delete-inventory-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+

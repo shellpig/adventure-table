@@ -6,6 +6,7 @@ import {
   RECENT_ROOMS_STORAGE_KEY,
   persistRoomGrant,
   readRecentRooms,
+  recentRoomForId,
   type RoomStorage,
 } from './roomStorage'
 
@@ -78,5 +79,36 @@ describe('P2 recent Room storage', () => {
     forgetRecentRoom(GRANT.room.id, storage)
 
     expect(readRecentRooms(storage)).toEqual([])
+  })
+
+  it('keeps all persisted Rooms without truncating and resolves the oldest entry', () => {
+    const storage = memoryStorage()
+    const grants: RoomAccessGrant[] = Array.from({ length: 7 }, (_, index) => ({
+      ...GRANT,
+      room: {
+        ...GRANT.room,
+        id: `room-${index + 1}`,
+        name: `Room ${index + 1}`,
+        code: `CODE00000${index + 1}`,
+      },
+      access_token: `token-${index + 1}`,
+    }))
+
+    for (const grant of grants) {
+      persistRoomGrant(grant, storage)
+    }
+
+    const recent = readRecentRooms(storage)
+    expect(recent).toHaveLength(7)
+    expect(recent.map((room) => room.roomId)).toEqual([
+      'room-7',
+      'room-6',
+      'room-5',
+      'room-4',
+      'room-3',
+      'room-2',
+      'room-1',
+    ])
+    expect(recentRoomForId('room-1', storage)?.accessToken).toBe('token-1')
   })
 })

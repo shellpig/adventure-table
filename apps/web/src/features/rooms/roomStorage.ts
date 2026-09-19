@@ -1,7 +1,6 @@
 import type { RoomAccessGrant, RoomAuthority } from '../../api/rooms'
 
 export const RECENT_ROOMS_STORAGE_KEY = 'adventure-table.recent-rooms.v1'
-const MAX_RECENT_ROOMS = 5
 
 export type RoomStorage = {
   getItem: (key: string) => string | null
@@ -42,7 +41,7 @@ export function readRecentRooms(storage: RoomStorage | undefined = browserRoomSt
   try {
     const parsed: unknown = JSON.parse(storage.getItem(RECENT_ROOMS_STORAGE_KEY) ?? '[]')
     if (!Array.isArray(parsed)) return []
-    return parsed.filter(isRecentRoom).slice(0, MAX_RECENT_ROOMS)
+    return parsed.filter(isRecentRoom)
   } catch {
     return []
   }
@@ -64,7 +63,7 @@ export function persistRoomGrant(
   const next = [
     recent,
     ...readRecentRooms(storage).filter((room) => room.roomId !== recent.roomId),
-  ].slice(0, MAX_RECENT_ROOMS)
+  ]
   try {
     storage.setItem(RECENT_ROOMS_STORAGE_KEY, JSON.stringify(next))
   } catch {
