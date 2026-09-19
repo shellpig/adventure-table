@@ -8,6 +8,8 @@ from alembic.config import Config
 import pytest
 from sqlalchemy import create_engine, inspect, text
 
+from tests.migration_support import migration_heads
+
 
 POSTGRES_URL = os.environ.get("P4_POSTGRES_URL")
 pytestmark = pytest.mark.skipif(
@@ -16,15 +18,6 @@ pytestmark = pytest.mark.skipif(
 )
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 P4E_PARENT = "0025_p4c_core_resolution"
-P4E_HEAD = "0026_p4e_monster_concentration"
-# Later P4-F migrations move the web head past P4E_HEAD; "heads" lands on one of these.
-P4E_APPLIED_HEADS = {
-    P4E_HEAD,
-    "0027_p4f_monster_outcome",
-    "0028_p4f_monster_reveal_state",
-    "0029_p4f_roll_request_auto_fail",
-    "0030_p4f_entry_dodging",
-}
 
 
 def _config() -> Config:
@@ -83,20 +76,20 @@ def _assert_concentration_column_absent() -> None:
 def test_p4e_real_postgres_upgrade_and_downgrade_from_p4c_parent() -> None:
     _reset()
     command.upgrade(_config(), P4E_PARENT)
-    assert P4E_HEAD not in _revision_set()
+    assert P4E_PARENT in _revision_set()
     _assert_concentration_column_absent()
 
     command.upgrade(_config(), "heads")
-    assert _revision_set() & P4E_APPLIED_HEADS
+    assert _revision_set() == set(migration_heads(_config()).values())
     _assert_concentration_column_present()
 
     command.downgrade(_config(), P4E_PARENT)
-    assert P4E_HEAD not in _revision_set()
+    assert P4E_PARENT in _revision_set()
     _assert_concentration_column_absent()
 
 
 def test_p4e_schema_survives_fresh_upgrade_to_heads() -> None:
     _reset()
     command.upgrade(_config(), "heads")
-    assert _revision_set() & P4E_APPLIED_HEADS
+    assert _revision_set() == set(migration_heads(_config()).values())
     _assert_concentration_column_present()

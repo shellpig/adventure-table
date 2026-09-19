@@ -10,6 +10,8 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError
 
+from tests.migration_support import migration_heads
+
 
 POSTGRES_URL = os.environ.get("P4_POSTGRES_URL")
 pytestmark = pytest.mark.skipif(
@@ -18,7 +20,6 @@ pytestmark = pytest.mark.skipif(
 )
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 P4F_PARENT = "0026_p4e_monster_concentration"
-P4F_HEAD = "0030_p4f_entry_dodging"
 
 
 def _config() -> Config:
@@ -122,25 +123,25 @@ def _assert_surrendered_status_rejected() -> None:
 def test_p4f_real_postgres_upgrade_and_downgrade_from_p4e_parent() -> None:
     _reset()
     command.upgrade(_config(), P4F_PARENT)
-    assert P4F_HEAD not in _revision_set()
+    assert P4F_PARENT in _revision_set()
     _assert_surrendered_status_rejected()
 
     _reset()
     command.upgrade(_config(), "heads")
-    assert P4F_HEAD in _revision_set()
+    assert _revision_set() == set(migration_heads(_config()).values())
     _assert_surrendered_status_accepted()
 
     _reset()
     command.upgrade(_config(), "heads")
     command.downgrade(_config(), P4F_PARENT)
-    assert P4F_HEAD not in _revision_set()
+    assert P4F_PARENT in _revision_set()
     _assert_surrendered_status_rejected()
 
 
 def test_p4f_schema_survives_fresh_upgrade_to_heads() -> None:
     _reset()
     command.upgrade(_config(), "heads")
-    assert P4F_HEAD in _revision_set()
+    assert _revision_set() == set(migration_heads(_config()).values())
     _assert_surrendered_status_accepted()
 
 
@@ -223,7 +224,7 @@ def test_p4f_real_postgres_roll_request_auto_fail_upgrade_and_downgrade() -> Non
 def test_p4f_real_postgres_entry_dodging_upgrade_and_downgrade() -> None:
     _reset()
     command.upgrade(_config(), "0029_p4f_roll_request_auto_fail")
-    assert "0030_p4f_entry_dodging" not in _revision_set()
+    assert "0029_p4f_roll_request_auto_fail" in _revision_set()
 
     assert POSTGRES_URL is not None
     engine = create_engine(POSTGRES_URL)
@@ -235,7 +236,7 @@ def test_p4f_real_postgres_entry_dodging_upgrade_and_downgrade() -> None:
         engine.dispose()
 
     command.upgrade(_config(), "heads")
-    assert "0030_p4f_entry_dodging" in _revision_set()
+    assert _revision_set() == set(migration_heads(_config()).values())
 
     engine = create_engine(POSTGRES_URL)
     try:
@@ -255,7 +256,7 @@ def test_p4f_real_postgres_entry_dodging_upgrade_and_downgrade() -> None:
         engine.dispose()
 
     command.downgrade(_config(), "0029_p4f_roll_request_auto_fail")
-    assert "0030_p4f_entry_dodging" not in _revision_set()
+    assert "0029_p4f_roll_request_auto_fail" in _revision_set()
     engine = create_engine(POSTGRES_URL)
     try:
         with pytest.raises(Exception):

@@ -12,21 +12,11 @@ from app.persistence.rooms.p3c_runtime import (
     roll_requests,
     roll_results,
 )
+from tests.migration_support import migration_heads
 
 
 ROLL_PENDING_REVISION = "0018_p3c_roll_pending"
 CHECK_COMMAND_REVISION = "0019_p3c_check_command"
-P3D_REVISION = "0020_p3d_ai_controller_grants"
-M04B_REVISION = "0021_m04b_ai_oauth"
-P4A_REVISION = "0022_p4a_monster_instances"
-P4B_LIFECYCLE_REVISION = "0023_p4b_combat_lifecycle"
-P4B_ROLL_TARGETS_REVISION = "0024_p4b_combat_roll_targets"
-P4C_REVISION = "0025_p4c_core_resolution"
-P4E_REVISION = "0026_p4e_monster_concentration"
-P4F_OUTCOME_REVISION = "0027_p4f_monster_outcome"
-P4F_REVEAL_REVISION = "0028_p4f_monster_reveal_state"
-P4F_AUTO_FAIL_REVISION = "0029_p4f_roll_request_auto_fail"
-P4F_REVISION = "0030_p4f_entry_dodging"
 
 
 def _migration_source() -> str:
@@ -70,44 +60,11 @@ def test_p3c_web_migration_chain_links_check_command_into_current_head() -> None
     assert check_revision is not None
     assert check_revision.down_revision == ROLL_PENDING_REVISION
 
-    p3d_revision = scripts.get_revision(P3D_REVISION)
-    assert p3d_revision is not None
-    assert p3d_revision.down_revision == CHECK_COMMAND_REVISION
-
-    m04b_revision = scripts.get_revision(M04B_REVISION)
-    assert m04b_revision is not None
-    assert m04b_revision.down_revision == P3D_REVISION
-
-    p4a_revision = scripts.get_revision(P4A_REVISION)
-    assert p4a_revision is not None
-    assert p4a_revision.down_revision == M04B_REVISION
-
-    p4b_lifecycle = scripts.get_revision(P4B_LIFECYCLE_REVISION)
-    assert p4b_lifecycle is not None
-    assert p4b_lifecycle.down_revision == P4A_REVISION
-
-    p4b_roll_targets = scripts.get_revision(P4B_ROLL_TARGETS_REVISION)
-    assert p4b_roll_targets is not None
-    assert p4b_roll_targets.down_revision == P4B_LIFECYCLE_REVISION
-    p4c_revision = scripts.get_revision(P4C_REVISION)
-    assert p4c_revision is not None
-    assert p4c_revision.down_revision == P4B_ROLL_TARGETS_REVISION
-    p4e_revision = scripts.get_revision(P4E_REVISION)
-    assert p4e_revision is not None
-    assert p4e_revision.down_revision == P4C_REVISION
-    p4f_outcome = scripts.get_revision(P4F_OUTCOME_REVISION)
-    assert p4f_outcome is not None
-    assert p4f_outcome.down_revision == P4E_REVISION
-    p4f_reveal = scripts.get_revision(P4F_REVEAL_REVISION)
-    assert p4f_reveal is not None
-    assert p4f_reveal.down_revision == P4F_OUTCOME_REVISION
-    p4f_auto_fail = scripts.get_revision(P4F_AUTO_FAIL_REVISION)
-    assert p4f_auto_fail is not None
-    assert p4f_auto_fail.down_revision == P4F_REVEAL_REVISION
-    p4f_revision = scripts.get_revision(P4F_REVISION)
-    assert p4f_revision is not None
-    assert p4f_revision.down_revision == P4F_AUTO_FAIL_REVISION
-    assert P4F_REVISION in scripts.get_heads()
+    heads = migration_heads(config)
+    web_ancestry = {
+        item.revision for item in scripts.walk_revisions(base="base", head=heads["web"])
+    }
+    assert CHECK_COMMAND_REVISION in web_ancestry
 
 
 def test_p3c_check_command_constraint_matches_metadata_and_downgrades_safely() -> None:

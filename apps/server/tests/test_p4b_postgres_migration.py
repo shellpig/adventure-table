@@ -8,6 +8,8 @@ from alembic.config import Config
 import pytest
 from sqlalchemy import create_engine, inspect, text
 
+from tests.migration_support import migration_heads
+
 
 POSTGRES_URL = os.environ.get("P4_POSTGRES_URL")
 pytestmark = pytest.mark.skipif(
@@ -16,16 +18,6 @@ pytestmark = pytest.mark.skipif(
 )
 SERVER_ROOT = Path(__file__).resolve().parents[1]
 P4B_PARENT = "0022_p4a_monster_instances"
-P4B_HEAD = "0024_p4b_combat_roll_targets"
-P4B_APPLIED_HEADS = {
-    P4B_HEAD,
-    "0025_p4c_core_resolution",
-    "0026_p4e_monster_concentration",
-    "0027_p4f_monster_outcome",
-    "0028_p4f_monster_reveal_state",
-    "0029_p4f_roll_request_auto_fail",
-    "0030_p4f_entry_dodging",
-}
 
 
 def _config() -> Config:
@@ -56,10 +48,6 @@ def _revision_set() -> set[str]:
             return set(connection.execute(text("SELECT version_num FROM alembic_version")).scalars())
     finally:
         engine.dispose()
-
-
-def _assert_p4b_applied() -> None:
-    assert _revision_set() & P4B_APPLIED_HEADS
 
 
 def _assert_schema() -> None:
@@ -136,14 +124,14 @@ def _assert_schema() -> None:
 def test_p4b_real_postgres_upgrade_from_p4a_parent() -> None:
     _reset()
     command.upgrade(_config(), P4B_PARENT)
-    assert P4B_HEAD not in _revision_set()
+    assert P4B_PARENT in _revision_set()
     command.upgrade(_config(), "heads")
-    _assert_p4b_applied()
+    assert _revision_set() == set(migration_heads(_config()).values())
     _assert_schema()
 
 
 def test_p4b_schema_survives_fresh_upgrade_to_heads() -> None:
     _reset()
     command.upgrade(_config(), "heads")
-    _assert_p4b_applied()
+    assert _revision_set() == set(migration_heads(_config()).values())
     _assert_schema()
