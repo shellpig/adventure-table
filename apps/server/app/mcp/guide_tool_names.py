@@ -32,6 +32,7 @@ class GuideToolNames:
     adjudicate_attack: str
     adjudicate_special_attack: str
     resolve_aoe_spell: str
+    apply_damage: str
 
 
 _EXPECTED = {
@@ -129,6 +130,7 @@ def guide_tool_names() -> GuideToolNames:
         adjudicate_attack="combat_adjudicate_attack",
         adjudicate_special_attack="combat_adjudicate_special_attack",
         resolve_aoe_spell="combat_resolve_aoe_spell",
+        apply_damage="combat_apply_damage",
     )
 
 

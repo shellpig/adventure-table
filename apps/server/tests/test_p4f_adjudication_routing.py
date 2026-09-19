@@ -62,6 +62,28 @@ def test_next_combat_action_dm_first_kind_precedence_and_unknown() -> None:
         )
 
 
+def test_next_combat_action_dm_advances_when_player_turn_is_done() -> None:
+    base = dict(
+        is_dm=True,
+        current_turn_entry_id=uuid4(),
+        current_turn_is_monster=False,
+        my_entry_ids=frozenset(),
+        pending_adjudication_kinds=(),
+        has_open_reaction=False,
+        has_pending_roll=False,
+    )
+    assert next_combat_action(**base, current_turn_done=True) == "advance_turn"
+    assert next_combat_action(**base, current_turn_done=False) == "wait_for_event"
+    # An open reaction window or a pending adjudication still wins over the advance hint.
+    assert next_combat_action(**{**base, "has_open_reaction": True}, current_turn_done=True) == "wait_for_event"
+    assert (
+        next_combat_action(**{**base, "pending_adjudication_kinds": ("range",)}, current_turn_done=True)
+        == "adjudicate_attack"
+    )
+    # Monster turns keep take_turn regardless of the flag.
+    assert next_combat_action(**{**base, "current_turn_is_monster": True}, current_turn_done=True) == "take_turn"
+
+
 def test_next_combat_action_player_branch_unchanged() -> None:
     my_id = uuid4()
     # Player with pending adjudication AND pending roll still gets roll_pending

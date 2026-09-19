@@ -215,6 +215,21 @@ describe('SessionCombatActionBar', () => {
     expect(markup).not.toContain('<select')
   })
 
+  it('tells the Player to wait for the DM once the action is spent on their own turn', () => {
+    const copy = sessionCopy('en')
+    const spent = combat('entry-player')
+    spent.entries = spent.entries.map((entry) =>
+      entry.id === 'entry-player' ? { ...entry, action_available: false, attacks_used: 1 } : entry,
+    )
+    const markup = renderActionBar({ detail: spent, isCurrentDm: false })
+    expect(markup).toContain('data-combat-action-spent="true"')
+    expect(markup).toContain(copy.combatActionSpentWaitingDm)
+    expect(markup).not.toContain('<select')
+
+    const fresh = renderActionBar({ detail: combat('entry-player'), isCurrentDm: false })
+    expect(fresh).not.toContain(copy.combatActionSpentWaitingDm)
+  })
+
   it('renders the range-confirmed checkbox for the DM on a monster turn', () => {
     const copy = sessionCopy('en')
     const markup = renderActionBar({ detail: combat('entry-enemy'), isCurrentDm: true })

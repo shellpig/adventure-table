@@ -730,6 +730,10 @@ export function SessionCombatActionBar({
         </p>
       ) : pendingActionId !== null ? (
         <p className="session-combat-actions__waiting">{copy.combatAwaitingAdjudication}</p>
+      ) : actingEntry && !actingEntry.action_available && !isCurrentDm ? (
+        <p className="session-combat-actions__waiting" data-combat-action-spent="true">
+          {copy.combatActionSpentWaitingDm}
+        </p>
       ) : (
         <form
           className="session-combat__form session-combat-actions__form"

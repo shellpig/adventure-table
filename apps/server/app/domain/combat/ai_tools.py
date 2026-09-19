@@ -121,6 +121,7 @@ def next_combat_action(
     pending_adjudication_kinds: tuple[str, ...],
     has_open_reaction: bool,
     has_pending_roll: bool,
+    current_turn_done: bool = False,
 ) -> str:
     """Compact next-step hint shared by get_combat_context and (E8) get_session_context."""
     if is_dm:
@@ -131,6 +132,10 @@ def next_combat_action(
             return _ADJUDICATION_KIND_TO_HINT[first_kind]
         if current_turn_is_monster:
             return "take_turn"
+        # Turn advance is DM-authoritative: once the Player's action is spent and
+        # nothing is pending, waiting would leave the table stuck (F8 finding).
+        if current_turn_done and not has_open_reaction:
+            return "advance_turn"
         return "wait_for_event"
     if has_pending_roll:
         return "roll_pending"
@@ -523,10 +528,12 @@ class CombatAIToolApplicationService(AIToolApplicationService):
 
         my_entry_ids: set[UUID] = set()
         current_turn_is_monster = False
+        current_turn_action_spent = False
         if detail is not None:
             for entry in detail.entries:
-                if entry.id == current_turn_entry_id and entry.subject_kind == "monster":
-                    current_turn_is_monster = True
+                if entry.id == current_turn_entry_id:
+                    current_turn_is_monster = entry.subject_kind == "monster"
+                    current_turn_action_spent = not entry.action_available
                 if entry.status != "active":
                     continue
                 if actor.is_current_dm:
@@ -565,6 +572,7 @@ class CombatAIToolApplicationService(AIToolApplicationService):
             pending_adjudication_kinds=pending_adjudication_kinds,
             has_open_reaction=bool(reaction_windows),
             has_pending_roll=has_pending_roll,
+            current_turn_done=current_turn_action_spent and not pending_requests,
         )
         return {
             "combat": detail.model_dump(mode="json") if detail is not None else None,

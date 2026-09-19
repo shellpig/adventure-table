@@ -177,7 +177,9 @@ def render_guide(locale: Locale | str) -> str:
             f"AoE 法術受影響目標用 {names.resolve_aoe_spell}；"
             f"Opportunity Attack 與 Player 提請的特殊裁定用 {names.resolve_adjudication}。"
             "context 的 next_required_action 會直接指出該用哪一個。"
-            f"輪到怪物時 DM 結算敵方動作並呼叫 {names.advance_turn} 推進回合。"
+            f"輪到怪物時 DM 結算敵方動作並呼叫 {names.advance_turn} 推進回合；Player 回合 action 用完且無待處理事項時（next_required_action 為 advance_turn）同樣由 DM 推進。"
+            f"環境或陷阱傷害用 {names.quick_roll} 擲骰再以 {names.apply_damage} 寫回，不要自行指定數字。"
+            "DM 敘事只描述傷勢等級，不得說出敵人精確 HP。"
             f"每次結算後立即呼叫 {names.wait_event}，不要停在 host chat。"
         )
         rules = f"【DM 守則】\n{role_rule(role='dm', locale=locale)}\n\n【Player 守則】\n{role_rule(role='player', locale=locale)}"
@@ -212,7 +214,10 @@ def render_guide(locale: Locale | str) -> str:
             f"AoE spell affected targets use {names.resolve_aoe_spell}; "
             f"Opportunity Attack and Player-requested special adjudications use {names.resolve_adjudication}. "
             "The context next_required_action indicates directly which one to use. "
-            f"On a Monster turn the DM resolves enemy actions then calls {names.advance_turn} to advance the turn. "
+            f"On a Monster turn the DM resolves enemy actions then calls {names.advance_turn} to advance the turn; "
+            "when a Player's action is spent with nothing pending (next_required_action is advance_turn) the DM advances as well. "
+            f"Environmental or trap damage: roll with {names.quick_roll}, then write it back with {names.apply_damage}; never invent the number. "
+            "DM narration describes injury level only and never an enemy's exact HP. "
             f"After each resolution, immediately call {names.wait_event} and never stop in host chat."
         )
         rules = f"[DM rules]\n{role_rule(role='dm', locale=locale)}\n\n[Player rules]\n{role_rule(role='player', locale=locale)}"
