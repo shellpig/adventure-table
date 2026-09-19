@@ -38,7 +38,7 @@
 2. **MANDATORY READING**：確認完整且最新的 `AGENTS.md`（已載入則不重讀）→ 精簡 `PROJECT_BRIEF.md` → 該 Subphase 接手摘要／步驟板與自己的 step 檔案 → 三份 Phase 文件對應段及必要共用前言 → **要動的每個程式檔與相關 API 定義（列檔名 + 用途 / 現在缺什麼）**。依賴其他 step 才額外列該步，不要求整份讀實作紀錄或 ROADMAP_HISTORY。server contract 把 route、input / view model 欄位與來源段落寫進 prompt；摘要不取代正式契約，修改前仍須讀該程式檔最新 HEAD。續做同一步時，不重讀已取得且未變更的背景文件。
 3. **SCOPE**：A/B/C… 條列，含測試案例清單，**必列「不該看到 / 不該操作」的 actor**（Player 看不到 DM 控制、非本場 participant 被拒且零副作用）。
 4. **Do not touch**：明列不可碰的檔案 / 區域。
-5. **CODE QUALITY**：不可省。點名要共用的既有 helper；禁 `getattr` / `Any` / 吞錯 try-except / optional-everything props + 空值 guard / 假資料補值 / `"?"` 佔位；「貼超過 ~20 行就抽 helper」。
+5. **CODE QUALITY**：一句「必須通過 `pytest tests/test_code_quality_gate.py`（cwd `apps/server`）與 `npm run build`」。`getattr` 帶 default／bare `Any` 註記／不 re-raise 的 broad except 由該測試擋，baseline 只能降不能升，不再逐條寫進 prompt。仍要人寫的：點名要共用的既有 helper；禁測試替身掩蓋 production gap、假資料補值／`"?"` 佔位、optional-everything props + 空值 guard、越界改既有契約；「貼超過 ~20 行就抽 helper」。
 6. **VERIFICATION**：worker 跑不了或不可靠時，寫明指揮者會跑哪些指令。
 7. **HARD RULES / GIT**：agy 不得 git 操作；ChatGPT 的 commit message、禁 force push / 開新 branch / 動 main。**parent 一律寫「你動手前 fetch 到的 branch HEAD」，不要寫死 hash**——指揮者常在 worker 跑的期間推自己的修正或文件 commit，寫死的 hash 會過期（2026-09-17 E10d-2a 撞到，worker 正確地拒絕覆蓋並改用當前 HEAD）。
 8. **FINAL REPORT**：固定五項（commit / 檔案 / 新簽名 / 測試名 / 契約疑點）。
