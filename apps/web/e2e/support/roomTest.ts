@@ -19,7 +19,14 @@ const ROOM_CONTEXT_PATH = resolve(
   'test-results',
   'p2-room-context.json',
 )
+const E2E_ROOM_PASSWORD = 'p2-e2e-room-pass'
 const HTTP_METHODS = ['delete', 'fetch', 'get', 'head', 'patch', 'post', 'put'] as const
+
+// 'worker': every Playwright worker creates its own Room, so spec files can run
+// in parallel without sharing character lists. 'baseline': the Room that
+// e2e-global-setup created first, the only one that adopted the seeded P0
+// fixture character; specs that hard-code that fixture id run there serially.
+export type RoomSource = 'worker' | 'baseline'
 
 type RequestOptions = {
   headers?: Record<string, string>
@@ -31,6 +38,29 @@ type RequestMethod = (url: unknown, options?: RequestOptions) => unknown
 async function readRoomContext(): Promise<E2ERoomContext> {
   const raw = await readFile(ROOM_CONTEXT_PATH, 'utf8')
   return JSON.parse(raw) as E2ERoomContext
+}
+
+async function createWorkerRoom(baseURL: string, workerIndex: number): Promise<E2ERoomContext> {
+  const response = await fetch(new URL('/api/rooms', baseURL), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: `E2E Worker Room ${workerIndex}`,
+      password: E2E_ROOM_PASSWORD,
+      display_name: 'Playwright Owner',
+    }),
+  })
+  if (!response.ok) {
+    throw new Error(`worker Room creation failed: ${response.status} ${await response.text()}`)
+  }
+  const grant = await response.json()
+  return {
+    roomId: grant.room.id,
+    code: grant.room.code,
+    name: grant.room.name,
+    accessToken: grant.access_token,
+    authority: grant.authority,
+  }
 }
 
 function scopeApiUrl(url: unknown, roomId: string): unknown {
@@ -89,9 +119,25 @@ function roomPageProxy(page: Page, room: E2ERoomContext): Page {
   }) as Page
 }
 
-export const test = base.extend<{ roomContext: E2ERoomContext }>({
-  roomContext: async ({}, use) => {
-    await use(await readRoomContext())
+export const test = base.extend<
+  { roomContext: E2ERoomContext },
+  { roomSource: RoomSource; workerRoom: E2ERoomContext }
+>({
+  roomSource: ['worker', { option: true, scope: 'worker' }],
+  workerRoom: [
+    async ({ roomSource }, use, workerInfo) => {
+      if (roomSource === 'baseline') {
+        await use(await readRoomContext())
+        return
+      }
+      const { baseURL } = workerInfo.project.use
+      if (!baseURL) throw new Error('baseURL is required to create a worker Room')
+      await use(await createWorkerRoom(baseURL, workerInfo.workerIndex))
+    },
+    { scope: 'worker' },
+  ],
+  roomContext: async ({ workerRoom }, use) => {
+    await use(workerRoom)
   },
   page: async ({ page, roomContext }, use) => {
     await page.goto('/')

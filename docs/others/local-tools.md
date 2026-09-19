@@ -43,6 +43,8 @@ npm run test:e2e:docker
 
 該 script 內的 `--build` 不可省——`web` service 沒有掛 bind mount，略過重建會靜默測到上一版 frontend。
 
+無參數時 script 依 `playwright.config.ts` 的三個 project 分三趟跑，每趟各自 reset DB：`parallel`（大多數 spec，每個 worker 自建 Room，預設 2 workers，`E2E_PARALLEL_WORKERS` 可調——server-e2e 是單一 uvicorn process，2 個 worker 就到 ~100% CPU，4 個不會更快且 Builder review 會開始 flake）、`baseline-room`（依賴 seed 出的 P0 fixture 角色的 spec，只在 global setup 建的第一個 Room 有這個角色，單 worker）、`serial-restart`（會 `docker compose restart server-e2e` 的 P4-F journey，單 worker）。帶參數時只跑一趟，預設 1 worker；新 spec 若依賴 fixture 角色或會重啟 server，要加進 config 對應清單，否則會被放進 `parallel`。
+
 `playwright.config.ts` 會直接擋下 Windows 託管路徑；要重現該 dev server問題才設 `ALLOW_WINDOWS_VITE_E2E=1`。細節見 `已知問題.md` 的 KI-ENV-001。
 
 ### 本機工具

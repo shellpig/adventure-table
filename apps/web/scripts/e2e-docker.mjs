@@ -2,9 +2,14 @@
 // U01-A keeps the daily server/web on 8000/5173 and daily PostgreSQL database
 // untouched while browser tests use server-e2e/web-e2e and adventure_table_e2e.
 //
-// A full invocation runs the suite twice. The second pass restarts only the E2E
-// services with xge removed and re-runs the M03-C missing-pack import contract.
-// Passing extra Playwright arguments skips that second pass.
+// A full invocation runs the three playwright.config.ts projects as separate
+// passes (each re-runs global setup, so each starts from a reset database):
+//   parallel        the bulk of the suite on PARALLEL_WORKERS workers
+//   baseline-room   specs that need the seeded fixture Room, one worker
+//   serial-restart  the P4-F journey that restarts server-e2e, one worker
+// then restarts only the E2E services with xge removed and re-runs the M03-C
+// missing-pack import contract. Passing extra Playwright arguments runs a single
+// pass with those arguments instead.
 //
 // Usage: npm run test:e2e:docker [-- <playwright args>]
 import { spawnSync } from 'node:child_process'
@@ -25,6 +30,9 @@ const webDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repoRoot = resolve(webDir, '..', '..')
 const playwrightArgs = process.argv.slice(2)
 const SUBSET_SPEC = 'e2e/m03c-character-import.spec.ts'
+// server-e2e is one uvicorn process and sits at ~100% CPU with two browsers;
+// four workers ran no faster and started failing on Builder review timing.
+const PARALLEL_WORKERS = process.env.E2E_PARALLEL_WORKERS ?? '2'
 
 const run = (command, args, cwd, env = {}) => {
   const result = spawnSync(command, args, {
@@ -129,10 +137,25 @@ runOrExit(
 )
 await waitForWeb()
 
-console.log(`[e2e-docker] running Playwright against ${E2E_BASE_URL}`)
-runOrExit('npx', ['playwright', 'test', ...playwrightArgs], webDir, playwrightEnv)
+if (playwrightArgs.length > 0) {
+  console.log(`[e2e-docker] running Playwright against ${E2E_BASE_URL}`)
+  runOrExit('npx', ['playwright', 'test', ...playwrightArgs], webDir, playwrightEnv)
+  process.exit(0)
+}
 
-if (playwrightArgs.length > 0) process.exit(0)
+for (const [project, workers] of [
+  ['parallel', PARALLEL_WORKERS],
+  ['baseline-room', '1'],
+  ['serial-restart', '1'],
+]) {
+  console.log(`[e2e-docker] running project ${project} (${workers} worker(s)) against ${E2E_BASE_URL}`)
+  runOrExit(
+    'npx',
+    ['playwright', 'test', `--project=${project}`, `--workers=${workers}`],
+    webDir,
+    playwrightEnv,
+  )
+}
 
 const subset = enabledPacksWithoutXge()
 console.log(`[e2e-docker] restarting isolated E2E services without xge (${subset})`)
