@@ -3,8 +3,11 @@ import { describe, expect, it } from 'vitest'
 import type { SessionResume, TableEvent, TableEventPage } from '../../api/sessions'
 import {
   applySessionEventPage,
+  applySessionHistoryPage,
   eventStreamFromResume,
+  hasOlderHistory,
   mergeResumeStream,
+  type SessionEventStreamState,
 } from './sessionEventStream'
 
 const SESSION_ID = '30000000-0000-4000-8000-000000000001'
@@ -60,7 +63,35 @@ describe('P3 Session event cursor reducer', () => {
     expect(state).not.toBeNull()
     expect(state?.cursor).toBe(2)
     expect(state?.currentSeq).toBe(2)
+    expect(state?.historyFloorSeq).toBe(0)
     expect(state?.events.map((item) => item.seq)).toEqual([1, 2])
+  })
+
+  it('reports no older history when Resume has after_seq === 0', () => {
+    const state = eventStreamFromResume(resume())
+    expect(state).not.toBeNull()
+    expect(state?.historyFloorSeq).toBe(0)
+    expect(hasOlderHistory(state!)).toBe(false)
+  })
+
+  it('continues from cursor and reports older history when Resume has after_seq > 0', () => {
+    const longResume = resume()
+    longResume.table_runtime!.last_event_seq = 120
+    longResume.recent_events = {
+      session_id: SESSION_ID,
+      after_seq: 70,
+      cursor: 120,
+      current_seq: 120,
+      has_more: false,
+      events: [event(119), event(120)],
+    }
+    const state = eventStreamFromResume(longResume)
+    expect(state).not.toBeNull()
+    expect(state?.cursor).toBe(120)
+    expect(state?.currentSeq).toBe(120)
+    expect(state?.historyFloorSeq).toBe(70)
+    expect(hasOlderHistory(state!)).toBe(true)
+    expect(state?.events.map((item) => item.seq)).toEqual([119, 120])
   })
 
   it('applies incremental pages and makes duplicate delivery idempotent', () => {
@@ -78,46 +109,81 @@ describe('P3 Session event cursor reducer', () => {
     const twice = applySessionEventPage(once, page)
 
     expect(once.cursor).toBe(4)
+    expect(once.historyFloorSeq).toBe(0)
     expect(twice.events.map((item) => item.seq)).toEqual([1, 2, 3, 4])
     expect(twice.events).toHaveLength(4)
   })
 
-  it('backfills caller-visible events before a bounded Resume window, including hidden raw gaps', () => {
-    const longResume = resume()
-    longResume.table_runtime!.last_event_seq = 120
-    longResume.recent_events = {
-      session_id: SESSION_ID,
-      after_seq: 70,
-      cursor: 120,
-      current_seq: 120,
-      has_more: false,
-      events: [event(119), event(120)],
+  it('prepends older events, keeps ascending order, dedupes, lowers historyFloorSeq, and ignores wrong-Session pages in applySessionHistoryPage', () => {
+    const initial = eventStreamFromResume(resume())!
+    const advanced: SessionEventStreamState = {
+      ...initial,
+      cursor: 100,
+      currentSeq: 100,
+      historyFloorSeq: 50,
+      events: [event(60), event(100)],
     }
-    const initial = eventStreamFromResume(longResume)!
+    const historyPage: TableEventPage = {
+      session_id: SESSION_ID,
+      after_seq: 20,
+      cursor: 49,
+      current_seq: 100,
+      has_more: true,
+      events: [event(30), event(60)],
+    }
+    const updated = applySessionHistoryPage(advanced, historyPage)
 
-    const first = applySessionEventPage(initial, {
+    expect(updated.historyFloorSeq).toBe(20)
+    expect(hasOlderHistory(updated)).toBe(true)
+    expect(updated.events.map((e) => e.seq)).toEqual([30, 60, 100])
+    expect(updated.cursor).toBe(100)
+    expect(updated.currentSeq).toBe(100)
+
+    const wrongSessionPage: TableEventPage = {
+      session_id: '30000000-0000-4000-8000-000000000099',
+      after_seq: 0,
+      cursor: 19,
+      current_seq: 100,
+      has_more: false,
+      events: [event(10)],
+    }
+    const ignored = applySessionHistoryPage(updated, wrongSessionPage)
+    expect(ignored).toBe(updated)
+  })
+
+  it('keeps both history and poll ranges after an incremental poll page with no 200 cap', () => {
+    const initial: SessionEventStreamState = {
+      sessionId: SESSION_ID,
+      cursor: 100,
+      currentSeq: 100,
+      historyFloorSeq: 50,
+      events: [event(60), event(100)],
+    }
+    const historyPage: TableEventPage = {
       session_id: SESSION_ID,
       after_seq: 0,
-      cursor: 100,
-      current_seq: 120,
-      has_more: true,
-      // The raw page may contain many private events for other seats. Only an
-      // older caller-visible event survives server audience projection.
-      events: [event(12)],
-    })
-    const second = applySessionEventPage(first, {
+      cursor: 49,
+      current_seq: 100,
+      has_more: false,
+      events: Array.from({ length: 150 }, (_, i) => event(i + 1)),
+    }
+    const withHistory = applySessionHistoryPage(initial, historyPage)
+
+    const pollPage: TableEventPage = {
       session_id: SESSION_ID,
       after_seq: 100,
-      cursor: 120,
-      current_seq: 120,
+      cursor: 220,
+      current_seq: 220,
       has_more: false,
-      events: [event(119), event(120)],
-    })
+      events: Array.from({ length: 120 }, (_, i) => event(101 + i)),
+    }
+    const withPoll = applySessionEventPage(withHistory, pollPage)
 
-    expect(initial.cursor).toBe(0)
-    expect(first.cursor).toBe(100)
-    expect(second.cursor).toBe(120)
-    expect(second.events.map((item) => item.seq)).toEqual([12, 119, 120])
+    expect(withPoll.events).toHaveLength(220)
+    expect(withPoll.events[0].seq).toBe(1)
+    expect(withPoll.events[withPoll.events.length - 1].seq).toBe(220)
+    expect(withPoll.historyFloorSeq).toBe(0)
+    expect(hasOlderHistory(withPoll)).toBe(false)
   })
 
   it('ignores stale or wrong-Session pages instead of moving the cursor backward', () => {
@@ -159,23 +225,8 @@ describe('P3 Session event cursor reducer', () => {
     const state = eventStreamFromResume(withoutRecent)
     expect(state?.cursor).toBe(0)
     expect(state?.currentSeq).toBe(9)
+    expect(state?.historyFloorSeq).toBe(0)
     expect(state?.events).toEqual([])
-  })
-
-  it('falls back to durable replay when Resume cannot prove its recent page reached the runtime head', () => {
-    const incompleteRecent = resume()
-    incompleteRecent.table_runtime!.last_event_seq = 9
-    incompleteRecent.recent_events = {
-      session_id: SESSION_ID,
-      after_seq: 0,
-      cursor: 8,
-      current_seq: 9,
-      has_more: false,
-      events: [event(8)],
-    }
-    const state = eventStreamFromResume(incompleteRecent)
-    expect(state?.cursor).toBe(0)
-    expect(state?.events.map((item) => item.seq)).toEqual([8])
   })
 
   it('does not invent an incremental stream for callers without P3 projection', () => {
@@ -203,6 +254,7 @@ describe('Resume merged into a live stream', () => {
     expect(merged?.events.map((item) => item.seq)).toEqual([1, 2, 3])
     expect(merged?.cursor).toBe(3)
     expect(merged?.currentSeq).toBe(3)
+    expect(merged?.historyFloorSeq).toBe(0)
   })
 
   it('replaces the stream for a different Session or a caller without projection', () => {

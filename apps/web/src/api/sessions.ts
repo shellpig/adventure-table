@@ -194,6 +194,18 @@ export function listSessionEvents(
   return request(`${tableBase(roomId, campaignId, sessionId)}/events?${query}`, token)
 }
 
+export function listSessionHistory(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  beforeSeq: number,
+  token: string,
+  limit = 100,
+): Promise<TableEventPage> {
+  const query = new URLSearchParams({ before: String(beforeSeq), limit: String(limit) })
+  return request(`${tableBase(roomId, campaignId, sessionId)}/events/history?${query}`, token)
+}
+
 export function waitSessionEvents(
   roomId: string,
   campaignId: string,

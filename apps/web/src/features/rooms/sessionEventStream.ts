@@ -4,10 +4,13 @@ export type SessionEventStreamState = {
   sessionId: string
   cursor: number
   currentSeq: number
+  historyFloorSeq: number
   events: TableEvent[]
 }
 
-const MAX_BUFFERED_EVENTS = 200
+export function hasOlderHistory(state: SessionEventStreamState): boolean {
+  return state.historyFloorSeq > 0
+}
 
 function mergeEvents(current: TableEvent[], incoming: TableEvent[]): TableEvent[] {
   const bySeq = new Map<number, TableEvent>()
@@ -18,9 +21,7 @@ function mergeEvents(current: TableEvent[], incoming: TableEvent[]): TableEvent[
     // committed projection rather than mutating already-rendered history.
     if (!bySeq.has(event.seq)) bySeq.set(event.seq, event)
   }
-  return [...bySeq.values()]
-    .sort((left, right) => left.seq - right.seq)
-    .slice(-MAX_BUFFERED_EVENTS)
+  return [...bySeq.values()].sort((left, right) => left.seq - right.seq)
 }
 
 export function mergeResumeStream(
@@ -36,6 +37,7 @@ export function mergeResumeStream(
     sessionId: next.sessionId,
     cursor: Math.max(current.cursor, next.cursor),
     currentSeq: Math.max(current.currentSeq, next.currentSeq),
+    historyFloorSeq: Math.min(current.historyFloorSeq, next.historyFloorSeq),
     events: mergeEvents(current.events, next.events),
   }
 }
@@ -47,23 +49,25 @@ export function eventStreamFromResume(resume: SessionResume): SessionEventStream
 
   const initialPage = resume.recent_events ?? null
   const matchingRecentPage = initialPage?.session_id === sessionId ? initialPage : null
-  const resumeHistoryIsComplete = matchingRecentPage !== null
-    && matchingRecentPage.after_seq === 0
-    && matchingRecentPage.has_more === false
-    && matchingRecentPage.cursor >= runtime.last_event_seq
+
+  // Resume provides a recent page ending at the runtime head; older history before
+  // after_seq is paged backward on demand. When absent, replay from seq 0.
+  if (matchingRecentPage) {
+    return {
+      sessionId,
+      cursor: matchingRecentPage.cursor,
+      currentSeq: Math.max(runtime.last_event_seq, matchingRecentPage.current_seq),
+      historyFloorSeq: matchingRecentPage.after_seq,
+      events: mergeEvents([], matchingRecentPage.events),
+    }
+  }
 
   return {
     sessionId,
-    // Resume paints a bounded recent projection immediately. We may continue
-    // directly from its cursor only when that projection proves it covered the
-    // durable history from seq 0 through the current runtime head. Otherwise a
-    // fresh browser must replay from zero so older caller-visible events cannot
-    // disappear merely because private/raw traffic pushed them outside the
-    // bounded Resume window. The reducer remains idempotent, so recent events
-    // already painted by Resume are harmlessly de-duplicated during backfill.
-    cursor: resumeHistoryIsComplete ? matchingRecentPage.cursor : 0,
-    currentSeq: Math.max(runtime.last_event_seq, matchingRecentPage?.current_seq ?? 0),
-    events: matchingRecentPage ? mergeEvents([], matchingRecentPage.events) : [],
+    cursor: 0,
+    currentSeq: runtime.last_event_seq,
+    historyFloorSeq: 0,
+    events: [],
   }
 }
 
@@ -78,8 +82,22 @@ export function applySessionEventPage(
     sessionId: state.sessionId,
     cursor: Math.max(state.cursor, page.cursor),
     currentSeq: Math.max(state.currentSeq, page.current_seq),
+    historyFloorSeq: state.historyFloorSeq,
     events: mergeEvents(state.events, page.events),
   }
 }
 
-export { MAX_BUFFERED_EVENTS }
+export function applySessionHistoryPage(
+  state: SessionEventStreamState,
+  page: TableEventPage,
+): SessionEventStreamState {
+  if (page.session_id !== state.sessionId) return state
+
+  return {
+    sessionId: state.sessionId,
+    cursor: Math.max(state.cursor, page.cursor),
+    currentSeq: Math.max(state.currentSeq, page.current_seq),
+    historyFloorSeq: Math.min(state.historyFloorSeq, page.after_seq),
+    events: mergeEvents(state.events, page.events),
+  }
+}

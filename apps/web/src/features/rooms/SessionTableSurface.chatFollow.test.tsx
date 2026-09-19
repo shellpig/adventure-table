@@ -127,6 +127,9 @@ describe('SessionTableSurface chat follow & jump control', () => {
           isCurrentDm={false}
           initialStage={null}
           events={[sampleChatEvent(1, 'Hello table'), sampleChatEvent(2, 'Second message')]}
+          hasOlderHistory={false}
+          historyLoading={false}
+          onLoadOlder={() => undefined}
           copy={sessionCopy(locale)}
           onError={() => undefined}
         />,

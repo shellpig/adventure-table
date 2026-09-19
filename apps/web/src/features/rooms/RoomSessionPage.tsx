@@ -9,6 +9,7 @@ import {
   getActiveSession,
   getSession,
   lateJoinSession,
+  listSessionHistory,
   waitSessionEvents,
   type SessionSnapshot,
   type StageState,
@@ -23,7 +24,9 @@ import {
 } from './sessionEventPoll'
 import {
   applySessionEventPage,
+  applySessionHistoryPage,
   eventStreamFromResume,
+  hasOlderHistory,
   mergeResumeStream,
   type SessionEventStreamState,
 } from './sessionEventStream'
@@ -118,6 +121,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   const [initialStage, setInitialStage] = useState<StageState | null>(null)
   const [eventStream, setEventStream] = useState<SessionEventStreamState | null>(null)
   const [eventConnectionStatus, setEventConnectionStatus] = useState<SessionEventConnectionStatus>('connected')
+  const [historyLoading, setHistoryLoading] = useState(false)
   const [lateJoinSeatId, setLateJoinSeatId] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -183,6 +187,26 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     (cause: unknown) => setError(sessionErrorMessage(cause, copy)),
     [copy],
   )
+
+  const loadOlderEvents = useCallback(async () => {
+    if (!eventStream || !hasOlderHistory(eventStream) || historyLoading) return
+    setHistoryLoading(true)
+    try {
+      const page = await listSessionHistory(
+        roomId,
+        campaignId,
+        sessionId,
+        eventStream.historyFloorSeq + 1,
+        token,
+        100,
+      )
+      setEventStream((current) => (current ? applySessionHistoryPage(current, page) : current))
+    } catch (cause) {
+      handleSessionTableError(cause)
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [eventStream, historyLoading, roomId, campaignId, sessionId, token, handleSessionTableError])
 
   const optionalLobby = (): Promise<LobbySnapshot | null> =>
     getLobby(roomId, campaignId, token).catch(() => null)
@@ -422,6 +446,9 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
             isCurrentDm={isCurrentDm}
             initialStage={initialStage}
             events={eventStream?.events ?? []}
+            hasOlderHistory={eventStream ? hasOlderHistory(eventStream) : false}
+            historyLoading={historyLoading}
+            onLoadOlder={loadOlderEvents}
             copy={copy}
             onError={handleSessionTableError}
           />

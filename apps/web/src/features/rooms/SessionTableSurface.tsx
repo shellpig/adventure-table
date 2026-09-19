@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import type { RoomCharacterSummary } from '../../api/campaigns'
 import { createPendingAction } from '../../api/p3c'
@@ -71,6 +71,9 @@ type SessionTableSurfaceProps = {
   isCurrentDm: boolean
   initialStage: StageState | null
   events: TableEvent[]
+  hasOlderHistory: boolean
+  historyLoading: boolean
+  onLoadOlder: () => void
   copy: SessionCopy
   onError: (cause: unknown) => void
 }
@@ -125,6 +128,9 @@ export function SessionTableSurface({
   isCurrentDm,
   initialStage,
   events,
+  hasOlderHistory,
+  historyLoading,
+  onLoadOlder,
   copy,
   onError,
 }: SessionTableSurfaceProps) {
@@ -134,7 +140,7 @@ export function SessionTableSurface({
   )
   const combatLogEvents = useMemo(() => events.slice(-100), [events])
   const chatEvents = useMemo(
-    () => events.filter(isSessionChatEvent).slice(-100),
+    () => events.filter(isSessionChatEvent),
     [events],
   )
   // Chat roll prompts name attacks via the same content presentations as the log.
@@ -359,6 +365,24 @@ export function SessionTableSurface({
   const [followChat, setFollowChat] = useState(true)
   const [lastSeenSeq, setLastSeenSeq] = useState(0)
   const chatMessagesRef = useRef<HTMLDivElement>(null)
+  const pendingAnchorScrollHeightRef = useRef<number | null>(null)
+
+  const handleLoadOlder = () => {
+    const container = chatMessagesRef.current
+    if (container) {
+      pendingAnchorScrollHeightRef.current = container.scrollHeight
+    }
+    onLoadOlder()
+  }
+
+  // Keep the reader on the same message after an older page is prepended.
+  useLayoutEffect(() => {
+    const container = chatMessagesRef.current
+    const previousHeight = pendingAnchorScrollHeightRef.current
+    if (historyLoading || !container || previousHeight === null) return
+    container.scrollTop += container.scrollHeight - previousHeight
+    pendingAnchorScrollHeightRef.current = null
+  }, [chatEvents, historyLoading])
 
   // Follow chat only when reader is already at bottom or explicitly jumps
   useEffect(() => {
@@ -652,6 +676,17 @@ export function SessionTableSurface({
                   ref={chatMessagesRef}
                   onScroll={handleChatScroll}
                 >
+                  {hasOlderHistory ? (
+                    <button
+                      type="button"
+                      className="session-chat__load-older"
+                      data-chat-load-older
+                      disabled={historyLoading}
+                      onClick={handleLoadOlder}
+                    >
+                      {historyLoading ? copy.loadingOlderMessages : copy.loadOlderMessages}
+                    </button>
+                  ) : null}
                   {chatEvents.length === 0 ? <p className="session-stage__empty">{copy.noMessages}</p> : null}
                   {chatEvents.map((event) => {
                     if (isRollRequestEvent(event)) {

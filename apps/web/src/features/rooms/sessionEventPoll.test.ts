@@ -115,6 +115,7 @@ describe('Session event long-poll reconnect', () => {
       sessionId: SESSION_ID,
       cursor: 2,
       currentSeq: 2,
+      historyFloorSeq: 0,
       events: [event(1), event(2)],
     }
 

@@ -166,6 +166,9 @@ describe('SessionTableSurface message presentation', () => {
           isCurrentDm={true}
           initialStage={null}
           events={[rollRequestedEvent()]}
+          hasOlderHistory={false}
+          historyLoading={false}
+          onLoadOlder={() => undefined}
           copy={sessionCopy(locale)}
           onError={() => undefined}
         />,
@@ -198,6 +201,9 @@ describe('SessionTableSurface message presentation', () => {
           explorationEvent(1, 'exploration.ooc', MIRA_SEAT, 'Mira OOC line'),
           explorationEvent(2, 'exploration.whisper_dm', SERENA_SEAT, 'Serena secret'),
         ]}
+        hasOlderHistory={false}
+        historyLoading={false}
+        onLoadOlder={() => undefined}
         copy={sessionCopy('en')}
         onError={() => undefined}
       />,
@@ -249,6 +255,9 @@ describe('SessionTableSurface message presentation', () => {
           events={[
             explorationEvent(1, 'exploration.ooc', MIRA_SEAT, 'Mira colored line'),
           ]}
+          hasOlderHistory={false}
+          historyLoading={false}
+          onLoadOlder={() => undefined}
           copy={sessionCopy('zh-TW')}
           onError={() => undefined}
         />,
@@ -285,6 +294,9 @@ describe('SessionTableSurface combat toolbar', () => {
           isCurrentDm={true}
           initialStage={null}
           events={[]}
+          hasOlderHistory={false}
+          historyLoading={false}
+          onLoadOlder={() => undefined}
           copy={copy}
           onError={() => undefined}
         />,
@@ -311,6 +323,9 @@ describe('SessionTableSurface combat toolbar', () => {
           isCurrentDm={false}
           initialStage={null}
           events={[]}
+          hasOlderHistory={false}
+          historyLoading={false}
+          onLoadOlder={() => undefined}
           copy={copy}
           onError={() => undefined}
         />,
@@ -320,6 +335,127 @@ describe('SessionTableSurface combat toolbar', () => {
       expect(markup).not.toContain(copy.combatStart)
       expect(markup).not.toContain(copy.combatEnd)
     }
+  })
+})
+
+describe('SessionTableSurface older history & message capacity', () => {
+  it('renders load-older button when hasOlderHistory is true, disabled with loading label when historyLoading is true, and no button when false', () => {
+    for (const locale of ['zh-TW', 'en'] as const) {
+      const copy = sessionCopy(locale)
+      const markup = renderSurface(
+        <SessionTableSurface
+          roomId={ROOM_ID}
+          campaignId={CAMPAIGN_ID}
+          sessionId={SESSION_ID}
+          token="room-token"
+          snapshot={snapshot}
+          seats={seats}
+          characters={characters}
+          callerAccessSessionId="dm-access"
+          isCurrentDm={true}
+          initialStage={null}
+          events={[]}
+          hasOlderHistory={true}
+          historyLoading={false}
+          onLoadOlder={() => undefined}
+          copy={copy}
+          onError={() => undefined}
+        />,
+      )
+      expect(markup).toContain('data-chat-load-older')
+      expect(markup).toContain('session-chat__load-older')
+      expect(markup).toContain(copy.loadOlderMessages)
+      expect(markup).not.toContain('disabled=""')
+    }
+
+    const loadingMarkup = renderSurface(
+      <SessionTableSurface
+        roomId={ROOM_ID}
+        campaignId={CAMPAIGN_ID}
+        sessionId={SESSION_ID}
+        token="room-token"
+        snapshot={snapshot}
+        seats={seats}
+        characters={characters}
+        callerAccessSessionId="dm-access"
+        isCurrentDm={true}
+        initialStage={null}
+        events={[]}
+        hasOlderHistory={true}
+        historyLoading={true}
+        onLoadOlder={() => undefined}
+        copy={sessionCopy('en')}
+        onError={() => undefined}
+      />,
+    )
+    expect(loadingMarkup).toContain('data-chat-load-older')
+    expect(loadingMarkup).toContain('disabled=""')
+    expect(loadingMarkup).toContain(sessionCopy('en').loadingOlderMessages)
+
+    const noOlderMarkup = renderSurface(
+      <SessionTableSurface
+        roomId={ROOM_ID}
+        campaignId={CAMPAIGN_ID}
+        sessionId={SESSION_ID}
+        token="room-token"
+        snapshot={snapshot}
+        seats={seats}
+        characters={characters}
+        callerAccessSessionId="dm-access"
+        isCurrentDm={true}
+        initialStage={null}
+        events={[]}
+        hasOlderHistory={false}
+        historyLoading={false}
+        onLoadOlder={() => undefined}
+        copy={sessionCopy('en')}
+        onError={() => undefined}
+      />,
+    )
+    expect(noOlderMarkup).not.toContain('data-chat-load-older')
+    expect(noOlderMarkup).not.toContain('session-chat__load-older')
+  })
+
+  it('renders all chat events when there are more than 100 chat events', () => {
+    const manyEvents: TableEvent[] = Array.from({ length: 120 }, (_, index) => ({
+      id: `60000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      session_id: SESSION_ID,
+      seq: index + 1,
+      kind: 'exploration.dialogue',
+      acting_seat_id: MIRA_SEAT,
+      subject_seat_id: MIRA_SEAT,
+      subject_character_id: MIRA_CHARACTER,
+      execution_mode: 'self',
+      visibility: 'public',
+      recipient_seat_ids: [],
+      payload_version: 1,
+      payload: { text: `Message number ${index + 1}` },
+      created_at: NOW,
+    }))
+
+    const markup = renderSurface(
+      <SessionTableSurface
+        roomId={ROOM_ID}
+        campaignId={CAMPAIGN_ID}
+        sessionId={SESSION_ID}
+        token="room-token"
+        snapshot={snapshot}
+        seats={seats}
+        characters={characters}
+        callerAccessSessionId="mira-access"
+        isCurrentDm={false}
+        initialStage={null}
+        events={manyEvents}
+        hasOlderHistory={false}
+        historyLoading={false}
+        onLoadOlder={() => undefined}
+        copy={sessionCopy('en')}
+        onError={() => undefined}
+      />,
+    )
+
+    const matches = markup.match(/class="session-chat__message"/g)
+    expect(matches).toHaveLength(120)
   })
 })
 
