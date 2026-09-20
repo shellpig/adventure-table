@@ -5,13 +5,13 @@ import {
   createAdventure,
   deleteAdventure,
   finalizeAdventure,
-  getAdventure,
   listAdventures,
   type AdventureDefinition,
   type AdventureStatus,
 } from '../../api/adventures'
 import type { RoomAuthority } from '../../api/rooms'
 import { useLocale } from '../../i18n/LocaleProvider'
+import { AdventureEditorPage } from './AdventureEditorPage'
 import { adventureErrorMessage, adventuresCopy } from './adventuresCopy'
 import { recentRoomForId } from './roomStorage'
 import './rooms.css'
@@ -157,7 +157,6 @@ export function RoomAdventuresPage({ roomId, adventureId }: RoomAdventuresRoute)
   const { canAuthor } = adventurePermissions(recent?.authority)
 
   const [adventures, setAdventures] = useState<AdventureDefinition[]>([])
-  const [detailAdventure, setDetailAdventure] = useState<AdventureDefinition | null>(null)
   const [name, setName] = useState('')
   const [summary, setSummary] = useState('')
   const [pending, setPending] = useState(false)
@@ -179,25 +178,16 @@ export function RoomAdventuresPage({ roomId, adventureId }: RoomAdventuresRoute)
 
   useEffect(() => {
     if (!recent || !canAuthor) return
+    if (adventureId) return
     let active = true
 
-    if (adventureId) {
-      void getAdventure(roomId, adventureId, token)
-        .then((adv) => {
-          if (active) setDetailAdventure(adv)
-        })
-        .catch((cause: unknown) => {
-          if (active) setError(adventureErrorMessage(cause, copy))
-        })
-    } else {
-      void listAdventures(roomId, token)
-        .then((items) => {
-          if (active) setAdventures(items)
-        })
-        .catch((cause: unknown) => {
-          if (active) setError(adventureErrorMessage(cause, copy))
-        })
-    }
+    void listAdventures(roomId, token)
+      .then((items) => {
+        if (active) setAdventures(items)
+      })
+      .catch((cause: unknown) => {
+        if (active) setError(adventureErrorMessage(cause, copy))
+      })
 
     return () => {
       active = false
@@ -218,22 +208,6 @@ export function RoomAdventuresPage({ roomId, adventureId }: RoomAdventuresRoute)
     )
   }
 
-  if (adventureId) {
-    return (
-      <main className="landing-page room-workspace-page">
-        <section className="landing-card room-workspace-card">
-          <h1>{detailAdventure?.name ?? copy.title}</h1>
-          <p>{copy.editorPlaceholder}</p>
-          <div className="workshop-card__split-actions">
-            <a className="button secondary" href={`/rooms/${roomId}/adventures`}>
-              {copy.backAdventures}
-            </a>
-          </div>
-        </section>
-      </main>
-    )
-  }
-
   if (!canAuthor) {
     return (
       <main className="landing-page room-workspace-page">
@@ -244,6 +218,10 @@ export function RoomAdventuresPage({ roomId, adventureId }: RoomAdventuresRoute)
         </section>
       </main>
     )
+  }
+
+  if (adventureId) {
+    return <AdventureEditorPage roomId={roomId} adventureId={adventureId} token={token} />
   }
 
   return (
