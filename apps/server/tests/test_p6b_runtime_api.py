@@ -17,14 +17,31 @@ from app.api.errors import APIError
 from app.api.rooms.access import get_room_access_context
 from app.api.rooms.campaign_runtime import map_campaign_runtime_error
 from app.db import metadata
+from app.domain.adventures.attachments import CampaignAdventureService
+from app.domain.adventures.schemas import (
+    CampaignAdventureAttach,
+    CampaignAdventureDetachBlockedError,
+)
 from app.domain.campaign_runtime.service import CampaignRuntimeService
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.table_events import TableEventService
 from app.main import app as fastapi_app
+from app.persistence.adventures.repository import (
+    AdventureRepository,
+    CampaignAdventureLinkRepository,
+)
+from app.persistence.adventures.tables import (
+    adventure_definitions,
+    adventure_entries,
+    campaign_adventure_links,
+)
 from app.persistence.campaign_runtime.tables import (
+    campaign_adventure_overrides,
+    campaign_runtime_context,
     campaign_world_entries,
     campaign_world_mutations,
 )
+from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.table_runtime import TableEventRepository
 from app.persistence.rooms.tables import (
     campaign_seats,
@@ -65,6 +82,13 @@ class RuntimeApiFixture:
     token_dm_a: str
     token_member_a: str
     token_owner_b: str
+    adv_1_id: UUID
+    adv_2_unattached_id: UUID
+    npc_entry_id: UUID
+    scene_entry_id: UUID
+    unattached_entry_id: UUID
+    adv_service: CampaignAdventureService
+    owner_context_a: RoomAccessContext
 
 
 def _auth(token: str) -> dict[str, str]:
@@ -228,6 +252,108 @@ def api_fixture() -> Generator[RuntimeApiFixture, None, None]:
             )
         )
 
+        adv_1_id = uuid4()
+        adv_2_unattached_id = uuid4()
+        npc_entry_id = uuid4()
+        scene_entry_id = uuid4()
+        unattached_entry_id = uuid4()
+
+        conn.execute(
+            insert(adventure_definitions).values(
+                [
+                    {
+                        "id": adv_1_id,
+                        "room_id": room_a_id,
+                        "name": "Lost Mine",
+                        "summary": "Adventure 1",
+                        "ruleset": "dnd5e-2014",
+                        "status": "finalized",
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                    {
+                        "id": adv_2_unattached_id,
+                        "room_id": room_a_id,
+                        "name": "Sunless Citadel",
+                        "summary": "Adventure 2",
+                        "ruleset": "dnd5e-2014",
+                        "status": "finalized",
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                ]
+            )
+        )
+        conn.execute(
+            insert(adventure_entries).values(
+                [
+                    {
+                        "id": npc_entry_id,
+                        "adventure_id": adv_1_id,
+                        "parent_entry_id": None,
+                        "kind": "npc",
+                        "title": "Goblin Sentry",
+                        "body": "A small green creature",
+                        "data_json": {"disposition": "neutral"},
+                        "visibility": "public",
+                        "sort_order": 1,
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                    {
+                        "id": scene_entry_id,
+                        "adventure_id": adv_1_id,
+                        "parent_entry_id": None,
+                        "kind": "scene",
+                        "title": "Goblin Cave",
+                        "body": "Dark and damp",
+                        "data_json": {},
+                        "visibility": "public",
+                        "sort_order": 2,
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                    {
+                        "id": unattached_entry_id,
+                        "adventure_id": adv_2_unattached_id,
+                        "parent_entry_id": None,
+                        "kind": "scene",
+                        "title": "Citadel Gate",
+                        "body": "Overgrown entrance",
+                        "data_json": {},
+                        "visibility": "public",
+                        "sort_order": 1,
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                ]
+            )
+        )
+        conn.execute(
+            insert(campaign_adventure_links).values(
+                [
+                    {
+                        "campaign_id": campaign_a1_id,
+                        "adventure_id": adv_1_id,
+                        "sort_order": 1,
+                        "attached_at": now,
+                    },
+                    {
+                        "campaign_id": campaign_active_id,
+                        "adventure_id": adv_1_id,
+                        "sort_order": 1,
+                        "attached_at": now,
+                    },
+                ]
+            )
+        )
+
+    adv_service = CampaignAdventureService(
+        CampaignAdventureLinkRepository(engine),
+        AdventureRepository(engine),
+        CampaignRepository(engine),
+    )
+
     token_owner_a = "tok-owner-a"
     token_dm_a = "tok-dm-a"
     token_member_a = "tok-member-a"
@@ -286,6 +412,13 @@ def api_fixture() -> Generator[RuntimeApiFixture, None, None]:
             token_dm_a=token_dm_a,
             token_member_a=token_member_a,
             token_owner_b=token_owner_b,
+            adv_1_id=adv_1_id,
+            adv_2_unattached_id=adv_2_unattached_id,
+            npc_entry_id=npc_entry_id,
+            scene_entry_id=scene_entry_id,
+            unattached_entry_id=unattached_entry_id,
+            adv_service=adv_service,
+            owner_context_a=token_to_context[token_owner_a],
         )
     finally:
         try:
@@ -932,3 +1065,931 @@ def test_rejected_requests_leave_row_revision_and_mutation_state_unchanged(
     )
     assert resp4.status_code == 409
     assert _snapshot() == (rev_before, total_before, muts_before)
+
+
+def _snapshot_runtime_state(fix: RuntimeApiFixture) -> tuple[int, int, int]:
+    with fix.engine.connect() as conn:
+        ovr_count = len(
+            conn.execute(
+                select(campaign_adventure_overrides).where(
+                    campaign_adventure_overrides.c.campaign_id == fix.campaign_a1_id
+                )
+            ).fetchall()
+        )
+        ctx_row = conn.execute(
+            select(campaign_runtime_context).where(
+                campaign_runtime_context.c.campaign_id == fix.campaign_a1_id
+            )
+        ).mappings().one_or_none()
+        ctx_rev = ctx_row["revision"] if ctx_row is not None else 0
+        mut_count = len(
+            conn.execute(
+                select(campaign_world_mutations).where(
+                    campaign_world_mutations.c.campaign_id == fix.campaign_a1_id
+                )
+            ).fetchall()
+        )
+        return ovr_count, ctx_rev, mut_count
+
+
+def test_override_management_crud_and_overlay_reads(api_fixture: RuntimeApiFixture) -> None:
+    fix = api_fixture
+    base = f"/api/rooms/{fix.room_a_id}/campaigns/{fix.campaign_a1_id}/runtime"
+
+    # 1. Overlay read before any override exists
+    ov_resp = fix.client.get(
+        f"{base}/adventure-overlays/{fix.npc_entry_id}",
+        headers=_auth(fix.token_owner_a),
+    )
+    assert ov_resp.status_code == 200
+    ov_data = ov_resp.json()
+    assert ov_data["id"] == str(fix.npc_entry_id)
+    assert ov_data["kind"] == "npc"
+    assert ov_data["data"]["disposition"] == "neutral"
+    assert ov_data["override"] is None
+
+    # List overlays for adventure
+    list_ov_resp = fix.client.get(
+        f"{base}/adventures/{fix.adv_1_id}/overlays",
+        headers=_auth(fix.token_owner_a),
+    )
+    assert list_ov_resp.status_code == 200
+    overlays = list_ov_resp.json()
+    assert len(overlays) == 2
+    assert all(o["override"] is None for o in overlays)
+
+    # Initial list overrides is empty
+    list_ovr_0 = fix.client.get(f"{base}/overrides", headers=_auth(fix.token_owner_a))
+    assert list_ovr_0.status_code == 200
+    assert list_ovr_0.json() == []
+
+    # 2. Owner creates override
+    create_resp = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-ovr-c1",
+            "adventure_entry_id": str(fix.npc_entry_id),
+            "state": {"disposition": "hostile"},
+            "note": "Ambushed party",
+            "needs_review": False,
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert create_resp.status_code == 201
+    created = create_resp.json()
+    ovr_id = created["id"]
+    assert created["adventure_entry_id"] == str(fix.npc_entry_id)
+    assert created["state_json"] == {"disposition": "hostile"}
+    assert created["note"] == "Ambushed party"
+    assert created["needs_review"] is False
+    assert created["revision"] == 1
+
+    # 3. GET override by adventure_entry_id
+    get_ovr = fix.client.get(
+        f"{base}/overrides/{fix.npc_entry_id}",
+        headers=_auth(fix.token_owner_a),
+    )
+    assert get_ovr.status_code == 200
+    assert get_ovr.json()["id"] == ovr_id
+
+    # 4. GET list overrides
+    list_ovr_1 = fix.client.get(f"{base}/overrides", headers=_auth(fix.token_owner_a))
+    assert list_ovr_1.status_code == 200
+    assert len(list_ovr_1.json()) == 1
+    assert list_ovr_1.json()[0]["id"] == ovr_id
+
+    # 5. Overlay read with override present
+    ov_resp_with = fix.client.get(
+        f"{base}/adventure-overlays/{fix.npc_entry_id}",
+        headers=_auth(fix.token_dm_a),
+    )
+    assert ov_resp_with.status_code == 200
+    ov_with_data = ov_resp_with.json()
+    assert ov_with_data["override"] is not None
+    assert ov_with_data["override"]["id"] == ovr_id
+    assert ov_with_data["override"]["state_json"] == {"disposition": "hostile"}
+
+    # Assert underlying adventure_entries definition row is completely unchanged
+    with fix.engine.connect() as conn:
+        entry_row = conn.execute(
+            select(adventure_entries).where(adventure_entries.c.id == fix.npc_entry_id)
+        ).mappings().one()
+        assert entry_row["data_json"] == {"disposition": "neutral"}
+
+    # 6. DM updates override
+    patch_resp = fix.client.patch(
+        f"{base}/overrides/{fix.npc_entry_id}",
+        json={
+            "idempotency_key": "k-ovr-p1",
+            "expected_override_id": ovr_id,
+            "expected_revision": 1,
+            "state": {"disposition": "friendly"},
+            "note": "Bribed with rations",
+            "needs_review": True,
+        },
+        headers=_auth(fix.token_dm_a),
+    )
+    assert patch_resp.status_code == 200
+    updated = patch_resp.json()
+    assert updated["revision"] == 2
+    assert updated["state_json"] == {"disposition": "friendly"}
+    assert updated["needs_review"] is True
+
+    # 7. DM clears override
+    clear_resp = fix.client.post(
+        f"{base}/overrides/{fix.npc_entry_id}/clear",
+        json={
+            "idempotency_key": "k-ovr-clear1",
+            "expected_override_id": ovr_id,
+            "expected_revision": 2,
+        },
+        headers=_auth(fix.token_dm_a),
+    )
+    assert clear_resp.status_code == 200
+
+    # 8. Verify cleared
+    get_cleared = fix.client.get(
+        f"{base}/overrides/{fix.npc_entry_id}",
+        headers=_auth(fix.token_owner_a),
+    )
+    assert get_cleared.status_code == 404
+    assert get_cleared.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    list_cleared = fix.client.get(f"{base}/overrides", headers=_auth(fix.token_owner_a))
+    assert list_cleared.status_code == 200
+    assert list_cleared.json() == []
+
+    ov_after_clear = fix.client.get(
+        f"{base}/adventure-overlays/{fix.npc_entry_id}",
+        headers=_auth(fix.token_owner_a),
+    )
+    assert ov_after_clear.status_code == 200
+    assert ov_after_clear.json()["override"] is None
+
+
+def test_context_management_crud(api_fixture: RuntimeApiFixture) -> None:
+    fix = api_fixture
+    base = f"/api/rooms/{fix.room_a_id}/campaigns/{fix.campaign_a1_id}/runtime"
+
+    # 1. Initial GET context (revision 0, all None)
+    get_ctx_0 = fix.client.get(f"{base}/context", headers=_auth(fix.token_owner_a))
+    assert get_ctx_0.status_code == 200
+    ctx_0 = get_ctx_0.json()
+    assert ctx_0["revision"] == 0
+    assert ctx_0["current_adventure_scene_entry_id"] is None
+    assert ctx_0["current_runtime_scene_entry_id"] is None
+    assert ctx_0["current_situation"] is None
+
+    # 2. Owner updates situation only
+    patch_1 = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-ctx-p1",
+            "expected_revision": 0,
+            "current_situation": "The party enters Phandalin.",
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert patch_1.status_code == 200
+    ctx_1 = patch_1.json()
+    assert ctx_1["revision"] == 1
+    assert ctx_1["current_situation"] == "The party enters Phandalin."
+    assert ctx_1["current_adventure_scene_entry_id"] is None
+
+    # 3. DM updates with adventure scene reference
+    patch_2 = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-ctx-p2",
+            "expected_revision": 1,
+            "current_adventure_scene_entry_id": str(fix.scene_entry_id),
+        },
+        headers=_auth(fix.token_dm_a),
+    )
+    assert patch_2.status_code == 200
+    ctx_2 = patch_2.json()
+    assert ctx_2["revision"] == 2
+    assert ctx_2["current_adventure_scene_entry_id"] == str(fix.scene_entry_id)
+    assert ctx_2["current_situation"] == "The party enters Phandalin."
+
+    # 4. Owner clears context
+    clear_resp = fix.client.post(
+        f"{base}/context/clear",
+        json={
+            "idempotency_key": "k-ctx-c1",
+            "expected_revision": 2,
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert clear_resp.status_code == 200
+    cleared_ctx = clear_resp.json()
+    assert cleared_ctx["revision"] == 3
+    assert cleared_ctx["current_adventure_scene_entry_id"] is None
+    assert cleared_ctx["current_runtime_scene_entry_id"] is None
+    assert cleared_ctx["current_situation"] is None
+
+
+def test_player_forbidden_from_overrides_context_and_overlays(
+    api_fixture: RuntimeApiFixture,
+) -> None:
+    fix = api_fixture
+    base = f"/api/rooms/{fix.room_a_id}/campaigns/{fix.campaign_a1_id}/runtime"
+
+    calls = [
+        ("GET", f"{base}/overrides", None),
+        ("GET", f"{base}/overrides/{fix.npc_entry_id}", None),
+        (
+            "POST",
+            f"{base}/overrides",
+            {
+                "idempotency_key": "k-pl-1",
+                "adventure_entry_id": str(fix.npc_entry_id),
+                "state": {"disposition": "hostile"},
+            },
+        ),
+        (
+            "PATCH",
+            f"{base}/overrides/{fix.npc_entry_id}",
+            {
+                "idempotency_key": "k-pl-2",
+                "expected_override_id": str(uuid4()),
+                "expected_revision": 1,
+                "state": {"disposition": "friendly"},
+            },
+        ),
+        (
+            "POST",
+            f"{base}/overrides/{fix.npc_entry_id}/clear",
+            {
+                "idempotency_key": "k-pl-3",
+                "expected_override_id": str(uuid4()),
+                "expected_revision": 1,
+            },
+        ),
+        ("GET", f"{base}/context", None),
+        (
+            "PATCH",
+            f"{base}/context",
+            {"idempotency_key": "k-pl-4", "expected_revision": 0, "current_situation": "hack"},
+        ),
+        (
+            "POST",
+            f"{base}/context/clear",
+            {"idempotency_key": "k-pl-5", "expected_revision": 0},
+        ),
+        ("GET", f"{base}/adventure-overlays/{fix.npc_entry_id}", None),
+        ("GET", f"{base}/adventures/{fix.adv_1_id}/overlays", None),
+    ]
+
+    for method, url, json_body in calls:
+        if method == "GET":
+            r = fix.client.get(url, headers=_auth(fix.token_member_a))
+        elif method == "POST":
+            r = fix.client.post(url, json=json_body, headers=_auth(fix.token_member_a))
+        elif method == "PATCH":
+            r = fix.client.patch(url, json=json_body, headers=_auth(fix.token_member_a))
+        else:
+            raise AssertionError(f"Unknown method {method}")
+        assert r.status_code == 403, f"{method} {url} returned {r.status_code}"
+        assert r.json()["error"]["code"] == "campaign_runtime_forbidden"
+
+
+def test_wrong_room_and_campaign_overrides_context_overlays(
+    api_fixture: RuntimeApiFixture,
+) -> None:
+    fix = api_fixture
+    # Wrong room context
+    r1 = fix.client.get(
+        f"/api/rooms/{fix.room_b_id}/campaigns/{fix.campaign_b1_id}/runtime/overrides",
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r1.status_code == 404
+    assert r1.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    r2 = fix.client.get(
+        f"/api/rooms/{fix.room_b_id}/campaigns/{fix.campaign_b1_id}/runtime/context",
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r2.status_code == 404
+    assert r2.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    # Campaign not in room
+    r3 = fix.client.get(
+        f"/api/rooms/{fix.room_a_id}/campaigns/{fix.campaign_b1_id}/runtime/overrides",
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r3.status_code == 404
+    assert r3.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    # Non-existent campaign
+    rand_camp = uuid4()
+    r4 = fix.client.get(
+        f"/api/rooms/{fix.room_a_id}/campaigns/{rand_camp}/runtime/context",
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r4.status_code == 404
+    assert r4.json()["error"]["code"] == "campaign_runtime_not_found"
+
+
+def test_unattached_adventure_entry_and_duplicate_override(
+    api_fixture: RuntimeApiFixture,
+) -> None:
+    fix = api_fixture
+    base = f"/api/rooms/{fix.room_a_id}/campaigns/{fix.campaign_a1_id}/runtime"
+
+    # 1. Override on unattached entry -> 422 campaign_runtime_invalid
+    r_unattached = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-unattached-1",
+            "adventure_entry_id": str(fix.unattached_entry_id),
+            "state": {},
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r_unattached.status_code == 422
+    assert r_unattached.json()["error"]["code"] == "campaign_runtime_invalid"
+
+    # 2. Override on non-existent entry -> 404 campaign_runtime_not_found
+    r_missing = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-missing-entry",
+            "adventure_entry_id": str(uuid4()),
+            "state": {},
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r_missing.status_code == 404
+    assert r_missing.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    # 3. Create valid override
+    r_valid = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-valid-ovr",
+            "adventure_entry_id": str(fix.npc_entry_id),
+            "state": {"disposition": "hostile"},
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r_valid.status_code == 201
+
+    # 4. Attempt to create duplicate override -> 409 campaign_runtime_override_exists
+    r_dup = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-dup-ovr",
+            "adventure_entry_id": str(fix.npc_entry_id),
+            "state": {"disposition": "friendly"},
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r_dup.status_code == 409
+    assert r_dup.json()["error"]["code"] == "campaign_runtime_override_exists"
+
+
+def test_invalid_and_dual_scene_references_in_context(
+    api_fixture: RuntimeApiFixture,
+) -> None:
+    fix = api_fixture
+    base = f"/api/rooms/{fix.room_a_id}/campaigns/{fix.campaign_a1_id}/runtime"
+
+    # Create a runtime scene and a runtime fact
+    scene_resp = fix.client.post(
+        f"{base}/entries",
+        json={"idempotency_key": "k-rt-scene", "kind": "scene", "title": "Runtime Scene"},
+        headers=_auth(fix.token_owner_a),
+    )
+    assert scene_resp.status_code == 201
+    rt_scene_id = scene_resp.json()["id"]
+
+    fact_resp = fix.client.post(
+        f"{base}/entries",
+        json={"idempotency_key": "k-rt-fact", "kind": "fact", "body": "Runtime Fact"},
+        headers=_auth(fix.token_owner_a),
+    )
+    assert fact_resp.status_code == 201
+    rt_fact_id = fact_resp.json()["id"]
+
+    # 1. Both scene references set -> 422 campaign_runtime_invalid
+    r_dual = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-ctx-dual",
+            "expected_revision": 0,
+            "current_adventure_scene_entry_id": str(fix.scene_entry_id),
+            "current_runtime_scene_entry_id": rt_scene_id,
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r_dual.status_code == 422
+    assert r_dual.json()["error"]["code"] == "campaign_runtime_invalid"
+
+    # 2. Adventure entry is not a scene (it's an NPC) -> 422 campaign_runtime_invalid
+    r_non_scene_adv = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-ctx-bad-adv",
+            "expected_revision": 0,
+            "current_adventure_scene_entry_id": str(fix.npc_entry_id),
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r_non_scene_adv.status_code == 422
+    assert r_non_scene_adv.json()["error"]["code"] == "campaign_runtime_invalid"
+
+    # 3. Runtime entry is not a scene (it's a fact) -> 422 campaign_runtime_invalid
+    r_non_scene_rt = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-ctx-bad-rt",
+            "expected_revision": 0,
+            "current_runtime_scene_entry_id": rt_fact_id,
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r_non_scene_rt.status_code == 422
+    assert r_non_scene_rt.json()["error"]["code"] == "campaign_runtime_invalid"
+
+    # 4. Non-existent adventure entry -> 404 campaign_runtime_not_found
+    r_missing_adv = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-ctx-miss-adv",
+            "expected_revision": 0,
+            "current_adventure_scene_entry_id": str(uuid4()),
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r_missing_adv.status_code == 404
+    assert r_missing_adv.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    # 5. Non-existent runtime entry -> 404 campaign_runtime_not_found
+    r_missing_rt = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-ctx-miss-rt",
+            "expected_revision": 0,
+            "current_runtime_scene_entry_id": str(uuid4()),
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r_missing_rt.status_code == 404
+    assert r_missing_rt.json()["error"]["code"] == "campaign_runtime_not_found"
+
+
+def test_stale_override_and_context_revisions(api_fixture: RuntimeApiFixture) -> None:
+    fix = api_fixture
+    base = f"/api/rooms/{fix.room_a_id}/campaigns/{fix.campaign_a1_id}/runtime"
+
+    # Create an override
+    c_resp = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-stale-ovr-create",
+            "adventure_entry_id": str(fix.npc_entry_id),
+            "state": {"disposition": "hostile"},
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert c_resp.status_code == 201
+    ovr_id = c_resp.json()["id"]
+
+    # 1. PATCH override with wrong expected_override_id -> 409
+    r1 = fix.client.patch(
+        f"{base}/overrides/{fix.npc_entry_id}",
+        json={
+            "idempotency_key": "k-stale-p1",
+            "expected_override_id": str(uuid4()),
+            "expected_revision": 1,
+            "note": "Bad id",
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r1.status_code == 409
+    assert r1.json()["error"]["code"] == "campaign_runtime_revision_conflict"
+
+    # 2. PATCH override with wrong expected_revision -> 409
+    r2 = fix.client.patch(
+        f"{base}/overrides/{fix.npc_entry_id}",
+        json={
+            "idempotency_key": "k-stale-p2",
+            "expected_override_id": ovr_id,
+            "expected_revision": 999,
+            "note": "Bad rev",
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r2.status_code == 409
+    assert r2.json()["error"]["code"] == "campaign_runtime_revision_conflict"
+
+    # 3. POST clear override with wrong expected_override_id -> 409
+    r3 = fix.client.post(
+        f"{base}/overrides/{fix.npc_entry_id}/clear",
+        json={
+            "idempotency_key": "k-stale-c1",
+            "expected_override_id": str(uuid4()),
+            "expected_revision": 1,
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r3.status_code == 409
+    assert r3.json()["error"]["code"] == "campaign_runtime_revision_conflict"
+
+    # 4. POST clear override with wrong expected_revision -> 409
+    r4 = fix.client.post(
+        f"{base}/overrides/{fix.npc_entry_id}/clear",
+        json={
+            "idempotency_key": "k-stale-c2",
+            "expected_override_id": ovr_id,
+            "expected_revision": 999,
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r4.status_code == 409
+    assert r4.json()["error"]["code"] == "campaign_runtime_revision_conflict"
+
+    # 5. PATCH context with wrong expected_revision -> 409
+    r5 = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-stale-ctx-p",
+            "expected_revision": 999,
+            "current_situation": "Stale",
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r5.status_code == 409
+    assert r5.json()["error"]["code"] == "campaign_runtime_revision_conflict"
+
+    # 6. POST clear context with wrong expected_revision -> 409
+    r6 = fix.client.post(
+        f"{base}/context/clear",
+        json={
+            "idempotency_key": "k-stale-ctx-c",
+            "expected_revision": 999,
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r6.status_code == 409
+    assert r6.json()["error"]["code"] == "campaign_runtime_revision_conflict"
+
+
+def test_active_session_blocks_override_and_context_mutations_but_allows_reads(
+    api_fixture: RuntimeApiFixture,
+) -> None:
+    fix = api_fixture
+    base = f"/api/rooms/{fix.room_a_id}/campaigns/{fix.campaign_active_id}/runtime"
+
+    # Reads are permitted
+    r_ovrs = fix.client.get(f"{base}/overrides", headers=_auth(fix.token_owner_a))
+    assert r_ovrs.status_code == 200
+
+    r_ctx = fix.client.get(f"{base}/context", headers=_auth(fix.token_owner_a))
+    assert r_ctx.status_code == 200
+
+    r_overlay = fix.client.get(
+        f"{base}/adventure-overlays/{fix.npc_entry_id}",
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r_overlay.status_code == 200
+
+    r_adv_overlays = fix.client.get(
+        f"{base}/adventures/{fix.adv_1_id}/overlays",
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r_adv_overlays.status_code == 200
+
+    # Mutations are blocked with 409 campaign_runtime_active_session
+    m1 = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-act-ovr-c",
+            "adventure_entry_id": str(fix.npc_entry_id),
+            "state": {"disposition": "hostile"},
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert m1.status_code == 409
+    assert m1.json()["error"]["code"] == "campaign_runtime_active_session"
+
+    m2 = fix.client.patch(
+        f"{base}/overrides/{fix.npc_entry_id}",
+        json={
+            "idempotency_key": "k-act-ovr-p",
+            "expected_override_id": str(uuid4()),
+            "expected_revision": 1,
+            "note": "Blocked",
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert m2.status_code == 409
+    assert m2.json()["error"]["code"] == "campaign_runtime_active_session"
+
+    m3 = fix.client.post(
+        f"{base}/overrides/{fix.npc_entry_id}/clear",
+        json={
+            "idempotency_key": "k-act-ovr-clr",
+            "expected_override_id": str(uuid4()),
+            "expected_revision": 1,
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert m3.status_code == 409
+    assert m3.json()["error"]["code"] == "campaign_runtime_active_session"
+
+    m4 = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-act-ctx-p",
+            "expected_revision": 0,
+            "current_situation": "Blocked",
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert m4.status_code == 409
+    assert m4.json()["error"]["code"] == "campaign_runtime_active_session"
+
+    m5 = fix.client.post(
+        f"{base}/context/clear",
+        json={
+            "idempotency_key": "k-act-ctx-clr",
+            "expected_revision": 0,
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert m5.status_code == 409
+    assert m5.json()["error"]["code"] == "campaign_runtime_active_session"
+
+
+def test_override_and_context_idempotency_replay_and_conflict(
+    api_fixture: RuntimeApiFixture,
+) -> None:
+    fix = api_fixture
+    base = f"/api/rooms/{fix.room_a_id}/campaigns/{fix.campaign_a1_id}/runtime"
+
+    # 1. Override create replay and conflict
+    c_body = {
+        "idempotency_key": "k-idem-ovr-c",
+        "adventure_entry_id": str(fix.npc_entry_id),
+        "state": {"disposition": "hostile"},
+        "note": "First note",
+    }
+    r1 = fix.client.post(f"{base}/overrides", json=c_body, headers=_auth(fix.token_owner_a))
+    assert r1.status_code == 201
+    ovr_id = r1.json()["id"]
+
+    # Replay
+    r2 = fix.client.post(f"{base}/overrides", json=c_body, headers=_auth(fix.token_owner_a))
+    assert r2.status_code == 201
+    assert r2.json()["id"] == ovr_id
+
+    # Conflict
+    c_conflict = dict(c_body)
+    c_conflict["note"] = "Different note"
+    r3 = fix.client.post(f"{base}/overrides", json=c_conflict, headers=_auth(fix.token_owner_a))
+    assert r3.status_code == 409
+    assert r3.json()["error"]["code"] == "campaign_runtime_idempotency_conflict"
+
+    # 2. Override patch replay and conflict
+    p_body = {
+        "idempotency_key": "k-idem-ovr-p",
+        "expected_override_id": ovr_id,
+        "expected_revision": 1,
+        "note": "Updated note",
+    }
+    p1 = fix.client.patch(f"{base}/overrides/{fix.npc_entry_id}", json=p_body, headers=_auth(fix.token_owner_a))
+    assert p1.status_code == 200
+    assert p1.json()["revision"] == 2
+
+    # Replay
+    p2 = fix.client.patch(f"{base}/overrides/{fix.npc_entry_id}", json=p_body, headers=_auth(fix.token_owner_a))
+    assert p2.status_code == 200
+    assert p2.json()["revision"] == 2
+
+    # Conflict
+    p_conflict = dict(p_body)
+    p_conflict["note"] = "Conflicting note"
+    p3 = fix.client.patch(f"{base}/overrides/{fix.npc_entry_id}", json=p_conflict, headers=_auth(fix.token_owner_a))
+    assert p3.status_code == 409
+    assert p3.json()["error"]["code"] == "campaign_runtime_idempotency_conflict"
+
+    # 3. Override clear replay and conflict
+    clr_body = {
+        "idempotency_key": "k-idem-ovr-clr",
+        "expected_override_id": ovr_id,
+        "expected_revision": 2,
+    }
+    clr1 = fix.client.post(f"{base}/overrides/{fix.npc_entry_id}/clear", json=clr_body, headers=_auth(fix.token_owner_a))
+    assert clr1.status_code == 200
+
+    # Replay
+    clr2 = fix.client.post(f"{base}/overrides/{fix.npc_entry_id}/clear", json=clr_body, headers=_auth(fix.token_owner_a))
+    assert clr2.status_code == 200
+
+    # Conflict
+    clr_conflict = dict(clr_body)
+    clr_conflict["expected_revision"] = 999
+    clr3 = fix.client.post(f"{base}/overrides/{fix.npc_entry_id}/clear", json=clr_conflict, headers=_auth(fix.token_owner_a))
+    assert clr3.status_code == 409
+    assert clr3.json()["error"]["code"] == "campaign_runtime_idempotency_conflict"
+
+    # 4. Context patch replay and conflict
+    ctx_p_body = {
+        "idempotency_key": "k-idem-ctx-p",
+        "expected_revision": 0,
+        "current_situation": "In the inn",
+    }
+    cp1 = fix.client.patch(f"{base}/context", json=ctx_p_body, headers=_auth(fix.token_owner_a))
+    assert cp1.status_code == 200
+    assert cp1.json()["revision"] == 1
+
+    # Replay
+    cp2 = fix.client.patch(f"{base}/context", json=ctx_p_body, headers=_auth(fix.token_owner_a))
+    assert cp2.status_code == 200
+    assert cp2.json()["revision"] == 1
+
+    # Conflict
+    cp_conflict = dict(ctx_p_body)
+    cp_conflict["current_situation"] = "Outside the inn"
+    cp3 = fix.client.patch(f"{base}/context", json=cp_conflict, headers=_auth(fix.token_owner_a))
+    assert cp3.status_code == 409
+    assert cp3.json()["error"]["code"] == "campaign_runtime_idempotency_conflict"
+
+    # 5. Context clear replay and conflict
+    ctx_clr_body = {
+        "idempotency_key": "k-idem-ctx-clr",
+        "expected_revision": 1,
+    }
+    ccl1 = fix.client.post(f"{base}/context/clear", json=ctx_clr_body, headers=_auth(fix.token_owner_a))
+    assert ccl1.status_code == 200
+    assert ccl1.json()["revision"] == 2
+
+    # Replay
+    ccl2 = fix.client.post(f"{base}/context/clear", json=ctx_clr_body, headers=_auth(fix.token_owner_a))
+    assert ccl2.status_code == 200
+    assert ccl2.json()["revision"] == 2
+
+    # Conflict
+    ccl_conflict = dict(ctx_clr_body)
+    ccl_conflict["expected_revision"] = 999
+    ccl3 = fix.client.post(f"{base}/context/clear", json=ccl_conflict, headers=_auth(fix.token_owner_a))
+    assert ccl3.status_code == 409
+    assert ccl3.json()["error"]["code"] == "campaign_runtime_idempotency_conflict"
+
+
+def test_clear_removes_detach_blockers_via_api(api_fixture: RuntimeApiFixture) -> None:
+    fix = api_fixture
+    base = f"/api/rooms/{fix.room_a_id}/campaigns/{fix.campaign_a1_id}/runtime"
+
+    # 1. Override blocker
+    create_resp = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-blocker-ovr",
+            "adventure_entry_id": str(fix.npc_entry_id),
+            "state": {"disposition": "hostile"},
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert create_resp.status_code == 201
+    ovr_id = create_resp.json()["id"]
+
+    # Detach fails because active override exists
+    with pytest.raises(CampaignAdventureDetachBlockedError) as exc_info:
+        fix.adv_service.detach(fix.owner_context_a, fix.room_a_id, fix.campaign_a1_id, fix.adv_1_id)
+    assert exc_info.value.reason == "active overrides exist for this adventure"
+
+    # Clear override via API
+    clear_resp = fix.client.post(
+        f"{base}/overrides/{fix.npc_entry_id}/clear",
+        json={
+            "idempotency_key": "k-blocker-ovr-clear",
+            "expected_override_id": ovr_id,
+            "expected_revision": 1,
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert clear_resp.status_code == 200
+
+    # Detach now succeeds!
+    fix.adv_service.detach(fix.owner_context_a, fix.room_a_id, fix.campaign_a1_id, fix.adv_1_id)
+
+    # 2. Context scene blocker
+    # Re-attach adventure
+    fix.adv_service.attach(
+        fix.owner_context_a,
+        fix.room_a_id,
+        fix.campaign_a1_id,
+        CampaignAdventureAttach(adventure_id=fix.adv_1_id),
+    )
+
+    # Set context current adventure scene via API
+    patch_ctx = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-blocker-ctx-p",
+            "expected_revision": 0,
+            "current_adventure_scene_entry_id": str(fix.scene_entry_id),
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert patch_ctx.status_code == 200
+
+    # Detach fails because current context scene points to adventure
+    with pytest.raises(CampaignAdventureDetachBlockedError) as exc_ctx:
+        fix.adv_service.detach(fix.owner_context_a, fix.room_a_id, fix.campaign_a1_id, fix.adv_1_id)
+    assert exc_ctx.value.reason == "current adventure scene points to this adventure"
+
+    # Clear context via API
+    clear_ctx_resp = fix.client.post(
+        f"{base}/context/clear",
+        json={
+            "idempotency_key": "k-blocker-ctx-clr",
+            "expected_revision": 1,
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert clear_ctx_resp.status_code == 200
+
+    # Detach now succeeds!
+    fix.adv_service.detach(fix.owner_context_a, fix.room_a_id, fix.campaign_a1_id, fix.adv_1_id)
+
+
+def test_rejected_override_and_context_leave_zero_side_effects(
+    api_fixture: RuntimeApiFixture,
+) -> None:
+    fix = api_fixture
+    base = f"/api/rooms/{fix.room_a_id}/campaigns/{fix.campaign_a1_id}/runtime"
+
+    # Create a valid override to set a baseline state
+    c_resp = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-zero-ovr-init",
+            "adventure_entry_id": str(fix.npc_entry_id),
+            "state": {"disposition": "hostile"},
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert c_resp.status_code == 201
+    ovr_id = c_resp.json()["id"]
+
+    snap_before = _snapshot_runtime_state(fix)
+
+    # 1. Stale revision override patch
+    r1 = fix.client.patch(
+        f"{base}/overrides/{fix.npc_entry_id}",
+        json={
+            "idempotency_key": "k-zero-fail-1",
+            "expected_override_id": ovr_id,
+            "expected_revision": 999,
+            "note": "Will fail",
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r1.status_code == 409
+    assert _snapshot_runtime_state(fix) == snap_before
+
+    # 2. Dual scene in context patch (422)
+    r2 = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-zero-fail-2",
+            "expected_revision": 0,
+            "current_adventure_scene_entry_id": str(fix.scene_entry_id),
+            "current_runtime_scene_entry_id": str(uuid4()),
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r2.status_code == 422
+    assert _snapshot_runtime_state(fix) == snap_before
+
+    # 3. Unauthorized player patch (403)
+    r3 = fix.client.patch(
+        f"{base}/overrides/{fix.npc_entry_id}",
+        json={
+            "idempotency_key": "k-zero-fail-3",
+            "expected_override_id": ovr_id,
+            "expected_revision": 1,
+            "note": "Player hack",
+        },
+        headers=_auth(fix.token_member_a),
+    )
+    assert r3.status_code == 403
+    assert _snapshot_runtime_state(fix) == snap_before
+
+    # 4. Active session block on active campaign (409)
+    active_base = f"/api/rooms/{fix.room_a_id}/campaigns/{fix.campaign_active_id}/runtime"
+    r4 = fix.client.post(
+        f"{active_base}/overrides",
+        json={
+            "idempotency_key": "k-zero-fail-4",
+            "adventure_entry_id": str(fix.npc_entry_id),
+            "state": {"disposition": "friendly"},
+        },
+        headers=_auth(fix.token_owner_a),
+    )
+    assert r4.status_code == 409
+    assert _snapshot_runtime_state(fix) == snap_before
