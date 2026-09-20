@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 from fastapi import Request
 from fastapi.testclient import TestClient
 import pytest
-from sqlalchemy import create_engine, event, insert, select
+from sqlalchemy import create_engine, event, func, insert, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import StaticPool
 
@@ -16,6 +16,10 @@ from app.api.dependencies import get_database_engine
 from app.api.errors import APIError
 from app.api.rooms.access import get_room_access_context
 from app.api.rooms.campaign_runtime import map_campaign_runtime_error
+from app.api.rooms.dependencies import (
+    get_campaign_runtime_service,
+    get_table_event_service,
+)
 from app.db import metadata
 from app.domain.adventures.attachments import CampaignAdventureService
 from app.domain.adventures.schemas import (
@@ -39,15 +43,22 @@ from app.persistence.campaign_runtime.tables import (
     campaign_adventure_overrides,
     campaign_runtime_context,
     campaign_world_entries,
+    campaign_world_entry_characters,
     campaign_world_mutations,
 )
+from app.persistence.characters import characters
 from app.persistence.rooms.campaigns import CampaignRepository
-from app.persistence.rooms.table_runtime import TableEventRepository
+from app.persistence.rooms.table_runtime import (
+    TableEventRepository,
+    session_events,
+)
 from app.persistence.rooms.tables import (
     campaign_seats,
     campaigns,
     room_access_sessions,
+    room_characters,
     rooms,
+    session_participants,
     sessions,
 )
 
@@ -1993,3 +2004,849 @@ def test_rejected_override_and_context_leave_zero_side_effects(
     )
     assert r4.status_code == 409
     assert _snapshot_runtime_state(fix) == snap_before
+
+
+class RecordingNotifier:
+    def __init__(self) -> None:
+        self.notifications: list[UUID] = []
+
+    def notify(self, session_id: UUID) -> None:
+        self.notifications.append(session_id)
+
+    def register(self, session_id: UUID) -> object:
+        return object()
+
+    async def wait(self, handle: object, timeout: float) -> bool:
+        return False
+
+    def unregister(self, handle: object) -> None:
+        pass
+
+
+@dataclass(frozen=True)
+class ActiveSessionApiFixture:
+    client: TestClient
+    engine: Engine
+    room_id: UUID
+    campaign_id: UUID
+    session_id: UUID
+    inactive_session_id: UUID
+    dm_seat_id: UUID
+    player_1_seat_id: UUID
+    player_2_seat_id: UUID
+    char_1_id: UUID
+    char_2_id: UUID
+    p2_access_id: UUID
+    token_dm: str
+    token_player_1: str
+    token_player_2: str
+    token_nonparticipant: str
+    entry_public_id: UUID
+    entry_own_id: UUID
+    entry_other_id: UUID
+    entry_dm_only_id: UUID
+    notifier: RecordingNotifier
+
+
+@pytest.fixture
+def active_api_fixture() -> Generator[ActiveSessionApiFixture, None, None]:
+    engine = _engine()
+    notifier = RecordingNotifier()
+    event_service = TableEventService(TableEventRepository(engine), notifier=notifier)
+    runtime_service = CampaignRuntimeService(engine, event_service)
+
+    room_id = uuid4()
+    campaign_id = uuid4()
+    session_id = uuid4()
+    inactive_session_id = uuid4()
+    now = datetime.now(timezone.utc)
+
+    dm_access_id = uuid4()
+    p1_access_id = uuid4()
+    p2_access_id = uuid4()
+    nonparticipant_access_id = uuid4()
+
+    dm_seat_id = uuid4()
+    p1_seat_id = uuid4()
+    p2_seat_id = uuid4()
+
+    char_1_id = uuid4()
+    char_2_id = uuid4()
+
+    entry_public_id = uuid4()
+    entry_own_id = uuid4()
+    entry_other_id = uuid4()
+    entry_dm_only_id = uuid4()
+
+    token_dm = "tok-act-dm"
+    token_player_1 = "tok-act-p1"
+    token_player_2 = "tok-act-p2"
+    token_nonparticipant = "tok-act-nonpart"
+
+    with engine.begin() as conn:
+        conn.execute(
+            insert(rooms).values(
+                id=room_id,
+                code="ROOM-ACT",
+                name="Active Room",
+                password_salt=b"salt",
+                password_hash=b"pw",
+                owner_key_hash=b"owner",
+                dm_key_hash=b"dm",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        conn.execute(
+            insert(room_access_sessions).values(
+                [
+                    {
+                        "id": dm_access_id,
+                        "room_id": room_id,
+                        "authority": "dm",
+                        "token_hash": b"tok_dm_hash_1234567890123",
+                        "display_name": "DM",
+                        "created_at": now,
+                        "last_seen_at": now,
+                    },
+                    {
+                        "id": p1_access_id,
+                        "room_id": room_id,
+                        "authority": "member",
+                        "token_hash": b"tok_p1_hash_1234567890123",
+                        "display_name": "Player 1",
+                        "created_at": now,
+                        "last_seen_at": now,
+                    },
+                    {
+                        "id": p2_access_id,
+                        "room_id": room_id,
+                        "authority": "member",
+                        "token_hash": b"tok_p2_hash_1234567890123",
+                        "display_name": "Player 2",
+                        "created_at": now,
+                        "last_seen_at": now,
+                    },
+                    {
+                        "id": nonparticipant_access_id,
+                        "room_id": room_id,
+                        "authority": "member",
+                        "token_hash": b"tok_nonpart_hash_12345678",
+                        "display_name": "Nonparticipant",
+                        "created_at": now,
+                        "last_seen_at": now,
+                    },
+                ]
+            )
+        )
+        conn.execute(
+            insert(campaigns).values(
+                id=campaign_id,
+                room_id=room_id,
+                name="Active Campaign",
+                ruleset="dnd5e-2014",
+                status="active",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        for cid, name in [(char_1_id, "Fighter 1"), (char_2_id, "Wizard 2")]:
+            conn.execute(
+                insert(characters).values(
+                    id=cid,
+                    name=name,
+                    ruleset="dnd5e-2014",
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+            conn.execute(
+                insert(room_characters).values(
+                    room_id=room_id,
+                    character_id=cid,
+                    created_at=now,
+                )
+            )
+        conn.execute(
+            insert(campaign_seats).values(
+                [
+                    {
+                        "id": dm_seat_id,
+                        "campaign_id": campaign_id,
+                        "role": "dm",
+                        "controller_kind": "human",
+                        "controller_access_session_id": dm_access_id,
+                        "ai_controller_grant_id": None,
+                        "controller_epoch": 1,
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                    {
+                        "id": p1_seat_id,
+                        "campaign_id": campaign_id,
+                        "role": "player",
+                        "controller_kind": "human",
+                        "controller_access_session_id": p1_access_id,
+                        "ai_controller_grant_id": None,
+                        "controller_epoch": 1,
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                    {
+                        "id": p2_seat_id,
+                        "campaign_id": campaign_id,
+                        "role": "player",
+                        "controller_kind": "human",
+                        "controller_access_session_id": p2_access_id,
+                        "ai_controller_grant_id": None,
+                        "controller_epoch": 1,
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                ]
+            )
+        )
+        conn.execute(
+            insert(sessions).values(
+                [
+                    {
+                        "id": session_id,
+                        "campaign_id": campaign_id,
+                        "status": "active",
+                        "dm_seat_id": dm_seat_id,
+                        "dm_controller_kind": "human",
+                        "dm_controller_access_session_id": dm_access_id,
+                        "started_at": now,
+                        "created_at": now,
+                    },
+                    {
+                        "id": inactive_session_id,
+                        "campaign_id": campaign_id,
+                        "status": "ended",
+                        "dm_seat_id": dm_seat_id,
+                        "dm_controller_kind": "human",
+                        "dm_controller_access_session_id": dm_access_id,
+                        "started_at": now,
+                        "ended_at": now,
+                        "created_at": now,
+                    },
+                ]
+            )
+        )
+        conn.execute(
+            insert(session_participants).values(
+                [
+                    {
+                        "id": uuid4(),
+                        "session_id": session_id,
+                        "seat_id": dm_seat_id,
+                        "role_snapshot": "dm",
+                        "controller_kind_at_join": "human",
+                        "controller_access_session_id_at_join": dm_access_id,
+                        "controller_ai_grant_id_at_join": None,
+                        "controller_generation_at_join": None,
+                        "active_character_id": None,
+                        "joined_at": now,
+                    },
+                    {
+                        "id": uuid4(),
+                        "session_id": session_id,
+                        "seat_id": p1_seat_id,
+                        "role_snapshot": "player",
+                        "controller_kind_at_join": "human",
+                        "controller_access_session_id_at_join": p1_access_id,
+                        "controller_ai_grant_id_at_join": None,
+                        "controller_generation_at_join": None,
+                        "active_character_id": char_1_id,
+                        "joined_at": now,
+                    },
+                    {
+                        "id": uuid4(),
+                        "session_id": session_id,
+                        "seat_id": p2_seat_id,
+                        "role_snapshot": "player",
+                        "controller_kind_at_join": "human",
+                        "controller_access_session_id_at_join": p2_access_id,
+                        "controller_ai_grant_id_at_join": None,
+                        "controller_generation_at_join": None,
+                        "active_character_id": char_2_id,
+                        "joined_at": now,
+                    },
+                ]
+            )
+        )
+        conn.execute(
+            insert(campaign_world_entries).values(
+                [
+                    {
+                        "id": entry_public_id,
+                        "campaign_id": campaign_id,
+                        "kind": "scene",
+                        "title": "Town Square",
+                        "body": "A bustling public town square",
+                        "state_json": {},
+                        "dm_notes": "Hidden smugglers tunnel beneath the fountain",
+                        "visibility": "public",
+                        "needs_review": False,
+                        "source_adventure_entry_id": None,
+                        "provenance_json": None,
+                        "revision": 1,
+                        "created_by_actor_kind": "human",
+                        "created_by_actor_id": dm_access_id,
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                    {
+                        "id": entry_own_id,
+                        "campaign_id": campaign_id,
+                        "kind": "secret",
+                        "title": "Fighter Heirloom",
+                        "body": "Family crest sword passed down generations",
+                        "state_json": {},
+                        "dm_notes": None,
+                        "visibility": "character",
+                        "needs_review": False,
+                        "source_adventure_entry_id": None,
+                        "provenance_json": None,
+                        "revision": 1,
+                        "created_by_actor_kind": "human",
+                        "created_by_actor_id": dm_access_id,
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                    {
+                        "id": entry_other_id,
+                        "campaign_id": campaign_id,
+                        "kind": "secret",
+                        "title": "Wizard Spellbook",
+                        "body": "Forbidden spell inscribed in invisible ink",
+                        "state_json": {},
+                        "dm_notes": None,
+                        "visibility": "character",
+                        "needs_review": False,
+                        "source_adventure_entry_id": None,
+                        "provenance_json": None,
+                        "revision": 1,
+                        "created_by_actor_kind": "human",
+                        "created_by_actor_id": dm_access_id,
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                    {
+                        "id": entry_dm_only_id,
+                        "campaign_id": campaign_id,
+                        "kind": "secret",
+                        "title": "Vampire Lord Secret",
+                        "body": "The local priest is secretly a vampire",
+                        "state_json": {},
+                        "dm_notes": "Bite marks on his neck are concealed with illusion",
+                        "visibility": "dm_only",
+                        "needs_review": False,
+                        "source_adventure_entry_id": None,
+                        "provenance_json": None,
+                        "revision": 1,
+                        "created_by_actor_kind": "human",
+                        "created_by_actor_id": dm_access_id,
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                ]
+            )
+        )
+        conn.execute(
+            insert(campaign_world_entry_characters).values(
+                [
+                    {"world_entry_id": entry_own_id, "character_id": char_1_id},
+                    {"world_entry_id": entry_other_id, "character_id": char_2_id},
+                ]
+            )
+        )
+
+    token_to_context = {
+        token_dm: RoomAccessContext(
+            room_id=room_id,
+            access_session_id=dm_access_id,
+            authority=RoomAccessAuthority.DM,
+            display_name="DM",
+        ),
+        token_player_1: RoomAccessContext(
+            room_id=room_id,
+            access_session_id=p1_access_id,
+            authority=RoomAccessAuthority.MEMBER,
+            display_name="Player 1",
+        ),
+        token_player_2: RoomAccessContext(
+            room_id=room_id,
+            access_session_id=p2_access_id,
+            authority=RoomAccessAuthority.MEMBER,
+            display_name="Player 2",
+        ),
+        token_nonparticipant: RoomAccessContext(
+            room_id=room_id,
+            access_session_id=nonparticipant_access_id,
+            authority=RoomAccessAuthority.MEMBER,
+            display_name="Nonparticipant",
+        ),
+    }
+
+    def _override_access_context(request: Request) -> RoomAccessContext:
+        auth = request.headers.get("authorization", "")
+        _, _, token = auth.partition(" ")
+        token_clean = token.strip()
+        if token_clean in token_to_context:
+            return token_to_context[token_clean]
+        raise APIError(401, "room_access_required", "Room access token is required")
+
+    fastapi_app.state.campaign_runtime_service = runtime_service
+    fastapi_app.state.table_event_service = event_service
+    fastapi_app.dependency_overrides[get_database_engine] = lambda: engine
+    fastapi_app.dependency_overrides[get_room_access_context] = _override_access_context
+    fastapi_app.dependency_overrides[get_campaign_runtime_service] = lambda: runtime_service
+    fastapi_app.dependency_overrides[get_table_event_service] = lambda: event_service
+
+    client = TestClient(fastapi_app)
+    try:
+        yield ActiveSessionApiFixture(
+            client=client,
+            engine=engine,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            inactive_session_id=inactive_session_id,
+            dm_seat_id=dm_seat_id,
+            player_1_seat_id=p1_seat_id,
+            player_2_seat_id=p2_seat_id,
+            char_1_id=char_1_id,
+            char_2_id=char_2_id,
+            p2_access_id=p2_access_id,
+            token_dm=token_dm,
+            token_player_1=token_player_1,
+            token_player_2=token_player_2,
+            token_nonparticipant=token_nonparticipant,
+            entry_public_id=entry_public_id,
+            entry_own_id=entry_own_id,
+            entry_other_id=entry_other_id,
+            entry_dm_only_id=entry_dm_only_id,
+            notifier=notifier,
+        )
+    finally:
+        try:
+            del fastapi_app.state.campaign_runtime_service
+        except AttributeError:
+            pass
+        try:
+            del fastapi_app.state.table_event_service
+        except AttributeError:
+            pass
+        fastapi_app.dependency_overrides.pop(get_database_engine, None)
+        fastapi_app.dependency_overrides.pop(get_room_access_context, None)
+        fastapi_app.dependency_overrides.pop(get_campaign_runtime_service, None)
+        fastapi_app.dependency_overrides.pop(get_table_event_service, None)
+
+
+def test_active_session_player_secrecy_matrix_list_and_item(
+    active_api_fixture: ActiveSessionApiFixture,
+) -> None:
+    fix = active_api_fixture
+    base = f"/api/rooms/{fix.room_id}/campaigns/{fix.campaign_id}/sessions/{fix.session_id}/runtime/entries"
+
+    # 1. Player 1 lists entries: should see public + own character only
+    resp = fix.client.get(base, headers=_auth(fix.token_player_1))
+    assert resp.status_code == 200
+    entries = resp.json()
+    assert len(entries) == 2
+    entry_ids = {e["id"] for e in entries}
+    assert entry_ids == {str(fix.entry_public_id), str(fix.entry_own_id)}
+    assert str(fix.entry_other_id) not in entry_ids
+    assert str(fix.entry_dm_only_id) not in entry_ids
+
+    # Assert raw JSON keys for player view: exact fields, zero leakage
+    expected_player_keys = {
+        "id",
+        "campaign_id",
+        "kind",
+        "title",
+        "body",
+        "state",
+        "visibility",
+        "revision",
+        "created_at",
+        "updated_at",
+    }
+    forbidden_keys = {
+        "dm_notes",
+        "character_recipient_ids",
+        "needs_review",
+        "source_adventure_entry_id",
+        "provenance_json",
+        "created_by_actor_kind",
+        "created_by_actor_id",
+        "archived_at",
+    }
+    for item in entries:
+        assert set(item.keys()) == expected_player_keys
+        for forbidden in forbidden_keys:
+            assert forbidden not in item
+
+    # 2. Player 1 GET item: public entry
+    pub_resp = fix.client.get(f"{base}/{fix.entry_public_id}", headers=_auth(fix.token_player_1))
+    assert pub_resp.status_code == 200
+    pub_json = pub_resp.json()
+    assert set(pub_json.keys()) == expected_player_keys
+    assert "dm_notes" not in pub_json
+
+    # 3. Player 1 GET item: own character entry
+    own_resp = fix.client.get(f"{base}/{fix.entry_own_id}", headers=_auth(fix.token_player_1))
+    assert own_resp.status_code == 200
+    own_json = own_resp.json()
+    assert set(own_json.keys()) == expected_player_keys
+    assert "character_recipient_ids" not in own_json
+    assert "dm_notes" not in own_json
+
+    # 4. Player 1 GET item: other character entry -> 404 (not a visibility oracle)
+    other_resp = fix.client.get(f"{base}/{fix.entry_other_id}", headers=_auth(fix.token_player_1))
+    assert other_resp.status_code == 404
+    assert other_resp.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    # 5. Player 1 GET item: dm_only entry -> 404
+    dm_resp = fix.client.get(f"{base}/{fix.entry_dm_only_id}", headers=_auth(fix.token_player_1))
+    assert dm_resp.status_code == 404
+    assert dm_resp.json()["error"]["code"] == "campaign_runtime_not_found"
+
+
+def test_active_session_dm_full_view(
+    active_api_fixture: ActiveSessionApiFixture,
+) -> None:
+    fix = active_api_fixture
+    base = f"/api/rooms/{fix.room_id}/campaigns/{fix.campaign_id}/sessions/{fix.session_id}/runtime/entries"
+
+    # 1. DM lists entries: should see all 4 entries with full DM view
+    resp = fix.client.get(base, headers=_auth(fix.token_dm))
+    assert resp.status_code == 200
+    entries = resp.json()
+    assert len(entries) == 4
+    entry_ids = {e["id"] for e in entries}
+    assert entry_ids == {
+        str(fix.entry_public_id),
+        str(fix.entry_own_id),
+        str(fix.entry_other_id),
+        str(fix.entry_dm_only_id),
+    }
+
+    expected_dm_keys = {
+        "id",
+        "campaign_id",
+        "kind",
+        "title",
+        "body",
+        "state",
+        "visibility",
+        "dm_notes",
+        "needs_review",
+        "source_adventure_entry_id",
+        "provenance_json",
+        "character_recipient_ids",
+        "revision",
+        "created_by_actor_kind",
+        "created_by_actor_id",
+        "created_at",
+        "updated_at",
+        "archived_at",
+    }
+    for item in entries:
+        assert set(item.keys()) == expected_dm_keys
+
+    # Check specific fields
+    by_id = {e["id"]: e for e in entries}
+    assert by_id[str(fix.entry_public_id)]["dm_notes"] == "Hidden smugglers tunnel beneath the fountain"
+    assert by_id[str(fix.entry_own_id)]["character_recipient_ids"] == [str(fix.char_1_id)]
+    assert by_id[str(fix.entry_other_id)]["character_recipient_ids"] == [str(fix.char_2_id)]
+    assert by_id[str(fix.entry_dm_only_id)]["visibility"] == "dm_only"
+    assert by_id[str(fix.entry_dm_only_id)]["dm_notes"] == "Bite marks on his neck are concealed with illusion"
+
+    # 2. DM GET item for all entries
+    for eid in [fix.entry_public_id, fix.entry_own_id, fix.entry_other_id, fix.entry_dm_only_id]:
+        item_resp = fix.client.get(f"{base}/{eid}", headers=_auth(fix.token_dm))
+        assert item_resp.status_code == 200
+        assert set(item_resp.json().keys()) == expected_dm_keys
+
+
+def test_active_session_player_forbidden_writes_zero_side_effects(
+    active_api_fixture: ActiveSessionApiFixture,
+) -> None:
+    fix = active_api_fixture
+    base = f"/api/rooms/{fix.room_id}/campaigns/{fix.campaign_id}/sessions/{fix.session_id}/runtime/entries"
+
+    def _counts() -> tuple[int, int, int]:
+        with fix.engine.connect() as conn:
+            entries_count = conn.execute(select(func.count()).select_from(campaign_world_entries)).scalar_one()
+            mutations_count = conn.execute(select(func.count()).select_from(campaign_world_mutations)).scalar_one()
+            events_count = conn.execute(select(func.count()).select_from(session_events)).scalar_one()
+            return entries_count, mutations_count, events_count
+
+    counts_before = _counts()
+
+    # 1. Player POST /entries forbidden
+    post_resp = fix.client.post(
+        base,
+        json={
+            "idempotency_key": "k-p-write-1",
+            "kind": "npc",
+            "title": "Player Hack NPC",
+        },
+        headers=_auth(fix.token_player_1),
+    )
+    assert post_resp.status_code == 403
+    assert post_resp.json()["error"]["code"] == "campaign_runtime_forbidden"
+    assert _counts() == counts_before
+
+    # 2. Player PATCH /entries/{id} forbidden
+    patch_resp = fix.client.patch(
+        f"{base}/{fix.entry_public_id}",
+        json={
+            "idempotency_key": "k-p-write-2",
+            "expected_revision": 1,
+            "title": "Player Modified Title",
+        },
+        headers=_auth(fix.token_player_1),
+    )
+    assert patch_resp.status_code == 403
+    assert patch_resp.json()["error"]["code"] == "campaign_runtime_forbidden"
+    assert _counts() == counts_before
+
+    # 3. Player POST /entries/{id}/archive forbidden
+    arch_resp = fix.client.post(
+        f"{base}/{fix.entry_public_id}/archive",
+        json={
+            "idempotency_key": "k-p-write-3",
+            "expected_revision": 1,
+        },
+        headers=_auth(fix.token_player_1),
+    )
+    assert arch_resp.status_code == 403
+    assert arch_resp.json()["error"]["code"] == "campaign_runtime_forbidden"
+    assert _counts() == counts_before
+
+
+def test_active_session_nonparticipant_and_stale_and_scope_and_inactive(
+    active_api_fixture: ActiveSessionApiFixture,
+) -> None:
+    fix = active_api_fixture
+    base = f"/api/rooms/{fix.room_id}/campaigns/{fix.campaign_id}/sessions/{fix.session_id}/runtime/entries"
+
+    # 1. Nonparticipant -> 404
+    r_nonpart_list = fix.client.get(base, headers=_auth(fix.token_nonparticipant))
+    assert r_nonpart_list.status_code == 404
+    assert r_nonpart_list.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    r_nonpart_post = fix.client.post(
+        base,
+        json={"idempotency_key": "k-np-1", "kind": "npc", "title": "Fail NPC"},
+        headers=_auth(fix.token_nonparticipant),
+    )
+    assert r_nonpart_post.status_code == 404
+    assert r_nonpart_post.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    # 2. Wrong scope in URL
+    # Wrong room
+    r_wrong_room = fix.client.get(
+        f"/api/rooms/{uuid4()}/campaigns/{fix.campaign_id}/sessions/{fix.session_id}/runtime/entries",
+        headers=_auth(fix.token_dm),
+    )
+    assert r_wrong_room.status_code == 404
+    assert r_wrong_room.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    # Wrong campaign
+    r_wrong_camp = fix.client.get(
+        f"/api/rooms/{fix.room_id}/campaigns/{uuid4()}/sessions/{fix.session_id}/runtime/entries",
+        headers=_auth(fix.token_dm),
+    )
+    assert r_wrong_camp.status_code == 404
+    assert r_wrong_camp.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    # Wrong session
+    r_wrong_sess = fix.client.get(
+        f"/api/rooms/{fix.room_id}/campaigns/{fix.campaign_id}/sessions/{uuid4()}/runtime/entries",
+        headers=_auth(fix.token_dm),
+    )
+    assert r_wrong_sess.status_code == 404
+    assert r_wrong_sess.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    # 3. Inactive session -> 409 session_not_active
+    inactive_base = (
+        f"/api/rooms/{fix.room_id}/campaigns/{fix.campaign_id}"
+        f"/sessions/{fix.inactive_session_id}/runtime/entries"
+    )
+    r_inact_list = fix.client.get(inactive_base, headers=_auth(fix.token_dm))
+    assert r_inact_list.status_code == 409
+    assert r_inact_list.json()["error"]["code"] == "campaign_runtime_session_not_active"
+
+    r_inact_post = fix.client.post(
+        inactive_base,
+        json={"idempotency_key": "k-inact-1", "kind": "npc", "title": "Fail NPC"},
+        headers=_auth(fix.token_dm),
+    )
+    assert r_inact_post.status_code == 409
+    assert r_inact_post.json()["error"]["code"] == "campaign_runtime_session_not_active"
+
+    # 4. Stale controller epoch / reassigned DM -> 403 forbidden
+    with fix.engine.begin() as conn:
+        conn.execute(
+            update(sessions)
+            .where(sessions.c.id == fix.session_id)
+            .values(dm_controller_access_session_id=fix.p2_access_id)
+        )
+    r_stale_dm = fix.client.post(
+        base,
+        json={"idempotency_key": "k-stale-1", "kind": "npc", "title": "Stale DM NPC"},
+        headers=_auth(fix.token_dm),
+    )
+    assert r_stale_dm.status_code == 403
+    assert r_stale_dm.json()["error"]["code"] == "campaign_runtime_forbidden"
+
+
+def test_active_session_dm_crud_lifecycle_events_and_concurrency(
+    active_api_fixture: ActiveSessionApiFixture,
+) -> None:
+    fix = active_api_fixture
+    base = f"/api/rooms/{fix.room_id}/campaigns/{fix.campaign_id}/sessions/{fix.session_id}/runtime/entries"
+
+    notifications_before = len(fix.notifier.notifications)
+
+    # 1. DM creates an active entry
+    create_resp = fix.client.post(
+        base,
+        json={
+            "idempotency_key": "k-dm-act-create-1",
+            "kind": "npc",
+            "title": "Barkeep Bob",
+            "body": "Friendly barkeep with a scar",
+            "state": {},
+            "visibility": "public",
+            "dm_notes": "Knows the thieves guild secret entrance",
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert create_resp.status_code == 201
+    created = create_resp.json()
+    entry_id = created["id"]
+    assert created["revision"] == 1
+    assert created["title"] == "Barkeep Bob"
+
+    # Verify event was emitted
+    with fix.engine.connect() as conn:
+        ev = conn.execute(
+            select(session_events).where(
+                session_events.c.session_id == fix.session_id,
+                session_events.c.kind == "world.entry.created",
+            )
+        ).mappings().all()
+        assert len(ev) == 1
+    assert len(fix.notifier.notifications) == notifications_before + 1
+
+    # 2. DM updates the active entry
+    patch_resp = fix.client.patch(
+        f"{base}/{entry_id}",
+        json={
+            "idempotency_key": "k-dm-act-patch-1",
+            "expected_revision": 1,
+            "title": "Master Barkeep Bob",
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert patch_resp.status_code == 200
+    patched = patch_resp.json()
+    assert patched["revision"] == 2
+    assert patched["title"] == "Master Barkeep Bob"
+
+    # Verify update event was emitted
+    with fix.engine.connect() as conn:
+        ev = conn.execute(
+            select(session_events).where(
+                session_events.c.session_id == fix.session_id,
+                session_events.c.kind == "world.entry.updated",
+            )
+        ).mappings().all()
+        assert len(ev) == 1
+    assert len(fix.notifier.notifications) == notifications_before + 2
+
+    # 3. Stale revision conflict on PATCH -> 409, no new event
+    with fix.engine.connect() as connection:
+        events_before_conflict = len(
+            connection.execute(
+                select(session_events).where(session_events.c.session_id == fix.session_id)
+            ).all()
+        )
+    stale_resp = fix.client.patch(
+        f"{base}/{entry_id}",
+        json={
+            "idempotency_key": "k-dm-act-stale-1",
+            "expected_revision": 99,
+            "title": "Stale Title",
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert stale_resp.status_code == 409
+    assert stale_resp.json()["error"]["code"] == "campaign_runtime_revision_conflict"
+    with fix.engine.connect() as connection:
+        events_after_conflict = len(
+            connection.execute(
+                select(session_events).where(session_events.c.session_id == fix.session_id)
+            ).all()
+        )
+    assert events_after_conflict == events_before_conflict
+
+    # 4. Idempotency conflict on CREATE -> 409, no new event
+    idemp_conflict_resp = fix.client.post(
+        base,
+        json={
+            "idempotency_key": "k-dm-act-create-1",
+            "kind": "npc",
+            "title": "Different Title Same Key",
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert idemp_conflict_resp.status_code == 409
+    assert idemp_conflict_resp.json()["error"]["code"] == "campaign_runtime_idempotency_conflict"
+
+    # 5. Idempotent replay on CREATE -> 201 replay, no new event
+    idemp_replay_resp = fix.client.post(
+        base,
+        json={
+            "idempotency_key": "k-dm-act-create-1",
+            "kind": "npc",
+            "title": "Barkeep Bob",
+            "body": "Friendly barkeep with a scar",
+            "state": {},
+            "visibility": "public",
+            "dm_notes": "Knows the thieves guild secret entrance",
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert idemp_replay_resp.status_code in (200, 201)
+    assert idemp_replay_resp.json()["id"] == entry_id
+
+    # 6. DM archives the entry
+    arch_resp = fix.client.post(
+        f"{base}/{entry_id}/archive",
+        json={
+            "idempotency_key": "k-dm-act-arch-1",
+            "expected_revision": 2,
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert arch_resp.status_code == 200
+    archived = arch_resp.json()
+    assert archived["archived_at"] is not None
+    assert archived["revision"] == 3
+
+    # Verify archive event was emitted
+    with fix.engine.connect() as conn:
+        ev = conn.execute(
+            select(session_events).where(
+                session_events.c.session_id == fix.session_id,
+                session_events.c.kind == "world.entry.archived",
+            )
+        ).mappings().all()
+        assert len(ev) == 1
+    assert len(fix.notifier.notifications) == notifications_before + 3

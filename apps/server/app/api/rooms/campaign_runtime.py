@@ -7,7 +7,10 @@ from pydantic import Field, ValidationError
 
 from app.api.errors import APIError
 from app.api.rooms.access import get_room_access_context
-from app.api.rooms.dependencies import get_campaign_runtime_service
+from app.api.rooms.dependencies import (
+    get_campaign_runtime_service,
+    get_table_event_service,
+)
 from app.domain.campaign_runtime.payloads import (
     RuntimeEntryKind,
     RuntimeEntryPayloadError,
@@ -26,6 +29,7 @@ from app.domain.campaign_runtime.schemas import (
     RuntimeWorldEntryCreate,
     RuntimeWorldEntryDmView,
     RuntimeWorldEntryPatch,
+    RuntimeWorldEntryPlayerView,
 )
 from app.domain.campaign_runtime.service import (
     CampaignRuntimeActiveSessionError,
@@ -39,6 +43,12 @@ from app.domain.campaign_runtime.service import (
     CampaignRuntimeValidationError,
 )
 from app.domain.rooms.schemas import RoomAccessContext, StrictModel
+from app.domain.rooms.table_events import (
+    TableEventActorUnauthorizedError,
+    TableEventNotFoundError,
+    TableEventService,
+    TableEventSessionNotActiveError,
+)
 
 router = APIRouter(
     prefix="/api/rooms/{room_id}/campaigns/{campaign_id}/runtime",
@@ -49,15 +59,15 @@ router = APIRouter(
 def map_campaign_runtime_error(exc: Exception) -> APIError:
     if isinstance(exc, APIError):
         return exc
-    if isinstance(exc, CampaignRuntimeAuthorityError):
+    if isinstance(exc, (CampaignRuntimeAuthorityError, TableEventActorUnauthorizedError)):
         return APIError(403, "campaign_runtime_forbidden", str(exc))
-    if isinstance(exc, CampaignRuntimeNotFoundError):
+    if isinstance(exc, (CampaignRuntimeNotFoundError, TableEventNotFoundError)):
         return APIError(404, "campaign_runtime_not_found", str(exc))
     if isinstance(exc, CampaignRuntimeArchivedError):
         return APIError(409, "campaign_runtime_archived", str(exc))
     if isinstance(exc, CampaignRuntimeActiveSessionError):
         return APIError(409, "campaign_runtime_active_session", str(exc))
-    if isinstance(exc, CampaignRuntimeSessionNotActiveError):
+    if isinstance(exc, (CampaignRuntimeSessionNotActiveError, TableEventSessionNotActiveError)):
         return APIError(409, "campaign_runtime_session_not_active", str(exc))
     if isinstance(exc, CampaignRuntimeIdempotencyConflictError):
         return APIError(409, "campaign_runtime_idempotency_conflict", str(exc))
@@ -519,6 +529,169 @@ def list_adventure_entry_overlays(
         raise map_campaign_runtime_error(exc) from exc
 
 
+active_router = APIRouter(
+    prefix=(
+        "/api/rooms/{room_id}/campaigns/{campaign_id}"
+        "/sessions/{session_id}/runtime"
+    ),
+    tags=["campaign-runtime-active"],
+)
+
+
+@active_router.get(
+    "/entries",
+    response_model=list[RuntimeWorldEntryDmView | RuntimeWorldEntryPlayerView],
+)
+def list_active_runtime_entries(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    include_archived: bool = False,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
+) -> list[RuntimeWorldEntryDmView | RuntimeWorldEntryPlayerView]:
+    try:
+        actor = event_service.resolve_human_actor(
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+        )
+        return list(
+            service.list_active(
+                actor,
+                include_archived=include_archived,
+            )
+        )
+    except Exception as exc:
+        raise map_campaign_runtime_error(exc) from exc
+
+
+@active_router.get(
+    "/entries/{entry_id}",
+    response_model=RuntimeWorldEntryDmView | RuntimeWorldEntryPlayerView,
+)
+def get_active_runtime_entry(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    entry_id: UUID,
+    include_archived: bool = False,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
+) -> RuntimeWorldEntryDmView | RuntimeWorldEntryPlayerView:
+    try:
+        actor = event_service.resolve_human_actor(
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+        )
+        return service.get_active(
+            actor,
+            entry_id=entry_id,
+            include_archived=include_archived,
+        )
+    except Exception as exc:
+        raise map_campaign_runtime_error(exc) from exc
+
+
+@active_router.post(
+    "/entries",
+    response_model=RuntimeWorldEntryDmView,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_active_runtime_entry(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    payload: CreateRuntimeWorldEntryRequest,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
+) -> RuntimeWorldEntryDmView:
+    try:
+        actor = event_service.resolve_human_actor(
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+        )
+        domain_payload = payload.to_domain()
+        return service.create_active(
+            actor,
+            payload=domain_payload,
+            idempotency_key=payload.idempotency_key,
+        )
+    except Exception as exc:
+        raise map_campaign_runtime_error(exc) from exc
+
+
+@active_router.patch(
+    "/entries/{entry_id}",
+    response_model=RuntimeWorldEntryDmView,
+)
+def update_active_runtime_entry(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    entry_id: UUID,
+    payload: UpdateRuntimeWorldEntryRequest,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
+) -> RuntimeWorldEntryDmView:
+    try:
+        actor = event_service.resolve_human_actor(
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+        )
+        domain_patch = payload.to_domain()
+        return service.update_active(
+            actor,
+            entry_id=entry_id,
+            patch=domain_patch,
+            idempotency_key=payload.idempotency_key,
+        )
+    except Exception as exc:
+        raise map_campaign_runtime_error(exc) from exc
+
+
+@active_router.post(
+    "/entries/{entry_id}/archive",
+    response_model=RuntimeWorldEntryDmView,
+)
+def archive_active_runtime_entry(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    entry_id: UUID,
+    payload: ArchiveRuntimeWorldEntryRequest,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
+) -> RuntimeWorldEntryDmView:
+    try:
+        actor = event_service.resolve_human_actor(
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+        )
+        return service.archive_active(
+            actor,
+            entry_id=entry_id,
+            expected_revision=payload.expected_revision,
+            idempotency_key=payload.idempotency_key,
+        )
+    except Exception as exc:
+        raise map_campaign_runtime_error(exc) from exc
+
+
 __all__ = [
     "ArchiveRuntimeWorldEntryRequest",
     "ClearCampaignAdventureOverrideRequest",
@@ -528,6 +701,7 @@ __all__ = [
     "UpdateCampaignAdventureOverrideRequest",
     "UpdateCampaignRuntimeContextRequest",
     "UpdateRuntimeWorldEntryRequest",
+    "active_router",
     "map_campaign_runtime_error",
     "router",
 ]
