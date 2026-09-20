@@ -121,7 +121,7 @@ tasklist | grep -ci python.exe                                     # 有沒有�
 | 測試品質 | E8 在每個 test 內 mutate fixture；E9b 用 `'Attack'` / `'1d6'` 補值偽造 |
 | 執行穩定度 | quota 429（E4b、P4-F F6b）、print-timeout（E7c）、stream 中斷（E9b）、把測試丟背景後空等到 timeout（P4-F F7b）；大 step 常收不了尾。監看與判死見 §3.1 |
 
-淨效益：backend domain 步驟省時最多（指揮者只做小清理）；碰既有契約面或 UI 的步驟，審核修正量接近重寫一半。
+淨效益：backend domain 步驟省時最多（指揮者只做小清理）。P4-E 時碰既有契約面或 UI 的步驟審核修正量接近重寫一半，但 M05（2026-09-20）四步只有一處必修，且使用者自己指揮 agy 做 UI 的經驗良好——差別在 prompt 是否把契約欄位、要共用的 helper 與 Do-not-touch 寫死；UI 步驟不必預設繞開 agy。
 
 ---
 
@@ -205,7 +205,7 @@ if (btn && !btn.disabled) btn.click();
 | 情況 | 建議 |
 |---|---|
 | backend domain / persistence 小步驟，契約清楚 | agy（快、省 Claude 用量、審核量小） |
-| UI 元件、碰既有契約面、雙語 copy | ChatGPT（品質高、越界少）或指揮者自己做 |
+| UI 元件、碰既有契約面、雙語 copy | agy 也可以（使用者 2026-09-20：自己下指令給 agy 做 UI 表現很強；P4-E 的高審核量偏向 prompt 問題——契約欄位、既有 helper、Do-not-touch 沒寫清楚），ChatGPT 或指揮者自己做為備選 |
 | 純 copy / guide 文案、closeout 文件、E2E 關門 | 指揮者自己（contract-bearing、需要跑 Docker E2E） |
 | 使用者在意時間 | agy 為主；ChatGPT 每步預留兩回合 |
 | 使用者在意審核成本 | ChatGPT 為主 |
