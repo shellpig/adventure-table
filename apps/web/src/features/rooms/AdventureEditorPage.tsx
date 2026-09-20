@@ -28,7 +28,7 @@ import {
 import { useLocale } from '../../i18n/LocaleProvider'
 import { AssetThumbnail } from './AssetThumbnail'
 import { adventureErrorMessage, adventuresCopy } from './adventuresCopy'
-import { adventureActions } from './RoomAdventuresPage'
+import { adventureActions, adventureStatusLabel } from './RoomAdventuresPage'
 import './rooms.css'
 
 export type EntryFormState = {
@@ -726,16 +726,7 @@ export function AdventureEditorPage({ roomId, adventureId, token }: AdventureEdi
     ? adventureActions(adventure.status)
     : { finalize: false, archive: false, delete: false }
 
-  const statusLabel = (status: AdventureStatus) => {
-    switch (status) {
-      case 'draft':
-        return copy.statusDraft
-      case 'finalized':
-        return copy.statusFinalized
-      case 'archived':
-        return copy.statusArchived
-    }
-  }
+  const statusLabel = (status: AdventureStatus) => adventureStatusLabel(status, copy)
 
   const setFieldValue = (key: string, value: string) => {
     setEntryForm((prev) => ({

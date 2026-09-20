@@ -22,6 +22,7 @@ import {
 } from '../../api/campaigns'
 import { getRoom, type RoomAuthority, type RoomSummary } from '../../api/rooms'
 import { useLocale } from '../../i18n/LocaleProvider'
+import { CampaignAdventuresSection } from './CampaignAdventuresSection'
 import { campaignCopy } from './campaignCopy'
 import { recentRoomForId } from './roomStorage'
 import './rooms.css'
@@ -381,6 +382,7 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
             )
           })}
         </div>
+        {canManageRoster ? <CampaignAdventuresSection roomId={roomId} campaignId={campaign.id} token={token} /> : null}
       </section>
     </main>
   )

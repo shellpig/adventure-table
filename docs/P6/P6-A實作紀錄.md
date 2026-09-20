@@ -5,9 +5,9 @@
 - **更新日期**：2026-09-20
 - **目標與邊界**：Room-scoped asset substrate（PostgreSQL metadata＋Server filesystem）、Adventure Definition／Entry authoring 與 draft→finalized→archived lifecycle、Campaign 對 finalized Adventure 的多重 attach／detach、最小 Adventures workspace UI。**不做** Runtime／override／AI context／Importer（P6-B～F）。Human Player／AI Player 對 Adventure entry 任何 visibility 一律不可讀；`source_document` asset 固定 `dm_only`。契約：`docs/P6/實作規格.md` P6-A 與「P6 共用產品邊界」、`docs/P6/開發設計方針.md` §A.1～A.3 與「Shared authority」「REST / UI surface」「Migration」「Subphase implementation boundary」、`docs/P6/測試指南.md` A.1～A.5 與「執行環境」。
 - **Branch**：`feat/p6a-adventure-definition`（自 `main@f2822270` 開出）
-- **最近已驗證 commit**：A4b-2（entry 圖片；hash 見 git log）。Backend 全部完成
+- **最近已驗證 commit**：A4c（Campaign Attached Adventures；hash 見 git log）。Backend 全部完成
 - **Worker**：agy 做 backend（A1a～A3）與 web（A4a～A4c；A4b 拆 A4b-1／A4b-2）；E2E、關門由指揮者做。每步 prompt 存 `C:\_work\AI_Work\Tools\agy-runs\agy-p6a-<step>.prompt.txt`
-- **下一步**：A4c 進行中（agy）；之後 A5，使用者 2026-09-20 指示連續做到 P6-A 完成
+- **下一步**：A5 進行中（指揮者：E2E、關門 gate、closeout、合併 main），使用者 2026-09-20 指示連續做到 P6-A 完成
 - **阻礙／未審**：無
 - **本 Subphase 技術決策（契約未指定，指揮者拍板，verifier 可同步回設計文件）**：
   1. 模組位置：`app/persistence/room_assets/`（tables、storage、repository）、`app/persistence/adventures/`（tables、repository）、`app/domain/room_assets/`、`app/domain/adventures/`、`app/api/rooms/room_assets.py`、`app/api/rooms/adventures.py`、`app/api/rooms/campaign_adventures.py`。M03 boundary regex 同 commit 加 `room_assets?`／`adventures?`。
@@ -29,5 +29,5 @@
 | A4a | web：`api/adventures.ts`／`api/roomAssets.ts`、`RoomAdventuresPage`（list／create／finalize／archive）、routing、workspace 入口、copy 兩 locale | 完成 | A2b、A3 | [A4a](P6-A_steps/A4a.md) |
 | A4b-1 | web：`AdventureEditorPage`（definition 編輯、entries CRUD／kind 欄位／reorder、archived 唯讀）、copy 兩 locale | 完成 | A4a | [A4b-1](P6-A_steps/A4b-1.md) |
 | A4b-2 | web：entry 圖片上傳→連結、縮圖（fetch＋blob URL）、unlink、copy 兩 locale | 完成 | A4b-1、A1b | [A4b-2](P6-A_steps/A4b-2.md) |
-| A4c | web：Campaign page「Attached Adventures」（attach picker／detach）、copy 兩 locale | 進行中 | A4a、A3 | [A4c](P6-A_steps/A4c.md) |
-| A5 | E2E `p6a-adventures.spec.ts`、關門 gate、closeout、合併 `main` | 待做 | A1a～A4c | [A5](P6-A_steps/A5.md) |
+| A4c | web：Campaign page「Attached Adventures」（attach picker／detach）、copy 兩 locale | 完成 | A4a、A3 | [A4c](P6-A_steps/A4c.md) |
+| A5 | E2E `p6a-adventures.spec.ts`、關門 gate、closeout、合併 `main` | 進行中 | A1a～A4c | [A5](P6-A_steps/A5.md) |

@@ -53,6 +53,20 @@ export function adventureActions(status: AdventureStatus): {
   }
 }
 
+export function adventureStatusLabel(
+  status: AdventureStatus,
+  copy: ReturnType<typeof adventuresCopy>,
+): string {
+  switch (status) {
+    case 'draft':
+      return copy.statusDraft
+    case 'finalized':
+      return copy.statusFinalized
+    case 'archived':
+      return copy.statusArchived
+  }
+}
+
 export type AdventureListProps = {
   adventures: AdventureDefinition[]
   copy: ReturnType<typeof adventuresCopy>
@@ -76,16 +90,7 @@ export function AdventureList({
     return <p className="room-empty-text">{copy.empty}</p>
   }
 
-  const statusLabel = (status: AdventureStatus) => {
-    switch (status) {
-      case 'draft':
-        return copy.statusDraft
-      case 'finalized':
-        return copy.statusFinalized
-      case 'archived':
-        return copy.statusArchived
-    }
-  }
+  const statusLabel = (status: AdventureStatus) => adventureStatusLabel(status, copy)
 
   return (
     <div className="adventure-grid">

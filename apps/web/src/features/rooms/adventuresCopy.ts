@@ -120,6 +120,17 @@ const COPY = {
     uploadAttach: 'Upload & attach',
     unlinkAsset: 'Unlink',
     unlinkConfirm: 'Unlink this image from the entry? The file stays in the Room.',
+    attachedTitle: 'Attached Adventures',
+    attachedIntro: 'Attaching an Adventure gives this Campaign access to its data; it never copies or edits the Adventure.',
+    attachedEmpty: 'No Adventures attached to this Campaign yet.',
+    attachPicker: 'Attach a finalized Adventure',
+    attachAction: 'Attach',
+    detach: 'Detach',
+    detachConfirm: 'Detach this Adventure from the Campaign? The Adventure itself is not changed or deleted.',
+    noAttachable: 'No finalized Adventure is available to attach.',
+    goToAdventures: 'Manage Adventures',
+    errCampaignAdventureLinkNotFound: 'This Adventure is not attached to this Campaign.',
+    errCampaignNotFound: 'Campaign not found.',
   },
   'zh-TW': {
     title: 'Adventures',
@@ -238,6 +249,17 @@ const COPY = {
     uploadAttach: '上傳並附加',
     unlinkAsset: '解除連結',
     unlinkConfirm: '要解除此圖片與 entry 的連結嗎？檔案仍保留在 Room。',
+    attachedTitle: '已附加的 Adventures',
+    attachedIntro: '附加 Adventure 可讓此 Campaign 存取其資料；這絕不會複製或修改 Adventure 本身。',
+    attachedEmpty: '此 Campaign 尚未附加任何 Adventure。',
+    attachPicker: '附加已定稿的 Adventure',
+    attachAction: '附加',
+    detach: '解除附加',
+    detachConfirm: '要解除此 Adventure 與 Campaign 的附加嗎？Adventure 本身不會被修改或刪除。',
+    noAttachable: '目前沒有可附加的已定稿 Adventure。',
+    goToAdventures: '管理 Adventures',
+    errCampaignAdventureLinkNotFound: '此 Adventure 未附加至此 Campaign。',
+    errCampaignNotFound: '找不到此 Campaign。',
   },
 } as const satisfies Record<Locale, Record<string, string>>
 
@@ -287,6 +309,10 @@ export function adventureErrorMessage(
       return copy.errRoomAssetNotFound
     case 'asset_empty':
       return copy.errAssetEmpty
+    case 'campaign_adventure_link_not_found':
+      return copy.errCampaignAdventureLinkNotFound
+    case 'campaign_not_found':
+      return copy.errCampaignNotFound
     default:
       return copy.requestFailed
   }
