@@ -5,7 +5,7 @@
 - **更新日期**：2026-09-20
 - **目標與邊界**：建立 Campaign mutable world layer：Runtime Scene／NPC／Item／Quest／Fact／Secret、角色知識、Adventure Override、optional Current Scene／Situation、revision／idempotency 與 Server-side projection。支援空 Campaign、跨 Session persistence、Human DM quick add；不做 P6-C AI retrieval、P6-D MCP write-back／Stage bridge、P6-E/F Importer。
 - **Branch**：`codex/p6b-campaign-runtime`（自 `main@8db7d851`）
-- **最近已驗證 commit**：尚無；規劃紀錄待提交
+- **最近已驗證 commit**：`aaed59a5`（步驟板與 scope 建立；純文件 diff 已核對）
 - **Worker**：B1～B5e 由 agy 實作；每步由指揮者審 diff、跑 focused/regression gate、修小錯、commit＋push。B6 E2E／完整 gate／closeout／合併由指揮者處理。
 - **下一步**：B1 — schema／migration／Standalone boundary；prompt 存 `C:\_work\AI_Work\Tools\agy-runs\agy-p6b-b1.prompt.txt`
 - **阻礙／未審**：無
@@ -16,7 +16,7 @@
 
 | Step | 標題 | 狀態 | 依賴 | 紀錄 |
 |---|---|---|---|---|
-| B1 | 五張 Runtime table、migration、Standalone boundary／parity | 待做 | — | [B1](P6-B_steps/B1.md) |
+| B1 | 五張 Runtime table、migration、Standalone boundary／parity | 進行中 | — | [B1](P6-B_steps/B1.md) |
 | B2a | Typed payload、command／view DTO、projection 基礎 | 待做 | B1 | [B2a](P6-B_steps/B2a.md) |
 | B2b | Runtime entry repository 與 character recipients | 待做 | B1、B2a | [B2b](P6-B_steps/B2b.md) |
 | B2c | Runtime CRUD service、authority、revision／idempotency、event | 待做 | B2a、B2b | [B2c](P6-B_steps/B2c.md) |
