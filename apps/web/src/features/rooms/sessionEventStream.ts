@@ -1,4 +1,10 @@
-import type { SessionResume, TableEvent, TableEventPage } from '../../api/sessions'
+import type {
+  SessionHistoryLink,
+  SessionResume,
+  SessionSnapshot,
+  TableEvent,
+  TableEventPage,
+} from '../../api/sessions'
 
 export type SessionEventStreamState = {
   sessionId: string
@@ -8,8 +14,33 @@ export type SessionEventStreamState = {
   events: TableEvent[]
 }
 
-export function hasOlderHistory(state: SessionEventStreamState): boolean {
-  return state.historyFloorSeq > 0
+export type OlderSessionHistory = {
+  session: SessionSnapshot
+  lastEventSeq: number
+  historyFloorSeq: number
+  events: TableEvent[]
+}
+
+export type SessionHistoryChain = {
+  older: OlderSessionHistory[]
+  exhausted: boolean
+}
+
+export function emptyHistoryChain(): SessionHistoryChain {
+  return {
+    older: [],
+    exhausted: false,
+  }
+}
+
+export function hasOlderHistory(
+  state: SessionEventStreamState,
+  chain: SessionHistoryChain,
+): boolean {
+  if (state.historyFloorSeq > 0) return true
+  const oldest = chain.older[chain.older.length - 1]
+  if (oldest && oldest.historyFloorSeq > 0) return true
+  return !chain.exhausted
 }
 
 function mergeEvents(current: TableEvent[], incoming: TableEvent[]): TableEvent[] {
@@ -100,4 +131,71 @@ export function applySessionHistoryPage(
     historyFloorSeq: Math.min(state.historyFloorSeq, page.after_seq),
     events: mergeEvents(state.events, page.events),
   }
+}
+
+export function pushOlderSession(
+  chain: SessionHistoryChain,
+  link: SessionHistoryLink,
+  page: TableEventPage | null,
+): SessionHistoryChain {
+  if (link.previous_session === null) {
+    return { ...chain, exhausted: true }
+  }
+
+  const validPage = page && page.session_id === link.previous_session.id ? page : null
+  const newEntry: OlderSessionHistory = {
+    session: link.previous_session,
+    lastEventSeq: link.previous_last_event_seq,
+    historyFloorSeq: validPage ? validPage.after_seq : 0,
+    events: validPage ? mergeEvents([], validPage.events) : [],
+  }
+
+  return {
+    ...chain,
+    older: [...chain.older, newEntry],
+  }
+}
+
+export function applyOlderSessionPage(
+  chain: SessionHistoryChain,
+  page: TableEventPage,
+): SessionHistoryChain {
+  const index = chain.older.findIndex((entry) => entry.session.id === page.session_id)
+  if (index === -1) return chain
+
+  const entry = chain.older[index]
+  const updatedEntry: OlderSessionHistory = {
+    ...entry,
+    historyFloorSeq: Math.min(entry.historyFloorSeq, page.after_seq),
+    events: mergeEvents(entry.events, page.events),
+  }
+
+  const newOlder = [...chain.older]
+  newOlder[index] = updatedEntry
+  return {
+    ...chain,
+    older: newOlder,
+  }
+}
+
+export function nextHistoryRequest(
+  state: SessionEventStreamState,
+  chain: SessionHistoryChain,
+):
+  | { kind: 'current'; beforeSeq: number }
+  | { kind: 'older'; sessionId: string; beforeSeq: number }
+  | { kind: 'previous'; baseSessionId: string }
+  | null {
+  if (state.historyFloorSeq > 0) {
+    return { kind: 'current', beforeSeq: state.historyFloorSeq + 1 }
+  }
+  const oldest = chain.older[chain.older.length - 1]
+  if (oldest && oldest.historyFloorSeq > 0) {
+    return { kind: 'older', sessionId: oldest.session.id, beforeSeq: oldest.historyFloorSeq + 1 }
+  }
+  if (!chain.exhausted) {
+    const baseSessionId = oldest ? oldest.session.id : state.sessionId
+    return { kind: 'previous', baseSessionId }
+  }
+  return null
 }

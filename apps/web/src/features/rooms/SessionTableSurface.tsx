@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import type { RoomCharacterSummary } from '../../api/campaigns'
 import { createPendingAction } from '../../api/p3c'
@@ -9,6 +9,7 @@ import {
   replaceSessionStage,
   sendExplorationInput,
   type ExplorationInputKind,
+  type SessionParticipantSnapshot,
   type SessionSnapshot,
   type StageImageUpload,
   type StageState,
@@ -51,6 +52,7 @@ import {
 import { endCombat, startCombat } from '../../api/combat'
 import { SessionCombatStage } from './SessionCombatStage'
 import { myEntryIds, useActiveCombat } from './sessionCombat'
+import type { OlderSessionHistory } from './sessionEventStream'
 import {
   combatLogContentFields,
   combatLogContentReferences,
@@ -71,6 +73,8 @@ type SessionTableSurfaceProps = {
   isCurrentDm: boolean
   initialStage: StageState | null
   events: TableEvent[]
+  olderSessions: OlderSessionHistory[]
+  historyExhausted: boolean
   hasOlderHistory: boolean
   historyLoading: boolean
   onLoadOlder: () => void
@@ -128,6 +132,8 @@ export function SessionTableSurface({
   isCurrentDm,
   initialStage,
   events,
+  olderSessions,
+  historyExhausted,
   hasOlderHistory,
   historyLoading,
   onLoadOlder,
@@ -361,6 +367,63 @@ export function SessionTableSurface({
     const speakerSeatId = event.subject_seat_id ?? event.acting_seat_id
     return speakerSeatId ? seatLabel(speakerSeatId) : copy.ooc
   }
+  // M05-B: an earlier Session's boundary in the chat stream. Times use the UI
+  // locale; the divider is presentation only and is never written as an event.
+  const sessionDividerLabel = (session: SessionSnapshot) => {
+    const status = session.status === 'abandoned' ? copy.sessionDividerAbandoned : copy.sessionDividerEnded
+    const dmKind = session.dm_controller_kind === 'ai' ? copy.dmKindAi : copy.dmKindHuman
+    const format = (value: string | null) => (value ? new Date(value).toLocaleString(copy.locale) : '—')
+    return `${status} · ${copy.dm}: ${dmKind} · ${format(session.started_at)} – ${format(session.ended_at)}`
+  }
+
+  const renderChatMessage = (event: TableEvent, participants: SessionParticipantSnapshot[]) => {
+    if (isRollRequestEvent(event)) {
+      const targetLabels = event.recipient_seat_ids.map((seatId) => {
+        const participant = participants.find((item) => item.seat_id === seatId)
+        return participant?.active_character_id
+          ? characterName(participant.active_character_id)
+          : seatLabel(seatId)
+      })
+      return (
+        <article className="session-chat__message session-chat__message--system" key={`${event.session_id}:${event.seq}`}>
+          <header><strong>{copy.system}</strong></header>
+          <p>
+            {formatRollRequestPrompt(event, targetLabels, copy, {
+              entryLabel: combatEntryLabel,
+              contentName: resolveCombatContentName,
+              contentField: resolveCombatContentField,
+            })}
+          </p>
+        </article>
+      )
+    }
+    const speakerKey = getSpeakerKey(event, snapshot.dm_seat_id)
+    const speakerColor = speakerColors[speakerKey]
+    return (
+      <article className="session-chat__message" key={`${event.session_id}:${event.seq}`}>
+        <header>
+          <button
+            type="button"
+            className="session-chat__color-dot-btn"
+            style={{ backgroundColor: speakerColor || DEFAULT_CHAT_COLOR }}
+            title={`${speakerLabel(event)}: ${copy.selectChatColor}`}
+            aria-label={`${speakerLabel(event)}: ${copy.selectChatColor}`}
+            onClick={() => {
+              setColorPickerSpeakerKey(speakerKey)
+              setColorPickerOpen(true)
+            }}
+          />
+          <strong style={speakerColor ? { color: speakerColor } : undefined}>
+            {speakerLabel(event)}
+          </strong>
+          {event.kind === 'exploration.ooc' ? <span>{copy.ooc}</span> : null}
+          {event.execution_mode === 'dm_proxy' ? <span>{copy.dmProxy}</span> : null}
+          {event.kind === 'exploration.whisper_dm' ? <span>{copy.whisperPrivate}</span> : null}
+        </header>
+        <p style={speakerColor ? { color: speakerColor } : undefined}>{explorationEventText(event)}</p>
+      </article>
+    )
+  }
 
   const [followChat, setFollowChat] = useState(true)
   const [lastSeenSeq, setLastSeenSeq] = useState(0)
@@ -382,7 +445,7 @@ export function SessionTableSurface({
     if (historyLoading || !container || previousHeight === null) return
     container.scrollTop += container.scrollHeight - previousHeight
     pendingAnchorScrollHeightRef.current = null
-  }, [chatEvents, historyLoading])
+  }, [chatEvents, olderSessions, historyLoading])
 
   // Follow chat only when reader is already at bottom or explicitly jumps
   useEffect(() => {
@@ -687,55 +750,23 @@ export function SessionTableSurface({
                       {historyLoading ? copy.loadingOlderMessages : copy.loadOlderMessages}
                     </button>
                   ) : null}
-                  {chatEvents.length === 0 ? <p className="session-stage__empty">{copy.noMessages}</p> : null}
-                  {chatEvents.map((event) => {
-                    if (isRollRequestEvent(event)) {
-                      const targetLabels = event.recipient_seat_ids.map((seatId) => {
-                        const participant = snapshot.participants.find((item) => item.seat_id === seatId)
-                        return participant?.active_character_id
-                          ? characterName(participant.active_character_id)
-                          : seatLabel(seatId)
-                      })
-                      return (
-                        <article className="session-chat__message session-chat__message--system" key={`${event.session_id}:${event.seq}`}>
-                          <header><strong>{copy.system}</strong></header>
-                          <p>
-                            {formatRollRequestPrompt(event, targetLabels, copy, {
-                              entryLabel: combatEntryLabel,
-                              contentName: resolveCombatContentName,
-                              contentField: resolveCombatContentField,
-                            })}
-                          </p>
-                        </article>
-                      )
-                    }
-                    const speakerKey = getSpeakerKey(event, snapshot.dm_seat_id)
-                    const speakerColor = speakerColors[speakerKey]
-                    return (
-                      <article className="session-chat__message" key={`${event.session_id}:${event.seq}`}>
-                        <header>
-                          <button
-                            type="button"
-                            className="session-chat__color-dot-btn"
-                            style={{ backgroundColor: speakerColor || DEFAULT_CHAT_COLOR }}
-                            title={`${speakerLabel(event)}: ${copy.selectChatColor}`}
-                            aria-label={`${speakerLabel(event)}: ${copy.selectChatColor}`}
-                            onClick={() => {
-                              setColorPickerSpeakerKey(speakerKey)
-                              setColorPickerOpen(true)
-                            }}
-                          />
-                          <strong style={speakerColor ? { color: speakerColor } : undefined}>
-                            {speakerLabel(event)}
-                          </strong>
-                          {event.kind === 'exploration.ooc' ? <span>{copy.ooc}</span> : null}
-                          {event.execution_mode === 'dm_proxy' ? <span>{copy.dmProxy}</span> : null}
-                          {event.kind === 'exploration.whisper_dm' ? <span>{copy.whisperPrivate}</span> : null}
-                        </header>
-                        <p style={speakerColor ? { color: speakerColor } : undefined}>{explorationEventText(event)}</p>
-                      </article>
-                    )
-                  })}
+                  {historyExhausted && !hasOlderHistory ? (
+                    <p className="session-chat__history-start" data-chat-history-start>{copy.historyStart}</p>
+                  ) : null}
+                  {[...olderSessions].reverse().map((older) => (
+                    <Fragment key={older.session.id}>
+                      <div
+                        role="separator"
+                        className="session-chat__session-divider"
+                        data-session-divider={older.session.id}
+                      >
+                        {sessionDividerLabel(older.session)}
+                      </div>
+                      {older.events.filter(isSessionChatEvent).map((event) => renderChatMessage(event, older.session.participants))}
+                    </Fragment>
+                  ))}
+                  {chatEvents.length === 0 && olderSessions.length === 0 ? <p className="session-stage__empty">{copy.noMessages}</p> : null}
+                  {chatEvents.map((event) => renderChatMessage(event, snapshot.participants))}
                 </div>
                 {!followChat && unseenChatCount > 0 ? (
                   <ChatJumpButton

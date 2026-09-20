@@ -134,6 +134,13 @@
 | **P4-E — Quick Combat UI, DM Adjudication & AI Tool Surface** | ✅ | migration `0026`（Monster concentration）、Monster persisted cast、Concentration roll routing、audience-projected `GET .../combat/detail` 與 Player-safe event payload、spell / reaction / concentration / adjudication / Monster Instance REST、38 個 role-scoped `combat_*` MCP tool + `get_session_context` combat context 與雙語 briefing、Session table Quick Combat Stage / DM 控制 / Quick Action Bar / adjudication panel、compact bilingual Combat Log、Combat REST error code 雙語、Playwright `p4e-quick-combat.spec.ts`；[closeout](../docs/P4/P4-E_CLOSEOUT.md) |
 | **P4-F — Full P4 Integration & Closeout** | ✅ | migration `0027`～`0030`、Monster outcome / bookkeeping / reveal、escape_grapple、state PATCH P4-D 欄位、真 PostgreSQL restart、full browser journey + Session boundary + 真 process restart、conditions / exhaustion / Dodge → attack / save modifier 與 auto-fail、adjudication 工具分流 + `advance_turn` hint + `table_conflict` detail、Quick Enemy attack 輸入正規化、真實 ChatGPT Web Combat gate 三場（F8）；[closeout](../docs/P4/P4-F_CLOSEOUT.md) |
 
+### M05
+
+| Subphase | 狀態 | 重點 |
+|---|---|---|
+| **M05-A — Owner End for AI DM Sessions** | ✅ | `SessionService.end_session` 對 `dm_controller_kind == "ai"` 的 active Session 開 Owner Room-management 分支（與 Owner Abandon 同 `_finalize_with_event`，撤 AI grant、Seat 回 none＋epoch+1、釋放 lease）；Human DM 場 Owner 仍只能 Abandon；Session 頁 `sessionEndControls()` 與雙語 copy；`m05-session-history.spec.ts` A 段；[closeout](../docs/M05/M05-A_CLOSEOUT.md)，merge `7b913d3d` |
+| **M05-B — Cross-Session Chat History Paging** | ✅ | 專用 `HistoricalSessionReadScope`（Seat 為單位、DM 層跟 `dm_seat_id`、不看 participants），`resolve_human_actor`／`actor_binding_is_current`／gameplay route 零改動；`GET /sessions/{id}/previous`＋既有 `/events/history` 對非 active Session 分流；前端 `SessionHistoryChain`／`nextHistoryRequest` 一步一頁、分隔線、已到最前，舊事件不進本場投影；Resume／MCP 仍單場；[closeout](../docs/M05/M05-B_CLOSEOUT.md) |
+
 ## 已解限制的歷史記錄
 
 | 項目 | 當時結論 | 證據 |
@@ -155,3 +162,4 @@
 | P3 | [規格](P3/實作規格.md) | [設計](P3/開發設計方針.md) | [測試](P3/測試指南.md) |
 | M04 | [規格](M04/實作規格.md) | [設計](M04/開發設計方針.md) | [測試](M04/測試指南.md) |
 | P4 | [規格](P4/實作規格.md) | [設計](P4/開發設計方針.md) | [測試](P4/測試指南.md) |
+| M05 | [規格](M05/實作規格.md) | [設計](M05/開發設計方針.md) | [測試](M05/測試指南.md) |

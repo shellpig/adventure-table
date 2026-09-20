@@ -7,6 +7,7 @@ import {
   abandonSession,
   endSession,
   getActiveSession,
+  getPreviousSession,
   getSession,
   lateJoinSession,
   listSessionHistory,
@@ -23,12 +24,17 @@ import {
   type SessionEventConnectionStatus,
 } from './sessionEventPoll'
 import {
+  applyOlderSessionPage,
   applySessionEventPage,
   applySessionHistoryPage,
+  emptyHistoryChain,
   eventStreamFromResume,
   hasOlderHistory,
   mergeResumeStream,
+  nextHistoryRequest,
+  pushOlderSession,
   type SessionEventStreamState,
+  type SessionHistoryChain,
 } from './sessionEventStream'
 import { SessionTableSurface } from './SessionTableSurface'
 import {
@@ -147,6 +153,7 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   const [characters, setCharacters] = useState<RoomCharacterSummary[]>([])
   const [initialStage, setInitialStage] = useState<StageState | null>(null)
   const [eventStream, setEventStream] = useState<SessionEventStreamState | null>(null)
+  const [historyChain, setHistoryChain] = useState<SessionHistoryChain>(emptyHistoryChain)
   const [eventConnectionStatus, setEventConnectionStatus] = useState<SessionEventConnectionStatus>('connected')
   const [historyLoading, setHistoryLoading] = useState(false)
   const [lateJoinSeatId, setLateJoinSeatId] = useState('')
@@ -215,25 +222,42 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     [copy],
   )
 
+  // One click loads one page: the current Session's older page, an older
+  // Session's page, or — at a Session boundary — the previous-Session lookup plus
+  // that Session's latest page. Older Sessions live in historyChain and never enter
+  // the current eventStream, so Stage / Combat / Roll projections stay per-Session.
   const loadOlderEvents = useCallback(async () => {
-    if (!eventStream || !hasOlderHistory(eventStream) || historyLoading) return
+    if (!eventStream || historyLoading) return
+    const next = nextHistoryRequest(eventStream, historyChain)
+    if (next === null) return
     setHistoryLoading(true)
     try {
-      const page = await listSessionHistory(
-        roomId,
-        campaignId,
-        sessionId,
-        eventStream.historyFloorSeq + 1,
-        token,
-        100,
-      )
-      setEventStream((current) => (current ? applySessionHistoryPage(current, page) : current))
+      if (next.kind === 'current') {
+        const page = await listSessionHistory(roomId, campaignId, sessionId, next.beforeSeq, token, 100)
+        setEventStream((current) => (current ? applySessionHistoryPage(current, page) : current))
+      } else if (next.kind === 'older') {
+        const page = await listSessionHistory(roomId, campaignId, next.sessionId, next.beforeSeq, token, 100)
+        setHistoryChain((current) => applyOlderSessionPage(current, page))
+      } else {
+        const link = await getPreviousSession(roomId, campaignId, next.baseSessionId, token)
+        const page = link.previous_session
+          ? await listSessionHistory(
+            roomId,
+            campaignId,
+            link.previous_session.id,
+            link.previous_last_event_seq + 1,
+            token,
+            100,
+          )
+          : null
+        setHistoryChain((current) => pushOlderSession(current, link, page))
+      }
     } catch (cause) {
       handleSessionTableError(cause)
     } finally {
       setHistoryLoading(false)
     }
-  }, [eventStream, historyLoading, roomId, campaignId, sessionId, token, handleSessionTableError])
+  }, [eventStream, historyChain, historyLoading, roomId, campaignId, sessionId, token, handleSessionTableError])
 
   const optionalLobby = (): Promise<LobbySnapshot | null> =>
     getLobby(roomId, campaignId, token).catch(() => null)
@@ -261,6 +285,8 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
         ? eventStreamFromResume(nextResume)
         : null,
     ))
+    // A full Resume restarts the cross-Session chain from this Session's boundary.
+    setHistoryChain(emptyHistoryChain())
   }
 
   useEffect(() => {
@@ -478,7 +504,9 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
             isCurrentDm={isCurrentDm}
             initialStage={initialStage}
             events={eventStream?.events ?? []}
-            hasOlderHistory={eventStream ? hasOlderHistory(eventStream) : false}
+            olderSessions={historyChain.older}
+            historyExhausted={historyChain.exhausted}
+            hasOlderHistory={eventStream ? hasOlderHistory(eventStream, historyChain) : false}
             historyLoading={historyLoading}
             onLoadOlder={loadOlderEvents}
             copy={copy}

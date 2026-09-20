@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import asdict
 from datetime import datetime
 from enum import StrEnum
 from typing import Any, Protocol
@@ -13,6 +14,7 @@ from app.domain.combat.projection import CombatantAudience
 from app.domain.rooms.schemas import RoomAccessContext, StrictModel
 from app.persistence.rooms.table_runtime import (
     MAX_EVENT_SCAN_LIMIT,
+    StoredHistoryReadScope,
     StoredTableActorBinding,
     StoredTableEvent,
     TableEventActorBindingStalePersistenceError,
@@ -63,6 +65,25 @@ class TableEventNotifier(Protocol):
     async def wait(self, handle: object, timeout: float) -> bool: ...
 
     def unregister(self, handle: object) -> None: ...
+
+
+class EventReadScope(Protocol):
+    is_current_dm: bool
+    controlled_seat_ids: tuple[UUID, ...]
+
+
+class HistoricalSessionReadScope(StrictModel):
+    room_id: UUID
+    campaign_id: UUID
+    session_id: UUID
+    session_status: str
+    access_session_id: UUID
+    controlled_seat_ids: tuple[UUID, ...]
+    is_dm: bool
+
+    @property
+    def is_current_dm(self) -> bool:
+        return self.is_dm
 
 
 class TableActorContext(StrictModel):
@@ -231,13 +252,33 @@ class TableEventService:
             raise TableEventActorUnauthorizedError("AI table actor binding is not current")
         return self._actor(binding)
 
+    def resolve_history_scope(
+        self,
+        *,
+        room_id: UUID,
+        campaign_id: UUID,
+        session_id: UUID,
+        context: RoomAccessContext,
+    ) -> HistoricalSessionReadScope:
+        if context.room_id != room_id:
+            raise TableEventNotFoundError(str(session_id))
+        stored = self.repository.history_read_scope(
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            access_session_id=context.access_session_id,
+        )
+        if stored is None:
+            raise TableEventNotFoundError(str(session_id))
+        return HistoricalSessionReadScope(**asdict(stored))
+
     def require_actor_current(self, actor: TableActorContext) -> None:
         binding = self._stored_binding(actor)
         if not self.repository.actor_binding_is_current(binding):
             raise TableEventActorUnauthorizedError("Table actor binding is no longer current")
 
     @staticmethod
-    def _present(stored: StoredTableEvent, *, actor: TableActorContext) -> TableEvent:
+    def _present(stored: StoredTableEvent, *, actor: EventReadScope) -> TableEvent:
         # Enemy secrecy is decided here, once, for every path an event can take
         # (list / long-poll / Resume / MCP): the projector is a no-op for the DM.
         audience: CombatantAudience = "dm" if actor.is_current_dm else "player"
@@ -264,7 +305,7 @@ class TableEventService:
         )
 
     @staticmethod
-    def _visible(actor: TableActorContext, stored: StoredTableEvent) -> bool:
+    def _visible(actor: EventReadScope, stored: StoredTableEvent) -> bool:
         visibility = TableEventVisibility(stored.visibility)
         if visibility is TableEventVisibility.PUBLIC:
             return True
@@ -342,28 +383,30 @@ class TableEventService:
             events=visible,
         )
 
-    def list_before(
+    def _scan_before(
         self,
-        actor: TableActorContext,
+        scope: EventReadScope,
         *,
+        room_id: UUID,
+        campaign_id: UUID,
+        session_id: UUID,
         before_seq: int,
         limit: int,
     ) -> TableEventPage:
-        self.require_actor_current(actor)
         bounded_limit = max(1, min(int(limit), MAX_EVENT_SCAN_LIMIT))
         try:
             runtime = self.repository.current_runtime(
-                room_id=actor.room_id,
-                campaign_id=actor.campaign_id,
-                session_id=actor.session_id,
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
             )
         except TableEventSessionNotFoundPersistenceError as exc:
-            raise TableEventNotFoundError(str(actor.session_id)) from exc
+            raise TableEventNotFoundError(str(session_id)) from exc
 
         cursor = max(0, min(int(before_seq) - 1, runtime.last_event_seq))
         if before_seq <= 1 or runtime.last_event_seq == 0:
             return TableEventPage(
-                session_id=actor.session_id,
+                session_id=session_id,
                 after_seq=0,
                 cursor=cursor,
                 current_seq=runtime.last_event_seq,
@@ -384,14 +427,14 @@ class TableEventService:
                 break
             try:
                 raw_chunk = self.repository.list_before(
-                    room_id=actor.room_id,
-                    campaign_id=actor.campaign_id,
-                    session_id=actor.session_id,
+                    room_id=room_id,
+                    campaign_id=campaign_id,
+                    session_id=session_id,
                     before_seq=current_before,
                     scan_limit=MAX_EVENT_SCAN_LIMIT,
                 )
             except TableEventSessionNotFoundPersistenceError as exc:
-                raise TableEventNotFoundError(str(actor.session_id)) from exc
+                raise TableEventNotFoundError(str(session_id)) from exc
 
             if not raw_chunk:
                 reached_start = True
@@ -399,8 +442,8 @@ class TableEventService:
 
             for stored in reversed(raw_chunk):
                 smallest_scanned_seq = stored.seq
-                if self._visible(actor, stored):
-                    collected_events_desc.append(self._present(stored, actor=actor))
+                if self._visible(scope, stored):
+                    collected_events_desc.append(self._present(stored, actor=scope))
                     if len(collected_events_desc) == bounded_limit:
                         break
 
@@ -418,12 +461,57 @@ class TableEventService:
             after_seq = max(0, smallest_scanned_seq - 1)
 
         return TableEventPage(
-            session_id=actor.session_id,
+            session_id=session_id,
             after_seq=after_seq,
             cursor=cursor,
             current_seq=runtime.last_event_seq,
             has_more=cursor < runtime.last_event_seq,
             events=list(reversed(collected_events_desc)),
+        )
+
+    def list_before(
+        self,
+        actor: TableActorContext,
+        *,
+        before_seq: int,
+        limit: int,
+    ) -> TableEventPage:
+        self.require_actor_current(actor)
+        return self._scan_before(
+            actor,
+            room_id=actor.room_id,
+            campaign_id=actor.campaign_id,
+            session_id=actor.session_id,
+            before_seq=before_seq,
+            limit=limit,
+        )
+
+    def list_history_before(
+        self,
+        scope: HistoricalSessionReadScope,
+        *,
+        before_seq: int,
+        limit: int,
+    ) -> TableEventPage:
+        if scope.session_status == "active":
+            raise TableEventNotFoundError(str(scope.session_id))
+        # History equivalent of require_actor_current: Seat control is re-read on
+        # every page so a reassigned or archived Seat drops out immediately.
+        current_stored = self.repository.history_read_scope(
+            room_id=scope.room_id,
+            campaign_id=scope.campaign_id,
+            session_id=scope.session_id,
+            access_session_id=scope.access_session_id,
+        )
+        if current_stored != StoredHistoryReadScope(**scope.model_dump()):
+            raise TableEventActorUnauthorizedError("Historical session read scope is no longer current")
+        return self._scan_before(
+            scope,
+            room_id=scope.room_id,
+            campaign_id=scope.campaign_id,
+            session_id=scope.session_id,
+            before_seq=before_seq,
+            limit=limit,
         )
 
     async def wait_after(
@@ -525,6 +613,8 @@ class TableEventService:
 
 
 __all__ = [
+    "EventReadScope",
+    "HistoricalSessionReadScope",
     "MAX_HISTORY_SCAN_CHUNKS",
     "TableActorContext",
     "TableActorKind",

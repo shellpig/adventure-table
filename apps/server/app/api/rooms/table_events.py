@@ -107,14 +107,24 @@ def list_table_event_history(
     service: TableEventService = Depends(get_table_event_service),
 ) -> TableEventPage:
     try:
-        actor = _resolve_actor(
+        # M05-B: a finalized Session is read through the Seat-scoped history scope;
+        # an active Session keeps the P3 actor path unchanged.
+        scope = service.resolve_history_scope(
             room_id=room_id,
             campaign_id=campaign_id,
             session_id=session_id,
             context=context,
-            service=service,
         )
-        return service.list_before(actor, before_seq=before, limit=limit)
+        if scope.session_status == "active":
+            actor = _resolve_actor(
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+                context=context,
+                service=service,
+            )
+            return service.list_before(actor, before_seq=before, limit=limit)
+        return service.list_history_before(scope, before_seq=before, limit=limit)
     except Exception as exc:
         raise _map_table_event_error(exc) from exc
 
