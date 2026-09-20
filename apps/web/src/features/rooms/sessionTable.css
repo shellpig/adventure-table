@@ -311,6 +311,30 @@
   cursor: not-allowed;
 }
 
+.session-chat__session-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.session-chat__session-divider::before,
+.session-chat__session-divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px dashed var(--line-soft);
+}
+
+.session-chat__history-start {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
 .session-chat__messages,
 .session-log {
   overflow: auto;

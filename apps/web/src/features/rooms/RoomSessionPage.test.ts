@@ -185,6 +185,27 @@ describe('Session route and presentation', () => {
     expect(sessionCopy('en').ownerEndAiDmHint).toContain('AI DM')
   })
 
+  it('M05-B: pages older chat through the Campaign history chain without touching the current stream', () => {
+    const source = readFileSync(new URL('./RoomSessionPage.tsx', import.meta.url), 'utf8')
+    // One click = one nextHistoryRequest decision; the previous-Session step issues the
+    // lookup and that Session's latest page together.
+    expect(source).toContain('const next = nextHistoryRequest(eventStream, historyChain)')
+    expect(source).toContain("if (next.kind === 'current')")
+    expect(source).toContain("} else if (next.kind === 'older')")
+    expect(source).toContain('await getPreviousSession(roomId, campaignId, next.baseSessionId, token)')
+    expect(source).toContain('link.previous_last_event_seq + 1')
+    expect(source).toContain('setHistoryChain((current) => pushOlderSession(current, link, page))')
+    expect(source).toContain('setHistoryChain((current) => applyOlderSessionPage(current, page))')
+    // Older pages never merge into eventStream; only the current-Session page does.
+    expect(source.match(/applySessionHistoryPage\(current, page\)/g) ?? []).toHaveLength(1)
+    // A full Resume resets the chain; the surface receives the chain, not merged events.
+    expect(source).toContain('setHistoryChain(emptyHistoryChain())')
+    expect(source).toContain('olderSessions={historyChain.older}')
+    expect(source).toContain('historyExhausted={historyChain.exhausted}')
+    expect(source).toContain('hasOlderHistory(eventStream, historyChain)')
+    expect(source).not.toContain('exhausted: true }')
+  })
+
   it('renders persistent reconnect and fatal connection status in both locales', () => {
     for (const locale of ['zh-TW', 'en'] as const) {
       const copy = sessionCopy(locale)

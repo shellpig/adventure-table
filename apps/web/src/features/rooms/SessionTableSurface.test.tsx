@@ -166,6 +166,8 @@ describe('SessionTableSurface message presentation', () => {
           isCurrentDm={true}
           initialStage={null}
           events={[rollRequestedEvent()]}
+          olderSessions={[]}
+          historyExhausted={false}
           hasOlderHistory={false}
           historyLoading={false}
           onLoadOlder={() => undefined}
@@ -201,6 +203,8 @@ describe('SessionTableSurface message presentation', () => {
           explorationEvent(1, 'exploration.ooc', MIRA_SEAT, 'Mira OOC line'),
           explorationEvent(2, 'exploration.whisper_dm', SERENA_SEAT, 'Serena secret'),
         ]}
+        olderSessions={[]}
+        historyExhausted={false}
         hasOlderHistory={false}
         historyLoading={false}
         onLoadOlder={() => undefined}
@@ -255,6 +259,8 @@ describe('SessionTableSurface message presentation', () => {
           events={[
             explorationEvent(1, 'exploration.ooc', MIRA_SEAT, 'Mira colored line'),
           ]}
+          olderSessions={[]}
+          historyExhausted={false}
           hasOlderHistory={false}
           historyLoading={false}
           onLoadOlder={() => undefined}
@@ -294,6 +300,8 @@ describe('SessionTableSurface combat toolbar', () => {
           isCurrentDm={true}
           initialStage={null}
           events={[]}
+          olderSessions={[]}
+          historyExhausted={false}
           hasOlderHistory={false}
           historyLoading={false}
           onLoadOlder={() => undefined}
@@ -323,6 +331,8 @@ describe('SessionTableSurface combat toolbar', () => {
           isCurrentDm={false}
           initialStage={null}
           events={[]}
+          olderSessions={[]}
+          historyExhausted={false}
           hasOlderHistory={false}
           historyLoading={false}
           onLoadOlder={() => undefined}
@@ -355,6 +365,8 @@ describe('SessionTableSurface older history & message capacity', () => {
           isCurrentDm={true}
           initialStage={null}
           events={[]}
+          olderSessions={[]}
+          historyExhausted={false}
           hasOlderHistory={true}
           historyLoading={false}
           onLoadOlder={() => undefined}
@@ -381,6 +393,8 @@ describe('SessionTableSurface older history & message capacity', () => {
         isCurrentDm={true}
         initialStage={null}
         events={[]}
+        olderSessions={[]}
+        historyExhausted={false}
         hasOlderHistory={true}
         historyLoading={true}
         onLoadOlder={() => undefined}
@@ -405,6 +419,8 @@ describe('SessionTableSurface older history & message capacity', () => {
         isCurrentDm={true}
         initialStage={null}
         events={[]}
+        olderSessions={[]}
+        historyExhausted={false}
         hasOlderHistory={false}
         historyLoading={false}
         onLoadOlder={() => undefined}
@@ -446,6 +462,8 @@ describe('SessionTableSurface older history & message capacity', () => {
         isCurrentDm={false}
         initialStage={null}
         events={manyEvents}
+        olderSessions={[]}
+        historyExhausted={false}
         hasOlderHistory={false}
         historyLoading={false}
         onLoadOlder={() => undefined}
@@ -459,3 +477,140 @@ describe('SessionTableSurface older history & message capacity', () => {
   })
 })
 
+
+// M05-B: earlier Sessions loaded across the Session boundary render before the
+// current Session's messages, separated by a divider, and never feed the Stage /
+// Combat projections.
+describe('SessionTableSurface cross-Session history', () => {
+  const OLDER_A = '30000000-0000-4000-8000-00000000000a'
+  const OLDER_B = '30000000-0000-4000-8000-00000000000b'
+  const KAEL_CHARACTER = '50000000-0000-4000-8000-000000000009'
+
+  function olderEvent(sessionId: string, seq: number, kind: string, text: string, extra: Partial<TableEvent> = {}): TableEvent {
+    return {
+      id: `61000000-0000-4000-8000-${String(seq).padStart(12, '0')}`,
+      session_id: sessionId,
+      seq,
+      kind,
+      acting_seat_id: MIRA_SEAT,
+      subject_seat_id: null,
+      subject_character_id: null,
+      execution_mode: 'self',
+      visibility: 'public',
+      recipient_seat_ids: [],
+      payload_version: 1,
+      payload: { text },
+      created_at: '2026-09-01T00:00:00Z',
+      ...extra,
+    }
+  }
+
+  function olderSession(id: string, status: 'ended' | 'abandoned', dmKind: 'human' | 'ai', activeCharacterId: string): SessionSnapshot {
+    return {
+      ...snapshot,
+      id,
+      status,
+      dm_controller_kind: dmKind,
+      started_at: '2026-09-01T10:00:00Z',
+      ended_at: '2026-09-01T13:00:00Z',
+      participants: [{
+        id: `participant-${id}`,
+        seat_id: MIRA_SEAT,
+        role: 'player',
+        controller_kind_at_join: 'ai',
+        controller_access_session_id_at_join: null,
+        active_character_id: activeCharacterId,
+      }],
+    }
+  }
+
+  function renderHistory(locale: 'zh-TW' | 'en', options: { exhausted: boolean; hasOlder: boolean }) {
+    return renderSurface(
+      <SessionTableSurface
+        roomId={ROOM_ID}
+        campaignId={CAMPAIGN_ID}
+        sessionId={SESSION_ID}
+        token="room-token"
+        snapshot={snapshot}
+        seats={seats}
+        characters={[...characters, { id: KAEL_CHARACTER, name: 'Kael', level: 2, class_summary: 'Fighter 2', version_no: 1 }]}
+        callerAccessSessionId="dm-access"
+        isCurrentDm={true}
+        initialStage={{ session_id: SESSION_ID, revision: 3, text: 'Current stage text', image_id: null, image_media_type: null, image_filename: null }}
+        events={[explorationEvent(1, 'exploration.ooc', MIRA_SEAT, 'Current session line')]}
+        olderSessions={[
+          {
+            session: olderSession(OLDER_A, 'ended', 'ai', KAEL_CHARACTER),
+            lastEventSeq: 9,
+            historyFloorSeq: 0,
+            events: [
+              olderEvent(OLDER_A, 8, 'exploration.ooc', 'Older A line'),
+              olderEvent(OLDER_A, 9, 'stage.updated', 'Older stage text', { payload: { text: 'Older stage text', revision: 99 } }),
+              olderEvent(OLDER_A, 7, 'roll.requested', 'older roll', {
+                payload: { request_type: 'skill', skill_ref: 'srd5.1:skill:athletics', label: 'Older roll label', visibility: 'public', dc: 15 },
+                recipient_seat_ids: [MIRA_SEAT],
+                visibility: 'public',
+              }),
+            ],
+          },
+          {
+            session: olderSession(OLDER_B, 'abandoned', 'human', MIRA_CHARACTER),
+            lastEventSeq: 2,
+            historyFloorSeq: 0,
+            events: [olderEvent(OLDER_B, 2, 'exploration.ooc', 'Older B line')],
+          },
+        ]}
+        historyExhausted={options.exhausted}
+        hasOlderHistory={options.hasOlder}
+        historyLoading={false}
+        onLoadOlder={() => undefined}
+        copy={sessionCopy(locale)}
+        onError={() => undefined}
+      />,
+    )
+  }
+
+  it('renders older Sessions oldest-first with dividers before the current Session, in both locales', () => {
+    for (const locale of ['zh-TW', 'en'] as const) {
+      const copy = sessionCopy(locale)
+      const markup = renderHistory(locale, { exhausted: true, hasOlder: false })
+
+      const dividerB = markup.indexOf(`data-session-divider="${OLDER_B}"`)
+      const lineB = markup.indexOf('Older B line')
+      const dividerA = markup.indexOf(`data-session-divider="${OLDER_A}"`)
+      const lineA = markup.indexOf('Older A line')
+      const current = markup.indexOf('Current session line')
+      expect(dividerB).toBeGreaterThan(-1)
+      expect(dividerB).toBeLessThan(lineB)
+      expect(lineB).toBeLessThan(dividerA)
+      expect(dividerA).toBeLessThan(lineA)
+      expect(lineA).toBeLessThan(current)
+
+      expect(markup).toContain(copy.sessionDividerAbandoned)
+      expect(markup).toContain(copy.sessionDividerEnded)
+      expect(markup).toContain(`${copy.dm}: ${copy.dmKindAi}`)
+      expect(markup).toContain(`${copy.dm}: ${copy.dmKindHuman}`)
+      expect(markup).toContain('role="separator"')
+      // Exhausted with nothing more to load: the beginning-of-Campaign note replaces the button.
+      expect(markup).toContain(copy.historyStart)
+      expect(markup).not.toContain('data-chat-load-older')
+    }
+  })
+
+  it('resolves older-Session character names from that Session\'s participants', () => {
+    const markup = renderHistory('en', { exhausted: false, hasOlder: true })
+    // The older roll prompt targets Mira's Seat, which in that Session carried Kael.
+    expect(markup).toContain('Kael')
+    expect(markup).toContain('Older roll label')
+    expect(markup).not.toContain('DC 15')
+    // Still loading is possible: the button stays and the beginning note is absent.
+    expect(markup).toContain('data-chat-load-older')
+    expect(markup).not.toContain(sessionCopy('en').historyStart)
+  })
+
+  it('keeps Stage and other projections on the current Session only', () => {
+    const markup = renderHistory('en', { exhausted: true, hasOlder: false })
+    expect(markup).toContain('Current stage text')
+    expect(markup).not.toContain('Older stage text')
+  })
+})
