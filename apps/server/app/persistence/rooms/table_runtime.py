@@ -165,6 +165,17 @@ class StoredTableActorBinding:
 
 
 @dataclass(frozen=True)
+class StoredHistoryReadScope:
+    room_id: UUID
+    campaign_id: UUID
+    session_id: UUID
+    session_status: str
+    access_session_id: UUID
+    controlled_seat_ids: tuple[UUID, ...]
+    is_dm: bool
+
+
+@dataclass(frozen=True)
 class StoredTableEvent:
     id: UUID
     session_id: UUID
@@ -544,6 +555,63 @@ class TableEventRepository:
         with self.engine.connect() as connection:
             return self._actor_from_connection(connection, binding) == binding
 
+    def history_read_scope(
+        self,
+        *,
+        room_id: UUID,
+        campaign_id: UUID,
+        session_id: UUID,
+        access_session_id: UUID,
+    ) -> StoredHistoryReadScope | None:
+        with self.engine.connect() as connection:
+            session_row = self._session_scope_row(
+                connection,
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+            )
+            if session_row is None:
+                return None
+
+            access = connection.execute(
+                select(
+                    room_access_sessions.c.id,
+                    room_access_sessions.c.room_id,
+                    room_access_sessions.c.revoked_at,
+                ).where(room_access_sessions.c.id == access_session_id)
+            ).mappings().one_or_none()
+            if (
+                access is None
+                or access["room_id"] != room_id
+                or access["revoked_at"] is not None
+            ):
+                return None
+
+            seat_rows = connection.execute(
+                select(campaign_seats.c.id)
+                .where(
+                    campaign_seats.c.campaign_id == campaign_id,
+                    campaign_seats.c.archived_at.is_(None),
+                    campaign_seats.c.controller_kind == "human",
+                    campaign_seats.c.controller_access_session_id == access_session_id,
+                )
+                .order_by(campaign_seats.c.created_at, campaign_seats.c.id)
+            ).mappings().all()
+
+            controlled = tuple(row["id"] for row in seat_rows)
+            if not controlled:
+                return None
+
+            return StoredHistoryReadScope(
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+                session_status=str(session_row["status"]),
+                access_session_id=access_session_id,
+                controlled_seat_ids=controlled,
+                is_dm=session_row["dm_seat_id"] in controlled,
+            )
+
     def _require_session_scope(
         self,
         connection,
@@ -760,6 +828,7 @@ class TableEventRepository:
 
 __all__ = [
     "MAX_EVENT_SCAN_LIMIT",
+    "StoredHistoryReadScope",
     "StoredTableActorBinding",
     "StoredTableEvent",
     "StoredTableRuntime",

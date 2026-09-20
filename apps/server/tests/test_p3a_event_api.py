@@ -11,6 +11,7 @@ from app.api.rooms.dependencies import get_table_event_service
 from app.api.rooms.table_events import wait_table_events
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.table_events import (
+    HistoricalSessionReadScope,
     TableActorContext,
     TableActorKind,
     TableEventNotFoundError,
@@ -46,6 +47,22 @@ class _ApiTableEventService:
         if self.resolve_error is not None:
             raise self.resolve_error
         return self.actor.model_copy(update={"access_session_id": context.access_session_id})
+
+    def resolve_history_scope(self, *, room_id, campaign_id, session_id, context):
+        # M05-B: the history route first resolves the Seat scope; this stub keeps the
+        # Session active so the route continues down the P3 actor path.
+        assert session_id == self.session_id
+        if self.resolve_error is not None:
+            raise self.resolve_error
+        return HistoricalSessionReadScope(
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            session_status="active",
+            access_session_id=context.access_session_id,
+            controlled_seat_ids=(self.actor.seat_id,),
+            is_dm=True,
+        )
 
     def current_cursor(self, actor):
         assert actor.session_id == self.session_id
