@@ -10,6 +10,7 @@ from app.api.rooms.table_event_wait import ProcessLocalTableEventNotifier
 from app.config import settings
 from app.domain.adventures.attachments import CampaignAdventureService
 from app.domain.adventures.service import AdventureService
+from app.domain.campaign_runtime.service import CampaignRuntimeService
 from app.domain.combat.adjudication_service import CombatAdjudicationService
 from app.domain.combat.attack_definitions import AttackDefinitionResolver
 from app.domain.combat.attacks import CombatAttackService
@@ -149,6 +150,20 @@ def get_campaign_adventure_service(request: Request) -> CampaignAdventureService
         CampaignRepository(engine),
     )
     request.app.state.campaign_adventure_service = service
+    return service
+
+
+def get_campaign_runtime_service(request: Request) -> CampaignRuntimeService:
+    # Starlette State has no membership test; the AttributeError is the "not built yet" signal.
+    try:
+        return request.app.state.campaign_runtime_service
+    except AttributeError:
+        pass
+    service = CampaignRuntimeService(
+        get_database_engine(request),
+        get_table_event_service(request),
+    )
+    request.app.state.campaign_runtime_service = service
     return service
 
 
