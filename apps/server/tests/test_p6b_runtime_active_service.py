@@ -970,11 +970,13 @@ def test_active_read_matrix(fix: ActiveFixture) -> None:
     # Can read public
     p2_pub = fix.service.get_active(fix.ai_player_2_actor, pub_view.id)
     assert isinstance(p2_pub, RuntimeWorldEntryPlayerView)
+    assert "dm_notes" not in p2_pub.model_dump(mode="json")
 
     # Can read own char_2 knowledge
     p2_c2 = fix.service.get_active(fix.ai_player_2_actor, c2_view.id)
     assert isinstance(p2_c2, RuntimeWorldEntryPlayerView)
     assert p2_c2.title == "Wizard's Spellbook Clue"
+    assert "character_recipient_ids" not in p2_c2.model_dump(mode="json")
 
     # Cannot read char_1 knowledge
     with pytest.raises(CampaignRuntimeNotFoundError):
@@ -989,6 +991,11 @@ def test_active_read_matrix(fix: ActiveFixture) -> None:
     assert len(p2_list) == 2
     p2_list_ids = {e.id for e in p2_list}
     assert p2_list_ids == {pub_view.id, c2_view.id}
+    for entry in p2_list:
+        assert isinstance(entry, RuntimeWorldEntryPlayerView)
+        serialized = entry.model_dump(mode="json")
+        assert "dm_notes" not in serialized
+        assert "character_recipient_ids" not in serialized
 
 
 # 4. Event payload exact allowlist and visibility/recipient mapping

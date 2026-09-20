@@ -44,6 +44,7 @@ from app.domain.campaign_runtime.service import (
 )
 from app.domain.rooms.schemas import RoomAccessContext, StrictModel
 from app.domain.rooms.table_events import (
+    TableActorContext,
     TableEventActorUnauthorizedError,
     TableEventNotFoundError,
     TableEventService,
@@ -538,6 +539,22 @@ active_router = APIRouter(
 )
 
 
+def _resolve_active_actor(
+    event_service: TableEventService,
+    *,
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    context: RoomAccessContext,
+) -> TableActorContext:
+    return event_service.resolve_human_actor(
+        room_id=room_id,
+        campaign_id=campaign_id,
+        session_id=session_id,
+        context=context,
+    )
+
+
 @active_router.get(
     "/entries",
     response_model=list[RuntimeWorldEntryDmView | RuntimeWorldEntryPlayerView],
@@ -552,7 +569,8 @@ def list_active_runtime_entries(
     service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
 ) -> list[RuntimeWorldEntryDmView | RuntimeWorldEntryPlayerView]:
     try:
-        actor = event_service.resolve_human_actor(
+        actor = _resolve_active_actor(
+            event_service,
             room_id=room_id,
             campaign_id=campaign_id,
             session_id=session_id,
@@ -583,7 +601,8 @@ def get_active_runtime_entry(
     service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
 ) -> RuntimeWorldEntryDmView | RuntimeWorldEntryPlayerView:
     try:
-        actor = event_service.resolve_human_actor(
+        actor = _resolve_active_actor(
+            event_service,
             room_id=room_id,
             campaign_id=campaign_id,
             session_id=session_id,
@@ -613,7 +632,8 @@ def create_active_runtime_entry(
     service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
 ) -> RuntimeWorldEntryDmView:
     try:
-        actor = event_service.resolve_human_actor(
+        actor = _resolve_active_actor(
+            event_service,
             room_id=room_id,
             campaign_id=campaign_id,
             session_id=session_id,
@@ -644,7 +664,8 @@ def update_active_runtime_entry(
     service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
 ) -> RuntimeWorldEntryDmView:
     try:
-        actor = event_service.resolve_human_actor(
+        actor = _resolve_active_actor(
+            event_service,
             room_id=room_id,
             campaign_id=campaign_id,
             session_id=session_id,
@@ -676,7 +697,8 @@ def archive_active_runtime_entry(
     service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
 ) -> RuntimeWorldEntryDmView:
     try:
-        actor = event_service.resolve_human_actor(
+        actor = _resolve_active_actor(
+            event_service,
             room_id=room_id,
             campaign_id=campaign_id,
             session_id=session_id,
@@ -687,6 +709,304 @@ def archive_active_runtime_entry(
             entry_id=entry_id,
             expected_revision=payload.expected_revision,
             idempotency_key=payload.idempotency_key,
+        )
+    except Exception as exc:
+        raise map_campaign_runtime_error(exc) from exc
+
+
+@active_router.get(
+    "/overrides",
+    response_model=list[CampaignAdventureOverride],
+)
+def list_active_overrides(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
+) -> list[CampaignAdventureOverride]:
+    try:
+        actor = _resolve_active_actor(
+            event_service,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+        )
+        return list(service.list_overrides_active(actor))
+    except Exception as exc:
+        raise map_campaign_runtime_error(exc) from exc
+
+
+@active_router.get(
+    "/overrides/{adventure_entry_id}",
+    response_model=CampaignAdventureOverride,
+)
+def get_active_override(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    adventure_entry_id: UUID,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
+) -> CampaignAdventureOverride:
+    try:
+        actor = _resolve_active_actor(
+            event_service,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+        )
+        return service.get_override_active(
+            actor,
+            adventure_entry_id=adventure_entry_id,
+        )
+    except Exception as exc:
+        raise map_campaign_runtime_error(exc) from exc
+
+
+@active_router.post(
+    "/overrides",
+    response_model=CampaignAdventureOverride,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_active_override(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    payload: CreateCampaignAdventureOverrideRequest,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
+) -> CampaignAdventureOverride:
+    try:
+        actor = _resolve_active_actor(
+            event_service,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+        )
+        domain_payload = payload.to_domain()
+        return service.create_override_active(
+            actor,
+            payload=domain_payload,
+            idempotency_key=payload.idempotency_key,
+        )
+    except Exception as exc:
+        raise map_campaign_runtime_error(exc) from exc
+
+
+@active_router.patch(
+    "/overrides/{adventure_entry_id}",
+    response_model=CampaignAdventureOverride,
+)
+def update_active_override(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    adventure_entry_id: UUID,
+    payload: UpdateCampaignAdventureOverrideRequest,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
+) -> CampaignAdventureOverride:
+    try:
+        actor = _resolve_active_actor(
+            event_service,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+        )
+        domain_patch = payload.to_domain()
+        return service.update_override_active(
+            actor,
+            adventure_entry_id=adventure_entry_id,
+            patch=domain_patch,
+            idempotency_key=payload.idempotency_key,
+        )
+    except Exception as exc:
+        raise map_campaign_runtime_error(exc) from exc
+
+
+@active_router.post(
+    "/overrides/{adventure_entry_id}/clear",
+    response_model=CampaignAdventureOverride,
+)
+def clear_active_override(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    adventure_entry_id: UUID,
+    payload: ClearCampaignAdventureOverrideRequest,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
+) -> CampaignAdventureOverride:
+    try:
+        actor = _resolve_active_actor(
+            event_service,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+        )
+        return service.clear_override_active(
+            actor,
+            adventure_entry_id=adventure_entry_id,
+            expected_override_id=payload.expected_override_id,
+            expected_revision=payload.expected_revision,
+            idempotency_key=payload.idempotency_key,
+        )
+    except Exception as exc:
+        raise map_campaign_runtime_error(exc) from exc
+
+
+@active_router.get(
+    "/context",
+    response_model=CampaignRuntimeContext,
+)
+def get_active_context(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
+) -> CampaignRuntimeContext:
+    try:
+        actor = _resolve_active_actor(
+            event_service,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+        )
+        return service.get_context_active(actor)
+    except Exception as exc:
+        raise map_campaign_runtime_error(exc) from exc
+
+
+@active_router.patch(
+    "/context",
+    response_model=CampaignRuntimeContext,
+)
+def update_active_context(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    payload: UpdateCampaignRuntimeContextRequest,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
+) -> CampaignRuntimeContext:
+    try:
+        actor = _resolve_active_actor(
+            event_service,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+        )
+        domain_patch = payload.to_domain()
+        return service.update_context_active(
+            actor,
+            patch=domain_patch,
+            idempotency_key=payload.idempotency_key,
+        )
+    except Exception as exc:
+        raise map_campaign_runtime_error(exc) from exc
+
+
+@active_router.post(
+    "/context/clear",
+    response_model=CampaignRuntimeContext,
+)
+def clear_active_context(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    payload: ClearCampaignRuntimeContextRequest,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
+) -> CampaignRuntimeContext:
+    try:
+        actor = _resolve_active_actor(
+            event_service,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+        )
+        return service.clear_context_active(
+            actor,
+            expected_revision=payload.expected_revision,
+            idempotency_key=payload.idempotency_key,
+        )
+    except Exception as exc:
+        raise map_campaign_runtime_error(exc) from exc
+
+
+@active_router.get(
+    "/adventure-overlays/{adventure_entry_id}",
+    response_model=CampaignAdventureEntryOverlayView,
+)
+def get_active_adventure_entry_overlay(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    adventure_entry_id: UUID,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
+) -> CampaignAdventureEntryOverlayView:
+    try:
+        actor = _resolve_active_actor(
+            event_service,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+        )
+        return service.get_adventure_entry_overlay_active(
+            actor,
+            adventure_entry_id=adventure_entry_id,
+        )
+    except Exception as exc:
+        raise map_campaign_runtime_error(exc) from exc
+
+
+@active_router.get(
+    "/adventures/{adventure_id}/overlays",
+    response_model=list[CampaignAdventureEntryOverlayView],
+)
+def list_active_adventure_entry_overlays(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    adventure_id: UUID,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CampaignRuntimeService = Depends(get_campaign_runtime_service),
+) -> list[CampaignAdventureEntryOverlayView]:
+    try:
+        actor = _resolve_active_actor(
+            event_service,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+        )
+        return list(
+            service.list_adventure_entry_overlays_active(
+                actor,
+                adventure_id=adventure_id,
+            )
         )
     except Exception as exc:
         raise map_campaign_runtime_error(exc) from exc

@@ -24,11 +24,31 @@ from app.db import metadata
 from app.domain.adventures.attachments import CampaignAdventureService
 from app.domain.adventures.schemas import (
     CampaignAdventureAttach,
-    CampaignAdventureDetachBlockedError,
 )
-from app.domain.campaign_runtime.service import CampaignRuntimeService
+from app.domain.campaign_runtime.payloads import RuntimeEntryPayloadError
+from app.domain.campaign_runtime.schemas import (
+    CampaignAdventureOverrideAlreadyExistsError,
+    RuntimeEntryValidationError,
+    RuntimeEntryVisibilityError,
+)
+from app.domain.campaign_runtime.service import (
+    CampaignRuntimeActiveSessionError,
+    CampaignRuntimeArchivedError,
+    CampaignRuntimeAuthorityError,
+    CampaignRuntimeIdempotencyConflictError,
+    CampaignRuntimeNotFoundError,
+    CampaignRuntimeRevisionConflictError,
+    CampaignRuntimeService,
+    CampaignRuntimeSessionNotActiveError,
+    CampaignRuntimeValidationError,
+)
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
-from app.domain.rooms.table_events import TableEventService
+from app.domain.rooms.table_events import (
+    TableEventActorUnauthorizedError,
+    TableEventNotFoundError,
+    TableEventService,
+    TableEventSessionNotActiveError,
+)
 from app.main import app as fastapi_app
 from app.persistence.adventures.repository import (
     AdventureRepository,
@@ -406,6 +426,7 @@ def api_fixture() -> Generator[RuntimeApiFixture, None, None]:
         raise APIError(401, "room_access_required", "Room access token is required")
 
     fastapi_app.state.campaign_runtime_service = runtime_service
+    fastapi_app.state.campaign_adventure_service = adv_service
     fastapi_app.dependency_overrides[get_database_engine] = lambda: engine
     fastapi_app.dependency_overrides[get_room_access_context] = _override_access_context
 
@@ -434,6 +455,10 @@ def api_fixture() -> Generator[RuntimeApiFixture, None, None]:
     finally:
         try:
             del fastapi_app.state.campaign_runtime_service
+        except AttributeError:
+            pass
+        try:
+            del fastapi_app.state.campaign_adventure_service
         except AttributeError:
             pass
         fastapi_app.dependency_overrides.pop(get_database_engine, None)
@@ -1853,6 +1878,10 @@ def test_override_and_context_idempotency_replay_and_conflict(
 def test_clear_removes_detach_blockers_via_api(api_fixture: RuntimeApiFixture) -> None:
     fix = api_fixture
     base = f"/api/rooms/{fix.room_a_id}/campaigns/{fix.campaign_a1_id}/runtime"
+    detach_url = (
+        f"/api/rooms/{fix.room_a_id}/campaigns/{fix.campaign_a1_id}"
+        f"/adventures/{fix.adv_1_id}"
+    )
 
     # 1. Override blocker
     create_resp = fix.client.post(
@@ -1867,10 +1896,10 @@ def test_clear_removes_detach_blockers_via_api(api_fixture: RuntimeApiFixture) -
     assert create_resp.status_code == 201
     ovr_id = create_resp.json()["id"]
 
-    # Detach fails because active override exists
-    with pytest.raises(CampaignAdventureDetachBlockedError) as exc_info:
-        fix.adv_service.detach(fix.owner_context_a, fix.room_a_id, fix.campaign_a1_id, fix.adv_1_id)
-    assert exc_info.value.reason == "active overrides exist for this adventure"
+    # Detach fails through the public route with a stable machine code.
+    blocked_override = fix.client.delete(detach_url, headers=_auth(fix.token_owner_a))
+    assert blocked_override.status_code == 409
+    assert blocked_override.json()["error"]["code"] == "campaign_adventure_detach_blocked"
 
     # Clear override via API
     clear_resp = fix.client.post(
@@ -1884,8 +1913,9 @@ def test_clear_removes_detach_blockers_via_api(api_fixture: RuntimeApiFixture) -
     )
     assert clear_resp.status_code == 200
 
-    # Detach now succeeds!
-    fix.adv_service.detach(fix.owner_context_a, fix.room_a_id, fix.campaign_a1_id, fix.adv_1_id)
+    # Detach now succeeds through the same public route.
+    detached_override = fix.client.delete(detach_url, headers=_auth(fix.token_owner_a))
+    assert detached_override.status_code == 204
 
     # 2. Context scene blocker
     # Re-attach adventure
@@ -1908,10 +1938,10 @@ def test_clear_removes_detach_blockers_via_api(api_fixture: RuntimeApiFixture) -
     )
     assert patch_ctx.status_code == 200
 
-    # Detach fails because current context scene points to adventure
-    with pytest.raises(CampaignAdventureDetachBlockedError) as exc_ctx:
-        fix.adv_service.detach(fix.owner_context_a, fix.room_a_id, fix.campaign_a1_id, fix.adv_1_id)
-    assert exc_ctx.value.reason == "current adventure scene points to this adventure"
+    # The other blocker has the same stable public error contract.
+    blocked_context = fix.client.delete(detach_url, headers=_auth(fix.token_owner_a))
+    assert blocked_context.status_code == 409
+    assert blocked_context.json()["error"]["code"] == "campaign_adventure_detach_blocked"
 
     # Clear context via API
     clear_ctx_resp = fix.client.post(
@@ -1924,8 +1954,8 @@ def test_clear_removes_detach_blockers_via_api(api_fixture: RuntimeApiFixture) -
     )
     assert clear_ctx_resp.status_code == 200
 
-    # Detach now succeeds!
-    fix.adv_service.detach(fix.owner_context_a, fix.room_a_id, fix.campaign_a1_id, fix.adv_1_id)
+    detached_context = fix.client.delete(detach_url, headers=_auth(fix.token_owner_a))
+    assert detached_context.status_code == 204
 
 
 def test_rejected_override_and_context_leave_zero_side_effects(
@@ -2045,6 +2075,11 @@ class ActiveSessionApiFixture:
     entry_own_id: UUID
     entry_other_id: UUID
     entry_dm_only_id: UUID
+    adv_attached_id: UUID
+    adv_unattached_id: UUID
+    adv_entry_scene_id: UUID
+    adv_entry_npc_id: UUID
+    adv_entry_unattached_id: UUID
     notifier: RecordingNotifier
 
 
@@ -2077,6 +2112,12 @@ def active_api_fixture() -> Generator[ActiveSessionApiFixture, None, None]:
     entry_own_id = uuid4()
     entry_other_id = uuid4()
     entry_dm_only_id = uuid4()
+
+    adv_attached_id = uuid4()
+    adv_unattached_id = uuid4()
+    adv_entry_scene_id = uuid4()
+    adv_entry_npc_id = uuid4()
+    adv_entry_unattached_id = uuid4()
 
     token_dm = "tok-act-dm"
     token_player_1 = "tok-act-p1"
@@ -2276,6 +2317,85 @@ def active_api_fixture() -> Generator[ActiveSessionApiFixture, None, None]:
             )
         )
         conn.execute(
+            insert(adventure_definitions).values(
+                [
+                    {
+                        "id": adv_attached_id,
+                        "room_id": room_id,
+                        "name": "Attached Adventure",
+                        "summary": "Adventure attached to active campaign",
+                        "ruleset": "dnd5e-2014",
+                        "status": "finalized",
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                    {
+                        "id": adv_unattached_id,
+                        "room_id": room_id,
+                        "name": "Unattached Adventure",
+                        "summary": "Adventure not attached",
+                        "ruleset": "dnd5e-2014",
+                        "status": "finalized",
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                ]
+            )
+        )
+        conn.execute(
+            insert(adventure_entries).values(
+                [
+                    {
+                        "id": adv_entry_scene_id,
+                        "adventure_id": adv_attached_id,
+                        "parent_entry_id": None,
+                        "kind": "scene",
+                        "title": "Old Mill",
+                        "body": "An abandoned water mill",
+                        "data_json": {},
+                        "visibility": "public",
+                        "sort_order": 1,
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                    {
+                        "id": adv_entry_npc_id,
+                        "adventure_id": adv_attached_id,
+                        "parent_entry_id": None,
+                        "kind": "npc",
+                        "title": "Miller John",
+                        "body": "Retired miller",
+                        "data_json": {},
+                        "visibility": "public",
+                        "sort_order": 2,
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                    {
+                        "id": adv_entry_unattached_id,
+                        "adventure_id": adv_unattached_id,
+                        "parent_entry_id": None,
+                        "kind": "scene",
+                        "title": "Sunken Crypt",
+                        "body": "Crypt in unattached adventure",
+                        "data_json": {},
+                        "visibility": "public",
+                        "sort_order": 1,
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                ]
+            )
+        )
+        conn.execute(
+            insert(campaign_adventure_links).values(
+                campaign_id=campaign_id,
+                adventure_id=adv_attached_id,
+                sort_order=1,
+                attached_at=now,
+            )
+        )
+        conn.execute(
             insert(campaign_world_entries).values(
                 [
                     {
@@ -2427,6 +2547,11 @@ def active_api_fixture() -> Generator[ActiveSessionApiFixture, None, None]:
             entry_own_id=entry_own_id,
             entry_other_id=entry_other_id,
             entry_dm_only_id=entry_dm_only_id,
+            adv_attached_id=adv_attached_id,
+            adv_unattached_id=adv_unattached_id,
+            adv_entry_scene_id=adv_entry_scene_id,
+            adv_entry_npc_id=adv_entry_npc_id,
+            adv_entry_unattached_id=adv_entry_unattached_id,
             notifier=notifier,
         )
     finally:
@@ -2850,3 +2975,805 @@ def test_active_session_dm_crud_lifecycle_events_and_concurrency(
         ).mappings().all()
         assert len(ev) == 1
     assert len(fix.notifier.notifications) == notifications_before + 3
+
+
+def test_active_session_dm_override_crud_and_overlay_reads(
+    active_api_fixture: ActiveSessionApiFixture,
+) -> None:
+    fix = active_api_fixture
+    base = f"/api/rooms/{fix.room_id}/campaigns/{fix.campaign_id}/sessions/{fix.session_id}/runtime"
+
+    notifications_before = len(fix.notifier.notifications)
+
+    # 1. Initial list of overrides is empty
+    resp_list_0 = fix.client.get(f"{base}/overrides", headers=_auth(fix.token_dm))
+    assert resp_list_0.status_code == 200
+    assert resp_list_0.json() == []
+
+    # 2. DM creates an active override
+    resp_create = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-dm-act-ov-create-1",
+            "adventure_entry_id": str(fix.adv_entry_npc_id),
+            "state": {"disposition": "hostile"},
+            "note": "DM override note",
+            "needs_review": True,
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert resp_create.status_code == 201
+    created_ov = resp_create.json()
+    ov_id = created_ov["id"]
+    assert created_ov["adventure_entry_id"] == str(fix.adv_entry_npc_id)
+    assert created_ov["revision"] == 1
+    assert created_ov["needs_review"] is True
+    assert created_ov["state_json"] == {"disposition": "hostile"}
+    assert created_ov["note"] == "DM override note"
+
+    # Verify event emitted
+    with fix.engine.connect() as conn:
+        ev = conn.execute(
+            select(session_events).where(
+                session_events.c.session_id == fix.session_id,
+                session_events.c.kind == "world.override.created",
+            )
+        ).mappings().all()
+        assert len(ev) == 1
+    assert len(fix.notifier.notifications) == notifications_before + 1
+
+    # 3. DM lists overrides -> contains created override
+    resp_list_1 = fix.client.get(f"{base}/overrides", headers=_auth(fix.token_dm))
+    assert resp_list_1.status_code == 200
+    items = resp_list_1.json()
+    assert len(items) == 1
+    assert items[0]["id"] == ov_id
+
+    # 4. DM gets override by adventure_entry_id
+    resp_get = fix.client.get(
+        f"{base}/overrides/{fix.adv_entry_npc_id}",
+        headers=_auth(fix.token_dm),
+    )
+    assert resp_get.status_code == 200
+    assert resp_get.json()["id"] == ov_id
+
+    # 5. DM reads overlay by adventure_entry_id -> reflects override
+    resp_overlay = fix.client.get(
+        f"{base}/adventure-overlays/{fix.adv_entry_npc_id}",
+        headers=_auth(fix.token_dm),
+    )
+    assert resp_overlay.status_code == 200
+    overlay = resp_overlay.json()
+    assert overlay["id"] == str(fix.adv_entry_npc_id)
+    assert overlay["title"] == "Miller John"
+    assert overlay["override"] is not None
+    assert overlay["override"]["id"] == ov_id
+    assert overlay["override"]["state_json"] == {"disposition": "hostile"}
+    assert overlay["override"]["note"] == "DM override note"
+
+    # 6. DM lists adventure overlays
+    resp_overlays = fix.client.get(
+        f"{base}/adventures/{fix.adv_attached_id}/overlays",
+        headers=_auth(fix.token_dm),
+    )
+    assert resp_overlays.status_code == 200
+    overlays = resp_overlays.json()
+    assert len(overlays) == 2
+    overlay_map = {o["id"]: o for o in overlays}
+    assert overlay_map[str(fix.adv_entry_npc_id)]["override"] is not None
+    assert overlay_map[str(fix.adv_entry_scene_id)]["override"] is None
+
+    # 7. DM updates override
+    resp_patch = fix.client.patch(
+        f"{base}/overrides/{fix.adv_entry_npc_id}",
+        json={
+            "idempotency_key": "k-dm-act-ov-patch-1",
+            "expected_override_id": ov_id,
+            "expected_revision": 1,
+            "state": {"disposition": "friendly"},
+            "needs_review": False,
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert resp_patch.status_code == 200
+    patched_ov = resp_patch.json()
+    assert patched_ov["revision"] == 2
+    assert patched_ov["needs_review"] is False
+    assert patched_ov["state_json"] == {"disposition": "friendly"}
+
+    with fix.engine.connect() as conn:
+        ev = conn.execute(
+            select(session_events).where(
+                session_events.c.session_id == fix.session_id,
+                session_events.c.kind == "world.override.updated",
+            )
+        ).mappings().all()
+        assert len(ev) == 1
+    assert len(fix.notifier.notifications) == notifications_before + 2
+
+    # 8. DM clears override
+    resp_clear = fix.client.post(
+        f"{base}/overrides/{fix.adv_entry_npc_id}/clear",
+        json={
+            "idempotency_key": "k-dm-act-ov-clear-1",
+            "expected_override_id": ov_id,
+            "expected_revision": 2,
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert resp_clear.status_code == 200
+
+    with fix.engine.connect() as conn:
+        ev = conn.execute(
+            select(session_events).where(
+                session_events.c.session_id == fix.session_id,
+                session_events.c.kind == "world.override.cleared",
+            )
+        ).mappings().all()
+        assert len(ev) == 1
+    assert len(fix.notifier.notifications) == notifications_before + 3
+
+    # 9. GET cleared override -> 404
+    resp_get_cleared = fix.client.get(
+        f"{base}/overrides/{fix.adv_entry_npc_id}",
+        headers=_auth(fix.token_dm),
+    )
+    assert resp_get_cleared.status_code == 404
+    assert resp_get_cleared.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    # 10. Overlay has no override
+    resp_overlay_cleared = fix.client.get(
+        f"{base}/adventure-overlays/{fix.adv_entry_npc_id}",
+        headers=_auth(fix.token_dm),
+    )
+    assert resp_overlay_cleared.status_code == 200
+    assert resp_overlay_cleared.json()["override"] is None
+
+
+def test_active_session_dm_context_lifecycle_and_events(
+    active_api_fixture: ActiveSessionApiFixture,
+) -> None:
+    fix = active_api_fixture
+    base = f"/api/rooms/{fix.room_id}/campaigns/{fix.campaign_id}/sessions/{fix.session_id}/runtime/context"
+
+    notifications_before = len(fix.notifier.notifications)
+
+    # 1. Initial context: revision 0, all null
+    resp_get_0 = fix.client.get(base, headers=_auth(fix.token_dm))
+    assert resp_get_0.status_code == 200
+    ctx_0 = resp_get_0.json()
+    assert ctx_0["campaign_id"] == str(fix.campaign_id)
+    assert ctx_0["revision"] == 0
+    assert ctx_0["current_adventure_scene_entry_id"] is None
+    assert ctx_0["current_runtime_scene_entry_id"] is None
+    assert ctx_0["current_situation"] is None
+
+    # 2. DM updates context with adventure scene and situation
+    resp_patch_1 = fix.client.patch(
+        base,
+        json={
+            "idempotency_key": "k-dm-act-ctx-patch-1",
+            "expected_revision": 0,
+            "current_adventure_scene_entry_id": str(fix.adv_entry_scene_id),
+            "current_situation": "Party investigating the old mill",
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert resp_patch_1.status_code == 200
+    ctx_1 = resp_patch_1.json()
+    assert ctx_1["revision"] == 1
+    assert ctx_1["current_adventure_scene_entry_id"] == str(fix.adv_entry_scene_id)
+    assert ctx_1["current_runtime_scene_entry_id"] is None
+    assert ctx_1["current_situation"] == "Party investigating the old mill"
+
+    with fix.engine.connect() as conn:
+        ev = conn.execute(
+            select(session_events).where(
+                session_events.c.session_id == fix.session_id,
+                session_events.c.kind == "world.context_changed",
+            )
+        ).mappings().all()
+        assert len(ev) == 1
+    assert len(fix.notifier.notifications) == notifications_before + 1
+
+    # 3. DM switches to runtime scene
+    resp_patch_2 = fix.client.patch(
+        base,
+        json={
+            "idempotency_key": "k-dm-act-ctx-patch-2",
+            "expected_revision": 1,
+            "current_adventure_scene_entry_id": None,
+            "current_runtime_scene_entry_id": str(fix.entry_public_id),
+            "current_situation": "Party returned to town square",
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert resp_patch_2.status_code == 200
+    ctx_2 = resp_patch_2.json()
+    assert ctx_2["revision"] == 2
+    assert ctx_2["current_adventure_scene_entry_id"] is None
+    assert ctx_2["current_runtime_scene_entry_id"] == str(fix.entry_public_id)
+    assert ctx_2["current_situation"] == "Party returned to town square"
+
+    with fix.engine.connect() as conn:
+        ev = conn.execute(
+            select(session_events).where(
+                session_events.c.session_id == fix.session_id,
+                session_events.c.kind == "world.context_changed",
+            )
+        ).mappings().all()
+        assert len(ev) == 2
+    assert len(fix.notifier.notifications) == notifications_before + 2
+
+    # 4. DM clears context
+    resp_clear = fix.client.post(
+        f"{base}/clear",
+        json={
+            "idempotency_key": "k-dm-act-ctx-clear-1",
+            "expected_revision": 2,
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert resp_clear.status_code == 200
+    ctx_cleared = resp_clear.json()
+    assert ctx_cleared["revision"] == 3
+    assert ctx_cleared["current_adventure_scene_entry_id"] is None
+    assert ctx_cleared["current_runtime_scene_entry_id"] is None
+    assert ctx_cleared["current_situation"] is None
+
+    with fix.engine.connect() as conn:
+        ev = conn.execute(
+            select(session_events).where(
+                session_events.c.session_id == fix.session_id,
+                session_events.c.kind == "world.context_changed",
+            )
+        ).mappings().all()
+        assert len(ev) == 3
+    assert len(fix.notifier.notifications) == notifications_before + 3
+
+
+def test_active_session_player_forbidden_from_overrides_context_and_overlays(
+    active_api_fixture: ActiveSessionApiFixture,
+) -> None:
+    fix = active_api_fixture
+    base = f"/api/rooms/{fix.room_id}/campaigns/{fix.campaign_id}/sessions/{fix.session_id}/runtime"
+
+    # Seed an override first so read targets exist
+    create_resp = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-dm-seed-ov-1",
+            "adventure_entry_id": str(fix.adv_entry_npc_id),
+            "state": {"disposition": "hostile"},
+            "note": "Super secret DM note",
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert create_resp.status_code == 201
+    ov_id = create_resp.json()["id"]
+
+    events_before = len(fix.notifier.notifications)
+
+    def _state_counts() -> tuple[int, int, int, int]:
+        with fix.engine.connect() as connection:
+            override_count = connection.execute(
+                select(func.count())
+                .select_from(campaign_adventure_overrides)
+                .where(campaign_adventure_overrides.c.campaign_id == fix.campaign_id)
+            ).scalar_one()
+            context_count = connection.execute(
+                select(func.count())
+                .select_from(campaign_runtime_context)
+                .where(campaign_runtime_context.c.campaign_id == fix.campaign_id)
+            ).scalar_one()
+            mutation_count = connection.execute(
+                select(func.count())
+                .select_from(campaign_world_mutations)
+                .where(campaign_world_mutations.c.campaign_id == fix.campaign_id)
+            ).scalar_one()
+            event_count = connection.execute(
+                select(func.count())
+                .select_from(session_events)
+                .where(session_events.c.session_id == fix.session_id)
+            ).scalar_one()
+            return override_count, context_count, mutation_count, event_count
+
+    state_before = _state_counts()
+
+    # For both Player 1 and Player 2, test all 10 endpoints
+    for token in (fix.token_player_1, fix.token_player_2):
+        # 1. GET /overrides
+        r1 = fix.client.get(f"{base}/overrides", headers=_auth(token))
+        assert r1.status_code == 403
+        assert r1.json()["error"]["code"] == "campaign_runtime_forbidden"
+        assert "secret" not in r1.text.lower()
+
+        # 2. GET /overrides/{entry_id}
+        r2 = fix.client.get(f"{base}/overrides/{fix.adv_entry_npc_id}", headers=_auth(token))
+        assert r2.status_code == 403
+        assert r2.json()["error"]["code"] == "campaign_runtime_forbidden"
+        assert "secret" not in r2.text.lower()
+
+        # 3. POST /overrides
+        r3 = fix.client.post(
+            f"{base}/overrides",
+            json={
+                "idempotency_key": "k-p-ov-create",
+                "adventure_entry_id": str(fix.adv_entry_scene_id),
+                "state": {},
+            },
+            headers=_auth(token),
+        )
+        assert r3.status_code == 403
+        assert r3.json()["error"]["code"] == "campaign_runtime_forbidden"
+
+        # 4. PATCH /overrides/{entry_id}
+        r4 = fix.client.patch(
+            f"{base}/overrides/{fix.adv_entry_npc_id}",
+            json={
+                "idempotency_key": "k-p-ov-patch",
+                "expected_override_id": ov_id,
+                "expected_revision": 1,
+                "note": "player hack",
+            },
+            headers=_auth(token),
+        )
+        assert r4.status_code == 403
+        assert r4.json()["error"]["code"] == "campaign_runtime_forbidden"
+
+        # 5. POST /overrides/{entry_id}/clear
+        r5 = fix.client.post(
+            f"{base}/overrides/{fix.adv_entry_npc_id}/clear",
+            json={
+                "idempotency_key": "k-p-ov-clear",
+                "expected_override_id": ov_id,
+                "expected_revision": 1,
+            },
+            headers=_auth(token),
+        )
+        assert r5.status_code == 403
+        assert r5.json()["error"]["code"] == "campaign_runtime_forbidden"
+
+        # 6. GET /context
+        r6 = fix.client.get(f"{base}/context", headers=_auth(token))
+        assert r6.status_code == 403
+        assert r6.json()["error"]["code"] == "campaign_runtime_forbidden"
+
+        # 7. PATCH /context
+        r7 = fix.client.patch(
+            f"{base}/context",
+            json={
+                "idempotency_key": "k-p-ctx-patch",
+                "expected_revision": 0,
+                "current_situation": "player situation",
+            },
+            headers=_auth(token),
+        )
+        assert r7.status_code == 403
+        assert r7.json()["error"]["code"] == "campaign_runtime_forbidden"
+
+        # 8. POST /context/clear
+        r8 = fix.client.post(
+            f"{base}/context/clear",
+            json={
+                "idempotency_key": "k-p-ctx-clear",
+                "expected_revision": 0,
+            },
+            headers=_auth(token),
+        )
+        assert r8.status_code == 403
+        assert r8.json()["error"]["code"] == "campaign_runtime_forbidden"
+
+        # 9. GET /adventure-overlays/{entry_id}
+        r9 = fix.client.get(f"{base}/adventure-overlays/{fix.adv_entry_npc_id}", headers=_auth(token))
+        assert r9.status_code == 403
+        assert r9.json()["error"]["code"] == "campaign_runtime_forbidden"
+        assert "secret" not in r9.text.lower()
+
+        # 10. GET /adventures/{id}/overlays
+        r10 = fix.client.get(f"{base}/adventures/{fix.adv_attached_id}/overlays", headers=_auth(token))
+        assert r10.status_code == 403
+        assert r10.json()["error"]["code"] == "campaign_runtime_forbidden"
+        assert "secret" not in r10.text.lower()
+
+    # Verify zero side effects across durable state, mutation records, events, and notifier.
+    assert _state_counts() == state_before
+    assert len(fix.notifier.notifications) == events_before
+
+
+def test_active_session_override_and_context_errors_matrix(
+    active_api_fixture: ActiveSessionApiFixture,
+) -> None:
+    fix = active_api_fixture
+    base = f"/api/rooms/{fix.room_id}/campaigns/{fix.campaign_id}/sessions/{fix.session_id}/runtime"
+
+    # 1. Nonparticipant -> 404 (session not found for nonparticipant)
+    r_np_1 = fix.client.get(f"{base}/overrides", headers=_auth(fix.token_nonparticipant))
+    assert r_np_1.status_code == 404
+    assert r_np_1.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    r_np_2 = fix.client.get(f"{base}/context", headers=_auth(fix.token_nonparticipant))
+    assert r_np_2.status_code == 404
+    assert r_np_2.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    r_np_3 = fix.client.get(
+        f"{base}/adventure-overlays/{fix.adv_entry_scene_id}",
+        headers=_auth(fix.token_nonparticipant),
+    )
+    assert r_np_3.status_code == 404
+    assert r_np_3.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    # 2. Inactive session -> 409 session_not_active
+    inact_base = f"/api/rooms/{fix.room_id}/campaigns/{fix.campaign_id}/sessions/{fix.inactive_session_id}/runtime"
+    r_inact_1 = fix.client.get(f"{inact_base}/overrides", headers=_auth(fix.token_dm))
+    assert r_inact_1.status_code == 409
+    assert r_inact_1.json()["error"]["code"] == "campaign_runtime_session_not_active"
+
+    r_inact_2 = fix.client.post(
+        f"{inact_base}/overrides",
+        json={
+            "idempotency_key": "k-inact-ov-1",
+            "adventure_entry_id": str(fix.adv_entry_scene_id),
+            "state": {},
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_inact_2.status_code == 409
+    assert r_inact_2.json()["error"]["code"] == "campaign_runtime_session_not_active"
+
+    r_inact_3 = fix.client.get(f"{inact_base}/context", headers=_auth(fix.token_dm))
+    assert r_inact_3.status_code == 409
+    assert r_inact_3.json()["error"]["code"] == "campaign_runtime_session_not_active"
+
+    r_inact_4 = fix.client.patch(
+        f"{inact_base}/context",
+        json={
+            "idempotency_key": "k-inact-ctx-1",
+            "expected_revision": 0,
+            "current_situation": "Inactive test",
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_inact_4.status_code == 409
+    assert r_inact_4.json()["error"]["code"] == "campaign_runtime_session_not_active"
+
+    r_inact_5 = fix.client.get(
+        f"{inact_base}/adventure-overlays/{fix.adv_entry_scene_id}",
+        headers=_auth(fix.token_dm),
+    )
+    assert r_inact_5.status_code == 409
+    assert r_inact_5.json()["error"]["code"] == "campaign_runtime_session_not_active"
+
+    # 3. Wrong scope -> 404
+    wrong_room = uuid4()
+    r_wrong_room = fix.client.get(
+        f"/api/rooms/{wrong_room}/campaigns/{fix.campaign_id}/sessions/{fix.session_id}/runtime/overrides",
+        headers=_auth(fix.token_dm),
+    )
+    assert r_wrong_room.status_code == 404
+    assert r_wrong_room.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    wrong_camp = uuid4()
+    r_wrong_camp = fix.client.get(
+        f"/api/rooms/{fix.room_id}/campaigns/{wrong_camp}/sessions/{fix.session_id}/runtime/context",
+        headers=_auth(fix.token_dm),
+    )
+    assert r_wrong_camp.status_code == 404
+    assert r_wrong_camp.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    wrong_sess = uuid4()
+    r_wrong_sess = fix.client.get(
+        f"/api/rooms/{fix.room_id}/campaigns/{fix.campaign_id}/sessions/{wrong_sess}/runtime/overrides",
+        headers=_auth(fix.token_dm),
+    )
+    assert r_wrong_sess.status_code == 404
+    assert r_wrong_sess.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    # 4. Stale DM -> 403
+    with fix.engine.begin() as conn:
+        conn.execute(
+            update(sessions)
+            .where(sessions.c.id == fix.session_id)
+            .values(dm_controller_access_session_id=fix.p2_access_id)
+        )
+    r_stale = fix.client.get(f"{base}/overrides", headers=_auth(fix.token_dm))
+    assert r_stale.status_code == 403
+    assert r_stale.json()["error"]["code"] == "campaign_runtime_forbidden"
+
+    # Restore session DM
+    with fix.engine.begin() as conn:
+        conn.execute(
+            update(sessions)
+            .where(sessions.c.id == fix.session_id)
+            .values(
+                dm_controller_access_session_id=select(campaign_seats.c.controller_access_session_id)
+                .where(campaign_seats.c.id == fix.dm_seat_id)
+                .scalar_subquery()
+            )
+        )
+
+    # 5. Override domain validation / conflict errors
+    # Nonexistent adventure entry -> 404
+    r_notfound = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-ov-notfound",
+            "adventure_entry_id": str(uuid4()),
+            "state": {},
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_notfound.status_code == 404
+    assert r_notfound.json()["error"]["code"] == "campaign_runtime_not_found"
+
+    # Unattached adventure entry -> 422 invalid
+    r_unatt = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-ov-unattached",
+            "adventure_entry_id": str(fix.adv_entry_unattached_id),
+            "state": {},
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_unatt.status_code == 422
+    assert r_unatt.json()["error"]["code"] == "campaign_runtime_invalid"
+
+    # Create attached override
+    r_ov_ok = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-ov-ok-1",
+            "adventure_entry_id": str(fix.adv_entry_scene_id),
+            "state": {"read_aloud": "Creaking gears"},
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_ov_ok.status_code == 201
+    ov_scene_id = r_ov_ok.json()["id"]
+
+    # Duplicate override -> 409 override_exists
+    r_dup = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-ov-dup",
+            "adventure_entry_id": str(fix.adv_entry_scene_id),
+            "state": {},
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_dup.status_code == 409
+    assert r_dup.json()["error"]["code"] == "campaign_runtime_override_exists"
+
+    # Stale override revision on PATCH -> 409 revision_conflict
+    r_stale_rev_patch = fix.client.patch(
+        f"{base}/overrides/{fix.adv_entry_scene_id}",
+        json={
+            "idempotency_key": "k-ov-stale-rev",
+            "expected_override_id": ov_scene_id,
+            "expected_revision": 99,
+            "note": "stale rev note",
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_stale_rev_patch.status_code == 409
+    assert r_stale_rev_patch.json()["error"]["code"] == "campaign_runtime_revision_conflict"
+
+    # Stale override identity on PATCH -> 409 revision_conflict
+    r_stale_id_patch = fix.client.patch(
+        f"{base}/overrides/{fix.adv_entry_scene_id}",
+        json={
+            "idempotency_key": "k-ov-stale-id",
+            "expected_override_id": str(uuid4()),
+            "expected_revision": 1,
+            "note": "stale id note",
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_stale_id_patch.status_code == 409
+    assert r_stale_id_patch.json()["error"]["code"] == "campaign_runtime_revision_conflict"
+
+    # Stale override revision on CLEAR -> 409 revision_conflict
+    r_stale_rev_clear = fix.client.post(
+        f"{base}/overrides/{fix.adv_entry_scene_id}/clear",
+        json={
+            "idempotency_key": "k-ov-stale-clr-rev",
+            "expected_override_id": ov_scene_id,
+            "expected_revision": 99,
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_stale_rev_clear.status_code == 409
+    assert r_stale_rev_clear.json()["error"]["code"] == "campaign_runtime_revision_conflict"
+
+    # Stale override identity on CLEAR -> 409 revision_conflict
+    r_stale_id_clear = fix.client.post(
+        f"{base}/overrides/{fix.adv_entry_scene_id}/clear",
+        json={
+            "idempotency_key": "k-ov-stale-clr-id",
+            "expected_override_id": str(uuid4()),
+            "expected_revision": 1,
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_stale_id_clear.status_code == 409
+    assert r_stale_id_clear.json()["error"]["code"] == "campaign_runtime_revision_conflict"
+
+    # 6. Context domain validation / conflict errors
+    # Context dual scene -> 422 invalid
+    r_dual = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-ctx-dual",
+            "expected_revision": 0,
+            "current_adventure_scene_entry_id": str(fix.adv_entry_scene_id),
+            "current_runtime_scene_entry_id": str(fix.entry_public_id),
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_dual.status_code == 422
+    assert r_dual.json()["error"]["code"] == "campaign_runtime_invalid"
+
+    # Context non-scene entry (npc entry) -> 422 invalid
+    r_non_scene = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-ctx-non-scene",
+            "expected_revision": 0,
+            "current_adventure_scene_entry_id": str(fix.adv_entry_npc_id),
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_non_scene.status_code == 422
+    assert r_non_scene.json()["error"]["code"] == "campaign_runtime_invalid"
+
+    # Context unattached adventure scene -> 422 invalid
+    r_unatt_scene = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-ctx-unatt-scene",
+            "expected_revision": 0,
+            "current_adventure_scene_entry_id": str(fix.adv_entry_unattached_id),
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_unatt_scene.status_code == 422
+    assert r_unatt_scene.json()["error"]["code"] == "campaign_runtime_invalid"
+
+    # Stale context revision on PATCH -> 409 revision_conflict
+    r_stale_ctx_patch = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-ctx-stale-patch",
+            "expected_revision": 99,
+            "current_situation": "Stale",
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_stale_ctx_patch.status_code == 409
+    assert r_stale_ctx_patch.json()["error"]["code"] == "campaign_runtime_revision_conflict"
+
+    # Stale context revision on CLEAR -> 409 revision_conflict
+    r_stale_ctx_clear = fix.client.post(
+        f"{base}/context/clear",
+        json={
+            "idempotency_key": "k-ctx-stale-clear",
+            "expected_revision": 99,
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_stale_ctx_clear.status_code == 409
+    assert r_stale_ctx_clear.json()["error"]["code"] == "campaign_runtime_revision_conflict"
+
+    # 7. Idempotency replay and conflict
+    # Override replay
+    r_replay_ov = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-ov-ok-1",
+            "adventure_entry_id": str(fix.adv_entry_scene_id),
+            "state": {"read_aloud": "Creaking gears"},
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_replay_ov.status_code in (200, 201)
+    assert r_replay_ov.json()["id"] == ov_scene_id
+
+    # Override idempotency conflict (different state with same key)
+    r_conf_ov = fix.client.post(
+        f"{base}/overrides",
+        json={
+            "idempotency_key": "k-ov-ok-1",
+            "adventure_entry_id": str(fix.adv_entry_scene_id),
+            "state": {"read_aloud": "Different text"},
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_conf_ov.status_code == 409
+    assert r_conf_ov.json()["error"]["code"] == "campaign_runtime_idempotency_conflict"
+
+    # Context update ok
+    r_ctx_ok = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-ctx-ok-1",
+            "expected_revision": 0,
+            "current_situation": "Situation OK",
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_ctx_ok.status_code == 200
+
+    # Context replay
+    r_ctx_replay = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-ctx-ok-1",
+            "expected_revision": 0,
+            "current_situation": "Situation OK",
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_ctx_replay.status_code == 200
+    assert r_ctx_replay.json()["current_situation"] == "Situation OK"
+
+    # Context conflict
+    r_ctx_conf = fix.client.patch(
+        f"{base}/context",
+        json={
+            "idempotency_key": "k-ctx-ok-1",
+            "expected_revision": 0,
+            "current_situation": "Different Situation",
+        },
+        headers=_auth(fix.token_dm),
+    )
+    assert r_ctx_conf.status_code == 409
+    assert r_ctx_conf.json()["error"]["code"] == "campaign_runtime_idempotency_conflict"
+
+
+@pytest.mark.parametrize(
+    ("exc", "expected_status", "expected_code"),
+    [
+        (CampaignRuntimeAuthorityError("forbidden"), 403, "campaign_runtime_forbidden"),
+        (TableEventActorUnauthorizedError("unauth"), 403, "campaign_runtime_forbidden"),
+        (CampaignRuntimeNotFoundError("not found"), 404, "campaign_runtime_not_found"),
+        (TableEventNotFoundError("not found"), 404, "campaign_runtime_not_found"),
+        (
+            CampaignRuntimeArchivedError(
+                UUID("00000000-0000-0000-0000-000000000001"),
+                UUID("00000000-0000-0000-0000-000000000002"),
+                1,
+                2,
+            ),
+            409,
+            "campaign_runtime_archived",
+        ),
+        (CampaignRuntimeActiveSessionError("active"), 409, "campaign_runtime_active_session"),
+        (CampaignRuntimeSessionNotActiveError("inactive"), 409, "campaign_runtime_session_not_active"),
+        (TableEventSessionNotActiveError("inactive"), 409, "campaign_runtime_session_not_active"),
+        (CampaignRuntimeIdempotencyConflictError("idemp"), 409, "campaign_runtime_idempotency_conflict"),
+        (
+            CampaignRuntimeRevisionConflictError(
+                UUID("00000000-0000-0000-0000-000000000001"),
+                UUID("00000000-0000-0000-0000-000000000002"),
+                1,
+                2,
+            ),
+            409,
+            "campaign_runtime_revision_conflict",
+        ),
+        (CampaignAdventureOverrideAlreadyExistsError("exists"), 409, "campaign_runtime_override_exists"),
+        (CampaignRuntimeValidationError("invalid"), 422, "campaign_runtime_invalid"),
+        (RuntimeEntryValidationError("entry invalid"), 422, "campaign_runtime_invalid"),
+        (RuntimeEntryVisibilityError("visibility invalid"), 422, "campaign_runtime_invalid"),
+        (RuntimeEntryPayloadError("payload invalid"), 422, "campaign_runtime_invalid"),
+    ],
+)
+def test_error_mapper_parameterized_matrix(
+    exc: Exception,
+    expected_status: int,
+    expected_code: str,
+) -> None:
+    api_error = map_campaign_runtime_error(exc)
+    assert api_error.status_code == expected_status
+    assert api_error.code == expected_code
