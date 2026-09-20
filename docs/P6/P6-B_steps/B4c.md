@@ -18,4 +18,9 @@
 
 ## 完成紀錄
 
-- 待補。
+- **起始**：2026-09-20；agy 一回合實作，conversation `23f59939-8c24-4f38-b157-1dc4ea56136b`，約 9 分 21 秒。
+- **交付**：active Session Runtime entry list/get/create/update/archive routes；Human actor resolution；TableEvent authority error mapping；Current DM full view與Player public／own-character serialized projection tests；world event／notifier與拒絕零副作用 tests。
+- **指揮者審核修正**：直接核對 FastAPI union response raw JSON key集合，確認 Player無 `dm_notes`、recipient、provenance、actor audit等欄位且 invisible item為404；移除未使用 import、關閉測試暫時 connection並清除 EOF whitespace。
+- **測試**：B4 API＋active/runtime/override/context service regression＋Exploration route＋quality gate，`78 passed, 2 skipped`；`git diff --check` 通過。
+- **驗證 commit**：`26a50fd8`。
+- **未解問題／下一步**：無；接 B4d active Override／Context／Overlay與完整 stable-error／Human-AI projection matrix。
