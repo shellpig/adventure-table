@@ -209,6 +209,7 @@ describe('Attached Adventures copy and error mapping', () => {
       'noAttachable',
       'goToAdventures',
       'errCampaignAdventureLinkNotFound',
+      'errCampaignAdventureDetachBlocked',
       'errCampaignNotFound',
     ] as const
 
@@ -220,12 +221,15 @@ describe('Attached Adventures copy and error mapping', () => {
     }
   })
 
-  it('maps campaign_adventure_link_not_found and campaign_not_found in both locales', () => {
+  it('maps campaign_adventure_link_not_found, campaign_adventure_detach_blocked, and campaign_not_found in both locales', () => {
     for (const locale of ['en', 'zh-TW'] as const) {
       const copy = adventuresCopy(locale)
 
       const linkNotFound = new AdventureApiError(404, 'campaign_adventure_link_not_found', 'Not linked')
       expect(adventureErrorMessage(linkNotFound, copy)).toBe(copy.errCampaignAdventureLinkNotFound)
+
+      const detachBlocked = new AdventureApiError(409, 'campaign_adventure_detach_blocked', 'Detach blocked')
+      expect(adventureErrorMessage(detachBlocked, copy)).toBe(copy.errCampaignAdventureDetachBlocked)
 
       const campaignNotFound = new AdventureApiError(404, 'campaign_not_found', 'Campaign not found')
       expect(adventureErrorMessage(campaignNotFound, copy)).toBe(copy.errCampaignNotFound)

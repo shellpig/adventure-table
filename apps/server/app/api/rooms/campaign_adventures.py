@@ -15,6 +15,7 @@ from app.domain.adventures.schemas import (
     AdventureNotFoundError,
     AttachedAdventure,
     CampaignAdventureAttach,
+    CampaignAdventureDetachBlockedError,
     CampaignAdventureLinkNotFoundError,
 )
 from app.domain.rooms.campaigns import CampaignNotFoundError
@@ -35,6 +36,8 @@ def _map_campaign_adventure_error(exc: Exception) -> APIError:
         return APIError(409, "adventure_not_finalized", str(exc))
     if isinstance(exc, AdventureAlreadyAttachedError):
         return APIError(409, "adventure_already_attached", str(exc))
+    if isinstance(exc, CampaignAdventureDetachBlockedError):
+        return APIError(409, "campaign_adventure_detach_blocked", str(exc))
     if isinstance(exc, CampaignAdventureLinkNotFoundError):
         return APIError(404, "campaign_adventure_link_not_found", str(exc))
     raise exc

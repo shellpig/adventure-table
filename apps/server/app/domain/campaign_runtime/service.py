@@ -4,11 +4,21 @@ import hashlib
 from collections.abc import Callable, Collection, Sequence
 from copy import deepcopy
 from datetime import datetime, timezone
-from typing import cast
+from typing import TypeVar, cast
 from uuid import UUID, uuid4
 
-from sqlalchemy.engine import Connection, Engine
+from sqlalchemy import select
+from sqlalchemy.engine import Connection, Engine, RowMapping
 
+from app.domain.adventures.payloads import (
+    AdventureEntryPayload,
+    AdventureEntryPayloadError,
+    parse_entry_payload,
+)
+from app.domain.adventures.schemas import (
+    AdventureEntryKind,
+    AdventureEntryVisibility,
+)
 from app.domain.campaign_runtime.payloads import (
     CampaignRuntimeError,
     RuntimeEntryKind,
@@ -20,6 +30,11 @@ from app.domain.campaign_runtime.payloads import (
 )
 from app.domain.campaign_runtime.projection import project_runtime_entry
 from app.domain.campaign_runtime.schemas import (
+    CampaignAdventureEntryOverlayView,
+    CampaignAdventureOverride,
+    CampaignAdventureOverrideAlreadyExistsError,
+    CampaignAdventureOverrideCreate,
+    CampaignAdventureOverridePatch,
     RuntimeWorldEntry,
     RuntimeWorldEntryCreate,
     RuntimeWorldEntryDmView,
@@ -36,15 +51,23 @@ from app.domain.rooms.table_events import (
     TableEventService,
 )
 from app.persistence.adventures.repository import CampaignAdventureLinkRepository
+from app.persistence.adventures.tables import (
+    adventure_definitions,
+    adventure_entries,
+)
 from app.persistence.campaign_runtime.mutations import (
     CampaignWorldMutationRepository,
     StoredCampaignWorldMutation,
 )
 from app.persistence.campaign_runtime.repository import (
+    CampaignAdventureOverrideConflictError,
+    CampaignAdventureOverrideNotFoundError,
     CampaignRuntimeRepository,
     RuntimeWorldEntryArchivedError,
     RuntimeWorldEntryConflictError,
     RuntimeWorldEntryNotFoundError,
+    StoredCampaignAdventureOverride,
+    StoredCampaignAdventureOverrideUpdate,
     StoredRuntimeWorldEntry,
     StoredRuntimeWorldEntryAggregate,
     StoredRuntimeWorldEntryUpdate,
@@ -57,6 +80,8 @@ from app.persistence.rooms.table_runtime import (
     TableEventSessionNotActivePersistenceError,
     TableEventSessionNotFoundPersistenceError,
 )
+
+T = TypeVar("T")
 
 
 class CampaignRuntimeAuthorityError(CampaignRuntimeError, PermissionError):
@@ -187,6 +212,231 @@ def project_runtime_aggregates(
     return tuple(results)
 
 
+def stored_override_to_domain(
+    stored: StoredCampaignAdventureOverride,
+) -> CampaignAdventureOverride:
+    return CampaignAdventureOverride(
+        id=stored.id,
+        campaign_id=stored.campaign_id,
+        adventure_entry_id=stored.adventure_entry_id,
+        state_json=deepcopy(stored.state_json),
+        note=stored.note,
+        needs_review=stored.needs_review,
+        revision=stored.revision,
+        created_at=stored.created_at,
+        updated_at=stored.updated_at,
+    )
+
+
+def _get_attached_adventure_entry_source(
+    connection: Connection,
+    *,
+    room_id: UUID,
+    campaign_id: UUID,
+    adventure_entry_id: UUID,
+    link_repo: CampaignAdventureLinkRepository,
+) -> RowMapping:
+    row = connection.execute(
+        select(
+            adventure_entries.c.id,
+            adventure_entries.c.adventure_id,
+            adventure_entries.c.parent_entry_id,
+            adventure_entries.c.kind,
+            adventure_entries.c.title,
+            adventure_entries.c.body,
+            adventure_entries.c.data_json,
+            adventure_entries.c.visibility,
+            adventure_entries.c.sort_order,
+            adventure_definitions.c.room_id,
+        )
+        .join(
+            adventure_definitions,
+            adventure_definitions.c.id == adventure_entries.c.adventure_id,
+        )
+        .where(adventure_entries.c.id == adventure_entry_id)
+    ).mappings().one_or_none()
+
+    if row is None or row["room_id"] != room_id:
+        raise CampaignRuntimeNotFoundError(
+            f"Adventure entry {adventure_entry_id} not found in room {room_id}"
+        )
+    if not link_repo.is_adventure_entry_attached_in_transaction(
+        connection, campaign_id, adventure_entry_id
+    ):
+        raise CampaignRuntimeValidationError(
+            f"Adventure entry {adventure_entry_id} is not from an adventure attached to campaign {campaign_id}"
+        )
+    return row
+
+
+def _validate_and_parse_entry_state(
+    entry_kind: str,
+    base_data_json: dict[str, object],
+    override_state: dict[str, object] | None,
+) -> AdventureEntryPayload:
+    if override_state is None:
+        try:
+            return parse_entry_payload(entry_kind, base_data_json)
+        except AdventureEntryPayloadError as exc:
+            raise CampaignRuntimeValidationError(
+                f"Invalid state for entry kind '{entry_kind}': {exc}"
+            ) from exc
+
+    merged = dict(base_data_json)
+    merged.update(override_state)
+    try:
+        return parse_entry_payload(entry_kind, merged)
+    except AdventureEntryPayloadError as exc:
+        raise CampaignRuntimeValidationError(
+            f"Invalid override state for entry kind '{entry_kind}': {exc}"
+        ) from exc
+
+
+def _build_adventure_entry_overlay(
+    entry_row: RowMapping,
+    override: StoredCampaignAdventureOverride | None,
+) -> CampaignAdventureEntryOverlayView:
+    entry_id = entry_row["id"]
+    adventure_id = entry_row["adventure_id"]
+    parent_entry_id = entry_row["parent_entry_id"]
+    kind = cast(AdventureEntryKind, entry_row["kind"])
+    title = entry_row["title"]
+    body = entry_row["body"]
+    visibility = cast(AdventureEntryVisibility, entry_row["visibility"])
+    sort_order = entry_row["sort_order"]
+
+    override_state = override.state_json if override is not None else None
+    data = _validate_and_parse_entry_state(kind, entry_row["data_json"], override_state)
+    domain_override = stored_override_to_domain(override) if override is not None else None
+
+    return CampaignAdventureEntryOverlayView(
+        id=entry_id,
+        adventure_id=adventure_id,
+        parent_entry_id=parent_entry_id,
+        kind=kind,
+        title=title,
+        body=body,
+        data=data,
+        visibility=visibility,
+        sort_order=sort_order,
+        override=domain_override,
+    )
+
+
+def _get_adventure_entry_overlay_in_transaction(
+    connection: Connection,
+    *,
+    room_id: UUID,
+    campaign_id: UUID,
+    adventure_entry_id: UUID,
+    link_repo: CampaignAdventureLinkRepository,
+    runtime_repo: CampaignRuntimeRepository,
+) -> CampaignAdventureEntryOverlayView:
+    row = _get_attached_adventure_entry_source(
+        connection,
+        room_id=room_id,
+        campaign_id=campaign_id,
+        adventure_entry_id=adventure_entry_id,
+        link_repo=link_repo,
+    )
+    override = runtime_repo.get_override_in_transaction(
+        connection, campaign_id, adventure_entry_id
+    )
+    return _build_adventure_entry_overlay(row, override)
+
+
+def _list_adventure_entry_overlays_in_transaction(
+    connection: Connection,
+    *,
+    campaign_id: UUID,
+    adventure_id: UUID,
+    link_repo: CampaignAdventureLinkRepository,
+    runtime_repo: CampaignRuntimeRepository,
+) -> tuple[CampaignAdventureEntryOverlayView, ...]:
+    if not link_repo.is_attached_in_transaction(
+        connection, campaign_id, adventure_id
+    ):
+        raise CampaignRuntimeValidationError(
+            f"Adventure {adventure_id} is not attached to campaign {campaign_id}"
+        )
+    rows = connection.execute(
+        select(
+            adventure_entries.c.id,
+            adventure_entries.c.adventure_id,
+            adventure_entries.c.parent_entry_id,
+            adventure_entries.c.kind,
+            adventure_entries.c.title,
+            adventure_entries.c.body,
+            adventure_entries.c.data_json,
+            adventure_entries.c.visibility,
+            adventure_entries.c.sort_order,
+        )
+        .where(adventure_entries.c.adventure_id == adventure_id)
+        .order_by(
+            adventure_entries.c.sort_order.asc(),
+            adventure_entries.c.created_at.asc(),
+        )
+    ).mappings().all()
+    overrides = runtime_repo.list_overrides_in_transaction(
+        connection, campaign_id
+    )
+    overrides_by_entry_id = {o.adventure_entry_id: o for o in overrides}
+    return tuple(
+        _build_adventure_entry_overlay(row, overrides_by_entry_id.get(row["id"]))
+        for row in rows
+    )
+
+
+def _override_event_envelope(
+    override: CampaignAdventureOverride,
+    action: str,
+) -> tuple[CampaignAdventureOverride, str, tuple[UUID, ...], dict[str, object]]:
+    return (
+        override,
+        "dm_only",
+        (),
+        {
+            "override_id": str(override.id),
+            "adventure_entry_id": str(override.adventure_entry_id),
+            "revision": int(override.revision),
+            "action": action,
+        },
+    )
+
+
+def _runtime_entry_event_envelope(
+    connection: Connection,
+    session_id: UUID,
+    view: RuntimeWorldEntryDmView,
+    aggregate: StoredRuntimeWorldEntryAggregate,
+    action: str,
+    event_service: TableEventService,
+) -> tuple[RuntimeWorldEntryDmView, str, tuple[UUID, ...], dict[str, object]]:
+    if aggregate.entry.visibility == "character":
+        recipient_seats = (
+            event_service.repository.active_session_seats_for_characters_in_transaction(
+                connection,
+                session_id,
+                aggregate.character_recipient_ids,
+            )
+        )
+        event_visibility = "seat_private"
+    elif aggregate.entry.visibility == "dm_only":
+        recipient_seats = ()
+        event_visibility = "dm_only"
+    else:
+        recipient_seats = ()
+        event_visibility = "public"
+
+    event_payload: dict[str, object] = {
+        "entry_id": str(aggregate.entry.id),
+        "entry_kind": str(aggregate.entry.kind),
+        "revision": int(aggregate.entry.revision),
+        "action": action,
+    }
+    return view, event_visibility, recipient_seats, event_payload
+
+
 def validate_mutation_identity(
     stored: StoredCampaignWorldMutation,
     *,
@@ -196,8 +446,10 @@ def validate_mutation_identity(
     actor_kind: str,
     actor_id: UUID | None,
 ) -> None:
-    if action_kind == "runtime_entry.create":
-        target_matches = stored.target_id is not None
+    if action_kind in ("runtime_entry.create", "override.create"):
+        target_matches = (
+            stored.target_id is not None if target_id is None else stored.target_id == target_id
+        )
     else:
         target_matches = stored.target_id == target_id
 
@@ -614,6 +866,223 @@ def _execute_archive_in_transaction(
     return view, archived_aggregate
 
 
+def _execute_create_override_in_transaction(
+    connection: Connection,
+    *,
+    room_id: UUID,
+    campaign_id: UUID,
+    payload: CampaignAdventureOverrideCreate,
+    idempotency_key: str,
+    actor_kind: str,
+    actor_id: UUID | None,
+    now: datetime,
+    runtime_repo: CampaignRuntimeRepository,
+    mutation_repo: CampaignWorldMutationRepository,
+    link_repo: CampaignAdventureLinkRepository,
+) -> CampaignAdventureOverride:
+    row = _get_attached_adventure_entry_source(
+        connection,
+        room_id=room_id,
+        campaign_id=campaign_id,
+        adventure_entry_id=payload.adventure_entry_id,
+        link_repo=link_repo,
+    )
+
+    existing = runtime_repo.get_override_in_transaction(
+        connection, campaign_id, payload.adventure_entry_id
+    )
+    if existing is not None:
+        raise CampaignAdventureOverrideAlreadyExistsError(
+            f"Override for adventure entry {payload.adventure_entry_id} already exists in campaign {campaign_id}"
+        )
+
+    _validate_and_parse_entry_state(row["kind"], row["data_json"], payload.state)
+
+    override_id = uuid4()
+    stored_override = StoredCampaignAdventureOverride(
+        id=override_id,
+        campaign_id=campaign_id,
+        adventure_entry_id=payload.adventure_entry_id,
+        state_json=deepcopy(payload.state),
+        note=payload.note,
+        needs_review=payload.needs_review,
+        revision=1,
+        created_at=now,
+        updated_at=now,
+    )
+    created_override = runtime_repo.create_override_in_transaction(
+        connection, stored_override
+    )
+    domain_override = stored_override_to_domain(created_override)
+
+    mutation = StoredCampaignWorldMutation(
+        id=uuid4(),
+        campaign_id=campaign_id,
+        idempotency_key=idempotency_key,
+        action_kind="override.create",
+        target_id=payload.adventure_entry_id,
+        command_payload=payload.model_dump(mode="json"),
+        result_payload=domain_override.model_dump(mode="json"),
+        created_by_actor_kind=actor_kind,
+        created_by_actor_id=actor_id,
+        created_at=now,
+    )
+    mutation_repo.insert_in_transaction(connection, mutation)
+    return domain_override
+
+
+def _execute_update_override_in_transaction(
+    connection: Connection,
+    *,
+    room_id: UUID,
+    campaign_id: UUID,
+    adventure_entry_id: UUID,
+    patch: CampaignAdventureOverridePatch,
+    idempotency_key: str,
+    actor_kind: str,
+    actor_id: UUID | None,
+    now: datetime,
+    runtime_repo: CampaignRuntimeRepository,
+    mutation_repo: CampaignWorldMutationRepository,
+    link_repo: CampaignAdventureLinkRepository,
+) -> CampaignAdventureOverride:
+    existing_override = runtime_repo.get_override_in_transaction(
+        connection, campaign_id, adventure_entry_id
+    )
+    if existing_override is None:
+        raise CampaignRuntimeNotFoundError(
+            f"Campaign adventure override for entry {adventure_entry_id} not found in campaign {campaign_id}"
+        )
+    if (
+        existing_override.id != patch.expected_override_id
+        or existing_override.revision != patch.expected_revision
+    ):
+        raise CampaignRuntimeRevisionConflictError(
+            campaign_id=campaign_id,
+            entry_id=adventure_entry_id,
+            expected_revision=patch.expected_revision,
+            current_revision=existing_override.revision,
+        )
+
+    row = _get_attached_adventure_entry_source(
+        connection,
+        room_id=room_id,
+        campaign_id=campaign_id,
+        adventure_entry_id=adventure_entry_id,
+        link_repo=link_repo,
+    )
+
+    candidate_state = (
+        patch.state if "state" in patch.model_fields_set else existing_override.state_json
+    )
+    candidate_note = (
+        patch.note if "note" in patch.model_fields_set else existing_override.note
+    )
+    candidate_needs_review = (
+        patch.needs_review if "needs_review" in patch.model_fields_set else existing_override.needs_review
+    )
+    assert candidate_state is not None
+    assert candidate_needs_review is not None
+
+    _validate_and_parse_entry_state(row["kind"], row["data_json"], candidate_state)
+
+    update_candidate = StoredCampaignAdventureOverrideUpdate(
+        expected_override_id=patch.expected_override_id,
+        expected_revision=patch.expected_revision,
+        state_json=deepcopy(candidate_state),
+        note=candidate_note,
+        needs_review=candidate_needs_review,
+        updated_at=now,
+    )
+    try:
+        updated_stored = runtime_repo.update_override_in_transaction(
+            connection, campaign_id, adventure_entry_id, update_candidate
+        )
+    except CampaignAdventureOverrideConflictError as exc:
+        raise CampaignRuntimeRevisionConflictError(
+            campaign_id=exc.campaign_id,
+            entry_id=exc.adventure_entry_id,
+            expected_revision=exc.expected_revision,
+            current_revision=exc.current_revision,
+        ) from exc
+    except CampaignAdventureOverrideNotFoundError as exc:
+        raise CampaignRuntimeNotFoundError(str(exc)) from exc
+
+    domain_override = stored_override_to_domain(updated_stored)
+
+    command_payload = {
+        k: v for k, v in patch.model_dump(mode="json").items() if k in patch.model_fields_set
+    }
+    mutation = StoredCampaignWorldMutation(
+        id=uuid4(),
+        campaign_id=campaign_id,
+        idempotency_key=idempotency_key,
+        action_kind="override.update",
+        target_id=adventure_entry_id,
+        command_payload=command_payload,
+        result_payload=domain_override.model_dump(mode="json"),
+        created_by_actor_kind=actor_kind,
+        created_by_actor_id=actor_id,
+        created_at=now,
+    )
+    mutation_repo.insert_in_transaction(connection, mutation)
+    return domain_override
+
+
+def _execute_clear_override_in_transaction(
+    connection: Connection,
+    *,
+    campaign_id: UUID,
+    adventure_entry_id: UUID,
+    expected_override_id: UUID,
+    expected_revision: int,
+    idempotency_key: str,
+    actor_kind: str,
+    actor_id: UUID | None,
+    now: datetime,
+    runtime_repo: CampaignRuntimeRepository,
+    mutation_repo: CampaignWorldMutationRepository,
+) -> CampaignAdventureOverride:
+    try:
+        deleted_stored = runtime_repo.delete_override_in_transaction(
+            connection,
+            campaign_id,
+            adventure_entry_id,
+            expected_override_id,
+            expected_revision,
+        )
+    except CampaignAdventureOverrideNotFoundError as exc:
+        raise CampaignRuntimeNotFoundError(str(exc)) from exc
+    except CampaignAdventureOverrideConflictError as exc:
+        raise CampaignRuntimeRevisionConflictError(
+            campaign_id=exc.campaign_id,
+            entry_id=exc.adventure_entry_id,
+            expected_revision=exc.expected_revision,
+            current_revision=exc.current_revision,
+        ) from exc
+
+    domain_override = stored_override_to_domain(deleted_stored)
+
+    command_payload = {
+        "expected_override_id": str(expected_override_id),
+        "expected_revision": expected_revision,
+    }
+    mutation = StoredCampaignWorldMutation(
+        id=uuid4(),
+        campaign_id=campaign_id,
+        idempotency_key=idempotency_key,
+        action_kind="override.clear",
+        target_id=adventure_entry_id,
+        command_payload=command_payload,
+        result_payload=domain_override.model_dump(mode="json"),
+        created_by_actor_kind=actor_kind,
+        created_by_actor_id=actor_id,
+        created_at=now,
+    )
+    mutation_repo.insert_in_transaction(connection, mutation)
+    return domain_override
+
+
 def _session_event_idempotency_key(idempotency_key: str) -> str:
     digest = hashlib.sha256(idempotency_key.encode("utf-8")).hexdigest()
     return f"p6b-world:{digest}"
@@ -646,9 +1115,10 @@ class CampaignRuntimeService:
         self,
         connection: Connection,
         actor: TableActorContext,
+        action_verb: str = "write runtime world state",
     ) -> StoredTableActorBinding:
         if not actor.is_current_dm or actor.role != "dm":
-            raise CampaignRuntimeAuthorityError("Only the current DM may write runtime world state")
+            raise CampaignRuntimeAuthorityError(f"Only the current DM may {action_verb}")
         return self._require_active_actor(connection, actor)
 
     def _require_active_actor(
@@ -673,18 +1143,21 @@ class CampaignRuntimeService:
         except TableEventActorBindingStalePersistenceError as exc:
             raise CampaignRuntimeAuthorityError(str(exc)) from exc
 
-    def create_management(
+    def _orchestrate_management_mutation(
         self,
+        *,
         context: RoomAccessContext,
         room_id: UUID,
         campaign_id: UUID,
-        payload: RuntimeWorldEntryCreate,
-        *,
+        action_kind: str,
+        target_id: UUID | None,
+        command_payload: dict[str, object],
         idempotency_key: str,
-    ) -> RuntimeWorldEntryDmView:
+        parse_result: Callable[[dict[str, object]], T],
+        execute_action: Callable[[Connection, datetime], T],
+    ) -> T:
         _require_management_authority(context, room_id)
         _validate_idempotency_key(idempotency_key)
-        command_payload = payload.model_dump(mode="json")
 
         with self.engine.begin() as connection:
             campaign = self.campaign_repo.get_for_update_in_transaction(
@@ -709,17 +1182,38 @@ class CampaignRuntimeService:
             if stored_mutation is not None:
                 validate_mutation_identity(
                     stored_mutation,
-                    action_kind="runtime_entry.create",
-                    target_id=None,
+                    action_kind=action_kind,
+                    target_id=target_id,
                     command_payload=command_payload,
                     actor_kind="human",
                     actor_id=context.access_session_id,
                 )
-                return RuntimeWorldEntryDmView.model_validate(stored_mutation.result_payload)
+                return parse_result(stored_mutation.result_payload)
 
             now = datetime.now(timezone.utc)
-            view, _ = _execute_create_in_transaction(
-                connection,
+            return execute_action(connection, now)
+
+    def create_management(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        campaign_id: UUID,
+        payload: RuntimeWorldEntryCreate,
+        *,
+        idempotency_key: str,
+    ) -> RuntimeWorldEntryDmView:
+        command_payload = payload.model_dump(mode="json")
+        return self._orchestrate_management_mutation(
+            context=context,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            action_kind="runtime_entry.create",
+            target_id=None,
+            command_payload=command_payload,
+            idempotency_key=idempotency_key,
+            parse_result=RuntimeWorldEntryDmView.model_validate,
+            execute_action=lambda conn, now: _execute_create_in_transaction(
+                conn,
                 room_id=room_id,
                 campaign_id=campaign_id,
                 payload=payload,
@@ -730,8 +1224,8 @@ class CampaignRuntimeService:
                 runtime_repo=self.runtime_repo,
                 mutation_repo=self.mutation_repo,
                 link_repo=self.link_repo,
-            )
-            return view
+            )[0],
+        )
 
     def update_management(
         self,
@@ -743,46 +1237,20 @@ class CampaignRuntimeService:
         *,
         idempotency_key: str,
     ) -> RuntimeWorldEntryDmView:
-        _require_management_authority(context, room_id)
-        _validate_idempotency_key(idempotency_key)
         command_payload = {
             k: v for k, v in patch.model_dump(mode="json").items() if k in patch.model_fields_set
         }
-
-        with self.engine.begin() as connection:
-            campaign = self.campaign_repo.get_for_update_in_transaction(
-                connection, campaign_id
-            )
-            if campaign is None or campaign.room_id != room_id:
-                raise CampaignRuntimeNotFoundError(
-                    f"Campaign {campaign_id} not found in room {room_id}"
-                )
-
-            active_session = self.session_repo.active_for_campaign_in_transaction(
-                connection, campaign_id
-            )
-            if active_session is not None:
-                raise CampaignRuntimeActiveSessionError(
-                    f"Campaign {campaign_id} has an active session; management writes are forbidden during active sessions"
-                )
-
-            stored_mutation = self.mutation_repo.get_in_transaction(
-                connection, campaign_id, idempotency_key
-            )
-            if stored_mutation is not None:
-                validate_mutation_identity(
-                    stored_mutation,
-                    action_kind="runtime_entry.update",
-                    target_id=entry_id,
-                    command_payload=command_payload,
-                    actor_kind="human",
-                    actor_id=context.access_session_id,
-                )
-                return RuntimeWorldEntryDmView.model_validate(stored_mutation.result_payload)
-
-            now = datetime.now(timezone.utc)
-            view, _ = _execute_update_in_transaction(
-                connection,
+        return self._orchestrate_management_mutation(
+            context=context,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            action_kind="runtime_entry.update",
+            target_id=entry_id,
+            command_payload=command_payload,
+            idempotency_key=idempotency_key,
+            parse_result=RuntimeWorldEntryDmView.model_validate,
+            execute_action=lambda conn, now: _execute_update_in_transaction(
+                conn,
                 room_id=room_id,
                 campaign_id=campaign_id,
                 entry_id=entry_id,
@@ -794,8 +1262,8 @@ class CampaignRuntimeService:
                 runtime_repo=self.runtime_repo,
                 mutation_repo=self.mutation_repo,
                 link_repo=self.link_repo,
-            )
-            return view
+            )[0],
+        )
 
     def archive_management(
         self,
@@ -807,46 +1275,20 @@ class CampaignRuntimeService:
         expected_revision: int,
         idempotency_key: str,
     ) -> RuntimeWorldEntryDmView:
-        _require_management_authority(context, room_id)
-        _validate_idempotency_key(idempotency_key)
         if expected_revision < 1:
             raise CampaignRuntimeValidationError("expected_revision must be at least 1")
         command_payload = {"expected_revision": expected_revision}
-
-        with self.engine.begin() as connection:
-            campaign = self.campaign_repo.get_for_update_in_transaction(
-                connection, campaign_id
-            )
-            if campaign is None or campaign.room_id != room_id:
-                raise CampaignRuntimeNotFoundError(
-                    f"Campaign {campaign_id} not found in room {room_id}"
-                )
-
-            active_session = self.session_repo.active_for_campaign_in_transaction(
-                connection, campaign_id
-            )
-            if active_session is not None:
-                raise CampaignRuntimeActiveSessionError(
-                    f"Campaign {campaign_id} has an active session; management writes are forbidden during active sessions"
-                )
-
-            stored_mutation = self.mutation_repo.get_in_transaction(
-                connection, campaign_id, idempotency_key
-            )
-            if stored_mutation is not None:
-                validate_mutation_identity(
-                    stored_mutation,
-                    action_kind="runtime_entry.archive",
-                    target_id=entry_id,
-                    command_payload=command_payload,
-                    actor_kind="human",
-                    actor_id=context.access_session_id,
-                )
-                return RuntimeWorldEntryDmView.model_validate(stored_mutation.result_payload)
-
-            now = datetime.now(timezone.utc)
-            view, _ = _execute_archive_in_transaction(
-                connection,
+        return self._orchestrate_management_mutation(
+            context=context,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            action_kind="runtime_entry.archive",
+            target_id=entry_id,
+            command_payload=command_payload,
+            idempotency_key=idempotency_key,
+            parse_result=RuntimeWorldEntryDmView.model_validate,
+            execute_action=lambda conn, now: _execute_archive_in_transaction(
+                conn,
                 campaign_id=campaign_id,
                 entry_id=entry_id,
                 expected_revision=expected_revision,
@@ -856,8 +1298,121 @@ class CampaignRuntimeService:
                 now=now,
                 runtime_repo=self.runtime_repo,
                 mutation_repo=self.mutation_repo,
-            )
-            return view
+            )[0],
+        )
+
+    def create_override_management(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        campaign_id: UUID,
+        payload: CampaignAdventureOverrideCreate,
+        *,
+        idempotency_key: str,
+    ) -> CampaignAdventureOverride:
+        command_payload = payload.model_dump(mode="json")
+        return self._orchestrate_management_mutation(
+            context=context,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            action_kind="override.create",
+            target_id=payload.adventure_entry_id,
+            command_payload=command_payload,
+            idempotency_key=idempotency_key,
+            parse_result=CampaignAdventureOverride.model_validate,
+            execute_action=lambda conn, now: _execute_create_override_in_transaction(
+                conn,
+                room_id=room_id,
+                campaign_id=campaign_id,
+                payload=payload,
+                idempotency_key=idempotency_key,
+                actor_kind="human",
+                actor_id=context.access_session_id,
+                now=now,
+                runtime_repo=self.runtime_repo,
+                mutation_repo=self.mutation_repo,
+                link_repo=self.link_repo,
+            ),
+        )
+
+    def update_override_management(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        campaign_id: UUID,
+        adventure_entry_id: UUID,
+        patch: CampaignAdventureOverridePatch,
+        *,
+        idempotency_key: str,
+    ) -> CampaignAdventureOverride:
+        command_payload = {
+            k: v for k, v in patch.model_dump(mode="json").items() if k in patch.model_fields_set
+        }
+        return self._orchestrate_management_mutation(
+            context=context,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            action_kind="override.update",
+            target_id=adventure_entry_id,
+            command_payload=command_payload,
+            idempotency_key=idempotency_key,
+            parse_result=CampaignAdventureOverride.model_validate,
+            execute_action=lambda conn, now: _execute_update_override_in_transaction(
+                conn,
+                room_id=room_id,
+                campaign_id=campaign_id,
+                adventure_entry_id=adventure_entry_id,
+                patch=patch,
+                idempotency_key=idempotency_key,
+                actor_kind="human",
+                actor_id=context.access_session_id,
+                now=now,
+                runtime_repo=self.runtime_repo,
+                mutation_repo=self.mutation_repo,
+                link_repo=self.link_repo,
+            ),
+        )
+
+    def clear_override_management(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        campaign_id: UUID,
+        adventure_entry_id: UUID,
+        *,
+        expected_override_id: UUID,
+        expected_revision: int,
+        idempotency_key: str,
+    ) -> CampaignAdventureOverride:
+        if expected_revision < 1:
+            raise CampaignRuntimeValidationError("expected_revision must be at least 1")
+        command_payload = {
+            "expected_override_id": str(expected_override_id),
+            "expected_revision": expected_revision,
+        }
+        return self._orchestrate_management_mutation(
+            context=context,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            action_kind="override.clear",
+            target_id=adventure_entry_id,
+            command_payload=command_payload,
+            idempotency_key=idempotency_key,
+            parse_result=CampaignAdventureOverride.model_validate,
+            execute_action=lambda conn, now: _execute_clear_override_in_transaction(
+                conn,
+                campaign_id=campaign_id,
+                adventure_entry_id=adventure_entry_id,
+                expected_override_id=expected_override_id,
+                expected_revision=expected_revision,
+                idempotency_key=idempotency_key,
+                actor_kind="human",
+                actor_id=context.access_session_id,
+                now=now,
+                runtime_repo=self.runtime_repo,
+                mutation_repo=self.mutation_repo,
+            ),
+        )
 
     def _orchestrate_active_mutation(
         self,
@@ -868,12 +1423,12 @@ class CampaignRuntimeService:
         command_payload: dict[str, object],
         idempotency_key: str,
         event_kind: str,
-        action_name: str,
+        parse_result: Callable[[dict[str, object]], T],
         execute_action: Callable[
             [Connection],
-            tuple[RuntimeWorldEntryDmView, StoredRuntimeWorldEntryAggregate],
+            tuple[T, str, Sequence[UUID], dict[str, object]],
         ],
-    ) -> RuntimeWorldEntryDmView:
+    ) -> T:
         _validate_idempotency_key(idempotency_key)
         actor_kind, actor_id = _actor_identity(actor)
 
@@ -891,45 +1446,27 @@ class CampaignRuntimeService:
                     actor_kind=actor_kind,
                     actor_id=actor_id,
                 )
-                return RuntimeWorldEntryDmView.model_validate(stored_mutation.result_payload)
+                return parse_result(stored_mutation.result_payload)
 
         event_key = _session_event_idempotency_key(idempotency_key)
         projection_ran = False
-        result_view: RuntimeWorldEntryDmView | None = None
+        result_item: T | None = None
 
         def projection(connection: Connection, event_id: UUID, _seq: int) -> None:
-            nonlocal projection_ran, result_view
-            view, aggregate = execute_action(connection)
-            if aggregate.entry.visibility == "character":
-                recipient_seats = (
-                    self.event_service.repository.active_session_seats_for_characters_in_transaction(
-                        connection,
-                        actor.session_id,
-                        aggregate.character_recipient_ids,
-                    )
-                )
-                event_visibility = "seat_private"
-            elif aggregate.entry.visibility == "dm_only":
-                recipient_seats = ()
-                event_visibility = "dm_only"
-            else:
-                recipient_seats = ()
-                event_visibility = "public"
-
+            nonlocal projection_ran, result_item
+            self.campaign_repo.get_for_update_in_transaction(
+                connection, actor.campaign_id
+            )
+            item, event_visibility, recipient_seats, event_payload = execute_action(connection)
             self.event_service.repository.update_event_projection_in_transaction(
                 connection,
                 event_id=event_id,
                 visibility=event_visibility,
-                recipient_seat_ids=recipient_seats,
-                payload={
-                    "entry_id": str(aggregate.entry.id),
-                    "entry_kind": str(aggregate.entry.kind),
-                    "revision": int(aggregate.entry.revision),
-                    "action": action_name,
-                },
+                recipient_seat_ids=tuple(recipient_seats),
+                payload=event_payload,
             )
             projection_ran = True
-            result_view = view
+            result_item = item
 
         try:
             self.event_service.repository.append(
@@ -970,13 +1507,13 @@ class CampaignRuntimeService:
                 actor_kind=actor_kind,
                 actor_id=actor_id,
             )
-            return RuntimeWorldEntryDmView.model_validate(stored_mutation.result_payload)
+            return parse_result(stored_mutation.result_payload)
 
         if self.event_service.notifier is not None:
             self.event_service.notifier.notify(actor.session_id)
 
-        assert result_view is not None
-        return result_view
+        assert result_item is not None
+        return result_item
 
     def create_active(
         self,
@@ -989,8 +1526,10 @@ class CampaignRuntimeService:
         now = datetime.now(timezone.utc)
         actor_kind, actor_id = _actor_identity(actor)
 
-        def execute(connection: Connection) -> tuple[RuntimeWorldEntryDmView, StoredRuntimeWorldEntryAggregate]:
-            return _execute_create_in_transaction(
+        def execute(
+            connection: Connection,
+        ) -> tuple[RuntimeWorldEntryDmView, str, tuple[UUID, ...], dict[str, object]]:
+            view, aggregate = _execute_create_in_transaction(
                 connection,
                 room_id=actor.room_id,
                 campaign_id=actor.campaign_id,
@@ -1003,6 +1542,9 @@ class CampaignRuntimeService:
                 mutation_repo=self.mutation_repo,
                 link_repo=self.link_repo,
             )
+            return _runtime_entry_event_envelope(
+                connection, actor.session_id, view, aggregate, "created", self.event_service
+            )
 
         return self._orchestrate_active_mutation(
             actor=actor,
@@ -1011,7 +1553,7 @@ class CampaignRuntimeService:
             command_payload=command_payload,
             idempotency_key=idempotency_key,
             event_kind="world.entry.created",
-            action_name="created",
+            parse_result=RuntimeWorldEntryDmView.model_validate,
             execute_action=execute,
         )
 
@@ -1029,8 +1571,10 @@ class CampaignRuntimeService:
         now = datetime.now(timezone.utc)
         actor_kind, actor_id = _actor_identity(actor)
 
-        def execute(connection: Connection) -> tuple[RuntimeWorldEntryDmView, StoredRuntimeWorldEntryAggregate]:
-            return _execute_update_in_transaction(
+        def execute(
+            connection: Connection,
+        ) -> tuple[RuntimeWorldEntryDmView, str, tuple[UUID, ...], dict[str, object]]:
+            view, aggregate = _execute_update_in_transaction(
                 connection,
                 room_id=actor.room_id,
                 campaign_id=actor.campaign_id,
@@ -1044,6 +1588,9 @@ class CampaignRuntimeService:
                 mutation_repo=self.mutation_repo,
                 link_repo=self.link_repo,
             )
+            return _runtime_entry_event_envelope(
+                connection, actor.session_id, view, aggregate, "updated", self.event_service
+            )
 
         return self._orchestrate_active_mutation(
             actor=actor,
@@ -1052,7 +1599,7 @@ class CampaignRuntimeService:
             command_payload=command_payload,
             idempotency_key=idempotency_key,
             event_kind="world.entry.updated",
-            action_name="updated",
+            parse_result=RuntimeWorldEntryDmView.model_validate,
             execute_action=execute,
         )
 
@@ -1070,8 +1617,10 @@ class CampaignRuntimeService:
         now = datetime.now(timezone.utc)
         actor_kind, actor_id = _actor_identity(actor)
 
-        def execute(connection: Connection) -> tuple[RuntimeWorldEntryDmView, StoredRuntimeWorldEntryAggregate]:
-            return _execute_archive_in_transaction(
+        def execute(
+            connection: Connection,
+        ) -> tuple[RuntimeWorldEntryDmView, str, tuple[UUID, ...], dict[str, object]]:
+            view, aggregate = _execute_archive_in_transaction(
                 connection,
                 campaign_id=actor.campaign_id,
                 entry_id=entry_id,
@@ -1083,6 +1632,9 @@ class CampaignRuntimeService:
                 runtime_repo=self.runtime_repo,
                 mutation_repo=self.mutation_repo,
             )
+            return _runtime_entry_event_envelope(
+                connection, actor.session_id, view, aggregate, "archived", self.event_service
+            )
 
         return self._orchestrate_active_mutation(
             actor=actor,
@@ -1091,7 +1643,138 @@ class CampaignRuntimeService:
             command_payload=command_payload,
             idempotency_key=idempotency_key,
             event_kind="world.entry.archived",
-            action_name="archived",
+            parse_result=RuntimeWorldEntryDmView.model_validate,
+            execute_action=execute,
+        )
+
+    def create_override_active(
+        self,
+        actor: TableActorContext,
+        payload: CampaignAdventureOverrideCreate,
+        *,
+        idempotency_key: str,
+    ) -> CampaignAdventureOverride:
+        command_payload = payload.model_dump(mode="json")
+        now = datetime.now(timezone.utc)
+        actor_kind, actor_id = _actor_identity(actor)
+
+        def execute(
+            connection: Connection,
+        ) -> tuple[CampaignAdventureOverride, str, tuple[UUID, ...], dict[str, object]]:
+            override = _execute_create_override_in_transaction(
+                connection,
+                room_id=actor.room_id,
+                campaign_id=actor.campaign_id,
+                payload=payload,
+                idempotency_key=idempotency_key,
+                actor_kind=actor_kind,
+                actor_id=actor_id,
+                now=now,
+                runtime_repo=self.runtime_repo,
+                mutation_repo=self.mutation_repo,
+                link_repo=self.link_repo,
+            )
+            return _override_event_envelope(override, "created")
+
+        return self._orchestrate_active_mutation(
+            actor=actor,
+            action_kind="override.create",
+            target_id=payload.adventure_entry_id,
+            command_payload=command_payload,
+            idempotency_key=idempotency_key,
+            event_kind="world.override.created",
+            parse_result=CampaignAdventureOverride.model_validate,
+            execute_action=execute,
+        )
+
+    def update_override_active(
+        self,
+        actor: TableActorContext,
+        adventure_entry_id: UUID,
+        patch: CampaignAdventureOverridePatch,
+        *,
+        idempotency_key: str,
+    ) -> CampaignAdventureOverride:
+        command_payload = {
+            k: v for k, v in patch.model_dump(mode="json").items() if k in patch.model_fields_set
+        }
+        now = datetime.now(timezone.utc)
+        actor_kind, actor_id = _actor_identity(actor)
+
+        def execute(
+            connection: Connection,
+        ) -> tuple[CampaignAdventureOverride, str, tuple[UUID, ...], dict[str, object]]:
+            override = _execute_update_override_in_transaction(
+                connection,
+                room_id=actor.room_id,
+                campaign_id=actor.campaign_id,
+                adventure_entry_id=adventure_entry_id,
+                patch=patch,
+                idempotency_key=idempotency_key,
+                actor_kind=actor_kind,
+                actor_id=actor_id,
+                now=now,
+                runtime_repo=self.runtime_repo,
+                mutation_repo=self.mutation_repo,
+                link_repo=self.link_repo,
+            )
+            return _override_event_envelope(override, "updated")
+
+        return self._orchestrate_active_mutation(
+            actor=actor,
+            action_kind="override.update",
+            target_id=adventure_entry_id,
+            command_payload=command_payload,
+            idempotency_key=idempotency_key,
+            event_kind="world.override.updated",
+            parse_result=CampaignAdventureOverride.model_validate,
+            execute_action=execute,
+        )
+
+    def clear_override_active(
+        self,
+        actor: TableActorContext,
+        adventure_entry_id: UUID,
+        *,
+        expected_override_id: UUID,
+        expected_revision: int,
+        idempotency_key: str,
+    ) -> CampaignAdventureOverride:
+        if expected_revision < 1:
+            raise CampaignRuntimeValidationError("expected_revision must be at least 1")
+        command_payload = {
+            "expected_override_id": str(expected_override_id),
+            "expected_revision": expected_revision,
+        }
+        now = datetime.now(timezone.utc)
+        actor_kind, actor_id = _actor_identity(actor)
+
+        def execute(
+            connection: Connection,
+        ) -> tuple[CampaignAdventureOverride, str, tuple[UUID, ...], dict[str, object]]:
+            override = _execute_clear_override_in_transaction(
+                connection,
+                campaign_id=actor.campaign_id,
+                adventure_entry_id=adventure_entry_id,
+                expected_override_id=expected_override_id,
+                expected_revision=expected_revision,
+                idempotency_key=idempotency_key,
+                actor_kind=actor_kind,
+                actor_id=actor_id,
+                now=now,
+                runtime_repo=self.runtime_repo,
+                mutation_repo=self.mutation_repo,
+            )
+            return _override_event_envelope(override, "cleared")
+
+        return self._orchestrate_active_mutation(
+            actor=actor,
+            action_kind="override.clear",
+            target_id=adventure_entry_id,
+            command_payload=command_payload,
+            idempotency_key=idempotency_key,
+            event_kind="world.override.cleared",
+            parse_result=CampaignAdventureOverride.model_validate,
             execute_action=execute,
         )
 
@@ -1140,6 +1823,92 @@ class CampaignRuntimeService:
             )
             views = project_runtime_aggregates(aggregates, controlled_character_ids=(), is_dm=True)
             return tuple(cast(RuntimeWorldEntryDmView, v) for v in views)
+
+    def get_override_management(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        campaign_id: UUID,
+        adventure_entry_id: UUID,
+    ) -> CampaignAdventureOverride:
+        _require_management_authority(context, room_id)
+        with self.engine.connect() as connection:
+            campaign = self.campaign_repo.get_in_transaction(connection, campaign_id)
+            if campaign is None or campaign.room_id != room_id:
+                raise CampaignRuntimeNotFoundError(
+                    f"Campaign {campaign_id} not found in room {room_id}"
+                )
+            stored = self.runtime_repo.get_override_in_transaction(
+                connection, campaign_id, adventure_entry_id
+            )
+            if stored is None:
+                raise CampaignRuntimeNotFoundError(
+                    f"Campaign adventure override for entry {adventure_entry_id} not found in campaign {campaign_id}"
+                )
+            return stored_override_to_domain(stored)
+
+    def list_overrides_management(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        campaign_id: UUID,
+    ) -> tuple[CampaignAdventureOverride, ...]:
+        _require_management_authority(context, room_id)
+        with self.engine.connect() as connection:
+            campaign = self.campaign_repo.get_in_transaction(connection, campaign_id)
+            if campaign is None or campaign.room_id != room_id:
+                raise CampaignRuntimeNotFoundError(
+                    f"Campaign {campaign_id} not found in room {room_id}"
+                )
+            stored_list = self.runtime_repo.list_overrides_in_transaction(
+                connection, campaign_id
+            )
+            return tuple(stored_override_to_domain(s) for s in stored_list)
+
+    def get_adventure_entry_overlay_management(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        campaign_id: UUID,
+        adventure_entry_id: UUID,
+    ) -> CampaignAdventureEntryOverlayView:
+        _require_management_authority(context, room_id)
+        with self.engine.connect() as connection:
+            campaign = self.campaign_repo.get_in_transaction(connection, campaign_id)
+            if campaign is None or campaign.room_id != room_id:
+                raise CampaignRuntimeNotFoundError(
+                    f"Campaign {campaign_id} not found in room {room_id}"
+                )
+            return _get_adventure_entry_overlay_in_transaction(
+                connection,
+                room_id=room_id,
+                campaign_id=campaign_id,
+                adventure_entry_id=adventure_entry_id,
+                link_repo=self.link_repo,
+                runtime_repo=self.runtime_repo,
+            )
+
+    def list_adventure_entry_overlays_management(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        campaign_id: UUID,
+        adventure_id: UUID,
+    ) -> tuple[CampaignAdventureEntryOverlayView, ...]:
+        _require_management_authority(context, room_id)
+        with self.engine.connect() as connection:
+            campaign = self.campaign_repo.get_in_transaction(connection, campaign_id)
+            if campaign is None or campaign.room_id != room_id:
+                raise CampaignRuntimeNotFoundError(
+                    f"Campaign {campaign_id} not found in room {room_id}"
+                )
+            return _list_adventure_entry_overlays_in_transaction(
+                connection,
+                campaign_id=campaign_id,
+                adventure_id=adventure_id,
+                link_repo=self.link_repo,
+                runtime_repo=self.runtime_repo,
+            )
 
     def get_active(
         self,
@@ -1209,8 +1978,99 @@ class CampaignRuntimeService:
             )
             return player_views
 
+    def get_override_active(
+        self,
+        actor: TableActorContext,
+        adventure_entry_id: UUID,
+    ) -> CampaignAdventureOverride:
+        with self.engine.connect() as connection:
+            self._require_active_dm_authority(
+                connection, actor, action_verb="read adventure override"
+            )
+            campaign = self.campaign_repo.get_in_transaction(connection, actor.campaign_id)
+            if campaign is None or campaign.room_id != actor.room_id:
+                raise CampaignRuntimeNotFoundError(
+                    f"Campaign {actor.campaign_id} not found in room {actor.room_id}"
+                )
+            stored = self.runtime_repo.get_override_in_transaction(
+                connection, actor.campaign_id, adventure_entry_id
+            )
+            if stored is None:
+                raise CampaignRuntimeNotFoundError(
+                    f"Campaign adventure override for entry {adventure_entry_id} not found in campaign {actor.campaign_id}"
+                )
+            return stored_override_to_domain(stored)
+
+    def list_overrides_active(
+        self,
+        actor: TableActorContext,
+    ) -> tuple[CampaignAdventureOverride, ...]:
+        with self.engine.connect() as connection:
+            self._require_active_dm_authority(
+                connection, actor, action_verb="read adventure overrides"
+            )
+            campaign = self.campaign_repo.get_in_transaction(connection, actor.campaign_id)
+            if campaign is None or campaign.room_id != actor.room_id:
+                raise CampaignRuntimeNotFoundError(
+                    f"Campaign {actor.campaign_id} not found in room {actor.room_id}"
+                )
+            stored_list = self.runtime_repo.list_overrides_in_transaction(
+                connection, actor.campaign_id
+            )
+            return tuple(stored_override_to_domain(s) for s in stored_list)
+
+    def get_adventure_entry_overlay_active(
+        self,
+        actor: TableActorContext,
+        adventure_entry_id: UUID,
+    ) -> CampaignAdventureEntryOverlayView:
+        with self.engine.connect() as connection:
+            self._require_active_dm_authority(
+                connection, actor, action_verb="read adventure entry overlay"
+            )
+            campaign = self.campaign_repo.get_in_transaction(connection, actor.campaign_id)
+            if campaign is None or campaign.room_id != actor.room_id:
+                raise CampaignRuntimeNotFoundError(
+                    f"Campaign {actor.campaign_id} not found in room {actor.room_id}"
+                )
+            return _get_adventure_entry_overlay_in_transaction(
+                connection,
+                room_id=actor.room_id,
+                campaign_id=actor.campaign_id,
+                adventure_entry_id=adventure_entry_id,
+                link_repo=self.link_repo,
+                runtime_repo=self.runtime_repo,
+            )
+
+    def list_adventure_entry_overlays_active(
+        self,
+        actor: TableActorContext,
+        adventure_id: UUID,
+    ) -> tuple[CampaignAdventureEntryOverlayView, ...]:
+        with self.engine.connect() as connection:
+            self._require_active_dm_authority(
+                connection, actor, action_verb="read adventure entry overlays"
+            )
+            campaign = self.campaign_repo.get_in_transaction(connection, actor.campaign_id)
+            if campaign is None or campaign.room_id != actor.room_id:
+                raise CampaignRuntimeNotFoundError(
+                    f"Campaign {actor.campaign_id} not found in room {actor.room_id}"
+                )
+            return _list_adventure_entry_overlays_in_transaction(
+                connection,
+                campaign_id=actor.campaign_id,
+                adventure_id=adventure_id,
+                link_repo=self.link_repo,
+                runtime_repo=self.runtime_repo,
+            )
+
 
 __all__ = [
+    "CampaignAdventureEntryOverlayView",
+    "CampaignAdventureOverride",
+    "CampaignAdventureOverrideAlreadyExistsError",
+    "CampaignAdventureOverrideCreate",
+    "CampaignAdventureOverridePatch",
     "CampaignRuntimeActiveSessionError",
     "CampaignRuntimeArchivedError",
     "CampaignRuntimeAuthorityError",
@@ -1224,5 +2084,6 @@ __all__ = [
     "project_runtime_aggregate",
     "project_runtime_aggregates",
     "stored_aggregate_to_runtime_entry",
+    "stored_override_to_domain",
     "validate_mutation_identity",
 ]

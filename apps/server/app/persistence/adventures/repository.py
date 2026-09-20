@@ -313,15 +313,21 @@ class CampaignAdventureLinkRepository:
         with self.engine.begin() as connection:
             connection.execute(insert(campaign_adventure_links).values(**stored.__dict__))
 
+    @staticmethod
+    def detach_in_transaction(
+        connection: Connection, campaign_id: UUID, adventure_id: UUID
+    ) -> bool:
+        result = connection.execute(
+            delete(campaign_adventure_links).where(
+                campaign_adventure_links.c.campaign_id == campaign_id,
+                campaign_adventure_links.c.adventure_id == adventure_id,
+            )
+        )
+        return bool(result.rowcount > 0)
+
     def detach(self, campaign_id: UUID, adventure_id: UUID) -> bool:
         with self.engine.begin() as connection:
-            result = connection.execute(
-                delete(campaign_adventure_links).where(
-                    campaign_adventure_links.c.campaign_id == campaign_id,
-                    campaign_adventure_links.c.adventure_id == adventure_id,
-                )
-            )
-            return bool(result.rowcount > 0)
+            return self.detach_in_transaction(connection, campaign_id, adventure_id)
 
     def list_for_campaign(
         self, campaign_id: UUID

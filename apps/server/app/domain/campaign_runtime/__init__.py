@@ -27,6 +27,11 @@ from app.domain.campaign_runtime.projection import (
     project_runtime_entry,
 )
 from app.domain.campaign_runtime.schemas import (
+    CampaignAdventureEntryOverlayView,
+    CampaignAdventureOverride,
+    CampaignAdventureOverrideAlreadyExistsError,
+    CampaignAdventureOverrideCreate,
+    CampaignAdventureOverridePatch,
     RuntimeEntryValidationError,
     RuntimeEntryVisibilityError,
     RuntimeWorldEntry,
@@ -54,6 +59,11 @@ from app.domain.campaign_runtime.service import (
     validate_mutation_identity,
 )
 __all__ = [
+    "CampaignAdventureEntryOverlayView",
+    "CampaignAdventureOverride",
+    "CampaignAdventureOverrideAlreadyExistsError",
+    "CampaignAdventureOverrideCreate",
+    "CampaignAdventureOverridePatch",
     "CampaignRuntimeActiveSessionError",
     "CampaignRuntimeArchivedError",
     "CampaignRuntimeAuthorityError",

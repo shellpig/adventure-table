@@ -7,6 +7,11 @@ from uuid import UUID
 
 from pydantic import Field, model_validator
 
+from app.domain.adventures.payloads import AdventureEntryPayload
+from app.domain.adventures.schemas import (
+    AdventureEntryKind,
+    AdventureEntryVisibility,
+)
 from app.domain.campaign_runtime.payloads import (
     CampaignRuntimeError,
     RuntimeEntryKind,
@@ -208,7 +213,67 @@ class RuntimeWorldEntryPlayerView(StrictModel):
     updated_at: datetime
 
 
+class CampaignAdventureOverrideAlreadyExistsError(CampaignRuntimeError, ValueError):
+    """Raised when an override already exists for the specified adventure entry."""
+
+
+class CampaignAdventureOverride(StrictModel):
+    id: UUID
+    campaign_id: UUID
+    adventure_entry_id: UUID
+    state_json: dict[str, object]
+    note: str | None = None
+    needs_review: bool = False
+    revision: int = Field(default=1, ge=1)
+    created_at: datetime
+    updated_at: datetime
+
+
+class CampaignAdventureOverrideCreate(StrictModel):
+    adventure_entry_id: UUID
+    state: dict[str, object] = Field(default_factory=dict)
+    note: str | None = None
+    needs_review: bool = False
+
+
+class CampaignAdventureOverridePatch(StrictModel):
+    expected_override_id: UUID
+    expected_revision: int = Field(ge=1)
+    state: dict[str, object] | None = None
+    note: str | None = None
+    needs_review: bool | None = None
+
+    @model_validator(mode="after")
+    def _validate_patch(self) -> Self:
+        patch_fields = self.model_fields_set - {"expected_override_id", "expected_revision"}
+        if not patch_fields:
+            raise ValueError("at least one patch field must be set")
+        if "state" in self.model_fields_set and self.state is None:
+            raise ValueError("state cannot be null")
+        if "needs_review" in self.model_fields_set and self.needs_review is None:
+            raise ValueError("needs_review cannot be null")
+        return self
+
+
+class CampaignAdventureEntryOverlayView(StrictModel):
+    id: UUID
+    adventure_id: UUID
+    parent_entry_id: UUID | None = None
+    kind: AdventureEntryKind
+    title: str | None = None
+    body: str | None = None
+    data: AdventureEntryPayload
+    visibility: AdventureEntryVisibility
+    sort_order: int
+    override: CampaignAdventureOverride | None = None
+
+
 __all__ = [
+    "CampaignAdventureEntryOverlayView",
+    "CampaignAdventureOverride",
+    "CampaignAdventureOverrideAlreadyExistsError",
+    "CampaignAdventureOverrideCreate",
+    "CampaignAdventureOverridePatch",
     "CampaignRuntimeError",
     "RuntimeEntryValidationError",
     "RuntimeEntryVisibilityError",

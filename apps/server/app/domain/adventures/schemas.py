@@ -200,6 +200,18 @@ class CampaignAdventureLinkNotFoundError(Exception):
     pass
 
 
+class CampaignAdventureDetachBlockedError(Exception):
+    """Raised when an adventure cannot be detached due to active overrides or current scene."""
+
+    def __init__(self, campaign_id: UUID, adventure_id: UUID, reason: str) -> None:
+        self.campaign_id = campaign_id
+        self.adventure_id = adventure_id
+        self.reason = reason
+        super().__init__(
+            f"Cannot detach adventure {adventure_id} from campaign {campaign_id}: {reason}"
+        )
+
+
 __all__ = [
     "AdventureAlreadyAttachedError",
     "AdventureArchivedError",
@@ -227,5 +239,6 @@ __all__ = [
     "AdventureStatusError",
     "AttachedAdventure",
     "CampaignAdventureAttach",
+    "CampaignAdventureDetachBlockedError",
     "CampaignAdventureLinkNotFoundError",
 ]
