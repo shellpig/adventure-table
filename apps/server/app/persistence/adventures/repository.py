@@ -5,12 +5,14 @@ from datetime import datetime
 from typing import Sequence
 from uuid import UUID
 
-from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy import delete, exists, func, insert, select, update
 from sqlalchemy.engine import Engine
 
 from app.persistence.adventures.tables import (
     adventure_definitions,
     adventure_entries,
+    adventure_entry_assets,
+    campaign_adventure_links,
 )
 
 UNSET = object()
@@ -43,6 +45,14 @@ class StoredAdventureEntry:
     source_ref_json: dict[str, object] | None
     created_at: datetime
     updated_at: datetime
+
+
+@dataclass(frozen=True)
+class StoredAdventureEntryAsset:
+    adventure_entry_id: UUID
+    asset_id: UUID
+    role: str
+    sort_order: int
 
 
 class AdventureRepository:
@@ -197,7 +207,7 @@ class AdventureRepository:
                     adventure_entries.c.adventure_id == adventure_id
                 )
             )
-            return int(val if val is not None else 0)
+            return int(val)
 
     def reorder_entries(
         self,
@@ -225,10 +235,72 @@ class AdventureRepository:
                 )
             return True
 
+    def delete_definition(self, room_id: UUID, adventure_id: UUID) -> bool:
+        with self.engine.begin() as connection:
+            result = connection.execute(
+                delete(adventure_definitions).where(
+                    adventure_definitions.c.room_id == room_id,
+                    adventure_definitions.c.id == adventure_id,
+                )
+            )
+            return bool(result.rowcount > 0)
+
+    def is_attached(self, adventure_id: UUID) -> bool:
+        with self.engine.connect() as connection:
+            return bool(
+                connection.scalar(
+                    select(
+                        exists().where(campaign_adventure_links.c.adventure_id == adventure_id)
+                    )
+                )
+            )
+
+    def insert_entry_asset(self, stored: StoredAdventureEntryAsset) -> None:
+        with self.engine.begin() as connection:
+            connection.execute(insert(adventure_entry_assets).values(**stored.__dict__))
+
+    def delete_entry_asset(self, entry_id: UUID, asset_id: UUID) -> bool:
+        with self.engine.begin() as connection:
+            result = connection.execute(
+                delete(adventure_entry_assets).where(
+                    adventure_entry_assets.c.adventure_entry_id == entry_id,
+                    adventure_entry_assets.c.asset_id == asset_id,
+                )
+            )
+            return bool(result.rowcount > 0)
+
+    def list_entry_assets(self, adventure_id: UUID) -> tuple[StoredAdventureEntryAsset, ...]:
+        with self.engine.connect() as connection:
+            query = (
+                select(adventure_entry_assets)
+                .join(
+                    adventure_entries,
+                    adventure_entry_assets.c.adventure_entry_id == adventure_entries.c.id,
+                )
+                .where(adventure_entries.c.adventure_id == adventure_id)
+                .order_by(
+                    adventure_entry_assets.c.adventure_entry_id,
+                    adventure_entry_assets.c.sort_order,
+                    adventure_entry_assets.c.asset_id,
+                )
+            )
+            rows = connection.execute(query).mappings().all()
+            return tuple(StoredAdventureEntryAsset(**dict(row)) for row in rows)
+
+    def next_entry_asset_sort_order(self, entry_id: UUID) -> int:
+        with self.engine.connect() as connection:
+            val = connection.scalar(
+                select(
+                    func.coalesce(func.max(adventure_entry_assets.c.sort_order) + 1, 0)
+                ).where(adventure_entry_assets.c.adventure_entry_id == entry_id)
+            )
+            return int(val)
+
 
 __all__ = [
     "UNSET",
     "AdventureRepository",
     "StoredAdventureDefinition",
     "StoredAdventureEntry",
+    "StoredAdventureEntryAsset",
 ]

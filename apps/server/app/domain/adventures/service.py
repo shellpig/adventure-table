@@ -7,28 +7,38 @@ from uuid import UUID, uuid4
 from app.domain.adventures.payloads import dump_entry_payload, parse_entry_payload
 from app.domain.adventures.schemas import (
     AdventureArchivedError,
+    AdventureAttachedError,
     AdventureDefinition,
     AdventureDefinitionCreate,
     AdventureDefinitionPatch,
     AdventureEntry,
+    AdventureEntryAsset,
+    AdventureEntryAssetLink,
+    AdventureEntryAssetNotFoundError,
+    AdventureEntryAssetRole,
     AdventureEntryCreate,
     AdventureEntryKind,
     AdventureEntryNotFoundError,
     AdventureEntryParentError,
     AdventureEntryPatch,
+    AdventureEntryPayloadError,
     AdventureEntryReorder,
     AdventureEntryVisibility,
     AdventureForbiddenError,
     AdventureNotFoundError,
     AdventureStatus,
+    AdventureStatusError,
 )
+from app.domain.room_assets.service import room_asset_view
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.persistence.adventures.repository import (
     UNSET,
     AdventureRepository,
     StoredAdventureDefinition,
     StoredAdventureEntry,
+    StoredAdventureEntryAsset,
 )
+from app.persistence.room_assets.repository import RoomAssetRepository
 
 
 def _to_definition_view(stored: StoredAdventureDefinition) -> AdventureDefinition:
@@ -44,7 +54,10 @@ def _to_definition_view(stored: StoredAdventureDefinition) -> AdventureDefinitio
     )
 
 
-def _to_entry_view(stored: StoredAdventureEntry) -> AdventureEntry:
+def _to_entry_view(
+    stored: StoredAdventureEntry,
+    assets: tuple[AdventureEntryAsset, ...] = (),
+) -> AdventureEntry:
     parsed_data = parse_entry_payload(stored.kind, stored.data_json)
     return AdventureEntry(
         id=stored.id,
@@ -56,6 +69,7 @@ def _to_entry_view(stored: StoredAdventureEntry) -> AdventureEntry:
         data=parsed_data,
         visibility=cast(AdventureEntryVisibility, stored.visibility),
         sort_order=stored.sort_order,
+        assets=assets,
         provenance=stored.provenance_json,
         source_ref=stored.source_ref_json,
         created_at=stored.created_at,
@@ -64,8 +78,13 @@ def _to_entry_view(stored: StoredAdventureEntry) -> AdventureEntry:
 
 
 class AdventureService:
-    def __init__(self, repository: AdventureRepository) -> None:
+    def __init__(
+        self,
+        repository: AdventureRepository,
+        asset_repository: RoomAssetRepository,
+    ) -> None:
         self.repository = repository
+        self.asset_repository = asset_repository
 
     @staticmethod
     def _require_author(context: RoomAccessContext, room_id: UUID) -> None:
@@ -180,6 +199,78 @@ class AdventureService:
             raise AdventureNotFoundError(f"Adventure {adventure_id} not found in room {room_id}")
         return _to_definition_view(updated)
 
+    def _resolve_entry_assets(
+        self,
+        adventure_id: UUID,
+        room_id: UUID,
+    ) -> dict[UUID, tuple[AdventureEntryAsset, ...]]:
+        stored_assets = self.repository.list_entry_assets(adventure_id)
+        if not stored_assets:
+            return {}
+        # The asset FK is RESTRICT, so every linked asset row exists in this Room.
+        room_assets_by_id = {
+            stored.id: room_asset_view(stored)
+            for stored in self.asset_repository.list_for_room(room_id)
+        }
+        result: dict[UUID, list[AdventureEntryAsset]] = {}
+        for link in stored_assets:
+            result.setdefault(link.adventure_entry_id, []).append(
+                AdventureEntryAsset(
+                    asset=room_assets_by_id[link.asset_id],
+                    role=cast(AdventureEntryAssetRole, link.role),
+                    sort_order=link.sort_order,
+                )
+            )
+        return {entry_id: tuple(links) for entry_id, links in result.items()}
+
+    def finalize(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        adventure_id: UUID,
+    ) -> AdventureDefinition:
+        self._require_author(context, room_id)
+        definition = self._definition_or_404(room_id, adventure_id)
+        if definition.status != "draft":
+            raise AdventureStatusError(
+                f"Cannot finalize adventure in '{definition.status}' status; only draft can be finalized"
+            )
+        now = datetime.now(timezone.utc)
+        updated = self.repository.set_status(adventure_id, "finalized", now)
+        if updated is None:
+            raise AdventureNotFoundError(f"Adventure {adventure_id} not found in room {room_id}")
+        return _to_definition_view(updated)
+
+    def archive(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        adventure_id: UUID,
+    ) -> AdventureDefinition:
+        self._require_author(context, room_id)
+        definition = self._definition_or_404(room_id, adventure_id)
+        if definition.status == "archived":
+            return _to_definition_view(definition)
+        now = datetime.now(timezone.utc)
+        updated = self.repository.set_status(adventure_id, "archived", now)
+        if updated is None:
+            raise AdventureNotFoundError(f"Adventure {adventure_id} not found in room {room_id}")
+        return _to_definition_view(updated)
+
+    def delete_definition(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        adventure_id: UUID,
+    ) -> None:
+        self._require_author(context, room_id)
+        self._definition_or_404(room_id, adventure_id)
+        if self.repository.is_attached(adventure_id):
+            raise AdventureAttachedError(
+                "Adventure is attached to a campaign; use archive instead of delete"
+            )
+        self.repository.delete_definition(room_id, adventure_id)
+
     def create_entry(
         self,
         context: RoomAccessContext,
@@ -235,7 +326,8 @@ class AdventureService:
             raise AdventureEntryNotFoundError(
                 f"Adventure entry {entry_id} not found in adventure {adventure_id}"
             )
-        return _to_entry_view(stored)
+        assets_map = self._resolve_entry_assets(adventure_id, room_id)
+        return _to_entry_view(stored, assets_map.get(entry_id, ()))
 
     def list_entries(
         self,
@@ -246,7 +338,8 @@ class AdventureService:
         self._require_author(context, room_id)
         self._definition_or_404(room_id, adventure_id)
         stored_list = self.repository.list_entries(adventure_id)
-        return [_to_entry_view(stored) for stored in stored_list]
+        assets_map = self._resolve_entry_assets(adventure_id, room_id)
+        return [_to_entry_view(stored, assets_map.get(stored.id, ())) for stored in stored_list]
 
     def patch_entry(
         self,
@@ -289,7 +382,8 @@ class AdventureService:
         )
         if updated is None:
             raise AdventureEntryNotFoundError(f"Adventure entry {entry_id} not found")
-        return _to_entry_view(updated)
+        assets_map = self._resolve_entry_assets(adventure_id, room_id)
+        return _to_entry_view(updated, assets_map.get(entry_id, ()))
 
     def delete_entry(
         self,
@@ -319,6 +413,79 @@ class AdventureService:
         success = self.repository.reorder_entries(adventure_id, payload.entry_ids)
         if not success:
             raise AdventureEntryNotFoundError("One or more entry IDs not found in adventure")
+
+    def link_entry_asset(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        adventure_id: UUID,
+        entry_id: UUID,
+        payload: AdventureEntryAssetLink,
+    ) -> AdventureEntry:
+        self._require_author(context, room_id)
+        self._writable_definition(room_id, adventure_id)
+        entry = self.repository.get_entry(adventure_id, entry_id)
+        if entry is None:
+            raise AdventureEntryNotFoundError(
+                f"Adventure entry {entry_id} not found in adventure {adventure_id}"
+            )
+        asset = self.asset_repository.get(room_id, payload.asset_id)
+        if asset is None:
+            raise AdventureEntryAssetNotFoundError(
+                f"Room asset {payload.asset_id} not found in room {room_id}"
+            )
+        # "attachment" accepts either kind; the other roles are kind-specific.
+        if payload.role == "source" and asset.kind != "source_document":
+            raise AdventureEntryPayloadError(
+                f"Role 'source' requires asset kind 'source_document', got '{asset.kind}'"
+            )
+        if payload.role in ("image", "map") and asset.kind != "image":
+            raise AdventureEntryPayloadError(
+                f"Role '{payload.role}' requires asset kind 'image', got '{asset.kind}'"
+            )
+
+        existing_assets = self.repository.list_entry_assets(adventure_id)
+        if any(
+            a.adventure_entry_id == entry_id and a.asset_id == payload.asset_id
+            for a in existing_assets
+        ):
+            raise AdventureEntryPayloadError(
+                f"Asset {payload.asset_id} is already linked to entry {entry_id}"
+            )
+
+        sort_order = self.repository.next_entry_asset_sort_order(entry_id)
+        stored_link = StoredAdventureEntryAsset(
+            adventure_entry_id=entry_id,
+            asset_id=payload.asset_id,
+            role=payload.role,
+            sort_order=sort_order,
+        )
+        self.repository.insert_entry_asset(stored_link)
+        assets_map = self._resolve_entry_assets(adventure_id, room_id)
+        return _to_entry_view(entry, assets_map.get(entry_id, ()))
+
+    def unlink_entry_asset(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        adventure_id: UUID,
+        entry_id: UUID,
+        asset_id: UUID,
+    ) -> AdventureEntry:
+        self._require_author(context, room_id)
+        self._writable_definition(room_id, adventure_id)
+        entry = self.repository.get_entry(adventure_id, entry_id)
+        if entry is None:
+            raise AdventureEntryNotFoundError(
+                f"Adventure entry {entry_id} not found in adventure {adventure_id}"
+            )
+        deleted = self.repository.delete_entry_asset(entry_id, asset_id)
+        if not deleted:
+            raise AdventureEntryAssetNotFoundError(
+                f"Asset {asset_id} is not linked to entry {entry_id}"
+            )
+        assets_map = self._resolve_entry_assets(adventure_id, room_id)
+        return _to_entry_view(entry, assets_map.get(entry_id, ()))
 
 
 __all__ = ["AdventureService"]

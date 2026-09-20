@@ -5,9 +5,10 @@ from typing import Any
 from fastapi import Request
 
 from app.api.dependencies import get_content_registry, get_database_engine
-from app.config import settings
 from app.api.errors import APIError
 from app.api.rooms.table_event_wait import ProcessLocalTableEventNotifier
+from app.config import settings
+from app.domain.adventures.service import AdventureService
 from app.domain.combat.adjudication_service import CombatAdjudicationService
 from app.domain.combat.attack_definitions import AttackDefinitionResolver
 from app.domain.combat.attacks import CombatAttackService
@@ -35,6 +36,7 @@ from app.domain.rooms.table_character_state import TableCharacterStateService
 from app.domain.rooms.table_events import TableEventService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
 from app.paths import resolve_asset_root
+from app.persistence.adventures.repository import AdventureRepository
 from app.persistence.combat.adjudication import CombatAdjudicationRepository
 from app.persistence.combat.attacks import CombatAttackRepository
 from app.persistence.combat.concentration import CombatConcentrationRepository
@@ -112,6 +114,21 @@ def get_room_asset_service(request: Request) -> RoomAssetService:
         max_source_document_bytes=settings.asset_max_source_document_bytes,
     )
     request.app.state.room_asset_service = service
+    return service
+
+
+def get_adventure_service(request: Request) -> AdventureService:
+    # Starlette State has no membership test; the AttributeError is the "not built yet" signal.
+    try:
+        return request.app.state.adventure_service
+    except AttributeError:
+        pass
+    engine = get_database_engine(request)
+    service = AdventureService(
+        AdventureRepository(engine),
+        RoomAssetRepository(engine),
+    )
+    request.app.state.adventure_service = service
     return service
 
 
@@ -435,6 +452,7 @@ def get_monster_instance_service(request: Request) -> MonsterInstanceService:
 
 __all__ = [
     "_HistoryGuardedCharacterRepository",
+    "get_adventure_service",
     "get_campaign_service",
     "get_combat_adjudication_service",
     "get_combat_attack_service",

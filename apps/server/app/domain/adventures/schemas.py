@@ -10,6 +10,7 @@ from app.domain.adventures.payloads import (
     AdventureEntryPayload,
     AdventureEntryPayloadError,
 )
+from app.domain.room_assets.schemas import RoomAsset
 from app.domain.rooms.schemas import StrictModel
 
 AdventureStatus = Literal["draft", "finalized", "archived"]
@@ -30,6 +31,13 @@ AdventureEntryKind = Literal[
 ]
 
 AdventureEntryVisibility = Literal["public", "dm_only"]
+AdventureEntryAssetRole = Literal["image", "map", "source", "attachment"]
+
+
+class AdventureEntryAsset(StrictModel):
+    asset: RoomAsset
+    role: AdventureEntryAssetRole
+    sort_order: int
 
 
 class AdventureDefinition(StrictModel):
@@ -53,6 +61,7 @@ class AdventureEntry(StrictModel):
     data: AdventureEntryPayload
     visibility: AdventureEntryVisibility
     sort_order: int
+    assets: tuple[AdventureEntryAsset, ...] = ()
     provenance: dict[str, object] | None = None
     source_ref: dict[str, object] | None = None
     created_at: datetime
@@ -128,6 +137,11 @@ class AdventureEntryReorder(StrictModel):
     entry_ids: tuple[UUID, ...] = Field(min_length=1)
 
 
+class AdventureEntryAssetLink(StrictModel):
+    asset_id: UUID
+    role: AdventureEntryAssetRole
+
+
 class AdventureNotFoundError(Exception):
     pass
 
@@ -148,12 +162,29 @@ class AdventureEntryParentError(Exception):
     pass
 
 
+class AdventureAttachedError(Exception):
+    pass
+
+
+class AdventureStatusError(Exception):
+    pass
+
+
+class AdventureEntryAssetNotFoundError(Exception):
+    pass
+
+
 __all__ = [
     "AdventureArchivedError",
+    "AdventureAttachedError",
     "AdventureDefinition",
     "AdventureDefinitionCreate",
     "AdventureDefinitionPatch",
     "AdventureEntry",
+    "AdventureEntryAsset",
+    "AdventureEntryAssetLink",
+    "AdventureEntryAssetNotFoundError",
+    "AdventureEntryAssetRole",
     "AdventureEntryCreate",
     "AdventureEntryKind",
     "AdventureEntryNotFoundError",
@@ -165,4 +196,5 @@ __all__ = [
     "AdventureForbiddenError",
     "AdventureNotFoundError",
     "AdventureStatus",
+    "AdventureStatusError",
 ]

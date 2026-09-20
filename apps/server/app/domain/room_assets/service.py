@@ -41,7 +41,7 @@ def _visible(stored: StoredRoomAsset, context: RoomAccessContext) -> bool:
     return stored.visibility == "room"
 
 
-def _to_view(stored: StoredRoomAsset) -> RoomAsset:
+def room_asset_view(stored: StoredRoomAsset) -> RoomAsset:
     return RoomAsset(
         id=stored.id,
         room_id=stored.room_id,
@@ -131,7 +131,7 @@ class RoomAssetService:
             self.storage.delete(storage_key)
             raise
 
-        return _to_view(stored)
+        return room_asset_view(stored)
 
     def get(
         self,
@@ -144,7 +144,7 @@ class RoomAssetService:
         stored = self.repository.get(room_id, asset_id)
         if stored is None or not _visible(stored, context):
             raise RoomAssetNotFoundError(f"Room asset {asset_id} not found")
-        return _to_view(stored)
+        return room_asset_view(stored)
 
     def list(
         self,
@@ -155,7 +155,7 @@ class RoomAssetService:
         if context.room_id != room_id:
             raise RoomAssetNotFoundError(f"Room {room_id} not found")
         stored_list = self.repository.list_for_room(room_id, kind=kind)
-        return [_to_view(stored) for stored in stored_list if _visible(stored, context)]
+        return [room_asset_view(stored) for stored in stored_list if _visible(stored, context)]
 
     def open_content(
         self,
@@ -169,7 +169,7 @@ class RoomAssetService:
         if stored is None or not _visible(stored, context):
             raise RoomAssetNotFoundError(f"Room asset {asset_id} not found")
         handle = self.storage.open(stored.storage_key)
-        return _to_view(stored), handle
+        return room_asset_view(stored), handle
 
     def delete(
         self,
@@ -195,4 +195,5 @@ __all__ = [
     "IMAGE_MIME_TYPES",
     "RoomAssetService",
     "SOURCE_DOCUMENT_MIME_TYPES",
+    "room_asset_view",
 ]

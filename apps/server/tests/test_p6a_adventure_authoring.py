@@ -31,6 +31,7 @@ from app.domain.adventures.schemas import (
 from app.domain.adventures.service import AdventureService
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.persistence.adventures.repository import AdventureRepository
+from app.persistence.room_assets.repository import RoomAssetRepository
 from app.persistence.rooms.tables import rooms
 
 
@@ -127,7 +128,7 @@ def fixture() -> AdventureFixture:
     )
 
     repository = AdventureRepository(engine)
-    service = AdventureService(repository)
+    service = AdventureService(repository, RoomAssetRepository(engine))
 
     return AdventureFixture(
         engine=engine,
