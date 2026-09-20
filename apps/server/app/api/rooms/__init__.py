@@ -15,6 +15,7 @@ from app.api.rooms.monster_instances import router as monster_instances_router
 from app.api.rooms.p3c_pending import router as p3c_pending_router
 from app.api.rooms.p3c_rolls import router as p3c_rolls_router
 from app.api.rooms.p3c_state import router as p3c_state_router
+from app.api.rooms.room_assets import router as room_assets_router
 from app.api.rooms.seats import router as seats_router
 from app.api.rooms.sessions import router as sessions_router
 from app.api.rooms.table_events import router as table_events_router
@@ -22,6 +23,7 @@ from app.api.rooms.table_events import router as table_events_router
 
 router = APIRouter()
 router.include_router(access_router)
+router.include_router(room_assets_router)
 router.include_router(campaigns_router)
 router.include_router(seats_router)
 router.include_router(sessions_router)

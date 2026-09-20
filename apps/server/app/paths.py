@@ -135,3 +135,13 @@ def resolve_database_url() -> str:
     if database_path is not None:
         return f"sqlite+pysqlite:///{database_path.as_posix()}"
     return settings.database_url
+
+
+def resolve_asset_root() -> Path:
+    """Resolve the storage root directory for Room assets."""
+
+    configured = os.environ.get("ADVENTURE_TABLE_ASSET_ROOT") or settings.asset_root
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return (Path(__file__).resolve().parents[1] / ".data" / "assets").resolve()
+

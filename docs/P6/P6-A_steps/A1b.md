@@ -22,4 +22,13 @@ A1a 五張表與 Settings。
 
 ## 紀錄
 
-（派工後補）
+- **起始**：2026-09-20，worker agy（`Gemini 3.8 Flash (High)`），1 回合 4 分 47 秒，prompt `C:/_work/AI_Work/Tools/agy-runs/agy-p6a-A1b.prompt.txt`，conversation `a530827b-360e-4a31-8f79-ac552dfbeef5`。
+- **交付**：`paths.resolve_asset_root()`（env → Settings → `apps/server/.data/assets`；`.gitignore` 加 `.data/`）；`persistence/room_assets/storage.py::FilesystemAssetStorage`（tmp＋`os.replace`、`..`／絕對路徑拒絕、root 逃逸拒絕）；`repository.py::StoredRoomAsset`／`RoomAssetRepository`（`insert_in_transaction`、`get`、`list_for_room`、`delete` 回傳 row、`is_referenced` EXISTS `adventure_entry_assets`）；`domain/room_assets/schemas.py`（`RoomAsset` view 無 storage_key、7 個 domain error）；`service.py::RoomAssetService`（`create`／`get`／`list`／`open_content`／`delete`，單一 `_visible`，MIME→ext 常數，insert＋write 同 transaction、失敗清檔）；`api/rooms/room_assets.py`（POST raw body／GET list／GET one／GET content StreamingResponse／DELETE；錯誤碼 `room_asset_not_found` 404、`room_asset_authority_required` 403、`asset_media_type_not_supported` 400、`asset_too_large` 413、`asset_empty` 400、`asset_visibility_not_allowed` 400、`asset_in_use` 409）；`dependencies.get_room_asset_service`；router 註冊；`tests/test_p6a_room_assets.py` 10 個測試。
+- **指揮者審核修正**：
+  - `Content-Disposition` 原本把 `quote()` 百分比編碼塞進 `filename="…"`（瀏覽器不解碼）→ 改為 RFC 6266／5987：ASCII fallback `filename=` ＋ `filename*=UTF-8''<quote>`；測試斷言同步改為驗兩段。
+  - `get_asset_content` 同時用 generator `finally: close` 與 `BackgroundTask(handle.close)` 雙重關閉 → 移除 BackgroundTask。
+  - `get_room_asset_service` 多餘的 `if service is not None` 與 import 亂序（`app.config` 插在 combat import 中間）→ 整理；保留 `try/except AttributeError` 作為 Starlette State 的 membership test（既有 `getattr` 形式會突破 quality gate baseline）。
+  - `storage.write` 失敗清理的 nested try/except → `unlink(missing_ok=True)`。
+  - fixture teardown 沒清 `app.state.room_asset_service`，會漏到其他測試模組 → 加 `del`。
+- **測試**：`pytest tests/test_p6a_room_assets.py tests/test_p2a_room_access.py tests/test_p2b_room_character_api.py tests/test_p2b_legacy_and_room_delete.py tests/test_m03_import_boundary.py tests/test_code_quality_gate.py` 34 passed；全套 backend pytest 全綠（1 既有 skip）。
+- **未解問題／下一步**：`create()` 內 `else: raise Unsupported kind` 是 Literal 已排除的不可能分支，留待 A1c 若改到同檔順手收；A2a。
