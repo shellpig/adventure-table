@@ -7,6 +7,9 @@ from fastapi import Request
 from app.api.dependencies import get_content_registry, get_database_engine
 from app.api.errors import APIError
 from app.api.rooms.table_event_wait import ProcessLocalTableEventNotifier
+from app.config import settings
+from app.domain.adventures.attachments import CampaignAdventureService
+from app.domain.adventures.service import AdventureService
 from app.domain.combat.adjudication_service import CombatAdjudicationService
 from app.domain.combat.attack_definitions import AttackDefinitionResolver
 from app.domain.combat.attacks import CombatAttackService
@@ -21,6 +24,7 @@ from app.domain.combat.roll_compat import CombatAwareRollRepository
 from app.domain.combat.semantic_hp import CombatResolutionService
 from app.domain.combat.special_attacks import CombatSpecialAttackService
 from app.domain.combat.spell_service import CombatSpellService
+from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.campaigns import CampaignService
 from app.domain.rooms.character_rolls import CharacterRollModifierResolver
 from app.domain.rooms.exploration import ExplorationActionService, ExplorationStageService
@@ -32,6 +36,11 @@ from app.domain.rooms.sessions import SessionService
 from app.domain.rooms.table_character_state import TableCharacterStateService
 from app.domain.rooms.table_events import TableEventService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
+from app.paths import resolve_asset_root
+from app.persistence.adventures.repository import (
+    AdventureRepository,
+    CampaignAdventureLinkRepository,
+)
 from app.persistence.combat.adjudication import CombatAdjudicationRepository
 from app.persistence.combat.attacks import CombatAttackRepository
 from app.persistence.combat.concentration import CombatConcentrationRepository
@@ -45,6 +54,8 @@ from app.persistence.combat.resolution import CombatResolutionRepository
 from app.persistence.combat.special_attacks import SpecialAttackRepository
 from app.persistence.combat.spells import CombatSpellRepository
 from app.persistence.mcp.room_lifecycle import M04BSeatRepository, M04BSessionRepository
+from app.persistence.room_assets.repository import RoomAssetRepository
+from app.persistence.room_assets.storage import FilesystemAssetStorage
 from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.exploration import ExplorationRepository
 from app.persistence.rooms.exploration_messages import ExplorationMessageRepository
@@ -91,6 +102,53 @@ def get_campaign_service(request: Request) -> CampaignService:
     if service is None:
         service = CampaignService(CampaignRepository(get_database_engine(request)))
         request.app.state.campaign_service = service
+    return service
+
+
+def get_room_asset_service(request: Request) -> RoomAssetService:
+    # Starlette State has no membership test; the AttributeError is the "not built yet" signal.
+    try:
+        return request.app.state.room_asset_service
+    except AttributeError:
+        pass
+    service = RoomAssetService(
+        RoomAssetRepository(get_database_engine(request)),
+        FilesystemAssetStorage(resolve_asset_root()),
+        max_image_bytes=settings.asset_max_image_bytes,
+        max_source_document_bytes=settings.asset_max_source_document_bytes,
+    )
+    request.app.state.room_asset_service = service
+    return service
+
+
+def get_adventure_service(request: Request) -> AdventureService:
+    # Starlette State has no membership test; the AttributeError is the "not built yet" signal.
+    try:
+        return request.app.state.adventure_service
+    except AttributeError:
+        pass
+    engine = get_database_engine(request)
+    service = AdventureService(
+        AdventureRepository(engine),
+        RoomAssetRepository(engine),
+    )
+    request.app.state.adventure_service = service
+    return service
+
+
+def get_campaign_adventure_service(request: Request) -> CampaignAdventureService:
+    # Starlette State has no membership test; the AttributeError is the "not built yet" signal.
+    try:
+        return request.app.state.campaign_adventure_service
+    except AttributeError:
+        pass
+    engine = get_database_engine(request)
+    service = CampaignAdventureService(
+        CampaignAdventureLinkRepository(engine),
+        AdventureRepository(engine),
+        CampaignRepository(engine),
+    )
+    request.app.state.campaign_adventure_service = service
     return service
 
 
@@ -414,6 +472,8 @@ def get_monster_instance_service(request: Request) -> MonsterInstanceService:
 
 __all__ = [
     "_HistoryGuardedCharacterRepository",
+    "get_adventure_service",
+    "get_campaign_adventure_service",
     "get_campaign_service",
     "get_combat_adjudication_service",
     "get_combat_attack_service",
@@ -431,6 +491,7 @@ __all__ = [
     "get_monster_instance_service",
     "get_pending_action_service",
     "get_roll_service",
+    "get_room_asset_service",
     "get_room_workspace_service",
     "get_seat_service",
     "get_session_resume_service",

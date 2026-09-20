@@ -43,6 +43,11 @@ FORBIDDEN_MULTIPLAYER_TABLES = {
     "ai_oauth_authorizations",
     "ai_oauth_authorization_codes",
     "ai_oauth_tokens",
+    "room_assets",
+    "adventure_definitions",
+    "adventure_entries",
+    "adventure_entry_assets",
+    "campaign_adventure_links",
 }
 
 

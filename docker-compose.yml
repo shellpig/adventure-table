@@ -27,6 +27,10 @@ services:
       # Public https origin advertised in OAuth metadata when a TLS proxy
       # (e.g. Tailscale serve/funnel) fronts /mcp. Empty = request origin.
       ADVENTURE_TABLE_MCP_PUBLIC_ORIGIN: ${ADVENTURE_TABLE_MCP_PUBLIC_ORIGIN:-}
+      # Filesystem root for uploaded Room assets (images and source documents).
+      ADVENTURE_TABLE_ASSET_ROOT: /data/adventure-table/assets
+    volumes:
+      - asset_data:/data/adventure-table/assets
     command: >-
       sh -c "alembic upgrade heads &&
       uvicorn app.main:app --host 0.0.0.0 --port 8000"
@@ -70,6 +74,10 @@ services:
       # Keep E2E metadata deterministic even when a developer's .env advertises
       # a real Tailscale/Funnel origin for the daily server.
       ADVENTURE_TABLE_MCP_PUBLIC_ORIGIN: ""
+      # Filesystem root for uploaded Room assets (images and source documents).
+      ADVENTURE_TABLE_ASSET_ROOT: /data/adventure-table/assets
+    volumes:
+      - asset_data_e2e:/data/adventure-table/assets
     command: >-
       sh -c "alembic upgrade heads &&
       uvicorn app.main:app --host 0.0.0.0 --port 8000"
@@ -103,3 +111,5 @@ services:
 
 volumes:
   postgres_data:
+  asset_data:
+  asset_data_e2e:

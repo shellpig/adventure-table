@@ -8,7 +8,7 @@ import re
 
 APP_ROOT = Path(__file__).resolve().parents[1] / "app"
 FORBIDDEN_MODULE_RE = re.compile(
-    r"(?:^|\.)(?:(?:rooms?|sessions?|seats?|campaigns?|party_rosters?|table_runtime|table_events?|mcp|combats?)|monster(?:s|_[a-z0-9_]+)?)(?:\.|$)",
+    r"(?:^|\.)(?:(?:rooms?|sessions?|seats?|campaigns?|party_rosters?|table_runtime|table_events?|mcp|combats?|room_assets?|adventures?)|monster(?:s|_[a-z0-9_]+)?)(?:\.|$)",
     re.IGNORECASE,
 )
 
@@ -206,6 +206,8 @@ def test_forbidden_regex_matches_module_segments_not_substrings() -> None:
     assert FORBIDDEN_MODULE_RE.search("app.domain.combats.runtime")
     assert FORBIDDEN_MODULE_RE.search("app.persistence.monster_instances")
     assert FORBIDDEN_MODULE_RE.search("app.persistence.monster_templates")
+    assert FORBIDDEN_MODULE_RE.search("app.persistence.room_assets.tables")
+    assert FORBIDDEN_MODULE_RE.search("app.domain.adventures.service")
     assert FORBIDDEN_MODULE_RE.search("app.domain.session_scope") is None
     assert FORBIDDEN_MODULE_RE.search("app.content.roommate") is None
     assert FORBIDDEN_MODULE_RE.search("app.content.event_table") is None
@@ -213,6 +215,7 @@ def test_forbidden_regex_matches_module_segments_not_substrings() -> None:
     assert FORBIDDEN_MODULE_RE.search("app.content.combatant") is None
     assert FORBIDDEN_MODULE_RE.search("app.content.monsteroid") is None
     assert FORBIDDEN_MODULE_RE.search("app.content.p4a_monsters") is None
+    assert FORBIDDEN_MODULE_RE.search("app.misadventurer") is None
 
 
 def test_forbidden_regex_matches_plural_resource_module_names() -> None:
