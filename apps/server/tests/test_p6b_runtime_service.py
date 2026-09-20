@@ -30,6 +30,8 @@ from app.domain.campaign_runtime import (
     project_runtime_aggregates,
 )
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
+from app.domain.rooms.table_events import TableEventService
+from app.persistence.rooms.table_runtime import TableEventRepository
 from app.persistence.adventures.tables import (
     adventure_definitions,
     adventure_entries,
@@ -91,7 +93,8 @@ class ServiceFixture:
 @pytest.fixture
 def fix() -> ServiceFixture:
     engine = _engine()
-    service = CampaignRuntimeService(engine)
+    event_service = TableEventService(TableEventRepository(engine))
+    service = CampaignRuntimeService(engine, event_service)
     now = datetime.now(timezone.utc)
 
     room_a_id = uuid4()
