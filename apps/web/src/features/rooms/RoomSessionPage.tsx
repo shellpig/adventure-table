@@ -216,7 +216,8 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   )
 
   const loadOlderEvents = useCallback(async () => {
-    if (!eventStream || !hasOlderHistory(eventStream) || historyLoading) return
+    // B2b wires the Campaign history chain
+    if (!eventStream || !hasOlderHistory(eventStream, { older: [], exhausted: true }) || historyLoading) return
     setHistoryLoading(true)
     try {
       const page = await listSessionHistory(
@@ -478,7 +479,10 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
             isCurrentDm={isCurrentDm}
             initialStage={initialStage}
             events={eventStream?.events ?? []}
-            hasOlderHistory={eventStream ? hasOlderHistory(eventStream) : false}
+            // B2b wires the Campaign history chain
+            hasOlderHistory={
+              eventStream ? hasOlderHistory(eventStream, { older: [], exhausted: true }) : false
+            }
             historyLoading={historyLoading}
             onLoadOlder={loadOlderEvents}
             copy={copy}

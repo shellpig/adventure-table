@@ -77,6 +77,12 @@ export type TableEventPage = {
   events: TableEvent[]
 }
 
+export type SessionHistoryLink = {
+  session_id: string
+  previous_session: SessionSnapshot | null
+  previous_last_event_seq: number
+}
+
 export type StageState = {
   session_id: string
   revision: number
@@ -180,6 +186,15 @@ export function getSession(
   token: string,
 ): Promise<SessionSnapshot> {
   return request(tableBase(roomId, campaignId, sessionId), token)
+}
+
+export function getPreviousSession(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  token: string,
+): Promise<SessionHistoryLink> {
+  return request(`${tableBase(roomId, campaignId, sessionId)}/previous`, token)
 }
 
 export function listSessionEvents(
