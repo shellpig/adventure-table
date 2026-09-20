@@ -433,7 +433,19 @@ class SessionService:
         session_id: UUID,
         context: RoomAccessContext,
     ) -> SessionSnapshot:
-        self._require_active(room_id, campaign_id, session_id)
+        stored = self._require_active(room_id, campaign_id, session_id)
+        if (
+            context.authority is RoomAccessAuthority.OWNER
+            and stored.dm_controller_kind == "ai"
+        ):
+            return self._finalize_with_event(
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+                status=SessionStatus.ENDED,
+                actor=None,
+                owner_access_session_id=context.access_session_id,
+            )
         actor = self._resolve_human_actor(
             room_id=room_id,
             campaign_id=campaign_id,
