@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Iterable
 from uuid import UUID, uuid4
 
-from sqlalchemy import and_, delete, insert, select, update
+from sqlalchemy import and_, delete, insert, or_, select, update
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 
@@ -122,6 +122,36 @@ class SessionRepository:
                     sessions.c.campaign_id == campaign_id,
                     sessions.c.status == "active",
                 )
+            ).mappings().one_or_none()
+        return self._session(row)
+
+    def previous_for_campaign(
+        self, *, campaign_id: UUID, session_id: UUID
+    ) -> StoredSession | None:
+        with self.engine.connect() as connection:
+            base = connection.execute(
+                select(sessions.c.started_at, sessions.c.id, sessions.c.campaign_id).where(
+                    sessions.c.id == session_id
+                )
+            ).mappings().one_or_none()
+            if base is None or base["campaign_id"] != campaign_id:
+                return None
+            base_started_at = base["started_at"]
+            base_id = base["id"]
+            row = connection.execute(
+                select(sessions)
+                .where(
+                    sessions.c.campaign_id == campaign_id,
+                    or_(
+                        sessions.c.started_at < base_started_at,
+                        and_(
+                            sessions.c.started_at == base_started_at,
+                            sessions.c.id < base_id,
+                        ),
+                    ),
+                )
+                .order_by(sessions.c.started_at.desc(), sessions.c.id.desc())
+                .limit(1)
             ).mappings().one_or_none()
         return self._session(row)
 

@@ -15,6 +15,7 @@ from app.domain.rooms.sessions import (
     SessionActiveCharacterLockedError,
     SessionActiveCharacterPatch,
     SessionAlreadyActiveError,
+    SessionHistoryLink,
     SessionLateJoinError,
     SessionLateJoinRequest,
     SessionLobbyUnavailableError,
@@ -95,6 +96,20 @@ def get_session(
 ) -> SessionSnapshot:
     try:
         return service.get_session(context.room_id, campaign_id, session_id)
+    except Exception as exc:
+        raise _map_session_error(exc) from exc
+
+
+@router.get("/sessions/{session_id}/previous", response_model=SessionHistoryLink)
+def previous_session(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    service: SessionService = Depends(get_session_service),
+) -> SessionHistoryLink:
+    try:
+        return service.previous_session(context.room_id, campaign_id, session_id, context)
     except Exception as exc:
         raise _map_session_error(exc) from exc
 

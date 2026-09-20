@@ -4,6 +4,8 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
+from pydantic import Field
+
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext, StrictModel
 from app.domain.rooms.table_events import (
     TableActorContext,
@@ -77,6 +79,12 @@ class SessionResume(StrictModel):
     room_id: UUID
     campaign_id: UUID
     active_session: SessionSnapshot | None = None
+
+
+class SessionHistoryLink(StrictModel):
+    session_id: UUID
+    previous_session: SessionSnapshot | None = None
+    previous_last_event_seq: int = Field(ge=0)
 
 
 class SessionNotFoundError(LookupError):
@@ -234,6 +242,46 @@ class SessionService:
             room_id=room_id,
             campaign_id=campaign_id,
             active_session=self._present(stored) if stored is not None else None,
+        )
+
+    def previous_session(
+        self,
+        room_id: UUID,
+        campaign_id: UUID,
+        session_id: UUID,
+        context: RoomAccessContext,
+    ) -> SessionHistoryLink:
+        self._require_campaign(room_id, campaign_id)
+        try:
+            self.event_service.resolve_history_scope(
+                room_id=room_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+                context=context,
+            )
+        except TableEventNotFoundError as exc:
+            raise SessionNotFoundError(session_id) from exc
+
+        previous = self.repository.previous_for_campaign(
+            campaign_id=campaign_id,
+            session_id=session_id,
+        )
+        if previous is None:
+            return SessionHistoryLink(
+                session_id=session_id,
+                previous_session=None,
+                previous_last_event_seq=0,
+            )
+
+        runtime = self.event_service.repository.current_runtime(
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=previous.id,
+        )
+        return SessionHistoryLink(
+            session_id=session_id,
+            previous_session=self._present(previous),
+            previous_last_event_seq=runtime.last_event_seq,
         )
 
     def _require_active(
@@ -530,6 +578,7 @@ __all__ = [
     "SessionActiveCharacterLockedError",
     "SessionActiveCharacterPatch",
     "SessionAlreadyActiveError",
+    "SessionHistoryLink",
     "SessionLateJoinError",
     "SessionLateJoinRequest",
     "SessionLobbyUnavailableError",
