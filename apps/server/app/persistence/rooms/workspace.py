@@ -7,6 +7,12 @@ from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 
+from app.persistence.adventures.tables import (
+    adventure_definitions,
+    adventure_entries,
+    adventure_entry_assets,
+    campaign_adventure_links,
+)
 from app.persistence.builder_drafts import character_build_drafts
 from app.persistence.character_imports import character_import_records
 from app.persistence.characters import (
@@ -14,6 +20,7 @@ from app.persistence.characters import (
     character_versions,
     characters,
 )
+from app.persistence.room_assets.tables import room_assets
 from app.persistence.rooms.tables import (
     active_character_session_leases,
     campaign_roster_entries,
@@ -34,6 +41,7 @@ class RoomWorkspaceAssociationConflictError(RuntimeError):
 class LegacyWorkspaceCounts:
     characters: int
     drafts: int
+    asset_storage_keys: tuple[str, ...] = ()
 
 
 class RoomWorkspaceRepository:
@@ -216,6 +224,53 @@ class RoomWorkspaceRepository:
                     select(campaigns.c.id).where(campaigns.c.room_id == room_id)
                 ).all()
             )
+            adventure_ids = tuple(
+                connection.scalars(
+                    select(adventure_definitions.c.id).where(
+                        adventure_definitions.c.room_id == room_id
+                    )
+                ).all()
+            )
+            storage_keys = tuple(
+                connection.scalars(
+                    select(room_assets.c.storage_key).where(
+                        room_assets.c.room_id == room_id
+                    )
+                ).all()
+            )
+            if adventure_ids:
+                # P6-A graph: links and entry assets are RESTRICT, so unwind them first.
+                connection.execute(
+                    delete(campaign_adventure_links).where(
+                        campaign_adventure_links.c.adventure_id.in_(adventure_ids)
+                    )
+                )
+                entry_ids = tuple(
+                    connection.scalars(
+                        select(adventure_entries.c.id).where(
+                            adventure_entries.c.adventure_id.in_(adventure_ids)
+                        )
+                    ).all()
+                )
+                if entry_ids:
+                    connection.execute(
+                        delete(adventure_entry_assets).where(
+                            adventure_entry_assets.c.adventure_entry_id.in_(entry_ids)
+                        )
+                    )
+                connection.execute(
+                    delete(adventure_entries).where(
+                        adventure_entries.c.adventure_id.in_(adventure_ids)
+                    )
+                )
+                connection.execute(
+                    delete(adventure_definitions).where(
+                        adventure_definitions.c.id.in_(adventure_ids)
+                    )
+                )
+            connection.execute(
+                delete(room_assets).where(room_assets.c.room_id == room_id)
+            )
             if campaign_ids:
                 # Room Hard Delete is the explicit exception to P2 history retention.
                 # Clear the Room pointer and the Session-owned RESTRICT graph before
@@ -291,6 +346,7 @@ class RoomWorkspaceRepository:
             return LegacyWorkspaceCounts(
                 characters=len(character_ids),
                 drafts=len(draft_ids),
+                asset_storage_keys=storage_keys,
             )
 
     def attach_character(self, *, room_id: UUID, character_id: UUID) -> None:

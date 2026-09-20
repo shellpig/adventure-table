@@ -22,6 +22,11 @@ class RoomAsset(StrictModel):
     created_at: datetime
 
 
+class RoomAssetCleanupReport(StrictModel):
+    deleted: int
+    failed: tuple[str, ...] = ()
+
+
 class RoomAssetNotFoundError(Exception):
     pass
 
@@ -52,6 +57,7 @@ class RoomAssetInUseError(Exception):
 
 __all__ = [
     "RoomAsset",
+    "RoomAssetCleanupReport",
     "RoomAssetEmptyError",
     "RoomAssetForbiddenError",
     "RoomAssetInUseError",

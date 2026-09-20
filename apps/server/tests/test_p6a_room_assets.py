@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
+import logging
 from pathlib import Path
 from typing import Generator
 from urllib.parse import quote
@@ -19,18 +20,23 @@ from app.api.dependencies import get_database_engine
 from app.api.errors import APIError
 from app.api.rooms.access import get_room_access_context
 from app.db import metadata
+from app.content import load_default_content_registry
+from app.domain.adventures.service import AdventureService
 from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
+from app.domain.rooms.workspace import RoomCharacterWorkspaceService
 from app.main import app
+from app.persistence.adventures.repository import AdventureRepository
 from app.persistence.adventures.tables import (
     adventure_definitions,
     adventure_entries,
     adventure_entry_assets,
+    campaign_adventure_links,
 )
 from app.persistence.room_assets.repository import RoomAssetRepository
 from app.persistence.room_assets.storage import FilesystemAssetStorage
 from app.persistence.room_assets.tables import room_assets
-from app.persistence.rooms.tables import rooms
+from app.persistence.rooms.tables import campaigns, rooms
 
 
 def _engine() -> Engine:
@@ -179,7 +185,18 @@ def asset_fixture(tmp_path: Path) -> Generator[RoomAssetFixture, None, None]:
             return token_to_context[token_clean]
         raise APIError(401, "room_access_required", "Room access token is required")
 
+    # Room hard delete resolves these two services from app.state; pin them to this
+    # engine and restore whatever another test module left behind.
+    previous_state = {
+        name: app.state._state.get(name)
+        for name in ("room_workspace_service", "adventure_service", "character_engine")
+    }
     app.state.room_asset_service = service
+    app.state.room_workspace_service = RoomCharacterWorkspaceService(
+        engine, load_default_content_registry()
+    )
+    app.state.adventure_service = AdventureService(AdventureRepository(engine), repository)
+    app.state.character_engine = engine
     app.dependency_overrides[get_database_engine] = lambda: engine
     app.dependency_overrides[get_room_access_context] = _override_access_context
 
@@ -201,6 +218,11 @@ def asset_fixture(tmp_path: Path) -> Generator[RoomAssetFixture, None, None]:
         )
     finally:
         del app.state.room_asset_service
+        for name, value in previous_state.items():
+            if value is None:
+                app.state._state.pop(name, None)
+            else:
+                app.state._state[name] = value
         app.dependency_overrides.pop(get_database_engine, None)
         app.dependency_overrides.pop(get_room_access_context, None)
 
@@ -690,3 +712,336 @@ def test_content_disposition_uses_original_filename(asset_fixture: RoomAssetFixt
     content_disp = content_resp.headers.get("content-disposition", "")
     assert content_disp.startswith("inline; filename=\"map of 'Old' Keep.png\"")
     assert f"filename*=UTF-8''{quote(original_name)}" in content_disp
+
+
+def test_room_hard_delete_removes_assets_adventures_and_files(
+    asset_fixture: RoomAssetFixture,
+) -> None:
+    # owner uploads two images and one source_document
+    img1_resp = _upload(
+        asset_fixture.client,
+        asset_fixture.token_owner_a,
+        room_id=asset_fixture.room_a_id,
+        kind="image",
+        filename="img1.png",
+        mime="image/png",
+        data=b"\x89PNG\r\n\x1a\nimg1",
+        visibility="room",
+    )
+    assert img1_resp.status_code == 201
+    img1_id = img1_resp.json()["id"]
+
+    img2_resp = _upload(
+        asset_fixture.client,
+        asset_fixture.token_owner_a,
+        room_id=asset_fixture.room_a_id,
+        kind="image",
+        filename="img2.png",
+        mime="image/png",
+        data=b"\x89PNG\r\n\x1a\nimg2",
+        visibility="room",
+    )
+    assert img2_resp.status_code == 201
+    img2_id = img2_resp.json()["id"]
+
+    doc_resp = _upload(
+        asset_fixture.client,
+        asset_fixture.token_owner_a,
+        room_id=asset_fixture.room_a_id,
+        kind="source_document",
+        filename="notes.txt",
+        mime="text/plain",
+        data=b"secret notes",
+        visibility="dm_only",
+    )
+    assert doc_resp.status_code == 201
+
+    # upload one image to Room B before the delete
+    img_b_resp = _upload(
+        asset_fixture.client,
+        asset_fixture.token_owner_b,
+        room_id=asset_fixture.room_b_id,
+        kind="image",
+        filename="b.png",
+        mime="image/png",
+        data=b"\x89PNG\r\n\x1a\nimgB",
+        visibility="room",
+    )
+    assert img_b_resp.status_code == 201
+    img_b_id = img_b_resp.json()["id"]
+
+    # creates an Adventure via POST /api/rooms/{room_a}/adventures, an entry, links one image (POST .../entries/{id}/assets), finalizes
+    auth_a = {"Authorization": f"Bearer {asset_fixture.token_owner_a}"}
+    adv_resp = asset_fixture.client.post(
+        f"/api/rooms/{asset_fixture.room_a_id}/adventures",
+        json={"name": "Adventure A"},
+        headers=auth_a,
+    )
+    assert adv_resp.status_code == 201
+    adv_id = adv_resp.json()["id"]
+
+    entry_resp = asset_fixture.client.post(
+        f"/api/rooms/{asset_fixture.room_a_id}/adventures/{adv_id}/entries",
+        json={"kind": "scene", "title": "Scene 1"},
+        headers=auth_a,
+    )
+    assert entry_resp.status_code == 201
+    entry_id = entry_resp.json()["id"]
+
+    link_resp = asset_fixture.client.post(
+        f"/api/rooms/{asset_fixture.room_a_id}/adventures/{adv_id}/entries/{entry_id}/assets",
+        json={"asset_id": img1_id, "role": "image"},
+        headers=auth_a,
+    )
+    assert link_resp.status_code == 200
+
+    fin_resp = asset_fixture.client.post(
+        f"/api/rooms/{asset_fixture.room_a_id}/adventures/{adv_id}/finalize",
+        headers=auth_a,
+    )
+    assert fin_resp.status_code == 200
+
+    # seed a Campaign and link the finalized Adventure to it
+    camp_id = uuid4()
+    now = datetime.now(timezone.utc)
+    with asset_fixture.engine.begin() as conn:
+        conn.execute(
+            insert(campaigns).values(
+                id=camp_id,
+                room_id=asset_fixture.room_a_id,
+                name="Campaign Alpha",
+                ruleset="dnd5e-2014",
+                status="active",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        conn.execute(
+            insert(campaign_adventure_links).values(
+                campaign_id=camp_id,
+                adventure_id=UUID(adv_id),
+                sort_order=0,
+                attached_at=now,
+            )
+        )
+
+    # DELETE /api/rooms/{room_a} with the owner token → 204
+    del_resp = asset_fixture.client.delete(
+        f"/api/rooms/{asset_fixture.room_a_id}",
+        headers=auth_a,
+    )
+    assert del_resp.status_code == 204
+
+    # every Room A row across the P6-A tables is gone
+    with asset_fixture.engine.connect() as conn:
+        assert (
+            conn.scalar(
+                select(func.count())
+                .select_from(rooms)
+                .where(rooms.c.id == asset_fixture.room_a_id)
+            )
+            == 0
+        )
+        assert (
+            conn.scalar(
+                select(func.count())
+                .select_from(room_assets)
+                .where(room_assets.c.room_id == asset_fixture.room_a_id)
+            )
+            == 0
+        )
+        assert (
+            conn.scalar(
+                select(func.count())
+                .select_from(adventure_definitions)
+                .where(adventure_definitions.c.room_id == asset_fixture.room_a_id)
+            )
+            == 0
+        )
+        assert (
+            conn.scalar(
+                select(func.count())
+                .select_from(adventure_entries)
+                .where(adventure_entries.c.adventure_id == UUID(adv_id))
+            )
+            == 0
+        )
+        assert (
+            conn.scalar(
+                select(func.count())
+                .select_from(adventure_entry_assets)
+                .where(adventure_entry_assets.c.adventure_entry_id == UUID(entry_id))
+            )
+            == 0
+        )
+        assert (
+            conn.scalar(
+                select(func.count())
+                .select_from(campaign_adventure_links)
+                .where(campaign_adventure_links.c.campaign_id == camp_id)
+            )
+            == 0
+        )
+
+    # tmp_path/<room_a> contains no files
+    room_a_dir = asset_fixture.tmp_path / str(asset_fixture.room_a_id)
+    if room_a_dir.exists():
+        assert not [f for f in room_a_dir.rglob("*") if f.is_file()]
+
+    # Room B is untouched
+    with asset_fixture.engine.connect() as conn:
+        assert (
+            conn.scalar(
+                select(func.count())
+                .select_from(rooms)
+                .where(rooms.c.id == asset_fixture.room_b_id)
+            )
+            == 1
+        )
+        assert (
+            conn.scalar(
+                select(func.count())
+                .select_from(room_assets)
+                .where(room_assets.c.room_id == asset_fixture.room_b_id)
+            )
+            == 1
+        )
+    file_b = asset_fixture.tmp_path / str(asset_fixture.room_b_id) / f"{img_b_id}.png"
+    assert file_b.is_file()
+
+
+def test_room_hard_delete_file_failure_keeps_locator_and_deletes_the_rest(
+    asset_fixture: RoomAssetFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # owner uploads three images
+    ids: list[str] = []
+    for i in range(3):
+        resp = _upload(
+            asset_fixture.client,
+            asset_fixture.token_owner_a,
+            room_id=asset_fixture.room_a_id,
+            kind="image",
+            filename=f"img{i}.png",
+            mime="image/png",
+            data=b"\x89PNG\r\n\x1a\n" + f"img-data-{i}".encode(),
+            visibility="room",
+        )
+        assert resp.status_code == 201
+        ids.append(resp.json()["id"])
+
+    # one storage_key fails to delete, the others succeed
+    failing_id = ids[1]
+    failing_key = f"{asset_fixture.room_a_id}/{failing_id}.png"
+    orig_delete = asset_fixture.storage.delete
+
+    def _delete_with_one_failure(storage_key: str) -> None:
+        if storage_key == failing_key:
+            raise OSError("Simulated disk error on delete")
+        orig_delete(storage_key)
+
+    monkeypatch.setattr(asset_fixture.storage, "delete", _delete_with_one_failure)
+
+    auth_a = {"Authorization": f"Bearer {asset_fixture.token_owner_a}"}
+    # Alembic's fileConfig (run by migration tests in the same worker) disables
+    # existing loggers; re-enable ours so the capture below sees the record.
+    logging.getLogger("app.domain.room_assets.service").disabled = False
+    with caplog.at_level(logging.ERROR, logger="app.domain.room_assets.service"):
+        del_resp = asset_fixture.client.delete(
+            f"/api/rooms/{asset_fixture.room_a_id}",
+            headers=auth_a,
+        )
+    assert del_resp.status_code == 204
+
+    # all DB rows gone
+    with asset_fixture.engine.connect() as conn:
+        assert (
+            conn.scalar(
+                select(func.count())
+                .select_from(rooms)
+                .where(rooms.c.id == asset_fixture.room_a_id)
+            )
+            == 0
+        )
+        assert (
+            conn.scalar(
+                select(func.count())
+                .select_from(room_assets)
+                .where(room_assets.c.room_id == asset_fixture.room_a_id)
+            )
+            == 0
+        )
+
+    # the two other files gone
+    assert not (asset_fixture.tmp_path / str(asset_fixture.room_a_id) / f"{ids[0]}.png").exists()
+    assert not (asset_fixture.tmp_path / str(asset_fixture.room_a_id) / f"{ids[2]}.png").exists()
+
+    # the failing file still on disk
+    failing_file = asset_fixture.tmp_path / str(asset_fixture.room_a_id) / f"{failing_id}.png"
+    assert failing_file.is_file()
+
+    # exactly one ERROR line, and it locates the orphan by room and storage_key
+    error_records = [
+        r
+        for r in caplog.records
+        if r.levelno == logging.ERROR and r.name == "app.domain.room_assets.service"
+    ]
+    assert len(error_records) == 1
+    rec_msg = error_records[0].getMessage()
+    assert str(asset_fixture.room_a_id) in rec_msg
+    assert failing_key in rec_msg
+
+    # the report a retry job would consume
+    report = asset_fixture.service.purge_storage_keys(
+        asset_fixture.room_a_id, [failing_key]
+    )
+    assert report.deleted == 0
+    assert report.failed == (failing_key,)
+
+
+def test_room_hard_delete_by_member_is_403_and_touches_nothing(
+    asset_fixture: RoomAssetFixture,
+) -> None:
+    # owner uploads an image
+    resp = _upload(
+        asset_fixture.client,
+        asset_fixture.token_owner_a,
+        room_id=asset_fixture.room_a_id,
+        kind="image",
+        filename="test.png",
+        mime="image/png",
+        data=b"\x89PNG\r\n\x1a\ntest",
+        visibility="room",
+    )
+    assert resp.status_code == 201
+    asset_id = resp.json()["id"]
+    file_path = asset_fixture.tmp_path / str(asset_fixture.room_a_id) / f"{asset_id}.png"
+    assert file_path.is_file()
+
+    # member token DELETE room → 403
+    del_resp = asset_fixture.client.delete(
+        f"/api/rooms/{asset_fixture.room_a_id}",
+        headers={"Authorization": f"Bearer {asset_fixture.token_member_a}"},
+    )
+    assert del_resp.status_code == 403
+
+    # asset rows and files unchanged
+    with asset_fixture.engine.connect() as conn:
+        assert (
+            conn.scalar(
+                select(func.count())
+                .select_from(rooms)
+                .where(rooms.c.id == asset_fixture.room_a_id)
+            )
+            == 1
+        )
+        assert (
+            conn.scalar(
+                select(func.count())
+                .select_from(room_assets)
+                .where(room_assets.c.room_id == asset_fixture.room_a_id)
+            )
+            == 1
+        )
+    assert file_path.is_file()

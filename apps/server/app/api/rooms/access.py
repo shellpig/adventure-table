@@ -6,7 +6,11 @@ from fastapi import APIRouter, Depends, Request, Response, status
 
 from app.api.dependencies import get_database_engine
 from app.api.errors import APIError
-from app.api.rooms.dependencies import get_room_workspace_service
+from app.api.rooms.dependencies import (
+    get_room_asset_service,
+    get_room_workspace_service,
+)
+from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.access import FixedWindowThrottle
 from app.domain.rooms.schemas import (
     CreateRoomRequest,
@@ -136,10 +140,12 @@ def heartbeat(
 def hard_delete_room(
     context: RoomAccessContext = Depends(get_room_access_context),
     workspace: RoomCharacterWorkspaceService = Depends(get_room_workspace_service),
+    asset_service: RoomAssetService = Depends(get_room_asset_service),
 ) -> Response:
     if context.authority is not RoomAccessAuthority.OWNER:
         raise APIError(403, "room_owner_required", "Owner authority is required")
-    workspace.workspace_repository.hard_delete_room(context.room_id)
+    removed = workspace.workspace_repository.hard_delete_room(context.room_id)
+    asset_service.purge_storage_keys(context.room_id, removed.asset_storage_keys)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

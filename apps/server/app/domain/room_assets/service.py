@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import hashlib
-from typing import BinaryIO, cast
+import logging
+from typing import BinaryIO, Sequence, cast
 from uuid import UUID, uuid4
 
 from app.domain.room_assets.schemas import (
     RoomAsset,
+    RoomAssetCleanupReport,
     RoomAssetEmptyError,
     RoomAssetForbiddenError,
     RoomAssetInUseError,
@@ -20,6 +22,8 @@ from app.domain.room_assets.schemas import (
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.persistence.room_assets.repository import RoomAssetRepository, StoredRoomAsset
 from app.persistence.room_assets.storage import FilesystemAssetStorage
+
+logger = logging.getLogger(__name__)
 
 IMAGE_MIME_TYPES: dict[str, str] = {
     "image/png": ".png",
@@ -189,6 +193,25 @@ class RoomAssetService:
         deleted = self.repository.delete(room_id, asset_id)
         if deleted is not None:
             self.storage.delete(deleted.storage_key)
+
+    def purge_storage_keys(
+        self,
+        room_id: UUID,
+        storage_keys: Sequence[str],
+    ) -> RoomAssetCleanupReport:
+        deleted = 0
+        failed: list[str] = []
+        for key in storage_keys:
+            try:
+                self.storage.delete(key)
+                deleted += 1
+            except OSError as exc:
+                # The log line plus the returned report are the retry locator for the orphan.
+                logger.error(
+                    "room asset cleanup failed for room=%s storage_key=%s: %s", room_id, key, exc
+                )
+                failed.append(key)
+        return RoomAssetCleanupReport(deleted=deleted, failed=tuple(failed))
 
 
 __all__ = [
