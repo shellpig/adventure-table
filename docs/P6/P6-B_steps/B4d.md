@@ -19,4 +19,9 @@
 
 ## 完成紀錄
 
-- 待補。
+- **起始**：2026-09-20～2026-09-21；agy 一回合實作，conversation `dedf9df2-78e9-4771-9bfd-c10f3d984390`，約 13 分 23 秒。
+- **交付**：active Session override create/get/list/update/clear、context get/update/clear、Adventure overlay get/list routes；共用 typed Human actor resolver；Current DM lifecycle／event tests；Player全 route拒絕；nonparticipant／wrong scope／inactive／stale actor／revision／identity／idempotency／scene validation完整 stable-error matrix。
+- **指揮者審核修正**：補上 Player拒絕時 override/context/mutation/event durable state皆零副作用；補 AI Player serialized model無 `dm_notes`／recipient ids；把 detach兩種 blocker改走 public DELETE route，直接驗證 409 `campaign_adventure_detach_blocked` 且清除後204。核對 route無 persistence import、Player無 Adventure Definition／overlay讀取、Human／AI共用 service authority。
+- **測試**：B4 API＋P6-B runtime／active／override／context＋P6-A attach＋Exploration API＋quality gate，`106 passed, 2 skipped`；`git diff --check` 通過。
+- **驗證 commit**：`3bcc65d4`。
+- **未解問題／下一步**：B4無未解；接 B5a Web API／types、雙語 copy、Campaign Changes骨架。
