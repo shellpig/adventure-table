@@ -142,6 +142,20 @@ class AdventureEntryAssetLink(StrictModel):
     role: AdventureEntryAssetRole
 
 
+class AttachedAdventure(StrictModel):
+    campaign_id: UUID
+    adventure_id: UUID
+    sort_order: int
+    attached_at: datetime
+    name: str
+    summary: str | None
+    status: AdventureStatus
+
+
+class CampaignAdventureAttach(StrictModel):
+    adventure_id: UUID
+
+
 class AdventureNotFoundError(Exception):
     pass
 
@@ -174,7 +188,20 @@ class AdventureEntryAssetNotFoundError(Exception):
     pass
 
 
+class AdventureNotFinalizedError(Exception):
+    pass
+
+
+class AdventureAlreadyAttachedError(Exception):
+    pass
+
+
+class CampaignAdventureLinkNotFoundError(Exception):
+    pass
+
+
 __all__ = [
+    "AdventureAlreadyAttachedError",
     "AdventureArchivedError",
     "AdventureAttachedError",
     "AdventureDefinition",
@@ -194,7 +221,11 @@ __all__ = [
     "AdventureEntryReorder",
     "AdventureEntryVisibility",
     "AdventureForbiddenError",
+    "AdventureNotFinalizedError",
     "AdventureNotFoundError",
     "AdventureStatus",
     "AdventureStatusError",
+    "AttachedAdventure",
+    "CampaignAdventureAttach",
+    "CampaignAdventureLinkNotFoundError",
 ]

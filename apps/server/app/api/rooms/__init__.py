@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.rooms.access import router as access_router
 from app.api.rooms.adventures import router as adventures_router
 from app.api.rooms.ai_controllers import router as ai_controllers_router
+from app.api.rooms.campaign_adventures import router as campaign_adventures_router
 from app.api.rooms.campaigns import router as campaigns_router
 from app.api.rooms.character_builder import router as character_builder_router
 from app.api.rooms.characters import router as characters_router
@@ -26,6 +27,7 @@ router = APIRouter()
 router.include_router(access_router)
 router.include_router(room_assets_router)
 router.include_router(adventures_router)
+router.include_router(campaign_adventures_router)
 router.include_router(campaigns_router)
 router.include_router(seats_router)
 router.include_router(sessions_router)

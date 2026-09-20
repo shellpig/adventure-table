@@ -55,6 +55,14 @@ class StoredAdventureEntryAsset:
     sort_order: int
 
 
+@dataclass(frozen=True)
+class StoredCampaignAdventureLink:
+    campaign_id: UUID
+    adventure_id: UUID
+    sort_order: int
+    attached_at: datetime
+
+
 class AdventureRepository:
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
@@ -297,10 +305,69 @@ class AdventureRepository:
             return int(val)
 
 
+class CampaignAdventureLinkRepository:
+    def __init__(self, engine: Engine) -> None:
+        self.engine = engine
+
+    def attach(self, stored: StoredCampaignAdventureLink) -> None:
+        with self.engine.begin() as connection:
+            connection.execute(insert(campaign_adventure_links).values(**stored.__dict__))
+
+    def detach(self, campaign_id: UUID, adventure_id: UUID) -> bool:
+        with self.engine.begin() as connection:
+            result = connection.execute(
+                delete(campaign_adventure_links).where(
+                    campaign_adventure_links.c.campaign_id == campaign_id,
+                    campaign_adventure_links.c.adventure_id == adventure_id,
+                )
+            )
+            return bool(result.rowcount > 0)
+
+    def list_for_campaign(
+        self, campaign_id: UUID
+    ) -> tuple[StoredCampaignAdventureLink, ...]:
+        with self.engine.connect() as connection:
+            query = (
+                select(campaign_adventure_links)
+                .where(campaign_adventure_links.c.campaign_id == campaign_id)
+                .order_by(
+                    campaign_adventure_links.c.sort_order,
+                    campaign_adventure_links.c.attached_at,
+                    campaign_adventure_links.c.adventure_id,
+                )
+            )
+            rows = connection.execute(query).mappings().all()
+            return tuple(StoredCampaignAdventureLink(**dict(row)) for row in rows)
+
+    def is_attached(self, campaign_id: UUID, adventure_id: UUID) -> bool:
+        with self.engine.connect() as connection:
+            return bool(
+                connection.scalar(
+                    select(
+                        exists().where(
+                            campaign_adventure_links.c.campaign_id == campaign_id,
+                            campaign_adventure_links.c.adventure_id == adventure_id,
+                        )
+                    )
+                )
+            )
+
+    def next_sort_order(self, campaign_id: UUID) -> int:
+        with self.engine.connect() as connection:
+            val = connection.scalar(
+                select(
+                    func.coalesce(func.max(campaign_adventure_links.c.sort_order) + 1, 0)
+                ).where(campaign_adventure_links.c.campaign_id == campaign_id)
+            )
+            return int(val)
+
+
 __all__ = [
     "UNSET",
     "AdventureRepository",
+    "CampaignAdventureLinkRepository",
     "StoredAdventureDefinition",
     "StoredAdventureEntry",
     "StoredAdventureEntryAsset",
+    "StoredCampaignAdventureLink",
 ]
