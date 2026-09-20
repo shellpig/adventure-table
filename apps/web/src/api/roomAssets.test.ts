@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  getRoomAssetContent,
+  RoomAssetApiError,
   roomAssetContentUrl,
   uploadRoomAsset,
 } from './roomAssets'
@@ -63,5 +65,45 @@ describe('P6-A Room Assets API client', () => {
   it('roomAssetContentUrl returns relative path to asset content', () => {
     const url = roomAssetContentUrl(ROOM_ID, ASSET_ID)
     expect(url).toBe(`/api/rooms/${ROOM_ID}/assets/${ASSET_ID}/content`)
+  })
+
+  it('getRoomAssetContent fetches content with Bearer header and no Content-Type, resolves to Blob, and rejects with RoomAssetApiError on 404', async () => {
+    const fakeBlob = new Blob(['fake image data'], { type: 'image/png' })
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => fakeBlob,
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await getRoomAssetContent(ROOM_ID, ASSET_ID, TOKEN)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe(`/api/rooms/${ROOM_ID}/assets/${ASSET_ID}/content`)
+    expect(init.headers).toEqual({
+      Authorization: `Bearer ${TOKEN}`,
+    })
+    expect(init.headers).not.toHaveProperty('Content-Type')
+    expect(result).toBe(fakeBlob)
+
+    const errorFetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({
+        error: { code: 'room_asset_not_found', message: 'Asset not found' },
+      }),
+    })
+    vi.stubGlobal('fetch', errorFetchMock)
+
+    await expect(getRoomAssetContent(ROOM_ID, ASSET_ID, TOKEN)).rejects.toThrow(RoomAssetApiError)
+    try {
+      await getRoomAssetContent(ROOM_ID, ASSET_ID, TOKEN)
+    } catch (err) {
+      expect(err).toBeInstanceOf(RoomAssetApiError)
+      const apiErr = err as RoomAssetApiError
+      expect(apiErr.status).toBe(404)
+      expect(apiErr.code).toBe('room_asset_not_found')
+    }
   })
 })

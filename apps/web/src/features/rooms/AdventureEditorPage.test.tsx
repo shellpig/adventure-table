@@ -6,11 +6,13 @@ import {
   AdventureApiError,
   type AdventureEntry,
 } from '../../api/adventures'
+import { RoomAssetApiError } from '../../api/roomAssets'
 import { LocaleProvider } from '../../i18n/LocaleProvider'
 import { LOCALE_STORAGE_KEY, type LocaleStorage } from '../../i18n/locale'
 import {
   AdventureEntryList,
   ENTRY_KIND_FIELDS,
+  EntryAssetUploadForm,
   entryCreateFromForm,
   entryFormFromEntry,
   entryPatchFromForm,
@@ -20,6 +22,14 @@ import {
   type EntryFormState,
 } from './AdventureEditorPage'
 import { adventureErrorMessage, adventuresCopy } from './adventuresCopy'
+
+vi.mock('../../api/roomAssets', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../api/roomAssets')>()
+  return {
+    ...actual,
+    getRoomAssetContent: vi.fn().mockReturnValue(new Promise(() => {})),
+  }
+})
 
 function testStorage(locale: 'en' | 'zh-TW'): LocaleStorage {
   return {
@@ -305,9 +315,14 @@ describe('AdventureEntryList rendering and copy parity', () => {
           entries={sampleEntries}
           pending={false}
           readOnly={false}
+          roomId="room-1"
+          token="token-1"
+          onAssetError={vi.fn()}
           onDelete={vi.fn()}
           onEdit={vi.fn()}
+          onLinkAsset={vi.fn()}
           onMove={vi.fn()}
+          onUnlinkAsset={vi.fn()}
         />
       </LocaleProvider>,
     )
@@ -329,9 +344,14 @@ describe('AdventureEntryList rendering and copy parity', () => {
           entries={sampleEntries}
           pending={false}
           readOnly={true}
+          roomId="room-1"
+          token="token-1"
+          onAssetError={vi.fn()}
           onDelete={vi.fn()}
           onEdit={vi.fn()}
+          onLinkAsset={vi.fn()}
           onMove={vi.fn()}
+          onUnlinkAsset={vi.fn()}
         />
       </LocaleProvider>,
     )
@@ -345,9 +365,14 @@ describe('AdventureEntryList rendering and copy parity', () => {
           entries={sampleEntries}
           pending={false}
           readOnly={false}
+          roomId="room-1"
+          token="token-1"
+          onAssetError={vi.fn()}
           onDelete={vi.fn()}
           onEdit={vi.fn()}
+          onLinkAsset={vi.fn()}
           onMove={vi.fn()}
+          onUnlinkAsset={vi.fn()}
         />
       </LocaleProvider>,
     )
@@ -357,6 +382,117 @@ describe('AdventureEntryList rendering and copy parity', () => {
     expect(zhHtml).not.toContain('?')
     expect(zhHtml).toContain(zhCopy.editEntry)
     expect(zhHtml).toContain(zhCopy.deleteEntry)
+  })
+
+  it('renders entry with image and attachment assets correctly and respects readOnly', () => {
+    const enCopy = adventuresCopy('en')
+    const entryWithAssets: AdventureEntry = {
+      id: 'entry-assets-1',
+      adventure_id: 'adv-1',
+      parent_entry_id: null,
+      kind: 'scene',
+      title: 'Cave of Echoes',
+      body: 'Drip drop.',
+      visibility: 'public',
+      sort_order: 1,
+      assets: [
+        {
+          asset: {
+            id: 'asset-img-1',
+            room_id: 'room-1',
+            kind: 'image',
+            original_filename: 'cave-map.png',
+            mime_type: 'image/png',
+            size_bytes: 1024,
+            sha256: 'sha-img-1',
+            visibility: 'dm_only',
+            created_at: '2026-09-20T00:00:00Z',
+          },
+          role: 'image',
+          sort_order: 1,
+        },
+        {
+          asset: {
+            id: 'asset-att-1',
+            room_id: 'room-1',
+            kind: 'source_document',
+            original_filename: 'handout.pdf',
+            mime_type: 'application/pdf',
+            size_bytes: 2048,
+            sha256: 'sha-att-1',
+            visibility: 'room',
+            created_at: '2026-09-20T00:00:00Z',
+          },
+          role: 'attachment',
+          sort_order: 2,
+        },
+      ],
+      data: { kind: 'scene' },
+      created_at: '2026-09-20T00:00:00Z',
+      updated_at: '2026-09-20T00:00:00Z',
+    }
+
+    const editableHtml = renderToStaticMarkup(
+      <LocaleProvider storage={testStorage('en')} documentTarget={null}>
+        <AdventureEntryList
+          copy={enCopy}
+          entries={[entryWithAssets]}
+          pending={false}
+          readOnly={false}
+          roomId="room-1"
+          token="token-1"
+          onAssetError={vi.fn()}
+          onDelete={vi.fn()}
+          onEdit={vi.fn()}
+          onLinkAsset={vi.fn()}
+          onMove={vi.fn()}
+          onUnlinkAsset={vi.fn()}
+        />
+      </LocaleProvider>,
+    )
+    expect(editableHtml).toContain('handout.pdf')
+    expect(editableHtml).toContain(enCopy.roleImage)
+    expect(editableHtml).toContain(enCopy.assetDmOnly)
+    expect(editableHtml).toContain(enCopy.unlinkAsset)
+
+    const readOnlyHtml = renderToStaticMarkup(
+      <LocaleProvider storage={testStorage('en')} documentTarget={null}>
+        <AdventureEntryList
+          copy={enCopy}
+          entries={[entryWithAssets]}
+          pending={false}
+          readOnly={true}
+          roomId="room-1"
+          token="token-1"
+          onAssetError={vi.fn()}
+          onDelete={vi.fn()}
+          onEdit={vi.fn()}
+          onLinkAsset={vi.fn()}
+          onMove={vi.fn()}
+          onUnlinkAsset={vi.fn()}
+        />
+      </LocaleProvider>,
+    )
+    expect(readOnlyHtml).toContain('handout.pdf')
+    expect(readOnlyHtml).toContain(enCopy.roleImage)
+    expect(readOnlyHtml).toContain(enCopy.assetDmOnly)
+    expect(readOnlyHtml).not.toContain('<button')
+  })
+
+  it('renders EntryAssetUploadForm with image accept, role labels, visibility labels, and dm_only default', () => {
+    const copy = adventuresCopy('en')
+    const html = renderToStaticMarkup(
+      <EntryAssetUploadForm
+        copy={copy}
+        onSubmit={vi.fn()}
+      />,
+    )
+    expect(html).toContain('accept="image/png,image/jpeg,image/webp"')
+    expect(html).toContain(copy.roleImage)
+    expect(html).toContain(copy.roleMap)
+    expect(html).toContain(copy.assetVisibilityRoom)
+    expect(html).toContain(copy.assetVisibilityDmOnly)
+    expect(html).toMatch(/value="dm_only" selected|selected="" value="dm_only"|<option selected="" value="dm_only"|<option value="dm_only" selected=""/)
   })
 
   it('maintains copy parity and maps new error codes', () => {
@@ -377,6 +513,12 @@ describe('AdventureEntryList rendering and copy parity', () => {
 
       const notFoundErr = new AdventureApiError(404, 'adventure_entry_not_found', 'Not found')
       expect(adventureErrorMessage(notFoundErr, copy)).toBe(copy.errAdventureEntryNotFound)
+
+      const roomAssetNotFoundErr = new RoomAssetApiError(404, 'room_asset_not_found', 'Not found')
+      expect(adventureErrorMessage(roomAssetNotFoundErr, copy)).toBe(copy.errRoomAssetNotFound)
+
+      const assetEmptyErr = new RoomAssetApiError(400, 'asset_empty', 'Empty')
+      expect(adventureErrorMessage(assetEmptyErr, copy)).toBe(copy.errAssetEmpty)
     }
   })
 
@@ -392,6 +534,22 @@ describe('AdventureEntryList rendering and copy parity', () => {
     expect(editorSource).toContain('<label className="room-field">')
     expect(editorSource).not.toContain('<div className="room-field">')
 
+    const uploadIdx = editorSource.indexOf('uploadRoomAsset(')
+    const linkIdx = editorSource.indexOf('linkAdventureEntryAsset(')
+    expect(uploadIdx).toBeGreaterThan(-1)
+    expect(linkIdx).toBeGreaterThan(-1)
+    expect(uploadIdx).toBeLessThan(linkIdx)
+    expect(editorSource).toContain('.then((asset)')
+    expect(editorSource).toContain('window.confirm(copy.unlinkConfirm)')
+
+    const thumbSource = readFileSync(
+      new URL('./AssetThumbnail.tsx', import.meta.url),
+      'utf8',
+    )
+    expect(thumbSource).toContain('URL.createObjectURL')
+    expect(thumbSource).toContain('URL.revokeObjectURL')
+    expect(thumbSource).not.toContain('src={roomAssetContentUrl')
+
     const pageSource = readFileSync(
       new URL('./RoomAdventuresPage.tsx', import.meta.url),
       'utf8',
@@ -403,3 +561,5 @@ describe('AdventureEntryList rendering and copy parity', () => {
     expect(noAuthorityIdx).toBeLessThan(editorComponentIdx)
   })
 })
+
+

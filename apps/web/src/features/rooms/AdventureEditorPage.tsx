@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import {
   archiveAdventure,
@@ -6,10 +6,12 @@ import {
   deleteAdventureEntry,
   finalizeAdventure,
   getAdventure,
+  linkAdventureEntryAsset,
   listAdventureEntries,
   patchAdventure,
   patchAdventureEntry,
   reorderAdventureEntries,
+  unlinkAdventureEntryAsset,
   type AdventureDefinition,
   type AdventureEntry,
   type AdventureEntryCreate,
@@ -19,7 +21,12 @@ import {
   type AdventureEntryVisibility,
   type AdventureStatus,
 } from '../../api/adventures'
+import {
+  uploadRoomAsset,
+  type RoomAssetVisibility,
+} from '../../api/roomAssets'
 import { useLocale } from '../../i18n/LocaleProvider'
+import { AssetThumbnail } from './AssetThumbnail'
 import { adventureErrorMessage, adventuresCopy } from './adventuresCopy'
 import { adventureActions } from './RoomAdventuresPage'
 import './rooms.css'
@@ -387,14 +394,94 @@ function dispositionLabel(
   }
 }
 
+export type EntryAssetUploadFormProps = {
+  copy: ReturnType<typeof adventuresCopy>
+  pending?: boolean
+  onSubmit: (file: File, visibility: RoomAssetVisibility, role: 'image' | 'map') => void
+}
+
+export function EntryAssetUploadForm({
+  copy,
+  pending = false,
+  onSubmit,
+}: EntryAssetUploadFormProps) {
+  const [file, setFile] = useState<File | null>(null)
+  const [role, setRole] = useState<'image' | 'map'>('image')
+  const [visibility, setVisibility] = useState<RoomAssetVisibility>('dm_only')
+  const [fileInputKey, setFileInputKey] = useState(0)
+
+  return (
+    <form
+      className="adventure-entry__upload"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (!file) return
+        onSubmit(file, visibility, role)
+        setFile(null)
+        setFileInputKey((k) => k + 1)
+      }}
+    >
+      <label className="room-field">
+        <span>{copy.assetFileLabel}</span>
+        <input
+          accept="image/png,image/jpeg,image/webp"
+          disabled={pending}
+          key={fileInputKey}
+          type="file"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+        />
+      </label>
+      <label className="room-field">
+        <span>{copy.assetRoleLabel}</span>
+        <select
+          disabled={pending}
+          value={role}
+          onChange={(e) => setRole(e.target.value as 'image' | 'map')}
+        >
+          <option value="image">{copy.roleImage}</option>
+          <option value="map">{copy.roleMap}</option>
+        </select>
+      </label>
+      <label className="room-field">
+        <span>{copy.assetVisibilityLabel}</span>
+        <select
+          disabled={pending}
+          value={visibility}
+          onChange={(e) => setVisibility(e.target.value as RoomAssetVisibility)}
+        >
+          <option value="room">{copy.assetVisibilityRoom}</option>
+          <option value="dm_only">{copy.assetVisibilityDmOnly}</option>
+        </select>
+      </label>
+      <button
+        className="button primary"
+        disabled={pending || !file}
+        type="submit"
+      >
+        {copy.uploadAttach}
+      </button>
+    </form>
+  )
+}
+
 export type AdventureEntryListProps = {
   entries: AdventureEntry[]
   copy: ReturnType<typeof adventuresCopy>
   readOnly: boolean
   pending?: boolean
+  roomId: string
+  token: string
   onEdit: (entry: AdventureEntry) => void
   onDelete: (entryId: string) => void
   onMove: (entryId: string, direction: -1 | 1) => void
+  onLinkAsset: (
+    entryId: string,
+    file: File,
+    visibility: RoomAssetVisibility,
+    role: 'image' | 'map',
+  ) => void
+  onUnlinkAsset: (entryId: string, assetId: string) => void
+  onAssetError: (error: unknown) => void
 }
 
 export function AdventureEntryList({
@@ -402,9 +489,14 @@ export function AdventureEntryList({
   copy,
   readOnly,
   pending = false,
+  roomId,
+  token,
   onEdit,
   onDelete,
   onMove,
+  onLinkAsset,
+  onUnlinkAsset,
+  onAssetError,
 }: AdventureEntryListProps) {
   if (entries.length === 0) {
     return <p className="room-empty-text">{copy.entriesEmpty}</p>
@@ -432,6 +524,63 @@ export function AdventureEntryList({
               </div>
               <h3 className="adventure-entry__title">{titleText}</h3>
               {entry.body ? <p className="adventure-entry__body">{entry.body}</p> : null}
+              {entry.assets.length > 0 ? (
+                <div className="adventure-entry__assets">
+                  {entry.assets.map((entryAsset) => {
+                    const isImageOrMap =
+                      entryAsset.role === 'image' || entryAsset.role === 'map'
+                    return (
+                      <div className="adventure-asset" key={entryAsset.asset.id}>
+                        {isImageOrMap ? (
+                          <>
+                            <AssetThumbnail
+                              alt={entryAsset.asset.original_filename}
+                              assetId={entryAsset.asset.id}
+                              onError={onAssetError}
+                              roomId={roomId}
+                              token={token}
+                            />
+                            <div className="adventure-asset__caption">
+                              <span>{entryAsset.role === 'map' ? copy.roleMap : copy.roleImage}</span>
+                              {entryAsset.asset.visibility === 'dm_only' ? (
+                                <span className="adventure-entry__visibility">
+                                  {copy.assetDmOnly}
+                                </span>
+                              ) : null}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="adventure-asset__caption">
+                            {entryAsset.asset.original_filename}
+                          </span>
+                        )}
+                        {!readOnly ? (
+                          <button
+                            className="button secondary"
+                            disabled={pending}
+                            type="button"
+                            onClick={() => {
+                              if (!window.confirm(copy.unlinkConfirm)) return
+                              onUnlinkAsset(entry.id, entryAsset.asset.id)
+                            }}
+                          >
+                            {copy.unlinkAsset}
+                          </button>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : null}
+              {!readOnly ? (
+                <EntryAssetUploadForm
+                  copy={copy}
+                  pending={pending}
+                  onSubmit={(file, visibility, role) =>
+                    onLinkAsset(entry.id, file, visibility, role)
+                  }
+                />
+              ) : null}
             </div>
             {!readOnly ? (
               <div className="adventure-entry__actions">
@@ -535,6 +684,13 @@ export function AdventureEditorPage({ roomId, adventureId, token }: AdventureEdi
       .catch((cause: unknown) => setError(adventureErrorMessage(cause, copy)))
       .finally(() => setPending(false))
   }
+
+  const handleAssetError = useCallback(
+    (cause: unknown) => {
+      setError(adventureErrorMessage(cause, copy))
+    },
+    [copy],
+  )
 
   useEffect(() => {
     let active = true
@@ -677,6 +833,9 @@ export function AdventureEditorPage({ roomId, adventureId, token }: AdventureEdi
           entries={entries}
           pending={pending}
           readOnly={isArchived}
+          roomId={roomId}
+          token={token}
+          onAssetError={handleAssetError}
           onDelete={(entryId) => {
             runMutation(
               () => deleteAdventureEntry(roomId, adventureId, entryId, token),
@@ -687,11 +846,34 @@ export function AdventureEditorPage({ roomId, adventureId, token }: AdventureEdi
             setEditMode({ kind: 'edit', entryId: entry.id })
             setEntryForm(entryFormFromEntry(entry))
           }}
+          onLinkAsset={(entryId, file, visibility, role) => {
+            runMutation(
+              () =>
+                uploadRoomAsset(roomId, token, {
+                  kind: 'image',
+                  filename: file.name,
+                  visibility,
+                  file,
+                }).then((asset) =>
+                  linkAdventureEntryAsset(roomId, adventureId, entryId, token, {
+                    asset_id: asset.id,
+                    role,
+                  }),
+                ),
+              reloadEntriesOnly,
+            )
+          }}
           onMove={(entryId, direction) => {
             const nextIds = moveEntry(entries, entryId, direction)
             if (!nextIds) return
             runMutation(
               () => reorderAdventureEntries(roomId, adventureId, token, { entry_ids: nextIds }),
+              reloadEntriesOnly,
+            )
+          }}
+          onUnlinkAsset={(entryId, assetId) => {
+            runMutation(
+              () => unlinkAdventureEntryAsset(roomId, adventureId, entryId, assetId, token),
               reloadEntriesOnly,
             )
           }}

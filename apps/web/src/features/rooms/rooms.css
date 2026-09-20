@@ -913,3 +913,43 @@
   outline: none;
 }
 
+.adventure-entry__assets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.adventure-asset {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 160px;
+}
+
+.adventure-asset-thumb {
+  width: 160px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.adventure-asset__caption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--quiet);
+  word-break: break-word;
+}
+
+.adventure-entry__upload {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+  margin-top: 8px;
+}
+
+

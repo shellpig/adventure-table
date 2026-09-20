@@ -106,6 +106,20 @@ const COPY = {
     errAssetInUse: 'Asset is currently in use and cannot be deleted.',
     errAssetMediaTypeNotSupported: 'Asset media type is not supported.',
     errAssetTooLarge: 'Asset file is too large.',
+    errRoomAssetNotFound: 'Room asset not found.',
+    errAssetEmpty: 'Asset file is empty.',
+    assetsTitle: 'Images',
+    assetFileLabel: 'Image file (PNG / JPEG / WebP, max 20 MiB)',
+    assetRoleLabel: 'Role',
+    roleImage: 'Image',
+    roleMap: 'Map',
+    assetVisibilityLabel: 'Visibility',
+    assetVisibilityRoom: 'Room (visible to Players when shown)',
+    assetVisibilityDmOnly: 'DM only',
+    assetDmOnly: 'DM only',
+    uploadAttach: 'Upload & attach',
+    unlinkAsset: 'Unlink',
+    unlinkConfirm: 'Unlink this image from the entry? The file stays in the Room.',
   },
   'zh-TW': {
     title: 'Adventures',
@@ -210,6 +224,20 @@ const COPY = {
     errAssetInUse: '素材目前正在使用中，無法刪除。',
     errAssetMediaTypeNotSupported: '不支援的素材檔案類型。',
     errAssetTooLarge: '素材檔案過大。',
+    errRoomAssetNotFound: '找不到此 Room 素材。',
+    errAssetEmpty: '素材檔案為空。',
+    assetsTitle: '圖片',
+    assetFileLabel: '圖片檔（PNG／JPEG／WebP，上限 20 MiB）',
+    assetRoleLabel: '用途',
+    roleImage: '圖片',
+    roleMap: '地圖',
+    assetVisibilityLabel: '可見度',
+    assetVisibilityRoom: 'Room（顯示時 Player 可見）',
+    assetVisibilityDmOnly: '僅 DM',
+    assetDmOnly: '僅 DM',
+    uploadAttach: '上傳並附加',
+    unlinkAsset: '解除連結',
+    unlinkConfirm: '要解除此圖片與 entry 的連結嗎？檔案仍保留在 Room。',
   },
 } as const satisfies Record<Locale, Record<string, string>>
 
@@ -255,6 +283,10 @@ export function adventureErrorMessage(
       return copy.errAssetMediaTypeNotSupported
     case 'asset_too_large':
       return copy.errAssetTooLarge
+    case 'room_asset_not_found':
+      return copy.errRoomAssetNotFound
+    case 'asset_empty':
+      return copy.errAssetEmpty
     default:
       return copy.requestFailed
   }

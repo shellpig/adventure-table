@@ -119,7 +119,22 @@ export function deleteRoomAsset(
   return request(`${base(roomId)}/${assetId}`, token, { method: 'DELETE' })
 }
 
-// Browser <img> tags send no Authorization header; serving authenticated media is a known limitation.
+// Consumed by getRoomAssetContent (authenticated fetch) rather than by <img src>.
 export function roomAssetContentUrl(roomId: string, assetId: string): string {
   return `/api/rooms/${roomId}/assets/${assetId}/content`
 }
+
+export async function getRoomAssetContent(
+  roomId: string,
+  assetId: string,
+  token: string,
+): Promise<Blob> {
+  const response = await fetch(roomAssetContentUrl(roomId, assetId), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!response.ok) throw await apiError(response)
+  return response.blob()
+}
+
