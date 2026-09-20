@@ -268,12 +268,52 @@ class CampaignAdventureEntryOverlayView(StrictModel):
     override: CampaignAdventureOverride | None = None
 
 
+class CampaignRuntimeContext(StrictModel):
+    campaign_id: UUID
+    current_adventure_scene_entry_id: UUID | None = None
+    current_runtime_scene_entry_id: UUID | None = None
+    current_situation: str | None = None
+    revision: int = Field(default=0, ge=0)
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def _validate_scenes(self) -> Self:
+        if (
+            self.current_adventure_scene_entry_id is not None
+            and self.current_runtime_scene_entry_id is not None
+        ):
+            raise ValueError("Cannot specify both adventure and runtime scene references")
+        return self
+
+
+class CampaignRuntimeContextPatch(StrictModel):
+    expected_revision: int = Field(ge=0)
+    current_adventure_scene_entry_id: UUID | None = None
+    current_runtime_scene_entry_id: UUID | None = None
+    current_situation: str | None = None
+
+    @model_validator(mode="after")
+    def _validate_patch(self) -> Self:
+        patch_fields = self.model_fields_set - {"expected_revision"}
+        if not patch_fields:
+            raise ValueError("at least one patch field must be set")
+        if (
+            self.current_adventure_scene_entry_id is not None
+            and self.current_runtime_scene_entry_id is not None
+        ):
+            raise ValueError("Cannot set both adventure and runtime scene references")
+        return self
+
+
 __all__ = [
     "CampaignAdventureEntryOverlayView",
     "CampaignAdventureOverride",
     "CampaignAdventureOverrideAlreadyExistsError",
     "CampaignAdventureOverrideCreate",
     "CampaignAdventureOverridePatch",
+    "CampaignRuntimeContext",
+    "CampaignRuntimeContextPatch",
     "CampaignRuntimeError",
     "RuntimeEntryValidationError",
     "RuntimeEntryVisibilityError",

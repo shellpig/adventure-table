@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy import delete, exists, insert, select, update
 from sqlalchemy.engine import Connection, Engine, RowMapping
+from sqlalchemy.exc import IntegrityError
 
 from app.persistence.adventures.tables import adventure_entries
 from app.persistence.campaign_runtime.tables import (
@@ -121,6 +122,28 @@ class CampaignAdventureOverrideConflictError(CampaignRuntimePersistenceError, Ru
         )
 
 
+class CampaignRuntimeContextConflictError(CampaignRuntimePersistenceError, RuntimeError):
+    """Raised when expected revision does not match current context revision."""
+
+    def __init__(
+        self,
+        campaign_id: UUID,
+        expected_revision: int,
+        current_revision: int,
+        message: str | None = None,
+    ) -> None:
+        self.campaign_id = campaign_id
+        self.expected_revision = expected_revision
+        self.current_revision = current_revision
+        detail = (
+            message
+            or f"expected revision {expected_revision} but found {current_revision}"
+        )
+        super().__init__(
+            f"Campaign runtime context revision conflict in campaign {campaign_id}: {detail}"
+        )
+
+
 @dataclass(frozen=True)
 class StoredRuntimeWorldEntry:
     id: UUID
@@ -186,6 +209,26 @@ class StoredCampaignAdventureOverrideUpdate:
     updated_at: datetime
 
 
+@dataclass(frozen=True)
+class StoredCampaignRuntimeContext:
+    campaign_id: UUID
+    current_adventure_scene_entry_id: UUID | None
+    current_runtime_scene_entry_id: UUID | None
+    current_situation: str | None
+    revision: int
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class StoredCampaignRuntimeContextUpdate:
+    expected_revision: int
+    current_adventure_scene_entry_id: UUID | None
+    current_runtime_scene_entry_id: UUID | None
+    current_situation: str | None
+    updated_at: datetime
+
+
 def _as_utc(dt: datetime | None) -> datetime | None:
     if dt is None:
         return None
@@ -233,6 +276,22 @@ def _row_to_stored_override(row: RowMapping) -> StoredCampaignAdventureOverride:
         state_json=row["state_json"],
         note=row["note"],
         needs_review=row["needs_review"],
+        revision=row["revision"],
+        created_at=created_at,
+        updated_at=updated_at,
+    )
+
+
+def _row_to_stored_context(row: RowMapping) -> StoredCampaignRuntimeContext:
+    created_at = _as_utc(row["created_at"])
+    updated_at = _as_utc(row["updated_at"])
+    assert created_at is not None
+    assert updated_at is not None
+    return StoredCampaignRuntimeContext(
+        campaign_id=row["campaign_id"],
+        current_adventure_scene_entry_id=row["current_adventure_scene_entry_id"],
+        current_runtime_scene_entry_id=row["current_runtime_scene_entry_id"],
+        current_situation=row["current_situation"],
         revision=row["revision"],
         created_at=created_at,
         updated_at=updated_at,
@@ -855,4 +914,155 @@ class CampaignRuntimeRepository:
         with self.engine.connect() as connection:
             return self.has_current_adventure_scene_in_transaction(
                 connection, campaign_id, adventure_id
+            )
+
+    @staticmethod
+    def get_context_in_transaction(
+        connection: Connection,
+        campaign_id: UUID,
+    ) -> StoredCampaignRuntimeContext | None:
+        query = select(campaign_runtime_context).where(
+            campaign_runtime_context.c.campaign_id == campaign_id
+        )
+        row = connection.execute(query).mappings().one_or_none()
+        if row is None:
+            return None
+        return _row_to_stored_context(row)
+
+    def get_context(
+        self,
+        campaign_id: UUID,
+    ) -> StoredCampaignRuntimeContext | None:
+        with self.engine.connect() as connection:
+            return self.get_context_in_transaction(connection, campaign_id)
+
+    @staticmethod
+    def update_context_in_transaction(
+        connection: Connection,
+        campaign_id: UUID,
+        update_candidate: StoredCampaignRuntimeContextUpdate,
+    ) -> StoredCampaignRuntimeContext:
+        if update_candidate.expected_revision == 0:
+            existing = connection.execute(
+                select(campaign_runtime_context.c.revision).where(
+                    campaign_runtime_context.c.campaign_id == campaign_id
+                )
+            ).mappings().one_or_none()
+            if existing is not None:
+                raise CampaignRuntimeContextConflictError(
+                    campaign_id=campaign_id,
+                    expected_revision=0,
+                    current_revision=existing["revision"],
+                )
+            try:
+                with connection.begin_nested():
+                    connection.execute(
+                        insert(campaign_runtime_context).values(
+                            campaign_id=campaign_id,
+                            current_adventure_scene_entry_id=update_candidate.current_adventure_scene_entry_id,
+                            current_runtime_scene_entry_id=update_candidate.current_runtime_scene_entry_id,
+                            current_situation=update_candidate.current_situation,
+                            revision=1,
+                            created_at=update_candidate.updated_at,
+                            updated_at=update_candidate.updated_at,
+                        )
+                    )
+            except IntegrityError as exc:
+                existing = connection.execute(
+                    select(campaign_runtime_context.c.revision).where(
+                        campaign_runtime_context.c.campaign_id == campaign_id
+                    )
+                ).mappings().one_or_none()
+                current_rev = existing["revision"] if existing is not None else 1
+                raise CampaignRuntimeContextConflictError(
+                    campaign_id=campaign_id,
+                    expected_revision=0,
+                    current_revision=current_rev,
+                ) from exc
+            row = connection.execute(
+                select(campaign_runtime_context).where(
+                    campaign_runtime_context.c.campaign_id == campaign_id
+                )
+            ).mappings().one()
+            return _row_to_stored_context(row)
+
+        stmt = (
+            update(campaign_runtime_context)
+            .where(
+                campaign_runtime_context.c.campaign_id == campaign_id,
+                campaign_runtime_context.c.revision == update_candidate.expected_revision,
+            )
+            .values(
+                current_adventure_scene_entry_id=update_candidate.current_adventure_scene_entry_id,
+                current_runtime_scene_entry_id=update_candidate.current_runtime_scene_entry_id,
+                current_situation=update_candidate.current_situation,
+                revision=campaign_runtime_context.c.revision + 1,
+                updated_at=update_candidate.updated_at,
+            )
+        )
+        result = connection.execute(stmt)
+        if result.rowcount == 0:
+            existing = connection.execute(
+                select(campaign_runtime_context.c.revision).where(
+                    campaign_runtime_context.c.campaign_id == campaign_id
+                )
+            ).mappings().one_or_none()
+            if existing is None:
+                raise CampaignRuntimeContextConflictError(
+                    campaign_id=campaign_id,
+                    expected_revision=update_candidate.expected_revision,
+                    current_revision=0,
+                    message=f"expected revision {update_candidate.expected_revision} but context does not exist (virtual revision 0)",
+                )
+            raise CampaignRuntimeContextConflictError(
+                campaign_id=campaign_id,
+                expected_revision=update_candidate.expected_revision,
+                current_revision=existing["revision"],
+            )
+
+        row = connection.execute(
+            select(campaign_runtime_context).where(
+                campaign_runtime_context.c.campaign_id == campaign_id
+            )
+        ).mappings().one()
+        return _row_to_stored_context(row)
+
+    def update_context(
+        self,
+        campaign_id: UUID,
+        update_candidate: StoredCampaignRuntimeContextUpdate,
+    ) -> StoredCampaignRuntimeContext:
+        with self.engine.begin() as connection:
+            return self.update_context_in_transaction(
+                connection, campaign_id, update_candidate
+            )
+
+    @staticmethod
+    def clear_context_in_transaction(
+        connection: Connection,
+        campaign_id: UUID,
+        expected_revision: int,
+        updated_at: datetime,
+    ) -> StoredCampaignRuntimeContext:
+        return CampaignRuntimeRepository.update_context_in_transaction(
+            connection,
+            campaign_id,
+            StoredCampaignRuntimeContextUpdate(
+                expected_revision=expected_revision,
+                current_adventure_scene_entry_id=None,
+                current_runtime_scene_entry_id=None,
+                current_situation=None,
+                updated_at=updated_at,
+            ),
+        )
+
+    def clear_context(
+        self,
+        campaign_id: UUID,
+        expected_revision: int,
+        updated_at: datetime,
+    ) -> StoredCampaignRuntimeContext:
+        with self.engine.begin() as connection:
+            return self.clear_context_in_transaction(
+                connection, campaign_id, expected_revision, updated_at
             )

@@ -35,6 +35,8 @@ from app.domain.campaign_runtime.schemas import (
     CampaignAdventureOverrideAlreadyExistsError,
     CampaignAdventureOverrideCreate,
     CampaignAdventureOverridePatch,
+    CampaignRuntimeContext,
+    CampaignRuntimeContextPatch,
     RuntimeWorldEntry,
     RuntimeWorldEntryCreate,
     RuntimeWorldEntryDmView,
@@ -62,12 +64,15 @@ from app.persistence.campaign_runtime.mutations import (
 from app.persistence.campaign_runtime.repository import (
     CampaignAdventureOverrideConflictError,
     CampaignAdventureOverrideNotFoundError,
+    CampaignRuntimeContextConflictError,
     CampaignRuntimeRepository,
     RuntimeWorldEntryArchivedError,
     RuntimeWorldEntryConflictError,
     RuntimeWorldEntryNotFoundError,
     StoredCampaignAdventureOverride,
     StoredCampaignAdventureOverrideUpdate,
+    StoredCampaignRuntimeContext,
+    StoredCampaignRuntimeContextUpdate,
     StoredRuntimeWorldEntry,
     StoredRuntimeWorldEntryAggregate,
     StoredRuntimeWorldEntryUpdate,
@@ -222,6 +227,26 @@ def stored_override_to_domain(
         state_json=deepcopy(stored.state_json),
         note=stored.note,
         needs_review=stored.needs_review,
+        revision=stored.revision,
+        created_at=stored.created_at,
+        updated_at=stored.updated_at,
+    )
+
+
+def _stored_to_context_domain(
+    stored: StoredCampaignRuntimeContext | None,
+    campaign_id: UUID,
+) -> CampaignRuntimeContext:
+    if stored is None:
+        return CampaignRuntimeContext(
+            campaign_id=campaign_id,
+            revision=0,
+        )
+    return CampaignRuntimeContext(
+        campaign_id=stored.campaign_id,
+        current_adventure_scene_entry_id=stored.current_adventure_scene_entry_id,
+        current_runtime_scene_entry_id=stored.current_runtime_scene_entry_id,
+        current_situation=stored.current_situation,
         revision=stored.revision,
         created_at=stored.created_at,
         updated_at=stored.updated_at,
@@ -1083,6 +1108,213 @@ def _execute_clear_override_in_transaction(
     return domain_override
 
 
+def _context_event_envelope(
+    context: CampaignRuntimeContext,
+    action: str,
+) -> tuple[CampaignRuntimeContext, str, tuple[UUID, ...], dict[str, object]]:
+    return (
+        context,
+        "dm_only",
+        (),
+        {
+            "revision": int(context.revision),
+            "action": action,
+        },
+    )
+
+
+def _validate_context_references(
+    connection: Connection,
+    *,
+    room_id: UUID,
+    campaign_id: UUID,
+    adventure_scene_entry_id: UUID | None,
+    runtime_scene_entry_id: UUID | None,
+    runtime_repo: CampaignRuntimeRepository,
+    link_repo: CampaignAdventureLinkRepository,
+) -> None:
+    if adventure_scene_entry_id is not None:
+        row = connection.execute(
+            select(
+                adventure_entries.c.id,
+                adventure_entries.c.kind,
+                adventure_definitions.c.room_id,
+            )
+            .join(
+                adventure_definitions,
+                adventure_definitions.c.id == adventure_entries.c.adventure_id,
+            )
+            .where(adventure_entries.c.id == adventure_scene_entry_id)
+        ).mappings().one_or_none()
+
+        if row is None or row["room_id"] != room_id:
+            raise CampaignRuntimeNotFoundError(
+                f"Adventure entry {adventure_scene_entry_id} not found in room {room_id}"
+            )
+        if row["kind"] != "scene":
+            raise CampaignRuntimeValidationError(
+                f"Adventure entry {adventure_scene_entry_id} is not a scene (kind='{row['kind']}')"
+            )
+        if not link_repo.is_adventure_entry_attached_in_transaction(
+            connection, campaign_id, adventure_scene_entry_id
+        ):
+            raise CampaignRuntimeValidationError(
+                f"Adventure entry {adventure_scene_entry_id} is not from an adventure attached to campaign {campaign_id}"
+            )
+
+    if runtime_scene_entry_id is not None:
+        aggregate = runtime_repo.get_entry_in_transaction(
+            connection, campaign_id, runtime_scene_entry_id, include_archived=True
+        )
+        if aggregate is None:
+            raise CampaignRuntimeNotFoundError(
+                f"Runtime entry {runtime_scene_entry_id} not found in campaign {campaign_id}"
+            )
+        if aggregate.entry.archived_at is not None:
+            raise CampaignRuntimeValidationError(
+                f"Runtime scene entry {runtime_scene_entry_id} is archived"
+            )
+        if aggregate.entry.kind != "scene":
+            raise CampaignRuntimeValidationError(
+                f"Runtime entry {runtime_scene_entry_id} is not a scene (kind='{aggregate.entry.kind}')"
+            )
+
+
+def _execute_update_context_in_transaction(
+    connection: Connection,
+    *,
+    room_id: UUID,
+    campaign_id: UUID,
+    patch: CampaignRuntimeContextPatch,
+    idempotency_key: str,
+    actor_kind: str,
+    actor_id: UUID | None,
+    now: datetime,
+    runtime_repo: CampaignRuntimeRepository,
+    mutation_repo: CampaignWorldMutationRepository,
+    link_repo: CampaignAdventureLinkRepository,
+) -> CampaignRuntimeContext:
+    existing_stored = runtime_repo.get_context_in_transaction(connection, campaign_id)
+    cand_adv = (
+        patch.current_adventure_scene_entry_id
+        if "current_adventure_scene_entry_id" in patch.model_fields_set
+        else (existing_stored.current_adventure_scene_entry_id if existing_stored is not None else None)
+    )
+    cand_rt = (
+        patch.current_runtime_scene_entry_id
+        if "current_runtime_scene_entry_id" in patch.model_fields_set
+        else (existing_stored.current_runtime_scene_entry_id if existing_stored is not None else None)
+    )
+    cand_sit = (
+        patch.current_situation
+        if "current_situation" in patch.model_fields_set
+        else (existing_stored.current_situation if existing_stored is not None else None)
+    )
+
+    if cand_adv is not None and cand_rt is not None:
+        raise CampaignRuntimeValidationError(
+            "Cannot set both adventure and runtime scene references; clear the other in the same patch"
+        )
+
+    _validate_context_references(
+        connection,
+        room_id=room_id,
+        campaign_id=campaign_id,
+        adventure_scene_entry_id=cand_adv,
+        runtime_scene_entry_id=cand_rt,
+        runtime_repo=runtime_repo,
+        link_repo=link_repo,
+    )
+
+    try:
+        updated_stored = runtime_repo.update_context_in_transaction(
+            connection,
+            campaign_id,
+            StoredCampaignRuntimeContextUpdate(
+                expected_revision=patch.expected_revision,
+                current_adventure_scene_entry_id=cand_adv,
+                current_runtime_scene_entry_id=cand_rt,
+                current_situation=cand_sit,
+                updated_at=now,
+            ),
+        )
+    except CampaignRuntimeContextConflictError as exc:
+        raise CampaignRuntimeRevisionConflictError(
+            campaign_id=exc.campaign_id,
+            entry_id=exc.campaign_id,
+            expected_revision=exc.expected_revision,
+            current_revision=exc.current_revision,
+            message=str(exc),
+        ) from exc
+
+    domain_context = _stored_to_context_domain(updated_stored, campaign_id)
+    command_payload = {
+        k: v for k, v in patch.model_dump(mode="json").items() if k in patch.model_fields_set
+    }
+    mutation = StoredCampaignWorldMutation(
+        id=uuid4(),
+        campaign_id=campaign_id,
+        idempotency_key=idempotency_key,
+        action_kind="context.update",
+        target_id=campaign_id,
+        command_payload=command_payload,
+        result_payload=domain_context.model_dump(mode="json"),
+        created_by_actor_kind=actor_kind,
+        created_by_actor_id=actor_id,
+        created_at=now,
+    )
+    mutation_repo.insert_in_transaction(connection, mutation)
+    return domain_context
+
+
+def _execute_clear_context_in_transaction(
+    connection: Connection,
+    *,
+    campaign_id: UUID,
+    expected_revision: int,
+    idempotency_key: str,
+    actor_kind: str,
+    actor_id: UUID | None,
+    now: datetime,
+    runtime_repo: CampaignRuntimeRepository,
+    mutation_repo: CampaignWorldMutationRepository,
+) -> CampaignRuntimeContext:
+    try:
+        updated_stored = runtime_repo.clear_context_in_transaction(
+            connection,
+            campaign_id,
+            expected_revision=expected_revision,
+            updated_at=now,
+        )
+    except CampaignRuntimeContextConflictError as exc:
+        raise CampaignRuntimeRevisionConflictError(
+            campaign_id=exc.campaign_id,
+            entry_id=exc.campaign_id,
+            expected_revision=exc.expected_revision,
+            current_revision=exc.current_revision,
+            message=str(exc),
+        ) from exc
+
+    domain_context = _stored_to_context_domain(updated_stored, campaign_id)
+    command_payload = {
+        "expected_revision": expected_revision,
+    }
+    mutation = StoredCampaignWorldMutation(
+        id=uuid4(),
+        campaign_id=campaign_id,
+        idempotency_key=idempotency_key,
+        action_kind="context.clear",
+        target_id=campaign_id,
+        command_payload=command_payload,
+        result_payload=domain_context.model_dump(mode="json"),
+        created_by_actor_kind=actor_kind,
+        created_by_actor_id=actor_id,
+        created_at=now,
+    )
+    mutation_repo.insert_in_transaction(connection, mutation)
+    return domain_context
+
+
 def _session_event_idempotency_key(idempotency_key: str) -> str:
     digest = hashlib.sha256(idempotency_key.encode("utf-8")).hexdigest()
     return f"p6b-world:{digest}"
@@ -1404,6 +1636,78 @@ class CampaignRuntimeService:
                 campaign_id=campaign_id,
                 adventure_entry_id=adventure_entry_id,
                 expected_override_id=expected_override_id,
+                expected_revision=expected_revision,
+                idempotency_key=idempotency_key,
+                actor_kind="human",
+                actor_id=context.access_session_id,
+                now=now,
+                runtime_repo=self.runtime_repo,
+                mutation_repo=self.mutation_repo,
+            ),
+        )
+
+    def update_context_management(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        campaign_id: UUID,
+        patch: CampaignRuntimeContextPatch,
+        *,
+        idempotency_key: str,
+    ) -> CampaignRuntimeContext:
+        command_payload = {
+            k: v for k, v in patch.model_dump(mode="json").items() if k in patch.model_fields_set
+        }
+        return self._orchestrate_management_mutation(
+            context=context,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            action_kind="context.update",
+            target_id=campaign_id,
+            command_payload=command_payload,
+            idempotency_key=idempotency_key,
+            parse_result=CampaignRuntimeContext.model_validate,
+            execute_action=lambda conn, now: _execute_update_context_in_transaction(
+                conn,
+                room_id=room_id,
+                campaign_id=campaign_id,
+                patch=patch,
+                idempotency_key=idempotency_key,
+                actor_kind="human",
+                actor_id=context.access_session_id,
+                now=now,
+                runtime_repo=self.runtime_repo,
+                mutation_repo=self.mutation_repo,
+                link_repo=self.link_repo,
+            ),
+        )
+
+    def clear_context_management(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        campaign_id: UUID,
+        *,
+        expected_revision: int,
+        idempotency_key: str,
+    ) -> CampaignRuntimeContext:
+        if expected_revision < 0:
+            raise CampaignRuntimeValidationError("expected_revision must be at least 0")
+        command_payload = {
+            "expected_revision": expected_revision,
+        }
+        return self._orchestrate_management_mutation(
+            context=context,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            action_kind="context.clear",
+            target_id=campaign_id,
+            command_payload=command_payload,
+            idempotency_key=idempotency_key,
+            parse_result=CampaignRuntimeContext.model_validate,
+            execute_action=lambda conn, now: _execute_clear_context_in_transaction(
+                conn,
+                campaign_id=campaign_id,
                 expected_revision=expected_revision,
                 idempotency_key=idempotency_key,
                 actor_kind="human",
@@ -1778,6 +2082,90 @@ class CampaignRuntimeService:
             execute_action=execute,
         )
 
+    def update_context_active(
+        self,
+        actor: TableActorContext,
+        patch: CampaignRuntimeContextPatch,
+        *,
+        idempotency_key: str,
+    ) -> CampaignRuntimeContext:
+        command_payload = {
+            k: v for k, v in patch.model_dump(mode="json").items() if k in patch.model_fields_set
+        }
+        now = datetime.now(timezone.utc)
+        actor_kind, actor_id = _actor_identity(actor)
+
+        def execute(
+            connection: Connection,
+        ) -> tuple[CampaignRuntimeContext, str, tuple[UUID, ...], dict[str, object]]:
+            context = _execute_update_context_in_transaction(
+                connection,
+                room_id=actor.room_id,
+                campaign_id=actor.campaign_id,
+                patch=patch,
+                idempotency_key=idempotency_key,
+                actor_kind=actor_kind,
+                actor_id=actor_id,
+                now=now,
+                runtime_repo=self.runtime_repo,
+                mutation_repo=self.mutation_repo,
+                link_repo=self.link_repo,
+            )
+            return _context_event_envelope(context, "updated")
+
+        return self._orchestrate_active_mutation(
+            actor=actor,
+            action_kind="context.update",
+            target_id=actor.campaign_id,
+            command_payload=command_payload,
+            idempotency_key=idempotency_key,
+            event_kind="world.context_changed",
+            parse_result=CampaignRuntimeContext.model_validate,
+            execute_action=execute,
+        )
+
+    def clear_context_active(
+        self,
+        actor: TableActorContext,
+        *,
+        expected_revision: int,
+        idempotency_key: str,
+    ) -> CampaignRuntimeContext:
+        if expected_revision < 0:
+            raise CampaignRuntimeValidationError("expected_revision must be at least 0")
+        command_payload = {
+            "expected_revision": expected_revision,
+        }
+        now = datetime.now(timezone.utc)
+        actor_kind, actor_id = _actor_identity(actor)
+
+        def execute(
+            connection: Connection,
+        ) -> tuple[CampaignRuntimeContext, str, tuple[UUID, ...], dict[str, object]]:
+            context = _execute_clear_context_in_transaction(
+                connection,
+                campaign_id=actor.campaign_id,
+                expected_revision=expected_revision,
+                idempotency_key=idempotency_key,
+                actor_kind=actor_kind,
+                actor_id=actor_id,
+                now=now,
+                runtime_repo=self.runtime_repo,
+                mutation_repo=self.mutation_repo,
+            )
+            return _context_event_envelope(context, "cleared")
+
+        return self._orchestrate_active_mutation(
+            actor=actor,
+            action_kind="context.clear",
+            target_id=actor.campaign_id,
+            command_payload=command_payload,
+            idempotency_key=idempotency_key,
+            event_kind="world.context_changed",
+            parse_result=CampaignRuntimeContext.model_validate,
+            execute_action=execute,
+        )
+
     def get_management(
         self,
         context: RoomAccessContext,
@@ -1864,6 +2252,22 @@ class CampaignRuntimeService:
                 connection, campaign_id
             )
             return tuple(stored_override_to_domain(s) for s in stored_list)
+
+    def get_context_management(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        campaign_id: UUID,
+    ) -> CampaignRuntimeContext:
+        _require_management_authority(context, room_id)
+        with self.engine.connect() as connection:
+            campaign = self.campaign_repo.get_in_transaction(connection, campaign_id)
+            if campaign is None or campaign.room_id != room_id:
+                raise CampaignRuntimeNotFoundError(
+                    f"Campaign {campaign_id} not found in room {room_id}"
+                )
+            stored = self.runtime_repo.get_context_in_transaction(connection, campaign_id)
+            return _stored_to_context_domain(stored, campaign_id)
 
     def get_adventure_entry_overlay_management(
         self,
@@ -2019,6 +2423,22 @@ class CampaignRuntimeService:
             )
             return tuple(stored_override_to_domain(s) for s in stored_list)
 
+    def get_context_active(
+        self,
+        actor: TableActorContext,
+    ) -> CampaignRuntimeContext:
+        with self.engine.connect() as connection:
+            self._require_active_dm_authority(
+                connection, actor, action_verb="read campaign runtime context"
+            )
+            campaign = self.campaign_repo.get_in_transaction(connection, actor.campaign_id)
+            if campaign is None or campaign.room_id != actor.room_id:
+                raise CampaignRuntimeNotFoundError(
+                    f"Campaign {actor.campaign_id} not found in room {actor.room_id}"
+                )
+            stored = self.runtime_repo.get_context_in_transaction(connection, actor.campaign_id)
+            return _stored_to_context_domain(stored, actor.campaign_id)
+
     def get_adventure_entry_overlay_active(
         self,
         actor: TableActorContext,
@@ -2075,6 +2495,8 @@ __all__ = [
     "CampaignRuntimeArchivedError",
     "CampaignRuntimeAuthorityError",
     "CampaignRuntimeConflictError",
+    "CampaignRuntimeContext",
+    "CampaignRuntimeContextPatch",
     "CampaignRuntimeIdempotencyConflictError",
     "CampaignRuntimeNotFoundError",
     "CampaignRuntimeRevisionConflictError",
