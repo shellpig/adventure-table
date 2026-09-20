@@ -93,6 +93,15 @@ class CampaignRepository:
         return CampaignRepository._campaign(row)
 
     @staticmethod
+    def get_for_update_in_transaction(
+        connection: Connection, campaign_id: UUID
+    ) -> StoredCampaign | None:
+        row = connection.execute(
+            select(campaigns).where(campaigns.c.id == campaign_id).with_for_update()
+        ).mappings().one_or_none()
+        return CampaignRepository._campaign(row)
+
+    @staticmethod
     def character_room_id_in_transaction(
         connection: Connection,
         character_id: UUID,

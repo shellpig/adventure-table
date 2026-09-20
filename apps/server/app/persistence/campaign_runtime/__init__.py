@@ -1,3 +1,7 @@
+from app.persistence.campaign_runtime.mutations import (
+    CampaignWorldMutationRepository,
+    StoredCampaignWorldMutation,
+)
 from app.persistence.campaign_runtime.repository import (
     CampaignRuntimePersistenceError,
     CampaignRuntimeRepository,
@@ -19,9 +23,11 @@ from app.persistence.campaign_runtime.tables import (
 __all__ = [
     "CampaignRuntimePersistenceError",
     "CampaignRuntimeRepository",
+    "CampaignWorldMutationRepository",
     "RuntimeWorldEntryArchivedError",
     "RuntimeWorldEntryConflictError",
     "RuntimeWorldEntryNotFoundError",
+    "StoredCampaignWorldMutation",
     "StoredRuntimeWorldEntry",
     "StoredRuntimeWorldEntryAggregate",
     "StoredRuntimeWorldEntryUpdate",
