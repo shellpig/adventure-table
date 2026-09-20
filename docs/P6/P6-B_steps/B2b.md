@@ -18,4 +18,9 @@
 
 ## 完成紀錄
 
-- 待補。
+- **起始**：2026-09-20；agy 1 回合，283 秒；conversation `9e22b211-0d81-475c-86e5-1d3278f1dcaf`。
+- **交付**：connection-aware＋engine wrapper repository、Stored aggregate/update types、campaign-scoped CRUD、batched recipient load、expected-revision update／soft archive、typed not-found/conflict/archive errors與 focused tests。
+- **指揮者審核修正**：移除 repository 的 `dict.fromkeys` recipient 靜默去重，以及 Stored aggregate/update 將非 tuple 偷轉 tuple 的 `__post_init__`；persistence 現在不掩蓋上游 invariant 違約。補 duplicate recipient 觸發 join PK 且整筆 create rollback 的 regression。
+- **測試**：repository＋schemas＋code-quality＋P6-A authoring regression 共 59 tests 全綠（pytest exit 0）；list recipient query-count 證明固定 2 queries，空清單 1 query。
+- **驗證 commit**：待本次 B2b commit。
+- **未解問題**：repository 不做 actor／projection；B2c 必須用 in-transaction methods 組合 mutation record與 active-session event，不可退回 nested transaction。

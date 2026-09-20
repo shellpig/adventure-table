@@ -1,3 +1,13 @@
+from app.persistence.campaign_runtime.repository import (
+    CampaignRuntimePersistenceError,
+    CampaignRuntimeRepository,
+    RuntimeWorldEntryArchivedError,
+    RuntimeWorldEntryConflictError,
+    RuntimeWorldEntryNotFoundError,
+    StoredRuntimeWorldEntry,
+    StoredRuntimeWorldEntryAggregate,
+    StoredRuntimeWorldEntryUpdate,
+)
 from app.persistence.campaign_runtime.tables import (
     campaign_adventure_overrides,
     campaign_runtime_context,
@@ -7,6 +17,14 @@ from app.persistence.campaign_runtime.tables import (
 )
 
 __all__ = [
+    "CampaignRuntimePersistenceError",
+    "CampaignRuntimeRepository",
+    "RuntimeWorldEntryArchivedError",
+    "RuntimeWorldEntryConflictError",
+    "RuntimeWorldEntryNotFoundError",
+    "StoredRuntimeWorldEntry",
+    "StoredRuntimeWorldEntryAggregate",
+    "StoredRuntimeWorldEntryUpdate",
     "campaign_adventure_overrides",
     "campaign_runtime_context",
     "campaign_world_entries",
