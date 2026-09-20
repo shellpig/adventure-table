@@ -22,4 +22,12 @@ A1a 表。
 
 ## 紀錄
 
-（派工後補）
+- **起始**：2026-09-20，worker agy（`Gemini 3.8 Flash (High)`），1 回合 4 分 51 秒，prompt `C:/_work/AI_Work/Tools/agy-runs/agy-p6a-A2a.prompt.txt`，conversation `f288d9ed-00f0-40e1-96ca-8cd484a2e5ee`。
+- **交付**：`domain/adventures/payloads.py`（12 個 kind 的 StrictModel、`kind` discriminator union、`parse_entry_payload`／`dump_entry_payload`、`AdventureEntryPayloadError` 包裝 pydantic 錯誤；`map` 無任何幾何欄位）；`schemas.py`（`AdventureDefinition`／`AdventureEntry` view、Create／Patch／Reorder input、5 個 domain error）；`persistence/adventures/repository.py`（`StoredAdventureDefinition`／`StoredAdventureEntry`、definition／entry CRUD、`set_status`、`next_sort_order`、`reorder_entries` 單 transaction、`UNSET` sentinel）；`service.py::AdventureService`（`_require_author` 每個方法含讀取都先過、`_definition_or_404`、`_writable_definition`、`_validate_parent` 含 cycle 檢查；無任何 `TableActorContext` 入口）；`tests/test_p6a_adventure_authoring.py` 10 個測試（含 12 kind × valid／invalid parametrize）。
+- **指揮者審核修正**：
+  - repository 在兩個 Stored dataclass 加了 `__post_init__` 把 SQLite 回傳的 naive datetime 硬轉 UTC——這是為了讓測試 9 拿 create() 的 aware 值和 DB 回讀的 naive 值比較而寫的 production workaround。刪除；測試改為前後都經 `get_definition`／`get_entry` 回讀再比較，並多斷言 status 仍為 finalized。
+  - service 從 repository import 私有 `_UNSET` → 改為公開 `UNSET` 並列入 `__all__`。
+  - `patch_entry` 內 `if payload.data is None: raise` 是 validator 已擋掉的死分支 → 收斂為 `if payload.data is not None`。
+  - 移除 repository 未使用的 `timezone` import。
+- **測試**：`pytest tests/test_p6a_adventure_authoring.py tests/test_p6a_room_assets.py tests/test_m03_import_boundary.py tests/test_code_quality_gate.py` 49 passed；全套 backend pytest 全綠（1 既有 skip）。
+- **未解問題／下一步**：`KNOWN_ENTRY_KINDS` 與 `AdventureEntryKind` Literal 重複列舉 12 個 kind（可改由 Literal `__args__` 推導），留給 A2b 若碰同檔順手收；A2b。
