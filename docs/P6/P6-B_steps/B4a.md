@@ -21,4 +21,9 @@
 
 ## 完成紀錄
 
-- 待補。
+- **起始**：2026-09-20；agy 一回合實作，conversation `7d31c36f-6cb3-46cb-9ed5-82f46249e241`，約 6 分 41 秒。
+- **交付**：Room-first management Runtime entry list/get/create/update/archive routes；HTTP transport request models；`CampaignRuntimeService` dependency；共用 stable error mapper；router registration；真 service／SQLite HTTP tests。
+- **指揮者審核修正**：逐項核對 route→service intent、authority、active Session blocker、revision/idempotency、serialized error code與拒絕零副作用。收窄 error mapper：不再把任意 `ValueError` 掩蓋成 422，只接受明確 domain／Pydantic validation error，並補 unknown `ValueError` re-raise regression。
+- **測試**：`test_p6b_runtime_api.py`＋既有 runtime service／active／override／context＋quality gate，`60 passed, 2 skipped`；B4a focused＋quality gate `12 passed`；`git diff --check` 通過。
+- **驗證 commit**：`45b56702`。
+- **未解問題／下一步**：無；接 B4b Session 外 Override／Context／Overlay routes，沿用本步 router、dependency與 error mapper。
