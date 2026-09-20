@@ -45,6 +45,7 @@ export function campaignPermissions(authority: RoomAuthority | null | undefined)
   return {
     isOwner: authority === 'owner',
     canManageRoster: authority === 'owner' || authority === 'dm',
+    canManageRuntime: authority === 'owner' || authority === 'dm',
   }
 }
 
@@ -57,7 +58,7 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
   const copy = campaignCopy(locale)
   const recent = recentRoomForId(roomId)
   const token = recent?.accessToken ?? ''
-  const { isOwner, canManageRoster } = campaignPermissions(recent?.authority)
+  const { isOwner, canManageRoster, canManageRuntime } = campaignPermissions(recent?.authority)
   const [room, setRoom] = useState<RoomSummary | null>(null)
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [campaign, setCampaign] = useState<Campaign | null>(null)
@@ -253,6 +254,11 @@ export function RoomCampaignPage({ roomId, campaignId }: RoomCampaignRoute) {
           <a className="button secondary" href={`/rooms/${roomId}/campaigns`}>{copy.backCampaigns}</a>
           {campaign.status === 'active' && room?.active_campaign_id === campaign.id ? (
             <a className="button primary" href={`/rooms/${roomId}/campaigns/${campaign.id}/lobby`}>{copy.openLobby}</a>
+          ) : null}
+          {canManageRuntime ? (
+            <a className="button secondary" href={`/rooms/${roomId}/campaigns/${campaign.id}/changes`}>
+              {copy.campaignChanges}
+            </a>
           ) : null}
           {isOwner && room?.active_campaign_id !== campaign.id && campaign.status !== 'archived' ? (
             <button
