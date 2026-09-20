@@ -15,7 +15,7 @@
 ## 當前狀態與下一步
 
 - **P4 已全部關門並合併回 `main`**：P4-F code `651a14d0`，merge `7ef02d13`；證據見 [P4-F closeout](docs/P4/P4-F_CLOSEOUT.md)。歷史步驟不再作開場必讀。
-- **2026-09-20 拍板插入 M05（Session History Continuity & Owner End for AI DM Sessions），插入點為 P6-A 之前**：M05-A Owner 可正常 End AI DM 的 Session；M05-B 聊天串向上翻頁越過 Session 邊界。起因見 [M05 實作規格 §1](docs/M05/實作規格.md)；契約已定案，尚未開工。**下一步為 M05-A。**
+- **2026-09-20 拍板插入 M05（Session History Continuity & Owner End for AI DM Sessions），插入點為 P6-A 之前**：M05-A Owner 可正常 End AI DM 的 Session；M05-B 聊天串向上翻頁越過 Session 邊界。起因見 [M05 實作規格 §1](docs/M05/實作規格.md)；M05-A 已關門；**下一步為 M05-B。**
 - **M05 關門後進 P6-A — Adventure Definition & Campaign Attachment**。2026-09-19 使用者拍板讓 P6 先於 P5 執行，以先完成「世界／冒險資料 → Exploration → Quick Combat → 世界狀態跨 Session 保存」的可玩 Campaign loop；Phase 編號不重編，P5 契約完整保留，P6 關門後再回 P5。
 - **P6 契約已定案，固定 A～G**；M05-B closeout 後開工，讀 [P6 實作規格](docs/P6/實作規格.md)、[開發設計方針](docs/P6/開發設計方針.md)、[測試指南](docs/P6/測試指南.md) 的 P6-A 與必要共用前言。列出下一步不代表 coding 授權。
 - **M01／U01 保持 open，不阻塞 P Roadmap**。M01-A～O、U01-A 已關門；下一個未使用字母分別為 M01-P、U01-B，兩者下一項 scope 均未拍板，不建立虛構的待辦 Subphase。
@@ -27,7 +27,7 @@
 
 | Subphase | 狀態 |
 |---|---|
-| M05-A — Owner End for AI DM Sessions | ⬜ |
+| M05-A — Owner End for AI DM Sessions | ✅ 關門，見 [closeout](docs/M05/M05-A_CLOSEOUT.md) |
 | M05-B — Cross-Session Chat History Paging | ⬜ |
 
 ### P6 Subphase 進度
@@ -55,7 +55,7 @@ Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **
 | M04 | Web Chat MCP／OAuth／AI Join Kit；已關門，目標平台為 ChatGPT Web Plus |
 | U01 | Test / Development Efficiency；長期 open |
 | P4 | Quick Combat；已關門 |
-| M05 | Session History Continuity／Owner End for AI DM；**當前 Phase，下一步 M05-A**；插在 P4 與 P6-A 之間 |
+| M05 | Session History Continuity／Owner End for AI DM；**當前 Phase，下一步 M05-B**；插在 P4 與 P6-A 之間 |
 | P5 | Tactical Combat；契約已定案，依使用者決定延至 P6 關門後實作 |
 | P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；契約已定案，M05 關門後開工 |
 | P7 | Timeline、Snapshot／Restore、broader Archive／Import／Export；角色 JSON 已由 M03 先行，不做 gameplay Undo |
