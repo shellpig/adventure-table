@@ -386,6 +386,9 @@ export function RoomWorkspacePage({ roomId }: { roomId: string }) {
           <a className="button primary" href={`/rooms/${roomId}/campaigns`}>
             {copy.campaignsAction}
           </a>
+          <a className="button primary" href={`/rooms/${roomId}/adventures`}>
+            {copy.adventuresAction}
+          </a>
           <a className="button secondary" href="/">{copy.backHome}</a>
         </div>
 

@@ -9,6 +9,7 @@ import { capabilityCopy } from './features/capabilities/copy'
 import { protectedCapabilityForPath } from './features/capabilities/routes'
 import { CharacterBuilderRoutePage } from './features/m01m/M01MBuilderRoutePanel'
 import { CharacterSheetRoutePage } from './features/m01m/M01MAncestryRoutePanel'
+import { RoomAdventuresPage, roomAdventuresRouteFromPath } from './features/rooms/RoomAdventuresPage'
 import { RoomCampaignPage, roomCampaignRouteFromPath } from './features/rooms/RoomCampaignPage'
 import { RoomCharacterWorkspacePage } from './features/rooms/RoomCharacterWorkspacePage'
 import { RoomLandingPage } from './features/rooms/RoomLandingPage'
@@ -109,6 +110,7 @@ export default function App() {
   const protectedCapability = protectedCapabilityForPath(pathname)
   const roomSessionRoute = roomSessionRouteFromPath(pathname)
   const roomLobbyRoute = roomLobbyRouteFromPath(pathname)
+  const roomAdventuresRoute = roomAdventuresRouteFromPath(pathname)
   const roomCampaignRoute = roomCampaignRouteFromPath(pathname)
   const roomCharacterRoute = roomCharacterRouteFromPath(pathname)
   const roomId = roomIdFromPath(pathname)
@@ -138,6 +140,14 @@ export default function App() {
   }
   if (roomLobbyRoute) {
     return <RoomLobbyPage roomId={roomLobbyRoute.roomId} campaignId={roomLobbyRoute.campaignId} />
+  }
+  if (roomAdventuresRoute) {
+    return (
+      <RoomAdventuresPage
+        roomId={roomAdventuresRoute.roomId}
+        adventureId={roomAdventuresRoute.adventureId}
+      />
+    )
   }
   if (roomCampaignRoute) {
     return (
