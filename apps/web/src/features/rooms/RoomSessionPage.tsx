@@ -86,6 +86,33 @@ export function sessionTableSnapshotWithCurrentControllers(
   }
 }
 
+export type SessionEndControls = {
+  showEnd: boolean
+  showAbandon: boolean
+  ownerEndsAiDm: boolean
+  ownerHint: 'aiDm' | 'humanDm' | null
+}
+
+// M05-A: the Owner may End an AI DM Session (Room-management path, not a
+// takeover); a Human DM Session still only offers the Owner Abandon.
+export function sessionEndControls(input: {
+  status: SessionSnapshot['status']
+  dmControllerKind: SessionSnapshot['dm_controller_kind']
+  isCurrentDm: boolean
+  isOwner: boolean
+}): SessionEndControls {
+  if (input.status !== 'active') {
+    return { showEnd: false, showAbandon: false, ownerEndsAiDm: false, ownerHint: null }
+  }
+  const ownerEndsAiDm = input.isOwner && !input.isCurrentDm && input.dmControllerKind === 'ai'
+  return {
+    showEnd: input.isCurrentDm || ownerEndsAiDm,
+    showAbandon: input.isCurrentDm || input.isOwner,
+    ownerEndsAiDm,
+    ownerHint: input.isOwner && !input.isCurrentDm ? (ownerEndsAiDm ? 'aiDm' : 'humanDm') : null,
+  }
+}
+
 export function SessionEventConnectionBanner({
   status,
   copy,
@@ -354,7 +381,12 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
   )
   const isOwner = recent.authority === 'owner'
   const canManage = recent.authority === 'owner' || recent.authority === 'dm'
-  const canAbandon = snapshot.status === 'active' && (isCurrentDm || isOwner)
+  const endControls = sessionEndControls({
+    status: snapshot.status,
+    dmControllerKind: snapshot.dm_controller_kind,
+    isCurrentDm,
+    isOwner,
+  })
   const statusLabel = snapshot.status === 'active'
     ? copy.active
     : snapshot.status === 'ended'
@@ -558,22 +590,24 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
         ) : null}
 
         {snapshot.status === 'active' ? <p>{copy.currentDmHint}</p> : null}
-        {snapshot.status === 'active' && isOwner && !isCurrentDm ? <p>{copy.ownerAbandonHint}</p> : null}
+        {endControls.ownerHint === 'aiDm' ? <p>{copy.ownerEndAiDmHint}</p> : null}
+        {endControls.ownerHint === 'humanDm' ? <p>{copy.ownerAbandonHint}</p> : null}
 
-        {snapshot.status === 'active' && (isCurrentDm || canAbandon) ? (
+        {endControls.showEnd || endControls.showAbandon ? (
           <div className="workshop-card__split-actions">
-            {isCurrentDm ? (
+            {endControls.showEnd ? (
               <button
                 className="button primary"
                 disabled={pending}
                 type="button"
                 onClick={() => {
-                  if (!window.confirm(copy.endConfirm)) return
+                  const confirmText = endControls.ownerEndsAiDm ? copy.ownerEndAiDmConfirm : copy.endConfirm
+                  if (!window.confirm(confirmText)) return
                   mutate(() => endSession(roomId, campaignId, sessionId, token))
                 }}
               >{copy.end}</button>
             ) : null}
-            {canAbandon ? (
+            {endControls.showAbandon ? (
               <button
                 className="button danger"
                 disabled={pending}

@@ -11,6 +11,7 @@ import {
   mergeSessionSeatTruth,
   RoomSessionPage,
   roomSessionRouteFromPath,
+  sessionEndControls,
   sessionTableSnapshotWithCurrentControllers,
   SessionEventConnectionBanner,
 } from './RoomSessionPage'
@@ -115,6 +116,73 @@ describe('Session route and presentation', () => {
       sessionTableSnapshotWithCurrentControllers(snapshot, [currentSeat])
         .participants[0].controller_access_session_id_at_join,
     ).toBeNull()
+  })
+
+  it('M05-A: offers the Owner End and Abandon on an AI DM Session, Abandon only on a Human DM Session', () => {
+    const ownerOnAiDm = sessionEndControls({
+      status: 'active',
+      dmControllerKind: 'ai',
+      isCurrentDm: false,
+      isOwner: true,
+    })
+    expect(ownerOnAiDm).toEqual({
+      showEnd: true,
+      showAbandon: true,
+      ownerEndsAiDm: true,
+      ownerHint: 'aiDm',
+    })
+
+    const ownerOnHumanDm = sessionEndControls({
+      status: 'active',
+      dmControllerKind: 'human',
+      isCurrentDm: false,
+      isOwner: true,
+    })
+    expect(ownerOnHumanDm).toEqual({
+      showEnd: false,
+      showAbandon: true,
+      ownerEndsAiDm: false,
+      ownerHint: 'humanDm',
+    })
+
+    // The current DM (human) keeps the normal End path even when they are also the Owner.
+    expect(sessionEndControls({
+      status: 'active',
+      dmControllerKind: 'human',
+      isCurrentDm: true,
+      isOwner: true,
+    })).toEqual({ showEnd: true, showAbandon: true, ownerEndsAiDm: false, ownerHint: null })
+
+    // A DM-key holder or member who is not the current DM gets neither control on an AI DM Session.
+    expect(sessionEndControls({
+      status: 'active',
+      dmControllerKind: 'ai',
+      isCurrentDm: false,
+      isOwner: false,
+    })).toEqual({ showEnd: false, showAbandon: false, ownerEndsAiDm: false, ownerHint: null })
+
+    // Finalized Sessions offer nothing.
+    expect(sessionEndControls({
+      status: 'ended',
+      dmControllerKind: 'ai',
+      isCurrentDm: false,
+      isOwner: true,
+    })).toEqual({ showEnd: false, showAbandon: false, ownerEndsAiDm: false, ownerHint: null })
+
+    const source = readFileSync(new URL('./RoomSessionPage.tsx', import.meta.url), 'utf8')
+    expect(source).toContain('endControls.ownerEndsAiDm ? copy.ownerEndAiDmConfirm : copy.endConfirm')
+    expect(source).toContain("endControls.ownerHint === 'aiDm' ? <p>{copy.ownerEndAiDmHint}</p>")
+    expect(source).toContain("endControls.ownerHint === 'humanDm' ? <p>{copy.ownerAbandonHint}</p>")
+
+    for (const locale of ['en', 'zh-TW'] as const) {
+      const copy = sessionCopy(locale)
+      expect(copy.ownerEndAiDmHint).toBeTruthy()
+      expect(copy.ownerEndAiDmConfirm).toBeTruthy()
+      expect(copy.ownerAbandonHint).toBeTruthy()
+      expect(copy.ownerEndAiDmHint).not.toBe(copy.ownerAbandonHint)
+    }
+    expect(sessionCopy('zh-TW').ownerEndAiDmHint).toContain('AI')
+    expect(sessionCopy('en').ownerEndAiDmHint).toContain('AI DM')
   })
 
   it('renders persistent reconnect and fatal connection status in both locales', () => {
