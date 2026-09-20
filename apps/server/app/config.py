@@ -16,6 +16,12 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("ADVENTURE_TABLE_CONTENT_ROOT"),
     )
+    asset_root: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("ADVENTURE_TABLE_ASSET_ROOT"),
+    )
+    asset_max_image_bytes: int = 20 * 1024 * 1024
+    asset_max_source_document_bytes: int = 20 * 1024 * 1024
     database_path: str | None = Field(
         default=None,
         validation_alias=AliasChoices("ADVENTURE_TABLE_DATABASE_PATH"),

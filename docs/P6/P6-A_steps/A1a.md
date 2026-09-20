@@ -28,4 +28,8 @@
 
 ## 紀錄
 
-（派工後補）
+- **起始**：2026-09-20，worker agy（`Gemini 3.8 Flash (High)`），1 回合 2 分 23 秒，prompt `C:/_work/AI_Work/Tools/agy-runs/agy-p6a-A1a.prompt.txt`，conversation `0b166a93-3c25-4510-b545-7bd411396b4c`。agy 在寫完全部檔案後、pytest 跑完前就結束回合（final report 只有一句「Running pytest…」），檔案齊全，指揮者自行跑 gate。
+- **交付**：`persistence/room_assets/tables.py`（`room_assets`，CHECK `ck_room_assets_kind`／`ck_room_assets_visibility`，`storage_key` unique）；`persistence/adventures/tables.py`（`adventure_definitions`／`adventure_entries`／`adventure_entry_assets`／`campaign_adventure_links`，CHECK status／kind／visibility／role，`campaign_adventure_links` PK `(campaign_id, adventure_id)`、`adventure_id` RESTRICT）；兩模組由 `persistence/rooms/__init__.py` import 註冊到 metadata；`alembic/versions/0031_p6a_room_assets_adventures.py`（web track，parent `0030`）；`Settings.asset_root`／`asset_max_image_bytes`／`asset_max_source_document_bytes`；compose：server／server-e2e `ADVENTURE_TABLE_ASSET_ROOT` 與 `asset_data`／`asset_data_e2e` volume；`test_m03_import_boundary.py` regex 加 `room_assets?|adventures?` 與正／反斷言；`test_m03d_schema_parity.py` forbidden 加五表；`tests/test_p6a_postgres_migration.py` 3 個測試（reuse `test_p4f_postgres_migration._seed_room_and_campaign`）。
+- **指揮者審核修正**：兩處 CHECK `kind IN (...)` 字串超過 140 字元，拆成兩行字串常數；其餘零修正。`test_p6a_source_document_visibility_check_constraint` 名稱是 prompt 給的，實際驗的是 invalid kind／visibility 被 CHECK 擋、`source_document+room` 在 DB 層合法（dm_only 是 A1b service 規則）。
+- **測試**：`P4_POSTGRES_URL=…/adventure_table_p4` 下 `pytest tests/test_p6a_postgres_migration.py tests/test_p4f_postgres_migration.py tests/test_m03_import_boundary.py tests/test_m03d_schema_parity.py tests/test_migration_heads.py tests/test_p2a_migration_tracks.py tests/test_p3b_migration_contract.py tests/test_code_quality_gate.py` 34 passed；PG 三測試單跑 3 passed（非 skip）；全套 backend pytest 全綠（1 既有 skip）；`docker compose config` exit 0。
+- **未解問題／下一步**：無；A1b。

@@ -1,3 +1,5 @@
+from app.persistence.adventures import tables as _adventure_tables  # noqa: F401
+from app.persistence.room_assets import tables as _room_asset_tables  # noqa: F401
 from app.persistence.rooms.repository import RoomRepository
 from app.persistence.rooms.sessions import SessionRepository
 from app.persistence.rooms.tables import (
