@@ -30,6 +30,8 @@ def validate_runtime_visibility_recipients(
     visibility: RuntimeVisibility,
     character_recipient_ids: Sequence[UUID],
 ) -> None:
+    if len(set(character_recipient_ids)) != len(character_recipient_ids):
+        raise RuntimeEntryVisibilityError("Character recipients must be unique")
     if visibility == "character":
         if not character_recipient_ids:
             raise RuntimeEntryVisibilityError(

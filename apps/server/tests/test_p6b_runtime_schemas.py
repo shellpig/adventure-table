@@ -500,6 +500,9 @@ def test_visibility_recipient_invariant() -> None:
     ):
         validate_runtime_visibility_recipients("dm_only", (char_id1,))
 
+    with pytest.raises(RuntimeEntryVisibilityError, match="recipients must be unique"):
+        validate_runtime_visibility_recipients("character", (char_id1, char_id1))
+
     with pytest.raises(RuntimeEntryVisibilityError, match="Unknown visibility"):
         validate_runtime_visibility_recipients("invalid_vis", ())  # type: ignore[arg-type]
 
