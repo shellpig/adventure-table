@@ -7,6 +7,12 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
+from app.domain.campaign_runtime.ai_tools import (
+    AdventureEntryToolInput,
+    SceneContextToolInput,
+    SearchCampaignContextToolInput,
+    WorldEntryToolInput,
+)
 from app.domain.combat.adjudication_service import (
     OpportunityAttackRequestInput,
     SpecialAdjudicationRequestInput,
@@ -312,6 +318,26 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
         "DM resolves a pending combat adjudication, determining success, consequences, conditions, or resulting roll requests.",
         "DM 裁定待處理的戰鬥裁定事項，決定是否成立、後果、狀態或後續擲骰請求。",
     ),
+    "get_campaign_context": (
+        "Call once after get_session_context when you need the Campaign's scene, situation, party and world entry refs; then drill down with get_scene_context / search_campaign_context. Results are role-projected to what the caller may see.",
+        "在 get_session_context 之後呼叫一次，以取得 Campaign 的場景、局勢、隊伍與世界條目參照；後續再以 get_scene_context 或 search_campaign_context 深入查詢。回傳結果已依角色權限投影。",
+    ),
+    "get_scene_context": (
+        "Retrieve structured details for the current active scene or a specified scene reference; results are role-projected to what the caller may see.",
+        "取得目前作用中場景或指定場景參照的結構化詳細資訊；回傳結果已依角色權限投影。",
+    ),
+    "search_campaign_context": (
+        "Search Campaign runtime world entries and visible lore using keyword tokens; results are bounded, deterministic, and role-projected to what the caller may see.",
+        "以關鍵字搜尋 Campaign runtime 世界條目與可見設定；搜尋結果具邊界、具決定性，且已依角色權限投影。",
+    ),
+    "get_world_entry": (
+        "Fetch a single Campaign runtime world entry by its UUID; results are role-projected to what the caller may see.",
+        "依 UUID 取得單筆 Campaign runtime 世界條目；回傳結果已依角色權限投影。",
+    ),
+    "get_adventure_entry": (
+        "DM-only tool to read an attached Adventure baseline entry with any active Campaign runtime override applied.",
+        "DM 專用工具，讀取已附加 Adventure 的基準條目，並套用任何作用中的 Campaign runtime override。",
+    ),
 }
 
 
@@ -507,6 +533,11 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("combat_request_opportunity_attack", _desc("Request an opportunity attack trigger adjudication.", "申請借機攻擊觸發裁定。"), OpportunityAttackRequestInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_request_adjudication", _desc("Request a DM adjudication for a special tactical situation.", "針對特殊戰術情境向 DM 申請戰鬥裁定。"), SpecialAdjudicationRequestInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_resolve_adjudication", _desc("Resolve a pending combat adjudication ruling.", "裁定待處理的戰鬥裁定事項。"), CombatAdjudicationDecisionToolInput, frozenset({"dm"})),
+    MCPToolDefinition("get_campaign_context", _desc("Read Campaign overview including current scene, situation, party, and world entry references.", "讀取 Campaign 概覽，包含目前場景、局勢、隊伍與世界條目參照。"), _NoArguments, frozenset({"player", "dm"})),
+    MCPToolDefinition("get_scene_context", _desc("Read detailed scene context and related entries for the current scene or a specified scene reference.", "讀取目前場景或指定場景參照的詳細情境與關聯條目。"), SceneContextToolInput, frozenset({"player", "dm"})),
+    MCPToolDefinition("search_campaign_context", _desc("Search Campaign world entries and visible lore by keyword query.", "以關鍵字搜尋 Campaign 世界條目與可見設定。"), SearchCampaignContextToolInput, frozenset({"player", "dm"})),
+    MCPToolDefinition("get_world_entry", _desc("Read a specific Campaign runtime world entry by its ID.", "依 ID 讀取特定的 Campaign runtime 世界條目。"), WorldEntryToolInput, frozenset({"player", "dm"})),
+    MCPToolDefinition("get_adventure_entry", _desc("Read an attached Adventure entry with runtime overrides (DM only).", "讀取已附加 Adventure 條目與 runtime override（僅限 DM）。"), AdventureEntryToolInput, frozenset({"dm"})),
 )
 
 
@@ -706,6 +737,16 @@ async def call_tool(
             data = await asyncio.to_thread(service.combat_request_adjudication, token, parsed, authenticated=auth)
         elif name == "combat_resolve_adjudication":
             data = await asyncio.to_thread(service.combat_resolve_adjudication, token, parsed, authenticated=auth)
+        elif name == "get_campaign_context":
+            data = await asyncio.to_thread(service.get_campaign_context, token, authenticated=auth)
+        elif name == "get_scene_context":
+            data = await asyncio.to_thread(service.get_scene_context, token, parsed, authenticated=auth)
+        elif name == "search_campaign_context":
+            data = await asyncio.to_thread(service.search_campaign_context, token, parsed, authenticated=auth)
+        elif name == "get_world_entry":
+            data = await asyncio.to_thread(service.get_world_entry, token, parsed, authenticated=auth)
+        elif name == "get_adventure_entry":
+            data = await asyncio.to_thread(service.get_adventure_entry, token, parsed, authenticated=auth)
         else:  # pragma: no cover
             return structured_tool_error("tool_not_implemented", "Tool dispatch is not implemented", "工具 dispatch 尚未實作")
     except ValidationError:

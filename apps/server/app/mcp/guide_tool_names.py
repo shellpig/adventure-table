@@ -93,6 +93,11 @@ _EXPECTED = {
     "combat_request_opportunity_attack",
     "combat_request_adjudication",
     "combat_resolve_adjudication",
+    "get_campaign_context",
+    "get_scene_context",
+    "search_campaign_context",
+    "get_world_entry",
+    "get_adventure_entry",
 }
 
 

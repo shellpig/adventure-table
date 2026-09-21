@@ -4,13 +4,10 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import insert, select, update
+from sqlalchemy import insert, select
 
 from app.domain.campaign_runtime import (
     CampaignContextService,
-    CampaignRuntimeAuthorityError,
-    CampaignRuntimeNotFoundError,
-    CampaignRuntimeSessionNotActiveError,
     CampaignRuntimeValidationError,
     CampaignSearchDmResult,
     CampaignSearchHitDmView,
@@ -20,15 +17,12 @@ from app.domain.campaign_runtime.context import _search_sort_key
 from app.domain.rooms.table_events import TableActorContext
 from app.persistence.adventures.tables import adventure_entries
 from app.persistence.campaign_runtime.tables import campaign_world_entries
-from app.persistence.rooms.tables import (
-    ai_controller_grants,
-    room_access_sessions,
-)
 from tests.p6_active_fixture import (
     ActiveFixture,
     _scan_str,
     _snapshot,
     context_seeded_fix,
+    setup_authority_failure_actor,
 )
 
 
@@ -248,32 +242,7 @@ def test_search_kinds_filter(fix: ActiveFixture, svc: CampaignContextService) ->
 def test_authority_lifecycle_rejections_zero_side_effects(
     fix: ActiveFixture, svc: CampaignContextService, failure_kind: str
 ) -> None:
-    now = datetime.now(timezone.utc)
-    if failure_kind == "inactive_session":
-        actor = TableActorContext(
-            actor_kind=fix.human_dm_actor.actor_kind, room_id=fix.room_id,
-            campaign_id=fix.campaign_id, session_id=fix.inactive_session_id,
-            seat_id=fix.dm_seat_id, controlled_seat_ids=(fix.dm_seat_id,),
-            role="dm", is_current_dm=True, access_session_id=fix.human_dm_access_id,
-        )
-        expected_exc = (CampaignRuntimeSessionNotActiveError, CampaignRuntimeNotFoundError)
-    elif failure_kind == "revoked_human":
-        with fix.engine.begin() as conn:
-            conn.execute(
-                update(room_access_sessions)
-                .where(room_access_sessions.c.id == fix.human_dm_access_id)
-                .values(revoked_at=now)
-            )
-        actor, expected_exc = fix.human_dm_actor, (CampaignRuntimeAuthorityError,)
-    else:  # revoked_ai
-        with fix.engine.begin() as conn:
-            conn.execute(
-                update(ai_controller_grants)
-                .where(ai_controller_grants.c.id == fix.ai_dm_grant_id)
-                .values(status="revoked", revoked_at=now)
-            )
-        actor, expected_exc = fix.ai_dm_actor, (CampaignRuntimeAuthorityError,)
-
+    actor, expected_exc = setup_authority_failure_actor(fix, failure_kind)
     before = _snapshot(fix.engine, actor.campaign_id)
     with pytest.raises(expected_exc):
         svc.search_campaign_context(actor, "ancientkey")

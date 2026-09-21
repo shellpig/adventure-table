@@ -13,8 +13,11 @@ from sqlalchemy.pool import StaticPool
 from app.db import metadata
 from app.domain.campaign_runtime import (
     CampaignAdventureOverrideCreate,
+    CampaignRuntimeAuthorityError,
     CampaignRuntimeContextPatch,
+    CampaignRuntimeNotFoundError,
     CampaignRuntimeService,
+    CampaignRuntimeSessionNotActiveError,
     RuntimeWorldEntryCreate,
 )
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
@@ -729,3 +732,39 @@ def _seed_context_fixture(base_fix: ActiveFixture) -> ActiveFixture:
 @pytest.fixture
 def context_seeded_fix() -> ActiveFixture:
     return _seed_context_fixture(_build_active_fixture())
+
+
+def setup_authority_failure_actor(
+    fix: ActiveFixture, failure_kind: str
+) -> tuple[TableActorContext, tuple[type[Exception], ...]]:
+    now = datetime.now(timezone.utc)
+    if failure_kind == "inactive_session":
+        actor = TableActorContext(
+            actor_kind=fix.human_dm_actor.actor_kind,
+            room_id=fix.room_id,
+            campaign_id=fix.campaign_id,
+            session_id=fix.inactive_session_id,
+            seat_id=fix.dm_seat_id,
+            controlled_seat_ids=(fix.dm_seat_id,),
+            role="dm",
+            is_current_dm=True,
+            access_session_id=fix.human_dm_access_id,
+        )
+        return actor, (CampaignRuntimeSessionNotActiveError, CampaignRuntimeNotFoundError)
+    if failure_kind == "revoked_human":
+        with fix.engine.begin() as conn:
+            conn.execute(
+                update(room_access_sessions)
+                .where(room_access_sessions.c.id == fix.human_dm_access_id)
+                .values(revoked_at=now)
+            )
+        return fix.human_dm_actor, (CampaignRuntimeAuthorityError,)
+    if failure_kind == "revoked_ai":
+        with fix.engine.begin() as conn:
+            conn.execute(
+                update(ai_controller_grants)
+                .where(ai_controller_grants.c.id == fix.ai_dm_grant_id)
+                .values(status="revoked", revoked_at=now)
+            )
+        return fix.ai_dm_actor, (CampaignRuntimeAuthorityError,)
+    raise ValueError(f"Unknown failure kind: {failure_kind}")

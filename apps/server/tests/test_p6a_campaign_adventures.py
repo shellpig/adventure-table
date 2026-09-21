@@ -799,5 +799,10 @@ def test_adventure_domain_has_no_gameplay_actor_entry_point() -> None:
 
     assert "TableActorContext" not in inspect.getsource(app.domain.adventures.service)
     assert "TableActorContext" not in inspect.getsource(app.domain.adventures.attachments)
+    # P6-C C.2 fixes `get_adventure_entry` as the one DM-only MCP read of an
+    # attached Adventure entry (through the Campaign runtime overlay); no other
+    # MCP tool may expose Adventure authoring.
     for tool_def in app.mcp.tools._TOOL_DEFINITIONS:
-        assert "adventure" not in tool_def.name.lower(), f"MCP tool {tool_def.name} contains 'adventure'"
+        assert tool_def.name == "get_adventure_entry" or "adventure" not in tool_def.name.lower(), (
+            f"MCP tool {tool_def.name} contains 'adventure'"
+        )

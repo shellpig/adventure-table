@@ -18,6 +18,7 @@ PLAYER_ACTIVE = {
     "combat_roll_concentration", "combat_drop_concentration",
     "combat_respond_to_reaction", "combat_request_opportunity_attack",
     "combat_request_adjudication",
+    "get_campaign_context", "get_scene_context", "search_campaign_context", "get_world_entry",
 }
 # The DM catalog is one fixed set before and after start_session (2026-09-12
 # revision): a connector that snapshots tools/list in the Lobby must not need a
@@ -43,6 +44,8 @@ DM_CATALOG = {
     "combat_open_reaction_window", "combat_respond_to_reaction",
     "combat_request_opportunity_attack", "combat_request_adjudication",
     "combat_resolve_adjudication",
+    "get_campaign_context", "get_scene_context", "search_campaign_context", "get_world_entry",
+    "get_adventure_entry",
 }
 
 
