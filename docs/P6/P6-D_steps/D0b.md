@@ -23,4 +23,9 @@
 
 ## 完成紀錄
 
-（待補）
+- **起始**：2026-09-21；agy 1 回合，298 秒；conversation `22f6a3aa-e4be-46d8-bc20-c2efb8862cde`。
+- **交付**：`entry_mutations.py`（492 行）、`override_mutations.py`（260）、`context_mutations.py`（232）；`service.py` 2,099 → 1,242 行，只剩 import、`T = TypeVar` 與 `CampaignRuntimeService`；改名十個（見 Scope 表）；`__init__.py` 的 `validate_mutation_identity` 改從 `entry_mutations` import。三個 mutation module 只依賴 D0a leaf module／schemas／persistence，無循環。
+- **指揮者審核修正**：無。
+- **測試**：AST 逐函式比對 39／39 本體相等（累計 D0a＋D0b）；`import app.main` OK；P6-A／B／C 全部＋code quality＋M03 boundary：216 passed／2 skipped；unused-import 掃描乾淨；`git diff --check` 通過；全套 backend pytest 2,101 passed／74 skipped／0 failed。
+- **驗證 commit**：見步驟板。
+- **未解問題／下一步**：D0 完成。`service.py` 仍 1,242 行，主因 16 個 management／active wrapper 各約 40 行樣板；P6-D `CampaignWorldService` 若能以 intent 表驅動包裝，可再壓縮，但不在 D0 範圍。

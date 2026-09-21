@@ -60,9 +60,11 @@ from app.domain.campaign_runtime.errors import (
     CampaignRuntimeSessionNotActiveError,
     CampaignRuntimeValidationError,
 )
+from app.domain.campaign_runtime.entry_mutations import (
+    validate_mutation_identity,
+)
 from app.domain.campaign_runtime.service import (
     CampaignRuntimeService,
-    validate_mutation_identity,
 )
 from app.domain.campaign_runtime.context import (
     CampaignContextService,
