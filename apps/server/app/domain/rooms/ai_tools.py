@@ -177,6 +177,9 @@ class AIToolApplicationService:
             return True, "set_stage_text"
         return stage_unset, "wait_for_event"
 
+    def _active_context_extension(self, actor: TableActorContext) -> dict[str, Any]:
+        return {}
+
     def get_session_context(
         self,
         token: str,
@@ -212,7 +215,7 @@ class AIToolApplicationService:
         )
         stage = self.stage_service.get_stage(actor)
         stage_unset, next_required_action = self._stage_hint(stage, role=actor.role)
-        return {
+        data = {
             "mode": "active_session",
             "caller": {
                 "seat_id": str(actor.seat_id),
@@ -253,6 +256,8 @@ class AIToolApplicationService:
             "briefing": self._briefing(role=actor.role, mode="active_session"),
             "temporary_instruction": auth.temporary_instruction,
         }
+        data.update(self._active_context_extension(actor))
+        return data
 
     def start_session(
         self,
