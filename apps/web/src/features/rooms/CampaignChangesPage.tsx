@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
 
+import type { AttachedAdventure } from '../../api/adventures'
 import type { RoomCharacterSummary } from '../../api/campaigns'
-import {
-  createRuntimeEntry,
-  updateRuntimeEntry,
-  type CampaignAdventureOverride,
-  type CampaignRuntimeContext,
-  type RuntimeWorldEntryDmView,
+import type {
+  CampaignAdventureEntryOverlayView,
+  CampaignAdventureOverride,
+  CampaignRuntimeContext,
+  RuntimeWorldEntryDmView,
 } from '../../api/campaignRuntime'
 import { useLocale } from '../../i18n/LocaleProvider'
 import {
@@ -15,22 +15,32 @@ import {
   type CampaignRuntimeCopy,
 } from './campaignRuntimeCopy'
 import {
-  buildCreateEntryRequest,
-  buildUpdateEntryRequest,
-  createInitialEntryFormState,
-  entryToFormState,
-  executeRuntimeMutation,
-  generateRuntimeIdempotencyKey,
-  handleArchiveRuntimeEntry,
   loadCampaignChanges,
-  type RuntimeEntryFormState,
 } from './campaignRuntimeForm'
+import {
+  CampaignRuntimeContextView,
+} from './CampaignRuntimeContext'
 import {
   RuntimeEntryCardView,
   RuntimeEntryFormView,
 } from './CampaignRuntimeEntries'
+import {
+  collectReviewQueueItems,
+} from './campaignRuntimeOverrideForm'
+import {
+  CampaignAttachedAdventuresSection,
+} from './CampaignRuntimeOverrides'
+import {
+  CampaignRuntimeReviewQueue,
+} from './CampaignRuntimeReviewQueue'
 import { recentRoomForId } from './roomStorage'
+import {
+  useCampaignChangesManagement,
+  type CampaignChangesManagement,
+} from './useCampaignChangesManagement'
 import './rooms.css'
+
+export type { CampaignChangesManagement }
 
 const UUID_PATTERN = '[0-9a-fA-F-]{36}'
 
@@ -54,29 +64,16 @@ export function isCampaignChangesEmpty(
     current_runtime_scene_entry_id?: string | null
     current_situation?: string | null
   } | null,
+  attachedAdventures: { length: number },
 ): boolean {
   if (entries.length > 0 || overrides.length > 0) return false
+  if (attachedAdventures.length > 0) return false
   if (!context) return true
   return (
     !context.current_adventure_scene_entry_id &&
     !context.current_runtime_scene_entry_id &&
     !context.current_situation
   )
-}
-
-export type CampaignChangesManagement = {
-  characters: RoomCharacterSummary[]
-  formState: RuntimeEntryFormState | null
-  pending: boolean
-  formError: string | null
-  mutationError: string | null
-  committedWarning: string | null
-  onOpenCreate: () => void
-  onOpenEdit: (entry: RuntimeWorldEntryDmView) => void
-  onCancelForm: () => void
-  onChangeForm: (updater: (prev: RuntimeEntryFormState) => RuntimeEntryFormState) => void
-  onSubmitForm: (e: React.FormEvent) => void
-  onArchiveEntry: (entry: RuntimeWorldEntryDmView) => void
 }
 
 export type CampaignChangesViewProps = {
@@ -87,6 +84,8 @@ export type CampaignChangesViewProps = {
   entries: RuntimeWorldEntryDmView[]
   overrides: CampaignAdventureOverride[]
   context: CampaignRuntimeContext | null
+  attachedAdventures: AttachedAdventure[]
+  overlays: CampaignAdventureEntryOverlayView[]
   management: CampaignChangesManagement | null
   copy: CampaignRuntimeCopy
 }
@@ -99,15 +98,14 @@ export function CampaignChangesView({
   entries,
   overrides,
   context,
+  attachedAdventures,
+  overlays,
   management,
   copy,
 }: CampaignChangesViewProps) {
-  const isEmpty = isCampaignChangesEmpty(entries, overrides, context)
+  const isEmpty = isCampaignChangesEmpty(entries, overrides, context, attachedAdventures)
   const backHref = `/rooms/${roomId}/campaigns/${campaignId}`
-  const currentScene =
-    context?.current_runtime_scene_entry_id ??
-    context?.current_adventure_scene_entry_id ??
-    null
+  const reviewQueueItems = collectReviewQueueItems(entries, overlays, attachedAdventures)
 
   return (
     <main className="landing-page room-workspace-page">
@@ -121,66 +119,64 @@ export function CampaignChangesView({
         </div>
         {loading ? <p>{copy.loading}</p> : null}
         {error ? <div className="error-banner">{error}</div> : null}
+        {management?.mutationError ? (
+          <div className="error-banner">{management.mutationError}</div>
+        ) : null}
         {management?.committedWarning ? (
           <div className="notice-banner" role="status">
             {management.committedWarning}
           </div>
         ) : null}
-        {!loading && !error && isEmpty ? (
+
+        {!loading && !error ? (
           <div>
-            <p>{copy.emptyState}</p>
-            {management && !management.formState ? (
-              <div className="workshop-card__split-actions">
-                <button
-                  className="button primary"
-                  disabled={management.pending}
-                  onClick={management.onOpenCreate}
-                  type="button"
-                >
-                  {copy.createEntryButton}
-                </button>
-              </div>
-            ) : null}
-            {management?.formState?.mode === 'create' ? (
-              <div className="runtime-entry-create-form-wrapper">
-                <RuntimeEntryFormView
-                  characters={management.characters}
-                  copy={copy}
-                  entries={entries}
-                  form={management.formState}
-                  formError={management.formError}
-                  onCancel={management.onCancelForm}
-                  onChange={management.onChangeForm}
-                  onSubmit={management.onSubmitForm}
-                  pending={management.pending}
-                />
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-        {!loading && !error && !isEmpty ? (
-          <div>
+            {isEmpty ? <p className="runtime-review-queue__empty">{copy.emptyState}</p> : null}
+
+            <CampaignRuntimeReviewQueue
+              actions={
+                management
+                  ? {
+                      disabled: management.pending,
+                      onOpenEditOverride: management.onOpenEditOverride,
+                      onOpenEditRuntime: management.onOpenEdit,
+                    }
+                  : null
+              }
+              copy={copy}
+              items={reviewQueueItems}
+            />
+
             <hr />
-            <section>
-              <h2>{copy.contextHeading}</h2>
-              <p>
-                <strong>{copy.currentSceneLabel}:</strong> {currentScene ?? copy.noCurrentScene}
-              </p>
-              {context?.current_situation ? (
-                <p>
-                  <strong>{copy.currentSituationLabel}:</strong> {context.current_situation}
-                </p>
-              ) : null}
-            </section>
+
+            <CampaignRuntimeContextView
+              actions={
+                management
+                  ? {
+                      pending: management.pending,
+                      formState: management.contextFormState,
+                      formError: management.contextFormError,
+                      onOpenEdit: management.onOpenEditContext,
+                      onCancelEdit: management.onCancelEditContext,
+                      onChangeForm: management.onChangeContextForm,
+                      onSubmitForm: management.onSubmitContextForm,
+                      onClearContext: management.onClearContext,
+                    }
+                  : null
+              }
+              attachedAdventures={attachedAdventures}
+              context={context}
+              copy={copy}
+              entries={entries}
+              overlays={overlays}
+            />
+
             <hr />
+
             <section>
               <h2>{copy.entriesHeading}</h2>
               <p>
                 {copy.entryCountLabel}: {entries.length}
               </p>
-              {management?.mutationError ? (
-                <div className="error-banner">{management.mutationError}</div>
-              ) : null}
               {management && !management.formState ? (
                 <div className="workshop-card__split-actions">
                   <button
@@ -208,50 +204,70 @@ export function CampaignChangesView({
                   />
                 </div>
               ) : null}
-              <ul className="adventure-entry-list">
-                {entries.map((entry) => (
-                  <li key={entry.id}>
-                    {management?.formState?.mode === 'edit' &&
-                    management.formState.entryId === entry.id ? (
-                      <RuntimeEntryFormView
-                        characters={management.characters}
-                        copy={copy}
-                        entries={entries}
-                        form={management.formState}
-                        formError={management.formError}
-                        onCancel={management.onCancelForm}
-                        onChange={management.onChangeForm}
-                        onSubmit={management.onSubmitForm}
-                        pending={management.pending}
-                      />
-                    ) : (
-                      <RuntimeEntryCardView
-                        actions={
-                          management
-                            ? {
-                                disabled: management.pending,
-                                onArchive: management.onArchiveEntry,
-                                onEdit: management.onOpenEdit,
-                              }
-                            : null
-                        }
-                        characters={management ? management.characters : []}
-                        copy={copy}
-                        entries={entries}
-                        entry={entry}
-                      />
-                    )}
-                  </li>
-                ))}
-              </ul>
+              {entries.length > 0 ? (
+                <ul className="adventure-entry-list">
+                  {entries.map((entry) => (
+                    <li key={entry.id}>
+                      {management?.formState?.mode === 'edit' &&
+                      management.formState.entryId === entry.id ? (
+                        <RuntimeEntryFormView
+                          characters={management.characters}
+                          copy={copy}
+                          entries={entries}
+                          form={management.formState}
+                          formError={management.formError}
+                          onCancel={management.onCancelForm}
+                          onChange={management.onChangeForm}
+                          onSubmit={management.onSubmitForm}
+                          pending={management.pending}
+                        />
+                      ) : (
+                        <RuntimeEntryCardView
+                          actions={
+                            management
+                              ? {
+                                  disabled: management.pending,
+                                  onArchive: management.onArchiveEntry,
+                                  onEdit: management.onOpenEdit,
+                                }
+                              : null
+                          }
+                          characters={management ? management.characters : []}
+                          copy={copy}
+                          entries={entries}
+                          entry={entry}
+                        />
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </section>
+
             <hr />
-            <section>
-              <h2>{copy.overridesHeading}</h2>
-              <p>
-                {copy.overrideCountLabel}: {overrides.length}
-              </p>
-            </section>
+
+            <CampaignAttachedAdventuresSection
+              actions={
+                management
+                  ? {
+                      pending: management.pending,
+                      activeOverrideForm: management.overrideFormState,
+                      overrideFormError: management.overrideFormError,
+                      onCancelOverrideForm: management.onCancelOverrideForm,
+                      onChangeOverrideForm: management.onChangeOverrideForm,
+                      onClearOverride: management.onClearOverride,
+                      onOpenCreateOverride: management.onOpenCreateOverride,
+                      onOpenEditOverride: management.onOpenEditOverride,
+                      onSubmitOverrideForm: management.onSubmitOverrideForm,
+                    }
+                  : null
+              }
+              attachedAdventures={attachedAdventures}
+              context={context}
+              copy={copy}
+              overrideCount={overrides.length}
+              overlays={overlays}
+            />
           </div>
         ) : null}
       </section>
@@ -268,13 +284,10 @@ export function CampaignChangesPage({ roomId, campaignId }: CampaignChangesRoute
   const [overrides, setOverrides] = useState<CampaignAdventureOverride[]>([])
   const [context, setContext] = useState<CampaignRuntimeContext | null>(null)
   const [characters, setCharacters] = useState<RoomCharacterSummary[]>([])
+  const [attachedAdventures, setAttachedAdventures] = useState<AttachedAdventure[]>([])
+  const [overlays, setOverlays] = useState<CampaignAdventureEntryOverlayView[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [formState, setFormState] = useState<RuntimeEntryFormState | null>(null)
-  const [pending, setPending] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
-  const [mutationError, setMutationError] = useState<string | null>(null)
-  const [committedWarning, setCommittedWarning] = useState<string | null>(null)
 
   const handleReload = async () => {
     const snapshot = await loadCampaignChanges(roomId, campaignId, token)
@@ -282,6 +295,8 @@ export function CampaignChangesPage({ roomId, campaignId }: CampaignChangesRoute
     setOverrides(snapshot.overrides)
     setContext(snapshot.context)
     setCharacters(snapshot.characters)
+    setAttachedAdventures(snapshot.attachedAdventures)
+    setOverlays(snapshot.overlays)
   }
 
   useEffect(() => {
@@ -302,6 +317,8 @@ export function CampaignChangesPage({ roomId, campaignId }: CampaignChangesRoute
         setOverrides(snapshot.overrides)
         setContext(snapshot.context)
         setCharacters(snapshot.characters)
+        setAttachedAdventures(snapshot.attachedAdventures)
+        setOverlays(snapshot.overlays)
       })
       .catch((cause: unknown) => {
         if (!active) return
@@ -316,162 +333,28 @@ export function CampaignChangesPage({ roomId, campaignId }: CampaignChangesRoute
     }
   }, [campaignId, locale, roomId, token])
 
-  const handleOpenCreate = () => {
-    setFormState(createInitialEntryFormState('scene'))
-    setFormError(null)
-    setMutationError(null)
-    setCommittedWarning(null)
-  }
-
-  const handleOpenEdit = (entry: RuntimeWorldEntryDmView) => {
-    const nextState = entryToFormState(entry)
-    if (!nextState) return
-    setFormState(nextState)
-    setFormError(null)
-    setMutationError(null)
-    setCommittedWarning(null)
-  }
-
-  const handleCancelForm = () => {
-    setFormState(null)
-    setFormError(null)
-  }
-
-  const handleChangeForm = (
-    updater: (prev: RuntimeEntryFormState) => RuntimeEntryFormState,
-  ) => {
-    setFormState((prev) => (prev ? updater(prev) : prev))
-  }
-
-  const handleSubmitForm = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formState) return
-
-    if (formState.mode === 'create') {
-      const idempotencyKey = generateRuntimeIdempotencyKey('runtime-entry-create')
-      const built = buildCreateEntryRequest(formState, idempotencyKey)
-      if (!built.ok) {
-        setFormError(copy[built.errorKey])
-        return
-      }
-      setPending(true)
-      setFormError(null)
-      setMutationError(null)
-      setCommittedWarning(null)
-      void executeRuntimeMutation({
-        action: () => createRuntimeEntry(roomId, campaignId, token, built.value),
-        onReload: handleReload,
-        onSuccess: () => {
-          setFormState(null)
-          setPending(false)
-        },
-        onError: (err) => {
-          setFormError(err)
-          setPending(false)
-        },
-        onCommittedReloadError: () => {
-          setFormState(null)
-          setPending(false)
-          setFormError(null)
-          setMutationError(null)
-          setCommittedWarning(copy.committedReloadWarning)
-        },
-        copy,
-      })
-    } else {
-      const idempotencyKey = generateRuntimeIdempotencyKey('runtime-entry-update')
-      const built = buildUpdateEntryRequest(formState, idempotencyKey)
-      if (!built.ok) {
-        setFormError(copy[built.errorKey])
-        return
-      }
-      setPending(true)
-      setFormError(null)
-      setMutationError(null)
-      setCommittedWarning(null)
-      void executeRuntimeMutation({
-        action: () =>
-          updateRuntimeEntry(roomId, campaignId, formState.entryId, token, built.value),
-        onReload: handleReload,
-        onSuccess: () => {
-          setFormState(null)
-          setPending(false)
-        },
-        onError: (err) => {
-          setFormError(err)
-          setPending(false)
-        },
-        onCommittedReloadError: () => {
-          setFormState(null)
-          setPending(false)
-          setFormError(null)
-          setMutationError(null)
-          setCommittedWarning(copy.committedReloadWarning)
-        },
-        copy,
-      })
-    }
-  }
-
-  const handleArchive = (entry: RuntimeWorldEntryDmView) => {
-    const idempotencyKey = generateRuntimeIdempotencyKey('runtime-entry-archive')
-    void handleArchiveRuntimeEntry({
-      roomId,
-      campaignId,
-      entryId: entry.id,
-      revision: entry.revision,
-      token,
-      idempotencyKey,
-      onStart: () => {
-        setPending(true)
-        setMutationError(null)
-        setCommittedWarning(null)
-      },
-      onCancel: () => {
-        setPending(false)
-      },
-      onReload: handleReload,
-      onSuccess: () => {
-        setPending(false)
-      },
-      onError: (err) => {
-        setMutationError(err)
-        setPending(false)
-      },
-      onCommittedReloadError: () => {
-        setPending(false)
-        setMutationError(null)
-        setCommittedWarning(copy.committedReloadWarning)
-      },
-      copy,
-    })
-  }
-
-  const management: CampaignChangesManagement = {
+  const management = useCampaignChangesManagement({
+    roomId,
+    campaignId,
+    token,
+    copy,
+    context,
     characters,
-    formState,
-    pending,
-    formError,
-    mutationError,
-    committedWarning,
-    onOpenCreate: handleOpenCreate,
-    onOpenEdit: handleOpenEdit,
-    onCancelForm: handleCancelForm,
-    onChangeForm: handleChangeForm,
-    onSubmitForm: handleSubmitForm,
-    onArchiveEntry: handleArchive,
-  }
+    onReload: handleReload,
+  })
 
   return (
     <CampaignChangesView
+      attachedAdventures={attachedAdventures}
       campaignId={campaignId}
       context={context}
       copy={copy}
       entries={entries}
       error={error}
       loading={loading}
-      management={management}
+      management={recent ? management : null}
       overrides={overrides}
+      overlays={overlays}
       roomId={roomId}
     />
   )

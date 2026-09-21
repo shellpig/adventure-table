@@ -1,3 +1,4 @@
+import type { AdventureEntryKind } from '../../api/adventures'
 import {
   CampaignRuntimeApiError,
   type RuntimeEntryKind,
@@ -67,6 +68,12 @@ const COPY = {
     kindFact: 'Fact',
     kindSecret: 'Secret',
     kindHazard: 'Hazard',
+    kindSection: 'Section',
+    kindMonsterRef: 'Monster Reference',
+    kindDmNote: 'DM Note',
+    kindSuggestedCheck: 'Suggested Check',
+    kindMap: 'Map',
+    kindLore: 'Lore',
     kindOther: 'Other',
     monsterInstanceIdLabel: 'Monster Instance ID',
     monsterTemplateRefLabel: 'Monster Template Reference',
@@ -94,6 +101,45 @@ const COPY = {
     recipientsNone: 'None',
     committedReloadWarning:
       'The change was saved, but the latest state could not be loaded. Please refresh before making another change.',
+    createOverrideButton: 'Add Override',
+    editOverrideButton: 'Edit Override',
+    clearOverrideButton: 'Clear Override',
+    confirmClearOverride: 'Are you sure you want to clear this adventure override?',
+    overrideStateLabel: 'Override State JSON (top-level object)',
+    overrideNoteLabel: 'Note',
+    overrideRevisionLabel: 'Override Revision',
+    formTitleCreateOverride: 'New Adventure Override',
+    formTitleEditOverride: 'Edit Adventure Override',
+    effectiveDataLabel: 'Effective Data',
+    overridePatchLabel: 'Override State',
+    errOverrideStateInvalidJson: 'Override state must be a valid JSON object.',
+    detachBlockerOverrides:
+      'Cannot detach: this adventure has active overrides. Clear all overrides before detaching.',
+    detachBlockerContextScene:
+      'Cannot detach: current scene is set to a scene from this adventure. Clear or change the current scene before detaching.',
+    detachBlockerNoticeHeading: 'Detach Notice',
+    reviewQueueHeading: 'Needs Review',
+    reviewQueueCountLabel: 'Items needing review',
+    reviewQueueEmpty: 'No items currently need review.',
+    reviewQueueHint:
+      'This queue is a reminder of items flagged for review and does not block running your Campaign.',
+    reviewButton: 'Open/Edit',
+    reviewSourceTypeRuntime: 'Runtime Entry',
+    reviewSourceTypeOverride: 'Adventure Override',
+    editContextButton: 'Edit Context',
+    clearContextButton: 'Clear Context',
+    confirmClearContext: 'Are you sure you want to clear the current scene and situation?',
+    formTitleEditContext: 'Edit Current Context',
+    sceneSelectorLabel: 'Current Scene',
+    sceneOptionNone: 'None',
+    sceneGroupAdventure: 'Attached Adventure Scenes',
+    sceneGroupRuntime: 'Runtime Scenes',
+    contextSituationPlaceholder: 'Describe the current party situation or environment…',
+    contextSaveButton: 'Save Context',
+    noAttachedAdventures: 'No adventures attached to this Campaign.',
+    adventureEntriesCountLabel: 'Entries',
+    noActiveOverride: 'No override active (using baseline template)',
+    activeOverrideNotice: 'Active Override',
   },
   'zh-TW': {
     changesTitle: 'Campaign 變更',
@@ -155,6 +201,12 @@ const COPY = {
     kindFact: '世界事實',
     kindSecret: '秘密',
     kindHazard: '危害',
+    kindSection: '章節',
+    kindMonsterRef: '怪物參照',
+    kindDmNote: 'DM 備忘',
+    kindSuggestedCheck: '建議檢定',
+    kindMap: '地圖',
+    kindLore: '傳聞知識',
     kindOther: '其他',
     monsterInstanceIdLabel: '怪物實例 ID',
     monsterTemplateRefLabel: '怪物範本參照',
@@ -182,6 +234,45 @@ const COPY = {
     recipientsNone: '無',
     committedReloadWarning:
       '變更已成功儲存，但無法載入最新狀態。請在進行下一次變更前重新整理。',
+    createOverrideButton: '新增覆寫',
+    editOverrideButton: '編輯覆寫',
+    clearOverrideButton: '清除覆寫',
+    confirmClearOverride: '確定要清除此冒險覆寫嗎？',
+    overrideStateLabel: '覆寫狀態 JSON（頂層物件）',
+    overrideNoteLabel: '備忘說明',
+    overrideRevisionLabel: '覆寫修訂版號',
+    formTitleCreateOverride: '新增冒險覆寫',
+    formTitleEditOverride: '編輯冒險覆寫',
+    effectiveDataLabel: '生效資料',
+    overridePatchLabel: '覆寫狀態',
+    errOverrideStateInvalidJson: '覆寫狀態必須是有效的 JSON 物件。',
+    detachBlockerOverrides:
+      '無法卸載：此冒險仍有使用中的覆寫。請先清除所有覆寫後再卸載。',
+    detachBlockerContextScene:
+      '無法卸載：目前場景指向此冒險的場景。請先清除或更換目前場景後再卸載。',
+    detachBlockerNoticeHeading: '卸載提醒',
+    reviewQueueHeading: '待審核項目',
+    reviewQueueCountLabel: '待審核項目數',
+    reviewQueueEmpty: '目前沒有需要審核的項目。',
+    reviewQueueHint:
+      '此佇列僅為待審核項目的提醒，不會阻礙 Campaign 的正常進行。',
+    reviewButton: '檢視／編輯',
+    reviewSourceTypeRuntime: '執行期項目',
+    reviewSourceTypeOverride: '冒險覆寫',
+    editContextButton: '編輯情境',
+    clearContextButton: '清除情境',
+    confirmClearContext: '確定要清除目前場景與情境摘要嗎？',
+    formTitleEditContext: '編輯目前情境',
+    sceneSelectorLabel: '目前場景',
+    sceneOptionNone: '無',
+    sceneGroupAdventure: '已附加冒險場景',
+    sceneGroupRuntime: '執行期場景',
+    contextSituationPlaceholder: '描述隊伍目前的處境或環境…',
+    contextSaveButton: '儲存情境',
+    noAttachedAdventures: '此 Campaign 尚未附加任何冒險。',
+    adventureEntriesCountLabel: '項目數',
+    noActiveOverride: '無使用中覆寫（使用原始範本）',
+    activeOverrideNotice: '使用中覆寫',
   },
 } as const satisfies Record<Locale, Record<string, string>>
 
@@ -191,14 +282,23 @@ export function campaignRuntimeCopy(locale: Locale): CampaignRuntimeCopy {
   return COPY[locale]
 }
 
-export function entryKindLabel(kind: RuntimeEntryKind, copy: CampaignRuntimeCopy): string {
+export type AnyWorldEntryKind = RuntimeEntryKind | AdventureEntryKind
+
+export function anyEntryKindLabel(
+  kind: AnyWorldEntryKind,
+  copy: CampaignRuntimeCopy,
+): string {
   switch (kind) {
+    case 'section':
+      return copy.kindSection
     case 'scene':
       return copy.kindScene
     case 'npc':
       return copy.kindNpc
     case 'item':
       return copy.kindItem
+    case 'monster_ref':
+      return copy.kindMonsterRef
     case 'quest':
       return copy.kindQuest
     case 'fact':
@@ -207,11 +307,31 @@ export function entryKindLabel(kind: RuntimeEntryKind, copy: CampaignRuntimeCopy
       return copy.kindSecret
     case 'hazard':
       return copy.kindHazard
+    case 'dm_note':
+      return copy.kindDmNote
+    case 'suggested_check':
+      return copy.kindSuggestedCheck
+    case 'map':
+      return copy.kindMap
+    case 'lore':
+      return copy.kindLore
     case 'other':
       return copy.kindOther
-    default:
-      return kind
   }
+}
+
+export function entryKindLabel(
+  kind: RuntimeEntryKind,
+  copy: CampaignRuntimeCopy,
+): string {
+  return anyEntryKindLabel(kind, copy)
+}
+
+export function adventureEntryKindLabel(
+  kind: AdventureEntryKind,
+  copy: CampaignRuntimeCopy,
+): string {
+  return anyEntryKindLabel(kind, copy)
 }
 
 export function visibilityLabel(visibility: RuntimeVisibility, copy: CampaignRuntimeCopy): string {

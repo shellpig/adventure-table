@@ -997,3 +997,154 @@
 .runtime-entry-create-form-wrapper {
   margin-bottom: 20px;
 }
+
+/* B5c Review Queue */
+.runtime-review-queue {
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+
+.runtime-review-queue__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.runtime-review-queue__header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.runtime-review-queue__count {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.runtime-review-queue__empty {
+  margin: 0;
+  color: var(--quiet);
+  font-size: 0.9rem;
+}
+
+.runtime-review-queue__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.runtime-review-queue__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--surface-1, #0c1017);
+  border: 1px solid var(--line-soft);
+}
+
+.runtime-review-queue__item-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+
+.runtime-review-queue__source-type {
+  color: var(--quiet);
+  font-size: 0.8rem;
+}
+
+.runtime-review-queue__title {
+  color: var(--text);
+}
+
+/* B5c Context Card */
+.runtime-context-card {
+  margin-bottom: 24px;
+}
+
+.runtime-context-card__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.runtime-context-card__header h2 {
+  margin: 0;
+}
+
+.runtime-context-card__details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* B5c Attached Adventures & Overrides */
+.attached-adventure-block {
+  margin-bottom: 24px;
+}
+
+.attached-adventure-block__header {
+  margin-bottom: 12px;
+}
+
+.attached-adventure-block__header h3 {
+  margin: 0 0 4px;
+}
+
+.attached-adventure-block__header p {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.attached-adventure-block__meta {
+  display: flex;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: var(--quiet);
+}
+
+.detach-blocker-warning {
+  margin: 10px 0 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(220, 100, 50, 0.12);
+  border: 1px solid rgba(220, 100, 50, 0.4);
+  color: #ffaa77;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.runtime-override-box {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(215, 181, 109, 0.08);
+  border: 1px solid rgba(215, 181, 109, 0.3);
+}
+
+.runtime-override-box h4 {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  color: var(--gold-bright);
+}
+
+.runtime-override-none {
+  margin-top: 8px;
+  margin-bottom: 0;
+  font-size: 0.82rem;
+  color: var(--quiet);
+  font-style: italic;
+}

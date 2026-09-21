@@ -1,10 +1,16 @@
 import {
+  listCampaignAdventures,
+  type AttachedAdventure,
+} from '../../api/adventures'
+import {
   archiveRuntimeEntry,
   CampaignRuntimeApiError,
   getRuntimeContext,
+  listAdventureEntryOverlays,
   listOverrides,
   listRuntimeEntries,
   type ArchiveRuntimeWorldEntryRequest,
+  type CampaignAdventureEntryOverlayView,
   type CampaignAdventureOverride,
   type CampaignRuntimeContext,
   type CreateRuntimeWorldEntryRequest,
@@ -415,6 +421,8 @@ export type CampaignChangesSnapshot = {
   overrides: CampaignAdventureOverride[]
   context: CampaignRuntimeContext
   characters: RoomCharacterSummary[]
+  attachedAdventures: AttachedAdventure[]
+  overlays: CampaignAdventureEntryOverlayView[]
 }
 
 export async function loadCampaignChanges(
@@ -422,13 +430,32 @@ export async function loadCampaignChanges(
   campaignId: string,
   token: string,
 ): Promise<CampaignChangesSnapshot> {
-  const [entries, overrides, context, characters] = await Promise.all([
+  const [entries, overrides, context, characters, attachedAdventures] = await Promise.all([
     listRuntimeEntries(roomId, campaignId, token),
     listOverrides(roomId, campaignId, token),
     getRuntimeContext(roomId, campaignId, token),
     listRoomCharacters(roomId, token),
+    listCampaignAdventures(roomId, campaignId, token),
   ])
-  return { entries, overrides, context, characters }
+
+  let overlays: CampaignAdventureEntryOverlayView[] = []
+  if (attachedAdventures.length > 0) {
+    const overlayLists = await Promise.all(
+      attachedAdventures.map((adv) =>
+        listAdventureEntryOverlays(roomId, campaignId, adv.adventure_id, token),
+      ),
+    )
+    overlays = overlayLists.flat()
+  }
+
+  return {
+    entries,
+    overrides,
+    context,
+    characters,
+    attachedAdventures,
+    overlays,
+  }
 }
 
 export type ExecuteRuntimeMutationOptions<T> = {
@@ -436,6 +463,7 @@ export type ExecuteRuntimeMutationOptions<T> = {
   onReload: () => Promise<void>
   onSuccess?: (result: T) => void
   onError: (errorMessage: string) => void
+  onConflict?: (errorMessage: string) => void
   onCommittedReloadError: (errorMessage: string) => void
   copy: CampaignRuntimeCopy
 }
@@ -445,6 +473,7 @@ export async function executeRuntimeMutation<T>({
   onReload,
   onSuccess,
   onError,
+  onConflict,
   onCommittedReloadError,
   copy,
 }: ExecuteRuntimeMutationOptions<T>): Promise<boolean> {
@@ -464,7 +493,11 @@ export async function executeRuntimeMutation<T>({
       try {
         await onReload()
         const message = campaignRuntimeErrorMessage(err, copy)
-        onError(message)
+        if (onConflict) {
+          onConflict(message)
+        } else {
+          onError(message)
+        }
         return false
       } catch (reloadErr) {
         const reloadMessage = campaignRuntimeErrorMessage(reloadErr, copy)

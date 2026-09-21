@@ -114,33 +114,69 @@ describe('Campaign Runtime bilingual copy & machine error mapping', () => {
 
 describe('isCampaignChangesEmpty helper', () => {
   it('returns true only when entries and overrides are empty and context fields are null', () => {
-    expect(isCampaignChangesEmpty([], [], null)).toBe(true)
+    expect(isCampaignChangesEmpty([], [], null, [])).toBe(true)
     expect(
       isCampaignChangesEmpty([], [], {
         current_adventure_scene_entry_id: null,
         current_runtime_scene_entry_id: null,
         current_situation: null,
-      }),
+      }, []),
     ).toBe(true)
 
-    expect(isCampaignChangesEmpty([{ id: '1' }] as never[], [], null)).toBe(false)
-    expect(isCampaignChangesEmpty([], [{ id: '1' }] as never[], null)).toBe(false)
+    expect(isCampaignChangesEmpty([{ id: '1' }] as never[], [], null, [])).toBe(false)
+    expect(isCampaignChangesEmpty([], [{ id: '1' }] as never[], null, [])).toBe(false)
     expect(
       isCampaignChangesEmpty([], [], {
         current_adventure_scene_entry_id: 'scene-1',
         current_runtime_scene_entry_id: null,
         current_situation: null,
-      }),
+      }, []),
     ).toBe(false)
     expect(
       isCampaignChangesEmpty([], [], {
         current_adventure_scene_entry_id: null,
         current_runtime_scene_entry_id: null,
         current_situation: 'Party resting in the grove',
-      }),
+      }, []),
     ).toBe(false)
+    expect(isCampaignChangesEmpty([], [], null, [{ id: 'adventure-1' }])).toBe(false)
   })
 })
+
+function createTestManagement(
+  overrides: Partial<CampaignChangesManagement> = {},
+): CampaignChangesManagement {
+  return {
+    characters: [],
+    formState: null,
+    pending: false,
+    formError: null,
+    mutationError: null,
+    committedWarning: null,
+    onOpenCreate: vi.fn(),
+    onOpenEdit: vi.fn(),
+    onCancelForm: vi.fn(),
+    onChangeForm: vi.fn(),
+    onSubmitForm: vi.fn(),
+    onArchiveEntry: vi.fn(),
+    overrideFormState: null,
+    overrideFormError: null,
+    onOpenCreateOverride: vi.fn(),
+    onOpenEditOverride: vi.fn(),
+    onCancelOverrideForm: vi.fn(),
+    onChangeOverrideForm: vi.fn(),
+    onSubmitOverrideForm: vi.fn(),
+    onClearOverride: vi.fn(),
+    contextFormState: null,
+    contextFormError: null,
+    onOpenEditContext: vi.fn(),
+    onCancelEditContext: vi.fn(),
+    onChangeContextForm: vi.fn(),
+    onSubmitContextForm: vi.fn(),
+    onClearContext: vi.fn(),
+    ...overrides,
+  }
+}
 
 describe('CampaignChangesView pure presentational component', () => {
   const copy = campaignRuntimeCopy('en')
@@ -155,6 +191,8 @@ describe('CampaignChangesView pure presentational component', () => {
         entries={[]}
         overrides={[]}
         context={null}
+        attachedAdventures={[]}
+        overlays={[]}
         management={null}
         copy={copy}
       />,
@@ -177,6 +215,8 @@ describe('CampaignChangesView pure presentational component', () => {
         entries={[]}
         overrides={[]}
         context={null}
+        attachedAdventures={[]}
+        overlays={[]}
         management={null}
         copy={copy}
       />,
@@ -188,7 +228,7 @@ describe('CampaignChangesView pure presentational component', () => {
     expect(html).not.toContain(copy.entriesHeading)
   })
 
-  it('renders empty state when entries, overrides, and context are empty', () => {
+  it('renders empty state informational notice and keeps sections accessible when entries, overrides, and context are empty', () => {
     const html = renderToStaticMarkup(
       <CampaignChangesView
         roomId={ROOM_ID}
@@ -206,6 +246,8 @@ describe('CampaignChangesView pure presentational component', () => {
           created_at: null,
           updated_at: null,
         }}
+        attachedAdventures={[]}
+        overlays={[]}
         management={null}
         copy={copy}
       />,
@@ -213,7 +255,10 @@ describe('CampaignChangesView pure presentational component', () => {
 
     expect(html).toContain(copy.emptyState)
     expect(html).not.toContain(copy.loading)
-    expect(html).not.toContain(copy.entriesHeading)
+    expect(html).toContain(copy.entriesHeading)
+    expect(html).toContain(copy.contextHeading)
+    expect(html).toContain(copy.reviewQueueHeading)
+    expect(html).toContain(copy.overridesHeading)
   })
 
   it('renders nonempty skeleton with counts, headings, and current situation summary', () => {
@@ -259,6 +304,8 @@ describe('CampaignChangesView pure presentational component', () => {
           created_at: '2026-09-21T00:00:00Z',
           updated_at: '2026-09-21T00:00:00Z',
         }}
+        attachedAdventures={[]}
+        overlays={[]}
         management={null}
         copy={copy}
       />,
@@ -940,20 +987,9 @@ describe('Hazard display and edit restriction', () => {
   it('renders committed-warning and preserves entries list while omitting form after committed+reload-failed', () => {
     for (const loc of ['en', 'zh-TW'] as const) {
       const copy = campaignRuntimeCopy(loc)
-      const management: CampaignChangesManagement = {
-        characters: [],
-        formState: null,
-        pending: false,
-        formError: null,
-        mutationError: null,
+      const management = createTestManagement({
         committedWarning: copy.committedReloadWarning,
-        onOpenCreate: vi.fn(),
-        onOpenEdit: vi.fn(),
-        onCancelForm: vi.fn(),
-        onChangeForm: vi.fn(),
-        onSubmitForm: vi.fn(),
-        onArchiveEntry: vi.fn(),
-      }
+      })
 
       const html = renderToStaticMarkup(
         <CampaignChangesView
@@ -964,6 +1000,8 @@ describe('Hazard display and edit restriction', () => {
           entries={[hazardEntry]}
           overrides={[]}
           context={null}
+          attachedAdventures={[]}
+          overlays={[]}
           management={management}
           copy={copy}
         />,
@@ -1288,6 +1326,9 @@ describe('H.8 loadCampaignChanges snapshot helper', () => {
       if (url.includes('/characters')) {
         return { ok: true, status: 200, json: async () => fakeCharacters }
       }
+      if (url.includes('/adventures')) {
+        return { ok: true, status: 200, json: async () => [] }
+      }
       return { ok: false, status: 404, json: async () => ({}) }
     })
     vi.stubGlobal('fetch', fetchMock)
@@ -1299,8 +1340,10 @@ describe('H.8 loadCampaignChanges snapshot helper', () => {
       overrides: fakeOverrides,
       context: fakeContext,
       characters: fakeCharacters,
+      attachedAdventures: [],
+      overlays: [],
     })
-    expect(fetchMock).toHaveBeenCalledTimes(4)
+    expect(fetchMock).toHaveBeenCalledTimes(5)
   })
 
   it('preserves fatal rejection if any underlying query fails', async () => {
