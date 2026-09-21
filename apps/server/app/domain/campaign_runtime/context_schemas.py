@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
+from app.domain.adventures.schemas import AdventureEntryKind, AdventureEntryVisibility
 from app.domain.campaign_runtime.payloads import (
     CampaignRuntimeError,
     RuntimeEntryKind,
@@ -109,6 +110,51 @@ class SceneContextDmView(StrictModel):
 SceneContextView = SceneContextDmView | SceneContextPlayerView
 
 
+SEARCH_DEFAULT_LIMIT = 20
+SEARCH_MAX_LIMIT = 50
+SEARCH_SNIPPET_MAX_CHARS = 160
+
+SearchKind = RuntimeEntryKind | AdventureEntryKind
+
+
+class CampaignSearchHitPlayerView(StrictModel):
+    id: UUID
+    kind: RuntimeEntryKind
+    title: str | None = None
+    snippet: str | None = None
+
+
+class CampaignSearchHitDmView(StrictModel):
+    source: Literal["runtime", "adventure"]
+    id: UUID
+    kind: SearchKind
+    title: str | None = None
+    snippet: str | None = None
+    visibility: RuntimeVisibility | AdventureEntryVisibility
+    adventure_id: UUID | None = None
+    has_override: bool
+    current_truth: Literal["runtime", "override", "baseline"]
+
+
+class CampaignSearchPlayerResult(StrictModel):
+    query: str
+    limit: int
+    offset: int
+    has_more: bool
+    hits: tuple[CampaignSearchHitPlayerView, ...] = ()
+
+
+class CampaignSearchDmResult(StrictModel):
+    query: str
+    limit: int
+    offset: int
+    has_more: bool
+    hits: tuple[CampaignSearchHitDmView, ...] = ()
+
+
+CampaignSearchResult = CampaignSearchDmResult | CampaignSearchPlayerResult
+
+
 __all__ = [
     "ActiveCombatRef",
     "AdventureSceneRef",
@@ -118,11 +164,20 @@ __all__ = [
     "CampaignContextView",
     "CampaignInvalidSceneRefError",
     "CampaignPartyMemberView",
+    "CampaignSearchDmResult",
+    "CampaignSearchHitDmView",
+    "CampaignSearchHitPlayerView",
+    "CampaignSearchPlayerResult",
+    "CampaignSearchResult",
     "CurrentSceneView",
     "RuntimeSceneRef",
+    "SEARCH_DEFAULT_LIMIT",
+    "SEARCH_MAX_LIMIT",
+    "SEARCH_SNIPPET_MAX_CHARS",
     "SceneContextDmView",
     "SceneContextPlayerView",
     "SceneContextView",
     "SceneRef",
+    "SearchKind",
     "WorldEntryRef",
 ]

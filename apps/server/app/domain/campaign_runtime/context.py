@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Collection, Sequence
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.engine import Connection
 
+from app.domain.adventures.payloads import KNOWN_ENTRY_KINDS
 from app.domain.campaign_runtime.context_schemas import (
     ActiveCombatRef,
     AdventureSceneRef,
@@ -13,14 +15,25 @@ from app.domain.campaign_runtime.context_schemas import (
     CampaignContextPlayerView,
     CampaignInvalidSceneRefError,
     CampaignPartyMemberView,
+    CampaignSearchDmResult,
+    CampaignSearchHitDmView,
+    CampaignSearchHitPlayerView,
+    CampaignSearchPlayerResult,
     CurrentSceneView,
     RuntimeSceneRef,
+    SEARCH_DEFAULT_LIMIT,
+    SEARCH_MAX_LIMIT,
+    SEARCH_SNIPPET_MAX_CHARS,
     SceneContextDmView,
     SceneContextPlayerView,
     SceneRef,
     WorldEntryRef,
 )
-from app.domain.campaign_runtime.payloads import RuntimeItemPayload, parse_runtime_payload
+from app.domain.campaign_runtime.payloads import (
+    KNOWN_RUNTIME_ENTRY_KINDS,
+    RuntimeItemPayload,
+    parse_runtime_payload,
+)
 from app.domain.campaign_runtime.schemas import (
     CampaignAdventureEntryOverlayView,
     CampaignRuntimeContext,
@@ -33,6 +46,7 @@ from app.domain.campaign_runtime.service import (
     CampaignRuntimeService,
     CampaignRuntimeValidationError,
     _get_adventure_entry_overlay_in_transaction,
+    _list_adventure_entry_overlays_in_transaction,
     project_runtime_aggregate,
 )
 from app.domain.rooms.table_events import TableActorContext
@@ -56,6 +70,70 @@ def _no_scene_view(actor: TableActorContext) -> SceneContextDmView | SceneContex
     if actor.is_current_dm:
         return SceneContextDmView()
     return SceneContextPlayerView()
+
+
+def _matches(title: str | None, body: str | None, tokens: Sequence[str]) -> bool:
+    title_cf = (title or "").casefold()
+    body_cf = (body or "").casefold()
+    return all(t in title_cf or t in body_cf for t in tokens)
+
+
+def _snippet(body: str | None, tokens: Sequence[str]) -> str | None:
+    if body is None:
+        return None
+    body_cf = body.casefold()
+    for token in tokens:
+        idx = body_cf.find(token)
+        if idx != -1:
+            start = max(0, idx - 40)
+            return body[start : start + SEARCH_SNIPPET_MAX_CHARS]
+    return body[:SEARCH_SNIPPET_MAX_CHARS]
+
+
+def _search_sort_key(
+    hit: CampaignSearchHitDmView | CampaignSearchHitPlayerView, tokens: Sequence[str]
+) -> tuple[int, int, str, str]:
+    title_cf = (hit.title or "").casefold()
+    title_match = 0 if any(t in title_cf for t in tokens) else 1
+    source_rank = 1 if isinstance(hit, CampaignSearchHitDmView) and hit.source == "adventure" else 0
+    return (title_match, source_rank, title_cf, str(hit.id))
+
+
+def _runtime_hit_dm(view: RuntimeWorldEntryDmView, tokens: Sequence[str]) -> CampaignSearchHitDmView:
+    return CampaignSearchHitDmView(
+        source="runtime",
+        id=view.id,
+        kind=view.kind,
+        title=view.title,
+        snippet=_snippet(view.body, tokens),
+        visibility=view.visibility,
+        has_override=False,
+        current_truth="runtime",
+    )
+
+
+def _adventure_hit_dm(
+    overlay: CampaignAdventureEntryOverlayView, tokens: Sequence[str]
+) -> CampaignSearchHitDmView:
+    return CampaignSearchHitDmView(
+        source="adventure",
+        id=overlay.id,
+        kind=overlay.kind,
+        title=overlay.title,
+        snippet=_snippet(overlay.body, tokens),
+        visibility=overlay.visibility,
+        adventure_id=overlay.adventure_id,
+        has_override=overlay.override is not None,
+        current_truth="override" if overlay.override is not None else "baseline",
+    )
+
+
+def _runtime_hit_player(
+    view: RuntimeWorldEntryPlayerView, tokens: Sequence[str]
+) -> CampaignSearchHitPlayerView:
+    return CampaignSearchHitPlayerView(
+        id=view.id, kind=view.kind, title=view.title, snippet=_snippet(view.body, tokens)
+    )
 
 
 class CampaignContextService:
@@ -156,6 +234,75 @@ class CampaignContextService:
                     is_current_scene=True,
                 )
             return _no_scene_view(actor)
+
+    def search_campaign_context(
+        self,
+        actor: TableActorContext,
+        query: str,
+        kinds: Collection[str] | None = None,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> CampaignSearchDmResult | CampaignSearchPlayerResult:
+        with self.engine.connect() as connection:
+            self.runtime_service._require_active_actor(connection, actor)
+            tokens = query.casefold().split()
+            if not tokens:
+                raise CampaignRuntimeValidationError("Search query cannot be empty")
+            limit = SEARCH_DEFAULT_LIMIT if limit is None else limit
+            if limit < 1 or limit > SEARCH_MAX_LIMIT:
+                raise CampaignRuntimeValidationError(f"Limit must be between 1 and {SEARCH_MAX_LIMIT}")
+            if offset < 0:
+                raise CampaignRuntimeValidationError("Offset must be non-negative")
+            if kinds is not None:
+                unknown = set(kinds) - KNOWN_RUNTIME_ENTRY_KINDS - KNOWN_ENTRY_KINDS
+                if unknown:
+                    raise CampaignRuntimeValidationError(f"Unknown entry kinds: {sorted(unknown)}")
+            self._campaign_or_404(connection, actor)
+
+            aggregates = self.runtime_repo.list_entries_in_transaction(
+                connection, actor.campaign_id, include_archived=False
+            )
+            projected = [
+                v
+                for v in self._project_for_actor(connection, actor, aggregates)
+                if (kinds is None or v.kind in kinds) and _matches(v.title, v.body, tokens)
+            ]
+            hits: list[CampaignSearchHitDmView] | list[CampaignSearchHitPlayerView]
+            if actor.is_current_dm:
+                hits = [
+                    _runtime_hit_dm(v, tokens)
+                    for v in projected
+                    if isinstance(v, RuntimeWorldEntryDmView)
+                ]
+                for link in self.link_repo.list_for_campaign(actor.campaign_id):
+                    overlays = _list_adventure_entry_overlays_in_transaction(
+                        connection,
+                        campaign_id=actor.campaign_id,
+                        adventure_id=link.adventure_id,
+                        link_repo=self.link_repo,
+                        runtime_repo=self.runtime_repo,
+                    )
+                    hits.extend(
+                        _adventure_hit_dm(o, tokens)
+                        for o in overlays
+                        if (kinds is None or o.kind in kinds) and _matches(o.title, o.body, tokens)
+                    )
+            else:
+                hits = [
+                    _runtime_hit_player(v, tokens)
+                    for v in projected
+                    if isinstance(v, RuntimeWorldEntryPlayerView)
+                ]
+            hits.sort(key=lambda h: _search_sort_key(h, tokens))
+            has_more = len(hits) > offset + limit
+            page = tuple(hits[offset : offset + limit])
+            if actor.is_current_dm:
+                return CampaignSearchDmResult(
+                    query=query, limit=limit, offset=offset, has_more=has_more, hits=page
+                )
+            return CampaignSearchPlayerResult(
+                query=query, limit=limit, offset=offset, has_more=has_more, hits=page
+            )
 
     def get_world_entry(
         self,

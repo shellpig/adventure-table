@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
-from sqlalchemy import func, insert, select, update
-from sqlalchemy.engine import Engine
+from sqlalchemy import insert, update
 
 from app.domain.campaign_runtime import (
     ActiveCombatRef,
     AdventureSceneRef,
-    CampaignAdventureOverrideCreate,
     CampaignContextDmView,
     CampaignContextPlayerView,
     CampaignContextService,
@@ -21,25 +18,11 @@ from app.domain.campaign_runtime import (
     CampaignRuntimeNotFoundError,
     CampaignRuntimeSessionNotActiveError,
     RuntimeSceneRef,
-    RuntimeWorldEntryCreate,
-    RuntimeWorldEntryDmView,
-    RuntimeWorldEntryPlayerView,
     SceneContextDmView,
     SceneContextPlayerView,
 )
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.table_events import TableActorContext
-from app.persistence.adventures.tables import (
-    adventure_definitions,
-    adventure_entries,
-    campaign_adventure_links,
-)
-from app.persistence.campaign_runtime.tables import (
-    campaign_adventure_overrides,
-    campaign_runtime_context,
-    campaign_world_entries,
-    campaign_world_mutations,
-)
 from app.persistence.combat.tables import combats
 from app.persistence.rooms.tables import (
     ai_controller_grants,
@@ -49,149 +32,12 @@ from app.persistence.rooms.tables import (
     session_participants,
     sessions,
 )
-from tests.test_p6b_runtime_active_service import ActiveFixture, fix as base_fix
-
-
-def _scan_str(obj: object, target: str) -> bool:
-    if isinstance(obj, str):
-        return target in obj
-    if isinstance(obj, dict):
-        return any(_scan_str(k, target) or _scan_str(v, target) for k, v in obj.items())
-    if isinstance(obj, (list, tuple, set)):
-        return any(_scan_str(item, target) for item in obj)
-    return False
-
-
-def _snapshot(engine: Engine, campaign_id: UUID) -> dict[str, int]:
-    with engine.connect() as conn:
-        return {
-            "entries": conn.scalar(
-                select(func.count()).select_from(campaign_world_entries).where(
-                    campaign_world_entries.c.campaign_id == campaign_id
-                )
-            ) or 0,
-            "mutations": conn.scalar(
-                select(func.count()).select_from(campaign_world_mutations).where(
-                    campaign_world_mutations.c.campaign_id == campaign_id
-                )
-            ) or 0,
-            "overrides": conn.scalar(
-                select(func.count()).select_from(campaign_adventure_overrides).where(
-                    campaign_adventure_overrides.c.campaign_id == campaign_id
-                )
-            ) or 0,
-            "contexts": conn.scalar(
-                select(func.count()).select_from(campaign_runtime_context).where(
-                    campaign_runtime_context.c.campaign_id == campaign_id
-                )
-            ) or 0,
-        }
-
-
-@pytest.fixture
-def fix(base_fix: ActiveFixture) -> ActiveFixture:
-    now = datetime.now(timezone.utc)
-    # Attach adventure and link to ai_campaign_id for DM parity
-    with base_fix.engine.begin() as conn:
-        adv_def_id = conn.scalar(
-            select(adventure_entries.c.adventure_id).where(
-                adventure_entries.c.id == base_fix.adv_entry_id
-            )
-        )
-        assert adv_def_id is not None
-        conn.execute(
-            insert(campaign_adventure_links).values(
-                campaign_id=base_fix.ai_campaign_id,
-                adventure_id=adv_def_id,
-                sort_order=0,
-                attached_at=now,
-            )
-        )
-
-    # Seed override, runtime scene, dm-only secret, char-only fact, related item, context
-    base_fix.service.create_override_active(
-        base_fix.human_dm_actor,
-        CampaignAdventureOverrideCreate(
-            adventure_entry_id=base_fix.adv_entry_id,
-            state={"dm_summary": "The scene has been cleared."},
-            note="Override note",
-        ),
-        idempotency_key="seed-override",
-    )
-    base_fix.service.create_active(
-        base_fix.human_dm_actor,
-        RuntimeWorldEntryCreate(
-            kind="scene",
-            title="Runtime Inn",
-            body="A noisy tavern.",
-            visibility="public",
-        ),
-        idempotency_key="seed-rt-scene",
-    )
-    base_fix.service.create_active(
-        base_fix.human_dm_actor,
-        RuntimeWorldEntryCreate(
-            kind="secret",
-            title="Secret Room",
-            body="Behind the chimney.",
-            visibility="dm_only",
-            dm_notes="DC 15 trap",
-        ),
-        idempotency_key="seed-secret",
-    )
-    base_fix.service.create_active(
-        base_fix.human_dm_actor,
-        RuntimeWorldEntryCreate(
-            kind="fact",
-            body="Player 1 secret heritage.",
-            visibility="character",
-            character_recipient_ids=(base_fix.char_1_id,),
-        ),
-        idempotency_key="seed-fact",
-    )
-    base_fix.service.create_active(
-        base_fix.human_dm_actor,
-        RuntimeWorldEntryCreate(
-            kind="item",
-            title="Relic Blade",
-            visibility="public",
-            state={
-                "kind": "item",
-                "holder_ref": {"kind": "party"},
-            },
-            source_adventure_entry_id=base_fix.adv_entry_id,
-        ),
-        idempotency_key="seed-item",
-    )
-    base_fix.service.update_context_active(
-        base_fix.human_dm_actor,
-        CampaignRuntimeContextPatch(
-            expected_revision=0,
-            current_adventure_scene_entry_id=base_fix.adv_entry_id,
-            current_situation="Party rests at the entrance.",
-        ),
-        idempotency_key="seed-context",
-    )
-    # Mirror context to AI DM campaign
-    base_fix.service.create_override_active(
-        base_fix.ai_dm_actor,
-        CampaignAdventureOverrideCreate(
-            adventure_entry_id=base_fix.adv_entry_id,
-            state={"dm_summary": "The scene has been cleared."},
-            note="Override note",
-        ),
-        idempotency_key="ai-seed-override",
-    )
-    base_fix.service.update_context_active(
-        base_fix.ai_dm_actor,
-        CampaignRuntimeContextPatch(
-            expected_revision=0,
-            current_adventure_scene_entry_id=base_fix.adv_entry_id,
-            current_situation="Party rests at the entrance.",
-        ),
-        idempotency_key="ai-seed-context",
-    )
-    return base_fix
+from tests.p6_active_fixture import (
+    ActiveFixture,
+    _scan_str,
+    _snapshot,
+    context_seeded_fix as fix,
+)
 
 
 @pytest.fixture
