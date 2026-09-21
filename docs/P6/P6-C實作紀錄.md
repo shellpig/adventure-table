@@ -5,8 +5,8 @@
 - **更新日期**：2026-09-21
 - **目標與邊界**：新增 `CampaignContextService`（`get_campaign_context`／`get_scene_context`／`search_campaign_context`／`get_world_entry`／`get_adventure_entry`）與同名五個 MCP read tool，輸出 role-projected、bounded、deterministic 的 Campaign context；`get_session_context` 只加 compact summary／refs，`BRIEFING_MAX_CHARS` 仍是 hard gate。AI Player 不得拿到任何 Adventure entry id／title／body／命中數 side channel，也不得拿到 DM-only Runtime truth。不做 write-back（P6-D）、不改 P3-D pre-session grant、不做 vector／embedding／LLM reranker。
 - **Branch**：`feat/p6c-ai-context-retrieval`（自 `main@a2e04387`）
-- **最近已驗證 commit**：`094aeb26`（C3）
-- **下一步**：C1～C3 完成；下一步 C4 完整 gate、closeout、合併（指揮者自己做）。使用者 2026-09-21 拍板四步；C0 拆 `service.py` 不做，留到 P6-D write-back 再拆。
+- **最近已驗證 commit**：`28bd076e`（C4 test）；closeout 見 [P6-C_CLOSEOUT.md](P6-C_CLOSEOUT.md)
+- **下一步**：C1～C4 完成，Subphase 關門並合併 `main`；接 P6-D（開工前先拆 `campaign_runtime/service.py`，見派工約束 2）。使用者 2026-09-21 拍板四步；C0 拆 `service.py` 不做，留到 P6-D write-back 再拆。
 - **阻礙／未審**：無。
 - **派工約束（P6-B 回顧，31.8k 行中 19.1k 是測試；`campaign_runtime/service.py` 已 2,511 行）**：
   1. **測試用 parametrize／shared fixture，同一矩陣不得展開成獨立 function。** 每個 step prompt 明寫；審核時把「同一 assert 模式重複三次以上」視同退修，不只擋錯誤。P6-B 的 `test_p6b_runtime_api.py` 3,779 行是反例。
@@ -22,4 +22,4 @@
 | C1 | `CampaignContextService`：campaign／scene context 與單筆 entry read | 完成 | — | [C1](P6-C_steps/C1.md) |
 | C2 | `search_campaign_context`：bounded、deterministic、零 side channel | 完成 | C1 | [C2](P6-C_steps/C2.md) |
 | C3 | `get_session_context` compact summary 與五個 MCP read tool | 完成 | C1、C2 | [C3](P6-C_steps/C3.md) |
-| C4 | 完整 gate、closeout、合併 | 待做 | C1～C3 | [C4](P6-C_steps/C4.md) |
+| C4 | 完整 gate、closeout、合併 | 完成 | C1～C3 | [C4](P6-C_steps/C4.md) |
