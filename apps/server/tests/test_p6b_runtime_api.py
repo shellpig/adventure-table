@@ -31,16 +31,18 @@ from app.domain.campaign_runtime.schemas import (
     RuntimeEntryValidationError,
     RuntimeEntryVisibilityError,
 )
-from app.domain.campaign_runtime.service import (
+from app.domain.campaign_runtime.errors import (
     CampaignRuntimeActiveSessionError,
     CampaignRuntimeArchivedError,
     CampaignRuntimeAuthorityError,
     CampaignRuntimeIdempotencyConflictError,
     CampaignRuntimeNotFoundError,
     CampaignRuntimeRevisionConflictError,
-    CampaignRuntimeService,
     CampaignRuntimeSessionNotActiveError,
     CampaignRuntimeValidationError,
+)
+from app.domain.campaign_runtime.service import (
+    CampaignRuntimeService,
 )
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.table_events import (

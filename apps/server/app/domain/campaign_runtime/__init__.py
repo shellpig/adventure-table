@@ -44,7 +44,12 @@ from app.domain.campaign_runtime.schemas import (
     validate_entry_quick_add_minima,
     validate_runtime_visibility_recipients,
 )
-from app.domain.campaign_runtime.service import (
+from app.domain.campaign_runtime.conversion import (
+    project_runtime_aggregate,
+    project_runtime_aggregates,
+    stored_aggregate_to_runtime_entry,
+)
+from app.domain.campaign_runtime.errors import (
     CampaignRuntimeActiveSessionError,
     CampaignRuntimeArchivedError,
     CampaignRuntimeAuthorityError,
@@ -52,12 +57,11 @@ from app.domain.campaign_runtime.service import (
     CampaignRuntimeIdempotencyConflictError,
     CampaignRuntimeNotFoundError,
     CampaignRuntimeRevisionConflictError,
-    CampaignRuntimeService,
     CampaignRuntimeSessionNotActiveError,
     CampaignRuntimeValidationError,
-    project_runtime_aggregate,
-    project_runtime_aggregates,
-    stored_aggregate_to_runtime_entry,
+)
+from app.domain.campaign_runtime.service import (
+    CampaignRuntimeService,
     validate_mutation_identity,
 )
 from app.domain.campaign_runtime.context import (
