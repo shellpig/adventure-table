@@ -22,10 +22,26 @@ describe('Room Campaign routes', () => {
   })
 
   it('keeps lifecycle Owner-only while allowing DM roster management', () => {
-    expect(campaignPermissions('owner')).toEqual({ isOwner: true, canManageRoster: true })
-    expect(campaignPermissions('dm')).toEqual({ isOwner: false, canManageRoster: true })
-    expect(campaignPermissions('member')).toEqual({ isOwner: false, canManageRoster: false })
-    expect(campaignPermissions(null)).toEqual({ isOwner: false, canManageRoster: false })
+    expect(campaignPermissions('owner')).toEqual({
+      isOwner: true,
+      canManageRoster: true,
+      canManageRuntime: true,
+    })
+    expect(campaignPermissions('dm')).toEqual({
+      isOwner: false,
+      canManageRoster: true,
+      canManageRuntime: true,
+    })
+    expect(campaignPermissions('member')).toEqual({
+      isOwner: false,
+      canManageRoster: false,
+      canManageRuntime: false,
+    })
+    expect(campaignPermissions(null)).toEqual({
+      isOwner: false,
+      canManageRoster: false,
+      canManageRuntime: false,
+    })
   })
 
   it('keeps Campaign presentation copy product-facing and localized', () => {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable
@@ -24,7 +25,7 @@ from sqlalchemy import (
     update,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 
 from app.db import metadata
 from app.persistence.rooms.tables import (
@@ -555,6 +556,32 @@ class TableEventRepository:
         with self.engine.connect() as connection:
             return self._actor_from_connection(connection, binding) == binding
 
+    def require_active_actor_in_transaction(
+        self,
+        connection: Connection,
+        binding: StoredTableActorBinding,
+    ) -> StoredTableActorBinding:
+        session_row = self._session_scope_row(
+            connection,
+            room_id=binding.room_id,
+            campaign_id=binding.campaign_id,
+            session_id=binding.session_id,
+        )
+        if session_row is None:
+            raise TableEventSessionNotFoundPersistenceError(str(binding.session_id))
+        if session_row["status"] != "active":
+            raise TableEventSessionNotActivePersistenceError(str(binding.session_id))
+        current = self._actor_from_connection(
+            connection,
+            binding,
+            session_row=session_row,
+        )
+        if current != binding:
+            raise TableEventActorBindingStalePersistenceError(
+                "Table actor binding is no longer current"
+            )
+        return current
+
     def history_read_scope(
         self,
         *,
@@ -716,6 +743,77 @@ class TableEventRepository:
                 .limit(bounded_limit)
             ).mappings().all()
         return tuple(self._event(row) for row in reversed(rows))
+
+    def active_session_seats_for_characters_in_transaction(
+        self,
+        connection: Connection,
+        session_id: UUID,
+        character_ids: Sequence[UUID] | Collection[UUID],
+    ) -> tuple[UUID, ...]:
+        if not character_ids:
+            return ()
+        query = (
+            select(session_participants.c.seat_id)
+            .select_from(
+                session_participants.join(
+                    campaign_seats,
+                    campaign_seats.c.id == session_participants.c.seat_id,
+                )
+            )
+            .where(
+                session_participants.c.session_id == session_id,
+                session_participants.c.left_at.is_(None),
+                campaign_seats.c.archived_at.is_(None),
+                session_participants.c.active_character_id.in_(character_ids),
+            )
+            .order_by(session_participants.c.joined_at, session_participants.c.seat_id)
+        )
+        rows = connection.execute(query).scalars().all()
+        return tuple(rows)
+
+    def active_character_ids_for_seats_in_transaction(
+        self,
+        connection: Connection,
+        session_id: UUID,
+        seat_ids: Sequence[UUID] | Collection[UUID],
+    ) -> tuple[UUID, ...]:
+        if not seat_ids:
+            return ()
+        query = (
+            select(session_participants.c.active_character_id)
+            .where(
+                session_participants.c.session_id == session_id,
+                session_participants.c.seat_id.in_(seat_ids),
+                session_participants.c.left_at.is_(None),
+                session_participants.c.active_character_id.is_not(None),
+            )
+            .order_by(session_participants.c.joined_at, session_participants.c.id)
+        )
+        rows = connection.execute(query).scalars().all()
+        return tuple(cid for cid in rows if cid is not None)
+
+    def update_event_projection_in_transaction(
+        self,
+        connection: Connection,
+        *,
+        event_id: UUID,
+        visibility: str,
+        recipient_seat_ids: Sequence[UUID] | Collection[UUID],
+        payload: dict[str, object],
+    ) -> None:
+        result = connection.execute(
+            update(session_events)
+            .where(session_events.c.id == event_id)
+            .values(
+                visibility=visibility,
+                recipient_seat_ids=[str(value) for value in recipient_seat_ids],
+                payload=payload,
+            )
+        )
+        if result.rowcount != 1:
+            raise RuntimeError(
+                f"Expected to update 1 event projection row for {event_id}, updated {result.rowcount}"
+            )
 
     def append(
         self,

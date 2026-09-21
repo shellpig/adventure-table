@@ -48,6 +48,11 @@ FORBIDDEN_MULTIPLAYER_TABLES = {
     "adventure_entries",
     "adventure_entry_assets",
     "campaign_adventure_links",
+    "campaign_world_entries",
+    "campaign_world_entry_characters",
+    "campaign_adventure_overrides",
+    "campaign_runtime_context",
+    "campaign_world_mutations",
 }
 
 

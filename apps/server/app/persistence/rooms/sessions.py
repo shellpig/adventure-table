@@ -115,15 +115,21 @@ class SessionRepository:
         with self.engine.connect() as connection:
             return connection.scalar(select(campaigns.c.room_id).where(campaigns.c.id == campaign_id))
 
+    @staticmethod
+    def active_for_campaign_in_transaction(
+        connection: Connection, campaign_id: UUID
+    ) -> StoredSession | None:
+        row = connection.execute(
+            select(sessions).where(
+                sessions.c.campaign_id == campaign_id,
+                sessions.c.status == "active",
+            )
+        ).mappings().one_or_none()
+        return SessionRepository._session(row)
+
     def active_for_campaign(self, campaign_id: UUID) -> StoredSession | None:
         with self.engine.connect() as connection:
-            row = connection.execute(
-                select(sessions).where(
-                    sessions.c.campaign_id == campaign_id,
-                    sessions.c.status == "active",
-                )
-            ).mappings().one_or_none()
-        return self._session(row)
+            return self.active_for_campaign_in_transaction(connection, campaign_id)
 
     def previous_for_campaign(
         self, *, campaign_id: UUID, session_id: UUID

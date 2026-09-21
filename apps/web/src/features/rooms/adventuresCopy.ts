@@ -130,6 +130,7 @@ const COPY = {
     noAttachable: 'No finalized Adventure is available to attach.',
     goToAdventures: 'Manage Adventures',
     errCampaignAdventureLinkNotFound: 'This Adventure is not attached to this Campaign.',
+    errCampaignAdventureDetachBlocked: 'Cannot detach this Adventure because it has active overrides or is the active scene.',
     errCampaignNotFound: 'Campaign not found.',
   },
   'zh-TW': {
@@ -259,6 +260,7 @@ const COPY = {
     noAttachable: '目前沒有可附加的已定稿 Adventure。',
     goToAdventures: '管理 Adventures',
     errCampaignAdventureLinkNotFound: '此 Adventure 未附加至此 Campaign。',
+    errCampaignAdventureDetachBlocked: '無法解除附加此 Adventure，因為其具有作用中的覆寫或為目前場景。',
     errCampaignNotFound: '找不到此 Campaign。',
   },
 } as const satisfies Record<Locale, Record<string, string>>
@@ -311,6 +313,8 @@ export function adventureErrorMessage(
       return copy.errAssetEmpty
     case 'campaign_adventure_link_not_found':
       return copy.errCampaignAdventureLinkNotFound
+    case 'campaign_adventure_detach_blocked':
+      return copy.errCampaignAdventureDetachBlocked
     case 'campaign_not_found':
       return copy.errCampaignNotFound
     default:

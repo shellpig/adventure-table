@@ -13,6 +13,7 @@ from app.domain.adventures.schemas import (
     AdventureStatus,
     AttachedAdventure,
     CampaignAdventureAttach,
+    CampaignAdventureDetachBlockedError,
     CampaignAdventureLinkNotFoundError,
 )
 from app.domain.adventures.service import require_adventure_author
@@ -24,6 +25,7 @@ from app.persistence.adventures.repository import (
     StoredAdventureDefinition,
     StoredCampaignAdventureLink,
 )
+from app.persistence.campaign_runtime.repository import CampaignRuntimeRepository
 from app.persistence.rooms.campaigns import CampaignRepository, StoredCampaign
 
 
@@ -104,13 +106,47 @@ class CampaignAdventureService:
         adventure_id: UUID,
     ) -> None:
         require_adventure_author(context, room_id)
-        self._campaign_or_404(room_id, campaign_id)
-        # P6-B adds override / current-scene blockers here.
-        deleted = self.link_repository.detach(campaign_id, adventure_id)
-        if not deleted:
-            raise CampaignAdventureLinkNotFoundError(
-                f"Adventure {adventure_id} is not attached to campaign {campaign_id}"
+        with self.campaign_repository.engine.begin() as connection:
+            campaign = self.campaign_repository.get_for_update_in_transaction(
+                connection, campaign_id
             )
+            if campaign is None or campaign.room_id != room_id:
+                raise CampaignNotFoundError(
+                    f"Campaign {campaign_id} not found in room {room_id}"
+                )
+
+            if not self.link_repository.is_attached_in_transaction(
+                connection, campaign_id, adventure_id
+            ):
+                raise CampaignAdventureLinkNotFoundError(
+                    f"Adventure {adventure_id} is not attached to campaign {campaign_id}"
+                )
+
+            if CampaignRuntimeRepository.has_active_overrides_for_adventure_in_transaction(
+                connection, campaign_id, adventure_id
+            ):
+                raise CampaignAdventureDetachBlockedError(
+                    campaign_id=campaign_id,
+                    adventure_id=adventure_id,
+                    reason="active overrides exist for this adventure",
+                )
+
+            if CampaignRuntimeRepository.has_current_adventure_scene_in_transaction(
+                connection, campaign_id, adventure_id
+            ):
+                raise CampaignAdventureDetachBlockedError(
+                    campaign_id=campaign_id,
+                    adventure_id=adventure_id,
+                    reason="current adventure scene points to this adventure",
+                )
+
+            deleted = self.link_repository.detach_in_transaction(
+                connection, campaign_id, adventure_id
+            )
+            if not deleted:
+                raise CampaignAdventureLinkNotFoundError(
+                    f"Adventure {adventure_id} is not attached to campaign {campaign_id}"
+                )
 
     def list(
         self,

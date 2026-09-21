@@ -1731,3 +1731,159 @@
   gap: 8px;
 }
 
+/* Session Campaign World Panel */
+.session-world-panel {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.session-world-panel__header h2 {
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+.session-world-panel__header p {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.session-world-banner {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.session-world-retry-btn {
+  margin-left: auto;
+}
+
+.session-world-loading {
+  color: var(--muted);
+  font-style: italic;
+  margin: 12px 0;
+}
+
+.session-world-quick-add {
+  margin-top: 16px;
+}
+
+.session-world-quick-add-form-wrapper {
+  margin-top: 12px;
+}
+
+/* Session Player Journal */
+.session-journal-panel {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.session-journal-panel__header h2 {
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+.session-journal-panel__header p {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.session-journal-banner {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.session-journal-retry-btn {
+  margin-left: auto;
+}
+
+.session-journal-loading {
+  color: var(--muted);
+  font-style: italic;
+  margin: 12px 0;
+}
+
+.session-journal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.session-journal-group__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.session-journal-group__title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.session-journal-group__names {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.session-journal-empty {
+  color: var(--muted);
+  font-style: italic;
+  margin: 8px 0;
+  font-size: 0.9rem;
+}
+
+.session-journal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-journal-entry {
+  padding: 12px;
+}
+
+.session-journal-entry__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.session-journal-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-secondary, rgba(255, 255, 255, 0.08));
+  color: var(--text-primary);
+}
+
+.session-journal-badge--character {
+  background: var(--badge-info-bg, rgba(59, 130, 246, 0.15));
+  color: var(--badge-info-text, #60a5fa);
+}
+
+.session-journal-entry__title {
+  margin: 0 0 4px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.session-journal-entry__body {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary, var(--muted));
+  white-space: pre-wrap;
+}
+

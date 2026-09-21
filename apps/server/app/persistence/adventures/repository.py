@@ -6,7 +6,7 @@ from typing import Sequence
 from uuid import UUID
 
 from sqlalchemy import delete, exists, func, insert, select, update
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 
 from app.persistence.adventures.tables import (
     adventure_definitions,
@@ -313,15 +313,21 @@ class CampaignAdventureLinkRepository:
         with self.engine.begin() as connection:
             connection.execute(insert(campaign_adventure_links).values(**stored.__dict__))
 
+    @staticmethod
+    def detach_in_transaction(
+        connection: Connection, campaign_id: UUID, adventure_id: UUID
+    ) -> bool:
+        result = connection.execute(
+            delete(campaign_adventure_links).where(
+                campaign_adventure_links.c.campaign_id == campaign_id,
+                campaign_adventure_links.c.adventure_id == adventure_id,
+            )
+        )
+        return bool(result.rowcount > 0)
+
     def detach(self, campaign_id: UUID, adventure_id: UUID) -> bool:
         with self.engine.begin() as connection:
-            result = connection.execute(
-                delete(campaign_adventure_links).where(
-                    campaign_adventure_links.c.campaign_id == campaign_id,
-                    campaign_adventure_links.c.adventure_id == adventure_id,
-                )
-            )
-            return bool(result.rowcount > 0)
+            return self.detach_in_transaction(connection, campaign_id, adventure_id)
 
     def list_for_campaign(
         self, campaign_id: UUID
@@ -339,17 +345,47 @@ class CampaignAdventureLinkRepository:
             rows = connection.execute(query).mappings().all()
             return tuple(StoredCampaignAdventureLink(**dict(row)) for row in rows)
 
-    def is_attached(self, campaign_id: UUID, adventure_id: UUID) -> bool:
-        with self.engine.connect() as connection:
-            return bool(
-                connection.scalar(
-                    select(
-                        exists().where(
-                            campaign_adventure_links.c.campaign_id == campaign_id,
-                            campaign_adventure_links.c.adventure_id == adventure_id,
-                        )
+    @staticmethod
+    def is_attached_in_transaction(
+        connection: Connection, campaign_id: UUID, adventure_id: UUID
+    ) -> bool:
+        return bool(
+            connection.scalar(
+                select(
+                    exists().where(
+                        campaign_adventure_links.c.campaign_id == campaign_id,
+                        campaign_adventure_links.c.adventure_id == adventure_id,
                     )
                 )
+            )
+        )
+
+    def is_attached(self, campaign_id: UUID, adventure_id: UUID) -> bool:
+        with self.engine.connect() as connection:
+            return self.is_attached_in_transaction(connection, campaign_id, adventure_id)
+
+    @staticmethod
+    def is_adventure_entry_attached_in_transaction(
+        connection: Connection, campaign_id: UUID, adventure_entry_id: UUID
+    ) -> bool:
+        return bool(
+            connection.scalar(
+                select(
+                    exists().where(
+                        campaign_adventure_links.c.campaign_id == campaign_id,
+                        campaign_adventure_links.c.adventure_id == adventure_entries.c.adventure_id,
+                        adventure_entries.c.id == adventure_entry_id,
+                    )
+                )
+            )
+        )
+
+    def is_adventure_entry_attached(
+        self, campaign_id: UUID, adventure_entry_id: UUID
+    ) -> bool:
+        with self.engine.connect() as connection:
+            return self.is_adventure_entry_attached_in_transaction(
+                connection, campaign_id, adventure_entry_id
             )
 
     def next_sort_order(self, campaign_id: UUID) -> int:
