@@ -15,6 +15,7 @@ import {
   sessionTableSnapshotWithCurrentControllers,
   SessionEventConnectionBanner,
 } from './RoomSessionPage'
+import { derivePlayerJournalIdentity } from './SessionPlayerJournal'
 import { sessionCopy } from './sessionCopy'
 
 const ROOM_ID = '10000000-0000-4000-8000-000000000001'
@@ -340,5 +341,61 @@ describe('Session route and presentation', () => {
     expect(css).toContain('.session-participant-badge--dm')
     expect(css).toContain('.session-participant-badge--player')
     expect(css).toContain('.session-participant-card__header')
+  })
+
+  it('B5e: derives player journal identity for human player and unmounts for DM or nonparticipant', () => {
+    const seatId = '40000000-0000-4000-8000-000000000010'
+    const charId = '60000000-0000-4000-8000-000000000001'
+    const snapshot: SessionSnapshot = {
+      id: SESSION_ID,
+      campaign_id: CAMPAIGN_ID,
+      status: 'active',
+      dm_seat_id: '40000000-0000-4000-8000-000000000099',
+      dm_controller_access_session_id: 'dm-access',
+      started_at: '2026-09-10T00:00:00Z',
+      ended_at: null,
+      participants: [{
+        id: '70000000-0000-4000-8000-000000000001',
+        seat_id: seatId,
+        role: 'player',
+        controller_kind_at_join: 'human',
+        controller_access_session_id_at_join: 'human-player',
+        active_character_id: charId,
+      }],
+    }
+
+    const playerIdentity = derivePlayerJournalIdentity({
+      status: 'active',
+      isCurrentDm: false,
+      callerAccessSessionId: 'human-player',
+      tableSnapshot: snapshot,
+    })
+    expect(playerIdentity).toEqual({
+      callerAccessSessionId: 'human-player',
+      controlledSeatIds: [seatId],
+      activeCharacterIds: [charId],
+      projectionKey: `human-player:${seatId}:${charId}`,
+    })
+
+    expect(derivePlayerJournalIdentity({
+      status: 'active',
+      isCurrentDm: true,
+      callerAccessSessionId: 'dm-access',
+      tableSnapshot: snapshot,
+    })).toBeNull()
+
+    expect(derivePlayerJournalIdentity({
+      status: 'active',
+      isCurrentDm: false,
+      callerAccessSessionId: 'stranger',
+      tableSnapshot: snapshot,
+    })).toBeNull()
+
+    expect(derivePlayerJournalIdentity({
+      status: 'ended',
+      isCurrentDm: false,
+      callerAccessSessionId: 'human-player',
+      tableSnapshot: { ...snapshot, status: 'ended' },
+    })).toBeNull()
   })
 })

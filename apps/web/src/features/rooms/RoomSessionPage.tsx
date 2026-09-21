@@ -20,6 +20,10 @@ import { startRoomHeartbeat } from './heartbeat'
 import { PlayerAIControlPanel } from './PlayerAIControlPanel'
 import { recentRoomForId } from './roomStorage'
 import { SessionCampaignRuntimePanel } from './SessionCampaignRuntimePanel'
+import {
+  SessionPlayerJournal,
+  derivePlayerJournalIdentity,
+} from './SessionPlayerJournal'
 import { deriveLatestWorldEventSeq } from './sessionCampaignRuntime'
 import {
   runSessionEventPoll,
@@ -439,6 +443,12 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     return seat.label || (seat.role === 'dm' ? copy.dm : seat.role === 'player' ? copy.player : copy.spectator)
   }
   const tableSnapshot = sessionTableSnapshotWithCurrentControllers(snapshot, sessionSeats)
+  const playerJournalIdentity = derivePlayerJournalIdentity({
+    status: snapshot.status,
+    isCurrentDm,
+    callerAccessSessionId,
+    tableSnapshot,
+  })
 
   return (
     <main className="landing-page room-workspace-page">
@@ -533,6 +543,20 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
             campaignId={campaignId}
             sessionId={sessionId}
             token={token}
+            characters={characters}
+            worldEventCursor={worldEventCursor}
+            onError={handleSessionTableError}
+          />
+        ) : null}
+
+        {playerJournalIdentity ? (
+          <SessionPlayerJournal
+            key={playerJournalIdentity.projectionKey}
+            roomId={roomId}
+            campaignId={campaignId}
+            sessionId={sessionId}
+            token={token}
+            identity={playerJournalIdentity}
             characters={characters}
             worldEventCursor={worldEventCursor}
             onError={handleSessionTableError}
