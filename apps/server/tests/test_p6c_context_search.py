@@ -238,7 +238,7 @@ def test_search_kinds_filter(fix: ActiveFixture, svc: CampaignContextService) ->
 
 
 # 9. Authority lifecycle rejections & zero side-effects
-@pytest.mark.parametrize("failure_kind", ["inactive_session", "revoked_human", "revoked_ai"])
+@pytest.mark.parametrize("failure_kind", ["inactive_session", "revoked_human", "revoked_ai", "controller_epoch"])
 def test_authority_lifecycle_rejections_zero_side_effects(
     fix: ActiveFixture, svc: CampaignContextService, failure_kind: str
 ) -> None:

@@ -333,7 +333,7 @@ def test_get_session_context_full_path(context_seeded_fix: ActiveFixture) -> Non
 
 
 # (5) Authority lifecycle
-@pytest.mark.parametrize("failure_kind", ["revoked_ai", "inactive_session"])
+@pytest.mark.parametrize("failure_kind", ["revoked_ai", "controller_epoch", "inactive_session"])
 @pytest.mark.parametrize("tool_name", P6C_TOOLS)
 def test_authority_lifecycle_at_facade_level(
     context_seeded_fix: ActiveFixture, failure_kind: str, tool_name: str

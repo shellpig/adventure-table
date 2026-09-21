@@ -759,6 +759,15 @@ def setup_authority_failure_actor(
                 .values(revoked_at=now)
             )
         return fix.human_dm_actor, (CampaignRuntimeAuthorityError,)
+    if failure_kind == "controller_epoch":
+        # A controller change bumps the Seat epoch; the AI actor's grant generation is now stale.
+        with fix.engine.begin() as conn:
+            conn.execute(
+                update(campaign_seats)
+                .where(campaign_seats.c.id == fix.ai_dm_seat_id)
+                .values(controller_epoch=campaign_seats.c.controller_epoch + 1)
+            )
+        return fix.ai_dm_actor, (CampaignRuntimeAuthorityError,)
     if failure_kind == "revoked_ai":
         with fix.engine.begin() as conn:
             conn.execute(
