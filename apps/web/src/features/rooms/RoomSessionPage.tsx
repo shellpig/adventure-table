@@ -19,6 +19,8 @@ import { useLocale } from '../../i18n/LocaleProvider'
 import { startRoomHeartbeat } from './heartbeat'
 import { PlayerAIControlPanel } from './PlayerAIControlPanel'
 import { recentRoomForId } from './roomStorage'
+import { SessionCampaignRuntimePanel } from './SessionCampaignRuntimePanel'
+import { deriveLatestWorldEventSeq } from './sessionCampaignRuntime'
 import {
   runSessionEventPoll,
   type SessionEventConnectionStatus,
@@ -117,6 +119,13 @@ export function sessionEndControls(input: {
     ownerEndsAiDm,
     ownerHint: input.isOwner && !input.isCurrentDm ? (ownerEndsAiDm ? 'aiDm' : 'humanDm') : null,
   }
+}
+
+export function shouldMountSessionCampaignRuntimePanel(input: {
+  status: SessionSnapshot['status']
+  isCurrentDm: boolean
+}): boolean {
+  return input.status === 'active' && input.isCurrentDm
 }
 
 export function SessionEventConnectionBanner({
@@ -362,6 +371,10 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
     () => mergeSessionSeatTruth(lobby?.seats ?? [], resumeSeats),
     [lobby, resumeSeats],
   )
+  const worldEventCursor = useMemo(
+    () => (eventStream ? deriveLatestWorldEventSeq(eventStream.events, sessionId) : 0),
+    [eventStream, sessionId],
+  )
 
   const mutate = (operation: () => Promise<SessionSnapshot>) => {
     setPending(true)
@@ -510,6 +523,18 @@ export function RoomSessionPage({ roomId, campaignId, sessionId }: RoomSessionRo
             historyLoading={historyLoading}
             onLoadOlder={loadOlderEvents}
             copy={copy}
+            onError={handleSessionTableError}
+          />
+        ) : null}
+
+        {shouldMountSessionCampaignRuntimePanel({ status: snapshot.status, isCurrentDm }) ? (
+          <SessionCampaignRuntimePanel
+            roomId={roomId}
+            campaignId={campaignId}
+            sessionId={sessionId}
+            token={token}
+            characters={characters}
+            worldEventCursor={worldEventCursor}
             onError={handleSessionTableError}
           />
         ) : null}

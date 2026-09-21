@@ -186,6 +186,7 @@ export type RuntimeEntryFormViewProps = {
   pending: boolean
   formError: string | null
   copy: CampaignRuntimeCopy
+  kindOptions: readonly EditableRuntimeEntryKind[]
 }
 
 export function RuntimeEntryFormView({
@@ -198,6 +199,7 @@ export function RuntimeEntryFormView({
   pending,
   formError,
   copy,
+  kindOptions,
 }: RuntimeEntryFormViewProps) {
   return (
     <form className="room-form landing-card room-workspace-card" onSubmit={onSubmit}>
@@ -212,12 +214,12 @@ export function RuntimeEntryFormView({
             disabled={pending}
             onChange={(e) => {
               const val = e.target.value
-              if (isEditableRuntimeEntryKind(val)) {
+              if (isEditableRuntimeEntryKind(val) && kindOptions.includes(val)) {
                 onChange((prev) => onFormKindChange(prev, val))
               }
             }}
           >
-            {EDITABLE_RUNTIME_ENTRY_KINDS.map((k) => (
+            {kindOptions.map((k) => (
               <option key={k} value={k}>
                 {entryKindLabel(k, copy)}
               </option>

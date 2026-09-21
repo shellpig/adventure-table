@@ -1731,3 +1731,48 @@
   gap: 8px;
 }
 
+/* Session Campaign World Panel */
+.session-world-panel {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.session-world-panel__header h2 {
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+.session-world-panel__header p {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.session-world-banner {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.session-world-retry-btn {
+  margin-left: auto;
+}
+
+.session-world-loading {
+  color: var(--muted);
+  font-style: italic;
+  margin: 12px 0;
+}
+
+.session-world-quick-add {
+  margin-top: 16px;
+}
+
+.session-world-quick-add-form-wrapper {
+  margin-top: 12px;
+}
+

@@ -15,6 +15,7 @@ import {
   type CampaignRuntimeCopy,
 } from './campaignRuntimeCopy'
 import {
+  EDITABLE_RUNTIME_ENTRY_KINDS,
   loadCampaignChanges,
 } from './campaignRuntimeForm'
 import {
@@ -197,6 +198,7 @@ export function CampaignChangesView({
                     entries={entries}
                     form={management.formState}
                     formError={management.formError}
+                    kindOptions={EDITABLE_RUNTIME_ENTRY_KINDS}
                     onCancel={management.onCancelForm}
                     onChange={management.onChangeForm}
                     onSubmit={management.onSubmitForm}
@@ -216,6 +218,7 @@ export function CampaignChangesView({
                           entries={entries}
                           form={management.formState}
                           formError={management.formError}
+                          kindOptions={EDITABLE_RUNTIME_ENTRY_KINDS}
                           onCancel={management.onCancelForm}
                           onChange={management.onChangeForm}
                           onSubmit={management.onSubmitForm}

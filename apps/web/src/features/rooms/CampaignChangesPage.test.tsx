@@ -21,6 +21,7 @@ import {
   buildCreateEntryRequest,
   buildUpdateEntryRequest,
   createInitialEntryFormState,
+  EDITABLE_RUNTIME_ENTRY_KINDS,
   entryToFormState,
   executeRuntimeMutation,
   handleArchiveRuntimeEntry,
@@ -1266,6 +1267,7 @@ describe('H.7 Static rendering in en and zh-TW without leaked placeholders and w
       const createHtml = renderToStaticMarkup(
         <RuntimeEntryFormView
           form={createForm}
+          kindOptions={EDITABLE_RUNTIME_ENTRY_KINDS}
           onChange={vi.fn()}
           onSubmit={vi.fn()}
           onCancel={vi.fn()}
@@ -1283,6 +1285,7 @@ describe('H.7 Static rendering in en and zh-TW without leaked placeholders and w
       const editHtml = renderToStaticMarkup(
         <RuntimeEntryFormView
           form={editForm}
+          kindOptions={EDITABLE_RUNTIME_ENTRY_KINDS}
           onChange={vi.fn()}
           onSubmit={vi.fn()}
           onCancel={vi.fn()}
