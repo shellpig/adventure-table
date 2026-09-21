@@ -952,4 +952,48 @@
   margin-top: 8px;
 }
 
+.runtime-entry-card {
+  width: 100%;
+}
 
+.runtime-entry__badge {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(220, 100, 50, 0.2);
+  border: 1px solid rgba(220, 100, 50, 0.4);
+  color: #ff9966;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.runtime-entry__recipients,
+.runtime-entry__dm-notes,
+.runtime-entry__provenance,
+.runtime-entry__typed-field {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+
+.runtime-entry__json {
+  margin: 6px 0 0;
+  padding: 8px 12px;
+  background: #0c1017;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  overflow-x: auto;
+}
+
+.character-recipient-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.runtime-entry-create-form-wrapper {
+  margin-bottom: 20px;
+}
