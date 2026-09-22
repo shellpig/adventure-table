@@ -46,6 +46,10 @@ DM_CATALOG = {
     "combat_resolve_adjudication",
     "get_campaign_context", "get_scene_context", "search_campaign_context", "get_world_entry",
     "get_adventure_entry",
+    "world_create_entry", "world_update_entry", "world_archive_entry",
+    "world_set_override", "world_clear_override", "world_set_current_context",
+    "world_grant_knowledge", "world_set_needs_review", "world_resolve_action",
+    "set_stage_image",
 }
 
 

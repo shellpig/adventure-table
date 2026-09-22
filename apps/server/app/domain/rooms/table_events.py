@@ -8,6 +8,7 @@ from typing import Any, Protocol
 from uuid import UUID
 
 from pydantic import Field
+from sqlalchemy.engine import Connection
 
 from app.domain.combat.event_projection import project_combat_event_payload
 from app.domain.combat.projection import CombatantAudience
@@ -612,6 +613,22 @@ class TableEventService:
         return self._present(stored, actor=actor)
 
 
+def require_active_table_actor(
+    connection: Connection,
+    actor: TableActorContext,
+    repository: TableEventRepository,
+) -> StoredTableActorBinding:
+    binding = TableEventService._stored_binding(actor)
+    try:
+        return repository.require_active_actor_in_transaction(connection, binding)
+    except TableEventSessionNotFoundPersistenceError as exc:
+        raise TableEventNotFoundError(str(actor.session_id)) from exc
+    except TableEventSessionNotActivePersistenceError as exc:
+        raise TableEventSessionNotActiveError(str(actor.session_id)) from exc
+    except TableEventActorBindingStalePersistenceError as exc:
+        raise TableEventActorUnauthorizedError(str(exc)) from exc
+
+
 __all__ = [
     "EventReadScope",
     "HistoricalSessionReadScope",
@@ -628,4 +645,5 @@ __all__ = [
     "TableEventVisibility",
     "TableExecutionMode",
     "TableRuntimeCursor",
+    "require_active_table_actor",
 ]

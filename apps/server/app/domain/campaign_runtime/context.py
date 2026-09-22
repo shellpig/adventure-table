@@ -180,8 +180,9 @@ class CampaignContextService:
                 return CampaignContextDmView(
                     campaign_id=campaign.id,
                     name=campaign.name,
-                        current_scene=current_scene,
+                    current_scene=current_scene,
                     current_situation=current_situation,
+                    current_context_revision=stored_context.revision if stored_context else 0,
                     party=party,
                     active_combat=active_combat,
                     attached_adventures=self._resolve_attached_adventures(actor),

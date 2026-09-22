@@ -19,20 +19,14 @@ from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import (
     TableActorContext,
     TableEventActorUnauthorizedError,
-    TableEventNotFoundError,
     TableEventService,
-    TableEventSessionNotActiveError,
+    require_active_table_actor,
 )
 from app.persistence.adventures.repository import (
     AdventureRepository,
     CampaignAdventureLinkRepository,
 )
 from app.persistence.campaign_runtime.repository import CampaignRuntimeRepository
-from app.persistence.rooms.table_runtime import (
-    TableEventActorBindingStalePersistenceError,
-    TableEventSessionNotActivePersistenceError,
-    TableEventSessionNotFoundPersistenceError,
-)
 
 
 class CampaignStageError(Exception):
@@ -95,21 +89,10 @@ class CampaignStageBridgeService:
             raise TableEventActorUnauthorizedError(
                 "Only the current Session DM can update Main Stage"
             )
-        try:
-            binding = TableEventService._stored_binding(actor)
-        except TableEventActorUnauthorizedError:
-            raise
         with self.table_event_service.repository.engine.connect() as connection:
-            try:
-                self.table_event_service.repository.require_active_actor_in_transaction(
-                    connection, binding
-                )
-            except TableEventSessionNotFoundPersistenceError as exc:
-                raise TableEventNotFoundError(str(actor.session_id)) from exc
-            except TableEventSessionNotActivePersistenceError as exc:
-                raise TableEventSessionNotActiveError(str(actor.session_id)) from exc
-            except TableEventActorBindingStalePersistenceError as exc:
-                raise TableEventActorUnauthorizedError(str(exc)) from exc
+            require_active_table_actor(
+                connection, actor, self.table_event_service.repository
+            )
 
     def set_stage_image(
         self,

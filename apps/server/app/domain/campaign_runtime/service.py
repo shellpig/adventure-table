@@ -65,7 +65,10 @@ from app.domain.rooms.schemas import RoomAccessContext
 from app.domain.rooms.table_events import (
     TableActorContext,
     TableEventActorUnauthorizedError,
+    TableEventNotFoundError,
     TableEventService,
+    TableEventSessionNotActiveError,
+    require_active_table_actor,
 )
 from app.persistence.adventures.repository import CampaignAdventureLinkRepository
 from app.persistence.campaign_runtime.mutations import (
@@ -116,20 +119,16 @@ class CampaignRuntimeService:
         actor: TableActorContext,
     ) -> StoredTableActorBinding:
         try:
-            binding = TableEventService._stored_binding(actor)
-        except TableEventActorUnauthorizedError as exc:
-            raise CampaignRuntimeAuthorityError(str(exc)) from exc
-        try:
-            return self.event_service.repository.require_active_actor_in_transaction(
-                connection, binding
+            return require_active_table_actor(
+                connection, actor, self.event_service.repository
             )
-        except TableEventSessionNotFoundPersistenceError as exc:
+        except TableEventNotFoundError as exc:
             raise CampaignRuntimeNotFoundError(f"Session {actor.session_id} not found") from exc
-        except TableEventSessionNotActivePersistenceError as exc:
+        except TableEventSessionNotActiveError as exc:
             raise CampaignRuntimeSessionNotActiveError(
                 f"Session {actor.session_id} is not active"
             ) from exc
-        except TableEventActorBindingStalePersistenceError as exc:
+        except TableEventActorUnauthorizedError as exc:
             raise CampaignRuntimeAuthorityError(str(exc)) from exc
 
     def _orchestrate_management_mutation(

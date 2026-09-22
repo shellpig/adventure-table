@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
+from pydantic import Field
+
 from app.domain.adventures.schemas import AdventureEntryKind, AdventureEntryVisibility
 from app.domain.campaign_runtime.payloads import (
     CampaignRuntimeError,
@@ -68,6 +70,7 @@ class CampaignContextDmView(StrictModel):
     name: str
     current_scene: CurrentSceneView
     current_situation: str | None = None
+    current_context_revision: int = Field(ge=0)
     party: tuple[CampaignPartyMemberView, ...] = ()
     active_combat: ActiveCombatRef | None = None
     attached_adventures: tuple[AttachedAdventureRef, ...] = ()

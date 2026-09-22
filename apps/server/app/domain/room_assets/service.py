@@ -23,17 +23,11 @@ from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.table_events import (
     TableActorContext,
     TableEventActorUnauthorizedError,
-    TableEventNotFoundError,
     TableEventService,
-    TableEventSessionNotActiveError,
+    require_active_table_actor,
 )
 from app.persistence.room_assets.repository import RoomAssetRepository, StoredRoomAsset
 from app.persistence.room_assets.storage import FilesystemAssetStorage
-from app.persistence.rooms.table_runtime import (
-    TableEventActorBindingStalePersistenceError,
-    TableEventSessionNotActivePersistenceError,
-    TableEventSessionNotFoundPersistenceError,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -199,29 +193,16 @@ class RoomAssetService:
             raise TableEventActorUnauthorizedError(
                 "Only the current Session DM can access stage image assets"
             )
-        try:
-            binding = TableEventService._stored_binding(actor)
-        except TableEventActorUnauthorizedError:
-            raise
         with event_service.repository.engine.connect() as connection:
-            try:
-                event_service.repository.require_active_actor_in_transaction(
-                    connection, binding
-                )
-            except TableEventSessionNotFoundPersistenceError as exc:
-                raise TableEventNotFoundError(str(actor.session_id)) from exc
-            except TableEventSessionNotActivePersistenceError as exc:
-                raise TableEventSessionNotActiveError(str(actor.session_id)) from exc
-            except TableEventActorBindingStalePersistenceError as exc:
-                raise TableEventActorUnauthorizedError(str(exc)) from exc
+            require_active_table_actor(
+                connection, actor, event_service.repository
+            )
 
         if actor.room_id != room_id:
             raise RoomAssetNotFoundError(f"Room {room_id} not found")
 
         stored = self.repository.get(room_id, asset_id)
         if stored is None:
-            raise RoomAssetNotFoundError(f"Room asset {asset_id} not found")
-        if stored.visibility not in ("room", "dm_only"):
             raise RoomAssetNotFoundError(f"Room asset {asset_id} not found")
 
         handle = self.storage.open(stored.storage_key)
