@@ -11,16 +11,20 @@ import { LocaleProvider } from '../../i18n/LocaleProvider'
 import { LOCALE_STORAGE_KEY, type LocaleStorage } from '../../i18n/locale'
 import {
   AdventureEntryList,
-  ENTRY_KIND_FIELDS,
   EntryAssetUploadForm,
   entryCreateFromForm,
   entryFormFromEntry,
   entryPatchFromForm,
-  entryPayloadFromForm,
   moveEntry,
   sectionOptions,
   type EntryFormState,
 } from './AdventureEditorPage'
+import {
+  AdventureEntryPayloadFields,
+  ENTRY_KIND_FIELDS,
+  entryFieldsFromPayload,
+  entryPayloadFromForm,
+} from './AdventureEntryPayloadFields'
 import { adventureErrorMessage, adventuresCopy } from './adventuresCopy'
 
 vi.mock('../../api/roomAssets', async (importOriginal) => {
@@ -60,10 +64,6 @@ describe('AdventureEditorPage pure helpers and models', () => {
     // scene with empty dm_summary omits it and keeps kind
     const scenePayload = entryPayloadFromForm({
       kind: 'scene',
-      title: '',
-      body: '',
-      visibility: 'public',
-      parentEntryId: '',
       fields: { read_aloud: 'You enter a dark cave.', dm_summary: '   ' },
     })
     expect(scenePayload).toEqual({
@@ -74,10 +74,6 @@ describe('AdventureEditorPage pure helpers and models', () => {
     // item converts value_gp to number and is_magic to boolean
     const itemPayload = entryPayloadFromForm({
       kind: 'item',
-      title: '',
-      body: '',
-      visibility: 'public',
-      parentEntryId: '',
       fields: { rarity: 'rare', value_gp: ' 500 ', is_magic: 'true' },
     })
     expect(itemPayload).toEqual({
@@ -90,10 +86,6 @@ describe('AdventureEditorPage pure helpers and models', () => {
     // monster_ref converts count
     const monsterPayload = entryPayloadFromForm({
       kind: 'monster_ref',
-      title: '',
-      body: '',
-      visibility: 'public',
-      parentEntryId: '',
       fields: { monster_template_ref: 'goblin', count: ' 3 ', notes: '   ' },
     })
     expect(monsterPayload).toEqual({
@@ -105,10 +97,6 @@ describe('AdventureEditorPage pure helpers and models', () => {
     // suggested_check converts dc and passes ability
     const checkPayload = entryPayloadFromForm({
       kind: 'suggested_check',
-      title: '',
-      body: '',
-      visibility: 'public',
-      parentEntryId: '',
       fields: { ability: 'wis', dc: ' 15 ', skill: 'Perception' },
     })
     expect(checkPayload).toEqual({
@@ -121,10 +109,6 @@ describe('AdventureEditorPage pure helpers and models', () => {
     // section produces { kind: 'section' } only
     const sectionPayload = entryPayloadFromForm({
       kind: 'section',
-      title: 'Chapter 1',
-      body: '',
-      visibility: 'public',
-      parentEntryId: '',
       fields: {},
     })
     expect(sectionPayload).toEqual({ kind: 'section' })
@@ -133,10 +117,6 @@ describe('AdventureEditorPage pure helpers and models', () => {
   it('defaults suggested_check ability to str and dc to NaN when empty, and npc disposition to unknown', () => {
     const checkPayload = entryPayloadFromForm({
       kind: 'suggested_check',
-      title: '',
-      body: '',
-      visibility: 'public',
-      parentEntryId: '',
       fields: {},
     })
     expect(checkPayload.kind).toBe('suggested_check')
@@ -147,10 +127,6 @@ describe('AdventureEditorPage pure helpers and models', () => {
 
     const npcPayload = entryPayloadFromForm({
       kind: 'npc',
-      title: '',
-      body: '',
-      visibility: 'public',
-      parentEntryId: '',
       fields: {},
     })
     expect(npcPayload.kind).toBe('npc')
@@ -257,6 +233,40 @@ describe('AdventureEditorPage pure helpers and models', () => {
     expect(sectionOptions(entries, 'sec-1')).toEqual([
       { id: 'sec-2', kind: 'section' },
     ])
+  })
+
+  it('renders extracted AdventureEntryPayloadFields and verifies entryFieldsFromPayload round-trip', () => {
+    const copy = adventuresCopy('en')
+    const html = renderToStaticMarkup(
+      <AdventureEntryPayloadFields
+        copy={copy}
+        fields={{ ability: 'wis', dc: '15', skill: 'Perception' }}
+        kind="suggested_check"
+        onChange={vi.fn()}
+      />,
+    )
+    expect(html).toContain('Perception')
+    expect(html).toContain('15')
+    expect(html).toContain(copy.abilityWis)
+
+    const payload = entryPayloadFromForm({
+      kind: 'suggested_check',
+      fields: { ability: 'wis', dc: '15', skill: 'Perception' },
+    })
+    const extractedFields = entryFieldsFromPayload(payload)
+    expect(extractedFields).toEqual({
+      ability: 'wis',
+      dc: '15',
+      skill: 'Perception',
+      on_success: '',
+      on_failure: '',
+    })
+
+    const rebuiltPayload = entryPayloadFromForm({
+      kind: 'suggested_check',
+      fields: extractedFields,
+    })
+    expect(rebuiltPayload).toEqual(payload)
   })
 })
 

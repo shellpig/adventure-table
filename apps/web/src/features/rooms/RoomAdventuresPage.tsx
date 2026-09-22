@@ -12,6 +12,7 @@ import {
 import type { RoomAuthority } from '../../api/rooms'
 import { useLocale } from '../../i18n/LocaleProvider'
 import { AdventureEditorPage } from './AdventureEditorPage'
+import { AdventureImporterPanel } from './AdventureImporterPanel'
 import { adventureErrorMessage, adventuresCopy } from './adventuresCopy'
 import { recentRoomForId } from './roomStorage'
 import './rooms.css'
@@ -287,6 +288,8 @@ export function RoomAdventuresPage({ roomId, adventureId }: RoomAdventuresRoute)
           onArchive={(id) => runMutation(() => archiveAdventure(roomId, id, token))}
           onDelete={(id) => runMutation(() => deleteAdventure(roomId, id, token))}
         />
+
+        <AdventureImporterPanel key={`${roomId}:${token}`} roomId={roomId} token={token} />
       </section>
     </main>
   )
