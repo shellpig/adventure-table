@@ -18,6 +18,8 @@ dependencies = [
 [project.optional-dependencies]
 web = [
   "psycopg[binary]>=3.2,<4",
+  "pypdf>=6,<7",
+  "python-docx>=1.2,<2",
 ]
 dev = [
   "httpx>=0.28,<1",

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import hashlib
-from typing import Literal
+from typing import Literal, cast
 import urllib.parse
 from uuid import UUID, uuid4
 
@@ -13,6 +13,11 @@ from app.domain.adventure_imports.errors import (
     AdventureImportForbiddenError,
     AdventureImportNotFoundError,
     AdventureImportValidationError,
+    ExtractorUnavailableError,
+)
+from app.domain.adventure_imports.extractors import (
+    extract_docx_text,
+    extract_pdf_text,
 )
 from app.domain.adventure_imports.schemas import (
     AdventureImport,
@@ -31,6 +36,11 @@ from app.domain.adventures.schemas import (
     AdventureNotFoundError,
 )
 from app.domain.adventures.service import require_adventure_author
+from app.domain.room_assets.schemas import (
+    RoomAssetForbiddenError,
+    RoomAssetNotFoundError,
+)
+from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.schemas import RoomAccessContext
 from app.persistence.adventure_imports.repository import (
     AdventureImportRepository,
@@ -81,6 +91,13 @@ def normalize_source_text(text: str) -> str:
 
 _TERMINAL_STATUSES = ("finalized", "cancelled")
 
+_ASSET_MIME_TO_SOURCE_KIND: dict[str, str] = {
+    "application/pdf": "pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+    "text/plain": "txt",
+    "text/markdown": "markdown",
+}
+
 
 def _text_stats(normalized: str) -> dict[str, object]:
     return {"line_count": len(normalized.splitlines()), "char_count": len(normalized)}
@@ -91,9 +108,11 @@ class AdventureImportService:
         self,
         repository: AdventureImportRepository,
         settings: Settings,
+        room_asset_service: RoomAssetService,
     ) -> None:
         self.repository = repository
         self.settings = settings
+        self.room_asset_service = room_asset_service
 
     def _import_in_room(
         self, connection: Connection, room_id: UUID, import_id: UUID
@@ -130,6 +149,8 @@ class AdventureImportService:
         normalized: str,
         sha256: str,
         metadata_json: dict[str, object],
+        asset_id: UUID | None = None,
+        warning: tuple[str, str] | None = None,
     ) -> AdventureImportSource:
         """Insert a source unless the import already holds one with the same sha256."""
         with self.repository.engine.begin() as connection:
@@ -142,7 +163,7 @@ class AdventureImportService:
             stored = StoredAdventureImportSource(
                 id=uuid4(),
                 import_id=import_id,
-                asset_id=None,
+                asset_id=asset_id,
                 source_kind=source_kind,
                 source_url=source_url,
                 metadata_json=metadata_json,
@@ -152,7 +173,20 @@ class AdventureImportService:
                 text_length=len(normalized),
             )
             created = self.repository.add_source_in_transaction(connection, stored)
-            if source_kind == "url" and not normalized:
+            if warning is not None:
+                warning_code, warning_message = warning
+                self._append_warning_in_transaction(
+                    connection,
+                    import_id,
+                    DraftWarning(
+                        warning_id=f"source:{created.id}:{warning_code}",
+                        level="warning",
+                        code=warning_code,
+                        message=warning_message,
+                        source_id=created.id,
+                    ),
+                )
+            elif source_kind == "url" and not normalized:
                 self._append_warning_in_transaction(
                     connection,
                     import_id,
@@ -249,9 +283,8 @@ class AdventureImportService:
             )
             return adventure_import_from_stored(updated)
 
-    def add_text_source(
+    def _add_text_or_content_source(
         self,
-        context: RoomAccessContext,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -260,8 +293,8 @@ class AdventureImportService:
         content: bytes | None = None,
         filename: str | None = None,
         media_type: str | None = None,
+        asset_id: UUID | None = None,
     ) -> AdventureImportSource:
-        require_import_author(context, room_id)
         if (text is None) == (content is None):
             raise AdventureImportValidationError(
                 "Exactly one of 'text' or 'content' must be provided"
@@ -282,19 +315,139 @@ class AdventureImportService:
         self._check_source_size(raw_bytes_len)
 
         normalized = normalize_source_text(decoded_text)
+        if asset_id is not None:
+            sha256 = hashlib.sha256(
+                f"asset:{asset_id}:{normalized}".encode("utf-8")
+            ).hexdigest()
+        else:
+            sha256 = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
         return self._add_source(
             room_id,
             import_id,
             source_kind=source_kind,
             source_url=None,
             normalized=normalized,
-            sha256=hashlib.sha256(normalized.encode("utf-8")).hexdigest(),
+            sha256=sha256,
             metadata_json={
                 "filename": filename,
                 "media_type": media_type,
                 "byte_size": raw_bytes_len,
                 **_text_stats(normalized),
             },
+            asset_id=asset_id,
+        )
+
+    def add_text_source(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        import_id: UUID,
+        *,
+        source_kind: Literal["paste", "txt", "markdown"],
+        text: str | None = None,
+        content: bytes | None = None,
+        filename: str | None = None,
+        media_type: str | None = None,
+    ) -> AdventureImportSource:
+        require_import_author(context, room_id)
+        return self._add_text_or_content_source(
+            room_id,
+            import_id,
+            source_kind=source_kind,
+            text=text,
+            content=content,
+            filename=filename,
+            media_type=media_type,
+            asset_id=None,
+        )
+
+    def add_asset_source(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        import_id: UUID,
+        *,
+        asset_id: UUID,
+    ) -> AdventureImportSource:
+        require_import_author(context, room_id)
+        try:
+            asset, handle = self.room_asset_service.open_content(
+                context, room_id, asset_id
+            )
+        except RoomAssetNotFoundError as exc:
+            raise AdventureImportNotFoundError(message=str(exc)) from exc
+        except RoomAssetForbiddenError as exc:
+            raise AdventureImportForbiddenError(str(exc)) from exc
+
+        with handle:
+            if asset.kind != "source_document":
+                raise AdventureImportValidationError(
+                    f"Asset {asset_id} kind '{asset.kind}' is not 'source_document'"
+                )
+
+            if asset.mime_type not in _ASSET_MIME_TO_SOURCE_KIND:
+                raise AdventureImportValidationError(
+                    f"Asset {asset_id} media type '{asset.mime_type}' is not supported for import"
+                )
+
+            source_kind = _ASSET_MIME_TO_SOURCE_KIND[asset.mime_type]
+            data = handle.read(self.settings.import_source_max_bytes + 1)
+
+        self._check_source_size(len(data))
+
+        if source_kind in ("txt", "markdown"):
+            return self._add_text_or_content_source(
+                room_id,
+                import_id,
+                source_kind=cast(Literal["txt", "markdown"], source_kind),
+                content=data,
+                filename=asset.original_filename,
+                media_type=asset.mime_type,
+                asset_id=asset.id,
+            )
+
+        warning: tuple[str, str] | None = None
+        sections: list[dict[str, object]] = []
+        normalized = ""
+
+        try:
+            if source_kind == "pdf":
+                result = extract_pdf_text(data)
+            else:
+                result = extract_docx_text(data)
+            normalized = result.normalized_text
+            sections = [dict(s) for s in result.sections]
+            if not normalized:
+                warning = (
+                    "empty_extraction",
+                    (
+                        f"No text could be extracted from {source_kind.upper()} "
+                        f"asset '{asset.original_filename}'"
+                    ),
+                )
+        except ExtractorUnavailableError as exc:
+            warning = ("extractor_unavailable", str(exc))
+
+        sha256 = hashlib.sha256(
+            f"asset:{asset.id}:{normalized}".encode("utf-8")
+        ).hexdigest()
+
+        return self._add_source(
+            room_id,
+            import_id,
+            source_kind=source_kind,
+            source_url=None,
+            normalized=normalized,
+            sha256=sha256,
+            metadata_json={
+                "filename": asset.original_filename,
+                "media_type": asset.mime_type,
+                "byte_size": len(data),
+                **_text_stats(normalized),
+                "sections": sections,
+            },
+            asset_id=asset.id,
+            warning=warning,
         )
 
     def add_url_source(

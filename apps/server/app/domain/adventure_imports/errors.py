@@ -41,3 +41,7 @@ class AdventureImportValidationError(AdventureImportError, ValueError):
 
 class AdventureImportForbiddenError(AdventureImportError, PermissionError):
     """Raised when actor lacks required room/import authority."""
+
+
+class ExtractorUnavailableError(AdventureImportError):
+    """Raised when an optional extraction library is not available."""

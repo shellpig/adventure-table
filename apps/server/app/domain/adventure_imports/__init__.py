@@ -6,6 +6,12 @@ from app.domain.adventure_imports.errors import (
     AdventureImportNotFoundError,
     AdventureImportRevisionConflictError,
     AdventureImportValidationError,
+    ExtractorUnavailableError,
+)
+from app.domain.adventure_imports.extractors import (
+    ExtractionResult,
+    extract_docx_text,
+    extract_pdf_text,
 )
 from app.domain.adventure_imports.schemas import (
     AdventureImport,
@@ -47,6 +53,8 @@ __all__ = [
     "DraftQuestion",
     "DraftSourceRef",
     "DraftWarning",
+    "ExtractionResult",
+    "ExtractorUnavailableError",
     "ImportDraft",
     "ImportStatus",
     "SourceChunk",
@@ -55,6 +63,8 @@ __all__ = [
     "adventure_import_draft_from_stored",
     "adventure_import_from_stored",
     "adventure_import_source_from_stored",
+    "extract_docx_text",
+    "extract_pdf_text",
     "normalize_source_text",
     "require_import_author",
     "validate_draft_warnings",

@@ -31,6 +31,7 @@ from app.domain.adventure_imports.service import (
     AdventureImportService,
 )
 from app.domain.adventures.payloads import ScenePayload
+from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.persistence.adventure_imports.repository import AdventureImportRepository
 from app.persistence.adventure_imports.tables import (
@@ -39,6 +40,8 @@ from app.persistence.adventure_imports.tables import (
     adventure_imports,
 )
 from app.persistence.adventures.tables import adventure_definitions
+from app.persistence.room_assets.repository import RoomAssetRepository
+from app.persistence.room_assets.storage import FilesystemAssetStorage
 from app.persistence.room_assets.tables import room_assets
 from app.persistence.rooms.tables import campaigns, rooms
 
@@ -59,6 +62,7 @@ class ImportServiceFixture:
     repo: AdventureImportRepository
     service: AdventureImportService
     settings: Settings
+    asset_service: RoomAssetService
     db_path: Path
     room_a_id: UUID
     room_b_id: UUID
@@ -122,13 +126,22 @@ def fixture(tmp_path: Path) -> ImportServiceFixture:
 
     repo = AdventureImportRepository(engine)
     settings = Settings()
-    service = AdventureImportService(repo, settings)
+    asset_storage = FilesystemAssetStorage(tmp_path / "assets")
+    asset_repo = RoomAssetRepository(engine)
+    asset_service = RoomAssetService(
+        asset_repo,
+        asset_storage,
+        max_image_bytes=settings.asset_max_image_bytes,
+        max_source_document_bytes=settings.asset_max_source_document_bytes,
+    )
+    service = AdventureImportService(repo, settings, asset_service)
 
     return ImportServiceFixture(
         engine=engine,
         repo=repo,
         service=service,
         settings=settings,
+        asset_service=asset_service,
         db_path=db_path,
         room_a_id=room_a_id,
         room_b_id=room_b_id,
@@ -235,6 +248,12 @@ AUTHORITY_METHODS: list[
             draft=ImportDraft(),
             warnings=[],
             expected_revision=0,
+        ),
+    ),
+    (
+        "add_asset_source",
+        lambda s, ctx, r_id, imp_id, _src: s.add_asset_source(
+            ctx, r_id, imp_id, asset_id=uuid4()
         ),
     ),
 ]
@@ -350,7 +369,9 @@ def test_text_source_kinds(
 def test_text_source_oversize_and_undecodable(fixture: ImportServiceFixture) -> None:
     imp = fixture.service.create_import(fixture.owner_a, fixture.room_a_id, "Limit Import")
     custom_settings = Settings(import_source_max_bytes=50)
-    service_small = AdventureImportService(fixture.repo, custom_settings)
+    service_small = AdventureImportService(
+        fixture.repo, custom_settings, fixture.asset_service
+    )
 
     before_counts = _count_rows(fixture.engine)
     with pytest.raises(AdventureImportValidationError):
@@ -649,7 +670,15 @@ def test_draft_lifecycle_revisions_and_restart_stability(
     # E.4: Restart stability — fresh repository and service on the same SQLite file
     fresh_engine = _create_sqlite_engine(fixture.db_path)
     fresh_repo = AdventureImportRepository(fresh_engine)
-    fresh_service = AdventureImportService(fresh_repo, fixture.settings)
+    fresh_asset_service = RoomAssetService(
+        RoomAssetRepository(fresh_engine),
+        FilesystemAssetStorage(fixture.db_path.parent / "assets"),
+        max_image_bytes=fixture.settings.asset_max_image_bytes,
+        max_source_document_bytes=fixture.settings.asset_max_source_document_bytes,
+    )
+    fresh_service = AdventureImportService(
+        fresh_repo, fixture.settings, fresh_asset_service
+    )
 
     reopened_draft = fresh_service.get_draft(fixture.owner_a, fixture.room_a_id, imp.id)
     assert reopened_draft.revision == 2
