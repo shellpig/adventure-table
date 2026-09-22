@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import hashlib
-from typing import Literal, cast
+from typing import Callable, Literal, cast
 import urllib.parse
 from uuid import UUID, uuid4
 
@@ -12,6 +12,7 @@ from app.config import Settings
 from app.domain.adventure_imports.errors import (
     AdventureImportForbiddenError,
     AdventureImportNotFoundError,
+    AdventureImportRevisionConflictError,
     AdventureImportValidationError,
     ExtractorUnavailableError,
 )
@@ -23,8 +24,11 @@ from app.domain.adventure_imports.schemas import (
     AdventureImport,
     AdventureImportDraft,
     AdventureImportSource,
+    DraftEntry,
+    DraftQuestion,
     DraftWarning,
     ImportDraft,
+    ReviewStatus,
     SourceChunk,
     adventure_import_draft_from_stored,
     adventure_import_from_stored,
@@ -632,6 +636,166 @@ class AdventureImportService:
                 )
 
             return adventure_import_draft_from_stored(stored_draft)
+
+    def _apply_draft_mutation(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        import_id: UUID,
+        action: str,
+        expected_revision: int,
+        mutator: Callable[
+            [ImportDraft, list[DraftWarning]],
+            tuple[ImportDraft, list[DraftWarning]],
+        ],
+    ) -> AdventureImportDraft:
+        require_import_author(context, room_id)
+        with self.repository.engine.begin() as connection:
+            self._writable_import(connection, room_id, import_id, action)
+            stored_draft = self.repository.get_draft_in_transaction(
+                connection, import_id
+            )
+            if stored_draft is None:
+                current_draft = ImportDraft()
+                current_warnings: list[DraftWarning] = []
+                current_revision = 0
+            else:
+                current_draft = ImportDraft.model_validate(stored_draft.draft_json)
+                current_warnings = [
+                    DraftWarning.model_validate(w) for w in stored_draft.warnings_json
+                ]
+                current_revision = stored_draft.revision
+
+            if current_revision != expected_revision:
+                raise AdventureImportRevisionConflictError(
+                    import_id=import_id,
+                    expected_revision=expected_revision,
+                    current_revision=current_revision,
+                )
+
+            updated_draft, updated_warnings = mutator(
+                current_draft, current_warnings
+            )
+
+            stored = self.repository.upsert_draft_in_transaction(
+                connection,
+                import_id,
+                updated_draft.model_dump(mode="json"),
+                [w.model_dump(mode="json") for w in updated_warnings],
+                expected_revision=expected_revision,
+            )
+            return adventure_import_draft_from_stored(stored)
+
+    def set_entry_review(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        import_id: UUID,
+        *,
+        entry_id: str,
+        review_status: ReviewStatus,
+        expected_revision: int,
+    ) -> AdventureImportDraft:
+        def _mutate(
+            draft: ImportDraft,
+            warnings: list[DraftWarning],
+        ) -> tuple[ImportDraft, list[DraftWarning]]:
+            if review_status not in ("pending", "accepted", "ignored", "uncertain"):
+                raise AdventureImportValidationError(
+                    f"Invalid review_status: {review_status}"
+                )
+            for idx, entry in enumerate(draft.entries):
+                if entry.entry_id == entry_id:
+                    new_entries = list(draft.entries)
+                    new_entries[idx] = entry.model_copy(
+                        update={"review_status": review_status}
+                    )
+                    return draft.model_copy(update={"entries": new_entries}), warnings
+            raise AdventureImportNotFoundError(
+                import_id=import_id,
+                message=f"Entry '{entry_id}' not found in draft of import {import_id}",
+            )
+
+        return self._apply_draft_mutation(
+            context,
+            room_id,
+            import_id,
+            "set entry review",
+            expected_revision,
+            _mutate,
+        )
+
+    def resolve_import_warning(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        import_id: UUID,
+        *,
+        warning_id: str,
+        resolution: str | None = None,
+        expected_revision: int,
+    ) -> AdventureImportDraft:
+        def _mutate(
+            draft: ImportDraft,
+            warnings: list[DraftWarning],
+        ) -> tuple[ImportDraft, list[DraftWarning]]:
+            for idx, w in enumerate(warnings):
+                if w.warning_id == warning_id:
+                    if w.resolved:
+                        raise AdventureImportValidationError(
+                            f"Warning '{warning_id}' is already resolved"
+                        )
+                    new_warnings = list(warnings)
+                    new_warnings[idx] = w.model_copy(
+                        update={"resolved": True, "resolution": resolution}
+                    )
+                    return draft, new_warnings
+            raise AdventureImportNotFoundError(
+                import_id=import_id,
+                message=f"Warning '{warning_id}' not found in draft of import {import_id}",
+            )
+
+        return self._apply_draft_mutation(
+            context,
+            room_id,
+            import_id,
+            "resolve import warning",
+            expected_revision,
+            _mutate,
+        )
+
+    def answer_import_question(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        import_id: UUID,
+        *,
+        question_id: str,
+        answer: str,
+        expected_revision: int,
+    ) -> AdventureImportDraft:
+        def _mutate(
+            draft: ImportDraft,
+            warnings: list[DraftWarning],
+        ) -> tuple[ImportDraft, list[DraftWarning]]:
+            for idx, q in enumerate(draft.questions):
+                if q.question_id == question_id:
+                    new_questions = list(draft.questions)
+                    new_questions[idx] = q.model_copy(update={"answer": answer})
+                    return draft.model_copy(update={"questions": new_questions}), warnings
+            raise AdventureImportNotFoundError(
+                import_id=import_id,
+                message=f"Question '{question_id}' not found in draft of import {import_id}",
+            )
+
+        return self._apply_draft_mutation(
+            context,
+            room_id,
+            import_id,
+            "answer import question",
+            expected_revision,
+            _mutate,
+        )
 
 
 __all__ = [

@@ -28,6 +28,7 @@ DraftProvenance = Literal[
     "ai_generated",
 ]
 WarningLevel = Literal["info", "warning", "blocking"]
+ReviewStatus = Literal["pending", "accepted", "ignored", "uncertain"]
 
 
 class DraftSourceRef(StrictModel):
@@ -43,6 +44,8 @@ class DraftEntry(StrictModel):
     provenance: DraftProvenance = "source_document"
     source_ref: DraftSourceRef | None = None
     note: str | None = None
+    review_status: ReviewStatus = "pending"
+    asset_ids: list[UUID] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
@@ -75,6 +78,8 @@ class DraftWarning(StrictModel):
     message: str
     entry_id: str | None = None
     source_id: UUID | None = None
+    resolved: bool = False
+    resolution: str | None = None
 
 
 class DraftQuestion(StrictModel):
@@ -213,6 +218,16 @@ def adventure_import_draft_from_stored(
     )
 
 
+def unresolved_blocking_warnings(
+    draft_view: AdventureImportDraft | list[DraftWarning] | tuple[DraftWarning, ...],
+) -> list[DraftWarning]:
+    if isinstance(draft_view, AdventureImportDraft):
+        warnings = draft_view.warnings
+    else:
+        warnings = draft_view
+    return [w for w in warnings if w.level == "blocking" and not w.resolved]
+
+
 __all__ = [
     "AdventureImport",
     "AdventureImportDraft",
@@ -224,11 +239,13 @@ __all__ = [
     "DraftWarning",
     "ImportDraft",
     "ImportStatus",
+    "ReviewStatus",
     "SourceChunk",
     "SourceKind",
     "WarningLevel",
     "adventure_import_draft_from_stored",
     "adventure_import_from_stored",
     "adventure_import_source_from_stored",
+    "unresolved_blocking_warnings",
     "validate_draft_warnings",
 ]
