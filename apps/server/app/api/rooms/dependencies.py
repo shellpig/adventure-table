@@ -11,6 +11,7 @@ from app.config import settings
 from app.domain.adventures.attachments import CampaignAdventureService
 from app.domain.adventures.service import AdventureService
 from app.domain.campaign_runtime.service import CampaignRuntimeService
+from app.domain.campaign_runtime.stage import CampaignStageBridgeService
 from app.domain.combat.adjudication_service import CombatAdjudicationService
 from app.domain.combat.attack_definitions import AttackDefinitionResolver
 from app.domain.combat.attacks import CombatAttackService
@@ -42,6 +43,7 @@ from app.persistence.adventures.repository import (
     AdventureRepository,
     CampaignAdventureLinkRepository,
 )
+from app.persistence.campaign_runtime.repository import CampaignRuntimeRepository
 from app.persistence.combat.adjudication import CombatAdjudicationRepository
 from app.persistence.combat.attacks import CombatAttackRepository
 from app.persistence.combat.concentration import CombatConcentrationRepository
@@ -164,6 +166,25 @@ def get_campaign_runtime_service(request: Request) -> CampaignRuntimeService:
         get_table_event_service(request),
     )
     request.app.state.campaign_runtime_service = service
+    return service
+
+
+def get_campaign_stage_service(request: Request) -> CampaignStageBridgeService:
+    # Starlette State has no membership test; the AttributeError is the "not built yet" signal.
+    try:
+        return request.app.state.campaign_stage_service
+    except AttributeError:
+        pass
+    engine = get_database_engine(request)
+    service = CampaignStageBridgeService(
+        room_asset_service=get_room_asset_service(request),
+        adventure_repository=AdventureRepository(engine),
+        campaign_adventure_link_repository=CampaignAdventureLinkRepository(engine),
+        campaign_runtime_repository=CampaignRuntimeRepository(engine),
+        stage_service=get_exploration_stage_service(request),
+        table_event_service=get_table_event_service(request),
+    )
+    request.app.state.campaign_stage_service = service
     return service
 
 
@@ -490,6 +511,7 @@ __all__ = [
     "get_adventure_service",
     "get_campaign_adventure_service",
     "get_campaign_service",
+    "get_campaign_stage_service",
     "get_combat_adjudication_service",
     "get_combat_attack_service",
     "get_combat_concentration_service",
