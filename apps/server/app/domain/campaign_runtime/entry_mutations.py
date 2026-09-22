@@ -99,6 +99,9 @@ def require_management_authority(context: RoomAccessContext, room_id: UUID) -> N
         raise CampaignRuntimeAuthorityError("Owner or DM authority is required")
 
 
+RESERVED_INTERNAL_IDEMPOTENCY_PREFIX: str = "p6d-world-action-inner:"
+
+
 def validate_idempotency_key(idempotency_key: str) -> None:
     if (
         not isinstance(idempotency_key, str)
@@ -107,6 +110,10 @@ def validate_idempotency_key(idempotency_key: str) -> None:
     ):
         raise CampaignRuntimeValidationError(
             "Idempotency key must be a nonblank string of at most 160 characters"
+        )
+    if idempotency_key.startswith(RESERVED_INTERNAL_IDEMPOTENCY_PREFIX):
+        raise CampaignRuntimeValidationError(
+            f"Idempotency key cannot use reserved prefix '{RESERVED_INTERNAL_IDEMPOTENCY_PREFIX}'"
         )
 
 
@@ -489,4 +496,3 @@ def execute_archive_entry_in_transaction(
     )
     mutation_repo.insert_in_transaction(connection, mutation)
     return view, archived_aggregate
-
