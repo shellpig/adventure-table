@@ -69,6 +69,16 @@ from app.domain.campaign_runtime.service import (
 from app.domain.campaign_runtime.context import (
     CampaignContextService,
 )
+from app.domain.campaign_runtime.world import (
+    CampaignWorldService,
+    ClearAdventureOverrideIntent,
+    GrantCharacterKnowledgeIntent,
+    SetAdventureOverrideIntent,
+    SetCurrentContextIntent,
+    SetEntryNeedsReviewIntent,
+    SetNeedsReviewTarget,
+    SetOverrideNeedsReviewIntent,
+)
 from app.domain.campaign_runtime.context_schemas import (
     ActiveCombatRef,
     AdventureSceneRef,
@@ -140,6 +150,9 @@ __all__ = [
     "CampaignRuntimeService",
     "CampaignRuntimeSessionNotActiveError",
     "CampaignRuntimeValidationError",
+    "CampaignWorldService",
+    "ClearAdventureOverrideIntent",
+    "GrantCharacterKnowledgeIntent",
     "KNOWN_ITEM_HOLDER_KINDS",
     "KNOWN_RUNTIME_ENTRY_KINDS",
     "KNOWN_RUNTIME_VISIBILITIES",
@@ -165,6 +178,11 @@ __all__ = [
     "RuntimeWorldEntryDmView",
     "RuntimeWorldEntryPatch",
     "RuntimeWorldEntryPlayerView",
+    "SetAdventureOverrideIntent",
+    "SetCurrentContextIntent",
+    "SetEntryNeedsReviewIntent",
+    "SetNeedsReviewTarget",
+    "SetOverrideNeedsReviewIntent",
     "dump_runtime_payload",
     "parse_runtime_payload",
     "project_runtime_aggregate",
