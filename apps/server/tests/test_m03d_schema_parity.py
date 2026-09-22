@@ -53,6 +53,9 @@ FORBIDDEN_MULTIPLAYER_TABLES = {
     "campaign_adventure_overrides",
     "campaign_runtime_context",
     "campaign_world_mutations",
+    "adventure_imports",
+    "adventure_import_sources",
+    "adventure_import_drafts",
 }
 
 

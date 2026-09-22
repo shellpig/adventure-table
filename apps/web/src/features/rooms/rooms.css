@@ -1148,3 +1148,130 @@
   color: var(--quiet);
   font-style: italic;
 }
+
+/* ==========================================================================
+   P6-E Adventure Importer Panel Styles
+   ========================================================================== */
+
+.adventure-importer-panel {
+  margin-top: 36px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line-soft);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.adventure-importer-panel h2 {
+  margin: 0 0 6px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.4rem;
+  color: var(--text);
+}
+
+.importer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+
+.importer-section h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--gold-bright);
+}
+
+.importer-section h4 {
+  margin: 0 0 8px;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.importer-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.importer-item-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #0c1017;
+  border: 1px solid var(--line);
+  gap: 8px;
+}
+
+.importer-item-card--active {
+  border-color: var(--gold-dark);
+  box-shadow: 0 0 0 1px rgb(215 181 109 / 20%);
+}
+
+.importer-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.importer-chunk-viewer {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 10px;
+  background: #080b10;
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.importer-chunk-viewer pre {
+  margin: 0;
+  padding: 12px;
+  background: #05070a;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.importer-chunk-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.importer-warnings-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #ffaa77;
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.importer-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}

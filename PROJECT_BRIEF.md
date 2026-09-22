@@ -16,8 +16,8 @@
 
 - **P4 已全部關門並合併回 `main`**：P4-F code `651a14d0`，merge `7ef02d13`；證據見 [P4-F closeout](docs/P4/P4-F_CLOSEOUT.md)。歷史步驟不再作開場必讀。
 - **M05（Session History Continuity & Owner End for AI DM Sessions）已於 2026-09-20 當日開工並全部關門、合併回 `main`**：M05-A Owner 可正常 End AI DM 的 Session；M05-B 聊天串向上翻頁越過 Session 邊界（專用 history read scope，不擴大 gameplay actor）。證據見 [M05-A closeout](docs/M05/M05-A_CLOSEOUT.md)、[M05-B closeout](docs/M05/M05-B_CLOSEOUT.md)；逐項表已移至 ROADMAP_HISTORY。
-- **P6-A～P6-D 已關門並合併回 `main`**：P6-A 2026-09-20（Room asset、Adventure Definition／Entry authoring 與 lifecycle、Campaign attach／detach、Adventures UI，[closeout](docs/P6/P6-A_CLOSEOUT.md)）；P6-B 2026-09-21（migration `0032` Runtime table、typed Runtime entry／Override／Current Context、Session 外管理與 active Session Human／AI DM 共用 service、Player secrecy projection、Campaign Changes／Session DM panel／Player Journal UI，[closeout](docs/P6/P6-B_CLOSEOUT.md)）；P6-C 2026-09-21（`CampaignContextService` 五個 read intent、bounded search、五個 MCP read tool、compact `campaign_context`，[closeout](docs/P6/P6-C_CLOSEOUT.md)）；**P6-D 2026-09-22**（`campaign_runtime/service.py` 拆檔、`CampaignWorldService` 八 intent 雙路徑、`resolve_world_action` atomic world＋narration、asset／entry image → P3 Stage bridge、十個 DM-only MCP write tool、Session DM Set Stage／`needs_review` UI，[closeout](docs/P6/P6-D_CLOSEOUT.md)）。**下一步為 P6-E — Adventure Source & Import Draft**。2026-09-19 使用者拍板 P6 先於 P5，以先完成可玩 Campaign loop；Phase 編號不重編，P5 契約完整保留，P6 關門後再回 P5。
-- **P6 契約已定案，固定 A～G**；開工讀 [P6 實作規格](docs/P6/實作規格.md)、[開發設計方針](docs/P6/開發設計方針.md)、[測試指南](docs/P6/測試指南.md) 的 P6-E 與必要共用前言。P6-A～P6-D 的技術決策（raw-body asset upload、縮圖走 authenticated blob fetch、duplicate attach 409、context clear 不刪 row、required `TableEventService`、Player Journal 只列 public quest／fact＋own-character knowledge、search 為 Python 端比對且 Player 不觸 Adventure 分支、`_active_context_extension` hook、P6-B REST 不改接 world service、`resolve_world_action` MCP-only、write tool `idempotency_key` required、`current_context_revision`、共用 `require_active_table_actor`）見各自 closeout。列出下一步不代表 coding 授權。
+- **P6-A～P6-E 已關門並合併回 `main`**：P6-A 2026-09-20 Adventure Definition／Entry authoring、Room asset、Campaign attach／detach（[closeout](docs/P6/P6-A_CLOSEOUT.md)）；P6-B 2026-09-21 migration `0032` Campaign Runtime world state 與 Player secrecy projection（[closeout](docs/P6/P6-B_CLOSEOUT.md)）；P6-C 2026-09-21 `CampaignContextService` read intent 與五個 MCP read tool（[closeout](docs/P6/P6-C_CLOSEOUT.md)）；P6-D 2026-09-22 `CampaignWorldService` 八 intent、`resolve_world_action`、Stage bridge、十個 DM-only MCP write tool（[closeout](docs/P6/P6-D_CLOSEOUT.md)）；**P6-E 2026-09-22 migration `0033` Import Source／Draft substrate、PDF／DOCX extraction、DM-only Import REST 與 Importer UI**（[closeout](docs/P6/P6-E_CLOSEOUT.md)）。**下一步為 P6-F — Import Review, Finalization & Importer MCP**。2026-09-19 使用者拍板 P6 先於 P5；Phase 編號不重編，P5 契約完整保留，P6 關門後再回 P5。
+- **P6 契約已定案，固定 A～G**；開工讀 [P6 實作規格](docs/P6/實作規格.md)、[開發設計方針](docs/P6/開發設計方針.md)、[測試指南](docs/P6/測試指南.md) 的 P6-F 與必要共用前言。P6-A～P6-E 的技術決策（raw-body asset upload、縮圖走 authenticated blob fetch、duplicate attach 409、context clear 不刪 row、required `TableEventService`、Player Journal 只列 public quest／fact＋own-character knowledge、search 為 Python 端比對且 Player 不觸 Adventure 分支、`_active_context_extension` hook、P6-B REST 不改接 world service、`resolve_world_action` MCP-only、write tool `idempotency_key` required、`current_context_revision`、共用 `require_active_table_actor`、Importer MCP tool 全放 P6-F、URL-only source 以 `sha256("url:<url>")` 為鍵、PDF／DOCX 套件只在 `web` extra）見各自 closeout。列出下一步不代表 coding 授權。
 - **M01／U01 保持 open，不阻塞 P Roadmap**。M01-A～O、U01-A 已關門；下一個未使用字母分別為 M01-P、U01-B，兩者下一項 scope 均未拍板，不建立虛構的待辦 Subphase。
 - **P5 已有完整契約但暫後移；P7～P8 保持大 Phase**，不提前拆分或設計 schema／API／module。
 
@@ -31,7 +31,7 @@
 | P6-B — Campaign Runtime World State | ✅ 2026-09-21 |
 | P6-C — AI Context & Retrieval | ✅ 2026-09-21 |
 | P6-D — AI DM Write-back & Exploration Integration | ✅ 2026-09-22 |
-| P6-E — Adventure Source & Import Draft | ⬜ |
+| P6-E — Adventure Source & Import Draft | ✅ 2026-09-22 |
 | P6-F — Import Review, Finalization & Importer MCP | ⬜ |
 | P6-G — Full P6 Integration & Closeout | ⬜ |
 
@@ -50,7 +50,7 @@ Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **
 | P4 | Quick Combat；已關門 |
 | M05 | Session History Continuity／Owner End for AI DM；已關門（2026-09-20），插在 P4 與 P6-A 之間 |
 | P5 | Tactical Combat；契約已定案，依使用者決定延至 P6 關門後實作 |
-| P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；**當前 Phase，P6-A～P6-D 已關門，下一步 P6-E** |
+| P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；**當前 Phase，P6-A～P6-E 已關門，下一步 P6-F** |
 | P7 | Timeline、Snapshot／Restore、broader Archive／Import／Export；角色 JSON 已由 M03 先行，不做 gameplay Undo |
 | P8 | 全流程 QA／Polish、權限、reconnect、效能、Responsive UI |
 
