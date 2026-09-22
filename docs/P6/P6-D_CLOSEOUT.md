@@ -34,7 +34,7 @@ diff 觸及 `apps/web`（D5），依 AGENTS 工程守則第 4 條跑全套 backe
 
 - 全套 backend pytest：2,266 passed／76 skipped（`12264f20` tree）。
 - 全套 E2E（`12264f20` tree，detached 無參數執行）：`parallel` 98 passed／3 skipped／**2 failed**（`p1f-character-creation`、`p1g-level-up`，5.7m）；script 因此中止，其餘 pass 由指揮者逐一補跑：`baseline-room` 30 passed／1 skipped、`serial-restart` 1 passed、xge-less `m03c-character-import` 7 passed（restore 後 server-e2e healthy）。P6-D 新增的 `p6d-stage-and-review.spec.ts` 與受影響的 `p6b-campaign-runtime`／`p3b-exploration-chat-actions` 均在 parallel pass 通過。
-- 兩個失敗的處置：重啟 server-e2e 後單跑 `p1g` 通過；`p1f` 單跑仍失敗（Review 停在「1 blocking：Barbarian skill choice 未達所需數量」），**切到 `main@10565217`（P6-C merge，未含任何 P6-D 改動）以同一 Docker 路徑單跑同樣失敗**——屬 Builder E2E 的既有問題，非 P6-D regression（`已知問題.md`「附帶觀察」原判斷 Docker 路徑 0/4，現於 Docker 路徑可穩定重現，需獨立追查；建議 verifier 立條目）。
+- 兩個失敗的處置：重啟 server-e2e 後單跑 `p1g` 通過；`p1f` 單跑仍失敗（Review 停在「1 blocking：Barbarian skill choice 未達所需數量」），**切到 `main@10565217`（P6-C merge，未含任何 P6-D 改動）以同一 Docker 路徑單跑同樣失敗**——屬 Builder E2E 的既有問題，非 P6-D regression（`已知問題.md`「附帶觀察」原判斷 Docker 路徑 0/4，現於 Docker 路徑可穩定重現，已立 `已知問題.md` KI-P1F-001）。
 
 ## 指揮者審核修正摘要
 
