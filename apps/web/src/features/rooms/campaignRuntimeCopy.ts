@@ -160,6 +160,21 @@ const COPY = {
     journalAccessUnavailable: 'Player journal is currently unavailable for this session.',
     journalUnexpectedDmProjection: 'Unexpected DM projection received for player journal.',
     journalActiveCharacterFallback: 'Active character',
+    stageImageHeading: 'Stage Image',
+    openStagePickerButton: 'Set Stage Image',
+    closeStagePickerButton: 'Cancel',
+    submitStageImageButton: 'Set as Stage Image',
+    stageImageSelectLabel: 'Stage image',
+    stageImageAriaSelect: 'Select Stage image source',
+    stageImageGroupAdventure: 'Adventure Entry Images',
+    stageImageGroupRuntime: 'Runtime Entry Images',
+    stageImageGroupRoom: 'Room Images',
+    stageImageEmpty: 'No stage image candidates available.',
+    stageImageSuccess: 'Stage image updated.',
+    sessionReviewHeading: 'Review Items',
+    sessionReviewEmpty: 'No world entries or overrides to review.',
+    markNeedsReviewButton: 'Mark Needs Review',
+    clearNeedsReviewButton: 'Clear Needs Review',
   },
   'zh-TW': {
     changesTitle: 'Campaign 變更',
@@ -313,6 +328,21 @@ const COPY = {
     journalAccessUnavailable: '此 Session 目前無法存取玩家日誌。',
     journalUnexpectedDmProjection: '接收到非預期的 DM 投影資料。',
     journalActiveCharacterFallback: '目前角色',
+    stageImageHeading: '主舞台圖片',
+    openStagePickerButton: '設定主舞台圖片',
+    closeStagePickerButton: '取消',
+    submitStageImageButton: '設為主舞台圖片',
+    stageImageSelectLabel: '主舞台圖片',
+    stageImageAriaSelect: '選擇主舞台圖片來源',
+    stageImageGroupAdventure: '冒險項目圖片',
+    stageImageGroupRuntime: '執行期項目圖片',
+    stageImageGroupRoom: 'Room 圖片',
+    stageImageEmpty: '無可用的主舞台候選圖片。',
+    stageImageSuccess: '已更新主舞台圖片。',
+    sessionReviewHeading: '待審核項目',
+    sessionReviewEmpty: '尚無可審核的世界項目或覆寫。',
+    markNeedsReviewButton: '標記待審核',
+    clearNeedsReviewButton: '清除待審核',
   },
 } as const satisfies Record<Locale, Record<string, string>>
 
@@ -419,22 +449,27 @@ export function campaignRuntimeErrorMessage(error: unknown, copy: CampaignRuntim
 
   switch (code) {
     case 'campaign_runtime_forbidden':
+    case 'table_actor_unauthorized':
       return copy.errCampaignRuntimeForbidden
     case 'campaign_runtime_not_found':
+    case 'stage_source_not_found':
       return copy.errCampaignRuntimeNotFound
     case 'campaign_runtime_archived':
       return copy.errCampaignRuntimeArchived
     case 'campaign_runtime_active_session':
       return copy.errCampaignRuntimeActiveSession
     case 'campaign_runtime_session_not_active':
+    case 'session_not_active':
       return copy.errCampaignRuntimeSessionNotActive
     case 'campaign_runtime_idempotency_conflict':
       return copy.errCampaignRuntimeIdempotencyConflict
     case 'campaign_runtime_revision_conflict':
+    case 'stage_revision_conflict':
       return copy.errCampaignRuntimeRevisionConflict
     case 'campaign_runtime_override_exists':
       return copy.errCampaignRuntimeOverrideExists
     case 'campaign_runtime_invalid':
+    case 'invalid_stage_image':
       return copy.errCampaignRuntimeInvalid
     default:
       return copy.requestFailed

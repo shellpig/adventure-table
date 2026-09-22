@@ -1776,6 +1776,75 @@
   margin-top: 12px;
 }
 
+.session-world-stage {
+  margin-top: 16px;
+}
+
+.session-world-stage-picker {
+  margin-top: 12px;
+}
+
+.session-stage-picker__loading,
+.session-stage-picker__empty {
+  color: var(--muted);
+  font-style: italic;
+  margin: 8px 0;
+}
+
+.session-stage-picker__empty-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.session-world-review {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--line);
+}
+
+.session-world-review h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.session-world-review__empty {
+  color: var(--muted);
+  font-style: italic;
+  margin: 8px 0;
+}
+
+.session-world-review__list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-world-review__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--surface-subtle, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.session-world-review__item-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.session-world-review__title {
+  font-size: 0.95rem;
+}
+
 /* Session Player Journal */
 .session-journal-panel {
   margin-top: 24px;

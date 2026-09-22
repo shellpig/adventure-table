@@ -116,6 +116,21 @@ const sampleSnapshot: ActiveSessionRuntimeSnapshot = {
   overlays: [sampleOverlay],
 }
 
+const stageAndReviewActionDefaults = {
+  stagePickerOpen: false,
+  stagePickerLoading: false,
+  stagePickerError: null,
+  stageSuccess: null,
+  stageCandidates: null,
+  stageSelectedKey: null,
+  onOpenStagePicker: vi.fn(),
+  onCloseStagePicker: vi.fn(),
+  onSelectStageCandidate: vi.fn(),
+  onSubmitStageImage: vi.fn(),
+  onToggleEntryNeedsReview: vi.fn(),
+  onToggleOverrideNeedsReview: vi.fn(),
+}
+
 describe('SessionCampaignRuntime authority and composition truth table', () => {
   it('uses the real production mount predicate for active DM, player, owner, ended, abandoned', () => {
     // Current DM on active session mounts
@@ -153,6 +168,7 @@ describe('SessionCampaignRuntime authority and composition truth table', () => {
         error={null}
         refreshStatus={null}
         actions={{
+          ...stageAndReviewActionDefaults,
           pending: false,
           quickAddOpen: true,
           quickAddForm: createInitialEntryFormState('scene'),
@@ -555,6 +571,7 @@ describe('Fix 3: Authority loss classification, snapshot clearing, and null acti
         error={copy.eventRefreshError}
         refreshStatus={null}
         actions={{
+          ...stageAndReviewActionDefaults,
           pending: false,
           quickAddOpen: false,
           quickAddForm: null,
@@ -623,6 +640,7 @@ describe('Fix 3: Authority loss classification, snapshot clearing, and null acti
         error={null}
         refreshStatus={null}
         actions={{
+          ...stageAndReviewActionDefaults,
           pending: false,
           quickAddOpen: false,
           quickAddForm: null,
