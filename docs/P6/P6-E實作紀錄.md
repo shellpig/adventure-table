@@ -5,7 +5,7 @@
 - **更新日期**：2026-09-22
 - **目標與邊界**：建立 Importer 的 Source → Draft substrate：`adventure_imports` 三張表、`AdventureImportService`（paste／txt／markdown／url source、bounded chunk 讀取、Draft revision）、PDF／DOCX deterministic extraction、DM-only REST 與最小 Human UI（Source 區＋Draft editor）。**不做** Review 動作（Accept／Ignore／Mark uncertain）、warning 分級、Finalize、六個 Importer MCP tool——全部留 P6-F。Backend 不對 URL 做任何 fetch；importer module 不得含 LLM client。
 - **Branch**：`feat/p6e-adventure-import`（自 `main@4c4943f5`）
-- **最近已驗證 commit**：E1（見步驟板）；120 passed／8 skipped（E1 focused＋parity／boundary／quality＋P6-A regression）。
+- **最近已驗證 commit**：`1b878669`（E1）；120 passed／8 skipped（E1 focused＋parity／boundary／quality＋P6-A regression）。
 - **下一步**：派工 E2。
 - **阻礙／未審**：無。
 - **派工約束**：沿 P6-C 派工約束 1／3（parametrize、前端測試不超過元件兩倍）。E3 若新增 Python 套件，只進 `[project.optional-dependencies].web`、extractor lazy import；`constraints-standalone-win.txt` 重產、standalone build 與 frozen smoke 由指揮者在 E3 驗證時執行，不派給 worker。
@@ -17,7 +17,7 @@
 
 | Step | 標題 | 狀態 | 依賴 | 紀錄 |
 |---|---|---|---|---|
-| E1 | migration `0033`＋persistence＋Draft schema v1＋boundary gate | 完成（見 commit） | — | [E1](P6-E_steps/E1.md) |
+| E1 | migration `0033`＋persistence＋Draft schema v1＋boundary gate | 完成（`1b878669`） | — | [E1](P6-E_steps/E1.md) |
 | E2 | `AdventureImportService`：paste／txt／markdown／url source、chunk 讀取、Draft revision | 待做 | E1 | [E2](P6-E_steps/E2.md) |
 | E3 | PDF／DOCX extractor（`web` extra、lazy import、locator、empty warning）＋從 room asset 建 source | 待做 | E2 | [E3](P6-E_steps/E3.md) |
 | E4 | REST `/api/rooms/{room}/adventure-imports/...`（DM-only） | 待做 | E2、E3 | [E4](P6-E_steps/E4.md) |
