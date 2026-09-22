@@ -149,6 +149,14 @@ class AdventureImportSource(StrictModel):
     created_at: datetime
 
 
+class SourceChunk(StrictModel):
+    source_id: UUID
+    offset: int
+    text: str
+    total_length: int
+    next_offset: int | None
+
+
 class AdventureImportDraft(StrictModel):
     import_id: UUID
     draft: ImportDraft
@@ -216,6 +224,7 @@ __all__ = [
     "DraftWarning",
     "ImportDraft",
     "ImportStatus",
+    "SourceChunk",
     "SourceKind",
     "WarningLevel",
     "adventure_import_draft_from_stored",
