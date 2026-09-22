@@ -5,8 +5,8 @@
 - **更新日期**：2026-09-22
 - **目標與邊界**：建立 Importer 的 Source → Draft substrate：`adventure_imports` 三張表、`AdventureImportService`（paste／txt／markdown／url source、bounded chunk 讀取、Draft revision）、PDF／DOCX deterministic extraction、DM-only REST 與最小 Human UI（Source 區＋Draft editor）。**不做** Review 動作（Accept／Ignore／Mark uncertain）、warning 分級、Finalize、六個 Importer MCP tool——全部留 P6-F。Backend 不對 URL 做任何 fetch；importer module 不得含 LLM client。
 - **Branch**：`feat/p6e-adventure-import`（自 `main@4c4943f5`）
-- **最近已驗證 commit**：`1ea8f365`（E4）；80 focused／boundary／quality、532 passed＋16 skipped（P6-A～E regression）、749 frontend tests＋build通過。
-- **下一步**：派工 E5。
+- **最近已驗證 commit**：`a164c5b0`（E5）；全前端 103 files／754 tests＋build、docker E2E `p6e-importer-source.spec.ts` 1 passed。
+- **下一步**：E1～E5 全部完成；Subphase 關門 gate（全套 backend pytest、全套前端＋build、`docker compose config`、全套 E2E）、`P6-E_CLOSEOUT.md`、PROJECT_BRIEF／ROADMAP_HISTORY 更新、合併回 `main`。
 - **阻礙／未審**：無。
 - **派工約束**：沿 P6-C 派工約束 1／3（parametrize、前端測試不超過元件兩倍）。E5 只做最小 Source／Draft editor 與對應 E2E，不帶入 P6-F Review／Finalize。
 - **派工決策（2026-09-22 拍板）**：(1) 六個 Importer MCP tool **全放 P6-F**，P6-E 只以 service／REST 驗測試指南 E.3 的 URL boundary；(2) E5 Draft editor 為**最小表單編 entry**，Human 建立的 entry provenance 固定 `user_explicit`，Review 動作留 F；(3) PDF／DOCX 套件採 `pypdf` + `python-docx`。
@@ -21,4 +21,4 @@
 | E2 | `AdventureImportService`：paste／txt／markdown／url source、chunk 讀取、Draft revision | 完成（`ad13898f`） | E1 | [E2](P6-E_steps/E2.md) |
 | E3 | PDF／DOCX extractor（`web` extra、lazy import、locator、empty warning）＋從 room asset 建 source | 完成（`74b30920`） | E2 | [E3](P6-E_steps/E3.md) |
 | E4 | REST `/api/rooms/{room}/adventure-imports/...`（DM-only） | 完成（`1ea8f365`） | E2、E3 | [E4](P6-E_steps/E4.md) |
-| E5 | Web UI：Importer Source 區＋最小 Draft editor、zh-TW／en、E2E | 待做 | E4 | [E5](P6-E_steps/E5.md) |
+| E5 | Web UI：Importer Source 區＋最小 Draft editor、zh-TW／en、E2E | 完成（`a164c5b0`） | E4 | [E5](P6-E_steps/E5.md) |
