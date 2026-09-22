@@ -5,8 +5,8 @@
 - **更新日期**：2026-09-22
 - **目標與邊界**：建立 Importer 的 Source → Draft substrate：`adventure_imports` 三張表、`AdventureImportService`（paste／txt／markdown／url source、bounded chunk 讀取、Draft revision）、PDF／DOCX deterministic extraction、DM-only REST 與最小 Human UI（Source 區＋Draft editor）。**不做** Review 動作（Accept／Ignore／Mark uncertain）、warning 分級、Finalize、六個 Importer MCP tool——全部留 P6-F。Backend 不對 URL 做任何 fetch；importer module 不得含 LLM client。
 - **Branch**：`feat/p6e-adventure-import`（自 `main@4c4943f5`）
-- **最近已驗證 commit**：`a164c5b0`（E5）；全前端 103 files／754 tests＋build、docker E2E `p6e-importer-source.spec.ts` 1 passed。
-- **下一步**：E1～E5 全部完成；Subphase 關門 gate（全套 backend pytest、全套前端＋build、`docker compose config`、全套 E2E）、`P6-E_CLOSEOUT.md`、PROJECT_BRIEF／ROADMAP_HISTORY 更新、合併回 `main`。
+- **最近已驗證 commit**：`a164c5b0`（E5 code）；關門 gate 證據見 closeout。
+- **下一步**：E1～E5 全部完成，關門 gate 與 [closeout](P6-E_CLOSEOUT.md) 已完成（backend 2,361 passed／78 skipped、前端 103 files／754 tests＋build、`docker compose config`、全套 E2E 三 project＋xge-less subset 全綠），已合併回 `main`。接 P6-F。
 - **阻礙／未審**：無。
 - **派工約束**：沿 P6-C 派工約束 1／3（parametrize、前端測試不超過元件兩倍）。E5 只做最小 Source／Draft editor 與對應 E2E，不帶入 P6-F Review／Finalize。
 - **派工決策（2026-09-22 拍板）**：(1) 六個 Importer MCP tool **全放 P6-F**，P6-E 只以 service／REST 驗測試指南 E.3 的 URL boundary；(2) E5 Draft editor 為**最小表單編 entry**，Human 建立的 entry provenance 固定 `user_explicit`，Review 動作留 F；(3) PDF／DOCX 套件採 `pypdf` + `python-docx`。
