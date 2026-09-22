@@ -40,14 +40,20 @@ from app.domain.campaign_runtime.schemas import (
     RuntimeWorldEntryDmView,
     RuntimeWorldEntryPlayerView,
 )
-from app.domain.campaign_runtime.service import (
+from app.domain.campaign_runtime.adventure_overlay import (
+    get_adventure_entry_overlay_in_transaction,
+    list_adventure_entry_overlays_in_transaction,
+)
+from app.domain.campaign_runtime.conversion import (
+    project_runtime_aggregate,
+)
+from app.domain.campaign_runtime.errors import (
     CampaignRuntimeAuthorityError,
     CampaignRuntimeNotFoundError,
-    CampaignRuntimeService,
     CampaignRuntimeValidationError,
-    _get_adventure_entry_overlay_in_transaction,
-    _list_adventure_entry_overlays_in_transaction,
-    project_runtime_aggregate,
+)
+from app.domain.campaign_runtime.service import (
+    CampaignRuntimeService,
 )
 from app.domain.rooms.table_events import TableActorContext
 from app.persistence.adventures.repository import AdventureRepository
@@ -174,8 +180,9 @@ class CampaignContextService:
                 return CampaignContextDmView(
                     campaign_id=campaign.id,
                     name=campaign.name,
-                        current_scene=current_scene,
+                    current_scene=current_scene,
                     current_situation=current_situation,
+                    current_context_revision=stored_context.revision if stored_context else 0,
                     party=party,
                     active_combat=active_combat,
                     attached_adventures=self._resolve_attached_adventures(actor),
@@ -275,7 +282,7 @@ class CampaignContextService:
                     if isinstance(v, RuntimeWorldEntryDmView)
                 ]
                 for link in self.link_repo.list_for_campaign(actor.campaign_id):
-                    overlays = _list_adventure_entry_overlays_in_transaction(
+                    overlays = list_adventure_entry_overlays_in_transaction(
                         connection,
                         campaign_id=actor.campaign_id,
                         adventure_id=link.adventure_id,
@@ -374,7 +381,7 @@ class CampaignContextService:
                 return CurrentSceneView(kind="none")
             # Detach is blocked while the Current Scene points at this entry, so the
             # overlay lookup cannot miss; let any failure propagate.
-            overlay = _get_adventure_entry_overlay_in_transaction(
+            overlay = get_adventure_entry_overlay_in_transaction(
                 connection,
                 room_id=actor.room_id,
                 campaign_id=actor.campaign_id,
@@ -485,7 +492,7 @@ class CampaignContextService:
         adventure_entry_id: UUID,
     ) -> SceneContextDmView | SceneContextPlayerView:
         try:
-            overlay = _get_adventure_entry_overlay_in_transaction(
+            overlay = get_adventure_entry_overlay_in_transaction(
                 connection,
                 room_id=actor.room_id,
                 campaign_id=actor.campaign_id,

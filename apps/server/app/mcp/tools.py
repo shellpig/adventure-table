@@ -11,7 +11,17 @@ from app.domain.campaign_runtime.ai_tools import (
     AdventureEntryToolInput,
     SceneContextToolInput,
     SearchCampaignContextToolInput,
+    SetStageImageToolInput,
+    WorldArchiveEntryToolInput,
+    WorldClearOverrideToolInput,
+    WorldCreateEntryToolInput,
     WorldEntryToolInput,
+    WorldGrantKnowledgeToolInput,
+    WorldResolveActionToolInput,
+    WorldSetCurrentContextToolInput,
+    WorldSetNeedsReviewToolInput,
+    WorldSetOverrideToolInput,
+    WorldUpdateEntryToolInput,
 )
 from app.domain.combat.adjudication_service import (
     OpportunityAttackRequestInput,
@@ -338,6 +348,46 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
         "DM-only tool to read an attached Adventure baseline entry with any active Campaign runtime override applied.",
         "DM 專用工具，讀取已附加 Adventure 的基準條目，並套用任何作用中的 Campaign runtime override。",
     ),
+    "world_create_entry": (
+        "Call when introducing a new runtime NPC, scene, item, quest, fact, or secret during an active session that should persist in the campaign world.",
+        "在 active session 期間建立需要持久保存在戰役世界中的新 runtime NPC、場景、物品、任務、事實或秘密時呼叫。",
+    ),
+    "world_update_entry": (
+        "Call when modifying an existing runtime world entry's fields, status, or visibility after reading its expected_revision from get_world_entry or get_campaign_context.",
+        "在從 get_world_entry 或 get_campaign_context 讀取 expected_revision 之後，修改現有 runtime 世界條目的欄位、狀態或可見性時呼叫。",
+    ),
+    "world_archive_entry": (
+        "Call when softly deleting or retiring a runtime world entry from active play using its current expected_revision read from the world entry view.",
+        "使用從世界條目檢視讀取的目前 expected_revision，將 runtime 世界條目從當前遊戲中軟刪除或歸檔時呼叫。",
+    ),
+    "world_set_override": (
+        "Call when customizing or diverging an attached Adventure entry's state, notes, or review flag with an expected_revision matching its current override.",
+        "使用與目前 override 相符的 expected_revision，客製或分歧已附加 Adventure 條目的狀態、備忘或審查旗標時呼叫。",
+    ),
+    "world_clear_override": (
+        "Call when reverting an attached Adventure entry back to its original baseline state, clearing the runtime override using its expected_override_id and expected_revision.",
+        "使用 expected_override_id 與 expected_revision 清除 runtime override，將已附加 Adventure 條目還原回原始 baseline 狀態時呼叫。",
+    ),
+    "world_set_current_context": (
+        "Call when updating the campaign's active focus such as the current scene reference or a high-level summary of the current situation.",
+        "更新戰役當前焦點（例如當前場景參照或當前局勢高階摘要）時呼叫。",
+    ),
+    "world_grant_knowledge": (
+        "Call when revealing a runtime world entry specifically to one or more player characters by granting character-scoped knowledge.",
+        "透過授予角色專屬認知，將 runtime 世界條目具體揭露給一位或多位玩家角色時呼叫。",
+    ),
+    "world_set_needs_review": (
+        "Call when flagging or unflagging a runtime entry or adventure override that requires human DM review or confirmation.",
+        "為需要真人 DM 審查或確認的 runtime 條目或冒險 override 設定或解除 needs_review 旗標時呼叫。",
+    ),
+    "world_resolve_action": (
+        "Call when performing an atomic world state mutation together with an optional definitive narration in a single database transaction.",
+        "在單一資料庫交易中，將原子世界狀態變更與選填的定案敘事一同執行時呼叫。",
+    ),
+    "set_stage_image": (
+        "Call when displaying an image or map from a room asset, adventure asset, or runtime entry on the main stage.",
+        "將房間素材、冒險素材或 runtime 條目的圖片或地圖呈現在主舞台時呼叫。",
+    ),
 }
 
 
@@ -538,6 +588,16 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("search_campaign_context", _desc("Search Campaign world entries and visible lore by keyword query.", "以關鍵字搜尋 Campaign 世界條目與可見設定。"), SearchCampaignContextToolInput, frozenset({"player", "dm"})),
     MCPToolDefinition("get_world_entry", _desc("Read a specific Campaign runtime world entry by its ID.", "依 ID 讀取特定的 Campaign runtime 世界條目。"), WorldEntryToolInput, frozenset({"player", "dm"})),
     MCPToolDefinition("get_adventure_entry", _desc("Read an attached Adventure entry with runtime overrides (DM only).", "讀取已附加 Adventure 條目與 runtime override（僅限 DM）。"), AdventureEntryToolInput, frozenset({"dm"})),
+    MCPToolDefinition("world_create_entry", _desc("Create a runtime campaign world entry (DM only, active Session only). Requires an idempotency_key.", "建立 runtime 戰役世界條目（僅限 DM，需要 active Session）。需要 idempotency_key。"), WorldCreateEntryToolInput, frozenset({"dm"})),
+    MCPToolDefinition("world_update_entry", _desc("Update an existing runtime world entry (DM only, active Session only). Requires expected_revision from get_world_entry and an idempotency_key.", "更新現有的 runtime 世界條目（僅限 DM，需要 active Session）。需要來自 get_world_entry 的 expected_revision 與 idempotency_key。"), WorldUpdateEntryToolInput, frozenset({"dm"})),
+    MCPToolDefinition("world_archive_entry", _desc("Archive a runtime world entry from active play (DM only, active Session only). Requires expected_revision from get_world_entry and an idempotency_key.", "將 runtime 世界條目自遊戲中歸檔（僅限 DM，需要 active Session）。需要來自 get_world_entry 的 expected_revision 與 idempotency_key。"), WorldArchiveEntryToolInput, frozenset({"dm"})),
+    MCPToolDefinition("world_set_override", _desc("Create or update an Adventure entry override (DM only, active Session only). Requires expected_revision from get_adventure_entry when updating, and an idempotency_key.", "建立或更新 Adventure 條目 override（僅限 DM，需要 active Session）。更新時需要來自 get_adventure_entry 的 expected_revision，並需要 idempotency_key。"), WorldSetOverrideToolInput, frozenset({"dm"})),
+    MCPToolDefinition("world_clear_override", _desc("Clear an Adventure entry override back to baseline (DM only, active Session only). Requires expected_override_id, expected_revision from get_adventure_entry, and an idempotency_key.", "清除 Adventure 條目 override 還原至基準（僅限 DM，需要 active Session）。需要來自 get_adventure_entry 的 expected_override_id、expected_revision 與 idempotency_key。"), WorldClearOverrideToolInput, frozenset({"dm"})),
+    MCPToolDefinition("world_set_current_context", _desc("Update current scene reference or situation summary (DM only, active Session only). Requires expected_revision (the current_context_revision from get_campaign_context) and an idempotency_key.", "更新當前場景參照或局勢摘要（僅限 DM，需要 active Session）。需要 expected_revision（即 get_campaign_context 的 current_context_revision）與 idempotency_key。"), WorldSetCurrentContextToolInput, frozenset({"dm"})),
+    MCPToolDefinition("world_grant_knowledge", _desc("Grant character-scoped knowledge of an entry to characters (DM only, active Session only). Requires expected_revision from get_world_entry and an idempotency_key.", "向指定角色授予條目的角色專屬認知（僅限 DM，需要 active Session）。需要來自 get_world_entry 的 expected_revision 與 idempotency_key。"), WorldGrantKnowledgeToolInput, frozenset({"dm"})),
+    MCPToolDefinition("world_set_needs_review", _desc("Set needs_review flag on a runtime entry or override (DM only, active Session only). Requires expected_revision from get_world_entry or get_adventure_entry and an idempotency_key.", "為 runtime 條目或 override 設定 needs_review 旗標（僅限 DM，需要 active Session）。需要來自 get_world_entry 或 get_adventure_entry 的 expected_revision 與 idempotency_key。"), WorldSetNeedsReviewToolInput, frozenset({"dm"})),
+    MCPToolDefinition("world_resolve_action", _desc("Atomically apply a world change and optional definitive narration (DM only, active Session only). Narration is optional and atomic with the change. Requires an idempotency_key.", "原子化套用世界變更與選填定案敘事（僅限 DM，需要 active Session）。敘事為選填且與變更具原子性。需要 idempotency_key。"), WorldResolveActionToolInput, frozenset({"dm"})),
+    MCPToolDefinition("set_stage_image", _desc("Set the main exploration stage image from an asset or entry (DM only, active Session only). Requires current expected_revision from get_session_context and an idempotency_key.", "自素材或條目設定主探索舞台圖片（僅限 DM，需要 active Session）。需要來自 get_session_context 的目前 expected_revision 與 idempotency_key。"), SetStageImageToolInput, frozenset({"dm"})),
 )
 
 
@@ -747,6 +807,26 @@ async def call_tool(
             data = await asyncio.to_thread(service.get_world_entry, token, parsed, authenticated=auth)
         elif name == "get_adventure_entry":
             data = await asyncio.to_thread(service.get_adventure_entry, token, parsed, authenticated=auth)
+        elif name == "world_create_entry":
+            data = await asyncio.to_thread(service.world_create_entry, token, parsed, authenticated=auth)
+        elif name == "world_update_entry":
+            data = await asyncio.to_thread(service.world_update_entry, token, parsed, authenticated=auth)
+        elif name == "world_archive_entry":
+            data = await asyncio.to_thread(service.world_archive_entry, token, parsed, authenticated=auth)
+        elif name == "world_set_override":
+            data = await asyncio.to_thread(service.world_set_override, token, parsed, authenticated=auth)
+        elif name == "world_clear_override":
+            data = await asyncio.to_thread(service.world_clear_override, token, parsed, authenticated=auth)
+        elif name == "world_set_current_context":
+            data = await asyncio.to_thread(service.world_set_current_context, token, parsed, authenticated=auth)
+        elif name == "world_grant_knowledge":
+            data = await asyncio.to_thread(service.world_grant_knowledge, token, parsed, authenticated=auth)
+        elif name == "world_set_needs_review":
+            data = await asyncio.to_thread(service.world_set_needs_review, token, parsed, authenticated=auth)
+        elif name == "world_resolve_action":
+            data = await asyncio.to_thread(service.world_resolve_action, token, parsed, authenticated=auth)
+        elif name == "set_stage_image":
+            data = await asyncio.to_thread(service.set_stage_image, token, parsed, authenticated=auth)
         else:  # pragma: no cover
             return structured_tool_error("tool_not_implemented", "Tool dispatch is not implemented", "工具 dispatch 尚未實作")
     except ValidationError:

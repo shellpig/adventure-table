@@ -18,7 +18,7 @@ from sqlalchemy import (
     insert,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 
 from app.db import metadata
 from app.persistence.rooms.table_runtime import (
@@ -105,8 +105,9 @@ class ExplorationMessageRepository:
     def __init__(self, engine: Engine) -> None:
         self.event_repository = TableEventRepository(engine)
 
-    def append_message(
+    def append_message_in_transaction(
         self,
+        connection: Connection,
         *,
         binding: StoredTableActorBinding,
         message_kind: str,
@@ -122,8 +123,8 @@ class ExplorationMessageRepository:
     ) -> StoredTableEvent:
         message_id = uuid4()
 
-        def persist_message(connection, event_id: UUID, _event_seq: int) -> None:
-            connection.execute(
+        def persist_message(conn: Connection, event_id: UUID, _event_seq: int) -> None:
+            conn.execute(
                 insert(session_messages).values(
                     id=message_id,
                     session_id=binding.session_id,
@@ -140,7 +141,8 @@ class ExplorationMessageRepository:
                 )
             )
 
-        return self.event_repository.append(
+        return self.event_repository.append_in_transaction(
+            connection,
             room_id=binding.room_id,
             campaign_id=binding.campaign_id,
             session_id=binding.session_id,
@@ -161,6 +163,37 @@ class ExplorationMessageRepository:
             expected_actor_binding=binding,
             transaction_projection=persist_message,
         )
+
+    def append_message(
+        self,
+        *,
+        binding: StoredTableActorBinding,
+        message_kind: str,
+        text: str,
+        acting_seat_id: UUID,
+        subject_seat_id: UUID | None,
+        subject_character_id: UUID | None,
+        execution_mode: str,
+        visibility: str,
+        recipient_seat_ids: tuple[UUID, ...],
+        source_command: str | None,
+        idempotency_key: str | None,
+    ) -> StoredTableEvent:
+        with self.event_repository.engine.begin() as connection:
+            return self.append_message_in_transaction(
+                connection,
+                binding=binding,
+                message_kind=message_kind,
+                text=text,
+                acting_seat_id=acting_seat_id,
+                subject_seat_id=subject_seat_id,
+                subject_character_id=subject_character_id,
+                execution_mode=execution_mode,
+                visibility=visibility,
+                recipient_seat_ids=recipient_seat_ids,
+                source_command=source_command,
+                idempotency_key=idempotency_key,
+            )
 
 
 __all__ = ["ExplorationMessageRepository", "session_messages"]

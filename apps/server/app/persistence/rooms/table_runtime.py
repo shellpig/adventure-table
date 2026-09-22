@@ -815,6 +815,114 @@ class TableEventRepository:
                 f"Expected to update 1 event projection row for {event_id}, updated {result.rowcount}"
             )
 
+    def append_in_transaction(
+        self,
+        connection: Connection,
+        *,
+        room_id: UUID,
+        campaign_id: UUID,
+        session_id: UUID,
+        kind: str,
+        acting_seat_id: UUID | None,
+        subject_seat_id: UUID | None,
+        subject_character_id: UUID | None,
+        execution_mode: str | None,
+        visibility: str,
+        recipient_seat_ids: tuple[UUID, ...],
+        payload_version: int,
+        payload: dict[str, Any],
+        idempotency_key: str | None,
+        expected_actor_binding: StoredTableActorBinding | None = None,
+        transaction_projection: TableEventTransactionProjection | None = None,
+    ) -> StoredTableEvent:
+        event_id = uuid4()
+        session_row = self._session_scope_row(
+            connection,
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            for_update=True,
+        )
+        if session_row is None:
+            raise TableEventSessionNotFoundPersistenceError(str(session_id))
+
+        if expected_actor_binding is not None:
+            current_actor = self._actor_from_connection(
+                connection,
+                expected_actor_binding,
+                session_row=session_row,
+                lock_actor=True,
+            )
+            if current_actor != expected_actor_binding:
+                raise TableEventActorBindingStalePersistenceError(
+                    "Table actor binding is no longer current"
+                )
+
+        if idempotency_key is not None:
+            existing = connection.execute(
+                select(session_events).where(
+                    session_events.c.session_id == session_id,
+                    session_events.c.idempotency_key == idempotency_key,
+                )
+            ).mappings().one_or_none()
+            if existing is not None:
+                return self._event(existing)
+
+        if session_row["status"] != "active":
+            raise TableEventSessionNotActivePersistenceError(str(session_id))
+
+        runtime = connection.execute(
+            select(session_table_runtime)
+            .where(session_table_runtime.c.session_id == session_id)
+            .with_for_update()
+        ).mappings().one_or_none()
+        if runtime is None:
+            next_seq = 1
+            next_revision = 1
+            connection.execute(
+                insert(session_table_runtime).values(
+                    session_id=session_id,
+                    revision=next_revision,
+                    last_event_seq=next_seq,
+                )
+            )
+        else:
+            next_seq = int(runtime["last_event_seq"]) + 1
+            next_revision = int(runtime["revision"]) + 1
+            connection.execute(
+                update(session_table_runtime)
+                .where(session_table_runtime.c.session_id == session_id)
+                .values(
+                    revision=next_revision,
+                    last_event_seq=next_seq,
+                    updated_at=func.now(),
+                )
+            )
+
+        connection.execute(
+            insert(session_events).values(
+                id=event_id,
+                session_id=session_id,
+                seq=next_seq,
+                kind=kind,
+                acting_seat_id=acting_seat_id,
+                subject_seat_id=subject_seat_id,
+                subject_character_id=subject_character_id,
+                execution_mode=execution_mode,
+                visibility=visibility,
+                recipient_seat_ids=[str(value) for value in recipient_seat_ids],
+                payload_version=payload_version,
+                payload=payload,
+                idempotency_key=idempotency_key,
+            )
+        )
+        if transaction_projection is not None:
+            transaction_projection(connection, event_id, next_seq)
+        row = connection.execute(
+            select(session_events).where(session_events.c.id == event_id)
+        ).mappings().one()
+        return self._event(row)
+
     def append(
         self,
         *,
@@ -834,94 +942,25 @@ class TableEventRepository:
         expected_actor_binding: StoredTableActorBinding | None = None,
         transaction_projection: TableEventTransactionProjection | None = None,
     ) -> StoredTableEvent:
-        event_id = uuid4()
         with self.engine.begin() as connection:
-            session_row = self._session_scope_row(
+            return self.append_in_transaction(
                 connection,
                 room_id=room_id,
                 campaign_id=campaign_id,
                 session_id=session_id,
-                for_update=True,
+                kind=kind,
+                acting_seat_id=acting_seat_id,
+                subject_seat_id=subject_seat_id,
+                subject_character_id=subject_character_id,
+                execution_mode=execution_mode,
+                visibility=visibility,
+                recipient_seat_ids=recipient_seat_ids,
+                payload_version=payload_version,
+                payload=payload,
+                idempotency_key=idempotency_key,
+                expected_actor_binding=expected_actor_binding,
+                transaction_projection=transaction_projection,
             )
-            if session_row is None:
-                raise TableEventSessionNotFoundPersistenceError(str(session_id))
-
-            if expected_actor_binding is not None:
-                current_actor = self._actor_from_connection(
-                    connection,
-                    expected_actor_binding,
-                    session_row=session_row,
-                    lock_actor=True,
-                )
-                if current_actor != expected_actor_binding:
-                    raise TableEventActorBindingStalePersistenceError(
-                        "Table actor binding is no longer current"
-                    )
-
-            if idempotency_key is not None:
-                existing = connection.execute(
-                    select(session_events).where(
-                        session_events.c.session_id == session_id,
-                        session_events.c.idempotency_key == idempotency_key,
-                    )
-                ).mappings().one_or_none()
-                if existing is not None:
-                    return self._event(existing)
-
-            if session_row["status"] != "active":
-                raise TableEventSessionNotActivePersistenceError(str(session_id))
-
-            runtime = connection.execute(
-                select(session_table_runtime)
-                .where(session_table_runtime.c.session_id == session_id)
-                .with_for_update()
-            ).mappings().one_or_none()
-            if runtime is None:
-                next_seq = 1
-                next_revision = 1
-                connection.execute(
-                    insert(session_table_runtime).values(
-                        session_id=session_id,
-                        revision=next_revision,
-                        last_event_seq=next_seq,
-                    )
-                )
-            else:
-                next_seq = int(runtime["last_event_seq"]) + 1
-                next_revision = int(runtime["revision"]) + 1
-                connection.execute(
-                    update(session_table_runtime)
-                    .where(session_table_runtime.c.session_id == session_id)
-                    .values(
-                        revision=next_revision,
-                        last_event_seq=next_seq,
-                        updated_at=func.now(),
-                    )
-                )
-
-            connection.execute(
-                insert(session_events).values(
-                    id=event_id,
-                    session_id=session_id,
-                    seq=next_seq,
-                    kind=kind,
-                    acting_seat_id=acting_seat_id,
-                    subject_seat_id=subject_seat_id,
-                    subject_character_id=subject_character_id,
-                    execution_mode=execution_mode,
-                    visibility=visibility,
-                    recipient_seat_ids=[str(value) for value in recipient_seat_ids],
-                    payload_version=payload_version,
-                    payload=payload,
-                    idempotency_key=idempotency_key,
-                )
-            )
-            if transaction_projection is not None:
-                transaction_projection(connection, event_id, next_seq)
-            row = connection.execute(
-                select(session_events).where(session_events.c.id == event_id)
-            ).mappings().one()
-        return self._event(row)
 
 
 __all__ = [

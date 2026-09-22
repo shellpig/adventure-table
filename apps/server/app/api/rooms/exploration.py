@@ -3,13 +3,33 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Response
+from pydantic import Field
 
 from app.api.errors import APIError
 from app.api.rooms.access import get_room_access_context
 from app.api.rooms.dependencies import (
+    get_campaign_stage_service,
     get_exploration_action_service,
     get_exploration_stage_service,
     get_table_event_service,
+)
+from app.domain.campaign_runtime.errors import (
+    CampaignRuntimeAuthorityError,
+    CampaignRuntimeNotFoundError,
+    CampaignRuntimeRevisionConflictError,
+    CampaignRuntimeSessionNotActiveError,
+    CampaignRuntimeValidationError,
+)
+from app.domain.campaign_runtime.stage import (
+    CampaignStageBridgeService,
+    StageImageSource,
+    StageSourceInvalidError,
+    StageSourceNotFoundError,
+)
+from app.domain.room_assets.schemas import (
+    RoomAssetForbiddenError,
+    RoomAssetNotFoundError,
+    RoomAssetUnsupportedMediaTypeError,
 )
 from app.domain.rooms.exploration import (
     ExplorationActionService,
@@ -22,7 +42,7 @@ from app.domain.rooms.exploration import (
     StageState,
     StageUpdateRequest,
 )
-from app.domain.rooms.schemas import RoomAccessContext
+from app.domain.rooms.schemas import RoomAccessContext, StrictModel
 from app.domain.rooms.table_events import (
     TableActorContext,
     TableEvent,
@@ -31,6 +51,12 @@ from app.domain.rooms.table_events import (
     TableEventService,
     TableEventSessionNotActiveError,
 )
+
+
+class SetStageImageSourceRequest(StrictModel):
+    source: StageImageSource = Field(discriminator="kind")
+    expected_revision: int = Field(ge=0)
+    idempotency_key: str = Field(min_length=1, max_length=120)
 
 
 router = APIRouter(
@@ -43,19 +69,31 @@ router = APIRouter(
 
 
 def _map_exploration_error(exc: Exception) -> APIError:
+    if isinstance(exc, APIError):
+        return exc
     if isinstance(exc, TableEventNotFoundError):
         return APIError(404, "session_not_found", "Session was not found for this table actor")
-    if isinstance(exc, TableEventActorUnauthorizedError):
+    if isinstance(exc, (TableEventActorUnauthorizedError, CampaignRuntimeAuthorityError, RoomAssetForbiddenError)):
         return APIError(403, "table_actor_unauthorized", str(exc))
-    if isinstance(exc, TableEventSessionNotActiveError):
+    if isinstance(exc, (TableEventSessionNotActiveError, CampaignRuntimeSessionNotActiveError)):
         return APIError(409, "session_not_active", "Session is not active")
     if isinstance(exc, ExplorationSubjectNotFoundError):
         return APIError(404, "exploration_subject_not_found", "Player Seat is not active in this Session")
+    if isinstance(exc, (StageSourceNotFoundError, RoomAssetNotFoundError, CampaignRuntimeNotFoundError)):
+        return APIError(404, "stage_source_not_found", str(exc))
     if isinstance(exc, StageImageNotFoundPersistenceError):
         return APIError(404, "stage_image_not_found", "Stage image was not found in this Room")
-    if isinstance(exc, StageImageInvalidError):
+    if isinstance(
+        exc,
+        (
+            StageSourceInvalidError,
+            StageImageInvalidError,
+            RoomAssetUnsupportedMediaTypeError,
+            CampaignRuntimeValidationError,
+        ),
+    ):
         return APIError(422, "invalid_stage_image", str(exc))
-    if isinstance(exc, StageRevisionConflictError):
+    if isinstance(exc, (StageRevisionConflictError, CampaignRuntimeRevisionConflictError)):
         return APIError(409, "stage_revision_conflict", "Main Stage changed since this editor loaded")
     raise exc
 
@@ -117,6 +155,34 @@ def replace_stage(
             event_service=event_service,
         )
         return stage_service.replace_stage(actor, request)
+    except Exception as exc:
+        raise _map_exploration_error(exc) from exc
+
+
+@router.put("/stage/image-source", response_model=StageState)
+def set_stage_image_source(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    request: SetStageImageSourceRequest,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    campaign_stage_service: CampaignStageBridgeService = Depends(get_campaign_stage_service),
+) -> StageState:
+    try:
+        actor = _resolve_actor(
+            room_id=room_id,
+            campaign_id=campaign_id,
+            session_id=session_id,
+            context=context,
+            event_service=event_service,
+        )
+        return campaign_stage_service.set_stage_image(
+            actor,
+            request.source,
+            expected_revision=request.expected_revision,
+            idempotency_key=request.idempotency_key,
+        )
     except Exception as exc:
         raise _map_exploration_error(exc) from exc
 

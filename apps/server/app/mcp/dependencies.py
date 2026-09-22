@@ -5,6 +5,7 @@ from fastapi import Request
 from app.api.rooms.ai_controllers import get_ai_controller_service
 from app.api.rooms.dependencies import (
     get_campaign_runtime_service,
+    get_campaign_stage_service,
     get_combat_adjudication_service,
     get_combat_attack_service,
     get_combat_concentration_service,
@@ -27,6 +28,7 @@ from app.api.rooms.dependencies import (
 )
 from app.domain.campaign_runtime.ai_tools import CampaignContextAIToolApplicationService
 from app.domain.campaign_runtime.context import CampaignContextService
+from app.domain.campaign_runtime.world import CampaignWorldService
 from app.domain.rooms.ai_tools import AIToolApplicationService
 
 
@@ -35,6 +37,8 @@ def get_ai_tool_application_service(request: Request) -> AIToolApplicationServic
     if service is None:
         service = CampaignContextAIToolApplicationService(
             campaign_context_service=CampaignContextService(get_campaign_runtime_service(request)),
+            campaign_world_service=CampaignWorldService(get_campaign_runtime_service(request)),
+            campaign_stage_service=get_campaign_stage_service(request),
             ai_controller_service=get_ai_controller_service(request),
             session_service=get_session_service(request),
             stage_service=get_exploration_stage_service(request),

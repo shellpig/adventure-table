@@ -106,6 +106,36 @@ export type StageUpdateRequest = {
   idempotency_key?: string | null
 }
 
+export type RoomAssetStageSource = {
+  kind: 'room_asset'
+  asset_id: string
+}
+
+export type AdventureEntryAssetStageSource = {
+  kind: 'adventure_entry_asset'
+  adventure_id: string
+  adventure_entry_id: string
+  asset_id: string
+}
+
+export type RuntimeEntryImageStageSource = {
+  kind: 'runtime_entry_image'
+  runtime_entry_id: string
+  adventure_id: string
+  asset_id: string
+}
+
+export type StageImageSource =
+  | RoomAssetStageSource
+  | AdventureEntryAssetStageSource
+  | RuntimeEntryImageStageSource
+
+export type SetStageImageSourceRequest = {
+  source: StageImageSource
+  expected_revision: number
+  idempotency_key: string
+}
+
 export type ExplorationInputKind = 'dialogue' | 'action' | 'ooc' | 'whisper_dm' | 'narration'
 
 export type ExplorationInputRequest = {
@@ -239,6 +269,15 @@ export function waitSessionEvents(
   })
 }
 
+export function getSessionStage(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  token: string,
+): Promise<StageState> {
+  return request(`${tableBase(roomId, campaignId, sessionId)}/stage`, token)
+}
+
 export function replaceSessionStage(
   roomId: string,
   campaignId: string,
@@ -249,6 +288,19 @@ export function replaceSessionStage(
   return request(`${tableBase(roomId, campaignId, sessionId)}/stage`, token, {
     method: 'PUT',
     body: JSON.stringify(update),
+  })
+}
+
+export function setSessionStageImageSource(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  requestPayload: SetStageImageSourceRequest,
+  token: string,
+): Promise<StageState> {
+  return request(`${tableBase(roomId, campaignId, sessionId)}/stage/image-source`, token, {
+    method: 'PUT',
+    body: JSON.stringify(requestPayload),
   })
 }
 
