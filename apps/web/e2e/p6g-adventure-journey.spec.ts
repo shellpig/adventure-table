@@ -99,7 +99,43 @@ type RuntimeContext = {
   revision: number
 }
 
-test('P6-G G2b-2: Adventure-driven journey through exploration, formal Check, and Quick Combat', async ({
+type CampaignAdventureOverride = {
+  id: string
+  campaign_id: string
+  adventure_entry_id: string
+  state_json: Record<string, unknown>
+  note: string | null
+  needs_review: boolean
+  revision: number
+  created_at: string
+  updated_at: string
+}
+
+type RuntimeEntry = {
+  id: string
+  kind: string
+  title: string | null
+  body: string | null
+  visibility: string
+  dm_notes?: string | null
+  revision: number
+  [key: string]: unknown
+}
+
+type SessionHistoryLink = {
+  session_id: string
+  previous_session: { id: string; status: string } | null
+  previous_last_event_seq: number
+}
+
+type MonsterInstance = {
+  id: string
+  name: string
+  current_hp: number | null
+  max_hp: number | null
+}
+
+test('P6-G G2b-3: Adventure-driven journey through exploration, combat, write-back, and next Session continuity', async ({
   browser,
   page,
   request,
@@ -752,6 +788,372 @@ test('P6-G G2b-2: Adventure-driven journey through exploration, formal Check, an
     expect(playerFinalHtml).not.toContain('vault-key.png')
     expect(playerFinalHtml).not.toContain(secretAsset.id)
     expect(playerFinalHtml).not.toContain('/assets/')
+
+    // 31. In the SAME active Session: update Current Situation via official DM UI
+    const postCombatContextCard = worldPanel.locator('.runtime-context-card')
+    await postCombatContextCard.getByRole('button', { name: 'Edit Context' }).click()
+    const UPDATED_SITUATION =
+      'The temple guardian has fallen; courtyard waters recede down ancient floor drains.'
+    await postCombatContextCard.getByRole('textbox', { name: 'Current Situation' }).fill(UPDATED_SITUATION)
+    const contextUpdatedPromise = page.waitForResponse(
+      (resp) => resp.request().method() === 'PATCH' && resp.url().endsWith(`/sessions/${sessionId}/runtime/context`),
+    )
+    await postCombatContextCard.getByRole('button', { name: 'Save Context' }).click()
+    await responseJson(await contextUpdatedPromise)
+    await expect(postCombatContextCard).toContainText(UPDATED_SITUATION)
+
+    // 32. Persist a Fact via official DM UI Quick Add
+    await worldPanel.getByRole('button', { name: 'Quick Add' }).click()
+    const factForm = worldPanel.locator('form')
+    await expect(factForm).toBeVisible()
+    await factForm.getByRole('combobox', { name: 'Kind', exact: true }).selectOption('fact')
+    const FACT_TITLE = 'Receded Temple Waters'
+    const FACT_BODY =
+      'With the guardian destroyed, the dark waters drained away to reveal mossy stone stairs descending into the crypt.'
+    await factForm.getByRole('textbox', { name: 'Title / Name' }).fill(FACT_TITLE)
+    await factForm.getByRole('textbox', { name: 'Description / Body' }).fill(FACT_BODY)
+    const factCreatedPromise = page.waitForResponse(
+      (resp) => resp.request().method() === 'POST' && resp.url().endsWith(`/sessions/${sessionId}/runtime/entries`),
+    )
+    await factForm.getByRole('button', { name: 'Create Entry' }).click()
+    await responseJson(await factCreatedPromise)
+
+    await expect(worldPanel).toContainText(FACT_TITLE)
+    await expect(player.page.locator('.session-journal-panel')).toContainText(FACT_BODY)
+
+    // 33. Persist an explicit Adventure Override via official backend service
+    const OVERRIDE_NOTE = 'Courtyard altered: water drained and mossy stairs exposed after combat'
+    const OVERRIDE_STATE = {
+      read_aloud: 'The courtyard stands drained and damp; shattered guardian stones surround a revealed stairwell.',
+      dm_summary: 'Guardian defeated; water drained, revealed crypt entrance stairs.',
+    }
+    const override = await json<CampaignAdventureOverride>(
+      await request.post(`${activePrefix}/runtime/overrides`, {
+        data: {
+          idempotency_key: `p6g-adventure-override-${sessionId}`,
+          adventure_entry_id: sceneEntry.id,
+          state: OVERRIDE_STATE,
+          note: OVERRIDE_NOTE,
+          needs_review: false,
+        },
+      }),
+    )
+    expect(override.adventure_entry_id).toBe(sceneEntry.id)
+    expect(override.note).toBe(OVERRIDE_NOTE)
+    expect(override.revision).toBe(1)
+
+    // Reload DM page to verify review list displays the overridden scene entry
+    await page.reload()
+    await expect(page.locator('.session-world-panel')).toBeVisible()
+    await expect(page.locator('.session-world-review')).toContainText('Sunken Temple Courtyard')
+    await expect(page.locator('.runtime-context-card')).toContainText(UPDATED_SITUATION)
+
+    // 34. Assert write-back in AT API/UI: Narration alone must not be the only record
+    const POST_COMBAT_NARRATION =
+      'The shattered guardian crumbles into the mire; a low grinding sound echoes as the dark waters rush down newly opened floor vents.'
+    await page.getByRole('combobox', { name: 'Type', exact: true }).selectOption('narration')
+    await page.getByPlaceholder(/Type here/).fill(POST_COMBAT_NARRATION)
+    const postNarrationPromise = page.waitForResponse(
+      (resp) => resp.request().method() === 'POST' && resp.url().includes(`/sessions/${sessionId}/exploration`),
+    )
+    await page.getByRole('button', { name: 'Send' }).click()
+    await responseJson(await postNarrationPromise)
+    await expect(page.getByText(POST_COMBAT_NARRATION, { exact: true })).toBeVisible()
+    await player.page.getByRole('button', { name: 'Chat', exact: true }).click()
+    await expect(player.page.getByText(POST_COMBAT_NARRATION, { exact: true })).toBeVisible()
+
+    // Assert AT API write-back: durable world state is queryable through REST services
+    const session1Context = await json<RuntimeContext>(
+      await request.get(`${activePrefix}/runtime/context`),
+    )
+    expect(session1Context.current_situation).toBe(UPDATED_SITUATION)
+    expect(session1Context.current_adventure_scene_entry_id).toBe(sceneEntry.id)
+
+    const session1Overrides = await json<CampaignAdventureOverride[]>(
+      await request.get(`${activePrefix}/runtime/overrides`),
+    )
+    expect(session1Overrides).toHaveLength(1)
+    expect(session1Overrides[0].adventure_entry_id).toBe(sceneEntry.id)
+    expect(session1Overrides[0].note).toBe(OVERRIDE_NOTE)
+
+    const session1Entries = await json<RuntimeEntry[]>(
+      await request.get(`${activePrefix}/runtime/entries`),
+    )
+    const storedFact = session1Entries.find((e) => e.kind === 'fact' && e.title === FACT_TITLE)
+    expect(storedFact).toBeDefined()
+    expect(storedFact!.body).toBe(FACT_BODY)
+
+    // Verify session events include context change, entry creation, and override creation
+    const sessionEvents = await json<EventPage>(
+      await request.get(`${activePrefix}/events?after=0&limit=100`),
+    )
+    const sessionEventKinds = sessionEvents.events.map((e) => e.kind)
+    expect(sessionEventKinds).toContain('world.context_changed')
+    expect(sessionEventKinds).toContain('world.entry.created')
+    expect(sessionEventKinds).toContain('world.override.created')
+
+    // 35. Secrecy & Player projection filtering in Session 1
+    // Player event stream does not receive DM-only world events
+    const playerEvents1 = await json<EventPage>(
+      await request.get(`${activePrefix}/events?after=0&limit=100`, {
+        headers: { Authorization: `Bearer ${playerGrant.access_token}` },
+      }),
+    )
+    const playerEventKinds = playerEvents1.events.map((e) => e.kind)
+    expect(playerEventKinds).not.toContain('world.override.created')
+    expect(playerEventKinds).not.toContain('world.context_changed')
+
+    // Player direct API access to overrides and context is forbidden
+    const playerOverrideResp = await request.get(`${activePrefix}/runtime/overrides`, {
+      headers: { Authorization: `Bearer ${playerGrant.access_token}` },
+    })
+    expect(playerOverrideResp.status()).toBe(403)
+
+    const playerContextResp = await request.get(`${activePrefix}/runtime/context`, {
+      headers: { Authorization: `Bearer ${playerGrant.access_token}` },
+    })
+    expect(playerContextResp.status()).toBe(403)
+
+    const playerCreateOverrideResp = await request.post(`${activePrefix}/runtime/overrides`, {
+      headers: { Authorization: `Bearer ${playerGrant.access_token}` },
+      data: {
+        idempotency_key: 'forbidden-override',
+        adventure_entry_id: sceneEntry.id,
+        state: {},
+      },
+    })
+    expect(playerCreateOverrideResp.status()).toBe(403)
+
+    // Player UI does not leak internal override state or note
+    const playerHtmlMid = await player.page.content()
+    expect(playerHtmlMid).not.toContain(OVERRIDE_NOTE)
+
+    // Original Adventure Definition baseline is unmodified by the override
+    const defEntriesMid = await json<AdventureEntry[]>(
+      await request.get(`/api/rooms/${roomId}/adventures/${adventure.id}/entries`),
+    )
+    const baselineSceneMid = defEntriesMid.find((e) => e.id === sceneEntry.id)!
+    expect(baselineSceneMid.title).toBe('Sunken Temple Courtyard')
+    expect(baselineSceneMid.body).toBe('Ancient stone archway overgrown with vines.')
+
+    // 36. End first Session via official UI
+    page.once('dialog', (dialog) => dialog.accept())
+    const endSessionPromise = page.waitForResponse(
+      (resp) => resp.request().method() === 'POST' && resp.url().includes(`/sessions/${sessionId}/end`),
+    )
+    await page.getByRole('button', { name: 'End Session' }).click()
+    await responseJson(await endSessionPromise)
+    await expect(page.getByText('Ended', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'End Session' })).toHaveCount(0)
+
+    // 37. Management Check on Campaign Changes page (/changes)
+    await page.goto(`/rooms/${roomId}/campaigns/${campaign.id}/changes`)
+    await expect(page.getByRole('heading', { name: 'Campaign Changes', level: 1 })).toBeVisible()
+
+    const changesOverlay = page.locator('.adventure-entry').filter({ hasText: 'Sunken Temple Courtyard' })
+    await expect(changesOverlay).toBeVisible()
+    await expect(changesOverlay.getByText('Active Override', { exact: true })).toBeVisible()
+    await expect(changesOverlay).toContainText(OVERRIDE_NOTE)
+
+    const changesContext = page.locator('.runtime-context-card')
+    await expect(changesContext).toContainText('Sunken Temple Courtyard')
+    await expect(changesContext).toContainText(UPDATED_SITUATION)
+
+    await expect(page.locator('.runtime-entry-card').filter({ hasText: FACT_TITLE })).toBeVisible()
+
+    // 38. Return to Lobby, start second Session, and assert continuity of updated world truth
+    await page.goto(`/rooms/${roomId}/campaigns/${campaign.id}/lobby`)
+    await expect(page.getByRole('heading', { name: 'Lobby & Seats', level: 1 })).toBeVisible()
+
+    await expect(page.locator('article.seat-card').filter({ hasText: 'P6-G DM' })).toBeVisible()
+    const playerSeatCard = page.locator('article.seat-card').filter({ hasText: 'P6-G Player' })
+    await expect(playerSeatCard).toBeVisible()
+    await expect(playerSeatCard).toContainText(character.name)
+
+    await page.getByRole('button', { name: 'Start Session' }).click()
+    await expect(page).toHaveURL(
+      new RegExp(`/rooms/${roomId}/campaigns/${campaign.id}/sessions/[0-9a-fA-F-]{36}/?$`),
+    )
+    await expect(page.getByRole('heading', { name: 'Active Session', level: 1 })).toBeVisible()
+
+    const nextSessionMatch = page.url().match(/\/sessions\/([0-9a-fA-F-]{36})/)
+    expect(nextSessionMatch).not.toBeNull()
+    const nextSessionId = nextSessionMatch![1]
+    expect(nextSessionId).not.toBe(sessionId)
+    const nextActivePrefix = `/api/rooms/${roomId}/campaigns/${campaign.id}/sessions/${nextSessionId}`
+    const nextSessionUrl = `/rooms/${roomId}/campaigns/${campaign.id}/sessions/${nextSessionId}`
+
+    // Note on AI DM context check boundary:
+    // P3-D authority requires an AI DM controller grant binding on the Seat to call
+    // MCP get_session_context or AI retrieval tools. Because this journey tests a
+    // Human DM on the DM Seat, faking an AI grant token or bypassing controller
+    // authority would violate the core security contract. Real AI DM context retrieval
+    // with actual token grant is verified in G4 (P6-G_steps/G4.md).
+
+    // DM UI in Session 2: Current Scene, Updated Situation, Fact, and Review List persist
+    const nextWorldPanel = page.locator('.session-world-panel')
+    await expect(nextWorldPanel).toBeVisible()
+
+    const nextContextCard = nextWorldPanel.locator('.runtime-context-card')
+    await expect(nextContextCard).toContainText('Sunken Temple Courtyard')
+    await expect(nextContextCard).toContainText(UPDATED_SITUATION)
+
+    await expect(nextWorldPanel).toContainText(FACT_TITLE)
+    await expect(nextWorldPanel.locator('.session-world-review')).toContainText('Sunken Temple Courtyard')
+
+    // DM sets Stage Image from Current Scene in Session 2
+    await nextWorldPanel.getByRole('button', { name: 'Set Stage Image' }).click()
+    const nextStageSelect = nextWorldPanel.getByRole('combobox', { name: 'Select Stage image source' })
+    await expect(nextStageSelect).toBeVisible()
+    await nextStageSelect.selectOption({ label: 'Sunken Temple Courtyard — sunken-temple.png' })
+
+    const nextStagePromise = page.waitForResponse(
+      (resp) => resp.request().method() === 'PUT' && resp.url().endsWith(`/sessions/${nextSessionId}/stage/image-source`),
+    )
+    await nextWorldPanel.getByRole('button', { name: 'Set as Stage Image' }).click()
+    await responseJson(await nextStagePromise)
+
+    const dmNextStageImg = page.locator('.session-stage img')
+    await expect(dmNextStageImg).toBeVisible()
+    await expect(dmNextStageImg).toHaveAttribute('src', /^blob:/)
+
+    // DM API assertions in Session 2
+    const nextContext = await json<RuntimeContext>(
+      await request.get(`${nextActivePrefix}/runtime/context`),
+    )
+    expect(nextContext.current_adventure_scene_entry_id).toBe(sceneEntry.id)
+    expect(nextContext.current_runtime_scene_entry_id).toBeNull()
+    expect(nextContext.current_situation).toBe(UPDATED_SITUATION)
+
+    const nextOverrides = await json<CampaignAdventureOverride[]>(
+      await request.get(`${nextActivePrefix}/runtime/overrides`),
+    )
+    expect(nextOverrides).toHaveLength(1)
+    expect(nextOverrides[0].adventure_entry_id).toBe(sceneEntry.id)
+    expect(nextOverrides[0].note).toBe(OVERRIDE_NOTE)
+    expect(nextOverrides[0].revision).toBeGreaterThanOrEqual(1)
+
+    const nextDmEntries = await json<RuntimeEntry[]>(
+      await request.get(`${nextActivePrefix}/runtime/entries`),
+    )
+    const nextFact = nextDmEntries.find((e) => e.kind === 'fact' && e.title === FACT_TITLE)
+    expect(nextFact).toBeDefined()
+    expect(nextFact!.body).toBe(FACT_BODY)
+
+    // Assert Original Adventure Definition baseline is STILL Unmodified
+    const defAfter = await json<AdventureDefinition>(
+      await request.get(`/api/rooms/${roomId}/adventures/${adventure.id}`),
+    )
+    expect(defAfter.status).toBe('finalized')
+    expect(defAfter.name).toBe('P6-G Sunken Temple')
+
+    const defEntriesAfter = await json<AdventureEntry[]>(
+      await request.get(`/api/rooms/${roomId}/adventures/${adventure.id}/entries`),
+    )
+    expect(defEntriesAfter).toHaveLength(3)
+
+    const sceneDef = defEntriesAfter.find((e) => e.id === sceneEntry.id)!
+    expect(sceneDef.title).toBe('Sunken Temple Courtyard')
+    expect(sceneDef.body).toBe('Ancient stone archway overgrown with vines.')
+    expect(sceneDef.visibility).toBe('public')
+
+    const secretDef = defEntriesAfter.find((e) => e.id === secretEntry.id)!
+    expect(secretDef.title).toBe('Submerged Relic Vault')
+    expect(secretDef.body).toBe('A hidden pressure plate beneath the altar opens the flooded crypt.')
+    expect(secretDef.visibility).toBe('dm_only')
+
+    const dmNoteDef = defEntriesAfter.find((e) => e.id === dmNoteEntry.id)!
+    expect(dmNoteDef.title).toBe('DM Tactics and Traps')
+    expect(dmNoteDef.body).toBe('Triggering the false floor drops players into stagnant pool.')
+    expect(dmNoteDef.visibility).toBe('dm_only')
+
+    // Reconnect Player to Next Session & Assert Secrecy
+    await player.page.goto(nextSessionUrl)
+    await expect(player.page.getByRole('heading', { name: 'Active Session', level: 1 })).toBeVisible()
+
+    const playerNextStageImg = player.page.locator('.session-stage img')
+    await expect(playerNextStageImg).toBeVisible()
+    await expect(playerNextStageImg).toHaveAttribute('src', /^blob:/)
+
+    const playerNextHtml = await player.page.content()
+    expect(playerNextHtml).not.toContain(sceneAsset.id)
+    expect(playerNextHtml).not.toContain('/assets/')
+    expect(playerNextHtml).not.toContain('Submerged Relic Vault')
+    expect(playerNextHtml).not.toContain('hidden pressure plate beneath the altar')
+    expect(playerNextHtml).not.toContain('DM Tactics and Traps')
+    expect(playerNextHtml).not.toContain('Triggering the false floor drops players into stagnant pool')
+    expect(playerNextHtml).not.toContain(OVERRIDE_NOTE)
+    expect(playerNextHtml).not.toContain(secretAsset.id)
+
+    const nextJournal = player.page.locator('.session-journal-panel')
+    await expect(nextJournal).toBeVisible()
+    await expect(nextJournal).toContainText(FACT_BODY)
+    await expect(player.page.locator('.session-world-panel')).toHaveCount(0)
+    await expect(player.page.getByRole('button', { name: 'Quick Add' })).toHaveCount(0)
+    await expect(player.page.getByRole('button', { name: 'Start Combat' })).toHaveCount(0)
+    await expect(combatStage(player.page)).toHaveCount(0)
+
+    // Player API projection filtering in Session 2
+    const playerNextEntries = await json<RuntimeEntry[]>(
+      await request.get(`${nextActivePrefix}/runtime/entries`, {
+        headers: { Authorization: `Bearer ${playerGrant.access_token}` },
+      }),
+    )
+    expect(playerNextEntries.some((e) => e.title === FACT_TITLE)).toBe(true)
+    for (const entry of playerNextEntries) {
+      expect(entry).not.toHaveProperty('dm_notes')
+      expect(entry).not.toHaveProperty('character_recipient_ids')
+      expect(entry).not.toHaveProperty('needs_review')
+      expect(entry).not.toHaveProperty('provenance_json')
+    }
+
+    const playerNextOverrides = await request.get(`${nextActivePrefix}/runtime/overrides`, {
+      headers: { Authorization: `Bearer ${playerGrant.access_token}` },
+    })
+    expect(playerNextOverrides.status()).toBe(403)
+
+    const playerNextContext = await request.get(`${nextActivePrefix}/runtime/context`, {
+      headers: { Authorization: `Bearer ${playerGrant.access_token}` },
+    })
+    expect(playerNextContext.status()).toBe(403)
+
+    const playerNextAdv = await request.get(`/api/rooms/${roomId}/adventures/${adventure.id}`, {
+      headers: { Authorization: `Bearer ${playerGrant.access_token}` },
+    })
+    expect(playerNextAdv.status()).toBe(404)
+
+    const playerNextSecretAsset = await request.get(`/api/rooms/${roomId}/assets/${secretAsset.id}`, {
+      headers: { Authorization: `Bearer ${playerGrant.access_token}` },
+    })
+    expect(playerNextSecretAsset.status()).toBe(404)
+
+    // Character sheet HP remains 12 across sessions
+    const nextHeroSheet = await json<{ current_hp: number; max_hp: number }>(
+      await request.get(`/api/characters/${character.id}/sheet`),
+    )
+    expect(nextHeroSheet.current_hp).toBe(12)
+    expect(nextHeroSheet.max_hp).toBe(12)
+
+    // Active combat is null in Session 2
+    const nextCombatDetail = await json<CombatDetail | null>(
+      await request.get(`${nextActivePrefix}/combat/detail`),
+    )
+    expect(nextCombatDetail).toBeNull()
+
+    // Recorded ended Combat outcome remains inspectable via previous link
+    const prevLink = await json<SessionHistoryLink>(
+      await request.get(`${nextActivePrefix}/previous`),
+    )
+    expect(prevLink.previous_session).not.toBeNull()
+    expect(prevLink.previous_session!.id).toBe(sessionId)
+    expect(prevLink.previous_session!.status).toBe('ended')
+
+    const prevMonsters = await json<MonsterInstance[]>(
+      await request.get(`/api/rooms/${roomId}/campaigns/${campaign.id}/sessions/${sessionId}/monster-instances`),
+    )
+    const recordedGuardian = prevMonsters.find((m) => m.name === QUICK_ENEMY.name)
+    expect(recordedGuardian).toBeDefined()
+    expect(recordedGuardian!.current_hp).toBe(QUICK_ENEMY.maxHp - hit.damage_total)
   } finally {
     await player.context.close()
   }
