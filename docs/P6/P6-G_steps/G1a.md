@@ -23,4 +23,4 @@
 - **交付**：同一個 Room 內以現有 fixture 建零 Adventure Campaign、DM／Player Seat 與 Character，UI Start、DM narration、Quick Add NPC＋Fact、Player action、DM Request Check／Player formal roll；查事件、Runtime entity、Player Journal 與 server projection。Player 不見 DM world controls／NPC notes，直接 Adventure read 回 404。G1b 可接在已解的正式 roll 後。
 - **指揮者審核修正**：無；核對 event kind、Room scoped Player credential、真 UI 操作與 persisted state 斷言，未發現 test-only bypass 或越界修改。
 - **測試與證據**：指揮者於 `apps/web` 用受 guard 保護的獨立 Docker E2E DB 跑 `p6g-empty-campaign.spec.ts`＋`p6a-adventures.spec.ts`＋`p6b-campaign-runtime.spec.ts`，**5 passed**；全套 frontend Vitest **103 files／775 tests passed**、`npm run build` 通過；`apps/server` 專案 venv 的 `test_code_quality_gate.py` **2 passed**；`git diff --cached --check` 通過。驗證 code commit：`f106a5b8`。
-- **未解與下一步**：本步無未解。G1b 延續同一 spec 完成 Combat、End／next Session、先前世界與角色／Combat 結果延續。
+- **未解與下一步**：本步無未解。G1b 已按指揮者手冊步長拆為 G1b-1（Combat）與 G1b-2（End／next Session）。
