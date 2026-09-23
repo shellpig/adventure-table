@@ -1,6 +1,6 @@
 # Adventure Table 專案簡報
 
-最後更新：2026-09-21
+最後更新：2026-09-23
 
 本檔是**當前進度、下一步、Roadmap 與索引的單一事實來源**，上限 **16,000 UTF-8 bytes**。歷史進度見 [ROADMAP_HISTORY](docs/ROADMAP_HISTORY.md)，未解問題見 [已知問題](已知問題.md)；不在本檔累加歷史過程、測試數字或決策全文。
 
@@ -16,14 +16,14 @@
 
 - **P4 已全部關門並合併回 `main`**：P4-F code `651a14d0`，merge `7ef02d13`；證據見 [P4-F closeout](docs/P4/P4-F_CLOSEOUT.md)。歷史步驟不再作開場必讀。
 - **M05（Session History Continuity & Owner End for AI DM Sessions）已於 2026-09-20 當日開工並全部關門、合併回 `main`**：M05-A Owner 可正常 End AI DM 的 Session；M05-B 聊天串向上翻頁越過 Session 邊界（專用 history read scope，不擴大 gameplay actor）。證據見 [M05-A closeout](docs/M05/M05-A_CLOSEOUT.md)、[M05-B closeout](docs/M05/M05-B_CLOSEOUT.md)；逐項表已移至 ROADMAP_HISTORY。
-- **P6-A～P6-E 已關門並合併回 `main`**：Adventure authoring／Room asset、Campaign Runtime、AI context／write-back、Import Source／Draft 已交付；證據見各 [closeout](docs/P6/P6-E_CLOSEOUT.md) 與 [歷史進度](docs/ROADMAP_HISTORY.md)。**P6-F Review／Finalize／Importer MCP 已通過關門驗證，待合併回 `main`**（[closeout](docs/P6/P6-F_CLOSEOUT.md)）。合併後下一步是 P6-G 完整整合與 Phase closeout；P6 關門後才回 P5 Tactical Combat。
-- **P6 契約固定 A～G**；P6-G 開工讀 [實作規格](docs/P6/實作規格.md)、[開發設計方針](docs/P6/開發設計方針.md)、[測試指南](docs/P6/測試指南.md) 的 P6-G 與必要共用前言。既有技術決策與驗證證據住各 Subphase closeout，不在本簡報重複。列出下一步不代表 coding 或 merge 授權。
+- **P6-A～P6-E 已關門並合併回 `main`**：Adventure authoring／Room asset、Campaign Runtime、AI context／write-back、Import Source／Draft 已交付；證據見各 [closeout](docs/P6/P6-E_CLOSEOUT.md) 與 [歷史進度](docs/ROADMAP_HISTORY.md)。**P6-F 已通過關門驗證，待合併回 `main`**（[closeout](docs/P6/P6-F_CLOSEOUT.md)）。**P6-G 已在依賴 F 的 `codex/p6g-integration` 分支開工**，下一步 G1a；合併順序仍為 F 後 G，P6 關門後才回 P5 Tactical Combat。
+- **P6 契約固定 A～G**；P6-G 接手讀 [實作規格](docs/P6/實作規格.md)、[開發設計方針](docs/P6/開發設計方針.md)、[測試指南](docs/P6/測試指南.md) 的 P6-G 與 [實作紀錄](docs/P6/P6-G實作紀錄.md)。既有技術決策與驗證證據住各 Subphase closeout，不在本簡報重複。列出下一步不代表 merge 授權。
 - **M01／U01 保持 open，不阻塞 P Roadmap**。M01-A～O、U01-A 已關門；下一個未使用字母分別為 M01-P、U01-B，兩者下一項 scope 均未拍板，不建立虛構的待辦 Subphase。
 - **P5 已有完整契約但暫後移；P7～P8 保持大 Phase**，不提前拆分或設計 schema／API／module。
 
 ### P6 Subphase 進度
 
-✅＝已關門並合併；☑️＝關門驗證通過、待合併；⬜＝正式契約已存在、尚未實作。當前 Phase 一列一個 Subphase；完成的 step 狀態只住該 Subphase 實作紀錄，不寫進本檔。
+✅＝已關門並合併；☑️＝關門驗證通過、待合併；🟡＝進行中；⬜＝正式契約已存在、尚未實作。當前 Phase 一列一個 Subphase；完成的 step 狀態只住該 Subphase 實作紀錄，不寫進本檔。
 
 | Subphase | 狀態 |
 |---|---|
@@ -33,7 +33,7 @@
 | P6-D — AI DM Write-back & Exploration Integration | ✅ 2026-09-22 |
 | P6-E — Adventure Source & Import Draft | ✅ 2026-09-22 |
 | P6-F — Import Review, Finalization & Importer MCP | ☑️ 2026-09-23，待合併 |
-| P6-G — Full P6 Integration & Closeout | ⬜ |
+| P6-G — Full P6 Integration & Closeout | 🟡 G1a 待做，依賴 P6-F 分支 |
 
 ## Phase Roadmap
 
@@ -50,7 +50,7 @@ Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **
 | P4 | Quick Combat；已關門 |
 | M05 | Session History Continuity／Owner End for AI DM；已關門（2026-09-20），插在 P4 與 P6-A 之間 |
 | P5 | Tactical Combat；契約已定案，依使用者決定延至 P6 關門後實作 |
-| P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；**當前 Phase，P6-F 關門驗證通過待合併，之後 P6-G** |
+| P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；**當前 Phase，P6-F 待合併，P6-G 工作分支已開工** |
 | P7 | Timeline、Snapshot／Restore、broader Archive／Import／Export；角色 JSON 已由 M03 先行，不做 gameplay Undo |
 | P8 | 全流程 QA／Polish、權限、reconnect、效能、Responsive UI |
 
