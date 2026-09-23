@@ -501,4 +501,22 @@ describe('P6-E Adventure Imports API client', () => {
       expect(apiErr.message).toBe(message)
     }
   })
+
+  it('preserves blocking warning ids from the server error', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: async () => ({
+        error: {
+          code: 'adventure_import_blocking_warnings',
+          message: 'Unresolved blocking warnings',
+          params: { warning_ids: ['missing_map', 'missing_npc'] },
+        },
+      }),
+    }))
+
+    await expect(getAdventureImport(ROOM_ID, IMPORT_ID, TOKEN)).rejects.toMatchObject({
+      params: { warning_ids: ['missing_map', 'missing_npc'] },
+    })
+  })
 })

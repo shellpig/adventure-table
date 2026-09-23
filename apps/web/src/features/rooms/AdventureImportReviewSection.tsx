@@ -353,14 +353,7 @@ export function AdventureImportReviewSection({
       await onImportReload()
       onFinalized(adv)
     } catch (cause) {
-      if (
-        cause instanceof AdventureImportApiError &&
-        cause.code === 'adventure_import_blocking_warnings'
-      ) {
-        onError(copy.errBlockingWarnings)
-      } else {
-        onError(importerErrorMessage(cause, copy))
-      }
+      onError(importerErrorMessage(cause, copy))
     } finally {
       setPending(false)
     }

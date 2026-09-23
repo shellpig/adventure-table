@@ -350,6 +350,14 @@ describe('Adventure Importer Panel & Helper tests', () => {
       expect(importerErrorMessage(err, zh)).toBe(zh[ec.expectedKey as keyof typeof zh])
     }
     expect(importerErrorMessage(new Error('unknown'), en)).toBe(en.requestFailed)
+    const blockingError = new AdventureImportApiError(
+      409,
+      'adventure_import_blocking_warnings',
+      'Unresolved blocking warnings',
+      { warning_ids: ['missing_map'] },
+    )
+    expect(importerErrorMessage(blockingError, en)).toContain('Warning IDs: missing_map')
+    expect(importerErrorMessage(blockingError, zh)).toContain('警告 ID: missing_map')
 
     // Localized entry-kind labels
     const advEn = adventuresCopy('en')

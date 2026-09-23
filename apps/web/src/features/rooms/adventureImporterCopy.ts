@@ -151,6 +151,7 @@ const COPY = {
     errInvalidSource: 'Invalid source data.',
     errAuthorityRequired: 'Only the Room owner or DM can manage adventure imports.',
     errBlockingWarnings: 'Cannot finalize: there are unresolved blocking warnings.',
+    warningIdsLabel: 'Warning IDs',
     requestFailed: 'Adventure import request failed.',
   },
   'zh-TW': {
@@ -293,6 +294,7 @@ const COPY = {
     errInvalidSource: '無效的來源資料。',
     errAuthorityRequired: '只有 Room Owner 或 DM 可以管理冒險匯入。',
     errBlockingWarnings: '無法定稿：尚有未解決的阻礙性警告。',
+    warningIdsLabel: '警告 ID',
     requestFailed: '冒險匯入請求失敗。',
   },
 } as const satisfies Record<Locale, Record<string, string>>
@@ -402,6 +404,9 @@ export function importerErrorMessage(error: unknown, copy: AdventureImporterCopy
     case 'adventure_import_authority_required':
       return copy.errAuthorityRequired
     case 'adventure_import_blocking_warnings':
+      if (error instanceof AdventureImportApiError && error.params?.warning_ids?.length) {
+        return `${copy.errBlockingWarnings} ${copy.warningIdsLabel}: ${error.params.warning_ids.join(', ')}`
+      }
       return copy.errBlockingWarnings
     default:
       return copy.requestFailed

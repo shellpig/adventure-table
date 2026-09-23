@@ -204,13 +204,16 @@ export type FinalizeAdventureImportInput = {
   expected_revision: number
 }
 
-type ApiErrorPayload = { error?: { code?: string; message?: string } }
+type ApiErrorPayload = {
+  error?: { code?: string; message?: string; params?: { warning_ids?: string[] } }
+}
 
 export class AdventureImportApiError extends Error {
   constructor(
     readonly status: number,
     readonly code: string,
     message: string,
+    readonly params?: { warning_ids?: string[] },
   ) {
     super(message)
   }
@@ -227,6 +230,7 @@ async function apiError(response: Response): Promise<AdventureImportApiError> {
     response.status,
     payload.error?.code ?? 'adventure_import_request_failed',
     payload.error?.message ?? `Adventure import request failed (${response.status})`,
+    payload.error?.params,
   )
 }
 
