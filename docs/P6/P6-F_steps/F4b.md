@@ -23,4 +23,9 @@
 
 ## 完成紀錄
 
-（待填）
+- **起始與 worker**：2026-09-23，agy（Gemini 3.8 Flash High），1 回合，CLI 回報約 817 秒；CLI status 為 `ERROR`，但最終報告完整、檔案齊全，指揮者以自己的測試結果為準。
+- **交付**：新模組 `app/domain/adventure_imports/ai_tools.py`：`AdventureImportAIToolApplicationService(CampaignContextAIToolApplicationService)`（必填 `adventure_import_service`）與六個 tool input（`ImportAdventureSourceToolInput` 以 `source_kind` 區分 `paste`／`markdown`／`url`／`asset`，未帶 `import_id` 時 `name` 必填並先建 import；其餘五個直接組合 `ImportDraft`／`DraftWarning` 與 service 參數，mutation 的 `expected_revision` 皆 required）。`mcp/tools.py` 新增六個 `roles={"dm"}`、`pre_session=False` 的定義、雙語 description／when-to-use（`update_import_draft` 明示 AI 推論值用 `ai_generated`／`user_approximation`、可留 `DM decides`）、dispatch，以及錯誤對應：blocking → `adventure_import_blocking_warnings`（detail 為 warning id）、revision 衝突 → `adventure_import_revision_conflict`、Adventure domain 錯誤 → 既有 `not_found`／`permission_denied`／`invalid_arguments`／`table_conflict`。`mcp/dependencies.py` 改建新 facade，`guide_tool_names._EXPECTED`、`test_m04c_tool_descriptions.py` 的 DM catalog 加入六個名稱。新增 `tests/test_p6f_mcp_tools.py`（9 個 test function、46 cases）。
+- **指揮者審核修正**：`import_adventure_source` 原本依是否新建回傳兩種不同 shape 並用 `# type: ignore`，統一為 `{import_id, source}`；finalize description 的「immutable」改為「baseline」（契約是 immutable-ish，owner／dm 仍可 authoring 修正），並補上 retry 回同一 Adventure；測試抽 `_call` helper、sample 參數表、以 `__getattr__` 記錄的 dispatch spy，合併 pre-session／player gate 與 invalid-arguments 測試，722 行縮為 429 行、斷言不減。
+- **觀察（未修）**：(1) 新建 import 後若加 source 失敗，會留下空 import，DM 可取消；(2) 六個 tool 沒有讀 source 原文的工具，Human 上傳的 PDF／DOCX AI 無法經 MCP 讀取內容（超出規格列的六個 intent，若需要另開一步）；(3) 測試仍以覆寫 `_actor` 的測試 facade 取代 token 解析，沿 P6-D 前例，authority 由真實 service 與 fixture 驗證。
+- **測試與證據**：指揮者在 `apps/server` 用專案 venv 執行所有 `test_p6*`、`test_m04*`、`test_m03*`、名稱含 `mcp` 的測試與 code quality gate（108 檔），**1070 個 0 failed**（18 skipped，皆為未提供 PostgreSQL URL）；全套 backend `pytest` **2606 個 0 failed**（78 skipped）；`git diff --check` 通過。驗證 code commit：`bce9459c`。
+- **未解與下一步**：F5 UI（Draft Review、Warnings、Questions、Finalize、zh-TW／en、E2E），含 F3 留下的 `adventure_import_blocking_warnings` 文案。
