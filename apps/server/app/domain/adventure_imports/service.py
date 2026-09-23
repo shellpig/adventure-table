@@ -10,6 +10,7 @@ from sqlalchemy.engine import Connection
 
 from app.config import Settings
 from app.domain.adventure_imports.errors import (
+    AdventureImportBlockingWarningsError,
     AdventureImportForbiddenError,
     AdventureImportNotFoundError,
     AdventureImportRevisionConflictError,
@@ -33,13 +34,19 @@ from app.domain.adventure_imports.schemas import (
     adventure_import_draft_from_stored,
     adventure_import_from_stored,
     adventure_import_source_from_stored,
+    unresolved_blocking_warnings,
     validate_draft_warnings,
 )
+from app.domain.adventures.payloads import dump_entry_payload
 from app.domain.adventures.schemas import (
+    AdventureDefinition,
+    AdventureDefinitionCreate,
+    AdventureEntryAssetLink,
+    AdventureEntryCreate,
     AdventureForbiddenError,
     AdventureNotFoundError,
 )
-from app.domain.adventures.service import require_adventure_author
+from app.domain.adventures.service import AdventureService, require_adventure_author
 from app.domain.room_assets.schemas import (
     RoomAssetForbiddenError,
     RoomAssetNotFoundError,
@@ -113,10 +120,12 @@ class AdventureImportService:
         repository: AdventureImportRepository,
         settings: Settings,
         room_asset_service: RoomAssetService,
+        adventure_service: AdventureService,
     ) -> None:
         self.repository = repository
         self.settings = settings
         self.room_asset_service = room_asset_service
+        self.adventure_service = adventure_service
 
     def _import_in_room(
         self, connection: Connection, room_id: UUID, import_id: UUID
@@ -637,6 +646,34 @@ class AdventureImportService:
 
             return adventure_import_draft_from_stored(stored_draft)
 
+    def _load_draft_state(
+        self,
+        connection: Connection,
+        import_id: UUID,
+        expected_revision: int,
+    ) -> tuple[ImportDraft, list[DraftWarning]]:
+        stored_draft = self.repository.get_draft_in_transaction(
+            connection, import_id
+        )
+        if stored_draft is None:
+            current_draft = ImportDraft()
+            current_warnings: list[DraftWarning] = []
+            current_revision = 0
+        else:
+            current_draft = ImportDraft.model_validate(stored_draft.draft_json)
+            current_warnings = [
+                DraftWarning.model_validate(w) for w in stored_draft.warnings_json
+            ]
+            current_revision = stored_draft.revision
+
+        if current_revision != expected_revision:
+            raise AdventureImportRevisionConflictError(
+                import_id=import_id,
+                expected_revision=expected_revision,
+                current_revision=current_revision,
+            )
+        return current_draft, current_warnings
+
     def _apply_draft_mutation(
         self,
         context: RoomAccessContext,
@@ -652,27 +689,9 @@ class AdventureImportService:
         require_import_author(context, room_id)
         with self.repository.engine.begin() as connection:
             self._writable_import(connection, room_id, import_id, action)
-            stored_draft = self.repository.get_draft_in_transaction(
-                connection, import_id
+            current_draft, current_warnings = self._load_draft_state(
+                connection, import_id, expected_revision
             )
-            if stored_draft is None:
-                current_draft = ImportDraft()
-                current_warnings: list[DraftWarning] = []
-                current_revision = 0
-            else:
-                current_draft = ImportDraft.model_validate(stored_draft.draft_json)
-                current_warnings = [
-                    DraftWarning.model_validate(w) for w in stored_draft.warnings_json
-                ]
-                current_revision = stored_draft.revision
-
-            if current_revision != expected_revision:
-                raise AdventureImportRevisionConflictError(
-                    import_id=import_id,
-                    expected_revision=expected_revision,
-                    current_revision=current_revision,
-                )
-
             updated_draft, updated_warnings = mutator(
                 current_draft, current_warnings
             )
@@ -796,6 +815,118 @@ class AdventureImportService:
             expected_revision,
             _mutate,
         )
+
+    def finalize_adventure(
+        self,
+        context: RoomAccessContext,
+        room_id: UUID,
+        import_id: UUID,
+        *,
+        name: str,
+        summary: str | None = None,
+        expected_revision: int,
+    ) -> AdventureDefinition:
+        require_import_author(context, room_id)
+        with self.repository.engine.begin() as connection:
+            stored_import = self._import_in_room(connection, room_id, import_id)
+            # target_adventure_id is the idempotency key: retries return the same Adventure.
+            if stored_import.target_adventure_id is not None:
+                return self.adventure_service.get_definition(
+                    context, room_id, stored_import.target_adventure_id
+                )
+            if stored_import.status == "cancelled":
+                raise AdventureImportValidationError(
+                    "Cannot finalize import with status 'cancelled'"
+                )
+
+            current_draft, current_warnings = self._load_draft_state(
+                connection, import_id, expected_revision
+            )
+            blocking = unresolved_blocking_warnings(current_warnings)
+            if blocking:
+                raise AdventureImportBlockingWarningsError(
+                    import_id=import_id,
+                    unresolved_warning_ids=[w.warning_id for w in blocking],
+                )
+
+            definition = self.adventure_service.create_definition(
+                context,
+                room_id,
+                AdventureDefinitionCreate(name=name, summary=summary),
+                connection=connection,
+            )
+
+            included = [e for e in current_draft.entries if e.review_status != "ignored"]
+            entries_by_id = {e.entry_id: e for e in current_draft.entries}
+            children: dict[str | None, list[DraftEntry]] = {}
+            for entry in included:
+                parent_key = _nearest_included_parent_id(entry, entries_by_id)
+                children.setdefault(parent_key, []).append(entry)
+
+            # Parents are created before children; sort_order keeps the draft list order.
+            sort_orders = {e.entry_id: index for index, e in enumerate(included)}
+            created_ids: dict[str | None, UUID | None] = {None: None}
+            ready: list[str | None] = [None]
+            while ready:
+                parent_key = ready.pop(0)
+                for entry in children.get(parent_key, []):
+                    created_entry = self.adventure_service.create_entry(
+                        context,
+                        room_id,
+                        definition.id,
+                        AdventureEntryCreate(
+                            kind=entry.entry_kind,
+                            title=entry.title,
+                            body=entry.body,
+                            data=dump_entry_payload(entry.payload),
+                            visibility=entry.visibility,
+                            parent_entry_id=created_ids[parent_key],
+                            sort_order=sort_orders[entry.entry_id],
+                        ),
+                        connection=connection,
+                    )
+                    created_ids[entry.entry_id] = created_entry.id
+                    ready.append(entry.entry_id)
+                    # source_ref stays draft-only audit data; only asset_ids become links.
+                    for asset_id in entry.asset_ids:
+                        self.adventure_service.link_entry_asset(
+                            context,
+                            room_id,
+                            definition.id,
+                            created_entry.id,
+                            AdventureEntryAssetLink(asset_id=asset_id, role="attachment"),
+                            connection=connection,
+                        )
+            if len(created_ids) - 1 < len(included):
+                raise AdventureImportValidationError("Draft entry parents form a cycle")
+
+            finalized_definition = self.adventure_service.finalize(
+                context, room_id, definition.id, connection=connection
+            )
+            # Revision compare-and-set: a concurrent finalize fails here and rolls back whole.
+            self.repository.update_import_status_in_transaction(
+                connection,
+                import_id,
+                "finalized",
+                expected_revision=stored_import.revision,
+                target_adventure_id=definition.id,
+            )
+            return finalized_definition
+
+
+def _nearest_included_parent_id(
+    entry: DraftEntry,
+    entries_by_id: dict[str, DraftEntry],
+) -> str | None:
+    parent_id = entry.parent_entry_id
+    seen: set[str] = set()
+    while parent_id is not None and parent_id not in seen:
+        parent = entries_by_id[parent_id]
+        if parent.review_status != "ignored":
+            return parent_id
+        seen.add(parent_id)
+        parent_id = parent.parent_entry_id
+    return None
 
 
 __all__ = [

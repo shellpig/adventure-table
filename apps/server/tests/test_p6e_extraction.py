@@ -35,7 +35,13 @@ from app.persistence.adventure_imports.tables import (
     adventure_import_sources,
     adventure_imports,
 )
-from app.persistence.adventures.tables import adventure_definitions
+from app.domain.adventures.service import AdventureService
+from app.persistence.adventures.repository import AdventureRepository
+from app.persistence.adventures.tables import (
+    adventure_definitions,
+    adventure_entries,
+    adventure_entry_assets,
+)
 from app.persistence.room_assets.repository import RoomAssetRepository
 from app.persistence.room_assets.storage import FilesystemAssetStorage
 from app.persistence.room_assets.tables import room_assets
@@ -45,6 +51,8 @@ TABLES_TO_CREATE = [
     rooms,
     campaigns,
     adventure_definitions,
+    adventure_entries,
+    adventure_entry_assets,
     room_assets,
     adventure_imports,
     adventure_import_sources,
@@ -211,7 +219,11 @@ def fix(tmp_path: Path) -> ExtractionFixture:
         max_image_bytes=settings.asset_max_image_bytes,
         max_source_document_bytes=settings.asset_max_source_document_bytes,
     )
-    import_service = AdventureImportService(import_repo, settings, asset_service)
+    adventure_repo = AdventureRepository(engine)
+    adventure_service = AdventureService(adventure_repo, asset_repo)
+    import_service = AdventureImportService(
+        import_repo, settings, asset_service, adventure_service
+    )
 
     return ExtractionFixture(
         engine=engine,

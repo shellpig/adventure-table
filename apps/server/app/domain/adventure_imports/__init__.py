@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.domain.adventure_imports.errors import (
+    AdventureImportBlockingWarningsError,
     AdventureImportError,
     AdventureImportForbiddenError,
     AdventureImportNotFoundError,
@@ -40,6 +41,7 @@ from app.domain.adventure_imports.service import (
 
 __all__ = [
     "AdventureImport",
+    "AdventureImportBlockingWarningsError",
     "AdventureImportDraft",
     "AdventureImportError",
     "AdventureImportForbiddenError",

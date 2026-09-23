@@ -11,7 +11,10 @@ from app.domain.adventures.payloads import (
     AdventureEntryPayloadError,
     parse_entry_payload,
 )
-from app.domain.adventures.schemas import AdventureEntryKind
+from app.domain.adventures.schemas import (
+    AdventureEntryKind,
+    AdventureEntryVisibility,
+)
 from app.domain.rooms.schemas import StrictModel
 from app.persistence.adventure_imports.repository import (
     StoredAdventureImport,
@@ -46,6 +49,9 @@ class DraftEntry(StrictModel):
     note: str | None = None
     review_status: ReviewStatus = "pending"
     asset_ids: list[UUID] = Field(default_factory=list)
+    title: str | None = Field(default=None, max_length=200)
+    body: str | None = None
+    visibility: AdventureEntryVisibility = "dm_only"
 
     @model_validator(mode="before")
     @classmethod

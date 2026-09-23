@@ -37,7 +37,13 @@ from app.persistence.adventure_imports.tables import (
     adventure_import_sources,
     adventure_imports,
 )
-from app.persistence.adventures.tables import adventure_definitions
+from app.domain.adventures.service import AdventureService
+from app.persistence.adventures.repository import AdventureRepository
+from app.persistence.adventures.tables import (
+    adventure_definitions,
+    adventure_entries,
+    adventure_entry_assets,
+)
 from app.persistence.room_assets.repository import RoomAssetRepository
 from app.persistence.room_assets.storage import FilesystemAssetStorage
 from app.persistence.room_assets.tables import room_assets
@@ -47,6 +53,8 @@ TABLES_TO_CREATE = [
     rooms,
     campaigns,
     adventure_definitions,
+    adventure_entries,
+    adventure_entry_assets,
     room_assets,
     adventure_imports,
     adventure_import_sources,
@@ -117,7 +125,9 @@ def fixture(tmp_path: Path) -> ReviewStateFixture:
         max_image_bytes=settings.asset_max_image_bytes,
         max_source_document_bytes=settings.asset_max_source_document_bytes,
     )
-    service = AdventureImportService(repo, settings, asset_service)
+    adventure_repo = AdventureRepository(engine)
+    adventure_service = AdventureService(adventure_repo, asset_repo)
+    service = AdventureImportService(repo, settings, asset_service, adventure_service)
 
     def _ctx(r_id: UUID, auth: RoomAccessAuthority, name: str) -> RoomAccessContext:
         return RoomAccessContext(room_id=r_id, access_session_id=uuid4(), authority=auth, display_name=name)
