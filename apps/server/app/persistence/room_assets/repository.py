@@ -44,27 +44,40 @@ class RoomAssetRepository:
         with self.engine.begin() as connection:
             self.insert_in_transaction(connection, stored)
 
-    def get(self, room_id: UUID, asset_id: UUID) -> StoredRoomAsset | None:
-        with self.engine.connect() as connection:
-            row = connection.execute(
-                select(room_assets).where(
-                    room_assets.c.room_id == room_id,
-                    room_assets.c.id == asset_id,
-                )
-            ).mappings().one_or_none()
+    def get(
+        self,
+        room_id: UUID,
+        asset_id: UUID,
+        *,
+        connection: Connection | None = None,
+    ) -> StoredRoomAsset | None:
+        query = select(room_assets).where(
+            room_assets.c.room_id == room_id,
+            room_assets.c.id == asset_id,
+        )
+        if connection is not None:
+            row = connection.execute(query).mappings().one_or_none()
+            return self._asset(row)
+        with self.engine.connect() as conn:
+            row = conn.execute(query).mappings().one_or_none()
             return self._asset(row)
 
     def list_for_room(
         self,
         room_id: UUID,
         kind: str | None = None,
+        *,
+        connection: Connection | None = None,
     ) -> tuple[StoredRoomAsset, ...]:
-        with self.engine.connect() as connection:
-            query = select(room_assets).where(room_assets.c.room_id == room_id)
-            if kind is not None:
-                query = query.where(room_assets.c.kind == kind)
-            query = query.order_by(room_assets.c.created_at, room_assets.c.id)
+        query = select(room_assets).where(room_assets.c.room_id == room_id)
+        if kind is not None:
+            query = query.where(room_assets.c.kind == kind)
+        query = query.order_by(room_assets.c.created_at, room_assets.c.id)
+        if connection is not None:
             rows = connection.execute(query).mappings().all()
+            return tuple(StoredRoomAsset(**dict(row)) for row in rows)
+        with self.engine.connect() as conn:
+            rows = conn.execute(query).mappings().all()
             return tuple(StoredRoomAsset(**dict(row)) for row in rows)
 
     def delete(self, room_id: UUID, asset_id: UUID) -> StoredRoomAsset | None:
