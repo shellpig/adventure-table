@@ -289,7 +289,16 @@ export function RoomAdventuresPage({ roomId, adventureId }: RoomAdventuresRoute)
           onDelete={(id) => runMutation(() => deleteAdventure(roomId, id, token))}
         />
 
-        <AdventureImporterPanel key={`${roomId}:${token}`} roomId={roomId} token={token} />
+        <AdventureImporterPanel
+          key={`${roomId}:${token}`}
+          canAuthor={canAuthor}
+          roomId={roomId}
+          token={token}
+          onFinalized={(adv) => {
+            void reloadList()
+            window.location.assign(`/rooms/${roomId}/adventures/${adv.id}`)
+          }}
+        />
       </section>
     </main>
   )
