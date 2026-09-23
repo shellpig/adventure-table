@@ -1,12 +1,14 @@
 import { expect, test } from './support/roomTest'
 import {
   addPlayerSeat,
+  addQuickEnemy,
   addSeat,
   advanceUntilTurn,
   combatantCard,
   combatantOf,
   combatStage,
   createCampaign,
+  endCombat,
   enterAsMember,
   entryNamed,
   importCharacter,
@@ -350,13 +352,7 @@ test('P6-G G1b-2: empty Campaign through narration, combat, Current Situation, a
     await expect(player.page.getByRole('combobox', { name: 'Choose Monster' })).toHaveCount(0)
 
     const QUICK_ENEMY = { name: 'Moor Bandit', ac: 1, maxHp: 30, positionNote: 'Behind the crag' }
-    await page.getByRole('button', { name: 'Quick Enemy' }).click()
-    const quickForm = page.locator('.session-combat__add-enemy form')
-    await quickForm.getByLabel('Name', { exact: true }).fill(QUICK_ENEMY.name)
-    await quickForm.getByLabel('AC', { exact: true }).fill(String(QUICK_ENEMY.ac))
-    await quickForm.getByLabel('Max HP', { exact: true }).fill(String(QUICK_ENEMY.maxHp))
-    await quickForm.getByLabel('Position Note', { exact: true }).fill(QUICK_ENEMY.positionNote)
-    await page.getByRole('button', { name: 'Add to Combat' }).click()
+    await addQuickEnemy(page, QUICK_ENEMY)
 
     await expect(page.locator('.session-combat__initiative-row', { hasText: QUICK_ENEMY.name })).toBeVisible()
     await expect(player.page.locator('.session-combat__initiative-row', { hasText: QUICK_ENEMY.name })).toBeVisible()
@@ -498,16 +494,7 @@ test('P6-G G1b-2: empty Campaign through narration, combat, Current Situation, a
     })
     expect(rejectedEndCombat.status()).toBe(403)
 
-    page.once('dialog', (dialog) => dialog.accept())
-    const combatEndedPromise = page.waitForResponse(
-      (resp) => resp.request().method() === 'POST' && resp.url().includes(`/sessions/${sessionId}/combat/end`),
-    )
-    await page.getByRole('button', { name: 'End Combat' }).click()
-    const endView = await responseJson<{
-      status: string
-      round_number: number | null
-      current_turn_entry_id: string | null
-    }>(await combatEndedPromise)
+    const endView = await endCombat(page, sessionId)
     expect(endView.status).toBe('ended')
     expect(endView.round_number).toBeNull()
     expect(endView.current_turn_entry_id).toBeNull()
