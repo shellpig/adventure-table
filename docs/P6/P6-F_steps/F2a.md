@@ -20,4 +20,9 @@
 
 ## 完成紀錄
 
-（待填）
+- **起始與 worker**：2026-09-23，agy（Gemini 3.8 Flash High），同一對話 2 回合；CLI 回報約 417 秒與 944 秒（第二回合只精簡測試）。
+- **交付**：`AdventureService.create_definition`／`create_entry`／`link_entry_asset`／`finalize` 新增 keyword-only `connection: Connection | None = None`，並傳入 `_definition_or_404`、`_writable_definition`、`_validate_parent`、`_resolve_entry_assets`。`AdventureRepository` 的 `insert_definition`、`get_definition`、`set_status`、`insert_entry`、`get_entry`、`next_sort_order`、`insert_entry_asset`、`list_entry_assets`、`next_entry_asset_sort_order`，以及 `RoomAssetRepository.get`／`list_for_room` 同樣接受 optional connection；有傳時只在該 connection 執行，不另開 connection、不 commit。未傳時行為不變。新增 `tests/test_p6f_authoring_transaction.py`（6 個 test function、9 cases）。
+- **指揮者審核修正**：第一回合後，`test_p6a_adventure_api.py::test_entry_list_embeds_assets_without_n_plus_one` 的 counting monkeypatch 不接受 `connection` keyword 而失敗；並移除 agy 對 `RoomAssetRepository.insert` 多加的 connection 參數（F2a 不需要）。先前為此在 `_resolve_entry_assets` 加的「`connection is None` 時省略 keyword」分支是 production 遷就測試替身，已改為讓 monkeypatch 轉傳 `connection`，production 無條件呼叫 `list_for_room(room_id, connection=connection)`。要求 agy 把測試從 540 行精簡到 366 行（parametrize owner／dm 與 cross-room／missing）。
+- **觀察（未修）**：兩個 repository 的 11 個 method 都是「有 connection 直接用，否則自開」同一套分支，query 各寫一次；`RoomAssetRepository` 另有既存的 `insert_in_transaction(connection, stored)` 慣例，兩種並存。code quality gate 未擋，F2b 若需再加 connection-aware method 時再評估收斂。
+- **測試與證據**：指揮者在 `apps/server` 用專案 venv 執行 `pytest tests/test_p6f_authoring_transaction.py tests/test_p6a_adventure_authoring.py tests/test_p6a_adventure_api.py tests/test_p6a_room_assets.py tests/test_p6f_review_state.py tests/test_p6e_import_service.py tests/test_p6e_import_persistence.py tests/test_m03_import_boundary.py tests/test_code_quality_gate.py`，**135 passed**；全部 `tests/test_p6*.py` 577 個 0 failed（16 skipped）；`git diff --check` 通過。驗證 code commit：`6f50cfcd`。
+- **未解與下一步**：本步無未解問題。F2b 以這四個 intent 的 `connection=` 在 Import transaction 內組合 finalize。
