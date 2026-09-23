@@ -74,13 +74,33 @@ type RollSubmission = {
   result: RollResult | null
 }
 
-test('P6-G G1b-1: empty Campaign through narration, world entries, roll, and Quick Combat attack to End Combat', async ({
+type RuntimeContext = {
+  current_situation: string | null
+  current_adventure_scene_entry_id: string | null
+  current_runtime_scene_entry_id: string | null
+  revision: number
+}
+
+type SessionHistoryLink = {
+  session_id: string
+  previous_session: { id: string; status: string } | null
+  previous_last_event_seq: number
+}
+
+type MonsterInstance = {
+  id: string
+  name: string
+  current_hp: number | null
+  max_hp: number | null
+}
+
+test('P6-G G1b-2: empty Campaign through narration, combat, Current Situation, and next Session continuity', async ({
   browser,
   page,
   request,
   roomContext,
 }) => {
-  test.setTimeout(240_000)
+  test.setTimeout(300_000)
   const { roomId } = roomContext
 
   // 1. Campaign with ZERO attached Adventures
@@ -514,6 +534,207 @@ test('P6-G G1b-1: empty Campaign through narration, world entries, roll, and Qui
     )
     expect(postCombatSheet.current_hp).toBe(12)
     expect(postCombatSheet.max_hp).toBe(12)
+
+    // 16. In the SAME empty Campaign and still-active first Session:
+    // Update Current Situation via official DM UI
+    const contextCard = worldPanel.locator('.runtime-context-card')
+    await contextCard.getByRole('button', { name: 'Edit Context' }).click()
+    const CURRENT_SITUATION_TEXT =
+      'The bandit threat is neutralized; the party catches their breath as dawn breaks over the moor.'
+    await contextCard.getByRole('textbox', { name: 'Current Situation' }).fill(CURRENT_SITUATION_TEXT)
+    const contextUpdatedPromise = page.waitForResponse(
+      (resp) => resp.request().method() === 'PATCH' && resp.url().endsWith(`/sessions/${sessionId}/runtime/context`),
+    )
+    await contextCard.getByRole('button', { name: 'Save Context' }).click()
+    await responseJson(await contextUpdatedPromise)
+    await expect(contextCard).toContainText(CURRENT_SITUATION_TEXT)
+
+    // Add persistent post-combat Fact via official DM UI
+    await worldPanel.getByRole('button', { name: 'Quick Add' }).click()
+    const aftermathFactForm = worldPanel.locator('form')
+    await expect(aftermathFactForm).toBeVisible()
+    await aftermathFactForm.getByRole('combobox', { name: 'Kind', exact: true }).selectOption('fact')
+    const AFTERMATH_FACT_TITLE = 'Bandit Trail Cleared'
+    const AFTERMATH_FACT_BODY = 'The solitary bandit was driven off; the mountain path is secure for now.'
+    await aftermathFactForm.getByRole('textbox', { name: 'Title / Name' }).fill(AFTERMATH_FACT_TITLE)
+    await aftermathFactForm.getByRole('textbox', { name: 'Description / Body' }).fill(AFTERMATH_FACT_BODY)
+    const aftermathFactPromise = page.waitForResponse(
+      (resp) => resp.request().method() === 'POST' && resp.url().endsWith(`/sessions/${sessionId}/runtime/entries`),
+    )
+    await aftermathFactForm.getByRole('button', { name: 'Create Entry' }).click()
+    await responseJson(await aftermathFactPromise)
+
+    await expect(worldPanel).toContainText(AFTERMATH_FACT_TITLE)
+    await expect(journalPanel).toContainText(AFTERMATH_FACT_BODY)
+
+    // Verify persisted runtime state via API before End Session
+    const session1Context = await json<RuntimeContext>(
+      await request.get(`${activePrefix}/runtime/context`),
+    )
+    expect(session1Context.current_situation).toBe(CURRENT_SITUATION_TEXT)
+
+    // 17. End first Session via official UI
+    page.once('dialog', (dialog) => dialog.accept())
+    const endSessionPromise = page.waitForResponse(
+      (resp) => resp.request().method() === 'POST' && resp.url().includes(`/sessions/${sessionId}/end`),
+    )
+    await page.getByRole('button', { name: 'End Session' }).click()
+    await responseJson(await endSessionPromise)
+    await expect(page.getByText('Ended', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'End Session' })).toHaveCount(0)
+
+    // 18. Return to Lobby via official UI link, verify Seat lifecycle, and start second Session
+    await page.getByRole('link', { name: 'Back to Lobby' }).click()
+    await expect(page.getByRole('heading', { name: 'Lobby & Seats', level: 1 })).toBeVisible()
+
+    // Verify DM Seat and Player Seat with Character persist in Lobby
+    const dmSeatCard = page.locator('article').filter({ hasText: 'P6-G DM' })
+    await expect(dmSeatCard).toBeVisible()
+    const playerSeatCard = page.locator('article').filter({ hasText: 'P6-G Player' })
+    await expect(playerSeatCard).toBeVisible()
+    await expect(playerSeatCard).toContainText(character.name)
+
+    // Start second Session via official UI
+    await page.getByRole('button', { name: 'Start Session' }).click()
+    await expect(page).toHaveURL(
+      new RegExp(`/rooms/${roomId}/campaigns/${campaign.id}/sessions/[0-9a-fA-F-]{36}/?$`),
+    )
+    await expect(page.getByRole('heading', { name: 'Active Session', level: 1 })).toBeVisible()
+
+    const nextSessionMatch = page.url().match(/\/sessions\/([0-9a-fA-F-]{36})/)
+    expect(nextSessionMatch).not.toBeNull()
+    const nextSessionId = nextSessionMatch![1]
+    expect(nextSessionId).not.toBe(sessionId)
+    const nextSessionUrl = `/rooms/${roomId}/campaigns/${campaign.id}/sessions/${nextSessionId}`
+    const nextActivePrefix = `/api/rooms/${roomId}/campaigns/${campaign.id}/sessions/${nextSessionId}`
+
+    // 19. Assert prior NPC / Fact / Current Situation in second Session
+    const nextWorldPanel = page.locator('.session-world-panel')
+    await expect(nextWorldPanel).toBeVisible()
+    await expect(nextWorldPanel).toContainText('Old Ben')
+    await expect(nextWorldPanel).toContainText(FACT_TITLE)
+    await expect(nextWorldPanel).toContainText(AFTERMATH_FACT_TITLE)
+    const nextContextCard = nextWorldPanel.locator('.runtime-context-card')
+    await expect(nextContextCard).toContainText(CURRENT_SITUATION_TEXT)
+
+    const nextContext = await json<RuntimeContext>(
+      await request.get(`${nextActivePrefix}/runtime/context`),
+    )
+    expect(nextContext.current_situation).toBe(CURRENT_SITUATION_TEXT)
+    expect(nextContext.current_adventure_scene_entry_id).toBeNull()
+    expect(nextContext.current_runtime_scene_entry_id).toBeNull()
+
+    const nextDmEntries = await json<RuntimeEntry[]>(
+      await request.get(`${nextActivePrefix}/runtime/entries`),
+    )
+    const nextNpc = nextDmEntries.find((e) => e.kind === 'npc' && e.title === 'Old Ben')
+    expect(nextNpc).toBeDefined()
+    expect(nextNpc!.dm_notes).toBe('Secretly a retired ranger spying on goblin bands.')
+
+    const nextFact = nextDmEntries.find((e) => e.kind === 'fact' && e.title === FACT_TITLE)
+    expect(nextFact).toBeDefined()
+    expect(nextFact!.body).toBe(FACT_TEXT)
+
+    const nextAftermathFact = nextDmEntries.find((e) => e.kind === 'fact' && e.title === AFTERMATH_FACT_TITLE)
+    expect(nextAftermathFact).toBeDefined()
+    expect(nextAftermathFact!.body).toBe(AFTERMATH_FACT_BODY)
+
+    // 20. Assert Character Current State remains true across Session boundary
+    const nextHeroSheet = await json<{ current_hp: number; max_hp: number }>(
+      await request.get(`/api/characters/${character.id}/sheet`),
+    )
+    expect(nextHeroSheet.current_hp).toBe(12)
+    expect(nextHeroSheet.max_hp).toBe(12)
+
+    // 21. Check absence of active Combat after End, while ended Combat outcome remains inspectable
+    await expect(combatStage(page)).toHaveCount(0)
+    const nextCombatDetail = await json<CombatDetail | null>(
+      await request.get(`${nextActivePrefix}/combat/detail`),
+    )
+    expect(nextCombatDetail).toBeNull()
+
+    const nextCombat = await json<CombatDetail | null>(
+      await request.get(`${nextActivePrefix}/combat`),
+    )
+    expect(nextCombat).toBeNull()
+
+    // Recorded ended Combat/outcome remains inspectable via correct existing read surfaces:
+    // a) Previous Session link on the new active Session
+    const prevLink = await json<SessionHistoryLink>(
+      await request.get(`${nextActivePrefix}/previous`),
+    )
+    expect(prevLink.previous_session).not.toBeNull()
+    expect(prevLink.previous_session!.id).toBe(sessionId)
+    expect(prevLink.previous_session!.status).toBe('ended')
+
+    // b) Ended Session's recorded monster instance reflects post-combat damaged HP outcome
+    const prevMonsters = await json<MonsterInstance[]>(
+      await request.get(`/api/rooms/${roomId}/campaigns/${campaign.id}/sessions/${sessionId}/monster-instances`),
+    )
+    const recordedBandit = prevMonsters.find((m) => m.name === QUICK_ENEMY.name)
+    expect(recordedBandit).toBeDefined()
+    expect(recordedBandit!.current_hp).toBe(QUICK_ENEMY.maxHp - hit.damage_total)
+
+    // c) Ended Session's persisted event sequence includes combat.ended and world.context_changed
+    const prevSessionEvents = await json<EventPage>(
+      await request.get(`${activePrefix}/events?after=0&limit=100`),
+    )
+    expect(prevSessionEvents.events.map((e) => e.kind)).toContain('combat.ended')
+    expect(prevSessionEvents.events.map((e) => e.kind)).toContain('world.context_changed')
+
+    // Secrecy: Player does not see world.context_changed event in event stream
+    const playerPrevEvents = await json<EventPage>(
+      await request.get(`${activePrefix}/events?after=0&limit=100`, {
+        headers: { Authorization: `Bearer ${playerGrant.access_token}` },
+      }),
+    )
+    expect(playerPrevEvents.events.map((e) => e.kind)).not.toContain('world.context_changed')
+
+    // 22. Campaign remains at zero attached Adventures and no mandatory Scene/Quest
+    const nextAttachedAdventures = await json<unknown[]>(
+      await request.get(`/api/rooms/${roomId}/campaigns/${campaign.id}/adventures`),
+    )
+    expect(nextAttachedAdventures).toEqual([])
+    expect(nextContext.current_adventure_scene_entry_id).toBeNull()
+    expect(nextContext.current_runtime_scene_entry_id).toBeNull()
+
+    // 23. Reconnect Player page to next Session and assert secret filtering
+    await player.page.goto(nextSessionUrl)
+    await expect(player.page.getByRole('heading', { name: 'Active Session', level: 1 })).toBeVisible()
+
+    const nextJournalPanel = player.page.locator('.session-journal-panel')
+    await expect(nextJournalPanel).toBeVisible()
+    await expect(player.page.locator('.session-world-panel')).toHaveCount(0)
+    await expect(player.page.getByRole('button', { name: 'Quick Add' })).toHaveCount(0)
+    await expect(player.page.getByRole('button', { name: 'Start Combat' })).toHaveCount(0)
+    await expect(combatStage(player.page)).toHaveCount(0)
+
+    // Player sees public facts in Journal
+    await expect(nextJournalPanel).toContainText(FACT_TEXT)
+    await expect(nextJournalPanel).toContainText(AFTERMATH_FACT_BODY)
+
+    // Secrecy: Player does NOT see NPC DM Notes anywhere in DOM
+    await expect(player.page.locator('body')).not.toContainText('Secretly a retired ranger spying on goblin bands.')
+    await expect(player.page.locator('body')).not.toContainText('Secretly a retired ranger')
+
+    // Secrecy: Player projection via API has no secrets
+    const playerNextEntries = await json<RuntimeEntry[]>(
+      await request.get(`${nextActivePrefix}/runtime/entries`, {
+        headers: { Authorization: `Bearer ${playerGrant.access_token}` },
+      }),
+    )
+    for (const entry of playerNextEntries) {
+      expect(entry).not.toHaveProperty('dm_notes')
+      expect(entry).not.toHaveProperty('character_recipient_ids')
+      expect(entry).not.toHaveProperty('needs_review')
+      expect(entry).not.toHaveProperty('provenance_json')
+    }
+
+    // Secrecy: Direct Adventure read check remains forbidden
+    const playerNextDirectAdventures = await request.get(`/api/rooms/${roomId}/adventures`, {
+      headers: { Authorization: `Bearer ${playerGrant.access_token}` },
+    })
+    expect(playerNextDirectAdventures.status()).toBe(404)
   } finally {
     await player.context.close()
   }
