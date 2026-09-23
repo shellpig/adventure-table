@@ -16,14 +16,14 @@
 
 - **P4 已全部關門並合併回 `main`**：P4-F code `651a14d0`，merge `7ef02d13`；證據見 [P4-F closeout](docs/P4/P4-F_CLOSEOUT.md)。歷史步驟不再作開場必讀。
 - **M05（Session History Continuity & Owner End for AI DM Sessions）已於 2026-09-20 當日開工並全部關門、合併回 `main`**：M05-A Owner 可正常 End AI DM 的 Session；M05-B 聊天串向上翻頁越過 Session 邊界（專用 history read scope，不擴大 gameplay actor）。證據見 [M05-A closeout](docs/M05/M05-A_CLOSEOUT.md)、[M05-B closeout](docs/M05/M05-B_CLOSEOUT.md)；逐項表已移至 ROADMAP_HISTORY。
-- **P6-A～P6-E 已關門並合併回 `main`**：P6-A 2026-09-20 Adventure Definition／Entry authoring、Room asset、Campaign attach／detach（[closeout](docs/P6/P6-A_CLOSEOUT.md)）；P6-B 2026-09-21 migration `0032` Campaign Runtime world state 與 Player secrecy projection（[closeout](docs/P6/P6-B_CLOSEOUT.md)）；P6-C 2026-09-21 `CampaignContextService` read intent 與五個 MCP read tool（[closeout](docs/P6/P6-C_CLOSEOUT.md)）；P6-D 2026-09-22 `CampaignWorldService` 八 intent、`resolve_world_action`、Stage bridge、十個 DM-only MCP write tool（[closeout](docs/P6/P6-D_CLOSEOUT.md)）；**P6-E 2026-09-22 migration `0033` Import Source／Draft substrate、PDF／DOCX extraction、DM-only Import REST 與 Importer UI**（[closeout](docs/P6/P6-E_CLOSEOUT.md)）。**下一步為 P6-F — Import Review, Finalization & Importer MCP**。2026-09-19 使用者拍板 P6 先於 P5；Phase 編號不重編，P5 契約完整保留，P6 關門後再回 P5。
-- **P6 契約已定案，固定 A～G**；開工讀 [P6 實作規格](docs/P6/實作規格.md)、[開發設計方針](docs/P6/開發設計方針.md)、[測試指南](docs/P6/測試指南.md) 的 P6-F 與必要共用前言。P6-A～P6-E 的技術決策（raw-body asset upload、縮圖走 authenticated blob fetch、duplicate attach 409、context clear 不刪 row、required `TableEventService`、Player Journal 只列 public quest／fact＋own-character knowledge、search 為 Python 端比對且 Player 不觸 Adventure 分支、`_active_context_extension` hook、P6-B REST 不改接 world service、`resolve_world_action` MCP-only、write tool `idempotency_key` required、`current_context_revision`、共用 `require_active_table_actor`、Importer MCP tool 全放 P6-F、URL-only source 以 `sha256("url:<url>")` 為鍵、PDF／DOCX 套件只在 `web` extra）見各自 closeout。列出下一步不代表 coding 授權。
+- **P6-A～P6-E 已關門並合併回 `main`**：Adventure authoring／Room asset、Campaign Runtime、AI context／write-back、Import Source／Draft 已交付；證據見各 [closeout](docs/P6/P6-E_CLOSEOUT.md) 與 [歷史進度](docs/ROADMAP_HISTORY.md)。**P6-F Review／Finalize／Importer MCP 已通過關門驗證，待合併回 `main`**（[closeout](docs/P6/P6-F_CLOSEOUT.md)）。合併後下一步是 P6-G 完整整合與 Phase closeout；P6 關門後才回 P5 Tactical Combat。
+- **P6 契約固定 A～G**；P6-G 開工讀 [實作規格](docs/P6/實作規格.md)、[開發設計方針](docs/P6/開發設計方針.md)、[測試指南](docs/P6/測試指南.md) 的 P6-G 與必要共用前言。既有技術決策與驗證證據住各 Subphase closeout，不在本簡報重複。列出下一步不代表 coding 或 merge 授權。
 - **M01／U01 保持 open，不阻塞 P Roadmap**。M01-A～O、U01-A 已關門；下一個未使用字母分別為 M01-P、U01-B，兩者下一項 scope 均未拍板，不建立虛構的待辦 Subphase。
 - **P5 已有完整契約但暫後移；P7～P8 保持大 Phase**，不提前拆分或設計 schema／API／module。
 
 ### P6 Subphase 進度
 
-✅＝已關門並合併；⬜＝正式契約已存在、尚未實作。當前 Phase 一列一個 Subphase；完成的 step 狀態只住該 Subphase 實作紀錄，不寫進本檔。
+✅＝已關門並合併；☑️＝關門驗證通過、待合併；⬜＝正式契約已存在、尚未實作。當前 Phase 一列一個 Subphase；完成的 step 狀態只住該 Subphase 實作紀錄，不寫進本檔。
 
 | Subphase | 狀態 |
 |---|---|
@@ -32,7 +32,7 @@
 | P6-C — AI Context & Retrieval | ✅ 2026-09-21 |
 | P6-D — AI DM Write-back & Exploration Integration | ✅ 2026-09-22 |
 | P6-E — Adventure Source & Import Draft | ✅ 2026-09-22 |
-| P6-F — Import Review, Finalization & Importer MCP | ⬜ |
+| P6-F — Import Review, Finalization & Importer MCP | ☑️ 2026-09-23，待合併 |
 | P6-G — Full P6 Integration & Closeout | ⬜ |
 
 ## Phase Roadmap
@@ -50,7 +50,7 @@ Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **
 | P4 | Quick Combat；已關門 |
 | M05 | Session History Continuity／Owner End for AI DM；已關門（2026-09-20），插在 P4 與 P6-A 之間 |
 | P5 | Tactical Combat；契約已定案，依使用者決定延至 P6 關門後實作 |
-| P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；**當前 Phase，P6-A～P6-E 已關門，下一步 P6-F** |
+| P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；**當前 Phase，P6-F 關門驗證通過待合併，之後 P6-G** |
 | P7 | Timeline、Snapshot／Restore、broader Archive／Import／Export；角色 JSON 已由 M03 先行，不做 gameplay Undo |
 | P8 | 全流程 QA／Polish、權限、reconnect、效能、Responsive UI |
 
@@ -79,7 +79,7 @@ Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **
 
 完整索引見 [已知問題](已知問題.md#跨-phase-限制與驗收索引)。未解項目不因 Phase 關門而完成；舊驗收缺口先核對後續 closeout，不直接當成目前缺陷。
 
-- **P6 接手**：先交付不依賴 Importer 的可玩 loop（manual Adventure／空 Campaign、Runtime、AI context/write-back）；Importer 後置於 P6-E/F。P6 不放寬 P3-D pre-session AI grant，也不提前做 P5 geometry 或 P7 Timeline／Snapshot。
+- **P6-G 接手**：以已交付的 A～F service 驗 empty Campaign 與 Adventure-driven 兩條 journey、restart／next Session、secrecy、idempotency、Quick Combat 與 Standalone boundary；真實 ChatGPT Web gate 留 G。P6 不放寬 P3-D pre-session AI grant，也不提前做 P5 geometry 或 P7 Timeline／Snapshot。
 - **後續 P5 接手**：Quick range 裁定、Dodge「能看見攻擊者」、frightened 來源可見性，依 [P4-F closeout](docs/P4/P4-F_CLOSEOUT.md) 已知限制與 P5 契約處理。
 - **後續 M、尚未拍板**：spell save 的 conditions pipeline、`get_resolution_event` O(n)、Monster `desc` 尚未 expose、死亡／倒地不起標籤；另有 Character 抗性缺 machine-readable 欄位、`is_hostile` 仍由 subject kind 決定等既有邊界。見 P4 各 Subphase closeout／設計，不自行擴入 P5。
 - **延期驗收／內容**：M04-C Bearer／純 HTTP／非目標平台相容記錄、M01-O deferred Feats，見限制索引。
