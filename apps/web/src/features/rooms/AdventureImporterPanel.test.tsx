@@ -20,6 +20,7 @@ import {
   formatWhitelistedMetadata,
   inferSourceKindFromFilename,
   normalizeSourceFile,
+  parseSourceLocatorOffset,
 } from './AdventureImporterPanel'
 import { AdventureImportReviewSection } from './AdventureImportReviewSection'
 import {
@@ -280,6 +281,25 @@ describe('Adventure Importer Panel & Helper tests', () => {
 
     const exeFile = new File(['binary'], 'run.exe', { type: 'application/octet-stream' })
     expect(normalizeSourceFile(exeFile)).toBeNull()
+  })
+
+  it.each([
+    ['offset:42', 42],
+    ['page:2', 6000],
+    ['page_index:1', 6000],
+    ['paragraph:2', 9000],
+    ['paragraph_index:1', 9000],
+    ['heading_index:0', 9000],
+    ['unknown:2', 0],
+  ])('opens source locator %s at offset %i', (locator, expected) => {
+    const metadata = {
+      sections: [
+        { page_index: 0, start_offset: 0 },
+        { page_index: 1, start_offset: 6000 },
+        { paragraph_index: 1, heading_index: 0, start_offset: 9000 },
+      ],
+    }
+    expect(parseSourceLocatorOffset({ source_id: 'source', locator }, metadata)).toBe(expected)
   })
 
   it('maintains bilingual copy parity, error mapping, and localized label mappings including P6-F review/warning/finalize', () => {

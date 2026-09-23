@@ -191,7 +191,8 @@ export function AdventureImporterPanel({
   }
 
   const handleViewSource = async (sourceRef: DraftSourceRef) => {
-    const offset = parseSourceLocatorOffset(sourceRef)
+    const source = sources.find((item) => item.id === sourceRef.source_id)
+    const offset = parseSourceLocatorOffset(sourceRef, source?.metadata_json ?? {})
     await handleOpenChunk(sourceRef.source_id, offset)
   }
 

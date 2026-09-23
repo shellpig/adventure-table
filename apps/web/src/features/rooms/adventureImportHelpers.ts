@@ -249,12 +249,22 @@ export function formatWhitelistedMetadata(
   return items
 }
 
-export function parseSourceLocatorOffset(sourceRef: DraftSourceRef | null): number {
-  if (!sourceRef?.locator) return 0
-  const match = sourceRef.locator.match(/(?:offset:)?(\d+)/i)
-  if (match) {
-    const parsed = parseInt(match[1], 10)
-    if (!Number.isNaN(parsed)) return parsed
-  }
-  return 0
+export function parseSourceLocatorOffset(
+  sourceRef: DraftSourceRef,
+  metadata: Record<string, unknown>,
+): number {
+  const locator = sourceRef.locator?.trim().toLowerCase()
+  const match = locator?.match(/^(offset|page|page_index|paragraph|paragraph_index|heading_index):(\d+)$/)
+  if (!match) return 0
+  const index = Number(match[2])
+  if (match[1] === 'offset') return index
+
+  const key = match[1].replace(/^(page|paragraph)$/, '$1_index')
+  const sectionIndex = match[1] === 'page' || match[1] === 'paragraph' ? index - 1 : index
+  const sections = metadata.sections
+  if (!Array.isArray(sections)) return 0
+  const section = sections.find(
+    (item) => typeof item === 'object' && item !== null && item[key] === sectionIndex,
+  )
+  return typeof section?.start_offset === 'number' ? section.start_offset : 0
 }
