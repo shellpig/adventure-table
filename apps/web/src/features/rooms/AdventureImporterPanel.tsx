@@ -147,10 +147,10 @@ export function buildDraftMutationInput(
   currentDraft: AdventureImportDraft,
   action: DraftMutationAction,
 ): ExactUpdateImportDraftInput {
-  let nextEntries: DraftEntry[]
+  let nextEntries: DraftEntryInput[]
 
   if (action.type === 'add') {
-    const newEntry: DraftEntry = {
+    const newEntry: DraftEntryInput = {
       entry_id: action.entryId ?? crypto.randomUUID(),
       entry_kind: action.entry.entry_kind,
       payload: action.entry.payload,

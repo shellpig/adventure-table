@@ -1,6 +1,8 @@
 import type {
+  AdventureDefinition,
   AdventureEntryKind,
   AdventureEntryPayload,
+  AdventureEntryVisibility,
 } from './adventures'
 
 export type ImportStatus = 'source' | 'drafting' | 'review' | 'finalized' | 'cancelled'
@@ -11,6 +13,7 @@ export type DraftProvenance =
   | 'user_approximation'
   | 'ai_generated'
 export type WarningLevel = 'info' | 'warning' | 'blocking'
+export type ReviewStatus = 'pending' | 'accepted' | 'ignored' | 'uncertain'
 
 export type AdventureImport = {
   id: string
@@ -56,6 +59,11 @@ export type DraftEntry = {
   provenance: DraftProvenance
   source_ref: DraftSourceRef | null
   note: string | null
+  review_status: ReviewStatus
+  asset_ids: string[]
+  title: string | null
+  body: string | null
+  visibility: AdventureEntryVisibility
 }
 
 export type DraftWarning = {
@@ -65,6 +73,8 @@ export type DraftWarning = {
   message: string
   entry_id: string | null
   source_id: string | null
+  resolved: boolean
+  resolution: string | null
 }
 
 export type DraftQuestion = {
@@ -136,6 +146,11 @@ export type DraftEntryInput = {
   provenance?: DraftProvenance
   source_ref?: DraftSourceRefInput | null
   note?: string | null
+  review_status?: ReviewStatus
+  asset_ids?: string[]
+  title?: string | null
+  body?: string | null
+  visibility?: AdventureEntryVisibility
 }
 
 export type DraftWarningInput = {
@@ -145,6 +160,8 @@ export type DraftWarningInput = {
   message: string
   entry_id?: string | null
   source_id?: string | null
+  resolved?: boolean
+  resolution?: string | null
 }
 
 export type DraftQuestionInput = {
@@ -163,6 +180,27 @@ export type ImportDraftInput = {
 export type UpdateImportDraftInput = {
   draft: ImportDraftInput
   warnings?: DraftWarningInput[]
+  expected_revision: number
+}
+
+export type SetEntryReviewInput = {
+  review_status: ReviewStatus
+  expected_revision: number
+}
+
+export type ResolveWarningInput = {
+  resolution?: string | null
+  expected_revision: number
+}
+
+export type AnswerQuestionInput = {
+  answer: string
+  expected_revision: number
+}
+
+export type FinalizeAdventureImportInput = {
+  name: string
+  summary?: string | null
   expected_revision: number
 }
 
@@ -344,6 +382,73 @@ export function updateAdventureImportDraft(
 ): Promise<AdventureImportDraft> {
   return request(`${base(roomId)}/${importId}/draft`, token, {
     method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+}
+
+export function setAdventureImportEntryReview(
+  roomId: string,
+  importId: string,
+  entryId: string,
+  token: string,
+  input: SetEntryReviewInput,
+): Promise<AdventureImportDraft> {
+  return request(
+    `${base(roomId)}/${importId}/draft/entries/${encodeURIComponent(entryId)}/review`,
+    token,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  )
+}
+
+export function resolveAdventureImportWarning(
+  roomId: string,
+  importId: string,
+  warningId: string,
+  token: string,
+  input: ResolveWarningInput,
+): Promise<AdventureImportDraft> {
+  return request(
+    `${base(roomId)}/${importId}/warnings/${encodeURIComponent(warningId)}/resolve`,
+    token,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  )
+}
+
+export function answerAdventureImportQuestion(
+  roomId: string,
+  importId: string,
+  questionId: string,
+  token: string,
+  input: AnswerQuestionInput,
+): Promise<AdventureImportDraft> {
+  return request(
+    `${base(roomId)}/${importId}/questions/${encodeURIComponent(questionId)}/answer`,
+    token,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    },
+  )
+}
+
+export function finalizeAdventureImport(
+  roomId: string,
+  importId: string,
+  token: string,
+  input: FinalizeAdventureImportInput,
+): Promise<AdventureDefinition> {
+  return request(`${base(roomId)}/${importId}/finalize`, token, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
