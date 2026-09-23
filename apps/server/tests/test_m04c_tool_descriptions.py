@@ -50,6 +50,8 @@ DM_CATALOG = {
     "world_set_override", "world_clear_override", "world_set_current_context",
     "world_grant_knowledge", "world_set_needs_review", "world_resolve_action",
     "set_stage_image",
+    "import_adventure_source", "get_import_draft", "update_import_draft",
+    "resolve_import_warning", "answer_import_question", "finalize_adventure",
 }
 
 

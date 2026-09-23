@@ -4,6 +4,7 @@ from fastapi import Request
 
 from app.api.rooms.ai_controllers import get_ai_controller_service
 from app.api.rooms.dependencies import (
+    get_adventure_import_service,
     get_campaign_runtime_service,
     get_campaign_stage_service,
     get_combat_adjudication_service,
@@ -26,7 +27,7 @@ from app.api.rooms.dependencies import (
     get_table_character_state_service,
     get_table_event_service,
 )
-from app.domain.campaign_runtime.ai_tools import CampaignContextAIToolApplicationService
+from app.domain.adventure_imports.ai_tools import AdventureImportAIToolApplicationService
 from app.domain.campaign_runtime.context import CampaignContextService
 from app.domain.campaign_runtime.world import CampaignWorldService
 from app.domain.rooms.ai_tools import AIToolApplicationService
@@ -35,7 +36,8 @@ from app.domain.rooms.ai_tools import AIToolApplicationService
 def get_ai_tool_application_service(request: Request) -> AIToolApplicationService:
     service = getattr(request.app.state, "ai_tool_application_service", None)
     if service is None:
-        service = CampaignContextAIToolApplicationService(
+        service = AdventureImportAIToolApplicationService(
+            adventure_import_service=get_adventure_import_service(request),
             campaign_context_service=CampaignContextService(get_campaign_runtime_service(request)),
             campaign_world_service=CampaignWorldService(get_campaign_runtime_service(request)),
             campaign_stage_service=get_campaign_stage_service(request),

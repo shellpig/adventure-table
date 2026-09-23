@@ -7,6 +7,28 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
+from app.domain.adventure_imports.ai_tools import (
+    AnswerImportQuestionToolInput,
+    FinalizeAdventureToolInput,
+    GetImportDraftToolInput,
+    ImportAdventureSourceToolInput,
+    ResolveImportWarningToolInput,
+    UpdateImportDraftToolInput,
+)
+from app.domain.adventure_imports.errors import (
+    AdventureImportBlockingWarningsError,
+    AdventureImportRevisionConflictError,
+)
+from app.domain.adventures.schemas import (
+    AdventureArchivedError,
+    AdventureEntryAssetNotFoundError,
+    AdventureEntryNotFoundError,
+    AdventureEntryParentError,
+    AdventureEntryPayloadError,
+    AdventureForbiddenError,
+    AdventureNotFoundError,
+    AdventureStatusError,
+)
 from app.domain.campaign_runtime.ai_tools import (
     AdventureEntryToolInput,
     SceneContextToolInput,
@@ -388,6 +410,30 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
         "Call when displaying an image or map from a room asset, adventure asset, or runtime entry on the main stage.",
         "將房間素材、冒險素材或 runtime 條目的圖片或地圖呈現在主舞台時呼叫。",
     ),
+    "import_adventure_source": (
+        "Call when beginning an adventure import or appending text, markdown, URL, or room asset sources to an in-progress import.",
+        "開始進行冒險匯入，或將文字、Markdown、URL 或房間素材來源加入進行中的匯入時呼叫。",
+    ),
+    "get_import_draft": (
+        "Call when inspecting the current structured draft entries, questions, and validation warnings for an import.",
+        "檢視冒險匯入目前的結構化草稿條目、提問以及驗證警示時呼叫。",
+    ),
+    "update_import_draft": (
+        "Call when modifying draft entries, attributes, or questions. Any values inferred by AI (such as a suggested DC not explicitly stated in the source) must use provenance ai_generated or user_approximation, never source_document; you may also leave a rule value to DM decides.",
+        "修改草稿條目、屬性或提問時呼叫。任何由 AI 推論的值（例如來源未明寫的建議 DC）必須使用 ai_generated 或 user_approximation 出處，絕不可標記為 source_document；亦可將規則值保留為 DM decides。",
+    ),
+    "resolve_import_warning": (
+        "Call when addressing an import warning by marking it resolved with an optional resolution explanation.",
+        "處理匯入警示並將其標記為已解決（附帶選填的處理說明）時呼叫。",
+    ),
+    "answer_import_question": (
+        "Call when answering a question posed in the import draft to clarify rules, structure, or narrative details.",
+        "回答匯入草稿中提出的問題以釐清規則、結構或敘事細節時呼叫。",
+    ),
+    "finalize_adventure": (
+        "Call when all blocking warnings are resolved to lock the draft and produce a finalized adventure definition.",
+        "當所有阻擋性警示皆已解決、準備鎖定草稿並產出定案的冒險定義時呼叫。",
+    ),
 }
 
 
@@ -598,6 +644,12 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("world_set_needs_review", _desc("Set needs_review flag on a runtime entry or override (DM only, active Session only). Requires expected_revision from get_world_entry or get_adventure_entry and an idempotency_key.", "為 runtime 條目或 override 設定 needs_review 旗標（僅限 DM，需要 active Session）。需要來自 get_world_entry 或 get_adventure_entry 的 expected_revision 與 idempotency_key。"), WorldSetNeedsReviewToolInput, frozenset({"dm"})),
     MCPToolDefinition("world_resolve_action", _desc("Atomically apply a world change and optional definitive narration (DM only, active Session only). Narration is optional and atomic with the change. Requires an idempotency_key.", "原子化套用世界變更與選填定案敘事（僅限 DM，需要 active Session）。敘事為選填且與變更具原子性。需要 idempotency_key。"), WorldResolveActionToolInput, frozenset({"dm"})),
     MCPToolDefinition("set_stage_image", _desc("Set the main exploration stage image from an asset or entry (DM only, active Session only). Requires current expected_revision from get_session_context and an idempotency_key.", "自素材或條目設定主探索舞台圖片（僅限 DM，需要 active Session）。需要來自 get_session_context 的目前 expected_revision 與 idempotency_key。"), SetStageImageToolInput, frozenset({"dm"})),
+    MCPToolDefinition("import_adventure_source", _desc("Create a new adventure import (pass name) or attach a source to an existing one (pass import_id); returns import_id and the source (DM only).", "建立新的冒險匯入（傳 name）或將來源加入既有匯入（傳 import_id）；回傳 import_id 與來源（僅限 DM）。"), ImportAdventureSourceToolInput, frozenset({"dm"})),
+    MCPToolDefinition("get_import_draft", _desc("Read the structured draft and warnings for an adventure import (DM only).", "讀取冒險匯入的結構化草稿與警示清單（僅限 DM）。"), GetImportDraftToolInput, frozenset({"dm"})),
+    MCPToolDefinition("update_import_draft", _desc("Replace the import draft and warnings with updated entries and provenance (DM only).", "以更新後的條目與出處資訊替換匯入草稿及警示（僅限 DM）。"), UpdateImportDraftToolInput, frozenset({"dm"})),
+    MCPToolDefinition("resolve_import_warning", _desc("Resolve or dismiss a draft warning with an optional explanation (DM only).", "以選填說明解決或解除草稿警示（僅限 DM）。"), ResolveImportWarningToolInput, frozenset({"dm"})),
+    MCPToolDefinition("answer_import_question", _desc("Answer a clarification question in an import draft (DM only).", "回答匯入草稿中的釐清提問（僅限 DM）。"), AnswerImportQuestionToolInput, frozenset({"dm"})),
+    MCPToolDefinition("finalize_adventure", _desc("Finalize an import draft into a new baseline Adventure Definition (DM only). Retrying the same import returns the same Adventure.", "將匯入草稿定案為新的冒險定義 baseline（僅限 DM）。同一匯入重試會回傳同一冒險。"), FinalizeAdventureToolInput, frozenset({"dm"})),
 )
 
 
@@ -827,10 +879,71 @@ async def call_tool(
             data = await asyncio.to_thread(service.world_resolve_action, token, parsed, authenticated=auth)
         elif name == "set_stage_image":
             data = await asyncio.to_thread(service.set_stage_image, token, parsed, authenticated=auth)
+        elif name == "import_adventure_source":
+            data = await asyncio.to_thread(service.import_adventure_source, token, parsed, authenticated=auth)
+        elif name == "get_import_draft":
+            data = await asyncio.to_thread(service.get_import_draft, token, parsed, authenticated=auth)
+        elif name == "update_import_draft":
+            data = await asyncio.to_thread(service.update_import_draft, token, parsed, authenticated=auth)
+        elif name == "resolve_import_warning":
+            data = await asyncio.to_thread(service.resolve_import_warning, token, parsed, authenticated=auth)
+        elif name == "answer_import_question":
+            data = await asyncio.to_thread(service.answer_import_question, token, parsed, authenticated=auth)
+        elif name == "finalize_adventure":
+            data = await asyncio.to_thread(service.finalize_adventure, token, parsed, authenticated=auth)
         else:  # pragma: no cover
             return structured_tool_error("tool_not_implemented", "Tool dispatch is not implemented", "工具 dispatch 尚未實作")
     except ValidationError:
         return structured_tool_error("invalid_arguments", "Tool arguments failed schema validation", "工具 arguments 未通過 schema 驗證")
+    except AdventureImportBlockingWarningsError as exc:
+        return structured_tool_error(
+            "adventure_import_blocking_warnings",
+            "Adventure import has unresolved blocking warnings",
+            "冒險匯入尚有未解決的阻擋性警示",
+            detail=",".join(exc.unresolved_warning_ids),
+        )
+    except AdventureImportRevisionConflictError as exc:
+        return structured_tool_error(
+            "adventure_import_revision_conflict",
+            "Adventure import revision conflict",
+            "冒險匯入版本衝突",
+            detail=str(exc),
+        )
+    except (
+        AdventureNotFoundError,
+        AdventureEntryNotFoundError,
+        AdventureEntryAssetNotFoundError,
+    ):
+        return structured_tool_error(
+            "not_found",
+            "Requested table object was not found in the current scope",
+            "目前 scope 找不到指定的桌面物件",
+        )
+    except AdventureForbiddenError:
+        return structured_tool_error(
+            "permission_denied",
+            "Current AI controller is not permitted to perform this action",
+            "目前 AI controller 無權執行此動作",
+        )
+    except (
+        AdventureEntryParentError,
+        AdventureEntryPayloadError,
+    ):
+        return structured_tool_error(
+            "invalid_arguments",
+            "Tool arguments are not valid for the current table state",
+            "工具 arguments 不符合目前桌面狀態",
+        )
+    except (
+        AdventureStatusError,
+        AdventureArchivedError,
+    ) as exc:
+        return structured_tool_error(
+            "table_conflict",
+            "The table state changed or does not allow this action",
+            "桌面狀態已變更或目前不允許此動作",
+            detail=str(exc) or None,
+        )
     except PermissionError:
         return structured_tool_error("permission_denied", "Current AI controller is not permitted to perform this action", "目前 AI controller 無權執行此動作")
     except LookupError:
