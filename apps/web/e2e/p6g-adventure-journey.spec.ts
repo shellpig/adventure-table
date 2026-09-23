@@ -17,6 +17,47 @@ const ONE_PIXEL_PNG = Buffer.from(
   'base64',
 )
 
+type TableEvent = {
+  seq: number
+  kind: string
+  acting_seat_id: string | null
+  subject_seat_id: string | null
+  payload: Record<string, unknown>
+}
+
+type EventPage = {
+  events: TableEvent[]
+}
+
+type RollRequest = {
+  id: string
+  target_seat_id: string
+  dc: number | null
+  status: 'pending' | 'resolved' | 'cancelled'
+}
+
+type RequestCheckResponse = {
+  roll_group_id: string
+  requests: RollRequest[]
+}
+
+type RollResult = {
+  id: string
+  roll_request_id: string | null
+  raw_dice: number[]
+  kept_dice: number[]
+  base_modifier: number
+  flat_adjustment: number
+  total: number
+}
+
+type RollSubmission = {
+  result_id: string
+  roll_request_id: string | null
+  hidden: boolean
+  result: RollResult | null
+}
+
 type AdventureDefinition = {
   id: string
   name: string
@@ -46,13 +87,13 @@ type RuntimeContext = {
   revision: number
 }
 
-test('P6-G G2a: Adventure-driven journey from definition and attach to official DM Current Scene and Stage image', async ({
+test('P6-G G2b-1: Adventure-driven journey through narration, exploration, and formal Check', async ({
   browser,
   page,
   request,
   roomContext,
 }) => {
-  test.setTimeout(180_000)
+  test.setTimeout(240_000)
   const { roomId } = roomContext
 
   // 1. Fresh Room & Campaign with initially 0 attached Adventures
@@ -168,7 +209,14 @@ test('P6-G G2a: Adventure-driven journey from definition and attach to official 
 
   const character = await importCharacter(request)
   const playerGrant = await enterAsMember(request, roomContext, 'P6-G Player')
-  await addPlayerSeat(request, roomId, campaign.id, character, playerGrant.access_session_id, 'P6-G')
+  const playerSeat = await addPlayerSeat(
+    request,
+    roomId,
+    campaign.id,
+    character,
+    playerGrant.access_session_id,
+    'P6-G',
+  )
 
   // 5. Start Session through official UI as DM
   const sessionId = await startSession(page, roomId, campaign.id)
@@ -303,6 +351,144 @@ test('P6-G G2a: Adventure-driven journey from definition and attach to official 
     expect(playerHtml).not.toContain('Triggering the false floor drops players into stagnant pool')
     expect(playerHtml).not.toContain('vault-key.png')
     expect(playerHtml).not.toContain(secretAsset.id)
+
+    // 13. DM posts narration grounded in the selected Scene
+    const NARRATION_TEXT =
+      'Murky water sloshes around your boots as the crumbling pillars cast long shadows across the sunken courtyard.'
+    await page.getByRole('combobox', { name: 'Type', exact: true }).selectOption('narration')
+    await page.getByPlaceholder(/Type here/).fill(NARRATION_TEXT)
+    const narrationPromise = page.waitForResponse(
+      (resp) => resp.request().method() === 'POST' && resp.url().includes(`/sessions/${sessionId}/exploration`),
+    )
+    await page.getByRole('button', { name: 'Send' }).click()
+    await responseJson(await narrationPromise)
+
+    await expect(page.getByText(NARRATION_TEXT, { exact: true })).toBeVisible()
+    await expect(player.page.getByText(NARRATION_TEXT, { exact: true })).toBeVisible()
+
+    // 14. Player posts an exploration action
+    const ACTION_TEXT = 'I search the submerged stone pillars for ancient inscriptions or hidden mechanisms.'
+    await player.page.getByRole('combobox', { name: 'Type', exact: true }).selectOption('action')
+    await player.page.getByRole('combobox', { name: 'Character', exact: true }).selectOption(playerSeat.id)
+    await player.page.getByPlaceholder(/Type here/).fill(ACTION_TEXT)
+    const actionPromise = player.page.waitForResponse(
+      (resp) => resp.request().method() === 'POST' && resp.url().includes(`/sessions/${sessionId}/exploration`),
+    )
+    await player.page.getByRole('button', { name: 'Send' }).click()
+    await responseJson(await actionPromise)
+
+    await expect(page.getByText(ACTION_TEXT, { exact: true })).toBeVisible()
+    await expect(player.page.getByText(ACTION_TEXT, { exact: true })).toBeVisible()
+
+    // 15. DM requests a formal Check
+    await page.getByRole('button', { name: 'Dice', exact: true }).click()
+    const targetCheckbox = page.getByRole('checkbox', { name: new RegExp(character.name) })
+    await expect(targetCheckbox).toBeChecked()
+    await page.getByRole('combobox', { name: 'Check type' }).selectOption('skill')
+    await page.getByRole('combobox', { name: 'Skill' }).selectOption('srd5.1:skill:investigation')
+    await page.getByLabel('DC (optional)', { exact: true }).fill('14')
+    await page.getByRole('combobox', { name: 'Roll mode' }).selectOption('normal')
+    await page.getByRole('combobox', { name: 'Result visibility' }).selectOption('public')
+    await page.getByLabel('Label', { exact: true }).fill('Inspect courtyard carvings')
+
+    const checkPromise = page.waitForResponse(
+      (resp) => resp.request().method() === 'POST' && resp.url().includes(`/sessions/${sessionId}/checks`),
+    )
+    await page.getByRole('button', { name: 'Create Check' }).click()
+    const checkResponse = await responseJson<RequestCheckResponse>(await checkPromise)
+    expect(checkResponse.requests).toHaveLength(1)
+    const rollRequestId = checkResponse.requests[0].id
+    expect(checkResponse.requests[0]).toMatchObject({
+      target_seat_id: playerSeat.id,
+      dc: 14,
+      status: 'pending',
+    })
+
+    const rollPrompt = `The DM asks ${character.name} to make Investigation (Skill Check): Inspect courtyard carvings.`
+    await expect(player.page.getByText(rollPrompt, { exact: true })).toBeVisible()
+
+    // DM sees pending request with DC 14
+    const dmRequestCard = page.locator('.session-roll-request').first()
+    await expect(dmRequestCard).toHaveAttribute('data-roll-request-status', 'pending')
+    await expect(dmRequestCard.getByText('DC 14', { exact: true })).toBeVisible()
+
+    // 16. Player rolls formally, and both sides see authorized results
+    await player.page.getByRole('button', { name: 'Dice', exact: true }).click()
+    const playerRequestCard = player.page.locator('.session-roll-request').first()
+    await expect(playerRequestCard).toHaveAttribute('data-roll-request-status', 'pending')
+    await expect(playerRequestCard.getByText('Waiting to roll', { exact: true })).toBeVisible()
+    // Player does NOT see DC 14 (secrecy)
+    await expect(playerRequestCard.getByText('DC 14', { exact: true })).toHaveCount(0)
+
+    const rollPromise = player.page.waitForResponse(
+      (resp) => resp.request().method() === 'POST' && resp.url().includes(`/sessions/${sessionId}/rolls/formal`),
+    )
+    await playerRequestCard.getByRole('button', { name: 'Roll formally' }).click()
+    const rollSubmission = await responseJson<RollSubmission>(await rollPromise)
+    expect(rollSubmission.roll_request_id).toBe(rollRequestId)
+    expect(rollSubmission.result).not.toBeNull()
+    expect(rollSubmission.result!.raw_dice).toHaveLength(1)
+    expect(rollSubmission.result!.raw_dice[0]).toBeGreaterThanOrEqual(1)
+    expect(rollSubmission.result!.raw_dice[0]).toBeLessThanOrEqual(20)
+
+    // Both sides see resolved status and total
+    await expect(playerRequestCard).toHaveAttribute('data-roll-request-status', 'resolved')
+    await expect(dmRequestCard).toHaveAttribute('data-roll-request-status', 'resolved')
+    await expect(playerRequestCard.getByText(`Total: ${rollSubmission.result!.total}`, { exact: true })).toBeVisible()
+    await expect(dmRequestCard.getByText(`Total: ${rollSubmission.result!.total}`, { exact: true })).toBeVisible()
+    await expect(dmRequestCard.getByText('DC 14', { exact: true })).toBeVisible()
+    await expect(playerRequestCard.getByText('DC 14', { exact: true })).toHaveCount(0)
+
+    // 17. Assert actual persisted AT events & result via API
+    const eventPage = await json<EventPage>(
+      await request.get(`/api/rooms/${roomId}/campaigns/${campaign.id}/sessions/${sessionId}/events?after=0&limit=100`),
+    )
+    const eventKinds = eventPage.events.map((e) => e.kind)
+    expect(eventKinds).toContain('exploration.narration')
+    expect(eventKinds).toContain('exploration.action')
+    expect(eventKinds).toContain('roll.requested')
+    expect(eventKinds).toContain('roll.resolved')
+
+    const narrationEvent = eventPage.events.find((e) => e.kind === 'exploration.narration')!
+    expect(narrationEvent.payload.text).toBe(NARRATION_TEXT)
+
+    const actionEvent = eventPage.events.find((e) => e.kind === 'exploration.action')!
+    expect(actionEvent.payload.text).toBe(ACTION_TEXT)
+    const speakerSeat = actionEvent.acting_seat_id ?? actionEvent.subject_seat_id
+    expect(speakerSeat).toBe(playerSeat.id)
+
+    const rollRequestedEvent = eventPage.events.find((e) => e.kind === 'roll.requested')!
+    expect(rollRequestedEvent.payload.request_type).toBe('skill')
+    expect(rollRequestedEvent.payload.skill_ref).toBe('srd5.1:skill:investigation')
+    expect(rollRequestedEvent.payload.label).toBe('Inspect courtyard carvings')
+    // DC is secret-bearing and intentionally omitted from the public event payload
+    expect(rollRequestedEvent.payload.dc).toBeUndefined()
+
+    const rollResolvedEvent = eventPage.events.find((e) => e.kind === 'roll.resolved')!
+    expect(rollResolvedEvent.payload.roll_request_id).toBe(rollRequestId)
+    expect(rollResolvedEvent.payload.total).toBe(rollSubmission.result!.total)
+
+    // 18. Stage image remains visible for both DM and Player
+    await expect(dmStageImg).toBeVisible()
+    await expect(dmStageImg).toHaveAttribute('src', /^blob:/)
+    await expect(playerStageImg).toBeVisible()
+    await expect(playerStageImg).toHaveAttribute('src', /^blob:/)
+
+    // 19. Player still cannot directly read Adventure/secret/DM Note while Stage remains visible
+    const playerAdvResp2 = await request.get(
+      `/api/rooms/${roomId}/adventures/${adventure.id}`,
+      { headers: { Authorization: `Bearer ${playerGrant.access_token}` } },
+    )
+    expect(playerAdvResp2.status()).toBe(404)
+
+    const playerHtmlAfter = await player.page.content()
+    expect(playerHtmlAfter).not.toContain('Submerged Relic Vault')
+    expect(playerHtmlAfter).not.toContain('hidden pressure plate beneath the altar')
+    expect(playerHtmlAfter).not.toContain('DM Tactics and Traps')
+    expect(playerHtmlAfter).not.toContain('Triggering the false floor drops players into stagnant pool')
+    expect(playerHtmlAfter).not.toContain('vault-key.png')
+    expect(playerHtmlAfter).not.toContain(secretAsset.id)
+    expect(playerHtmlAfter).not.toContain('/assets/')
   } finally {
     await player.context.close()
   }
