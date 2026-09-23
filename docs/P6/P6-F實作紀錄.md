@@ -5,8 +5,8 @@
 - **更新日期**：2026-09-23
 - **目標與邊界**：完成 Importer 的 Review → Finalize：Draft entry 的 Accept／Edit／Ignore／Mark uncertain／View source、warning 三級（Info／Warning／Blocking）與 question 回答、Finalize 建立新的 Adventure Definition baseline（retry 不重複）、DM-only REST、六個 Importer MCP tool、Review／Finalize UI 與 E2E。**不做** P7 package import／export，也不放寬 P3-D pre-session grant 的工具集合。Backend 仍不對 URL fetch、不含 LLM client。
 - **Branch**：`feat/p6f-import-review-finalize`（自 `main@6028d6c9`）
-- **最近已驗證 commit**：`6f50cfcd`（F2a code；指揮者完成 focused／P6-A／P6-E／F1 regression 與 diff 審核）。
-- **下一步**：派 agy 做 F2b（Import finalize transaction），使用 F2a 的 `connection=` authoring API。
+- **最近已驗證 commit**：`431877d2`（F2b code；指揮者完成 focused／P6 全部 backend regression 與 diff 審核）。
+- **下一步**：F3 REST（review／resolve／answer／finalize route）；finalize 的派工決策（`dm_only` 預設、draft revision、attachment role）見 [F2b](P6-F_steps/F2b.md)。
 - **阻礙／未審**：無。
 - **派工約束**：沿 P6-C 派工約束 1／3（parametrize、前端測試不超過元件兩倍）。F5 開工前先評估是否順手拆 `AdventureImporterPanel.tsx`（P6-E closeout 觀察 1：1,241 行單一元件）；拆與不拆都要在 F5 紀錄說明。
 - **派工決策（2026-09-22 拍板）**：(1) Review state 存進 `draft_json` 的 entry／warning 欄位，**schema 維持 `schema_version=1`**，新欄位一律 optional 帶預設；(2) Finalize 的 idempotency 鍵就是 **`adventure_imports.target_adventure_id`**——已設即回同一 Adventure，不新增欄位、不新增 migration；(3) 六個 importer MCP tool **全開給 active Session 的 current AI DM**（AI Player／stale／revoked 一律拒絕，pre-session grant 工具集不變）；(4) Finalize 的 entry asset 走 **`DraftEntry.asset_ids`（room asset id，optional）**＋既有 `link_entry_asset`，`source_ref` 維持 draft-only 稽核。
@@ -19,7 +19,7 @@
 |---|---|---|---|---|
 | F1 | Review state：entry review status、warning 三級與 resolve、question answer | 完成 | — | [F1](P6-F_steps/F1.md) |
 | F2a | Adventure authoring 共用 transaction 接線 | 完成 | F1 | [F2a](P6-F_steps/F2a.md) |
-| F2b | Import Finalize transaction／blocking gate／idempotency | 進行中 | F2a | [F2b](P6-F_steps/F2b.md) |
+| F2b | Import Finalize transaction／blocking gate／idempotency | 完成 | F2a | [F2b](P6-F_steps/F2b.md) |
 | F3 | REST：review／resolve／answer／finalize route | 待做 | F2b | [F3](P6-F_steps/F3.md) |
 | F4 | 六個 Importer MCP tool＋catalog／guide parity＋authority | 待做 | F2b | [F4](P6-F_steps/F4.md) |
 | F5 | UI：Draft Review 面板、Finalize、zh-TW／en、E2E | 待做 | F3 | [F5](P6-F_steps/F5.md) |
