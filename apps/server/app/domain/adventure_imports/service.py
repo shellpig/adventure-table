@@ -46,13 +46,24 @@ from app.domain.adventures.schemas import (
     AdventureForbiddenError,
     AdventureNotFoundError,
 )
-from app.domain.adventures.service import AdventureService, require_adventure_author
+from app.domain.adventures.service import (
+    AdventureAuthor,
+    AdventureService,
+    require_adventure_author,
+)
 from app.domain.room_assets.schemas import (
     RoomAssetForbiddenError,
     RoomAssetNotFoundError,
 )
 from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.schemas import RoomAccessContext
+from app.domain.rooms.table_events import (
+    TableEventActorUnauthorizedError,
+    TableEventNotFoundError,
+    TableEventService,
+    TableEventSessionNotActiveError,
+    require_active_table_actor,
+)
 from app.persistence.adventure_imports.repository import (
     AdventureImportRepository,
     StoredAdventureImport,
@@ -60,7 +71,7 @@ from app.persistence.adventure_imports.repository import (
 )
 
 
-def require_import_author(context: RoomAccessContext, room_id: UUID) -> None:
+def require_import_author(context: AdventureAuthor, room_id: UUID) -> None:
     try:
         require_adventure_author(context, room_id)
     except AdventureNotFoundError as exc:
@@ -101,6 +112,11 @@ def normalize_source_text(text: str) -> str:
 
 
 _TERMINAL_STATUSES = ("finalized", "cancelled")
+_INACTIVE_TABLE_ACTOR_ERRORS = (
+    TableEventActorUnauthorizedError,
+    TableEventSessionNotActiveError,
+    TableEventNotFoundError,
+)
 
 _ASSET_MIME_TO_SOURCE_KIND: dict[str, str] = {
     "application/pdf": "pdf",
@@ -121,11 +137,23 @@ class AdventureImportService:
         settings: Settings,
         room_asset_service: RoomAssetService,
         adventure_service: AdventureService,
+        table_event_service: TableEventService,
     ) -> None:
         self.repository = repository
         self.settings = settings
         self.room_asset_service = room_asset_service
         self.adventure_service = adventure_service
+        self.table_event_service = table_event_service
+
+    def _require_active_author(
+        self, connection: Connection, author: AdventureAuthor
+    ) -> None:
+        if isinstance(author, RoomAccessContext):
+            return
+        try:
+            require_active_table_actor(connection, author, self.table_event_service.repository)
+        except _INACTIVE_TABLE_ACTOR_ERRORS as exc:
+            raise AdventureImportForbiddenError(str(exc)) from exc
 
     def _import_in_room(
         self, connection: Connection, room_id: UUID, import_id: UUID
@@ -154,6 +182,7 @@ class AdventureImportService:
 
     def _add_source(
         self,
+        author: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -167,6 +196,7 @@ class AdventureImportService:
     ) -> AdventureImportSource:
         """Insert a source unless the import already holds one with the same sha256."""
         with self.repository.engine.begin() as connection:
+            self._require_active_author(connection, author)
             self._writable_import(connection, room_id, import_id, "add source")
             existing = self.repository.find_source_by_sha256_in_transaction(
                 connection, import_id, sha256
@@ -232,7 +262,7 @@ class AdventureImportService:
 
     def create_import(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         name: str,
     ) -> AdventureImport:
@@ -254,8 +284,10 @@ class AdventureImportService:
             created_at=now,
             updated_at=now,
         )
-        created = self.repository.create_import(stored)
-        return adventure_import_from_stored(created)
+        with self.repository.engine.begin() as connection:
+            self._require_active_author(connection, context)
+            created = self.repository.create_import_in_transaction(connection, stored)
+            return adventure_import_from_stored(created)
 
     def list_imports(
         self,
@@ -298,6 +330,7 @@ class AdventureImportService:
 
     def _add_text_or_content_source(
         self,
+        author: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -335,6 +368,7 @@ class AdventureImportService:
         else:
             sha256 = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
         return self._add_source(
+            author,
             room_id,
             import_id,
             source_kind=source_kind,
@@ -352,7 +386,7 @@ class AdventureImportService:
 
     def add_text_source(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -364,6 +398,7 @@ class AdventureImportService:
     ) -> AdventureImportSource:
         require_import_author(context, room_id)
         return self._add_text_or_content_source(
+            context,
             room_id,
             import_id,
             source_kind=source_kind,
@@ -376,7 +411,7 @@ class AdventureImportService:
 
     def add_asset_source(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -384,12 +419,20 @@ class AdventureImportService:
     ) -> AdventureImportSource:
         require_import_author(context, room_id)
         try:
-            asset, handle = self.room_asset_service.open_content(
-                context, room_id, asset_id
-            )
+            if isinstance(context, RoomAccessContext):
+                asset, handle = self.room_asset_service.open_content(
+                    context, room_id, asset_id
+                )
+            else:
+                asset, handle = self.room_asset_service.open_content_for_table_actor(
+                    context,
+                    self.table_event_service,
+                    room_id=room_id,
+                    asset_id=asset_id,
+                )
         except RoomAssetNotFoundError as exc:
             raise AdventureImportNotFoundError(message=str(exc)) from exc
-        except RoomAssetForbiddenError as exc:
+        except (RoomAssetForbiddenError, *_INACTIVE_TABLE_ACTOR_ERRORS) as exc:
             raise AdventureImportForbiddenError(str(exc)) from exc
 
         with handle:
@@ -410,6 +453,7 @@ class AdventureImportService:
 
         if source_kind in ("txt", "markdown"):
             return self._add_text_or_content_source(
+                context,
                 room_id,
                 import_id,
                 source_kind=cast(Literal["txt", "markdown"], source_kind),
@@ -446,6 +490,7 @@ class AdventureImportService:
         ).hexdigest()
 
         return self._add_source(
+            context,
             room_id,
             import_id,
             source_kind=source_kind,
@@ -465,7 +510,7 @@ class AdventureImportService:
 
     def add_url_source(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -495,6 +540,7 @@ class AdventureImportService:
             sha256 = hashlib.sha256(f"url:{url}".encode("utf-8")).hexdigest()
 
         return self._add_source(
+            context,
             room_id,
             import_id,
             source_kind="url",
@@ -571,12 +617,13 @@ class AdventureImportService:
 
     def get_draft(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
     ) -> AdventureImportDraft:
         require_import_author(context, room_id)
         with self.repository.engine.connect() as connection:
+            self._require_active_author(connection, context)
             import_record = self._import_in_room(connection, room_id, import_id)
             stored_draft = self.repository.get_draft_in_transaction(connection, import_id)
         if stored_draft is None:
@@ -591,7 +638,7 @@ class AdventureImportService:
 
     def update_draft(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -606,6 +653,7 @@ class AdventureImportService:
             raise AdventureImportValidationError(str(exc)) from exc
 
         with self.repository.engine.begin() as connection:
+            self._require_active_author(connection, context)
             import_record = self._writable_import(
                 connection, room_id, import_id, "update draft"
             )
@@ -676,7 +724,7 @@ class AdventureImportService:
 
     def _apply_draft_mutation(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         action: str,
@@ -688,6 +736,7 @@ class AdventureImportService:
     ) -> AdventureImportDraft:
         require_import_author(context, room_id)
         with self.repository.engine.begin() as connection:
+            self._require_active_author(connection, context)
             self._writable_import(connection, room_id, import_id, action)
             current_draft, current_warnings = self._load_draft_state(
                 connection, import_id, expected_revision
@@ -707,7 +756,7 @@ class AdventureImportService:
 
     def set_entry_review(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -746,7 +795,7 @@ class AdventureImportService:
 
     def resolve_import_warning(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -785,7 +834,7 @@ class AdventureImportService:
 
     def answer_import_question(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -818,7 +867,7 @@ class AdventureImportService:
 
     def finalize_adventure(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -828,6 +877,7 @@ class AdventureImportService:
     ) -> AdventureDefinition:
         require_import_author(context, room_id)
         with self.repository.engine.begin() as connection:
+            self._require_active_author(connection, context)
             stored_import = self._import_in_room(connection, room_id, import_id)
             # target_adventure_id is the idempotency key: retries return the same Adventure.
             if stored_import.target_adventure_id is not None:

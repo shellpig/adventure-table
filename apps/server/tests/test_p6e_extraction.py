@@ -29,7 +29,9 @@ from app.domain.adventure_imports.service import AdventureImportService
 from app.domain.room_assets.schemas import RoomAsset
 from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
+from app.domain.rooms.table_events import TableEventService
 from app.persistence.adventure_imports.repository import AdventureImportRepository
+from app.persistence.rooms.table_runtime import TableEventRepository
 from app.persistence.adventure_imports.tables import (
     adventure_import_drafts,
     adventure_import_sources,
@@ -222,7 +224,11 @@ def fix(tmp_path: Path) -> ExtractionFixture:
     adventure_repo = AdventureRepository(engine)
     adventure_service = AdventureService(adventure_repo, asset_repo)
     import_service = AdventureImportService(
-        import_repo, settings, asset_service, adventure_service
+        import_repo,
+        settings,
+        asset_service,
+        adventure_service,
+        TableEventService(TableEventRepository(engine)),
     )
 
     return ExtractionFixture(

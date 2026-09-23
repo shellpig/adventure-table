@@ -33,7 +33,9 @@ from app.domain.adventures.schemas import AdventureEntryAssetNotFoundError
 from app.domain.adventures.service import AdventureService
 from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
+from app.domain.rooms.table_events import TableEventService
 from app.persistence.adventure_imports.repository import AdventureImportRepository
+from app.persistence.rooms.table_runtime import TableEventRepository
 from app.persistence.adventure_imports.tables import (
     adventure_import_drafts,
     adventure_import_sources,
@@ -170,6 +172,7 @@ def fix(tmp_path: Path) -> FinalizeFixture:
         settings,
         asset_service,
         adventure_service,
+        TableEventService(TableEventRepository(engine)),
     )
 
     return FinalizeFixture(

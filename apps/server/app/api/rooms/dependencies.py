@@ -135,11 +135,13 @@ def get_adventure_import_service(request: Request) -> AdventureImportService:
     engine = get_database_engine(request)
     room_asset_service = get_room_asset_service(request)
     adventure_service = get_adventure_service(request)
+    table_event_service = get_table_event_service(request)
     service = AdventureImportService(
         AdventureImportRepository(engine),
         settings,
         room_asset_service,
         adventure_service,
+        table_event_service,
     )
     request.app.state.adventure_import_service = service
     return service

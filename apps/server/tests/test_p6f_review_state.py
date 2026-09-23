@@ -31,7 +31,9 @@ from app.domain.adventure_imports.service import AdventureImportService
 from app.domain.adventures.payloads import ScenePayload
 from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
+from app.domain.rooms.table_events import TableEventService
 from app.persistence.adventure_imports.repository import AdventureImportRepository
+from app.persistence.rooms.table_runtime import TableEventRepository
 from app.persistence.adventure_imports.tables import (
     adventure_import_drafts,
     adventure_import_sources,
@@ -127,7 +129,13 @@ def fixture(tmp_path: Path) -> ReviewStateFixture:
     )
     adventure_repo = AdventureRepository(engine)
     adventure_service = AdventureService(adventure_repo, asset_repo)
-    service = AdventureImportService(repo, settings, asset_service, adventure_service)
+    service = AdventureImportService(
+        repo,
+        settings,
+        asset_service,
+        adventure_service,
+        TableEventService(TableEventRepository(engine)),
+    )
 
     def _ctx(r_id: UUID, auth: RoomAccessAuthority, name: str) -> RoomAccessContext:
         return RoomAccessContext(room_id=r_id, access_session_id=uuid4(), authority=auth, display_name=name)

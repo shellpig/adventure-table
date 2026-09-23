@@ -28,8 +28,10 @@ from app.domain.adventures.payloads import ScenePayload
 from app.domain.adventures.service import AdventureService
 from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
+from app.domain.rooms.table_events import TableEventService
 from app.main import app
 from app.persistence.adventure_imports.repository import AdventureImportRepository
+from app.persistence.rooms.table_runtime import TableEventRepository
 from app.persistence.adventure_imports.tables import (
     adventure_import_drafts,
     adventure_import_sources,
@@ -116,6 +118,7 @@ def api_fixture(tmp_path: Path) -> Generator[ReviewApiFixture, None, None]:
         settings,
         room_asset_service,
         adventure_service,
+        TableEventService(TableEventRepository(engine)),
     )
 
     room_a_id = uuid4()
