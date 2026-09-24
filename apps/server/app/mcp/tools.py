@@ -351,8 +351,8 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
         "DM 裁定待處理的戰鬥裁定事項，決定是否成立、後果、狀態或後續擲骰請求。",
     ),
     "get_campaign_context": (
-        "Call once after get_session_context when you need the Campaign's scene, situation, party and world entry refs; then drill down with get_scene_context / search_campaign_context. Results are role-projected to what the caller may see.",
-        "在 get_session_context 之後呼叫一次，以取得 Campaign 的場景、局勢、隊伍與世界條目參照；後續再以 get_scene_context 或 search_campaign_context 深入查詢。回傳結果已依角色權限投影。",
+        "Call once after get_session_context when you need the Campaign's scene, situation, party and world entry refs; for the DM it also returns each attached Adventure's outline (entry ids/titles, no bodies) to open with get_adventure_entry. Then drill down with get_scene_context / search_campaign_context. Results are role-projected to what the caller may see.",
+        "在 get_session_context 之後呼叫一次，以取得 Campaign 的場景、局勢、隊伍與世界條目參照；DM 另會取得每個附加 Adventure 的目錄（條目 id／標題，不含內文），可用 get_adventure_entry 開啟。後續再以 get_scene_context 或 search_campaign_context 深入查詢。回傳結果已依角色權限投影。",
     ),
     "get_scene_context": (
         "Retrieve structured details for the current active scene or a specified scene reference; results are role-projected to what the caller may see.",
@@ -629,7 +629,7 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("combat_request_opportunity_attack", _desc("Request an opportunity attack trigger adjudication.", "申請借機攻擊觸發裁定。"), OpportunityAttackRequestInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_request_adjudication", _desc("Request a DM adjudication for a special tactical situation.", "針對特殊戰術情境向 DM 申請戰鬥裁定。"), SpecialAdjudicationRequestInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_resolve_adjudication", _desc("Resolve a pending combat adjudication ruling.", "裁定待處理的戰鬥裁定事項。"), CombatAdjudicationDecisionToolInput, frozenset({"dm"})),
-    MCPToolDefinition("get_campaign_context", _desc("Read Campaign overview including current scene, situation, party, and world entry references.", "讀取 Campaign 概覽，包含目前場景、局勢、隊伍與世界條目參照。"), _NoArguments, frozenset({"player", "dm"})),
+    MCPToolDefinition("get_campaign_context", _desc("Read Campaign overview including current scene, situation, party, world entry references, and (DM only) the attached Adventure outline.", "讀取 Campaign 概覽，包含目前場景、局勢、隊伍、世界條目參照，以及（僅 DM）附加 Adventure 的目錄。"), _NoArguments, frozenset({"player", "dm"})),
     MCPToolDefinition("get_scene_context", _desc("Read detailed scene context and related entries for the current scene or a specified scene reference.", "讀取目前場景或指定場景參照的詳細情境與關聯條目。"), SceneContextToolInput, frozenset({"player", "dm"})),
     MCPToolDefinition("search_campaign_context", _desc("Search Campaign world entries and visible lore by keyword query.", "以關鍵字搜尋 Campaign 世界條目與可見設定。"), SearchCampaignContextToolInput, frozenset({"player", "dm"})),
     MCPToolDefinition("get_world_entry", _desc("Read a specific Campaign runtime world entry by its ID.", "依 ID 讀取特定的 Campaign runtime 世界條目。"), WorldEntryToolInput, frozenset({"player", "dm"})),

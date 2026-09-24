@@ -182,6 +182,15 @@ def render_guide(locale: Locale | str) -> str:
             "DM 敘事只描述傷勢等級，不得說出敵人精確 HP。"
             f"每次結算後立即呼叫 {names.wait_event}，不要停在 host chat。"
         )
+        world = (
+            f"【Adventure 與世界狀態（DM）】\n{names.context} 的 campaign_context.attached_adventure_count 大於 0 表示 Campaign 附加了 Adventure。"
+            f"用 {names.campaign_context} 讀 attached_adventures[].outline：這是 Adventure 目錄（條目 id、kind、title、visibility，不含內文），"
+            f"再用 {names.adventure_entry} 依 id 讀需要的條目；dm_only 條目與秘密只給 DM，不得寫入 Stage 或公開 narration。"
+            f"current_scene.kind 為 none 時，從目錄挑開場 scene，以 {names.set_current_context}（expected_revision 為 current_context_revision）設定。"
+            f"跑團中世界狀態改變（門被打開、NPC 死亡、物品被取走、真相揭露）時要寫回："
+            f"改變既有 Adventure 條目的現況用 {names.set_override}，新增的事實、NPC、物品用 {names.create_world_entry}。"
+            "Adventure 原文（baseline）不會被改寫；下一場 Session 讀 context 時會看到寫回後的現況。"
+        )
         rules = f"【DM 守則】\n{role_rule(role='dm', locale=locale)}\n\n【Player 守則】\n{role_rule(role='player', locale=locale)}"
         unauth = "收到 401 ai_token_unauthorized 時停止並告知使用者，不要重試；token 用完或不再需要時請由人類撤銷。"
         tool_heading = "【工具表】"
@@ -220,6 +229,15 @@ def render_guide(locale: Locale | str) -> str:
             "DM narration describes injury level only and never an enemy's exact HP. "
             f"After each resolution, immediately call {names.wait_event} and never stop in host chat."
         )
+        world = (
+            f"[Adventure and world state (DM)]\nIn {names.context}, campaign_context.attached_adventure_count > 0 means the Campaign has an Adventure attached. "
+            f"Read attached_adventures[].outline with {names.campaign_context}: it is the Adventure's table of contents (entry id, kind, title, visibility; no bodies). "
+            f"Then read the entries you need by id with {names.adventure_entry}; dm_only entries and secrets are for the DM only and never go on the Stage or in public narration. "
+            f"When current_scene.kind is none, pick the opening scene from the outline and set it with {names.set_current_context} (expected_revision is current_context_revision). "
+            "When the world changes during play (a door is opened, an NPC dies, an item is taken, a truth is revealed), write it back: "
+            f"use {names.set_override} to change the current state of an existing Adventure entry, and {names.create_world_entry} for new facts, NPCs, or items. "
+            "The Adventure text (baseline) is never rewritten; the next Session reads the written-back current state from context."
+        )
         rules = f"[DM rules]\n{role_rule(role='dm', locale=locale)}\n\n[Player rules]\n{role_rule(role='player', locale=locale)}"
         unauth = "On 401 ai_token_unauthorized, stop and tell the user; do not retry. Ask the human to revoke the token when it is no longer needed."
         tool_heading = "[Tools]"
@@ -239,6 +257,7 @@ def render_guide(locale: Locale | str) -> str:
             _http_contract(locale),
             "\n".join(tool_lines),
             flow,
+            world,
             combat,
             wait_rule(locale),
             rules,

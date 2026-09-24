@@ -37,9 +37,27 @@ class ActiveCombatRef(StrictModel):
     current_turn_entry_id: UUID | None = None
 
 
+ADVENTURE_OUTLINE_MAX_ENTRIES = 100
+
+
+class AdventureOutlineEntryRef(StrictModel):
+    id: UUID
+    parent_entry_id: UUID | None = None
+    kind: AdventureEntryKind
+    title: str | None = None
+    visibility: AdventureEntryVisibility
+    has_override: bool
+
+
 class AttachedAdventureRef(StrictModel):
+    """DM-only table of contents: entry refs without bodies, so an AI DM can
+    discover what the Adventure contains and drill down with get_adventure_entry."""
+
     adventure_id: UUID
     name: str
+    summary: str | None = None
+    outline: tuple[AdventureOutlineEntryRef, ...] = ()
+    outline_truncated: bool = False
 
 
 class WorldEntryRef(StrictModel):
@@ -159,7 +177,9 @@ CampaignSearchResult = CampaignSearchDmResult | CampaignSearchPlayerResult
 
 
 __all__ = [
+    "ADVENTURE_OUTLINE_MAX_ENTRIES",
     "ActiveCombatRef",
+    "AdventureOutlineEntryRef",
     "AdventureSceneRef",
     "AttachedAdventureRef",
     "CampaignContextDmView",

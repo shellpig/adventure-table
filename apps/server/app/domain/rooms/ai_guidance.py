@@ -78,28 +78,47 @@ _INVOCATION_RULE_ZH = (
 )
 
 
+# Pre-session context carries no Campaign summary, so the DM is told up front
+# where the attached Adventure's table of contents appears once play starts.
+_PRE_SESSION_ADVENTURE_EN = (
+    "After start, get_campaign_context lists attached Adventures with their outline "
+    "(entry ids/titles); read entries with get_adventure_entry and set the opening scene "
+    "with world_set_current_context. "
+)
+_PRE_SESSION_ADVENTURE_ZH = (
+    "開始後 get_campaign_context 會列出附加 Adventure 與其目錄（條目 id／標題）；"
+    "用 get_adventure_entry 讀條目，並以 world_set_current_context 設定開場 scene。"
+)
+
+
 def _dm_loop(locale: str) -> str:
     if locale == "zh-TW":
         return (
             "DM 必跑流程（無需先讀 guide；每步都做，不得停在 host chat 等提示）："
-            "1) 讀 stage；stage_unset 為真（stage.text 空）時先呼叫 set_stage_text 建立目前場景。"
-            "2) 用 post_narration 對玩家敘事（約 100–250 字；秘密不進 Stage／公開 narration，暗骰 visibility=dm_only）。"
-            f"3) 立即呼叫 wait_for_event（timeout 最多 {WAIT_TIMEOUT_SECONDS} 秒）——不要停、不要回 host chat 等人再提示。"
-            "4) 收到 Player 的 dialogue／action 立即處理；需要檢定用 request_check；它會自動顯示擲骰提示，不要只為同一次要求另發 post_narration。"
-            "5) 場景實質變化時再用 set_stage_text 更新。"
-            "6) 處理完事件後再次 wait_for_event，持續循環。"
-            f"7) 只有連續 {WAIT_RETRY_COUNT} 次無事件（約 10 分鐘）、Session 結束或 host 明確喊停才停止。"
+            "1) campaign_context.attached_adventure_count>0 時：用 get_campaign_context 讀 attached_adventures[].outline（Adventure 目錄），"
+            "以 get_adventure_entry 讀需要的條目；current_scene.kind 為 none 時用 world_set_current_context 設定目前 scene。"
+            "2) 讀 stage；stage_unset 為真（stage.text 空）時先呼叫 set_stage_text 建立目前場景。"
+            "3) 用 post_narration 對玩家敘事（約 100–250 字；秘密不進 Stage／公開 narration，暗骰 visibility=dm_only）。"
+            f"4) 立即呼叫 wait_for_event（timeout 最多 {WAIT_TIMEOUT_SECONDS} 秒）——不要停、不要回 host chat 等人再提示。"
+            "5) 收到 Player 的 dialogue／action 立即處理；需要檢定用 request_check；它會自動顯示擲骰提示，不要只為同一次要求另發 post_narration。"
+            "6) 場景實質變化時更新 set_stage_text；世界狀態改變（門開、NPC 死亡）時用 world_set_override（Adventure 條目現況）"
+            "或 world_create_entry（新 fact／npc／item）寫回，下一場才會延續。"
+            "7) 處理完事件後再次 wait_for_event，持續循環。"
+            f"8) 只有連續 {WAIT_RETRY_COUNT} 次無事件（約 10 分鐘）、Session 結束或 host 明確喊停才停止。"
             "所有寫入帶 idempotency_key，代理 Player 說話／行動帶 subject_seat_id。"
         )
     return (
         "MANDATORY DM LOOP (run it without reading the guide; do every step, never stop in host chat waiting for a prompt): "
-        "1) Read stage; when stage_unset is true (stage.text empty) call set_stage_text first to establish the current scene. "
-        "2) Narrate to players with post_narration (~100-250 words; keep secrets off the Stage/public narration, use visibility=dm_only for hidden rolls). "
-        f"3) Immediately call wait_for_event (timeout up to {WAIT_TIMEOUT_SECONDS}s) — do NOT stop or wait for a human prompt. "
-        "4) On a Player dialogue/action resolve it; for a check use request_check, which automatically posts the roll prompt; do not call post_narration merely to ask for the same roll. "
-        "5) When the scene materially changes, update set_stage_text. "
-        "6) After handling an event call wait_for_event again and repeat. "
-        f"7) Stop only after {WAIT_RETRY_COUNT} consecutive empty waits (~10 min), Session end, or the host tells you to stop. "
+        "1) If campaign_context.attached_adventure_count>0, read the outline (attached_adventures[].outline) via get_campaign_context "
+        "and open entries with get_adventure_entry; if current_scene.kind is none, set it with world_set_current_context. "
+        "2) Read stage; when stage_unset is true (stage.text empty) call set_stage_text first to establish the current scene. "
+        "3) Narrate to players with post_narration (~100-250 words; keep secrets off the Stage/public narration, use visibility=dm_only for hidden rolls). "
+        f"4) Immediately call wait_for_event (timeout up to {WAIT_TIMEOUT_SECONDS}s) — do NOT stop or wait for a human prompt. "
+        "5) On a Player dialogue/action resolve it; for a check use request_check, which automatically posts the roll prompt; do not call post_narration merely to ask for the same roll. "
+        "6) When the scene materially changes, update set_stage_text; when the world changes (door opened, NPC died) write it back with "
+        "world_set_override (Adventure entry state) or world_create_entry (new fact/npc/item) so it persists. "
+        "7) After handling an event call wait_for_event again and repeat. "
+        f"8) Stop only after {WAIT_RETRY_COUNT} consecutive empty waits (~10 min), Session end, or the host tells you to stop. "
         "Put idempotency_key on every write, and subject_seat_id when speaking/acting for a Player."
     )
 
@@ -208,10 +227,13 @@ def render_briefing(*, role: str, mode: str) -> str:
         briefing = (
             "EN: This token already makes you the controller of this DM Seat — there is NO join step. "
             "Read this context, then call start_session. The tool list is the same before and after start; gameplay tools simply start accepting calls. "
+            f"{_PRE_SESSION_ADVENTURE_EN if role == 'dm' else ''}"
             "Right after start the Stage is empty, so your first action is set_stage_text, then post_narration. "
             "Full guide: GET /mcp/guide?locale=en.\n"
             "zh-TW：這個 token 已經讓你成為此 DM Seat 的 controller，沒有另外的入席步驟。先讀 context，再呼叫 start_session；"
-            "工具清單開始前後相同，開始後 gameplay 工具即可呼叫。開場後 Stage 是空的，第一步先 set_stage_text，再 post_narration。"
+            "工具清單開始前後相同，開始後 gameplay 工具即可呼叫。"
+            f"{_PRE_SESSION_ADVENTURE_ZH if role == 'dm' else ''}"
+            "開場後 Stage 是空的，第一步先 set_stage_text，再 post_narration。"
             "完整指引：GET /mcp/guide?locale=zh-TW。"
         )
     elif mode == "active_combat":

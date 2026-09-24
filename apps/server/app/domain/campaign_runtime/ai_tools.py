@@ -362,6 +362,12 @@ class CampaignContextAIToolApplicationService(CombatAIToolApplicationService):
         ]
         if actor.is_current_dm:
             next_context_tools.append("get_adventure_entry")
+            # The Adventure outline lives in get_campaign_context; point the DM
+            # there first, and to scene selection while no scene is current.
+            if view.attached_adventures:
+                next_context_tools.insert(0, "get_campaign_context")
+            if view.current_scene.kind == "none":
+                next_context_tools.append("world_set_current_context")
 
         context_data: dict[str, Any] = {
             "current_scene": view.current_scene.model_dump(mode="json"),
@@ -372,6 +378,14 @@ class CampaignContextAIToolApplicationService(CombatAIToolApplicationService):
         }
         if isinstance(view, CampaignContextDmView):
             context_data["attached_adventure_count"] = len(view.attached_adventures)
+            context_data["attached_adventures"] = [
+                {
+                    "adventure_id": str(ref.adventure_id),
+                    "name": ref.name,
+                    "outline_entry_count": len(ref.outline),
+                }
+                for ref in view.attached_adventures
+            ]
 
         return {"campaign_context": context_data}
 
