@@ -7,7 +7,7 @@
 - **Branch**：`codex/p6g-integration`，基於 P6-F 關門驗證 commit `73a2ee9a`。P6-F 尚待合併 `main`；本分支只建立依賴分支，不合併或改寫 `main`。
 - **最近已驗證 commit**：`e1627262`（G3b Player resume network test；指揮者完成跨 transport secrecy matrix、P5／Standalone 靜態邊界與 focused regression）。
 - **下一步**：G4 真實 ChatGPT Web connector world-state journey；需要合法 current AI DM controller grant 與 AT 實際 state／event 證據，不以 Human DM session 或模型自述代替。
-- **阻礙／未審**：無。G4 真實 ChatGPT Web gate 需要既有 M04 connector 可操作，不用 host chat 自述代替 AT state 證據。
+- **阻礙／未審**：G4 已在隔離 `server-e2e`／`adventure_table_e2e` 備好 Room、Adventure、Campaign、AI DM／Human Player Seat 與既有 ChatGPT Web `AT mcp` connector 入口；建立限時 AI DM Token 與 OAuth 貼入需使用者依 `computer-use` 認證／敏感存取規則親自確認和完成，已送出確認請求，不能以 host chat 自述代替 AT state 證據。G5 全套自動 gate 的 backend／frontend／compose 已先驗，完整 E2E 留 G4 後以免重置測試 Room。
 - **正式契約**：`docs/P6/實作規格.md`「P6-G」、`開發設計方針.md`「P6-G」、`測試指南.md`「P6-G／G.1～G.8」與 P6 共用風險／執行環境。
 - **共用驗證邊界**：E2E 只用獨立 `adventure_table_e2e` 與 Linux Docker Vite；每步沿現有 Room fixture／backend REST／Playwright helper，不建立 test-only production bypass。Browser journey 要斷言實際 AT UI／API state；Player 的秘密靠 server projection。
 
