@@ -45,6 +45,8 @@ from app.domain.campaign_runtime.ai_tools import (
     WorldSetOverrideToolInput,
     WorldUpdateEntryToolInput,
 )
+from app.domain.campaign_runtime.errors import CampaignRuntimeValidationError
+from app.domain.campaign_runtime.payloads import RuntimeEntryPayloadError
 from app.domain.combat.adjudication_service import (
     OpportunityAttackRequestInput,
     SpecialAdjudicationRequestInput,
@@ -536,6 +538,22 @@ def _desc(en: str, zh: str) -> str:
     return f"{en} / {zh}"
 
 
+# `state` is a kind-discriminated payload validated in the domain layer, so its
+# JSON Schema is an open object; spell the shapes out so an AI need not guess.
+_RUNTIME_STATE_SHAPES_EN = (
+    "state shapes by kind: item {kind:'item', holder_ref:{kind:'character'|'npc'|'scene', target_id:<id>} "
+    "or {kind:'party'|'unknown'}} (a character target_id is party[].active_character_id from get_campaign_context); "
+    "npc {kind:'npc', monster_template_ref?, monster_instance_id?}; other {kind:'other', data:{...}}; "
+    "scene/quest/fact/secret/hazard {kind:<kind>}."
+)
+_RUNTIME_STATE_SHAPES_ZH = (
+    "state 依 kind：item 為 {kind:'item', holder_ref:{kind:'character'|'npc'|'scene', target_id:<id>} "
+    "或 {kind:'party'|'unknown'}}（character 的 target_id 是 get_campaign_context 的 party[].active_character_id）；"
+    "npc 為 {kind:'npc', monster_template_ref?, monster_instance_id?}；other 為 {kind:'other', data:{...}}；"
+    "scene／quest／fact／secret／hazard 為 {kind:<kind>}。"
+)
+
+
 _TOOL_DEFINITIONS = (
     MCPToolDefinition(
         "get_session_context",
@@ -634,8 +652,8 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("search_campaign_context", _desc("Search Campaign world entries and visible lore by keyword query.", "以關鍵字搜尋 Campaign 世界條目與可見設定。"), SearchCampaignContextToolInput, frozenset({"player", "dm"})),
     MCPToolDefinition("get_world_entry", _desc("Read a specific Campaign runtime world entry by its ID.", "依 ID 讀取特定的 Campaign runtime 世界條目。"), WorldEntryToolInput, frozenset({"player", "dm"})),
     MCPToolDefinition("get_adventure_entry", _desc("Read an attached Adventure entry with runtime overrides (DM only).", "讀取已附加 Adventure 條目與 runtime override（僅限 DM）。"), AdventureEntryToolInput, frozenset({"dm"})),
-    MCPToolDefinition("world_create_entry", _desc("Create a runtime campaign world entry (DM only, active Session only). Requires an idempotency_key.", "建立 runtime 戰役世界條目（僅限 DM，需要 active Session）。需要 idempotency_key。"), WorldCreateEntryToolInput, frozenset({"dm"})),
-    MCPToolDefinition("world_update_entry", _desc("Update an existing runtime world entry (DM only, active Session only). Requires expected_revision from get_world_entry and an idempotency_key.", "更新現有的 runtime 世界條目（僅限 DM，需要 active Session）。需要來自 get_world_entry 的 expected_revision 與 idempotency_key。"), WorldUpdateEntryToolInput, frozenset({"dm"})),
+    MCPToolDefinition("world_create_entry", _desc(f"Create a runtime campaign world entry (DM only, active Session only). Requires an idempotency_key. {_RUNTIME_STATE_SHAPES_EN}", f"建立 runtime 戰役世界條目（僅限 DM，需要 active Session）。需要 idempotency_key。{_RUNTIME_STATE_SHAPES_ZH}"), WorldCreateEntryToolInput, frozenset({"dm"})),
+    MCPToolDefinition("world_update_entry", _desc(f"Update an existing runtime world entry (DM only, active Session only). Requires expected_revision from get_world_entry and an idempotency_key; patch.state replaces the whole state. {_RUNTIME_STATE_SHAPES_EN}", f"更新現有的 runtime 世界條目（僅限 DM，需要 active Session）。需要來自 get_world_entry 的 expected_revision 與 idempotency_key；patch.state 會整個取代 state。{_RUNTIME_STATE_SHAPES_ZH}"), WorldUpdateEntryToolInput, frozenset({"dm"})),
     MCPToolDefinition("world_archive_entry", _desc("Archive a runtime world entry from active play (DM only, active Session only). Requires expected_revision from get_world_entry and an idempotency_key.", "將 runtime 世界條目自遊戲中歸檔（僅限 DM，需要 active Session）。需要來自 get_world_entry 的 expected_revision 與 idempotency_key。"), WorldArchiveEntryToolInput, frozenset({"dm"})),
     MCPToolDefinition("world_set_override", _desc("Create or update an Adventure entry override (DM only, active Session only). Requires expected_revision from get_adventure_entry when updating, and an idempotency_key.", "建立或更新 Adventure 條目 override（僅限 DM，需要 active Session）。更新時需要來自 get_adventure_entry 的 expected_revision，並需要 idempotency_key。"), WorldSetOverrideToolInput, frozenset({"dm"})),
     MCPToolDefinition("world_clear_override", _desc("Clear an Adventure entry override back to baseline (DM only, active Session only). Requires expected_override_id, expected_revision from get_adventure_entry, and an idempotency_key.", "清除 Adventure 條目 override 還原至基準（僅限 DM，需要 active Session）。需要來自 get_adventure_entry 的 expected_override_id、expected_revision 與 idempotency_key。"), WorldClearOverrideToolInput, frozenset({"dm"})),
@@ -710,6 +728,22 @@ def structured_tool_error(
         "structuredContent": structured,
         "isError": True,
     }
+
+
+_ERROR_DETAIL_MAX_CHARS = 600
+
+
+def _validation_detail(exc: Exception) -> str | None:
+    """Compact `loc: msg` lines for a wrapped pydantic error, else the message."""
+    cause = exc.__cause__
+    if isinstance(cause, ValidationError):
+        text = "; ".join(
+            f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}"
+            for error in cause.errors()
+        )
+    else:
+        text = str(exc)
+    return text[:_ERROR_DETAIL_MAX_CHARS] or None
 
 
 async def call_tool(
@@ -953,6 +987,15 @@ async def call_tool(
             "unknown_check_ref",
             f"Unknown skill/ability reference: {exc}. Use a skill index like 'investigation' or an ability like 'dexterity'.",
             f"無法解析的技能／屬性參照：{exc}。技能用如 'investigation' 的名稱，屬性用如 'dexterity'。",
+        )
+    except (RuntimeEntryPayloadError, CampaignRuntimeValidationError) as exc:
+        # World write tools are DM-only; the detail names the caller's own bad
+        # field so an AI DM can correct and retry instead of guessing.
+        return structured_tool_error(
+            "invalid_arguments",
+            "Tool arguments are not valid for the current table state",
+            "工具 arguments 不符合目前桌面狀態",
+            detail=_validation_detail(exc) if auth.role == "dm" else None,
         )
     except ValueError:
         return structured_tool_error("invalid_arguments", "Tool arguments are not valid for the current table state", "工具 arguments 不符合目前桌面狀態")
