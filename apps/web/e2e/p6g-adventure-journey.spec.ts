@@ -1068,7 +1068,12 @@ test('P6-G G2b-3: Adventure-driven journey through exploration, combat, write-ba
     expect(dmNoteDef.visibility).toBe('dm_only')
 
     // Reconnect Player to Next Session & Assert Secrecy
+    const playerResumeResponse = player.page.waitForResponse((response) => (
+      response.request().method() === 'GET'
+      && new URL(response.url()).pathname.endsWith('/sessions/active')
+    ))
     await player.page.goto(nextSessionUrl)
+    const playerResumePayload = JSON.stringify(await (await playerResumeResponse).json())
     await expect(player.page.getByRole('heading', { name: 'Active Session', level: 1 })).toBeVisible()
 
     const playerNextStageImg = player.page.locator('.session-stage img')
@@ -1088,6 +1093,11 @@ test('P6-G G2b-3: Adventure-driven journey through exploration, combat, write-ba
     const nextJournal = player.page.locator('.session-journal-panel')
     await expect(nextJournal).toBeVisible()
     await expect(nextJournal).toContainText(FACT_BODY)
+    expect(playerResumePayload).not.toContain('Submerged Relic Vault')
+    expect(playerResumePayload).not.toContain('hidden pressure plate beneath the altar')
+    expect(playerResumePayload).not.toContain('DM Tactics and Traps')
+    expect(playerResumePayload).not.toContain('Triggering the false floor drops players into stagnant pool')
+    expect(playerResumePayload).not.toContain(OVERRIDE_NOTE)
     await expect(player.page.locator('.session-world-panel')).toHaveCount(0)
     await expect(player.page.getByRole('button', { name: 'Quick Add' })).toHaveCount(0)
     await expect(player.page.getByRole('button', { name: 'Start Combat' })).toHaveCount(0)
