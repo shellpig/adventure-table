@@ -38,7 +38,7 @@ const BASELINE_ROOM_SPECS = [
   'p2f-cross-campaign.spec.ts',
 ]
 // Restarts server-e2e mid-test, which would kill every other worker's run.
-const RESTART_SPECS = ['p4f-full-combat-journey.spec.ts']
+const RESTART_SPECS = ['p4f-full-combat-journey.spec.ts', 'p6g-restart-continuity.spec.ts']
 
 export default defineConfig<{}, { roomSource: RoomSource }>({
   testDir: './e2e',
