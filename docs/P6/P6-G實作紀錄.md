@@ -25,5 +25,6 @@
 | G3a | PostgreSQL restart／reconnect continuity | 完成 | G1b-2／G2b-3 | [G3a](P6-G_steps/G3a.md) |
 | G3b | Secrecy matrix 與 P5／Standalone 邊界 | 完成 | G2b-3 | [G3b](P6-G_steps/G3b.md) |
 | G4a | AI DM Adventure outline 與主持指引（P6-C 補缺） | 完成 | G4 第一次嘗試 | [G4a](P6-G_steps/G4a.md) |
-| G4 | 真實 ChatGPT Web connector world-state journey | 待做 | G2b-3、G4a | [G4](P6-G_steps/G4.md) |
+| G4b | AI DM 即興與桌面語言指引（G4 第二次嘗試補缺） | 完成 | G4a | [G4b](P6-G_steps/G4b.md) |
+| G4 | 真實 ChatGPT Web connector world-state journey | 進行中 | G2b-3、G4a、G4b | [G4](P6-G_steps/G4.md) |
 | G5 | 全套 regression、靜態審核與 P6 closeout | 待做 | G1～G4 | [G5](P6-G_steps/G5.md) |

@@ -83,43 +83,49 @@ _INVOCATION_RULE_ZH = (
 _PRE_SESSION_ADVENTURE_EN = (
     "After start, get_campaign_context lists attached Adventures with their outline "
     "(entry ids/titles); read entries with get_adventure_entry and set the opening scene "
-    "with world_set_current_context. "
+    "with world_set_current_context. Narrate, set the Stage and write back in the players' language. "
 )
 _PRE_SESSION_ADVENTURE_ZH = (
     "開始後 get_campaign_context 會列出附加 Adventure 與其目錄（條目 id／標題）；"
-    "用 get_adventure_entry 讀條目，並以 world_set_current_context 設定開場 scene。"
+    "用 get_adventure_entry 讀條目，並以 world_set_current_context 設定開場 scene。敘事、Stage 與寫回一律用玩家使用的語言。"
 )
 
 
+# An Adventure is a baseline, not a script (規格企劃 〇.7): when it offers no
+# path — e.g. a reveal condition with no matching encounter — the DM improvises
+# and persists what matters instead of stalling the table.
 def _dm_loop(locale: str) -> str:
     if locale == "zh-TW":
         return (
-            "DM 必跑流程（無需先讀 guide；每步都做，不得停在 host chat 等提示）："
+            "DM 必跑流程（每步都做，不得停在 host chat）："
             "1) campaign_context.attached_adventure_count>0 時：用 get_campaign_context 讀 attached_adventures[].outline（Adventure 目錄），"
             "以 get_adventure_entry 讀需要的條目；current_scene.kind 為 none 時用 world_set_current_context 設定目前 scene。"
-            "2) 讀 stage；stage_unset 為真（stage.text 空）時先呼叫 set_stage_text 建立目前場景。"
-            "3) 用 post_narration 對玩家敘事（約 100–250 字；秘密不進 Stage／公開 narration，暗骰 visibility=dm_only）。"
-            f"4) 立即呼叫 wait_for_event（timeout 最多 {WAIT_TIMEOUT_SECONDS} 秒）——不要停、不要回 host chat 等人再提示。"
-            "5) 收到 Player 的 dialogue／action 立即處理；需要檢定用 request_check；它會自動顯示擲骰提示，不要只為同一次要求另發 post_narration。"
-            "6) 場景實質變化時更新 set_stage_text；世界狀態改變（門開、NPC 死亡）時用 world_set_override（Adventure 條目現況）"
+            "Adventure 是底稿不是劇本：它沒給路徑時（例如有條件卻沒有對應遭遇）要像真人 DM 即興（新 NPC 用 world_create_entry、敵人用 Quick Combat）。"
+            "2) stage_unset 為真時先 set_stage_text。"
+            "3) 用 post_narration 敘事（約 100–250 字；秘密不進 Stage／公開 narration，暗骰 visibility=dm_only）。"
+            f"4) 立即呼叫 wait_for_event（timeout 最多 {WAIT_TIMEOUT_SECONDS} 秒）。"
+            "5) 處理 Player 的 dialogue／action；檢定用 request_check，它會自動顯示擲骰提示，不必另發 post_narration。"
+            "6) 場景變化時更新 set_stage_text；世界狀態改變（門開、NPC 死亡、重要的即興內容）用 world_set_override（Adventure 條目現況）"
             "或 world_create_entry（新 fact／npc／item）寫回，下一場才會延續。"
-            "7) 處理完事件後再次 wait_for_event，持續循環。"
-            f"8) 只有連續 {WAIT_RETRY_COUNT} 次無事件（約 10 分鐘）、Session 結束或 host 明確喊停才停止。"
-            "所有寫入帶 idempotency_key，代理 Player 說話／行動帶 subject_seat_id。"
+            "7) 每處理完一個事件再 wait_for_event。"
+            f"8) 只有連續 {WAIT_RETRY_COUNT} 次無事件（約 10 分鐘）、Session 結束或 host 喊停才停止。"
+            "敘事、Stage 與寫回一律用玩家使用的語言。寫入帶 idempotency_key，代理 Player 帶 subject_seat_id。"
         )
     return (
-        "MANDATORY DM LOOP (run it without reading the guide; do every step, never stop in host chat waiting for a prompt): "
-        "1) If campaign_context.attached_adventure_count>0, read the outline (attached_adventures[].outline) via get_campaign_context "
+        "MANDATORY DM LOOP (do every step; never stop in host chat): "
+        "1) If campaign_context.attached_adventure_count>0, read attached_adventures[].outline via get_campaign_context "
         "and open entries with get_adventure_entry; if current_scene.kind is none, set it with world_set_current_context. "
-        "2) Read stage; when stage_unset is true (stage.text empty) call set_stage_text first to establish the current scene. "
-        "3) Narrate to players with post_narration (~100-250 words; keep secrets off the Stage/public narration, use visibility=dm_only for hidden rolls). "
-        f"4) Immediately call wait_for_event (timeout up to {WAIT_TIMEOUT_SECONDS}s) — do NOT stop or wait for a human prompt. "
-        "5) On a Player dialogue/action resolve it; for a check use request_check, which automatically posts the roll prompt; do not call post_narration merely to ask for the same roll. "
-        "6) When the scene materially changes, update set_stage_text; when the world changes (door opened, NPC died) write it back with "
+        "The Adventure is a baseline, not a script: where it gives no path (e.g. a condition with no encounter), improvise like a human DM "
+        "(new NPC via world_create_entry, enemies via Quick Combat). "
+        "2) When stage_unset is true call set_stage_text first. "
+        "3) Narrate with post_narration (~100-250 words; secrets never on Stage/public narration; hidden rolls visibility=dm_only). "
+        f"4) Immediately call wait_for_event (timeout up to {WAIT_TIMEOUT_SECONDS}s). "
+        "5) Resolve each Player dialogue/action; for a check use request_check, which automatically posts the roll prompt (no extra post_narration). "
+        "6) Update set_stage_text when the scene changes; when the world changes (door opened, NPC died, key improvisation) write it back with "
         "world_set_override (Adventure entry state) or world_create_entry (new fact/npc/item) so it persists. "
-        "7) After handling an event call wait_for_event again and repeat. "
-        f"8) Stop only after {WAIT_RETRY_COUNT} consecutive empty waits (~10 min), Session end, or the host tells you to stop. "
-        "Put idempotency_key on every write, and subject_seat_id when speaking/acting for a Player."
+        "7) Call wait_for_event again after each event. "
+        f"8) Stop only after {WAIT_RETRY_COUNT} consecutive empty waits (~10 min), Session end, or host stop. "
+        "Narrate, set the Stage and write back in the players' language. idempotency_key on every write; subject_seat_id when acting for a Player."
     )
 
 

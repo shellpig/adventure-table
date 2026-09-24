@@ -182,6 +182,12 @@ def test_dm_briefings_teach_adventure_discovery_and_write_back() -> None:
         for tool in ("get_campaign_context", "get_adventure_entry", "world_set_current_context"):
             assert tool in text
 
+    # An Adventure is a baseline, not a script: a gap must not stall the table.
+    assert "improvise" in en and "Quick Combat" in en
+    assert "即興" in zh and "Quick Combat" in zh
+    assert "players' language" in en and "players' language" in pre_en
+    assert "玩家使用的語言" in zh and "玩家使用的語言" in pre_zh
+
     player_pre = render_briefing(role="player", mode="pre_session")
     assert "get_adventure_entry" not in player_pre
     assert "world_set_current_context" not in player_pre
@@ -197,3 +203,8 @@ def test_guide_has_adventure_world_section(locale: str, heading: str) -> None:
     for tool in ("get_session_context", *ADVENTURE_TOOLS):
         assert tool in section
     assert "attached_adventures[].outline" in section
+    improvise, language = (
+        ("即興", "玩家使用的語言") if locale == "zh-TW" else ("improvise", "language the players use")
+    )
+    assert improvise in section and "Quick Combat" in section
+    assert language in section
