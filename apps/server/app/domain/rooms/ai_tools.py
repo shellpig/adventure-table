@@ -34,7 +34,13 @@ from app.domain.rooms.table_character_state import (
     TableCharacterStatePatch,
     TableCharacterStateService,
 )
-from app.domain.rooms.table_events import TableActorContext, TableEventService
+from app.domain.rooms.ai_event_projection import compact_roll_resolved
+from app.domain.rooms.table_events import (
+    TableActorContext,
+    TableEvent,
+    TableEventPage,
+    TableEventService,
+)
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
 
 
@@ -477,16 +483,57 @@ class AIToolApplicationService:
             actor = await asyncio.to_thread(self._actor, token)
         else:
             actor = self._actor(token, authenticated=authenticated)
-        return (
-            await self.event_service.wait_after(
-                actor,
-                after_seq=input.after_seq,
-                limit=input.limit,
-                timeout=input.timeout,
-                max_timeout=WAIT_EVENT_MAX_TIMEOUT_SECONDS,
-                suppress_own=not input.include_own,
+        page = await self.event_service.wait_after(
+            actor,
+            after_seq=input.after_seq,
+            limit=input.limit,
+            timeout=input.timeout,
+            max_timeout=WAIT_EVENT_MAX_TIMEOUT_SECONDS,
+            suppress_own=not input.include_own,
+        )
+
+        return (await self._compact_roll_results(actor, page)).model_dump(mode="json")
+
+    async def _compact_roll_results(
+        self,
+        actor: TableActorContext,
+        page: TableEventPage,
+    ) -> TableEventPage:
+        """M06-C: wait_for_event returns roll.resolved without dice detail; one DC lookup per page."""
+
+        request_ids = {
+            UUID(str(event.payload["roll_request_id"]))
+            for event in page.events
+            if event.kind == "roll.resolved"
+        }
+        if not request_ids:
+            return page
+        outcome_inputs = await asyncio.to_thread(
+            self.roll_service.request_outcome_inputs,
+            actor,
+            request_ids,
+        )
+        events: list[TableEvent] = []
+        for event in page.events:
+            if event.kind != "roll.resolved":
+                events.append(event)
+                continue
+            dc, auto_fail = outcome_inputs.get(
+                UUID(str(event.payload["roll_request_id"])), (None, False)
             )
-        ).model_dump(mode="json")
+            events.append(
+                event.model_copy(
+                    update={
+                        "payload": compact_roll_resolved(
+                            event.payload,
+                            dc=dc,
+                            auto_fail=auto_fail,
+                            is_current_dm=actor.is_current_dm,
+                        )
+                    }
+                )
+            )
+        return page.model_copy(update={"events": events})
 
 
 __all__ = [

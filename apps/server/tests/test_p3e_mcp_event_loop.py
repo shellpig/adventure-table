@@ -93,6 +93,7 @@ class _LoopCheckingController:
 class _EmptyEventPage:
     def __init__(self, after_seq: int) -> None:
         self.after_seq = after_seq
+        self.events: list[object] = []
 
     def model_dump(self, *, mode: str) -> dict:
         del mode
