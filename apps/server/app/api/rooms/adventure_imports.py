@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Annotated, Literal, Union
 from uuid import UUID
 
@@ -46,6 +47,8 @@ from app.domain.room_assets.schemas import (
 )
 from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.schemas import RoomAccessContext, StrictModel
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/rooms/{room_id}/adventure-imports",
@@ -316,8 +319,16 @@ async def add_source(
             RoomAssetForbiddenError,
             RoomAssetInUseError,
             OSError,
-        ):
-            pass
+        ) as cleanup_exc:
+            # The original error is still raised below; this line is the only
+            # trace of the orphaned source_document asset left in the Room.
+            logger.warning(
+                "adventure import source cleanup failed for room=%s import_id=%s asset_id=%s: %s",
+                room_id,
+                import_id,
+                asset.id,
+                cleanup_exc,
+            )
         raise _map_adventure_import_error(exc) from exc
 
 
