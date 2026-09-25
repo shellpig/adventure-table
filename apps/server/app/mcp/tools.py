@@ -180,8 +180,13 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
         "已有 cursor 且要立即補抓之後的 durable 可見事件、不需等待時使用。",
     ),
     "wait_for_event": (
-        "Use after processing all known events to wait for new visible table activity; advance the cursor monotonically.",
-        "已處理完已知事件後等待新的可見桌面活動；cursor 只能往前。",
+        "Use after processing all known events to wait for new visible table activity; advance the cursor monotonically. "
+        "By default it skips the pure echo events of your own writes (their results already came back from the write tool) "
+        "and does not wake for them, but the returned cursor still moves past them. "
+        "Pass include_own=true, or call get_pending_events, when you need the complete event list.",
+        "已處理完已知事件後等待新的可見桌面活動；cursor 只能往前。"
+        "預設會略過你自己寫入產生的純 echo 事件（結果已由寫入工具回傳），也不會因它們醒來，但回傳的 cursor 仍會越過它們前進。"
+        "需要完整事件時傳 include_own=true，或改用 get_pending_events。",
     ),
     "combat_get_active": (
         "Use to read the current Campaign Quick Combat projection for this AI actor; visibility is enforced by the shared Combat service.",

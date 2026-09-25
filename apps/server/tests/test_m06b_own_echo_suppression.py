@@ -27,6 +27,8 @@ from app.domain.rooms.table_events import (
     TableEventVisibility,
 )
 from app.main import app
+from app.mcp.guide import render_guide
+from app.mcp.tools import tool_reference_rows
 from app.persistence.characters import characters
 from app.persistence.rooms.table_runtime import (
     TableEventRepository,
@@ -1007,3 +1009,21 @@ def test_player_visibility_unchanged_by_suppression() -> None:
     assert page_suppressed.events == page_unsuppressed.events
     assert page_suppressed.cursor == 2
     assert page_unsuppressed.cursor == 2
+
+
+def test_wait_for_event_texts_explain_own_echo_suppression() -> None:
+    description = next(
+        row["description"] for row in tool_reference_rows(None) if row["name"] == "wait_for_event"
+    )
+    english, _, chinese = description.partition(" / ")
+    for phrase in ("echo events of your own writes", "cursor still moves past", "include_own=true", "get_pending_events"):
+        assert phrase in english
+    for phrase in ("略過你自己寫入", "cursor 仍會越過", "include_own=true", "get_pending_events"):
+        assert phrase in chinese
+
+    guide_en = render_guide("en")
+    for phrase in ("echo events of your own writes", "cursor still advances", "include_own=true", "catch up with get_session_context / get_pending_events"):
+        assert phrase in guide_en
+    guide_zh = render_guide("zh-TW")
+    for phrase in ("略過你自己寫入", "cursor 仍會前進", "include_own=true", "先用 get_session_context／get_pending_events 補帳"):
+        assert phrase in guide_zh
