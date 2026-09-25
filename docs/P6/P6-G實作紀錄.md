@@ -5,9 +5,9 @@
 - **更新日期**：2026-09-25。
 - **目標與邊界**：用 P6-A～F 已交付的 production service 驗空 Campaign 與 Adventure-driven 兩條完整旅程、PostgreSQL restart／next Session continuity、Player secrecy、Quick Combat／Standalone 邊界、真實網頁版 AI agent connector，最後做 P6 closeout。G 不新增核心資料模型或新玩法；若發現 A～F 必要能力缺漏，回所屬 Subphase 補實作與證據。
 - **Branch**：`codex/p6g-integration`，基於 P6-F 關門驗證 commit `73a2ee9a`。P6-F 尚待合併 `main`；本分支只建立依賴分支，不合併或改寫 `main`。
-- **最近已驗證 commit**：G4d（見 git log；暫時性 MCP 失敗重試指引與 host 中立措辭，完整 backend 2545 passed／78 skipped、前端 775 passed＋build）。
-- **下一步**：G5 全套 regression、靜態審核與 P6 closeout。完整 Docker E2E 會 reset `adventure_table_e2e`，G4 證據已寫入 [G4](P6-G_steps/G4.md) 完成紀錄。
-- **阻礙／未審**：無。G4 已通過（ChatGPT Web 跑完 journey，跨 Session 讀回由 Claude 網頁版完成；使用者拍板 connector gate 不限 ChatGPT）。
+- **最近已驗證 commit**：G5a／G5 closeout（見 git log；全套 backend 2556 passed／78 skipped、frontend 775 passed＋build、全套 Docker E2E 各趟與 xge-less 子集通過，詳見 [closeout](P6-G_CLOSEOUT.md)）。
+- **下一步**：P6-G 關門驗證完成。待使用者授權後依序 `--no-ff` 合併 P6-F、P6-G 回 `main`；之後進 M06，再 P5。
+- **阻礙／未審**：無。
 - **正式契約**：`docs/P6/實作規格.md`「P6-G」、`開發設計方針.md`「P6-G」、`測試指南.md`「P6-G／G.1～G.8」與 P6 共用風險／執行環境。
 - **共用驗證邊界**：E2E 只用獨立 `adventure_table_e2e` 與 Linux Docker Vite；每步沿現有 Room fixture／backend REST／Playwright helper，不建立 test-only production bypass。Browser journey 要斷言實際 AT UI／API state；Player 的秘密靠 server projection。
 
@@ -29,4 +29,5 @@
 | G4c | World 寫入工具 state 形狀說明與錯誤 detail（G4 續跑補缺） | 完成 | G4b | [G4c](P6-G_steps/G4c.md) |
 | G4d | 暫時性 MCP 失敗重試指引與 host 中立措辭（G4 收尾補缺） | 完成 | G4c | [G4d](P6-G_steps/G4d.md) |
 | G4 | 真實網頁版 AI agent connector world-state journey | 完成 | G2b-3、G4a～G4d | [G4](P6-G_steps/G4.md) |
-| G5 | 全套 regression、靜態審核與 P6 closeout | 待做 | G1～G4 | [G5](P6-G_steps/G5.md) |
+| G5a | AI campaign context 自由文字與清單上限（G5 靜態審核補缺） | 完成 | G4 | [G5a](P6-G_steps/G5a.md) |
+| G5 | 全套 regression、靜態審核與 P6 closeout | 完成 | G1～G4、G5a | [G5](P6-G_steps/G5.md) |
