@@ -1,6 +1,6 @@
 # Adventure Table 專案簡報
 
-最後更新：2026-09-24
+最後更新：2026-09-25
 
 本檔是**當前進度、下一步、Roadmap 與索引的單一事實來源**，上限 **16,000 UTF-8 bytes**。歷史進度見 [ROADMAP_HISTORY](docs/ROADMAP_HISTORY.md)，未解問題見 [已知問題](已知問題.md)；不在本檔累加歷史過程、測試數字或決策全文。
 
@@ -17,9 +17,9 @@
 - **P4 已全部關門並合併回 `main`**：P4-F code `651a14d0`，merge `7ef02d13`；證據見 [P4-F closeout](docs/P4/P4-F_CLOSEOUT.md)。歷史步驟不再作開場必讀。
 - **M05（Session History Continuity & Owner End for AI DM Sessions）已於 2026-09-20 當日開工並全部關門、合併回 `main`**：M05-A Owner 可正常 End AI DM 的 Session；M05-B 聊天串向上翻頁越過 Session 邊界（專用 history read scope，不擴大 gameplay actor）。證據見 [M05-A closeout](docs/M05/M05-A_CLOSEOUT.md)、[M05-B closeout](docs/M05/M05-B_CLOSEOUT.md)；逐項表已移至 ROADMAP_HISTORY。
 - **P6 已全部關門並合併回 `main`（2026-09-25）**：P6-F merge `b06e2e21`、P6-G merge `8b47fb05`；證據見 [P6-F closeout](docs/P6/P6-F_CLOSEOUT.md)、[P6-G closeout](docs/P6/P6-G_CLOSEOUT.md)。P6-G 分支含 P6-F 全部 commit，G5 全套 Docker E2E 同時涵蓋兩者。逐項表已移至 ROADMAP_HISTORY。
-- **下一步**：開工 M06，再回 P5 Tactical Combat。
+- **下一步**：開工 P5-A（Tactical Combat）。
 - **M01／U01 保持 open，不阻塞 P Roadmap**。M01-A～O、U01-A 已關門；下一個未使用字母分別為 M01-P、U01-B，兩者下一項 scope 均未拍板，不建立虛構的待辦 Subphase。
-- **M06（AI Long-Session Hosting Efficiency）契約已定、待開工**：插在 P6 關門後、P5-A 前；M06-A `wait_for_event` 實際等待上限對齊 120 秒、M06-B 自己寫入的 echo 不喚醒 wait、M06-C MCP `roll.resolved` 精簡投影。
+- **M06（AI Long-Session Hosting Efficiency）已全部關門並合併回 `main`（2026-09-25）**：M06-A merge `a3af1eee`、M06-B merge `e2fa1d89`、M06-C merge `7df05b12`；證據見 [M06-A](docs/M06/M06-A_CLOSEOUT.md)、[M06-B](docs/M06/M06-B_CLOSEOUT.md)、[M06-C closeout](docs/M06/M06-C_CLOSEOUT.md)。逐項表已移至 ROADMAP_HISTORY。
 - **P5 已有完整契約但暫後移；P7～P8 保持大 Phase**，不提前拆分或設計 schema／API／module。
 
 ## Phase Roadmap
@@ -36,7 +36,7 @@ Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **
 | U01 | Test / Development Efficiency；長期 open |
 | P4 | Quick Combat；已關門 |
 | M05 | Session History Continuity／Owner End for AI DM；已關門（2026-09-20），插在 P4 與 P6-A 之間 |
-| M06 | AI Long-Session Hosting Efficiency；契約已定，插在 P6 關門後、P5-A 前 |
+| M06 | AI Long-Session Hosting Efficiency；已關門並合併（2026-09-25），插在 P6 與 P5-A 之間 |
 | P5 | Tactical Combat；契約已定案，依使用者決定延至 P6 與 M06 之後實作 |
 | P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；已關門並合併（2026-09-25） |
 | P7 | Timeline、Snapshot／Restore、broader Archive／Import／Export；角色 JSON 已由 M03 先行，不做 gameplay Undo |
@@ -55,7 +55,7 @@ Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **
 - **Human／AI 授權**：沿用 `TableActorContext` 與 `live_character_write_scope()`，不建 AI-specific bypass。每次 AI request 重驗 Seat current grant binding＋單調 `controller_epoch`；grant／Session／Participant generation 是 snapshot，不能取代 current authority；歷史 migration `0013`／`0014` 不改寫。見 [P3-D 設計](docs/P3/開發設計方針.md)。
 - **AI lifecycle／Take Back**：pre-session DM grant 有限 TTL、只可最小 context＋Start；Seat／Campaign／Room active Campaign／Owner revoke 等失效條件沿用 P3-D，Start 後綁 Session，End／Abandon 原子撤銷；M05-A 起 Owner 可對 **AI DM** 的 active Session 正常 End（Human DM 場仍只有 Abandon），不構成接管。Player self-service Take Back 只認原 `handoff_return_access_session_id`；遺失時由 Owner／DM reassignment＋revoke＋epoch＋audit，不能以姓名／新 access session 冒充同一人；DM controller 一場固定。見 [P3-D 規格](docs/P3/實作規格.md)。
 - **OAuth 不另造授權**：access／refresh 均重驗同一 P3-D authority；一張 grant 一個 active token family，`client_id` 不是 Seat 身分，OAuth 不寫 Seat／Session／Participant。Guide／briefing 只講操作守則，Adventure context 留 P6。見 [M04 設計](docs/M04/開發設計方針.md)。
-- **事件與 wait**：durable event＋DB cursor 是真值；HTTP wait async，await 不持有 DB connection／transaction、不長占 sync worker，wake／timeout 後重查 cursor，保留 waiter 不餓死一般 request 的證據。P3 event 不等於 P7 跨 Session Timeline／Snapshot。見 [P3 設計](docs/P3/開發設計方針.md)。
+- **事件與 wait**：durable event＋DB cursor 是真值；HTTP wait async，await 不持有 DB connection／transaction、不長占 sync worker，wake／timeout 後重查 cursor，保留 waiter 不餓死一般 request 的證據。P3 event 不等於 P7 跨 Session Timeline／Snapshot。見 [P3 設計](docs/P3/開發設計方針.md)。M06 起事件列蓋寫入者 AI grant／generation（不進公開 DTO）；MCP `wait_for_event` 預設略過呼叫者自己的白名單 echo（cursor 照走）並精簡 `roll.resolved`，`get_pending_events`／Human 路徑維持完整；新事件種類預設照送，要加入白名單須補前提測試。見 [M06 設計](docs/M06/開發設計方針.md)。
 - **Combat／Standalone**：Combat 以 Campaign 為 root，可跨 Session End／Abandon 延續；entry identity 是 Character／Monster Instance。Monster Template 可共用於 Standalone，Instance／Combat schema 不可。Monster 長文 `desc` 首次 expose 時須補齊 zh-TW；來源與 count 以 P4-A pinned manifest 為準。見 [P4 設計](docs/P4/開發設計方針.md)。
 - **Combat 共用寫入邊界**：active Combat HP 只經 semantic damage／healing，Player raw patch 被拒、DM absolute set 要 `correction_reason`；Concentration／Exhaustion／Death Save／Temporary Effects 住 shared Character Current State。Spell cast 沿用 `authorize_character_spell` → `spend_character_spell`，Character／Monster casting source 都合法；Concentration CON save 由 `CombatConcentrationRepository.complete_check` 消費。敵人精確 HP／AC／hidden resources 不送 Player。Combat mutation 須呼叫 `TableEventService.notifier`，前端把帶 `combat_id` 的 `roll.*` 視為 Combat 變更。見 P4-C～E 正式契約。
 - **M05 歷史讀取邊界**：已結束 Session 的事件唯讀；讀者 scope 以目前 Human 控制的 Campaign Seat 為單位，DM 層跟該場 `dm_seat_id`；舊事件只進聊天串、不進本場 seq-based 投影；MCP `get_session_context` 與 Resume 仍只含本場。P7 Timeline 疊在 M05-B 的讀取入口上。見 [M05 設計](docs/M05/開發設計方針.md)。
@@ -67,7 +67,7 @@ Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **
 
 完整索引見 [已知問題](已知問題.md#跨-phase-限制與驗收索引)。未解項目不因 Phase 關門而完成；舊驗收缺口先核對後續 closeout，不直接當成目前缺陷。
 
-- **P6 已知限制**：KI-ENV-002（Windows Playwright worker 崩潰）、KI-P1D-001 重現、G4 AI 主持觀察與 AI context 排序，見 [P6-G closeout](docs/P6/P6-G_CLOSEOUT.md)「已知限制」；AI 長時間主持成本由 M06 處理。P6 不放寬 P3-D pre-session AI grant。
+- **P6 已知限制**：KI-ENV-002（Windows Playwright worker 崩潰）、KI-P1D-001 重現、G4 AI 主持觀察與 AI context 排序，見 [P6-G closeout](docs/P6/P6-G_CLOSEOUT.md)「已知限制」；AI 長時間主持成本已由 M06 處理（人工觀察驗收尚未做，見 M06-C closeout）。P6 不放寬 P3-D pre-session AI grant。
 - **後續 P5 接手**：Quick range 裁定、Dodge「能看見攻擊者」、frightened 來源可見性，依 [P4-F closeout](docs/P4/P4-F_CLOSEOUT.md) 已知限制與 P5 契約處理。
 - **後續 M、尚未拍板**：spell save 的 conditions pipeline、`get_resolution_event` O(n)、Monster `desc` 尚未 expose、死亡／倒地不起標籤；另有 Character 抗性缺 machine-readable 欄位、`is_hostile` 仍由 subject kind 決定等既有邊界。見 P4 各 Subphase closeout／設計，不自行擴入 P5。
 - **延期驗收／內容**：M04-C Bearer／純 HTTP／非目標平台相容記錄、M01-O deferred Feats，見限制索引。

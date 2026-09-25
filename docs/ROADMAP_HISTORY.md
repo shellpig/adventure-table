@@ -141,6 +141,14 @@
 | **M05-A — Owner End for AI DM Sessions** | ✅ | `SessionService.end_session` 對 `dm_controller_kind == "ai"` 的 active Session 開 Owner Room-management 分支（與 Owner Abandon 同 `_finalize_with_event`，撤 AI grant、Seat 回 none＋epoch+1、釋放 lease）；Human DM 場 Owner 仍只能 Abandon；Session 頁 `sessionEndControls()` 與雙語 copy；`m05-session-history.spec.ts` A 段；[closeout](../docs/M05/M05-A_CLOSEOUT.md)，merge `7b913d3d` |
 | **M05-B — Cross-Session Chat History Paging** | ✅ | 專用 `HistoricalSessionReadScope`（Seat 為單位、DM 層跟 `dm_seat_id`、不看 participants），`resolve_human_actor`／`actor_binding_is_current`／gameplay route 零改動；`GET /sessions/{id}/previous`＋既有 `/events/history` 對非 active Session 分流；前端 `SessionHistoryChain`／`nextHistoryRequest` 一步一頁、分隔線、已到最前，舊事件不進本場投影；Resume／MCP 仍單場；[closeout](../docs/M05/M05-B_CLOSEOUT.md) |
 
+### M06
+
+| Subphase | 狀態 | 重點 |
+|---|---|---|
+| **M06-A — wait_for_event Timeout Cap Alignment** | ✅ 2026-09-25 | `wait_after(max_timeout=)`，MCP 傳 `WAIT_EVENT_MAX_TIMEOUT_SECONDS`（120），Human `/events/wait` 仍 60；[closeout](../docs/M06/M06-A_CLOSEOUT.md)，merge `a3af1eee` |
+| **M06-B — Own-Write Echo Suppression in wait_for_event** | ✅ 2026-09-25 | migration `0034_m06b_event_actor_stamp`（事件蓋 AI grant／generation）、`OWN_ECHO_EVENT_KINDS`、`suppress_own` deadline 迴圈、`include_own`、雙語 tool description／guide；production facade 經 HTTP `/mcp` 端到端測試；[closeout](../docs/M06/M06-B_CLOSEOUT.md)，merge `e2fa1d89` |
+| **M06-C — Compact Roll Result Projection for MCP wait** | ✅ 2026-09-25 | `wait_for_event` 的 `roll.resolved` 去骰子細節、加 `natural`、保留 Combat 鍵，DM 另得 `dc`／`outcome`（一頁一次查詢）；全套 Docker E2E 136 passed／0 failed；[closeout](../docs/M06/M06-C_CLOSEOUT.md)，merge `7df05b12`。**M06 Phase 至此全部關門** |
+
 ### P6
 
 
@@ -177,3 +185,4 @@
 | P4 | [規格](P4/實作規格.md) | [設計](P4/開發設計方針.md) | [測試](P4/測試指南.md) |
 | M05 | [規格](M05/實作規格.md) | [設計](M05/開發設計方針.md) | [測試](M05/測試指南.md) |
 | P6 | [規格](P6/實作規格.md) | [設計](P6/開發設計方針.md) | [測試](P6/測試指南.md) |
+| M06 | [規格](M06/實作規格.md) | [設計](M06/開發設計方針.md) | [測試](M06/測試指南.md) |
