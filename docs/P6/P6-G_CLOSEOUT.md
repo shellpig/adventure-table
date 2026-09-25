@@ -1,6 +1,6 @@
 # P6-G — Full P6 Integration & Closeout · Closeout
 
-日期：2026-09-25　Branch：`codex/p6g-integration`（依賴 P6-F `feat/p6f-import-review-finalize@73a2ee9a`）　狀態：**關門驗證通過，P6 Phase 全部 Subphase 完成；待依序合併 P6-F、P6-G 回 `main`**
+日期：2026-09-25　Branch：`codex/p6g-integration`（依賴 P6-F `feat/p6f-import-review-finalize@73a2ee9a`）　狀態：**關門並合併回 `main`（P6-F merge `b06e2e21`、P6-G merge `8b47fb05`）；P6 Phase 全部完成**
 
 步驟與詳細證據見 [P6-G 實作紀錄](P6-G實作紀錄.md) 與 `P6-G_steps/`。
 
@@ -60,4 +60,4 @@
 
 ## 合併順序
 
-P6-F closeout 只跑了相關 spec；P6-G 分支包含 P6-F 全部 commit，本 closeout 的全套 E2E 同時涵蓋兩者。合併時先 `--no-ff` 合 P6-F、再合 P6-G，合併需使用者另行授權。
+P6-F closeout 只跑了相關 spec；P6-G 分支包含 P6-F 全部 commit，本 closeout 的全套 E2E 同時涵蓋兩者。2026-09-25 依序 `--no-ff` 合併：P6-F `b06e2e21`、P6-G `8b47fb05`；合併後 `main` 的內容與已驗證的 `codex/p6g-integration` 完全相同（`git diff` 為空），驗證證據直接適用。

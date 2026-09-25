@@ -16,8 +16,8 @@
 
 - **P4 已全部關門並合併回 `main`**：P4-F code `651a14d0`，merge `7ef02d13`；證據見 [P4-F closeout](docs/P4/P4-F_CLOSEOUT.md)。歷史步驟不再作開場必讀。
 - **M05（Session History Continuity & Owner End for AI DM Sessions）已於 2026-09-20 當日開工並全部關門、合併回 `main`**：M05-A Owner 可正常 End AI DM 的 Session；M05-B 聊天串向上翻頁越過 Session 邊界（專用 history read scope，不擴大 gameplay actor）。證據見 [M05-A closeout](docs/M05/M05-A_CLOSEOUT.md)、[M05-B closeout](docs/M05/M05-B_CLOSEOUT.md)；逐項表已移至 ROADMAP_HISTORY。
-- **P6 全部 Subphase 關門驗證通過（2026-09-25）**：P6-A～E 已合併回 `main`；P6-F（[closeout](docs/P6/P6-F_CLOSEOUT.md)）與 P6-G（[closeout](docs/P6/P6-G_CLOSEOUT.md)）待依序 `--no-ff` 合併，合併需另行授權。P6-G 分支含 P6-F 全部 commit，G5 全套 Docker E2E 同時涵蓋兩者。逐項表已移至 ROADMAP_HISTORY。
-- **下一步**：合併 P6-F → P6-G 回 `main`，接著開工 M06，再回 P5 Tactical Combat。
+- **P6 已全部關門並合併回 `main`（2026-09-25）**：P6-F merge `b06e2e21`、P6-G merge `8b47fb05`；證據見 [P6-F closeout](docs/P6/P6-F_CLOSEOUT.md)、[P6-G closeout](docs/P6/P6-G_CLOSEOUT.md)。P6-G 分支含 P6-F 全部 commit，G5 全套 Docker E2E 同時涵蓋兩者。逐項表已移至 ROADMAP_HISTORY。
+- **下一步**：開工 M06，再回 P5 Tactical Combat。
 - **M01／U01 保持 open，不阻塞 P Roadmap**。M01-A～O、U01-A 已關門；下一個未使用字母分別為 M01-P、U01-B，兩者下一項 scope 均未拍板，不建立虛構的待辦 Subphase。
 - **M06（AI Long-Session Hosting Efficiency）契約已定、待開工**：插在 P6 關門後、P5-A 前；M06-A `wait_for_event` 實際等待上限對齊 120 秒、M06-B 自己寫入的 echo 不喚醒 wait、M06-C MCP `roll.resolved` 精簡投影。
 - **P5 已有完整契約但暫後移；P7～P8 保持大 Phase**，不提前拆分或設計 schema／API／module。
@@ -38,7 +38,7 @@ Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **
 | M05 | Session History Continuity／Owner End for AI DM；已關門（2026-09-20），插在 P4 與 P6-A 之間 |
 | M06 | AI Long-Session Hosting Efficiency；契約已定，插在 P6 關門後、P5-A 前 |
 | P5 | Tactical Combat；契約已定案，依使用者決定延至 P6 與 M06 之後實作 |
-| P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；關門驗證通過（2026-09-25），待合併 P6-F → P6-G |
+| P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；已關門並合併（2026-09-25） |
 | P7 | Timeline、Snapshot／Restore、broader Archive／Import／Export；角色 JSON 已由 M03 先行，不做 gameplay Undo |
 | P8 | 全流程 QA／Polish、權限、reconnect、效能、Responsive UI |
 

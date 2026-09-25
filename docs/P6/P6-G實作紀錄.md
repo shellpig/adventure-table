@@ -6,7 +6,7 @@
 - **目標與邊界**：用 P6-A～F 已交付的 production service 驗空 Campaign 與 Adventure-driven 兩條完整旅程、PostgreSQL restart／next Session continuity、Player secrecy、Quick Combat／Standalone 邊界、真實網頁版 AI agent connector，最後做 P6 closeout。G 不新增核心資料模型或新玩法；若發現 A～F 必要能力缺漏，回所屬 Subphase 補實作與證據。
 - **Branch**：`codex/p6g-integration`，基於 P6-F 關門驗證 commit `73a2ee9a`。P6-F 尚待合併 `main`；本分支只建立依賴分支，不合併或改寫 `main`。
 - **最近已驗證 commit**：G5a／G5 closeout（見 git log；全套 backend 2556 passed／78 skipped、frontend 775 passed＋build、全套 Docker E2E 各趟與 xge-less 子集通過，詳見 [closeout](P6-G_CLOSEOUT.md)）。
-- **下一步**：P6-G 關門驗證完成。待使用者授權後依序 `--no-ff` 合併 P6-F、P6-G 回 `main`；之後進 M06，再 P5。
+- **下一步**：P6-G 已關門並合併（P6-F `b06e2e21`、P6-G `8b47fb05`）；之後進 M06，再 P5。
 - **阻礙／未審**：無。
 - **正式契約**：`docs/P6/實作規格.md`「P6-G」、`開發設計方針.md`「P6-G」、`測試指南.md`「P6-G／G.1～G.8」與 P6 共用風險／執行環境。
 - **共用驗證邊界**：E2E 只用獨立 `adventure_table_e2e` 與 Linux Docker Vite；每步沿現有 Room fixture／backend REST／Playwright helper，不建立 test-only production bypass。Browser journey 要斷言實際 AT UI／API state；Player 的秘密靠 server projection。

@@ -143,7 +143,6 @@
 
 ### P6
 
-✅＝已關門並合併；☑️＝關門驗證通過、待合併。
 
 | Subphase | 狀態 | 重點 |
 |---|---|---|
@@ -152,8 +151,8 @@
 | **P6-C — AI Context & Retrieval** | ✅ 2026-09-21 | role-scoped bounded campaign／scene context、search、五個 MCP read tool；[closeout](../docs/P6/P6-C_CLOSEOUT.md)，merge `10565217` |
 | **P6-D — AI DM Write-back & Exploration Integration** | ✅ 2026-09-22 | AI DM world write-back、idempotent world action、Stage bridge、`needs_review`；[closeout](../docs/P6/P6-D_CLOSEOUT.md)，merge `4c4943f5` |
 | **P6-E — Adventure Source & Import Draft** | ✅ 2026-09-22 | Import Source（text／Markdown／PDF／DOCX）與 Import Draft、provenance；[closeout](../docs/P6/P6-E_CLOSEOUT.md)，merge `6028d6c9` |
-| **P6-F — Import Review, Finalization & Importer MCP** | ☑️ 2026-09-23，待合併 | Review／Finalize 建新 Adventure baseline、idempotent finalize、六個 Importer MCP tool；[closeout](../docs/P6/P6-F_CLOSEOUT.md) |
-| **P6-G — Full P6 Integration & Closeout** | ☑️ 2026-09-25，待合併 | empty Campaign／Adventure-driven browser journey、真 PostgreSQL restart、secrecy matrix、真實網頁版 AI agent gate（ChatGPT Web＋Claude 跨 Session 讀回）、G4a～G4d AI 指引補缺、G5a AI context 上限；全套 backend 2556 passed；[closeout](../docs/P6/P6-G_CLOSEOUT.md) |
+| **P6-F — Import Review, Finalization & Importer MCP** | ✅ 2026-09-23 | Review／Finalize 建新 Adventure baseline、idempotent finalize、六個 Importer MCP tool；[closeout](../docs/P6/P6-F_CLOSEOUT.md)，merge `b06e2e21` |
+| **P6-G — Full P6 Integration & Closeout** | ✅ 2026-09-25 | empty Campaign／Adventure-driven browser journey、真 PostgreSQL restart、secrecy matrix、真實網頁版 AI agent gate（ChatGPT Web＋Claude 跨 Session 讀回）、G4a～G4d AI 指引補缺、G5a AI context 上限；全套 backend 2556 passed；[closeout](../docs/P6/P6-G_CLOSEOUT.md)，merge `8b47fb05`。**P6 Phase 至此全部關門** |
 
 ## 已解限制的歷史記錄
 
