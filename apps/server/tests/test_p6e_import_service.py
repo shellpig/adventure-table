@@ -39,16 +39,26 @@ from app.persistence.adventure_imports.tables import (
     adventure_import_sources,
     adventure_imports,
 )
-from app.persistence.adventures.tables import adventure_definitions
+from app.domain.adventures.service import AdventureService
+from app.domain.rooms.table_events import TableEventService
+from app.persistence.adventures.repository import AdventureRepository
+from app.persistence.adventures.tables import (
+    adventure_definitions,
+    adventure_entries,
+    adventure_entry_assets,
+)
 from app.persistence.room_assets.repository import RoomAssetRepository
 from app.persistence.room_assets.storage import FilesystemAssetStorage
 from app.persistence.room_assets.tables import room_assets
+from app.persistence.rooms.table_runtime import TableEventRepository
 from app.persistence.rooms.tables import campaigns, rooms
 
 TABLES_TO_CREATE = [
     rooms,
     campaigns,
     adventure_definitions,
+    adventure_entries,
+    adventure_entry_assets,
     room_assets,
     adventure_imports,
     adventure_import_sources,
@@ -63,6 +73,7 @@ class ImportServiceFixture:
     service: AdventureImportService
     settings: Settings
     asset_service: RoomAssetService
+    adventure_service: AdventureService
     db_path: Path
     room_a_id: UUID
     room_b_id: UUID
@@ -134,7 +145,15 @@ def fixture(tmp_path: Path) -> ImportServiceFixture:
         max_image_bytes=settings.asset_max_image_bytes,
         max_source_document_bytes=settings.asset_max_source_document_bytes,
     )
-    service = AdventureImportService(repo, settings, asset_service)
+    adventure_repo = AdventureRepository(engine)
+    adventure_service = AdventureService(adventure_repo, asset_repo)
+    service = AdventureImportService(
+        repo,
+        settings,
+        asset_service,
+        adventure_service,
+        TableEventService(TableEventRepository(engine)),
+    )
 
     return ImportServiceFixture(
         engine=engine,
@@ -142,6 +161,7 @@ def fixture(tmp_path: Path) -> ImportServiceFixture:
         service=service,
         settings=settings,
         asset_service=asset_service,
+        adventure_service=adventure_service,
         db_path=db_path,
         room_a_id=room_a_id,
         room_b_id=room_b_id,
@@ -370,7 +390,11 @@ def test_text_source_oversize_and_undecodable(fixture: ImportServiceFixture) -> 
     imp = fixture.service.create_import(fixture.owner_a, fixture.room_a_id, "Limit Import")
     custom_settings = Settings(import_source_max_bytes=50)
     service_small = AdventureImportService(
-        fixture.repo, custom_settings, fixture.asset_service
+        fixture.repo,
+        custom_settings,
+        fixture.asset_service,
+        fixture.adventure_service,
+        TableEventService(TableEventRepository(fixture.engine)),
     )
 
     before_counts = _count_rows(fixture.engine)
@@ -670,14 +694,23 @@ def test_draft_lifecycle_revisions_and_restart_stability(
     # E.4: Restart stability — fresh repository and service on the same SQLite file
     fresh_engine = _create_sqlite_engine(fixture.db_path)
     fresh_repo = AdventureImportRepository(fresh_engine)
+    fresh_asset_repo = RoomAssetRepository(fresh_engine)
     fresh_asset_service = RoomAssetService(
-        RoomAssetRepository(fresh_engine),
+        fresh_asset_repo,
         FilesystemAssetStorage(fixture.db_path.parent / "assets"),
         max_image_bytes=fixture.settings.asset_max_image_bytes,
         max_source_document_bytes=fixture.settings.asset_max_source_document_bytes,
     )
+    fresh_adventure_service = AdventureService(
+        AdventureRepository(fresh_engine),
+        fresh_asset_repo,
+    )
     fresh_service = AdventureImportService(
-        fresh_repo, fixture.settings, fresh_asset_service
+        fresh_repo,
+        fixture.settings,
+        fresh_asset_service,
+        fresh_adventure_service,
+        TableEventService(TableEventRepository(fresh_engine)),
     )
 
     reopened_draft = fresh_service.get_draft(fixture.owner_a, fixture.room_a_id, imp.id)

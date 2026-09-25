@@ -2,7 +2,9 @@ import {
   AdventureImportApiError,
   type DraftProvenance,
   type ImportStatus,
+  type ReviewStatus,
   type SourceKind,
+  type WarningLevel,
 } from '../../api/adventureImports'
 import { RoomAssetApiError } from '../../api/roomAssets'
 import type { Locale } from '../../i18n/locale'
@@ -94,12 +96,62 @@ const COPY = {
     staleDraftConflict:
       'Draft revision conflict. Someone else modified this draft, or local state is stale. Please reload.',
     reloadDraftAction: 'Reload Draft',
+
+    // P6-F Review status
+    reviewStatusLabel: 'Review status',
+    reviewStatusPending: 'Pending',
+    reviewStatusAccepted: 'Accepted',
+    reviewStatusIgnored: 'Ignored',
+    reviewStatusUncertain: 'Uncertain',
+
+    // P6-F Review actions
+    acceptEntryAction: 'Accept',
+    ignoreEntryAction: 'Ignore',
+    markUncertainAction: 'Mark uncertain',
+    viewSourceAction: 'View source',
+
+    // P6-F Warnings
+    warningLevelInfo: 'Info',
+    warningLevelWarning: 'Warning',
+    warningLevelBlocking: 'Blocking',
+    warningsInfoTitle: 'Information',
+    warningsWarningTitle: 'Warnings',
+    warningsBlockingTitle: 'Blocking Warnings',
+    resolvedBadge: 'Resolved',
+    warningCodeLabel: 'Code',
+    warningEntryLabel: 'Entry',
+    resolutionLabel: 'Resolution',
+    resolutionPlaceholder: 'Resolution notes (optional)',
+    resolveWarningAction: 'Resolve',
+    blockingWarningsNotice: 'Unresolved blocking warnings must be resolved before finalizing.',
+
+    // P6-F Questions
+    questionsTitle: 'Questions',
+    noQuestions: 'No questions.',
+    answeredBadge: 'Answered',
+    answerLabel: 'Answer',
+    questionAnswerPlaceholder: 'Enter answer…',
+    answerQuestionAction: 'Submit Answer',
+
+    // P6-F Finalize
+    finalizeSectionTitle: 'Finalize Adventure',
+    finalizeNameLabel: 'Adventure Name',
+    finalizeSummaryLabel: 'Summary (optional)',
+    finalizeAdventureAction: 'Finalize',
+    finalizeBlockedReason: 'Cannot finalize: unresolved blocking warnings exist.',
+    importAlreadyFinalized: 'This import has been finalized.',
+    openTargetAdventure: 'Open Adventure',
+    targetAdventureLabel: 'Target Adventure',
+
+    // Error messages
     errUnsupportedFileType: 'Unsupported file type. Please upload a .txt, .md, .pdf, or .docx file.',
     errImportNotFound: 'Adventure import not found.',
     errImportRevisionConflict: 'Adventure import revision conflict. Please reload.',
     errAssetTooLarge: 'The uploaded file exceeds the allowed size limit.',
     errInvalidSource: 'Invalid source data.',
     errAuthorityRequired: 'Only the Room owner or DM can manage adventure imports.',
+    errBlockingWarnings: 'Cannot finalize: there are unresolved blocking warnings.',
+    warningIdsLabel: 'Warning IDs',
     requestFailed: 'Adventure import request failed.',
   },
   'zh-TW': {
@@ -187,12 +239,62 @@ const COPY = {
     staleDraftConflict:
       '草稿版本衝突（已有其他變更或本地狀態過期）。請重新載入最新內容。',
     reloadDraftAction: '重新載入草稿',
+
+    // P6-F Review status
+    reviewStatusLabel: '審閱狀態',
+    reviewStatusPending: '待審閱',
+    reviewStatusAccepted: '已接受',
+    reviewStatusIgnored: '已略過',
+    reviewStatusUncertain: '存疑',
+
+    // P6-F Review actions
+    acceptEntryAction: '接受',
+    ignoreEntryAction: '略過',
+    markUncertainAction: '標記為存疑',
+    viewSourceAction: '檢視來源',
+
+    // P6-F Warnings
+    warningLevelInfo: '提示',
+    warningLevelWarning: '警告',
+    warningLevelBlocking: '阻礙性警告',
+    warningsInfoTitle: '一般提示',
+    warningsWarningTitle: '一般警告',
+    warningsBlockingTitle: '阻礙性警告',
+    resolvedBadge: '已解決',
+    warningCodeLabel: '代碼',
+    warningEntryLabel: '項目',
+    resolutionLabel: '處理方式',
+    resolutionPlaceholder: '處理備註（選填）',
+    resolveWarningAction: '解決警告',
+    blockingWarningsNotice: '尚有未解決的阻礙性警告，必須全部解決後方可定稿。',
+
+    // P6-F Questions
+    questionsTitle: '待確認問題',
+    noQuestions: '目前無問題。',
+    answeredBadge: '已回答',
+    answerLabel: '回答',
+    questionAnswerPlaceholder: '輸入回答…',
+    answerQuestionAction: '提交回答',
+
+    // P6-F Finalize
+    finalizeSectionTitle: '定稿為冒險模組',
+    finalizeNameLabel: '冒險模組名稱',
+    finalizeSummaryLabel: '摘要（選填）',
+    finalizeAdventureAction: '確認定稿',
+    finalizeBlockedReason: '無法定稿：尚有未解決的阻礙性警告。',
+    importAlreadyFinalized: '此匯入項目已定稿。',
+    openTargetAdventure: '開啟冒險模組',
+    targetAdventureLabel: '目標冒險模組',
+
+    // Error messages
     errUnsupportedFileType: '不支援的檔案類型，請上傳 .txt、.md、.pdf 或 .docx 檔案。',
     errImportNotFound: '找不到此匯入項目。',
     errImportRevisionConflict: '匯入版本衝突，請重新載入。',
     errAssetTooLarge: '上傳檔案超過大小限制。',
     errInvalidSource: '無效的來源資料。',
     errAuthorityRequired: '只有 Room Owner 或 DM 可以管理冒險匯入。',
+    errBlockingWarnings: '無法定稿：尚有未解決的阻礙性警告。',
+    warningIdsLabel: '警告 ID',
     requestFailed: '冒險匯入請求失敗。',
   },
 } as const satisfies Record<Locale, Record<string, string>>
@@ -251,6 +353,36 @@ export function draftProvenanceLabel(
   }
 }
 
+export function reviewStatusLabel(
+  status: ReviewStatus,
+  copy: AdventureImporterCopy,
+): string {
+  switch (status) {
+    case 'pending':
+      return copy.reviewStatusPending
+    case 'accepted':
+      return copy.reviewStatusAccepted
+    case 'ignored':
+      return copy.reviewStatusIgnored
+    case 'uncertain':
+      return copy.reviewStatusUncertain
+  }
+}
+
+export function warningLevelLabel(
+  level: WarningLevel,
+  copy: AdventureImporterCopy,
+): string {
+  switch (level) {
+    case 'info':
+      return copy.warningLevelInfo
+    case 'warning':
+      return copy.warningLevelWarning
+    case 'blocking':
+      return copy.warningLevelBlocking
+  }
+}
+
 export function importerErrorMessage(error: unknown, copy: AdventureImporterCopy): string {
   const code =
     error instanceof AdventureImportApiError || error instanceof RoomAssetApiError
@@ -271,6 +403,11 @@ export function importerErrorMessage(error: unknown, copy: AdventureImporterCopy
       return copy.errInvalidSource
     case 'adventure_import_authority_required':
       return copy.errAuthorityRequired
+    case 'adventure_import_blocking_warnings':
+      if (error instanceof AdventureImportApiError && error.params?.warning_ids?.length) {
+        return `${copy.errBlockingWarnings} ${copy.warningIdsLabel}: ${error.params.warning_ids.join(', ')}`
+      }
+      return copy.errBlockingWarnings
     default:
       return copy.requestFailed
   }

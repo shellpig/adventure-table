@@ -67,18 +67,35 @@ class AdventureRepository:
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
 
-    def insert_definition(self, stored: StoredAdventureDefinition) -> None:
-        with self.engine.begin() as connection:
-            connection.execute(insert(adventure_definitions).values(**stored.__dict__))
+    def insert_definition(
+        self,
+        stored: StoredAdventureDefinition,
+        *,
+        connection: Connection | None = None,
+    ) -> None:
+        statement = insert(adventure_definitions).values(**stored.__dict__)
+        if connection is not None:
+            connection.execute(statement)
+            return
+        with self.engine.begin() as conn:
+            conn.execute(statement)
 
-    def get_definition(self, room_id: UUID, adventure_id: UUID) -> StoredAdventureDefinition | None:
-        with self.engine.connect() as connection:
-            row = connection.execute(
-                select(adventure_definitions).where(
-                    adventure_definitions.c.room_id == room_id,
-                    adventure_definitions.c.id == adventure_id,
-                )
-            ).mappings().one_or_none()
+    def get_definition(
+        self,
+        room_id: UUID,
+        adventure_id: UUID,
+        *,
+        connection: Connection | None = None,
+    ) -> StoredAdventureDefinition | None:
+        query = select(adventure_definitions).where(
+            adventure_definitions.c.room_id == room_id,
+            adventure_definitions.c.id == adventure_id,
+        )
+        if connection is not None:
+            row = connection.execute(query).mappings().one_or_none()
+            return StoredAdventureDefinition(**dict(row)) if row is not None else None
+        with self.engine.connect() as conn:
+            row = conn.execute(query).mappings().one_or_none()
             return StoredAdventureDefinition(**dict(row)) if row is not None else None
 
     def list_definitions(self, room_id: UUID) -> tuple[StoredAdventureDefinition, ...]:
@@ -121,30 +138,53 @@ class AdventureRepository:
         adventure_id: UUID,
         status: str,
         updated_at: datetime,
+        *,
+        connection: Connection | None = None,
     ) -> StoredAdventureDefinition | None:
-        with self.engine.begin() as connection:
-            connection.execute(
-                update(adventure_definitions)
-                .where(adventure_definitions.c.id == adventure_id)
-                .values(status=status, updated_at=updated_at)
-            )
-            row = connection.execute(
-                select(adventure_definitions).where(adventure_definitions.c.id == adventure_id)
-            ).mappings().one_or_none()
+        statement = (
+            update(adventure_definitions)
+            .where(adventure_definitions.c.id == adventure_id)
+            .values(status=status, updated_at=updated_at)
+        )
+        query = select(adventure_definitions).where(adventure_definitions.c.id == adventure_id)
+        if connection is not None:
+            connection.execute(statement)
+            row = connection.execute(query).mappings().one_or_none()
+            return StoredAdventureDefinition(**dict(row)) if row is not None else None
+        with self.engine.begin() as conn:
+            conn.execute(statement)
+            row = conn.execute(query).mappings().one_or_none()
             return StoredAdventureDefinition(**dict(row)) if row is not None else None
 
-    def insert_entry(self, stored: StoredAdventureEntry) -> None:
-        with self.engine.begin() as connection:
-            connection.execute(insert(adventure_entries).values(**stored.__dict__))
+    def insert_entry(
+        self,
+        stored: StoredAdventureEntry,
+        *,
+        connection: Connection | None = None,
+    ) -> None:
+        statement = insert(adventure_entries).values(**stored.__dict__)
+        if connection is not None:
+            connection.execute(statement)
+            return
+        with self.engine.begin() as conn:
+            conn.execute(statement)
 
-    def get_entry(self, adventure_id: UUID, entry_id: UUID) -> StoredAdventureEntry | None:
-        with self.engine.connect() as connection:
-            row = connection.execute(
-                select(adventure_entries).where(
-                    adventure_entries.c.adventure_id == adventure_id,
-                    adventure_entries.c.id == entry_id,
-                )
-            ).mappings().one_or_none()
+    def get_entry(
+        self,
+        adventure_id: UUID,
+        entry_id: UUID,
+        *,
+        connection: Connection | None = None,
+    ) -> StoredAdventureEntry | None:
+        query = select(adventure_entries).where(
+            adventure_entries.c.adventure_id == adventure_id,
+            adventure_entries.c.id == entry_id,
+        )
+        if connection is not None:
+            row = connection.execute(query).mappings().one_or_none()
+            return StoredAdventureEntry(**dict(row)) if row is not None else None
+        with self.engine.connect() as conn:
+            row = conn.execute(query).mappings().one_or_none()
             return StoredAdventureEntry(**dict(row)) if row is not None else None
 
     def list_entries(self, adventure_id: UUID) -> tuple[StoredAdventureEntry, ...]:
@@ -208,13 +248,20 @@ class AdventureRepository:
             )
             return bool(result.rowcount > 0)
 
-    def next_sort_order(self, adventure_id: UUID) -> int:
-        with self.engine.connect() as connection:
-            val = connection.scalar(
-                select(func.coalesce(func.max(adventure_entries.c.sort_order) + 1, 0)).where(
-                    adventure_entries.c.adventure_id == adventure_id
-                )
-            )
+    def next_sort_order(
+        self,
+        adventure_id: UUID,
+        *,
+        connection: Connection | None = None,
+    ) -> int:
+        query = select(
+            func.coalesce(func.max(adventure_entries.c.sort_order) + 1, 0)
+        ).where(adventure_entries.c.adventure_id == adventure_id)
+        if connection is not None:
+            val = connection.scalar(query)
+            return int(val)
+        with self.engine.connect() as conn:
+            val = conn.scalar(query)
             return int(val)
 
     def reorder_entries(
@@ -263,9 +310,18 @@ class AdventureRepository:
                 )
             )
 
-    def insert_entry_asset(self, stored: StoredAdventureEntryAsset) -> None:
-        with self.engine.begin() as connection:
-            connection.execute(insert(adventure_entry_assets).values(**stored.__dict__))
+    def insert_entry_asset(
+        self,
+        stored: StoredAdventureEntryAsset,
+        *,
+        connection: Connection | None = None,
+    ) -> None:
+        statement = insert(adventure_entry_assets).values(**stored.__dict__)
+        if connection is not None:
+            connection.execute(statement)
+            return
+        with self.engine.begin() as conn:
+            conn.execute(statement)
 
     def delete_entry_asset(self, entry_id: UUID, asset_id: UUID) -> bool:
         with self.engine.begin() as connection:
@@ -277,31 +333,46 @@ class AdventureRepository:
             )
             return bool(result.rowcount > 0)
 
-    def list_entry_assets(self, adventure_id: UUID) -> tuple[StoredAdventureEntryAsset, ...]:
-        with self.engine.connect() as connection:
-            query = (
-                select(adventure_entry_assets)
-                .join(
-                    adventure_entries,
-                    adventure_entry_assets.c.adventure_entry_id == adventure_entries.c.id,
-                )
-                .where(adventure_entries.c.adventure_id == adventure_id)
-                .order_by(
-                    adventure_entry_assets.c.adventure_entry_id,
-                    adventure_entry_assets.c.sort_order,
-                    adventure_entry_assets.c.asset_id,
-                )
+    def list_entry_assets(
+        self,
+        adventure_id: UUID,
+        *,
+        connection: Connection | None = None,
+    ) -> tuple[StoredAdventureEntryAsset, ...]:
+        query = (
+            select(adventure_entry_assets)
+            .join(
+                adventure_entries,
+                adventure_entry_assets.c.adventure_entry_id == adventure_entries.c.id,
             )
+            .where(adventure_entries.c.adventure_id == adventure_id)
+            .order_by(
+                adventure_entry_assets.c.adventure_entry_id,
+                adventure_entry_assets.c.sort_order,
+                adventure_entry_assets.c.asset_id,
+            )
+        )
+        if connection is not None:
             rows = connection.execute(query).mappings().all()
             return tuple(StoredAdventureEntryAsset(**dict(row)) for row in rows)
+        with self.engine.connect() as conn:
+            rows = conn.execute(query).mappings().all()
+            return tuple(StoredAdventureEntryAsset(**dict(row)) for row in rows)
 
-    def next_entry_asset_sort_order(self, entry_id: UUID) -> int:
-        with self.engine.connect() as connection:
-            val = connection.scalar(
-                select(
-                    func.coalesce(func.max(adventure_entry_assets.c.sort_order) + 1, 0)
-                ).where(adventure_entry_assets.c.adventure_entry_id == entry_id)
-            )
+    def next_entry_asset_sort_order(
+        self,
+        entry_id: UUID,
+        *,
+        connection: Connection | None = None,
+    ) -> int:
+        query = select(
+            func.coalesce(func.max(adventure_entry_assets.c.sort_order) + 1, 0)
+        ).where(adventure_entry_assets.c.adventure_entry_id == entry_id)
+        if connection is not None:
+            val = connection.scalar(query)
+            return int(val)
+        with self.engine.connect() as conn:
+            val = conn.scalar(query)
             return int(val)
 
 

@@ -108,6 +108,12 @@ _EXPECTED = {
     "world_set_needs_review",
     "world_resolve_action",
     "set_stage_image",
+    "import_adventure_source",
+    "get_import_draft",
+    "update_import_draft",
+    "resolve_import_warning",
+    "answer_import_question",
+    "finalize_adventure",
 }
 
 

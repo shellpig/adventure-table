@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import hashlib
-from typing import Literal, cast
+from typing import Callable, Literal, cast
 import urllib.parse
 from uuid import UUID, uuid4
 
@@ -10,8 +10,10 @@ from sqlalchemy.engine import Connection
 
 from app.config import Settings
 from app.domain.adventure_imports.errors import (
+    AdventureImportBlockingWarningsError,
     AdventureImportForbiddenError,
     AdventureImportNotFoundError,
+    AdventureImportRevisionConflictError,
     AdventureImportValidationError,
     ExtractorUnavailableError,
 )
@@ -23,25 +25,45 @@ from app.domain.adventure_imports.schemas import (
     AdventureImport,
     AdventureImportDraft,
     AdventureImportSource,
+    DraftEntry,
+    DraftQuestion,
     DraftWarning,
     ImportDraft,
+    ReviewStatus,
     SourceChunk,
     adventure_import_draft_from_stored,
     adventure_import_from_stored,
     adventure_import_source_from_stored,
+    unresolved_blocking_warnings,
     validate_draft_warnings,
 )
+from app.domain.adventures.payloads import dump_entry_payload
 from app.domain.adventures.schemas import (
+    AdventureDefinition,
+    AdventureDefinitionCreate,
+    AdventureEntryAssetLink,
+    AdventureEntryCreate,
     AdventureForbiddenError,
     AdventureNotFoundError,
 )
-from app.domain.adventures.service import require_adventure_author
+from app.domain.adventures.service import (
+    AdventureAuthor,
+    AdventureService,
+    require_adventure_author,
+)
 from app.domain.room_assets.schemas import (
     RoomAssetForbiddenError,
     RoomAssetNotFoundError,
 )
 from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.schemas import RoomAccessContext
+from app.domain.rooms.table_events import (
+    TableEventActorUnauthorizedError,
+    TableEventNotFoundError,
+    TableEventService,
+    TableEventSessionNotActiveError,
+    require_active_table_actor,
+)
 from app.persistence.adventure_imports.repository import (
     AdventureImportRepository,
     StoredAdventureImport,
@@ -49,7 +71,7 @@ from app.persistence.adventure_imports.repository import (
 )
 
 
-def require_import_author(context: RoomAccessContext, room_id: UUID) -> None:
+def require_import_author(context: AdventureAuthor, room_id: UUID) -> None:
     try:
         require_adventure_author(context, room_id)
     except AdventureNotFoundError as exc:
@@ -90,6 +112,11 @@ def normalize_source_text(text: str) -> str:
 
 
 _TERMINAL_STATUSES = ("finalized", "cancelled")
+_INACTIVE_TABLE_ACTOR_ERRORS = (
+    TableEventActorUnauthorizedError,
+    TableEventSessionNotActiveError,
+    TableEventNotFoundError,
+)
 
 _ASSET_MIME_TO_SOURCE_KIND: dict[str, str] = {
     "application/pdf": "pdf",
@@ -109,10 +136,24 @@ class AdventureImportService:
         repository: AdventureImportRepository,
         settings: Settings,
         room_asset_service: RoomAssetService,
+        adventure_service: AdventureService,
+        table_event_service: TableEventService,
     ) -> None:
         self.repository = repository
         self.settings = settings
         self.room_asset_service = room_asset_service
+        self.adventure_service = adventure_service
+        self.table_event_service = table_event_service
+
+    def _require_active_author(
+        self, connection: Connection, author: AdventureAuthor
+    ) -> None:
+        if isinstance(author, RoomAccessContext):
+            return
+        try:
+            require_active_table_actor(connection, author, self.table_event_service.repository)
+        except _INACTIVE_TABLE_ACTOR_ERRORS as exc:
+            raise AdventureImportForbiddenError(str(exc)) from exc
 
     def _import_in_room(
         self, connection: Connection, room_id: UUID, import_id: UUID
@@ -141,6 +182,7 @@ class AdventureImportService:
 
     def _add_source(
         self,
+        author: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -154,6 +196,7 @@ class AdventureImportService:
     ) -> AdventureImportSource:
         """Insert a source unless the import already holds one with the same sha256."""
         with self.repository.engine.begin() as connection:
+            self._require_active_author(connection, author)
             self._writable_import(connection, room_id, import_id, "add source")
             existing = self.repository.find_source_by_sha256_in_transaction(
                 connection, import_id, sha256
@@ -219,7 +262,7 @@ class AdventureImportService:
 
     def create_import(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         name: str,
     ) -> AdventureImport:
@@ -241,8 +284,10 @@ class AdventureImportService:
             created_at=now,
             updated_at=now,
         )
-        created = self.repository.create_import(stored)
-        return adventure_import_from_stored(created)
+        with self.repository.engine.begin() as connection:
+            self._require_active_author(connection, context)
+            created = self.repository.create_import_in_transaction(connection, stored)
+            return adventure_import_from_stored(created)
 
     def list_imports(
         self,
@@ -285,6 +330,7 @@ class AdventureImportService:
 
     def _add_text_or_content_source(
         self,
+        author: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -322,6 +368,7 @@ class AdventureImportService:
         else:
             sha256 = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
         return self._add_source(
+            author,
             room_id,
             import_id,
             source_kind=source_kind,
@@ -339,7 +386,7 @@ class AdventureImportService:
 
     def add_text_source(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -351,6 +398,7 @@ class AdventureImportService:
     ) -> AdventureImportSource:
         require_import_author(context, room_id)
         return self._add_text_or_content_source(
+            context,
             room_id,
             import_id,
             source_kind=source_kind,
@@ -363,7 +411,7 @@ class AdventureImportService:
 
     def add_asset_source(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -371,12 +419,20 @@ class AdventureImportService:
     ) -> AdventureImportSource:
         require_import_author(context, room_id)
         try:
-            asset, handle = self.room_asset_service.open_content(
-                context, room_id, asset_id
-            )
+            if isinstance(context, RoomAccessContext):
+                asset, handle = self.room_asset_service.open_content(
+                    context, room_id, asset_id
+                )
+            else:
+                asset, handle = self.room_asset_service.open_content_for_table_actor(
+                    context,
+                    self.table_event_service,
+                    room_id=room_id,
+                    asset_id=asset_id,
+                )
         except RoomAssetNotFoundError as exc:
             raise AdventureImportNotFoundError(message=str(exc)) from exc
-        except RoomAssetForbiddenError as exc:
+        except (RoomAssetForbiddenError, *_INACTIVE_TABLE_ACTOR_ERRORS) as exc:
             raise AdventureImportForbiddenError(str(exc)) from exc
 
         with handle:
@@ -397,6 +453,7 @@ class AdventureImportService:
 
         if source_kind in ("txt", "markdown"):
             return self._add_text_or_content_source(
+                context,
                 room_id,
                 import_id,
                 source_kind=cast(Literal["txt", "markdown"], source_kind),
@@ -433,6 +490,7 @@ class AdventureImportService:
         ).hexdigest()
 
         return self._add_source(
+            context,
             room_id,
             import_id,
             source_kind=source_kind,
@@ -452,7 +510,7 @@ class AdventureImportService:
 
     def add_url_source(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -482,6 +540,7 @@ class AdventureImportService:
             sha256 = hashlib.sha256(f"url:{url}".encode("utf-8")).hexdigest()
 
         return self._add_source(
+            context,
             room_id,
             import_id,
             source_kind="url",
@@ -558,12 +617,13 @@ class AdventureImportService:
 
     def get_draft(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
     ) -> AdventureImportDraft:
         require_import_author(context, room_id)
         with self.repository.engine.connect() as connection:
+            self._require_active_author(connection, context)
             import_record = self._import_in_room(connection, room_id, import_id)
             stored_draft = self.repository.get_draft_in_transaction(connection, import_id)
         if stored_draft is None:
@@ -578,7 +638,7 @@ class AdventureImportService:
 
     def update_draft(
         self,
-        context: RoomAccessContext,
+        context: AdventureAuthor,
         room_id: UUID,
         import_id: UUID,
         *,
@@ -593,6 +653,7 @@ class AdventureImportService:
             raise AdventureImportValidationError(str(exc)) from exc
 
         with self.repository.engine.begin() as connection:
+            self._require_active_author(connection, context)
             import_record = self._writable_import(
                 connection, room_id, import_id, "update draft"
             )
@@ -632,6 +693,290 @@ class AdventureImportService:
                 )
 
             return adventure_import_draft_from_stored(stored_draft)
+
+    def _load_draft_state(
+        self,
+        connection: Connection,
+        import_id: UUID,
+        expected_revision: int,
+    ) -> tuple[ImportDraft, list[DraftWarning]]:
+        stored_draft = self.repository.get_draft_in_transaction(
+            connection, import_id
+        )
+        if stored_draft is None:
+            current_draft = ImportDraft()
+            current_warnings: list[DraftWarning] = []
+            current_revision = 0
+        else:
+            current_draft = ImportDraft.model_validate(stored_draft.draft_json)
+            current_warnings = [
+                DraftWarning.model_validate(w) for w in stored_draft.warnings_json
+            ]
+            current_revision = stored_draft.revision
+
+        if current_revision != expected_revision:
+            raise AdventureImportRevisionConflictError(
+                import_id=import_id,
+                expected_revision=expected_revision,
+                current_revision=current_revision,
+            )
+        return current_draft, current_warnings
+
+    def _apply_draft_mutation(
+        self,
+        context: AdventureAuthor,
+        room_id: UUID,
+        import_id: UUID,
+        action: str,
+        expected_revision: int,
+        mutator: Callable[
+            [ImportDraft, list[DraftWarning]],
+            tuple[ImportDraft, list[DraftWarning]],
+        ],
+    ) -> AdventureImportDraft:
+        require_import_author(context, room_id)
+        with self.repository.engine.begin() as connection:
+            self._require_active_author(connection, context)
+            self._writable_import(connection, room_id, import_id, action)
+            current_draft, current_warnings = self._load_draft_state(
+                connection, import_id, expected_revision
+            )
+            updated_draft, updated_warnings = mutator(
+                current_draft, current_warnings
+            )
+
+            stored = self.repository.upsert_draft_in_transaction(
+                connection,
+                import_id,
+                updated_draft.model_dump(mode="json"),
+                [w.model_dump(mode="json") for w in updated_warnings],
+                expected_revision=expected_revision,
+            )
+            return adventure_import_draft_from_stored(stored)
+
+    def set_entry_review(
+        self,
+        context: AdventureAuthor,
+        room_id: UUID,
+        import_id: UUID,
+        *,
+        entry_id: str,
+        review_status: ReviewStatus,
+        expected_revision: int,
+    ) -> AdventureImportDraft:
+        def _mutate(
+            draft: ImportDraft,
+            warnings: list[DraftWarning],
+        ) -> tuple[ImportDraft, list[DraftWarning]]:
+            if review_status not in ("pending", "accepted", "ignored", "uncertain"):
+                raise AdventureImportValidationError(
+                    f"Invalid review_status: {review_status}"
+                )
+            for idx, entry in enumerate(draft.entries):
+                if entry.entry_id == entry_id:
+                    new_entries = list(draft.entries)
+                    new_entries[idx] = entry.model_copy(
+                        update={"review_status": review_status}
+                    )
+                    return draft.model_copy(update={"entries": new_entries}), warnings
+            raise AdventureImportNotFoundError(
+                import_id=import_id,
+                message=f"Entry '{entry_id}' not found in draft of import {import_id}",
+            )
+
+        return self._apply_draft_mutation(
+            context,
+            room_id,
+            import_id,
+            "set entry review",
+            expected_revision,
+            _mutate,
+        )
+
+    def resolve_import_warning(
+        self,
+        context: AdventureAuthor,
+        room_id: UUID,
+        import_id: UUID,
+        *,
+        warning_id: str,
+        resolution: str | None = None,
+        expected_revision: int,
+    ) -> AdventureImportDraft:
+        def _mutate(
+            draft: ImportDraft,
+            warnings: list[DraftWarning],
+        ) -> tuple[ImportDraft, list[DraftWarning]]:
+            for idx, w in enumerate(warnings):
+                if w.warning_id == warning_id:
+                    if w.resolved:
+                        raise AdventureImportValidationError(
+                            f"Warning '{warning_id}' is already resolved"
+                        )
+                    new_warnings = list(warnings)
+                    new_warnings[idx] = w.model_copy(
+                        update={"resolved": True, "resolution": resolution}
+                    )
+                    return draft, new_warnings
+            raise AdventureImportNotFoundError(
+                import_id=import_id,
+                message=f"Warning '{warning_id}' not found in draft of import {import_id}",
+            )
+
+        return self._apply_draft_mutation(
+            context,
+            room_id,
+            import_id,
+            "resolve import warning",
+            expected_revision,
+            _mutate,
+        )
+
+    def answer_import_question(
+        self,
+        context: AdventureAuthor,
+        room_id: UUID,
+        import_id: UUID,
+        *,
+        question_id: str,
+        answer: str,
+        expected_revision: int,
+    ) -> AdventureImportDraft:
+        def _mutate(
+            draft: ImportDraft,
+            warnings: list[DraftWarning],
+        ) -> tuple[ImportDraft, list[DraftWarning]]:
+            for idx, q in enumerate(draft.questions):
+                if q.question_id == question_id:
+                    new_questions = list(draft.questions)
+                    new_questions[idx] = q.model_copy(update={"answer": answer})
+                    return draft.model_copy(update={"questions": new_questions}), warnings
+            raise AdventureImportNotFoundError(
+                import_id=import_id,
+                message=f"Question '{question_id}' not found in draft of import {import_id}",
+            )
+
+        return self._apply_draft_mutation(
+            context,
+            room_id,
+            import_id,
+            "answer import question",
+            expected_revision,
+            _mutate,
+        )
+
+    def finalize_adventure(
+        self,
+        context: AdventureAuthor,
+        room_id: UUID,
+        import_id: UUID,
+        *,
+        name: str,
+        summary: str | None = None,
+        expected_revision: int,
+    ) -> AdventureDefinition:
+        require_import_author(context, room_id)
+        with self.repository.engine.begin() as connection:
+            self._require_active_author(connection, context)
+            stored_import = self._import_in_room(connection, room_id, import_id)
+            # target_adventure_id is the idempotency key: retries return the same Adventure.
+            if stored_import.target_adventure_id is not None:
+                return self.adventure_service.get_definition(
+                    context, room_id, stored_import.target_adventure_id
+                )
+            if stored_import.status == "cancelled":
+                raise AdventureImportValidationError(
+                    "Cannot finalize import with status 'cancelled'"
+                )
+
+            current_draft, current_warnings = self._load_draft_state(
+                connection, import_id, expected_revision
+            )
+            blocking = unresolved_blocking_warnings(current_warnings)
+            if blocking:
+                raise AdventureImportBlockingWarningsError(
+                    import_id=import_id,
+                    unresolved_warning_ids=[w.warning_id for w in blocking],
+                )
+
+            definition = self.adventure_service.create_definition(
+                context,
+                room_id,
+                AdventureDefinitionCreate(name=name, summary=summary),
+                connection=connection,
+            )
+
+            included = [e for e in current_draft.entries if e.review_status != "ignored"]
+            entries_by_id = {e.entry_id: e for e in current_draft.entries}
+            children: dict[str | None, list[DraftEntry]] = {}
+            for entry in included:
+                parent_key = _nearest_included_parent_id(entry, entries_by_id)
+                children.setdefault(parent_key, []).append(entry)
+
+            # Parents are created before children; sort_order keeps the draft list order.
+            sort_orders = {e.entry_id: index for index, e in enumerate(included)}
+            created_ids: dict[str | None, UUID | None] = {None: None}
+            ready: list[str | None] = [None]
+            while ready:
+                parent_key = ready.pop(0)
+                for entry in children.get(parent_key, []):
+                    created_entry = self.adventure_service.create_entry(
+                        context,
+                        room_id,
+                        definition.id,
+                        AdventureEntryCreate(
+                            kind=entry.entry_kind,
+                            title=entry.title,
+                            body=entry.body,
+                            data=dump_entry_payload(entry.payload),
+                            visibility=entry.visibility,
+                            parent_entry_id=created_ids[parent_key],
+                            sort_order=sort_orders[entry.entry_id],
+                        ),
+                        connection=connection,
+                    )
+                    created_ids[entry.entry_id] = created_entry.id
+                    ready.append(entry.entry_id)
+                    # source_ref stays draft-only audit data; only asset_ids become links.
+                    for asset_id in entry.asset_ids:
+                        self.adventure_service.link_entry_asset(
+                            context,
+                            room_id,
+                            definition.id,
+                            created_entry.id,
+                            AdventureEntryAssetLink(asset_id=asset_id, role="attachment"),
+                            connection=connection,
+                        )
+            if len(created_ids) - 1 < len(included):
+                raise AdventureImportValidationError("Draft entry parents form a cycle")
+
+            finalized_definition = self.adventure_service.finalize(
+                context, room_id, definition.id, connection=connection
+            )
+            # Revision compare-and-set: a concurrent finalize fails here and rolls back whole.
+            self.repository.update_import_status_in_transaction(
+                connection,
+                import_id,
+                "finalized",
+                expected_revision=stored_import.revision,
+                target_adventure_id=definition.id,
+            )
+            return finalized_definition
+
+
+def _nearest_included_parent_id(
+    entry: DraftEntry,
+    entries_by_id: dict[str, DraftEntry],
+) -> str | None:
+    parent_id = entry.parent_entry_id
+    seen: set[str] = set()
+    while parent_id is not None and parent_id not in seen:
+        parent = entries_by_id[parent_id]
+        if parent.review_status != "ignored":
+            return parent_id
+        seen.add(parent_id)
+        parent_id = parent.parent_entry_id
+    return None
 
 
 __all__ = [

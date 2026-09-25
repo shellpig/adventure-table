@@ -5,13 +5,17 @@ import {
   addSourceFromAsset,
   AdventureImportApiError,
   type AdventureImportDraft,
+  answerAdventureImportQuestion,
   cancelAdventureImport,
   createAdventureImport,
+  finalizeAdventureImport,
   getAdventureImport,
   getAdventureImportDraft,
   listAdventureImports,
   listAdventureImportSources,
   readSourceChunk,
+  resolveAdventureImportWarning,
+  setAdventureImportEntryReview,
   updateAdventureImportDraft,
   type UpdateImportDraftInput,
   uploadRawSource,
@@ -28,6 +32,51 @@ afterEach(() => {
 })
 
 describe('P6-E Adventure Imports API client', () => {
+  const fullResponse: AdventureImportDraft = {
+    import_id: IMPORT_ID,
+    draft: {
+      schema_version: 1,
+      entries: [
+        {
+          entry_id: 'e1',
+          entry_kind: 'scene',
+          payload: { kind: 'scene', dm_summary: 'Summary' },
+          parent_entry_id: null,
+          provenance: 'source_document',
+          source_ref: { source_id: SOURCE_ID, locator: 'page:1' },
+          note: null,
+          review_status: 'pending',
+          asset_ids: [],
+          title: null,
+          body: null,
+          visibility: 'dm_only',
+        },
+      ],
+      questions: [
+        {
+          question_id: 'q1',
+          message: 'Question?',
+          entry_id: null,
+          answer: null,
+        },
+      ],
+    },
+    warnings: [
+      {
+        warning_id: 'w1',
+        level: 'warning',
+        code: 'warn_code',
+        message: 'Warning msg',
+        entry_id: null,
+        source_id: null,
+        resolved: false,
+        resolution: null,
+      },
+    ],
+    revision: 0,
+    updated_at: '2026-09-22T00:00:00Z',
+  }
+
   it('createAdventureImport POSTs to /api/rooms/{room}/adventure-imports with JSON and Bearer header', async () => {
     const mockImport = { id: IMPORT_ID, room_id: ROOM_ID, name: 'Tomb of Horrors', status: 'source', revision: 0 }
     const fetchMock = vi.fn().mockResolvedValue({
@@ -246,45 +295,6 @@ describe('P6-E Adventure Imports API client', () => {
   })
 
   it('getAdventureImportDraft and updateAdventureImportDraft perform expected requests and verify types', async () => {
-    // Compile-time fixture demonstrating exact response shape with all required default-bearing fields
-    const fullResponse: AdventureImportDraft = {
-      import_id: IMPORT_ID,
-      draft: {
-        schema_version: 1,
-        entries: [
-          {
-            entry_id: 'e1',
-            entry_kind: 'scene',
-            payload: { kind: 'scene', dm_summary: 'Summary' },
-            parent_entry_id: null,
-            provenance: 'source_document',
-            source_ref: { source_id: SOURCE_ID, locator: 'page:1' },
-            note: null,
-          },
-        ],
-        questions: [
-          {
-            question_id: 'q1',
-            message: 'Question?',
-            entry_id: null,
-            answer: null,
-          },
-        ],
-      },
-      warnings: [
-        {
-          warning_id: 'w1',
-          level: 'warning',
-          code: 'warn_code',
-          message: 'Warning msg',
-          entry_id: null,
-          source_id: null,
-        },
-      ],
-      revision: 0,
-      updated_at: '2026-09-22T00:00:00Z',
-    }
-
     // Compile-time assignment demonstrating input shape allows omitting optional fields
     const minimalInput: UpdateImportDraftInput = {
       draft: {
@@ -336,11 +346,138 @@ describe('P6-E Adventure Imports API client', () => {
     )
   })
 
+  it('setAdventureImportEntryReview POSTs to /{import_id}/draft/entries/{entry_id}/review with encoded entry_id', async () => {
+    const mockDraft = { ...fullResponse, revision: 1 }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockDraft,
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await setAdventureImportEntryReview(ROOM_ID, IMPORT_ID, 'entry/1 #test', TOKEN, {
+      review_status: 'accepted',
+      expected_revision: 0,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/rooms/${ROOM_ID}/adventure-imports/${IMPORT_ID}/draft/entries/entry%2F1%20%23test/review`,
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${TOKEN}`,
+        }),
+        body: JSON.stringify({ review_status: 'accepted', expected_revision: 0 }),
+      }),
+    )
+    expect(result).toEqual(mockDraft)
+  })
+
+  it('resolveAdventureImportWarning POSTs to /{import_id}/warnings/{warning_id}/resolve with encoded warning_id', async () => {
+    const mockDraft = { ...fullResponse, revision: 1 }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockDraft,
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await resolveAdventureImportWarning(ROOM_ID, IMPORT_ID, 'warn/1 #test', TOKEN, {
+      resolution: 'Manual resolution note',
+      expected_revision: 0,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/rooms/${ROOM_ID}/adventure-imports/${IMPORT_ID}/warnings/warn%2F1%20%23test/resolve`,
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${TOKEN}`,
+        }),
+        body: JSON.stringify({ resolution: 'Manual resolution note', expected_revision: 0 }),
+      }),
+    )
+    expect(result).toEqual(mockDraft)
+  })
+
+  it('answerAdventureImportQuestion POSTs to /{import_id}/questions/{question_id}/answer with encoded question_id', async () => {
+    const mockDraft = { ...fullResponse, revision: 1 }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockDraft,
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await answerAdventureImportQuestion(ROOM_ID, IMPORT_ID, 'q/1 #test', TOKEN, {
+      answer: 'Yes, this is an entrance',
+      expected_revision: 0,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/rooms/${ROOM_ID}/adventure-imports/${IMPORT_ID}/questions/q%2F1%20%23test/answer`,
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${TOKEN}`,
+        }),
+        body: JSON.stringify({ answer: 'Yes, this is an entrance', expected_revision: 0 }),
+      }),
+    )
+    expect(result).toEqual(mockDraft)
+  })
+
+  it('finalizeAdventureImport POSTs to /{import_id}/finalize and returns AdventureDefinition', async () => {
+    const mockAdventure = {
+      id: '50000000-0000-4000-8000-000000000001',
+      room_id: ROOM_ID,
+      name: 'Finalized Adventure',
+      summary: 'A thrilling tale',
+      ruleset: 'dnd5e_2014',
+      status: 'finalized',
+      created_at: '2026-09-23T00:00:00Z',
+      updated_at: '2026-09-23T00:00:00Z',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockAdventure,
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await finalizeAdventureImport(ROOM_ID, IMPORT_ID, TOKEN, {
+      name: 'Finalized Adventure',
+      summary: 'A thrilling tale',
+      expected_revision: 1,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/rooms/${ROOM_ID}/adventure-imports/${IMPORT_ID}/finalize`,
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${TOKEN}`,
+        }),
+        body: JSON.stringify({
+          name: 'Finalized Adventure',
+          summary: 'A thrilling tale',
+          expected_revision: 1,
+        }),
+      }),
+    )
+    expect(result).toEqual(mockAdventure)
+  })
+
   it.each([
     { status: 400, code: 'adventure_import_invalid', message: 'Invalid payload' },
     { status: 403, code: 'adventure_import_authority_required', message: 'DM required' },
     { status: 404, code: 'adventure_import_not_found', message: 'Import not found' },
     { status: 409, code: 'adventure_import_revision_conflict', message: 'Revision conflict' },
+    { status: 409, code: 'adventure_import_blocking_warnings', message: 'Unresolved blocking warnings' },
     { status: 413, code: 'asset_too_large', message: 'Too large' },
   ])('maps HTTP $status to AdventureImportApiError with code $code', async ({ status, code, message }) => {
     const fetchMock = vi.fn().mockResolvedValue({
@@ -363,5 +500,23 @@ describe('P6-E Adventure Imports API client', () => {
       expect(apiErr.code).toBe(code)
       expect(apiErr.message).toBe(message)
     }
+  })
+
+  it('preserves blocking warning ids from the server error', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: async () => ({
+        error: {
+          code: 'adventure_import_blocking_warnings',
+          message: 'Unresolved blocking warnings',
+          params: { warning_ids: ['missing_map', 'missing_npc'] },
+        },
+      }),
+    }))
+
+    await expect(getAdventureImport(ROOM_ID, IMPORT_ID, TOKEN)).rejects.toMatchObject({
+      params: { warning_ids: ['missing_map', 'missing_npc'] },
+    })
   })
 })

@@ -25,10 +25,14 @@ from app.api.rooms.dependencies import (
 from app.config import settings
 from app.db import metadata
 from app.domain.adventure_imports.service import AdventureImportService
+from app.domain.adventures.service import AdventureService
 from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
+from app.domain.rooms.table_events import TableEventService
 from app.main import app
 from app.persistence.adventure_imports.repository import AdventureImportRepository
+from app.persistence.rooms.table_runtime import TableEventRepository
+from app.persistence.adventures.repository import AdventureRepository
 from app.persistence.adventure_imports.tables import (
     adventure_import_drafts,
     adventure_import_sources,
@@ -128,10 +132,14 @@ def api_fixture(tmp_path: Path) -> Generator[ImportApiFixture, None, None]:
         max_source_document_bytes=settings.asset_max_source_document_bytes,
     )
     import_repo = AdventureImportRepository(engine)
+    adventure_repo = AdventureRepository(engine)
+    adventure_service = AdventureService(adventure_repo, asset_repo)
     import_service = AdventureImportService(
         import_repo,
         settings,
         room_asset_service,
+        adventure_service,
+        TableEventService(TableEventRepository(engine)),
     )
 
     room_a_id = uuid4()
@@ -209,6 +217,7 @@ def api_fixture(tmp_path: Path) -> Generator[ImportApiFixture, None, None]:
         raise APIError(401, "room_access_required", "Room access token is required")
 
     app.state.room_asset_service = room_asset_service
+    app.state.adventure_service = adventure_service
     app.state.adventure_import_service = import_service
     app.dependency_overrides[get_database_engine] = lambda: engine
     app.dependency_overrides[get_room_access_context] = _override_access_context

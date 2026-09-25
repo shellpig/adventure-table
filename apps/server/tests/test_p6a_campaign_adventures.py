@@ -26,8 +26,14 @@ from app.content.registry import load_default_content_registry
 from app.db import metadata
 import app.domain.adventures.attachments
 from app.domain.adventures.attachments import CampaignAdventureService
-import app.domain.adventures.service
-from app.domain.adventures.service import AdventureService
+from app.domain.adventures.schemas import (
+    AdventureDefinitionCreate,
+    AdventureEntryAssetLink,
+    AdventureEntryCreate,
+    AdventureForbiddenError,
+    AdventureStatusError,
+)
+from app.domain.adventures.service import AdventureAuthor, AdventureService
 from app.domain.combat.lifecycle import CombatService, StartCombatInput
 from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.campaigns import CampaignCreate, CampaignService, CampaignStatus, RosterAdd
@@ -54,7 +60,7 @@ from app.domain.rooms.seats import (
 from app.domain.rooms.service import RoomService
 from app.domain.rooms.sessions import SessionService
 from app.domain.rooms.table_character_state import TableCharacterStateService
-from app.domain.rooms.table_events import TableActorContext, TableEventService
+from app.domain.rooms.table_events import TableActorContext, TableActorKind, TableEventService
 from app.main import app as fastapi_app
 import app.mcp.tools
 from app.persistence.adventures.repository import (
@@ -71,7 +77,7 @@ from app.persistence.characters import CharacterRepository
 from app.persistence.combat.lifecycle import CombatRepository
 from app.persistence.combat.repository import MonsterRepository
 from app.domain.combat.roll_compat import CombatAwareRollRepository
-from app.persistence.room_assets.repository import RoomAssetRepository
+from app.persistence.room_assets.repository import RoomAssetRepository, StoredRoomAsset
 from app.persistence.room_assets.storage import FilesystemAssetStorage
 from app.persistence.rooms.campaigns import CampaignRepository
 from app.persistence.rooms.exploration_messages import ExplorationMessageRepository
@@ -777,6 +783,15 @@ def test_empty_campaign_still_starts_session_narrates_checks_and_fights() -> Non
     assert link_repo.list_for_campaign(campaign.id) == ()
 
 
+# P6-F (user decision 2026-09-23): the importer lets the active current AI DM author a draft
+# Adventure and finalize it. These are the only AdventureService entries a table actor has,
+# and they refuse any Adventure that is no longer a draft.
+_IMPORT_AUTHORING_METHODS = frozenset(
+    {"get_definition", "create_definition", "create_entry", "link_entry_asset", "finalize"}
+)
+_IMPORT_MCP_TOOLS = frozenset({"import_adventure_source", "finalize_adventure"})
+
+
 def test_adventure_domain_has_no_gameplay_actor_entry_point() -> None:
     for cls in (AdventureService, CampaignAdventureService):
         for name, method in inspect.getmembers(cls, predicate=inspect.isfunction):
@@ -789,20 +804,96 @@ def test_adventure_domain_has_no_gameplay_actor_entry_point() -> None:
             assert (
                 params[0].name == "context"
             ), f"{cls.__name__}.{name} first non-self parameter is '{params[0].name}', expected 'context'"
+            expected = (
+                AdventureAuthor
+                if cls is AdventureService and name in _IMPORT_AUTHORING_METHODS
+                else RoomAccessContext
+            )
             assert (
-                hints.get(params[0].name) is RoomAccessContext
-            ), f"{cls.__name__}.{name} first parameter type is {hints.get(params[0].name)}, expected RoomAccessContext"
-            for p in params:
+                hints.get(params[0].name) == expected
+            ), f"{cls.__name__}.{name} first parameter type is {hints.get(params[0].name)}, expected {expected}"
+            for p in params[1:]:
                 assert (
                     hints.get(p.name) is not TableActorContext
                 ), f"{cls.__name__}.{name} parameter '{p.name}' is TableActorContext"
 
-    assert "TableActorContext" not in inspect.getsource(app.domain.adventures.service)
     assert "TableActorContext" not in inspect.getsource(app.domain.adventures.attachments)
     # P6-C C.2 fixes `get_adventure_entry` as the one DM-only MCP read of an
-    # attached Adventure entry (through the Campaign runtime overlay); no other
-    # MCP tool may expose Adventure authoring.
+    # attached Adventure entry (through the Campaign runtime overlay); besides the
+    # P6-F importer tools no other MCP tool may expose Adventure authoring.
+    allowed_tools = {"get_adventure_entry", *_IMPORT_MCP_TOOLS}
     for tool_def in app.mcp.tools._TOOL_DEFINITIONS:
-        assert tool_def.name == "get_adventure_entry" or "adventure" not in tool_def.name.lower(), (
+        assert tool_def.name in allowed_tools or "adventure" not in tool_def.name.lower(), (
             f"MCP tool {tool_def.name} contains 'adventure'"
         )
+
+
+def test_table_actor_cannot_modify_finalized_adventure() -> None:
+    engine = _engine()
+    room_id = uuid4()
+    now = datetime.now(timezone.utc)
+    with engine.begin() as conn:
+        conn.execute(
+            insert(rooms).values(
+                id=room_id,
+                code="ROOMA",
+                name="Room A",
+                password_salt=b"salt",
+                password_hash=b"pw",
+                owner_key_hash=b"owner",
+                dm_key_hash=b"dm",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+    asset_repo = RoomAssetRepository(engine)
+    service = AdventureService(AdventureRepository(engine), asset_repo)
+    owner = RoomAccessContext(
+        room_id=room_id,
+        access_session_id=uuid4(),
+        authority=RoomAccessAuthority.OWNER,
+        display_name="Owner",
+    )
+    current_dm = TableActorContext(
+        actor_kind=TableActorKind.AI,
+        room_id=room_id,
+        campaign_id=uuid4(),
+        session_id=uuid4(),
+        seat_id=uuid4(),
+        controlled_seat_ids=(),
+        role="dm",
+        is_current_dm=True,
+    )
+    asset = StoredRoomAsset(
+        id=uuid4(),
+        room_id=room_id,
+        kind="image",
+        storage_key="assets/map.png",
+        original_filename="map.png",
+        mime_type="image/png",
+        size_bytes=1,
+        sha256="sha",
+        visibility="room",
+        created_at=now,
+    )
+    asset_repo.insert(asset)
+    adventure = service.create_definition(owner, room_id, AdventureDefinitionCreate(name="Baseline"))
+    entry = service.create_entry(owner, room_id, adventure.id, AdventureEntryCreate(kind="section"))
+    service.finalize(owner, room_id, adventure.id)
+
+    with pytest.raises(AdventureForbiddenError):
+        service.create_entry(current_dm, room_id, adventure.id, AdventureEntryCreate(kind="section"))
+    with pytest.raises(AdventureForbiddenError):
+        service.link_entry_asset(
+            current_dm,
+            room_id,
+            adventure.id,
+            entry.id,
+            AdventureEntryAssetLink(asset_id=asset.id, role="attachment"),
+        )
+    with pytest.raises(AdventureStatusError):
+        service.finalize(current_dm, room_id, adventure.id)
+
+    assert [e.id for e in service.list_entries(owner, room_id, adventure.id)] == [entry.id]
+    assert service.list_entries(owner, room_id, adventure.id)[0].assets == ()
+    assert service.get_definition(owner, room_id, adventure.id).status == "finalized"

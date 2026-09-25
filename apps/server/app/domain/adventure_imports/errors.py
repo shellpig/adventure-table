@@ -39,6 +39,24 @@ class AdventureImportValidationError(AdventureImportError, ValueError):
     """Raised when import or draft validation invariants are violated."""
 
 
+class AdventureImportBlockingWarningsError(AdventureImportValidationError):
+    """Raised when finalize is attempted with unresolved blocking warnings."""
+
+    def __init__(
+        self,
+        import_id: UUID,
+        unresolved_warning_ids: list[str],
+        message: str | None = None,
+    ) -> None:
+        self.import_id = import_id
+        self.unresolved_warning_ids = unresolved_warning_ids
+        detail = (
+            message
+            or f"Adventure import {import_id} has unresolved blocking warnings: {unresolved_warning_ids}"
+        )
+        super().__init__(detail)
+
+
 class AdventureImportForbiddenError(AdventureImportError, PermissionError):
     """Raised when actor lacks required room/import authority."""
 

@@ -9,11 +9,13 @@ from pydantic import Field, TypeAdapter, ValidationError
 
 from app.api.errors import APIError
 from app.api.rooms.access import get_room_access_context
+from app.api.rooms.adventures import _map_adventure_error
 from app.api.rooms.dependencies import (
     get_adventure_import_service,
     get_room_asset_service,
 )
 from app.domain.adventure_imports.errors import (
+    AdventureImportBlockingWarningsError,
     AdventureImportForbiddenError,
     AdventureImportNotFoundError,
     AdventureImportRevisionConflictError,
@@ -25,8 +27,10 @@ from app.domain.adventure_imports.schemas import (
     AdventureImportSource,
     DraftWarning,
     ImportDraft,
+    ReviewStatus,
     SourceChunk,
 )
+from app.domain.adventures.schemas import AdventureDefinition
 from app.domain.adventure_imports.service import (
     AdventureImportService,
     require_import_author,
@@ -97,6 +101,27 @@ class UpdateImportDraftRequest(StrictModel):
     expected_revision: int
 
 
+class SetEntryReviewRequest(StrictModel):
+    review_status: ReviewStatus
+    expected_revision: int
+
+
+class ResolveWarningRequest(StrictModel):
+    resolution: str | None = None
+    expected_revision: int
+
+
+class AnswerQuestionRequest(StrictModel):
+    answer: str
+    expected_revision: int
+
+
+class FinalizeAdventureImportRequest(StrictModel):
+    name: str = Field(min_length=1, max_length=160)
+    summary: str | None = None
+    expected_revision: int
+
+
 def _map_adventure_import_error(exc: Exception) -> APIError:
     if isinstance(exc, APIError):
         return exc
@@ -106,6 +131,13 @@ def _map_adventure_import_error(exc: Exception) -> APIError:
         return APIError(403, "adventure_import_authority_required", str(exc))
     if isinstance(exc, AdventureImportRevisionConflictError):
         return APIError(409, "adventure_import_revision_conflict", str(exc))
+    if isinstance(exc, AdventureImportBlockingWarningsError):
+        return APIError(
+            409,
+            "adventure_import_blocking_warnings",
+            str(exc),
+            params={"warning_ids": list(exc.unresolved_warning_ids)},
+        )
     if isinstance(exc, AdventureImportValidationError):
         return APIError(400, "adventure_import_invalid", str(exc))
     if isinstance(exc, RoomAssetNotFoundError):
@@ -122,7 +154,7 @@ def _map_adventure_import_error(exc: Exception) -> APIError:
         return APIError(400, "asset_visibility_not_allowed", str(exc))
     if isinstance(exc, RoomAssetInUseError):
         return APIError(409, "asset_in_use", str(exc))
-    raise exc
+    return _map_adventure_error(exc)
 
 
 @router.post("", response_model=AdventureImport, status_code=status.HTTP_201_CREATED)
@@ -372,6 +404,102 @@ def update_draft(
             import_id=import_id,
             draft=payload.draft,
             warnings=payload.warnings,
+            expected_revision=payload.expected_revision,
+        )
+    except Exception as exc:
+        raise _map_adventure_import_error(exc) from exc
+
+
+@router.post(
+    "/{import_id}/draft/entries/{entry_id}/review",
+    response_model=AdventureImportDraft,
+)
+def set_entry_review(
+    room_id: UUID,
+    import_id: UUID,
+    entry_id: str,
+    payload: SetEntryReviewRequest,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    service: AdventureImportService = Depends(get_adventure_import_service),
+) -> AdventureImportDraft:
+    try:
+        return service.set_entry_review(
+            context,
+            room_id=room_id,
+            import_id=import_id,
+            entry_id=entry_id,
+            review_status=payload.review_status,
+            expected_revision=payload.expected_revision,
+        )
+    except Exception as exc:
+        raise _map_adventure_import_error(exc) from exc
+
+
+@router.post(
+    "/{import_id}/warnings/{warning_id}/resolve",
+    response_model=AdventureImportDraft,
+)
+def resolve_warning(
+    room_id: UUID,
+    import_id: UUID,
+    warning_id: str,
+    payload: ResolveWarningRequest,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    service: AdventureImportService = Depends(get_adventure_import_service),
+) -> AdventureImportDraft:
+    try:
+        return service.resolve_import_warning(
+            context,
+            room_id=room_id,
+            import_id=import_id,
+            warning_id=warning_id,
+            resolution=payload.resolution,
+            expected_revision=payload.expected_revision,
+        )
+    except Exception as exc:
+        raise _map_adventure_import_error(exc) from exc
+
+
+@router.post(
+    "/{import_id}/questions/{question_id}/answer",
+    response_model=AdventureImportDraft,
+)
+def answer_question(
+    room_id: UUID,
+    import_id: UUID,
+    question_id: str,
+    payload: AnswerQuestionRequest,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    service: AdventureImportService = Depends(get_adventure_import_service),
+) -> AdventureImportDraft:
+    try:
+        return service.answer_import_question(
+            context,
+            room_id=room_id,
+            import_id=import_id,
+            question_id=question_id,
+            answer=payload.answer,
+            expected_revision=payload.expected_revision,
+        )
+    except Exception as exc:
+        raise _map_adventure_import_error(exc) from exc
+
+
+@router.post("/{import_id}/finalize", response_model=AdventureDefinition)
+def finalize_adventure(
+    room_id: UUID,
+    import_id: UUID,
+    payload: FinalizeAdventureImportRequest,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    service: AdventureImportService = Depends(get_adventure_import_service),
+) -> AdventureDefinition:
+    try:
+        return service.finalize_adventure(
+            context,
+            room_id=room_id,
+            import_id=import_id,
+            name=payload.name,
+            summary=payload.summary,
             expected_revision=payload.expected_revision,
         )
     except Exception as exc:

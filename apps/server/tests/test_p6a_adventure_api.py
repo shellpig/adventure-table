@@ -961,10 +961,10 @@ def test_entry_list_embeds_assets_without_n_plus_one(
     call_count = 0
     original_list_for_room = RoomAssetRepository.list_for_room
 
-    def _counting_list_for_room(self, room_id, kind=None):
+    def _counting_list_for_room(self, room_id, kind=None, *, connection=None):
         nonlocal call_count
         call_count += 1
-        return original_list_for_room(self, room_id, kind=kind)
+        return original_list_for_room(self, room_id, kind=kind, connection=connection)
 
     monkeypatch.setattr(RoomAssetRepository, "list_for_room", _counting_list_for_room)
 
