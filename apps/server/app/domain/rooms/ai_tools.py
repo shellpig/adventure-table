@@ -90,6 +90,7 @@ class EventsInput(StrictModel):
 
 class WaitEventsInput(EventsInput):
     timeout: float = Field(default=30.0, ge=0.0, le=WAIT_EVENT_MAX_TIMEOUT_SECONDS)
+    include_own: bool = False
 
 
 class RequestCheckToolInput(StrictModel):
@@ -483,6 +484,7 @@ class AIToolApplicationService:
                 limit=input.limit,
                 timeout=input.timeout,
                 max_timeout=WAIT_EVENT_MAX_TIMEOUT_SECONDS,
+                suppress_own=not input.include_own,
             )
         ).model_dump(mode="json")
 

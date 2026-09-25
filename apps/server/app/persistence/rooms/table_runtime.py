@@ -108,6 +108,8 @@ session_events = Table(
     Column("payload", json_payload_type, nullable=False),
     Column("idempotency_key", String(160), nullable=True),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("acting_ai_controller_grant_id", Uuid(), nullable=True),
+    Column("acting_grant_generation", Integer, nullable=True),
     CheckConstraint("seq > 0", name="ck_session_events_seq_positive"),
     CheckConstraint(
         "payload_version > 0",
@@ -192,6 +194,8 @@ class StoredTableEvent:
     payload: dict[str, Any]
     idempotency_key: str | None
     created_at: datetime
+    acting_ai_controller_grant_id: UUID | None
+    acting_grant_generation: int | None
 
 
 TableEventTransactionProjection = Callable[[Any, UUID, int], None]
@@ -205,6 +209,7 @@ class TableEventRepository:
 
     @staticmethod
     def _event(row) -> StoredTableEvent:
+        raw_generation = row["acting_grant_generation"]
         return StoredTableEvent(
             id=row["id"],
             session_id=row["session_id"],
@@ -222,6 +227,10 @@ class TableEventRepository:
             payload=dict(row["payload"]),
             idempotency_key=row["idempotency_key"],
             created_at=row["created_at"],
+            acting_ai_controller_grant_id=row["acting_ai_controller_grant_id"],
+            acting_grant_generation=(
+                int(raw_generation) if raw_generation is not None else None
+            ),
         )
 
     def _session_scope_row(
@@ -899,6 +908,15 @@ class TableEventRepository:
                 )
             )
 
+        acting_ai_controller_grant_id: UUID | None = None
+        acting_grant_generation: int | None = None
+        if (
+            expected_actor_binding is not None
+            and expected_actor_binding.actor_kind == "ai"
+        ):
+            acting_ai_controller_grant_id = expected_actor_binding.ai_controller_grant_id
+            acting_grant_generation = expected_actor_binding.grant_generation
+
         connection.execute(
             insert(session_events).values(
                 id=event_id,
@@ -914,6 +932,8 @@ class TableEventRepository:
                 payload_version=payload_version,
                 payload=payload,
                 idempotency_key=idempotency_key,
+                acting_ai_controller_grant_id=acting_ai_controller_grant_id,
+                acting_grant_generation=acting_grant_generation,
             )
         )
         if transaction_projection is not None:
