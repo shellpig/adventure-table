@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -168,6 +168,33 @@ class RollRepository:
                 .order_by(roll_requests.c.created_at, roll_requests.c.id)
             ).mappings().all()
         return tuple(self._request(row) for row in rows)
+
+    def list_request_outcome_inputs(
+        self,
+        *,
+        session_id: UUID,
+        request_ids: Collection[UUID],
+    ) -> dict[UUID, tuple[int | None, bool]]:
+        if not request_ids:
+            return {}
+        with self.engine.connect() as connection:
+            rows = connection.execute(
+                select(
+                    roll_requests.c.id,
+                    roll_requests.c.dc,
+                    roll_requests.c.auto_fail,
+                ).where(
+                    roll_requests.c.session_id == session_id,
+                    roll_requests.c.id.in_(request_ids),
+                )
+            ).mappings().all()
+        return {
+            row["id"]: (
+                int(row["dc"]) if row["dc"] is not None else None,
+                bool(row["auto_fail"]),
+            )
+            for row in rows
+        }
 
     def create_request_group(
         self,

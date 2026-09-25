@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Collection
 from enum import StrEnum
 from random import SystemRandom
 from typing import Protocol
@@ -411,6 +412,16 @@ class RollService:
             if actor.is_current_dm or visibility is RollVisibility.PUBLIC or request.target_seat_id in controlled:
                 visible.append(self._request_view(actor, request))
         return tuple(visible)
+
+    def request_outcome_inputs(
+        self,
+        actor: TableActorContext,
+        request_ids: Collection[UUID],
+    ) -> dict[UUID, tuple[int | None, bool]]:
+        return self.repository.list_request_outcome_inputs(
+            session_id=actor.session_id,
+            request_ids=request_ids,
+        )
 
     def complete_formal(self, actor: TableActorContext, input: FormalRollInput) -> RollResultView:
         self.table_event_service.require_actor_current(actor)
