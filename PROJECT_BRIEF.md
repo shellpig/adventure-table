@@ -16,9 +16,10 @@
 
 - **P4 已全部關門並合併回 `main`**：P4-F code `651a14d0`，merge `7ef02d13`；證據見 [P4-F closeout](docs/P4/P4-F_CLOSEOUT.md)。歷史步驟不再作開場必讀。
 - **M05（Session History Continuity & Owner End for AI DM Sessions）已於 2026-09-20 當日開工並全部關門、合併回 `main`**：M05-A Owner 可正常 End AI DM 的 Session；M05-B 聊天串向上翻頁越過 Session 邊界（專用 history read scope，不擴大 gameplay actor）。證據見 [M05-A closeout](docs/M05/M05-A_CLOSEOUT.md)、[M05-B closeout](docs/M05/M05-B_CLOSEOUT.md)；逐項表已移至 ROADMAP_HISTORY。
-- **P6-A～P6-E 已關門並合併回 `main`**：Adventure authoring／Room asset、Campaign Runtime、AI context／write-back、Import Source／Draft 已交付；證據見各 [closeout](docs/P6/P6-E_CLOSEOUT.md) 與 [歷史進度](docs/ROADMAP_HISTORY.md)。**P6-F 已通過關門驗證，待合併回 `main`**（[closeout](docs/P6/P6-F_CLOSEOUT.md)）。**P6-G 的 G1～G4 已在依賴 F 的 `codex/p6g-integration` 分支完成**（G4 真實網頁版 AI agent：ChatGPT Web journey＋Claude 網頁版跨 Session 讀回）；剩 G5 Phase closeout。合併順序仍為 F 後 G，P6 關門後才回 P5 Tactical Combat。
+- **P6-A～P6-E 已關門並合併回 `main`**：Adventure authoring／Room asset、Campaign Runtime、AI context／write-back、Import Source／Draft 已交付；證據見各 [closeout](docs/P6/P6-E_CLOSEOUT.md) 與 [歷史進度](docs/ROADMAP_HISTORY.md)。**P6-F 已通過關門驗證，待合併回 `main`**（[closeout](docs/P6/P6-F_CLOSEOUT.md)）。**P6-G 的 G1～G4 已在依賴 F 的 `codex/p6g-integration` 分支完成**（G4 真實網頁版 AI agent：ChatGPT Web journey＋Claude 網頁版跨 Session 讀回）；剩 G5 Phase closeout。合併順序仍為 F 後 G，P6 關門後先做 M06，再回 P5 Tactical Combat。
 - **P6 契約固定 A～G**；P6-G 接手讀 [實作規格](docs/P6/實作規格.md)、[開發設計方針](docs/P6/開發設計方針.md)、[測試指南](docs/P6/測試指南.md) 的 P6-G 與 [實作紀錄](docs/P6/P6-G實作紀錄.md)。既有技術決策與驗證證據住各 Subphase closeout，不在本簡報重複。列出下一步不代表 merge 授權。
 - **M01／U01 保持 open，不阻塞 P Roadmap**。M01-A～O、U01-A 已關門；下一個未使用字母分別為 M01-P、U01-B，兩者下一項 scope 均未拍板，不建立虛構的待辦 Subphase。
+- **M06（AI Long-Session Hosting Efficiency）契約已定、待開工**：插在 P6 關門後、P5-A 前；M06-A `wait_for_event` 實際等待上限對齊 120 秒、M06-B 自己寫入的 echo 不喚醒 wait、M06-C MCP `roll.resolved` 精簡投影。
 - **P5 已有完整契約但暫後移；P7～P8 保持大 Phase**，不提前拆分或設計 schema／API／module。
 
 ### P6 Subphase 進度
@@ -37,7 +38,7 @@
 
 ## Phase Roadmap
 
-Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **P0→P4 → M05 → P6 → P5 → P7 → P8**。這不是重編 Phase：P5 仍是 Tactical Combat、P6 仍是 Adventure / Campaign Runtime。M 為插入式維護／內容擴充，U 為測試／開發效率優化，兩者均可長期 open。
+Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **P0→P4 → M05 → P6 → M06 → P5 → P7 → P8**。這不是重編 Phase：P5 仍是 Tactical Combat、P6 仍是 Adventure / Campaign Runtime。M 為插入式維護／內容擴充，U 為測試／開發效率優化，兩者均可長期 open。
 
 | Phase | 主題／狀態 |
 |---|---|
@@ -49,7 +50,8 @@ Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **
 | U01 | Test / Development Efficiency；長期 open |
 | P4 | Quick Combat；已關門 |
 | M05 | Session History Continuity／Owner End for AI DM；已關門（2026-09-20），插在 P4 與 P6-A 之間 |
-| P5 | Tactical Combat；契約已定案，依使用者決定延至 P6 關門後實作 |
+| M06 | AI Long-Session Hosting Efficiency；契約已定，插在 P6 關門後、P5-A 前 |
+| P5 | Tactical Combat；契約已定案，依使用者決定延至 P6 與 M06 之後實作 |
 | P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；**當前 Phase，P6-F 待合併，P6-G 工作分支已開工** |
 | P7 | Timeline、Snapshot／Restore、broader Archive／Import／Export；角色 JSON 已由 M03 先行，不做 gameplay Undo |
 | P8 | 全流程 QA／Polish、權限、reconnect、效能、Responsive UI |
@@ -110,6 +112,7 @@ P／M 三份文件：**實作規格＝完成後必須為真；開發設計方針
 | P5 | [規格](docs/P5/實作規格.md) | [設計](docs/P5/開發設計方針.md) | [測試](docs/P5/測試指南.md) |
 | M05 | [規格](docs/M05/實作規格.md) | [設計](docs/M05/開發設計方針.md) | [測試](docs/M05/測試指南.md) |
 | P6 | [規格](docs/P6/實作規格.md) | [設計](docs/P6/開發設計方針.md) | [測試](docs/P6/測試指南.md) |
+| M06 | [規格](docs/M06/實作規格.md) | [設計](docs/M06/開發設計方針.md) | [測試](docs/M06/測試指南.md) |
 
 其餘已交付 Phase 的三份文件見 [歷史文件索引](docs/ROADMAP_HISTORY.md#已交付-phase-文件索引)。
 
