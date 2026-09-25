@@ -27,6 +27,25 @@ from app.persistence.rooms.table_runtime import (
 
 MAX_HISTORY_SCAN_CHUNKS = 5
 
+OWN_ECHO_EVENT_KINDS = frozenset({
+    "stage.updated",
+    "exploration.narration",
+    "exploration.dialogue",
+    "exploration.action",
+    "exploration.ooc",
+    "exploration.whisper_dm",
+    "roll.quick",
+    "character.state.updated",
+    "world.entry.created",
+    "world.entry.updated",
+    "world.entry.archived",
+    "world.override.created",
+    "world.override.updated",
+    "world.override.cleared",
+    "world.action.resolved",
+    "world.context_changed",
+})
+
 
 class TableActorKind(StrEnum):
     HUMAN = "human"
@@ -327,6 +346,21 @@ class TableEventService:
             return bool(controlled.intersection(stored.recipient_seat_ids))
         return False
 
+    @staticmethod
+    def _is_own_echo(actor: TableActorContext, stored: StoredTableEvent) -> bool:
+        if actor.actor_kind is not TableActorKind.AI:
+            return False
+        if stored.acting_ai_controller_grant_id is None:
+            return False
+        if (stored.acting_ai_controller_grant_id, stored.acting_grant_generation) != (
+            actor.ai_controller_grant_id,
+            actor.grant_generation,
+        ):
+            return False
+        if stored.kind == "roll.requested":
+            return "combat_id" not in stored.payload
+        return stored.kind in OWN_ECHO_EVENT_KINDS
+
     def current_cursor(self, actor: TableActorContext) -> TableRuntimeCursor:
         self.require_actor_current(actor)
         try:
@@ -349,6 +383,7 @@ class TableEventService:
         *,
         after_seq: int,
         limit: int,
+        suppress_own: bool = False,
     ) -> TableEventPage:
         self.require_actor_current(actor)
         bounded_after = max(0, int(after_seq))
@@ -374,6 +409,7 @@ class TableEventService:
             self._present(stored, actor=actor)
             for stored in raw
             if self._visible(actor, stored)
+            and (not suppress_own or not self._is_own_echo(actor, stored))
         ]
         return TableEventPage(
             session_id=actor.session_id,
@@ -523,51 +559,96 @@ class TableEventService:
         limit: int,
         timeout: float,
         max_timeout: float = 60.0,
+        suppress_own: bool = False,
     ) -> TableEventPage:
         """Wait without occupying a DB connection/transaction or worker thread."""
 
         bounded_after = max(0, int(after_seq))
         bounded_timeout = max(0.0, min(float(timeout), max_timeout))
 
-        first = await asyncio.to_thread(
-            self.list_after,
-            actor,
-            after_seq=bounded_after,
-            limit=limit,
-        )
-        if first.cursor > bounded_after:
-            return first
+        if not suppress_own:
+            first = await asyncio.to_thread(
+                self.list_after,
+                actor,
+                after_seq=bounded_after,
+                limit=limit,
+            )
+            if first.cursor > bounded_after:
+                return first
 
-        if self.notifier is None:
-            if bounded_timeout > 0:
-                await asyncio.sleep(bounded_timeout)
+            if self.notifier is None:
+                if bounded_timeout > 0:
+                    await asyncio.sleep(bounded_timeout)
+                return await asyncio.to_thread(
+                    self.list_after,
+                    actor,
+                    after_seq=bounded_after,
+                    limit=limit,
+                )
+
+            handle = self.notifier.register(actor.session_id)
+            try:
+                second = await asyncio.to_thread(
+                    self.list_after,
+                    actor,
+                    after_seq=bounded_after,
+                    limit=limit,
+                )
+                if second.cursor > bounded_after:
+                    return second
+
+                await self.notifier.wait(handle, bounded_timeout)
+                return await asyncio.to_thread(
+                    self.list_after,
+                    actor,
+                    after_seq=bounded_after,
+                    limit=limit,
+                )
+            finally:
+                self.notifier.unregister(handle)
+
+        # Own-echo suppression (M06-B): skipped echoes still advance the cursor,
+        # so keep waiting until a non-echo event arrives or the deadline passes.
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + bounded_timeout
+        cursor = bounded_after
+
+        async def scan() -> TableEventPage:
             return await asyncio.to_thread(
                 self.list_after,
                 actor,
-                after_seq=bounded_after,
+                after_seq=cursor,
                 limit=limit,
+                suppress_own=True,
             )
 
-        handle = self.notifier.register(actor.session_id)
-        try:
-            second = await asyncio.to_thread(
-                self.list_after,
-                actor,
-                after_seq=bounded_after,
-                limit=limit,
-            )
-            if second.cursor > bounded_after:
-                return second
+        while True:
+            page = await scan()
+            if page.events:
+                return page
+            if page.cursor > cursor:
+                cursor = page.cursor
+                continue
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                return page
+            if self.notifier is None:
+                await asyncio.sleep(remaining)
+                continue
 
-            await self.notifier.wait(handle, bounded_timeout)
-            return await asyncio.to_thread(
-                self.list_after,
-                actor,
-                after_seq=bounded_after,
-                limit=limit,
-            )
-        finally:
-            self.notifier.unregister(handle)
+            # A fresh handle per round: a notified handle stays set.
+            handle = self.notifier.register(actor.session_id)
+            try:
+                recheck = await scan()
+                if recheck.events:
+                    return recheck
+                if recheck.cursor > cursor:
+                    cursor = recheck.cursor
+                    continue
+                if not await self.notifier.wait(handle, remaining):
+                    return await scan()
+            finally:
+                self.notifier.unregister(handle)
 
     def append_event(
         self,
@@ -634,6 +715,7 @@ __all__ = [
     "EventReadScope",
     "HistoricalSessionReadScope",
     "MAX_HISTORY_SCAN_CHUNKS",
+    "OWN_ECHO_EVENT_KINDS",
     "TableActorContext",
     "TableActorKind",
     "TableEvent",

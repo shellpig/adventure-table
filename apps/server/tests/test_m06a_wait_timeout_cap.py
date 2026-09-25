@@ -56,8 +56,9 @@ class _TestTableEventService(TableEventService):
         *,
         after_seq: int,
         limit: int,
+        suppress_own: bool = False,
     ) -> TableEventPage:
-        del limit
+        del limit, suppress_own
         return TableEventPage(
             session_id=actor.session_id,
             after_seq=after_seq,
@@ -178,7 +179,8 @@ def test_mcp_wait_for_event_passes_full_timeout_to_notifier() -> None:
         facade.wait_for_event("fake-token", WaitEventsInput(timeout=120))
     )
     assert result["events"] == []
-    assert notifier.recorded_timeouts == [120.0]
+    # Default wait suppresses own echoes (M06-B), whose loop passes the time left before the deadline.
+    assert notifier.recorded_timeouts == [pytest.approx(120.0, abs=1.0)]
 
 
 def test_mcp_wait_for_event_passes_shorter_timeout_unchanged() -> None:
@@ -192,7 +194,7 @@ def test_mcp_wait_for_event_passes_shorter_timeout_unchanged() -> None:
         facade.wait_for_event("fake-token", WaitEventsInput(timeout=90))
     )
     assert result["events"] == []
-    assert notifier.recorded_timeouts == [90.0]
+    assert notifier.recorded_timeouts == [pytest.approx(90.0, abs=1.0)]
 
 
 def test_wait_after_default_cap_is_sixty() -> None:
@@ -227,8 +229,9 @@ def test_wait_cap_single_source() -> None:
         limit: int,
         timeout: float,
         max_timeout: float = 60.0,
+        suppress_own: bool = False,
     ) -> TableEventPage:
-        del actor_arg, after_seq, limit, timeout
+        del actor_arg, after_seq, limit, timeout, suppress_own
         recorded_kwargs["max_timeout"] = max_timeout
         return TableEventPage(
             session_id=actor.session_id,

@@ -1,8 +1,10 @@
 from __future__ import annotations
-
+ 
+import asyncio
 from datetime import datetime, timezone
+import time
 from typing import NamedTuple
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, insert, select, update
@@ -11,12 +13,16 @@ from sqlalchemy.pool import StaticPool
 
 from app.api.rooms.access import get_room_access_context
 from app.api.rooms.dependencies import get_table_event_service
+from app.api.rooms.table_event_wait import ProcessLocalTableEventNotifier
 from app.db import metadata
+from app.domain.rooms.ai_tools import AIToolApplicationService, WaitEventsInput
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.table_events import (
     TableActorContext,
     TableEvent,
     TableEventAppend,
+    TableEventNotifier,
+    TableEventPage,
     TableEventService,
     TableEventVisibility,
 )
@@ -45,7 +51,9 @@ class M06bFixture(NamedTuple):
     ai_player_actor: TableActorContext
 
 
-def create_m06b_fixture() -> M06bFixture:
+def create_m06b_fixture(
+    notifier: TableEventNotifier | None = None,
+) -> M06bFixture:
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -292,7 +300,7 @@ def create_m06b_fixture() -> M06bFixture:
             )
         )
 
-    service = TableEventService(TableEventRepository(engine))
+    service = TableEventService(TableEventRepository(engine), notifier=notifier)
 
     human_actor = service.resolve_human_actor(
         room_id=room_id,
@@ -536,3 +544,466 @@ def test_table_event_json_has_no_stamp_fields() -> None:
     finally:
         app.dependency_overrides.pop(get_table_event_service, None)
         app.dependency_overrides.pop(get_room_access_context, None)
+
+
+def _append(
+    fix: M06bFixture,
+    actor: TableActorContext,
+    kind: str,
+    payload: dict[str, object],
+) -> TableEvent:
+    return fix.service.append_event(
+        actor,
+        TableEventAppend(kind=kind, visibility=TableEventVisibility.PUBLIC, payload=payload),
+    )
+
+
+def _regrant_dm_seat(
+    fix: M06bFixture,
+    *,
+    new_grant_id: UUID,
+    new_generation: int = 2,
+) -> TableActorContext:
+    now = datetime.now(timezone.utc)
+    with fix.engine.begin() as conn:
+        conn.execute(
+            update(ai_controller_grants)
+            .where(ai_controller_grants.c.id == fix.ai_dm_actor.ai_controller_grant_id)
+            .values(status="revoked", revoked_at=now)
+        )
+        conn.execute(
+            insert(ai_controller_grants).values(
+                id=new_grant_id,
+                room_id=fix.ai_dm_actor.room_id,
+                campaign_id=fix.ai_dm_actor.campaign_id,
+                seat_id=fix.ai_dm_actor.seat_id,
+                role="dm",
+                session_id=fix.ai_dm_actor.session_id,
+                secret_hash=b"s2" * 16,
+                secret_prefix="aidm2",
+                generation=new_generation,
+                status="active",
+                pre_session_expires_at=None,
+                handoff_return_access_session_id=None,
+                temporary_instruction=None,
+                created_at=now,
+                bound_at=now,
+                revoked_at=None,
+                last_seen_at=None,
+            )
+        )
+        conn.execute(
+            update(campaign_seats)
+            .where(campaign_seats.c.id == fix.ai_dm_actor.seat_id)
+            .values(
+                ai_controller_grant_id=new_grant_id,
+                controller_epoch=new_generation,
+            )
+        )
+        conn.execute(
+            update(sessions)
+            .where(sessions.c.id == fix.ai_dm_actor.session_id)
+            .values(
+                dm_controller_ai_grant_id=new_grant_id,
+                dm_controller_generation=new_generation,
+            )
+        )
+    return fix.service.resolve_ai_actor(
+        room_id=fix.ai_dm_actor.room_id,
+        campaign_id=fix.ai_dm_actor.campaign_id,
+        session_id=fix.ai_dm_actor.session_id,
+        grant_id=new_grant_id,
+        generation=new_generation,
+    )
+
+
+def test_list_after_suppress_own_skips_ai_dm_echoes_and_advances_cursor() -> None:
+    fix = create_m06b_fixture()
+
+    _append(fix, fix.ai_dm_actor, "stage.updated", {"text": "The goblin lair entrance is dark."})
+    _append(fix, fix.ai_dm_actor, "exploration.narration", {"text": "Water drips from stalactites above."})
+    _append(fix, fix.ai_dm_actor, "world.entry.created", {"entry_id": "entry-1"})
+    _append(fix, fix.ai_dm_actor, "world.context_changed", {"context": "active_scene"})
+    e5 = _append(fix, fix.ai_dm_actor, "roll.requested", {"prompt": "Wisdom (Perception) DC 12"})
+
+    page_suppressed = fix.service.list_after(
+        fix.ai_dm_actor,
+        after_seq=0,
+        limit=10,
+        suppress_own=True,
+    )
+    assert page_suppressed.events == []
+    assert page_suppressed.cursor == e5.seq
+
+    page_unsuppressed = fix.service.list_after(
+        fix.ai_dm_actor,
+        after_seq=0,
+        limit=10,
+        suppress_own=False,
+    )
+    assert len(page_unsuppressed.events) == 5
+    assert [e.kind for e in page_unsuppressed.events] == [
+        "stage.updated",
+        "exploration.narration",
+        "world.entry.created",
+        "world.context_changed",
+        "roll.requested",
+    ]
+
+
+def test_wait_suppress_own_keeps_waiting_past_own_echoes_until_timeout() -> None:
+    notifier = ProcessLocalTableEventNotifier()
+    fix = create_m06b_fixture(notifier=notifier)
+
+    _append(fix, fix.ai_dm_actor, "stage.updated", {"text": "Stage text"})
+    _append(fix, fix.ai_dm_actor, "exploration.narration", {"text": "Narration text"})
+    _append(fix, fix.ai_dm_actor, "world.entry.created", {"entry_id": "e1"})
+    _append(fix, fix.ai_dm_actor, "world.context_changed", {"context": "ctx"})
+    e5 = _append(fix, fix.ai_dm_actor, "roll.requested", {"prompt": "Perception check"})
+
+    start = time.perf_counter()
+    page = asyncio.run(
+        fix.service.wait_after(
+            fix.ai_dm_actor,
+            after_seq=0,
+            limit=10,
+            timeout=0.2,
+            max_timeout=120.0,
+            suppress_own=True,
+        )
+    )
+    elapsed = time.perf_counter() - start
+
+    assert page.events == []
+    assert page.cursor == e5.seq
+    assert elapsed >= 0.15
+
+
+def test_wait_suppress_own_wakes_on_player_dialogue_after_own_echoes() -> None:
+    notifier = ProcessLocalTableEventNotifier()
+    fix = create_m06b_fixture(notifier=notifier)
+
+    _append(fix, fix.ai_dm_actor, "stage.updated", {"text": "Stage text"})
+    _append(fix, fix.ai_dm_actor, "exploration.narration", {"text": "Narration text"})
+
+    async def delayed_player_write() -> None:
+        await asyncio.sleep(0.08)
+        await asyncio.to_thread(
+            fix.service.append_event,
+            fix.human_actor,
+            TableEventAppend(
+                kind="exploration.dialogue",
+                visibility=TableEventVisibility.PUBLIC,
+                payload={"text": "I ready my sword."},
+            ),
+        )
+
+    async def run_wait() -> tuple[TableEventPage, float]:
+        task = asyncio.create_task(delayed_player_write())
+        start = time.perf_counter()
+        page = await fix.service.wait_after(
+            fix.ai_dm_actor,
+            after_seq=0,
+            limit=10,
+            timeout=2.0,
+            max_timeout=120.0,
+            suppress_own=True,
+        )
+        elapsed = time.perf_counter() - start
+        await task
+        return page, elapsed
+
+    page, elapsed = asyncio.run(run_wait())
+
+    assert len(page.events) == 1
+    assert page.events[0].kind == "exploration.dialogue"
+    assert page.events[0].payload["text"] == "I ready my sword."
+    assert page.cursor == 3
+    assert elapsed < 1.0
+
+
+def test_other_actor_events_are_returned() -> None:
+    fix = create_m06b_fixture()
+
+    _append(fix, fix.human_actor, "exploration.dialogue", {"text": "Human dialogue"})
+    _append(fix, fix.ai_player_actor, "exploration.dialogue", {"text": "AI player dialogue"})
+    _append(fix, fix.human_actor, "roll.resolved", {"total": 17})
+
+    page = fix.service.list_after(
+        fix.ai_dm_actor,
+        after_seq=0,
+        limit=10,
+        suppress_own=True,
+    )
+
+    assert len(page.events) == 3
+    assert [e.kind for e in page.events] == [
+        "exploration.dialogue",
+        "exploration.dialogue",
+        "roll.resolved",
+    ]
+
+
+def test_non_whitelisted_own_events_are_returned() -> None:
+    fix = create_m06b_fixture()
+
+    binding = TableEventService._stored_binding(fix.ai_dm_actor)
+    kinds_and_payloads = [
+        ("combat.started", {"combat_id": str(uuid4())}),
+        ("roll.requested", {"combat_id": str(uuid4()), "prompt": "Attack roll"}),
+        ("roll.resolved", {"combat_id": str(uuid4()), "total": 19}),
+        ("pending_action.created", {"action_id": str(uuid4())}),
+        ("controller.changed", {"to": "new_controller"}),
+        ("session.started", {"mode": "adventure"}),
+    ]
+
+    for kind, payload in kinds_and_payloads:
+        fix.service.repository.append(
+            room_id=fix.ai_dm_actor.room_id,
+            campaign_id=fix.ai_dm_actor.campaign_id,
+            session_id=fix.ai_dm_actor.session_id,
+            kind=kind,
+            acting_seat_id=fix.ai_dm_actor.seat_id,
+            subject_seat_id=None,
+            subject_character_id=None,
+            execution_mode="self",
+            visibility="public",
+            recipient_seat_ids=(),
+            payload_version=1,
+            payload=payload,
+            idempotency_key=None,
+            expected_actor_binding=binding,
+        )
+
+    page = fix.service.list_after(
+        fix.ai_dm_actor,
+        after_seq=0,
+        limit=10,
+        suppress_own=True,
+    )
+
+    assert len(page.events) == 6
+    assert [e.kind for e in page.events] == [k for k, _ in kinds_and_payloads]
+
+
+def test_include_own_equivalent_to_unsuppressed() -> None:
+    fix = create_m06b_fixture()
+
+    _append(fix, fix.ai_dm_actor, "stage.updated", {"text": "Scene text"})
+    _append(fix, fix.ai_dm_actor, "exploration.narration", {"text": "Narration text"})
+
+    page_unsuppressed = asyncio.run(
+        fix.service.wait_after(
+            fix.ai_dm_actor,
+            after_seq=0,
+            limit=10,
+            timeout=1.0,
+            suppress_own=False,
+        )
+    )
+    assert len(page_unsuppressed.events) == 2
+
+    recorded_suppress_own: list[bool] = []
+
+    class _SpyEventService:
+        async def wait_after(
+            self,
+            actor: TableActorContext,
+            *,
+            after_seq: int,
+            limit: int,
+            timeout: float,
+            max_timeout: float = 60.0,
+            suppress_own: bool = False,
+        ) -> TableEventPage:
+            del timeout, max_timeout
+            recorded_suppress_own.append(suppress_own)
+            return TableEventPage(
+                session_id=actor.session_id,
+                after_seq=after_seq,
+                cursor=after_seq,
+                current_seq=after_seq,
+                has_more=False,
+                events=[],
+            )
+
+    class _StaticAIControllerService:
+        def __init__(self, actor: TableActorContext) -> None:
+            self.actor = actor
+
+        def resolve_actor(self, token: str, *, touch: bool = True) -> TableActorContext:
+            del token, touch
+            return self.actor
+
+    facade = AIToolApplicationService(
+        ai_controller_service=_StaticAIControllerService(fix.ai_dm_actor),  # type: ignore[arg-type]
+        session_service=None,  # type: ignore[arg-type]
+        stage_service=None,  # type: ignore[arg-type]
+        action_service=None,  # type: ignore[arg-type]
+        roll_service=None,  # type: ignore[arg-type]
+        state_service=None,  # type: ignore[arg-type]
+        pending_action_service=None,  # type: ignore[arg-type]
+        event_service=_SpyEventService(),  # type: ignore[arg-type]
+        workspace_service=None,  # type: ignore[arg-type]
+    )
+
+    asyncio.run(
+        facade.wait_for_event("fake-token", WaitEventsInput(include_own=True))
+    )
+    assert recorded_suppress_own == [False]
+
+    asyncio.run(
+        facade.wait_for_event("fake-token", WaitEventsInput())
+    )
+    assert recorded_suppress_own == [False, True]
+
+
+def test_human_and_pending_paths_unchanged() -> None:
+    fix = create_m06b_fixture()
+
+    _append(fix, fix.ai_dm_actor, "stage.updated", {"text": "Scene text"})
+    _append(fix, fix.ai_dm_actor, "exploration.narration", {"text": "Narration text"})
+
+    human_page = fix.service.list_after(fix.human_actor, after_seq=0, limit=10)
+    assert len(human_page.events) == 2
+
+    ai_page = fix.service.list_after(fix.ai_dm_actor, after_seq=0, limit=10)
+    assert len(ai_page.events) == 2
+
+    human_wait_page = asyncio.run(
+        fix.service.wait_after(fix.human_actor, after_seq=0, limit=10, timeout=1.0)
+    )
+    assert len(human_wait_page.events) == 2
+
+
+def test_previous_controller_echoes_not_own_after_regrant() -> None:
+    fix = create_m06b_fixture()
+
+    e1 = _append(fix, fix.ai_dm_actor, "stage.updated", {"text": "Scene described by G1"})
+
+    g2_id = uuid4()
+    g2_actor = _regrant_dm_seat(fix, new_grant_id=g2_id, new_generation=2)
+
+    page_g2 = fix.service.list_after(
+        g2_actor,
+        after_seq=0,
+        limit=10,
+        suppress_own=True,
+    )
+    assert len(page_g2.events) == 1
+    assert page_g2.events[0].id == e1.id
+    assert page_g2.events[0].kind == "stage.updated"
+
+    e2 = _append(fix, g2_actor, "exploration.narration", {"text": "Narration by G2"})
+
+    page_g2_after = fix.service.list_after(
+        g2_actor,
+        after_seq=page_g2.cursor,
+        limit=10,
+        suppress_own=True,
+    )
+    assert page_g2_after.events == []
+    assert page_g2_after.cursor == e2.seq
+
+
+def test_human_dm_writes_never_own_for_ai() -> None:
+    fix = create_m06b_fixture()
+
+    # The fixture's Human actor is a player. We append exploration.dialogue
+    # from the human player actor, and stage.updated via repository with human binding.
+    _append(fix, fix.human_actor, "exploration.dialogue", {"text": "Let us proceed through the door."})
+    fix.service.repository.append(
+        room_id=fix.human_actor.room_id,
+        campaign_id=fix.human_actor.campaign_id,
+        session_id=fix.human_actor.session_id,
+        kind="stage.updated",
+        acting_seat_id=fix.human_actor.seat_id,
+        subject_seat_id=None,
+        subject_character_id=None,
+        execution_mode="self",
+        visibility="public",
+        recipient_seat_ids=(),
+        payload_version=1,
+        payload={"text": "Human-updated stage text"},
+        idempotency_key=None,
+        expected_actor_binding=TableEventService._stored_binding(fix.human_actor),
+    )
+
+    dm_page = fix.service.list_after(
+        fix.ai_dm_actor,
+        after_seq=0,
+        limit=10,
+        suppress_own=True,
+    )
+    assert len(dm_page.events) == 2
+    assert [e.kind for e in dm_page.events] == ["exploration.dialogue", "stage.updated"]
+
+    player_page = fix.service.list_after(
+        fix.ai_player_actor,
+        after_seq=0,
+        limit=10,
+        suppress_own=True,
+    )
+    assert len(player_page.events) == 2
+    assert [e.kind for e in player_page.events] == ["exploration.dialogue", "stage.updated"]
+
+
+def test_legacy_null_stamp_events_are_returned() -> None:
+    fix = create_m06b_fixture()
+
+    stored = fix.service.repository.append(
+        room_id=fix.ai_dm_actor.room_id,
+        campaign_id=fix.ai_dm_actor.campaign_id,
+        session_id=fix.ai_dm_actor.session_id,
+        kind="stage.updated",
+        acting_seat_id=fix.ai_dm_actor.seat_id,
+        subject_seat_id=None,
+        subject_character_id=None,
+        execution_mode="self",
+        visibility="public",
+        recipient_seat_ids=(),
+        payload_version=1,
+        payload={"text": "Pre-M06 legacy scene description"},
+        idempotency_key=None,
+        expected_actor_binding=None,
+    )
+    assert stored.acting_ai_controller_grant_id is None
+    assert stored.acting_grant_generation is None
+
+    page = fix.service.list_after(fix.ai_dm_actor, after_seq=0, limit=10, suppress_own=True)
+    assert len(page.events) == 1
+    assert page.events[0].id == stored.id
+    assert page.events[0].kind == "stage.updated"
+
+
+def test_player_visibility_unchanged_by_suppression() -> None:
+    fix = create_m06b_fixture()
+
+    fix.service.append_event(
+        fix.ai_dm_actor,
+        TableEventAppend(
+            kind="stage.updated",
+            visibility=TableEventVisibility.DM_ONLY,
+            payload={"secret_note": "A hidden door is behind the altar."},
+        ),
+    )
+    _append(fix, fix.ai_dm_actor, "exploration.narration", {"text": "You enter the stone chapel."})
+
+    page_suppressed = fix.service.list_after(
+        fix.ai_player_actor,
+        after_seq=0,
+        limit=10,
+        suppress_own=True,
+    )
+    page_unsuppressed = fix.service.list_after(
+        fix.ai_player_actor,
+        after_seq=0,
+        limit=10,
+        suppress_own=False,
+    )
+
+    assert [e.kind for e in page_suppressed.events] == ["exploration.narration"]
+    assert [e.kind for e in page_unsuppressed.events] == ["exploration.narration"]
+    assert page_suppressed.events == page_unsuppressed.events
+    assert page_suppressed.cursor == 2
+    assert page_unsuppressed.cursor == 2
