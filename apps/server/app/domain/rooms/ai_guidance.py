@@ -62,20 +62,26 @@ BRIEFING_MAX_CHARS = 3_000
 
 # Connectors expose tool discovery separately from tool execution; a model can
 # mistake "I can see / rescanned the tools" for "I called the tool". This rule
-# makes an actual invocation the only evidence of connectivity.
+# makes an actual invocation the only evidence of connectivity. Web-chat
+# connectors also fail intermittently for a few attempts and then recover, so a
+# failure without an AT result is transient and must not end the table loop.
 _INVOCATION_RULE_EN = (
-    "MCP invocation rule: only an actual tool call this turn (a real AT_mcp.<tool> "
-    "invocation that returned a success or error) counts as calling MCP. Tool "
-    "discovery, reading schemas, rescanning the connector or listing tools do NOT "
-    "count. Never report MCP connection success or failure unless such an "
-    "invocation occurred this turn; with none, say it is untested, do not guess "
-    "connection failed."
+    "MCP invocation rule: only a real AT_mcp.<tool> call this turn that returned a "
+    "result counts (listing tools does not); without one, say it is untested, never "
+    "guess connection failed. A call that fails with no AT result (timeout, connector "
+    "error) is transient: retry it (same idempotency_key) until it works; do not stop. "
+    "Only 401 ai_token_unauthorized means stop."
 )
 _INVOCATION_RULE_ZH = (
-    "MCP 呼叫判定：只有本回合實際執行 AT_mcp.<tool> 並取得成功或錯誤結果才算呼叫 MCP；"
-    "查看工具清單、讀 schema、重新掃描 connector 都不算。沒有實際 invocation 前，不得宣稱連線成功或失敗，"
-    "只能說『尚未測試』，不可推測為 connection failed。"
+    "MCP 呼叫判定：只有本回合實際執行 AT_mcp.<tool> 並取得結果才算（看清單、重新掃描不算）；"
+    "沒呼叫就說『尚未測試』，不可推測為 connection failed。"
+    "呼叫失敗且沒有 AT 回應（逾時、connector 錯誤）是暫時的：用同一 idempotency_key 重試直到成功，"
+    "不要停下；只有 401 ai_token_unauthorized 才停止。"
 )
+_TRANSIENT_RETRY_EN = (
+    "If a tool call fails with no AT result (timeout, connector error), retry it until it works; do not stop. "
+)
+_TRANSIENT_RETRY_ZH = "工具呼叫失敗且沒有 AT 回應（逾時、connector 錯誤）時重試直到成功，不要停下。"
 
 
 # Pre-session context carries no Campaign summary, so the DM is told up front
@@ -235,11 +241,13 @@ def render_briefing(*, role: str, mode: str) -> str:
             "Read this context, then call start_session. The tool list is the same before and after start; gameplay tools simply start accepting calls. "
             f"{_PRE_SESSION_ADVENTURE_EN if role == 'dm' else ''}"
             "Right after start the Stage is empty, so your first action is set_stage_text, then post_narration. "
+            f"{_TRANSIENT_RETRY_EN}"
             "Full guide: GET /mcp/guide?locale=en.\n"
             "zh-TW：這個 token 已經讓你成為此 DM Seat 的 controller，沒有另外的入席步驟。先讀 context，再呼叫 start_session；"
             "工具清單開始前後相同，開始後 gameplay 工具即可呼叫。"
             f"{_PRE_SESSION_ADVENTURE_ZH if role == 'dm' else ''}"
             "開場後 Stage 是空的，第一步先 set_stage_text，再 post_narration。"
+            f"{_TRANSIENT_RETRY_ZH}"
             "完整指引：GET /mcp/guide?locale=zh-TW。"
         )
     elif mode == "active_combat":

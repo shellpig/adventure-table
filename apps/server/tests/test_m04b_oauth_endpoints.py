@@ -194,6 +194,8 @@ def test_authorize_page_bilingual() -> None:
     assert "授權 Adventure Table" in zh.text
     assert "Authorize Adventure Table" in en.text
     assert 'name="ai_join_token"' in zh.text and 'name="ai_join_token"' in en.text
+    assert "AI agent connector" in zh.text and "AI agent connector" in en.text
+    assert "ChatGPT" not in zh.text + en.text
     assert str(authority.grant_id) not in zh.text + en.text
 
 

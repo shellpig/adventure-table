@@ -149,9 +149,9 @@ def render_guide(locale: Locale | str) -> str:
     rows = tool_reference_rows(None)
 
     if locale == "zh-TW":
-        intro = "Adventure Table AI 接入指引（ChatGPT Web／MCP client／純 HTTP）"
+        intro = "Adventure Table AI 接入指引（網頁版 AI agent／MCP client／純 HTTP）"
         web = (
-            "【1. ChatGPT Web／connector】\n"
+            "【1. 網頁版 AI agent／connector】\n"
             "新增 Adventure Table connector，URL 指向 https://<host>/mcp；OAuth 授權頁出現時貼上 AI Join Token。"
             "工具清單在 Session 開始前後相同，start_session 後不需要 Refresh。換 Seat／Role 必須重新 authorize；換 Role 後若工具仍是舊快照，請 Refresh／重新掃描工具並開新對話。"
         )
@@ -195,12 +195,16 @@ def render_guide(locale: Locale | str) -> str:
             "敘事、Stage 文字與寫回內容一律使用玩家使用的語言；Adventure 原文是其他語言時要轉述，不要直接照抄。"
         )
         rules = f"【DM 守則】\n{role_rule(role='dm', locale=locale)}\n\n【Player 守則】\n{role_rule(role='player', locale=locale)}"
-        unauth = "收到 401 ai_token_unauthorized 時停止並告知使用者，不要重試；token 用完或不再需要時請由人類撤銷。"
+        unauth = (
+            "工具呼叫失敗且沒有 AT 回應（逾時、connector 錯誤）是暫時的，通常稍後就恢復：用同一 idempotency_key 重試同一呼叫直到成功，"
+            "不要因此停下或交回使用者。AT 回傳的業務錯誤（ok:false）要依 error 修正參數，不是暫時錯誤。\n"
+            "收到 401 ai_token_unauthorized 時停止並告知使用者，不要重試；token 用完或不再需要時請由人類撤銷。"
+        )
         tool_heading = "【工具表】"
     else:
-        intro = "Adventure Table AI Join Guide (ChatGPT Web / MCP client / raw HTTP)"
+        intro = "Adventure Table AI Join Guide (web chat AI agent / MCP client / raw HTTP)"
         web = (
-            "[1. ChatGPT Web / connector]\n"
+            "[1. Web chat AI agent / connector]\n"
             "Add the Adventure Table connector at https://<host>/mcp and paste the AI Join Token when OAuth asks for it. "
             "The tool list is the same before and after the Session starts, so no Refresh is needed after start_session. Changing Seat/Role requires a new authorization; if the host still shows the old role's tools afterwards, Refresh/rescan and open a new chat."
         )
@@ -246,7 +250,12 @@ def render_guide(locale: Locale | str) -> str:
             "Narrate, write the Stage, and write back in the language the players use; when the Adventure text is in another language, render it rather than copying it verbatim."
         )
         rules = f"[DM rules]\n{role_rule(role='dm', locale=locale)}\n\n[Player rules]\n{role_rule(role='player', locale=locale)}"
-        unauth = "On 401 ai_token_unauthorized, stop and tell the user; do not retry. Ask the human to revoke the token when it is no longer needed."
+        unauth = (
+            "A tool call that fails with no AT result (timeout, connector error) is transient and usually recovers shortly: "
+            "retry the same call with the same idempotency_key until it succeeds; do not stop or hand back to the user over it. "
+            "A business error returned by AT (ok:false) is not transient; correct the arguments from its error.\n"
+            "On 401 ai_token_unauthorized, stop and tell the user; do not retry. Ask the human to revoke the token when it is no longer needed."
+        )
         tool_heading = "[Tools]"
 
     tool_lines = [tool_heading]

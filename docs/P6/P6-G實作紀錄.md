@@ -2,12 +2,12 @@
 
 ## 接手摘要
 
-- **更新日期**：2026-09-24。
-- **目標與邊界**：用 P6-A～F 已交付的 production service 驗空 Campaign 與 Adventure-driven 兩條完整旅程、PostgreSQL restart／next Session continuity、Player secrecy、Quick Combat／Standalone 邊界、真實 ChatGPT Web connector，最後做 P6 closeout。G 不新增核心資料模型或新玩法；若發現 A～F 必要能力缺漏，回所屬 Subphase 補實作與證據。
+- **更新日期**：2026-09-25。
+- **目標與邊界**：用 P6-A～F 已交付的 production service 驗空 Campaign 與 Adventure-driven 兩條完整旅程、PostgreSQL restart／next Session continuity、Player secrecy、Quick Combat／Standalone 邊界、真實網頁版 AI agent connector，最後做 P6 closeout。G 不新增核心資料模型或新玩法；若發現 A～F 必要能力缺漏，回所屬 Subphase 補實作與證據。
 - **Branch**：`codex/p6g-integration`，基於 P6-F 關門驗證 commit `73a2ee9a`。P6-F 尚待合併 `main`；本分支只建立依賴分支，不合併或改寫 `main`。
-- **最近已驗證 commit**：`e1627262`（G3b Player resume network test；指揮者完成跨 transport secrecy matrix、P5／Standalone 靜態邊界與 focused regression）。
-- **下一步**：依 [G4](P6-G_steps/G4.md)「測試方法」重跑 G4：新 AI DM Token、新 ChatGPT 對話，只給一句開場指示，AI 須自行從 outline 發現 Adventure、設 scene、Check／Quick Combat 與寫回；需要合法 current AI DM controller grant 與 AT 實際 state／event 證據，不以 Human DM session、逐步口述或模型自述代替。
-- **阻礙／未審**：G4 第一次嘗試（Session `412d30c9`）發現 AI DM 看不到 Adventure 內容，已作廢並由 G4a 補 P6-C；重跑前需由 Owner Abandon 該 Session 並以含 G4a 的 image 重建 `server-e2e`。建立 AI DM Token 與 OAuth 貼入由使用者親自完成。G5 全套自動 gate 的 backend／frontend／compose 已先驗，完整 E2E 留 G4 後以免重置測試 Room。
+- **最近已驗證 commit**：G4d（見 git log；暫時性 MCP 失敗重試指引與 host 中立措辭，完整 backend 2545 passed／78 skipped、前端 775 passed＋build）。
+- **下一步**：G5 全套 regression、靜態審核與 P6 closeout。完整 Docker E2E 會 reset `adventure_table_e2e`，G4 證據已寫入 [G4](P6-G_steps/G4.md) 完成紀錄。
+- **阻礙／未審**：無。G4 已通過（ChatGPT Web 跑完 journey，跨 Session 讀回由 Claude 網頁版完成；使用者拍板 connector gate 不限 ChatGPT）。
 - **正式契約**：`docs/P6/實作規格.md`「P6-G」、`開發設計方針.md`「P6-G」、`測試指南.md`「P6-G／G.1～G.8」與 P6 共用風險／執行環境。
 - **共用驗證邊界**：E2E 只用獨立 `adventure_table_e2e` 與 Linux Docker Vite；每步沿現有 Room fixture／backend REST／Playwright helper，不建立 test-only production bypass。Browser journey 要斷言實際 AT UI／API state；Player 的秘密靠 server projection。
 
@@ -27,5 +27,6 @@
 | G4a | AI DM Adventure outline 與主持指引（P6-C 補缺） | 完成 | G4 第一次嘗試 | [G4a](P6-G_steps/G4a.md) |
 | G4b | AI DM 即興與桌面語言指引（G4 第二次嘗試補缺） | 完成 | G4a | [G4b](P6-G_steps/G4b.md) |
 | G4c | World 寫入工具 state 形狀說明與錯誤 detail（G4 續跑補缺） | 完成 | G4b | [G4c](P6-G_steps/G4c.md) |
-| G4 | 真實 ChatGPT Web connector world-state journey | 進行中 | G2b-3、G4a～G4c | [G4](P6-G_steps/G4.md) |
+| G4d | 暫時性 MCP 失敗重試指引與 host 中立措辭（G4 收尾補缺） | 完成 | G4c | [G4d](P6-G_steps/G4d.md) |
+| G4 | 真實網頁版 AI agent connector world-state journey | 完成 | G2b-3、G4a～G4d | [G4](P6-G_steps/G4.md) |
 | G5 | 全套 regression、靜態審核與 P6 closeout | 待做 | G1～G4 | [G5](P6-G_steps/G5.md) |
