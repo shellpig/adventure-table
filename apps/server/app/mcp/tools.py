@@ -160,8 +160,8 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
         "Player 描述嘗試後，DM 要建立正式能力／技能／檢定擲骰時使用。成功後會自動在桌上聊天顯示符合權限範圍的擲骰提示；不要只為重複要求同一次擲骰而另呼叫 post_narration。skill_ref 用技能名如 'investigation'，ability_ref 用屬性如 'dexterity'。",
     ),
     "roll_pending": (
-        "Use only to resolve a visible pending non-combat formal roll with server RNG. P4-C Combat rolls use the matching combat_roll_* tool so the shared Combat transaction resolves the outcome.",
-        "只用來以 server RNG 完成目前可見且待處理的非戰鬥正式擲骰。P4-C 戰鬥擲骰要使用對應 combat_roll_* 工具，才能由共用 Combat transaction 完成結果。",
+        "Use only to resolve a visible pending non-combat formal roll with server RNG. Combat rolls use the matching combat_roll_* tool so the shared Combat transaction resolves the outcome.",
+        "只用來以 server RNG 完成目前可見且待處理的非戰鬥正式擲骰。戰鬥擲骰要使用對應 combat_roll_* 工具，才能由共用 Combat transaction 完成結果。",
     ),
     "submit_physical_roll": (
         "Use only when resolving a pending non-combat formal roll from physical d20 values supplied by the human.",
@@ -197,8 +197,8 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
         "宣告 Attack 前使用，取得受控制 combatant 合法的 runtime source_ref。",
     ),
     "combat_request_attack": (
-        "Declare a formal Attack through the shared P4-C service. Quick Combat geometry may return dm_adjudication_required instead of guessing range.",
-        "透過共用 P4-C service 宣告正式 Attack。Quick Combat 不猜距離，必要時會回 dm_adjudication_required。",
+        "Declare a formal Attack through the shared Combat service. Quick Combat geometry may return dm_adjudication_required instead of guessing range.",
+        "透過共用 Combat service 宣告正式 Attack。Quick Combat 不猜距離，必要時會回 dm_adjudication_required。",
     ),
     "combat_adjudicate_attack": (
         "Current DM resolves a pending Quick Combat range adjudication. In-range creates the canonical formal Attack RollRequest; out-of-range spends no Attack budget.",
@@ -595,7 +595,7 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("wait_for_event", _desc("Wait asynchronously for visible events after a cursor.", "以非同步方式等待指定 cursor 之後的可見事件。"), WaitEventsInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_get_active", _desc("Read the active Quick Combat projection.", "讀取目前 Quick Combat 投影。"), _NoArguments, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_list_attacks", _desc("List legal runtime attacks for one controlled CombatEntry.", "列出一個受控制 CombatEntry 的合法 runtime attacks。"), CombatEntryToolInput, frozenset({"player", "dm"})),
-    MCPToolDefinition("combat_request_attack", _desc("Declare a formal P4-C Attack.", "宣告正式 P4-C Attack。"), AttackRequestInput, frozenset({"player", "dm"})),
+    MCPToolDefinition("combat_request_attack", _desc("Declare a formal Combat Attack.", "宣告正式 Combat Attack。"), AttackRequestInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_adjudicate_attack", _desc("Resolve pending Attack range adjudication.", "裁定待處理 Attack range。"), AttackAdjudicationInput, frozenset({"dm"})),
     MCPToolDefinition("combat_roll_attack", _desc("Resolve a pending Attack RollRequest with server RNG.", "以 Server RNG 完成待處理 Attack RollRequest。"), CombatRollToolInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_apply_damage", _desc("Apply semantic Combat damage.", "套用語意化 Combat 傷害。"), SemanticDamageInput, frozenset({"player", "dm"})),

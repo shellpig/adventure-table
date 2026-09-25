@@ -17,7 +17,7 @@
 3. `git log --oneline -10`
 
 **Layer 2 — 按任務讀對應文件／段落：**
-- `規格企劃.md` — **產品與玩法的單一事實來源**。約 70 KB，一律標題定位、只讀該段
+- `規格企劃.md` — **產品與玩法的單一事實來源**。大檔，一律標題定位、只讀該段
 - `技術棧討論.md` — 只在基礎技術選型／Framework 討論時讀；不要把它當成全專案 architecture spec
 - `docs/Px/` / `docs/Mxx/` — 某個產品／維護 Phase 開工後，該 Phase 的正式實作規格、開發設計與測試文件
 - `docs/Uxx/` — Test / Development Efficiency 優化軌；每個 U Subphase 使用單一文件承載實作、設計、測試與 closeout 證據
@@ -116,7 +116,7 @@ U 類例外採單檔格式，直接讀對應 `docs/Uxx/Uxx-<letter>.md`。
 2. **所有正常產品 Phase 在 coding 開始前，都必須先拆成 `P<n>-A`、`P<n>-B`… 的 Subphases。所有 Maintenance / Modification Phase 在 coding 開始前，都必須先拆成 `M<nn>-A`、`M<nn>-B`… 的 Subphases。** 每個 Subphase 必須能獨立實作、驗證並 commit；完成時應處於可執行、可測試、沒有已知編譯／型別／該 Subphase 測試錯誤的狀態。
 3. **M Phase 定位**：`M01`、`M02`… 用於補資料／補設定、既有能力加強、資料 migration、或不構成下一個正常產品里程碑的維護／修改工作。M Phase 可以插在 P Phase 之間，**也可以插在另一個 M Phase 的兩個 Subphase 之間**；但不改寫 `P0 → P1 → P2...` 的正常 Roadmap。**Maintenance / content 型 M Phase 也可以長期保持 open，讓正常 P Roadmap 繼續前進；除非 `PROJECT_BRIEF.md` 或該 Phase 契約明確指定 dependency，整個 M Phase 的「final closeout」不是進下一個 P Phase 的必要條件。** 每個已拍板的 M Subphase仍各自 closeout，後續新增時照下一個字母接續，不重編已完成項目。
 4. **U Phase 定位**：`U01`、`U02`… 用於 Test / Development Efficiency Optimization，例如測試速度、開發迴圈成本、CI 效率與相關可靠性。U 類不改寫產品 `P0 → P1 → ...` Roadmap，也不是內容 Maintenance；可以與 P / M 工作並行，整體長期保持 open、不設 Full Closeout。每個具體項目仍使用 `U<nn>-A`、`U<nn>-B`…，各自實作、驗證、commit 與 closeout。**U 類每個 Subphase 使用單一文件** `docs/Uxx/Uxx-<letter>.md`，同檔承載實作規格、開發設計、測試與證據，不套 P / M 的三份文件制；優化不得犧牲 correctness、資料隔離或既有產品行為。
-5. **Subphase 只拆當前 Phase。唯一例外：使用者已明確決定要插入、且插入點已確定的 M Phase，可以在插入點到達前先完成拆分與三份文件**（M02 即為此例，插入點固定在 M01-C closeout 後）。此例外只適用已拍板的插入，不適用「將來可能會做」的 Phase。
+5. **Subphase 只拆當前 Phase。唯一例外：使用者已明確決定要插入、且插入點已確定的 M Phase，可以在插入點到達前先完成拆分與三份文件**。此例外只適用已拍板的插入，不適用「將來可能會做」的 Phase。
 6. 同一 Phase 的 `實作規格.md`、`開發設計方針.md`、`測試指南.md` 必須使用完全一致的 Subphase 名稱與順序，讓實作者可用 Subphase id 精準取得三份契約；U 類依第 4 條使用單檔格式。
 7. `PROJECT_BRIEF.md` 在當前 Phase 已拆分後，必須一列一個 Subphase 顯示進度，不可合併成一列；U 類同樣適用。產品 Phase 全部關門後，把逐項表移到 `docs/ROADMAP_HISTORY.md`；長期 open 的 M／U track 逐項移出已關門 Subphase，只保留當前已拍板工作與下一個未使用字母。移出後不在兩檔維護同一份進度表；未解問題仍留在 `已知問題.md`，有效約束仍在簡報保留摘要與正式契約入口。
 8. **長期 M Phase 的跨 Phase 相容性隨 Roadmap 前進而擴大。** 當後續 P Phase 已存在時，新 M Subphase若修改共享 domain / persistence / schema / DTO，除了本 M Subphase自己的 regression，還要 review並驗證所有直接受影響、已完成的後續 P Phase；不能只用「這是舊 M Phase」為理由忽略新 consumer。
