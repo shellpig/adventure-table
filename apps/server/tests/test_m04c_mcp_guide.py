@@ -65,6 +65,16 @@ def test_guide_contains_contract_sections() -> None:
             assert expected in guide
 
 
+def test_guide_is_host_neutral_and_retries_transient_failures() -> None:
+    en = render_guide("en")
+    zh = render_guide("zh-TW")
+    assert "ChatGPT" not in en and "ChatGPT" not in zh
+    assert "Web chat AI agent / connector" in en
+    assert "網頁版 AI agent／connector" in zh
+    assert "retry the same call with the same idempotency_key until it succeeds" in en
+    assert "用同一 idempotency_key 重試同一呼叫直到成功" in zh
+
+
 def test_guide_wait_rule_matches_cap() -> None:
     maximum = WaitEventsInput.model_json_schema()["properties"]["timeout"]["maximum"]
     assert maximum == 120.0

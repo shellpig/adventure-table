@@ -86,6 +86,14 @@ def test_active_briefings_carry_the_invocation_rule() -> None:
         assert "尚未測試" in briefing
 
 
+def test_briefings_tell_ai_to_keep_retrying_transient_failures() -> None:
+    for role in ("dm", "player"):
+        for mode in ("pre_session", "active_session", "active_combat"):
+            briefing = render_briefing(role=role, mode=mode)
+            assert "retry it" in briefing and "until it works; do not stop" in briefing
+            assert "重試直到成功，不要停下" in briefing
+
+
 def test_briefing_contains_no_secret() -> None:
     for role in ("dm", "player"):
         briefing = render_briefing(role=role, mode="active_session")

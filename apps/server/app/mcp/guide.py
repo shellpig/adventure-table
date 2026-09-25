@@ -149,9 +149,9 @@ def render_guide(locale: Locale | str) -> str:
     rows = tool_reference_rows(None)
 
     if locale == "zh-TW":
-        intro = "Adventure Table AI 接入指引（ChatGPT Web／MCP client／純 HTTP）"
+        intro = "Adventure Table AI 接入指引（網頁版 AI agent／MCP client／純 HTTP）"
         web = (
-            "【1. ChatGPT Web／connector】\n"
+            "【1. 網頁版 AI agent／connector】\n"
             "新增 Adventure Table connector，URL 指向 https://<host>/mcp；OAuth 授權頁出現時貼上 AI Join Token。"
             "工具清單在 Session 開始前後相同，start_session 後不需要 Refresh。換 Seat／Role 必須重新 authorize；換 Role 後若工具仍是舊快照，請 Refresh／重新掃描工具並開新對話。"
         )
@@ -182,13 +182,29 @@ def render_guide(locale: Locale | str) -> str:
             "DM 敘事只描述傷勢等級，不得說出敵人精確 HP。"
             f"每次結算後立即呼叫 {names.wait_event}，不要停在 host chat。"
         )
+        world = (
+            f"【Adventure 與世界狀態（DM）】\n{names.context} 的 campaign_context.attached_adventure_count 大於 0 表示 Campaign 附加了 Adventure。"
+            f"用 {names.campaign_context} 讀 attached_adventures[].outline：這是 Adventure 目錄（條目 id、kind、title、visibility，不含內文），"
+            f"再用 {names.adventure_entry} 依 id 讀需要的條目；dm_only 條目與秘密只給 DM，不得寫入 Stage 或公開 narration。"
+            f"current_scene.kind 為 none 時，從目錄挑開場 scene，以 {names.set_current_context}（expected_revision 為 current_context_revision）設定。"
+            f"跑團中世界狀態改變（門被打開、NPC 死亡、物品被取走、真相揭露）時要寫回："
+            f"改變既有 Adventure 條目的現況用 {names.set_override}，新增的事實、NPC、物品用 {names.create_world_entry}。"
+            "Adventure 原文（baseline）不會被改寫；下一場 Session 讀 context 時會看到寫回後的現況。\n"
+            "Adventure 是底稿不是劇本：DM 保留即興與世界裁定權。Adventure 沒提供可行路徑時（例如寫了「擊敗守衛後開門」卻沒有守衛或遭遇），"
+            f"不要讓桌面卡住，要像真人 DM 即興補上（新 NPC 用 {names.create_world_entry}、敵人用 Quick Combat），重要的即興內容同樣寫回。"
+            "敘事、Stage 文字與寫回內容一律使用玩家使用的語言；Adventure 原文是其他語言時要轉述，不要直接照抄。"
+        )
         rules = f"【DM 守則】\n{role_rule(role='dm', locale=locale)}\n\n【Player 守則】\n{role_rule(role='player', locale=locale)}"
-        unauth = "收到 401 ai_token_unauthorized 時停止並告知使用者，不要重試；token 用完或不再需要時請由人類撤銷。"
+        unauth = (
+            "工具呼叫失敗且沒有 AT 回應（逾時、connector 錯誤）是暫時的，通常稍後就恢復：用同一 idempotency_key 重試同一呼叫直到成功，"
+            "不要因此停下或交回使用者。AT 回傳的業務錯誤（ok:false）要依 error 修正參數，不是暫時錯誤。\n"
+            "收到 401 ai_token_unauthorized 時停止並告知使用者，不要重試；token 用完或不再需要時請由人類撤銷。"
+        )
         tool_heading = "【工具表】"
     else:
-        intro = "Adventure Table AI Join Guide (ChatGPT Web / MCP client / raw HTTP)"
+        intro = "Adventure Table AI Join Guide (web chat AI agent / MCP client / raw HTTP)"
         web = (
-            "[1. ChatGPT Web / connector]\n"
+            "[1. Web chat AI agent / connector]\n"
             "Add the Adventure Table connector at https://<host>/mcp and paste the AI Join Token when OAuth asks for it. "
             "The tool list is the same before and after the Session starts, so no Refresh is needed after start_session. Changing Seat/Role requires a new authorization; if the host still shows the old role's tools afterwards, Refresh/rescan and open a new chat."
         )
@@ -220,8 +236,26 @@ def render_guide(locale: Locale | str) -> str:
             "DM narration describes injury level only and never an enemy's exact HP. "
             f"After each resolution, immediately call {names.wait_event} and never stop in host chat."
         )
+        world = (
+            f"[Adventure and world state (DM)]\nIn {names.context}, campaign_context.attached_adventure_count > 0 means the Campaign has an Adventure attached. "
+            f"Read attached_adventures[].outline with {names.campaign_context}: it is the Adventure's table of contents (entry id, kind, title, visibility; no bodies). "
+            f"Then read the entries you need by id with {names.adventure_entry}; dm_only entries and secrets are for the DM only and never go on the Stage or in public narration. "
+            f"When current_scene.kind is none, pick the opening scene from the outline and set it with {names.set_current_context} (expected_revision is current_context_revision). "
+            "When the world changes during play (a door is opened, an NPC dies, an item is taken, a truth is revealed), write it back: "
+            f"use {names.set_override} to change the current state of an existing Adventure entry, and {names.create_world_entry} for new facts, NPCs, or items. "
+            "The Adventure text (baseline) is never rewritten; the next Session reads the written-back current state from context.\n"
+            "An Adventure is a baseline, not a script: the DM keeps the right to improvise and rule on the world. When the Adventure offers no workable path "
+            "(for example it says the door opens after the guardian is defeated but has no guardian or encounter), do not stall the table; "
+            f"improvise like a human DM (a new NPC via {names.create_world_entry}, enemies via Quick Combat) and write back improvisations that matter. "
+            "Narrate, write the Stage, and write back in the language the players use; when the Adventure text is in another language, render it rather than copying it verbatim."
+        )
         rules = f"[DM rules]\n{role_rule(role='dm', locale=locale)}\n\n[Player rules]\n{role_rule(role='player', locale=locale)}"
-        unauth = "On 401 ai_token_unauthorized, stop and tell the user; do not retry. Ask the human to revoke the token when it is no longer needed."
+        unauth = (
+            "A tool call that fails with no AT result (timeout, connector error) is transient and usually recovers shortly: "
+            "retry the same call with the same idempotency_key until it succeeds; do not stop or hand back to the user over it. "
+            "A business error returned by AT (ok:false) is not transient; correct the arguments from its error.\n"
+            "On 401 ai_token_unauthorized, stop and tell the user; do not retry. Ask the human to revoke the token when it is no longer needed."
+        )
         tool_heading = "[Tools]"
 
     tool_lines = [tool_heading]
@@ -239,6 +273,7 @@ def render_guide(locale: Locale | str) -> str:
             _http_contract(locale),
             "\n".join(tool_lines),
             flow,
+            world,
             combat,
             wait_rule(locale),
             rules,

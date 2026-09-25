@@ -1,6 +1,6 @@
 # Roadmap 歷史進度
 
-最後整理：2026-09-19
+最後整理：2026-09-25
 
 本檔保存已關門 Subphase 的進度表與關門摘要，不是開場必讀，也不定義當前工作。當前狀態、下一步與未來 Roadmap 只看 [PROJECT_BRIEF.md](../PROJECT_BRIEF.md)。M01／U01 整體保持 open，其已關門 Subphase 同樣歸入本檔。
 
@@ -141,6 +141,20 @@
 | **M05-A — Owner End for AI DM Sessions** | ✅ | `SessionService.end_session` 對 `dm_controller_kind == "ai"` 的 active Session 開 Owner Room-management 分支（與 Owner Abandon 同 `_finalize_with_event`，撤 AI grant、Seat 回 none＋epoch+1、釋放 lease）；Human DM 場 Owner 仍只能 Abandon；Session 頁 `sessionEndControls()` 與雙語 copy；`m05-session-history.spec.ts` A 段；[closeout](../docs/M05/M05-A_CLOSEOUT.md)，merge `7b913d3d` |
 | **M05-B — Cross-Session Chat History Paging** | ✅ | 專用 `HistoricalSessionReadScope`（Seat 為單位、DM 層跟 `dm_seat_id`、不看 participants），`resolve_human_actor`／`actor_binding_is_current`／gameplay route 零改動；`GET /sessions/{id}/previous`＋既有 `/events/history` 對非 active Session 分流；前端 `SessionHistoryChain`／`nextHistoryRequest` 一步一頁、分隔線、已到最前，舊事件不進本場投影；Resume／MCP 仍單場；[closeout](../docs/M05/M05-B_CLOSEOUT.md) |
 
+### P6
+
+✅＝已關門並合併；☑️＝關門驗證通過、待合併。
+
+| Subphase | 狀態 | 重點 |
+|---|---|---|
+| **P6-A — Adventure Definition & Campaign Attachment** | ✅ 2026-09-20 | Adventure Definition／entry authoring、Room asset、finalize、同一 Campaign 可 attach 多個 Adventure；[closeout](../docs/P6/P6-A_CLOSEOUT.md)，merge `8db7d851` |
+| **P6-B — Campaign Runtime World State** | ✅ 2026-09-21 | Campaign Runtime world entry／override／current context、baseline 與現況分離、Player projection；[closeout](../docs/P6/P6-B_CLOSEOUT.md)，merge `5f67feba` |
+| **P6-C — AI Context & Retrieval** | ✅ 2026-09-21 | role-scoped bounded campaign／scene context、search、五個 MCP read tool；[closeout](../docs/P6/P6-C_CLOSEOUT.md)，merge `10565217` |
+| **P6-D — AI DM Write-back & Exploration Integration** | ✅ 2026-09-22 | AI DM world write-back、idempotent world action、Stage bridge、`needs_review`；[closeout](../docs/P6/P6-D_CLOSEOUT.md)，merge `4c4943f5` |
+| **P6-E — Adventure Source & Import Draft** | ✅ 2026-09-22 | Import Source（text／Markdown／PDF／DOCX）與 Import Draft、provenance；[closeout](../docs/P6/P6-E_CLOSEOUT.md)，merge `6028d6c9` |
+| **P6-F — Import Review, Finalization & Importer MCP** | ☑️ 2026-09-23，待合併 | Review／Finalize 建新 Adventure baseline、idempotent finalize、六個 Importer MCP tool；[closeout](../docs/P6/P6-F_CLOSEOUT.md) |
+| **P6-G — Full P6 Integration & Closeout** | ☑️ 2026-09-25，待合併 | empty Campaign／Adventure-driven browser journey、真 PostgreSQL restart、secrecy matrix、真實網頁版 AI agent gate（ChatGPT Web＋Claude 跨 Session 讀回）、G4a～G4d AI 指引補缺、G5a AI context 上限；全套 backend 2556 passed；[closeout](../docs/P6/P6-G_CLOSEOUT.md) |
+
 ## 已解限制的歷史記錄
 
 | 項目 | 當時結論 | 證據 |
@@ -163,3 +177,4 @@
 | M04 | [規格](M04/實作規格.md) | [設計](M04/開發設計方針.md) | [測試](M04/測試指南.md) |
 | P4 | [規格](P4/實作規格.md) | [設計](P4/開發設計方針.md) | [測試](P4/測試指南.md) |
 | M05 | [規格](M05/實作規格.md) | [設計](M05/開發設計方針.md) | [測試](M05/測試指南.md) |
+| P6 | [規格](P6/實作規格.md) | [設計](P6/開發設計方針.md) | [測試](P6/測試指南.md) |

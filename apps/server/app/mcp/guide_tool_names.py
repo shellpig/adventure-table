@@ -33,6 +33,11 @@ class GuideToolNames:
     adjudicate_special_attack: str
     resolve_aoe_spell: str
     apply_damage: str
+    campaign_context: str
+    adventure_entry: str
+    set_current_context: str
+    set_override: str
+    create_world_entry: str
 
 
 _EXPECTED = {
@@ -152,6 +157,11 @@ def guide_tool_names() -> GuideToolNames:
         adjudicate_special_attack="combat_adjudicate_special_attack",
         resolve_aoe_spell="combat_resolve_aoe_spell",
         apply_damage="combat_apply_damage",
+        campaign_context="get_campaign_context",
+        adventure_entry="get_adventure_entry",
+        set_current_context="world_set_current_context",
+        set_override="world_set_override",
+        create_world_entry="world_create_entry",
     )
 
 

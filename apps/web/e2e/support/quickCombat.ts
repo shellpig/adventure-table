@@ -260,6 +260,21 @@ export async function pickSrdMonster(page: Page, name: string): Promise<void> {
   await option.click()
 }
 
+export async function addQuickEnemy(
+  page: Page,
+  enemy: { name: string; ac: number; maxHp: number; positionNote?: string },
+): Promise<void> {
+  await page.getByRole('button', { name: 'Quick Enemy' }).click()
+  const quickForm = page.locator('.session-combat__add-enemy form')
+  await quickForm.getByLabel('Name', { exact: true }).fill(enemy.name)
+  await quickForm.getByLabel('AC', { exact: true }).fill(String(enemy.ac))
+  await quickForm.getByLabel('Max HP', { exact: true }).fill(String(enemy.maxHp))
+  if (enemy.positionNote) {
+    await quickForm.getByLabel('Position Note', { exact: true }).fill(enemy.positionNote)
+  }
+  await page.getByRole('button', { name: 'Add to Combat' }).click()
+}
+
 export async function advanceUntilTurn(
   page: Page,
   request: APIRequestContext,
@@ -323,6 +338,24 @@ export async function playerAttack(
   ))
   await pendingRoll.click()
   return responseJson<AttackResolution>(await rolled)
+}
+
+export type CombatEndResult = {
+  status: string
+  round_number: number | null
+  current_turn_entry_id: string | null
+}
+
+export async function endCombat(
+  page: Page,
+  sessionId: string,
+): Promise<CombatEndResult> {
+  page.once('dialog', (dialog) => dialog.accept())
+  const combatEndedPromise = page.waitForResponse(
+    (resp) => resp.request().method() === 'POST' && resp.url().includes(`/sessions/${sessionId}/combat/end`),
+  )
+  await page.getByRole('button', { name: 'End Combat' }).click()
+  return responseJson<CombatEndResult>(await combatEndedPromise)
 }
 
 export async function restartE2EServer(request: APIRequestContext): Promise<void> {

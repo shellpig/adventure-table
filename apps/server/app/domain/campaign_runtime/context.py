@@ -8,7 +8,10 @@ from sqlalchemy.engine import Connection
 
 from app.domain.adventures.payloads import KNOWN_ENTRY_KINDS
 from app.domain.campaign_runtime.context_schemas import (
+    ADVENTURE_OUTLINE_MAX_ENTRIES,
+    CAMPAIGN_CONTEXT_MAX_WORLD_REFS,
     ActiveCombatRef,
+    AdventureOutlineEntryRef,
     AdventureSceneRef,
     AttachedAdventureRef,
     CampaignContextDmView,
@@ -26,6 +29,7 @@ from app.domain.campaign_runtime.context_schemas import (
     SEARCH_SNIPPET_MAX_CHARS,
     SceneContextDmView,
     SceneContextPlayerView,
+    bounded_context_text,
     SceneRef,
     WorldEntryRef,
 )
@@ -170,11 +174,15 @@ class CampaignContextService:
             stored_context = self.runtime_repo.get_context_in_transaction(
                 connection, actor.campaign_id
             )
-            current_situation = stored_context.current_situation if stored_context else None
+            current_situation, situation_truncated = bounded_context_text(
+                stored_context.current_situation if stored_context else None
+            )
             current_scene = self._resolve_current_scene_ref(connection, actor, stored_context)
             party = self._resolve_party(connection, actor)
             active_combat = self._resolve_active_combat(actor)
-            world_entries = self._resolve_world_entries(actor)
+            all_world_entries = self._resolve_world_entries(actor)
+            world_entries = all_world_entries[:CAMPAIGN_CONTEXT_MAX_WORLD_REFS]
+            world_entries_truncated = len(all_world_entries) > CAMPAIGN_CONTEXT_MAX_WORLD_REFS
 
             if actor.is_current_dm:
                 return CampaignContextDmView(
@@ -182,20 +190,24 @@ class CampaignContextService:
                     name=campaign.name,
                     current_scene=current_scene,
                     current_situation=current_situation,
+                    current_situation_truncated=situation_truncated,
                     current_context_revision=stored_context.revision if stored_context else 0,
                     party=party,
                     active_combat=active_combat,
-                    attached_adventures=self._resolve_attached_adventures(actor),
+                    attached_adventures=self._resolve_attached_adventures(connection, actor),
                     world_entries=world_entries,
+                    world_entries_truncated=world_entries_truncated,
                 )
             return CampaignContextPlayerView(
                 campaign_id=campaign.id,
                 name=campaign.name,
                 current_scene=current_scene,
                 current_situation=current_situation,
+                current_situation_truncated=situation_truncated,
                 party=party,
                 active_combat=active_combat,
                 world_entries=world_entries,
+                world_entries_truncated=world_entries_truncated,
             )
 
     def get_scene_context(
@@ -444,16 +456,42 @@ class CampaignContextService:
         )
 
     def _resolve_attached_adventures(
-        self, actor: TableActorContext
+        self, connection: Connection, actor: TableActorContext
     ) -> tuple[AttachedAdventureRef, ...]:
         # Links are FK RESTRICT to same-Room definitions, so every link resolves.
         definitions = {d.id: d for d in self.adventure_repo.list_definitions(actor.room_id)}
-        return tuple(
-            AttachedAdventureRef(
-                adventure_id=link.adventure_id, name=definitions[link.adventure_id].name
+        refs: list[AttachedAdventureRef] = []
+        for link in self.link_repo.list_for_campaign(actor.campaign_id):
+            definition = definitions[link.adventure_id]
+            overlays = list_adventure_entry_overlays_in_transaction(
+                connection,
+                campaign_id=actor.campaign_id,
+                adventure_id=link.adventure_id,
+                link_repo=self.link_repo,
+                runtime_repo=self.runtime_repo,
             )
-            for link in self.link_repo.list_for_campaign(actor.campaign_id)
-        )
+            summary, summary_truncated = bounded_context_text(definition.summary)
+            refs.append(
+                AttachedAdventureRef(
+                    adventure_id=link.adventure_id,
+                    name=definition.name,
+                    summary=summary,
+                    summary_truncated=summary_truncated,
+                    outline=tuple(
+                        AdventureOutlineEntryRef(
+                            id=o.id,
+                            parent_entry_id=o.parent_entry_id,
+                            kind=o.kind,
+                            title=o.title,
+                            visibility=o.visibility,
+                            has_override=o.override is not None,
+                        )
+                        for o in overlays[:ADVENTURE_OUTLINE_MAX_ENTRIES]
+                    ),
+                    outline_truncated=len(overlays) > ADVENTURE_OUTLINE_MAX_ENTRIES,
+                )
+            )
+        return tuple(refs)
 
     def _resolve_world_entries(self, actor: TableActorContext) -> tuple[WorldEntryRef, ...]:
         return tuple(
