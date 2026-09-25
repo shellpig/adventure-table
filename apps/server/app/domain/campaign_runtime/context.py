@@ -9,6 +9,7 @@ from sqlalchemy.engine import Connection
 from app.domain.adventures.payloads import KNOWN_ENTRY_KINDS
 from app.domain.campaign_runtime.context_schemas import (
     ADVENTURE_OUTLINE_MAX_ENTRIES,
+    CAMPAIGN_CONTEXT_MAX_WORLD_REFS,
     ActiveCombatRef,
     AdventureOutlineEntryRef,
     AdventureSceneRef,
@@ -28,6 +29,7 @@ from app.domain.campaign_runtime.context_schemas import (
     SEARCH_SNIPPET_MAX_CHARS,
     SceneContextDmView,
     SceneContextPlayerView,
+    bounded_context_text,
     SceneRef,
     WorldEntryRef,
 )
@@ -172,11 +174,15 @@ class CampaignContextService:
             stored_context = self.runtime_repo.get_context_in_transaction(
                 connection, actor.campaign_id
             )
-            current_situation = stored_context.current_situation if stored_context else None
+            current_situation, situation_truncated = bounded_context_text(
+                stored_context.current_situation if stored_context else None
+            )
             current_scene = self._resolve_current_scene_ref(connection, actor, stored_context)
             party = self._resolve_party(connection, actor)
             active_combat = self._resolve_active_combat(actor)
-            world_entries = self._resolve_world_entries(actor)
+            all_world_entries = self._resolve_world_entries(actor)
+            world_entries = all_world_entries[:CAMPAIGN_CONTEXT_MAX_WORLD_REFS]
+            world_entries_truncated = len(all_world_entries) > CAMPAIGN_CONTEXT_MAX_WORLD_REFS
 
             if actor.is_current_dm:
                 return CampaignContextDmView(
@@ -184,20 +190,24 @@ class CampaignContextService:
                     name=campaign.name,
                     current_scene=current_scene,
                     current_situation=current_situation,
+                    current_situation_truncated=situation_truncated,
                     current_context_revision=stored_context.revision if stored_context else 0,
                     party=party,
                     active_combat=active_combat,
                     attached_adventures=self._resolve_attached_adventures(connection, actor),
                     world_entries=world_entries,
+                    world_entries_truncated=world_entries_truncated,
                 )
             return CampaignContextPlayerView(
                 campaign_id=campaign.id,
                 name=campaign.name,
                 current_scene=current_scene,
                 current_situation=current_situation,
+                current_situation_truncated=situation_truncated,
                 party=party,
                 active_combat=active_combat,
                 world_entries=world_entries,
+                world_entries_truncated=world_entries_truncated,
             )
 
     def get_scene_context(
@@ -460,11 +470,13 @@ class CampaignContextService:
                 link_repo=self.link_repo,
                 runtime_repo=self.runtime_repo,
             )
+            summary, summary_truncated = bounded_context_text(definition.summary)
             refs.append(
                 AttachedAdventureRef(
                     adventure_id=link.adventure_id,
                     name=definition.name,
-                    summary=definition.summary,
+                    summary=summary,
+                    summary_truncated=summary_truncated,
                     outline=tuple(
                         AdventureOutlineEntryRef(
                             id=o.id,

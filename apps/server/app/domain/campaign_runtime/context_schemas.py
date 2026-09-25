@@ -38,6 +38,18 @@ class ActiveCombatRef(StrictModel):
 
 
 ADVENTURE_OUTLINE_MAX_ENTRIES = 100
+# Free-text fields (Adventure summary, current situation) and the world entry
+# list have no write-side cap, so the AI context projection bounds them here.
+CONTEXT_TEXT_MAX_CHARS = 1000
+CAMPAIGN_CONTEXT_MAX_WORLD_REFS = 100
+
+
+def bounded_context_text(value: str | None) -> tuple[str | None, bool]:
+    """Return ``value`` cut to ``CONTEXT_TEXT_MAX_CHARS`` and whether it was cut."""
+
+    if value is None or len(value) <= CONTEXT_TEXT_MAX_CHARS:
+        return value, False
+    return value[:CONTEXT_TEXT_MAX_CHARS], True
 
 
 class AdventureOutlineEntryRef(StrictModel):
@@ -56,6 +68,7 @@ class AttachedAdventureRef(StrictModel):
     adventure_id: UUID
     name: str
     summary: str | None = None
+    summary_truncated: bool = False
     outline: tuple[AdventureOutlineEntryRef, ...] = ()
     outline_truncated: bool = False
 
@@ -78,9 +91,11 @@ class CampaignContextPlayerView(StrictModel):
     name: str
     current_scene: CurrentSceneView
     current_situation: str | None = None
+    current_situation_truncated: bool = False
     party: tuple[CampaignPartyMemberView, ...] = ()
     active_combat: ActiveCombatRef | None = None
     world_entries: tuple[WorldEntryRef, ...] = ()
+    world_entries_truncated: bool = False
 
 
 class CampaignContextDmView(StrictModel):
@@ -88,11 +103,13 @@ class CampaignContextDmView(StrictModel):
     name: str
     current_scene: CurrentSceneView
     current_situation: str | None = None
+    current_situation_truncated: bool = False
     current_context_revision: int = Field(ge=0)
     party: tuple[CampaignPartyMemberView, ...] = ()
     active_combat: ActiveCombatRef | None = None
     attached_adventures: tuple[AttachedAdventureRef, ...] = ()
     world_entries: tuple[WorldEntryRef, ...] = ()
+    world_entries_truncated: bool = False
 
 
 CampaignContextView = CampaignContextDmView | CampaignContextPlayerView
@@ -178,6 +195,8 @@ CampaignSearchResult = CampaignSearchDmResult | CampaignSearchPlayerResult
 
 __all__ = [
     "ADVENTURE_OUTLINE_MAX_ENTRIES",
+    "CAMPAIGN_CONTEXT_MAX_WORLD_REFS",
+    "CONTEXT_TEXT_MAX_CHARS",
     "ActiveCombatRef",
     "AdventureOutlineEntryRef",
     "AdventureSceneRef",
@@ -203,4 +222,5 @@ __all__ = [
     "SceneRef",
     "SearchKind",
     "WorldEntryRef",
+    "bounded_context_text",
 ]

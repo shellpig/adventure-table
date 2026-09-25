@@ -372,6 +372,7 @@ class CampaignContextAIToolApplicationService(CombatAIToolApplicationService):
         context_data: dict[str, Any] = {
             "current_scene": view.current_scene.model_dump(mode="json"),
             "current_situation": view.current_situation,
+            "current_situation_truncated": view.current_situation_truncated,
             "world_entry_refs": world_entry_refs,
             "world_entry_refs_truncated": len(view.world_entries) > SESSION_CONTEXT_MAX_WORLD_REFS,
             "next_context_tools": next_context_tools,
