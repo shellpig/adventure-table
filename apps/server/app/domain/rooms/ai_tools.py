@@ -501,6 +501,12 @@ class AIToolApplicationService:
     ) -> TableEventPage:
         """M06-C: wait_for_event returns roll.resolved without dice detail; one DC lookup per page."""
 
+        # Invariant: every roll.resolved payload carries roll_request_id. The
+        # only emitters are the formal/quick resolution in
+        # persistence/rooms/p3c_rolls.py, the initiative resolution in
+        # persistence/combat/initiative.py, and the attack resolution in
+        # persistence/combat/attacks.py, all of which always set the key, so no
+        # fallback lookup is needed here.
         request_ids = {
             UUID(str(event.payload["roll_request_id"]))
             for event in page.events
@@ -508,11 +514,16 @@ class AIToolApplicationService:
         }
         if not request_ids:
             return page
-        outcome_inputs = await asyncio.to_thread(
-            self.roll_service.request_outcome_inputs,
-            actor,
-            request_ids,
-        )
+        # Non-DM actors never see dc/outcome, so skip the lookup entirely and
+        # keep secret DCs out of the Player path. Their events are still
+        # compacted below (dice detail dropped, natural added).
+        outcome_inputs: dict[UUID, tuple[int | None, bool]] = {}
+        if actor.is_current_dm:
+            outcome_inputs = await asyncio.to_thread(
+                self.roll_service.request_outcome_inputs,
+                actor,
+                request_ids,
+            )
         events: list[TableEvent] = []
         for event in page.events:
             if event.kind != "roll.resolved":

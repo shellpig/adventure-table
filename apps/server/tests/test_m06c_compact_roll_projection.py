@@ -441,6 +441,53 @@ def test_mcp_wait_queries_roll_requests_once_per_page(
     assert queried_ids == {UUID(req_id_1), UUID(req_id_2)}
 
 
+def test_mcp_wait_player_skips_roll_request_lookup(
+    integration_fixture: IntegrationFixture,
+) -> None:
+    fix = integration_fixture
+
+    req_id, _ = _request_and_resolve_check(fix, dc=13, key_prefix="c8-player-skip")
+
+    ai_service = fix.client.app.state.ai_tool_application_service
+    roll_service = ai_service.roll_service
+    calls: list[tuple[object, set[UUID]]] = []
+    original_method = roll_service.request_outcome_inputs
+
+    def spy_request_outcome_inputs(actor, request_ids):
+        calls.append((actor, set(request_ids)))
+        return original_method(actor, request_ids)
+
+    roll_service.request_outcome_inputs = spy_request_outcome_inputs
+    try:
+        wait_res = _mcp_call(
+            fix.client,
+            fix.ai_player_token,
+            "wait_for_event",
+            {"after_seq": 0, "timeout": 0.1},
+        )
+    finally:
+        roll_service.request_outcome_inputs = original_method
+
+    assert calls == []
+    events = wait_res["structuredContent"]["data"]["events"]
+    player_roll = next(
+        e["payload"]
+        for e in events
+        if e["kind"] == "roll.resolved" and e["payload"]["roll_request_id"] == req_id
+    )
+    assert set(player_roll.keys()) == {
+        "roll_request_id",
+        "total",
+        "formula",
+        "natural",
+        "visibility",
+    }
+    assert "dc" not in player_roll
+    assert "outcome" not in player_roll
+    for key in DICE_DETAIL_KEYS:
+        assert key not in player_roll
+
+
 def test_mcp_combat_roll_projection_keeps_enemy_secrecy(
     integration_fixture: IntegrationFixture,
 ) -> None:
