@@ -81,7 +81,7 @@ Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **
 
 完整索引見 [已知問題](已知問題.md#跨-phase-限制與驗收索引)。未解項目不因 Phase 關門而完成；舊驗收缺口先核對後續 closeout，不直接當成目前缺陷。
 
-- **P6-G 接手**：以已交付的 A～F service 驗 empty Campaign 與 Adventure-driven 兩條 journey、restart／next Session、secrecy、idempotency、Quick Combat 與 Standalone boundary；真實網頁版 AI agent gate 留 G。P6 不放寬 P3-D pre-session AI grant，也不提前做 P5 geometry 或 P7 Timeline／Snapshot。
+- **P6-G 接手**：G1～G4 已完成（empty Campaign／Adventure-driven journey、restart／next Session、secrecy、Quick Combat、Standalone boundary、真實網頁版 AI agent gate 的證據都在各 step 檔），不重驗。G5 只剩全套 Docker E2E、依 G.8 的靜態審核與 P6 closeout；見 [G5](docs/P6/P6-G_steps/G5.md)。P6 不放寬 P3-D pre-session AI grant，也不提前做 P5 geometry 或 P7 Timeline／Snapshot。
 - **後續 P5 接手**：Quick range 裁定、Dodge「能看見攻擊者」、frightened 來源可見性，依 [P4-F closeout](docs/P4/P4-F_CLOSEOUT.md) 已知限制與 P5 契約處理。
 - **後續 M、尚未拍板**：spell save 的 conditions pipeline、`get_resolution_event` O(n)、Monster `desc` 尚未 expose、死亡／倒地不起標籤；另有 Character 抗性缺 machine-readable 欄位、`is_hostile` 仍由 subject kind 決定等既有邊界。見 P4 各 Subphase closeout／設計，不自行擴入 P5。
 - **延期驗收／內容**：M04-C Bearer／純 HTTP／非目標平台相容記錄、M01-O deferred Feats，見限制索引。
