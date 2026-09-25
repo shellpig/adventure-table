@@ -522,11 +522,12 @@ class TableEventService:
         after_seq: int,
         limit: int,
         timeout: float,
+        max_timeout: float = 60.0,
     ) -> TableEventPage:
         """Wait without occupying a DB connection/transaction or worker thread."""
 
         bounded_after = max(0, int(after_seq))
-        bounded_timeout = max(0.0, min(float(timeout), 60.0))
+        bounded_timeout = max(0.0, min(float(timeout), max_timeout))
 
         first = await asyncio.to_thread(
             self.list_after,

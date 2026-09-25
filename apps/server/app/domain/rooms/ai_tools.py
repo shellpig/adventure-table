@@ -482,6 +482,7 @@ class AIToolApplicationService:
                 after_seq=input.after_seq,
                 limit=input.limit,
                 timeout=input.timeout,
+                max_timeout=WAIT_EVENT_MAX_TIMEOUT_SECONDS,
             )
         ).model_dump(mode="json")
 

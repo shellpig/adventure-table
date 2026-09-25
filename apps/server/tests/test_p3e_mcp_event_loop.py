@@ -106,8 +106,8 @@ class _EmptyEventPage:
 
 
 class _WaitEventService:
-    async def wait_after(self, actor, *, after_seq, limit, timeout):
-        del actor, limit, timeout
+    async def wait_after(self, actor, *, after_seq, limit, timeout, max_timeout):
+        del actor, limit, timeout, max_timeout
         return _EmptyEventPage(after_seq)
 
 
