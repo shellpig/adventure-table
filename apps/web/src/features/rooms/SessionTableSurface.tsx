@@ -31,12 +31,12 @@ import {
   type CheckIntent,
 } from './sessionCheckIntent'
 import {
-  MAX_SIDE_PANEL_WIDTH,
-  MIN_SIDE_PANEL_WIDTH,
-  clampSidePanelWidth,
-  readSidePanelWidth,
-  resolveKeyboardSidePanelWidth,
-  writeSidePanelWidth,
+  MAX_SIDE_PANEL_RATIO,
+  MIN_SIDE_PANEL_RATIO,
+  readSidePanelRatio,
+  resolveKeyboardSidePanelRatio,
+  sidePanelRatioFromPointer,
+  writeSidePanelRatio,
 } from './sessionTableLayout'
 import type { SessionCopy } from './sessionCopy'
 import {
@@ -83,7 +83,7 @@ type SessionTableSurfaceProps = {
 }
 
 type TableTab = 'chat' | 'dice' | 'log'
-type SessionLayoutStyle = CSSProperties & { '--session-side-width': string }
+type SessionLayoutStyle = CSSProperties & { '--session-side-ratio': string }
 
 export function requestId(prefix: string): string {
   const random = globalThis.crypto?.randomUUID?.()
@@ -178,7 +178,7 @@ export function SessionTableSurface({
   const [composerPending, setComposerPending] = useState(false)
   const [composerHint, setComposerHint] = useState<string | null>(null)
   const [checkDraft, setCheckDraft] = useState<CheckIntent | null>(null)
-  const [sidePanelWidth, setSidePanelWidth] = useState(() => readSidePanelWidth())
+  const [sidePanelRatio, setSidePanelRatio] = useState(() => readSidePanelRatio())
   const layoutRef = useRef<HTMLDivElement>(null)
   const [speakerColors, setSpeakerColors] = useState<Record<string, string>>(() => readSpeakerColors())
   const [colorPickerOpen, setColorPickerOpen] = useState(false)
@@ -480,28 +480,22 @@ export function SessionTableSurface({
 
   const unseenChatCount = countUnseenChatMessages(chatEvents, lastSeenSeq)
 
-  const applySidePanelWidth = (nextWidth: number) => {
-    setSidePanelWidth(nextWidth)
-    writeSidePanelWidth(nextWidth)
+  const applySidePanelRatio = (nextRatio: number) => {
+    setSidePanelRatio(nextRatio)
+    writeSidePanelRatio(nextRatio)
   }
 
   const resizeFromPointer = (clientX: number) => {
     const layout = layoutRef.current
     if (!layout) return
     const bounds = layout.getBoundingClientRect()
-    applySidePanelWidth(clampSidePanelWidth(bounds.right - clientX, bounds.width))
+    applySidePanelRatio(sidePanelRatioFromPointer(clientX, bounds.right, bounds.width))
   }
 
   const resizeFromKeyboard = (key: string): boolean => {
-    const layout = layoutRef.current
-    if (!layout) return false
-    const nextWidth = resolveKeyboardSidePanelWidth(
-      sidePanelWidth,
-      key,
-      layout.getBoundingClientRect().width,
-    )
-    if (nextWidth === null) return false
-    applySidePanelWidth(nextWidth)
+    const nextRatio = resolveKeyboardSidePanelRatio(sidePanelRatio, key)
+    if (nextRatio === null) return false
+    applySidePanelRatio(nextRatio)
     return true
   }
 
@@ -599,7 +593,7 @@ export function SessionTableSurface({
   }
 
   const layoutStyle: SessionLayoutStyle = {
-    '--session-side-width': `${sidePanelWidth}px`,
+    '--session-side-ratio': String(sidePanelRatio),
   }
 
   return (
@@ -698,9 +692,9 @@ export function SessionTableSurface({
           tabIndex={0}
           aria-orientation="vertical"
           aria-label={`${copy.mainStage} / ${copy.chat}`}
-          aria-valuemin={MIN_SIDE_PANEL_WIDTH}
-          aria-valuemax={MAX_SIDE_PANEL_WIDTH}
-          aria-valuenow={Math.round(sidePanelWidth)}
+          aria-valuemin={Math.round(MIN_SIDE_PANEL_RATIO * 100)}
+          aria-valuemax={Math.round(MAX_SIDE_PANEL_RATIO * 100)}
+          aria-valuenow={Math.round(sidePanelRatio * 100)}
           onKeyDown={(event) => {
             if (resizeFromKeyboard(event.key)) event.preventDefault()
           }}

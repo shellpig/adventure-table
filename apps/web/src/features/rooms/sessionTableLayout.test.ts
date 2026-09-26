@@ -2,22 +2,21 @@ import { describe, expect, it } from 'vitest'
 
 import {
   clampCardWidth,
-  clampSidePanelWidth,
+  clampSidePanelRatio,
   DEFAULT_CARD_WIDTH,
-  DEFAULT_SIDE_PANEL_WIDTH,
+  DEFAULT_SIDE_PANEL_RATIO,
   MAX_CARD_WIDTH,
-  MAX_SIDE_PANEL_WIDTH,
   MIN_CARD_WIDTH,
-  MIN_SIDE_PANEL_WIDTH,
   readCardWidth,
-  readSidePanelWidth,
+  readSidePanelRatio,
   resolveKeyboardCardWidth,
-  resolveKeyboardSidePanelWidth,
+  resolveKeyboardSidePanelRatio,
   SESSION_CARD_WIDTH_STORAGE_KEY,
   SESSION_SIDE_PANEL_STORAGE_KEY,
+  sidePanelRatioFromPointer,
   toggleCardWidth,
   writeCardWidth,
-  writeSidePanelWidth,
+  writeSidePanelRatio,
 } from './sessionTableLayout'
 
 class MemoryStorage {
@@ -33,46 +32,54 @@ class MemoryStorage {
 }
 
 describe('P3-B Session table layout preference', () => {
-  it('clamps the side panel to its product bounds and preserves Main Stage space', () => {
-    expect(clampSidePanelWidth(100, 1200)).toBe(MIN_SIDE_PANEL_WIDTH)
-    expect(clampSidePanelWidth(900, 1400)).toBe(MAX_SIDE_PANEL_WIDTH)
-    expect(clampSidePanelWidth(500, 760)).toBe(390)
+  it('clamps the side panel ratio to its bounds and rounds to 4 decimals', () => {
+    expect(clampSidePanelRatio(0.1)).toBe(0.3333)
+    expect(clampSidePanelRatio(0.9)).toBe(0.6667)
+    expect(clampSidePanelRatio(0.50004)).toBe(0.5)
+    expect(clampSidePanelRatio(0.50006)).toBe(0.5001)
   })
 
-  it('persists and restores the client-only side panel width', () => {
-    const storage = new MemoryStorage()
-    expect(readSidePanelWidth(storage)).toBe(DEFAULT_SIDE_PANEL_WIDTH)
-
-    writeSidePanelWidth(412.4, storage)
-    expect(storage.getItem(SESSION_SIDE_PANEL_STORAGE_KEY)).toBe('412')
-    expect(readSidePanelWidth(storage)).toBe(412)
-  })
-
-  it('clamps persisted widths and falls back safely for invalid values', () => {
-    const storage = new MemoryStorage()
-
-    storage.setItem(SESSION_SIDE_PANEL_STORAGE_KEY, '100')
-    expect(readSidePanelWidth(storage)).toBe(MIN_SIDE_PANEL_WIDTH)
-
-    storage.setItem(SESSION_SIDE_PANEL_STORAGE_KEY, '900')
-    expect(readSidePanelWidth(storage)).toBe(MAX_SIDE_PANEL_WIDTH)
-
-    storage.setItem(SESSION_SIDE_PANEL_STORAGE_KEY, 'not-a-number')
-    expect(readSidePanelWidth(storage)).toBe(DEFAULT_SIDE_PANEL_WIDTH)
+  it('converts pointer positions to clamped side panel ratios', () => {
+    expect(sidePanelRatioFromPointer(610, 1210, 1210)).toBe(0.5)
+    expect(sidePanelRatioFromPointer(0, 1210, 1210)).toBe(0.6667)
+    expect(sidePanelRatioFromPointer(1210, 1210, 1210)).toBe(0.3333)
+    expect(sidePanelRatioFromPointer(610, 1210, 0)).toBe(DEFAULT_SIDE_PANEL_RATIO)
   })
 
   it('supports keyboard resizing without escaping layout bounds', () => {
-    expect(resolveKeyboardSidePanelWidth(360, 'ArrowLeft', 1200)).toBe(384)
-    expect(resolveKeyboardSidePanelWidth(360, 'ArrowRight', 1200)).toBe(336)
-    expect(resolveKeyboardSidePanelWidth(MIN_SIDE_PANEL_WIDTH, 'ArrowRight', 1200)).toBe(
-      MIN_SIDE_PANEL_WIDTH,
-    )
-    expect(resolveKeyboardSidePanelWidth(MAX_SIDE_PANEL_WIDTH, 'ArrowLeft', 1200)).toBe(
-      MAX_SIDE_PANEL_WIDTH,
-    )
-    expect(resolveKeyboardSidePanelWidth(400, 'Home', 1200)).toBe(MIN_SIDE_PANEL_WIDTH)
-    expect(resolveKeyboardSidePanelWidth(400, 'End', 1200)).toBe(MAX_SIDE_PANEL_WIDTH)
-    expect(resolveKeyboardSidePanelWidth(400, 'Enter', 1200)).toBeNull()
+    expect(resolveKeyboardSidePanelRatio(0.5, 'ArrowLeft')).toBe(0.52)
+    expect(resolveKeyboardSidePanelRatio(0.5, 'ArrowRight')).toBe(0.48)
+    expect(resolveKeyboardSidePanelRatio(0.6667, 'ArrowLeft')).toBe(0.6667)
+    expect(resolveKeyboardSidePanelRatio(0.3333, 'ArrowRight')).toBe(0.3333)
+    expect(resolveKeyboardSidePanelRatio(0.5, 'Home')).toBe(0.3333)
+    expect(resolveKeyboardSidePanelRatio(0.5, 'End')).toBe(0.6667)
+    expect(resolveKeyboardSidePanelRatio(0.5, 'Enter')).toBeNull()
+  })
+
+  it('persists and restores the client-only side panel ratio under the new key', () => {
+    const storage = new MemoryStorage()
+    expect(readSidePanelRatio(storage)).toBe(DEFAULT_SIDE_PANEL_RATIO)
+
+    writeSidePanelRatio(0.5, storage)
+    expect(storage.getItem(SESSION_SIDE_PANEL_STORAGE_KEY)).toBe('0.5')
+    expect(readSidePanelRatio(storage)).toBe(0.5)
+  })
+
+  it('clamps persisted ratios, falls back safely, and ignores the old width key', () => {
+    const storage = new MemoryStorage()
+
+    storage.setItem(SESSION_SIDE_PANEL_STORAGE_KEY, '0.1')
+    expect(readSidePanelRatio(storage)).toBe(0.3333)
+
+    storage.setItem(SESSION_SIDE_PANEL_STORAGE_KEY, '0.9')
+    expect(readSidePanelRatio(storage)).toBe(0.6667)
+
+    storage.setItem(SESSION_SIDE_PANEL_STORAGE_KEY, 'not-a-number')
+    expect(readSidePanelRatio(storage)).toBe(DEFAULT_SIDE_PANEL_RATIO)
+
+    const oldStorage = new MemoryStorage()
+    oldStorage.setItem('adventure-table.session-side-panel-width', '500')
+    expect(readSidePanelRatio(oldStorage)).toBe(DEFAULT_SIDE_PANEL_RATIO)
   })
 
   it('clamps the card width to its bounds and viewport constraints', () => {
