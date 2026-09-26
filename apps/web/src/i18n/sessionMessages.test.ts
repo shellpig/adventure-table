@@ -102,7 +102,7 @@ describe('Session request message SSOT', () => {
       'server detail',
     )
     expect(localizedSessionRequestMessage('session_future_error', 500, 'server detail', 'zh-TW')).toBe(
-      'Session 請求失敗（HTTP 500），請稍後再試。',
+      '跑團請求失敗（HTTP 500），請稍後再試。',
     )
   })
 })

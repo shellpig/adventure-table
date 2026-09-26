@@ -17,8 +17,8 @@ describe('P2-E live Character request messages', () => {
       'en',
     )
 
-    expect(zh).toContain('Session')
-    expect(zh).toContain('Player Seat')
+    expect(zh).toContain('跑團')
+    expect(zh).toContain('玩家席位')
     expect(zh).not.toContain('重新載入')
     expect(en).toContain('active Session')
     expect(en).not.toContain('Reload')

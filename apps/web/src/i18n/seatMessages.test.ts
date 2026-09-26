@@ -10,7 +10,7 @@ describe('P2-E Seat request messages', () => {
       409,
       'Seat is referenced by Session history',
       'zh-TW',
-    )).toContain('Session 歷史紀錄')
+    )).toContain('跑團歷史紀錄')
     expect(localizedSeatRequestMessage(
       'seat_history_referenced',
       409,

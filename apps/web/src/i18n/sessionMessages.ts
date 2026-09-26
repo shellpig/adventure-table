@@ -65,15 +65,15 @@ export type SessionRequestCode = (typeof SESSION_REQUEST_CODES)[number]
 
 export const SESSION_REQUEST_CODE_MESSAGES: Record<SessionRequestCode, Record<Locale, string>> = {
   session_not_found: {
-    'zh-TW': '找不到這場 Session。',
+    'zh-TW': '找不到這場跑團。',
     en: 'Session not found.',
   },
   session_already_active: {
-    'zh-TW': '這個 Campaign 已經有進行中的 Session。',
+    'zh-TW': '這個戰役已經有進行中的跑團。',
     en: 'This Campaign already has an active Session.',
   },
   character_already_in_active_session: {
-    'zh-TW': '至少一名所選角色已在另一個進行中的 Session。',
+    'zh-TW': '至少一名所選角色已在另一個進行中的跑團。',
     en: 'At least one selected Character is already in another active Session.',
   },
   dm_controller_mismatch: {
@@ -81,27 +81,27 @@ export const SESSION_REQUEST_CODE_MESSAGES: Record<SessionRequestCode, Record<Lo
     en: 'Only this Session’s fixed current DM Controller may perform this operation.',
   },
   session_not_active: {
-    'zh-TW': '這場 Session 已不再是進行中狀態。',
+    'zh-TW': '這場跑團已不再是進行中狀態。',
     en: 'This Session is no longer active.',
   },
   session_active_character_locked: {
-    'zh-TW': 'Session 開始後，參與者的 Active Character 不能更換。',
+    'zh-TW': '跑團開始後，參與者的 Active Character 不能更換。',
     en: 'A participant’s Active Character cannot be changed after the Session starts.',
   },
   seat_character_invalid: {
-    'zh-TW': '這個 Player Seat 目前無法加入 Session。',
+    'zh-TW': '這個玩家席位目前無法加入跑團。',
     en: 'This Player Seat cannot join the Session right now.',
   },
   lobby_unavailable: {
-    'zh-TW': '目前的 Campaign／Lobby 狀態無法執行此 Session 操作。',
+    'zh-TW': '目前的戰役／Lobby 狀態無法執行此跑團操作。',
     en: 'The current Campaign or Lobby state does not allow this Session operation.',
   },
   table_actor_unauthorized: {
-    'zh-TW': '你目前沒有權限執行這個桌內操作，請重新整理 Session 狀態。',
+    'zh-TW': '你目前沒有權限執行這個桌內操作，請重新整理跑團狀態。',
     en: 'You are no longer authorized for this table action. Refresh the Session state.',
   },
   exploration_subject_not_found: {
-    'zh-TW': '選擇的 Player Seat 目前不是這場 Session 的有效角色。',
+    'zh-TW': '選擇的玩家席位目前不是這場跑團的有效角色。',
     en: 'The selected Player Seat is not an active Character in this Session.',
   },
   stage_image_not_found: {
@@ -157,7 +157,7 @@ export const SESSION_REQUEST_CODE_MESSAGES: Record<SessionRequestCode, Record<Lo
     en: 'This PendingAction cannot bind to that formal RollRequest. Choose a current request.',
   },
   table_state_subject_stale: {
-    'zh-TW': '角色座位或本場角色在提交前已改變，請重新整理角色狀態。',
+    'zh-TW': '角色席位或本場角色在提交前已改變，請重新整理角色狀態。',
     en: 'The Seat or active Character changed before the state update committed. Refresh Character state.',
   },
   character_not_found: {
@@ -205,7 +205,7 @@ export const SESSION_REQUEST_CODE_MESSAGES: Record<SessionRequestCode, Record<Lo
     en: 'The combat target is no longer in this Combat. Select another target.',
   },
   active_combat_exists: {
-    'zh-TW': '這個 Campaign 已有進行中的戰鬥。',
+    'zh-TW': '這個戰役已有進行中的戰鬥。',
     en: 'This Campaign already has an active Combat.',
   },
   combat_state_conflict: {
@@ -244,5 +244,5 @@ export function localizedSessionRequestMessage(
     return SESSION_REQUEST_CODE_MESSAGES[code as SessionRequestCode][locale]
   }
   if (locale === 'en') return originalMessage || `Session request failed (${status})`
-  return `Session 請求失敗（HTTP ${status}），請稍後再試。`
+  return `跑團請求失敗（HTTP ${status}），請稍後再試。`
 }

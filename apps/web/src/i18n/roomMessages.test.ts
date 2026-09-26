@@ -25,7 +25,7 @@ describe('Room request messages', () => {
       'server detail',
     )
     expect(localizedRoomRequestMessage('room_future_error', 500, 'server detail', 'zh-TW')).toBe(
-      'Room 請求失敗（HTTP 500），請稍後再試。',
+      '房間請求失敗（HTTP 500），請稍後再試。',
     )
   })
 })
