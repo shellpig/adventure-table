@@ -6,7 +6,6 @@ type FilePickerProps = {
   accept: string
   disabled: boolean
   onFileChange: (file: File | null) => void
-  required?: boolean
   chooseLabel?: string
 }
 
@@ -14,7 +13,6 @@ export function FilePicker({
   accept,
   disabled,
   onFileChange,
-  required,
   chooseLabel,
 }: FilePickerProps) {
   const { t } = useUiCopy()
@@ -30,11 +28,12 @@ export function FilePicker({
         tabIndex={-1}
         accept={accept}
         disabled={disabled}
-        required={required}
         onChange={(event) => {
           const file = event.target.files?.[0] ?? null
           setFileName(file ? file.name : null)
           onFileChange(file)
+          // Clear the native value so picking the same file again still fires onChange.
+          event.target.value = ''
         }}
       />
       <button

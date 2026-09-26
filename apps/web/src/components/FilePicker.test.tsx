@@ -17,7 +17,6 @@ function renderPicker(
     accept?: string
     disabled?: boolean
     onFileChange?: (file: File | null) => void
-    required?: boolean
     chooseLabel?: string
   } = {},
   locale: Locale = 'en',
@@ -28,7 +27,6 @@ function renderPicker(
         accept={props.accept ?? 'image/*'}
         disabled={props.disabled ?? false}
         onFileChange={props.onFileChange ?? (() => undefined)}
-        required={props.required}
         chooseLabel={props.chooseLabel}
       />
     </LocaleProvider>,
@@ -68,14 +66,11 @@ describe('FilePicker component', () => {
     expect(html).not.toContain('Choose file')
   })
 
-  it('passes required and disabled through', () => {
-    const defaultHtml = renderPicker({ required: false, disabled: false })
+  it('passes disabled through and never marks the native input required', () => {
+    const defaultHtml = renderPicker({ disabled: false })
     expect(defaultHtml).not.toMatch(/<input[^>]*\brequired\b/)
     expect(defaultHtml).not.toMatch(/<input[^>]*\bdisabled\b/)
     expect(defaultHtml).not.toMatch(/<button[^>]*\bdisabled\b/)
-
-    const requiredHtml = renderPicker({ required: true })
-    expect(requiredHtml).toMatch(/<input[^>]*\brequired\b/)
 
     const disabledHtml = renderPicker({ disabled: true })
     expect(disabledHtml).toMatch(/<input[^>]*\bdisabled\b/)

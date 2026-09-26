@@ -282,7 +282,6 @@ export function AdventureImportSourceSection({
                   accept=".txt,.md,.markdown,.pdf,.docx"
                   disabled={pending}
                   key={fileInputKey}
-                  required
                   onFileChange={setUploadFile}
                 />
               </label>
