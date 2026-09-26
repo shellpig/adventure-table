@@ -1076,7 +1076,7 @@ describe('Bilingual copy parity and zero phase jargon', () => {
     expect(enKeys).toEqual(zhTwKeys)
 
     expect(en.sessionWorldHeading).toBe('Campaign World')
-    expect(zhTw.sessionWorldHeading).toBe('Campaign 世界狀態')
+    expect(zhTw.sessionWorldHeading).toBe('戰役世界狀態')
     expect(en.quickAddButton).toBe('Quick Add')
     expect(zhTw.quickAddButton).toBe('快速新增')
     expect(en.refreshingFromEvents).toBeTruthy()
