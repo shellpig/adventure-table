@@ -56,9 +56,9 @@ export async function enterRoom(
     await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   }
 
-  await expect(page.getByRole('heading', { name: /^(Start at the table|先進入跑團房間)$/ })).toBeVisible()
-  await page.getByLabel(/^(Room name|Room 名稱)$/).fill(name)
-  await page.getByLabel(/^(Room password|Room 密碼)$/).first().fill(E2E_ROOM_PASSWORD)
+  await expect(page.getByRole('heading', { name: /^(Start at the table|先進入房間)$/ })).toBeVisible()
+  await page.getByLabel(/^(Room name|房間名稱)$/).fill(name)
+  await page.getByLabel(/^(Room password|房間密碼)$/).first().fill(E2E_ROOM_PASSWORD)
   if (options.displayName) {
     await page.getByLabel(/^(Player display name \(optional\)|Display name \(optional\)|玩家顯示名稱（選填）|顯示名稱（選填）)$/).first().fill(options.displayName)
   }
@@ -67,14 +67,14 @@ export async function enterRoom(
     const url = new URL(response.url())
     return url.pathname === '/api/rooms' && response.request().method() === 'POST'
   })
-  await page.getByRole('button', { name: /^(Create Room|建立 Room)$/ }).click()
+  await page.getByRole('button', { name: /^(Create Room|建立房間)$/ }).click()
   const response = await responsePromise
   if (!response.ok()) {
     throw new Error(`Room bootstrap failed: ${response.status()} ${await response.text()}`)
   }
   const grant = (await response.json()) as RoomGrant
 
-  await expect(page.getByRole('heading', { name: /^(Room created|Room 已建立)$/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^(Room created|房間已建立)$/ })).toBeVisible()
   const stored = await readStoredRoomContext(page)
   expect(stored?.roomId).toBe(grant.room.id)
   expect(stored?.accessToken).toBe(grant.access_token)

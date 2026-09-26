@@ -14,9 +14,9 @@ test('M02-B switches Room-first landing copy and accessibility names immediately
   await expect(page.getByRole('group', { name: 'Language' })).toBeVisible()
 
   await page.getByTestId('locale-option-zh-TW').click()
-  await expect(page.getByRole('heading', { name: '先進入跑團房間' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: '建立 Room' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: '進入 Room' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '先進入房間' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '建立房間' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '進入房間' })).toBeVisible()
   await expect(page.getByRole('group', { name: '語言' })).toBeVisible()
 
   await page.getByTestId('locale-option-en').click()

@@ -130,11 +130,11 @@ test('M04-C Lobby AI DM kit token reaches pre_session context', async ({ page, r
 test('M04-C Lobby AI DM kit renders in zh-TW', async ({ page, request, roomContext }) => {
   await createActiveCampaign(page, roomContext.roomId, 'M04-C Join Kit zh-TW')
   await page.getByRole('button', { name: 'Traditional Chinese' }).click()
-  await expect(page.getByRole('heading', { name: '大廳與座位', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '大廳與席位', level: 1 })).toBeVisible()
 
   await page.getByLabel('角色').selectOption('dm')
-  await page.getByLabel('座位名稱').fill('M04-C AI DM zh')
-  await page.getByRole('button', { name: '新增座位' }).click()
+  await page.getByLabel('席位名稱').fill('M04-C AI DM zh')
+  await page.getByRole('button', { name: '新增席位' }).click()
 
   const panel = page.locator('[data-ai-dm-grant-panel]').filter({ has: page.getByRole('heading', { name: 'AI DM 開場憑證' }) })
   await panel.getByRole('button', { name: '建立 AI DM Token' }).click()

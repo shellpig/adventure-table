@@ -181,7 +181,7 @@ describe('Delete Room inventory logic and rendering', () => {
       const htmlZh = renderDeleteSection({ inventory }, 'zh-TW')
       const copyZh = roomCopy('zh-TW')
 
-      expect(htmlZh).toContain('2 個 Campaign · 2 個角色 · 3 個草稿')
+      expect(htmlZh).toContain('2 個戰役 · 2 個角色 · 3 個草稿')
       expect(htmlZh).toContain(copyZh.deleteRoomInventoryCampaigns)
       expect(htmlZh).toContain(copyZh.deleteRoomInventoryCharacters)
       expect(htmlZh).toContain('Brog (Barbarian 2)（已封存）')
@@ -200,7 +200,7 @@ describe('Delete Room inventory logic and rendering', () => {
       const htmlZh = renderDeleteSection({ inventory }, 'zh-TW')
       const copyZh = roomCopy('zh-TW')
 
-      expect(htmlZh).toContain('0 個 Campaign · 0 個角色 · 0 個草稿')
+      expect(htmlZh).toContain('0 個戰役 · 0 個角色 · 0 個草稿')
       expect(htmlZh).not.toContain(`<strong>${copyZh.deleteRoomInventoryCampaigns}</strong>`)
       expect(htmlZh).not.toContain(`<strong>${copyZh.deleteRoomInventoryCharacters}</strong>`)
     })

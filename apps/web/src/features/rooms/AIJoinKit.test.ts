@@ -51,7 +51,7 @@ describe('M04-C AI Join Kit', () => {
     expect(kit).not.toContain('URL（公網）')
     expect(kit).not.toContain('Guide（公網）')
     expect(kit).toContain('尚未設定公網入口（ADVENTURE_TABLE_MCP_PUBLIC_ORIGIN）')
-    expect(kit).toContain('Expires: 直到 Session 結束或被撤銷')
+    expect(kit).toContain('Expires: 直到跑團結束或被撤銷')
     expect(kit).toContain('你已透過 MCP 連上這張桌')
     expect(kit).toContain('實際呼叫」get_session_context')
     expect(kit).toContain('接入設定（給架設者')
