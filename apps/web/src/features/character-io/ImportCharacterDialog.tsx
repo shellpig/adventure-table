@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 
+import { FilePicker } from '../../components/FilePicker'
 import { useLocale } from '../../i18n/LocaleProvider'
 import { useCharacterIoCopy } from '../../i18n/useCharacterIoCopy'
 import {
@@ -27,7 +28,6 @@ export function ImportCharacterDialog({
 }: ImportCharacterDialogProps) {
   const copy = useCharacterIoCopy()
   const { locale } = useLocale()
-  const fileInput = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
   const [documentText, setDocumentText] = useState('')
   const [preview, setPreview] = useState<CharacterImportResult | null>(null)
@@ -99,31 +99,19 @@ export function ImportCharacterDialog({
             </header>
 
             <div className="character-import-dialog__body">
-              <input
-                ref={fileInput}
-                className="character-import-file-input"
-                type="file"
+              <FilePicker
                 accept="application/json,.json"
-                onChange={async (event) => {
-                  const file = event.target.files?.[0]
+                disabled={Boolean(pending)}
+                chooseLabel={copy.importChooseFile}
+                onFileChange={async (file) => {
                   if (!file) return
                   try {
                     resetPreview(await file.text())
                   } catch (caught) {
                     setError(caught instanceof Error ? caught.message : String(caught))
-                  } finally {
-                    event.target.value = ''
                   }
                 }}
               />
-              <button
-                type="button"
-                className="button secondary"
-                disabled={Boolean(pending)}
-                onClick={() => fileInput.current?.click()}
-              >
-                {copy.importChooseFile}
-              </button>
 
               <label className="character-import-editor">
                 <span>{copy.importPasteLabel}</span>

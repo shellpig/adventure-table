@@ -85,6 +85,10 @@ button { color: inherit; }
 .button.danger { border-color: rgb(225 128 128 / 45%); color: var(--red); background: #241a1c; }
 .button.danger:not(:disabled):hover { border-color: var(--red); background: #2c1e21; }
 .button.full { width: 100%; margin-top: 10px; }
+.file-picker { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 3px 13px 3px 3px; border: 1px solid var(--line); border-radius: 10px; background: #0c1017; box-sizing: border-box; }
+.file-picker > input.file-picker__input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; padding: 0; margin: -1px; }
+.file-picker .file-picker__button { flex-shrink: 0; min-height: 32px; white-space: nowrap; }
+.file-picker__name { min-width: 0; overflow: hidden; color: var(--muted); font-size: .86rem; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
 .error-banner { margin: 16px 30px 0; border: 1px solid rgb(225 128 128 / 38%); border-radius: 12px; padding: 12px 14px; color: #f0b2b2; background: rgb(225 128 128 / 8%); font-size: .84rem; }
 .notice-banner { margin: 16px 30px 0; border: 1px solid rgb(150 170 200 / 34%); border-radius: 12px; padding: 12px 14px; color: #b9c6da; background: rgb(150 170 200 / 8%); font-size: .84rem; }
 .token-display-box { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; width: 100%; }

@@ -16,6 +16,7 @@ import {
   type TableEvent,
 } from '../../api/sessions'
 import { useContentPresentations } from '../../i18n/useContentPresentations'
+import { FilePicker } from '../../components/FilePicker'
 import { SessionCheckRequestPanel } from './SessionCheckRequestPanel'
 import { SessionQuickDicePanel } from './SessionQuickDicePanel'
 import { SessionRollRequestList } from './SessionRollRequestList'
@@ -169,6 +170,7 @@ export function SessionTableSurface({
   const [stage, setStage] = useState<StageState | null>(projectedStage)
   const [stageText, setStageText] = useState(projectedStage?.text ?? '')
   const [stageFile, setStageFile] = useState<File | null>(null)
+  const [stageFileKey, setStageFileKey] = useState(0)
   const [stagePending, setStagePending] = useState(false)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [tab, setTab] = useState<TableTab>('chat')
@@ -527,6 +529,7 @@ export function SessionTableSurface({
       setStage(next)
       setStageText(next.text ?? '')
       setStageFile(null)
+      setStageFileKey((k) => k + 1)
     } catch (cause) {
       onError(cause)
     } finally {
@@ -667,11 +670,11 @@ export function SessionTableSurface({
               </label>
               <label>
                 <span>{copy.stageImageLabel}</span>
-                <input
-                  type="file"
+                <FilePicker
                   accept="image/png,image/jpeg,image/webp"
                   disabled={stagePending}
-                  onChange={(event) => setStageFile(event.target.files?.[0] ?? null)}
+                  key={stageFileKey}
+                  onFileChange={setStageFile}
                 />
               </label>
               <div className="session-stage__actions">

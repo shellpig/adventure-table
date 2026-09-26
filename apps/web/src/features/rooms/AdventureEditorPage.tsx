@@ -26,6 +26,7 @@ import {
   type RoomAssetVisibility,
 } from '../../api/roomAssets'
 import { useLocale } from '../../i18n/LocaleProvider'
+import { FilePicker } from '../../components/FilePicker'
 import { AssetThumbnail } from './AssetThumbnail'
 import { adventureErrorMessage, adventuresCopy } from './adventuresCopy'
 import {
@@ -147,12 +148,11 @@ export function EntryAssetUploadForm({
     >
       <label className="room-field">
         <span>{copy.assetFileLabel}</span>
-        <input
+        <FilePicker
           accept="image/png,image/jpeg,image/webp"
           disabled={pending}
           key={fileInputKey}
-          type="file"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          onFileChange={setFile}
         />
       </label>
       <label className="room-field">

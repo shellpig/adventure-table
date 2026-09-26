@@ -492,10 +492,12 @@ describe('AdventureEntryList rendering and copy parity', () => {
   it('renders EntryAssetUploadForm with image accept, role labels, visibility labels, and dm_only default', () => {
     const copy = adventuresCopy('en')
     const html = renderToStaticMarkup(
-      <EntryAssetUploadForm
-        copy={copy}
-        onSubmit={vi.fn()}
-      />,
+      <LocaleProvider storage={testStorage('en')} documentTarget={null}>
+        <EntryAssetUploadForm
+          copy={copy}
+          onSubmit={vi.fn()}
+        />
+      </LocaleProvider>,
     )
     expect(html).toContain('accept="image/png,image/jpeg,image/webp"')
     expect(html).toContain(copy.roleImage)

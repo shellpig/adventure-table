@@ -8,6 +8,7 @@ import {
   type SourceChunk,
 } from '../../api/adventureImports'
 import { listRoomAssets, type RoomAsset } from '../../api/roomAssets'
+import { FilePicker } from '../../components/FilePicker'
 import {
   formatWhitelistedMetadata,
   normalizeSourceFile,
@@ -277,13 +278,12 @@ export function AdventureImportSourceSection({
             <form className="room-form" onSubmit={handleUploadSource}>
               <label className="room-field">
                 <span>{copy.uploadFileLabel}</span>
-                <input
+                <FilePicker
                   accept=".txt,.md,.markdown,.pdf,.docx"
                   disabled={pending}
                   key={fileInputKey}
                   required
-                  type="file"
-                  onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+                  onFileChange={setUploadFile}
                 />
               </label>
               <button
