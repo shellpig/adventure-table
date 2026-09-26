@@ -1355,6 +1355,31 @@ describe('Pure View Rendering and Identity Secrecy (SessionPlayerJournalView)', 
     expect(html).not.toContain('session-journal-entry__body')
   })
 
+  it('renders entry title inside session-journal-entry__header after the badge for public and character entries', () => {
+    const html = renderToStaticMarkup(
+      createElement(SessionPlayerJournalView, {
+        selection: {
+          publicEntries: [validPlayerQuest],
+          characterEntries: [validCharacterKnowledge],
+        },
+        characterNames: ['Thorin Stonehelm'],
+        hasActiveCharacters: true,
+        loading: false,
+        error: null,
+        accessUnavailable: false,
+        copy: copyEn,
+        onRetry: vi.fn(),
+      }),
+    )
+
+    expect(html).toMatch(
+      /<div class="session-journal-entry__header"><span class="session-journal-badge session-journal-badge--quest">[^<]*<\/span><h4 class="session-journal-entry__title">Find the Sunken Key<\/h4><\/div>/,
+    )
+    expect(html).toMatch(
+      /<div class="session-journal-entry__header"><span class="session-journal-badge session-journal-badge--secret">[^<]*<\/span><span class="session-journal-badge session-journal-badge--character">[^<]*<\/span><h4 class="session-journal-entry__title">Secret Family Crest<\/h4><\/div>/,
+    )
+  })
+
   it('renders error banner and retry button when error is present', () => {
     const onRetry = vi.fn()
     const html = renderToStaticMarkup(

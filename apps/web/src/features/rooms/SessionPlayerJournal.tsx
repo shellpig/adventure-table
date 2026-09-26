@@ -547,10 +547,10 @@ export function SessionPlayerJournalView({
                       <span className={`session-journal-badge session-journal-badge--${entry.kind}`}>
                         {anyEntryKindLabel(entry.kind, copy)}
                       </span>
+                      {entry.title ? (
+                        <h4 className="session-journal-entry__title">{entry.title}</h4>
+                      ) : null}
                     </div>
-                    {entry.title ? (
-                      <h4 className="session-journal-entry__title">{entry.title}</h4>
-                    ) : null}
                     {entry.body ? (
                       <p className="session-journal-entry__body">{entry.body}</p>
                     ) : null}
@@ -593,10 +593,10 @@ export function SessionPlayerJournalView({
                       <span className="session-journal-badge session-journal-badge--character">
                         {copy.visibilityCharacter}
                       </span>
+                      {entry.title ? (
+                        <h4 className="session-journal-entry__title">{entry.title}</h4>
+                      ) : null}
                     </div>
-                    {entry.title ? (
-                      <h4 className="session-journal-entry__title">{entry.title}</h4>
-                    ) : null}
                     {entry.body ? (
                       <p className="session-journal-entry__body">{entry.body}</p>
                     ) : null}
