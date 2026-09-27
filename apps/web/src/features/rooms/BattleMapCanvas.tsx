@@ -296,6 +296,8 @@ export function BattleMapCanvas({
                 textAnchor="middle"
                 dominantBaseline="middle"
                 fontSize={11}
+                // Long names overflow the token; the label must not swallow clicks on neighbouring cells.
+                pointerEvents="none"
               >
                 {token.name}
               </text>

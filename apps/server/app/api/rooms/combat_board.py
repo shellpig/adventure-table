@@ -34,6 +34,7 @@ from app.domain.combat.movement import (
     ConfirmMovementInput,
     ConfirmMovementView,
     MovementService,
+    MovementStatusView,
     PreviewMovementInput,
     PreviewMovementView,
     RepositionInput,
@@ -126,6 +127,27 @@ def resume_movement(
             _actor_from_request(room_id, campaign_id, session_id, context, event_service),
             payload.entry_id,
             payload,
+        )
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
+@router.get("/board/movement/{entry_id}/status", response_model=MovementStatusView)
+def movement_status(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    entry_id: UUID,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: MovementService = Depends(get_movement_service),
+) -> MovementStatusView:
+    # Read-only budget and paused-movement revision for the mover's controller or the DM;
+    # the UI needs the current pending revision after reaction windows resolve.
+    try:
+        return service.movement_status(
+            _actor_from_request(room_id, campaign_id, session_id, context, event_service),
+            entry_id,
         )
     except Exception as exc:
         raise _map_combat_error(exc) from exc

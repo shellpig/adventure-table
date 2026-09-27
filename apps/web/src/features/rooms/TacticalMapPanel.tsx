@@ -7,6 +7,7 @@ import type { TableEvent } from '../../api/sessions'
 import {
   cancelPendingMovement,
   confirmMovement,
+  getMovementStatus,
   getCombatBoard,
   placeCombatant,
   previewAoeSpell,
@@ -278,10 +279,13 @@ export function TacticalMapPanel({
     reloadTimerRef.current = setTimeout(() => {
       void loadBoard()
     }, BOARD_RELOAD_DEBOUNCE_MS)
-    return () => {
-      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current)
-    }
+    // No cleanup here: a re-render with no new events would cancel the pending
+    // reload and never reschedule it. The timer is cleared on unmount below.
   }, [events, loadBoard])
+
+  useEffect(() => () => {
+    if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current)
+  }, [])
 
   // Load board image as blob with auth token (the image route requires auth).
   useEffect(() => {
@@ -662,17 +666,40 @@ export function TacticalMapPanel({
     }
   }, [moveEntryId, moveAnchors, board, movePreview, roomId, campaignId, sessionId, token, clearMoveDraft, loadBoard, refresh, onError])
 
+  // Paused movement is durable server state: re-read it whenever the board or turn changes so the
+  // DM, a reloaded page, and the mover all see it, and so resume uses the revision after reactions resolved.
+  const turnEntryId = combat.current_turn_entry_id
+  useEffect(() => {
+    if (!board || !turnEntryId || !canMoveEntry(turnEntryId)) return
+    if (!board.positions.some((p) => p.entry_id === turnEntryId)) return
+    let cancelled = false
+    getMovementStatus(roomId, campaignId, sessionId, turnEntryId, token)
+      .then((status) => {
+        if (cancelled) return
+        setPausedMove(
+          status.has_pending_movement
+            ? { entryId: status.entry_id, pendingRevision: status.pending_revision }
+            : null,
+        )
+      })
+      .catch(onError)
+    return () => {
+      cancelled = true
+    }
+  }, [board, turnEntryId, canMoveEntry, roomId, campaignId, sessionId, token, onError])
+
   const handleResumeMove = useCallback(async () => {
     if (!pausedMove) return
     setMoveBusy(true)
     try {
+      const status = await getMovementStatus(roomId, campaignId, sessionId, pausedMove.entryId, token)
       const view = await resumeMovement(
         roomId,
         campaignId,
         sessionId,
         {
           entry_id: pausedMove.entryId,
-          expected_pending_revision: pausedMove.pendingRevision,
+          expected_pending_revision: status.pending_revision,
           idempotency_key: requestId('resume'),
         },
         token,
@@ -877,6 +904,58 @@ export function TacticalMapPanel({
         ) : null}
       </div>
 
+      <div
+        ref={boardWrapRef}
+        className="tactical-map-panel__board-wrap"
+        data-testid="tactical-board-wrap"
+        onMouseDown={(e) => {
+          if (e.button === 1) startPan(e.clientX, e.clientY)
+        }}
+        onMouseMove={(e) => panBy(e.clientX, e.clientY)}
+        onMouseUp={endPan}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {boardError ? (
+          <p className="tactical-map-panel__error" data-testid="tactical-board-error">
+            {copy.tacticalBoardLoadFailed}
+          </p>
+        ) : board ? (
+          <BattleMapCanvas
+            widthCells={board.width_cells}
+            heightCells={board.height_cells}
+            walls={canvasWalls}
+            doors={canvasDoors}
+            terrain={board.terrain.map((t) => ({
+              x: t.x,
+              y: t.y,
+              terrain_kind: t.terrain_kind,
+            }))}
+            tokens={canvasTokens}
+            imageUrl={imageObjectUrl}
+            camera={camera}
+            isDm={isCurrentDm}
+            selectedEntryId={selectedEntryId}
+            onCellClick={mapMode.kind === 'idle' ? undefined : handleMapCellClick}
+            onTokenClick={handleMapTokenClick}
+            onTokenPointerDown={handleTokenPointerDown}
+            onCellPointerEnter={handleCellPointerEnter}
+            onPointerUp={handleDragPointerUp}
+            onDoorClick={handleDoorClick}
+            onEmptyMouseDown={(x, y) => startPan(x, y)}
+            onMouseMove={(x, y) => panBy(x, y)}
+            onMouseUp={endPan}
+            onWheel={handleWheel}
+            aoeCells={aoePreview?.affected_cells}
+            aoeOrigin={aoeOrigin}
+          />
+        ) : (
+          <p className="tactical-map-panel__loading">{copy.tacticalBoardLoading}</p>
+        )}
+      </div>
+
+      {/* Draft panels sit below the map so opening one never shifts cells under the pointer mid-drag. */}
       {/* Movement draft panel */}
       {moveEntryId ? (
         <div className="tactical-map-panel__movement" data-testid="tactical-movement">
@@ -1066,57 +1145,6 @@ export function TacticalMapPanel({
           )}
         </div>
       ) : null}
-
-      <div
-        ref={boardWrapRef}
-        className="tactical-map-panel__board-wrap"
-        data-testid="tactical-board-wrap"
-        onMouseDown={(e) => {
-          if (e.button === 1) startPan(e.clientX, e.clientY)
-        }}
-        onMouseMove={(e) => panBy(e.clientX, e.clientY)}
-        onMouseUp={endPan}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        {boardError ? (
-          <p className="tactical-map-panel__error" data-testid="tactical-board-error">
-            {copy.tacticalBoardLoadFailed}
-          </p>
-        ) : board ? (
-          <BattleMapCanvas
-            widthCells={board.width_cells}
-            heightCells={board.height_cells}
-            walls={canvasWalls}
-            doors={canvasDoors}
-            terrain={board.terrain.map((t) => ({
-              x: t.x,
-              y: t.y,
-              terrain_kind: t.terrain_kind,
-            }))}
-            tokens={canvasTokens}
-            imageUrl={imageObjectUrl}
-            camera={camera}
-            isDm={isCurrentDm}
-            selectedEntryId={selectedEntryId}
-            onCellClick={mapMode.kind === 'idle' ? undefined : handleMapCellClick}
-            onTokenClick={handleMapTokenClick}
-            onTokenPointerDown={handleTokenPointerDown}
-            onCellPointerEnter={handleCellPointerEnter}
-            onPointerUp={handleDragPointerUp}
-            onDoorClick={handleDoorClick}
-            onEmptyMouseDown={(x, y) => startPan(x, y)}
-            onMouseMove={(x, y) => panBy(x, y)}
-            onMouseUp={endPan}
-            onWheel={handleWheel}
-            aoeCells={aoePreview?.affected_cells}
-            aoeOrigin={aoeOrigin}
-          />
-        ) : (
-          <p className="tactical-map-panel__loading">{copy.tacticalBoardLoading}</p>
-        )}
-      </div>
 
       {isCurrentDm && selectedDoor ? (
         <div className="tactical-map-panel__door-controls" data-testid="tactical-door-controls">

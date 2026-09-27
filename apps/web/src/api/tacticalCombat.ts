@@ -271,6 +271,25 @@ export function confirmMovement(
   })
 }
 
+export type MovementStatusView = {
+  entry_id: string
+  used_feet: number
+  remaining_feet: number
+  budget_feet: number
+  has_pending_movement: boolean
+  pending_revision: number
+}
+
+export function getMovementStatus(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  entryId: string,
+  token: string,
+): Promise<MovementStatusView> {
+  return request(`${tacticalBase(roomId, campaignId, sessionId)}/board/movement/${entryId}/status`, token)
+}
+
 export function resumeMovement(
   roomId: string,
   campaignId: string,

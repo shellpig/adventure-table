@@ -262,10 +262,9 @@ export type CastableSpellView = {
   targeting: 'single' | 'self' | 'aoe'
   cast_mode: 'attack' | 'save' | 'heal' | 'utility'
   castable_slot_levels: number[]
-  /** AoE geometry from spell data (server content). Absent when the server
-   * does not expose it; the tactical template mode needs these fields. */
-  aoe_shape?: 'circle' | 'square' | 'cone' | 'line' | null
-  aoe_size_feet?: number | null
+  /** Canonical Tactical AoE template from spell content; null for non-AoE or unsupported areas. */
+  aoe_shape: 'circle' | 'square' | 'cone' | 'line' | null
+  aoe_size_feet: number | null
 }
 
 export type SpellCastView = {

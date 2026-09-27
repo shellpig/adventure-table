@@ -146,6 +146,9 @@ class CastableSpellView(StrictModel):
     targeting: Literal["single", "self", "aoe"]
     cast_mode: SpellCastMode
     castable_slot_levels: tuple[int, ...]
+    # Canonical Tactical template for AoE spells; the preview route requires the client to echo it.
+    aoe_shape: AoeShapeKind | None = None
+    aoe_size_feet: int | None = None
 
 
 class SpellCastView(StrictModel):
@@ -248,6 +251,15 @@ class CombatSpellService:
     ) -> CastableSpellView:
         spell_entry = self.registry.get(spell_ref)
         spell_data = spell_entry.data
+        aoe_shape: AoeShapeKind | None = None
+        aoe_size_feet: int | None = None
+        area = spell_data.get("area_of_effect")
+        if isinstance(area, Mapping):
+            try:
+                aoe_shape, aoe_size_feet = normalize_area_of_effect(area)
+            except ValueError:
+                # Unsupported area types stay DM-adjudicated; no Tactical template.
+                aoe_shape, aoe_size_feet = None, None
         return CastableSpellView(
             spell_ref=spell_ref,
             name=spell_entry.name,
@@ -257,6 +269,8 @@ class CombatSpellService:
             targeting=self._targeting(spell_data),
             cast_mode=self._cast_mode(spell_data),
             castable_slot_levels=castable_slot_levels,
+            aoe_shape=aoe_shape,
+            aoe_size_feet=aoe_size_feet,
         )
 
     def available_spells(
