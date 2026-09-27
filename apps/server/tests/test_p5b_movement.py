@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from uuid import UUID
 
 import pytest
@@ -811,7 +812,11 @@ def test_hidden_monster_does_not_block_player_preview_but_blocks_dm() -> None:
     assert dm_view.failure == "creature_blocked"
 
 
-def test_player_confirm_into_hidden_blocker_fails_generic() -> None:
+def test_player_confirm_into_hidden_blocker_is_interrupted_not_invalid() -> None:
+    # B2 supersedes the B1 generic-invalid contract: a caller-visible-legal
+    # path blocked by a hidden monster now returns outcome="interrupted"
+    # (HTTP 200) with a Player-safe event. Full coverage lives in
+    # tests/test_p5b_b2.py; this keeps the B1 scenario pinned to the new rule.
     table = setup_tactical_table()
     _start(table, blank_width_cells=12, blank_height_cells=12)
     char_entry = _character_entry_id(table)
@@ -820,18 +825,14 @@ def test_player_confirm_into_hidden_blocker_fails_generic() -> None:
 
     preview = _preview(table, table.player_actor, char_entry, (1, 1), (2, 1), (3, 1), (4, 1))
     assert preview.valid
-    with pytest.raises(CombatMovementInvalidError) as exc_info:
-        _confirm(
-            table, table.player_actor, char_entry, (1, 1), (2, 1), (3, 1), (4, 1),
-            expected_position_revision=preview.position_revision,
-            expected_board_revision=preview.board_revision,
-        )
-    # B1: generic invalid; the response carries no hidden identity or coordinates.
-    assert str(hidden_entry) not in str(exc_info.value)
-    assert "(3, 1)" not in str(exc_info.value)
-    assert _movement_event_count(table) == 0
-    position = table.board.board_repository.get_position(char_entry)
-    assert position is not None and (position.anchor_x, position.anchor_y) == (1, 1)
+    result = _confirm(
+        table, table.player_actor, char_entry, (1, 1), (2, 1), (3, 1), (4, 1),
+        expected_position_revision=preview.position_revision,
+        expected_board_revision=preview.board_revision,
+    )
+    assert result.outcome == "interrupted"
+    assert (result.anchor_x, result.anchor_y) == (1, 1)
+    assert str(hidden_entry) not in json.dumps(result.model_dump(mode="json"))
 
 
 def test_hidden_monster_movement_event_is_dm_only() -> None:

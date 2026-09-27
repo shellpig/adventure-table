@@ -230,7 +230,19 @@ def validate_movement_path(request: PathValidationRequest) -> PathValidationResu
             current.x, current.y, request.footprint, request.barriers
         ):
             return invalid("wall_or_door", index)
-        if crosses_wall_or_closed_door(previous, current, request.barriers, request.blocked_cells):
+        if diagonal:
+            # Corner cutting is checked for every cell of the footprint, not
+            # just the anchor: a Large mover stepping (0,0)->(1,1) sweeps its
+            # leading-edge corners (2,0) and (0,2) as well.
+            for cell in occupied_cells(previous.x, previous.y, request.footprint):
+                if crosses_wall_or_closed_door(
+                    cell, GridCell(cell.x + dx, cell.y + dy),
+                    request.barriers, request.blocked_cells,
+                ):
+                    return invalid("wall_or_door", index)
+        elif crosses_wall_or_closed_door(
+            previous, current, request.barriers, request.blocked_cells
+        ):
             return invalid("wall_or_door", index)
 
         difficult = any(cell in request.difficult_cells for cell in cells)

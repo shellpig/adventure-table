@@ -130,6 +130,19 @@ def project_combat_event_payload(
         # Hidden-origin doors never expose their id to Players (their board
         # view projects door_id=None); the state change itself stays visible.
         data.pop("door_id", None)
+    if kind == "combat.movement_interrupted":
+        # An interrupted movement tells Players only that the path was
+        # obstructed. The step index and blocker identity stay DM-only; the
+        # blocker id is deliberately outside _ID_KEYS, so the allowlist below
+        # is the only thing that keeps it out of Player payloads.
+        return {
+            "combat_id": data.get("combat_id"),
+            "entry_id": data.get("entry_id"),
+            "reason": data.get("reason"),
+        }
+    if kind == "combat.position_corrected":
+        # The DM's correction reason is audit-only; Players see the new position.
+        data.pop("reason", None)
     target_is_hostile = bool(data.get("target_is_hostile", False))
     caster_is_hostile = bool(data.get("caster_is_hostile", False))
 

@@ -206,6 +206,33 @@ class CombatBoardService:
     # ------------------------------------------------------------------
     # placement
 
+    def _check_placement(
+        self,
+        *,
+        board: StoredCombatBoard,
+        combat_id: UUID,
+        entry: StoredCombatEntry,
+        anchor_x: int,
+        anchor_y: int,
+        error_message: str,
+    ) -> None:
+        """Shared placement legality check reused by place_position and reposition.
+
+        Full-truth validation: bounds, blocked terrain, walls/doors (a barrier
+        cutting through the footprint's interior), and overlap with other
+        tokens. Raises CombatPlacementInvalidError with the caller's message.
+        """
+        footprint = self._entry_footprint(entry)
+        walls, blocked = self._barriers(board, combat_id)
+        occupied_by_others = self._occupied_by_others(combat_id, entry.id)
+        if not can_occupy(
+            anchor_x, anchor_y, footprint,
+            width_cells=board.width_cells, height_cells=board.height_cells,
+            blocked_cells=blocked, barriers=walls,
+            occupied_by_others=occupied_by_others,
+        ):
+            raise CombatPlacementInvalidError(error_message)
+
     def place_position(
         self, actor: TableActorContext, entry_id: UUID, request: PlaceCombatantInput
     ) -> BoardPositionView:
@@ -227,14 +254,11 @@ class CombatBoardService:
                 f"cannot place Combat entries while Combat is {combat.status}"
             )
         footprint = self._entry_footprint(entry)
-        walls, blocked = self._barriers(board, combat.id)
-        occupied_by_others = self._occupied_by_others(combat.id, entry.id)
-        if not can_occupy(
-            request.anchor_x, request.anchor_y, footprint,
-            width_cells=board.width_cells, height_cells=board.height_cells,
-            blocked_cells=blocked, barriers=walls, occupied_by_others=occupied_by_others,
-        ):
-            raise CombatPlacementInvalidError("placement is out of bounds, blocked, or overlapping")
+        self._check_placement(
+            board=board, combat_id=combat.id, entry=entry,
+            anchor_x=request.anchor_x, anchor_y=request.anchor_y,
+            error_message="placement is out of bounds, blocked, or overlapping",
+        )
         hidden = entry.id in self.combat_service._hidden_entry_ids((entry,))
         stored = self.board_repository.upsert_position_with_event(
             binding=actor_binding(actor), combat_id=combat.id, entry_id=entry.id,
@@ -301,7 +325,8 @@ class CombatBoardService:
         return self._project_board(combat, board, is_dm=actor.is_current_dm)
 
     def _project_board(
-        self, combat: StoredCombat, board: StoredCombatBoard, *, is_dm: bool
+        self, combat: StoredCombat, board: StoredCombatBoard, *, is_dm: bool,
+        movement_planning: bool = False,
     ) -> CombatBoardView:
         baseline = board.baseline
         runtime_doors = {
@@ -324,6 +349,12 @@ class CombatBoardService:
             revealed = runtime.revealed if runtime is not None else False
             hidden_origin = raw.get("visibility") == "hidden"
             if hidden_origin and not revealed and not is_dm:
+                if movement_planning:
+                    # Movement planning must not treat an unrevealed hidden
+                    # door as a wall: the Player's Preview plans through it
+                    # (leaking nothing), while the full-truth Confirm still
+                    # interrupts. Board views keep the wall projection.
+                    continue
                 # Players see an unrevealed hidden door as a plain wall — no id, no "hidden"
                 # string. The DM keeps the door (with id) so it can be revealed or changed.
                 walls.append(BoardWallView(x1=raw["x1"], y1=raw["y1"], x2=raw["x2"], y2=raw["y2"]))

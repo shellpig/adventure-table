@@ -400,18 +400,18 @@ class CombatBoardRepository:
             raise BoardNotFoundError(str(entry_id))
         return stored
 
-    def find_movement_commit(
-        self, *, session_id: UUID, idempotency_key: str
+    def _find_idempotent_outcome(
+        self, *, session_id: UUID, kind: str, key_prefix: str, idempotency_key: str
     ) -> dict[str, Any] | None:
-        """Return the payload of an already-committed movement for a retry key."""
+        """Stored outcome (kind, payload, acting seat) of an idempotent board write."""
         with self.engine.connect() as connection:
             row = (
                 connection.execute(
-                    select(session_events.c.payload)
+                    select(session_events.c.payload, session_events.c.acting_seat_id)
                     .where(
                         session_events.c.session_id == session_id,
-                        session_events.c.kind == "combat.movement_committed",
-                        session_events.c.idempotency_key == f"p5b-movement-commit:{idempotency_key}",
+                        session_events.c.kind == kind,
+                        session_events.c.idempotency_key == f"{key_prefix}:{idempotency_key}",
                     )
                 )
                 .mappings()
@@ -419,7 +419,198 @@ class CombatBoardRepository:
             )
         if row is None:
             return None
-        return dict(row["payload"])
+        return {
+            "kind": kind,
+            "payload": dict(row["payload"]),
+            "acting_seat_id": row["acting_seat_id"],
+        }
+
+    def find_movement_outcome(
+        self, *, session_id: UUID, idempotency_key: str
+    ) -> dict[str, Any] | None:
+        """Return the committed or interrupted movement stored for a retry key.
+
+        A retry of the same key replays the original outcome (committed or
+        interrupted) instead of appending a duplicate event.
+        """
+        outcome = self._find_idempotent_outcome(
+            session_id=session_id, kind="combat.movement_committed",
+            key_prefix="p5b-movement-commit", idempotency_key=idempotency_key,
+        )
+        if outcome is not None:
+            return outcome
+        return self._find_idempotent_outcome(
+            session_id=session_id, kind="combat.movement_interrupted",
+            key_prefix="p5b-movement-interrupted", idempotency_key=idempotency_key,
+        )
+
+    def append_movement_interrupted_with_event(
+        self,
+        *,
+        binding: StoredTableActorBinding,
+        combat_id: UUID,
+        entry_id: UUID,
+        reason: str,
+        step_index: int,
+        blocker_type: str,
+        blocker_id: str | None,
+        expected_position_revision: int,
+        expected_board_revision: int,
+        anchor_x: int,
+        anchor_y: int,
+        used_feet: int,
+        budget_feet: int,
+        diagonal_steps_used: int,
+        position_revision: int,
+        board_revision: int,
+        idempotency_key: str | None,
+        visibility: str,
+        subject_seat_id: UUID | None,
+        execution_mode: str,
+    ) -> None:
+        """Append combat.movement_interrupted for a path blocked by hidden objects.
+
+        Nothing moves and no bookkeeping changes; the event itself is the
+        durable outcome. The position/board revisions are re-checked inside
+        the event transaction (compare-and-set): a concurrent writer fails
+        here even if the domain-level check passed a moment earlier.
+
+        The confirm snapshot (anchor/feet/revisions as of the interruption)
+        is stored in the payload so a retry replays the identical outcome
+        even if the token or the board changed afterwards.
+        """
+        if self.event_repository is None:
+            raise BoardNotFoundError("CombatBoardRepository has no event repository")
+
+        def projection(connection: Connection, _event_id: UUID, _seq: int) -> None:
+            position = (
+                connection.execute(
+                    select(combat_positions)
+                    .where(combat_positions.c.combat_entry_id == entry_id)
+                    .with_for_update()
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if position is None:
+                raise BoardNotFoundError(f"Combat entry {entry_id} has no board position")
+            if int(position["revision"]) != expected_position_revision:
+                raise BoardMovementStaleError("combat token moved; refresh and replan")
+            current_board_revision = connection.execute(
+                select(combat_boards.c.runtime_revision).where(
+                    combat_boards.c.combat_id == combat_id
+                )
+            ).scalar_one_or_none()
+            if current_board_revision != expected_board_revision:
+                raise BoardMovementStaleError("combat board changed; refresh and replan")
+            # No mutation: an interruption moves nothing and touches no
+            # bookkeeping; the revision check above only guards the race.
+
+        self.event_repository.append(
+            room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
+            kind="combat.movement_interrupted", acting_seat_id=binding.seat_id,
+            subject_seat_id=subject_seat_id, subject_character_id=None,
+            execution_mode=execution_mode, visibility=visibility,
+            recipient_seat_ids=(), payload_version=1,
+            payload={
+                "combat_id": str(combat_id), "entry_id": str(entry_id),
+                "reason": reason, "step_index": step_index,
+                "blocker_type": blocker_type, "blocker_id": blocker_id,
+                "anchor_x": anchor_x, "anchor_y": anchor_y,
+                "used_feet": used_feet, "budget_feet": budget_feet,
+                "diagonal_steps_used": diagonal_steps_used,
+                "position_revision": position_revision,
+                "board_revision": board_revision,
+            },
+            idempotency_key=(
+                f"p5b-movement-interrupted:{idempotency_key}" if idempotency_key else None
+            ),
+            expected_actor_binding=binding, transaction_projection=projection,
+        )
+
+    def reposition_with_event(
+        self,
+        *,
+        binding: StoredTableActorBinding,
+        combat_id: UUID,
+        entry_id: UUID,
+        anchor_x: int,
+        anchor_y: int,
+        expected_position_revision: int,
+        new_board_revision: int,
+        idempotency_key: str | None,
+        reason: str,
+        visibility: str,
+        subject_seat_id: UUID | None,
+        execution_mode: str,
+    ) -> StoredCombatPosition:
+        """DM correction: move a token without touching movement bookkeeping.
+
+        The position revision is compare-and-set inside the event transaction;
+        the board runtime revision is bumped unconditionally (reposition takes
+        no expected board revision; new_board_revision is the post-bump value
+        for the payload). Emits combat.position_corrected.
+        """
+        if self.event_repository is None:
+            raise BoardNotFoundError("CombatBoardRepository has no event repository")
+
+        def projection(connection: Connection, _event_id: UUID, _seq: int) -> None:
+            position = (
+                connection.execute(
+                    select(combat_positions)
+                    .where(combat_positions.c.combat_entry_id == entry_id)
+                    .with_for_update()
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if position is None:
+                raise BoardNotFoundError(f"Combat entry {entry_id} has no board position")
+            if int(position["revision"]) != expected_position_revision:
+                raise BoardMovementStaleError("combat token moved; refresh and replan")
+            connection.execute(
+                update(combat_boards)
+                .where(combat_boards.c.combat_id == combat_id)
+                .values(runtime_revision=combat_boards.c.runtime_revision + 1)
+            )
+            connection.execute(
+                update(combat_positions)
+                .where(combat_positions.c.combat_entry_id == entry_id)
+                .values(
+                    anchor_x=anchor_x, anchor_y=anchor_y,
+                    revision=combat_positions.c.revision + 1,
+                )
+            )
+
+        self.event_repository.append(
+            room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
+            kind="combat.position_corrected", acting_seat_id=binding.seat_id,
+            subject_seat_id=subject_seat_id, subject_character_id=None,
+            execution_mode=execution_mode, visibility=visibility,
+            recipient_seat_ids=(), payload_version=1,
+            payload={
+                "combat_id": str(combat_id), "entry_id": str(entry_id),
+                "anchor_x": anchor_x, "anchor_y": anchor_y,
+                "reason": reason,
+                "position_revision": expected_position_revision + 1,
+                "board_revision": new_board_revision,
+            },
+            idempotency_key=f"p5b-reposition:{idempotency_key}" if idempotency_key else None,
+            expected_actor_binding=binding, transaction_projection=projection,
+        )
+        stored = self.get_position(entry_id)
+        if stored is None:
+            raise BoardNotFoundError(str(entry_id))
+        return stored
+
+    def find_reposition_outcome(
+        self, *, session_id: UUID, idempotency_key: str
+    ) -> dict[str, Any] | None:
+        """Return the combat.position_corrected stored for a retry key."""
+        return self._find_idempotent_outcome(
+            session_id=session_id, kind="combat.position_corrected",
+            key_prefix="p5b-reposition", idempotency_key=idempotency_key,
+        )
 
 
 __all__ = [

@@ -32,6 +32,8 @@ from app.domain.combat.movement import (
     MovementService,
     PreviewMovementInput,
     PreviewMovementView,
+    RepositionInput,
+    RepositionView,
 )
 from app.domain.rooms.table_events import TableEventService
 
@@ -95,6 +97,26 @@ def confirm_movement(
 ) -> ConfirmMovementView:
     try:
         return service.confirm(
+            _actor_from_request(room_id, campaign_id, session_id, context, event_service),
+            payload.entry_id,
+            payload,
+        )
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
+@router.post("/board/reposition", response_model=RepositionView)
+def reposition_combatant(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    payload: RepositionInput,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: MovementService = Depends(get_movement_service),
+) -> RepositionView:
+    try:
+        return service.reposition(
             _actor_from_request(room_id, campaign_id, session_id, context, event_service),
             payload.entry_id,
             payload,
