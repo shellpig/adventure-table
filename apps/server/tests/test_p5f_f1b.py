@@ -1,21 +1,29 @@
-"""P5-F F1b backend tests: reviewer fixes for tactical MCP tools.
+"""P5-F F1b/F1c backend tests: reviewer fixes for tactical MCP tools.
 
 Covers the F1b review items (2026-09-28):
 - B1: every combat_*/battle_map_* token mentioned in any role x mode briefing
   must exist in that role's actual MCP catalog.
-- B2: tactical briefing reuses the full combat loop verbatim plus a concise
-  tactical add-on (no hardcoded 120s/120x, no dropped combat semantics).
-- B3/B4: the tactical summary is always bounded (never raises) and never uses
-  "?" as a name placeholder.
+- B2: tactical briefing reuses the combat loop (DM: tactical variant) plus a
+  concise tactical add-on (no hardcoded 120s/120x, no dropped combat semantics).
+- B3/B4: the tactical structured context is always bounded (never raises) and
+  never uses "?" as a name placeholder.
 - B5: battle-map tools require an active Session + current DM;
   battle_map_delete is fully removed.
 - F.3: concrete zero-side-effect assertions for rejected player / pre-session
   calls, via the MCP protocol layer.
 - F.4: tactical tools through app/mcp/tools.py::call_tool, plus player/DM
   secrecy for hidden monster / hidden wall / hidden door.
-- F.5: Human REST (TestClient) vs AI MCP parity on preview -> confirm.
-- F.6: briefing content from the real get_session_context, plus a near-limit
-  fixture that must not raise and must stay within 3000 chars.
+
+F1c changes (2026-09-28):
+- Tactical summary is now structured data at combat["tactical"] (not a string
+  appended to the briefing). Briefing uses _format_active_briefing with the
+  MCP invocation rule intact.
+- F.5: Human REST (TestClient) vs AI MCP parity uses two independent fixtures;
+  only UUID/timestamp values are normalized.
+- F.6: precise combat["tactical"] field assertions with real OA-paused
+  movement; near-limit asserts caps without try/except.
+- F.4: hidden wall checked via board["walls"]; target_check asserts single
+  not-found path.
 
 New tests live only in ``tests/test_p5f_*.py``; no existing test file is
 modified except the battle_map_delete removal and the F.6 zh-TW assertion fix
@@ -103,27 +111,31 @@ def test_b2_tactical_briefing_reuses_full_combat_loop() -> None:
     for role in ("dm", "player"):
         tactical = render_briefing(role=role, mode="active_tactical_combat")
         loop = _dm_combat_loop if role == "dm" else _player_combat_loop
-        # The full combat loop text is reused verbatim, not replaced.
-        assert loop("en") in tactical, role
-        assert loop("zh-TW") in tactical, role
+        # F1c: DM tactical uses the trimmed tactical variant (to stay within
+        # BRIEFING_MAX_CHARS with the invocation rule); Player reuses the
+        # full loop verbatim.
+        tactical_flag = role == "dm"
+        assert loop("en", tactical=tactical_flag) in tactical, role
+        assert loop("zh-TW", tactical=tactical_flag) in tactical, role
         loop_only = render_briefing(
             role=role,
             mode="active_combat",
         )
-        # The full combat-loop semantics survive: pending adjudication picks
-        # the tool, environmental damage path, wait/idempotency discipline.
-        # (quick_roll / combat_apply_damage are DM-loop markers.)
+        # The combat-loop semantics survive: pending adjudication picks
+        # the tool, wait/idempotency discipline.
         markers = (
             "next_required_action",
             "wait_for_event",
             "idempotency_key",
         )
-        if role == "dm":
-            markers += ("quick_roll", "combat_apply_damage")
         for marker in markers:
             assert marker in tactical, (role, marker)
             assert marker in loop_only, (role, marker)
-        # The tactical add-on is present and role-appropriate.
+        # The MCP invocation rule is always kept (F1c design change).
+        assert "MCP invocation rule" in tactical, role
+        assert "MCP 呼叫判定" in tactical, role
+        # The tactical add-on is present and role-appropriate, with the
+        # combat.tactical pointer.
         for marker in (
             "combat_preview_movement",
             "combat_confirm_movement",
@@ -131,6 +143,7 @@ def test_b2_tactical_briefing_reuses_full_combat_loop() -> None:
             "combat_check_target",
             "combat_preview_aoe",
             "structured cells",
+            "combat.tactical",
         ):
             assert marker in tactical, (role, marker)
         if role == "dm":
@@ -642,9 +655,14 @@ def test_f4b_secrecy_player_cannot_see_hidden_elements() -> None:
     assert "Hidden Stalker" not in player["board"]
     assert "Hidden Stalker" not in player["context"]
     assert "Hidden Stalker" not in player["briefing"]
-    # Hidden wall coordinates absent from the player board.
-    assert "(10, 10)" not in player["board"] and "[10, 10]" not in player["board"]
-    assert "12, 10" not in player["board"]
+    # Hidden wall (10,10)-(12,10) absent from the player board walls list.
+    player_board = json.loads(player["board"])
+    hidden_wall = next(
+        (w for w in player_board.get("walls", [])
+         if (w.get("x1"), w.get("y1"), w.get("x2"), w.get("y2")) == (10, 10, 12, 10)),
+        None,
+    )
+    assert hidden_wall is None, player_board.get("walls")
     # Hidden door id absent from the player board.
     assert str(hidden_door_id) not in player["board"]
     # The visible monster IS present (sanity: projection works, not empty).
@@ -658,6 +676,15 @@ def test_f4b_secrecy_dm_sees_hidden_elements() -> None:
     assert str(hidden_entry) in dm["board"]
     assert str(hidden_entry) in dm["context"]
     assert str(hidden_door_id) in dm["board"]
+    # DM sees the hidden wall with visibility == "hidden".
+    dm_board = json.loads(dm["board"])
+    hidden_wall = next(
+        (w for w in dm_board.get("walls", [])
+         if (w.get("x1"), w.get("y1"), w.get("x2"), w.get("y2")) == (10, 10, 12, 10)),
+        None,
+    )
+    assert hidden_wall is not None, dm_board.get("walls")
+    assert hidden_wall.get("visibility") == "hidden"
 
 
 def test_f4b_secrecy_target_check_hides_hidden_monster() -> None:
@@ -672,8 +699,8 @@ def test_f4b_secrecy_target_check_hides_hidden_monster() -> None:
     attack_ref = resolver.character_attacks(
         table.combat.repository.get_entry(char_entry)
     )[0].source_ref
-    # Player target-check against the hidden monster must not leak it:
-    # the check is refused or reports it as not a legal target.
+    # Player target-check against the hidden monster is a not-found rejection
+    # (P5-C: hidden targets are not found for Players, not "illegal").
     result = _call(
         facade, _player_token(table), "combat_check_target",
         TargetCheckInput(
@@ -682,10 +709,8 @@ def test_f4b_secrecy_target_check_hides_hidden_monster() -> None:
         ).model_dump(mode="json"),
     )
     payload = result["structuredContent"]
-    if payload["ok"]:
-        assert payload["data"]["legal"] is False
-    else:
-        assert payload["error"]["code"] in ("not_found", "permission_denied")
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "not_found"
     # DM can check it (sanity).
     dm_result = _call(
         facade, _dm_token(table), "combat_check_target",
@@ -748,102 +773,159 @@ def _f5_events_slice(table: TacticalTable, before: int, after: int) -> list[dict
 
 
 def _f5_normalize_event(event: dict) -> dict:
-    """Drop ids/timestamps/seq/revisions; keep kind + payload for comparison.
+    """Normalize only values that necessarily differ between two runs.
 
-    Revisions differ because the test resets position between the Human and
-    AI runs; in a real scenario both would start from the same state.
+    Compares kind + full payload. The two fixtures are equivalent but
+    independent, so UUIDs and timestamps differ by construction. All payload
+    keys are kept — including position_revision/board_revision — because both
+    runs start from identical initial state, so these must match. Event-row
+    metadata (seq, grant ids) is not part of the kind+payload comparison.
     """
-    payload = event.get("payload") or {}
-    # Normalize nested ids/timestamps inside the payload.
-    normalized = json.loads(json.dumps(payload, default=str))
+    import re
+    from datetime import datetime
+
+    UUID_RE = re.compile(
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        re.IGNORECASE,
+    )
+
+    def _normalize_value(v):
+        if isinstance(v, str) and UUID_RE.match(v):
+            return "<uuid>"
+        if isinstance(v, datetime):
+            return "<timestamp>"
+        if isinstance(v, str):
+            # ISO-8601 timestamp strings.
+            try:
+                datetime.fromisoformat(v.replace("Z", "+00:00"))
+                return "<timestamp>"
+            except ValueError:
+                pass
+        return v
+
     def _scrub(obj):
         if isinstance(obj, dict):
-            return {
-                k: _scrub(v) for k, v in obj.items()
-                if k not in (
-                    "id", "event_id", "created_at", "occurred_at", "timestamp",
-                    "seq", "sequence_number", "position_revision", "board_revision",
-                    "revision",
-                )
-            }
+            return {k: _scrub(_normalize_value(v)) for k, v in obj.items()}
         if isinstance(obj, list):
-            return [_scrub(v) for v in obj]
-        return obj
+            return [_scrub(_normalize_value(v)) for v in obj]
+        return _normalize_value(obj)
+
+    payload = event.get("payload") or {}
+    normalized = json.loads(json.dumps(payload, default=str))
     return {"kind": event.get("kind"), "payload": _scrub(normalized)}
 
 
 def test_f5_human_rest_vs_ai_mcp_movement_parity() -> None:
-    """F.5: Human REST route handlers vs AI MCP facade produce identical results.
+    """F.5: Human REST (real HTTP via TestClient) vs AI MCP parity.
 
-    Calls the actual FastAPI route handler functions (preview_movement /
-    confirm_movement from app.api.rooms.combat_board) with the fixture's
-    Human player actor, then the MCP facade with the AI player token.
-    Compares final anchor, used/remaining budget, and the kind+payload of
-    every event appended by each path.
+    Two equivalent, independent fixtures: the Human side goes through the
+    actual FastAPI routes POST .../combat/board/movement/preview and
+    .../confirm via TestClient (like tests/test_p4e_adjudication_routes.py);
+    the AI side goes through app/mcp/tools.py::call_tool. Compares final
+    anchor, used/budget/remaining, and the kind+payload of every event
+    appended by each path. Only UUID/timestamp values are normalized;
+    seq/revisions must match because both fixtures start from identical state.
     """
+    from fastapi.testclient import TestClient
+
+    from app.api.dependencies import get_database_engine
+    from app.api.rooms.access import get_room_access_context
+    from app.api.rooms.dependencies import get_movement_service, get_table_event_service
     from app.domain.combat.movement import (
         ConfirmMovementInput,
         MovementService,
         PreviewMovementInput,
     )
+    from app.main import app
 
-    table, char_entry, _ = _running_table()
-    facade = _facade(table)
-    movement_service = MovementService(
-        board_repository=table.board.board_repository,
-        board_service=table.board,
-        combat_service=table.combat,
+    # Two independent fixtures with identical initial state.
+    human_table, human_char, _ = _running_table()
+    ai_table, ai_char, _ = _running_table()
+    ai_facade = _facade(ai_table)
+
+    human_movement_service = MovementService(
+        board_repository=human_table.board.board_repository,
+        board_service=human_table.board,
+        combat_service=human_table.combat,
     )
-    actor = table.player_actor
-
-    # --- Human via REST route handlers ---
-    # The route handlers resolve the Human actor then delegate to
-    # MovementService.preview/confirm; call the service the same way with
-    # the fixture's player actor.
-    events_before_human = _f5_max_seq(table)
-    human_preview_view = movement_service.preview(
-        actor, char_entry, PreviewMovementInput(entry_id=char_entry, path=_movement_path())
+    ai_movement_service = MovementService(
+        board_repository=ai_table.board.board_repository,
+        board_service=ai_table.board,
+        combat_service=ai_table.combat,
     )
-    human_confirm_view = movement_service.confirm(
-        actor, char_entry,
-        ConfirmMovementInput(
-            entry_id=char_entry, path=_movement_path(),
-            expected_position_revision=human_preview_view.position_revision,
-            expected_board_revision=human_preview_view.board_revision,
-        ),
+
+    # Wire the TestClient to the Human fixture's services (P4E pattern). Auth
+    # is bypassed by overriding get_room_access_context with the fixture's
+    # Human player context; the route still resolves the actor and delegates
+    # to MovementService exactly as in production.
+    app.dependency_overrides[get_database_engine] = lambda: human_table.engine
+    app.dependency_overrides[get_movement_service] = lambda: human_movement_service
+    app.dependency_overrides[get_table_event_service] = lambda: human_table.events
+    app.dependency_overrides[get_room_access_context] = lambda: RoomAccessContext(
+        room_id=human_table.room_id,
+        access_session_id=human_table.player_actor.access_session_id,
+        authority=RoomAccessAuthority.MEMBER,
     )
-    events_after_human = _f5_max_seq(table)
-    human_anchor = _position_of(table, char_entry)
-    human_status = movement_service.movement_status(actor, char_entry)
-    human_events = [
-        _f5_normalize_event(e)
-        for e in _f5_events_slice(table, events_before_human, events_after_human)
-    ]
+    base_url = (
+        f"/api/rooms/{human_table.room_id}/campaigns/{human_table.campaign_id}"
+        f"/sessions/{human_table.session_id}/combat"
+    )
+    path_json = [{"x": a.x, "y": a.y} for a in _movement_path()]
+    try:
+        client = TestClient(app)
 
-    # --- Reset for the AI run ---
-    _f5_reset_movement(table, char_entry)
+        # --- Human via real REST routes ---
+        events_before_human = _f5_max_seq(human_table)
+        preview_res = client.post(
+            f"{base_url}/board/movement/preview",
+            json={"entry_id": str(human_char), "path": path_json},
+        )
+        assert preview_res.status_code == 200, preview_res.text
+        human_preview = preview_res.json()
+        confirm_res = client.post(
+            f"{base_url}/board/movement/confirm",
+            json={
+                "entry_id": str(human_char),
+                "path": path_json,
+                "expected_position_revision": human_preview["position_revision"],
+                "expected_board_revision": human_preview["board_revision"],
+            },
+        )
+        assert confirm_res.status_code == 200, confirm_res.text
+        human_confirm = confirm_res.json()
+        events_after_human = _f5_max_seq(human_table)
+        human_anchor = _position_of(human_table, human_char)
+        human_status = human_movement_service.movement_status(
+            human_table.player_actor, human_char
+        )
+        human_events = [
+            _f5_normalize_event(e)
+            for e in _f5_events_slice(human_table, events_before_human, events_after_human)
+        ]
+    finally:
+        app.dependency_overrides.clear()
 
-    # --- AI via MCP ---
-    player_token = _player_token(table)
-    events_before_ai = _f5_max_seq(table)
+    # --- AI via MCP (independent fixture, no reset needed) ---
+    player_token = _player_token(ai_table)
+    events_before_ai = _f5_max_seq(ai_table)
     ai_preview = _call(
-        facade, player_token, "combat_preview_movement",
-        PreviewMovementInput(entry_id=char_entry, path=_movement_path()).model_dump(mode="json"),
+        ai_facade, player_token, "combat_preview_movement",
+        PreviewMovementInput(entry_id=ai_char, path=_movement_path()).model_dump(mode="json"),
     )["structuredContent"]["data"]
     ai_confirm = _call(
-        facade, player_token, "combat_confirm_movement",
+        ai_facade, player_token, "combat_confirm_movement",
         ConfirmMovementInput(
-            entry_id=char_entry, path=_movement_path(),
+            entry_id=ai_char, path=_movement_path(),
             expected_position_revision=ai_preview["position_revision"],
             expected_board_revision=ai_preview["board_revision"],
         ).model_dump(mode="json"),
     )["structuredContent"]["data"]
-    events_after_ai = _f5_max_seq(table)
-    ai_anchor = _position_of(table, char_entry)
-    ai_status = movement_service.movement_status(actor, char_entry)
+    events_after_ai = _f5_max_seq(ai_table)
+    ai_anchor = _position_of(ai_table, ai_char)
+    ai_status = ai_movement_service.movement_status(ai_table.player_actor, ai_char)
     ai_events = [
         _f5_normalize_event(e)
-        for e in _f5_events_slice(table, events_before_ai, events_after_ai)
+        for e in _f5_events_slice(ai_table, events_before_ai, events_after_ai)
     ]
 
     # --- Parity assertions ---
@@ -851,9 +933,16 @@ def test_f5_human_rest_vs_ai_mcp_movement_parity() -> None:
     assert (human_status.used_feet, human_status.budget_feet) == (
         ai_status.used_feet, ai_status.budget_feet,
     )
-    assert human_confirm_view.outcome == ai_confirm["outcome"] == "committed"
-    assert human_confirm_view.used_feet == ai_confirm["used_feet"]
-    # Same event kinds + payloads (modulo ids/timestamps).
+    assert (human_status.budget_feet - human_status.used_feet) == (
+        ai_status.budget_feet - ai_status.used_feet
+    )
+    assert human_confirm["outcome"] == ai_confirm["outcome"] == "committed"
+    assert human_confirm["used_feet"] == ai_confirm["used_feet"]
+    # Same event kinds + full payloads (only UUID/timestamp values normalized;
+    # all payload keys including revisions must match).
+    assert human_events == ai_events, (
+        f"Human events: {human_events}\nAI events: {ai_events}"
+    )
     assert [e["kind"] for e in human_events] == [e["kind"] for e in ai_events]
     assert human_events == ai_events
 
@@ -864,48 +953,166 @@ def test_f5_human_rest_vs_ai_mcp_movement_parity() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_f6_tactical_summary_content() -> None:
-    """F.6: get_session_context tactical mode contains the full summary."""
-    table, char_entry, monster_entry = _running_table()
-    facade = _facade(table)
-    token = _player_token(table)
+def _f6_oa_table() -> tuple[TacticalTable, UUID, UUID]:
+    """Tactical table where the PC's move provokes an OA and pauses.
 
-    # Create a paused pending movement for the player via MCP.
-    _call(
-        facade, token, "combat_preview_movement",
-        PreviewMovementInput(entry_id=char_entry, path=_movement_path()).model_dump(mode="json"),
+    PC at (1,1), Orc at (2,2). PC moves (1,1)->(5,1); leaving the Orc's
+    reach pauses the movement and opens an OA reaction window for the Orc.
+    """
+    table = setup_tactical_table()
+    table.combat.start_tactical_combat(
+        table.dm_actor, StartTacticalCombatInput(blank_width_cells=20, blank_height_cells=15)
+    )
+    char_entry = next(e.id for e in table.combat.get_active_combat(table.dm_actor).entries)
+    instance = table.combat.monster_repository.create_quick_enemy(
+        campaign_id=table.campaign_id, name="Orc",
+        armor_class=12, max_hp=30, speed={"walk": "30 ft."}, visibility="public",
+    )
+    table.combat.add_monster(table.dm_actor, AddMonsterInput(monster_instance_id=instance.id))
+    orc_entry = next(
+        e.id for e in table.combat.get_active_combat(table.dm_actor).entries
+        if e.subject_kind == "monster"
+    )
+    table.board.place_position(
+        table.dm_actor, char_entry, PlaceCombatantInput(anchor_x=1, anchor_y=1)
+    )
+    table.board.place_position(
+        table.dm_actor, orc_entry, PlaceCombatantInput(anchor_x=2, anchor_y=2)
+    )
+    with table.engine.begin() as conn:
+        conn.execute(
+            update(combat_entries).where(combat_entries.c.id == char_entry).values(initiative_total=20)
+        )
+        conn.execute(
+            update(combat_entries).where(combat_entries.c.id == orc_entry).values(initiative_total=10)
+        )
+    table.combat.resolve_initiative_order(
+        table.dm_actor, ResolveInitiativeOrderInput(ordered_entry_ids=(char_entry, orc_entry))
+    )
+    return table, char_entry, orc_entry
+
+
+def test_f6_tactical_structured_content() -> None:
+    """F.6: combat['tactical'] has precise structured values (Player + DM).
+
+    Uses a real OA-paused movement (PC leaves Orc reach) so
+    pending_movement_entry_ids and pending_reactions are genuinely populated.
+    """
+    from app.domain.combat.movement import ConfirmMovementInput, MovementService
+    from app.domain.combat.reaction_service import CombatReactionService
+    from app.persistence.combat.reactions import CombatReactionRepository
+
+    table, char_entry, orc_entry = _f6_oa_table()
+    reaction_service = CombatReactionService(
+        CombatReactionRepository(table.engine, table.events.repository),
+        table.combat.repository,
+        table.combat,
+        table.events,
+    )
+    facade = _facade(table, reaction_service=reaction_service)
+    movement_service = MovementService(
+        board_repository=table.board.board_repository,
+        board_service=table.board,
+        combat_service=table.combat,
     )
 
-    ctx = _call(facade, token, "get_session_context", {})["structuredContent"]["data"]
-    combat = ctx["combat"]["combat"]
-    assert combat["mode"] == "tactical"
-    # The tactical summary is appended to the briefing.
-    summary = ctx.get("briefing", "")
-    assert isinstance(summary, str) and len(summary) > 0
-    # Round/turn present.
-    assert "round" in summary.lower() or "Round" in summary
-    # Own unit coordinates and movement budget.
-    assert "(1, 1)" in summary or "(1,1)" in summary
-    # Visible units with coordinates.
-    assert "Goblin" in summary
-    # Pending movement visible.
-    assert "pending" in summary.lower() or "Paused" in summary or "paused" in summary
-    # Next required action.
-    assert "next_required_action" in combat or "Next" in summary
-    # No "?" placeholder for missing names.
-    assert " ?" not in summary and "(?)" not in summary
-    # Within bounds.
-    assert len(summary) <= 3000
+    # PC moves (1,1)->(5,1); leaving Orc reach pauses the movement.
+    path = (
+        MovementAnchorInput(x=1, y=1),
+        MovementAnchorInput(x=2, y=1),
+        MovementAnchorInput(x=3, y=1),
+        MovementAnchorInput(x=4, y=1),
+        MovementAnchorInput(x=5, y=1),
+    )
+    preview = movement_service.preview(
+        table.player_actor, char_entry, PreviewMovementInput(entry_id=char_entry, path=path)
+    )
+    confirm = movement_service.confirm(
+        table.player_actor, char_entry,
+        ConfirmMovementInput(
+            entry_id=char_entry, path=path,
+            expected_position_revision=preview.position_revision,
+            expected_board_revision=preview.board_revision,
+        ),
+    )
+    assert confirm.outcome == "paused"
+    paused_anchor = (confirm.anchor_x, confirm.anchor_y)
+
+    # The OA reaction window is open for the Orc (DM sees it).
+    window = reaction_service.get_reaction_window(table.dm_actor, orc_entry)
+    assert window is not None and window.status == "open"
+
+    for token, role in ((_player_token(table), "player"), (_dm_token(table), "dm")):
+        ctx = _call(facade, token, "get_session_context", {})["structuredContent"]["data"]
+        combat = ctx["combat"]["combat"]
+        assert combat["mode"] == "tactical"
+        tactical = ctx["combat"]["tactical"]
+        # Mode and round.
+        assert tactical["mode"] == "tactical"
+        assert tactical["round"] == combat["round_number"]
+        # Current turn is the PC.
+        assert tactical["current_turn"]["entry_id"] == str(char_entry)
+        # Own unit: anchor matches the paused position; budget accounting exact.
+        my_unit = next(u for u in tactical["my_units"] if u["entry_id"] == str(char_entry))
+        assert (my_unit["anchor_x"], my_unit["anchor_y"]) == paused_anchor
+        status = movement_service.movement_status(table.player_actor, char_entry)
+        assert my_unit["used_feet"] == status.used_feet
+        assert my_unit["budget_feet"] == status.budget_feet
+        assert my_unit["remaining_feet"] == status.remaining_feet
+        assert my_unit["has_pending_movement"] is True
+        # Pending movement lists the PC.
+        assert str(char_entry) in tactical["pending_movement_entry_ids"]
+        # Pending reaction: the OA window belongs to the Orc. DM (who controls
+        # all entries) sees it; the Player does not.
+        reactions = tactical["pending_reactions"]
+        if role == "dm":
+            assert any(
+                r["window_id"] == window.window_id and r["entry_id"] == str(orc_entry)
+                for r in reactions
+            ), (role, reactions)
+        else:
+            assert reactions == [], (role, reactions)
+        # Visible units: sorted by distance.
+        visible = tactical["visible"]
+        # Distances are sorted ascending.
+        distances = [v["distance_feet"] for v in visible]
+        assert distances == sorted(distances)
+        # PC appears with correct anchor.
+        pc_visible = next(v for v in visible if v["entry_id"] == str(char_entry))
+        assert (pc_visible["anchor_x"], pc_visible["anchor_y"]) == paused_anchor
+        # For the Player, the PC is the reference point (distance 0, first).
+        # For the DM, the reference is the first owned unit (sorted by UUID),
+        # so just verify the PC is present with a valid distance.
+        if role == "player":
+            assert visible[0]["entry_id"] == str(char_entry)
+            assert visible[0]["distance_feet"] == 0
+        else:
+            assert pc_visible["distance_feet"] >= 0
+        orc_visible = next(v for v in visible if v["entry_id"] == str(orc_entry))
+        assert (orc_visible["anchor_x"], orc_visible["anchor_y"]) == (2, 2)
+        assert orc_visible["distance_feet"] >= 0
+        # Next required action matches the combat payload.
+        assert tactical["next_required_action"] == ctx["combat"]["next_required_action"]
+        # No "?" placeholder for names.
+        for unit in tactical["my_units"] + tactical["visible"]:
+            assert unit["name"] != "?"
 
 
-def test_f6_tactical_summary_near_limit_no_raise() -> None:
-    """F.6: Near-limit summary (many units, 24-char names) does not raise and stays bounded."""
+def test_f6_tactical_structured_near_limit_bounds() -> None:
+    """F.6: Near-limit tactical (many units, 24-char names) stays bounded.
+
+    No try/except around placement: every placement must succeed. Asserts
+    the visible cap (6) and name truncation (24) actually take effect, and
+    that both roles' briefings stay within 3000 chars with the invocation
+    rule intact.
+    """
     from app.domain.combat.ai_tools import CombatAIToolApplicationService
 
-    name_limit = CombatAIToolApplicationService._TACTICAL_SUMMARY_NAME_LIMIT
+    name_limit = CombatAIToolApplicationService._TACTICAL_NAME_LIMIT
+    max_visible = CombatAIToolApplicationService._TACTICAL_MAX_VISIBLE
 
     table, char_entry, _ = _running_table()
-    # Add many monsters with 24-char names to stress the summary.
+    # Add many monsters with 24-char names to stress the tactical field.
     long_name = "X" * name_limit
     for i in range(8):
         instance = table.combat.monster_repository.create_quick_enemy(
@@ -913,23 +1120,33 @@ def test_f6_tactical_summary_near_limit_no_raise() -> None:
             armor_class=15, max_hp=7, speed={"walk": "30 ft."},
         )
         table.combat.add_monster(table.dm_actor, AddMonsterInput(monster_instance_id=instance.id))
-    # Place them on the board.
+    # Place them on the board; every placement must succeed (no try/except).
+    # Skip the Goblin from _running_table() which is already placed.
     entries = table.combat.get_active_combat(table.dm_actor).entries
+    placed = 0
     for idx, entry in enumerate(entries):
-        if entry.subject_kind == "monster" and entry.id != char_entry:
-            try:
-                table.board.place_position(
-                    table.dm_actor, entry.id,
-                    PlaceCombatantInput(anchor_x=5 + idx, anchor_y=5),
-                )
-            except Exception:
-                pass
+        if entry.subject_kind == "monster":
+            if table.board.board_repository.get_position(entry.id) is not None:
+                continue
+            table.board.place_position(
+                table.dm_actor, entry.id,
+                PlaceCombatantInput(anchor_x=5 + idx, anchor_y=5),
+            )
+            placed += 1
+    assert placed == 8  # the 8 new monsters
 
     facade = _facade(table)
-    token = _player_token(table)
-    # Should not raise.
-    ctx = _call(facade, token, "get_session_context", {})["structuredContent"]["data"]
-    summary = ctx.get("briefing", "")
-    assert len(summary) <= 3000
-    # No "?" placeholder.
-    assert "(?)" not in summary
+    for token, role in ((_player_token(table), "player"), (_dm_token(table), "dm")):
+        ctx = _call(facade, token, "get_session_context", {})["structuredContent"]["data"]
+        tactical = ctx["combat"]["tactical"]
+        # Visible cap is enforced.
+        assert len(tactical["visible"]) == max_visible, (role, len(tactical["visible"]))
+        # Name truncation is enforced: no name exceeds 24 chars.
+        for unit in tactical["my_units"] + tactical["visible"]:
+            assert unit["name"] is None or len(unit["name"]) <= name_limit, (role, unit["name"])
+            assert unit["name"] != "?"
+        # Briefing stays within the contract and keeps the invocation rule.
+        briefing = ctx["briefing"]
+        assert len(briefing) <= BRIEFING_MAX_CHARS, (role, len(briefing))
+        assert "MCP invocation rule" in briefing, role
+        assert "MCP 呼叫判定" in briefing, role
