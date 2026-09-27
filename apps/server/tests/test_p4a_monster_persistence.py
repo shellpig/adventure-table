@@ -220,6 +220,9 @@ def test_save_as_template_copies_rules_but_not_live_state() -> None:
             "armor_class": 16,
             "max_hp": 24,
             "speed": {"walk": "25 ft."},
+            # P5-A B1: create_quick_enemy stamps the default Medium size into
+            # rules_snapshot; size is rules, not live state, so it is copied.
+            "size": "medium",
         }
         spawned = repository.create_instance_from_template(template.id)
         assert spawned.current_hp == 24
