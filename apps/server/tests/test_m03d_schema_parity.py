@@ -56,6 +56,11 @@ FORBIDDEN_MULTIPLAYER_TABLES = {
     "adventure_imports",
     "adventure_import_sources",
     "adventure_import_drafts",
+    "battle_maps",
+    "battle_map_walls",
+    "battle_map_doors",
+    "battle_map_terrain",
+    "battle_map_drawings",
 }
 
 
