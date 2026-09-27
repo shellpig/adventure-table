@@ -84,6 +84,9 @@ class CombatOrderService:
         combat = self.combat_service.repository.get_active(actor.campaign_id)
         if combat is None:
             raise CombatNotFoundError("Campaign has no active Combat")
+        if combat.mode == "tactical":
+            # Initiative gate (P5-A): Tactical entries must be placed before initiative.
+            self.combat_service.require_tactical_placements(combat.id, request.ordered_entry_ids)
         self._validate_order_preserves_totals(combat.id, request.ordered_entry_ids)
         try:
             self.repository.reorder_running(

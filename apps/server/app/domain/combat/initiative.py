@@ -133,6 +133,11 @@ class CombatInitiativeService:
         if combat is None:
             raise CombatNotFoundError("Campaign has no active Combat")
         entries = self._active_entries(actor, request.entry_ids)
+        if combat.mode == "tactical":
+            # Initiative gate (P5-A): Tactical entries must be placed before initiative.
+            self.combat_service.require_tactical_placements(
+                combat.id, tuple(entry.id for entry in entries)
+            )
         units: list[NewInitiativeUnit] = []
         monster_groups: dict[str, list[StoredCombatEntry]] = defaultdict(list)
         individual_monsters: list[StoredCombatEntry] = []

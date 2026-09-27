@@ -1,17 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import insert, select, update
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
 from app.domain.combat.reaction_service import ReactionWindow
 from app.persistence.characters import characters
 from app.persistence.combat.tables import combat_actions, combat_entries, combats, monster_instances
+from app.persistence.combat_boards.repository import StoredBoardDoor, StoredCombatBoard
+from app.persistence.combat_boards.tables import combat_board_doors, combat_boards, combat_positions
 from app.persistence.rooms.table_runtime import (
     StoredTableActorBinding,
     TableEventRepository,
@@ -311,6 +313,67 @@ class CombatRepository:
                 subject_character_id=None, execution_mode="self", visibility="public", recipient_seat_ids=(),
                 payload_version=1, payload={"combat_id": str(combat_id), "mode": "quick", "entry_ids": [str(v) for v in entry_ids]},
                 idempotency_key=f"p4b-combat-start:{idempotency_key}" if idempotency_key else None,
+                expected_actor_binding=binding, transaction_projection=projection,
+            )
+        except IntegrityError as exc:
+            if self.get_active(binding.campaign_id) is not None:
+                raise ActiveCombatExistsPersistenceError(str(binding.campaign_id)) from exc
+            raise
+        canonical_id = UUID(str(event.payload["combat_id"]))
+        combat = self.get(canonical_id)
+        if combat is None:
+            raise CombatNotFoundPersistenceError(str(canonical_id))
+        return combat, self.list_entries(canonical_id), event
+
+    def create_tactical_combat(
+        self,
+        *,
+        binding: StoredTableActorBinding,
+        entries: tuple[NewCombatEntry, ...],
+        board: StoredCombatBoard,
+        doors: tuple[StoredBoardDoor, ...],
+        battle_map_id: UUID | None,
+        idempotency_key: str | None,
+    ):
+        """Atomically create a tactical Combat, freeze its board, and emit combat.started.
+
+        The board row carries a placeholder combat_id; it (and the door rows) are
+        rebound to the generated Combat id inside the event transaction so an
+        idempotency-key retry reuses the canonical Combat from the stored event.
+        """
+        combat_id = uuid4()
+        entry_ids = tuple(uuid4() for _ in entries)
+        now = datetime.now().astimezone()
+        board = replace(board, combat_id=combat_id, runtime_revision=1, created_at=now)
+        doors = tuple(
+            replace(door, combat_id=combat_id, created_at=now) for door in doors
+        )
+
+        def projection(connection, _event_id: UUID, _seq: int) -> None:
+            connection.execute(insert(combats).values(
+                id=combat_id, campaign_id=binding.campaign_id, started_session_id=binding.session_id,
+                mode="tactical", status="initiative_pending", revision=1,
+            ))
+            for entry_id, entry in zip(entry_ids, entries, strict=True):
+                self._insert_entry(connection, combat_id, entry, entry_id=entry_id)
+            connection.execute(insert(combat_boards).values(**board.__dict__))
+            for door in doors:
+                connection.execute(insert(combat_board_doors).values(**door.__dict__))
+
+        try:
+            event = self.event_repository.append(
+                room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
+                kind="combat.started", acting_seat_id=binding.seat_id, subject_seat_id=None,
+                subject_character_id=None, execution_mode="self", visibility="public", recipient_seat_ids=(),
+                payload_version=1,
+                payload={
+                    "combat_id": str(combat_id),
+                    "mode": "tactical",
+                    "entry_ids": [str(v) for v in entry_ids],
+                    "battle_map_id": str(battle_map_id) if battle_map_id is not None else None,
+                    "board_runtime_revision": 1,
+                },
+                idempotency_key=f"p5a-tactical-start:{idempotency_key}" if idempotency_key else None,
                 expected_actor_binding=binding, transaction_projection=projection,
             )
         except IntegrityError as exc:
@@ -656,6 +719,12 @@ class CombatRepository:
                 dodging=False,
                 updated_at=datetime.now().astimezone(),
             ))
+            if status in {"withdrawn", "removed"}:
+                # P5-A: a withdrawn/removed combatant leaves the board; its token
+                # position must not linger for placement or projection.
+                connection.execute(delete(combat_positions).where(
+                    combat_positions.c.combat_entry_id == entry_id
+                ))
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
                 revision=combats.c.revision + 1, updated_at=datetime.now().astimezone()
             ))

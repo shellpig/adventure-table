@@ -16,6 +16,11 @@ from app.api.rooms.dependencies import (
     get_table_event_service,
 )
 from app.content.registry import ContentNotFoundError
+from app.domain.battle_maps.schemas import BattleMapNotFoundError
+from app.domain.combat.board import (
+    CombatBoardImageNotFoundError,
+    CombatPlacementInvalidError,
+)
 from app.domain.combat.attack_definitions import (
     AttackDefinitionInvalidError,
     AttackDefinitionNotFoundError,
@@ -53,6 +58,7 @@ from app.domain.combat.lifecycle import (
     CombatActionView,
     CombatDetailView,
     CombatNotFoundError,
+    CombatPlacementIncompleteError,
     CombatService,
     CombatStateConflictError,
     CombatView,
@@ -177,6 +183,14 @@ def _map_combat_error(exc: Exception) -> APIError:
         return APIError(404, "initiative_request_not_found", str(exc))
     if isinstance(exc, InitiativeInputError):
         return APIError(422, "invalid_initiative_input", str(exc))
+    if isinstance(exc, CombatPlacementInvalidError):
+        return APIError(409, "combat_placement_invalid", str(exc))
+    if isinstance(exc, CombatPlacementIncompleteError):
+        return APIError(409, "combat_placement_incomplete", str(exc))
+    if isinstance(exc, CombatBoardImageNotFoundError):
+        return APIError(404, "combat_board_image_not_found", str(exc))
+    if isinstance(exc, BattleMapNotFoundError):
+        return APIError(404, "battle_map_not_found", str(exc))
     if isinstance(exc, AttackDefinitionInvalidError):
         return APIError(422, "invalid_attack_definition", str(exc))
     if isinstance(exc, (RollInputInvalidError, ValueError)):
