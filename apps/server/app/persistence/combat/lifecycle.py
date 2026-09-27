@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -98,6 +98,10 @@ class StoredCombatEntry:
     created_at: datetime
     updated_at: datetime
     dodging: bool = False
+    movement_used_feet: int = 0
+    movement_diagonal_steps_used: int = 0
+    movement_budget_feet: int = 0
+    pending_movement_state: dict[str, Any] = field(default_factory=dict)
     death_save_successes: int = 0
     death_save_failures: int = 0
     death_save_stable: bool = False
@@ -195,6 +199,10 @@ class CombatRepository:
             pending_reaction_state=dict(row["pending_reaction_state"] or {}),
             created_at=row["created_at"], updated_at=row["updated_at"],
             dodging=bool(row["dodging"]),
+            movement_used_feet=int(row["movement_used_feet"]),
+            movement_diagonal_steps_used=int(row["movement_diagonal_steps_used"]),
+            movement_budget_feet=int(row["movement_budget_feet"]),
+            pending_movement_state=dict(row["pending_movement_state"] or {}),
             death_save_successes=int(row["death_save_successes"]),
             death_save_failures=int(row["death_save_failures"]),
             death_save_stable=bool(row["death_save_stable"]),
@@ -474,7 +482,10 @@ class CombatRepository:
                 connection.execute(update(combat_entries).where(combat_entries.c.id == target_id).values(
                     turn_order=index, action_available=True, bonus_action_available=True,
                     reaction_available=not bool(row["surprised"]), attacks_used=0,
-                    ready_state={}, pending_reaction_state={}, dodging=False, updated_at=datetime.now().astimezone(),
+                    ready_state={}, pending_reaction_state={}, dodging=False,
+                    movement_used_feet=0, movement_diagonal_steps_used=0,
+                    movement_budget_feet=0, pending_movement_state={},
+                    updated_at=datetime.now().astimezone(),
                 ))
             first = ordered_entry_ids[0]
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
@@ -538,7 +549,10 @@ class CombatRepository:
             connection.execute(update(combat_entries).where(combat_entries.c.id == next_entry_id).values(
                 action_available=True, bonus_action_available=True,
                 reaction_available=not next_surprised,
-                attacks_used=0, ready_state={}, pending_reaction_state={}, dodging=False, updated_at=datetime.now().astimezone(),
+                attacks_used=0, ready_state={}, pending_reaction_state={}, dodging=False,
+                movement_used_feet=0, movement_diagonal_steps_used=0,
+                movement_budget_feet=0, pending_movement_state={},
+                updated_at=datetime.now().astimezone(),
             ))
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
                 round_number=round_number, current_turn_entry_id=next_entry_id,
@@ -564,7 +578,7 @@ class CombatRepository:
     def consume_action(self, *, binding: StoredTableActorBinding, combat_id: UUID, entry_id: UUID,
                        subject_seat_id: UUID | None, execution_mode: str, action_kind: str,
                        economy_cost: str, payload: dict[str, Any], idempotency_key: str | None,
-                       attack_use: bool = False):
+                       attack_use: bool = False, dash_speed_feet: int | None = None):
         action_id = uuid4()
 
         def projection(connection, event_id: UUID, _seq: int) -> None:
@@ -618,6 +632,11 @@ class CombatRepository:
                 values["ready_state"] = dict(payload)
             elif action_kind == "dodge":
                 values["dodging"] = True
+            if action_kind == "dash" and dash_speed_feet is not None and combat["mode"] == "tactical":
+                # P5-B: Dash grants extra movement equal to the entry's speed. It
+                # stacks with (never replaces) the base budget, and does not
+                # touch used feet or diagonal parity.
+                values["movement_budget_feet"] = combat_entries.c.movement_budget_feet + dash_speed_feet
             connection.execute(update(combat_entries).where(combat_entries.c.id == entry_id).values(**values))
             connection.execute(insert(combat_actions).values(
                 id=action_id, combat_id=combat_id, entry_id=entry_id, session_id=binding.session_id,
@@ -717,6 +736,10 @@ class CombatRepository:
                 ready_state={},
                 pending_reaction_state={},
                 dodging=False,
+                movement_used_feet=0,
+                movement_diagonal_steps_used=0,
+                movement_budget_feet=0,
+                pending_movement_state={},
                 updated_at=datetime.now().astimezone(),
             ))
             if status in {"withdrawn", "removed"}:
@@ -793,7 +816,10 @@ class CombatRepository:
             connection.execute(update(combat_entries).where(combat_entries.c.combat_id == combat_id).values(
                 initiative_roll_request_id=None, initiative_roll_result_id=None, initiative_total=None,
                 turn_order=None, surprised=False, action_available=True, bonus_action_available=True,
-                reaction_available=True, attacks_used=0, ready_state={}, pending_reaction_state={}, dodging=False, updated_at=now,
+                reaction_available=True, attacks_used=0, ready_state={}, pending_reaction_state={}, dodging=False,
+                movement_used_feet=0, movement_diagonal_steps_used=0,
+                movement_budget_feet=0, pending_movement_state={},
+                updated_at=now,
             ))
             connection.execute(update(combats).where(combats.c.id == combat_id).values(
                 ended_session_id=binding.session_id, status="ended", round_number=None,

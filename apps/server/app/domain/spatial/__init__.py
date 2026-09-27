@@ -1,5 +1,19 @@
-"""Shared spatial primitives: grid cells, footprints, occupancy checks."""
+"""Shared spatial primitives: grid cells, footprints, occupancy checks, pathing."""
 
+from app.domain.spatial.pathing import (
+    FEET_PER_CELL,
+    DistanceResult,
+    GridPath,
+    PathCreature,
+    PathStep,
+    PathValidationRequest,
+    PathValidationResult,
+    cell_distance,
+    crosses_wall_or_closed_door,
+    grid_distance,
+    step_cost,
+    validate_movement_path,
+)
 from app.domain.spatial.primitives import (
     BarrierSegment,
     Footprint,
@@ -16,14 +30,26 @@ from app.domain.spatial.primitives import (
 
 __all__ = [
     "BarrierSegment",
+    "DistanceResult",
+    "FEET_PER_CELL",
     "Footprint",
     "GridCell",
+    "GridPath",
+    "PathCreature",
+    "PathStep",
+    "PathValidationRequest",
+    "PathValidationResult",
     "SIZE_FOOTPRINT",
     "can_occupy",
+    "cell_distance",
+    "crosses_wall_or_closed_door",
     "footprint_for_size",
     "footprint_for_size_name",
     "footprint_straddles_barrier",
+    "grid_distance",
     "intersects_blocked_cell",
     "is_inside_bounds",
     "occupied_cells",
+    "step_cost",
+    "validate_movement_path",
 ]
