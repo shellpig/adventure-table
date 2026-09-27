@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   castSpell,
@@ -42,6 +42,8 @@ import { useContentPresentations } from '../../i18n/useContentPresentations'
 import { isContentReference } from './sessionCombatLog'
 import type { SessionCopy } from './sessionCopy'
 import { requestId } from './requestId'
+import { checkTarget, type TargetCheckResult } from '../../api/tacticalCombat'
+import { targetCheckBand } from './tacticalLogic'
 
 type CombatRollResult =
   | { kind: 'attack'; value: AttackResolutionView }
@@ -194,6 +196,16 @@ type SessionCombatActionBarProps = {
   isCurrentDm: boolean
   onError: (cause: unknown) => void
   refresh: () => void
+  /** Tactical mode: show range feedback when a target is selected. */
+  tacticalMode?: boolean
+  /** Start AoE template placement on the tactical map (tactical mode). */
+  onStartAoePlacement?: (request: {
+    spell_ref: string
+    shape: 'circle' | 'square' | 'cone' | 'line'
+    size_feet: number
+    caster_entry_id: string
+    slot_level: number | null
+  }) => void
 }
 
 function reactionKindLabel(kind: ReactionKind, copy: SessionCopy): string {
@@ -236,6 +248,8 @@ export function SessionCombatActionBar({
   isCurrentDm,
   onError,
   refresh,
+  tacticalMode = false,
+  onStartAoePlacement,
 }: SessionCombatActionBarProps) {
   const currentActingEntryId = actingEntryId(combat, myEntryIds, isCurrentDm)
   const actingEntry = currentActingEntryId
@@ -299,6 +313,9 @@ export function SessionCombatActionBar({
   const [spellStatus, setSpellStatus] = useState<{ castMode: string; status: string } | null>(null)
   const [pendingActionId, setPendingActionId] = useState<string | null>(null)
   const [pendingActionSeen, setPendingActionSeen] = useState(false)
+  // Tactical range feedback for the selected target (server is authority).
+  const [targetCheck, setTargetCheck] = useState<TargetCheckResult | null>(null)
+  const targetCheckSeqRef = useRef(0)
 
   useEffect(() => {
     if (actionKind === 'escape_grapple' && !actingIsGrappled) {
@@ -361,6 +378,61 @@ export function SessionCombatActionBar({
   )
   const selectedSpell = spells.find((spell) => spell.spell_ref === spellRef) ?? null
   const castTargetEntries = spellTargetEntries(selectedSpell, actingEntry, targetEntries)
+
+  // Tactical mode: check range for the selected attack/spell target.
+  // Quick mode never calls this; behavior and UI there are unchanged.
+  useEffect(() => {
+    if (!tacticalMode || !currentActingEntryId || !targetEntryId) {
+      setTargetCheck(null)
+      return
+    }
+    const isAttack = actionKind === 'attack' && attackRef !== ''
+    const isSingleSpell =
+      actionKind === 'spell' && selectedSpell?.targeting === 'single' && spellRef !== ''
+    if (!isAttack && !isSingleSpell) {
+      setTargetCheck(null)
+      return
+    }
+    const seq = ++targetCheckSeqRef.current
+    let cancelled = false
+    checkTarget(
+      roomId,
+      campaignId,
+      sessionId,
+      {
+        source_entry_id: currentActingEntryId,
+        target_entry_id: targetEntryId,
+        attack_source_ref: isAttack ? attackRef : null,
+        spell_ref: isSingleSpell ? spellRef : null,
+      },
+      token,
+    )
+      .then((result) => {
+        if (!cancelled && seq === targetCheckSeqRef.current) setTargetCheck(result)
+      })
+      .catch((cause) => {
+        if (!cancelled && seq === targetCheckSeqRef.current) {
+          setTargetCheck(null)
+          onError(cause)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [
+    tacticalMode,
+    currentActingEntryId,
+    targetEntryId,
+    actionKind,
+    attackRef,
+    spellRef,
+    selectedSpell,
+    roomId,
+    campaignId,
+    sessionId,
+    token,
+    onError,
+  ])
   const hasAttackEconomy = Boolean(
     actingEntry &&
     actingEntry.action_available &&
@@ -887,6 +959,49 @@ export function SessionCombatActionBar({
               />
               <span>{copy.combatRangeConfirmed}</span>
             </label>
+          ) : null}
+          {tacticalMode && targetCheck && targetEntryId ? (
+            <p className="session-combat-actions__range-hint" data-testid="combat-target-range">
+              {(() => {
+                const band = targetCheckBand(targetCheck)
+                const label =
+                  band === 'blocked'
+                    ? copy.tacticalTargetBlocked
+                    : band === 'long-range'
+                      ? copy.tacticalTargetLongRange
+                      : band === 'out-of-range'
+                        ? copy.tacticalTargetOutOfRange
+                        : copy.tacticalTargetInRange
+                return `${label}${targetCheck.distance_feet !== null ? ` (${targetCheck.distance_feet} ft)` : ''}`
+              })()}
+            </p>
+          ) : null}
+          {tacticalMode &&
+          actionKind === 'spell' &&
+          selectedSpell?.targeting === 'aoe' &&
+          selectedSpell.aoe_shape &&
+          selectedSpell.aoe_size_feet &&
+          currentActingEntryId &&
+          onStartAoePlacement ? (
+            <div className="session-combat__form-actions">
+              <button
+                type="button"
+                className="button secondary compact"
+                data-testid="combat-aoe-place-template"
+                disabled={formDisabled}
+                onClick={() =>
+                  onStartAoePlacement({
+                    spell_ref: selectedSpell.spell_ref,
+                    shape: selectedSpell.aoe_shape as 'circle' | 'square' | 'cone' | 'line',
+                    size_feet: selectedSpell.aoe_size_feet as number,
+                    caster_entry_id: currentActingEntryId,
+                    slot_level: slotLevel ?? selectedSpell.castable_slot_levels[0] ?? null,
+                  })
+                }
+              >
+                {copy.tacticalAoePlaceTemplate}
+              </button>
+            </div>
           ) : null}
           <div className="session-combat__form-actions">
             <button

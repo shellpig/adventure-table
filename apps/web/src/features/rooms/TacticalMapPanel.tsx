@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { getBattleMap, type BattleMap } from '../../api/battleMaps'
+import { proposeAoeSpell } from '../../api/combat'
 import type { CombatDetailView } from '../../api/combat'
 import type { TableEvent } from '../../api/sessions'
 import {
   cancelPendingMovement,
-  checkTarget,
   confirmMovement,
   getCombatBoard,
   placeCombatant,
@@ -19,14 +19,32 @@ import {
   type CombatBoardView,
   type ConfirmMovementView,
   type PreviewMovementView,
-  type TargetCheckResult,
 } from '../../api/tacticalCombat'
 import { BattleMapCanvas } from './BattleMapCanvas'
 import type { CanvasDoor, CanvasToken, CanvasWall } from './BattleMapCanvas'
 import { requestId } from './requestId'
 import type { SessionCopy } from './sessionCopy'
-import { combatantFor, isCombatEvent } from './sessionCombat'
+import { combatantFor } from './sessionCombat'
+import {
+  appendAnchor,
+  aoeShapeNeedsAim,
+  cellClickAction,
+  doorClickAction,
+  isLatestPreview,
+  shouldReloadOnEvents,
+  tokenClickAction,
+  type AoeShapeKind,
+  type MapMode,
+} from './tacticalLogic'
 import { useTacticalCamera } from './useTacticalCamera'
+
+export type AoePlacementRequest = {
+  spell_ref: string
+  shape: AoeShapeKind
+  size_feet: number
+  caster_entry_id: string
+  slot_level: number | null
+}
 
 type TacticalMapPanelProps = {
   combat: CombatDetailView
@@ -40,6 +58,9 @@ type TacticalMapPanelProps = {
   events: TableEvent[]
   onError: (cause: unknown) => void
   refresh: () => void
+  /** AoE template placement requested from the action bar (tactical mode). */
+  aoePlacement?: AoePlacementRequest | null
+  onAoePlacementEnd?: () => void
 }
 
 export function doorIsHidden(boardDoor: BoardDoorView, battleMap: BattleMap | null): boolean {
@@ -65,6 +86,8 @@ export function TacticalMapPanel({
   events,
   onError,
   refresh,
+  aoePlacement = null,
+  onAoePlacementEnd,
 }: TacticalMapPanelProps) {
   const [board, setBoard] = useState<CombatBoardView | null>(null)
   const [battleMap, setBattleMap] = useState<BattleMap | null>(null)
@@ -81,6 +104,14 @@ export function TacticalMapPanel({
   const [movePreview, setMovePreview] = useState<PreviewMovementView | null>(null)
   const [moveBusy, setMoveBusy] = useState(false)
   const [lastMoveOutcome, setLastMoveOutcome] = useState<ConfirmMovementView | null>(null)
+  // Mirror of moveAnchors so the next path can be computed outside the state
+  // updater (updaters must stay pure; StrictMode may invoke them twice).
+  const moveAnchorsRef = useRef<Array<{ x: number; y: number }>>([])
+  // Synchronous mirror of moveEntryId so the click handler sees the draft
+  // started by pointerdown (state updates are async).
+  const moveEntryIdRef = useRef<string | null>(null)
+  // Monotonic preview request id; only the latest response is applied.
+  const previewSeqRef = useRef(0)
   // Pending (paused) movement from confirm outcome.
   const [pausedMove, setPausedMove] = useState<{
     entryId: string
@@ -92,11 +123,108 @@ export function TacticalMapPanel({
   const [repositionEntryId, setRepositionEntryId] = useState<string | null>(null)
   const [repositionReason, setRepositionReason] = useState('')
   const [repositionTarget, setRepositionTarget] = useState<{ x: number; y: number } | null>(null)
-  // AoE preview.
+  // AoE template placement (tactical mode). Shape/size come from the selected
+  // spell's data (aoePlacement prop); the server validates the template.
   const [aoePreview, setAoePreview] = useState<AoeSpellPreviewView | null>(null)
   const [aoeOrigin, setAoeOrigin] = useState<{ x: number; y: number } | null>(null)
-  // Range feedback for the currently selected target.
-  const [targetCheck, setTargetCheck] = useState<TargetCheckResult | null>(null)
+
+  const clearAoe = useCallback(() => {
+    setAoePreview(null)
+    setAoeOrigin(null)
+    onAoePlacementEnd?.()
+  }, [onAoePlacementEnd])
+
+  const requestAoePreview = useCallback(
+    async (
+      placement: AoePlacementRequest,
+      origin: { x: number; y: number },
+      aim: { x: number; y: number } | null,
+    ) => {
+      setMoveBusy(true)
+      try {
+        const view = await previewAoeSpell(
+          roomId,
+          campaignId,
+          sessionId,
+          {
+            caster_entry_id: placement.caster_entry_id,
+            spell_ref: placement.spell_ref,
+            template: {
+              shape: placement.shape,
+              size_feet: placement.size_feet,
+              origin_x: origin.x,
+              origin_y: origin.y,
+              aim_x: aim ? aim.x : null,
+              aim_y: aim ? aim.y : null,
+            },
+          },
+          token,
+        )
+        setAoePreview(view)
+      } catch (cause) {
+        onError(cause)
+      } finally {
+        setMoveBusy(false)
+      }
+    },
+    [roomId, campaignId, sessionId, token, onError],
+  )
+
+  const handleAoeOriginClick = useCallback(
+    (x: number, y: number) => {
+      if (!aoePlacement) return
+      const origin = { x, y }
+      setAoeOrigin(origin)
+      // Circle/square need no aim: preview immediately.
+      if (!aoeShapeNeedsAim(aoePlacement.shape)) {
+        void requestAoePreview(aoePlacement, origin, null)
+      }
+    },
+    [aoePlacement, requestAoePreview],
+  )
+
+  const handleAoeAimClick = useCallback(
+    (x: number, y: number) => {
+      if (!aoePlacement || !aoeOrigin) return
+      void requestAoePreview(aoePlacement, aoeOrigin, { x, y })
+    },
+    [aoePlacement, aoeOrigin, requestAoePreview],
+  )
+
+  const handleAoePropose = useCallback(async () => {
+    if (!aoePlacement || !aoePreview || moveBusy) return
+    setMoveBusy(true)
+    try {
+      await proposeAoeSpell(
+        roomId,
+        campaignId,
+        sessionId,
+        {
+          caster_entry_id: aoePlacement.caster_entry_id,
+          spell_ref: aoePlacement.spell_ref,
+          slot_level: aoePlacement.slot_level,
+          proposed_target_ids: aoePreview.candidates.map((c) => c.entry_id),
+          template: {
+            shape: aoePreview.template.shape,
+            size_feet: aoePreview.template.size_feet,
+            origin_x: aoePreview.template.origin_x,
+            origin_y: aoePreview.template.origin_y,
+            aim_x: aoePreview.template.aim_x,
+            aim_y: aoePreview.template.aim_y,
+          },
+          board_revision: aoePreview.board_revision,
+          idempotency_key: requestId('aoe-propose'),
+        },
+        token,
+      )
+      clearAoe()
+      refresh()
+    } catch (cause) {
+      onError(cause)
+    } finally {
+      setMoveBusy(false)
+    }
+  }, [aoePlacement, aoePreview, moveBusy, roomId, campaignId, sessionId, token, clearAoe, refresh, onError])
   const boardWrapRef = useRef<HTMLDivElement | null>(null)
   const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const {
@@ -143,12 +271,9 @@ export function TacticalMapPanel({
   // bump combat.revision). Debounced to avoid storms.
   const lastEventSeqRef = useRef<number>(-1)
   useEffect(() => {
-    const unseen = events.filter(
-      (e) => e.seq > lastEventSeqRef.current,
-    )
-    if (unseen.length === 0) return
-    lastEventSeqRef.current = Math.max(...unseen.map((e) => e.seq))
-    if (!unseen.some(isCombatEvent)) return
+    const { reload, newLastSeq } = shouldReloadOnEvents(events, lastEventSeqRef.current)
+    lastEventSeqRef.current = newLastSeq
+    if (!reload) return
     if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current)
     reloadTimerRef.current = setTimeout(() => {
       void loadBoard()
@@ -298,11 +423,10 @@ export function TacticalMapPanel({
 
   const handleDoorClick = useCallback(
     (doorId: string | null) => {
-      // Only DM can operate doors; Player clicks do nothing.
-      if (!isCurrentDm || !doorId) return
-      setSelectedDoorId((prev) => (prev === doorId ? null : doorId))
+      const decision = doorClickAction(isCurrentDm, doorId, selectedDoorId)
+      if (decision.kind === 'select') setSelectedDoorId(decision.doorId)
     },
-    [isCurrentDm],
+    [isCurrentDm, selectedDoorId],
   )
 
   const handleDoorStateChange = useCallback(
@@ -351,46 +475,159 @@ export function TacticalMapPanel({
       if (!canMoveEntry(entryId) || !board) return
       const pos = board.positions.find((p) => p.entry_id === entryId)
       if (!pos) return
+      const anchors = [{ x: pos.anchor_x, y: pos.anchor_y }]
       setMoveEntryId(entryId)
-      setMoveAnchors([{ x: pos.anchor_x, y: pos.anchor_y }])
+      moveEntryIdRef.current = entryId
+      moveAnchorsRef.current = anchors
+      setMoveAnchors(anchors)
       setMovePreview(null)
       setLastMoveOutcome(null)
     },
     [canMoveEntry, board],
   )
 
-  const addMoveAnchor = useCallback(
-    async (x: number, y: number) => {
-      if (!moveEntryId) return
-      setMoveAnchors((prev) => {
-        const last = prev[prev.length - 1]
-        if (last && last.x === x && last.y === y) return prev
-        const next = [...prev, { x, y }]
-        // Preview on each change (debounced by React batching; server is authority).
-        if (next.length >= 2) {
-          setMoveBusy(true)
-          previewMovement(
-            roomId,
-            campaignId,
-            sessionId,
-            { entry_id: moveEntryId, path: next },
-            token,
-          )
-            .then((view) => setMovePreview(view))
-            .catch(onError)
-            .finally(() => setMoveBusy(false))
-        }
-        return next
-      })
+  const requestMovePreview = useCallback(
+    (entryId: string, path: Array<{ x: number; y: number }>) => {
+      const seq = ++previewSeqRef.current
+      setMoveBusy(true)
+      previewMovement(
+        roomId,
+        campaignId,
+        sessionId,
+        { entry_id: entryId, path },
+        token,
+      )
+        .then((view) => {
+          // A stale preview must not overwrite a newer one.
+          if (isLatestPreview(seq, previewSeqRef.current)) setMovePreview(view)
+        })
+        .catch(onError)
+        .finally(() => {
+          if (isLatestPreview(seq, previewSeqRef.current)) setMoveBusy(false)
+        })
     },
-    [moveEntryId, roomId, campaignId, sessionId, token, onError],
+    [roomId, campaignId, sessionId, token, onError],
+  )
+
+  const addMoveAnchor = useCallback(
+    (x: number, y: number) => {
+      // Use the ref so a draft started by pointerdown is visible immediately
+      // (state updates are async; the first pointerenter must not be dropped).
+      const entryId = moveEntryIdRef.current
+      if (!entryId) return
+      // Compute the next path outside the updater so the updater stays pure.
+      const next = appendAnchor(moveAnchorsRef.current, x, y)
+      if (next === moveAnchorsRef.current) return
+      moveAnchorsRef.current = next
+      setMoveAnchors(next)
+      // Preview on each change; the server is the authority.
+      if (next.length >= 2) requestMovePreview(entryId, next)
+    },
+    [requestMovePreview],
   )
 
   const clearMoveDraft = useCallback(() => {
     setMoveEntryId(null)
+    moveEntryIdRef.current = null
+    moveAnchorsRef.current = []
     setMoveAnchors([])
     setMovePreview(null)
   }, [])
+
+  // --- Token drag (P5-F F3b A5) ---
+  // Pressing a movable token starts a client-side draft; cells entered while
+  // dragging become anchors in order. Releasing only shows the preview —
+  // confirm is a separate explicit action and no write route is called here.
+  const draggingEntryRef = useRef<string | null>(null)
+
+  const handleTokenPointerDown = useCallback(
+    (entryId: string) => {
+      if (!canMoveEntry(entryId) || placingEntryId || repositionMode || aoePlacement) return
+      if (moveEntryId !== entryId) startMoveDraft(entryId)
+      draggingEntryRef.current = entryId
+    },
+    [canMoveEntry, placingEntryId, repositionMode, aoePlacement, moveEntryId, startMoveDraft],
+  )
+
+  const handleCellPointerEnter = useCallback(
+    (x: number, y: number) => {
+      if (!draggingEntryRef.current) return
+      addMoveAnchor(x, y)
+    },
+    [addMoveAnchor],
+  )
+
+  const handleDragPointerUp = useCallback(() => {
+    draggingEntryRef.current = null
+  }, [])
+
+  // --- Map interaction dispatch (pure decision functions) ---
+  const mapMode: MapMode =
+    placingEntryId && isCurrentDm
+      ? { kind: 'placement', entryId: placingEntryId }
+      : moveEntryId
+        ? { kind: 'move', entryId: moveEntryId }
+        : repositionMode && repositionEntryId
+          ? { kind: 'reposition' }
+          : aoePlacement
+            ? !aoeOrigin
+              ? { kind: 'aoe-origin' }
+              : aoeShapeNeedsAim(aoePlacement.shape) && !aoePreview
+                ? { kind: 'aoe-aim' }
+                : { kind: 'idle' }
+            : { kind: 'idle' }
+
+  const handleMapCellClick = useCallback(
+    (x: number, y: number) => {
+      const decision = cellClickAction(mapMode, x, y)
+      switch (decision.action) {
+        case 'place':
+          void handleCellClick(decision.x, decision.y)
+          break
+        case 'add-anchor':
+          addMoveAnchor(decision.x, decision.y)
+          break
+        case 'set-reposition-target':
+          setRepositionTarget({ x: decision.x, y: decision.y })
+          break
+        case 'set-aoe-origin':
+          handleAoeOriginClick(decision.x, decision.y)
+          break
+        case 'set-aoe-aim':
+          handleAoeAimClick(decision.x, decision.y)
+          break
+        case 'none':
+          break
+      }
+    },
+    [mapMode, handleCellClick, addMoveAnchor, handleAoeOriginClick, handleAoeAimClick],
+  )
+
+  const handleMapTokenClick = useCallback(
+    (entryId: string) => {
+      const decision = tokenClickAction(entryId, {
+        isDm: isCurrentDm,
+        repositionMode,
+        placing: Boolean(placingEntryId),
+        moveEntryId: moveEntryIdRef.current,
+        canMove: canMoveEntry(entryId),
+      })
+      switch (decision.kind) {
+        case 'start-move':
+          startMoveDraft(decision.entryId)
+          break
+        case 'select-reposition':
+          setRepositionEntryId(decision.entryId)
+          break
+        case 'select':
+          setSelectedEntryId((prev) => (prev === decision.entryId ? null : decision.entryId))
+          break
+        case 'ignore':
+          break
+      }
+    },
+    [isCurrentDm, repositionMode, placingEntryId, canMoveEntry, startMoveDraft],
+  )
 
   const confirmMoveDraft = useCallback(async () => {
     if (!moveEntryId || moveAnchors.length < 2 || !board || !movePreview) return
@@ -514,68 +751,6 @@ export function TacticalMapPanel({
     }
   }, [isCurrentDm, repositionEntryId, repositionTarget, repositionReason, board, roomId, campaignId, sessionId, token, loadBoard, refresh, onError])
 
-  // --- Range / target feedback ---
-  const handleTargetCheck = useCallback(
-    async (sourceEntryId: string, targetEntryId: string, attackSourceRef?: string, spellRef?: string) => {
-      try {
-        const result = await checkTarget(
-          roomId,
-          campaignId,
-          sessionId,
-          {
-            source_entry_id: sourceEntryId,
-            target_entry_id: targetEntryId,
-            attack_source_ref: attackSourceRef ?? null,
-            spell_ref: spellRef ?? null,
-          },
-          token,
-        )
-        setTargetCheck(result)
-      } catch (cause) {
-        onError(cause)
-      }
-    },
-    [roomId, campaignId, sessionId, token, onError],
-  )
-
-  // --- AoE preview ---
-  const handleAoeMapClick = useCallback(
-    async (x: number, y: number, casterEntryId: string, spellRef: string, shape: 'circle' | 'square' | 'cone' | 'line', sizeFeet: number) => {
-      if (!aoeOrigin) {
-        setAoeOrigin({ x, y })
-        return
-      }
-      setMoveBusy(true)
-      try {
-        const view = await previewAoeSpell(
-          roomId,
-          campaignId,
-          sessionId,
-          {
-            caster_entry_id: casterEntryId,
-            spell_ref: spellRef,
-            template: {
-              shape,
-              size_feet: sizeFeet,
-              origin_x: aoeOrigin.x,
-              origin_y: aoeOrigin.y,
-              aim_x: shape === 'cone' || shape === 'line' ? x : null,
-              aim_y: shape === 'cone' || shape === 'line' ? y : null,
-            },
-          },
-          token,
-        )
-        setAoePreview(view)
-        setAoeOrigin(null)
-      } catch (cause) {
-        onError(cause)
-      } finally {
-        setMoveBusy(false)
-      }
-    },
-    [aoeOrigin, roomId, campaignId, sessionId, token, onError],
-  )
-
   // Touch handlers for pinch zoom.
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
@@ -633,10 +808,20 @@ export function TacticalMapPanel({
       ) : null}
 
       <div className="tactical-map-panel__toolbar" role="toolbar">
-        <button type="button" className="button secondary compact" onClick={zoomIn}>
+        <button
+          type="button"
+          className="button secondary compact"
+          data-testid="tactical-zoom-in"
+          onClick={zoomIn}
+        >
           {copy.tacticalZoomIn}
         </button>
-        <button type="button" className="button secondary compact" onClick={zoomOut}>
+        <button
+          type="button"
+          className="button secondary compact"
+          data-testid="tactical-zoom-out"
+          onClick={zoomOut}
+        >
           {copy.tacticalZoomOut}
         </button>
         <button
@@ -827,20 +1012,58 @@ export function TacticalMapPanel({
         </div>
       ) : null}
 
-      {/* Range feedback */}
-      {targetCheck ? (
-        <div className="tactical-map-panel__target-check" data-testid="tactical-target-check">
-          <h4>{copy.tacticalTargetCheckLabel}</h4>
-          <p data-testid="tactical-target-band">
-            {targetCheck.blocked
-              ? copy.tacticalTargetBlocked
-              : !targetCheck.in_range
-                ? copy.tacticalTargetOutOfRange
-                : targetCheck.is_long_range
-                  ? copy.tacticalTargetLongRange
-                  : copy.tacticalTargetInRange}
-            {targetCheck.distance_feet !== null ? ` (${targetCheck.distance_feet} ft)` : ''}
+      {/* AoE template placement (tactical mode) */}
+      {aoePlacement ? (
+        <div className="tactical-map-panel__aoe" data-testid="tactical-aoe">
+          <h3>{copy.tacticalAoeHeading}</h3>
+          <p data-testid="tactical-aoe-hint">
+            {!aoeOrigin
+              ? copy.tacticalAoePlaceTemplate
+              : aoeShapeNeedsAim(aoePlacement.shape) && !aoePreview
+                ? copy.tacticalAoeOriginHint
+                : ''}
           </p>
+          {aoePreview ? (
+            <>
+              <p data-testid="tactical-aoe-affected-count">
+                {copy.tacticalAoeAffectedCells}: {aoePreview.affected_cells.length}
+              </p>
+              <ul data-testid="tactical-aoe-candidates">
+                {aoePreview.candidates.map((c) => (
+                  <li key={c.entry_id}>{c.display_name}</li>
+                ))}
+              </ul>
+              <div>
+                <button
+                  type="button"
+                  className="button primary compact"
+                  data-testid="tactical-aoe-confirm"
+                  disabled={moveBusy}
+                  onClick={() => void handleAoePropose()}
+                >
+                  {copy.tacticalAoeConfirm}
+                </button>
+                <button
+                  type="button"
+                  className="button secondary compact"
+                  data-testid="tactical-aoe-clear"
+                  disabled={moveBusy}
+                  onClick={clearAoe}
+                >
+                  {copy.tacticalAoeClear}
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="button secondary compact"
+              data-testid="tactical-aoe-cancel"
+              onClick={clearAoe}
+            >
+              {copy.tacticalMoveCancel}
+            </button>
+          )}
         </div>
       ) : null}
 
@@ -877,37 +1100,18 @@ export function TacticalMapPanel({
             camera={camera}
             isDm={isCurrentDm}
             selectedEntryId={selectedEntryId}
-            onCellClick={
-              placingEntryId && isCurrentDm
-                ? handleCellClick
-                : moveEntryId
-                  ? (x, y) => void addMoveAnchor(x, y)
-                  : repositionMode && repositionEntryId
-                    ? (x, y) => setRepositionTarget({ x, y })
-                    : undefined
-            }
-            onTokenClick={(entryId) => {
-              // DM reposition mode: select token to reposition.
-              if (repositionMode && isCurrentDm) {
-                setRepositionEntryId(entryId)
-                return
-              }
-              // Movement: click own token to start/continue draft.
-              if (canMoveEntry(entryId) && !placingEntryId) {
-                if (moveEntryId === entryId) {
-                  // Already moving this token; keep draft.
-                  return
-                }
-                startMoveDraft(entryId)
-                return
-              }
-              setSelectedEntryId((prev) => (prev === entryId ? null : entryId))
-            }}
+            onCellClick={mapMode.kind === 'idle' ? undefined : handleMapCellClick}
+            onTokenClick={handleMapTokenClick}
+            onTokenPointerDown={handleTokenPointerDown}
+            onCellPointerEnter={handleCellPointerEnter}
+            onPointerUp={handleDragPointerUp}
             onDoorClick={handleDoorClick}
             onEmptyMouseDown={(x, y) => startPan(x, y)}
             onMouseMove={(x, y) => panBy(x, y)}
             onMouseUp={endPan}
             onWheel={handleWheel}
+            aoeCells={aoePreview?.affected_cells}
+            aoeOrigin={aoeOrigin}
           />
         ) : (
           <p className="tactical-map-panel__loading">{copy.tacticalBoardLoading}</p>

@@ -31,6 +31,14 @@ type SessionCombatStageProps = {
   isCurrentDm: boolean
   onError: (cause: unknown) => void
   refresh: () => void
+  tacticalMode?: boolean
+  onStartAoePlacement?: (request: {
+    spell_ref: string
+    shape: 'circle' | 'square' | 'cone' | 'line'
+    size_feet: number
+    caster_entry_id: string
+    slot_level: number | null
+  }) => void
 }
 
 function getStatusLabel(status: string, copy: SessionCopy): string {
@@ -68,6 +76,8 @@ export function SessionCombatStage({
   isCurrentDm,
   onError,
   refresh,
+  tacticalMode = false,
+  onStartAoePlacement,
 }: SessionCombatStageProps) {
   const monsterOptions = useMonsterOptions(isCurrentDm)
   const [rollingEntryId, setRollingEntryId] = useState<string | null>(null)
@@ -399,6 +409,8 @@ export function SessionCombatStage({
             isCurrentDm={isCurrentDm}
             onError={onError}
             refresh={refreshCombatResources}
+            tacticalMode={tacticalMode}
+            onStartAoePlacement={onStartAoePlacement}
           />
           {isCurrentDm ? (
             <SessionCombatAdjudicationPanel

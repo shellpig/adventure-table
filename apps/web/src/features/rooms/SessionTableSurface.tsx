@@ -53,7 +53,7 @@ import {
 } from './chatFollow'
 import { endCombat, startCombat } from '../../api/combat'
 import { SessionCombatStage } from './SessionCombatStage'
-import { TacticalMapPanel } from './TacticalMapPanel'
+import { TacticalMapPanel, type AoePlacementRequest } from './TacticalMapPanel'
 import { TacticalSetupPanel } from './TacticalSetupPanel'
 import { myEntryIds, useActiveCombat } from './sessionCombat'
 import type { OlderSessionHistory } from './sessionEventStream'
@@ -288,6 +288,8 @@ export function SessionTableSurface({
 
   const [combatPending, setCombatPending] = useState(false)
   const [showTacticalSetup, setShowTacticalSetup] = useState(false)
+  // AoE template placement requested from the combat action bar (tactical).
+  const [aoePlacement, setAoePlacement] = useState<AoePlacementRequest | null>(null)
 
   const { combat, refresh } = useActiveCombat({
     roomId,
@@ -673,6 +675,8 @@ export function SessionTableSurface({
                 isCurrentDm={isCurrentDm}
                 onError={onError}
                 refresh={refresh}
+                tacticalMode={combat.mode === 'tactical'}
+                onStartAoePlacement={setAoePlacement}
               />
               {combat.mode === 'tactical' ? (
                 <TacticalMapPanel
@@ -687,6 +691,8 @@ export function SessionTableSurface({
                   events={events}
                   onError={onError}
                   refresh={refresh}
+                  aoePlacement={aoePlacement}
+                  onAoePlacementEnd={() => setAoePlacement(null)}
                 />
               ) : null}
             </>

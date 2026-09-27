@@ -48,11 +48,19 @@ type BattleMapCanvasProps = {
   selectedEntryId?: string | null
   onCellClick?: (x: number, y: number) => void
   onTokenClick?: (entryId: string) => void
+  /** Pointer pressed on a token: start a drag (e.g. movement plan). */
+  onTokenPointerDown?: (entryId: string) => void
+  /** Pointer entered a cell while dragging (accumulates drag anchors). */
+  onCellPointerEnter?: (x: number, y: number) => void
+  onPointerUp?: () => void
   onDoorClick?: (doorId: string | null) => void
   onEmptyMouseDown?: (clientX: number, clientY: number, button: number) => void
   onMouseMove?: (clientX: number, clientY: number) => void
   onMouseUp?: () => void
   onWheel?: (event: { deltaY: number; clientX: number; clientY: number }) => void
+  /** AoE template overlay cells (server preview). */
+  aoeCells?: Array<{ x: number; y: number }>
+  aoeOrigin?: { x: number; y: number } | null
 }
 
 const TERRAIN_COLORS: Record<string, string> = {
@@ -79,11 +87,16 @@ export function BattleMapCanvas({
   selectedEntryId,
   onCellClick,
   onTokenClick,
+  onTokenPointerDown,
+  onCellPointerEnter,
+  onPointerUp,
   onDoorClick,
   onEmptyMouseDown,
   onMouseMove,
   onMouseUp,
   onWheel,
+  aoeCells,
+  aoeOrigin,
 }: BattleMapCanvasProps) {
   const mapWidth = widthCells * cellSize
   const mapHeight = heightCells * cellSize
@@ -138,6 +151,8 @@ export function BattleMapCanvas({
       }}
       onMouseMove={(e) => onMouseMove?.(e.clientX, e.clientY)}
       onMouseUp={() => onMouseUp?.()}
+      onPointerUp={() => onPointerUp?.()}
+      onPointerCancel={() => onPointerUp?.()}
       onWheel={(e) => {
         e.preventDefault()
         onWheel?.({ deltaY: e.deltaY, clientX: e.clientX, clientY: e.clientY })
@@ -224,6 +239,28 @@ export function BattleMapCanvas({
           )
         })}
       </g>
+      <g data-testid="battle-map-cells">
+        {Array.from({ length: widthCells * heightCells }, (_, i) => {
+          const x = i % widthCells
+          const y = Math.floor(i / widthCells)
+          return (
+            <rect
+              key={`cell-${x}-${y}`}
+              data-testid="battle-map-cell"
+              data-cell-x={x}
+              data-cell-y={y}
+              x={x * cellSize}
+              y={y * cellSize}
+              width={cellSize}
+              height={cellSize}
+              fill="transparent"
+              onClick={(e) => handleCellClick(e, x, y)}
+              onPointerEnter={() => onCellPointerEnter?.(x, y)}
+              style={{ cursor: onCellClick ? 'pointer' : 'default' }}
+            />
+          )
+        })}
+      </g>
       <g data-testid="battle-map-tokens">
         {tokens.map((token) => {
           const isSelected = token.entry_id === selectedEntryId
@@ -238,7 +275,13 @@ export function BattleMapCanvas({
                 e.stopPropagation()
                 onTokenClick?.(token.entry_id)
               }}
-              style={{ cursor: onTokenClick ? 'pointer' : 'default' }}
+              onPointerDown={(e) => {
+                // Left button only; a drag plans movement, it never confirms.
+                if (e.button !== 0 || !onTokenPointerDown) return
+                e.stopPropagation()
+                onTokenPointerDown(token.entry_id)
+              }}
+              style={{ cursor: onTokenClick ? 'pointer' : 'default', touchAction: 'none' }}
             >
               <rect
                 x={token.anchor_x * cellSize}
@@ -260,27 +303,37 @@ export function BattleMapCanvas({
           )
         })}
       </g>
-      <g data-testid="battle-map-cells">
-        {Array.from({ length: widthCells * heightCells }, (_, i) => {
-          const x = i % widthCells
-          const y = Math.floor(i / widthCells)
-          return (
+      {aoeCells && aoeCells.length > 0 ? (
+        <g data-testid="battle-map-aoe-cells" pointerEvents="none">
+          {aoeCells.map((cell) => (
             <rect
-              key={`cell-${x}-${y}`}
-              data-testid="battle-map-cell"
-              data-cell-x={x}
-              data-cell-y={y}
-              x={x * cellSize}
-              y={y * cellSize}
+              key={`aoe-${cell.x}-${cell.y}`}
+              data-testid="battle-map-aoe-cell"
+              data-cell-x={cell.x}
+              data-cell-y={cell.y}
+              x={cell.x * cellSize}
+              y={cell.y * cellSize}
               width={cellSize}
               height={cellSize}
-              fill="transparent"
-              onClick={(e) => handleCellClick(e, x, y)}
-              style={{ cursor: onCellClick ? 'pointer' : 'default' }}
+              fill="#a855f7"
+              opacity={0.35}
             />
-          )
-        })}
-      </g>
+          ))}
+        </g>
+      ) : null}
+      {aoeOrigin ? (
+        <g data-testid="battle-map-aoe-origin" pointerEvents="none">
+          <rect
+            x={aoeOrigin.x * cellSize}
+            y={aoeOrigin.y * cellSize}
+            width={cellSize}
+            height={cellSize}
+            fill="none"
+            stroke="#a855f7"
+            strokeWidth={3}
+          />
+        </g>
+      ) : null}
     </svg>
   )
 }
