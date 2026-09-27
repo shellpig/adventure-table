@@ -5,9 +5,9 @@
 - **更新日期**：2026-09-27
 - **目標與邊界**：Tactical Attack／targeted Spell 由 Server 依 footprint、attack／spell range、shared grid distance 與 hard blocker 產生 spatial targeting result，取代 Quick 的 DM in-range 裁定；reach／range 經 `AttackDefinitionResolver → ResolvedAttack` 單一來源；long range disadvantage 與「5 呎內／外」condition 事實接回既有 P4 modifier pipeline。**Backend only**；不做 Cover 自動計算、LOS／lighting、OA（P5-E）、AoE（P5-D）、UI／MCP（P5-F）。契約：`docs/P5/實作規格.md` §4、§7；`docs/P5/開發設計方針.md` §4、§7、§11、§14；`docs/P5/測試指南.md` §3、C.1～C.6。
 - **Branch**：`feat/p5c-range-reach-spatial-targeting`（自 `main@6d3997a0` 開出）
-- **最近已驗證 commit**：—（尚無 worker commit）
+- **最近已驗證 commit**：`ceac4627`
 - **Worker**：Muse（新 thread「AT P5C」，見指揮者手冊 §4b.1）。prompt 存 `C:\_work\AI_Work\Tools\agy-runs\muse-p5c-<step>.prompt.txt`。關門（C2）由指揮者做。
-- **下一步**：C1
+- **下一步**：無；P5-C 已關門並合併 `main`，接 P5-D。證據見 [P5-C closeout](P5-C_CLOSEOUT.md)
 - **阻礙／未審**：無
 - **本 Subphase 技術決策（契約未指定，指揮者拍板）**：
   1. Spatial targeting 為純函式放 `app/domain/spatial/targeting.py`（消費 `ResolvedAttack` 與 board snapshot，不擲骰、不寫 DB）；接線放既有 `app/domain/combat/attacks.py`／spell service，不新增 `TacticalAction` model。
@@ -21,5 +21,5 @@
 
 | Step | 標題 | 狀態 | 依賴 | 紀錄 |
 |---|---|---|---|---|
-| C1 | `ResolvedAttack` reach／range 欄位、spatial targeting result、hard blocker、Tactical attack／targeted spell 接線、long range 與 5 呎 condition 事實（C.1～C.6） | 待做 | — | [C1](P5-C_steps/C1.md) |
-| C2 | 關門 gate、closeout、合併 `main`（指揮者） | 待做 | C1 | — |
+| C1 | `ResolvedAttack` reach／range 欄位、spatial targeting result、hard blocker、Tactical attack／targeted spell 接線、long range 與 5 呎 condition 事實（C.1～C.6） | 完成 | — | [C1](P5-C_steps/C1.md) |
+| C2 | 關門 gate、closeout、合併 `main`（指揮者） | 完成 | C1 | — |

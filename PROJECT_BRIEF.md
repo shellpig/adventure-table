@@ -17,14 +17,14 @@
 - **P4 已全部關門並合併回 `main`**：P4-F code `651a14d0`，merge `7ef02d13`；證據見 [P4-F closeout](docs/P4/P4-F_CLOSEOUT.md)。歷史步驟不再作開場必讀。
 - **M05（Session History Continuity & Owner End for AI DM Sessions）已於 2026-09-20 當日開工並全部關門、合併回 `main`**：M05-A Owner 可正常 End AI DM 的 Session；M05-B 聊天串向上翻頁越過 Session 邊界（專用 history read scope，不擴大 gameplay actor）。證據見 [M05-A closeout](docs/M05/M05-A_CLOSEOUT.md)、[M05-B closeout](docs/M05/M05-B_CLOSEOUT.md)；逐項表已移至 ROADMAP_HISTORY。
 - **P6 已全部關門並合併回 `main`（2026-09-25）**：P6-F merge `b06e2e21`、P6-G merge `8b47fb05`；證據見 [P6-F closeout](docs/P6/P6-F_CLOSEOUT.md)、[P6-G closeout](docs/P6/P6-G_CLOSEOUT.md)。P6-G 分支含 P6-F 全部 commit，G5 全套 Docker E2E 同時涵蓋兩者。逐項表已移至 ROADMAP_HISTORY。
-- **P5（Tactical Combat）進行中**：P5-A、P5-B 已於 2026-09-27 關門並合併回 `main`（證據見 [P5-A closeout](docs/P5/P5-A_CLOSEOUT.md)、[P5-B closeout](docs/P5/P5-B_CLOSEOUT.md)）；worker 為 Muse（muse.ai，在自己環境跑綠後推送），指揮者本機驗收。
-- **下一步**：開工 P5-C（Range, Reach & Spatial Targeting）。
+- **P5（Tactical Combat）進行中**：P5-A～C 已於 2026-09-27 關門並合併回 `main`（證據見 [P5-A](docs/P5/P5-A_CLOSEOUT.md)、[P5-B](docs/P5/P5-B_CLOSEOUT.md)、[P5-C closeout](docs/P5/P5-C_CLOSEOUT.md)）；worker 為 Muse（muse.ai，在自己環境跑綠後推送），指揮者本機驗收。
+- **下一步**：開工 P5-D（AoE & Tactical Spell Geometry）。
 
 | P5 Subphase | 狀態 |
 |---|---|
 | P5-A — Battle Map & Spatial Foundation | 已關門並合併（2026-09-27） |
 | P5-B — Movement & Path Resolution | 已關門並合併（2026-09-27） |
-| P5-C — Range, Reach & Spatial Targeting | 待開工 |
+| P5-C — Range, Reach & Spatial Targeting | 已關門並合併（2026-09-27） |
 | P5-D — AoE & Tactical Spell Geometry | 待開工 |
 | P5-E — Opportunity Attack & Spatial Reactions | 待開工 |
 | P5-F — Tactical Combat UI & AI Tool Surface | 待開工 |
@@ -48,7 +48,7 @@ Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **
 | P4 | Quick Combat；已關門 |
 | M05 | Session History Continuity／Owner End for AI DM；已關門（2026-09-20），插在 P4 與 P6-A 之間 |
 | M06 | AI Long-Session Hosting Efficiency；已關門並合併（2026-09-25），插在 P6 與 P5-A 之間 |
-| P5 | Tactical Combat；進行中，P5-A、P5-B 已關門（2026-09-27） |
+| P5 | Tactical Combat；進行中，P5-A～C 已關門（2026-09-27） |
 | P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；已關門並合併（2026-09-25） |
 | P7 | Timeline、Snapshot／Restore、broader Archive／Import／Export；角色 JSON 已由 M03 先行，不做 gameplay Undo |
 | P8 | 全流程 QA／Polish、權限、reconnect、效能、Responsive UI |
