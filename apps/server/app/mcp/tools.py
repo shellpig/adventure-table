@@ -442,10 +442,6 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
         "DM-only. Atomically replace a battle map's full object list (walls, doors, props) in one call.",
         "僅限 DM。以單次呼叫原子化替換戰鬥地圖的完整物件清單（牆、門、道具）。",
     ),
-    "battle_map_delete": (
-        "DM-only. Permanently delete a battle map that is not bound to an active combat.",
-        "僅限 DM。永久刪除未綁定至進行中戰鬥的戰鬥地圖。",
-    ),
     "get_campaign_context": (
         "Call once after get_session_context when you need the Campaign's scene, situation, party and world entry refs; for the DM it also returns each attached Adventure's outline (entry ids/titles, no bodies) to open with get_adventure_entry. Then drill down with get_scene_context / search_campaign_context. Results are role-projected to what the caller may see.",
         "在 get_session_context 之後呼叫一次，以取得 Campaign 的場景、局勢、隊伍與世界條目參照；DM 另會取得每個附加 Adventure 的目錄（條目 id／標題，不含內文），可用 get_adventure_entry 開啟。後續再以 get_scene_context 或 search_campaign_context 深入查詢。回傳結果已依角色權限投影。",
@@ -757,7 +753,6 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("battle_map_list", _desc("List this room's battle maps as summaries.", "以摘要形式列出本房間的戰鬥地圖。"), _NoArguments, frozenset({"dm"})),
     MCPToolDefinition("battle_map_patch", _desc("Patch a battle map's name, grid, or metadata against its expected revision.", "依 expected revision 修補戰鬥地圖的名稱、格線或中繼資料。"), BattleMapPatchToolInput, frozenset({"dm"})),
     MCPToolDefinition("battle_map_replace_objects", _desc("Atomically replace a battle map's full object list (walls, doors, props).", "原子化替換戰鬥地圖的完整物件清單（牆、門、道具）。"), BattleMapReplaceObjectsToolInput, frozenset({"dm"})),
-    MCPToolDefinition("battle_map_delete", _desc("Permanently delete a battle map that is not bound to an active combat.", "永久刪除未綁定至進行中戰鬥的戰鬥地圖。"), BattleMapIdToolInput, frozenset({"dm"})),
     MCPToolDefinition("get_campaign_context", _desc("Read Campaign overview including current scene, situation, party, world entry references, and (DM only) the attached Adventure outline.", "讀取 Campaign 概覽，包含目前場景、局勢、隊伍、世界條目參照，以及（僅 DM）附加 Adventure 的目錄。"), _NoArguments, frozenset({"player", "dm"})),
     MCPToolDefinition("get_scene_context", _desc("Read detailed scene context and related entries for the current scene or a specified scene reference.", "讀取目前場景或指定場景參照的詳細情境與關聯條目。"), SceneContextToolInput, frozenset({"player", "dm"})),
     MCPToolDefinition("search_campaign_context", _desc("Search Campaign world entries and visible lore by keyword query.", "以關鍵字搜尋 Campaign 世界條目與可見設定。"), SearchCampaignContextToolInput, frozenset({"player", "dm"})),
@@ -1026,8 +1021,6 @@ async def call_tool(
             data = await asyncio.to_thread(service.battle_map_patch, token, parsed, authenticated=auth)
         elif name == "battle_map_replace_objects":
             data = await asyncio.to_thread(service.battle_map_replace_objects, token, parsed, authenticated=auth)
-        elif name == "battle_map_delete":
-            data = await asyncio.to_thread(service.battle_map_delete, token, parsed, authenticated=auth)
         elif name == "get_campaign_context":
             data = await asyncio.to_thread(service.get_campaign_context, token, authenticated=auth)
         elif name == "get_scene_context":

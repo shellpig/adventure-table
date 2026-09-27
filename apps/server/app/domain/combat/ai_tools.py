@@ -98,7 +98,7 @@ from app.domain.combat.special_attacks import (
 )
 from app.domain.rooms.ai_controllers import AIControllerAuthView, AIControllerUnauthorizedError
 from app.domain.rooms.ai_guidance import BRIEFING_MAX_CHARS
-from app.domain.rooms.ai_tools import AIToolApplicationService
+from app.domain.rooms.ai_tools import AIToolApplicationService, AIToolScopeError
 from app.domain.rooms.rolls import FormalRollInput, FormalRollSource
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext, StrictModel
 from app.domain.rooms.table_events import TableActorContext
@@ -699,26 +699,46 @@ class CombatAIToolApplicationService(AIToolApplicationService):
 
     _TACTICAL_SUMMARY_MAX_SUBJECTS = 5
     _TACTICAL_SUMMARY_MAX_VISIBLE = 6
+    _TACTICAL_SUMMARY_NAME_LIMIT = 24
 
     def _tactical_summary(
         self,
         actor: TableActorContext,
         detail: CombatDetailView,
         combat_ctx: dict[str, Any],
+        *,
+        name_limit: int = _TACTICAL_SUMMARY_NAME_LIMIT,
+        max_subjects: int = _TACTICAL_SUMMARY_MAX_SUBJECTS,
+        max_visible: int = _TACTICAL_SUMMARY_MAX_VISIBLE,
     ) -> str:
         """P5-F compact bilingual tactical snapshot appended to the briefing.
 
-        Bounded (no ASCII map): at most ``_TACTICAL_SUMMARY_MAX_SUBJECTS``
-        subjects and ``_TACTICAL_SUMMARY_MAX_VISIBLE`` visible combatants.
-        Every position comes from the actor-projected board, so Players never
-        see hidden truth here.
+        Bounded (no ASCII map): at most ``max_subjects`` subjects and
+        ``max_visible`` visible combatants, names truncated to ``name_limit``
+        chars. Every position comes from the actor-projected board, so
+        Players never see hidden truth here.
+
+        Names come from the combatant projection, falling back to the
+        entry's display_name; when both are missing the name field is
+        omitted entirely (never a "?" placeholder).
         """
         board = self._require_board_service().get_board(actor)
         pos_by_entry = {position.entry_id: position for position in board.positions}
-        name_by_entry = {
-            combatant.entry_id: str(combatant.projection.get("name") or "?")
-            for combatant in detail.combatants
+        projection_names = {}
+        for combatant in detail.combatants:
+            raw_name = combatant.projection.get("name")
+            if isinstance(raw_name, str) and raw_name.strip():
+                projection_names[combatant.entry_id] = raw_name.strip()
+        display_names = {
+            entry.id: entry.display_name.strip()
+            for entry in detail.entries
+            if entry.display_name and entry.display_name.strip()
         }
+
+        def display_name(entry_id) -> str | None:
+            name = projection_names.get(entry_id) or display_names.get(entry_id)
+            return name[:name_limit] if name else None
+
         running = detail.status == "running"
 
         def cells_of(position) -> tuple:
@@ -736,15 +756,19 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         subject_parts: list[str] = []
         pending_movement: list[str] = []
         reference_cells = None
-        for entry_id in positioned[: self._TACTICAL_SUMMARY_MAX_SUBJECTS]:
+        for entry_id in positioned[:max_subjects]:
             position = pos_by_entry[entry_id]
-            name = name_by_entry.get(entry_id, "?")
-            part = f"{name}({position.anchor_x},{position.anchor_y})"
+            name = display_name(entry_id)
+            part = (
+                f"{name}({position.anchor_x},{position.anchor_y})"
+                if name
+                else f"({position.anchor_x},{position.anchor_y})"
+            )
             if running:
                 status = self._require_movement_service().movement_status(actor, entry_id)
                 part += f" {status.used_feet}/{status.budget_feet}ft"
                 if status.has_pending_movement:
-                    pending_movement.append(name)
+                    pending_movement.append(name or f"entry {str(entry_id)[:8]}")
             subject_parts.append(part)
             if reference_cells is None:
                 reference_cells = cells_of(position)
@@ -764,18 +788,23 @@ class CombatAIToolApplicationService(AIToolApplicationService):
             board.positions,
             key=lambda p: (distance_of(p), p.anchor_x, p.anchor_y),
         )
-        visible_parts = [
-            f"{name_by_entry.get(p.entry_id, '?')}({p.anchor_x},{p.anchor_y}) "
-            f"{distance_of(p)}ft"
-            for p in visible[: self._TACTICAL_SUMMARY_MAX_VISIBLE]
-        ]
+        visible_parts = []
+        for position in visible[:max_visible]:
+            name = display_name(position.entry_id)
+            label = (
+                f"{name}({position.anchor_x},{position.anchor_y})"
+                if name
+                else f"({position.anchor_x},{position.anchor_y})"
+            )
+            visible_parts.append(f"{label} {distance_of(position)}ft")
         more_visible = len(visible) - len(visible_parts)
 
-        turn_name = (
-            name_by_entry.get(detail.current_turn_entry_id, "?")
-            if detail.current_turn_entry_id is not None
-            else "?"
-        )
+        turn_clause = f"Round {detail.round_number}"
+        if detail.current_turn_entry_id is not None:
+            turn_name = display_name(detail.current_turn_entry_id)
+            if turn_name:
+                turn_clause += f", turn: {turn_name}"
+        turn_clause += "."
         reaction_count = len(combat_ctx.get("reaction_windows", ()))
         subjects_text = "; ".join(subject_parts) or "none"
         if more_subjects:
@@ -784,24 +813,68 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         if more_visible:
             visible_text += f" (+{more_visible} more)"
         pending_text = ", ".join(pending_movement) if pending_movement else "none"
-        reaction_text = f"{reaction_count} open" if reaction_count else "none"
+        if reaction_count:
+            kinds = sorted(
+                {str(window.get("kind")) for window in combat_ctx["reaction_windows"]}
+            )
+            reaction_text = f"{reaction_count} open ({', '.join(kinds)})"
+        else:
+            reaction_text = "none"
         return " ".join(
             [
-                (
-                    f"Tactical 戰術 [mode=tactical]: Round {detail.round_number}, "
-                    f"turn: {turn_name}."
-                ),
+                f"Tactical 戰術 [mode=tactical]: {turn_clause}",
                 f"Your units 你的單位: {subjects_text}.",
                 f"Visible by distance 可見（依距離）: {visible_text}.",
                 f"Pending movement 待處理移動: {pending_text}.",
                 f"Pending reaction 待處理反應: {reaction_text}.",
                 f"Next 下一步: {combat_ctx['next_required_action']}.",
-                (
-                    "Tool order 工具順序: preview→confirm (paused: resume); "
-                    "check_target before attack/spell; preview_aoe before AoE cast."
-                ),
             ]
         )
+
+    def _bounded_tactical_summary(
+        self,
+        actor: TableActorContext,
+        detail: CombatDetailView,
+        combat_ctx: dict[str, Any],
+        *,
+        budget: int,
+    ) -> str:
+        """Render the tactical summary so ``static + summary`` stays in budget.
+
+        Progressively tightens (visible rows, subject rows, name length) and,
+        as a last resort, cuts at a sentence boundary. Never raises: this
+        runs on the per-round AI path, so an over-long summary must shrink,
+        not 500.
+        """
+        if budget <= 0:
+            return ""
+        tightening = (
+            (self._TACTICAL_SUMMARY_NAME_LIMIT, self._TACTICAL_SUMMARY_MAX_SUBJECTS, self._TACTICAL_SUMMARY_MAX_VISIBLE),
+            (self._TACTICAL_SUMMARY_NAME_LIMIT, self._TACTICAL_SUMMARY_MAX_SUBJECTS, 4),
+            (self._TACTICAL_SUMMARY_NAME_LIMIT, self._TACTICAL_SUMMARY_MAX_SUBJECTS, 2),
+            (self._TACTICAL_SUMMARY_NAME_LIMIT, 3, 2),
+            (self._TACTICAL_SUMMARY_NAME_LIMIT, 2, 2),
+            (16, 2, 2),
+            (8, 1, 1),
+        )
+        summary = ""
+        for name_limit, max_subjects, max_visible in tightening:
+            summary = self._tactical_summary(
+                actor,
+                detail,
+                combat_ctx,
+                name_limit=name_limit,
+                max_subjects=max_subjects,
+                max_visible=max_visible,
+            )
+            if len(summary) <= budget:
+                return summary
+        # Last resort: cut at the last sentence boundary inside the budget so
+        # no unlucky combination can ever break the 3000-char contract.
+        cut = summary.rfind(". ", 0, budget)
+        if cut < 0:
+            return summary[:budget]
+        return summary[: cut + 1]
 
     def combat_get_context(
         self,
@@ -834,13 +907,12 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         detail = self.combat_service.get_active_combat_detail(actor)
         if detail is not None and detail.mode == "tactical":
             static = self._briefing(role=actor.role, mode="active_tactical_combat")
-            summary = self._tactical_summary(actor, detail, combat_ctx)
-            briefing = f"{static}\n{summary}"
-            if len(briefing) > BRIEFING_MAX_CHARS:
-                raise RuntimeError(
-                    f"AI briefing exceeded {BRIEFING_MAX_CHARS}-character contract"
-                )
-            payload["briefing"] = briefing
+            # P5-F F1b: the summary is always bounded to the remaining budget.
+            # It never raises — this runs on the per-round AI path, so an
+            # over-long summary must shrink, not 500.
+            budget = BRIEFING_MAX_CHARS - len(static) - 1
+            summary = self._bounded_tactical_summary(actor, detail, combat_ctx, budget=budget)
+            payload["briefing"] = f"{static}\n{summary}"
         else:
             payload["briefing"] = self._briefing(role=actor.role, mode="active_combat")
         return payload
@@ -1155,6 +1227,15 @@ class CombatAIToolApplicationService(AIToolApplicationService):
             raise AIControllerUnauthorizedError(
                 "AI battle-map tools require an AI controller grant"
             )
+        if actor.session_id is None or not actor.is_current_dm:
+            # P5-F F1b: battle maps are Room-level shared assets; only the
+            # current DM of an active Session may set them up or edit them.
+            # A pre-session DM grant (P3-D) gets minimal context + Start only,
+            # and non-DM roles are gated here even when the MCP catalog gate
+            # is bypassed by calling the facade directly.
+            raise AIToolScopeError(
+                "Battle-map tools require the current DM of an active Session"
+            )
         return RoomAccessContext(
             room_id=actor.room_id,
             access_session_id=actor.ai_controller_grant_id,
@@ -1232,19 +1313,6 @@ class CombatAIToolApplicationService(AIToolApplicationService):
             payload=input.payload,
         )
         return view.model_dump(mode="json")
-
-    def battle_map_delete(
-        self,
-        token: str,
-        input: BattleMapIdToolInput,
-        *,
-        authenticated: AIControllerAuthView | None = None,
-    ) -> dict[str, Any]:
-        actor = self._actor(token, authenticated=authenticated)
-        self._require_battle_map_service().delete(
-            self._room_access_context(actor), actor.room_id, input.map_id
-        )
-        return {"deleted": True, "map_id": str(input.map_id)}
 
 
 __all__ = [

@@ -114,7 +114,6 @@ _EXPECTED = {
     "battle_map_list",
     "battle_map_patch",
     "battle_map_replace_objects",
-    "battle_map_delete",
     "get_campaign_context",
     "get_scene_context",
     "search_campaign_context",
