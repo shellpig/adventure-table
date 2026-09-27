@@ -757,3 +757,50 @@ def test_tactical_event_projection_strips_hidden_targets() -> None:
         hidden_entry_ids={str(hidden)},
     )
     assert set(dm_payload["proposed_target_ids"]) == {str(goblin), str(hidden)}
+
+
+def _goblin_hp(table: TacticalTable, entry_id: UUID) -> int:
+    from app.persistence.combat.tables import monster_instances
+
+    with table.engine.connect() as conn:
+        return int(conn.scalar(
+            select(monster_instances.c.current_hp)
+            .select_from(monster_instances.join(
+                combat_entries, combat_entries.c.monster_instance_id == monster_instances.c.id
+            ))
+            .where(combat_entries.c.id == entry_id)
+        ))
+
+
+def test_duplicate_propose_and_resolve_with_same_key_apply_once() -> None:
+    table, char_entry, goblin, _hidden = _tactical_aoe_table()
+    service = _spells(table)
+    propose = _propose_input(
+        char_entry, goblin, board_revision=_board_revision(table), idempotency_key="p5d-dup",
+    )
+    first = service.propose_aoe(table.player_actor, propose)
+    actions_after_propose = _action_count(table)
+    events_after_propose = _event_count(table)
+    again = service.propose_aoe(table.player_actor, propose)
+    assert again.action_id == first.action_id
+    assert _action_count(table) == actions_after_propose
+    assert _event_count(table) == events_after_propose
+
+    resolve = ResolveAoeSpellInput(
+        action_id=first.action_id,
+        confirmed_target_ids=(goblin,),
+        save_modifiers={goblin: 0},
+        save_d20s={goblin: 1},
+        damage_parts=(DamageRollPart(damage_type=DamageType.FIRE, dice=(8, 8)),),
+        roll_source="server",
+        idempotency_key="p5d-dup-resolve",
+    )
+    hp_before = _goblin_hp(table, goblin)
+    service.resolve_aoe(table.dm_actor, resolve)
+    hp_after_first = _goblin_hp(table, goblin)
+    events_after_resolve = _event_count(table)
+    assert hp_after_first < hp_before
+
+    service.resolve_aoe(table.dm_actor, resolve)
+    assert _goblin_hp(table, goblin) == hp_after_first
+    assert _event_count(table) == events_after_resolve
