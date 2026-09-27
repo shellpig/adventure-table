@@ -277,13 +277,10 @@ class MovementService:
         position = self.board_repository.get_position(entry.id)
         if position is None:
             raise CombatStateConflictError(f"CombatEntry {entry_id} has no board position")
-        # The caller's movement planning projection: an unrevealed hidden door
-        # never blocks a Player's plan (it stays invisible), while the DM
-        # plans against full truth.
-        view = self.board_service._project_board(
-            combat, board, is_dm=actor.is_current_dm,
-            movement_planning=not actor.is_current_dm,
-        )
+        # The caller's own board projection: a Player plans against exactly
+        # what their board shows (an unrevealed hidden door is a plain wall),
+        # while the DM plans against full truth.
+        view = self.board_service._project_board(combat, board, is_dm=actor.is_current_dm)
         budget_feet, used_feet, diagonal_steps_used = self._turn_budget(entry)
         anchors = tuple(GridCell(anchor.x, anchor.y) for anchor in request.path)
         result = validate_movement_path(
@@ -542,11 +539,8 @@ class MovementService:
         mover_anchor = GridCell(position.anchor_x, position.anchor_y)
         # Layer 1: the caller's visible projection. Illegal here -> 400 with
         # zero side effects; the error never names hidden blockers. An
-        # unrevealed hidden door does not block a Player's plan here.
-        visible = self.board_service._project_board(
-            combat, board, is_dm=actor.is_current_dm,
-            movement_planning=not actor.is_current_dm,
-        )
+        # unrevealed hidden door is a plain wall here, as on the Player board.
+        visible = self.board_service._project_board(combat, board, is_dm=actor.is_current_dm)
         visible_result = validate_movement_path(
             self._validation_request(
                 view=visible, entry=entry, mover_anchor=mover_anchor,

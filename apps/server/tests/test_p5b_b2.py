@@ -541,35 +541,36 @@ def _map_with_hidden_interior_door(table: TacticalTable) -> UUID:
     return map_id
 
 
-def test_unrevealed_hidden_door_does_not_block_player_preview_but_interrupts_confirm() -> None:
+def test_unrevealed_hidden_door_blocks_player_as_plain_wall() -> None:
     table = setup_tactical_table()
-    _start(table, battle_map_id=_map_with_hidden_interior_door(table))
+    map_id = _map_with_hidden_interior_door(table)
+    _start(table, battle_map_id=map_id)
     char_entry = _character_entry_id(table)
     monster_entry = _add_monster(table)
     _running(
         table, char_entry=char_entry, monster_entry=monster_entry,
         char_at=(5, 3), monster_at=(2, 8),
     )
-    # The unrevealed hidden door is invisible to the Player's movement plan:
-    # the preview plans straight through it and leaks nothing about the door.
+    # The Player board shows an unrevealed hidden door as a plain wall, so the
+    # Player's plan is blocked exactly like any visible wall, and the preview
+    # carries no door identity.
     preview = _preview(table, table.player_actor, char_entry, (5, 3), (5, 4))
-    assert preview.valid
+    assert not preview.valid
+    assert preview.failure == "wall_or_door"
     payload = json.dumps(preview.model_dump(mode="json"))
-    assert "hidden" not in payload
-    # The DM plans against full truth and sees the closed door.
+    assert "hidden" not in payload and str(_door_id(table)) not in payload
     dm_preview = _preview(table, table.dm_actor, char_entry, (5, 3), (5, 4))
     assert not dm_preview.valid
     assert dm_preview.failure == "wall_or_door"
-    # But the full-truth Confirm still catches it: interrupted, generic reason.
-    result = _confirm(
-        table, table.player_actor, char_entry, (5, 3), (5, 4),
-        expected_position_revision=1, expected_board_revision=1,
-    )
-    assert result.outcome == "interrupted"
+    # Confirm fails on the caller-visible layer: 400, zero side effects, and
+    # no interruption event (nothing hidden was learned).
+    with pytest.raises(CombatMovementInvalidError):
+        _confirm(
+            table, table.player_actor, char_entry, (5, 3), (5, 4),
+            expected_position_revision=1, expected_board_revision=1,
+        )
     assert _position(table, char_entry) == (5, 3, 1)
-    event = _latest_event(table, "combat.movement_interrupted")
-    assert event["payload"]["blocker_type"] == "door"
-    assert event["payload"]["blocker_id"] is not None
+    assert _event_count(table, "combat.movement_interrupted") == 0
 
 
 def test_difficult_terrain_costs_double_and_blocked_rejects_at_service_level() -> None:

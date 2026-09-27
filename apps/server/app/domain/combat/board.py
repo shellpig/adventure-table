@@ -325,8 +325,7 @@ class CombatBoardService:
         return self._project_board(combat, board, is_dm=actor.is_current_dm)
 
     def _project_board(
-        self, combat: StoredCombat, board: StoredCombatBoard, *, is_dm: bool,
-        movement_planning: bool = False,
+        self, combat: StoredCombat, board: StoredCombatBoard, *, is_dm: bool
     ) -> CombatBoardView:
         baseline = board.baseline
         runtime_doors = {
@@ -349,12 +348,6 @@ class CombatBoardService:
             revealed = runtime.revealed if runtime is not None else False
             hidden_origin = raw.get("visibility") == "hidden"
             if hidden_origin and not revealed and not is_dm:
-                if movement_planning:
-                    # Movement planning must not treat an unrevealed hidden
-                    # door as a wall: the Player's Preview plans through it
-                    # (leaking nothing), while the full-truth Confirm still
-                    # interrupts. Board views keep the wall projection.
-                    continue
                 # Players see an unrevealed hidden door as a plain wall — no id, no "hidden"
                 # string. The DM keeps the door (with id) so it can be revealed or changed.
                 walls.append(BoardWallView(x1=raw["x1"], y1=raw["y1"], x2=raw["x2"], y2=raw["y2"]))
