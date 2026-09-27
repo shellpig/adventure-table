@@ -531,21 +531,17 @@ class CombatRepository:
 
             current_row = rows[current_index]
             current_was_surprised = bool(current_row["surprised"])
-            # P5-E: a paused movement blocks the turn advance while any of its
-            # OA windows is still open (409, zero side effects). If the windows
-            # are all resolved, advancing abandons the pending movement.
+            # P5-E E1b: a paused movement blocks the turn advance while any of
+            # its OA windows is still open (409, zero side effects). The
+            # pending_window_ids list is maintained by reactions.py: empty
+            # means all windows resolved. Per design §9.2, stale pending is
+            # cleared by the entry's own next-turn incoming reset, not here.
             current_pending = dict(current_row["pending_movement_state"] or {})
             if current_pending:
                 if list(current_pending.get("pending_window_ids", [])):
                     raise CombatStateConflictPersistenceError(
                         "cannot advance turn while opportunity-attack windows are still open"
                     )
-                connection.execute(update(combat_entries).where(
-                    combat_entries.c.id == current_row["id"]
-                ).values(
-                    pending_movement_state={},
-                    updated_at=datetime.now().astimezone(),
-                ))
             if current_was_surprised:
                 # 5e 2014 surprise ends when that creature's first turn ends. It
                 # can react immediately after that turn, even before round 1 ends.
