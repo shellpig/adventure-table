@@ -190,7 +190,7 @@ if (btn && !btn.disabled) btn.click();
 
 ### 4b.1 前置
 
-- Muse（muse.ai）thread：P5-G 起使用 `https://muse.ai/thread/584a5bc6-e75c-4078-90e7-15c56fd3d5ae`（使用者 2026-09-28 指定；P5-F 用 `3c177caa-…`，P5-E 用 `932eaf87-…`，P5-C／P5-D 用「AT P5C」`a2928d6f-…`，P5-A／P5-B 用「AT P05」`bf1c7224-…`）。Linux 環境跨 thread 沿用。用 **Claude in Chrome**（使用者的真 Chrome，已登入）驅動。
+- Muse（muse.ai）thread 由使用者指定，**可能因 context 上限隨時重開**；當前 thread URL 只記在該 Subphase 實作紀錄的接手摘要，本檔不記。派新 step、送修正回合或新指揮者接手時，若使用者當下沒有提供 thread，**先問使用者**，不沿用紀錄裡的舊連結。新 thread 不帶前一 thread 的對話脈絡，prompt 必須自足（指向實作紀錄與 step 檔）；Linux 環境跨 thread 沿用。用 **Claude in Chrome**（使用者的真 Chrome，已登入）驅動。
 - Muse 有自己的 Linux 環境，跨回合保留：clone 在 `~/workspace/repos/adventure-table`、repo root `.venv`（`apps/server[dev,web]`，venv 內 pin SQLAlchemy 2.0.54，不進 repo）、PostgreSQL 17（`P4_POSTGRES_URL=postgresql+psycopg://advtest:advtest@localhost:5432/advtest`）、node 24。VM 重建後 PostgreSQL 需 `pg_ctlcluster 17 main start`。
 - **Muse 自己跑測試**：focused＋全套 backend pytest（含 PG）綠燈才 commit；指揮者仍在本機複驗（§2.3）。
 - **`git push` 不通**（PAT 只經 egress proxy 以 Bearer 轉送，git 協定需 Basic）：Muse 在本機 commit 後用 Git Data API（blob→tree→commit→update ref）推同一 tree，推完 `git fetch` 核對 diff 為空。
@@ -279,5 +279,5 @@ document.querySelector('button[aria-label="傳送"]').click();
 1. 確認最新 `AGENTS.md`（已完整載入則不重讀）→ 精簡 `PROJECT_BRIEF.md` → 本檔共通段落與所選 worker 段落 → 當前 Subphase 接手摘要／步驟板 → 本步及必要前置／待審紀錄。舊格式按 §2.4 定位，不整份讀；ROADMAP_HISTORY 不列入固定必讀。
 2. `git fetch` + `git log origin/<branch> --oneline -5`，確認 remote 與本機一致；有未審的 worker commit 先走 §2.3 gate。
 3. 看 `C:\_work\AI_Work\Tools\agy-runs\` 最新的 prompt 檔，知道上一步送了什麼。
-4. ChatGPT 對話 URL 與帳號在指揮者 memory（`chatgpt-worker-workflow`）；Muse thread 見 §4b.1；agy conversation id 遺失不影響，開新對話讀實作紀錄即可。
+4. ChatGPT 對話 URL 與帳號在指揮者 memory（`chatgpt-worker-workflow`）；Muse thread 依 §4b.1 先問使用者；agy conversation id 遺失不影響，開新對話讀實作紀錄即可。
 5. 依所選 worker 的檢查節奏繼續（ChatGPT §4.3、Muse §4b.3）。
