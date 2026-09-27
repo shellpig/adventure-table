@@ -40,8 +40,6 @@ class AoeAdjudication:
     def __post_init__(self) -> None:
         if not self.command_id.strip() or not self.acting_entry_id.strip():
             raise ValueError("AoE command and acting entry are required")
-        if not self.proposed_target_ids:
-            raise ValueError("AoE requires at least one proposed target")
         if len(self.proposed_target_ids) != len(set(self.proposed_target_ids)):
             raise ValueError("AoE proposed targets must be unique")
         if len(self.confirmed_target_ids) != len(set(self.confirmed_target_ids)):
@@ -108,22 +106,46 @@ class AoeResolution:
 
 
 def propose_aoe(
-    *, command_id: str, acting_entry_id: str, target_ids: tuple[str, ...]
+    *,
+    command_id: str,
+    acting_entry_id: str,
+    target_ids: tuple[str, ...],
+    allow_empty: bool = False,
 ) -> AoeAdjudication:
-    """Create identity-only Quick Combat targeting; no fake geometry is stored."""
+    """Create identity-only Quick Combat targeting; no fake geometry is stored.
 
+    Quick AoE keeps the P4 contract (non-empty target set). Tactical geometry
+    may honestly recompute zero candidates (``allow_empty=True``).
+    """
+    if not target_ids and not allow_empty:
+        raise ValueError("AoE requires at least one proposed target")
     return AoeAdjudication(command_id, acting_entry_id, target_ids)
 
 
 def confirm_aoe(
-    adjudication: AoeAdjudication, *, confirmed_target_ids: tuple[str, ...]
+    adjudication: AoeAdjudication,
+    *,
+    confirmed_target_ids: tuple[str, ...],
+    allow_reselection: bool = False,
 ) -> AoeAdjudication:
+    """Confirm the adjudicated target set.
+
+    Quick AoE keeps the P4 contract: confirmed targets must be a non-empty
+    subset of the proposed set. Tactical AoE (``allow_reselection=True``) lets
+    the DM add or remove targets at confirm time (obstruction / special
+    rules); resolution still locks and validates every confirmed entry, so
+    unknown or inactive entries are rejected there.
+    """
     if adjudication.status != "proposed":
         raise ValueError("AoE adjudication is not awaiting confirmation")
-    if not confirmed_target_ids:
+    if not confirmed_target_ids and not allow_reselection:
         raise ValueError("confirmed AoE target set cannot be empty")
-    if not set(confirmed_target_ids).issubset(set(adjudication.proposed_target_ids)):
-        raise ValueError("confirmed AoE targets must come from the proposed identity set")
+    if len(set(confirmed_target_ids)) != len(confirmed_target_ids):
+        raise ValueError("confirmed AoE targets must be unique")
+    if not allow_reselection and set(confirmed_target_ids) - set(
+        adjudication.proposed_target_ids
+    ):
+        raise ValueError("confirmed AoE targets must be a subset of proposed targets")
     return replace(
         adjudication,
         confirmed_target_ids=confirmed_target_ids,

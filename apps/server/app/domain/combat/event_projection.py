@@ -57,6 +57,9 @@ _ID_KEYS = {
     "target_combat_entry_id",
     "current_turn_entry_id",
     "acting_entry_id",
+    # P5-D D1: a hidden Monster casting an AoE must not leak its entry id in
+    # the public proposal event.
+    "caster_entry_id",
     "monster_instance_id",
     "subject_monster_instance_id",
     "target_monster_instance_id",
@@ -65,6 +68,10 @@ _ID_LIST_KEYS = {
     "entry_ids",
     "ordered_entry_ids",
     "grouped_entry_ids",
+    # P5-D D1: AoE proposal/confirm/candidate identity sets.
+    "proposed_target_ids",
+    "confirmed_target_ids",
+    "candidate_entry_ids",
 }
 
 

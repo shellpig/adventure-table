@@ -11,6 +11,7 @@ from app.api.rooms.dependencies import (
     get_combat_spell_service,
     get_table_event_service,
 )
+from app.domain.combat.board import CombatBoardStaleError
 from app.domain.combat.concentration import (
     CombatConcentrationNotFoundError,
     CombatConcentrationService,
@@ -27,6 +28,7 @@ from app.domain.combat.spell_service import (
     CombatSpellNotFoundError,
     CombatSpellService,
     CombatSpellStateConflictError,
+    PreviewAoeSpellInput,
     ProposeAoeSpellInput,
     ResolveAoeSpellInput,
     SpellCastView,
@@ -72,6 +74,8 @@ def _actor(
 
 
 def _map_error(exc: Exception) -> APIError:
+    if isinstance(exc, CombatBoardStaleError):
+        return APIError(409, "combat_board_stale", str(exc))
     if isinstance(exc, (TableEventNotFoundError, TableEventSessionNotFoundPersistenceError)):
         return APIError(404, "session_not_found", "Session was not found for this table actor")
     if isinstance(exc, (TableEventActorUnauthorizedError, TableEventActorBindingStalePersistenceError)):
@@ -143,6 +147,81 @@ def propose_aoe(
         )
     except Exception as exc:
         raise _map_error(exc) from exc
+
+
+class AoeCellResponse(StrictModel):
+    x: int
+    y: int
+
+
+class AoePreviewCandidateResponse(StrictModel):
+    entry_id: UUID
+    display_name: str
+    subject_kind: str
+
+
+class AoeTemplateResponse(StrictModel):
+    shape: str
+    size_feet: int
+    origin_x: int
+    origin_y: int
+    aim_x: float | None
+    aim_y: float | None
+    direction: str | None
+
+
+class AoeSpellPreviewResponse(StrictModel):
+    combat_id: UUID
+    caster_entry_id: UUID
+    spell_ref: str
+    board_revision: int
+    template: AoeTemplateResponse
+    affected_cells: list[AoeCellResponse]
+    candidates: list[AoePreviewCandidateResponse]
+
+
+@router.post("/spells/aoe/preview", response_model=AoeSpellPreviewResponse)
+def preview_aoe(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    payload: PreviewAoeSpellInput,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: CombatSpellService = Depends(get_combat_spell_service),
+) -> AoeSpellPreviewResponse:
+    try:
+        preview = service.preview_aoe(
+            _actor(room_id, campaign_id, session_id, context, event_service), payload
+        )
+    except Exception as exc:
+        raise _map_error(exc) from exc
+    return AoeSpellPreviewResponse(
+        combat_id=preview.combat_id,
+        caster_entry_id=preview.caster_entry_id,
+        spell_ref=preview.spell_ref,
+        board_revision=preview.board_revision,
+        template=AoeTemplateResponse(
+            shape=preview.template.kind,
+            size_feet=preview.template.size_feet,
+            origin_x=preview.template.origin_x,
+            origin_y=preview.template.origin_y,
+            aim_x=preview.template.aim_x,
+            aim_y=preview.template.aim_y,
+            direction=preview.template.direction,
+        ),
+        affected_cells=[
+            AoeCellResponse(x=cell.x, y=cell.y) for cell in preview.affected_cells
+        ],
+        candidates=[
+            AoePreviewCandidateResponse(
+                entry_id=candidate.entry_id,
+                display_name=candidate.display_name,
+                subject_kind=candidate.subject_kind,
+            )
+            for candidate in preview.candidates
+        ],
+    )
 
 
 @router.post("/spells/aoe/resolve", response_model=AoeSpellResolutionView)
