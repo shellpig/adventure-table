@@ -31,7 +31,7 @@
 | P5-G — Full P5 Integration & Closeout | 待開工 |
 - **M01／U01 保持 open，不阻塞 P Roadmap**。M01-A～O、U01-A 已關門；下一個未使用字母分別為 M01-P、U01-B，兩者下一項 scope 均未拍板，不建立虛構的待辦 Subphase。
 - **M06（AI Long-Session Hosting Efficiency）已全部關門並合併回 `main`（2026-09-25）**：M06-A merge `a3af1eee`、M06-B merge `e2fa1d89`、M06-C merge `7df05b12`；證據見 [M06-A](docs/M06/M06-A_CLOSEOUT.md)、[M06-B](docs/M06/M06-B_CLOSEOUT.md)、[M06-C closeout](docs/M06/M06-C_CLOSEOUT.md)。逐項表已移至 ROADMAP_HISTORY。
-- **P5 已有完整契約但暫後移；P7～P8 保持大 Phase**，不提前拆分或設計 schema／API／module。
+- **P7～P8 保持大 Phase**，不提前拆分或設計 schema／API／module。
 
 ## Phase Roadmap
 
