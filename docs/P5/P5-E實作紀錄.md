@@ -5,9 +5,9 @@
 - **更新日期**：2026-09-27
 - **目標與邊界**：Tactical voluntary movement 離開敵對 combatant 的 melee reach 時，Server 自動在 trigger boundary 暫停 movement、以既有 P4-D `ReactionWindow` 開 OA window，resolve 後由 MovementService 從 durable path 續走或停止；Shove push／Grapple drag 接入 spatial system。**Backend only**；UI、MCP tools 屬 P5-F。契約：`docs/P5/實作規格.md` §9；`docs/P5/開發設計方針.md` §9、§11、§14；`docs/P5/測試指南.md` §3、E.1～E.6。
 - **Branch**：`feat/p5e-opportunity-attack-spatial-reactions`（自 `main@7f08b266` 開出）
-- **最近已驗證 commit**：無（E1 未開工）
+- **最近已驗證 commit**：無（`b1da6d19` 已複驗但審核退回 E1b）
 - **Worker**：Muse（thread `https://muse.ai/thread/932eaf87-f705-4b76-9fd7-8d011d7163e0`，使用者 2026-09-27 指定）。prompt 存 `C:\_work\AI_Work\Tools\agy-runs\muse-p5e-<step>.prompt.txt`。關門（E2）由指揮者做。
-- **下一步**：Muse 做 E1
+- **下一步**：Muse 做 E1b（審核修正），之後指揮者複驗
 - **阻礙／未審**：無
 - **本 Subphase 技術決策（契約未指定，指揮者拍板）**：
   1. **觸發點**：confirm 逐步執行 path；某一步由 previous footprint 在 reactor reach 內、next footprint 在 reach 外時，movement commit 到 previous footprint（仍在 reach 內，5e OA 發生於離開之前）後暫停，`outcome="paused"`。Reach＝reactor 所有 melee `ResolvedAttack.reach_feet` 的最大值（`AttackDefinitionResolver`，沒有 melee attack 時以 unarmed 5 ft），距離一律經 P5-C `is_within_reach`／`grid_distance`。
@@ -26,5 +26,5 @@
 
 | Step | 標題 | 狀態 | 依賴 | 紀錄 |
 |---|---|---|---|---|
-| E1 | 自動 OA、durable paused movement、resume／cancel、advance_turn guard、Shove／Grapple 空間化（E.1～E.6） | 進行中 | — | [E1](P5-E_steps/E1.md) |
+| E1 | 自動 OA、durable paused movement、resume／cancel、advance_turn guard、Shove／Grapple 空間化（E.1～E.6） | 進行中（E1b 修正回合） | — | [E1](P5-E_steps/E1.md) |
 | E2 | 關門 gate、closeout、合併 `main`（指揮者） | 待做 | E1 | — |
