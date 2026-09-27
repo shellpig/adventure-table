@@ -839,6 +839,48 @@ def test_c3_monster_reach_ten_action() -> None:
     assert resolved.reach_feet == 10
 
 
+def test_c3_monster_melee_or_ranged_keeps_reach_and_range() -> None:
+    # SRD "Melee or Ranged" actions (thrown dagger / javelin) normalize as
+    # ranged but keep their parsed reach; a ranged band is never reach.
+    table, _, _ = _tactical_with_entries()
+    instance = table.combat.monster_repository.create_quick_enemy(
+        campaign_id=table.campaign_id, name="Bugbear",
+        armor_class=16, max_hp=27, speed={"walk": "30 ft."},
+        attack={
+            "name": "Javelin",
+            "attack_bonus": 4,
+            "damage": "2d6+2 piercing",
+            "attack_kind": "ranged",
+            "desc": "Melee or Ranged Weapon Attack: +4 to hit, reach 5 ft. or range 30/120 ft., one target.",
+        },
+    )
+    table.combat.add_monster(
+        table.dm_actor, AddMonsterInput(monster_instance_id=instance.id)
+    )
+    view = table.combat.get_active_combat(table.dm_actor)
+    assert view is not None
+    bugbear_entry = next(e for e in view.entries if e.monster_instance_id == instance.id)
+    javelin = next(
+        a for a in _resolver(table).attacks_for(bugbear_entry) if a.name == "Javelin"
+    )
+    assert javelin.reach_feet == 5
+    assert (javelin.range_normal_feet, javelin.range_long_feet) == (30, 120)
+    assert is_within_reach((GridCell(0, 0),), (GridCell(1, 0),), javelin) is True
+    assert is_within_reach((GridCell(0, 0),), (GridCell(2, 0),), javelin) is False
+
+
+def test_pure_ranged_attack_never_threatens_reach() -> None:
+    table, char_entry, _ = _tactical_with_entries()
+    _grant_weapon(table, "srd5.1:equipment:crossbow-light")
+    entry = table.combat.repository.get_entry(char_entry)
+    assert entry is not None
+    crossbow = next(
+        a for a in _resolver(table).attacks_for(entry) if a.name == "Crossbow, light"
+    )
+    assert crossbow.reach_feet is None
+    assert is_within_reach((GridCell(0, 0),), (GridCell(1, 0),), crossbow) is False
+
+
 def test_c4_crossbow_light_range_through_resolver() -> None:
     table, char_entry, _ = _tactical_with_entries()
     _grant_weapon(table, "srd5.1:equipment:crossbow-light")

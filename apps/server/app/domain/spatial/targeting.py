@@ -145,15 +145,13 @@ def is_within_reach(
 ) -> bool:
     """Shared reach query (P5-E opportunity attacks build on this).
 
-    Never triggers reactions; it is a pure distance question.
+    Reach is melee reach only: a ranged band is never reach, so an attack
+    without ``reach_feet`` never threatens. Never triggers reactions; it is a
+    pure distance question.
     """
-    if attack.attack_kind is AttackKind.MELEE:
-        reach = attack.reach_feet
-    else:
-        reach = attack.range_normal_feet
-    if reach is None:
+    if attack.reach_feet is None:
         return False
-    return grid_distance(tuple(source_cells), tuple(target_cells)).feet <= reach
+    return grid_distance(tuple(source_cells), tuple(target_cells)).feet <= attack.reach_feet
 
 
 def validate_attack_target(

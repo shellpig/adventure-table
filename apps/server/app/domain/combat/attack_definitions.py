@@ -297,16 +297,18 @@ class AttackDefinitionResolver:
             kind = AttackKind.MELEE if attack_kind_raw.startswith("melee") else AttackKind.RANGED
             name = str(raw.get("name") or f"Attack {index + 1}")
             # P5-C: reach/range from the normalized MonsterAction contract only.
-            # Melee defaults to reach 5 ft when no reach was parsed.
+            # Melee defaults to reach 5 ft when no reach was parsed. A
+            # "Melee or Ranged" action (thrown dagger/javelin) is normalized as
+            # ranged but keeps its parsed reach, so it still threatens in melee.
             reach_feet: int | None
             range_normal_feet: int | None
             range_long_feet: int | None
+            parsed_reach = raw.get("reach")
             if kind is AttackKind.MELEE:
-                parsed_reach = raw.get("reach")
                 reach_feet = parsed_reach if isinstance(parsed_reach, int) and parsed_reach > 0 else 5
                 range_normal_feet, range_long_feet = None, None
             else:
-                reach_feet = None
+                reach_feet = parsed_reach if isinstance(parsed_reach, int) and parsed_reach > 0 else None
                 parsed_normal = raw.get("range_normal")
                 parsed_long = raw.get("range_long")
                 range_normal_feet = parsed_normal if isinstance(parsed_normal, int) and parsed_normal > 0 else None
