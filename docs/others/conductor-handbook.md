@@ -190,7 +190,7 @@ if (btn && !btn.disabled) btn.click();
 
 ### 4b.1 前置
 
-- Muse（muse.ai）thread：P5-F 起使用 `https://muse.ai/thread/3c177caa-543a-46dd-8438-94f54b07df80`（使用者 2026-09-28 指定；P5-E 用 `932eaf87-…`，P5-C／P5-D 用「AT P5C」`a2928d6f-…`，P5-A／P5-B 用「AT P05」`bf1c7224-…`）。Linux 環境跨 thread 沿用。用 **Claude in Chrome**（使用者的真 Chrome，已登入）驅動。
+- Muse（muse.ai）thread：P5-G 起使用 `https://muse.ai/thread/584a5bc6-e75c-4078-90e7-15c56fd3d5ae`（使用者 2026-09-28 指定；P5-F 用 `3c177caa-…`，P5-E 用 `932eaf87-…`，P5-C／P5-D 用「AT P5C」`a2928d6f-…`，P5-A／P5-B 用「AT P05」`bf1c7224-…`）。Linux 環境跨 thread 沿用。用 **Claude in Chrome**（使用者的真 Chrome，已登入）驅動。
 - Muse 有自己的 Linux 環境，跨回合保留：clone 在 `~/workspace/repos/adventure-table`、repo root `.venv`（`apps/server[dev,web]`，venv 內 pin SQLAlchemy 2.0.54，不進 repo）、PostgreSQL 17（`P4_POSTGRES_URL=postgresql+psycopg://advtest:advtest@localhost:5432/advtest`）、node 24。VM 重建後 PostgreSQL 需 `pg_ctlcluster 17 main start`。
 - **Muse 自己跑測試**：focused＋全套 backend pytest（含 PG）綠燈才 commit；指揮者仍在本機複驗（§2.3）。
 - **`git push` 不通**（PAT 只經 egress proxy 以 Bearer 轉送，git 協定需 Basic）：Muse 在本機 commit 後用 Git Data API（blob→tree→commit→update ref）推同一 tree，推完 `git fetch` 核對 diff 為空。
