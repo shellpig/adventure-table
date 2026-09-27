@@ -31,7 +31,7 @@ const SOURCE_FILES = [
   '../features/rooms/SessionCombatDmControls.tsx',
   '../features/rooms/BattleMapCanvas.tsx',
   '../features/rooms/BattleMapEditor.tsx',
-  '../features/rooms/TacticalStage.tsx',
+  '../features/rooms/TacticalMapPanel.tsx',
   '../features/rooms/TacticalSetupPanel.tsx',
   '../features/rooms/RoomWorkspacePage.tsx',
   '../features/rooms/AIJoinKit.tsx',

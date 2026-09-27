@@ -143,9 +143,11 @@ describe('BattleMapEditor working state', () => {
         onClose={vi.fn()}
       />,
     )
-    for (const tool of ['select', 'wall', 'door', 'terrain', 'token', 'draw', 'erase']) {
+    for (const tool of ['select', 'wall', 'door', 'terrain', 'draw', 'erase']) {
       expect(html).toContain(`data-testid="map-editor-tool-${tool}"`)
     }
+    // Token tool lives in the tactical map panel (placement mode), not the editor.
+    expect(html).not.toContain('data-testid="map-editor-tool-token"')
     expect(html).toContain('data-testid="map-editor-save"')
     expect(html).toContain('data-testid="map-editor-undo"')
     expect(html).toContain('data-testid="map-editor-canvas"')

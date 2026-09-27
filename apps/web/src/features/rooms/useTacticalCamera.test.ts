@@ -3,11 +3,14 @@ import { describe, expect, it } from 'vitest'
 
 import {
   applyPan,
+  applyPinch,
   applyZoom,
   clampZoom,
   computeCenterOn,
   computeFitMap,
   MAX_ZOOM,
+  pinchCenter,
+  pinchDistance,
   MIN_ZOOM,
 } from './useTacticalCamera'
 
@@ -53,6 +56,37 @@ describe('useTacticalCamera pure logic', () => {
     const next = computeCenterOn(camera, 400, 300, 800, 600)
     expect(next.x).toBe(0)
     expect(next.y).toBe(0)
+  })
+
+  it('pinchDistance measures finger separation', () => {
+    expect(pinchDistance({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(5)
+    expect(pinchDistance({ x: 10, y: 10 }, { x: 10, y: 10 })).toBe(0)
+  })
+
+  it('pinchCenter finds midpoint', () => {
+    expect(pinchCenter({ x: 0, y: 0 }, { x: 10, y: 20 })).toEqual({ x: 5, y: 10 })
+  })
+
+  it('applyPinch zooms by distance ratio', () => {
+    const camera = { x: 0, y: 0, zoom: 1 }
+    // Fingers spread from 100px to 200px: zoom doubles.
+    const next = applyPinch(camera, 100, 200, { x: 50, y: 50 }, { x: 50, y: 50 })
+    expect(next.zoom).toBe(2)
+  })
+
+  it('applyPinch pans by center delta', () => {
+    const camera = { x: 0, y: 0, zoom: 1 }
+    // Same distance, center moves by (10, 20).
+    const next = applyPinch(camera, 100, 100, { x: 50, y: 50 }, { x: 60, y: 70 })
+    expect(next.x).toBe(10)
+    expect(next.y).toBe(20)
+    expect(next.zoom).toBe(1)
+  })
+
+  it('applyPinch ignores invalid distances', () => {
+    const camera = { x: 5, y: 5, zoom: 1 }
+    expect(applyPinch(camera, 0, 100, { x: 0, y: 0 }, { x: 0, y: 0 })).toEqual(camera)
+    expect(applyPinch(camera, 100, 0, { x: 0, y: 0 }, { x: 0, y: 0 })).toEqual(camera)
   })
 
   it('camera module performs no network requests', () => {
