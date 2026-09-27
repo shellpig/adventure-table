@@ -52,6 +52,8 @@ import {
 } from './chatFollow'
 import { endCombat, startCombat } from '../../api/combat'
 import { SessionCombatStage } from './SessionCombatStage'
+import { TacticalStage } from './TacticalStage'
+import { TacticalSetupPanel } from './TacticalSetupPanel'
 import { myEntryIds, useActiveCombat } from './sessionCombat'
 import type { OlderSessionHistory } from './sessionEventStream'
 import {
@@ -289,6 +291,7 @@ export function SessionTableSurface({
   }, [isCurrentDm, snapshot.participants, controlledParticipants])
 
   const [combatPending, setCombatPending] = useState(false)
+  const [showTacticalSetup, setShowTacticalSetup] = useState(false)
 
   const { combat, refresh } = useActiveCombat({
     roomId,
@@ -611,14 +614,25 @@ export function SessionTableSurface({
         {isCurrentDm ? (
           <div className="session-table__combat-toolbar">
             {combat === null ? (
-              <button
-                type="button"
-                className="button secondary compact"
-                disabled={combatPending}
-                onClick={() => void handleStartCombat()}
-              >
-                {copy.combatStart}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="button secondary compact"
+                  disabled={combatPending}
+                  onClick={() => void handleStartCombat()}
+                >
+                  {copy.combatStart}
+                </button>
+                <button
+                  type="button"
+                  className="button secondary compact"
+                  disabled={combatPending}
+                  onClick={() => setShowTacticalSetup(true)}
+                  data-testid="tactical-start-open"
+                >
+                  {copy.tacticalStartButton}
+                </button>
+              </>
             ) : (
               <button
                 type="button"
@@ -631,25 +645,58 @@ export function SessionTableSurface({
             )}
           </div>
         ) : null}
+        {isCurrentDm && showTacticalSetup && combat === null ? (
+          <TacticalSetupPanel
+            copy={copy}
+            locale={copy.locale}
+            roomId={roomId}
+            campaignId={campaignId}
+            sessionId={sessionId}
+            token={token}
+            onError={onError}
+            refresh={refresh}
+            onClose={() => setShowTacticalSetup(false)}
+          />
+        ) : null}
       </div>
 
       <div ref={layoutRef} className="session-table__layout" style={layoutStyle}>
         <section className="session-stage" aria-label={copy.mainStage}>
           <header><h2>{copy.mainStage}</h2></header>
           {combat ? (
-            <SessionCombatStage
-              combat={combat}
-              myEntryIds={derivedMyEntryIds}
-              copy={copy}
-              roomId={roomId}
-              campaignId={campaignId}
-              sessionId={sessionId}
-              token={token}
-              events={events}
-              isCurrentDm={isCurrentDm}
-              onError={onError}
-              refresh={refresh}
-            />
+            combat.mode === 'tactical' ? (
+              <TacticalStage
+                combat={combat}
+                myEntryIds={derivedMyEntryIds}
+                copy={copy}
+                locale={copy.locale}
+                roomId={roomId}
+                campaignId={campaignId}
+                sessionId={sessionId}
+                token={token}
+                isCurrentDm={isCurrentDm}
+                logEvents={combatLogEvents}
+                resolveEntryLabel={combatEntryLabel}
+                resolveContentName={resolveCombatContentName}
+                resolveContentField={resolveCombatContentField}
+                onError={onError}
+                refresh={refresh}
+              />
+            ) : (
+              <SessionCombatStage
+                combat={combat}
+                myEntryIds={derivedMyEntryIds}
+                copy={copy}
+                roomId={roomId}
+                campaignId={campaignId}
+                sessionId={sessionId}
+                token={token}
+                events={events}
+                isCurrentDm={isCurrentDm}
+                onError={onError}
+                refresh={refresh}
+              />
+            )
           ) : null}
           <div className="session-stage__canvas">
             {imageUrl ? <img src={imageUrl} alt={stage?.image_filename || copy.mainStage} /> : null}

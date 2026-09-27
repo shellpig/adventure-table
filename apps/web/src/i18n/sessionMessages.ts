@@ -54,11 +54,19 @@ export const P4E_SESSION_REQUEST_CODES = [
   'special_attack_not_found',
 ] as const
 
+export const P5F_SESSION_REQUEST_CODES = [
+  'battle_map_not_found',
+  'battle_map_revision_conflict',
+  'battle_map_invalid',
+  'battle_map_asset_invalid',
+] as const
+
 export const SESSION_REQUEST_CODES = [
   ...P2E_SESSION_REQUEST_CODES,
   ...P3B_SESSION_REQUEST_CODES,
   ...P3C_SESSION_REQUEST_CODES,
   ...P4E_SESSION_REQUEST_CODES,
+  ...P5F_SESSION_REQUEST_CODES,
 ] as const
 
 export type SessionRequestCode = (typeof SESSION_REQUEST_CODES)[number]
@@ -231,6 +239,22 @@ export const SESSION_REQUEST_CODE_MESSAGES: Record<SessionRequestCode, Record<Lo
   special_attack_not_found: {
     'zh-TW': '找不到這項特殊攻擊請求，請重新整理後再試。',
     en: 'This special attack request no longer exists. Refresh and try again.',
+  },
+  battle_map_not_found: {
+    'zh-TW': '找不到這張戰鬥地圖，請確認地圖是否已被刪除。',
+    en: 'This battle map could not be found. Confirm whether it was deleted.',
+  },
+  battle_map_revision_conflict: {
+    'zh-TW': '地圖已被他人修改，請重新載入地圖後再試，不要直接覆蓋。',
+    en: 'The map was modified by someone else. Reload the map and try again; do not overwrite.',
+  },
+  battle_map_invalid: {
+    'zh-TW': '地圖資料不合法，請檢查牆／門／地形的座標與尺寸。',
+    en: 'The map data is invalid. Check wall/door/terrain coordinates and dimensions.',
+  },
+  battle_map_asset_invalid: {
+    'zh-TW': '地圖圖片資源無效，請重新選擇圖片。',
+    en: 'The map image asset is invalid. Select the image again.',
   },
 }
 
