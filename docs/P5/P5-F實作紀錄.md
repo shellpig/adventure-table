@@ -5,9 +5,9 @@
 - **更新日期**：2026-09-28
 - **目標與邊界**：把 P5-A～E 已交付的 Tactical backend（board、movement、targeting、AoE、OA）接上 Human Tactical UI 與 AI MCP tool surface；Human／AI 共用同一 application service，不新增第二套遊戲邏輯。契約：`docs/P5/實作規格.md` §10；`docs/P5/開發設計方針.md` §10、§11、§14；`docs/P5/測試指南.md` §3、F.1～F.7。
 - **Branch**：`feat/p5f-tactical-combat-ui-ai-tools`（自 `main@fe75ffa9` 開出）
-- **最近已驗證 commit**：F1 完成（Muse F1／F1b／F1c＋指揮者修正，本 commit）
+- **最近已驗證 commit**：F2 完成（Muse F2／F2b＋指揮者修正）；vitest 831 passed、build 綠
 - **Worker**：Muse（thread `https://muse.ai/thread/3c177caa-543a-46dd-8438-94f54b07df80`，使用者 2026-09-28 指定）。prompt 存 `C:\_work\AI_Work\Tools\agy-runs\muse-p5f-<step>.prompt.txt`。關門（F4）由指揮者做。
-- **下一步**：F2 派工（frontend）
+- **下一步**：F3 派工（gameplay UI＋Playwright spec），含 F2 測試缺口
 - **阻礙／未審**：無
 - **本 Subphase 技術決策（契約未指定，指揮者拍板）**：
   1. **MCP tool 命名**沿用既有 `combat_` 前綴。全角色：`combat_get_board`（與 `GET .../board` 同一 audience projection）、`combat_preview_movement`、`combat_confirm_movement`、`combat_resume_movement`、`combat_check_target`（唯讀 range／reach／blocker 判定，重用 P5-C `validate_attack_target`／`validate_spell_target`，不寫狀態、不擲骰）、`combat_preview_aoe`（包既有 AoE preview service）。DM-only：`combat_start_tactical`、`combat_place_token`、`combat_reposition`、`combat_set_door_state`、`combat_cancel_pending_movement`；map 定義編輯（walls／doors／terrain objects）命名依 battle map 既有 route 語意取 `battle_map_` 前綴。名稱一經確定即列入 `_EXPECTED`，最終報告列出。
@@ -25,6 +25,6 @@
 | Step | 標題 | 狀態 | 依賴 | 紀錄 |
 |---|---|---|---|---|
 | F1 | Tactical MCP tools、tactical briefing、target check、DM wall visibility（backend，F.3～F.7 backend 面） | 完成 | — | [F1](P5-F_steps/F1.md) |
-| F2 | Battle map 編輯器、Tactical start／placement、Tactical Stage 骨架、camera、hidden rendering、雙語（F.2、F.7 frontend 面） | 待做 | F1 | [F2](P5-F_steps/F2.md) |
+| F2 | Battle map 編輯器、Tactical start／placement、Tactical Stage 骨架、camera、hidden rendering、雙語（F.2、F.7 frontend 面） | 完成 | F1 | [F2](P5-F_steps/F2.md) |
 | F3 | Player drag plan／movement、range feedback、AoE preview、OA／pending movement UI、DM reposition、Playwright spec（F.1、F.7） | 待做 | F2 | [F3](P5-F_steps/F3.md) |
 | F4 | 關門 gate、Docker E2E、closeout、合併 `main`（指揮者） | 待做 | F1～F3 | — |

@@ -14,7 +14,7 @@ import { BattleMapCanvas } from './BattleMapCanvas'
 import type { CanvasDoor, CanvasToken, CanvasWall } from './BattleMapCanvas'
 import { requestId } from './requestId'
 import type { SessionCopy } from './sessionCopy'
-import { combatantFor } from './sessionCombat'
+import { combatantFor, isCombatEvent } from './sessionCombat'
 import { useTacticalCamera } from './useTacticalCamera'
 
 type TacticalMapPanelProps = {
@@ -108,11 +108,12 @@ export function TacticalMapPanel({
   // bump combat.revision). Debounced to avoid storms.
   const lastEventSeqRef = useRef<number>(-1)
   useEffect(() => {
-    const relevant = events.filter(
+    const unseen = events.filter(
       (e) => e.seq > lastEventSeqRef.current,
     )
-    if (relevant.length === 0) return
-    lastEventSeqRef.current = Math.max(...relevant.map((e) => e.seq))
+    if (unseen.length === 0) return
+    lastEventSeqRef.current = Math.max(...unseen.map((e) => e.seq))
+    if (!unseen.some(isCombatEvent)) return
     if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current)
     reloadTimerRef.current = setTimeout(() => {
       void loadBoard()
