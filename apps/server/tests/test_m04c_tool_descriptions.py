@@ -18,6 +18,9 @@ PLAYER_ACTIVE = {
     "combat_roll_concentration", "combat_drop_concentration",
     "combat_respond_to_reaction", "combat_request_opportunity_attack",
     "combat_request_adjudication",
+    # P5-F F1b: all-role tactical tools (2026-09-28 revision).
+    "combat_get_board", "combat_preview_movement", "combat_confirm_movement",
+    "combat_resume_movement", "combat_check_target", "combat_preview_aoe",
     "get_campaign_context", "get_scene_context", "search_campaign_context", "get_world_entry",
 }
 # The DM catalog is one fixed set before and after start_session (2026-09-12
@@ -44,6 +47,14 @@ DM_CATALOG = {
     "combat_open_reaction_window", "combat_respond_to_reaction",
     "combat_request_opportunity_attack", "combat_request_adjudication",
     "combat_resolve_adjudication",
+    # P5-F F1b: tactical tools (2026-09-28 revision). battle_map_delete is
+    # intentionally absent — the delete path is fully removed.
+    "combat_get_board", "combat_preview_movement", "combat_confirm_movement",
+    "combat_resume_movement", "combat_check_target", "combat_preview_aoe",
+    "combat_start_tactical", "combat_place_token", "combat_reposition",
+    "combat_set_door_state", "combat_cancel_pending_movement",
+    "battle_map_create", "battle_map_get", "battle_map_list",
+    "battle_map_patch", "battle_map_replace_objects",
     "get_campaign_context", "get_scene_context", "search_campaign_context", "get_world_entry",
     "get_adventure_entry",
     "world_create_entry", "world_update_entry", "world_archive_entry",

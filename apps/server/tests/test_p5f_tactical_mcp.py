@@ -377,7 +377,6 @@ _DM_ONLY_BATTLE_MAP = {
     "battle_map_list",
     "battle_map_patch",
     "battle_map_replace_objects",
-    "battle_map_delete",
 }
 
 
@@ -683,8 +682,17 @@ def test_f6_tactical_briefing_covers_tool_order_and_both_languages() -> None:
         "structured",
     ):
         assert marker in en_zh
-    # The tactical loop ships EN and zh-TW in one text.
-    assert "移動" in en_zh or "行动" in en_zh
+    # The tactical loop ships EN and zh-TW in one text; assert exact zh-TW
+    # fragments from the tactical add-on, not a loose single-character match.
+    for fragment in (
+        "戰術補充：combat_preview_movement→combat_confirm_movement",
+        "暫停：combat_resume_movement",
+        "僅 DM：combat_cancel_pending_movement",
+        "攻擊／施法前 combat_check_target",
+        "AoE 前 combat_preview_aoe",
+        "只用 structured cells",
+    ):
+        assert fragment in en_zh, fragment
 
 
 def test_f6_active_tactical_combat_context_briefing_within_bounds() -> None:
@@ -755,8 +763,10 @@ def test_f7_battle_map_error_codes_bilingual() -> None:
     # permission_denied: a Player role may not call DM-only battle-map tools.
     denied = asyncio.run(
         call_tool(
-            facade, token=dm_token, auth=_auth_view("player"), name="battle_map_delete",
-            arguments={"map_id": str(uuid4())},
+            facade, token=dm_token, auth=_auth_view("player"), name="battle_map_create",
+            arguments={"payload": BattleMapCreate(
+                name="nope", source_kind="blank", width_cells=10, height_cells=10
+            ).model_dump(mode="json")},
         )
     )
     denied_error = denied["structuredContent"]["error"]
