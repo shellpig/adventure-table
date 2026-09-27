@@ -9,6 +9,7 @@ from sqlalchemy.engine import Connection, Engine
 
 from app.persistence.adventures.tables import adventure_entry_assets
 from app.persistence.battle_maps.tables import battle_maps
+from app.persistence.combat_boards.tables import combat_boards
 from app.persistence.room_assets.tables import room_assets
 
 
@@ -111,6 +112,9 @@ class RoomAssetRepository:
                             ),
                             exists().where(
                                 battle_maps.c.image_asset_id == asset_id
+                            ),
+                            exists().where(
+                                combat_boards.c.image_asset_id == asset_id
                             ),
                         )
                     )
