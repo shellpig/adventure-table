@@ -310,8 +310,6 @@ class CombatReactionRepository:
                             .where(combat_entries.c.id == UUID(str(mover_entry_id)))
                             .values(pending_movement_state=mover_pending, updated_at=now)
                         )
-                        event_payload["mover_entry_id"] = str(mover_entry_id)
-                        event_payload["mover_pending_revision"] = mover_pending["revision"]
             connection.execute(
                 update(combats)
                 .where(combats.c.id == combat_id)

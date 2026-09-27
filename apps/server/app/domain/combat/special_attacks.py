@@ -253,9 +253,10 @@ class CombatSpecialAttackService:
                 hostile_to_mover=bool(other.is_hostile) != bool(target.is_hostile),
                 size_rank=int(other_size),
             ))
+        start = GridCell(position.anchor_x, position.anchor_y)
         request = PathValidationRequest(
-            start=GridCell(position.anchor_x, position.anchor_y),
-            anchors=(destination,),
+            start=start,
+            anchors=(start, destination),
             footprint=target_footprint,
             mover_size_rank=int(target_size),
             width_cells=view.width_cells,

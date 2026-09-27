@@ -8,6 +8,7 @@ transaction.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -18,7 +19,6 @@ from app.domain.combat.board import (
     CombatBoardService,
     CombatBoardView,
 )
-from app.domain.combat.condition_modifiers import conditions_from_refs
 from app.domain.combat.effect_resolver import CONDITION_SEMANTICS
 from app.domain.combat.lifecycle import (
     CombatNotFoundError,
@@ -38,7 +38,6 @@ from app.domain.rooms.table_events import (
 )
 from app.domain.spatial import (
     BarrierSegment,
-    Footprint,
     GridCell,
     OpportunityCrossing,
     OpportunityReactor,
@@ -50,7 +49,6 @@ from app.domain.spatial import (
     detect_opportunity_crossings,
     footprint_for_size,
     footprint_straddles_barrier,
-    grid_distance,
     occupied_cells,
     validate_movement_path,
 )
@@ -66,6 +64,11 @@ from app.persistence.combat_boards.repository import (
     StoredCombatBoard,
     StoredCombatPosition,
 )
+
+
+# A dragged creature moves with its grappler and spends none of its own
+# movement; its path is validated for legality only.
+_DRAGGED_CREATURE_BUDGET_FEET = 1_000_000
 
 
 class CombatMovementInvalidError(RuntimeError):
@@ -332,12 +335,81 @@ class MovementService:
             monster_repository=self.combat_service.monster_repository,
             registry=self.combat_service.registry,
         )
-        # Size ranks: tiny=0, small=1, medium=2, large=3, huge=4, gargantuan=5
-        size_rank = {"tiny": 0, "small": 1, "medium": 2, "large": 3, "huge": 4, "gargantuan": 5}
-        mover_rank = size_rank.get(str(mover_size).lower(), 2)
-        target_rank = size_rank.get(str(target_size).lower(), 2)
-        drag_doubles_cost = (mover_rank - target_rank) < 2
+        # SizeCategory is an IntEnum ranked tiny=0 .. gargantuan=5.
+        drag_doubles_cost = int(mover_size) - int(target_size) < 2
         return target, drag_doubles_cost
+
+    def _validate_drag_path(
+        self,
+        *,
+        actor: TableActorContext,
+        combat: StoredCombat,
+        board: StoredCombatBoard,
+        mover: StoredCombatEntry,
+        drag_target: StoredCombatEntry,
+        mover_anchor: GridCell,
+        anchors: tuple[GridCell, ...],
+        moved_feet: int,
+        remaining_budget: int,
+        drag_doubles_cost: bool,
+    ) -> None:
+        """Reject a drag whose cost or dragged-creature path is illegal.
+
+        The dragged creature follows the mover's per-step delta; every step is
+        checked with the same path validator (bounds, blocked terrain, walls,
+        doors, creature space) under the caller's projection and full truth.
+        The dragged creature spends no movement of its own. Errors never name
+        hidden blockers.
+        """
+        if drag_doubles_cost and moved_feet * 2 > remaining_budget:
+            raise CombatMovementInvalidError("dragging doubles the cost beyond the remaining movement")
+        drag_position = self.board_repository.get_position(drag_target.id)
+        if drag_position is None:
+            raise CombatMovementInvalidError("Drag target has no board position")
+        dx = drag_position.anchor_x - mover_anchor.x
+        dy = drag_position.anchor_y - mover_anchor.y
+        drag_anchors = tuple(GridCell(anchor.x + dx, anchor.y + dy) for anchor in anchors)
+        projections = {actor.is_current_dm, True}
+        for is_dm in projections:
+            view = self.board_service._project_board(combat, board, is_dm=is_dm)
+            result = validate_movement_path(
+                self._validation_request(
+                    view=view, entry=drag_target,
+                    mover_anchor=GridCell(drag_position.anchor_x, drag_position.anchor_y),
+                    anchors=drag_anchors, budget_feet=_DRAGGED_CREATURE_BUDGET_FEET,
+                    diagonal_steps_used=0, exclude_entry_ids=frozenset({mover.id}),
+                )
+            )
+            if not result.valid:
+                raise CombatMovementInvalidError("the dragged creature's path is not legal")
+
+    @staticmethod
+    def _oa_windows(
+        actor: TableActorContext,
+        mover: StoredCombatEntry,
+        reactor_ids: tuple[UUID, ...],
+        hidden_reactor_ids: frozenset[UUID] | set[UUID],
+    ) -> tuple[ReactionWindow, ...]:
+        """One Server-confirmed OA window per visible reactor, in crossing order.
+
+        ``mover_entry_id`` in the safe payload lets reaction resolution drain
+        the mover's pending_window_ids.
+        """
+        windows: list[ReactionWindow] = []
+        for reactor_id in reactor_ids:
+            if reactor_id in hidden_reactor_ids:
+                continue
+            window = open_opportunity_attack_window(
+                window_id=f"oa-{uuid4()}",
+                entry_id=str(reactor_id),
+                source_entry_id=str(mover.id),
+                target_entry_id=str(mover.id),
+                dm_adjudicated=False,
+                tactical_geometry_confirmed=True,
+                session_ref=str(actor.session_id),
+            )
+            windows.append(replace(window, safe_payload={"mover_entry_id": str(mover.id)}))
+        return tuple(windows)
 
     def _opportunity_reactors(
         self,
@@ -434,6 +506,7 @@ class MovementService:
         anchors: tuple[GridCell, ...],
         budget_feet: int,
         diagonal_steps_used: int,
+        exclude_entry_ids: frozenset[UUID] = frozenset(),
     ) -> PathValidationRequest:
         footprint = self.board_service._entry_footprint(entry)
         size = resolve_entry_size(
@@ -460,7 +533,7 @@ class MovementService:
                 difficult_cells.add(cell)
         creatures: list[PathCreature] = []
         for position in view.positions:
-            if position.entry_id == entry.id:
+            if position.entry_id == entry.id or position.entry_id in exclude_entry_ids:
                 continue
             other = self.combat_service.repository.get_entry(position.entry_id)
             if other is None or other.status != "active":
@@ -838,10 +911,13 @@ class MovementService:
             drag_target, drag_doubles_cost = self._validate_drag_target(
                 entry, request.drag_entry_id
             )
+            self._validate_drag_path(
+                actor=actor, combat=combat, board=board, mover=entry,
+                drag_target=drag_target, mover_anchor=mover_anchor, anchors=anchors,
+                moved_feet=truth_result.used_feet, remaining_budget=remaining_budget,
+                drag_doubles_cost=drag_doubles_cost,
+            )
             drag_target_position = self.board_repository.get_position(drag_target.id)
-            if drag_target_position is None:
-                raise CombatMovementInvalidError("Drag target has no board position")
-            # Apply drag cost doubling.
             if drag_doubles_cost:
                 new_used = used_feet + (truth_result.used_feet * 2)
 
@@ -995,28 +1071,7 @@ class MovementService:
         new_diagonals = diagonal_steps_used + prefix_result.diagonal_steps
         hidden = entry.id in self.combat_service._hidden_entry_ids((entry,))
         # Open one window per visible reactor at this boundary.
-        windows: list[ReactionWindow] = []
-        for reactor_id in crossing.reactor_entry_ids:
-            if reactor_id in hidden_reactor_ids:
-                continue
-            window = open_opportunity_attack_window(
-                window_id=f"oa-{uuid4()}",
-                entry_id=str(reactor_id),
-                source_entry_id=str(entry.id),
-                target_entry_id=str(entry.id),
-                dm_adjudicated=False,
-                tactical_geometry_confirmed=True,
-            )
-            windows.append(ReactionWindow(
-                window_id=window.window_id, entry_id=window.entry_id,
-                kind=window.kind, reason=window.reason,
-                source_entry_id=window.source_entry_id,
-                eligible_entry_ids=(window.entry_id,),
-                target_entry_id=window.target_entry_id,
-                safe_payload={"mover_entry_id": str(entry.id)},
-                secret_payload=dict(window.secret_payload) if window.secret_payload else {},
-                session_ref=window.session_ref,
-            ))
+        windows = self._oa_windows(actor, entry, crossing.reactor_entry_ids, hidden_reactor_ids)
         pending_state: dict[str, Any] = {
             "version": 1,
             "command_id": str(uuid4()),
@@ -1035,6 +1090,8 @@ class MovementService:
         # P5-E E1b: drag target follows the mover in the same transaction.
         # Persist drag context in pending_state so resume can continue it.
         drag: MovementDrag | None = None
+        if drag_target is not None:
+            pending_state["drag_target_entry_id"] = str(drag_target.id)
         if drag_target is not None and drag_target_position is not None:
             dx = pause_anchor.x - mover_anchor.x
             dy = pause_anchor.y - mover_anchor.y
@@ -1045,7 +1102,6 @@ class MovementService:
                     anchor_x=drag_target_position.anchor_x + dx,
                     anchor_y=drag_target_position.anchor_y + dy,
                 )
-                pending_state["drag_target_entry_id"] = str(drag_target.id)
                 pending_state["drag_target_anchor"] = [
                     drag_target_position.anchor_x + dx,
                     drag_target_position.anchor_y + dy,
@@ -1224,6 +1280,28 @@ class MovementService:
                     subject_seat_id, execution_mode,
                 )
 
+        # A continued drag must still be legal: the grapple still holds, the
+        # dragged creature's remaining path is clear, and the doubled cost fits.
+        cost_multiplier = 1
+        resume_drag_id = pending.get("drag_target_entry_id")
+        if resume_drag_id:
+            try:
+                drag_target, drag_doubles_cost = self._validate_drag_target(
+                    entry, UUID(str(resume_drag_id))
+                )
+                self._validate_drag_path(
+                    actor=actor, combat=combat, board=board, mover=entry,
+                    drag_target=drag_target, mover_anchor=mover_anchor,
+                    anchors=remaining_anchors, moved_feet=truth_result.used_feet,
+                    remaining_budget=remaining_budget, drag_doubles_cost=drag_doubles_cost,
+                )
+            except CombatMovementInvalidError:
+                return self._resume_stop(
+                    actor, combat, board, entry, position, request,
+                    pending, subject_seat_id, execution_mode,
+                )
+            cost_multiplier = 2 if drag_doubles_cost else 1
+
         # E1b: OA detection on remaining path (can re-pause).
         # Skip reactors already asked at this boundary.
         mover_disengaged = bool(entry.disengaged)
@@ -1231,12 +1309,10 @@ class MovementService:
         new_windows: tuple = ()
         outcome = "resumed"
         final_anchor = truth_result.steps[-1].anchor if truth_result.steps else mover_anchor
-        new_used = committed_feet + truth_result.used_feet
+        new_used = committed_feet + truth_result.used_feet * cost_multiplier
         new_diagonals = committed_diagonals + truth_result.diagonal_steps
 
         if not mover_disengaged:
-            # E1b: Exclude drag target from reactors on resume.
-            resume_drag_id = pending.get("drag_target_entry_id")
             reactors, hidden_reactor_ids = self._opportunity_reactors(
                 combat, board, entry, mover_disengaged=False,
                 drag_target_id=UUID(str(resume_drag_id)) if resume_drag_id else None,
@@ -1277,25 +1353,13 @@ class MovementService:
                         diagonal_steps_used=committed_diagonals,
                     )
                 )
-                new_used = committed_feet + prefix_result.used_feet
+                new_used = committed_feet + prefix_result.used_feet * cost_multiplier
                 new_diagonals = committed_diagonals + prefix_result.diagonal_steps
                 final_anchor = pause_anchor
                 outcome = "paused"
-                # Build new windows.
-                windows_list = []
-                for reactor_id in crossing.reactor_entry_ids:
-                    if reactor_id in hidden_reactor_ids:
-                        continue
-                    window = open_opportunity_attack_window(
-                        window_id=f"oa-{uuid4()}",
-                        entry_id=str(reactor_id),
-                        source_entry_id=str(entry.id),
-                        target_entry_id=str(entry.id),
-                        dm_adjudicated=False,
-                        tactical_geometry_confirmed=True,
-                    )
-                    windows_list.append(window)
-                new_windows = tuple(windows_list)
+                new_windows = self._oa_windows(
+                    actor, entry, crossing.reactor_entry_ids, hidden_reactor_ids
+                )
                 # New pending state for re-pause.
                 new_pending_state = {
                     "version": 1,
@@ -1306,7 +1370,7 @@ class MovementService:
                     "pause_anchor_y": pause_anchor.y,
                     "committed_feet": new_used,
                     "diagonal_steps_used": new_diagonals,
-                    "pending_window_ids": [w.window_id for w in windows_list],
+                    "pending_window_ids": [w.window_id for w in new_windows],
                     "boundary_reactor_ids": [str(rid) for rid in crossing.reactor_entry_ids],
                     "asked_reactor_ids": list(asked_reactor_ids | {
                         str(rid) for rid in crossing.reactor_entry_ids
@@ -1408,12 +1472,12 @@ class MovementService:
             entry_id=entry_id, outcome=str(payload["outcome"]),
             anchor_x=int(payload["anchor_x"]), anchor_y=int(payload["anchor_y"]),
             used_feet=int(payload["used_feet"]),
-            remaining_feet=int(payload["remaining_feet"]),
+            remaining_feet=max(0, int(payload["budget_feet"]) - int(payload["used_feet"])),
             budget_feet=int(payload["budget_feet"]),
             diagonal_steps_used=int(payload["diagonal_steps_used"]),
             position_revision=int(payload["position_revision"]),
             board_revision=int(payload["board_revision"]),
-            pending_revision=int(payload.get("pending_revision", 0)),
+            pending_revision=int(payload.get("pending_revision") or 0),
             pending_window_ids=tuple(payload.get("pending_window_ids", ())),
             boundary_reactor_ids=tuple(
                 UUID(rid) for rid in payload.get("boundary_reactor_ids", ())

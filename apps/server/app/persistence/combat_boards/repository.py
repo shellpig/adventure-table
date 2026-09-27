@@ -871,6 +871,7 @@ class CombatBoardRepository:
                 "board_revision": expected_board_revision + 1,
                 "pending_revision": int(pending_movement_state.get("revision", 0)) if pending_movement_state else None,
                 "pending_window_ids": list(pending_movement_state.get("pending_window_ids", [])) if pending_movement_state else [],
+                "boundary_reactor_ids": list(pending_movement_state.get("boundary_reactor_ids", [])) if pending_movement_state else [],
             },
             idempotency_key=f"p5e-movement-resumed:{idempotency_key}" if idempotency_key else None,
             expected_actor_binding=binding, transaction_projection=projection,
