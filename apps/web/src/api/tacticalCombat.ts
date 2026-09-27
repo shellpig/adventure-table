@@ -134,3 +134,272 @@ export function updateBoardDoorState(
     body: JSON.stringify(body),
   })
 }
+
+// --- Movement (P5-B/E) ---
+
+export type MovementAnchor = { x: number; y: number }
+
+export type PreviewMovementInput = {
+  entry_id: string
+  path: MovementAnchor[]
+  drag_entry_id?: string | null
+}
+
+export type MovementStepView = {
+  anchor_x: number
+  anchor_y: number
+  cost_feet: number
+  difficult: boolean
+  warnings: string[]
+}
+
+export type PreviewMovementView = {
+  entry_id: string
+  valid: boolean
+  failure: string | null
+  steps: MovementStepView[]
+  used_feet: number
+  remaining_feet: number
+  budget_feet: number
+  diagonal_steps_used: number
+  position_revision: number
+  board_revision: number
+}
+
+export type ConfirmMovementInput = {
+  entry_id: string
+  path: MovementAnchor[]
+  expected_position_revision: number
+  expected_board_revision: number
+  idempotency_key?: string | null
+  drag_entry_id?: string | null
+}
+
+export type ConfirmMovementView = {
+  entry_id: string
+  outcome: 'committed' | 'interrupted' | 'paused'
+  anchor_x: number
+  anchor_y: number
+  used_feet: number
+  remaining_feet: number
+  budget_feet: number
+  diagonal_steps_used: number
+  position_revision: number
+  board_revision: number
+  pending_revision: number
+  pending_window_ids: string[]
+  boundary_reactor_ids: string[]
+}
+
+export type ResumeMovementInput = {
+  entry_id: string
+  expected_pending_revision: number
+  idempotency_key?: string | null
+}
+
+export type ResumeMovementView = {
+  entry_id: string
+  outcome: 'resumed' | 'paused' | 'stopped'
+  anchor_x: number
+  anchor_y: number
+  used_feet: number
+  remaining_feet: number
+  budget_feet: number
+  diagonal_steps_used: number
+  position_revision: number
+  board_revision: number
+  pending_revision: number
+  pending_window_ids: string[]
+  boundary_reactor_ids: string[]
+}
+
+export type CancelPendingMovementInput = {
+  entry_id: string
+  reason: string
+  idempotency_key?: string | null
+}
+
+export type CancelPendingMovementView = {
+  entry_id: string
+  cancelled: boolean
+  anchor_x: number
+  anchor_y: number
+  position_revision: number
+  board_revision: number
+}
+
+export type RepositionInput = {
+  entry_id: string
+  anchor_x: number
+  anchor_y: number
+  reason: string
+  expected_position_revision: number
+  idempotency_key?: string | null
+}
+
+export type RepositionView = {
+  entry_id: string
+  anchor_x: number
+  anchor_y: number
+  position_revision: number
+  board_revision: number
+}
+
+export function previewMovement(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: PreviewMovementInput,
+  token: string,
+): Promise<PreviewMovementView> {
+  return request(`${tacticalBase(roomId, campaignId, sessionId)}/board/movement/preview`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function confirmMovement(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: ConfirmMovementInput,
+  token: string,
+): Promise<ConfirmMovementView> {
+  return request(`${tacticalBase(roomId, campaignId, sessionId)}/board/movement/confirm`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function resumeMovement(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: ResumeMovementInput,
+  token: string,
+): Promise<ResumeMovementView> {
+  return request(`${tacticalBase(roomId, campaignId, sessionId)}/board/movement/resume`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function cancelPendingMovement(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: CancelPendingMovementInput,
+  token: string,
+): Promise<CancelPendingMovementView> {
+  return request(
+    `${tacticalBase(roomId, campaignId, sessionId)}/board/movement/cancel-pending`,
+    token,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
+  )
+}
+
+export function repositionCombatant(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: RepositionInput,
+  token: string,
+): Promise<RepositionView> {
+  return request(`${tacticalBase(roomId, campaignId, sessionId)}/board/reposition`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+// --- Target check (P5-C) ---
+
+export type TargetCheckInput = {
+  source_entry_id: string
+  target_entry_id: string
+  attack_source_ref?: string | null
+  spell_ref?: string | null
+}
+
+export type TargetCheckResult = {
+  source_entry_id: string
+  target_entry_id: string
+  kind: 'attack' | 'spell'
+  ref: string
+  legal: boolean
+  in_range: boolean
+  distance_feet: number | null
+  range_band: string
+  blocked: boolean
+  blocker_kind: string | null
+  requires_dm_adjudication: boolean
+  is_long_range: boolean
+  target_within_5ft: boolean
+}
+
+export function checkTarget(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: TargetCheckInput,
+  token: string,
+): Promise<TargetCheckResult> {
+  return request(`${tacticalBase(roomId, campaignId, sessionId)}/board/target-check`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+// --- AoE preview (P5-D) ---
+
+export type AoeTemplateInput = {
+  shape: 'circle' | 'square' | 'cone' | 'line'
+  size_feet: number
+  origin_x: number
+  origin_y: number
+  aim_x?: number | null
+  aim_y?: number | null
+}
+
+export type AoeCell = { x: number; y: number }
+
+export type AoePreviewCandidate = {
+  entry_id: string
+  display_name: string
+  subject_kind: string
+}
+
+export type AoeTemplateView = {
+  shape: string
+  size_feet: number
+  origin_x: number
+  origin_y: number
+  aim_x: number | null
+  aim_y: number | null
+  direction: string | null
+}
+
+export type AoeSpellPreviewView = {
+  combat_id: string
+  caster_entry_id: string
+  spell_ref: string
+  board_revision: number
+  template: AoeTemplateView
+  affected_cells: AoeCell[]
+  candidates: AoePreviewCandidate[]
+}
+
+export function previewAoeSpell(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  body: { caster_entry_id: string; spell_ref: string; template: AoeTemplateInput },
+  token: string,
+): Promise<AoeSpellPreviewView> {
+  return request(`${tacticalBase(roomId, campaignId, sessionId)}/spells/aoe/preview`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}

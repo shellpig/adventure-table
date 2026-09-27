@@ -63,6 +63,7 @@ const props = {
   campaignId: 'camp-1',
   sessionId: 'sess-1',
   token: 'token-123',
+  myEntryIds: ['entry-1'],
   events: [] as TableEvent[],
   onError: () => {},
   refresh: () => {},

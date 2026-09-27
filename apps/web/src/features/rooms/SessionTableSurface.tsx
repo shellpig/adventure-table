@@ -683,6 +683,7 @@ export function SessionTableSurface({
                   sessionId={sessionId}
                   token={token}
                   isCurrentDm={isCurrentDm}
+                  myEntryIds={derivedMyEntryIds}
                   events={events}
                   onError={onError}
                   refresh={refresh}

@@ -4,11 +4,22 @@ import { getBattleMap, type BattleMap } from '../../api/battleMaps'
 import type { CombatDetailView } from '../../api/combat'
 import type { TableEvent } from '../../api/sessions'
 import {
+  cancelPendingMovement,
+  checkTarget,
+  confirmMovement,
   getCombatBoard,
   placeCombatant,
+  previewAoeSpell,
+  previewMovement,
+  repositionCombatant,
+  resumeMovement,
   updateBoardDoorState,
+  type AoeSpellPreviewView,
   type BoardDoorView,
   type CombatBoardView,
+  type ConfirmMovementView,
+  type PreviewMovementView,
+  type TargetCheckResult,
 } from '../../api/tacticalCombat'
 import { BattleMapCanvas } from './BattleMapCanvas'
 import type { CanvasDoor, CanvasToken, CanvasWall } from './BattleMapCanvas'
@@ -25,6 +36,7 @@ type TacticalMapPanelProps = {
   sessionId: string
   token: string
   isCurrentDm: boolean
+  myEntryIds: string[]
   events: TableEvent[]
   onError: (cause: unknown) => void
   refresh: () => void
@@ -49,6 +61,7 @@ export function TacticalMapPanel({
   sessionId,
   token,
   isCurrentDm,
+  myEntryIds,
   events,
   onError,
   refresh,
@@ -62,6 +75,28 @@ export function TacticalMapPanel({
   const [placingEntryId, setPlacingEntryId] = useState<string | null>(null)
   const [placing, setPlacing] = useState(false)
   const [doorPending, setDoorPending] = useState(false)
+  // Movement draft (client-only until Confirm).
+  const [moveEntryId, setMoveEntryId] = useState<string | null>(null)
+  const [moveAnchors, setMoveAnchors] = useState<Array<{ x: number; y: number }>>([])
+  const [movePreview, setMovePreview] = useState<PreviewMovementView | null>(null)
+  const [moveBusy, setMoveBusy] = useState(false)
+  const [lastMoveOutcome, setLastMoveOutcome] = useState<ConfirmMovementView | null>(null)
+  // Pending (paused) movement from confirm outcome.
+  const [pausedMove, setPausedMove] = useState<{
+    entryId: string
+    pendingRevision: number
+  } | null>(null)
+  const [cancelReason, setCancelReason] = useState('')
+  // DM reposition mode (distinct from gameplay movement).
+  const [repositionMode, setRepositionMode] = useState(false)
+  const [repositionEntryId, setRepositionEntryId] = useState<string | null>(null)
+  const [repositionReason, setRepositionReason] = useState('')
+  const [repositionTarget, setRepositionTarget] = useState<{ x: number; y: number } | null>(null)
+  // AoE preview.
+  const [aoePreview, setAoePreview] = useState<AoeSpellPreviewView | null>(null)
+  const [aoeOrigin, setAoeOrigin] = useState<{ x: number; y: number } | null>(null)
+  // Range feedback for the currently selected target.
+  const [targetCheck, setTargetCheck] = useState<TargetCheckResult | null>(null)
   const boardWrapRef = useRef<HTMLDivElement | null>(null)
   const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const {
@@ -304,6 +339,243 @@ export function TacticalMapPanel({
     [board, selectedDoorId],
   )
 
+  // --- Movement draft (P5-F F3) ---
+  // The user can only move their own tokens (or DM can move any as proxy).
+  const canMoveEntry = useCallback(
+    (entryId: string) => isCurrentDm || myEntryIds.includes(entryId),
+    [isCurrentDm, myEntryIds],
+  )
+
+  const startMoveDraft = useCallback(
+    (entryId: string) => {
+      if (!canMoveEntry(entryId) || !board) return
+      const pos = board.positions.find((p) => p.entry_id === entryId)
+      if (!pos) return
+      setMoveEntryId(entryId)
+      setMoveAnchors([{ x: pos.anchor_x, y: pos.anchor_y }])
+      setMovePreview(null)
+      setLastMoveOutcome(null)
+    },
+    [canMoveEntry, board],
+  )
+
+  const addMoveAnchor = useCallback(
+    async (x: number, y: number) => {
+      if (!moveEntryId) return
+      setMoveAnchors((prev) => {
+        const last = prev[prev.length - 1]
+        if (last && last.x === x && last.y === y) return prev
+        const next = [...prev, { x, y }]
+        // Preview on each change (debounced by React batching; server is authority).
+        if (next.length >= 2) {
+          setMoveBusy(true)
+          previewMovement(
+            roomId,
+            campaignId,
+            sessionId,
+            { entry_id: moveEntryId, path: next },
+            token,
+          )
+            .then((view) => setMovePreview(view))
+            .catch(onError)
+            .finally(() => setMoveBusy(false))
+        }
+        return next
+      })
+    },
+    [moveEntryId, roomId, campaignId, sessionId, token, onError],
+  )
+
+  const clearMoveDraft = useCallback(() => {
+    setMoveEntryId(null)
+    setMoveAnchors([])
+    setMovePreview(null)
+  }, [])
+
+  const confirmMoveDraft = useCallback(async () => {
+    if (!moveEntryId || moveAnchors.length < 2 || !board || !movePreview) return
+    const pos = board.positions.find((p) => p.entry_id === moveEntryId)
+    if (!pos) return
+    setMoveBusy(true)
+    try {
+      const view = await confirmMovement(
+        roomId,
+        campaignId,
+        sessionId,
+        {
+          entry_id: moveEntryId,
+          path: moveAnchors,
+          expected_position_revision: pos.revision,
+          expected_board_revision: board.runtime_revision,
+          idempotency_key: requestId('move'),
+        },
+        token,
+      )
+      setLastMoveOutcome(view)
+      clearMoveDraft()
+      if (view.outcome === 'paused') {
+        setPausedMove({ entryId: view.entry_id, pendingRevision: view.pending_revision })
+      }
+      await loadBoard()
+      refresh()
+    } catch (cause) {
+      onError(cause)
+    } finally {
+      setMoveBusy(false)
+    }
+  }, [moveEntryId, moveAnchors, board, movePreview, roomId, campaignId, sessionId, token, clearMoveDraft, loadBoard, refresh, onError])
+
+  const handleResumeMove = useCallback(async () => {
+    if (!pausedMove) return
+    setMoveBusy(true)
+    try {
+      const view = await resumeMovement(
+        roomId,
+        campaignId,
+        sessionId,
+        {
+          entry_id: pausedMove.entryId,
+          expected_pending_revision: pausedMove.pendingRevision,
+          idempotency_key: requestId('resume'),
+        },
+        token,
+      )
+      if (view.outcome === 'resumed' || view.outcome === 'stopped') {
+        setPausedMove(null)
+      } else {
+        setPausedMove({ entryId: view.entry_id, pendingRevision: view.pending_revision })
+      }
+      await loadBoard()
+      refresh()
+    } catch (cause) {
+      onError(cause)
+    } finally {
+      setMoveBusy(false)
+    }
+  }, [pausedMove, roomId, campaignId, sessionId, token, loadBoard, refresh, onError])
+
+  const handleCancelPending = useCallback(async () => {
+    if (!pausedMove || !isCurrentDm || !cancelReason.trim()) return
+    setMoveBusy(true)
+    try {
+      await cancelPendingMovement(
+        roomId,
+        campaignId,
+        sessionId,
+        {
+          entry_id: pausedMove.entryId,
+          reason: cancelReason.trim(),
+          idempotency_key: requestId('cancel-pending'),
+        },
+        token,
+      )
+      setPausedMove(null)
+      setCancelReason('')
+      await loadBoard()
+      refresh()
+    } catch (cause) {
+      onError(cause)
+    } finally {
+      setMoveBusy(false)
+    }
+  }, [pausedMove, isCurrentDm, cancelReason, roomId, campaignId, sessionId, token, loadBoard, refresh, onError])
+
+  // --- DM reposition (distinct mode from gameplay movement) ---
+  const handleRepositionConfirm = useCallback(async () => {
+    if (!isCurrentDm || !repositionEntryId || !repositionTarget || !repositionReason.trim() || !board) return
+    const pos = board.positions.find((p) => p.entry_id === repositionEntryId)
+    if (!pos) return
+    setMoveBusy(true)
+    try {
+      await repositionCombatant(
+        roomId,
+        campaignId,
+        sessionId,
+        {
+          entry_id: repositionEntryId,
+          anchor_x: repositionTarget.x,
+          anchor_y: repositionTarget.y,
+          reason: repositionReason.trim(),
+          expected_position_revision: pos.revision,
+          idempotency_key: requestId('reposition'),
+        },
+        token,
+      )
+      setRepositionMode(false)
+      setRepositionEntryId(null)
+      setRepositionTarget(null)
+      setRepositionReason('')
+      await loadBoard()
+      refresh()
+    } catch (cause) {
+      onError(cause)
+    } finally {
+      setMoveBusy(false)
+    }
+  }, [isCurrentDm, repositionEntryId, repositionTarget, repositionReason, board, roomId, campaignId, sessionId, token, loadBoard, refresh, onError])
+
+  // --- Range / target feedback ---
+  const handleTargetCheck = useCallback(
+    async (sourceEntryId: string, targetEntryId: string, attackSourceRef?: string, spellRef?: string) => {
+      try {
+        const result = await checkTarget(
+          roomId,
+          campaignId,
+          sessionId,
+          {
+            source_entry_id: sourceEntryId,
+            target_entry_id: targetEntryId,
+            attack_source_ref: attackSourceRef ?? null,
+            spell_ref: spellRef ?? null,
+          },
+          token,
+        )
+        setTargetCheck(result)
+      } catch (cause) {
+        onError(cause)
+      }
+    },
+    [roomId, campaignId, sessionId, token, onError],
+  )
+
+  // --- AoE preview ---
+  const handleAoeMapClick = useCallback(
+    async (x: number, y: number, casterEntryId: string, spellRef: string, shape: 'circle' | 'square' | 'cone' | 'line', sizeFeet: number) => {
+      if (!aoeOrigin) {
+        setAoeOrigin({ x, y })
+        return
+      }
+      setMoveBusy(true)
+      try {
+        const view = await previewAoeSpell(
+          roomId,
+          campaignId,
+          sessionId,
+          {
+            caster_entry_id: casterEntryId,
+            spell_ref: spellRef,
+            template: {
+              shape,
+              size_feet: sizeFeet,
+              origin_x: aoeOrigin.x,
+              origin_y: aoeOrigin.y,
+              aim_x: shape === 'cone' || shape === 'line' ? x : null,
+              aim_y: shape === 'cone' || shape === 'line' ? y : null,
+            },
+          },
+          token,
+        )
+        setAoePreview(view)
+        setAoeOrigin(null)
+      } catch (cause) {
+        onError(cause)
+      } finally {
+        setMoveBusy(false)
+      }
+    },
+    [aoeOrigin, roomId, campaignId, sessionId, token, onError],
+  )
+
   // Touch handlers for pinch zoom.
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
@@ -403,7 +675,174 @@ export function TacticalMapPanel({
             {copy.tacticalToolToken}
           </button>
         ) : null}
+        {isCurrentDm ? (
+          <button
+            type="button"
+            className={`button secondary compact${repositionMode ? ' tactical-map-panel__token-mode--active' : ''}`}
+            data-testid="tactical-reposition-mode"
+            data-active={repositionMode ? 'true' : undefined}
+            onClick={() => {
+              setRepositionMode((v) => !v)
+              setRepositionEntryId(null)
+              setRepositionTarget(null)
+            }}
+          >
+            {copy.tacticalRepositionMode}
+          </button>
+        ) : null}
       </div>
+
+      {/* Movement draft panel */}
+      {moveEntryId ? (
+        <div className="tactical-map-panel__movement" data-testid="tactical-movement">
+          <h3>{copy.tacticalMoveHeading}</h3>
+          <p data-testid="tactical-move-draft-label">{copy.tacticalMoveDraft}</p>
+          {movePreview ? (
+            <dl>
+              <div>
+                <dt>{copy.tacticalMoveUsed}</dt>
+                <dd data-testid="tactical-move-used">{movePreview.used_feet} {copy.tacticalFeetUnit}</dd>
+              </div>
+              <div>
+                <dt>{copy.tacticalMoveRemaining}</dt>
+                <dd data-testid="tactical-move-remaining">{movePreview.remaining_feet} {copy.tacticalFeetUnit}</dd>
+              </div>
+              <div>
+                <dt>{copy.tacticalMoveBudget}</dt>
+                <dd>{movePreview.budget_feet} {copy.tacticalFeetUnit}</dd>
+              </div>
+            </dl>
+          ) : null}
+          {movePreview && !movePreview.valid && movePreview.failure ? (
+            <p data-testid="tactical-move-invalid">
+              {copy.tacticalMoveInvalid}: {movePreview.failure}
+            </p>
+          ) : null}
+          <div>
+            <button
+              type="button"
+              className="button primary compact"
+              data-testid="tactical-move-confirm"
+              disabled={!movePreview?.valid || moveBusy}
+              onClick={() => void confirmMoveDraft()}
+            >
+              {copy.tacticalMoveConfirm}
+            </button>
+            <button
+              type="button"
+              className="button secondary compact"
+              data-testid="tactical-move-cancel"
+              disabled={moveBusy}
+              onClick={clearMoveDraft}
+            >
+              {copy.tacticalMoveCancel}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Pending (paused) movement */}
+      {pausedMove ? (
+        <div className="tactical-map-panel__paused" data-testid="tactical-move-paused">
+          <h4>{copy.tacticalMovePendingHeading}</h4>
+          <p>{copy.tacticalMovePausedWaiting}</p>
+          <button
+            type="button"
+            className="button primary compact"
+            data-testid="tactical-move-resume"
+            disabled={moveBusy}
+            onClick={() => void handleResumeMove()}
+          >
+            {copy.tacticalMoveResume}
+          </button>
+          {isCurrentDm ? (
+            <div>
+              <label>
+                {copy.tacticalMoveCancelReasonLabel}
+                <input
+                  type="text"
+                  data-testid="tactical-move-cancel-reason"
+                  value={cancelReason}
+                  placeholder={copy.tacticalMoveCancelReasonPlaceholder}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="button secondary compact"
+                data-testid="tactical-move-cancel-pending"
+                disabled={moveBusy || !cancelReason.trim()}
+                onClick={() => void handleCancelPending()}
+              >
+                {copy.tacticalMoveCancelPending}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Last move outcome */}
+      {lastMoveOutcome && !pausedMove ? (
+        <p data-testid="tactical-move-outcome">
+          {lastMoveOutcome.outcome === 'committed'
+            ? copy.tacticalMoveOutcomeCommitted
+            : lastMoveOutcome.outcome === 'interrupted'
+              ? copy.tacticalMoveOutcomeInterrupted
+              : copy.tacticalMoveOutcomePaused}
+        </p>
+      ) : null}
+
+      {/* DM reposition mode */}
+      {repositionMode && isCurrentDm ? (
+        <div className="tactical-map-panel__reposition" data-testid="tactical-reposition">
+          <h3>{copy.tacticalRepositionHeading}</h3>
+          <p>{copy.tacticalRepositionHint}</p>
+          <label>
+            {copy.tacticalRepositionReasonLabel}
+            <input
+              type="text"
+              data-testid="tactical-reposition-reason"
+              value={repositionReason}
+              placeholder={copy.tacticalRepositionReasonPlaceholder}
+              onChange={(e) => setRepositionReason(e.target.value)}
+            />
+          </label>
+          {repositionTarget ? (
+            <p data-testid="tactical-reposition-target">
+              ({repositionTarget.x}, {repositionTarget.y})
+            </p>
+          ) : null}
+          <button
+            type="button"
+            className="button primary compact"
+            data-testid="tactical-reposition-confirm"
+            disabled={!repositionEntryId || !repositionTarget || !repositionReason.trim() || moveBusy}
+            onClick={() => void handleRepositionConfirm()}
+          >
+            {copy.tacticalRepositionConfirm}
+          </button>
+          {!repositionEntryId || !repositionTarget || !repositionReason.trim() ? (
+            <p>{copy.tacticalRepositionConfirmMissing}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Range feedback */}
+      {targetCheck ? (
+        <div className="tactical-map-panel__target-check" data-testid="tactical-target-check">
+          <h4>{copy.tacticalTargetCheckLabel}</h4>
+          <p data-testid="tactical-target-band">
+            {targetCheck.blocked
+              ? copy.tacticalTargetBlocked
+              : !targetCheck.in_range
+                ? copy.tacticalTargetOutOfRange
+                : targetCheck.is_long_range
+                  ? copy.tacticalTargetLongRange
+                  : copy.tacticalTargetInRange}
+            {targetCheck.distance_feet !== null ? ` (${targetCheck.distance_feet} ft)` : ''}
+          </p>
+        </div>
+      ) : null}
 
       <div
         ref={boardWrapRef}
@@ -438,10 +877,32 @@ export function TacticalMapPanel({
             camera={camera}
             isDm={isCurrentDm}
             selectedEntryId={selectedEntryId}
-            onCellClick={isCurrentDm && placingEntryId ? handleCellClick : undefined}
-            onTokenClick={(entryId) =>
-              setSelectedEntryId((prev) => (prev === entryId ? null : entryId))
+            onCellClick={
+              placingEntryId && isCurrentDm
+                ? handleCellClick
+                : moveEntryId
+                  ? (x, y) => void addMoveAnchor(x, y)
+                  : repositionMode && repositionEntryId
+                    ? (x, y) => setRepositionTarget({ x, y })
+                    : undefined
             }
+            onTokenClick={(entryId) => {
+              // DM reposition mode: select token to reposition.
+              if (repositionMode && isCurrentDm) {
+                setRepositionEntryId(entryId)
+                return
+              }
+              // Movement: click own token to start/continue draft.
+              if (canMoveEntry(entryId) && !placingEntryId) {
+                if (moveEntryId === entryId) {
+                  // Already moving this token; keep draft.
+                  return
+                }
+                startMoveDraft(entryId)
+                return
+              }
+              setSelectedEntryId((prev) => (prev === entryId ? null : entryId))
+            }}
             onDoorClick={handleDoorClick}
             onEmptyMouseDown={(x, y) => startPan(x, y)}
             onMouseMove={(x, y) => panBy(x, y)}
