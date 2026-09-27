@@ -225,3 +225,95 @@ def test_p5a_postgres_migration() -> None:
             assert row[0] == "p5a adventure"
     finally:
         engine.dispose()
+
+
+BOARD_TABLES = ("combat_boards", "combat_board_doors", "combat_positions")
+
+
+def test_p5a_postgres_board_tables_migration() -> None:
+    """0037 creates the combat board tables; downgrade drops them cleanly."""
+    _reset()
+    config = _config()
+    command.upgrade(config, P5A_PARENT)
+    assert POSTGRES_URL is not None
+    engine = create_engine(POSTGRES_URL)
+    try:
+        with engine.begin() as connection:
+            seeded = _seed_p6_snapshot(connection)
+            campaign_id = seeded["campaign_id"]
+            session_id = seeded["session_id"]
+
+        command.upgrade(config, "heads")
+        names = _table_names()
+        for table in BOARD_TABLES:
+            assert table in names
+
+        with engine.begin() as connection:
+            combat_id = uuid4()
+            connection.execute(
+                text(
+                    "INSERT INTO combats (id, campaign_id, started_session_id, mode, status) "
+                    "VALUES (:combat_id, :campaign_id, :session_id, 'tactical', 'initiative_pending')"
+                ),
+                {"combat_id": combat_id, "campaign_id": campaign_id, "session_id": session_id},
+            )
+            # Minimal frozen board row.
+            connection.execute(
+                text(
+                    "INSERT INTO combat_boards (combat_id, width_cells, height_cells, baseline, "
+                    "source_battle_map_revision, runtime_revision, created_at) "
+                    "VALUES (:combat_id, 20, 15, '{}', 1, 1, now())"
+                ),
+                {"combat_id": combat_id},
+            )
+            door_id = uuid4()
+            connection.execute(
+                text(
+                    "INSERT INTO combat_board_doors (combat_id, door_id, state, revealed, created_at) "
+                    "VALUES (:combat_id, :door_id, 'closed', false, now())"
+                ),
+                {"combat_id": combat_id, "door_id": door_id},
+            )
+            # Position rows need a combat entry; create a minimal monster entry.
+            monster_id = uuid4()
+            connection.execute(
+                text(
+                    "INSERT INTO monster_instances (id, campaign_id, name, rules_snapshot, current_hp, "
+                    "conditions, effects, combat_status, visibility, resources) "
+                    "VALUES (:monster_id, :campaign_id, 'Goblin', '{}', 7, '[]', '[]', 'active', 'public', '{}')"
+                ),
+                {"monster_id": monster_id, "campaign_id": campaign_id},
+            )
+            entry_id = uuid4()
+            connection.execute(
+                text(
+                    "INSERT INTO combat_entries (id, combat_id, subject_kind, monster_instance_id, "
+                    "display_name, status, ready_state, pending_reaction_state) "
+                    "VALUES (:entry_id, :combat_id, 'monster', :monster_id, 'Goblin', 'active', '{}', '{}')"
+                ),
+                {"entry_id": entry_id, "combat_id": combat_id, "monster_id": monster_id},
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO combat_positions (combat_entry_id, combat_id, anchor_x, anchor_y, "
+                    "footprint_width, footprint_height, revision) "
+                    "VALUES (:entry_id, :combat_id, 3, 4, 1, 1, 1)"
+                ),
+                {"entry_id": entry_id, "combat_id": combat_id},
+            )
+            # Cascade: deleting the combat removes board, doors, and positions.
+            connection.execute(
+                text("DELETE FROM combats WHERE id = :combat_id"),
+                {"combat_id": combat_id},
+            )
+            for table in BOARD_TABLES:
+                count = connection.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
+                assert count == 0, table
+
+        # Downgrade back to 0034 drops the board tables with the battle maps.
+        command.downgrade(config, P5A_PARENT)
+        names = _table_names()
+        for table in BOARD_TABLES + BATTLE_MAP_TABLES:
+            assert table not in names
+    finally:
+        engine.dispose()
