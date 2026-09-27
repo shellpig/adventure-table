@@ -27,6 +27,8 @@ from app.domain.combat.board import (
 )
 from app.domain.combat.lifecycle import CombatService, CombatView, StartTacticalCombatInput
 from app.domain.combat.movement import (
+    CancelPendingMovementInput,
+    CancelPendingMovementView,
     ConfirmMovementInput,
     ConfirmMovementView,
     MovementService,
@@ -34,6 +36,8 @@ from app.domain.combat.movement import (
     PreviewMovementView,
     RepositionInput,
     RepositionView,
+    ResumeMovementInput,
+    ResumeMovementView,
 )
 from app.domain.rooms.table_events import TableEventService
 
@@ -97,6 +101,46 @@ def confirm_movement(
 ) -> ConfirmMovementView:
     try:
         return service.confirm(
+            _actor_from_request(room_id, campaign_id, session_id, context, event_service),
+            payload.entry_id,
+            payload,
+        )
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
+@router.post("/board/movement/resume", response_model=ResumeMovementView)
+def resume_movement(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    payload: ResumeMovementInput,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: MovementService = Depends(get_movement_service),
+) -> ResumeMovementView:
+    try:
+        return service.resume(
+            _actor_from_request(room_id, campaign_id, session_id, context, event_service),
+            payload.entry_id,
+            payload,
+        )
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
+@router.post("/board/movement/cancel-pending", response_model=CancelPendingMovementView)
+def cancel_pending_movement(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    payload: CancelPendingMovementInput,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: MovementService = Depends(get_movement_service),
+) -> CancelPendingMovementView:
+    try:
+        return service.cancel_pending_movement(
             _actor_from_request(room_id, campaign_id, session_id, context, event_service),
             payload.entry_id,
             payload,

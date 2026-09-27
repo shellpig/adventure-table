@@ -98,6 +98,7 @@ class StoredCombatEntry:
     created_at: datetime
     updated_at: datetime
     dodging: bool = False
+    disengaged: bool = False
     movement_used_feet: int = 0
     movement_diagonal_steps_used: int = 0
     movement_budget_feet: int = 0
@@ -199,6 +200,7 @@ class CombatRepository:
             pending_reaction_state=dict(row["pending_reaction_state"] or {}),
             created_at=row["created_at"], updated_at=row["updated_at"],
             dodging=bool(row["dodging"]),
+            disengaged=bool(row["disengaged"]),
             movement_used_feet=int(row["movement_used_feet"]),
             movement_diagonal_steps_used=int(row["movement_diagonal_steps_used"]),
             movement_budget_feet=int(row["movement_budget_feet"]),
@@ -299,7 +301,7 @@ class CombatRepository:
             surprised=entry.surprised, action_available=True, bonus_action_available=True,
             reaction_available=not entry.surprised,
             attacks_allowed=max(1, int(entry.attacks_allowed)), attacks_used=0,
-            ready_state={}, pending_reaction_state={}, dodging=False,
+            ready_state={}, pending_reaction_state={}, dodging=False, disengaged=False,
         ))
 
     def create_quick_combat(self, *, binding: StoredTableActorBinding, entries: tuple[NewCombatEntry, ...], idempotency_key: str | None):
@@ -482,7 +484,7 @@ class CombatRepository:
                 connection.execute(update(combat_entries).where(combat_entries.c.id == target_id).values(
                     turn_order=index, action_available=True, bonus_action_available=True,
                     reaction_available=not bool(row["surprised"]), attacks_used=0,
-                    ready_state={}, pending_reaction_state={}, dodging=False,
+                    ready_state={}, pending_reaction_state={}, dodging=False, disengaged=False,
                     movement_used_feet=0, movement_diagonal_steps_used=0,
                     movement_budget_feet=0, pending_movement_state={},
                     updated_at=datetime.now().astimezone(),
@@ -529,6 +531,21 @@ class CombatRepository:
 
             current_row = rows[current_index]
             current_was_surprised = bool(current_row["surprised"])
+            # P5-E: a paused movement blocks the turn advance while any of its
+            # OA windows is still open (409, zero side effects). If the windows
+            # are all resolved, advancing abandons the pending movement.
+            current_pending = dict(current_row["pending_movement_state"] or {})
+            if current_pending:
+                if list(current_pending.get("pending_window_ids", [])):
+                    raise CombatStateConflictPersistenceError(
+                        "cannot advance turn while opportunity-attack windows are still open"
+                    )
+                connection.execute(update(combat_entries).where(
+                    combat_entries.c.id == current_row["id"]
+                ).values(
+                    pending_movement_state={},
+                    updated_at=datetime.now().astimezone(),
+                ))
             if current_was_surprised:
                 # 5e 2014 surprise ends when that creature's first turn ends. It
                 # can react immediately after that turn, even before round 1 ends.
@@ -549,7 +566,7 @@ class CombatRepository:
             connection.execute(update(combat_entries).where(combat_entries.c.id == next_entry_id).values(
                 action_available=True, bonus_action_available=True,
                 reaction_available=not next_surprised,
-                attacks_used=0, ready_state={}, pending_reaction_state={}, dodging=False,
+                attacks_used=0, ready_state={}, pending_reaction_state={}, dodging=False, disengaged=False,
                 movement_used_feet=0, movement_diagonal_steps_used=0,
                 movement_budget_feet=0, pending_movement_state={},
                 updated_at=datetime.now().astimezone(),
@@ -632,6 +649,8 @@ class CombatRepository:
                 values["ready_state"] = dict(payload)
             elif action_kind == "dodge":
                 values["dodging"] = True
+            elif action_kind == "disengage":
+                values["disengaged"] = True
             if action_kind == "dash" and dash_speed_feet is not None and combat["mode"] == "tactical":
                 # P5-B: Dash grants extra movement equal to the entry's speed. It
                 # stacks with (never replaces) the base budget, and does not
@@ -736,6 +755,7 @@ class CombatRepository:
                 ready_state={},
                 pending_reaction_state={},
                 dodging=False,
+                disengaged=False,
                 movement_used_feet=0,
                 movement_diagonal_steps_used=0,
                 movement_budget_feet=0,
@@ -816,7 +836,7 @@ class CombatRepository:
             connection.execute(update(combat_entries).where(combat_entries.c.combat_id == combat_id).values(
                 initiative_roll_request_id=None, initiative_roll_result_id=None, initiative_total=None,
                 turn_order=None, surprised=False, action_available=True, bonus_action_available=True,
-                reaction_available=True, attacks_used=0, ready_state={}, pending_reaction_state={}, dodging=False,
+                reaction_available=True, attacks_used=0, ready_state={}, pending_reaction_state={}, dodging=False, disengaged=False,
                 movement_used_feet=0, movement_diagonal_steps_used=0,
                 movement_budget_feet=0, pending_movement_state={},
                 updated_at=now,
