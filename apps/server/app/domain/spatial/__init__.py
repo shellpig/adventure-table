@@ -1,5 +1,18 @@
 """Shared spatial primitives: grid cells, footprints, occupancy checks, pathing."""
 
+from app.domain.spatial.aoe import (
+    AOE_LINE_WIDTH_FEET,
+    CONE_HALF_ANGLE,
+    AoeCombatant,
+    AoeShapeKind,
+    AoeTemplate,
+    SquareDirection,
+    affected_cells,
+    cell_in_template,
+    make_aoe_template,
+    normalize_area_of_effect,
+    resolve_aoe_candidates,
+)
 from app.domain.spatial.pathing import (
     FEET_PER_CELL,
     DistanceResult,
@@ -13,6 +26,7 @@ from app.domain.spatial.pathing import (
     grid_distance,
     step_cost,
     validate_movement_path,
+    vertex_cell_distance,
 )
 from app.domain.spatial.primitives import (
     BarrierSegment,
@@ -29,6 +43,11 @@ from app.domain.spatial.primitives import (
 )
 
 __all__ = [
+    "AOE_LINE_WIDTH_FEET",
+    "CONE_HALF_ANGLE",
+    "AoeCombatant",
+    "AoeShapeKind",
+    "AoeTemplate",
     "BarrierSegment",
     "DistanceResult",
     "FEET_PER_CELL",
@@ -40,8 +59,11 @@ __all__ = [
     "PathValidationRequest",
     "PathValidationResult",
     "SIZE_FOOTPRINT",
+    "SquareDirection",
+    "affected_cells",
     "can_occupy",
     "cell_distance",
+    "cell_in_template",
     "crosses_wall_or_closed_door",
     "footprint_for_size",
     "footprint_for_size_name",
@@ -49,7 +71,11 @@ __all__ = [
     "grid_distance",
     "intersects_blocked_cell",
     "is_inside_bounds",
+    "make_aoe_template",
+    "normalize_area_of_effect",
     "occupied_cells",
+    "resolve_aoe_candidates",
     "step_cost",
     "validate_movement_path",
+    "vertex_cell_distance",
 ]

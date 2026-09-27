@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any, Literal
 from uuid import UUID
 
@@ -31,6 +32,16 @@ from app.domain.rooms.table_events import (
     TableEventActorUnauthorizedError,
     TableEventService,
 )
+from app.domain.spatial.aoe import (
+    AoeCombatant,
+    AoeShapeKind,
+    AoeTemplate,
+    affected_cells,
+    make_aoe_template,
+    normalize_area_of_effect,
+    resolve_aoe_candidates,
+)
+from app.domain.spatial.primitives import Footprint, GridCell, occupied_cells
 from app.domain.spatial.targeting import (
     CombatTargetBlockedError,
     CombatTargetOutOfRangeError,
@@ -48,6 +59,7 @@ from app.persistence.combat.spells import (
     StoredAoeSpellAction,
     StoredSpellCastAction,
 )
+from app.persistence.combat_boards.repository import StoredCombatBoard
 
 
 class CastSpellInput(StrictModel):
@@ -62,6 +74,22 @@ class CastSpellInput(StrictModel):
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
 
 
+class AoeTemplateInput(StrictModel):
+    """Client-supplied AoE template for Tactical preview/proposal.
+
+    Shape kind and size are validated against the spell's canonical
+    ``data.area_of_effect``; the server never trusts them blindly.
+    """
+
+    shape: Literal["circle", "square", "cone", "line"]
+    size_feet: int = Field(ge=1, le=1000)
+    origin_x: int = Field(ge=0, le=200)
+    origin_y: int = Field(ge=0, le=200)
+    aim_x: float | None = None
+    aim_y: float | None = None
+    direction: Literal["ne", "nw", "se", "sw"] | None = None
+
+
 class ProposeAoeSpellInput(StrictModel):
     caster_entry_id: UUID
     spell_ref: str = Field(min_length=1, max_length=320)
@@ -69,6 +97,34 @@ class ProposeAoeSpellInput(StrictModel):
     profile_id: str | None = None
     proposed_target_ids: tuple[UUID, ...]
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+    # P5-D D1 tactical AoE: client-placed template plus the board revision the
+    # preview was computed against. Ignored by Quick AoE.
+    template: AoeTemplateInput | None = None
+    board_revision: int | None = Field(default=None, ge=1)
+
+
+class PreviewAoeSpellInput(StrictModel):
+    caster_entry_id: UUID
+    spell_ref: str = Field(min_length=1, max_length=320)
+    template: AoeTemplateInput
+
+
+@dataclass(frozen=True)
+class AoePreviewCandidate:
+    entry_id: UUID
+    display_name: str
+    subject_kind: str
+
+
+@dataclass(frozen=True)
+class AoeSpellPreview:
+    combat_id: UUID
+    caster_entry_id: UUID
+    spell_ref: str
+    board_revision: int
+    template: AoeTemplate
+    affected_cells: tuple[GridCell, ...]
+    candidates: tuple[AoePreviewCandidate, ...]
 
 
 class ResolveAoeSpellInput(StrictModel):
@@ -479,11 +535,160 @@ class CombatSpellService:
             resolution_result=resolution_dict,
         )
 
+    # ------------------------------------------------------------------
+    # P5-D D1 tactical AoE geometry
+
+    def _aoe_spell_shape(self, spell_ref: str) -> tuple[AoeShapeKind, int]:
+        """Canonical ``(shape kind, size in feet)`` from spell content.
+
+        Raises ``ValueError`` when the spell has no usable area of effect.
+        """
+        try:
+            spell_entry = self.registry.get(spell_ref)
+        except LookupError as exc:
+            raise CombatSpellNotFoundError(str(exc)) from exc
+        area = spell_entry.data.get("area_of_effect")
+        if not area:
+            raise ValueError(f"Spell '{spell_ref}' has no area of effect")
+        return normalize_area_of_effect(area)
+
+    def _tactical_template(self, spell_ref: str, raw: AoeTemplateInput) -> AoeTemplate:
+        """Validate a client template against the spell's canonical AoE."""
+        kind, size_feet = self._aoe_spell_shape(spell_ref)
+        if raw.shape != kind:
+            raise ValueError(
+                f"Template shape '{raw.shape}' does not match "
+                f"spell area of effect '{kind}'"
+            )
+        if raw.size_feet != size_feet:
+            raise ValueError(
+                f"Template size {raw.size_feet} ft does not match "
+                f"spell area of effect ({size_feet} ft)"
+            )
+        aim: tuple[float, float] | None = None
+        if raw.aim_x is not None and raw.aim_y is not None:
+            aim = (raw.aim_x, raw.aim_y)
+        return make_aoe_template(
+            kind,
+            size_feet,
+            origin_x=raw.origin_x,
+            origin_y=raw.origin_y,
+            aim=aim,
+            direction=raw.direction,
+        )
+
+    def _tactical_board(
+        self, actor: TableActorContext
+    ) -> tuple[CombatBoardService, StoredCombatBoard]:
+        """Active tactical board, or ``CombatStateConflictError``."""
+        board_service = self.board_service
+        if board_service is None:
+            raise CombatStateConflictError("Tactical AoE requires a combat board")
+        combat = self.combat_repository.get_active(actor.campaign_id)
+        if combat is None or combat.mode != "tactical":
+            raise CombatStateConflictError("Tactical AoE requires Tactical Combat")
+        board = board_service.board_repository.get_board(combat.id)
+        if board is None:
+            raise CombatStateConflictError("Tactical Combat has no board")
+        return board_service, board
+
+    def _tactical_candidate_ids(
+        self,
+        board_service: CombatBoardService,
+        board: StoredCombatBoard,
+        template: AoeTemplate,
+    ) -> tuple[str, ...]:
+        """Server-side candidate entry ids with full truth (hidden included)."""
+        combatants = tuple(
+            AoeCombatant(
+                entry_id=str(position.combat_entry_id),
+                cells=tuple(
+                    occupied_cells(
+                        position.anchor_x,
+                        position.anchor_y,
+                        Footprint(
+                            width=position.footprint_width,
+                            height=position.footprint_height,
+                        ),
+                    )
+                ),
+            )
+            for position in board_service.board_repository.list_positions(board.combat_id)
+        )
+        return resolve_aoe_candidates(
+            template,
+            combatants,
+            width_cells=board.width_cells,
+            height_cells=board.height_cells,
+        )
+
+    def preview_aoe(
+        self, actor: TableActorContext, input: PreviewAoeSpellInput
+    ) -> AoeSpellPreview:
+        """Stateless Tactical AoE preview: affected cells plus actor-visible candidates.
+
+        Hidden combatants are excluded from ``candidates`` for players; the DM
+        sees the full list. ``affected_cells`` is pure geometry and always
+        returned. No state is changed.
+        """
+        self.table_event_service.require_actor_current(actor)
+        caster_entry = self._active_entry(actor, input.caster_entry_id)
+        self.combat_service._authorize_entry(actor, caster_entry)
+        template = self._tactical_template(input.spell_ref, input.template)
+        board_service, board = self._tactical_board(actor)
+        board_view = board_service.get_board(actor)
+        combatants = tuple(
+            AoeCombatant(
+                entry_id=str(position.entry_id),
+                cells=tuple(
+                    occupied_cells(
+                        position.anchor_x,
+                        position.anchor_y,
+                        Footprint(
+                            width=position.footprint_width,
+                            height=position.footprint_height,
+                        ),
+                    )
+                ),
+            )
+            for position in board_view.positions
+        )
+        candidate_ids = resolve_aoe_candidates(
+            template,
+            combatants,
+            width_cells=board.width_cells,
+            height_cells=board.height_cells,
+        )
+        candidates: list[AoePreviewCandidate] = []
+        for raw_id in candidate_ids:
+            entry = self.combat_repository.get_entry(UUID(raw_id))
+            if entry is None:
+                continue
+            candidates.append(
+                AoePreviewCandidate(
+                    entry_id=entry.id,
+                    display_name=entry.display_name,
+                    subject_kind=entry.subject_kind,
+                )
+            )
+        return AoeSpellPreview(
+            combat_id=board.combat_id,
+            caster_entry_id=caster_entry.id,
+            spell_ref=input.spell_ref,
+            board_revision=board.runtime_revision,
+            template=template,
+            affected_cells=affected_cells(
+                template,
+                width_cells=board.width_cells,
+                height_cells=board.height_cells,
+            ),
+            candidates=tuple(candidates),
+        )
+
     def propose_aoe(self, actor: TableActorContext, input: ProposeAoeSpellInput) -> AoeSpellProposalView:
         self.table_event_service.require_actor_current(actor)
         caster_entry = self._active_entry(actor, input.caster_entry_id)
         subject_seat_id, execution_mode = self.combat_service._authorize_entry(actor, caster_entry)
-
         try:
             (
                 spell_level,
@@ -504,6 +709,55 @@ class CombatSpellService:
         except ValueError as exc:
             raise CombatSpellStateConflictError(str(exc)) from exc
 
+        # P5-D D1: Quick vs Tactical split. Quick keeps the legacy caller-
+        # supplied target list untouched; Tactical recomputes candidates from
+        # the template (character casters) or keeps DM adjudication (monsters).
+        proposed_target_ids = input.proposed_target_ids
+        expected_board_revision: int | None = None
+        tactical_payload: dict[str, object] | None = None
+        board_service = self.board_service
+        combat = self.combat_repository.get_active(actor.campaign_id)
+        board: StoredCombatBoard | None = None
+        if (
+            board_service is not None
+            and combat is not None
+            and combat.mode == "tactical"
+        ):
+            board = board_service.board_repository.get_board(combat.id)
+            if board is None:
+                raise CombatSpellStateConflictError("Tactical Combat has no board")
+        if board is not None and board_service is not None:
+            if caster_entry.subject_kind == "monster" and input.template is None:
+                # Monster AoE keeps DM adjudication; only the source is recorded.
+                tactical_payload = {"candidate_source": "dm_adjudicated"}
+            else:
+                if input.template is None or input.board_revision is None:
+                    raise ValueError(
+                        "Tactical AoE proposal requires a template and board_revision"
+                    )
+                template = self._tactical_template(input.spell_ref, input.template)
+                candidate_ids = self._tactical_candidate_ids(
+                    board_service, board, template
+                )
+                proposed_target_ids = tuple(UUID(raw) for raw in candidate_ids)
+                tactical_payload = {
+                    "board_revision": input.board_revision,
+                    "candidate_source": "geometry",
+                    "shape": {
+                        "kind": template.kind,
+                        "size_feet": template.size_feet,
+                        "origin": [template.origin_x, template.origin_y],
+                        "aim": (
+                            [template.aim_x, template.aim_y]
+                            if template.aim_x is not None
+                            and template.aim_y is not None
+                            else None
+                        ),
+                        "direction": template.direction,
+                    },
+                }
+                expected_board_revision = input.board_revision
+
         stored, _event = self.repository.propose_character_aoe(
             binding=actor_binding(actor),
             combat_id=caster_entry.combat_id,
@@ -517,11 +771,26 @@ class CombatSpellService:
             save_ability_ref=save_ability_ref,
             save_dc=save_dc,
             save_damage_mode=save_damage_mode,
-            proposed_target_ids=input.proposed_target_ids,
+            proposed_target_ids=proposed_target_ids,
             idempotency_key=input.idempotency_key,
+            expected_board_revision=expected_board_revision,
+            tactical=tactical_payload,
         )
         if self.table_event_service.notifier is not None:
             self.table_event_service.notifier.notify(actor.session_id)
+
+        # P5-D D1 secrecy: players never see hidden combatants in the proposal
+        # response; the DM gets the complete candidate list.
+        response_target_ids = tuple(
+            UUID(t) for t in stored.adjudication.proposed_target_ids
+        )
+        if not actor.is_current_dm:
+            hidden = self.combat_service._hidden_entry_ids(
+                tuple(self.combat_repository.list_entries(stored.combat_id))
+            )
+            response_target_ids = tuple(
+                entry_id for entry_id in response_target_ids if entry_id not in hidden
+            )
 
         return AoeSpellProposalView(
             action_id=stored.action_id,
@@ -529,7 +798,7 @@ class CombatSpellService:
             caster_entry_id=stored.caster_entry_id,
             spell_ref=stored.spell_ref,
             status=stored.status,
-            proposed_target_ids=tuple(UUID(t) for t in stored.adjudication.proposed_target_ids),
+            proposed_target_ids=response_target_ids,
         )
 
     def resolve_aoe(self, actor: TableActorContext, input: ResolveAoeSpellInput) -> AoeSpellResolutionView:
@@ -591,13 +860,17 @@ class CombatSpellService:
 
 
 __all__ = [
+    "AoePreviewCandidate",
+    "AoeSpellPreview",
     "AoeSpellProposalView",
     "AoeSpellResolutionView",
+    "AoeTemplateInput",
     "CastableSpellView",
     "CastSpellInput",
     "CombatSpellNotFoundError",
     "CombatSpellService",
     "CombatSpellStateConflictError",
+    "PreviewAoeSpellInput",
     "ProposeAoeSpellInput",
     "ResolveAoeSpellInput",
     "SpellCastView",

@@ -21,6 +21,7 @@ from app.domain.combat.aoe_adjudication import (
     propose_aoe,
     resolve_aoe_save_spell,
 )
+from app.domain.combat.board import CombatBoardStaleError
 from app.domain.combat.concentration_triggers import concentration_dc
 from app.domain.combat.effect_resolver import EffectSpec
 from app.domain.combat.projection import calculate_injury_level
@@ -56,6 +57,7 @@ from app.persistence.combat.resolution import (
     _death_values,
 )
 from app.persistence.combat.tables import combat_actions, combat_entries, combats, monster_instances
+from app.persistence.combat_boards.tables import combat_boards
 from app.persistence.rooms.p3c_runtime import roll_groups, roll_requests, roll_results
 from app.persistence.rooms.table_runtime import (
     StoredTableActorBinding,
@@ -256,8 +258,13 @@ class CombatSpellRepository:
         save_damage_mode: SaveDamageMode,
         proposed_target_ids: tuple[UUID, ...],
         idempotency_key: str | None,
+        expected_board_revision: int | None = None,
+        tactical: Mapping[str, object] | None = None,
     ) -> tuple[StoredAoeSpellAction, StoredTableEvent]:
-        if not proposed_target_ids:
+        # P5-D D1: the P4 "at least one target" gate applies to Quick AoE
+        # (client-supplied targets). A Tactical geometry recompute may
+        # honestly find zero candidates (e.g. fireball on empty ground).
+        if not proposed_target_ids and tactical is None:
             raise ValueError("AoE requires at least one proposed target")
         if len(proposed_target_ids) != len(set(proposed_target_ids)):
             raise ValueError("AoE proposed targets must be unique")
@@ -267,6 +274,8 @@ class CombatSpellRepository:
             command_id=str(action_id),
             acting_entry_id=str(caster_entry_id),
             target_ids=tuple(str(value) for value in proposed_target_ids),
+            # Tactical geometry may honestly find zero candidates.
+            allow_empty=tactical is not None,
         )
         payload = {
             "spell": {
@@ -280,6 +289,10 @@ class CombatSpellRepository:
             },
             "adjudication": adjudication.to_payload(),
         }
+        if tactical is not None:
+            # P5-D D1: tactical proposal metadata (board revision, template,
+            # candidate source). Quick AoE proposals never carry this key.
+            payload["tactical"] = dict(tactical)
 
         def projection(connection, event_id: UUID, _seq: int) -> None:
             combat = connection.execute(
@@ -292,6 +305,23 @@ class CombatSpellRepository:
             ).mappings().one_or_none()
             if combat is None or combat["status"] != "running":
                 raise CombatSpellStateConflictError("AoE requires a running Combat")
+            if expected_board_revision is not None:
+                # P5-D D1 stale gate, inside the proposal transaction so the
+                # check is atomic with the write (no TOCTOU). Zero side
+                # effects: raising here rolls back before anything is written.
+                board_revision = connection.execute(
+                    select(combat_boards.c.runtime_revision).where(
+                        combat_boards.c.combat_id == combat_id
+                    )
+                ).scalar_one_or_none()
+                if board_revision is None:
+                    raise CombatSpellStateConflictError(
+                        "Tactical AoE requires a combat board"
+                    )
+                if int(board_revision) != expected_board_revision:
+                    raise CombatBoardStaleError(
+                        "Combat board changed; refresh the preview and resend"
+                    )
             caster = self._lock_entry(
                 connection,
                 combat_id=combat_id,
@@ -338,6 +368,9 @@ class CombatSpellRepository:
                 "spell_ref": spell_ref,
                 "proposed_target_ids": [str(value) for value in proposed_target_ids],
                 "status": "dm_adjudication_required",
+                # P5-D D1: tactical geometry metadata (no entry ids); omitted
+                # for Quick AoE so its event payload stays byte-identical.
+                **({"tactical": tactical} if tactical is not None else {}),
             }
             connection.execute(
                 update(session_events)
@@ -395,8 +428,11 @@ class CombatSpellRepository:
     ) -> tuple[StoredAoeSpellAction, StoredTableEvent]:
         if roll_source not in {"server", "physical"}:
             raise ValueError("AoE formal save roll_source must be server or physical")
-        if not confirmed_target_ids or len(confirmed_target_ids) != len(set(confirmed_target_ids)):
-            raise ValueError("confirmed AoE targets must be a non-empty unique set")
+        # The non-empty gate lives inside the projection: Tactical proposals
+        # (tactical metadata present) may resolve an honestly empty candidate
+        # set, while Quick AoE keeps the P4 non-empty contract.
+        if len(set(confirmed_target_ids)) != len(confirmed_target_ids):
+            raise ValueError("confirmed AoE targets must be a unique set")
         existing = self.get_aoe_action(session_id=binding.session_id, action_id=action_id)
         if existing is None:
             raise CombatSpellNotFoundError(str(action_id))
@@ -445,9 +481,17 @@ class CombatSpellRepository:
             payload = dict(action["payload"] or {})
             spell = dict(payload["spell"])
             proposed = AoeAdjudication.from_payload(dict(payload["adjudication"]))
+            # P5-D D1: Quick AoE keeps the P4 non-empty confirm contract;
+            # Tactical may resolve an honestly empty candidate set.
+            if not confirmed_target_ids and not payload.get("tactical"):
+                raise ValueError("confirmed AoE targets must be a non-empty unique set")
             confirmed = confirm_aoe(
                 proposed,
                 confirmed_target_ids=tuple(str(value) for value in confirmed_target_ids),
+                # P5-D D1: only Tactical proposals (which carry tactical
+                # metadata) allow the DM to add/remove targets at confirm
+                # time; Quick AoE keeps the P4 subset-only contract.
+                allow_reselection=bool(payload.get("tactical")),
             )
             if set(save_modifiers) != set(confirmed_target_ids):
                 raise ValueError("save modifiers must exactly match confirmed AoE targets")
@@ -780,8 +824,13 @@ class CombatSpellRepository:
                 "concentration_checks": concentration_payloads,
                 "domain_events": list(resolution.events),
             }
-            first_target = confirmed_target_ids[0]
-            first_request_id, first_result_id = roll_ids[first_target]
+            first_target = confirmed_target_ids[0] if confirmed_target_ids else None
+            if first_target is None:
+                # Tactical AoE may resolve an empty candidate set; the action
+                # then references no save roll pair.
+                first_request_id = first_result_id = None
+            else:
+                first_request_id, first_result_id = roll_ids[first_target]
             payload["adjudication"] = resolution.adjudication.to_payload()
             connection.execute(
                 update(combat_actions)

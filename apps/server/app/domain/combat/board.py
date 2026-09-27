@@ -42,6 +42,14 @@ class CombatPlacementInvalidError(RuntimeError):
     """A placement or door update the board state rejects (HTTP 409 combat_placement_invalid)."""
 
 
+class CombatBoardStaleError(RuntimeError):
+    """Board runtime_revision changed under a Tactical request (HTTP 409 combat_board_stale).
+
+    Callers must re-read the board (preview) and resend with the fresh revision;
+    the stale request itself has no side effects.
+    """
+
+
 class CombatBoardImageNotFoundError(LookupError):
     pass
 
@@ -492,6 +500,7 @@ __all__ = [
     "BoardWallView",
     "CombatBoardImageNotFoundError",
     "CombatBoardService",
+    "CombatBoardStaleError",
     "CombatBoardView",
     "CombatPlacementInvalidError",
     "PlaceCombatantInput",

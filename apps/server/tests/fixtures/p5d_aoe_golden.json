@@ -1,0 +1,676 @@
+{
+ "version": 1,
+ "description": "P5-D D1 AoE geometry golden fixture. Each case records the exact affected cells computed by app.domain.spatial.aoe for a fixed template on a 30x20 board. Boundaries are all inclusive (<=). Reused by the P5-F renderer tests.",
+ "cases": [
+  {
+   "name": "circle_even_radius_boundary",
+   "shape": {
+    "kind": "circle",
+    "size_feet": 20,
+    "origin": [
+     10,
+     10
+    ],
+    "aim": null,
+    "direction": null
+   },
+   "board": {
+    "width_cells": 30,
+    "height_cells": 20
+   },
+   "affected_cells": [
+    [
+     9,
+     6
+    ],
+    [
+     10,
+     6
+    ],
+    [
+     7,
+     7
+    ],
+    [
+     8,
+     7
+    ],
+    [
+     9,
+     7
+    ],
+    [
+     10,
+     7
+    ],
+    [
+     11,
+     7
+    ],
+    [
+     12,
+     7
+    ],
+    [
+     7,
+     8
+    ],
+    [
+     8,
+     8
+    ],
+    [
+     9,
+     8
+    ],
+    [
+     10,
+     8
+    ],
+    [
+     11,
+     8
+    ],
+    [
+     12,
+     8
+    ],
+    [
+     6,
+     9
+    ],
+    [
+     7,
+     9
+    ],
+    [
+     8,
+     9
+    ],
+    [
+     9,
+     9
+    ],
+    [
+     10,
+     9
+    ],
+    [
+     11,
+     9
+    ],
+    [
+     12,
+     9
+    ],
+    [
+     13,
+     9
+    ],
+    [
+     6,
+     10
+    ],
+    [
+     7,
+     10
+    ],
+    [
+     8,
+     10
+    ],
+    [
+     9,
+     10
+    ],
+    [
+     10,
+     10
+    ],
+    [
+     11,
+     10
+    ],
+    [
+     12,
+     10
+    ],
+    [
+     13,
+     10
+    ],
+    [
+     7,
+     11
+    ],
+    [
+     8,
+     11
+    ],
+    [
+     9,
+     11
+    ],
+    [
+     10,
+     11
+    ],
+    [
+     11,
+     11
+    ],
+    [
+     12,
+     11
+    ],
+    [
+     7,
+     12
+    ],
+    [
+     8,
+     12
+    ],
+    [
+     9,
+     12
+    ],
+    [
+     10,
+     12
+    ],
+    [
+     11,
+     12
+    ],
+    [
+     12,
+     12
+    ],
+    [
+     9,
+     13
+    ],
+    [
+     10,
+     13
+    ]
+   ]
+  },
+  {
+   "name": "circle_odd_radius_boundary",
+   "shape": {
+    "kind": "circle",
+    "size_feet": 15,
+    "origin": [
+     10,
+     10
+    ],
+    "aim": null,
+    "direction": null
+   },
+   "board": {
+    "width_cells": 30,
+    "height_cells": 20
+   },
+   "affected_cells": [
+    [
+     9,
+     7
+    ],
+    [
+     10,
+     7
+    ],
+    [
+     8,
+     8
+    ],
+    [
+     9,
+     8
+    ],
+    [
+     10,
+     8
+    ],
+    [
+     11,
+     8
+    ],
+    [
+     7,
+     9
+    ],
+    [
+     8,
+     9
+    ],
+    [
+     9,
+     9
+    ],
+    [
+     10,
+     9
+    ],
+    [
+     11,
+     9
+    ],
+    [
+     12,
+     9
+    ],
+    [
+     7,
+     10
+    ],
+    [
+     8,
+     10
+    ],
+    [
+     9,
+     10
+    ],
+    [
+     10,
+     10
+    ],
+    [
+     11,
+     10
+    ],
+    [
+     12,
+     10
+    ],
+    [
+     8,
+     11
+    ],
+    [
+     9,
+     11
+    ],
+    [
+     10,
+     11
+    ],
+    [
+     11,
+     11
+    ],
+    [
+     9,
+     12
+    ],
+    [
+     10,
+     12
+    ]
+   ]
+  },
+  {
+   "name": "square_odd_side",
+   "shape": {
+    "kind": "square",
+    "size_feet": 15,
+    "origin": [
+     5,
+     15
+    ],
+    "aim": null,
+    "direction": "ne"
+   },
+   "board": {
+    "width_cells": 30,
+    "height_cells": 20
+   },
+   "affected_cells": [
+    [
+     5,
+     12
+    ],
+    [
+     6,
+     12
+    ],
+    [
+     7,
+     12
+    ],
+    [
+     5,
+     13
+    ],
+    [
+     6,
+     13
+    ],
+    [
+     7,
+     13
+    ],
+    [
+     5,
+     14
+    ],
+    [
+     6,
+     14
+    ],
+    [
+     7,
+     14
+    ]
+   ]
+  },
+  {
+   "name": "square_even_side",
+   "shape": {
+    "kind": "square",
+    "size_feet": 10,
+    "origin": [
+     0,
+     10
+    ],
+    "aim": null,
+    "direction": "se"
+   },
+   "board": {
+    "width_cells": 30,
+    "height_cells": 20
+   },
+   "affected_cells": [
+    [
+     0,
+     10
+    ],
+    [
+     1,
+     10
+    ],
+    [
+     0,
+     11
+    ],
+    [
+     1,
+     11
+    ]
+   ]
+  },
+  {
+   "name": "cone_odd_wedge",
+   "shape": {
+    "kind": "cone",
+    "size_feet": 15,
+    "origin": [
+     5,
+     5
+    ],
+    "aim": [
+     6,
+     5
+    ],
+    "direction": null
+   },
+   "board": {
+    "width_cells": 30,
+    "height_cells": 20
+   },
+   "affected_cells": [
+    [
+     6,
+     4
+    ],
+    [
+     7,
+     4
+    ],
+    [
+     6,
+     5
+    ],
+    [
+     7,
+     5
+    ]
+   ]
+  },
+  {
+   "name": "cone_diagonal_aim",
+   "shape": {
+    "kind": "cone",
+    "size_feet": 20,
+    "origin": [
+     5,
+     5
+    ],
+    "aim": [
+     6,
+     6
+    ],
+    "direction": null
+   },
+   "board": {
+    "width_cells": 30,
+    "height_cells": 20
+   },
+   "affected_cells": [
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     5
+    ],
+    [
+     5,
+     6
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     6
+    ],
+    [
+     6,
+     7
+    ],
+    [
+     7,
+     7
+    ]
+   ]
+  },
+  {
+   "name": "line_even_half_width_boundary",
+   "shape": {
+    "kind": "line",
+    "size_feet": 100,
+    "origin": [
+     5,
+     5
+    ],
+    "aim": [
+     6,
+     5
+    ],
+    "direction": null
+   },
+   "board": {
+    "width_cells": 30,
+    "height_cells": 20
+   },
+   "affected_cells": [
+    [
+     5,
+     4
+    ],
+    [
+     6,
+     4
+    ],
+    [
+     7,
+     4
+    ],
+    [
+     8,
+     4
+    ],
+    [
+     9,
+     4
+    ],
+    [
+     10,
+     4
+    ],
+    [
+     11,
+     4
+    ],
+    [
+     12,
+     4
+    ],
+    [
+     13,
+     4
+    ],
+    [
+     14,
+     4
+    ],
+    [
+     15,
+     4
+    ],
+    [
+     16,
+     4
+    ],
+    [
+     17,
+     4
+    ],
+    [
+     18,
+     4
+    ],
+    [
+     19,
+     4
+    ],
+    [
+     20,
+     4
+    ],
+    [
+     21,
+     4
+    ],
+    [
+     22,
+     4
+    ],
+    [
+     23,
+     4
+    ],
+    [
+     24,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     5
+    ],
+    [
+     7,
+     5
+    ],
+    [
+     8,
+     5
+    ],
+    [
+     9,
+     5
+    ],
+    [
+     10,
+     5
+    ],
+    [
+     11,
+     5
+    ],
+    [
+     12,
+     5
+    ],
+    [
+     13,
+     5
+    ],
+    [
+     14,
+     5
+    ],
+    [
+     15,
+     5
+    ],
+    [
+     16,
+     5
+    ],
+    [
+     17,
+     5
+    ],
+    [
+     18,
+     5
+    ],
+    [
+     19,
+     5
+    ],
+    [
+     20,
+     5
+    ],
+    [
+     21,
+     5
+    ],
+    [
+     22,
+     5
+    ],
+    [
+     23,
+     5
+    ],
+    [
+     24,
+     5
+    ]
+   ]
+  }
+ ]
+}

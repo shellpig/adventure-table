@@ -7,6 +7,7 @@ diagonal/footprint implementation. One cell is always 5 ft (spec 4.1).
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 from app.domain.spatial.primitives import (
@@ -49,6 +50,23 @@ def cell_distance(from_cell: GridCell, to_cell: GridCell) -> DistanceResult:
     dy = abs(from_cell.y - to_cell.y)
     diagonals = min(dx, dy)
     orthogonal = max(dx, dy) - diagonals
+    return DistanceResult(
+        feet=orthogonal * FEET_PER_CELL + _alternating_diagonal_cost(diagonals),
+        diagonal_steps=diagonals,
+    )
+
+
+def vertex_cell_distance(vertex: tuple[int, int], cell: GridCell) -> DistanceResult:
+    """5/10-alternating distance from an integer grid vertex to a cell center.
+
+    The axial step counts are ``ceil(|delta|)`` of the vertex-to-center offsets,
+    then the shared 5/10 alternating rule applies (P5-D D1 AoE geometry).
+    """
+    ox, oy = vertex
+    steps_x = math.ceil(abs((cell.x + 0.5) - ox))
+    steps_y = math.ceil(abs((cell.y + 0.5) - oy))
+    diagonals = min(steps_x, steps_y)
+    orthogonal = max(steps_x, steps_y) - diagonals
     return DistanceResult(
         feet=orthogonal * FEET_PER_CELL + _alternating_diagonal_cost(diagonals),
         diagonal_steps=diagonals,
