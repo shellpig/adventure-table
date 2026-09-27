@@ -43,6 +43,8 @@ from app.persistence.adventures.tables import (
     adventure_entries,
     adventure_entry_assets,
 )
+from app.persistence.battle_maps.tables import battle_maps
+from app.persistence.combat_boards.tables import combat_boards
 from app.persistence.room_assets.repository import RoomAssetRepository
 from app.persistence.room_assets.storage import FilesystemAssetStorage
 from app.persistence.room_assets.tables import room_assets
@@ -55,6 +57,8 @@ TABLES_TO_CREATE = [
     adventure_entries,
     adventure_entry_assets,
     room_assets,
+    battle_maps,
+    combat_boards,
     adventure_imports,
     adventure_import_sources,
     adventure_import_drafts,

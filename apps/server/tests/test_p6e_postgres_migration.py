@@ -183,6 +183,7 @@ def test_p6e_imports_status_and_sources_kind_checks() -> None:
                         "id, import_id, source_kind, normalized_text, metadata_json, sha256"
                         ") VALUES ("
                         ":id, :import_id, 'bad_kind', 'Some text', '{}', 'sha-2'"
+                        ")"
                     ),
                     {"id": uuid4(), "import_id": import_id},
                 )

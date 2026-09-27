@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import UUID
 
 from fastapi import Request
 
@@ -11,11 +12,13 @@ from app.config import settings
 from app.domain.adventure_imports.service import AdventureImportService
 from app.domain.adventures.attachments import CampaignAdventureService
 from app.domain.adventures.service import AdventureService
+from app.domain.battle_maps.service import BattleMapService
 from app.domain.campaign_runtime.service import CampaignRuntimeService
 from app.domain.campaign_runtime.stage import CampaignStageBridgeService
 from app.domain.combat.adjudication_service import CombatAdjudicationService
 from app.domain.combat.attack_definitions import AttackDefinitionResolver
 from app.domain.combat.attacks import CombatAttackService
+from app.domain.combat.board import CombatBoardService
 from app.domain.combat.concentration import CombatConcentrationService
 from app.domain.combat.core_rolls import CombatCoreRollService
 from app.domain.combat.initiative import CombatInitiativeService
@@ -45,6 +48,7 @@ from app.persistence.adventures.repository import (
     AdventureRepository,
     CampaignAdventureLinkRepository,
 )
+from app.persistence.battle_maps.repository import BattleMapRepository
 from app.persistence.campaign_runtime.repository import CampaignRuntimeRepository
 from app.persistence.combat.adjudication import CombatAdjudicationRepository
 from app.persistence.combat.attacks import CombatAttackRepository
@@ -54,6 +58,7 @@ from app.persistence.combat.initiative import CombatInitiativeRepository
 from app.persistence.combat.lifecycle import CombatRepository
 from app.persistence.combat.order import CombatOrderRepository
 from app.persistence.combat.reactions import CombatReactionRepository
+from app.persistence.combat_boards.repository import CombatBoardRepository
 from app.persistence.combat.repository import MonsterRepository
 from app.persistence.combat.resolution import CombatResolutionRepository
 from app.persistence.combat.special_attacks import SpecialAttackRepository
@@ -162,6 +167,21 @@ def get_adventure_service(request: Request) -> AdventureService:
     return service
 
 
+def get_battle_map_service(request: Request) -> BattleMapService:
+    # Starlette State has no membership test; the AttributeError is the "not built yet" signal.
+    try:
+        return request.app.state.battle_map_service
+    except AttributeError:
+        pass
+    engine = get_database_engine(request)
+    service = BattleMapService(
+        BattleMapRepository(engine),
+        RoomAssetRepository(engine),
+    )
+    request.app.state.battle_map_service = service
+    return service
+
+
 def get_campaign_adventure_service(request: Request) -> CampaignAdventureService:
     # Starlette State has no membership test; the AttributeError is the "not built yet" signal.
     try:
@@ -230,7 +250,32 @@ def get_table_event_notifier(request: Request) -> ProcessLocalTableEventNotifier
 def get_table_event_service(request: Request) -> TableEventService:
     service = getattr(request.app.state, "table_event_service", None)
     if service is None:
-        service = TableEventService(TableEventRepository(get_database_engine(request)), get_table_event_notifier(request))
+        engine = get_database_engine(request)
+        event_repository = TableEventRepository(engine)
+        combat_repository = CombatRepository(engine, event_repository)
+        monster_repository = MonsterRepository(engine)
+
+        def hidden_combat_entry_ids(campaign_id: UUID) -> frozenset[str]:
+            # P5-A B6: hidden Monster combatants must never leak to Players
+            # through event payloads (list / wait / resume / MCP).
+            combat = combat_repository.get_active(campaign_id)
+            if combat is None:
+                return frozenset()
+            hidden: set[str] = set()
+            for entry in combat_repository.list_entries(combat.id):
+                if entry.subject_kind != "monster" or entry.monster_instance_id is None:
+                    continue
+                instance = monster_repository.get_instance(entry.monster_instance_id)
+                if instance is not None and instance.visibility == "hidden":
+                    hidden.add(str(entry.id))
+                    hidden.add(str(entry.monster_instance_id))
+            return frozenset(hidden)
+
+        service = TableEventService(
+            event_repository,
+            get_table_event_notifier(request),
+            hidden_combat_entry_ids=hidden_combat_entry_ids,
+        )
         request.app.state.table_event_service = service
     return service
 
@@ -312,15 +357,31 @@ def get_combat_service(request: Request) -> CombatService:
     if service is None:
         engine = get_database_engine(request)
         event_service = get_table_event_service(request)
+        board_repository = CombatBoardRepository(engine, event_service.repository)
         service = CombatService(
             CombatRepository(engine, event_service.repository),
             event_service,
             get_room_workspace_service(request).character_repository,
             MonsterRepository(engine),
             get_content_registry(request),
+            battle_map_repository=BattleMapRepository(engine),
+            board_repository=board_repository,
         )
         request.app.state.combat_service = service
+        # Built alongside: the board runtime shares the combat service and its
+        # repositories, so both dependency providers stay consistent.
+        request.app.state.combat_board_service = CombatBoardService(
+            board_repository=board_repository,
+            combat_service=service,
+            room_asset_service=get_room_asset_service(request),
+            table_event_service=event_service,
+        )
     return service
+
+
+def get_combat_board_service(request: Request) -> CombatBoardService:
+    get_combat_service(request)
+    return request.app.state.combat_board_service
 
 
 def get_combat_resolution_service(request: Request) -> CombatResolutionService:
@@ -533,6 +594,7 @@ __all__ = [
     "_HistoryGuardedCharacterRepository",
     "get_adventure_import_service",
     "get_adventure_service",
+    "get_battle_map_service",
     "get_campaign_adventure_service",
     "get_campaign_service",
     "get_campaign_stage_service",

@@ -3,12 +3,13 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Any, Iterable, Literal
 from uuid import UUID
 
 from pydantic import Field, model_validator
 
 from app.content.registry import ContentRegistry
+from app.domain.battle_maps.schemas import BattleMapNotFoundError
 from app.domain.combat.projection import CombatantAudience, project_combatant
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import TableActorContext, TableEventActorUnauthorizedError, TableEventService
@@ -23,13 +24,16 @@ from app.persistence.combat.lifecycle import (
     CombatRepository, CombatStateConflictPersistenceError,
     NewCombatEntry, StoredCombat, StoredCombatEntry, actor_binding,
 )
+from app.persistence.battle_maps.repository import BattleMapRepository
 from app.persistence.combat.repository import MonsterRepository
+from app.persistence.combat_boards.repository import CombatBoardRepository, StoredBoardDoor, StoredCombatBoard
 
 
 class CombatLifecycleError(RuntimeError): pass
 class CombatNotFoundError(LookupError): pass
 class ActiveCombatExistsError(CombatLifecycleError): pass
 class CombatStateConflictError(CombatLifecycleError): pass
+class CombatPlacementIncompleteError(CombatLifecycleError): pass
 
 
 class CombatActionKind(StrEnum):
@@ -52,6 +56,26 @@ class CombatEconomyCost(StrEnum):
 class StartCombatInput(StrictModel):
     include_active_party: bool = True
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+
+
+class StartTacticalCombatInput(StrictModel):
+    """P5-A tactical start: freeze a battle map (or a blank board) as the Combat board."""
+
+    battle_map_id: UUID | None = None
+    blank_width_cells: int | None = Field(default=None, ge=1, le=200)
+    blank_height_cells: int | None = Field(default=None, ge=1, le=200)
+    include_active_party: bool = True
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+
+    @model_validator(mode="after")
+    def _require_map_or_blank_dimensions(self) -> StartTacticalCombatInput:
+        if self.battle_map_id is None and (
+            self.blank_width_cells is None or self.blank_height_cells is None
+        ):
+            raise ValueError(
+                "blank_width_cells and blank_height_cells are required when battle_map_id is omitted"
+            )
+        return self
 
 
 class AddCharacterInput(StrictModel):
@@ -208,12 +232,16 @@ class CombatService:
     """Actor-neutral P4-B application service shared by Human and AI adapters."""
     def __init__(self, repository: CombatRepository, table_event_service: TableEventService,
                  character_repository: CharacterRepository, monster_repository: MonsterRepository,
-                 registry: ContentRegistry) -> None:
+                 registry: ContentRegistry,
+                 battle_map_repository: BattleMapRepository | None = None,
+                 board_repository: CombatBoardRepository | None = None) -> None:
         self.repository = repository
         self.table_event_service = table_event_service
         self.character_repository = character_repository
         self.monster_repository = monster_repository
         self.registry = registry
+        self.battle_map_repository = battle_map_repository
+        self.board_repository = board_repository
 
     def condition_context(self, entry: StoredCombatEntry) -> EntryConditionContext:
         if entry.subject_kind == "character":
@@ -273,8 +301,34 @@ class CombatService:
             dodging=entry.dodging,
         )
 
-    def _view(self, combat: StoredCombat) -> CombatView:
+    def _hidden_entry_ids(self, entries: tuple[StoredCombatEntry, ...]) -> frozenset[UUID]:
+        """Entry ids of hidden Monster combatants — never shown to Players (P5-A B6)."""
+        hidden: set[UUID] = set()
+        for entry in entries:
+            if entry.subject_kind != "monster" or entry.monster_instance_id is None:
+                continue
+            instance = self.monster_repository.get_instance(entry.monster_instance_id)
+            if instance is not None and instance.visibility == "hidden":
+                hidden.add(entry.id)
+        return frozenset(hidden)
+
+    def require_tactical_placements(self, combat_id: UUID, entry_ids: Iterable[UUID]) -> None:
+        """Initiative gate (P5-A): every targeted Tactical entry must have a board position."""
+        if self.board_repository is None:
+            return
+        missing = [entry_id for entry_id in entry_ids if self.board_repository.get_position(entry_id) is None]
+        if missing:
+            raise CombatPlacementIncompleteError(
+                f"{len(missing)} combatant(s) have no board position; "
+                "place every combatant before initiative proceeds"
+            )
+
+    def _view(self, combat: StoredCombat, actor: TableActorContext) -> CombatView:
         stored_entries = self.repository.list_entries(combat.id)
+        hidden_ids = frozenset() if actor.is_current_dm else self._hidden_entry_ids(tuple(stored_entries))
+        current_turn_entry_id = combat.current_turn_entry_id
+        if current_turn_entry_id is not None and current_turn_entry_id in hidden_ids:
+            current_turn_entry_id = None
         warnings: tuple[str, ...] = ()
         if (
             combat.status in {"initiative_pending", "running"}
@@ -284,23 +338,25 @@ class CombatService:
             warnings = ("no_hostile_combatants",)
         return CombatView(
             id=combat.id, campaign_id=combat.campaign_id, mode=combat.mode, status=combat.status,
-            round_number=combat.round_number, current_turn_entry_id=combat.current_turn_entry_id,
+            round_number=combat.round_number, current_turn_entry_id=current_turn_entry_id,
             revision=combat.revision,
-            entries=tuple(self._entry_view(entry) for entry in stored_entries),
+            entries=tuple(
+                self._entry_view(entry) for entry in stored_entries if entry.id not in hidden_ids
+            ),
             warnings=warnings,
         )
 
     def get_active_combat(self, actor: TableActorContext) -> CombatView | None:
         self._current(actor)
         combat = self.repository.get_active(actor.campaign_id)
-        return self._view(combat) if combat is not None else None
+        return self._view(combat, actor) if combat is not None else None
 
     def get_active_combat_detail(self, actor: TableActorContext) -> CombatDetailView | None:
         self._current(actor)
         combat = self.repository.get_active(actor.campaign_id)
         if combat is None:
             return None
-        base_view = self._view(combat)
+        base_view = self._view(combat, actor)
         audience: CombatantAudience = "dm" if actor.is_current_dm else "player"
         stored_entries = self.repository.list_entries(combat.id)
         combatant_views: list[CombatantDetailView] = []
@@ -367,7 +423,7 @@ class CombatService:
         except ActiveCombatExistsPersistenceError as exc:
             raise ActiveCombatExistsError("Campaign already has an active Combat") from exc
         self._notify(actor)
-        return self._view(combat)
+        return self._view(combat, actor)
 
     def add_character(self, actor: TableActorContext, request: AddCharacterInput) -> CombatView:
         self._require_dm(actor)
@@ -388,7 +444,124 @@ class CombatService:
         except CombatStateConflictPersistenceError as exc:
             raise CombatStateConflictError(str(exc)) from exc
         self._notify(actor)
-        return self._view(self.repository.get(combat.id) or combat)
+        return self._view(self.repository.get(combat.id) or combat, actor)
+
+    def start_tactical_combat(self, actor: TableActorContext, request: StartTacticalCombatInput) -> CombatView:
+        """P5-A tactical start: create the Combat, freeze the board, emit combat.started.
+
+        The board freezes the battle map baseline (walls/doors/terrain/drawings) and
+        runtime door states at the source map revision, or a blank board when no
+        battle map is given. Map Definition is never mutated.
+        """
+        self._require_dm(actor)
+        if self.battle_map_repository is None or self.board_repository is None:
+            raise CombatStateConflictError("Tactical Combat is not available")
+        # With an idempotency key the persistence layer resolves retries against
+        # the stored combat.started event; without one, fail fast here.
+        if request.idempotency_key is None and self.repository.get_active(actor.campaign_id) is not None:
+            raise ActiveCombatExistsError("Campaign already has an active Combat")
+        entries: list[NewCombatEntry] = []
+        if request.include_active_party:
+            for subject in self.repository.session_characters(campaign_id=actor.campaign_id, session_id=actor.session_id):
+                character = self.character_repository.load_character(subject.character_id)
+                entries.append(NewCombatEntry(
+                    subject_kind="character", character_id=subject.character_id,
+                    display_name=subject.character_name, attacks_allowed=_extra_attack_budget(character),
+                ))
+        board, doors, battle_map_id = self._freeze_board(actor, request)
+        try:
+            combat, _entries, _event = self.repository.create_tactical_combat(
+                binding=actor_binding(actor), entries=tuple(entries), board=board, doors=doors,
+                battle_map_id=battle_map_id, idempotency_key=request.idempotency_key,
+            )
+        except ActiveCombatExistsPersistenceError as exc:
+            raise ActiveCombatExistsError("Campaign already has an active Combat") from exc
+        self._notify(actor)
+        return self._view(combat, actor)
+
+    def _freeze_board(
+        self, actor: TableActorContext, request: StartTacticalCombatInput
+    ) -> tuple[StoredCombatBoard, tuple[StoredBoardDoor, ...], UUID | None]:
+        from datetime import datetime, timezone
+        from uuid import uuid4
+
+        assert self.battle_map_repository is not None
+        now = datetime.now(timezone.utc)
+        placeholder_combat_id = uuid4()
+        if request.battle_map_id is not None:
+            stored_map = self.battle_map_repository.get_map(actor.room_id, request.battle_map_id)
+            if stored_map is None:
+                raise BattleMapNotFoundError(f"BattleMap {request.battle_map_id} not found")
+            objects = self.battle_map_repository.get_objects(stored_map.id)
+            baseline = {
+                "walls": [
+                    {"id": str(wall.id), "x1": wall.x1, "y1": wall.y1, "x2": wall.x2, "y2": wall.y2,
+                     "visibility": wall.visibility}
+                    for wall in objects.walls
+                ],
+                "doors": [
+                    {"id": str(door.id), "x1": door.x1, "y1": door.y1, "x2": door.x2, "y2": door.y2,
+                     "state": door.default_state, "visibility": door.visibility}
+                    for door in objects.doors
+                ],
+                "terrain": [
+                    {"x": terrain.x, "y": terrain.y, "terrain_kind": terrain.terrain_kind}
+                    for terrain in objects.terrain
+                ],
+                "drawings": [
+                    {"id": str(drawing.id), "payload": drawing.payload}
+                    for drawing in objects.drawings
+                ],
+            }
+            doors = tuple(
+                StoredBoardDoor(
+                    combat_id=placeholder_combat_id, door_id=door.id,
+                    state=door.default_state, revealed=door.visibility == "public",
+                    created_at=now,
+                )
+                for door in objects.doors
+            )
+            board = StoredCombatBoard(
+                combat_id=placeholder_combat_id,
+                source_battle_map_id=stored_map.id,
+                source_battle_map_revision=stored_map.revision,
+                width_cells=stored_map.width_cells, height_cells=stored_map.height_cells,
+                grid_pixel_size=stored_map.grid_pixel_size,
+                grid_offset_x=stored_map.grid_offset_x, grid_offset_y=stored_map.grid_offset_y,
+                image_asset_id=stored_map.image_asset_id,
+                baseline=baseline, runtime_revision=1, created_at=now,
+            )
+            return board, doors, stored_map.id
+        board = StoredCombatBoard(
+            combat_id=placeholder_combat_id,
+            source_battle_map_id=None, source_battle_map_revision=None,
+            width_cells=int(request.blank_width_cells or 0),
+            height_cells=int(request.blank_height_cells or 0),
+            grid_pixel_size=None, grid_offset_x=None, grid_offset_y=None,
+            image_asset_id=None,
+            baseline={"walls": [], "doors": [], "terrain": [], "drawings": []},
+            runtime_revision=1, created_at=now,
+        )
+        return board, (), None
+        self._require_dm(actor)
+        combat = self.repository.get_active(actor.campaign_id)
+        if combat is None: raise CombatNotFoundError("Campaign has no active Combat")
+        if self.repository.controlling_seat_for_character(
+            campaign_id=actor.campaign_id, session_id=actor.session_id, character_id=request.character_id
+        ) is None:
+            raise CombatStateConflictError("Character must be an active participant in the current Session before mid-Combat entry")
+        character = self.character_repository.load_character(request.character_id)
+        try:
+            self.repository.add_entry(
+                binding=actor_binding(actor), combat_id=combat.id,
+                entry=NewCombatEntry(subject_kind="character", character_id=request.character_id,
+                    display_name=character.name, attacks_allowed=_extra_attack_budget(character), surprised=request.surprised),
+                idempotency_key=request.idempotency_key,
+            )
+        except CombatStateConflictPersistenceError as exc:
+            raise CombatStateConflictError(str(exc)) from exc
+        self._notify(actor)
+        return self._view(self.repository.get(combat.id) or combat, actor)
 
     def add_monster(self, actor: TableActorContext, request: AddMonsterInput) -> CombatView:
         self._require_dm(actor)
@@ -407,12 +580,19 @@ class CombatService:
         except CombatStateConflictPersistenceError as exc:
             raise CombatStateConflictError(str(exc)) from exc
         self._notify(actor)
-        return self._view(self.repository.get(combat.id) or combat)
+        return self._view(self.repository.get(combat.id) or combat, actor)
 
     def resolve_initiative_order(self, actor: TableActorContext, request: ResolveInitiativeOrderInput) -> CombatView:
         self._require_dm(actor)
         combat = self.repository.get_active(actor.campaign_id)
         if combat is None: raise CombatNotFoundError("Campaign has no active Combat")
+        if combat.mode == "tactical":
+            # Initiative gate (P5-A): a Tactical Combat may not go running while
+            # any active combatant is still unplaced.
+            self.require_tactical_placements(
+                combat.id,
+                tuple(entry.id for entry in self.repository.list_entries(combat.id) if entry.status == "active"),
+            )
         try:
             stored, _event = self.repository.resolve_initiative_order(
                 binding=actor_binding(actor), combat_id=combat.id,
@@ -421,7 +601,7 @@ class CombatService:
         except CombatStateConflictPersistenceError as exc:
             raise CombatStateConflictError(str(exc)) from exc
         self._notify(actor)
-        return self._view(stored)
+        return self._view(stored, actor)
 
     def advance_turn(self, actor: TableActorContext, *, idempotency_key: str | None = None) -> CombatView:
         self._require_dm(actor)
@@ -434,7 +614,7 @@ class CombatService:
         except CombatStateConflictPersistenceError as exc:
             raise CombatStateConflictError(str(exc)) from exc
         self._notify(actor)
-        return self._view(stored)
+        return self._view(stored, actor)
 
     def _authorize_entry(self, actor: TableActorContext, entry: StoredCombatEntry) -> tuple[UUID | None, str]:
         if entry.subject_kind == "monster":
@@ -495,7 +675,7 @@ class CombatService:
             state=state if request.open else {}, idempotency_key=request.idempotency_key,
         )
         self._notify(actor)
-        return self._view(self.repository.get(combat.id) or combat)
+        return self._view(self.repository.get(combat.id) or combat, actor)
 
     def withdraw_entry(self, actor: TableActorContext, entry_id: UUID, *, idempotency_key: str | None = None) -> CombatView:
         self._require_dm(actor)
@@ -508,7 +688,7 @@ class CombatService:
         except CombatStateConflictPersistenceError as exc:
             raise CombatStateConflictError(str(exc)) from exc
         self._notify(actor)
-        return self._view(self.repository.get(combat.id) or combat)
+        return self._view(self.repository.get(combat.id) or combat, actor)
 
     def remove_entry(self, actor: TableActorContext, entry_id: UUID, *, idempotency_key: str | None = None) -> CombatView:
         self._require_dm(actor)
@@ -521,7 +701,7 @@ class CombatService:
         except CombatStateConflictPersistenceError as exc:
             raise CombatStateConflictError(str(exc)) from exc
         self._notify(actor)
-        return self._view(self.repository.get(combat.id) or combat)
+        return self._view(self.repository.get(combat.id) or combat, actor)
 
     def set_monster_outcome(self, actor: TableActorContext, request: MonsterOutcomeInput) -> CombatView:
         self._require_dm(actor)
@@ -537,7 +717,7 @@ class CombatService:
         except CombatNotFoundPersistenceError as exc:
             raise CombatNotFoundError(str(exc)) from exc
         self._notify(actor)
-        return self._view(self.repository.get(combat.id) or combat)
+        return self._view(self.repository.get(combat.id) or combat, actor)
 
     def end_combat(self, actor: TableActorContext, *, idempotency_key: str | None = None) -> CombatView:
         self._require_dm(actor)
@@ -547,13 +727,15 @@ class CombatService:
             binding=actor_binding(actor), combat_id=combat.id, idempotency_key=idempotency_key
         )
         self._notify(actor)
-        return self._view(stored)
+        return self._view(stored, actor)
 
 
 __all__ = [
     "ActiveCombatExistsError", "AddCharacterInput", "AddMonsterInput", "CombatActionInput", "CombatActionKind",
     "CombatActionView", "CombatDetailView", "CombatantDetailView", "CombatEconomyCost", "CombatEntryView",
-    "CombatLifecycleError", "CombatNotFoundError", "CombatService", "CombatStateConflictError", "CombatView",
+    "CombatLifecycleError", "CombatNotFoundError", "CombatPlacementIncompleteError", "CombatService",
+    "CombatStateConflictError", "CombatView",
     "EntryConditionContext", "MonsterOutcome", "MonsterOutcomeChoice", "MonsterOutcomeInput",
-    "ReactionWindowInput", "ResolveInitiativeOrderInput", "StartCombatInput", "_extra_attack_budget",
+    "ReactionWindowInput", "ResolveInitiativeOrderInput", "StartCombatInput", "StartTacticalCombatInput",
+    "_extra_attack_budget",
 ]

@@ -7,6 +7,7 @@ from pydantic import Field
 
 from app.content.registry import ContentRegistry
 from app.domain.combat.lifecycle import CombatNotFoundError, CombatService, CombatStateConflictError
+from app.domain.combat.sizes import parse_size, resolve_entry_size
 from app.domain.combat.resolution import (
     SizeCategory,
     SpecialAttackKind,
@@ -122,31 +123,15 @@ class CombatSpecialAttackService:
 
     @staticmethod
     def _parse_size(value: object) -> SizeCategory:
-        if not isinstance(value, str) or not value.strip():
-            raise CombatStateConflictError("Combatant size is required for Grapple/Shove")
-        key = value.strip().upper().replace(" ", "_")
-        try:
-            return SizeCategory[key]
-        except KeyError as exc:
-            raise CombatStateConflictError(f"Unsupported combatant size: {value}") from exc
+        return parse_size(value)
 
     def _size(self, entry: StoredCombatEntry) -> SizeCategory:
-        if entry.subject_kind == "character":
-            if entry.character_id is None:
-                raise CombatStateConflictError("Character CombatEntry has no Character identity")
-            character = self.character_repository.load_character(entry.character_id)
-            race = self.registry.get_optional(character.build.race_ref)
-            if race is None:
-                raise CombatStateConflictError("Character race content is unavailable for size resolution")
-            return self._parse_size(race.data.get("size"))
-        if entry.subject_kind == "monster":
-            if entry.monster_instance_id is None:
-                raise CombatStateConflictError("Monster CombatEntry has no Monster identity")
-            monster = self.monster_repository.get_instance(entry.monster_instance_id)
-            if monster is None:
-                raise CombatNotFoundError("Monster Instance was not found")
-            return self._parse_size(monster.rules_snapshot.get("size"))
-        raise CombatStateConflictError(f"unsupported CombatEntry kind: {entry.subject_kind}")
+        return resolve_entry_size(
+            entry,
+            character_repository=self.character_repository,
+            monster_repository=self.monster_repository,
+            registry=self.registry,
+        )
 
     def _has_free_hand(self, entry: StoredCombatEntry) -> bool:
         if entry.subject_kind == "monster":

@@ -6,7 +6,7 @@ from uuid import UUID
 
 from app.domain.rooms.schemas import StrictModel
 
-RoomAssetKind = Literal["image", "source_document"]
+RoomAssetKind = Literal["image", "source_document", "battle_map_image"]
 RoomAssetVisibility = Literal["room", "dm_only"]
 
 

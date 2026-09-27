@@ -13,7 +13,19 @@ from app.persistence.adventures.tables import (
     adventure_entry_assets,
     campaign_adventure_links,
 )
+from app.persistence.battle_maps.tables import (
+    battle_map_doors,
+    battle_map_drawings,
+    battle_map_terrain,
+    battle_map_walls,
+    battle_maps,
+)
 from app.persistence.builder_drafts import character_build_drafts
+from app.persistence.combat_boards.tables import (
+    combat_board_doors,
+    combat_boards,
+    combat_positions,
+)
 from app.persistence.character_imports import character_import_records
 from app.persistence.characters import (
     character_states,
@@ -268,6 +280,78 @@ class RoomWorkspaceRepository:
                         adventure_definitions.c.id.in_(adventure_ids)
                     )
                 )
+            # P5-A: battle maps reference room_assets.image_asset_id with RESTRICT,
+            # so delete the map graph (child tables cascade) before room_assets.
+            map_ids = tuple(
+                connection.scalars(
+                    select(battle_maps.c.id).where(
+                        battle_maps.c.room_id == room_id
+                    )
+                ).all()
+            )
+            if map_ids:
+                connection.execute(
+                    delete(battle_map_drawings).where(
+                        battle_map_drawings.c.battle_map_id.in_(map_ids)
+                    )
+                )
+                connection.execute(
+                    delete(battle_map_terrain).where(
+                        battle_map_terrain.c.battle_map_id.in_(map_ids)
+                    )
+                )
+                connection.execute(
+                    delete(battle_map_doors).where(
+                        battle_map_doors.c.battle_map_id.in_(map_ids)
+                    )
+                )
+                connection.execute(
+                    delete(battle_map_walls).where(
+                        battle_map_walls.c.battle_map_id.in_(map_ids)
+                    )
+                )
+                connection.execute(
+                    delete(battle_maps).where(battle_maps.c.id.in_(map_ids))
+                )
+            # P5-A: combat boards reference room_assets.image_asset_id with RESTRICT,
+            # so delete the board graph before room_assets (the combat cascade at
+            # campaigns deletion only clears them after room_assets are gone).
+            # Local import: app.persistence.combat pulls domain modules at package
+            # init, which cycles back through table_events when rooms init first.
+            if campaign_ids:
+                from app.persistence.combat.tables import combats
+
+                board_combat_ids = tuple(
+                    connection.scalars(
+                        select(combats.c.id).where(
+                            combats.c.campaign_id.in_(campaign_ids)
+                        )
+                    ).all()
+                )
+                if board_combat_ids:
+                    connection.execute(
+                        delete(combat_board_doors).where(
+                            combat_board_doors.c.combat_id.in_(board_combat_ids)
+                        )
+                    )
+                    connection.execute(
+                        delete(combat_positions).where(
+                            combat_positions.c.combat_id.in_(board_combat_ids)
+                        )
+                    )
+                    connection.execute(
+                        delete(combat_boards).where(
+                            combat_boards.c.combat_id.in_(board_combat_ids)
+                        )
+                    )
+                    # Combats RESTRICT their started session; delete them before
+                    # sessions so the Room hard delete is not blocked by any
+                    # (quick or tactical) Combat. Entries cascade from combats.
+                    connection.execute(
+                        delete(combats).where(
+                            combats.c.campaign_id.in_(campaign_ids)
+                        )
+                    )
             connection.execute(
                 delete(room_assets).where(room_assets.c.room_id == room_id)
             )

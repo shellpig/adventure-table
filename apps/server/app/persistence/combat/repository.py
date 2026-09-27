@@ -209,6 +209,7 @@ class MonsterRepository:
         now: datetime | None = None,
     ) -> StoredMonsterInstance:
         rules: dict[str, Any] = {
+            "size": "medium",
             "armor_class": armor_class,
             "max_hp": max_hp,
             "speed": deepcopy(speed),
