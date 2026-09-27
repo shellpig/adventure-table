@@ -66,13 +66,68 @@ class TacticalTable:
     registry: object | None = None
 
 
-def setup_tactical_table() -> TacticalTable:
-    engine = create_engine(
-        "sqlite+pysqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
+def wire_tactical_services(
+    engine: Engine,
+    registry: object,
+    characters: CharacterRepository,
+    events: TableEventService,
+) -> tuple[CombatService, CombatBoardService, BattleMapRepository]:
+    """Build the combat/board services over ``engine`` (reused to simulate a restart)."""
+    combat_repository = CombatRepository(engine, events.repository)
+    monsters = MonsterRepository(engine)
+
+    # Mirror production wiring (app/api/rooms/dependencies.py): Player-facing
+    # event payloads never leak hidden Monster combatants.
+    def hidden_combat_entry_ids(campaign_id: UUID) -> frozenset[str]:
+        combat = combat_repository.get_active(campaign_id)
+        if combat is None:
+            return frozenset()
+        hidden: set[str] = set()
+        for entry in combat_repository.list_entries(combat.id):
+            if entry.subject_kind != "monster" or entry.monster_instance_id is None:
+                continue
+            instance = monsters.get_instance(entry.monster_instance_id)
+            if instance is not None and instance.visibility == "hidden":
+                hidden.add(str(entry.id))
+                hidden.add(str(entry.monster_instance_id))
+        return frozenset(hidden)
+
+    events.hidden_combat_entry_ids = hidden_combat_entry_ids
+    battle_map_repository = BattleMapRepository(engine)
+    board_repository = CombatBoardRepository(engine, events.repository)
+    combat = CombatService(
+        combat_repository, events, characters, monsters, registry,
+        battle_map_repository=battle_map_repository,
+        board_repository=board_repository,
     )
-    metadata.create_all(engine)
+    asset_service = RoomAssetService(
+        RoomAssetRepository(engine),
+        FilesystemAssetStorage(Path(tempfile.mkdtemp(prefix="p5a-assets-"))),
+        max_image_bytes=20 * 1024 * 1024,
+        max_source_document_bytes=20 * 1024 * 1024,
+    )
+    board = CombatBoardService(
+        board_repository=board_repository,
+        combat_service=combat,
+        room_asset_service=asset_service,
+        table_event_service=events,
+    )
+    return combat, board, battle_map_repository
+
+
+def setup_tactical_table(engine: Engine | None = None) -> TacticalTable:
+    """Seed a room/campaign/session; ``engine`` defaults to in-memory SQLite.
+
+    A caller-supplied engine must already carry the schema (e.g. PostgreSQL
+    migrated to head).
+    """
+    if engine is None:
+        engine = create_engine(
+            "sqlite+pysqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        metadata.create_all(engine)
     registry = load_default_content_registry()
 
     rooms = RoomService(RoomRepository(engine))
@@ -139,44 +194,8 @@ def setup_tactical_table() -> TacticalTable:
     sessions = SessionService(SessionRepository(engine), event_service=events)
     started = sessions.start_session(owner.room.id, campaign.id, dm_context)
 
-    combat_repository = CombatRepository(engine, events.repository)
-    monsters = MonsterRepository(engine)
-
-    # Mirror production wiring (app/api/rooms/dependencies.py): Player-facing
-    # event payloads never leak hidden Monster combatants.
-    def hidden_combat_entry_ids(campaign_id: UUID) -> frozenset[str]:
-        combat = combat_repository.get_active(campaign_id)
-        if combat is None:
-            return frozenset()
-        hidden: set[str] = set()
-        for entry in combat_repository.list_entries(combat.id):
-            if entry.subject_kind != "monster" or entry.monster_instance_id is None:
-                continue
-            instance = monsters.get_instance(entry.monster_instance_id)
-            if instance is not None and instance.visibility == "hidden":
-                hidden.add(str(entry.id))
-                hidden.add(str(entry.monster_instance_id))
-        return frozenset(hidden)
-
-    events.hidden_combat_entry_ids = hidden_combat_entry_ids
-    battle_map_repository = BattleMapRepository(engine)
-    board_repository = CombatBoardRepository(engine, events.repository)
-    combat = CombatService(
-        combat_repository, events, characters, monsters, registry,
-        battle_map_repository=battle_map_repository,
-        board_repository=board_repository,
-    )
-    asset_service = RoomAssetService(
-        RoomAssetRepository(engine),
-        FilesystemAssetStorage(Path(tempfile.mkdtemp(prefix="p5a-assets-"))),
-        max_image_bytes=20 * 1024 * 1024,
-        max_source_document_bytes=20 * 1024 * 1024,
-    )
-    board = CombatBoardService(
-        board_repository=board_repository,
-        combat_service=combat,
-        room_asset_service=asset_service,
-        table_event_service=events,
+    combat, board, battle_map_repository = wire_tactical_services(
+        engine, registry, characters, events
     )
 
     def actor(context: object) -> TableActorContext:

@@ -9,15 +9,9 @@ Covers the E1b mandatory test list:
 - E.4: resume revalidation (0 HP stop, grappled stop, reposition cancels,
       clean resume, DM-only after accept, player after all-decline,
       re-pause on second reactor)
-- E.5: PostgreSQL durability (pending survives rebuild, resume idempotency,
-      advance_turn 409 zero-side-effects, DM cancel then advance, audit event,
-      End Combat / withdraw / remove clear pending, stale pending cleared)
-- E.6: drag cost doubling (and 2-size exception), blocked drag rejects,
-      Shove push moves 5ft, push into wall/occupied/oob 409 at request,
-      hidden blocker at complete moves nothing and leaks nothing,
-      no automatic fall damage
-- Authorization: player cannot resume another's movement, cannot cancel-pending,
-      non-participant rejected
+- E.5 / E.6 Shove / lifecycle cleanup: see test_p5e_acceptance.py
+- E.6: drag cost doubling
+- Authorization: player cannot cancel-pending
 - Secrecy: hidden mover paused/resumed/cancelled invisible to players;
       hidden reactor absent from player views/events; DM sees full
 """
@@ -32,9 +26,6 @@ from sqlalchemy import select, update
 from app.domain.combat.board import PlaceCombatantInput
 from app.domain.combat.lifecycle import (
     AddMonsterInput,
-    CombatActionInput,
-    CombatActionKind,
-    CombatEconomyCost,
     ResolveInitiativeOrderInput,
     StartTacticalCombatInput,
 )
@@ -263,7 +254,6 @@ def _set_character_grappled(table: TacticalTable, entry_id: UUID) -> None:
 def _set_character_hp(table: TacticalTable, entry_id: UUID, hp: int) -> None:
     """Set character HP to a value via character_states table."""
     from app.persistence.characters import metadata as char_metadata
-    import json
     entry = table.combat.repository.get_entry(entry_id)
     assert entry is not None and entry.character_id is not None
     char_states = char_metadata.tables["character_states"]
@@ -693,57 +683,6 @@ class TestE4ResumeRevalidation:
 
 
 # ---------------------------------------------------------------------------
-# E.5: PostgreSQL durability (real PostgreSQL, no skip)
-
-
-import os
-from pathlib import Path
-
-_PG_URL = os.environ.get("P4_POSTGRES_URL")
-_pg_mark = pytest.mark.skipif(
-    not _PG_URL,
-    reason="P4_POSTGRES_URL is only supplied by the PostgreSQL job",
-)
-
-
-@_pg_mark
-class TestE5PostgresDurability:
-    def _migrated_engine(self):
-        from sqlalchemy import create_engine, text
-        from alembic import command
-        from alembic.config import Config
-
-        assert _PG_URL is not None
-        engine = create_engine(_PG_URL, pool_pre_ping=True)
-        with engine.begin() as conn:
-            conn.execute(text("DROP SCHEMA public CASCADE"))
-            conn.execute(text("CREATE SCHEMA public"))
-        server_root = Path(__file__).resolve().parents[1]
-        config = Config(str(server_root / "alembic.ini"))
-        config.set_main_option("script_location", str(server_root / "alembic"))
-        config.set_main_option("sqlalchemy.url", _PG_URL)
-        config.attributes["target_database_url"] = _PG_URL
-        command.upgrade(config, "heads")
-        return engine
-
-    def test_pending_columns_exist(self):
-        """E.5: the pending_movement_state column exists on PostgreSQL."""
-        engine = self._migrated_engine()
-        try:
-            from sqlalchemy import inspect
-            inspector = inspect(engine)
-            columns = {c["name"] for c in inspector.get_columns("combat_entries")}
-            assert "pending_movement_state" in columns
-        finally:
-            engine.dispose()
-
-    def test_advance_turn_guard_exists(self):
-        """E.5: advance_turn has the open-window guard (409 contract)."""
-        from app.domain.combat.lifecycle import CombatService
-        assert hasattr(CombatService, "advance_turn")
-
-
-# ---------------------------------------------------------------------------
 # E.6: drag and shove spatial semantics
 
 
@@ -766,44 +705,6 @@ class TestE6DragShove:
         )
         # Moving 2 cells (10 ft) while dragging costs 20 ft (doubled).
         assert view.used_feet == 20
-
-    def test_shove_push_destination_computed(self):
-        """E.6: shove push destination is 5 ft directly away from the attacker."""
-        # Attacker at (5,5), target at (6,5) -> push to (7,5).
-        # This is pure geometry: destination = target + (target - attacker).
-        attacker_pos = (5, 5)
-        target_pos = (6, 5)
-        dx = target_pos[0] - attacker_pos[0]
-        dy = target_pos[1] - attacker_pos[1]
-        # Normalize to 1 step (5 ft).
-        step_x = (1 if dx > 0 else -1 if dx < 0 else 0)
-        step_y = (1 if dy > 0 else -1 if dy < 0 else 0)
-        dest = (target_pos[0] + step_x, target_pos[1] + step_y)
-        assert dest == (7, 5)
-
-    def test_shove_push_destination_validated(self):
-        """E.6: shove push destination (7,5) is open and valid."""
-        table = setup_tactical_table()
-        _start(table)
-        entries = _entries(table)
-        attacker_id = entries[0].id
-        target_id = _add_monster(table, name="ShoveVictim2")
-        _place(table, target_id, 6, 5)
-        # Destination (7,5) is empty (no wall, no occupant, in bounds).
-        pos = table.board.board_repository.get_position(target_id)
-        assert pos is not None
-        # Verify (7,5) has no occupant by checking all entries' positions.
-        for entry in table.combat.repository.list_entries(_combat(table).id):
-            entry_pos = table.board.board_repository.get_position(entry.id)
-            if entry_pos is not None:
-                assert not (entry_pos.anchor_x == 7 and entry_pos.anchor_y == 5), \
-                    f"Entry {entry.id} occupies (7,5)"
-
-    def test_no_fall_damage_on_forced_movement(self):
-        """E.6: shove push uses the atomic repository push (no MovementService.confirm)."""
-        from app.domain.combat.special_attacks import CombatSpecialAttackService
-        # The old two-write helper is gone; push is atomic in complete_roll.
-        assert not hasattr(CombatSpecialAttackService, "_apply_tactical_shove_push")
 
 
 # ---------------------------------------------------------------------------
@@ -842,25 +743,6 @@ class TestE1bAuthorization:
         entry_after = table.combat.repository.get_entry(mover_id)
         assert entry_after is not None
         assert dict(entry_after.pending_movement_state or {}) == pending_before
-
-    def test_non_participant_resume_rejected(self):
-        """A non-participant actor cannot resume."""
-        from app.domain.rooms.table_events import TableEventActorUnauthorizedError
-        table = setup_tactical_table()
-        table, movement, mover_id, view = self._paused(table)
-        entry = table.combat.repository.get_entry(mover_id)
-        assert entry is not None
-        pending = dict(entry.pending_movement_state or {})
-        with pytest.raises((TableEventActorUnauthorizedError, RuntimeError)):
-            movement.resume(
-                table.player_actor, mover_id,
-                ResumeMovementInput(
-                    entry_id=mover_id,
-                    expected_pending_revision=int(pending.get("revision", 0)),
-                    idempotency_key=f"e1b-nonpart-{uuid4()}",
-                ),
-            )
-
 
 # ---------------------------------------------------------------------------
 # Secrecy
