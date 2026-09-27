@@ -6,7 +6,7 @@
 - **目標與邊界**：把 P5-A～E 已交付的 Tactical backend（board、movement、targeting、AoE、OA）接上 Human Tactical UI 與 AI MCP tool surface；Human／AI 共用同一 application service，不新增第二套遊戲邏輯。契約：`docs/P5/實作規格.md` §10；`docs/P5/開發設計方針.md` §10、§11、§14；`docs/P5/測試指南.md` §3、F.1～F.7。
 - **Branch**：`feat/p5f-tactical-combat-ui-ai-tools`（自 `main@fe75ffa9` 開出）
 - **最近已驗證 commit**：F1 完成（Muse F1／F1b／F1c＋指揮者修正，本 commit）
-- **Worker**：Muse（thread `https://muse.ai/thread/3c177caa-543a-46dd-8438-94f54b07df80`，使用者 2026-09-28 指定）。prompt 存 `C:\_work\AI_Work\Tools\agy-runs\muse-p5f-<step>.prompt.txt`。關門（F3）由指揮者做。
+- **Worker**：Muse（thread `https://muse.ai/thread/3c177caa-543a-46dd-8438-94f54b07df80`，使用者 2026-09-28 指定）。prompt 存 `C:\_work\AI_Work\Tools\agy-runs\muse-p5f-<step>.prompt.txt`。關門（F4）由指揮者做。
 - **下一步**：F2 派工（frontend）
 - **阻礙／未審**：無
 - **本 Subphase 技術決策（契約未指定，指揮者拍板）**：
@@ -18,12 +18,13 @@
   6. **Camera** 只在 client memory，不做 localStorage persistence；zoom／pan 不打任何 server API。
   7. **AoE renderer** 以 `apps/server/tests/fixtures/p5d_aoe_golden.json` 為前端單元測試 golden，與 server geometry 對齊；preview 以 server 回傳的 cells 為準，前端只畫模板輪廓與 server cells。
   8. **Player drag**：拖自己的 Token 只改 client draft path，呼叫 preview 顯示 used／remaining；只有 Confirm 呼叫 confirm route。DM 的 setup placement／reposition 與 gameplay movement 在 UI 上是不同模式（toolbar 切換），走不同 route。
-- **跨步依賴**：F2 依賴 F1（DM wall visibility、`check-target` REST 若 F1 新增）；F3 依賴 F1、F2
+- **跨步依賴**：F2 依賴 F1（DM wall visibility）；F3 依賴 F2（board 呈現與 API client）與 F1（`board/target-check`）；F4 依賴 F1～F3
 
 ## 步驟進度
 
 | Step | 標題 | 狀態 | 依賴 | 紀錄 |
 |---|---|---|---|---|
 | F1 | Tactical MCP tools、tactical briefing、target check、DM wall visibility（backend，F.3～F.7 backend 面） | 完成 | — | [F1](P5-F_steps/F1.md) |
-| F2 | Tactical Stage UI、camera、drag plan、DM toolbar、AoE／OA UI、locale、Playwright spec（F.1、F.2、F.7 frontend 面） | 待做 | F1 | [F2](P5-F_steps/F2.md) |
-| F3 | 關門 gate、Docker E2E、closeout、合併 `main`（指揮者） | 待做 | F1、F2 | — |
+| F2 | Battle map 編輯器、Tactical start／placement、Tactical Stage 骨架、camera、hidden rendering、雙語（F.2、F.7 frontend 面） | 待做 | F1 | [F2](P5-F_steps/F2.md) |
+| F3 | Player drag plan／movement、range feedback、AoE preview、OA／pending movement UI、DM reposition、Playwright spec（F.1、F.7） | 待做 | F2 | [F3](P5-F_steps/F3.md) |
+| F4 | 關門 gate、Docker E2E、closeout、合併 `main`（指揮者） | 待做 | F1～F3 | — |
