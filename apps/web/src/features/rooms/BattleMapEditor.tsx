@@ -26,7 +26,6 @@ export type EditorTool =
   | 'wall'
   | 'door'
   | 'terrain'
-  | 'token'
   | 'draw'
   | 'erase'
 
@@ -53,7 +52,6 @@ const TOOLS: EditorTool[] = [
   'wall',
   'door',
   'terrain',
-  'token',
   'draw',
   'erase',
 ]
@@ -258,8 +256,6 @@ export function BattleMapEditor({
         return copy.tacticalToolDoor
       case 'terrain':
         return copy.tacticalToolTerrain
-      case 'token':
-        return copy.tacticalToolToken
       case 'draw':
         return copy.tacticalToolDraw
       case 'erase':
@@ -336,12 +332,6 @@ export function BattleMapEditor({
             </select>
           </label>
         </div>
-      ) : null}
-
-      {tool === 'token' ? (
-        <p className="battle-map-editor__hint" data-testid="map-editor-token-hint">
-          {copy.tacticalTokenHint}
-        </p>
       ) : null}
 
       {selectedItem ? (

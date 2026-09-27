@@ -78,11 +78,43 @@ export function computeCenterOn(
   }
 }
 
+export type PinchPoint = { x: number; y: number }
+
+export function pinchDistance(p1: PinchPoint, p2: PinchPoint): number {
+  return Math.hypot(p2.x - p1.x, p2.y - p1.y)
+}
+
+export function pinchCenter(p1: PinchPoint, p2: PinchPoint): PinchPoint {
+  return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 }
+}
+
+export function applyPinch(
+  camera: TacticalCamera,
+  startDistance: number,
+  currentDistance: number,
+  startCenter: PinchPoint,
+  currentCenter: PinchPoint,
+): TacticalCamera {
+  if (startDistance <= 0 || currentDistance <= 0) return camera
+  // Zoom by distance ratio, centered at the current pinch center.
+  const zoomed = applyZoom(camera, currentDistance / startDistance, currentCenter.x, currentCenter.y)
+  // Pan by center delta.
+  return {
+    ...zoomed,
+    x: zoomed.x + (currentCenter.x - startCenter.x),
+    y: zoomed.y + (currentCenter.y - startCenter.y),
+  }
+}
+
 export function useTacticalCamera() {
   const [camera, setCamera] = useState<TacticalCamera>({ x: 0, y: 0, zoom: 1 })
   const dragRef = useRef<{ startX: number; startY: number; camX: number; camY: number } | null>(
     null,
   )
+  const pinchRef = useRef<{
+    startDistance: number
+    startCenter: PinchPoint
+  } | null>(null)
 
   const zoomBy = useCallback((factor: number, centerX?: number, centerY?: number) => {
     setCamera((prev) => applyZoom(prev, factor, centerX, centerY))
@@ -116,6 +148,29 @@ export function useTacticalCamera() {
     dragRef.current = null
   }, [])
 
+  const startPinch = useCallback((p1: PinchPoint, p2: PinchPoint) => {
+    pinchRef.current = {
+      startDistance: pinchDistance(p1, p2),
+      startCenter: pinchCenter(p1, p2),
+    }
+    // Pinch takes over from pan.
+    dragRef.current = null
+  }, [])
+
+  const pinchBy = useCallback((p1: PinchPoint, p2: PinchPoint) => {
+    const pinch = pinchRef.current
+    if (!pinch) return
+    const currentDistance = pinchDistance(p1, p2)
+    const currentCenter = pinchCenter(p1, p2)
+    setCamera((prev) =>
+      applyPinch(prev, pinch.startDistance, currentDistance, pinch.startCenter, currentCenter),
+    )
+  }, [])
+
+  const endPinch = useCallback(() => {
+    pinchRef.current = null
+  }, [])
+
   const fitMap = useCallback(
     (mapWidthPx: number, mapHeightPx: number, viewportWidth: number, viewportHeight: number) => {
       const next = computeFitMap(mapWidthPx, mapHeightPx, viewportWidth, viewportHeight)
@@ -144,6 +199,9 @@ export function useTacticalCamera() {
     startPan,
     panBy,
     endPan,
+    startPinch,
+    pinchBy,
+    endPinch,
     fitMap,
     centerOn,
     reset,

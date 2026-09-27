@@ -5,7 +5,7 @@ import { createBattleMap, getBattleMap, listBattleMaps } from '../../api/battleM
 import { startTacticalCombat } from '../../api/tacticalCombat'
 import { BattleMapEditor } from './BattleMapEditor'
 import type { SessionCopy } from './sessionCopy'
-import { requestId } from './SessionTableSurface'
+import { requestId } from './requestId'
 import type { Locale } from '../../i18n/locale'
 
 type TacticalSetupPanelProps = {

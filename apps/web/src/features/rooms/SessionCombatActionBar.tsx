@@ -41,7 +41,7 @@ import {
 import { useContentPresentations } from '../../i18n/useContentPresentations'
 import { isContentReference } from './sessionCombatLog'
 import type { SessionCopy } from './sessionCopy'
-import { requestId } from './SessionTableSurface'
+import { requestId } from './requestId'
 
 type CombatRollResult =
   | { kind: 'attack'; value: AttackResolutionView }

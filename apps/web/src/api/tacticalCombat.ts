@@ -33,6 +33,8 @@ export type BoardDoorView = {
   y2: number
   state: string
   revealed: boolean
+  // Present on DM projection when the server includes it; absent otherwise.
+  hidden_origin?: boolean | null
 }
 
 export type BoardTerrainView = {

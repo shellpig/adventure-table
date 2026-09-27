@@ -10,7 +10,7 @@ import {
 } from '../../api/combat'
 import { adjudicationKindLabel, runCombatMutation } from './sessionCombat'
 import type { SessionCopy } from './sessionCopy'
-import { requestId } from './SessionTableSurface'
+import { requestId } from './requestId'
 
 type SessionCombatAdjudicationPanelProps = {
   combat: CombatDetailView

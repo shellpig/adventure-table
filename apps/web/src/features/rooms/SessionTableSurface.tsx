@@ -40,6 +40,7 @@ import {
   writeSidePanelRatio,
 } from './sessionTableLayout'
 import type { SessionCopy } from './sessionCopy'
+import { requestId } from './requestId'
 import {
   CHAT_COLOR_PALETTE,
   DEFAULT_CHAT_COLOR,
@@ -52,7 +53,7 @@ import {
 } from './chatFollow'
 import { endCombat, startCombat } from '../../api/combat'
 import { SessionCombatStage } from './SessionCombatStage'
-import { TacticalStage } from './TacticalStage'
+import { TacticalMapPanel } from './TacticalMapPanel'
 import { TacticalSetupPanel } from './TacticalSetupPanel'
 import { myEntryIds, useActiveCombat } from './sessionCombat'
 import type { OlderSessionHistory } from './sessionEventStream'
@@ -87,11 +88,6 @@ type SessionTableSurfaceProps = {
 
 type TableTab = 'chat' | 'dice' | 'log'
 type SessionLayoutStyle = CSSProperties & { '--session-side-ratio': string }
-
-export function requestId(prefix: string): string {
-  const random = globalThis.crypto?.randomUUID?.()
-  return random ? `${prefix}-${random}` : `${prefix}-${Date.now()}-${Math.random()}`
-}
 
 async function fileUpload(file: File): Promise<StageImageUpload> {
   const mediaType = file.type
@@ -664,25 +660,7 @@ export function SessionTableSurface({
         <section className="session-stage" aria-label={copy.mainStage}>
           <header><h2>{copy.mainStage}</h2></header>
           {combat ? (
-            combat.mode === 'tactical' ? (
-              <TacticalStage
-                combat={combat}
-                myEntryIds={derivedMyEntryIds}
-                copy={copy}
-                locale={copy.locale}
-                roomId={roomId}
-                campaignId={campaignId}
-                sessionId={sessionId}
-                token={token}
-                isCurrentDm={isCurrentDm}
-                logEvents={combatLogEvents}
-                resolveEntryLabel={combatEntryLabel}
-                resolveContentName={resolveCombatContentName}
-                resolveContentField={resolveCombatContentField}
-                onError={onError}
-                refresh={refresh}
-              />
-            ) : (
+            <>
               <SessionCombatStage
                 combat={combat}
                 myEntryIds={derivedMyEntryIds}
@@ -696,7 +674,21 @@ export function SessionTableSurface({
                 onError={onError}
                 refresh={refresh}
               />
-            )
+              {combat.mode === 'tactical' ? (
+                <TacticalMapPanel
+                  combat={combat}
+                  copy={copy}
+                  roomId={roomId}
+                  campaignId={campaignId}
+                  sessionId={sessionId}
+                  token={token}
+                  isCurrentDm={isCurrentDm}
+                  events={events}
+                  onError={onError}
+                  refresh={refresh}
+                />
+              ) : null}
+            </>
           ) : null}
           <div className="session-stage__canvas">
             {imageUrl ? <img src={imageUrl} alt={stage?.image_filename || copy.mainStage} /> : null}

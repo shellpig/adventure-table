@@ -17,7 +17,7 @@ import {
   useReactionWindows,
 } from './sessionCombat'
 import type { SessionCopy } from './sessionCopy'
-import { requestId } from './SessionTableSurface'
+import { requestId } from './requestId'
 
 type SessionCombatStageProps = {
   combat: CombatDetailView

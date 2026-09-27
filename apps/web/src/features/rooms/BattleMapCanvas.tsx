@@ -48,6 +48,7 @@ type BattleMapCanvasProps = {
   selectedEntryId?: string | null
   onCellClick?: (x: number, y: number) => void
   onTokenClick?: (entryId: string) => void
+  onDoorClick?: (doorId: string | null) => void
   onEmptyMouseDown?: (clientX: number, clientY: number, button: number) => void
   onMouseMove?: (clientX: number, clientY: number) => void
   onMouseUp?: () => void
@@ -78,6 +79,7 @@ export function BattleMapCanvas({
   selectedEntryId,
   onCellClick,
   onTokenClick,
+  onDoorClick,
   onEmptyMouseDown,
   onMouseMove,
   onMouseUp,
@@ -196,6 +198,11 @@ export function BattleMapCanvas({
               data-door-id={door.door_id ?? undefined}
               data-hidden={isHidden && isDm ? 'true' : undefined}
               className={`battle-map__door${isHidden && isDm ? ' battle-map__door--hidden' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                onDoorClick?.(door.door_id)
+              }}
+              style={{ cursor: onDoorClick ? 'pointer' : 'default' }}
             >
               <line
                 x1={door.x1 * cellSize}
@@ -247,7 +254,7 @@ export function BattleMapCanvas({
                 dominantBaseline="middle"
                 fontSize={11}
               >
-                {token.name.slice(0, 8)}
+                {token.name}
               </text>
             </g>
           )
