@@ -1060,6 +1060,7 @@ def test_f6_tactical_structured_content() -> None:
         assert my_unit["budget_feet"] == status.budget_feet
         assert my_unit["remaining_feet"] == status.remaining_feet
         assert my_unit["has_pending_movement"] is True
+        assert my_unit["pending_revision"] == status.pending_revision
         # Pending movement lists the PC.
         assert str(char_entry) in tactical["pending_movement_entry_ids"]
         # Pending reaction: the OA window belongs to the Orc. DM (who controls
@@ -1150,3 +1151,60 @@ def test_f6_tactical_structured_near_limit_bounds() -> None:
         assert len(briefing) <= BRIEFING_MAX_CHARS, (role, len(briefing))
         assert "MCP invocation rule" in briefing, role
         assert "MCP 呼叫判定" in briefing, role
+
+
+def test_f4_ai_player_resumes_after_reaction_with_context_revision() -> None:
+    """F4: the pending revision advances when the OA window resolves; the AI
+    reads the current one from combat['tactical'] and resumes over MCP, while
+    the stale revision from the confirm response is rejected."""
+    from app.domain.combat.movement import ConfirmMovementInput, MovementService
+    from app.domain.combat.reaction_service import CombatReactionService, ResolveReactionInput
+    from app.persistence.combat.reactions import CombatReactionRepository
+
+    table, char_entry, orc_entry = _f6_oa_table()
+    reaction_service = CombatReactionService(
+        CombatReactionRepository(table.engine, table.events.repository),
+        table.combat.repository,
+        table.combat,
+        table.events,
+    )
+    facade = _facade(table, reaction_service=reaction_service)
+    movement_service = MovementService(
+        board_repository=table.board.board_repository,
+        board_service=table.board,
+        combat_service=table.combat,
+    )
+    path = tuple(MovementAnchorInput(x=x, y=1) for x in range(1, 6))
+    preview = movement_service.preview(
+        table.player_actor, char_entry, PreviewMovementInput(entry_id=char_entry, path=path)
+    )
+    confirm = movement_service.confirm(
+        table.player_actor, char_entry,
+        ConfirmMovementInput(
+            entry_id=char_entry, path=path,
+            expected_position_revision=preview.position_revision,
+            expected_board_revision=preview.board_revision,
+        ),
+    )
+    assert confirm.outcome == "paused"
+    reaction_service.resolve_reaction(
+        table.dm_actor, ResolveReactionInput(owner_entry_id=orc_entry, accept=False)
+    )
+
+    token = _player_token(table)
+    ctx = _call(facade, token, "get_session_context", {})["structuredContent"]["data"]
+    unit = next(u for u in ctx["combat"]["tactical"]["my_units"] if u["entry_id"] == str(char_entry))
+    assert unit["has_pending_movement"] is True
+    assert unit["pending_revision"] > confirm.pending_revision
+
+    stale = _call(facade, token, "combat_resume_movement", {
+        "entry_id": str(char_entry), "expected_pending_revision": confirm.pending_revision,
+    })["structuredContent"]
+    assert stale["ok"] is False
+
+    resumed = _call(facade, token, "combat_resume_movement", {
+        "entry_id": str(char_entry), "expected_pending_revision": unit["pending_revision"],
+    })["structuredContent"]
+    assert resumed["ok"] is True, resumed
+    assert resumed["data"]["outcome"] == "resumed"
+    assert _position_of(table, char_entry) == (5, 1)

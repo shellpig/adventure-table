@@ -763,6 +763,8 @@ class CombatAIToolApplicationService(AIToolApplicationService):
                 "budget_feet": 0,
                 "remaining_feet": 0,
                 "has_pending_movement": False,
+                # Resume needs the current revision; it moves on when a reaction window resolves.
+                "pending_revision": 0,
             }
             if running:
                 status = self._require_movement_service().movement_status(actor, entry_id)
@@ -770,6 +772,7 @@ class CombatAIToolApplicationService(AIToolApplicationService):
                 unit["budget_feet"] = status.budget_feet
                 unit["remaining_feet"] = status.remaining_feet
                 unit["has_pending_movement"] = status.has_pending_movement
+                unit["pending_revision"] = status.pending_revision
                 if status.has_pending_movement:
                     pending_movement_entry_ids.append(str(entry_id))
             my_units.append(unit)
