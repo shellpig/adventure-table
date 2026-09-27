@@ -4,7 +4,7 @@ import asyncio
 from dataclasses import asdict
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 from uuid import UUID
 
 from pydantic import Field
@@ -90,6 +90,7 @@ class TableEventNotifier(Protocol):
 class EventReadScope(Protocol):
     is_current_dm: bool
     controlled_seat_ids: tuple[UUID, ...]
+    campaign_id: UUID
 
 
 class HistoricalSessionReadScope(StrictModel):
@@ -180,9 +181,13 @@ class TableEventService:
         self,
         repository: TableEventRepository,
         notifier: TableEventNotifier | None = None,
+        hidden_combat_entry_ids: Callable[[UUID], frozenset[str]] | None = None,
     ) -> None:
         self.repository = repository
         self.notifier = notifier
+        # P5-A B6: maps a campaign to the entry/instance ids of hidden Monster
+        # combatants, so Player-facing event payloads never leak them.
+        self.hidden_combat_entry_ids = hidden_combat_entry_ids
 
     @staticmethod
     def _actor(binding: StoredTableActorBinding) -> TableActorContext:
@@ -297,12 +302,26 @@ class TableEventService:
         if not self.repository.actor_binding_is_current(binding):
             raise TableEventActorUnauthorizedError("Table actor binding is no longer current")
 
-    @staticmethod
-    def _present(stored: StoredTableEvent, *, actor: EventReadScope) -> TableEvent:
+    def _present(
+        self,
+        stored: StoredTableEvent,
+        *,
+        actor: EventReadScope,
+        hidden_entry_ids: frozenset[str] | None = None,
+    ) -> TableEvent:
         # Enemy secrecy is decided here, once, for every path an event can take
         # (list / long-poll / Resume / MCP): the projector is a no-op for the DM.
         audience: CombatantAudience = "dm" if actor.is_current_dm else "player"
-        payload = project_combat_event_payload(stored.kind, stored.payload, audience=audience)
+        if (
+            hidden_entry_ids is None
+            and audience == "player"
+            and self.hidden_combat_entry_ids is not None
+        ):
+            hidden_entry_ids = self.hidden_combat_entry_ids(actor.campaign_id)
+        payload = project_combat_event_payload(
+            stored.kind, stored.payload, audience=audience,
+            hidden_entry_ids=hidden_entry_ids or frozenset(),
+        )
 
         return TableEvent(
             id=stored.id,
@@ -323,6 +342,12 @@ class TableEventService:
             payload=payload,
             created_at=stored.created_at,
         )
+
+    def _hidden_ids_for(self, actor: EventReadScope) -> frozenset[str]:
+        """Hidden Monster entry/instance ids for one event page (P5-A B6)."""
+        if actor.is_current_dm or self.hidden_combat_entry_ids is None:
+            return frozenset()
+        return self.hidden_combat_entry_ids(actor.campaign_id)
 
     @staticmethod
     def _visible(actor: EventReadScope, stored: StoredTableEvent) -> bool:
@@ -405,8 +430,9 @@ class TableEventService:
             raise TableEventNotFoundError(str(actor.session_id)) from exc
 
         cursor = raw[-1].seq if raw else bounded_after
+        hidden_entry_ids = self._hidden_ids_for(actor)
         visible = [
-            self._present(stored, actor=actor)
+            self._present(stored, actor=actor, hidden_entry_ids=hidden_entry_ids)
             for stored in raw
             if self._visible(actor, stored)
             and (not suppress_own or not self._is_own_echo(actor, stored))
@@ -457,6 +483,7 @@ class TableEventService:
         current_before = int(before_seq)
         smallest_scanned_seq: int | None = None
         reached_start = False
+        hidden_entry_ids = self._hidden_ids_for(scope)
 
         for _ in range(MAX_HISTORY_SCAN_CHUNKS):
             if current_before <= 1:
@@ -480,7 +507,9 @@ class TableEventService:
             for stored in reversed(raw_chunk):
                 smallest_scanned_seq = stored.seq
                 if self._visible(scope, stored):
-                    collected_events_desc.append(self._present(stored, actor=scope))
+                    collected_events_desc.append(
+                        self._present(stored, actor=scope, hidden_entry_ids=hidden_entry_ids)
+                    )
                     if len(collected_events_desc) == bounded_limit:
                         break
 

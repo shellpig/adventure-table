@@ -50,17 +50,70 @@ def _redact_attack_structure(res: dict[str, Any]) -> None:
         damage.pop("after_hp", None)
 
 
+# Payload keys that carry Combat entry ids (or Monster instance ids), singly or as lists.
+_ID_KEYS = {
+    "entry_id",
+    "target_entry_id",
+    "target_combat_entry_id",
+    "current_turn_entry_id",
+    "acting_entry_id",
+    "monster_instance_id",
+    "subject_monster_instance_id",
+    "target_monster_instance_id",
+}
+_ID_LIST_KEYS = {
+    "entry_ids",
+    "ordered_entry_ids",
+    "grouped_entry_ids",
+}
+
+
+def _redact_hidden_entries(data: dict[str, Any], hidden_ids: frozenset[str]) -> None:
+    """Strip hidden Monster entry/instance ids and their names from a Player-facing payload."""
+
+    def is_hidden(value: object) -> bool:
+        return isinstance(value, str) and value in hidden_ids
+
+    redacted = False
+    for key in _ID_KEYS:
+        if is_hidden(data.get(key)):
+            data[key] = None
+            redacted = True
+    for key in _ID_LIST_KEYS:
+        values = data.get(key)
+        if isinstance(values, list):
+            filtered = [value for value in values if not is_hidden(value)]
+            if len(filtered) != len(values):
+                redacted = True
+            data[key] = filtered
+    if redacted:
+        # A payload that names its entry (combat.entry_added et al.) must not
+        # name a hidden Monster; the id above is already nulled.
+        data.pop("display_name", None)
+        data.pop("name", None)
+    # Per-target lists: element-wise projection
+    for list_key in ("outcomes", "targets"):
+        items = data.get(list_key)
+        if isinstance(items, list):
+            for item in items:
+                if isinstance(item, dict):
+                    _redact_hidden_entries(item, hidden_ids)
+
+
 def project_combat_event_payload(
     kind: str,
     payload: dict[str, Any],
     *,
     audience: CombatantAudience,
+    hidden_entry_ids: frozenset[str] = frozenset(),
 ) -> dict[str, Any]:
     """Project combat event payloads and mutation responses for caller visibility.
 
     DM audience receives the complete payload untouched.
     Player audience has exact enemy HP, AC, saving throw modifiers, and caster DCs
     redacted while preserving damage amounts, hit/crit, outcomes, and injury levels.
+    Hidden Monster entry ids/names (P5-A B6) are stripped for Players whenever the
+    caller supplies them via hidden_entry_ids.
     Non-combat event kinds are never modified.
     """
     if audience == "dm":
@@ -70,6 +123,13 @@ def project_combat_event_payload(
 
     data = deepcopy(payload)
 
+    if hidden_entry_ids:
+        _redact_hidden_entries(data, hidden_entry_ids)
+
+    if kind == "combat.door_state_changed" and data.pop("hidden_door", False):
+        # Hidden-origin doors never expose their id to Players (their board
+        # view projects door_id=None); the state change itself stays visible.
+        data.pop("door_id", None)
     target_is_hostile = bool(data.get("target_is_hostile", False))
     caster_is_hostile = bool(data.get("caster_is_hostile", False))
 

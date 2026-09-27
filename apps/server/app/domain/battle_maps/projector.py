@@ -62,6 +62,9 @@ def project_battle_map(
                 state=door.default_state,
             )
         )
+    # Sort so the wall order cannot leak which segments are hidden doors:
+    # public walls and hidden-door walls are interleaved by coordinates only.
+    walls.sort(key=lambda wall: (wall.x1, wall.y1, wall.x2, wall.y2))
     return ProjectedBattleMap(
         id=definition.id,
         room_id=definition.room_id,
