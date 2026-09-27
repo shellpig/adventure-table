@@ -323,8 +323,9 @@ class CombatBoardService:
             state = runtime.state if runtime is not None else str(raw.get("state", "closed"))
             revealed = runtime.revealed if runtime is not None else False
             hidden_origin = raw.get("visibility") == "hidden"
-            if hidden_origin and not revealed:
-                # Unrevealed hidden doors project as plain walls — no id, no "hidden" string.
+            if hidden_origin and not revealed and not is_dm:
+                # Players see an unrevealed hidden door as a plain wall — no id, no "hidden"
+                # string. The DM keeps the door (with id) so it can be revealed or changed.
                 walls.append(BoardWallView(x1=raw["x1"], y1=raw["y1"], x2=raw["x2"], y2=raw["y2"]))
                 continue
             doors.append(self._door_view(

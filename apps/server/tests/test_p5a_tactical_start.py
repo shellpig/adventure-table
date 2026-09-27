@@ -57,13 +57,16 @@ def test_tactical_start_freezes_map_baseline() -> None:
     assert board_view.grid_pixel_size is None  # blank map carries no grid alignment
     assert board_view.source_battle_map_id == map_id
     assert board_view.source_battle_map_revision == 3
-    # Unrevealed hidden doors project as plain walls for everyone, including DM:
-    # 2 public walls + 1 hidden door rendered as a wall, 0 doors.
-    assert len(board_view.walls) == 3
-    assert board_view.doors == ()
-    assert [ (w.x1, w.y1, w.x2, w.y2) for w in board_view.walls ] == sorted(
-        [(0, 0, 5, 0), (10, 10, 12, 10), (5, 0, 6, 0)]
-    )
+    # The DM keeps full semantic objects: both walls (incl. the hidden one) and the
+    # unrevealed hidden door as a door with its id.
+    assert [(w.x1, w.y1, w.x2, w.y2) for w in board_view.walls] == [
+        (0, 0, 5, 0), (10, 10, 12, 10),
+    ]
+    assert len(board_view.doors) == 1
+    dm_door = board_view.doors[0]
+    assert dm_door.door_id is not None
+    assert (dm_door.x1, dm_door.y1, dm_door.x2, dm_door.y2) == (5, 0, 6, 0)
+    assert (dm_door.state, dm_door.revealed) == ("closed", False)
 
     # Player sees public walls plus the hidden door rendered as a wall (hidden
     # walls stay DM-only); the hidden door is indistinguishable from a wall.

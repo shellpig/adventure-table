@@ -551,3 +551,51 @@ def test_request_initiative_gate_rejects_unplaced_tactical_entry() -> None:
         RequestInitiativeInput(entry_ids=(char_entry, monster_entry)),
     )
     assert response is not None
+
+
+def _position_event_count(table: TacticalTable) -> int:
+    from sqlalchemy import func, select
+
+    from app.persistence.rooms.table_runtime import session_events
+
+    with table.engine.connect() as conn:
+        return conn.execute(
+            select(func.count()).select_from(session_events).where(
+                session_events.c.kind == "combat.position_placed"
+            )
+        ).scalar_one()
+
+
+def test_placement_retry_with_same_key_does_not_duplicate() -> None:
+    table = setup_tactical_table()
+    _start(table, blank_width_cells=10, blank_height_cells=10)
+    char_entry = _character_entry_id(table)
+    request = PlaceCombatantInput(anchor_x=2, anchor_y=3, idempotency_key="place-once")
+
+    first = table.board.place_position(table.dm_actor, char_entry, request)
+    second = table.board.place_position(table.dm_actor, char_entry, request)
+
+    assert (second.anchor_x, second.anchor_y) == (first.anchor_x, first.anchor_y) == (2, 3)
+    board = table.board.get_board(table.dm_actor)
+    assert [p.entry_id for p in board.positions] == [char_entry]
+    assert _position_event_count(table) == 1
+
+
+def test_definition_edit_after_start_does_not_drift_board() -> None:
+    table = setup_tactical_table()
+    map_id = insert_battle_map(table)
+    _start(table, battle_map_id=map_id)
+    before = table.board.get_board(table.dm_actor)
+
+    with table.engine.begin() as conn:
+        conn.execute(insert(battle_map_walls).values(
+            id=uuid4(), battle_map_id=map_id, x1=1, y1=5, x2=4, y2=5, visibility="public",
+        ))
+        conn.execute(insert(battle_map_terrain).values(
+            battle_map_id=map_id, x=7, y=7, terrain_kind="blocked",
+        ))
+
+    after = table.board.get_board(table.dm_actor)
+    assert after.walls == before.walls
+    assert after.terrain == before.terrain
+    assert after.runtime_revision == before.runtime_revision
