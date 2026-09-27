@@ -190,7 +190,7 @@ if (btn && !btn.disabled) btn.click();
 
 ### 4b.1 前置
 
-- Muse（muse.ai）thread：P5-E 起使用 `https://muse.ai/thread/932eaf87-f705-4b76-9fd7-8d011d7163e0`（使用者 2026-09-27 指定；P5-C／P5-D 用「AT P5C」`a2928d6f-…`，P5-A／P5-B 用「AT P05」`bf1c7224-…`）。Linux 環境跨 thread 沿用。用 **Claude in Chrome**（使用者的真 Chrome，已登入）驅動。
+- Muse（muse.ai）thread：P5-F 起使用 `https://muse.ai/thread/3c177caa-543a-46dd-8438-94f54b07df80`（使用者 2026-09-28 指定；P5-E 用 `932eaf87-…`，P5-C／P5-D 用「AT P5C」`a2928d6f-…`，P5-A／P5-B 用「AT P05」`bf1c7224-…`）。Linux 環境跨 thread 沿用。用 **Claude in Chrome**（使用者的真 Chrome，已登入）驅動。
 - Muse 有自己的 Linux 環境，跨回合保留：clone 在 `~/workspace/repos/adventure-table`、repo root `.venv`（`apps/server[dev,web]`，venv 內 pin SQLAlchemy 2.0.54，不進 repo）、PostgreSQL 17（`P4_POSTGRES_URL=postgresql+psycopg://advtest:advtest@localhost:5432/advtest`）、node 24。VM 重建後 PostgreSQL 需 `pg_ctlcluster 17 main start`。
 - **Muse 自己跑測試**：focused＋全套 backend pytest（含 PG）綠燈才 commit；指揮者仍在本機複驗（§2.3）。
 - **`git push` 不通**（PAT 只經 egress proxy 以 Bearer 轉送，git 協定需 Basic）：Muse 在本機 commit 後用 Git Data API（blob→tree→commit→update ref）推同一 tree，推完 `git fetch` 核對 diff 為空。
@@ -215,8 +215,9 @@ document.querySelector('button[aria-label="傳送"]').click();
 
 ### 4b.3 檢查節奏
 
-- **每 5～10 分鐘檢查一次**（使用者 2026-09-27：2 分鐘輪詢浪費 token）。喚醒訊號用背景 `git ls-remote origin refs/heads/<branch>` 迴圈（有新 head 或 10 分鐘到即結束），每次喚醒只做一次瀏覽器檢查（順便按權限核可）。
-- 狀態字樣「蒐集我的想法／正在處理／執行中」都代表還在跑；P5-A 兩步都在 50～55 分鐘內推送，超過 60 分鐘再重新載入確認。
+- **每 10～20 分鐘檢查一次**（使用者 2026-09-28）。喚醒訊號用背景 `git ls-remote origin refs/heads/<branch>` 迴圈（有新 head 或時間到即結束），每次喚醒只做一次瀏覽器檢查（順便按權限核可）。
+- 狀態字樣「蒐集我的想法／正在處理／執行中」都代表還在跑。**還在跑時只問進度，不催「繼續、不要停」**；接受一輪 60～90 分鐘。只有它**閒置**（任務已結束卻沒推送，或回報後停住）時才明確要它繼續做完。P5-F 的教訓：prompt 與催促一再強調「不要停、快推送」，Muse 把它理解成「不要驗證」，前端每輪 15～25 分鐘就交出沒跑過的東西。
+- 頁面重新載入後常空白數分鐘；需要時用 Enter 送出輸入框內容（送出鈕在頁面未載入完時不存在）。
 
 ### 4b.4 Muse 已知缺陷
 
@@ -226,8 +227,18 @@ document.querySelector('button[aria-label="傳送"]').click();
 | 保密規則套過頭（P5-A 把未揭露 hidden door 連 DM 都藏起來），且寫測試斷言錯誤行為 | 審 secrecy 時分別核對 DM 與 Player 視角是否符合契約 |
 | 漏測試指南條目（P5-A placement retry、開戰後編輯 Definition） | 把測試指南每條對應到測試名，缺的當場補或退回 |
 | projection 的列表順序洩漏（hidden door 轉成的 wall 排在最後） | secrecy 審核也看順序、計數等側通道 |
+| 自造 server 沒提供的欄位並設成 optional（P5-F `aoe_shape`／`aoe_size_feet`，按鈕永遠不出現） | 每個新前端欄位對照 server model；prompt 明文允許回報 blocker |
+| handler／hook 寫了但沒有呼叫者（P5-F target check、AoE、`useMovementDraft`） | 每個新 handler grep 呼叫位置 |
+| 假測試：測試自己呼叫 mock 再斷言、`renderToStaticMarkup` 讓 effect／事件不執行、永遠成立的寬鬆斷言 | 審測試時確認斷言失敗得了；前端互動以 Playwright 驗 |
+| Playwright spec 未執行就交（P5-F 建 map payload 不合法） | Muse 環境跑不了瀏覽器；前端步驟的 E2E 由指揮者寫並以 Docker 跑 |
 
-品質面：結構乾淨、守範圍與 Do-not-touch、會說明範圍外的必要改動；每步約需指揮者一至兩處修正。
+品質面：P5-A～D 結構乾淨、守範圍與 Do-not-touch，每步約需指揮者一至兩處修正；P5-E 起品質下滑（P5-E 藏 5 個 bug，P5-F 前端 7 輪仍有 5 個 bug 靠指揮者跑 E2E 找出）。後端有既有契約與 PostgreSQL 測試可控，前端無法自我驗證——**Muse 只派後端步驟**，前端改派 agy 或指揮者自己做。
+
+### 4b.5 prompt 必備（2026-09-28 起）
+
+- **允許回報 blocker**：「發現 server 沒提供需要的欄位／route，或契約有缺口，停下來回報，不要自己補型別或假資料。」一般實作決定不必等確認。不再寫「中途不要停下來等我確認」。
+- **FINAL REPORT 要求可核對的驗證證據，不收「全綠」**：每個新增前端欄位 → 對應的 server model 欄位；每個新增 handler → grep 到的呼叫位置；每條 user flow → 從哪個點擊開始、依序經過哪些函式與 route；每個測試 → 說明它在什麼錯誤實作下會失敗。
+- 前端步驟的 Playwright spec 不派給 Muse。
 
 ---
 
