@@ -5,9 +5,9 @@
 - **更新日期**：2026-09-27
 - **目標與邊界**：Tactical AoE 由 Server 以 canonical geometry（circle／cone／line／square，cell-center 規則）算 affected cells 與 candidate combatants，接回既有 P4 AoE 提案／DM 確認／save／damage pipeline；Player preview 不洩漏 hidden token；confirm 綁 board revision、retry 不重複。**Backend only**；前端 renderer、template 操作 UI、MCP tool 屬 P5-F；OA 屬 P5-E。契約：`docs/P5/實作規格.md` §4.3、§4.5、§8；`docs/P5/開發設計方針.md` §4、§8、§11、§14；`docs/P5/測試指南.md` §3、D.1～D.6。
 - **Branch**：`feat/p5d-aoe-tactical-spell-geometry`（自 `main@7eeab560` 開出）
-- **最近已驗證 commit**：—
+- **最近已驗證 commit**：`40741554`＋指揮者補測試 `76a61fee`
 - **Worker**：Muse（thread `https://muse.ai/thread/a2928d6f-41d1-466e-81f9-b9c59bbdca60`，與 P5-C 同一個）。prompt 存 `C:\_work\AI_Work\Tools\agy-runs\muse-p5d-<step>.prompt.txt`。關門（D2）由指揮者做。
-- **下一步**：D1
+- **下一步**：無；P5-D 已關門並合併 `main`，接 P5-E。證據見 [P5-D closeout](P5-D_CLOSEOUT.md)
 - **阻礙／未審**：無
 - **本 Subphase 技術決策（契約未指定，指揮者拍板）**：
   1. 純幾何放 `app/domain/spatial/aoe.py`（不擲骰、不碰 DB）。Shape 由 spell content 的 `area_of_effect`（`type`、`size`）normalize：`sphere`／`cylinder` → `circle`（radius = size）、`cube` → `square`（side = size）、`cone` → `cone`（length = size）、`line` → `line`（length = size，width 固定 5 ft；content 沒有寬度資料，其他寬度交 DM 調整）。不以 spell name hardcode。
@@ -22,5 +22,5 @@
 
 | Step | 標題 | 狀態 | 依賴 | 紀錄 |
 |---|---|---|---|---|
-| D1 | AoE geometry、golden fixtures、Tactical AoE preview／提案接線、hidden 過濾、stale 與 idempotency（D.1～D.6） | 進行中 | — | [D1](P5-D_steps/D1.md) |
-| D2 | 關門 gate、closeout、合併 `main`（指揮者） | 待做 | D1 | — |
+| D1 | AoE geometry、golden fixtures、Tactical AoE preview／提案接線、hidden 過濾、stale 與 idempotency（D.1～D.6） | 完成 | — | [D1](P5-D_steps/D1.md) |
+| D2 | 關門 gate、closeout、合併 `main`（指揮者） | 完成 | D1 | — |
