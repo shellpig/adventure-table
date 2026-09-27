@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import Field
 
 from app.content.registry import ContentRegistry
+from app.domain.combat.board import CombatBoardService
 from app.domain.combat.effect_resolver import EffectSpec
 from app.domain.combat.event_projection import project_combat_event_payload
 from app.domain.combat.lifecycle import (
@@ -30,9 +31,16 @@ from app.domain.rooms.table_events import (
     TableEventActorUnauthorizedError,
     TableEventService,
 )
+from app.domain.spatial.targeting import (
+    CombatTargetBlockedError,
+    CombatTargetOutOfRangeError,
+    parse_spell_range,
+    validate_spell_target,
+)
 from app.persistence.characters import CharacterRepository
 from app.persistence.combat.lifecycle import CombatRepository, StoredCombatEntry, actor_binding
 from app.persistence.combat.repository import MonsterRepository
+from app.persistence.combat.resolution import CombatResolutionTargetNotFoundError
 from app.persistence.combat.spells import (
     CombatSpellNotFoundError,
     CombatSpellRepository,
@@ -127,6 +135,7 @@ class CombatSpellService:
         character_repository: CharacterRepository,
         roll_service: RollService,
         registry: ContentRegistry,
+        board_service: CombatBoardService | None = None,
     ) -> None:
         self.repository = repository
         self.combat_repository = combat_repository
@@ -136,6 +145,8 @@ class CombatSpellService:
         self.character_repository = character_repository
         self.roll_service = roll_service
         self.registry = registry
+        # P5-C: None keeps the legacy Quick-only behavior (no spatial validation).
+        self.board_service = board_service
         self.resolver = SpellDefinitionResolver(
             character_repository=character_repository,
             monster_repository=monster_repository,
@@ -286,6 +297,63 @@ class CombatSpellService:
             )
         return tuple(views)
 
+    def _validate_tactical_spell_target(
+        self,
+        actor: TableActorContext,
+        *,
+        caster_entry: StoredCombatEntry,
+        target_entry: StoredCombatEntry | None,
+        range_text: str | None,
+        targeting_kind: str,
+    ) -> None:
+        """P5-C Tactical targeted-spell range validation; no-op outside Tactical.
+
+        AoE geometry is P5-D (untouched). Unparsable ranges (Sight, Special,
+        ...) stay on the legacy path with no spatial gate. Illegal targets
+        raise with zero side effects.
+        """
+        if self.board_service is None:
+            return
+        combat = self.combat_repository.get_active(actor.campaign_id)
+        if combat is None or combat.mode != "tactical":
+            return
+        if targeting_kind == "aoe":
+            return
+        if target_entry is not None and not actor.is_current_dm:
+            if (
+                target_entry.subject_kind == "monster"
+                and target_entry.monster_instance_id is not None
+            ):
+                instance = self.monster_repository.get_instance(
+                    target_entry.monster_instance_id
+                )
+                if instance is not None and instance.visibility == "hidden":
+                    raise CombatResolutionTargetNotFoundError(
+                        "Combat target is not visible"
+                    )
+        kind, feet = parse_spell_range(range_text)
+        if kind == "self":
+            if target_entry is not None and target_entry.id != caster_entry.id:
+                raise CombatStateConflictError(
+                    "Self-range spell must target the caster"
+                )
+            return
+        if kind == "unknown" or feet is None or target_entry is None:
+            return
+        board_service = self.board_service
+        result = validate_spell_target(
+            source_cells=board_service.entry_footprint_cells(caster_entry),
+            target_cells=board_service.entry_footprint_cells(target_entry),
+            range_feet=feet,
+            barriers=board_service.sight_barriers(combat.id),
+            audience="dm" if actor.is_current_dm else "player",
+        )
+        if not result.legal:
+            if result.blocked:
+                detail = result.blocker_kind or "unknown"
+                raise CombatTargetBlockedError(f"spell target is blocked ({detail})")
+            raise CombatTargetOutOfRangeError("spell target is out of range")
+
     def cast_spell(self, actor: TableActorContext, input: CastSpellInput) -> SpellCastView:
         self.table_event_service.require_actor_current(actor)
         caster_entry = self._active_entry(actor, input.caster_entry_id)
@@ -312,6 +380,17 @@ class CombatSpellService:
             raise CombatSpellNotFoundError(str(exc)) from exc
         except ValueError as exc:
             raise CombatSpellStateConflictError(str(exc)) from exc
+
+        # P5-C: Tactical targeted spells validate range before anything is
+        # persisted; illegal targets raise with zero side effects.
+        spell_entry = self.registry.get(resolved.spell_ref)
+        self._validate_tactical_spell_target(
+            actor,
+            caster_entry=caster_entry,
+            target_entry=target_entry,
+            range_text=resolved.range_text,
+            targeting_kind=self._targeting(spell_entry.data),
+        )
 
         if caster_entry.subject_kind == "character":
             stored, _event = self.repository.cast_character_spell(

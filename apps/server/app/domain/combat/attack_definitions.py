@@ -89,6 +89,19 @@ def _property_indexes(data: dict[str, object]) -> set[str]:
     return result
 
 
+def _weapon_range_feet(data: dict[str, object]) -> tuple[int | None, int | None]:
+    """P5-C: content range {normal, long} in feet; non-positive values are dropped."""
+    raw = data.get("range")
+    if not isinstance(raw, dict):
+        return None, None
+    normal = raw.get("normal")
+    long = raw.get("long")
+    return (
+        normal if isinstance(normal, int) and normal > 0 else None,
+        long if isinstance(long, int) and long > 0 else None,
+    )
+
+
 def _proficiency_bonus(level: int) -> int:
     return 2 + (level - 1) // 4
 
@@ -208,6 +221,16 @@ class AttackDefinitionResolver:
             if proficient:
                 sources.append(ModifierSource(source="proficiency_bonus", value=proficiency))
             sources.extend(source for source in infusion_sources if source.source.endswith(":attack"))
+            # P5-C: reach/range derivation from content only. Melee defaults to
+            # reach 5 ft; the reach property extends it to 10 ft; thrown melee
+            # weapons additionally carry their content range for thrown use.
+            range_normal_feet, range_long_feet = _weapon_range_feet(data)
+            if attack_kind is AttackKind.RANGED:
+                reach_feet: int | None = None
+            else:
+                reach_feet = 10 if "reach" in properties else 5
+                if "thrown" not in properties:
+                    range_normal_feet, range_long_feet = None, None
             attacks.append(
                 ResolvedAttack(
                     source_ref=f"inventory:{inventory.entry_id}",
@@ -226,6 +249,9 @@ class AttackDefinitionResolver:
                     notes=(f"item_ref={inventory.item_ref}",),
                     content_ref=inventory.item_ref,
                     presentation_field="name",
+                    reach_feet=reach_feet,
+                    range_normal_feet=range_normal_feet,
+                    range_long_feet=range_long_feet,
                 )
             )
         return tuple(attacks)
@@ -270,6 +296,23 @@ class AttackDefinitionResolver:
                 continue
             kind = AttackKind.MELEE if attack_kind_raw.startswith("melee") else AttackKind.RANGED
             name = str(raw.get("name") or f"Attack {index + 1}")
+            # P5-C: reach/range from the normalized MonsterAction contract only.
+            # Melee defaults to reach 5 ft when no reach was parsed. A
+            # "Melee or Ranged" action (thrown dagger/javelin) is normalized as
+            # ranged but keeps its parsed reach, so it still threatens in melee.
+            reach_feet: int | None
+            range_normal_feet: int | None
+            range_long_feet: int | None
+            parsed_reach = raw.get("reach")
+            if kind is AttackKind.MELEE:
+                reach_feet = parsed_reach if isinstance(parsed_reach, int) and parsed_reach > 0 else 5
+                range_normal_feet, range_long_feet = None, None
+            else:
+                reach_feet = parsed_reach if isinstance(parsed_reach, int) and parsed_reach > 0 else None
+                parsed_normal = raw.get("range_normal")
+                parsed_long = raw.get("range_long")
+                range_normal_feet = parsed_normal if isinstance(parsed_normal, int) and parsed_normal > 0 else None
+                range_long_feet = parsed_long if isinstance(parsed_long, int) and parsed_long > 0 else None
             content_ref = None
             presentation_field = None
             if template_entry:
@@ -297,6 +340,9 @@ class AttackDefinitionResolver:
                     notes=(f"monster_instance_id={monster.id}",),
                     content_ref=content_ref,
                     presentation_field=presentation_field,
+                    reach_feet=reach_feet,
+                    range_normal_feet=range_normal_feet,
+                    range_long_feet=range_long_feet,
                 )
             )
         return tuple(attacks)
