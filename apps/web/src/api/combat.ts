@@ -262,6 +262,9 @@ export type CastableSpellView = {
   targeting: 'single' | 'self' | 'aoe'
   cast_mode: 'attack' | 'save' | 'heal' | 'utility'
   castable_slot_levels: number[]
+  /** Canonical Tactical AoE template from spell content; null for non-AoE or unsupported areas. */
+  aoe_shape: 'circle' | 'square' | 'cone' | 'line' | null
+  aoe_size_feet: number | null
 }
 
 export type SpellCastView = {
@@ -313,6 +316,17 @@ export type ProposeAoeSpellInput = {
   profile_id?: string | null
   proposed_target_ids: string[]
   idempotency_key?: string | null
+  /** Tactical AoE: client-placed template plus the board revision the preview
+   * was computed against. Ignored by Quick AoE. */
+  template?: {
+    shape: string
+    size_feet: number
+    origin_x: number
+    origin_y: number
+    aim_x?: number | null
+    aim_y?: number | null
+  } | null
+  board_revision?: number | null
 }
 
 export type ResolveAoeSpellInput = {

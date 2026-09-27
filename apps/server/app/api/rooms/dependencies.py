@@ -31,6 +31,7 @@ from app.domain.combat.roll_compat import CombatAwareRollRepository
 from app.domain.combat.semantic_hp import CombatResolutionService
 from app.domain.combat.special_attacks import CombatSpecialAttackService
 from app.domain.combat.spell_service import CombatSpellService
+from app.domain.combat.target_check import TargetCheckService
 from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.campaigns import CampaignService
 from app.domain.rooms.character_rolls import CharacterRollModifierResolver
@@ -594,6 +595,32 @@ def get_combat_spell_service(request: Request) -> CombatSpellService:
     return service
 
 
+def get_target_check_service(request: Request) -> TargetCheckService:
+    # P5-F: read-only target legality/range/blocker check used by both the
+    # REST route and the MCP facade; shares the same repositories and the
+    # same AttackDefinitionResolver wiring as the attack service.
+    # Starlette State has no membership test; the AttributeError is the "not built yet" signal.
+    try:
+        return request.app.state.target_check_service
+    except AttributeError:
+        pass
+    combat_service = get_combat_service(request)
+    service = TargetCheckService(
+        table_event_service=get_table_event_service(request),
+        combat_service=combat_service,
+        board_service=get_combat_board_service(request),
+        attack_definition_resolver=AttackDefinitionResolver(
+            get_room_workspace_service(request).character_repository,
+            combat_service.monster_repository,
+            get_content_registry(request),
+        ),
+        monster_repository=combat_service.monster_repository,
+        registry=get_content_registry(request),
+    )
+    request.app.state.target_check_service = service
+    return service
+
+
 def get_monster_instance_service(request: Request) -> MonsterInstanceService:
     service = getattr(request.app.state, "monster_instance_service", None)
     if service is None:
@@ -639,5 +666,6 @@ __all__ = [
     "get_table_character_state_service",
     "get_table_event_notifier",
     "get_table_event_service",
+    "get_target_check_service",
 ]
 

@@ -207,6 +207,21 @@ class RepositionView(StrictModel):
     board_revision: int
 
 
+class MovementStatusView(StrictModel):
+    """P5-F read-only movement bookkeeping for the tactical briefing.
+
+    ``has_pending_movement`` is true while a paused movement (P5-E) waits for
+    ``combat_resume_movement`` / ``combat_cancel_pending_movement``.
+    """
+
+    entry_id: UUID
+    used_feet: int
+    remaining_feet: int
+    budget_feet: int
+    has_pending_movement: bool
+    pending_revision: int = 0
+
+
 def _step_view(step: PathStep) -> MovementStepView:
     return MovementStepView(
         anchor_x=step.anchor.x, anchor_y=step.anchor.y, cost_feet=step.cost_feet,
@@ -565,6 +580,26 @@ class MovementService:
 
     # ------------------------------------------------------------------
     # Preview
+
+    def movement_status(
+        self, actor: TableActorContext, entry_id: UUID
+    ) -> MovementStatusView:
+        """P5-F read-only bookkeeping for the tactical briefing. No path
+        resolution, no events, no writes."""
+        _combat, _board, entry = self._running_entry(actor, entry_id)
+        self.combat_service._authorize_entry(actor, entry)
+        if self.board_repository.get_position(entry.id) is None:
+            raise CombatStateConflictError(f"CombatEntry {entry_id} has no board position")
+        budget_feet, used_feet, _diagonal_steps = self._turn_budget(entry)
+        pending = dict(entry.pending_movement_state or {})
+        return MovementStatusView(
+            entry_id=entry.id,
+            used_feet=used_feet,
+            remaining_feet=max(0, budget_feet - used_feet),
+            budget_feet=budget_feet,
+            has_pending_movement=bool(pending),
+            pending_revision=int(pending.get("revision", 0) or 0),
+        )
 
     def preview(
         self, actor: TableActorContext, entry_id: UUID, request: PreviewMovementInput

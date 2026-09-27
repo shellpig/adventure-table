@@ -13,7 +13,7 @@ import {
 import { SearchableSelect, type SearchOption } from '../../components/SearchableSelect'
 import { runCombatMutation } from './sessionCombat'
 import type { SessionCopy } from './sessionCopy'
-import { requestId } from './SessionTableSurface'
+import { requestId } from './requestId'
 
 type SessionCombatDmControlsProps = {
   combat: CombatDetailView

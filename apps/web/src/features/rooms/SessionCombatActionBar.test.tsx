@@ -150,6 +150,8 @@ function spell(
     targeting,
     cast_mode: targeting === 'aoe' ? 'save' : 'attack',
     castable_slot_levels: targeting === 'aoe' ? [3, 4] : [0],
+    aoe_shape: targeting === 'aoe' ? 'circle' : null,
+    aoe_size_feet: targeting === 'aoe' ? 20 : null,
     ...options,
   }
 }

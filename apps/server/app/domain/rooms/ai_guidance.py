@@ -159,8 +159,27 @@ def _player_loop(locale: str) -> str:
     )
 
 
-def _dm_combat_loop(locale: str) -> str:
+def _dm_combat_loop(locale: str, tactical: bool = False) -> str:
     if locale == "zh-TW":
+        if tactical:
+            # P5-F F1c: tactical mode reads the structured combat.tactical
+            # field; range is server-computed so the Quick-specific
+            # combat_adjudicate_attack (in_range) line is dropped. Keeps the
+            # DM tactical briefing within BRIEFING_MAX_CHARS.
+            return (
+                "DM 戰鬥必跑流程（每步都做，不得停在 host chat）："
+                "1) 讀 get_session_context.combat.tactical：round、current_turn、my_units、visible、"
+                "pending 移動／反應，依 next_required_action 行動。"
+                "2) 待處理裁定依 next_required_action 選工具：reach 用 combat_adjudicate_special_attack、"
+                "AoE 用 combat_resolve_aoe_spell、OA／自由規則用 combat_resolve_adjudication（Tactical 射程由 Server 計算）。"
+                "3) Monster 回合以 combat_* 工具解決後 combat_advance_turn；"
+                "next_required_action=advance_turn 時也由你推進。環境傷害 quick_roll 後 combat_apply_damage。"
+                "4) post_narration 簡述戰況（嚴禁改 HP 偽造攻擊；只說傷勢，不說敵人精確 HP）。"
+                f"5) 每次解決後立即 wait_for_event（timeout 最多 {WAIT_TIMEOUT_SECONDS} 秒）。"
+                "6) 處理完事件後再次 wait_for_event 持續循環。"
+                f"7) 僅連續 {WAIT_RETRY_COUNT} 次無事件（約 10 分鐘）、戰鬥或 Session 結束才停止。"
+                "寫入帶 idempotency_key，代 Player 行動帶 subject_seat_id。"
+            )
         return (
             "DM 戰鬥必跑流程（無需先讀 guide；每步都做，不得停在 host chat 等提示）："
             "1) 讀取 get_session_context.combat（或 get_combat_context）：檢視 round、current_turn_entry_id（當前回合）、"
@@ -175,6 +194,23 @@ def _dm_combat_loop(locale: str) -> str:
             "6) 處理完事件後再次呼叫 wait_for_event 持續循環。"
             f"7) 僅連續 {WAIT_RETRY_COUNT} 次無事件（約 10 分鐘）、戰鬥或 Session 結束才停止。"
             "寫入帶 idempotency_key，代 Player 行動帶 subject_seat_id。"
+        )
+    if tactical:
+        return (
+            "MANDATORY DM COMBAT LOOP (do every step, never stop in host chat): "
+            "1) Read get_session_context.combat.tactical: round, current_turn, my_units, visible, "
+            "pending movement/reactions, and follow next_required_action. "
+            "2) On pending adjudication use the tool next_required_action names: "
+            "reach -> combat_adjudicate_special_attack, AoE -> combat_resolve_aoe_spell, OA/freeform -> combat_resolve_adjudication "
+            "(tactical range is server-computed). "
+            "3) On a Monster turn resolve with combat_* tools then combat_advance_turn; "
+            "also advance when next_required_action=advance_turn. Environmental damage: quick_roll then combat_apply_damage. "
+            "4) Narrate briefly with post_narration (never patch enemy HP to fake attacks; "
+            "narrate injury level, never exact enemy HP). "
+            f"5) After handling any action call wait_for_event (timeout up to {WAIT_TIMEOUT_SECONDS}s). "
+            "6) After resolving an event call wait_for_event again and repeat. "
+            f"7) Stop only after {WAIT_RETRY_COUNT} consecutive empty waits (~10 min), combat end, Session end, or host stop. "
+            "Writes take idempotency_key; acting for Player takes subject_seat_id."
         )
     return (
         "MANDATORY DM COMBAT LOOP (no need to read the guide; do every step, never stop in host chat): "
@@ -194,7 +230,9 @@ def _dm_combat_loop(locale: str) -> str:
     )
 
 
-def _player_combat_loop(locale: str) -> str:
+def _player_combat_loop(locale: str, tactical: bool = False) -> str:
+    # P5-F F1c: tactical flag accepted for symmetry with _dm_combat_loop;
+    # the Player loop already fits BRIEFING_MAX_CHARS, so no variant text.
     if locale == "zh-TW":
         return (
             "Player 戰鬥必跑流程（無需先讀 guide；每步都做，不得停在 host chat 等提示）："
@@ -230,10 +268,40 @@ def _format_active_briefing(en_loop: str, zh_loop: str) -> str:
     )
 
 
+def _tactical_addon(locale: str, role: str) -> str:
+    """Concise tactical-only section appended after the full combat loop.
+
+    P5-F F1c: the tactical mode reuses the combat loop (tactical variant for
+    DM) verbatim and only adds what is tactical-specific: tool order,
+    structured cells, paused→resume, the DM-only cancel, and a pointer to
+    the structured combat.tactical field. Wait behaviour stays in the loop
+    text, which already references WAIT_TIMEOUT_SECONDS / WAIT_RETRY_COUNT.
+    """
+    if role not in {"dm", "player"}:
+        raise ValueError("unsupported role")
+    cancel_en = "; DM-only: combat_cancel_pending_movement" if role == "dm" else ""
+    cancel_zh = "；僅 DM：combat_cancel_pending_movement" if role == "dm" else ""
+    if locale == "en":
+        return (
+            " Tactical add-on: combat_preview_movement→combat_confirm_movement"
+            f" (paused: combat_resume_movement{cancel_en});"
+            " combat_check_target before attack/spell;"
+            " combat_preview_aoe before AoE;"
+            " structured cells only."
+            " Read combat.tactical for the structured snapshot."
+        )
+    return (
+        " 戰術補充：combat_preview_movement→combat_confirm_movement"
+        f"（暫停：combat_resume_movement{cancel_zh}）；"
+        "攻擊／施法前 combat_check_target；AoE 前 combat_preview_aoe；"
+        "只用 structured cells。讀 combat.tactical 取結構化戰況。"
+    )
+
+
 def render_briefing(*, role: str, mode: str) -> str:
     if role not in {"dm", "player"}:
         raise ValueError("unsupported role")
-    if mode not in {"pre_session", "active_session", "active_combat"}:
+    if mode not in {"pre_session", "active_session", "active_combat", "active_tactical_combat"}:
         raise ValueError("unsupported mode")
     if mode == "pre_session":
         briefing = (
@@ -253,6 +321,17 @@ def render_briefing(*, role: str, mode: str) -> str:
     elif mode == "active_combat":
         loop = _dm_combat_loop if role == "dm" else _player_combat_loop
         briefing = _format_active_briefing(loop("en"), loop("zh-TW"))
+    elif mode == "active_tactical_combat":
+        # P5-F F1c: tactical briefing = combat loop (+ tactical add-on) via
+        # _format_active_briefing, so the MCP invocation rule is always kept.
+        # The DM loop uses its tactical variant to stay within
+        # BRIEFING_MAX_CHARS. Structured state lives in combat.tactical.
+        loop = _dm_combat_loop if role == "dm" else _player_combat_loop
+        tactical = role == "dm"
+        briefing = _format_active_briefing(
+            loop("en", tactical=tactical) + _tactical_addon("en", role),
+            loop("zh-TW", tactical=tactical) + _tactical_addon("zh-TW", role),
+        )
     else:
         loop = _dm_loop if role == "dm" else _player_loop
         briefing = _format_active_briefing(loop("en"), loop("zh-TW"))

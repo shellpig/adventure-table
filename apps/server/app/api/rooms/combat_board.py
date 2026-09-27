@@ -16,6 +16,7 @@ from app.api.rooms.dependencies import (
     get_combat_service,
     get_movement_service,
     get_table_event_service,
+    get_target_check_service,
 )
 from app.domain.combat.board import (
     BoardDoorView,
@@ -26,12 +27,14 @@ from app.domain.combat.board import (
     UpdateDoorStateInput,
 )
 from app.domain.combat.lifecycle import CombatService, CombatView, StartTacticalCombatInput
+from app.domain.combat.target_check import TargetCheckInput, TargetCheckResult, TargetCheckService
 from app.domain.combat.movement import (
     CancelPendingMovementInput,
     CancelPendingMovementView,
     ConfirmMovementInput,
     ConfirmMovementView,
     MovementService,
+    MovementStatusView,
     PreviewMovementInput,
     PreviewMovementView,
     RepositionInput,
@@ -129,6 +132,46 @@ def resume_movement(
         raise _map_combat_error(exc) from exc
 
 
+@router.get("/board/movement/{entry_id}/status", response_model=MovementStatusView)
+def movement_status(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    entry_id: UUID,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: MovementService = Depends(get_movement_service),
+) -> MovementStatusView:
+    # Read-only budget and paused-movement revision for the mover's controller or the DM;
+    # the UI needs the current pending revision after reaction windows resolve.
+    try:
+        return service.movement_status(
+            _actor_from_request(room_id, campaign_id, session_id, context, event_service),
+            entry_id,
+        )
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
+@router.post("/board/target-check", response_model=TargetCheckResult)
+def check_target(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    payload: TargetCheckInput,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: TargetCheckService = Depends(get_target_check_service),
+) -> TargetCheckResult:
+    try:
+        return service.check_target(
+            _actor_from_request(room_id, campaign_id, session_id, context, event_service),
+            payload,
+        )
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
 @router.post("/board/movement/cancel-pending", response_model=CancelPendingMovementView)
 def cancel_pending_movement(
     room_id: UUID,
@@ -199,7 +242,7 @@ def place_combatant(
     service: CombatBoardService = Depends(get_combat_board_service),
 ) -> BoardPositionView:
     try:
-        return service.place_combatant(
+        return service.place_position(
             _actor_from_request(room_id, campaign_id, session_id, context, event_service),
             entry_id,
             payload,
