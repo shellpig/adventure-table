@@ -11,6 +11,7 @@ from app.config import settings
 from app.domain.adventure_imports.service import AdventureImportService
 from app.domain.adventures.attachments import CampaignAdventureService
 from app.domain.adventures.service import AdventureService
+from app.domain.battle_maps.service import BattleMapService
 from app.domain.campaign_runtime.service import CampaignRuntimeService
 from app.domain.campaign_runtime.stage import CampaignStageBridgeService
 from app.domain.combat.adjudication_service import CombatAdjudicationService
@@ -45,6 +46,7 @@ from app.persistence.adventures.repository import (
     AdventureRepository,
     CampaignAdventureLinkRepository,
 )
+from app.persistence.battle_maps.repository import BattleMapRepository
 from app.persistence.campaign_runtime.repository import CampaignRuntimeRepository
 from app.persistence.combat.adjudication import CombatAdjudicationRepository
 from app.persistence.combat.attacks import CombatAttackRepository
@@ -159,6 +161,21 @@ def get_adventure_service(request: Request) -> AdventureService:
         RoomAssetRepository(engine),
     )
     request.app.state.adventure_service = service
+    return service
+
+
+def get_battle_map_service(request: Request) -> BattleMapService:
+    # Starlette State has no membership test; the AttributeError is the "not built yet" signal.
+    try:
+        return request.app.state.battle_map_service
+    except AttributeError:
+        pass
+    engine = get_database_engine(request)
+    service = BattleMapService(
+        BattleMapRepository(engine),
+        RoomAssetRepository(engine),
+    )
+    request.app.state.battle_map_service = service
     return service
 
 
@@ -533,6 +550,7 @@ __all__ = [
     "_HistoryGuardedCharacterRepository",
     "get_adventure_import_service",
     "get_adventure_service",
+    "get_battle_map_service",
     "get_campaign_adventure_service",
     "get_campaign_service",
     "get_campaign_stage_service",

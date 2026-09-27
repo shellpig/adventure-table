@@ -30,7 +30,7 @@ room_assets = Table(
     Column("visibility", String(16), nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     CheckConstraint(
-        "kind IN ('image', 'source_document')",
+        "kind IN ('image', 'source_document', 'battle_map_image')",
         name="ck_room_assets_kind",
     ),
     CheckConstraint(

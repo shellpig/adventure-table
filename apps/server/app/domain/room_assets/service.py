@@ -97,7 +97,7 @@ class RoomAssetService:
         if kind == "source_document" and visibility != "dm_only":
             raise RoomAssetVisibilityNotAllowedError("source_document must have visibility dm_only")
 
-        if kind == "image":
+        if kind in ("image", "battle_map_image"):
             if mime_type not in IMAGE_MIME_TYPES:
                 raise RoomAssetUnsupportedMediaTypeError(f"Unsupported image media type: {mime_type}")
             ext = IMAGE_MIME_TYPES[mime_type]
@@ -222,7 +222,9 @@ class RoomAssetService:
         if stored is None:
             raise RoomAssetNotFoundError(f"Room asset {asset_id} not found")
         if self.repository.is_referenced(asset_id):
-            raise RoomAssetInUseError(f"Room asset {asset_id} is referenced by an adventure entry")
+            raise RoomAssetInUseError(
+                f"Room asset {asset_id} is referenced by an adventure entry or battle map"
+            )
         deleted = self.repository.delete(room_id, asset_id)
         if deleted is not None:
             self.storage.delete(deleted.storage_key)

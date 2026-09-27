@@ -13,6 +13,13 @@ from app.persistence.adventures.tables import (
     adventure_entry_assets,
     campaign_adventure_links,
 )
+from app.persistence.battle_maps.tables import (
+    battle_map_doors,
+    battle_map_drawings,
+    battle_map_terrain,
+    battle_map_walls,
+    battle_maps,
+)
 from app.persistence.builder_drafts import character_build_drafts
 from app.persistence.character_imports import character_import_records
 from app.persistence.characters import (
@@ -267,6 +274,39 @@ class RoomWorkspaceRepository:
                     delete(adventure_definitions).where(
                         adventure_definitions.c.id.in_(adventure_ids)
                     )
+                )
+            # P5-A: battle maps reference room_assets.image_asset_id with RESTRICT,
+            # so delete the map graph (child tables cascade) before room_assets.
+            map_ids = tuple(
+                connection.scalars(
+                    select(battle_maps.c.id).where(
+                        battle_maps.c.room_id == room_id
+                    )
+                ).all()
+            )
+            if map_ids:
+                connection.execute(
+                    delete(battle_map_drawings).where(
+                        battle_map_drawings.c.battle_map_id.in_(map_ids)
+                    )
+                )
+                connection.execute(
+                    delete(battle_map_terrain).where(
+                        battle_map_terrain.c.battle_map_id.in_(map_ids)
+                    )
+                )
+                connection.execute(
+                    delete(battle_map_doors).where(
+                        battle_map_doors.c.battle_map_id.in_(map_ids)
+                    )
+                )
+                connection.execute(
+                    delete(battle_map_walls).where(
+                        battle_map_walls.c.battle_map_id.in_(map_ids)
+                    )
+                )
+                connection.execute(
+                    delete(battle_maps).where(battle_maps.c.id.in_(map_ids))
                 )
             connection.execute(
                 delete(room_assets).where(room_assets.c.room_id == room_id)

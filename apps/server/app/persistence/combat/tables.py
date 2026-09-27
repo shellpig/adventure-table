@@ -100,7 +100,7 @@ combats = Table(
     Column("started_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("ended_at", DateTime(timezone=True), nullable=True),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
-    CheckConstraint("mode = 'quick'", name="ck_combats_mode_quick"),
+    CheckConstraint("mode IN ('quick', 'tactical')", name="ck_combats_mode"),
     CheckConstraint(
         "status IN ('initiative_pending', 'running', 'ended')",
         name="ck_combats_status",

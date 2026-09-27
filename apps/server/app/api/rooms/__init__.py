@@ -4,6 +4,7 @@ from app.api.rooms.access import router as access_router
 from app.api.rooms.adventure_imports import router as adventure_imports_router
 from app.api.rooms.adventures import router as adventures_router
 from app.api.rooms.ai_controllers import router as ai_controllers_router
+from app.api.rooms.battle_maps import router as battle_maps_router
 from app.api.rooms.campaign_adventures import router as campaign_adventures_router
 from app.api.rooms.campaign_runtime import (
     active_router as active_campaign_runtime_router,
@@ -32,6 +33,7 @@ router = APIRouter()
 router.include_router(access_router)
 router.include_router(room_assets_router)
 router.include_router(adventures_router)
+router.include_router(battle_maps_router)
 router.include_router(adventure_imports_router)
 router.include_router(campaign_adventures_router)
 router.include_router(campaign_runtime_router)
