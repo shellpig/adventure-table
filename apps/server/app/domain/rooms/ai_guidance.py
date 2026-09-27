@@ -230,10 +230,73 @@ def _format_active_briefing(en_loop: str, zh_loop: str) -> str:
     )
 
 
+def _dm_tactical_loop(locale: str) -> str:
+    if locale == "en":
+        return (
+            "MANDATORY DM TACTICAL LOOP: 1) Every turn read get_session_context.combat plus the Tactical summary below "
+            "(mode, round, turn, positions, movement used/remaining, visible combatants by distance, pending "
+            "movement/reaction) and follow next_required_action. "
+            "2) Tool order: combat_preview_movement → combat_confirm_movement "
+            "(paused: combat_resume_movement; DM-only cancel: combat_cancel_pending_movement); "
+            "combat_check_target before combat_request_attack / combat_cast_spell; "
+            "combat_preview_aoe before combat_propose_aoe_spell. "
+            "All board actions take structured cells — never invent coordinates. "
+            "3) Run Monster turns with the combat_* tools, then combat_advance_turn; narrate briefly with post_narration "
+            "(never secret HP numbers). "
+            "4) You are the DM in host chat: never stop in host chat. After each step call wait_for_event (up to 120s); "
+            "stop only after 120 consecutive empty waits (~10 min), combat end, Session end, or the host says stop. "
+            "5) Combat writes take idempotency_key; acting for a Player takes subject_seat_id."
+        )
+    return (
+        "強制 DM 戰術 LOOP：1）每回合讀 get_session_context.combat 與下方 Tactical summary"
+        "（mode、round、回合、位置、移動 used/remaining、依距離的可見單位、pending movement/reaction），"
+        "依 next_required_action 行動。"
+        "2）工具順序：combat_preview_movement → combat_confirm_movement"
+        "（暫停中：combat_resume_movement；只有 DM 能 combat_cancel_pending_movement）；"
+        "攻擊／施法前 combat_check_target；AoE 先 combat_preview_aoe 再 combat_propose_aoe_spell。"
+        "棋盤動作只接受 structured cells，禁止自編座標。"
+        "3）怪物回合用 combat_* 工具處理後 combat_advance_turn；post_narration 簡述（不透露秘密 HP）。"
+        "4）你是主持聊天室的 DM：主持聊天中絕不停。每步後呼叫 wait_for_event（最長 120 秒）；"
+        "連續 120 次空等（約 10 分鐘）、戰鬥結束、Session 結束或主持人喊停才停。"
+        "5）戰鬥寫入要 idempotency_key；替玩家行動要 subject_seat_id。"
+    )
+
+
+def _player_tactical_loop(locale: str) -> str:
+    if locale == "en":
+        return (
+            "MANDATORY PLAYER TACTICAL LOOP: 1) Every turn read get_session_context.combat plus the Tactical summary below "
+            "(mode, round, turn, positions, movement used/remaining, visible combatants by distance, pending "
+            "movement/reaction) and follow next_required_action. "
+            "2) Tool order: combat_preview_movement → combat_confirm_movement "
+            "(paused: combat_resume_movement); "
+            "combat_check_target before combat_request_attack / combat_cast_spell; "
+            "combat_preview_aoe before combat_propose_aoe_spell. "
+            "All board actions take structured cells — never invent coordinates. "
+            "3) Use combat_use_reaction when a reaction window opens for you; resolve your roll requests when asked. "
+            "4) You are a Player in host chat: never stop in host chat. After each step call wait_for_event (up to 120s); "
+            "stop only after 120 consecutive empty waits (~10 min), combat end, Session end, or the host says stop. "
+            "5) Your combat calls always act for your own controlled character only."
+        )
+    return (
+        "強制玩家戰術 LOOP：1）每回合讀 get_session_context.combat 與下方 Tactical summary"
+        "（mode、round、回合、位置、移動 used/remaining、依距離的可見單位、pending movement/reaction），"
+        "依 next_required_action 行動。"
+        "2）工具順序：combat_preview_movement → combat_confirm_movement"
+        "（暫停中：combat_resume_movement）；"
+        "攻擊／施法前 combat_check_target；AoE 先 combat_preview_aoe 再 combat_propose_aoe_spell。"
+        "棋盤動作只接受 structured cells，禁止自編座標。"
+        "3）輪到你的 reaction window 開啟時用 combat_use_reaction；被要求時處理自己的 roll。"
+        "4）你是主持聊天室的玩家：主持聊天中絕不停。每步後呼叫 wait_for_event（最長 120 秒）；"
+        "連續 120 次空等（約 10 分鐘）、戰鬥結束、Session 結束或主持人喊停才停。"
+        "5）你的戰鬥呼叫一律只替自己控制的角色行動。"
+    )
+
+
 def render_briefing(*, role: str, mode: str) -> str:
     if role not in {"dm", "player"}:
         raise ValueError("unsupported role")
-    if mode not in {"pre_session", "active_session", "active_combat"}:
+    if mode not in {"pre_session", "active_session", "active_combat", "active_tactical_combat"}:
         raise ValueError("unsupported mode")
     if mode == "pre_session":
         briefing = (
@@ -252,6 +315,9 @@ def render_briefing(*, role: str, mode: str) -> str:
         )
     elif mode == "active_combat":
         loop = _dm_combat_loop if role == "dm" else _player_combat_loop
+        briefing = _format_active_briefing(loop("en"), loop("zh-TW"))
+    elif mode == "active_tactical_combat":
+        loop = _dm_tactical_loop if role == "dm" else _player_tactical_loop
         briefing = _format_active_briefing(loop("en"), loop("zh-TW"))
     else:
         loop = _dm_loop if role == "dm" else _player_loop

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_serializer
 
 from app.domain.combat.lifecycle import (
     CombatNotFoundError,
@@ -81,6 +81,16 @@ class BoardWallView(StrictModel):
     y1: int
     x2: int
     y2: int
+    # P5-F: the wall's battle-map visibility, DM audience only. Players always
+    # see None here so the projection never leaks hidden-wall truth; the
+    # serializer below drops the key entirely for Players so their payload
+    # shape is unchanged.
+    visibility: Literal["public", "hidden"] | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_visibility(self, handler):  # type: ignore[no-untyped-def]
+        data = handler(self)
+        return {k: v for k, v in data.items() if v is not None}
 
 
 class BoardDoorView(StrictModel):
@@ -400,7 +410,14 @@ class CombatBoardService:
             frozenset() if is_dm else self.combat_service._hidden_entry_ids(entries)
         )
         walls = [
-            BoardWallView(x1=wall["x1"], y1=wall["y1"], x2=wall["x2"], y2=wall["y2"])
+            BoardWallView(
+                x1=wall["x1"], y1=wall["y1"], x2=wall["x2"], y2=wall["y2"],
+                # DM-only truth: the Player projection keeps visibility=None so
+                # no hidden-wall information ever reaches the Player payload.
+                visibility="hidden" if wall.get("visibility") == "hidden" else "public"
+                if is_dm
+                else None,
+            )
             for wall in baseline.get("walls", [])
             if is_dm or wall.get("visibility") != "hidden"
         ]

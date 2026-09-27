@@ -1,10 +1,16 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import Field
 
+from app.domain.battle_maps.schemas import (
+    BattleMapCreate,
+    BattleMapObjectsReplace,
+    BattleMapPatch,
+)
+from app.domain.battle_maps.service import BattleMapService
 from app.domain.combat.adjudication_service import (
     AdjudicationDecisionInput,
     CombatAdjudicationService,
@@ -16,6 +22,11 @@ from app.domain.combat.attacks import (
     AttackAdjudicationInput,
     AttackRequestInput,
     CombatAttackService,
+)
+from app.domain.combat.board import (
+    CombatBoardService,
+    PlaceCombatantInput,
+    UpdateDoorStateInput,
 )
 from app.domain.combat.concentration import (
     CombatConcentrationService,
@@ -40,6 +51,15 @@ from app.domain.combat.lifecycle import (
     CombatService,
     MonsterOutcomeInput,
     StartCombatInput,
+    StartTacticalCombatInput,
+)
+from app.domain.combat.movement import (
+    CancelPendingMovementInput,
+    ConfirmMovementInput,
+    MovementService,
+    PreviewMovementInput,
+    RepositionInput,
+    ResumeMovementInput,
 )
 from app.domain.combat.reaction_service import (
     CombatReactionService,
@@ -53,10 +73,12 @@ from app.domain.combat.spell_service import (
     AoeSpellResolutionView,
     CastSpellInput,
     CombatSpellService,
+    PreviewAoeSpellInput,
     ProposeAoeSpellInput,
     ResolveAoeSpellInput,
     SpellCastView,
 )
+from app.domain.combat.target_check import TargetCheckInput, TargetCheckService
 from app.domain.combat.monster_instances import (
     CreateMonsterFromContentInput,
     CreateQuickEnemyInput,
@@ -74,11 +96,14 @@ from app.domain.combat.special_attacks import (
     SpecialAttackAdjudicationInput,
     SpecialAttackRequestInput,
 )
-from app.domain.rooms.ai_controllers import AIControllerAuthView
+from app.domain.rooms.ai_controllers import AIControllerAuthView, AIControllerUnauthorizedError
+from app.domain.rooms.ai_guidance import BRIEFING_MAX_CHARS
 from app.domain.rooms.ai_tools import AIToolApplicationService
 from app.domain.rooms.rolls import FormalRollInput, FormalRollSource
-from app.domain.rooms.schemas import StrictModel
+from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext, StrictModel
 from app.domain.rooms.table_events import TableActorContext
+from app.domain.spatial.pathing import grid_distance
+from app.domain.spatial.primitives import Footprint, occupied_cells
 
 
 class CombatEntryToolInput(StrictModel):
@@ -97,6 +122,56 @@ class CombatMutationToolInput(StrictModel):
 class CombatEntryMutationToolInput(StrictModel):
     entry_id: UUID
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+
+
+class CombatPlaceTokenToolInput(StrictModel):
+    """P5-F: entry_id plus the PlaceCombatantInput coordinates."""
+
+    entry_id: UUID
+    anchor_x: int = Field(ge=0, le=200)
+    anchor_y: int = Field(ge=0, le=200)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+
+
+class CombatSetDoorStateToolInput(StrictModel):
+    """P5-F: door_id plus the UpdateDoorStateInput fields."""
+
+    door_id: UUID
+    state: Literal["open", "closed", "locked", "broken"]
+    revealed: bool | None = None
+    expected_runtime_revision: int = Field(ge=1)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+
+
+class CombatRepositionToolInput(StrictModel):
+    """P5-F: entry_id plus the RepositionInput fields (DM correction)."""
+
+    entry_id: UUID
+    anchor_x: int = Field(ge=0, le=200)
+    anchor_y: int = Field(ge=0, le=200)
+    reason: str = Field(min_length=1, max_length=500)
+    expected_position_revision: int = Field(ge=0)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
+
+
+class BattleMapIdToolInput(StrictModel):
+    """P5-F: battle-map editor tools address a map by id; room comes from the actor."""
+
+    map_id: UUID
+
+
+class BattleMapCreateToolInput(StrictModel):
+    payload: BattleMapCreate
+
+
+class BattleMapPatchToolInput(StrictModel):
+    map_id: UUID
+    payload: BattleMapPatch
+
+
+class BattleMapReplaceObjectsToolInput(StrictModel):
+    map_id: UUID
+    payload: BattleMapObjectsReplace
 
 
 class CombatAdjudicationDecisionToolInput(AdjudicationDecisionInput):
@@ -168,8 +243,15 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         combat_concentration_service: CombatConcentrationService,
         combat_reaction_service: CombatReactionService,
         combat_adjudication_service: CombatAdjudicationService,
+        movement_service: MovementService | None = None,
+        combat_board_service: CombatBoardService | None = None,
+        battle_map_service: BattleMapService | None = None,
+        target_check_service: TargetCheckService | None = None,
         **kwargs: Any,
     ) -> None:
+        # P5-F: the four tactical services are optional at construction so
+        # pre-F1 call sites (P4-E fixtures) keep working; each tactical tool
+        # requires its service at call time instead.
         super().__init__(**kwargs)
         self.combat_service = combat_service
         self.combat_attack_service = combat_attack_service
@@ -182,6 +264,30 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         self.combat_concentration_service = combat_concentration_service
         self.combat_reaction_service = combat_reaction_service
         self.combat_adjudication_service = combat_adjudication_service
+        self.movement_service = movement_service
+        self.combat_board_service = combat_board_service
+        self.battle_map_service = battle_map_service
+        self.target_check_service = target_check_service
+
+    def _require_movement_service(self) -> MovementService:
+        if self.movement_service is None:
+            raise RuntimeError("MovementService is not wired on this facade")
+        return self.movement_service
+
+    def _require_board_service(self) -> CombatBoardService:
+        if self.combat_board_service is None:
+            raise RuntimeError("CombatBoardService is not wired on this facade")
+        return self.combat_board_service
+
+    def _require_battle_map_service(self) -> BattleMapService:
+        if self.battle_map_service is None:
+            raise RuntimeError("BattleMapService is not wired on this facade")
+        return self.battle_map_service
+
+    def _require_target_check_service(self) -> TargetCheckService:
+        if self.target_check_service is None:
+            raise RuntimeError("TargetCheckService is not wired on this facade")
+        return self.target_check_service
 
     @staticmethod
     def _semantic_resolution(result: SemanticResolutionView) -> dict[str, Any]:
@@ -522,7 +628,12 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         actor = self._actor(token, authenticated=authenticated)
         return self.combat_service.end_combat(actor, idempotency_key=input.idempotency_key).model_dump(mode="json")
 
-    def _combat_context(self, actor: TableActorContext) -> dict[str, Any]:
+    def _combat_context(
+        self, actor: TableActorContext
+    ) -> dict[str, Any]:
+        # Single-value contract (pre-F1): P6-C and other call sites stub or
+        # consume this as a plain payload dict. The combat detail needed for
+        # the tactical summary is fetched separately by get_session_context.
         detail = self.combat_service.get_active_combat_detail(actor)
         current_turn_entry_id = detail.current_turn_entry_id if detail is not None else None
 
@@ -574,7 +685,7 @@ class CombatAIToolApplicationService(AIToolApplicationService):
             has_pending_roll=has_pending_roll,
             current_turn_done=current_turn_action_spent and not pending_requests,
         )
-        return {
+        payload = {
             "combat": detail.model_dump(mode="json") if detail is not None else None,
             "current_turn_entry_id": str(current_turn_entry_id) if current_turn_entry_id else None,
             "round": detail.round_number if detail is not None else None,
@@ -584,6 +695,113 @@ class CombatAIToolApplicationService(AIToolApplicationService):
             "pending_adjudications": [item.model_dump(mode="json") for item in adjudications],
             "next_required_action": next_action,
         }
+        return payload
+
+    _TACTICAL_SUMMARY_MAX_SUBJECTS = 5
+    _TACTICAL_SUMMARY_MAX_VISIBLE = 6
+
+    def _tactical_summary(
+        self,
+        actor: TableActorContext,
+        detail: CombatDetailView,
+        combat_ctx: dict[str, Any],
+    ) -> str:
+        """P5-F compact bilingual tactical snapshot appended to the briefing.
+
+        Bounded (no ASCII map): at most ``_TACTICAL_SUMMARY_MAX_SUBJECTS``
+        subjects and ``_TACTICAL_SUMMARY_MAX_VISIBLE`` visible combatants.
+        Every position comes from the actor-projected board, so Players never
+        see hidden truth here.
+        """
+        board = self._require_board_service().get_board(actor)
+        pos_by_entry = {position.entry_id: position for position in board.positions}
+        name_by_entry = {
+            combatant.entry_id: str(combatant.projection.get("name") or "?")
+            for combatant in detail.combatants
+        }
+        running = detail.status == "running"
+
+        def cells_of(position) -> tuple:
+            return occupied_cells(
+                position.anchor_x,
+                position.anchor_y,
+                Footprint(
+                    width=position.footprint_width,
+                    height=position.footprint_height,
+                ),
+            )
+
+        my_ids = [UUID(raw) for raw in combat_ctx["my_entry_ids"]]
+        positioned = [entry_id for entry_id in my_ids if entry_id in pos_by_entry]
+        subject_parts: list[str] = []
+        pending_movement: list[str] = []
+        reference_cells = None
+        for entry_id in positioned[: self._TACTICAL_SUMMARY_MAX_SUBJECTS]:
+            position = pos_by_entry[entry_id]
+            name = name_by_entry.get(entry_id, "?")
+            part = f"{name}({position.anchor_x},{position.anchor_y})"
+            if running:
+                status = self._require_movement_service().movement_status(actor, entry_id)
+                part += f" {status.used_feet}/{status.budget_feet}ft"
+                if status.has_pending_movement:
+                    pending_movement.append(name)
+            subject_parts.append(part)
+            if reference_cells is None:
+                reference_cells = cells_of(position)
+        more_subjects = len(positioned) - len(subject_parts)
+
+        if reference_cells is None and detail.current_turn_entry_id is not None:
+            turn_position = pos_by_entry.get(detail.current_turn_entry_id)
+            if turn_position is not None:
+                reference_cells = cells_of(turn_position)
+
+        def distance_of(position) -> int:
+            if reference_cells is None:
+                return 0
+            return grid_distance(reference_cells, cells_of(position)).feet
+
+        visible = sorted(
+            board.positions,
+            key=lambda p: (distance_of(p), p.anchor_x, p.anchor_y),
+        )
+        visible_parts = [
+            f"{name_by_entry.get(p.entry_id, '?')}({p.anchor_x},{p.anchor_y}) "
+            f"{distance_of(p)}ft"
+            for p in visible[: self._TACTICAL_SUMMARY_MAX_VISIBLE]
+        ]
+        more_visible = len(visible) - len(visible_parts)
+
+        turn_name = (
+            name_by_entry.get(detail.current_turn_entry_id, "?")
+            if detail.current_turn_entry_id is not None
+            else "?"
+        )
+        reaction_count = len(combat_ctx.get("reaction_windows", ()))
+        subjects_text = "; ".join(subject_parts) or "none"
+        if more_subjects:
+            subjects_text += f" (+{more_subjects} more)"
+        visible_text = "; ".join(visible_parts) or "none"
+        if more_visible:
+            visible_text += f" (+{more_visible} more)"
+        pending_text = ", ".join(pending_movement) if pending_movement else "none"
+        reaction_text = f"{reaction_count} open" if reaction_count else "none"
+        return " ".join(
+            [
+                (
+                    f"Tactical 戰術 [mode=tactical]: Round {detail.round_number}, "
+                    f"turn: {turn_name}."
+                ),
+                f"Your units 你的單位: {subjects_text}.",
+                f"Visible by distance 可見（依距離）: {visible_text}.",
+                f"Pending movement 待處理移動: {pending_text}.",
+                f"Pending reaction 待處理反應: {reaction_text}.",
+                f"Next 下一步: {combat_ctx['next_required_action']}.",
+                (
+                    "Tool order 工具順序: preview→confirm (paused: resume); "
+                    "check_target before attack/spell; preview_aoe before AoE cast."
+                ),
+            ]
+        )
 
     def combat_get_context(
         self,
@@ -592,7 +810,8 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         authenticated: AIControllerAuthView | None = None,
     ) -> dict[str, Any]:
         actor = self._actor(token, authenticated=authenticated)
-        return self._combat_context(actor)
+        payload = self._combat_context(actor)
+        return payload
 
     def get_session_context(
         self,
@@ -612,7 +831,18 @@ class CombatAIToolApplicationService(AIToolApplicationService):
 
         payload["combat"] = combat_ctx
         payload["next_required_action"] = combat_ctx["next_required_action"]
-        payload["briefing"] = self._briefing(role=actor.role, mode="active_combat")
+        detail = self.combat_service.get_active_combat_detail(actor)
+        if detail is not None and detail.mode == "tactical":
+            static = self._briefing(role=actor.role, mode="active_tactical_combat")
+            summary = self._tactical_summary(actor, detail, combat_ctx)
+            briefing = f"{static}\n{summary}"
+            if len(briefing) > BRIEFING_MAX_CHARS:
+                raise RuntimeError(
+                    f"AI briefing exceeded {BRIEFING_MAX_CHARS}-character contract"
+                )
+            payload["briefing"] = briefing
+        else:
+            payload["briefing"] = self._briefing(role=actor.role, mode="active_combat")
         return payload
 
     def combat_cast_spell(
@@ -729,13 +959,307 @@ class CombatAIToolApplicationService(AIToolApplicationService):
             actor, input.action_id, input
         ).model_dump(mode="json")
 
+    # ------------------------------------------------------------------
+    # P5-F tactical MCP tools. Every method resolves the actor (which
+    # re-validates the grant on each call) and delegates to the same domain
+    # services Human REST uses. No rule logic lives here.
+    # ------------------------------------------------------------------
+
+    def combat_start_tactical(
+        self,
+        token: str,
+        input: StartTacticalCombatInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self.combat_service.start_tactical_combat(
+            actor, input
+        ).model_dump(mode="json")
+
+    def combat_get_board(
+        self,
+        token: str,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self._require_board_service().get_board(actor).model_dump(mode="json")
+
+    def combat_place_token(
+        self,
+        token: str,
+        input: CombatPlaceTokenToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self._require_board_service().place_position(
+            actor,
+            input.entry_id,
+            PlaceCombatantInput(
+                anchor_x=input.anchor_x,
+                anchor_y=input.anchor_y,
+                idempotency_key=input.idempotency_key,
+            ),
+        ).model_dump(mode="json")
+
+    def combat_reposition(
+        self,
+        token: str,
+        input: CombatRepositionToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self._require_movement_service().reposition(
+            actor,
+            input.entry_id,
+            RepositionInput(
+                entry_id=input.entry_id,
+                anchor_x=input.anchor_x,
+                anchor_y=input.anchor_y,
+                reason=input.reason,
+                expected_position_revision=input.expected_position_revision,
+                idempotency_key=input.idempotency_key,
+            ),
+        ).model_dump(mode="json")
+
+    def combat_set_door_state(
+        self,
+        token: str,
+        input: CombatSetDoorStateToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self._require_board_service().update_door_state(
+            actor,
+            input.door_id,
+            UpdateDoorStateInput(
+                state=input.state,
+                revealed=input.revealed,
+                expected_runtime_revision=input.expected_runtime_revision,
+                idempotency_key=input.idempotency_key,
+            ),
+        ).model_dump(mode="json")
+
+    def combat_preview_movement(
+        self,
+        token: str,
+        input: PreviewMovementInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self._require_movement_service().preview(
+            actor, input.entry_id, input
+        ).model_dump(mode="json")
+
+    def combat_confirm_movement(
+        self,
+        token: str,
+        input: ConfirmMovementInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self._require_movement_service().confirm(
+            actor, input.entry_id, input
+        ).model_dump(mode="json")
+
+    def combat_resume_movement(
+        self,
+        token: str,
+        input: ResumeMovementInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self._require_movement_service().resume(
+            actor, input.entry_id, input
+        ).model_dump(mode="json")
+
+    def combat_cancel_pending_movement(
+        self,
+        token: str,
+        input: CancelPendingMovementInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self._require_movement_service().cancel_pending_movement(
+            actor, input.entry_id, input
+        ).model_dump(mode="json")
+
+    def combat_check_target(
+        self,
+        token: str,
+        input: TargetCheckInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        return self._require_target_check_service().check_target(
+            actor, input
+        ).model_dump(mode="json")
+
+    def combat_preview_aoe(
+        self,
+        token: str,
+        input: PreviewAoeSpellInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        preview = self.combat_spell_service.preview_aoe(actor, input)
+        # AoeSpellPreview is a frozen dataclass (no model_dump); map it to the
+        # same shape the REST preview route returns via AoeSpellPreviewResponse.
+        template = preview.template
+        return {
+            "combat_id": str(preview.combat_id),
+            "caster_entry_id": str(preview.caster_entry_id),
+            "spell_ref": preview.spell_ref,
+            "board_revision": preview.board_revision,
+            "template": {
+                "shape": template.kind,
+                "size_feet": template.size_feet,
+                "origin_x": template.origin_x,
+                "origin_y": template.origin_y,
+                "aim_x": template.aim_x,
+                "aim_y": template.aim_y,
+                "direction": template.direction,
+            },
+            "affected_cells": [
+                {"x": cell.x, "y": cell.y} for cell in preview.affected_cells
+            ],
+            "candidates": [
+                {
+                    "entry_id": str(candidate.entry_id),
+                    "display_name": candidate.display_name,
+                    "subject_kind": candidate.subject_kind,
+                }
+                for candidate in preview.candidates
+            ],
+        }
+
+    def _room_access_context(self, actor: TableActorContext) -> RoomAccessContext:
+        """Translate an authenticated AI DM actor into a room access context.
+
+        The MCP catalog gates battle-map tools to role="dm" and _actor()
+        re-validates the grant on every call, so authority=DM is faithful, not
+        fabricated. The grant id identifies the AI access session for the
+        battle-map service, which only needs it as an identifier.
+        """
+        if actor.ai_controller_grant_id is None:
+            raise AIControllerUnauthorizedError(
+                "AI battle-map tools require an AI controller grant"
+            )
+        return RoomAccessContext(
+            room_id=actor.room_id,
+            access_session_id=actor.ai_controller_grant_id,
+            authority=RoomAccessAuthority.DM,
+        )
+
+    def battle_map_create(
+        self,
+        token: str,
+        input: BattleMapCreateToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        view = self._require_battle_map_service().create(
+            self._room_access_context(actor),
+            room_id=actor.room_id,
+            payload=input.payload,
+        )
+        return view.model_dump(mode="json")
+
+    def battle_map_get(
+        self,
+        token: str,
+        input: BattleMapIdToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        view = self._require_battle_map_service().get(
+            self._room_access_context(actor), actor.room_id, input.map_id
+        )
+        return view.model_dump(mode="json")
+
+    def battle_map_list(
+        self,
+        token: str,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        views = self._require_battle_map_service().list(
+            self._room_access_context(actor), actor.room_id
+        )
+        return {"battle_maps": [view.model_dump(mode="json") for view in views]}
+
+    def battle_map_patch(
+        self,
+        token: str,
+        input: BattleMapPatchToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        view = self._require_battle_map_service().patch(
+            self._room_access_context(actor),
+            room_id=actor.room_id,
+            map_id=input.map_id,
+            payload=input.payload,
+        )
+        return view.model_dump(mode="json")
+
+    def battle_map_replace_objects(
+        self,
+        token: str,
+        input: BattleMapReplaceObjectsToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        view = self._require_battle_map_service().replace_objects(
+            self._room_access_context(actor),
+            room_id=actor.room_id,
+            map_id=input.map_id,
+            payload=input.payload,
+        )
+        return view.model_dump(mode="json")
+
+    def battle_map_delete(
+        self,
+        token: str,
+        input: BattleMapIdToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        self._require_battle_map_service().delete(
+            self._room_access_context(actor), actor.room_id, input.map_id
+        )
+        return {"deleted": True, "map_id": str(input.map_id)}
+
 
 __all__ = [
+    "BattleMapCreateToolInput",
+    "BattleMapIdToolInput",
+    "BattleMapPatchToolInput",
+    "BattleMapReplaceObjectsToolInput",
     "CombatAIToolApplicationService",
     "CombatAdjudicationDecisionToolInput",
     "CombatEntryMutationToolInput",
     "CombatEntryToolInput",
     "CombatMutationToolInput",
+    "CombatPlaceTokenToolInput",
+    "CombatRepositionToolInput",
     "CombatRollToolInput",
+    "CombatSetDoorStateToolInput",
     "next_combat_action",
 ]

@@ -5,10 +5,12 @@ from fastapi import Request
 from app.api.rooms.ai_controllers import get_ai_controller_service
 from app.api.rooms.dependencies import (
     get_adventure_import_service,
+    get_battle_map_service,
     get_campaign_runtime_service,
     get_campaign_stage_service,
     get_combat_adjudication_service,
     get_combat_attack_service,
+    get_combat_board_service,
     get_combat_concentration_service,
     get_combat_core_roll_service,
     get_combat_initiative_service,
@@ -20,12 +22,14 @@ from app.api.rooms.dependencies import (
     get_exploration_action_service,
     get_exploration_stage_service,
     get_monster_instance_service,
+    get_movement_service,
     get_pending_action_service,
     get_roll_service,
     get_room_workspace_service,
     get_session_service,
     get_table_character_state_service,
     get_table_event_service,
+    get_target_check_service,
 )
 from app.domain.adventure_imports.ai_tools import AdventureImportAIToolApplicationService
 from app.domain.campaign_runtime.context import CampaignContextService
@@ -61,6 +65,10 @@ def get_ai_tool_application_service(request: Request) -> AIToolApplicationServic
             combat_concentration_service=get_combat_concentration_service(request),
             combat_reaction_service=get_combat_reaction_service(request),
             combat_adjudication_service=get_combat_adjudication_service(request),
+            movement_service=get_movement_service(request),
+            combat_board_service=get_combat_board_service(request),
+            battle_map_service=get_battle_map_service(request),
+            target_check_service=get_target_check_service(request),
         )
         request.app.state.ai_tool_application_service = service
     return service
