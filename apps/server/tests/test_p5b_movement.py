@@ -597,13 +597,14 @@ def test_split_movement_across_attack_keeps_bookkeeping() -> None:
         table.player_actor, char_entry,
         ConfirmMovementInput(
             entry_id=char_entry,
-            path=_path((3, 1), (4, 1), (5, 1)),
+            path=_path((3, 1), (4, 1), (5, 1), (6, 1)),
             expected_position_revision=2, expected_board_revision=2,
         ),
     )
-    assert second.used_feet == 20
-    assert second.remaining_feet == 10
-    assert _bookkeeping(table, char_entry)[:3] == (20, 0, 30)
+    # Test guide B.4: Move 10 -> Attack -> Move 15 -> used = 25, no reset.
+    assert second.used_feet == 25
+    assert second.remaining_feet == 5
+    assert _bookkeeping(table, char_entry)[:3] == (25, 0, 30)
 
 
 def test_dash_after_partial_move_adds_budget_without_touching_used() -> None:
