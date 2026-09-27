@@ -26,6 +26,7 @@ from app.domain.spatial.primitives import (
     footprint_for_size,
     occupied_cells,
 )
+from app.domain.spatial.targeting import BarrierView, BlockerKind
 from app.domain.combat.sizes import resolve_entry_size
 from app.persistence.combat.lifecycle import StoredCombat, StoredCombatEntry, actor_binding
 from app.persistence.combat_boards.repository import (
@@ -202,6 +203,61 @@ class CombatBoardService:
             other_footprint = self._entry_footprint(other)
             cells.update(occupied_cells(position.anchor_x, position.anchor_y, other_footprint))
         return frozenset(cells)
+
+    # ------------------------------------------------------------------
+    # P5-C spatial targeting helpers (shared by attack and spell services)
+
+    def entry_footprint_cells(self, entry: StoredCombatEntry) -> tuple[GridCell, ...]:
+        """Occupied grid cells of one entry on its combat board."""
+        position = self.board_repository.get_position(entry.id)
+        if position is None:
+            raise CombatStateConflictError("Combatant has no board position")
+        footprint = self._entry_footprint(entry)
+        return tuple(occupied_cells(position.anchor_x, position.anchor_y, footprint))
+
+    def sight_barriers(self, combat_id: UUID) -> tuple[BarrierView, ...]:
+        """Full-truth sight blockers: walls plus closed/locked doors.
+
+        Open and broken doors never block sight. Hidden walls/doors keep
+        their full-truth kind here; callers project them per audience via
+        ``public_blocker_kind``.
+        """
+        board = self.board_repository.get_board(combat_id)
+        if board is None:
+            raise CombatStateConflictError("Tactical Combat has no board")
+        baseline = board.baseline
+        barriers: list[BarrierView] = []
+        for wall in baseline.get("walls", []):
+            barriers.append(
+                BarrierView(
+                    segment=BarrierSegment(
+                        x1=wall["x1"], y1=wall["y1"], x2=wall["x2"], y2=wall["y2"]
+                    ),
+                    kind="hidden_wall" if wall.get("visibility") == "hidden" else "wall",
+                )
+            )
+        door_coords = {str(raw["id"]): raw for raw in baseline.get("doors", [])}
+        for runtime_door in self.board_repository.list_doors(combat_id):
+            coords = door_coords.get(str(runtime_door.door_id))
+            if coords is None or runtime_door.state in ("open", "broken"):
+                continue
+            hidden = coords.get("visibility") == "hidden"
+            kind: BlockerKind = (
+                "hidden_door"
+                if hidden
+                else "locked_door"
+                if runtime_door.state == "locked"
+                else "closed_door"
+            )
+            barriers.append(
+                BarrierView(
+                    segment=BarrierSegment(
+                        x1=coords["x1"], y1=coords["y1"], x2=coords["x2"], y2=coords["y2"]
+                    ),
+                    kind=kind,
+                )
+            )
+        return tuple(barriers)
 
     # ------------------------------------------------------------------
     # placement

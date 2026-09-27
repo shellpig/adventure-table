@@ -116,8 +116,15 @@ def attack_modifiers(
     target_conditions: Iterable[str],
     attacker_exhaustion: int = 0,
     target_dodging: bool = False,
+    target_within_5ft: bool | None = None,
+    long_range: bool = False,
 ) -> AttackModifierDecision:
-    """Evaluate conditions, exhaustion, and dodging for an attack roll."""
+    """Evaluate conditions, exhaustion, and dodging for an attack roll.
+
+    P5-C: ``target_within_5ft`` is the Tactical measured fact. When None
+    (Quick), the historical attack-kind fallback is kept unchanged.
+    ``long_range`` adds the ranged long-band disadvantage source.
+    """
     parsed_attacker = sorted(
         conditions_from_refs(attacker_conditions, ignore_unknown=True),
         key=lambda c: c.value,
@@ -147,19 +154,34 @@ def attack_modifiers(
 
     for cond in parsed_target:
         sem = CONDITION_SEMANTICS[cond]
-        if sem.attacks_against_advantage or (
-            sem.attacks_against_advantage_within_5ft and attack_kind is AttackKind.MELEE
+        if sem.attacks_against_advantage:
+            adv_sources.append(f"target:{cond.value}")
+        elif sem.attacks_against_advantage_within_5ft and (
+            target_within_5ft
+            if target_within_5ft is not None
+            else attack_kind is AttackKind.MELEE
         ):
             adv_sources.append(f"target:{cond.value}")
-        if sem.attacks_against_disadvantage or (
-            sem.attacks_against_disadvantage_beyond_5ft and attack_kind is AttackKind.RANGED
+        if sem.attacks_against_disadvantage:
+            dis_sources.append(f"target:{cond.value}")
+        elif sem.attacks_against_disadvantage_beyond_5ft and (
+            (not target_within_5ft)
+            if target_within_5ft is not None
+            else attack_kind is AttackKind.RANGED
         ):
             dis_sources.append(f"target:{cond.value}")
-        if sem.adjacent_hit_is_critical and attack_kind is AttackKind.MELEE:
+        if sem.adjacent_hit_is_critical and (
+            target_within_5ft
+            if target_within_5ft is not None
+            else attack_kind is AttackKind.MELEE
+        ):
             critical_on_hit = True
 
     if _dodge_benefit_active(parsed_target, dodging=target_dodging):
         dis_sources.append("target:dodging")
+
+    if long_range:
+        dis_sources.append("attack:long_range")
 
     return AttackModifierDecision(
         mode=_combine(adv_sources, dis_sources),

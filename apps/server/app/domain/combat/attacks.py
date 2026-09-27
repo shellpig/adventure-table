@@ -9,6 +9,7 @@ from app.domain.combat.attack_definitions import (
     AttackDefinitionNotFoundError,
     AttackDefinitionResolver,
 )
+from app.domain.combat.board import CombatBoardService
 from app.domain.combat.condition_modifiers import (
     AttackModifierDecision,
     attack_decision_payload,
@@ -21,13 +22,19 @@ from app.domain.combat.lifecycle import (
     CombatStateConflictError,
 )
 from app.domain.combat.projection import CombatantAudience
-from app.domain.combat.resolution import AttackKind, DamageRollPart, RollMode
+from app.domain.combat.resolution import AttackKind, DamageRollPart, ResolvedAttack, RollMode
 from app.domain.rooms.rolls import FormalRollInput, FormalRollSource, RollModifierMode, RollService
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import (
     TableActorContext,
     TableEventActorUnauthorizedError,
     TableEventService,
+)
+from app.domain.spatial.targeting import (
+    CombatTargetBlockedError,
+    CombatTargetOutOfRangeError,
+    SpatialTargetingResult,
+    validate_attack_target,
 )
 from app.persistence.combat.adjudication import (
     CombatAdjudicationRepository,
@@ -44,6 +51,7 @@ from app.persistence.combat.attacks import (
     StoredAttackResolution,
 )
 from app.persistence.combat.lifecycle import CombatRepository, StoredCombatEntry, actor_binding
+from app.persistence.combat.resolution import CombatResolutionTargetNotFoundError
 
 
 class AttackRequestInput(StrictModel):
@@ -75,6 +83,10 @@ class AttackDefinitionView(StrictModel):
     notes: tuple[str, ...]
     content_ref: str | None = None
     presentation_field: str | None = None
+    # P5-C: spatial targeting inputs; None where the attack kind has no band.
+    reach_feet: int | None = None
+    range_normal_feet: int | None = None
+    range_long_feet: int | None = None
 
 
 class AttackRequestView(StrictModel):
@@ -127,6 +139,7 @@ class CombatAttackService:
         definition_resolver: AttackDefinitionResolver,
         roll_service: RollService,
         table_event_service: TableEventService,
+        board_service: CombatBoardService | None = None,
     ) -> None:
         self.repository = repository
         self.adjudication_repository = adjudication_repository
@@ -135,6 +148,8 @@ class CombatAttackService:
         self.definition_resolver = definition_resolver
         self.roll_service = roll_service
         self.table_event_service = table_event_service
+        # P5-C: None keeps the legacy Quick-only behavior (no spatial validation).
+        self.board_service = board_service
 
     @staticmethod
     def _definition_view(attack) -> AttackDefinitionView:
@@ -159,6 +174,9 @@ class CombatAttackService:
             notes=attack.notes,
             content_ref=attack.content_ref,
             presentation_field=attack.presentation_field,
+            reach_feet=attack.reach_feet,
+            range_normal_feet=attack.range_normal_feet,
+            range_long_feet=attack.range_long_feet,
         )
 
     @staticmethod
@@ -246,6 +264,8 @@ class CombatAttackService:
         attack_kind: AttackKind,
         attacker: StoredCombatEntry,
         target: StoredCombatEntry,
+        target_within_5ft: bool | None = None,
+        long_range: bool = False,
     ) -> AttackModifierDecision:
         attacker_ctx = self.combat_service.condition_context(attacker)
         target_ctx = self.combat_service.condition_context(target)
@@ -256,7 +276,60 @@ class CombatAttackService:
             target_conditions=target_ctx.conditions,
             attacker_exhaustion=attacker_ctx.exhaustion_level,
             target_dodging=target_ctx.dodging,
+            target_within_5ft=target_within_5ft,
+            long_range=long_range,
         )
+
+    def _reject_hidden_target_for_player(
+        self, actor: TableActorContext, target: StoredCombatEntry
+    ) -> None:
+        """P5-C Tactical: players cannot target hidden monsters at all."""
+        if actor.is_current_dm:
+            return
+        if target.subject_kind != "monster" or target.monster_instance_id is None:
+            return
+        instance = self.combat_service.monster_repository.get_instance(
+            target.monster_instance_id
+        )
+        if instance is not None and instance.visibility == "hidden":
+            raise CombatResolutionTargetNotFoundError("Combat target is not visible")
+
+    def _tactical_targeting_or_none(
+        self,
+        actor: TableActorContext,
+        *,
+        attacker: StoredCombatEntry,
+        target: StoredCombatEntry,
+        attack: ResolvedAttack,
+    ) -> SpatialTargetingResult | None:
+        """P5-C Tactical spatial validation; None outside Tactical mode.
+
+        Runs before any persistence: illegal targets raise with zero side
+        effects. Legal targets carry the measured facts into the P4 pipeline.
+        """
+        combat = self.combat_repository.get_active(actor.campaign_id)
+        if combat is None or combat.mode != "tactical" or self.board_service is None:
+            return None
+        self._reject_hidden_target_for_player(actor, target)
+        board_service = self.board_service
+        result = validate_attack_target(
+            source_cells=board_service.entry_footprint_cells(attacker),
+            target_cells=board_service.entry_footprint_cells(target),
+            attack=attack,
+            barriers=board_service.sight_barriers(combat.id),
+            audience="dm" if actor.is_current_dm else "player",
+        )
+        if result.requires_dm_adjudication:
+            # Tactical has no range adjudication queue: unknown ranges stay rejected.
+            raise CombatTargetOutOfRangeError(f"{attack.name} has no usable range data")
+        if not result.legal:
+            if result.blocked:
+                detail = result.blocker_kind or "unknown"
+                raise CombatTargetBlockedError(
+                    f"{attack.name} target is blocked ({detail})"
+                )
+            raise CombatTargetOutOfRangeError(f"{attack.name} target is out of range")
+        return result
 
     def available_attacks(
         self,
@@ -297,17 +370,26 @@ class CombatAttackService:
         try:
             attack = self.definition_resolver.resolve(attacker, request.source_ref)
             target_ac = self.definition_resolver.armor_class_for(target)
+            # P5-C: Tactical validates reach/range/hard blockers against the
+            # caller-visible board before anything is persisted; illegal
+            # targets raise with zero side effects and skip DM adjudication.
+            spatial = self._tactical_targeting_or_none(
+                actor, attacker=attacker, target=target, attack=attack
+            )
             decision = self._evaluate_attack_modifiers(
                 chosen=RollMode(request.modifier_mode.value),
                 attack_kind=attack.attack_kind,
                 attacker=attacker,
                 target=target,
+                target_within_5ft=spatial.target_within_5ft if spatial is not None else None,
+                long_range=spatial.is_long_range if spatial is not None else False,
             )
             decision_payload = attack_decision_payload(decision)
-            # Geometry is authoritative only when supplied by the current DM.
+            # Geometry is authoritative only when supplied by the current DM,
+            # or measured by the Tactical board itself.
             range_is_authoritative = (
                 actor.is_current_dm and request.range_confirmed is True
-            )
+            ) or spatial is not None
             if not range_is_authoritative:
                 stored, _event = (
                     self.adjudication_repository.request_attack_adjudication(

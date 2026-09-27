@@ -15,6 +15,10 @@ from app.api.rooms.dependencies import (
     get_combat_service,
     get_table_event_service,
 )
+from app.domain.spatial.targeting import (
+    CombatTargetBlockedError,
+    CombatTargetOutOfRangeError,
+)
 from app.content.registry import ContentNotFoundError
 from app.domain.battle_maps.schemas import BattleMapNotFoundError
 from app.domain.combat.board import (
@@ -196,6 +200,10 @@ def _map_combat_error(exc: Exception) -> APIError:
         return APIError(409, "combat_movement_conflict", str(exc))
     if isinstance(exc, CombatPlacementInvalidError):
         return APIError(409, "combat_placement_invalid", str(exc))
+    if isinstance(exc, CombatTargetOutOfRangeError):
+        return APIError(409, "combat_target_out_of_range", str(exc))
+    if isinstance(exc, CombatTargetBlockedError):
+        return APIError(409, "combat_target_blocked", str(exc))
     if isinstance(exc, CombatPlacementIncompleteError):
         return APIError(409, "combat_placement_incomplete", str(exc))
     if isinstance(exc, CombatBoardImageNotFoundError):

@@ -113,6 +113,9 @@ class ResolvedSpellCast:
     attack_d20s: tuple[int, ...]
     save_d20: int | None
     target_seat_id: UUID | None
+    # P5-C: raw SRD range text ("Self", "Touch", "60 feet", ...). Tactical
+    # targeted-spell validation parses this; unparsable stays DM-adjudicated.
+    range_text: str | None = None
 
 
 class SpellDefinitionResolver:
@@ -393,6 +396,7 @@ class SpellDefinitionResolver:
             attack_d20s=attack_d20s,
             save_d20=save_d20,
             target_seat_id=target_seat_id,
+            range_text=spell_data.get("range") if isinstance(spell_data.get("range"), str) else None,
         )
 
     def resolve_aoe_proposal(

@@ -101,6 +101,13 @@ class ResolvedAttack:
     notes: tuple[str, ...] = ()
     content_ref: str | None = None
     presentation_field: str | None = None
+    # P5-C: spatial targeting inputs. Only these fields may feed range/reach
+    # validation; plain melee defaults to reach_feet=5 when populated by the
+    # resolver. reach_feet is None for ranged attacks; range_*_feet is None
+    # for non-thrown melee attacks.
+    reach_feet: int | None = None
+    range_normal_feet: int | None = None
+    range_long_feet: int | None = None
 
     def __post_init__(self) -> None:
         if not self.source_ref.strip():

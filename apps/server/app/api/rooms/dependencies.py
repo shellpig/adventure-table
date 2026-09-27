@@ -427,6 +427,8 @@ def get_combat_attack_service(request: Request) -> CombatAttackService:
             ),
             get_roll_service(request),
             event_service,
+            # P5-C: Tactical range/reach/hard-blocker validation.
+            board_service=get_combat_board_service(request),
         )
         request.app.state.combat_attack_service = service
     return service
@@ -584,6 +586,8 @@ def get_combat_spell_service(request: Request) -> CombatSpellService:
             character_repository=get_room_workspace_service(request).character_repository,
             roll_service=get_roll_service(request),
             registry=get_content_registry(request),
+            # P5-C: Tactical targeted-spell range validation.
+            board_service=get_combat_board_service(request),
         )
         request.app.state.combat_spell_service = service
     return service
