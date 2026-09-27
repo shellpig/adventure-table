@@ -190,7 +190,7 @@ if (btn && !btn.disabled) btn.click();
 
 ### 4b.1 前置
 
-- Muse（muse.ai）thread：`https://muse.ai/thread/bf1c7224-66b0-40a1-8705-066f2d4afa86`（標題「AT P05」）。用 **Claude in Chrome**（使用者的真 Chrome，已登入）驅動。
+- Muse（muse.ai）thread：P5-C 起使用 `https://muse.ai/thread/a2928d6f-41d1-466e-81f9-b9c59bbdca60`（標題「AT P5C」，使用者 2026-09-27 指定；P5-A／P5-B 用的是「AT P05」`bf1c7224-…`）。Linux 環境跨 thread 沿用。用 **Claude in Chrome**（使用者的真 Chrome，已登入）驅動。
 - Muse 有自己的 Linux 環境，跨回合保留：clone 在 `~/workspace/repos/adventure-table`、repo root `.venv`（`apps/server[dev,web]`，venv 內 pin SQLAlchemy 2.0.54，不進 repo）、PostgreSQL 17（`P4_POSTGRES_URL=postgresql+psycopg://advtest:advtest@localhost:5432/advtest`）、node 24。VM 重建後 PostgreSQL 需 `pg_ctlcluster 17 main start`。
 - **Muse 自己跑測試**：focused＋全套 backend pytest（含 PG）綠燈才 commit；指揮者仍在本機複驗（§2.3）。
 - **`git push` 不通**（PAT 只經 egress proxy 以 Bearer 轉送，git 協定需 Basic）：Muse 在本機 commit 後用 Git Data API（blob→tree→commit→update ref）推同一 tree，推完 `git fetch` 核對 diff 為空。
