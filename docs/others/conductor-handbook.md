@@ -1,12 +1,12 @@
-# 指揮者手冊 — 讓 agy / ChatGPT 實作，指揮者驗證與收尾
+# 指揮者手冊 — 讓 agy / ChatGPT / Muse 實作，指揮者驗證與收尾
 
-適用對象：被指定為「指揮者」的 AI session（目前是 Claude Code）。指揮者不自己寫主要程式，而是把 Subphase 拆成小步驟交給外部 worker（Antigravity CLI `agy`、ChatGPT Web）實作，再在本機驗證、審核、修小錯、commit、push、更新實作紀錄。
+適用對象：被指定為「指揮者」的 AI session（目前是 Claude Code）。指揮者不自己寫主要程式，而是把 Subphase 拆成小步驟交給外部 worker（Antigravity CLI `agy`、ChatGPT Web、Muse）實作，再在本機驗證、審核、修小錯、commit、push、更新實作紀錄。
 
 本檔是流程與踩坑紀錄，不是 Phase 契約。Phase 要做什麼看 `docs/Px/` 三份文件；本檔只講「怎麼讓別人做、怎麼確認做對」。
 
-按角色／工作讀取：指揮者讀 §1、§2、§5、§7，再讀所選 worker 的 §3 或 §4；選 worker 時才讀 §6。只建立實作紀錄時讀 §2.4。Windows 指令與外部 CLI 另見 [local-tools.md](local-tools.md) 對應段落，不必每次整份重讀。
+按角色／工作讀取：指揮者讀 §1、§2、§5、§7，再讀所選 worker 的 §3、§4 或 §4b；選 worker 時才讀 §6。只建立實作紀錄時讀 §2.4。Windows 指令與外部 CLI 另見 [local-tools.md](local-tools.md) 對應段落，不必每次整份重讀。
 
-首次成型：2026-09-17，P4-E（E1～E9b 由 agy、E10a 起由 ChatGPT）。
+首次成型：2026-09-17，P4-E（E1～E9b 由 agy、E10a 起由 ChatGPT）。2026-09-27 起 P5 由 Muse 實作（§4b）。
 
 ---
 
@@ -16,17 +16,18 @@
 |---|---|---|
 | 使用者 | 拍板 step 範圍、選 worker、決定何時停 | 不盯進度（指揮者負責） |
 | 指揮者（本 session） | 讀契約、拆 step、寫 prompt、送出、定時檢查、pull、跑測試、審 diff、修小錯、commit、push、更新 `<Subphase>實作紀錄.md` | 不重寫 worker 的大段程式（改動超過幾個檔案就退回 worker）；不改 Phase 三份文件（verifier 職權） |
-| worker（agy / ChatGPT） | 讀指定文件與程式、寫程式與測試、回報 | agy：不得 git add / commit / push；ChatGPT：可 commit + push 到指定 branch，但不得開新 branch / 動 main / force push / rebase |
+| worker（agy / ChatGPT / Muse） | 讀指定文件與程式、寫程式與測試、回報 | agy：不得 git add / commit / push；ChatGPT／Muse：可 commit + push 到指定 branch，但不得開新 branch / 動 main / force push / rebase |
 
 **commit 權責**：agy 產出由指揮者 commit；ChatGPT 自己 commit（author 是 repo owner，沒有 Co-Authored-By）。指揮者自己的修正另開 commit，訊息寫清楚修了 worker 的什麼。
 
 ---
 
-## 2. 共通原則（兩種 worker 都適用）
+## 2. 共通原則（所有 worker 都適用）
 
 ### 2.1 step 粒度
 
-- **一個 step = 15～20 分鐘內能收斂到「測試綠、可 commit」的量。** 判準：一條 route + 對應 client、或一個元件 + 測試、或一個 domain 函式 + route + 測試。
+- **使用者 2026-09-27 拍板：不要過度拆分。** Subphase 可視需要拆成少數大步（例：A1、A2、A3，每步約 2,000～3,000 行），但一步之內不再列 A～H 之類的子項，也不為子項建紀錄；指揮者以節省自身 token 為準。下面 15～20 分鐘的粒度只適用單回合有硬性時間上限的 worker（ChatGPT）。
+- **一個 step = 15～20 分鐘內能收斂到「測試綠、可 commit」的量**（ChatGPT）。 判準：一條 route + 對應 client、或一個元件 + 測試、或一個 domain 函式 + route + 測試。
 - 大 step 一定失敗：P4-E E10c 整包（rolls + reactions + grapple/shove + reach）連續兩回合 timeout；拆成 E10c-1 / E10c-2 後各一回合完成。
 - step 命名接在 Subphase 步驟板後面（E10a、E10b、E10c-1…），寫進 `docs/<Phase>/<Subphase>實作紀錄.md` 的「步驟進度」表，這張表是唯一的進度真相；`PROJECT_BRIEF.md` 不記 step。
 
@@ -183,6 +184,53 @@ if (btn && !btn.disabled) btn.click();
 
 ---
 
+## 4b. Muse 流程
+
+2026-09-27 以 P5-A 試行後採用（P5-A A1／A2 各約 3,000 行，各一回合約 50～55 分鐘，含 Muse 自己跑測試）。
+
+### 4b.1 前置
+
+- Muse（muse.ai）thread：`https://muse.ai/thread/bf1c7224-66b0-40a1-8705-066f2d4afa86`（標題「AT P05」）。用 **Claude in Chrome**（使用者的真 Chrome，已登入）驅動。
+- Muse 有自己的 Linux 環境，跨回合保留：clone 在 `~/workspace/repos/adventure-table`、repo root `.venv`（`apps/server[dev,web]`，venv 內 pin SQLAlchemy 2.0.54，不進 repo）、PostgreSQL 17（`P4_POSTGRES_URL=postgresql+psycopg://advtest:advtest@localhost:5432/advtest`）、node 24。VM 重建後 PostgreSQL 需 `pg_ctlcluster 17 main start`。
+- **Muse 自己跑測試**：focused＋全套 backend pytest（含 PG）綠燈才 commit；指揮者仍在本機複驗（§2.3）。
+- **`git push` 不通**（PAT 只經 egress proxy 以 Bearer 轉送，git 協定需 Basic）：Muse 在本機 commit 後用 Git Data API（blob→tree→commit→update ref）推同一 tree，推完 `git fetch` 核對 diff 為空。
+- **權限核可**：Muse 要連新網域時畫面會跳「允許Muse與…分享資訊？」並暫停；使用者授權指揮者一律按「這個網站一律允許」。
+
+### 4b.2 送 prompt 與讀回覆
+
+composer 是一般 React textarea：
+
+```js
+const ta = document.querySelector('textarea[placeholder="傳送訊息"]'); ta.focus();
+Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(ta, text);
+ta.dispatchEvent(new Event('input', {bubbles: true}));
+await new Promise(r => setTimeout(r, 600));
+document.querySelector('button[aria-label="傳送"]').click();
+```
+
+- 長 prompt（~5 KB）直接以 JS template literal 嵌入即可。
+- 讀回覆：`document.body.innerText` 以上一則自己訊息的結尾字串定位後切片；JS 工具回傳約 1.4 KB 會截斷，分段讀。
+- 回合中送的訊息會排隊，**等它本回合結束才回**（送出後出現 👍 表示已收到）。
+- 網站偶爾重新載入後卡在「連結中……」讀不到對話；不要為讀報告卡住關門，以 commit＋本機驗證為準。
+
+### 4b.3 檢查節奏
+
+- **每 5～10 分鐘檢查一次**（使用者 2026-09-27：2 分鐘輪詢浪費 token）。喚醒訊號用背景 `git ls-remote origin refs/heads/<branch>` 迴圈（有新 head 或 10 分鐘到即結束），每次喚醒只做一次瀏覽器檢查（順便按權限核可）。
+- 狀態字樣「蒐集我的想法／正在處理／執行中」都代表還在跑；P5-A 兩步都在 50～55 分鐘內推送，超過 60 分鐘再重新載入確認。
+
+### 4b.4 Muse 已知缺陷
+
+| 現象 | 對策 |
+|---|---|
+| 唯讀審查時把「必須」講得很肯定但有錯（P5 設計 §11(a) 誤說事件須經 `TableEventService.append_event`） | 它的「必須」類結論逐條對照程式碼，再併入契約 |
+| 保密規則套過頭（P5-A 把未揭露 hidden door 連 DM 都藏起來），且寫測試斷言錯誤行為 | 審 secrecy 時分別核對 DM 與 Player 視角是否符合契約 |
+| 漏測試指南條目（P5-A placement retry、開戰後編輯 Definition） | 把測試指南每條對應到測試名，缺的當場補或退回 |
+| projection 的列表順序洩漏（hidden door 轉成的 wall 排在最後） | secrecy 審核也看順序、計數等側通道 |
+
+品質面：結構乾淨、守範圍與 Do-not-touch、會說明範圍外的必要改動；每步約需指揮者一至兩處修正。
+
+---
+
 ## 5. diff 審核 checklist
 
 每個 step 至少看這些，看到就修或退回：
@@ -209,6 +257,7 @@ if (btn && !btn.disabled) btn.click();
 | 純 copy / guide 文案、closeout 文件、E2E 關門 | 指揮者自己（contract-bearing、需要跑 Docker E2E） |
 | 使用者在意時間 | agy 為主；ChatGPT 每步預留兩回合 |
 | 使用者在意審核成本 | ChatGPT 為主 |
+| 大步 backend／整個 Subphase、希望 worker 自己跑測試（含真 PostgreSQL） | Muse（2026-09-27 起 P5 主力） |
 
 指揮者自己做的判準：剩餘修改幾行、單一檔案、不需重新理解脈絡 → 直接改；否則退回 worker。
 
@@ -219,5 +268,5 @@ if (btn && !btn.disabled) btn.click();
 1. 確認最新 `AGENTS.md`（已完整載入則不重讀）→ 精簡 `PROJECT_BRIEF.md` → 本檔共通段落與所選 worker 段落 → 當前 Subphase 接手摘要／步驟板 → 本步及必要前置／待審紀錄。舊格式按 §2.4 定位，不整份讀；ROADMAP_HISTORY 不列入固定必讀。
 2. `git fetch` + `git log origin/<branch> --oneline -5`，確認 remote 與本機一致；有未審的 worker commit 先走 §2.3 gate。
 3. 看 `C:\_work\AI_Work\Tools\agy-runs\` 最新的 prompt 檔，知道上一步送了什麼。
-4. ChatGPT 對話 URL 與帳號在指揮者 memory（`chatgpt-worker-workflow`）；agy conversation id 遺失不影響，開新對話讀實作紀錄即可。
-5. 依 §4.3 節奏繼續。
+4. ChatGPT 對話 URL 與帳號在指揮者 memory（`chatgpt-worker-workflow`）；Muse thread 見 §4b.1；agy conversation id 遺失不影響，開新對話讀實作紀錄即可。
+5. 依所選 worker 的檢查節奏繼續（ChatGPT §4.3、Muse §4b.3）。
