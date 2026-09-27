@@ -50,6 +50,10 @@ from app.domain.combat.initiative import (
     InitiativeRollResponse,
     RequestInitiativeInput,
 )
+from app.domain.combat.movement import (
+    CombatMovementInvalidError,
+    CombatMovementStaleError,
+)
 from app.domain.combat.lifecycle import (
     ActiveCombatExistsError,
     AddCharacterInput,
@@ -183,6 +187,10 @@ def _map_combat_error(exc: Exception) -> APIError:
         return APIError(404, "initiative_request_not_found", str(exc))
     if isinstance(exc, InitiativeInputError):
         return APIError(422, "invalid_initiative_input", str(exc))
+    if isinstance(exc, CombatMovementInvalidError):
+        return APIError(400, "combat_movement_invalid", str(exc))
+    if isinstance(exc, CombatMovementStaleError):
+        return APIError(409, "combat_movement_stale", str(exc))
     if isinstance(exc, CombatPlacementInvalidError):
         return APIError(409, "combat_placement_invalid", str(exc))
     if isinstance(exc, CombatPlacementIncompleteError):

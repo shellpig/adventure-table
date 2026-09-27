@@ -14,6 +14,7 @@ from app.api.rooms.combat import _actor_from_request, _map_combat_error
 from app.api.rooms.dependencies import (
     get_combat_board_service,
     get_combat_service,
+    get_movement_service,
     get_table_event_service,
 )
 from app.domain.combat.board import (
@@ -25,6 +26,13 @@ from app.domain.combat.board import (
     UpdateDoorStateInput,
 )
 from app.domain.combat.lifecycle import CombatService, CombatView, StartTacticalCombatInput
+from app.domain.combat.movement import (
+    ConfirmMovementInput,
+    ConfirmMovementView,
+    MovementService,
+    PreviewMovementInput,
+    PreviewMovementView,
+)
 from app.domain.rooms.table_events import TableEventService
 
 router = APIRouter(
@@ -53,6 +61,47 @@ def start_tactical_combat(
         )
     except Exception as exc:
         raise _map_combat_error(exc) from exc
+
+
+@router.post("/board/movement/preview", response_model=PreviewMovementView)
+def preview_movement(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    payload: PreviewMovementInput,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: MovementService = Depends(get_movement_service),
+) -> PreviewMovementView:
+    try:
+        return service.preview(
+            _actor_from_request(room_id, campaign_id, session_id, context, event_service),
+            payload.entry_id,
+            payload,
+        )
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
+
+@router.post("/board/movement/confirm", response_model=ConfirmMovementView)
+def confirm_movement(
+    room_id: UUID,
+    campaign_id: UUID,
+    session_id: UUID,
+    payload: ConfirmMovementInput,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    event_service: TableEventService = Depends(get_table_event_service),
+    service: MovementService = Depends(get_movement_service),
+) -> ConfirmMovementView:
+    try:
+        return service.confirm(
+            _actor_from_request(room_id, campaign_id, session_id, context, event_service),
+            payload.entry_id,
+            payload,
+        )
+    except Exception as exc:
+        raise _map_combat_error(exc) from exc
+
 
 
 @router.get("/board", response_model=CombatBoardView)

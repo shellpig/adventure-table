@@ -15,6 +15,7 @@ from app.persistence.combat_boards.tables import (
     combat_boards,
     combat_positions,
 )
+from app.persistence.rooms.table_runtime import session_events
 
 if TYPE_CHECKING:
     from app.persistence.rooms.table_runtime import StoredTableActorBinding, TableEventRepository
@@ -63,6 +64,10 @@ class BoardNotFoundError(Exception):
 
 class BoardDoorStateConflictError(Exception):
     pass
+
+
+class BoardMovementStaleError(Exception):
+    """Position or board revision changed under a movement confirm (HTTP 409)."""
 
 
 DOOR_STATES = ("open", "closed", "locked", "broken")
@@ -297,9 +302,129 @@ class CombatBoardRepository:
                 return door
         raise BoardNotFoundError(str(door_id))
 
+    def commit_movement_with_event(
+        self,
+        *,
+        binding: StoredTableActorBinding,
+        combat_id: UUID,
+        entry_id: UUID,
+        anchor_x: int,
+        anchor_y: int,
+        expected_position_revision: int,
+        expected_board_revision: int,
+        movement_used_feet: int,
+        movement_diagonal_steps_used: int,
+        movement_budget_feet: int,
+        idempotency_key: str | None,
+        visibility: str,
+        subject_seat_id: UUID | None,
+        execution_mode: str,
+    ) -> StoredCombatPosition:
+        """Atomically move a token, write turn bookkeeping, emit combat.movement_committed.
+
+        The position/board revisions are re-checked inside the event
+        transaction (compare-and-set): a concurrent writer fails here even if
+        the domain-level check passed a moment earlier.
+        """
+        if self.event_repository is None:
+            raise BoardNotFoundError("CombatBoardRepository has no event repository")
+        # Imported here: app.persistence.combat.lifecycle imports this module
+        # at top level, so a top-level combat.tables import would be circular.
+        from app.persistence.combat.tables import combat_entries
+
+        now = datetime.now().astimezone()
+
+        def projection(connection: Connection, _event_id: UUID, _seq: int) -> None:
+            position = (
+                connection.execute(
+                    select(combat_positions)
+                    .where(combat_positions.c.combat_entry_id == entry_id)
+                    .with_for_update()
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if position is None:
+                raise BoardNotFoundError(f"Combat entry {entry_id} has no board position")
+            if int(position["revision"]) != expected_position_revision:
+                raise BoardMovementStaleError("combat token moved; refresh and replan")
+            bumped_board = connection.execute(
+                update(combat_boards)
+                .where(
+                    combat_boards.c.combat_id == combat_id,
+                    combat_boards.c.runtime_revision == expected_board_revision,
+                )
+                .values(runtime_revision=combat_boards.c.runtime_revision + 1)
+            ).rowcount
+            if bumped_board != 1:
+                raise BoardMovementStaleError("combat board changed; refresh and replan")
+            connection.execute(
+                update(combat_positions)
+                .where(combat_positions.c.combat_entry_id == entry_id)
+                .values(
+                    anchor_x=anchor_x, anchor_y=anchor_y,
+                    revision=combat_positions.c.revision + 1,
+                )
+            )
+            connection.execute(
+                update(combat_entries)
+                .where(combat_entries.c.id == entry_id)
+                .values(
+                    movement_used_feet=movement_used_feet,
+                    movement_diagonal_steps_used=movement_diagonal_steps_used,
+                    movement_budget_feet=movement_budget_feet,
+                    updated_at=now,
+                )
+            )
+
+        self.event_repository.append(
+            room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
+            kind="combat.movement_committed", acting_seat_id=binding.seat_id,
+            subject_seat_id=subject_seat_id, subject_character_id=None,
+            execution_mode=execution_mode, visibility=visibility,
+            recipient_seat_ids=(), payload_version=1,
+            payload={
+                "combat_id": str(combat_id), "entry_id": str(entry_id),
+                "anchor_x": anchor_x, "anchor_y": anchor_y,
+                "used_feet": movement_used_feet,
+                "diagonal_steps_used": movement_diagonal_steps_used,
+                "budget_feet": movement_budget_feet,
+                "position_revision": expected_position_revision + 1,
+                "board_revision": expected_board_revision + 1,
+            },
+            idempotency_key=f"p5b-movement-commit:{idempotency_key}" if idempotency_key else None,
+            expected_actor_binding=binding, transaction_projection=projection,
+        )
+        stored = self.get_position(entry_id)
+        if stored is None:
+            raise BoardNotFoundError(str(entry_id))
+        return stored
+
+    def find_movement_commit(
+        self, *, session_id: UUID, idempotency_key: str
+    ) -> dict[str, Any] | None:
+        """Return the payload of an already-committed movement for a retry key."""
+        with self.engine.connect() as connection:
+            row = (
+                connection.execute(
+                    select(session_events.c.payload)
+                    .where(
+                        session_events.c.session_id == session_id,
+                        session_events.c.kind == "combat.movement_committed",
+                        session_events.c.idempotency_key == f"p5b-movement-commit:{idempotency_key}",
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+        if row is None:
+            return None
+        return dict(row["payload"])
+
 
 __all__ = [
     "BoardDoorStateConflictError",
+    "BoardMovementStaleError",
     "BoardNotFoundError",
     "CombatBoardRepository",
     "DOOR_STATES",

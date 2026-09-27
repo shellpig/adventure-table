@@ -157,6 +157,10 @@ combat_entries = Table(
     Column("ready_state", JSON(), nullable=False),
     Column("pending_reaction_state", JSON(), nullable=False),
     Column("dodging", Boolean(), nullable=False, server_default=false()),
+    Column("movement_used_feet", Integer(), nullable=False, server_default="0"),
+    Column("movement_diagonal_steps_used", Integer(), nullable=False, server_default="0"),
+    Column("movement_budget_feet", Integer(), nullable=False, server_default="0"),
+    Column("pending_movement_state", JSON(), nullable=False, server_default=text("'{}'")),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     CheckConstraint(
@@ -173,6 +177,18 @@ combat_entries = Table(
     CheckConstraint(
         "attacks_used >= 0 AND attacks_used <= attacks_allowed",
         name="ck_combat_entries_attacks_used",
+    ),
+    CheckConstraint(
+        "movement_used_feet >= 0",
+        name="ck_combat_entries_movement_used_feet",
+    ),
+    CheckConstraint(
+        "movement_diagonal_steps_used >= 0",
+        name="ck_combat_entries_movement_diagonal_steps_used",
+    ),
+    CheckConstraint(
+        "movement_budget_feet >= 0",
+        name="ck_combat_entries_movement_budget_feet",
     ),
     CheckConstraint(
         "death_save_successes >= 0 AND death_save_successes <= 2",

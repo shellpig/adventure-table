@@ -11,6 +11,7 @@ from pydantic import Field, model_validator
 from app.content.registry import ContentRegistry
 from app.domain.battle_maps.schemas import BattleMapNotFoundError
 from app.domain.combat.projection import CombatantAudience, project_combatant
+from app.domain.combat.speeds import resolve_entry_walk_speed
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import TableActorContext, TableEventActorUnauthorizedError, TableEventService
 from app.persistence.characters import CharacterRepository
@@ -645,6 +646,19 @@ class CombatService:
         entry = self.repository.get_entry(request.entry_id)
         if entry is None or entry.combat_id != combat.id: raise CombatNotFoundError("Combat entry was not found")
         subject_seat_id, execution_mode = self._authorize_entry(actor, entry)
+        dash_speed_feet: int | None = None
+        if request.action_kind is CombatActionKind.DASH and combat.mode == "tactical":
+            # P5-B: Dash grants extra movement equal to the entry's current
+            # walk speed; the persistence layer adds it to the turn budget in
+            # the same transaction as the action economy update.
+            condition = self.condition_context(entry)
+            dash_speed_feet = resolve_entry_walk_speed(
+                entry,
+                character_repository=self.character_repository,
+                monster_repository=self.monster_repository,
+                conditions=condition.conditions,
+                exhaustion_level=condition.exhaustion_level,
+            )
         try:
             stored, _event = self.repository.consume_action(
                 binding=actor_binding(actor), combat_id=combat.id, entry_id=entry.id,
@@ -652,6 +666,7 @@ class CombatService:
                 action_kind=request.action_kind.value, economy_cost=request.economy_cost.value,
                 payload=dict(request.payload), idempotency_key=request.idempotency_key,
                 attack_use=request.action_kind is CombatActionKind.ATTACK_BUDGET,
+                dash_speed_feet=dash_speed_feet,
             )
         except CombatStateConflictPersistenceError as exc:
             raise CombatStateConflictError(str(exc)) from exc

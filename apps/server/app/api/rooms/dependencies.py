@@ -24,6 +24,7 @@ from app.domain.combat.core_rolls import CombatCoreRollService
 from app.domain.combat.initiative import CombatInitiativeService
 from app.domain.combat.lifecycle import CombatService
 from app.domain.combat.monster_instances import MonsterInstanceService
+from app.domain.combat.movement import MovementService
 from app.domain.combat.order import CombatOrderService
 from app.domain.combat.reaction_service import CombatReactionService
 from app.domain.combat.roll_compat import CombatAwareRollRepository
@@ -376,12 +377,23 @@ def get_combat_service(request: Request) -> CombatService:
             room_asset_service=get_room_asset_service(request),
             table_event_service=event_service,
         )
+        # P5-B movement shares the board runtime and combat service.
+        request.app.state.movement_service = MovementService(
+            board_repository=board_repository,
+            board_service=request.app.state.combat_board_service,
+            combat_service=service,
+        )
     return service
 
 
 def get_combat_board_service(request: Request) -> CombatBoardService:
     get_combat_service(request)
     return request.app.state.combat_board_service
+
+
+def get_movement_service(request: Request) -> MovementService:
+    get_combat_service(request)
+    return request.app.state.movement_service
 
 
 def get_combat_resolution_service(request: Request) -> CombatResolutionService:
