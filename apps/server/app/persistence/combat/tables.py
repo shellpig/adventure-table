@@ -157,6 +157,7 @@ combat_entries = Table(
     Column("ready_state", JSON(), nullable=False),
     Column("pending_reaction_state", JSON(), nullable=False),
     Column("dodging", Boolean(), nullable=False, server_default=false()),
+    Column("disengaged", Boolean(), nullable=False, server_default=false()),
     Column("movement_used_feet", Integer(), nullable=False, server_default="0"),
     Column("movement_diagonal_steps_used", Integer(), nullable=False, server_default="0"),
     Column("movement_budget_feet", Integer(), nullable=False, server_default="0"),

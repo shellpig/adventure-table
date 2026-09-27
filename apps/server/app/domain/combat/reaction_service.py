@@ -189,14 +189,26 @@ def open_opportunity_attack_window(
     target_entry_id: str,
     dm_adjudicated: bool,
     session_ref: str | None = None,
+    tactical_geometry_confirmed: bool = False,
 ) -> ReactionWindow:
-    if not dm_adjudicated:
+    """Open an opportunity-attack window.
+
+    Quick Combat has no geometry, so it still requires DM adjudication.
+    Tactical movement whose reach crossing the Server confirmed step by step
+    (P5-E) may open the window without a DM ruling; the reason records which
+    path authorized it.
+    """
+    if not dm_adjudicated and not tactical_geometry_confirmed:
         raise PermissionError("Quick Combat opportunity attacks require DM adjudication")
     return open_reaction_window(
         window_id=window_id,
         entry_id=entry_id,
         kind=ReactionKind.OPPORTUNITY_ATTACK,
-        reason="dm_adjudicated_opportunity_attack",
+        reason=(
+            "tactical_geometry_opportunity_attack"
+            if tactical_geometry_confirmed
+            else "dm_adjudicated_opportunity_attack"
+        ),
         source_entry_id=source_entry_id,
         target_entry_id=target_entry_id,
         session_ref=session_ref,

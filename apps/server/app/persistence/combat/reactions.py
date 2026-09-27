@@ -282,6 +282,34 @@ class CombatReactionRepository:
                     "status": resolution.window.status,
                 }
             )
+            # P5-E: an opportunity-attack window carries its mover in the safe
+            # payload. Bookkeep the mover's durable pending movement: drop the
+            # window from pending_window_ids, record an acceptance, and bump
+            # the pending revision so resume sees the change.
+            mover_entry_id = (window.safe_payload or {}).get("mover_entry_id")
+            if mover_entry_id and window.kind.value == "opportunity_attack":
+                mover = connection.execute(
+                    select(combat_entries)
+                    .where(combat_entries.c.id == UUID(str(mover_entry_id)))
+                    .with_for_update()
+                ).mappings().one_or_none()
+                if mover is not None:
+                    mover_pending = dict(mover["pending_movement_state"] or {})
+                    pending_ids = list(mover_pending.get("pending_window_ids", []))
+                    if mover_pending and window.window_id in pending_ids:
+                        mover_pending["pending_window_ids"] = [
+                            wid for wid in pending_ids if wid != window.window_id
+                        ]
+                        if resolution.window.status == "resolved":
+                            accepted_ids = list(mover_pending.get("accepted_window_ids", []))
+                            accepted_ids.append(window.window_id)
+                            mover_pending["accepted_window_ids"] = accepted_ids
+                        mover_pending["revision"] = int(mover_pending.get("revision", 0)) + 1
+                        connection.execute(
+                            update(combat_entries)
+                            .where(combat_entries.c.id == UUID(str(mover_entry_id)))
+                            .values(pending_movement_state=mover_pending, updated_at=now)
+                        )
             connection.execute(
                 update(combats)
                 .where(combats.c.id == combat_id)

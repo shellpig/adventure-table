@@ -58,6 +58,21 @@ class StoredCombatPosition:
     created_at: datetime
 
 
+@dataclass(frozen=True)
+class MovementDrag:
+    """Dragged target to move atomically with the mover.
+
+    The domain service validates the dragged target's path step-by-step
+    before the transaction; the repository CAS-checks the target's position
+    revision inside the transaction and moves it by the same delta as the
+    mover. The dragged target never triggers opportunity attacks.
+    """
+    target_entry_id: UUID
+    expected_position_revision: int
+    anchor_x: int
+    anchor_y: int
+
+
 class BoardNotFoundError(Exception):
     pass
 
@@ -319,6 +334,7 @@ class CombatBoardRepository:
         visibility: str,
         subject_seat_id: UUID | None,
         execution_mode: str,
+        drag: MovementDrag | None = None,
     ) -> StoredCombatPosition:
         """Atomically move a token, write turn bookkeeping, emit combat.movement_committed.
 
@@ -366,6 +382,34 @@ class CombatBoardRepository:
                     revision=combat_positions.c.revision + 1,
                 )
             )
+            # P5-E E1b: move the dragged target in the same transaction.
+            # The domain service validated the target's path step-by-step;
+            # here we CAS its position revision and apply the move.
+            if drag is not None:
+                drag_position = (
+                    connection.execute(
+                        select(combat_positions)
+                        .where(combat_positions.c.combat_entry_id == drag.target_entry_id)
+                        .with_for_update()
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if drag_position is None:
+                    raise BoardNotFoundError(
+                        f"Drag target {drag.target_entry_id} has no board position"
+                    )
+                if int(drag_position["revision"]) != drag.expected_position_revision:
+                    raise BoardMovementStaleError("drag target moved; refresh and replan")
+                connection.execute(
+                    update(combat_positions)
+                    .where(combat_positions.c.combat_entry_id == drag.target_entry_id)
+                    .values(
+                        anchor_x=drag.anchor_x, anchor_y=drag.anchor_y,
+                        revision=combat_positions.c.revision + 1,
+                    )
+                )
+            from app.persistence.combat.tables import combat_entries
             connection.execute(
                 update(combat_entries)
                 .where(combat_entries.c.id == entry_id)
@@ -612,6 +656,439 @@ class CombatBoardRepository:
             key_prefix="p5b-reposition", idempotency_key=idempotency_key,
         )
 
+    def find_paused_movement_outcome(
+        self, *, session_id: UUID, idempotency_key: str
+    ) -> dict[str, Any] | None:
+        """Return the combat.movement_paused payload stored for a retry key."""
+        return self._find_idempotent_outcome(
+            session_id=session_id, kind="combat.movement_paused",
+            key_prefix="p5e-movement-paused", idempotency_key=idempotency_key,
+        )
+
+    def note_hidden_opportunity_crossings(
+        self,
+        *,
+        binding: StoredTableActorBinding,
+        combat_id: UUID,
+        entry_id: UUID,
+        crossings: tuple[dict[str, Any], ...],
+        subject_seat_id: UUID | None,
+        execution_mode: str,
+    ) -> None:
+        """Append a DM-only note that hidden reactors' reach was crossed.
+
+        Informational only: the movement itself already committed or paused.
+        ``crossings`` is a tuple of {"step_index": int, "reactor_entry_ids":
+        [str]} for boundaries whose reactors are all hidden.
+        """
+        if self.event_repository is None or not crossings:
+            return
+        self.event_repository.append(
+            room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
+            kind="combat.opportunity_crossing_noted", acting_seat_id=binding.seat_id,
+            subject_seat_id=subject_seat_id, subject_character_id=None,
+            execution_mode=execution_mode, visibility="dm_only",
+            recipient_seat_ids=(), payload_version=1,
+            payload={
+                "combat_id": str(combat_id), "entry_id": str(entry_id),
+                "crossings": [
+                    {
+                        "step_index": int(item["step_index"]),
+                        "reactor_entry_ids": [str(rid) for rid in item["reactor_entry_ids"]],
+                    }
+                    for item in crossings
+                ],
+            },
+            idempotency_key=None,
+            expected_actor_binding=binding,
+        )
+
+    def find_resumed_movement_outcome(
+        self, *, session_id: UUID, idempotency_key: str
+    ) -> dict[str, Any] | None:
+        """Return the combat.movement_resumed payload stored for a retry key."""
+        return self._find_idempotent_outcome(
+            session_id=session_id, kind="combat.movement_resumed",
+            key_prefix="p5e-movement-resumed", idempotency_key=idempotency_key,
+        )
+
+    def find_cancelled_movement_outcome(
+        self, *, session_id: UUID, idempotency_key: str
+    ) -> dict[str, Any] | None:
+        """Return the combat.movement_cancelled payload stored for a retry key."""
+        return self._find_idempotent_outcome(
+            session_id=session_id, kind="combat.movement_cancelled",
+            key_prefix="p5e-movement-cancelled", idempotency_key=idempotency_key,
+        )
+
+    def resume_movement(
+        self,
+        *,
+        binding: StoredTableActorBinding,
+        combat_id: UUID,
+        entry_id: UUID,
+        outcome: str,
+        anchor_x: int,
+        anchor_y: int,
+        expected_position_revision: int,
+        expected_board_revision: int,
+        expected_pending_revision: int,
+        movement_used_feet: int,
+        movement_diagonal_steps_used: int,
+        movement_budget_feet: int,
+        pending_movement_state: dict[str, Any],
+        windows: tuple[Any, ...],
+        idempotency_key: str | None,
+        visibility: str,
+        subject_seat_id: UUID | None,
+        execution_mode: str,
+        drag: MovementDrag | None = None,
+    ) -> StoredCombatPosition:
+        """Resume a paused movement: commit the rest, re-pause, or stop.
+
+        Atomically (single event transaction): CAS the position, board, and
+        pending revisions; move the token (unless stopped); write movement
+        bookkeeping and the new pending state ({} clears it); write new OA
+        windows for a re-pause. Appends ``combat.movement_resumed`` with the
+        outcome. ``outcome`` is "resumed", "paused", or "stopped".
+        """
+        if self.event_repository is None:
+            raise BoardNotFoundError("CombatBoardRepository has no event repository")
+        from app.persistence.combat.reactions import write_reaction_window
+
+        now = datetime.now().astimezone()
+
+        def projection(connection: Connection, _event_id: UUID, _seq: int) -> None:
+            from app.persistence.combat.tables import combat_entries
+            entry_row = (
+                connection.execute(
+                    select(combat_entries)
+                    .where(combat_entries.c.id == entry_id)
+                    .with_for_update()
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if entry_row is None:
+                raise BoardNotFoundError(f"Combat entry {entry_id} was not found")
+            pending = dict(entry_row["pending_movement_state"] or {})
+            if not pending:
+                raise BoardMovementStaleError("no pending movement to resume")
+            if int(pending.get("revision", -1)) != expected_pending_revision:
+                raise BoardMovementStaleError("pending movement changed; refresh")
+            position = (
+                connection.execute(
+                    select(combat_positions)
+                    .where(combat_positions.c.combat_entry_id == entry_id)
+                    .with_for_update()
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if position is None:
+                raise BoardNotFoundError(f"Combat entry {entry_id} has no board position")
+            if int(position["revision"]) != expected_position_revision:
+                raise BoardMovementStaleError("combat token moved; refresh and replan")
+            bumped_board = connection.execute(
+                update(combat_boards)
+                .where(
+                    combat_boards.c.combat_id == combat_id,
+                    combat_boards.c.runtime_revision == expected_board_revision,
+                )
+                .values(runtime_revision=combat_boards.c.runtime_revision + 1)
+            ).rowcount
+            if bumped_board != 1:
+                raise BoardMovementStaleError("combat board changed; refresh and replan")
+            if outcome != "stopped":
+                connection.execute(
+                    update(combat_positions)
+                    .where(combat_positions.c.combat_entry_id == entry_id)
+                    .values(
+                        anchor_x=anchor_x, anchor_y=anchor_y,
+                        revision=combat_positions.c.revision + 1,
+                    )
+                )
+                # P5-E E1b: move the dragged target in the same transaction.
+                if drag is not None:
+                    drag_position = (
+                        connection.execute(
+                            select(combat_positions)
+                            .where(combat_positions.c.combat_entry_id == drag.target_entry_id)
+                            .with_for_update()
+                        )
+                        .mappings()
+                        .one_or_none()
+                    )
+                    if drag_position is None:
+                        raise BoardNotFoundError(
+                            f"Drag target {drag.target_entry_id} has no board position"
+                        )
+                    if int(drag_position["revision"]) != drag.expected_position_revision:
+                        raise BoardMovementStaleError("drag target moved; refresh and replan")
+                    connection.execute(
+                        update(combat_positions)
+                        .where(combat_positions.c.combat_entry_id == drag.target_entry_id)
+                        .values(
+                            anchor_x=drag.anchor_x, anchor_y=drag.anchor_y,
+                            revision=combat_positions.c.revision + 1,
+                        )
+                    )
+            from app.persistence.combat.tables import combat_entries
+            connection.execute(
+                update(combat_entries)
+                .where(combat_entries.c.id == entry_id)
+                .values(
+                    movement_used_feet=movement_used_feet,
+                    movement_diagonal_steps_used=movement_diagonal_steps_used,
+                    movement_budget_feet=movement_budget_feet,
+                    pending_movement_state=pending_movement_state,
+                    updated_at=now,
+                )
+            )
+            for window in windows:
+                write_reaction_window(
+                    connection,
+                    binding=binding,
+                    combat_id=combat_id,
+                    entry_id=UUID(window.entry_id),
+                    window=window,
+                )
+
+        self.event_repository.append(
+            room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
+            kind="combat.movement_resumed", acting_seat_id=binding.seat_id,
+            subject_seat_id=subject_seat_id, subject_character_id=None,
+            execution_mode=execution_mode, visibility=visibility,
+            recipient_seat_ids=(), payload_version=1,
+            payload={
+                "combat_id": str(combat_id), "entry_id": str(entry_id),
+                "outcome": outcome,
+                "anchor_x": anchor_x, "anchor_y": anchor_y,
+                "used_feet": movement_used_feet,
+                "diagonal_steps_used": movement_diagonal_steps_used,
+                "budget_feet": movement_budget_feet,
+                "position_revision": expected_position_revision + (0 if outcome == "stopped" else 1),
+                "board_revision": expected_board_revision + 1,
+                "pending_revision": int(pending_movement_state.get("revision", 0)) if pending_movement_state else None,
+                "pending_window_ids": list(pending_movement_state.get("pending_window_ids", [])) if pending_movement_state else [],
+                "boundary_reactor_ids": list(pending_movement_state.get("boundary_reactor_ids", [])) if pending_movement_state else [],
+            },
+            idempotency_key=f"p5e-movement-resumed:{idempotency_key}" if idempotency_key else None,
+            expected_actor_binding=binding, transaction_projection=projection,
+        )
+        stored = self.get_position(entry_id)
+        if stored is None:
+            raise BoardNotFoundError(str(entry_id))
+        return stored
+
+    def cancel_pending_movement(
+        self,
+        *,
+        binding: StoredTableActorBinding,
+        combat_id: UUID,
+        entry_id: UUID,
+        reason: str,
+        idempotency_key: str | None,
+        visibility: str,
+        subject_seat_id: UUID | None,
+        execution_mode: str,
+    ) -> StoredCombatPosition:
+        """DM-only: drop a paused movement. The mover stays where it paused.
+
+        Atomically clears ``pending_movement_state`` and appends
+        ``combat.movement_cancelled`` with the reason for audit. The token
+        does not move and bookkeeping is unchanged.
+        """
+        if self.event_repository is None:
+            raise BoardNotFoundError("CombatBoardRepository has no event repository")
+
+        now = datetime.now().astimezone()
+
+        def projection(connection: Connection, _event_id: UUID, _seq: int) -> None:
+            from app.persistence.combat.tables import combat_entries
+            entry_row = (
+                connection.execute(
+                    select(combat_entries)
+                    .where(combat_entries.c.id == entry_id)
+                    .with_for_update()
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if entry_row is None:
+                raise BoardNotFoundError(f"Combat entry {entry_id} was not found")
+            if not dict(entry_row["pending_movement_state"] or {}):
+                raise BoardMovementStaleError("no pending movement to cancel")
+            from app.persistence.combat.tables import combat_entries
+            connection.execute(
+                update(combat_entries)
+                .where(combat_entries.c.id == entry_id)
+                .values(pending_movement_state={}, updated_at=now)
+            )
+            connection.execute(
+                update(combat_boards)
+                .where(combat_boards.c.combat_id == combat_id)
+                .values(runtime_revision=combat_boards.c.runtime_revision + 1)
+            )
+
+        self.event_repository.append(
+            room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
+            kind="combat.movement_cancelled", acting_seat_id=binding.seat_id,
+            subject_seat_id=subject_seat_id, subject_character_id=None,
+            execution_mode=execution_mode, visibility=visibility,
+            recipient_seat_ids=(), payload_version=1,
+            payload={
+                "combat_id": str(combat_id), "entry_id": str(entry_id),
+                "reason": reason,
+            },
+            idempotency_key=f"p5e-movement-cancelled:{idempotency_key}" if idempotency_key else None,
+            expected_actor_binding=binding, transaction_projection=projection,
+        )
+        stored = self.get_position(entry_id)
+        if stored is None:
+            raise BoardNotFoundError(str(entry_id))
+        return stored
+
+    def pause_movement_with_windows(
+        self,
+        *,
+        binding: StoredTableActorBinding,
+        combat_id: UUID,
+        entry_id: UUID,
+        anchor_x: int,
+        anchor_y: int,
+        expected_position_revision: int,
+        expected_board_revision: int,
+        movement_used_feet: int,
+        movement_diagonal_steps_used: int,
+        movement_budget_feet: int,
+        pending_movement_state: dict[str, Any],
+        windows: tuple[Any, ...],
+        idempotency_key: str | None,
+        visibility: str,
+        subject_seat_id: UUID | None,
+        execution_mode: str,
+        drag: MovementDrag | None = None,
+    ) -> StoredCombatPosition:
+        """Pause a mover at an opportunity-attack boundary and open windows.
+
+        Atomically (single event transaction): CAS the position and board
+        revisions, commit the mover to the pause anchor, write its movement
+        bookkeeping plus durable ``pending_movement_state``, and write one
+        open OA reaction window per reactor via ``write_reaction_window``.
+        Appends ``combat.movement_paused``. ``windows`` are prebuilt
+        ``ReactionWindow`` objects for the eligible reactors.
+        """
+        if self.event_repository is None:
+            raise BoardNotFoundError("CombatBoardRepository has no event repository")
+        from app.persistence.combat.reactions import write_reaction_window
+
+        now = datetime.now().astimezone()
+
+        def projection(connection: Connection, _event_id: UUID, _seq: int) -> None:
+            position = (
+                connection.execute(
+                    select(combat_positions)
+                    .where(combat_positions.c.combat_entry_id == entry_id)
+                    .with_for_update()
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if position is None:
+                raise BoardNotFoundError(f"Combat entry {entry_id} has no board position")
+            if int(position["revision"]) != expected_position_revision:
+                raise BoardMovementStaleError("combat token moved; refresh and replan")
+            bumped_board = connection.execute(
+                update(combat_boards)
+                .where(
+                    combat_boards.c.combat_id == combat_id,
+                    combat_boards.c.runtime_revision == expected_board_revision,
+                )
+                .values(runtime_revision=combat_boards.c.runtime_revision + 1)
+            ).rowcount
+            if bumped_board != 1:
+                raise BoardMovementStaleError("combat board changed; refresh and replan")
+            connection.execute(
+                update(combat_positions)
+                .where(combat_positions.c.combat_entry_id == entry_id)
+                .values(
+                    anchor_x=anchor_x, anchor_y=anchor_y,
+                    revision=combat_positions.c.revision + 1,
+                )
+            )
+            # P5-E E1b: move the dragged target in the same transaction.
+            if drag is not None:
+                drag_position = (
+                    connection.execute(
+                        select(combat_positions)
+                        .where(combat_positions.c.combat_entry_id == drag.target_entry_id)
+                        .with_for_update()
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if drag_position is None:
+                    raise BoardNotFoundError(
+                        f"Drag target {drag.target_entry_id} has no board position"
+                    )
+                if int(drag_position["revision"]) != drag.expected_position_revision:
+                    raise BoardMovementStaleError("drag target moved; refresh and replan")
+                connection.execute(
+                    update(combat_positions)
+                    .where(combat_positions.c.combat_entry_id == drag.target_entry_id)
+                    .values(
+                        anchor_x=drag.anchor_x, anchor_y=drag.anchor_y,
+                        revision=combat_positions.c.revision + 1,
+                    )
+                )
+            from app.persistence.combat.tables import combat_entries
+            connection.execute(
+                update(combat_entries)
+                .where(combat_entries.c.id == entry_id)
+                .values(
+                    movement_used_feet=movement_used_feet,
+                    movement_diagonal_steps_used=movement_diagonal_steps_used,
+                    movement_budget_feet=movement_budget_feet,
+                    pending_movement_state=pending_movement_state,
+                    updated_at=now,
+                )
+            )
+            for window in windows:
+                write_reaction_window(
+                    connection,
+                    binding=binding,
+                    combat_id=combat_id,
+                    entry_id=UUID(window.entry_id),
+                    window=window,
+                )
+
+        self.event_repository.append(
+            room_id=binding.room_id, campaign_id=binding.campaign_id, session_id=binding.session_id,
+            kind="combat.movement_paused", acting_seat_id=binding.seat_id,
+            subject_seat_id=subject_seat_id, subject_character_id=None,
+            execution_mode=execution_mode, visibility=visibility,
+            recipient_seat_ids=(), payload_version=1,
+            payload={
+                "combat_id": str(combat_id), "entry_id": str(entry_id),
+                "anchor_x": anchor_x, "anchor_y": anchor_y,
+                "used_feet": movement_used_feet,
+                "diagonal_steps_used": movement_diagonal_steps_used,
+                "budget_feet": movement_budget_feet,
+                "position_revision": expected_position_revision + 1,
+                "board_revision": expected_board_revision + 1,
+                "pending_revision": int(pending_movement_state["revision"]),
+                "pending_window_ids": list(pending_movement_state["pending_window_ids"]),
+                "boundary_reactor_ids": list(pending_movement_state["boundary_reactor_ids"]),
+            },
+            idempotency_key=f"p5e-movement-paused:{idempotency_key}" if idempotency_key else None,
+            expected_actor_binding=binding, transaction_projection=projection,
+        )
+        stored = self.get_position(entry_id)
+        if stored is None:
+            raise BoardNotFoundError(str(entry_id))
+        return stored
+
 
 __all__ = [
     "BoardDoorStateConflictError",
@@ -619,6 +1096,7 @@ __all__ = [
     "BoardNotFoundError",
     "CombatBoardRepository",
     "DOOR_STATES",
+    "MovementDrag",
     "StoredBoardDoor",
     "StoredCombatBoard",
     "StoredCombatPosition",

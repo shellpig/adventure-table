@@ -171,6 +171,7 @@ class CombatEntryView(StrictModel):
     ready_state: dict[str, Any]
     pending_reaction_state: dict[str, Any]
     dodging: bool = False
+    disengaged: bool = False
 
 
 class CombatView(StrictModel):
@@ -299,7 +300,7 @@ class CombatService:
             bonus_action_available=entry.bonus_action_available, reaction_available=entry.reaction_available,
             attacks_allowed=entry.attacks_allowed, attacks_used=entry.attacks_used,
             ready_state=dict(entry.ready_state), pending_reaction_state=dict(entry.pending_reaction_state),
-            dodging=entry.dodging,
+            dodging=entry.dodging, disengaged=entry.disengaged,
         )
 
     def _hidden_entry_ids(self, entries: tuple[StoredCombatEntry, ...]) -> frozenset[UUID]:
