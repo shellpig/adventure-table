@@ -58,6 +58,21 @@ class StoredCombatPosition:
     created_at: datetime
 
 
+@dataclass(frozen=True)
+class MovementDrag:
+    """Dragged target to move atomically with the mover.
+
+    The domain service validates the dragged target's path step-by-step
+    before the transaction; the repository CAS-checks the target's position
+    revision inside the transaction and moves it by the same delta as the
+    mover. The dragged target never triggers opportunity attacks.
+    """
+    target_entry_id: UUID
+    expected_position_revision: int
+    anchor_x: int
+    anchor_y: int
+
+
 class BoardNotFoundError(Exception):
     pass
 
@@ -319,6 +334,7 @@ class CombatBoardRepository:
         visibility: str,
         subject_seat_id: UUID | None,
         execution_mode: str,
+        drag: MovementDrag | None = None,
     ) -> StoredCombatPosition:
         """Atomically move a token, write turn bookkeeping, emit combat.movement_committed.
 
@@ -366,6 +382,33 @@ class CombatBoardRepository:
                     revision=combat_positions.c.revision + 1,
                 )
             )
+            # P5-E E1b: move the dragged target in the same transaction.
+            # The domain service validated the target's path step-by-step;
+            # here we CAS its position revision and apply the move.
+            if drag is not None:
+                drag_position = (
+                    connection.execute(
+                        select(combat_positions)
+                        .where(combat_positions.c.combat_entry_id == drag.target_entry_id)
+                        .with_for_update()
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if drag_position is None:
+                    raise BoardNotFoundError(
+                        f"Drag target {drag.target_entry_id} has no board position"
+                    )
+                if int(drag_position["revision"]) != drag.expected_position_revision:
+                    raise BoardMovementStaleError("drag target moved; refresh and replan")
+                connection.execute(
+                    update(combat_positions)
+                    .where(combat_positions.c.combat_entry_id == drag.target_entry_id)
+                    .values(
+                        anchor_x=drag.anchor_x, anchor_y=drag.anchor_y,
+                        revision=combat_positions.c.revision + 1,
+                    )
+                )
             from app.persistence.combat.tables import combat_entries
             connection.execute(
                 update(combat_entries)
@@ -699,6 +742,7 @@ class CombatBoardRepository:
         visibility: str,
         subject_seat_id: UUID | None,
         execution_mode: str,
+        drag: MovementDrag | None = None,
     ) -> StoredCombatPosition:
         """Resume a paused movement: commit the rest, re-pause, or stop.
 
@@ -764,6 +808,31 @@ class CombatBoardRepository:
                         revision=combat_positions.c.revision + 1,
                     )
                 )
+                # P5-E E1b: move the dragged target in the same transaction.
+                if drag is not None:
+                    drag_position = (
+                        connection.execute(
+                            select(combat_positions)
+                            .where(combat_positions.c.combat_entry_id == drag.target_entry_id)
+                            .with_for_update()
+                        )
+                        .mappings()
+                        .one_or_none()
+                    )
+                    if drag_position is None:
+                        raise BoardNotFoundError(
+                            f"Drag target {drag.target_entry_id} has no board position"
+                        )
+                    if int(drag_position["revision"]) != drag.expected_position_revision:
+                        raise BoardMovementStaleError("drag target moved; refresh and replan")
+                    connection.execute(
+                        update(combat_positions)
+                        .where(combat_positions.c.combat_entry_id == drag.target_entry_id)
+                        .values(
+                            anchor_x=drag.anchor_x, anchor_y=drag.anchor_y,
+                            revision=combat_positions.c.revision + 1,
+                        )
+                    )
             from app.persistence.combat.tables import combat_entries
             connection.execute(
                 update(combat_entries)
@@ -898,6 +967,7 @@ class CombatBoardRepository:
         visibility: str,
         subject_seat_id: UUID | None,
         execution_mode: str,
+        drag: MovementDrag | None = None,
     ) -> StoredCombatPosition:
         """Pause a mover at an opportunity-attack boundary and open windows.
 
@@ -946,6 +1016,31 @@ class CombatBoardRepository:
                     revision=combat_positions.c.revision + 1,
                 )
             )
+            # P5-E E1b: move the dragged target in the same transaction.
+            if drag is not None:
+                drag_position = (
+                    connection.execute(
+                        select(combat_positions)
+                        .where(combat_positions.c.combat_entry_id == drag.target_entry_id)
+                        .with_for_update()
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if drag_position is None:
+                    raise BoardNotFoundError(
+                        f"Drag target {drag.target_entry_id} has no board position"
+                    )
+                if int(drag_position["revision"]) != drag.expected_position_revision:
+                    raise BoardMovementStaleError("drag target moved; refresh and replan")
+                connection.execute(
+                    update(combat_positions)
+                    .where(combat_positions.c.combat_entry_id == drag.target_entry_id)
+                    .values(
+                        anchor_x=drag.anchor_x, anchor_y=drag.anchor_y,
+                        revision=combat_positions.c.revision + 1,
+                    )
+                )
             from app.persistence.combat.tables import combat_entries
             connection.execute(
                 update(combat_entries)
@@ -1000,6 +1095,7 @@ __all__ = [
     "BoardNotFoundError",
     "CombatBoardRepository",
     "DOOR_STATES",
+    "MovementDrag",
     "StoredBoardDoor",
     "StoredCombatBoard",
     "StoredCombatPosition",

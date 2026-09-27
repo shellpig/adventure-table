@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import Field
 
 from app.content.registry import ContentRegistry
+from app.domain.combat.board import CombatBoardService
 from app.domain.combat.lifecycle import CombatNotFoundError, CombatService, CombatStateConflictError
 from app.domain.combat.sizes import parse_size, resolve_entry_size
 from app.domain.combat.resolution import (
@@ -22,9 +23,13 @@ from app.domain.rooms.table_events import (
 )
 from app.domain.rules.abilities import ability_modifier
 from app.domain.spatial import (
+    BarrierSegment,
     GridCell,
+    PathCreature,
+    PathValidationRequest,
     footprint_for_size,
     occupied_cells,
+    validate_movement_path,
 )
 from app.persistence.characters import CharacterRepository
 from app.persistence.combat.core_rolls import CombatCoreRollRepository
@@ -34,6 +39,7 @@ from app.persistence.combat.repository import MonsterRepository
 from app.persistence.combat.special_attacks import (
     GRAPPLED_REF,
     SpecialAttackNotFoundError,
+    SpecialAttackPush,
     SpecialAttackRepository,
     SpecialAttackRollComputation,
     SpecialAttackRollUnit,
@@ -108,6 +114,7 @@ class CombatSpecialAttackService:
         roll_service: RollService,
         table_event_service: TableEventService,
         board_repository: CombatBoardRepository | None = None,
+        board_service: CombatBoardService | None = None,
     ) -> None:
         self.repository = repository
         self.core_roll_repository = core_roll_repository
@@ -121,6 +128,9 @@ class CombatSpecialAttackService:
         # P5-E: Tactical shove push needs board positions. Falls back to the
         # combat service's board repository when not explicitly wired.
         self.board_repository = board_repository or combat_service.board_repository
+        # P5-E E1b: push destination validation reuses the movement path
+        # validator against a board projection.
+        self.board_service = board_service
 
     def _active_entry(self, actor: TableActorContext, entry_id: UUID) -> StoredCombatEntry:
         combat = self.combat_repository.get_active(actor.campaign_id)
@@ -183,50 +193,82 @@ class CombatSpecialAttackService:
         destination: GridCell,
         is_dm: bool,
     ) -> bool:
-        """Check a shove push destination against board truth.
+        """Check a shove push destination via the movement path validator.
 
-        Uses the caller's visible projection (is_dm=False) for the request
-        preflight, full truth (is_dm=True) for the complete re-validation.
-        Returns False when the destination is out of bounds, blocked, behind
-        a wall/closed door, or occupied.
+        Builds a single-step PathValidationRequest against the caller's board
+        projection (is_dm=False: caller-visible, hidden creatures/doors
+        concealed; is_dm=True: full truth) and runs validate_movement_path.
+        This covers blocked terrain, wall/closed-door crossing (including
+        diagonal corner cuts), out-of-bounds, and occupied cells without any
+        hand-written bounds/occupancy loops.
+        Returns False when the destination is not a legal single step.
         """
-        if self.board_repository is None:
+        if self.board_repository is None or self.board_service is None:
             return False
-        # For simplicity, use the board repository's placement check via the
-        # combat service's board service if available; otherwise do a basic
-        # bounds + occupancy check.
         board = self.board_repository.get_board(combat_id)
         if board is None:
             return False
-        # Bounds check
-        target_footprint = footprint_for_size(self._size(target))
-        cells = set(occupied_cells(destination.x, destination.y, target_footprint))
-        for cell in cells:
-            if not (0 <= cell.x < board.width_cells and 0 <= cell.y < board.height_cells):
-                return False
-        # Occupancy check (excluding the target itself)
-        positions = {
-            position.combat_entry_id: position
-            for position in self.board_repository.list_positions(combat_id)
-        }
-        for entry_id, position in positions.items():
-            if entry_id == target.id:
+        combat = self.combat_repository.get(combat_id)
+        if combat is None:
+            return False
+        position = self.board_repository.get_position(target.id)
+        if position is None:
+            return False
+        view = self.board_service._project_board(combat, board, is_dm=is_dm)
+        target_size = self._size(target)
+        target_footprint = footprint_for_size(target_size)
+        barriers = tuple(
+            BarrierSegment(x1=wall.x1, y1=wall.y1, x2=wall.x2, y2=wall.y2)
+            for wall in view.walls
+        ) + tuple(
+            BarrierSegment(x1=door.x1, y1=door.y1, x2=door.x2, y2=door.y2)
+            for door in view.doors
+            if door.state in ("closed", "locked")
+        )
+        blocked_cells: set[GridCell] = set()
+        for terrain in view.terrain:
+            if terrain.terrain_kind == "blocked":
+                blocked_cells.add(GridCell(terrain.x, terrain.y))
+        creatures: list[PathCreature] = []
+        for board_position in view.positions:
+            if board_position.entry_id == target.id:
                 continue
-            other = self.combat_repository.get_entry(entry_id)
+            other = self.combat_repository.get_entry(board_position.entry_id)
             if other is None or other.status != "active":
                 continue
-            # Hidden creatures are invisible to a non-DM caller.
-            if not is_dm:
-                hidden_ids = self.combat_service._hidden_entry_ids((other,))
-                if other.id in hidden_ids:
-                    continue
-            other_footprint = footprint_for_size(self._size(other))
-            other_cells = set(occupied_cells(position.anchor_x, position.anchor_y, other_footprint))
-            if cells & other_cells:
-                return False
-        # TODO: blocked terrain, walls/doors check needs board baseline access.
-        # For now, rely on the board service's placement check if available.
-        return True
+            other_size = resolve_entry_size(
+                other,
+                character_repository=self.character_repository,
+                monster_repository=self.monster_repository,
+                registry=self.registry,
+            )
+            other_footprint = footprint_for_size(other_size)
+            creatures.append(PathCreature(
+                cells=frozenset(
+                    occupied_cells(
+                        board_position.anchor_x, board_position.anchor_y,
+                        other_footprint,
+                    )
+                ),
+                hostile_to_mover=bool(other.is_hostile) != bool(target.is_hostile),
+                size_rank=int(other_size),
+            ))
+        request = PathValidationRequest(
+            start=GridCell(position.anchor_x, position.anchor_y),
+            anchors=(destination,),
+            footprint=target_footprint,
+            mover_size_rank=int(target_size),
+            width_cells=view.width_cells,
+            height_cells=view.height_cells,
+            blocked_cells=frozenset(blocked_cells),
+            difficult_cells=frozenset(),
+            barriers=barriers,
+            creatures=tuple(creatures),
+            budget_feet=5,
+            diagonal_steps_used=0,
+        )
+        result = validate_movement_path(request)
+        return result.valid
 
     def _has_free_hand(self, entry: StoredCombatEntry) -> bool:
         if entry.subject_kind == "monster":
@@ -565,6 +607,40 @@ class CombatSpecialAttackService:
                 total=audit.total,
             )
 
+        # P5-E E1b: Tactical shove push. Pre-compute and validate the
+        # destination against full truth before the transaction; the
+        # repository applies it atomically with the roll resolution only on
+        # a successful push. A hidden blocker (validation fails against
+        # truth) means push=None: the shove can still succeed but the target
+        # does not move, and the event leaks nothing.
+        # Forced movement never triggers opportunity attacks and never deals
+        # fall/hazard damage (position row is updated directly, not via
+        # MovementService.confirm).
+        push: SpecialAttackPush | None = None
+        if action.kind == SpecialAttackKind.SHOVE_PUSH and self.board_repository is not None:
+            combat = self.combat_repository.get(action.combat_id)
+            if combat is not None and combat.mode == "tactical":
+                attacker = self.combat_repository.get_entry(action.attacker_entry_id)
+                target = self.combat_repository.get_entry(action.target_entry_id)
+                if attacker is not None and target is not None:
+                    destination = self._push_destination(attacker=attacker, target=target)
+                    position = self.board_repository.get_position(target.id)
+                    if destination is not None and position is not None and self._validate_push_destination(
+                        combat_id=combat.id,
+                        target=target,
+                        destination=destination,
+                        is_dm=True,
+                    ):
+                        footprint = footprint_for_size(self._size(target))
+                        push = SpecialAttackPush(
+                            target_entry_id=target.id,
+                            expected_position_revision=int(position.revision),
+                            anchor_x=destination.x,
+                            anchor_y=destination.y,
+                            footprint_width=footprint.width,
+                            footprint_height=footprint.height,
+                        )
+
         try:
             stored, _event = self.repository.complete_roll(
                 binding=actor_binding(actor),
@@ -573,78 +649,14 @@ class CombatSpecialAttackService:
                 execution_mode=execution_mode,
                 result_factory=compute,
                 idempotency_key=input.idempotency_key,
+                push=push,
             )
         except SpecialAttackStateConflictError as exc:
             raise CombatStateConflictError(str(exc)) from exc
-        # P5-E: Tactical shove push moves the target on success. Re-validate
-        # the destination against full truth; a hidden blocker means success
-        # without movement (no leak in the event).
-        self._apply_tactical_shove_push(actor, stored)
         if self.table_event_service.notifier is not None:
             self.table_event_service.notifier.notify(actor.session_id)
         return _view(stored)
 
-    def _apply_tactical_shove_push(
-        self, actor: TableActorContext, stored: StoredSpecialAttackAction
-    ) -> None:
-        """Move a shoved target 5 ft on Tactical success (P5-E).
-
-        No-op unless the action is a resolved, successful Tactical shove push.
-        Forced movement never triggers opportunity attacks and never deals
-        fall/hazard damage.
-        """
-        if self.board_repository is None:
-            return
-        if stored.kind is not SpecialAttackKind.SHOVE:
-            return
-        if stored.status != "resolved":
-            return
-        result = dict(stored.resolution_result or {})
-        if result.get("status") != "success":
-            return
-        if result.get("push_distance_ft") is None:
-            # Shove prone, not a push.
-            return
-        combat = self.combat_repository.get(stored.combat_id)
-        if combat is None or combat.mode != "tactical":
-            return
-        attacker = self.combat_repository.get_entry(stored.attacker_entry_id)
-        target = self.combat_repository.get_entry(stored.target_entry_id)
-        if attacker is None or target is None:
-            return
-        destination = self._push_destination(attacker=attacker, target=target)
-        if destination is None:
-            return
-        # Full-truth re-validation. A hidden blocker blocks the move but the
-        # shove still succeeds; the event payload does not name the blocker.
-        if not self._validate_push_destination(
-            combat_id=combat.id,
-            target=target,
-            destination=destination,
-            is_dm=True,
-        ):
-            return
-        position = self.board_repository.get_position(target.id)
-        if position is None:
-            return
-        try:
-            footprint = footprint_for_size(self._size(target))
-            self.board_repository.upsert_position_with_event(
-                binding=actor_binding(actor),
-                combat_id=combat.id,
-                entry_id=target.id,
-                anchor_x=destination.x,
-                anchor_y=destination.y,
-                footprint_width=footprint.width,
-                footprint_height=footprint.height,
-                idempotency_key=f"p5e-shove-push:{stored.action_id}",
-                visibility="public",
-            )
-        except Exception as exc:
-            # The shove succeeded; a concurrent move winning the race is a
-            # stale-state conflict, not a silent success.
-            from app.domain.combat.movement import CombatMovementStaleError
-            raise CombatMovementStaleError(str(exc)) from exc
 
 
 __all__ = [

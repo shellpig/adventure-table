@@ -61,6 +61,23 @@ class SpecialAttackRollComputation:
     total: int
 
 
+@dataclass(frozen=True)
+class SpecialAttackPush:
+    """Pre-validated shove push to apply atomically with roll completion.
+
+    The domain service validates the destination against full truth before
+    calling complete_roll; the repository CAS-checks the target's position
+    revision inside the transaction and applies the move in the same event
+    transaction as the roll resolution.
+    """
+    target_entry_id: UUID
+    expected_position_revision: int
+    anchor_x: int
+    anchor_y: int
+    footprint_width: int
+    footprint_height: int
+
+
 SpecialAttackRollFactory = Callable[[], SpecialAttackRollComputation]
 
 
@@ -753,6 +770,7 @@ class SpecialAttackRepository:
         execution_mode: str,
         result_factory: SpecialAttackRollFactory,
         idempotency_key: str | None,
+        push: SpecialAttackPush | None = None,
     ) -> tuple[StoredSpecialAttackAction, StoredTableEvent]:
         action = self.find_by_roll_request(session_id=binding.session_id, request_id=request_id)
         if action is None:
@@ -860,6 +878,52 @@ class SpecialAttackRepository:
                         condition_ref=PRONE_REF,
                         note=f"P4-C Shoved prone by combat entry {attacker['id']}",
                     )
+                # P5-E E1b: apply a pre-validated shove push in the same
+                # transaction as the roll resolution. The domain service
+                # validated the destination against full truth; here we
+                # CAS the target's position revision and move it. A hidden
+                # blocker means the domain service passes push=None, so the
+                # shove succeeds without movement and the event leaks nothing.
+                push_applied = False
+                push_to: dict[str, int] | None = None
+                if (
+                    push is not None
+                    and outcome.status == "success"
+                    and outcome.kind == SpecialAttackKind.SHOVE_PUSH
+                    and outcome.push_distance_ft is not None
+                ):
+                    from app.persistence.combat_boards.tables import combat_positions
+                    target_position = (
+                        connection.execute(
+                            select(combat_positions)
+                            .where(combat_positions.c.combat_entry_id == push.target_entry_id)
+                            .with_for_update()
+                        )
+                        .mappings()
+                        .one_or_none()
+                    )
+                    if target_position is None:
+                        raise SpecialAttackStateConflictError("Shove target has no board position")
+                    if int(target_position["revision"]) != push.expected_position_revision:
+                        raise SpecialAttackStateConflictError(
+                            "Shove target moved; push destination is stale"
+                        )
+                    connection.execute(
+                        update(combat_positions)
+                        .where(combat_positions.c.combat_entry_id == push.target_entry_id)
+                        .values(
+                            anchor_x=push.anchor_x,
+                            anchor_y=push.anchor_y,
+                            footprint_width=push.footprint_width,
+                            footprint_height=push.footprint_height,
+                            revision=combat_positions.c.revision + 1,
+                        )
+                    )
+                    push_applied = True
+                    push_to = {"x": push.anchor_x, "y": push.anchor_y}
+                final_result["push_applied"] = push_applied
+                if push_to is not None:
+                    final_result["push_to"] = push_to
                 connection.execute(
                     update(combat_actions)
                     .where(combat_actions.c.id == locked_action["id"])
@@ -924,6 +988,7 @@ class SpecialAttackRepository:
 __all__ = [
     "GRAPPLED_REF",
     "SpecialAttackNotFoundError",
+    "SpecialAttackPush",
     "SpecialAttackRepository",
     "SpecialAttackRollComputation",
     "SpecialAttackRollUnit",

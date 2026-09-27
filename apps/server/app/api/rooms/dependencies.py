@@ -502,6 +502,7 @@ def get_combat_special_attack_service(request: Request) -> CombatSpecialAttackSe
             get_content_registry(request),
             get_roll_service(request),
             event_service,
+            board_service=get_combat_board_service(request),
         )
         request.app.state.combat_special_attack_service = service
     return service

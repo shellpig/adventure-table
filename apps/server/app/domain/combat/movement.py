@@ -62,6 +62,7 @@ from app.persistence.combat.lifecycle import (
 from app.persistence.combat_boards.repository import (
     BoardMovementStaleError,
     CombatBoardRepository,
+    MovementDrag,
     StoredCombatBoard,
     StoredCombatPosition,
 )
@@ -344,12 +345,12 @@ class MovementService:
         board: StoredCombatBoard,
         mover: StoredCombatEntry,
         mover_disengaged: bool,
+        drag_target_id: UUID | None = None,
     ) -> tuple[tuple[OpportunityReactor, ...], set[UUID]]:
         """Build OA reactor candidates for a mover.
 
-        Returns (reactors, hidden_reactor_ids). Only visible, eligible
-        reactors are returned for window opening; hidden IDs are returned
-        separately for DM-only notes.
+        E1b: The drag target is excluded from reactors (a creature being
+        dragged does not get OAs against the mover dragging it).
         """
         entries = self.combat_service.repository.list_entries(combat.id)
         hidden_ids = self.combat_service._hidden_entry_ids(tuple(entries))
@@ -357,6 +358,9 @@ class MovementService:
         hidden_reactor_ids: set[UUID] = set()
         for other in entries:
             if other.id == mover.id:
+                continue
+            # E1b: The drag target does not get OAs against the mover.
+            if drag_target_id is not None and other.id == drag_target_id:
                 continue
             if other.status != "active":
                 continue
@@ -539,6 +543,11 @@ class MovementService:
     def _confirm_view_from_payload(
         self, entry_id: UUID, payload: dict, *, outcome: str
     ) -> ConfirmMovementView:
+        # E1b: paused replays must return the original window IDs (no 2nd windows).
+        pending_window_ids = tuple(payload.get("pending_window_ids", ()))
+        boundary_reactor_ids = tuple(
+            UUID(rid) for rid in payload.get("boundary_reactor_ids", ())
+        )
         return ConfirmMovementView(
             entry_id=entry_id, outcome=outcome,
             anchor_x=int(payload["anchor_x"]), anchor_y=int(payload["anchor_y"]),
@@ -548,6 +557,8 @@ class MovementService:
             diagonal_steps_used=int(payload["diagonal_steps_used"]),
             position_revision=int(payload["position_revision"]),
             board_revision=int(payload["board_revision"]),
+            pending_window_ids=pending_window_ids,
+            boundary_reactor_ids=boundary_reactor_ids,
         )
 
     def _interrupted_view(
@@ -838,6 +849,7 @@ class MovementService:
         if not mover_disengaged:
             reactors, hidden_reactor_ids = self._opportunity_reactors(
                 combat, board, entry, mover_disengaged=False,
+                drag_target_id=drag_target.id if drag_target is not None else None,
             )
             # Build the anchor path for crossing detection.
             mover_footprint = footprint_for_size(resolve_entry_size(
@@ -889,6 +901,20 @@ class MovementService:
                 )
 
         hidden = entry.id in self.combat_service._hidden_entry_ids((entry,))
+        # P5-E E1b: build the drag move (if any) to apply in the same
+        # transaction as the mover. The dragged target follows the mover's
+        # delta; its path was validated step-by-step during confirm.
+        drag: MovementDrag | None = None
+        if drag_target is not None and drag_target_position is not None:
+            dx = final_anchor.x - position.anchor_x
+            dy = final_anchor.y - position.anchor_y
+            if dx != 0 or dy != 0:
+                drag = MovementDrag(
+                    target_entry_id=drag_target.id,
+                    expected_position_revision=drag_target_position.revision,
+                    anchor_x=drag_target_position.anchor_x + dx,
+                    anchor_y=drag_target_position.anchor_y + dy,
+                )
         try:
             stored = self.board_repository.commit_movement_with_event(
                 binding=actor_binding(actor),
@@ -902,6 +928,7 @@ class MovementService:
                 idempotency_key=request.idempotency_key,
                 visibility="dm_only" if hidden else "public",
                 subject_seat_id=subject_seat_id, execution_mode=execution_mode,
+                drag=drag,
             )
         except BoardMovementStaleError as exc:
             raise CombatMovementStaleError(str(exc)) from exc
@@ -1001,7 +1028,28 @@ class MovementService:
             "boundary_reactor_ids": [str(rid) for rid in crossing.reactor_entry_ids],
             "asked_reactor_ids": [str(rid) for rid in crossing.reactor_entry_ids],
             "revision": 0,
+            # E1b: Save pause anchor for reposition detection on resume.
+            "pause_anchor_x": pause_anchor.x,
+            "pause_anchor_y": pause_anchor.y,
         }
+        # P5-E E1b: drag target follows the mover in the same transaction.
+        # Persist drag context in pending_state so resume can continue it.
+        drag: MovementDrag | None = None
+        if drag_target is not None and drag_target_position is not None:
+            dx = pause_anchor.x - mover_anchor.x
+            dy = pause_anchor.y - mover_anchor.y
+            if dx != 0 or dy != 0:
+                drag = MovementDrag(
+                    target_entry_id=drag_target.id,
+                    expected_position_revision=drag_target_position.revision,
+                    anchor_x=drag_target_position.anchor_x + dx,
+                    anchor_y=drag_target_position.anchor_y + dy,
+                )
+                pending_state["drag_target_entry_id"] = str(drag_target.id)
+                pending_state["drag_target_anchor"] = [
+                    drag_target_position.anchor_x + dx,
+                    drag_target_position.anchor_y + dy,
+                ]
         # Commit the pause position and pending state atomically.
         try:
             stored = self.board_repository.pause_movement_with_windows(
@@ -1018,32 +1066,10 @@ class MovementService:
                 idempotency_key=request.idempotency_key,
                 visibility="dm_only" if hidden else "public",
                 subject_seat_id=subject_seat_id, execution_mode=execution_mode,
+                drag=drag,
             )
         except BoardMovementStaleError as exc:
             raise CombatMovementStaleError(str(exc)) from exc
-        # Sync the dragged target (if any) to the pause anchor offset.
-        if drag_target is not None and drag_target_position is not None:
-            dx = pause_anchor.x - mover_anchor.x
-            dy = pause_anchor.y - mover_anchor.y
-            if dx != 0 or dy != 0:
-                from app.domain.combat.sizes import resolve_entry_size
-                drag_footprint = footprint_for_size(resolve_entry_size(
-                    drag_target,
-                    character_repository=self.combat_service.character_repository,
-                    monster_repository=self.combat_service.monster_repository,
-                    registry=self.combat_service.registry,
-                ))
-                self.board_repository.upsert_position_with_event(
-                    binding=actor_binding(actor),
-                    combat_id=combat.id,
-                    entry_id=drag_target.id,
-                    anchor_x=drag_target_position.anchor_x + dx,
-                    anchor_y=drag_target_position.anchor_y + dy,
-                    footprint_width=drag_footprint.width,
-                    footprint_height=drag_footprint.height,
-                    idempotency_key=f"p5e-drag:{request.idempotency_key}" if request.idempotency_key else None,
-                    visibility="dm_only" if hidden else "public",
-                )
         self.board_service._notify(actor)
         return ConfirmMovementView(
             entry_id=entry.id, outcome="paused",
@@ -1209,8 +1235,11 @@ class MovementService:
         new_diagonals = committed_diagonals + truth_result.diagonal_steps
 
         if not mover_disengaged:
+            # E1b: Exclude drag target from reactors on resume.
+            resume_drag_id = pending.get("drag_target_entry_id")
             reactors, hidden_reactor_ids = self._opportunity_reactors(
                 combat, board, entry, mover_disengaged=False,
+                drag_target_id=UUID(str(resume_drag_id)) if resume_drag_id else None,
             )
             # Filter out already-asked reactors.
             reactors = tuple(
@@ -1306,6 +1335,31 @@ class MovementService:
         hidden = entry.id in self.combat_service._hidden_entry_ids((entry,))
         visibility = "dm_only" if hidden else "public"
 
+        # P5-E E1b: drag target follows the mover in the same transaction.
+        # Drag context was persisted in pending_state at pause time.
+        drag: MovementDrag | None = None
+        drag_target_entry_id = pending.get("drag_target_entry_id")
+        if drag_target_entry_id is not None and outcome != "stopped":
+            drag_target_position = self.board_repository.get_position(
+                UUID(str(drag_target_entry_id))
+            )
+            if drag_target_position is not None:
+                dx = final_anchor.x - mover_anchor.x
+                dy = final_anchor.y - mover_anchor.y
+                if dx != 0 or dy != 0:
+                    drag = MovementDrag(
+                        target_entry_id=UUID(str(drag_target_entry_id)),
+                        expected_position_revision=drag_target_position.revision,
+                        anchor_x=drag_target_position.anchor_x + dx,
+                        anchor_y=drag_target_position.anchor_y + dy,
+                    )
+                    if outcome == "paused":
+                        new_pending_state["drag_target_entry_id"] = str(drag_target_entry_id)
+                        new_pending_state["drag_target_anchor"] = [
+                            drag_target_position.anchor_x + dx,
+                            drag_target_position.anchor_y + dy,
+                        ]
+
         # E1b: Atomic resume via repository.
         try:
             stored = self.board_repository.resume_movement(
@@ -1324,6 +1378,7 @@ class MovementService:
                 idempotency_key=request.idempotency_key,
                 visibility=visibility,
                 subject_seat_id=subject_seat_id, execution_mode=execution_mode,
+                drag=drag,
             )
         except BoardMovementStaleError as exc:
             raise CombatMovementStaleError(str(exc)) from exc
