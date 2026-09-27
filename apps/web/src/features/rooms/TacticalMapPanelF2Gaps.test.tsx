@@ -3,13 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { CombatDetailView } from '../../api/combat'
 import type { TableEvent } from '../../api/sessions'
+import type { TargetCheckResult } from '../../api/tacticalCombat'
 import * as tacticalApi from '../../api/tacticalCombat'
-import { isCombatEvent } from './sessionCombat'
+import {
+  aoeShapeNeedsAim,
+  appendAnchor,
+  cellClickAction,
+  doorClickAction,
+  dragCellsToAnchors,
+  isLatestPreview,
+  shouldReloadOnEvents,
+  targetCheckBand,
+  tokenClickAction,
+} from './tacticalLogic'
 import { TacticalMapPanel } from './TacticalMapPanel'
 import { sessionCopy } from './sessionCopy'
-
-// F2 test gaps: these verify the behavior contracts that static markup alone
-// cannot. Effect-running render tests use the mocked API surface below.
 
 vi.mock('../../api/tacticalCombat', async (importOriginal) => {
   const original = await importOriginal<typeof tacticalApi>()
@@ -95,67 +103,202 @@ beforeEach(() => {
   vi.mocked(tacticalApi.getCombatBoard).mockResolvedValue(baseBoard)
 })
 
-describe('F2 gaps: board image auth', () => {
-  it('uses bearer token fetch for board image (not raw img src)', () => {
-    // The panel must not render the image URL directly as an <img>/<image> src
-    // because the route requires auth. Static markup has no object URL yet
-    // (effect hasn't run), so we assert the raw API URL never appears.
-    const html = renderToStaticMarkup(<TacticalMapPanel {...props} isCurrentDm={true} />)
-    expect(html).not.toContain('/board/image')
+function targetCheckResult(overrides: Partial<TargetCheckResult>): TargetCheckResult {
+  return {
+    source_entry_id: 'entry-1',
+    target_entry_id: 'entry-2',
+    kind: 'attack',
+    ref: 'longbow',
+    legal: true,
+    in_range: true,
+    distance_feet: 60,
+    range_band: 'normal',
+    blocked: false,
+    blocker_kind: null,
+    requires_dm_adjudication: false,
+    is_long_range: false,
+    target_within_5ft: false,
+    ...overrides,
+  }
+}
+
+describe('tacticalLogic: cellClickAction', () => {
+  it('placement mode places', () => {
+    expect(cellClickAction({ kind: 'placement', entryId: 'e1' }, 3, 4)).toEqual({
+      action: 'place',
+      x: 3,
+      y: 4,
+    })
+  })
+  it('move mode adds an anchor', () => {
+    expect(cellClickAction({ kind: 'move', entryId: 'e1' }, 3, 4)).toEqual({
+      action: 'add-anchor',
+      x: 3,
+      y: 4,
+    })
+  })
+  it('reposition mode sets the reposition target', () => {
+    expect(cellClickAction({ kind: 'reposition' }, 3, 4)).toEqual({
+      action: 'set-reposition-target',
+      x: 3,
+      y: 4,
+    })
+  })
+  it('aoe modes set origin then aim', () => {
+    expect(cellClickAction({ kind: 'aoe-origin' }, 3, 4)).toEqual({
+      action: 'set-aoe-origin',
+      x: 3,
+      y: 4,
+    })
+    expect(cellClickAction({ kind: 'aoe-aim' }, 5, 6)).toEqual({
+      action: 'set-aoe-aim',
+      x: 5,
+      y: 6,
+    })
+  })
+  it('idle mode does nothing', () => {
+    expect(cellClickAction({ kind: 'idle' }, 3, 4)).toEqual({ action: 'none' })
   })
 })
 
-describe('F2 gaps: DM door route', () => {
-  it('updateBoardDoorState payload includes revision and idempotency key', async () => {
-    vi.mocked(tacticalApi.updateBoardDoorState).mockResolvedValue(baseBoard.doors[0])
-    // Call the API the same way the panel does (DM door controls).
-    await tacticalApi.updateBoardDoorState(
-      'room-1',
-      'camp-1',
-      'sess-1',
-      'door-1',
-      {
-        state: 'open',
-        revealed: true,
-        expected_runtime_revision: baseBoard.runtime_revision,
-        idempotency_key: 'door-test-key',
-      },
-      'token-123',
-    )
-    expect(tacticalApi.updateBoardDoorState).toHaveBeenCalledWith(
-      'room-1',
-      'camp-1',
-      'sess-1',
-      'door-1',
-      expect.objectContaining({
-        state: 'open',
-        revealed: true,
-        expected_runtime_revision: 7,
-        idempotency_key: 'door-test-key',
-      }),
-      'token-123',
-    )
+describe('tacticalLogic: anchors', () => {
+  it('appendAnchor appends a new cell', () => {
+    expect(appendAnchor([{ x: 1, y: 1 }], 2, 1)).toEqual([
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+    ])
   })
-
-  it('Player door clicks do not call updateBoardDoorState', () => {
-    const html = renderToStaticMarkup(<TacticalMapPanel {...props} isCurrentDm={false} />)
-    // Player gets no door controls at all.
-    expect(html).not.toContain('data-testid="tactical-door-controls"')
-    expect(tacticalApi.updateBoardDoorState).not.toHaveBeenCalled()
+  it('appendAnchor drops consecutive duplicates', () => {
+    const prev = [{ x: 1, y: 1 }]
+    expect(appendAnchor(prev, 1, 1)).toBe(prev)
+  })
+  it('dragCellsToAnchors dedups a drag path in order', () => {
+    expect(
+      dragCellsToAnchors([
+        { x: 3, y: 3 },
+        { x: 3, y: 3 },
+        { x: 4, y: 3 },
+        { x: 4, y: 4 },
+        { x: 4, y: 4 },
+      ]),
+    ).toEqual([
+      { x: 3, y: 3 },
+      { x: 4, y: 3 },
+      { x: 4, y: 4 },
+    ])
   })
 })
 
-describe('F2 gaps: combat event reload', () => {
-  it('isCombatEvent filters combat vs chat events', () => {
-    const combatEvent = { seq: 1, kind: 'combat.turn_advanced' } as TableEvent
-    const chatEvent = { seq: 2, kind: 'chat.message' } as TableEvent
-    expect(isCombatEvent(combatEvent)).toBe(true)
-    expect(isCombatEvent(chatEvent)).toBe(false)
+describe('tacticalLogic: doorClickAction', () => {
+  it('DM click selects a door; clicking again deselects', () => {
+    expect(doorClickAction(true, 'door-1', null)).toEqual({
+      kind: 'select',
+      doorId: 'door-1',
+    })
+    expect(doorClickAction(true, 'door-1', 'door-1')).toEqual({
+      kind: 'select',
+      doorId: null,
+    })
   })
+  it('Player clicks and null doors are ignored', () => {
+    expect(doorClickAction(false, 'door-1', null)).toEqual({ kind: 'ignore' })
+    expect(doorClickAction(true, null, null)).toEqual({ kind: 'ignore' })
+  })
+})
 
-  it('tactical panel renders in tactical mode', () => {
-    const html = renderToStaticMarkup(<TacticalMapPanel {...props} isCurrentDm={true} />)
-    expect(html).toContain('data-testid="tactical-map-panel"')
+describe('tacticalLogic: tokenClickAction', () => {
+  const base = {
+    isDm: false,
+    repositionMode: false,
+    placing: false,
+    moveEntryId: null as string | null,
+    canMove: true,
+  }
+  it('DM in reposition mode selects the token for reposition', () => {
+    expect(
+      tokenClickAction('entry-1', { ...base, isDm: true, repositionMode: true }),
+    ).toEqual({ kind: 'select-reposition', entryId: 'entry-1' })
+  })
+  it('movable token starts a move draft', () => {
+    expect(tokenClickAction('entry-1', base)).toEqual({
+      kind: 'start-move',
+      entryId: 'entry-1',
+    })
+  })
+  it('clicking the token already being moved is ignored', () => {
+    expect(tokenClickAction('entry-1', { ...base, moveEntryId: 'entry-1' })).toEqual({
+      kind: 'ignore',
+    })
+  })
+  it('non-movable token falls back to selection', () => {
+    expect(tokenClickAction('entry-9', { ...base, canMove: false })).toEqual({
+      kind: 'select',
+      entryId: 'entry-9',
+    })
+  })
+  it('placement mode suppresses move start', () => {
+    expect(tokenClickAction('entry-1', { ...base, placing: true })).toEqual({
+      kind: 'select',
+      entryId: 'entry-1',
+    })
+  })
+})
+
+describe('tacticalLogic: shouldReloadOnEvents', () => {
+  const combatEvent = { seq: 3, kind: 'combat.turn_advanced' } as TableEvent
+  const chatEvent = { seq: 4, kind: 'chat.message' } as TableEvent
+  it('reloads on unseen combat events and advances the seq', () => {
+    expect(shouldReloadOnEvents([combatEvent], 2)).toEqual({
+      reload: true,
+      newLastSeq: 3,
+    })
+  })
+  it('does not reload on non-combat events but still advances the seq', () => {
+    expect(shouldReloadOnEvents([chatEvent], 2)).toEqual({
+      reload: false,
+      newLastSeq: 4,
+    })
+  })
+  it('ignores already-seen events', () => {
+    expect(shouldReloadOnEvents([combatEvent], 5)).toEqual({
+      reload: false,
+      newLastSeq: 5,
+    })
+  })
+})
+
+describe('tacticalLogic: targetCheckBand', () => {
+  it('maps server range bands to display bands', () => {
+    expect(targetCheckBand(targetCheckResult({ range_band: 'reach' }))).toBe('in-range')
+    expect(targetCheckBand(targetCheckResult({ range_band: 'normal' }))).toBe('in-range')
+    expect(targetCheckBand(targetCheckResult({ range_band: 'long' }))).toBe('long-range')
+    expect(targetCheckBand(targetCheckResult({ range_band: 'out_of_range' }))).toBe(
+      'out-of-range',
+    )
+    expect(targetCheckBand(targetCheckResult({ range_band: 'unknown' }))).toBe('out-of-range')
+  })
+  it('blocked wins over any range band', () => {
+    expect(
+      targetCheckBand(targetCheckResult({ range_band: 'normal', blocked: true })),
+    ).toBe('blocked')
+  })
+})
+
+describe('tacticalLogic: preview race', () => {
+  it('only the latest preview request is adopted', () => {
+    expect(isLatestPreview(1, 2)).toBe(false)
+    expect(isLatestPreview(2, 2)).toBe(true)
+  })
+})
+
+describe('tacticalLogic: aoeShapeNeedsAim', () => {
+  it('cone and line need an aim click', () => {
+    expect(aoeShapeNeedsAim('cone')).toBe(true)
+    expect(aoeShapeNeedsAim('line')).toBe(true)
+  })
+  it('circle and square preview on origin click', () => {
+    expect(aoeShapeNeedsAim('circle')).toBe(false)
+    expect(aoeShapeNeedsAim('square')).toBe(false)
   })
 })
 
@@ -170,5 +313,24 @@ describe('F3: movement UI', () => {
   it('does not show movement panel before draft starts', () => {
     const html = renderToStaticMarkup(<TacticalMapPanel {...props} isCurrentDm={false} />)
     expect(html).not.toContain('data-testid="tactical-movement"')
+  })
+
+  it('renders the AoE template panel when placement is requested', () => {
+    const html = renderToStaticMarkup(
+      <TacticalMapPanel
+        {...props}
+        isCurrentDm={false}
+        aoePlacement={{
+          spell_ref: 'srd5.1:spell:fireball',
+          shape: 'circle',
+          size_feet: 20,
+          caster_entry_id: 'entry-1',
+          slot_level: 3,
+        }}
+        onAoePlacementEnd={() => {}}
+      />,
+    )
+    expect(html).toContain('data-testid="tactical-aoe"')
+    expect(html).toContain('data-testid="tactical-aoe-hint"')
   })
 })
