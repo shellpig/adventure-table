@@ -2169,7 +2169,6 @@
 }
 
 .battle-map__drawing {
-  stroke: var(--text);
   stroke-linecap: round;
   stroke-linejoin: round;
   opacity: 0.85;
@@ -2177,9 +2176,15 @@
 }
 
 .battle-map__drawing--selected {
-  stroke: var(--gold-bright);
-  stroke-width: 5;
   opacity: 1;
+}
+
+.battle-map__drawing-halo {
+  stroke: var(--gold-bright);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 @keyframes battle-map-pulse {
@@ -2223,8 +2228,6 @@
 }
 
 .battle-map__preview-drawing {
-  stroke: var(--gold-bright);
-  stroke-dasharray: 4 2;
   pointer-events: none;
 }
 
@@ -2317,6 +2320,40 @@
   font-size: 0.85rem;
 }
 
+.battle-map-editor__pen-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.battle-map-editor__pen-picker label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.battle-map-editor__swatches {
+  display: flex;
+  gap: 6px;
+}
+
+.battle-map-editor__swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.battle-map-editor__swatch--active {
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 0 2px var(--surface-2), 0 0 0 4px var(--gold-bright);
+}
+
 .battle-map-editor__selection {
   display: flex;
   align-items: center;
@@ -2351,6 +2388,31 @@
 
 .battle-map-editor__canvas-wrap:active {
   cursor: grabbing;
+}
+
+/* Drag handle under the canvas: pulling it down makes the editing area taller. */
+.battle-map-editor__resize-handle {
+  height: 12px;
+  /* Cancel the editor's flex gap so the handle sits flush under the canvas. */
+  margin-top: -12px;
+  border-radius: 0 0 6px 6px;
+  background: var(--surface-3);
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.battle-map-editor__resize-handle::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 3px;
+  margin: 4px auto 0;
+  border-radius: 2px;
+  background: var(--muted);
+}
+
+.battle-map-editor__resize-handle:hover {
+  background: var(--line);
 }
 
 /* 4. Tactical Map Panel */

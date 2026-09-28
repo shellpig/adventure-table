@@ -11,6 +11,12 @@ import {
   addDoor,
   addDrawing,
   addWall,
+  DRAWING_COLORS,
+  DRAWING_WIDTH_DEFAULT,
+  DRAWING_WIDTH_MAX,
+  DRAWING_WIDTH_MIN,
+  type DrawingColorKey,
+  EDITOR_CANVAS_HEIGHT_DEFAULT,
   deleteById,
   eraseAt,
   findAt,
@@ -24,6 +30,7 @@ import {
   type WorkingState,
   nearestGridSegment,
   placementLine,
+  resizedCanvasHeight,
   snapToVertex,
   type CellPoint,
 } from './mapEditorState'
@@ -56,6 +63,17 @@ function localId(prefix: string): string {
   return `${prefix}-local-${localIdCounter}`
 }
 
+const DRAWING_COLOR_LABEL: Record<DrawingColorKey, `tacticalDrawColor${Capitalize<DrawingColorKey>}`> = {
+  white: 'tacticalDrawColorWhite',
+  black: 'tacticalDrawColorBlack',
+  red: 'tacticalDrawColorRed',
+  orange: 'tacticalDrawColorOrange',
+  yellow: 'tacticalDrawColorYellow',
+  green: 'tacticalDrawColorGreen',
+  blue: 'tacticalDrawColorBlue',
+  purple: 'tacticalDrawColorPurple',
+}
+
 const TOOLS: EditorTool[] = [
   'select',
   'wall',
@@ -81,6 +99,9 @@ export function BattleMapEditor({
   const [tool, setTool] = useState<EditorTool>('select')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [terrainKind, setTerrainKind] = useState<BattleMapTerrainKind>('difficult')
+  const [penColor, setPenColor] = useState<string>(DRAWING_COLORS[0].hex)
+  const [penWidth, setPenWidth] = useState(DRAWING_WIDTH_DEFAULT)
+  const [canvasHeight, setCanvasHeight] = useState(EDITOR_CANVAS_HEIGHT_DEFAULT)
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
@@ -332,12 +353,12 @@ export function BattleMapEditor({
         updateWorking((prev) =>
           addDrawing(prev, {
             id: localId('drawing'),
-            payload: { kind: 'freehand', points: thinned },
+            payload: { kind: 'freehand', points: thinned, color: penColor, width: penWidth },
           }),
         )
       }
     }
-  }, [endPan, tool, updateWorking])
+  }, [endPan, penColor, penWidth, tool, updateWorking])
 
   const handleMouseLeave = useCallback(() => {
     if (!dragStartVertexRef.current && !isDrawingRef.current) {
@@ -383,6 +404,25 @@ export function BattleMapEditor({
       window.removeEventListener('keydown', handleKeyDown)
     }
   }, [handleMouseUp, handleUndo])
+
+  const startResize = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.button !== 0) return
+      e.preventDefault()
+      const startY = e.clientY
+      const startHeight = canvasHeight
+      const handleMove = (event: PointerEvent) => {
+        setCanvasHeight(resizedCanvasHeight(startHeight, event.clientY - startY))
+      }
+      const handleUp = () => {
+        window.removeEventListener('pointermove', handleMove)
+        window.removeEventListener('pointerup', handleUp)
+      }
+      window.addEventListener('pointermove', handleMove)
+      window.addEventListener('pointerup', handleUp)
+    },
+    [canvasHeight],
+  )
 
   const handleCellClick = useCallback(
     (x: number, y: number) => {
@@ -579,6 +619,39 @@ export function BattleMapEditor({
         </div>
       ) : null}
 
+      {tool === 'draw' ? (
+        <div className="battle-map-editor__pen-picker" data-testid="map-editor-pen-picker">
+          <span>{copy.tacticalDrawColor}:</span>
+          <div className="battle-map-editor__swatches" role="group" aria-label={copy.tacticalDrawColor}>
+            {DRAWING_COLORS.map((color) => (
+              <button
+                key={color.key}
+                type="button"
+                className={`battle-map-editor__swatch${penColor === color.hex ? ' battle-map-editor__swatch--active' : ''}`}
+                style={{ background: color.hex }}
+                data-testid={`map-editor-color-${color.key}`}
+                aria-label={copy[DRAWING_COLOR_LABEL[color.key]]}
+                aria-pressed={penColor === color.hex}
+                onClick={() => setPenColor(color.hex)}
+              />
+            ))}
+          </div>
+          <label>
+            {copy.tacticalDrawWidth}:
+            <input
+              type="range"
+              min={DRAWING_WIDTH_MIN}
+              max={DRAWING_WIDTH_MAX}
+              step={1}
+              value={penWidth}
+              onChange={(e) => setPenWidth(Number(e.target.value))}
+              data-testid="map-editor-pen-width"
+            />
+            <span>{penWidth}</span>
+          </label>
+        </div>
+      ) : null}
+
       {selectedItem ? (
         <div className="battle-map-editor__selection" data-testid="map-editor-selection">
           <span>
@@ -620,6 +693,7 @@ export function BattleMapEditor({
         ref={containerRef}
         className="battle-map-editor__canvas-wrap"
         data-testid="map-editor-canvas"
+        style={{ height: canvasHeight }}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
@@ -642,10 +716,20 @@ export function BattleMapEditor({
           highlightObjectId={highlightObjectId}
           previewLine={previewLine}
           previewDrawingPoints={previewDrawingPoints}
+          previewDrawingStroke={{ color: penColor, width: penWidth }}
           onCellClick={handleCellClick}
           onWheel={handleWheel}
         />
       </div>
+      <div
+        className="battle-map-editor__resize-handle"
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label={copy.tacticalMapResize}
+        title={copy.tacticalMapResize}
+        data-testid="map-editor-resize-handle"
+        onPointerDown={startResize}
+      />
     </section>
   )
 }

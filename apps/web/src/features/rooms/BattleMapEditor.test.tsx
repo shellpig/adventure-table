@@ -14,6 +14,7 @@ import {
   findAt,
   nearestGridSegment,
   placementLine,
+  resizedCanvasHeight,
   roundCellCoord,
   setTerrain,
   snapToVertex,
@@ -160,6 +161,37 @@ describe('BattleMapEditor working state', () => {
     expect(html).toContain('data-testid="map-editor-undo"')
     expect(html).toContain('data-testid="map-editor-canvas"')
     expect(html).toContain('aria-label="Close"')
+  })
+
+  it('renders the resize handle under the canvas at the default height', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapEditor
+        map={makeMap()}
+        copy={copy}
+        locale="en"
+        roomId={ROOM_ID}
+        token={TOKEN}
+        onSaved={vi.fn()}
+        onError={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+    expect(html).toMatch(/data-testid="map-editor-canvas" style="height:520px"/)
+    expect(html).toContain('data-testid="map-editor-resize-handle"')
+    expect(html).toContain('aria-label="Drag to resize the map area"')
+    // The pen picker only shows with the Draw tool.
+    expect(html).not.toContain('data-testid="map-editor-pen-picker"')
+  })
+
+  it('resizedCanvasHeight grows with the drag and never drops below the minimum', () => {
+    expect(resizedCanvasHeight(520, 200)).toBe(720)
+    expect(resizedCanvasHeight(520, -100)).toBe(420)
+    expect(resizedCanvasHeight(520, -400)).toBe(320)
+  })
+
+  it('new strokes carry the pen colour and width in the saved payload', () => {
+    const source = readFileSync(new URL('./BattleMapEditor.tsx', import.meta.url), 'utf-8')
+    expect(source).toContain("payload: { kind: 'freehand', points: thinned, color: penColor, width: penWidth }")
   })
 
   it('renders hidden wall with DM marker', () => {

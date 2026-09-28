@@ -11,6 +11,8 @@ import type {
  * {
  *   kind: 'freehand',
  *   points: Array<[number, number]>, // [x, y] in map cell units (floats rounded to 0.05 cell)
+ *   color?: string,                  // one of DRAWING_COLORS; absent on older drawings
+ *   width?: number,                  // stroke width in map pixels (DRAWING_WIDTH_MIN..MAX)
  * }
  * Purely visual annotation on the map; does not affect movement, targeting, or rules.
  * Color and pen style carry no rule meaning.
@@ -18,6 +20,46 @@ import type {
 export type FreehandDrawingPayload = {
   kind: 'freehand'
   points: Array<[number, number]>
+  color?: string
+  width?: number
+}
+
+export const DRAWING_COLORS = [
+  { key: 'white', hex: '#f2efe8' },
+  { key: 'black', hex: '#111111' },
+  { key: 'red', hex: '#e05252' },
+  { key: 'orange', hex: '#f08c3a' },
+  { key: 'yellow', hex: '#f2d04b' },
+  { key: 'green', hex: '#5cc26a' },
+  { key: 'blue', hex: '#4a90e2' },
+  { key: 'purple', hex: '#a066d3' },
+] as const
+
+export type DrawingColorKey = (typeof DRAWING_COLORS)[number]['key']
+
+export const DRAWING_WIDTH_MIN = 1
+export const DRAWING_WIDTH_MAX = 12
+export const DRAWING_WIDTH_DEFAULT = 3
+
+/** Stroke colour and width for a freehand payload; older drawings without them get the defaults. */
+export function freehandStroke(payload: Record<string, unknown>): { color: string; width: number } {
+  const color =
+    typeof payload.color === 'string' && /^#[0-9a-f]{6}$/i.test(payload.color)
+      ? payload.color
+      : DRAWING_COLORS[0].hex
+  const width =
+    typeof payload.width === 'number' && Number.isFinite(payload.width)
+      ? Math.min(DRAWING_WIDTH_MAX, Math.max(DRAWING_WIDTH_MIN, payload.width))
+      : DRAWING_WIDTH_DEFAULT
+  return { color, width }
+}
+
+export const EDITOR_CANVAS_HEIGHT_DEFAULT = 520
+export const EDITOR_CANVAS_HEIGHT_MIN = 320
+
+/** Editor canvas height after dragging the bottom handle by deltaY pixels. */
+export function resizedCanvasHeight(startHeight: number, deltaY: number): number {
+  return Math.max(EDITOR_CANVAS_HEIGHT_MIN, Math.round(startHeight + deltaY))
 }
 
 export type WorkingState = {

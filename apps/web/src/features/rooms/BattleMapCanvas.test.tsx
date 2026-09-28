@@ -307,6 +307,68 @@ describe('BattleMapCanvas hidden rendering', () => {
     expect(html).toContain('data-selected="true"')
   })
 
+  it('draws each freehand stroke in its own colour and width; older drawings get the defaults', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        widthCells={10}
+        heightCells={10}
+        walls={[]}
+        doors={[]}
+        terrain={[]}
+        drawings={[
+          { id: 'dr-red', payload: { kind: 'freehand', points: [[1, 1], [2, 2]], color: '#e05252', width: 8 } },
+          { id: 'dr-old', payload: { kind: 'freehand', points: [[3, 3], [4, 4]] } },
+          { id: 'dr-bad', payload: { kind: 'freehand', points: [[5, 5], [6, 6]], color: 'url(x)', width: 99 } },
+        ]}
+        tokens={[]}
+        camera={camera}
+        isDm={false}
+      />,
+    )
+    expect(html).toMatch(/data-drawing-id="dr-red"[^>]*stroke="#e05252" stroke-width="8"/)
+    expect(html).toMatch(/data-drawing-id="dr-old"[^>]*stroke="#f2efe8" stroke-width="3"/)
+    expect(html).toMatch(/data-drawing-id="dr-bad"[^>]*stroke="#f2efe8" stroke-width="12"/)
+  })
+
+  it('selecting a drawing adds a gold halo without changing its colour or width', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        widthCells={10}
+        heightCells={10}
+        walls={[]}
+        doors={[]}
+        terrain={[]}
+        drawings={[
+          { id: 'dr1', payload: { kind: 'freehand', points: [[1, 1], [2, 2]], color: '#4a90e2', width: 5 } },
+        ]}
+        tokens={[]}
+        camera={camera}
+        isDm={true}
+        selectedObjectId="dr1"
+      />,
+    )
+    expect(html).toMatch(/class="battle-map__drawing-halo" stroke-width="11"/)
+    expect(html).toMatch(/data-drawing-id="dr1"[^>]*stroke="#4a90e2" stroke-width="5"/)
+  })
+
+  it('previews the stroke being drawn in the current pen colour and width', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        widthCells={10}
+        heightCells={10}
+        walls={[]}
+        doors={[]}
+        terrain={[]}
+        tokens={[]}
+        camera={camera}
+        isDm={true}
+        previewDrawingPoints={[[1, 1], [2, 2]]}
+        previewDrawingStroke={{ color: '#5cc26a', width: 10 }}
+      />,
+    )
+    expect(html).toMatch(/data-testid="battle-map-preview-drawing"[^>]*stroke="#5cc26a" stroke-width="10"/)
+  })
+
   it('skips drawings with unknown payload kind without error', () => {
     const html = renderToStaticMarkup(
       <BattleMapCanvas

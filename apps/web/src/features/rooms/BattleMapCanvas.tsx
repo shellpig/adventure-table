@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 
+import { freehandStroke } from './mapEditorState'
 import { BATTLE_MAP_CELL_SIZE, type TacticalCamera } from './useTacticalCamera'
 
 export type CanvasWall = {
@@ -61,6 +62,8 @@ type BattleMapCanvasProps = {
   highlightObjectId?: string | null
   previewLine?: { x1: number; y1: number; x2: number; y2: number } | null
   previewDrawingPoints?: Array<[number, number]> | null
+  /** Pen colour and width of the stroke being drawn. */
+  previewDrawingStroke?: { color: string; width: number }
   onCellClick?: (x: number, y: number) => void
   onTokenClick?: (entryId: string) => void
   /** Pointer pressed on a token: start a drag (e.g. movement plan). */
@@ -109,6 +112,7 @@ export function BattleMapCanvas({
   highlightObjectId,
   previewLine,
   previewDrawingPoints,
+  previewDrawingStroke,
   onCellClick,
   onTokenClick,
   onTokenPointerDown,
@@ -247,17 +251,29 @@ export function BattleMapCanvas({
           const pointsStr = points
             .map(([x, y]) => `${x * cellSize},${y * cellSize}`)
             .join(' ')
+          const stroke = freehandStroke(payload)
           return (
-            <polyline
-              key={drawing.id ?? `drawing-${index}`}
-              data-testid="battle-map-drawing"
-              data-drawing-id={drawing.id ?? undefined}
-              data-selected={isSelected ? 'true' : undefined}
-              points={pointsStr}
-              fill="none"
-              className={`battle-map__drawing${isSelected ? ' battle-map__drawing--selected' : ''}${isHovered ? ' battle-map__highlight-object' : ''}`}
-              strokeWidth={isSelected ? 5 : 3}
-            />
+            <g key={drawing.id ?? `drawing-${index}`}>
+              {isSelected ? (
+                // Gold halo under the stroke, so selection never changes the pen's colour or width.
+                <polyline
+                  points={pointsStr}
+                  fill="none"
+                  className="battle-map__drawing-halo"
+                  strokeWidth={stroke.width + 6}
+                />
+              ) : null}
+              <polyline
+                data-testid="battle-map-drawing"
+                data-drawing-id={drawing.id ?? undefined}
+                data-selected={isSelected ? 'true' : undefined}
+                points={pointsStr}
+                fill="none"
+                className={`battle-map__drawing${isSelected ? ' battle-map__drawing--selected' : ''}${isHovered ? ' battle-map__highlight-object' : ''}`}
+                stroke={stroke.color}
+                strokeWidth={stroke.width}
+              />
+            </g>
           )
         })}
       </g>
@@ -451,7 +467,8 @@ export function BattleMapCanvas({
             .join(' ')}
           fill="none"
           className="battle-map__drawing battle-map__preview-drawing"
-          strokeWidth={3}
+          stroke={previewDrawingStroke?.color ?? freehandStroke({}).color}
+          strokeWidth={previewDrawingStroke?.width ?? freehandStroke({}).width}
           pointerEvents="none"
         />
       ) : null}

@@ -43,6 +43,17 @@ const tacticalKeys = [
   'tacticalTerrainDifficult',
   'tacticalTerrainNormal',
   'tacticalTerrainBlocked',
+  'tacticalDrawColor',
+  'tacticalDrawWidth',
+  'tacticalDrawColorWhite',
+  'tacticalDrawColorBlack',
+  'tacticalDrawColorRed',
+  'tacticalDrawColorOrange',
+  'tacticalDrawColorYellow',
+  'tacticalDrawColorGreen',
+  'tacticalDrawColorBlue',
+  'tacticalDrawColorPurple',
+  'tacticalMapResize',
 ] as const
 
 describe('P5-F F2 tactical copy parity', () => {
