@@ -57,7 +57,7 @@ export type CombatBoardView = {
   walls: BoardWallView[]
   doors: BoardDoorView[]
   terrain: BoardTerrainView[]
-  drawings: Array<Record<string, unknown>>
+  drawings: Array<{ id: string; payload: Record<string, unknown> }>
   positions: BoardPositionView[]
 }
 

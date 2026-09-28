@@ -932,6 +932,7 @@ export function TacticalMapPanel({
               y: t.y,
               terrain_kind: t.terrain_kind,
             }))}
+            drawings={board.drawings}
             tokens={canvasTokens}
             imageUrl={imageObjectUrl}
             camera={camera}

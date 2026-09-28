@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { BattleMap } from '../../api/battleMaps'
 import { replaceBattleMapObjects } from '../../api/battleMaps'
@@ -9,17 +9,25 @@ import { BattleMapCanvas } from './BattleMapCanvas'
 import type { CanvasDoor, CanvasTerrain, CanvasWall } from './BattleMapCanvas'
 import {
   addDoor,
+  addDrawing,
   addWall,
   deleteById,
   eraseAt,
   findAt,
+  roundCellCoord,
   setTerrain,
+  shouldTriggerEditorUndo,
+  thinDrawingPoints,
   toggleHidden as toggleHiddenInState,
   toWorkingState,
+  type GridSegment,
   type WorkingState,
+  nearestGridSegment,
+  snapToVertex,
+  type CellPoint,
 } from './mapEditorState'
 import type { SessionCopy } from './sessionCopy'
-import { useTacticalCamera } from './useTacticalCamera'
+import { BATTLE_MAP_CELL_SIZE, useTacticalCamera } from './useTacticalCamera'
 
 export type EditorTool =
   | 'select'
@@ -74,7 +82,27 @@ export function BattleMapEditor({
   const [terrainKind, setTerrainKind] = useState('difficult')
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
-  const dragStartRef = useRef<{ x: number; y: number } | null>(null)
+
+  // Editor previews and highlights
+  const [highlightSegment, setHighlightSegment] = useState<GridSegment | null>(null)
+  const [highlightCell, setHighlightCell] = useState<{ x: number; y: number } | null>(null)
+  const [highlightObjectId, setHighlightObjectId] = useState<string | null>(null)
+  const [previewLine, setPreviewLine] = useState<{
+    x1: number
+    y1: number
+    x2: number
+    y2: number
+  } | null>(null)
+  const [previewDrawingPoints, setPreviewDrawingPoints] = useState<Array<[number, number]> | null>(
+    null,
+  )
+
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const dragStartVertexRef = useRef<{ x: number; y: number } | null>(null)
+  const lastSnappedVertexRef = useRef<{ x: number; y: number } | null>(null)
+  const drawingPointsRef = useRef<Array<[number, number]>>([])
+  const isDrawingRef = useRef(false)
+
   const { camera, zoomIn, zoomOut, handleWheel, startPan, panBy, endPan, fitMap } =
     useTacticalCamera()
 
@@ -104,6 +132,230 @@ export function BattleMapEditor({
     })
   }, [])
 
+  const selectTool = useCallback((nextTool: EditorTool) => {
+    setTool(nextTool)
+    setHighlightSegment(null)
+    setHighlightCell(null)
+    setHighlightObjectId(null)
+    setPreviewLine(null)
+    setPreviewDrawingPoints(null)
+    dragStartVertexRef.current = null
+    lastSnappedVertexRef.current = null
+    isDrawingRef.current = false
+    drawingPointsRef.current = []
+  }, [])
+
+  const getMapCell = useCallback((clientX: number, clientY: number): CellPoint | null => {
+    // The SVG's screen CTM already includes the wrapper centring, the camera CSS transform and
+    // the SVG's rendered size, so it maps the pointer straight into viewBox pixels.
+    const svg = containerRef.current?.querySelector<SVGSVGElement>('svg[data-testid="battle-map"]')
+    const ctm = svg?.getScreenCTM()
+    if (!ctm) return null
+    const point = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse())
+    return { cellX: point.x / BATTLE_MAP_CELL_SIZE, cellY: point.y / BATTLE_MAP_CELL_SIZE }
+  }, [])
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (e.button === 1) {
+        startPan(e.clientX, e.clientY)
+        return
+      }
+      if (e.button !== 0) return
+
+      const cell = getMapCell(e.clientX, e.clientY)
+      if (!cell) return
+
+      if (tool === 'wall' || tool === 'door') {
+        const start = snapToVertex(cell.cellX, cell.cellY, map.width_cells, map.height_cells)
+        dragStartVertexRef.current = start
+        lastSnappedVertexRef.current = start
+        setPreviewLine({ x1: start.x, y1: start.y, x2: start.x, y2: start.y })
+        setHighlightSegment(null)
+      } else if (tool === 'draw') {
+        const coords = cell
+        const rx = roundCellCoord(coords.cellX)
+        const ry = roundCellCoord(coords.cellY)
+        drawingPointsRef.current = [[rx, ry]]
+        isDrawingRef.current = true
+        setPreviewDrawingPoints([[rx, ry]])
+      }
+    },
+    [getMapCell, map.height_cells, map.width_cells, startPan, tool],
+  )
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      panBy(e.clientX, e.clientY)
+
+      const cell = getMapCell(e.clientX, e.clientY)
+      if (!cell) return
+
+      // Dragging wall/door
+      if (dragStartVertexRef.current && (tool === 'wall' || tool === 'door')) {
+        const snapped = snapToVertex(cell.cellX, cell.cellY, map.width_cells, map.height_cells)
+        lastSnappedVertexRef.current = snapped
+        setPreviewLine({
+          x1: dragStartVertexRef.current.x,
+          y1: dragStartVertexRef.current.y,
+          x2: snapped.x,
+          y2: snapped.y,
+        })
+        return
+      }
+
+      // Dragging free drawing
+      if (isDrawingRef.current && tool === 'draw') {
+        const coords = cell
+        const rx = roundCellCoord(coords.cellX)
+        const ry = roundCellCoord(coords.cellY)
+        const last = drawingPointsRef.current[drawingPointsRef.current.length - 1]
+        if (!last || last[0] !== rx || last[1] !== ry) {
+          drawingPointsRef.current.push([rx, ry])
+          setPreviewDrawingPoints([...drawingPointsRef.current])
+        }
+        return
+      }
+
+      // Hover states (no button pressed)
+      if (tool === 'wall' || tool === 'door') {
+        const segment = nearestGridSegment(
+          cell.cellX,
+          cell.cellY,
+          map.width_cells,
+          map.height_cells,
+        )
+        setHighlightSegment(segment)
+        setHighlightCell(null)
+        setHighlightObjectId(null)
+      } else if (tool === 'terrain' || tool === 'erase') {
+        const coords = cell
+        const cx = Math.floor(coords.cellX)
+        const cy = Math.floor(coords.cellY)
+        if (cx >= 0 && cx < map.width_cells && cy >= 0 && cy < map.height_cells) {
+          setHighlightCell({ x: cx, y: cy })
+        } else {
+          setHighlightCell(null)
+        }
+        setHighlightSegment(null)
+        setHighlightObjectId(null)
+      } else if (tool === 'select') {
+        const coords = cell
+        const cx = Math.floor(coords.cellX)
+        const cy = Math.floor(coords.cellY)
+        const hit = findAt(working, cx, cy)
+        setHighlightObjectId(hit?.id ?? null)
+        setHighlightSegment(null)
+        setHighlightCell(null)
+      } else {
+        setHighlightSegment(null)
+        setHighlightCell(null)
+        setHighlightObjectId(null)
+      }
+    },
+    [getMapCell, map.height_cells, map.width_cells, panBy, tool, working],
+  )
+
+  const handleMouseUp = useCallback(() => {
+    endPan()
+
+    if (dragStartVertexRef.current && (tool === 'wall' || tool === 'door')) {
+      const start = dragStartVertexRef.current
+      const end = lastSnappedVertexRef.current ?? start
+      dragStartVertexRef.current = null
+      lastSnappedVertexRef.current = null
+      setPreviewLine(null)
+
+      if (start.x !== end.x || start.y !== end.y) {
+        if (tool === 'wall') {
+          updateWorking((prev) =>
+            addWall(prev, {
+              id: localId('wall'),
+              x1: start.x,
+              y1: start.y,
+              x2: end.x,
+              y2: end.y,
+              visibility: 'public',
+            }),
+          )
+        } else if (tool === 'door') {
+          updateWorking((prev) =>
+            addDoor(prev, {
+              id: localId('door'),
+              x1: start.x,
+              y1: start.y,
+              x2: end.x,
+              y2: end.y,
+              default_state: 'closed',
+              visibility: 'public',
+            }),
+          )
+        }
+      }
+    }
+
+    if (isDrawingRef.current && tool === 'draw') {
+      isDrawingRef.current = false
+      const raw = drawingPointsRef.current
+      drawingPointsRef.current = []
+      setPreviewDrawingPoints(null)
+
+      const thinned = thinDrawingPoints(raw)
+      if (thinned.length >= 1) {
+        updateWorking((prev) =>
+          addDrawing(prev, {
+            id: localId('drawing'),
+            payload: { kind: 'freehand', points: thinned },
+          }),
+        )
+      }
+    }
+  }, [endPan, tool, updateWorking])
+
+  const handleMouseLeave = useCallback(() => {
+    if (!dragStartVertexRef.current && !isDrawingRef.current) {
+      setHighlightSegment(null)
+      setHighlightCell(null)
+      setHighlightObjectId(null)
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (dragStartVertexRef.current || isDrawingRef.current) {
+        handleMouseUp()
+      }
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (dragStartVertexRef.current) {
+          dragStartVertexRef.current = null
+          lastSnappedVertexRef.current = null
+          setPreviewLine(null)
+        }
+        if (isDrawingRef.current) {
+          isDrawingRef.current = false
+          drawingPointsRef.current = []
+          setPreviewDrawingPoints(null)
+        }
+        return
+      }
+
+      if (shouldTriggerEditorUndo(e)) {
+        e.preventDefault()
+        handleUndo()
+      }
+    }
+
+    window.addEventListener('mouseup', handleGlobalMouseUp)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('mouseup', handleGlobalMouseUp)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [handleMouseUp, handleUndo])
+
   const handleCellClick = useCallback(
     (x: number, y: number) => {
       if (tool === 'terrain') {
@@ -111,56 +363,11 @@ export function BattleMapEditor({
       } else if (tool === 'erase') {
         updateWorking((prev) => eraseAt(prev, x, y))
       } else if (tool === 'select') {
-        // Select wall/door under the cell.
         const hit = findAt(working, x, y)
         setSelectedId(hit?.id ?? null)
       }
     },
     [tool, terrainKind, updateWorking, working],
-  )
-
-  const handleCellMouseDown = useCallback(
-    (x: number, y: number) => {
-      if (tool === 'wall' || tool === 'door' || tool === 'draw') {
-        dragStartRef.current = { x, y }
-      }
-    },
-    [tool],
-  )
-
-  const handleCellMouseUp = useCallback(
-    (x: number, y: number) => {
-      const start = dragStartRef.current
-      dragStartRef.current = null
-      if (!start) return
-      if (start.x === x && start.y === y) return
-      if (tool === 'wall') {
-        updateWorking((prev) =>
-          addWall(prev, {
-            id: localId('wall'),
-            x1: start.x,
-            y1: start.y,
-            x2: x,
-            y2: y,
-            visibility: 'public',
-          }),
-        )
-      } else if (tool === 'door') {
-        updateWorking((prev) =>
-          addDoor(prev, {
-            id: localId('door'),
-            x1: start.x,
-            y1: start.y,
-            x2: x,
-            y2: y,
-            default_state: 'closed',
-            visibility: 'public',
-          }),
-        )
-      }
-      // 'draw' freehand is handled via drawings in a future step; drag creates a wall segment.
-    },
-    [tool, updateWorking],
   )
 
   const toggleHidden = useCallback(() => {
@@ -185,7 +392,7 @@ export function BattleMapEditor({
           walls: working.walls,
           doors: working.doors,
           terrain: working.terrain,
-          drawings: [],
+          drawings: working.drawings,
         },
         token,
       )
@@ -208,6 +415,7 @@ export function BattleMapEditor({
   const canvasWalls: CanvasWall[] = useMemo(
     () =>
       working.walls.map((w) => ({
+        id: w.id ?? undefined,
         x1: w.x1,
         y1: w.y1,
         x2: w.x2,
@@ -243,6 +451,8 @@ export function BattleMapEditor({
     if (wall) return { kind: 'wall' as const, visibility: wall.visibility ?? 'public' }
     const door = working.doors.find((d) => d.id === selectedId)
     if (door) return { kind: 'door' as const, visibility: door.visibility ?? 'public' }
+    const drawing = working.drawings.find((d) => d.id === selectedId)
+    if (drawing) return { kind: 'drawing' as const, visibility: 'public' as const }
     return null
   }, [selectedId, working])
 
@@ -296,7 +506,7 @@ export function BattleMapEditor({
             className={`button secondary compact${tool === t ? ' battle-map-editor__tool--active' : ''}`}
             data-testid={`map-editor-tool-${t}`}
             data-active={tool === t ? 'true' : undefined}
-            onClick={() => setTool(t)}
+            onClick={() => selectTool(t)}
           >
             {toolLabel(t)}
           </button>
@@ -313,7 +523,7 @@ export function BattleMapEditor({
         <button
           type="button"
           className="button secondary compact"
-          onClick={() => fitMap(map.width_cells * 40, map.height_cells * 40, 800, 600)}
+          onClick={() => fitMap(map.width_cells * BATTLE_MAP_CELL_SIZE, map.height_cells * BATTLE_MAP_CELL_SIZE, 800, 600)}
           data-testid="map-editor-fit"
         >
           {copy.tacticalToolFitMap}
@@ -342,17 +552,23 @@ export function BattleMapEditor({
       {selectedItem ? (
         <div className="battle-map-editor__selection" data-testid="map-editor-selection">
           <span>
-            {selectedItem.kind === 'wall' ? copy.tacticalToolWall : copy.tacticalToolDoor}
+            {selectedItem.kind === 'wall'
+              ? copy.tacticalToolWall
+              : selectedItem.kind === 'door'
+                ? copy.tacticalToolDoor
+                : copy.tacticalToolDraw}
           </span>
-          <button
-            type="button"
-            className="button secondary compact"
-            onClick={toggleHidden}
-            data-testid="map-editor-toggle-hidden"
-            data-hidden={selectedItem.visibility === 'hidden' ? 'true' : undefined}
-          >
-            {copy.tacticalHiddenToggle}: {selectedItem.visibility === 'hidden' ? '✓' : '—'}
-          </button>
+          {selectedItem.kind !== 'drawing' ? (
+            <button
+              type="button"
+              className="button secondary compact"
+              onClick={toggleHidden}
+              data-testid="map-editor-toggle-hidden"
+              data-hidden={selectedItem.visibility === 'hidden' ? 'true' : undefined}
+            >
+              {copy.tacticalHiddenToggle}: {selectedItem.visibility === 'hidden' ? '✓' : '—'}
+            </button>
+          ) : null}
           <button
             type="button"
             className="button secondary compact"
@@ -371,28 +587,13 @@ export function BattleMapEditor({
       ) : null}
 
       <div
+        ref={containerRef}
         className="battle-map-editor__canvas-wrap"
         data-testid="map-editor-canvas"
-        onMouseDown={(e) => {
-          const cell = (e.target as HTMLElement).closest('[data-cell-x]')
-          if (cell) {
-            const x = Number(cell.getAttribute('data-cell-x'))
-            const y = Number(cell.getAttribute('data-cell-y'))
-            handleCellMouseDown(x, y)
-          } else if (e.button === 1) {
-            startPan(e.clientX, e.clientY)
-          }
-        }}
-        onMouseUp={(e) => {
-          const cell = (e.target as HTMLElement).closest('[data-cell-x]')
-          if (cell && dragStartRef.current) {
-            const x = Number(cell.getAttribute('data-cell-x'))
-            const y = Number(cell.getAttribute('data-cell-y'))
-            handleCellMouseUp(x, y)
-          }
-          endPan()
-        }}
-        onMouseMove={(e) => panBy(e.clientX, e.clientY)}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
       >
         <BattleMapCanvas
           widthCells={map.width_cells}
@@ -400,10 +601,17 @@ export function BattleMapEditor({
           walls={canvasWalls}
           doors={canvasDoors}
           terrain={canvasTerrain}
+          drawings={working.drawings}
           tokens={[]}
           imageUrl={imageUrl}
           camera={camera}
           isDm={true}
+          selectedObjectId={selectedId}
+          highlightSegment={highlightSegment}
+          highlightCell={highlightCell}
+          highlightObjectId={highlightObjectId}
+          previewLine={previewLine}
+          previewDrawingPoints={previewDrawingPoints}
           onCellClick={handleCellClick}
           onWheel={handleWheel}
         />

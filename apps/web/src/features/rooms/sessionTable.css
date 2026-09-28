@@ -2127,9 +2127,13 @@
 }
 
 .battle-map__grid-line {
-  stroke: var(--line-soft);
+  stroke: var(--line);
   stroke-width: 1;
-  opacity: 0.5;
+}
+
+.battle-map__grid-line--major {
+  stroke: var(--quiet);
+  stroke-width: 1.5;
 }
 
 .battle-map__wall {
@@ -2141,6 +2145,13 @@
   opacity: 0.6;
 }
 
+.battle-map__wall--selected {
+  stroke: var(--gold-bright);
+  stroke-width: 6;
+  stroke-dasharray: none;
+  opacity: 1;
+}
+
 .battle-map__door {
   stroke: var(--gold);
   fill: var(--text);
@@ -2149,6 +2160,86 @@
 .battle-map__door--hidden {
   stroke-dasharray: 6 4;
   opacity: 0.6;
+}
+
+.battle-map__door--selected {
+  stroke: var(--gold-bright);
+}
+
+.battle-map__door--selected line {
+  stroke: var(--gold-bright);
+  stroke-width: 8;
+  stroke-dasharray: none;
+  opacity: 1;
+}
+
+.battle-map__drawing {
+  stroke: var(--text);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.battle-map__drawing--selected {
+  stroke: var(--gold-bright);
+  stroke-width: 5;
+  opacity: 1;
+}
+
+@keyframes battle-map-pulse {
+  0%, 100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+.battle-map__highlight-segment {
+  stroke: var(--gold-bright);
+  stroke-width: 4;
+  pointer-events: none;
+  animation: battle-map-pulse 1.4s ease-in-out infinite;
+}
+
+.battle-map__highlight-cell {
+  fill: var(--gold-bright);
+  opacity: 0.35;
+  pointer-events: none;
+  animation: battle-map-pulse 1.4s ease-in-out infinite;
+}
+
+.battle-map__highlight-object {
+  stroke: var(--gold-bright);
+  pointer-events: none;
+  animation: battle-map-pulse 1.4s ease-in-out infinite;
+}
+
+.battle-map__highlight-object line {
+  stroke: var(--gold-bright);
+}
+
+.battle-map__preview-line {
+  stroke: var(--gold-bright);
+  stroke-width: 4;
+  stroke-dasharray: 6 3;
+  pointer-events: none;
+}
+
+.battle-map__preview-drawing {
+  stroke: var(--gold-bright);
+  stroke-dasharray: 4 2;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battle-map__highlight-segment,
+  .battle-map__highlight-cell,
+  .battle-map__highlight-object {
+    animation: none;
+    opacity: 0.75;
+  }
 }
 
 .battle-map__token rect {

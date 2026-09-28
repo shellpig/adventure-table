@@ -199,5 +199,155 @@ describe('BattleMapCanvas hidden rendering', () => {
     expect(html).toContain('data-testid="battle-map-tokens"')
     expect(html).not.toContain('pointer-events:none')
   })
+
+  it('renders selected wall with battle-map__wall--selected class and data-selected attribute', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        widthCells={10}
+        heightCells={10}
+        walls={[{ id: 'w1', x1: 0, y1: 0, x2: 2, y2: 0, visibility: 'public' }]}
+        doors={[]}
+        terrain={[]}
+        tokens={[]}
+        camera={camera}
+        isDm={true}
+        selectedObjectId="w1"
+      />,
+    )
+    expect(html).toContain('battle-map__wall--selected')
+    expect(html).toContain('data-selected="true"')
+  })
+
+  it('renders selected door with battle-map__door--selected class and data-selected attribute', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        widthCells={10}
+        heightCells={10}
+        walls={[]}
+        doors={[
+          {
+            door_id: 'd1',
+            x1: 1,
+            y1: 1,
+            x2: 2,
+            y2: 1,
+            state: 'closed',
+            revealed: true,
+          },
+        ]}
+        terrain={[]}
+        tokens={[]}
+        camera={camera}
+        isDm={true}
+        selectedObjectId="d1"
+      />,
+    )
+    expect(html).toContain('battle-map__door--selected')
+    expect(html).toContain('data-selected="true"')
+  })
+
+  it('renders freehand drawings as SVG polylines with cell-scaled coordinates', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        widthCells={10}
+        heightCells={10}
+        walls={[]}
+        doors={[]}
+        terrain={[]}
+        drawings={[
+          {
+            id: 'dr1',
+            payload: {
+              kind: 'freehand',
+              points: [
+                [1, 2],
+                [3, 4],
+              ],
+            },
+          },
+        ]}
+        tokens={[]}
+        camera={camera}
+        isDm={false}
+      />,
+    )
+    expect(html).toContain('data-testid="battle-map-drawing"')
+    expect(html).toContain('data-drawing-id="dr1"')
+    expect(html).toContain('points="40,80 120,160"')
+    expect(html).toContain('battle-map__drawing')
+  })
+
+  it('renders selected drawing with battle-map__drawing--selected class', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        widthCells={10}
+        heightCells={10}
+        walls={[]}
+        doors={[]}
+        terrain={[]}
+        drawings={[
+          {
+            id: 'dr1',
+            payload: {
+              kind: 'freehand',
+              points: [
+                [1, 2],
+                [3, 4],
+              ],
+            },
+          },
+        ]}
+        tokens={[]}
+        camera={camera}
+        isDm={true}
+        selectedObjectId="dr1"
+      />,
+    )
+    expect(html).toContain('battle-map__drawing--selected')
+    expect(html).toContain('data-selected="true"')
+  })
+
+  it('skips drawings with unknown payload kind without error', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        widthCells={10}
+        heightCells={10}
+        walls={[]}
+        doors={[]}
+        terrain={[]}
+        drawings={[
+          {
+            id: 'dr-custom',
+            payload: {
+              kind: 'polygon',
+              sides: 6,
+            },
+          },
+        ]}
+        tokens={[]}
+        camera={camera}
+        isDm={false}
+      />,
+    )
+    expect(html).not.toContain('dr-custom')
+    expect(html).not.toContain('data-testid="battle-map-drawing"')
+    expect(html).not.toContain('battle-map__drawing')
+  })
+
+  it('renders every 5th grid line with battle-map__grid-line--major class', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        widthCells={10}
+        heightCells={10}
+        walls={[]}
+        doors={[]}
+        terrain={[]}
+        tokens={[]}
+        camera={camera}
+        isDm={false}
+      />,
+    )
+    expect(html).toContain('battle-map__grid-line--major')
+  })
 })
 
