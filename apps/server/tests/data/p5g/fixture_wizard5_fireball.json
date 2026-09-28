@@ -1,0 +1,674 @@
+{
+  "envelope": {
+    "content_requirements": [
+      {
+        "pack": "phb2014",
+        "version": "1.0.0"
+      },
+      {
+        "pack": "srd5.1",
+        "version": "1.0.0"
+      },
+      {
+        "pack": "tce",
+        "version": "1.0.0"
+      }
+    ],
+    "export_type": "character",
+    "exported_at": "2026-09-04T00:00:00Z",
+    "ruleset": "dnd5e-2014",
+    "schema_status": "locked",
+    "schema_version": "1",
+    "source_app": {
+      "build": null,
+      "channel": "web",
+      "commit": null,
+      "name": "adventure-table"
+    },
+    "source_character_id": "00000000-0000-4000-8000-00000000c0de",
+    "source_export_id": "00000000-0000-4000-8000-0000000e6b07",
+    "stable_key_refs_summary": 58
+  },
+  "payload": {
+    "character": {
+      "name": "P5-G Caster",
+      "ruleset": "dnd5e-2014"
+    },
+    "current_state": {
+      "state_payload": {
+        "active_infusions": [],
+        "concentration": null,
+        "conditions": [],
+        "current_hp": 32,
+        "death_saves": {
+          "dead": false,
+          "failures": 0,
+          "stable": false,
+          "successes": 0
+        },
+        "exhaustion_level": 0,
+        "feature_modes": {},
+        "hit_dice_state": {
+          "d6": 5
+        },
+        "inventory_state": [
+          {
+            "carried": true,
+            "entry_id": "inventory:start:a6103cf94b881df25bde",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:spellbook",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:bcbd6e53e76a23f11c19",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:quarterstaff",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:d6adba043e62889785d0",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:component-pouch",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:30b6979f3d5267157e8e",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:scholars-pack",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:e68506b01a3bba8bf3e3",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:clothes-common",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:f9e2bbe2e512de2cf63f",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:pouch",
+            "quantity": 1
+          },
+          {
+            "carried": true,
+            "entry_id": "inventory:start:42f883b474fc241b0032",
+            "equipped": false,
+            "item_ref": "srd5.1:equipment:amulet",
+            "quantity": 1
+          }
+        ],
+        "prepared_spell_entry_ids": [],
+        "prepared_spells": [
+          {
+            "source_access_entry_id": "class:wizard:spellbook:fireball",
+            "source_profile_id": "class:wizard",
+            "spell_key": "srd5.1:spell:fireball"
+          }
+        ],
+        "resources": {},
+        "spell_slots": {
+          "1": {
+            "remaining": 4,
+            "used": 0
+          },
+          "2": {
+            "remaining": 3,
+            "used": 0
+          },
+          "3": {
+            "remaining": 2,
+            "used": 0
+          }
+        },
+        "spell_storing_item": null,
+        "temporary_effects": [],
+        "temporary_hp": 0
+      }
+    },
+    "current_version_no": 1,
+    "versions": [
+      {
+        "build_payload": {
+          "ability_scores": {
+            "charisma": 11,
+            "constitution": 14,
+            "dexterity": 16,
+            "intelligence": 16,
+            "strength": 10,
+            "wisdom": 13
+          },
+          "alignment_ref": null,
+          "ancestral_legacy": null,
+          "ancestral_origin_ref": null,
+          "background_ref": "srd5.1:background:acolyte",
+          "character_level": 5,
+          "class_progression": [
+            "srd5.1:class:wizard",
+            "srd5.1:class:wizard",
+            "srd5.1:class:wizard",
+            "srd5.1:class:wizard",
+            "srd5.1:class:wizard"
+          ],
+          "climb_speed": null,
+          "content_sources": [
+            "phb2014",
+            "srd5.1",
+            "tce"
+          ],
+          "feat_acquisitions": [],
+          "feat_refs": [],
+          "feat_resource_grants": [],
+          "feat_static_facts": [],
+          "feature_grant_sources": [],
+          "feature_refs": [
+            "srd5.1:feature:spellcasting-wizard",
+            "srd5.1:feature:arcane-recovery",
+            "srd5.1:feature:arcane-tradition",
+            "srd5.1:feature:evocation-savant",
+            "srd5.1:feature:sculpt-spells",
+            "srd5.1:feature:wizard-ability-score-improvement-1"
+          ],
+          "fly_speed": null,
+          "hp_progression": [
+            6,
+            4,
+            4,
+            4,
+            4
+          ],
+          "infusion_refs": [],
+          "language_refs": [
+            "srd5.1:language:common",
+            "srd5.1:language:dwarvish",
+            "srd5.1:language:abyssal",
+            "srd5.1:language:celestial"
+          ],
+          "lineage_ref": null,
+          "numeric_overrides": [],
+          "proficiencies": [
+            "srd5.1:proficiency:daggers",
+            "srd5.1:proficiency:darts",
+            "srd5.1:proficiency:slings",
+            "srd5.1:proficiency:quarterstaffs",
+            "srd5.1:proficiency:crossbows-light"
+          ],
+          "race_ref": "srd5.1:race:human",
+          "race_variant_group_selections": [],
+          "race_variant_ref": null,
+          "roleplay_profile": {
+            "appearance": null,
+            "biography": null,
+            "bonds": [],
+            "custom_fields": {},
+            "flaws": [],
+            "ideals": [],
+            "personality_traits": []
+          },
+          "ruleset": "dnd5e-2014",
+          "saving_throw_proficiencies": [
+            "srd5.1:ability:int",
+            "srd5.1:ability:wis"
+          ],
+          "size": null,
+          "skill_choices": [
+            "srd5.1:skill:insight",
+            "srd5.1:skill:religion",
+            "srd5.1:skill:arcana",
+            "srd5.1:skill:history"
+          ],
+          "skill_expertise_refs": [],
+          "spell_access_entries": [
+            {
+              "access_type": "known",
+              "casting_ability": null,
+              "entry_id": "class:wizard:known:acid-splash",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:acid-splash",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "known",
+              "casting_ability": null,
+              "entry_id": "class:wizard:known:phb2014:blade-ward",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "phb2014:spell:blade-ward",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "known",
+              "casting_ability": null,
+              "entry_id": "class:wizard:known:tce:booming-blade",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "tce:spell:booming-blade",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "known",
+              "casting_ability": null,
+              "entry_id": "class:wizard:known:chill-touch",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:chill-touch",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "spellbook",
+              "casting_ability": null,
+              "entry_id": "class:wizard:spellbook:fireball",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:fireball",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "spellbook",
+              "casting_ability": null,
+              "entry_id": "class:wizard:spellbook:alarm",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:alarm",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "spellbook",
+              "casting_ability": null,
+              "entry_id": "class:wizard:spellbook:burning-hands",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:burning-hands",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "spellbook",
+              "casting_ability": null,
+              "entry_id": "class:wizard:spellbook:charm-person",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:charm-person",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "spellbook",
+              "casting_ability": null,
+              "entry_id": "class:wizard:spellbook:phb2014:chromatic-orb",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "phb2014:spell:chromatic-orb",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "spellbook",
+              "casting_ability": null,
+              "entry_id": "class:wizard:spellbook:color-spray",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:color-spray",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "spellbook",
+              "casting_ability": null,
+              "entry_id": "class:wizard:spellbook:comprehend-languages",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:comprehend-languages",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "spellbook",
+              "casting_ability": null,
+              "entry_id": "class:wizard:spellbook:detect-magic",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:detect-magic",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "spellbook",
+              "casting_ability": null,
+              "entry_id": "class:wizard:spellbook:disguise-self",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:disguise-self",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "spellbook",
+              "casting_ability": null,
+              "entry_id": "class:wizard:spellbook:expeditious-retreat",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:expeditious-retreat",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "spellbook",
+              "casting_ability": null,
+              "entry_id": "class:wizard:spellbook:false-life",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:false-life",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "spellbook",
+              "casting_ability": null,
+              "entry_id": "class:wizard:spellbook:feather-fall",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:feather-fall",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "spellbook",
+              "casting_ability": null,
+              "entry_id": "class:wizard:spellbook:find-familiar",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:find-familiar",
+              "uses_per_rest": null
+            },
+            {
+              "access_type": "spellbook",
+              "casting_ability": null,
+              "entry_id": "class:wizard:spellbook:floating-disk",
+              "recharge_types": [],
+              "rest_type": null,
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class",
+              "spell_key": "srd5.1:spell:floating-disk",
+              "uses_per_rest": null
+            }
+          ],
+          "spell_resource_pools": [
+            {
+              "pool_id": "spell_slots:normal",
+              "pool_type": "normal_multiclass_slots",
+              "slots": [
+                {
+                  "capacity": 4,
+                  "level": 1
+                },
+                {
+                  "capacity": 3,
+                  "level": 2
+                },
+                {
+                  "capacity": 2,
+                  "level": 3
+                }
+              ],
+              "source_profile_id": null
+            }
+          ],
+          "spellcasting_profiles": [
+            {
+              "ability": "intelligence",
+              "access_model": "spellbook",
+              "class_ref": "srd5.1:class:wizard",
+              "max_spell_level": 3,
+              "prepared_limit": 8,
+              "profile_id": "class:wizard",
+              "resource_pool_type": "normal_multiclass_slots",
+              "source_key": "srd5.1:class:wizard",
+              "source_type": "class"
+            }
+          ],
+          "starting_equipment": [
+            {
+              "entry_id": "start:a6103cf94b881df25bde",
+              "item_ref": "srd5.1:equipment:spellbook",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:bcbd6e53e76a23f11c19",
+              "item_ref": "srd5.1:equipment:quarterstaff",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:d6adba043e62889785d0",
+              "item_ref": "srd5.1:equipment:component-pouch",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:30b6979f3d5267157e8e",
+              "item_ref": "srd5.1:equipment:scholars-pack",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:e68506b01a3bba8bf3e3",
+              "item_ref": "srd5.1:equipment:clothes-common",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:f9e2bbe2e512de2cf63f",
+              "item_ref": "srd5.1:equipment:pouch",
+              "quantity": 1
+            },
+            {
+              "entry_id": "start:42f883b474fc241b0032",
+              "item_ref": "srd5.1:equipment:amulet",
+              "quantity": 1
+            }
+          ],
+          "static_derived_modifiers": [],
+          "subclasses": [
+            {
+              "class_ref": "srd5.1:class:wizard",
+              "subclass_ref": "srd5.1:subclass:evocation"
+            }
+          ],
+          "subrace_ref": null,
+          "swim_speed": null,
+          "walking_speed": 30
+        },
+        "builder_provenance": {
+          "ability_generation": {
+            "method": "standard_array",
+            "provenance": "m03b-fixture",
+            "scores": {
+              "charisma": 10,
+              "constitution": 13,
+              "dexterity": 14,
+              "intelligence": 15,
+              "strength": 8,
+              "wisdom": 12
+            }
+          },
+          "alignment_selection": null,
+          "background_selection": {
+            "reference_id": "srd5.1:background:acolyte",
+            "source_ref": null
+          },
+          "basic": {
+            "name": "P5-G Caster",
+            "ruleset": "dnd5e-2014"
+          },
+          "choice_selections": {
+            "level:1:srd5.1:class:wizard:starting-proficiency:0": {
+              "choice_id": "level:1:srd5.1:class:wizard:starting-proficiency:0",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "srd5.1:proficiency:skill-arcana",
+                "srd5.1:proficiency:skill-history"
+              ],
+              "source_ref": "srd5.1:class:wizard"
+            },
+            "level:4:asi-abilities:0": {
+              "choice_id": "level:4:asi-abilities:0",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "ability:strength",
+                "ability:dexterity"
+              ],
+              "source_ref": "srd5.1:class:wizard"
+            },
+            "level:4:asi-feat:0": {
+              "choice_id": "level:4:asi-feat:0",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "level:4:asi-feat:0:asi"
+              ],
+              "source_ref": "srd5.1:class:wizard"
+            },
+            "srd5.1:background:acolyte:language_options:0": {
+              "choice_id": "srd5.1:background:acolyte:language_options:0",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "srd5.1:language:abyssal",
+                "srd5.1:language:celestial"
+              ],
+              "source_ref": "srd5.1:background:acolyte"
+            },
+            "srd5.1:race:human:language_options:0": {
+              "choice_id": "srd5.1:race:human:language_options:0",
+              "provenance_path": null,
+              "selected_option_ids": [
+                "srd5.1:language:dwarvish"
+              ],
+              "source_ref": "srd5.1:race:human"
+            }
+          },
+          "initial_state_seed": {},
+          "level_choices": [
+            {
+              "character_level": 1,
+              "class_ref": "srd5.1:class:wizard",
+              "hp_base_gain": 6,
+              "hp_method": "first_level",
+              "subclass_ref": null
+            },
+            {
+              "character_level": 2,
+              "class_ref": "srd5.1:class:wizard",
+              "hp_base_gain": 4,
+              "hp_method": "fixed_average",
+              "subclass_ref": "srd5.1:subclass:evocation"
+            },
+            {
+              "character_level": 3,
+              "class_ref": "srd5.1:class:wizard",
+              "hp_base_gain": 4,
+              "hp_method": "fixed_average",
+              "subclass_ref": null
+            },
+            {
+              "character_level": 4,
+              "class_ref": "srd5.1:class:wizard",
+              "hp_base_gain": 4,
+              "hp_method": "fixed_average",
+              "subclass_ref": null
+            },
+            {
+              "character_level": 5,
+              "class_ref": "srd5.1:class:wizard",
+              "hp_base_gain": 4,
+              "hp_method": "fixed_average",
+              "subclass_ref": null
+            }
+          ],
+          "lineage_selection": null,
+          "numeric_overrides": [],
+          "race_selection": {
+            "reference_id": "srd5.1:race:human",
+            "source_ref": null
+          },
+          "race_variant_selection": null,
+          "roleplay_profile": {},
+          "spell_choices": {
+            "class:wizard": {
+              "cantrip_keys": [
+                "srd5.1:spell:acid-splash",
+                "phb2014:spell:blade-ward",
+                "tce:spell:booming-blade",
+                "srd5.1:spell:chill-touch"
+              ],
+              "known_spell_keys": [],
+              "prepared_spell_keys": [],
+              "spellbook_spell_keys": [
+                "srd5.1:spell:fireball",
+                "srd5.1:spell:alarm",
+                "srd5.1:spell:burning-hands",
+                "srd5.1:spell:charm-person",
+                "phb2014:spell:chromatic-orb",
+                "srd5.1:spell:color-spray",
+                "srd5.1:spell:comprehend-languages",
+                "srd5.1:spell:detect-magic",
+                "srd5.1:spell:disguise-self",
+                "srd5.1:spell:expeditious-retreat",
+                "srd5.1:spell:false-life",
+                "srd5.1:spell:feather-fall",
+                "srd5.1:spell:find-familiar",
+                "srd5.1:spell:floating-disk"
+              ]
+            }
+          },
+          "starting_equipment_choices": {
+            "equipment:acolyte:4e27ce81740b": [
+              "equipment:acolyte:4e27ce81740b:option:0"
+            ],
+            "equipment:wizard:b1c14c3ea72d": [
+              "equipment:wizard:b1c14c3ea72d:option:0"
+            ],
+            "equipment:wizard:d29984a3146a": [
+              "equipment:wizard:d29984a3146a:option:0"
+            ],
+            "equipment:wizard:ff12c88749e0": [
+              "equipment:wizard:ff12c88749e0:option:0"
+            ]
+          },
+          "subrace_selection": null,
+          "target_level": 5
+        },
+        "change_note": null,
+        "created_at": "2026-09-04T00:00:00Z",
+        "parent_version_no": null,
+        "superseded_by_version_no": null,
+        "version_kind": "create",
+        "version_no": 1
+      }
+    ]
+  }
+}

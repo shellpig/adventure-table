@@ -146,4 +146,58 @@ describe('BattleMapCanvas hidden rendering', () => {
     expect(html).toContain('data-entry-id="entry-1"')
     expect(html).toContain('data-selected="true"')
   })
+
+  it('sets pointer-events: none on battle-map-tokens when tokensInteractive is false', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        widthCells={10}
+        heightCells={10}
+        walls={[]}
+        doors={[]}
+        terrain={[]}
+        tokens={[
+          {
+            entry_id: 'entry-1',
+            name: 'Goblin',
+            anchor_x: 2,
+            anchor_y: 3,
+            footprint_width: 1,
+            footprint_height: 1,
+          },
+        ]}
+        camera={camera}
+        isDm={false}
+        tokensInteractive={false}
+      />,
+    )
+    expect(html).toContain('data-testid="battle-map-tokens"')
+    expect(html).toContain('pointer-events:none')
+  })
+
+  it('keeps pointer-events enabled on battle-map-tokens by default', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        widthCells={10}
+        heightCells={10}
+        walls={[]}
+        doors={[]}
+        terrain={[]}
+        tokens={[
+          {
+            entry_id: 'entry-1',
+            name: 'Goblin',
+            anchor_x: 2,
+            anchor_y: 3,
+            footprint_width: 1,
+            footprint_height: 1,
+          },
+        ]}
+        camera={camera}
+        isDm={false}
+      />,
+    )
+    expect(html).toContain('data-testid="battle-map-tokens"')
+    expect(html).not.toContain('pointer-events:none')
+  })
 })
+

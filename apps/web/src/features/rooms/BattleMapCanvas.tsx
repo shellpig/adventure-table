@@ -61,6 +61,8 @@ type BattleMapCanvasProps = {
   /** AoE template overlay cells (server preview). */
   aoeCells?: Array<{ x: number; y: number }>
   aoeOrigin?: { x: number; y: number } | null
+  /** Whether tokens intercept pointer events (false during AoE targeting). */
+  tokensInteractive?: boolean
 }
 
 const TERRAIN_COLORS: Record<string, string> = {
@@ -97,6 +99,7 @@ export function BattleMapCanvas({
   onWheel,
   aoeCells,
   aoeOrigin,
+  tokensInteractive = true,
 }: BattleMapCanvasProps) {
   const mapWidth = widthCells * cellSize
   const mapHeight = heightCells * cellSize
@@ -261,7 +264,11 @@ export function BattleMapCanvas({
           )
         })}
       </g>
-      <g data-testid="battle-map-tokens">
+      <g
+        data-testid="battle-map-tokens"
+        pointerEvents={tokensInteractive ? undefined : 'none'}
+        style={tokensInteractive ? undefined : { pointerEvents: 'none' }}
+      >
         {tokens.map((token) => {
           const isSelected = token.entry_id === selectedEntryId
           return (

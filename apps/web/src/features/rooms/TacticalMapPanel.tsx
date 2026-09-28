@@ -949,6 +949,7 @@ export function TacticalMapPanel({
             onWheel={handleWheel}
             aoeCells={aoePreview?.affected_cells}
             aoeOrigin={aoeOrigin}
+            tokensInteractive={mapMode.kind !== 'aoe-origin' && mapMode.kind !== 'aoe-aim'}
           />
         ) : (
           <p className="tactical-map-panel__loading">{copy.tacticalBoardLoading}</p>
