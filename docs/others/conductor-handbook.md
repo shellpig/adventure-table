@@ -111,7 +111,7 @@ tasklist | grep -ci python.exe                                     # 有沒有�
 
 重送時 prompt 加一句硬規則：「所有指令前景執行並等它回來；不得把測試丟到背景再等；先寫程式、最後只跑一次測試」。F7b 第二回合即以此重送。
 
-**agy 必須自己做，不得交給 subagent**（使用者 2026-09-28）：P5-G G2 第一回合 agy 把工作交給自己開的背景子任務，root agent 印「root agent idle; waiting ... for 1 background task(s)」後空等，10 分鐘零進度。`TEMPLATE.prompt.txt` 第一行已固定「YOU MUST DO THIS STEP YOURSELF…不得交給 subagent／background task／parallel worker」，每個 agy prompt 都要保留在最前面；輸出檔出現上述字樣即視同違規，停掉重送。
+**agy 必須自己做，不得交給 subagent**（使用者 2026-09-28）：P5-G G2 第一回合 agy 把工作交給自己開的背景子任務，root agent 印「root agent idle; waiting ... for 1 background task(s)」後空等，10 分鐘零進度。`TEMPLATE.prompt.txt` 第一行已固定「YOU MUST DO THIS STEP YOURSELF…不得交給 subagent／background task／parallel worker」，每個 agy prompt 都要保留在最前面。注意同一句字樣也會在 agy 把長時間 shell 指令（例如 Docker E2E）放到背景時出現（G2d 實測：印出後 E2E server 仍持續收到請求、spec 持續修改）；單憑字樣不判死，仍依上表看檔案 mtime，跑 E2E 時另看 `docker logs --since 5m adventure-table-server-e2e-1` 是否仍有非 `/ready` 請求。
 
 **agy 已知缺陷（P4-E E1～E9b 統計，每步都要在 prompt 裡點名禁止）**
 
