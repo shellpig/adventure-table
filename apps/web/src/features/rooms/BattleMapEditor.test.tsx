@@ -151,6 +151,7 @@ describe('BattleMapEditor working state', () => {
     expect(html).toContain('data-testid="map-editor-save"')
     expect(html).toContain('data-testid="map-editor-undo"')
     expect(html).toContain('data-testid="map-editor-canvas"')
+    expect(html).toContain('aria-label="Close"')
   })
 
   it('renders hidden wall with DM marker', () => {

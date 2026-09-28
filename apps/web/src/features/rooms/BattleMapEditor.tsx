@@ -277,7 +277,12 @@ export function BattleMapEditor({
           >
             {saving ? copy.tacticalMapSaving : copy.tacticalMapSave}
           </button>
-          <button type="button" className="button secondary compact" onClick={onClose}>
+          <button
+            type="button"
+            className="button secondary compact"
+            onClick={onClose}
+            aria-label={copy.close}
+          >
             ×
           </button>
         </div>

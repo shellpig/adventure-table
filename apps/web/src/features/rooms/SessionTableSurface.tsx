@@ -643,20 +643,20 @@ export function SessionTableSurface({
             )}
           </div>
         ) : null}
-        {isCurrentDm && showTacticalSetup && combat === null ? (
-          <TacticalSetupPanel
-            copy={copy}
-            locale={copy.locale}
-            roomId={roomId}
-            campaignId={campaignId}
-            sessionId={sessionId}
-            token={token}
-            onError={onError}
-            refresh={refresh}
-            onClose={() => setShowTacticalSetup(false)}
-          />
-        ) : null}
       </div>
+      {isCurrentDm && showTacticalSetup && combat === null ? (
+        <TacticalSetupPanel
+          copy={copy}
+          locale={copy.locale}
+          roomId={roomId}
+          campaignId={campaignId}
+          sessionId={sessionId}
+          token={token}
+          onError={onError}
+          refresh={refresh}
+          onClose={() => setShowTacticalSetup(false)}
+        />
+      ) : null}
 
       <div ref={layoutRef} className="session-table__layout" style={layoutStyle}>
         <section className="session-stage" aria-label={copy.mainStage}>

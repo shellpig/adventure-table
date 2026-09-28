@@ -26,6 +26,7 @@ const tacticalKeys = [
   'tacticalStartButton',
   'tacticalStarting',
   'tacticalSelectMap',
+  'tacticalMapListEmpty',
   'tacticalStartBlank',
   'tacticalPlacementHeading',
   'tacticalPlaceToken',
