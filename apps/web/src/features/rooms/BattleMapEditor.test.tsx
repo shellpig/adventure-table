@@ -13,6 +13,7 @@ import {
   eraseAt,
   findAt,
   nearestGridSegment,
+  placementLine,
   roundCellCoord,
   setTerrain,
   snapToVertex,
@@ -194,6 +195,13 @@ describe('BattleMapEditor working state', () => {
     expect(nearestGridSegment(2.1, 3.5, 10, 10)).toEqual({ x1: 2, y1: 3, x2: 2, y2: 4 })
     // cellX 2.5, cellY 3.9: the bottom edge y = 4 is 0.1 away.
     expect(nearestGridSegment(2.5, 3.9, 10, 10)).toEqual({ x1: 2, y1: 4, x2: 3, y2: 4 })
+  })
+
+  it('placementLine places the dragged line, or the clicked one-cell edge when nothing was dragged', () => {
+    const edge = { x1: 2, y1: 3, x2: 2, y2: 4 }
+    expect(placementLine({ x: 1, y: 1 }, { x: 4, y: 1 }, edge)).toEqual({ x1: 1, y1: 1, x2: 4, y2: 1 })
+    expect(placementLine({ x: 2, y: 3 }, { x: 2, y: 3 }, edge)).toEqual(edge)
+    expect(placementLine({ x: 2, y: 3 }, { x: 2, y: 3 }, null)).toBeNull()
   })
 
   it('roundCellCoord rounds floats to nearest 0.05 cell unit', () => {

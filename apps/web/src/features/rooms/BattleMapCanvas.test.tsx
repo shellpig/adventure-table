@@ -333,21 +333,4 @@ describe('BattleMapCanvas hidden rendering', () => {
     expect(html).not.toContain('data-testid="battle-map-drawing"')
     expect(html).not.toContain('battle-map__drawing')
   })
-
-  it('renders every 5th grid line with battle-map__grid-line--major class', () => {
-    const html = renderToStaticMarkup(
-      <BattleMapCanvas
-        widthCells={10}
-        heightCells={10}
-        walls={[]}
-        doors={[]}
-        terrain={[]}
-        tokens={[]}
-        camera={camera}
-        isDm={false}
-      />,
-    )
-    expect(html).toContain('battle-map__grid-line--major')
-  })
 })
-

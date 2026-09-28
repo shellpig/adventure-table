@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+
 import { BATTLE_MAP_CELL_SIZE, type TacticalCamera } from './useTacticalCamera'
 
 export type CanvasWall = {
@@ -124,9 +126,29 @@ export function BattleMapCanvas({
   const mapWidth = widthCells * cellSize
   const mapHeight = heightCells * cellSize
 
+  const svgRef = useRef<SVGSVGElement | null>(null)
+  const onWheelRef = useRef(onWheel)
+  useEffect(() => {
+    onWheelRef.current = onWheel
+  }, [onWheel])
+  useEffect(() => {
+    // React registers wheel listeners as passive, so preventDefault there cannot stop the page
+    // from scrolling. Listen natively on the map's wrapper (the whole map area, including the
+    // margin around a centred map) so the wheel only zooms the map.
+    const area = svgRef.current?.parentElement
+    if (!area) return
+    const handleWheel = (event: WheelEvent) => {
+      const zoom = onWheelRef.current
+      if (!zoom) return
+      event.preventDefault()
+      zoom({ deltaY: event.deltaY, clientX: event.clientX, clientY: event.clientY })
+    }
+    area.addEventListener('wheel', handleWheel, { passive: false })
+    return () => area.removeEventListener('wheel', handleWheel)
+  }, [])
+
   const gridLines: React.ReactNode[] = []
   for (let x = 0; x <= widthCells; x++) {
-    const isMajor = x % 5 === 0
     gridLines.push(
       <line
         key={`v-${x}`}
@@ -134,12 +156,11 @@ export function BattleMapCanvas({
         y1={0}
         x2={x * cellSize}
         y2={mapHeight}
-        className={`battle-map__grid-line${isMajor ? ' battle-map__grid-line--major' : ''}`}
+        className="battle-map__grid-line"
       />,
     )
   }
   for (let y = 0; y <= heightCells; y++) {
-    const isMajor = y % 5 === 0
     gridLines.push(
       <line
         key={`h-${y}`}
@@ -147,7 +168,7 @@ export function BattleMapCanvas({
         y1={y * cellSize}
         x2={mapWidth}
         y2={y * cellSize}
-        className={`battle-map__grid-line${isMajor ? ' battle-map__grid-line--major' : ''}`}
+        className="battle-map__grid-line"
       />,
     )
   }
@@ -159,6 +180,7 @@ export function BattleMapCanvas({
 
   return (
     <svg
+      ref={svgRef}
       className="battle-map"
       data-testid="battle-map"
       data-map-width={widthCells}
@@ -178,10 +200,6 @@ export function BattleMapCanvas({
       onMouseUp={() => onMouseUp?.()}
       onPointerUp={() => onPointerUp?.()}
       onPointerCancel={() => onPointerUp?.()}
-      onWheel={(e) => {
-        e.preventDefault()
-        onWheel?.({ deltaY: e.deltaY, clientX: e.clientX, clientY: e.clientY })
-      }}
     >
       {imageUrl ? (
         <image

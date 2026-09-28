@@ -2131,11 +2131,6 @@
   stroke-width: 1;
 }
 
-.battle-map__grid-line--major {
-  stroke: var(--quiet);
-  stroke-width: 1.5;
-}
-
 .battle-map__wall {
   stroke: #7e8b9b;
 }

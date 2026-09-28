@@ -332,6 +332,21 @@ export function nearestGridSegment(
   return { x1: cx, y1: cy + 1, x2: cx + 1, y2: cy + 1 }
 }
 
+/**
+ * The wall/door a pointer gesture places: a drag places the line between its snapped vertices;
+ * a click without dragging places the one-cell edge that was under the pointer.
+ */
+export function placementLine(
+  start: { x: number; y: number },
+  end: { x: number; y: number },
+  clicked: GridSegment | null,
+): GridSegment | null {
+  if (start.x !== end.x || start.y !== end.y) {
+    return { x1: start.x, y1: start.y, x2: end.x, y2: end.y }
+  }
+  return clicked
+}
+
 export function shouldTriggerEditorUndo(event: {
   ctrlKey?: boolean
   metaKey?: boolean

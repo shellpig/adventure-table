@@ -23,6 +23,7 @@ import {
   type GridSegment,
   type WorkingState,
   nearestGridSegment,
+  placementLine,
   snapToVertex,
   type CellPoint,
 } from './mapEditorState'
@@ -100,6 +101,7 @@ export function BattleMapEditor({
   const containerRef = useRef<HTMLDivElement | null>(null)
   const dragStartVertexRef = useRef<{ x: number; y: number } | null>(null)
   const lastSnappedVertexRef = useRef<{ x: number; y: number } | null>(null)
+  const clickSegmentRef = useRef<GridSegment | null>(null)
   const drawingPointsRef = useRef<Array<[number, number]>>([])
   const isDrawingRef = useRef(false)
 
@@ -170,6 +172,7 @@ export function BattleMapEditor({
         const start = snapToVertex(cell.cellX, cell.cellY, map.width_cells, map.height_cells)
         dragStartVertexRef.current = start
         lastSnappedVertexRef.current = start
+        clickSegmentRef.current = nearestGridSegment(cell.cellX, cell.cellY, map.width_cells, map.height_cells)
         setPreviewLine({ x1: start.x, y1: start.y, x2: start.x, y2: start.y })
         setHighlightSegment(null)
       } else if (tool === 'draw') {
@@ -262,19 +265,19 @@ export function BattleMapEditor({
     if (dragStartVertexRef.current && (tool === 'wall' || tool === 'door')) {
       const start = dragStartVertexRef.current
       const end = lastSnappedVertexRef.current ?? start
+      const clicked = clickSegmentRef.current
       dragStartVertexRef.current = null
       lastSnappedVertexRef.current = null
+      clickSegmentRef.current = null
       setPreviewLine(null)
 
-      if (start.x !== end.x || start.y !== end.y) {
+      const line = placementLine(start, end, clicked)
+      if (line) {
         if (tool === 'wall') {
           updateWorking((prev) =>
             addWall(prev, {
               id: localId('wall'),
-              x1: start.x,
-              y1: start.y,
-              x2: end.x,
-              y2: end.y,
+              ...line,
               visibility: 'public',
             }),
           )
@@ -282,10 +285,7 @@ export function BattleMapEditor({
           updateWorking((prev) =>
             addDoor(prev, {
               id: localId('door'),
-              x1: start.x,
-              y1: start.y,
-              x2: end.x,
-              y2: end.y,
+              ...line,
               default_state: 'closed',
               visibility: 'public',
             }),
@@ -332,6 +332,7 @@ export function BattleMapEditor({
         if (dragStartVertexRef.current) {
           dragStartVertexRef.current = null
           lastSnappedVertexRef.current = null
+          clickSegmentRef.current = null
           setPreviewLine(null)
         }
         if (isDrawingRef.current) {
