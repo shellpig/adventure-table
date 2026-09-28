@@ -8,7 +8,7 @@
 - **最近已驗證 commit**：G1 `d344a637`、G2 見 [G2](P5-G_steps/G2.md)
 - **Worker**：G1 Muse（只做 backend；當前 thread `https://muse.ai/thread/584a5bc6-e75c-4078-90e7-15c56fd3d5ae`「AT P5G」，使用者 2026-09-28 提供。thread 可能因 context 重開：派工／修正回合／接手前使用者未提供最新 thread 時先問，依手冊 §4b.1）；G2 agy（本機工作樹，只改 `apps/web`，由指揮者 commit）；G3 指揮者。prompt 存 `C:\_work\AI_Work\Tools\agy-runs\<worker>-p5g-<step>.prompt.txt`。
 - **並行規則**：G1 與 G2 同時進行、同一 branch。Muse 只動 `apps/server/**`、agy 只動 `apps/web/**`；指揮者 commit agy 產出前先 `git pull --ff-only` 取 Muse 的 commit。G2 若需要 backend 改動，回報給指揮者轉派，不自己改 server。
-- **下一步**：G3——自動 gate 已綠；待 G.5 真實 AI gate（E2E 桌 8001，AI 當 Player）與 §4 人工驗收，再寫 closeout、合併 `main`
+- **下一步**：G3——自動 gate 已綠；§4 人工驗收進行中；G.5 真實 AI gate 使用者決定延後（Funnel 已關，重跑時開 Funnel＋`docker-compose.gate.yml`），G.5 通過後才能寫 closeout、合併 `main`
 - **阻礙／未審**：無
 - **跨步依賴**：G3 依賴 G1、G2
 
