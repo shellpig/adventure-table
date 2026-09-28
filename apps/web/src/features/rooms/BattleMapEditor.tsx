@@ -25,6 +25,7 @@ import {
   shouldTriggerEditorUndo,
   thinDrawingPoints,
   toggleHidden as toggleHiddenInState,
+  toReplaceObjects,
   toWorkingState,
   type GridSegment,
   type WorkingState,
@@ -453,17 +454,14 @@ export function BattleMapEditor({
       const saved = await replaceBattleMapObjects(
         roomId,
         map.id,
-        {
-          expected_revision: map.revision,
-          walls: working.walls,
-          doors: working.doors,
-          terrain: working.terrain,
-          drawings: working.drawings,
-        },
+        { expected_revision: map.revision, ...toReplaceObjects(working) },
         token,
       )
       setSaveMessage(copy.tacticalMapSaved)
       setHistory([])
+      // Continue from the saved map so new objects carry their server-assigned ids.
+      setWorking(toWorkingState(saved))
+      setSelectedId(null)
       onSaved(saved)
     } catch (cause) {
       if (cause instanceof SessionApiError && cause.code === 'battle_map_revision_conflict') {

@@ -96,6 +96,23 @@ export function toWorkingState(map: BattleMap): WorkingState {
   }
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Objects to send in a replace request. Objects added in the editor carry local ids
+ * (`wall-local-1`, ...) that the server rejects; send them with a null id so the server
+ * assigns one. Objects loaded from the map keep their UUIDs.
+ */
+export function toReplaceObjects(state: WorkingState): WorkingState {
+  const serverId = (id: string | null | undefined) => (id && UUID_PATTERN.test(id) ? id : null)
+  return {
+    walls: state.walls.map((w) => ({ ...w, id: serverId(w.id) })),
+    doors: state.doors.map((d) => ({ ...d, id: serverId(d.id) })),
+    terrain: state.terrain,
+    drawings: state.drawings.map((d) => ({ ...d, id: serverId(d.id) })),
+  }
+}
+
 export function addWall(state: WorkingState, wall: BattleMapWallInput): WorkingState {
   return { ...state, walls: [...state.walls, wall] }
 }

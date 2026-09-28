@@ -21,6 +21,7 @@ import {
   shouldTriggerEditorUndo,
   thinDrawingPoints,
   toggleHidden,
+  toReplaceObjects,
   toWorkingState,
 } from './mapEditorState'
 import { sessionCopy } from './sessionCopy'
@@ -333,9 +334,39 @@ describe('BattleMapEditor working state', () => {
     expect(working.drawings[1].id).toBe('dr-unknown')
   })
 
-  it('save sends working drawings including unknown drawing kinds', () => {
+  it('toReplaceObjects sends editor-added objects with null ids and keeps loaded UUIDs', () => {
+    const wallId = '20000000-0000-4000-8000-000000000001'
+    const doorId = '20000000-0000-4000-8000-000000000002'
+    const drawingId = '20000000-0000-4000-8000-000000000003'
+    let state = toWorkingState({
+      ...makeMap(),
+      walls: [{ id: wallId, x1: 0, y1: 0, x2: 1, y2: 0, visibility: 'public' }],
+      doors: [{ id: doorId, x1: 1, y1: 1, x2: 2, y2: 1, default_state: 'closed', visibility: 'public' }],
+      terrain: [{ x: 3, y: 3, terrain_kind: 'difficult' }],
+      drawings: [{ id: drawingId, payload: { kind: 'custom_stamp', icon: 'flag' } }],
+    })
+    state = addWall(state, { id: 'wall-local-1', x1: 2, y1: 2, x2: 3, y2: 2, visibility: 'public' })
+    state = addDoor(state, { id: 'door-local-2', x1: 4, y1: 4, x2: 5, y2: 4, default_state: 'closed', visibility: 'public' })
+    state = addDrawing(state, {
+      id: 'drawing-local-3',
+      payload: { kind: 'freehand', points: [[1, 1], [2, 2]], color: '#e05252', width: 8 },
+    })
+
+    const sent = toReplaceObjects(state)
+    expect(sent.walls.map((w) => w.id)).toEqual([wallId, null])
+    expect(sent.doors.map((d) => d.id)).toEqual([doorId, null])
+    expect(sent.drawings.map((d) => d.id)).toEqual([drawingId, null])
+    // Everything else, including unknown drawing kinds and pen style, goes through unchanged.
+    expect(sent.terrain).toEqual(state.terrain)
+    expect(sent.drawings[0].payload).toEqual({ kind: 'custom_stamp', icon: 'flag' })
+    expect(sent.drawings[1].payload).toEqual(state.drawings[1].payload)
+    expect(sent.walls[1]).toEqual({ ...state.walls[1], id: null })
+  })
+
+  it('save sends every working object and continues from the saved map', () => {
     const source = readFileSync(new URL('./BattleMapEditor.tsx', import.meta.url), 'utf8')
-    expect(source).toContain('drawings: working.drawings')
+    expect(source).toContain('{ expected_revision: map.revision, ...toReplaceObjects(working) }')
+    expect(source).toContain('setWorking(toWorkingState(saved))')
     expect(source).not.toContain('drawings: []')
   })
 
