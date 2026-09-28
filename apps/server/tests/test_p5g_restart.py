@@ -21,14 +21,10 @@ from sqlalchemy import create_engine, insert, update
 
 from app.domain.combat.board import PlaceCombatantInput, UpdateDoorStateInput
 from app.domain.combat.lifecycle import (
-    AddMonsterInput,
     ResolveInitiativeOrderInput,
     StartTacticalCombatInput,
 )
-from app.domain.combat.movement import (
-    MovementService,
-    ResumeMovementInput,
-)
+from app.domain.combat.movement import ResumeMovementInput
 from app.domain.combat.roll_compat import CombatAwareRollRepository
 from app.domain.rooms.character_rolls import CharacterRollModifierResolver
 from app.domain.rooms.rolls import RequestCheckInput, RollRequestType, RollService
