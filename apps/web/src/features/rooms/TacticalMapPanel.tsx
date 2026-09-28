@@ -909,7 +909,11 @@ export function TacticalMapPanel({
         className="tactical-map-panel__board-wrap"
         data-testid="tactical-board-wrap"
         onMouseDown={(e) => {
-          if (e.button === 1) startPan(e.clientX, e.clientY)
+          if (e.button === 1) {
+            // Middle button pans the map; stop the browser's middle-click autoscroll.
+            e.preventDefault()
+            startPan(e.clientX, e.clientY)
+          }
         }}
         onMouseMove={(e) => panBy(e.clientX, e.clientY)}
         onMouseUp={endPan}

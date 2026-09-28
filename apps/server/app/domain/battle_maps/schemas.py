@@ -11,7 +11,7 @@ from app.domain.rooms.schemas import StrictModel
 BattleMapSourceKind = Literal["blank", "image"]
 BattleMapWallVisibility = Literal["public", "hidden"]
 BattleMapDoorState = Literal["open", "closed", "locked", "broken"]
-BattleMapTerrainKind = Literal["difficult", "blocked"]
+BattleMapTerrainKind = Literal["normal", "difficult", "blocked"]
 BattleMapAudience = Literal["dm", "player"]
 
 MAX_NAME_LENGTH = 160

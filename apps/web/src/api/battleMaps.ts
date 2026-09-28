@@ -2,7 +2,8 @@ import { request } from './sessions'
 
 export type BattleMapWallVisibility = 'public' | 'hidden'
 export type BattleMapDoorState = 'open' | 'closed' | 'locked' | 'broken'
-export type BattleMapTerrainKind = string
+/** Server terrain kinds; normal is painted Normal terrain and has no rule effect. */
+export type BattleMapTerrainKind = 'normal' | 'difficult' | 'blocked'
 export type BattleMapSourceKind = 'blank' | 'image'
 
 export type BattleMapWall = {

@@ -41,8 +41,8 @@ const tacticalKeys = [
   'tacticalZoomOut',
   'tacticalTokenHint',
   'tacticalTerrainDifficult',
-  'tacticalTerrainWater',
-  'tacticalTerrainLava',
+  'tacticalTerrainNormal',
+  'tacticalTerrainBlocked',
 ] as const
 
 describe('P5-F F2 tactical copy parity', () => {

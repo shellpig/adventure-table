@@ -125,7 +125,7 @@ battle_map_terrain = Table(
     Column("y", Integer(), nullable=False),
     Column("terrain_kind", String(16), nullable=False),
     CheckConstraint(
-        "terrain_kind IN ('difficult', 'blocked')",
+        "terrain_kind IN ('normal', 'difficult', 'blocked')",
         name="ck_battle_map_terrain_kind",
     ),
     PrimaryKeyConstraint("battle_map_id", "x", "y"),

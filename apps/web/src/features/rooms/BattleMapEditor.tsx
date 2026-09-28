@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import type { BattleMap } from '../../api/battleMaps'
+import type { BattleMap, BattleMapTerrainKind } from '../../api/battleMaps'
 import { replaceBattleMapObjects } from '../../api/battleMaps'
 import { SessionApiError } from '../../api/sessions'
 import { localizedSessionRequestMessage } from '../../i18n/sessionMessages'
@@ -80,7 +80,7 @@ export function BattleMapEditor({
   const [history, setHistory] = useState<WorkingState[]>([])
   const [tool, setTool] = useState<EditorTool>('select')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [terrainKind, setTerrainKind] = useState('difficult')
+  const [terrainKind, setTerrainKind] = useState<BattleMapTerrainKind>('difficult')
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
@@ -104,6 +104,8 @@ export function BattleMapEditor({
   const clickSegmentRef = useRef<GridSegment | null>(null)
   const drawingPointsRef = useRef<Array<[number, number]>>([])
   const isDrawingRef = useRef(false)
+  // Key of the last cell a terrain drag painted; null when no terrain stroke is in progress.
+  const paintingCellRef = useRef<string | null>(null)
 
   const { camera, zoomIn, zoomOut, handleWheel, startPan, panBy, endPan, fitMap } =
     useTacticalCamera()
@@ -160,6 +162,8 @@ export function BattleMapEditor({
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (e.button === 1) {
+        // Middle button pans the map; stop the browser's middle-click autoscroll.
+        e.preventDefault()
         startPan(e.clientX, e.clientY)
         return
       }
@@ -167,6 +171,16 @@ export function BattleMapEditor({
 
       const cell = getMapCell(e.clientX, e.clientY)
       if (!cell) return
+
+      if (tool === 'terrain') {
+        const x = Math.floor(cell.cellX)
+        const y = Math.floor(cell.cellY)
+        if (x < 0 || x >= map.width_cells || y < 0 || y >= map.height_cells) return
+        // One stroke is one undo step: only its first cell records history.
+        paintingCellRef.current = `${x},${y}`
+        updateWorking((prev) => setTerrain(prev, { x, y, terrain_kind: terrainKind }))
+        return
+      }
 
       if (tool === 'wall' || tool === 'door') {
         const start = snapToVertex(cell.cellX, cell.cellY, map.width_cells, map.height_cells)
@@ -184,7 +198,7 @@ export function BattleMapEditor({
         setPreviewDrawingPoints([[rx, ry]])
       }
     },
-    [getMapCell, map.height_cells, map.width_cells, startPan, tool],
+    [getMapCell, map.height_cells, map.width_cells, startPan, terrainKind, tool, updateWorking],
   )
 
   const handleMouseMove = useCallback(
@@ -204,6 +218,18 @@ export function BattleMapEditor({
           x2: snapped.x,
           y2: snapped.y,
         })
+        return
+      }
+
+      // Dragging terrain paint
+      if (paintingCellRef.current !== null && tool === 'terrain') {
+        const x = Math.floor(cell.cellX)
+        const y = Math.floor(cell.cellY)
+        const key = `${x},${y}`
+        if (x >= 0 && x < map.width_cells && y >= 0 && y < map.height_cells && key !== paintingCellRef.current) {
+          paintingCellRef.current = key
+          setWorking((prev) => setTerrain(prev, { x, y, terrain_kind: terrainKind }))
+        }
         return
       }
 
@@ -256,11 +282,12 @@ export function BattleMapEditor({
         setHighlightObjectId(null)
       }
     },
-    [getMapCell, map.height_cells, map.width_cells, panBy, tool, working],
+    [getMapCell, map.height_cells, map.width_cells, panBy, terrainKind, tool, working],
   )
 
   const handleMouseUp = useCallback(() => {
     endPan()
+    paintingCellRef.current = null
 
     if (dragStartVertexRef.current && (tool === 'wall' || tool === 'door')) {
       const start = dragStartVertexRef.current
@@ -322,7 +349,7 @@ export function BattleMapEditor({
 
   useEffect(() => {
     const handleGlobalMouseUp = () => {
-      if (dragStartVertexRef.current || isDrawingRef.current) {
+      if (dragStartVertexRef.current || isDrawingRef.current || paintingCellRef.current !== null) {
         handleMouseUp()
       }
     }
@@ -359,16 +386,14 @@ export function BattleMapEditor({
 
   const handleCellClick = useCallback(
     (x: number, y: number) => {
-      if (tool === 'terrain') {
-        updateWorking((prev) => setTerrain(prev, { x, y, terrain_kind: terrainKind }))
-      } else if (tool === 'erase') {
+      if (tool === 'erase') {
         updateWorking((prev) => eraseAt(prev, x, y))
       } else if (tool === 'select') {
         const hit = findAt(working, x, y)
         setSelectedId(hit?.id ?? null)
       }
     },
-    [tool, terrainKind, updateWorking, working],
+    [tool, updateWorking, working],
   )
 
   const toggleHidden = useCallback(() => {
@@ -507,6 +532,7 @@ export function BattleMapEditor({
             className={`button secondary compact${tool === t ? ' battle-map-editor__tool--active' : ''}`}
             data-testid={`map-editor-tool-${t}`}
             data-active={tool === t ? 'true' : undefined}
+            aria-pressed={tool === t}
             onClick={() => selectTool(t)}
           >
             {toolLabel(t)}
@@ -541,10 +567,13 @@ export function BattleMapEditor({
         <div className="battle-map-editor__terrain-picker">
           <label>
             {copy.tacticalToolTerrain}:
-            <select value={terrainKind} onChange={(e) => setTerrainKind(e.target.value)}>
+            <select
+              value={terrainKind}
+              onChange={(e) => setTerrainKind(e.target.value as BattleMapTerrainKind)}
+            >
+              <option value="normal">{copy.tacticalTerrainNormal}</option>
               <option value="difficult">{copy.tacticalTerrainDifficult}</option>
-              <option value="water">{copy.tacticalTerrainWater}</option>
-              <option value="lava">{copy.tacticalTerrainLava}</option>
+              <option value="blocked">{copy.tacticalTerrainBlocked}</option>
             </select>
           </label>
         </div>

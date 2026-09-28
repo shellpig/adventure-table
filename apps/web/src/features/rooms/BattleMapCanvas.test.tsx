@@ -333,4 +333,23 @@ describe('BattleMapCanvas hidden rendering', () => {
     expect(html).not.toContain('data-testid="battle-map-drawing"')
     expect(html).not.toContain('battle-map__drawing')
   })
+
+  it('paints Normal terrain green and draws the grid above terrain fills', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        widthCells={4}
+        heightCells={4}
+        walls={[]}
+        doors={[]}
+        terrain={[{ x: 1, y: 1, terrain_kind: 'normal' }]}
+        tokens={[]}
+        camera={camera}
+        isDm={true}
+      />,
+    )
+    expect(html).toMatch(/data-terrain-kind="normal"[^>]*fill="#5fa35a"/)
+    expect(html.indexOf('data-testid="battle-map-grid"')).toBeGreaterThan(
+      html.indexOf('data-testid="battle-map-terrain"'),
+    )
+  })
 })

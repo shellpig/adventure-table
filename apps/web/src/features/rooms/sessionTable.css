@@ -2291,7 +2291,8 @@
   gap: 6px;
 }
 
-.battle-map-editor__tool--active {
+/* .button.secondary sets its own border/background/colour, so match its specificity. */
+.button.secondary.battle-map-editor__tool--active {
   border-color: var(--gold-bright);
   background: var(--surface-3);
   color: var(--gold-bright);

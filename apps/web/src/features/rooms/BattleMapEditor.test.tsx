@@ -77,15 +77,15 @@ describe('BattleMapEditor working state', () => {
   it('setTerrain replaces terrain on the same cell', () => {
     let state = toWorkingState(makeMap())
     state = setTerrain(state, { x: 2, y: 2, terrain_kind: 'difficult' })
-    state = setTerrain(state, { x: 2, y: 2, terrain_kind: 'water' })
+    state = setTerrain(state, { x: 2, y: 2, terrain_kind: 'normal' })
     expect(state.terrain).toHaveLength(1)
-    expect(state.terrain[0].terrain_kind).toBe('water')
+    expect(state.terrain[0].terrain_kind).toBe('normal')
   })
 
   it('eraseAt removes wall/door/terrain at cell', () => {
     let state = toWorkingState(makeMap())
     state = addWall(state, { id: 'w1', x1: 0, y1: 0, x2: 5, y2: 0 })
-    state = setTerrain(state, { x: 9, y: 9, terrain_kind: 'lava' })
+    state = setTerrain(state, { x: 9, y: 9, terrain_kind: 'blocked' })
     state = eraseAt(state, 2, 0)
     expect(state.walls).toHaveLength(0)
     expect(state.terrain).toHaveLength(1)

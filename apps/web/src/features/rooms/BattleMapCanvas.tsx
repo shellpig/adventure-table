@@ -81,9 +81,9 @@ type BattleMapCanvasProps = {
 }
 
 const TERRAIN_COLORS: Record<string, string> = {
+  normal: '#5fa35a',
   difficult: '#d4a574',
-  water: '#7ec8e3',
-  lava: '#e74c3c',
+  blocked: '#a24a4a',
 }
 
 function terrainColor(kind: string): string {
@@ -212,7 +212,6 @@ export function BattleMapCanvas({
           preserveAspectRatio="none"
         />
       ) : null}
-      <g data-testid="battle-map-grid">{gridLines}</g>
       <g data-testid="battle-map-terrain">
         {terrain.map((t, index) => (
           <rect
@@ -228,6 +227,8 @@ export function BattleMapCanvas({
           />
         ))}
       </g>
+      {/* Grid after terrain: painted cells keep their grid lines visible. */}
+      <g data-testid="battle-map-grid">{gridLines}</g>
       <g data-testid="battle-map-drawings" pointerEvents="none">
         {drawings.map((drawing, index) => {
           const payload = drawing.payload
