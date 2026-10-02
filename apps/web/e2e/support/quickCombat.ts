@@ -218,7 +218,7 @@ export async function openSessionAs(
 }
 
 export function combatStage(page: Page): Locator {
-  return page.getByRole('region', { name: 'Combat' })
+  return page.getByRole('region', { name: 'Combat', exact: true })
 }
 
 export function combatantCard(page: Page, entryId: string): Locator {

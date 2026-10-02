@@ -153,7 +153,12 @@ export function TacticalSetupPanel({
     <section className="tactical-setup" aria-label={copy.tacticalStartButton}>
       <header className="tactical-setup__header">
         <h3>{copy.tacticalStartButton}</h3>
-        <button type="button" className="button secondary compact" onClick={onClose}>
+        <button
+          type="button"
+          className="button secondary compact"
+          onClick={onClose}
+          aria-label={copy.close}
+        >
           ×
         </button>
       </header>
@@ -163,7 +168,7 @@ export function TacticalSetupPanel({
         {loading ? (
           <p>{copy.tacticalBoardLoading}</p>
         ) : maps.length === 0 ? (
-          <p>{copy.tacticalStartBlank}</p>
+          <p>{copy.tacticalMapListEmpty}</p>
         ) : (
           <ul className="tactical-setup__map-list">
             {maps.map((m) => (

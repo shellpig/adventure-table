@@ -909,7 +909,11 @@ export function TacticalMapPanel({
         className="tactical-map-panel__board-wrap"
         data-testid="tactical-board-wrap"
         onMouseDown={(e) => {
-          if (e.button === 1) startPan(e.clientX, e.clientY)
+          if (e.button === 1) {
+            // Middle button pans the map; stop the browser's middle-click autoscroll.
+            e.preventDefault()
+            startPan(e.clientX, e.clientY)
+          }
         }}
         onMouseMove={(e) => panBy(e.clientX, e.clientY)}
         onMouseUp={endPan}
@@ -932,6 +936,7 @@ export function TacticalMapPanel({
               y: t.y,
               terrain_kind: t.terrain_kind,
             }))}
+            drawings={board.drawings}
             tokens={canvasTokens}
             imageUrl={imageObjectUrl}
             camera={camera}
@@ -949,6 +954,7 @@ export function TacticalMapPanel({
             onWheel={handleWheel}
             aoeCells={aoePreview?.affected_cells}
             aoeOrigin={aoeOrigin}
+            tokensInteractive={mapMode.kind !== 'aoe-origin' && mapMode.kind !== 'aoe-aim'}
           />
         ) : (
           <p className="tactical-map-panel__loading">{copy.tacticalBoardLoading}</p>

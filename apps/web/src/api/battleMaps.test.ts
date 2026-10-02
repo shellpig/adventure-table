@@ -67,7 +67,7 @@ describe('Battle Maps API client', () => {
       expected_revision: 5,
       walls: [{ x1: 0, y1: 0, x2: 5, y2: 0, visibility: 'hidden' as const }],
       doors: [],
-      terrain: [{ x: 1, y: 1, terrain_kind: 'difficult' }],
+      terrain: [{ x: 1, y: 1, terrain_kind: 'difficult' as const }],
       drawings: [],
     }
     await replaceBattleMapObjects(ROOM_ID, MAP_ID, body, TOKEN)

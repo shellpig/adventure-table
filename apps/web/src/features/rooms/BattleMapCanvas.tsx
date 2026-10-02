@@ -1,6 +1,10 @@
-import type { TacticalCamera } from './useTacticalCamera'
+import { useEffect, useRef } from 'react'
+
+import { freehandStroke } from './mapEditorState'
+import { BATTLE_MAP_CELL_SIZE, type TacticalCamera } from './useTacticalCamera'
 
 export type CanvasWall = {
+  id?: string
   x1: number
   y1: number
   x2: number
@@ -25,6 +29,11 @@ export type CanvasTerrain = {
   terrain_kind: string
 }
 
+export type CanvasDrawing = {
+  id?: string | null
+  payload: Record<string, unknown>
+}
+
 export type CanvasToken = {
   entry_id: string
   name: string
@@ -41,11 +50,20 @@ type BattleMapCanvasProps = {
   walls: CanvasWall[]
   doors: CanvasDoor[]
   terrain: CanvasTerrain[]
+  drawings?: CanvasDrawing[]
   tokens: CanvasToken[]
   imageUrl?: string | null
   camera: TacticalCamera
   isDm: boolean
   selectedEntryId?: string | null
+  selectedObjectId?: string | null
+  highlightSegment?: { x1: number; y1: number; x2: number; y2: number } | null
+  highlightCell?: { x: number; y: number } | null
+  highlightObjectId?: string | null
+  previewLine?: { x1: number; y1: number; x2: number; y2: number } | null
+  previewDrawingPoints?: Array<[number, number]> | null
+  /** Pen colour and width of the stroke being drawn. */
+  previewDrawingStroke?: { color: string; width: number }
   onCellClick?: (x: number, y: number) => void
   onTokenClick?: (entryId: string) => void
   /** Pointer pressed on a token: start a drag (e.g. movement plan). */
@@ -61,12 +79,14 @@ type BattleMapCanvasProps = {
   /** AoE template overlay cells (server preview). */
   aoeCells?: Array<{ x: number; y: number }>
   aoeOrigin?: { x: number; y: number } | null
+  /** Whether tokens intercept pointer events (false during AoE targeting). */
+  tokensInteractive?: boolean
 }
 
 const TERRAIN_COLORS: Record<string, string> = {
+  normal: '#5fa35a',
   difficult: '#d4a574',
-  water: '#7ec8e3',
-  lava: '#e74c3c',
+  blocked: '#a24a4a',
 }
 
 function terrainColor(kind: string): string {
@@ -76,15 +96,23 @@ function terrainColor(kind: string): string {
 export function BattleMapCanvas({
   widthCells,
   heightCells,
-  cellSize = 40,
+  cellSize = BATTLE_MAP_CELL_SIZE,
   walls,
   doors,
   terrain,
+  drawings = [],
   tokens,
   imageUrl,
   camera,
   isDm,
   selectedEntryId,
+  selectedObjectId,
+  highlightSegment,
+  highlightCell,
+  highlightObjectId,
+  previewLine,
+  previewDrawingPoints,
+  previewDrawingStroke,
   onCellClick,
   onTokenClick,
   onTokenPointerDown,
@@ -97,9 +125,31 @@ export function BattleMapCanvas({
   onWheel,
   aoeCells,
   aoeOrigin,
+  tokensInteractive = true,
 }: BattleMapCanvasProps) {
   const mapWidth = widthCells * cellSize
   const mapHeight = heightCells * cellSize
+
+  const svgRef = useRef<SVGSVGElement | null>(null)
+  const onWheelRef = useRef(onWheel)
+  useEffect(() => {
+    onWheelRef.current = onWheel
+  }, [onWheel])
+  useEffect(() => {
+    // React registers wheel listeners as passive, so preventDefault there cannot stop the page
+    // from scrolling. Listen natively on the map's wrapper (the whole map area, including the
+    // margin around a centred map) so the wheel only zooms the map.
+    const area = svgRef.current?.parentElement
+    if (!area) return
+    const handleWheel = (event: WheelEvent) => {
+      const zoom = onWheelRef.current
+      if (!zoom) return
+      event.preventDefault()
+      zoom({ deltaY: event.deltaY, clientX: event.clientX, clientY: event.clientY })
+    }
+    area.addEventListener('wheel', handleWheel, { passive: false })
+    return () => area.removeEventListener('wheel', handleWheel)
+  }, [])
 
   const gridLines: React.ReactNode[] = []
   for (let x = 0; x <= widthCells; x++) {
@@ -134,6 +184,7 @@ export function BattleMapCanvas({
 
   return (
     <svg
+      ref={svgRef}
       className="battle-map"
       data-testid="battle-map"
       data-map-width={widthCells}
@@ -153,10 +204,6 @@ export function BattleMapCanvas({
       onMouseUp={() => onMouseUp?.()}
       onPointerUp={() => onPointerUp?.()}
       onPointerCancel={() => onPointerUp?.()}
-      onWheel={(e) => {
-        e.preventDefault()
-        onWheel?.({ deltaY: e.deltaY, clientX: e.clientX, clientY: e.clientY })
-      }}
     >
       {imageUrl ? (
         <image
@@ -169,7 +216,6 @@ export function BattleMapCanvas({
           preserveAspectRatio="none"
         />
       ) : null}
-      <g data-testid="battle-map-grid">{gridLines}</g>
       <g data-testid="battle-map-terrain">
         {terrain.map((t, index) => (
           <rect
@@ -185,20 +231,70 @@ export function BattleMapCanvas({
           />
         ))}
       </g>
+      {/* Grid after terrain: painted cells keep their grid lines visible. */}
+      <g data-testid="battle-map-grid">{gridLines}</g>
+      <g data-testid="battle-map-drawings" pointerEvents="none">
+        {drawings.map((drawing, index) => {
+          const payload = drawing.payload
+          if (
+            !payload ||
+            typeof payload !== 'object' ||
+            payload.kind !== 'freehand' ||
+            !Array.isArray(payload.points)
+          ) {
+            return null
+          }
+          const points = payload.points as Array<[number, number]>
+          if (points.length === 0) return null
+          const isSelected = Boolean(selectedObjectId && drawing.id === selectedObjectId)
+          const isHovered = Boolean(highlightObjectId && drawing.id === highlightObjectId)
+          const pointsStr = points
+            .map(([x, y]) => `${x * cellSize},${y * cellSize}`)
+            .join(' ')
+          const stroke = freehandStroke(payload)
+          return (
+            <g key={drawing.id ?? `drawing-${index}`}>
+              {isSelected ? (
+                // Gold halo under the stroke, so selection never changes the pen's colour or width.
+                <polyline
+                  points={pointsStr}
+                  fill="none"
+                  className="battle-map__drawing-halo"
+                  strokeWidth={stroke.width + 6}
+                />
+              ) : null}
+              <polyline
+                data-testid="battle-map-drawing"
+                data-drawing-id={drawing.id ?? undefined}
+                data-selected={isSelected ? 'true' : undefined}
+                points={pointsStr}
+                fill="none"
+                className={`battle-map__drawing${isSelected ? ' battle-map__drawing--selected' : ''}${isHovered ? ' battle-map__highlight-object' : ''}`}
+                stroke={stroke.color}
+                strokeWidth={stroke.width}
+              />
+            </g>
+          )
+        })}
+      </g>
       <g data-testid="battle-map-walls">
         {walls.map((wall, index) => {
           const isHidden = wall.visibility === 'hidden'
+          const isSelected = Boolean(selectedObjectId && wall.id === selectedObjectId)
+          const isHovered = Boolean(highlightObjectId && wall.id === highlightObjectId)
           return (
             <line
-              key={`wall-${index}`}
+              key={wall.id ?? `wall-${index}`}
               data-testid="battle-map-wall"
+              data-wall-id={wall.id ?? undefined}
               data-hidden={isHidden && isDm ? 'true' : undefined}
+              data-selected={isSelected ? 'true' : undefined}
               x1={wall.x1 * cellSize}
               y1={wall.y1 * cellSize}
               x2={wall.x2 * cellSize}
               y2={wall.y2 * cellSize}
-              className={`battle-map__wall${isHidden && isDm ? ' battle-map__wall--hidden' : ''}`}
-              strokeWidth={4}
+              className={`battle-map__wall${isHidden && isDm ? ' battle-map__wall--hidden' : ''}${isSelected ? ' battle-map__wall--selected' : ''}${isHovered ? ' battle-map__highlight-object' : ''}`}
+              strokeWidth={isSelected ? 6 : 4}
             />
           )
         })}
@@ -206,13 +302,16 @@ export function BattleMapCanvas({
       <g data-testid="battle-map-doors">
         {doors.map((door, index) => {
           const isHidden = door.isHidden === true
+          const isSelected = Boolean(selectedObjectId && door.door_id === selectedObjectId)
+          const isHovered = Boolean(highlightObjectId && door.door_id === highlightObjectId)
           return (
             <g
               key={`door-${door.door_id ?? index}`}
               data-testid="battle-map-door"
               data-door-id={door.door_id ?? undefined}
               data-hidden={isHidden && isDm ? 'true' : undefined}
-              className={`battle-map__door${isHidden && isDm ? ' battle-map__door--hidden' : ''}`}
+              data-selected={isSelected ? 'true' : undefined}
+              className={`battle-map__door${isHidden && isDm ? ' battle-map__door--hidden' : ''}${isSelected ? ' battle-map__door--selected' : ''}${isHovered ? ' battle-map__highlight-object' : ''}`}
               onClick={(e) => {
                 e.stopPropagation()
                 onDoorClick?.(door.door_id)
@@ -224,7 +323,7 @@ export function BattleMapCanvas({
                 y1={door.y1 * cellSize}
                 x2={door.x2 * cellSize}
                 y2={door.y2 * cellSize}
-                strokeWidth={6}
+                strokeWidth={isSelected ? 8 : 6}
               />
               <text
                 x={((door.x1 + door.x2) / 2) * cellSize}
@@ -261,7 +360,11 @@ export function BattleMapCanvas({
           )
         })}
       </g>
-      <g data-testid="battle-map-tokens">
+      <g
+        data-testid="battle-map-tokens"
+        pointerEvents={tokensInteractive ? undefined : 'none'}
+        style={tokensInteractive ? undefined : { pointerEvents: 'none' }}
+      >
         {tokens.map((token) => {
           const isSelected = token.entry_id === selectedEntryId
           return (
@@ -323,18 +426,51 @@ export function BattleMapCanvas({
           ))}
         </g>
       ) : null}
-      {aoeOrigin ? (
-        <g data-testid="battle-map-aoe-origin" pointerEvents="none">
-          <rect
-            x={aoeOrigin.x * cellSize}
-            y={aoeOrigin.y * cellSize}
-            width={cellSize}
-            height={cellSize}
-            fill="none"
-            stroke="#a855f7"
-            strokeWidth={3}
-          />
-        </g>
+      {highlightCell ? (
+        <rect
+          data-testid="battle-map-highlight-cell"
+          x={highlightCell.x * cellSize}
+          y={highlightCell.y * cellSize}
+          width={cellSize}
+          height={cellSize}
+          className="battle-map__highlight-cell"
+          pointerEvents="none"
+        />
+      ) : null}
+      {highlightSegment ? (
+        <line
+          data-testid="battle-map-highlight-segment"
+          x1={highlightSegment.x1 * cellSize}
+          y1={highlightSegment.y1 * cellSize}
+          x2={highlightSegment.x2 * cellSize}
+          y2={highlightSegment.y2 * cellSize}
+          className="battle-map__highlight-segment"
+          pointerEvents="none"
+        />
+      ) : null}
+      {previewLine ? (
+        <line
+          data-testid="battle-map-preview-line"
+          x1={previewLine.x1 * cellSize}
+          y1={previewLine.y1 * cellSize}
+          x2={previewLine.x2 * cellSize}
+          y2={previewLine.y2 * cellSize}
+          className="battle-map__preview-line"
+          pointerEvents="none"
+        />
+      ) : null}
+      {previewDrawingPoints && previewDrawingPoints.length > 0 ? (
+        <polyline
+          data-testid="battle-map-preview-drawing"
+          points={previewDrawingPoints
+            .map(([x, y]) => `${x * cellSize},${y * cellSize}`)
+            .join(' ')}
+          fill="none"
+          className="battle-map__drawing battle-map__preview-drawing"
+          stroke={previewDrawingStroke?.color ?? freehandStroke({}).color}
+          strokeWidth={previewDrawingStroke?.width ?? freehandStroke({}).width}
+          pointerEvents="none"
+        />
       ) : null}
     </svg>
   )

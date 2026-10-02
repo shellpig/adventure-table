@@ -6,6 +6,9 @@ export type TacticalCamera = {
   zoom: number
 }
 
+/** Pixel size of one grid cell before camera zoom (canvas, editor snapping). */
+export const BATTLE_MAP_CELL_SIZE = 40
+
 export const MIN_ZOOM = 0.25
 export const MAX_ZOOM = 4
 export const ZOOM_STEP = 1.2

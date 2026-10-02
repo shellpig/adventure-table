@@ -91,6 +91,7 @@ from app.domain.combat.monster_instances import (
 )
 from app.domain.combat.movement import (
     CancelPendingMovementInput,
+    CombatMovementStaleError,
     ConfirmMovementInput,
     PreviewMovementInput,
     ResumeMovementInput,
@@ -1153,6 +1154,16 @@ async def call_tool(
             "Tool arguments are not valid for the current table state",
             "工具 arguments 不符合目前桌面狀態",
             detail=_validation_detail(exc) if auth.role == "dm" else None,
+        )
+    except CombatMovementStaleError:
+        # G.4: movement revision conflicts must surface the same stable
+        # machine code on MCP as on REST (HTTP 409 combat_movement_stale),
+        # not the generic table_conflict. No detail: the exception message
+        # can carry position/board revision internals.
+        return structured_tool_error(
+            "combat_movement_stale",
+            "The combat token or board changed under this movement; refresh and replan",
+            "戰鬥 token 或棋盤已在這次移動下變更；請重新讀取後再規劃",
         )
     except ValueError:
         return structured_tool_error("invalid_arguments", "Tool arguments are not valid for the current table state", "工具 arguments 不符合目前桌面狀態")

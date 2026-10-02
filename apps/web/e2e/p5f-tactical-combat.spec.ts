@@ -14,9 +14,17 @@ import {
   type Lobby,
 } from './support/quickCombat'
 
-type BoardPosition = { entry_id: string; anchor_x: number; anchor_y: number }
-type Board = { positions: BoardPosition[]; runtime_revision: number }
-type MonsterInstance = { id: string }
+import {
+  advanceTo,
+  cameraStyle,
+  cell,
+  center,
+  mapPanel,
+  selectMatching,
+  token,
+  type Board,
+  type MonsterInstance,
+} from './support/tactical'
 
 // Hero starts next to the Goblin so leaving its reach provokes an opportunity attack.
 const HERO_START = { x: 2, y: 5 }
@@ -27,55 +35,6 @@ const GOBLIN_AT = { x: 3, y: 5 }
 const MAGE_AT = { x: 12, y: 5 }
 const STALKER_AT = { x: 15, y: 9 }
 const FIREBALL_ORIGIN = { x: 12, y: 2 }
-
-function mapPanel(page: Page) {
-  return page.getByTestId('tactical-map-panel')
-}
-
-function token(page: Page, entryId: string) {
-  return mapPanel(page).locator(`[data-testid="battle-map-token"][data-entry-id="${entryId}"]`)
-}
-
-function cell(page: Page, at: { x: number; y: number }) {
-  return mapPanel(page).locator(
-    `[data-testid="battle-map-cell"][data-cell-x="${at.x}"][data-cell-y="${at.y}"]`,
-  )
-}
-
-// Callers scroll the drag origin into view first; measuring must not scroll again mid-drag.
-async function center(page: Page, locator: ReturnType<typeof cell>) {
-  const box = await locator.boundingBox()
-  expect(box).not.toBeNull()
-  return { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 }
-}
-
-async function selectMatching(select: ReturnType<typeof cell>, pattern: RegExp) {
-  // Options load asynchronously (castable spells, attacks); wait until the wanted one exists.
-  await expect.poll(async () => (await select.locator('option').allTextContents()).some((text) => pattern.test(text)), {
-    timeout: 10_000,
-  }).toBe(true)
-  const labels = await select.locator('option').allTextContents()
-  const label = labels.find((text) => pattern.test(text))
-  expect(label, `${pattern} in ${labels.join(' | ')}`).toBeDefined()
-  await select.selectOption({ label: label! })
-}
-
-// Four combatants plus a possible round wrap: advance at most one full round and a half.
-async function advanceTo(page: Page, readTurn: () => Promise<string | null>, entryId: string) {
-  for (let step = 0; step < 8; step += 1) {
-    if (await readTurn() === entryId) return
-    const advanced = page.waitForResponse((response) => (
-      response.request().method() === 'POST' && response.url().includes('/combat/turn/advance')
-    ))
-    await page.getByRole('button', { name: 'Advance Turn' }).click()
-    expect((await advanced).ok()).toBe(true)
-  }
-  throw new Error(`turn never reached ${entryId}`)
-}
-
-function cameraStyle(page: Page) {
-  return mapPanel(page).getByTestId('battle-map').getAttribute('style')
-}
 
 test.use({ actionTimeout: 15_000 })
 

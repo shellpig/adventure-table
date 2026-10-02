@@ -1967,3 +1967,731 @@
   white-space: pre-wrap;
 }
 
+/* --- Tactical Combat, Map & Setup (P5-F / P5-G G2e) --- */
+
+/* 1. Tactical Setup Panel */
+.tactical-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  flex-basis: 100%;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  box-sizing: border-box;
+}
+
+.tactical-setup__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tactical-setup__header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.tactical-setup__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.tactical-setup__section h4 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tactical-setup__section label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.tactical-setup__map-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tactical-setup__map-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+
+.tactical-setup__map-list label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.tactical-setup__blank-dims {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+  padding-left: 24px;
+}
+
+.tactical-setup__blank-dims label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.tactical-setup__blank-dims input[type='number'] {
+  width: 72px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0c1017;
+  color: var(--text);
+  font: inherit;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  box-sizing: border-box;
+}
+
+.tactical-setup__blank-dims input[type='number']:focus {
+  border-color: var(--gold-dark);
+  box-shadow: 0 0 0 2px rgb(215 181 109 / 15%);
+  outline: none;
+}
+
+.tactical-setup__create-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tactical-setup__create-row input[type='text'] {
+  flex: 1 1 200px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0c1017;
+  color: var(--text);
+  font: inherit;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  box-sizing: border-box;
+}
+
+.tactical-setup__create-row input[type='text']:focus {
+  border-color: var(--gold-dark);
+  box-shadow: 0 0 0 2px rgb(215 181 109 / 15%);
+  outline: none;
+}
+
+.tactical-setup__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* 2. Battle Map & Canvas */
+.battle-map {
+  display: block;
+  background: #090c11;
+  user-select: none;
+}
+
+.battle-map__grid-line {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.battle-map__wall {
+  stroke: #7e8b9b;
+}
+
+.battle-map__wall--hidden {
+  stroke-dasharray: 6 4;
+  opacity: 0.6;
+}
+
+.battle-map__wall--selected {
+  stroke: var(--gold-bright);
+  stroke-width: 6;
+  stroke-dasharray: none;
+  opacity: 1;
+}
+
+.battle-map__door {
+  stroke: var(--gold);
+  fill: var(--text);
+}
+
+.battle-map__door--hidden {
+  stroke-dasharray: 6 4;
+  opacity: 0.6;
+}
+
+.battle-map__door--selected {
+  stroke: var(--gold-bright);
+}
+
+.battle-map__door--selected line {
+  stroke: var(--gold-bright);
+  stroke-width: 8;
+  stroke-dasharray: none;
+  opacity: 1;
+}
+
+.battle-map__drawing {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.battle-map__drawing--selected {
+  opacity: 1;
+}
+
+.battle-map__drawing-halo {
+  stroke: var(--gold-bright);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+@keyframes battle-map-pulse {
+  0%, 100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+.battle-map__highlight-segment {
+  stroke: var(--gold-bright);
+  stroke-width: 4;
+  pointer-events: none;
+  animation: battle-map-pulse 1.4s ease-in-out infinite;
+}
+
+.battle-map__highlight-cell {
+  fill: var(--gold-bright);
+  opacity: 0.35;
+  pointer-events: none;
+  animation: battle-map-pulse 1.4s ease-in-out infinite;
+}
+
+.battle-map__highlight-object {
+  stroke: var(--gold-bright);
+  pointer-events: none;
+  animation: battle-map-pulse 1.4s ease-in-out infinite;
+}
+
+.battle-map__highlight-object line {
+  stroke: var(--gold-bright);
+}
+
+.battle-map__preview-line {
+  stroke: var(--gold-bright);
+  stroke-width: 4;
+  stroke-dasharray: 6 3;
+  pointer-events: none;
+}
+
+.battle-map__preview-drawing {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battle-map__highlight-segment,
+  .battle-map__highlight-cell,
+  .battle-map__highlight-object {
+    animation: none;
+    opacity: 0.75;
+  }
+}
+
+.battle-map__token rect {
+  fill: #1a2230;
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+
+.battle-map__token--selected rect {
+  stroke: var(--gold-bright);
+  stroke-width: 2;
+}
+
+.battle-map__token text {
+  fill: var(--text);
+  font-weight: 600;
+}
+
+/* 3. Battle Map Editor */
+.battle-map-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  margin-bottom: 16px;
+}
+
+.battle-map-editor__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.battle-map-editor__header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.battle-map-editor__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.battle-map-editor__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* .button.secondary sets its own border/background/colour, so match its specificity. */
+.button.secondary.battle-map-editor__tool--active {
+  border-color: var(--gold-bright);
+  background: var(--surface-3);
+  color: var(--gold-bright);
+}
+
+.battle-map-editor__terrain-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.battle-map-editor__terrain-picker select {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0c1017;
+  color: var(--text);
+  font: inherit;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+}
+
+.battle-map-editor__pen-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.battle-map-editor__pen-picker label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.battle-map-editor__swatches {
+  display: flex;
+  gap: 6px;
+}
+
+.battle-map-editor__swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.battle-map-editor__swatch--active {
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 0 2px var(--surface-2), 0 0 0 4px var(--gold-bright);
+}
+
+.battle-map-editor__selection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.battle-map-editor__save-message {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--green);
+}
+
+.battle-map-editor__canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 520px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #070a0f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+}
+
+.battle-map-editor__canvas-wrap:active {
+  cursor: grabbing;
+}
+
+/* Drag handle under the canvas: pulling it down makes the editing area taller. */
+.battle-map-editor__resize-handle {
+  height: 12px;
+  /* Cancel the editor's flex gap so the handle sits flush under the canvas. */
+  margin-top: -12px;
+  border-radius: 0 0 6px 6px;
+  background: var(--surface-3);
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.battle-map-editor__resize-handle::after {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 3px;
+  margin: 4px auto 0;
+  border-radius: 2px;
+  background: var(--muted);
+}
+
+.battle-map-editor__resize-handle:hover {
+  background: var(--line);
+}
+
+/* 4. Tactical Map Panel */
+.tactical-map-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.tactical-map-panel__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.tactical-map-panel__token-mode--active {
+  border-color: var(--gold-bright);
+  background: var(--surface-3);
+  color: var(--gold-bright);
+}
+
+.tactical-map-panel__board-wrap {
+  position: relative;
+  width: 100%;
+  height: 560px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #070a0f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+}
+
+.tactical-map-panel__board-wrap:active {
+  cursor: grabbing;
+}
+
+.tactical-map-panel__loading {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.tactical-map-panel__error {
+  color: var(--red);
+  font-size: 0.88rem;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid rgb(225 128 128 / 38%);
+  border-radius: 6px;
+  background: rgb(225 128 128 / 8%);
+}
+
+.tactical-map-panel__placement {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+
+.tactical-map-panel__placement h3 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tactical-map-panel__placement-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tactical-map-panel__placing--active {
+  border-color: var(--gold-bright);
+  background: var(--surface-3);
+  color: var(--gold-bright);
+}
+
+.tactical-map-panel__movement {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+
+.tactical-map-panel__movement h3 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tactical-map-panel__movement dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0;
+}
+
+.tactical-map-panel__movement dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.tactical-map-panel__movement dd {
+  margin: 2px 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tactical-map-panel__movement div:last-child {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.tactical-map-panel__paused {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid rgb(215 181 109 / 40%);
+  border-radius: 6px;
+  background: rgb(215 181 109 / 6%);
+}
+
+.tactical-map-panel__paused h4 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--gold-bright);
+}
+
+.tactical-map-panel__paused p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.tactical-map-panel__paused input[type='text'] {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0c1017;
+  color: var(--text);
+  font: inherit;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  margin-left: 6px;
+}
+
+.tactical-map-panel__paused input[type='text']:focus {
+  border-color: var(--gold-dark);
+  box-shadow: 0 0 0 2px rgb(215 181 109 / 15%);
+  outline: none;
+}
+
+.tactical-map-panel__reposition {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+
+.tactical-map-panel__reposition h3 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tactical-map-panel__reposition p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.tactical-map-panel__reposition input[type='text'] {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0c1017;
+  color: var(--text);
+  font: inherit;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  margin-left: 6px;
+}
+
+.tactical-map-panel__reposition input[type='text']:focus {
+  border-color: var(--gold-dark);
+  box-shadow: 0 0 0 2px rgb(215 181 109 / 15%);
+  outline: none;
+}
+
+.tactical-map-panel__aoe {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid rgb(168 85 247 / 40%);
+  border-radius: 6px;
+  background: rgb(168 85 247 / 6%);
+}
+
+.tactical-map-panel__aoe h3 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #c084fc;
+}
+
+.tactical-map-panel__aoe p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.tactical-map-panel__aoe ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.tactical-map-panel__door-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+
+.tactical-map-panel__door-controls h4 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tactical-map-panel__door-controls div[role='group'] {
+  display: flex;
+  gap: 6px;
+}
+
+.tactical-map-panel__door-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
