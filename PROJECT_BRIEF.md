@@ -17,21 +17,11 @@
 - **P4 已全部關門並合併回 `main`**：P4-F code `651a14d0`，merge `7ef02d13`；證據見 [P4-F closeout](docs/P4/P4-F_CLOSEOUT.md)。歷史步驟不再作開場必讀。
 - **M05（Session History Continuity & Owner End for AI DM Sessions）已於 2026-09-20 當日開工並全部關門、合併回 `main`**：M05-A Owner 可正常 End AI DM 的 Session；M05-B 聊天串向上翻頁越過 Session 邊界（專用 history read scope，不擴大 gameplay actor）。證據見 [M05-A closeout](docs/M05/M05-A_CLOSEOUT.md)、[M05-B closeout](docs/M05/M05-B_CLOSEOUT.md)；逐項表已移至 ROADMAP_HISTORY。
 - **P6 已全部關門並合併回 `main`（2026-09-25）**：P6-F merge `b06e2e21`、P6-G merge `8b47fb05`；證據見 [P6-F closeout](docs/P6/P6-F_CLOSEOUT.md)、[P6-G closeout](docs/P6/P6-G_CLOSEOUT.md)。P6-G 分支含 P6-F 全部 commit，G5 全套 Docker E2E 同時涵蓋兩者。逐項表已移至 ROADMAP_HISTORY。
-- **P5（Tactical Combat）進行中**：P5-A～E 已於 2026-09-27、P5-F 於 2026-09-28 關門並合併回 `main`（證據見 [P5-A](docs/P5/P5-A_CLOSEOUT.md)、[P5-B](docs/P5/P5-B_CLOSEOUT.md)、[P5-C](docs/P5/P5-C_CLOSEOUT.md)、[P5-D](docs/P5/P5-D_CLOSEOUT.md)、[P5-E](docs/P5/P5-E_CLOSEOUT.md)、[P5-F closeout](docs/P5/P5-F_CLOSEOUT.md)）；worker 為 Muse（muse.ai，在自己環境跑綠後推送），指揮者本機驗收。
-- **下一步**：P5-G 進行中，步驟見 [P5-G 實作紀錄](docs/P5/P5-G實作紀錄.md)。
-
-| P5 Subphase | 狀態 |
-|---|---|
-| P5-A — Battle Map & Spatial Foundation | 已關門並合併（2026-09-27） |
-| P5-B — Movement & Path Resolution | 已關門並合併（2026-09-27） |
-| P5-C — Range, Reach & Spatial Targeting | 已關門並合併（2026-09-27） |
-| P5-D — AoE & Tactical Spell Geometry | 已關門並合併（2026-09-27） |
-| P5-E — Opportunity Attack & Spatial Reactions | 已關門並合併（2026-09-27） |
-| P5-F — Tactical Combat UI & AI Tool Surface | 已關門並合併（2026-09-28） |
-| P5-G — Full P5 Integration & Closeout | 進行中（2026-09-28 開工） |
+- **P5（Tactical Combat）已全部關門並合併回 `main`（2026-10-02）**：P5-A～E 2026-09-27、P5-F 2026-09-28、P5-G 2026-10-02；證據見 [P5-G closeout](docs/P5/P5-G_CLOSEOUT.md) 與各 Subphase closeout。**G.5 真實 AI Tactical gate 由使用者決定延後**，見已知問題索引。逐項表已移至 ROADMAP_HISTORY。
+- **下一步**：使用者 2026-10-02 決定先做場外（Session 外）建立地圖與怪物的**地圖庫／怪物庫**，排在 P7 之前；Phase 歸屬與 Subphase 拆分待定。
 - **M01／U01 保持 open，不阻塞 P Roadmap**。M01-A～O、U01-A 已關門；下一個未使用字母分別為 M01-P、U01-B，兩者下一項 scope 均未拍板，不建立虛構的待辦 Subphase。
 - **M06（AI Long-Session Hosting Efficiency）已全部關門並合併回 `main`（2026-09-25）**：M06-A merge `a3af1eee`、M06-B merge `e2fa1d89`、M06-C merge `7df05b12`；證據見 [M06-A](docs/M06/M06-A_CLOSEOUT.md)、[M06-B](docs/M06/M06-B_CLOSEOUT.md)、[M06-C closeout](docs/M06/M06-C_CLOSEOUT.md)。逐項表已移至 ROADMAP_HISTORY。
-- **P7-A～F 契約已準備、未開工**，待 P5 關門；見文件索引。**P8 保持大 Phase**。
+- **P7-A～F 契約已準備、未開工**，排在地圖庫／怪物庫之後；見文件索引。**P8 保持大 Phase**。
 
 | P7 Subphase | 狀態 |
 |---|---|
@@ -57,7 +47,7 @@
 | P4 | Quick Combat；已關門 |
 | M05 | Session History Continuity／Owner End for AI DM；已關門（2026-09-20），插在 P4 與 P6-A 之間 |
 | M06 | AI Long-Session Hosting Efficiency；已關門並合併（2026-09-25），插在 P6 與 P5-A 之間 |
-| P5 | Tactical Combat；進行中，P5-A～F 已關門（2026-09-28） |
+| P5 | Tactical Combat；已關門並合併（2026-10-02），G.5 真實 AI gate 延後 |
 | P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；已關門並合併（2026-09-25） |
 | P7 | Timeline、Campaign Snapshot／Restore、portable Import／Export；管理 MCP 延後 |
 | P8 | 全流程 QA／Polish、權限、reconnect、效能、Responsive UI |

@@ -1,6 +1,6 @@
 # Roadmap 歷史進度
 
-最後整理：2026-09-25
+最後整理：2026-10-02
 
 本檔保存已關門 Subphase 的進度表與關門摘要，不是開場必讀，也不定義當前工作。當前狀態、下一步與未來 Roadmap 只看 [PROJECT_BRIEF.md](../PROJECT_BRIEF.md)。M01／U01 整體保持 open，其已關門 Subphase 同樣歸入本檔。
 
@@ -162,6 +162,18 @@
 | **P6-F — Import Review, Finalization & Importer MCP** | ✅ 2026-09-23 | Review／Finalize 建新 Adventure baseline、idempotent finalize、六個 Importer MCP tool；[closeout](../docs/P6/P6-F_CLOSEOUT.md)，merge `b06e2e21` |
 | **P6-G — Full P6 Integration & Closeout** | ✅ 2026-09-25 | empty Campaign／Adventure-driven browser journey、真 PostgreSQL restart、secrecy matrix、真實網頁版 AI agent gate（ChatGPT Web＋Claude 跨 Session 讀回）、G4a～G4d AI 指引補缺、G5a AI context 上限；全套 backend 2556 passed；[closeout](../docs/P6/P6-G_CLOSEOUT.md)，merge `8b47fb05`。**P6 Phase 至此全部關門** |
 
+### P5
+
+| Subphase | 狀態 | 重點 |
+|---|---|---|
+| **P5-A — Battle Map & Spatial Foundation** | ✅ 2026-09-27 | Battle Map Definition（Blank Grid／image、wall／door／terrain）、開戰複製 `board.baseline` 的 runtime snapshot、placement 與 hidden blocker generic code；[closeout](../docs/P5/P5-A_CLOSEOUT.md) |
+| **P5-B — Movement & Path Resolution** | ✅ 2026-09-27 | 5/10 對角、Difficult Terrain、split movement、Dash、DM reposition、interrupted retry 冪等；[closeout](../docs/P5/P5-B_CLOSEOUT.md) |
+| **P5-C — Range, Reach & Spatial Targeting** | ✅ 2026-09-27 | normal／long／out of range、reach、target check 接 P4 resolution；[closeout](../docs/P5/P5-C_CLOSEOUT.md) |
+| **P5-D — AoE & Tactical Spell Geometry** | ✅ 2026-09-27 | AoE template preview／propose／resolve 同一演算法、冪等 key；[closeout](../docs/P5/P5-D_CLOSEOUT.md) |
+| **P5-E — Opportunity Attack & Spatial Reactions** | ✅ 2026-09-27 | 離開 reach 自動暫停 OA、resume 只一次、forced movement 不觸發 OA、PostgreSQL restart 恢復；[closeout](../docs/P5/P5-E_CLOSEOUT.md) |
+| **P5-F — Tactical Combat UI & AI Tool Surface** | ✅ 2026-09-28 | 地圖編輯器、Tactical Stage、Player 拖曳只產生 plan、MCP tactical tools 與 `combat["tactical"]` context；[closeout](../docs/P5/P5-F_CLOSEOUT.md)，merge `72395df3` |
+| **P5-G — Full P5 Integration & Closeout** | 🟡 2026-10-02 | G.3 PostgreSQL restart、G.4 併發 stale、G.6 secrecy matrix、Quick regression＋Tactical full journey＋地圖編輯器存檔 E2E；§4 人工驗收修正 G2e～G2i（含 P5-F 漏做的 Free Drawing、`normal` 地形 migration `0040`、編輯器新物件存檔 422）；全套 backend 3,087 passed、全套 Docker E2E 146 passed；**G.5 真實 AI gate 由使用者延後**；[closeout](../docs/P5/P5-G_CLOSEOUT.md)。**P5 Phase 至此關門** |
+
 ## 已解限制的歷史記錄
 
 | 項目 | 當時結論 | 證據 |
@@ -184,5 +196,6 @@
 | M04 | [規格](M04/實作規格.md) | [設計](M04/開發設計方針.md) | [測試](M04/測試指南.md) |
 | P4 | [規格](P4/實作規格.md) | [設計](P4/開發設計方針.md) | [測試](P4/測試指南.md) |
 | M05 | [規格](M05/實作規格.md) | [設計](M05/開發設計方針.md) | [測試](M05/測試指南.md) |
+| P5 | [規格](P5/實作規格.md) | [設計](P5/開發設計方針.md) | [測試](P5/測試指南.md) |
 | P6 | [規格](P6/實作規格.md) | [設計](P6/開發設計方針.md) | [測試](P6/測試指南.md) |
 | M06 | [規格](M06/實作規格.md) | [設計](M06/開發設計方針.md) | [測試](M06/測試指南.md) |
