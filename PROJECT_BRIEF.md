@@ -18,10 +18,17 @@
 - **M05（Session History Continuity & Owner End for AI DM Sessions）已於 2026-09-20 當日開工並全部關門、合併回 `main`**：M05-A Owner 可正常 End AI DM 的 Session；M05-B 聊天串向上翻頁越過 Session 邊界（專用 history read scope，不擴大 gameplay actor）。證據見 [M05-A closeout](docs/M05/M05-A_CLOSEOUT.md)、[M05-B closeout](docs/M05/M05-B_CLOSEOUT.md)；逐項表已移至 ROADMAP_HISTORY。
 - **P6 已全部關門並合併回 `main`（2026-09-25）**：P6-F merge `b06e2e21`、P6-G merge `8b47fb05`；證據見 [P6-F closeout](docs/P6/P6-F_CLOSEOUT.md)、[P6-G closeout](docs/P6/P6-G_CLOSEOUT.md)。P6-G 分支含 P6-F 全部 commit，G5 全套 Docker E2E 同時涵蓋兩者。逐項表已移至 ROADMAP_HISTORY。
 - **P5（Tactical Combat）已全部關門並合併回 `main`（2026-10-02）**：P5-A～E 2026-09-27、P5-F 2026-09-28、P5-G 2026-10-02；證據見 [P5-G closeout](docs/P5/P5-G_CLOSEOUT.md) 與各 Subphase closeout。**G.5 真實 AI Tactical gate 由使用者決定延後**，見已知問題索引。逐項表已移至 ROADMAP_HISTORY。
-- **下一步**：使用者 2026-10-02 決定先做場外（Session 外）建立地圖與怪物的**地圖庫／怪物庫**，排在 P7 之前；Phase 歸屬與 Subphase 拆分待定。
+- **下一步：M07 地圖庫／怪物庫**，已拆分、契約已準備，排在 P7 之前；尚未 coding。
 - **M01／U01 保持 open，不阻塞 P Roadmap**。M01-A～O、U01-A 已關門；下一個未使用字母分別為 M01-P、U01-B，兩者下一項 scope 均未拍板，不建立虛構的待辦 Subphase。
 - **M06（AI Long-Session Hosting Efficiency）已全部關門並合併回 `main`（2026-09-25）**：M06-A merge `a3af1eee`、M06-B merge `e2fa1d89`、M06-C merge `7df05b12`；證據見 [M06-A](docs/M06/M06-A_CLOSEOUT.md)、[M06-B](docs/M06/M06-B_CLOSEOUT.md)、[M06-C closeout](docs/M06/M06-C_CLOSEOUT.md)。逐項表已移至 ROADMAP_HISTORY。
-- **P7-A～F 契約已準備、未開工**，排在地圖庫／怪物庫之後；見文件索引。**P8 保持大 Phase**。
+- **P7-A～F 未開工**，排在 M07 之後；M07-D 交接時修訂 P7 契約。**P8 保持大 Phase**。
+
+| M07 Subphase | 狀態 |
+|---|---|
+| M07-A — Room Monster Library | 未開工 |
+| M07-B — Map Library Lifecycle & AI DM Boundary | 未開工 |
+| M07-C — Map Monster Placement & Combat Load | 未開工 |
+| M07-D — Full M07 Integration & Closeout | 未開工 |
 
 | P7 Subphase | 狀態 |
 |---|---|
@@ -34,7 +41,7 @@
 
 ## Phase Roadmap
 
-執行順序：**P0→P4 → M05 → P6 → M06 → P5 → P7 → P8**，編號／分工不變。M／U 可長期 open。
+執行順序：**P0→P4 → M05 → P6 → M06 → P5 → M07 → P7 → P8**，編號／分工不變。M／U 可長期 open。
 
 | Phase | 主題／狀態 |
 |---|---|
@@ -48,6 +55,7 @@
 | M05 | Session History Continuity／Owner End for AI DM；已關門（2026-09-20），插在 P4 與 P6-A 之間 |
 | M06 | AI Long-Session Hosting Efficiency；已關門並合併（2026-09-25），插在 P6 與 P5-A 之間 |
 | P5 | Tactical Combat；已關門並合併（2026-10-02），G.5 真實 AI gate 延後 |
+| M07 | Room 地圖庫／怪物庫、Tactical 怪物預配置；A～D 未開工 |
 | P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；已關門並合併（2026-09-25） |
 | P7 | Timeline、Campaign Snapshot／Restore、portable Import／Export；管理 MCP 延後 |
 | P8 | 全流程 QA／Polish、權限、reconnect、效能、Responsive UI |
@@ -66,7 +74,7 @@
 - **AI lifecycle／Take Back**：pre-session DM grant 有限 TTL、只可最小 context＋Start；Seat／Campaign／Room active Campaign／Owner revoke 等失效條件沿用 P3-D，Start 後綁 Session，End／Abandon 原子撤銷；M05-A 起 Owner 可對 **AI DM** 的 active Session 正常 End（Human DM 場仍只有 Abandon），不構成接管。Player self-service Take Back 只認原 `handoff_return_access_session_id`；遺失時由 Owner／DM reassignment＋revoke＋epoch＋audit，不能以姓名／新 access session 冒充同一人；DM controller 一場固定。見 [P3-D 規格](docs/P3/實作規格.md)。
 - **OAuth 不另造授權**：access／refresh 均重驗同一 P3-D authority；一張 grant 一個 active token family，`client_id` 不是 Seat 身分，OAuth 不寫 Seat／Session／Participant。Guide／briefing 只講操作守則，Adventure context 留 P6。見 [M04 設計](docs/M04/開發設計方針.md)。
 - **事件與 wait**：durable event＋DB cursor 是真值；HTTP wait async，await 不持有 DB connection／transaction、不長占 sync worker，wake／timeout 後重查 cursor，保留 waiter 不餓死一般 request 的證據。P3 event 不等於 P7 跨 Session Timeline／Snapshot。見 [P3 設計](docs/P3/開發設計方針.md)。M06 起事件列蓋寫入者 AI grant／generation（不進公開 DTO）；MCP `wait_for_event` 預設略過呼叫者自己的白名單 echo（cursor 照走）並精簡 `roll.resolved`，`get_pending_events`／Human 路徑維持完整；新事件種類預設照送，要加入白名單須補前提測試。見 [M06 設計](docs/M06/開發設計方針.md)。
-- **Combat／Standalone**：Combat 以 Campaign 為 root，可跨 Session End／Abandon 延續；entry identity 是 Character／Monster Instance。Monster Template 可共用於 Standalone，Instance／Combat schema 不可。Monster 長文 `desc` 首次 expose 時須補齊 zh-TW；來源與 count 以 P4-A pinned manifest 為準。見 [P4 設計](docs/P4/開發設計方針.md)。
+- **Combat／Standalone**：Combat 以 Campaign 為 root，可跨 Session End／Abandon 延續；entry identity 是 Character／Monster Instance。內建 Monster content 可共用於 Standalone，Room 自訂模板／Instance／Combat schema 不可。Monster 長文 `desc` 首次 expose 時須補齊 zh-TW；來源與 count 以 P4-A pinned manifest 為準。見 [P4 設計](docs/P4/開發設計方針.md)。
 - **Combat 共用寫入邊界**：active Combat HP 只經 semantic damage／healing，Player raw patch 被拒、DM absolute set 要 `correction_reason`；Concentration／Exhaustion／Death Save／Temporary Effects 住 shared Character Current State。Spell cast 沿用 `authorize_character_spell` → `spend_character_spell`，Character／Monster casting source 都合法；Concentration CON save 由 `CombatConcentrationRepository.complete_check` 消費。敵人精確 HP／AC／hidden resources 不送 Player。Combat mutation 須呼叫 `TableEventService.notifier`，前端把帶 `combat_id` 的 `roll.*` 視為 Combat 變更。見 P4-C～E 正式契約。
 - **M05 歷史讀取邊界**：已結束 Session 的事件唯讀；讀者 scope 以目前 Human 控制的 Campaign Seat 為單位，DM 層跟該場 `dm_seat_id`；舊事件只進聊天串、不進本場 seq-based 投影；MCP `get_session_context` 與 Resume 仍只含本場。P7 Timeline 疊在 M05-B 的讀取入口上。見 [M05 設計](docs/M05/開發設計方針.md)。
 - **P6 先於 P5 的邊界**：P6 必須在沒有 Tactical geometry 的情況下完整運作；Adventure 是可附加的世界／冒險資料包，Campaign 可零或多個 Adventure，真正 mutable truth 在 Campaign Runtime。Current Scene／Situation optional；P6 map/image 只作 Stage／世界素材；AI DM 重要世界變化需 write-back，Player projection 不得含 secret。見 [P6 規格](docs/P6/實作規格.md)。
@@ -110,6 +118,7 @@ P／M 三份文件：**實作規格＝完成後必須為真；開發設計方針
 | P6 | [規格](docs/P6/實作規格.md) | [設計](docs/P6/開發設計方針.md) | [測試](docs/P6/測試指南.md) |
 | P7 | [規格](docs/P7/實作規格.md) | [設計](docs/P7/開發設計方針.md) | [測試](docs/P7/測試指南.md) |
 | M06 | [規格](docs/M06/實作規格.md) | [設計](docs/M06/開發設計方針.md) | [測試](docs/M06/測試指南.md) |
+| M07 | [規格](docs/M07/實作規格.md) | [設計](docs/M07/開發設計方針.md) | [測試](docs/M07/測試指南.md) |
 
 其餘已交付 Phase 的三份文件見 [歷史文件索引](docs/ROADMAP_HISTORY.md#已交付-phase-文件索引)。
 
