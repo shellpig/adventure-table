@@ -1,8 +1,8 @@
 # Adventure Table 專案簡報
 
-最後更新：2026-09-27
+最後更新：2026-10-02
 
-本檔是**當前進度、下一步、Roadmap 與索引的單一事實來源**，上限 **16,000 UTF-8 bytes**。歷史進度見 [ROADMAP_HISTORY](docs/ROADMAP_HISTORY.md)，未解問題見 [已知問題](已知問題.md)；不在本檔累加歷史過程、測試數字或決策全文。
+本檔是**當前進度、下一步、Roadmap 與索引的單一事實來源**（≤ **16,000 UTF-8 bytes**）。歷史見 [ROADMAP_HISTORY](docs/ROADMAP_HISTORY.md)，限制見 [已知問題](已知問題.md)；不累加歷史、測試數字或決策全文。
 
 ## 專案定位與目前能力
 
@@ -31,11 +31,20 @@
 | P5-G — Full P5 Integration & Closeout | 進行中（2026-09-28 開工） |
 - **M01／U01 保持 open，不阻塞 P Roadmap**。M01-A～O、U01-A 已關門；下一個未使用字母分別為 M01-P、U01-B，兩者下一項 scope 均未拍板，不建立虛構的待辦 Subphase。
 - **M06（AI Long-Session Hosting Efficiency）已全部關門並合併回 `main`（2026-09-25）**：M06-A merge `a3af1eee`、M06-B merge `e2fa1d89`、M06-C merge `7df05b12`；證據見 [M06-A](docs/M06/M06-A_CLOSEOUT.md)、[M06-B](docs/M06/M06-B_CLOSEOUT.md)、[M06-C closeout](docs/M06/M06-C_CLOSEOUT.md)。逐項表已移至 ROADMAP_HISTORY。
-- **P7～P8 保持大 Phase**，不提前拆分或設計 schema／API／module。
+- **P7-A～F 契約已準備、未開工**，待 P5 關門；見文件索引。**P8 保持大 Phase**。
+
+| P7 Subphase | 狀態 |
+|---|---|
+| P7-A — Campaign Timeline & History Retrieval | 未開工 |
+| P7-B — Campaign Snapshot Capture | 未開工 |
+| P7-C — Campaign Restore & History Archive | 未開工 |
+| P7-D — Portable Package Export | 未開工 |
+| P7-E — Previewed Copy Import | 未開工 |
+| P7-F — Full P7 Integration & Closeout | 未開工 |
 
 ## Phase Roadmap
 
-Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **P0→P4 → M05 → P6 → M06 → P5 → P7 → P8**。這不是重編 Phase：P5 仍是 Tactical Combat、P6 仍是 Adventure / Campaign Runtime。M 為插入式維護／內容擴充，U 為測試／開發效率優化，兩者均可長期 open。
+執行順序：**P0→P4 → M05 → P6 → M06 → P5 → P7 → P8**，編號／分工不變。M／U 可長期 open。
 
 | Phase | 主題／狀態 |
 |---|---|
@@ -50,10 +59,10 @@ Phase 編號維持原產品分工；2026-09-19 起目前執行順序調整為 **
 | M06 | AI Long-Session Hosting Efficiency；已關門並合併（2026-09-25），插在 P6 與 P5-A 之間 |
 | P5 | Tactical Combat；進行中，P5-A～F 已關門（2026-09-28） |
 | P6 | Adventure Definition／Importer、Campaign Runtime、AI DM context／write-back；已關門並合併（2026-09-25） |
-| P7 | Timeline、Snapshot／Restore、broader Archive／Import／Export；角色 JSON 已由 M03 先行，不做 gameplay Undo |
+| P7 | Timeline、Campaign Snapshot／Restore、portable Import／Export；管理 MCP 延後 |
 | P8 | 全流程 QA／Polish、權限、reconnect、效能、Responsive UI |
 
-已關門的逐項表與關門摘要只住 [ROADMAP_HISTORY](docs/ROADMAP_HISTORY.md)；查歷史時按 Phase／Subphase 定位，不整份讀。
+已關門進度與摘要只住 [ROADMAP_HISTORY](docs/ROADMAP_HISTORY.md)，按 Phase／Subphase 查閱。
 
 ## 接手時必須保留的跨 Phase 約束
 
@@ -109,6 +118,7 @@ P／M 三份文件：**實作規格＝完成後必須為真；開發設計方針
 | P5 | [規格](docs/P5/實作規格.md) | [設計](docs/P5/開發設計方針.md) | [測試](docs/P5/測試指南.md) |
 | M05 | [規格](docs/M05/實作規格.md) | [設計](docs/M05/開發設計方針.md) | [測試](docs/M05/測試指南.md) |
 | P6 | [規格](docs/P6/實作規格.md) | [設計](docs/P6/開發設計方針.md) | [測試](docs/P6/測試指南.md) |
+| P7 | [規格](docs/P7/實作規格.md) | [設計](docs/P7/開發設計方針.md) | [測試](docs/P7/測試指南.md) |
 | M06 | [規格](docs/M06/實作規格.md) | [設計](docs/M06/開發設計方針.md) | [測試](docs/M06/測試指南.md) |
 
 其餘已交付 Phase 的三份文件見 [歷史文件索引](docs/ROADMAP_HISTORY.md#已交付-phase-文件索引)。
