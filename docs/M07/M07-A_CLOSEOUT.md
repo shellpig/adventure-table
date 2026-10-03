@@ -2,7 +2,7 @@
 
 日期：2026-10-03　Branch：`feat/m07a-room-monster-library`（自 `main@bdd3ee0a`）　Worker：agy（A1、A2）、指揮者（A3）
 
-Commit：A1 `cb6324a6`、A2 `5d8acdfb`、A3 本 closeout commit（補兩個驗收測試）。
+Commit：A1 `cb6324a6`、A2 `5d8acdfb`、A3 `fa0e536b`（補兩個驗收測試），以及合併前修正（列表搜尋競態）。
 
 ## 驗收對應
 
@@ -45,7 +45,20 @@ Backend 測試在 `apps/server/tests/`，前端測試在 `apps/web/src/`，E2E �
   - `baseline-room`：m02h-bilingual-site-smoke，3 passed。
   - 選這些 spec 的理由：Session 戰鬥 DM 控制與 Monster 控制，以及 Workspace 入口按鈕。
 - **M03 boundary／schema parity**：已含在全套 backend 中。新增的多人 package 已加進 forbidden regex 並附 negative assertion；Standalone 仍只升 `character@head`。
-- **合併回 `main`**：尚未合併。依 merge 規則，合併前要跑全套 Docker E2E，並等使用者指示。
+- **合併前全套 Docker E2E**（`npm run test:e2e:docker` 無參數，2026-10-03）：
+  - **第 1 次**：`parallel` 這趟 107 passed、3 failed、3 skipped，script 隨即中止。
+    - m07a zh-TW 案例失敗，是真的缺陷：負載下，頁面初次載入的「全部列表」回應比後送的搜尋回應更晚回來，把搜尋結果蓋掉。已修，`RoomMonsterLibraryPage.tsx` 加請求序號，只採用最新請求的回應。
+    - 另外 2 個失敗是 p1f、p1g。
+  - **第 2 次（含修正）**：`parallel` 這趟 106 passed、4 failed、3 skipped，script 中止。m07a 這次通過。4 個失敗：
+    - m01e ×2：worker 以 0xC0000409 崩潰，即 KI-ENV-002，測試本體沒有執行。
+    - p1f：KI-P1F-001 的症狀。
+    - p5f：等戰術地圖 radio 逾時；這個 spec 在 A3 的受影響 E2E 是通過的。
+  - **依 KI-ENV-002 的做法手動補跑**：
+    - 單獨重跑 m01e、p1f、p5f：6 passed。
+    - `baseline-room`：30 passed、1 skipped。
+    - `serial-restart`：2 passed。
+    - 關掉 xge 的 m03c：7 passed。
+  - **合計**：各 spec 都至少完整通過一次，0 個未解失敗。p1f 這次單獨重跑通過，與 KI-P1F-001「單跑也穩定失敗」的記載不同，建議 verifier 更新該條。
 
 ## 指揮者審核修正摘要
 
@@ -69,6 +82,7 @@ Backend 測試在 `apps/server/tests/`，前端測試在 `apps/web/src/`，E2E �
   - locale 名稱與能力名稱改走單一呈現 helper（後端一起改）。
   - SRD size／type／alignment 補雙語。
   - 修正兩個 E2E 腳本錯誤。
+- **合併前**：指揮者修正怪物庫列表的搜尋競態（舊回應覆蓋搜尋結果），unit 926 passed、build 通過，全套 E2E 中 m07a 通過。
 - **A3**：補兩個驗收測試。
   - 只改 AC 的測試改用同時有 Multiattack 與 Spellcasting 的怪物。
   - 新增：Member 控制 DM Seat 仍不可管理怪物庫。

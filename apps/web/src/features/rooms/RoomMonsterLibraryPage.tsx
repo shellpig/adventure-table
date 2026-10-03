@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   archiveCustomMonster,
@@ -130,7 +130,12 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
 
+  // Only the latest list request may update state; an older response that
+  // arrives later (e.g. the initial load after a search) is dropped.
+  const listRequestSeq = useRef(0)
+
   const reloadList = async (reset = true) => {
+    const requestSeq = ++listRequestSeq.current
     if (reset) {
       setLoadingList(true)
     } else {
@@ -145,6 +150,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
         limit: PAGE_SIZE,
         offset,
       })
+      if (requestSeq !== listRequestSeq.current) return
       if (reset) {
         setMonsters(items)
       } else {
@@ -153,10 +159,13 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
       setHasMore(items.length >= PAGE_SIZE)
       setListError(null)
     } catch (cause) {
+      if (requestSeq !== listRequestSeq.current) return
       setListError(monsterLibraryErrorMessage(cause, copy))
     } finally {
-      setLoadingList(false)
-      setLoadingMore(false)
+      if (requestSeq === listRequestSeq.current) {
+        setLoadingList(false)
+        setLoadingMore(false)
+      }
     }
   }
 
