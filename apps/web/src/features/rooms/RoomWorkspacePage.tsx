@@ -389,6 +389,11 @@ export function RoomWorkspacePage({ roomId }: { roomId: string }) {
           <a className="button primary" href={`/rooms/${roomId}/adventures`}>
             {copy.adventuresAction}
           </a>
+          {recent.authority === 'owner' || recent.authority === 'dm' ? (
+            <a className="button primary" href={`/rooms/${roomId}/monster-library`}>
+              {copy.monsterLibraryAction}
+            </a>
+          ) : null}
           <a className="button secondary" href="/">{copy.backHome}</a>
         </div>
 

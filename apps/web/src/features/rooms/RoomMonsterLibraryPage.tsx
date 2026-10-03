@@ -1,0 +1,1310 @@
+import { useEffect, useMemo, useState } from 'react'
+
+import {
+  archiveCustomMonster,
+  copyCustomMonster,
+  createCustomMonster,
+  createCustomMonsterFromContent,
+  deleteCustomMonster,
+  getMonsterLibraryEntry,
+  listMonsterLibrary,
+  patchCustomMonster,
+  type CreateCustomMonsterInput,
+  type MonsterLibraryDetailView,
+  type MonsterLibrarySummaryView,
+} from '../../api/monsterLibrary'
+import type { RoomAuthority } from '../../api/rooms'
+import { useLocale } from '../../i18n/LocaleProvider'
+import {
+  formatAbilityName,
+  formatMonsterName,
+  formatMonsterRuleField,
+  monsterLibraryCopy,
+  monsterLibraryErrorMessage,
+  SRD_ALIGNMENTS,
+  SRD_SIZES,
+  SRD_TYPES,
+  type MonsterLibraryCopy,
+} from './monsterLibraryCopy'
+import { recentRoomForId } from './roomStorage'
+import './rooms.css'
+
+const UUID_PATTERN = '[0-9a-fA-F-]{36}'
+
+export type RoomMonsterLibraryRoute = {
+  roomId: string
+}
+
+export function roomMonsterLibraryRouteFromPath(
+  pathname: string,
+): RoomMonsterLibraryRoute | null {
+  const match = pathname.match(
+    new RegExp(`^/rooms/(${UUID_PATTERN})/monster-library/?$`),
+  )
+  return match ? { roomId: match[1] } : null
+}
+
+export function libraryPermissions(authority: RoomAuthority | null | undefined): {
+  canManage: boolean
+} {
+  return {
+    canManage: authority === 'owner' || authority === 'dm',
+  }
+}
+
+function formatModifier(score: number): string {
+  const mod = Math.floor((score - 10) / 2)
+  return mod >= 0 ? `+${mod}` : `${mod}`
+}
+
+function getSpeedString(speed: unknown): string {
+  if (typeof speed === 'string') return speed
+  if (typeof speed === 'object' && speed !== null) {
+    const s = speed as Record<string, unknown>
+    if (typeof s.walk === 'string') return s.walk
+  }
+  return '30 ft.'
+}
+
+export type RoomMonsterLibraryPageProps = {
+  roomId: string
+}
+
+export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) {
+  const { locale } = useLocale()
+  const copy = monsterLibraryCopy(locale)
+  const recent = recentRoomForId(roomId)
+  const token = recent?.accessToken ?? ''
+  const { canManage } = libraryPermissions(recent?.authority)
+
+  const [monsters, setMonsters] = useState<MonsterLibrarySummaryView[]>([])
+  const [loadingList, setLoadingList] = useState(false)
+  const [listError, setListError] = useState<string | null>(null)
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'builtin' | 'custom'>('all')
+  const [showArchived, setShowArchived] = useState(false)
+
+  const [selectedRef, setSelectedRef] = useState<string | null>(null)
+  const [detail, setDetail] = useState<MonsterLibraryDetailView | null>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+  const [detailError, setDetailError] = useState<string | null>(null)
+  const [actionNotice, setActionNotice] = useState<string | null>(null)
+
+  const [pendingAction, setPendingAction] = useState<
+    'create' | 'copy' | 'save' | 'archive' | 'delete' | 'fromContent' | null
+  >(null)
+
+  // Custom monster form fields
+  const [formName, setFormName] = useState('')
+  const [formAc, setFormAc] = useState<number>(10)
+  const [formMaxHp, setFormMaxHp] = useState<number>(10)
+  const [formCr, setFormCr] = useState<number>(0)
+  const [formSize, setFormSize] = useState('Medium')
+  const [formType, setFormType] = useState('humanoid')
+  const [formAlignment, setFormAlignment] = useState('unaligned')
+  const [formSpeed, setFormSpeed] = useState('30 ft.')
+  const [formStr, setFormStr] = useState<number>(10)
+  const [formDex, setFormDex] = useState<number>(10)
+  const [formCon, setFormCon] = useState<number>(10)
+  const [formInt, setFormInt] = useState<number>(10)
+  const [formWis, setFormWis] = useState<number>(10)
+  const [formCha, setFormCha] = useState<number>(10)
+  const [formDescription, setFormDescription] = useState('')
+  const [formTraits, setFormTraits] = useState<Array<{ name: string; desc: string }>>([])
+  const [formActions, setFormActions] = useState<Array<{ name: string; desc: string }>>([])
+
+  // Modal dialog states
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [newMonsterName, setNewMonsterName] = useState('')
+  const [newMonsterAc, setNewMonsterAc] = useState(10)
+  const [newMonsterHp, setNewMonsterHp] = useState(10)
+
+  const [showCopyModal, setShowCopyModal] = useState(false)
+  const [copyMonsterName, setCopyMonsterName] = useState('')
+
+  const [showFromContentModal, setShowFromContentModal] = useState(false)
+  const [fromContentName, setFromContentName] = useState('')
+
+  const PAGE_SIZE = 50
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+
+  const reloadList = async (reset = true) => {
+    if (reset) {
+      setLoadingList(true)
+    } else {
+      setLoadingMore(true)
+    }
+    try {
+      const offset = reset ? 0 : monsters.length
+      const items = await listMonsterLibrary(roomId, token, {
+        query: searchQuery.trim() || undefined,
+        include_archived: showArchived,
+        source: sourceFilter,
+        limit: PAGE_SIZE,
+        offset,
+      })
+      if (reset) {
+        setMonsters(items)
+      } else {
+        setMonsters((prev) => [...prev, ...items])
+      }
+      setHasMore(items.length >= PAGE_SIZE)
+      setListError(null)
+    } catch (cause) {
+      setListError(monsterLibraryErrorMessage(cause, copy))
+    } finally {
+      setLoadingList(false)
+      setLoadingMore(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!recent || !canManage) return
+    void reloadList(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, token, canManage, sourceFilter, showArchived])
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    void reloadList(true)
+  }
+
+  // Load detail when selectedRef changes
+  useEffect(() => {
+    if (!selectedRef || !recent || !canManage) {
+      setDetail(null)
+      return
+    }
+    let active = true
+    setLoadingDetail(true)
+    setDetailError(null)
+    setActionNotice(null)
+
+    void getMonsterLibraryEntry(roomId, selectedRef, token)
+      .then((data) => {
+        if (!active) return
+        setDetail(data)
+        if (data.source_kind === 'custom') {
+          const rules = data.rules
+          const scores = rules.ability_scores
+          setFormName(data.name)
+          setFormAc(rules.armor_class)
+          setFormMaxHp(rules.max_hp)
+          setFormCr(rules.challenge_rating ?? 0)
+          setFormSize(rules.size)
+          setFormType(rules.type)
+          setFormAlignment(rules.alignment)
+          setFormSpeed(getSpeedString(rules.speed))
+          setFormStr(scores.strength)
+          setFormDex(scores.dexterity)
+          setFormCon(scores.constitution)
+          setFormInt(scores.intelligence)
+          setFormWis(scores.wisdom)
+          setFormCha(scores.charisma)
+          setFormDescription(rules.description ?? '')
+
+          const rawTraits = rules.traits ?? []
+          setFormTraits(
+            rawTraits.map((t) => ({
+              name: t.name,
+              desc: t.desc ?? '',
+            })),
+          )
+
+          const rawActions = rules.actions ?? []
+          setFormActions(
+            rawActions.map((a) => ({
+              name: a.name,
+              desc: a.desc ?? '',
+            })),
+          )
+        }
+      })
+      .catch((cause) => {
+        if (!active) return
+        setDetailError(monsterLibraryErrorMessage(cause, copy))
+      })
+      .finally(() => {
+        if (active) setLoadingDetail(false)
+      })
+
+    return () => {
+      active = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRef, roomId, token, canManage])
+
+  const handleCreateCustom = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newMonsterName.trim()) return
+    setPendingAction('create')
+    setDetailError(null)
+
+    const payload: CreateCustomMonsterInput = {
+      name: newMonsterName.trim(),
+      armor_class: newMonsterAc,
+      max_hp: newMonsterHp,
+    }
+
+    try {
+      const created = await createCustomMonster(roomId, token, payload)
+      setShowCreateModal(false)
+      setNewMonsterName('')
+      await reloadList()
+      setSelectedRef(created.ref)
+    } catch (cause) {
+      setDetailError(monsterLibraryErrorMessage(cause, copy))
+      await reloadList()
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  const handleCreateFromContent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!detail) return
+    setPendingAction('fromContent')
+    setDetailError(null)
+
+    try {
+      const created = await createCustomMonsterFromContent(roomId, token, {
+        content_key: detail.source_key ?? detail.ref,
+        name: fromContentName.trim() || null,
+      })
+      setShowFromContentModal(false)
+      setFromContentName('')
+      await reloadList()
+      setSelectedRef(created.ref)
+    } catch (cause) {
+      setDetailError(monsterLibraryErrorMessage(cause, copy))
+      await reloadList()
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  const handleCopyCustom = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!detail || detail.revision === null || detail.revision === undefined) return
+    setPendingAction('copy')
+    setDetailError(null)
+
+    const templateId = detail.ref.replace(/^custom:/, '')
+    try {
+      const copied = await copyCustomMonster(roomId, templateId, token, {
+        expected_revision: detail.revision,
+        name: copyMonsterName.trim() || null,
+      })
+      setShowCopyModal(false)
+      setCopyMonsterName('')
+      await reloadList()
+      setSelectedRef(copied.ref)
+    } catch (cause) {
+      setDetailError(monsterLibraryErrorMessage(cause, copy))
+      await reloadList()
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  const handleSaveCustom = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!detail || detail.revision === null || detail.revision === undefined) return
+    setPendingAction('save')
+    setDetailError(null)
+    setActionNotice(null)
+
+    const templateId = detail.ref.replace(/^custom:/, '')
+    const payload = {
+      expected_revision: detail.revision,
+      name: formName.trim(),
+      armor_class: formAc,
+      max_hp: formMaxHp,
+      challenge_rating: formCr,
+      size: formSize,
+      type: formType,
+      alignment: formAlignment,
+      speed: formSpeed,
+      ability_scores: {
+        strength: formStr,
+        dexterity: formDex,
+        constitution: formCon,
+        intelligence: formInt,
+        wisdom: formWis,
+        charisma: formCha,
+      },
+      description: formDescription,
+      traits: formTraits.map((t) => ({ name: t.name, desc: t.desc })),
+      actions: formActions.map((a) => ({ name: a.name, desc: a.desc })),
+    }
+
+    try {
+      const updated = await patchCustomMonster(roomId, templateId, token, payload)
+      setDetail(updated)
+      setActionNotice(copy.saveAction)
+      await reloadList()
+    } catch (cause) {
+      // Keep form intact on error!
+      setDetailError(monsterLibraryErrorMessage(cause, copy))
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  const handleArchiveCustom = async () => {
+    if (!detail || detail.revision === null || detail.revision === undefined) return
+    if (!window.confirm(copy.archiveConfirm)) return
+    setPendingAction('archive')
+    setDetailError(null)
+
+    const templateId = detail.ref.replace(/^custom:/, '')
+    try {
+      const updated = await archiveCustomMonster(roomId, templateId, token, {
+        expected_revision: detail.revision,
+      })
+      setDetail(updated)
+      await reloadList()
+    } catch (cause) {
+      setDetailError(monsterLibraryErrorMessage(cause, copy))
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  const handleDeleteCustom = async () => {
+    if (!detail || detail.revision === null || detail.revision === undefined) return
+    if (!window.confirm(copy.deleteConfirm)) return
+    setPendingAction('delete')
+    setDetailError(null)
+
+    const templateId = detail.ref.replace(/^custom:/, '')
+    try {
+      await deleteCustomMonster(roomId, templateId, token, detail.revision)
+      setDetail(null)
+      setSelectedRef(null)
+      await reloadList()
+    } catch (cause) {
+      setDetailError(monsterLibraryErrorMessage(cause, copy))
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  // Not logged in to room
+  if (!recent) {
+    return (
+      <main className="landing-page room-workspace-page">
+        <section className="landing-card room-workspace-card">
+          <h1>{copy.title}</h1>
+          <p>{copy.missingAccess}</p>
+          <a className="button secondary" href="/">{copy.backRoom}</a>
+        </section>
+      </main>
+    )
+  }
+
+  // Member lacks authority: show mapped error and no data
+  if (!canManage) {
+    return (
+      <main className="landing-page room-workspace-page">
+        <section className="landing-card room-workspace-card">
+          <h1>{copy.title}</h1>
+          <p>{copy.errMonsterLibraryForbidden}</p>
+          <a className="button secondary" href={`/rooms/${roomId}`}>{copy.backRoom}</a>
+        </section>
+      </main>
+    )
+  }
+
+  const isBuiltin = detail?.source_kind === 'builtin'
+  const isCustom = detail?.source_kind === 'custom'
+  const isArchived = Boolean(detail?.archived_at)
+
+  return (
+    <main className="landing-page room-workspace-page monster-library-page">
+      <section className="landing-card room-workspace-card monster-library-card">
+        <div className="monster-library__header">
+          <div>
+            <h1>{copy.title}</h1>
+            <p>{copy.intro}</p>
+          </div>
+          <div className="monster-library__top-actions">
+            <button
+              className="button primary"
+              type="button"
+              disabled={pendingAction !== null}
+              onClick={() => {
+                setNewMonsterName('')
+                setNewMonsterAc(10)
+                setNewMonsterHp(10)
+                setShowCreateModal(true)
+              }}
+            >
+              {copy.createAction}
+            </button>
+            <a className="button secondary" href={`/rooms/${roomId}`}>
+              {copy.backRoom}
+            </a>
+          </div>
+        </div>
+
+        {listError ? <div className="form-error">{listError}</div> : null}
+
+        {/* Search & Filters */}
+        <form className="monster-library__filters" onSubmit={handleSearchSubmit}>
+          <input
+            type="search"
+            value={searchQuery}
+            placeholder={copy.searchPlaceholder}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value as 'all' | 'builtin' | 'custom')}
+          >
+            <option value="all">{copy.filterAll}</option>
+            <option value="builtin">{copy.filterBuiltin}</option>
+            <option value="custom">{copy.filterCustom}</option>
+          </select>
+          <label className="monster-library__checkbox-label">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+            />
+            {copy.showArchived}
+          </label>
+          <button className="button secondary" type="submit" disabled={loadingList}>
+            {copy.refreshAction}
+          </button>
+        </form>
+
+        <div className="monster-library__layout">
+          {/* List panel */}
+          <aside className="monster-library__sidebar" aria-label={copy.title}>
+            {loadingList ? (
+              <p className="room-empty-text">{copy.loadingList}</p>
+            ) : monsters.length === 0 ? (
+              <p className="room-empty-text">{copy.emptyList}</p>
+            ) : (
+              <>
+                <ul className="monster-library__list">
+                  {monsters.map((item) => {
+                    const isSelected = item.ref === selectedRef
+                    const displayName = formatMonsterName(item, locale)
+                    return (
+                      <li
+                        key={item.ref}
+                        className={`monster-library__item${isSelected ? ' monster-library__item--selected' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          className="monster-library__item-button"
+                          onClick={() => setSelectedRef(item.ref)}
+                        >
+                          <div className="monster-library__item-title-row">
+                            <strong className="monster-library__item-name">{displayName}</strong>
+                            <span className={`badge ${item.source_kind}`}>
+                              {item.source_kind === 'builtin' ? copy.sourceBuiltin : copy.sourceCustom}
+                            </span>
+                            {item.archived_at ? (
+                              <span className="badge archived">{copy.badgeArchived}</span>
+                            ) : null}
+                          </div>
+                          <div className="monster-library__item-meta">
+                            {item.type ? (
+                              <span>{formatMonsterRuleField('type', item.type, locale)}</span>
+                            ) : null}
+                            {item.challenge_rating !== null && item.challenge_rating !== undefined ? (
+                              <span>CR {item.challenge_rating}</span>
+                            ) : null}
+                            {item.armor_class !== null && item.armor_class !== undefined ? (
+                              <span>AC {item.armor_class}</span>
+                            ) : null}
+                            {item.max_hp !== null && item.max_hp !== undefined ? (
+                              <span>HP {item.max_hp}</span>
+                            ) : null}
+                          </div>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+                {hasMore ? (
+                  <div className="monster-library__load-more-row">
+                    <button
+                      type="button"
+                      className="button secondary monster-library__load-more-btn"
+                      disabled={loadingMore || loadingList}
+                      onClick={() => void reloadList(false)}
+                    >
+                      {loadingMore ? copy.loadingMore : copy.loadMore}
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </aside>
+
+          {/* Detail panel */}
+          <section className="monster-library__detail" aria-label="Monster details">
+            {loadingDetail ? (
+              <p className="room-empty-text">{copy.loadingDetail}</p>
+            ) : !detail ? (
+              <p className="room-empty-text">{copy.selectPrompt}</p>
+            ) : (
+              <div className="monster-library__detail-body">
+                {detailError ? <div className="form-error">{detailError}</div> : null}
+                {actionNotice ? <div className="form-success">{actionNotice}</div> : null}
+
+                {/* Built-in Monster: Read Only */}
+                {isBuiltin ? (
+                  <div className="monster-library__builtin-view">
+                    <div className="monster-library__action-bar">
+                      <div className="monster-library__title-block">
+                        <h2>{formatMonsterName(detail, locale)}</h2>
+                        <span className="badge builtin">{copy.sourceBuiltin}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="button primary"
+                        disabled={pendingAction !== null}
+                        onClick={() => {
+                          setFromContentName('')
+                          setShowFromContentModal(true)
+                        }}
+                      >
+                        {copy.createFromContentAction}
+                      </button>
+                    </div>
+
+                    <p className="monster-library__notice">{copy.readOnlyNotice}</p>
+
+                    <div className="monster-library__stat-block">
+                      <h3>{copy.coreStatsHeading}</h3>
+                      <div className="monster-library__stats-grid">
+                        <div>
+                          <strong>{copy.fieldArmorClass}:</strong> {detail.rules.armor_class}
+                        </div>
+                        <div>
+                          <strong>{copy.fieldMaxHp}:</strong> {detail.rules.max_hp}
+                        </div>
+                        {detail.rules.challenge_rating !== null &&
+                        detail.rules.challenge_rating !== undefined ? (
+                          <div>
+                            <strong>{copy.fieldChallengeRating}:</strong>{' '}
+                            {detail.rules.challenge_rating}
+                          </div>
+                        ) : null}
+                        <div>
+                          <strong>{copy.fieldSpeed}:</strong> {getSpeedString(detail.rules.speed)}
+                        </div>
+                        <div>
+                          <strong>{copy.fieldSize}:</strong>{' '}
+                          {formatMonsterRuleField('size', detail.rules.size, locale)}
+                        </div>
+                        <div>
+                          <strong>{copy.fieldType}:</strong>{' '}
+                          {formatMonsterRuleField('type', detail.rules.type, locale)}
+                        </div>
+                        <div>
+                          <strong>{copy.fieldAlignment}:</strong>{' '}
+                          {formatMonsterRuleField('alignment', detail.rules.alignment, locale)}
+                        </div>
+                      </div>
+
+                      {/* Ability Scores */}
+                      <h3>{copy.abilitiesHeading}</h3>
+                      <div className="monster-library__abilities-grid">
+                        {(
+                          [
+                            ['STR', detail.rules.ability_scores.strength],
+                            ['DEX', detail.rules.ability_scores.dexterity],
+                            ['CON', detail.rules.ability_scores.constitution],
+                            ['INT', detail.rules.ability_scores.intelligence],
+                            ['WIS', detail.rules.ability_scores.wisdom],
+                            ['CHA', detail.rules.ability_scores.charisma],
+                          ] as const
+                        ).map(([label, val]) => (
+                          <div key={label} className="monster-library__ability-box">
+                            <strong>{label}</strong>
+                            <span>
+                              {val} ({formatModifier(val)})
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Traits */}
+                      <h3>{copy.traitsHeading}</h3>
+                      {Array.isArray(detail.rules.traits) && detail.rules.traits.length > 0 ? (
+                        <div className="monster-library__abilities-list">
+                          {detail.rules.traits.map((t, idx) => {
+                            const tName = formatAbilityName(
+                              t,
+                              idx,
+                              'traits',
+                              detail.presentation,
+                              locale,
+                            )
+                            return (
+                              <article key={idx} className="monster-library__ability-entry">
+                                <h4>
+                                  {tName}
+                                  {locale === 'zh-TW' && detail.presentation?.desc_is_english ? (
+                                    <span className="monster-library__desc-lang-label">
+                                      {' '}
+                                      ({copy.englishOriginal})
+                                    </span>
+                                  ) : null}
+                                </h4>
+                                {t.desc ? <p>{t.desc}</p> : null}
+                              </article>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <p className="room-empty-text">{copy.noTraits}</p>
+                      )}
+
+                      {/* Actions */}
+                      <h3>{copy.actionsHeading}</h3>
+                      {Array.isArray(detail.rules.actions) && detail.rules.actions.length > 0 ? (
+                        <div className="monster-library__abilities-list">
+                          {detail.rules.actions.map((a, idx) => {
+                            const aName = formatAbilityName(
+                              a,
+                              idx,
+                              'actions',
+                              detail.presentation,
+                              locale,
+                            )
+                            return (
+                              <article key={idx} className="monster-library__ability-entry">
+                                <h4>
+                                  {aName}
+                                  {locale === 'zh-TW' && detail.presentation?.desc_is_english ? (
+                                    <span className="monster-library__desc-lang-label">
+                                      {' '}
+                                      ({copy.englishOriginal})
+                                    </span>
+                                  ) : null}
+                                </h4>
+                                {a.desc ? <p>{a.desc}</p> : null}
+                              </article>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <p className="room-empty-text">{copy.noActions}</p>
+                      )}
+
+                      {/* Bonus Actions */}
+                      {Array.isArray(detail.rules.bonus_actions) &&
+                      detail.rules.bonus_actions.length > 0 ? (
+                        <div>
+                          <h3>{copy.bonusActionsHeading}</h3>
+                          <div className="monster-library__abilities-list">
+                            {detail.rules.bonus_actions.map((ba, idx) => {
+                              const baName = formatAbilityName(
+                                ba,
+                                idx,
+                                'bonus_actions',
+                                detail.presentation,
+                                locale,
+                              )
+                              return (
+                                <article key={idx} className="monster-library__ability-entry">
+                                  <h4>
+                                    {baName}
+                                    {locale === 'zh-TW' && detail.presentation?.desc_is_english ? (
+                                      <span className="monster-library__desc-lang-label">
+                                        {' '}
+                                        ({copy.englishOriginal})
+                                      </span>
+                                    ) : null}
+                                  </h4>
+                                  {ba.desc ? <p>{ba.desc}</p> : null}
+                                </article>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {/* Reactions */}
+                      {Array.isArray(detail.rules.reactions) &&
+                      detail.rules.reactions.length > 0 ? (
+                        <div>
+                          <h3>{copy.reactionsHeading}</h3>
+                          <div className="monster-library__abilities-list">
+                            {detail.rules.reactions.map((r, idx) => {
+                              const rName = formatAbilityName(
+                                r,
+                                idx,
+                                'reactions',
+                                detail.presentation,
+                                locale,
+                              )
+                              return (
+                                <article key={idx} className="monster-library__ability-entry">
+                                  <h4>
+                                    {rName}
+                                    {locale === 'zh-TW' && detail.presentation?.desc_is_english ? (
+                                      <span className="monster-library__desc-lang-label">
+                                        {' '}
+                                        ({copy.englishOriginal})
+                                      </span>
+                                    ) : null}
+                                  </h4>
+                                  {r.desc ? <p>{r.desc}</p> : null}
+                                </article>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {/* Legendary Actions */}
+                      {Array.isArray(detail.rules.legendary_actions) &&
+                      detail.rules.legendary_actions.length > 0 ? (
+                        <div>
+                          <h3>{copy.legendaryActionsHeading}</h3>
+                          <div className="monster-library__abilities-list">
+                            {detail.rules.legendary_actions.map((la, idx) => {
+                              const laName = formatAbilityName(
+                                la,
+                                idx,
+                                'legendary_actions',
+                                detail.presentation,
+                                locale,
+                              )
+                              return (
+                                <article key={idx} className="monster-library__ability-entry">
+                                  <h4>
+                                    {laName}
+                                    {locale === 'zh-TW' && detail.presentation?.desc_is_english ? (
+                                      <span className="monster-library__desc-lang-label">
+                                        {' '}
+                                        ({copy.englishOriginal})
+                                      </span>
+                                    ) : null}
+                                  </h4>
+                                  {la.desc ? <p>{la.desc}</p> : null}
+                                </article>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : isCustom ? (
+                  /* Custom Monster: Editable */
+                  <form className="monster-library__custom-form" onSubmit={handleSaveCustom}>
+                    <div className="monster-library__action-bar">
+                      <div className="monster-library__title-block">
+                        <h2>{formatMonsterName(detail, locale)}</h2>
+                        <span className="badge custom">{copy.sourceCustom}</span>
+                        {isArchived ? (
+                          <span className="badge archived">{copy.badgeArchived}</span>
+                        ) : null}
+                        {detail.revision !== null && detail.revision !== undefined ? (
+                          <span className="monster-library__revision">
+                            {copy.revisionLabel}: {detail.revision}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div className="monster-library__buttons-row">
+                        <button
+                          type="submit"
+                          className="button primary"
+                          disabled={pendingAction !== null}
+                        >
+                          {pendingAction === 'save' ? copy.savingAction : copy.saveAction}
+                        </button>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          disabled={pendingAction !== null}
+                          onClick={() => {
+                            setCopyMonsterName(`${detail.name} (${copy.copyAction})`)
+                            setShowCopyModal(true)
+                          }}
+                        >
+                          {copy.copyAction}
+                        </button>
+                        {!isArchived ? (
+                          <button
+                            type="button"
+                            className="button secondary"
+                            disabled={pendingAction !== null}
+                            onClick={handleArchiveCustom}
+                          >
+                            {pendingAction === 'archive' ? copy.archivingAction : copy.archiveAction}
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="button danger"
+                          disabled={pendingAction !== null}
+                          onClick={handleDeleteCustom}
+                        >
+                          {pendingAction === 'delete' ? copy.deletingAction : copy.deleteAction}
+                        </button>
+                      </div>
+                    </div>
+
+                    {isArchived ? (
+                      <p className="monster-library__notice">{copy.archivedNotice}</p>
+                    ) : null}
+
+                    {/* Core stats editing */}
+                    <h3>{copy.coreStatsHeading}</h3>
+                    <div className="monster-library__form-grid">
+                      <label>
+                        <span>{copy.fieldName}</span>
+                        <input
+                          type="text"
+                          required
+                          value={formName}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => setFormName(e.target.value)}
+                        />
+                      </label>
+                      <label>
+                        <span>{copy.fieldArmorClass}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={40}
+                          required
+                          value={formAc}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => setFormAc(Number(e.target.value))}
+                        />
+                      </label>
+                      <label>
+                        <span>{copy.fieldMaxHp}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={9999}
+                          required
+                          value={formMaxHp}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => setFormMaxHp(Number(e.target.value))}
+                        />
+                      </label>
+                      <label>
+                        <span>{copy.fieldChallengeRating}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step="any"
+                          value={formCr}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => setFormCr(Number(e.target.value))}
+                        />
+                      </label>
+                      <label>
+                        <span>{copy.fieldSpeed}</span>
+                        <input
+                          type="text"
+                          value={formSpeed}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => setFormSpeed(e.target.value)}
+                        />
+                      </label>
+                      <label>
+                        <span>{copy.fieldSize}</span>
+                        <select
+                          value={formSize}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => setFormSize(e.target.value)}
+                        >
+                          {!SRD_SIZES.includes(formSize as (typeof SRD_SIZES)[number]) && formSize ? (
+                            <option value={formSize}>
+                              {formatMonsterRuleField('size', formSize, locale)}
+                            </option>
+                          ) : null}
+                          {SRD_SIZES.map((s) => (
+                            <option key={s} value={s}>
+                              {formatMonsterRuleField('size', s, locale)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span>{copy.fieldType}</span>
+                        <select
+                          value={formType}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => setFormType(e.target.value)}
+                        >
+                          {!SRD_TYPES.includes(formType as (typeof SRD_TYPES)[number]) && formType ? (
+                            <option value={formType}>
+                              {formatMonsterRuleField('type', formType, locale)}
+                            </option>
+                          ) : null}
+                          {SRD_TYPES.map((t) => (
+                            <option key={t} value={t}>
+                              {formatMonsterRuleField('type', t, locale)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span>{copy.fieldAlignment}</span>
+                        <select
+                          value={formAlignment}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => setFormAlignment(e.target.value)}
+                        >
+                          {!SRD_ALIGNMENTS.includes(formAlignment as (typeof SRD_ALIGNMENTS)[number]) && formAlignment ? (
+                            <option value={formAlignment}>
+                              {formatMonsterRuleField('alignment', formAlignment, locale)}
+                            </option>
+                          ) : null}
+                          {SRD_ALIGNMENTS.map((a) => (
+                            <option key={a} value={a}>
+                              {formatMonsterRuleField('alignment', a, locale)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    {/* Ability Scores editing */}
+                    <h3>{copy.abilitiesHeading}</h3>
+                    <div className="monster-library__abilities-grid">
+                      <label className="monster-library__ability-input">
+                        <span>{copy.fieldStr}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={formStr}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => setFormStr(Number(e.target.value))}
+                        />
+                      </label>
+                      <label className="monster-library__ability-input">
+                        <span>{copy.fieldDex}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={formDex}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => setFormDex(Number(e.target.value))}
+                        />
+                      </label>
+                      <label className="monster-library__ability-input">
+                        <span>{copy.fieldCon}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={formCon}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => setFormCon(Number(e.target.value))}
+                        />
+                      </label>
+                      <label className="monster-library__ability-input">
+                        <span>{copy.fieldInt}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={formInt}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => setFormInt(Number(e.target.value))}
+                        />
+                      </label>
+                      <label className="monster-library__ability-input">
+                        <span>{copy.fieldWis}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={formWis}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => setFormWis(Number(e.target.value))}
+                        />
+                      </label>
+                      <label className="monster-library__ability-input">
+                        <span>{copy.fieldCha}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={formCha}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => setFormCha(Number(e.target.value))}
+                        />
+                      </label>
+                    </div>
+
+                    {/* Description editing */}
+                    <h3>{copy.descriptionHeading}</h3>
+                    <label>
+                      <textarea
+                        rows={3}
+                        value={formDescription}
+                        disabled={pendingAction !== null}
+                        onChange={(e) => setFormDescription(e.target.value)}
+                      />
+                    </label>
+
+                    {/* Traits editing */}
+                    <div className="monster-library__subhead-row">
+                      <h3>{copy.traitsHeading}</h3>
+                      <button
+                        type="button"
+                        className="button secondary compact"
+                        disabled={pendingAction !== null}
+                        onClick={() =>
+                          setFormTraits([...formTraits, { name: '', desc: '' }])
+                        }
+                      >
+                        {copy.addTrait}
+                      </button>
+                    </div>
+                    {formTraits.map((t, idx) => (
+                      <div key={idx} className="monster-library__item-edit-row">
+                        <input
+                          type="text"
+                          placeholder={copy.traitName}
+                          value={t.name}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => {
+                            const updated = [...formTraits]
+                            updated[idx] = { ...updated[idx], name: e.target.value }
+                            setFormTraits(updated)
+                          }}
+                        />
+                        <textarea
+                          placeholder={copy.traitDesc}
+                          rows={2}
+                          value={t.desc}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => {
+                            const updated = [...formTraits]
+                            updated[idx] = { ...updated[idx], desc: e.target.value }
+                            setFormTraits(updated)
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="button danger compact"
+                          disabled={pendingAction !== null}
+                          onClick={() => {
+                            setFormTraits(formTraits.filter((_, i) => i !== idx))
+                          }}
+                        >
+                          {copy.remove}
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Actions editing */}
+                    <div className="monster-library__subhead-row">
+                      <h3>{copy.actionsHeading}</h3>
+                      <button
+                        type="button"
+                        className="button secondary compact"
+                        disabled={pendingAction !== null}
+                        onClick={() =>
+                          setFormActions([...formActions, { name: '', desc: '' }])
+                        }
+                      >
+                        {copy.addAction}
+                      </button>
+                    </div>
+                    {formActions.map((a, idx) => (
+                      <div key={idx} className="monster-library__item-edit-row">
+                        <input
+                          type="text"
+                          placeholder={copy.actionName}
+                          value={a.name}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => {
+                            const updated = [...formActions]
+                            updated[idx] = { ...updated[idx], name: e.target.value }
+                            setFormActions(updated)
+                          }}
+                        />
+                        <textarea
+                          placeholder={copy.actionDesc}
+                          rows={2}
+                          value={a.desc}
+                          disabled={pendingAction !== null}
+                          onChange={(e) => {
+                            const updated = [...formActions]
+                            updated[idx] = { ...updated[idx], desc: e.target.value }
+                            setFormActions(updated)
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="button danger compact"
+                          disabled={pendingAction !== null}
+                          onClick={() => {
+                            setFormActions(formActions.filter((_, i) => i !== idx))
+                          }}
+                        >
+                          {copy.remove}
+                        </button>
+                      </div>
+                    ))}
+                  </form>
+                ) : null}
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* Modal: Create from zero */}
+        {showCreateModal ? (
+          <div className="modal-backdrop">
+            <div className="modal-dialog">
+              <h3>{copy.createModalTitle}</h3>
+              <form onSubmit={handleCreateCustom}>
+                <label>
+                  <span>{copy.modalNameRequired}</span>
+                  <input
+                    type="text"
+                    required
+                    value={newMonsterName}
+                    disabled={pendingAction !== null}
+                    onChange={(e) => setNewMonsterName(e.target.value)}
+                  />
+                </label>
+                <label>
+                  <span>{copy.fieldArmorClass}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={40}
+                    required
+                    value={newMonsterAc}
+                    disabled={pendingAction !== null}
+                    onChange={(e) => setNewMonsterAc(Number(e.target.value))}
+                  />
+                </label>
+                <label>
+                  <span>{copy.fieldMaxHp}</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={9999}
+                    required
+                    value={newMonsterHp}
+                    disabled={pendingAction !== null}
+                    onChange={(e) => setNewMonsterHp(Number(e.target.value))}
+                  />
+                </label>
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="button secondary"
+                    disabled={pendingAction !== null}
+                    onClick={() => setShowCreateModal(false)}
+                  >
+                    {copy.cancel}
+                  </button>
+                  <button
+                    type="submit"
+                    className="button primary"
+                    disabled={pendingAction !== null || !newMonsterName.trim()}
+                  >
+                    {pendingAction === 'create' ? copy.creatingAction : copy.submitCreate}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Modal: Create from Content */}
+        {showFromContentModal ? (
+          <div className="modal-backdrop">
+            <div className="modal-dialog">
+              <h3>{copy.fromContentModalTitle}</h3>
+              <form onSubmit={handleCreateFromContent}>
+                <label>
+                  <span>{copy.modalNameOptional}</span>
+                  <input
+                    type="text"
+                    value={fromContentName}
+                    placeholder={detail?.name}
+                    disabled={pendingAction !== null}
+                    onChange={(e) => setFromContentName(e.target.value)}
+                  />
+                </label>
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="button secondary"
+                    disabled={pendingAction !== null}
+                    onClick={() => setShowFromContentModal(false)}
+                  >
+                    {copy.cancel}
+                  </button>
+                  <button
+                    type="submit"
+                    className="button primary"
+                    disabled={pendingAction !== null}
+                  >
+                    {pendingAction === 'fromContent' ? copy.creatingAction : copy.submitCreate}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Modal: Copy Custom */}
+        {showCopyModal ? (
+          <div className="modal-backdrop">
+            <div className="modal-dialog">
+              <h3>{copy.copyModalTitle}</h3>
+              <form onSubmit={handleCopyCustom}>
+                <label>
+                  <span>{copy.modalNameOptional}</span>
+                  <input
+                    type="text"
+                    value={copyMonsterName}
+                    disabled={pendingAction !== null}
+                    onChange={(e) => setCopyMonsterName(e.target.value)}
+                  />
+                </label>
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="button secondary"
+                    disabled={pendingAction !== null}
+                    onClick={() => setShowCopyModal(false)}
+                  >
+                    {copy.cancel}
+                  </button>
+                  <button
+                    type="submit"
+                    className="button primary"
+                    disabled={pendingAction !== null}
+                  >
+                    {pendingAction === 'copy' ? copy.copyingAction : copy.submitCopy}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        ) : null}
+      </section>
+    </main>
+  )
+}

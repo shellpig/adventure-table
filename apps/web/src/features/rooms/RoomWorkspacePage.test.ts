@@ -23,3 +23,13 @@ describe('Room workspace stale Recent Rooms detection', () => {
     expect(isStaleRecentRoom(cause)).toBe(false)
   })
 })
+
+describe('Room workspace monster library action button visibility', () => {
+  it('guards monster-library link so only owner or dm can see it, and member cannot', async () => {
+    const { readFileSync } = await import('node:fs')
+    const source = readFileSync(new URL('./RoomWorkspacePage.tsx', import.meta.url), 'utf8')
+    expect(source).toContain("recent.authority === 'owner' || recent.authority === 'dm'")
+    expect(source).toContain('/monster-library')
+    expect(source).toContain('copy.monsterLibraryAction')
+  })
+})

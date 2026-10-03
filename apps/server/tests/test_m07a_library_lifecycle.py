@@ -232,9 +232,21 @@ def test_monster_library_builtin_read_only_and_desc_presentation(library_fixture
     assert len(traits) > 0
     nimble = next((t for t in traits if t.get("name") == "Nimble Escape"), None)
     assert nimble is not None
-    assert nimble["desc_is_english"] is True
-    assert nimble["is_english_source"] is True
     assert "Disengage" in nimble["desc"]
+
+    # Pure rules: no presentation keys in rules dicts
+    for group in ("traits", "actions", "bonus_actions", "reactions", "legendary_actions"):
+        for item in rules.get(group, []):
+            assert "desc_is_english" not in item
+            assert "is_english_source" not in item
+            assert "names" not in item
+
+    # Presentation dict checks
+    assert detail["presentation"]["desc_is_english"] is True
+    assert detail["presentation"]["ability_names"]["traits"][0] == {
+        "en": "Nimble Escape",
+        "zh-TW": "迅捷逃逸",
+    }
 
     # Read-only check: attempt to patch built-in template
     patch_resp = fix.client.patch(
@@ -519,3 +531,81 @@ def test_get_entry_by_encoded_ref(library_fixture: LibraryFixture) -> None:
     )
     assert resp.status_code == 200
     assert resp.json()["ref"] == "srd5.1:monster:goblin"
+
+
+def test_builtin_reactions_and_legendary_presentation_and_patch_action_drop(
+    library_fixture: LibraryFixture,
+) -> None:
+    fix = library_fixture
+
+    # 1. Built-in with reactions: bandit-captain
+    ref_bc = quote("srd5.1:monster:bandit-captain", safe="")
+    resp_bc = fix.client.get(
+        f"/api/rooms/{fix.room_id}/monster-library/{ref_bc}",
+        headers=_auth(fix.token_owner),
+    )
+    assert resp_bc.status_code == 200
+    bc_detail = resp_bc.json()
+    assert bc_detail["presentation"]["ability_names"]["reactions"][0] == {
+        "en": "Parry",
+        "zh-TW": "格擋",
+    }
+    # Rules contain no presentation keys
+    for group in ("traits", "actions", "bonus_actions", "reactions", "legendary_actions"):
+        for item in bc_detail["rules"].get(group, []):
+            assert "desc_is_english" not in item
+            assert "is_english_source" not in item
+            assert "names" not in item
+
+    # 2. Built-in with legendary actions: aboleth
+    ref_ab = quote("srd5.1:monster:aboleth", safe="")
+    resp_ab = fix.client.get(
+        f"/api/rooms/{fix.room_id}/monster-library/{ref_ab}",
+        headers=_auth(fix.token_owner),
+    )
+    assert resp_ab.status_code == 200
+    ab_detail = resp_ab.json()
+    assert ab_detail["presentation"]["ability_names"]["legendary_actions"][0] == {
+        "en": "Detect",
+        "zh-TW": "偵查",
+    }
+
+    # 3. From-content copy keeps ability_names
+    c_resp = fix.client.post(
+        f"/api/rooms/{fix.room_id}/monster-library/custom/from-content",
+        json={"content_key": "srd5.1:monster:bandit-captain"},
+        headers=_auth(fix.token_owner),
+    )
+    assert c_resp.status_code == 201
+    custom_bc = c_resp.json()
+    assert custom_bc["presentation"]["ability_names"]["reactions"][0] == {
+        "en": "Parry",
+        "zh-TW": "格擋",
+    }
+    assert "actions" in custom_bc["presentation"]["ability_names"]
+    template_id = custom_bc["ref"].removeprefix("custom:")
+
+    # 4. Patching actions drops ONLY actions' ability_names
+    patch_resp = fix.client.patch(
+        f"/api/rooms/{fix.room_id}/monster-library/custom/{template_id}",
+        json={
+            "expected_revision": 1,
+            "actions": [
+                {
+                    "name": "Custom Strike",
+                    "desc": "Strikes fiercely.",
+                    "kind": "attack",
+                }
+            ],
+        },
+        headers=_auth(fix.token_owner),
+    )
+    assert patch_resp.status_code == 200
+    patched_bc = patch_resp.json()
+    # actions ability_names is dropped
+    assert "actions" not in patched_bc["presentation"]["ability_names"]
+    # reactions ability_names is still preserved
+    assert patched_bc["presentation"]["ability_names"]["reactions"][0] == {
+        "en": "Parry",
+        "zh-TW": "格擋",
+    }

@@ -106,9 +106,6 @@ def _normalize_traits_collection(
             "dc",
             "usage",
             "spellcasting",
-            "desc_is_english",
-            "is_english_source",
-            "names",
         ):
             if extra in raw and raw[extra] is not None:
                 t_dict[extra] = raw[extra]
@@ -155,6 +152,62 @@ class MonsterLibraryService:
             return None
         except (ContentValidationError, KeyError):
             return None
+
+    def _build_builtin_presentation(
+        self,
+        entry: ContentEntry,
+        rules: dict[str, object],
+    ) -> dict[str, object]:
+        zh_name = self._resolve_overlay_string(entry.key, "name", "zh-TW")
+        names: dict[str, str] = {"en": entry.name}
+        if zh_name:
+            names["zh-TW"] = zh_name
+
+        overlay_group_paths: tuple[tuple[str, str], ...] = (
+            ("traits", "data.special_abilities"),
+            ("actions", "data.actions"),
+            ("bonus_actions", "data.bonus_actions"),
+            ("reactions", "data.reactions"),
+            ("legendary_actions", "data.legendary_actions"),
+        )
+
+        ability_names: dict[str, list[dict[str, str]]] = {}
+        for group, overlay_prefix in overlay_group_paths:
+            items = rules.get(group)
+            if isinstance(items, list):
+                group_list: list[dict[str, str]] = []
+                for i, ability in enumerate(items):
+                    if isinstance(ability, dict):
+                        en_name = str(ability.get("name", ""))
+                        item: dict[str, str] = {"en": en_name}
+                        zh_ability = self._resolve_overlay_string(
+                            entry.key, f"{overlay_prefix}.{i}.name", "zh-TW"
+                        )
+                        if zh_ability:
+                            item["zh-TW"] = zh_ability
+                        group_list.append(item)
+                ability_names[group] = group_list
+
+        return {
+            "names": names,
+            "name_is_custom": False,
+            "ability_names": ability_names,
+            "desc_is_english": True,
+        }
+
+    def _matches_builtin_query(self, entry: ContentEntry, normalized_query: str | None) -> bool:
+        if normalized_query is None:
+            return True
+        zh_name = self._resolve_overlay_string(entry.key, "name", "zh-TW")
+        data = entry.data if isinstance(entry.data, dict) else {}
+        m_type = str(data.get("type", ""))
+        subtype = str(data.get("subtype", ""))
+        return (
+            normalized_query in entry.name.casefold()
+            or (zh_name is not None and normalized_query in zh_name.casefold())
+            or normalized_query in m_type.casefold()
+            or (bool(subtype) and normalized_query in subtype.casefold())
+        )
 
     @staticmethod
     def _to_detail_view(stored: StoredMonsterTemplate) -> MonsterLibraryDetailView:
@@ -307,22 +360,10 @@ class MonsterLibraryService:
 
         if source == "builtin":
             builtin_entries = self.content_registry.list_kind("monster")
-            matched_builtin: list[ContentEntry] = []
-            for entry in builtin_entries:
-                if normalized_query is not None:
-                    zh_name = self._resolve_overlay_string(entry.key, "name", "zh-TW")
-                    data = entry.data if isinstance(entry.data, dict) else {}
-                    m_type = str(data.get("type", ""))
-                    subtype = str(data.get("subtype", ""))
-                    matches = (
-                        normalized_query in entry.name.casefold()
-                        or (zh_name is not None and normalized_query in zh_name.casefold())
-                        or normalized_query in m_type.casefold()
-                        or (bool(subtype) and normalized_query in subtype.casefold())
-                    )
-                    if not matches:
-                        continue
-                matched_builtin.append(entry)
+            matched_builtin = [
+                entry for entry in builtin_entries
+                if self._matches_builtin_query(entry, normalized_query)
+            ]
             matched_builtin.sort(key=lambda e: (e.name.casefold(), e.key))
             return [_builtin_to_summary(e) for e in matched_builtin[offset : offset + limit]]
 
@@ -337,22 +378,11 @@ class MonsterLibraryService:
         custom_items = [_custom_to_summary(c) for c in stored_custom]
 
         builtin_entries = self.content_registry.list_kind("monster")
-        builtin_items: list[MonsterLibrarySummaryView] = []
-        for entry in builtin_entries:
-            if normalized_query is not None:
-                zh_name = self._resolve_overlay_string(entry.key, "name", "zh-TW")
-                data = entry.data if isinstance(entry.data, dict) else {}
-                m_type = str(data.get("type", ""))
-                subtype = str(data.get("subtype", ""))
-                matches = (
-                    normalized_query in entry.name.casefold()
-                    or (zh_name is not None and normalized_query in zh_name.casefold())
-                    or normalized_query in m_type.casefold()
-                    or (bool(subtype) and normalized_query in subtype.casefold())
-                )
-                if not matches:
-                    continue
-            builtin_items.append(_builtin_to_summary(entry))
+        builtin_items = [
+            _builtin_to_summary(entry)
+            for entry in builtin_entries
+            if self._matches_builtin_query(entry, normalized_query)
+        ]
 
         merged = custom_items + builtin_items
         merged.sort(key=lambda item: (item.name.casefold(), item.ref))
@@ -410,44 +440,12 @@ class MonsterLibraryService:
         monster_data = MonsterData.model_validate(entry.data)
         rules = monster_to_reusable_rules(monster_data)
 
-        zh_name = self._resolve_overlay_string(entry.key, "name", "zh-TW")
-        names: dict[str, str] = {"en": entry.name}
-        if zh_name:
-            names["zh-TW"] = zh_name
-
-        # Built-in abilities: resolve translated ability names where available,
-        # but mark desc as English source text (not translated in zh-TW per AGENTS rule 7 exception)
-        actions = rules.get("actions")
-        if isinstance(actions, list):
-            for i, act in enumerate(actions):
-                if isinstance(act, dict):
-                    act_zh = self._resolve_overlay_string(entry.key, f"data.actions.{i}.name", "zh-TW")
-                    if act_zh:
-                        act["names"] = {"en": str(act.get("name", "")), "zh-TW": act_zh}
-                    act["desc_is_english"] = True
-                    act["is_english_source"] = True
-
-        traits = rules.get("traits")
-        if isinstance(traits, list):
-            for i, trait in enumerate(traits):
-                if isinstance(trait, dict):
-                    trait_zh = self._resolve_overlay_string(entry.key, f"data.special_abilities.{i}.name", "zh-TW")
-                    if trait_zh:
-                        trait["names"] = {"en": str(trait.get("name", "")), "zh-TW": trait_zh}
-                    trait["desc_is_english"] = True
-                    trait["is_english_source"] = True
-
-        presentation: dict[str, object] = {
-            "names": names,
-            "name_is_custom": False,
-            "desc_is_english": True,
-            "is_english_desc": True,
-        }
+        presentation = self._build_builtin_presentation(entry, rules)
 
         return MonsterLibraryDetailView(
             ref=entry.key,
             name=entry.name,
-            names=names,
+            names=dict(presentation.get("names", {})),
             name_is_custom=False,
             source_kind="builtin",
             source_key=entry.key,
@@ -540,7 +538,9 @@ class MonsterLibraryService:
 
         monster_data = MonsterData.model_validate(entry.data)
         rules = monster_to_reusable_rules(monster_data)
+        builtin_presentation = self._build_builtin_presentation(entry, rules)
 
+        presentation_json = deepcopy(builtin_presentation)
         if payload.name and payload.name.strip():
             name = payload.name.strip()
             names: dict[str, str] = {}
@@ -548,16 +548,11 @@ class MonsterLibraryService:
             rules["name"] = name
         else:
             name = entry.name
-            zh_name = self._resolve_overlay_string(entry.key, "name", "zh-TW")
-            names = {"en": entry.name}
-            if zh_name:
-                names["zh-TW"] = zh_name
+            names = dict(builtin_presentation.get("names", {}))
             name_is_custom = False
 
-        presentation_json: dict[str, object] = {
-            "names": names,
-            "name_is_custom": name_is_custom,
-        }
+        presentation_json["names"] = names
+        presentation_json["name_is_custom"] = name_is_custom
 
         stored = self.repository.create_custom_template(
             room_id=room_id,
@@ -610,6 +605,7 @@ class MonsterLibraryService:
                     f"monster template revision conflict: expected {payload.expected_revision}, got {source.revision}"
                 )
 
+            presentation_json = deepcopy(source.presentation_json)
             if payload.name and payload.name.strip():
                 name = payload.name.strip()
                 names: dict[str, str] = {}
@@ -622,10 +618,8 @@ class MonsterLibraryService:
             rules = deepcopy(source.rules)
             rules["name"] = name
 
-            presentation_json: dict[str, object] = {
-                "names": names,
-                "name_is_custom": name_is_custom,
-            }
+            presentation_json["names"] = names
+            presentation_json["name_is_custom"] = name_is_custom
 
             stored = self.repository.create_custom_template(
                 room_id=room_id,
@@ -712,6 +706,12 @@ class MonsterLibraryService:
 
             if "traits" in payload.model_fields_set:
                 rules["traits"] = _normalize_traits_collection(payload.traits)
+
+            ability_names = presentation_json.get("ability_names")
+            if isinstance(ability_names, dict):
+                for group in ("actions", "bonus_actions", "reactions", "legendary_actions", "traits"):
+                    if group in payload.model_fields_set:
+                        ability_names.pop(group, None)
 
             if "proficiencies" in payload.model_fields_set and payload.proficiencies is not None:
                 rules["proficiencies"] = payload.proficiencies

@@ -200,4 +200,32 @@ describe('SessionCombatMonsterControls', () => {
     expect(markup).toContain('結果判定')
     expect(markup).toContain('對玩家公開')
   })
+
+  it('renders Save as Template action button and input for DM in both locales', () => {
+    const markupEn = renderControls()
+    expect(markupEn).toContain('data-monster-save-template')
+    expect(markupEn).toContain('data-monster-template-name')
+    expect(markupEn).toContain(copyEn.combatSaveAsTemplateAction)
+    expect(markupEn).toContain(copyEn.combatSaveAsTemplateHeading)
+
+    const copyZh = sessionCopy('zh-TW')
+    const markupZh = renderControls(
+      {
+        copy: copyZh,
+        entry: makeEntry({ status: 'active' }),
+        projection: makeProjection(),
+      },
+      'zh-TW',
+    )
+    expect(markupZh).toContain(copyZh.combatSaveAsTemplateAction)
+    expect(markupZh).toContain(copyZh.combatSaveAsTemplateHeading)
+  })
+
+  it('connects Save as Template to createCustomMonsterFromInstance and error mapping', async () => {
+    const { readFileSync } = await import('node:fs')
+    const source = readFileSync(new URL('./SessionCombatMonsterControls.tsx', import.meta.url), 'utf8')
+    expect(source).toContain('createCustomMonsterFromInstance')
+    expect(source).toContain('monsterLibraryErrorMessage')
+    expect(source).toContain('copy.combatSaveAsTemplateSuccess')
+  })
 })

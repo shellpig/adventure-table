@@ -445,6 +445,11 @@ const copy = {
     combatOutcomeNotePlaceholder: '選「其他」時必填',
     combatOutcomeSubmit: '套用結果',
     combatOutcomeCurrentTurnHint: '目前輪到此戰鬥者，請先推進回合',
+    combatSaveAsTemplateHeading: '儲存為範本',
+    combatSaveAsTemplateNamePlaceholder: '範本名稱（選填）',
+    combatSaveAsTemplateAction: '儲存為怪物範本',
+    combatSaveAsTemplateSaving: '正在儲存為範本…',
+    combatSaveAsTemplateSuccess: '已成功儲存為怪物範本',
   },
   en: {
     locale: 'en' as const,
@@ -888,6 +893,11 @@ const copy = {
     combatOutcomeNotePlaceholder: 'Required when "Other"',
     combatOutcomeSubmit: 'Apply outcome',
     combatOutcomeCurrentTurnHint: 'This combatant has the current turn; advance the turn first',
+    combatSaveAsTemplateHeading: 'Save as Template',
+    combatSaveAsTemplateNamePlaceholder: 'Template name (optional)',
+    combatSaveAsTemplateAction: 'Save as monster template',
+    combatSaveAsTemplateSaving: 'Saving as template…',
+    combatSaveAsTemplateSuccess: 'Saved as monster template',
   },
 } as const
 

@@ -9,6 +9,8 @@ import {
   type MonsterInstancePatchInput,
   type MonsterOutcome,
 } from '../../api/combat'
+import { createCustomMonsterFromInstance } from '../../api/monsterLibrary'
+import { monsterLibraryCopy, monsterLibraryErrorMessage } from './monsterLibraryCopy'
 import { runCombatMutation } from './sessionCombat'
 import type { SessionCopy } from './sessionCopy'
 import { requestId } from './requestId'
@@ -45,6 +47,28 @@ export function SessionCombatMonsterControls({
   const [positionNote, setPositionNote] = useState(projection.position_note ?? '')
   const [outcome, setOutcome] = useState<MonsterOutcome>('dead')
   const [outcomeNote, setOutcomeNote] = useState('')
+  const [templateName, setTemplateName] = useState('')
+  const [savingTemplate, setSavingTemplate] = useState(false)
+  const [templateNotice, setTemplateNotice] = useState<{ kind: 'success' | 'error'; message: string } | null>(null)
+
+  const handleSaveAsTemplate = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setSavingTemplate(true)
+    setTemplateNotice(null)
+    try {
+      await createCustomMonsterFromInstance(roomId, token, {
+        instance_id: instanceId,
+        name: templateName.trim() || undefined,
+      })
+      setTemplateNotice({ kind: 'success', message: copy.combatSaveAsTemplateSuccess })
+      setTemplateName('')
+    } catch (cause) {
+      const msg = monsterLibraryErrorMessage(cause, monsterLibraryCopy(copy.locale))
+      setTemplateNotice({ kind: 'error', message: msg })
+    } finally {
+      setSavingTemplate(false)
+    }
+  }
 
   const runMutation = (mutation: () => Promise<void>) =>
     runCombatMutation(setPending, mutation, refresh, onError)
@@ -307,6 +331,44 @@ export function SessionCombatMonsterControls({
           </div>
         </form>
       ) : null}
+
+      <form className="session-combat__form session-combat__save-template-form" onSubmit={handleSaveAsTemplate}>
+        <div className="session-combat__sub-heading">
+          {copy.combatSaveAsTemplateHeading}
+        </div>
+        {templateNotice ? (
+          <div
+            className={templateNotice.kind === 'success' ? 'form-success' : 'form-error'}
+            data-monster-template-notice={templateNotice.kind}
+          >
+            {templateNotice.message}
+          </div>
+        ) : null}
+        <div className="session-combat__form-row">
+          <label>
+            <span>{copy.combatSaveAsTemplateNamePlaceholder}</span>
+            <input
+              type="text"
+              data-monster-template-name
+              value={templateName}
+              placeholder={projection.name}
+              maxLength={120}
+              disabled={pending || savingTemplate}
+              onChange={(e) => setTemplateName(e.target.value)}
+            />
+          </label>
+        </div>
+        <div className="session-combat__form-actions">
+          <button
+            type="submit"
+            className="button secondary compact"
+            data-monster-save-template
+            disabled={pending || savingTemplate}
+          >
+            {savingTemplate ? copy.combatSaveAsTemplateSaving : copy.combatSaveAsTemplateAction}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }
