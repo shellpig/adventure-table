@@ -491,15 +491,17 @@ def test_copy_custom_template(library_fixture: LibraryFixture) -> None:
 def test_patch_only_armor_class_preserves_everything_else(library_fixture: LibraryFixture) -> None:
     fix = library_fixture
 
-    # Copy goblin to custom
+    # Cult Fanatic carries both Multiattack and a Spellcasting trait (test guide A.1)
     c_resp = fix.client.post(
         f"/api/rooms/{fix.room_id}/monster-library/custom/from-content",
-        json={"content_key": "srd5.1:monster:goblin", "name": "Heavy Goblin"},
+        json={"content_key": "srd5.1:monster:cult-fanatic", "name": "Heavy Fanatic"},
         headers=_auth(fix.token_owner),
     )
     assert c_resp.status_code == 201
     template_id = c_resp.json()["ref"].removeprefix("custom:")
     orig_rules = c_resp.json()["rules"]
+    assert any(action["name"] == "Multiattack" for action in orig_rules["actions"])
+    assert any(trait["name"] == "Spellcasting" for trait in orig_rules["traits"])
 
     # PATCH only armor_class
     patch_resp = fix.client.patch(
@@ -520,6 +522,11 @@ def test_patch_only_armor_class_preserves_everything_else(library_fixture: Libra
     assert patched["rules"]["ability_scores"] == orig_rules["ability_scores"]
     assert patched["rules"]["speed"] == orig_rules["speed"]
     assert patched["rules"]["senses"] == orig_rules["senses"]
+    # Nothing outside the edited AC changed, including Multiattack and Spellcasting.
+    edited = {"armor_class", "armor_class_options"}
+    assert {k: v for k, v in patched["rules"].items() if k not in edited} == {
+        k: v for k, v in orig_rules.items() if k not in edited
+    }
 
 
 def test_get_entry_by_encoded_ref(library_fixture: LibraryFixture) -> None:

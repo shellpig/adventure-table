@@ -1263,3 +1263,28 @@ def test_human_room_authority_matrix(auth_fixture: AuthFixture) -> None:
         headers=_auth(fix.dm_token),
     )
     assert dm_list.status_code == 200
+
+
+def test_member_controlling_dm_seat_still_lacks_library_authority(auth_fixture: AuthFixture) -> None:
+    # Library authoring follows Room authority, not the Session Seat role (shared section 3).
+    fix = auth_fixture
+    with fix.engine.begin() as connection:
+        connection.execute(
+            update(campaign_seats)
+            .where(campaign_seats.c.id == fix.dm_seat_id)
+            .values(controller_access_session_id=fix.member_context.access_session_id)
+        )
+
+    for response in (
+        fix.client.get(
+            f"/api/rooms/{fix.room_id}/monster-library",
+            headers=_auth(fix.member_token),
+        ),
+        fix.client.post(
+            f"/api/rooms/{fix.room_id}/monster-library/custom",
+            json={"name": "Seat Only Monster", "armor_class": 12, "max_hp": 9},
+            headers=_auth(fix.member_token),
+        ),
+    ):
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "monster_library_forbidden"
