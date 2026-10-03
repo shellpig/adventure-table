@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import create_engine, insert
@@ -13,7 +13,7 @@ from app.persistence.combat.tables import monster_instances, monster_templates
 from app.persistence.rooms.tables import campaigns, rooms
 
 
-def _repository() -> tuple[MonsterRepository, object, object]:
+def _repository() -> tuple[MonsterRepository, object, UUID, UUID]:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     metadata.create_all(engine, tables=[rooms, campaigns, monster_templates, monster_instances])
     room_id = uuid4()
@@ -44,11 +44,11 @@ def _repository() -> tuple[MonsterRepository, object, object]:
                 updated_at=now,
             )
         )
-    return MonsterRepository(engine), engine, campaign_id
+    return MonsterRepository(engine), engine, campaign_id, room_id
 
 
 def test_quick_enemy_persists_minimum_rules_and_structured_canonical_action() -> None:
-    repository, engine, campaign_id = _repository()
+    repository, engine, campaign_id, room_id = _repository()
     try:
         enemy = repository.create_quick_enemy(
             campaign_id=campaign_id,
@@ -91,7 +91,7 @@ def test_quick_enemy_persists_minimum_rules_and_structured_canonical_action() ->
 
 
 def test_quick_enemy_preserves_explicit_ranged_attack_kind() -> None:
-    repository, engine, campaign_id = _repository()
+    repository, engine, campaign_id, room_id = _repository()
     try:
         enemy = repository.create_quick_enemy(
             campaign_id=campaign_id,
@@ -127,7 +127,7 @@ def test_quick_enemy_maps_melee_attack_kind_alias() -> None:
 
 
 def test_quick_enemy_damage_with_type_persists_split_parts() -> None:
-    repository, engine, campaign_id = _repository()
+    repository, engine, campaign_id, room_id = _repository()
     try:
         enemy = repository.create_quick_enemy(
             campaign_id=campaign_id,
@@ -148,7 +148,7 @@ def test_quick_enemy_damage_with_type_persists_split_parts() -> None:
 
 
 def test_goblin_template_instances_keep_independent_live_state() -> None:
-    repository, engine, campaign_id = _repository()
+    repository, engine, campaign_id, room_id = _repository()
     try:
         rules = {
             "armor_class": 15,
@@ -166,13 +166,13 @@ def test_goblin_template_instances_keep_independent_live_state() -> None:
             ],
         }
         template = repository.create_template(
-            campaign_id=campaign_id,
+            room_id=room_id,
             name="Goblin",
             source_key="srd5.1:monster:goblin",
             rules=rules,
         )
-        instance_a = repository.create_instance_from_template(template.id, name="Goblin A")
-        instance_b = repository.create_instance_from_template(template.id, name="Goblin B")
+        instance_a = repository.create_instance_from_template(template.id, campaign_id=campaign_id, name="Goblin A")
+        instance_b = repository.create_instance_from_template(template.id, campaign_id=campaign_id, name="Goblin B")
 
         changed_a = repository.update_live_state(
             instance_a.id,
@@ -190,7 +190,11 @@ def test_goblin_template_instances_keep_independent_live_state() -> None:
         assert unchanged_b.current_hp == 7
         assert unchanged_b.initiative is None
         assert unchanged_b.reaction_available is True
-        assert unchanged_b.rules_snapshot == rules
+        assert unchanged_b.rules_snapshot["armor_class"] == rules["armor_class"]
+        assert unchanged_b.rules_snapshot["max_hp"] == rules["max_hp"]
+        assert unchanged_b.rules_snapshot["speed"] == rules["speed"]
+        assert unchanged_b.rules_snapshot["actions"] == rules["actions"]
+        assert unchanged_b.rules_snapshot["provenance"]["template_revision"] == 1
         assert unchanged_template is not None
         assert unchanged_template.rules == rules
     finally:
@@ -198,7 +202,7 @@ def test_goblin_template_instances_keep_independent_live_state() -> None:
 
 
 def test_save_as_template_copies_rules_but_not_live_state() -> None:
-    repository, engine, campaign_id = _repository()
+    repository, engine, campaign_id, room_id = _repository()
     try:
         enemy = repository.create_quick_enemy(
             campaign_id=campaign_id,
@@ -224,7 +228,7 @@ def test_save_as_template_copies_rules_but_not_live_state() -> None:
             # rules_snapshot; size is rules, not live state, so it is copied.
             "size": "medium",
         }
-        spawned = repository.create_instance_from_template(template.id)
+        spawned = repository.create_instance_from_template(template.id, campaign_id=campaign_id)
         assert spawned.current_hp == 24
         assert spawned.initiative is None
         assert spawned.reaction_available is True
@@ -236,11 +240,11 @@ def test_save_as_template_copies_rules_but_not_live_state() -> None:
 
 
 def test_instance_snapshot_is_immutable_when_template_rules_change() -> None:
-    repository, engine, campaign_id = _repository()
+    repository, engine, campaign_id, room_id = _repository()
     try:
         rules = {"armor_class": 13, "max_hp": 9, "speed": {"walk": "30 ft."}}
-        template = repository.create_template(campaign_id=campaign_id, name="Scout", rules=rules)
-        instance = repository.create_instance_from_template(template.id)
+        template = repository.create_template(room_id=room_id, name="Scout", rules=rules)
+        instance = repository.create_instance_from_template(template.id, campaign_id=campaign_id)
         rules["max_hp"] = 999
         assert repository.get_instance(instance.id).rules_snapshot["max_hp"] == 9
     finally:
@@ -248,11 +252,9 @@ def test_instance_snapshot_is_immutable_when_template_rules_change() -> None:
 
 
 def test_list_instances_is_campaign_scoped() -> None:
-    repository, engine, campaign_id = _repository()
+    repository, engine, campaign_id, room_id = _repository()
     try:
         other_campaign = uuid4()
-        with engine.connect() as connection:
-            room_id = connection.execute(rooms.select()).mappings().one()["id"]
         now = datetime(2026, 9, 14, tzinfo=timezone.utc)
         with engine.begin() as connection:
             connection.execute(
@@ -286,7 +288,7 @@ def test_list_instances_is_campaign_scoped() -> None:
 
 
 def test_rules_and_template_source_validation() -> None:
-    repository, engine, campaign_id = _repository()
+    repository, engine, campaign_id, room_id = _repository()
     try:
         with pytest.raises(MonsterPersistenceError, match="missing required fields"):
             repository.create_instance(
@@ -307,7 +309,7 @@ def test_rules_and_template_source_validation() -> None:
 
 
 def test_quick_enemy_rejects_malformed_attack() -> None:
-    repository, engine, campaign_id = _repository()
+    repository, engine, campaign_id, room_id = _repository()
     try:
         with pytest.raises(MonsterPersistenceError, match="invalid quick enemy attack"):
             repository.create_quick_enemy(
@@ -323,32 +325,64 @@ def test_quick_enemy_rejects_malformed_attack() -> None:
 
 
 def test_custom_template_cannot_cross_campaign_boundary() -> None:
-    repository, engine, campaign_id = _repository()
+    repository, engine, campaign_id, room_id = _repository()
     try:
         template = repository.create_template(
-            campaign_id=campaign_id,
-            name="Campaign One",
+            room_id=room_id,
+            name="Room Template",
             rules={"armor_class": 12, "max_hp": 8, "speed": {"walk": "30 ft."}},
         )
-        other_campaign = uuid4()
-        with engine.connect() as connection:
-            room_id = connection.execute(rooms.select()).mappings().one()["id"]
+        other_campaign_same_room = uuid4()
+        other_room_id = uuid4()
+        other_campaign_other_room = uuid4()
         now = datetime(2026, 9, 14, tzinfo=timezone.utc)
         with engine.begin() as connection:
             connection.execute(
                 insert(campaigns).values(
-                    id=other_campaign,
+                    id=other_campaign_same_room,
                     room_id=room_id,
-                    name="Other",
+                    name="Other Same Room",
                     ruleset="dnd5e-2014",
                     status="active",
                     created_at=now,
                     updated_at=now,
                 )
             )
-        with pytest.raises(MonsterPersistenceError, match="same campaign"):
+            connection.execute(
+                insert(rooms).values(
+                    id=other_room_id,
+                    code="OTHERRM",
+                    name="Other Room",
+                    password_salt=b"0" * 32,
+                    password_hash=b"1" * 64,
+                    owner_key_hash=b"2" * 32,
+                    dm_key_hash=b"3" * 32,
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+            connection.execute(
+                insert(campaigns).values(
+                    id=other_campaign_other_room,
+                    room_id=other_room_id,
+                    name="Other Room Campaign",
+                    ruleset="dnd5e-2014",
+                    status="active",
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+        shared_instance = repository.create_instance(
+            campaign_id=other_campaign_same_room,
+            name="Shared",
+            rules_snapshot=template.rules,
+            custom_template_id=template.id,
+        )
+        assert shared_instance.custom_template_id == template.id
+
+        with pytest.raises(MonsterPersistenceError, match="must belong to the same room"):
             repository.create_instance(
-                campaign_id=other_campaign,
+                campaign_id=other_campaign_other_room,
                 name="Leak",
                 rules_snapshot=template.rules,
                 custom_template_id=template.id,

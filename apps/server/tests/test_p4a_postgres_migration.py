@@ -53,7 +53,9 @@ def _revision_set() -> set[str]:
         engine.dispose()
 
 
-def _assert_p4a_schema() -> None:
+def _assert_p4a_schema(*, room_scoped_templates: bool = False) -> None:
+    # M07-A (0041) moves monster_templates from Campaign to Room scope.
+    template_scope = "room_id" if room_scoped_templates else "campaign_id"
     assert POSTGRES_URL is not None
     engine = create_engine(POSTGRES_URL)
     try:
@@ -69,7 +71,7 @@ def _assert_p4a_schema() -> None:
         }
         assert {
             "id",
-            "campaign_id",
+            template_scope,
             "name",
             "source_key",
             "rules",
@@ -108,9 +110,11 @@ def _assert_p4a_schema() -> None:
             tuple(fk["constrained_columns"]): fk
             for fk in inspector.get_foreign_keys("monster_instances")
         }
-        assert template_fks[("campaign_id",)]["options"].get("ondelete") == "CASCADE"
+        assert template_fks[(template_scope,)]["options"].get("ondelete") == "CASCADE"
         assert instance_fks[("campaign_id",)]["options"].get("ondelete") == "CASCADE"
-        assert instance_fks[("custom_template_id",)]["options"].get("ondelete") == "SET NULL"
+        assert instance_fks[("custom_template_id",)]["options"].get("ondelete") == (
+            "RESTRICT" if room_scoped_templates else "SET NULL"
+        )
 
         checks = {
             constraint["name"]
@@ -126,7 +130,7 @@ def _assert_p4a_schema() -> None:
 
         template_indexes = {index["name"] for index in inspector.get_indexes("monster_templates")}
         instance_indexes = {index["name"] for index in inspector.get_indexes("monster_instances")}
-        assert "ix_monster_templates_campaign_id" in template_indexes
+        assert f"ix_monster_templates_{template_scope}" in template_indexes
         assert "ix_monster_instances_campaign_id" in instance_indexes
         assert "ix_monster_instances_custom_template_id" in instance_indexes
     finally:
@@ -159,8 +163,8 @@ def test_p4a_schema_survives_full_postgres_upgrade_to_heads() -> None:
 
     # P4-A is no longer necessarily an Alembic head once later P4 revisions
     # descend from it. The durable contract is that a full upgrade still
-    # materializes the P4-A schema unchanged.
-    _assert_p4a_schema()
+    # materializes the P4-A schema, with M07-A's Room-scoped templates.
+    _assert_p4a_schema(room_scoped_templates=True)
 
 
 def test_p4a_migration_downgrade_removes_only_combat_tables_on_real_postgres() -> None:

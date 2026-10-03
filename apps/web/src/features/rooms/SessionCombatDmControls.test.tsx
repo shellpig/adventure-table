@@ -174,4 +174,18 @@ describe('SessionCombatDmControls', () => {
 
     expect(markup).not.toContain(copy.combatAdvanceTurn)
   })
+
+  it('loads custom templates from library with include_archived=false and sends custom ref via createMonsterFromContent', async () => {
+    const { readFileSync } = await import('node:fs')
+    const source = readFileSync(new URL('./SessionCombatDmControls.tsx', import.meta.url), 'utf8')
+    expect(source).toContain('listMonsterLibrary')
+    expect(source).toContain("source: 'custom'")
+    expect(source).toContain('include_archived: false')
+    expect(source).toContain('content_key: selectedMonsterKey')
+    expect(source).toContain('createMonsterFromContent')
+    expect(source).toContain('combinedMonsterOptions')
+    expect(source).toContain('monster_library_forbidden')
+    expect(source).toContain('onError(cause)')
+    expect(source).toContain('formatMonsterName')
+  })
 })

@@ -6,7 +6,15 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.engine import Connection
 
-from app.domain.adventures.payloads import dump_entry_payload, parse_entry_payload
+from app.domain.adventures.payloads import (
+    MonsterRefPayload,
+    NpcPayload,
+    dump_entry_payload,
+    parse_entry_payload,
+)
+from app.domain.monster_library.references import (
+    validate_custom_monster_template_ref,
+)
 from app.domain.adventures.schemas import (
     AdventureArchivedError,
     AdventureAttachedError,
@@ -373,7 +381,20 @@ class AdventureService:
             created_at=now,
             updated_at=now,
         )
-        self.repository.insert_entry(stored, connection=connection)
+        def _insert(conn: Connection) -> None:
+            if isinstance(parsed_payload, (NpcPayload, MonsterRefPayload)):
+                validate_custom_monster_template_ref(
+                    conn,
+                    room_id=room_id,
+                    ref=parsed_payload.monster_template_ref,
+                )
+            self.repository.insert_entry(stored, connection=conn)
+
+        if connection is not None:
+            _insert(connection)
+        else:
+            with self.repository.engine.begin() as conn:
+                _insert(conn)
         return _to_entry_view(stored)
 
     def get_entry(
@@ -422,28 +443,49 @@ class AdventureService:
                 f"Adventure entry {entry_id} not found in adventure {adventure_id}"
             )
 
+        parsed_entry_payload = None
         dumped_data: dict[str, object] | None = None
         if payload.data is not None:
-            dumped_data = dump_entry_payload(parse_entry_payload(existing.kind, payload.data))
+            parsed_entry_payload = parse_entry_payload(existing.kind, payload.data)
+            dumped_data = dump_entry_payload(parsed_entry_payload)
 
         if "parent_entry_id" in payload.model_fields_set:
             self._validate_parent(adventure_id, payload.parent_entry_id, entry_id=entry_id)
 
         now = datetime.now(timezone.utc)
-        updated = self.repository.update_entry(
-            adventure_id,
-            entry_id,
-            title=payload.title if "title" in payload.model_fields_set else UNSET,
-            body=payload.body if "body" in payload.model_fields_set else UNSET,
-            data_json=dumped_data,
-            visibility=payload.visibility if "visibility" in payload.model_fields_set else None,
-            parent_entry_id=(
-                payload.parent_entry_id
-                if "parent_entry_id" in payload.model_fields_set
-                else UNSET
-            ),
-            updated_at=now,
-        )
+
+        def _update(conn: Connection) -> StoredAdventureEntry | None:
+            if isinstance(parsed_entry_payload, (NpcPayload, MonsterRefPayload)):
+                prev_ref = (
+                    existing.data_json.get("monster_template_ref")
+                    if isinstance(existing.data_json, dict)
+                    else None
+                )
+                prev_ref_str = str(prev_ref) if prev_ref is not None else None
+                validate_custom_monster_template_ref(
+                    conn,
+                    room_id=room_id,
+                    ref=parsed_entry_payload.monster_template_ref,
+                    previous_ref=prev_ref_str,
+                )
+            return self.repository.update_entry(
+                adventure_id,
+                entry_id,
+                title=payload.title if "title" in payload.model_fields_set else UNSET,
+                body=payload.body if "body" in payload.model_fields_set else UNSET,
+                data_json=dumped_data,
+                visibility=payload.visibility if "visibility" in payload.model_fields_set else None,
+                parent_entry_id=(
+                    payload.parent_entry_id
+                    if "parent_entry_id" in payload.model_fields_set
+                    else UNSET
+                ),
+                updated_at=now,
+                connection=conn,
+            )
+
+        with self.repository.engine.begin() as conn:
+            updated = _update(conn)
         if updated is None:
             raise AdventureEntryNotFoundError(f"Adventure entry {entry_id} not found")
         assets_map = self._resolve_entry_assets(adventure_id, room_id)

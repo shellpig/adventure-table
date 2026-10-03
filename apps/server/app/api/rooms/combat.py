@@ -21,6 +21,10 @@ from app.domain.spatial.targeting import (
 )
 from app.content.registry import ContentNotFoundError
 from app.domain.battle_maps.schemas import BattleMapNotFoundError
+from app.domain.monster_library.errors import (
+    MonsterTemplateArchivedError,
+    MonsterTemplateNotFoundError,
+)
 from app.domain.combat.board import (
     CombatBoardImageNotFoundError,
     CombatPlacementInvalidError,
@@ -153,6 +157,10 @@ def _map_combat_error(exc: Exception) -> APIError:
         return APIError(409, "session_not_active", "Session is not active")
     if isinstance(exc, ContentNotFoundError):
         return APIError(404, "unknown_reference", str(exc))
+    if isinstance(exc, MonsterTemplateNotFoundError):
+        return APIError(404, "monster_template_not_found", str(exc))
+    if isinstance(exc, MonsterTemplateArchivedError):
+        return APIError(409, "monster_template_archived", str(exc))
     if isinstance(exc, MonsterPersistenceError):
         return APIError(409, "monster_instance_conflict", str(exc))
     if isinstance(

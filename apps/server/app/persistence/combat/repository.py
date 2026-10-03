@@ -14,6 +14,7 @@ from app.content.p4a_combat_templates import (
     normalize_monster_action,
 )
 from app.persistence.combat.tables import monster_instances, monster_templates
+from app.persistence.rooms.tables import campaigns
 
 
 class MonsterPersistenceError(ValueError):
@@ -26,10 +27,13 @@ _UNSET = object()
 @dataclass(frozen=True)
 class StoredMonsterTemplate:
     id: UUID
-    campaign_id: UUID
+    room_id: UUID
     name: str
     source_key: str | None
     rules: dict[str, Any]
+    revision: int
+    archived_at: datetime | None
+    presentation_json: dict[str, Any]
     created_at: datetime
     updated_at: datetime
 
@@ -81,6 +85,7 @@ def _validate_rules(rules: dict[str, Any]) -> dict[str, Any]:
 def _template_from_row(row: Any) -> StoredMonsterTemplate:
     values = dict(row)
     values["rules"] = deepcopy(values["rules"])
+    values["presentation_json"] = deepcopy(values.get("presentation_json") or {})
     return StoredMonsterTemplate(**values)
 
 
@@ -104,11 +109,12 @@ class MonsterRepository:
     def create_template(
         self,
         *,
-        campaign_id: UUID,
+        room_id: UUID,
         name: str,
         rules: dict[str, Any],
         source_key: str | None = None,
         template_id: UUID | None = None,
+        presentation_json: dict[str, Any] | None = None,
         now: datetime | None = None,
     ) -> StoredMonsterTemplate:
         if not name.strip():
@@ -116,10 +122,13 @@ class MonsterRepository:
         moment = now or _now()
         values = {
             "id": template_id or uuid4(),
-            "campaign_id": campaign_id,
+            "room_id": room_id,
             "name": name.strip(),
             "source_key": source_key,
             "rules": _validate_rules(rules),
+            "revision": 1,
+            "archived_at": None,
+            "presentation_json": deepcopy(presentation_json or {}),
             "created_at": moment,
             "updated_at": moment,
         }
@@ -155,8 +164,14 @@ class MonsterRepository:
             template = self.get_template(custom_template_id)
             if template is None:
                 raise MonsterPersistenceError(f"monster template not found: {custom_template_id}")
-            if template.campaign_id != campaign_id:
-                raise MonsterPersistenceError("monster template and instance must belong to the same campaign")
+            with self.engine.connect() as connection:
+                campaign_room_id = connection.scalar(
+                    select(campaigns.c.room_id).where(campaigns.c.id == campaign_id)
+                )
+            if campaign_room_id is None:
+                raise MonsterPersistenceError(f"campaign not found: {campaign_id}")
+            if template.room_id != campaign_room_id:
+                raise MonsterPersistenceError("monster template and instance must belong to the same room")
         if not name.strip():
             raise MonsterPersistenceError("monster instance name must not be blank")
         rules = _validate_rules(rules_snapshot)
@@ -235,19 +250,51 @@ class MonsterRepository:
         self,
         template_id: UUID,
         *,
+        campaign_id: UUID,
         name: str | None = None,
         instance_id: UUID | None = None,
+        resources: dict[str, Any] | None = None,
+        visibility: str = "public",
+        position_note: str | None = None,
         now: datetime | None = None,
     ) -> StoredMonsterInstance:
         template = self.get_template(template_id)
         if template is None:
             raise MonsterPersistenceError(f"monster template not found: {template_id}")
+        with self.engine.connect() as connection:
+            campaign_room_id = connection.scalar(
+                select(campaigns.c.room_id).where(campaigns.c.id == campaign_id)
+            )
+        if campaign_room_id is None:
+            raise MonsterPersistenceError(f"campaign not found: {campaign_id}")
+        if template.room_id != campaign_room_id:
+            raise MonsterPersistenceError("monster template and campaign must belong to the same room")
+        if template.archived_at is not None:
+            raise MonsterPersistenceError(f"monster template '{template_id}' is archived")
+
+        rules_snapshot = deepcopy(template.rules)
+        if name and name.strip():
+            instance_name = name.strip()
+            name_is_custom = True
+        else:
+            instance_name = template.name
+            name_is_custom = bool(template.presentation_json.get("name_is_custom", True))
+
+        rules_snapshot["presentation"] = {
+            "names": deepcopy(template.presentation_json.get("names", {})),
+            "name_is_custom": name_is_custom,
+        }
+        rules_snapshot["provenance"] = {"template_revision": template.revision}
+
         return self.create_instance(
-            campaign_id=template.campaign_id,
-            name=name or template.name,
-            rules_snapshot=template.rules,
+            campaign_id=campaign_id,
+            name=instance_name,
+            rules_snapshot=rules_snapshot,
             custom_template_id=template.id,
             instance_id=instance_id,
+            resources=resources,
+            visibility=visibility,
+            position_note=position_note,
             now=now,
         )
 
@@ -262,12 +309,36 @@ class MonsterRepository:
         instance = self.get_instance(instance_id)
         if instance is None:
             raise MonsterPersistenceError(f"monster instance not found: {instance_id}")
+        with self.engine.connect() as connection:
+            room_id = connection.scalar(
+                select(campaigns.c.room_id).where(campaigns.c.id == instance.campaign_id)
+            )
+        if room_id is None:
+            raise MonsterPersistenceError(f"campaign not found: {instance.campaign_id}")
+
+        rules = deepcopy(instance.rules_snapshot)
+        presentation_data = rules.pop("presentation", None)
+        rules.pop("provenance", None)
+
+        pres_json: dict[str, Any] = {}
+        if isinstance(presentation_data, dict):
+            pres_json = deepcopy(presentation_data)
+
+        if name and name.strip():
+            template_name = name.strip()
+            pres_json["names"] = {"en": template_name, "zh-TW": template_name}
+            pres_json["name_is_custom"] = True
+        else:
+            template_name = instance.name
+            pres_json["name_is_custom"] = bool(pres_json.get("name_is_custom", True))
+
         return self.create_template(
-            campaign_id=instance.campaign_id,
-            name=name or instance.name,
-            rules=instance.rules_snapshot,
+            room_id=room_id,
+            name=template_name,
+            rules=rules,
             source_key=instance.template_key,
             template_id=template_id,
+            presentation_json=pres_json,
             now=now,
         )
 

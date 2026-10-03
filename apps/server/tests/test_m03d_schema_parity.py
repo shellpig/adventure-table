@@ -64,6 +64,8 @@ FORBIDDEN_MULTIPLAYER_TABLES = {
     "combat_boards",
     "combat_board_doors",
     "combat_positions",
+    "monster_templates",
+    "monster_instances",
 }
 
 

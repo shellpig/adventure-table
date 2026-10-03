@@ -165,6 +165,8 @@ def test_import_boundary_fixture_detects_multiplayer_module(tmp_path: Path) -> N
     (app_root / "combat" / "__init__.py").write_text("", encoding="utf-8")
     (app_root / "combat" / "runtime.py").write_text("VALUE = 6\n", encoding="utf-8")
     (app_root / "monster_runtime.py").write_text("VALUE = 7\n", encoding="utf-8")
+    (app_root / "domain" / "monster_library").mkdir(parents=True, exist_ok=True)
+    (app_root / "domain" / "monster_library" / "__init__.py").write_text("VALUE = 8\n", encoding="utf-8")
     (app_root / "table_events.py").write_text("VALUE = 3\n", encoding="utf-8")
     (app_root / "table_runtime.py").write_text("VALUE = 4\n", encoding="utf-8")
     (app_root / "domain" / "character_fixture.py").write_text(
@@ -173,6 +175,7 @@ def test_import_boundary_fixture_detects_multiplayer_module(tmp_path: Path) -> N
         "import app.mcp.transport\n"
         "import app.combat.runtime\n"
         "import app.monster_runtime\n"
+        "import app.domain.monster_library\n"
         "import app.table_events\n"
         "import app.table_runtime\n\n"
         "VALUE = fake.VALUE\n",
@@ -190,6 +193,7 @@ def test_import_boundary_fixture_detects_multiplayer_module(tmp_path: Path) -> N
     assert "app.mcp.transport" in flagged
     assert "app.combat.runtime" in flagged
     assert "app.monster_runtime" in flagged
+    assert "app.domain.monster_library" in flagged
     assert "app.table_events" in flagged
     assert "app.table_runtime" in flagged
 
@@ -214,6 +218,9 @@ def test_forbidden_regex_matches_module_segments_not_substrings() -> None:
     assert FORBIDDEN_MODULE_RE.search("app.persistence.battle_maps")
     assert FORBIDDEN_MODULE_RE.search("app.domain.battle_maps.service")
     assert FORBIDDEN_MODULE_RE.search("app.api.rooms.battle_maps")
+    assert FORBIDDEN_MODULE_RE.search("app.domain.monster_library")
+    assert FORBIDDEN_MODULE_RE.search("app.persistence.monster_library")
+    assert FORBIDDEN_MODULE_RE.search("app.api.rooms.monster_library")
     assert FORBIDDEN_MODULE_RE.search("app.content.battlemaps") is None
     assert FORBIDDEN_MODULE_RE.search("app.content.spatialfoo") is None
     assert FORBIDDEN_MODULE_RE.search("app.content.tacticality") is None
@@ -249,3 +256,6 @@ def test_exact_protected_modules_remains_exclusive_to_standalone_seeds() -> None
     assert "app.persistence.campaign_runtime.tables" not in EXACT_PROTECTED_MODULES
     assert "app.persistence.battle_maps" not in EXACT_PROTECTED_MODULES
     assert "app.domain.battle_maps" not in EXACT_PROTECTED_MODULES
+    assert "app.persistence.monster_library" not in EXACT_PROTECTED_MODULES
+    assert "app.domain.monster_library" not in EXACT_PROTECTED_MODULES
+    assert "app.api.rooms.monster_library" not in EXACT_PROTECTED_MODULES

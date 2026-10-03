@@ -25,10 +25,14 @@ from app.domain.campaign_runtime.errors import (
 from app.domain.campaign_runtime.payloads import (
     RuntimeEntryKind,
     RuntimeItemPayload,
+    RuntimeNpcPayload,
     RuntimeStatePayload,
     RuntimeVisibility,
     dump_runtime_payload,
     parse_runtime_payload,
+)
+from app.domain.monster_library.references import (
+    validate_custom_monster_template_ref,
 )
 from app.domain.campaign_runtime.schemas import (
     RuntimeWorldEntryCreate,
@@ -128,6 +132,7 @@ def _validate_entry_references(
     state: RuntimeStatePayload,
     runtime_repo: CampaignRuntimeRepository,
     link_repo: CampaignAdventureLinkRepository,
+    previous_state: RuntimeStatePayload | None = None,
 ) -> None:
     for cid in character_recipient_ids:
         char_room_id = CampaignRepository.character_room_id_in_transaction(connection, cid)
@@ -143,6 +148,15 @@ def _validate_entry_references(
             raise CampaignRuntimeValidationError(
                 f"Source adventure entry {source_adventure_entry_id} is not from an adventure attached to campaign {campaign_id}"
             )
+
+    if kind == "npc" and isinstance(state, RuntimeNpcPayload) and state.monster_template_ref:
+        prev_ref = previous_state.monster_template_ref if isinstance(previous_state, RuntimeNpcPayload) else None
+        validate_custom_monster_template_ref(
+            connection,
+            room_id=room_id,
+            ref=state.monster_template_ref,
+            previous_ref=prev_ref,
+        )
 
     if kind == "item" and isinstance(state, RuntimeItemPayload) and state.holder_ref is not None:
         holder_ref = state.holder_ref
@@ -362,6 +376,7 @@ def execute_update_entry_in_transaction(
     parsed_state = parse_runtime_payload(kind, candidate_state_dict)
     candidate_state_json = dump_runtime_payload(parsed_state)
 
+    previous_state = parse_runtime_payload(kind, existing_entry.state_json)
     _validate_entry_references(
         connection,
         room_id=room_id,
@@ -372,6 +387,7 @@ def execute_update_entry_in_transaction(
         state=parsed_state,
         runtime_repo=runtime_repo,
         link_repo=link_repo,
+        previous_state=previous_state,
     )
 
     update_candidate = StoredRuntimeWorldEntryUpdate(

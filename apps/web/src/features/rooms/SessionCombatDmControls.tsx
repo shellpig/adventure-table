@@ -1,4 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+
+import { listMonsterLibrary, MonsterLibraryApiError } from '../../api/monsterLibrary'
+import { formatMonsterName } from './monsterLibraryCopy'
+import { useLocale } from '../../i18n/LocaleProvider'
 
 import {
   addMonsterToCombat,
@@ -38,6 +42,7 @@ export function SessionCombatDmControls({
   onError,
   refresh,
 }: SessionCombatDmControlsProps) {
+  const { locale } = useLocale()
   const [enemyMode, setEnemyMode] = useState<'srd' | 'quick'>('srd')
   const [pending, setPending] = useState(false)
 
@@ -46,6 +51,55 @@ export function SessionCombatDmControls({
   const [srdDisplayName, setSrdDisplayName] = useState('')
   const [srdVisibility, setSrdVisibility] = useState<'public' | 'hidden'>('public')
   const [srdPositionNote, setSrdPositionNote] = useState('')
+  const [customOptions, setCustomOptions] = useState<SearchOption[]>([])
+
+  useEffect(() => {
+    let active = true
+    void listMonsterLibrary(roomId, token, {
+      source: 'custom',
+      include_archived: false,
+    })
+      .then((items) => {
+        if (!active) return
+        const options: SearchOption[] = items.map((item) => {
+          const localizedName = formatMonsterName(item, locale)
+          return {
+            value: item.ref,
+            label: localizedName,
+            description:
+              item.challenge_rating !== null && item.challenge_rating !== undefined
+                ? `CR ${item.challenge_rating}`
+                : undefined,
+            searchAliases: localizedName !== item.name ? [item.name, localizedName] : [item.name],
+          }
+        })
+        setCustomOptions(options)
+      })
+      .catch((cause: unknown) => {
+        if (!active) return
+        if (
+          (cause instanceof MonsterLibraryApiError &&
+            cause.code === 'monster_library_forbidden') ||
+          (typeof cause === 'object' &&
+            cause !== null &&
+            'code' in cause &&
+            (cause as { code: string }).code === 'monster_library_forbidden')
+        ) {
+          setCustomOptions([])
+          return
+        }
+        onError(cause)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [roomId, token, locale, onError])
+
+  const combinedMonsterOptions = useMemo(
+    () => [...customOptions, ...monsterOptions],
+    [customOptions, monsterOptions],
+  )
 
   // Quick enemy state
   const [quickName, setQuickName] = useState('')
@@ -252,7 +306,7 @@ export function SessionCombatDmControls({
           <form className="session-combat__form" onSubmit={handleAddSrdMonster}>
             <SearchableSelect
               label={copy.combatMonsterPickerLabel}
-              options={monsterOptions}
+              options={combinedMonsterOptions}
               value={selectedMonsterKey}
               onChange={setSelectedMonsterKey}
               placeholder={copy.combatMonsterPickerPlaceholder}
