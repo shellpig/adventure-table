@@ -85,6 +85,11 @@ from app.domain.combat.monster_instances import (
     MonsterInstanceService,
     MonsterInstanceUpdateToolInput,
 )
+from app.domain.monster_library.schemas import (
+    MonsterLibraryGetToolInput,
+    MonsterLibraryListToolInput,
+)
+from app.domain.monster_library.service import MonsterLibraryService
 from app.domain.combat.semantic_hp import (
     CombatResolutionService,
     SemanticDamageInput,
@@ -246,6 +251,7 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         combat_board_service: CombatBoardService | None = None,
         battle_map_service: BattleMapService | None = None,
         target_check_service: TargetCheckService | None = None,
+        monster_library_service: MonsterLibraryService | None = None,
         **kwargs: Any,
     ) -> None:
         # P5-F: the four tactical services are optional at construction so
@@ -267,6 +273,7 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         self.combat_board_service = combat_board_service
         self.battle_map_service = battle_map_service
         self.target_check_service = target_check_service
+        self.monster_library_service = monster_library_service
 
     def _require_movement_service(self) -> MovementService:
         if self.movement_service is None:
@@ -534,6 +541,42 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         return self.monster_instance_service.update_instance(
             actor, input.instance_id, input
         ).model_dump(mode="json")
+
+    def monster_library_list(
+        self,
+        token: str,
+        input: MonsterLibraryListToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        if self.monster_library_service is None:
+            raise RuntimeError("monster_library_service not configured")
+        items = self.monster_library_service.list_for_actor(
+            actor,
+            actor.room_id,
+            query=input.query,
+            limit=input.limit,
+            offset=input.offset,
+        )
+        return {"templates": [item.model_dump(mode="json") for item in items]}
+
+    def monster_library_get(
+        self,
+        token: str,
+        input: MonsterLibraryGetToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        if self.monster_library_service is None:
+            raise RuntimeError("monster_library_service not configured")
+        detail = self.monster_library_service.get_for_actor(
+            actor,
+            actor.room_id,
+            ref=input.ref,
+        )
+        return detail.model_dump(mode="json")
 
     def combat_request_initiative(
         self,
@@ -1272,6 +1315,63 @@ class CombatAIToolApplicationService(AIToolApplicationService):
             payload=input.payload,
         )
         return view.model_dump(mode="json")
+
+    def _require_monster_library_service(self) -> MonsterLibraryService:
+        if self.monster_library_service is None:
+            raise RuntimeError("MonsterLibraryService is required for monster library AI tools")
+        return self.monster_library_service
+
+    def monster_library_list(
+        self,
+        token: str,
+        input: MonsterLibraryListToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        library = self._require_monster_library_service()
+        templates = library.list_for_actor(
+            actor,
+            room_id=actor.room_id,
+            query=input.query,
+            limit=input.limit,
+            offset=input.offset,
+        )
+        return {
+            "templates": [
+                {
+                    "ref": t.ref,
+                    "name": t.name,
+                    "names": t.names,
+                    "name_is_custom": t.name_is_custom,
+                    "source_kind": t.source_kind,
+                    "source_key": t.source_key,
+                    "size": t.size,
+                    "type": t.type,
+                    "alignment": t.alignment,
+                    "armor_class": t.armor_class,
+                    "max_hp": t.max_hp,
+                    "challenge_rating": t.challenge_rating,
+                }
+                for t in templates
+            ]
+        }
+
+    def monster_library_get(
+        self,
+        token: str,
+        input: MonsterLibraryGetToolInput,
+        *,
+        authenticated: AIControllerAuthView | None = None,
+    ) -> dict[str, Any]:
+        actor = self._actor(token, authenticated=authenticated)
+        library = self._require_monster_library_service()
+        detail = library.get_for_actor(
+            actor,
+            room_id=actor.room_id,
+            ref=input.ref,
+        )
+        return detail.model_dump(mode="json")
 
 
 __all__ = [

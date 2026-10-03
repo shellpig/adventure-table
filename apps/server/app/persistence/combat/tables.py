@@ -28,14 +28,24 @@ monster_templates = Table(
     "monster_templates",
     metadata,
     Column("id", Uuid(), primary_key=True),
-    Column("campaign_id", Uuid(), ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False),
+    Column("room_id", Uuid(), ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False),
     Column("name", String(160), nullable=False),
     Column("source_key", String(255), nullable=True),
     Column("rules", JSON(), nullable=False),
+    Column("revision", BigInteger(), nullable=False, server_default="1"),
+    Column("archived_at", DateTime(timezone=True), nullable=True),
+    Column("presentation_json", JSON(), nullable=False, server_default=text("'{}'")),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    CheckConstraint("revision > 0", name="ck_monster_templates_revision_positive"),
 )
-Index("ix_monster_templates_campaign_id", monster_templates.c.campaign_id)
+Index("ix_monster_templates_room_id", monster_templates.c.room_id)
+Index(
+    "ix_monster_templates_room_archived_name",
+    monster_templates.c.room_id,
+    monster_templates.c.archived_at,
+    monster_templates.c.name,
+)
 
 
 monster_instances = Table(
@@ -47,7 +57,7 @@ monster_instances = Table(
     Column(
         "custom_template_id",
         Uuid(),
-        ForeignKey("monster_templates.id", ondelete="SET NULL"),
+        ForeignKey("monster_templates.id", ondelete="RESTRICT"),
         nullable=True,
     ),
     Column("name", String(160), nullable=False),

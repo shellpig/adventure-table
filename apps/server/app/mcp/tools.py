@@ -89,6 +89,15 @@ from app.domain.combat.monster_instances import (
     CreateQuickEnemyInput,
     MonsterInstanceUpdateToolInput,
 )
+from app.domain.monster_library.errors import (
+    MonsterLibraryForbiddenError,
+    MonsterTemplateArchivedError,
+    MonsterTemplateNotFoundError,
+)
+from app.domain.monster_library.schemas import (
+    MonsterLibraryGetToolInput,
+    MonsterLibraryListToolInput,
+)
 from app.domain.combat.movement import (
     CancelPendingMovementInput,
     CombatMovementStaleError,
@@ -284,8 +293,16 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
         "目前 DM 將既有的 Monster Instance 作為敵方單位加入目前 Combat 時使用。",
     ),
     "combat_create_monster": (
-        "Current DM instantiates an authoritative SRD monster template for the Campaign before or during encounter play.",
-        "目前 DM 在遭遇開始前或戰鬥中從權威 SRD 模板建立怪物實例時使用。",
+        "Current DM instantiates a monster from SRD rules content or Room monster library (custom:<uuid>) for the Campaign before or during encounter play.",
+        "目前 DM 在遭遇開始前或戰鬥中從 SRD 規則內容或 Room 怪物庫（custom:<uuid>）建立怪物實例時使用。",
+    ),
+    "monster_library_list": (
+        "Current DM lists or searches monster templates in the Room monster library (SRD built-in and Room custom templates).",
+        "目前 DM 列出或搜尋 Room 怪物庫內的怪物模板（包含 SRD 內建與 Room 自訂模板）。",
+    ),
+    "monster_library_get": (
+        "Current DM inspects detailed rules, stats, and abilities of a monster template from the Room monster library.",
+        "目前 DM 檢視 Room 怪物庫內特定怪物模板的詳細規則、數值與能力。",
     ),
     "combat_create_quick_enemy": (
         "Current DM quickly defines an ad-hoc enemy with custom stats without using a formal rulebook template.",
@@ -714,7 +731,9 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("combat_start", _desc("Start Quick Combat for the current Campaign.", "為目前 Campaign 啟動 Quick Combat。"), StartCombatInput, frozenset({"dm"})),
     MCPToolDefinition("combat_add_character", _desc("Add an active Session character to running Combat.", "將目前 Session 的角色加入進行中的 Combat。"), AddCharacterInput, frozenset({"dm"})),
     MCPToolDefinition("combat_add_monster", _desc("Add a Campaign monster instance into active Combat.", "將 Campaign 內的怪物實例加入目前 Combat。"), AddMonsterInput, frozenset({"dm"})),
-    MCPToolDefinition("combat_create_monster", _desc("Create a Monster Instance from SRD rules content.", "從 SRD 規則內容建立 Monster Instance。"), CreateMonsterFromContentInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_create_monster", _desc("Create a Monster Instance from SRD rules content or Room monster library (custom:<uuid>).", "從 SRD 規則內容或 Room 怪物庫（custom:<uuid>）建立 Monster Instance。"), CreateMonsterFromContentInput, frozenset({"dm"})),
+    MCPToolDefinition("monster_library_list", _desc("List or search monster templates in the Room monster library (SRD and custom).", "列出或搜尋 Room 怪物庫內的怪物模板（SRD 與自訂）。"), MonsterLibraryListToolInput, frozenset({"dm"})),
+    MCPToolDefinition("monster_library_get", _desc("Get detailed rules and stats for a monster template from the Room monster library.", "取得 Room 怪物庫內特定怪物模板的詳細規則與數值。"), MonsterLibraryGetToolInput, frozenset({"dm"})),
     MCPToolDefinition("combat_create_quick_enemy", _desc("Create an ad-hoc Quick Enemy monster instance.", "建立臨時的 Quick Enemy 怪物實例。"), CreateQuickEnemyInput, frozenset({"dm"})),
     MCPToolDefinition("combat_list_monster_instances", _desc("List all Campaign Monster Instances with full DM stats.", "列出 Campaign 內所有怪物實例的完整 DM 資訊。"), _NoArguments, frozenset({"dm"})),
     MCPToolDefinition("combat_update_monster_instance", _desc("Update Monster Instance details or reveal stats to Players.", "更新怪物實例資訊或向玩家揭露其戰鬥數值。"), MonsterInstanceUpdateToolInput, frozenset({"dm"})),
@@ -944,6 +963,10 @@ async def call_tool(
             data = await asyncio.to_thread(service.combat_add_monster, token, parsed, authenticated=auth)
         elif name == "combat_create_monster":
             data = await asyncio.to_thread(service.combat_create_monster, token, parsed, authenticated=auth)
+        elif name == "monster_library_list":
+            data = await asyncio.to_thread(service.monster_library_list, token, parsed, authenticated=auth)
+        elif name == "monster_library_get":
+            data = await asyncio.to_thread(service.monster_library_get, token, parsed, authenticated=auth)
         elif name == "combat_create_quick_enemy":
             data = await asyncio.to_thread(service.combat_create_quick_enemy, token, parsed, authenticated=auth)
         elif name == "combat_list_monster_instances":
@@ -1135,6 +1158,26 @@ async def call_tool(
             "The table state changed or does not allow this action",
             "桌面狀態已變更或目前不允許此動作",
             detail=str(exc) or None,
+        )
+    except MonsterTemplateNotFoundError as exc:
+        return structured_tool_error(
+            "not_found",
+            "Requested monster template was not found in the current scope",
+            "目前 scope 找不到指定的怪物模板",
+            detail=str(exc) or None,
+        )
+    except MonsterTemplateArchivedError as exc:
+        return structured_tool_error(
+            "monster_template_archived",
+            "The monster template is archived and cannot be instantiated",
+            "該怪物模板已封存，無法建立實例",
+            detail=str(exc) or None,
+        )
+    except MonsterLibraryForbiddenError:
+        return structured_tool_error(
+            "permission_denied",
+            "Current AI controller is not permitted to perform this action",
+            "目前 AI controller 無權執行此動作",
         )
     except PermissionError:
         return structured_tool_error("permission_denied", "Current AI controller is not permitted to perform this action", "目前 AI controller 無權執行此動作")

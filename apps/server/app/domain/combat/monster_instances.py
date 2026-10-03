@@ -17,6 +17,10 @@ from app.content.registry import ContentRegistry
 from app.domain.combat.lifecycle import CombatNotFoundError
 from app.domain.combat.resolution import DamageType
 from app.domain.combat.spell_resources import monster_casting_sources
+from app.domain.monster_library.errors import (
+    MonsterTemplateArchivedError,
+    MonsterTemplateNotFoundError,
+)
 from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import (
     TableActorContext,
@@ -246,6 +250,35 @@ class MonsterInstanceService:
         if existing is not None:
             return stored_to_monster_instance_view(existing)
 
+        content_key = input_data.content_key.strip()
+        if content_key.startswith("custom:"):
+            raw_uuid = content_key.removeprefix("custom:").strip()
+            try:
+                template_id = UUID(raw_uuid)
+            except ValueError as exc:
+                raise ValueError(f"invalid custom monster template id: '{content_key}'") from exc
+
+            template = self.monster_repository.get_template(template_id)
+            if template is None:
+                raise MonsterTemplateNotFoundError(f"custom monster template '{template_id}' not found")
+            if template.room_id != actor.room_id:
+                raise MonsterTemplateNotFoundError(
+                    f"custom monster template '{template_id}' not found in room '{actor.room_id}'"
+                )
+            if template.archived_at is not None:
+                raise MonsterTemplateArchivedError(f"monster template '{template_id}' is archived")
+
+            stored = self.monster_repository.create_instance_from_template(
+                template.id,
+                campaign_id=actor.campaign_id,
+                name=input_data.name,
+                instance_id=instance_id,
+                visibility=input_data.visibility,
+                position_note=input_data.position_note,
+            )
+            return stored_to_monster_instance_view(stored)
+
+        # Built-in content key
         entry = self.content_registry.get(input_data.content_key)
         parsed_key = parse_stable_key(entry.key)
         if parsed_key.kind != "monster":

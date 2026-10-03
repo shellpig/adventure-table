@@ -5,7 +5,11 @@ from uuid import UUID
 
 from fastapi import Request
 
-from app.api.dependencies import get_content_registry, get_database_engine
+from app.api.dependencies import (
+    get_content_localization,
+    get_content_registry,
+    get_database_engine,
+)
 from app.api.errors import APIError
 from app.api.rooms.table_event_wait import ProcessLocalTableEventNotifier
 from app.config import settings
@@ -24,6 +28,7 @@ from app.domain.combat.core_rolls import CombatCoreRollService
 from app.domain.combat.initiative import CombatInitiativeService
 from app.domain.combat.lifecycle import CombatService
 from app.domain.combat.monster_instances import MonsterInstanceService
+from app.domain.monster_library.service import MonsterLibraryService
 from app.domain.combat.movement import MovementService
 from app.domain.combat.order import CombatOrderService
 from app.domain.combat.reaction_service import CombatReactionService
@@ -65,6 +70,7 @@ from app.persistence.combat.repository import MonsterRepository
 from app.persistence.combat.resolution import CombatResolutionRepository
 from app.persistence.combat.special_attacks import SpecialAttackRepository
 from app.persistence.combat.spells import CombatSpellRepository
+from app.persistence.monster_library.repository import MonsterLibraryRepository
 from app.persistence.mcp.room_lifecycle import M04BSeatRepository, M04BSessionRepository
 from app.persistence.room_assets.repository import RoomAssetRepository
 from app.persistence.room_assets.storage import FilesystemAssetStorage
@@ -634,6 +640,24 @@ def get_monster_instance_service(request: Request) -> MonsterInstanceService:
     return service
 
 
+def get_monster_library_service(request: Request) -> MonsterLibraryService:
+    try:
+        return request.app.state.monster_library_service
+    except AttributeError:
+        engine = get_database_engine(request)
+        combat_service = get_combat_service(request)
+        service = MonsterLibraryService(
+            engine=engine,
+            repository=MonsterLibraryRepository(engine),
+            monster_repository=combat_service.monster_repository,
+            content_registry=get_content_registry(request),
+            localization=get_content_localization(request),
+            table_event_service=get_table_event_service(request),
+        )
+        request.app.state.monster_library_service = service
+        return service
+
+
 __all__ = [
     "_HistoryGuardedCharacterRepository",
     "get_adventure_import_service",
@@ -656,6 +680,7 @@ __all__ = [
     "get_exploration_action_service",
     "get_exploration_stage_service",
     "get_monster_instance_service",
+    "get_monster_library_service",
     "get_pending_action_service",
     "get_roll_service",
     "get_room_asset_service",

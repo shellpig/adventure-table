@@ -319,7 +319,7 @@ class RoomWorkspaceRepository:
             # Local import: app.persistence.combat pulls domain modules at package
             # init, which cycles back through table_events when rooms init first.
             if campaign_ids:
-                from app.persistence.combat.tables import combats
+                from app.persistence.combat.tables import combats, monster_instances
 
                 board_combat_ids = tuple(
                     connection.scalars(
@@ -352,6 +352,19 @@ class RoomWorkspaceRepository:
                             combats.c.campaign_id.in_(campaign_ids)
                         )
                     )
+                connection.execute(
+                    delete(monster_instances).where(
+                        monster_instances.c.campaign_id.in_(campaign_ids)
+                    )
+                )
+
+            from app.persistence.combat.tables import monster_templates
+
+            connection.execute(
+                delete(monster_templates).where(
+                    monster_templates.c.room_id == room_id
+                )
+            )
             connection.execute(
                 delete(room_assets).where(room_assets.c.room_id == room_id)
             )

@@ -208,6 +208,7 @@ class AdventureRepository:
         visibility: str | None = None,
         parent_entry_id: UUID | None | object = UNSET,
         updated_at: datetime,
+        connection: Connection | None = None,
     ) -> StoredAdventureEntry | None:
         values: dict[str, object] = {"updated_at": updated_at}
         if title is not UNSET:
@@ -221,21 +222,26 @@ class AdventureRepository:
         if parent_entry_id is not UNSET:
             values["parent_entry_id"] = parent_entry_id
 
-        with self.engine.begin() as connection:
-            connection.execute(
-                update(adventure_entries)
-                .where(
-                    adventure_entries.c.adventure_id == adventure_id,
-                    adventure_entries.c.id == entry_id,
-                )
-                .values(**values)
+        stmt = (
+            update(adventure_entries)
+            .where(
+                adventure_entries.c.adventure_id == adventure_id,
+                adventure_entries.c.id == entry_id,
             )
-            row = connection.execute(
-                select(adventure_entries).where(
-                    adventure_entries.c.adventure_id == adventure_id,
-                    adventure_entries.c.id == entry_id,
-                )
-            ).mappings().one_or_none()
+            .values(**values)
+        )
+        query = select(adventure_entries).where(
+            adventure_entries.c.adventure_id == adventure_id,
+            adventure_entries.c.id == entry_id,
+        )
+
+        if connection is not None:
+            connection.execute(stmt)
+            row = connection.execute(query).mappings().one_or_none()
+            return StoredAdventureEntry(**dict(row)) if row is not None else None
+        with self.engine.begin() as conn:
+            conn.execute(stmt)
+            row = conn.execute(query).mappings().one_or_none()
             return StoredAdventureEntry(**dict(row)) if row is not None else None
 
     def delete_entry(self, adventure_id: UUID, entry_id: UUID) -> bool:

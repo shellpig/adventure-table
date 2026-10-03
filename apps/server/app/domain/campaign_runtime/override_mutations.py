@@ -20,6 +20,9 @@ from app.domain.campaign_runtime.errors import (
     CampaignRuntimeNotFoundError,
     CampaignRuntimeRevisionConflictError,
 )
+from app.domain.monster_library.references import (
+    validate_custom_monster_template_ref,
+)
 from app.domain.campaign_runtime.schemas import (
     CampaignAdventureOverride,
     CampaignAdventureOverrideAlreadyExistsError,
@@ -73,6 +76,12 @@ def execute_create_override_in_transaction(
         )
 
     validate_and_parse_entry_state(row["kind"], row["data_json"], payload.state)
+    if row["kind"] == "npc" and isinstance(payload.state, dict) and payload.state.get("monster_template_ref"):
+        validate_custom_monster_template_ref(
+            connection,
+            room_id=room_id,
+            ref=str(payload.state["monster_template_ref"]),
+        )
 
     override_id = uuid4()
     stored_override = StoredCampaignAdventureOverride(
@@ -161,6 +170,19 @@ def execute_update_override_in_transaction(
     assert candidate_needs_review is not None
 
     validate_and_parse_entry_state(row["kind"], row["data_json"], candidate_state)
+    if row["kind"] == "npc" and isinstance(candidate_state, dict) and candidate_state.get("monster_template_ref"):
+        prev_ref = (
+            existing_override.state_json.get("monster_template_ref")
+            if isinstance(existing_override.state_json, dict)
+            else None
+        )
+        prev_ref_str = str(prev_ref) if prev_ref is not None else None
+        validate_custom_monster_template_ref(
+            connection,
+            room_id=room_id,
+            ref=str(candidate_state["monster_template_ref"]),
+            previous_ref=prev_ref_str,
+        )
 
     update_candidate = StoredCampaignAdventureOverrideUpdate(
         expected_override_id=patch.expected_override_id,

@@ -22,6 +22,7 @@ from app.api.rooms.dependencies import (
     get_exploration_action_service,
     get_exploration_stage_service,
     get_monster_instance_service,
+    get_monster_library_service,
     get_movement_service,
     get_pending_action_service,
     get_roll_service,
@@ -69,6 +70,7 @@ def get_ai_tool_application_service(request: Request) -> AIToolApplicationServic
             combat_board_service=get_combat_board_service(request),
             battle_map_service=get_battle_map_service(request),
             target_check_service=get_target_check_service(request),
+            monster_library_service=get_monster_library_service(request),
         )
         request.app.state.ai_tool_application_service = service
     return service
