@@ -459,6 +459,70 @@ def test_changed_to_archived_template_is_rejected(bm_fixture: BattleMapFixture) 
     assert [row[2] for row in snapshot] == [str(kept_id)]
 
 
+def test_new_placement_cannot_add_second_archived_reference(bm_fixture: BattleMapFixture) -> None:
+    fx = bm_fixture
+    created = _create_map(fx, fx.token_owner_a, fx.room_a_id, _blank_payload()).json()
+    custom_id = _insert_custom_template(fx.engine, fx.room_a_id)
+    first = _put_placements(fx, fx.token_owner_a, fx.room_a_id, created["id"], {
+        "expected_revision": 1,
+        "placements": [_placement_payload(custom_template_id=custom_id)],
+    })
+    assert first.status_code == 200
+    saved = first.json()["monster_placements"][0]
+    _archive_template(fx.engine, custom_id)
+    before = _map_state(fx, fx.token_owner_a, fx.room_a_id, UUID(created["id"]))
+
+    # The saved placement may stay, but a second placement of the same archived
+    # template is a new reference even though the map already uses it.
+    new_id = uuid4()
+    response = _put_placements(fx, fx.token_owner_a, fx.room_a_id, created["id"], {
+        "expected_revision": 2,
+        "placements": [
+            _placement_payload(
+                placement_id=UUID(saved["id"]), custom_template_id=custom_id,
+                anchor=(saved["anchor_x"], saved["anchor_y"]),
+            ),
+            _placement_payload(placement_id=new_id, custom_template_id=custom_id, anchor=(5, 5)),
+        ],
+    })
+    assert response.status_code == 409
+    assert _problems(response) == [{"placement_id": str(new_id), "code": "template_archived"}]
+    assert _map_state(fx, fx.token_owner_a, fx.room_a_id, UUID(created["id"])) == before
+
+
+def test_non_monster_content_key_is_422(bm_fixture: BattleMapFixture) -> None:
+    fx = bm_fixture
+    created = _create_map(fx, fx.token_owner_a, fx.room_a_id, _blank_payload()).json()
+    before = _map_state(fx, fx.token_owner_a, fx.room_a_id, UUID(created["id"]))
+    response = _put_placements(fx, fx.token_owner_a, fx.room_a_id, created["id"], {
+        "expected_revision": 1,
+        "placements": [_placement_payload(template_key="srd5.1:spell:fireball")],
+    })
+    assert response.status_code == 422
+    assert _error_code(response) == "monster_placement_invalid_source"
+    assert _map_state(fx, fx.token_owner_a, fx.room_a_id, UUID(created["id"])) == before
+
+
+def test_placement_id_owned_by_another_map_is_422(bm_fixture: BattleMapFixture) -> None:
+    fx = bm_fixture
+    first_map = _create_map(fx, fx.token_owner_a, fx.room_a_id, _blank_payload()).json()
+    second_map = _create_map(fx, fx.token_owner_a, fx.room_a_id, _blank_payload()).json()
+    saved = _put_placements(fx, fx.token_owner_a, fx.room_a_id, first_map["id"], {
+        "expected_revision": 1,
+        "placements": [_placement_payload(template_key=GOBLIN_KEY)],
+    }).json()["monster_placements"][0]
+    before = _map_state(fx, fx.token_owner_a, fx.room_a_id, UUID(second_map["id"]))
+
+    # Reusing another map's placement id must not collide on the primary key.
+    response = _put_placements(fx, fx.token_owner_a, fx.room_a_id, second_map["id"], {
+        "expected_revision": 1,
+        "placements": [_placement_payload(placement_id=UUID(saved["id"]), template_key=GOBLIN_KEY)],
+    })
+    assert response.status_code == 422
+    assert _error_code(response) == "monster_placement_invalid_source"
+    assert _map_state(fx, fx.token_owner_a, fx.room_a_id, UUID(second_map["id"])) == before
+
+
 # --- geometry validation ------------------------------------------------------
 
 

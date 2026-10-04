@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import select
 from sqlalchemy.engine import Connection
 
+from app.content.identity import parse_stable_key
 from app.content.registry import ContentRegistry
 from app.domain.battle_maps.placements import (
     PLACEMENT_PROBLEM_INVALID_SIZE,
@@ -390,6 +391,16 @@ class _ResolvedPlacement:
     archived_source: bool
 
 
+def _saved_custom_refs(
+    placements: tuple[StoredMonsterPlacement, ...],
+) -> frozenset[tuple[UUID, UUID]]:
+    return frozenset(
+        (placement.id, placement.custom_template_id)
+        for placement in placements
+        if placement.custom_template_id is not None
+    )
+
+
 class BattleMapService:
     def __init__(
         self,
@@ -727,11 +738,16 @@ class BattleMapService:
             old_placements = self.repository.get_placements(
                 map_id, connection=connection
             )
-            old_custom_refs = frozenset(
-                placement.custom_template_id
-                for placement in old_placements
-                if placement.custom_template_id is not None
+            foreign_ids = self.repository.placement_ids_on_other_maps(
+                connection,
+                map_id,
+                [item.id for item in payload.placements if item.id is not None],
             )
+            if foreign_ids:
+                raise MonsterPlacementSourceError(
+                    "monster placement ids belong to another map: "
+                    + ", ".join(str(placement_id) for placement_id in sorted(foreign_ids))
+                )
             sources = [
                 _PlacementSource(
                     placement_id=item.id or uuid4(),
@@ -748,7 +764,7 @@ class BattleMapService:
                 connection,
                 room_id,
                 sources,
-                old_custom_refs=old_custom_refs,
+                saved_custom_refs=_saved_custom_refs(old_placements),
                 lock_templates=True,
             )
             objects = self.repository.get_objects(map_id, connection=connection)
@@ -840,7 +856,7 @@ class BattleMapService:
         room_id: UUID,
         sources: list[_PlacementSource],
         *,
-        old_custom_refs: frozenset[UUID],
+        saved_custom_refs: frozenset[tuple[UUID, UUID]],
         lock_templates: bool,
     ) -> list[_ResolvedPlacement]:
         """Resolve template references to sizes.
@@ -850,7 +866,9 @@ class BattleMapService:
         template id. A missing built-in key or a missing / cross-Room custom
         template is a 404; a newly added (or changed-to) archived custom
         template is reported as a placement problem, while an unchanged
-        archived reference already saved on the map stays allowed.
+        archived reference already saved on the map stays allowed. "Unchanged"
+        is per placement: the same placement id must already reference that
+        template, so a new placement cannot add another archived reference.
         """
         custom_ids = {
             source.custom_template_id
@@ -868,6 +886,10 @@ class BattleMapService:
                     raise MonsterPlacementReferenceNotFoundError(
                         f"monster template '{source.template_key}' not found"
                     )
+                if parse_stable_key(entry.key).kind != "monster":
+                    raise MonsterPlacementSourceError(
+                        f"content entry '{source.template_key}' is not a monster"
+                    )
                 data = entry.data if isinstance(entry.data, dict) else {}
                 size = resolve_placement_size(data.get("size"))
                 archived_source = False
@@ -883,7 +905,7 @@ class BattleMapService:
                 size = resolve_placement_size(rules.get("size"))
                 archived_source = (
                     row["archived_at"] is not None
-                    and template_id not in old_custom_refs
+                    and (source.placement_id, template_id) not in saved_custom_refs
                 )
             resolved.append(
                 _ResolvedPlacement(
@@ -923,16 +945,11 @@ class BattleMapService:
             )
             for placement in placements
         ]
-        old_custom_refs = frozenset(
-            placement.custom_template_id
-            for placement in placements
-            if placement.custom_template_id is not None
-        )
         return self._resolve_placement_sources(
             connection,
             room_id,
             sources,
-            old_custom_refs=old_custom_refs,
+            saved_custom_refs=_saved_custom_refs(placements),
             lock_templates=False,
         )
 

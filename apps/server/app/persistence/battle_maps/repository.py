@@ -301,6 +301,22 @@ class BattleMapRepository:
                 rows = conn.execute(query).mappings().all()
         return tuple(StoredMonsterPlacement(**dict(row)) for row in rows)
 
+    def placement_ids_on_other_maps(
+        self,
+        connection: Connection,
+        map_id: UUID,
+        placement_ids: list[UUID],
+    ) -> frozenset[UUID]:
+        if not placement_ids:
+            return frozenset()
+        rows = connection.execute(
+            select(battle_map_monster_placements.c.id).where(
+                battle_map_monster_placements.c.id.in_(placement_ids),
+                battle_map_monster_placements.c.battle_map_id != map_id,
+            )
+        ).scalars()
+        return frozenset(rows)
+
     def replace_placements_in_transaction(
         self,
         connection: Connection,
