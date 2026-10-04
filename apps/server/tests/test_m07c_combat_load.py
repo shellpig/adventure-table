@@ -656,3 +656,193 @@ def test_party_initiative_gate_still_applies_with_loaded_monsters() -> None:
                 ordered_entry_ids=tuple(e.id for e in entries),
             ),
         )
+
+
+# --- C.2 AI grant revocation -----------------------------------------------------
+
+
+def _ai_dm_actor(table: TacticalTable):
+    """Seat the AI as DM via a grant (mirrors test_p5f_tactical_mcp._dm_token)."""
+    from datetime import UTC
+
+    from sqlalchemy import insert as sa_insert
+    from sqlalchemy import update as sa_update
+
+    from app.domain.rooms.ai_controller_tokens import mint_ai_controller_token
+    from app.persistence.rooms.tables import ai_controller_grants, campaign_seats, sessions
+
+    minted = mint_ai_controller_token()
+    now = datetime.now(UTC)
+    with table.engine.begin() as conn:
+        conn.execute(
+            sa_insert(ai_controller_grants).values(
+                id=minted.grant_id, room_id=table.room_id, campaign_id=table.campaign_id,
+                seat_id=table.dm_actor.seat_id, role="dm", session_id=table.session_id,
+                secret_hash=minted.secret_hash, secret_prefix=minted.display_hint,
+                generation=1, status="active", pre_session_expires_at=None,
+                handoff_return_access_session_id=None, temporary_instruction=None,
+                created_at=now, bound_at=now, revoked_at=None, last_seen_at=None,
+            )
+        )
+        conn.execute(
+            sa_update(campaign_seats)
+            .where(campaign_seats.c.id == table.dm_actor.seat_id)
+            .values(
+                controller_kind="ai", ai_controller_grant_id=minted.grant_id,
+                controller_epoch=1, controller_access_session_id=None, updated_at=now,
+            )
+        )
+        conn.execute(
+            sa_update(sessions)
+            .where(sessions.c.id == table.session_id)
+            .values(
+                dm_controller_kind="ai", dm_controller_ai_grant_id=minted.grant_id,
+                dm_controller_generation=1, dm_controller_access_session_id=None,
+            )
+        )
+    actor = table.events.resolve_ai_actor(
+        room_id=table.room_id, campaign_id=table.campaign_id, session_id=table.session_id,
+        grant_id=minted.grant_id, generation=1,
+    )
+    return actor, minted.grant_id
+
+
+def _revoke_grant(table: TacticalTable, grant_id) -> None:
+    from app.persistence.rooms.ai_controllers import AIControllerGrantRepository
+
+    repo = AIControllerGrantRepository(table.engine)
+    with table.engine.begin() as connection:
+        repo.revoke_session_grants_in_transaction(connection, session_id=table.session_id)
+
+
+def test_ai_grant_revoked_old_key_is_rejected_with_zero_side_effects() -> None:
+    table, battle_maps = _table()
+    map_id = _create_map(table, battle_maps)
+    _put_placements(table, battle_maps, map_id, [
+        _placement(template_key=GOBLIN_KEY, anchor=(1, 1)),
+    ])
+    ai_dm, grant_id = _ai_dm_actor(table)
+    assert ai_dm.is_current_dm
+    first = table.combat.start_tactical_combat(
+        ai_dm,
+        StartTacticalCombatInput(
+            battle_map_id=map_id, load_map_monsters=True,
+            idempotency_key="ai-dm-key-1",
+        ),
+    )
+    before = _counts(table.engine)
+    cursor = _event_cursor(table.engine, table.session_id)
+    # Revoke the AI DM grant: the old key must now be rejected even though the
+    # combat.started event exists.
+    _revoke_grant(table, grant_id)
+    with pytest.raises(TableEventActorUnauthorizedError):
+        table.combat.start_tactical_combat(
+            ai_dm,
+            StartTacticalCombatInput(
+                battle_map_id=map_id, load_map_monsters=True,
+                idempotency_key="ai-dm-key-1",
+            ),
+        )
+    assert _counts(table.engine) == before
+    assert _event_cursor(table.engine, table.session_id) == cursor
+    assert table.combat.repository.get_active(table.campaign_id).id == first.id
+
+
+# --- C.2 session end / abandon then retry ----------------------------------------
+
+
+def _session_service(table: TacticalTable):
+    from app.domain.rooms.sessions import SessionService
+    from app.persistence.rooms.session_live import SessionLiveRepository
+    from app.persistence.rooms.sessions import SessionRepository
+
+    return SessionService(
+        SessionRepository(table.engine),
+        SessionLiveRepository(table.engine),
+        event_service=table.events,
+    )
+
+
+def test_retry_after_session_end_returns_original_combat() -> None:
+    table, battle_maps = _table()
+    map_id = _create_map(table, battle_maps)
+    custom_id = _insert_custom_template(table.engine, table.room_id, name="Brute")
+    _put_placements(table, battle_maps, map_id, [
+        _placement(template_key=GOBLIN_KEY, anchor=(1, 1)),
+        _placement(custom_template_id=custom_id, anchor=(5, 5)),
+    ])
+    first = _start(table, map_id, idempotency_key="load-key-end")
+    instances_before = {m["monster_instance_id"] for m in _monster_entries(table, first.id)}
+    assert len(instances_before) == 2
+    # End the session (combat stays active).
+    _session_service(table).end_session(
+        table.room_id, table.campaign_id, table.session_id, _dm_context(table)
+    )
+    before = _counts(table.engine)
+    # The DM binding is still current; the retry resolves from the stored event
+    # before the session gate.
+    second = _start(table, map_id, idempotency_key="load-key-end")
+    assert second.id == first.id
+    assert _counts(table.engine) == before
+    assert {m["monster_instance_id"] for m in _monster_entries(table, first.id)} == instances_before
+    # Editing the template after the session ended does not respawn anything.
+    with table.engine.begin() as connection:
+        connection.execute(
+            update(monster_templates)
+            .where(monster_templates.c.id == custom_id)
+            .values(name="Brute Renamed", revision=2)
+        )
+    third = _start(table, map_id, idempotency_key="load-key-end")
+    assert third.id == first.id
+    assert {m["monster_instance_id"] for m in _monster_entries(table, first.id)} == instances_before
+
+
+def test_retry_after_session_abandon_returns_original_combat() -> None:
+    table, battle_maps = _table()
+    map_id = _create_map(table, battle_maps)
+    _put_placements(table, battle_maps, map_id, [
+        _placement(template_key=GOBLIN_KEY, anchor=(1, 1)),
+    ])
+    first = _start(table, map_id, idempotency_key="load-key-abandon")
+    instances_before = {m["monster_instance_id"] for m in _monster_entries(table, first.id)}
+    _session_service(table).abandon_session(
+        table.room_id, table.campaign_id, table.session_id, _dm_context(table)
+    )
+    before = _counts(table.engine)
+    second = _start(table, map_id, idempotency_key="load-key-abandon")
+    assert second.id == first.id
+    assert _counts(table.engine) == before
+    assert {m["monster_instance_id"] for m in _monster_entries(table, first.id)} == instances_before
+
+
+# --- C.2 snapshot frozen against spellcasting edits -------------------------------
+
+
+def test_snapshot_frozen_against_spellcasting_edit() -> None:
+    table, battle_maps = _table()
+    map_id = _create_map(table, battle_maps)
+    custom_id = _insert_custom_template(table.engine, table.room_id, name="Shaman")
+    _put_placements(table, battle_maps, map_id, [
+        _placement(custom_template_id=custom_id, anchor=(2, 2)),
+    ])
+    view = _start(table, map_id)
+    monsters = _monster_entries(table, view.id)
+    instance_id = monsters[0]["monster_instance_id"]
+    before = _instance(table, instance_id)["rules_snapshot"]
+    assert "spellcasting" not in before.get("rules", {})
+    # Add spellcasting to the template afterwards.
+    with table.engine.begin() as connection:
+        connection.execute(
+            update(monster_templates)
+            .where(monster_templates.c.id == custom_id)
+            .values(
+                revision=2,
+                rules={"size": "Large", "armor_class": 11, "max_hp": 59,
+                       "speed": {"walk": "40 ft."},
+                       "spellcasting": {"ability": "wisdom", "save_dc": 13}},
+            )
+        )
+    after = _instance(table, instance_id)["rules_snapshot"]
+    assert after == before
+    assert "spellcasting" not in after.get("rules", {})
+    assert after["presentation"]["names"] == {"en": "Shaman"}

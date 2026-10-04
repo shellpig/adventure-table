@@ -7,7 +7,8 @@ in parallel: ``xdist_group("postgres")`` serialises these).
 from __future__ import annotations
 
 import threading
-from uuid import UUID
+from datetime import datetime, timezone
+from uuid import UUID, uuid4
 
 from alembic import command
 import pytest
@@ -332,3 +333,245 @@ def test_pg_failed_load_rolls_back_with_cursor_unchanged() -> None:
         assert cursor_after == cursor_before
     finally:
         engine.dispose()
+
+
+# --- C.2 load vs template mutation races (two connections) -----------------------
+
+
+def _pg_table_with_custom_template() -> tuple:
+    """Table + map with one custom-template placement; returns template id too."""
+    from datetime import datetime, timezone
+
+    from sqlalchemy import insert as sa_insert
+
+    from app.persistence.combat.tables import monster_templates
+
+    table, battle_maps, engine = _pg_table()
+    template_id = uuid4()
+    now = datetime.now(timezone.utc)
+    with engine.begin() as connection:
+        connection.execute(
+            sa_insert(monster_templates).values(
+                id=template_id,
+                room_id=table.room_id,
+                name="Race Brute",
+                source_key=None,
+                rules={"size": "Large", "armor_class": 11, "max_hp": 59,
+                       "speed": {"walk": "40 ft."}},
+                revision=1,
+                archived_at=None,
+                presentation_json={"names": {"en": "Race Brute"}, "name_is_custom": True},
+                created_at=now,
+                updated_at=now,
+            )
+        )
+    created = battle_maps.create(
+        _dm_context(table),
+        room_id=table.room_id,
+        payload=BattleMapCreate(
+            name="Race Map 2", source_kind="blank", width_cells=20, height_cells=15
+        ),
+    )
+    battle_maps.replace_monster_placements(
+        _dm_context(table),
+        room_id=table.room_id,
+        map_id=created.id,
+        payload=MonsterPlacementsReplace(
+            expected_revision=1,
+            placements=[
+                MonsterPlacementInput(
+                    template_key=None, custom_template_id=template_id,
+                    anchor_x=5, anchor_y=5, visibility="public", sort_order=0,
+                )
+            ],
+        ),
+    )
+    return table, battle_maps, engine, created.id, template_id
+
+
+def _assert_full_graph(engine: Engine, expected_monsters: int) -> None:
+    counts = _graph_counts(engine)
+    assert counts["combats"] == 1
+    assert counts["instances"] == expected_monsters
+    assert counts["positions"] == expected_monsters
+    assert counts["entries"] == expected_monsters + 1  # + party character
+    assert counts["boards"] == 1
+
+
+def test_pg_load_vs_template_patch_two_connections() -> None:
+    """Concurrent template patch vs load: the load sees one atomic snapshot."""
+    table, battle_maps, engine_a, map_id, template_id = _pg_table_with_custom_template()
+    engine_b = create_engine(POSTGRES_URL, pool_size=5, max_overflow=5)
+    try:
+        from app.persistence.combat.tables import monster_templates
+
+        barrier = threading.Barrier(2)
+        outcome: dict = {}
+
+        def start_load() -> None:
+            try:
+                barrier.wait(timeout=30)
+                view = table.combat.start_tactical_combat(
+                    table.dm_actor,
+                    StartTacticalCombatInput(
+                        battle_map_id=map_id, load_map_monsters=True,
+                        idempotency_key="pg-race-patch",
+                    ),
+                )
+                with engine_a.connect() as connection:
+                    name = connection.scalar(
+                        select(monster_instances.c.name)
+                        .join(
+                            combat_entries,
+                            combat_entries.c.monster_instance_id == monster_instances.c.id,
+                        )
+                        .where(combat_entries.c.combat_id == view.id)
+                    )
+                outcome["loaded_name"] = name
+            except Exception as exc:  # noqa: BLE001
+                outcome["load_error"] = exc
+
+        def patch_template() -> None:
+            try:
+                barrier.wait(timeout=30)
+                with engine_b.begin() as connection:
+                    connection.execute(
+                        monster_templates.update()
+                        .where(monster_templates.c.id == template_id)
+                        .values(name="Race Brute Patched", revision=2)
+                    )
+                outcome["patch"] = "ok"
+            except Exception as exc:  # noqa: BLE001
+                outcome["patch_error"] = exc
+
+        threads = [threading.Thread(target=start_load), threading.Thread(target=patch_template)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=120)
+        assert "load_error" not in outcome, outcome.get("load_error")
+        assert "patch_error" not in outcome, outcome.get("patch_error")
+        # Atomic: the snapshot carries exactly one of the two names.
+        assert outcome["loaded_name"] in ("Race Brute", "Race Brute Patched")
+        _assert_full_graph(engine_a, 1)
+    finally:
+        engine_b.dispose()
+        engine_a.dispose()
+
+
+def test_pg_load_vs_template_archive_two_connections() -> None:
+    """Concurrent template archive vs load: archived-from-config still loads atomically."""
+    table, battle_maps, engine_a, map_id, template_id = _pg_table_with_custom_template()
+    engine_b = create_engine(POSTGRES_URL, pool_size=5, max_overflow=5)
+    try:
+        from datetime import datetime, timezone
+
+        from app.persistence.combat.tables import monster_templates
+
+        barrier = threading.Barrier(2)
+        outcome: dict = {}
+
+        def start_load() -> None:
+            try:
+                barrier.wait(timeout=30)
+                table.combat.start_tactical_combat(
+                    table.dm_actor,
+                    StartTacticalCombatInput(
+                        battle_map_id=map_id, load_map_monsters=True,
+                        idempotency_key="pg-race-archive",
+                    ),
+                )
+                outcome["load"] = "ok"
+            except Exception as exc:  # noqa: BLE001
+                outcome["load_error"] = exc
+
+        def archive_template() -> None:
+            try:
+                barrier.wait(timeout=30)
+                with engine_b.begin() as connection:
+                    connection.execute(
+                        monster_templates.update()
+                        .where(monster_templates.c.id == template_id)
+                        .values(archived_at=datetime.now(timezone.utc))
+                    )
+                outcome["archive"] = "ok"
+            except Exception as exc:  # noqa: BLE001
+                outcome["archive_error"] = exc
+
+        threads = [threading.Thread(target=start_load), threading.Thread(target=archive_template)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=120)
+        assert "load_error" not in outcome, outcome.get("load_error")
+        assert "archive_error" not in outcome, outcome.get("archive_error")
+        # No half batch either way.
+        _assert_full_graph(engine_a, 1)
+    finally:
+        engine_b.dispose()
+        engine_a.dispose()
+
+
+def test_pg_load_vs_template_delete_two_connections() -> None:
+    """Concurrent template delete vs load: the delete is rejected, the load is atomic."""
+    table, battle_maps, engine_a, map_id, template_id = _pg_table_with_custom_template()
+    engine_b = create_engine(POSTGRES_URL, pool_size=5, max_overflow=5)
+    try:
+        from app.persistence.combat.tables import monster_templates
+
+        barrier = threading.Barrier(2)
+        outcome: dict = {}
+
+        def start_load() -> None:
+            try:
+                barrier.wait(timeout=30)
+                table.combat.start_tactical_combat(
+                    table.dm_actor,
+                    StartTacticalCombatInput(
+                        battle_map_id=map_id, load_map_monsters=True,
+                        idempotency_key="pg-race-delete",
+                    ),
+                )
+                outcome["load"] = "ok"
+            except Exception as exc:  # noqa: BLE001
+                outcome["load_error"] = exc
+
+        def delete_template() -> None:
+            # The placement references the template (FK RESTRICT), so the raw
+            # delete must fail; it must not tear the concurrent load.
+            from app.persistence.combat.tables import monster_templates as mt
+
+            try:
+                barrier.wait(timeout=30)
+                with engine_b.begin() as connection:
+                    connection.execute(
+                        mt.delete().where(mt.c.id == template_id)
+                    )
+                outcome["delete"] = "ok"
+            except Exception as exc:  # noqa: BLE001
+                outcome["delete_error"] = exc
+
+        threads = [threading.Thread(target=start_load), threading.Thread(target=delete_template)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=120)
+        assert "load_error" not in outcome, outcome.get("load_error")
+        # The delete cannot succeed while the placement references the template.
+        assert "delete" not in outcome
+        assert "delete_error" in outcome
+        # The load graph is whole: no half batch of monsters.
+        _assert_full_graph(engine_a, 1)
+        with engine_a.connect() as connection:
+            cursor = int(
+                connection.scalar(
+                    select(func.max(session_events.c.seq)).where(
+                        session_events.c.session_id == table.session_id
+                    )
+                )
+                or 0
+            )
+        assert cursor >= 1
+    finally:
+        engine_b.dispose()
+        engine_a.dispose()
