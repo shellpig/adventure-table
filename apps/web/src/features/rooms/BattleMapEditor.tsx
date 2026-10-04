@@ -8,7 +8,7 @@ import type {
 } from '../../api/battleMaps'
 import { replaceBattleMapObjects, replaceMonsterPlacements } from '../../api/battleMaps'
 import type { MonsterLibrarySummaryView } from '../../api/monsterLibrary'
-import { listMonsterLibrary } from '../../api/monsterLibrary'
+import { getMonsterLibraryEntry, listMonsterLibrary } from '../../api/monsterLibrary'
 import { SessionApiError } from '../../api/sessions'
 import { localizedSessionRequestMessage } from '../../i18n/sessionMessages'
 import type { Locale } from '../../i18n/locale'
@@ -20,6 +20,7 @@ import {
   extractPlacementProblems,
   footprintForSizeName,
   monsterPlacementsFromMap,
+  monsterSummaryFromDetail,
   moveMonsterPlacement,
   newPlacementClientId,
   removeMonsterPlacement,
@@ -139,6 +140,17 @@ export function BattleMapEditor({
   )
   const [templates, setTemplates] = useState<MonsterLibrarySummaryView[] | null>(null)
   const [templatesLoading, setTemplatesLoading] = useState(false)
+  const [templateSearch, setTemplateSearch] = useState('')
+  // Saved placements may reference templates outside the current menu page
+  // (the menu only loads one page of 50). Those refs are resolved separately
+  // below, including archived custom templates the picker never offers.
+  const [resolvedTemplates, setResolvedTemplates] = useState<
+    Record<string, MonsterLibrarySummaryView>
+  >({})
+  // Only the latest menu request may update state; an older response that
+  // arrives later (e.g. an earlier keystroke after a later one) is dropped.
+  const templateListRequestSeq = useRef(0)
+  const unresolvableRefs = useRef<Set<string>>(new Set())
   const [selectedTemplateRef, setSelectedTemplateRef] = useState('')
   const [selectedPlacementId, setSelectedPlacementId] = useState<string | null>(null)
   const [newPlacementVisibility, setNewPlacementVisibility] =
@@ -499,23 +511,67 @@ export function BattleMapEditor({
   }, [])
 
   useEffect(() => {
-    if (!monsterMode || templates !== null || templatesLoading) return
+    if (!monsterMode) return
+    const requestSeq = ++templateListRequestSeq.current
     setTemplatesLoading(true)
-    listMonsterLibrary(roomId, token, { include_archived: true })
+    listMonsterLibrary(roomId, token, {
+      query: templateSearch.trim() || undefined,
+      include_archived: false,
+      limit: 50,
+    })
       .then((list) => {
+        if (requestSeq !== templateListRequestSeq.current) return
         setTemplates(list)
         setTemplatesLoading(false)
       })
       .catch((cause) => {
+        if (requestSeq !== templateListRequestSeq.current) return
         setTemplatesLoading(false)
         onError(cause)
       })
-  }, [monsterMode, templates, templatesLoading, roomId, token, onError])
+  }, [monsterMode, templateSearch, roomId, token, onError])
+
+  // Resolve saved placements whose template is not on the current menu page.
+  // Each missing ref is fetched once via the detail endpoint (archived custom
+  // templates included); refs the server rejects are remembered so a reopen
+  // with a deleted template does not refetch in a loop.
+  useEffect(() => {
+    if (!monsterMode || templates === null) return
+    const known = new Set([
+      ...templates.map((t) => t.ref),
+      ...Object.keys(resolvedTemplates),
+    ])
+    const missing = Array.from(new Set(placements.map((p) => p.templateRef))).filter(
+      (ref) => ref && !known.has(ref) && !unresolvableRefs.current.has(ref),
+    )
+    if (missing.length === 0) return
+    let cancelled = false
+    void (async () => {
+      for (const ref of missing) {
+        try {
+          const detail = await getMonsterLibraryEntry(roomId, ref, token)
+          if (cancelled) return
+          const summary = monsterSummaryFromDetail(detail)
+          setResolvedTemplates((prev) => (prev[ref] ? prev : { ...prev, [ref]: summary }))
+        } catch {
+          if (!cancelled) unresolvableRefs.current.add(ref)
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [monsterMode, templates, placements, resolvedTemplates, roomId, token])
 
   const templateForPlacement = useCallback(
-    (templateRef: string): MonsterLibrarySummaryView | undefined =>
-      templates ? resolvePlacementTemplate(templateRef, templates) : undefined,
-    [templates],
+    (templateRef: string): MonsterLibrarySummaryView | undefined => {
+      if (templates) {
+        const hit = resolvePlacementTemplate(templateRef, templates)
+        if (hit) return hit
+      }
+      return resolvedTemplates[templateRef]
+    },
+    [templates, resolvedTemplates],
   )
 
   const placementDisplayName = useCallback(
@@ -943,15 +999,34 @@ export function BattleMapEditor({
         <div className="battle-map-editor__monster-panel" data-testid="monster-placement-panel">
           <h4>{libraryCopy.monsterPlacementsHeading}</h4>
           <p>{libraryCopy.monsterPlacementsHint}</p>
-          {templatesLoading ? (
+          {templates === null ? (
             <p>{libraryCopy.monsterPlacementLoadingTemplates}</p>
           ) : (
             <div className="battle-map-editor__monster-picker">
               <label>
+                {libraryCopy.monsterTemplateSearchLabel}:
+                <input
+                  type="search"
+                  value={templateSearch}
+                  placeholder={libraryCopy.monsterTemplateSearchPlaceholder}
+                  onChange={(e) => setTemplateSearch(e.target.value)}
+                  data-testid="monster-placement-template-search"
+                />
+              </label>
+              <label>
                 {libraryCopy.monsterTemplatePickerLabel}:
                 <select
                   value={selectedTemplateRef}
-                  onChange={(e) => setSelectedTemplateRef(e.target.value)}
+                  onChange={(e) => {
+                    const ref = e.target.value
+                    setSelectedTemplateRef(ref)
+                    const hit = templates ? resolvePlacementTemplate(ref, templates) : undefined
+                    if (ref && hit) {
+                      setResolvedTemplates((prev) =>
+                        prev[ref] ? prev : { ...prev, [ref]: hit },
+                      )
+                    }
+                  }}
                   data-testid="monster-placement-template-picker"
                 >
                   <option value="">{libraryCopy.monsterTemplatePickerPlaceholder}</option>
@@ -963,8 +1038,33 @@ export function BattleMapEditor({
                       )}
                     </option>
                   ))}
+                  {selectedTemplateRef &&
+                  !availableTemplates.some((t) => t.ref === selectedTemplateRef)
+                    ? (() => {
+                        const kept =
+                          templateForPlacement(selectedTemplateRef) ??
+                          (templates
+                            ? resolvePlacementTemplate(selectedTemplateRef, templates)
+                            : undefined)
+                        return kept ? (
+                          <option key={kept.ref} value={kept.ref}>
+                            {formatMonsterName(
+                              {
+                                name: kept.name,
+                                names: kept.names,
+                                name_is_custom: kept.name_is_custom,
+                              },
+                              locale,
+                            )}
+                          </option>
+                        ) : null
+                      })()
+                    : null}
                 </select>
               </label>
+              {!templatesLoading && availableTemplates.length === 0 && templateSearch.trim() ? (
+                <p className="room-empty-text">{libraryCopy.monsterTemplateNoMatch}</p>
+              ) : null}
               <label>
                 {libraryCopy.monsterPlacementVisibilityLabel}:
                 <select

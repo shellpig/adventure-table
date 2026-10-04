@@ -7,6 +7,7 @@ import type {
 } from '../../api/battleMaps'
 import { SessionApiError } from '../../api/sessions'
 import type { MonsterLibrarySummaryView } from '../../api/monsterLibrary'
+import type { MonsterLibraryDetailView } from '../../api/monsterLibrary'
 
 /**
  * M07-C map monster pre-placements (library editor working state).
@@ -170,6 +171,31 @@ export function resolvePlacementTemplate(
   summaries: MonsterLibrarySummaryView[],
 ): MonsterLibrarySummaryView | undefined {
   return summaries.find((s) => s.ref === ref)
+}
+
+/**
+ * Summary view for a template resolved outside the menu page (e.g. a saved
+ * placement whose ref is not in the current search page). Carries the rules
+ * fields the editor needs (size for footprints, names for labels) including
+ * archived custom templates, which the add picker never offers.
+ */
+export function monsterSummaryFromDetail(detail: MonsterLibraryDetailView): MonsterLibrarySummaryView {
+  return {
+    ref: detail.ref,
+    name: detail.name,
+    names: detail.names,
+    name_is_custom: detail.name_is_custom,
+    source_kind: detail.source_kind,
+    source_key: detail.source_key ?? null,
+    size: detail.rules.size,
+    type: detail.rules.type,
+    alignment: detail.rules.alignment,
+    armor_class: detail.rules.armor_class,
+    max_hp: detail.rules.max_hp,
+    challenge_rating: detail.rules.challenge_rating ?? null,
+    archived_at: detail.archived_at ?? null,
+    revision: detail.revision ?? null,
+  }
 }
 
 /**

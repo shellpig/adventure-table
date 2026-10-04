@@ -462,10 +462,60 @@ describe('M07-C BattleMapEditor monster placements', () => {
     expect(source).not.toContain('/board/positions')
   })
 
-  it('loads archived templates for display but offers only unarchived ones for placement', () => {
-    expect(source).toContain('listMonsterLibrary(roomId, token, { include_archived: true })')
+  it('searches the template picker through listMonsterLibrary query (stale responses dropped)', () => {
+    expect(source).toContain('data-testid="monster-placement-template-search"')
+    expect(source).toContain('query: templateSearch.trim() || undefined')
+    expect(source).toContain('include_archived: false')
+    // Same stale-response guard as RoomMonsterLibraryPage: only the latest
+    // menu request may update state.
+    expect(source).toContain('templateListRequestSeq')
+    expect(source).toContain('requestSeq !== templateListRequestSeq.current')
+  })
+
+  it('resolves saved placements missing from the menu page via getMonsterLibraryEntry', () => {
+    expect(source).toContain('getMonsterLibraryEntry(roomId, ref, token)')
+    expect(source).toContain('monsterSummaryFromDetail(detail)')
+    expect(source).toContain('return resolvedTemplates[templateRef]')
+    // Archived custom templates resolve for display but are never offered.
     expect(source).toContain('availableMonsterTemplates(templates)')
     expect(source).toContain('availableTemplates.map(')
+  })
+
+  it('monsterSummaryFromDetail keeps the size and archived flag a footprint needs', async () => {
+    const { monsterSummaryFromDetail, footprintForSizeName } = await import(
+      './mapMonsterPlacements'
+    )
+    const summary = monsterSummaryFromDetail({
+      ref: 'custom:10000000-0000-4000-8000-000000000001',
+      name: 'Grown Horror',
+      names: {},
+      name_is_custom: true,
+      source_kind: 'custom',
+      source_key: null,
+      rules: {
+        name: 'Grown Horror',
+        armor_class: 13,
+        max_hp: 20,
+        size: 'Large',
+        type: 'monstrosity',
+        alignment: 'unaligned',
+        speed: '30 ft.',
+        ability_scores: {
+          strength: 10,
+          dexterity: 10,
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
+        },
+      },
+      presentation: {},
+      revision: 2,
+      archived_at: '2026-10-04T00:00:00Z',
+    })
+    expect(summary.size).toBe('Large')
+    expect(summary.archived_at).toBe('2026-10-04T00:00:00Z')
+    expect(footprintForSizeName(summary.size)).toEqual({ width: 2, height: 2 })
   })
 
   it('surfaces 409 problems on the matching placements and lists DM-only reasons', () => {
