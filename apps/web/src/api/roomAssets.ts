@@ -1,4 +1,4 @@
-export type RoomAssetKind = 'image' | 'source_document'
+export type RoomAssetKind = 'image' | 'source_document' | 'battle_map_image'
 export type RoomAssetVisibility = 'room' | 'dm_only'
 
 export type RoomAsset = {

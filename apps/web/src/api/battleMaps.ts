@@ -50,6 +50,7 @@ export type BattleMap = {
   revision: number
   created_at: string
   updated_at: string
+  archived_at: string | null
   walls: BattleMapWall[]
   doors: BattleMapDoor[]
   terrain: BattleMapTerrain[]
@@ -67,6 +68,20 @@ export type BattleMapSummary = {
   revision: number
   created_at: string
   updated_at: string
+  archived_at: string | null
+}
+
+export type BattleMapCopyInput = {
+  expected_revision: number
+  name?: string | null
+}
+
+export type BattleMapArchiveInput = {
+  expected_revision: number
+}
+
+export type ListBattleMapsOptions = {
+  includeArchived?: boolean
 }
 
 export type BattleMapCreateInput = {
@@ -130,8 +145,13 @@ export type BattleMapObjectsReplaceInput = {
 
 const battleMapsBase = (roomId: string) => `/api/rooms/${roomId}/battle-maps`
 
-export function listBattleMaps(roomId: string, token: string): Promise<BattleMapSummary[]> {
-  return request(battleMapsBase(roomId), token)
+export function listBattleMaps(
+  roomId: string,
+  token: string,
+  options?: ListBattleMapsOptions,
+): Promise<BattleMapSummary[]> {
+  const query = options?.includeArchived ? '?include_archived=true' : ''
+  return request(`${battleMapsBase(roomId)}${query}`, token)
 }
 
 export function createBattleMap(
@@ -143,6 +163,45 @@ export function createBattleMap(
     method: 'POST',
     body: JSON.stringify(body),
   })
+}
+
+export function copyBattleMap(
+  roomId: string,
+  mapId: string,
+  body: BattleMapCopyInput,
+  token: string,
+): Promise<BattleMap> {
+  return request(`${battleMapsBase(roomId)}/${mapId}/copy`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function archiveBattleMap(
+  roomId: string,
+  mapId: string,
+  body: BattleMapArchiveInput,
+  token: string,
+): Promise<BattleMap> {
+  return request(`${battleMapsBase(roomId)}/${mapId}/archive`, token, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function deleteBattleMap(
+  roomId: string,
+  mapId: string,
+  expectedRevision: number,
+  token: string,
+): Promise<void> {
+  return request(
+    `${battleMapsBase(roomId)}/${mapId}?expected_revision=${expectedRevision}`,
+    token,
+    {
+      method: 'DELETE',
+    },
+  )
 }
 
 export function getBattleMap(

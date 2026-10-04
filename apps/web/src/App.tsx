@@ -10,6 +10,7 @@ import { protectedCapabilityForPath } from './features/capabilities/routes'
 import { CharacterBuilderRoutePage } from './features/m01m/M01MBuilderRoutePanel'
 import { CharacterSheetRoutePage } from './features/m01m/M01MAncestryRoutePanel'
 import { RoomAdventuresPage, roomAdventuresRouteFromPath } from './features/rooms/RoomAdventuresPage'
+import { RoomBattleMapLibraryPage, roomBattleMapLibraryRouteFromPath } from './features/rooms/RoomBattleMapLibraryPage'
 import { RoomMonsterLibraryPage, roomMonsterLibraryRouteFromPath } from './features/rooms/RoomMonsterLibraryPage'
 import { CampaignChangesPage, campaignChangesRouteFromPath } from './features/rooms/CampaignChangesPage'
 import { RoomCampaignPage, roomCampaignRouteFromPath } from './features/rooms/RoomCampaignPage'
@@ -113,6 +114,7 @@ export default function App() {
   const roomSessionRoute = roomSessionRouteFromPath(pathname)
   const roomLobbyRoute = roomLobbyRouteFromPath(pathname)
   const roomMonsterLibraryRoute = roomMonsterLibraryRouteFromPath(pathname)
+  const roomBattleMapLibraryRoute = roomBattleMapLibraryRouteFromPath(pathname)
   const roomAdventuresRoute = roomAdventuresRouteFromPath(pathname)
   const campaignChangesRoute = campaignChangesRouteFromPath(pathname)
   const roomCampaignRoute = roomCampaignRouteFromPath(pathname)
@@ -147,6 +149,9 @@ export default function App() {
   }
   if (roomMonsterLibraryRoute) {
     return <RoomMonsterLibraryPage roomId={roomMonsterLibraryRoute.roomId} />
+  }
+  if (roomBattleMapLibraryRoute) {
+    return <RoomBattleMapLibraryPage roomId={roomBattleMapLibraryRoute.roomId} />
   }
   if (roomAdventuresRoute) {
     return (

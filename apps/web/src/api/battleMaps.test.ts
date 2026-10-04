@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  archiveBattleMap,
+  copyBattleMap,
   createBattleMap,
+  deleteBattleMap,
   getBattleMap,
   listBattleMaps,
   patchBattleMap,
@@ -75,5 +78,45 @@ describe('Battle Maps API client', () => {
     expect(url).toBe(`/api/rooms/${ROOM_ID}/battle-maps/${MAP_ID}/objects`)
     expect(init?.method).toBe('PUT')
     expect(JSON.parse(init?.body as string)).toEqual(body)
+  })
+
+  it('calls listBattleMaps with include_archived=true when requested', async () => {
+    const fetchMock = mockFetch([])
+    await listBattleMaps(ROOM_ID, TOKEN, { includeArchived: true })
+    expect(fetchMock).toHaveBeenCalledOnce()
+    const [url] = fetchMock.mock.calls[0]
+    expect(url).toBe(`/api/rooms/${ROOM_ID}/battle-maps?include_archived=true`)
+  })
+
+  it('calls copyBattleMap with POST, /copy URL, and expected_revision', async () => {
+    const fetchMock = mockFetch({ id: 'copy-id', revision: 1 })
+    const body = { expected_revision: 2, name: 'Copied Map' }
+    await copyBattleMap(ROOM_ID, MAP_ID, body, TOKEN)
+    expect(fetchMock).toHaveBeenCalledOnce()
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe(`/api/rooms/${ROOM_ID}/battle-maps/${MAP_ID}/copy`)
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(init?.body as string)).toEqual(body)
+  })
+
+  it('calls archiveBattleMap with POST, /archive URL, and expected_revision', async () => {
+    const fetchMock = mockFetch({ id: MAP_ID, revision: 3, archived_at: '2026-10-04T00:00:00Z' })
+    const body = { expected_revision: 2 }
+    await archiveBattleMap(ROOM_ID, MAP_ID, body, TOKEN)
+    expect(fetchMock).toHaveBeenCalledOnce()
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe(`/api/rooms/${ROOM_ID}/battle-maps/${MAP_ID}/archive`)
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(init?.body as string)).toEqual(body)
+  })
+
+  it('calls deleteBattleMap with DELETE, expected_revision query param, and resolves on 204', async () => {
+    const fetchMock = vi.fn<FetchMock>(async () => ({ ok: true, status: 204 } as Response))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(deleteBattleMap(ROOM_ID, MAP_ID, 4, TOKEN)).resolves.toBeUndefined()
+    expect(fetchMock).toHaveBeenCalledOnce()
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe(`/api/rooms/${ROOM_ID}/battle-maps/${MAP_ID}?expected_revision=4`)
+    expect(init?.method).toBe('DELETE')
   })
 })
