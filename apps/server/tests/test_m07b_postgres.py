@@ -12,7 +12,15 @@ from sqlalchemy import create_engine, func, inspect, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
-from app.domain.battle_maps.schemas import BattleMapNotFoundError, BattleMapReferencedError
+from app.domain.battle_maps.schemas import (
+    BattleMapArchive,
+    BattleMapArchivedError,
+    BattleMapCopy,
+    BattleMapNotFoundError,
+    BattleMapObjectsReplace,
+    BattleMapReferencedError,
+    BattleMapRevisionConflictError,
+)
 from app.domain.battle_maps.service import BattleMapService
 from app.domain.combat.lifecycle import StartTacticalCombatInput
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
@@ -129,5 +137,102 @@ def test_m07b_tactical_start_vs_map_delete_race_leaves_no_dangling_reference() -
         else:
             assert outcomes["delete"] is None
             assert (map_rows, board_refs, combat_count) == (0, 0, 0)
+    finally:
+        engine.dispose()
+
+
+def _race(*actions) -> list[Exception | None]:
+    """Run each action on its own connection-backed thread, released together."""
+    barrier = Barrier(len(actions))
+    outcomes: list[Exception | None] = [None] * len(actions)
+
+    def run(index: int) -> None:
+        barrier.wait(timeout=10)
+        try:
+            actions[index]()
+        except (BattleMapRevisionConflictError, BattleMapArchivedError) as exc:
+            outcomes[index] = exc
+
+    with ThreadPoolExecutor(max_workers=len(actions)) as pool:
+        for future in [pool.submit(run, index) for index in range(len(actions))]:
+            future.result(timeout=30)
+    return outcomes
+
+
+def test_m07b_copy_vs_edit_race_copies_a_consistent_revision() -> None:
+    _reset()
+    command.upgrade(_config(), "heads")
+    assert POSTGRES_URL is not None
+    engine = create_engine(POSTGRES_URL)
+    try:
+        table = setup_tactical_table(engine)
+        map_id = insert_battle_map(table)
+        maps = BattleMapService(BattleMapRepository(engine), RoomAssetRepository(engine), table.events)
+        original = maps.get(_owner_context(table), table.room_id, map_id)
+        copies = []
+
+        def copy() -> None:
+            copies.append(maps.copy(
+                _owner_context(table), room_id=table.room_id, map_id=map_id,
+                payload=BattleMapCopy(expected_revision=3),
+            ))
+
+        def edit() -> None:
+            maps.replace_objects(
+                _owner_context(table), room_id=table.room_id, map_id=map_id,
+                payload=BattleMapObjectsReplace(expected_revision=3, walls=[], doors=[], terrain=[], drawings=[]),
+            )
+
+        copy_outcome, edit_outcome = _race(copy, edit)
+
+        assert edit_outcome is None
+        edited = maps.get(_owner_context(table), table.room_id, map_id)
+        assert (edited.revision, edited.walls, edited.doors) == (4, [], [])
+        if copy_outcome is None:
+            # The copy read the pre-edit revision as a whole: no torn geometry.
+            assert sorted((w.x1, w.y1, w.x2, w.y2) for w in copies[0].walls) == sorted(
+                (w.x1, w.y1, w.x2, w.y2) for w in original.walls
+            )
+            assert len(copies[0].doors) == len(original.doors)
+        else:
+            assert isinstance(copy_outcome, BattleMapRevisionConflictError)
+            assert copies == []
+    finally:
+        engine.dispose()
+
+
+def test_m07b_archive_vs_tactical_start_race_never_starts_on_an_archived_map() -> None:
+    _reset()
+    command.upgrade(_config(), "heads")
+    assert POSTGRES_URL is not None
+    engine = create_engine(POSTGRES_URL)
+    try:
+        table = setup_tactical_table(engine)
+        map_id = insert_battle_map(table)
+        maps = BattleMapService(BattleMapRepository(engine), RoomAssetRepository(engine), table.events)
+
+        def archive() -> None:
+            maps.archive(
+                _owner_context(table), room_id=table.room_id, map_id=map_id,
+                payload=BattleMapArchive(expected_revision=3),
+            )
+
+        def start() -> None:
+            table.combat.start_tactical_combat(table.dm_actor, StartTacticalCombatInput(battle_map_id=map_id))
+
+        archive_outcome, start_outcome = _race(archive, start)
+
+        assert archive_outcome is None
+        with engine.connect() as connection:
+            boards = connection.execute(
+                select(combat_boards.c.source_battle_map_revision)
+                .where(combat_boards.c.source_battle_map_id == map_id)
+            ).scalars().all()
+        if start_outcome is None:
+            # Start won the row lock: it froze the pre-archive revision.
+            assert boards == [3]
+        else:
+            assert isinstance(start_outcome, BattleMapArchivedError)
+            assert boards == []
     finally:
         engine.dispose()
