@@ -185,6 +185,7 @@ def get_battle_map_service(request: Request) -> BattleMapService:
     service = BattleMapService(
         BattleMapRepository(engine),
         RoomAssetRepository(engine),
+        table_event_service=get_table_event_service(request),
     )
     request.app.state.battle_map_service = service
     return service

@@ -14,7 +14,6 @@ import pytest
 from app.content.registry import ContentNotFoundError
 from app.domain.battle_maps.service import BattleMapService
 from app.domain.combat.ai_tools import (
-    BattleMapCreateToolInput,
     CombatAIToolApplicationService,
     CombatPlaceTokenToolInput,
 )
@@ -140,7 +139,7 @@ def _facade(
         monster_repository=table.combat.monster_repository,
         registry=table.registry,
     )
-    battle_maps = BattleMapService(table.battle_maps, RoomAssetRepository(table.engine))
+    battle_maps = BattleMapService(table.battle_maps, RoomAssetRepository(table.engine), table.events)
     spell_service = CombatSpellService(
         repository=CombatSpellRepository(table.engine, table.events.repository),
         combat_repository=table.combat.repository,
@@ -372,11 +371,8 @@ _DM_ONLY_TACTICAL = {
     "combat_cancel_pending_movement",
 }
 _DM_ONLY_BATTLE_MAP = {
-    "battle_map_create",
     "battle_map_get",
     "battle_map_list",
-    "battle_map_patch",
-    "battle_map_replace_objects",
 }
 
 
@@ -740,13 +736,14 @@ def test_f7_battle_map_error_codes_bilingual() -> None:
     import asyncio
     from uuid import uuid4
 
-    from app.domain.battle_maps.schemas import BattleMapCreate, BattleMapPatch
     from app.mcp.tools import call_tool
 
     table, _, _ = _running_table()
     facade = _facade(table)
-    dm_auth = _auth_view("dm")
     dm_token = _dm_token(table)
+    # M07-B: battle-map reads re-validate the live DM grant, so use a real
+    # auth view rather than a synthetic one.
+    dm_auth = facade._auth(dm_token)
 
     # not_found: reading a battle map that does not exist.
     missing = asyncio.run(
@@ -763,42 +760,11 @@ def test_f7_battle_map_error_codes_bilingual() -> None:
     # permission_denied: a Player role may not call DM-only battle-map tools.
     denied = asyncio.run(
         call_tool(
-            facade, token=dm_token, auth=_auth_view("player"), name="battle_map_create",
-            arguments={"payload": BattleMapCreate(
-                name="nope", source_kind="blank", width_cells=10, height_cells=10
-            ).model_dump(mode="json")},
+            facade, token=dm_token, auth=_auth_view("player"), name="battle_map_list",
+            arguments={},
         )
     )
     denied_error = denied["structuredContent"]["error"]
     assert denied_error["code"] == "permission_denied"
     assert denied_error["messages"]["en"].strip()
     assert denied_error["messages"]["zh-TW"].strip()
-
-    # table_conflict: patching against a stale expected_revision.
-    created = facade.battle_map_create(
-        dm_token,
-        BattleMapCreateToolInput(
-            payload=BattleMapCreate(
-                name="F7 map", source_kind="blank", width_cells=10, height_cells=10
-            )
-        ),
-    )
-    map_id = created["id"]
-    # table_conflict: patching against a stale expected_revision. Use a real
-    # auth view here so the room scope matches the map created above.
-    real_auth = facade._auth(dm_token)
-    conflict = asyncio.run(
-        call_tool(
-            facade, token=dm_token, auth=real_auth, name="battle_map_patch",
-            arguments={
-                "map_id": map_id,
-                "payload": BattleMapPatch(expected_revision=999, name="renamed").model_dump(
-                    mode="json", exclude_none=True
-                ),
-            },
-        )
-    )
-    conflict_error = conflict["structuredContent"]["error"]
-    assert conflict_error["code"] == "table_conflict"
-    assert conflict_error["messages"]["en"].strip()
-    assert conflict_error["messages"]["zh-TW"].strip()

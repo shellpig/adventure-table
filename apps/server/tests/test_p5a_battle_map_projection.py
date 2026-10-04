@@ -15,7 +15,7 @@ def _definition(*, walls: list[BattleMapWall], doors: list[BattleMapDoor]) -> Ba
         id=uuid4(), room_id=uuid4(), name="Cave", source_kind="blank",
         image_asset_id=None, width_cells=20, height_cells=15,
         grid_pixel_size=None, grid_offset_x=None, grid_offset_y=None,
-        revision=3, created_at=now, updated_at=now,
+        revision=3, created_at=now, updated_at=now, archived_at=None,
         walls=walls, doors=doors,
     )
 

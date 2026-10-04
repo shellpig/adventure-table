@@ -61,12 +61,18 @@ export const P5F_SESSION_REQUEST_CODES = [
   'battle_map_asset_invalid',
 ] as const
 
+export const M07B_SESSION_REQUEST_CODES = [
+  'battle_map_archived',
+  'battle_map_referenced',
+] as const
+
 export const SESSION_REQUEST_CODES = [
   ...P2E_SESSION_REQUEST_CODES,
   ...P3B_SESSION_REQUEST_CODES,
   ...P3C_SESSION_REQUEST_CODES,
   ...P4E_SESSION_REQUEST_CODES,
   ...P5F_SESSION_REQUEST_CODES,
+  ...M07B_SESSION_REQUEST_CODES,
 ] as const
 
 export type SessionRequestCode = (typeof SESSION_REQUEST_CODES)[number]
@@ -255,6 +261,14 @@ export const SESSION_REQUEST_CODE_MESSAGES: Record<SessionRequestCode, Record<Lo
   battle_map_asset_invalid: {
     'zh-TW': '地圖圖片資源無效，請重新選擇圖片。',
     en: 'The map image asset is invalid. Select the image again.',
+  },
+  battle_map_archived: {
+    'zh-TW': '此戰鬥地圖已封存，無法用於新戰鬥。',
+    en: 'This battle map is archived and cannot be used for new combat.',
+  },
+  battle_map_referenced: {
+    'zh-TW': '此戰鬥地圖已被戰鬥引用，無法刪除；請改用封存。',
+    en: 'This battle map is used by a combat and cannot be deleted; archive it instead.',
   },
 }
 

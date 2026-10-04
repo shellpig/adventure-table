@@ -22,12 +22,14 @@ from app.domain.battle_maps.schemas import BattleMap
 from app.domain.battle_maps.service import BattleMapService
 from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
+from app.domain.rooms.table_events import TableEventService
 from app.main import app
 from app.persistence.battle_maps.repository import BattleMapRepository
 from app.persistence.battle_maps.tables import battle_maps
 from app.persistence.room_assets.repository import RoomAssetRepository
 from app.persistence.room_assets.storage import FilesystemAssetStorage
 from app.persistence.rooms.tables import rooms
+from app.persistence.rooms.table_runtime import TableEventRepository
 
 
 def _engine() -> Engine:
@@ -102,7 +104,9 @@ def bm_fixture(tmp_path: Path) -> Generator[BattleMapFixture, None, None]:
         max_source_document_bytes=20 * 1024 * 1024,
     )
     battle_map_service = BattleMapService(
-        BattleMapRepository(engine), asset_repository
+        BattleMapRepository(engine),
+        asset_repository,
+        TableEventService(TableEventRepository(engine)),
     )
 
     room_a_id = uuid4()
@@ -411,7 +415,7 @@ def test_member_everything_is_404_with_zero_side_effects(
         json=_objects_payload(1), headers=member,
     ).status_code == 404
     assert fx.client.delete(
-        f"/api/rooms/{fx.room_a_id}/battle-maps/{map_id}", headers=member
+        f"/api/rooms/{fx.room_a_id}/battle-maps/{map_id}?expected_revision=1", headers=member
     ).status_code == 404
 
     # Zero side effects: the map is untouched and nothing new exists.
@@ -446,7 +450,7 @@ def test_cross_room_map_access_is_404(bm_fixture: BattleMapFixture) -> None:
         json=_objects_payload(1), headers=owner_b,
     ).status_code == 404
     assert fx.client.delete(
-        f"/api/rooms/{fx.room_a_id}/battle-maps/{map_id}", headers=owner_b
+        f"/api/rooms/{fx.room_a_id}/battle-maps/{map_id}?expected_revision=1", headers=owner_b
     ).status_code == 404
 
     # Room B context must not see the Room A map either (room mismatch -> 404).
@@ -678,7 +682,7 @@ def test_delete_map(bm_fixture: BattleMapFixture) -> None:
     assert _map_count(fx.engine) == 1
 
     resp = fx.client.delete(
-        f"/api/rooms/{fx.room_a_id}/battle-maps/{map_id}",
+        f"/api/rooms/{fx.room_a_id}/battle-maps/{map_id}?expected_revision=1",
         headers=_auth(fx.token_dm_a),
     )
     assert resp.status_code == 204

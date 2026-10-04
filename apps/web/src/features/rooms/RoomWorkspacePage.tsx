@@ -394,6 +394,11 @@ export function RoomWorkspacePage({ roomId }: { roomId: string }) {
               {copy.monsterLibraryAction}
             </a>
           ) : null}
+          {recent.authority === 'owner' || recent.authority === 'dm' ? (
+            <a className="button primary" href={`/rooms/${roomId}/battle-maps`}>
+              {copy.battleMapLibraryAction}
+            </a>
+          ) : null}
           <a className="button secondary" href="/">{copy.backHome}</a>
         </div>
 

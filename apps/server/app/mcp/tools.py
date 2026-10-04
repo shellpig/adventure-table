@@ -48,7 +48,9 @@ from app.domain.campaign_runtime.ai_tools import (
 from app.domain.campaign_runtime.errors import CampaignRuntimeValidationError
 from app.domain.campaign_runtime.payloads import RuntimeEntryPayloadError
 from app.domain.battle_maps.schemas import (
+    BattleMapArchivedError,
     BattleMapForbiddenError,
+    BattleMapInvalidError,
     BattleMapNotFoundError,
     BattleMapRevisionConflictError,
 )
@@ -57,10 +59,7 @@ from app.domain.combat.adjudication_service import (
     SpecialAdjudicationRequestInput,
 )
 from app.domain.combat.ai_tools import (
-    BattleMapCreateToolInput,
     BattleMapIdToolInput,
-    BattleMapPatchToolInput,
-    BattleMapReplaceObjectsToolInput,
     CombatAdjudicationDecisionToolInput,
     CombatEntryMutationToolInput,
     CombatEntryToolInput,
@@ -397,8 +396,8 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
         "DM 裁定待處理的戰鬥裁定事項，決定是否成立、後果、狀態或後續擲骰請求。",
     ),
     "combat_start_tactical": (
-        "DM-only. Start a Tactical Combat round sequence by freezing a battle map (or blank board dimensions) into the combat board and placing the active party.",
-        "僅限 DM。以戰鬥地圖（或空白棋盤尺寸）凍結戰鬥棋盤並置入活躍隊伍，啟動戰術戰鬥回合流程。",
+        "DM-only. Start a Tactical Combat round sequence by freezing a battle map, blank board dimensions, or temporary map geometry into the combat board and placing the active party.",
+        "僅限 DM。以戰鬥地圖、空白棋盤尺寸或臨時地圖幾何凍結戰鬥棋盤並置入活躍隊伍，啟動戰術戰鬥回合流程。",
     ),
     "combat_get_board": (
         "Read the current Tactical Combat board projection: positions, walls, and doors as the caller's role may see them. Call before describing the battlefield or planning movement.",
@@ -440,10 +439,6 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
         "Preview an area-of-effect template anchored at structured cells: affected cells, candidate targets, and legality, before proposing or casting.",
         "在提案或施放前，預覽錨定於結構化格的範圍效果模板：影響格、候選目標與合法性。",
     ),
-    "battle_map_create": (
-        "DM-only. Create a blank or image-backed battle map in this room for later tactical setup.",
-        "僅限 DM。在本房間建立空白或圖像式戰鬥地圖，供後續戰術設置使用。",
-    ),
     "battle_map_get": (
         "DM-only. Read a battle map's full definition and objects by map id.",
         "僅限 DM。依地圖 id 讀取戰鬥地圖的完整定義與物件。",
@@ -451,14 +446,6 @@ _WHEN_TO_USE: dict[str, tuple[str, str]] = {
     "battle_map_list": (
         "DM-only. List this room's battle maps as summaries.",
         "僅限 DM。以摘要形式列出本房間的戰鬥地圖。",
-    ),
-    "battle_map_patch": (
-        "DM-only. Patch a battle map's name, grid, or metadata against its expected revision.",
-        "僅限 DM。依 expected revision 修補戰鬥地圖的名稱、格線或中繼資料。",
-    ),
-    "battle_map_replace_objects": (
-        "DM-only. Atomically replace a battle map's full object list (walls, doors, props) in one call.",
-        "僅限 DM。以單次呼叫原子化替換戰鬥地圖的完整物件清單（牆、門、道具）。",
     ),
     "get_campaign_context": (
         "Call once after get_session_context when you need the Campaign's scene, situation, party and world entry refs; for the DM it also returns each attached Adventure's outline (entry ids/titles, no bodies) to open with get_adventure_entry. Then drill down with get_scene_context / search_campaign_context. Results are role-projected to what the caller may see.",
@@ -757,7 +744,7 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("combat_request_opportunity_attack", _desc("Request an opportunity attack trigger adjudication.", "申請借機攻擊觸發裁定。"), OpportunityAttackRequestInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_request_adjudication", _desc("Request a DM adjudication for a special tactical situation.", "針對特殊戰術情境向 DM 申請戰鬥裁定。"), SpecialAdjudicationRequestInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_resolve_adjudication", _desc("Resolve a pending combat adjudication ruling.", "裁定待處理的戰鬥裁定事項。"), CombatAdjudicationDecisionToolInput, frozenset({"dm"})),
-    MCPToolDefinition("combat_start_tactical", _desc("Start a Tactical Combat by freezing a battle map or blank board into the combat board and placing the active party.", "以戰鬥地圖或空白棋盤凍結戰鬥棋盤並置入活躍隊伍，啟動戰術戰鬥。"), StartTacticalCombatInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_start_tactical", _desc("Start a Tactical Combat by freezing a battle map, blank board dimensions, or temporary map geometry into the combat board and placing the active party.", "以戰鬥地圖、空白棋盤尺寸或臨時地圖幾何凍結戰鬥棋盤並置入活躍隊伍，啟動戰術戰鬥。"), StartTacticalCombatInput, frozenset({"dm"})),
     MCPToolDefinition("combat_get_board", _desc("Read the Tactical Combat board projection: positions, walls, and doors as the caller's role may see them.", "讀取戰術戰鬥棋盤投影：依呼叫方角色權限可見的位置、牆壁與門。"), _NoArguments, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_place_token", _desc("Place a combatant entry token at explicit anchor cells on the frozen combat board.", "將戰鬥者 token 放置於凍結戰鬥棋盤的明確錨點格。"), CombatPlaceTokenToolInput, frozenset({"dm"})),
     MCPToolDefinition("combat_reposition", _desc("Correct a misplaced combatant token to new anchor cells with an explicit reason and expected_position_revision.", "以明確理由與 expected_position_revision 將放錯位置的戰鬥者 token 修正至新的錨點格。"), CombatRepositionToolInput, frozenset({"dm"})),
@@ -768,11 +755,8 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("combat_cancel_pending_movement", _desc("Cancel another combatant's pending movement after a rules call, restoring budget.", "在規則裁定後取消其他戰鬥者的待處理移動，恢復預算。"), CancelPendingMovementInput, frozenset({"dm"})),
     MCPToolDefinition("combat_check_target", _desc("Validate a declared attack or spell target: legality, range band, distance, cover/blocking, and whether DM adjudication is required.", "驗證宣告的攻擊或法術目標：合法性、距離帶、距離、掩蔽／阻擋，以及是否需要 DM 裁定。"), TargetCheckInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_preview_aoe", _desc("Preview an area-of-effect template anchored at structured cells: affected cells, candidate targets, and legality.", "預覽錨定於結構化格的範圍效果模板：影響格、候選目標與合法性。"), PreviewAoeSpellInput, frozenset({"player", "dm"})),
-    MCPToolDefinition("battle_map_create", _desc("Create a blank or image-backed battle map in this room.", "在本房間建立空白或圖像式戰鬥地圖。"), BattleMapCreateToolInput, frozenset({"dm"})),
     MCPToolDefinition("battle_map_get", _desc("Read a battle map's full definition and objects by map id.", "依地圖 id 讀取戰鬥地圖的完整定義與物件。"), BattleMapIdToolInput, frozenset({"dm"})),
     MCPToolDefinition("battle_map_list", _desc("List this room's battle maps as summaries.", "以摘要形式列出本房間的戰鬥地圖。"), _NoArguments, frozenset({"dm"})),
-    MCPToolDefinition("battle_map_patch", _desc("Patch a battle map's name, grid, or metadata against its expected revision.", "依 expected revision 修補戰鬥地圖的名稱、格線或中繼資料。"), BattleMapPatchToolInput, frozenset({"dm"})),
-    MCPToolDefinition("battle_map_replace_objects", _desc("Atomically replace a battle map's full object list (walls, doors, props).", "原子化替換戰鬥地圖的完整物件清單（牆、門、道具）。"), BattleMapReplaceObjectsToolInput, frozenset({"dm"})),
     MCPToolDefinition("get_campaign_context", _desc("Read Campaign overview including current scene, situation, party, world entry references, and (DM only) the attached Adventure outline.", "讀取 Campaign 概覽，包含目前場景、局勢、隊伍、世界條目參照，以及（僅 DM）附加 Adventure 的目錄。"), _NoArguments, frozenset({"player", "dm"})),
     MCPToolDefinition("get_scene_context", _desc("Read detailed scene context and related entries for the current scene or a specified scene reference.", "讀取目前場景或指定場景參照的詳細情境與關聯條目。"), SceneContextToolInput, frozenset({"player", "dm"})),
     MCPToolDefinition("search_campaign_context", _desc("Search Campaign world entries and visible lore by keyword query.", "以關鍵字搜尋 Campaign 世界條目與可見設定。"), SearchCampaignContextToolInput, frozenset({"player", "dm"})),
@@ -1035,16 +1019,10 @@ async def call_tool(
             data = await asyncio.to_thread(service.combat_check_target, token, parsed, authenticated=auth)
         elif name == "combat_preview_aoe":
             data = await asyncio.to_thread(service.combat_preview_aoe, token, parsed, authenticated=auth)
-        elif name == "battle_map_create":
-            data = await asyncio.to_thread(service.battle_map_create, token, parsed, authenticated=auth)
         elif name == "battle_map_get":
             data = await asyncio.to_thread(service.battle_map_get, token, parsed, authenticated=auth)
         elif name == "battle_map_list":
             data = await asyncio.to_thread(service.battle_map_list, token, authenticated=auth)
-        elif name == "battle_map_patch":
-            data = await asyncio.to_thread(service.battle_map_patch, token, parsed, authenticated=auth)
-        elif name == "battle_map_replace_objects":
-            data = await asyncio.to_thread(service.battle_map_replace_objects, token, parsed, authenticated=auth)
         elif name == "get_campaign_context":
             data = await asyncio.to_thread(service.get_campaign_context, token, authenticated=auth)
         elif name == "get_scene_context":
@@ -1138,6 +1116,20 @@ async def call_tool(
             "table_conflict",
             "The battle map revision changed; re-read the map and retry",
             "戰鬥地圖版本已變更；請重新讀取地圖後重試",
+            detail=str(exc) or None,
+        )
+    except BattleMapArchivedError as exc:
+        return structured_tool_error(
+            "battle_map_archived",
+            "The battle map is archived and cannot be used for tactical combat",
+            "該戰鬥地圖已封存，無法用於戰術戰鬥",
+            detail=str(exc) or None,
+        )
+    except BattleMapInvalidError as exc:
+        return structured_tool_error(
+            "invalid_arguments",
+            "The battle map geometry is invalid",
+            "戰鬥地圖幾何無效",
             detail=str(exc) or None,
         )
     except (

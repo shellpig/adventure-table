@@ -24,7 +24,7 @@ combat_boards = Table(
     "combat_boards",
     metadata,
     Column("combat_id", Uuid(), ForeignKey("combats.id", ondelete="CASCADE"), primary_key=True),
-    Column("source_battle_map_id", Uuid(), ForeignKey("battle_maps.id", ondelete="SET NULL"), nullable=True),
+    Column("source_battle_map_id", Uuid(), ForeignKey("battle_maps.id", ondelete="RESTRICT"), nullable=True),
     Column("source_battle_map_revision", BigInteger(), nullable=True),
     Column("width_cells", Integer(), nullable=False),
     Column("height_cells", Integer(), nullable=False),

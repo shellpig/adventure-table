@@ -1751,3 +1751,93 @@
   color: var(--muted);
 }
 
+/* Battle Map Library */
+.battle-map-library {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.battle-map-library__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.battle-map-library__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.battle-map-library__toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.battle-map-library__loading,
+.battle-map-library__empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 48px 0;
+  font-size: 1rem;
+}
+
+.battle-map-library__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.battle-map-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  gap: 12px;
+}
+
+.battle-map-card--archived {
+  opacity: 0.75;
+  border-style: dashed;
+}
+
+.battle-map-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.battle-map-card__title {
+  margin: 0;
+  font-size: 1.1rem;
+  word-break: break-word;
+}
+
+.battle-map-card__meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.battle-map-card__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+

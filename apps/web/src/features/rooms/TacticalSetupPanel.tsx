@@ -3,7 +3,10 @@ import { useCallback, useEffect, useState } from 'react'
 import type { BattleMap, BattleMapSummary } from '../../api/battleMaps'
 import { createBattleMap, getBattleMap, listBattleMaps } from '../../api/battleMaps'
 import { startTacticalCombat } from '../../api/tacticalCombat'
+import { SessionApiError } from '../../api/sessions'
 import { BattleMapEditor } from './BattleMapEditor'
+import { libraryPermissions } from './RoomBattleMapLibraryPage'
+import { recentRoomForId } from './roomStorage'
 import type { SessionCopy } from './sessionCopy'
 import { requestId } from './requestId'
 import type { Locale } from '../../i18n/locale'
@@ -31,6 +34,9 @@ export function TacticalSetupPanel({
   refresh,
   onClose,
 }: TacticalSetupPanelProps) {
+  const recent = recentRoomForId(roomId)
+  const { canManage } = libraryPermissions(recent?.authority)
+
   const [maps, setMaps] = useState<BattleMapSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedMapId, setSelectedMapId] = useState<string | null>(null)
@@ -126,6 +132,9 @@ export function TacticalSetupPanel({
       onClose()
     } catch (cause) {
       onError(cause)
+      if (cause instanceof SessionApiError && cause.code === 'battle_map_archived') {
+        void loadMaps()
+      }
     } finally {
       setStarting(false)
     }
@@ -185,14 +194,16 @@ export function TacticalSetupPanel({
                   />
                   {m.name} ({m.width_cells}×{m.height_cells})
                 </label>
-                <button
-                  type="button"
-                  className="button secondary compact"
-                  onClick={() => void handleEdit(m.id)}
-                  data-testid={`tactical-edit-map-${m.id}`}
-                >
-                  {copy.tacticalMapOpenEditor}
-                </button>
+                {canManage ? (
+                  <button
+                    type="button"
+                    className="button secondary compact"
+                    onClick={() => void handleEdit(m.id)}
+                    data-testid={`tactical-edit-map-${m.id}`}
+                  >
+                    {copy.tacticalMapOpenEditor}
+                  </button>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -235,27 +246,29 @@ export function TacticalSetupPanel({
         ) : null}
       </div>
 
-      <div className="tactical-setup__section">
-        <h4>{copy.tacticalMapCreate}</h4>
-        <div className="tactical-setup__create-row">
-          <input
-            type="text"
-            placeholder={copy.tacticalMapName}
-            value={newMapName}
-            onChange={(e) => setNewMapName(e.target.value)}
-            data-testid="tactical-new-map-name"
-          />
-          <button
-            type="button"
-            className="button secondary compact"
-            disabled={creating || !newMapName.trim()}
-            onClick={() => void handleCreateBlank()}
-            data-testid="tactical-create-map"
-          >
-            {creating ? copy.tacticalMapSaving : copy.tacticalMapCreate}
-          </button>
+      {canManage ? (
+        <div className="tactical-setup__section">
+          <h4>{copy.tacticalMapCreate}</h4>
+          <div className="tactical-setup__create-row">
+            <input
+              type="text"
+              placeholder={copy.tacticalMapName}
+              value={newMapName}
+              onChange={(e) => setNewMapName(e.target.value)}
+              data-testid="tactical-new-map-name"
+            />
+            <button
+              type="button"
+              className="button secondary compact"
+              disabled={creating || !newMapName.trim()}
+              onClick={() => void handleCreateBlank()}
+              data-testid="tactical-create-map"
+            >
+              {creating ? copy.tacticalMapSaving : copy.tacticalMapCreate}
+            </button>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="tactical-setup__actions">
         <button

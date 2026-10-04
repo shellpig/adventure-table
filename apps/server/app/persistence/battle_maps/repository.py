@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import delete, insert, select, update
@@ -14,6 +14,7 @@ from app.persistence.battle_maps.tables import (
     battle_map_walls,
     battle_maps,
 )
+from app.persistence.combat_boards.tables import combat_boards
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,7 @@ class StoredBattleMap:
     revision: int
     created_at: datetime
     updated_at: datetime
+    archived_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -87,6 +89,10 @@ class BattleMapRevisionConflictError(Exception):
     pass
 
 
+class BattleMapReferencedError(Exception):
+    pass
+
+
 class BattleMapRepository:
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
@@ -103,11 +109,14 @@ class BattleMapRepository:
         map_id: UUID,
         *,
         connection: Connection | None = None,
+        for_update: bool = False,
     ) -> StoredBattleMap | None:
         query = select(battle_maps).where(
             battle_maps.c.room_id == room_id,
             battle_maps.c.id == map_id,
         )
+        if for_update:
+            query = query.with_for_update()
         if connection is not None:
             row = connection.execute(query).mappings().one_or_none()
             return StoredBattleMap(**dict(row)) if row is not None else None
@@ -115,17 +124,15 @@ class BattleMapRepository:
             row = conn.execute(query).mappings().one_or_none()
             return StoredBattleMap(**dict(row)) if row is not None else None
 
-    def list_maps(self, room_id: UUID) -> tuple[StoredBattleMap, ...]:
+    def list_maps(
+        self, room_id: UUID, *, include_archived: bool = False
+    ) -> tuple[StoredBattleMap, ...]:
+        query = select(battle_maps).where(battle_maps.c.room_id == room_id)
+        if not include_archived:
+            query = query.where(battle_maps.c.archived_at.is_(None))
+        query = query.order_by(battle_maps.c.created_at, battle_maps.c.id)
         with self.engine.connect() as connection:
-            rows = (
-                connection.execute(
-                    select(battle_maps)
-                    .where(battle_maps.c.room_id == room_id)
-                    .order_by(battle_maps.c.created_at, battle_maps.c.id)
-                )
-                .mappings()
-                .all()
-            )
+            rows = connection.execute(query).mappings().all()
         return tuple(StoredBattleMap(**dict(row)) for row in rows)
 
     def update_map_in_transaction(
@@ -171,13 +178,62 @@ class BattleMapRepository:
         )
         return StoredBattleMap(**dict(row))
 
-    def delete_map(self, room_id: UUID, map_id: UUID) -> bool:
+    def archive_map_in_transaction(
+        self,
+        connection: Connection,
+        room_id: UUID,
+        map_id: UUID,
+        *,
+        expected_revision: int,
+    ) -> StoredBattleMap:
+        now = datetime.now(timezone.utc)
+        return self.update_map_in_transaction(
+            connection,
+            room_id,
+            map_id,
+            {"archived_at": now, "updated_at": now},
+            expected_revision=expected_revision,
+        )
+
+    def delete_map(
+        self, room_id: UUID, map_id: UUID, *, expected_revision: int
+    ) -> bool:
         with self.engine.begin() as connection:
-            return self.delete_map_in_transaction(connection, room_id, map_id)
+            return self.delete_map_in_transaction(
+                connection, room_id, map_id, expected_revision=expected_revision
+            )
 
     def delete_map_in_transaction(
-        self, connection: Connection, room_id: UUID, map_id: UUID
+        self,
+        connection: Connection,
+        room_id: UUID,
+        map_id: UUID,
+        *,
+        expected_revision: int,
     ) -> bool:
+        row = connection.execute(
+            select(battle_maps.c.id, battle_maps.c.revision)
+            .where(
+                battle_maps.c.room_id == room_id,
+                battle_maps.c.id == map_id,
+            )
+            .with_for_update()
+        ).mappings().one_or_none()
+        if row is None:
+            raise BattleMapNotFoundError(f"Battle map {map_id} not found")
+        if row["revision"] != expected_revision:
+            raise BattleMapRevisionConflictError(
+                f"Battle map {map_id} revision conflict: expected {expected_revision}, current {row['revision']}"
+            )
+        has_ref = connection.scalar(
+            select(combat_boards.c.combat_id)
+            .where(combat_boards.c.source_battle_map_id == map_id)
+            .limit(1)
+        )
+        if has_ref is not None:
+            raise BattleMapReferencedError(
+                f"Battle map {map_id} is referenced by combat board and cannot be deleted"
+            )
         connection.execute(
             delete(battle_map_drawings).where(
                 battle_map_drawings.c.battle_map_id == map_id
@@ -299,6 +355,15 @@ class BattleMapRepository:
                 battle_map_walls.c.battle_map_id == map_id
             )
         )
+        self.insert_objects_in_transaction(connection, map_id, objects)
+        return stored
+
+    def insert_objects_in_transaction(
+        self,
+        connection: Connection,
+        map_id: UUID,
+        objects: StoredBattleMapObjects,
+    ) -> None:
         if objects.walls:
             connection.execute(
                 insert(battle_map_walls),
@@ -319,11 +384,11 @@ class BattleMapRepository:
                 insert(battle_map_drawings),
                 [drawing.__dict__ for drawing in objects.drawings],
             )
-        return stored
 
 
 __all__ = [
     "BattleMapNotFoundError",
+    "BattleMapReferencedError",
     "BattleMapRepository",
     "BattleMapRevisionConflictError",
     "StoredBattleMap",

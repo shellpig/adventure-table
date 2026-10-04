@@ -280,42 +280,9 @@ class RoomWorkspaceRepository:
                         adventure_definitions.c.id.in_(adventure_ids)
                     )
                 )
-            # P5-A: battle maps reference room_assets.image_asset_id with RESTRICT,
-            # so delete the map graph (child tables cascade) before room_assets.
-            map_ids = tuple(
-                connection.scalars(
-                    select(battle_maps.c.id).where(
-                        battle_maps.c.room_id == room_id
-                    )
-                ).all()
-            )
-            if map_ids:
-                connection.execute(
-                    delete(battle_map_drawings).where(
-                        battle_map_drawings.c.battle_map_id.in_(map_ids)
-                    )
-                )
-                connection.execute(
-                    delete(battle_map_terrain).where(
-                        battle_map_terrain.c.battle_map_id.in_(map_ids)
-                    )
-                )
-                connection.execute(
-                    delete(battle_map_doors).where(
-                        battle_map_doors.c.battle_map_id.in_(map_ids)
-                    )
-                )
-                connection.execute(
-                    delete(battle_map_walls).where(
-                        battle_map_walls.c.battle_map_id.in_(map_ids)
-                    )
-                )
-                connection.execute(
-                    delete(battle_maps).where(battle_maps.c.id.in_(map_ids))
-                )
-            # P5-A: combat boards reference room_assets.image_asset_id with RESTRICT,
-            # so delete the board graph before room_assets (the combat cascade at
-            # campaigns deletion only clears them after room_assets are gone).
+            # P5-A / M07-B: combat boards reference room_assets.image_asset_id
+            # and battle_maps.id with RESTRICT, so delete the board and combat graph
+            # before battle_maps and room_assets.
             # Local import: app.persistence.combat pulls domain modules at package
             # init, which cycles back through table_events when rooms init first.
             if campaign_ids:
@@ -356,6 +323,40 @@ class RoomWorkspaceRepository:
                     delete(monster_instances).where(
                         monster_instances.c.campaign_id.in_(campaign_ids)
                     )
+                )
+
+            # P5-A: battle maps reference room_assets.image_asset_id with RESTRICT,
+            # so delete the map graph (child tables cascade) before room_assets.
+            map_ids = tuple(
+                connection.scalars(
+                    select(battle_maps.c.id).where(
+                        battle_maps.c.room_id == room_id
+                    )
+                ).all()
+            )
+            if map_ids:
+                connection.execute(
+                    delete(battle_map_drawings).where(
+                        battle_map_drawings.c.battle_map_id.in_(map_ids)
+                    )
+                )
+                connection.execute(
+                    delete(battle_map_terrain).where(
+                        battle_map_terrain.c.battle_map_id.in_(map_ids)
+                    )
+                )
+                connection.execute(
+                    delete(battle_map_doors).where(
+                        battle_map_doors.c.battle_map_id.in_(map_ids)
+                    )
+                )
+                connection.execute(
+                    delete(battle_map_walls).where(
+                        battle_map_walls.c.battle_map_id.in_(map_ids)
+                    )
+                )
+                connection.execute(
+                    delete(battle_maps).where(battle_maps.c.id.in_(map_ids))
                 )
 
             from app.persistence.combat.tables import monster_templates

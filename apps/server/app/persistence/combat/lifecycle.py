@@ -9,7 +9,12 @@ from sqlalchemy import delete, insert, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
+from app.domain.battle_maps.schemas import (
+    BattleMapArchivedError,
+    BattleMapNotFoundError,
+)
 from app.domain.combat.reaction_service import ReactionWindow
+from app.persistence.battle_maps.tables import battle_maps
 from app.persistence.characters import characters
 from app.persistence.combat.tables import combat_actions, combat_entries, combats, monster_instances
 from app.persistence.combat_boards.repository import StoredBoardDoor, StoredCombatBoard
@@ -360,6 +365,19 @@ class CombatRepository:
         )
 
         def projection(connection, _event_id: UUID, _seq: int) -> None:
+            if battle_map_id is not None:
+                map_row = connection.execute(
+                    select(battle_maps.c.id, battle_maps.c.archived_at)
+                    .where(
+                        battle_maps.c.room_id == binding.room_id,
+                        battle_maps.c.id == battle_map_id,
+                    )
+                    .with_for_update()
+                ).mappings().one_or_none()
+                if map_row is None:
+                    raise BattleMapNotFoundError(f"Battle map {battle_map_id} not found")
+                if map_row["archived_at"] is not None:
+                    raise BattleMapArchivedError(f"Battle map {battle_map_id} is archived")
             connection.execute(insert(combats).values(
                 id=combat_id, campaign_id=binding.campaign_id, started_session_id=binding.session_id,
                 mode="tactical", status="initiative_pending", revision=1,
