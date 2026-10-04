@@ -36,6 +36,38 @@ export type BattleMapDrawing = {
   payload: Record<string, unknown>
 }
 
+export type BattleMapMonsterPlacementVisibility = 'public' | 'hidden'
+
+export type BattleMapMonsterPlacement = {
+  id: string
+  template_key: string | null
+  custom_template_id: string | null
+  anchor_x: number
+  anchor_y: number
+  visibility: BattleMapMonsterPlacementVisibility
+  sort_order: number
+}
+
+export type MonsterPlacementInput = {
+  id?: string | null
+  template_key?: string | null
+  custom_template_id?: string | null
+  anchor_x: number
+  anchor_y: number
+  visibility?: BattleMapMonsterPlacementVisibility
+  sort_order?: number
+}
+
+export type MonsterPlacementsReplaceInput = {
+  expected_revision: number
+  placements: MonsterPlacementInput[]
+}
+
+export type MonsterPlacementProblem = {
+  placement_id: string
+  code: string
+}
+
 export type BattleMap = {
   id: string
   room_id: string
@@ -55,6 +87,7 @@ export type BattleMap = {
   doors: BattleMapDoor[]
   terrain: BattleMapTerrain[]
   drawings: BattleMapDrawing[]
+  monster_placements: BattleMapMonsterPlacement[]
 }
 
 export type BattleMapSummary = {
@@ -231,6 +264,18 @@ export function replaceBattleMapObjects(
   token: string,
 ): Promise<BattleMap> {
   return request(`${battleMapsBase(roomId)}/${mapId}/objects`, token, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
+}
+
+export function replaceMonsterPlacements(
+  roomId: string,
+  mapId: string,
+  body: MonsterPlacementsReplaceInput,
+  token: string,
+): Promise<BattleMap> {
+  return request(`${battleMapsBase(roomId)}/${mapId}/monster-placements`, token, {
     method: 'PUT',
     body: JSON.stringify(body),
   })

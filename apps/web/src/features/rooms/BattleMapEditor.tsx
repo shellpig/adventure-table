@@ -1,12 +1,37 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import type { BattleMap, BattleMapTerrainKind } from '../../api/battleMaps'
-import { replaceBattleMapObjects } from '../../api/battleMaps'
+import type {
+  BattleMap,
+  BattleMapMonsterPlacementVisibility,
+  BattleMapTerrainKind,
+  MonsterPlacementProblem,
+} from '../../api/battleMaps'
+import { replaceBattleMapObjects, replaceMonsterPlacements } from '../../api/battleMaps'
+import type { MonsterLibrarySummaryView } from '../../api/monsterLibrary'
+import { listMonsterLibrary } from '../../api/monsterLibrary'
 import { SessionApiError } from '../../api/sessions'
 import { localizedSessionRequestMessage } from '../../i18n/sessionMessages'
 import type { Locale } from '../../i18n/locale'
 import { BattleMapCanvas } from './BattleMapCanvas'
-import type { CanvasDoor, CanvasTerrain, CanvasWall } from './BattleMapCanvas'
+import type { CanvasDoor, CanvasTerrain, CanvasToken, CanvasWall } from './BattleMapCanvas'
+import {
+  availableMonsterTemplates,
+  buildMonsterPlacementsBody,
+  extractPlacementProblems,
+  footprintForSizeName,
+  monsterPlacementsFromMap,
+  moveMonsterPlacement,
+  newPlacementClientId,
+  removeMonsterPlacement,
+  resolvePlacementTemplate,
+  toggleMonsterPlacementVisibility,
+  type WorkingMonsterPlacement,
+} from './mapMonsterPlacements'
+import {
+  battleMapLibraryCopy,
+  monsterPlacementProblemMessage,
+} from './battleMapLibraryCopy'
+import { formatMonsterName } from './monsterLibraryCopy'
 import {
   addDoor,
   addDrawing,
@@ -105,6 +130,22 @@ export function BattleMapEditor({
   const [canvasHeight, setCanvasHeight] = useState(EDITOR_CANVAS_HEIGHT_DEFAULT)
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+
+  // M07-C monster pre-placements (library only; never a live combat API).
+  const libraryCopy = battleMapLibraryCopy(locale)
+  const [monsterMode, setMonsterMode] = useState(false)
+  const [placements, setPlacements] = useState<WorkingMonsterPlacement[]>(() =>
+    monsterPlacementsFromMap(map.monster_placements ?? []),
+  )
+  const [templates, setTemplates] = useState<MonsterLibrarySummaryView[] | null>(null)
+  const [templatesLoading, setTemplatesLoading] = useState(false)
+  const [selectedTemplateRef, setSelectedTemplateRef] = useState('')
+  const [selectedPlacementId, setSelectedPlacementId] = useState<string | null>(null)
+  const [newPlacementVisibility, setNewPlacementVisibility] =
+    useState<BattleMapMonsterPlacementVisibility>('public')
+  const [placementProblems, setPlacementProblems] = useState<MonsterPlacementProblem[]>([])
+  const [placementsSaving, setPlacementsSaving] = useState(false)
+  const [placementsMessage, setPlacementsMessage] = useState<string | null>(null)
 
   // Editor previews and highlights
   const [highlightSegment, setHighlightSegment] = useState<GridSegment | null>(null)
@@ -447,6 +488,156 @@ export function BattleMapEditor({
     updateWorking((prev) => deleteById(prev, selectedId))
   }, [selectedId, updateWorking])
 
+  const enterMonsterMode = useCallback(() => {
+    setMonsterMode(true)
+    setSelectedId(null)
+    setHighlightSegment(null)
+    setHighlightCell(null)
+    setHighlightObjectId(null)
+    setPreviewLine(null)
+    setPreviewDrawingPoints(null)
+  }, [])
+
+  useEffect(() => {
+    if (!monsterMode || templates !== null || templatesLoading) return
+    setTemplatesLoading(true)
+    listMonsterLibrary(roomId, token, { include_archived: true })
+      .then((list) => {
+        setTemplates(list)
+        setTemplatesLoading(false)
+      })
+      .catch((cause) => {
+        setTemplatesLoading(false)
+        onError(cause)
+      })
+  }, [monsterMode, templates, templatesLoading, roomId, token, onError])
+
+  const templateForPlacement = useCallback(
+    (templateRef: string): MonsterLibrarySummaryView | undefined =>
+      templates ? resolvePlacementTemplate(templateRef, templates) : undefined,
+    [templates],
+  )
+
+  const placementDisplayName = useCallback(
+    (placement: WorkingMonsterPlacement): string => {
+      const template = templateForPlacement(placement.templateRef)
+      if (template) {
+        return formatMonsterName(
+          { name: template.name, names: template.names, name_is_custom: template.name_is_custom },
+          locale,
+        )
+      }
+      return placement.templateRef || libraryCopy.monsterPlacementUnknownTemplate
+    },
+    [templateForPlacement, locale, libraryCopy],
+  )
+
+  const placementAt = useCallback(
+    (x: number, y: number): WorkingMonsterPlacement | undefined =>
+      placements.find((p) => {
+        const footprint = footprintForSizeName(templateForPlacement(p.templateRef)?.size)
+        return (
+          x >= p.anchor_x &&
+          x < p.anchor_x + footprint.width &&
+          y >= p.anchor_y &&
+          y < p.anchor_y + footprint.height
+        )
+      }),
+    [placements, templateForPlacement],
+  )
+
+  const handleMonsterCellClick = useCallback(
+    (x: number, y: number) => {
+      const hit = placementAt(x, y)
+      if (hit) {
+        setSelectedPlacementId((prev) => (prev === hit.clientId ? null : hit.clientId))
+        return
+      }
+      if (selectedPlacementId) {
+        setPlacements((prev) => moveMonsterPlacement(prev, selectedPlacementId, x, y))
+        setPlacementsMessage(null)
+        return
+      }
+      if (selectedTemplateRef) {
+        setPlacements((prev) => [
+          ...prev,
+          {
+            clientId: newPlacementClientId(),
+            templateRef: selectedTemplateRef,
+            anchor_x: x,
+            anchor_y: y,
+            visibility: newPlacementVisibility,
+          },
+        ])
+        setPlacementsMessage(null)
+      }
+    },
+    [placementAt, selectedPlacementId, selectedTemplateRef, newPlacementVisibility],
+  )
+
+  const handlePlacementTokenClick = useCallback((clientId: string) => {
+    setSelectedPlacementId((prev) => (prev === clientId ? null : clientId))
+  }, [])
+
+  const togglePlacementHidden = useCallback(() => {
+    if (!selectedPlacementId) return
+    setPlacements((prev) => toggleMonsterPlacementVisibility(prev, selectedPlacementId))
+    setPlacementsMessage(null)
+  }, [selectedPlacementId])
+
+  const removeSelectedPlacement = useCallback(() => {
+    if (!selectedPlacementId) return
+    setPlacements((prev) => removeMonsterPlacement(prev, selectedPlacementId))
+    setSelectedPlacementId(null)
+    setPlacementsMessage(null)
+  }, [selectedPlacementId])
+
+  const handleSavePlacements = useCallback(async () => {
+    if (placementsSaving) return
+    setPlacementsSaving(true)
+    setPlacementsMessage(null)
+    try {
+      const saved = await replaceMonsterPlacements(
+        roomId,
+        map.id,
+        buildMonsterPlacementsBody(map.revision, placements),
+        token,
+      )
+      setPlacements(monsterPlacementsFromMap(saved.monster_placements ?? []))
+      setPlacementProblems([])
+      setSelectedPlacementId(null)
+      setPlacementsMessage(libraryCopy.monsterPlacementSaved)
+      onSaved(saved)
+    } catch (cause) {
+      if (cause instanceof SessionApiError && cause.code === 'map_monster_placement_invalid') {
+        setPlacementProblems(extractPlacementProblems(cause))
+        setPlacementsMessage(libraryCopy.errMapMonsterPlacementInvalid)
+      } else if (
+        cause instanceof SessionApiError &&
+        cause.code === 'battle_map_revision_conflict'
+      ) {
+        setPlacementsMessage(
+          localizedSessionRequestMessage(cause.code, cause.status, cause.message, locale),
+        )
+      } else {
+        onError(cause)
+      }
+    } finally {
+      setPlacementsSaving(false)
+    }
+  }, [
+    placementsSaving,
+    roomId,
+    map.id,
+    map.revision,
+    placements,
+    token,
+    libraryCopy,
+    locale,
+    onSaved,
+    onError,
+  ])
+
   const handleSave = useCallback(async () => {
     setSaving(true)
     setSaveMessage(null)
@@ -509,6 +700,49 @@ export function BattleMapEditor({
     [working.terrain],
   )
 
+  const placementTokens: CanvasToken[] = useMemo(
+    () =>
+      placements.map((p) => {
+        const footprint = footprintForSizeName(templateForPlacement(p.templateRef)?.size)
+        return {
+          entry_id: p.clientId,
+          name: placementDisplayName(p),
+          anchor_x: p.anchor_x,
+          anchor_y: p.anchor_y,
+          footprint_width: footprint.width,
+          footprint_height: footprint.height,
+          isHidden: p.visibility === 'hidden',
+        }
+      }),
+    [placements, templateForPlacement, placementDisplayName],
+  )
+
+  const problemPlacementIds = useMemo(
+    () => new Set(placementProblems.map((p) => p.placement_id)),
+    [placementProblems],
+  )
+
+  const availableTemplates = useMemo(
+    () => (templates ? availableMonsterTemplates(templates) : []),
+    [templates],
+  )
+
+  const selectedPlacement = useMemo(
+    () => placements.find((p) => p.clientId === selectedPlacementId) ?? null,
+    [placements, selectedPlacementId],
+  )
+
+  const handleCanvasCellClick = useCallback(
+    (x: number, y: number) => {
+      if (monsterMode) {
+        handleMonsterCellClick(x, y)
+      } else {
+        handleCellClick(x, y)
+      }
+    },
+    [monsterMode, handleMonsterCellClick, handleCellClick],
+  )
+
   const selectedItem = useMemo(() => {
     if (!selectedId) return null
     const wall = working.walls.find((w) => w.id === selectedId)
@@ -567,15 +801,33 @@ export function BattleMapEditor({
           <button
             key={t}
             type="button"
-            className={`button secondary compact${tool === t ? ' battle-map-editor__tool--active' : ''}`}
+            className={`button secondary compact${tool === t && !monsterMode ? ' battle-map-editor__tool--active' : ''}`}
             data-testid={`map-editor-tool-${t}`}
-            data-active={tool === t ? 'true' : undefined}
-            aria-pressed={tool === t}
+            data-active={tool === t && !monsterMode ? 'true' : undefined}
+            aria-pressed={tool === t && !monsterMode}
+            disabled={monsterMode}
             onClick={() => selectTool(t)}
           >
             {toolLabel(t)}
           </button>
         ))}
+        <button
+          type="button"
+          className={`button secondary compact${monsterMode ? ' battle-map-editor__tool--active' : ''}`}
+          data-testid="map-editor-tool-monster"
+          data-active={monsterMode ? 'true' : undefined}
+          aria-pressed={monsterMode}
+          onClick={() => {
+            if (monsterMode) {
+              setMonsterMode(false)
+              setSelectedPlacementId(null)
+            } else {
+              enterMonsterMode()
+            }
+          }}
+        >
+          {copy.tacticalToolMonster}
+        </button>
         <button
           type="button"
           className="button secondary compact"
@@ -687,6 +939,132 @@ export function BattleMapEditor({
         </p>
       ) : null}
 
+      {monsterMode ? (
+        <div className="battle-map-editor__monster-panel" data-testid="monster-placement-panel">
+          <h4>{libraryCopy.monsterPlacementsHeading}</h4>
+          <p>{libraryCopy.monsterPlacementsHint}</p>
+          {templatesLoading ? (
+            <p>{libraryCopy.monsterPlacementLoadingTemplates}</p>
+          ) : (
+            <div className="battle-map-editor__monster-picker">
+              <label>
+                {libraryCopy.monsterTemplatePickerLabel}:
+                <select
+                  value={selectedTemplateRef}
+                  onChange={(e) => setSelectedTemplateRef(e.target.value)}
+                  data-testid="monster-placement-template-picker"
+                >
+                  <option value="">{libraryCopy.monsterTemplatePickerPlaceholder}</option>
+                  {availableTemplates.map((t) => (
+                    <option key={t.ref} value={t.ref}>
+                      {formatMonsterName(
+                        { name: t.name, names: t.names, name_is_custom: t.name_is_custom },
+                        locale,
+                      )}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {libraryCopy.monsterPlacementVisibilityLabel}:
+                <select
+                  value={newPlacementVisibility}
+                  onChange={(e) =>
+                    setNewPlacementVisibility(
+                      e.target.value as BattleMapMonsterPlacementVisibility,
+                    )
+                  }
+                  data-testid="monster-placement-visibility-picker"
+                >
+                  <option value="public">{libraryCopy.monsterVisibilityPublic}</option>
+                  <option value="hidden">{libraryCopy.monsterVisibilityHidden}</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                className="button secondary compact"
+                disabled={placementsSaving}
+                onClick={() => void handleSavePlacements()}
+                data-testid="monster-placement-save"
+              >
+                {placementsSaving
+                  ? libraryCopy.monsterPlacementSaving
+                  : libraryCopy.monsterPlacementSave}
+              </button>
+            </div>
+          )}
+          {selectedPlacement ? (
+            <div
+              className="battle-map-editor__monster-selection"
+              data-testid="monster-placement-selection"
+              data-placement-id={selectedPlacement.clientId}
+              data-problem={
+                problemPlacementIds.has(selectedPlacement.clientId) ? 'true' : undefined
+              }
+            >
+              <span>{placementDisplayName(selectedPlacement)}</span>
+              {templateForPlacement(selectedPlacement.templateRef)?.archived_at ? (
+                <span className="badge warning">{libraryCopy.monsterPlacementArchivedBadge}</span>
+              ) : null}
+              <button
+                type="button"
+                className="button secondary compact"
+                onClick={togglePlacementHidden}
+                data-testid="monster-placement-toggle-hidden"
+                data-hidden={selectedPlacement.visibility === 'hidden' ? 'true' : undefined}
+              >
+                {libraryCopy.monsterPlacementVisibilityLabel}:{' '}
+                {selectedPlacement.visibility === 'hidden'
+                  ? libraryCopy.monsterVisibilityHidden
+                  : libraryCopy.monsterVisibilityPublic}
+              </button>
+              <button
+                type="button"
+                className="button secondary compact"
+                onClick={removeSelectedPlacement}
+                data-testid="monster-placement-remove"
+              >
+                {libraryCopy.monsterPlacementRemove}
+              </button>
+            </div>
+          ) : null}
+          {placementsMessage ? (
+            <p
+              className="battle-map-editor__save-message"
+              data-testid="monster-placement-save-message"
+            >
+              {placementsMessage}
+            </p>
+          ) : null}
+          {placementProblems.length > 0 ? (
+            <div
+              className="battle-map-editor__monster-problems"
+              data-testid="monster-placement-problems"
+            >
+              <h5>{libraryCopy.monsterPlacementProblemsHeading}</h5>
+              <ul>
+                {placementProblems.map((problem, index) => {
+                  const match = placements.find((p) => p.clientId === problem.placement_id)
+                  const label = match
+                    ? placementDisplayName(match)
+                    : problem.placement_id.slice(0, 8)
+                  return (
+                    <li
+                      key={`${problem.placement_id}-${problem.code}-${index}`}
+                      data-placement-id={problem.placement_id}
+                      data-problem-code={problem.code}
+                    >
+                      {label}: {monsterPlacementProblemMessage(problem.code, libraryCopy)}
+                    </li>
+                  )
+                })}
+              </ul>
+              <p>{libraryCopy.monsterPlacementRetryHint}</p>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       <div
         ref={containerRef}
         className="battle-map-editor__canvas-wrap"
@@ -704,10 +1082,11 @@ export function BattleMapEditor({
           doors={canvasDoors}
           terrain={canvasTerrain}
           drawings={working.drawings}
-          tokens={[]}
+          tokens={monsterMode ? placementTokens : []}
           imageUrl={imageUrl}
           camera={camera}
           isDm={true}
+          selectedEntryId={monsterMode ? selectedPlacementId : selectedId}
           selectedObjectId={selectedId}
           highlightSegment={highlightSegment}
           highlightCell={highlightCell}
@@ -715,7 +1094,8 @@ export function BattleMapEditor({
           previewLine={previewLine}
           previewDrawingPoints={previewDrawingPoints}
           previewDrawingStroke={{ color: penColor, width: penWidth }}
-          onCellClick={handleCellClick}
+          onCellClick={handleCanvasCellClick}
+          onTokenClick={monsterMode ? handlePlacementTokenClick : undefined}
           onWheel={handleWheel}
         />
       </div>

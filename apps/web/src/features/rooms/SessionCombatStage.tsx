@@ -9,6 +9,7 @@ import { SessionCombatDmControls } from './SessionCombatDmControls'
 import { SessionCombatMonsterControls } from './SessionCombatMonsterControls'
 import {
   combatantFor,
+  combatEntryDisplayName,
   combatInjuryLabel,
   orderedEntries,
   useMonsterOptions,
@@ -131,7 +132,9 @@ export function SessionCombatStage({
   const currentTurnEntry = combat.current_turn_entry_id
     ? combat.entries.find((entry) => entry.id === combat.current_turn_entry_id)
     : null
-  const currentTurnName = currentTurnEntry ? currentTurnEntry.display_name : '-'
+  const currentTurnName = currentTurnEntry
+    ? combatEntryDisplayName(combat, currentTurnEntry, copy.locale)
+    : '-'
   const isMyTurn = Boolean(
     combat.current_turn_entry_id && myEntryIds.includes(combat.current_turn_entry_id),
   )
@@ -223,7 +226,7 @@ export function SessionCombatStage({
                 data-combat-entry={entry.id}
               >
                 <span className="session-combat__turn-order">{turnOrderText}</span>
-                <span className="session-combat__entry-name">{entry.display_name}</span>
+                <span className="session-combat__entry-name">{combatEntryDisplayName(combat, entry, copy.locale)}</span>
                 {hasInitTotal ? (
                   <span className="session-combat__initiative-total">{entry.initiative_total}</span>
                 ) : null}
@@ -292,7 +295,7 @@ export function SessionCombatStage({
                 >
                   <div className="session-combat__card-header">
                     <span className="session-combat__card-name">
-                      {proj.name || entry.display_name}
+                      {combatEntryDisplayName(combat, entry, copy.locale)}
                     </span>
                     {isHostile ? (
                       <span className="session-combat__hostile-badge">{copy.combatHostile}</span>

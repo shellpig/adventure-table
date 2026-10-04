@@ -10,6 +10,7 @@ import type { TableEvent } from '../../api/sessions'
 import {
   actingEntryId,
   combatantFor,
+  combatEntryDisplayName,
   eligibleReactionEntry,
   isCombatEvent,
   latestCombatEventSeq,
@@ -247,5 +248,71 @@ describe('sessionCombat helpers', () => {
 
   it('returns null before initiative is finalized', () => {
     expect(actingEntryId(makeDetail('initiative_pending', null), ['entry-mira'], true)).toBeNull()
+  })
+})
+
+describe('M07-C combatEntryDisplayName (name_presentation)', () => {
+  function detailWithPresentation(
+    presentation: Record<string, unknown> | undefined,
+    projectionName: string,
+  ): { detail: CombatDetailView; entry: CombatEntryView } {
+    const entry = makeEntry('entry-goblin', 'Goblin', null, 2)
+    const detail: CombatDetailView = {
+      ...makeDetail('running', 'entry-goblin'),
+      combatants: [
+        {
+          entry_id: 'entry-goblin',
+          subject_kind: 'monster',
+          is_hostile: true,
+          projection: {
+            id: 'inst-goblin',
+            kind: 'monster',
+            name: projectionName,
+            combat_status: 'active',
+            conditions: [],
+            effects: [],
+            ...(presentation === undefined ? {} : { name_presentation: presentation }),
+          },
+        },
+      ],
+    }
+    return { detail, entry }
+  }
+
+  it('uses the current locale snapshot name, then en, then the projection name', () => {
+    const { detail, entry } = detailWithPresentation(
+      { names: { en: 'Goblin', 'zh-TW': '地精' }, name_is_custom: false },
+      'Goblin',
+    )
+    expect(combatEntryDisplayName(detail, entry, 'zh-TW')).toBe('地精')
+    expect(combatEntryDisplayName(detail, entry, 'en')).toBe('Goblin')
+    // An unsupported locale falls back to en before the stored name.
+    expect(combatEntryDisplayName(detail, entry, 'ja')).toBe('Goblin')
+  })
+
+  it('a custom name always wins over any snapshot names', () => {
+    const { detail, entry } = detailWithPresentation(
+      { names: { en: 'Goblin', 'zh-TW': '地精' }, name_is_custom: true },
+      'Boss Goblin',
+    )
+    expect(combatEntryDisplayName(detail, entry, 'zh-TW')).toBe('Boss Goblin')
+    expect(combatEntryDisplayName(detail, entry, 'en')).toBe('Boss Goblin')
+  })
+
+  it('falls back to the projection name when the locale snapshot is missing', () => {
+    const { detail, entry } = detailWithPresentation(
+      { names: {}, name_is_custom: false },
+      'Goblin Scout',
+    )
+    expect(combatEntryDisplayName(detail, entry, 'zh-TW')).toBe('Goblin Scout')
+  })
+
+  it('legacy combatants without name_presentation keep existing behaviour', () => {
+    const { detail, entry } = detailWithPresentation(undefined, 'Old Goblin')
+    expect(combatEntryDisplayName(detail, entry, 'zh-TW')).toBe('Old Goblin')
+    // No combatant detail at all (e.g. hidden from this audience): entry name.
+    const bare = makeDetail('running', 'entry-goblin')
+    const bareEntry = bare.entries.find((e) => e.id === 'entry-goblin')!
+    expect(combatEntryDisplayName(bare, bareEntry, 'zh-TW')).toBe('Goblin')
   })
 })

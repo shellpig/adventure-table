@@ -2,14 +2,49 @@ import { useCallback, useEffect, useState } from 'react'
 
 import type { BattleMap, BattleMapSummary } from '../../api/battleMaps'
 import { createBattleMap, getBattleMap, listBattleMaps } from '../../api/battleMaps'
-import { startTacticalCombat } from '../../api/tacticalCombat'
+import { startTacticalCombat, type TacticalStartInput } from '../../api/tacticalCombat'
 import { SessionApiError } from '../../api/sessions'
 import { BattleMapEditor } from './BattleMapEditor'
 import { libraryPermissions } from './RoomBattleMapLibraryPage'
+import {
+  battleMapLibraryCopy,
+  monsterPlacementProblemMessage,
+} from './battleMapLibraryCopy'
+import { extractPlacementProblems } from './mapMonsterPlacements'
 import { recentRoomForId } from './roomStorage'
 import type { SessionCopy } from './sessionCopy'
 import { requestId } from './requestId'
 import type { Locale } from '../../i18n/locale'
+
+export type TacticalStartSelection =
+  | { kind: 'library-map'; mapId: string; loadMonsters: boolean }
+  | { kind: 'blank'; width: number; height: number }
+
+/**
+ * Exact POST body for the tactical start from the panel selection.
+ * `load_map_monsters` is only ever true for a library-map source; blank (and
+ * temporary) sources always start map-only, matching the server contract.
+ */
+export function tacticalStartBody(
+  selection: TacticalStartSelection,
+  idempotencyKey: string,
+): TacticalStartInput {
+  if (selection.kind === 'blank') {
+    return {
+      blank_width_cells: selection.width,
+      blank_height_cells: selection.height,
+      include_active_party: true,
+      load_map_monsters: false,
+      idempotency_key: idempotencyKey,
+    }
+  }
+  return {
+    battle_map_id: selection.mapId,
+    include_active_party: true,
+    load_map_monsters: selection.loadMonsters,
+    idempotency_key: idempotencyKey,
+  }
+}
 
 type TacticalSetupPanelProps = {
   copy: SessionCopy
@@ -47,6 +82,11 @@ export function TacticalSetupPanel({
   const [creating, setCreating] = useState(false)
   const [newMapName, setNewMapName] = useState('')
   const [editingMap, setEditingMap] = useState<BattleMap | null>(null)
+  // M07-C: library-map starts offer map-only vs with-monsters; default map-only.
+  const [loadMonsters, setLoadMonsters] = useState(false)
+  const [loadProblems, setLoadProblems] = useState<
+    Array<{ placement_id: string; code: string }>
+  >([])
 
   const loadMaps = useCallback(async () => {
     setLoading(true)
@@ -97,6 +137,7 @@ export function TacticalSetupPanel({
   const handleStart = async () => {
     if (starting) return
     setStarting(true)
+    setLoadProblems([])
     try {
       if (useBlank) {
         const width = Math.max(1, parseInt(blankWidth, 10) || 20)
@@ -105,12 +146,7 @@ export function TacticalSetupPanel({
           roomId,
           campaignId,
           sessionId,
-          {
-            blank_width_cells: width,
-            blank_height_cells: height,
-            include_active_party: true,
-            idempotency_key: requestId('tactical-start'),
-          },
+          tacticalStartBody({ kind: 'blank', width, height }, requestId('tactical-start')),
           token,
         )
       } else if (selectedMapId) {
@@ -118,11 +154,10 @@ export function TacticalSetupPanel({
           roomId,
           campaignId,
           sessionId,
-          {
-            battle_map_id: selectedMapId,
-            include_active_party: true,
-            idempotency_key: requestId('tactical-start'),
-          },
+          tacticalStartBody(
+            { kind: 'library-map', mapId: selectedMapId, loadMonsters },
+            requestId('tactical-start'),
+          ),
           token,
         )
       } else {
@@ -131,6 +166,14 @@ export function TacticalSetupPanel({
       refresh()
       onClose()
     } catch (cause) {
+      if (
+        cause instanceof SessionApiError &&
+        cause.code === 'map_monster_placement_invalid'
+      ) {
+        // DM-only problem list; the panel stays open so the DM can fix the
+        // library placements and retry with the same selection.
+        setLoadProblems(extractPlacementProblems(cause))
+      }
       onError(cause)
       if (cause instanceof SessionApiError && cause.code === 'battle_map_archived') {
         void loadMaps()
@@ -190,6 +233,7 @@ export function TacticalSetupPanel({
                     onChange={() => {
                       setSelectedMapId(m.id)
                       setUseBlank(false)
+                      setLoadProblems([])
                     }}
                   />
                   {m.name} ({m.width_cells}×{m.height_cells})
@@ -216,7 +260,10 @@ export function TacticalSetupPanel({
             type="radio"
             name="tactical-map"
             checked={useBlank}
-            onChange={() => setUseBlank(true)}
+            onChange={() => {
+              setUseBlank(true)
+              setLoadProblems([])
+            }}
           />
           {copy.tacticalStartBlank}
         </label>
@@ -267,6 +314,57 @@ export function TacticalSetupPanel({
               {creating ? copy.tacticalMapSaving : copy.tacticalMapCreate}
             </button>
           </div>
+        </div>
+      ) : null}
+
+      {selectedMapId && !useBlank ? (
+        <div className="tactical-setup__section" data-testid="tactical-load-monsters-option">
+          <h4>{copy.tacticalLoadMonstersHeading}</h4>
+          <label>
+            <input
+              type="radio"
+              name="tactical-load-monsters"
+              checked={!loadMonsters}
+              onChange={() => setLoadMonsters(false)}
+              data-testid="tactical-load-map-only"
+            />
+            {copy.tacticalLoadMapOnly}
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="tactical-load-monsters"
+              checked={loadMonsters}
+              onChange={() => setLoadMonsters(true)}
+              data-testid="tactical-load-with-monsters"
+            />
+            {copy.tacticalLoadMapWithMonsters}
+          </label>
+        </div>
+      ) : null}
+
+      {loadProblems.length > 0 ? (
+        <div
+          className="tactical-setup__load-problems"
+          data-testid="tactical-load-problems"
+        >
+          <h4>{copy.tacticalLoadProblemsHeading}</h4>
+          <ul>
+            {loadProblems.map((problem, index) => (
+              <li
+                key={`${problem.placement_id}-${problem.code}-${index}`}
+                data-placement-id={problem.placement_id}
+                data-problem-code={problem.code}
+              >
+                {problem.placement_id.slice(0, 8)}:{' '}
+                {monsterPlacementProblemMessage(
+                  problem.code,
+                  battleMapLibraryCopy(locale),
+                )}
+              </li>
+            ))}
+          </ul>
+          <p>{copy.tacticalLoadProblemsRetryHint}</p>
         </div>
       ) : null}
 

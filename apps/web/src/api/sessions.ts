@@ -164,10 +164,26 @@ export type SessionResume = {
   pending_actions?: PendingActionView[]
 }
 
-type ApiErrorPayload = { error?: { code?: string; message?: string } }
+export type SessionApiErrorParams = {
+  problems?: Array<{ placement_id: string; code: string }>
+  [key: string]: unknown
+}
+
+type ApiErrorPayload = {
+  error?: {
+    code?: string
+    message?: string
+    params?: SessionApiErrorParams
+  }
+}
 
 export class SessionApiError extends Error {
-  constructor(readonly status: number, readonly code: string, message: string) {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+    readonly params?: SessionApiErrorParams,
+  ) {
     super(message)
   }
 }
@@ -179,6 +195,7 @@ async function apiError(response: Response): Promise<SessionApiError> {
     response.status,
     payload.error?.code ?? 'session_request_failed',
     payload.error?.message ?? `Session request failed (${response.status})`,
+    payload.error?.params,
   )
 }
 

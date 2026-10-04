@@ -2251,6 +2251,11 @@
   stroke-width: 2;
 }
 
+.battle-map__token--hidden rect {
+  stroke-dasharray: 4 3;
+  opacity: 0.75;
+}
+
 .battle-map__token text {
   fill: var(--text);
   font-weight: 600;

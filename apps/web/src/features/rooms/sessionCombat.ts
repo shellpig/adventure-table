@@ -74,6 +74,35 @@ export function combatantFor(
   return detail?.combatants?.find((c) => c.entry_id === entryId)
 }
 
+/**
+ * M07-C monster name presentation (server `name_presentation` snapshot).
+ *
+ * - `name_is_custom` true → the stored name verbatim (a user override).
+ * - Otherwise the current locale's snapshot name, falling back to `names.en`,
+ *   then the projection's own name field.
+ * - No `name_presentation` (legacy instances) → existing behaviour:
+ *   the projection name, else the entry display name.
+ */
+export function combatEntryDisplayName(
+  combat: CombatDetailView | null | undefined,
+  entry: CombatEntryView,
+  locale: string,
+): string {
+  const projection = combatantFor(combat, entry.id)?.projection
+  const presented = projection?.name_presentation
+  if (presented && !presented.name_is_custom) {
+    const names = presented.names ?? {}
+    const localized = names[locale]
+    if (typeof localized === 'string' && localized.length > 0) return localized
+    const english = names['en']
+    if (typeof english === 'string' && english.length > 0) return english
+  }
+  if (projection && typeof projection.name === 'string' && projection.name.length > 0) {
+    return projection.name
+  }
+  return entry.display_name
+}
+
 export function actingEntryId(
   combat: CombatDetailView,
   ownEntryIds: string[],
