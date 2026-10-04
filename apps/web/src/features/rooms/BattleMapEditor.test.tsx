@@ -451,7 +451,7 @@ describe('M07-C BattleMapEditor monster placements', () => {
 
   it('saves placements through PUT monster-placements with expected_revision', () => {
     expect(source).toContain('replaceMonsterPlacements(')
-    expect(source).toContain('buildMonsterPlacementsBody(map.revision, placements)')
+    expect(source).toContain('buildMonsterPlacementsBody(map.revision, inFlight)')
     expect(source).toContain('monsterPlacementsFromMap(saved.monster_placements ?? [])')
   })
 
@@ -537,5 +537,66 @@ describe('M07-C BattleMapEditor monster placements', () => {
     expect(source).toContain('toggleMonsterPlacementVisibility(prev, selectedPlacementId)')
     expect(source).toContain('removeMonsterPlacement(prev, selectedPlacementId)')
     expect(source).toContain('moveMonsterPlacement(prev, selectedPlacementId, x, y)')
+  })
+
+  it('M07-D F16: geometry mouse handlers do nothing in monster mode', () => {
+    // Click/drag paint paths return before the tool switch; a drag that
+    // started earlier is cancelled instead of landing a wall/door/drawing.
+    expect(source).toContain('if (monsterMode) return')
+    expect(source).toContain('onCellClick={handleCanvasCellClick}')
+    expect(source).toContain('if (monsterMode) {')
+    expect(source).toContain('handleMonsterCellClick(x, y)')
+    // Monster-mode entry still clears geometry highlight state.
+    expect(source).toContain('setPreviewLine(null)')
+  })
+
+  it('M07-D F17: a save response never clobbers edits made mid-flight', () => {
+    // Reference snapshot at save start; only an unchanged working state is
+    // overwritten, otherwise the newer edits are kept and flagged unsaved.
+    expect(source).toContain('placementsRef')
+    expect(source).toContain('const inFlight = placementsRef.current')
+    expect(source).toContain('if (placementsRef.current !== inFlight) {')
+    expect(source).toContain('monsterPlacementUnsavedChanges')
+    // The parent still gets the bumped revision so the next save succeeds.
+    const saveBlock = source.slice(source.indexOf('const handleSavePlacements'))
+    const onSavedIdx = saveBlock.indexOf('onSaved(saved)')
+    const guardIdx = saveBlock.indexOf('placementsRef.current !== inFlight')
+    expect(onSavedIdx).toBeGreaterThan(-1)
+    expect(guardIdx).toBeGreaterThan(-1)
+    expect(onSavedIdx).toBeLessThan(guardIdx)
+  })
+
+  it('M07-D F19: placements move by drag, click-to-move stays as the alternative', () => {
+    expect(source).toContain('handlePlacementTokenPointerDown')
+    expect(source).toContain('handlePlacementCellPointerEnter')
+    expect(source).toContain('handlePlacementPointerUp')
+    expect(source).toContain('onTokenPointerDown={monsterMode ? handlePlacementTokenPointerDown : undefined}')
+    expect(source).toContain('onCellPointerEnter={monsterMode ? handlePlacementCellPointerEnter : undefined}')
+    expect(source).toContain('onPointerUp={monsterMode ? handlePlacementPointerUp : undefined}')
+    // A release outside the SVG never reaches it, so a global release clears
+    // the armed drag (cleaned up); leaving Monster mode disarms it too.
+    expect(source).toContain("window.addEventListener('pointerup', clearDrag)")
+    expect(source).toContain("window.addEventListener('pointercancel', clearDrag)")
+    expect(source).toContain("window.removeEventListener('pointerup', clearDrag)")
+    // Drag writes the same working state as click-move (footprint preview
+    // and server-side save validation are shared).
+    expect(source).toContain('moveMonsterPlacement(prev, dragging, x, y)')
+    expect(source).toContain('moveMonsterPlacement(prev, selectedPlacementId, x, y)')
+  })
+
+  it('M07-D F13: image maps expose grid alignment with save, and render aligned', () => {
+    expect(source).toContain('data-testid="map-grid-panel"')
+    expect(source).toContain('data-testid="map-grid-size"')
+    expect(source).toContain('data-testid="map-grid-offset-x"')
+    expect(source).toContain('data-testid="map-grid-offset-y"')
+    expect(source).toContain('data-testid="map-grid-save"')
+    expect(source).toContain('data-testid="map-grid-save-message"')
+    expect(source).toContain('patchBattleMap(roomId, map.id, body, token)')
+    expect(source).toContain("map.source_kind === 'image'")
+    expect(source).toContain('imageRect={imageRect}')
+    // Draft fields preview before Save (parsed draft drives the rect) and the
+    // save persists those exact effective values (blank offsets become 0).
+    expect(source).toContain('parseGridPixelSizeInput(gridSize)')
+    expect(source).toContain('rawOffsetX ?? 0')
   })
 })

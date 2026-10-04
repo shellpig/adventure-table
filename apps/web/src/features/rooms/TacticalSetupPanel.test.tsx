@@ -13,7 +13,23 @@ vi.mock('./roomStorage', () => ({
 vi.mock('../../api/battleMaps', () => ({
   createBattleMap: vi.fn(),
   getBattleMap: vi.fn(),
+  getSessionBattleMap: vi.fn().mockResolvedValue(null),
   listBattleMaps: vi.fn().mockResolvedValue([
+    {
+      id: 'map-1',
+      room_id: 'room-1',
+      name: 'Dungeon',
+      source_kind: 'blank',
+      image_asset_id: null,
+      width_cells: 20,
+      height_cells: 20,
+      revision: 1,
+      created_at: '2026-10-04T00:00:00Z',
+      updated_at: '2026-10-04T00:00:00Z',
+      archived_at: null,
+    },
+  ]),
+  listSessionBattleMaps: vi.fn().mockResolvedValue([
     {
       id: 'map-1',
       room_id: 'room-1',
@@ -115,5 +131,14 @@ describe('TacticalSetupPanel', () => {
 
     expect(html).toContain('data-testid="tactical-create-map"')
     expect(html).toContain('data-testid="tactical-start-confirm"')
+  })
+
+  it('M07-D F14: lists and reads maps through the session read-only routes', async () => {
+    const { readFileSync } = await import('node:fs')
+    const source = readFileSync(new URL('./TacticalSetupPanel.tsx', import.meta.url), 'utf8')
+    expect(source).toContain('listSessionBattleMaps(roomId, campaignId, sessionId, token)')
+    expect(source).toContain('getSessionBattleMap(roomId, campaignId, sessionId, mapId, token)')
+    expect(source).not.toContain('listBattleMaps(roomId, token)')
+    expect(source).not.toContain('getBattleMap(roomId, mapId, token)')
   })
 })

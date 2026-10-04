@@ -6,7 +6,12 @@ import type {
   BattleMapTerrainKind,
   MonsterPlacementProblem,
 } from '../../api/battleMaps'
-import { replaceBattleMapObjects, replaceMonsterPlacements } from '../../api/battleMaps'
+import {
+  patchBattleMap,
+  replaceBattleMapObjects,
+  replaceMonsterPlacements,
+  type BattleMapPatchInput,
+} from '../../api/battleMaps'
 import type { MonsterLibrarySummaryView } from '../../api/monsterLibrary'
 import { getMonsterLibraryEntry, listMonsterLibrary } from '../../api/monsterLibrary'
 import { SessionApiError } from '../../api/sessions'
@@ -14,6 +19,15 @@ import { localizedSessionRequestMessage } from '../../i18n/sessionMessages'
 import type { Locale } from '../../i18n/locale'
 import { BattleMapCanvas } from './BattleMapCanvas'
 import type { CanvasDoor, CanvasTerrain, CanvasToken, CanvasWall } from './BattleMapCanvas'
+import {
+  battleMapImageRect,
+  imageGridFromValues,
+  isValidGridOffsetInput,
+  isValidGridPixelSizeInput,
+  parseGridOffsetInput,
+  parseGridPixelSizeInput,
+  useImageNaturalSize,
+} from './battleMapImageGrid'
 import {
   availableMonsterTemplates,
   buildMonsterPlacementsBody,
@@ -158,6 +172,13 @@ export function BattleMapEditor({
   const [placementProblems, setPlacementProblems] = useState<MonsterPlacementProblem[]>([])
   const [placementsSaving, setPlacementsSaving] = useState(false)
   const [placementsMessage, setPlacementsMessage] = useState<string | null>(null)
+  // M07-D F17 (option b): synchronous mirror of the working placements. The
+  // save response only overwrites them when nothing changed mid-flight; a
+  // newer edit is kept and flagged unsaved instead of being clobbered.
+  const placementsRef = useRef(placements)
+  useEffect(() => {
+    placementsRef.current = placements
+  }, [placements])
 
   // Editor previews and highlights
   const [highlightSegment, setHighlightSegment] = useState<GridSegment | null>(null)
@@ -247,6 +268,11 @@ export function BattleMapEditor({
       const cell = getMapCell(e.clientX, e.clientY)
       if (!cell) return
 
+      // M07-D F16: monster mode owns the canvas; geometry tools (wall /
+      // door / terrain / drawing) must not paint while placing monsters.
+      // Middle-button pan above still works.
+      if (monsterMode) return
+
       if (tool === 'terrain') {
         const x = Math.floor(cell.cellX)
         const y = Math.floor(cell.cellY)
@@ -273,12 +299,15 @@ export function BattleMapEditor({
         setPreviewDrawingPoints([[rx, ry]])
       }
     },
-    [getMapCell, map.height_cells, map.width_cells, startPan, terrainKind, tool, updateWorking],
+    [getMapCell, map.height_cells, map.width_cells, monsterMode, startPan, terrainKind, tool, updateWorking],
   )
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       panBy(e.clientX, e.clientY)
+
+      // M07-D F16: no geometry hover/drag state while placing monsters.
+      if (monsterMode) return
 
       const cell = getMapCell(e.clientX, e.clientY)
       if (!cell) return
@@ -357,13 +386,25 @@ export function BattleMapEditor({
         setHighlightObjectId(null)
       }
     },
-    [getMapCell, map.height_cells, map.width_cells, panBy, terrainKind, tool, working],
+    [getMapCell, map.height_cells, map.width_cells, monsterMode, panBy, terrainKind, tool, working],
   )
 
   const handleMouseUp = useCallback(() => {
     endPan()
     paintingCellRef.current = null
 
+    // M07-D F16: a drag started before entering monster mode must not land
+    // a wall/door/drawing afterwards.
+    if (monsterMode) {
+      dragStartVertexRef.current = null
+      lastSnappedVertexRef.current = null
+      clickSegmentRef.current = null
+      setPreviewLine(null)
+      isDrawingRef.current = false
+      drawingPointsRef.current = []
+      setPreviewDrawingPoints(null)
+      return
+    }
     if (dragStartVertexRef.current && (tool === 'wall' || tool === 'door')) {
       const start = dragStartVertexRef.current
       const end = lastSnappedVertexRef.current ?? start
@@ -635,6 +676,51 @@ export function BattleMapEditor({
     setSelectedPlacementId((prev) => (prev === clientId ? null : clientId))
   }, [])
 
+  // M07-D F19: drag a placement token onto its destination cell. The drop
+  // writes the same working state as click-select-then-click-destination
+  // (kept as the alternative); footprint preview follows the drag through
+  // placementTokens, and out-of-bounds/overlap still surface as server-side
+  // save problems like any other move.
+  const dragPlacementRef = useRef<string | null>(null)
+
+  const handlePlacementTokenPointerDown = useCallback((clientId: string) => {
+    // Arm the drag only; selection stays on the click path so press+release
+    // without moving still toggles the selection exactly once.
+    dragPlacementRef.current = clientId
+  }, [])
+
+  const handlePlacementCellPointerEnter = useCallback((x: number, y: number) => {
+    const dragging = dragPlacementRef.current
+    if (!dragging) return
+    setPlacements((prev) => moveMonsterPlacement(prev, dragging, x, y))
+    setPlacementsMessage(null)
+  }, [])
+
+  const handlePlacementPointerUp = useCallback(() => {
+    dragPlacementRef.current = null
+  }, [])
+
+  // M07-D D2c: a drag released outside the SVG never reaches its onPointerUp,
+  // so later plain hover would keep moving the placement. Clear the armed
+  // drag on any global release; leaving Monster mode disarms it too. Window
+  // pointerup does not intercept cell hit testing (cells still use
+  // onPointerEnter/click only).
+  useEffect(() => {
+    if (!monsterMode) {
+      dragPlacementRef.current = null
+      return
+    }
+    const clearDrag = () => {
+      dragPlacementRef.current = null
+    }
+    window.addEventListener('pointerup', clearDrag)
+    window.addEventListener('pointercancel', clearDrag)
+    return () => {
+      window.removeEventListener('pointerup', clearDrag)
+      window.removeEventListener('pointercancel', clearDrag)
+    }
+  }, [monsterMode])
+
   const togglePlacementHidden = useCallback(() => {
     if (!selectedPlacementId) return
     setPlacements((prev) => toggleMonsterPlacementVisibility(prev, selectedPlacementId))
@@ -650,20 +736,29 @@ export function BattleMapEditor({
 
   const handleSavePlacements = useCallback(async () => {
     if (placementsSaving) return
+    // Snapshot by reference: every placement edit builds a new array, so a
+    // changed reference at response time means a newer unsaved edit exists.
+    const inFlight = placementsRef.current
     setPlacementsSaving(true)
     setPlacementsMessage(null)
     try {
       const saved = await replaceMonsterPlacements(
         roomId,
         map.id,
-        buildMonsterPlacementsBody(map.revision, placements),
+        buildMonsterPlacementsBody(map.revision, inFlight),
         token,
       )
-      setPlacements(monsterPlacementsFromMap(saved.monster_placements ?? []))
-      setPlacementProblems([])
-      setSelectedPlacementId(null)
-      setPlacementsMessage(libraryCopy.monsterPlacementSaved)
+      // The parent still needs the bumped revision for the next save even
+      // when the working state moved on.
       onSaved(saved)
+      if (placementsRef.current !== inFlight) {
+        setPlacementsMessage(libraryCopy.monsterPlacementUnsavedChanges)
+      } else {
+        setPlacements(monsterPlacementsFromMap(saved.monster_placements ?? []))
+        setPlacementProblems([])
+        setSelectedPlacementId(null)
+        setPlacementsMessage(libraryCopy.monsterPlacementSaved)
+      }
     } catch (cause) {
       if (cause instanceof SessionApiError && cause.code === 'map_monster_placement_invalid') {
         setPlacementProblems(extractPlacementProblems(cause))
@@ -686,7 +781,6 @@ export function BattleMapEditor({
     roomId,
     map.id,
     map.revision,
-    placements,
     token,
     libraryCopy,
     locale,
@@ -722,6 +816,95 @@ export function BattleMapEditor({
       setSaving(false)
     }
   }, [roomId, map.id, map.revision, working, token, copy, locale, onSaved, onError])
+
+  // M07-D F13: grid alignment for image maps (blank maps reject grid fields).
+  const [gridSize, setGridSize] = useState(map.grid_pixel_size?.toString() ?? '')
+  const [gridOffsetX, setGridOffsetX] = useState(map.grid_offset_x?.toString() ?? '')
+  const [gridOffsetY, setGridOffsetY] = useState(map.grid_offset_y?.toString() ?? '')
+  const [gridSaving, setGridSaving] = useState(false)
+  const [gridMessage, setGridMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    setGridSize(map.grid_pixel_size?.toString() ?? '')
+    setGridOffsetX(map.grid_offset_x?.toString() ?? '')
+    setGridOffsetY(map.grid_offset_y?.toString() ?? '')
+  }, [map.id, map.grid_pixel_size, map.grid_offset_x, map.grid_offset_y])
+
+  const gridInvalid =
+    !isValidGridPixelSizeInput(gridSize)
+    || !isValidGridOffsetInput(gridOffsetX)
+    || !isValidGridOffsetInput(gridOffsetY)
+
+  const handleSaveGrid = useCallback(async () => {
+    if (gridSaving || gridInvalid) return
+    const body: BattleMapPatchInput = { expected_revision: map.revision }
+    let changed = false
+    const size = parseGridPixelSizeInput(gridSize)
+    // The saved payload is the exact preview: a positive size renders with
+    // zero offsets when the offset inputs are blank.
+    const rawOffsetX = parseGridOffsetInput(gridOffsetX)
+    const rawOffsetY = parseGridOffsetInput(gridOffsetY)
+    const offsetX = size !== null ? (rawOffsetX ?? 0) : rawOffsetX
+    const offsetY = size !== null ? (rawOffsetY ?? 0) : rawOffsetY
+    if (size !== (map.grid_pixel_size ?? null)) {
+      body.grid_pixel_size = size
+      changed = true
+    }
+    if (offsetX !== (map.grid_offset_x ?? null)) {
+      body.grid_offset_x = offsetX
+      changed = true
+    }
+    if (offsetY !== (map.grid_offset_y ?? null)) {
+      body.grid_offset_y = offsetY
+      changed = true
+    }
+    if (!changed) {
+      setGridMessage(libraryCopy.gridSavedMessage)
+      return
+    }
+    setGridSaving(true)
+    setGridMessage(null)
+    try {
+      const saved = await patchBattleMap(roomId, map.id, body, token)
+      setGridMessage(libraryCopy.gridSavedMessage)
+      onSaved(saved)
+    } catch (cause) {
+      onError(cause)
+    } finally {
+      setGridSaving(false)
+    }
+  }, [
+    gridSaving,
+    gridInvalid,
+    gridSize,
+    gridOffsetX,
+    gridOffsetY,
+    map.id,
+    map.revision,
+    map.grid_pixel_size,
+    map.grid_offset_x,
+    map.grid_offset_y,
+    roomId,
+    token,
+    libraryCopy,
+    onSaved,
+    onError,
+  ])
+
+  const imageNaturalSize = useImageNaturalSize(imageUrl)
+  // Draft preview: the grid fields render before Save so the DM can visually
+  // align them; the save above persists these exact effective values. An empty
+  // size keeps the legacy stretch rendering; a positive size with blank
+  // offsets renders with zero offsets.
+  const imageGrid = imageGridFromValues(
+    parseGridPixelSizeInput(gridSize),
+    parseGridOffsetInput(gridOffsetX),
+    parseGridOffsetInput(gridOffsetY),
+  )
+  const imageRect =
+    imageGrid && imageNaturalSize
+      ? battleMapImageRect(imageGrid, imageNaturalSize, BATTLE_MAP_CELL_SIZE)
+      : null
 
   const canvasWalls: CanvasWall[] = useMemo(
     () =>
@@ -875,6 +1058,7 @@ export function BattleMapEditor({
           aria-pressed={monsterMode}
           onClick={() => {
             if (monsterMode) {
+              dragPlacementRef.current = null
               setMonsterMode(false)
               setSelectedPlacementId(null)
             } else {
@@ -993,6 +1177,63 @@ export function BattleMapEditor({
         <p className="battle-map-editor__save-message" data-testid="map-editor-save-message">
           {saveMessage}
         </p>
+      ) : null}
+
+      {map.source_kind === 'image' ? (
+        <div className="battle-map-editor__grid-panel" data-testid="map-grid-panel">
+          <h4>{libraryCopy.gridAlignmentHeading}</h4>
+          <p>{libraryCopy.gridAlignmentHint}</p>
+          <div className="battle-map-editor__grid-fields">
+            <label>
+              {libraryCopy.gridPixelSizeLabel}:
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={gridSize}
+                onChange={(e) => setGridSize(e.target.value)}
+                data-testid="map-grid-size"
+              />
+            </label>
+            <label>
+              {libraryCopy.gridOffsetXLabel}:
+              <input
+                type="number"
+                step={1}
+                value={gridOffsetX}
+                onChange={(e) => setGridOffsetX(e.target.value)}
+                data-testid="map-grid-offset-x"
+              />
+            </label>
+            <label>
+              {libraryCopy.gridOffsetYLabel}:
+              <input
+                type="number"
+                step={1}
+                value={gridOffsetY}
+                onChange={(e) => setGridOffsetY(e.target.value)}
+                data-testid="map-grid-offset-y"
+              />
+            </label>
+            <button
+              type="button"
+              className="button secondary compact"
+              disabled={gridSaving || gridInvalid}
+              onClick={() => void handleSaveGrid()}
+              data-testid="map-grid-save"
+            >
+              {gridSaving ? libraryCopy.gridSavingAction : libraryCopy.gridSaveAction}
+            </button>
+          </div>
+          {gridMessage ? (
+            <p
+              className="battle-map-editor__save-message"
+              data-testid="map-grid-save-message"
+            >
+              {gridMessage}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       {monsterMode ? (
@@ -1184,6 +1425,7 @@ export function BattleMapEditor({
           drawings={working.drawings}
           tokens={monsterMode ? placementTokens : []}
           imageUrl={imageUrl}
+          imageRect={imageRect}
           camera={camera}
           isDm={true}
           selectedEntryId={monsterMode ? selectedPlacementId : selectedId}
@@ -1196,6 +1438,9 @@ export function BattleMapEditor({
           previewDrawingStroke={{ color: penColor, width: penWidth }}
           onCellClick={handleCanvasCellClick}
           onTokenClick={monsterMode ? handlePlacementTokenClick : undefined}
+          onTokenPointerDown={monsterMode ? handlePlacementTokenPointerDown : undefined}
+          onCellPointerEnter={monsterMode ? handlePlacementCellPointerEnter : undefined}
+          onPointerUp={monsterMode ? handlePlacementPointerUp : undefined}
           onWheel={handleWheel}
         />
       </div>

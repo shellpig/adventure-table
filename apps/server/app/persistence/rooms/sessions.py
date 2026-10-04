@@ -443,10 +443,9 @@ class SessionRepository:
                     or access.room_id != room_id
                     or access.revoked_at is not None
                     or access.authority != caller_authority
-                    or caller_authority not in {"dm", "owner"}
                 ):
                     raise SessionStartControllerMismatchPersistenceError(
-                        "Start requires an active DM or Owner Room access session"
+                        "Start requires an active Room access session"
                     )
                 dm_seat = next(
                     (

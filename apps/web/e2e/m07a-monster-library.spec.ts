@@ -18,6 +18,7 @@ type MonsterDetail = {
   presentation: Record<string, unknown>
 }
 type MonsterInstance = { id: string }
+type CombatEntryRef = { id: string; monster_instance_id: string | null }
 
 function omitKeys(value: Record<string, unknown>, keys: string[]): Record<string, unknown> {
   return Object.fromEntries(Object.entries(value).filter(([key]) => !keys.includes(key)))
@@ -468,6 +469,124 @@ test('M07-A Monster Library in zh-TW: built-in shows Chinese names and English d
       has: page.locator('.monster-library__item-name', { hasText: /^地精$/ }),
     }),
   ).toBeVisible()
+})
+
+test('M07-D F12 Quick Enemy template opens in the editor and saves only the changed AC', async ({
+  page,
+  request,
+  roomContext,
+}) => {
+  test.setTimeout(180_000)
+  const { roomId } = roomContext
+  const templateName = 'E2E M07D Quick Thug'
+
+  const campaign = await createCampaign(request, roomId, 'M07-D Quick Template Campaign')
+  const ownerLobby = await json<Lobby>(
+    await request.get(`/api/rooms/${roomId}/campaigns/${campaign.id}/lobby`),
+  )
+  await addSeat(
+    request,
+    roomId,
+    campaign.id,
+    'dm',
+    ownerLobby.caller_access_session_id!,
+    'M07-D',
+  )
+  const sessionId = await startSession(page, roomId, campaign.id)
+  const prefix = `/api/rooms/${roomId}/campaigns/${campaign.id}/sessions/${sessionId}`
+  const idempotency = `e2e-m07d-quick-${Date.now()}`
+
+  // A Quick Enemy instance carries only size/AC/HP/speed (+ optional attack).
+  const instance = await json<MonsterInstance>(
+    await request.post(`${prefix}/monster-instances/quick-enemy`, {
+      data: {
+        name: 'Club Thug',
+        armor_class: 12,
+        max_hp: 11,
+        attack: { name: 'Club', attack_bonus: 4, damage: '1d6+2' },
+        idempotency_key: `${idempotency}-create`,
+      },
+    }),
+  )
+  await json(
+    await request.post(`${prefix}/combat/start`, {
+      data: { idempotency_key: `${idempotency}-start` },
+    }),
+  )
+  await json(
+    await request.post(`${prefix}/combat/entries/monsters`, {
+      data: { monster_instance_id: instance.id, idempotency_key: `${idempotency}-add` },
+    }),
+  )
+
+  // Save the Quick Enemy as a Room template through the combat UI.
+  await page.reload()
+  const detail = await json<{ entries: CombatEntryRef[] }>(
+    await request.get(`${prefix}/combat/detail`),
+  )
+  const quickEntry = detail.entries.find((e) => e.monster_instance_id === instance.id)!
+  expect(quickEntry).toBeDefined()
+  const controls = page.locator(`[data-monster-controls="${quickEntry.id}"]`)
+  await expect(controls).toBeVisible()
+  await controls.locator('[data-monster-template-name]').fill(templateName)
+  await controls.locator('[data-monster-save-template]').click()
+  await expect(controls.locator('[data-monster-template-notice="success"]')).toBeVisible()
+
+  const stored = await json<MonsterDetail>(
+    await request.get(
+      `/api/rooms/${roomId}/monster-library/${encodeURIComponent((await json<MonsterSummary[]>(
+        await request.get(`/api/rooms/${roomId}/monster-library?source=custom`),
+      )).find((m) => m.name === templateName)!.ref)}`,
+    ),
+  )
+  const rulesBefore = stored.rules as Record<string, unknown>
+  expect(rulesBefore['armor_class']).toBe(12)
+  // The quick-enemy shape has no full ability block, type, or alignment.
+  expect(rulesBefore['ability_scores']).toBeUndefined()
+  expect(rulesBefore['type']).toBeUndefined()
+  expect(rulesBefore['alignment']).toBeUndefined()
+
+  // The template opens in the editor without errors and shows unset fields.
+  await page.goto(`/rooms/${roomId}/monster-library`)
+  const searchInput = page.getByPlaceholder('Search by monster name, type, or subtype…')
+  await searchInput.fill(templateName)
+  await page.getByRole('button', { name: 'Refresh' }).click()
+  const item = page.locator('.monster-library__item').filter({
+    has: page.locator('.monster-library__item-name', { hasText: new RegExp(`^${templateName}$`) }),
+  })
+  await item.click()
+  const acInput = page.getByLabel('Armor Class (AC)')
+  await expect(acInput).toHaveValue('12')
+  await expect(page.getByLabel('Type')).toHaveValue('')
+  await expect(page.getByLabel('Alignment')).toHaveValue('')
+
+  // Change only AC and save: nothing else in the stored rules may change.
+  await acInput.fill('16')
+  await page.getByRole('button', { name: 'Save Changes' }).click()
+  await expect(page.locator('.form-success')).toBeVisible()
+
+  const storedAfter = await json<MonsterDetail>(
+    await request.get(
+      `/api/rooms/${roomId}/monster-library/${encodeURIComponent(stored.ref)}`,
+    ),
+  )
+  expect(storedAfter.rules['armor_class']).toBe(16)
+  expect(storedAfter.revision).toBeGreaterThan(stored.revision)
+  const { armor_class: _beforeAc, ...restBefore } = rulesBefore
+  const { armor_class: _afterAc, ...restAfter } = storedAfter.rules as Record<string, unknown>
+  expect(restAfter).toEqual(restBefore)
+
+  // Reopening still shows the saved AC with the other fields untouched.
+  await page.reload()
+  const searchAgain = page.getByPlaceholder('Search by monster name, type, or subtype…')
+  await searchAgain.fill(templateName)
+  await page.getByRole('button', { name: 'Refresh' }).click()
+  const itemAgain = page.locator('.monster-library__item').filter({
+    has: page.locator('.monster-library__item-name', { hasText: new RegExp(`^${templateName}$`) }),
+  })
+  await itemAgain.click()
+  await expect(page.getByLabel('Armor Class (AC)')).toHaveValue('16')
+  await expect(page.getByLabel('Type')).toHaveValue('')
 })
 
 test('M07-A Member directly visiting /monster-library gets no library data and sees forbidden error', async ({

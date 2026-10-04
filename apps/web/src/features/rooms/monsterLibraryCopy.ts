@@ -86,6 +86,7 @@ const COPY = {
     addTrait: '+ Add Trait',
     addAction: '+ Add Action',
     remove: 'Remove',
+    unsetOption: 'Not set',
     revisionLabel: 'Revision',
 
     // Modals / dialogs
@@ -192,6 +193,7 @@ const COPY = {
     addTrait: '+ 新增特性',
     addAction: '+ 新增動作',
     remove: '移除',
+    unsetOption: '未設定',
     revisionLabel: '版本',
 
     // Modals / dialogs

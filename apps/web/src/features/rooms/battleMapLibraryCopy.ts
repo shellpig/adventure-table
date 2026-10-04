@@ -84,9 +84,23 @@ const COPY = {
     monsterPlacementSave: 'Save monster placements',
     monsterPlacementSaving: 'Saving placements…',
     monsterPlacementSaved: 'Monster placements saved.',
+    monsterPlacementUnsavedChanges:
+      'Saved, but newer edits arrived during the save and were kept. Save again to persist them.',
     monsterPlacementProblemsHeading: 'Placement problems (DM only)',
     monsterPlacementRetryHint: 'Fix the placements above, then save again.',
     monsterPlacementLoadingTemplates: 'Loading monster templates…',
+
+    // Grid alignment (image maps; 1 cell is still 5 ft)
+    gridAlignmentHeading: 'Grid alignment',
+    gridAlignmentHint:
+      'Match the grid to the background image. The image pixel at the X/Y offset sits on the top-left corner of cell (0, 0); one cell spans the grid size in image pixels.',
+    gridPixelSizeLabel: 'Grid size (pixels per cell)',
+    gridOffsetXLabel: 'Grid X offset (pixels)',
+    gridOffsetYLabel: 'Grid Y offset (pixels)',
+    gridSaveAction: 'Save grid alignment',
+    gridSavingAction: 'Saving grid…',
+    gridSavedMessage: 'Grid alignment saved.',
+    imagePreviewHeading: 'Image preview',
 
     // Placement problem codes (server validator, DM only)
     placementProblemOutOfBounds: 'is outside the map.',
@@ -177,9 +191,23 @@ const COPY = {
     monsterPlacementSave: '儲存怪物配置',
     monsterPlacementSaving: '正在儲存配置…',
     monsterPlacementSaved: '怪物配置已儲存。',
+    monsterPlacementUnsavedChanges:
+      '已儲存，但儲存期間又有新的編輯（已保留），請再儲存一次以寫入最新內容。',
     monsterPlacementProblemsHeading: '配置問題（僅 DM 可見）',
     monsterPlacementRetryHint: '修正上方配置後再儲存一次。',
     monsterPlacementLoadingTemplates: '正在載入怪物範本…',
+
+    // Grid alignment (image maps; 1 cell is still 5 ft)
+    gridAlignmentHeading: '格線對齊',
+    gridAlignmentHint:
+      '將格線對準底圖：X／Y 位移指定的底圖像素會落在 (0, 0) 格的左上角，一格等於格線尺寸的底圖像素數。',
+    gridPixelSizeLabel: '格線尺寸（每格像素）',
+    gridOffsetXLabel: '格線 X 位移（像素）',
+    gridOffsetYLabel: '格線 Y 位移（像素）',
+    gridSaveAction: '儲存格線對齊',
+    gridSavingAction: '正在儲存格線…',
+    gridSavedMessage: '格線對齊已儲存。',
+    imagePreviewHeading: '圖片預覽',
 
     // Placement problem codes (server validator, DM only)
     placementProblemOutOfBounds: '超出地圖範圍。',

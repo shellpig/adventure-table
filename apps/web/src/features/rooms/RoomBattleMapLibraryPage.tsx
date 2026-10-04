@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   archiveBattleMap,
@@ -20,6 +20,13 @@ import {
   battleMapLibraryErrorMessage,
   type BattleMapLibraryCopy,
 } from './battleMapLibraryCopy'
+import {
+  isValidGridOffsetInput,
+  isValidGridPixelSizeInput,
+  previewGridLines,
+  resolveCreateImageGrid,
+  useImageNaturalSize,
+} from './battleMapImageGrid'
 import { recentRoomForId } from './roomStorage'
 import { sessionCopy } from './sessionCopy'
 import './rooms.css'
@@ -82,6 +89,26 @@ export function RoomBattleMapLibraryPage({ roomId }: RoomBattleMapLibraryPagePro
   const [createImageFile, setCreateImageFile] = useState<File | null>(null)
   const [createImageWidth, setCreateImageWidth] = useState('20')
   const [createImageHeight, setCreateImageHeight] = useState('20')
+  // M07-D F13: grid alignment against the uploaded background image.
+  // Empty inputs use the explicit new-upload defaults (size 40, offsets 0)
+  // so the preview and the saved payload always agree.
+  const [createImagePreviewUrl, setCreateImagePreviewUrl] = useState<string | null>(null)
+  const createImageNaturalSize = useImageNaturalSize(createImagePreviewUrl)
+  const createImagePreviewUrlRef = useRef<string | null>(null)
+  createImagePreviewUrlRef.current = createImagePreviewUrl
+  // Object URLs are revoked on replacement/close below; this only covers
+  // unmount with the modal still open.
+  useEffect(
+    () => () => {
+      if (createImagePreviewUrlRef.current) {
+        URL.revokeObjectURL(createImagePreviewUrlRef.current)
+      }
+    },
+    [],
+  )
+  const [createImageGridSize, setCreateImageGridSize] = useState('')
+  const [createImageOffsetX, setCreateImageOffsetX] = useState('')
+  const [createImageOffsetY, setCreateImageOffsetY] = useState('')
 
   // Copy Modal State
   const [showCopyModal, setShowCopyModal] = useState(false)
@@ -133,9 +160,45 @@ export function RoomBattleMapLibraryPage({ roomId }: RoomBattleMapLibraryPagePro
     }
   }
 
+  const setCreateImageFileAndPreview = (file: File | null) => {
+    if (createImagePreviewUrl) {
+      URL.revokeObjectURL(createImagePreviewUrl)
+      setCreateImagePreviewUrl(null)
+    }
+    setCreateImageFile(file)
+    if (file) {
+      setCreateImagePreviewUrl(URL.createObjectURL(file))
+    }
+  }
+
+  const resetCreateImageModal = () => {
+    if (createImagePreviewUrl) URL.revokeObjectURL(createImagePreviewUrl)
+    setShowCreateImageModal(false)
+    setCreateImageName('')
+    setCreateImageFile(null)
+    setCreateImageWidth('20')
+    setCreateImageHeight('20')
+    setCreateImagePreviewUrl(null)
+    setCreateImageGridSize('')
+    setCreateImageOffsetX('')
+    setCreateImageOffsetY('')
+  }
+
+  const createImageGridInvalid =
+    !isValidGridPixelSizeInput(createImageGridSize)
+    || !isValidGridOffsetInput(createImageOffsetX)
+    || !isValidGridOffsetInput(createImageOffsetY)
+
+  // Identical effective values for the preview overlay and the create payload.
+  const createImageGrid = resolveCreateImageGrid(
+    createImageGridSize,
+    createImageOffsetX,
+    createImageOffsetY,
+  )
+
   const handleCreateImage = async () => {
     const name = createImageName.trim()
-    if (!name || !createImageFile || pendingAction) return
+    if (!name || !createImageFile || pendingAction || createImageGridInvalid) return
     const width = Math.min(200, Math.max(1, parseInt(createImageWidth, 10) || 20))
     const height = Math.min(200, Math.max(1, parseInt(createImageHeight, 10) || 20))
     setListError(null)
@@ -154,14 +217,13 @@ export function RoomBattleMapLibraryPage({ roomId }: RoomBattleMapLibraryPagePro
           image_asset_id: asset.id,
           width_cells: width,
           height_cells: height,
+          grid_pixel_size: createImageGrid.pixelSize,
+          grid_offset_x: createImageGrid.offsetX,
+          grid_offset_y: createImageGrid.offsetY,
         },
         token,
       )
-      setShowCreateImageModal(false)
-      setCreateImageName('')
-      setCreateImageFile(null)
-      setCreateImageWidth('20')
-      setCreateImageHeight('20')
+      resetCreateImageModal()
       await loadMaps()
     } catch (cause) {
       setListError(battleMapLibraryErrorMessage(cause, copy))
@@ -570,7 +632,7 @@ export function RoomBattleMapLibraryPage({ roomId }: RoomBattleMapLibraryPagePro
                   required
                   onChange={(e) => {
                     const file = e.target.files?.[0] ?? null
-                    setCreateImageFile(file)
+                    setCreateImageFileAndPreview(file)
                     if (file && !createImageName) {
                       setCreateImageName(file.name.replace(/\.[^/.]+$/, ''))
                     }
@@ -578,6 +640,77 @@ export function RoomBattleMapLibraryPage({ roomId }: RoomBattleMapLibraryPagePro
                   data-testid="create-image-map-file"
                 />
               </label>
+              {createImagePreviewUrl && createImageNaturalSize ? (
+                <div data-testid="create-image-map-preview">
+                  <h4>{copy.imagePreviewHeading}</h4>
+                  <svg
+                    viewBox={`0 0 ${createImageNaturalSize.width} ${createImageNaturalSize.height}`}
+                    style={{ width: '100%' }}
+                    role="img"
+                    aria-label={copy.imagePreviewHeading}
+                  >
+                    <image
+                      href={createImagePreviewUrl}
+                      x={0}
+                      y={0}
+                      width={createImageNaturalSize.width}
+                      height={createImageNaturalSize.height}
+                      preserveAspectRatio="none"
+                    />
+                    {previewGridLines(
+                      createImageNaturalSize,
+                      createImageGrid.pixelSize,
+                      createImageGrid.offsetX,
+                      createImageGrid.offsetY,
+                    ).map((line) => (
+                      <line
+                        key={line.key}
+                        x1={line.x1}
+                        y1={line.y1}
+                        x2={line.x2}
+                        y2={line.y2}
+                        className="battle-map__grid-line"
+                      />
+                    ))}
+                  </svg>
+                </div>
+              ) : null}
+              <div className="modal-card__row">
+                <label>
+                  {copy.gridPixelSizeLabel}
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={createImageGridSize}
+                    placeholder="40"
+                    onChange={(e) => setCreateImageGridSize(e.target.value)}
+                    data-testid="create-image-map-grid-size"
+                  />
+                </label>
+                <label>
+                  {copy.gridOffsetXLabel}
+                  <input
+                    type="number"
+                    step={1}
+                    value={createImageOffsetX}
+                    placeholder="0"
+                    onChange={(e) => setCreateImageOffsetX(e.target.value)}
+                    data-testid="create-image-map-grid-offset-x"
+                  />
+                </label>
+                <label>
+                  {copy.gridOffsetYLabel}
+                  <input
+                    type="number"
+                    step={1}
+                    value={createImageOffsetY}
+                    placeholder="0"
+                    onChange={(e) => setCreateImageOffsetY(e.target.value)}
+                    data-testid="create-image-map-grid-offset-y"
+                  />
+                </label>
+              </div>
               <div className="modal-card__row">
                 <label>
                   {copy.modalWidthCells}
@@ -606,14 +739,14 @@ export function RoomBattleMapLibraryPage({ roomId }: RoomBattleMapLibraryPagePro
                 <button
                   type="button"
                   className="button secondary"
-                  onClick={() => setShowCreateImageModal(false)}
+                  onClick={() => resetCreateImageModal()}
                 >
                   {copy.cancel}
                 </button>
                 <button
                   type="submit"
                   className="button primary"
-                  disabled={pendingAction === 'upload' || !createImageName.trim() || !createImageFile}
+                  disabled={pendingAction === 'upload' || !createImageName.trim() || !createImageFile || createImageGridInvalid}
                   data-testid="create-image-map-submit"
                 >
                   {pendingAction === 'upload' ? copy.uploadingAction : copy.submitUpload}

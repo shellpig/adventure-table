@@ -55,6 +55,12 @@ type BattleMapCanvasProps = {
   drawings?: CanvasDrawing[]
   tokens: CanvasToken[]
   imageUrl?: string | null
+  /**
+   * M07-D F13: aligned background-image rectangle in map pixels. When absent
+   * the image keeps the legacy stretch-to-grid rendering (maps without saved
+   * grid values).
+   */
+  imageRect?: { x: number; y: number; width: number; height: number } | null
   camera: TacticalCamera
   isDm: boolean
   selectedEntryId?: string | null
@@ -105,6 +111,7 @@ export function BattleMapCanvas({
   drawings = [],
   tokens,
   imageUrl,
+  imageRect,
   camera,
   isDm,
   selectedEntryId,
@@ -210,10 +217,10 @@ export function BattleMapCanvas({
       {imageUrl ? (
         <image
           href={imageUrl}
-          x={0}
-          y={0}
-          width={mapWidth}
-          height={mapHeight}
+          x={imageRect?.x ?? 0}
+          y={imageRect?.y ?? 0}
+          width={imageRect?.width ?? mapWidth}
+          height={imageRect?.height ?? mapHeight}
           data-testid="battle-map-image"
           preserveAspectRatio="none"
         />

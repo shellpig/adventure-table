@@ -611,3 +611,148 @@ test('M07-C built-in monster names follow the UI locale in the placement picker'
     page.getByTestId('monster-placement-template-picker').locator(`option[value="${ACOLYTE_REF}"]`),
   ).toHaveText('Acolyte')
 })
+
+test('M07-D placements move by drag and monster mode never paints terrain', async ({
+  page,
+  request,
+  roomContext,
+}) => {
+  test.setTimeout(180_000)
+  const { roomId } = roomContext
+  const mapName = 'E2E M07D Drag Lair'
+  await createBlankMap(request, roomId, mapName, 12, 10)
+
+  await openLibraryEditor(page, roomId, mapName)
+  // Arm the terrain brush first: entering monster mode must fully disarm it.
+  await page.getByTestId('map-editor-tool-terrain').click()
+  await enterMonsterMode(page)
+  await searchTemplate(page, 'Goblin')
+  await placeTemplateAt(page, GOBLIN_REF, 'public', 5, 2)
+  await expect(editorTokens(page)).toHaveCount(1)
+
+  // Drag the token from (5, 2) to (8, 2).
+  const tokenBox = await editorTokens(page).first().boundingBox()
+  expect(tokenBox).not.toBeNull()
+  const dest = await mapPoint(page, 8.5, 2.5)
+  await page.mouse.move(tokenBox!.x + tokenBox!.width / 2, tokenBox!.y + tokenBox!.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(dest.x, dest.y, { steps: 5 })
+  await page.mouse.up()
+  await expect(editorTokens(page).first().locator('rect')).toHaveAttribute(
+    'x',
+    String(8 * CELL_SIZE),
+  )
+  await savePlacements(page)
+
+  const listed = await json<BattleMapSummary[]>(
+    await request.get(`/api/rooms/${roomId}/battle-maps`),
+  )
+  const mapId = listed.find((m) => m.name === mapName)!.id
+  const saved = await json<BattleMapDetail>(
+    await request.get(`/api/rooms/${roomId}/battle-maps/${mapId}`),
+  )
+  expect(saved.monster_placements).toHaveLength(1)
+  expect(saved.monster_placements[0]).toMatchObject({ anchor_x: 8, anchor_y: 2 })
+
+  // The armed terrain tool painted nothing while monster mode owned the canvas.
+  const objects = await json<{ terrain: unknown[] }>(
+    await request.get(`/api/rooms/${roomId}/battle-maps/${mapId}`),
+  )
+  expect(objects.terrain).toEqual([])
+})
+
+test('M07-D edits made while a placement save is in flight are kept and flagged', async ({
+  page,
+  request,
+  roomContext,
+}) => {
+  test.setTimeout(180_000)
+  const { roomId } = roomContext
+  const mapName = 'E2E M07D Save Race'
+  const created = await createBlankMap(request, roomId, mapName, 12, 10)
+  await putPlacements(request, roomId, created.id, created.revision, [
+    { template_key: GOBLIN_REF, anchor_x: 2, anchor_y: 2, visibility: 'public' },
+    { template_key: ACOLYTE_REF, anchor_x: 6, anchor_y: 2, visibility: 'public' },
+  ])
+
+  await openLibraryEditor(page, roomId, mapName)
+  await enterMonsterMode(page)
+  await expect(editorTokens(page)).toHaveCount(2)
+
+  await page.route('**/monster-placements', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 800))
+    await route.continue()
+  })
+  await page.getByTestId('monster-placement-save').click()
+  // Edit during the flight: select the Goblin token and move it to (3, 2).
+  const goblinAt = await mapPoint(page, 2.5, 2.5)
+  await page.mouse.click(goblinAt.x, goblinAt.y)
+  await expect(page.getByTestId('monster-placement-selection')).toBeVisible()
+  const movedTo = await mapPoint(page, 3.5, 2.5)
+  await page.mouse.click(movedTo.x, movedTo.y)
+
+  await expect(page.getByTestId('monster-placement-save-message')).toHaveText(
+    'Saved, but newer edits arrived during the save and were kept. Save again to persist them.',
+  )
+  // The mid-flight move survived the stale response instead of snapping back.
+  const movedRect = editorTokens(page).first().locator('rect')
+  await expect(movedRect).toHaveAttribute('x', String(3 * CELL_SIZE))
+
+  // Saving again persists the kept edit.
+  await page.unroute('**/monster-placements')
+  await page.getByTestId('monster-placement-save').click()
+  await expect(page.getByTestId('monster-placement-save-message')).toHaveText(
+    'Monster placements saved.',
+  )
+  const saved = await json<BattleMapDetail>(
+    await request.get(`/api/rooms/${roomId}/battle-maps/${created.id}`),
+  )
+  const goblinPlacement = saved.monster_placements.find((p) => p.template_key === GOBLIN_REF)!
+  expect(goblinPlacement).toMatchObject({ anchor_x: 3, anchor_y: 2 })
+})
+
+test('M07-D tactical tokens show the localized name and follow a DM rename', async ({
+  page,
+  request,
+  roomContext,
+}) => {
+  test.setTimeout(240_000)
+  const { roomId } = roomContext
+  const mapName = 'E2E M07D Token Names'
+  const created = await createBlankMap(request, roomId, mapName, 12, 10)
+  await putPlacements(request, roomId, created.id, created.revision, [
+    { template_key: GOBLIN_REF, anchor_x: 2, anchor_y: 2, visibility: 'public' },
+  ])
+
+  const campaign = await createCampaign(request, roomId, 'M07-D Token Campaign')
+  const lobby = await json<Lobby>(
+    await request.get(`/api/rooms/${roomId}/campaigns/${campaign.id}/lobby`),
+  )
+  await addSeat(request, roomId, campaign.id, 'dm', lobby.caller_access_session_id!, 'M07-D')
+  const sessionId = await startSession(page, roomId, campaign.id)
+  const prefix = `/api/rooms/${roomId}/campaigns/${campaign.id}/sessions/${sessionId}`
+
+  await page.getByTestId('tactical-start-open').click()
+  await page.getByTestId(`tactical-map-${created.id}`).getByRole('radio').check()
+  await page.getByTestId('tactical-load-with-monsters').check()
+  await page.getByTestId('tactical-start-confirm').click()
+  await expect(mapPanel(page)).toBeVisible()
+
+  const detail = await readDetailOrNull(request, prefix)
+  expect(detail).not.toBeNull()
+  const goblin = detail!.entries.find((e) => e.subject_kind === 'monster')!
+  expect(goblin).toBeDefined()
+
+  // Switch to zh-TW: the unrenamed Goblin token shows the localized name.
+  await page.evaluate(() => window.localStorage.setItem('adventure-table.locale', 'zh-TW'))
+  await page.reload()
+  await expect(mapPanel(page)).toBeVisible()
+  await expect(token(page, goblin.id)).toContainText('地精')
+
+  // A DM rename (name_is_custom) replaces the token label.
+  const controls = page.locator(`[data-monster-controls="${goblin.id}"]`)
+  await expect(controls).toBeVisible()
+  await controls.locator('input[type="text"]').first().fill('哥布林老大')
+  await controls.locator('[data-monster-save]').click()
+  await expect(token(page, goblin.id)).toContainText('哥布林老大')
+})

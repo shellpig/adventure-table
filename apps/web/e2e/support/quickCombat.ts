@@ -117,14 +117,19 @@ export async function createCampaign(
   request: APIRequestContext,
   roomId: string,
   name: string,
+  headers?: Record<string, string>,
 ): Promise<Campaign> {
   const campaign = await json<Campaign>(await request.post(`/api/rooms/${roomId}/campaigns`, {
+    headers,
     data: { name, ruleset: 'dnd5e-2014' },
   }))
   await json(await request.patch(`/api/rooms/${roomId}/campaigns/${campaign.id}/status`, {
+    headers,
     data: { status: 'active' },
   }))
-  await json(await request.post(`/api/rooms/${roomId}/campaigns/${campaign.id}/select`))
+  await json(await request.post(`/api/rooms/${roomId}/campaigns/${campaign.id}/select`, {
+    headers,
+  }))
   return campaign
 }
 
@@ -135,14 +140,16 @@ export async function addSeat(
   role: 'dm' | 'player',
   accessSessionId: string,
   labelPrefix: string = 'P4-E',
+  headers?: Record<string, string>,
 ): Promise<Seat> {
   const seat = await json<Seat>(await request.post(
     `/api/rooms/${roomId}/campaigns/${campaignId}/seats`,
-    { data: { role, label: role === 'dm' ? `${labelPrefix} DM` : `${labelPrefix} Player` } },
+    { headers, data: { role, label: role === 'dm' ? `${labelPrefix} DM` : `${labelPrefix} Player` } },
   ))
   await json(await request.patch(
     `/api/rooms/${roomId}/campaigns/${campaignId}/seats/${seat.id}/controller`,
     {
+      headers,
       data: {
         controller_kind: 'human',
         controller_access_session_id: accessSessionId,
@@ -159,14 +166,16 @@ export async function addPlayerSeat(
   character: CharacterSummary,
   accessSessionId: string,
   labelPrefix: string = 'P4-E',
+  headers?: Record<string, string>,
 ): Promise<Seat> {
   await json(await request.post(`/api/rooms/${roomId}/campaigns/${campaignId}/roster`, {
+    headers,
     data: { character_id: character.id, status: 'active' },
   }))
-  const seat = await addSeat(request, roomId, campaignId, 'player', accessSessionId, labelPrefix)
+  const seat = await addSeat(request, roomId, campaignId, 'player', accessSessionId, labelPrefix, headers)
   await json(await request.patch(
     `/api/rooms/${roomId}/campaigns/${campaignId}/seats/${seat.id}/character`,
-    { data: { selected_character_id: character.id } },
+    { headers, data: { selected_character_id: character.id } },
   ))
   return seat
 }

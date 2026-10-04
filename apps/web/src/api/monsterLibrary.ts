@@ -290,6 +290,54 @@ export function getMonsterLibraryEntry(
   return request(`${base(roomId)}/${encodeURIComponent(ref)}`, token)
 }
 
+const sessionLibrariesBase = (
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+) => `/api/rooms/${roomId}/campaigns/${campaignId}/sessions/${sessionId}/libraries`
+
+function sessionMonsterLibraryQuery(options?: MonsterLibraryListOptions): string {
+  const params = new URLSearchParams()
+  if (options?.query) params.set('query', options.query)
+  if (options?.include_archived !== undefined) {
+    params.set('include_archived', String(options.include_archived))
+  }
+  if (options?.limit !== undefined) params.set('limit', String(options.limit))
+  if (options?.offset !== undefined) params.set('offset', String(options.offset))
+  if (options?.source) params.set('source', options.source)
+  return params.toString()
+}
+
+/**
+ * M07-D D2 (F14): Session-scoped read-only monster library reads for the
+ * current DM. Same response models as the management routes; usable by a
+ * non-Owner Human sitting on the current DM Seat.
+ */
+export function listSessionMonsterLibrary(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  token: string,
+  options?: MonsterLibraryListOptions,
+): Promise<MonsterLibrarySummaryView[]> {
+  const qs = sessionMonsterLibraryQuery(options)
+  const url = `${sessionLibrariesBase(roomId, campaignId, sessionId)}/monster-library`
+  return request(qs ? `${url}?${qs}` : url, token)
+}
+
+export function getSessionMonsterLibraryEntry(
+  roomId: string,
+  campaignId: string,
+  sessionId: string,
+  ref: string,
+  token: string,
+): Promise<MonsterLibraryDetailView> {
+  return request(
+    `${sessionLibrariesBase(roomId, campaignId, sessionId)}/monster-library/${encodeURIComponent(ref)}`,
+    token,
+  )
+}
+
 export function createCustomMonster(
   roomId: string,
   token: string,
