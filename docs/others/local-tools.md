@@ -58,7 +58,7 @@ npm run test:e2e:docker
 
 ### 外部 Reviewer / Worker CLI
 
-把 agy 或 ChatGPT 當 **worker**（實作而非 review）時，流程、step 粒度、檢查節奏與踩坑一律看 `docs/others/conductor-handbook.md`；本段只保留啟動指令。
+把 agy、ChatGPT 或 Muse 當 **worker**（實作而非 review）時，流程、step 粒度、檢查節奏與踩坑一律看 `docs/others/conductor-handbook.md`；本段只保留啟動指令。
 
 三個 reviewer 共通：**預設 read-only**——不寫檔、不刪檔、不 stage、不 commit、不 push，不讀 `.env` 與 `C:\_work\AI_Work\Tools\`；非互動呼叫必須 `< NUL` 關閉 stdin，否則會停在等待輸入永久卡死；輸出重導到檔案保留；結果只當第二意見，回報前先自己審一遍，並以 `git status` / `git diff` 確認實際改動。
 
@@ -67,6 +67,7 @@ npm run test:e2e:docker
 | 「要 ds4 / ds4 pro / ds4 flash 做 XXX」 | DeepSeek via Codex CLI |
 | 「要 agy 做 XXX」「用 agy 審 / 驗證 XXX」 | Antigravity CLI |
 | 「要 codex 做 XXX」（不帶 `ds4`） | Codex CLI (OpenAI) |
+| 「要 opencode muse 做 XXX」 | Muse Spark 1.3 via OpenCode CLI（worker） |
 
 **DeepSeek via Codex CLI**：透過本機 Moon Bridge DeepSeek 設定，用 `CODEX_HOME=C:\_work\AI_Work\Tools\codex-deepseek-home`。Model：`ds4 pro` → `deepseek-v4-pro`；`ds4 flash` → `deepseek-v4-flash`；只說 `ds4` 用 `deepseek-v4-pro`。
 
@@ -84,6 +85,19 @@ cmd /c "C:\Users\User\AppData\Local\agy\bin\agy.exe -p `\"<任務>`\" --model `\
 - **拆步原則**：每個 agy 任務要在 15～20 分鐘內收斂到可驗證狀態；prompt 自足，只指向該步要讀的規格段落，明列交付物、focused test 指令與「不得 commit」。Subphase 進度只寫在 `<Subphase>實作紀錄.md` 的步驟板；新紀錄的摘要與各步檔案格式見 [指揮者手冊 §2.4](conductor-handbook.md#24-實作紀錄格式)，新對話只讀摘要、步驟板與相關步驟；agy 對話 ID 遺失不影響交接。
 - 每步結束後 Claude 以 `git diff` 審改動、跑該步 focused test，通過才 commit；失敗把錯誤餵回同一對話修。**審完若剩餘修改很小（幾行、單一檔案、不需重新理解脈絡），Claude 直接自己改完再 commit，不再開 agy 回合。**
 - Model：`--model` 用 `agy models` 列出的完整顯示字串，未指定時預設 `"Gemini 3.8 Flash (High)"`。
+
+**Muse Spark 1.3 via OpenCode CLI**（worker）：用 OpenCode 桌面版內建的 CLI；不要再裝 npm 版 `opencode`（舊版資料庫與桌面版不相容，啟動即報 `Database is not empty and has no session table`）。流程、檢查節奏與權責見 [指揮者手冊 §4c](conductor-handbook.md#4c-muse-13-via-opencode-cli)。
+
+```powershell
+$c = "C:\Users\User\AppData\Local\Programs\@opencodedesktop\resources\opencode-cli.exe"
+Set-Location C:\_work\AI_Work\Projects\adventure-table
+& $c run -m "opencode/muse-spark-1.3-contributor-free#high" --auto --title "<步驟>" (Get-Content -Raw -Encoding utf8 "C:\_work\AI_Work\Tools\agy-runs\opencode-muse-<步驟>.prompt.txt") *> "C:\_work\AI_Work\Tools\agy-runs\opencode-muse-<步驟>.log"
+```
+
+- 模型字串的 `#high` 是 effort variant；`opencode-cli.exe models` 可列出可用模型。使用者 2026-10-04 同意這個免費、會分享資料的方案用於本專案程式碼。
+- 加 `--auto` 才能寫檔與跑 shell，代價是 shell 指令不會被擋，禁止事項必須寫進 prompt。
+- **prompt 一律寫成檔案再傳入**；長文字直接放在 PowerShell 命令列，引號會被轉壞。
+- 一律 `run_in_background` 啟動，工作目錄是 repo root；worker 直接改本機工作樹，用本機 venv／npm／Docker E2E。
 
 **Codex CLI (OpenAI)**：用預設 `CODEX_HOME`。
 
