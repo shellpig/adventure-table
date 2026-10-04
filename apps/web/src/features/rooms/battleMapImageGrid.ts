@@ -132,27 +132,27 @@ export function previewGridLines(
 
 /** Natural pixel size of an image URL; null while loading, on error, or unset. */
 export function useImageNaturalSize(url: string | null | undefined): ImageNaturalSize | null {
-  const [size, setSize] = useState<ImageNaturalSize | null>(null)
+  const [loaded, setLoaded] = useState<{ url: string; size: ImageNaturalSize } | null>(null)
   useEffect(() => {
     if (!url) {
-      setSize(null)
+      setLoaded(null)
       return
     }
     let active = true
     const image = new Image()
     image.onload = () => {
       if (!active) return
-      setSize({ width: image.naturalWidth, height: image.naturalHeight })
+      setLoaded({ url, size: { width: image.naturalWidth, height: image.naturalHeight } })
     }
     image.onerror = () => {
-      if (active) setSize(null)
+      if (active) setLoaded(null)
     }
     image.src = url
     return () => {
       active = false
     }
   }, [url])
-  return size
+  return loaded && loaded.url === url ? loaded.size : null
 }
 
 /**
