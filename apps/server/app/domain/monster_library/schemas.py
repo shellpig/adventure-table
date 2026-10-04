@@ -84,6 +84,14 @@ class CustomMonsterActionInput(StrictModel):
     automation_level: Literal["structured", "partial", "dm_adjudication"] | None = None
 
 
+class PatchCustomMonsterTraitInput(CustomMonsterTraitInput):
+    source_index: int | None = Field(default=None, ge=0)
+
+
+class PatchCustomMonsterActionInput(CustomMonsterActionInput):
+    source_index: int | None = Field(default=None, ge=0)
+
+
 class CreateCustomMonsterInput(StrictModel):
     name: str = Field(min_length=1, max_length=160)
     armor_class: int = Field(ge=0)
@@ -141,11 +149,11 @@ class PatchCustomMonsterInput(StrictModel):
     languages: str | None = None
     challenge_rating: float | None = Field(default=None, ge=0)
     xp: int | None = Field(default=None, ge=0)
-    traits: list[CustomMonsterTraitInput] | None = None
-    actions: list[CustomMonsterActionInput] | None = None
-    bonus_actions: list[CustomMonsterActionInput] | None = None
-    reactions: list[CustomMonsterActionInput] | None = None
-    legendary_actions: list[CustomMonsterActionInput] | None = None
+    traits: list[PatchCustomMonsterTraitInput] | None = None
+    actions: list[PatchCustomMonsterActionInput] | None = None
+    bonus_actions: list[PatchCustomMonsterActionInput] | None = None
+    reactions: list[PatchCustomMonsterActionInput] | None = None
+    legendary_actions: list[PatchCustomMonsterActionInput] | None = None
     description: str | None = None
 
 

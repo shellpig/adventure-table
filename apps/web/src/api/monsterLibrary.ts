@@ -130,6 +130,14 @@ export type CustomMonsterActionInput = {
   automation_level?: 'structured' | 'partial' | 'dm_adjudication' | null
 }
 
+export type PatchCustomMonsterTraitInput = CustomMonsterTraitInput & {
+  source_index?: number | null
+}
+
+export type PatchCustomMonsterActionInput = CustomMonsterActionInput & {
+  source_index?: number | null
+}
+
 export type CreateCustomMonsterInput = {
   name: string
   armor_class: number
@@ -192,11 +200,11 @@ export type PatchCustomMonsterInput = {
   languages?: string | null
   challenge_rating?: number | null
   xp?: number | null
-  traits?: CustomMonsterTraitInput[] | null
-  actions?: CustomMonsterActionInput[] | null
-  bonus_actions?: CustomMonsterActionInput[] | null
-  reactions?: CustomMonsterActionInput[] | null
-  legendary_actions?: CustomMonsterActionInput[] | null
+  traits?: PatchCustomMonsterTraitInput[] | null
+  actions?: PatchCustomMonsterActionInput[] | null
+  bonus_actions?: PatchCustomMonsterActionInput[] | null
+  reactions?: PatchCustomMonsterActionInput[] | null
+  legendary_actions?: PatchCustomMonsterActionInput[] | null
   description?: string | null
 }
 
