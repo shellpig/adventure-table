@@ -39,7 +39,16 @@ Backend 測試在 `apps/server/tests/`，前端測試在 `apps/web/src/`，E2E �
 - **`docker compose config`**：預設與 `--profile e2e` 都通過。
 - **受影響 E2E**（Docker，`adventure_table_e2e`）：`m07b-map-library` 2 passed；`p5f-tactical-combat`、`p5g-map-editor-save`、`p5g-tactical-full-journey`、`m07a-monster-library` 6 passed。
 - **M03 boundary／schema parity**：已含在全套 backend 中。本 Subphase 沒有新增多人 package；新欄位由 schema parity 覆蓋；Standalone 仍只升 `character@head`。
-- **合併前全套 Docker E2E**：見下節。
+- **合併前全套 Docker E2E**（`npm run test:e2e:docker` 無參數，2026-10-04，HEAD `65418637`＋B3）：
+  - `parallel`：143 passed、1 failed、4 skipped，script 隨即中止。唯一失敗是 `m01d-vgm-races` Aasimar 案例的 `waitForDraftRevision` 逾時，即 KI-P1D-001 的簽章。
+  - 補跑另外兩組：`baseline-room` 30 passed、1 skipped；`serial-restart` 2 passed。
+  - 單獨重跑 m01d（舊 E2E 資料庫有前次全套殘留）：第一次 3 passed、1 failed；`--repeat-each=2` 再跑 6 passed、2 failed。這兩次失敗分別是：
+    - Hobgoblin 選項計數停在 1/2。
+    - Aasimar 升等後未跳到 builder 頁。
+  - 為排除 M07-B，以乾淨的 E2E 資料庫兩邊比對：
+    - `main@89a78a74`：m01d `--repeat-each=2`，8 passed。
+    - 本分支：m01d `--repeat-each=3`，12 passed。
+  - 判讀：失敗只在資料殘留／高負載下出現，乾淨資料庫兩邊都全綠。症狀與 KI-P1D-001／KI-M01J-001 同族（builder 控制項第一次操作後草稿未推進）。M07-B 沒有改動 builder 或角色 API。依 KI-P1D-001 的放行規則，未發現其他簽章，放行合併。
 
 ## 已知事項
 
