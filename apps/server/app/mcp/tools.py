@@ -53,6 +53,9 @@ from app.domain.battle_maps.schemas import (
     BattleMapInvalidError,
     BattleMapNotFoundError,
     BattleMapRevisionConflictError,
+    MapMonsterPlacementInvalidError,
+    MonsterPlacementReferenceNotFoundError,
+    MonsterPlacementSourceError,
 )
 from app.domain.combat.adjudication_service import (
     OpportunityAttackRequestInput,
@@ -79,6 +82,7 @@ from app.domain.combat.lifecycle import (
     AddCharacterInput,
     AddMonsterInput,
     CombatActionInput,
+    CombatIdempotencyConflictError,
     MonsterOutcomeInput,
     StartCombatInput,
     StartTacticalCombatInput,
@@ -1124,6 +1128,37 @@ async def call_tool(
             "The battle map is archived and cannot be used for tactical combat",
             "該戰鬥地圖已封存，無法用於戰術戰鬥",
             detail=str(exc) or None,
+        )
+    except MapMonsterPlacementInvalidError as exc:
+        # combat_start_tactical is DM-only, so the per-placement problems
+        # (same shape as REST params.problems) may go back to the caller.
+        return structured_tool_error(
+            "map_monster_placement_invalid",
+            "The map's monster placements cannot be loaded; fix the listed placements and retry",
+            "地圖的怪物配置無法載入；請修正列出的配置後重試",
+            detail=json.dumps(
+                [{"placement_id": str(problem.placement_id), "code": problem.code} for problem in exc.problems]
+            ),
+        )
+    except MonsterPlacementReferenceNotFoundError as exc:
+        return structured_tool_error(
+            "not_found",
+            "A monster template referenced by the map's placements was not found in the current room",
+            "地圖配置引用的怪物模板在目前房間找不到",
+            detail=str(exc) or None,
+        )
+    except MonsterPlacementSourceError as exc:
+        return structured_tool_error(
+            "invalid_arguments",
+            "A monster placement source is not valid",
+            "怪物配置來源無效",
+            detail=str(exc) or None,
+        )
+    except CombatIdempotencyConflictError:
+        return structured_tool_error(
+            "combat_idempotency_conflict",
+            "This idempotency key was already used for a different tactical start",
+            "此 idempotency key 已用於不同的戰術開戰",
         )
     except BattleMapInvalidError as exc:
         return structured_tool_error(

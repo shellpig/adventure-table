@@ -129,6 +129,10 @@ def project_combat_event_payload(
         return payload
 
     data = deepcopy(payload)
+    # M07-C: the tactical start idempotency intent (incl. load_map_monsters)
+    # is DM bookkeeping; with every loaded monster hidden it would tell
+    # Players that hidden monsters exist.
+    data.pop("start_intent", None)
 
     if hidden_entry_ids:
         _redact_hidden_entries(data, hidden_entry_ids)
