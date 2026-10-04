@@ -21,6 +21,9 @@ from app.domain.adventure_imports.extractors import (
     extract_docx_text,
     extract_pdf_text,
 )
+from app.domain.monster_library.references import (
+    validate_custom_monster_template_ref,
+)
 from app.domain.adventure_imports.schemas import (
     AdventureImport,
     AdventureImportDraft,
@@ -37,7 +40,11 @@ from app.domain.adventure_imports.schemas import (
     unresolved_blocking_warnings,
     validate_draft_warnings,
 )
-from app.domain.adventures.payloads import dump_entry_payload
+from app.domain.adventures.payloads import (
+    MonsterRefPayload,
+    NpcPayload,
+    dump_entry_payload,
+)
 from app.domain.adventures.schemas import (
     AdventureDefinition,
     AdventureDefinitionCreate,
@@ -676,6 +683,13 @@ class AdventureImportService:
                         f"{label} references unknown source '{source_id}'"
                     )
 
+            # M07-D D1 (F06): draft monster template refs are validated in
+            # this same write transaction (template row locked). A ref that
+            # is unchanged from the stored draft keeps an archived template
+            # legal; any new bad/cross-room/archived ref rejects the save
+            # with zero side effects (the upsert below never runs).
+            self._validate_draft_monster_refs(connection, room_id, import_id, draft)
+
             stored_draft = self.repository.upsert_draft_in_transaction(
                 connection,
                 import_id,
@@ -693,6 +707,46 @@ class AdventureImportService:
                 )
 
             return adventure_import_draft_from_stored(stored_draft)
+
+    def _validate_draft_monster_refs(
+        self,
+        connection: Connection,
+        room_id: UUID,
+        import_id: UUID,
+        draft: ImportDraft,
+    ) -> None:
+        """Validate every draft entry monster template ref in-transaction.
+
+        Previous refs are matched by ``entry_id`` against the currently
+        stored draft so an unchanged archived reference stays legal. Any
+        failure aborts before the draft upsert: zero side effects.
+        """
+        previous_by_entry_id: dict[str, str | None] = {}
+        stored = self.repository.get_draft_in_transaction(connection, import_id)
+        if stored is not None and isinstance(stored.draft_json, dict):
+            entries = stored.draft_json.get("entries")
+            if isinstance(entries, list):
+                for raw in entries:
+                    if not isinstance(raw, dict):
+                        continue
+                    entry_id = raw.get("entry_id")
+                    payload = raw.get("payload")
+                    ref = payload.get("monster_template_ref") if isinstance(payload, dict) else None
+                    if isinstance(entry_id, str):
+                        previous_by_entry_id[entry_id] = ref if isinstance(ref, str) else None
+        for entry in draft.entries:
+            payload = entry.payload
+            if not isinstance(payload, (NpcPayload, MonsterRefPayload)):
+                continue
+            ref = payload.monster_template_ref
+            if not ref:
+                continue
+            validate_custom_monster_template_ref(
+                connection,
+                room_id=room_id,
+                ref=ref,
+                previous_ref=previous_by_entry_id.get(entry.entry_id),
+            )
 
     def _load_draft_state(
         self,

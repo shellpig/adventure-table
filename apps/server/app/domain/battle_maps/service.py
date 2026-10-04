@@ -532,9 +532,11 @@ class BattleMapService:
         _require_author(context, room_id)
         return self._list_internal(room_id, include_archived=include_archived)
 
-    def list_for_actor(self, actor: TableActorContext) -> list[BattleMapSummary]:
+    def list_for_actor(
+        self, actor: TableActorContext, *, include_archived: bool = False
+    ) -> list[BattleMapSummary]:
         self._require_actor_dm(actor, actor.room_id)
-        return self._list_internal(actor.room_id, include_archived=False)
+        return self._list_internal(actor.room_id, include_archived=include_archived)
 
     def _list_internal(
         self, room_id: UUID, *, include_archived: bool

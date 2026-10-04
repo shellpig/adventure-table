@@ -21,6 +21,7 @@ from app.domain.campaign_runtime.errors import (
     CampaignRuntimeRevisionConflictError,
 )
 from app.domain.monster_library.references import (
+    canonicalize_state_monster_ref,
     validate_custom_monster_template_ref,
 )
 from app.domain.campaign_runtime.schemas import (
@@ -76,11 +77,25 @@ def execute_create_override_in_transaction(
         )
 
     validate_and_parse_entry_state(row["kind"], row["data_json"], payload.state)
-    if row["kind"] == "npc" and isinstance(payload.state, dict) and payload.state.get("monster_template_ref"):
+    # M07-D D1 (F06): npc and monster_ref overrides both validate template
+    # refs in this same transaction (with row lock). The previous ref is the
+    # base entry's ref: restating it keeps an archived reference legal, while
+    # pointing at a different archived template is rejected.
+    if (
+        row["kind"] in ("npc", "monster_ref")
+        and isinstance(payload.state, dict)
+        and payload.state.get("monster_template_ref")
+    ):
+        base_ref = (
+            row["data_json"].get("monster_template_ref")
+            if isinstance(row["data_json"], dict)
+            else None
+        )
         validate_custom_monster_template_ref(
             connection,
             room_id=room_id,
             ref=str(payload.state["monster_template_ref"]),
+            previous_ref=str(base_ref) if base_ref is not None else None,
         )
 
     override_id = uuid4()
@@ -88,7 +103,8 @@ def execute_create_override_in_transaction(
         id=override_id,
         campaign_id=campaign_id,
         adventure_entry_id=payload.adventure_entry_id,
-        state_json=deepcopy(payload.state),
+        # M07-D D1 (F04): store the canonical custom-ref spelling.
+        state_json=canonicalize_state_monster_ref(deepcopy(payload.state)) or {},
         note=payload.note,
         needs_review=payload.needs_review,
         revision=1,
@@ -170,11 +186,22 @@ def execute_update_override_in_transaction(
     assert candidate_needs_review is not None
 
     validate_and_parse_entry_state(row["kind"], row["data_json"], candidate_state)
-    if row["kind"] == "npc" and isinstance(candidate_state, dict) and candidate_state.get("monster_template_ref"):
+    # M07-D D1 (F06): see execute_create_override_in_transaction. The previous
+    # ref is the existing override's ref when present, else the base entry's.
+    if (
+        row["kind"] in ("npc", "monster_ref")
+        and isinstance(candidate_state, dict)
+        and candidate_state.get("monster_template_ref")
+    ):
         prev_ref = (
             existing_override.state_json.get("monster_template_ref")
             if isinstance(existing_override.state_json, dict)
-            else None
+            and existing_override.state_json.get("monster_template_ref") is not None
+            else (
+                row["data_json"].get("monster_template_ref")
+                if isinstance(row["data_json"], dict)
+                else None
+            )
         )
         prev_ref_str = str(prev_ref) if prev_ref is not None else None
         validate_custom_monster_template_ref(
@@ -187,7 +214,8 @@ def execute_update_override_in_transaction(
     update_candidate = StoredCampaignAdventureOverrideUpdate(
         expected_override_id=patch.expected_override_id,
         expected_revision=patch.expected_revision,
-        state_json=deepcopy(candidate_state),
+        # M07-D D1 (F04): store the canonical custom-ref spelling.
+        state_json=canonicalize_state_monster_ref(deepcopy(candidate_state)) or {},
         note=candidate_note,
         needs_review=candidate_needs_review,
         updated_at=now,

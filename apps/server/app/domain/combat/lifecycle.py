@@ -148,6 +148,10 @@ def tactical_start_intent(request: StartTacticalCombatInput) -> dict[str, Any]:
     return {
         "map_source": map_source,
         "battle_map_id": battle_map_id,
+        # M07-D D1 (F03): party inclusion is part of the intent. The same key
+        # with a different include_active_party value is a 409 conflict; the
+        # same value retries into the original Combat.
+        "include_active_party": bool(request.include_active_party),
         "load_map_monsters": bool(request.load_map_monsters),
         "temporary_geometry_digest": temporary_digest,
         "blank_dimensions": blank_dimensions,
@@ -443,12 +447,19 @@ class CombatService:
         if current_turn_entry_id is not None and current_turn_entry_id in hidden_ids:
             current_turn_entry_id = None
         warnings: tuple[str, ...] = ()
-        if (
-            combat.status in {"initiative_pending", "running"}
-            and not self.repository.has_active_hostile(combat.id)
-        ):
-            # Warning only: P4-B never auto-ends a Combat when hostiles disappear.
-            warnings = ("no_hostile_combatants",)
+        if combat.status in {"initiative_pending", "running"}:
+            # M07-D D1 (F02): the warning follows what the caller can see. A
+            # Player facing only hidden Monsters gets the same warning as a
+            # Player facing no Monsters at all; the DM follows the true state.
+            visible_hostile = any(
+                entry.is_hostile
+                and entry.status == "active"
+                and entry.id not in hidden_ids
+                for entry in stored_entries
+            )
+            if not visible_hostile:
+                # Warning only: P4-B never auto-ends a Combat when hostiles disappear.
+                warnings = ("no_hostile_combatants",)
         views = [
             self._entry_view(entry) for entry in stored_entries if entry.id not in hidden_ids
         ]
@@ -689,15 +700,18 @@ class CombatService:
             now = datetime.now(timezone.utc)
             placeholder_combat_id = uuid4()
             if battle_map_id is not None:
-                stored_map = battle_map_repository.get_map(
-                    room_id, battle_map_id, connection=connection, for_update=True
+                # M07-D D1 (F08): metadata and objects come from one locked
+                # read so concurrent edits cannot tear the frozen board.
+                locked = battle_map_repository.get_map_with_objects_for_update(
+                    connection, room_id, battle_map_id
                 )
-                if stored_map is None:
+                if locked is None:
                     raise BattleMapNotFoundError(f"BattleMap {battle_map_id} not found")
+                stored_map, map_objects = locked
                 if stored_map.archived_at is not None:
                     raise BattleMapArchivedError(f"BattleMap {battle_map_id} is archived")
                 baseline, doors = _frozen_board_geometry(
-                    battle_map_repository.get_objects(stored_map.id, connection=connection),
+                    map_objects,
                     combat_id=placeholder_combat_id, now=now,
                 )
                 board = StoredCombatBoard(

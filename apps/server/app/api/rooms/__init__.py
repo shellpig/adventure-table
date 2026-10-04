@@ -27,6 +27,7 @@ from app.api.rooms.p3c_rolls import router as p3c_rolls_router
 from app.api.rooms.p3c_state import router as p3c_state_router
 from app.api.rooms.room_assets import router as room_assets_router
 from app.api.rooms.seats import router as seats_router
+from app.api.rooms.session_libraries import router as session_libraries_router
 from app.api.rooms.sessions import router as sessions_router
 from app.api.rooms.table_events import router as table_events_router
 
@@ -43,6 +44,7 @@ router.include_router(active_campaign_runtime_router)
 router.include_router(campaigns_router)
 router.include_router(seats_router)
 router.include_router(sessions_router)
+router.include_router(session_libraries_router)
 router.include_router(ai_controllers_router)
 router.include_router(table_events_router)
 router.include_router(exploration_router)

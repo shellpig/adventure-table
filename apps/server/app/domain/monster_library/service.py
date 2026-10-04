@@ -304,6 +304,35 @@ class MonsterLibraryService:
             or (bool(subtype) and normalized_query in subtype.casefold())
         )
 
+    def _matches_custom_query(
+        self, custom: StoredMonsterTemplate, normalized_query: str | None
+    ) -> bool:
+        """Custom-template search parity with builtin matching (M07-D D1 F10).
+
+        Matches the canonical name, the supported-locale presentation names,
+        and the searchable type/subtype fields. Long-text English ``desc``
+        content (rules description, ability descs) is excluded, exactly like
+        the builtin matcher.
+        """
+        if normalized_query is None:
+            return True
+        if normalized_query in custom.name.casefold():
+            return True
+        presentation = custom.presentation_json
+        if isinstance(presentation, dict):
+            names = presentation.get("names")
+            if isinstance(names, dict):
+                for value in names.values():
+                    if isinstance(value, str) and normalized_query in value.casefold():
+                        return True
+        rules = custom.rules
+        if isinstance(rules, dict):
+            for key in ("type", "subtype"):
+                value = rules.get(key)
+                if isinstance(value, str) and value and normalized_query in value.casefold():
+                    return True
+        return False
+
     @staticmethod
     def _to_detail_view(stored: StoredMonsterTemplate) -> MonsterLibraryDetailView:
         presentation = dict(stored.presentation_json)
@@ -353,15 +382,17 @@ class MonsterLibraryService:
         query: str | None = None,
         limit: int = 50,
         offset: int = 0,
+        source: str = "all",
+        include_archived: bool = False,
     ) -> list[MonsterLibrarySummaryView]:
         self._require_actor_dm(actor, room_id)
         return self._list_internal(
             room_id=room_id,
             query=query,
-            include_archived=False,
+            include_archived=include_archived,
             limit=limit,
             offset=offset,
-            source="all",
+            source=source,
         )
 
     def _list_internal(
@@ -444,10 +475,20 @@ class MonsterLibraryService:
             )
 
         if source == "custom":
+            if normalized_query is not None:
+                all_custom = self.repository.list_custom_templates_for_search(
+                    room_id, include_archived=include_archived
+                )
+                matched = [
+                    c for c in all_custom
+                    if self._matches_custom_query(c, normalized_query)
+                ]
+                matched.sort(key=lambda c: (c.name.casefold(), str(c.id)))
+                return [_custom_to_summary(c) for c in matched[offset : offset + limit]]
             stored_custom = self.repository.list_custom_templates(
                 room_id,
                 include_archived=include_archived,
-                query=query,
+                query=None,
                 limit=limit,
                 offset=offset,
             )
@@ -462,14 +503,25 @@ class MonsterLibraryService:
             matched_builtin.sort(key=lambda e: (e.name.casefold(), e.key))
             return [_builtin_to_summary(e) for e in matched_builtin[offset : offset + limit]]
 
-        # source == "all": Bounded fetch
-        stored_custom = self.repository.list_custom_templates(
-            room_id,
-            include_archived=include_archived,
-            query=query,
-            limit=offset + limit,
-            offset=0,
-        )
+        # source == "all": with a query, customs are matched in Python (same
+        # locale-name/type semantics as builtins); otherwise keep the bounded
+        # DB fetch.
+        if normalized_query is not None:
+            all_custom = self.repository.list_custom_templates_for_search(
+                room_id, include_archived=include_archived
+            )
+            stored_custom = tuple(
+                c for c in all_custom
+                if self._matches_custom_query(c, normalized_query)
+            )
+        else:
+            stored_custom = self.repository.list_custom_templates(
+                room_id,
+                include_archived=include_archived,
+                query=None,
+                limit=offset + limit,
+                offset=0,
+            )
         custom_items = [_custom_to_summary(c) for c in stored_custom]
 
         builtin_entries = self.content_registry.list_kind("monster")

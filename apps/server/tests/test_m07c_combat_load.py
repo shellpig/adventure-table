@@ -291,6 +291,8 @@ def test_start_intent_captures_source_flag_and_geometry() -> None:
     assert intent == {
         "map_source": "battle_map",
         "battle_map_id": str(map_id),
+        # M07-D D1 (F03): party inclusion is part of the idempotency intent.
+        "include_active_party": True,
         "load_map_monsters": True,
         "temporary_geometry_digest": None,
         "blank_dimensions": None,

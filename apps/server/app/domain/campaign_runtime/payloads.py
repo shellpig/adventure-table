@@ -5,6 +5,7 @@ from uuid import UUID
 
 from pydantic import Field, TypeAdapter, ValidationError, field_validator, model_validator
 
+from app.domain.monster_library.references import normalize_monster_template_ref
 from app.domain.rooms.schemas import StrictModel
 
 
@@ -93,7 +94,9 @@ class RuntimeNpcPayload(StrictModel):
             normalized = value.strip()
             if not normalized:
                 raise ValueError("monster_template_ref cannot be blank")
-            return normalized
+            # M07-D D1 (F04): persist custom refs canonically so the deletion
+            # reference scan cannot be bypassed by UUID spelling variants.
+            return normalize_monster_template_ref(normalized)
         return None
 
 

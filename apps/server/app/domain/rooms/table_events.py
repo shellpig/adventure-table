@@ -308,9 +308,12 @@ class TableEventService:
         *,
         actor: EventReadScope,
         hidden_entry_ids: frozenset[str] | None = None,
-    ) -> TableEvent:
+    ) -> TableEvent | None:
         # Enemy secrecy is decided here, once, for every path an event can take
         # (list / long-poll / Resume / MCP): the projector is a no-op for the DM.
+        # M07-D D1 (F01): events about hidden Monsters (bookkeeping updates,
+        # hidden-only initiative rolls, hidden entry lifecycle) are withheld
+        # from non-DM readers entirely; the projector returns None for those.
         audience: CombatantAudience = "dm" if actor.is_current_dm else "player"
         if (
             hidden_entry_ids is None
@@ -322,6 +325,8 @@ class TableEventService:
             stored.kind, stored.payload, audience=audience,
             hidden_entry_ids=hidden_entry_ids or frozenset(),
         )
+        if payload is None:
+            return None
 
         return TableEvent(
             id=stored.id,
@@ -432,10 +437,16 @@ class TableEventService:
         cursor = raw[-1].seq if raw else bounded_after
         hidden_entry_ids = self._hidden_ids_for(actor)
         visible = [
-            self._present(stored, actor=actor, hidden_entry_ids=hidden_entry_ids)
+            presented
             for stored in raw
             if self._visible(actor, stored)
             and (not suppress_own or not self._is_own_echo(actor, stored))
+            and (
+                presented := self._present(
+                    stored, actor=actor, hidden_entry_ids=hidden_entry_ids
+                )
+            )
+            is not None
         ]
         return TableEventPage(
             session_id=actor.session_id,
@@ -507,9 +518,12 @@ class TableEventService:
             for stored in reversed(raw_chunk):
                 smallest_scanned_seq = stored.seq
                 if self._visible(scope, stored):
-                    collected_events_desc.append(
-                        self._present(stored, actor=scope, hidden_entry_ids=hidden_entry_ids)
+                    presented = self._present(
+                        stored, actor=scope, hidden_entry_ids=hidden_entry_ids
                     )
+                    if presented is None:
+                        continue
+                    collected_events_desc.append(presented)
                     if len(collected_events_desc) == bounded_limit:
                         break
 
@@ -721,7 +735,31 @@ class TableEventService:
 
         if self.notifier is not None:
             self.notifier.notify(actor.session_id)
-        return self._present(stored, actor=actor)
+        presented = self._present(stored, actor=actor)
+        if presented is not None:
+            return presented
+        # The writer just authored every byte of this payload, so echoing it
+        # back reveals nothing new; suppression only applies to other readers.
+        # (In practice only DM-authored combat bookkeeping hits this path.)
+        return TableEvent(
+            id=stored.id,
+            session_id=stored.session_id,
+            seq=stored.seq,
+            kind=stored.kind,
+            acting_seat_id=stored.acting_seat_id,
+            subject_seat_id=stored.subject_seat_id,
+            subject_character_id=stored.subject_character_id,
+            execution_mode=(
+                TableExecutionMode(stored.execution_mode)
+                if stored.execution_mode is not None
+                else None
+            ),
+            visibility=TableEventVisibility(stored.visibility),
+            recipient_seat_ids=stored.recipient_seat_ids,
+            payload_version=stored.payload_version,
+            payload=dict(stored.payload),
+            created_at=stored.created_at,
+        )
 
 
 def require_active_table_actor(
