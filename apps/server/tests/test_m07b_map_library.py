@@ -17,6 +17,7 @@ from app.persistence.room_assets.repository import RoomAssetRepository
 from app.persistence.room_assets.tables import room_assets
 from app.persistence.rooms.table_runtime import TableEventRepository
 from app.persistence.rooms.tables import campaign_seats
+from app.content.registry import load_default_content_registry
 from tests.test_m07a_authorization_and_mcp import AuthFixture, auth_fixture  # noqa: F401
 from tests.test_p5a_battle_maps import (  # noqa: F401
     BattleMapFixture,
@@ -227,6 +228,7 @@ def _attach_battle_maps(fix: AuthFixture) -> None:
     service = BattleMapService(
         BattleMapRepository(fix.engine), RoomAssetRepository(fix.engine),
         TableEventService(TableEventRepository(fix.engine)),
+        content_registry=load_default_content_registry(),
     )
     app.dependency_overrides[get_battle_map_service] = lambda: service
 

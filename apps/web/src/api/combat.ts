@@ -48,6 +48,11 @@ export type CombatView = {
   warnings?: string[]
 }
 
+export type CombatantNamePresentation = {
+  names?: Record<string, string> | null
+  name_is_custom?: boolean | null
+}
+
 export type CombatantProjection = {
   id: string
   kind: string
@@ -55,6 +60,7 @@ export type CombatantProjection = {
   combat_status: string
   conditions: ConditionOrEffectItem[]
   effects: ConditionOrEffectItem[]
+  name_presentation?: CombatantNamePresentation | null
   armor_class?: number | null
   max_hp?: number | null
   current_hp?: number | null

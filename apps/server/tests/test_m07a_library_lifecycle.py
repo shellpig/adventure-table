@@ -616,3 +616,84 @@ def test_builtin_reactions_and_legendary_presentation_and_patch_action_drop(
         "en": "Parry",
         "zh-TW": "格擋",
     }
+
+
+def test_source_indexed_ability_edits_preserve_metadata_and_locale_names(
+    library_fixture: LibraryFixture,
+) -> None:
+    fix = library_fixture
+    created_resp = fix.client.post(
+        f"/api/rooms/{fix.room_id}/monster-library/custom/from-content",
+        json={"content_key": "srd5.1:monster:cult-fanatic"},
+        headers=_auth(fix.token_owner),
+    )
+    assert created_resp.status_code == 201
+    original = created_resp.json()
+    template_id = original["ref"].removeprefix("custom:")
+    original_traits = original["rules"]["traits"]
+    original_actions = original["rules"]["actions"]
+
+    invalid_updates = (
+        {
+            "traits": [
+                {"source_index": 1, "name": "Spellcasting"},
+                {"source_index": 1, "name": "Duplicate"},
+            ]
+        },
+        {"traits": [{"source_index": len(original_traits), "name": "Out of range"}]},
+        {
+            "traits": [
+                {"source_index": 0, "name": "Dark Devotion"},
+                {"name": "Spellcasting"},
+            ]
+        },
+        {"actions": [{"source_index": 0, "name": "Multiattack", "attack_bonus": 5}]},
+    )
+    for update in invalid_updates:
+        response = fix.client.patch(
+            f"/api/rooms/{fix.room_id}/monster-library/custom/{template_id}",
+            json={"expected_revision": original["revision"], **update},
+            headers=_auth(fix.token_owner),
+        )
+        assert response.status_code == 422, response.text
+
+    after_rejections_resp = fix.client.get(
+        f"/api/rooms/{fix.room_id}/monster-library/{quote(original['ref'], safe='')}",
+        headers=_auth(fix.token_owner),
+    )
+    assert after_rejections_resp.status_code == 200
+    after_rejections = after_rejections_resp.json()
+    assert after_rejections["revision"] == original["revision"]
+    assert after_rejections["rules"] == original["rules"]
+    assert after_rejections["presentation"] == original["presentation"]
+
+    patch_resp = fix.client.patch(
+        f"/api/rooms/{fix.room_id}/monster-library/custom/{template_id}",
+        json={
+            "expected_revision": original["revision"],
+            "traits": [
+                {
+                    "source_index": 1,
+                    "name": "Spellcasting",
+                    "desc": "The fanatic prepares a revised list of spells.",
+                }
+            ],
+            "actions": [{"source_index": 1, "name": "Dagger"}],
+        },
+        headers=_auth(fix.token_owner),
+    )
+    assert patch_resp.status_code == 200, patch_resp.text
+    patched = patch_resp.json()
+    assert patched["rules"]["traits"] == [
+        {
+            **original_traits[1],
+            "desc": "The fanatic prepares a revised list of spells.",
+        }
+    ]
+    assert patched["rules"]["actions"] == [original_actions[1]]
+    assert patched["presentation"]["ability_names"]["traits"] == [
+        {"en": "Spellcasting", "zh-TW": "施法"}
+    ]
+    assert patched["presentation"]["ability_names"]["actions"] == [
+        {"en": "Dagger", "zh-TW": "匕首"}
+    ]

@@ -84,6 +84,7 @@ def ab_fixture(tmp_path: Path) -> Generator[AssetBattleMapFixture, None, None]:
         BattleMapRepository(engine),
         asset_repository,
         TableEventService(TableEventRepository(engine)),
+        content_registry=load_default_content_registry(),
     )
 
     room_a_id = uuid4()

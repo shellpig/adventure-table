@@ -51,6 +51,21 @@ describe('Tactical Combat API client', () => {
     expect(JSON.parse(init?.body as string)).toEqual(body)
   })
 
+  it('passes load_map_monsters through to tactical-start unchanged', async () => {
+    const fetchMock = mockFetch({ id: 'combat-1' })
+    vi.stubGlobal('fetch', fetchMock)
+    const body = {
+      battle_map_id: 'map-1',
+      include_active_party: true,
+      load_map_monsters: true,
+      idempotency_key: 'key-load',
+    }
+    await startTacticalCombat(ROOM_ID, CAMPAIGN_ID, SESSION_ID, body, TOKEN)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe(`${base}/tactical-start`)
+    expect(JSON.parse(init?.body as string)).toEqual(body)
+  })
+
   it('calls getCombatBoard with expected endpoint', async () => {
     const fetchMock = mockFetch({ combat_id: 'combat-1' })
     vi.stubGlobal('fetch', fetchMock)

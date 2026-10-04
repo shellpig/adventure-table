@@ -62,6 +62,7 @@ from app.persistence.rooms.exploration import ExplorationRepository
 from app.persistence.rooms.exploration_subjects import ExplorationSubjectRepository
 from app.persistence.rooms.sessions import SessionRepository
 from app.persistence.rooms.tables import ai_controller_grants, campaign_seats, sessions
+from app.content.registry import load_default_content_registry
 from sqlalchemy import insert, update
 from tests.p5a_tactical_helpers import (
     TacticalTable,
@@ -139,7 +140,8 @@ def _facade(
         monster_repository=table.combat.monster_repository,
         registry=table.registry,
     )
-    battle_maps = BattleMapService(table.battle_maps, RoomAssetRepository(table.engine), table.events)
+    battle_maps = BattleMapService(table.battle_maps, RoomAssetRepository(table.engine), table.events,
+                                 content_registry=load_default_content_registry())
     spell_service = CombatSpellService(
         repository=CombatSpellRepository(table.engine, table.events.repository),
         combat_repository=table.combat.repository,

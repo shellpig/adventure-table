@@ -1,11 +1,26 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
-from typing import cast
+from typing import TYPE_CHECKING, cast
 from uuid import UUID, uuid4
 
+from sqlalchemy import select
+from sqlalchemy.engine import Connection
+
+from app.content.identity import parse_stable_key
+from app.content.registry import ContentRegistry
+from app.domain.battle_maps.placements import (
+    PLACEMENT_PROBLEM_INVALID_SIZE,
+    PLACEMENT_PROBLEM_TEMPLATE_ARCHIVED,
+    PlacementValidationEntry,
+    barriers_from_map_objects,
+    blocked_cells_from_terrain,
+    resolve_placement_size,
+    validate_monster_placements,
+)
 from app.domain.battle_maps.schemas import (
     MAX_DRAWING_PAYLOAD_BYTES,
     BattleMap,
@@ -20,6 +35,8 @@ from app.domain.battle_maps.schemas import (
     BattleMapDrawingInput,
     BattleMapForbiddenError,
     BattleMapInvalidError,
+    BattleMapMonsterPlacement,
+    BattleMapMonsterPlacementVisibility,
     BattleMapNotFoundError,
     BattleMapObjectsReplace,
     BattleMapPatch,
@@ -34,6 +51,12 @@ from app.domain.battle_maps.schemas import (
     BattleMapWall,
     BattleMapWallInput,
     BattleMapWallVisibility,
+    MapMonsterPlacementInvalidError,
+    MonsterPlacementInput,
+    MonsterPlacementProblem,
+    MonsterPlacementReferenceNotFoundError,
+    MonsterPlacementSourceError,
+    MonsterPlacementsReplace,
 )
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.table_events import (
@@ -52,8 +75,14 @@ from app.persistence.battle_maps.repository import (
     StoredBattleMapObjects,
     StoredBattleMapTerrain,
     StoredBattleMapWall,
+    StoredMonsterPlacement,
 )
+from app.persistence.combat.tables import monster_templates
 from app.persistence.room_assets.repository import RoomAssetRepository
+
+
+if TYPE_CHECKING:
+    from app.domain.combat.resolution import SizeCategory
 
 
 def _require_author(context: RoomAccessContext, room_id: UUID) -> None:
@@ -247,7 +276,9 @@ def validated_stored_objects(
 
 
 def battle_map_view(
-    stored: StoredBattleMap, objects: StoredBattleMapObjects
+    stored: StoredBattleMap,
+    objects: StoredBattleMapObjects,
+    placements: tuple[StoredMonsterPlacement, ...] = (),
 ) -> BattleMap:
     return BattleMap(
         id=stored.id,
@@ -299,6 +330,20 @@ def battle_map_view(
             BattleMapDrawing(id=drawing.id, payload=drawing.payload)
             for drawing in objects.drawings
         ],
+        monster_placements=[
+            BattleMapMonsterPlacement(
+                id=placement.id,
+                template_key=placement.template_key,
+                custom_template_id=placement.custom_template_id,
+                anchor_x=placement.anchor_x,
+                anchor_y=placement.anchor_y,
+                visibility=cast(
+                    BattleMapMonsterPlacementVisibility, placement.visibility
+                ),
+                sort_order=placement.sort_order,
+            )
+            for placement in placements
+        ],
     )
 
 
@@ -318,16 +363,57 @@ def battle_map_summary_view(stored: StoredBattleMap) -> BattleMapSummary:
     )
 
 
+@dataclass(frozen=True)
+class _PlacementSource:
+    """One placement whose template reference still needs resolving."""
+
+    placement_id: UUID
+    template_key: str | None
+    custom_template_id: UUID | None
+    anchor_x: int
+    anchor_y: int
+    visibility: str
+    sort_order: int
+
+
+@dataclass(frozen=True)
+class _ResolvedPlacement:
+    """A placement with its template row looked up and size resolved."""
+
+    placement_id: UUID
+    template_key: str | None
+    custom_template_id: UUID | None
+    anchor_x: int
+    anchor_y: int
+    visibility: str
+    sort_order: int
+    size: SizeCategory | None  # None means the template size value is unparseable
+    archived_source: bool
+
+
+def _saved_custom_refs(
+    placements: tuple[StoredMonsterPlacement, ...],
+) -> frozenset[tuple[UUID, UUID]]:
+    return frozenset(
+        (placement.id, placement.custom_template_id)
+        for placement in placements
+        if placement.custom_template_id is not None
+    )
+
+
 class BattleMapService:
     def __init__(
         self,
         repository: BattleMapRepository,
         asset_repository: RoomAssetRepository,
         table_event_service: TableEventService,
+        *,
+        content_registry: ContentRegistry,
     ) -> None:
         self.repository = repository
         self.asset_repository = asset_repository
         self.table_event_service = table_event_service
+        self.content_registry = content_registry
 
     def create(
         self,
@@ -433,7 +519,8 @@ class BattleMapService:
         if stored is None:
             raise BattleMapNotFoundError(f"Battle map {map_id} not found")
         objects = self.repository.get_objects(map_id)
-        return battle_map_view(stored, objects)
+        placements = self.repository.get_placements(map_id)
+        return battle_map_view(stored, objects, placements=placements)
 
     def list(
         self,
@@ -515,6 +602,15 @@ class BattleMapService:
                 self._reject_shrink_out_of_bounds(
                     objects, new_width, new_height
                 )
+            if new_width != stored.width_cells or new_height != stored.height_cells:
+                self._reject_conflicting_placements(
+                    connection,
+                    room_id,
+                    map_id,
+                    width_cells=new_width,
+                    height_cells=new_height,
+                    objects=objects,
+                )
 
             values["updated_at"] = datetime.now(timezone.utc)
             try:
@@ -529,7 +625,10 @@ class BattleMapService:
                 raise BattleMapNotFoundError(str(exc)) from exc
             except PersistenceBattleMapRevisionConflictError as exc:
                 raise BattleMapRevisionConflictError(str(exc)) from exc
-            return battle_map_view(updated, objects)
+            placements = self.repository.get_placements(
+                map_id, connection=connection
+            )
+            return battle_map_view(updated, objects, placements=placements)
 
     @staticmethod
     def _reject_shrink_out_of_bounds(
@@ -581,6 +680,16 @@ class BattleMapService:
                 stored.height_cells,
                 map_id=map_id,
             )
+            # Geometry-only edit: never clears placements, but a geometry
+            # change that breaks saved placements rejects the whole replace.
+            self._reject_conflicting_placements(
+                connection,
+                room_id,
+                map_id,
+                width_cells=stored.width_cells,
+                height_cells=stored.height_cells,
+                objects=objects,
+            )
             try:
                 updated = self.repository.replace_objects_in_transaction(
                     connection,
@@ -593,7 +702,335 @@ class BattleMapService:
                 raise BattleMapNotFoundError(str(exc)) from exc
             except PersistenceBattleMapRevisionConflictError as exc:
                 raise BattleMapRevisionConflictError(str(exc)) from exc
-            return battle_map_view(updated, objects)
+            placements = self.repository.get_placements(
+                map_id, connection=connection
+            )
+            return battle_map_view(updated, objects, placements=placements)
+
+    def replace_monster_placements(
+        self,
+        context: RoomAccessContext,
+        *,
+        room_id: UUID,
+        map_id: UUID,
+        payload: MonsterPlacementsReplace,
+    ) -> BattleMap:
+        """Replace the map's whole monster placement set (M07-C).
+
+        Placements are part of the map revision: the replace runs in one
+        transaction, bumps the map revision, and rejects the whole batch when
+        any placement has a source or geometry problem.
+        """
+        _require_author(context, room_id)
+        self._check_duplicate_placement_ids(payload.placements)
+        with self.repository.engine.begin() as connection:
+            stored = self.repository.get_map(
+                room_id, map_id, connection=connection, for_update=True
+            )
+            if stored is None:
+                raise BattleMapNotFoundError(f"Battle map {map_id} not found")
+            if stored.revision != payload.expected_revision:
+                raise BattleMapRevisionConflictError(
+                    f"Battle map {map_id} revision conflict: "
+                    f"expected {payload.expected_revision}, "
+                    f"current {stored.revision}"
+                )
+            old_placements = self.repository.get_placements(
+                map_id, connection=connection
+            )
+            foreign_ids = self.repository.placement_ids_on_other_maps(
+                connection,
+                map_id,
+                [item.id for item in payload.placements if item.id is not None],
+            )
+            if foreign_ids:
+                raise MonsterPlacementSourceError(
+                    "monster placement ids belong to another map: "
+                    + ", ".join(str(placement_id) for placement_id in sorted(foreign_ids))
+                )
+            sources = [
+                _PlacementSource(
+                    placement_id=item.id or uuid4(),
+                    template_key=item.template_key,
+                    custom_template_id=item.custom_template_id,
+                    anchor_x=item.anchor_x,
+                    anchor_y=item.anchor_y,
+                    visibility=item.visibility,
+                    sort_order=item.sort_order,
+                )
+                for item in payload.placements
+            ]
+            resolved = self._resolve_placement_sources(
+                connection,
+                room_id,
+                sources,
+                saved_custom_refs=_saved_custom_refs(old_placements),
+                lock_templates=True,
+            )
+            objects = self.repository.get_objects(map_id, connection=connection)
+            problems = self._validate_resolved_placements(
+                resolved,
+                width_cells=stored.width_cells,
+                height_cells=stored.height_cells,
+                objects=objects,
+            )
+            if problems:
+                raise MapMonsterPlacementInvalidError(problems)
+            self.repository.replace_placements_in_transaction(
+                connection,
+                map_id,
+                tuple(
+                    StoredMonsterPlacement(
+                        id=item.placement_id,
+                        battle_map_id=map_id,
+                        template_key=item.template_key,
+                        custom_template_id=item.custom_template_id,
+                        anchor_x=item.anchor_x,
+                        anchor_y=item.anchor_y,
+                        visibility=item.visibility,
+                        sort_order=item.sort_order,
+                    )
+                    for item in resolved
+                ),
+            )
+            try:
+                updated = self.repository.update_map_in_transaction(
+                    connection,
+                    room_id,
+                    map_id,
+                    {"updated_at": datetime.now(timezone.utc)},
+                    expected_revision=payload.expected_revision,
+                )
+            except PersistenceBattleMapNotFoundError as exc:
+                raise BattleMapNotFoundError(str(exc)) from exc
+            except PersistenceBattleMapRevisionConflictError as exc:
+                raise BattleMapRevisionConflictError(str(exc)) from exc
+            new_placements = self.repository.get_placements(
+                map_id, connection=connection
+            )
+            return battle_map_view(updated, objects, placements=new_placements)
+
+    @staticmethod
+    def _check_duplicate_placement_ids(
+        placements: list[MonsterPlacementInput],
+    ) -> None:
+        seen: set[UUID] = set()
+        for item in placements:
+            if item.id is None:
+                continue
+            if item.id in seen:
+                raise MonsterPlacementSourceError(
+                    f"duplicate monster placement id {item.id} in replace payload"
+                )
+            seen.add(item.id)
+
+    def _template_rows(
+        self,
+        connection: Connection,
+        custom_template_ids: set[UUID],
+        *,
+        for_update: bool,
+    ) -> dict[UUID, dict[str, object]]:
+        if not custom_template_ids:
+            return {}
+        query = (
+            select(
+                monster_templates.c.id,
+                monster_templates.c.room_id,
+                monster_templates.c.archived_at,
+                monster_templates.c.rules,
+            )
+            .where(monster_templates.c.id.in_(sorted(custom_template_ids)))
+            .order_by(monster_templates.c.id)
+        )
+        if for_update:
+            query = query.with_for_update()
+        return {
+            row["id"]: dict(row)
+            for row in connection.execute(query).mappings()
+        }
+
+    def _resolve_placement_sources(
+        self,
+        connection: Connection,
+        room_id: UUID,
+        sources: list[_PlacementSource],
+        *,
+        saved_custom_refs: frozenset[tuple[UUID, UUID]],
+        lock_templates: bool,
+    ) -> list[_ResolvedPlacement]:
+        """Resolve template references to sizes.
+
+        Lock order follows the M07 design contract: the map row is already
+        locked by the caller; custom template rows are locked here ordered by
+        template id. A missing built-in key or a missing / cross-Room custom
+        template is a 404; a newly added (or changed-to) archived custom
+        template is reported as a placement problem, while an unchanged
+        archived reference already saved on the map stays allowed. "Unchanged"
+        is per placement: the same placement id must already reference that
+        template, so a new placement cannot add another archived reference.
+        """
+        custom_ids = {
+            source.custom_template_id
+            for source in sources
+            if source.custom_template_id is not None
+        }
+        rows = self._template_rows(
+            connection, custom_ids, for_update=lock_templates
+        )
+        resolved: list[_ResolvedPlacement] = []
+        for source in sources:
+            if source.template_key is not None:
+                entry = self.content_registry.get_optional(source.template_key)
+                if entry is None:
+                    raise MonsterPlacementReferenceNotFoundError(
+                        f"monster template '{source.template_key}' not found"
+                    )
+                if parse_stable_key(entry.key).kind != "monster":
+                    raise MonsterPlacementSourceError(
+                        f"content entry '{source.template_key}' is not a monster"
+                    )
+                data = entry.data if isinstance(entry.data, dict) else {}
+                size = resolve_placement_size(data.get("size"))
+                archived_source = False
+            else:
+                template_id = source.custom_template_id
+                assert template_id is not None
+                row = rows.get(template_id)
+                if row is None or row["room_id"] != room_id:
+                    raise MonsterPlacementReferenceNotFoundError(
+                        f"monster template '{template_id}' not found in this room"
+                    )
+                rules = row["rules"] if isinstance(row["rules"], dict) else {}
+                size = resolve_placement_size(rules.get("size"))
+                archived_source = (
+                    row["archived_at"] is not None
+                    and (source.placement_id, template_id) not in saved_custom_refs
+                )
+            resolved.append(
+                _ResolvedPlacement(
+                    placement_id=source.placement_id,
+                    template_key=source.template_key,
+                    custom_template_id=source.custom_template_id,
+                    anchor_x=source.anchor_x,
+                    anchor_y=source.anchor_y,
+                    visibility=source.visibility,
+                    sort_order=source.sort_order,
+                    size=size,
+                    archived_source=archived_source,
+                )
+            )
+        return resolved
+
+    def _resolve_existing_placements(
+        self,
+        connection: Connection,
+        room_id: UUID,
+        placements: tuple[StoredMonsterPlacement, ...],
+    ) -> list[_ResolvedPlacement]:
+        """Resolve sizes for already-saved placements (geometry re-validation).
+
+        Existing references keep their archived status; no template row locks
+        are taken because templates are not mutated here.
+        """
+        sources = [
+            _PlacementSource(
+                placement_id=placement.id,
+                template_key=placement.template_key,
+                custom_template_id=placement.custom_template_id,
+                anchor_x=placement.anchor_x,
+                anchor_y=placement.anchor_y,
+                visibility=placement.visibility,
+                sort_order=placement.sort_order,
+            )
+            for placement in placements
+        ]
+        return self._resolve_placement_sources(
+            connection,
+            room_id,
+            sources,
+            saved_custom_refs=_saved_custom_refs(placements),
+            lock_templates=False,
+        )
+
+    def _validate_resolved_placements(
+        self,
+        resolved: list[_ResolvedPlacement],
+        *,
+        width_cells: int,
+        height_cells: int,
+        objects: StoredBattleMapObjects,
+    ) -> list[MonsterPlacementProblem]:
+        """Collect every placement problem without stopping at the first."""
+        problems: list[MonsterPlacementProblem] = []
+        entries: list[PlacementValidationEntry] = []
+        for item in resolved:
+            if item.archived_source:
+                problems.append(
+                    MonsterPlacementProblem(
+                        placement_id=item.placement_id,
+                        code=PLACEMENT_PROBLEM_TEMPLATE_ARCHIVED,
+                    )
+                )
+            if item.size is None:
+                problems.append(
+                    MonsterPlacementProblem(
+                        placement_id=item.placement_id,
+                        code=PLACEMENT_PROBLEM_INVALID_SIZE,
+                    )
+                )
+            else:
+                entries.append(
+                    PlacementValidationEntry(
+                        placement_id=item.placement_id,
+                        size=item.size,
+                        anchor_x=item.anchor_x,
+                        anchor_y=item.anchor_y,
+                    )
+                )
+        barriers = barriers_from_map_objects(objects.walls, objects.doors)
+        blocked = blocked_cells_from_terrain(objects.terrain)
+        for problem in validate_monster_placements(
+            entries,
+            width_cells=width_cells,
+            height_cells=height_cells,
+            barriers=barriers,
+            blocked_cells=blocked,
+        ):
+            problems.append(
+                MonsterPlacementProblem(
+                    placement_id=problem.placement_id, code=problem.code
+                )
+            )
+        return problems
+
+    def _reject_conflicting_placements(
+        self,
+        connection: Connection,
+        room_id: UUID,
+        map_id: UUID,
+        *,
+        width_cells: int,
+        height_cells: int,
+        objects: StoredBattleMapObjects,
+    ) -> None:
+        """Reject a geometry/dimension change that breaks saved placements."""
+        placements = self.repository.get_placements(
+            map_id, connection=connection
+        )
+        if not placements:
+            return
+        resolved = self._resolve_existing_placements(
+            connection, room_id, placements
+        )
+        problems = self._validate_resolved_placements(
+            resolved,
+            width_cells=width_cells,
+            height_cells=height_cells,
+            objects=objects,
+        )
+        if problems:
+            raise MapMonsterPlacementInvalidError(problems)
 
     def copy(
         self,
@@ -685,7 +1122,12 @@ class BattleMapService:
             self.repository.insert_objects_in_transaction(
                 connection, new_map_id, new_objects
             )
-        return battle_map_view(new_stored, new_objects)
+            # M07-C: copy placements with fresh placement ids, keeping the
+            # original template references (archived references stay allowed).
+            new_placements = self.repository.copy_placements_in_transaction(
+                connection, map_id, new_map_id
+            )
+        return battle_map_view(new_stored, new_objects, placements=new_placements)
 
     def archive(
         self,
@@ -716,7 +1158,10 @@ class BattleMapService:
             objects = self.repository.get_objects(
                 map_id, connection=connection
             )
-            return battle_map_view(updated, objects)
+            placements = self.repository.get_placements(
+                map_id, connection=connection
+            )
+            return battle_map_view(updated, objects, placements=placements)
 
     @staticmethod
     def _validated_objects(

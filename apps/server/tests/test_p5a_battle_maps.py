@@ -30,6 +30,7 @@ from app.persistence.room_assets.repository import RoomAssetRepository
 from app.persistence.room_assets.storage import FilesystemAssetStorage
 from app.persistence.rooms.tables import rooms
 from app.persistence.rooms.table_runtime import TableEventRepository
+from app.content.registry import load_default_content_registry
 
 
 def _engine() -> Engine:
@@ -107,6 +108,7 @@ def bm_fixture(tmp_path: Path) -> Generator[BattleMapFixture, None, None]:
         BattleMapRepository(engine),
         asset_repository,
         TableEventService(TableEventRepository(engine)),
+        content_registry=load_default_content_registry(),
     )
 
     room_a_id = uuid4()

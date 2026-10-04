@@ -10,8 +10,18 @@ import {
 } from './support/quickCombat'
 
 type MonsterSummary = { ref: string; name: string }
-type MonsterDetail = { ref: string; name: string; revision: number }
+type MonsterDetail = {
+  ref: string
+  name: string
+  revision: number
+  rules: Record<string, unknown>
+  presentation: Record<string, unknown>
+}
 type MonsterInstance = { id: string }
+
+function omitKeys(value: Record<string, unknown>, keys: string[]): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(value).filter(([key]) => !keys.includes(key)))
+}
 
 test('M07-A Monster Library journey in English: create from built-in, edit only AC, copy, archive, referenced delete error, refresh', async ({
   page,
@@ -164,6 +174,234 @@ test('M07-A Monster Library journey in English: create from built-in, edit only 
   })
   await scoutItemAfterReload.click()
   await expect(acInput).toHaveValue('16')
+})
+
+test('M07-A editing a custom monster in the UI preserves unedited rules and presentation', async ({
+  page,
+  request,
+  roomContext,
+}) => {
+  test.setTimeout(180_000)
+  const { roomId } = roomContext
+  const templateName = 'Cult Fanatic'
+
+  const created = await json<MonsterDetail>(
+    await request.post(`/api/rooms/${roomId}/monster-library/custom/from-content`, {
+      data: { content_key: 'srd5.1:monster:cult-fanatic' },
+    }),
+  )
+  const templateId = created.ref.replace(/^custom:/, '')
+  const withMultipleSpeeds = await json<MonsterDetail>(
+    await request.patch(`/api/rooms/${roomId}/monster-library/custom/${templateId}`, {
+      data: {
+        expected_revision: created.revision,
+        speed: { walk: '30 ft.', fly: '40 ft.', swim: '20 ft.' },
+      },
+    }),
+  )
+  const duplicateIndexResponse = await request.patch(
+    `/api/rooms/${roomId}/monster-library/custom/${templateId}`,
+    {
+      data: {
+        expected_revision: withMultipleSpeeds.revision,
+        traits: [
+          { source_index: 1, name: 'Spellcasting' },
+          { source_index: 1, name: 'Duplicate' },
+        ],
+      },
+    },
+  )
+  expect(duplicateIndexResponse.status()).toBe(422)
+  const outOfRangeResponse = await request.patch(
+    `/api/rooms/${roomId}/monster-library/custom/${templateId}`,
+    {
+      data: {
+        expected_revision: withMultipleSpeeds.revision,
+        traits: [{ source_index: 2, name: 'Out of range' }],
+      },
+    },
+  )
+  expect(outOfRangeResponse.status()).toBe(422)
+  const mixedMarkerResponse = await request.patch(
+    `/api/rooms/${roomId}/monster-library/custom/${templateId}`,
+    {
+      data: {
+        expected_revision: withMultipleSpeeds.revision,
+        traits: [
+          { source_index: 0, name: 'Dark Devotion' },
+          { name: 'Spellcasting' },
+        ],
+      },
+    },
+  )
+  expect(mixedMarkerResponse.status()).toBe(422)
+  const structuredEditResponse = await request.patch(
+    `/api/rooms/${roomId}/monster-library/custom/${templateId}`,
+    {
+      data: {
+        expected_revision: withMultipleSpeeds.revision,
+        actions: [{ source_index: 0, name: 'Multiattack', attack_bonus: 5 }],
+      },
+    },
+  )
+  expect(structuredEditResponse.status()).toBe(422)
+  const afterRejectedEdits = await json<MonsterDetail>(
+    await request.get(
+      `/api/rooms/${roomId}/monster-library/${encodeURIComponent(withMultipleSpeeds.ref)}`,
+    ),
+  )
+  expect(afterRejectedEdits.revision).toBe(withMultipleSpeeds.revision)
+  expect(afterRejectedEdits.rules).toEqual(withMultipleSpeeds.rules)
+  expect(afterRejectedEdits.presentation).toEqual(withMultipleSpeeds.presentation)
+  const withUnannotatedTrait = await json<MonsterDetail>(
+    await request.patch(`/api/rooms/${roomId}/monster-library/custom/${templateId}`, {
+      data: {
+        expected_revision: withMultipleSpeeds.revision,
+        traits: [
+          { source_index: 0, name: 'Dark Devotion' },
+          { source_index: 1, name: 'Spellcasting' },
+          { source_index: null, name: 'Unannotated Trait' },
+        ],
+      },
+    }),
+  )
+  const before = await json<MonsterDetail>(
+    await request.get(
+      `/api/rooms/${roomId}/monster-library/${encodeURIComponent(withUnannotatedTrait.ref)}`,
+    ),
+  )
+  const originalTraits = before.rules.traits as Array<Record<string, unknown>>
+  const originalActions = before.rules.actions as Array<Record<string, unknown>>
+  expect(originalTraits.some((trait) => trait.name === 'Spellcasting')).toBe(true)
+  expect(originalTraits[2]).toEqual({ name: 'Unannotated Trait' })
+  expect(originalActions.some((action) => action.name === 'Multiattack')).toBe(true)
+  expect(before.rules.speed).toEqual({ walk: '30 ft.', fly: '40 ft.', swim: '20 ft.' })
+  expect(before.presentation.ability_names).toBeDefined()
+  expect(before.presentation.name_is_custom).toBe(false)
+  expect(before.presentation.names).toMatchObject({
+    en: 'Cult Fanatic',
+    'zh-TW': '邪教狂信者',
+  })
+
+  await page.goto(`/rooms/${roomId}/monster-library`)
+  await page.locator('.monster-library__filters select').selectOption('custom')
+  const searchInput = page.getByPlaceholder('Search by monster name, type, or subtype…')
+  await searchInput.fill(templateName)
+  await page.getByRole('button', { name: 'Refresh' }).click()
+  const item = page.locator('.monster-library__item').filter({
+    has: page.locator('.monster-library__item-name', { hasText: new RegExp(`^${templateName}$`) }),
+  })
+  await item.click()
+
+  const acInput = page.getByLabel('Armor Class (AC)')
+  await acInput.fill('19')
+  await page.getByRole('button', { name: 'Save Changes' }).click()
+  await expect(page.locator('.form-success')).toBeVisible()
+
+  const afterAcEdit = await json<MonsterDetail>(
+    await request.get(
+      `/api/rooms/${roomId}/monster-library/${encodeURIComponent(before.ref)}`,
+    ),
+  )
+  expect(afterAcEdit.rules.armor_class).toBe(19)
+  expect(omitKeys(afterAcEdit.rules, ['armor_class', 'armor_class_options'])).toEqual(
+    omitKeys(before.rules, ['armor_class', 'armor_class_options']),
+  )
+  expect(afterAcEdit.presentation).toEqual(before.presentation)
+
+  const editedName = 'E2E Cult Fanatic Archivist'
+  const editedDescription = 'Field notes for this particular encounter.'
+  await page.getByLabel('Name').fill(editedName)
+  await page.locator('.monster-library__custom-form textarea').first().fill(editedDescription)
+  await page.getByRole('button', { name: 'Save Changes' }).click()
+  await expect(page.locator('.form-success')).toBeVisible()
+
+  const afterTextEdit = await json<MonsterDetail>(
+    await request.get(
+      `/api/rooms/${roomId}/monster-library/${encodeURIComponent(before.ref)}`,
+    ),
+  )
+  expect(afterTextEdit.name).toBe(editedName)
+  expect(afterTextEdit.rules.name).toBe(editedName)
+  expect(afterTextEdit.rules.description).toBe(editedDescription)
+  expect(
+    omitKeys(afterTextEdit.rules, ['name', 'description']),
+  ).toEqual(omitKeys(afterAcEdit.rules, ['name', 'description']))
+  expect(afterTextEdit.presentation.ability_names).toEqual(
+    afterAcEdit.presentation.ability_names,
+  )
+
+  const editedSpellcastingDescription = 'This caster prepares a different set of spells.'
+  await page.getByPlaceholder('Trait description').nth(1).fill(editedSpellcastingDescription)
+  await page.getByRole('button', { name: 'Save Changes' }).click()
+  await expect(page.locator('.form-success')).toBeVisible()
+
+  const afterTraitEdit = await json<MonsterDetail>(
+    await request.get(
+      `/api/rooms/${roomId}/monster-library/${encodeURIComponent(before.ref)}`,
+    ),
+  )
+  const textEditTraits = afterTextEdit.rules.traits as Array<Record<string, unknown>>
+  const editedTraits = structuredClone(textEditTraits)
+  const spellcastingIndex = editedTraits.findIndex((trait) => trait.name === 'Spellcasting')
+  expect(spellcastingIndex).toBeGreaterThanOrEqual(0)
+  editedTraits[spellcastingIndex] = {
+    ...editedTraits[spellcastingIndex],
+    desc: editedSpellcastingDescription,
+  }
+  expect(afterTraitEdit.rules.traits).toEqual(editedTraits)
+  expect(afterTraitEdit.rules.actions).toEqual(afterTextEdit.rules.actions)
+  expect(afterTraitEdit.presentation.ability_names).toEqual(
+    afterTextEdit.presentation.ability_names,
+  )
+
+  // Removing the first visible row must keep the next row's original structure and locale name.
+  const editRows = page.locator('.monster-library__item-edit-row')
+  await editRows.nth(0).getByRole('button', { name: 'Remove' }).click()
+  await editRows.nth(2).getByRole('button', { name: 'Remove' }).click()
+  await page.getByRole('button', { name: 'Save Changes' }).click()
+  await expect(page.locator('.form-success')).toBeVisible()
+
+  const afterRemoval = await json<MonsterDetail>(
+    await request.get(
+      `/api/rooms/${roomId}/monster-library/${encodeURIComponent(before.ref)}`,
+    ),
+  )
+  expect(afterRemoval.rules.traits).toEqual([
+    editedTraits[spellcastingIndex],
+    editedTraits[2],
+  ])
+  expect(afterRemoval.rules.actions).toEqual([
+    (afterTextEdit.rules.actions as Array<Record<string, unknown>>)[1],
+  ])
+  expect(afterRemoval.presentation.ability_names).toMatchObject({
+    traits: [{ en: 'Spellcasting', 'zh-TW': '施法' }, {}],
+    actions: [{ en: 'Dagger', 'zh-TW': '匕首' }],
+  })
+
+  const editedSpellcastingName = 'Arcane Spellcasting'
+  await page.getByPlaceholder('Trait name').first().fill(editedSpellcastingName)
+  await page.getByRole('button', { name: 'Save Changes' }).click()
+  await expect(page.locator('.form-success')).toBeVisible()
+
+  const afterTraitRename = await json<MonsterDetail>(
+    await request.get(
+      `/api/rooms/${roomId}/monster-library/${encodeURIComponent(before.ref)}`,
+    ),
+  )
+  const remainingTraits = afterRemoval.rules.traits as Array<Record<string, unknown>>
+  expect(afterTraitRename.rules.traits).toEqual([
+    { ...remainingTraits[0], name: editedSpellcastingName },
+    remainingTraits[1],
+  ])
+  const renamedAbilityNames = afterTraitRename.presentation.ability_names as Record<
+    string,
+    Array<Record<string, string>>
+  >
+  expect(renamedAbilityNames.traits).toEqual([{}, {}])
+  expect(renamedAbilityNames.actions).toEqual(
+    (afterRemoval.presentation.ability_names as Record<string, unknown[]>).actions,
+  )
 })
 
 test('M07-A Monster Library in zh-TW: built-in shows Chinese names and English desc with label, search ignores desc words', async ({

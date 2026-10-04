@@ -38,7 +38,9 @@ from app.domain.monster_library.schemas import (
     CustomMonsterTraitInput,
     MonsterLibraryDetailView,
     MonsterLibrarySummaryView,
+    PatchCustomMonsterActionInput,
     PatchCustomMonsterInput,
+    PatchCustomMonsterTraitInput,
 )
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
 from app.domain.rooms.table_events import (
@@ -111,6 +113,99 @@ def _normalize_traits_collection(
                 t_dict[extra] = raw[extra]
         res.append(t_dict)
     return res
+
+
+def _uses_source_index_markers(
+    value: Sequence[PatchCustomMonsterTraitInput | PatchCustomMonsterActionInput] | None,
+) -> bool:
+    if not value:
+        return False
+    marked = ["source_index" in item.model_fields_set for item in value]
+    if any(marked) and not all(marked):
+        raise InvalidMonsterRulesError("ability edit rows must all include source_index")
+    return all(marked)
+
+
+def _apply_source_indexed_ability_edits(
+    source_rules: dict[str, object],
+    presentation_json: dict[str, object],
+    group: str,
+    value: Sequence[PatchCustomMonsterTraitInput | PatchCustomMonsterActionInput],
+) -> list[dict[str, object]]:
+    source_items_raw = source_rules.get(group)
+    source_items = source_items_raw if isinstance(source_items_raw, list) else []
+    presentation_names = presentation_json.get("ability_names")
+    localized_names: object = None
+    if isinstance(presentation_names, dict):
+        localized_names = presentation_names.get(group)
+    source_localized = localized_names if isinstance(localized_names, list) else []
+
+    result: list[dict[str, object]] = []
+    result_localized: list[dict[str, str]] = []
+    used_indices: set[int] = set()
+    for edit in value:
+        fields = set(edit.model_fields_set)
+        if not fields.issubset({"source_index", "name", "desc", "description"}):
+            raise InvalidMonsterRulesError(
+                "source-indexed ability edits support only name and description"
+            )
+
+        name = edit.name.strip()
+        if not name:
+            raise InvalidMonsterRulesError("monster ability name must not be blank")
+
+        source_index = edit.source_index
+        if source_index is None:
+            raw: dict[str, object] = {"name": name}
+            if "desc" in fields:
+                raw["desc"] = edit.desc
+            elif "description" in fields:
+                raw["description"] = edit.description
+            normalized = (
+                _normalize_traits_collection([raw])
+                if group == "traits"
+                else _normalize_actions_collection([raw])
+            )
+            result.extend(normalized)
+            result_localized.append({})
+            continue
+
+        if source_index in used_indices:
+            raise InvalidMonsterRulesError("ability edit source_index values must be unique")
+        if source_index >= len(source_items):
+            raise InvalidMonsterRulesError("ability edit source_index is out of range")
+        source_item = source_items[source_index]
+        if not isinstance(source_item, dict):
+            raise InvalidMonsterRulesError("monster ability source must be an object")
+        used_indices.add(source_index)
+
+        merged = deepcopy(source_item)
+        old_name = merged.get("name")
+        merged["name"] = name
+        if "desc" in fields:
+            if edit.desc is None:
+                merged.pop("desc", None)
+            else:
+                merged["desc"] = edit.desc
+                merged.pop("description", None)
+        elif "description" in fields:
+            if edit.description is None:
+                merged.pop("desc", None)
+            else:
+                merged["desc"] = edit.description
+                merged.pop("description", None)
+        result.append(merged)
+
+        localized = source_localized[source_index] if source_index < len(source_localized) else None
+        result_localized.append(
+            deepcopy(localized)
+            if old_name == name and isinstance(localized, dict)
+            else {}
+        )
+
+    if isinstance(presentation_names, dict) and isinstance(localized_names, list):
+        presentation_names[group] = result_localized
+    return result
 
 
 class MonsterLibraryService:
@@ -692,25 +787,28 @@ class MonsterLibraryService:
                 if isinstance(score_dict, dict):
                     score_dict.update(payload.ability_scores)
 
-            if "actions" in payload.model_fields_set:
-                rules["actions"] = _normalize_actions_collection(payload.actions)
-
-            if "bonus_actions" in payload.model_fields_set:
-                rules["bonus_actions"] = _normalize_actions_collection(payload.bonus_actions)
-
-            if "reactions" in payload.model_fields_set:
-                rules["reactions"] = _normalize_actions_collection(payload.reactions)
-
-            if "legendary_actions" in payload.model_fields_set:
-                rules["legendary_actions"] = _normalize_actions_collection(payload.legendary_actions)
-
-            if "traits" in payload.model_fields_set:
-                rules["traits"] = _normalize_traits_collection(payload.traits)
-
-            ability_names = presentation_json.get("ability_names")
-            if isinstance(ability_names, dict):
-                for group in ("actions", "bonus_actions", "reactions", "legendary_actions", "traits"):
-                    if group in payload.model_fields_set:
+            ability_updates = (
+                ("actions", payload.actions, _normalize_actions_collection),
+                ("bonus_actions", payload.bonus_actions, _normalize_actions_collection),
+                ("reactions", payload.reactions, _normalize_actions_collection),
+                ("legendary_actions", payload.legendary_actions, _normalize_actions_collection),
+                ("traits", payload.traits, _normalize_traits_collection),
+            )
+            for group, items, normalizer in ability_updates:
+                if group not in payload.model_fields_set:
+                    continue
+                if _uses_source_index_markers(items):
+                    assert items is not None
+                    rules[group] = _apply_source_indexed_ability_edits(
+                        source.rules,
+                        presentation_json,
+                        group,
+                        items,
+                    )
+                else:
+                    rules[group] = normalizer(items)
+                    ability_names = presentation_json.get("ability_names")
+                    if isinstance(ability_names, dict):
                         ability_names.pop(group, None)
 
             if "proficiencies" in payload.model_fields_set and payload.proficiencies is not None:

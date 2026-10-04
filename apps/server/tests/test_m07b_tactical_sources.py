@@ -34,6 +34,7 @@ from app.persistence.room_assets.repository import RoomAssetRepository
 from app.persistence.room_assets.tables import room_assets
 from app.persistence.rooms.tables import ai_controller_grants
 from app.persistence.rooms.workspace import RoomWorkspaceRepository
+from app.content.registry import load_default_content_registry
 from tests.p5a_tactical_helpers import TacticalTable, insert_battle_map, setup_tactical_table
 from tests.test_p5f_tactical_mcp import _dm_token, _event_count, _facade, _player_token
 
@@ -68,7 +69,8 @@ def _owner(table: TacticalTable) -> RoomAccessContext:
 
 
 def _maps(table: TacticalTable) -> BattleMapService:
-    return BattleMapService(table.battle_maps, RoomAssetRepository(table.engine), table.events)
+    return BattleMapService(table.battle_maps, RoomAssetRepository(table.engine), table.events,
+                             content_registry=load_default_content_registry())
 
 
 def _archive(table: TacticalTable, map_id) -> None:

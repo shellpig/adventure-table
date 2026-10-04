@@ -41,6 +41,8 @@ export type CanvasToken = {
   anchor_y: number
   footprint_width: number
   footprint_height: number
+  /** DM-only marker (e.g. a hidden library monster placement). */
+  isHidden?: boolean
 }
 
 type BattleMapCanvasProps = {
@@ -373,7 +375,8 @@ export function BattleMapCanvas({
               data-testid="battle-map-token"
               data-entry-id={token.entry_id}
               data-selected={isSelected ? 'true' : undefined}
-              className={`battle-map__token${isSelected ? ' battle-map__token--selected' : ''}`}
+              data-hidden={token.isHidden ? 'true' : undefined}
+              className={`battle-map__token${isSelected ? ' battle-map__token--selected' : ''}${token.isHidden ? ' battle-map__token--hidden' : ''}`}
               onClick={(e) => {
                 e.stopPropagation()
                 onTokenClick?.(token.entry_id)

@@ -66,6 +66,13 @@ export const M07B_SESSION_REQUEST_CODES = [
   'battle_map_referenced',
 ] as const
 
+export const M07C_SESSION_REQUEST_CODES = [
+  'map_monster_placement_invalid',
+  'monster_placement_reference_not_found',
+  'monster_placement_invalid_source',
+  'combat_idempotency_conflict',
+] as const
+
 export const SESSION_REQUEST_CODES = [
   ...P2E_SESSION_REQUEST_CODES,
   ...P3B_SESSION_REQUEST_CODES,
@@ -73,6 +80,7 @@ export const SESSION_REQUEST_CODES = [
   ...P4E_SESSION_REQUEST_CODES,
   ...P5F_SESSION_REQUEST_CODES,
   ...M07B_SESSION_REQUEST_CODES,
+  ...M07C_SESSION_REQUEST_CODES,
 ] as const
 
 export type SessionRequestCode = (typeof SESSION_REQUEST_CODES)[number]
@@ -269,6 +277,22 @@ export const SESSION_REQUEST_CODE_MESSAGES: Record<SessionRequestCode, Record<Lo
   battle_map_referenced: {
     'zh-TW': '此戰鬥地圖已被戰鬥引用，無法刪除；請改用封存。',
     en: 'This battle map is used by a combat and cannot be deleted; archive it instead.',
+  },
+  map_monster_placement_invalid: {
+    'zh-TW': '地圖上的怪物配置有問題，整場戰鬥無法開戰；請先修正配置。',
+    en: 'The map’s monster placements have problems, so combat cannot start. Fix the placements first.',
+  },
+  monster_placement_reference_not_found: {
+    'zh-TW': '引用的怪物範本已不存在於此房間。',
+    en: 'A referenced monster template no longer exists in this Room.',
+  },
+  monster_placement_invalid_source: {
+    'zh-TW': '怪物配置的範本來源無效。',
+    en: 'A monster placement has an invalid template source.',
+  },
+  combat_idempotency_conflict: {
+    'zh-TW': '相同的開戰請求重送時選項不同，請用新的請求再試一次。',
+    en: 'This combat start was retried with different options. Start again with a new request.',
   },
 }
 

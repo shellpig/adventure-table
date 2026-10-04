@@ -9,6 +9,7 @@ import {
   listBattleMaps,
   patchBattleMap,
   replaceBattleMapObjects,
+  replaceMonsterPlacements,
 } from './battleMaps'
 
 const ROOM_ID = '10000000-0000-4000-8000-000000000001'
@@ -118,5 +119,38 @@ describe('Battle Maps API client', () => {
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe(`/api/rooms/${ROOM_ID}/battle-maps/${MAP_ID}?expected_revision=4`)
     expect(init?.method).toBe('DELETE')
+  })
+
+  it('calls replaceMonsterPlacements with PUT, expected_revision, and the full placement set', async () => {
+    const fetchMock = mockFetch({ id: MAP_ID, revision: 8 })
+    const body = {
+      expected_revision: 7,
+      placements: [
+        {
+          id: '20000000-0000-4000-8000-000000000001',
+          template_key: 'srd5.1:monster:goblin',
+          custom_template_id: null,
+          anchor_x: 2,
+          anchor_y: 3,
+          visibility: 'hidden' as const,
+          sort_order: 0,
+        },
+        {
+          id: null,
+          template_key: null,
+          custom_template_id: '30000000-0000-4000-8000-000000000001',
+          anchor_x: 5,
+          anchor_y: 5,
+          visibility: 'public' as const,
+          sort_order: 1,
+        },
+      ],
+    }
+    await replaceMonsterPlacements(ROOM_ID, MAP_ID, body, TOKEN)
+    expect(fetchMock).toHaveBeenCalledOnce()
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe(`/api/rooms/${ROOM_ID}/battle-maps/${MAP_ID}/monster-placements`)
+    expect(init?.method).toBe('PUT')
+    expect(JSON.parse(init?.body as string)).toEqual(body)
   })
 })

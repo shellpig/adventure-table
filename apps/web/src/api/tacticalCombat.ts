@@ -5,6 +5,7 @@ export type TacticalStartInput = {
   blank_width_cells?: number | null
   blank_height_cells?: number | null
   include_active_party?: boolean
+  load_map_monsters?: boolean
   idempotency_key?: string | null
 }
 

@@ -186,6 +186,7 @@ def get_battle_map_service(request: Request) -> BattleMapService:
         BattleMapRepository(engine),
         RoomAssetRepository(engine),
         table_event_service=get_table_event_service(request),
+        content_registry=get_content_registry(request),
     )
     request.app.state.battle_map_service = service
     return service
@@ -375,6 +376,9 @@ def get_combat_service(request: Request) -> CombatService:
             get_content_registry(request),
             battle_map_repository=BattleMapRepository(engine),
             board_repository=board_repository,
+            # M07-C C2: snapshot builtin monster display names (zh-TW overlay)
+            # into the rules_snapshot presentation at load time.
+            content_localization=get_content_localization(request),
         )
         request.app.state.combat_service = service
         # Built alongside: the board runtime shares the combat service and its

@@ -80,3 +80,32 @@ describe('P5-F F2 tactical copy parity', () => {
     }
   })
 })
+
+const m07cTacticalKeys = [
+  'tacticalToolMonster',
+  'tacticalLoadMonstersHeading',
+  'tacticalLoadMapOnly',
+  'tacticalLoadMapWithMonsters',
+  'tacticalLoadProblemsHeading',
+  'tacticalLoadProblemsRetryHint',
+] as const
+
+describe('M07-C tactical copy parity', () => {
+  it('has all map-monster keys in zh-TW and en with distinct non-empty values', () => {
+    for (const locale of ['zh-TW', 'en'] as const) {
+      const copy = sessionCopy(locale)
+      for (const key of m07cTacticalKeys) {
+        const value = (copy as Record<string, unknown>)[key]
+        expect(typeof value, `${locale}.${key}`).toBe('string')
+        expect((value as string).length, `${locale}.${key}`).toBeGreaterThan(0)
+      }
+    }
+    const zh = sessionCopy('zh-TW')
+    const en = sessionCopy('en')
+    for (const key of m07cTacticalKeys) {
+      expect((zh as Record<string, string>)[key], key).not.toBe(
+        (en as Record<string, string>)[key],
+      )
+    }
+  })
+})

@@ -61,6 +61,7 @@ FORBIDDEN_MULTIPLAYER_TABLES = {
     "battle_map_doors",
     "battle_map_terrain",
     "battle_map_drawings",
+    "battle_map_monster_placements",
     "combat_boards",
     "combat_board_doors",
     "combat_positions",

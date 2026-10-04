@@ -31,6 +31,7 @@ import {
 import {
   actingEntryId,
   adjudicationKindLabel,
+  combatEntryDisplayName,
   combatInjuryLabel,
   combatantFor,
   eligibleReactionEntry,
@@ -266,7 +267,11 @@ export function SessionCombatActionBar({
   const currentTurnEntry = combat.current_turn_entry_id
     ? (combat.entries.find((entry) => entry.id === combat.current_turn_entry_id) ?? null)
     : null
-  const currentTurnName = currentTurnEntry?.display_name ?? copy.combatUnknownCombatant
+  const entryDisplayName = (entry: CombatEntryView): string =>
+    combatEntryDisplayName(combat, entry, copy.locale)
+  const currentTurnName = currentTurnEntry
+    ? entryDisplayName(currentTurnEntry)
+    : copy.combatUnknownCombatant
 
   const [attacks, setAttacks] = useState<AttackDefinitionView[]>([])
   const attackContentRefs = useMemo(
@@ -777,9 +782,11 @@ export function SessionCombatActionBar({
         <div className="session-combat-actions__reactions" data-combat-reactions="true">
           <h4 className="session-combat__sub-heading">{copy.combatReactionsHeading}</h4>
           {eligibleWindows.map(({ window, actorEntryId }) => {
-            const sourceName = window.source_entry_id
-              ? (combat.entries.find((entry) => entry.id === window.source_entry_id)
-                  ?.display_name ?? copy.combatUnknownCombatant)
+            const sourceEntry = window.source_entry_id
+              ? combat.entries.find((entry) => entry.id === window.source_entry_id)
+              : undefined
+            const sourceName = sourceEntry
+              ? entryDisplayName(sourceEntry)
               : copy.combatUnknownCombatant
             const payload = window.safe_payload ? Object.entries(window.safe_payload) : []
             return (
@@ -887,7 +894,10 @@ export function SessionCombatActionBar({
                 spellRef={spellRef}
                 slotLevel={slotLevel}
                 targetEntryId={targetEntryId}
-                targetEntries={castTargetEntries}
+                targetEntries={castTargetEntries.map((entry) => ({
+                  id: entry.id,
+                  display_name: entryDisplayName(entry),
+                }))}
                 disabled={formDisabled}
                 copy={copy}
                 onSpellRefChange={handleSpellRefChange}
@@ -905,7 +915,7 @@ export function SessionCombatActionBar({
                   <option value="">—</option>
                   {targetEntries.map((entry) => (
                     <option key={entry.id} value={entry.id}>
-                      {entry.display_name}
+                      {entryDisplayName(entry)}
                     </option>
                   ))}
                 </select>
@@ -922,7 +932,7 @@ export function SessionCombatActionBar({
                   <option value="">—</option>
                   {targetEntries.map((entry) => (
                     <option key={entry.id} value={entry.id}>
-                      {entry.display_name}
+                      {entryDisplayName(entry)}
                     </option>
                   ))}
                 </select>

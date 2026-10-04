@@ -49,6 +49,7 @@ function makeMap(revision = 1): BattleMap {
     doors: [],
     terrain: [],
     drawings: [],
+    monster_placements: [],
   }
 }
 
@@ -423,5 +424,118 @@ describe('BattleMapEditor working state', () => {
         target: { tagName: 'DIV' } as unknown as HTMLElement,
       }),
     ).toBe(true)
+  })
+})
+
+describe('M07-C BattleMapEditor monster placements', () => {
+  const source = readFileSync(new URL('./BattleMapEditor.tsx', import.meta.url), 'utf8')
+
+  it('exposes the monster configuration tool alongside the geometry tools', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapEditor
+        map={makeMap()}
+        copy={copy}
+        locale="en"
+        roomId={ROOM_ID}
+        token={TOKEN}
+        onSaved={vi.fn()}
+        onError={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+    expect(html).toContain('data-testid="map-editor-tool-monster"')
+    // Placement tokens only render in monster mode, so the default geometry
+    // view stays unchanged.
+    expect(html).not.toContain('data-testid="monster-placement-panel"')
+  })
+
+  it('saves placements through PUT monster-placements with expected_revision', () => {
+    expect(source).toContain('replaceMonsterPlacements(')
+    expect(source).toContain('buildMonsterPlacementsBody(map.revision, placements)')
+    expect(source).toContain('monsterPlacementsFromMap(saved.monster_placements ?? [])')
+  })
+
+  it('never calls a live combat API from the placement editor', () => {
+    expect(source).not.toContain('placeCombatant')
+    expect(source).not.toContain('startTacticalCombat')
+    expect(source).not.toContain('addMonsterToCombat')
+    expect(source).not.toContain('/board/positions')
+  })
+
+  it('searches the template picker through listMonsterLibrary query (stale responses dropped)', () => {
+    expect(source).toContain('data-testid="monster-placement-template-search"')
+    expect(source).toContain('query: templateSearch.trim() || undefined')
+    expect(source).toContain('include_archived: false')
+    // Same stale-response guard as RoomMonsterLibraryPage: only the latest
+    // menu request may update state.
+    expect(source).toContain('templateListRequestSeq')
+    expect(source).toContain('requestSeq !== templateListRequestSeq.current')
+  })
+
+  it('resolves saved placements missing from the menu page via getMonsterLibraryEntry', () => {
+    expect(source).toContain('getMonsterLibraryEntry(roomId, ref, token)')
+    expect(source).toContain('monsterSummaryFromDetail(detail)')
+    expect(source).toContain('return resolvedTemplates[templateRef]')
+    // Archived custom templates resolve for display but are never offered.
+    expect(source).toContain('availableMonsterTemplates(templates)')
+    expect(source).toContain('availableTemplates.map(')
+  })
+
+  it('monsterSummaryFromDetail keeps the size and archived flag a footprint needs', async () => {
+    const { monsterSummaryFromDetail, footprintForSizeName } = await import(
+      './mapMonsterPlacements'
+    )
+    const summary = monsterSummaryFromDetail({
+      ref: 'custom:10000000-0000-4000-8000-000000000001',
+      name: 'Grown Horror',
+      names: {},
+      name_is_custom: true,
+      source_kind: 'custom',
+      source_key: null,
+      rules: {
+        name: 'Grown Horror',
+        armor_class: 13,
+        max_hp: 20,
+        size: 'Large',
+        type: 'monstrosity',
+        alignment: 'unaligned',
+        speed: '30 ft.',
+        ability_scores: {
+          strength: 10,
+          dexterity: 10,
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
+        },
+      },
+      presentation: {},
+      revision: 2,
+      archived_at: '2026-10-04T00:00:00Z',
+    })
+    expect(summary.size).toBe('Large')
+    expect(summary.archived_at).toBe('2026-10-04T00:00:00Z')
+    expect(footprintForSizeName(summary.size)).toEqual({ width: 2, height: 2 })
+  })
+
+  it('surfaces 409 problems on the matching placements and lists DM-only reasons', () => {
+    expect(source).toContain("cause.code === 'map_monster_placement_invalid'")
+    expect(source).toContain('setPlacementProblems(extractPlacementProblems(cause))')
+    expect(source).toContain('data-testid="monster-placement-problems"')
+    expect(source).toContain('monsterPlacementProblemMessage(problem.code, libraryCopy)')
+    // Revision conflicts reuse the map editor handling, not the problems list.
+    expect(source).toContain("cause.code === 'battle_map_revision_conflict'")
+  })
+
+  it('supports place, move, remove, and public/hidden toggle handlers', () => {
+    expect(source).toContain('data-testid="monster-placement-template-picker"')
+    expect(source).toContain('data-testid="monster-placement-visibility-picker"')
+    expect(source).toContain('data-testid="monster-placement-save"')
+    expect(source).toContain('data-testid="monster-placement-toggle-hidden"')
+    expect(source).toContain('data-testid="monster-placement-remove"')
+    expect(source).toContain('onTokenClick={monsterMode ? handlePlacementTokenClick : undefined}')
+    expect(source).toContain('toggleMonsterPlacementVisibility(prev, selectedPlacementId)')
+    expect(source).toContain('removeMonsterPlacement(prev, selectedPlacementId)')
+    expect(source).toContain('moveMonsterPlacement(prev, selectedPlacementId, x, y)')
   })
 })

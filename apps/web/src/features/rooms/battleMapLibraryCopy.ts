@@ -62,6 +62,39 @@ const COPY = {
     errBattleMapArchived: 'This battle map is archived and cannot be used for this action.',
     errBattleMapInvalid: 'Invalid map parameters or dimensions.',
     errBattleMapAssetInvalid: 'Invalid image asset.',
+    errMapMonsterPlacementInvalid: 'Some monster placements are invalid. Fix the highlighted placements and save again.',
+    errMonsterPlacementReferenceNotFound: 'A referenced monster template no longer exists in this Room.',
+    errMonsterPlacementInvalidSource: 'A monster placement has an invalid template source.',
+
+    // Monster placements (M07-C library editor)
+    monsterPlacementsTool: 'Monsters',
+    monsterPlacementsHeading: 'Monster placements',
+    monsterPlacementsHint: 'Pick a template, then click a cell to place it. Click a placed monster to select it; click another cell to move it.',
+    monsterTemplatePickerLabel: 'Monster template',
+    monsterTemplatePickerPlaceholder: 'Choose a template…',
+    monsterTemplateSearchLabel: 'Search monster templates',
+    monsterTemplateSearchPlaceholder: 'Search templates…',
+    monsterTemplateNoMatch: 'No matching templates.',
+    monsterPlacementVisibilityLabel: 'Visibility',
+    monsterVisibilityPublic: 'Public',
+    monsterVisibilityHidden: 'Hidden',
+    monsterPlacementArchivedBadge: 'Archived template',
+    monsterPlacementUnknownTemplate: 'Unknown template',
+    monsterPlacementRemove: 'Remove',
+    monsterPlacementSave: 'Save monster placements',
+    monsterPlacementSaving: 'Saving placements…',
+    monsterPlacementSaved: 'Monster placements saved.',
+    monsterPlacementProblemsHeading: 'Placement problems (DM only)',
+    monsterPlacementRetryHint: 'Fix the placements above, then save again.',
+    monsterPlacementLoadingTemplates: 'Loading monster templates…',
+
+    // Placement problem codes (server validator, DM only)
+    placementProblemOutOfBounds: 'is outside the map.',
+    placementProblemBlockedTerrain: 'stands on blocked terrain.',
+    placementProblemWallOrDoorBlocked: 'is cut through by a wall or a closed door.',
+    placementProblemOverlappingPlacement: 'overlaps another monster placement.',
+    placementProblemTemplateArchived: 'uses an archived template and cannot be added again.',
+    placementProblemInvalidSize: 'has an unreadable monster size.',
   },
   'zh-TW': {
     title: '地圖庫',
@@ -122,6 +155,39 @@ const COPY = {
     errBattleMapArchived: '此地圖已封存，無法在此操作中使用。',
     errBattleMapInvalid: '地圖參數或尺寸無效。',
     errBattleMapAssetInvalid: '地圖底圖資源無效。',
+    errMapMonsterPlacementInvalid: '部分怪物配置無效，請修正標示的配置後再儲存。',
+    errMonsterPlacementReferenceNotFound: '引用的怪物範本已不存在於此房間。',
+    errMonsterPlacementInvalidSource: '某筆怪物配置的範本來源無效。',
+
+    // Monster placements (M07-C library editor)
+    monsterPlacementsTool: '怪物',
+    monsterPlacementsHeading: '怪物配置',
+    monsterPlacementsHint: '選擇範本後點空格子放置；點已放置的怪物可選取，再點其他格子可移動。',
+    monsterTemplatePickerLabel: '怪物範本',
+    monsterTemplatePickerPlaceholder: '選擇範本…',
+    monsterTemplateSearchLabel: '搜尋怪物範本',
+    monsterTemplateSearchPlaceholder: '搜尋範本…',
+    monsterTemplateNoMatch: '沒有符合的範本。',
+    monsterPlacementVisibilityLabel: '可見性',
+    monsterVisibilityPublic: '公開',
+    monsterVisibilityHidden: '隱藏',
+    monsterPlacementArchivedBadge: '已封存範本',
+    monsterPlacementUnknownTemplate: '未知範本',
+    monsterPlacementRemove: '移除',
+    monsterPlacementSave: '儲存怪物配置',
+    monsterPlacementSaving: '正在儲存配置…',
+    monsterPlacementSaved: '怪物配置已儲存。',
+    monsterPlacementProblemsHeading: '配置問題（僅 DM 可見）',
+    monsterPlacementRetryHint: '修正上方配置後再儲存一次。',
+    monsterPlacementLoadingTemplates: '正在載入怪物範本…',
+
+    // Placement problem codes (server validator, DM only)
+    placementProblemOutOfBounds: '超出地圖範圍。',
+    placementProblemBlockedTerrain: '站在阻擋地形上。',
+    placementProblemWallOrDoorBlocked: '被牆或關閉的門切過。',
+    placementProblemOverlappingPlacement: '與另一隻怪物的配置重疊。',
+    placementProblemTemplateArchived: '使用了已封存的範本，無法再新增。',
+    placementProblemInvalidSize: '怪物體型無法判讀。',
   },
 } as const satisfies Record<Locale, Record<string, string>>
 
@@ -151,7 +217,39 @@ export function battleMapLibraryErrorMessage(
       return copy.errBattleMapInvalid
     case 'battle_map_asset_invalid':
       return copy.errBattleMapAssetInvalid
+    case 'map_monster_placement_invalid':
+      return copy.errMapMonsterPlacementInvalid
+    case 'monster_placement_reference_not_found':
+      return copy.errMonsterPlacementReferenceNotFound
+    case 'monster_placement_invalid_source':
+      return copy.errMonsterPlacementInvalidSource
     default:
       return copy.requestFailed
+  }
+}
+
+/**
+ * Human sentence for one placement problem code (M07-C validator, DM only).
+ * Unknown codes fall back to the raw code so new server codes stay visible.
+ */
+export function monsterPlacementProblemMessage(
+  code: string,
+  copy: BattleMapLibraryCopy,
+): string {
+  switch (code) {
+    case 'out_of_bounds':
+      return copy.placementProblemOutOfBounds
+    case 'blocked_terrain':
+      return copy.placementProblemBlockedTerrain
+    case 'wall_or_door_blocked':
+      return copy.placementProblemWallOrDoorBlocked
+    case 'overlapping_placement':
+      return copy.placementProblemOverlappingPlacement
+    case 'template_archived':
+      return copy.placementProblemTemplateArchived
+    case 'invalid_size':
+      return copy.placementProblemInvalidSize
+    default:
+      return code
   }
 }

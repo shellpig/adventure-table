@@ -165,6 +165,17 @@ def test_import_boundary_fixture_detects_multiplayer_module(tmp_path: Path) -> N
     (app_root / "combat" / "__init__.py").write_text("", encoding="utf-8")
     (app_root / "combat" / "runtime.py").write_text("VALUE = 6\n", encoding="utf-8")
     (app_root / "monster_runtime.py").write_text("VALUE = 7\n", encoding="utf-8")
+    # M07-C: the monster placement table lives in the battle_maps package; the
+    # gate must flag that package name.
+    (app_root / "persistence").mkdir(parents=True, exist_ok=True)
+    (app_root / "persistence" / "__init__.py").write_text("", encoding="utf-8")
+    (app_root / "persistence" / "battle_maps").mkdir(parents=True, exist_ok=True)
+    (app_root / "persistence" / "battle_maps" / "__init__.py").write_text(
+        "VALUE = 9\n", encoding="utf-8"
+    )
+    (app_root / "persistence" / "battle_maps" / "tables.py").write_text(
+        "battle_map_monster_placements = object()\n", encoding="utf-8"
+    )
     (app_root / "domain" / "monster_library").mkdir(parents=True, exist_ok=True)
     (app_root / "domain" / "monster_library" / "__init__.py").write_text("VALUE = 8\n", encoding="utf-8")
     (app_root / "table_events.py").write_text("VALUE = 3\n", encoding="utf-8")
@@ -176,6 +187,7 @@ def test_import_boundary_fixture_detects_multiplayer_module(tmp_path: Path) -> N
         "import app.combat.runtime\n"
         "import app.monster_runtime\n"
         "import app.domain.monster_library\n"
+        "import app.persistence.battle_maps.tables\n"
         "import app.table_events\n"
         "import app.table_runtime\n\n"
         "VALUE = fake.VALUE\n",
@@ -194,6 +206,7 @@ def test_import_boundary_fixture_detects_multiplayer_module(tmp_path: Path) -> N
     assert "app.combat.runtime" in flagged
     assert "app.monster_runtime" in flagged
     assert "app.domain.monster_library" in flagged
+    assert "app.persistence.battle_maps.tables" in flagged
     assert "app.table_events" in flagged
     assert "app.table_runtime" in flagged
 
@@ -217,6 +230,7 @@ def test_forbidden_regex_matches_module_segments_not_substrings() -> None:
     assert FORBIDDEN_MODULE_RE.search("app.persistence.adventure_imports.tables")
     assert FORBIDDEN_MODULE_RE.search("app.persistence.battle_maps")
     assert FORBIDDEN_MODULE_RE.search("app.domain.battle_maps.service")
+    assert FORBIDDEN_MODULE_RE.search("app.domain.battle_maps.placements")
     assert FORBIDDEN_MODULE_RE.search("app.api.rooms.battle_maps")
     assert FORBIDDEN_MODULE_RE.search("app.domain.monster_library")
     assert FORBIDDEN_MODULE_RE.search("app.persistence.monster_library")

@@ -12,6 +12,7 @@ import {
   type CreateCustomMonsterInput,
   type MonsterLibraryDetailView,
   type MonsterLibrarySummaryView,
+  type PatchCustomMonsterInput,
 } from '../../api/monsterLibrary'
 import type { RoomAuthority } from '../../api/rooms'
 import { useLocale } from '../../i18n/LocaleProvider'
@@ -33,6 +34,22 @@ const UUID_PATTERN = '[0-9a-fA-F-]{36}'
 
 export type RoomMonsterLibraryRoute = {
   roomId: string
+}
+
+type EditableMonsterAbility = {
+  sourceIndex: number | null
+  name: string
+  desc: string
+}
+
+function toEditableAbilities(
+  items: Array<{ name: string; desc?: string | null }> | undefined,
+): EditableMonsterAbility[] {
+  return (items ?? []).map((item, sourceIndex) => ({
+    sourceIndex,
+    name: item.name,
+    desc: item.desc ?? '',
+  }))
 }
 
 export function roomMonsterLibraryRouteFromPath(
@@ -111,8 +128,8 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
   const [formWis, setFormWis] = useState<number>(10)
   const [formCha, setFormCha] = useState<number>(10)
   const [formDescription, setFormDescription] = useState('')
-  const [formTraits, setFormTraits] = useState<Array<{ name: string; desc: string }>>([])
-  const [formActions, setFormActions] = useState<Array<{ name: string; desc: string }>>([])
+  const [formTraits, setFormTraits] = useState<EditableMonsterAbility[]>([])
+  const [formActions, setFormActions] = useState<EditableMonsterAbility[]>([])
 
   // Modal dialog states
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -214,21 +231,8 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
           setFormCha(scores.charisma)
           setFormDescription(rules.description ?? '')
 
-          const rawTraits = rules.traits ?? []
-          setFormTraits(
-            rawTraits.map((t) => ({
-              name: t.name,
-              desc: t.desc ?? '',
-            })),
-          )
-
-          const rawActions = rules.actions ?? []
-          setFormActions(
-            rawActions.map((a) => ({
-              name: a.name,
-              desc: a.desc ?? '',
-            })),
-          )
+          setFormTraits(toEditableAbilities(rules.traits))
+          setFormActions(toEditableAbilities(rules.actions))
         }
       })
       .catch((cause) => {
@@ -326,32 +330,81 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
     setActionNotice(null)
 
     const templateId = detail.ref.replace(/^custom:/, '')
-    const payload = {
-      expected_revision: detail.revision,
-      name: formName.trim(),
-      armor_class: formAc,
-      max_hp: formMaxHp,
-      challenge_rating: formCr,
-      size: formSize,
-      type: formType,
-      alignment: formAlignment,
-      speed: formSpeed,
-      ability_scores: {
-        strength: formStr,
-        dexterity: formDex,
-        constitution: formCon,
-        intelligence: formInt,
-        wisdom: formWis,
-        charisma: formCha,
-      },
-      description: formDescription,
-      traits: formTraits.map((t) => ({ name: t.name, desc: t.desc })),
-      actions: formActions.map((a) => ({ name: a.name, desc: a.desc })),
+    const payload: PatchCustomMonsterInput = { expected_revision: detail.revision }
+    const rules = detail.rules
+    if (formName.trim() !== detail.name) payload.name = formName.trim()
+    if (formAc !== rules.armor_class) payload.armor_class = formAc
+    if (formMaxHp !== rules.max_hp) payload.max_hp = formMaxHp
+    if (formCr !== (rules.challenge_rating ?? 0)) payload.challenge_rating = formCr
+    if (formSize !== rules.size) payload.size = formSize
+    if (formType !== rules.type) payload.type = formType
+    if (formAlignment !== rules.alignment) payload.alignment = formAlignment
+    if (formSpeed !== getSpeedString(rules.speed)) {
+      payload.speed =
+        typeof rules.speed === 'object' && rules.speed !== null
+          ? { ...rules.speed, walk: formSpeed }
+          : formSpeed
+    }
+
+    const scoreUpdates: Record<string, number> = {}
+    const scores = {
+      strength: formStr,
+      dexterity: formDex,
+      constitution: formCon,
+      intelligence: formInt,
+      wisdom: formWis,
+      charisma: formCha,
+    }
+    for (const [ability, score] of Object.entries(scores)) {
+      if (rules.ability_scores[ability as keyof typeof rules.ability_scores] !== score) {
+        scoreUpdates[ability] = score
+      }
+    }
+    if (Object.keys(scoreUpdates).length > 0) payload.ability_scores = scoreUpdates
+
+    if (formDescription !== (rules.description ?? '')) payload.description = formDescription
+
+    const traits = rules.traits ?? []
+    if (
+      formTraits.length !== traits.length
+      || formTraits.some((trait, index) =>
+        trait.sourceIndex !== index
+        || trait.name !== traits[index]?.name
+        || trait.desc !== (traits[index]?.desc ?? ''),
+      )
+    ) {
+      payload.traits = formTraits.map((trait) => {
+        const edit = { source_index: trait.sourceIndex, name: trait.name }
+        return trait.sourceIndex === null
+          || trait.desc !== (traits[trait.sourceIndex]?.desc ?? '')
+          ? { ...edit, desc: trait.desc }
+          : edit
+      })
+    }
+
+    const actions = rules.actions ?? []
+    if (
+      formActions.length !== actions.length
+      || formActions.some((action, index) =>
+        action.sourceIndex !== index
+        || action.name !== actions[index]?.name
+        || action.desc !== (actions[index]?.desc ?? ''),
+      )
+    ) {
+      payload.actions = formActions.map((action) => {
+        const edit = { source_index: action.sourceIndex, name: action.name }
+        return action.sourceIndex === null
+          || action.desc !== (actions[action.sourceIndex]?.desc ?? '')
+          ? { ...edit, desc: action.desc }
+          : edit
+      })
     }
 
     try {
       const updated = await patchCustomMonster(roomId, templateId, token, payload)
       setDetail(updated)
+      setFormTraits(toEditableAbilities(updated.rules.traits))
+      setFormActions(toEditableAbilities(updated.rules.actions))
       setActionNotice(copy.saveAction)
       await reloadList()
     } catch (cause) {
@@ -1077,7 +1130,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                         className="button secondary compact"
                         disabled={pendingAction !== null}
                         onClick={() =>
-                          setFormTraits([...formTraits, { name: '', desc: '' }])
+                          setFormTraits([...formTraits, { sourceIndex: null, name: '', desc: '' }])
                         }
                       >
                         {copy.addTrait}
@@ -1128,7 +1181,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                         className="button secondary compact"
                         disabled={pendingAction !== null}
                         onClick={() =>
-                          setFormActions([...formActions, { name: '', desc: '' }])
+                          setFormActions([...formActions, { sourceIndex: null, name: '', desc: '' }])
                         }
                       >
                         {copy.addAction}

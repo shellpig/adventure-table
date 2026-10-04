@@ -53,6 +53,9 @@ from app.domain.battle_maps.schemas import (
     BattleMapInvalidError,
     BattleMapNotFoundError,
     BattleMapRevisionConflictError,
+    MapMonsterPlacementInvalidError,
+    MonsterPlacementReferenceNotFoundError,
+    MonsterPlacementSourceError,
 )
 from app.domain.combat.adjudication_service import (
     OpportunityAttackRequestInput,
@@ -79,6 +82,7 @@ from app.domain.combat.lifecycle import (
     AddCharacterInput,
     AddMonsterInput,
     CombatActionInput,
+    CombatIdempotencyConflictError,
     MonsterOutcomeInput,
     StartCombatInput,
     StartTacticalCombatInput,
@@ -744,7 +748,7 @@ _TOOL_DEFINITIONS = (
     MCPToolDefinition("combat_request_opportunity_attack", _desc("Request an opportunity attack trigger adjudication.", "申請借機攻擊觸發裁定。"), OpportunityAttackRequestInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_request_adjudication", _desc("Request a DM adjudication for a special tactical situation.", "針對特殊戰術情境向 DM 申請戰鬥裁定。"), SpecialAdjudicationRequestInput, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_resolve_adjudication", _desc("Resolve a pending combat adjudication ruling.", "裁定待處理的戰鬥裁定事項。"), CombatAdjudicationDecisionToolInput, frozenset({"dm"})),
-    MCPToolDefinition("combat_start_tactical", _desc("Start a Tactical Combat by freezing a battle map, blank board dimensions, or temporary map geometry into the combat board and placing the active party.", "以戰鬥地圖、空白棋盤尺寸或臨時地圖幾何凍結戰鬥棋盤並置入活躍隊伍，啟動戰術戰鬥。"), StartTacticalCombatInput, frozenset({"dm"})),
+    MCPToolDefinition("combat_start_tactical", _desc("Start a Tactical Combat by freezing a battle map, blank board dimensions, or temporary map geometry into the combat board and placing the active party. Set load_map_monsters with a battle_map_id source to also spawn the map's saved monster placements.", "以戰鬥地圖、空白棋盤尺寸或臨時地圖幾何凍結戰鬥棋盤並置入活躍隊伍，啟動戰術戰鬥。以 battle_map_id 開戰時可設 load_map_monsters 一併載入地圖已保存的怪物配置。"), StartTacticalCombatInput, frozenset({"dm"})),
     MCPToolDefinition("combat_get_board", _desc("Read the Tactical Combat board projection: positions, walls, and doors as the caller's role may see them.", "讀取戰術戰鬥棋盤投影：依呼叫方角色權限可見的位置、牆壁與門。"), _NoArguments, frozenset({"player", "dm"})),
     MCPToolDefinition("combat_place_token", _desc("Place a combatant entry token at explicit anchor cells on the frozen combat board.", "將戰鬥者 token 放置於凍結戰鬥棋盤的明確錨點格。"), CombatPlaceTokenToolInput, frozenset({"dm"})),
     MCPToolDefinition("combat_reposition", _desc("Correct a misplaced combatant token to new anchor cells with an explicit reason and expected_position_revision.", "以明確理由與 expected_position_revision 將放錯位置的戰鬥者 token 修正至新的錨點格。"), CombatRepositionToolInput, frozenset({"dm"})),
@@ -1124,6 +1128,37 @@ async def call_tool(
             "The battle map is archived and cannot be used for tactical combat",
             "該戰鬥地圖已封存，無法用於戰術戰鬥",
             detail=str(exc) or None,
+        )
+    except MapMonsterPlacementInvalidError as exc:
+        # combat_start_tactical is DM-only, so the per-placement problems
+        # (same shape as REST params.problems) may go back to the caller.
+        return structured_tool_error(
+            "map_monster_placement_invalid",
+            "The map's monster placements cannot be loaded; fix the listed placements and retry",
+            "地圖的怪物配置無法載入；請修正列出的配置後重試",
+            detail=json.dumps(
+                [{"placement_id": str(problem.placement_id), "code": problem.code} for problem in exc.problems]
+            ),
+        )
+    except MonsterPlacementReferenceNotFoundError as exc:
+        return structured_tool_error(
+            "not_found",
+            "A monster template referenced by the map's placements was not found in the current room",
+            "地圖配置引用的怪物模板在目前房間找不到",
+            detail=str(exc) or None,
+        )
+    except MonsterPlacementSourceError as exc:
+        return structured_tool_error(
+            "invalid_arguments",
+            "A monster placement source is not valid",
+            "怪物配置來源無效",
+            detail=str(exc) or None,
+        )
+    except CombatIdempotencyConflictError:
+        return structured_tool_error(
+            "combat_idempotency_conflict",
+            "This idempotency key was already used for a different tactical start",
+            "此 idempotency key 已用於不同的戰術開戰",
         )
     except BattleMapInvalidError as exc:
         return structured_tool_error(
