@@ -7,7 +7,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import insert, select, update
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 
 from app.content.p4a_combat_templates import (
     MonsterActionNormalizationError,
@@ -136,6 +136,72 @@ class MonsterRepository:
             connection.execute(insert(monster_templates).values(**values))
         return StoredMonsterTemplate(**deepcopy(values))
 
+    def create_instance_in_transaction(
+        self,
+        connection: Connection,
+        *,
+        campaign_id: UUID,
+        name: str,
+        rules_snapshot: dict[str, Any],
+        template_key: str | None = None,
+        custom_template_id: UUID | None = None,
+        instance_id: UUID | None = None,
+        current_hp: int | None = None,
+        temp_hp: int = 0,
+        conditions: list[dict[str, Any] | str] | None = None,
+        effects: list[dict[str, Any] | str] | None = None,
+        combat_status: str = "active",
+        initiative: int | None = None,
+        reaction_available: bool = True,
+        resources: dict[str, Any] | None = None,
+        visibility: str = "public",
+        position_note: str | None = None,
+        reveal_state: dict[str, Any] | None = None,
+        now: datetime | None = None,
+    ) -> StoredMonsterInstance:
+        """Insert a Monster Instance on the caller's Connection (no commit).
+
+        Internal helper for the atomic Tactical load: the caller owns the
+        transaction and has already verified template scope under its locks.
+        """
+        if template_key is not None and custom_template_id is not None:
+            raise MonsterPersistenceError("monster instance may have only one template source")
+        if not name.strip():
+            raise MonsterPersistenceError("monster instance name must not be blank")
+        rules = _validate_rules(rules_snapshot)
+        hp = rules["max_hp"] if current_hp is None else current_hp
+        if hp < 0 or temp_hp < 0:
+            raise MonsterPersistenceError("monster HP values must not be negative")
+        if combat_status not in {"active", "down", "dead", "removed"}:
+            raise MonsterPersistenceError(f"unsupported combat status: {combat_status}")
+        if visibility not in {"public", "hidden"}:
+            raise MonsterPersistenceError(f"unsupported monster visibility: {visibility}")
+        moment = now or _now()
+        values = {
+            "id": instance_id or uuid4(),
+            "campaign_id": campaign_id,
+            "template_key": template_key,
+            "custom_template_id": custom_template_id,
+            "name": name.strip(),
+            "rules_snapshot": rules,
+            "current_hp": hp,
+            "temp_hp": temp_hp,
+            "conditions": deepcopy(conditions or []),
+            "effects": deepcopy(effects or []),
+            "concentration": None,
+            "combat_status": combat_status,
+            "initiative": initiative,
+            "reaction_available": reaction_available,
+            "resources": deepcopy(resources or {}),
+            "visibility": visibility,
+            "position_note": position_note,
+            "reveal_state": deepcopy(reveal_state or {}),
+            "created_at": moment,
+            "updated_at": moment,
+        }
+        connection.execute(insert(monster_instances).values(**values))
+        return StoredMonsterInstance(**deepcopy(values))
+
     def create_instance(
         self,
         *,
@@ -172,42 +238,28 @@ class MonsterRepository:
                 raise MonsterPersistenceError(f"campaign not found: {campaign_id}")
             if template.room_id != campaign_room_id:
                 raise MonsterPersistenceError("monster template and instance must belong to the same room")
-        if not name.strip():
-            raise MonsterPersistenceError("monster instance name must not be blank")
-        rules = _validate_rules(rules_snapshot)
-        hp = rules["max_hp"] if current_hp is None else current_hp
-        if hp < 0 or temp_hp < 0:
-            raise MonsterPersistenceError("monster HP values must not be negative")
-        if combat_status not in {"active", "down", "dead", "removed"}:
-            raise MonsterPersistenceError(f"unsupported combat status: {combat_status}")
-        if visibility not in {"public", "hidden"}:
-            raise MonsterPersistenceError(f"unsupported monster visibility: {visibility}")
-        moment = now or _now()
-        values = {
-            "id": instance_id or uuid4(),
-            "campaign_id": campaign_id,
-            "template_key": template_key,
-            "custom_template_id": custom_template_id,
-            "name": name.strip(),
-            "rules_snapshot": rules,
-            "current_hp": hp,
-            "temp_hp": temp_hp,
-            "conditions": deepcopy(conditions or []),
-            "effects": deepcopy(effects or []),
-            "concentration": None,
-            "combat_status": combat_status,
-            "initiative": initiative,
-            "reaction_available": reaction_available,
-            "resources": deepcopy(resources or {}),
-            "visibility": visibility,
-            "position_note": position_note,
-            "reveal_state": deepcopy(reveal_state or {}),
-            "created_at": moment,
-            "updated_at": moment,
-        }
         with self.engine.begin() as connection:
-            connection.execute(insert(monster_instances).values(**values))
-        return StoredMonsterInstance(**deepcopy(values))
+            return self.create_instance_in_transaction(
+                connection,
+                campaign_id=campaign_id,
+                name=name,
+                rules_snapshot=rules_snapshot,
+                template_key=template_key,
+                custom_template_id=custom_template_id,
+                instance_id=instance_id,
+                current_hp=current_hp,
+                temp_hp=temp_hp,
+                conditions=conditions,
+                effects=effects,
+                combat_status=combat_status,
+                initiative=initiative,
+                reaction_available=reaction_available,
+                resources=resources,
+                visibility=visibility,
+                position_note=position_note,
+                reveal_state=reveal_state,
+                now=now,
+            )
 
     def create_quick_enemy(
         self,

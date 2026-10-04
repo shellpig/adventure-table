@@ -25,6 +25,9 @@ from app.domain.battle_maps.schemas import (
     BattleMapInvalidError,
     BattleMapNotFoundError,
     BattleMapReferencedError,
+    MapMonsterPlacementInvalidError,
+    MonsterPlacementReferenceNotFoundError,
+    MonsterPlacementSourceError,
 )
 from app.domain.monster_library.errors import (
     MonsterTemplateArchivedError,
@@ -75,6 +78,7 @@ from app.domain.combat.lifecycle import (
     CombatActionInput,
     CombatActionView,
     CombatDetailView,
+    CombatIdempotencyConflictError,
     CombatNotFoundError,
     CombatPlacementIncompleteError,
     CombatService,
@@ -120,6 +124,7 @@ from app.persistence.combat.initiative import (
     InitiativeRequestNotPendingPersistenceError,
 )
 from app.persistence.combat.lifecycle import (
+    CombatIdempotencyConflictPersistenceError,
     CombatNotFoundPersistenceError,
     CombatStateConflictPersistenceError,
 )
@@ -229,6 +234,27 @@ def _map_combat_error(exc: Exception) -> APIError:
         return APIError(409, "battle_map_referenced", str(exc))
     if isinstance(exc, BattleMapInvalidError):
         return APIError(422, "invalid_combat_input", str(exc))
+    if isinstance(
+        exc,
+        (CombatIdempotencyConflictError, CombatIdempotencyConflictPersistenceError),
+    ):
+        return APIError(409, "combat_idempotency_conflict", str(exc))
+    if isinstance(exc, MapMonsterPlacementInvalidError):
+        return APIError(
+            409,
+            "map_monster_placement_invalid",
+            str(exc),
+            params={
+                "problems": [
+                    {"placement_id": str(problem.placement_id), "code": problem.code}
+                    for problem in exc.problems
+                ]
+            },
+        )
+    if isinstance(exc, MonsterPlacementReferenceNotFoundError):
+        return APIError(404, "monster_placement_reference_not_found", str(exc))
+    if isinstance(exc, MonsterPlacementSourceError):
+        return APIError(422, "monster_placement_invalid_source", str(exc))
     if isinstance(exc, AttackDefinitionInvalidError):
         return APIError(422, "invalid_attack_definition", str(exc))
     if isinstance(exc, (RollInputInvalidError, ValueError)):

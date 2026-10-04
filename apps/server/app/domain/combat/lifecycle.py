@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import StrEnum
-from typing import Any, Iterable, Literal
+from typing import TYPE_CHECKING, Any, Iterable, Literal
 from uuid import UUID, uuid4
 
 from pydantic import Field, model_validator
+from sqlalchemy.engine import Connection
 
+from app.content.localization import ContentLocalizationCatalog
 from app.content.registry import ContentRegistry
 from app.domain.battle_maps.schemas import (
     BattleMapArchivedError,
@@ -27,7 +32,8 @@ from app.persistence.combat.combatants import (
 )
 from app.persistence.combat.core_rolls import _condition_ref
 from app.persistence.combat.lifecycle import (
-    ActiveCombatExistsPersistenceError, CombatNotFoundPersistenceError,
+    ActiveCombatExistsPersistenceError, CombatIdempotencyConflictPersistenceError,
+    CombatNotFoundPersistenceError,
     CombatRepository, CombatStateConflictPersistenceError,
     NewCombatEntry, StoredCombat, StoredCombatEntry, actor_binding,
 )
@@ -35,12 +41,17 @@ from app.persistence.battle_maps.repository import BattleMapRepository, StoredBa
 from app.persistence.combat.repository import MonsterRepository
 from app.persistence.combat_boards.repository import CombatBoardRepository, StoredBoardDoor, StoredCombatBoard
 
+if TYPE_CHECKING:
+    from app.domain.combat.map_monster_load import MonsterLoadOutcome
+
 
 class CombatLifecycleError(RuntimeError): pass
 class CombatNotFoundError(LookupError): pass
 class ActiveCombatExistsError(CombatLifecycleError): pass
 class CombatStateConflictError(CombatLifecycleError): pass
 class CombatPlacementIncompleteError(CombatLifecycleError): pass
+class CombatIdempotencyConflictError(CombatLifecycleError):
+    """Same idempotency key retried with a different tactical start intent (HTTP 409)."""
 
 
 class CombatActionKind(StrEnum):
@@ -73,6 +84,10 @@ class StartTacticalCombatInput(StrictModel):
     blank_height_cells: int | None = Field(default=None, ge=1, le=200)
     temporary_map: TemporaryBattleMapInput | None = None
     include_active_party: bool = True
+    # M07-C C2: also spawn the battle map's saved monster placements as Combat
+    # entries. Only valid with a battle_map_id source; blank / temporary_map
+    # (and Quick Combat) reject it.
+    load_map_monsters: bool = False
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
 
     @model_validator(mode="after")
@@ -93,7 +108,50 @@ class StartTacticalCombatInput(StrictModel):
             raise ValueError(
                 "Both blank_width_cells and blank_height_cells are required for a blank board"
             )
+        if self.load_map_monsters and not has_map:
+            raise ValueError(
+                "load_map_monsters requires a battle_map_id source"
+            )
         return self
+
+
+def tactical_start_intent(request: StartTacticalCombatInput) -> dict[str, Any]:
+    """Canonical idempotency intent for a tactical start (M07-C C2).
+
+    Stored on the ``combat.started`` event payload. A retry with the same key
+    but a different intent (map source, load flag, or temporary geometry) is a
+    409 conflict; a retry with the same intent returns the original Combat.
+    """
+    if request.battle_map_id is not None:
+        map_source = "battle_map"
+        battle_map_id: str | None = str(request.battle_map_id)
+    elif request.temporary_map is not None:
+        map_source = "temporary"
+        battle_map_id = None
+    else:
+        map_source = "blank"
+        battle_map_id = None
+    temporary_digest: str | None = None
+    if request.temporary_map is not None:
+        canonical = json.dumps(
+            request.temporary_map.model_dump(mode="json"),
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        temporary_digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    blank_dimensions: list[int] | None = None
+    if map_source == "blank":
+        blank_dimensions = [
+            int(request.blank_width_cells or 0),
+            int(request.blank_height_cells or 0),
+        ]
+    return {
+        "map_source": map_source,
+        "battle_map_id": battle_map_id,
+        "load_map_monsters": bool(request.load_map_monsters),
+        "temporary_geometry_digest": temporary_digest,
+        "blank_dimensions": blank_dimensions,
+    }
 
 
 class AddCharacterInput(StrictModel):
@@ -287,7 +345,8 @@ class CombatService:
                  character_repository: CharacterRepository, monster_repository: MonsterRepository,
                  registry: ContentRegistry,
                  battle_map_repository: BattleMapRepository | None = None,
-                 board_repository: CombatBoardRepository | None = None) -> None:
+                 board_repository: CombatBoardRepository | None = None,
+                 content_localization: ContentLocalizationCatalog | None = None) -> None:
         self.repository = repository
         self.table_event_service = table_event_service
         self.character_repository = character_repository
@@ -295,6 +354,7 @@ class CombatService:
         self.registry = registry
         self.battle_map_repository = battle_map_repository
         self.board_repository = board_repository
+        self.content_localization = content_localization
 
     def condition_context(self, entry: StoredCombatEntry) -> EntryConditionContext:
         if entry.subject_kind == "character":
@@ -389,13 +449,28 @@ class CombatService:
         ):
             # Warning only: P4-B never auto-ends a Combat when hostiles disappear.
             warnings = ("no_hostile_combatants",)
+        views = [
+            self._entry_view(entry) for entry in stored_entries if entry.id not in hidden_ids
+        ]
+        if hidden_ids:
+            # Densify Player-visible ordinals: gaps in turn_order would let a
+            # Player count hidden combatants (M07-C C.3).
+            ordered = sorted(
+                (view for view in views if view.turn_order is not None),
+                key=lambda view: view.turn_order,
+            )
+            dense = {view.id: index for index, view in enumerate(ordered)}
+            views = [
+                view.model_copy(update={"turn_order": dense[view.id]})
+                if view.id in dense
+                else view
+                for view in views
+            ]
         return CombatView(
             id=combat.id, campaign_id=combat.campaign_id, mode=combat.mode, status=combat.status,
             round_number=combat.round_number, current_turn_entry_id=current_turn_entry_id,
             revision=combat.revision,
-            entries=tuple(
-                self._entry_view(entry) for entry in stored_entries if entry.id not in hidden_ids
-            ),
+            entries=tuple(views),
             warnings=warnings,
         )
 
@@ -505,6 +580,11 @@ class CombatService:
         The board freezes the battle map baseline (walls/doors/terrain/drawings) and
         runtime door states at the source map revision, or a blank board when no
         battle map is given. Map Definition is never mutated.
+
+        M07-C C2: with ``load_map_monsters``, the map's saved placements are
+        resolved against the latest templates and validated against the frozen
+        board geometry inside the same event transaction; one bad placement
+        rolls back the entire start.
         """
         self._require_dm(actor)
         if self.battle_map_repository is None or self.board_repository is None:
@@ -521,71 +601,144 @@ class CombatService:
                     subject_kind="character", character_id=subject.character_id,
                     display_name=subject.character_name, attacks_allowed=_extra_attack_budget(character),
                 ))
-        board, doors, battle_map_id = self._freeze_board(actor, request)
+        board_loader = self._board_loader(actor, request)
+        intent = tactical_start_intent(request)
+        monster_loader = None
+        if request.load_map_monsters:
+            # battle_map_id is guaranteed by StartTacticalCombatInput validation.
+            monster_loader = self._map_monster_loader(actor, request.battle_map_id)
         try:
             combat, _entries, _event = self.repository.create_tactical_combat(
-                binding=actor_binding(actor), entries=tuple(entries), board=board, doors=doors,
-                battle_map_id=battle_map_id, idempotency_key=request.idempotency_key,
+                binding=actor_binding(actor), entries=tuple(entries),
+                board_loader=board_loader,
+                idempotency_key=request.idempotency_key,
+                start_intent=intent, monster_loader=monster_loader,
+                board_repository=self.board_repository,
             )
         except ActiveCombatExistsPersistenceError as exc:
             raise ActiveCombatExistsError("Campaign already has an active Combat") from exc
+        except CombatIdempotencyConflictPersistenceError as exc:
+            raise CombatIdempotencyConflictError(str(exc)) from exc
         self._notify(actor)
         return self._view(combat, actor)
 
-    def _freeze_board(
-        self, actor: TableActorContext, request: StartTacticalCombatInput
-    ) -> tuple[StoredCombatBoard, tuple[StoredBoardDoor, ...], UUID | None]:
+    def _map_monster_loader(
+        self,
+        actor: TableActorContext,
+        battle_map_id: UUID,
+    ) -> Callable[[Connection, StoredCombatBoard, datetime], MonsterLoadOutcome]:
+        """Build the in-transaction monster loader for ``load_map_monsters``.
+
+        The returned callable runs inside the ``combat.started`` event
+        transaction, after the board loader has frozen the board: it locks the
+        map row, reads the saved placements, locks the referenced custom
+        templates in id order, resolves the latest template rules, validates
+        the whole batch against the frozen board geometry, and creates one
+        Monster Instance per placement. Any failure aborts the entire Combat
+        start.
+        """
+        from app.domain.combat.map_monster_load import MonsterLoadOutcome, load_map_monsters
+
         assert self.battle_map_repository is not None
-        now = datetime.now(timezone.utc)
-        placeholder_combat_id = uuid4()
-        if request.battle_map_id is not None:
-            stored_map = self.battle_map_repository.get_map(actor.room_id, request.battle_map_id)
-            if stored_map is None:
-                raise BattleMapNotFoundError(f"BattleMap {request.battle_map_id} not found")
-            if stored_map.archived_at is not None:
-                raise BattleMapArchivedError(f"BattleMap {request.battle_map_id} is archived")
-            baseline, doors = _frozen_board_geometry(
-                self.battle_map_repository.get_objects(stored_map.id),
-                combat_id=placeholder_combat_id, now=now,
+        battle_map_repository = self.battle_map_repository
+        monster_repository = self.monster_repository
+        registry = self.registry
+        content_localization = self.content_localization
+        room_id = actor.room_id
+        campaign_id = actor.campaign_id
+
+        def load(connection: Connection, board: StoredCombatBoard, now: datetime) -> MonsterLoadOutcome:
+            return load_map_monsters(
+                connection,
+                room_id=room_id,
+                campaign_id=campaign_id,
+                battle_map_id=battle_map_id,
+                battle_map_repository=battle_map_repository,
+                monster_repository=monster_repository,
+                content_registry=registry,
+                content_localization=content_localization,
+                board=board,
+                now=now,
             )
+
+        return load
+
+    def _board_loader(
+        self, actor: TableActorContext, request: StartTacticalCombatInput
+    ) -> Callable[[Connection], tuple[StoredCombatBoard, tuple[StoredBoardDoor, ...], UUID | None]]:
+        """Build the in-transaction board freezer for a tactical start.
+
+        The loader runs inside the ``combat.started`` event transaction, after
+        the actor binding and idempotency replay: a same-key retry returns the
+        stored Combat without ever touching the map. For a battle-map source
+        the map row is locked and the revision/objects are read at that single
+        consistent point, so the frozen geometry and the monster placement
+        validation always agree.
+        """
+        assert self.battle_map_repository is not None
+        battle_map_repository = self.battle_map_repository
+        room_id = actor.room_id
+        battle_map_id = request.battle_map_id
+        temporary_map = request.temporary_map
+        blank_width_cells = request.blank_width_cells
+        blank_height_cells = request.blank_height_cells
+
+        def load(
+            connection: Connection,
+        ) -> tuple[StoredCombatBoard, tuple[StoredBoardDoor, ...], UUID | None]:
+            now = datetime.now(timezone.utc)
+            placeholder_combat_id = uuid4()
+            if battle_map_id is not None:
+                stored_map = battle_map_repository.get_map(
+                    room_id, battle_map_id, connection=connection, for_update=True
+                )
+                if stored_map is None:
+                    raise BattleMapNotFoundError(f"BattleMap {battle_map_id} not found")
+                if stored_map.archived_at is not None:
+                    raise BattleMapArchivedError(f"BattleMap {battle_map_id} is archived")
+                baseline, doors = _frozen_board_geometry(
+                    battle_map_repository.get_objects(stored_map.id, connection=connection),
+                    combat_id=placeholder_combat_id, now=now,
+                )
+                board = StoredCombatBoard(
+                    combat_id=placeholder_combat_id,
+                    source_battle_map_id=stored_map.id,
+                    source_battle_map_revision=stored_map.revision,
+                    width_cells=stored_map.width_cells, height_cells=stored_map.height_cells,
+                    grid_pixel_size=stored_map.grid_pixel_size,
+                    grid_offset_x=stored_map.grid_offset_x, grid_offset_y=stored_map.grid_offset_y,
+                    image_asset_id=stored_map.image_asset_id,
+                    baseline=baseline, runtime_revision=1, created_at=now,
+                )
+                return board, doors, stored_map.id
+            if temporary_map is not None:
+                # M07-B: temporary geometry freezes straight into the board; no
+                # battle_maps row or Room asset is created.
+                baseline, doors = _frozen_board_geometry(
+                    validated_stored_objects(
+                        temporary_map.width_cells, temporary_map.height_cells,
+                        walls=temporary_map.walls, doors=temporary_map.doors,
+                        terrain=temporary_map.terrain, drawings=temporary_map.drawings,
+                        map_id=placeholder_combat_id, keep_client_ids=False,
+                    ),
+                    combat_id=placeholder_combat_id, now=now,
+                )
+                width_cells, height_cells = temporary_map.width_cells, temporary_map.height_cells
+            else:
+                baseline, doors = {"walls": [], "doors": [], "terrain": [], "drawings": []}, ()
+                width_cells = int(blank_width_cells or 0)
+                height_cells = int(blank_height_cells or 0)
             board = StoredCombatBoard(
                 combat_id=placeholder_combat_id,
-                source_battle_map_id=stored_map.id,
-                source_battle_map_revision=stored_map.revision,
-                width_cells=stored_map.width_cells, height_cells=stored_map.height_cells,
-                grid_pixel_size=stored_map.grid_pixel_size,
-                grid_offset_x=stored_map.grid_offset_x, grid_offset_y=stored_map.grid_offset_y,
-                image_asset_id=stored_map.image_asset_id,
+                source_battle_map_id=None, source_battle_map_revision=None,
+                width_cells=width_cells, height_cells=height_cells,
+                grid_pixel_size=None, grid_offset_x=None, grid_offset_y=None,
+                image_asset_id=None,
                 baseline=baseline, runtime_revision=1, created_at=now,
             )
-            return board, doors, stored_map.id
-        if request.temporary_map is not None:
-            # M07-B: temporary geometry freezes straight into the board; no
-            # battle_maps row or Room asset is created.
-            temporary = request.temporary_map
-            baseline, doors = _frozen_board_geometry(
-                validated_stored_objects(
-                    temporary.width_cells, temporary.height_cells,
-                    walls=temporary.walls, doors=temporary.doors,
-                    terrain=temporary.terrain, drawings=temporary.drawings,
-                    map_id=placeholder_combat_id, keep_client_ids=False,
-                ),
-                combat_id=placeholder_combat_id, now=now,
-            )
-            width_cells, height_cells = temporary.width_cells, temporary.height_cells
-        else:
-            baseline, doors = {"walls": [], "doors": [], "terrain": [], "drawings": []}, ()
-            width_cells = int(request.blank_width_cells or 0)
-            height_cells = int(request.blank_height_cells or 0)
-        board = StoredCombatBoard(
-            combat_id=placeholder_combat_id,
-            source_battle_map_id=None, source_battle_map_revision=None,
-            width_cells=width_cells, height_cells=height_cells,
-            grid_pixel_size=None, grid_offset_x=None, grid_offset_y=None,
-            image_asset_id=None,
-            baseline=baseline, runtime_revision=1, created_at=now,
-        )
-        return board, doors, None
+            return board, doors, None
+
+        return load
 
     def add_monster(self, actor: TableActorContext, request: AddMonsterInput) -> CombatView:
         self._require_dm(actor)
@@ -771,9 +924,10 @@ class CombatService:
 __all__ = [
     "ActiveCombatExistsError", "AddCharacterInput", "AddMonsterInput", "CombatActionInput", "CombatActionKind",
     "CombatActionView", "CombatDetailView", "CombatantDetailView", "CombatEconomyCost", "CombatEntryView",
-    "CombatLifecycleError", "CombatNotFoundError", "CombatPlacementIncompleteError", "CombatService",
+    "CombatIdempotencyConflictError", "CombatLifecycleError", "CombatNotFoundError",
+    "CombatPlacementIncompleteError", "CombatService",
     "CombatStateConflictError", "CombatView",
     "EntryConditionContext", "MonsterOutcome", "MonsterOutcomeChoice", "MonsterOutcomeInput",
     "ReactionWindowInput", "ResolveInitiativeOrderInput", "StartCombatInput", "StartTacticalCombatInput",
-    "_extra_attack_budget",
+    "_extra_attack_budget", "tactical_start_intent",
 ]

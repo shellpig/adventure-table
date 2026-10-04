@@ -42,6 +42,10 @@ class CombatantState:
     concentration: dict[str, Any] | None = None
     death_saves: dict[str, Any] | None = None
     exhaustion_level: int = 0
+    # M07-C C2: snapshot of the monster's display names ({names, name_is_custom})
+    # copied from rules_snapshot.presentation at Instance creation. Never the
+    # full rules snapshot; None for characters and legacy instances.
+    name_presentation: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if self.current_hp < 0 or self.max_hp < 0 or self.temp_hp < 0:
@@ -75,7 +79,7 @@ def injury_level(state: CombatantState) -> Literal["down", "critical", "wounded"
 
 
 def _full_projection(state: CombatantState) -> dict[str, Any]:
-    return {
+    projected = {
         "id": str(state.id),
         "kind": state.kind,
         "name": state.name,
@@ -103,6 +107,9 @@ def _full_projection(state: CombatantState) -> dict[str, Any]:
         "death_saves": deepcopy(state.death_saves) if state.death_saves is not None else None,
         "exhaustion_level": state.exhaustion_level,
     }
+    if state.name_presentation is not None:
+        projected["name_presentation"] = deepcopy(state.name_presentation)
+    return projected
 
 
 def project_combatant(
@@ -148,6 +155,9 @@ def project_combatant(
         "conditions": list(state.public_conditions),
         "effects": list(state.public_effects),
     }
+    if state.name_presentation is not None:
+        # Visible monsters only: the name subset, never the rules snapshot.
+        projected["name_presentation"] = deepcopy(state.name_presentation)
     if state.initiative is not None:
         projected["initiative"] = state.initiative
     if state.armor_class_revealed and state.armor_class is not None:

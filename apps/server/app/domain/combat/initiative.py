@@ -225,6 +225,11 @@ class CombatInitiativeService:
         if combat is None:
             raise CombatNotFoundError("Campaign has no active Combat")
         entries = tuple(entry for entry in self.combat_repository.list_entries(combat.id) if entry.status == "active")
+        if not actor.is_current_dm:
+            # M07-C C.3: a Player must not learn hidden Monster entry ids (or
+            # their count / order) from the suggested order.
+            hidden = self.combat_service._hidden_entry_ids(entries)
+            entries = tuple(entry for entry in entries if entry.id not in hidden)
         if not entries or any(entry.initiative_total is None for entry in entries):
             raise CombatStateConflictError("Every active CombatEntry must resolve initiative first")
         return tuple(entry.id for entry in sorted(
@@ -236,8 +241,13 @@ class CombatInitiativeService:
         combat = self.combat_repository.get_active(actor.campaign_id)
         if combat is None:
             raise CombatNotFoundError("Campaign has no active Combat")
+        entries = tuple(self.combat_repository.list_entries(combat.id))
+        if not actor.is_current_dm:
+            # M07-C C.3: hidden Monster ties stay DM-only.
+            hidden = self.combat_service._hidden_entry_ids(entries)
+            entries = tuple(entry for entry in entries if entry.id not in hidden)
         groups: dict[int, list[StoredCombatEntry]] = defaultdict(list)
-        for entry in self.combat_repository.list_entries(combat.id):
+        for entry in entries:
             if entry.status == "active" and entry.initiative_total is not None:
                 groups[int(entry.initiative_total)].append(entry)
         result: dict[int, tuple[UUID, ...]] = {}

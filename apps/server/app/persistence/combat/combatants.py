@@ -60,6 +60,25 @@ def _partition_visible_names(
     return tuple(public), tuple(hidden)
 
 
+def _instance_name_presentation(instance: StoredMonsterInstance) -> dict[str, Any]:
+    """The monster's display-name subset for DM/Player projections (M07-C C2).
+
+    Copied from ``rules_snapshot.presentation`` at Instance creation; legacy
+    instances without a snapshot fall back to the instance name so the UI
+    never breaks. Never includes rules.
+    """
+    rules = instance.rules_snapshot
+    presentation = rules.get("presentation")
+    if isinstance(presentation, dict):
+        names = presentation.get("names")
+        if isinstance(names, dict) and names:
+            return {
+                "names": {str(key): str(value) for key, value in names.items()},
+                "name_is_custom": bool(presentation.get("name_is_custom", True)),
+            }
+    return {"names": {"en": instance.name}, "name_is_custom": True}
+
+
 def monster_instance_to_combatant(
     instance: StoredMonsterInstance,
     *,
@@ -108,6 +127,7 @@ def monster_instance_to_combatant(
         description_revealed=reveal_state.description,
         position_note_revealed=reveal_state.position_note,
         concentration=deepcopy(instance.concentration) if instance.concentration is not None else None,
+        name_presentation=_instance_name_presentation(instance),
     )
 
 

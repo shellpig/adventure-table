@@ -2,22 +2,22 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any, Callable
 from uuid import UUID, uuid4
 
 from sqlalchemy import delete, insert, select, update
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import IntegrityError
 
-from app.domain.battle_maps.schemas import (
-    BattleMapArchivedError,
-    BattleMapNotFoundError,
-)
 from app.domain.combat.reaction_service import ReactionWindow
-from app.persistence.battle_maps.tables import battle_maps
 from app.persistence.characters import characters
 from app.persistence.combat.tables import combat_actions, combat_entries, combats, monster_instances
-from app.persistence.combat_boards.repository import StoredBoardDoor, StoredCombatBoard
+from app.persistence.combat_boards.repository import (
+    CombatBoardRepository,
+    StoredBoardDoor,
+    StoredCombatBoard,
+    StoredCombatPosition,
+)
 from app.persistence.combat_boards.tables import combat_board_doors, combat_boards, combat_positions
 from app.persistence.rooms.table_runtime import (
     StoredTableActorBinding,
@@ -26,6 +26,9 @@ from app.persistence.rooms.table_runtime import (
 )
 from app.persistence.rooms.tables import session_participants, sessions
 
+if TYPE_CHECKING:
+    from app.domain.combat.map_monster_load import MonsterLoadOutcome
+
 
 class CombatPersistenceError(RuntimeError):
     pass
@@ -33,6 +36,10 @@ class CombatPersistenceError(RuntimeError):
 
 class ActiveCombatExistsPersistenceError(CombatPersistenceError):
     pass
+
+
+class CombatIdempotencyConflictPersistenceError(CombatPersistenceError):
+    """An idempotency key was retried with a different tactical start intent."""
 
 
 class CombatNotFoundPersistenceError(LookupError):
@@ -345,48 +352,109 @@ class CombatRepository:
         *,
         binding: StoredTableActorBinding,
         entries: tuple[NewCombatEntry, ...],
-        board: StoredCombatBoard,
-        doors: tuple[StoredBoardDoor, ...],
-        battle_map_id: UUID | None,
+        board_loader: Callable[
+            [Connection], tuple[StoredCombatBoard, tuple[StoredBoardDoor, ...], UUID | None]
+        ],
         idempotency_key: str | None,
+        start_intent: dict[str, Any] | None = None,
+        monster_loader: Callable[[Connection, StoredCombatBoard, datetime], MonsterLoadOutcome] | None = None,
+        board_repository: CombatBoardRepository | None = None,
     ):
         """Atomically create a tactical Combat, freeze its board, and emit combat.started.
 
-        The board row carries a placeholder combat_id; it (and the door rows) are
-        rebound to the generated Combat id inside the event transaction so an
-        idempotency-key retry reuses the canonical Combat from the stored event.
-        """
-        combat_id = uuid4()
-        entry_ids = tuple(uuid4() for _ in entries)
-        now = datetime.now().astimezone()
-        board = replace(board, combat_id=combat_id, runtime_revision=1, created_at=now)
-        doors = tuple(
-            replace(door, combat_id=combat_id, created_at=now) for door in doors
-        )
+        ``board_loader`` runs inside the event transaction, after the actor
+        binding and the idempotency replay: a same-key retry returns the stored
+        Combat without ever touching the battle map. For a battle-map source
+        the loader locks the map row and reads the revision/objects at that
+        single consistent point, so the frozen geometry and the monster
+        placement validation always agree.
 
-        def projection(connection, _event_id: UUID, _seq: int) -> None:
-            if battle_map_id is not None:
-                map_row = connection.execute(
-                    select(battle_maps.c.id, battle_maps.c.archived_at)
-                    .where(
-                        battle_maps.c.room_id == binding.room_id,
-                        battle_maps.c.id == battle_map_id,
-                    )
-                    .with_for_update()
-                ).mappings().one_or_none()
-                if map_row is None:
-                    raise BattleMapNotFoundError(f"Battle map {battle_map_id} not found")
-                if map_row["archived_at"] is not None:
-                    raise BattleMapArchivedError(f"Battle map {battle_map_id} is archived")
+        The board row carries a placeholder combat_id; it (and the door rows)
+        are rebound to the generated Combat id inside the event transaction so
+        an idempotency-key retry reuses the canonical Combat from the stored
+        event.
+
+        ``start_intent`` is stored on the event payload; a retry with the same
+        key but a different intent raises
+        ``CombatIdempotencyConflictPersistenceError`` without creating anything.
+
+        ``monster_loader`` runs inside the same transaction (after the board
+        loader): it resolves the map's saved placements against the latest
+        templates, validates the whole batch against the frozen board geometry,
+        and creates one Monster Instance per placement. The loader returns the
+        monster ``NewCombatEntry`` items plus aligned board position specs; this
+        method assigns entry ids and inserts the positions in the same
+        transaction. Any loader failure rolls back the entire start: no half
+        Combat, no stray Instances, no early notifier.
+        """
+        if monster_loader is not None and board_repository is None:
+            raise ValueError("board_repository is required when monster_loader is provided")
+        combat_id = uuid4()
+        party_entry_ids = tuple(uuid4() for _ in entries)
+        now = datetime.now().astimezone()
+        base_payload: dict[str, Any] = {
+            "combat_id": str(combat_id),
+            "mode": "tactical",
+            # Replaced with the full payload inside the projection when the
+            # board (and monsters) are loaded; the redactor needs every entry
+            # id and the battle map id.
+            "entry_ids": [str(v) for v in party_entry_ids],
+            "battle_map_id": None,
+            "board_runtime_revision": 1,
+            "start_intent": start_intent,
+        }
+
+        def projection(connection, event_id: UUID, _seq: int) -> None:
+            board, doors, battle_map_id = board_loader(connection)
+            board = replace(board, combat_id=combat_id, runtime_revision=1, created_at=now)
+            doors = tuple(
+                replace(door, combat_id=combat_id, created_at=now) for door in doors
+            )
+            monster_outcome: MonsterLoadOutcome | None = (
+                monster_loader(connection, board, now) if monster_loader is not None else None
+            )
+            monster_entries = (
+                tuple(monster_outcome.entries) if monster_outcome is not None else ()
+            )
+            entry_ids = party_entry_ids + tuple(uuid4() for _ in monster_entries)
+            all_entries = tuple(entries) + monster_entries
             connection.execute(insert(combats).values(
                 id=combat_id, campaign_id=binding.campaign_id, started_session_id=binding.session_id,
                 mode="tactical", status="initiative_pending", revision=1,
             ))
-            for entry_id, entry in zip(entry_ids, entries, strict=True):
+            for entry_id, entry in zip(entry_ids, all_entries, strict=True):
                 self._insert_entry(connection, combat_id, entry, entry_id=entry_id)
             connection.execute(insert(combat_boards).values(**board.__dict__))
             for door in doors:
                 connection.execute(insert(combat_board_doors).values(**door.__dict__))
+            if monster_outcome is not None:
+                assert board_repository is not None
+                base = len(entries)
+                for offset, spec in enumerate(monster_outcome.placements):
+                    board_repository.place_position_in_transaction(
+                        connection,
+                        StoredCombatPosition(
+                            combat_entry_id=entry_ids[base + offset],
+                            combat_id=combat_id,
+                            anchor_x=spec.anchor_x,
+                            anchor_y=spec.anchor_y,
+                            footprint_width=spec.footprint_width,
+                            footprint_height=spec.footprint_height,
+                            revision=1,
+                            created_at=now,
+                        ),
+                    )
+            connection.execute(
+                update(session_events)
+                .where(session_events.c.id == event_id)
+                .values(
+                    payload={
+                        **base_payload,
+                        "battle_map_id": str(battle_map_id) if battle_map_id is not None else None,
+                        "entry_ids": [str(v) for v in entry_ids],
+                    }
+                )
+            )
 
         try:
             event = self.event_repository.append(
@@ -394,13 +462,7 @@ class CombatRepository:
                 kind="combat.started", acting_seat_id=binding.seat_id, subject_seat_id=None,
                 subject_character_id=None, execution_mode="self", visibility="public", recipient_seat_ids=(),
                 payload_version=1,
-                payload={
-                    "combat_id": str(combat_id),
-                    "mode": "tactical",
-                    "entry_ids": [str(v) for v in entry_ids],
-                    "battle_map_id": str(battle_map_id) if battle_map_id is not None else None,
-                    "board_runtime_revision": 1,
-                },
+                payload=base_payload,
                 idempotency_key=f"p5a-tactical-start:{idempotency_key}" if idempotency_key else None,
                 expected_actor_binding=binding, transaction_projection=projection,
             )
@@ -409,6 +471,14 @@ class CombatRepository:
                 raise ActiveCombatExistsPersistenceError(str(binding.campaign_id)) from exc
             raise
         canonical_id = UUID(str(event.payload["combat_id"]))
+        if start_intent is not None and canonical_id != combat_id:
+            # Idempotency retry: the stored event already existed, so the
+            # projection never ran and nothing was created.
+            stored_intent = event.payload.get("start_intent")
+            if isinstance(stored_intent, dict) and stored_intent != start_intent:
+                raise CombatIdempotencyConflictPersistenceError(
+                    "idempotency key was already used with a different tactical start intent"
+                )
         combat = self.get(canonical_id)
         if combat is None:
             raise CombatNotFoundPersistenceError(str(canonical_id))
@@ -875,7 +945,8 @@ class CombatRepository:
 
 
 __all__ = [
-    "ActiveCombatExistsPersistenceError", "CombatNotFoundPersistenceError", "CombatPersistenceError",
+    "ActiveCombatExistsPersistenceError", "CombatIdempotencyConflictPersistenceError",
+    "CombatNotFoundPersistenceError", "CombatPersistenceError",
     "CombatRepository", "CombatStateConflictPersistenceError", "NewCombatEntry", "SessionCharacterBinding",
     "StoredCombat", "StoredCombatAction", "StoredCombatEntry", "actor_binding", "combat_action_from_row",
 ]
