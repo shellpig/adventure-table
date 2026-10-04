@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.engine import Connection, Engine
@@ -10,6 +10,7 @@ from sqlalchemy.engine import Connection, Engine
 from app.persistence.battle_maps.tables import (
     battle_map_doors,
     battle_map_drawings,
+    battle_map_monster_placements,
     battle_map_terrain,
     battle_map_walls,
     battle_maps,
@@ -71,6 +72,18 @@ class StoredBattleMapDrawing:
     id: UUID
     battle_map_id: UUID
     payload: dict[str, object]
+
+
+@dataclass(frozen=True)
+class StoredMonsterPlacement:
+    id: UUID
+    battle_map_id: UUID
+    template_key: str | None
+    custom_template_id: UUID | None
+    anchor_x: int
+    anchor_y: int
+    visibility: str
+    sort_order: int
 
 
 @dataclass(frozen=True)
@@ -235,6 +248,11 @@ class BattleMapRepository:
                 f"Battle map {map_id} is referenced by combat board and cannot be deleted"
             )
         connection.execute(
+            delete(battle_map_monster_placements).where(
+                battle_map_monster_placements.c.battle_map_id == map_id
+            )
+        )
+        connection.execute(
             delete(battle_map_drawings).where(
                 battle_map_drawings.c.battle_map_id == map_id
             )
@@ -261,6 +279,73 @@ class BattleMapRepository:
             )
         )
         return bool(result.rowcount > 0)
+
+    def get_placements(
+        self,
+        map_id: UUID,
+        *,
+        connection: Connection | None = None,
+    ) -> tuple[StoredMonsterPlacement, ...]:
+        query = (
+            select(battle_map_monster_placements)
+            .where(battle_map_monster_placements.c.battle_map_id == map_id)
+            .order_by(
+                battle_map_monster_placements.c.sort_order,
+                battle_map_monster_placements.c.id,
+            )
+        )
+        if connection is not None:
+            rows = connection.execute(query).mappings().all()
+        else:
+            with self.engine.connect() as conn:
+                rows = conn.execute(query).mappings().all()
+        return tuple(StoredMonsterPlacement(**dict(row)) for row in rows)
+
+    def replace_placements_in_transaction(
+        self,
+        connection: Connection,
+        map_id: UUID,
+        placements: tuple[StoredMonsterPlacement, ...],
+    ) -> None:
+        connection.execute(
+            delete(battle_map_monster_placements).where(
+                battle_map_monster_placements.c.battle_map_id == map_id
+            )
+        )
+        if placements:
+            connection.execute(
+                insert(battle_map_monster_placements),
+                [placement.__dict__ for placement in placements],
+            )
+
+    def copy_placements_in_transaction(
+        self,
+        connection: Connection,
+        source_map_id: UUID,
+        new_map_id: UUID,
+    ) -> tuple[StoredMonsterPlacement, ...]:
+        """Copy every placement to a new map, assigning fresh placement ids."""
+        copied = tuple(
+            StoredMonsterPlacement(
+                id=uuid4(),
+                battle_map_id=new_map_id,
+                template_key=placement.template_key,
+                custom_template_id=placement.custom_template_id,
+                anchor_x=placement.anchor_x,
+                anchor_y=placement.anchor_y,
+                visibility=placement.visibility,
+                sort_order=placement.sort_order,
+            )
+            for placement in self.get_placements(
+                source_map_id, connection=connection
+            )
+        )
+        if copied:
+            connection.execute(
+                insert(battle_map_monster_placements),
+                [placement.__dict__ for placement in copied],
+            )
+        return copied
 
     def get_objects(
         self,
@@ -397,4 +482,5 @@ __all__ = [
     "StoredBattleMapObjects",
     "StoredBattleMapTerrain",
     "StoredBattleMapWall",
+    "StoredMonsterPlacement",
 ]

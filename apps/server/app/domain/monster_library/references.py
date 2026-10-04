@@ -18,6 +18,10 @@ from app.persistence.adventures.tables import (
     adventure_definitions,
     adventure_entries,
 )
+from app.persistence.battle_maps.tables import (
+    battle_map_monster_placements,
+    battle_maps,
+)
 from app.persistence.campaign_runtime.tables import (
     campaign_adventure_overrides,
     campaign_world_entries,
@@ -92,6 +96,7 @@ def is_monster_template_referenced(
 
     Scans:
     - monster_instances.custom_template_id
+    - battle_map_monster_placements.custom_template_id (M07-C)
     - adventure_entries (npc, monster_ref)
     - campaign_world_entries (npc)
     - campaign_adventure_overrides
@@ -108,7 +113,24 @@ def is_monster_template_referenced(
     if inst_count and inst_count > 0:
         return True
 
-    # 2. adventure_entries
+    # 2. battle_map_monster_placements (M07-C map pre-placements)
+    placement_count = connection.scalar(
+        select(func.count())
+        .select_from(
+            battle_map_monster_placements.join(
+                battle_maps,
+                battle_map_monster_placements.c.battle_map_id == battle_maps.c.id,
+            )
+        )
+        .where(
+            battle_maps.c.room_id == room_id,
+            battle_map_monster_placements.c.custom_template_id == template_id,
+        )
+    )
+    if placement_count and placement_count > 0:
+        return True
+
+    # 3. adventure_entries
     adv_count = connection.scalar(
         select(func.count())
         .select_from(
@@ -126,7 +148,7 @@ def is_monster_template_referenced(
     if adv_count and adv_count > 0:
         return True
 
-    # 3. campaign_world_entries
+    # 4. campaign_world_entries
     world_count = connection.scalar(
         select(func.count())
         .select_from(
@@ -144,7 +166,7 @@ def is_monster_template_referenced(
     if world_count and world_count > 0:
         return True
 
-    # 4. campaign_adventure_overrides
+    # 5. campaign_adventure_overrides
     override_count = connection.scalar(
         select(func.count())
         .select_from(
@@ -161,7 +183,7 @@ def is_monster_template_referenced(
     if override_count and override_count > 0:
         return True
 
-    # 5. campaign_world_mutations (durable mutation typed provenance)
+    # 6. campaign_world_mutations (durable mutation typed provenance)
     mutation_count = connection.scalar(
         select(func.count())
         .select_from(
@@ -181,7 +203,7 @@ def is_monster_template_referenced(
     if mutation_count and mutation_count > 0:
         return True
 
-    # 6. adventure_import_drafts
+    # 7. adventure_import_drafts
     draft_rows = connection.scalars(
         select(adventure_import_drafts.c.draft_json)
         .select_from(

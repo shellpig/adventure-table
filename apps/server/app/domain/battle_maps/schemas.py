@@ -13,6 +13,7 @@ BattleMapWallVisibility = Literal["public", "hidden"]
 BattleMapDoorState = Literal["open", "closed", "locked", "broken"]
 BattleMapTerrainKind = Literal["normal", "difficult", "blocked"]
 BattleMapAudience = Literal["dm", "player"]
+BattleMapMonsterPlacementVisibility = Literal["public", "hidden"]
 
 MAX_NAME_LENGTH = 160
 MAX_DIMENSION_CELLS = 200
@@ -49,6 +50,18 @@ class BattleMapDrawing(StrictModel):
     payload: dict[str, object]
 
 
+class BattleMapMonsterPlacement(StrictModel):
+    """One monster pre-placement on a library map (M07-C)."""
+
+    id: UUID
+    template_key: str | None = None
+    custom_template_id: UUID | None = None
+    anchor_x: int
+    anchor_y: int
+    visibility: BattleMapMonsterPlacementVisibility
+    sort_order: int
+
+
 class BattleMap(StrictModel):
     id: UUID
     room_id: UUID
@@ -68,6 +81,44 @@ class BattleMap(StrictModel):
     doors: list[BattleMapDoor] = Field(default_factory=list)
     terrain: list[BattleMapTerrain] = Field(default_factory=list)
     drawings: list[BattleMapDrawing] = Field(default_factory=list)
+    # M07-C: monster pre-placements. Only present on management reads
+    # (Human owner|dm get/copy/PUT, AI DM get_for_actor); never projected to Players.
+    monster_placements: list[BattleMapMonsterPlacement] = Field(default_factory=list)
+
+
+class MonsterPlacementInput(StrictModel):
+    """One placement in a full-set replace. ``id`` is kept when supplied."""
+
+    id: UUID | None = None
+    template_key: str | None = None
+    custom_template_id: UUID | None = None
+    anchor_x: int
+    anchor_y: int
+    visibility: BattleMapMonsterPlacementVisibility = "public"
+    sort_order: int = 0
+
+    @model_validator(mode="after")
+    def validate_single_template_source(self) -> Self:
+        key = self.template_key.strip() if isinstance(self.template_key, str) else None
+        has_key = bool(key)
+        has_custom = self.custom_template_id is not None
+        if has_key == has_custom:
+            raise ValueError(
+                "exactly one of template_key and custom_template_id must be set"
+            )
+        # Normalize so the service sees a canonical value.
+        self.template_key = key if has_key else None
+        return self
+
+
+class MonsterPlacementsReplace(StrictModel):
+    expected_revision: int = Field(gt=0)
+    placements: list[MonsterPlacementInput] = Field(default_factory=list)
+
+
+class MonsterPlacementProblem(StrictModel):
+    placement_id: UUID
+    code: str
 
 
 class BattleMapSummary(StrictModel):
@@ -272,6 +323,34 @@ class BattleMapReferencedError(Exception):
     pass
 
 
+class MapMonsterPlacementInvalidError(Exception):
+    """A placement batch the map rejects (HTTP 409 map_monster_placement_invalid).
+
+    Carries every problem (placement id + code); only ever surfaced to
+    owner|dm readers.
+    """
+
+    def __init__(self, problems: list[MonsterPlacementProblem]) -> None:
+        self.problems = problems
+        detail = ", ".join(
+            f"{problem.placement_id}:{problem.code}" for problem in problems
+        )
+        super().__init__(f"monster placements invalid: {detail}")
+
+
+class MonsterPlacementReferenceNotFoundError(Exception):
+    """A referenced template is missing or in another Room (HTTP 404)."""
+
+    pass
+
+
+class MonsterPlacementSourceError(Exception):
+    """The placement source is malformed: not exactly one source, or duplicate
+    placement ids in one replace payload (HTTP 422)."""
+
+    pass
+
+
 __all__ = [
     "MAX_DIMENSION_CELLS",
     "MAX_DRAWING_PAYLOAD_BYTES",
@@ -289,6 +368,8 @@ __all__ = [
     "BattleMapDrawingInput",
     "BattleMapForbiddenError",
     "BattleMapInvalidError",
+    "BattleMapMonsterPlacement",
+    "BattleMapMonsterPlacementVisibility",
     "BattleMapNotFoundError",
     "BattleMapObjectsReplace",
     "BattleMapPatch",
@@ -303,6 +384,12 @@ __all__ = [
     "BattleMapWall",
     "BattleMapWallInput",
     "BattleMapWallVisibility",
+    "MapMonsterPlacementInvalidError",
+    "MonsterPlacementInput",
+    "MonsterPlacementProblem",
+    "MonsterPlacementReferenceNotFoundError",
+    "MonsterPlacementSourceError",
+    "MonsterPlacementsReplace",
     "ProjectedBattleMap",
     "ProjectedBattleMapDoor",
     "ProjectedBattleMapWall",

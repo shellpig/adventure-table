@@ -23,6 +23,10 @@ from app.domain.battle_maps.schemas import (
     BattleMapRevisionConflictError,
     BattleMapShrinkConflictError,
     BattleMapSummary,
+    MapMonsterPlacementInvalidError,
+    MonsterPlacementReferenceNotFoundError,
+    MonsterPlacementSourceError,
+    MonsterPlacementsReplace,
 )
 from app.domain.battle_maps.service import BattleMapService
 from app.domain.rooms.schemas import RoomAccessContext
@@ -45,6 +49,22 @@ def _map_battle_map_error(exc: Exception) -> APIError:
         return APIError(400, "battle_map_invalid", str(exc))
     if isinstance(exc, BattleMapAssetInvalidError):
         return APIError(400, "battle_map_asset_invalid", str(exc))
+    if isinstance(exc, MapMonsterPlacementInvalidError):
+        return APIError(
+            409,
+            "map_monster_placement_invalid",
+            str(exc),
+            params={
+                "problems": [
+                    {"placement_id": str(problem.placement_id), "code": problem.code}
+                    for problem in exc.problems
+                ]
+            },
+        )
+    if isinstance(exc, MonsterPlacementReferenceNotFoundError):
+        return APIError(404, "monster_placement_reference_not_found", str(exc))
+    if isinstance(exc, MonsterPlacementSourceError):
+        return APIError(422, "monster_placement_invalid_source", str(exc))
     raise exc
 
 
@@ -139,6 +159,22 @@ def replace_battle_map_objects(
 ) -> BattleMap:
     try:
         return service.replace_objects(
+            context, room_id=room_id, map_id=map_id, payload=payload
+        )
+    except Exception as exc:
+        raise _map_battle_map_error(exc) from exc
+
+
+@router.put("/{map_id}/monster-placements", response_model=BattleMap)
+def replace_monster_placements(
+    room_id: UUID,
+    map_id: UUID,
+    payload: MonsterPlacementsReplace,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    service: BattleMapService = Depends(get_battle_map_service),
+) -> BattleMap:
+    try:
+        return service.replace_monster_placements(
             context, room_id=room_id, map_id=map_id, payload=payload
         )
     except Exception as exc:

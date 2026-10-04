@@ -357,6 +357,7 @@ def _presession_dm_setup():
         BattleMapRepository(engine),
         RoomAssetRepository(engine),
         TableEventService(TableEventRepository(engine)),
+        content_registry=load_default_content_registry(),
     )
     created = battle_maps.create(
         RoomAccessContext(

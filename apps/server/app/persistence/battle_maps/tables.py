@@ -148,3 +148,34 @@ battle_map_drawings = Table(
     Column("payload", JSON(), nullable=False),
 )
 Index("ix_battle_map_drawings_battle_map_id", battle_map_drawings.c.battle_map_id)
+
+
+battle_map_monster_placements = Table(
+    "battle_map_monster_placements",
+    metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("battle_map_id", Uuid(), ForeignKey("battle_maps.id", ondelete="CASCADE"), nullable=False),
+    Column("template_key", String(255), nullable=True),
+    Column(
+        "custom_template_id",
+        Uuid(),
+        ForeignKey("monster_templates.id", ondelete="RESTRICT"),
+        nullable=True,
+    ),
+    Column("anchor_x", Integer(), nullable=False),
+    Column("anchor_y", Integer(), nullable=False),
+    Column("visibility", String(16), nullable=False),
+    Column("sort_order", Integer(), nullable=False),
+    CheckConstraint(
+        "visibility IN ('public', 'hidden')",
+        name="ck_battle_map_monster_placements_visibility",
+    ),
+    CheckConstraint(
+        "(template_key IS NULL) != (custom_template_id IS NULL)",
+        name="ck_battle_map_monster_placements_single_template_source",
+    ),
+)
+Index(
+    "ix_battle_map_monster_placements_battle_map_id",
+    battle_map_monster_placements.c.battle_map_id,
+)

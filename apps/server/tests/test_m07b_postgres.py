@@ -29,6 +29,7 @@ from app.persistence.battle_maps.tables import battle_maps
 from app.persistence.combat.tables import combats
 from app.persistence.combat_boards.tables import combat_boards
 from app.persistence.room_assets.repository import RoomAssetRepository
+from app.content.registry import load_default_content_registry
 from tests.p5a_tactical_helpers import TacticalTable, insert_battle_map, setup_tactical_table
 from tests.test_p5a_postgres_migration import POSTGRES_URL, _config, _reset
 
@@ -99,7 +100,8 @@ def test_m07b_tactical_start_vs_map_delete_race_leaves_no_dangling_reference() -
     try:
         table = setup_tactical_table(engine)
         map_id = insert_battle_map(table)
-        maps = BattleMapService(BattleMapRepository(engine), RoomAssetRepository(engine), table.events)
+        maps = BattleMapService(BattleMapRepository(engine), RoomAssetRepository(engine), table.events,
+                               content_registry=load_default_content_registry())
         barrier = Barrier(2)
         outcomes: dict[str, Exception | None] = {}
 
@@ -167,7 +169,8 @@ def test_m07b_copy_vs_edit_race_copies_a_consistent_revision() -> None:
     try:
         table = setup_tactical_table(engine)
         map_id = insert_battle_map(table)
-        maps = BattleMapService(BattleMapRepository(engine), RoomAssetRepository(engine), table.events)
+        maps = BattleMapService(BattleMapRepository(engine), RoomAssetRepository(engine), table.events,
+                               content_registry=load_default_content_registry())
         original = maps.get(_owner_context(table), table.room_id, map_id)
         copies = []
 
@@ -209,7 +212,8 @@ def test_m07b_archive_vs_tactical_start_race_never_starts_on_an_archived_map() -
     try:
         table = setup_tactical_table(engine)
         map_id = insert_battle_map(table)
-        maps = BattleMapService(BattleMapRepository(engine), RoomAssetRepository(engine), table.events)
+        maps = BattleMapService(BattleMapRepository(engine), RoomAssetRepository(engine), table.events,
+                               content_registry=load_default_content_registry())
 
         def archive() -> None:
             maps.archive(
