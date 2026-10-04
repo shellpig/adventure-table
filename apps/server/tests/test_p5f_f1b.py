@@ -42,7 +42,6 @@ from sqlalchemy import insert, select, update
 
 from app.domain.battle_maps.schemas import BattleMapCreate, BattleMapPatch
 from app.domain.combat.ai_tools import (
-    BattleMapCreateToolInput,
     BattleMapIdToolInput,
     CombatAIToolApplicationService,
 )
@@ -219,25 +218,19 @@ def test_f3b_player_battle_map_patch_rejected_zero_side_effects() -> None:
     facade = _facade(table)
     dm_token = _dm_token(table)
     player_token = _player_token(table)
-    created = facade.battle_map_create(
-        dm_token,
-        BattleMapCreateToolInput(
-            payload=BattleMapCreate(name="F3 map", source_kind="blank", width_cells=10, height_cells=10)
-        ),
-    )
-    map_id = created["id"]
+    map_id = insert_battle_map(table)
     revision_before = facade.battle_map_get(
         dm_token,
-        BattleMapIdToolInput(map_id=UUID(map_id)),
+        BattleMapIdToolInput(map_id=map_id),
     )["revision"]
     result = _call(
         facade, player_token, "battle_map_patch",
-        {"map_id": map_id, "payload": BattleMapPatch(expected_revision=revision_before, name="hacked").model_dump(mode="json", exclude_none=True)},
+        {"map_id": str(map_id), "payload": BattleMapPatch(expected_revision=revision_before, name="hacked").model_dump(mode="json", exclude_none=True)},
     )
-    assert result["structuredContent"]["error"]["code"] == "permission_denied"
+    assert result["structuredContent"]["error"]["code"] == "tool_not_found"
     revision_after = facade.battle_map_get(
         dm_token,
-        BattleMapIdToolInput(map_id=UUID(map_id)),
+        BattleMapIdToolInput(map_id=map_id),
     )["revision"]
     assert revision_after == revision_before
 
@@ -249,24 +242,21 @@ def test_f3b_player_battle_map_replace_objects_rejected_zero_side_effects() -> N
     facade = _facade(table)
     dm_token = _dm_token(table)
     player_token = _player_token(table)
-    created = facade.battle_map_create(
+    map_id = insert_battle_map(table)
+    revision_before = facade.battle_map_get(
         dm_token,
-        BattleMapCreateToolInput(
-            payload=BattleMapCreate(name="F3 map", source_kind="blank", width_cells=10, height_cells=10)
-        ),
-    )
-    map_id = created["id"]
-    revision_before = created["revision"]
+        BattleMapIdToolInput(map_id=map_id),
+    )["revision"]
     result = _call(
         facade, player_token, "battle_map_replace_objects",
-        {"map_id": map_id, "payload": BattleMapObjectsReplace(
+        {"map_id": str(map_id), "payload": BattleMapObjectsReplace(
             expected_revision=revision_before, walls=[], doors=[], terrain=[], drawings=[]
         ).model_dump(mode="json", exclude_none=True)},
     )
-    assert result["structuredContent"]["error"]["code"] == "permission_denied"
+    assert result["structuredContent"]["error"]["code"] == "tool_not_found"
     after = facade.battle_map_get(
         dm_token,
-        BattleMapIdToolInput(map_id=UUID(map_id)),
+        BattleMapIdToolInput(map_id=map_id),
     )
     assert after["revision"] == revision_before
 
@@ -364,7 +354,9 @@ def _presession_dm_setup():
     assert pre_auth.role == "dm"
 
     battle_maps = BattleMapService(
-        BattleMapRepository(engine), RoomAssetRepository(engine)
+        BattleMapRepository(engine),
+        RoomAssetRepository(engine),
+        TableEventService(TableEventRepository(engine)),
     )
     created = battle_maps.create(
         RoomAccessContext(
@@ -400,12 +392,6 @@ def test_f3b_presession_dm_grant_battle_map_rejected_zero_side_effects() -> None
     for name, arguments in (
         ("battle_map_get", {"map_id": str(map_id)}),
         ("battle_map_list", {}),
-        ("battle_map_create", {"payload": BattleMapCreate(
-            name="x", source_kind="blank", width_cells=5, height_cells=5
-        ).model_dump(mode="json")}),
-        ("battle_map_patch", {"map_id": str(map_id), "payload": BattleMapPatch(
-            expected_revision=revision_before, name="hacked"
-        ).model_dump(mode="json", exclude_none=True)}),
     ):
         result = asyncio.run(
             call_tool(facade, token=token, auth=pre_auth, name=name, arguments=arguments)
@@ -427,24 +413,21 @@ def test_f3b_presession_dm_grant_battle_map_rejected_zero_side_effects() -> None
 
 
 def test_b5b_battle_map_scope_requires_session_dm_at_facade() -> None:
-    from app.domain.rooms.ai_tools import AIToolScopeError
+    from app.domain.rooms.table_events import TableEventActorUnauthorizedError
 
     table, _, _ = _running_table()
     facade = _facade(table)
     player_token = _player_token(table)
+    map_id = insert_battle_map(table)
     # Bypass the MCP catalog gate by calling the facade directly: a Player
-    # must still be refused by the facade scope check, with zero side effects.
-    maps_before = facade.battle_map_service.repository.list_maps(table.room_id)
-    with pytest.raises(AIToolScopeError):
-        facade.battle_map_create(
+    # must still be refused by the actor DM check, with zero side effects.
+    with pytest.raises(TableEventActorUnauthorizedError):
+        facade.battle_map_get(
             player_token,
-            BattleMapCreateToolInput(
-                payload=BattleMapCreate(
-                    name="sneaky", source_kind="blank", width_cells=5, height_cells=5
-                )
-            ),
+            BattleMapIdToolInput(map_id=map_id),
         )
-    assert facade.battle_map_service.repository.list_maps(table.room_id) == maps_before
+    with pytest.raises(TableEventActorUnauthorizedError):
+        facade.battle_map_list(player_token)
 
 
 def test_b5b_battle_map_delete_fully_removed() -> None:
@@ -453,13 +436,25 @@ def test_b5b_battle_map_delete_fully_removed() -> None:
 
     table, _, _ = _running_table()
     facade = _facade(table)
-    assert not hasattr(facade, "battle_map_delete")
-    assert "battle_map_delete" not in combat_ai_tools.__dict__
-    assert mcp_tools._definition("battle_map_delete") is None
-    assert "battle_map_delete" not in mcp_tools._WHEN_TO_USE
+    for tool_name in (
+        "battle_map_delete",
+        "battle_map_create",
+        "battle_map_patch",
+        "battle_map_replace_objects",
+    ):
+        assert not hasattr(facade, tool_name)
+        assert tool_name not in combat_ai_tools.__dict__
+        assert mcp_tools._definition(tool_name) is None
+        assert tool_name not in mcp_tools._WHEN_TO_USE
     from app.mcp.guide_tool_names import _EXPECTED
 
-    assert "battle_map_delete" not in _EXPECTED
+    for tool_name in (
+        "battle_map_delete",
+        "battle_map_create",
+        "battle_map_patch",
+        "battle_map_replace_objects",
+    ):
+        assert tool_name not in _EXPECTED
     # The input model survives for battle_map_get.
     assert BattleMapIdToolInput is not None
 

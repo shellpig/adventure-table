@@ -2,14 +2,20 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any, Iterable, Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import Field, model_validator
 
 from app.content.registry import ContentRegistry
-from app.domain.battle_maps.schemas import BattleMapNotFoundError
+from app.domain.battle_maps.schemas import (
+    BattleMapArchivedError,
+    BattleMapNotFoundError,
+    TemporaryBattleMapInput,
+)
+from app.domain.battle_maps.service import validated_stored_objects
 from app.domain.combat.projection import CombatantAudience, project_combatant
 from app.domain.combat.speeds import resolve_entry_walk_speed
 from app.domain.rooms.schemas import StrictModel
@@ -25,7 +31,7 @@ from app.persistence.combat.lifecycle import (
     CombatRepository, CombatStateConflictPersistenceError,
     NewCombatEntry, StoredCombat, StoredCombatEntry, actor_binding,
 )
-from app.persistence.battle_maps.repository import BattleMapRepository
+from app.persistence.battle_maps.repository import BattleMapRepository, StoredBattleMapObjects
 from app.persistence.combat.repository import MonsterRepository
 from app.persistence.combat_boards.repository import CombatBoardRepository, StoredBoardDoor, StoredCombatBoard
 
@@ -65,16 +71,27 @@ class StartTacticalCombatInput(StrictModel):
     battle_map_id: UUID | None = None
     blank_width_cells: int | None = Field(default=None, ge=1, le=200)
     blank_height_cells: int | None = Field(default=None, ge=1, le=200)
+    temporary_map: TemporaryBattleMapInput | None = None
     include_active_party: bool = True
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=120)
 
     @model_validator(mode="after")
-    def _require_map_or_blank_dimensions(self) -> StartTacticalCombatInput:
-        if self.battle_map_id is None and (
+    def _validate_sources(self) -> StartTacticalCombatInput:
+        has_map = self.battle_map_id is not None
+        has_blank = (
+            self.blank_width_cells is not None or self.blank_height_cells is not None
+        )
+        has_temp = self.temporary_map is not None
+
+        if sum([has_map, has_blank, has_temp]) != 1:
+            raise ValueError(
+                "Exactly one source (battle_map_id, blank dimensions, or temporary_map) must be provided"
+            )
+        if has_blank and (
             self.blank_width_cells is None or self.blank_height_cells is None
         ):
             raise ValueError(
-                "blank_width_cells and blank_height_cells are required when battle_map_id is omitted"
+                "Both blank_width_cells and blank_height_cells are required for a blank board"
             )
         return self
 
@@ -228,6 +245,40 @@ class EntryConditionContext:
     conditions: tuple[str, ...]
     exhaustion_level: int
     dodging: bool = False
+
+
+def _frozen_board_geometry(
+    objects: StoredBattleMapObjects, *, combat_id: UUID, now: datetime
+) -> tuple[dict[str, Any], tuple[StoredBoardDoor, ...]]:
+    baseline = {
+        "walls": [
+            {"id": str(wall.id), "x1": wall.x1, "y1": wall.y1, "x2": wall.x2, "y2": wall.y2,
+             "visibility": wall.visibility}
+            for wall in objects.walls
+        ],
+        "doors": [
+            {"id": str(door.id), "x1": door.x1, "y1": door.y1, "x2": door.x2, "y2": door.y2,
+             "state": door.default_state, "visibility": door.visibility}
+            for door in objects.doors
+        ],
+        "terrain": [
+            {"x": terrain.x, "y": terrain.y, "terrain_kind": terrain.terrain_kind}
+            for terrain in objects.terrain
+        ],
+        "drawings": [
+            {"id": str(drawing.id), "payload": drawing.payload}
+            for drawing in objects.drawings
+        ],
+    }
+    doors = tuple(
+        StoredBoardDoor(
+            combat_id=combat_id, door_id=door.id,
+            state=door.default_state, revealed=door.visibility == "public",
+            created_at=now,
+        )
+        for door in objects.doors
+    )
+    return baseline, doors
 
 
 class CombatService:
@@ -484,9 +535,6 @@ class CombatService:
     def _freeze_board(
         self, actor: TableActorContext, request: StartTacticalCombatInput
     ) -> tuple[StoredCombatBoard, tuple[StoredBoardDoor, ...], UUID | None]:
-        from datetime import datetime, timezone
-        from uuid import uuid4
-
         assert self.battle_map_repository is not None
         now = datetime.now(timezone.utc)
         placeholder_combat_id = uuid4()
@@ -494,34 +542,11 @@ class CombatService:
             stored_map = self.battle_map_repository.get_map(actor.room_id, request.battle_map_id)
             if stored_map is None:
                 raise BattleMapNotFoundError(f"BattleMap {request.battle_map_id} not found")
-            objects = self.battle_map_repository.get_objects(stored_map.id)
-            baseline = {
-                "walls": [
-                    {"id": str(wall.id), "x1": wall.x1, "y1": wall.y1, "x2": wall.x2, "y2": wall.y2,
-                     "visibility": wall.visibility}
-                    for wall in objects.walls
-                ],
-                "doors": [
-                    {"id": str(door.id), "x1": door.x1, "y1": door.y1, "x2": door.x2, "y2": door.y2,
-                     "state": door.default_state, "visibility": door.visibility}
-                    for door in objects.doors
-                ],
-                "terrain": [
-                    {"x": terrain.x, "y": terrain.y, "terrain_kind": terrain.terrain_kind}
-                    for terrain in objects.terrain
-                ],
-                "drawings": [
-                    {"id": str(drawing.id), "payload": drawing.payload}
-                    for drawing in objects.drawings
-                ],
-            }
-            doors = tuple(
-                StoredBoardDoor(
-                    combat_id=placeholder_combat_id, door_id=door.id,
-                    state=door.default_state, revealed=door.visibility == "public",
-                    created_at=now,
-                )
-                for door in objects.doors
+            if stored_map.archived_at is not None:
+                raise BattleMapArchivedError(f"BattleMap {request.battle_map_id} is archived")
+            baseline, doors = _frozen_board_geometry(
+                self.battle_map_repository.get_objects(stored_map.id),
+                combat_id=placeholder_combat_id, now=now,
             )
             board = StoredCombatBoard(
                 combat_id=placeholder_combat_id,
@@ -534,36 +559,33 @@ class CombatService:
                 baseline=baseline, runtime_revision=1, created_at=now,
             )
             return board, doors, stored_map.id
+        if request.temporary_map is not None:
+            # M07-B: temporary geometry freezes straight into the board; no
+            # battle_maps row or Room asset is created.
+            temporary = request.temporary_map
+            baseline, doors = _frozen_board_geometry(
+                validated_stored_objects(
+                    temporary.width_cells, temporary.height_cells,
+                    walls=temporary.walls, doors=temporary.doors,
+                    terrain=temporary.terrain, drawings=temporary.drawings,
+                    map_id=placeholder_combat_id, keep_client_ids=False,
+                ),
+                combat_id=placeholder_combat_id, now=now,
+            )
+            width_cells, height_cells = temporary.width_cells, temporary.height_cells
+        else:
+            baseline, doors = {"walls": [], "doors": [], "terrain": [], "drawings": []}, ()
+            width_cells = int(request.blank_width_cells or 0)
+            height_cells = int(request.blank_height_cells or 0)
         board = StoredCombatBoard(
             combat_id=placeholder_combat_id,
             source_battle_map_id=None, source_battle_map_revision=None,
-            width_cells=int(request.blank_width_cells or 0),
-            height_cells=int(request.blank_height_cells or 0),
+            width_cells=width_cells, height_cells=height_cells,
             grid_pixel_size=None, grid_offset_x=None, grid_offset_y=None,
             image_asset_id=None,
-            baseline={"walls": [], "doors": [], "terrain": [], "drawings": []},
-            runtime_revision=1, created_at=now,
+            baseline=baseline, runtime_revision=1, created_at=now,
         )
-        return board, (), None
-        self._require_dm(actor)
-        combat = self.repository.get_active(actor.campaign_id)
-        if combat is None: raise CombatNotFoundError("Campaign has no active Combat")
-        if self.repository.controlling_seat_for_character(
-            campaign_id=actor.campaign_id, session_id=actor.session_id, character_id=request.character_id
-        ) is None:
-            raise CombatStateConflictError("Character must be an active participant in the current Session before mid-Combat entry")
-        character = self.character_repository.load_character(request.character_id)
-        try:
-            self.repository.add_entry(
-                binding=actor_binding(actor), combat_id=combat.id,
-                entry=NewCombatEntry(subject_kind="character", character_id=request.character_id,
-                    display_name=character.name, attacks_allowed=_extra_attack_budget(character), surprised=request.surprised),
-                idempotency_key=request.idempotency_key,
-            )
-        except CombatStateConflictPersistenceError as exc:
-            raise CombatStateConflictError(str(exc)) from exc
-        self._notify(actor)
-        return self._view(self.repository.get(combat.id) or combat, actor)
+        return board, doors, None
 
     def add_monster(self, actor: TableActorContext, request: AddMonsterInput) -> CombatView:
         self._require_dm(actor)

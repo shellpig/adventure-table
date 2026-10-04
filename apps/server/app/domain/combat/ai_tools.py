@@ -5,11 +5,6 @@ from uuid import UUID
 
 from pydantic import Field
 
-from app.domain.battle_maps.schemas import (
-    BattleMapCreate,
-    BattleMapObjectsReplace,
-    BattleMapPatch,
-)
 from app.domain.battle_maps.service import BattleMapService
 from app.domain.combat.adjudication_service import (
     AdjudicationDecisionInput,
@@ -101,10 +96,10 @@ from app.domain.combat.special_attacks import (
     SpecialAttackAdjudicationInput,
     SpecialAttackRequestInput,
 )
-from app.domain.rooms.ai_controllers import AIControllerAuthView, AIControllerUnauthorizedError
-from app.domain.rooms.ai_tools import AIToolApplicationService, AIToolScopeError
+from app.domain.rooms.ai_controllers import AIControllerAuthView
+from app.domain.rooms.ai_tools import AIToolApplicationService
 from app.domain.rooms.rolls import FormalRollInput, FormalRollSource
-from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext, StrictModel
+from app.domain.rooms.schemas import StrictModel
 from app.domain.rooms.table_events import TableActorContext
 from app.domain.spatial.pathing import grid_distance
 from app.domain.spatial.primitives import Footprint, occupied_cells
@@ -162,20 +157,6 @@ class BattleMapIdToolInput(StrictModel):
     """P5-F: battle-map editor tools address a map by id; room comes from the actor."""
 
     map_id: UUID
-
-
-class BattleMapCreateToolInput(StrictModel):
-    payload: BattleMapCreate
-
-
-class BattleMapPatchToolInput(StrictModel):
-    map_id: UUID
-    payload: BattleMapPatch
-
-
-class BattleMapReplaceObjectsToolInput(StrictModel):
-    map_id: UUID
-    payload: BattleMapObjectsReplace
 
 
 class CombatAdjudicationDecisionToolInput(AdjudicationDecisionInput):
@@ -1217,48 +1198,6 @@ class CombatAIToolApplicationService(AIToolApplicationService):
             ],
         }
 
-    def _room_access_context(self, actor: TableActorContext) -> RoomAccessContext:
-        """Translate an authenticated AI DM actor into a room access context.
-
-        The MCP catalog gates battle-map tools to role="dm" and _actor()
-        re-validates the grant on every call, so authority=DM is faithful, not
-        fabricated. The grant id identifies the AI access session for the
-        battle-map service, which only needs it as an identifier.
-        """
-        if actor.ai_controller_grant_id is None:
-            raise AIControllerUnauthorizedError(
-                "AI battle-map tools require an AI controller grant"
-            )
-        if actor.session_id is None or not actor.is_current_dm:
-            # P5-F F1b: battle maps are Room-level shared assets; only the
-            # current DM of an active Session may set them up or edit them.
-            # A pre-session DM grant (P3-D) gets minimal context + Start only,
-            # and non-DM roles are gated here even when the MCP catalog gate
-            # is bypassed by calling the facade directly.
-            raise AIToolScopeError(
-                "Battle-map tools require the current DM of an active Session"
-            )
-        return RoomAccessContext(
-            room_id=actor.room_id,
-            access_session_id=actor.ai_controller_grant_id,
-            authority=RoomAccessAuthority.DM,
-        )
-
-    def battle_map_create(
-        self,
-        token: str,
-        input: BattleMapCreateToolInput,
-        *,
-        authenticated: AIControllerAuthView | None = None,
-    ) -> dict[str, Any]:
-        actor = self._actor(token, authenticated=authenticated)
-        view = self._require_battle_map_service().create(
-            self._room_access_context(actor),
-            room_id=actor.room_id,
-            payload=input.payload,
-        )
-        return view.model_dump(mode="json")
-
     def battle_map_get(
         self,
         token: str,
@@ -1267,9 +1206,7 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         authenticated: AIControllerAuthView | None = None,
     ) -> dict[str, Any]:
         actor = self._actor(token, authenticated=authenticated)
-        view = self._require_battle_map_service().get(
-            self._room_access_context(actor), actor.room_id, input.map_id
-        )
+        view = self._require_battle_map_service().get_for_actor(actor, input.map_id)
         return view.model_dump(mode="json")
 
     def battle_map_list(
@@ -1279,42 +1216,8 @@ class CombatAIToolApplicationService(AIToolApplicationService):
         authenticated: AIControllerAuthView | None = None,
     ) -> dict[str, Any]:
         actor = self._actor(token, authenticated=authenticated)
-        views = self._require_battle_map_service().list(
-            self._room_access_context(actor), actor.room_id
-        )
+        views = self._require_battle_map_service().list_for_actor(actor)
         return {"battle_maps": [view.model_dump(mode="json") for view in views]}
-
-    def battle_map_patch(
-        self,
-        token: str,
-        input: BattleMapPatchToolInput,
-        *,
-        authenticated: AIControllerAuthView | None = None,
-    ) -> dict[str, Any]:
-        actor = self._actor(token, authenticated=authenticated)
-        view = self._require_battle_map_service().patch(
-            self._room_access_context(actor),
-            room_id=actor.room_id,
-            map_id=input.map_id,
-            payload=input.payload,
-        )
-        return view.model_dump(mode="json")
-
-    def battle_map_replace_objects(
-        self,
-        token: str,
-        input: BattleMapReplaceObjectsToolInput,
-        *,
-        authenticated: AIControllerAuthView | None = None,
-    ) -> dict[str, Any]:
-        actor = self._actor(token, authenticated=authenticated)
-        view = self._require_battle_map_service().replace_objects(
-            self._room_access_context(actor),
-            room_id=actor.room_id,
-            map_id=input.map_id,
-            payload=input.payload,
-        )
-        return view.model_dump(mode="json")
 
     def _require_monster_library_service(self) -> MonsterLibraryService:
         if self.monster_library_service is None:
@@ -1375,10 +1278,7 @@ class CombatAIToolApplicationService(AIToolApplicationService):
 
 
 __all__ = [
-    "BattleMapCreateToolInput",
     "BattleMapIdToolInput",
-    "BattleMapPatchToolInput",
-    "BattleMapReplaceObjectsToolInput",
     "CombatAIToolApplicationService",
     "CombatAdjudicationDecisionToolInput",
     "CombatEntryMutationToolInput",

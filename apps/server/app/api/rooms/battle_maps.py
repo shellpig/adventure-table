@@ -2,20 +2,24 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.api.errors import APIError
 from app.api.rooms.access import get_room_access_context
 from app.api.rooms.dependencies import get_battle_map_service
 from app.domain.battle_maps.schemas import (
     BattleMap,
+    BattleMapArchive,
+    BattleMapArchivedError,
     BattleMapAssetInvalidError,
+    BattleMapCopy,
     BattleMapCreate,
     BattleMapForbiddenError,
     BattleMapInvalidError,
     BattleMapNotFoundError,
     BattleMapObjectsReplace,
     BattleMapPatch,
+    BattleMapReferencedError,
     BattleMapRevisionConflictError,
     BattleMapShrinkConflictError,
     BattleMapSummary,
@@ -33,6 +37,10 @@ def _map_battle_map_error(exc: Exception) -> APIError:
         exc, (BattleMapRevisionConflictError, BattleMapShrinkConflictError)
     ):
         return APIError(409, "battle_map_revision_conflict", str(exc))
+    if isinstance(exc, BattleMapArchivedError):
+        return APIError(409, "battle_map_archived", str(exc))
+    if isinstance(exc, BattleMapReferencedError):
+        return APIError(409, "battle_map_referenced", str(exc))
     if isinstance(exc, BattleMapInvalidError):
         return APIError(400, "battle_map_invalid", str(exc))
     if isinstance(exc, BattleMapAssetInvalidError):
@@ -56,11 +64,40 @@ def create_battle_map(
 @router.get("", response_model=list[BattleMapSummary])
 def list_battle_maps(
     room_id: UUID,
+    include_archived: bool = Query(default=False),
     context: RoomAccessContext = Depends(get_room_access_context),
     service: BattleMapService = Depends(get_battle_map_service),
 ) -> list[BattleMapSummary]:
     try:
-        return service.list(context, room_id)
+        return service.list(context, room_id, include_archived=include_archived)
+    except Exception as exc:
+        raise _map_battle_map_error(exc) from exc
+
+
+@router.post("/{map_id}/copy", response_model=BattleMap, status_code=status.HTTP_201_CREATED)
+def copy_battle_map(
+    room_id: UUID,
+    map_id: UUID,
+    payload: BattleMapCopy,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    service: BattleMapService = Depends(get_battle_map_service),
+) -> BattleMap:
+    try:
+        return service.copy(context, room_id=room_id, map_id=map_id, payload=payload)
+    except Exception as exc:
+        raise _map_battle_map_error(exc) from exc
+
+
+@router.post("/{map_id}/archive", response_model=BattleMap)
+def archive_battle_map(
+    room_id: UUID,
+    map_id: UUID,
+    payload: BattleMapArchive,
+    context: RoomAccessContext = Depends(get_room_access_context),
+    service: BattleMapService = Depends(get_battle_map_service),
+) -> BattleMap:
+    try:
+        return service.archive(context, room_id=room_id, map_id=map_id, payload=payload)
     except Exception as exc:
         raise _map_battle_map_error(exc) from exc
 
@@ -112,11 +149,12 @@ def replace_battle_map_objects(
 def delete_battle_map(
     room_id: UUID,
     map_id: UUID,
+    expected_revision: int = Query(..., gt=0),
     context: RoomAccessContext = Depends(get_room_access_context),
     service: BattleMapService = Depends(get_battle_map_service),
 ) -> Response:
     try:
-        service.delete(context, room_id, map_id)
+        service.delete(context, room_id, map_id, expected_revision=expected_revision)
     except Exception as exc:
         raise _map_battle_map_error(exc) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)

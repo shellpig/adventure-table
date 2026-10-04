@@ -21,6 +21,7 @@ from app.db import metadata
 from app.domain.battle_maps.service import BattleMapService
 from app.domain.room_assets.service import RoomAssetService
 from app.domain.rooms.schemas import RoomAccessAuthority, RoomAccessContext
+from app.domain.rooms.table_events import TableEventService
 from app.domain.rooms.workspace import RoomCharacterWorkspaceService
 from app.main import app
 from app.persistence.battle_maps.repository import BattleMapRepository
@@ -35,6 +36,7 @@ from app.persistence.room_assets.repository import RoomAssetRepository
 from app.persistence.room_assets.storage import FilesystemAssetStorage
 from app.persistence.room_assets.tables import room_assets
 from app.persistence.rooms.tables import rooms
+from app.persistence.rooms.table_runtime import TableEventRepository
 
 
 def _engine() -> Engine:
@@ -79,7 +81,9 @@ def ab_fixture(tmp_path: Path) -> Generator[AssetBattleMapFixture, None, None]:
         max_source_document_bytes=20 * 1024 * 1024,
     )
     battle_map_service = BattleMapService(
-        BattleMapRepository(engine), asset_repository
+        BattleMapRepository(engine),
+        asset_repository,
+        TableEventService(TableEventRepository(engine)),
     )
 
     room_a_id = uuid4()

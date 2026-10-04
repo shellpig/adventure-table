@@ -36,6 +36,7 @@ battle_maps = Table(
     Column("revision", BigInteger(), nullable=False, server_default="1"),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("archived_at", DateTime(timezone=True), nullable=True),
     CheckConstraint(
         "source_kind IN ('blank', 'image')",
         name="ck_battle_maps_source_kind",
@@ -66,6 +67,12 @@ battle_maps = Table(
     CheckConstraint("revision > 0", name="ck_battle_maps_revision_positive"),
 )
 Index("ix_battle_maps_room_id", battle_maps.c.room_id)
+Index(
+    "ix_battle_maps_room_archived_created",
+    battle_maps.c.room_id,
+    battle_maps.c.archived_at,
+    battle_maps.c.created_at,
+)
 
 
 battle_map_walls = Table(

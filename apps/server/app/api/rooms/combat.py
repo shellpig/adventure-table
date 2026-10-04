@@ -20,7 +20,12 @@ from app.domain.spatial.targeting import (
     CombatTargetOutOfRangeError,
 )
 from app.content.registry import ContentNotFoundError
-from app.domain.battle_maps.schemas import BattleMapNotFoundError
+from app.domain.battle_maps.schemas import (
+    BattleMapArchivedError,
+    BattleMapInvalidError,
+    BattleMapNotFoundError,
+    BattleMapReferencedError,
+)
 from app.domain.monster_library.errors import (
     MonsterTemplateArchivedError,
     MonsterTemplateNotFoundError,
@@ -218,6 +223,12 @@ def _map_combat_error(exc: Exception) -> APIError:
         return APIError(404, "combat_board_image_not_found", str(exc))
     if isinstance(exc, BattleMapNotFoundError):
         return APIError(404, "battle_map_not_found", str(exc))
+    if isinstance(exc, BattleMapArchivedError):
+        return APIError(409, "battle_map_archived", str(exc))
+    if isinstance(exc, BattleMapReferencedError):
+        return APIError(409, "battle_map_referenced", str(exc))
+    if isinstance(exc, BattleMapInvalidError):
+        return APIError(422, "invalid_combat_input", str(exc))
     if isinstance(exc, AttackDefinitionInvalidError):
         return APIError(422, "invalid_attack_definition", str(exc))
     if isinstance(exc, (RollInputInvalidError, ValueError)):

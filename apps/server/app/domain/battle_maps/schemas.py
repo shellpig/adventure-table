@@ -63,6 +63,7 @@ class BattleMap(StrictModel):
     revision: int
     created_at: datetime
     updated_at: datetime
+    archived_at: datetime | None
     walls: list[BattleMapWall] = Field(default_factory=list)
     doors: list[BattleMapDoor] = Field(default_factory=list)
     terrain: list[BattleMapTerrain] = Field(default_factory=list)
@@ -80,6 +81,7 @@ class BattleMapSummary(StrictModel):
     revision: int
     created_at: datetime
     updated_at: datetime
+    archived_at: datetime | None
 
 
 class BattleMapCreate(StrictModel):
@@ -210,6 +212,34 @@ class ProjectedBattleMap(StrictModel):
     drawings: list[BattleMapDrawing] = Field(default_factory=list)
 
 
+class BattleMapCopy(StrictModel):
+    expected_revision: int = Field(gt=0)
+    name: str | None = Field(default=None, min_length=1, max_length=MAX_NAME_LENGTH)
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("name cannot be blank")
+        return normalized
+
+
+class BattleMapArchive(StrictModel):
+    expected_revision: int = Field(gt=0)
+
+
+class TemporaryBattleMapInput(StrictModel):
+    width_cells: int = Field(ge=1, le=MAX_DIMENSION_CELLS)
+    height_cells: int = Field(ge=1, le=MAX_DIMENSION_CELLS)
+    walls: list[BattleMapWallInput] = Field(default_factory=list)
+    doors: list[BattleMapDoorInput] = Field(default_factory=list)
+    terrain: list[BattleMapTerrainInput] = Field(default_factory=list)
+    drawings: list[BattleMapDrawingInput] = Field(default_factory=list)
+
+
 class BattleMapNotFoundError(Exception):
     pass
 
@@ -234,12 +264,23 @@ class BattleMapAssetInvalidError(Exception):
     pass
 
 
+class BattleMapArchivedError(Exception):
+    pass
+
+
+class BattleMapReferencedError(Exception):
+    pass
+
+
 __all__ = [
     "MAX_DIMENSION_CELLS",
     "MAX_DRAWING_PAYLOAD_BYTES",
     "BattleMap",
+    "BattleMapArchive",
+    "BattleMapArchivedError",
     "BattleMapAssetInvalidError",
     "BattleMapAudience",
+    "BattleMapCopy",
     "BattleMapCreate",
     "BattleMapDoor",
     "BattleMapDoorInput",
@@ -251,6 +292,7 @@ __all__ = [
     "BattleMapNotFoundError",
     "BattleMapObjectsReplace",
     "BattleMapPatch",
+    "BattleMapReferencedError",
     "BattleMapRevisionConflictError",
     "BattleMapShrinkConflictError",
     "BattleMapSourceKind",
@@ -264,4 +306,5 @@ __all__ = [
     "ProjectedBattleMap",
     "ProjectedBattleMapDoor",
     "ProjectedBattleMapWall",
+    "TemporaryBattleMapInput",
 ]
