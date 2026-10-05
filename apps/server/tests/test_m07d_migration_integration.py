@@ -13,6 +13,7 @@ M07 never touched the character track, so the character head must be
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -64,6 +65,15 @@ CURRENT_WEB = "0043_m07c_map_monster_placements"
 GOBLIN_KEY = "srd5.1:monster:goblin"
 
 
+@pytest.fixture(autouse=True)
+def _restore_pg_heads() -> Iterator[None]:
+    try:
+        yield
+    finally:
+        _reset()
+        command.upgrade(_config(), "heads")
+
+
 def _versions(engine: Engine) -> list[str]:
     with engine.connect() as connection:
         return sorted(
@@ -113,7 +123,7 @@ def test_pg_prem07_to_current_heads_empty() -> None:
     """Empty schema: pre-M07 heads upgrade cleanly to current heads.
 
     Pins the pre-M07 shape (campaign-bound templates, no placements table,
-    character track at its base) and the post-upgrade shape (Room-bound
+    character track at its head) and the post-upgrade shape (Room-bound
     templates, placements table, both tracks at their heads).
     """
     _reset()
@@ -122,14 +132,16 @@ def test_pg_prem07_to_current_heads_empty() -> None:
     engine = create_engine(POSTGRES_URL)
     try:
         command.upgrade(config, PRE_M07_WEB)
-        assert _versions(engine) == [PRE_M07_WEB]
+        command.upgrade(config, CHARACTER_HEAD)
+        assert _versions(engine) == [CHARACTER_HEAD, PRE_M07_WEB]
         assert "battle_map_monster_placements" not in _table_names(engine)
         assert _columns(engine, "monster_templates") == {
             "id", "campaign_id", "name", "source_key", "rules",
             "created_at", "updated_at",
         }
-        # M07 never touched the character track: its marker column is absent.
-        assert "state_revision" not in _columns(engine, "character_states")
+        # Start from both pre-M07 heads; M07 must not change Character schema.
+        character_columns = _columns(engine, "character_states")
+        assert "state_revision" in character_columns
 
         command.upgrade(config, "heads")
         assert _versions(engine) == [CHARACTER_HEAD, CURRENT_WEB]
@@ -143,7 +155,7 @@ def test_pg_prem07_to_current_heads_empty() -> None:
         assert "campaign_id" not in template_cols
         assert "revision" in template_cols
         assert "archived_at" in template_cols
-        assert "state_revision" in _columns(engine, "character_states")
+        assert _columns(engine, "character_states") == character_columns
     finally:
         engine.dispose()
 

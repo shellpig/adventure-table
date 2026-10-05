@@ -25,6 +25,7 @@ Deliberately not recreated here (cited nodes cover them):
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -33,7 +34,7 @@ import pytest
 from sqlalchemy import create_engine, func, select, text, update
 from sqlalchemy.engine import Engine
 
-from app.content import load_default_content_registry
+from app.content import ContentRegistry, load_default_content_registry
 from app.content.localization_files import load_content_localization_catalog
 from app.content.registry import resolve_content_root
 from app.domain.battle_maps.schemas import (
@@ -62,6 +63,7 @@ from app.domain.rooms.schemas import (
     EnterRoomRequest,
     RoomAccessAuthority,
     RoomAccessContext,
+    RoomAccessGrant,
 )
 from app.domain.rooms.table_events import (
     TableActorContext,
@@ -119,6 +121,15 @@ pytestmark = [
 GOBLIN_KEY = "srd5.1:monster:goblin"
 
 
+@pytest.fixture(autouse=True)
+def _restore_pg_heads() -> Iterator[None]:
+    try:
+        yield
+    finally:
+        _reset()
+        command.upgrade(_config(), "heads")
+
+
 @dataclass
 class CampaignWorld:
     campaign_id: UUID
@@ -133,11 +144,11 @@ class CampaignWorld:
 @dataclass
 class JourneyWorld:
     engine: Engine
-    registry: object
+    registry: ContentRegistry
     room_a_id: UUID
     room_b_id: UUID
-    owner_a: object
-    owner_b: object
+    owner_a: RoomAccessGrant
+    owner_b: RoomAccessGrant
     character_id: UUID
     character2_id: UUID
     events: TableEventService
@@ -145,19 +156,19 @@ class JourneyWorld:
     battle_maps: BattleMapService
     library: MonsterLibraryService
     characters: CharacterRepository
+    rooms: RoomService
     campaigns: dict[str, CampaignWorld] = field(default_factory=dict)
-    _rooms: object = None  # set post-init
 
 
 def _build_campaign(
     world: JourneyWorld,
     *,
     room_id: UUID,
-    owner: object,
+    owner: RoomAccessGrant,
     name: str,
     character_id: UUID,
 ) -> CampaignWorld:
-    rooms: RoomService = world._rooms
+    rooms = world.rooms
     dm = rooms.enter_room(
         EnterRoomRequest(
             code=owner.room.code,
@@ -206,7 +217,7 @@ def _build_campaign(
         world.engine, world.registry, world.characters, world.events
     )
 
-    def actor(context: object) -> TableActorContext:
+    def actor(context: RoomAccessContext) -> TableActorContext:
         return world.events.resolve_human_actor(
             room_id=room_id, campaign_id=campaign.id,
             session_id=started.id, context=context,
@@ -294,8 +305,8 @@ def _build_world() -> JourneyWorld:
         battle_maps=battle_maps,
         library=library,
         characters=characters,
+        rooms=rooms,
     )
-    world._rooms = rooms
     world.campaigns["a1"] = _build_campaign(
         world, room_id=owner_a.room.id, owner=owner_a, name="A1",
         character_id=character.id,
@@ -311,7 +322,7 @@ def _build_world() -> JourneyWorld:
     return world
 
 
-def _owner_context(world: JourneyWorld, room_id: UUID, owner: object) -> RoomAccessContext:
+def _owner_context(world: JourneyWorld, room_id: UUID, owner: RoomAccessGrant) -> RoomAccessContext:
     return RoomAccessContext(
         room_id=room_id,
         access_session_id=owner.access_session_id,
@@ -327,18 +338,18 @@ def _dm_room_context(cw: CampaignWorld, room_id: UUID) -> RoomAccessContext:
     )
 
 
-def _member_context(world: JourneyWorld, room_id: UUID, owner: object) -> RoomAccessContext:
-    member = world._rooms.enter_room(
+def _member_context(world: JourneyWorld, room_id: UUID, owner: RoomAccessGrant) -> RoomAccessContext:
+    member = world.rooms.enter_room(
         EnterRoomRequest(
             code=owner.room.code, password="secret", display_name="Member"
         ),
         remote_addr="127.0.0.9",
     )
-    return world._rooms.authenticate(room_id, member.access_token)
+    return world.rooms.authenticate(room_id, member.access_token)
 
 
 def _make_template(
-    world: JourneyWorld, room_id: UUID, owner: object, *, name: str, size: str, max_hp: int
+    world: JourneyWorld, room_id: UUID, owner: RoomAccessGrant, *, name: str, size: str, max_hp: int
 ) -> UUID:
     created = world.library.create_custom(
         _owner_context(world, room_id, owner),
@@ -348,7 +359,7 @@ def _make_template(
     return UUID(created.ref.removeprefix("custom:"))
 
 
-def _make_map(world: JourneyWorld, room_id: UUID, owner: object, *, name: str = "Journey Map") -> UUID:
+def _make_map(world: JourneyWorld, room_id: UUID, owner: RoomAccessGrant, *, name: str = "Journey Map") -> UUID:
     created = world.battle_maps.create(
         _owner_context(world, room_id, owner),
         room_id=room_id,
@@ -362,7 +373,7 @@ def _make_map(world: JourneyWorld, room_id: UUID, owner: object, *, name: str = 
 def _put(
     world: JourneyWorld,
     room_id: UUID,
-    owner: object,
+    owner: RoomAccessGrant,
     map_id: UUID,
     placements: list[MonsterPlacementInput],
     *,
@@ -416,11 +427,7 @@ def _ai_player_actor(world: JourneyWorld, cw: CampaignWorld) -> TableActorContex
         campaign_id=cw.campaign_id,
         session_id=cw.session_id,
         seat_id=cw.player_actor.seat_id,
-        context=RoomAccessContext(
-            room_id=world.room_a_id,
-            access_session_id=cw.player_actor.access_session_id,
-            authority=RoomAccessAuthority.MEMBER,
-        ),
+        context=world.rooms.authenticate(world.room_a_id, world.owner_a.access_token),
         request=AIHandoffRequest(),
     )
     return world.events.resolve_ai_actor(
@@ -797,8 +804,10 @@ def test_pg_quick_empty_map_zero_adventure_optional_scene_legal() -> None:
         assert board.source_battle_map_id == map_id
         a1.combat.end_combat(a1.dm_actor)
 
-        # The Session ran with no Scene configured at all (optional).
-        assert a1.session_id is not None
+        # No Adventure or runtime world entries were needed to run the Session.
+        with world.engine.connect() as connection:
+            assert connection.scalar(text("SELECT count(*) FROM adventure_entries")) == 0
+            assert connection.scalar(text("SELECT count(*) FROM campaign_world_entries")) == 0
     finally:
         world.engine.dispose()
 
@@ -886,6 +895,8 @@ def test_pg_room_hard_delete_clears_m07_graph() -> None:
                 include_active_party=False, idempotency_key="doomed",
             ),
         )
+        doomed_instances = _monster_instance_ids(world, started.id)
+        assert len(doomed_instances) == 1
         a1.combat.end_combat(a1.dm_actor)
 
         RoomWorkspaceRepository(world.engine).hard_delete_room(room_a)
@@ -911,11 +922,20 @@ def test_pg_room_hard_delete_clears_m07_graph() -> None:
                 select(func.count()).select_from(combat_boards)
                 .where(combat_boards.c.combat_id == started.id)
             ) == 0
+            assert connection.scalar(
+                select(func.count()).select_from(monster_instances)
+                .where(monster_instances.c.id.in_(doomed_instances))
+            ) == 0
             # Room B is untouched.
             b1 = world.campaigns["b1"]
+            assert connection.scalar(
+                text("SELECT count(*) FROM rooms WHERE id = :room_id"),
+                {"room_id": room_b},
+            ) == 1
             assert connection.scalar(
                 select(func.count()).select_from(combats)
                 .where(combats.c.campaign_id == b1.campaign_id)
             ) == 0
+        assert world.sessions.repository.get(b1.session_id) is not None
     finally:
         world.engine.dispose()
