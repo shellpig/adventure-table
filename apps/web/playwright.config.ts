@@ -60,6 +60,8 @@ export default defineConfig<{}, { roomSource: RoomSource }>({
   use: {
     baseURL,
     browserName: 'chromium',
+    // Intermittent failures are rarely reproducible on demand; keep the network log.
+    trace: 'retain-on-failure',
     storageState: {
       cookies: [],
       origins: [

@@ -306,6 +306,12 @@ test('P5-G G.2 Tactical Combat full browser journey', async ({
     }
     await expect(token(page, thugEntry.id)).toBeVisible()
     await expect(token(player.page, thugEntry.id)).toBeVisible()
+    // The Thug's move bumped the board revision. Movement confirm sends the client's board
+    // revision, so wait until the player's board has drawn the Thug on its final cell.
+    const thugCell = cell(player.page, THUG_PUSHED)
+    const thugRect = token(player.page, thugEntry.id).locator('rect')
+    await expect.poll(async () => [await thugRect.getAttribute('x'), await thugRect.getAttribute('y')])
+      .toEqual([await thugCell.getAttribute('x'), await thugCell.getAttribute('y')])
 
     // G.2 item 4: Difficult Terrain crossed by player with doubled cost in preview and committed movement
     // G.2 item 5: split movement (move, act, then move again in the same turn with remaining budget)
