@@ -794,7 +794,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                               <span>{formatMonsterRuleField('type', item.type, locale)}</span>
                             ) : null}
                             {item.challenge_rating !== null && item.challenge_rating !== undefined ? (
-                              <span>CR {item.challenge_rating}</span>
+                              <span>CR {formatChallengeRating(item.challenge_rating)}</span>
                             ) : null}
                             {item.armor_class !== null && item.armor_class !== undefined ? (
                               <span>AC {item.armor_class}</span>
@@ -891,7 +891,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                         detail.rules.challenge_rating !== undefined ? (
                           <div>
                             <strong>{copy.fieldChallengeRating}:</strong>{' '}
-                            {detail.rules.challenge_rating}
+                            {formatChallengeRating(detail.rules.challenge_rating)}
                           </div>
                         ) : null}
                         <div>

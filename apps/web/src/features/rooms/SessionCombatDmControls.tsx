@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { listSessionMonsterLibrary, MonsterLibraryApiError } from '../../api/monsterLibrary'
-import { formatMonsterName } from './monsterLibraryCopy'
+import { formatChallengeRating, formatMonsterName } from './monsterLibraryCopy'
 import { useLocale } from '../../i18n/LocaleProvider'
 
 import {
@@ -70,7 +70,7 @@ export function SessionCombatDmControls({
             label: localizedName,
             description:
               item.challenge_rating !== null && item.challenge_rating !== undefined
-                ? `CR ${item.challenge_rating}`
+                ? `CR ${formatChallengeRating(item.challenge_rating)}`
                 : undefined,
             searchAliases: localizedName !== item.name ? [item.name, localizedName] : [item.name],
           }
