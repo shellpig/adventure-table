@@ -1839,9 +1839,14 @@
 
 /* Battle Map Library */
 .battle-map-library {
-  max-width: 1000px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 24px;
+}
+
+@media (max-width: 480px) {
+  .battle-map-library {
+    padding: 24px 16px;
+  }
 }
 
 .battle-map-library__toolbar {
