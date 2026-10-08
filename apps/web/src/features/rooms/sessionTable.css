@@ -2428,27 +2428,44 @@
   opacity: 1;
 }
 
+/* M07-D D6e: compact single-row monster panel. No heading block, no hint
+   paragraph, no label-over-control stacks: visible labels are visually-hidden
+   spans (the wrapping labels keep the accessible names), so the row is just
+   the 41px controls and matches the other picker rows. Wraps on narrow
+   widths. Save/problems/messages below add lines only when present. */
 .battle-map-editor__monster-panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
+  gap: 8px;
 }
 
-.battle-map-editor__monster-panel > h4 {
+.battle-map-editor__field-label-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.battle-map-editor__monster-loading {
   margin: 0;
-  font-size: 0.9rem;
-  color: var(--text);
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .battle-map-editor__monster-picker {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 10px 12px;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.battle-map-editor__monster-picker .battle-map-editor__field {
+  gap: 0;
 }
 
 .battle-map-editor__monster-picker .battle-map-editor__field--search {

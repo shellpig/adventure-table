@@ -38,8 +38,12 @@ import {
   monsterPlacementsFromMap,
   monsterSummaryFromDetail,
   moveMonsterPlacement,
+  newPlacementClientId,
+  popPlacementHistory,
+  pushPlacementHistory,
   removeMonsterPlacement,
   resolvePlacementTemplate,
+  sameMonsterPlacements,
   toggleMonsterPlacementVisibility,
   type PlacementCreateStamp,
   type WorkingMonsterPlacement,
@@ -184,6 +188,10 @@ export function BattleMapEditor({
   const [placementProblems, setPlacementProblems] = useState<MonsterPlacementProblem[]>([])
   const [placementsSaving, setPlacementsSaving] = useState(false)
   const [placementsMessage, setPlacementsMessage] = useState<string | null>(null)
+  // M07-D D6e: placement undo stack. Each entry is the placements array as it
+  // was before one edit step (place, move, visibility toggle, remove); a
+  // token drag records its pre-drag snapshot once, so it undoes as one step.
+  const [placementHistory, setPlacementHistory] = useState<WorkingMonsterPlacement[][]>([])
   // M07-D F17 (option b): synchronous mirror of the working placements. The
   // save response only overwrites them when nothing changed mid-flight; a
   // newer edit is kept and flagged unsaved instead of being clobbered.
@@ -294,6 +302,25 @@ export function BattleMapEditor({
   )
 
   const handleUndo = useCallback(() => {
+    // M07-D D6e: undo follows the active mode. Monster mode rewinds placement
+    // edits; geometry modes rewind geometry exactly as before.
+    if (monsterMode) {
+      setPlacementHistory((h) => {
+        const popped = popPlacementHistory(h)
+        if (!popped) return h
+        setPlacements(popped.placements)
+        // A rewound place/remove can orphan the selection; drop it only then
+        // so move-undos keep the popover open on the restored token.
+        if (
+          selectedPlacementId &&
+          !popped.placements.some((p) => p.clientId === selectedPlacementId)
+        ) {
+          setSelectedPlacementId(null)
+        }
+        return popped.history
+      })
+      return
+    }
     setHistory((h) => {
       if (h.length === 0) return h
       const prev = h[h.length - 1]
@@ -301,7 +328,27 @@ export function BattleMapEditor({
       setSelectedId(null)
       return h.slice(0, -1)
     })
+  }, [monsterMode, selectedPlacementId])
+
+  const pushPlacementHistoryEntry = useCallback((prev: WorkingMonsterPlacement[]) => {
+    setPlacementHistory((h) => pushPlacementHistory(h, prev))
   }, [])
+
+  // M07-D D6e: every placement mutation goes through here so Ctrl/Cmd+Z and
+  // the Undo button can rewind it in monster mode. No-op updaters (same cell,
+  // unknown id) push nothing and skip the re-render.
+  const updatePlacements = useCallback(
+    (updater: (prev: WorkingMonsterPlacement[]) => WorkingMonsterPlacement[]) => {
+      setPlacements((prev) => {
+        const next = updater(prev)
+        if (next === prev || sameMonsterPlacements(prev, next)) return prev
+        pushPlacementHistoryEntry(prev)
+        return next
+      })
+      setPlacementsMessage(null)
+    },
+    [pushPlacementHistoryEntry],
+  )
 
   const selectTool = useCallback((nextTool: EditorTool) => {
     setTool(nextTool)
@@ -728,8 +775,7 @@ export function BattleMapEditor({
         return
       }
       if (selectedPlacementId) {
-        setPlacements((prev) => moveMonsterPlacement(prev, selectedPlacementId, x, y))
-        setPlacementsMessage(null)
+        updatePlacements((prev) => moveMonsterPlacement(prev, selectedPlacementId, x, y))
         return
       }
       if (selectedTemplateRef) {
@@ -753,16 +799,15 @@ export function BattleMapEditor({
         // createPlacementIfFree runs inside the updater against the latest
         // array, so even two clicks processed before a re-render (both
         // closures seeing an empty cell) still yield exactly one row.
-        setPlacements((prev) => createPlacementIfFree(prev, {
+        updatePlacements((prev) => createPlacementIfFree(prev, {
           templateRef,
           anchor_x: x,
           anchor_y: y,
           visibility,
         }, sizeOf).placements)
-        setPlacementsMessage(null)
       }
     },
-    [placementAt, selectedPlacementId, selectedTemplateRef, newPlacementVisibility, templateForPlacement],
+    [placementAt, selectedPlacementId, selectedTemplateRef, newPlacementVisibility, templateForPlacement, updatePlacements],
   )
 
   const handlePlacementTokenClick = useCallback((clientId: string) => {
@@ -789,6 +834,10 @@ export function BattleMapEditor({
     clientId: string
     startClientX: number
     startClientY: number
+    // M07-D D6e: pre-drag placements snapshot. The first real cell change of
+    // the drag pushes this snapshot once, so the whole drag undoes as one step.
+    snapshot: WorkingMonsterPlacement[]
+    historyPushed: boolean
   } | null>(null)
   const suppressPlacementClickRef = useRef(false)
   // Stamp of the last created placement for double-click suppression.
@@ -797,11 +846,14 @@ export function BattleMapEditor({
   const handlePlacementTokenPointerDown = useCallback(
     (clientId: string, point?: { clientX: number; clientY: number }) => {
       // Arm the drag only; selection stays on the click path so press+release
-      // without moving still toggles the selection exactly once.
+      // without moving still toggles the selection exactly once. The snapshot
+      // is the single undo entry if this press turns into a real drag.
       dragPlacementRef.current = {
         clientId,
         startClientX: point?.clientX ?? 0,
         startClientY: point?.clientY ?? 0,
+        snapshot: placementsRef.current,
+        historyPushed: false,
       }
       suppressPlacementClickRef.current = false
     },
@@ -823,11 +875,23 @@ export function BattleMapEditor({
       ) {
         return
       }
-      setPlacements((prev) => moveMonsterPlacement(prev, dragging.clientId, x, y))
+      // One undo step per drag: push the pre-drag snapshot on the first cell
+      // that actually moves the token, never once per cell.
+      if (!dragging.historyPushed) {
+        const from = dragging.snapshot.find((p) => p.clientId === dragging.clientId)
+        if (from && (from.anchor_x !== x || from.anchor_y !== y)) {
+          dragging.historyPushed = true
+          pushPlacementHistoryEntry(dragging.snapshot)
+        }
+      }
+      setPlacements((prev) => {
+        const next = moveMonsterPlacement(prev, dragging.clientId, x, y)
+        return next === prev || sameMonsterPlacements(prev, next) ? prev : next
+      })
       setPlacementsMessage(null)
       suppressPlacementClickRef.current = true
     },
-    [],
+    [pushPlacementHistoryEntry],
   )
 
   const handlePlacementPointerUp = useCallback(() => {
@@ -855,18 +919,26 @@ export function BattleMapEditor({
     }
   }, [monsterMode])
 
+  // M07-D D6e: single exit path for monster mode. Geometry tool buttons and
+  // the Monsters toggle share it: selection/popover cleared, any armed token
+  // drag disarmed. Placements (and their undo stack) are untouched, so
+  // unsaved edits survive a tool switch.
+  const leaveMonsterMode = useCallback(() => {
+    dragPlacementRef.current = null
+    setMonsterMode(false)
+    setSelectedPlacementId(null)
+  }, [])
+
   const togglePlacementHidden = useCallback(() => {
     if (!selectedPlacementId) return
-    setPlacements((prev) => toggleMonsterPlacementVisibility(prev, selectedPlacementId))
-    setPlacementsMessage(null)
-  }, [selectedPlacementId])
+    updatePlacements((prev) => toggleMonsterPlacementVisibility(prev, selectedPlacementId))
+  }, [selectedPlacementId, updatePlacements])
 
   const removeSelectedPlacement = useCallback(() => {
     if (!selectedPlacementId) return
-    setPlacements((prev) => removeMonsterPlacement(prev, selectedPlacementId))
+    updatePlacements((prev) => removeMonsterPlacement(prev, selectedPlacementId))
     setSelectedPlacementId(null)
-    setPlacementsMessage(null)
-  }, [selectedPlacementId])
+  }, [selectedPlacementId, updatePlacements])
 
   const handleSavePlacements = useCallback(async () => {
     if (placementsSaving) return
@@ -892,6 +964,11 @@ export function BattleMapEditor({
         setPlacementProblems([])
         setSelectedPlacementId(null)
         setPlacementsMessage(libraryCopy.monsterPlacementSaved)
+        // Mirror the geometry save (setHistory([]) there): the saved rows
+        // carry server-assigned ids, so pre-save undo entries would restore
+        // stale ids. Mid-flight edits above keep the stack because the working
+        // state — and its history — is still newer than the response.
+        setPlacementHistory([])
       }
     } catch (cause) {
       if (cause instanceof SessionApiError && cause.code === 'map_monster_placement_invalid') {
@@ -1178,8 +1255,13 @@ export function BattleMapEditor({
               data-testid={`map-editor-tool-${t}`}
               data-active={tool === t && !monsterMode ? 'true' : undefined}
               aria-pressed={tool === t && !monsterMode}
-              disabled={monsterMode}
-              onClick={() => selectTool(t)}
+              onClick={() => {
+                // M07-D D6e: geometry tools stay enabled in monster mode; one
+                // click leaves monster mode (selection/popover/drag cleared,
+                // placements kept) and activates the tool.
+                if (monsterMode) leaveMonsterMode()
+                selectTool(t)
+              }}
             >
               {toolLabel(t)}
             </button>
@@ -1192,9 +1274,7 @@ export function BattleMapEditor({
             aria-pressed={monsterMode}
             onClick={() => {
               if (monsterMode) {
-                dragPlacementRef.current = null
-                setMonsterMode(false)
-                setSelectedPlacementId(null)
+                leaveMonsterMode()
               } else {
                 enterMonsterMode()
               }
@@ -1205,7 +1285,7 @@ export function BattleMapEditor({
           <button
             type="button"
             className="button secondary compact"
-            disabled={history.length === 0}
+            disabled={monsterMode ? placementHistory.length === 0 : history.length === 0}
             onClick={handleUndo}
             data-testid="map-editor-undo"
           >
@@ -1248,7 +1328,10 @@ export function BattleMapEditor({
       </header>
 
 
-      {tool === 'terrain' ? (
+      {/* M07-D D6e: tool-specific rows follow the active mode. Geometry rows
+          render only outside monster mode; the monster panel (below) renders
+          only inside it. */}
+      {tool === 'terrain' && !monsterMode ? (
         <div className="battle-map-editor__terrain-picker">
           <label className="battle-map-editor__field">
             <span>{copy.tacticalToolTerrain}</span>
@@ -1264,7 +1347,7 @@ export function BattleMapEditor({
         </div>
       ) : null}
 
-      {tool === 'draw' ? (
+      {tool === 'draw' && !monsterMode ? (
         <div className="battle-map-editor__pen-picker" data-testid="map-editor-pen-picker">
           <div className="battle-map-editor__field">
             <span>{copy.tacticalDrawColor}</span>
@@ -1301,7 +1384,7 @@ export function BattleMapEditor({
         </div>
       ) : null}
 
-      {selectedItem ? (
+      {selectedItem && !monsterMode ? (
         <div className="battle-map-editor__selection" data-testid="map-editor-selection">
           <span>
             {selectedItem.kind === 'wall'
@@ -1396,15 +1479,29 @@ export function BattleMapEditor({
       ) : null}
 
       {monsterMode ? (
-        <div className="battle-map-editor__monster-panel" data-testid="monster-placement-panel">
-          <h4>{libraryCopy.monsterPlacementsHeading}</h4>
-          <p>{libraryCopy.monsterPlacementsHint}</p>
+        // M07-D D6e: one compact row at the same height as the other picker
+        // rows (41px controls). No heading block: the heading survives as the
+        // group's accessible name and the hint as a tooltip. Visible labels
+        // become visually-hidden spans (wrapping labels keep the accessible
+        // names); every behaviour testid is unchanged. May wrap on narrow
+        // widths.
+        <div
+          className="battle-map-editor__monster-panel"
+          data-testid="monster-placement-panel"
+          role="group"
+          aria-label={libraryCopy.monsterPlacementsHeading}
+          title={libraryCopy.monsterPlacementsHint}
+        >
           {templates === null ? (
-            <p>{libraryCopy.monsterPlacementLoadingTemplates}</p>
+            <p className="battle-map-editor__monster-loading">
+              {libraryCopy.monsterPlacementLoadingTemplates}
+            </p>
           ) : (
             <div className="battle-map-editor__monster-picker">
               <label className="battle-map-editor__field battle-map-editor__field--search">
-                <span>{libraryCopy.monsterTemplateSearchLabel}</span>
+                <span className="battle-map-editor__field-label-sr">
+                  {libraryCopy.monsterTemplateSearchLabel}
+                </span>
                 <input
                   type="search"
                   value={templateSearch}
@@ -1414,7 +1511,9 @@ export function BattleMapEditor({
                 />
               </label>
               <label className="battle-map-editor__field battle-map-editor__field--template">
-                <span>{libraryCopy.monsterTemplatePickerLabel}</span>
+                <span className="battle-map-editor__field-label-sr">
+                  {libraryCopy.monsterTemplatePickerLabel}
+                </span>
                 <select
                   value={selectedTemplateRef}
                   onChange={(e) => {
@@ -1466,7 +1565,9 @@ export function BattleMapEditor({
                 <p className="room-empty-text">{libraryCopy.monsterTemplateNoMatch}</p>
               ) : null}
               <label className="battle-map-editor__field battle-map-editor__field--visibility">
-                <span>{libraryCopy.monsterPlacementVisibilityLabel}</span>
+                <span className="battle-map-editor__field-label-sr">
+                  {libraryCopy.monsterPlacementVisibilityLabel}
+                </span>
                 <select
                   value={newPlacementVisibility}
                   onChange={(e) =>

@@ -613,6 +613,167 @@ describe('M07-C BattleMapEditor monster placements', () => {
   })
 })
 
+describe('M07-D D6e monster-mode usability', () => {
+  const source = readFileSync(new URL('./BattleMapEditor.tsx', import.meta.url), 'utf8')
+
+  it('pushPlacementHistory appends and caps at 50, popPlacementHistory rewinds one step', async () => {
+    const { pushPlacementHistory, popPlacementHistory, PLACEMENT_HISTORY_LIMIT } =
+      await import('./mapMonsterPlacements')
+    type WorkingMonsterPlacement =
+      import('./mapMonsterPlacements').WorkingMonsterPlacement
+    expect(PLACEMENT_HISTORY_LIMIT).toBe(50)
+    const row = (n: number): WorkingMonsterPlacement => ({ clientId: `p-${n}`, templateRef: 't', anchor_x: n, anchor_y: 0, visibility: 'public' })
+    let history: WorkingMonsterPlacement[][] = []
+    expect(popPlacementHistory(history)).toBeNull()
+    history = pushPlacementHistory(history, [])
+    history = pushPlacementHistory(history, [row(1)])
+    expect(history).toHaveLength(2)
+    const popped = popPlacementHistory(history)!
+    expect(popped.placements).toEqual([row(1)])
+    expect(popped.history).toEqual([[]])
+    // Overflow drops the oldest entries first.
+    let capped: WorkingMonsterPlacement[][] = []
+    for (let n = 0; n < 55; n += 1) capped = pushPlacementHistory(capped, [row(n)])
+    expect(capped).toHaveLength(50)
+    expect(capped[0]).toEqual([row(5)])
+    expect(capped[49]).toEqual([row(54)])
+    // A consecutive push of the identical reference collapses (StrictMode
+    // double-invokes the editor updater with the same pre-edit array).
+    const before = [row(7)]
+    const once = pushPlacementHistory([], before)
+    expect(pushPlacementHistory(once, before)).toBe(once)
+    expect(pushPlacementHistory(once, [row(7)])).toHaveLength(2)
+  })
+
+  it('sameMonsterPlacements tells real edits from no-op updater results', async () => {
+    const { sameMonsterPlacements, moveMonsterPlacement } = await import('./mapMonsterPlacements')
+    const before = [
+      { clientId: 'p-1', templateRef: 't', anchor_x: 5, anchor_y: 2, visibility: 'public' as const },
+    ]
+    // Helpers always build a new array, so the editor compares content.
+    expect(sameMonsterPlacements(before, [...before])).toBe(true)
+    expect(sameMonsterPlacements(before, moveMonsterPlacement(before, 'p-1', 5, 2))).toBe(true)
+    expect(sameMonsterPlacements(before, moveMonsterPlacement(before, 'no-such-id', 5, 2))).toBe(true)
+    expect(sameMonsterPlacements(before, moveMonsterPlacement(before, 'p-1', 7, 2))).toBe(false)
+    expect(sameMonsterPlacements(before, [])).toBe(false)
+  })
+
+  it('place, drag (one step), and undo rewind through the helper contract', async () => {
+    const {
+      createPlacementIfFree,
+      moveMonsterPlacement,
+      pushPlacementHistory,
+      popPlacementHistory,
+      sameMonsterPlacements,
+    } = await import('./mapMonsterPlacements')
+    type WorkingMonsterPlacement =
+      import('./mapMonsterPlacements').WorkingMonsterPlacement
+    const sizeOf = () => ({ width: 1, height: 1 })
+    const draft = { templateRef: 'srd5.1:monster:goblin', anchor_x: 5, anchor_y: 2, visibility: 'public' as const }
+    // Place pushes the empty array (create on a covered cell is a no-op that
+    // returns the identical reference, so it would push nothing).
+    const empty: WorkingMonsterPlacement[] = []
+    const created = createPlacementIfFree(empty, draft, sizeOf)
+    expect(created.created).not.toBeNull()
+    expect(createPlacementIfFree(created.placements, draft, sizeOf).placements).toBe(created.placements)
+    let history = pushPlacementHistory([], empty)
+    // A drag pushes its pre-drag snapshot once, then applies every cell move.
+    const id = created.created!.clientId
+    history = pushPlacementHistory(history, created.placements)
+    const mid = moveMonsterPlacement(created.placements, id, 6, 2)
+    const end = moveMonsterPlacement(mid, id, 8, 2)
+    expect(end[0]).toMatchObject({ anchor_x: 8, anchor_y: 2 })
+    // First undo restores the pre-drag position in a single step.
+    let popped = popPlacementHistory(history)!
+    expect(popped.placements).toBe(created.placements)
+    expect(sameMonsterPlacements(popped.placements, created.placements)).toBe(true)
+    // Second undo removes the placement; the stack is then empty.
+    popped = popPlacementHistory(popped.history)!
+    expect(popped.placements).toEqual([])
+    expect(popPlacementHistory(popped.history)).toBeNull()
+  })
+
+  it('geometry tool buttons stay enabled in monster mode and switch in one click', () => {
+    // No geometry toolbar button may be disabled by monster mode anymore.
+    expect(source).not.toContain('disabled={monsterMode}')
+    const toolbar = source.slice(source.indexOf('{TOOLS.map((t)'))
+    expect(toolbar).toContain('if (monsterMode) leaveMonsterMode()')
+    expect(toolbar).toContain('selectTool(t)')
+    // The shared exit clears selection/popover and disarms drags, but keeps
+    // placements (and their history) so unsaved edits survive the switch.
+    const leaveStart = source.indexOf('const leaveMonsterMode')
+    const leaveEnd = source.indexOf('}, [])', leaveStart)
+    const leave = source.slice(leaveStart, leaveEnd)
+    expect(leave).toContain('dragPlacementRef.current = null')
+    expect(leave).toContain('setMonsterMode(false)')
+    expect(leave).toContain('setSelectedPlacementId(null)')
+    expect(leave).not.toContain('setPlacements(')
+    expect(leave).not.toContain('setPlacementHistory(')
+  })
+
+  it('tool-specific rows follow the active mode', () => {
+    expect(source).toContain("tool === 'terrain' && !monsterMode")
+    expect(source).toContain("tool === 'draw' && !monsterMode")
+    expect(source).toContain('selectedItem && !monsterMode')
+    // The monster panel still renders only in monster mode.
+    expect(source).toContain('data-testid="monster-placement-panel"')
+    expect(source).toContain('{monsterMode ? (')
+  })
+
+  it('undo follows the active mode and the button enables per mode', () => {
+    const undo = source.slice(source.indexOf('const handleUndo'))
+    expect(undo).toContain('if (monsterMode)')
+    expect(undo).toContain('popPlacementHistory(h)')
+    expect(undo).toContain('setPlacements(popped.placements)')
+    // A rewound place drops the orphaned selection; move-undos keep it.
+    expect(undo).toContain('setSelectedPlacementId(null)')
+    expect(source).toContain('disabled={monsterMode ? placementHistory.length === 0 : history.length === 0}')
+    // Ctrl/Cmd+Z keeps the shared input guard and routes through handleUndo.
+    expect(source).toContain('shouldTriggerEditorUndo(e)')
+  })
+
+  it('a token drag records exactly one undo step', () => {
+    expect(source).toContain('snapshot: placementsRef.current')
+    expect(source).toContain('historyPushed')
+    // Pushed once on the first cell that actually moves the token.
+    expect(source).toContain('pushPlacementHistoryEntry(dragging.snapshot)')
+    // Every other placement mutation pushes through the shared wrapper.
+    expect(source).toContain('const updatePlacements = useCallback')
+    expect(source).toContain('sameMonsterPlacements(prev, next)')
+  })
+
+  it('a clean placement save clears the undo stack like the geometry save', () => {
+    expect(source).toContain('setPlacementHistory([])')
+    const save = source.slice(source.indexOf('const handleSavePlacements'))
+    expect(save).toContain('placementsRef.current !== inFlight')
+    expect(save).toContain('setPlacementHistory([])')
+    expect(source).toContain('setHistory([])')
+  })
+
+  it('the monster panel is one compact row keeping every behaviour testid', () => {
+    // No heading block, no hint paragraph.
+    expect(source).not.toContain('<h4>{libraryCopy.monsterPlacementsHeading}</h4>')
+    expect(source).not.toContain('<p>{libraryCopy.monsterPlacementsHint}</p>')
+    // Heading and hint survive as accessible name and tooltip.
+    expect(source).toContain('aria-label={libraryCopy.monsterPlacementsHeading}')
+    expect(source).toContain('title={libraryCopy.monsterPlacementsHint}')
+    // Labels are visually hidden; wrapping labels keep the accessible names.
+    expect(source).toContain('battle-map-editor__field-label-sr')
+    const css = readFileSync(new URL('./sessionTable.css', import.meta.url), 'utf8')
+    expect(css).toContain('.battle-map-editor__field-label-sr')
+    // Every behaviour testid is unchanged.
+    for (const testid of [
+      'monster-placement-panel',
+      'monster-placement-template-search',
+      'monster-placement-template-picker',
+      'monster-placement-visibility-picker',
+      'monster-placement-save',
+    ]) {
+      expect(source).toContain(`data-testid="${testid}"`)
+    }
+  })
+})
+
 describe('M07-D D6d map editor monster-placement UX fixes', () => {
   const source = readFileSync(new URL('./BattleMapEditor.tsx', import.meta.url), 'utf8')
 

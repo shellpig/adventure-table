@@ -852,3 +852,121 @@ test('M07-D D6d placement popover, deselect paths, and double-click safety', asy
   )
   await expect(selection).toBeVisible()
 })
+
+test('M07-D D6e monster row hides geometry pickers and tools switch in one click', async ({
+  page,
+  request,
+  roomContext,
+}) => {
+  test.setTimeout(180_000)
+  const { roomId } = roomContext
+  const mapName = 'E2E M07D D6e Tool Switch'
+  await createBlankMap(request, roomId, mapName, 12, 10)
+  // Wide viewport so the compact row must fit on a single line.
+  await page.setViewportSize({ width: 2000, height: 900 })
+  await openLibraryEditor(page, roomId, mapName)
+
+  // The terrain picker row is visible with the terrain tool...
+  await page.getByTestId('map-editor-tool-terrain').click()
+  await expect(page.locator('.battle-map-editor__terrain-picker')).toHaveCount(1)
+  // ...but hides as soon as monster mode takes over the canvas.
+  await page.getByTestId('map-editor-tool-monster').click()
+  const panel = page.getByTestId('monster-placement-panel')
+  await expect(panel).toBeVisible()
+  await expect(page.locator('.battle-map-editor__terrain-picker')).toHaveCount(0)
+  // Compact single row at 2000px width (was ~180px: heading + hint + labels).
+  const panelBox = await panel.boundingBox()
+  expect(panelBox).not.toBeNull()
+  expect(panelBox!.height).toBeLessThanOrEqual(49)
+
+  // Geometry tools stay enabled in monster mode: place a monster, then leave
+  // monster mode for the Wall tool in a single click.
+  const wallTool = page.getByTestId('map-editor-tool-wall')
+  await expect(wallTool).toBeEnabled()
+  await searchTemplate(page, 'Goblin')
+  await placeTemplateAt(page, GOBLIN_REF, 'public', 5, 2)
+  await expect(editorTokens(page)).toHaveCount(1)
+  await wallTool.click()
+  await expect(panel).toHaveCount(0)
+  await expect(wallTool).toHaveAttribute('data-active', 'true')
+
+  // The unsaved placement survives the tool switch: monster mode shows it again.
+  await enterMonsterMode(page)
+  await expect(editorTokens(page)).toHaveCount(1)
+  await expect(editorTokens(page).first().locator('rect')).toHaveAttribute(
+    'x',
+    String(5 * CELL_SIZE),
+  )
+})
+
+test('M07-D D6e Ctrl+Z undoes a placement move, then the placement', async ({
+  page,
+  request,
+  roomContext,
+}) => {
+  test.setTimeout(180_000)
+  const { roomId } = roomContext
+  const mapName = 'E2E M07D D6e Key Undo'
+  await createBlankMap(request, roomId, mapName, 12, 10)
+  await openLibraryEditor(page, roomId, mapName)
+  await enterMonsterMode(page)
+  await searchTemplate(page, 'Goblin')
+  await placeTemplateAt(page, GOBLIN_REF, 'public', 5, 2)
+  await expect(editorTokens(page)).toHaveCount(1)
+  const tokenRect = editorTokens(page).first().locator('rect')
+  await expect(tokenRect).toHaveAttribute('x', String(5 * CELL_SIZE))
+
+  // Select the token, then click the destination cell to move it.
+  const at = await mapPoint(page, 5.5, 2.5)
+  await page.mouse.click(at.x, at.y)
+  await expect(page.getByTestId('monster-placement-selection')).toBeVisible()
+  const dest = await mapPoint(page, 7.5, 2.5)
+  await page.mouse.click(dest.x, dest.y)
+  await expect(tokenRect).toHaveAttribute('x', String(7 * CELL_SIZE))
+
+  // First Ctrl+Z restores the pre-move position; selection and popover survive.
+  await page.keyboard.press('ControlOrMeta+z')
+  await expect(tokenRect).toHaveAttribute('x', String(5 * CELL_SIZE))
+  await expect(editorTokens(page)).toHaveCount(1)
+  await expect(page.getByTestId('monster-placement-selection')).toBeVisible()
+
+  // Second Ctrl+Z removes the placement; the popover goes with it.
+  await page.keyboard.press('ControlOrMeta+z')
+  await expect(editorTokens(page)).toHaveCount(0)
+  await expect(page.getByTestId('monster-placement-selection')).toHaveCount(0)
+})
+
+test('M07-D D6e Undo button rewinds placement edits and enables per mode', async ({
+  page,
+  request,
+  roomContext,
+}) => {
+  test.setTimeout(180_000)
+  const { roomId } = roomContext
+  const mapName = 'E2E M07D D6e Button Undo'
+  await createBlankMap(request, roomId, mapName, 12, 10)
+  await openLibraryEditor(page, roomId, mapName)
+  await enterMonsterMode(page)
+  const undo = page.getByTestId('map-editor-undo')
+  // Empty placement history: Undo is disabled in monster mode.
+  await expect(undo).toBeDisabled()
+  await searchTemplate(page, 'Goblin')
+  await placeTemplateAt(page, GOBLIN_REF, 'public', 2, 2)
+  await expect(editorTokens(page)).toHaveCount(1)
+  await expect(undo).toBeEnabled()
+
+  // Move via select + click, then undo twice through the button.
+  const at = await mapPoint(page, 2.5, 2.5)
+  await page.mouse.click(at.x, at.y)
+  await expect(page.getByTestId('monster-placement-selection')).toBeVisible()
+  const dest = await mapPoint(page, 3.5, 2.5)
+  await page.mouse.click(dest.x, dest.y)
+  const tokenRect = editorTokens(page).first().locator('rect')
+  await expect(tokenRect).toHaveAttribute('x', String(3 * CELL_SIZE))
+  await undo.click()
+  await expect(tokenRect).toHaveAttribute('x', String(2 * CELL_SIZE))
+  await expect(undo).toBeEnabled()
+  await undo.click()
+  await expect(editorTokens(page)).toHaveCount(0)
+  await expect(undo).toBeDisabled()
+})

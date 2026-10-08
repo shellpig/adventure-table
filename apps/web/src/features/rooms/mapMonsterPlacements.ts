@@ -191,6 +191,67 @@ export function toggleMonsterPlacementVisibility(
   )
 }
 
+/**
+ * M07-D D6e: content equality for placement arrays. The editor's placement
+ * updater pushes history only on a real change; helpers like
+ * `moveMonsterPlacement` always build a new array, so reference inequality
+ * alone cannot tell a no-op (same cell, unknown id) from an edit.
+ */
+export function sameMonsterPlacements(
+  a: WorkingMonsterPlacement[],
+  b: WorkingMonsterPlacement[],
+): boolean {
+  return (
+    a.length === b.length &&
+    a.every((p, index) => {
+      const q = b[index]
+      return (
+        p.clientId === q.clientId &&
+        p.templateRef === q.templateRef &&
+        p.anchor_x === q.anchor_x &&
+        p.anchor_y === q.anchor_y &&
+        p.visibility === q.visibility
+      )
+    })
+  )
+}
+
+/** Cap for the M07-D D6e placement undo stack (mirrors the geometry history). */
+export const PLACEMENT_HISTORY_LIMIT = 50
+
+/**
+ * M07-D D6e: push the pre-edit placements array onto the undo stack, dropping
+ * the oldest entry past the cap. Pure helper so the push/cap/undo contract is
+ * unit-testable without React.
+ *
+ * A consecutive push of the identical reference is a no-op. The editor pushes
+ * from inside its state updater (so two clicks before a re-render still see
+ * each other's rows, per the D6d double-click design), and StrictMode
+ * double-invokes updaters in dev/E2E: both invocations push the same pre-edit
+ * array, which must yield one undo step, not two. Genuine consecutive edits
+ * always carry distinct arrays (every edit builds a new one), so the collapse
+ * can only merge a double-invoked push.
+ */
+export function pushPlacementHistory(
+  history: WorkingMonsterPlacement[][],
+  prev: WorkingMonsterPlacement[],
+  limit: number = PLACEMENT_HISTORY_LIMIT,
+): WorkingMonsterPlacement[][] {
+  if (history.length > 0 && history[history.length - 1] === prev) return history
+  return [...history.slice(-(limit - 1)), prev]
+}
+
+/**
+ * M07-D D6e: pop one placement undo step. Returns null when the stack is
+ * empty so the Undo button and Ctrl/Cmd+Z can stay disabled/no-op.
+ */
+export function popPlacementHistory(
+  history: WorkingMonsterPlacement[][],
+): { placements: WorkingMonsterPlacement[]; history: WorkingMonsterPlacement[][] } | null {
+  if (history.length === 0) return null
+  return { placements: history[history.length - 1], history: history.slice(0, -1) }
+}
+
 export type MonsterFootprint = { width: number; height: number }
 
 /**
