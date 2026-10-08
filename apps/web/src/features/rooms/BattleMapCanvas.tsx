@@ -74,12 +74,19 @@ type BattleMapCanvasProps = {
   previewDrawingPoints?: Array<[number, number]> | null
   /** Pen colour and width of the stroke being drawn. */
   previewDrawingStroke?: { color: string; width: number }
-  onCellClick?: (x: number, y: number) => void
+  onCellClick?: (x: number, y: number, point?: { clientX: number; clientY: number }) => void
   onTokenClick?: (entryId: string) => void
-  /** Pointer pressed on a token: start a drag (e.g. movement plan). */
-  onTokenPointerDown?: (entryId: string) => void
-  /** Pointer entered a cell while dragging (accumulates drag anchors). */
-  onCellPointerEnter?: (x: number, y: number) => void
+  /**
+   * Pointer pressed on a token: start a drag (e.g. movement plan).
+   * The press point is included so callers can tell a click (deselect)
+   * apart from a real drag (M07-D D6d placement threshold).
+   */
+  onTokenPointerDown?: (entryId: string, point?: { clientX: number; clientY: number }) => void
+  /**
+   * Pointer entered a cell while dragging (accumulates drag anchors).
+   * The pointer point is included for the same click-vs-drag threshold.
+   */
+  onCellPointerEnter?: (x: number, y: number, point?: { clientX: number; clientY: number }) => void
   onPointerUp?: () => void
   onDoorClick?: (doorId: string | null) => void
   onEmptyMouseDown?: (clientX: number, clientY: number, button: number) => void
@@ -101,6 +108,39 @@ const TERRAIN_COLORS: Record<string, string> = {
 
 function terrainColor(kind: string): string {
   return TERRAIN_COLORS[kind] ?? '#b8b8b8'
+}
+
+/**
+ * M07-D D6d: readable door-state label position in map pixels. The label
+ * sits half a cell away from the door's midpoint, perpendicular to the
+ * door direction (preferring above the door, else to its right), so the
+ * text never sits on top of the thick door line. A zero-length door
+ * falls back to directly above its point.
+ */
+export function doorLabelPosition(
+  door: { x1: number; y1: number; x2: number; y2: number },
+  cellSize: number,
+): { x: number; y: number } {
+  const dx = door.x2 - door.x1
+  const dy = door.y2 - door.y1
+  const length = Math.hypot(dx, dy)
+  const midX = (door.x1 + door.x2) / 2
+  const midY = (door.y1 + door.y2) / 2
+  let normalX = 0
+  let normalY = -1
+  if (length > 0) {
+    normalX = -dy / length
+    normalY = dx / length
+    // Prefer the upper side; for vertical doors prefer the right side.
+    if (normalY > 0 || (normalY === 0 && normalX < 0)) {
+      normalX = -normalX
+      normalY = -normalY
+    }
+  }
+  return {
+    x: (midX + normalX * 0.5) * cellSize,
+    y: (midY + normalY * 0.5) * cellSize,
+  }
 }
 
 export function BattleMapCanvas({
@@ -191,7 +231,7 @@ export function BattleMapCanvas({
 
   const handleCellClick = (event: React.MouseEvent<SVGRectElement>, x: number, y: number) => {
     event.stopPropagation()
-    onCellClick?.(x, y)
+    onCellClick?.(x, y, { clientX: event.clientX, clientY: event.clientY })
   }
 
   return (
@@ -346,15 +386,23 @@ export function BattleMapCanvas({
                 y2={door.y2 * cellSize}
                 strokeWidth={isSelected ? 8 : 6}
               />
-              <text
-                x={((door.x1 + door.x2) / 2) * cellSize}
-                y={((door.y1 + door.y2) / 2) * cellSize}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={10}
-              >
-                {doorStateLabel(door.state)}
-              </text>
+              {(() => {
+                // Offset beside the door line (never on top of it) with a
+                // dark halo so zh-TW/en labels stay legible at normal zoom.
+                const label = doorLabelPosition(door, cellSize)
+                return (
+                  <text
+                    x={label.x}
+                    y={label.y}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize={13}
+                    className="battle-map__door-label"
+                  >
+                    {doorStateLabel(door.state)}
+                  </text>
+                )
+              })()}
             </g>
           )
         })}
@@ -375,7 +423,9 @@ export function BattleMapCanvas({
               height={cellSize}
               fill="transparent"
               onClick={(e) => handleCellClick(e, x, y)}
-              onPointerEnter={() => onCellPointerEnter?.(x, y)}
+              onPointerEnter={(e) =>
+                onCellPointerEnter?.(x, y, { clientX: e.clientX, clientY: e.clientY })
+              }
               style={{ cursor: onCellClick ? 'pointer' : 'default' }}
             />
           )
@@ -404,7 +454,7 @@ export function BattleMapCanvas({
                 // Left button only; a drag plans movement, it never confirms.
                 if (e.button !== 0 || !onTokenPointerDown) return
                 e.stopPropagation()
-                onTokenPointerDown(token.entry_id)
+                onTokenPointerDown(token.entry_id, { clientX: e.clientX, clientY: e.clientY })
               }}
               style={{ cursor: onTokenClick ? 'pointer' : 'default', touchAction: 'none' }}
             >

@@ -7,11 +7,14 @@ import {
   addMonsterPlacement,
   availableMonsterTemplates,
   buildMonsterPlacementsBody,
+  createPlacementIfFree,
   extractPlacementProblems,
   footprintForSizeName,
+  isRapidPlacementRepeat,
   monsterPlacementsFromMap,
   moveMonsterPlacement,
   placementSourceForRef,
+  PLACEMENT_DOUBLE_CLICK_WINDOW_MS,
   removeMonsterPlacement,
   resolvePlacementTemplate,
   templateRefForPlacement,
@@ -220,8 +223,7 @@ describe('monster template availability', () => {
   })
 })
 
-describe('placement problem extraction', () => {
-  it('returns problems only for map_monster_placement_invalid with a problems array', () => {
+describe('placement problem extraction', () => {  it('returns problems only for map_monster_placement_invalid with a problems array', () => {
     const problems = [
       { placement_id: SAVED_ID, code: 'overlapping_placement' },
       { placement_id: 'other', code: 'out_of_bounds' },
@@ -250,5 +252,91 @@ describe('placement problem extraction', () => {
       ),
     ).toEqual([])
     expect(extractPlacementProblems(new Error('boom'))).toEqual([])
+  })
+})
+
+describe('double-click-safe placement creation (M07-D D6d)', () => {
+  const sizeOf = (ref: string) =>
+    ref === 'large-ref' ? { width: 2, height: 2 } : { width: 1, height: 1 }
+
+  it('creates a row on a free cell', () => {
+    const { placements, created } = createPlacementIfFree(
+      [],
+      { templateRef: 'goblin', anchor_x: 5, anchor_y: 2, visibility: 'public' },
+      sizeOf,
+    )
+    expect(placements).toHaveLength(1)
+    expect(created).toMatchObject({ templateRef: 'goblin', anchor_x: 5, anchor_y: 2 })
+    expect(created!.clientId).toBeTruthy()
+  })
+
+  it('a second create on the same cell before re-render is a no-op returning the same array', () => {
+    const first = createPlacementIfFree(
+      [],
+      { templateRef: 'goblin', anchor_x: 5, anchor_y: 2, visibility: 'public' },
+      sizeOf,
+    )
+    // The stale closure of a rapid second click still sees the old array…
+    const second = createPlacementIfFree(
+      first.placements,
+      { templateRef: 'goblin', anchor_x: 5, anchor_y: 2, visibility: 'public' },
+      sizeOf,
+    )
+    // …but the functional updater path runs against the latest array, so a
+    // double-click never yields two rows.
+    const replayed = createPlacementIfFree(first.placements, {
+      templateRef: 'goblin',
+      anchor_x: 5,
+      anchor_y: 2,
+      visibility: 'public',
+    }, sizeOf)
+    expect(replayed.placements).toBe(first.placements)
+    expect(replayed.created).toBeNull()
+    expect(second.placements).toBe(first.placements)
+  })
+
+  it('respects multi-cell footprints when detecting coverage', () => {
+    const large = createPlacementIfFree(
+      [],
+      { templateRef: 'large-ref', anchor_x: 4, anchor_y: 2, visibility: 'public' },
+      sizeOf,
+    )
+    // (5, 3) is inside the 2x2 footprint anchored at (4, 2).
+    const inside = createPlacementIfFree(large.placements, {
+      templateRef: 'goblin',
+      anchor_x: 5,
+      anchor_y: 3,
+      visibility: 'public',
+    }, sizeOf)
+    expect(inside.created).toBeNull()
+    // (6, 2) is outside it.
+    const outside = createPlacementIfFree(large.placements, {
+      templateRef: 'goblin',
+      anchor_x: 6,
+      anchor_y: 2,
+      visibility: 'public',
+    }, sizeOf)
+    expect(outside.created).not.toBeNull()
+    expect(outside.placements).toHaveLength(2)
+  })
+
+  it('flags a rapid repeat click at (nearly) the same screen point', () => {
+    const stamp = { clientX: 220, clientY: 100, time: 1000 }
+    expect(isRapidPlacementRepeat(null, { clientX: 220, clientY: 100 }, 1100)).toBe(false)
+    expect(isRapidPlacementRepeat(stamp, { clientX: 220, clientY: 100 }, 1100)).toBe(true)
+    // Human double-click drift of a few pixels is suppressed too.
+    expect(isRapidPlacementRepeat(stamp, { clientX: 225, clientY: 103 }, 1100)).toBe(true)
+    // Outside the window, far away (an adjacent cell is 40px at zoom 1),
+    // or from the future, creation proceeds.
+    expect(
+      isRapidPlacementRepeat(
+        stamp,
+        { clientX: 220, clientY: 100 },
+        1000 + PLACEMENT_DOUBLE_CLICK_WINDOW_MS,
+      ),
+    ).toBe(false)
+    expect(isRapidPlacementRepeat(stamp, { clientX: 220, clientY: 100 }, 2000)).toBe(false)
+    expect(isRapidPlacementRepeat(stamp, { clientX: 260, clientY: 100 }, 1100)).toBe(false)
+    expect(isRapidPlacementRepeat(stamp, { clientX: 220, clientY: 100 }, 900)).toBe(false)
   })
 })

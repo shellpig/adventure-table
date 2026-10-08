@@ -118,6 +118,61 @@ export function moveMonsterPlacement(
   )
 }
 
+/**
+ * M07-D D6d: double-click-safe creation. Two clicks that both take the
+ * "empty cell" branch (e.g. a rapid double-click before React re-renders,
+ * so both closures see the same placements array) must not append two
+ * rows. The check runs inside the functional state updater, which always
+ * sees the latest array, so the second create is a no-op returning the
+ * identical reference (no re-render, no second row).
+ */
+export function createPlacementIfFree(
+  placements: WorkingMonsterPlacement[],
+  draft: Omit<WorkingMonsterPlacement, 'clientId'>,
+  footprintOf: (templateRef: string) => MonsterFootprint,
+): { placements: WorkingMonsterPlacement[]; created: WorkingMonsterPlacement | null } {
+  const covered = placements.some((p) => {
+    const footprint = footprintOf(p.templateRef)
+    return (
+      draft.anchor_x >= p.anchor_x &&
+      draft.anchor_x < p.anchor_x + footprint.width &&
+      draft.anchor_y >= p.anchor_y &&
+      draft.anchor_y < p.anchor_y + footprint.height
+    )
+  })
+  if (covered) return { placements, created: null }
+  const created: WorkingMonsterPlacement = { ...draft, clientId: newPlacementClientId() }
+  return { placements: [...placements, created], created }
+}
+
+export type PlacementCreateStamp = { clientX: number; clientY: number; time: number }
+
+/** Window in which a second create click counts as a double-click repeat. */
+export const PLACEMENT_DOUBLE_CLICK_WINDOW_MS = 500
+
+/** Screen distance below which two create clicks are the same double-click. */
+export const PLACEMENT_DOUBLE_CLICK_DISTANCE_PX = 12
+
+/**
+ * M07-D D6d: the second half of a double-click must not place a second
+ * monster. Both halves land within a few screen pixels (even when human
+ * jitter drifts onto the neighbouring cell), while two deliberate
+ * placements in adjacent cells are a full cell (40px at zoom 1) apart —
+ * so the guard compares screen pixels, not cells. Deliberate placements
+ * are also seconds apart, outside the window.
+ */
+export function isRapidPlacementRepeat(
+  last: PlacementCreateStamp | null,
+  point: { clientX: number; clientY: number },
+  now: number,
+  windowMs: number = PLACEMENT_DOUBLE_CLICK_WINDOW_MS,
+  distancePx: number = PLACEMENT_DOUBLE_CLICK_DISTANCE_PX,
+): boolean {
+  if (!last) return false
+  if (now - last.time < 0 || now - last.time >= windowMs) return false
+  return Math.hypot(point.clientX - last.clientX, point.clientY - last.clientY) <= distancePx
+}
+
 export function removeMonsterPlacement(
   placements: WorkingMonsterPlacement[],
   clientId: string,

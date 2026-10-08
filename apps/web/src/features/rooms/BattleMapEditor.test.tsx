@@ -558,7 +558,7 @@ describe('M07-C BattleMapEditor monster placements', () => {
     expect(source).toContain('if (monsterMode) return')
     expect(source).toContain('onCellClick={handleCanvasCellClick}')
     expect(source).toContain('if (monsterMode) {')
-    expect(source).toContain('handleMonsterCellClick(x, y)')
+    expect(source).toContain('handleMonsterCellClick(x, y, point)')
     // Monster-mode entry still clears geometry highlight state.
     expect(source).toContain('setPreviewLine(null)')
   })
@@ -593,12 +593,11 @@ describe('M07-C BattleMapEditor monster placements', () => {
     expect(source).toContain("window.removeEventListener('pointerup', clearDrag)")
     // Drag writes the same working state as click-move (footprint preview
     // and server-side save validation are shared).
-    expect(source).toContain('moveMonsterPlacement(prev, dragging, x, y)')
+    expect(source).toContain('moveMonsterPlacement(prev, dragging.clientId, x, y)')
     expect(source).toContain('moveMonsterPlacement(prev, selectedPlacementId, x, y)')
   })
 
-  it('M07-D F13: image maps expose grid alignment with save, and render aligned', () => {
-    expect(source).toContain('data-testid="map-grid-panel"')
+  it('M07-D F13: image maps expose grid alignment with save, and render aligned', () => {    expect(source).toContain('data-testid="map-grid-panel"')
     expect(source).toContain('data-testid="map-grid-size"')
     expect(source).toContain('data-testid="map-grid-offset-x"')
     expect(source).toContain('data-testid="map-grid-offset-y"')
@@ -611,5 +610,58 @@ describe('M07-C BattleMapEditor monster placements', () => {
     // save persists those exact effective values (blank offsets become 0).
     expect(source).toContain('parseGridPixelSizeInput(gridSize)')
     expect(source).toContain('rawOffsetX ?? 0')
+  })
+})
+
+describe('M07-D D6d map editor monster-placement UX fixes', () => {
+  const source = readFileSync(new URL('./BattleMapEditor.tsx', import.meta.url), 'utf8')
+
+  it('renders the selection as a canvas popover keeping every behaviour testid', () => {
+    // Popover root keeps the selection testid so existing assertions hold.
+    expect(source).toContain('data-testid="monster-placement-selection"')
+    expect(source).toContain('data-testid="monster-placement-toggle-hidden"')
+    expect(source).toContain('data-testid="monster-placement-remove"')
+    expect(source).toContain('data-testid="monster-placement-popover-close"')
+    // The popover lives inside the canvas wrap, positioned from the token.
+    expect(source).toContain('data-testid="monster-placement-popover"')
+    expect(source).toContain('placementPopoverPosition(tokenRect, canvasWrapSize')
+    expect(source).toContain('placementTokenScreenRect(')
+    // Clicks pass through to the canvas; only buttons opt back in (CSS).
+    const css = readFileSync(new URL('./sessionTable.css', import.meta.url), 'utf8')
+    expect(css).toContain('.battle-map-editor__placement-popover')
+    expect(css).toContain('.battle-map-editor__placement-card button')
+  })
+
+  it('deselects via token re-click, popover close, and Escape', () => {
+    // Token click still toggles (re-click deselects).
+    expect(source).toContain('setSelectedPlacementId((prev) => (prev === clientId ? null : clientId))')
+    expect(source).toContain('onClick={() => setSelectedPlacementId(null)}')
+    expect(source).toContain("if (e.key === 'Escape')")
+    const escapeBlock = source.slice(source.indexOf("if (e.key === 'Escape')"))
+    expect(escapeBlock).toContain('setSelectedPlacementId(null)')
+    // Clicking an empty cell while selected still moves (unchanged).
+    expect(source).toContain('moveMonsterPlacement(prev, selectedPlacementId, x, y)')
+  })
+
+  it('arms placement drags past a pointer threshold so clicks never move tokens', () => {
+    expect(source).toContain('isPlacementDragBeyondThreshold(')
+    expect(source).toContain('suppressPlacementClickRef')
+    // A press that moved suppresses the following token click once.
+    expect(source).toContain('if (suppressPlacementClickRef.current) {')
+  })
+
+  it('never creates more than one placement per double-click', () => {
+    // Same-tick duplicates collapse inside the functional updater.
+    expect(source).toContain('createPlacementIfFree(prev,')
+    // Human double-click drift is suppressed by a time+pixel-distance guard.
+    expect(source).toContain('isRapidPlacementRepeat(lastPlacementCreateRef.current, point, Date.now())')
+  })
+
+  it('restyles picker rows with dark field labels above the controls', () => {
+    expect(source).toContain('battle-map-editor__field')
+    expect(source).toContain('battle-map-editor__monster-picker')
+    const css = readFileSync(new URL('./sessionTable.css', import.meta.url), 'utf8')
+    expect(css).toContain('.battle-map-editor__field input[')
+    expect(css).toContain('background: #0d1118')
   })
 })

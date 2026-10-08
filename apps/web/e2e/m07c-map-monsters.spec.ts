@@ -711,8 +711,7 @@ test('M07-D edits made while a placement save is in flight are kept and flagged'
   expect(goblinPlacement).toMatchObject({ anchor_x: 3, anchor_y: 2 })
 })
 
-test('M07-D tactical tokens show the localized name and follow a DM rename', async ({
-  page,
+test('M07-D tactical tokens show the localized name and follow a DM rename', async ({  page,
   request,
   roomContext,
 }) => {
@@ -755,4 +754,101 @@ test('M07-D tactical tokens show the localized name and follow a DM rename', asy
   await controls.locator('input[type="text"]').first().fill('哥布林老大')
   await controls.locator('[data-monster-save]').click()
   await expect(token(page, goblin.id)).toContainText('哥布林老大')
+})
+
+test('M07-D D6d placement popover, deselect paths, and double-click safety', async ({
+  page,
+  request,
+  roomContext,
+}) => {
+  test.setTimeout(180_000)
+  const { roomId } = roomContext
+  const mapName = 'E2E M07D D6d Popover'
+  await createBlankMap(request, roomId, mapName, 12, 10)
+
+  await openLibraryEditor(page, roomId, mapName)
+  await enterMonsterMode(page)
+  await searchTemplate(page, 'Goblin')
+  const picker = page.getByTestId('monster-placement-template-picker')
+  await expect(picker.locator(`option[value="${GOBLIN_REF}"]`)).toHaveCount(1)
+  await picker.selectOption(GOBLIN_REF)
+  await page.getByTestId('map-editor-canvas').scrollIntoViewIfNeeded()
+
+  // A double-click on an empty cell creates exactly one placement.
+  const empty = await mapPoint(page, 5.5, 2.5)
+  await page.mouse.dblclick(empty.x, empty.y)
+  await expect(editorTokens(page)).toHaveCount(1)
+
+  const selection = page.getByTestId('monster-placement-selection')
+  const tokenCenter = async () => {
+    const box = await editorTokens(page).first().boundingBox()
+    expect(box).not.toBeNull()
+    return { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 }
+  }
+  const selectToken = async () => {
+    // The second half of the double-click may already have selected the
+    // new token; only click when the popover is not showing.
+    if ((await selection.count()) === 0) {
+      const at = await tokenCenter()
+      await page.mouse.click(at.x, at.y)
+    }
+    await expect(selection).toBeVisible()
+  }
+
+  // The popover shows next to the token, inside the canvas wrap.
+  await selectToken()
+  const tokenBox = await editorTokens(page).first().boundingBox()
+  const popoverBox = await selection.boundingBox()
+  const canvasBox = await page.getByTestId('map-editor-canvas').boundingBox()
+  expect(tokenBox).not.toBeNull()
+  expect(popoverBox).not.toBeNull()
+  expect(canvasBox).not.toBeNull()
+  expect(popoverBox!.x).toBeGreaterThanOrEqual(canvasBox!.x - 1)
+  expect(popoverBox!.y).toBeGreaterThanOrEqual(canvasBox!.y - 1)
+  expect(popoverBox!.x + popoverBox!.width).toBeLessThanOrEqual(
+    canvasBox!.x + canvasBox!.width + 1,
+  )
+  expect(popoverBox!.y + popoverBox!.height).toBeLessThanOrEqual(
+    canvasBox!.y + canvasBox!.height + 1,
+  )
+  // Horizontally adjacent to the token (preferred right side, flipped left
+  // when the token is near the right edge).
+  expect(popoverBox!.x).toBeLessThanOrEqual(tokenBox!.x + tokenBox!.width + 40)
+  expect(popoverBox!.x + popoverBox!.width).toBeGreaterThanOrEqual(tokenBox!.x - 40)
+  await expect(selection).toContainText('Goblin')
+
+  // Deselect by clicking the selected token again: no move, no duplicate.
+  const selected = await tokenCenter()
+  await page.mouse.click(selected.x, selected.y)
+  await expect(selection).toHaveCount(0)
+  await expect(editorTokens(page)).toHaveCount(1)
+  const stayedRect = editorTokens(page).first().locator('rect')
+  await expect(stayedRect).toHaveAttribute('x', String(5 * CELL_SIZE))
+
+  // Deselect via the popover close button.
+  await selectToken()
+  await page.getByTestId('monster-placement-popover-close').click()
+  await expect(selection).toHaveCount(0)
+  await expect(editorTokens(page)).toHaveCount(1)
+
+  // Deselect via Escape.
+  await selectToken()
+  await page.keyboard.press('Escape')
+  await expect(selection).toHaveCount(0)
+  await expect(editorTokens(page)).toHaveCount(1)
+
+  // A double-click on the existing token creates no placement.
+  const dbl = await tokenCenter()
+  await page.mouse.dblclick(dbl.x, dbl.y)
+  await expect(editorTokens(page)).toHaveCount(1)
+
+  // Clicking an empty cell while selected still moves the placement.
+  await selectToken()
+  const dest = await mapPoint(page, 7.5, 2.5)
+  await page.mouse.click(dest.x, dest.y)
+  await expect(editorTokens(page).first().locator('rect')).toHaveAttribute(
+    'x',
+    String(7 * CELL_SIZE),
+  )
+  await expect(selection).toBeVisible()
 })

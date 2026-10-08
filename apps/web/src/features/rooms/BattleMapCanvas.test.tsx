@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 
-import { BattleMapCanvas } from './BattleMapCanvas'
+import { BattleMapCanvas, doorLabelPosition } from './BattleMapCanvas'
 import { doorStateLabel, sessionCopy } from './sessionCopy'
 
 const camera = { x: 0, y: 0, zoom: 1 }
@@ -489,5 +489,45 @@ describe('BattleMapCanvas door labels', () => {
         expect(doorStateLabel(copy, state)).not.toBe(state)
       }
     }
+  })
+
+  it('offsets the label half a cell perpendicular to the door, never on the line', () => {
+    // Horizontal door from (1, 1) to (3, 1): midpoint (2, 1), label above.
+    expect(doorLabelPosition({ x1: 1, y1: 1, x2: 3, y2: 1 }, 40)).toEqual({
+      x: 80,
+      y: 20,
+    })
+    // Vertical door from (2, 1) to (2, 4): midpoint (2, 2.5), label right.
+    expect(doorLabelPosition({ x1: 2, y1: 1, x2: 2, y2: 4 }, 40)).toEqual({
+      x: 100,
+      y: 100,
+    })
+    // Zero-length door falls back to above its point.
+    expect(doorLabelPosition({ x1: 2, y1: 2, x2: 2, y2: 2 }, 40)).toEqual({
+      x: 80,
+      y: 60,
+    })
+  })
+
+  it('renders the label larger with a dark halo class beside the door line', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        doorStateLabel={(state) => doorStateLabel(sessionCopy('zh-TW'), state)}
+        widthCells={6}
+        heightCells={6}
+        walls={[]}
+        doors={[{ ...door, x1: 1, y1: 1, x2: 3, y2: 1 }]}
+        terrain={[]}
+        tokens={[]}
+        camera={camera}
+        isDm
+      />,
+    )
+    // Midpoint x=80 on the line; the label is offset half a cell above it.
+    expect(html).toContain('class="battle-map__door-label"')
+    expect(html).toContain('font-size="13"')
+    expect(html).toContain('x="80"')
+    expect(html).toContain('y="20"')
+    expect(html).toContain('>關閉</text>')
   })
 })
