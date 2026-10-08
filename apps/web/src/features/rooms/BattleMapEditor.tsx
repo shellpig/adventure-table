@@ -77,7 +77,7 @@ import {
   type CellPoint,
 } from './mapEditorState'
 import { doorStateLabel, type SessionCopy } from './sessionCopy'
-import { BATTLE_MAP_CELL_SIZE, useTacticalCamera } from './useTacticalCamera'
+import { BATTLE_MAP_CELL_SIZE, resolveViewportSize, useTacticalCamera } from './useTacticalCamera'
 
 export type EditorTool =
   | 'select'
@@ -199,13 +199,18 @@ export function BattleMapEditor({
   )
 
   const containerRef = useRef<HTMLDivElement | null>(null)
+  // Height the fill-viewport effect below produced (null when it does not
+  // apply). The open-fitted effect waits until canvasHeight matches it.
+  const filledCanvasHeightRef = useRef<number | null>(null)
 
   // Map Library: open with the canvas reaching the viewport bottom. Picker
   // rows that appear later push it down; the handle still resizes it.
   useLayoutEffect(() => {
     if (!fillViewportHeight || !containerRef.current) return
     const top = containerRef.current.getBoundingClientRect().top + window.scrollY
-    setCanvasHeight(viewportFillCanvasHeight(top, window.innerHeight))
+    const filled = viewportFillCanvasHeight(top, window.innerHeight)
+    filledCanvasHeightRef.current = filled
+    setCanvasHeight(filled)
   }, [fillViewportHeight])
   const dragStartVertexRef = useRef<{ x: number; y: number } | null>(null)
   const lastSnappedVertexRef = useRef<{ x: number; y: number } | null>(null)
@@ -217,6 +222,35 @@ export function BattleMapEditor({
 
   const { camera, zoomIn, zoomOut, handleWheel, startPan, panBy, endPan, fitMap } =
     useTacticalCamera()
+
+  // M07-D D6c: open with the whole map fitted into the real canvas size.
+  // With fillViewportHeight the first commit still carries the default height,
+  // so the fit waits until the fill effect above has landed (its produced
+  // height equals canvasHeight). It runs exactly once: user pan/zoom and the
+  // resize handle are never overridden afterwards; the Fit button refits.
+  const editorInitialFitDoneRef = useRef(false)
+  useLayoutEffect(() => {
+    if (editorInitialFitDoneRef.current) return
+    if (fillViewportHeight && filledCanvasHeightRef.current !== canvasHeight) return
+    editorInitialFitDoneRef.current = true
+    const { width, height } = resolveViewportSize(containerRef.current)
+    fitMap(
+      map.width_cells * BATTLE_MAP_CELL_SIZE,
+      map.height_cells * BATTLE_MAP_CELL_SIZE,
+      width,
+      height,
+    )
+  }, [canvasHeight, fillViewportHeight, fitMap, map.height_cells, map.width_cells])
+
+  const handleEditorFitMap = useCallback(() => {
+    const { width, height } = resolveViewportSize(containerRef.current)
+    fitMap(
+      map.width_cells * BATTLE_MAP_CELL_SIZE,
+      map.height_cells * BATTLE_MAP_CELL_SIZE,
+      width,
+      height,
+    )
+  }, [fitMap, map.height_cells, map.width_cells])
 
   const pushHistory = useCallback((prev: WorkingState) => {
     setHistory((h) => [...h.slice(-49), prev])
@@ -258,8 +292,9 @@ export function BattleMapEditor({
   }, [])
 
   const getMapCell = useCallback((clientX: number, clientY: number): CellPoint | null => {
-    // The SVG's screen CTM already includes the wrapper centring, the camera CSS transform and
-    // the SVG's rendered size, so it maps the pointer straight into viewBox pixels.
+    // The SVG sits at the wrap's top-left at its natural map size, so its
+    // screen CTM already includes the camera CSS transform and zoom and maps
+    // the pointer straight into viewBox pixels.
     const svg = containerRef.current?.querySelector<SVGSVGElement>('svg[data-testid="battle-map"]')
     const ctm = svg?.getScreenCTM()
     if (!ctm) return null
@@ -1071,7 +1106,7 @@ export function BattleMapEditor({
           <button
             type="button"
             className="button secondary compact"
-            onClick={() => fitMap(map.width_cells * BATTLE_MAP_CELL_SIZE, map.height_cells * BATTLE_MAP_CELL_SIZE, 800, 600)}
+            onClick={handleEditorFitMap}
             data-testid="map-editor-fit"
           >
             {copy.tacticalToolFitMap}

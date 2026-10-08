@@ -12,6 +12,9 @@ import {
   pinchCenter,
   pinchDistance,
   MIN_ZOOM,
+  resolveViewportSize,
+  VIEWPORT_FALLBACK_HEIGHT,
+  VIEWPORT_FALLBACK_WIDTH,
 } from './useTacticalCamera'
 
 describe('useTacticalCamera pure logic', () => {
@@ -87,6 +90,30 @@ describe('useTacticalCamera pure logic', () => {
     const camera = { x: 5, y: 5, zoom: 1 }
     expect(applyPinch(camera, 0, 100, { x: 0, y: 0 }, { x: 0, y: 0 })).toEqual(camera)
     expect(applyPinch(camera, 100, 0, { x: 0, y: 0 }, { x: 0, y: 0 })).toEqual(camera)
+  })
+
+  it('resolveViewportSize measures the wrapper and falls back while it is not laid out', () => {
+    expect(
+      resolveViewportSize({ getBoundingClientRect: () => ({ width: 1024, height: 768 }) }),
+    ).toEqual({ width: 1024, height: 768 })
+    // Missing element or zero size: fall back to 800x600.
+    expect(resolveViewportSize(null)).toEqual({
+      width: VIEWPORT_FALLBACK_WIDTH,
+      height: VIEWPORT_FALLBACK_HEIGHT,
+    })
+    expect(resolveViewportSize(undefined)).toEqual({ width: 800, height: 600 })
+    expect(resolveViewportSize({ getBoundingClientRect: () => ({ width: 0, height: 0 }) })).toEqual({
+      width: 800,
+      height: 600,
+    })
+    expect(
+      resolveViewportSize({ getBoundingClientRect: () => ({ width: 0, height: 500 }) }),
+    ).toEqual({ width: 800, height: 600 })
+    expect(
+      resolveViewportSize({ getBoundingClientRect: () => ({ width: 500, height: 0 }) }),
+    ).toEqual({ width: 800, height: 600 })
+    // Custom fallback passes through.
+    expect(resolveViewportSize(null, 320, 240)).toEqual({ width: 320, height: 240 })
   })
 
   it('camera module performs no network requests', () => {

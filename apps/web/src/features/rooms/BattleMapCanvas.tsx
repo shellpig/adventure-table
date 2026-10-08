@@ -150,7 +150,7 @@ export function BattleMapCanvas({
   useEffect(() => {
     // React registers wheel listeners as passive, so preventDefault there cannot stop the page
     // from scrolling. Listen natively on the map's wrapper (the whole map area, including the
-    // margin around a centred map) so the wheel only zooms the map.
+    // empty area around the map) so the wheel only zooms the map.
     const area = svgRef.current?.parentElement
     if (!area) return
     const handleWheel = (event: WheelEvent) => {
@@ -203,6 +203,15 @@ export function BattleMapCanvas({
       data-map-height={heightCells}
       viewBox={`0 0 ${mapWidth} ${mapHeight}`}
       style={{
+        // The SVG sits at the wrap's top-left at its natural map pixel size.
+        // The wraps are position:relative + overflow:hidden, so translate(x, y)
+        // scale(zoom) with origin 0 0 is exactly what computeFitMap and
+        // computeCenterOn assume (no flex centring or stretch in between).
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        width: mapWidth,
+        height: mapHeight,
         transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`,
         transformOrigin: '0 0',
       }}

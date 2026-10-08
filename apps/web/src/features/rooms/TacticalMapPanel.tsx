@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { getSessionBattleMap, type BattleMap } from '../../api/battleMaps'
 import { proposeAoeSpell } from '../../api/combat'
@@ -42,7 +42,7 @@ import {
   type AoeShapeKind,
   type MapMode,
 } from './tacticalLogic'
-import { BATTLE_MAP_CELL_SIZE, useTacticalCamera } from './useTacticalCamera'
+import { BATTLE_MAP_CELL_SIZE, resolveViewportSize, useTacticalCamera } from './useTacticalCamera'
 
 export type AoePlacementRequest = {
   spell_ref: string
@@ -400,16 +400,25 @@ export function TacticalMapPanel({
     [board, combat, copy.locale],
   )
 
-  const getViewportSize = useCallback((): { width: number; height: number } => {
-    const el = boardWrapRef.current
-    if (el) {
-      const rect = el.getBoundingClientRect()
-      if (rect.width > 0 && rect.height > 0) {
-        return { width: rect.width, height: rect.height }
-      }
-    }
-    return { width: 800, height: 600 }
-  }, [])
+  const getViewportSize = useCallback((): { width: number; height: number } => (
+    resolveViewportSize(boardWrapRef.current)
+  ), [])
+
+  // M07-D D6c: fit once when the board first loads so DM and players see the
+  // whole map initially. Later board updates (polls, moves, doors) must not
+  // move the camera; the Fit button refits on demand.
+  const boardInitialFitDoneRef = useRef(false)
+  useLayoutEffect(() => {
+    if (!board || boardInitialFitDoneRef.current) return
+    boardInitialFitDoneRef.current = true
+    const { width, height } = getViewportSize()
+    fitMap(
+      board.width_cells * BATTLE_MAP_CELL_SIZE,
+      board.height_cells * BATTLE_MAP_CELL_SIZE,
+      width,
+      height,
+    )
+  }, [board, fitMap, getViewportSize])
 
   const handleFitMap = useCallback(() => {
     if (!board) return

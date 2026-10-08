@@ -434,6 +434,29 @@ describe('BattleMapCanvas hidden rendering', () => {
   })
 })
 
+describe('BattleMapCanvas camera geometry', () => {
+  it('sits at the wrap top-left at its natural map size so camera math holds', () => {
+    const html = renderToStaticMarkup(
+      <BattleMapCanvas
+        doorStateLabel={(state) => state}
+        widthCells={10}
+        heightCells={8}
+        walls={[]}
+        doors={[]}
+        terrain={[]}
+        tokens={[]}
+        camera={camera}
+        isDm={true}
+      />,
+    )
+    // 10x40=400 by 8x40=320: the camera translate/scale with origin 0 0
+    // assumes exactly this box at the wrap's top-left (no flex centring).
+    expect(html).toMatch(
+      /<svg[^>]*style="[^"]*position:absolute[^"]*left:0[^"]*top:0[^"]*width:400px[^"]*height:320px[^"]*"/,
+    )
+  })
+})
+
 describe('BattleMapCanvas door labels', () => {
   const door = { door_id: 'd1', x1: 1, y1: 1, x2: 2, y2: 1, state: 'closed', revealed: true }
 
