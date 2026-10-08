@@ -128,6 +128,21 @@ export function RoomBattleMapLibraryPage({ roomId }: RoomBattleMapLibraryPagePro
     }
   }, [roomId, token, showArchived, copy])
 
+  // Escape closes whichever map modal is open, unless an action is pending.
+  useEffect(() => {
+    if (!showCreateBlankModal && !showCreateImageModal && !showCopyModal) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || pendingAction !== null) return
+      if (showCreateImageModal) resetCreateImageModal()
+      setShowCreateBlankModal(false)
+      setShowCopyModal(false)
+      setCopyTargetMap(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCreateBlankModal, showCreateImageModal, showCopyModal, pendingAction])
+
   useEffect(() => {
     if (canManage && token) {
       void loadMaps()

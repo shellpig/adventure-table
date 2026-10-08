@@ -1902,3 +1902,82 @@
   border-top: 1px solid var(--line-soft);
 }
 
+
+/* Modal dialogs shared by the Monster Library and Battle Map Library pages.
+   Scoped under .modal-backdrop so shared card rules (text-align:center etc.)
+   cannot leak into the dialog content. */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(4 6 10 / 76%);
+  backdrop-filter: blur(8px);
+}
+
+.modal-backdrop .modal-dialog,
+.modal-backdrop .modal-card {
+  display: grid;
+  gap: 14px;
+  box-sizing: border-box;
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px;
+  color: inherit;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+
+.modal-backdrop .modal-dialog h3,
+.modal-backdrop .modal-card h3 {
+  margin: 0;
+  color: var(--gold-bright);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+}
+
+.modal-backdrop .modal-dialog form,
+.modal-backdrop .modal-card form {
+  display: grid;
+  gap: 14px;
+}
+
+.modal-backdrop .modal-dialog label,
+.modal-backdrop .modal-card label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: .8rem;
+  font-weight: 800;
+  text-align: left;
+}
+
+.modal-backdrop .modal-dialog input:not([type="checkbox"]):not([type="radio"]),
+.modal-backdrop .modal-dialog select,
+.modal-backdrop .modal-dialog textarea,
+.modal-backdrop .modal-card input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.modal-backdrop .modal-card select,
+.modal-backdrop .modal-card textarea {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.modal-backdrop .modal-card__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.modal-backdrop .modal-actions,
+.modal-backdrop .modal-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}

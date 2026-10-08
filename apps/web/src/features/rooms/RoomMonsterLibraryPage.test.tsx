@@ -166,6 +166,20 @@ describe('RoomMonsterLibraryPage contract and source assertions', () => {
     expect(source).toContain('monster-library__desc-lang-label')
   })
 
+  it('gives all three modals dialog semantics, a labelled heading, autofocus and Escape-to-close', () => {
+    const backdrops = source.match(/<div className="modal-backdrop"[^>]*>/g) ?? []
+    expect(backdrops).toHaveLength(3)
+    for (const tag of backdrops) {
+      expect(tag).toContain('role="dialog"')
+      expect(tag).toContain('aria-modal="true"')
+      const id = /aria-labelledby="([^"]+)"/.exec(tag)?.[1]
+      expect(id).toBeTruthy()
+      expect(source).toContain(`<h3 id="${id}">`)
+    }
+    expect(source.match(/autoFocus/g)).toHaveLength(3)
+    expect(source).toContain("event.key !== 'Escape' || pendingAction !== null")
+  })
+
   it('lays built-in core stats out as two explicit rows', () => {
     const start = source.indexOf('<div className="monster-library__stats-grid">')
     const block = source.slice(start, source.indexOf('{/* Ability Scores */}'))

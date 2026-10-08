@@ -241,6 +241,19 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, token, canManage, sourceFilter, showArchived])
 
+  // Escape closes whichever monster modal is open, unless an action is pending.
+  useEffect(() => {
+    if (!showCreateModal && !showFromContentModal && !showCopyModal) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || pendingAction !== null) return
+      setShowCreateModal(false)
+      setShowFromContentModal(false)
+      setShowCopyModal(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [showCreateModal, showFromContentModal, showCopyModal, pendingAction])
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     void reloadList(true)
@@ -1337,9 +1350,9 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
 
         {/* Modal: Create from zero */}
         {showCreateModal ? (
-          <div className="modal-backdrop">
+          <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="monster-create-modal-title">
             <div className="modal-dialog">
-              <h3>{copy.createModalTitle}</h3>
+              <h3 id="monster-create-modal-title">{copy.createModalTitle}</h3>
               <form onSubmit={handleCreateCustom}>
                 <label>
                   <span>{copy.modalNameRequired}</span>
@@ -1347,6 +1360,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                     type="text"
                     required
                     value={newMonsterName}
+                    autoFocus
                     disabled={pendingAction !== null}
                     onChange={(e) => setNewMonsterName(e.target.value)}
                   />
@@ -1399,15 +1413,16 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
 
         {/* Modal: Create from Content */}
         {showFromContentModal ? (
-          <div className="modal-backdrop">
+          <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="monster-from-content-modal-title">
             <div className="modal-dialog">
-              <h3>{copy.fromContentModalTitle}</h3>
+              <h3 id="monster-from-content-modal-title">{copy.fromContentModalTitle}</h3>
               <form onSubmit={handleCreateFromContent}>
                 <label>
                   <span>{copy.modalNameOptional}</span>
                   <input
                     type="text"
                     value={fromContentName}
+                    autoFocus
                     placeholder={detail?.name}
                     disabled={pendingAction !== null}
                     onChange={(e) => setFromContentName(e.target.value)}
@@ -1437,15 +1452,16 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
 
         {/* Modal: Copy Custom */}
         {showCopyModal ? (
-          <div className="modal-backdrop">
+          <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="monster-copy-modal-title">
             <div className="modal-dialog">
-              <h3>{copy.copyModalTitle}</h3>
+              <h3 id="monster-copy-modal-title">{copy.copyModalTitle}</h3>
               <form onSubmit={handleCopyCustom}>
                 <label>
                   <span>{copy.modalNameOptional}</span>
                   <input
                     type="text"
                     value={copyMonsterName}
+                    autoFocus
                     disabled={pendingAction !== null}
                     onChange={(e) => setCopyMonsterName(e.target.value)}
                   />
