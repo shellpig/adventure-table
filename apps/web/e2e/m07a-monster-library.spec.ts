@@ -285,7 +285,7 @@ test('M07-A editing a custom monster in the UI preserves unedited rules and pres
   })
 
   await page.goto(`/rooms/${roomId}/monster-library`)
-  await page.locator('.monster-library__filters select').selectOption('custom')
+  await page.locator('.monster-library__filters select').first().selectOption('custom')
   const searchInput = page.getByPlaceholder('Search by monster name, type, or subtype…')
   await searchInput.fill(templateName)
   await page.getByRole('button', { name: 'Refresh' }).click()
@@ -312,7 +312,7 @@ test('M07-A editing a custom monster in the UI preserves unedited rules and pres
 
   const editedName = 'E2E Cult Fanatic Archivist'
   const editedDescription = 'Field notes for this particular encounter.'
-  await page.getByLabel('Name').fill(editedName)
+  await page.locator('.monster-library__custom-form').getByLabel('Name').fill(editedName)
   await page.locator('.monster-library__custom-form textarea').first().fill(editedDescription)
   await page.getByRole('button', { name: 'Save Changes' }).click()
   await expect(page.locator('.form-success')).toBeVisible()
@@ -557,7 +557,7 @@ test('M07-D F12 Quick Enemy template opens in the editor and saves only the chan
   await item.click()
   const acInput = page.getByLabel('Armor Class (AC)')
   await expect(acInput).toHaveValue('12')
-  await expect(page.getByLabel('Type')).toHaveValue('')
+  await expect(page.locator('.monster-library__custom-form').getByLabel('Type')).toHaveValue('')
   await expect(page.getByLabel('Alignment')).toHaveValue('')
 
   // Change only AC and save: nothing else in the stored rules may change.
@@ -586,7 +586,7 @@ test('M07-D F12 Quick Enemy template opens in the editor and saves only the chan
   })
   await itemAgain.click()
   await expect(page.getByLabel('Armor Class (AC)')).toHaveValue('16')
-  await expect(page.getByLabel('Type')).toHaveValue('')
+  await expect(page.locator('.monster-library__custom-form').getByLabel('Type')).toHaveValue('')
 })
 
 test('M07-A Member directly visiting /monster-library gets no library data and sees forbidden error', async ({

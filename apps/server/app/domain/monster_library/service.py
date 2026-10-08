@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from typing import Sequence
 from uuid import UUID
@@ -19,6 +20,7 @@ from app.content.p4a_monsters import MonsterData
 from app.content.registry import ContentNotFoundError, ContentRegistry, ContentValidationError
 from app.content.schemas import ContentEntry
 from app.domain.monster_library.errors import (
+    InvalidMonsterLibraryFilterError,
     InvalidMonsterRulesError,
     InvalidMonsterTemplateRefError,
     MonsterLibraryForbiddenError,
@@ -56,6 +58,143 @@ def _resolve_name_is_custom(presentation: dict[str, object] | None) -> bool:
     if not presentation:
         return True
     return bool(presentation.get("name_is_custom", True))
+
+
+LIBRARY_SORT_FIELDS = ("name", "armor_class", "max_hp", "challenge_rating", "walk_speed")
+LIBRARY_SORT_ORDERS = ("asc", "desc")
+
+_WALK_SPEED_RE = re.compile(r"\s*(\d+)")
+
+
+def _parse_walk_speed(speed: object) -> int | None:
+    """Walk speed in feet from custom rules or built-in content speed data.
+
+    Both shapes store ``walk`` as a display string like ``"30 ft."``; custom
+    rules may also hold the whole speed as a plain string. Missing or
+    unparsable values return None so the caller can sort them last.
+    """
+    candidate: object = speed.get("walk") if isinstance(speed, dict) else speed
+    if isinstance(candidate, bool):
+        return None
+    if isinstance(candidate, (int, float)):
+        return int(candidate)
+    if isinstance(candidate, str):
+        match = _WALK_SPEED_RE.match(candidate)
+        return int(match.group(1)) if match is not None else None
+    return None
+
+
+def _validate_library_list_filters(
+    sort: str,
+    order: str,
+    cr_eq: float | None,
+    cr_min: float | None,
+    cr_max: float | None,
+) -> None:
+    if sort not in LIBRARY_SORT_FIELDS:
+        raise InvalidMonsterLibraryFilterError(
+            f"invalid monster library sort field: '{sort}'"
+        )
+    if order not in LIBRARY_SORT_ORDERS:
+        raise InvalidMonsterLibraryFilterError(
+            f"invalid monster library sort order: '{order}'"
+        )
+    if cr_eq is not None and (cr_min is not None or cr_max is not None):
+        raise InvalidMonsterLibraryFilterError(
+            "cr_eq cannot be combined with cr_min or cr_max"
+        )
+    if cr_min is not None and cr_max is not None and cr_min > cr_max:
+        raise InvalidMonsterLibraryFilterError("cr_min cannot be greater than cr_max")
+
+
+def _library_sort_value(item: MonsterLibrarySummaryView, sort: str) -> float | None:
+    if sort == "armor_class":
+        return float(item.armor_class) if item.armor_class is not None else None
+    if sort == "max_hp":
+        return float(item.max_hp) if item.max_hp is not None else None
+    if sort == "challenge_rating":
+        return float(item.challenge_rating) if item.challenge_rating is not None else None
+    if sort == "walk_speed":
+        return float(item.walk_speed) if item.walk_speed is not None else None
+    return None
+
+
+def _matches_library_filters(
+    item: MonsterLibrarySummaryView,
+    *,
+    size: str | None,
+    monster_type: str | None,
+    cr_eq: float | None,
+    cr_min: float | None,
+    cr_max: float | None,
+) -> bool:
+    if size is not None and (item.size is None or item.size.casefold() != size.casefold()):
+        return False
+    if monster_type is not None and (
+        item.type is None or item.type.casefold() != monster_type.casefold()
+    ):
+        return False
+    if cr_eq is not None or cr_min is not None or cr_max is not None:
+        if item.challenge_rating is None:
+            return False
+        if cr_eq is not None and item.challenge_rating != cr_eq:
+            return False
+        if cr_min is not None and item.challenge_rating < cr_min:
+            return False
+        if cr_max is not None and item.challenge_rating > cr_max:
+            return False
+    return True
+
+
+def _apply_library_sort_and_filters(
+    items: list[MonsterLibrarySummaryView],
+    *,
+    sort: str,
+    order: str,
+    size: str | None,
+    monster_type: str | None,
+    cr_eq: float | None,
+    cr_min: float | None,
+    cr_max: float | None,
+    limit: int,
+    offset: int,
+) -> list[MonsterLibrarySummaryView]:
+    """Filter and sort the full candidate set, then apply offset/limit.
+
+    Entries missing the sort value always sort last regardless of order;
+    ties break by name casefold then ref so paging stays deterministic.
+    """
+    filtered = [
+        item
+        for item in items
+        if _matches_library_filters(
+            item,
+            size=size,
+            monster_type=monster_type,
+            cr_eq=cr_eq,
+            cr_min=cr_min,
+            cr_max=cr_max,
+        )
+    ]
+    if sort == "name":
+        filtered.sort(
+            key=lambda item: (item.name.casefold(), item.ref),
+            reverse=(order == "desc"),
+        )
+    else:
+        valued: list[tuple[float, str, str, MonsterLibrarySummaryView]] = []
+        missing: list[MonsterLibrarySummaryView] = []
+        for item in filtered:
+            value = _library_sort_value(item, sort)
+            if value is None:
+                missing.append(item)
+            else:
+                key = -value if order == "desc" else value
+                valued.append((key, item.name.casefold(), item.ref, item))
+        valued.sort(key=lambda entry: (entry[0], entry[1], entry[2]))
+        missing.sort(key=lambda item: (item.name.casefold(), item.ref))
+        filtered = [entry[3] for entry in valued] + missing
+    return filtered[offset : offset + limit]
 
 
 def _normalize_actions_collection(
@@ -363,6 +502,13 @@ class MonsterLibraryService:
         limit: int = 50,
         offset: int = 0,
         source: str = "all",
+        sort: str = "name",
+        order: str = "asc",
+        size: str | None = None,
+        monster_type: str | None = None,
+        cr_eq: float | None = None,
+        cr_min: float | None = None,
+        cr_max: float | None = None,
     ) -> list[MonsterLibrarySummaryView]:
         self._require_room_authority(context, room_id)
         return self._list_internal(
@@ -372,6 +518,13 @@ class MonsterLibraryService:
             limit=limit,
             offset=offset,
             source=source,
+            sort=sort,
+            order=order,
+            size=size,
+            monster_type=monster_type,
+            cr_eq=cr_eq,
+            cr_min=cr_min,
+            cr_max=cr_max,
         )
 
     def list_for_actor(
@@ -404,8 +557,43 @@ class MonsterLibraryService:
         limit: int = 50,
         offset: int = 0,
         source: str = "all",
+        sort: str = "name",
+        order: str = "asc",
+        size: str | None = None,
+        monster_type: str | None = None,
+        cr_eq: float | None = None,
+        cr_min: float | None = None,
+        cr_max: float | None = None,
     ) -> list[MonsterLibrarySummaryView]:
         normalized_query = query.strip().casefold() if query is not None and query.strip() else None
+        _validate_library_list_filters(sort, order, cr_eq, cr_min, cr_max)
+        size_filter = size.strip() or None if size is not None else None
+        monster_type_filter = monster_type.strip() or None if monster_type is not None else None
+        advanced = (
+            sort != "name"
+            or order != "asc"
+            or size_filter is not None
+            or monster_type_filter is not None
+            or cr_eq is not None
+            or cr_min is not None
+            or cr_max is not None
+        )
+
+        def _apply(
+            items: list[MonsterLibrarySummaryView],
+        ) -> list[MonsterLibrarySummaryView]:
+            return _apply_library_sort_and_filters(
+                items,
+                sort=sort,
+                order=order,
+                size=size_filter,
+                monster_type=monster_type_filter,
+                cr_eq=cr_eq,
+                cr_min=cr_min,
+                cr_max=cr_max,
+                limit=limit,
+                offset=offset,
+            )
 
         def _custom_to_summary(custom: StoredMonsterTemplate) -> MonsterLibrarySummaryView:
             presentation = dict(custom.presentation_json)
@@ -421,6 +609,7 @@ class MonsterLibraryService:
             max_hp = int(max_hp_raw) if isinstance(max_hp_raw, int) else None
             cr_raw = rules.get("challenge_rating")
             cr = float(cr_raw) if isinstance(cr_raw, (int, float)) else None
+            walk_speed = _parse_walk_speed(rules.get("speed"))
             return MonsterLibrarySummaryView(
                 ref=f"custom:{custom.id}",
                 name=custom.name,
@@ -434,6 +623,7 @@ class MonsterLibraryService:
                 armor_class=ac,
                 max_hp=max_hp,
                 challenge_rating=cr,
+                walk_speed=walk_speed,
                 archived_at=custom.archived_at,
                 revision=custom.revision,
             )
@@ -457,6 +647,7 @@ class MonsterLibraryService:
             max_hp = int(max_hp_val) if isinstance(max_hp_val, int) else None
             cr_val = data.get("challenge_rating")
             cr = float(cr_val) if isinstance(cr_val, (int, float)) else None
+            walk_speed = _parse_walk_speed(data.get("speed"))
             return MonsterLibrarySummaryView(
                 ref=entry.key,
                 name=entry.name,
@@ -470,12 +661,13 @@ class MonsterLibraryService:
                 armor_class=ac,
                 max_hp=max_hp,
                 challenge_rating=cr,
+                walk_speed=walk_speed,
                 archived_at=None,
                 revision=None,
             )
 
         if source == "custom":
-            if normalized_query is not None:
+            if normalized_query is not None or advanced:
                 all_custom = self.repository.list_custom_templates_for_search(
                     room_id, include_archived=include_archived
                 )
@@ -483,8 +675,7 @@ class MonsterLibraryService:
                     c for c in all_custom
                     if self._matches_custom_query(c, normalized_query)
                 ]
-                matched.sort(key=lambda c: (c.name.casefold(), str(c.id)))
-                return [_custom_to_summary(c) for c in matched[offset : offset + limit]]
+                return _apply([_custom_to_summary(c) for c in matched])
             stored_custom = self.repository.list_custom_templates(
                 room_id,
                 include_archived=include_archived,
@@ -500,13 +691,16 @@ class MonsterLibraryService:
                 entry for entry in builtin_entries
                 if self._matches_builtin_query(entry, normalized_query)
             ]
+            if advanced:
+                return _apply([_builtin_to_summary(e) for e in matched_builtin])
             matched_builtin.sort(key=lambda e: (e.name.casefold(), e.key))
             return [_builtin_to_summary(e) for e in matched_builtin[offset : offset + limit]]
 
         # source == "all": with a query, customs are matched in Python (same
         # locale-name/type semantics as builtins); otherwise keep the bounded
-        # DB fetch.
-        if normalized_query is not None:
+        # DB fetch. Any non-default sort or filter also needs the full custom
+        # fetch so ordering and filtering apply across pages.
+        if normalized_query is not None or advanced:
             all_custom = self.repository.list_custom_templates_for_search(
                 room_id, include_archived=include_archived
             )
@@ -532,6 +726,8 @@ class MonsterLibraryService:
         ]
 
         merged = custom_items + builtin_items
+        if normalized_query is not None or advanced:
+            return _apply(merged)
         merged.sort(key=lambda item: (item.name.casefold(), item.ref))
         return merged[offset : offset + limit]
 

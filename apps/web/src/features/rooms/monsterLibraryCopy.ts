@@ -11,6 +11,26 @@ const COPY = {
     filterBuiltin: 'Built-in',
     filterCustom: 'Custom',
     showArchived: 'Show archived',
+    sortLabel: 'Sort by',
+    sortName: 'Name',
+    sortArmorClass: 'AC',
+    sortMaxHp: 'HP',
+    sortChallengeRating: 'CR',
+    sortWalkSpeed: 'Speed',
+    orderLabel: 'Order',
+    orderAsc: 'Ascending',
+    orderDesc: 'Descending',
+    filterSizeLabel: 'Size',
+    filterTypeLabel: 'Type',
+    filterAllOption: 'All',
+    crModeLabel: 'Challenge Rating',
+    crModeAny: 'Any',
+    crModeEq: 'Equals',
+    crModeRange: 'Range',
+    crEqLabel: 'CR equals',
+    crMinLabel: 'CR ≥',
+    crMaxLabel: 'CR ≤',
+    crUnlimitedOption: 'Any',
     sourceBuiltin: 'Built-in',
     sourceCustom: 'Custom',
     badgeArchived: 'Archived',
@@ -110,6 +130,8 @@ const COPY = {
     errMonsterTemplateReferenced: 'This monster template is in use (referenced by map placements, campaigns, or history) and cannot be deleted; archive it instead.',
     errMonsterTemplateArchived: 'This monster template is archived and cannot be used for this action.',
     errInvalidMonsterTemplateRef: 'Invalid monster template reference or invalid rules data.',
+    errInvalidMonsterLibraryFilter: 'Invalid monster library sort or filter. Check the CR range and try again.',
+    errCrRangeInvalid: 'CR minimum cannot be greater than the maximum.',
   },
   'zh-TW': {
     title: '怪物庫',
@@ -120,6 +142,26 @@ const COPY = {
     filterBuiltin: '內建怪物',
     filterCustom: '自訂怪物',
     showArchived: '顯示已封存',
+    sortLabel: '排序',
+    sortName: '名稱',
+    sortArmorClass: 'AC',
+    sortMaxHp: 'HP',
+    sortChallengeRating: 'CR',
+    sortWalkSpeed: '速度',
+    orderLabel: '排序方向',
+    orderAsc: '升冪',
+    orderDesc: '降冪',
+    filterSizeLabel: '體型',
+    filterTypeLabel: '類型',
+    filterAllOption: '全部',
+    crModeLabel: '挑戰等級',
+    crModeAny: '不限',
+    crModeEq: '等於',
+    crModeRange: '範圍',
+    crEqLabel: 'CR 等於',
+    crMinLabel: 'CR ≥',
+    crMaxLabel: 'CR ≤',
+    crUnlimitedOption: '不限',
     sourceBuiltin: '內建',
     sourceCustom: '自訂',
     badgeArchived: '已封存',
@@ -219,6 +261,8 @@ const COPY = {
     errMonsterTemplateReferenced: '此怪物範本已被地圖配置、戰役或歷史引用，無法刪除；請改用封存。',
     errMonsterTemplateArchived: '此怪物範本已封存，無法在此操作中使用。',
     errInvalidMonsterTemplateRef: '怪物範本參照格式或數值無效。',
+    errInvalidMonsterLibraryFilter: '怪物庫排序或篩選條件無效，請檢查挑戰等級範圍後再試。',
+    errCrRangeInvalid: 'CR 下限不可大於上限。',
   },
 } as const satisfies Record<Locale, Record<string, string>>
 
@@ -254,6 +298,8 @@ export function monsterLibraryErrorMessage(
       return copy.errMonsterTemplateArchived
     case 'invalid_monster_template_ref':
       return copy.errInvalidMonsterTemplateRef
+    case 'invalid_monster_library_filter':
+      return copy.errInvalidMonsterLibraryFilter
     default:
       return copy.requestFailed
   }
@@ -471,5 +517,25 @@ export function formatMonsterRuleField(
     }
   }
   return value
+}
+
+/** Every legal Challenge Rating value (SRD 5.1): 0, 1/8, 1/4, 1/2, 1 … 30. */
+export const CHALLENGE_RATINGS: number[] = [
+  0, 0.125, 0.25, 0.5,
+  ...Array.from({ length: 30 }, (_, index) => index + 1),
+]
+
+const FRACTIONAL_CR_LABELS: Record<number, string> = {
+  0.125: '1/8',
+  0.25: '1/4',
+  0.5: '1/2',
+}
+
+export function formatChallengeRating(value: number): string {
+  return FRACTIONAL_CR_LABELS[value] ?? String(value)
+}
+
+export function formatWalkSpeed(feet: number, locale: Locale | string): string {
+  return locale === 'zh-TW' ? `速度 ${feet} ft.` : `Speed ${feet} ft.`
 }
 

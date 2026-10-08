@@ -11,6 +11,7 @@ import {
   patchCustomMonster,
   type CreateCustomMonsterInput,
   type MonsterLibraryDetailView,
+  type MonsterLibraryListOptions,
   type MonsterLibrarySummaryView,
   type PatchCustomMonsterInput,
 } from '../../api/monsterLibrary'
@@ -23,9 +24,12 @@ import {
   type CustomMonsterFormValues,
 } from './monsterLibraryForm'
 import {
+  CHALLENGE_RATINGS,
   formatAbilityName,
+  formatChallengeRating,
   formatMonsterName,
   formatMonsterRuleField,
+  formatWalkSpeed,
   monsterLibraryCopy,
   monsterLibraryErrorMessage,
   SRD_ALIGNMENTS,
@@ -109,6 +113,21 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
   const [searchQuery, setSearchQuery] = useState('')
   const [sourceFilter, setSourceFilter] = useState<'all' | 'builtin' | 'custom'>('all')
   const [showArchived, setShowArchived] = useState(false)
+
+  // D.4 sort & filter ('' = all/unlimited; any change resets to offset 0)
+  const [sortField, setSortField] = useState('name')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [sizeFilter, setSizeFilter] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [crMode, setCrMode] = useState<'any' | 'eq' | 'range'>('any')
+  const [crEq, setCrEq] = useState('0')
+  const [crMin, setCrMin] = useState('')
+  const [crMax, setCrMax] = useState('')
+
+  // CR range guards the fetch: min > max shows an inline message and skips
+  // the request instead of sending an invalid combination to the server.
+  const crRangeInvalid =
+    crMode === 'range' && crMin !== '' && crMax !== '' && Number(crMin) > Number(crMax)
 
   const [selectedRef, setSelectedRef] = useState<string | null>(null)
   const [detail, setDetail] = useState<MonsterLibraryDetailView | null>(null)
@@ -201,6 +220,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
   const listRequestSeq = useRef(0)
 
   const reloadList = async (reset = true) => {
+    if (crRangeInvalid) return
     const requestSeq = ++listRequestSeq.current
     if (reset) {
       setLoadingList(true)
@@ -209,13 +229,21 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
     }
     try {
       const offset = reset ? 0 : monsters.length
-      const items = await listMonsterLibrary(roomId, token, {
+      const options: MonsterLibraryListOptions = {
         query: searchQuery.trim() || undefined,
         include_archived: showArchived,
         source: sourceFilter,
         limit: PAGE_SIZE,
         offset,
-      })
+      }
+      if (sortField !== 'name') options.sort = sortField
+      if (sortOrder !== 'asc') options.order = sortOrder
+      if (sizeFilter) options.size = sizeFilter
+      if (typeFilter) options.type = typeFilter
+      if (crMode === 'eq' && crEq !== '') options.cr_eq = Number(crEq)
+      if (crMode === 'range' && crMin !== '') options.cr_min = Number(crMin)
+      if (crMode === 'range' && crMax !== '') options.cr_max = Number(crMax)
+      const items = await listMonsterLibrary(roomId, token, options)
       if (requestSeq !== listRequestSeq.current) return
       if (reset) {
         setMonsters(items)
@@ -237,9 +265,10 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
 
   useEffect(() => {
     if (!recent || !canManage) return
+    if (crRangeInvalid) return
     void reloadList(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId, token, canManage, sourceFilter, showArchived])
+  }, [roomId, token, canManage, sourceFilter, showArchived, sortField, sortOrder, sizeFilter, typeFilter, crMode, crEq, crMin, crMax, crRangeInvalid])
 
   // Escape closes whichever monster modal is open, unless an action is pending.
   useEffect(() => {
@@ -623,6 +652,102 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
             />
             {copy.showArchived}
           </label>
+          <label className="monster-library__filter-label">
+            <span>{copy.sortLabel}</span>
+            <select value={sortField} onChange={(e) => setSortField(e.target.value)}>
+              <option value="name">{copy.sortName}</option>
+              <option value="armor_class">{copy.sortArmorClass}</option>
+              <option value="max_hp">{copy.sortMaxHp}</option>
+              <option value="challenge_rating">{copy.sortChallengeRating}</option>
+              <option value="walk_speed">{copy.sortWalkSpeed}</option>
+            </select>
+          </label>
+          <label className="monster-library__filter-label">
+            <span>{copy.orderLabel}</span>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+            >
+              <option value="asc">{copy.orderAsc}</option>
+              <option value="desc">{copy.orderDesc}</option>
+            </select>
+          </label>
+          <label className="monster-library__filter-label">
+            <span>{copy.filterSizeLabel}</span>
+            <select value={sizeFilter} onChange={(e) => setSizeFilter(e.target.value)}>
+              <option value="">{copy.filterAllOption}</option>
+              {SRD_SIZES.map((size) => (
+                <option key={size} value={size}>
+                  {formatMonsterRuleField('size', size, locale)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="monster-library__filter-label">
+            <span>{copy.filterTypeLabel}</span>
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <option value="">{copy.filterAllOption}</option>
+              {SRD_TYPES.map((monsterType) => (
+                <option key={monsterType} value={monsterType}>
+                  {formatMonsterRuleField('type', monsterType, locale)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="monster-library__filter-label">
+            <span>{copy.crModeLabel}</span>
+            <select
+              value={crMode}
+              onChange={(e) => setCrMode(e.target.value as 'any' | 'eq' | 'range')}
+            >
+              <option value="any">{copy.crModeAny}</option>
+              <option value="eq">{copy.crModeEq}</option>
+              <option value="range">{copy.crModeRange}</option>
+            </select>
+          </label>
+          {crMode === 'eq' ? (
+            <label className="monster-library__filter-label">
+              <span>{copy.crEqLabel}</span>
+              <select value={crEq} onChange={(e) => setCrEq(e.target.value)}>
+                {CHALLENGE_RATINGS.map((cr) => (
+                  <option key={cr} value={String(cr)}>
+                    {formatChallengeRating(cr)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {crMode === 'range' ? (
+            <>
+              <label className="monster-library__filter-label">
+                <span>{copy.crMinLabel}</span>
+                <select value={crMin} onChange={(e) => setCrMin(e.target.value)}>
+                  <option value="">{copy.crUnlimitedOption}</option>
+                  {CHALLENGE_RATINGS.map((cr) => (
+                    <option key={cr} value={String(cr)}>
+                      {formatChallengeRating(cr)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="monster-library__filter-label">
+                <span>{copy.crMaxLabel}</span>
+                <select value={crMax} onChange={(e) => setCrMax(e.target.value)}>
+                  <option value="">{copy.crUnlimitedOption}</option>
+                  {CHALLENGE_RATINGS.map((cr) => (
+                    <option key={cr} value={String(cr)}>
+                      {formatChallengeRating(cr)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          ) : null}
+          {crRangeInvalid ? (
+            <p className="monster-library__filter-error" role="alert">
+              {copy.errCrRangeInvalid}
+            </p>
+          ) : null}
           <button className="button secondary" type="submit" disabled={loadingList}>
             {copy.refreshAction}
           </button>
@@ -676,6 +801,9 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                             ) : null}
                             {item.max_hp !== null && item.max_hp !== undefined ? (
                               <span>HP {item.max_hp}</span>
+                            ) : null}
+                            {item.walk_speed !== null && item.walk_speed !== undefined ? (
+                              <span>{formatWalkSpeed(item.walk_speed, locale)}</span>
                             ) : null}
                           </div>
                         </button>

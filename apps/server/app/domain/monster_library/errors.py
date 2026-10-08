@@ -35,3 +35,7 @@ class InvalidMonsterTemplateRefError(MonsterLibraryError, ValueError):
 
 class InvalidMonsterRulesError(MonsterLibraryError, ValueError):
     """Raised when monster rules validation fails."""
+
+
+class InvalidMonsterLibraryFilterError(MonsterLibraryError):
+    """Raised when monster library list sort/filter query params are invalid."""

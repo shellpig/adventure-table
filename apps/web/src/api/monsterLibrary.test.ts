@@ -9,6 +9,7 @@ import {
   deleteCustomMonster,
   getMonsterLibraryEntry,
   listMonsterLibrary,
+  listSessionMonsterLibrary,
   MonsterLibraryApiError,
   patchCustomMonster,
 } from './monsterLibrary'
@@ -50,6 +51,110 @@ describe('monsterLibrary API client', () => {
         },
       }),
     )
+  })
+
+  it('lists monsters with sort and filter parameters', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    await listMonsterLibrary('room-1', 'token-123', {
+      sort: 'max_hp',
+      order: 'desc',
+      size: 'Large',
+      type: 'dragon',
+      cr_min: 10,
+      cr_max: 15,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/rooms/room-1/monster-library?sort=max_hp&order=desc&size=Large&type=dragon&cr_min=10&cr_max=15',
+      expect.objectContaining({
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer token-123',
+        },
+      }),
+    )
+  })
+
+  it('sends cr_eq on its own for exact challenge rating matches', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    await listMonsterLibrary('room-1', 'token-123', { cr_eq: 0.125 })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/rooms/room-1/monster-library?cr_eq=0.125',
+      expect.objectContaining({
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer token-123',
+        },
+      }),
+    )
+  })
+
+  it('omits sort, order, and filters when they are at their defaults', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    await listMonsterLibrary('room-1', 'token-123', {
+      query: 'gob',
+      include_archived: true,
+      limit: 10,
+      offset: 5,
+      source: 'custom',
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/rooms/room-1/monster-library?query=gob&include_archived=true&limit=10&offset=5&source=custom',
+      expect.anything(),
+    )
+  })
+
+  it('builds identical query strings for the room and session library readers', async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    )
+
+    const options = {
+      query: 'drake',
+      include_archived: true,
+      limit: 10,
+      offset: 5,
+      source: 'custom',
+      sort: 'challenge_rating',
+      order: 'desc',
+      size: 'Large',
+      type: 'dragon',
+      cr_min: 10,
+      cr_max: 15,
+    } as const
+    fetchMock.mockClear()
+    await listMonsterLibrary('room-1', 'token-123', options)
+    await listSessionMonsterLibrary('room-1', 'camp-1', 'sess-1', 'token-123', options)
+
+    const roomUrl = String(fetchMock.mock.calls[0][0])
+    const sessionUrl = String(fetchMock.mock.calls[1][0])
+    expect(sessionUrl).toContain('/campaigns/camp-1/sessions/sess-1/libraries/monster-library?')
+    expect(sessionUrl.split('?')[1]).toBe(roomUrl.split('?')[1])
   })
 
   it('encodes ref segment when getting entry', async () => {

@@ -1527,6 +1527,30 @@
   min-width: 240px;
 }
 
+.monster-library__filter-label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.monster-library__filter-label select {
+  max-width: 168px;
+}
+
+.monster-library__filter-error {
+  flex-basis: 100%;
+  margin: 0;
+  border: 1px solid rgb(225 128 128 / 40%);
+  border-radius: 12px;
+  padding: 8px 16px;
+  color: #f3b8b8;
+  background: rgb(225 128 128 / 9%);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 .monster-library__checkbox-label {
   display: flex;
   gap: 6px;
@@ -1645,6 +1669,7 @@
 .monster-library__item-meta {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
   font-size: 0.82rem;
   color: var(--muted);
 }

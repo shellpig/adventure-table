@@ -132,6 +132,44 @@ describe('RoomMonsterLibraryPage permissions & member rendering', () => {
     expect(html).toContain(copy.filterCustom)
     expect(html).toContain(copy.showArchived)
   })
+
+  it.each(['en', 'zh-TW'] as const)('renders D.4 sort and filter controls in %s', (locale) => {
+    vi.spyOn(roomStorage, 'recentRoomForId').mockReturnValue({
+      roomId: ROOM_ID,
+      code: 'ROOM01',
+      name: 'Test Room',
+      accessToken: 'owner-token',
+      authority: 'owner',
+    })
+    const copy = monsterLibraryCopy(locale)
+
+    const html = renderToStaticMarkup(
+      <LocaleProvider storage={testStorage(locale)} documentTarget={null}>
+        <RoomMonsterLibraryPage roomId={ROOM_ID} />
+      </LocaleProvider>,
+    )
+
+    for (const label of [
+      copy.sortLabel,
+      copy.sortName,
+      copy.sortArmorClass,
+      copy.sortMaxHp,
+      copy.sortChallengeRating,
+      copy.sortWalkSpeed,
+      copy.orderLabel,
+      copy.orderAsc,
+      copy.orderDesc,
+      copy.filterSizeLabel,
+      copy.filterTypeLabel,
+      copy.filterAllOption,
+      copy.crModeLabel,
+      copy.crModeAny,
+      copy.crModeEq,
+      copy.crModeRange,
+    ]) {
+      expect(html).toContain(label)
+    }
+  })
 })
 
 describe('RoomMonsterLibraryPage contract and source assertions', () => {
@@ -209,6 +247,32 @@ describe('RoomMonsterLibraryPage contract and source assertions', () => {
     // Normalized rules read directly without ?? '-'
     expect(source).not.toContain("detail.rules.armor_class ?? '-'")
     expect(source).not.toContain("detail.rules.max_hp ?? detail.rules.hit_points")
+  })
+
+  it('wires D.4 sort/filter state into listMonsterLibrary and resets pagination', () => {
+    for (const fragment of [
+      'sortField',
+      'sortOrder',
+      'sizeFilter',
+      'typeFilter',
+      'crMode',
+      'crEq',
+      'crMin',
+      'crMax',
+      'options.sort = sortField',
+      'options.order = sortOrder',
+      'options.size = sizeFilter',
+      'options.type = typeFilter',
+      'options.cr_eq = Number(crEq)',
+      'options.cr_min = Number(crMin)',
+      'options.cr_max = Number(crMax)',
+      'crRangeInvalid',
+      'copy.errCrRangeInvalid',
+      'role="alert"',
+      'formatWalkSpeed(item.walk_speed, locale)',
+    ]) {
+      expect(source).toContain(fragment)
+    }
   })
 })
 
