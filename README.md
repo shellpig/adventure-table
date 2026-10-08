@@ -10,7 +10,7 @@
 
 Adventure Table 是一個**輕量、桌上跑團優先的 D&D 5e 2014 Web VTT**。真人 DM 像實體跑團一樣主要靠口頭敘事，網站只管需要共享、同步、計算、保存、權限與 AI 接入的東西。外部 AI 未來可透過 MCP / Site Tools 正式進桌擔任 DM 或 Player，與真人共用同一套 Game State、規則與權限。
 
-朋友間私人使用，非商品化平台。介面為 `zh-TW` / `en` 雙語。
+第一階段為朋友間私人使用，後續規劃產品化。介面為 `zh-TW` / `en` 雙語。
 
 **目前進度以 [`PROJECT_BRIEF.md`](PROJECT_BRIEF.md) 為單一事實來源**——本檔不複述 Phase 狀態。
 

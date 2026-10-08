@@ -1,12 +1,12 @@
 # Adventure Table 專案簡報
 
-最後更新：2026-10-05
+最後更新：2026-10-08
 
 本檔是**當前進度、下一步、Roadmap 與索引的單一事實來源**（≤ **16,000 UTF-8 bytes**）。歷史見 [ROADMAP_HISTORY](docs/ROADMAP_HISTORY.md)，限制見 [已知問題](已知問題.md)；不累加歷史、測試數字或決策全文。
 
 ## 專案定位與目前能力
 
-朋友間私人使用的輕量 **D&D 5e 2014 Web VTT**。真人 DM 主要靠口頭敘事；網站負責共享、同步、計算、保存、權限及外部 AI 接入。不是 CRPG，不做全能平台，網站本身不接 LLM API。
+先供朋友私用、後續產品化的輕量 **D&D 5e 2014 Web VTT**。真人 DM 主要靠口頭敘事；網站負責共享、同步、計算、保存、權限及外部 AI 接入。不是 CRPG，不做全能平台，網站不接 LLM API。
 
 已交付角色創建／角色卡／升等／版本、Room／Campaign／Seat／Session、Exploration、正式擲骰、Human／AI 交接、MCP／OAuth／AI Join Kit、Quick Combat，以及 Windows 離線創角與 Character JSON exchange。支援 `zh-TW`／`en`；內容由 SRD 5.1 起擴充。
 
