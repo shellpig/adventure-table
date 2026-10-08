@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import {
   archiveCustomMonster,
@@ -33,6 +33,14 @@ import {
   SRD_TYPES,
   type MonsterLibraryCopy,
 } from './monsterLibraryCopy'
+import {
+  clampListWidth,
+  MAX_LIST_WIDTH,
+  MIN_LIST_WIDTH,
+  readListWidth,
+  resolveKeyboardListWidth,
+  writeListWidth,
+} from './monsterLibraryLayout'
 import { recentRoomForId } from './roomStorage'
 import './rooms.css'
 
@@ -144,6 +152,45 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
 
   const [showFromContentModal, setShowFromContentModal] = useState(false)
   const [fromContentName, setFromContentName] = useState('')
+
+  const [listWidth, setListWidth] = useState(() => readListWidth())
+  const listWidthRef = useRef(listWidth)
+  const layoutRef = useRef<HTMLDivElement | null>(null)
+
+  const applyListWidth = (next: number, persist: boolean) => {
+    listWidthRef.current = next
+    setListWidth(next)
+    if (persist) writeListWidth(next)
+  }
+
+  const handleSplitterPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  const handleSplitterPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const layout = layoutRef.current
+    if (!layout || !event.currentTarget.hasPointerCapture(event.pointerId)) return
+    const rect = layout.getBoundingClientRect()
+    applyListWidth(clampListWidth(event.clientX - rect.left, rect.width), false)
+  }
+
+  const handleSplitterPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
+    event.currentTarget.releasePointerCapture(event.pointerId)
+    writeListWidth(listWidthRef.current)
+  }
+
+  const handleSplitterKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const next = resolveKeyboardListWidth(
+      listWidthRef.current,
+      event.key,
+      layoutRef.current?.getBoundingClientRect().width,
+    )
+    if (next === null) return
+    event.preventDefault()
+    applyListWidth(next, true)
+  }
 
   const PAGE_SIZE = 50
   const [hasMore, setHasMore] = useState(false)
@@ -568,7 +615,11 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
           </button>
         </form>
 
-        <div className="monster-library__layout">
+        <div
+          ref={layoutRef}
+          className="monster-library__layout"
+          style={{ '--monster-library-list-width': `${listWidth}px` } as CSSProperties}
+        >
           {/* List panel */}
           <aside className="monster-library__sidebar" aria-label={copy.title}>
             {loadingList ? (
@@ -634,6 +685,22 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
               </>
             )}
           </aside>
+
+          <div
+            className="monster-library__splitter"
+            role="separator"
+            tabIndex={0}
+            aria-orientation="vertical"
+            aria-label={copy.resizeList}
+            title={copy.resizeListHint}
+            aria-valuemin={MIN_LIST_WIDTH}
+            aria-valuemax={MAX_LIST_WIDTH}
+            aria-valuenow={listWidth}
+            onPointerDown={handleSplitterPointerDown}
+            onPointerMove={handleSplitterPointerMove}
+            onPointerUp={handleSplitterPointerUp}
+            onKeyDown={handleSplitterKeyDown}
+          />
 
           {/* Detail panel */}
           <section className="monster-library__detail" aria-label="Monster details">

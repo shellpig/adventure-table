@@ -1481,10 +1481,23 @@
 /* ==========================================================================
    Monster Library Styles
    ========================================================================== */
-.monster-library-card {
-  width: min(1200px, 100%);
-  max-width: 1200px;
+.landing-page.monster-library-page {
+  align-items: start;
+  justify-items: stretch;
+}
+
+.landing-card.room-workspace-card.monster-library-card {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  justify-self: stretch;
   text-align: left;
+}
+
+@media (max-width: 480px) {
+  .landing-page.monster-library-page {
+    padding: 16px;
+  }
 }
 
 .monster-library__header {
@@ -1525,19 +1538,50 @@
 
 .monster-library__layout {
   display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 24px;
+  grid-template-columns:
+    minmax(0, min(var(--monster-library-list-width, 800px), calc(100% - 372px)))
+    12px
+    minmax(0, 1fr);
+  gap: 0;
   min-height: 500px;
+}
+
+.monster-library__splitter {
+  position: relative;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.monster-library__splitter::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 1px;
+  background: var(--line);
+  transition: background 150ms ease;
+}
+
+.monster-library__splitter:hover::after,
+.monster-library__splitter:focus-visible::after {
+  background: var(--gold-bright);
 }
 
 @media (max-width: 840px) {
   .monster-library__layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .monster-library__splitter {
+    display: none;
   }
 }
 
 .monster-library__sidebar {
-  border-right: 1px solid var(--line);
   padding-right: 16px;
   max-height: 75vh;
   overflow-y: auto;
@@ -1547,8 +1591,8 @@
   list-style: none;
   padding: 0;
   margin: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 8px;
 }
 

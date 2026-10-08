@@ -18,6 +18,17 @@ import {
   RoomMonsterLibraryPage,
   roomMonsterLibraryRouteFromPath,
 } from './RoomMonsterLibraryPage'
+import {
+  clampListWidth,
+  DEFAULT_LIST_WIDTH,
+  LIST_KEYBOARD_STEP,
+  MAX_LIST_WIDTH,
+  MIN_LIST_WIDTH,
+  MONSTER_LIST_WIDTH_STORAGE_KEY,
+  readListWidth,
+  resolveKeyboardListWidth,
+  writeListWidth,
+} from './monsterLibraryLayout'
 import * as roomStorage from './roomStorage'
 
 const ROOM_ID = '10000000-0000-4000-8000-000000000001'
@@ -171,5 +182,91 @@ describe('RoomMonsterLibraryPage contract and source assertions', () => {
     // Normalized rules read directly without ?? '-'
     expect(source).not.toContain("detail.rules.armor_class ?? '-'")
     expect(source).not.toContain("detail.rules.max_hp ?? detail.rules.hit_points")
+  })
+})
+
+describe('Monster library list splitter', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it.each(['en', 'zh-TW'] as const)('renders an accessible vertical separator in %s', (locale) => {
+    vi.spyOn(roomStorage, 'recentRoomForId').mockReturnValue({
+      roomId: ROOM_ID,
+      code: 'ROOM01',
+      name: 'Test Room',
+      accessToken: 'owner-token',
+      authority: 'owner',
+    })
+    const copy = monsterLibraryCopy(locale)
+
+    const html = renderToStaticMarkup(
+      <LocaleProvider storage={testStorage(locale)} documentTarget={null}>
+        <RoomMonsterLibraryPage roomId={ROOM_ID} />
+      </LocaleProvider>,
+    )
+
+    expect(copy.resizeList).not.toBe('')
+    expect(html).toContain('role="separator"')
+    expect(html).toContain('aria-orientation="vertical"')
+    expect(html).toContain(`aria-label="${copy.resizeList}"`)
+    expect(html).toContain(`aria-valuenow="${DEFAULT_LIST_WIDTH}"`)
+    expect(html).toContain(`aria-valuemin="${MIN_LIST_WIDTH}"`)
+    expect(html).toContain(`aria-valuemax="${MAX_LIST_WIDTH}"`)
+    expect(html).toContain('tabindex="0"')
+  })
+
+  it('has distinct labels per locale', () => {
+    expect(monsterLibraryCopy('en').resizeList).not.toBe(monsterLibraryCopy('zh-TW').resizeList)
+  })
+
+  it('steps with ArrowRight / ArrowLeft and clamps to min and max', () => {
+    expect(resolveKeyboardListWidth(480, 'ArrowRight')).toBe(480 + LIST_KEYBOARD_STEP)
+    expect(resolveKeyboardListWidth(480, 'ArrowLeft')).toBe(480 - LIST_KEYBOARD_STEP)
+    expect(resolveKeyboardListWidth(MIN_LIST_WIDTH, 'ArrowLeft')).toBe(MIN_LIST_WIDTH)
+    expect(resolveKeyboardListWidth(MAX_LIST_WIDTH, 'ArrowRight')).toBe(MAX_LIST_WIDTH)
+    expect(resolveKeyboardListWidth(480, 'a')).toBeNull()
+  })
+
+  it('keeps the detail panel usable by capping against the container width', () => {
+    expect(clampListWidth(5000, 1000)).toBe(1000 - 12 - 360)
+    expect(clampListWidth(10, 1000)).toBe(MIN_LIST_WIDTH)
+    expect(clampListWidth(900)).toBe(900)
+  })
+
+  it('persists keyboard width and restores it from storage', () => {
+    const values = new Map<string, string>()
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => void values.set(key, value),
+    }
+    const next = resolveKeyboardListWidth(readListWidth(storage), 'ArrowRight')
+    expect(next).toBe(DEFAULT_LIST_WIDTH + LIST_KEYBOARD_STEP)
+    writeListWidth(next as number, storage)
+    expect(values.get(MONSTER_LIST_WIDTH_STORAGE_KEY)).toBe(String(next))
+    expect(readListWidth(storage)).toBe(next)
+  })
+
+  it('falls back to the default for missing, invalid or out-of-range stored values', () => {
+    const make = (raw: string | null) => ({ getItem: () => raw, setItem: () => undefined })
+    expect(readListWidth(make(null))).toBe(DEFAULT_LIST_WIDTH)
+    expect(readListWidth(make('abc'))).toBe(DEFAULT_LIST_WIDTH)
+    expect(readListWidth(make('99999'))).toBe(MAX_LIST_WIDTH)
+    expect(readListWidth(make('10'))).toBe(MIN_LIST_WIDTH)
+  })
+
+  it('works when storage is unavailable or throws', () => {
+    const throwing = {
+      getItem: () => {
+        throw new Error('blocked')
+      },
+      setItem: () => {
+        throw new Error('blocked')
+      },
+    }
+    expect(readListWidth(throwing)).toBe(DEFAULT_LIST_WIDTH)
+    expect(() => writeListWidth(500, throwing)).not.toThrow()
+    expect(readListWidth(null)).toBe(DEFAULT_LIST_WIDTH)
+    expect(() => writeListWidth(500, null)).not.toThrow()
   })
 })
