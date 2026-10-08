@@ -1500,6 +1500,11 @@
   }
 }
 
+.monster-library__back {
+  align-self: flex-start;
+  margin-bottom: 16px;
+}
+
 .monster-library__header {
   display: flex;
   justify-content: space-between;

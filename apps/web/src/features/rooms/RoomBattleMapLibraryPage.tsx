@@ -329,7 +329,7 @@ export function RoomBattleMapLibraryPage({ roomId }: RoomBattleMapLibraryPagePro
     return (
       <div className="battle-map-library page">
         <header className="page-header">
-          <a className="page-header__back" href={`/rooms/${roomId}`}>
+          <a className="button secondary page-header__back" href={`/rooms/${roomId}`}>
             {copy.backRoom}
           </a>
           <h1>{copy.title}</h1>
@@ -343,7 +343,7 @@ export function RoomBattleMapLibraryPage({ roomId }: RoomBattleMapLibraryPagePro
     return (
       <div className="battle-map-library page">
         <header className="page-header">
-          <a className="page-header__back" href={`/rooms/${roomId}`}>
+          <a className="button secondary page-header__back" href={`/rooms/${roomId}`}>
             {copy.backRoom}
           </a>
           <h1>{copy.title}</h1>
@@ -360,7 +360,7 @@ export function RoomBattleMapLibraryPage({ roomId }: RoomBattleMapLibraryPagePro
       <div className="battle-map-library battle-map-library--editing page">
         <header className="page-header">
           <a
-            className="page-header__back"
+            className="button secondary page-header__back"
             href={`/rooms/${roomId}`}
             data-testid="editor-back-link"
             onClick={(e) => {
@@ -411,7 +411,7 @@ export function RoomBattleMapLibraryPage({ roomId }: RoomBattleMapLibraryPagePro
   return (
     <div className="battle-map-library page">
       <header className="page-header">
-        <a className="page-header__back" href={`/rooms/${roomId}`}>
+        <a className="button secondary page-header__back" href={`/rooms/${roomId}`}>
           {copy.backRoom}
         </a>
         <h1>{copy.title}</h1>

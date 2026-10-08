@@ -601,6 +601,9 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
   return (
     <main className="landing-page room-workspace-page monster-library-page">
       <section className="landing-card room-workspace-card monster-library-card">
+        <a className="button secondary monster-library__back" href={`/rooms/${roomId}`}>
+          {copy.backRoom}
+        </a>
         <div className="monster-library__header">
           <div>
             <h1>{copy.title}</h1>
@@ -620,9 +623,6 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
             >
               {copy.createAction}
             </button>
-            <a className="button secondary" href={`/rooms/${roomId}`}>
-              {copy.backRoom}
-            </a>
           </div>
         </div>
 
