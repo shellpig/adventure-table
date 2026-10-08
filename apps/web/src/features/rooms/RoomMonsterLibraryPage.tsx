@@ -1200,14 +1200,22 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                       </label>
                       <label>
                         <span>{copy.fieldChallengeRating}</span>
-                        <input
-                          type="number"
-                          min={0}
-                          step="any"
-                          value={formCr}
+                        <select
+                          value={String(formCr)}
                           disabled={pendingAction !== null}
                           onChange={(e) => setFormCr(Number(e.target.value))}
-                        />
+                        >
+                          {!CHALLENGE_RATINGS.includes(formCr) ? (
+                            <option value={String(formCr)}>
+                              {formatChallengeRating(formCr)}
+                            </option>
+                          ) : null}
+                          {CHALLENGE_RATINGS.map((cr) => (
+                            <option key={cr} value={String(cr)}>
+                              {formatChallengeRating(cr)}
+                            </option>
+                          ))}
+                        </select>
                       </label>
                       <label>
                         <span>{copy.fieldSpeed}</span>
@@ -1359,7 +1367,8 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
 
                     {/* Description editing */}
                     <h3>{copy.descriptionHeading}</h3>
-                    <label>
+                    <label className="monster-library__description-field">
+                      <span>{copy.fieldDescription}</span>
                       <textarea
                         rows={3}
                         value={formDescription}

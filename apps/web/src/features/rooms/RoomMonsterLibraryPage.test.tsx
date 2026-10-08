@@ -249,6 +249,14 @@ describe('RoomMonsterLibraryPage contract and source assertions', () => {
     expect(source).not.toContain("detail.rules.max_hp ?? detail.rules.hit_points")
   })
 
+  it('edits challenge rating through a select of legal CHALLENGE_RATINGS values', () => {
+    expect(source).toContain('value={String(formCr)}')
+    expect(source).toContain('CHALLENGE_RATINGS.map')
+    expect(source).toContain('CHALLENGE_RATINGS.includes(formCr)')
+    expect(source).toContain('formatChallengeRating(cr)')
+    expect(source).toContain('setFormCr(Number(e.target.value))')
+  })
+
   it('wires D.4 sort/filter state into listMonsterLibrary and resets pagination', () => {
     for (const fragment of [
       'sortField',
