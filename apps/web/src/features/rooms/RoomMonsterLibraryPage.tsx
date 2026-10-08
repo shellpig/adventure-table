@@ -739,6 +739,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                     <div className="monster-library__stat-block">
                       <h3>{copy.coreStatsHeading}</h3>
                       <div className="monster-library__stats-grid">
+                        <div className="monster-library__stats-row">
                         <div>
                           <strong>{copy.fieldArmorClass}:</strong> {detail.rules.armor_class}
                         </div>
@@ -755,6 +756,8 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                         <div>
                           <strong>{copy.fieldSpeed}:</strong> {monsterSpeedString(detail.rules.speed)}
                         </div>
+                        </div>
+                        <div className="monster-library__stats-row">
                         <div>
                           <strong>{copy.fieldSize}:</strong>{' '}
                           {formatMonsterRuleField('size', detail.rules.size, locale)}
@@ -766,6 +769,7 @@ export function RoomMonsterLibraryPage({ roomId }: RoomMonsterLibraryPageProps) 
                         <div>
                           <strong>{copy.fieldAlignment}:</strong>{' '}
                           {formatMonsterRuleField('alignment', detail.rules.alignment, locale)}
+                        </div>
                         </div>
                       </div>
 

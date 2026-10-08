@@ -1696,13 +1696,30 @@
 }
 
 .monster-library__stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   margin-bottom: 20px;
   padding: 14px;
   background: var(--surface-2);
   border-radius: 8px;
+}
+
+.monster-library__stat-block .monster-library__stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* The detail panel width follows the list splitter, not the viewport. */
+.monster-library__stat-block .monster-library__stats-grid {
+  container-type: inline-size;
+}
+
+@container (max-width: 680px) {
+  .monster-library__stat-block .monster-library__stats-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .monster-library__abilities-grid {

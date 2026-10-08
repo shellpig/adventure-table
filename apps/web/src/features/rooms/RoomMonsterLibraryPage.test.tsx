@@ -166,6 +166,19 @@ describe('RoomMonsterLibraryPage contract and source assertions', () => {
     expect(source).toContain('monster-library__desc-lang-label')
   })
 
+  it('lays built-in core stats out as two explicit rows', () => {
+    const start = source.indexOf('<div className="monster-library__stats-grid">')
+    const block = source.slice(start, source.indexOf('{/* Ability Scores */}'))
+    const rows = block.split('<div className="monster-library__stats-row">')
+    expect(rows).toHaveLength(3)
+    for (const field of ['fieldArmorClass', 'fieldMaxHp', 'fieldSpeed']) {
+      expect(rows[1]).toContain(`copy.${field}`)
+    }
+    for (const field of ['fieldSize', 'fieldType', 'fieldAlignment']) {
+      expect(rows[2]).toContain(`copy.${field}`)
+    }
+  })
+
   it('excludes client-side desc filtering on search', () => {
     // Search only queries the server, never client-side desc filtering
     expect(source).not.toContain('t.desc.includes')
