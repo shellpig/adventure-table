@@ -384,6 +384,7 @@ export function RoomBattleMapLibraryPage({ roomId }: RoomBattleMapLibraryPagePro
           roomId={roomId}
           token={token}
           imageUrl={editingImageUrl}
+          fillViewportHeight
           onSaved={(savedMap) => {
             setEditingMap(savedMap)
             void loadMaps()

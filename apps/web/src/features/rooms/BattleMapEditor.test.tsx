@@ -15,6 +15,7 @@ import {
   nearestGridSegment,
   placementLine,
   resizedCanvasHeight,
+  viewportFillCanvasHeight,
   roundCellCoord,
   setTerrain,
   snapToVertex,
@@ -190,6 +191,18 @@ describe('BattleMapEditor working state', () => {
     expect(resizedCanvasHeight(520, 200)).toBe(720)
     expect(resizedCanvasHeight(520, -100)).toBe(420)
     expect(resizedCanvasHeight(520, -400)).toBe(320)
+  })
+
+  it('viewportFillCanvasHeight reaches the viewport bottom but never drops below the default', () => {
+    expect(viewportFillCanvasHeight(120, 950)).toBe(758)
+    expect(viewportFillCanvasHeight(300, 720)).toBe(520)
+  })
+
+  it('only the Map Library opens the editor stretched to the viewport bottom', () => {
+    const library = readFileSync(new URL('./RoomBattleMapLibraryPage.tsx', import.meta.url), 'utf-8')
+    const setup = readFileSync(new URL('./TacticalSetupPanel.tsx', import.meta.url), 'utf-8')
+    expect(library).toContain('fillViewportHeight')
+    expect(setup).not.toContain('fillViewportHeight')
   })
 
   it('new strokes carry the pen colour and width in the saved payload', () => {

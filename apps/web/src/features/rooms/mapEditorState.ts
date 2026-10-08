@@ -57,6 +57,16 @@ export function freehandStroke(payload: Record<string, unknown>): { color: strin
 export const EDITOR_CANVAS_HEIGHT_DEFAULT = 520
 export const EDITOR_CANVAS_HEIGHT_MIN = 320
 
+/**
+ * Canvas height that reaches the bottom of the viewport from the canvas top,
+ * leaving room for the resize handle and page padding below it. Never shorter
+ * than the default, so small screens keep the previous editor size.
+ */
+export function viewportFillCanvasHeight(canvasTop: number, viewportHeight: number): number {
+  const bottomReserve = 72
+  return Math.max(EDITOR_CANVAS_HEIGHT_DEFAULT, Math.round(viewportHeight - canvasTop - bottomReserve))
+}
+
 /** Editor canvas height after dragging the bottom handle by deltaY pixels. */
 export function resizedCanvasHeight(startHeight: number, deltaY: number): number {
   return Math.max(EDITOR_CANVAS_HEIGHT_MIN, Math.round(startHeight + deltaY))

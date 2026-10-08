@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import type {
   BattleMap,
@@ -57,6 +57,7 @@ import {
   DRAWING_WIDTH_MIN,
   type DrawingColorKey,
   EDITOR_CANVAS_HEIGHT_DEFAULT,
+  viewportFillCanvasHeight,
   deleteById,
   eraseAt,
   findAt,
@@ -96,6 +97,8 @@ type BattleMapEditorProps = {
   onSaved: (map: BattleMap) => void
   onError: (cause: unknown) => void
   onClose: () => void
+  /** Map Library: open with the canvas stretched to the bottom of the screen. */
+  fillViewportHeight?: boolean
 }
 
 let localIdCounter = 0
@@ -134,6 +137,7 @@ export function BattleMapEditor({
   onSaved,
   onError,
   onClose,
+  fillViewportHeight = false,
 }: BattleMapEditorProps) {
   const [working, setWorking] = useState<WorkingState>(() => toWorkingState(map))
   const [history, setHistory] = useState<WorkingState[]>([])
@@ -195,6 +199,14 @@ export function BattleMapEditor({
   )
 
   const containerRef = useRef<HTMLDivElement | null>(null)
+
+  // Map Library: open with the canvas reaching the viewport bottom. Picker
+  // rows that appear later push it down; the handle still resizes it.
+  useLayoutEffect(() => {
+    if (!fillViewportHeight || !containerRef.current) return
+    const top = containerRef.current.getBoundingClientRect().top + window.scrollY
+    setCanvasHeight(viewportFillCanvasHeight(top, window.innerHeight))
+  }, [fillViewportHeight])
   const dragStartVertexRef = useRef<{ x: number; y: number } | null>(null)
   const lastSnappedVertexRef = useRef<{ x: number; y: number } | null>(null)
   const clickSegmentRef = useRef<GridSegment | null>(null)
