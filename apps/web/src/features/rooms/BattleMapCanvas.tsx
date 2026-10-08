@@ -51,6 +51,8 @@ type BattleMapCanvasProps = {
   cellSize?: number
   walls: CanvasWall[]
   doors: CanvasDoor[]
+  /** Localized label for a door state shown on the map. */
+  doorStateLabel: (state: string) => string
   terrain: CanvasTerrain[]
   drawings?: CanvasDrawing[]
   tokens: CanvasToken[]
@@ -107,6 +109,7 @@ export function BattleMapCanvas({
   cellSize = BATTLE_MAP_CELL_SIZE,
   walls,
   doors,
+  doorStateLabel,
   terrain,
   drawings = [],
   tokens,
@@ -341,7 +344,7 @@ export function BattleMapCanvas({
                 dominantBaseline="middle"
                 fontSize={10}
               >
-                {door.state}
+                {doorStateLabel(door.state)}
               </text>
             </g>
           )

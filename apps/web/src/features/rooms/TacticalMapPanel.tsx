@@ -29,7 +29,7 @@ import {
   useImageNaturalSize,
 } from './battleMapImageGrid'
 import { requestId } from './requestId'
-import type { SessionCopy } from './sessionCopy'
+import { doorStateLabel, type SessionCopy } from './sessionCopy'
 import { combatantFor, combatEntryDisplayName } from './sessionCombat'
 import {
   appendAnchor,
@@ -958,6 +958,7 @@ export function TacticalMapPanel({
             heightCells={board.height_cells}
             walls={canvasWalls}
             doors={canvasDoors}
+            doorStateLabel={(state) => doorStateLabel(copy, state)}
             terrain={board.terrain.map((t) => ({
               x: t.x,
               y: t.y,

@@ -919,6 +919,18 @@ export function sessionCopy(locale: Locale): SessionCopy {
   return copy[locale]
 }
 
+const DOOR_STATE_KEYS = {
+  open: 'tacticalDoorState_open',
+  closed: 'tacticalDoorState_closed',
+  locked: 'tacticalDoorState_locked',
+  broken: 'tacticalDoorState_broken',
+} as const
+
+export function doorStateLabel(presentation: SessionCopy, state: string): string {
+  const key = DOOR_STATE_KEYS[state as keyof typeof DOOR_STATE_KEYS]
+  return key ? presentation[key] : state
+}
+
 export function sessionErrorMessage(error: unknown, presentation: SessionCopy): string {
   if (!(error instanceof SessionApiError)) return presentation.requestFailed
   return localizedSessionRequestMessage(error.code, error.status, error.message, presentation.locale)

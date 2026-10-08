@@ -75,7 +75,7 @@ import {
   snapToVertex,
   type CellPoint,
 } from './mapEditorState'
-import type { SessionCopy } from './sessionCopy'
+import { doorStateLabel, type SessionCopy } from './sessionCopy'
 import { BATTLE_MAP_CELL_SIZE, useTacticalCamera } from './useTacticalCamera'
 
 export type EditorTool =
@@ -1421,6 +1421,7 @@ export function BattleMapEditor({
           heightCells={map.height_cells}
           walls={canvasWalls}
           doors={canvasDoors}
+          doorStateLabel={(state) => doorStateLabel(copy, state)}
           terrain={canvasTerrain}
           drawings={working.drawings}
           tokens={monsterMode ? placementTokens : []}
