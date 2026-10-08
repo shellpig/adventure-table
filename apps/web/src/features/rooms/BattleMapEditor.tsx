@@ -1014,6 +1014,63 @@ export function BattleMapEditor({
     <section className="battle-map-editor" aria-label={copy.tacticalMapEditorTitle}>
       <header className="battle-map-editor__header">
         <h3>{copy.tacticalMapEditorTitle}: {map.name}</h3>
+        <div className="battle-map-editor__toolbar" role="toolbar" aria-label={copy.tacticalMapEditorTitle}>
+          {TOOLS.map((t) => (
+            <button
+              key={t}
+              type="button"
+              className={`button secondary compact${tool === t && !monsterMode ? ' battle-map-editor__tool--active' : ''}`}
+              data-testid={`map-editor-tool-${t}`}
+              data-active={tool === t && !monsterMode ? 'true' : undefined}
+              aria-pressed={tool === t && !monsterMode}
+              disabled={monsterMode}
+              onClick={() => selectTool(t)}
+            >
+              {toolLabel(t)}
+            </button>
+          ))}
+          <button
+            type="button"
+            className={`button secondary compact${monsterMode ? ' battle-map-editor__tool--active' : ''}`}
+            data-testid="map-editor-tool-monster"
+            data-active={monsterMode ? 'true' : undefined}
+            aria-pressed={monsterMode}
+            onClick={() => {
+              if (monsterMode) {
+                dragPlacementRef.current = null
+                setMonsterMode(false)
+                setSelectedPlacementId(null)
+              } else {
+                enterMonsterMode()
+              }
+            }}
+          >
+            {copy.tacticalToolMonster}
+          </button>
+          <button
+            type="button"
+            className="button secondary compact"
+            disabled={history.length === 0}
+            onClick={handleUndo}
+            data-testid="map-editor-undo"
+          >
+            {copy.tacticalToolUndo}
+          </button>
+          <button
+            type="button"
+            className="button secondary compact"
+            onClick={() => fitMap(map.width_cells * BATTLE_MAP_CELL_SIZE, map.height_cells * BATTLE_MAP_CELL_SIZE, 800, 600)}
+            data-testid="map-editor-fit"
+          >
+            {copy.tacticalToolFitMap}
+          </button>
+          <button type="button" className="button secondary compact" onClick={zoomIn}>
+            {copy.tacticalZoomIn}
+          </button>
+          <button type="button" className="button secondary compact" onClick={zoomOut}>
+            {copy.tacticalZoomOut}
+          </button>
+        </div>
         <div className="battle-map-editor__actions">
           <button
             type="button"
@@ -1035,63 +1092,6 @@ export function BattleMapEditor({
         </div>
       </header>
 
-      <div className="battle-map-editor__toolbar" role="toolbar" aria-label={copy.tacticalMapEditorTitle}>
-        {TOOLS.map((t) => (
-          <button
-            key={t}
-            type="button"
-            className={`button secondary compact${tool === t && !monsterMode ? ' battle-map-editor__tool--active' : ''}`}
-            data-testid={`map-editor-tool-${t}`}
-            data-active={tool === t && !monsterMode ? 'true' : undefined}
-            aria-pressed={tool === t && !monsterMode}
-            disabled={monsterMode}
-            onClick={() => selectTool(t)}
-          >
-            {toolLabel(t)}
-          </button>
-        ))}
-        <button
-          type="button"
-          className={`button secondary compact${monsterMode ? ' battle-map-editor__tool--active' : ''}`}
-          data-testid="map-editor-tool-monster"
-          data-active={monsterMode ? 'true' : undefined}
-          aria-pressed={monsterMode}
-          onClick={() => {
-            if (monsterMode) {
-              dragPlacementRef.current = null
-              setMonsterMode(false)
-              setSelectedPlacementId(null)
-            } else {
-              enterMonsterMode()
-            }
-          }}
-        >
-          {copy.tacticalToolMonster}
-        </button>
-        <button
-          type="button"
-          className="button secondary compact"
-          disabled={history.length === 0}
-          onClick={handleUndo}
-          data-testid="map-editor-undo"
-        >
-          {copy.tacticalToolUndo}
-        </button>
-        <button
-          type="button"
-          className="button secondary compact"
-          onClick={() => fitMap(map.width_cells * BATTLE_MAP_CELL_SIZE, map.height_cells * BATTLE_MAP_CELL_SIZE, 800, 600)}
-          data-testid="map-editor-fit"
-        >
-          {copy.tacticalToolFitMap}
-        </button>
-        <button type="button" className="button secondary compact" onClick={zoomIn}>
-          {copy.tacticalZoomIn}
-        </button>
-        <button type="button" className="button secondary compact" onClick={zoomOut}>
-          {copy.tacticalZoomOut}
-        </button>
-      </div>
 
       {tool === 'terrain' ? (
         <div className="battle-map-editor__terrain-picker">

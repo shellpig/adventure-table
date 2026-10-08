@@ -2275,8 +2275,8 @@
 
 .battle-map-editor__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
 }
 
@@ -2284,6 +2284,17 @@
   margin: 0;
   font-size: 1.05rem;
   color: var(--text);
+  white-space: nowrap;
+}
+
+/* Tools sit on the title row; save/close stay pinned to the right. */
+.battle-map-editor__header .battle-map-editor__toolbar {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.battle-map-editor__header .battle-map-editor__actions {
+  margin-left: auto;
 }
 
 .battle-map-editor__actions {

@@ -1838,9 +1838,28 @@
 }
 
 /* Battle Map Library */
+/* The list view is sized for five map cards per row; the editor uses the
+   full screen width for the canvas. */
 .battle-map-library {
+  max-width: 1520px;
   margin: 0 auto;
   padding: 24px;
+}
+
+.battle-map-library.battle-map-library--editing {
+  max-width: none;
+}
+
+.battle-map-library--editing .page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  margin-bottom: 16px;
+}
+
+.battle-map-library--editing .page-header h1 {
+  margin: 0;
 }
 
 @media (max-width: 480px) {
@@ -1883,8 +1902,14 @@
 
 .battle-map-library__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 16px;
+}
+
+@media (min-width: 1440px) {
+  .battle-map-library__grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
 
 .battle-map-card {

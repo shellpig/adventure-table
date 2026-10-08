@@ -357,7 +357,7 @@ export function RoomBattleMapLibraryPage({ roomId }: RoomBattleMapLibraryPagePro
 
   if (editingMap) {
     return (
-      <div className="battle-map-library page">
+      <div className="battle-map-library battle-map-library--editing page">
         <header className="page-header">
           <a
             className="page-header__back"
