@@ -624,6 +624,15 @@ test('P6-G G2b-3: Adventure-driven journey through exploration, combat, write-ba
     const MAX_ATTACK_ROUNDS = 6
     let resolution: AttackResolution | null = null
     for (let round = 0; round < MAX_ATTACK_ROUNDS && !resolution?.hit; round += 1) {
+      if (round > 0) {
+        // A miss spends the hero's action while it is still the hero's turn,
+        // so pass the turn before advancing back to the hero.
+        const advanced = page.waitForResponse((response) => (
+          response.request().method() === 'POST' && response.url().includes('/combat/turn/advance')
+        ))
+        await page.getByRole('button', { name: 'Advance Turn' }).click()
+        await responseJson(await advanced)
+      }
       await advanceUntilTurn(page, request, activePrefix, heroEntry.id)
       await expect(combatStage(player.page).locator('.session-combat__your-turn-badge')).toBeVisible()
       resolution = await playerAttack(page, player.page, sessionId, QUICK_ENEMY.name)

@@ -405,6 +405,15 @@ test('P6-G G1b-2: empty Campaign through narration, combat, Current Situation, a
     const MAX_ATTACK_ROUNDS = 6
     let resolution: AttackResolution | null = null
     for (let round = 0; round < MAX_ATTACK_ROUNDS && !resolution?.hit; round += 1) {
+      if (round > 0) {
+        // A miss spends the hero's action while it is still the hero's turn,
+        // so pass the turn before advancing back to the hero.
+        const advanced = page.waitForResponse((response) => (
+          response.request().method() === 'POST' && response.url().includes('/combat/turn/advance')
+        ))
+        await page.getByRole('button', { name: 'Advance Turn' }).click()
+        await responseJson(await advanced)
+      }
       await advanceUntilTurn(page, request, activePrefix, heroEntry.id)
       await expect(combatStage(player.page).locator('.session-combat__your-turn-badge')).toBeVisible()
       resolution = await playerAttack(page, player.page, sessionId, QUICK_ENEMY.name)
@@ -577,7 +586,11 @@ test('P6-G G1b-2: empty Campaign through narration, combat, Current Situation, a
     // Verify DM Seat and Player Seat with Character persist in Lobby
     const dmSeatCard = page.locator('article').filter({ hasText: 'P6-G DM' })
     await expect(dmSeatCard).toBeVisible()
-    const playerSeatCard = page.locator('article').filter({ hasText: 'P6-G Player' })
+    // Match the seat heading: the DM seat's Controller picker also lists the
+    // Player member as an option, so a text filter would hit both cards.
+    const playerSeatCard = page
+      .locator('article')
+      .filter({ has: page.getByRole('heading', { name: 'P6-G Player', level: 2 }) })
     await expect(playerSeatCard).toBeVisible()
     await expect(playerSeatCard).toContainText(character.name)
 
